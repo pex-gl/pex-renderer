@@ -1,0 +1,13 @@
+{
+  "name": "downsample-cubemap",
+  "version": "0.0.0",
+  "description": "",
+  "main": "index.js",
+  "author": "Marcin Ignac <marcin.ignac@gmail.com> (http://marcinignac.com/)",
+  "license": "MIT",
+  "dependencies": {
+    "glsl-inverse": "^1.0.0",
+    "glsl-transpose": "^1.0.0",
+    "glslify": "^2.3.1"
+  }
+}
