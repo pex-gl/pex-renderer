@@ -1,0 +1,17 @@
+{
+  "name": "example",
+  "version": "1.0.0",
+  "description": "",
+  "main": "main.js",
+  "scripts": {
+    "build": "browserify main.js -o main.web.js --ignore plask -g glslify-sync/transform"
+  },
+  "author": "Marcin Ignac <marcin.ignac@gmail.com> (http://marcinignac.com/)",
+  "license": "MIT",
+  "dependencies": {
+    "browserify": "^13.0.0",
+    "geom-parse-obj": "../local_modules/geom-parse-obj",
+    "glslify": "^3.0.0",
+    "primitive-cube": "^1.0.2"
+  }
+}
