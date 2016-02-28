@@ -1,0 +1,366 @@
+var Vec3 = require('pex-math/Vec3');
+var Quat = require('pex-math/Quat');
+var Mat4 = require('pex-math/Mat4');
+var PerspCamera = require('pex-cam/PerspCamera');
+var Node = require('./Node');
+var Material = require('./Material');
+var glslify = require('glslify-sync');
+var renderToCubemap = require('./local_modules/pex-render-to-cubemap');
+var downsampleCubemap = require('./local_modules/pex-downsample-cubemap');
+var convolveCubemap = require('./local_modules/pex-convolve-cubemap');
+
+console.time('renderer.glslify');
+var SOLID_COLOR_VERT           = glslify(__dirname + '/glsl/SolidColor.vert');
+var SOLID_COLOR_FRAG           = glslify(__dirname + '/glsl/SolidColor.frag');
+var SHOW_COLORS_VERT           = glslify(__dirname + '/glsl/ShowColors.vert');
+var SHOW_COLORS_FRAG           = glslify(__dirname + '/glsl/ShowColors.frag');
+var STANDARD_VERT              = glslify(__dirname + '/glsl/Standard.vert');
+var STANDARD_FRAG              = glslify(__dirname + '/glsl/Standard.frag');
+var STANDARD_INSTANCED_VERT    = glslify(__dirname + '/glsl/StandardInstanced.vert');
+var STANDARD_INSTANCED_FRAG    = glslify(__dirname + '/glsl/StandardInstanced.frag');
+var POSTPROCESS_VERT           = glslify(__dirname + '/glsl/Postprocess.vert');
+var POSTPROCESS_FRAG           = glslify(__dirname + '/glsl/Postprocess.frag');
+var SKYBOX_VERT                = glslify(__dirname + '/glsl/Skybox.vert');
+var SKYBOX_FRAG                = glslify(__dirname + '/glsl/Skybox.frag');
+var OVERLAY_VERT               = glslify(__dirname + '/glsl/Overlay.vert');
+var OVERLAY_FRAG               = glslify(__dirname + '/glsl/Overlay.frag');
+console.timeEnd('renderer.glslify');
+
+
+
+var State = {
+    backgroundColor : [0.1, 0.1, 0.1, 1],
+    sunPosition: [3, 0, 0],
+    prevSunPosition: [0, 0, 0],
+    exposure: 1.5
+}
+
+function Renderer(ctx, width, height) {
+    this._ctx = ctx;
+    this._width = width;
+    this._height = height;
+
+    this._materials = [];
+    this._nodes = [];
+
+    this.initMaterials();
+    this.initSkybox();
+    this.initShadowmaps();
+    this.initPostproces();
+
+    this.createCameraNode();
+
+    this.updateSky();
+
+    this._state = State;
+}
+
+
+Renderer.prototype.initMaterials = function() {
+    var ctx = this._ctx;
+    this._solidColorProgram = ctx.createProgram(SOLID_COLOR_VERT, SOLID_COLOR_FRAG);
+    this._showColorsProgram = ctx.createProgram(SHOW_COLORS_VERT, SHOW_COLORS_FRAG);
+    this._standardProgram = ctx.createProgram(STANDARD_VERT, STANDARD_FRAG);
+    this._standardInstancedProgram = ctx.createProgram(STANDARD_INSTANCED_VERT, STANDARD_INSTANCED_FRAG);
+}
+
+Renderer.prototype.initShadowmaps = function() {
+    var ctx = this._ctx;
+    this._shadowMapFbo = ctx.createFramebuffer();
+}
+
+Renderer.prototype.initPostproces = function() {
+    var ctx = this._ctx;
+
+    var fsqPositions = [[-1,-1],[1,-1], [1,1],[-1,1]];
+    var fsqFaces = [ [0, 1, 2], [0, 2, 3]];
+    var fsqAttributes = [
+        { data: fsqPositions, location: ctx.ATTRIB_POSITION },
+    ];
+    var fsqIndices = { data: fsqFaces };
+    this._fsqMesh = ctx.createMesh(fsqAttributes, fsqIndices);
+
+    this._frameColorTex = ctx.createTexture2D(null, this._width, this._height, { type: ctx.HALF_FLOAT });
+    this._frameDepthTex = ctx.createTexture2D(null, this._width, this._height, { format: ctx.DEPTH_COMPONENT, type: ctx.UNSIGNED_SHORT });
+    this._frameFbo = ctx.createFramebuffer([ { texture: this._frameColorTex } ], { texture: this._frameDepthTex});
+
+    this._postprocesProgram = ctx.createProgram(POSTPROCESS_VERT, POSTPROCESS_FRAG);
+
+    this._overlayProgram = ctx.createProgram(OVERLAY_VERT, OVERLAY_FRAG);
+}
+
+Renderer.prototype.initSkybox = function() {
+    var ctx = this._ctx;
+
+    this._skyEnvMap = ctx.createTextureCube(null, 128, 128, { minFilter: ctx.NEAREST, magFilter: ctx.NEAREST, type: ctx.HALF_FLOAT });
+    this._skyEnvMap64 = ctx.createTextureCube(null, 64, 64, { minFilter: ctx.NEAREST, magFilter: ctx.NEAREST, type: ctx.HALF_FLOAT });
+    this._skyEnvMap32 = ctx.createTextureCube(null, 32, 32, { minFilter: ctx.NEAREST, magFilter: ctx.NEAREST, type: ctx.HALF_FLOAT });
+    this._skyEnvMap16 = ctx.createTextureCube(null, 16, 16, { minFilter: ctx.NEAREST, magFilter: ctx.NEAREST, type: ctx.HALF_FLOAT });
+    this._skyIrradianceMap = ctx.createTextureCube(null, 16, 16, { type: ctx.HALF_FLOAT });
+
+    this._skyboxProgram = ctx.createProgram(SKYBOX_VERT, SKYBOX_FRAG);
+}
+
+Renderer.prototype.addNode = function(node) {
+    this._nodes.push(node);
+    return node;
+}
+
+Renderer.prototype.addMaterial = function(material) {
+    this._materials.push(material);
+    return material;
+}
+
+Renderer.prototype.createNode = function() {
+    return this.addNode(new Node());
+}
+
+Renderer.prototype.createMaterial = function() {
+    return this.addMaterial(new Material());
+}
+
+Renderer.prototype.createMeshNode = function(mesh, material) {
+    var node = this.createNode();
+    node.mesh = mesh;
+    node.material = material || this.createMaterial();
+    return node;
+}
+
+Renderer.prototype.createOverlayNode = function(overlay) {
+    var node = this.createNode();
+    node.overlay = overlay;
+    return node;
+}
+
+Renderer.prototype.createDirectionalLightNode = function(direction) {
+    var ctx = this._ctx;
+
+    var node = this.createNode();
+
+    node.light = {
+        type: 'directional',
+        direction: direction,
+        shadows: true,
+        colorMap: ctx.createTexture2D(null, 1024, 1024),
+        shadowMap: ctx.createTexture2D(null, 1024, 1024, { format: ctx.DEPTH_COMPONENT, type: ctx.UNSIGNED_SHORT}),
+        viewMatrix: Mat4.create(),
+        projectionMatrix: Mat4.create()
+    }
+    return node;
+}
+
+Renderer.prototype.createCameraNode = function(camera) {
+    var node = this.createNode();
+    node.camera = camera;
+    return node;
+}
+
+Renderer.prototype.getNodes = function(type) {
+    return this._nodes.filter(function(node) { return node[type] != null; });
+}
+
+Renderer.prototype.getMeshNodes = function() {
+    return this.getNodes('mesh');
+}
+
+Renderer.prototype.getCameraNodes = function() {
+    return this.getNodes('camera');
+}
+
+Renderer.prototype.getLightNodes = function() {
+    return this.getNodes('light');
+}
+
+Renderer.prototype.getOverlays = function() {
+    return this.getNodes('overlay');
+}
+
+Renderer.prototype.updateSky = function() {
+    var ctx = this._ctx;
+    renderToCubemap(ctx, this._skyEnvMap, this.drawSky.bind(this));
+    downsampleCubemap(ctx, this._skyEnvMap, this._skyEnvMap64);
+    downsampleCubemap(ctx, this._skyEnvMap64, this._skyEnvMap32);
+    downsampleCubemap(ctx, this._skyEnvMap32, this._skyEnvMap16);
+    convolveCubemap(ctx, this._skyEnvMap16, this._skyIrradianceMap);
+}
+
+Renderer.prototype.updateShadowmaps = function() {
+    var ctx = this._ctx;
+    var lightNodes = this.getLightNodes();
+
+    ctx.pushState(ctx.FRAMEBUFFER_BIT | ctx.VIEWPORT_BIT);
+    ctx.bindFramebuffer(this._shadowMapFbo);
+
+    lightNodes.forEach(function(lightNode) {
+        var light = lightNode.light;
+
+        light.near = 1;
+        light.far = 40;
+        Mat4.lookAt(light.viewMatrix, [State.sunPosition[0]*16, State.sunPosition[1]*16, State.sunPosition[2]*16], [0,0,0], [0, 1, 0]);
+        Mat4.perspective(light.projectionMatrix, 90, 1, light.near, light.far);
+        ctx.setViewMatrix(light.viewMatrix);
+        ctx.setProjectionMatrix(light.projectionMatrix);
+        this._shadowMapFbo.setColorAttachment(0, light.colorMap.getTarget(), light.colorMap.getHandle(), 0);
+        this._shadowMapFbo.setDepthAttachment(light.shadowMap.getTarget(), light.shadowMap.getHandle(), 0);
+
+        ctx.setViewport(0, 0, light.shadowMap.getWidth(), light.shadowMap.getHeight())
+
+        ctx.setDepthTest(true);
+        ctx.setClearColor(0, 0, 0, 1);
+        ctx.clear(ctx.COLOR_BIT | ctx.DEPTH_BIT);
+
+        this.drawMeshes();
+    }.bind(this));
+
+    ctx.popState(ctx.FRAMEBUFFER_BIT | ctx.VIEWPORT_BIT);
+}
+
+Renderer.prototype.drawSky = function() {
+    var ctx = this._ctx;
+
+    ctx.setDepthTest(false);
+    ctx.bindProgram(this._skyboxProgram);
+    this._skyboxProgram.setUniform('uSunPosition', State.sunPosition);
+
+    if (State.skyEnvMap) {
+        ctx.bindTexture(State.skyEnvMap, 0);
+        this._skyboxProgram.setUniform('uEnvMap', 0);
+        this._skyboxProgram.setUniform('uUseEnvMap', true);
+    }
+    else {
+        this._skyboxProgram.setUniform('uUseEnvMap', false);
+    }
+
+    ctx.bindMesh(this._fsqMesh);
+    ctx.drawMesh();
+}
+
+Renderer.prototype.drawMeshes = function() {
+    var meshNodes = this.getMeshNodes();
+    var lightNodes = this.getLightNodes();
+
+    var ctx = this._ctx;
+
+    ctx.setDepthTest(true);
+
+
+    ctx.bindTexture(this._skyIrradianceMap, 0);
+    ctx.bindTexture(lightNodes[0].light.shadowMap, 1);
+
+    ctx.bindProgram(this._standardProgram);
+    this._standardProgram.setUniform('uSkyIrradianceMap', 0);
+    this._standardProgram.setUniform('uSunPosition', State.sunPosition);
+    this._standardProgram.setUniform('uLightViewMatrix', lightNodes[0].light.viewMatrix);
+    this._standardProgram.setUniform('uLightProjectionMatrix', lightNodes[0].light.projectionMatrix);
+    this._standardProgram.setUniform('uShadowMap', 1);
+    this._standardProgram.setUniform('uLightNear', lightNodes[0].light.near);
+    this._standardProgram.setUniform('uLightFar', lightNodes[0].light.far);
+
+    ctx.bindProgram(this._standardInstancedProgram);
+    this._standardInstancedProgram.setUniform('uSkyIrradianceMap', 0);
+    this._standardInstancedProgram.setUniform('uSunPosition', State.sunPosition);
+    this._standardInstancedProgram.setUniform('uLightViewMatrix', lightNodes[0].light.viewMatrix);
+    this._standardInstancedProgram.setUniform('uLightProjectionMatrix', lightNodes[0].light.projectionMatrix);
+    this._standardInstancedProgram.setUniform('uShadowMap', 1);
+    this._standardInstancedProgram.setUniform('uLightNear', lightNodes[0].light.near);
+    this._standardInstancedProgram.setUniform('uLightFar', lightNodes[0].light.far);
+
+    meshNodes.forEach(function(meshNode) {
+        if (meshNode.mesh._hasDivisor) {
+            ctx.bindProgram(this._standardInstancedProgram);
+            this._standardInstancedProgram.setUniform('uAlbedoColor', meshNode.material._albedoColor);
+        }
+        else {
+            ctx.bindProgram(this._standardProgram);
+            this._standardProgram.setUniform('uAlbedoColor', meshNode.material._albedoColor);
+        }
+        ctx.bindMesh(meshNode.mesh);
+        ctx.pushModelMatrix();
+        ctx.translate(meshNode._position);
+        ctx.rotateQuat(meshNode._rotation);
+        ctx.scale(meshNode._scale);
+        if (meshNode.mesh._hasDivisor) {
+            ctx.drawMesh(meshNode.mesh.getAttribute(ctx.ATTRIB_CUSTOM_0).data.length);
+        }
+        else {
+            ctx.drawMesh();
+        }
+
+        ctx.popModelMatrix();
+    }.bind(this))
+}
+
+Renderer.prototype.draw = function() {
+    var ctx = this._ctx;
+
+    var flags = 0;
+    flags |= ctx.COLOR_BIT | ctx.DEPTH_BIT | ctx.BLEND_BIT;
+    flags |= ctx.MATRIX_PROJECTION_BIT | ctx.MATRIX_VIEW_BIT | ctx.MATRIX_MODEL_BIT
+    flags |= ctx.PROGRAM_BIT | ctx.MESH_BIT;
+    //ctx.pushState(flags);
+
+    ctx.setClearColor(State.backgroundColor[0], State.backgroundColor[1], State.backgroundColor[2], State.backgroundColor[3]);
+    ctx.clear(ctx.COLOR_BIT | ctx.DEPTH_BIT);
+
+    var cameraNodes = this._nodes.filter(function(node) { return node.camera != null; });
+    var meshNodes = this._nodes.filter(function(node) { return node.mesh != null; });
+    var lightNodes = this._nodes.filter(function(node) { return node.light != null; });
+
+    var cameraNodes = this.getCameraNodes();
+    if (cameraNodes.length == 0) {
+        console.log('WARN: Renderer.draw no cameras found');
+        return;
+    }
+
+    if (!Vec3.equals(State.prevSunPosition, State.sunPosition)) {
+        this.updateSky();
+        Vec3.set(State.prevSunPosition, State.sunPosition);
+    }
+    this.updateShadowmaps();
+
+    //draw scene
+
+    ctx.pushState(ctx.FRAMEBUFFER_BIT);
+    ctx.bindFramebuffer(this._frameFbo);
+
+    ctx.clear(ctx.COLOR_BIT | ctx.DEPTH_BIT);
+
+    var currentCamera = this.getCameraNodes()[0].camera;
+    ctx.setViewMatrix(currentCamera.getViewMatrix());
+    ctx.setProjectionMatrix(currentCamera.getProjectionMatrix());
+
+    this.drawSky();
+    this.drawMeshes();
+
+    ctx.popState(ctx.FRAMEBUFFER_BIT);
+
+    //final postprocessing
+
+    ctx.setDepthTest(false);
+    ctx.bindTexture(this._frameColorTex);
+    ctx.bindProgram(this._postprocesProgram);
+    this._postprocesProgram.setUniform('uScreenSize', [this._width, this._height]);
+    this._postprocesProgram.setUniform('uColorBufferTex', 0);
+    this._postprocesProgram.setUniform('uExposure', State.exposure);
+    ctx.bindMesh(this._fsqMesh);
+    ctx.drawMesh();
+
+    //overlays
+
+    ctx.bindProgram(this._overlayProgram);
+    this._overlayProgram.setUniform('uScreenSize', [this._width, this._height]);
+    this._overlayProgram.setUniform('uOverlay', 0);
+    ctx.bindMesh(this._fsqMesh);
+    ctx.setDepthTest(false);
+    ctx.setBlend(true);
+    ctx.setBlendFunc(ctx.ONE, ctx.ONE);
+    this.getOverlays().forEach(function(overlayNode) {
+        ctx.bindTexture(overlayNode.overlay);
+        ctx.drawMesh();
+    }.bind(this));
+
+    ctx.setBlend(false);
+    //ctx.popState(flags);
+}
+
+module.exports = Renderer;
