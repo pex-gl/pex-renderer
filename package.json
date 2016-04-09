@@ -10,6 +10,7 @@
     "url": "https://github.com/vorg"
   },
   "dependencies": {
+    "flatten": "^1.0.2",
     "glsl-gamma": "^2.0.0",
     "glsl-inverse": "^1.0.0",
     "glsl-sky": "./local_modules/glsl-sky",
@@ -39,5 +40,10 @@
   "homepage": "https://github.com/pex-gl/pex-renderer",
   "bugs": {
     "url": "https://github.com/pex-gl/pex-renderer/issues"
+  },
+  "browserify": {
+    "transform": [
+      "glslify-sync/transform"
+    ]
   }
 }

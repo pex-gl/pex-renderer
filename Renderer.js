@@ -1,6 +1,7 @@
 var Vec3 = require('pex-math/Vec3');
 var Quat = require('pex-math/Quat');
 var Mat4 = require('pex-math/Mat4');
+var Draw = require('pex-draw/Draw');
 var PerspCamera = require('pex-cam/PerspCamera');
 var Node = require('./Node');
 var Material = require('./Material');
@@ -8,6 +9,11 @@ var glslify = require('glslify-sync');
 var renderToCubemap = require('./local_modules/pex-render-to-cubemap');
 var downsampleCubemap = require('./local_modules/pex-downsample-cubemap');
 var convolveCubemap = require('./local_modules/pex-convolve-cubemap');
+var fx = require('pex-fx');
+var random = require('pex-random');
+var MathUtils = require('pex-math/Utils')
+var flatten = require('flatten')
+var SSAOv2          = require('./SSAO')
 
 console.time('renderer.glslify');
 var SOLID_COLOR_VERT           = glslify(__dirname + '/glsl/SolidColor.vert');
@@ -32,13 +38,18 @@ var State = {
     backgroundColor : [0.1, 0.1, 0.1, 1],
     sunPosition: [3, 0, 0],
     prevSunPosition: [0, 0, 0],
-    exposure: 1.5
+    exposure: 1.5,
+    dirtySky: true,
+    frame: 0
 }
 
 function Renderer(ctx, width, height) {
     this._ctx = ctx;
     this._width = width;
     this._height = height;
+
+    this._debugDraw = new Draw(ctx);
+    this._debug = false;
 
     this._materials = [];
     this._nodes = [];
@@ -81,12 +92,46 @@ Renderer.prototype.initPostproces = function() {
     this._fsqMesh = ctx.createMesh(fsqAttributes, fsqIndices);
 
     this._frameColorTex = ctx.createTexture2D(null, this._width, this._height, { type: ctx.HALF_FLOAT });
+    this._frameNormalTex = ctx.createTexture2D(null, this._width, this._height, { type: ctx.HALF_FLOAT });
     this._frameDepthTex = ctx.createTexture2D(null, this._width, this._height, { format: ctx.DEPTH_COMPONENT, type: ctx.UNSIGNED_SHORT });
-    this._frameFbo = ctx.createFramebuffer([ { texture: this._frameColorTex } ], { texture: this._frameDepthTex});
+    this._frameFbo = ctx.createFramebuffer([ { texture: this._frameColorTex }, { texture: this._frameNormalTex} ], { texture: this._frameDepthTex});
 
     this._postprocesProgram = ctx.createProgram(POSTPROCESS_VERT, POSTPROCESS_FRAG);
 
     this._overlayProgram = ctx.createProgram(OVERLAY_VERT, OVERLAY_FRAG);
+
+    this._fx = fx(ctx);
+
+    var ssaoKernel = [];
+    for(var i=0; i<64; i++) {
+        var sample = [
+            random.float() * 2 - 1,
+            random.float() * 2 - 1,
+            random.float(),
+            1
+        ]
+        Vec3.normalize(sample)
+        var scale = random.float()
+        scale = MathUtils.lerp(0.1, 1.0, scale * scale);
+        Vec3.scale(sample, scale)
+        ssaoKernel.push(sample)
+    }
+    var ssaoKernelData = new Float32Array(flatten(ssaoKernel))
+
+    var ssaoNoise = [];
+    for(var i=0; i<64; i++) {
+        var sample = [
+            random.float() * 2 - 1,
+            random.float() * 2 - 1,
+            0,
+            1
+        ]
+        ssaoNoise.push(sample)
+    }
+    var ssaoNoiseData = new Float32Array(flatten(ssaoNoise))
+
+    this.ssaoKernelMap = ctx.createTexture2D(ssaoKernelData, 8, 8, { format: ctx.RGBA, type: ctx.FLOAT, minFilter: ctx.NEAREST, magFilter: ctx.NEAREST, repeat: true });
+    this.ssaoNoiseMap = ctx.createTexture2D(ssaoNoiseData, 4, 4, { format: ctx.RGBA, type: ctx.FLOAT, minFilter: ctx.NEAREST, magFilter: ctx.NEAREST, repeat: true });
 }
 
 Renderer.prototype.initSkybox = function() {
@@ -112,7 +157,7 @@ Renderer.prototype.addMaterial = function(material) {
 }
 
 Renderer.prototype.createNode = function() {
-    return this.addNode(new Node());
+    return this.addNode(new Node()); //TODO: don't add newly created node, e.g. gltfl loader would like to first create nodes then add them
 }
 
 Renderer.prototype.createMaterial = function() {
@@ -194,14 +239,16 @@ Renderer.prototype.updateShadowmaps = function() {
     lightNodes.forEach(function(lightNode) {
         var light = lightNode.light;
 
-        light.near = 1;
-        light.far = 40;
-        Mat4.lookAt(light.viewMatrix, [State.sunPosition[0]*16, State.sunPosition[1]*16, State.sunPosition[2]*16], [0,0,0], [0, 1, 0]);
+        light.near = 2;
+        light.far = 12;
+        Mat4.lookAt(light.viewMatrix, [State.sunPosition[0]*4.5, State.sunPosition[1]*4.5, State.sunPosition[2]*4.5], [0,0,0], [0, 1, 0]);
         Mat4.perspective(light.projectionMatrix, 90, 1, light.near, light.far);
         ctx.setViewMatrix(light.viewMatrix);
         ctx.setProjectionMatrix(light.projectionMatrix);
         this._shadowMapFbo.setColorAttachment(0, light.colorMap.getTarget(), light.colorMap.getHandle(), 0);
         this._shadowMapFbo.setDepthAttachment(light.shadowMap.getTarget(), light.shadowMap.getHandle(), 0);
+
+        this._shadowMap = light.shadowMap;
 
         ctx.setViewport(0, 0, light.shadowMap.getWidth(), light.shadowMap.getHeight())
 
@@ -281,17 +328,19 @@ Renderer.prototype.drawMeshes = function() {
     this._standardProgram.setUniform('uLightViewMatrix', lightNodes[0].light.viewMatrix);
     this._standardProgram.setUniform('uLightProjectionMatrix', lightNodes[0].light.projectionMatrix);
     this._standardProgram.setUniform('uShadowMap', 1);
+    this._standardProgram.setUniform('uShadowMapSize', [lightNodes[0].light.shadowMap.getWidth(), lightNodes[0].light.shadowMap.getHeight()]);
+    this._standardProgram.setUniform('uBias', 0.05);
     this._standardProgram.setUniform('uLightNear', lightNodes[0].light.near);
     this._standardProgram.setUniform('uLightFar', lightNodes[0].light.far);
 
-    ctx.bindProgram(this._standardInstancedProgram);
-    this._standardInstancedProgram.setUniform('uSkyIrradianceMap', 0);
-    this._standardInstancedProgram.setUniform('uSunPosition', State.sunPosition);
-    this._standardInstancedProgram.setUniform('uLightViewMatrix', lightNodes[0].light.viewMatrix);
-    this._standardInstancedProgram.setUniform('uLightProjectionMatrix', lightNodes[0].light.projectionMatrix);
-    this._standardInstancedProgram.setUniform('uShadowMap', 1);
-    this._standardInstancedProgram.setUniform('uLightNear', lightNodes[0].light.near);
-    this._standardInstancedProgram.setUniform('uLightFar', lightNodes[0].light.far);
+    //ctx.bindProgram(this._standardInstancedProgram);
+    //this._standardInstancedProgram.setUniform('uSkyIrradianceMap', 0);
+    //this._standardInstancedProgram.setUniform('uSunPosition', State.sunPosition);
+    //this._standardInstancedProgram.setUniform('uLightViewMatrix', lightNodes[0].light.viewMatrix);
+    //this._standardInstancedProgram.setUniform('uLightProjectionMatrix', lightNodes[0].light.projectionMatrix);
+    //this._standardInstancedProgram.setUniform('uShadowMap', 1);
+    //this._standardInstancedProgram.setUniform('uLightNear', lightNodes[0].light.near);
+    //this._standardInstancedProgram.setUniform('uLightFar', lightNodes[0].light.far);
 
     meshNodes.forEach(function(meshNode) {
         if (meshNode.mesh._hasDivisor) {
@@ -301,6 +350,15 @@ Renderer.prototype.drawMeshes = function() {
         else {
             ctx.bindProgram(this._standardProgram);
             this._standardProgram.setUniform('uAlbedoColor', meshNode.material._albedoColor);
+            this._standardProgram.setUniform('uAlbedoColorTexEnabled', true);
+
+            this._standardProgram.setUniform('uAlbedoColorTex', 2);
+            if (meshNode.material._albedoColorTexture) {
+                ctx.bindTexture(meshNode.material._albedoColorTexture, 2)
+            }
+            else {
+                this._standardProgram.setUniform('uAlbedoColorTexEnabled', false);
+            }
         }
 
         var isVertexArray = meshNode.primitiveType && meshNode.count;
@@ -376,11 +434,14 @@ Renderer.prototype.draw = function() {
         return;
     }
 
-    if (!Vec3.equals(State.prevSunPosition, State.sunPosition)) {
+    if (!Vec3.equals(State.prevSunPosition, State.sunPosition) || State.dirtySky) {
+        State.dirtySky = false;
         this.updateSky();
         Vec3.set(State.prevSunPosition, State.sunPosition);
+        this.updateShadowmaps();
     }
-    this.updateShadowmaps();
+
+
 
     //draw scene
 
@@ -398,10 +459,26 @@ Renderer.prototype.draw = function() {
 
     ctx.popState(ctx.FRAMEBUFFER_BIT);
 
+    var W = this._width;
+    var H = this._height;
+
+    var root = this._fx.reset();
+    var color = root.asFXStage(this._frameColorTex, 'img');//.fxaa()
+    //var color = root.asFXStage(this._frameNormalTex, 'img')
+    var ssao = root.ssao({ depthMap: this._frameDepthTex, normalMap: this._frameNormalTex, kernelMap: this.ssaoKernelMap, noiseMap: this.ssaoNoiseMap, camera: currentCamera, width: W, height: H }).blur3().blur3();
+    //var ssao = root.ssao({ depthMap: this._frameDepthTex, camera: currentCamera, strength: 2, offset: 0.0, width: this._width, height: this._height });//.blur3().blur3();
+    var final = ssao.mult(color)
+    //final = final.asFXStage(this._shadowMap, 'bla');
+    final = color.mult(ssao);
+    //final = color
+    //final = root.asFXStage(this._frameNormalTex, 'img');//.fxaa()_frameNormalTex
+    //final.blit(W, H)
+    //return;
     //final postprocessing
 
     ctx.setDepthTest(false);
-    ctx.bindTexture(this._frameColorTex);
+    ctx.bindTexture(final.getSourceTexture());//ctx.bindTexture(this._frameColorTex);
+
     ctx.bindProgram(this._postprocesProgram);
     this._postprocesProgram.setUniform('uScreenSize', [this._width, this._height]);
     this._postprocesProgram.setUniform('uColorBufferTex', 0);
