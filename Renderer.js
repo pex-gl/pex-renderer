@@ -36,7 +36,8 @@ var State = {
     prevSunPosition: [0, 0, 0],
     exposure: 1.5,
     dirtySky: true,
-    frame: 0
+    frame: 0,
+    ssao: true
 }
 
 function Renderer(ctx, width, height) {
@@ -460,17 +461,11 @@ Renderer.prototype.draw = function() {
 
     var root = this._fx.reset();
     var color = root.asFXStage(this._frameColorTex, 'img');//.fxaa()
-    //var color = root.asFXStage(this._frameNormalTex, 'img')
-    var ssao = root.ssao({ depthMap: this._frameDepthTex, normalMap: this._frameNormalTex, kernelMap: this.ssaoKernelMap, noiseMap: this.ssaoNoiseMap, camera: currentCamera, width: W, height: H }).blur3().blur3();
-    //var ssao = root.ssao({ depthMap: this._frameDepthTex, camera: currentCamera, strength: 2, offset: 0.0, width: this._width, height: this._height });//.blur3().blur3();
-    var final = ssao.mult(color)
-    //final = final.asFXStage(this._shadowMap, 'bla');
-    final = color.mult(ssao);
-    //final = color
-    //final = root.asFXStage(this._frameNormalTex, 'img');//.fxaa()_frameNormalTex
-    //final.blit(W, H)
-    //return;
-    //final postprocessing
+    var final = color;
+    if (State.ssao) {
+        var ssao = root.ssao({ depthMap: this._frameDepthTex, normalMap: this._frameNormalTex, kernelMap: this.ssaoKernelMap, noiseMap: this.ssaoNoiseMap, camera: currentCamera, width: W, height: H }).blur3().blur3();
+        final = ssao.mult(color)
+    }
 
     ctx.setDepthTest(false);
     ctx.bindTexture(final.getSourceTexture());//ctx.bindTexture(this._frameColorTex);
