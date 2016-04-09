@@ -12,6 +12,7 @@
     "browserify": "^13.0.0",
     "geom-parse-obj": "../local_modules/geom-parse-obj",
     "glslify": "^3.0.0",
+    "is-browser": "^2.0.1",
     "primitive-cube": "^1.0.2"
   }
 }
