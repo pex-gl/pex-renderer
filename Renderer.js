@@ -37,7 +37,8 @@ var State = {
     exposure: 1.5,
     dirtySky: true,
     frame: 0,
-    ssao: true
+    ssao: true,
+    shadows: true
 }
 
 function Renderer(ctx, width, height) {
@@ -326,18 +327,10 @@ Renderer.prototype.drawMeshes = function() {
     this._standardProgram.setUniform('uLightProjectionMatrix', lightNodes[0].light.projectionMatrix);
     this._standardProgram.setUniform('uShadowMap', 1);
     this._standardProgram.setUniform('uShadowMapSize', [lightNodes[0].light.shadowMap.getWidth(), lightNodes[0].light.shadowMap.getHeight()]);
+    this._standardProgram.setUniform('uShadowsEnabled', State.shadows);
     this._standardProgram.setUniform('uBias', 0.05);
     this._standardProgram.setUniform('uLightNear', lightNodes[0].light.near);
     this._standardProgram.setUniform('uLightFar', lightNodes[0].light.far);
-
-    //ctx.bindProgram(this._standardInstancedProgram);
-    //this._standardInstancedProgram.setUniform('uSkyIrradianceMap', 0);
-    //this._standardInstancedProgram.setUniform('uSunPosition', State.sunPosition);
-    //this._standardInstancedProgram.setUniform('uLightViewMatrix', lightNodes[0].light.viewMatrix);
-    //this._standardInstancedProgram.setUniform('uLightProjectionMatrix', lightNodes[0].light.projectionMatrix);
-    //this._standardInstancedProgram.setUniform('uShadowMap', 1);
-    //this._standardInstancedProgram.setUniform('uLightNear', lightNodes[0].light.near);
-    //this._standardInstancedProgram.setUniform('uLightFar', lightNodes[0].light.far);
 
     meshNodes.forEach(function(meshNode) {
         if (meshNode.mesh._hasDivisor) {
