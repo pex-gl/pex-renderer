@@ -15,7 +15,6 @@ var MathUtils = require('pex-math/Utils')
 var flatten = require('flatten')
 var SSAOv2          = require('./SSAO')
 
-console.time('renderer.glslify');
 var SOLID_COLOR_VERT           = glslify(__dirname + '/glsl/SolidColor.vert');
 var SOLID_COLOR_FRAG           = glslify(__dirname + '/glsl/SolidColor.frag');
 var SHOW_COLORS_VERT           = glslify(__dirname + '/glsl/ShowColors.vert');
@@ -30,9 +29,6 @@ var SKYBOX_VERT                = glslify(__dirname + '/glsl/Skybox.vert');
 var SKYBOX_FRAG                = glslify(__dirname + '/glsl/Skybox.frag');
 var OVERLAY_VERT               = glslify(__dirname + '/glsl/Overlay.vert');
 var OVERLAY_FRAG               = glslify(__dirname + '/glsl/Overlay.frag');
-console.timeEnd('renderer.glslify');
-
-
 
 var State = {
     backgroundColor : [0.1, 0.1, 0.1, 1],
