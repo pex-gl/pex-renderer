@@ -83,8 +83,6 @@ void main() {
         albedoColor = toLinear(texture2D(uAlbedoColorTex, vTexCoord0));
     }
 
-    //albedoColor = vec4(1.0);
-
     vec3 L = normalize(uSunPosition);
     vec3 lightColor = sky(L, L).rgb;
 
@@ -106,10 +104,8 @@ void main() {
 
 
 
-    //if (lightDist2 > 99990.0) {
-        gl_FragData[0].rgb = albedoColor.rgb * irradiance + albedoColor.rgb * diffuse * lightColor * illuminated;
-        gl_FragData[0].a = 1.0;
-    //}
-    //
+    gl_FragData[0].rgb = albedoColor.rgb * irradiance + albedoColor.rgb * diffuse * lightColor * illuminated;
+    gl_FragData[0].a = 1.0;
+
     gl_FragData[1] = vec4(ecNormal * 0.5 + 0.5, 1.0);
 }
