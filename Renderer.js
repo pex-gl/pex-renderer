@@ -470,6 +470,7 @@ Renderer.prototype.draw = function() {
     ctx.setDepthTest(false);
     ctx.bindTexture(final.getSourceTexture());//ctx.bindTexture(this._frameColorTex);
 
+    //apply exposure, tone mapping and gamma corection
     ctx.bindProgram(this._postprocesProgram);
     this._postprocesProgram.setUniform('uScreenSize', [this._width, this._height]);
     this._postprocesProgram.setUniform('uColorBufferTex', 0);
