@@ -243,6 +243,34 @@ Renderer.prototype.drawMeshes = function() {
 
     ctx.setDepthTest(true);
 
+    //TODO: optimize this
+    this._nodes.forEach(function(node) {
+        Mat4.identity(node._localTransform)
+        Mat4.translate(node._localTransform, node._position);
+        Mat4.mult(node._localTransform, Mat4.fromQuat(Mat4.create(), node._rotation));
+        Mat4.scale(node._localTransform, node._scale);
+
+        if (node._transform) { //TODO: required for GLTF
+            Mat4.mult(node._localTransform, node._transform);
+        }
+    }.bind(this))
+
+    this._nodes.forEach(function(node) {
+        Mat4.identity(node._globalTransform)
+
+        var parent = node._parent;
+        var stack = [ node._localTransform ]
+        while (parent) {
+            stack.push(parent._localTransform)
+            parent = parent._parent;
+        }
+        stack.reverse()
+        stack.forEach(function(mat) {
+            Mat4.mult(node._globalTransform, mat)
+        })
+
+    })
+
 
     ctx.bindTexture(this._skyIrradianceMap, 0);
     ctx.bindTexture(lightNodes[0].light.shadowMap, 1);
@@ -274,12 +302,33 @@ Renderer.prototype.drawMeshes = function() {
             ctx.bindProgram(this._standardProgram);
             this._standardProgram.setUniform('uAlbedoColor', meshNode.material._albedoColor);
         }
-        ctx.bindMesh(meshNode.mesh);
+
+        var isVertexArray = meshNode.primitiveType && meshNode.count;
+
+        if (isVertexArray) {
+            ctx.bindVertexArray(meshNode.mesh);
+        }
+        else {
+            ctx.bindMesh(meshNode.mesh);
+        }
+
         ctx.pushModelMatrix();
-        ctx.translate(meshNode._position);
-        ctx.rotateQuat(meshNode._rotation);
-        ctx.scale(meshNode._scale);
-        if (meshNode.mesh._hasDivisor) {
+        if (meshNode._globalTransform) {
+            ctx.loadIdentity();
+            ctx.multMatrix(meshNode._globalTransform)
+        }
+        else if (meshNode._localTransform) {
+            ctx.multMatrix(meshNode._localTransform)
+        }
+        else {
+            ctx.translate(meshNode._position);
+            ctx.rotateQuat(meshNode._rotation);
+            ctx.scale(meshNode._scale);
+        }
+        if (isVertexArray) {
+            ctx.drawElements(meshNode.primitiveType, meshNode.count, 0);
+        }
+        else if (meshNode.mesh._hasDivisor) {
             ctx.drawMesh(meshNode.mesh.getAttribute(ctx.ATTRIB_CUSTOM_0).data.length);
         }
         else {
@@ -288,6 +337,21 @@ Renderer.prototype.drawMeshes = function() {
 
         ctx.popModelMatrix();
     }.bind(this))
+
+    ctx.bindProgram(this._solidColorProgram);
+    this._solidColorProgram.setUniform('uColor', [1,0,0,1])
+
+    this._nodes.forEach(function(node) {
+        ctx.pushModelMatrix();
+        if (node._globalTransform) {
+            ctx.loadIdentity();
+            ctx.multMatrix(node._globalTransform)
+        }
+        if (this._debug && node._bbox) {
+            this._debugDraw.debugAABB(node._bbox)
+        }
+        ctx.popModelMatrix();
+    }.bind(this));
 }
 
 Renderer.prototype.draw = function() {
