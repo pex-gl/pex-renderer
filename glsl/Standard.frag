@@ -19,7 +19,7 @@ uniform float uLightNear;
 uniform float uLightFar;
 uniform sampler2D uShadowMap;
 uniform vec2 uShadowMapSize;
-uniform bool uShadowsEnabled;
+uniform float uShadowQuality;
 uniform float uBias;
 
 varying vec3 ecNormal;
@@ -84,7 +84,7 @@ void main() {
     float diffuse = dotNL;
 
     float illuminated = 1.0;
-    if (uShadowsEnabled) {
+    if (uShadowQuality > 0.0) {
         //shadows
         vec4 lightViewPosition = uLightViewMatrix * vec4(vWorldPosition, 1.0);
         float lightDistView = -lightViewPosition.z;
@@ -92,9 +92,15 @@ void main() {
         vec2 lightDeviceCoordsPositionNormalized = lightDeviceCoordsPosition.xy / lightDeviceCoordsPosition.w;
         vec2 lightUV = lightDeviceCoordsPositionNormalized.xy * 0.5 + 0.5;
 
-        illuminated = texture2DShadowLerp(uShadowMap, uShadowMapSize, lightUV, lightDistView - uBias);
-        //illuminated = PCF(uShadowMap, uShadowMapSize, lightUV, lightDistView - uBias);
-        //illuminated = texture2DCompare(uShadowMap, lightUV, lightDistView - uBias);
+        if (uShadowQuality == 1.0) {
+            illuminated = texture2DCompare(uShadowMap, lightUV, lightDistView - uBias);
+        }
+        if (uShadowQuality == 2.0) {
+            illuminated = texture2DShadowLerp(uShadowMap, uShadowMapSize, lightUV, lightDistView - uBias);
+        }
+        if (uShadowQuality == 3.0) {
+            illuminated = PCF(uShadowMap, uShadowMapSize, lightUV, lightDistView - uBias);
+        }
     }
 
     gl_FragData[0].rgb = albedoColor.rgb * irradiance + albedoColor.rgb * diffuse * lightColor * illuminated;

@@ -40,7 +40,8 @@ var State = {
     dirtySky: true,
     frame: 0,
     ssao: true,
-    shadows: true
+    shadows: true,
+    shadowQuality: 3
 }
 
 function Renderer(ctx, width, height) {
@@ -351,7 +352,7 @@ Renderer.prototype.drawMeshes = function() {
         program.setUniform('uLightProjectionMatrix', lightNodes[0].light.projectionMatrix);
         program.setUniform('uShadowMap', 1);
         program.setUniform('uShadowMapSize', [lightNodes[0].light.shadowMap.getWidth(), lightNodes[0].light.shadowMap.getHeight()]);
-        program.setUniform('uShadowsEnabled', State.shadows);
+        program.setUniform('uShadowQuality', State.shadows ? State.shadowQuality : 0 );
         program.setUniform('uBias', 0.05);
         program.setUniform('uLightNear', lightNodes[0].light.near);
         program.setUniform('uLightFar', lightNodes[0].light.far);
