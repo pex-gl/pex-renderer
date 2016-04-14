@@ -1,7 +1,7 @@
-attribute vec4 aColor;
+//attribute vec4 aColor;
 attribute vec4 aPosition;
 attribute vec3 aNormal;
-attribute vec2 aTexCoord0;
+//attribute vec2 aTexCoord0;
 
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
@@ -16,7 +16,8 @@ varying vec2 vTexCoord0;
 void main() {
     vec4 worldPosition = uModelMatrix * aPosition;
     vWorldPosition = vec3(worldPosition);
-    vTexCoord0 = aTexCoord0;
+    //vTexCoord0 = aTexCoord0;
+    vTexCoord0 = vec2(0.0, 0.0);
 
     gl_Position = uProjectionMatrix * uViewMatrix * worldPosition;
     gl_PointSize = uPointSize;
