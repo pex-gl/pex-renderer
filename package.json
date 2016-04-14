@@ -17,7 +17,8 @@
     "glslify": "^5.0.0",
     "glslify-promise": "^1.0.1",
     "glslify-sync": "^1.1.1",
-    "hammersley": "^1.0.0"
+    "hammersley": "^1.0.0",
+    "pex-fx": "^1.4.0"
   },
   "devDependencies": {},
   "scripts": {
