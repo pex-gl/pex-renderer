@@ -9,7 +9,7 @@ precision highp float;
 #pragma glslify: toGamma = require(glsl-gamma/out)
 
 uniform mat4 uInverseViewMatrix;
-uniform vec4 uAlbedoColor;
+uniform sampler2D uAlbedoColorTex;
 uniform samplerCube uSkyIrradianceMap;
 uniform vec3 uSunPosition;
 
@@ -24,6 +24,7 @@ uniform float uBias;
 
 varying vec3 ecNormal;
 varying vec3 vWorldPosition;
+varying vec2 vTexCoord0;
 
 const float flipEnvMap = 1.0;
 
@@ -75,7 +76,8 @@ float PCF(sampler2D depths, vec2 size, vec2 uv, float compare){
 void main() {
     vec3 wcNormal = normalize(vec3(uInverseViewMatrix * vec4(ecNormal, 0.0)));
     vec3 irradiance = textureCubeEnv(uSkyIrradianceMap, wcNormal, flipEnvMap).rgb;
-    vec4 albedoColor = toLinear(uAlbedoColor);
+    vec4 albedoColor = toLinear(texture2D(uAlbedoColorTex, vTexCoord0));
+
 
     vec3 L = normalize(uSunPosition);
     vec3 lightColor = sky(L, L).rgb;
