@@ -92,8 +92,8 @@ void main() {
         vec2 lightDeviceCoordsPositionNormalized = lightDeviceCoordsPosition.xy / lightDeviceCoordsPosition.w;
         vec2 lightUV = lightDeviceCoordsPositionNormalized.xy * 0.5 + 0.5;
 
-        //illuminated = texture2DShadowLerp(uShadowMap, uShadowMapSize, lightUV, lightDistView - uBias);
-        illuminated = PCF(uShadowMap, uShadowMapSize, lightUV, lightDistView - uBias);
+        illuminated = texture2DShadowLerp(uShadowMap, uShadowMapSize, lightUV, lightDistView - uBias);
+        //illuminated = PCF(uShadowMap, uShadowMapSize, lightUV, lightDistView - uBias);
         //illuminated = texture2DCompare(uShadowMap, lightUV, lightDistView - uBias);
     }
 
