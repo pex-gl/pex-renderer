@@ -16,7 +16,8 @@
     "glsl-transpose": "^1.0.0",
     "glslify": "^5.0.0",
     "glslify-promise": "^1.0.1",
-    "glslify-sync": "^1.1.1"
+    "glslify-sync": "^1.1.1",
+    "hammersley": "^1.0.0"
   },
   "devDependencies": {},
   "scripts": {
