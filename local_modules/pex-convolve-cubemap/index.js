@@ -1,4 +1,4 @@
-var renderToCubemap = require('pex-render-to-cubemap');
+var renderToCubemap = require('../pex-render-to-cubemap');
 var glslifySync = require('glslify-sync');
 var hammersley = require('hammersley');
 

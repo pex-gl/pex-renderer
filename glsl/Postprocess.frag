@@ -2,7 +2,7 @@
 precision highp float;
 #endif
 
-#pragma glslify: tonemapReinhard = require(glsl-tonemap-reinhard)
+#pragma glslify: tonemapReinhard = require(../local_modules/glsl-tonemap-reinhard)
 #pragma glslify: toGamma = require(glsl-gamma/out)
 
 uniform vec2 uScreenSize;

@@ -13,16 +13,10 @@
     "flatten": "^1.0.2",
     "glsl-gamma": "^2.0.0",
     "glsl-inverse": "^1.0.0",
-    "glsl-sky": "file:local_modules/glsl-sky",
-    "glsl-textureCube-env": "file:local_modules/glsl-textureCube-env",
-    "glsl-tonemap-reinhard": "file:local_modules/glsl-tonemap-reinhard",
     "glsl-transpose": "^1.0.0",
     "glslify": "^5.0.0",
     "glslify-promise": "^1.0.1",
-    "glslify-sync": "^1.1.1",
-    "pex-convolve-cubemap": "file:local_modules/pex-convolve-cubemap",
-    "pex-downsample-cubemap": "file:local_modules/pex-downsample-cubemap",
-    "pex-render-to-cubemap": "file:local_modules/pex-render-to-cubemap"
+    "glslify-sync": "^1.1.1"
   },
   "devDependencies": {},
   "scripts": {

@@ -2,8 +2,8 @@
 precision highp float;
 #endif
 
-#pragma glslify: textureCubeEnv = require('glsl-textureCube-env')
-#pragma glslify: sky = require('glsl-sky')
+#pragma glslify: textureCubeEnv = require('../local_modules/glsl-texturecube-env')
+#pragma glslify: sky = require('../local_modules/glsl-sky')
 #pragma glslify: toLinear = require('glsl-gamma/in')
 #pragma glslify: toGamma = require(glsl-gamma/out)
 
