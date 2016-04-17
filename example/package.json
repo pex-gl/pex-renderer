@@ -13,6 +13,14 @@
     "geom-parse-obj": "../local_modules/geom-parse-obj",
     "glslify": "^3.0.0",
     "is-browser": "^2.0.1",
-    "primitive-cube": "^1.0.2"
+    "pex-cam": "^1.0.0-beta.2",
+    "pex-context": "^1.1.1",
+    "pex-draw": "^1.0.0-beta.2",
+    "pex-geom": "^1.0.0-beta.2",
+    "pex-io": "^1.1.0",
+    "pex-math": "^1.0.0",
+    "pex-sys": "^1.1.1",
+    "primitive-cube": "^1.0.2",
+    "primitive-sphere": "^2.0.0"
   }
 }
