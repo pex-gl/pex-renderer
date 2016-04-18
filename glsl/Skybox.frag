@@ -2,30 +2,19 @@
 precision highp float;
 #endif
 
-#pragma glslify: sky = require('../local_modules/glsl-sky')
-#pragma glslify: textureCubeEnv = require('../local_modules/glsl-texturecube-env');
-#pragma glslify: toLinear = require('glsl-gamma/in');
+#pragma glslify: envMapEquirect = require('../local_modules/glsl-envmap-equirect');
+
+//assuming texture in Linear Space
+//most likely HDR or Texture2D with sRGB Ext
+uniform sampler2D uEnvMap; 
 
 varying vec3 wcNormal;
-uniform vec3 uSunPosition;
-uniform samplerCube uEnvMap;
-uniform bool uUseEnvMap;
 
 const float flipEnvMap = -1.0;
 
 void main() {
     vec3 N = normalize(wcNormal);
 
-    if (uUseEnvMap) {
-        gl_FragColor.rgb = toLinear(textureCubeEnv(uEnvMap, N, flipEnvMap).rgb);
-    }
-    else {
-        gl_FragColor.rgb = sky(uSunPosition, N);
-        //gl_FragColor.rgb = tonemapReinhard(sky(uSunPosition, N));
-        if (N.y < 0.0) {
-            gl_FragColor.rgb = gl_FragColor.rgb * (1.0 - 0.5*min(1.0, -N.y*20.0));
-        }
-    }
+    gl_FragColor.rgb = texture2D(uEnvMap, envMapEquirect(N)).rgb;
     gl_FragColor.a = 1.0;
-    //gl_FragColor = texture2DEnvLatLong(uEnvMap, N, flipEvnMap);
 }

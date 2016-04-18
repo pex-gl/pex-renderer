@@ -13,7 +13,7 @@ uniform mat4 uViewMatrix;
 varying vec3 wcNormal;
 
 void main() {
-    mat4 inverseProjection = transpose(uProjectionMatrix);
+    mat4 inverseProjection = inverse(uProjectionMatrix);
     mat3 inverseModelview = transpose(mat3(uViewMatrix));
     vec3 unprojected = (inverseProjection * aPosition).xyz;
     wcNormal = inverseModelview * unprojected;
