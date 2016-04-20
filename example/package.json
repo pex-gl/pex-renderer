@@ -4,19 +4,23 @@
   "description": "",
   "main": "main.js",
   "scripts": {
-    "build": "browserify main.js -o main.web.js --ignore plask -g glslify-sync/transform"
+    "start": "beefy main.js:main.web.js --open --live -- -i plask -g glslify-sync/transform",
+    "build": "browserify main.js -o main.web.js --ignore plask -g glslify-sync/transform -g glslify-promise/transform"
   },
   "author": "Marcin Ignac <marcin.ignac@gmail.com> (http://marcinignac.com/)",
   "license": "MIT",
   "dependencies": {
+    "beefy": "^2.1.6",
     "browserify": "^13.0.0",
     "geom-parse-obj": "../local_modules/geom-parse-obj",
     "glslify": "^3.0.0",
+    "glslify-sync": "^2.0.0",
     "is-browser": "^2.0.1",
     "pex-cam": "^1.0.0-beta.2",
-    "pex-context": "^1.1.1",
+    "pex-context": "^1.2.0",
     "pex-draw": "^1.0.0-beta.2",
     "pex-geom": "^1.0.0-beta.2",
+    "pex-gui": "^1.3.0",
     "pex-io": "^1.1.0",
     "pex-math": "^1.0.0",
     "pex-sys": "^1.1.1",
