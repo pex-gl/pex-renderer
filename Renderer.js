@@ -17,6 +17,7 @@ var SSAOv2          = require('./SSAO')
 var Postprocess = require('./Postprocess');
 var SkyEnvMap = require('./SkyEnvMap');
 var Skybox = require('./Skybox');
+var ReflectionProbe = require('./ReflectionProbe');
 
 var SOLID_COLOR_VERT           = glslify(__dirname + '/glsl/SolidColor.vert');
 var SOLID_COLOR_FRAG           = glslify(__dirname + '/glsl/SolidColor.frag');
@@ -135,15 +136,10 @@ Renderer.prototype.initPostproces = function() {
 
 Renderer.prototype.initSkybox = function() {
     var ctx = this._ctx;
-
-    this._skyEnvMap = ctx.createTextureCube(null, 128, 128, { minFilter: ctx.NEAREST, magFilter: ctx.NEAREST, type: ctx.HALF_FLOAT });
-    this._skyEnvMap64 = ctx.createTextureCube(null, 64, 64, { minFilter: ctx.NEAREST, magFilter: ctx.NEAREST, type: ctx.HALF_FLOAT });
-    this._skyEnvMap32 = ctx.createTextureCube(null, 32, 32, { minFilter: ctx.NEAREST, magFilter: ctx.NEAREST, type: ctx.HALF_FLOAT });
-    this._skyEnvMap16 = ctx.createTextureCube(null, 16, 16, { minFilter: ctx.NEAREST, magFilter: ctx.NEAREST, type: ctx.HALF_FLOAT });
-    this._skyIrradianceMap = ctx.createTextureCube(null, 16, 16, { type: ctx.HALF_FLOAT });
-
+    
     this._skyEnvMapTex = new SkyEnvMap(ctx, State.sunPosition);
     this._skybox = new Skybox(ctx, this._skyEnvMap);
+    this._reflectionProbe = new ReflectionProbe(ctx, [0, 0, 0]);
 }
 
 Renderer.prototype.addNode = function(node) {
@@ -222,12 +218,6 @@ Renderer.prototype.getOverlays = function() {
 
 Renderer.prototype.updateSky = function() {
     var ctx = this._ctx;
-    this._skyEnvMapTex.setSunPosition(State.sunPosition);
-    renderToCubemap(ctx, this._skyEnvMap, this.drawSky.bind(this));
-    downsampleCubemap(ctx, this._skyEnvMap, this._skyEnvMap64);
-    downsampleCubemap(ctx, this._skyEnvMap64, this._skyEnvMap32);
-    downsampleCubemap(ctx, this._skyEnvMap32, this._skyEnvMap16);
-    convolveCubemap(ctx, this._skyEnvMap16, this._skyIrradianceMap);
 }
 
 Renderer.prototype.updateShadowmaps = function() {
@@ -242,7 +232,7 @@ Renderer.prototype.updateShadowmaps = function() {
 
         light.near = 2;
         light.far = 12;
-        Mat4.lookAt(light.viewMatrix, [State.sunPosition[0]*4.5, State.sunPosition[1]*4.5, State.sunPosition[2]*4.5], [0,0,0], [0, 1, 0]);
+        Mat4.lookAt(light.viewMatrix, [State.sunPosition[0]*7.5, State.sunPosition[1]*7.5, State.sunPosition[2]*7.5], [0,-2,0], [0, 1, 0]);
         Mat4.perspective(light.projectionMatrix, 90, 1, light.near, light.far);
         ctx.setViewMatrix(light.viewMatrix);
         ctx.setProjectionMatrix(light.projectionMatrix);
@@ -261,11 +251,6 @@ Renderer.prototype.updateShadowmaps = function() {
     }.bind(this));
 
     ctx.popState(ctx.FRAMEBUFFER_BIT | ctx.VIEWPORT_BIT);
-}
-
-Renderer.prototype.drawSky = function() {
-    this._skybox.setEnvMap(State.skyEnvMap || this._skyEnvMapTex);
-    this._skybox.draw();
 }
 
 Renderer.prototype.drawMeshes = function() {
@@ -305,7 +290,7 @@ Renderer.prototype.drawMeshes = function() {
     })
 
 
-    ctx.bindTexture(this._skyIrradianceMap, 0);
+    ctx.bindTexture(this._reflectionProbe.getIrradianceMap());
     ctx.bindTexture(lightNodes[0].light.shadowMap, 1);
 
     ctx.bindProgram(this._standardProgram);
@@ -416,8 +401,12 @@ Renderer.prototype.draw = function() {
 
     if (!Vec3.equals(State.prevSunPosition, State.sunPosition) || State.dirtySky) {
         State.dirtySky = false;
-        this.updateSky();
+        this._skyEnvMapTex.setSunPosition(State.sunPosition);
+        this._skybox.setEnvMap(State.skyEnvMap || this._skyEnvMapTex);
         Vec3.set(State.prevSunPosition, State.sunPosition);
+        this._reflectionProbe.update(function() {
+            this._skybox.draw();
+        }.bind(this));
         this.updateShadowmaps();
     }
 
@@ -434,7 +423,7 @@ Renderer.prototype.draw = function() {
     ctx.setViewMatrix(currentCamera.getViewMatrix());
     ctx.setProjectionMatrix(currentCamera.getProjectionMatrix());
 
-    this.drawSky();
+    this._skybox.draw();
     this.drawMeshes();
 
     ctx.popState(ctx.FRAMEBUFFER_BIT);
