@@ -22,7 +22,7 @@ SkyEnvMap.prototype.setSunPosition = function(sunPosition) {
 
     ctx.pushState(ctx.FRAMEBUFFER_BIT | ctx.PROGRAM_BIT | ctx.VIEWPORT_BIT);
     ctx.bindFramebuffer(this._fbo);
-    ctx.setClearColor(1, 0, 0, 1);
+    ctx.setClearColor(0, 0, 0, 0);
     ctx.clear(ctx.COLOR_BIT);
     ctx.setViewport(0, 0, this.getWidth(), this.getHeight());
     ctx.bindProgram(this._program);

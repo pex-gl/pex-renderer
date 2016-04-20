@@ -15,6 +15,7 @@ var MathUtils = require('pex-math/Utils')
 var flatten = require('flatten')
 var SSAOv2          = require('./SSAO')
 var Postprocess = require('./Postprocess');
+var SkyEnvMap = require('./SkyEnvMap');
 
 var SOLID_COLOR_VERT           = glslify(__dirname + '/glsl/SolidColor.vert');
 var SOLID_COLOR_FRAG           = glslify(__dirname + '/glsl/SolidColor.frag');
@@ -143,6 +144,8 @@ Renderer.prototype.initSkybox = function() {
     this._skyIrradianceMap = ctx.createTextureCube(null, 16, 16, { type: ctx.HALF_FLOAT });
 
     this._skyboxProgram = ctx.createProgram(SKYBOX_VERT, SKYBOX_FRAG);
+
+    this._skyEnvMapTex = new SkyEnvMap(ctx, State.sunPosition);
 }
 
 Renderer.prototype.addNode = function(node) {
@@ -221,6 +224,7 @@ Renderer.prototype.getOverlays = function() {
 
 Renderer.prototype.updateSky = function() {
     var ctx = this._ctx;
+    this._skyEnvMapTex.setSunPosition(State.sunPosition);
     renderToCubemap(ctx, this._skyEnvMap, this.drawSky.bind(this));
     downsampleCubemap(ctx, this._skyEnvMap, this._skyEnvMap64);
     downsampleCubemap(ctx, this._skyEnvMap64, this._skyEnvMap32);
@@ -265,7 +269,7 @@ Renderer.prototype.drawSky = function() {
     var ctx = this._ctx;
 
     ctx.setDepthTest(false);
-    ctx.bindTexture(State.skyEnvMap);
+    ctx.bindTexture(State.skyEnvMap || this._skyEnvMapTex);
     ctx.bindProgram(this._skyboxProgram);
     this._skyboxProgram.setUniform('uEnvMap', 0);
 

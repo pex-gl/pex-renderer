@@ -2,7 +2,7 @@
 precision highp float;
 #endif
 
-//#pragma glslify: sky = require('../local_modules/glsl-sky')
+#pragma glslify: sky = require('../local_modules/glsl-sky')
 #pragma glslify: atmosphere = require(glsl-atmosphere) 
 
 #ifndef PI
@@ -25,7 +25,8 @@ void main() {
 
     float theta = PI * (u - 1.0);
     float phi = PI * v;
-    float x = sin(phi) * sin(theta);
+    //added "-" here to conform to flipped env map orientation 
+    float x = -sin(phi) * sin(theta);
     float y = cos(phi);
     //originally this z should be -sin * cos
     float z = sin(phi) * cos(theta);
@@ -35,28 +36,21 @@ void main() {
     vec3 color = atmosphere(
         N,           // normalized ray direction 
         vec3(0,6372e3,0),               // ray origin 
-        uSunPosition,                        // position of the sun 
+        normalize(uSunPosition),                        // position of the sun 
         22.0,                           // intensity of the sun 
         6371e3,                         // radius of the planet in meters 
         6471e3,                         // radius of the atmosphere in meters 
         vec3(5.5e-6, 13.0e-6, 22.4e-6), // Rayleigh scattering coefficient 
         21e-6,                          // Mie scattering coefficient 
-        8e3,                            // Rayleigh scale height 
+        28e3,                            // Rayleigh scale height 
         1.2e3,                          // Mie scale height 
         0.758                           // Mie preferred scattering direction 
    );
+   
+   //color = pow(color, vec3(2.2));
+   //color = 1.0 - exp(-1.0 * color); 
+   color = sky(uSunPosition, N);
  
-   gl_FragColor.rgb = vec3(vTexCoord0, 0.0); 
-   gl_FragColor.rgb = N * 0.5 + 0.5;
-   if (abs(N.x) > abs(N.y) && abs(N.x) > abs(N.z)) {
-     gl_FragColor.rgb = vec3(0.75 + 0.25 * sign(N.x), 0.0, 0.0);
-   }
-   if (abs(N.y) > abs(N.x) && abs(N.y) > abs(N.z)) {
-     gl_FragColor.rgb = vec3(0.0, 0.75 + 0.25 * sign(N.y), 0.0);
-   }
-   if (abs(N.z) > abs(N.y) && abs(N.z) > abs(N.x)) {
-     gl_FragColor.rgb = vec3(0.0, 0.0, 0.75 + 0.25 * sign(N.z));
-   }
-   /*gl_FragColor.rgb = color;*/
+   gl_FragColor.rgb = color;
    gl_FragColor.a = 1.0;
 }
