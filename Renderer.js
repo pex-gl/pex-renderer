@@ -16,6 +16,7 @@ var flatten = require('flatten')
 var SSAOv2          = require('./SSAO')
 var Postprocess = require('./Postprocess');
 var SkyEnvMap = require('./SkyEnvMap');
+var Skybox = require('./Skybox');
 
 var SOLID_COLOR_VERT           = glslify(__dirname + '/glsl/SolidColor.vert');
 var SOLID_COLOR_FRAG           = glslify(__dirname + '/glsl/SolidColor.frag');
@@ -27,8 +28,6 @@ var STANDARD_TEXTURED_VERT     = glslify(__dirname + '/glsl/StandardTextured.ver
 var STANDARD_TEXTURED_FRAG     = glslify(__dirname + '/glsl/StandardTextured.frag');
 var STANDARD_INSTANCED_VERT    = glslify(__dirname + '/glsl/StandardInstanced.vert');
 var STANDARD_INSTANCED_FRAG    = glslify(__dirname + '/glsl/StandardInstanced.frag');
-var SKYBOX_VERT                = glslify(__dirname + '/glsl/Skybox.vert');
-var SKYBOX_FRAG                = glslify(__dirname + '/glsl/Skybox.frag');
 var OVERLAY_VERT               = glslify(__dirname + '/glsl/Overlay.vert');
 var OVERLAY_FRAG               = glslify(__dirname + '/glsl/Overlay.frag');
 
@@ -143,9 +142,8 @@ Renderer.prototype.initSkybox = function() {
     this._skyEnvMap16 = ctx.createTextureCube(null, 16, 16, { minFilter: ctx.NEAREST, magFilter: ctx.NEAREST, type: ctx.HALF_FLOAT });
     this._skyIrradianceMap = ctx.createTextureCube(null, 16, 16, { type: ctx.HALF_FLOAT });
 
-    this._skyboxProgram = ctx.createProgram(SKYBOX_VERT, SKYBOX_FRAG);
-
     this._skyEnvMapTex = new SkyEnvMap(ctx, State.sunPosition);
+    this._skybox = new Skybox(ctx, this._skyEnvMap);
 }
 
 Renderer.prototype.addNode = function(node) {
@@ -266,15 +264,8 @@ Renderer.prototype.updateShadowmaps = function() {
 }
 
 Renderer.prototype.drawSky = function() {
-    var ctx = this._ctx;
-
-    ctx.setDepthTest(false);
-    ctx.bindTexture(State.skyEnvMap || this._skyEnvMapTex);
-    ctx.bindProgram(this._skyboxProgram);
-    this._skyboxProgram.setUniform('uEnvMap', 0);
-
-    ctx.bindMesh(this._fsqMesh);
-    ctx.drawMesh();
+    this._skybox.setEnvMap(State.skyEnvMap || this._skyEnvMapTex);
+    this._skybox.draw();
 }
 
 Renderer.prototype.drawMeshes = function() {
