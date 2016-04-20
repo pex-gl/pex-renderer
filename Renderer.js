@@ -14,6 +14,7 @@ var random = require('pex-random');
 var MathUtils = require('pex-math/Utils')
 var flatten = require('flatten')
 var SSAOv2          = require('./SSAO')
+var Postprocess = require('./Postprocess');
 
 var SOLID_COLOR_VERT           = glslify(__dirname + '/glsl/SolidColor.vert');
 var SOLID_COLOR_FRAG           = glslify(__dirname + '/glsl/SolidColor.frag');
@@ -25,8 +26,6 @@ var STANDARD_TEXTURED_VERT     = glslify(__dirname + '/glsl/StandardTextured.ver
 var STANDARD_TEXTURED_FRAG     = glslify(__dirname + '/glsl/StandardTextured.frag');
 var STANDARD_INSTANCED_VERT    = glslify(__dirname + '/glsl/StandardInstanced.vert');
 var STANDARD_INSTANCED_FRAG    = glslify(__dirname + '/glsl/StandardInstanced.frag');
-var POSTPROCESS_VERT           = glslify(__dirname + '/glsl/Postprocess.vert');
-var POSTPROCESS_FRAG           = glslify(__dirname + '/glsl/Postprocess.frag');
 var SKYBOX_VERT                = glslify(__dirname + '/glsl/Skybox.vert');
 var SKYBOX_FRAG                = glslify(__dirname + '/glsl/Skybox.frag');
 var OVERLAY_VERT               = glslify(__dirname + '/glsl/Overlay.vert');
@@ -97,8 +96,6 @@ Renderer.prototype.initPostproces = function() {
     this._frameNormalTex = ctx.createTexture2D(null, this._width, this._height, { type: ctx.HALF_FLOAT });
     this._frameDepthTex = ctx.createTexture2D(null, this._width, this._height, { format: ctx.DEPTH_COMPONENT, type: ctx.UNSIGNED_SHORT });
     this._frameFbo = ctx.createFramebuffer([ { texture: this._frameColorTex }, { texture: this._frameNormalTex} ], { texture: this._frameDepthTex});
-
-    this._postprocesProgram = ctx.createProgram(POSTPROCESS_VERT, POSTPROCESS_FRAG);
 
     this._overlayProgram = ctx.createProgram(OVERLAY_VERT, OVERLAY_FRAG);
 
@@ -268,17 +265,9 @@ Renderer.prototype.drawSky = function() {
     var ctx = this._ctx;
 
     ctx.setDepthTest(false);
+    ctx.bindTexture(State.skyEnvMap);
     ctx.bindProgram(this._skyboxProgram);
-    this._skyboxProgram.setUniform('uSunPosition', State.sunPosition);
-
-    if (State.skyEnvMap) {
-        ctx.bindTexture(State.skyEnvMap, 0);
-        this._skyboxProgram.setUniform('uEnvMap', 0);
-        this._skyboxProgram.setUniform('uUseEnvMap', true);
-    }
-    else {
-        this._skyboxProgram.setUniform('uUseEnvMap', false);
-    }
+    this._skyboxProgram.setUniform('uEnvMap', 0);
 
     ctx.bindMesh(this._fsqMesh);
     ctx.drawMesh();
@@ -461,21 +450,13 @@ Renderer.prototype.draw = function() {
     var root = this._fx.reset();
     var color = root.asFXStage(this._frameColorTex, 'img');//.fxaa()
     var final = color;
-    if (State.ssao) {
+    if (State.ssao || true) {
         var ssao = root.ssao({ depthMap: this._frameDepthTex, normalMap: this._frameNormalTex, kernelMap: this.ssaoKernelMap, noiseMap: this.ssaoNoiseMap, camera: currentCamera, width: W/2, height: H/2 }).blur3().blur3();
         final = color.mult(ssao);
     }
-
-    ctx.setDepthTest(false);
-    ctx.bindTexture(final.getSourceTexture());//ctx.bindTexture(this._frameColorTex);
-
-    //apply exposure, tone mapping and gamma corection
-    ctx.bindProgram(this._postprocesProgram);
-    this._postprocesProgram.setUniform('uScreenSize', [this._width, this._height]);
-    this._postprocesProgram.setUniform('uColorBufferTex', 0);
-    this._postprocesProgram.setUniform('uExposure', State.exposure);
-    ctx.bindMesh(this._fsqMesh);
-    ctx.drawMesh();
+    final = final.postprocess({ exposure: State.exposure })
+    final = final.fxaa()
+    final.blit();
 
     //overlays
 

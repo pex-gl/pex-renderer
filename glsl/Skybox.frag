@@ -10,7 +10,6 @@ uniform sampler2D uEnvMap;
 
 varying vec3 wcNormal;
 
-const float flipEnvMap = -1.0;
 
 void main() {
     vec3 N = normalize(wcNormal);
