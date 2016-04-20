@@ -1,0 +1,15 @@
+{
+  "name": "convolve-cubemap",
+  "version": "0.0.0",
+  "description": "",
+  "main": "index.js",
+  "author": "Marcin Ignac <marcin.ignac@gmail.com> (http://marcinignac.com/)",
+  "license": "MIT",
+  "dependencies": {
+    "glsl-inverse": "^1.0.0",
+    "glsl-random": "0.0.5",
+    "glsl-transpose": "^1.0.0",
+    "is-browser": "^2.0.1",
+    "hammersley": "^1.0.0"
+  }
+}
