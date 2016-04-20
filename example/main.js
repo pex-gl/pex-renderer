@@ -26,8 +26,7 @@ Window.create({
         fullScreen: isBrowser
     },
     resources: {
-        envMap: { image: ASSETS_DIR + '/textures/envmaps/Hamarikyu_Bridge_B/Hamarikyu_Bridge_B.jpg' },
-        envMapTest: { image: ASSETS_DIR +'/textures/envmaps/test/test.png' }
+        //envMap: { image: ASSETS_DIR + '/textures/envmaps/Hamarikyu_Bridge_B/Hamarikyu_Bridge_B.jpg' },
     },
     sunPosition: [0, 5, -5],
     elevation: 65,
@@ -42,18 +41,19 @@ Window.create({
 
         random.seed(0);
 
-        var envMapTex = ctx.createTexture2D(res.envMap);
-        var envMapTestTex = ctx.createTexture2D(res.envMapTest);
 
         gui.addParam('Sun Elevation', this, 'elevation', { min: -90, max: 180 }, this.updateSunPosition.bind(this));
         gui.addParam('Sun Mie', this, 'mie', { min: 0.00001, max: 0.00005 }, this.updateSunPosition.bind(this));
-        gui.addTexture2D('EnvMap', envMapTex);
-        gui.addTexture2D('EnvMap Test', envMapTestTex);
         this.addEventListener(gui);
 
         var renderer = this.renderer = new Renderer(ctx, this.getWidth(), this.getHeight());
         renderer._state.exposure = 2.0;
-        //renderer._state.skyEnvMap = envMapTex;
+        
+        if (res.envMap) {
+            var envMapTex = ctx.createTexture2D(res.envMap);
+            gui.addTexture2D('EnvMap', envMapTex);
+            renderer._state.skyEnvMap = envMapTex;
+        }
         gui.addTexture2D('SkyEnvMap', renderer._skyEnvMapTex, { hdr: true });
         gui.addTextureCube('Reflection Map', renderer._reflectionProbe.getReflectionMap(), { hdr: true });
         //gui.addTextureCube('Reflection Map 64', renderer._reflectionProbe._reflectionMap64, { hdr: true });
