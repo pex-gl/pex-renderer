@@ -4,3 +4,7 @@ node_modules
 .DS_Store
 bundle.js
 example/main.web.js
+*.swp
+*.swo
+.atom-build.json
+.tern-project

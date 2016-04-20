@@ -8,3 +8,5 @@ test.js
 example/
 .npmignore
 LICENSE.md
+*.swp
+.tern-project
