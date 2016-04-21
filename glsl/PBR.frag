@@ -202,7 +202,7 @@ void main() {
     vec3 reflectance = EnvBRDFApprox( F0, roughness, NdotV );
 
     vec3 diffuseColor = albedo * (1.0 - metalness);
-
+    vec3 specularColor = mix(vec3(1.0), albedo, metalness); 
     float illuminated = 1.0;
     if (uShadowQuality > 0.0) {
         //shadows
@@ -227,10 +227,11 @@ void main() {
     
     //TODO: No kd? so not really energy conserving
     //we could use disney brdf for irradiance map to compensate for that like in Frostbite
-    //TODO: is dialectric reflection colored or white?
-    vec3 color = diffuseColor * irradianceColor + reflectionColor * diffuseColor * reflectance * illuminated;
-    /*vec3 color = reflectionColor * diffuseColor * reflectance * illuminated;*/
-    //color = reflectionColor * diffuseColor * illuminated;// * reflectance * illuminated;
+    vec3 indirectDiffuse = diffuseColor * irradianceColor;
+    vec3 indirectSpecular = reflectionColor * specularColor * reflectance;
+    vec3 directDiffuse = vec3(0.0);
+    vec3 directSpecular = vec3(0.0);
+    vec3 color = indirectDiffuse + indirectSpecular + directDiffuse + directSpecular;
 
     gl_FragData[0] = vec4(color, 1.0);
     gl_FragData[1] = vec4(vNormalView * 0.5 + 0.5, 1.0);
