@@ -15,6 +15,10 @@ function prefilterCubemap(ctx, fromCubemap, toCubemap, options) {
     options = options || {};
     var highQuality = (options.highQuality !== undefined) ? options.highQuality : true;
 
+    if (fromCubemap.getWidth() != toCubemap.getWidth() || fromCubemap.getHeight() != toCubemap.getHeight()) {
+        throw new Error('PrefilterCubemap. Source and target cubemap are different size!');
+    }
+
     var numSamples = highQuality ? 1024 : 128;
     var hammersleyPointSet = new Float32Array(4 * numSamples);
     for(var i=0; i<numSamples; i++) {
