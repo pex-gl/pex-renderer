@@ -457,8 +457,11 @@ Renderer.prototype.draw = function() {
     var color = root.asFXStage(this._frameColorTex, 'img');//.fxaa()
     var final = color;
     if (State.ssao) {
-        var ssao = root.ssao({ type: ctx.HALF_FLOAT, depthMap: this._frameDepthTex, normalMap: this._frameNormalTex, kernelMap: this.ssaoKernelMap, noiseMap: this.ssaoNoiseMap, camera: currentCamera, width: W/2, height: H/2 }).blur3().blur3();
-        final = color.mult(ssao);
+        var ssao = root.ssao({ depthMap: this._frameDepthTex, normalMap: this._frameNormalTex, kernelMap: this.ssaoKernelMap, noiseMap: this.ssaoNoiseMap, camera: currentCamera, width: W/2, height: H/2 });
+        ssao = ssao.blur3().blur3();
+        //TODO: this is incorrect, AO influences only indirect diffuse (irradiance) and indirect specular reflections
+        //this will also influence direct lighting (lights, sun)
+        final = color.mult(ssao, { bpp: 16 });
     }
     final = final.postprocess({ exposure: State.exposure })
     final = final.fxaa()
