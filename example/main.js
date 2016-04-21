@@ -60,7 +60,7 @@ Window.create({
                     type: ctx.FLOAT
                 });
             }
-            gui.addTexture2D('EnvMap', envMapTex);
+            gui.addTexture2D('EnvMap', envMapTex, { hdr: true });
             renderer._state.skyEnvMap = envMapTex;
         }
         gui.addTexture2D('SkyEnvMap', renderer._skyEnvMapTex, { hdr: true });
