@@ -162,8 +162,8 @@ void main() {
 
     //color = toGamma(color);
 
-    gl_FragColor.rgb = color;
     //gl_FragColor.rgb = albedo  + 1.0;
 
-    gl_FragColor.a = 1.0;
+    gl_FragData[0] = vec4(color, 1.0);
+    gl_FragData[1] = vec4(vNormalView * 0.5 + 0.5, 1.0);
 }
