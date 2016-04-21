@@ -14,8 +14,7 @@ precision highp float;
 #pragma glslify: envMapCube         = require(../local_modules/glsl-envmap-cubemap)
 #pragma glslify: toGamma            = require(glsl-gamma/out)
 #pragma glslify: toLinear           = require(glsl-gamma/in)
-/*#pragma glslify: tonemapUncharted2  = require(../local_modules/glsl-tonemap-uncharted2)*/
-/*#pragma glslify: tonemapFilmic  = require(../local_modules/glsl-tonemap-filmic)*/
+#pragma glslify: sky = require('../local_modules/glsl-sky')
 #pragma glslify: random             = require(glsl-random/lowp)
 
 uniform float uIor;
@@ -29,6 +28,10 @@ varying vec2 vTexCord0;
 
 varying vec3 vPositionWorld;
 uniform mat4 uInverseViewMatrix;
+
+
+//sun
+uniform vec3 uSunPosition;
 
 //shadow mapping
 uniform mat4 uLightProjectionMatrix;
@@ -153,9 +156,7 @@ uniform samplerCube uReflectionMap;
 uniform samplerCube uIrradianceMap;
 
 vec3 getIrradiance(vec3 eyeDirWorld, vec3 normalWorld) {
-    float maxMipMapLevel = 7.0; //TODO: const
-    vec3 reflectionWorld = reflect(-eyeDirWorld, normalWorld);
-    vec3 R = envMapCube(reflectionWorld);
+    vec3 R = envMapCube(normalWorld);
     return textureCube(uIrradianceMap, R).rgb;
 }
 
@@ -203,9 +204,18 @@ void main() {
 
     vec3 diffuseColor = albedo * (1.0 - metalness);
     vec3 specularColor = mix(vec3(1.0), albedo, metalness); 
+    
+    //light
+
+    vec3 sunL = normalize(uSunPosition);
+    vec3 sunColor = sky(sunL, sunL).rgb;
+
+    float dotNsunL = max(0.0, dot(normalWorld, sunL));
+    float sunDiffuse = dotNsunL;
     float illuminated = 1.0;
+
+    //shadows
     if (uShadowQuality > 0.0) {
-        //shadows
         vec4 lightViewPosition = uLightViewMatrix * vec4(vPositionWorld, 1.0);
         float lightDistView = -lightViewPosition.z;
         vec4 lightDeviceCoordsPosition = uLightProjectionMatrix * lightViewPosition;
@@ -221,17 +231,16 @@ void main() {
         if (uShadowQuality == 3.0) {
             illuminated = PCF(uShadowMap, uShadowMapSize, lightUV, lightDistView - uBias);
         }
-
-        //illuminated = mix(0.2, 1.0, illuminated);
     }
     
     //TODO: No kd? so not really energy conserving
     //we could use disney brdf for irradiance map to compensate for that like in Frostbite
     vec3 indirectDiffuse = diffuseColor * irradianceColor;
     vec3 indirectSpecular = reflectionColor * specularColor * reflectance;
-    vec3 directDiffuse = vec3(0.0);
+    vec3 directDiffuse = diffuseColor * sunDiffuse * sunColor * illuminated;
     vec3 directSpecular = vec3(0.0);
     vec3 color = indirectDiffuse + indirectSpecular + directDiffuse + directSpecular;
+    //color = irradianceColor;
 
     gl_FragData[0] = vec4(color, 1.0);
     gl_FragData[1] = vec4(vNormalView * 0.5 + 0.5, 1.0);

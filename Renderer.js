@@ -302,6 +302,7 @@ Renderer.prototype.drawMeshes = function() {
         material.uniforms.uRoughness = (typeof(meshNode.material._roughness) !== 'undefined') ? meshNode.material._roughness : 0.8;
         material.uniforms.uMetalness = (typeof(meshNode.material._metalness) !== 'undefined') ? meshNode.material._metalness : 0.0;
 
+        material.uniforms.uSunPosition = State.sunPosition;
         material.uniforms.uLightProjectionMatrix = lightNodes[0].light.projectionMatrix;
         material.uniforms.uLightViewMatrix = lightNodes[0].light.viewMatrix;
         material.uniforms.uLightNear = lightNodes[0].light.near;
