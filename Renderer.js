@@ -456,8 +456,8 @@ Renderer.prototype.draw = function() {
     var root = this._fx.reset();
     var color = root.asFXStage(this._frameColorTex, 'img');//.fxaa()
     var final = color;
-    if (State.ssao || true) {
-        var ssao = root.ssao({ depthMap: this._frameDepthTex, normalMap: this._frameNormalTex, kernelMap: this.ssaoKernelMap, noiseMap: this.ssaoNoiseMap, camera: currentCamera, width: W/2, height: H/2 }).blur3().blur3();
+    if (State.ssao) {
+        var ssao = root.ssao({ type: ctx.HALF_FLOAT, depthMap: this._frameDepthTex, normalMap: this._frameNormalTex, kernelMap: this.ssaoKernelMap, noiseMap: this.ssaoNoiseMap, camera: currentCamera, width: W/2, height: H/2 }).blur3().blur3();
         final = color.mult(ssao);
     }
     final = final.postprocess({ exposure: State.exposure })
