@@ -76,7 +76,7 @@ void main() {
 
   float occlusion = 0.0;
   const int kernelSize = 64;
-  float radius = 0.1;
+  float radius = 0.2;
   vec3 lastSample = vec3(0.0);
   for(int i = 0; i < kernelSize; ++i) {
     vec2 tc = vec2(mod(float(i), 8.0) / 8.0 + 0.5/8.0, floor(float(i) / 8.0) / 8.0 + 0.5/8.0);
