@@ -18,17 +18,16 @@ var Postprocess = require('./Postprocess');
 var SkyEnvMap = require('./SkyEnvMap');
 var Skybox = require('./Skybox');
 var ReflectionProbe = require('./ReflectionProbe');
+var PBRMaterial = require('./PBRMaterial');
+var Texture2D     = require('pex-context/Texture2D');
+var TextureCube   = require('pex-context/TextureCube');
+var lookup = require('gl-constants/lookup');
 
+var SOLID_COLOR_VERT           = glslify(__dirname + '/glsl/SolidColor.vert');
 var SOLID_COLOR_VERT           = glslify(__dirname + '/glsl/SolidColor.vert');
 var SOLID_COLOR_FRAG           = glslify(__dirname + '/glsl/SolidColor.frag');
 var SHOW_COLORS_VERT           = glslify(__dirname + '/glsl/ShowColors.vert');
 var SHOW_COLORS_FRAG           = glslify(__dirname + '/glsl/ShowColors.frag');
-var STANDARD_VERT              = glslify(__dirname + '/glsl/Standard.vert');
-var STANDARD_FRAG              = glslify(__dirname + '/glsl/Standard.frag');
-var STANDARD_TEXTURED_VERT     = glslify(__dirname + '/glsl/StandardTextured.vert');
-var STANDARD_TEXTURED_FRAG     = glslify(__dirname + '/glsl/StandardTextured.frag');
-var STANDARD_INSTANCED_VERT    = glslify(__dirname + '/glsl/StandardInstanced.vert');
-var STANDARD_INSTANCED_FRAG    = glslify(__dirname + '/glsl/StandardInstanced.frag');
 var OVERLAY_VERT               = glslify(__dirname + '/glsl/Overlay.vert');
 var OVERLAY_FRAG               = glslify(__dirname + '/glsl/Overlay.frag');
 
@@ -72,9 +71,7 @@ Renderer.prototype.initMaterials = function() {
     var ctx = this._ctx;
     this._solidColorProgram = ctx.createProgram(SOLID_COLOR_VERT, SOLID_COLOR_FRAG);
     this._showColorsProgram = ctx.createProgram(SHOW_COLORS_VERT, SHOW_COLORS_FRAG);
-    this._standardProgram = ctx.createProgram(STANDARD_VERT, STANDARD_FRAG);
-    this._standardProgramTextured = ctx.createProgram(STANDARD_TEXTURED_VERT, STANDARD_TEXTURED_FRAG);
-    this._standardInstancedProgram = ctx.createProgram(STANDARD_INSTANCED_VERT, STANDARD_INSTANCED_FRAG);
+    this._pbrMaterial = new PBRMaterial(ctx, {}, true);
 }
 
 Renderer.prototype.initShadowmaps = function() {
@@ -297,34 +294,58 @@ Renderer.prototype.drawMeshes = function() {
 
 
     meshNodes.forEach(function(meshNode) {
-        var program = null;
-        if (meshNode.mesh._hasDivisor) {
-            ctx.bindProgram(this._standardInstancedProgram);
-            this._standardInstancedProgram.setUniform('uAlbedoColor', meshNode.material._albedoColor);
-            program = this._standardInstancedProgram;
-        }
-        else if (meshNode.material._albedoColorTexture) {
-            ctx.bindProgram(this._standardProgramTextured);
-            this._standardProgramTextured.setUniform('uAlbedoColorTex', 2);
-            ctx.bindTexture(meshNode.material._albedoColorTexture, 2)
-            program = this._standardProgramTextured;
-        }
-        else {
-            ctx.bindProgram(this._standardProgram);
-            this._standardProgram.setUniform('uAlbedoColor', meshNode.material._albedoColor);
-            program = this._standardProgram;
-        }
+        var material = this._pbrMaterial;
 
-        program.setUniform('uSkyIrradianceMap', 0);
-        program.setUniform('uSunPosition', State.sunPosition);
-        program.setUniform('uLightViewMatrix', lightNodes[0].light.viewMatrix);
-        program.setUniform('uLightProjectionMatrix', lightNodes[0].light.projectionMatrix);
-        program.setUniform('uShadowMap', 1);
-        program.setUniform('uShadowMapSize', [lightNodes[0].light.shadowMap.getWidth(), lightNodes[0].light.shadowMap.getHeight()]);
-        program.setUniform('uShadowQuality', State.shadows ? State.shadowQuality : 0 );
-        program.setUniform('uBias', 0.05);
-        program.setUniform('uLightNear', lightNodes[0].light.near);
-        program.setUniform('uLightFar', lightNodes[0].light.far);
+		material.uniforms.uReflectionMap = this._reflectionProbe.getReflectionMap();
+		material.uniforms.uIrradianceMap = this._reflectionProbe.getIrradianceMap();
+        material.uniforms.uAlbedoColor = meshNode.material._albedoColor;
+
+        var program = material.program;
+		var numTextures = 0;
+		ctx.bindProgram(program);
+		for(var uniformName in material.uniforms) {
+			var value = material.uniforms[uniformName];
+            if (!value) {
+                throw new Error('Null uniform value for ' + uniformName + ' in PBRMaterial');
+            }
+			if (value.getTarget && (value.getTarget() == ctx.TEXTURE_2D || value.getTarget() == ctx.TEXTURE_CUBE_MAP)) {
+                ctx.bindTexture(value, numTextures);
+				value = numTextures++;
+			}
+			if (material.program.hasUniform(uniformName)) {
+				material.program.setUniform(uniformName, value)
+			}
+			else {
+				//console.log('unknown uniformName', uniformName);
+			}
+		}
+        //if (meshNode.mesh._hasDivisor) {
+            //ctx.bindProgram(this._standardInstancedProgram);
+            //this._standardInstancedProgram.setUniform('uAlbedoColor', meshNode.material._albedoColor);
+            //program = this._standardInstancedProgram;
+        //}
+        //else if (meshNode.material._albedoColorTexture) {
+            //ctx.bindProgram(this._standardProgramTextured);
+            //this._standardProgramTextured.setUniform('uAlbedoColorTex', 2);
+            //ctx.bindTexture(meshNode.material._albedoColorTexture, 2)
+            //program = this._standardProgramTextured;
+        //}
+        //else {
+            //ctx.bindProgram(this._standardProgram);
+            //this._standardProgram.setUniform('uAlbedoColor', meshNode.material._albedoColor);
+            //program = this._standardProgram;
+        //}
+
+        //program.setUniform('uSkyIrradianceMap', 0);
+        //program.setUniform('uSunPosition', State.sunPosition);
+        //program.setUniform('uLightViewMatrix', lightNodes[0].light.viewMatrix);
+        //program.setUniform('uLightProjectionMatrix', lightNodes[0].light.projectionMatrix);
+        //program.setUniform('uShadowMap', 1);
+        //program.setUniform('uShadowMapSize', [lightNodes[0].light.shadowMap.getWidth(), lightNodes[0].light.shadowMap.getHeight()]);
+        //program.setUniform('uShadowQuality', State.shadows ? State.shadowQuality : 0 );
+        //program.setUniform('uBias', 0.05);
+        //program.setUniform('uLightNear', lightNodes[0].light.near);
+        //program.setUniform('uLightFar', lightNodes[0].light.far);
 
         var isVertexArray = meshNode.primitiveType && meshNode.count;
 

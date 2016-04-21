@@ -20,7 +20,7 @@ function ReflectionProbe(ctx, position) {
 
     var gl = ctx.getGL();
     
-    this._reflectionPREM = ctx.createTextureCube(null, 256, 256, { type: ctx.HALF_FLOAT, minFilter: ctx.LINEAR_MIPMAP_LINEAR, magFilter: ctx.LINEAR, flipEnvMap: 1 });
+    this._reflectionPREM = ctx.createTextureCube(null, 128, 128, { type: ctx.HALF_FLOAT, minFilter: ctx.LINEAR_MIPMAP_LINEAR, magFilter: ctx.LINEAR, flipEnvMap: 1 });
     //FIXME: add mip mapping to TextureCube
     ctx.bindTexture(this._reflectionPREM);
     gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
@@ -44,7 +44,7 @@ ReflectionProbe.prototype.update = function(drawScene) {
 
 
 ReflectionProbe.prototype.getReflectionMap = function() {
-    return this._reflectionMap;
+    return this._reflectionPREM;
 }
 
 ReflectionProbe.prototype.getIrradianceMap = function() {
