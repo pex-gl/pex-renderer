@@ -1,0 +1,15 @@
+{
+  "name": "parse-hdr",
+  "version": "0.0.0",
+  "description": "Parses HDR (Radiance) file",
+  "main": "parse-hdr.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "hdr",
+    "webgl"
+  ],
+  "author": "Marcin Ignac <marcin.ignac@gmail.com>",
+  "license": "MIT"
+}

@@ -15,8 +15,8 @@ var Draw          = require('pex-draw');
 var isBrowser     = require('is-browser');
 var GUI           = require('pex-gui');
 var random        = require('pex-random');
-
 var ASSETS_DIR    = isBrowser ? 'Assets' : __dirname + '/Assets';
+var parseHdr      = require('./local_modules/parse-hdr');
 
 Window.create({
     settings: {
@@ -26,7 +26,10 @@ Window.create({
         fullScreen: isBrowser
     },
     resources: {
-        //envMap: { image: ASSETS_DIR + '/textures/envmaps/Hamarikyu_Bridge_B/Hamarikyu_Bridge_B.jpg' },
+       //envMap: { binary: ASSETS_DIR + '/textures/envmaps/Hamarikyu_Bridge_B/Hamarikyu_Bridge_B.hdr' },
+       envMap: { binary: ASSETS_DIR + '/textures/envmaps/garage/garage.hdr' },
+       //envMap: { binary: ASSETS_DIR + '/textures/envmaps/uffizi/uffizi.hdr' },
+       // envMap: { image: ASSETS_DIR + '/textures/envmaps/test/test.png' },
     },
     sunPosition: [0, 5, -5],
     elevation: 65,
@@ -35,32 +38,36 @@ Window.create({
     elevationMat: Mat4.create(),
     rotationMat: Mat4.create(),
     init: function() {
+        try {
         var res = this.getResources();
         var ctx = this.getContext();
         var gui = this.gui = new GUI(ctx, this.getWidth(), this.getHeight());
-
+        this.addEventListener(gui);
         random.seed(0);
 
-
         gui.addParam('Sun Elevation', this, 'elevation', { min: -90, max: 180 }, this.updateSunPosition.bind(this));
-        gui.addParam('Sun Mie', this, 'mie', { min: 0.00001, max: 0.00005 }, this.updateSunPosition.bind(this));
-        this.addEventListener(gui);
-
         var renderer = this.renderer = new Renderer(ctx, this.getWidth(), this.getHeight());
-        renderer._state.exposure = 2.0;
-        
+       
+        gui.addParam('Exposure', this.renderer._state, 'exposure', { min: 0.01, max: 5});
+
         if (res.envMap) {
-            var envMapTex = ctx.createTexture2D(res.envMap);
+            if (res.envMap.width) {
+                var envMapTex = ctx.createTexture2D(res.envMap);
+            }
+            else { //binary
+                var envMapInfo = parseHdr(res.envMap);
+                var envMapTex = ctx.createTexture2D(envMapInfo.data, envMapInfo.shape[0], envMapInfo.shape[1], {
+                    type: ctx.FLOAT
+                });
+            }
             gui.addTexture2D('EnvMap', envMapTex);
             renderer._state.skyEnvMap = envMapTex;
         }
         gui.addTexture2D('SkyEnvMap', renderer._skyEnvMapTex, { hdr: true });
         gui.addTextureCube('Reflection Map', renderer._reflectionProbe.getReflectionMap(), { hdr: true });
-        //gui.addTextureCube('Reflection Map 64', renderer._reflectionProbe._reflectionMap64, { hdr: true });
-        //gui.addTextureCube('Reflection Map 32', renderer._reflectionProbe._reflectionMap32, { hdr: true });
         gui.addTextureCube('Irradiance Map', renderer._reflectionProbe.getIrradianceMap(), { hdr: true });
 
-        this.camera = new PerspCamera(45, this.getAspectRatio(), 0.001, 100.0);;
+        this.camera = new PerspCamera(45, this.getAspectRatio(), 0.1, 20.0);;
         this.camera.lookAt([0,0,5], [0,0,0]);
         renderer.createCameraNode(this.camera);
 
@@ -71,12 +78,8 @@ Window.create({
         this.sunLightNode = renderer.createDirectionalLightNode(sunDir);
         gui.addTexture2D('Shadow Map', this.sunLightNode.light.shadowMap);
 
-        // for(var i=0; i<10; i++) {
-        //     var node = renderer.createMeshNode(this.buildMesh(createCube(0.2, 0.5 + Math.random(), 0.2)))
-        //     node._position[0] = Math.random() * 2 - 1;
-        //     node._position[2] = Math.random() * 2 - 1;
-        // }
         var mesh = this.buildMesh(createCube(0.2, 0.5 + Math.random(), 0.2));
+        //var mesh = this.buildMesh(createSphere(0.2 + Math.random() * 0.3));
         for(var i=0; i<1000; i++) {
             var node = renderer.createMeshNode(mesh)
             var x = Math.random() * 10 - 5;
@@ -84,6 +87,9 @@ Window.create({
             node._position[0] = x;
             node._position[2] = z;
             node._position[1] = -0.5 + 2*random.noise2(x/2, z/2) + random.noise2(2*x, 2*z);
+            node.material._albedoColor = [0.69,0.69,0.69,1]
+            node.material._roughness = 0.7;//Math.random()*0.99 + 0.01;
+            node.material._metalness = 0.0;//Math.random();
         }
 
         var positions = [];
@@ -100,18 +106,27 @@ Window.create({
         }
         var node = renderer.createMeshNode(this.buildMesh({ positions: positions }, ctx.LINE_STRIP))
         node.material._albedoColor = [0.9,0.9,0.2,1]
+        node.material._roughness = 1;
 
         var node = renderer.createMeshNode(this.buildMesh(createCube(0.2, 0.5 + Math.random(), 0.2)))
         node._position[0] = 2;
         node._position[1] = 1;
+        node.material._roughness = 1;
 
         ctx.setLineWidth(5)
 
         var floorMesh = this.buildMesh(createCube(14, 0.02, 14));
         var floorNode = renderer.createMeshNode(floorMesh);
+        floorNode.material._roughness = 1;
         Vec3.set3(floorNode._position, 0, -.3, 0);
 
         this.updateSunPosition();
+        }
+        catch(e) {
+            console.log(e);
+            console.log(e.stack);
+            process.exit(-1);
+        }
     },
     updateSunPosition: function() {
         Mat4.setRotation(this.elevationMat, this.elevation/180*Math.PI, [0, 0, 1]);
@@ -135,6 +150,7 @@ Window.create({
         return ctx.createMesh(attributes, geometry.cells ? indices : null, primitiveType);
     },
     draw: function() {
+        try {
         this.arcball.apply();
         this.renderer.draw();
         
@@ -142,6 +158,11 @@ Window.create({
         ctx.pushState(ctx.ALL_BIT);
         this.gui.draw()
         ctx.popState();
-
+        }
+        catch(e) {
+            console.log(e);
+            console.log(e.stack);
+            process.exit(-1);
+        }
     }
 })
