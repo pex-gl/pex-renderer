@@ -449,12 +449,11 @@ Renderer.prototype.draw = function() {
     this.drawMeshes();
 
     ctx.popState(ctx.FRAMEBUFFER_BIT);
-
     var W = this._width;
     var H = this._height;
 
     var root = this._fx.reset();
-    var color = root.asFXStage(this._frameColorTex, 'img');//.fxaa()
+    var color = root.asFXStage(this._frameColorTex, 'img');
     var final = color;
     if (State.ssao) {
         var ssao = root.ssao({ depthMap: this._frameDepthTex, normalMap: this._frameNormalTex, kernelMap: this.ssaoKernelMap, noiseMap: this.ssaoNoiseMap, camera: currentCamera, width: W/2, height: H/2 });
