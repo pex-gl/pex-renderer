@@ -35,8 +35,7 @@ varying vec2 vTexCoord;
 void main() {
     vec3 color = texture2D(tex0, vTexCoord).rgb;
     color *= uExposure;
-    color = tonemapFilmic(color);
-    color = toGamma(color);
+    color = tonemapFilmic(color); //filmic has built-in gamma
     gl_FragColor.rgb = color;
     gl_FragColor.a = 1.0;
 }
