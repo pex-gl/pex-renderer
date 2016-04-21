@@ -299,8 +299,8 @@ Renderer.prototype.drawMeshes = function() {
 		material.uniforms.uReflectionMap = this._reflectionProbe.getReflectionMap();
 		material.uniforms.uIrradianceMap = this._reflectionProbe.getIrradianceMap();
         material.uniforms.uAlbedoColor = meshNode.material._albedoColor;
-        material.uniforms.uRoughness = meshNode.material._roughness || 1;
-        material.uniforms.uMetalness = meshNode.material._metalness || 0;
+        material.uniforms.uRoughness = (typeof(meshNode.material._roughness) !== 'undefined') ? meshNode.material._roughness : 0.8;
+        material.uniforms.uMetalness = (typeof(meshNode.material._metalness) !== 'undefined') ? meshNode.material._metalness : 0.0;
 
         material.uniforms.uLightProjectionMatrix = lightNodes[0].light.projectionMatrix;
         material.uniforms.uLightViewMatrix = lightNodes[0].light.viewMatrix;
