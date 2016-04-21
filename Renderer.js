@@ -35,7 +35,7 @@ var State = {
     backgroundColor : [0.1, 0.1, 0.1, 1],
     sunPosition: [3, 0, 0],
     prevSunPosition: [0, 0, 0],
-    exposure: 1.5,
+    exposure: 1,
     dirtySky: true,
     frame: 0,
     ssao: true,
