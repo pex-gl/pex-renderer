@@ -299,13 +299,24 @@ Renderer.prototype.drawMeshes = function() {
 		material.uniforms.uReflectionMap = this._reflectionProbe.getReflectionMap();
 		material.uniforms.uIrradianceMap = this._reflectionProbe.getIrradianceMap();
         material.uniforms.uAlbedoColor = meshNode.material._albedoColor;
+        material.uniforms.uRoughness = meshNode.material._roughness || 1;
+        material.uniforms.uMetalness = meshNode.material._metalness || 0;
+
+        material.uniforms.uLightProjectionMatrix = lightNodes[0].light.projectionMatrix;
+        material.uniforms.uLightViewMatrix = lightNodes[0].light.viewMatrix;
+        material.uniforms.uLightNear = lightNodes[0].light.near;
+        material.uniforms.uLightFar = lightNodes[0].light.far;
+        material.uniforms.uShadowMap = lightNodes[0].light.shadowMap;
+        material.uniforms.uShadowMapSize = [lightNodes[0].light.shadowMap.getWidth(), lightNodes[0].light.shadowMap.getHeight()];
+        material.uniforms.uShadowQuality = State.shadows ? State.shadowQuality : 0 ;
+        material.uniforms.uBias = 0.05;
 
         var program = material.program;
 		var numTextures = 0;
 		ctx.bindProgram(program);
 		for(var uniformName in material.uniforms) {
 			var value = material.uniforms[uniformName];
-            if (!value) {
+            if (value === null || value === undefined) {
                 throw new Error('Null uniform value for ' + uniformName + ' in PBRMaterial');
             }
 			if (value.getTarget && (value.getTarget() == ctx.TEXTURE_2D || value.getTarget() == ctx.TEXTURE_CUBE_MAP)) {
@@ -336,16 +347,6 @@ Renderer.prototype.drawMeshes = function() {
             //program = this._standardProgram;
         //}
 
-        //program.setUniform('uSkyIrradianceMap', 0);
-        //program.setUniform('uSunPosition', State.sunPosition);
-        //program.setUniform('uLightViewMatrix', lightNodes[0].light.viewMatrix);
-        //program.setUniform('uLightProjectionMatrix', lightNodes[0].light.projectionMatrix);
-        //program.setUniform('uShadowMap', 1);
-        //program.setUniform('uShadowMapSize', [lightNodes[0].light.shadowMap.getWidth(), lightNodes[0].light.shadowMap.getHeight()]);
-        //program.setUniform('uShadowQuality', State.shadows ? State.shadowQuality : 0 );
-        //program.setUniform('uBias', 0.05);
-        //program.setUniform('uLightNear', lightNodes[0].light.near);
-        //program.setUniform('uLightFar', lightNodes[0].light.far);
 
         var isVertexArray = meshNode.primitiveType && meshNode.count;
 

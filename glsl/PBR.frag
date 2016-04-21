@@ -18,7 +18,6 @@ precision highp float;
 /*#pragma glslify: tonemapFilmic  = require(../local_modules/glsl-tonemap-filmic)*/
 #pragma glslify: random             = require(glsl-random/lowp)
 
-uniform float uExposure;
 uniform float uIor;
 
 varying vec3 vNormalWorld;
@@ -28,9 +27,63 @@ varying vec3 vEyeDirView;
 
 varying vec2 vTexCord0;
 
-varying vec3 vPositionView;
+varying vec3 vPositionWorld;
 uniform mat4 uInverseViewMatrix;
 
+//shadow mapping
+uniform mat4 uLightProjectionMatrix;
+uniform mat4 uLightViewMatrix;
+uniform float uLightNear;
+uniform float uLightFar;
+uniform sampler2D uShadowMap;
+uniform vec2 uShadowMapSize;
+uniform float uShadowQuality;
+uniform float uBias;
+
+//fron depth buf normalized z to linear (eye space) z
+//http://stackoverflow.com/questions/6652253/getting-the-true-z-value-from-the-depth-buffer
+float ndcDepthToEyeSpace(float ndcDepth) {
+    return 2.0 * uLightNear * uLightFar / (uLightFar + uLightNear - ndcDepth * (uLightFar - uLightNear));
+}
+
+//fron depth buf normalized z to linear (eye space) z
+//http://stackoverflow.com/questions/6652253/getting-the-true-z-value-from-the-depth-buffer
+float readDepth(sampler2D depthMap, vec2 coord) {
+    float z_b = texture2D(depthMap, coord).r;
+    float z_n = 2.0 * z_b - 1.0;
+    return ndcDepthToEyeSpace(z_n);
+}
+
+float texture2DCompare(sampler2D depthMap, vec2 uv, float compare) {
+    float depth = readDepth(depthMap, uv);
+    return step(compare, depth);
+}
+
+float texture2DShadowLerp(sampler2D depthMap, vec2 size, vec2 uv, float compare){
+    vec2 texelSize = vec2(1.0)/size;
+    vec2 f = fract(uv*size+0.5);
+    vec2 centroidUV = floor(uv*size+0.5)/size;
+
+    float lb = texture2DCompare(depthMap, centroidUV+texelSize*vec2(0.0, 0.0), compare);
+    float lt = texture2DCompare(depthMap, centroidUV+texelSize*vec2(0.0, 1.0), compare);
+    float rb = texture2DCompare(depthMap, centroidUV+texelSize*vec2(1.0, 0.0), compare);
+    float rt = texture2DCompare(depthMap, centroidUV+texelSize*vec2(1.0, 1.0), compare);
+    float a = mix(lb, lt, f.y);
+    float b = mix(rb, rt, f.y);
+    float c = mix(a, b, f.x);
+    return c;
+}
+
+float PCF(sampler2D depths, vec2 size, vec2 uv, float compare){
+    float result = 0.0;
+    for(int x=-2; x<=2; x++){
+        for(int y=-2; y<=2; y++){
+            vec2 off = vec2(x,y)/size;
+            result += texture2DShadowLerp(depths, size, uv+off, compare);
+        }
+    }
+    return result/25.0;
+}
 
 float saturate(float f) {
     return clamp(f, 0.0, 1.0);
@@ -150,19 +203,34 @@ void main() {
 
     vec3 diffuseColor = albedo * (1.0 - metalness);
 
+    float illuminated = 1.0;
+    if (uShadowQuality > 0.0) {
+        //shadows
+        vec4 lightViewPosition = uLightViewMatrix * vec4(vPositionWorld, 1.0);
+        float lightDistView = -lightViewPosition.z;
+        vec4 lightDeviceCoordsPosition = uLightProjectionMatrix * lightViewPosition;
+        vec2 lightDeviceCoordsPositionNormalized = lightDeviceCoordsPosition.xy / lightDeviceCoordsPosition.w;
+        vec2 lightUV = lightDeviceCoordsPositionNormalized.xy * 0.5 + 0.5;
+
+        if (uShadowQuality == 1.0) {
+            illuminated = texture2DCompare(uShadowMap, lightUV, lightDistView - uBias);
+        }
+        if (uShadowQuality == 2.0) {
+            illuminated = texture2DShadowLerp(uShadowMap, uShadowMapSize, lightUV, lightDistView - uBias);
+        }
+        if (uShadowQuality == 3.0) {
+            illuminated = PCF(uShadowMap, uShadowMapSize, lightUV, lightDistView - uBias);
+        }
+
+        //illuminated = mix(0.2, 1.0, illuminated);
+    }
+    
     //TODO: No kd? so not really energy conserving
     //we could use disney brdf for irradiance map to compensate for that like in Frostbite
-    vec3 color = diffuseColor * irradianceColor + reflectionColor * reflectance;
-    /*color = vec3(roughness);*/
-    //color = irradianceColor;
-
-    //color *= uExposure;
-
-    //color = tonemapUncharted2(color);
-
-    //color = toGamma(color);
-
-    //gl_FragColor.rgb = albedo  + 1.0;
+    //TODO: is dialectric reflection colored or white?
+    vec3 color = diffuseColor * irradianceColor + reflectionColor * diffuseColor * reflectance * illuminated;
+    /*vec3 color = reflectionColor * diffuseColor * reflectance * illuminated;*/
+    //color = reflectionColor * diffuseColor * illuminated;// * reflectance * illuminated;
 
     gl_FragData[0] = vec4(color, 1.0);
     gl_FragData[1] = vec4(vNormalView * 0.5 + 0.5, 1.0);
