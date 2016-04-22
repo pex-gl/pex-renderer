@@ -1,4 +1,5 @@
 var Vec3 = require('pex-math/Vec3');
+var Vec4 = require('pex-math/Vec4');
 var Quat = require('pex-math/Quat');
 var Mat4 = require('pex-math/Mat4');
 var Draw = require('pex-draw/Draw');
@@ -40,7 +41,8 @@ var State = {
     frame: 0,
     ssao: true,
     shadows: true,
-    shadowQuality: 3
+    shadowQuality: 3,
+    bias: 0.1
 }
 
 function Renderer(ctx, width, height) {
@@ -60,8 +62,6 @@ function Renderer(ctx, width, height) {
     this.initPostproces();
 
     this.createCameraNode();
-
-    this.updateSky();
 
     this._state = State;
 }
@@ -213,10 +213,6 @@ Renderer.prototype.getOverlays = function() {
     return this.getNodes('overlay');
 }
 
-Renderer.prototype.updateSky = function() {
-    var ctx = this._ctx;
-}
-
 Renderer.prototype.updateShadowmaps = function() {
     var ctx = this._ctx;
     var lightNodes = this.getLightNodes();
@@ -227,15 +223,22 @@ Renderer.prototype.updateShadowmaps = function() {
     lightNodes.forEach(function(lightNode) {
         var light = lightNode.light;
 
-        light.near = 2;
-        light.far = 12;
+        light.near = 4;//-8;
+        light.far = 25;
         Mat4.lookAt(light.viewMatrix, [State.sunPosition[0]*7.5, State.sunPosition[1]*7.5, State.sunPosition[2]*7.5], [0,-2,0], [0, 1, 0]);
         Mat4.perspective(light.projectionMatrix, 90, 1, light.near, light.far);
+        Mat4.ortho(light.projectionMatrix, -6, 6, -6, 6, light.near, light.far);
         ctx.setViewMatrix(light.viewMatrix);
         ctx.setProjectionMatrix(light.projectionMatrix);
         this._shadowMapFbo.setColorAttachment(0, light.colorMap.getTarget(), light.colorMap.getHandle(), 0);
         this._shadowMapFbo.setDepthAttachment(light.shadowMap.getTarget(), light.shadowMap.getHandle(), 0);
 
+
+        var points = [[5,0,0], [0,0,0], [-5,0,0]];
+        points.forEach(function(p) {
+            var tmp = [p[0], p[1], p[2], 1];
+            Vec4.multMat4(Vec4.multMat4(tmp, light.viewMatrix), light.projectionMatrix);
+        });
         this._shadowMap = light.shadowMap;
 
         ctx.setViewport(0, 0, light.shadowMap.getWidth(), light.shadowMap.getHeight())
@@ -302,6 +305,8 @@ Renderer.prototype.drawMeshes = function() {
         material.uniforms.uRoughness = (typeof(meshNode.material._roughness) !== 'undefined') ? meshNode.material._roughness : 0.8;
         material.uniforms.uMetalness = (typeof(meshNode.material._metalness) !== 'undefined') ? meshNode.material._metalness : 0.0;
 
+        //material.uniforms.uIor = 3.0;
+        
         material.uniforms.uSunPosition = State.sunPosition;
         material.uniforms.uLightProjectionMatrix = lightNodes[0].light.projectionMatrix;
         material.uniforms.uLightViewMatrix = lightNodes[0].light.viewMatrix;
@@ -310,7 +315,7 @@ Renderer.prototype.drawMeshes = function() {
         material.uniforms.uShadowMap = lightNodes[0].light.shadowMap;
         material.uniforms.uShadowMapSize = [lightNodes[0].light.shadowMap.getWidth(), lightNodes[0].light.shadowMap.getHeight()];
         material.uniforms.uShadowQuality = State.shadows ? State.shadowQuality : 0 ;
-        material.uniforms.uBias = 0.05;
+        material.uniforms.uBias = State.bias;
 
         var program = material.program;
 		var numTextures = 0;
@@ -483,6 +488,42 @@ Renderer.prototype.draw = function() {
 
     ctx.setBlend(false);
     //ctx.popState(flags);
+
+    if (this._debug) {
+        ctx.bindProgram(this._showColorsProgram);
+        this._debugDraw.setColor([1,0,0,1]);
+        var lightNodes = this.getLightNodes();
+
+        this._debugDraw.setLineWidth(2);
+        lightNodes.forEach(function(lightNode) {
+            var light = lightNode.light;
+            var invProj = Mat4.invert(Mat4.copy(light.projectionMatrix));
+            var invView = Mat4.invert(Mat4.copy(light.viewMatrix));
+            var corners = [[-1, -1, 1, 1], [1, -1, 1,1], [1, 1, 1,1], [-1, 1, 1,1], [-1, -1, -1,1], [1, -1, -1,1], [1, 1, -1,1], [-1, 1, -1,1]].map(function(p) {
+                var v = Vec4.multMat4(Vec4.multMat4(Vec4.copy(p), invProj), invView); 
+                Vec3.scale(v, 1/v[3]);
+                return v;
+            });
+            
+            var position = Vec3.scale(Vec3.copy(State.sunPosition),7.5);
+            this._debugDraw.drawLine(position, corners[0+4]);
+            this._debugDraw.drawLine(position, corners[1+4]);
+            this._debugDraw.drawLine(position, corners[2+4]);
+            this._debugDraw.drawLine(position, corners[3+4]);
+            this._debugDraw.drawLine(corners[3], corners[0]);
+            this._debugDraw.drawLine(corners[0], corners[1]);
+            this._debugDraw.drawLine(corners[1], corners[2]);
+            this._debugDraw.drawLine(corners[2], corners[3]);
+            this._debugDraw.drawLine(corners[3], corners[4+3]);
+            this._debugDraw.drawLine(corners[0], corners[4+0]);
+            this._debugDraw.drawLine(corners[1], corners[4+1]);
+            this._debugDraw.drawLine(corners[2], corners[4+2]);
+            this._debugDraw.drawLine(corners[4+3], corners[4+0]);
+            this._debugDraw.drawLine(corners[4+0], corners[4+1]);
+            this._debugDraw.drawLine(corners[4+1], corners[4+2]);
+            this._debugDraw.drawLine(corners[4+2], corners[4+3]);
+        }.bind(this));
+    }
 }
 
 module.exports = Renderer;
