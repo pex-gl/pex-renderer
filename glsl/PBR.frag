@@ -45,12 +45,18 @@ uniform float uBias;
 
 //fron depth buf normalized z to linear (eye space) z
 //http://stackoverflow.com/questions/6652253/getting-the-true-z-value-from-the-depth-buffer
-float ndcDepthToEyeSpace(float ndcDepth) {
+float ndcDepthToEyeSpaceProj(float ndcDepth) {
+    /*return ((ndcDepth + (uLightFar + uLightNear)/(uLightFar - uLightNear)) * (uLightFar - uLightNear))/2.0;*/
     return 2.0 * uLightNear * uLightFar / (uLightFar + uLightNear - ndcDepth * (uLightFar - uLightNear));
 }
 
-//fron depth buf normalized z to linear (eye space) z
-//http://stackoverflow.com/questions/6652253/getting-the-true-z-value-from-the-depth-buffer
+//otho
+//z = (f - n) * (zn + (f + n)/(f-n))/2
+//http://www.ogldev.org/www/tutorial47/tutorial47.html
+float ndcDepthToEyeSpace(float ndcDepth) {
+    return (uLightFar - uLightNear) * (ndcDepth + (uLightFar + uLightNear) / (uLightFar - uLightNear)) / 2;
+}
+
 float readDepth(sampler2D depthMap, vec2 coord) {
     float z_b = texture2D(depthMap, coord).r;
     float z_n = 2.0 * z_b - 1.0;
@@ -183,6 +189,13 @@ vec3 getPrefilteredReflection(vec3 eyeDirWorld, vec3 normalWorld, float roughnes
     return mix(a, b, lod - upLod);
 }
 
+
+vec3 hsv2rgb(vec3 c) {
+    vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+    vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
+    return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+}
+
 void main() {
     vec3 normalWorld = getNormal();
     vec3 eyeDirWorld = normalize(vEyeDirWorld);
@@ -214,12 +227,14 @@ void main() {
     float sunDiffuse = dotNsunL;
     float illuminated = 1.0;
 
+    vec3 debugColor = vec3(0.0);
     //shadows
     if (uShadowQuality > 0.0) {
         vec4 lightViewPosition = uLightViewMatrix * vec4(vPositionWorld, 1.0);
         float lightDistView = -lightViewPosition.z;
         vec4 lightDeviceCoordsPosition = uLightProjectionMatrix * lightViewPosition;
         vec2 lightDeviceCoordsPositionNormalized = lightDeviceCoordsPosition.xy / lightDeviceCoordsPosition.w;
+        float lightDeviceCoordsZ = lightDeviceCoordsPosition.z / lightDeviceCoordsPosition.w;
         vec2 lightUV = lightDeviceCoordsPositionNormalized.xy * 0.5 + 0.5;
 
         if (uShadowQuality == 1.0) {
@@ -231,6 +246,23 @@ void main() {
         if (uShadowQuality == 3.0) {
             illuminated = PCF(uShadowMap, uShadowMapSize, lightUV, lightDistView - uBias);
         }
+        
+        float depth = readDepth(uShadowMap, lightUV);
+        float z = (lightDistView-uLightNear)/(uLightFar-uLightNear);
+        float z2 = (depth-uLightNear)/(uLightFar-uLightNear);
+
+        if (vPositionWorld.z > 0)
+            debugColor = hsv2rgb(vec3(z2, 1.0, 0.5));
+        else if (z < 0.0) 
+            debugColor = vec3(0.0);
+        else if (z > 1.0) 
+            debugColor = vec3(0.0);
+        else
+            debugColor = hsv2rgb(vec3(z, 1.0, 0.5));
+        /*debugColor = hsv2rgb(vec3(illuminated, 1.0, 0.5));*/
+        /*debugColor = hsv2rgb(vec3(step(lightDist, 8.0), 1.0, 0.5));*/
+        /*debugColor = hsv2rgb(vec3(step(-lightDistView, 10.0), 1.0, 0.5));*/
+        /*debugColor = vec3(lightUV, 0.0); */
     }
     
     //TODO: No kd? so not really energy conserving
@@ -241,7 +273,7 @@ void main() {
     vec3 directSpecular = vec3(0.0);
     vec3 color = indirectDiffuse + indirectSpecular + directDiffuse + directSpecular;
     //color = irradianceColor;
-
+    /*color = debugColor;*/
     gl_FragData[0] = vec4(color, 1.0);
     gl_FragData[1] = vec4(vNormalView * 0.5 + 0.5, 1.0);
 }
