@@ -5,6 +5,7 @@ precision highp float;
 #ifdef GL_ES
   #extension GL_EXT_shader_texture_lod : require
   #extension GL_OES_standard_derivatives : require
+  #extension GL_EXT_draw_buffers : require  
   #define textureCubeLod textureCubeLodEXT
 #else
   #extension GL_ARB_shader_texture_lod : require
@@ -54,7 +55,7 @@ float ndcDepthToEyeSpaceProj(float ndcDepth) {
 //z = (f - n) * (zn + (f + n)/(f-n))/2
 //http://www.ogldev.org/www/tutorial47/tutorial47.html
 float ndcDepthToEyeSpace(float ndcDepth) {
-    return (uLightFar - uLightNear) * (ndcDepth + (uLightFar + uLightNear) / (uLightFar - uLightNear)) / 2;
+    return (uLightFar - uLightNear) * (ndcDepth + (uLightFar + uLightNear) / (uLightFar - uLightNear)) / 2.0;
 }
 
 float readDepth(sampler2D depthMap, vec2 coord) {
@@ -87,7 +88,7 @@ float PCF(sampler2D depths, vec2 size, vec2 uv, float compare){
     float result = 0.0;
     for(int x=-2; x<=2; x++){
         for(int y=-2; y<=2; y++){
-            vec2 off = vec2(x,y)/size;
+            vec2 off = vec2(x,y)/float(size);
             result += texture2DShadowLerp(depths, size, uv+off, compare);
         }
     }
@@ -251,7 +252,7 @@ void main() {
         float z = (lightDistView-uLightNear)/(uLightFar-uLightNear);
         float z2 = (depth-uLightNear)/(uLightFar-uLightNear);
 
-        if (vPositionWorld.z > 0)
+        if (vPositionWorld.z > 0.0)
             debugColor = hsv2rgb(vec3(z2, 1.0, 0.5));
         else if (z < 0.0) 
             debugColor = vec3(0.0);
