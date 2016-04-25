@@ -302,6 +302,14 @@ Renderer.prototype.drawMeshes = function() {
 		material.uniforms.uReflectionMap = this._reflectionProbe.getReflectionMap();
 		material.uniforms.uIrradianceMap = this._reflectionProbe.getIrradianceMap();
         material.uniforms.uAlbedoColor = meshNode.material._albedoColor;
+        material.uniforms.uAlbedoColorMap = meshNode.material._albedoColorMap;
+        material.uniforms.uAlbedoColorMapEnabled = meshNode.material._albedoColorMap != null;
+        material.uniforms.uNormalMap = meshNode.material._normalMap;
+        material.uniforms.uNormalMapEnabled = meshNode.material._normalMap != null;
+        material.uniforms.uRoughnessMap = meshNode.material._roughnessMap;
+        material.uniforms.uRoughnessMapEnabled = meshNode.material._roughnessMap != null;
+        material.uniforms.uMetalnessMap = meshNode.material._metallicMap;
+        material.uniforms.uMetalnessMapEnabled = meshNode.material._metallicMap != null;
         material.uniforms.uRoughness = (typeof(meshNode.material._roughness) !== 'undefined') ? meshNode.material._roughness : 0.8;
         material.uniforms.uMetalness = (typeof(meshNode.material._metalness) !== 'undefined') ? meshNode.material._metalness : 0.0;
 
@@ -323,6 +331,7 @@ Renderer.prototype.drawMeshes = function() {
 		for(var uniformName in material.uniforms) {
 			var value = material.uniforms[uniformName];
             if (value === null || value === undefined) {
+                continue; //TEMP
                 throw new Error('Null uniform value for ' + uniformName + ' in PBRMaterial');
             }
 			if (value.getTarget && (value.getTarget() == ctx.TEXTURE_2D || value.getTarget() == ctx.TEXTURE_CUBE_MAP)) {

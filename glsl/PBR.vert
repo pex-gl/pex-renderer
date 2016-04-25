@@ -14,7 +14,7 @@ varying vec3 vNormalWorld;
 varying vec3 vNormalView;
 varying vec3 vEyeDirWorld;
 varying vec3 vEyeDirView;
-varying vec2 vTexCord0;
+varying vec2 vTexCoord0;
 varying vec3 vPositionWorld;
 
 void main() {
@@ -30,5 +30,7 @@ void main() {
 
     gl_Position = uProjectionMatrix * vec4(positionView, 1.0);
 
-    vTexCord0 = fract(aTexCoord0 * uTexCoord0Scale * vec2(1.0, 0.5) + uTexCoord0Offset);
+    //vTexCoord0 = fract(aTexCoord0 * uTexCoord0Scale * vec2(1.0, 0.5) + uTexCoord0Offset);
+
+    vTexCoord0 = aTexCoord0;
 }

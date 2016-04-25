@@ -25,7 +25,7 @@ varying vec3 vNormalView;
 varying vec3 vEyeDirWorld;
 varying vec3 vEyeDirView;
 
-varying vec2 vTexCord0;
+varying vec2 vTexCoord0;
 
 varying vec3 vPositionWorld;
 uniform mat4 uInverseViewMatrix;
@@ -100,64 +100,63 @@ float saturate(float f) {
 }
 
 
-#ifdef USE_ALBEDO_MAP
-uniform sampler2D uAlbedoColor; //assumes sRGB color, not linear
-vec3 getAlbedo() {
-    return toLinear(texture2D(uAlbedoColor, vTexCord0).rgb);
+uniform sampler2D uAlbedoColorMap; //assumes sRGB color, not linear
+vec3 getAlbedoColorMap() {
+    return toLinear(texture2D(uAlbedoColorMap, vTexCoord0).rgb);
 }
-#else
 uniform vec4 uAlbedoColor; //assumes sRGB color, not linear
-vec3 getAlbedo() {
+vec3 getAlbedoColor() {
     return toLinear(uAlbedoColor.rgb);
 }
-#endif
-
-#ifdef USE_ROUGHNESS_MAP
-uniform sampler2D uRoughness; //assumes sRGB color, not linear
-float getRoughness() {
-    return texture2D(uRoughness, vTexCord0).r;
+uniform bool uAlbedoColorMapEnabled;
+vec3 getAlbedo() {
+    if (uAlbedoColorMapEnabled) return getAlbedoColorMap();
+    else return getAlbedoColor();
 }
-#else
+uniform sampler2D uRoughnessMap; //assumes sRGB color, not linear
+uniform bool uRoughnessMapEnabled; //assumes sRGB color, not linear
+float getRoughnessMap() {
+    return texture2D(uRoughnessMap, vTexCoord0).r;//FIXME: changed to 1- for glssines textures
+}
 uniform float uRoughness;
 float getRoughness() {
+    if (uRoughnessMapEnabled) return getRoughnessMap();
     return uRoughness;
 }
-#endif
 
 
-#ifdef USE_METALNESS_MAP
-uniform sampler2D uMetalness; //assumes sRGB color, not linear
-float getMetalness() {
-    return toLinear(texture2D(uMetalness, vTexCord0).r);
+uniform sampler2D uMetalnessMap; //assumes sRGB color, not linear
+uniform bool uMetalnessMapEnabled;
+float getMetalnessMap() {
+    return toLinear(texture2D(uMetalnessMap, vTexCoord0).r);
 }
-#else
 uniform float uMetalness;
 float getMetalness() {
+    if (uMetalnessMapEnabled) return getMetalnessMap();
     return uMetalness;
 }
-#endif
-
-#ifdef USE_NORMAL_MAP
 uniform sampler2D uNormalMap;
 #pragma glslify: perturb = require('glsl-perturb-normal')
-vec3 getNormal() {
-    vec3 normalRGB = texture2D(uNormalMap, vTexCord0).rgb;
+vec3 getNormalMap() {
+    vec3 normalRGB = texture2D(uNormalMap, vTexCoord0).rgb;
     vec3 normalMap = normalRGB * 2.0 - 1.0;
 
-    normalMap.y *= -1.0;
+    //normalMap.y *= -1.0;
+    /*normalMap.x *= -1.0;*/
 
     vec3 N = normalize(vNormalView);
     vec3 V = normalize(vEyeDirView);
 
-    vec3 normalView = perturb(normalMap, N, V, vTexCord0);
+    vec3 normalView = perturb(normalMap, N, V, vTexCoord0);
     vec3 normalWorld = vec3(uInverseViewMatrix * vec4(normalView, 0.0));
     return normalWorld;
+
 }
-#else
+uniform bool uNormalMapEnabled;
 vec3 getNormal() {
+    if (uNormalMapEnabled) return normalize(getNormalMap());
     return normalize(vNormalWorld);
 }
-#endif
 
 uniform samplerCube uReflectionMap;
 uniform samplerCube uIrradianceMap;
@@ -190,6 +189,42 @@ vec3 getPrefilteredReflection(vec3 eyeDirWorld, vec3 normalWorld, float roughnes
     return mix(a, b, lod - upLod);
 }
 
+float G1V(float dotNV, float k) {
+  return 1.0/(dotNV*(1.0-k)+k);
+}
+
+vec3 directSpecularGGX(vec3 N, vec3 V, vec3 L, float roughness, vec3 F0) {
+  float alpha = roughness * roughness;
+
+  //half vector
+  vec3 H = normalize(V+L);
+
+  float dotNL = clamp(dot(N,L), 0.0, 1.0);
+  float dotNV = clamp(dot(N,V), 0.0, 1.0);
+  float dotNH = clamp(dot(N,H), 0.0, 1.0);
+  float dotLH = clamp(dot(L,H), 0.0, 1.0);
+
+  float D, vis;
+  vec3 F;
+  //microfacet model
+
+  // D - microfacet distribution function, shape of specular peak
+  float alphaSqr = alpha*alpha;
+  float pi = 3.14159;
+  float denom = dotNH * dotNH * (alphaSqr-1.0) + 1.0;
+  D = alphaSqr/(pi * denom * denom);
+
+  // F - fresnel reflection coefficient
+  F = F0 + (1.0 - F0) * pow(1.0 - dotLH, 5.0);
+
+  // V / G - geometric attenuation or shadowing factor
+  float k = alpha/2.0;
+  vis = G1V(dotNL,k)*G1V(dotNV,k);
+
+  vec3 specular = dotNL * D * F * vis;
+  //float specular = F;
+  return specular;
+}
 
 vec3 hsv2rgb(vec3 c) {
     vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
@@ -204,6 +239,7 @@ void main() {
     vec3 albedo = getAlbedo();
     float roughness = getRoughness();
     float metalness = getMetalness();
+    /*albedo = vec3(1.0);*/
     vec3 irradianceColor = getIrradiance(eyeDirWorld, normalWorld);
 
     vec3 reflectionColor = getPrefilteredReflection(eyeDirWorld, normalWorld, roughness);
@@ -271,10 +307,17 @@ void main() {
     vec3 indirectDiffuse = diffuseColor * irradianceColor;
     vec3 indirectSpecular = reflectionColor * specularColor * reflectance;
     vec3 directDiffuse = diffuseColor * sunDiffuse * sunColor * illuminated;
-    vec3 directSpecular = vec3(0.0);
+    vec3 directSpecular = directSpecularGGX(normalWorld, eyeDirWorld, sunL, roughness, F0);
     vec3 color = indirectDiffuse + indirectSpecular + directDiffuse + directSpecular;
+    //color = indirectDiffuse;// + indirectSpecular + directDiffuse + directSpecular;
+    //color = reflectionColor * specularColor * reflectance;
+    /*color = vec3(F0);*/
+    /*color = vec3(roughness);*/
+    /*color = vec3(metalness);*/
     //color = irradianceColor;
     /*color = debugColor;*/
-    gl_FragData[0] = vec4(color, 1.0);
+    /*if (vTexCoord0.x > 0.5) color = normalWorld * 0.5 + 0.5;*/
+    
+	gl_FragData[0] = vec4(color, 1.0);
     gl_FragData[1] = vec4(vNormalView * 0.5 + 0.5, 1.0);
 }
