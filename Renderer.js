@@ -72,6 +72,7 @@ Renderer.prototype.initMaterials = function() {
     this._solidColorProgram = ctx.createProgram(SOLID_COLOR_VERT, SOLID_COLOR_FRAG);
     this._showColorsProgram = ctx.createProgram(SHOW_COLORS_VERT, SHOW_COLORS_FRAG);
     this._pbrMaterial = new PBRMaterial(ctx, {}, true);
+    this._tmpTex = ctx.createTexture2D(null, 1, 1);
 }
 
 Renderer.prototype.initShadowmaps = function() {
@@ -301,14 +302,14 @@ Renderer.prototype.drawMeshes = function() {
 
 		material.uniforms.uReflectionMap = this._reflectionProbe.getReflectionMap();
 		material.uniforms.uIrradianceMap = this._reflectionProbe.getIrradianceMap();
-        material.uniforms.uAlbedoColor = meshNode.material._albedoColor;
-        material.uniforms.uAlbedoColorMap = meshNode.material._albedoColorMap;
+        material.uniforms.uAlbedoColor = meshNode.material._albedoColor || [1,0,0,1];
+        material.uniforms.uAlbedoColorMap = meshNode.material._albedoColorMap || this._tmpTex;
         material.uniforms.uAlbedoColorMapEnabled = meshNode.material._albedoColorMap != null;
-        material.uniforms.uNormalMap = meshNode.material._normalMap;
+        material.uniforms.uNormalMap = meshNode.material._normalMap || this._tmpTex;
         material.uniforms.uNormalMapEnabled = meshNode.material._normalMap != null;
-        material.uniforms.uRoughnessMap = meshNode.material._roughnessMap;
+        material.uniforms.uRoughnessMap = meshNode.material._roughnessMap || this._tmpTex;
         material.uniforms.uRoughnessMapEnabled = meshNode.material._roughnessMap != null;
-        material.uniforms.uMetalnessMap = meshNode.material._metallicMap;
+        material.uniforms.uMetalnessMap = meshNode.material._metallicMap || this._tmpTex;
         material.uniforms.uMetalnessMapEnabled = meshNode.material._metallicMap != null;
         material.uniforms.uRoughness = (typeof(meshNode.material._roughness) !== 'undefined') ? meshNode.material._roughness : 0.8;
         material.uniforms.uMetalness = (typeof(meshNode.material._metalness) !== 'undefined') ? meshNode.material._metalness : 0.0;
