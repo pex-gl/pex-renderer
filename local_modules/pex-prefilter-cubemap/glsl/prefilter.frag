@@ -5,7 +5,7 @@
 precision highp float;
 #endif
 
-#pragma glslify: random    = require(glsl-random)
+#pragma glslify: random    = require(glsl-random/lowp)
 #pragma glslify: envMapCube      = require(../../glsl-envmap-cubemap)
 
 varying vec3 wcNormal;
