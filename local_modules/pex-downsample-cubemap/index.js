@@ -1,8 +1,9 @@
 var renderToCubemap = require('../pex-render-to-cubemap');
 var glslifySync = require('glslify-sync');
+var fs = require('fs');
 
-var VERT = glslifySync(__dirname + '/glsl/downsample.vert');
-var FRAG = glslifySync(__dirname + '/glsl/downsample.frag');
+var VERT = fs.readFileSync(__dirname + '/glsl/downsample.vert', 'utf8');
+var FRAG = fs.readFileSync(__dirname + '/glsl/downsample.frag', 'utf8');
 
 var quadPositions = [[-1,-1],[1,-1], [1,1],[-1,1]];
 var quadFaces = [ [0, 1, 2], [0, 2, 3]];

@@ -3,8 +3,8 @@ var isBrowser      = require('is-browser');
 var fs             = require('fs');
 var Texture2D      = require('pex-context/Texture2D');
 
-var Vert = glslify(__dirname + '/glsl/PBR.vert');
-var Frag = glslify(__dirname + '/glsl/PBR.frag');
+var Vert = fs.readFileSync(__dirname + '/glsl/PBR.vert', 'utf8');
+var Frag = fs.readFileSync(__dirname + '/glsl/PBR.frag', 'utf8');
 
 function PBRMaterial(ctx, uniforms, watch) {
     uniforms = uniforms || {};

@@ -1,9 +1,10 @@
 var renderToCubemap = require('../pex-render-to-cubemap');
-var glslifySync = require('glslify-sync');
 var hammersley = require('hammersley');
 var isBrowser = require('is-browser');
-var VERT = glslifySync(__dirname + '/glsl/prefilter.vert');
-var FRAG = glslifySync(__dirname + '/glsl/prefilter.frag');
+var fs = require('fs');
+
+var VERT = fs.readFileSync(__dirname + '/glsl/prefilter.vert', 'utf8');
+var FRAG = fs.readFileSync(__dirname + '/glsl/prefilter.frag', 'utf8');
 
 var quadPositions = [[-1,-1],[1,-1], [1,1],[-1,1]];
 var quadFaces = [ [0, 1, 2], [0, 2, 3]];

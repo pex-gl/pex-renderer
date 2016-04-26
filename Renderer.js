@@ -6,7 +6,6 @@ var Draw = require('pex-draw/Draw');
 var PerspCamera = require('pex-cam/PerspCamera');
 var Node = require('./Node');
 var Material = require('./Material');
-var glslify = require('glslify-sync');
 var renderToCubemap = require('./local_modules/pex-render-to-cubemap');
 var downsampleCubemap = require('./local_modules/pex-downsample-cubemap');
 var convolveCubemap = require('./local_modules/pex-convolve-cubemap');
@@ -23,14 +22,15 @@ var PBRMaterial = require('./PBRMaterial');
 var Texture2D     = require('pex-context/Texture2D');
 var TextureCube   = require('pex-context/TextureCube');
 var lookup = require('gl-constants/lookup');
+var fs = require('fs');
 
-var SOLID_COLOR_VERT           = glslify(__dirname + '/glsl/SolidColor.vert');
-var SOLID_COLOR_VERT           = glslify(__dirname + '/glsl/SolidColor.vert');
-var SOLID_COLOR_FRAG           = glslify(__dirname + '/glsl/SolidColor.frag');
-var SHOW_COLORS_VERT           = glslify(__dirname + '/glsl/ShowColors.vert');
-var SHOW_COLORS_FRAG           = glslify(__dirname + '/glsl/ShowColors.frag');
-var OVERLAY_VERT               = glslify(__dirname + '/glsl/Overlay.vert');
-var OVERLAY_FRAG               = glslify(__dirname + '/glsl/Overlay.frag');
+var SOLID_COLOR_VERT           = fs.readFileSync(__dirname + '/glsl/SolidColor.vert', 'utf8');
+var SOLID_COLOR_VERT           = fs.readFileSync(__dirname + '/glsl/SolidColor.vert', 'utf8');
+var SOLID_COLOR_FRAG           = fs.readFileSync(__dirname + '/glsl/SolidColor.frag', 'utf8');
+var SHOW_COLORS_VERT           = fs.readFileSync(__dirname + '/glsl/ShowColors.vert', 'utf8');
+var SHOW_COLORS_FRAG           = fs.readFileSync(__dirname + '/glsl/ShowColors.frag', 'utf8');
+var OVERLAY_VERT               = fs.readFileSync(__dirname + '/glsl/Overlay.vert', 'utf8');
+var OVERLAY_FRAG               = fs.readFileSync(__dirname + '/glsl/Overlay.frag', 'utf8');
 
 var State = {
     backgroundColor : [0.1, 0.1, 0.1, 1],

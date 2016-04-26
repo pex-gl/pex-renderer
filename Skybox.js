@@ -1,8 +1,9 @@
-var glslify            = require('glslify-sync');
 var createQuad         = require('primitive-quad');
 var createMeshFromGeom = require('./local_modules/mesh-from-geom');
-var SKYBOX_VERT        = glslify(__dirname + '/glsl/Skybox.vert');
-var SKYBOX_FRAG        = glslify(__dirname + '/glsl/Skybox.frag');
+var fs = require('fs');
+
+var SKYBOX_VERT        = fs.readFileSync(__dirname + '/glsl/Skybox.vert', 'utf8');
+var SKYBOX_FRAG        = fs.readFileSync(__dirname + '/glsl/Skybox.frag', 'utf8');
 
 function Skybox(ctx, envMap) {
     this._ctx = ctx;

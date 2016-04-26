@@ -3,29 +3,10 @@
 
 #ifdef GL_ES
 precision highp float;
-#define GLSLIFY 1
 #endif
 
-float random(vec2 co)
-{
-   return fract(sin(dot(co.xy,vec2(12.9898,78.233))) * 43758.5453);
-}
-
-/**
- * Samples cubemap environment map
- * @param  {vec3} wcNormal - normal in the world coordinate space
- * @param  {float} - flipEnvMap    -1.0 for left handed coorinate system oriented texture (usual case)
- *                                  1.0 for right handed coorinate system oriented texture
- * @return {vec4} - cubemap texture coordinate
- */
-vec3 envMapCubemap(vec3 wcNormal, float flipEnvMap) {
-    return vec3(flipEnvMap * wcNormal.x, wcNormal.y, wcNormal.z);
-}
-
-vec3 envMapCubemap(vec3 wcNormal) {
-    //-1.0 for left handed coorinate system oriented texture (usual case)
-    return envMapCubemap(wcNormal, -1.0);
-}
+#pragma glslify: random    = require(glsl-random/lowp)
+#pragma glslify: envMapCube      = require(../../glsl-envmap-cubemap)
 
 varying vec3 wcNormal;
 varying vec2 scPosition;
