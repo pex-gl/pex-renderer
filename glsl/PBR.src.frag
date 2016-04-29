@@ -264,7 +264,6 @@ void main() {
     float sunDiffuse = dotNsunL;
     float illuminated = 1.0;
 
-    vec3 debugColor = vec3(0.0);
     //shadows
     if (uShadowQuality > 0.0) {
         vec4 lightViewPosition = uLightViewMatrix * vec4(vPositionWorld, 1.0);
@@ -283,23 +282,6 @@ void main() {
         if (uShadowQuality == 3.0) {
             illuminated = PCF(uShadowMap, uShadowMapSize, lightUV, lightDistView - uBias);
         }
-        
-        float depth = readDepth(uShadowMap, lightUV);
-        float z = (lightDistView-uLightNear)/(uLightFar-uLightNear);
-        float z2 = (depth-uLightNear)/(uLightFar-uLightNear);
-
-        if (vPositionWorld.z > 0.0)
-            debugColor = hsv2rgb(vec3(z2, 1.0, 0.5));
-        else if (z < 0.0) 
-            debugColor = vec3(0.0);
-        else if (z > 1.0) 
-            debugColor = vec3(0.0);
-        else
-            debugColor = hsv2rgb(vec3(z, 1.0, 0.5));
-        /*debugColor = hsv2rgb(vec3(illuminated, 1.0, 0.5));*/
-        /*debugColor = hsv2rgb(vec3(step(lightDist, 8.0), 1.0, 0.5));*/
-        /*debugColor = hsv2rgb(vec3(step(-lightDistView, 10.0), 1.0, 0.5));*/
-        /*debugColor = vec3(lightUV, 0.0); */
     }
     
     //TODO: No kd? so not really energy conserving
@@ -309,15 +291,7 @@ void main() {
     vec3 directDiffuse = diffuseColor * sunDiffuse * sunColor * illuminated;
     vec3 directSpecular = directSpecularGGX(normalWorld, eyeDirWorld, sunL, roughness, F0);
     vec3 color = indirectDiffuse + indirectSpecular + directDiffuse + directSpecular;
-    //color = indirectDiffuse;// + indirectSpecular + directDiffuse + directSpecular;
-    //color = reflectionColor * specularColor * reflectance;
-    /*color = vec3(F0);*/
-    /*color = vec3(roughness);*/
-    /*color = vec3(metalness);*/
-    //color = irradianceColor;
-    /*color = debugColor;*/
-    /*if (vTexCoord0.x > 0.5) color = normalWorld * 0.5 + 0.5;*/
-    
-	gl_FragData[0] = vec4(color, 1.0);
+	
+    gl_FragData[0] = vec4(color, 1.0);
     gl_FragData[1] = vec4(vNormalView * 0.5 + 0.5, 1.0);
 }
