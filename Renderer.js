@@ -452,8 +452,9 @@ Renderer.prototype.draw = function() {
 
     //draw scene
 
-    ctx.pushState(ctx.FRAMEBUFFER_BIT);
+    ctx.pushState(ctx.FRAMEBUFFER_BIT | ctx.VIEWPORT_BIT);
     ctx.bindFramebuffer(this._frameFbo);
+    ctx.setViewport(0, 0, this._width, this._height);
 
     ctx.clear(ctx.COLOR_BIT | ctx.DEPTH_BIT);
 
@@ -464,7 +465,7 @@ Renderer.prototype.draw = function() {
     this._skybox.draw();
     this.drawMeshes();
 
-    ctx.popState(ctx.FRAMEBUFFER_BIT);
+    ctx.popState();
     var W = this._width;
     var H = this._height;
 
@@ -480,7 +481,9 @@ Renderer.prototype.draw = function() {
     }
     final = final.postprocess({ exposure: State.exposure })
     final = final.fxaa()
-    final.blit();
+
+    var viewport = ctx.getViewport();
+    final.blit({ x: viewport[0], y: viewport[1], width: viewport[2], height: viewport[3]});
 
     //overlays
 
