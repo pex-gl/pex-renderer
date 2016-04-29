@@ -42,15 +42,16 @@ function PBRMaterial(ctx, uniforms, watch) {
 }
 
 PBRMaterial.prototype.watch = function() {
+    console.log('PBRMaterial.watch', __dirname + '/glsl/PBR.frag');
     fs.watchFile(__dirname + '/glsl/PBR.frag', function() {
+        console.log('PBRMaterial.watch', __dirname + '/glsl/PBR.frag', 'changed');
         this.reload();
     }.bind(this));
 }
 
 PBRMaterial.prototype.reload = function() {
-    console.log('reloading');
-    Vert = glslify(__dirname + '/glsl/PBR.vert');
-    Frag = glslify(__dirname + '/glsl/PBR.frag');
+    console.log('PBRMaterial.reload');
+    Frag = fs.readFileSync(__dirname + '/glsl/PBR.frag', 'utf8');
     this.compile();
 }
 
