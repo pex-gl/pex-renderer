@@ -29,7 +29,8 @@ function PBRMaterial(ctx, uniforms, watch) {
         uLightColor: [1,1,1,1],
         uIor: 1.4,
         uTexCoord0Scale: 1,
-        uTexCoord0Offset: [0, 0]
+        uTexCoord0Offset: [0, 0],
+        shadowQuality: 3
     }, uniforms)
 
     this.name = uniforms.name || 'PBRIBL';
@@ -61,6 +62,8 @@ PBRMaterial.prototype.compile = function() {
     var uniforms = this.uniforms;
 
     var flags = [];
+
+    flags.push('#define SHADOW_QUALITY_' + uniforms.shadowQuality);
 
     if (uniforms.uAlbedoColor instanceof Texture2D) {
         flags.push('#define USE_ALBEDO_MAP');

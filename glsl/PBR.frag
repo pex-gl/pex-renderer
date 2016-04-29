@@ -57,36 +57,36 @@ vec3 envMapCubemap(vec3 wcNormal) {
     return envMapCubemap(wcNormal, -1.0);
 }
 
-const float gamma_0 = 2.2;
+const float gamma_1 = 2.2;
 
 float toGamma(float v) {
-  return pow(v, 1.0 / gamma_0);
+  return pow(v, 1.0 / gamma_1);
 }
 
 vec2 toGamma(vec2 v) {
-  return pow(v, vec2(1.0 / gamma_0));
+  return pow(v, vec2(1.0 / gamma_1));
 }
 
 vec3 toGamma(vec3 v) {
-  return pow(v, vec3(1.0 / gamma_0));
+  return pow(v, vec3(1.0 / gamma_1));
 }
 
 vec4 toGamma(vec4 v) {
   return vec4(toGamma(v.rgb), v.a);
 }
 
-const float gamma_1 = 2.2;
+const float gamma_0 = 2.2;
 
 float toLinear(float v) {
-  return pow(v, gamma_1);
+  return pow(v, gamma_0);
 }
 
 vec2 toLinear(vec2 v) {
-  return pow(v, vec2(gamma_1));
+  return pow(v, vec2(gamma_0));
 }
 
 vec3 toLinear(vec3 v) {
-  return pow(v, vec3(gamma_1));
+  return pow(v, vec3(gamma_0));
 }
 
 vec4 toLinear(vec4 v) {
@@ -310,6 +310,7 @@ uniform mat4 uInverseViewMatrix;
 
 //sun
 uniform vec3 uSunPosition;
+uniform vec4 uSunColor;
 
 //shadow mapping
 uniform mat4 uLightProjectionMatrix;
@@ -318,13 +319,11 @@ uniform float uLightNear;
 uniform float uLightFar;
 uniform sampler2D uShadowMap;
 uniform vec2 uShadowMapSize;
-uniform float uShadowQuality;
 uniform float uBias;
 
 //fron depth buf normalized z to linear (eye space) z
 //http://stackoverflow.com/questions/6652253/getting-the-true-z-value-from-the-depth-buffer
 float ndcDepthToEyeSpaceProj(float ndcDepth) {
-    /*return ((ndcDepth + (uLightFar + uLightNear)/(uLightFar - uLightNear)) * (uLightFar - uLightNear))/2.0;*/
     return 2.0 * uLightNear * uLightFar / (uLightFar + uLightNear - ndcDepth * (uLightFar - uLightNear));
 }
 
@@ -450,6 +449,7 @@ vec3 getNormalMap() {
     return normalWorld;
 
 }
+
 uniform bool uNormalMapEnabled;
 vec3 getNormal() {
     if (uNormalMapEnabled) return normalize(getNormalMap());
@@ -537,14 +537,11 @@ void main() {
     vec3 albedo = getAlbedo();
     float roughness = getRoughness();
     float metalness = getMetalness();
-    /*albedo = vec3(1.0);*/
     vec3 irradianceColor = getIrradiance(eyeDirWorld, normalWorld);
-
     vec3 reflectionColor = getPrefilteredReflection(eyeDirWorld, normalWorld, roughness);
 
     vec3 F0 = vec3(abs((1.0 - uIor) / (1.0 + uIor)));
-    F0 = F0 * F0;
-    //F0 = vec3(0.04); //0.04 is default for non-metals in UE4
+    F0 = F0 * F0; //0.04 is default for non-metals in UE4
     F0 = mix(F0, albedo, metalness);
 
     float NdotV = saturate( dot( normalWorld, eyeDirWorld ) );
@@ -556,40 +553,37 @@ void main() {
     //light
 
     vec3 sunL = normalize(uSunPosition);
-    vec3 sunColor = sky(sunL, sunL).rgb;
 
     float dotNsunL = max(0.0, dot(normalWorld, sunL));
     float sunDiffuse = dotNsunL;
-    float illuminated = 1.0;
 
     //shadows
-    if (uShadowQuality > 0.0) {
-        vec4 lightViewPosition = uLightViewMatrix * vec4(vPositionWorld, 1.0);
-        float lightDistView = -lightViewPosition.z;
-        vec4 lightDeviceCoordsPosition = uLightProjectionMatrix * lightViewPosition;
-        vec2 lightDeviceCoordsPositionNormalized = lightDeviceCoordsPosition.xy / lightDeviceCoordsPosition.w;
-        float lightDeviceCoordsZ = lightDeviceCoordsPosition.z / lightDeviceCoordsPosition.w;
-        vec2 lightUV = lightDeviceCoordsPositionNormalized.xy * 0.5 + 0.5;
+    vec4 lightViewPosition = uLightViewMatrix * vec4(vPositionWorld, 1.0);
+    float lightDistView = -lightViewPosition.z;
+    vec4 lightDeviceCoordsPosition = uLightProjectionMatrix * lightViewPosition;
+    vec2 lightDeviceCoordsPositionNormalized = lightDeviceCoordsPosition.xy / lightDeviceCoordsPosition.w;
+    float lightDeviceCoordsZ = lightDeviceCoordsPosition.z / lightDeviceCoordsPosition.w;
+    vec2 lightUV = lightDeviceCoordsPositionNormalized.xy * 0.5 + 0.5;
 
-        if (uShadowQuality == 1.0) {
-            illuminated = texture2DCompare(uShadowMap, lightUV, lightDistView - uBias);
-        }
-        if (uShadowQuality == 2.0) {
-            illuminated = texture2DShadowLerp(uShadowMap, uShadowMapSize, lightUV, lightDistView - uBias);
-        }
-        if (uShadowQuality == 3.0) {
-            illuminated = PCF(uShadowMap, uShadowMapSize, lightUV, lightDistView - uBias);
-        }
-    }
+#ifdef SHADOW_QUALITY_0
+    float illuminated = 1.0;
+#elseif SHADOW_QUALITY_1
+    float illuminated = texture2DCompare(uShadowMap, lightUV, lightDistView - uBias);
+#elseif SHADOW_QUALITY_2
+    float illuminated = texture2DShadowLerp(uShadowMap, uShadowMapSize, lightUV, lightDistView - uBias);
+#else
+    float illuminated = PCF(uShadowMap, uShadowMapSize, lightUV, lightDistView - uBias);
+#endif
     
     //TODO: No kd? so not really energy conserving
     //we could use disney brdf for irradiance map to compensate for that like in Frostbite
     vec3 indirectDiffuse = diffuseColor * irradianceColor;
     vec3 indirectSpecular = reflectionColor * specularColor * reflectance;
-    vec3 directDiffuse = diffuseColor * sunDiffuse * sunColor * illuminated;
+    vec3 directDiffuse = diffuseColor * sunDiffuse * uSunColor.rgb * illuminated;
     vec3 directSpecular = directSpecularGGX(normalWorld, eyeDirWorld, sunL, roughness, F0);
     vec3 color = indirectDiffuse + indirectSpecular + directDiffuse + directSpecular;
-	
+
+    /*color.r = 1.0;*/
     gl_FragData[0] = vec4(color, 1.0);
     gl_FragData[1] = vec4(vNormalView * 0.5 + 0.5, 1.0);
 }

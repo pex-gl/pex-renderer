@@ -35,6 +35,7 @@ var OVERLAY_FRAG               = fs.readFileSync(__dirname + '/glsl/Overlay.frag
 var State = {
     backgroundColor : [0.1, 0.1, 0.1, 1],
     sunPosition: [3, 0, 0],
+    sunColor: [1,1,1,1],
     prevSunPosition: [0, 0, 0],
     exposure: 1,
     dirtySky: true,
@@ -44,6 +45,9 @@ var State = {
     shadowQuality: 3,
     bias: 0.1
 }
+
+
+
 
 function Renderer(ctx, width, height) {
     this._ctx = ctx;
@@ -317,6 +321,7 @@ Renderer.prototype.drawMeshes = function() {
         //material.uniforms.uIor = 3.0;
         
         material.uniforms.uSunPosition = State.sunPosition;
+        material.uniforms.uSunColor = State.sunColor;
         material.uniforms.uLightProjectionMatrix = lightNodes[0].light.projectionMatrix;
         material.uniforms.uLightViewMatrix = lightNodes[0].light.viewMatrix;
         material.uniforms.uLightNear = lightNodes[0].light.near;
