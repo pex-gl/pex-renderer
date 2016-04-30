@@ -10,22 +10,17 @@ function PBRMaterial(ctx, uniforms, watch) {
     uniforms = uniforms || {};
     this.ctx = ctx;
     this.uniforms = Object.assign({
+        uBaseColor: [0,0,0,1],
+        uBaseColorMap: null,
+        uMetallic: 0.0,
+        uMetallicMap: null,
         uRoughness: 0.5,
-        uMetalness: 1.0,
+        uRoughnessMap: null,
         uExposure: 0.5,
         uLightPos: [10, 10, 0],
         uReflectionMap: null,
         uIrradianceMap: null,
-        //uHammersleyPointSetMap: null,
-        uAlbedoColor: [0,0,0,1],
-        uAlbedoColorMap: null,
-        uAlbedoColorMapEnabled: false,
         uNormalMap: null,
-        uNormalMapEnabled: false,
-        uRoughnessMap: null,
-        uRoughnessMapEnabled: false,
-        uMetalnessMap: null,
-        uMetalnessMapEnabled: false,
         uLightColor: [1,1,1,1],
         uIor: 1.4,
         uTexCoord0Scale: 1,
@@ -33,7 +28,7 @@ function PBRMaterial(ctx, uniforms, watch) {
         shadowQuality: 3
     }, uniforms)
 
-    this.name = uniforms.name || 'PBRIBL';
+    this.name = uniforms.name || 'PBR';
 
     this.compile();
 
@@ -65,35 +60,17 @@ PBRMaterial.prototype.compile = function() {
 
     flags.push('#define SHADOW_QUALITY_' + uniforms.shadowQuality);
 
-    if (uniforms.uAlbedoColor instanceof Texture2D) {
-        flags.push('#define USE_ALBEDO_MAP');
+    if (uniforms.uBaseColorMap && uniforms.uBaseColorMap.getTarget && (uniforms.uBaseColorMap.getTarget() == ctx.TEXTURE_2D)) {
+        flags.push('#define USE_BASE_COLOR_MAP');
     }
-    if (uniforms.uRoughness instanceof Texture2D) {
+    if (uniforms.uMetallicMap && uniforms.uMetallicMap.getTarget && (uniforms.uMetallicMap.getTarget() == ctx.TEXTURE_2D)) {
+        flags.push('#define USE_METALLIC_MAP');
+    }
+    if (uniforms.uRoughnessMap && uniforms.uRoughnessMap.getTarget && (uniforms.uRoughnessMap.getTarget() == ctx.TEXTURE_2D)) {
         flags.push('#define USE_ROUGHNESS_MAP');
     }
-    if (uniforms.uMetalness instanceof Texture2D) {
-        flags.push('#define USE_METALNESS_MAP');
-    }
-    if (uniforms.uNormalMap instanceof Texture2D) {
+    if (uniforms.uNormalMap && uniforms.uNormalMap.getTarget && (uniforms.uNormalMap.getTarget() == ctx.TEXTURE_2D)) {
         flags.push('#define USE_NORMAL_MAP');
-    }
-    if (uniforms.useTonemap) {
-        flags.push('#define USE_TONEMAP');
-    }
-    if (uniforms.showNormals) {
-        flags.push('#define SHOW_NORMALS');
-    }
-    if (uniforms.showTexCoords) {
-        flags.push('#define SHOW_TEX_COORDS');
-    }
-    if (uniforms.showFresnel) {
-        flags.push('#define SHOW_FRESNEL');
-    }
-    if (uniforms.showIrradiance) {
-        flags.push('#define SHOW_IRRADIANCE');
-    }
-    if (uniforms.showIndirectSpecular) {
-        flags.push('#define SHOW_INDIRECT_SPECULAR');
     }
     flags = flags.join('\n') + '\n';
 

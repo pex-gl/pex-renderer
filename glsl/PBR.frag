@@ -375,42 +375,45 @@ float saturate(float f) {
     return clamp(f, 0.0, 1.0);
 }
 
-uniform sampler2D uAlbedoColorMap; //assumes sRGB color, not linear
-vec3 getAlbedoColorMap() {
-    return toLinear(texture2D(uAlbedoColorMap, vTexCoord0).rgb);
-}
-uniform vec4 uAlbedoColor; //assumes sRGB color, not linear
-vec3 getAlbedoColor() {
-    return toLinear(uAlbedoColor.rgb);
-}
-uniform bool uAlbedoColorMapEnabled;
-vec3 getAlbedo() {
-    if (uAlbedoColorMapEnabled) return getAlbedoColorMap();
-    else return getAlbedoColor();
-}
-uniform sampler2D uRoughnessMap; //assumes sRGB color, not linear
-uniform bool uRoughnessMapEnabled; //assumes sRGB color, not linear
-float getRoughnessMap() {
-    return texture2D(uRoughnessMap, vTexCoord0).r;//FIXME: changed to 1- for glssines textures
-}
-uniform float uRoughness;
-float getRoughness() {
-    if (uRoughnessMapEnabled) return getRoughnessMap();
-    return uRoughness;
-}
+#ifdef USE_BASE_COLOR_MAP
+    uniform sampler2D uBaseColorMap; //assumes sRGB color, not linear
+    vec3 getBaseColor() {
+        return toLinear(texture2D(uBaseColorMap, vTexCoord0).rgb);
+    }
+#else
+    uniform vec4 uBaseColor; //assumes sRGB color, not linear
+    vec3 getBaseColor() {
+        return toLinear(uBaseColor.rgb);
+    }
+#endif
 
-uniform sampler2D uMetalnessMap; //assumes sRGB color, not linear
-uniform bool uMetalnessMapEnabled;
-float getMetalnessMap() {
-    return toLinear(texture2D(uMetalnessMap, vTexCoord0).r);
-}
-uniform float uMetalness;
-float getMetalness() {
-    if (uMetalnessMapEnabled) return getMetalnessMap();
-    return uMetalness;
-}
-uniform sampler2D uNormalMap;
-//http://www.thetenthplanet.de/archives/1180
+#ifdef USE_METALLIC_MAP
+    uniform sampler2D uMetallicMap; //assumes linear
+    float getMetallic() {
+        return texture2D(uMetallicMap, vTexCoord0).r;
+    }
+#else
+    uniform float uMetallic;
+    float getMetallic() {
+        return uMetallic;
+    }
+#endif
+
+#ifdef USE_ROUGHNESS_MAP
+    uniform sampler2D uRoughnessMap; //assumes sRGB color, not linear
+    float getRoughness() {
+        return texture2D(uRoughnessMap, vTexCoord0).r;
+    }
+#else
+    uniform float uRoughness;
+    float getRoughness() {
+        return uRoughness;
+    }
+#endif
+
+#ifdef USE_NORMAL_MAP
+    uniform sampler2D uNormalMap;
+    //http://www.thetenthplanet.de/archives/1180
 mat3 cotangentFrame(vec3 N, vec3 p, vec2 uv) {
   // get edge vectors of the pixel triangle
   vec3 dp1 = dFdx(p);
@@ -434,27 +437,27 @@ vec3 perturb(vec3 map, vec3 N, vec3 V, vec2 texcoord) {
   return normalize(TBN * map);
 }
 
-vec3 getNormalMap() {
-    vec3 normalRGB = texture2D(uNormalMap, vTexCoord0).rgb;
-    vec3 normalMap = normalRGB * 2.0 - 1.0;
+    vec3 getNormal() {
+        vec3 normalRGB = texture2D(uNormalMap, vTexCoord0).rgb;
+        vec3 normalMap = normalRGB * 2.0 - 1.0;
 
-    //normalMap.y *= -1.0;
-    /*normalMap.x *= -1.0;*/
+        //normalMap.y *= -1.0;
+        /*normalMap.x *= -1.0;*/
 
-    vec3 N = normalize(vNormalView);
-    vec3 V = normalize(vEyeDirView);
+        vec3 N = normalize(vNormalView);
+        vec3 V = normalize(vEyeDirView);
 
-    vec3 normalView = perturb(normalMap, N, V, vTexCoord0);
-    vec3 normalWorld = vec3(uInverseViewMatrix * vec4(normalView, 0.0));
-    return normalWorld;
+        vec3 normalView = perturb(normalMap, N, V, vTexCoord0);
+        vec3 normalWorld = vec3(uInverseViewMatrix * vec4(normalView, 0.0));
+        return normalWorld;
 
-}
-
-uniform bool uNormalMapEnabled;
-vec3 getNormal() {
-    if (uNormalMapEnabled) return normalize(getNormalMap());
-    return normalize(vNormalWorld);
-}
+    }
+#else
+    uniform bool uNormalMapEnabled;
+    vec3 getNormal() {
+        return normalize(vNormalWorld);
+    }
+#endif
 
 uniform samplerCube uReflectionMap;
 uniform samplerCube uIrradianceMap;
@@ -534,21 +537,21 @@ void main() {
     vec3 normalWorld = getNormal();
     vec3 eyeDirWorld = normalize(vEyeDirWorld);
 
-    vec3 albedo = getAlbedo();
+    vec3 baseColor = getBaseColor();
     float roughness = getRoughness();
-    float metalness = getMetalness();
+    float metallic = getMetallic();
     vec3 irradianceColor = getIrradiance(eyeDirWorld, normalWorld);
     vec3 reflectionColor = getPrefilteredReflection(eyeDirWorld, normalWorld, roughness);
 
     vec3 F0 = vec3(abs((1.0 - uIor) / (1.0 + uIor)));
     F0 = F0 * F0; //0.04 is default for non-metals in UE4
-    F0 = mix(F0, albedo, metalness);
+    F0 = mix(F0, baseColor, metallic);
 
     float NdotV = saturate( dot( normalWorld, eyeDirWorld ) );
     vec3 reflectance = EnvBRDFApprox( F0, roughness, NdotV );
 
-    vec3 diffuseColor = albedo * (1.0 - metalness);
-    vec3 specularColor = mix(vec3(1.0), albedo, metalness); 
+    vec3 diffuseColor = baseColor * (1.0 - metallic);
+    vec3 specularColor = mix(vec3(1.0), baseColor, metallic); 
     
     //light
 
