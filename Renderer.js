@@ -46,9 +46,6 @@ var State = {
     bias: 0.1
 }
 
-
-
-
 function Renderer(ctx, width, height) {
     this._ctx = ctx;
     this._width = width;
@@ -76,7 +73,6 @@ Renderer.prototype.initMaterials = function() {
     this._solidColorProgram = ctx.createProgram(SOLID_COLOR_VERT, SOLID_COLOR_FRAG);
     this._showColorsProgram = ctx.createProgram(SHOW_COLORS_VERT, SHOW_COLORS_FRAG);
     this._pbrMaterial = new PBRMaterial(ctx, {}, true);
-    this._tmpTex = ctx.createTexture2D(null, 1, 1);
 }
 
 Renderer.prototype.initShadowmaps = function() {
@@ -327,21 +323,29 @@ Renderer.prototype.drawMeshes = function() {
         material.uniforms.uShadowQuality = State.shadows ? State.shadowQuality : 0 ;
         material.uniforms.uBias = State.bias;
 
-        var program = material.program;
-		var numTextures = 0;
+        if (!meshNode.pbrMaterial) {
+            meshNode.pbrMaterial = new PBRMaterial(ctx, material.uniforms);
+        }
+
+        program = meshNode.pbrMaterial.program;
+        var numTextures = 0;
 		ctx.bindProgram(program);
 		for(var uniformName in material.uniforms) {
 			var value = material.uniforms[uniformName];
             if (value === null || value === undefined) {
-                continue; //TEMP
-                throw new Error('Null uniform value for ' + uniformName + ' in PBRMaterial');
+                if (program._uniforms[uniformName]) {
+                    throw new Error('Null uniform value for ' + uniformName + ' in PBRMaterial');
+                }
+                else {
+                    continue;
+                }
             }
 			if (value.getTarget && (value.getTarget() == ctx.TEXTURE_2D || value.getTarget() == ctx.TEXTURE_CUBE_MAP)) {
                 ctx.bindTexture(value, numTextures);
 				value = numTextures++;
 			}
-			if (material.program.hasUniform(uniformName)) {
-				material.program.setUniform(uniformName, value)
+			if (program.hasUniform(uniformName)) {
+				program.setUniform(uniformName, value)
 			}
 			else {
 				//console.log('unknown uniformName', uniformName);
@@ -396,7 +400,6 @@ Renderer.prototype.drawMeshes = function() {
         else {
             ctx.drawMesh();
         }
-
         ctx.popModelMatrix();
     }.bind(this))
 
