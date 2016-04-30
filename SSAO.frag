@@ -17,9 +17,6 @@ uniform float aspectRatio;
 uniform float fov;
 uniform mat4 uProjectionMatrix;
 
-const int samples = 3;
-const int rings = 5;
-
 //fron depth buf normalized z to linear (eye space) z
 //http://stackoverflow.com/questions/6652253/getting-the-true-z-value-from-the-depth-buffer
 float readDepth(vec2 coord) {
@@ -75,11 +72,12 @@ void main() {
   mat3 TBN = mat3(tangent, bitangent, normal);
 
   float occlusion = 0.0;
-  const int kernelSize = 64;
+  const float kernelWidth = 6.0; //8.0
+  const int kernelSize = 36; //64
   float radius = 0.2;
   vec3 lastSample = vec3(0.0);
   for(int i = 0; i < kernelSize; ++i) {
-    vec2 tc = vec2(mod(float(i), 8.0) / 8.0 + 0.5/8.0, floor(float(i) / 8.0) / 8.0 + 0.5/8.0);
+    vec2 tc = vec2(mod(float(i), kernelWidth) / kernelWidth + 0.5/kernelWidth, floor(float(i) / kernelWidth) / kernelWidth + 0.5/kernelWidth);
     // get sample position
     vec3 sample = TBN * texture2D(kernelMap, tc).rgb; // From tangent to view-space
     sample = fragPos + sample * radius;
