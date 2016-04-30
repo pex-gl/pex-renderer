@@ -302,7 +302,7 @@ Renderer.prototype.drawMeshes = function() {
 
 		material.uniforms.uReflectionMap = this._reflectionProbe.getReflectionMap();
 		material.uniforms.uIrradianceMap = this._reflectionProbe.getIrradianceMap();
-        material.uniforms.uBaseColor = meshNode.material._baseColor || [1,0,0,1];
+        material.uniforms.uBaseColor = meshNode.material._baseColor || [0.9,0.9,0.9,0.9];
         material.uniforms.uBaseColorMap = meshNode.material._baseColorMap;
         material.uniforms.uMetallic = (typeof(meshNode.material._metallic) !== 'undefined') ? meshNode.material._metallic : 0.0;
         material.uniforms.uMetallicMap = meshNode.material._metallicMap;
