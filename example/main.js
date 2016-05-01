@@ -17,6 +17,10 @@ var GUI           = require('pex-gui');
 var random        = require('pex-random');
 var ASSETS_DIR    = isBrowser ? 'Assets' : __dirname + '/Assets';
 var parseHdr      = require('./local_modules/parse-hdr');
+var cosineGradient = require('cosine-gradient');
+
+var scheme = [[0.000,0.500,0.500],[0.000,0.500,0.500],[0.000,0.500,0.333],[0.000,0.500,0.667]];
+var gradient = cosineGradient(scheme[0], scheme[1], scheme[2], scheme[3]);
 
 Window.create({
     settings: {
@@ -27,7 +31,7 @@ Window.create({
     },
     resources: {
        //envMap: { binary: ASSETS_DIR + '/textures/envmaps/Hamarikyu_Bridge_B/Hamarikyu_Bridge_B.hdr' },
-       envMap: { binary: ASSETS_DIR + '/textures/envmaps/garage/garage.hdr' },
+       //envMap: { binary: ASSETS_DIR + '/textures/envmaps/garage/garage.hdr' },
        //envMap: { binary: ASSETS_DIR + '/textures/envmaps/uffizi/uffizi.hdr' },
        // envMap: { image: ASSETS_DIR + '/textures/envmaps/test/test.png' },
     },
@@ -43,12 +47,13 @@ Window.create({
         var ctx = this.getContext();
         var gui = this.gui = new GUI(ctx, this.getWidth(), this.getHeight());
         this.addEventListener(gui);
-        random.seed(0);
+        random.seed(10);
 
         gui.addParam('Sun Elevation', this, 'elevation', { min: -90, max: 180 }, this.updateSunPosition.bind(this));
         var renderer = this.renderer = new Renderer(ctx, this.getWidth(), this.getHeight());
        
         gui.addParam('Exposure', this.renderer._state, 'exposure', { min: 0.01, max: 5});
+        gui.addParam('Shadow Bias', this.renderer._state, 'bias', { min: 0.001, max: 0.1});
 
         if (res.envMap) {
             if (res.envMap.width) {
@@ -67,31 +72,70 @@ Window.create({
         gui.addTextureCube('Reflection Map', renderer._reflectionProbe.getReflectionMap(), { hdr: true });
         gui.addTextureCube('Irradiance Map', renderer._reflectionProbe.getIrradianceMap(), { hdr: true });
 
-        this.camera = new PerspCamera(45, this.getAspectRatio(), 0.1, 20.0);;
+        this.camera = new PerspCamera(45, this.getAspectRatio(), 0.1, 50.0);;
         this.camera.lookAt([0,0,5], [0,0,0]);
-        renderer.createCameraNode(this.camera);
+        renderer.createNode({
+            camera: this.camera
+        });
 
         this.arcball = new Arcball(this.camera, this.getWidth(), this.getHeight());
         this.addEventListener(this.arcball);
 
         var sunDir = Vec3.normalize([1, 0.1, 0]);
-        this.sunLightNode = renderer.createDirectionalLightNode(sunDir);
-        gui.addTexture2D('Shadow Map', this.sunLightNode.light.shadowMap);
+        this.sunLightNode = renderer.createNode({
+            light: {
+                type: 'directional',
+                direction: sunDir
+            }
+        });
+        gui.addTexture2D('Shadow Map', this.sunLightNode.light._shadowMap);
 
+        //http://stackoverflow.com/a/36481059
+        function randn_bm() {
+            var u = 1 - Math.random(); // Subtraction to flip [0, 1) to (0, 1].
+            var v = 1 - Math.random();
+            return Math.sqrt( -2.0 * Math.log( u ) ) * Math.cos( 2.0 * Math.PI * v );
+        }
+        
+        function rand() {
+            return (Math.random() * 2 - 1) * 3;
+        }
         var mesh = this.buildMesh(createCube(0.2, 0.5 + Math.random(), 0.2));
         //var mesh = this.buildMesh(createSphere(0.2 + Math.random() * 0.3));
         for(var i=0; i<1000; i++) {
-            var node = renderer.createMeshNode(mesh)
-            var x = Math.random() * 10 - 5;
-            var z = Math.random() * 10 - 5;
-            node._position[0] = x;
-            node._position[2] = z;
-            node._position[1] = -0.5 + 2*random.noise2(x/2, z/2) + random.noise2(2*x, 2*z);
-            node.material._albedoColor = [0.69,0.69,0.69,1]
-            node.material._roughness = 0.7;//Math.random()*0.99 + 0.01;
-            node.material._metalness = 0.0;//Math.random();
+            var x = randn_bm() * 8/3;
+            var z = randn_bm() * 8/3;
+            var y = 2*random.noise2(x/2, z/2) + random.noise2(2*x, 2*z);
+            var s = Math.max(0.0, 3.0 - Math.sqrt(x*x + z*z)/2);
+            var node = renderer.createNode({
+                mesh: mesh,
+                position: [x, y, z],
+                scale: [1, s, 1],
+                material: {
+                    albedoColor: [0.9, 0.9, 0.9, 1.0],
+                    rougness: 0.7,
+                    metallic: 0.0
+                }
+            })
         }
 
+        var sphereMesh = this.buildMesh(createSphere(0.2 + Math.random()));
+        for(var i=0; i<100; i++) {
+            var x = rand() * 8/3;
+            var z = rand() * 8/3;
+            var y = 2*random.noise2(x/2, z/2) + random.noise2(2*x, 2*z);
+            var s = Math.max(0.0, 3.0 - Math.sqrt(x*x + z*z)/2);
+            var node = renderer.createNode({
+                mesh: sphereMesh,
+                position: [x, y, z],
+                scale: [s, s, s],
+                material: {
+                    baseColor: gradient(Math.random()).concat(1),
+                    rougness: 0.91,
+                    metallic: 1.0
+                }
+            })
+        }
         var positions = [];
         var p = [0, 0]
         for(var i=0; i<100; i++) {
@@ -104,21 +148,26 @@ Window.create({
             }
             positions.push([p[0], 0.2, p[1]]);
         }
-        var node = renderer.createMeshNode(this.buildMesh({ positions: positions }, ctx.LINE_STRIP))
-        node.material._albedoColor = [0.9,0.9,0.2,1]
-        node.material._roughness = 1;
+        var node = renderer.createNode({
+            mesh: this.buildMesh({ positions: positions }, ctx.LINE_STRIP),
+            material: {
+                baseColor: [0.9,0.9,0.2,1],
+                roughness: 1
+            }
+        });
 
-        var node = renderer.createMeshNode(this.buildMesh(createCube(0.2, 0.5 + Math.random(), 0.2)))
-        node._position[0] = 2;
-        node._position[1] = 1;
-        node.material._roughness = 1;
+        var node = renderer.createNode({
+            mesh: this.buildMesh(createCube(0.2, 0.5 + Math.random(), 0.2)),
+            position: [2, 1, 0],
+        });
 
         ctx.setLineWidth(5)
 
         var floorMesh = this.buildMesh(createCube(14, 0.02, 14));
-        var floorNode = renderer.createMeshNode(floorMesh);
-        floorNode.material._roughness = 1;
-        Vec3.set3(floorNode._position, 0, -.3, 0);
+        var floorNode = renderer.createNode({
+            mesh: floorMesh,
+            position: [0, -0.3, 0]
+        });
 
         this.updateSunPosition();
         }
@@ -127,6 +176,9 @@ Window.create({
             console.log(e.stack);
             process.exit(-1);
         }
+    },
+    onKeyPress: function(e) {
+        if (e.str == 'g') this.gui.toggleEnabled();
     },
     updateSunPosition: function() {
         Mat4.setRotation(this.elevationMat, this.elevation/180*Math.PI, [0, 0, 1]);

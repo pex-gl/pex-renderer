@@ -12,6 +12,7 @@
   "dependencies": {
     "beefy": "^2.1.6",
     "browserify": "^13.0.0",
+    "cosine-gradient": "^0.1.0",
     "geom-parse-obj": "../local_modules/geom-parse-obj",
     "glslify": "^3.0.0",
     "glslify-sync": "^2.0.0",
