@@ -59,8 +59,6 @@ function Renderer(ctx, width, height) {
     this.initShadowmaps();
     this.initPostproces();
 
-    this.createCameraNode();
-
     this._state = State;
 }
 
@@ -156,6 +154,8 @@ Renderer.prototype.createNode = function(props) {
 }
 
 Renderer.prototype.initNode = function(node) {
+    var ctx = this._ctx;
+
     node._parent = null;
     node._children = [];
     node._localTransform = Mat4.create();
@@ -173,46 +173,18 @@ Renderer.prototype.initNode = function(node) {
         if (!material.roughnessMap && (material.roughness === undefined)) { material.roughness = 0.5 } 
         if (!material._uniforms) { material._uniforms = {}}
     }
-}
-
-Renderer.prototype.createMaterial = function() {
-    return this.addMaterial(new Material());
-}
-
-Renderer.prototype.createMeshNode = function(mesh, material) {
-    var node = this.createNode();
-    node.mesh = mesh;
-    node.material = material || this.createMaterial();
-    return node;
-}
-
-Renderer.prototype.createOverlayNode = function(overlay) {
-    var node = this.createNode();
-    node.overlay = overlay;
-    return node;
-}
-
-Renderer.prototype.createDirectionalLightNode = function(direction) {
-    var ctx = this._ctx;
-
-    var node = this.createNode();
-
-    node.light = {
-        type: 'directional',
-        direction: direction,
-        shadows: true,
-        colorMap: ctx.createTexture2D(null, 1024, 1024),
-        shadowMap: ctx.createTexture2D(null, 1024, 1024, { format: ctx.DEPTH_COMPONENT, type: ctx.UNSIGNED_SHORT}),
-        viewMatrix: Mat4.create(),
-        projectionMatrix: Mat4.create()
+    if (node.light) {
+        if (node.light.type == 'directional') {
+            if (node.light.shadows === undefined) { node.light.shadows = true; }
+            node.light._colorMap = ctx.createTexture2D(null, 1024, 1024); //TODO: remove this
+            node.light._shadowMap = ctx.createTexture2D(null, 1024, 1024, { format: ctx.DEPTH_COMPONENT, type: ctx.UNSIGNED_SHORT});
+            node.light._viewMatrix = Mat4.create();
+            node.light._projectionMatrix = Mat4.create();
+        }
+        else {
+            throw new Error('Renderer.initNode unknown light type ' + node.light.type);
+        }
     }
-    return node;
-}
-
-Renderer.prototype.createCameraNode = function(camera) {
-    var node = this.createNode();
-    node.camera = camera;
-    return node;
 }
 
 Renderer.prototype.getNodes = function(type) {
@@ -245,31 +217,32 @@ Renderer.prototype.updateShadowmaps = function() {
     lightNodes.forEach(function(lightNode) {
         var light = lightNode.light;
 
-        light.near = 4;//-8;
-        light.far = 25;
-        Mat4.lookAt(light.viewMatrix, [State.sunPosition[0]*7.5, State.sunPosition[1]*7.5, State.sunPosition[2]*7.5], [0,-2,0], [0, 1, 0]);
-        Mat4.perspective(light.projectionMatrix, 90, 1, light.near, light.far);
-        Mat4.ortho(light.projectionMatrix, -6, 6, -6, 6, light.near, light.far);
-        ctx.setViewMatrix(light.viewMatrix);
-        ctx.setProjectionMatrix(light.projectionMatrix);
-        this._shadowMapFbo.setColorAttachment(0, light.colorMap.getTarget(), light.colorMap.getHandle(), 0);
-        this._shadowMapFbo.setDepthAttachment(light.shadowMap.getTarget(), light.shadowMap.getHandle(), 0);
+        light._near = 4;//-8;
+        light._far = 25;
+        Mat4.lookAt(light._viewMatrix, [State.sunPosition[0]*7.5, State.sunPosition[1]*7.5, State.sunPosition[2]*7.5], [0,-2,0], [0, 1, 0]);
+        Mat4.perspective(light._projectionMatrix, 90, 1, light._near, light._far);
+        Mat4.ortho(light._projectionMatrix, -6, 6, -6, 6, light._near, light._far);
+        ctx.setViewMatrix(light._viewMatrix);
+        ctx.setProjectionMatrix(light._projectionMatrix);
+        this._shadowMapFbo.setColorAttachment(0, light._colorMap.getTarget(), light._colorMap.getHandle(), 0);
+        this._shadowMapFbo.setDepthAttachment(light._shadowMap.getTarget(), light._shadowMap.getHandle(), 0);
 
 
         var points = [[5,0,0], [0,0,0], [-5,0,0]];
         points.forEach(function(p) {
             var tmp = [p[0], p[1], p[2], 1];
-            Vec4.multMat4(Vec4.multMat4(tmp, light.viewMatrix), light.projectionMatrix);
+            Vec4.multMat4(Vec4.multMat4(tmp, light._viewMatrix), light._projectionMatrix);
         });
-        this._shadowMap = light.shadowMap;
+        this._shadowMap = light._shadowMap;
 
-        ctx.setViewport(0, 0, light.shadowMap.getWidth(), light.shadowMap.getHeight())
+        ctx.setViewport(0, 0, light._shadowMap.getWidth(), light._shadowMap.getHeight())
 
         ctx.setDepthTest(true);
         ctx.setClearColor(0, 0, 0, 1);
         ctx.clear(ctx.COLOR_BIT | ctx.DEPTH_BIT);
-
+        ctx.setColorMask(0,0,0,0);
         this.drawMeshes();
+        ctx.setColorMask(1,1,1,1);
     }.bind(this));
 
     ctx.popState(ctx.FRAMEBUFFER_BIT | ctx.VIEWPORT_BIT);
@@ -355,12 +328,12 @@ Renderer.prototype.drawMeshes = function() {
     var sharedUniforms = {
         uSunPosition: State.sunPosition,
         uSunColor: State.sunColor,
-        uLightProjectionMatrix: lightNodes[0].light.projectionMatrix,
-        uLightViewMatrix: lightNodes[0].light.viewMatrix,
-        uLightNear: lightNodes[0].light.near,
-        uLightFar: lightNodes[0].light.far,
-        uShadowMap: lightNodes[0].light.shadowMap,
-        uShadowMapSize: [lightNodes[0].light.shadowMap.getWidth(), lightNodes[0].light.shadowMap.getHeight()],
+        uLightProjectionMatrix: lightNodes[0].light._projectionMatrix,
+        uLightViewMatrix: lightNodes[0].light._viewMatrix,
+        uLightNear: lightNodes[0].light._near,
+        uLightFar: lightNodes[0].light._far,
+        uShadowMap: lightNodes[0].light._shadowMap,
+        uShadowMapSize: [lightNodes[0].light._shadowMap.getWidth(), lightNodes[0].light._shadowMap.getHeight()],
         uShadowQuality: State.shadows ? State.shadowQuality : 0,
         uBias: State.bias,
 		uReflectionMap: this._reflectionProbe.getReflectionMap(),
@@ -508,8 +481,6 @@ Renderer.prototype.draw = function() {
         }.bind(this));
         this.updateShadowmaps();
     }
-
-
 
     //draw scene
 
