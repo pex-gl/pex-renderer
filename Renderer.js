@@ -288,12 +288,15 @@ Renderer.prototype.getMeshProgram = function(meshMaterial) {
 }
 
 Renderer.prototype.drawMeshes = function() {
+    var ctx = this._ctx;
     var meshNodes = this.getMeshNodes();
     var lightNodes = this.getLightNodes();
 
-    var ctx = this._ctx;
 
+    ctx.pushState(ctx.CULL_BIT | ctx.DEPTH_BIT);
     ctx.setDepthTest(true);
+    ctx.setCullFace(true);
+    ctx.setCullFaceMode(ctx.BACK);
 
     //TODO: optimize this
     this._nodes.forEach(function(node) {
@@ -446,6 +449,7 @@ Renderer.prototype.drawMeshes = function() {
         }
         ctx.popModelMatrix();
     }.bind(this));
+    ctx.popState();
 }
 
 Renderer.prototype.draw = function() {
