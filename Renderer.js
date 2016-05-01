@@ -4,8 +4,6 @@ var Quat = require('pex-math/Quat');
 var Mat4 = require('pex-math/Mat4');
 var Draw = require('pex-draw/Draw');
 var PerspCamera = require('pex-cam/PerspCamera');
-var Node = require('./Node');
-var Material = require('./Material');
 var renderToCubemap = require('./local_modules/pex-render-to-cubemap');
 var downsampleCubemap = require('./local_modules/pex-downsample-cubemap');
 var convolveCubemap = require('./local_modules/pex-convolve-cubemap');
@@ -18,7 +16,6 @@ var Postprocess = require('./Postprocess');
 var SkyEnvMap = require('./SkyEnvMap');
 var Skybox = require('./Skybox');
 var ReflectionProbe = require('./ReflectionProbe');
-var PBRMaterial = require('./PBRMaterial');
 var Texture2D     = require('pex-context/Texture2D');
 var TextureCube   = require('pex-context/TextureCube');
 var lookup = require('gl-constants/lookup');
@@ -72,7 +69,6 @@ Renderer.prototype.initMaterials = function() {
     var ctx = this._ctx;
     this._solidColorProgram = ctx.createProgram(SOLID_COLOR_VERT, SOLID_COLOR_FRAG);
     this._showColorsProgram = ctx.createProgram(SHOW_COLORS_VERT, SHOW_COLORS_FRAG);
-    this._pbrMaterial = new PBRMaterial(ctx, {}, true);
 }
 
 Renderer.prototype.initShadowmaps = function() {
@@ -150,8 +146,33 @@ Renderer.prototype.addMaterial = function(material) {
     return material;
 }
 
-Renderer.prototype.createNode = function() {
-    return this.addNode(new Node()); //TODO: don't add newly created node, e.g. gltfl loader would like to first create nodes then add them
+Renderer.prototype.createNode = function(props) {
+    var node = {};
+    for(var propName in props) {
+        node[propName] = props[propName];
+    }
+    this.initNode(node);
+    return this.addNode(node); //TODO: don't add newly created node, e.g. gltfl loader would like to first create nodes then add them
+}
+
+Renderer.prototype.initNode = function(node) {
+    node._parent = null;
+    node._children = [];
+    node._localTransform = Mat4.create();
+    node._globalTransform = Mat4.create();
+
+    if (!node.position) node.position = [0,0,0];
+    if (!node.scale) node.scale = [1,1,1];
+    if (!node.rotation) node.rotation = [0,0,0,1];
+
+    if (node.mesh) {
+        var material = node.material
+        if (!material) { material = node.material = {} }
+        if (!material.baseColorMap && (material.baseColor === undefined)) { material.baseColor = [0.95, 0.95, 0.95, 1] } 
+        if (!material.metallicMap && (material.metallic === undefined)) { material.metallic = 0.0 } 
+        if (!material.roughnessMap && (material.roughness === undefined)) { material.roughness = 0.5 } 
+        if (!material._uniforms) { material._uniforms = {}}
+    }
 }
 
 Renderer.prototype.createMaterial = function() {
@@ -254,6 +275,45 @@ Renderer.prototype.updateShadowmaps = function() {
     ctx.popState(ctx.FRAMEBUFFER_BIT | ctx.VIEWPORT_BIT);
 }
 
+var Vert = fs.readFileSync(__dirname + '/glsl/PBR.vert', 'utf8');
+var Frag = fs.readFileSync(__dirname + '/glsl/PBR.frag', 'utf8');
+
+Renderer.prototype.getMeshProgram = function(meshMaterial) {
+    var USE_BASE_COLOR_MAP = 1 << 0;
+    var USE_METALLIC_MAP   = 1 << 1;
+    var USE_ROUGHNESS_MAP  = 1 << 2;
+    var USE_NORMAL_MAP     = 1 << 3;
+
+    var ctx = this._ctx;
+
+    var flags = [];
+    flags.push('#define SHADOW_QUALITY_' + State.shadowQuality);
+
+    if (meshMaterial.baseColorMap) {
+        flags.push('#define USE_BASE_COLOR_MAP');
+    }
+    if (meshMaterial.metallicMap) {
+        flags.push('#define USE_METALLIC_MAP');
+    }
+    if (meshMaterial.roughnessMap) {
+        flags.push('#define USE_ROUGHNESS_MAP');
+    }
+    if (meshMaterial.normalMap) {
+        flags.push('#define USE_NORMAL_MAP');
+    }
+    flags = flags.join('\n') + '\n';
+
+    if (!this._programCache) {
+        this._programCache = {};
+    }
+
+    var program = this._programCache[flags];
+    if (!program) {
+        program = this._programCache[flags] = ctx.createProgram(Vert, flags + Frag);
+    }
+    return program;
+}
+
 Renderer.prototype.drawMeshes = function() {
     var meshNodes = this.getMeshNodes();
     var lightNodes = this.getLightNodes();
@@ -265,12 +325,12 @@ Renderer.prototype.drawMeshes = function() {
     //TODO: optimize this
     this._nodes.forEach(function(node) {
         Mat4.identity(node._localTransform)
-        Mat4.translate(node._localTransform, node._position);
-        Mat4.mult(node._localTransform, Mat4.fromQuat(Mat4.create(), node._rotation));
-        Mat4.scale(node._localTransform, node._scale);
+        Mat4.translate(node._localTransform, node.position);
+        Mat4.mult(node._localTransform, Mat4.fromQuat(Mat4.create(), node.rotation));
+        Mat4.scale(node._localTransform, node.scale);
 
-        if (node._transform) { //TODO: required for GLTF
-            Mat4.mult(node._localTransform, node._transform);
+        if (node.transform) { //TODO: required for GLTF
+            Mat4.mult(node._localTransform, node.transform);
         }
     }.bind(this))
 
@@ -287,53 +347,49 @@ Renderer.prototype.drawMeshes = function() {
         stack.forEach(function(mat) {
             Mat4.mult(node._globalTransform, mat)
         })
-
     })
-
 
     ctx.bindTexture(this._reflectionProbe.getIrradianceMap());
     ctx.bindTexture(lightNodes[0].light.shadowMap, 1);
 
-    ctx.bindProgram(this._standardProgram);
-
+    var sharedUniforms = {
+        uSunPosition: State.sunPosition,
+        uSunColor: State.sunColor,
+        uLightProjectionMatrix: lightNodes[0].light.projectionMatrix,
+        uLightViewMatrix: lightNodes[0].light.viewMatrix,
+        uLightNear: lightNodes[0].light.near,
+        uLightFar: lightNodes[0].light.far,
+        uShadowMap: lightNodes[0].light.shadowMap,
+        uShadowMapSize: [lightNodes[0].light.shadowMap.getWidth(), lightNodes[0].light.shadowMap.getHeight()],
+        uShadowQuality: State.shadows ? State.shadowQuality : 0,
+        uBias: State.bias,
+		uReflectionMap: this._reflectionProbe.getReflectionMap(),
+        uIrradianceMap: this._reflectionProbe.getIrradianceMap()
+    };
 
     meshNodes.forEach(function(meshNode) {
-        var material = this._pbrMaterial;
-
-		material.uniforms.uReflectionMap = this._reflectionProbe.getReflectionMap();
-		material.uniforms.uIrradianceMap = this._reflectionProbe.getIrradianceMap();
-        material.uniforms.uBaseColor = meshNode.material._baseColor || [0.9,0.9,0.9,0.9];
-        material.uniforms.uBaseColorMap = meshNode.material._baseColorMap;
-        material.uniforms.uMetallic = (typeof(meshNode.material._metallic) !== 'undefined') ? meshNode.material._metallic : 0.0;
-        material.uniforms.uMetallicMap = meshNode.material._metallicMap;
-        material.uniforms.uRoughness = (typeof(meshNode.material._roughness) !== 'undefined') ? meshNode.material._roughness : 0.8;
-        material.uniforms.uRoughnessMap = meshNode.material._roughnessMap;
-        material.uniforms.uNormalMap = meshNode.material._normalMap;
-
-        //material.uniforms.uIor = 3.0;
-        
-        material.uniforms.uSunPosition = State.sunPosition;
-        material.uniforms.uSunColor = State.sunColor;
-        material.uniforms.uLightProjectionMatrix = lightNodes[0].light.projectionMatrix;
-        material.uniforms.uLightViewMatrix = lightNodes[0].light.viewMatrix;
-        material.uniforms.uLightNear = lightNodes[0].light.near;
-        material.uniforms.uLightFar = lightNodes[0].light.far;
-        material.uniforms.uShadowMap = lightNodes[0].light.shadowMap;
-        material.uniforms.uShadowMapSize = [lightNodes[0].light.shadowMap.getWidth(), lightNodes[0].light.shadowMap.getHeight()];
-        material.uniforms.uShadowQuality = State.shadows ? State.shadowQuality : 0 ;
-        material.uniforms.uBias = State.bias;
-
-        if (!meshNode.pbrMaterial) {
-            meshNode.pbrMaterial = new PBRMaterial(ctx, material.uniforms);
+        var meshUniforms = {
+            uIor: 1.4,
+            uBaseColor: meshNode.material.baseColor || [0.9,0.9,0.9,0.9],
+            uBaseColorMap: meshNode.material.baseColorMap,
+            uMetallic: meshNode.material.metallic || 0.1,
+            uMetallicMap: meshNode.material.metallicMap,
+            uRoughness: meshNode.material.roughness || 1,
+            uRoughnessMap: meshNode.material.roughnessMap,
+            uNormalMap: meshNode.material.normalMap
         }
 
-        program = meshNode.pbrMaterial.program;
+        Object.assign(meshNode.material._uniforms, sharedUniforms, meshUniforms);
+        var meshUniforms = meshNode.material._uniforms;
+        
+        var meshProgram = this.getMeshProgram(meshNode.material);
+
         var numTextures = 0;
-		ctx.bindProgram(program);
-		for(var uniformName in material.uniforms) {
-			var value = material.uniforms[uniformName];
+		ctx.bindProgram(meshProgram);
+		for(var uniformName in meshUniforms) {
+			var value = meshUniforms[uniformName];
             if (value === null || value === undefined) {
-                if (program._uniforms[uniformName]) {
+                if (meshProgram._uniforms[uniformName]) {
                     throw new Error('Null uniform value for ' + uniformName + ' in PBRMaterial');
                 }
                 else {
@@ -344,8 +400,8 @@ Renderer.prototype.drawMeshes = function() {
                 ctx.bindTexture(value, numTextures);
 				value = numTextures++;
 			}
-			if (program.hasUniform(uniformName)) {
-				program.setUniform(uniformName, value)
+			if (meshProgram.hasUniform(uniformName)) {
+				meshProgram.setUniform(uniformName, value)
 			}
 			else {
 				//console.log('unknown uniformName', uniformName);
@@ -387,9 +443,9 @@ Renderer.prototype.drawMeshes = function() {
             ctx.multMatrix(meshNode._localTransform)
         }
         else {
-            ctx.translate(meshNode._position);
-            ctx.rotateQuat(meshNode._rotation);
-            ctx.scale(meshNode._scale);
+            ctx.translate(meshNode.position);
+            ctx.rotateQuat(meshNode.rotation);
+            ctx.scale(meshNode.scale);
         }
         if (isVertexArray) {
             ctx.drawElements(meshNode.primitiveType, meshNode.count, 0);
@@ -443,6 +499,7 @@ Renderer.prototype.draw = function() {
 
     if (!Vec3.equals(State.prevSunPosition, State.sunPosition) || State.dirtySky) {
         State.dirtySky = false;
+        //TODO: update sky only if it's used
         this._skyEnvMapTex.setSunPosition(State.sunPosition);
         this._skybox.setEnvMap(State.skyEnvMap || this._skyEnvMapTex);
         Vec3.set(State.prevSunPosition, State.sunPosition);
@@ -485,7 +542,6 @@ Renderer.prototype.draw = function() {
     }
     final = final.postprocess({ exposure: State.exposure })
     final = final.fxaa()
-
     var viewport = ctx.getViewport();
     final.blit({ x: viewport[0], y: viewport[1], width: viewport[2], height: viewport[3]});
 

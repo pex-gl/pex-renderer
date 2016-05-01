@@ -28,36 +28,36 @@ vec3 envMapCubemap(vec3 wcNormal) {
     return envMapCubemap(wcNormal, -1.0);
 }
 
-const float gamma_1 = 2.2;
+const float gamma_0 = 2.2;
 
 float toGamma(float v) {
-  return pow(v, 1.0 / gamma_1);
+  return pow(v, 1.0 / gamma_0);
 }
 
 vec2 toGamma(vec2 v) {
-  return pow(v, vec2(1.0 / gamma_1));
+  return pow(v, vec2(1.0 / gamma_0));
 }
 
 vec3 toGamma(vec3 v) {
-  return pow(v, vec3(1.0 / gamma_1));
+  return pow(v, vec3(1.0 / gamma_0));
 }
 
 vec4 toGamma(vec4 v) {
   return vec4(toGamma(v.rgb), v.a);
 }
 
-const float gamma_0 = 2.2;
+const float gamma_1 = 2.2;
 
 float toLinear(float v) {
-  return pow(v, gamma_0);
+  return pow(v, gamma_1);
 }
 
 vec2 toLinear(vec2 v) {
-  return pow(v, vec2(gamma_0));
+  return pow(v, vec2(gamma_1));
 }
 
 vec3 toLinear(vec3 v) {
-  return pow(v, vec3(gamma_0));
+  return pow(v, vec3(gamma_1));
 }
 
 vec4 toLinear(vec4 v) {
