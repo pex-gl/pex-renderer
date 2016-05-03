@@ -33,7 +33,7 @@ Window.create({
        //envMap: { binary: ASSETS_DIR + '/textures/envmaps/Hamarikyu_Bridge_B/Hamarikyu_Bridge_B.hdr' },
        //envMap: { binary: ASSETS_DIR + '/textures/envmaps/garage/garage.hdr' },
        //envMap: { binary: ASSETS_DIR + '/textures/envmaps/uffizi/uffizi.hdr' },
-       // envMap: { image: ASSETS_DIR + '/textures/envmaps/test/test.png' },
+       //envMap: { image: ASSETS_DIR + '/textures/envmaps/test/test.png' },
     },
     sunPosition: [0, 5, -5],
     elevation: 65,
@@ -54,6 +54,10 @@ Window.create({
        
         gui.addParam('Exposure', this.renderer._state, 'exposure', { min: 0.01, max: 5});
         gui.addParam('Shadow Bias', this.renderer._state, 'bias', { min: 0.001, max: 0.1});
+        gui.addParam('SSAO', this.renderer._state, 'ssao' );
+        gui.addParam('SSAO Sharpness', this.renderer._state, 'ssaoSharpness', { min: 0, max:100 });
+        gui.addParam('SSAO Radius', this.renderer._state, 'ssaoRadius', { min: 0, max:1 });
+        this.renderer._state.debug = true;
 
         if (res.envMap) {
             if (res.envMap.width) {
@@ -73,7 +77,7 @@ Window.create({
         gui.addTextureCube('Irradiance Map', renderer._reflectionProbe.getIrradianceMap(), { hdr: true });
 
         this.camera = new PerspCamera(45, this.getAspectRatio(), 0.1, 50.0);;
-        this.camera.lookAt([0,0,5], [0,0,0]);
+        this.camera.lookAt([0,3,8], [0,0,0]);
         renderer.createNode({
             camera: this.camera
         });
@@ -202,6 +206,11 @@ Window.create({
         return ctx.createMesh(attributes, geometry.cells ? indices : null, primitiveType);
     },
     draw: function() {
+        if (this.getTime().getElapsedFrames() % 30 == 0) {
+            this.getContext().getGL().finish();
+            console.time('frame');
+            this.renderer._state.profile = true;
+        }
         try {
         this.arcball.apply();
         this.renderer.draw();
@@ -215,6 +224,12 @@ Window.create({
             console.log(e);
             console.log(e.stack);
             process.exit(-1);
+        }
+        if (this.getTime().getElapsedFrames() % 30 == 0) {
+            this.renderer._state.profile = false;
+            this.getContext().getGL().finish();
+            console.timeEnd('frame');
+            console.log('fps:', this.getTime().getFPS());
         }
     }
 })
