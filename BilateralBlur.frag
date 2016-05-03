@@ -30,24 +30,33 @@ float readDepth(sampler2D depthMap, vec2 coord) {
 
 //blur weight based on https://github.com/nvpro-samples/gl_ssao/blob/master/hbao_blur.frag.glsl
 
+vec4 bilataralSample(sampler2D image, vec2 imageResolution, sampler2D depthMap, vec2 depthMapResolution, vec2 uv, vec2 direction, float r, float centerDepth, float blurFalloff, out float weightSum) {
+    vec2 off = direction * r;
+    float sampleDepth = readDepth(depthMap, uv);
+    float diff = (sampleDepth - centerDepth) * sharpness;
+    float weight = exp2(-r * r * blurFalloff - diff * diff);
+    weightSum += weight;
+    return texture2D(image, uv + (off / imageResolution)) * weight;
+}
+
 vec4 bilateralBlur(sampler2D image, vec2 imageResolution, sampler2D depthMap, vec2 depthMapResolution, vec2 uv, vec2 direction) {
   vec4 color = vec4(0.0);
   const int numSamples = 9;
   const float blurRadius = float(numSamples) / 2.0;
   const float blurSigma = blurRadius * 0.5;
   const float blurFalloff = 1.0 / (2.0*blurSigma*blurSigma);
-  const float offsets[numSamples] = float[]( -8.0, -6.0, -4.0, -2.0, 0.0, 2.0, 4.0, 6.0, 8.0 );
+  
   float centerDepth = readDepth(depthMap, uv);
   float weightSum = 0.0;
-  for(int i=0; i<numSamples; i++) {
-        float r = offsets[i];
-        vec2 off = direction * r;
-        float sampleDepth = readDepth(depthMap, uv + (off / depthMapResolution));
-        float diff = (sampleDepth - centerDepth) * sharpness;
-        float weight = exp2(-r * r * blurFalloff - diff * diff);
-        color += texture2D(image, uv + (off / imageResolution)) * weight;
-        weightSum += weight;
-  }
+  color += bilataralSample(image, imageResolution, depthMap, depthMapResolution, uv, direction, -8.0, centerDepth, blurFalloff, weightSum);
+  color += bilataralSample(image, imageResolution, depthMap, depthMapResolution, uv, direction, -6.0, centerDepth, blurFalloff, weightSum);
+  color += bilataralSample(image, imageResolution, depthMap, depthMapResolution, uv, direction, -4.0, centerDepth, blurFalloff, weightSum);
+  color += bilataralSample(image, imageResolution, depthMap, depthMapResolution, uv, direction, -2.0, centerDepth, blurFalloff, weightSum);
+  color += bilataralSample(image, imageResolution, depthMap, depthMapResolution, uv, direction,  0.0, centerDepth, blurFalloff, weightSum);
+  color += bilataralSample(image, imageResolution, depthMap, depthMapResolution, uv, direction,  2.0, centerDepth, blurFalloff, weightSum);
+  color += bilataralSample(image, imageResolution, depthMap, depthMapResolution, uv, direction,  4.0, centerDepth, blurFalloff, weightSum);
+  color += bilataralSample(image, imageResolution, depthMap, depthMapResolution, uv, direction,  6.0, centerDepth, blurFalloff, weightSum);
+  color += bilataralSample(image, imageResolution, depthMap, depthMapResolution, uv, direction,  8.0, centerDepth, blurFalloff, weightSum);
   color /= weightSum;
   return color;
 }
