@@ -50,7 +50,7 @@ FXStage.prototype.bilateralBlur = function (options) {
     }
     ctx.popState(ctx.PROGRAM_BIT | ctx.FRAMEBUFFER_BIT);
 
-    return this.asFXStage(readRT, 'blur');
+    return this.asFXStage(readRT, 'bilateralBlur');
 };
 
 module.exports = FXStage;
