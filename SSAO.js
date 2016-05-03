@@ -13,10 +13,8 @@ FXStage.prototype.ssao = function (options) {
 
     var program = this.getShader(VERT, FRAG);
 
-    ctx.pushState(ctx.FRAMEBUFFER_BIT | ctx.TEXTURE_BIT | ctx.PROGRAM_BIT);
+    ctx.pushState(ctx.FRAMEBUFFER_BIT);
         ctx.bindFramebuffer(rt);
-        ctx.setClearColor(0,0,0,0);
-        ctx.clear(ctx.COLOR_BIT | ctx.DEPTH_BIT);
 
         ctx.bindTexture(this.getSourceTexture(options.depthMap), 0)
         ctx.bindTexture(this.getSourceTexture(options.normalMap), 1)
@@ -38,9 +36,9 @@ FXStage.prototype.ssao = function (options) {
         program.setUniform('radius', options.radius || 0.2);
 
         this.drawFullScreenQuad(outputSize.width, outputSize.height, null, program);
-    ctx.popState(ctx.FRAMEBUFFER_BIT | ctx.TEXTURE_BIT | ctx.PROGRAM_BIT);
+    ctx.popState(ctx.FRAMEBUFFER_BIT);
 
-    return this.asFXStage(rt, 'mult');
+    return this.asFXStage(rt, 'ssao');
 };
 
 FXStage.prototype.ssao.updateFrag = function(src) {
