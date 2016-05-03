@@ -16,6 +16,7 @@ uniform float far;
 uniform float aspectRatio;
 uniform float fov;
 uniform mat4 uProjectionMatrix;
+uniform float radius;
 
 //fron depth buf normalized z to linear (eye space) z
 //http://stackoverflow.com/questions/6652253/getting-the-true-z-value-from-the-depth-buffer
@@ -74,7 +75,6 @@ void main() {
   float occlusion = 0.0;
   const float kernelWidth = 5.0; //8.0
   const int kernelSize = 25; //64
-  float radius = 0.2;
   vec3 lastSample = vec3(0.0);
   for(int i = 0; i < kernelSize; ++i) {
     vec2 tc = vec2(mod(float(i), kernelWidth) / kernelWidth + 0.5/kernelWidth, floor(float(i) / kernelWidth) / kernelWidth + 0.5/kernelWidth);

@@ -35,6 +35,7 @@ FXStage.prototype.ssao = function (options) {
         program.setUniform('far', options.camera.getFar());
         program.setUniform('fov', options.camera.getFov());
         program.setUniform('aspectRatio', options.camera.getAspectRatio());
+        program.setUniform('radius', options.radius || 0.2);
 
         this.drawFullScreenQuad(outputSize.width, outputSize.height, null, program);
     ctx.popState(ctx.FRAMEBUFFER_BIT | ctx.TEXTURE_BIT | ctx.PROGRAM_BIT);

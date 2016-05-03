@@ -41,6 +41,7 @@ var State = {
     ssao: true,
     ssaoDownsample: 2,
     ssaoSharpness: 1,
+    ssaoRadius: 0.2,
     shadows: true,
     shadowQuality: 3,
     bias: 0.1,
@@ -530,7 +531,7 @@ Renderer.prototype.draw = function() {
     if (State.debug) console.time('postprocessing');
     if (State.debug) console.time('ssao');
     if (State.ssao) {
-        var ssao = root.ssao({ depthMap: this._frameDepthTex, normalMap: this._frameNormalTex, kernelMap: this.ssaoKernelMap, noiseMap: this.ssaoNoiseMap, camera: currentCamera, width: W/State.ssaoDownsample, height: H/State.ssaoDownsample });
+        var ssao = root.ssao({ depthMap: this._frameDepthTex, normalMap: this._frameNormalTex, kernelMap: this.ssaoKernelMap, noiseMap: this.ssaoNoiseMap, camera: currentCamera, width: W/State.ssaoDownsample, height: H/State.ssaoDownsample, radius: State.ssaoRadius });
         ssao = ssao.bilateralBlur({ depthMap: this._frameDepthTex, camera: currentCamera, sharpness: State.ssaoSharpness });
         //TODO: this is incorrect, AO influences only indirect diffuse (irradiance) and indirect specular reflections
         //this will also influence direct lighting (lights, sun)
