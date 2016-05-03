@@ -12,6 +12,7 @@ var random = require('pex-random');
 var MathUtils = require('pex-math/Utils')
 var flatten = require('flatten')
 var SSAOv2          = require('./SSAO')
+var BilateralBlur = require('./BilateralBlur')
 var Postprocess = require('./Postprocess');
 var SkyEnvMap = require('./SkyEnvMap');
 var Skybox = require('./Skybox');
@@ -38,12 +39,15 @@ var State = {
     dirtySky: true,
     frame: 0,
     ssao: true,
+    ssaoDownsample: 2,
+    ssaoSharpness: 1,
     shadows: true,
     shadowQuality: 3,
-    bias: 0.1
+    bias: 0.1,
+    debug: false
 }
 
-function Renderer(ctx, width, height) {
+function Renderer(ctx, width, height, initialState) {
     this._ctx = ctx;
     this._width = width;
     this._height = height;
@@ -60,6 +64,10 @@ function Renderer(ctx, width, height) {
     this.initPostproces();
 
     this._state = State;
+
+    if (initialState) {
+        Object.assign(State, initialState);
+    }
 }
 
 
@@ -289,6 +297,10 @@ Renderer.prototype.getMeshProgram = function(meshMaterial) {
 
 Renderer.prototype.drawMeshes = function() {
     var ctx = this._ctx;
+
+    if (State.debug) ctx.getGL().finish();
+    if (State.debug) console.time('drawMeshes');
+    
     var meshNodes = this.getMeshNodes();
     var lightNodes = this.getLightNodes();
 
@@ -438,6 +450,7 @@ Renderer.prototype.drawMeshes = function() {
     ctx.bindProgram(this._solidColorProgram);
     this._solidColorProgram.setUniform('uColor', [1,0,0,1])
 
+    //TODO: don't calculate debug node stack unless in debug
     this._nodes.forEach(function(node) {
         ctx.pushModelMatrix();
         if (node._globalTransform) {
@@ -449,7 +462,11 @@ Renderer.prototype.drawMeshes = function() {
         }
         ctx.popModelMatrix();
     }.bind(this));
+    
     ctx.popState();
+
+    if (State.debug) ctx.getGL().finish();
+    if (State.debug) console.timeEnd('drawMeshes');
 }
 
 Renderer.prototype.draw = function() {
@@ -508,16 +525,34 @@ Renderer.prototype.draw = function() {
     var root = this._fx.reset();
     var color = root.asFXStage(this._frameColorTex, 'img');
     var final = color;
+
+    if (State.debug) ctx.getGL().finish();
+    if (State.debug) console.time('postprocessing');
+    if (State.debug) console.time('ssao');
     if (State.ssao) {
-        var ssao = root.ssao({ depthMap: this._frameDepthTex, normalMap: this._frameNormalTex, kernelMap: this.ssaoKernelMap, noiseMap: this.ssaoNoiseMap, camera: currentCamera, width: W/2, height: H/2 });
-        ssao = ssao.blur3().blur3();
+        var ssao = root.ssao({ depthMap: this._frameDepthTex, normalMap: this._frameNormalTex, kernelMap: this.ssaoKernelMap, noiseMap: this.ssaoNoiseMap, camera: currentCamera, width: W/State.ssaoDownsample, height: H/State.ssaoDownsample });
+        ssao = ssao.bilateralBlur({ depthMap: this._frameDepthTex, camera: currentCamera, sharpness: State.ssaoSharpness });
         //TODO: this is incorrect, AO influences only indirect diffuse (irradiance) and indirect specular reflections
         //this will also influence direct lighting (lights, sun)
         final = color.mult(ssao, { bpp: 16 });
     }
+    if (State.debug) ctx.getGL().finish();
+    if (State.debug) console.timeEnd('ssao');
+
+    if (State.debug) console.time('postprocess');
     final = final.postprocess({ exposure: State.exposure })
+    if (State.debug) ctx.getGL().finish();
+    if (State.debug) console.timeEnd('postprocess');
+
+    if (State.debug) console.time('fxaa');
     final = final.fxaa()
+    if (State.debug) ctx.getGL().finish();
+    if (State.debug) console.timeEnd('fxaa');
+
+    if (State.debug) ctx.getGL().finish();
+    if (State.debug) console.timeEnd('postprocessing');
     var viewport = ctx.getViewport();
+
     final.blit({ x: viewport[0], y: viewport[1], width: viewport[2], height: viewport[3]});
 
     //overlays

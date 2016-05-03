@@ -72,8 +72,8 @@ void main() {
   mat3 TBN = mat3(tangent, bitangent, normal);
 
   float occlusion = 0.0;
-  const float kernelWidth = 6.0; //8.0
-  const int kernelSize = 36; //64
+  const float kernelWidth = 5.0; //8.0
+  const int kernelSize = 25; //64
   float radius = 0.2;
   vec3 lastSample = vec3(0.0);
   for(int i = 0; i < kernelSize; ++i) {
