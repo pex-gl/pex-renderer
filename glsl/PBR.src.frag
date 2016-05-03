@@ -33,59 +33,68 @@ uniform vec3 uSunPosition;
 uniform vec4 uSunColor;
 
 //shadow mapping
-uniform mat4 uLightProjectionMatrix;
-uniform mat4 uLightViewMatrix;
-uniform float uLightNear;
-uniform float uLightFar;
-uniform sampler2D uShadowMap;
-uniform vec2 uShadowMapSize;
-uniform float uBias;
+struct DirectionalLight {
+    vec3 position;
+    vec3 direction;
+    vec4 color;
+    mat4 projectionMatrix;
+    mat4 viewMatrix;
+    float near;
+    float far;
+    float bias;
+    vec2 shadowMapSize;
+};
+
+
+#define NUM_DIRECTIONAL_LIGHTS 1
+uniform DirectionalLight uDirectionalLights[NUM_DIRECTIONAL_LIGHTS];
+uniform sampler2D uDirectionalLightShadowMaps[NUM_DIRECTIONAL_LIGHTS];
 
 //fron depth buf normalized z to linear (eye space) z
 //http://stackoverflow.com/questions/6652253/getting-the-true-z-value-from-the-depth-buffer
-float ndcDepthToEyeSpaceProj(float ndcDepth) {
-    return 2.0 * uLightNear * uLightFar / (uLightFar + uLightNear - ndcDepth * (uLightFar - uLightNear));
+float ndcDepthToEyeSpaceProj(float ndcDepth, float near, float far) {
+    return 2.0 * near * far / (far + near - ndcDepth * (far - near));
 }
 
 //otho
 //z = (f - n) * (zn + (f + n)/(f-n))/2
 //http://www.ogldev.org/www/tutorial47/tutorial47.html
-float ndcDepthToEyeSpace(float ndcDepth) {
-    return (uLightFar - uLightNear) * (ndcDepth + (uLightFar + uLightNear) / (uLightFar - uLightNear)) / 2.0;
+float ndcDepthToEyeSpace(float ndcDepth, float near, float far) {
+    return (far - near) * (ndcDepth + (far + near) / (far - near)) / 2.0;
 }
 
-float readDepth(sampler2D depthMap, vec2 coord) {
+float readDepth(sampler2D depthMap, vec2 coord, float near, float far) {
     float z_b = texture2D(depthMap, coord).r;
     float z_n = 2.0 * z_b - 1.0;
-    return ndcDepthToEyeSpace(z_n);
+    return ndcDepthToEyeSpace(z_n, near, far);
 }
 
-float texture2DCompare(sampler2D depthMap, vec2 uv, float compare) {
-    float depth = readDepth(depthMap, uv);
+float texture2DCompare(sampler2D depthMap, vec2 uv, float compare, float near, float far) {
+    float depth = readDepth(depthMap, uv, near, far);
     return step(compare, depth);
 }
 
-float texture2DShadowLerp(sampler2D depthMap, vec2 size, vec2 uv, float compare){
+float texture2DShadowLerp(sampler2D depthMap, vec2 size, vec2 uv, float compare, float near, float far){
     vec2 texelSize = vec2(1.0)/size;
     vec2 f = fract(uv*size+0.5);
     vec2 centroidUV = floor(uv*size+0.5)/size;
 
-    float lb = texture2DCompare(depthMap, centroidUV+texelSize*vec2(0.0, 0.0), compare);
-    float lt = texture2DCompare(depthMap, centroidUV+texelSize*vec2(0.0, 1.0), compare);
-    float rb = texture2DCompare(depthMap, centroidUV+texelSize*vec2(1.0, 0.0), compare);
-    float rt = texture2DCompare(depthMap, centroidUV+texelSize*vec2(1.0, 1.0), compare);
+    float lb = texture2DCompare(depthMap, centroidUV+texelSize*vec2(0.0, 0.0), compare, near, far);
+    float lt = texture2DCompare(depthMap, centroidUV+texelSize*vec2(0.0, 1.0), compare, near, far);
+    float rb = texture2DCompare(depthMap, centroidUV+texelSize*vec2(1.0, 0.0), compare, near, far);
+    float rt = texture2DCompare(depthMap, centroidUV+texelSize*vec2(1.0, 1.0), compare, near, far);
     float a = mix(lb, lt, f.y);
     float b = mix(rb, rt, f.y);
     float c = mix(a, b, f.x);
     return c;
 }
 
-float PCF(sampler2D depths, vec2 size, vec2 uv, float compare){
+float PCF(sampler2D depths, vec2 size, vec2 uv, float compare, float near, float far){
     float result = 0.0;
     for(int x=-2; x<=2; x++){
         for(int y=-2; y<=2; y++){
             vec2 off = vec2(x,y)/float(size);
-            result += texture2DShadowLerp(depths, size, uv+off, compare);
+            result += texture2DShadowLerp(depths, size, uv+off, compare, near, far);
         }
     }
     return result/25.0;
@@ -238,39 +247,47 @@ void main() {
     vec3 reflectance = EnvBRDFApprox( F0, roughness, NdotV );
 
     vec3 diffuseColor = baseColor * (1.0 - metallic);
-    vec3 specularColor = mix(vec3(1.0), baseColor, metallic); 
-    
-    //light
-
-    vec3 sunL = normalize(uSunPosition);
-
-    float dotNsunL = max(0.0, dot(normalWorld, sunL));
-    float sunDiffuse = dotNsunL;
-
-    //shadows
-    vec4 lightViewPosition = uLightViewMatrix * vec4(vPositionWorld, 1.0);
-    float lightDistView = -lightViewPosition.z;
-    vec4 lightDeviceCoordsPosition = uLightProjectionMatrix * lightViewPosition;
-    vec2 lightDeviceCoordsPositionNormalized = lightDeviceCoordsPosition.xy / lightDeviceCoordsPosition.w;
-    float lightDeviceCoordsZ = lightDeviceCoordsPosition.z / lightDeviceCoordsPosition.w;
-    vec2 lightUV = lightDeviceCoordsPositionNormalized.xy * 0.5 + 0.5;
-
-#ifdef SHADOW_QUALITY_0
-    float illuminated = 1.0;
-#elseif SHADOW_QUALITY_1
-    float illuminated = texture2DCompare(uShadowMap, lightUV, lightDistView - uBias);
-#elseif SHADOW_QUALITY_2
-    float illuminated = texture2DShadowLerp(uShadowMap, uShadowMapSize, lightUV, lightDistView - uBias);
-#else
-    float illuminated = PCF(uShadowMap, uShadowMapSize, lightUV, lightDistView - uBias);
-#endif
+    vec3 specularColor = mix(vec3(1.0), baseColor, metallic);
     
     //TODO: No kd? so not really energy conserving
     //we could use disney brdf for irradiance map to compensate for that like in Frostbite
     vec3 indirectDiffuse = diffuseColor * irradianceColor;
     vec3 indirectSpecular = reflectionColor * specularColor * reflectance;
-    vec3 directDiffuse = diffuseColor * sunDiffuse * uSunColor.rgb * illuminated;
-    vec3 directSpecular = directSpecularGGX(normalWorld, eyeDirWorld, sunL, roughness, F0);
+
+    vec3 directDiffuse = vec3(0.0);
+    vec3 directSpecular = vec3(0.0);
+
+    //lights
+    for(int i=0; i<NUM_DIRECTIONAL_LIGHTS; i++) {
+        DirectionalLight light = uDirectionalLights[i];
+
+        vec3 L = normalize(light.direction);
+
+        float dotNL = max(0.0, dot(normalWorld, L));
+
+        //shadows
+        vec4 lightViewPosition = light.viewMatrix * vec4(vPositionWorld, 1.0);
+        float lightDistView = -lightViewPosition.z;
+        vec4 lightDeviceCoordsPosition = light.projectionMatrix * lightViewPosition;
+        vec2 lightDeviceCoordsPositionNormalized = lightDeviceCoordsPosition.xy / lightDeviceCoordsPosition.w;
+        float lightDeviceCoordsZ = lightDeviceCoordsPosition.z / lightDeviceCoordsPosition.w;
+        vec2 lightUV = lightDeviceCoordsPositionNormalized.xy * 0.5 + 0.5;
+
+#ifdef SHADOW_QUALITY_0
+        float illuminated = 1.0;
+#elseif SHADOW_QUALITY_1
+        float illuminated = texture2DCompare(uDirectionalLightShadowMaps[i], lightUV, lightDistView - uBias, light.near, light.far);
+#elseif SHADOW_QUALITY_2
+        float illuminated = texture2DShadowLerp(uDirectionalLightShadowMaps[i], light.shadowMapSize, lightUV, lightDistView - light.bias, light.near, light.far);
+#else
+        float illuminated = PCF(uDirectionalLightShadowMaps[i], light.shadowMapSize, lightUV, lightDistView - light.bias, light.near, light.far);
+#endif
+        if (illuminated > 0.0) {
+            directDiffuse += diffuseColor * dotNL * light.color.rgb * illuminated;
+            directSpecular += directSpecularGGX(normalWorld, eyeDirWorld, L, roughness, F0) * illuminated;
+        }
+    }
+        
     vec3 color = indirectDiffuse + indirectSpecular + directDiffuse + directSpecular;
 
     /*color.r = 1.0;*/

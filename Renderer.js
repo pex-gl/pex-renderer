@@ -185,6 +185,7 @@ Renderer.prototype.initNode = function(node) {
     if (node.light) {
         if (node.light.type == 'directional') {
             if (node.light.shadows === undefined) { node.light.shadows = true; }
+            if (node.light.color === undefined) { node.light.color = [1,1,1,1]; }
             node.light._colorMap = ctx.createTexture2D(null, 1024, 1024); //TODO: remove this
             node.light._shadowMap = ctx.createTexture2D(null, 1024, 1024, { format: ctx.DEPTH_COMPONENT, type: ctx.UNSIGNED_SHORT});
             node.light._viewMatrix = Mat4.create();
@@ -200,25 +201,9 @@ Renderer.prototype.getNodes = function(type) {
     return this._nodes.filter(function(node) { return node[type] != null; });
 }
 
-Renderer.prototype.getMeshNodes = function() {
-    return this.getNodes('mesh');
-}
-
-Renderer.prototype.getCameraNodes = function() {
-    return this.getNodes('camera');
-}
-
-Renderer.prototype.getLightNodes = function() {
-    return this.getNodes('light');
-}
-
-Renderer.prototype.getOverlays = function() {
-    return this.getNodes('overlay');
-}
-
 Renderer.prototype.updateShadowmaps = function() {
     var ctx = this._ctx;
-    var lightNodes = this.getLightNodes();
+    var lightNodes = this.getNodes('light');
 
     ctx.pushState(ctx.FRAMEBUFFER_BIT | ctx.VIEWPORT_BIT);
     ctx.bindFramebuffer(this._shadowMapFbo);
@@ -243,7 +228,6 @@ Renderer.prototype.updateShadowmaps = function() {
             var tmp = [p[0], p[1], p[2], 1];
             Vec4.multMat4(Vec4.multMat4(tmp, light._viewMatrix), light._projectionMatrix);
         });
-        this._shadowMap = light._shadowMap;
 
         ctx.setViewport(0, 0, light._shadowMap.getWidth(), light._shadowMap.getHeight())
 
@@ -293,6 +277,7 @@ Renderer.prototype.getMeshProgram = function(meshMaterial) {
     var program = this._programCache[flags];
     if (!program) {
         program = this._programCache[flags] = ctx.createProgram(Vert, flags + Frag);
+        console.log(Object.keys(program._uniforms))
     }
     return program;
 }
@@ -303,8 +288,9 @@ Renderer.prototype.drawMeshes = function() {
     if (State.profile) ctx.getGL().finish();
     if (State.profile) console.time('drawMeshes');
     
-    var meshNodes = this.getMeshNodes();
-    var lightNodes = this.getLightNodes();
+    var meshNodes = this.getNodes('mesh');
+    var lightNodes = this.getNodes('light');
+    var directionalLightNodes = lightNodes.filter(function(node) { return node.light.type == 'directional'});
 
 
     ctx.pushState(ctx.CULL_BIT | ctx.DEPTH_BIT);
@@ -339,28 +325,29 @@ Renderer.prototype.drawMeshes = function() {
         })
     })
 
-    ctx.bindTexture(this._reflectionProbe.getIrradianceMap());
-    ctx.bindTexture(lightNodes[0].light.shadowMap, 1);
-
     var sharedUniforms = {
-        uSunPosition: State.sunPosition,
-        uSunColor: State.sunColor,
-        uLightProjectionMatrix: lightNodes[0].light._projectionMatrix,
-        uLightViewMatrix: lightNodes[0].light._viewMatrix,
-        uLightNear: lightNodes[0].light._near,
-        uLightFar: lightNodes[0].light._far,
-        uShadowMap: lightNodes[0].light._shadowMap,
-        uShadowMapSize: [lightNodes[0].light._shadowMap.getWidth(), lightNodes[0].light._shadowMap.getHeight()],
-        uShadowQuality: State.shadows ? State.shadowQuality : 0,
-        uBias: State.bias,
 		uReflectionMap: this._reflectionProbe.getReflectionMap(),
         uIrradianceMap: this._reflectionProbe.getIrradianceMap()
     };
+   
+    directionalLightNodes.forEach(function(lightNode, i) {
+        var light = lightNode.light;
+        sharedUniforms['uDirectionalLights['+i+'].position'] = light.position || State.sunPosition; //TODO: fixme
+        sharedUniforms['uDirectionalLights['+i+'].direction'] = State.sunPosition || light.direction;
+        sharedUniforms['uDirectionalLights['+i+'].color'] = light.color || State.sunColor; //TODO: fixme
+        sharedUniforms['uDirectionalLights['+i+'].projectionMatrix'] = light._projectionMatrix;
+        sharedUniforms['uDirectionalLights['+i+'].viewMatrix'] = light._viewMatrix;
+        sharedUniforms['uDirectionalLights['+i+'].near'] = light._near;
+        sharedUniforms['uDirectionalLights['+i+'].far'] = light._far;
+        sharedUniforms['uDirectionalLights['+i+'].bias'] = State.bias;
+        sharedUniforms['uDirectionalLights['+i+'].shadowMapSize'] = [light._shadowMap.getWidth(), light._shadowMap.getHeight()];
+        sharedUniforms['uDirectionalLightShadowMaps['+i+']'] = light._shadowMap;
+    })
 
     meshNodes.forEach(function(meshNode) {
         var meshUniforms = {
             uIor: 1.4,
-            uBaseColor: meshNode.material.baseColor || [0.9,0.9,0.9,0.9],
+            uBaseColor: meshNode.material.baseColor,
             uBaseColorMap: meshNode.material.baseColorMap,
             uMetallic: meshNode.material.metallic || 0.1,
             uMetallicMap: meshNode.material.metallicMap,
@@ -372,7 +359,13 @@ Renderer.prototype.drawMeshes = function() {
         Object.assign(meshNode.material._uniforms, sharedUniforms, meshUniforms);
         var meshUniforms = meshNode.material._uniforms;
         
-        var meshProgram = this.getMeshProgram(meshNode.material);
+        var meshProgram = this.getMeshProgram(meshNode.material, directionalLightNodes.length);
+
+        Object.keys(meshProgram._uniforms).forEach(function(uniformName) {
+            if (!meshUniforms[uniformName]) {
+                //console.log('missing', uniformName);
+            }
+        });
 
         var numTextures = 0;
 		ctx.bindProgram(meshProgram);
@@ -383,6 +376,7 @@ Renderer.prototype.drawMeshes = function() {
                     throw new Error('Null uniform value for ' + uniformName + ' in PBRMaterial');
                 }
                 else {
+                    //console.log('Unnecessary uniform', uniformName);
                     continue;
                 }
             }
@@ -483,11 +477,11 @@ Renderer.prototype.draw = function() {
     ctx.setClearColor(State.backgroundColor[0], State.backgroundColor[1], State.backgroundColor[2], State.backgroundColor[3]);
     ctx.clear(ctx.COLOR_BIT | ctx.DEPTH_BIT);
 
-    var cameraNodes = this._nodes.filter(function(node) { return node.camera != null; });
-    var meshNodes = this._nodes.filter(function(node) { return node.mesh != null; });
-    var lightNodes = this._nodes.filter(function(node) { return node.light != null; });
+    var cameraNodes = this.getNodes('camera');
+    var meshNodes = this.getNodes('mesh');
+    var directionalLightNodes = this.getNodes('light').filter(function(node) { node.light.type == 'directional'});
+    var overlayNodes = this.getNodes('overlay');
 
-    var cameraNodes = this.getCameraNodes();
     if (cameraNodes.length == 0) {
         console.log('WARN: Renderer.draw no cameras found');
         return;
@@ -513,7 +507,7 @@ Renderer.prototype.draw = function() {
 
     ctx.clear(ctx.COLOR_BIT | ctx.DEPTH_BIT);
 
-    var currentCamera = this.getCameraNodes()[0].camera;
+    var currentCamera = cameraNodes[0].camera;
     ctx.setViewMatrix(currentCamera.getViewMatrix());
     ctx.setProjectionMatrix(currentCamera.getProjectionMatrix());
 
@@ -566,7 +560,7 @@ Renderer.prototype.draw = function() {
     ctx.setDepthTest(false);
     ctx.setBlend(true);
     ctx.setBlendFunc(ctx.ONE, ctx.ONE);
-    this.getOverlays().forEach(function(overlayNode) {
+    overlayNodes.forEach(function(overlayNode) {
         ctx.bindTexture(overlayNode.overlay);
         ctx.drawMesh();
     }.bind(this));
@@ -577,7 +571,7 @@ Renderer.prototype.draw = function() {
     if (State.debug) {
         ctx.bindProgram(this._showColorsProgram);
         this._debugDraw.setColor([1,0,0,1]);
-        var lightNodes = this.getLightNodes();
+        var lightNodes = this.getNodes('light');
 
         this._debugDraw.setLineWidth(2);
         lightNodes.forEach(function(lightNode) {
