@@ -229,8 +229,9 @@ Renderer.prototype.updateShadowmaps = function() {
         light._near = 4;//-8;
         light._far = 25;
         Mat4.lookAt(light._viewMatrix, [State.sunPosition[0]*7.5, State.sunPosition[1]*7.5, State.sunPosition[2]*7.5], [0,-2,0], [0, 1, 0]);
-        Mat4.perspective(light._projectionMatrix, 90, 1, light._near, light._far);
+        //Mat4.perspective(light._projectionMatrix, 90, 1, light._near, light._far);
         Mat4.ortho(light._projectionMatrix, -6, 6, -6, 6, light._near, light._far);
+
         ctx.setViewMatrix(light._viewMatrix);
         ctx.setProjectionMatrix(light._projectionMatrix);
         this._shadowMapFbo.setColorAttachment(0, light._colorMap.getTarget(), light._colorMap.getHandle(), 0);
@@ -299,8 +300,8 @@ Renderer.prototype.getMeshProgram = function(meshMaterial) {
 Renderer.prototype.drawMeshes = function() {
     var ctx = this._ctx;
 
-    if (State.debug) ctx.getGL().finish();
-    if (State.debug) console.time('drawMeshes');
+    if (State.profile) ctx.getGL().finish();
+    if (State.profile) console.time('drawMeshes');
     
     var meshNodes = this.getMeshNodes();
     var lightNodes = this.getLightNodes();
@@ -466,8 +467,8 @@ Renderer.prototype.drawMeshes = function() {
     
     ctx.popState();
 
-    if (State.debug) ctx.getGL().finish();
-    if (State.debug) console.timeEnd('drawMeshes');
+    if (State.profile) ctx.getGL().finish();
+    if (State.profile) console.timeEnd('drawMeshes');
 }
 
 Renderer.prototype.draw = function() {
@@ -527,9 +528,9 @@ Renderer.prototype.draw = function() {
     var color = root.asFXStage(this._frameColorTex, 'img');
     var final = color;
 
-    if (State.debug) ctx.getGL().finish();
-    if (State.debug) console.time('postprocessing');
-    if (State.debug) console.time('ssao');
+    if (State.profile) ctx.getGL().finish();
+    if (State.profile) console.time('postprocessing');
+    if (State.profile) console.time('ssao');
     if (State.ssao) {
         var ssao = root.ssao({ depthMap: this._frameDepthTex, normalMap: this._frameNormalTex, kernelMap: this.ssaoKernelMap, noiseMap: this.ssaoNoiseMap, camera: currentCamera, width: W/State.ssaoDownsample, height: H/State.ssaoDownsample, radius: State.ssaoRadius });
         ssao = ssao.bilateralBlur({ depthMap: this._frameDepthTex, camera: currentCamera, sharpness: State.ssaoSharpness });
@@ -537,21 +538,21 @@ Renderer.prototype.draw = function() {
         //this will also influence direct lighting (lights, sun)
         final = color.mult(ssao, { bpp: 16 });
     }
-    if (State.debug) ctx.getGL().finish();
-    if (State.debug) console.timeEnd('ssao');
+    if (State.profile) ctx.getGL().finish();
+    if (State.profile) console.timeEnd('ssao');
 
-    if (State.debug) console.time('postprocess');
+    if (State.profile) console.time('postprocess');
     final = final.postprocess({ exposure: State.exposure })
-    if (State.debug) ctx.getGL().finish();
-    if (State.debug) console.timeEnd('postprocess');
+    if (State.profile) ctx.getGL().finish();
+    if (State.profile) console.timeEnd('postprocess');
 
-    if (State.debug) console.time('fxaa');
+    if (State.profile) console.time('fxaa');
     final = final.fxaa()
-    if (State.debug) ctx.getGL().finish();
-    if (State.debug) console.timeEnd('fxaa');
+    if (State.profile) ctx.getGL().finish();
+    if (State.profile) console.timeEnd('fxaa');
 
-    if (State.debug) ctx.getGL().finish();
-    if (State.debug) console.timeEnd('postprocessing');
+    if (State.profile) ctx.getGL().finish();
+    if (State.profile) console.timeEnd('postprocessing');
     var viewport = ctx.getViewport();
 
     final.blit({ x: viewport[0], y: viewport[1], width: viewport[2], height: viewport[3]});
@@ -573,7 +574,7 @@ Renderer.prototype.draw = function() {
     ctx.setBlend(false);
     //ctx.popState(flags);
 
-    if (this._debug) {
+    if (State.debug) {
         ctx.bindProgram(this._showColorsProgram);
         this._debugDraw.setColor([1,0,0,1]);
         var lightNodes = this.getLightNodes();
@@ -581,8 +582,8 @@ Renderer.prototype.draw = function() {
         this._debugDraw.setLineWidth(2);
         lightNodes.forEach(function(lightNode) {
             var light = lightNode.light;
-            var invProj = Mat4.invert(Mat4.copy(light.projectionMatrix));
-            var invView = Mat4.invert(Mat4.copy(light.viewMatrix));
+            var invProj = Mat4.invert(Mat4.copy(light._projectionMatrix));
+            var invView = Mat4.invert(Mat4.copy(light._viewMatrix));
             var corners = [[-1, -1, 1, 1], [1, -1, 1,1], [1, 1, 1,1], [-1, 1, 1,1], [-1, -1, -1,1], [1, -1, -1,1], [1, 1, -1,1], [-1, 1, -1,1]].map(function(p) {
                 var v = Vec4.multMat4(Vec4.multMat4(Vec4.copy(p), invProj), invView); 
                 Vec3.scale(v, 1/v[3]);
