@@ -36,7 +36,6 @@ var State = {
     sunColor: [1,1,1,1],
     prevSunPosition: [0, 0, 0],
     exposure: 1,
-    dirtySky: true,
     frame: 0,
     ssao: true,
     ssaoDownsample: 2,
@@ -141,6 +140,13 @@ Renderer.prototype.initSkybox = function() {
     this._skyEnvMapTex = new SkyEnvMap(ctx, State.sunPosition);
     this._skybox = new Skybox(ctx, this._skyEnvMap);
     this._reflectionProbe = new ReflectionProbe(ctx, [0, 0, 0]);
+
+    //No need to set default props as these will be automatically updated on first render
+    this._sunLightNode = this.createNode({
+        light: {
+            type: 'directional'
+        }
+    });
 }
 
 Renderer.prototype.addNode = function(node) {
@@ -165,14 +171,16 @@ Renderer.prototype.createNode = function(props) {
 Renderer.prototype.initNode = function(node) {
     var ctx = this._ctx;
 
+    if (!node.position) node.position = [0,0,0];
+    if (!node.scale) node.scale = [1,1,1];
+    if (!node.rotation) node.rotation = [0,0,0,1];
+    
     node._parent = null;
     node._children = [];
     node._localTransform = Mat4.create();
     node._globalTransform = Mat4.create();
+    node._prevPosition = Vec3.copy(node.position);
 
-    if (!node.position) node.position = [0,0,0];
-    if (!node.scale) node.scale = [1,1,1];
-    if (!node.rotation) node.rotation = [0,0,0,1];
 
     if (node.mesh) {
         var material = node.material
@@ -186,10 +194,12 @@ Renderer.prototype.initNode = function(node) {
         if (node.light.type == 'directional') {
             if (node.light.shadows === undefined) { node.light.shadows = true; }
             if (node.light.color === undefined) { node.light.color = [1,1,1,1]; }
+            if (node.light.direction === undefined) { node.light.direction = [0,-1,0]; }
             node.light._colorMap = ctx.createTexture2D(null, 1024, 1024); //TODO: remove this
             node.light._shadowMap = ctx.createTexture2D(null, 1024, 1024, { format: ctx.DEPTH_COMPONENT, type: ctx.UNSIGNED_SHORT});
             node.light._viewMatrix = Mat4.create();
             node.light._projectionMatrix = Mat4.create();
+            node.light._prevDirection = [0,0,0];
         }
         else {
             throw new Error('Renderer.initNode unknown light type ' + node.light.type);
@@ -201,43 +211,32 @@ Renderer.prototype.getNodes = function(type) {
     return this._nodes.filter(function(node) { return node[type] != null; });
 }
 
-Renderer.prototype.updateShadowmaps = function() {
+Renderer.prototype.updateDirectionalLightShadowMap = function(lightNode) {
     var ctx = this._ctx;
-    var lightNodes = this.getNodes('light');
 
     ctx.pushState(ctx.FRAMEBUFFER_BIT | ctx.VIEWPORT_BIT);
     ctx.bindFramebuffer(this._shadowMapFbo);
 
-    lightNodes.forEach(function(lightNode) {
-        var light = lightNode.light;
+    var light = lightNode.light;
 
-        light._near = 4;//-8;
-        light._far = 25;
-        Mat4.lookAt(light._viewMatrix, [State.sunPosition[0]*7.5, State.sunPosition[1]*7.5, State.sunPosition[2]*7.5], [0,-2,0], [0, 1, 0]);
-        //Mat4.perspective(light._projectionMatrix, 90, 1, light._near, light._far);
-        Mat4.ortho(light._projectionMatrix, -6, 6, -6, 6, light._near, light._far);
+    var target = Vec3.copy(lightNode.position);
+    Vec3.add(target, light.direction);
+    Mat4.lookAt(light._viewMatrix, lightNode.position, target, [0, 1, 0]);
+    Mat4.ortho(light._projectionMatrix, light._left, light._right, light._bottom, light._top, light._near, light._far);
 
-        ctx.setViewMatrix(light._viewMatrix);
-        ctx.setProjectionMatrix(light._projectionMatrix);
-        this._shadowMapFbo.setColorAttachment(0, light._colorMap.getTarget(), light._colorMap.getHandle(), 0);
-        this._shadowMapFbo.setDepthAttachment(light._shadowMap.getTarget(), light._shadowMap.getHandle(), 0);
+    ctx.setViewMatrix(light._viewMatrix);
+    ctx.setProjectionMatrix(light._projectionMatrix);
+    this._shadowMapFbo.setColorAttachment(0, light._colorMap.getTarget(), light._colorMap.getHandle(), 0);
+    this._shadowMapFbo.setDepthAttachment(light._shadowMap.getTarget(), light._shadowMap.getHandle(), 0);
 
+    ctx.setViewport(0, 0, light._shadowMap.getWidth(), light._shadowMap.getHeight())
 
-        var points = [[5,0,0], [0,0,0], [-5,0,0]];
-        points.forEach(function(p) {
-            var tmp = [p[0], p[1], p[2], 1];
-            Vec4.multMat4(Vec4.multMat4(tmp, light._viewMatrix), light._projectionMatrix);
-        });
-
-        ctx.setViewport(0, 0, light._shadowMap.getWidth(), light._shadowMap.getHeight())
-
-        ctx.setDepthTest(true);
-        ctx.setClearColor(0, 0, 0, 1);
-        ctx.clear(ctx.COLOR_BIT | ctx.DEPTH_BIT);
-        ctx.setColorMask(0,0,0,0);
-        this.drawMeshes();
-        ctx.setColorMask(1,1,1,1);
-    }.bind(this));
+    ctx.setDepthTest(true);
+    ctx.setClearColor(0, 0, 0, 1);
+    ctx.clear(ctx.COLOR_BIT | ctx.DEPTH_BIT);
+    ctx.setColorMask(0,0,0,0);
+    this.drawMeshes();
+    ctx.setColorMask(1,1,1,1);
 
     ctx.popState(ctx.FRAMEBUFFER_BIT | ctx.VIEWPORT_BIT);
 }
@@ -245,11 +244,12 @@ Renderer.prototype.updateShadowmaps = function() {
 var Vert = fs.readFileSync(__dirname + '/glsl/PBR.vert', 'utf8');
 var Frag = fs.readFileSync(__dirname + '/glsl/PBR.frag', 'utf8');
 
-Renderer.prototype.getMeshProgram = function(meshMaterial) {
-    var USE_BASE_COLOR_MAP = 1 << 0;
-    var USE_METALLIC_MAP   = 1 << 1;
-    var USE_ROUGHNESS_MAP  = 1 << 2;
-    var USE_NORMAL_MAP     = 1 << 3;
+//TODO: how fast is building these flag strings every frame for every object?
+Renderer.prototype.getMeshProgram = function(meshMaterial, numDirectionalLights) {
+    //var USE_BASE_COLOR_MAP = 1 << 0;
+    //var USE_METALLIC_MAP   = 1 << 1;
+    //var USE_ROUGHNESS_MAP  = 1 << 2;
+    //var USE_NORMAL_MAP     = 1 << 3;
 
     var ctx = this._ctx;
 
@@ -268,6 +268,7 @@ Renderer.prototype.getMeshProgram = function(meshMaterial) {
     if (meshMaterial.normalMap) {
         flags.push('#define USE_NORMAL_MAP');
     }
+    flags.push('#define NUM_DIRECTIONAL_LIGHTS ' + numDirectionalLights);
     flags = flags.join('\n') + '\n';
 
     if (!this._programCache) {
@@ -331,9 +332,9 @@ Renderer.prototype.drawMeshes = function() {
    
     directionalLightNodes.forEach(function(lightNode, i) {
         var light = lightNode.light;
-        sharedUniforms['uDirectionalLights['+i+'].position'] = light.position || State.sunPosition; //TODO: fixme
-        sharedUniforms['uDirectionalLights['+i+'].direction'] = State.sunPosition || light.direction;
-        sharedUniforms['uDirectionalLights['+i+'].color'] = light.color || State.sunColor; //TODO: fixme
+        sharedUniforms['uDirectionalLights['+i+'].position'] = lightNode.position;
+        sharedUniforms['uDirectionalLights['+i+'].direction'] = light.direction;
+        sharedUniforms['uDirectionalLights['+i+'].color'] = light.color;
         sharedUniforms['uDirectionalLights['+i+'].projectionMatrix'] = light._projectionMatrix;
         sharedUniforms['uDirectionalLights['+i+'].viewMatrix'] = light._viewMatrix;
         sharedUniforms['uDirectionalLights['+i+'].near'] = light._near;
@@ -464,6 +465,28 @@ Renderer.prototype.drawMeshes = function() {
     if (State.profile) console.timeEnd('drawMeshes');
 }
 
+Renderer.prototype.updateSunLight = function() {
+    var sunLightNode = this._sunLightNode;
+    var sunLight = sunLightNode.light;
+
+    Vec3.set(sunLightNode.position, State.sunPosition);
+    Vec3.scale(sunLightNode.position, 7.5); //TODO: set sun light node position based on bounding box
+
+    Vec3.set(sunLight.direction, State.sunPosition);
+    Vec3.scale(sunLight.direction, -1.0);
+    Vec3.normalize(sunLight.direction);
+
+    Vec3.set(sunLight.color, State.sunColor);
+
+    //TODO: sunLight frustum should come from the scene bounding box
+    sunLight._left    = -6;
+    sunLight._right   =  6;
+    sunLight._bottom  = -6;
+    sunLight._top     =  6;
+    sunLight._near    =  4;
+    sunLight._far     = 25;
+}
+
 Renderer.prototype.draw = function() {
     var ctx = this._ctx;
 
@@ -471,14 +494,17 @@ Renderer.prototype.draw = function() {
     flags |= ctx.COLOR_BIT | ctx.DEPTH_BIT | ctx.BLEND_BIT;
     flags |= ctx.MATRIX_PROJECTION_BIT | ctx.MATRIX_VIEW_BIT | ctx.MATRIX_MODEL_BIT
     flags |= ctx.PROGRAM_BIT | ctx.MESH_BIT;
-    //ctx.pushState(flags);
+    ctx.pushState(flags);
 
     ctx.setClearColor(State.backgroundColor[0], State.backgroundColor[1], State.backgroundColor[2], State.backgroundColor[3]);
     ctx.clear(ctx.COLOR_BIT | ctx.DEPTH_BIT);
+    
+    this.updateSunLight();
 
     var cameraNodes = this.getNodes('camera');
     var meshNodes = this.getNodes('mesh');
-    var directionalLightNodes = this.getNodes('light').filter(function(node) { node.light.type == 'directional'});
+    var lightNodes = this.getNodes('light');
+    var directionalLightNodes = lightNodes.filter(function(node) { return node.light.type == 'directional'});
     var overlayNodes = this.getNodes('overlay');
 
     if (cameraNodes.length == 0) {
@@ -486,17 +512,27 @@ Renderer.prototype.draw = function() {
         return;
     }
 
-    if (!Vec3.equals(State.prevSunPosition, State.sunPosition) || State.dirtySky) {
-        State.dirtySky = false;
+    if (!Vec3.equals(State.prevSunPosition, State.sunPosition)) {
+        Vec3.set(State.prevSunPosition, State.sunPosition);
+
         //TODO: update sky only if it's used
         this._skyEnvMapTex.setSunPosition(State.sunPosition);
         this._skybox.setEnvMap(State.skyEnvMap || this._skyEnvMapTex);
-        Vec3.set(State.prevSunPosition, State.sunPosition);
         this._reflectionProbe.update(function() {
             this._skybox.draw();
         }.bind(this));
-        this.updateShadowmaps();
     }
+
+    directionalLightNodes.forEach(function(lightNode) {
+        var light = lightNode.light;
+        var positionHasChanged = !Vec3.equals(lightNode.position, lightNode._prevPosition); 
+        var directionHasChanged = !Vec3.equals(light.direction, light._prevDirection); 
+        if (positionHasChanged || directionHasChanged) {
+            Vec3.set(lightNode._prevPosition, lightNode.position);
+            Vec3.set(light._prevDirection, light.direction);
+            this.updateDirectionalLightShadowMap(lightNode);
+        }
+    }.bind(this));
 
     //draw scene
 
@@ -564,7 +600,7 @@ Renderer.prototype.draw = function() {
     }.bind(this));
 
     ctx.setBlend(false);
-    //ctx.popState(flags);
+    ctx.popState(flags);
 
     if (State.debug) {
         ctx.bindProgram(this._showColorsProgram);
@@ -582,7 +618,7 @@ Renderer.prototype.draw = function() {
                 return v;
             });
             
-            var position = Vec3.scale(Vec3.copy(State.sunPosition),7.5);
+            var position = lightNode.position; 
             this._debugDraw.drawLine(position, corners[0+4]);
             this._debugDraw.drawLine(position, corners[1+4]);
             this._debugDraw.drawLine(position, corners[2+4]);

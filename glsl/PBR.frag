@@ -93,9 +93,10 @@ struct DirectionalLight {
     vec2 shadowMapSize;
 };
 
-#define NUM_DIRECTIONAL_LIGHTS 1
+#if NUM_DIRECTIONAL_LIGHTS > 0
 uniform DirectionalLight uDirectionalLights[NUM_DIRECTIONAL_LIGHTS];
 uniform sampler2D uDirectionalLightShadowMaps[NUM_DIRECTIONAL_LIGHTS];
+#endif
 
 //fron depth buf normalized z to linear (eye space) z
 //http://stackoverflow.com/questions/6652253/getting-the-true-z-value-from-the-depth-buffer
@@ -328,10 +329,11 @@ void main() {
     vec3 directSpecular = vec3(0.0);
 
     //lights
+#if NUM_DIRECTIONAL_LIGHTS > 0
     for(int i=0; i<NUM_DIRECTIONAL_LIGHTS; i++) {
         DirectionalLight light = uDirectionalLights[i];
 
-        vec3 L = normalize(light.direction);
+        vec3 L = normalize(-light.direction);
 
         float dotNL = max(0.0, dot(normalWorld, L));
 
@@ -357,7 +359,8 @@ void main() {
             directSpecular += directSpecularGGX(normalWorld, eyeDirWorld, L, roughness, F0) * illuminated;
         }
     }
-        
+#endif
+
     vec3 color = indirectDiffuse + indirectSpecular + directDiffuse + directSpecular;
 
     /*color.r = 1.0;*/
