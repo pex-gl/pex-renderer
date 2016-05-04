@@ -277,7 +277,6 @@ Renderer.prototype.getMeshProgram = function(meshMaterial) {
     var program = this._programCache[flags];
     if (!program) {
         program = this._programCache[flags] = ctx.createProgram(Vert, flags + Frag);
-        console.log(Object.keys(program._uniforms))
     }
     return program;
 }
@@ -548,7 +547,6 @@ Renderer.prototype.draw = function() {
     if (State.profile) ctx.getGL().finish();
     if (State.profile) console.timeEnd('postprocessing');
     var viewport = ctx.getViewport();
-
     final.blit({ x: viewport[0], y: viewport[1], width: viewport[2], height: viewport[3]});
 
     //overlays
