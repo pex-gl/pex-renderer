@@ -465,7 +465,7 @@ Renderer.prototype.drawMeshes = function() {
     if (State.profile) console.timeEnd('drawMeshes');
 }
 
-Renderer.prototype.updateSunLight = function() {
+Renderer.prototype.updateDirectionalLights = function(directionalLightNodes) {
     var sunLightNode = this._sunLightNode;
     var sunLight = sunLightNode.light;
 
@@ -478,13 +478,16 @@ Renderer.prototype.updateSunLight = function() {
 
     Vec3.set(sunLight.color, State.sunColor);
 
-    //TODO: sunLight frustum should come from the scene bounding box
-    sunLight._left    = -6;
-    sunLight._right   =  6;
-    sunLight._bottom  = -6;
-    sunLight._top     =  6;
-    sunLight._near    =  4;
-    sunLight._far     = 25;
+    directionalLightNodes.forEach(function(lightNode) {
+        var light = lightNode.light;
+        //TODO: sunLight frustum should come from the scene bounding box
+        light._left    = -6;
+        light._right   =  6;
+        light._bottom  = -6;
+        light._top     =  6;
+        light._near    =  4;
+        light._far     = 25;
+    });
 }
 
 Renderer.prototype.draw = function() {
@@ -499,8 +502,6 @@ Renderer.prototype.draw = function() {
     ctx.setClearColor(State.backgroundColor[0], State.backgroundColor[1], State.backgroundColor[2], State.backgroundColor[3]);
     ctx.clear(ctx.COLOR_BIT | ctx.DEPTH_BIT);
     
-    this.updateSunLight();
-
     var cameraNodes = this.getNodes('camera');
     var meshNodes = this.getNodes('mesh');
     var lightNodes = this.getNodes('light');
@@ -511,6 +512,8 @@ Renderer.prototype.draw = function() {
         console.log('WARN: Renderer.draw no cameras found');
         return;
     }
+
+    this.updateDirectionalLights(directionalLightNodes);
 
     if (!Vec3.equals(State.prevSunPosition, State.sunPosition)) {
         Vec3.set(State.prevSunPosition, State.sunPosition);
