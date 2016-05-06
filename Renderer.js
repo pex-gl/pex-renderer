@@ -201,6 +201,9 @@ Renderer.prototype.initNode = function(node) {
             node.light._projectionMatrix = Mat4.create();
             node.light._prevDirection = [0,0,0];
         }
+        else if (node.light.type == 'point') {
+            if (node.light.radius === undefined) { node.light.radius = 10; }
+        }
         else {
             throw new Error('Renderer.initNode unknown light type ' + node.light.type);
         }
@@ -245,7 +248,7 @@ var Vert = fs.readFileSync(__dirname + '/glsl/PBR.vert', 'utf8');
 var Frag = fs.readFileSync(__dirname + '/glsl/PBR.frag', 'utf8');
 
 //TODO: how fast is building these flag strings every frame for every object?
-Renderer.prototype.getMeshProgram = function(meshMaterial, numDirectionalLights) {
+Renderer.prototype.getMeshProgram = function(meshMaterial, numDirectionalLights, numPointLights) {
     //var USE_BASE_COLOR_MAP = 1 << 0;
     //var USE_METALLIC_MAP   = 1 << 1;
     //var USE_ROUGHNESS_MAP  = 1 << 2;
@@ -269,6 +272,7 @@ Renderer.prototype.getMeshProgram = function(meshMaterial, numDirectionalLights)
         flags.push('#define USE_NORMAL_MAP');
     }
     flags.push('#define NUM_DIRECTIONAL_LIGHTS ' + numDirectionalLights);
+    flags.push('#define NUM_POINT_LIGHTS ' + numPointLights);
     flags = flags.join('\n') + '\n';
 
     if (!this._programCache) {
@@ -291,7 +295,7 @@ Renderer.prototype.drawMeshes = function() {
     var meshNodes = this.getNodes('mesh');
     var lightNodes = this.getNodes('light');
     var directionalLightNodes = lightNodes.filter(function(node) { return node.light.type == 'directional'});
-
+    var pointLightNodes = lightNodes.filter(function(node) { return node.light.type == 'point'});
 
     ctx.pushState(ctx.CULL_BIT | ctx.DEPTH_BIT);
     ctx.setDepthTest(true);
@@ -344,6 +348,13 @@ Renderer.prototype.drawMeshes = function() {
         sharedUniforms['uDirectionalLightShadowMaps['+i+']'] = light._shadowMap;
     })
 
+    pointLightNodes.forEach(function(lightNode, i) {
+        var light = lightNode.light;
+        sharedUniforms['uPointLights['+i+'].position'] = lightNode.position;
+        sharedUniforms['uPointLights['+i+'].color'] = light.color;
+        sharedUniforms['uPointLights['+i+'].radius'] = light.radius;
+    })
+
     meshNodes.forEach(function(meshNode) {
         var meshUniforms = {
             uIor: 1.4,
@@ -359,7 +370,7 @@ Renderer.prototype.drawMeshes = function() {
         Object.assign(meshNode.material._uniforms, sharedUniforms, meshUniforms);
         var meshUniforms = meshNode.material._uniforms;
         
-        var meshProgram = this.getMeshProgram(meshNode.material, directionalLightNodes.length);
+        var meshProgram = this.getMeshProgram(meshNode.material, directionalLightNodes.length, pointLightNodes.length);
 
         Object.keys(meshProgram._uniforms).forEach(function(uniformName) {
             if (!meshUniforms[uniformName]) {
@@ -506,6 +517,7 @@ Renderer.prototype.draw = function() {
     var meshNodes = this.getNodes('mesh');
     var lightNodes = this.getNodes('light');
     var directionalLightNodes = lightNodes.filter(function(node) { return node.light.type == 'directional'});
+    var pointLightNodes = lightNodes.filter(function(node) { return node.light.type == 'point'});
     var overlayNodes = this.getNodes('overlay');
 
     if (cameraNodes.length == 0) {
@@ -611,7 +623,7 @@ Renderer.prototype.draw = function() {
         var lightNodes = this.getNodes('light');
 
         this._debugDraw.setLineWidth(2);
-        lightNodes.forEach(function(lightNode) {
+        directionalLightNodes.forEach(function(lightNode) {
             var light = lightNode.light;
             var invProj = Mat4.invert(Mat4.copy(light._projectionMatrix));
             var invView = Mat4.invert(Mat4.copy(light._viewMatrix));

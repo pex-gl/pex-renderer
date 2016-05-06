@@ -80,7 +80,8 @@ uniform mat4 uInverseViewMatrix;
 uniform vec3 uSunPosition;
 uniform vec4 uSunColor;
 
-//shadow mapping
+#if NUM_DIRECTIONAL_LIGHTS > 0
+
 struct DirectionalLight {
     vec3 position;
     vec3 direction;
@@ -93,9 +94,21 @@ struct DirectionalLight {
     vec2 shadowMapSize;
 };
 
-#if NUM_DIRECTIONAL_LIGHTS > 0
 uniform DirectionalLight uDirectionalLights[NUM_DIRECTIONAL_LIGHTS];
 uniform sampler2D uDirectionalLightShadowMaps[NUM_DIRECTIONAL_LIGHTS];
+
+#endif
+
+#if NUM_POINT_LIGHTS > 0
+
+struct PointLight {
+    vec3 position;
+    vec4 color;
+    float radius;
+};
+
+uniform PointLight uPointLights[NUM_POINT_LIGHTS];
+
 #endif
 
 //fron depth buf normalized z to linear (eye space) z
@@ -355,13 +368,32 @@ void main() {
         float illuminated = PCF(uDirectionalLightShadowMaps[i], light.shadowMapSize, lightUV, lightDistView - light.bias, light.near, light.far);
 #endif
         if (illuminated > 0.0) {
+            //TODO: specular light conservation
             directDiffuse += diffuseColor * dotNL * light.color.rgb * illuminated;
             directSpecular += directSpecularGGX(normalWorld, eyeDirWorld, L, roughness, F0) * illuminated;
         }
     }
 #endif
 
-    vec3 color = indirectDiffuse + indirectSpecular + directDiffuse + directSpecular;
+#if NUM_POINT_LIGHTS > 0
+    for(int i=0; i<NUM_POINT_LIGHTS; i++) {
+        PointLight light = uPointLights[i];
+
+        vec3 L = light.position - vPositionWorld;
+        float dist = length(L);
+        L /= dist;
+
+        float dotNL = max(0.0, dot(normalWorld, L));
+
+        float distanceRatio = clamp(1.0 - pow(dist/light.radius, 4.0), 0.0, 1.0);
+        float falloff = (distanceRatio * distanceRatio) / (dist * dist + 1.0);
+
+        //TODO: specular light conservation
+        directDiffuse += diffuseColor * dotNL * light.color.rgb * falloff;
+        directSpecular += directSpecularGGX(normalWorld, eyeDirWorld, L, roughness, F0) * light.color.rgb * falloff;
+    }
+#endif
+
 
     /*color.r = 1.0;*/
     gl_FragData[0] = vec4(color, 1.0);
