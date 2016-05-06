@@ -130,6 +130,18 @@ float saturate(float f) {
     }
 #endif
 
+#ifdef USE_EMISSIVE_COLOR_MAP
+    uniform sampler2D uEmissiveColorMap; //assumes sRGB color, not linear
+    vec3 getEmissiveColor() {
+        return toLinear(texture2D(uEmissiveColorMap, vTexCoord0).rgb);
+    }
+#else
+    uniform vec4 uEmissiveColor; //assumes sRGB color, not linear
+    vec3 getEmissiveColor() {
+        return toLinear(uEmissiveColor.rgb);
+    }
+#endif
+
 #ifdef USE_METALLIC_MAP
     uniform sampler2D uMetallicMap; //assumes linear
     float getMetallic() {
@@ -248,6 +260,7 @@ void main() {
     vec3 eyeDirWorld = normalize(vEyeDirWorld);
 
     vec3 baseColor = getBaseColor();
+    vec3 emissiveColor = getEmissiveColor();
     float roughness = getRoughness();
     float metallic = getMetallic();
     vec3 irradianceColor = getIrradiance(eyeDirWorld, normalWorld);
@@ -324,6 +337,7 @@ void main() {
     }
 #endif
 
+    vec3 color = emissiveColor + indirectDiffuse + indirectSpecular + directDiffuse + directSpecular;
 
     /*color.r = 1.0;*/
     gl_FragData[0] = vec4(color, 1.0);

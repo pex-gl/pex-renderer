@@ -186,6 +186,7 @@ Renderer.prototype.initNode = function(node) {
         var material = node.material
         if (!material) { material = node.material = {} }
         if (!material.baseColorMap && (material.baseColor === undefined)) { material.baseColor = [0.95, 0.95, 0.95, 1] } 
+        if (!material.emissiveColorMap && (material.emissiveColor === undefined)) { material.emissiveColor = [0.0, 0.0, 0.0, 1] } 
         if (!material.metallicMap && (material.metallic === undefined)) { material.metallic = 0.0 } 
         if (!material.roughnessMap && (material.roughness === undefined)) { material.roughness = 0.5 } 
         if (!material._uniforms) { material._uniforms = {}}
@@ -360,6 +361,8 @@ Renderer.prototype.drawMeshes = function() {
             uIor: 1.4,
             uBaseColor: meshNode.material.baseColor,
             uBaseColorMap: meshNode.material.baseColorMap,
+            uEmissiveColor: meshNode.material.emissiveColor,
+            uEmissiveColorMap: meshNode.material.emissiveColorMap,
             uMetallic: meshNode.material.metallic || 0.1,
             uMetallicMap: meshNode.material.metallicMap,
             uRoughness: meshNode.material.roughness || 1,
