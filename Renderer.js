@@ -137,7 +137,7 @@ Renderer.prototype.initPostproces = function() {
 
 Renderer.prototype.initSkybox = function() {
     var ctx = this._ctx;
-    
+
     this._skyEnvMapTex = new SkyEnvMap(ctx, State.sunPosition);
     this._skybox = new Skybox(ctx, this._skyEnvMap);
     this._reflectionProbe = new ReflectionProbe(ctx, [0, 0, 0]);
@@ -354,6 +354,7 @@ Renderer.prototype.drawMeshes = function() {
     }
     sharedUniforms.ltc_mat = this.ltc_mat_texture;
     sharedUniforms.ltc_mag = this.ltc_mag_texture;
+
     directionalLightNodes.forEach(function(lightNode, i) {
         var light = lightNode.light;
         sharedUniforms['uDirectionalLights['+i+'].position'] = lightNode.position;
@@ -505,7 +506,7 @@ Renderer.prototype.drawMeshes = function() {
         }
         ctx.popModelMatrix();
     }.bind(this));
-    
+
     ctx.popState();
 
     if (State.profile) ctx.getGL().finish();
@@ -548,7 +549,7 @@ Renderer.prototype.draw = function() {
 
     ctx.setClearColor(State.backgroundColor[0], State.backgroundColor[1], State.backgroundColor[2], State.backgroundColor[3]);
     ctx.clear(ctx.COLOR_BIT | ctx.DEPTH_BIT);
-    
+
     var cameraNodes = this.getNodes('camera');
     var meshNodes = this.getNodes('mesh');
     var lightNodes = this.getNodes('light');
@@ -664,12 +665,12 @@ Renderer.prototype.draw = function() {
             var invProj = Mat4.invert(Mat4.copy(light._projectionMatrix));
             var invView = Mat4.invert(Mat4.copy(light._viewMatrix));
             var corners = [[-1, -1, 1, 1], [1, -1, 1,1], [1, 1, 1,1], [-1, 1, 1,1], [-1, -1, -1,1], [1, -1, -1,1], [1, 1, -1,1], [-1, 1, -1,1]].map(function(p) {
-                var v = Vec4.multMat4(Vec4.multMat4(Vec4.copy(p), invProj), invView); 
+                var v = Vec4.multMat4(Vec4.multMat4(Vec4.copy(p), invProj), invView);
                 Vec3.scale(v, 1/v[3]);
                 return v;
             });
-            
-            var position = lightNode.position; 
+
+            var position = lightNode.position;
             this._debugDraw.drawLine(position, corners[0+4]);
             this._debugDraw.drawLine(position, corners[1+4]);
             this._debugDraw.drawLine(position, corners[2+4]);
