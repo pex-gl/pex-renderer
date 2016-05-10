@@ -249,7 +249,7 @@ var Vert = fs.readFileSync(__dirname + '/glsl/PBR.vert', 'utf8');
 var Frag = fs.readFileSync(__dirname + '/glsl/PBR.frag', 'utf8');
 
 //TODO: how fast is building these flag strings every frame for every object?
-Renderer.prototype.getMeshProgram = function(meshMaterial, numDirectionalLights, numPointLights) {
+Renderer.prototype.getMeshProgram = function(meshMaterial, options) {
     //var USE_BASE_COLOR_MAP = 1 << 0;
     //var USE_METALLIC_MAP   = 1 << 1;
     //var USE_ROUGHNESS_MAP  = 1 << 2;
@@ -272,8 +272,12 @@ Renderer.prototype.getMeshProgram = function(meshMaterial, numDirectionalLights,
     if (meshMaterial.normalMap) {
         flags.push('#define USE_NORMAL_MAP');
     }
-    flags.push('#define NUM_DIRECTIONAL_LIGHTS ' + numDirectionalLights);
-    flags.push('#define NUM_POINT_LIGHTS ' + numPointLights);
+    flags.push('#define NUM_DIRECTIONAL_LIGHTS ' + options.numDirectionalLights);
+    flags.push('#define NUM_POINT_LIGHTS ' + options.numPointLights);
+    flags.push('#define NUM_AREA_LIGHTS ' + options.numAreaLights);
+    if (options.useReflectionProbes) {
+        flags.push('#define USE_REFLECTION_PROBES');
+    }
     flags = flags.join('\n') + '\n';
 
     if (!this._programCache) {
@@ -292,11 +296,13 @@ Renderer.prototype.drawMeshes = function() {
 
     if (State.profile) ctx.getGL().finish();
     if (State.profile) console.time('drawMeshes');
-    
+
+    var cameraNodes = this.getNodes('camera');
     var meshNodes = this.getNodes('mesh');
-    var lightNodes = this.getNodes('light');
+    var lightNodes = this.getNodes('light').filter(function(node) { return node.enabled });
     var directionalLightNodes = lightNodes.filter(function(node) { return node.light.type == 'directional'});
     var pointLightNodes = lightNodes.filter(function(node) { return node.light.type == 'point'});
+    var areaLightNodes = lightNodes.filter(function(node) { return node.light.type == 'area'});
 
     ctx.pushState(ctx.CULL_BIT | ctx.DEPTH_BIT);
     ctx.setDepthTest(true);
@@ -332,9 +338,18 @@ Renderer.prototype.drawMeshes = function() {
 
     var sharedUniforms = {
 		uReflectionMap: this._reflectionProbe.getReflectionMap(),
-        uIrradianceMap: this._reflectionProbe.getIrradianceMap()
+        uIrradianceMap: this._reflectionProbe.getIrradianceMap(),
+        uCameraPosition: cameraNodes[0].camera.getPosition(),
     };
-   
+
+    if (!this.areaLightTextures) {
+        console.log('creating textures');
+        this.ltc_mat_texture = ctx.createTexture2D(new Float32Array(AreaLightsData.mat), 64, 64, { type: ctx.FLOAT, flipY: false });
+        this.ltc_mag_texture = ctx.createTexture2D(new Float32Array(AreaLightsData.mag), 64, 64, { type: ctx.FLOAT, format: ctx.getGL().ALPHA, flipY: false });
+        this.areaLightTextures = true;
+    }
+    sharedUniforms.ltc_mat = this.ltc_mat_texture;
+    sharedUniforms.ltc_mag = this.ltc_mag_texture;
     directionalLightNodes.forEach(function(lightNode, i) {
         var light = lightNode.light;
         sharedUniforms['uDirectionalLights['+i+'].position'] = lightNode.position;
@@ -356,6 +371,15 @@ Renderer.prototype.drawMeshes = function() {
         sharedUniforms['uPointLights['+i+'].radius'] = light.radius;
     })
 
+    areaLightNodes.forEach(function(lightNode, i) {
+        var light = lightNode.light;
+        sharedUniforms['uAreaLights['+i+'].position'] = lightNode.position;
+        sharedUniforms['uAreaLights['+i+'].color'] = light.color;
+        sharedUniforms['uAreaLights['+i+'].intensity'] = light.intensity;
+        sharedUniforms['uAreaLights['+i+'].rotation'] = lightNode.rotation;
+        sharedUniforms['uAreaLights['+i+'].size'] = [lightNode.scale[0]/2, lightNode.scale[1]/2];
+    })
+
     meshNodes.forEach(function(meshNode) {
         var meshUniforms = {
             uIor: 1.4,
@@ -372,8 +396,13 @@ Renderer.prototype.drawMeshes = function() {
 
         Object.assign(meshNode.material._uniforms, sharedUniforms, meshUniforms);
         var meshUniforms = meshNode.material._uniforms;
-        
-        var meshProgram = this.getMeshProgram(meshNode.material, directionalLightNodes.length, pointLightNodes.length);
+
+        var meshProgram = this.getMeshProgram(meshNode.material, {
+            numDirectionalLights: directionalLightNodes.length,
+            numPointLights: pointLightNodes.length,
+            numAreaLights: areaLightNodes.length,
+            useReflectionProbes: false//true
+        })
 
         Object.keys(meshProgram._uniforms).forEach(function(uniformName) {
             if (!meshUniforms[uniformName]) {
@@ -543,8 +572,8 @@ Renderer.prototype.draw = function() {
 
     directionalLightNodes.forEach(function(lightNode) {
         var light = lightNode.light;
-        var positionHasChanged = !Vec3.equals(lightNode.position, lightNode._prevPosition); 
-        var directionHasChanged = !Vec3.equals(light.direction, light._prevDirection); 
+        var positionHasChanged = !Vec3.equals(lightNode.position, lightNode._prevPosition);
+        var directionHasChanged = !Vec3.equals(light.direction, light._prevDirection);
         if (positionHasChanged || directionHasChanged) {
             Vec3.set(lightNode._prevPosition, lightNode.position);
             Vec3.set(light._prevDirection, light.direction);
