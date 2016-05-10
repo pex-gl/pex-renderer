@@ -176,6 +176,7 @@ Renderer.prototype.initNode = function(node) {
     if (!node.scale) node.scale = [1,1,1];
     if (!node.rotation) node.rotation = [0,0,0,1];
     
+    if (node.enabled === undefined) node.enabled = true;
     node._parent = null;
     node._children = [];
     node._localTransform = Mat4.create();
