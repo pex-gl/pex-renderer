@@ -21,6 +21,7 @@ var Texture2D     = require('pex-context/Texture2D');
 var TextureCube   = require('pex-context/TextureCube');
 var lookup = require('gl-constants/lookup');
 var fs = require('fs');
+var AreaLightsData = require('./AreaLightsData');
 
 var SOLID_COLOR_VERT           = fs.readFileSync(__dirname + '/glsl/SolidColor.vert', 'utf8');
 var SOLID_COLOR_VERT           = fs.readFileSync(__dirname + '/glsl/SolidColor.vert', 'utf8');
@@ -204,6 +205,8 @@ Renderer.prototype.initNode = function(node) {
         }
         else if (node.light.type == 'point') {
             if (node.light.radius === undefined) { node.light.radius = 10; }
+        }
+        else if (node.light.type == 'area') {
         }
         else {
             throw new Error('Renderer.initNode unknown light type ' + node.light.type);
