@@ -24,7 +24,6 @@ void main() {
 
     vNormalView = vec3(uNormalMatrix * aNormal);
     vNormalWorld = vec3(uInverseViewMatrix * vec4(vNormalView, 0.0));
-    vNormalWorld = aNormal;
 
     vEyeDirView = normalize(vec3(0.0, 0.0, 0.0) - vPositionView);
     vEyeDirWorld = vec3(uInverseViewMatrix * vec4(vEyeDirView, 0.0));
