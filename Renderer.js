@@ -406,7 +406,7 @@ Renderer.prototype.drawMeshes = function() {
             numDirectionalLights: directionalLightNodes.length,
             numPointLights: pointLightNodes.length,
             numAreaLights: areaLightNodes.length,
-            useReflectionProbes: false//true
+            useReflectionProbes: true
         })
 
         Object.keys(meshProgram._uniforms).forEach(function(uniformName) {
