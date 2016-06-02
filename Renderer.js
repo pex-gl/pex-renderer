@@ -45,7 +45,8 @@ var State = {
     shadows: true,
     shadowQuality: 3,
     bias: 0.1,
-    debug: false
+    debug: false,
+    watchShaders: false
 }
 
 function Renderer(ctx, width, height, initialState) {
@@ -286,6 +287,15 @@ Renderer.prototype.getMeshProgram = function(meshMaterial, options) {
 
     if (!this._programCache) {
         this._programCache = {};
+
+        if (State.watchShaders) {
+            fs.watch(__dirname + '/glsl/PBR.frag', {}, function() {
+                setTimeout(function() {
+                    Frag = fs.readFileSync(__dirname + '/glsl/PBR.frag', 'utf8');
+                    this._programCache = {};
+                }.bind(this), 500);
+            }.bind(this));
+        }
     }
 
     var program = this._programCache[flags];
