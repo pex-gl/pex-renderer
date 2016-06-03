@@ -2,6 +2,7 @@ var renderToCubemap = require('./local_modules/pex-render-to-cubemap');
 var downsampleCubemap = require('./local_modules/pex-downsample-cubemap');
 var convolveCubemap = require('./local_modules/pex-convolve-cubemap');
 var prefilterCubemap = require('./local_modules/pex-prefilter-cubemap');
+var isMobile = require('is-mobile')();
 
 //Mipmap levels
 //
@@ -12,14 +13,11 @@ var prefilterCubemap = require('./local_modules/pex-prefilter-cubemap');
 // 4 - 16
 // 5 - 8
 
-
-var isMobile = false; //FIXME: hardcoded isMobile
-
 function ReflectionProbe(ctx, position) {
     this._ctx = ctx;
 
     var gl = ctx.getGL();
-    
+
     this._reflectionPREM = ctx.createTextureCube(null, 256, 256, { type: ctx.HALF_FLOAT, minFilter: ctx.LINEAR_MIPMAP_LINEAR, magFilter: ctx.LINEAR, flipEnvMap: 1 });
     //FIXME: add mip mapping to TextureCube
     ctx.bindTexture(this._reflectionPREM);

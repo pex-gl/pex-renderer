@@ -23,6 +23,7 @@
     "glslify-sync": "^1.1.1",
     "hammersley": "^1.0.0",
     "is-browser": "^2.0.1",
+    "is-mobile": "^0.2.2",
     "pex-cam": "^1.0.0-beta.2",
     "pex-context": "^1.2.1",
     "pex-draw": "^1.0.0-beta.2",

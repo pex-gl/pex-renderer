@@ -47,13 +47,16 @@ function prefilterCubemap(ctx, fromCubemap, toCubemap, options) {
     for(var level=0; level<=numLevels; level++) {
         //console.log('prefilter-cubemap level:' + level + ' roughness:' + level/numLevels*0.99 + 0.01 + ' size:' + size)
         var cubemapForLevel = toCubemap;
-        cubemapForLevel = ctx.createTextureCube(null, size, size, { type: ctx.UNSIGNED_BYTE, magFilter: ctx.NEAREST, minFilter: ctx.NEAREST });
-        toCubemap.levels.push(cubemapForLevel);
+        if (!highQuality) {
+            cubemapForLevel = ctx.createTextureCube(null, size, size, { type: ctx.UNSIGNED_BYTE, magFilter: ctx.NEAREST, minFilter: ctx.NEAREST });
+            toCubemap.levels.push(cubemapForLevel);
+        }
         var faceData = [];
         var gl = ctx.getGL();
         //console.log(ctx.getGL().getError() + ' before level ' + level);
 
-        renderToCubemap(ctx, cubemapForLevel, function() {
+        //renderToCubemap(ctx, cubemapForLevel, function() {
+        renderToCubemap(ctx, toCubemap, function() {
             ctx.bindTexture(fromCubemap, 0);
             ctx.bindTexture(hammersleyPointSetMap, 1);
             ctx.bindProgram(prefilterProgram);
@@ -64,24 +67,28 @@ function prefilterCubemap(ctx, fromCubemap, toCubemap, options) {
             ctx.bindMesh(quadMesh);
             ctx.drawMesh();
 
-            var pixels = new Uint8Array(size * size * 4);
-            var floatPixels = new Float32Array(size * size * 4);
-            //FIXME: our PREM cubemap is basically LDR, we need to compress pixels
-            gl.readPixels(0, 0, size, size, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
-            for(var i=0; i<pixels.length; i++) {
-                floatPixels[i] = pixels[i] / 255;
+            if (!highQuality) {
+                var pixels = new Uint8Array(size * size * 4);
+                var floatPixels = new Float32Array(size * size * 4);
+                //FIXME: our PREM cubemap is basically LDR, we need to compress pixels
+                gl.readPixels(0, 0, size, size, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+                for(var i=0; i<pixels.length; i++) {
+                    floatPixels[i] = pixels[i] / 255;
+                }
+                faceData.push(floatPixels);
             }
-            faceData.push(floatPixels);
-        }, 0); //always on the top of mipmap cube
+        }, highQuality ? level : 0);
         //console.log(ctx.getGL().getError() + ' after level ' + level);
 
         //updated mip level
-        ctx.bindTexture(toCubemap);
-        for(var i=0; i<6; i++) {
-            if (isBrowser) {
-                gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+        if (!highQuality) {
+            ctx.bindTexture(toCubemap);
+            for(var i=0; i<6; i++) {
+                if (isBrowser) {
+                    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+                }
+                gl.texImage2D(ctx.TEXTURE_CUBE_MAP_POSITIVE_X + i, level, ctx.RGBA, size, size, 0, ctx.RGBA, ctx.FLOAT, faceData[i]);
             }
-            gl.texImage2D(ctx.TEXTURE_CUBE_MAP_POSITIVE_X + i, level, ctx.RGBA, size, size, 0, ctx.RGBA, ctx.FLOAT, faceData[i]);
         }
 
         //console.log(ctx.getGL().getError() + ' after level upload' + level);
