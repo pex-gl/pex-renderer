@@ -312,7 +312,7 @@ Renderer.prototype.drawMeshes = function() {
     if (State.profile) console.time('drawMeshes');
 
     var cameraNodes = this.getNodes('camera');
-    var meshNodes = this.getNodes('mesh');
+    var meshNodes = this.getNodes('mesh').filter(function(node) { return node.enabled; });
     var lightNodes = this.getNodes('light').filter(function(node) { return node.enabled });
     var directionalLightNodes = lightNodes.filter(function(node) { return node.light.type == 'directional'});
     var pointLightNodes = lightNodes.filter(function(node) { return node.light.type == 'point'});
