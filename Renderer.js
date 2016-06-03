@@ -176,7 +176,7 @@ Renderer.prototype.initNode = function(node) {
     if (!node.position) node.position = [0,0,0];
     if (!node.scale) node.scale = [1,1,1];
     if (!node.rotation) node.rotation = [0,0,0,1];
-    
+
     if (node.enabled === undefined) node.enabled = true;
     node._parent = null;
     node._children = [];
@@ -188,10 +188,10 @@ Renderer.prototype.initNode = function(node) {
     if (node.mesh) {
         var material = node.material
         if (!material) { material = node.material = {} }
-        if (!material.baseColorMap && (material.baseColor === undefined)) { material.baseColor = [0.95, 0.95, 0.95, 1] } 
-        if (!material.emissiveColorMap && (material.emissiveColor === undefined)) { material.emissiveColor = [0.0, 0.0, 0.0, 1] } 
-        if (!material.metallicMap && (material.metallic === undefined)) { material.metallic = 0.0 } 
-        if (!material.roughnessMap && (material.roughness === undefined)) { material.roughness = 0.5 } 
+        if (!material.baseColorMap && (material.baseColor === undefined)) { material.baseColor = [0.95, 0.95, 0.95, 1] }
+        if (!material.emissiveColorMap && (material.emissiveColor === undefined)) { material.emissiveColor = [0.0, 0.0, 0.0, 1] }
+        if (!material.metallicMap && (material.metallic === undefined)) { material.metallic = 0.0 }
+        if (!material.roughnessMap && (material.roughness === undefined)) { material.roughness = 0.5 }
         if (!material._uniforms) { material._uniforms = {}}
     }
     if (node.light) {
