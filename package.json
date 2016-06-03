@@ -37,8 +37,8 @@
     "onchange": "^2.4.0"
   },
   "scripts": {
-      "build-glsl" : "glslify glsl/PBR.src.frag > glsl/PBR.frag",
-      "watch-glsl" : "onchange '**/*.src.frag' -- npm run build-glsl" 
+    "build-glsl": "glslify glsl/PBR.src.frag > glsl/PBR.frag",
+    "watch-glsl": "onchange '**/*.src.frag' -- npm run build-glsl"
   },
   "keywords": [
     "webgl",
