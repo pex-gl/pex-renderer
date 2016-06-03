@@ -34,6 +34,7 @@ Skybox.prototype.draw = function() {
 
     ctx.bindTexture(this._envMap, 0);
     this._skyboxProgram.setUniform('uEnvMap', 0);
+    this._skyboxProgram.setUniform('uFlipEnvMap', this._envMap.getFlipEnvMap ? this._envMap.getFlipEnvMap() : -1);
 
     ctx.bindMesh(this._fsqMesh);
     ctx.drawMesh();

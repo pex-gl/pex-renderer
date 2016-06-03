@@ -302,7 +302,9 @@ vec3 perturb(vec3 map, vec3 N, vec3 V, vec2 texcoord) {
 #endif
 
 uniform samplerCube uReflectionMap;
+uniform float uReflectionMapFlipEnvMap;
 uniform samplerCube uIrradianceMap;
+uniform float uIrradianceMapFlipEnvMap;
 
 vec3 getIrradiance(vec3 eyeDirWorld, vec3 normalWorld) {
     vec3 R = envMapCubemap(normalWorld);
@@ -322,7 +324,7 @@ vec3 getPrefilteredReflection(vec3 eyeDirWorld, vec3 normalWorld, float roughnes
     float maxMipMapLevel = 5.0; //TODO: const
     vec3 reflectionWorld = reflect(-eyeDirWorld, normalWorld);
     //vec3 R = envMapCube(data.normalWorld);
-    vec3 R = envMapCubemap(reflectionWorld);
+    vec3 R = envMapCubemap(reflectionWorld, uReflectionMapFlipEnvMap);
     float lod = roughness * maxMipMapLevel;
     float upLod = floor(lod);
     float downLod = ceil(lod);
@@ -893,7 +895,7 @@ void main() {
 
     vec3 diffuseColor = baseColor * (1.0 - metallic);
     vec3 specularColor = mix(vec3(1.0), baseColor, metallic);
-    
+
     vec3 indirectDiffuse = vec3(0.0);
     vec3 indirectSpecular = vec3(0.0);
     vec3 directDiffuse = vec3(0.0);

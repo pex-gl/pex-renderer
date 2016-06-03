@@ -6,14 +6,14 @@ precision highp float;
 
 //assuming texture in Linear Space
 //most likely HDR or Texture2D with sRGB Ext
-uniform sampler2D uEnvMap; 
+uniform sampler2D uEnvMap;
+uniform float uFlipEnvMap;
 
 varying vec3 wcNormal;
-
 
 void main() {
     vec3 N = normalize(wcNormal);
 
-    gl_FragColor.rgb = texture2D(uEnvMap, envMapEquirect(N)).rgb;
+    gl_FragColor.rgb = texture2D(uEnvMap, envMapEquirect(N, uFlipEnvMap)).rgb;
     gl_FragColor.a = 1.0;
 }

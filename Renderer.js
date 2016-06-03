@@ -353,6 +353,8 @@ Renderer.prototype.drawMeshes = function() {
     var sharedUniforms = {
 		uReflectionMap: this._reflectionProbe.getReflectionMap(),
         uIrradianceMap: this._reflectionProbe.getIrradianceMap(),
+        uReflectionMapFlipEnvMap: this._reflectionProbe.getReflectionMap().getFlipEnvMap ? this._reflectionProbe.getReflectionMap().getFlipEnvMap() : -1,
+        uIrradianceMapFlipEnvMap: this._reflectionProbe.getIrradianceMap().getFlipEnvMap ? this._reflectionProbe.getIrradianceMap().getFlipEnvMap() : -1,
         uCameraPosition: cameraNodes[0].camera.getPosition(),
     };
 
