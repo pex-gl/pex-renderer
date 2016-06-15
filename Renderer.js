@@ -39,6 +39,7 @@ var State = {
     exposure: 1,
     frame: 0,
     ssao: true,
+    fxaa: true,
     ssaoDownsample: 2,
     ssaoSharpness: 1,
     ssaoRadius: 0.2,
@@ -640,7 +641,9 @@ Renderer.prototype.draw = function() {
     if (State.profile) console.timeEnd('postprocess');
 
     if (State.profile) console.time('fxaa');
-    final = final.fxaa()
+    if (State.fxaa) {
+        final = final.fxaa()
+    }
     if (State.profile) ctx.getGL().finish();
     if (State.profile) console.timeEnd('fxaa');
 
