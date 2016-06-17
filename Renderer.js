@@ -616,7 +616,19 @@ Renderer.prototype.draw = function() {
     ctx.setProjectionMatrix(currentCamera.getProjectionMatrix());
 
     this._skybox.draw();
+
+    if (State.debug) {
+        console.time('Renderer:drawMeshes')
+        console.time('Renderer:drawMeshes:finish')
+        State.uniformsSet = 0
+    }
     this.drawMeshes();
+    if (State.debug) {
+        console.timeEnd('Renderer:drawMeshes')
+        ctx.getGL().finish();
+        console.timeEnd('Renderer:drawMeshes:finish')
+        console.log('Renderer:uniformsSet', State.uniformsSet)
+    }
 
     ctx.popState();
     var W = this._width;
