@@ -299,13 +299,50 @@ Renderer.prototype.getMeshProgram = function(meshMaterial, options) {
         }
     }
 
-    var program = this._programCache[flags];
+    var vertSrc = meshMaterial.vert || Vert;
+    var fragSrc = flags + (meshMaterial.frag || Frag);
+    var hash = vertSrc + fragSrc;
+
+    var program = this._programCache[hash];
     if (!program) {
-        program = this._programCache[flags] = ctx.createProgram(Vert, flags + Frag);
+        program = this._programCache[hash] = ctx.createProgram(vertSrc, fragSrc);
     }
     return program;
 }
 
+function applyUniforms(ctx, program, uniforms, textureOffset) {
+    var numTextures = textureOffset;
+    for(var uniformName in uniforms) {
+        //TODO: can i do array index check instead of function call?
+        if (!program.hasUniform(uniformName)) {
+            continue;
+        }
+        var value = uniforms[uniformName];
+        if (value === null || value === undefined) {
+            if (program._uniforms[uniformName]) {
+                throw new Error('Null uniform value for ' + uniformName + ' in PBRMaterial');
+            }
+            else {
+                //console.log('Unnecessary uniform', uniformName);
+                continue;
+            }
+        }
+        if (value.getTarget && (value.getTarget() == ctx.TEXTURE_2D || value.getTarget() == ctx.TEXTURE_CUBE_MAP)) {
+            ctx.bindTexture(value, numTextures);
+            value = numTextures++;
+        }
+        State.uniformsSet++;
+        program.setUniform(uniformName, value)
+    }
+    return numTextures
+}
+
+//sort meshes by material
+//do material search by props not string concat
+//set global uniforms like lights once
+//set update transforms once per frame
+//draw + shadowmap @ 1000 objects x 30 uniforms = 60'000 setters / frame!!
+//transform feedback?
 Renderer.prototype.drawMeshes = function() {
     var ctx = this._ctx;
 
@@ -323,33 +360,6 @@ Renderer.prototype.drawMeshes = function() {
     ctx.setDepthTest(true);
     ctx.setCullFace(true);
     ctx.setCullFaceMode(ctx.BACK);
-
-    //TODO: optimize this
-    this._nodes.forEach(function(node) {
-        Mat4.identity(node._localTransform)
-        Mat4.translate(node._localTransform, node.position);
-        Mat4.mult(node._localTransform, Mat4.fromQuat(Mat4.create(), node.rotation));
-        Mat4.scale(node._localTransform, node.scale);
-
-        if (node.transform) { //TODO: required for GLTF
-            Mat4.mult(node._localTransform, node.transform);
-        }
-    }.bind(this))
-
-    this._nodes.forEach(function(node) {
-        Mat4.identity(node._globalTransform)
-
-        var parent = node._parent;
-        var stack = [ node._localTransform ]
-        while (parent) {
-            stack.push(parent._localTransform)
-            parent = parent._parent;
-        }
-        stack.reverse()
-        stack.forEach(function(mat) {
-            Mat4.mult(node._globalTransform, mat)
-        })
-    })
 
     var sharedUniforms = {
 		uReflectionMap: this._reflectionProbe.getReflectionMap(),
@@ -398,8 +408,11 @@ Renderer.prototype.drawMeshes = function() {
         sharedUniforms['uAreaLights['+i+'].size'] = [lightNode.scale[0]/2, lightNode.scale[1]/2];
     })
 
+    var sharedTextureOffset = 0;
+    var prevProgram = null;
     meshNodes.forEach(function(meshNode) {
-        var meshUniforms = {
+        //TODO: i should only set either texture or the value
+        var pbrUniforms = {
             uIor: 1.4,
             uBaseColor: meshNode.material.baseColor,
             uBaseColorMap: meshNode.material.baseColorMap,
@@ -412,46 +425,24 @@ Renderer.prototype.drawMeshes = function() {
             uNormalMap: meshNode.material.normalMap
         }
 
-        Object.assign(meshNode.material._uniforms, sharedUniforms, meshUniforms);
-        var meshUniforms = meshNode.material._uniforms;
+        var meshUniforms = meshNode.material.uniforms;
 
-        var meshProgram = this.getMeshProgram(meshNode.material, {
+        var meshProgram = meshNode.material._program = meshNode.material._program || this.getMeshProgram(meshNode.material, {
             numDirectionalLights: directionalLightNodes.length,
             numPointLights: pointLightNodes.length,
             numAreaLights: areaLightNodes.length,
             useReflectionProbes: true
         })
 
-        Object.keys(meshProgram._uniforms).forEach(function(uniformName) {
-            if (!meshUniforms[uniformName]) {
-                //console.log('missing', uniformName);
-            }
-        });
 
-        var numTextures = 0;
-		ctx.bindProgram(meshProgram);
-		for(var uniformName in meshUniforms) {
-			var value = meshUniforms[uniformName];
-            if (value === null || value === undefined) {
-                if (meshProgram._uniforms[uniformName]) {
-                    throw new Error('Null uniform value for ' + uniformName + ' in PBRMaterial');
-                }
-                else {
-                    //console.log('Unnecessary uniform', uniformName);
-                    continue;
-                }
-            }
-			if (value.getTarget && (value.getTarget() == ctx.TEXTURE_2D || value.getTarget() == ctx.TEXTURE_CUBE_MAP)) {
-                ctx.bindTexture(value, numTextures);
-				value = numTextures++;
-			}
-			if (meshProgram.hasUniform(uniformName)) {
-				meshProgram.setUniform(uniformName, value)
-			}
-			else {
-				//console.log('unknown uniformName', uniformName);
-			}
-		}
+		    ctx.bindProgram(meshProgram);
+        if (meshProgram != prevProgram) {
+            sharedTextureOffset = applyUniforms(ctx, meshProgram, sharedUniforms, 0)
+            prevProgram = meshProgram
+        }
+        var textureOffset = sharedTextureOffset;
+        textureOffset = applyUniforms(ctx, meshProgram, pbrUniforms, textureOffset)
+        applyUniforms(ctx, meshProgram, meshUniforms, textureOffset)
         //if (meshNode.mesh._hasDivisor) {
             //ctx.bindProgram(this._standardInstancedProgram);
             //this._standardInstancedProgram.setUniform('uAlbedoColor', meshNode.material._albedoColor);
@@ -484,18 +475,9 @@ Renderer.prototype.drawMeshes = function() {
         }
 
         ctx.pushModelMatrix();
-        if (meshNode._globalTransform) {
-            ctx.loadIdentity();
-            ctx.multMatrix(meshNode._globalTransform)
-        }
-        else if (meshNode._localTransform) {
-            ctx.multMatrix(meshNode._localTransform)
-        }
-        else {
-            ctx.translate(meshNode.position);
-            ctx.rotateQuat(meshNode.rotation);
-            ctx.scale(meshNode.scale);
-        }
+        ctx.loadIdentity();
+        ctx.multMatrix(meshNode._globalTransform)
+
         if (isVertexArray) {
             ctx.drawElements(meshNode.primitiveType, meshNode.count, 0);
         }
@@ -506,6 +488,10 @@ Renderer.prototype.drawMeshes = function() {
             ctx.drawMesh();
         }
         ctx.popModelMatrix();
+
+        if (meshNode.material.lineWidth) {
+            ctx.setLineWidth(1)
+        }
     }.bind(this))
 
     ctx.bindProgram(this._solidColorProgram);
@@ -546,12 +532,12 @@ Renderer.prototype.updateDirectionalLights = function(directionalLightNodes) {
     directionalLightNodes.forEach(function(lightNode) {
         var light = lightNode.light;
         //TODO: sunLight frustum should come from the scene bounding box
-        light._left    = -6;
-        light._right   =  6;
-        light._bottom  = -6;
-        light._top     =  6;
-        light._near    =  4;
-        light._far     = 25;
+        light._left    = -8;
+        light._right   =  8;
+        light._bottom  = -8;
+        light._top     =  8;
+        light._near    =  2;
+        light._far     = 40;
     });
 }
 
@@ -590,6 +576,7 @@ Renderer.prototype.draw = function() {
         this._reflectionProbe.update(function() {
             this._skybox.draw();
         }.bind(this));
+        // this._skybox.setEnvMap(this._reflectionProbe.getIrradianceMap());
     }
 
     directionalLightNodes.forEach(function(lightNode) {
@@ -602,6 +589,36 @@ Renderer.prototype.draw = function() {
             this.updateDirectionalLightShadowMap(lightNode);
         }
     }.bind(this));
+
+    //update scene graph
+
+    //TODO: optimize this
+    this._nodes.forEach(function(node) {
+        Mat4.identity(node._localTransform)
+        Mat4.translate(node._localTransform, node.position);
+        Mat4.mult(node._localTransform, Mat4.fromQuat(Mat4.create(), node.rotation));
+        Mat4.scale(node._localTransform, node.scale);
+
+        if (node.transform) { //TODO: required for GLTF
+            Mat4.mult(node._localTransform, node.transform);
+        }
+    }.bind(this))
+
+    this._nodes.forEach(function(node) {
+        Mat4.identity(node._globalTransform)
+
+        var parent = node._parent;
+        var stack = [ node._localTransform ]
+        while (parent) {
+            stack.push(parent._localTransform)
+            parent = parent._parent;
+        }
+        stack.reverse()
+        stack.forEach(function(mat) {
+            Mat4.mult(node._globalTransform, mat)
+        })
+    })
+
 
     //draw scene
 
