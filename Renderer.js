@@ -472,6 +472,10 @@ Renderer.prototype.drawMeshes = function() {
 
         var isVertexArray = meshNode.primitiveType && meshNode.count;
 
+        if (meshNode.material.lineWidth) {
+            ctx.setLineWidth(meshNode.material.lineWidth)
+        }
+
         if (isVertexArray) {
             ctx.bindVertexArray(meshNode.mesh);
         }
