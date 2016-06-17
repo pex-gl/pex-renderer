@@ -3,6 +3,10 @@ var downsampleCubemap = require('./local_modules/pex-downsample-cubemap');
 var convolveCubemap = require('./local_modules/pex-convolve-cubemap');
 var prefilterCubemap = require('./local_modules/pex-prefilter-cubemap');
 var isMobile = require('is-mobile')();
+var isBrowser = require('is-browser')
+var cubemapToOctmap = require('./local_modules/cubemap-to-octmap')
+
+var useOctohedralMaps = false;
 
 //Mipmap levels
 //
@@ -28,6 +32,10 @@ function ReflectionProbe(ctx, position) {
     this._reflectionMap32 = ctx.createTextureCube(null, 32, 32, { minFilter: ctx.NEAREST, magFilter: ctx.NEAREST, type: ctx.HALF_FLOAT, flipEnvMap: 1 });
     this._reflectionMap16 = ctx.createTextureCube(null, 16, 16, { minFilter: ctx.NEAREST, magFilter: ctx.NEAREST, type: ctx.HALF_FLOAT, flipEnvMap: 1 });
     this._irradianceMap = ctx.createTextureCube(null, 16, 16, { type: ctx.HALF_FLOAT, flipEnvMap: 1  });
+
+    if (useOctohedralMaps) {
+        this._reflectionOctMap = ctx.createTexture2D(null, 512, 512, { type: ctx.HALF_FLOAT })
+    }
 }
 
 ReflectionProbe.prototype.update = function(drawScene) {
@@ -39,7 +47,10 @@ ReflectionProbe.prototype.update = function(drawScene) {
     downsampleCubemap(ctx, this._reflectionMap64, this._reflectionMap32);
     downsampleCubemap(ctx, this._reflectionMap32, this._reflectionMap16);
     convolveCubemap(ctx, this._reflectionMap16, this._irradianceMap);
-    prefilterCubemap(ctx, this._reflectionMap,  this._reflectionPREM, { highQuality: !isMobile });
+    prefilterCubemap(ctx, this._reflectionMap,  this._reflectionPREM, { highQuality: !isMobile && !isBrowser });
+    if (useOctohedralMaps) {
+      cubemapToOctmap(ctx, this._reflectionMap, this._reflectionOctMap)
+    }
 }
 
 
