@@ -18,6 +18,7 @@ var random        = require('pex-random');
 var ASSETS_DIR    = isBrowser ? 'Assets' : __dirname + '/Assets';
 var parseHdr      = require('./local_modules/parse-hdr');
 var cosineGradient = require('cosine-gradient');
+var ShowNormals   = require('pex-materials/show-normals')
 
 var scheme = [[0.000,0.500,0.500],[0.000,0.500,0.500],[0.000,0.500,0.333],[0.000,0.500,0.667]];
 var gradient = cosineGradient(scheme[0], scheme[1], scheme[2], scheme[3]);
@@ -27,6 +28,7 @@ Window.create({
         type: '3d',
         width: 1280,
         height: 720,
+        // debug: true,
         fullScreen: isBrowser
     },
     resources: {
@@ -51,13 +53,13 @@ Window.create({
 
         gui.addParam('Sun Elevation', this, 'elevation', { min: -90, max: 180 }, this.updateSunPosition.bind(this));
         var renderer = this.renderer = new Renderer(ctx, this.getWidth(), this.getHeight());
-       
+
         gui.addParam('Exposure', this.renderer._state, 'exposure', { min: 0.01, max: 5});
         gui.addParam('Shadow Bias', this.renderer._state, 'bias', { min: 0.001, max: 0.1});
         gui.addParam('SSAO', this.renderer._state, 'ssao' );
         gui.addParam('SSAO Sharpness', this.renderer._state, 'ssaoSharpness', { min: 0, max:100 });
         gui.addParam('SSAO Radius', this.renderer._state, 'ssaoRadius', { min: 0, max:1 });
-        this.renderer._state.debug = true;
+        // this.renderer._state.debug = true;
 
         if (res.envMap) {
             if (res.envMap.width) {
@@ -75,6 +77,7 @@ Window.create({
         gui.addTexture2D('SkyEnvMap', renderer._skyEnvMapTex, { hdr: true });
         gui.addTextureCube('Reflection Map', renderer._reflectionProbe.getReflectionMap(), { hdr: true });
         gui.addTextureCube('Irradiance Map', renderer._reflectionProbe.getIrradianceMap(), { hdr: true });
+        // gui.addTexture2D('Reflection OctMap', renderer._reflectionProbe._reflectionOctMap, { hdr: true });
 
         this.camera = new PerspCamera(45, this.getAspectRatio(), 0.1, 50.0);;
         this.camera.lookAt([0,3,8], [0,0,0]);
@@ -85,14 +88,14 @@ Window.create({
         this.arcball = new Arcball(this.camera, this.getWidth(), this.getHeight());
         this.addEventListener(this.arcball);
 
-        var sunDir = Vec3.normalize([1, 0.1, 0]);
-        this.sunLightNode = renderer.createNode({
-            light: {
-                type: 'directional',
-                direction: sunDir
-            }
-        });
-        gui.addTexture2D('Shadow Map', this.sunLightNode.light._shadowMap);
+        // var sunDir = Vec3.normalize([1, 0.1, 0]);
+        // this.sunLightNode = renderer.createNode({
+            // light: {
+                // type: 'directional',
+                // direction: sunDir
+            // }
+        // });
+        // gui.addTexture2D('Shadow Map', this.sunLightNode.light._shadowMap);
 
         //http://stackoverflow.com/a/36481059
         function randn_bm() {
@@ -170,7 +173,7 @@ Window.create({
         var floorMesh = this.buildMesh(createCube(14, 0.02, 14));
         var floorNode = renderer.createNode({
             mesh: floorMesh,
-            position: [0, -0.3, 0]
+            position: [0, -0.3, 0],
         });
 
         this.updateSunPosition();
