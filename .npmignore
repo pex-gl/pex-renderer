@@ -10,5 +10,6 @@ example/
 LICENSE.md
 *.swp
 .tern-project
+.tern-port
 experiments
 tags

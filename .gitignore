@@ -8,5 +8,6 @@ example/main.web.js
 *.swo
 .atom-build.json
 .tern-project
+.tern-port
 experiments
 tags
