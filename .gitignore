@@ -8,4 +8,4 @@ example/main.web.js
 *.swo
 .atom-build.json
 .tern-project
-test
+experiments
