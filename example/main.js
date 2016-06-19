@@ -15,7 +15,6 @@ var Draw          = require('pex-draw');
 var isBrowser     = require('is-browser');
 var GUI           = require('pex-gui');
 var random        = require('pex-random');
-var ASSETS_DIR    = isBrowser ? 'Assets' : __dirname + '/Assets';
 var parseHdr      = require('./local_modules/parse-hdr');
 var cosineGradient = require('cosine-gradient');
 var ShowNormals   = require('pex-materials/show-normals')
@@ -32,10 +31,6 @@ Window.create({
         fullScreen: isBrowser
     },
     resources: {
-       //envMap: { binary: ASSETS_DIR + '/textures/envmaps/Hamarikyu_Bridge_B/Hamarikyu_Bridge_B.hdr' },
-       //envMap: { binary: ASSETS_DIR + '/textures/envmaps/garage/garage.hdr' },
-       //envMap: { binary: ASSETS_DIR + '/textures/envmaps/uffizi/uffizi.hdr' },
-       //envMap: { image: ASSETS_DIR + '/textures/envmaps/test/test.png' },
     },
     sunPosition: [0, 5, -5],
     elevation: 65,
