@@ -47,6 +47,7 @@ var State = {
     shadowQuality: 3,
     bias: 0.1,
     debug: false,
+    profile: false,
     watchShaders: false
 }
 
