@@ -635,13 +635,13 @@ Renderer.prototype.draw = function() {
 
     this._skybox.draw();
 
-    if (State.debug) {
+    if (State.profile) {
         console.time('Renderer:drawMeshes')
         console.time('Renderer:drawMeshes:finish')
         State.uniformsSet = 0
     }
     this.drawMeshes();
-    if (State.debug) {
+    if (State.profile) {
         console.timeEnd('Renderer:drawMeshes')
         ctx.getGL().finish();
         console.timeEnd('Renderer:drawMeshes:finish')
