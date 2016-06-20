@@ -599,7 +599,9 @@ Renderer.prototype.draw = function () {
   var color = root.asFXStage(this._frameColorTex, 'img')
   var final = color
 
-  ctx.setViewport(0, 0, this._width, this._height)
+  //FIXME: ssao internally needs uProjectionMatrix...
+  ctx.pushProjectionMatrix()
+  ctx.setProjectionMatrix(currentCamera.getProjectionMatrix())
 
   if (State.profile) ctx.getGL().finish()
   if (State.profile) console.time('postprocessing')
@@ -620,6 +622,7 @@ Renderer.prototype.draw = function () {
     // this will also influence direct lighting (lights, sun)
     final = color.mult(ssao, { bpp: 16 })
   }
+  ctx.popProjectionMatrix()
   if (State.profile) ctx.getGL().finish()
   if (State.profile) console.timeEnd('ssao')
 
