@@ -11,6 +11,7 @@ var SkyEnvMap = require('./SkyEnvMap')
 var ReflectionProbe = require('./ReflectionProbe')
 var fs = require('fs')
 var AreaLightsData = require('./AreaLightsData')
+var CommandQueue = require('./CommandQueue')
 
 // pex-fx extensions, extending FXStage
 require('./Postprocess')
@@ -50,22 +51,43 @@ function Renderer (ctx, width, height, initialState) {
   this._width = width
   this._height = height
 
+  this._cmdQueue = new CommandQueue(ctx)
+
   this._debugDraw = new Draw(ctx)
   this._debug = false
 
   this._materials = []
   this._nodes = []
 
+  this.initCommands()
   this.initMaterials()
   this.initSkybox()
   this.initShadowmaps()
   this.initPostproces()
+
+  this._debugTexture = ctx.createTexture2D(null, width, height)
+  this._debugFBO = ctx.createFramebuffer([{ texture: this._debugTexture }])
+  this._debugClearCommand = this._cmdQueue.createClearCommand({
+    framebuffer: this._debugFBO,
+    color: [1, 1, 0, 1]
+  })
+  this._debugDrawCommand = this._cmdQueue.createDrawCommand({
+    framebuffer: this._debugFBO
+  })
 
   this._state = State
 
   if (initialState) {
     Object.assign(State, initialState)
   }
+}
+
+Renderer.prototype.initCommands = function () {
+  var cmdQueue = this._cmdQueue
+  this._clearCommand = cmdQueue.createClearCommand({
+    color: State.backgroundColor,
+    depth: 1
+  })
 }
 
 Renderer.prototype.initMaterials = function () {
@@ -132,11 +154,11 @@ Renderer.prototype.initPostproces = function () {
 }
 
 Renderer.prototype.initSkybox = function () {
-  var ctx = this._ctx
+  var cmdQueue = this._cmdQueue
 
-  this._skyEnvMapTex = new SkyEnvMap(ctx, State.sunPosition)
-  this._skybox = new Skybox(ctx, this._skyEnvMap)
-  this._reflectionProbe = new ReflectionProbe(ctx, [0, 0, 0])
+  this._skyEnvMapTex = new SkyEnvMap(cmdQueue, State.sunPosition)
+  this._skybox = new Skybox(cmdQueue, this._skyEnvMapTex)
+  this._reflectionProbe = new ReflectionProbe(cmdQueue, [0, 0, 0])
 
   // No need to set default props as these will be automatically updated on first render
   this._sunLightNode = this.createNode({
@@ -527,15 +549,11 @@ Renderer.prototype.updateDirectionalLights = function (directionalLightNodes) {
 
 Renderer.prototype.draw = function () {
   var ctx = this._ctx
+  var cmdQueue = this._cmdQueue
 
-  var flags = 0
-  flags |= ctx.COLOR_BIT | ctx.DEPTH_BIT | ctx.BLEND_BIT
-  flags |= ctx.MATRIX_PROJECTION_BIT | ctx.MATRIX_VIEW_BIT | ctx.MATRIX_MODEL_BIT
-  flags |= ctx.PROGRAM_BIT | ctx.MESH_BIT
-  ctx.pushState(flags)
+  ctx.pushState(ctx.ALL)
 
-  ctx.setClearColor(State.backgroundColor[0], State.backgroundColor[1], State.backgroundColor[2], State.backgroundColor[3])
-  ctx.clear(ctx.COLOR_BIT | ctx.DEPTH_BIT)
+  cmdQueue.submit(this._clearCommand)
 
   var cameraNodes = this.getNodes('camera')
   var lightNodes = this.getNodes('light')
@@ -549,7 +567,6 @@ Renderer.prototype.draw = function () {
   }
 
   this.updateDirectionalLights(directionalLightNodes)
-
   if (!Vec3.equals(State.prevSunPosition, State.sunPosition)) {
     Vec3.set(State.prevSunPosition, State.sunPosition)
 
@@ -557,11 +574,16 @@ Renderer.prototype.draw = function () {
     this._skyEnvMapTex.setSunPosition(State.sunPosition)
     this._skybox.setEnvMap(State.skyEnvMap || this._skyEnvMapTex)
     this._reflectionProbe.update(function () {
+      // ctx.setClearColor(0, 1, 0, 1)
+      // ctx.clear(ctx.COLOR_BIT)
+      // var currentCamera = cameraNodes[0].camera
+      // ctx.setViewMatrix(currentCamera.getViewMatrix())
+      // ctx.setProjectionMatrix(currentCamera.getProjectionMatrix())
+      // ctx.setViewport(0, 0, 500, 500)
       this._skybox.draw()
     }.bind(this))
-    // this._skybox.setEnvMap(this._reflectionProbe.getIrradianceMap())
   }
-
+  /*
   directionalLightNodes.forEach(function (lightNode) {
     var light = lightNode.light
     var positionHasChanged = !Vec3.equals(lightNode.position, lightNode._prevPosition)
@@ -609,13 +631,17 @@ Renderer.prototype.draw = function () {
   ctx.setViewport(0, 0, this._width, this._height)
 
   ctx.clear(ctx.COLOR_BIT | ctx.DEPTH_BIT)
-
+  */
   var currentCamera = cameraNodes[0].camera
   ctx.setViewMatrix(currentCamera.getViewMatrix())
   ctx.setProjectionMatrix(currentCamera.getProjectionMatrix())
-
   this._skybox.draw()
 
+  cmdQueue.submit(this._debugClearCommand)
+  cmdQueue.submit(this._debugDrawCommand, null, function () {
+    this._skybox.draw()
+  }.bind(this))
+  /*
   if (State.profile) {
     console.time('Renderer:drawMeshes')
     console.time('Renderer:drawMeshes:finish')
@@ -688,44 +714,51 @@ Renderer.prototype.draw = function () {
     ctx.bindTexture(overlayNode.overlay)
     ctx.drawMesh()
   })
-
-  ctx.setBlend(false)
-  ctx.popState(flags)
+  */
+  ctx.popState()
 
   if (State.debug) {
-    ctx.bindProgram(this._showColorsProgram)
-    this._debugDraw.setColor([1, 0, 0, 1])
-
-    this._debugDraw.setLineWidth(2)
-    directionalLightNodes.forEach(function (lightNode) {
-      var light = lightNode.light
-      var invProj = Mat4.invert(Mat4.copy(light._projectionMatrix))
-      var invView = Mat4.invert(Mat4.copy(light._viewMatrix))
-      var corners = [[-1, -1, 1, 1], [1, -1, 1, 1], [1, 1, 1, 1], [-1, 1, 1, 1], [-1, -1, -1, 1], [1, -1, -1, 1], [1, 1, -1, 1], [-1, 1, -1, 1]].map(function (p) {
-        var v = Vec4.multMat4(Vec4.multMat4(Vec4.copy(p), invProj), invView)
-        Vec3.scale(v, 1 / v[3])
-        return v
-      })
-
-      var position = lightNode.position
-      this._debugDraw.drawLine(position, corners[0 + 4])
-      this._debugDraw.drawLine(position, corners[1 + 4])
-      this._debugDraw.drawLine(position, corners[2 + 4])
-      this._debugDraw.drawLine(position, corners[3 + 4])
-      this._debugDraw.drawLine(corners[3], corners[0])
-      this._debugDraw.drawLine(corners[0], corners[1])
-      this._debugDraw.drawLine(corners[1], corners[2])
-      this._debugDraw.drawLine(corners[2], corners[3])
-      this._debugDraw.drawLine(corners[3], corners[4 + 3])
-      this._debugDraw.drawLine(corners[0], corners[4 + 0])
-      this._debugDraw.drawLine(corners[1], corners[4 + 1])
-      this._debugDraw.drawLine(corners[2], corners[4 + 2])
-      this._debugDraw.drawLine(corners[4 + 3], corners[4 + 0])
-      this._debugDraw.drawLine(corners[4 + 0], corners[4 + 1])
-      this._debugDraw.drawLine(corners[4 + 1], corners[4 + 2])
-      this._debugDraw.drawLine(corners[4 + 2], corners[4 + 3])
-    }.bind(this))
+    this.drawDebug()
   }
+}
+
+Renderer.prototype.drawDebug = function () {
+  var ctx = this._ctx
+
+  var lightNodes = this.getNodes('light')
+  var directionalLightNodes = lightNodes.filter(function (node) { return node.light.type === 'directional'})
+  ctx.bindProgram(this._showColorsProgram)
+  this._debugDraw.setColor([1, 0, 0, 1])
+
+  this._debugDraw.setLineWidth(2)
+  directionalLightNodes.forEach(function (lightNode) {
+    var light = lightNode.light
+    var invProj = Mat4.invert(Mat4.copy(light._projectionMatrix))
+    var invView = Mat4.invert(Mat4.copy(light._viewMatrix))
+    var corners = [[-1, -1, 1, 1], [1, -1, 1, 1], [1, 1, 1, 1], [-1, 1, 1, 1], [-1, -1, -1, 1], [1, -1, -1, 1], [1, 1, -1, 1], [-1, 1, -1, 1]].map(function (p) {
+      var v = Vec4.multMat4(Vec4.multMat4(Vec4.copy(p), invProj), invView)
+      Vec3.scale(v, 1 / v[3])
+      return v
+    })
+
+    var position = lightNode.position
+    this._debugDraw.drawLine(position, corners[0 + 4])
+    this._debugDraw.drawLine(position, corners[1 + 4])
+    this._debugDraw.drawLine(position, corners[2 + 4])
+    this._debugDraw.drawLine(position, corners[3 + 4])
+    this._debugDraw.drawLine(corners[3], corners[0])
+    this._debugDraw.drawLine(corners[0], corners[1])
+    this._debugDraw.drawLine(corners[1], corners[2])
+    this._debugDraw.drawLine(corners[2], corners[3])
+    this._debugDraw.drawLine(corners[3], corners[4 + 3])
+    this._debugDraw.drawLine(corners[0], corners[4 + 0])
+    this._debugDraw.drawLine(corners[1], corners[4 + 1])
+    this._debugDraw.drawLine(corners[2], corners[4 + 2])
+    this._debugDraw.drawLine(corners[4 + 3], corners[4 + 0])
+    this._debugDraw.drawLine(corners[4 + 0], corners[4 + 1])
+    this._debugDraw.drawLine(corners[4 + 1], corners[4 + 2])
+    this._debugDraw.drawLine(corners[4 + 2], corners[4 + 3])
+  }.bind(this))
 }
 
 module.exports = Renderer

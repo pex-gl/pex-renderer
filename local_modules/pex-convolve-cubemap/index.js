@@ -1,48 +1,54 @@
-var renderToCubemap = require('../pex-render-to-cubemap');
-var hammersley = require('hammersley');
-var fs = require('fs');
+var renderToCubemap = require('../pex-render-to-cubemap')
+var hammersley = require('hammersley')
+var fs = require('fs')
 
-var VERT = fs.readFileSync(__dirname + '/glsl/convolve.vert', 'utf8');
-var FRAG = fs.readFileSync(__dirname + '/glsl/convolve.frag', 'utf8');
+var VERT = fs.readFileSync(__dirname + '/glsl/convolve.vert', 'utf8')
+var FRAG = fs.readFileSync(__dirname + '/glsl/convolve.frag', 'utf8')
 
-var quadPositions = [[-1,-1],[1,-1], [1,1],[-1,1]];
-var quadFaces = [ [0, 1, 2], [0, 2, 3]];
+var quadPositions = [[-1, -1], [1, -1], [1, 1], [-1, 1]]
+var quadFaces = [ [0, 1, 2], [0, 2, 3]]
 
-var quadMesh = null;
-var hammersleyPointSet = 0;
-var convolveProgram = null;
+var quadMesh = null
+var convolveProgram = null
+var hammersleyPointSetMap = null
 
-function convolveCubemap(ctx, fromCubemap, toCubemap) {
-    ctx.pushState(ctx.MESH_BIT | ctx.PROGRAM_BIT); //ctx.TEXTURE_BIT
-    if (!quadMesh) {
-        var quadAttributes = [ { data: quadPositions, location: ctx.ATTRIB_POSITION } ];
-        var quadIndices = { data: quadFaces };
-        quadMesh = ctx.createMesh(quadAttributes, quadIndices);
+function convolveCubemap (cmdQueue, fromCubemap, toCubemap) {
+  var ctx = cmdQueue.getContext()
 
-        convolveProgram = ctx.createProgram(VERT, FRAG);
+  if (!quadMesh) {
+    var quadAttributes = [ { data: quadPositions, location: ctx.ATTRIB_POSITION } ]
+    var quadIndices = { data: quadFaces }
+    quadMesh = ctx.createMesh(quadAttributes, quadIndices)
 
-        var numSamples = 512;
-        var hammersleyPointSet = new Float32Array(4 * numSamples);
-        for(var i=0; i<numSamples; i++) {
-            var p = hammersley(i, numSamples)
-            hammersleyPointSet[i*4]   = p[0];
-            hammersleyPointSet[i*4+1] = p[1];
-            hammersleyPointSet[i*4+2] = 0;
-            hammersleyPointSet[i*4+3] = 0;
-        }
+    convolveProgram = ctx.createProgram(VERT, FRAG)
 
-        hammersleyPointSetMap = ctx.createTexture2D(hammersleyPointSet, 1, numSamples, { type: ctx.FLOAT, magFilter: ctx.NEAREST, minFilter: ctx.NEAREST });
+    var numSamples = 512
+    var hammersleyPointSet = new Float32Array(4 * numSamples)
+    for (var i = 0; i < numSamples; i++) {
+      var p = hammersley(i, numSamples)
+      hammersleyPointSet[i * 4] = p[0]
+      hammersleyPointSet[i * 4 + 1] = p[1]
+      hammersleyPointSet[i * 4 + 2] = 0
+      hammersleyPointSet[i * 4 + 3] = 0
     }
-    renderToCubemap(ctx, toCubemap, function() {
-        ctx.bindTexture(fromCubemap, 0);
-        ctx.bindTexture(hammersleyPointSetMap, 1);
-        ctx.bindProgram(convolveProgram);
-        convolveProgram.setUniform('uEnvMap', 0);
-        convolveProgram.setUniform('uHammersleyPointSetMap', 1);
-        ctx.bindMesh(quadMesh);
-        ctx.drawMesh();
-    });
-    ctx.popState(ctx.MESH_BIT | ctx.PROGRAM_BIT); //ctx.TEXTURE_BIT
+
+    hammersleyPointSetMap = ctx.createTexture2D(hammersleyPointSet, 1, numSamples, { type: ctx.FLOAT, magFilter: ctx.NEAREST, minFilter: ctx.NEAREST })
+  }
+  renderToCubemap(cmdQueue, toCubemap, function () {
+    var drawCommand = cmdQueue.createDrawCommand({
+      mesh: quadMesh,
+      program: convolveProgram,
+      textures: {
+        '0': fromCubemap,
+        '1': hammersleyPointSetMap
+      },
+      uniforms: {
+        uEnvMap: 0,
+        uHammersleyPointSetMap: 1
+      }
+    })
+    cmdQueue.submit(drawCommand)
+  })
 }
 
-module.exports = convolveCubemap;
+module.exports = convolveCubemap
