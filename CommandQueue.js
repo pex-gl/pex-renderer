@@ -64,7 +64,7 @@ function applyUniforms (ctx, program, uniforms, debug) {
 // inherit defaults from the currently executing cmd
 CommandQueue.prototype.submit = function (cmd, opts, subCommanDraw) {
   this._commands.push([cmd, opts, subCommanDraw])
-  if (this.debug) console.log('submit', cmd._type, cmd._id)
+  // if (this.debug) console.log('submit', cmd._type, cmd._id)
 
   if (!cmd._type) {
     if (this.debug) console.log(cmd.toString())
@@ -82,19 +82,22 @@ CommandQueue.prototype.submit = function (cmd, opts, subCommanDraw) {
 
   var ctx = this._ctx
   if (cmd.framebuffer) {
-    if (this.debug) console.log('  bindFramebuffer')
     ctx.pushState(ctx.FRAMEBUFFER_BIT)
     ctx.bindFramebuffer(cmd.framebuffer)
     pushedStates++
     if (cmd.framebufferColorAttachments) {
+      // FIXME: this modifies the framebuffer permamently after the call
       for (var attachmentIndex in cmd.framebufferColorAttachments) {
         var attachment = cmd.framebufferColorAttachments[attachmentIndex]
         var index = parseInt(attachmentIndex, 10)
         cmd.framebuffer.setColorAttachment(index, attachment.target, attachment.handle, attachment.level)
       }
     }
-  } else {
-    // ctx.bindFramebuffer(null)
+    if (cmd.framebufferDepthAttachment) {
+      // FIXME: this modifies the framebuffer permamently after the call
+      var attachment = cmd.framebufferDepthAttachment
+      cmd.framebuffer.setDepthAttachment(attachment.target, attachment.handle, attachment.level)
+    }
   }
 
   var clearFlags = 0
@@ -166,6 +169,12 @@ CommandQueue.prototype.submit = function (cmd, opts, subCommanDraw) {
     ctx.setCullFaceMode(cmd.cullFaceMode)
   }
 
+  if (cmd.colorMask !== undefined) {
+    ctx.pushState(ctx.COLOR_BIT)
+    pushedStates++
+    ctx.setColorMask(cmd.colorMask[0], cmd.colorMask[1], cmd.colorMask[2], cmd.colorMask[3])
+  }
+
   if (cmd.mesh) {
     ctx.bindMesh(cmd.mesh)
     ctx.drawMesh()
@@ -175,7 +184,7 @@ CommandQueue.prototype.submit = function (cmd, opts, subCommanDraw) {
     subCommanDraw()
   }
 
-  if (this.debug) console.log(' ', 'pushedStates', pushedStates)
+  // if (this.debug) console.log(' ', 'pushedStates', pushedStates)
   for (var i = 0; i < pushedStates; i++) {
     ctx.popState()
   }

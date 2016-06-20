@@ -235,11 +235,7 @@ Renderer.prototype.getNodes = function (type) {
 }
 
 Renderer.prototype.updateDirectionalLightShadowMap = function (lightNode) {
-  var ctx = this._ctx
-
-  ctx.pushState(ctx.FRAMEBUFFER_BIT | ctx.VIEWPORT_BIT)
-  ctx.bindFramebuffer(this._shadowMapFbo)
-
+  var cmdQueue = this._cmdQueue
   var light = lightNode.light
 
   var target = Vec3.copy(lightNode.position)
@@ -247,21 +243,32 @@ Renderer.prototype.updateDirectionalLightShadowMap = function (lightNode) {
   Mat4.lookAt(light._viewMatrix, lightNode.position, target, [0, 1, 0])
   Mat4.ortho(light._projectionMatrix, light._left, light._right, light._bottom, light._top, light._near, light._far)
 
-  ctx.setViewMatrix(light._viewMatrix)
-  ctx.setProjectionMatrix(light._projectionMatrix)
-  this._shadowMapFbo.setColorAttachment(0, light._colorMap.getTarget(), light._colorMap.getHandle(), 0)
-  this._shadowMapFbo.setDepthAttachment(light._shadowMap.getTarget(), light._shadowMap.getHandle(), 0)
+  // FIXME: how Metal / Vulkan implement FBO clear on bind?
+  var shadowMapClearCommand = cmdQueue.createClearCommand({
+    framebuffer: this._shadowMapFbo,
+    framebufferColorAttachments: {
+      '0': { target: light._colorMap.getTarget(), handle: light._colorMap.getHandle(), level: 0 }
+    },
+    framebufferDepthAttachment: { target: light._shadowMap.getTarget(), handle: light._shadowMap.getHandle(), level: 0},
+    color: [0, 0, 0, 1],
+    depth: 1
+  })
 
-  ctx.setViewport(0, 0, light._shadowMap.getWidth(), light._shadowMap.getHeight())
+  var shadowMapDrawCommand = cmdQueue.createDrawCommand({
+    framebuffer: this._shadowMapFbo,
+    framebufferColorAttachments: {
+      '0': { target: light._colorMap.getTarget(), handle: light._colorMap.getHandle(), level: 0 }
+    },
+    framebufferDepthAttachment: { target: light._shadowMap.getTarget(), handle: light._shadowMap.getHandle(), level: 0},
+    viewport: [0, 0, light._shadowMap.getWidth(), light._shadowMap.getHeight()],
+    projectionMatrix: light._projectionMatrix,
+    viewMatrix: light._viewMatrix,
+    depthTest: true,
+    colorMask: [0, 0, 0, 0]
+  })
 
-  ctx.setDepthTest(true)
-  ctx.setClearColor(0, 0, 0, 1)
-  ctx.clear(ctx.COLOR_BIT | ctx.DEPTH_BIT)
-  ctx.setColorMask(0, 0, 0, 0)
-  this.drawMeshes()
-  ctx.setColorMask(1, 1, 1, 1)
-
-  ctx.popState(ctx.FRAMEBUFFER_BIT | ctx.VIEWPORT_BIT)
+  cmdQueue.submit(shadowMapClearCommand)
+  cmdQueue.submit(shadowMapDrawCommand, null, this.drawMeshes.bind(this))
 }
 
 var Vert = fs.readFileSync(__dirname + '/glsl/PBR.vert', 'utf8')
@@ -526,7 +533,8 @@ Renderer.prototype.draw = function () {
     if (positionHasChanged || directionHasChanged) {
       Vec3.set(lightNode._prevPosition, lightNode.position)
       Vec3.set(light._prevDirection, light.direction)
-      // TODO: //IMPLEMENT this.updateDirectionalLightShadowMap(lightNode)
+      console.log('updateDirectionalLightShadowMap')
+      this.updateDirectionalLightShadowMap(lightNode)
     }
   }.bind(this))
 
@@ -591,6 +599,8 @@ Renderer.prototype.draw = function () {
   var color = root.asFXStage(this._frameColorTex, 'img')
   var final = color
 
+  ctx.setViewport(0, 0, this._width, this._height)
+
   if (State.profile) ctx.getGL().finish()
   if (State.profile) console.time('postprocessing')
   if (State.profile) console.time('ssao')
@@ -627,6 +637,7 @@ Renderer.prototype.draw = function () {
   if (State.profile) ctx.getGL().finish()
   if (State.profile) console.timeEnd('postprocessing')
   var viewport = ctx.getViewport()
+  // final = ssao
   final.blit({ x: viewport[0], y: viewport[1], width: viewport[2], height: viewport[3]})
 
   // overlays
