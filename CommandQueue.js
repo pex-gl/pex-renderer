@@ -88,15 +88,15 @@ CommandQueue.prototype.submit = function (cmd, opts, subCommanDraw) {
     if (cmd.framebufferColorAttachments) {
       // FIXME: this modifies the framebuffer permamently after the call
       for (var attachmentIndex in cmd.framebufferColorAttachments) {
-        var attachment = cmd.framebufferColorAttachments[attachmentIndex]
+        var colorAttachment = cmd.framebufferColorAttachments[attachmentIndex]
         var index = parseInt(attachmentIndex, 10)
-        cmd.framebuffer.setColorAttachment(index, attachment.target, attachment.handle, attachment.level)
+        cmd.framebuffer.setColorAttachment(index, colorAttachment.target, colorAttachment.handle, colorAttachment.level)
       }
     }
     if (cmd.framebufferDepthAttachment) {
       // FIXME: this modifies the framebuffer permamently after the call
-      var attachment = cmd.framebufferDepthAttachment
-      cmd.framebuffer.setDepthAttachment(attachment.target, attachment.handle, attachment.level)
+      var depthAttachment = cmd.framebufferDepthAttachment
+      cmd.framebuffer.setDepthAttachment(depthAttachment.target, depthAttachment.handle, depthAttachment.level)
     }
   }
 
