@@ -216,7 +216,7 @@ Renderer.prototype.initNode = function (node) {
       if (node.light.shadows === undefined) { node.light.shadows = true }
       if (node.light.color === undefined) { node.light.color = [1, 1, 1, 1] }
       if (node.light.direction === undefined) { node.light.direction = [0, -1, 0] }
-      node.light._colorMap = ctx.createTexture2D(null, 1024, 1024) // TODO: remove this
+      node.light._colorMap = ctx.createTexture2D(null, 1024, 1024) // FIXME: remove light color map
       node.light._shadowMap = ctx.createTexture2D(null, 1024, 1024, { format: ctx.DEPTH_COMPONENT, type: ctx.UNSIGNED_SHORT})
       node.light._viewMatrix = Mat4.create()
       node.light._projectionMatrix = Mat4.create()
@@ -268,7 +268,9 @@ Renderer.prototype.updateDirectionalLightShadowMap = function (lightNode) {
   })
 
   cmdQueue.submit(shadowMapClearCommand)
-  cmdQueue.submit(shadowMapDrawCommand, null, this.drawMeshes.bind(this))
+  cmdQueue.submit(shadowMapDrawCommand, null, function () {
+    this.drawMeshes(true)
+  }.bind(this))
 }
 
 var Vert = fs.readFileSync(__dirname + '/glsl/PBR.vert', 'utf8')
@@ -298,9 +300,9 @@ Renderer.prototype.getMeshProgram = function (meshMaterial, options) {
   if (meshMaterial.normalMap) {
     flags.push('#define USE_NORMAL_MAP')
   }
-  flags.push('#define NUM_DIRECTIONAL_LIGHTS ' + options.numDirectionalLights)
-  flags.push('#define NUM_POINT_LIGHTS ' + options.numPointLights)
-  flags.push('#define NUM_AREA_LIGHTS ' + options.numAreaLights)
+  flags.push('#define NUM_DIRECTIONAL_LIGHTS ' + (options.numDirectionalLights || 0))
+  flags.push('#define NUM_POINT_LIGHTS ' + (options.numPointLights || 0))
+  flags.push('#define NUM_AREA_LIGHTS ' + (options.numAreaLights || 0))
   if (options.useReflectionProbes) {
     flags.push('#define USE_REFLECTION_PROBES')
   }
@@ -336,7 +338,7 @@ Renderer.prototype.getMeshProgram = function (meshMaterial, options) {
 // set update transforms once per frame
 // draw + shadowmap @ 1000 objects x 30 uniforms = 60'000 setters / frame!!
 // transform feedback?
-Renderer.prototype.drawMeshes = function () {
+Renderer.prototype.drawMeshes = function (shadowMappingPass) {
   var ctx = this._ctx
   var cmdQueue = this._cmdQueue
 
@@ -414,12 +416,18 @@ Renderer.prototype.drawMeshes = function () {
 
     var meshUniforms = meshNode.material.uniforms
 
-    var meshProgram = meshNode.material._program = meshNode.material._program || this.getMeshProgram(meshNode.material, {
-      numDirectionalLights: directionalLightNodes.length,
-      numPointLights: pointLightNodes.length,
-      numAreaLights: areaLightNodes.length,
-      useReflectionProbes: true
-    })
+    var meshProgram
+
+    if (shadowMappingPass) {
+      meshProgram = meshNode.material._shadowProgram = meshNode.material._shadowProgram || this.getMeshProgram(meshNode.material, {})
+    } else {
+      meshProgram = meshNode.material._program = meshNode.material._program || this.getMeshProgram(meshNode.material, {
+        numDirectionalLights: directionalLightNodes.length,
+        numPointLights: pointLightNodes.length,
+        numAreaLights: areaLightNodes.length,
+        useReflectionProbes: true
+      })
+    }
 
     var isVertexArray = meshNode.primitiveType && meshNode.count
 
@@ -526,18 +534,6 @@ Renderer.prototype.draw = function () {
     }.bind(this))
   }
 
-  directionalLightNodes.forEach(function (lightNode) {
-    var light = lightNode.light
-    var positionHasChanged = !Vec3.equals(lightNode.position, lightNode._prevPosition)
-    var directionHasChanged = !Vec3.equals(light.direction, light._prevDirection)
-    if (positionHasChanged || directionHasChanged) {
-      Vec3.set(lightNode._prevPosition, lightNode.position)
-      Vec3.set(light._prevDirection, light.direction)
-      console.log('updateDirectionalLightShadowMap')
-      this.updateDirectionalLightShadowMap(lightNode)
-    }
-  }.bind(this))
-
   // update scene graph
 
   // TODO: optimize this
@@ -569,6 +565,18 @@ Renderer.prototype.draw = function () {
 
   // draw scene
 
+  directionalLightNodes.forEach(function (lightNode) {
+    var light = lightNode.light
+    var positionHasChanged = !Vec3.equals(lightNode.position, lightNode._prevPosition)
+    var directionHasChanged = !Vec3.equals(light.direction, light._prevDirection)
+    if (positionHasChanged || directionHasChanged) {
+      Vec3.set(lightNode._prevPosition, lightNode.position)
+      Vec3.set(light._prevDirection, light.direction)
+      console.log('updateDirectionalLightShadowMap')
+      this.updateDirectionalLightShadowMap(lightNode)
+    }
+  }.bind(this))
+
   var currentCamera = cameraNodes[0].camera
 
   cmdQueue.submit(this._clearFrameFboCommand)
@@ -599,7 +607,7 @@ Renderer.prototype.draw = function () {
   var color = root.asFXStage(this._frameColorTex, 'img')
   var final = color
 
-  //FIXME: ssao internally needs uProjectionMatrix...
+  // FIXME: ssao internally needs uProjectionMatrix...
   ctx.pushProjectionMatrix()
   ctx.setProjectionMatrix(currentCamera.getProjectionMatrix())
 
