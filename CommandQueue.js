@@ -34,7 +34,7 @@ function applyUniforms (ctx, program, uniforms, debug) {
   var textureOffset = 0
   for (var uniformName in uniforms) {
     // TODO: can i do array index check instead of function call?
-    if (debug) console.log('  setUniform', uniformName, '' + uniforms[uniformName])
+    // if (debug) console.log('  setUniform', uniformName, '' + uniforms[uniformName])
     if (!program.hasUniform(uniformName)) {
       // console.log('Unnecessary uniform', uniformName)
       continue
@@ -63,6 +63,7 @@ function applyUniforms (ctx, program, uniforms, debug) {
 // subContextCallback - all submit calls within this callback will
 // inherit defaults from the currently executing cmd
 CommandQueue.prototype.submit = function (cmd, opts, subCommanDraw) {
+  this._commands.push([cmd, opts, subCommanDraw])
   if (this.debug) console.log('submit', cmd._type, cmd._id)
 
   if (!cmd._type) {
@@ -113,34 +114,56 @@ CommandQueue.prototype.submit = function (cmd, opts, subCommanDraw) {
     ctx.clear(clearFlags)
   }
 
-  if (cmd.program) {
+  if (cmd.program !== undefined) {
     ctx.pushState(ctx.PROGRAM_BIT)
     pushedStates++
     ctx.bindProgram(cmd.program)
-  } else {
-    // ctx.bindProgram(null)
   }
 
-  if (cmd.uniforms) {
+  if (cmd.uniforms !== undefined) {
     applyUniforms(ctx, cmd.program, cmd.uniforms, this.debug)
   }
 
-  if (cmd.projectionMatrix) {
+  if (cmd.projectionMatrix !== undefined) {
     ctx.pushState(ctx.MATRIX_PROJECTION_BIT)
     pushedStates++
     ctx.setProjectionMatrix(cmd.projectionMatrix)
   }
 
-  if (cmd.viewMatrix) {
+  if (cmd.viewMatrix !== undefined) {
     ctx.pushState(ctx.MATRIX_VIEW_BIT)
     pushedStates++
     ctx.setViewMatrix(cmd.viewMatrix)
   }
 
-  if (cmd.viewport) {
+  if (cmd.modelMatrix !== undefined) {
+    ctx.pushState(ctx.MATRIX_MODEL_BIT)
+    pushedStates++
+    ctx.setModelMatrix(cmd.modelMatrix)
+  }
+
+  if (cmd.viewport !== undefined) {
     ctx.pushState(ctx.VIEWPORT_BIT)
     pushedStates++
     ctx.setViewport(cmd.viewport[0], cmd.viewport[1], cmd.viewport[2], cmd.viewport[3])
+  }
+
+  if (cmd.depthTest !== undefined) {
+    ctx.pushState(ctx.DEPTH_BIT)
+    pushedStates++
+    ctx.setDepthTest(cmd.depthTest)
+  }
+
+  if (cmd.cullFace !== undefined) {
+    ctx.pushState(ctx.CULL_BIT)
+    pushedStates++
+    ctx.setCullFace(cmd.cullFace)
+  }
+
+  if (cmd.cullFaceMode !== undefined) {
+    ctx.pushState(ctx.CULL_BIT)
+    pushedStates++
+    ctx.setCullFaceMode(cmd.cullFaceMode)
   }
 
   if (cmd.mesh) {
@@ -160,6 +183,9 @@ CommandQueue.prototype.submit = function (cmd, opts, subCommanDraw) {
 
 // force execute of all commands in the queue
 CommandQueue.prototype.flush = function () {
+  var numCommands = this._commands.length
+  this._commands.length = 0
+  return numCommands
 }
 
 module.exports = CommandQueue

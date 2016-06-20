@@ -65,16 +65,6 @@ function Renderer (ctx, width, height, initialState) {
   this.initShadowmaps()
   this.initPostproces()
 
-  this._debugTexture = ctx.createTexture2D(null, width, height)
-  this._debugFBO = ctx.createFramebuffer([{ texture: this._debugTexture }])
-  this._debugClearCommand = this._cmdQueue.createClearCommand({
-    framebuffer: this._debugFBO,
-    color: [1, 1, 0, 1]
-  })
-  this._debugDrawCommand = this._cmdQueue.createDrawCommand({
-    framebuffer: this._debugFBO
-  })
-
   this._state = State
 
   if (initialState) {
@@ -103,6 +93,7 @@ Renderer.prototype.initShadowmaps = function () {
 
 Renderer.prototype.initPostproces = function () {
   var ctx = this._ctx
+  var cmdQueue = this._cmdQueue
 
   var fsqPositions = [[-1, -1], [1, -1], [1, 1], [-1, 1]]
   var fsqFaces = [ [0, 1, 2], [0, 2, 3]]
@@ -116,6 +107,16 @@ Renderer.prototype.initPostproces = function () {
   this._frameNormalTex = ctx.createTexture2D(null, this._width, this._height, { type: ctx.HALF_FLOAT })
   this._frameDepthTex = ctx.createTexture2D(null, this._width, this._height, { format: ctx.DEPTH_COMPONENT, type: ctx.UNSIGNED_SHORT })
   this._frameFbo = ctx.createFramebuffer([ { texture: this._frameColorTex }, { texture: this._frameNormalTex} ], { texture: this._frameDepthTex})
+  this._clearFrameFboCommand = cmdQueue.createClearCommand({
+    framebuffer: this._frameFbo,
+    color: [0, 0, 0, 1],
+    depth: 1
+  })
+
+  this._drawFrameFboCommand = cmdQueue.createDrawCommand({
+    framebuffer: this._frameFbo,
+    viewport: [0, 0, this._width, this._height]
+  })
 
   this._overlayProgram = ctx.createProgram(OVERLAY_VERT, OVERLAY_FRAG)
 
@@ -322,32 +323,6 @@ Renderer.prototype.getMeshProgram = function (meshMaterial, options) {
   return program
 }
 
-function applyUniforms (ctx, program, uniforms, textureOffset) {
-  var numTextures = textureOffset
-  for (var uniformName in uniforms) {
-    // TODO: can i do array index check instead of function call?
-    if (!program.hasUniform(uniformName)) {
-      continue
-    }
-    var value = uniforms[uniformName]
-    if (value === null || value === undefined) {
-      if (program._uniforms[uniformName]) {
-        throw new Error('Null uniform value for ' + uniformName + ' in PBRMaterial')
-      } else {
-        // console.log('Unnecessary uniform', uniformName)
-        continue
-      }
-    }
-    if (value.getTarget && (value.getTarget() === ctx.TEXTURE_2D || value.getTarget() === ctx.TEXTURE_CUBE_MAP)) {
-      ctx.bindTexture(value, numTextures)
-      value = numTextures++
-    }
-    State.uniformsSet++
-    program.setUniform(uniformName, value)
-  }
-  return numTextures
-}
-
 // sort meshes by material
 // do material search by props not string concat
 // set global uniforms like lights once
@@ -356,6 +331,7 @@ function applyUniforms (ctx, program, uniforms, textureOffset) {
 // transform feedback?
 Renderer.prototype.drawMeshes = function () {
   var ctx = this._ctx
+  var cmdQueue = this._cmdQueue
 
   if (State.profile) ctx.getGL().finish()
   if (State.profile) console.time('drawMeshes')
@@ -366,11 +342,6 @@ Renderer.prototype.drawMeshes = function () {
   var directionalLightNodes = lightNodes.filter(function (node) { return node.light.type === 'directional'})
   var pointLightNodes = lightNodes.filter(function (node) { return node.light.type === 'point'})
   var areaLightNodes = lightNodes.filter(function (node) { return node.light.type === 'area'})
-
-  ctx.pushState(ctx.CULL_BIT | ctx.DEPTH_BIT)
-  ctx.setDepthTest(true)
-  ctx.setCullFace(true)
-  ctx.setCullFaceMode(ctx.BACK)
 
   var sharedUniforms = {
     uReflectionMap: this._reflectionProbe.getReflectionMap(),
@@ -419,8 +390,6 @@ Renderer.prototype.drawMeshes = function () {
     sharedUniforms['uAreaLights[' + i + '].size'] = [lightNode.scale[0] / 2, lightNode.scale[1] / 2]
   })
 
-  var sharedTextureOffset = 0
-  var prevProgram = null
   meshNodes.forEach(function (meshNode) {
     // TODO: i should only set either texture or the value
     var pbrUniforms = {
@@ -445,14 +414,24 @@ Renderer.prototype.drawMeshes = function () {
       useReflectionProbes: true
     })
 
-    ctx.bindProgram(meshProgram)
-    if (meshProgram !== prevProgram) {
-      sharedTextureOffset = applyUniforms(ctx, meshProgram, sharedUniforms, 0)
-      prevProgram = meshProgram
-    }
-    var textureOffset = sharedTextureOffset
-    textureOffset = applyUniforms(ctx, meshProgram, pbrUniforms, textureOffset)
-    applyUniforms(ctx, meshProgram, meshUniforms, textureOffset)
+    var isVertexArray = meshNode.primitiveType && meshNode.count
+
+    // TODO: don't create mesh draw commands every frame
+    var meshDrawCommand = cmdQueue.createDrawCommand({
+      // TODO: implement vertex array support // vertexArray: isVertexArray ? meshNode.mesh : undefined,
+      mesh: !isVertexArray ? meshNode.mesh : undefined,
+      modelMatrix: meshNode._globalTransform,
+      program: meshProgram,
+      uniforms: Object.assign({ }, meshUniforms, pbrUniforms, sharedUniforms),
+      lineWidth: meshNode.material.lineWidth,
+      depthTest: true,
+      cullFace: true,
+      cullFaceMode: ctx.BACK
+    })
+
+    cmdQueue.submit(meshDrawCommand)
+
+    // TODO: implement instancing support
     // if (meshNode.mesh._hasDivisor) {
     // ctx.bindProgram(this._standardInstancedProgram)
     // this._standardInstancedProgram.setUniform('uAlbedoColor', meshNode.material._albedoColor)
@@ -470,53 +449,15 @@ Renderer.prototype.drawMeshes = function () {
     // program = this._standardProgram
     // }
 
-    var isVertexArray = meshNode.primitiveType && meshNode.count
-
-    if (meshNode.material.lineWidth) {
-      ctx.setLineWidth(meshNode.material.lineWidth)
-    }
-
-    if (isVertexArray) {
-      ctx.bindVertexArray(meshNode.mesh)
-    } else {
-      ctx.bindMesh(meshNode.mesh)
-    }
-
-    ctx.pushModelMatrix()
-    ctx.loadIdentity()
-    ctx.multMatrix(meshNode._globalTransform)
-
-    if (isVertexArray) {
-      ctx.drawElements(meshNode.primitiveType, meshNode.count, 0)
-    } else if (meshNode.mesh._hasDivisor) {
-      ctx.drawMesh(meshNode.mesh.getAttribute(ctx.ATTRIB_CUSTOM_0).data.length)
-    } else {
-      ctx.drawMesh()
-    }
-    ctx.popModelMatrix()
-
-    if (meshNode.material.lineWidth) {
-      ctx.setLineWidth(1)
-    }
+    // TODO: implement vertex arrays
+    // if (isVertexArray) {
+      // ctx.drawElements(meshNode.primitiveType, meshNode.count, 0)
+    // } else if (meshNode.mesh._hasDivisor) {
+      // ctx.drawMesh(meshNode.mesh.getAttribute(ctx.ATTRIB_CUSTOM_0).data.length)
+    // } else {
+      // ctx.drawMesh()
+    // }
   }.bind(this))
-
-  ctx.bindProgram(this._solidColorProgram)
-  this._solidColorProgram.setUniform('uColor', [1, 0, 0, 1])
-
-  // TODO: don't calculate debug node stack unless in debug
-  this._nodes.forEach(function (node) {
-    ctx.pushModelMatrix()
-    if (node._globalTransform) {
-      ctx.loadIdentity()
-      ctx.multMatrix(node._globalTransform)
-    }
-    if (this._debug && node._bbox) {
-      this._debugDraw.debugAABB(node._bbox)
-    }
-    ctx.popModelMatrix()
-  }.bind(this))
-
-  ctx.popState()
 
   if (State.profile) ctx.getGL().finish()
   if (State.profile) console.timeEnd('drawMeshes')
@@ -553,7 +494,7 @@ Renderer.prototype.draw = function () {
 
   ctx.pushState(ctx.ALL)
 
-  cmdQueue.submit(this._clearCommand)
+  cmdQueue.submit(this._clearCommand) // FIXME: unnecesary?
 
   var cameraNodes = this.getNodes('camera')
   var lightNodes = this.getNodes('light')
@@ -577,7 +518,7 @@ Renderer.prototype.draw = function () {
       this._skybox.draw()
     }.bind(this))
   }
-  /*
+
   directionalLightNodes.forEach(function (lightNode) {
     var light = lightNode.light
     var positionHasChanged = !Vec3.equals(lightNode.position, lightNode._prevPosition)
@@ -585,7 +526,7 @@ Renderer.prototype.draw = function () {
     if (positionHasChanged || directionHasChanged) {
       Vec3.set(lightNode._prevPosition, lightNode.position)
       Vec3.set(light._prevDirection, light.direction)
-      this.updateDirectionalLightShadowMap(lightNode)
+      // TODO: //IMPLEMENT this.updateDirectionalLightShadowMap(lightNode)
     }
   }.bind(this))
 
@@ -620,36 +561,29 @@ Renderer.prototype.draw = function () {
 
   // draw scene
 
-  ctx.pushState(ctx.FRAMEBUFFER_BIT | ctx.VIEWPORT_BIT)
-  ctx.bindFramebuffer(this._frameFbo)
-  ctx.setViewport(0, 0, this._width, this._height)
-
-  ctx.clear(ctx.COLOR_BIT | ctx.DEPTH_BIT)
-  */
   var currentCamera = cameraNodes[0].camera
-  ctx.setViewMatrix(currentCamera.getViewMatrix())
-  ctx.setProjectionMatrix(currentCamera.getProjectionMatrix())
-  this._skybox.draw()
 
-  cmdQueue.submit(this._debugClearCommand)
-  cmdQueue.submit(this._debugDrawCommand, null, function () {
+  cmdQueue.submit(this._clearFrameFboCommand)
+
+  cmdQueue.submit(this._drawFrameFboCommand, {
+    projectionMatrix: currentCamera.getProjectionMatrix(),
+    viewMatrix: currentCamera.getViewMatrix()
+  }, function () {
     this._skybox.draw()
+    if (State.profile) {
+      console.time('Renderer:drawMeshes')
+      console.time('Renderer:drawMeshes:finish')
+      State.uniformsSet = 0
+    }
+    this.drawMeshes()
+    if (State.profile) {
+      console.timeEnd('Renderer:drawMeshes')
+      ctx.getGL().finish()
+      console.timeEnd('Renderer:drawMeshes:finish')
+      console.log('Renderer:uniformsSet', State.uniformsSet)
+    }
   }.bind(this))
-  /*
-  if (State.profile) {
-    console.time('Renderer:drawMeshes')
-    console.time('Renderer:drawMeshes:finish')
-    State.uniformsSet = 0
-  }
-  this.drawMeshes()
-  if (State.profile) {
-    console.timeEnd('Renderer:drawMeshes')
-    ctx.getGL().finish()
-    console.timeEnd('Renderer:drawMeshes:finish')
-    console.log('Renderer:uniformsSet', State.uniformsSet)
-  }
 
-  ctx.popState()
   var W = this._width
   var H = this._height
 
@@ -697,22 +631,27 @@ Renderer.prototype.draw = function () {
 
   // overlays
 
-  ctx.bindProgram(this._overlayProgram)
-  this._overlayProgram.setUniform('uScreenSize', [this._width, this._height])
-  this._overlayProgram.setUniform('uOverlay', 0)
-  ctx.bindMesh(this._fsqMesh)
-  ctx.setDepthTest(false)
-  ctx.setBlend(true)
-  ctx.setBlendFunc(ctx.ONE, ctx.ONE)
-  overlayNodes.forEach(function (overlayNode) {
-    ctx.bindTexture(overlayNode.overlay)
-    ctx.drawMesh()
-  })
-  */
-  ctx.popState()
+  // TODO: Implement overlays
+  // ctx.bindProgram(this._overlayProgram)
+  // this._overlayProgram.setUniform('uScreenSize', [this._width, this._height])
+  // this._overlayProgram.setUniform('uOverlay', 0)
+  // ctx.bindMesh(this._fsqMesh)
+  // ctx.setDepthTest(false)
+  // ctx.setBlend(true)
+  // ctx.setBlendFunc(ctx.ONE, ctx.ONE)
+
+  // overlayNodes.forEach(function (overlayNode) {
+    // ctx.bindTexture(overlayNode.overlay)
+    // ctx.drawMesh()
+  // })
 
   if (State.debug) {
     this.drawDebug()
+  }
+
+  var numCommands = cmdQueue.flush()
+  if (State.profile) {
+    console.log('Renderer numCommands', numCommands)
   }
 }
 
@@ -752,6 +691,22 @@ Renderer.prototype.drawDebug = function () {
     this._debugDraw.drawLine(corners[4 + 0], corners[4 + 1])
     this._debugDraw.drawLine(corners[4 + 1], corners[4 + 2])
     this._debugDraw.drawLine(corners[4 + 2], corners[4 + 3])
+  }.bind(this))
+
+  ctx.bindProgram(this._solidColorProgram)
+  this._solidColorProgram.setUniform('uColor', [1, 0, 0, 1])
+
+  // TODO: don't calculate debug node stack unless in debug
+  this._nodes.forEach(function (node) {
+    ctx.pushModelMatrix()
+    if (node._globalTransform) {
+      ctx.loadIdentity()
+      ctx.multMatrix(node._globalTransform)
+    }
+    if (this._debug && node._bbox) {
+      this._debugDraw.debugAABB(node._bbox)
+    }
+    ctx.popModelMatrix()
   }.bind(this))
 }
 
