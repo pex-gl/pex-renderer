@@ -31,6 +31,17 @@ CommandQueue.prototype.createVertexArrayUpdateCommand = function (obj) {
 }
 
 function applyUniforms (ctx, program, uniforms, debug) {
+  for (var requiredUniform in program._uniforms) {
+    if (requiredUniform === 'uProjectionMatrix') continue
+    if (requiredUniform === 'uViewMatrix') continue
+    if (requiredUniform === 'uInverseViewMatrix') continue
+    if (requiredUniform === 'uModelMatrix') continue
+    if (requiredUniform === 'uNormalMatrix') continue
+    if (uniforms[requiredUniform] === undefined) {
+      console.log('missing uniform', requiredUniform)
+    }
+  }
+
   var textureOffset = 0
   for (var uniformName in uniforms) {
     // TODO: can i do array index check instead of function call?
