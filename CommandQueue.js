@@ -30,11 +30,11 @@ CommandQueue.prototype.createTextureUpdateCommand = function (obj) {
 CommandQueue.prototype.createVertexArrayUpdateCommand = function (obj) {
 }
 
-function applyUniforms (ctx, program, uniforms, textureOffset, debug) {
-  var numTextures = textureOffset
+function applyUniforms (ctx, program, uniforms, debug) {
+  var textureOffset = 0
   for (var uniformName in uniforms) {
     // TODO: can i do array index check instead of function call?
-    if (debug) console.log('  setUniform', uniformName, uniforms[uniformName])
+    if (debug) console.log('  setUniform', uniformName, '' + uniforms[uniformName])
     if (!program.hasUniform(uniformName)) {
       // console.log('Unnecessary uniform', uniformName)
       continue
@@ -49,12 +49,12 @@ function applyUniforms (ctx, program, uniforms, textureOffset, debug) {
       }
     }
     if (value.getTarget && (value.getTarget() === ctx.TEXTURE_2D || value.getTarget() === ctx.TEXTURE_CUBE_MAP)) {
-      ctx.bindTexture(value, numTextures)
-      value = numTextures++
+      ctx.bindTexture(value, textureOffset)
+      value = textureOffset++
     }
     program.setUniform(uniformName, value)
   }
-  return numTextures
+  return textureOffset
 }
 
 // cmd - a command to submit to the queue, the immediate execution is not guaranteed and will
@@ -74,9 +74,6 @@ CommandQueue.prototype.submit = function (cmd, opts, subCommanDraw) {
     cmd = Object.assign({}, cmd, opts)
     if (cmd.uniforms && opts.uniforms) {
       cmd.uniforms = Object.assign({}, cmd.uniforms, opts.uniforms)
-    }
-    if (cmd.textures && opts.textures) {
-      cmd.textures = Object.assign({}, cmd.textures, opts.textures)
     }
   }
 
@@ -125,7 +122,7 @@ CommandQueue.prototype.submit = function (cmd, opts, subCommanDraw) {
   }
 
   if (cmd.uniforms) {
-    applyUniforms(ctx, cmd.program, cmd.uniforms, 0)
+    applyUniforms(ctx, cmd.program, cmd.uniforms, this.debug)
   }
 
   if (cmd.projectionMatrix) {
@@ -146,20 +143,10 @@ CommandQueue.prototype.submit = function (cmd, opts, subCommanDraw) {
     ctx.setViewport(cmd.viewport[0], cmd.viewport[1], cmd.viewport[2], cmd.viewport[3])
   }
 
-  if (cmd.textures) {
-    ctx.pushState(ctx.TEXTURE_BIT)
-    pushedStates++
-    for (var textureIndex in cmd.textures) {
-      ctx.bindTexture(cmd.textures[textureIndex], textureIndex | 0)
-      if (this.debug) console.log('  bindTexture', textureIndex)
-    }
-  }
-
   if (cmd.mesh) {
     ctx.bindMesh(cmd.mesh)
     ctx.drawMesh()
   }
-
 
   if (subCommanDraw) {
     subCommanDraw()

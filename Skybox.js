@@ -22,11 +22,8 @@ function Skybox (cmdQueue, envMap) {
     depthTest: false,
     program: this._skyboxProgram,
     mesh: this._fsqMesh,
-    textures: {
-      '0': this._envMap 
-    },
     uniforms: {
-      uEnvMap: 0,
+      uEnvMap: this._envMap,
       uFlipEnvMap: this._envMap.getFlipEnvMap ? this._envMap.getFlipEnvMap() : -1
     }
   })
@@ -42,11 +39,8 @@ Skybox.prototype.draw = function () {
 
   // TODO: can we somehow avoid creating an object every frame here?
   cmdQueue.submit(this._drawCommand, {
-    textures: {
-      '0': this._envMap
-    },
     uniforms: {
-      uEnvMap: 0,
+      uEnvMap: this._envMap,
       uFlipEnvMap: this._envMap.getFlipEnvMap ? this._envMap.getFlipEnvMap() : -1
     }
   })

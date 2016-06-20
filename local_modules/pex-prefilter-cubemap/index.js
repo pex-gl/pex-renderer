@@ -44,14 +44,10 @@ function prefilterCubemap (cmdQueue, fromCubemap, toCubemap, options) {
     renderToCubemap(cmdQueue, toCubemap, function () {
       var drawCommand = cmdQueue.createDrawCommand({
         mesh: quadMesh,
-        textures: {
-          '0': fromCubemap,
-          '1': hammersleyPointSetMap
-        },
         program: prefilterProgram,
         uniforms: {
-          uEnvMap: 0,
-          uHammersleyPointSetMap: 1,
+          uEnvMap: fromCubemap,
+          uHammersleyPointSetMap: hammersleyPointSetMap,
           uNumSamples: numSamples,
           uRoughness: Math.min(1.0, level * 0.2)
         }

@@ -38,13 +38,9 @@ function convolveCubemap (cmdQueue, fromCubemap, toCubemap) {
     var drawCommand = cmdQueue.createDrawCommand({
       mesh: quadMesh,
       program: convolveProgram,
-      textures: {
-        '0': fromCubemap,
-        '1': hammersleyPointSetMap
-      },
       uniforms: {
-        uEnvMap: 0,
-        uHammersleyPointSetMap: 1
+        uEnvMap: fromCubemap,
+        uHammersleyPointSetMap: hammersleyPointSetMap
       }
     })
     cmdQueue.submit(drawCommand)

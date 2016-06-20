@@ -574,12 +574,6 @@ Renderer.prototype.draw = function () {
     this._skyEnvMapTex.setSunPosition(State.sunPosition)
     this._skybox.setEnvMap(State.skyEnvMap || this._skyEnvMapTex)
     this._reflectionProbe.update(function () {
-      // ctx.setClearColor(0, 1, 0, 1)
-      // ctx.clear(ctx.COLOR_BIT)
-      // var currentCamera = cameraNodes[0].camera
-      // ctx.setViewMatrix(currentCamera.getViewMatrix())
-      // ctx.setProjectionMatrix(currentCamera.getProjectionMatrix())
-      // ctx.setViewport(0, 0, 500, 500)
       this._skybox.draw()
     }.bind(this))
   }

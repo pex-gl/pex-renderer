@@ -25,11 +25,8 @@ function downsampleCubemap (cmdQueue, fromCubemap, toCubemap) {
     var drawCommand = cmdQueue.createDrawCommand({
       mesh: quadMesh,
       program: downsampleProgram,
-      textures: {
-        '0': fromCubemap
-      },
       uniforms: {
-        uEnvMap: 0,
+        uEnvMap: fromCubemap,
         uTextureSize: toCubemap.getWidth()
       }
     })
