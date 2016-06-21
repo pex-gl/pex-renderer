@@ -38,7 +38,7 @@ function renderToCubemap (cmdQueue, cubemap, drawScene, level) {
       framebufferColorAttachments: {
         '0': { target: ctx.TEXTURE_CUBE_MAP_POSITIVE_X + sideIndex, handle: cubemap.getHandle(), level: level }
       },
-      color: [sideIndex%3/3, (sideIndex+1)%3/3, 0, 1]
+      color: [sideIndex % 3 / 3, (sideIndex + 1) % 3 / 3, 0, 1]
     })
     // TODO: should matrices be in uniforms?
     var drawCommand = cmdQueue.createDrawCommand({
