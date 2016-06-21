@@ -4,7 +4,7 @@
   "description": "",
   "main": "main.js",
   "scripts": {
-    "start": "beefy main.js:main.web.js --open --live -- -i plask -g glslify-sync/transform",
+    "start": "beefy main.js:main.web.js --open --live -- -i plask -g glslify-sync/transform -g brfs",
     "build": "browserify main.js -o main.web.js --ignore plask -g glslify-sync/transform -g glslify-promise/transform -g brfs"
   },
   "author": "Marcin Ignac <marcin.ignac@gmail.com> (http://marcinignac.com/)",
