@@ -26,12 +26,6 @@ var SHOW_COLORS_FRAG = fs.readFileSync(__dirname + '/glsl/ShowColors.frag', 'utf
 var OVERLAY_VERT = fs.readFileSync(__dirname + '/glsl/Overlay.vert', 'utf8')
 var OVERLAY_FRAG = fs.readFileSync(__dirname + '/glsl/Overlay.frag', 'utf8')
 
-function debugObject (cmd) {
-  for (var prop in cmd) {
-    console.log(prop, '' + cmd[prop])
-  }
-}
-
 var State = {
   backgroundColor: [0.1, 0.1, 0.1, 1],
   sunPosition: [3, 0, 0],
@@ -177,6 +171,7 @@ Renderer.prototype.initSkybox = function () {
 
 Renderer.prototype.addNode = function (node) {
   this._nodes.push(node)
+  this.updateNodeLists()
   return node
 }
 
@@ -355,6 +350,16 @@ Renderer.prototype.getMeshProgram = function (meshMaterial, options) {
   return program
 }
 
+Renderer.prototype.updateNodeLists = function () {
+  this._cameraNodes = this.getNodes('camera')
+  // TODO: reimplement node.enabled filtering
+  this._meshNodes = this.getNodes('mesh')// .filter(function (node) { return node.enabled })
+  this._lightNodes = this.getNodes('light')// .filter(function (node) { return node.enabled })
+  this._directionalLightNodes = this._lightNodes.filter(function (node) { return node.light.type === 'directional'})
+  this._pointLightNodes = this._lightNodes.filter(function (node) { return node.light.type === 'point'})
+  this._areaLightNodes = this._lightNodes.filter(function (node) { return node.light.type === 'area'})
+}
+
 // sort meshes by material
 // do material search by props not string concat
 // set global uniforms like lights once
@@ -368,12 +373,11 @@ Renderer.prototype.drawMeshes = function (shadowMappingPass) {
   if (State.profile) ctx.getGL().finish()
   if (State.profile) console.time('drawMeshes')
 
-  var cameraNodes = this.getNodes('camera')
-  var meshNodes = this.getNodes('mesh').filter(function (node) { return node.enabled })
-  var lightNodes = this.getNodes('light').filter(function (node) { return node.enabled })
-  var directionalLightNodes = lightNodes.filter(function (node) { return node.light.type === 'directional'})
-  var pointLightNodes = lightNodes.filter(function (node) { return node.light.type === 'point'})
-  var areaLightNodes = lightNodes.filter(function (node) { return node.light.type === 'area'})
+  var cameraNodes = this._cameraNodes
+  var meshNodes = this._meshNodes
+  var directionalLightNodes = this._directionalLightNodes
+  var pointLightNodes = this._pointLightNodes
+  var areaLightNodes = this._areaLightNodes
 
   var sharedUniforms = {
     uReflectionMap: this._reflectionProbe.getReflectionMap(),
@@ -525,8 +529,8 @@ Renderer.prototype.draw = function () {
 
   cmdQueue.submit(this._clearCommand) // FIXME: unnecesary?
 
-  var cameraNodes = this.getNodes('camera')
-  var lightNodes = this.getNodes('light')
+  var cameraNodes = this._cameraNodes
+  var lightNodes = this._lightNodes
   var directionalLightNodes = lightNodes.filter(function (node) { return node.light.type === 'directional'})
   // var pointLightNodes = lightNodes.filter(function (node) { return node.light.type === 'point'})
   // var overlayNodes = this.getNodes('overlay')
