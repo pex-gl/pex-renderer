@@ -58,7 +58,7 @@ ReflectionProbe.prototype.update = function (drawScene) {
 
 ReflectionProbe.prototype.getReflectionMap = function () {
   // FIXME: re-enable blurry reflection in the browser
-  return isBrowser ? this._reflectionPREM : this._reflectionMap
+  return !isBrowser ? this._reflectionPREM : this._reflectionMap
 }
 
 ReflectionProbe.prototype.getIrradianceMap = function () {
