@@ -353,8 +353,8 @@ Renderer.prototype.getMeshProgram = function (meshMaterial, options) {
 Renderer.prototype.updateNodeLists = function () {
   this._cameraNodes = this.getNodes('camera')
   // TODO: reimplement node.enabled filtering
-  this._meshNodes = this.getNodes('mesh')// .filter(function (node) { return node.enabled })
-  this._lightNodes = this.getNodes('light')// .filter(function (node) { return node.enabled })
+  this._meshNodes = this.getNodes('mesh').filter(function (node) { return node.enabled })
+  this._lightNodes = this.getNodes('light').filter(function (node) { return node.enabled })
   this._directionalLightNodes = this._lightNodes.filter(function (node) { return node.light.type === 'directional'})
   this._pointLightNodes = this._lightNodes.filter(function (node) { return node.light.type === 'point'})
   this._areaLightNodes = this._lightNodes.filter(function (node) { return node.light.type === 'area'})
