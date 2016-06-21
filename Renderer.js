@@ -379,13 +379,12 @@ Renderer.prototype.drawMeshes = function (shadowMappingPass) {
   var pointLightNodes = this._pointLightNodes
   var areaLightNodes = this._areaLightNodes
 
-  var sharedUniforms = {
-    uReflectionMap: this._reflectionProbe.getReflectionMap(),
-    uIrradianceMap: this._reflectionProbe.getIrradianceMap(),
-    uReflectionMapFlipEnvMap: this._reflectionProbe.getReflectionMap().getFlipEnvMap ? this._reflectionProbe.getReflectionMap().getFlipEnvMap() : -1,
-    uIrradianceMapFlipEnvMap: this._reflectionProbe.getIrradianceMap().getFlipEnvMap ? this._reflectionProbe.getIrradianceMap().getFlipEnvMap() : -1,
-    uCameraPosition: cameraNodes[0].camera.getPosition()
-  }
+  var sharedUniforms = this._sharedUniforms = this._sharedUniforms || {}
+  sharedUniforms.uReflectionMap = this._reflectionProbe.getReflectionMap()
+  sharedUniforms.uIrradianceMap = this._reflectionProbe.getIrradianceMap()
+  sharedUniforms.uReflectionMapFlipEnvMap = this._reflectionProbe.getReflectionMap().getFlipEnvMap ? this._reflectionProbe.getReflectionMap().getFlipEnvMap() : -1
+  sharedUniforms.uIrradianceMapFlipEnvMap = this._reflectionProbe.getIrradianceMap().getFlipEnvMap ? this._reflectionProbe.getIrradianceMap().getFlipEnvMap() : -1
+  sharedUniforms.uCameraPosition = cameraNodes[0].camera.getPosition()
 
   if (!this.areaLightTextures) {
     console.log('creating textures')
@@ -426,22 +425,26 @@ Renderer.prototype.drawMeshes = function (shadowMappingPass) {
     sharedUniforms['uAreaLights[' + i + '].size'] = [lightNode.scale[0] / 2, lightNode.scale[1] / 2]
   })
 
+  var prevProgram = null
   meshNodes.forEach(function (meshNode) {
-    // TODO: i should only set either texture or the value
-    var pbrUniforms = {
-      uIor: 1.4,
-      uBaseColor: meshNode.material.baseColor,
-      uBaseColorMap: meshNode.material.baseColorMap,
-      uEmissiveColor: meshNode.material.emissiveColor,
-      uEmissiveColorMap: meshNode.material.emissiveColorMap,
-      uMetallic: meshNode.material.metallic || 0.1,
-      uMetallicMap: meshNode.material.metallicMap,
-      uRoughness: meshNode.material.roughness || 1,
-      uRoughnessMap: meshNode.material.roughnessMap,
-      uNormalMap: meshNode.material.normalMap
-    }
+    var material = meshNode.material
+    var cachedUniforms = material._uniforms
+    cachedUniforms.uIor = 1.4
+    cachedUniforms.uBaseColor = material.baseColor
+    cachedUniforms.uBaseColorMap = material.baseColorMap
+    cachedUniforms.uEmissiveColor = material.emissiveColor
+    cachedUniforms.uEmissiveColorMap = material.emissiveColorMap
+    cachedUniforms.uMetallic = material.metallic || 0.1
+    cachedUniforms.uMetallicMap = material.metallicMap
+    cachedUniforms.uRoughness = material.roughness || 1
+    cachedUniforms.uRoughnessMap = material.roughnessMap
+    cachedUniforms.uNormalMap = material.normalMap
 
-    var meshUniforms = meshNode.material.uniforms
+    if (material.uniforms) {
+      for (var uniformName in material.uniforms) {
+        cachedUniforms[uniformName] = material.uniforms[uniformName]
+      }
+    }
 
     var meshProgram
 
@@ -456,12 +459,15 @@ Renderer.prototype.drawMeshes = function (shadowMappingPass) {
       })
     }
 
-    // update program
-    // TODO: add another shadow program
+    if (meshProgram !== prevProgram) {
+      prevProgram = meshProgram
+      // this is a bit hacky but prevents checking the same uniforms over and over again
+      // this would be even better if we sort meshes by material
+      Object.assign(cachedUniforms, sharedUniforms)
+    }
+
     meshNode._drawCommand.program = meshProgram
 
-    // this will update material._uniforms and therefore _drawCommand.uniforms
-    Object.assign(meshNode.material._uniforms, sharedUniforms, pbrUniforms, meshUniforms)
     cmdQueue.submit(meshNode._drawCommand)
 
     // TODO: implement instancing support
