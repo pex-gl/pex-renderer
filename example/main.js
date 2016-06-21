@@ -31,7 +31,7 @@ Window.create({
     type: '3d',
     width: 1280,
     height: 720,
-    // debug: true,
+    debug: false,
     fullScreen: isBrowser
   },
   resources: {
@@ -74,8 +74,11 @@ Window.create({
         renderer._state.skyEnvMap = envMapTex
       }
       gui.addTexture2D('SkyEnvMap', renderer._skyEnvMapTex, { hdr: true })
-      gui.addTextureCube('Reflection Map', renderer._reflectionProbe.getReflectionMap(), { hdr: true })
+      gui.addTextureCube('Reflection Map PREM', renderer._reflectionProbe.getReflectionMap(), { hdr: true })
       gui.addTextureCube('Irradiance Map', renderer._reflectionProbe.getIrradianceMap(), { hdr: true })
+      gui.addTexture2D('Color', renderer._frameColorTex, { hdr: true }).setPosition(180, 10)
+      gui.addTexture2D('Normals', renderer._frameNormalTex)
+      gui.addTexture2D('Depth', renderer._frameDepthTex)
       // gui.addTexture2D('Reflection OctMap', renderer._reflectionProbe._reflectionOctMap, { hdr: true })
 
       this.camera = new PerspCamera(45, this.getAspectRatio(), 0.1, 50.0)
@@ -94,7 +97,7 @@ Window.create({
       // direction: sunDir
       // }
       // })
-      // gui.addTexture2D('Shadow Map', this.sunLightNode.light._shadowMap)
+      gui.addTexture2D('Shadow Map', renderer._sunLightNode.light._shadowMap)
 
       // http://stackoverflow.com/a/36481059
       var mesh = this.buildMesh(createCube(0.2, 0.5 + Math.random(), 0.2))
@@ -174,7 +177,9 @@ Window.create({
     } catch(e) {
       console.log(e)
       console.log(e.stack)
-      process.exit(-1)
+      if (typeof (process) !== 'undefined' && process.exit) {
+        process.exit(-1)
+      }
     }
   },
   onKeyPress: function (e) {
@@ -205,7 +210,16 @@ Window.create({
       this.getContext().getGL().finish()
       console.time('frame')
       this.renderer._state.profile = true
+      this.renderer._cmdQueue.profile = true
     }
+
+    if (this.getTime().getElapsedFrames() <= 1) {
+      console.log('frame')
+      this.renderer._cmdQueue.debug = true
+    } else {
+      this.renderer._cmdQueue.debug = false
+    }
+
     try {
       this.arcball.apply()
       this.renderer.draw()
@@ -219,8 +233,10 @@ Window.create({
       console.log(e.stack)
       process.exit(-1)
     }
+
     if (this.getTime().getElapsedFrames() % 30 === 0) {
       this.renderer._state.profile = false
+      this.renderer._cmdQueue.profile = false
       this.getContext().getGL().finish()
       console.timeEnd('frame')
       console.log('fps:', this.getTime().getFPS())
