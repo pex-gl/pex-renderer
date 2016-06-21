@@ -26,6 +26,12 @@ var SHOW_COLORS_FRAG = fs.readFileSync(__dirname + '/glsl/ShowColors.frag', 'utf
 var OVERLAY_VERT = fs.readFileSync(__dirname + '/glsl/Overlay.vert', 'utf8')
 var OVERLAY_FRAG = fs.readFileSync(__dirname + '/glsl/Overlay.frag', 'utf8')
 
+function debugObject (cmd) {
+  for (var prop in cmd) {
+    console.log(prop, '' + cmd[prop])
+  }
+}
+
 var State = {
   backgroundColor: [0.1, 0.1, 0.1, 1],
   sunPosition: [3, 0, 0],
@@ -59,10 +65,10 @@ function Renderer (ctx, width, height, initialState) {
   this._materials = []
   this._nodes = []
 
+  this.initShadowmaps()
   this.initCommands()
   this.initMaterials()
   this.initSkybox()
-  this.initShadowmaps()
   this.initPostproces()
 
   this._state = State
@@ -190,6 +196,7 @@ Renderer.prototype.createNode = function (props) {
 
 Renderer.prototype.initNode = function (node) {
   var ctx = this._ctx
+  var cmdQueue = this._cmdQueue
 
   if (!node.position) node.position = [0, 0, 0]
   if (!node.scale) node.scale = [1, 1, 1]
@@ -210,17 +217,56 @@ Renderer.prototype.initNode = function (node) {
     if (!material.metallicMap && (material.metallic === undefined)) { material.metallic = 0.0 }
     if (!material.roughnessMap && (material.roughness === undefined)) { material.roughness = 0.5 }
     if (!material._uniforms) { material._uniforms = {}}
+
+    // TODO: don't create mesh draw commands every frame
+    node._drawCommand = cmdQueue.createDrawCommand({
+      // TODO: implement vertex array support // vertexArray: isVertexArray ? meshNode.mesh : undefined,
+      mesh: node.mesh,
+      modelMatrix: node._globalTransform,
+      program: null,
+      uniforms: material._uniforms,
+      lineWidth: material.lineWidth,
+      depthTest: true,
+      cullFace: true,
+      cullFaceMode: ctx.BACK
+    })
+
   }
   if (node.light) {
-    if (node.light.type === 'directional') {
-      if (node.light.shadows === undefined) { node.light.shadows = true }
-      if (node.light.color === undefined) { node.light.color = [1, 1, 1, 1] }
-      if (node.light.direction === undefined) { node.light.direction = [0, -1, 0] }
-      node.light._colorMap = ctx.createTexture2D(null, 1024, 1024) // FIXME: remove light color map
-      node.light._shadowMap = ctx.createTexture2D(null, 1024, 1024, { format: ctx.DEPTH_COMPONENT, type: ctx.UNSIGNED_SHORT})
-      node.light._viewMatrix = Mat4.create()
-      node.light._projectionMatrix = Mat4.create()
-      node.light._prevDirection = [0, 0, 0]
+    var light = node.light
+    if (light.type === 'directional') {
+      if (light.shadows === undefined) { light.shadows = true }
+      if (light.color === undefined) { light.color = [1, 1, 1, 1] }
+      if (light.direction === undefined) { light.direction = [0, -1, 0] }
+      light._colorMap = ctx.createTexture2D(null, 1024, 1024) // FIXME: remove light color map
+      light._shadowMap = ctx.createTexture2D(null, 1024, 1024, { format: ctx.DEPTH_COMPONENT, type: ctx.UNSIGNED_SHORT})
+      light._viewMatrix = Mat4.create()
+      light._projectionMatrix = Mat4.create()
+      light._prevDirection = [0, 0, 0]
+
+      // FIXME: how Metal / Vulkan implement FBO clear on bind?
+      light._shadowMapClearCommand = cmdQueue.createClearCommand({
+        framebuffer: this._shadowMapFbo,
+        framebufferColorAttachments: {
+          '0': { target: light._colorMap.getTarget(), handle: light._colorMap.getHandle(), level: 0 }
+        },
+        framebufferDepthAttachment: { target: light._shadowMap.getTarget(), handle: light._shadowMap.getHandle(), level: 0},
+        color: [0, 0, 0, 1],
+        depth: 1
+      })
+
+      light._shadowMapDrawCommand = cmdQueue.createDrawCommand({
+        framebuffer: this._shadowMapFbo,
+        framebufferColorAttachments: {
+          '0': { target: light._colorMap.getTarget(), handle: light._colorMap.getHandle(), level: 0 }
+        },
+        framebufferDepthAttachment: { target: light._shadowMap.getTarget(), handle: light._shadowMap.getHandle(), level: 0},
+        viewport: [0, 0, light._shadowMap.getWidth(), light._shadowMap.getHeight()],
+        projectionMatrix: light._projectionMatrix,
+        viewMatrix: light._viewMatrix,
+        depthTest: true,
+        colorMask: [0, 0, 0, 0]
+      })
     } else if (node.light.type === 'point') {
       if (node.light.radius === undefined) { node.light.radius = 10 }
     } else if (node.light.type === 'area') {
@@ -243,32 +289,9 @@ Renderer.prototype.updateDirectionalLightShadowMap = function (lightNode) {
   Mat4.lookAt(light._viewMatrix, lightNode.position, target, [0, 1, 0])
   Mat4.ortho(light._projectionMatrix, light._left, light._right, light._bottom, light._top, light._near, light._far)
 
-  // FIXME: how Metal / Vulkan implement FBO clear on bind?
-  var shadowMapClearCommand = cmdQueue.createClearCommand({
-    framebuffer: this._shadowMapFbo,
-    framebufferColorAttachments: {
-      '0': { target: light._colorMap.getTarget(), handle: light._colorMap.getHandle(), level: 0 }
-    },
-    framebufferDepthAttachment: { target: light._shadowMap.getTarget(), handle: light._shadowMap.getHandle(), level: 0},
-    color: [0, 0, 0, 1],
-    depth: 1
-  })
-
-  var shadowMapDrawCommand = cmdQueue.createDrawCommand({
-    framebuffer: this._shadowMapFbo,
-    framebufferColorAttachments: {
-      '0': { target: light._colorMap.getTarget(), handle: light._colorMap.getHandle(), level: 0 }
-    },
-    framebufferDepthAttachment: { target: light._shadowMap.getTarget(), handle: light._shadowMap.getHandle(), level: 0},
-    viewport: [0, 0, light._shadowMap.getWidth(), light._shadowMap.getHeight()],
-    projectionMatrix: light._projectionMatrix,
-    viewMatrix: light._viewMatrix,
-    depthTest: true,
-    colorMask: [0, 0, 0, 0]
-  })
-
-  cmdQueue.submit(shadowMapClearCommand)
-  cmdQueue.submit(shadowMapDrawCommand, null, function () {
+  cmdQueue.submit(light._shadowMapClearCommand)
+  cmdQueue.submit(light._shadowMapDrawCommand, null, function () {
+    console.log('updateDirectionalLightShadowMap.draw')
     this.drawMeshes(true)
   }.bind(this))
 }
@@ -429,22 +452,13 @@ Renderer.prototype.drawMeshes = function (shadowMappingPass) {
       })
     }
 
-    var isVertexArray = meshNode.primitiveType && meshNode.count
+    // update program
+    // TODO: add another shadow program
+    meshNode._drawCommand.program = meshProgram
 
-    // TODO: don't create mesh draw commands every frame
-    var meshDrawCommand = cmdQueue.createDrawCommand({
-      // TODO: implement vertex array support // vertexArray: isVertexArray ? meshNode.mesh : undefined,
-      mesh: !isVertexArray ? meshNode.mesh : undefined,
-      modelMatrix: meshNode._globalTransform,
-      program: meshProgram,
-      uniforms: Object.assign({ }, meshUniforms, pbrUniforms, sharedUniforms),
-      lineWidth: meshNode.material.lineWidth,
-      depthTest: true,
-      cullFace: true,
-      cullFaceMode: ctx.BACK
-    })
-
-    cmdQueue.submit(meshDrawCommand)
+    // this will update material._uniforms and therefore _drawCommand.uniforms
+    Object.assign(meshNode.material._uniforms, sharedUniforms, pbrUniforms, meshUniforms)
+    cmdQueue.submit(meshNode._drawCommand)
 
     // TODO: implement instancing support
     // if (meshNode.mesh._hasDivisor) {
