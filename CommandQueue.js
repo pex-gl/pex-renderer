@@ -6,15 +6,6 @@ function copyArray (a, na) {
   return na
 }
 
-function arrayEquals (a, b) {
-  for (var i = 0; i < a.length; i++) {
-    if (a[i] !== b[i]) {
-      return false
-    }
-  }
-  return true
-}
-
 function CommandQueue (ctx) {
   this._ctx = ctx
   this._commands = 0
@@ -98,20 +89,23 @@ function applyUniforms (ctx, program, uniforms, prevUniforms, prevTextures, debu
 
     var shouldUpdate = false
     var prevValue = prevUniforms[uniformName]
-    var isArray = Array.isArray(value)
+    var len = value.length
 
     if (prevValue === undefined) {
       shouldUpdate = true
-    } else if (isArray) {
-      if (!arrayEquals(value, prevValue)) {
-        shouldUpdate = true
+    } else if (len) {
+      for (var i = 0; i < len; i++) {
+        if (value[i] !== prevValue[i]) {
+          shouldUpdate = true
+          break
+        }
       }
     } else if (value !== prevValue) {
       shouldUpdate = true
     }
 
     if (shouldUpdate) {
-      prevUniforms[uniformName] = isArray ? copyArray(value, prevUniforms[uniformName]) : value
+      prevUniforms[uniformName] = len ? copyArray(value, prevUniforms[uniformName]) : value
       program.setUniform(uniformName, value)
       updatedUniforms[uniformName] = (updatedUniforms[uniformName] || 0) + 1
     }
