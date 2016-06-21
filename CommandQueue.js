@@ -1,9 +1,18 @@
 function CommandQueue (ctx) {
   this._ctx = ctx
   this._commands = []
+  this._prevUniforms = {}
+  this._prevProgram = null
+  this._prevTextures = []
+
+  this.debug = false
+  this.profile = false
 }
 
 var ID = 0
+
+var updatedUniforms = 0
+var createdCommands = 0
 
 CommandQueue.prototype.getContext = function () {
   return this._ctx
@@ -13,12 +22,14 @@ CommandQueue.prototype.getContext = function () {
 // - defaults
 // - validation
 CommandQueue.prototype.createDrawCommand = function (obj) {
+  createdCommands++
   obj._type = 'draw'
   obj._id = ID++
   return obj
 }
 
 CommandQueue.prototype.createClearCommand = function (obj) {
+  createdCommands++
   obj._type = 'clear'
   obj._id = ID++
   return obj
@@ -30,40 +41,75 @@ CommandQueue.prototype.createTextureUpdateCommand = function (obj) {
 CommandQueue.prototype.createVertexArrayUpdateCommand = function (obj) {
 }
 
-function applyUniforms (ctx, program, uniforms, debug) {
-  for (var requiredUniform in program._uniforms) {
-    if (requiredUniform === 'uProjectionMatrix') continue
-    if (requiredUniform === 'uViewMatrix') continue
-    if (requiredUniform === 'uInverseViewMatrix') continue
-    if (requiredUniform === 'uModelMatrix') continue
-    if (requiredUniform === 'uNormalMatrix') continue
-    if (uniforms[requiredUniform] === undefined) {
-      console.log('missing uniform', requiredUniform)
+function applyUniforms (ctx, program, uniforms, prevUniforms, prevTextures, debug) {
+  if (debug) {
+    // verify if we provide all uniforms required by the shader
+    for (var requiredUniform in program._uniforms) {
+      if (requiredUniform === 'uProjectionMatrix') continue
+      if (requiredUniform === 'uViewMatrix') continue
+      if (requiredUniform === 'uInverseViewMatrix') continue
+      if (requiredUniform === 'uModelMatrix') continue
+      if (requiredUniform === 'uNormalMatrix') continue
+      if (uniforms[requiredUniform] === undefined) {
+        console.log('missing uniform', requiredUniform)
+      }
     }
   }
 
   var textureOffset = 0
+  // console.log(Object.keys(uniforms).length)
   for (var uniformName in uniforms) {
     // TODO: can i do array index check instead of function call?
     // if (debug) console.log('  setUniform', uniformName, '' + uniforms[uniformName])
-    if (!program.hasUniform(uniformName)) {
+    // if (!program.hasUniform(uniformName)) {
+    if (!program._uniforms[uniformName]) {
       // console.log('Unnecessary uniform', uniformName)
       continue
     }
     var value = uniforms[uniformName]
-    if (value === null || value === undefined) {
-      if (program._uniforms[uniformName]) {
-        throw new Error('Null uniform value for ' + uniformName + ' in PBRMaterial')
-      } else {
-        // console.log('Unnecessary uniform', uniformName)
-        continue
+    if (debug) {
+      if (value === null || value === undefined) {
+        if (program._uniforms[uniformName]) {
+          throw new Error('Null uniform value for ' + uniformName + ' in PBRMaterial')
+        } else {
+          // console.log('Unnecessary uniform', uniformName)
+          continue
+        }
       }
     }
-    if (value.getTarget && (value.getTarget() === ctx.TEXTURE_2D || value.getTarget() === ctx.TEXTURE_CUBE_MAP)) {
-      ctx.bindTexture(value, textureOffset)
+    // if (value.getTarget && (value.getTarget() === ctx.TEXTURE_2D || value.getTarget() === ctx.TEXTURE_CUBE_MAP)) {
+    if (value.getTarget) {
+      if (prevTextures[textureOffset] !== value) {
+        ctx.bindTexture(value, textureOffset)
+        prevTextures[textureOffset] = value
+      }
       value = textureOffset++
     }
-    program.setUniform(uniformName, value)
+    var shouldUpdate = false
+    if (!prevUniforms) {
+      shouldUpdate = true
+    } else {
+      var prevValue = prevUniforms[uniformName]
+      if (!prevValue) {
+        shouldUpdate = true
+      } else if (value !== prevValue) {
+        shouldUpdate = true
+      } else {
+        if (Array.isArray(value)) {
+          shouldUpdate = true
+          // for (var i = 0; i < value.length; i++) {
+            // if (value[i] !== prevValue[i]) {
+              // shouldUpdate = true
+              // break
+            // }
+          // }
+        }
+      }
+    }
+    if (shouldUpdate) {
+      program.setUniform(uniformName, value)
+      updatedUniforms++
+    }
   }
   return textureOffset
 }
@@ -129,13 +175,16 @@ CommandQueue.prototype.submit = function (cmd, opts, subCommanDraw) {
   }
 
   if (cmd.program !== undefined) {
-    ctx.pushState(ctx.PROGRAM_BIT)
-    pushedStates++
-    ctx.bindProgram(cmd.program)
+    if (this._prevProgram !== cmd.program) {
+      ctx.bindProgram(cmd.program)
+      this._prevProgram = cmd.program
+      this._prevUniforms = null
+    }
   }
 
   if (cmd.uniforms !== undefined) {
-    applyUniforms(ctx, cmd.program, cmd.uniforms, this.debug)
+    applyUniforms(ctx, cmd.program, cmd.uniforms, this._prevUniforms, this._prevTextures, this.debug)
+    this._prevUniforms = cmd.uniforms
   }
 
   if (cmd.projectionMatrix !== undefined) {
@@ -203,9 +252,15 @@ CommandQueue.prototype.submit = function (cmd, opts, subCommanDraw) {
 
 // force execute of all commands in the queue
 CommandQueue.prototype.flush = function () {
-  var numCommands = this._commands.length
+  if (this.profile) {
+    console.log('CommandQueue', 'numCommands', this._commands.length, 'updatedUniforms', updatedUniforms, 'createdCommands', createdCommands)
+  }
+  this._prevProgram = null
+  this._prevUniforms = null
+  this._prevTextures.length = 0
   this._commands.length = 0
-  return numCommands
+  updatedUniforms = 0
+  createdCommands = 0
 }
 
 module.exports = CommandQueue
