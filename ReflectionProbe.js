@@ -48,14 +48,17 @@ ReflectionProbe.prototype.update = function (drawScene) {
   downsampleCubemap(cmdQueue, this._reflectionMap64, this._reflectionMap32)
   downsampleCubemap(cmdQueue, this._reflectionMap32, this._reflectionMap16)
   convolveCubemap(cmdQueue, this._reflectionMap16, this._irradianceMap)
-  prefilterCubemap(cmdQueue, this._reflectionMap, this._reflectionPREM, { highQuality: !isMobile && !isBrowser })
+  if (!isBrowser) {
+    prefilterCubemap(cmdQueue, this._reflectionMap, this._reflectionPREM, { highQuality: !isMobile && !isBrowser })
+  }
   // if (useOctohedralMaps) {
     // cubemapToOctmap(cmdQueue, this._reflectionMap, this._reflectionOctMap)
   // }
 }
 
 ReflectionProbe.prototype.getReflectionMap = function () {
-  return this._reflectionPREM
+  // FIXME: re-enable blurry reflection in the browser
+  return isBrowser ? this._reflectionPREM : this._reflectionMap
 }
 
 ReflectionProbe.prototype.getIrradianceMap = function () {
