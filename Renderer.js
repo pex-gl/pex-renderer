@@ -671,10 +671,7 @@ Renderer.prototype.draw = function () {
     this.drawDebug()
   }
 
-  var numCommands = cmdQueue.flush()
-  if (State.profile) {
-    console.log('Renderer numCommands', numCommands)
-  }
+  cmdQueue.flush()
 }
 
 Renderer.prototype.drawDebug = function () {
