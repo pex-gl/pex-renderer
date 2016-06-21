@@ -515,7 +515,7 @@ Renderer.prototype.draw = function () {
   var lightNodes = this.getNodes('light')
   var directionalLightNodes = lightNodes.filter(function (node) { return node.light.type === 'directional'})
   // var pointLightNodes = lightNodes.filter(function (node) { return node.light.type === 'point'})
-  var overlayNodes = this.getNodes('overlay')
+  // var overlayNodes = this.getNodes('overlay')
 
   if (cameraNodes.length === 0) {
     console.log('WARN: Renderer.draw no cameras found')
