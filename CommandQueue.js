@@ -58,7 +58,7 @@ function applyUniforms (ctx, program, uniforms, prevUniforms, prevTextures, debu
       if (requiredUniform === 'uModelMatrix') continue
       if (requiredUniform === 'uNormalMatrix') continue
       if (uniforms[requiredUniform] === undefined) {
-        //console.log('missing uniform', requiredUniform)
+        // console.log('missing uniform', requiredUniform)
       }
     }
   }
