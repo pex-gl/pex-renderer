@@ -175,9 +175,6 @@ Renderer.prototype.addNode = function (node) {
   return node
 }
 
-Renderer.prototype.addMaterial = function (material) {
-  this._materials.push(material)
-  return material
 }
 
 Renderer.prototype.createNode = function (props) {
