@@ -175,6 +175,12 @@ Renderer.prototype.addNode = function (node) {
   return node
 }
 
+Renderer.prototype.removeNode = function (node) {
+  var idx = this._nodes.indexOf(node)
+  if (idx !== -1) {
+    this._nodes.splice(idx, 1)
+    this.updateNodeLists()
+  }
 }
 
 Renderer.prototype.createNode = function (props) {
