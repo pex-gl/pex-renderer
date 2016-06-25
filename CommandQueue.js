@@ -251,6 +251,11 @@ CommandQueue.prototype.submit = function (cmd, opts, subCommanDraw) {
     ctx.drawMesh()
   }
 
+  if (cmd.vertexArray) {
+    ctx.bindVertexArray(cmd.vertexArray)
+    ctx.drawElements(cmd.primitiveType, cmd.count, 0)
+  }
+
   if (subCommanDraw) {
     subCommanDraw()
   }
