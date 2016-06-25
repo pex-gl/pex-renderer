@@ -207,7 +207,7 @@ Renderer.prototype.initNode = function (node) {
   node._globalTransform = Mat4.create()
   node._prevPosition = Vec3.copy(node.position)
 
-  if (node.mesh) {
+  if (node.mesh || node.vertexArray) {
     var material = node.material
     if (!material) { material = node.material = {} }
     if (!material.baseColorMap && (material.baseColor === undefined)) { material.baseColor = [0.95, 0.95, 0.95, 1] }
@@ -218,8 +218,10 @@ Renderer.prototype.initNode = function (node) {
 
     // TODO: don't create mesh draw commands every frame
     node._drawCommand = cmdQueue.createDrawCommand({
-      // TODO: implement vertex array support // vertexArray: isVertexArray ? meshNode.mesh : undefined,
       mesh: node.mesh,
+			vertexArray: node.vertexArray,
+			count: node.count,
+			primitiveType: node.primitiveType,
       modelMatrix: node._globalTransform,
       program: null,
       uniforms: material._uniforms,
