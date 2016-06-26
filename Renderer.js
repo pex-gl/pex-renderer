@@ -433,7 +433,8 @@ Renderer.prototype.drawMeshes = function (shadowMappingPass) {
   })
 
   var prevProgram = null
-  meshNodes.forEach(function (meshNode) {
+  for (var i = 0; i < meshNodes.length; i++) {
+    var meshNode = meshNodes[i]
     var material = meshNode.material
     var cachedUniforms = material._uniforms
     cachedUniforms.uIor = 1.4
@@ -503,7 +504,7 @@ Renderer.prototype.drawMeshes = function (shadowMappingPass) {
     // } else {
       // ctx.drawMesh()
     // }
-  }.bind(this))
+  }
 
   if (State.profile) ctx.getGL().finish()
   if (State.profile) console.timeEnd('drawMeshes')
