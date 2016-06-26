@@ -32,7 +32,7 @@
     "pex-math": "^1.0.0",
     "pex-random": "^1.0.0",
     "primitive-quad": "^1.0.1",
-    "scene-tree": "^1.0.0"
+    "scene-tree": "^2.0.1"
   },
   "devDependencies": {
     "onchange": "^2.4.0"
