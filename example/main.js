@@ -209,13 +209,12 @@ Window.create({
   draw: function () {
     if (this.getTime().getElapsedFrames() % 30 === 0) {
       this.getContext().getGL().finish()
-      console.time('frame')
+      console.time('App:frame')
       this.renderer._state.profile = true
       this.renderer._cmdQueue.profile = true
     }
 
     if (this.getTime().getElapsedFrames() <= 1) {
-      console.log('frame')
       this.renderer._cmdQueue.debug = true
     } else {
       this.renderer._cmdQueue.debug = false
@@ -239,8 +238,8 @@ Window.create({
       this.renderer._state.profile = false
       this.renderer._cmdQueue.profile = false
       this.getContext().getGL().finish()
-      console.timeEnd('frame')
-      console.log('fps:', this.getTime().getFPS())
+      console.timeEnd('App:frame')
+      console.log('App:fps:', this.getTime().getFPS())
     }
   }
 })
