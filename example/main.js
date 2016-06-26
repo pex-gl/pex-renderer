@@ -26,8 +26,6 @@ function rand () {
 }
 var gradient = cosineGradient(scheme[0], scheme[1], scheme[2], scheme[3])
 
-//TODO: does removing element rests list?
-
 Window.create({
   settings: {
     type: '3d',
