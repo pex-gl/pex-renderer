@@ -59,6 +59,7 @@ function Renderer (ctx, width, height, initialState) {
 
   this._root = createTreeNode()
   this._rootNodeList = this._root.list()
+  this._rootPrevSortVersion = -1
 
   this.initShadowmaps()
   this.initCommands()
@@ -174,16 +175,11 @@ Renderer.prototype.initSkybox = function () {
 
 Renderer.prototype.add = function (node) {
   this._root.add(node)
-  this.updateNodeLists()
   return node
 }
 
 Renderer.prototype.remove = function (node) {
-  var idx = this._nodes.indexOf(node)
-  if (idx !== -1) {
-    this._nodes.splice(idx, 1)
-    this.updateNodeLists()
-  }
+  node.parent.remove(node)
 }
 
 Renderer.prototype.createNode = function (data) {
@@ -535,6 +531,10 @@ Renderer.prototype.draw = function () {
   var cmdQueue = this._cmdQueue
 
   this._root.tick()
+  if (this._root.sortVersion !== this._rootPrevSortVersion) {
+    this.updateNodeLists()
+    this._rootPrevSortVersion = this._root.sortVersion
+  }
 
   ctx.pushState(ctx.ALL)
 
