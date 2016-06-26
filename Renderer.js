@@ -506,7 +506,7 @@ Renderer.prototype.updateDirectionalLights = function (directionalLightNodes) {
   var sunLight = sunLightNode.data.light
 
   // TODO: set sun light node position based on bounding box
-  sunLightNode.setPosition([State.sunPosition[0] * 7.5, State.sunPosition[1] * 7.5, State.sunPosition[0] * 7.5])
+  sunLightNode.setPosition([State.sunPosition[0] * 7.5, State.sunPosition[1] * 7.5, State.sunPosition[2] * 7.5])
 
   Vec3.set(sunLight.direction, State.sunPosition)
   Vec3.scale(sunLight.direction, -1.0)
