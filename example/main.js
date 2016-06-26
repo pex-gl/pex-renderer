@@ -26,6 +26,8 @@ function rand () {
 }
 var gradient = cosineGradient(scheme[0], scheme[1], scheme[2], scheme[3])
 
+//TODO: does removing element rests list?
+
 Window.create({
   settings: {
     type: '3d',
@@ -83,9 +85,10 @@ Window.create({
 
       this.camera = new PerspCamera(45, this.getAspectRatio(), 0.1, 50.0)
       this.camera.lookAt([0, 3, 8], [0, 0, 0])
-      renderer.createNode({
+      var cameraNode = renderer.createNode({
         camera: this.camera
       })
+      renderer.add(cameraNode)
 
       this.arcball = new Arcball(this.camera, this.getWidth(), this.getHeight())
       this.addEventListener(this.arcball)
@@ -97,7 +100,7 @@ Window.create({
       // direction: sunDir
       // }
       // })
-      gui.addTexture2D('Shadow Map', renderer._sunLightNode.light._shadowMap)
+      gui.addTexture2D('Shadow Map', renderer._sunLightNode.data.light._shadowMap)
 
       // http://stackoverflow.com/a/36481059
       var mesh = this.buildMesh(createCube(0.2, 0.5 + Math.random(), 0.2))
@@ -112,7 +115,7 @@ Window.create({
         z = randn_bm() * 8 / 3
         y = 2 * random.noise2(x / 2, z / 2) + random.noise2(2 * x, 2 * z)
         s = Math.max(0.0, 3.0 - Math.sqrt(x * x + z * z) / 2)
-        renderer.createNode({
+        renderer.add(renderer.createNode({
           mesh: mesh,
           position: [x, y, z],
           scale: [1, s, 1],
@@ -121,7 +124,7 @@ Window.create({
             rougness: 0.7,
             metallic: 0.0
           }
-        })
+        }))
       }
 
       var sphereMesh = this.buildMesh(createSphere(0.2 + Math.random()))
@@ -130,7 +133,7 @@ Window.create({
         z = rand() * 8 / 3
         y = 2 * random.noise2(x / 2, z / 2) + random.noise2(2 * x, 2 * z)
         s = Math.max(0.0, 3.0 - Math.sqrt(x * x + z * z) / 2)
-        renderer.createNode({
+        renderer.add(renderer.createNode({
           mesh: sphereMesh,
           position: [x, y, z],
           scale: [s, s, s],
@@ -139,7 +142,7 @@ Window.create({
             rougness: 0.91,
             metallic: 1.0
           }
-        })
+        }))
       }
       var positions = []
       var p = [0, 0]
@@ -152,26 +155,26 @@ Window.create({
         }
         positions.push([p[0], 0.2, p[1]])
       }
-      renderer.createNode({
+      renderer.add(renderer.createNode({
         mesh: this.buildMesh({ positions: positions }, ctx.LINE_STRIP),
         material: {
           baseColor: [0.9, 0.9, 0.2, 1],
           roughness: 1
         }
-      })
+      }))
 
-      renderer.createNode({
+      renderer.add(renderer.createNode({
         mesh: this.buildMesh(createCube(0.2, 0.5 + Math.random(), 0.2)),
         position: [2, 1, 0]
-      })
+      }))
 
       ctx.setLineWidth(5)
 
       var floorMesh = this.buildMesh(createCube(14, 0.02, 14))
-      renderer.createNode({
+      renderer.add(renderer.createNode({
         mesh: floorMesh,
         position: [0, -0.3, 0]
-      })
+      }))
 
       this.updateSunPosition()
     } catch(e) {

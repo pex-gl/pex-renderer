@@ -12,6 +12,7 @@ var ReflectionProbe = require('./ReflectionProbe')
 var fs = require('fs')
 var AreaLightsData = require('./AreaLightsData')
 var CommandQueue = require('./CommandQueue')
+var createTreeNode = require('scene-tree')
 
 // pex-fx extensions, extending FXStage
 require('./Postprocess')
@@ -56,8 +57,8 @@ function Renderer (ctx, width, height, initialState) {
   this._debugDraw = new Draw(ctx)
   this._debug = false
 
-  this._materials = []
-  this._nodes = []
+  this._root = createTreeNode()
+  this._rootNodeList = this._root.list()
 
   this.initShadowmaps()
   this.initCommands()
@@ -91,6 +92,7 @@ Renderer.prototype.initShadowmaps = function () {
   this._shadowMapFbo = ctx.createFramebuffer()
 }
 
+// TODO: move ssao kernels to pex-fx
 Renderer.prototype.initPostproces = function () {
   var ctx = this._ctx
   var cmdQueue = this._cmdQueue
@@ -167,15 +169,16 @@ Renderer.prototype.initSkybox = function () {
       type: 'directional'
     }
   })
+  this._root.add(this._sunLightNode)
 }
 
-Renderer.prototype.addNode = function (node) {
-  this._nodes.push(node)
+Renderer.prototype.add = function (node) {
+  this._root.add(node)
   this.updateNodeLists()
   return node
 }
 
-Renderer.prototype.removeNode = function (node) {
+Renderer.prototype.remove = function (node) {
   var idx = this._nodes.indexOf(node)
   if (idx !== -1) {
     this._nodes.splice(idx, 1)
@@ -183,33 +186,28 @@ Renderer.prototype.removeNode = function (node) {
   }
 }
 
-Renderer.prototype.createNode = function (props) {
-  var node = {}
-  for (var propName in props) {
-    node[propName] = props[propName]
-  }
-  this.initNode(node)
-  return this.addNode(node) // TODO: don't add newly created node, e.g. gltfl loader would like to first create nodes then add them
+Renderer.prototype.createNode = function (data) {
+  return createTreeNode(this.initNode(data))
 }
 
-Renderer.prototype.initNode = function (node) {
+Renderer.prototype.initNode = function (data) {
   var ctx = this._ctx
   var cmdQueue = this._cmdQueue
 
-  if (!node.position) node.position = [0, 0, 0]
-  if (!node.scale) node.scale = [1, 1, 1]
-  if (!node.rotation) node.rotation = [0, 0, 0, 1]
+  if (!data.position) data.position = [0, 0, 0]
+  if (!data.scale) data.scale = [1, 1, 1]
+  if (!data.rotation) data.rotation = [0, 0, 0, 1]
 
-  if (node.enabled === undefined) node.enabled = true
-  node._parent = null
-  node._children = []
-  node._localTransform = Mat4.create()
-  node._globalTransform = Mat4.create()
-  node._prevPosition = Vec3.copy(node.position)
+  if (data.enabled === undefined) data.enabled = true
+  data._parent = null
+  data._children = []
+  data._localTransform = Mat4.create()
+  data._globalTransform = Mat4.create()
+  data._prevPosition = Vec3.copy(data.position)
 
-  if (node.mesh || node.vertexArray) {
-    var material = node.material
-    if (!material) { material = node.material = {} }
+  if (data.mesh || data.vertexArray) {
+    var material = data.material
+    if (!material) { material = data.material = {} }
     if (!material.baseColorMap && (material.baseColor === undefined)) { material.baseColor = [0.95, 0.95, 0.95, 1] }
     if (!material.emissiveColorMap && (material.emissiveColor === undefined)) { material.emissiveColor = [0.0, 0.0, 0.0, 1] }
     if (!material.metallicMap && (material.metallic === undefined)) { material.metallic = 0.0 }
@@ -217,12 +215,11 @@ Renderer.prototype.initNode = function (node) {
     if (!material._uniforms) { material._uniforms = {}}
 
     // TODO: don't create mesh draw commands every frame
-    node._drawCommand = cmdQueue.createDrawCommand({
-      mesh: node.mesh,
-			vertexArray: node.vertexArray,
-			count: node.count,
-			primitiveType: node.primitiveType,
-      modelMatrix: node._globalTransform,
+    data._drawCommand = cmdQueue.createDrawCommand({
+      mesh: data.mesh,
+			vertexArray: data.vertexArray,
+			count: data.count,
+			primitiveType: data.primitiveType,
       program: null,
       uniforms: material._uniforms,
       lineWidth: material.lineWidth,
@@ -232,8 +229,8 @@ Renderer.prototype.initNode = function (node) {
     })
 
   }
-  if (node.light) {
-    var light = node.light
+  if (data.light) {
+    var light = data.light
     if (light.type === 'directional') {
       if (light.shadows === undefined) { light.shadows = true }
       if (light.color === undefined) { light.color = [1, 1, 1, 1] }
@@ -267,26 +264,28 @@ Renderer.prototype.initNode = function (node) {
         depthTest: true,
         colorMask: [0, 0, 0, 0]
       })
-    } else if (node.light.type === 'point') {
-      if (node.light.radius === undefined) { node.light.radius = 10 }
-    } else if (node.light.type === 'area') {
+    } else if (data.light.type === 'point') {
+      if (data.light.radius === undefined) { data.light.radius = 10 }
+    } else if (data.light.type === 'area') {
     } else {
-      throw new Error('Renderer.initNode unknown light type ' + node.light.type)
+      throw new Error('Renderer.initNode unknown light type ' + data.light.type)
     }
   }
+
+  return data
 }
 
 Renderer.prototype.getNodes = function (type) {
-  return this._nodes.filter(function (node) { return node[type] != null })
+  return this._rootNodeList().filter(function (node) { return node.data[type] != null })
 }
 
 Renderer.prototype.updateDirectionalLightShadowMap = function (lightNode) {
   var cmdQueue = this._cmdQueue
-  var light = lightNode.light
+  var light = lightNode.data.light
 
-  var target = Vec3.copy(lightNode.position)
+  var target = Vec3.copy(lightNode.data.position)
   Vec3.add(target, light.direction)
-  Mat4.lookAt(light._viewMatrix, lightNode.position, target, [0, 1, 0])
+  Mat4.lookAt(light._viewMatrix, lightNode.data.position, target, [0, 1, 0])
   Mat4.ortho(light._projectionMatrix, light._left, light._right, light._bottom, light._top, light._near, light._far)
 
   cmdQueue.submit(light._shadowMapClearCommand)
@@ -301,11 +300,6 @@ var Frag = fs.readFileSync(__dirname + '/glsl/PBR.frag', 'utf8')
 
 // TODO: how fast is building these flag strings every frame for every object?
 Renderer.prototype.getMeshProgram = function (meshMaterial, options) {
-  // var USE_BASE_COLOR_MAP = 1 << 0
-  // var USE_METALLIC_MAP   = 1 << 1
-  // var USE_ROUGHNESS_MAP  = 1 << 2
-  // var USE_NORMAL_MAP     = 1 << 3
-
   var ctx = this._ctx
 
   var flags = []
@@ -360,11 +354,11 @@ Renderer.prototype.updateNodeLists = function () {
   // TODO: reimplement node.enabled filtering
   this._meshNodes = this.getNodes('mesh')
 		.concat(this.getNodes('vertexArray'))
-		.filter(function (node) { return node.enabled })
-  this._lightNodes = this.getNodes('light').filter(function (node) { return node.enabled })
-  this._directionalLightNodes = this._lightNodes.filter(function (node) { return node.light.type === 'directional'})
-  this._pointLightNodes = this._lightNodes.filter(function (node) { return node.light.type === 'point'})
-  this._areaLightNodes = this._lightNodes.filter(function (node) { return node.light.type === 'area'})
+		.filter(function (node) { return node.data.enabled })
+  this._lightNodes = this.getNodes('light').filter(function (node) { return node.data.enabled })
+  this._directionalLightNodes = this._lightNodes.filter(function (node) { return node.data.light.type === 'directional'})
+  this._pointLightNodes = this._lightNodes.filter(function (node) { return node.data.light.type === 'point'})
+  this._areaLightNodes = this._lightNodes.filter(function (node) { return node.data.light.type === 'area'})
 }
 
 // sort meshes by material
@@ -391,7 +385,7 @@ Renderer.prototype.drawMeshes = function (shadowMappingPass) {
   sharedUniforms.uIrradianceMap = this._reflectionProbe.getIrradianceMap()
   sharedUniforms.uReflectionMapFlipEnvMap = this._reflectionProbe.getReflectionMap().getFlipEnvMap ? this._reflectionProbe.getReflectionMap().getFlipEnvMap() : -1
   sharedUniforms.uIrradianceMapFlipEnvMap = this._reflectionProbe.getIrradianceMap().getFlipEnvMap ? this._reflectionProbe.getIrradianceMap().getFlipEnvMap() : -1
-  sharedUniforms.uCameraPosition = cameraNodes[0].camera.getPosition()
+  sharedUniforms.uCameraPosition = cameraNodes[0].data.camera.getPosition()
 
   if (!this.areaLightTextures) {
     console.log('creating textures')
@@ -403,8 +397,8 @@ Renderer.prototype.drawMeshes = function (shadowMappingPass) {
   sharedUniforms.ltc_mag = this.ltc_mag_texture
 
   directionalLightNodes.forEach(function (lightNode, i) {
-    var light = lightNode.light
-    sharedUniforms['uDirectionalLights[' + i + '].position'] = lightNode.position
+    var light = lightNode.data.light
+    sharedUniforms['uDirectionalLights[' + i + '].position'] = lightNode.data.position
     sharedUniforms['uDirectionalLights[' + i + '].direction'] = light.direction
     sharedUniforms['uDirectionalLights[' + i + '].color'] = light.color
     sharedUniforms['uDirectionalLights[' + i + '].projectionMatrix'] = light._projectionMatrix
@@ -417,25 +411,25 @@ Renderer.prototype.drawMeshes = function (shadowMappingPass) {
   })
 
   pointLightNodes.forEach(function (lightNode, i) {
-    var light = lightNode.light
-    sharedUniforms['uPointLights[' + i + '].position'] = lightNode.position
+    var light = lightNode.data.light
+    sharedUniforms['uPointLights[' + i + '].position'] = lightNode.data.position
     sharedUniforms['uPointLights[' + i + '].color'] = light.color
     sharedUniforms['uPointLights[' + i + '].radius'] = light.radius
   })
 
   areaLightNodes.forEach(function (lightNode, i) {
-    var light = lightNode.light
-    sharedUniforms['uAreaLights[' + i + '].position'] = lightNode.position
+    var light = lightNode.data.light
+    sharedUniforms['uAreaLights[' + i + '].position'] = lightNode.data.position
     sharedUniforms['uAreaLights[' + i + '].color'] = light.color
     sharedUniforms['uAreaLights[' + i + '].intensity'] = light.intensity
-    sharedUniforms['uAreaLights[' + i + '].rotation'] = lightNode.rotation
-    sharedUniforms['uAreaLights[' + i + '].size'] = [lightNode.scale[0] / 2, lightNode.scale[1] / 2]
+    sharedUniforms['uAreaLights[' + i + '].rotation'] = lightNode.data.rotation
+    sharedUniforms['uAreaLights[' + i + '].size'] = [lightNode.data.scale[0] / 2, lightNode.data.scale[1] / 2]
   })
 
   var prevProgram = null
   for (var i = 0; i < meshNodes.length; i++) {
     var meshNode = meshNodes[i]
-    var material = meshNode.material
+    var material = meshNode.data.material
     var cachedUniforms = material._uniforms
     cachedUniforms.uIor = 1.4
     cachedUniforms.uBaseColor = material.baseColor
@@ -457,9 +451,9 @@ Renderer.prototype.drawMeshes = function (shadowMappingPass) {
     var meshProgram
 
     if (shadowMappingPass) {
-      meshProgram = meshNode.material._shadowProgram = meshNode.material._shadowProgram || this.getMeshProgram(meshNode.material, {})
+      meshProgram = material._shadowProgram = material._shadowProgram || this.getMeshProgram(material, {})
     } else {
-      meshProgram = meshNode.material._program = meshNode.material._program || this.getMeshProgram(meshNode.material, {
+      meshProgram = material._program = material._program || this.getMeshProgram(material, {
         numDirectionalLights: directionalLightNodes.length,
         numPointLights: pointLightNodes.length,
         numAreaLights: areaLightNodes.length,
@@ -474,9 +468,10 @@ Renderer.prototype.drawMeshes = function (shadowMappingPass) {
       Object.assign(cachedUniforms, sharedUniforms)
     }
 
-    meshNode._drawCommand.program = meshProgram
+    meshNode.data._drawCommand.modelMatrix = meshNode.modelMatrix
+    meshNode.data._drawCommand.program = meshProgram
 
-    cmdQueue.submit(meshNode._drawCommand)
+    cmdQueue.submit(meshNode.data._drawCommand)
 
     // TODO: implement instancing support
     // if (meshNode.mesh._hasDivisor) {
@@ -512,10 +507,10 @@ Renderer.prototype.drawMeshes = function (shadowMappingPass) {
 
 Renderer.prototype.updateDirectionalLights = function (directionalLightNodes) {
   var sunLightNode = this._sunLightNode
-  var sunLight = sunLightNode.light
+  var sunLight = sunLightNode.data.light
 
-  Vec3.set(sunLightNode.position, State.sunPosition)
-  Vec3.scale(sunLightNode.position, 7.5) // TODO: set sun light node position based on bounding box
+  // TODO: set sun light node position based on bounding box
+  sunLightNode.setPosition([State.sunPosition[0] * 7.5, State.sunPosition[1] * 7.5, State.sunPosition[0] * 7.5])
 
   Vec3.set(sunLight.direction, State.sunPosition)
   Vec3.scale(sunLight.direction, -1.0)
@@ -524,7 +519,7 @@ Renderer.prototype.updateDirectionalLights = function (directionalLightNodes) {
   Vec3.set(sunLight.color, State.sunColor)
 
   directionalLightNodes.forEach(function (lightNode) {
-    var light = lightNode.light
+    var light = lightNode.data.light
     // TODO: sunLight frustum should come from the scene bounding box
     light._left = -8
     light._right = 8
@@ -539,14 +534,15 @@ Renderer.prototype.draw = function () {
   var ctx = this._ctx
   var cmdQueue = this._cmdQueue
 
+  this._root.tick()
+
   ctx.pushState(ctx.ALL)
 
   cmdQueue.submit(this._clearCommand) // FIXME: unnecesary?
 
   var cameraNodes = this._cameraNodes
-  var lightNodes = this._lightNodes
-  var directionalLightNodes = lightNodes.filter(function (node) { return node.light.type === 'directional'})
-  // var pointLightNodes = lightNodes.filter(function (node) { return node.light.type === 'point'})
+  var directionalLightNodes = this._directionalLightNodes
+  // var pointLightNodes = lightNodes.filter(function (node) { return node.data.light.type === 'point'})
   // var overlayNodes = this.getNodes('overlay')
 
   if (cameraNodes.length === 0) {
@@ -569,6 +565,7 @@ Renderer.prototype.draw = function () {
   // update scene graph
 
   // TODO: optimize this
+  /*
   this._nodes.forEach(function (node) {
     Mat4.identity(node._localTransform)
     Mat4.translate(node._localTransform, node.position)
@@ -594,22 +591,23 @@ Renderer.prototype.draw = function () {
       Mat4.mult(node._globalTransform, mat)
     })
   })
+  */
 
   // draw scene
 
   directionalLightNodes.forEach(function (lightNode) {
-    var light = lightNode.light
-    var positionHasChanged = !Vec3.equals(lightNode.position, lightNode._prevPosition)
+    var light = lightNode.data.light
+    var positionHasChanged = !Vec3.equals(lightNode.data.position, lightNode.data._prevPosition)
     var directionHasChanged = !Vec3.equals(light.direction, light._prevDirection)
     if (positionHasChanged || directionHasChanged) {
-      Vec3.set(lightNode._prevPosition, lightNode.position)
+      Vec3.set(lightNode.data._prevPosition, lightNode.data.position)
       Vec3.set(light._prevDirection, light.direction)
       console.log('updateDirectionalLightShadowMap')
       this.updateDirectionalLightShadowMap(lightNode)
     }
   }.bind(this))
 
-  var currentCamera = cameraNodes[0].camera
+  var currentCamera = cameraNodes[0].data.camera
 
   cmdQueue.submit(this._clearFrameFboCommand)
 
@@ -710,13 +708,13 @@ Renderer.prototype.drawDebug = function () {
   var ctx = this._ctx
 
   var lightNodes = this.getNodes('light')
-  var directionalLightNodes = lightNodes.filter(function (node) { return node.light.type === 'directional'})
+  var directionalLightNodes = lightNodes.filter(function (node) { return node.data.light.type === 'directional'})
   ctx.bindProgram(this._showColorsProgram)
   this._debugDraw.setColor([1, 0, 0, 1])
 
   this._debugDraw.setLineWidth(2)
   directionalLightNodes.forEach(function (lightNode) {
-    var light = lightNode.light
+    var light = lightNode.data.light
     var invProj = Mat4.invert(Mat4.copy(light._projectionMatrix))
     var invView = Mat4.invert(Mat4.copy(light._viewMatrix))
     var corners = [[-1, -1, 1, 1], [1, -1, 1, 1], [1, 1, 1, 1], [-1, 1, 1, 1], [-1, -1, -1, 1], [1, -1, -1, 1], [1, 1, -1, 1], [-1, 1, -1, 1]].map(function (p) {
@@ -725,7 +723,7 @@ Renderer.prototype.drawDebug = function () {
       return v
     })
 
-    var position = lightNode.position
+    var position = lightNode.data.position
     this._debugDraw.drawLine(position, corners[0 + 4])
     this._debugDraw.drawLine(position, corners[1 + 4])
     this._debugDraw.drawLine(position, corners[2 + 4])
@@ -747,6 +745,7 @@ Renderer.prototype.drawDebug = function () {
   ctx.bindProgram(this._solidColorProgram)
   this._solidColorProgram.setUniform('uColor', [1, 0, 0, 1])
 
+  /*
   // TODO: don't calculate debug node stack unless in debug
   this._nodes.forEach(function (node) {
     ctx.pushModelMatrix()
@@ -759,6 +758,7 @@ Renderer.prototype.drawDebug = function () {
     }
     ctx.popModelMatrix()
   }.bind(this))
+  */
 }
 
 module.exports = Renderer
