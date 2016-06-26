@@ -129,7 +129,7 @@ CommandQueue.prototype.submit = function (cmd, opts, subCommanDraw) {
   // if (this.debug) console.log('submit', cmd._type, cmd._id, cmd.name || '')
 
   if (this.debug && cmd.name) {
-    console.log('prev uniforms')
+    console.log('CommandQueue: prev uniforms')
     debugObject(this._prevUniforms)
   }
 
@@ -269,7 +269,7 @@ CommandQueue.prototype.submit = function (cmd, opts, subCommanDraw) {
 // force execute of all commands in the queue
 CommandQueue.prototype.flush = function () {
   if (this.profile) {
-    console.log('CommandQueue', 'numCommands', this._commands, 'updatedUniforms', Object.keys(updatedUniforms).length, 'createdCommands', createdCommands)
+    console.log('CommandQueue', 'numCommands', this._commands, 'createdCommands', createdCommands)
   }
   this._prevProgram = null
   this._prevTextures.length = 0
