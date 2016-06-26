@@ -562,37 +562,6 @@ Renderer.prototype.draw = function () {
     }.bind(this))
   }
 
-  // update scene graph
-
-  // TODO: optimize this
-  /*
-  this._nodes.forEach(function (node) {
-    Mat4.identity(node._localTransform)
-    Mat4.translate(node._localTransform, node.position)
-    Mat4.mult(node._localTransform, Mat4.fromQuat(Mat4.create(), node.rotation))
-    Mat4.scale(node._localTransform, node.scale)
-
-    if (node.transform) { // TODO: required for GLTF
-      Mat4.mult(node._localTransform, node.transform)
-    }
-  })
-
-  this._nodes.forEach(function (node) {
-    Mat4.identity(node._globalTransform)
-
-    var parent = node._parent
-    var stack = [ node._localTransform ]
-    while (parent) {
-      stack.push(parent._localTransform)
-      parent = parent._parent
-    }
-    stack.reverse()
-    stack.forEach(function (mat) {
-      Mat4.mult(node._globalTransform, mat)
-    })
-  })
-  */
-
   // draw scene
 
   directionalLightNodes.forEach(function (lightNode) {
