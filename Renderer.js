@@ -286,7 +286,6 @@ Renderer.prototype.updateDirectionalLightShadowMap = function (lightNode) {
 
   cmdQueue.submit(light._shadowMapClearCommand)
   cmdQueue.submit(light._shadowMapDrawCommand, null, function () {
-    console.log('updateDirectionalLightShadowMap.draw')
     this.drawMeshes(true)
   }.bind(this))
 }
@@ -368,7 +367,7 @@ Renderer.prototype.drawMeshes = function (shadowMappingPass) {
   var cmdQueue = this._cmdQueue
 
   if (State.profile) ctx.getGL().finish()
-  if (State.profile) console.time('drawMeshes')
+  if (State.profile) console.time('Renderer:drawMeshes')
 
   var cameraNodes = this._cameraNodes
   var meshNodes = this._meshNodes
@@ -384,7 +383,6 @@ Renderer.prototype.drawMeshes = function (shadowMappingPass) {
   sharedUniforms.uCameraPosition = cameraNodes[0].data.camera.getPosition()
 
   if (!this.areaLightTextures) {
-    console.log('creating textures')
     this.ltc_mat_texture = ctx.createTexture2D(new Float32Array(AreaLightsData.mat), 64, 64, { type: ctx.FLOAT, flipY: false })
     this.ltc_mag_texture = ctx.createTexture2D(new Float32Array(AreaLightsData.mag), 64, 64, { type: ctx.FLOAT, format: ctx.getGL().ALPHA, flipY: false })
     this.areaLightTextures = true
@@ -498,7 +496,7 @@ Renderer.prototype.drawMeshes = function (shadowMappingPass) {
   }
 
   if (State.profile) ctx.getGL().finish()
-  if (State.profile) console.timeEnd('drawMeshes')
+  if (State.profile) console.timeEnd('Renderer:drawMeshes')
 }
 
 Renderer.prototype.updateDirectionalLights = function (directionalLightNodes) {
@@ -571,7 +569,6 @@ Renderer.prototype.draw = function () {
     if (positionHasChanged || directionHasChanged) {
       Vec3.set(lightNode.data._prevPosition, lightNode.data.position)
       Vec3.set(light._prevDirection, light.direction)
-      console.log('updateDirectionalLightShadowMap')
       this.updateDirectionalLightShadowMap(lightNode)
     }
   }.bind(this))
@@ -611,8 +608,8 @@ Renderer.prototype.draw = function () {
   ctx.setProjectionMatrix(currentCamera.getProjectionMatrix())
 
   if (State.profile) ctx.getGL().finish()
-  if (State.profile) console.time('postprocessing')
-  if (State.profile) console.time('ssao')
+  if (State.profile) console.time('Renderer:postprocessing')
+  if (State.profile) console.time('Renderer:ssao')
   if (State.ssao) {
     var ssao = root.ssao({
       depthMap: this._frameDepthTex,
@@ -631,21 +628,21 @@ Renderer.prototype.draw = function () {
   }
   ctx.popProjectionMatrix()
   if (State.profile) ctx.getGL().finish()
-  if (State.profile) console.timeEnd('ssao')
+  if (State.profile) console.timeEnd('Renderer:ssao')
 
-  if (State.profile) console.time('postprocess')
+  if (State.profile) console.time('Renderer:postprocess')
   final = final.postprocess({ exposure: State.exposure })
   if (State.profile) ctx.getGL().finish()
-  if (State.profile) console.timeEnd('postprocess')
+  if (State.profile) console.timeEnd('Renderer:postprocess')
 
-  if (State.profile) console.time('fxaa')
+  if (State.profile) console.time('Renderer:fxaa')
   if (State.fxaa) {
     final = final.fxaa()
   }
   if (State.profile) ctx.getGL().finish()
-  if (State.profile) console.timeEnd('fxaa')
+  if (State.profile) console.timeEnd('Renderer:fxaa')
   if (State.profile) ctx.getGL().finish()
-  if (State.profile) console.timeEnd('postprocessing')
+  if (State.profile) console.timeEnd('Renderer:postprocessing')
   var viewport = ctx.getViewport()
   // final = ssao
   final.blit({ x: viewport[0], y: viewport[1], width: viewport[2], height: viewport[3]})
@@ -676,8 +673,7 @@ Renderer.prototype.draw = function () {
 Renderer.prototype.drawDebug = function () {
   var ctx = this._ctx
 
-  var lightNodes = this.getNodes('light')
-  var directionalLightNodes = lightNodes.filter(function (node) { return node.data.light.type === 'directional'})
+  var directionalLightNodes = this._directionalLightNodes
   ctx.bindProgram(this._showColorsProgram)
   this._debugDraw.setColor([1, 0, 0, 1])
 
