@@ -11,5 +11,6 @@ LICENSE.md
 *.swp
 .tern-project
 .tern-port
-experiments
+.atom-buid.json
+experiments/
 tags
