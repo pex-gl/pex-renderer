@@ -80,7 +80,7 @@ uniform mat4 uViewMatrix;
 uniform mat3 uNormalMatrix;
 uniform mat4 uModelMatrix;
 
-uniform vec3 uCameraPosition;
+// uniform vec3 uCameraPosition;
 
 //sun
 uniform vec3 uSunPosition;
@@ -97,7 +97,7 @@ struct DirectionalLight {
     float near;
     float far;
     float bias;
-    vec2 shadowMapSize;
+    // vec2 shadowMapSize;
 };
 
 uniform DirectionalLight uDirectionalLights[NUM_DIRECTIONAL_LIGHTS];
@@ -896,22 +896,22 @@ void main() {
     vec3 diffuseColor = baseColor * (1.0 - metallic);
     vec3 specularColor = mix(vec3(1.0), baseColor, metallic);
 
-    vec3 indirectDiffuse = vec3(0.0);
-    vec3 indirectSpecular = vec3(0.0);
+    // vec3 indirectDiffuse = vec3(0.0);
+    // vec3 indirectSpecular = vec3(0.0);
     vec3 directDiffuse = vec3(0.0);
     vec3 directSpecular = vec3(0.0);
 
-    //TODO: No kd? so not really energy conserving
-    //we could use disney brdf for irradiance map to compensate for that like in Frostbite
-#ifdef USE_REFLECTION_PROBES
-    float NdotV = saturate( dot( normalWorld, eyeDirWorld ) );
-    vec3 reflectance = EnvBRDFApprox( F0, roughness, NdotV );
-    vec3 irradianceColor = getIrradiance(eyeDirWorld, normalWorld);
-    vec3 reflectionColor = getPrefilteredReflection(eyeDirWorld, normalWorld, roughness);
-    indirectDiffuse = diffuseColor * irradianceColor;
-    indirectSpecular = reflectionColor * specularColor * reflectance;
+    // //TODO: No kd? so not really energy conserving
+    // //we could use disney brdf for irradiance map to compensate for that like in Frostbite
+// #ifdef USE_REFLECTION_PROBES
+    // float NdotV = saturate( dot( normalWorld, eyeDirWorld ) );
+    // vec3 reflectance = EnvBRDFApprox( F0, roughness, NdotV );
+    // vec3 irradianceColor = getIrradiance(eyeDirWorld, normalWorld);
+    // vec3 reflectionColor = getPrefilteredReflection(eyeDirWorld, normalWorld, roughness);
+    // indirectDiffuse = diffuseColor * irradianceColor;
+    // indirectSpecular = reflectionColor * specularColor * reflectance;
 
-#endif
+// #endif
 
     //lights
 #if NUM_DIRECTIONAL_LIGHTS > 0
@@ -922,68 +922,62 @@ void main() {
 
         float dotNL = max(0.0, dot(normalWorld, L));
 
-        //shadows
-        vec4 lightViewPosition = light.viewMatrix * vec4(vPositionWorld, 1.0);
-        float lightDistView = -lightViewPosition.z;
-        vec4 lightDeviceCoordsPosition = light.projectionMatrix * lightViewPosition;
-        vec2 lightDeviceCoordsPositionNormalized = lightDeviceCoordsPosition.xy / lightDeviceCoordsPosition.w;
-        float lightDeviceCoordsZ = lightDeviceCoordsPosition.z / lightDeviceCoordsPosition.w;
-        vec2 lightUV = lightDeviceCoordsPositionNormalized.xy * 0.5 + 0.5;
+        // //shadows
+        // vec4 lightViewPosition = light.viewMatrix * vec4(vPositionWorld, 1.0);
+        // float lightDistView = -lightViewPosition.z;
+        // vec4 lightDeviceCoordsPosition = light.projectionMatrix * lightViewPosition;
+        // vec2 lightDeviceCoordsPositionNormalized = lightDeviceCoordsPosition.xy / lightDeviceCoordsPosition.w;
+        // float lightDeviceCoordsZ = lightDeviceCoordsPosition.z / lightDeviceCoordsPosition.w;
+        // vec2 lightUV = lightDeviceCoordsPositionNormalized.xy * 0.5 + 0.5;
 
-#ifdef SHADOW_QUALITY_0
+// #ifdef SHADOW_QUALITY_0
         float illuminated = 1.0;
-#elseif SHADOW_QUALITY_1
-        float illuminated = texture2DCompare(uDirectionalLightShadowMaps[i], lightUV, lightDistView - uBias, light.near, light.far);
-#elseif SHADOW_QUALITY_2
-        float illuminated = texture2DShadowLerp(uDirectionalLightShadowMaps[i], light.shadowMapSize, lightUV, lightDistView - light.bias, light.near, light.far);
-#else
-        float illuminated = PCF(uDirectionalLightShadowMaps[i], light.shadowMapSize, lightUV, lightDistView - light.bias, light.near, light.far);
-#endif
-        if (illuminated > 0.0) {
-            //TODO: specular light conservation
+// #elseif SHADOW_QUALITY_1
+        // float illuminated = texture2DCompare(uDirectionalLightShadowMaps[i], lightUV, lightDistView - uBias, light.near, light.far);
+// #elseif SHADOW_QUALITY_2
+        // float illuminated = texture2DShadowLerp(uDirectionalLightShadowMaps[i], light.shadowMapSize, lightUV, lightDistView - light.bias, light.near, light.far);
+// #else
+        // float illuminated = PCF(uDirectionalLightShadowMaps[i], light.shadowMapSize, lightUV, lightDistView - light.bias, light.near, light.far);
+// #endif
+        // if (illuminated > 0.0) {
+            // //TODO: specular light conservation
             directDiffuse += diffuseColor * dotNL * light.color.rgb * illuminated;
             directSpecular += directSpecularGGX(normalWorld, eyeDirWorld, L, roughness, F0) * illuminated;
-        }
+        // }
     }
 #endif
 
-#if NUM_POINT_LIGHTS > 0
-    for(int i=0; i<NUM_POINT_LIGHTS; i++) {
-        PointLight light = uPointLights[i];
+// #if NUM_POINT_LIGHTS > 0
+    // for(int i=0; i<NUM_POINT_LIGHTS; i++) {
+        // PointLight light = uPointLights[i];
 
-        vec3 L = light.position - vPositionWorld;
-        float dist = length(L);
-        L /= dist;
+        // vec3 L = light.position - vPositionWorld;
+        // float dist = length(L);
+        // L /= dist;
 
-        float dotNL = max(0.0, dot(normalWorld, L));
+        // float dotNL = max(0.0, dot(normalWorld, L));
 
-        float distanceRatio = clamp(1.0 - pow(dist/light.radius, 4.0), 0.0, 1.0);
-        float falloff = (distanceRatio * distanceRatio) / (dist * dist + 1.0);
+        // float distanceRatio = clamp(1.0 - pow(dist/light.radius, 4.0), 0.0, 1.0);
+        // float falloff = (distanceRatio * distanceRatio) / (dist * dist + 1.0);
 
-        //TODO: specular light conservation
-        directDiffuse += diffuseColor * dotNL * light.color.rgb * falloff;
-        directSpecular += directSpecularGGX(normalWorld, eyeDirWorld, L, roughness, F0) * light.color.rgb * falloff;
-    }
-#endif
+        // //TODO: specular light conservation
+        // directDiffuse += diffuseColor * dotNL * light.color.rgb * falloff;
+        // directSpecular += directSpecularGGX(normalWorld, eyeDirWorld, L, roughness, F0) * light.color.rgb * falloff;
+    // }
+// #endif
 
-    vec3 indirectArea = vec3(0.0);
+    // vec3 indirectArea = vec3(0.0);
 
-#if NUM_AREA_LIGHTS > 0
-    for(int i=0; i<NUM_AREA_LIGHTS; i++) {
-        AreaLight light = uAreaLights[i];
+// #if NUM_AREA_LIGHTS > 0
+    // for(int i=0; i<NUM_AREA_LIGHTS; i++) {
+        // AreaLight light = uAreaLights[i];
 
-        //if (length(emissiveColor) == 0.0) {
-            indirectArea += evalAreaLight(light, vPositionWorld, normalWorld, diffuseColor, specularColor, roughness); //TEMP: fix roughness
-            //indirectArea = evalAreaLight(light, vPositionWorld, normalWorld,roughness); //TEMP: fix roughness
-            /*indirectArea = evalAreaLight(light, vPositionView, (uNormalMatrix*normalWorld).xyz, diffuseColor, specularColor, roughness); //TEMP: fix roughness*/
-        //}
-    }
-#endif
+            // indirectArea += evalAreaLight(light, vPositionWorld, normalWorld, diffuseColor, specularColor, roughness); //TEMP: fix roughness
+    // }
+// #endif
 
-    vec3 color = emissiveColor + indirectDiffuse + indirectSpecular + directDiffuse + directSpecular + indirectArea;
-    /*vec3 color = indirectArea;*/
-    //color = emissiveColor + indirectArea;
-    /*color.r = 1.0;*/
+    // vec3 color = emissiveColor + indirectDiffuse + indirectSpecular + directDiffuse + directSpecular + indirectArea;
+    vec3 color = directDiffuse + directSpecular;
     gl_FragData[0] = vec4(color, 1.0);
     gl_FragData[1] = vec4(vNormalView * 0.5 + 0.5, 1.0);
 }

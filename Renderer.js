@@ -1,8 +1,8 @@
 var Vec3 = require('pex-math/Vec3')
 var Vec4 = require('pex-math/Vec4')
 var Mat4 = require('pex-math/Mat4')
-var Draw = require('pex-draw/Draw')
-var fx = require('pex-fx')
+// var Draw = require('pex-draw/Draw')
+var fx = require('./local_modules/pex-fx')
 var random = require('pex-random')
 var MathUtils = require('pex-math/Utils')
 var flatten = require('flatten')
@@ -10,9 +10,10 @@ var Skybox = require('./Skybox')
 var SkyEnvMap = require('./SkyEnvMap')
 var ReflectionProbe = require('./ReflectionProbe')
 var fs = require('fs')
-var AreaLightsData = require('./AreaLightsData')
-var CommandQueue = require('./CommandQueue')
+// var AreaLightsData = require('./AreaLightsData')
+// var CommandQueue = require('./CommandQueue')
 var createTreeNode = require('scene-tree')
+// var SolidColor = require('pex-materials/solid-color')
 
 // pex-fx extensions, extending FXStage
 require('./Postprocess')
@@ -24,8 +25,8 @@ var SOLID_COLOR_VERT = fs.readFileSync(__dirname + '/glsl/SolidColor.vert', 'utf
 var SOLID_COLOR_FRAG = fs.readFileSync(__dirname + '/glsl/SolidColor.frag', 'utf8')
 var SHOW_COLORS_VERT = fs.readFileSync(__dirname + '/glsl/ShowColors.vert', 'utf8')
 var SHOW_COLORS_FRAG = fs.readFileSync(__dirname + '/glsl/ShowColors.frag', 'utf8')
-var OVERLAY_VERT = fs.readFileSync(__dirname + '/glsl/Overlay.vert', 'utf8')
-var OVERLAY_FRAG = fs.readFileSync(__dirname + '/glsl/Overlay.frag', 'utf8')
+// var OVERLAY_VERT = fs.readFileSync(__dirname + '/glsl/Overlay.vert', 'utf8')
+// var OVERLAY_FRAG = fs.readFileSync(__dirname + '/glsl/Overlay.frag', 'utf8')
 
 var State = {
   backgroundColor: [0.1, 0.1, 0.1, 1],
@@ -47,23 +48,21 @@ var State = {
   watchShaders: false
 }
 
-function Renderer (ctx, width, height, initialState) {
-  this._ctx = ctx
+function Renderer (regl, width, height, initialState) {
+  this._regl = regl
   this._width = width
   this._height = height
 
-  this._cmdQueue = new CommandQueue(ctx)
-
-  this._debugDraw = new Draw(ctx)
+  // this._debugDraw = new Draw(ctx)
   this._debug = false
 
   this._root = createTreeNode()
   this._rootNodeList = this._root.list()
   this._rootPrevSortVersion = -1
 
-  this.initShadowmaps()
-  this.initCommands()
-  this.initMaterials()
+  // this.initShadowmaps()
+  // this.initCommands()
+  // this.initMaterials()
   this.initSkybox()
   this.initPostproces()
 
@@ -95,74 +94,74 @@ Renderer.prototype.initShadowmaps = function () {
 
 // TODO: move ssao kernels to pex-fx
 Renderer.prototype.initPostproces = function () {
-  var ctx = this._ctx
-  var cmdQueue = this._cmdQueue
+  var regl = this._regl
 
-  var fsqPositions = [[-1, -1], [1, -1], [1, 1], [-1, 1]]
-  var fsqFaces = [ [0, 1, 2], [0, 2, 3]]
-  var fsqAttributes = [
-    { data: fsqPositions, location: ctx.ATTRIB_POSITION }
-  ]
-  var fsqIndices = { data: fsqFaces }
-  this._fsqMesh = ctx.createMesh(fsqAttributes, fsqIndices)
+  // var fsqPositions = [[-1, -1], [1, -1], [1, 1], [-1, 1]]
+  // var fsqFaces = [ [0, 1, 2], [0, 2, 3]]
+  // var fsqAttributes = [
+    // { data: fsqPositions, location: ctx.ATTRIB_POSITION }
+  // ]
+  // var fsqIndices = { data: fsqFaces }
+  // this._fsqMesh = ctx.createMesh(fsqAttributes, fsqIndices)
 
-  this._frameColorTex = ctx.createTexture2D(null, this._width, this._height, { type: ctx.HALF_FLOAT })
-  this._frameNormalTex = ctx.createTexture2D(null, this._width, this._height, { type: ctx.HALF_FLOAT })
-  this._frameDepthTex = ctx.createTexture2D(null, this._width, this._height, { format: ctx.DEPTH_COMPONENT, type: ctx.UNSIGNED_SHORT })
-  this._frameFbo = ctx.createFramebuffer([ { texture: this._frameColorTex }, { texture: this._frameNormalTex} ], { texture: this._frameDepthTex})
-  this._clearFrameFboCommand = cmdQueue.createClearCommand({
-    framebuffer: this._frameFbo,
-    color: [0, 0, 0, 1],
-    depth: 1
+  console.log('initPostproces', this._width)
+  this._frameColorTex = regl.texture({ width: this._width, height: this._height, type2: 'half float' })
+  this._frameNormalTex = regl.texture({ width: this._width, height: this._height, type2: 'half float' })
+  this._frameDepthTex = regl.texture({ width: this._width, height: this._height, type: 'uint16', format: 'depth' })
+
+  this._frameFbo = regl.framebuffer({
+    color: [
+      this._frameColorTex,
+      this._frameNormalTex
+    ],
+    depthTexture: this._frameDepthTex
   })
 
-  this._drawFrameFboCommand = cmdQueue.createDrawCommand({
+  this._drawFrameFboCommand = regl({
     framebuffer: this._frameFbo,
-    viewport: [0, 0, this._width, this._height]
+    viewport: { x: 0, y: 0, width: this._width, height: this._height }
   })
 
-  this._overlayProgram = ctx.createProgram(OVERLAY_VERT, OVERLAY_FRAG)
+  // this._overlayProgram = ctx.createProgram(OVERLAY_VERT, OVERLAY_FRAG)
 
-  this._fx = fx(ctx)
+  this._fx = fx(regl)
 
-  var ssaoKernel = []
-  for (var i = 0; i < 64; i++) {
-    var sample = [
-      random.float() * 2 - 1,
-      random.float() * 2 - 1,
-      random.float(),
-      1
-    ]
-    Vec3.normalize(sample)
-    var scale = random.float()
-    scale = MathUtils.lerp(0.1, 1.0, scale * scale)
-    Vec3.scale(sample, scale)
-    ssaoKernel.push(sample)
-  }
-  var ssaoKernelData = new Float32Array(flatten(ssaoKernel))
+  // var ssaoKernel = []
+  // for (var i = 0; i < 64; i++) {
+    // var sample = [
+      // random.float() * 2 - 1,
+      // random.float() * 2 - 1,
+      // random.float(),
+      // 1
+    // ]
+    // Vec3.normalize(sample)
+    // var scale = random.float()
+    // scale = MathUtils.lerp(0.1, 1.0, scale * scale)
+    // Vec3.scale(sample, scale)
+    // ssaoKernel.push(sample)
+  // }
+  // var ssaoKernelData = new Float32Array(flatten(ssaoKernel))
 
-  var ssaoNoise = []
-  for (var j = 0; j < 64; j++) {
-    var noiseSample = [
-      random.float() * 2 - 1,
-      random.float() * 2 - 1,
-      0,
-      1
-    ]
-    ssaoNoise.push(noiseSample)
-  }
-  var ssaoNoiseData = new Float32Array(flatten(ssaoNoise))
+  // var ssaoNoise = []
+  // for (var j = 0; j < 64; j++) {
+    // var noiseSample = [
+      // random.float() * 2 - 1,
+      // random.float() * 2 - 1,
+      // 0,
+      // 1
+    // ]
+    // ssaoNoise.push(noiseSample)
+  // }
+  // var ssaoNoiseData = new Float32Array(flatten(ssaoNoise))
 
-  this.ssaoKernelMap = ctx.createTexture2D(ssaoKernelData, 8, 8, { format: ctx.RGBA, type: ctx.FLOAT, minFilter: ctx.NEAREST, magFilter: ctx.NEAREST, repeat: true })
-  this.ssaoNoiseMap = ctx.createTexture2D(ssaoNoiseData, 4, 4, { format: ctx.RGBA, type: ctx.FLOAT, minFilter: ctx.NEAREST, magFilter: ctx.NEAREST, repeat: true })
+  // this.ssaoKernelMap = ctx.createTexture2D(ssaoKernelData, 8, 8, { format: ctx.RGBA, type: ctx.FLOAT, minFilter: ctx.NEAREST, magFilter: ctx.NEAREST, repeat: true })
+  // this.ssaoNoiseMap = ctx.createTexture2D(ssaoNoiseData, 4, 4, { format: ctx.RGBA, type: ctx.FLOAT, minFilter: ctx.NEAREST, magFilter: ctx.NEAREST, repeat: true })
 }
 
 Renderer.prototype.initSkybox = function () {
-  var cmdQueue = this._cmdQueue
-
-  this._skyEnvMapTex = new SkyEnvMap(cmdQueue, State.sunPosition)
-  this._skybox = new Skybox(cmdQueue, this._skyEnvMapTex)
-  this._reflectionProbe = new ReflectionProbe(cmdQueue, [0, 0, 0])
+  // this._skyEnvMapTex = new SkyEnvMap(cmdQueue, State.sunPosition)
+  // this._skybox = new Skybox(cmdQueue, this._skyEnvMapTex)
+  // this._reflectionProbe = new ReflectionProbe(cmdQueue, [0, 0, 0])
 
   // No need to set default props as these will be automatically updated on first render
   this._sunLightNode = this.createNode({
@@ -187,9 +186,7 @@ Renderer.prototype.createNode = function (data) {
 }
 
 Renderer.prototype.initNode = function (data) {
-  var ctx = this._ctx
-  var cmdQueue = this._cmdQueue
-
+  // var regl = this._regl
   if (!data.position) data.position = [0, 0, 0]
   if (!data.scale) data.scale = [1, 1, 1]
   if (!data.rotation) data.rotation = [0, 0, 0, 1]
@@ -211,19 +208,18 @@ Renderer.prototype.initNode = function (data) {
     if (!material._uniforms) { material._uniforms = {}}
 
     // TODO: don't create mesh draw commands every frame
-    data._drawCommand = cmdQueue.createDrawCommand({
-      mesh: data.mesh,
-			vertexArray: data.vertexArray,
-			count: data.count,
-			primitiveType: data.primitiveType,
-      program: null,
-      uniforms: material._uniforms,
-      lineWidth: material.lineWidth,
-      depthTest: true,
-      cullFace: true,
-      cullFaceMode: ctx.BACK
-    })
-
+    // data._drawCommand = cmdQueue.createDrawCommand({
+      // mesh: data.mesh,
+			// vertexArray: data.vertexArray,
+			// count: data.count,
+			// primitiveType: data.primitiveType,
+      // program: null,
+      // uniforms: material._uniforms,
+      // lineWidth: material.lineWidth,
+      // depthTest: true,
+      // cullFace: true,
+      // cullFaceMode: ctx.BACK
+    // })
   }
   if (data.light) {
     var light = data.light
@@ -231,35 +227,37 @@ Renderer.prototype.initNode = function (data) {
       if (light.shadows === undefined) { light.shadows = true }
       if (light.color === undefined) { light.color = [1, 1, 1, 1] }
       if (light.direction === undefined) { light.direction = [0, -1, 0] }
-      light._colorMap = ctx.createTexture2D(null, 1024, 1024) // FIXME: remove light color map
-      light._shadowMap = ctx.createTexture2D(null, 1024, 1024, { format: ctx.DEPTH_COMPONENT, type: ctx.UNSIGNED_SHORT})
+      // REGL light._colorMap = ctx.createTexture2D(null, 1024, 1024) // FIXME: remove light color map
+      // REGL light._shadowMap = ctx.createTexture2D(null, 1024, 1024, { format: ctx.DEPTH_COMPONENT, type: ctx.UNSIGNED_SHORT})
       light._viewMatrix = Mat4.create()
       light._projectionMatrix = Mat4.create()
       light._prevDirection = [0, 0, 0]
 
       // FIXME: how Metal / Vulkan implement FBO clear on bind?
-      light._shadowMapClearCommand = cmdQueue.createClearCommand({
-        framebuffer: this._shadowMapFbo,
-        framebufferColorAttachments: {
-          '0': { target: light._colorMap.getTarget(), handle: light._colorMap.getHandle(), level: 0 }
-        },
-        framebufferDepthAttachment: { target: light._shadowMap.getTarget(), handle: light._shadowMap.getHandle(), level: 0},
-        color: [0, 0, 0, 1],
-        depth: 1
-      })
+      // REGL
+      // light._shadowMapClearCommand = cmdQueue.createClearCommand({
+        // framebuffer: this._shadowMapFbo,
+        // framebufferColorAttachments: {
+          // '0': { target: light._colorMap.getTarget(), handle: light._colorMap.getHandle(), level: 0 }
+        // },
+        // framebufferDepthAttachment: { target: light._shadowMap.getTarget(), handle: light._shadowMap.getHandle(), level: 0},
+        // color: [0, 0, 0, 1],
+        // depth: 1
+      // })
 
-      light._shadowMapDrawCommand = cmdQueue.createDrawCommand({
-        framebuffer: this._shadowMapFbo,
-        framebufferColorAttachments: {
-          '0': { target: light._colorMap.getTarget(), handle: light._colorMap.getHandle(), level: 0 }
-        },
-        framebufferDepthAttachment: { target: light._shadowMap.getTarget(), handle: light._shadowMap.getHandle(), level: 0},
-        viewport: [0, 0, light._shadowMap.getWidth(), light._shadowMap.getHeight()],
-        projectionMatrix: light._projectionMatrix,
-        viewMatrix: light._viewMatrix,
-        depthTest: true,
-        colorMask: [0, 0, 0, 0]
-      })
+      // REGL
+      // light._shadowMapDrawCommand = cmdQueue.createDrawCommand({
+        // framebuffer: this._shadowMapFbo,
+        // framebufferColorAttachments: {
+          // '0': { target: light._colorMap.getTarget(), handle: light._colorMap.getHandle(), level: 0 }
+        // },
+        // framebufferDepthAttachment: { target: light._shadowMap.getTarget(), handle: light._shadowMap.getHandle(), level: 0},
+        // viewport: [0, 0, light._shadowMap.getWidth(), light._shadowMap.getHeight()],
+        // projectionMatrix: light._projectionMatrix,
+        // viewMatrix: light._viewMatrix,
+        // depthTest: true,
+        // colorMask: [0, 0, 0, 0]
+      // })
     } else if (data.light.type === 'point') {
       if (data.light.radius === undefined) { data.light.radius = 10 }
     } else if (data.light.type === 'area') {
@@ -295,7 +293,7 @@ var Frag = fs.readFileSync(__dirname + '/glsl/PBR.frag', 'utf8')
 
 // TODO: how fast is building these flag strings every frame for every object?
 Renderer.prototype.getMeshProgram = function (meshMaterial, options) {
-  var ctx = this._ctx
+  // var ctx = this._ctx
 
   var flags = []
   flags.push('#define SHADOW_QUALITY_' + State.shadowQuality)
@@ -335,13 +333,12 @@ Renderer.prototype.getMeshProgram = function (meshMaterial, options) {
 
   var vertSrc = meshMaterial.vert || Vert
   var fragSrc = flags + (meshMaterial.frag || Frag)
-  var hash = vertSrc + fragSrc
+  // var hash = vertSrc + fragSrc
 
-  var program = this._programCache[hash]
-  if (!program) {
-    program = this._programCache[hash] = ctx.createProgram(vertSrc, fragSrc)
+  return {
+    vert: vertSrc,
+    frag: fragSrc
   }
-  return program
 }
 
 Renderer.prototype.updateNodeLists = function () {
@@ -363,10 +360,10 @@ Renderer.prototype.updateNodeLists = function () {
 // draw + shadowmap @ 1000 objects x 30 uniforms = 60'000 setters / frame!!
 // transform feedback?
 Renderer.prototype.drawMeshes = function (shadowMappingPass) {
-  var ctx = this._ctx
-  var cmdQueue = this._cmdQueue
+  // var ctx = this._ctx
+  // var cmdQueue = this._cmdQueue
 
-  if (State.profile) ctx.getGL().finish()
+  // if (State.profile) ctx.getGL().finish()
   if (State.profile) console.time('Renderer:drawMeshes')
 
   var cameraNodes = this._cameraNodes
@@ -374,21 +371,22 @@ Renderer.prototype.drawMeshes = function (shadowMappingPass) {
   var directionalLightNodes = this._directionalLightNodes
   var pointLightNodes = this._pointLightNodes
   var areaLightNodes = this._areaLightNodes
+  var camera = cameraNodes[0].data.camera
 
   var sharedUniforms = this._sharedUniforms = this._sharedUniforms || {}
-  sharedUniforms.uReflectionMap = this._reflectionProbe.getReflectionMap()
-  sharedUniforms.uIrradianceMap = this._reflectionProbe.getIrradianceMap()
-  sharedUniforms.uReflectionMapFlipEnvMap = this._reflectionProbe.getReflectionMap().getFlipEnvMap ? this._reflectionProbe.getReflectionMap().getFlipEnvMap() : -1
-  sharedUniforms.uIrradianceMapFlipEnvMap = this._reflectionProbe.getIrradianceMap().getFlipEnvMap ? this._reflectionProbe.getIrradianceMap().getFlipEnvMap() : -1
-  sharedUniforms.uCameraPosition = cameraNodes[0].data.camera.getPosition()
+  // sharedUniforms.uReflectionMap = this._reflectionProbe.getReflectionMap()
+  // sharedUniforms.uIrradianceMap = this._reflectionProbe.getIrradianceMap()
+  // sharedUniforms.uReflectionMapFlipEnvMap = this._reflectionProbe.getReflectionMap().getFlipEnvMap ? this._reflectionProbe.getReflectionMap().getFlipEnvMap() : -1
+  // sharedUniforms.uIrradianceMapFlipEnvMap = this._reflectionProbe.getIrradianceMap().getFlipEnvMap ? this._reflectionProbe.getIrradianceMap().getFlipEnvMap() : -1
+  // sharedUniforms.uCameraPosition = cameraNodes[0].data.camera.getPosition()
 
   if (!this.areaLightTextures) {
-    this.ltc_mat_texture = ctx.createTexture2D(new Float32Array(AreaLightsData.mat), 64, 64, { type: ctx.FLOAT, flipY: false })
-    this.ltc_mag_texture = ctx.createTexture2D(new Float32Array(AreaLightsData.mag), 64, 64, { type: ctx.FLOAT, format: ctx.getGL().ALPHA, flipY: false })
-    this.areaLightTextures = true
+    // this.ltc_mat_texture = ctx.createTexture2D(new Float32Array(AreaLightsData.mat), 64, 64, { type: ctx.FLOAT, flipY: false })
+    // this.ltc_mag_texture = ctx.createTexture2D(new Float32Array(AreaLightsData.mag), 64, 64, { type: ctx.FLOAT, format: ctx.getGL().ALPHA, flipY: false })
+    // this.areaLightTextures = true
   }
-  sharedUniforms.ltc_mat = this.ltc_mat_texture
-  sharedUniforms.ltc_mag = this.ltc_mag_texture
+  // sharedUniforms.ltc_mat = this.ltc_mat_texture
+  // sharedUniforms.ltc_mag = this.ltc_mag_texture
 
   directionalLightNodes.forEach(function (lightNode, i) {
     var light = lightNode.data.light
@@ -400,41 +398,45 @@ Renderer.prototype.drawMeshes = function (shadowMappingPass) {
     sharedUniforms['uDirectionalLights[' + i + '].near'] = light._near
     sharedUniforms['uDirectionalLights[' + i + '].far'] = light._far
     sharedUniforms['uDirectionalLights[' + i + '].bias'] = State.bias
-    sharedUniforms['uDirectionalLights[' + i + '].shadowMapSize'] = [light._shadowMap.getWidth(), light._shadowMap.getHeight()]
-    sharedUniforms['uDirectionalLightShadowMaps[' + i + ']'] = light._shadowMap
+    // sharedUniforms['uDirectionalLights[' + i + '].shadowMapSize'] = [light._shadowMap.getWidth(), light._shadowMap.getHeight()]
+    // sharedUniforms['uDirectionalLightShadowMaps[' + i + ']'] = light._shadowMap
   })
 
   pointLightNodes.forEach(function (lightNode, i) {
-    var light = lightNode.data.light
-    sharedUniforms['uPointLights[' + i + '].position'] = lightNode.data.position
-    sharedUniforms['uPointLights[' + i + '].color'] = light.color
-    sharedUniforms['uPointLights[' + i + '].radius'] = light.radius
+    // var light = lightNode.data.light
+    // sharedUniforms['uPointLights[' + i + '].position'] = lightNode.data.position
+    // sharedUniforms['uPointLights[' + i + '].color'] = light.color
+    // sharedUniforms['uPointLights[' + i + '].radius'] = light.radius
   })
 
   areaLightNodes.forEach(function (lightNode, i) {
-    var light = lightNode.data.light
-    sharedUniforms['uAreaLights[' + i + '].position'] = lightNode.data.position
-    sharedUniforms['uAreaLights[' + i + '].color'] = light.color
-    sharedUniforms['uAreaLights[' + i + '].intensity'] = light.intensity
-    sharedUniforms['uAreaLights[' + i + '].rotation'] = lightNode.data.rotation
-    sharedUniforms['uAreaLights[' + i + '].size'] = [lightNode.data.scale[0] / 2, lightNode.data.scale[1] / 2]
+    // var light = lightNode.data.light
+    // sharedUniforms['uAreaLights[' + i + '].position'] = lightNode.data.position
+    // sharedUniforms['uAreaLights[' + i + '].color'] = light.color
+    // sharedUniforms['uAreaLights[' + i + '].intensity'] = light.intensity
+    // sharedUniforms['uAreaLights[' + i + '].rotation'] = lightNode.data.rotation
+    // sharedUniforms['uAreaLights[' + i + '].size'] = [lightNode.data.scale[0] / 2, lightNode.data.scale[1] / 2]
   })
 
-  var prevProgram = null
+  var viewMatrix = camera.getViewMatrix()
+  var inverseViewMatrix = Mat4.invert(Mat4.create(), viewMatrix) // FIXME: invViewMat allocation
+  var projectionMatrix = camera.getProjectionMatrix()
+
+  // var prevProgram = null
   for (var i = 0; i < meshNodes.length; i++) {
     var meshNode = meshNodes[i]
     var material = meshNode.data.material
     var cachedUniforms = material._uniforms
     cachedUniforms.uIor = 1.4
     cachedUniforms.uBaseColor = material.baseColor
-    cachedUniforms.uBaseColorMap = material.baseColorMap
+    // cachedUniforms.uBaseColorMap = material.baseColorMap
     cachedUniforms.uEmissiveColor = material.emissiveColor
-    cachedUniforms.uEmissiveColorMap = material.emissiveColorMap
+    // cachedUniforms.uEmissiveColorMap = material.emissiveColorMap
     cachedUniforms.uMetallic = material.metallic || 0.1
-    cachedUniforms.uMetallicMap = material.metallicMap
+    // cachedUniforms.uMetallicMap = material.metallicMap
     cachedUniforms.uRoughness = material.roughness || 1
-    cachedUniforms.uRoughnessMap = material.roughnessMap
-    cachedUniforms.uNormalMap = material.normalMap
+    // cachedUniforms.uRoughnessMap = material.roughnessMap
+    // cachedUniforms.uNormalMap = material.normalMap
 
     if (material.uniforms) {
       for (var uniformName in material.uniforms) {
@@ -442,30 +444,71 @@ Renderer.prototype.drawMeshes = function (shadowMappingPass) {
       }
     }
 
-    var meshProgram
-
     if (shadowMappingPass) {
-      meshProgram = material._shadowProgram = material._shadowProgram || this.getMeshProgram(material, {})
+      // meshProgram = material._shadowProgram = material._shadowProgram || this.getMeshProgram(material, {})
     } else {
-      meshProgram = material._program = material._program || this.getMeshProgram(material, {
-        numDirectionalLights: directionalLightNodes.length,
-        numPointLights: pointLightNodes.length,
-        numAreaLights: areaLightNodes.length,
-        useReflectionProbes: true
-      })
+      // meshProgram = material._program = material._program || this.getMeshProgram(material, {
+      // })
     }
 
-    if (meshProgram !== prevProgram) {
-      prevProgram = meshProgram
+    // if (meshProgram !== prevProgram) {
+      // prevProgram = meshProgram
       // this is a bit hacky but prevents checking the same uniforms over and over again
       // this would be even better if we sort meshes by material
-      Object.assign(cachedUniforms, sharedUniforms)
+      // Object.assign(cachedUniforms, sharedUniforms)
+    // }
+    var data = meshNode.data
+    if (!data._drawCommand) {
+      var regl = this._regl
+      var meshProgram = this.getMeshProgram(material, {
+        numDirectionalLights: directionalLightNodes.length,
+        // numPointLights: pointLightNodes.length,
+        // numAreaLights: areaLightNodes.length,
+        // useReflectionProbes: true
+      })
+      data._drawCommand = regl({
+        attributes: {
+          aPosition: regl.buffer(data.mesh.positions),
+          aNormal: regl.buffer(data.mesh.normals || data.mesh.positions),
+          aTexCoord0: regl.buffer(data.mesh.uvs || data.mesh.positions)
+        },
+        elements: regl.elements(data.mesh.cells),
+        vert: meshProgram.vert,
+        frag: meshProgram.frag,
+        depth: {
+        },
+        uniforms: Object.assign({
+          uColor: material.baseColor,
+          uModelMatrix: regl.prop('uModelMatrix'),
+          uNormalMatrix: regl.prop('uNormalMatrix'),
+          uViewMatrix: regl.prop('uViewMatrix'),
+          uProjectionMatrix: regl.prop('uProjectionMatrix'),
+          uInverseViewMatrix: regl.prop('uInverseViewMatrix')
+        }, cachedUniforms, sharedUniforms)
+        // mesh: data.mesh,
+        // vertexArray: data.vertexArray,
+        // count: data.count,
+        // primitiveType: data.primitiveType,
+        // program: null,
+        // uniforms: material._uniforms,
+        // lineWidth: material.lineWidth,
+        // depthTest: true,
+        // cullFace: true,
+        // cullFaceMode: ctx.BACK
+      })
     }
 
     meshNode.data._drawCommand.modelMatrix = meshNode.modelMatrix
     meshNode.data._drawCommand.program = meshProgram
 
-    cmdQueue.submit(meshNode.data._drawCommand)
+    // cmdQueue.submit(meshNode.data._drawCommand)
+    meshNode.data._drawCommand({
+      uModelMatrix: meshNode.modelMatrix,
+      uNormalMatrix: meshNode.normalMatrix,
+      uViewMatrix: viewMatrix,
+      uInverseViewMatrix: inverseViewMatrix,
+      uProjectionMatrix: projectionMatrix
+    })
 
     // TODO: implement instancing support
     // if (meshNode.mesh._hasDivisor) {
@@ -495,7 +538,7 @@ Renderer.prototype.drawMeshes = function (shadowMappingPass) {
     // }
   }
 
-  if (State.profile) ctx.getGL().finish()
+  // if (State.profile) ctx.getGL().finish()
   if (State.profile) console.timeEnd('Renderer:drawMeshes')
 }
 
@@ -525,8 +568,13 @@ Renderer.prototype.updateDirectionalLights = function (directionalLightNodes) {
 }
 
 Renderer.prototype.draw = function () {
-  var ctx = this._ctx
-  var cmdQueue = this._cmdQueue
+  var regl = this._regl
+
+  regl.clear({
+    color: [0.2, 0.2, 0.2, 1],
+    depth: 1,
+    stencil: 0
+  })
 
   this._root.tick()
   if (this._root.sortVersion !== this._rootPrevSortVersion) {
@@ -534,9 +582,7 @@ Renderer.prototype.draw = function () {
     this._rootPrevSortVersion = this._root.sortVersion
   }
 
-  ctx.pushState(ctx.ALL)
-
-  cmdQueue.submit(this._clearCommand) // FIXME: unnecesary?
+  // REGL cmdQueue.submit(this._clearCommand) // FIXME: unnecesary?
 
   var cameraNodes = this._cameraNodes
   var directionalLightNodes = this._directionalLightNodes
@@ -553,99 +599,106 @@ Renderer.prototype.draw = function () {
     Vec3.set(State.prevSunPosition, State.sunPosition)
 
     // TODO: update sky only if it's used
-    this._skyEnvMapTex.setSunPosition(State.sunPosition)
-    this._skybox.setEnvMap(State.skyEnvMap || this._skyEnvMapTex)
-    this._reflectionProbe.update(function () {
-      this._skybox.draw()
-    }.bind(this))
+    // REGL
+    // this._skyEnvMapTex.setSunPosition(State.sunPosition)
+    // this._skybox.setEnvMap(State.skyEnvMap || this._skyEnvMapTex)
+    // this._reflectionProbe.update(function () {
+      // this._skybox.draw()
+    // }.bind(this))
   }
 
   // draw scene
 
-  directionalLightNodes.forEach(function (lightNode) {
-    var light = lightNode.data.light
-    var positionHasChanged = !Vec3.equals(lightNode.data.position, lightNode.data._prevPosition)
-    var directionHasChanged = !Vec3.equals(light.direction, light._prevDirection)
-    if (positionHasChanged || directionHasChanged) {
-      Vec3.set(lightNode.data._prevPosition, lightNode.data.position)
-      Vec3.set(light._prevDirection, light.direction)
-      this.updateDirectionalLightShadowMap(lightNode)
-    }
-  }.bind(this))
+  // REGL
+  // directionalLightNodes.forEach(function (lightNode) {
+    // var light = lightNode.data.light
+    // var positionHasChanged = !Vec3.equals(lightNode.data.position, lightNode.data._prevPosition)
+    // var directionHasChanged = !Vec3.equals(light.direction, light._prevDirection)
+    // if (positionHasChanged || directionHasChanged) {
+      // Vec3.set(lightNode.data._prevPosition, lightNode.data.position)
+      // Vec3.set(light._prevDirection, light.direction)
+      // this.updateDirectionalLightShadowMap(lightNode)
+    // }
+  // }.bind(this))
 
-  var currentCamera = cameraNodes[0].data.camera
+  // var currentCamera = cameraNodes[0].data.camera
 
-  cmdQueue.submit(this._clearFrameFboCommand)
+  // cmdQueue.submit(this._clearFrameFboCommand)
 
-  cmdQueue.submit(this._drawFrameFboCommand, {
-    projectionMatrix: currentCamera.getProjectionMatrix(),
-    viewMatrix: currentCamera.getViewMatrix()
-  }, function () {
-    this._skybox.draw()
-    if (State.profile) {
-      console.time('Renderer:drawMeshes')
-      console.time('Renderer:drawMeshes:finish')
-      State.uniformsSet = 0
-    }
+  this._drawFrameFboCommand(function (context) {
+    regl.clear({
+      color: [1, 0, 0, 1],
+      depth: 1
+    })
+  // cmdQueue.submit(this._drawFrameFboCommand, {
+    // projectionMatrix: currentCamera.getProjectionMatrix(),
+    // viewMatrix: currentCamera.getViewMatrix()
+  // }, function () {
+    // this._skybox.draw()
+    // if (State.profile) {
+      // console.time('Renderer:drawMeshes')
+      // console.time('Renderer:drawMeshes:finish')
+      // State.uniformsSet = 0
+    // }
     this.drawMeshes()
-    if (State.profile) {
-      console.timeEnd('Renderer:drawMeshes')
-      ctx.getGL().finish()
-      console.timeEnd('Renderer:drawMeshes:finish')
-      console.log('Renderer:uniformsSet', State.uniformsSet)
-    }
+    // if (State.profile) {
+      // console.timeEnd('Renderer:drawMeshes')
+      // ctx.getGL().finish()
+      // console.timeEnd('Renderer:drawMeshes:finish')
+      // console.log('Renderer:uniformsSet', State.uniformsSet)
+    // }
   }.bind(this))
 
-  var W = this._width
-  var H = this._height
+  // var W = this._width
+  // var H = this._height
 
   var root = this._fx.reset()
   var color = root.asFXStage(this._frameColorTex, 'img')
   var final = color
 
-  // FIXME: ssao internally needs uProjectionMatrix...
-  ctx.pushProjectionMatrix()
-  ctx.setProjectionMatrix(currentCamera.getProjectionMatrix())
+  // // FIXME: ssao internally needs uProjectionMatrix...
+  // ctx.pushProjectionMatrix()
+  // ctx.setProjectionMatrix(currentCamera.getProjectionMatrix())
 
-  if (State.profile) ctx.getGL().finish()
-  if (State.profile) console.time('Renderer:postprocessing')
-  if (State.profile) console.time('Renderer:ssao')
-  if (State.ssao) {
-    var ssao = root.ssao({
-      depthMap: this._frameDepthTex,
-      normalMap: this._frameNormalTex,
-      kernelMap: this.ssaoKernelMap,
-      noiseMap: this.ssaoNoiseMap,
-      camera: currentCamera,
-      width: W / State.ssaoDownsample,
-      height: H / State.ssaoDownsample,
-      radius: State.ssaoRadius
-    })
-    ssao = ssao.bilateralBlur({ depthMap: this._frameDepthTex, camera: currentCamera, sharpness: State.ssaoSharpness })
-    // TODO: this is incorrect, AO influences only indirect diffuse (irradiance) and indirect specular reflections
-    // this will also influence direct lighting (lights, sun)
-    final = color.mult(ssao, { bpp: 16 })
-  }
-  ctx.popProjectionMatrix()
-  if (State.profile) ctx.getGL().finish()
-  if (State.profile) console.timeEnd('Renderer:ssao')
+  // if (State.profile) ctx.getGL().finish()
+  // if (State.profile) console.time('Renderer:postprocessing')
+  // if (State.profile) console.time('Renderer:ssao')
+  // if (State.ssao) {
+    // var ssao = root.ssao({
+      // depthMap: this._frameDepthTex,
+      // normalMap: this._frameNormalTex,
+      // kernelMap: this.ssaoKernelMap,
+      // noiseMap: this.ssaoNoiseMap,
+      // camera: currentCamera,
+      // width: W / State.ssaoDownsample,
+      // height: H / State.ssaoDownsample,
+      // radius: State.ssaoRadius
+    // })
+    // ssao = ssao.bilateralBlur({ depthMap: this._frameDepthTex, camera: currentCamera, sharpness: State.ssaoSharpness })
+    // // TODO: this is incorrect, AO influences only indirect diffuse (irradiance) and indirect specular reflections
+    // // this will also influence direct lighting (lights, sun)
+    // final = color.mult(ssao, { bpp: 16 })
+  // }
+  // ctx.popProjectionMatrix()
+  // if (State.profile) ctx.getGL().finish()
+  // if (State.profile) console.timeEnd('Renderer:ssao')
 
-  if (State.profile) console.time('Renderer:postprocess')
+  // if (State.profile) console.time('Renderer:postprocess')
   final = final.postprocess({ exposure: State.exposure })
-  if (State.profile) ctx.getGL().finish()
-  if (State.profile) console.timeEnd('Renderer:postprocess')
+  // if (State.profile) ctx.getGL().finish()
+  // if (State.profile) console.timeEnd('Renderer:postprocess')
 
-  if (State.profile) console.time('Renderer:fxaa')
-  if (State.fxaa) {
-    final = final.fxaa()
-  }
-  if (State.profile) ctx.getGL().finish()
-  if (State.profile) console.timeEnd('Renderer:fxaa')
-  if (State.profile) ctx.getGL().finish()
-  if (State.profile) console.timeEnd('Renderer:postprocessing')
-  var viewport = ctx.getViewport()
-  // final = ssao
-  final.blit({ x: viewport[0], y: viewport[1], width: viewport[2], height: viewport[3]})
+  // if (State.profile) console.time('Renderer:fxaa')
+  // if (State.fxaa) {
+    // final = final.fxaa()
+  // }
+  // if (State.profile) ctx.getGL().finish()
+  // if (State.profile) console.timeEnd('Renderer:fxaa')
+  // if (State.profile) ctx.getGL().finish()
+  // if (State.profile) console.timeEnd('Renderer:postprocessing')
+  // var viewport = ctx.getViewport()
+  // // final = ssao
+  final.blit({ x: 0, y: 0, width: this._width, height: this._height })
 
   // overlays
 
@@ -663,11 +716,11 @@ Renderer.prototype.draw = function () {
     // ctx.drawMesh()
   // })
 
-  if (State.debug) {
-    this.drawDebug()
-  }
+  // if (State.debug) {
+    // // this.drawDebug()
+  // }
 
-  cmdQueue.flush()
+  // cmdQueue.flush()
 }
 
 Renderer.prototype.drawDebug = function () {
