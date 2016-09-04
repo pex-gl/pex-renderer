@@ -27,13 +27,13 @@ vec4 toGamma(vec4 v) {
   return vec4(toGamma(v.rgb), v.a);
 }
 
-uniform sampler2D tex0;
+uniform sampler2D image;
 uniform float uExposure;
 
 varying vec2 vTexCoord;
 
 void main() {
-    vec3 color = texture2D(tex0, vTexCoord).rgb;
+    vec3 color = texture2D(image, vTexCoord).rgb;
     color *= uExposure;
     color = tonemapFilmic(color); //filmic has built-in gamma
     gl_FragColor.rgb = color;

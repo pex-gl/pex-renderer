@@ -1,33 +1,45 @@
-var FXStage = require('pex-fx/FXStage');
-var fs = require('fs');
+var FXStage = require('./local_modules/pex-fx/FXStage')
+var fs = require('fs')
 
-var VERT = fs.readFileSync(__dirname + '/ScreenImage.vert', 'utf8');
-var FRAG = fs.readFileSync(__dirname + '/Postprocess.frag', 'utf8');
+var VERT = fs.readFileSync(__dirname + '/ScreenImage.vert', 'utf8')
+var FRAG = fs.readFileSync(__dirname + '/Postprocess.frag', 'utf8')
 
 FXStage.prototype.postprocess = function (options) {
-    var ctx = this.ctx;
-    options = options || {};
-    exposure = options.exposure !== undefined ? options.exposure : 1;
-    var outputSize = this.getOutputSize(options.width, options.height);
-    var rt = this.getRenderTarget(outputSize.width, outputSize.height, options.depth, options.bpp);
+  var regl = this.regl
 
-    var program = this.getShader(VERT, FRAG);
+  options = options || {}
+  var exposure = options.exposure !== undefined ? options.exposure : 1
+  var source = this.getSourceTexture()
+  var outputSize = this.getOutputSize(options.width, options.height)
+  var rt = this.getRenderTarget(outputSize.width, outputSize.height, options.depth, options.bpp)
 
-    ctx.pushState(ctx.FRAMEBUFFER_BIT | ctx.TEXTURE_BIT | ctx.PROGRAM_BIT);
-        ctx.bindFramebuffer(rt);
-        ctx.setClearColor(0,0,0,0);
-        ctx.clear(ctx.COLOR_BIT | ctx.DEPTH_BIT);
+  if (!this.cmd) {
+    // TODO: what if the viewport size / target output has changed?
+    // FIXME: i don't know how to pass my uniform to drawFullScreenQuad command,
+    // so i'm just doing all of it here
+    // how can i inject new uniforms if i don't know their name in the
+    // drawFullScreenQuad function, can cmd(props) take props.uniforms somehow?
+    this.cmd = regl({
+      attributes: this.fullscreenQuad.attributes,
+      elements: this.fullscreenQuad.elements,
+      framebuffer: rt,
+      viewport: { x: 0, y: 0, width: outputSize.width, height: outputSize.height },
+      vert: VERT,
+      frag: FRAG,
+      uniforms: {
+        image: regl.prop('image'),
+        // uExposure: regl.prop('exposure')
+        uExposure: 1
+      }
+    })
+  }
 
-        ctx.bindTexture(this.getSourceTexture(), 0)
+  this.cmd({
+    image: source,
+    exposure: exposure
+  })
 
-        ctx.bindProgram(program);
-        program.setUniform('tex0', 0);
-        program.setUniform('uExposure', exposure);
+  return this.asFXStage(rt, 'Postprocess')
+}
 
-        this.drawFullScreenQuad(outputSize.width, outputSize.height, null, program);
-    ctx.popState(ctx.FRAMEBUFFER_BIT | ctx.TEXTURE_BIT | ctx.PROGRAM_BIT);
-
-    return this.asFXStage(rt, 'add');
-};
-
-module.exports = FXStage;
+module.exports = FXStage
