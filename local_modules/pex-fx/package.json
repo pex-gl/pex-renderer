@@ -1,0 +1,39 @@
+{
+  "name": "pex-fx",
+  "version": "1.4.0",
+  "description": "Postprocessing effects for the pex library",
+  "homepage": "https://github.com/vorg/pex-fx.git",
+  "keywords": [
+    "pex",
+    "webgl",
+    "glsl",
+    "3d graphics",
+    "postprocessing",
+    "fx"
+  ],
+  "author": {
+    "name": "Marcin Ignac",
+    "email": "marcin.ignac@gmail.com",
+    "url": "http://marcinignac.com"
+  },
+  "main": "index.js",
+  "devDependencies": {
+    "glslify": "^5.0.2"
+  },
+  "dependencies": {
+    "brfs": "^1.4.3",
+    "glsl-fast-gaussian-blur": "^1.0.2",
+    "glsl-gamma": "^2.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vorg/pex-fx.git"
+  },
+  "bugs": "https://github.com/vorg/pex-fx/issues",
+  "license": "MIT",
+  "browserify": {
+    "transform": [
+      "brfs"
+    ]
+  }
+}
