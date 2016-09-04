@@ -466,13 +466,13 @@ Renderer.prototype.drawMeshes = function (shadowMappingPass) {
         // numAreaLights: areaLightNodes.length,
         // useReflectionProbes: true
       })
-      data._drawCommand = regl({
+      var cmdData = {
         attributes: {
           aPosition: regl.buffer(data.mesh.positions),
           aNormal: regl.buffer(data.mesh.normals || data.mesh.positions),
           aTexCoord0: regl.buffer(data.mesh.uvs || data.mesh.positions)
         },
-        elements: regl.elements(data.mesh.cells),
+        // elements: regl.elements(data.mesh.cells),
         vert: meshProgram.vert,
         frag: meshProgram.frag,
         depth: {
@@ -495,7 +495,13 @@ Renderer.prototype.drawMeshes = function (shadowMappingPass) {
         // depthTest: true,
         // cullFace: true,
         // cullFaceMode: ctx.BACK
-      })
+      }
+      if (data.mesh.cells) {
+        cmdData.elements = regl.elements(data.mesh.cells)
+      } else {
+        cmdData.count = data.mesh.positions.length
+      }
+      data._drawCommand = regl(cmdData)
     }
 
     meshNode.data._drawCommand.modelMatrix = meshNode.modelMatrix
