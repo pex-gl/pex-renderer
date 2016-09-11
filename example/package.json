@@ -28,6 +28,6 @@
     "pex-sys": "^1.4.0",
     "primitive-cube": "^1.0.2",
     "primitive-sphere": "^2.0.0",
-    "regl": "^0.9.0"
+    "regl": "^1.1.1"
   }
 }

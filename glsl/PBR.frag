@@ -97,7 +97,7 @@ struct DirectionalLight {
     float near;
     float far;
     float bias;
-    // vec2 shadowMapSize;
+    vec2 shadowMapSize;
 };
 
 uniform DirectionalLight uDirectionalLights[NUM_DIRECTIONAL_LIGHTS];
@@ -923,27 +923,42 @@ void main() {
         float dotNL = max(0.0, dot(normalWorld, L));
 
         // //shadows
-        // vec4 lightViewPosition = light.viewMatrix * vec4(vPositionWorld, 1.0);
-        // float lightDistView = -lightViewPosition.z;
-        // vec4 lightDeviceCoordsPosition = light.projectionMatrix * lightViewPosition;
-        // vec2 lightDeviceCoordsPositionNormalized = lightDeviceCoordsPosition.xy / lightDeviceCoordsPosition.w;
-        // float lightDeviceCoordsZ = lightDeviceCoordsPosition.z / lightDeviceCoordsPosition.w;
-        // vec2 lightUV = lightDeviceCoordsPositionNormalized.xy * 0.5 + 0.5;
+        vec4 lightViewPosition = light.viewMatrix * vec4(vPositionWorld, 1.0);
+        float lightDistView = -lightViewPosition.z;
+        vec4 lightDeviceCoordsPosition = light.projectionMatrix * lightViewPosition;
+        vec2 lightDeviceCoordsPositionNormalized = lightDeviceCoordsPosition.xy / lightDeviceCoordsPosition.w;
+        float lightDeviceCoordsZ = lightDeviceCoordsPosition.z / lightDeviceCoordsPosition.w;
+        vec2 lightUV = lightDeviceCoordsPositionNormalized.xy * 0.5 + 0.5;
 
-// #ifdef SHADOW_QUALITY_0
+#ifdef SHADOW_QUALITY_0
         float illuminated = 1.0;
-// #elseif SHADOW_QUALITY_1
-        // float illuminated = texture2DCompare(uDirectionalLightShadowMaps[i], lightUV, lightDistView - uBias, light.near, light.far);
-// #elseif SHADOW_QUALITY_2
-        // float illuminated = texture2DShadowLerp(uDirectionalLightShadowMaps[i], light.shadowMapSize, lightUV, lightDistView - light.bias, light.near, light.far);
-// #else
-        // float illuminated = PCF(uDirectionalLightShadowMaps[i], light.shadowMapSize, lightUV, lightDistView - light.bias, light.near, light.far);
-// #endif
-        // if (illuminated > 0.0) {
-            // //TODO: specular light conservation
+#elseif SHADOW_QUALITY_1
+        float bias = 0.01;
+        float illuminated = texture2DCompare(uDirectionalLightShadowMaps[i], lightUV, lightDistView - bias, light.near, light.far);
+#elseif SHADOW_QUALITY_2
+        float illuminated = texture2DShadowLerp(
+            uDirectionalLightShadowMaps[i],
+            light.shadowMapSize,
+            lightUV,
+            lightDistView - light.bias,
+            light.near,
+            light.far
+          );
+#else
+        float illuminated = PCF(
+            uDirectionalLightShadowMaps[i],
+            light.shadowMapSize,
+            lightUV,
+            lightDistView - light.bias,
+            light.near,
+            light.far
+            );
+#endif
+        if (illuminated > 0.0) {
+            //TODO: specular light conservation
             directDiffuse += diffuseColor * dotNL * light.color.rgb * illuminated;
             directSpecular += directSpecularGGX(normalWorld, eyeDirWorld, L, roughness, F0) * illuminated;
-        // }
+        }
     }
 #endif
 

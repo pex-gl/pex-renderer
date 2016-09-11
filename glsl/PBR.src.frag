@@ -918,6 +918,7 @@ void main() {
     /*vec3 color = indirectArea;*/
     //color = emissiveColor + indirectArea;
     /*color.r = 1.0;*/
-    gl_FragData[0] = vec4(color, 1.0);
-    gl_FragData[1] = vec4(vNormalView * 0.5 + 0.5, 1.0);
+    // gl_FragData[0] = vec4(color, 1.0);
+    // gl_FragData[1] = vec4(vNormalView * 0.5 + 0.5, 1.0);
+    gl_FragColor = vec4(vNormalView * 0.5 + 0.5, 1.0);
 }

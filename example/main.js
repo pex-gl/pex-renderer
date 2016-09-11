@@ -8,7 +8,7 @@ var Renderer = require('../Renderer')
 var createSphere = require('primitive-sphere')
 var createCube = require('primitive-cube')
 var isBrowser = require('is-browser')
-// var GUI = require('pex-gui')
+var GUI = require('../local_modules/pex-gui')
 var random = require('pex-random')
 var parseHdr = require('./local_modules/parse-hdr')
 var cosineGradient = require('cosine-gradient')
@@ -24,6 +24,7 @@ function randn_bm () {
 function rand () {
   return (Math.random() * 2 - 1) * 3
 }
+
 var gradient = cosineGradient(scheme[0], scheme[1], scheme[2], scheme[3])
 
 Window.create({
@@ -31,7 +32,7 @@ Window.create({
     type: '3d',
     width: 1280,
     height: 720,
-    debug: false,
+    debug: true,
     fullScreen: isBrowser
   },
   resources: {
@@ -46,10 +47,10 @@ Window.create({
     try {
       var res = this.getResources()
       var ctx = this.getContext()
-      // var gui = this.gui = new GUI(ctx, this.getWidth(), this.getHeight())
-      // this.addEventListener(gui)
 
       var gl = ctx.getGL()
+
+      var APP_VERSION = 'app-30'
 
       function getEnumName (e) {
         for (var name in gl) {
@@ -69,6 +70,14 @@ Window.create({
           WEBGL_depth_texture,WEBGL_draw_buffers,ANGLE_instanced_arrays,\
           WEBGL_debug_renderer_info'.toLowerCase().split(',')
         }
+        var glPixelStorei = gl.pixelStorei
+        gl.pixelStorei = function () {
+          try {
+            glPixelStorei.apply(gl, arguments)
+          } catch (e) {
+            console.log(e)
+          }
+        }
         gl.getExtension = function (name) {
           if (name === 'oes_texture_float') return {}
           if (name === 'oes_texture_float_linear') return {}
@@ -77,11 +86,16 @@ Window.create({
           if (name === 'webgl_depth_texture') return {}
           if (name === 'webgl_draw_buffers') {
             return {
-              drawBuffersWEBGL: gl.drawBuffers.bind(gl)
+              drawBuffersWEBGL: function () {
+                // FIXME: first call is throwing error for some reason
+                try {
+                  gl.drawBuffers.apply(gl, arguments)
+                } catch (e) {
+                }
+              }
             }
           }
         }
-
         var GL_COMPRESSED_TEXTURE_FORMATS = 0x86A3
         var glGetParameter = gl.getParameter
         gl.getParameter = function (name) {
@@ -122,15 +136,24 @@ Window.create({
             stencil: false
           }
         }
+        gl.isContextLost = function () {
+          return false
+        }
       }
 
-      var regl = this._regl = require('regl')(gl)
+      var regl = this._regl = require('regl')({
+        gl: gl,
+        extensions: ['WEBGL_depth_texture', 'WEBGL_draw_buffers', 'OES_texture_float']
+      })
       random.seed(10)
 
-      // gui.addParam('Sun Elevation', this, 'elevation', { min: -90, max: 180 }, this.updateSunPosition.bind(this))
+      var gui = this.gui = new GUI(regl, this.getWidth(), this.getHeight())
+      this.addEventListener(gui)
+      gui.addHeader(APP_VERSION)
+      gui.addParam('Sun Elevation', this, 'elevation', { min: -90, max: 180 }, this.updateSunPosition.bind(this))
       var renderer = this.renderer = new Renderer(regl, this.getWidth(), this.getHeight())
 
-      // gui.addParam('Exposure', this.renderer._state, 'exposure', { min: 0.01, max: 5})
+      gui.addParam('Exposure', this.renderer._state, 'exposure', { min: 0.01, max: 5})
       // gui.addParam('Shadow Bias', this.renderer._state, 'bias', { min: 0.001, max: 0.1})
       // gui.addParam('SSAO', this.renderer._state, 'ssao')
       // gui.addParam('SSAO Sharpness', this.renderer._state, 'ssaoSharpness', { min: 0, max: 100 })
@@ -152,9 +175,9 @@ Window.create({
       // gui.addTexture2D('SkyEnvMap', renderer._skyEnvMapTex, { hdr: true })
       // gui.addTextureCube('Reflection Map PREM', renderer._reflectionProbe.getReflectionMap(), { hdr: true })
       // gui.addTextureCube('Irradiance Map', renderer._reflectionProbe.getIrradianceMap(), { hdr: true })
-      // gui.addTexture2D('Color', renderer._frameColorTex, { hdr: true }).setPosition(180, 10)
-      // gui.addTexture2D('Normals', renderer._frameNormalTex)
-      // gui.addTexture2D('Depth', renderer._frameDepthTex)
+      gui.addTexture2D('Color', renderer._frameColorTex, { hdr: true }).setPosition(180, 10)
+      gui.addTexture2D('Normals', renderer._frameNormalTex)
+      gui.addTexture2D('Depth', renderer._frameDepthTex)
       // gui.addTexture2D('Reflection OctMap', renderer._reflectionProbe._reflectionOctMap, { hdr: true })
 
       this.camera = new PerspCamera(45, this.getAspectRatio(), 0.1, 50.0)
@@ -176,40 +199,49 @@ Window.create({
       var y
       var z
       var s
-      for (i = 0; i < 100; i++) {
+      var cubes = []
+      for (i = 0; i < 1000; i++) {
         x = randn_bm() * 8 / 3
         z = randn_bm() * 8 / 3
         y = 2 * random.noise2(x / 2, z / 2) + random.noise2(2 * x, 2 * z)
         s = Math.max(0.0, 3.0 - Math.sqrt(x * x + z * z) / 2)
-        renderer.add(renderer.createNode({
-          mesh: mesh,
-          position: [x, y, z],
-          scale: [1, s, 1],
-          material: {
-            albedoColor: [0.9, 0.9, 0.9, 1.0],
-            rougness: 0.7,
-            metallic: 0.0
-          }
-        }))
+        cubes.push({ position: [x, y, z], scale: [1, s, 1] })
       }
+      renderer.add(renderer.createNode({
+				mesh: mesh,
+				position: [0, 0, 0],
+				scale: [1, 1, 1],
+				material: {
+					baseColor: [0.9, 0.9, 0.9, 1.0],
+					rougness: 0.7,
+					metallic: 0.0
+				},
+				batch: cubes
+			}))
 
-      var sphereMesh = createSphere(0.2 + Math.random())
-      for (i = 0; i < 10; i++) {
+      var sphereMesh = createSphere(0.2 + 0.5 * Math.random())
+      var spheres = []
+      for (i = 0; i < 100; i++) {
         x = rand() * 8 / 3
         z = rand() * 8 / 3
         y = 2 * random.noise2(x / 2, z / 2) + random.noise2(2 * x, 2 * z)
         s = Math.max(0.0, 3.0 - Math.sqrt(x * x + z * z) / 2)
-        renderer.add(renderer.createNode({
-          mesh: sphereMesh,
+        spheres.push({
           position: [x, y, z],
-          scale: [s, s, s],
-          material: {
-            baseColor: gradient(Math.random()).concat(1),
-            rougness: 0.91,
-            metallic: 1.0
-          }
-        }))
+          scale: [s, s, s]
+        })
       }
+      renderer.add(renderer.createNode({
+        mesh: sphereMesh,
+        position: [0, 0, 0],
+        scale: [1, 1, 1],
+        material: {
+          baseColor: gradient(Math.random()).concat(1), // FIXME: baseColor should go to batch
+          rougness: 0.91,
+          metallic: 1.0
+        },
+        batch: spheres
+      }))
       var positions = []
       var p = [0, 0]
       for (i = 0; i < 100; i++) {
@@ -223,7 +255,7 @@ Window.create({
       }
       renderer.add(renderer.createNode({
         mesh: { positions: positions },
-        primitiveType: ctx.LINE_STRIP,
+        primitive: 'line strip',
         material: {
           baseColor: [0.9, 0.9, 0.2, 1],
           roughness: 1
@@ -300,11 +332,15 @@ Window.create({
     if (this.getTime().getElapsedFrames() % 600 === 0) {
       this.renderer._state.profile = false
       // this.renderer._cmdQueue.profile = false
-      this.getContext().getGL().finish()
       console.timeEnd('App:frame')
       console.log('App:fps:', this.getTime().getFPS())
     }
 
+    var sun = this.renderer._directionalLightNodes[0]
+    if (sun.data.light._shadowMap && !sun.guiElem) {
+      sun.guiElem = this.gui.addTexture2D('Sun shadow map', sun.data.light._shadowMap)
+    }
+    this.gui.draw()
     this._regl.poll()
   }
 })

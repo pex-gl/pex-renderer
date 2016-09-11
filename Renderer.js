@@ -1,19 +1,16 @@
 var Vec3 = require('pex-math/Vec3')
 var Vec4 = require('pex-math/Vec4')
+var Mat3 = require('pex-math/Mat3')
 var Mat4 = require('pex-math/Mat4')
-// var Draw = require('pex-draw/Draw')
 var fx = require('./local_modules/pex-fx')
-var random = require('pex-random')
-var MathUtils = require('pex-math/Utils')
-var flatten = require('flatten')
-var Skybox = require('./Skybox')
+// var random = require('pex-random' var MathUtils = require('pex-math/Utils')
+// var flatten = require('flatten')
+// var Skybox = require('./Skybox')
 var SkyEnvMap = require('./SkyEnvMap')
-var ReflectionProbe = require('./ReflectionProbe')
+// var ReflectionProbe = require('./ReflectionProbe')
 var fs = require('fs')
 // var AreaLightsData = require('./AreaLightsData')
-// var CommandQueue = require('./CommandQueue')
 var createTreeNode = require('scene-tree')
-// var SolidColor = require('pex-materials/solid-color')
 
 // pex-fx extensions, extending FXStage
 require('./Postprocess')
@@ -25,8 +22,6 @@ var SOLID_COLOR_VERT = fs.readFileSync(__dirname + '/glsl/SolidColor.vert', 'utf
 var SOLID_COLOR_FRAG = fs.readFileSync(__dirname + '/glsl/SolidColor.frag', 'utf8')
 var SHOW_COLORS_VERT = fs.readFileSync(__dirname + '/glsl/ShowColors.vert', 'utf8')
 var SHOW_COLORS_FRAG = fs.readFileSync(__dirname + '/glsl/ShowColors.frag', 'utf8')
-// var OVERLAY_VERT = fs.readFileSync(__dirname + '/glsl/Overlay.vert', 'utf8')
-// var OVERLAY_FRAG = fs.readFileSync(__dirname + '/glsl/Overlay.frag', 'utf8')
 
 var State = {
   backgroundColor: [0.1, 0.1, 0.1, 1],
@@ -53,14 +48,12 @@ function Renderer (regl, width, height, initialState) {
   this._width = width
   this._height = height
 
-  // this._debugDraw = new Draw(ctx)
   this._debug = false
 
   this._root = createTreeNode()
   this._rootNodeList = this._root.list()
   this._rootPrevSortVersion = -1
 
-  // this.initShadowmaps()
   // this.initCommands()
   // this.initMaterials()
   this.initSkybox()
@@ -73,23 +66,10 @@ function Renderer (regl, width, height, initialState) {
   }
 }
 
-Renderer.prototype.initCommands = function () {
-  var cmdQueue = this._cmdQueue
-  this._clearCommand = cmdQueue.createClearCommand({
-    color: State.backgroundColor,
-    depth: 1
-  })
-}
-
 Renderer.prototype.initMaterials = function () {
   var ctx = this._ctx
   this._solidColorProgram = ctx.createProgram(SOLID_COLOR_VERT, SOLID_COLOR_FRAG)
   this._showColorsProgram = ctx.createProgram(SHOW_COLORS_VERT, SHOW_COLORS_FRAG)
-}
-
-Renderer.prototype.initShadowmaps = function () {
-  var ctx = this._ctx
-  this._shadowMapFbo = ctx.createFramebuffer()
 }
 
 // TODO: move ssao kernels to pex-fx
@@ -105,23 +85,23 @@ Renderer.prototype.initPostproces = function () {
   // this._fsqMesh = ctx.createMesh(fsqAttributes, fsqIndices)
 
   console.log('initPostproces', this._width)
-  this._frameColorTex = regl.texture({ width: this._width, height: this._height, type2: 'half float' })
-  this._frameNormalTex = regl.texture({ width: this._width, height: this._height, type2: 'half float' })
-  this._frameDepthTex = regl.texture({ width: this._width, height: this._height, type: 'uint16', format: 'depth' })
+  this._frameColorTex = regl.texture({ width: this._width, height: this._height, type2: 'half float' }) // TODO
+  this._frameNormalTex = regl.texture({ width: this._width, height: this._height, type2: 'half float' }) // TODO
+  this._frameDepthTex = regl.texture({ width: this._width, height: this._height, type: 'depth stencil', format: 'depth stencil' })
 
+  console.log('depthtex', Object.keys(this._frameDepthTex), this._frameDepthTex._reglType)
   this._frameFbo = regl.framebuffer({
     color: [
       this._frameColorTex,
       this._frameNormalTex
     ],
-    depthTexture: this._frameDepthTex
+    depthStencil: this._frameDepthTex
   })
 
   this._drawFrameFboCommand = regl({
     framebuffer: this._frameFbo,
     viewport: { x: 0, y: 0, width: this._width, height: this._height }
   })
-
   // this._overlayProgram = ctx.createProgram(OVERLAY_VERT, OVERLAY_FRAG)
 
   this._fx = fx(regl)
@@ -159,8 +139,9 @@ Renderer.prototype.initPostproces = function () {
 }
 
 Renderer.prototype.initSkybox = function () {
-  // this._skyEnvMapTex = new SkyEnvMap(cmdQueue, State.sunPosition)
-  // this._skybox = new Skybox(cmdQueue, this._skyEnvMapTex)
+  var regl = this._regl
+  this._skyEnvMapTex = new SkyEnvMap(regl, State.sunPosition)
+  // this._skybox = new Skybox(cmdQueue, this._skyEnvMapTex.getTexture())
   // this._reflectionProbe = new ReflectionProbe(cmdQueue, [0, 0, 0])
 
   // No need to set default props as these will be automatically updated on first render
@@ -186,7 +167,7 @@ Renderer.prototype.createNode = function (data) {
 }
 
 Renderer.prototype.initNode = function (data) {
-  // var regl = this._regl
+  var regl = this._regl
   if (!data.position) data.position = [0, 0, 0]
   if (!data.scale) data.scale = [1, 1, 1]
   if (!data.rotation) data.rotation = [0, 0, 0, 1]
@@ -227,37 +208,23 @@ Renderer.prototype.initNode = function (data) {
       if (light.shadows === undefined) { light.shadows = true }
       if (light.color === undefined) { light.color = [1, 1, 1, 1] }
       if (light.direction === undefined) { light.direction = [0, -1, 0] }
-      // REGL light._colorMap = ctx.createTexture2D(null, 1024, 1024) // FIXME: remove light color map
-      // REGL light._shadowMap = ctx.createTexture2D(null, 1024, 1024, { format: ctx.DEPTH_COMPONENT, type: ctx.UNSIGNED_SHORT})
+
+      // TODO: continue here
+
+      light._colorMap = regl.texture({ width: 1024, height: 1024 }) // FIXME: remove light color map
+      light._shadowMap = regl.texture({ width: 1024, height: 1024, format: 'depth stencil', type: 'depth stencil' })
+      light._shadowFbo = regl.framebuffer({
+        color: [light._colorMap],
+        depthStencil: light._shadowMap
+      })
+
+      light._shadowMapDrawCommand = regl({
+        framebuffer: light._shadowFbo,
+        viewport: { x: 0, y: 0, width: 1024, height: 1024 }
+      })
       light._viewMatrix = Mat4.create()
       light._projectionMatrix = Mat4.create()
       light._prevDirection = [0, 0, 0]
-
-      // FIXME: how Metal / Vulkan implement FBO clear on bind?
-      // REGL
-      // light._shadowMapClearCommand = cmdQueue.createClearCommand({
-        // framebuffer: this._shadowMapFbo,
-        // framebufferColorAttachments: {
-          // '0': { target: light._colorMap.getTarget(), handle: light._colorMap.getHandle(), level: 0 }
-        // },
-        // framebufferDepthAttachment: { target: light._shadowMap.getTarget(), handle: light._shadowMap.getHandle(), level: 0},
-        // color: [0, 0, 0, 1],
-        // depth: 1
-      // })
-
-      // REGL
-      // light._shadowMapDrawCommand = cmdQueue.createDrawCommand({
-        // framebuffer: this._shadowMapFbo,
-        // framebufferColorAttachments: {
-          // '0': { target: light._colorMap.getTarget(), handle: light._colorMap.getHandle(), level: 0 }
-        // },
-        // framebufferDepthAttachment: { target: light._shadowMap.getTarget(), handle: light._shadowMap.getHandle(), level: 0},
-        // viewport: [0, 0, light._shadowMap.getWidth(), light._shadowMap.getHeight()],
-        // projectionMatrix: light._projectionMatrix,
-        // viewMatrix: light._viewMatrix,
-        // depthTest: true,
-        // colorMask: [0, 0, 0, 0]
-      // })
     } else if (data.light.type === 'point') {
       if (data.light.radius === undefined) { data.light.radius = 10 }
     } else if (data.light.type === 'area') {
@@ -274,7 +241,7 @@ Renderer.prototype.getNodes = function (type) {
 }
 
 Renderer.prototype.updateDirectionalLightShadowMap = function (lightNode) {
-  var cmdQueue = this._cmdQueue
+  var regl = this._regl
   var light = lightNode.data.light
 
   var target = Vec3.copy(lightNode.data.position)
@@ -282,9 +249,12 @@ Renderer.prototype.updateDirectionalLightShadowMap = function (lightNode) {
   Mat4.lookAt(light._viewMatrix, lightNode.data.position, target, [0, 1, 0])
   Mat4.ortho(light._projectionMatrix, light._left, light._right, light._bottom, light._top, light._near, light._far)
 
-  cmdQueue.submit(light._shadowMapClearCommand)
-  cmdQueue.submit(light._shadowMapDrawCommand, null, function () {
-    this.drawMeshes(true)
+  light._shadowMapDrawCommand(function (context) {
+    regl.clear({
+      color: [0, 0, 0, 1],
+      depth: 1
+    })
+    this.drawMeshes(light)
   }.bind(this))
 }
 
@@ -345,8 +315,9 @@ Renderer.prototype.updateNodeLists = function () {
   this._cameraNodes = this.getNodes('camera')
   // TODO: reimplement node.enabled filtering
   this._meshNodes = this.getNodes('mesh')
-		.concat(this.getNodes('vertexArray'))
-		.filter(function (node) { return node.data.enabled })
+		.concat(this.getNodes('attributes'))
+		// .filter(function (node) { return node.data.enabled })
+  console.log('updateNodesList meshNodes', this._meshNodes.length)
   this._lightNodes = this.getNodes('light').filter(function (node) { return node.data.enabled })
   this._directionalLightNodes = this._lightNodes.filter(function (node) { return node.data.light.type === 'directional'})
   this._pointLightNodes = this._lightNodes.filter(function (node) { return node.data.light.type === 'point'})
@@ -359,7 +330,7 @@ Renderer.prototype.updateNodeLists = function () {
 // set update transforms once per frame
 // draw + shadowmap @ 1000 objects x 30 uniforms = 60'000 setters / frame!!
 // transform feedback?
-Renderer.prototype.drawMeshes = function (shadowMappingPass) {
+Renderer.prototype.drawMeshes = function (shadowMappingLight) {
   // var ctx = this._ctx
   // var cmdQueue = this._cmdQueue
 
@@ -398,8 +369,8 @@ Renderer.prototype.drawMeshes = function (shadowMappingPass) {
     sharedUniforms['uDirectionalLights[' + i + '].near'] = light._near
     sharedUniforms['uDirectionalLights[' + i + '].far'] = light._far
     sharedUniforms['uDirectionalLights[' + i + '].bias'] = State.bias
-    // sharedUniforms['uDirectionalLights[' + i + '].shadowMapSize'] = [light._shadowMap.getWidth(), light._shadowMap.getHeight()]
-    // sharedUniforms['uDirectionalLightShadowMaps[' + i + ']'] = light._shadowMap
+    sharedUniforms['uDirectionalLights[' + i + '].shadowMapSize'] = [light._shadowMap.width, light._shadowMap.height]
+    sharedUniforms['uDirectionalLightShadowMaps[' + i + ']'] = light._shadowMap
   })
 
   pointLightNodes.forEach(function (lightNode, i) {
@@ -418,9 +389,18 @@ Renderer.prototype.drawMeshes = function (shadowMappingPass) {
     // sharedUniforms['uAreaLights[' + i + '].size'] = [lightNode.data.scale[0] / 2, lightNode.data.scale[1] / 2]
   })
 
-  var viewMatrix = camera.getViewMatrix()
-  var inverseViewMatrix = Mat4.invert(Mat4.create(), viewMatrix) // FIXME: invViewMat allocation
-  var projectionMatrix = camera.getProjectionMatrix()
+  var viewMatrix
+  var inverseViewMatrix
+  var projectionMatrix
+  if (shadowMappingLight) {
+    projectionMatrix = shadowMappingLight._projectionMatrix
+    viewMatrix = shadowMappingLight._viewMatrix
+    inverseViewMatrix = Mat4.invert(Mat4.create(), viewMatrix) // FIXME: invViewMat allocation
+  } else {
+    projectionMatrix = camera.getProjectionMatrix()
+    viewMatrix = camera.getViewMatrix()
+    inverseViewMatrix = Mat4.invert(Mat4.create(), viewMatrix) // FIXME: invViewMat allocation
+  }
 
   // var prevProgram = null
   for (var i = 0; i < meshNodes.length; i++) {
@@ -444,13 +424,6 @@ Renderer.prototype.drawMeshes = function (shadowMappingPass) {
       }
     }
 
-    if (shadowMappingPass) {
-      // meshProgram = material._shadowProgram = material._shadowProgram || this.getMeshProgram(material, {})
-    } else {
-      // meshProgram = material._program = material._program || this.getMeshProgram(material, {
-      // })
-    }
-
     // if (meshProgram !== prevProgram) {
       // prevProgram = meshProgram
       // this is a bit hacky but prevents checking the same uniforms over and over again
@@ -461,7 +434,7 @@ Renderer.prototype.drawMeshes = function (shadowMappingPass) {
     if (!data._drawCommand) {
       var regl = this._regl
       var meshProgram = this.getMeshProgram(material, {
-        numDirectionalLights: directionalLightNodes.length,
+        numDirectionalLights: directionalLightNodes.length
         // numPointLights: pointLightNodes.length,
         // numAreaLights: areaLightNodes.length,
         // useReflectionProbes: true
@@ -472,18 +445,20 @@ Renderer.prototype.drawMeshes = function (shadowMappingPass) {
           aNormal: regl.buffer(data.mesh.normals || data.mesh.positions),
           aTexCoord0: regl.buffer(data.mesh.uvs || data.mesh.positions)
         },
+        primitive: data.primitive || 'triangles',
         // elements: regl.elements(data.mesh.cells),
         vert: meshProgram.vert,
         frag: meshProgram.frag,
-        depth: {
-        },
+        // depth: {
+          // enable: true
+        // },
         uniforms: Object.assign({
           uColor: material.baseColor,
-          uModelMatrix: regl.prop('uModelMatrix'),
-          uNormalMatrix: regl.prop('uNormalMatrix'),
-          uViewMatrix: regl.prop('uViewMatrix'),
-          uProjectionMatrix: regl.prop('uProjectionMatrix'),
-          uInverseViewMatrix: regl.prop('uInverseViewMatrix')
+          uModelMatrix: regl.prop('modelMatrix'),
+          uNormalMatrix: regl.prop('normalMatrix'),
+          uProjectionMatrix: regl.context('projectionMatrix'),
+          uViewMatrix: regl.context('viewMatrix'),
+          uInverseViewMatrix: regl.context('inverseViewMatrix')
         }, cachedUniforms, sharedUniforms)
         // mesh: data.mesh,
         // vertexArray: data.vertexArray,
@@ -495,6 +470,24 @@ Renderer.prototype.drawMeshes = function (shadowMappingPass) {
         // depthTest: true,
         // cullFace: true,
         // cullFaceMode: ctx.BACK
+      }
+      if (data.batch) {
+        console.log('batches mesh', data.batch.length)
+        cmdData.uniforms.uModelMatrix = function (context, props) {
+          // FIXME: can i cache is somehow? Maybe just pass modelMatrix directly?
+          var m = Mat4.create()
+          var pos = regl.prop('position')
+          Mat4.translate(m, props.position)
+          Mat4.scale(m, props.scale)
+          // TODO: add rotation
+          return m
+        }
+        cmdData.uniforms.uNormalMatrix = function () {
+          var m = Mat3.create()
+          // TODO: implement normal matrix computation
+          // Mat3.translate(m, regl.prop('position'))
+          return m
+        }
       }
       if (data.mesh.cells) {
         cmdData.elements = regl.elements(data.mesh.cells)
@@ -508,12 +501,17 @@ Renderer.prototype.drawMeshes = function (shadowMappingPass) {
     meshNode.data._drawCommand.program = meshProgram
 
     // cmdQueue.submit(meshNode.data._drawCommand)
-    meshNode.data._drawCommand({
-      uModelMatrix: meshNode.modelMatrix,
-      uNormalMatrix: meshNode.normalMatrix,
-      uViewMatrix: viewMatrix,
-      uInverseViewMatrix: inverseViewMatrix,
-      uProjectionMatrix: projectionMatrix
+
+    // FIXME: this should happen only once
+    this._setupCameraCommand({
+      projectionMatrix: projectionMatrix,
+      viewMatrix: viewMatrix,
+      inverseViewMatrix: inverseViewMatrix
+    }, function () {
+      meshNode.data._drawCommand(meshNode.data.batch || {
+        modelMatrix: meshNode.modelMatrix,
+        normalMatrix: meshNode.normalMatrix
+     })
     })
 
     // TODO: implement instancing support
@@ -606,34 +604,42 @@ Renderer.prototype.draw = function () {
 
     // TODO: update sky only if it's used
     // REGL
-    // this._skyEnvMapTex.setSunPosition(State.sunPosition)
-    // this._skybox.setEnvMap(State.skyEnvMap || this._skyEnvMapTex)
+    this._skyEnvMapTex.setSunPosition(State.sunPosition)
+    // this._skybox.setEnvMap(State.skyEnvMap || this._skyEnvMapTex.getTexture())
     // this._reflectionProbe.update(function () {
       // this._skybox.draw()
     // }.bind(this))
   }
 
   // draw scene
+  this._setupCameraCommand = regl({
+    context: {
+      projectionMatrix: regl.prop('projectionMatrix'),
+      viewMatrix: regl.prop('viewMatrix'),
+      inverseViewMatrix: regl.prop('inverseViewMatrix')
+    }
+  })
 
   // REGL
-  // directionalLightNodes.forEach(function (lightNode) {
-    // var light = lightNode.data.light
-    // var positionHasChanged = !Vec3.equals(lightNode.data.position, lightNode.data._prevPosition)
-    // var directionHasChanged = !Vec3.equals(light.direction, light._prevDirection)
-    // if (positionHasChanged || directionHasChanged) {
-      // Vec3.set(lightNode.data._prevPosition, lightNode.data.position)
-      // Vec3.set(light._prevDirection, light.direction)
-      // this.updateDirectionalLightShadowMap(lightNode)
-    // }
-  // }.bind(this))
+  directionalLightNodes.forEach(function (lightNode) {
+    var light = lightNode.data.light
+    var positionHasChanged = !Vec3.equals(lightNode.data.position, lightNode.data._prevPosition)
+    var directionHasChanged = !Vec3.equals(light.direction, light._prevDirection)
+    if (positionHasChanged || directionHasChanged) {
+      Vec3.set(lightNode.data._prevPosition, lightNode.data.position)
+      Vec3.set(light._prevDirection, light.direction)
+      this.updateDirectionalLightShadowMap(lightNode)
+    }
+  }.bind(this))
 
   // var currentCamera = cameraNodes[0].data.camera
 
   // cmdQueue.submit(this._clearFrameFboCommand)
 
+
   this._drawFrameFboCommand(function (context) {
     regl.clear({
-      color: [1, 0, 0, 1],
+      color: [1, 1, 0, 1],
       depth: 1
     })
   // cmdQueue.submit(this._drawFrameFboCommand, {
@@ -660,6 +666,9 @@ Renderer.prototype.draw = function () {
 
   var root = this._fx.reset()
   var color = root.asFXStage(this._frameColorTex, 'img')
+  if (directionalLightNodes[0].data.light) {
+    // color = root.asFXStage(directionalLightNodes[0].data.light._colorMap, 'img')
+  }
   var final = color
 
   // // FIXME: ssao internally needs uProjectionMatrix...
