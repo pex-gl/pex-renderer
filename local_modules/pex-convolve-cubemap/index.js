@@ -8,20 +8,11 @@ var FRAG = fs.readFileSync(__dirname + '/glsl/convolve.frag', 'utf8')
 var quadPositions = [[-1, -1], [1, -1], [1, 1], [-1, 1]]
 var quadFaces = [ [0, 1, 2], [0, 2, 3]]
 
-var quadMesh = null
-var convolveProgram = null
+var drawQuadCommand = null
 var hammersleyPointSetMap = null
 
-function convolveCubemap (cmdQueue, fromCubemap, toCubemap) {
-  var ctx = cmdQueue.getContext()
-
-  if (!quadMesh) {
-    var quadAttributes = [ { data: quadPositions, location: ctx.ATTRIB_POSITION } ]
-    var quadIndices = { data: quadFaces }
-    quadMesh = ctx.createMesh(quadAttributes, quadIndices)
-
-    convolveProgram = ctx.createProgram(VERT, FRAG)
-
+function convolveCubemap (regl, fromCubemap, toCubemap) {
+  if (!drawQuadCommand) {
     var numSamples = 512
     var hammersleyPointSet = new Float32Array(4 * numSamples)
     for (var i = 0; i < numSamples; i++) {
@@ -32,18 +23,38 @@ function convolveCubemap (cmdQueue, fromCubemap, toCubemap) {
       hammersleyPointSet[i * 4 + 3] = 0
     }
 
-    hammersleyPointSetMap = ctx.createTexture2D(hammersleyPointSet, 1, numSamples, { type: ctx.FLOAT, magFilter: ctx.NEAREST, minFilter: ctx.NEAREST })
-  }
-  renderToCubemap(cmdQueue, toCubemap, function () {
-    var drawCommand = cmdQueue.createDrawCommand({
-      mesh: quadMesh,
-      program: convolveProgram,
+    hammersleyPointSetMap = regl.texture({
+      width: 1,
+      height: numSamples,
+      data: hammersleyPointSet,
+      type: 'float',
+      min: 'nearest',
+      max: 'nearest'
+    })
+
+    drawQuadCommand = regl({
+      attributes: {
+        aPosition: quadPositions
+      },
+      elements: quadFaces,
+      vert: VERT,
+      frag: FRAG,
       uniforms: {
-        uEnvMap: fromCubemap,
+        uProjectionMatrix: regl.context('projectionMatrix'),
+        uViewMatrix: regl.context('viewMatrix'),
+        uEnvMap: regl.prop('cubemap'),
         uHammersleyPointSetMap: hammersleyPointSetMap
       }
     })
-    cmdQueue.submit(drawCommand)
+  }
+
+  renderToCubemap(regl, toCubemap, function () {
+    regl.clear({
+      color: [0, 0, 1, 1]
+    })
+    drawQuadCommand({
+      cubemap: fromCubemap
+    })
   })
 }
 

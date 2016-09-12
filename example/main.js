@@ -75,13 +75,26 @@ Window.create({
           try {
             glPixelStorei.apply(gl, arguments)
           } catch (e) {
-            console.log(e)
+            // console.log(e)
           }
+        }
+        var glDrawingBufferWidth = gl.drawingBufferWidth
+        gl.drawingBufferWidth = function () {
+          console.log('drawingBufferWidth', arguments)
+          glDrawingBufferWidth.apply(gl, arguments)
+        }
+        var glTexImage2D = gl.texImage2D
+        gl.texImage2D = function () {
+          glTexImage2D.apply(gl, arguments)
         }
         gl.getExtension = function (name) {
           if (name === 'oes_texture_float') return {}
           if (name === 'oes_texture_float_linear') return {}
-          if (name === 'oes_texture_half_float') return {}
+          if (name === 'oes_texture_half_float') {
+            return {
+              HALF_FLOAT_OES: isBrowser ? 0x8D61 : gl.HALF_FLOAT
+            }
+          }
           if (name === 'oes_texture_half_float_linear') return {}
           if (name === 'webgl_depth_texture') return {}
           if (name === 'webgl_draw_buffers') {
@@ -141,9 +154,15 @@ Window.create({
         }
       }
 
+      gl.getEnumName = getEnumName
+
       var regl = this._regl = require('regl')({
         gl: gl,
-        extensions: ['WEBGL_depth_texture', 'WEBGL_draw_buffers', 'OES_texture_float']
+        extensions: [
+          'WEBGL_depth_texture',
+          'WEBGL_draw_buffers',
+          'OES_texture_float',
+          'OES_texture_half_float']
       })
       random.seed(10)
 
@@ -172,9 +191,9 @@ Window.create({
         // gui.addTexture2D('EnvMap', envMapTex, { hdr: true })
         renderer._state.skyEnvMap = envMapTex
       }
-      // gui.addTexture2D('SkyEnvMap', renderer._skyEnvMapTex, { hdr: true })
-      // gui.addTextureCube('Reflection Map PREM', renderer._reflectionProbe.getReflectionMap(), { hdr: true })
-      // gui.addTextureCube('Irradiance Map', renderer._reflectionProbe.getIrradianceMap(), { hdr: true })
+      gui.addTexture2D('SkyEnvMap', renderer._skyEnvMapTex.getTexture(), { hdr: true })
+      gui.addTextureCube('Reflection Map PREM', renderer._reflectionProbe.getReflectionMap(), { hdr: true })
+      gui.addTextureCube('Irradiance Map', renderer._reflectionProbe.getIrradianceMap(), { hdr: true })
       gui.addTexture2D('Color', renderer._frameColorTex, { hdr: true }).setPosition(180, 10)
       gui.addTexture2D('Normals', renderer._frameNormalTex)
       gui.addTexture2D('Depth', renderer._frameDepthTex)

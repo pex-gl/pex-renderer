@@ -10,25 +10,52 @@ var sides = [
   { eye: [0, 0, 0], target: [0, 0, -1], up: [0, -1, 0] }
 ]
 
-var fbo = null
+var drawCubeFace = null
+var cubeFbo = null
 var projectionMatrix = null
 var viewMatrix = null
 
-function renderToCubemap (cmdQueue, cubemap, drawScene, level) {
-  var ctx = cmdQueue.getContext()
+function renderToCubemap (regl, cubemap, drawScene/*, level*/) {
+  // level = level || 0
 
-  level = level || 0
-  if (!fbo) {
-    fbo = ctx.createFramebuffer()
-    fbo.id = 'render-to-cubemap'
+  if (!drawCubeFace) {
     projectionMatrix = Mat4.perspective(Mat4.create(), 90, 1, 0.001, 50.0)
     viewMatrix = Mat4.create()
+
+    cubeFbo = regl.framebufferCube({
+      radius: cubemap.width,
+      color: cubemap,
+      depth: false,
+      stencil: false
+    })
+
+    drawCubeFace = regl({
+      framebuffer: function (context, props, batchId) {
+        return cubeFbo.faces[batchId]
+      },
+      context: {
+        projectionMatrix: projectionMatrix,
+        viewMatrix: function (context, props, batchId) {
+          var side = sides[batchId]
+          Mat4.lookAt(viewMatrix, side.eye, side.target, side.up)
+          return viewMatrix
+        }
+      }
+    })
   }
+  // TODO: add level
+  // var levelScale = 1.0 / Math.pow(2.0, level)
+  cubeFbo({
+    radius: cubemap.width,
+    color: cubemap,
+    depth: false,
+    stencil: false
+  })
 
-  var levelScale = 1.0 / Math.pow(2.0, level)
-
+  // drawCubeFace.call({ cubemap: cubemap }, 6, drawScene)
+  drawCubeFace(6, drawScene)
+  /*
   sides.forEach(function (side, sideIndex) {
-    Mat4.lookAt(viewMatrix, side.eye, side.target, side.up)
 
     // TODO: color attacments are ugly
     // TODO: missing depth map, ok-ish because we only render sky
@@ -54,6 +81,7 @@ function renderToCubemap (cmdQueue, cubemap, drawScene, level) {
     cmdQueue.submit(clearCommand)
     cmdQueue.submit(drawCommand, null, drawScene)
   })
+  */
 }
 
 module.exports = renderToCubemap

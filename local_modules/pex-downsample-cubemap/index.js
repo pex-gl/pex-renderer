@@ -7,30 +7,35 @@ var FRAG = fs.readFileSync(__dirname + '/glsl/downsample.frag', 'utf8')
 var quadPositions = [[-1, -1], [1, -1], [1, 1], [-1, 1]]
 var quadFaces = [ [0, 1, 2], [0, 2, 3]]
 
-var quadMesh = null
-var downsampleProgram = null
+var drawQuadCommand = null
 
-function downsampleCubemap (cmdQueue, fromCubemap, toCubemap) {
-  var ctx = cmdQueue.getContext()
-
-  if (!quadMesh) {
-    var quadAttributes = [ { data: quadPositions, location: ctx.ATTRIB_POSITION } ]
-    var quadIndices = { data: quadFaces }
-    quadMesh = ctx.createMesh(quadAttributes, quadIndices)
-
-    downsampleProgram = ctx.createProgram(VERT, FRAG)
-  }
-
-  renderToCubemap(cmdQueue, toCubemap, function () {
-    var drawCommand = cmdQueue.createDrawCommand({
-      mesh: quadMesh,
-      program: downsampleProgram,
+function downsampleCubemap (regl, fromCubemap, toCubemap) {
+  if (!drawQuadCommand) {
+    drawQuadCommand = regl({
+      attributes: {
+        aPosition: quadPositions
+      },
+      elements: quadFaces,
+      vert: VERT,
+      frag: FRAG,
       uniforms: {
-        uEnvMap: fromCubemap,
-        uTextureSize: toCubemap.getWidth()
+        uProjectionMatrix: regl.context('projectionMatrix'),
+        uViewMatrix: regl.context('viewMatrix'),
+        uEnvMap: regl.prop('cubemap'),
+        uTextureSize: regl.prop('cubemapSize')
       }
     })
-    cmdQueue.submit(drawCommand)
+  }
+
+  renderToCubemap(regl, toCubemap, function () {
+    regl.clear({
+      color: [0, 0, 1, 1]
+    })
+    drawQuadCommand({
+      cubemap: fromCubemap,
+      // TODO: this should be called targetCubemapSize, not cubemapSize
+      cubemapSize: toCubemap.width
+    })
   })
 }
 

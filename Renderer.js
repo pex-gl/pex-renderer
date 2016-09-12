@@ -5,9 +5,9 @@ var Mat4 = require('pex-math/Mat4')
 var fx = require('./local_modules/pex-fx')
 // var random = require('pex-random' var MathUtils = require('pex-math/Utils')
 // var flatten = require('flatten')
-// var Skybox = require('./Skybox')
+var Skybox = require('./Skybox')
 var SkyEnvMap = require('./SkyEnvMap')
-// var ReflectionProbe = require('./ReflectionProbe')
+var ReflectionProbe = require('./ReflectionProbe')
 var fs = require('fs')
 // var AreaLightsData = require('./AreaLightsData')
 var createTreeNode = require('scene-tree')
@@ -84,12 +84,10 @@ Renderer.prototype.initPostproces = function () {
   // var fsqIndices = { data: fsqFaces }
   // this._fsqMesh = ctx.createMesh(fsqAttributes, fsqIndices)
 
-  console.log('initPostproces', this._width)
   this._frameColorTex = regl.texture({ width: this._width, height: this._height, type2: 'half float' }) // TODO
   this._frameNormalTex = regl.texture({ width: this._width, height: this._height, type2: 'half float' }) // TODO
   this._frameDepthTex = regl.texture({ width: this._width, height: this._height, type: 'depth stencil', format: 'depth stencil' })
 
-  console.log('depthtex', Object.keys(this._frameDepthTex), this._frameDepthTex._reglType)
   this._frameFbo = regl.framebuffer({
     color: [
       this._frameColorTex,
@@ -141,8 +139,8 @@ Renderer.prototype.initPostproces = function () {
 Renderer.prototype.initSkybox = function () {
   var regl = this._regl
   this._skyEnvMapTex = new SkyEnvMap(regl, State.sunPosition)
-  // this._skybox = new Skybox(cmdQueue, this._skyEnvMapTex.getTexture())
-  // this._reflectionProbe = new ReflectionProbe(cmdQueue, [0, 0, 0])
+  this._skybox = new Skybox(regl, this._skyEnvMapTex.getTexture())
+  this._reflectionProbe = new ReflectionProbe(regl, [0, 0, 0])
 
   // No need to set default props as these will be automatically updated on first render
   this._sunLightNode = this.createNode({
@@ -345,11 +343,11 @@ Renderer.prototype.drawMeshes = function (shadowMappingLight) {
   var camera = cameraNodes[0].data.camera
 
   var sharedUniforms = this._sharedUniforms = this._sharedUniforms || {}
-  // sharedUniforms.uReflectionMap = this._reflectionProbe.getReflectionMap()
-  // sharedUniforms.uIrradianceMap = this._reflectionProbe.getIrradianceMap()
-  // sharedUniforms.uReflectionMapFlipEnvMap = this._reflectionProbe.getReflectionMap().getFlipEnvMap ? this._reflectionProbe.getReflectionMap().getFlipEnvMap() : -1
-  // sharedUniforms.uIrradianceMapFlipEnvMap = this._reflectionProbe.getIrradianceMap().getFlipEnvMap ? this._reflectionProbe.getIrradianceMap().getFlipEnvMap() : -1
-  // sharedUniforms.uCameraPosition = cameraNodes[0].data.camera.getPosition()
+  sharedUniforms.uReflectionMap = this._reflectionProbe.getReflectionMap()
+  sharedUniforms.uIrradianceMap = this._reflectionProbe.getIrradianceMap()
+  sharedUniforms.uReflectionMapFlipEnvMap = 1 // TODO: this._reflectionProbe.getReflectionMap().getFlipEnvMap ? this._reflectionProbe.getReflectionMap().getFlipEnvMap() : -1
+  sharedUniforms.uIrradianceMapFlipEnvMap = 1 // TODO: this._reflectionProbe.getIrradianceMap().getFlipEnvMap ? this._reflectionProbe.getIrradianceMap().getFlipEnvMap() : -1
+  sharedUniforms.uCameraPosition = cameraNodes[0].data.camera.getPosition()
 
   if (!this.areaLightTextures) {
     // this.ltc_mat_texture = ctx.createTexture2D(new Float32Array(AreaLightsData.mat), 64, 64, { type: ctx.FLOAT, flipY: false })
@@ -434,10 +432,10 @@ Renderer.prototype.drawMeshes = function (shadowMappingLight) {
     if (!data._drawCommand) {
       var regl = this._regl
       var meshProgram = this.getMeshProgram(material, {
-        numDirectionalLights: directionalLightNodes.length
+        numDirectionalLights: directionalLightNodes.length,
         // numPointLights: pointLightNodes.length,
         // numAreaLights: areaLightNodes.length,
-        // useReflectionProbes: true
+        useReflectionProbes: true
       })
       var cmdData = {
         attributes: {
@@ -472,11 +470,9 @@ Renderer.prototype.drawMeshes = function (shadowMappingLight) {
         // cullFaceMode: ctx.BACK
       }
       if (data.batch) {
-        console.log('batches mesh', data.batch.length)
         cmdData.uniforms.uModelMatrix = function (context, props) {
           // FIXME: can i cache is somehow? Maybe just pass modelMatrix directly?
           var m = Mat4.create()
-          var pos = regl.prop('position')
           Mat4.translate(m, props.position)
           Mat4.scale(m, props.scale)
           // TODO: add rotation
@@ -605,10 +601,10 @@ Renderer.prototype.draw = function () {
     // TODO: update sky only if it's used
     // REGL
     this._skyEnvMapTex.setSunPosition(State.sunPosition)
-    // this._skybox.setEnvMap(State.skyEnvMap || this._skyEnvMapTex.getTexture())
-    // this._reflectionProbe.update(function () {
-      // this._skybox.draw()
-    // }.bind(this))
+    this._skybox.setEnvMap(State.skyEnvMap || this._skyEnvMapTex.getTexture())
+    this._reflectionProbe.update(function () {
+      this._skybox.draw()
+    }.bind(this))
   }
 
   // draw scene
@@ -632,21 +628,19 @@ Renderer.prototype.draw = function () {
     }
   }.bind(this))
 
-  // var currentCamera = cameraNodes[0].data.camera
-
-  // cmdQueue.submit(this._clearFrameFboCommand)
-
-
   this._drawFrameFboCommand(function (context) {
     regl.clear({
       color: [1, 1, 0, 1],
       depth: 1
     })
-  // cmdQueue.submit(this._drawFrameFboCommand, {
-    // projectionMatrix: currentCamera.getProjectionMatrix(),
-    // viewMatrix: currentCamera.getViewMatrix()
-  // }, function () {
-    // this._skybox.draw()
+    // FIXME: share that context with mesh draw
+    var currentCamera = this._cameraNodes[0].data.camera
+    this._setupCameraCommand({
+      projectionMatrix: currentCamera.getProjectionMatrix(),
+      viewMatrix: currentCamera.getViewMatrix()
+    }, function () {
+      this._skybox.draw()
+    }.bind(this))
     // if (State.profile) {
       // console.time('Renderer:drawMeshes')
       // console.time('Renderer:drawMeshes:finish')

@@ -11,6 +11,7 @@ function SkyEnvMap (regl, sunPosition) {
   })
 
   var quad = createQuad()
+  console.log('SkyEnvMap quad', quad)
 
   this._fbo = regl.framebuffer({
     color: this._texture
@@ -28,6 +29,9 @@ function SkyEnvMap (regl, sunPosition) {
     elements: quad.cells,
     uniforms: {
       uSunPosition: regl.prop('sunPosition')
+    },
+    depth: {
+      enable: false
     }
   })
   this.setSunPosition(sunPosition)
@@ -36,10 +40,12 @@ function SkyEnvMap (regl, sunPosition) {
 SkyEnvMap.prototype.setSunPosition = function (sunPosition) {
   var regl = this._regl
   this._drawCommand({
-    sunPosition: this.sunPosition
-  }, function () {
-    regl.clear({ color: [0, 0, 0, 0] })
+    sunPosition: sunPosition
   })
+}
+
+SkyEnvMap.prototype.getTexture = function () {
+  return this._texture
 }
 
 module.exports = SkyEnvMap

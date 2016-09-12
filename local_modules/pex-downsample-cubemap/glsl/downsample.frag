@@ -74,25 +74,25 @@ mat4 inverse_1_0(mat4 m) {
 uniform samplerCube uEnvMap;
 
 uniform mat4 uProjectionMatrix;
-uniform mat4 uInverseViewMatrix;
 uniform mat4 uViewMatrix;
 
 uniform float uTextureSize;
 
-vec4 sample(vec2 screenPos, mat4 inverseProjectionMatrix) {
+vec4 sample(vec2 screenPos, mat4 inverseViewMatrix, mat4 inverseProjectionMatrix) {
     vec4 position = vec4(screenPos.x / uTextureSize * 2.0 - 1.0, screenPos.y / uTextureSize * 2.0 - 1.0, 0.0, 1.0);
-    vec3 N = (uInverseViewMatrix * inverseProjectionMatrix * position).xyz;
+    vec3 N = (inverseViewMatrix * inverseProjectionMatrix * position).xyz;
     return textureCube(uEnvMap, N);
 }
 
 void main() {
     mat4 inverseProjectionMatrix = inverse_1_0(uProjectionMatrix);
+    mat4 inverseViewMatrix = inverse_1_0(uViewMatrix);
 
     vec4 color = vec4(0.0);
-    color += sample(gl_FragCoord.xy + vec2(-0.5, -0.5), inverseProjectionMatrix);
-    color += sample(gl_FragCoord.xy + vec2(-0.5, +0.5), inverseProjectionMatrix);
-    color += sample(gl_FragCoord.xy + vec2(+0.5, +0.5), inverseProjectionMatrix);
-    color += sample(gl_FragCoord.xy + vec2(+0.5, -0.5), inverseProjectionMatrix);
+    color += sample(gl_FragCoord.xy + vec2(-0.5, -0.5), inverseViewMatrix, inverseProjectionMatrix);
+    color += sample(gl_FragCoord.xy + vec2(-0.5, +0.5), inverseViewMatrix, inverseProjectionMatrix);
+    color += sample(gl_FragCoord.xy + vec2(+0.5, +0.5), inverseViewMatrix, inverseProjectionMatrix);
+    color += sample(gl_FragCoord.xy + vec2(+0.5, -0.5), inverseViewMatrix, inverseProjectionMatrix);
     color *= 0.25;
 
     gl_FragColor = color;

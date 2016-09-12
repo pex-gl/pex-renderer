@@ -896,22 +896,21 @@ void main() {
     vec3 diffuseColor = baseColor * (1.0 - metallic);
     vec3 specularColor = mix(vec3(1.0), baseColor, metallic);
 
-    // vec3 indirectDiffuse = vec3(0.0);
-    // vec3 indirectSpecular = vec3(0.0);
+    vec3 indirectDiffuse = vec3(0.0);
+    vec3 indirectSpecular = vec3(0.0);
     vec3 directDiffuse = vec3(0.0);
     vec3 directSpecular = vec3(0.0);
 
     // //TODO: No kd? so not really energy conserving
     // //we could use disney brdf for irradiance map to compensate for that like in Frostbite
-// #ifdef USE_REFLECTION_PROBES
-    // float NdotV = saturate( dot( normalWorld, eyeDirWorld ) );
-    // vec3 reflectance = EnvBRDFApprox( F0, roughness, NdotV );
-    // vec3 irradianceColor = getIrradiance(eyeDirWorld, normalWorld);
-    // vec3 reflectionColor = getPrefilteredReflection(eyeDirWorld, normalWorld, roughness);
-    // indirectDiffuse = diffuseColor * irradianceColor;
-    // indirectSpecular = reflectionColor * specularColor * reflectance;
-
-// #endif
+#ifdef USE_REFLECTION_PROBES
+    float NdotV = saturate( dot( normalWorld, eyeDirWorld ) );
+    vec3 reflectance = EnvBRDFApprox( F0, roughness, NdotV );
+    vec3 irradianceColor = getIrradiance(eyeDirWorld, normalWorld);
+    vec3 reflectionColor = getPrefilteredReflection(eyeDirWorld, normalWorld, roughness);
+    indirectDiffuse = diffuseColor * irradianceColor;
+    indirectSpecular = reflectionColor * specularColor * reflectance;
+#endif
 
     //lights
 #if NUM_DIRECTIONAL_LIGHTS > 0
@@ -981,7 +980,7 @@ void main() {
     // }
 // #endif
 
-    // vec3 indirectArea = vec3(0.0);
+    vec3 indirectArea = vec3(0.0);
 
 // #if NUM_AREA_LIGHTS > 0
     // for(int i=0; i<NUM_AREA_LIGHTS; i++) {
@@ -991,8 +990,8 @@ void main() {
     // }
 // #endif
 
-    // vec3 color = emissiveColor + indirectDiffuse + indirectSpecular + directDiffuse + directSpecular + indirectArea;
-    vec3 color = directDiffuse + directSpecular;
+    //vec3 color = emissiveColor + indirectDiffuse + indirectSpecular + directDiffuse + directSpecular + indirectArea;
+    vec3 color = indirectSpecular;
     gl_FragData[0] = vec4(color, 1.0);
     gl_FragData[1] = vec4(vNormalView * 0.5 + 0.5, 1.0);
 }

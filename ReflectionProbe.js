@@ -17,40 +17,44 @@ var useOctohedralMaps = false
 // 4 - 16
 // 5 - 8
 
-function ReflectionProbe (cmdQueue, position) {
-  this._cmdQueue = cmdQueue
+function ReflectionProbe (regl, position) {
+  this._regl = regl
 
-  var ctx = cmdQueue.getContext()
-  var gl = ctx.getGL()
+  var type = isBrowser ? 'half float' : 'float'
+  try {
+    this._reflectionPREM = regl.cube({ width: 256, height: 256, min: 'nearest', max: 'nearest', type: type })
+  // // FIXME: add mip mapping to TextureCube
+  // ctx.bindTexture(this._reflectionPREM)
+  // gl.generateMipmap(gl.TEXTURE_CUBE_MAP)
 
-  this._reflectionPREM = ctx.createTextureCube(null, 256, 256, { type: ctx.HALF_FLOAT, minFilter: ctx.LINEAR_MIPMAP_LINEAR, magFilter: ctx.LINEAR, flipEnvMap: 1 })
-  // FIXME: add mip mapping to TextureCube
-  ctx.bindTexture(this._reflectionPREM)
-  gl.generateMipmap(gl.TEXTURE_CUBE_MAP)
-  this._reflectionMap = ctx.createTextureCube(null, 256, 256, { minFilter: ctx.NEAREST, magFilter: ctx.NEAREST, type: ctx.HALF_FLOAT, flipEnvMap: 1 })
-  this._reflectionMap128 = ctx.createTextureCube(null, 128, 128, { minFilter: ctx.NEAREST, magFilter: ctx.NEAREST, type: ctx.HALF_FLOAT, flipEnvMap: 1 })
-  this._reflectionMap64 = ctx.createTextureCube(null, 64, 64, { minFilter: ctx.NEAREST, magFilter: ctx.NEAREST, type: ctx.HALF_FLOAT, flipEnvMap: 1 })
-  this._reflectionMap32 = ctx.createTextureCube(null, 32, 32, { minFilter: ctx.NEAREST, magFilter: ctx.NEAREST, type: ctx.HALF_FLOAT, flipEnvMap: 1 })
-  this._reflectionMap16 = ctx.createTextureCube(null, 16, 16, { minFilter: ctx.NEAREST, magFilter: ctx.NEAREST, type: ctx.HALF_FLOAT, flipEnvMap: 1 })
-  this._irradianceMap = ctx.createTextureCube(null, 16, 16, { type: ctx.HALF_FLOAT, flipEnvMap: 1 })
-
-  if (useOctohedralMaps) {
-    this._reflectionOctMap = ctx.createTexture2D(null, 512, 512, { type: ctx.HALF_FLOAT })
+    this._reflectionMap = regl.cube({ width: 256, height: 256, min: 'nearest', max: 'nearest', type: type })
+    this._reflectionMap128 = regl.cube({ width: 128, height: 128, min: 'nearest', max: 'nearest', type: type })
+    this._reflectionMap64 = regl.cube({ width: 64, height: 64, min: 'nearest', max: 'nearest', type: type })
+    this._reflectionMap32 = regl.cube({ width: 32, height: 32, min: 'nearest', max: 'nearest', type: type })
+    this._reflectionMap16 = regl.cube({ width: 16, height: 16, min: 'nearest', max: 'nearest', type: type })
+    this._irradianceMap = regl.cube({ width: 16, height: 16, min: 'linear', max: 'linear', type: type })
+  } catch (e) {
+    console.log('ReflectionProbe exited with error')
+    console.log(e)
   }
+
+  // if (useOctohedralMaps) {
+    // this._reflectionOctMap = ctx.createTexture2D(null, 512, 512, { type: ctx.HALF_FLOAT })
+  // }
 }
 
 ReflectionProbe.prototype.update = function (drawScene) {
-  var cmdQueue = this._cmdQueue
+  var regl = this._regl
 
-  renderToCubemap(cmdQueue, this._reflectionMap, drawScene)
-  downsampleCubemap(cmdQueue, this._reflectionMap, this._reflectionMap128)
-  downsampleCubemap(cmdQueue, this._reflectionMap128, this._reflectionMap64)
-  downsampleCubemap(cmdQueue, this._reflectionMap64, this._reflectionMap32)
-  downsampleCubemap(cmdQueue, this._reflectionMap32, this._reflectionMap16)
-  convolveCubemap(cmdQueue, this._reflectionMap16, this._irradianceMap)
-  if (!isBrowser) {
-    prefilterCubemap(cmdQueue, this._reflectionMap, this._reflectionPREM, { highQuality: !isMobile && !isBrowser })
-  }
+  renderToCubemap(regl, this._reflectionMap, drawScene)
+  downsampleCubemap(regl, this._reflectionMap, this._reflectionMap128)
+  downsampleCubemap(regl, this._reflectionMap128, this._reflectionMap64)
+  downsampleCubemap(regl, this._reflectionMap64, this._reflectionMap32)
+  downsampleCubemap(regl, this._reflectionMap32, this._reflectionMap16)
+  convolveCubemap(regl, this._reflectionMap16, this._irradianceMap)
+  // if (!isBrowser) {
+    // prefilterCubemap(cmdQueue, this._reflectionMap, this._reflectionPREM, { highQuality: !isMobile && !isBrowser })
+  // }
   // if (useOctohedralMaps) {
     // cubemapToOctmap(cmdQueue, this._reflectionMap, this._reflectionOctMap)
   // }
@@ -58,7 +62,8 @@ ReflectionProbe.prototype.update = function (drawScene) {
 
 ReflectionProbe.prototype.getReflectionMap = function () {
   // FIXME: re-enable blurry reflection in the browser
-  return !isBrowser ? this._reflectionPREM : this._reflectionMap
+  return this._reflectionMap
+  // return isBrowser ? this._reflectionMap : this._reflectionMapPRM
 }
 
 ReflectionProbe.prototype.getIrradianceMap = function () {
