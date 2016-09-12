@@ -1,0 +1,84 @@
+{
+  "_args": [
+    [
+      "pex-gui@1.3.0",
+      "/Users/vorg/Workspace/vorg-pex-modules/pex-modules/pex-renderer/example"
+    ]
+  ],
+  "_from": "pex-gui@1.3.0",
+  "_id": "pex-gui@1.3.0",
+  "_inCache": true,
+  "_installable": true,
+  "_location": "/pex-gui",
+  "_nodeVersion": "5.3.0",
+  "_npmOperationalInternal": {
+    "host": "packages-16-east.internal.npmjs.com",
+    "tmp": "tmp/pex-gui-1.3.0.tgz_1461075193147_0.9906123834662139"
+  },
+  "_npmUser": {
+    "email": "marcin.ignac@gmail.com",
+    "name": "vorg"
+  },
+  "_npmVersion": "3.3.12",
+  "_phantomChildren": {},
+  "_requested": {
+    "name": "pex-gui",
+    "raw": "pex-gui@1.3.0",
+    "rawSpec": "1.3.0",
+    "scope": null,
+    "spec": "1.3.0",
+    "type": "version"
+  },
+  "_requiredBy": [
+    "/"
+  ],
+  "_shasum": "2cb48161fd1bec6226c21e8fe24a24df5e03bafa",
+  "_shrinkwrap": null,
+  "_spec": "pex-gui@1.3.0",
+  "_where": "/Users/vorg/Workspace/vorg-pex-modules/pex-modules/pex-renderer/example",
+  "author": {
+    "email": "marcin.ignac@gmail.com",
+    "name": "Marcin Ignac",
+    "url": "http://marcinignac.com"
+  },
+  "bugs": {
+    "url": "https://github.com/pex-gl/pex-gui/issues"
+  },
+  "dependencies": {
+    "float-hsl2rgb": "^1.0.2",
+    "float-rgb2hsl": "^1.0.1",
+    "is-plask": "^1.0.0",
+    "rgb-hex": "^1.0.0"
+  },
+  "description": "GUI widgets for the pex library",
+  "devDependencies": {},
+  "directories": {},
+  "dist": {
+    "shasum": "2cb48161fd1bec6226c21e8fe24a24df5e03bafa",
+    "tarball": "https://registry.npmjs.org/pex-gui/-/pex-gui-1.3.0.tgz"
+  },
+  "gitHead": "8389f44a5e28cfdd44bcdddba2bab00dfa10fbf2",
+  "homepage": "https://github.com/pex-gl/pex-gui.git",
+  "keywords": [
+    "graphics",
+    "gui",
+    "webgl"
+  ],
+  "license": "MIT",
+  "main": "index.js",
+  "maintainers": [
+    {
+      "name": "vorg",
+      "email": "marcin.ignac@gmail.com"
+    }
+  ],
+  "name": "pex-gui",
+  "optionalDependencies": {},
+  "readme": "ERROR: No README data found!",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pex-gl/pex-gui.git"
+  },
+  "scripts": {},
+  "version": "1.3.0"
+}
