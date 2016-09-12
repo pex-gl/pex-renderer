@@ -33,11 +33,12 @@ FXStage.prototype.getOutputSize = function (width, height) {
       height: this.source.getHeight()
     }
   } else {
-    var viewport = this.ctx.getViewport()
-    return {
-      width: viewport[2],
-      height: viewport[3]
-    }
+    // TODO: implement viewport getter in regl
+    // var viewport = this.ctx.getViewport()
+    // return {
+      // width: viewport[2],
+      // height: viewport[3]
+    // }
   }
 }
 
@@ -101,30 +102,19 @@ FXStage.prototype.asFXStage = function (source, name) {
   return stage
 }
 
-FXStage.prototype.getShader = function (vert, frag) {
-  var resProps = { vert: vert, frag: frag }
-  var res = this.resourceMgr.getResource('Program', resProps)
-  if (!res) {
-    var ctx = this.ctx
-    var program = ctx.createProgram(vert, frag)
-    res = this.resourceMgr.addResource('Program', program, resProps)
-  }
-  res.used = true
-  return res.obj
-}
-
 FXStage.prototype.getSourceTexture = function (source) {
   if (source) {
-    // if (source.source) {
-    // if (source.source.getColorAttachment) {
-    // return source.source.getColorAttachment(0).texture
-    // }
-    // else return source.source
-    // }
-    // else if (source.getColorAttachment) {
-    // return source.getColorAttachment(0).texture
-    // }
-    // else return source
+    if (source.source) {
+      return this.getSourceTexture(source.source)
+    } if (source.color) {
+      if (source.color.length) {
+        return source.color[0]
+      } else {
+        return source.color // TODO: test if that's ever valid
+      }
+    } else {
+      return source
+    }
   } else if (this.source) {
     if (this.source.color) {
       return this.source.color[0]

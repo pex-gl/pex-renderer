@@ -255,7 +255,7 @@ Window.create({
         position: [0, 0, 0],
         scale: [1, 1, 1],
         material: {
-          baseColor: gradient(Math.random()).concat(1), // FIXME: baseColor should go to batch
+          baseColor: gradient(0.4).concat(1), // FIXME: baseColor should go to batch
           rougness: 0.91,
           metallic: 1.0
         },
@@ -294,6 +294,12 @@ Window.create({
         position: [0, -0.3, 0]
       }))
 
+      var floorMesh = createCube(1, 8, 1)
+      renderer.add(renderer.createNode({
+        mesh: floorMesh,
+        position: [0, -0.3, 0]
+      }))
+
       this.updateSunPosition()
     } catch(e) {
       console.log(e)
@@ -327,7 +333,7 @@ Window.create({
     // return ctx.createMesh(attributes, geometry.cells ? indices : null, primitiveType)
   // },
   draw: function () {
-    if (this.getTime().getElapsedFrames() % 600 === 0) {
+    if (this.getTime().getElapsedFrames() % 30 === 0) {
       this.getContext().getGL().finish()
       console.time('App:frame')
       this.renderer._state.profile = true
@@ -348,7 +354,7 @@ Window.create({
       process.exit(-1)
     }
 
-    if (this.getTime().getElapsedFrames() % 600 === 0) {
+    if (this.getTime().getElapsedFrames() % 30 === 0) {
       this.renderer._state.profile = false
       // this.renderer._cmdQueue.profile = false
       console.timeEnd('App:frame')

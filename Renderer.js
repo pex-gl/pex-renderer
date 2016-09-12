@@ -3,8 +3,9 @@ var Vec4 = require('pex-math/Vec4')
 var Mat3 = require('pex-math/Mat3')
 var Mat4 = require('pex-math/Mat4')
 var fx = require('./local_modules/pex-fx')
-// var random = require('pex-random' var MathUtils = require('pex-math/Utils')
-// var flatten = require('flatten')
+var random = require('pex-random')
+var MathUtils = require('pex-math/Utils')
+var flatten = require('flatten')
 var Skybox = require('./Skybox')
 var SkyEnvMap = require('./SkyEnvMap')
 var ReflectionProbe = require('./ReflectionProbe')
@@ -104,36 +105,54 @@ Renderer.prototype.initPostproces = function () {
 
   this._fx = fx(regl)
 
-  // var ssaoKernel = []
-  // for (var i = 0; i < 64; i++) {
-    // var sample = [
-      // random.float() * 2 - 1,
-      // random.float() * 2 - 1,
-      // random.float(),
-      // 1
-    // ]
-    // Vec3.normalize(sample)
-    // var scale = random.float()
-    // scale = MathUtils.lerp(0.1, 1.0, scale * scale)
-    // Vec3.scale(sample, scale)
-    // ssaoKernel.push(sample)
-  // }
-  // var ssaoKernelData = new Float32Array(flatten(ssaoKernel))
+  var ssaoKernel = []
+  for (var i = 0; i < 64; i++) {
+    var sample = [
+      random.float() * 2 - 1,
+      random.float() * 2 - 1,
+      random.float(),
+      1
+    ]
+    Vec3.normalize(sample)
+    var scale = random.float()
+    scale = MathUtils.lerp(0.1, 1.0, scale * scale)
+    Vec3.scale(sample, scale)
+    ssaoKernel.push(sample)
+  }
+  var ssaoKernelData = new Float32Array(flatten(ssaoKernel))
 
-  // var ssaoNoise = []
-  // for (var j = 0; j < 64; j++) {
-    // var noiseSample = [
-      // random.float() * 2 - 1,
-      // random.float() * 2 - 1,
-      // 0,
-      // 1
-    // ]
-    // ssaoNoise.push(noiseSample)
-  // }
-  // var ssaoNoiseData = new Float32Array(flatten(ssaoNoise))
+  var ssaoNoise = []
+  for (var j = 0; j < 64; j++) {
+    var noiseSample = [
+      random.float() * 2 - 1,
+      random.float() * 2 - 1,
+      0,
+      1
+    ]
+    ssaoNoise.push(noiseSample)
+  }
+  var ssaoNoiseData = new Float32Array(flatten(ssaoNoise))
 
-  // this.ssaoKernelMap = ctx.createTexture2D(ssaoKernelData, 8, 8, { format: ctx.RGBA, type: ctx.FLOAT, minFilter: ctx.NEAREST, magFilter: ctx.NEAREST, repeat: true })
-  // this.ssaoNoiseMap = ctx.createTexture2D(ssaoNoiseData, 4, 4, { format: ctx.RGBA, type: ctx.FLOAT, minFilter: ctx.NEAREST, magFilter: ctx.NEAREST, repeat: true })
+  this.ssaoKernelMap = regl.texture({
+    data: ssaoKernelData,
+    width: 8,
+    height: 8,
+    type: 'float',
+    min: 'nearest',
+    max: 'nearest',
+    wrap: 'repeat'
+  })
+
+  // TODO: so is this 4x4 or 8x8? (it's 64 floats, but was w=4 h=4)
+  this.ssaoNoiseMap = regl.texture({
+    data: ssaoNoiseData,
+    width: 8,
+    height: 8,
+    type: 'float',
+    min: 'nearest',
+    max: 'nearest',
+    wrap: 'repeat'
+  })
 }
 
 Renderer.prototype.initSkybox = function () {
@@ -322,6 +341,46 @@ Renderer.prototype.updateNodeLists = function () {
   this._areaLightNodes = this._lightNodes.filter(function (node) { return node.data.light.type === 'area'})
 }
 
+// From @toji's gl-matrix, pulled out to save some time :')
+// http://glmatrix.net/docs/mat4.html#.fromRotationTranslationScale
+function fromRotationTranslationScale (out, q, v, s) {
+  var x = q[0], y = q[1], z = q[2], w = q[3],
+    x2 = x + x,
+    y2 = y + y,
+    z2 = z + z,
+
+    xx = x * x2,
+    xy = x * y2,
+    xz = x * z2,
+    yy = y * y2,
+    yz = y * z2,
+    zz = z * z2,
+    wx = w * x2,
+    wy = w * y2,
+    wz = w * z2,
+    sx = s[0],
+    sy = s[1],
+    sz = s[2]
+
+  out[0] = (1 - (yy + zz)) * sx
+  out[1] = (xy + wz) * sx
+  out[2] = (xz - wy) * sx
+  out[3] = 0
+  out[4] = (xy - wz) * sy
+  out[5] = (1 - (xx + zz)) * sy
+  out[6] = (yz + wx) * sy
+  out[7] = 0
+  out[8] = (xz + wy) * sz
+  out[9] = (yz - wx) * sz
+  out[10] = (1 - (xx + yy)) * sz
+  out[11] = 0
+  out[12] = v[0]
+  out[13] = v[1]
+  out[14] = v[2]
+  out[15] = 1
+
+  return out
+}
 // sort meshes by material
 // do material search by props not string concat
 // set global uniforms like lights once
@@ -393,11 +452,11 @@ Renderer.prototype.drawMeshes = function (shadowMappingLight) {
   if (shadowMappingLight) {
     projectionMatrix = shadowMappingLight._projectionMatrix
     viewMatrix = shadowMappingLight._viewMatrix
-    inverseViewMatrix = Mat4.invert(Mat4.create(), viewMatrix) // FIXME: invViewMat allocation
+    inverseViewMatrix = Mat4.invert(Mat4.set(Mat4.create(), viewMatrix)) // FIXME: invViewMat allocation
   } else {
     projectionMatrix = camera.getProjectionMatrix()
     viewMatrix = camera.getViewMatrix()
-    inverseViewMatrix = Mat4.invert(Mat4.create(), viewMatrix) // FIXME: invViewMat allocation
+    inverseViewMatrix = Mat4.invert(Mat4.set(Mat4.create(), viewMatrix)) // FIXME: invViewMat allocation
   }
 
   // var prevProgram = null
@@ -428,6 +487,7 @@ Renderer.prototype.drawMeshes = function (shadowMappingLight) {
       // this would be even better if we sort meshes by material
       // Object.assign(cachedUniforms, sharedUniforms)
     // }
+    var tmpNormalMat = Mat4.create()
     var data = meshNode.data
     if (!data._drawCommand) {
       var regl = this._regl
@@ -472,17 +532,24 @@ Renderer.prototype.drawMeshes = function (shadowMappingLight) {
       if (data.batch) {
         cmdData.uniforms.uModelMatrix = function (context, props) {
           // FIXME: can i cache is somehow? Maybe just pass modelMatrix directly?
-          var m = Mat4.create()
-          Mat4.translate(m, props.position)
-          Mat4.scale(m, props.scale)
-          // TODO: add rotation
-          return m
+          return fromRotationTranslationScale(Mat4.create(), [0, 0, 0, 1], props.position, props.scale)
+          // var m = Mat4.create()
+          // Mat4.translate(m, props.position)
+          // Mat4.scale(m, props.scale)
+          // // TODO: add rotation
+          // return m
         }
-        cmdData.uniforms.uNormalMatrix = function () {
-          var m = Mat3.create()
-          // TODO: implement normal matrix computation
-          // Mat3.translate(m, regl.prop('position'))
-          return m
+        cmdData.uniforms.uNormalMatrix = function (context, props, batchId) {
+          var modelMatrix = fromRotationTranslationScale(Mat4.create(), [0, 0, 0, 1], props.position, props.scale)
+          // FIXME: can i cache is somehow? Maybe just pass modelMatrix directly?
+          // var modelMatrix = Mat4.create()
+          // Mat4.translate(modelMatrix, props.position)
+          // Mat4.scale(modelMatrix, props.scale)
+          Mat4.set(tmpNormalMat, context.viewMatrix)
+          Mat4.mult(tmpNormalMat, modelMatrix)
+          Mat4.invert(tmpNormalMat)
+          Mat4.transpose(tmpNormalMat)
+          return Mat3.fromMat4(Mat3.create(), tmpNormalMat)
         }
       }
       if (data.mesh.cells) {
@@ -504,6 +571,12 @@ Renderer.prototype.drawMeshes = function (shadowMappingLight) {
       viewMatrix: viewMatrix,
       inverseViewMatrix: inverseViewMatrix
     }, function () {
+      // FIXME: what is scene-graph normalMatrix? Can i compute the right one in the shader?
+      Mat4.set(tmpNormalMat, viewMatrix)
+      Mat4.mult(tmpNormalMat, meshNode.modelMatrix)
+      Mat4.invert(tmpNormalMat)
+      Mat4.transpose(tmpNormalMat)
+      Mat3.fromMat4(meshNode.normalMatrix, tmpNormalMat)
       meshNode.data._drawCommand(meshNode.data.batch || {
         modelMatrix: meshNode.modelMatrix,
         normalMatrix: meshNode.normalMatrix
@@ -607,6 +680,8 @@ Renderer.prototype.draw = function () {
     }.bind(this))
   }
 
+  var currentCamera = cameraNodes[0].data.camera
+
   // draw scene
   this._setupCameraCommand = regl({
     context: {
@@ -665,30 +740,25 @@ Renderer.prototype.draw = function () {
   }
   var final = color
 
-  // // FIXME: ssao internally needs uProjectionMatrix...
-  // ctx.pushProjectionMatrix()
-  // ctx.setProjectionMatrix(currentCamera.getProjectionMatrix())
-
   // if (State.profile) ctx.getGL().finish()
   // if (State.profile) console.time('Renderer:postprocessing')
   // if (State.profile) console.time('Renderer:ssao')
-  // if (State.ssao) {
-    // var ssao = root.ssao({
-      // depthMap: this._frameDepthTex,
-      // normalMap: this._frameNormalTex,
-      // kernelMap: this.ssaoKernelMap,
-      // noiseMap: this.ssaoNoiseMap,
-      // camera: currentCamera,
-      // width: W / State.ssaoDownsample,
-      // height: H / State.ssaoDownsample,
-      // radius: State.ssaoRadius
-    // })
-    // ssao = ssao.bilateralBlur({ depthMap: this._frameDepthTex, camera: currentCamera, sharpness: State.ssaoSharpness })
-    // // TODO: this is incorrect, AO influences only indirect diffuse (irradiance) and indirect specular reflections
-    // // this will also influence direct lighting (lights, sun)
-    // final = color.mult(ssao, { bpp: 16 })
-  // }
-  // ctx.popProjectionMatrix()
+  if (State.ssao) {
+    var ssao = root.ssao({
+      depthMap: this._frameDepthTex,
+      normalMap: this._frameNormalTex,
+      kernelMap: this.ssaoKernelMap,
+      noiseMap: this.ssaoNoiseMap,
+      camera: currentCamera,
+      width: this._width / State.ssaoDownsample,
+      height: this._height / State.ssaoDownsample,
+      radius: State.ssaoRadius
+    })
+    ssao = ssao.bilateralBlur({ depthMap: this._frameDepthTex, camera: currentCamera, sharpness: State.ssaoSharpness })
+    // TODO: this is incorrect, AO influences only indirect diffuse (irradiance) and indirect specular reflections
+    // this will also influence direct lighting (lights, sun)
+    final = color.mult(ssao, { bpp: 16 })
+  }
   // if (State.profile) ctx.getGL().finish()
   // if (State.profile) console.timeEnd('Renderer:ssao')
 
@@ -698,9 +768,9 @@ Renderer.prototype.draw = function () {
   // if (State.profile) console.timeEnd('Renderer:postprocess')
 
   // if (State.profile) console.time('Renderer:fxaa')
-  // if (State.fxaa) {
-    // final = final.fxaa()
-  // }
+  if (State.fxaa) {
+    final = final.fxaa()
+  }
   // if (State.profile) ctx.getGL().finish()
   // if (State.profile) console.timeEnd('Renderer:fxaa')
   // if (State.profile) ctx.getGL().finish()

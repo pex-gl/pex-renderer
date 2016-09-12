@@ -1,48 +1,55 @@
-var FXStage = require('pex-fx/FXStage');
-var fs = require('fs');
+var FXStage = require('./local_modules/pex-fx/FXStage')
+var fs = require('fs')
 
-var VERT = fs.readFileSync(__dirname + '/ScreenImage.vert', 'utf8');
-var FRAG = fs.readFileSync(__dirname + '/SSAO.frag', 'utf8');
+var VERT = fs.readFileSync(__dirname + '/ScreenImage.vert', 'utf8')
+var FRAG = fs.readFileSync(__dirname + '/SSAO.frag', 'utf8')
 
 FXStage.prototype.ssao = function (options) {
-    var ctx = this.ctx;
-    options = options || {};
-    scale = options.scale !== undefined ? options.scale : 1;
-    var outputSize = this.getOutputSize(options.width, options.height);
-    var rt = this.getRenderTarget(outputSize.width, outputSize.height, options.depth, options.bpp);
+  var regl = this.regl
+  options = options || {}
+  var outputSize = this.getOutputSize(options.width, options.height)
+  var rt = this.getRenderTarget(outputSize.width, outputSize.height, options.depth, options.bpp)
 
-    var program = this.getShader(VERT, FRAG);
+  if (!this.cmd) {
+    // TODO: what if the viewport size / target output has changed?
+    // FIXME: i don't know how to pass my uniform to drawFullScreenQuad command,
+    // so i'm just doing all of it here
+    // how can i inject new uniforms if i don't know their name in the
+    // drawFullScreenQuad function, can cmd(props) take props.uniforms somehow?
+    this.cmd = regl({
+      attributes: this.fullscreenQuad.attributes,
+      elements: this.fullscreenQuad.elements,
+      framebuffer: rt,
+      viewport: { x: 0, y: 0, width: outputSize.width, height: outputSize.height },
+      vert: VERT,
+      frag: FRAG,
+      // TODO: move those params to regl.prop()
+      uniforms: {
+        textureSize: [outputSize.width, outputSize.height],
+        depthMap: this.getSourceTexture(options.depthMap),
+        normalMap: this.getSourceTexture(options.normalMap),
+        kernelMap: options.kernelMap,
+        noiseMap: options.noiseMap,
+        // program.setUniform('strength', options.strength || 1)
+        // program.setUniform('offset', options.offset || 0),
+        near: options.camera.getNear(),
+        far: options.camera.getFar(),
+        fov: options.camera.getFov(),
+        aspectRatio: options.camera.getAspectRatio(),
+        radius: options.radius || 0.2,
+        uProjectionMatrix: options.camera.getProjectionMatrix()
+      }
+    })
+  }
 
-    ctx.pushState(ctx.FRAMEBUFFER_BIT);
-        ctx.bindFramebuffer(rt);
+  this.cmd({
+  })
 
-        ctx.bindTexture(this.getSourceTexture(options.depthMap), 0)
-        ctx.bindTexture(this.getSourceTexture(options.normalMap), 1)
-        ctx.bindTexture(options.kernelMap, 2)
-        ctx.bindTexture(options.noiseMap, 3)
-
-        ctx.bindProgram(program);
-        program.setUniform('textureSize', [outputSize.width, outputSize.height]);
-        program.setUniform('depthMap', 0);
-        program.setUniform('normalMap', 1);
-        program.setUniform('kernelMap', 2);
-        program.setUniform('noiseMap', 3);
-        //program.setUniform('strength', options.strength || 1);
-        //program.setUniform('offset', options.offset || 0);
-        program.setUniform('near', options.camera.getNear());
-        program.setUniform('far', options.camera.getFar());
-        program.setUniform('fov', options.camera.getFov());
-        program.setUniform('aspectRatio', options.camera.getAspectRatio());
-        program.setUniform('radius', options.radius || 0.2);
-
-        this.drawFullScreenQuad(outputSize.width, outputSize.height, null, program);
-    ctx.popState(ctx.FRAMEBUFFER_BIT);
-
-    return this.asFXStage(rt, 'ssao');
-};
-
-FXStage.prototype.ssao.updateFrag = function(src) {
-    FRAG = src;
+  return this.asFXStage(rt, 'ssao')
 }
 
-module.exports = FXStage;
+FXStage.prototype.ssao.updateFrag = function (src) {
+  FRAG = src
+}
+
+module.exports = FXStage

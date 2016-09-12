@@ -1,56 +1,72 @@
-var FXStage = require('pex-fx/FXStage');
-var fs = require('fs');
+var FXStage = require('./local_modules/pex-fx/FXStage')
+var fs = require('fs')
 
-var VERT = fs.readFileSync(__dirname + '/ScreenImage.vert', 'utf8');
-var FRAG = fs.readFileSync(__dirname + '/BilateralBlur.frag', 'utf8');
-
+var VERT = fs.readFileSync(__dirname + '/ScreenImage.vert', 'utf8')
+var FRAG = fs.readFileSync(__dirname + '/BilateralBlur.frag', 'utf8')
 
 FXStage.prototype.bilateralBlur = function (options) {
-    options = options || {};
-    var outputSize = this.getOutputSize(options.width, options.height);
-    var readRT = this.getRenderTarget(outputSize.width, outputSize.height, options.depth, options.bpp);
-    var writeRT = this.getRenderTarget(outputSize.width, outputSize.height, options.depth, options.bpp);
-    var source = this.getSourceTexture();
-    var depthMap = this.getSourceTexture(options.depthMap);
-    var program = this.getShader(VERT, FRAG);
+  var regl = this.regl
+  options = options || {}
+  var outputSize = this.getOutputSize(options.width, options.height)
+  var readRT = this.getRenderTarget(outputSize.width, outputSize.height, options.depth, options.bpp)
+  var writeRT = this.getRenderTarget(outputSize.width, outputSize.height, options.depth, options.bpp)
+  var source = this.getSourceTexture()
+  var depthMap = this.getSourceTexture(options.depthMap)
 
-    var ctx = this.ctx;
+  var iterations = options.iterations || 1
+  var sharpness = typeof (options.sharpness) === 'undefined' ? 1 : options.sharpness
+  var strength = typeof (options.strength) === 'undefined' ? 0.5 : options.strength
 
+  if (!this.cmd) {
+    // TODO: what if the viewport size / target output has changed?
+    // FIXME: i don't know how to pass my uniform to drawFullScreenQuad command,
+    // so i'm just doing all of it here
+    // how can i inject new uniforms if i don't know their name in the
+    // drawFullScreenQuad function, can cmd(props) take props.uniforms somehow?
+    this.cmd = regl({
+      attributes: this.fullscreenQuad.attributes,
+      elements: this.fullscreenQuad.elements,
+      framebuffer: regl.prop('framebuffer'),
+      viewport: { x: 0, y: 0, width: outputSize.width, height: outputSize.height },
+      vert: VERT,
+      frag: FRAG,
+      // TODO: move those params to regl.prop()
+      uniforms: {
+        image: regl.prop('image'),
+        imageSize: regl.prop('imageSize'),
+        depthMap: regl.prop('depthMap'),
+        depthMapSize: regl.prop('depthMapSize'),
+        near: regl.prop('near'),
+        far: regl.prop('far'),
+        sharpness: regl.prop('sharpness'),
+        direction: regl.prop('direction')
+      }
+    })
+  }
 
-    var iterations = options.iterations || 1;
-    var sharpness = typeof(options.sharpness) === 'undefined' ? 1 : options.sharpness;
-    var strength = typeof(options.strength) === 'undefined' ? 0.5 : options.strength;
+  for (var i = 0; i < iterations * 2; i++) {
+    var radius = (iterations - Math.floor(i / 2)) * strength
+    var direction = i % 2 === 0 ? [radius, 0] : [0, radius]
+    var src = (i === 0) ? source : readRT.color[0]
 
-    ctx.pushState(ctx.PROGRAM_BIT | ctx.FRAMEBUFFER_BIT);
-    ctx.bindProgram(program);
-    ctx.bindTexture(this.getSourceTexture(options.depthMap), 1)
-    program.setUniform('image', 0)
-    program.setUniform('imageSize', [ source.getWidth(), source.getHeight() ])
-    program.setUniform('depthMap', 1)
-    program.setUniform('depthMapSize', [depthMap.getWidth(), depthMap.getHeight()])
-    program.setUniform('near', options.camera.getNear());
-    program.setUniform('far', options.camera.getFar());
-    program.setUniform('sharpness', sharpness);
-    for(var i=0; i<iterations * 2; i++) {
-        var radius = (iterations - Math.floor(i / 2)) * strength;
-        var direction = i % 2 === 0 ? [radius, 0] : [0, radius];
+    this.cmd({
+      framebuffer: writeRT,
+      image: src,
+      imageSize: [src.width, src.height],
+      depthMap: depthMap,
+      depthMapSize: [depthMap.width, depthMap.height],
+      near: options.camera.getNear(),
+      far: options.camera.getFar(),
+      sharpness: sharpness,
+      direction: direction
+    })
 
-        var src = (i == 0) ? source : readRT.getColorAttachment(0).texture;
-        ctx.bindTexture(src, 0);
+    var tmp = writeRT
+    writeRT = readRT
+    readRT = tmp
+  }
 
-        ctx.bindFramebuffer(writeRT);
-        ctx.setClearColor(0,0,0,1);
-        ctx.clear(ctx.COLOR_BIT | ctx.DEPTH_BIT);
-        program.setUniform('direction', direction)
-        this.drawFullScreenQuad(outputSize.width, outputSize.height, src, program);
+  return this.asFXStage(readRT, 'bilateralBlur')
+}
 
-        var tmp = writeRT;
-        writeRT = readRT;
-        readRT = tmp;
-    }
-    ctx.popState(ctx.PROGRAM_BIT | ctx.FRAMEBUFFER_BIT);
-
-    return this.asFXStage(readRT, 'bilateralBlur');
-};
-
-module.exports = FXStage;
+module.exports = FXStage
