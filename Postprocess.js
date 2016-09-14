@@ -29,7 +29,9 @@ FXStage.prototype.postprocess = function (options) {
       frag: FRAG,
       uniforms: {
         image: regl.prop('image'),
-        uExposure: regl.prop('exposure')
+        uExposure: regl.prop('exposure'),
+        uOffset: [0, 0],
+        uSize: [1, 1]
       }
     }))
   }
