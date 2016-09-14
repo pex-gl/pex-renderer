@@ -163,7 +163,9 @@ Window.create({
           'WEBGL_depth_texture',
           'WEBGL_draw_buffers',
           'OES_texture_float',
-          'OES_texture_half_float']
+          'OES_texture_float_linear',
+          'OES_texture_half_float',
+          'OES_texture_half_float_linear']
       })
       random.seed(10)
 
