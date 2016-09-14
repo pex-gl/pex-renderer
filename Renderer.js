@@ -683,13 +683,15 @@ Renderer.prototype.draw = function () {
   var currentCamera = cameraNodes[0].data.camera
 
   // draw scene
-  this._setupCameraCommand = regl({
-    context: {
-      projectionMatrix: regl.prop('projectionMatrix'),
-      viewMatrix: regl.prop('viewMatrix'),
-      inverseViewMatrix: regl.prop('inverseViewMatrix')
-    }
-  })
+  if (!this._setupCameraCommand) {
+    this._setupCameraCommand = regl({
+      context: {
+        projectionMatrix: regl.prop('projectionMatrix'),
+        viewMatrix: regl.prop('viewMatrix'),
+        inverseViewMatrix: regl.prop('inverseViewMatrix')
+      }
+    })
+  }
 
   // REGL
   directionalLightNodes.forEach(function (lightNode) {
