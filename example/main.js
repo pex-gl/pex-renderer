@@ -192,7 +192,8 @@ Window.create({
 
       gui.addParam('Exposure', this.renderer._state, 'exposure', { min: 0.01, max: 5})
       // gui.addParam('Shadow Bias', this.renderer._state, 'bias', { min: 0.001, max: 0.1})
-      // gui.addParam('SSAO', this.renderer._state, 'ssao')
+      gui.addParam('SSAO', this.renderer._state, 'ssao')
+      gui.addParam('FXAA', this.renderer._state, 'fxaa')
       // gui.addParam('SSAO Sharpness', this.renderer._state, 'ssaoSharpness', { min: 0, max: 100 })
       // gui.addParam('SSAO Radius', this.renderer._state, 'ssaoRadius', { min: 0, max: 1 })
 
