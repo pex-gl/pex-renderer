@@ -351,7 +351,7 @@ Window.create({
     // return ctx.createMesh(attributes, geometry.cells ? indices : null, primitiveType)
   // },
   draw: function () {
-    if (this.getTime().getElapsedFrames() % 30 === 0) {
+    if (this.getTime().getElapsedFrames() % 300 === 0) {
       this.getContext().getGL().finish()
       console.time('App:frame')
       this.renderer._state.profile = true
@@ -372,11 +372,12 @@ Window.create({
       process.exit(-1)
     }
 
-    if (this.getTime().getElapsedFrames() % 30 === 0) {
+    if (this.getTime().getElapsedFrames() % 300 === 0) {
       this.renderer._state.profile = false
       // this.renderer._cmdQueue.profile = false
       console.timeEnd('App:frame')
       console.log('App:fps:', this.getTime().getFPS())
+      console.log(this._regl.stats)
     }
 
     var sun = this.renderer._directionalLightNodes[0]
