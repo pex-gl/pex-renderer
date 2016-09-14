@@ -12,13 +12,14 @@ FXStage.prototype.fxaa = function (options) {
 
   var source = this.getSourceTexture()
 
-  if (!this.cmd) {
+  var cmd = this.getCommand(VERT, FRAG)
+  if (!cmd) {
     // TODO: what if the viewport size / target output has changed?
     // FIXME: i don't know how to pass my uniform to drawFullScreenQuad command,
     // so i'm just doing all of it here
     // how can i inject new uniforms if i don't know their name in the
     // drawFullScreenQuad function, can cmd(props) take props.uniforms somehow?
-    this.cmd = regl({
+    cmd = this.addCommand(VERT, FRAG, regl({
       attributes: this.fullscreenQuad.attributes,
       elements: this.fullscreenQuad.elements,
       framebuffer: rt,
@@ -30,10 +31,10 @@ FXStage.prototype.fxaa = function (options) {
         rtWidth: regl.prop('rtWidth'),
         rtHeight: regl.prop('rtHeight')
       }
-    })
+    }))
   }
 
-  this.cmd({
+  cmd({
     tex0: source,
     rtWidth: source.width,
     rtHeight: source.height

@@ -84,6 +84,25 @@ FXStage.prototype.getRenderTarget = function (w, h, depth, bpp) {
   return res.obj
 }
 
+FXStage.prototype.getCommand = function (vert, frag) {
+  var resProps = {
+    vert: vert,
+    frag: frag
+  }
+  var res = this.resourceMgr.getResource('Command', resProps)
+  return res ? res.obj : null
+}
+
+FXStage.prototype.addCommand = function (vert, frag, cmd) {
+  var resProps = {
+    vert: vert,
+    frag: frag
+  }
+  // we don't mark cmd as used, they can be reused as many times as we like in the frame as they are stateless
+  var res = this.resourceMgr.addResource('Command', cmd, resProps)
+  return res.obj
+}
+
 FXStage.prototype.getFXStage = function (name) {
   var resProps = {}
   var res = this.resourceMgr.getResource('FXStage', resProps)
@@ -131,8 +150,8 @@ FXStage.prototype.drawFullScreenQuad = function (width, height, image, program) 
 FXStage.prototype.drawFullScreenQuadAt = function (x, y, width, height, image, program) {
   var regl = this.regl
   program = program || this.fullscreenQuad.program
-  if (!this.cmd) {
-    this.cmd = regl({
+  if (!this.blitCmd) {
+    this.blitCmd = regl({
       // depth: { enable: false },
       // viewport: { x: x, y: y, width: width, height: height },
       attributes: this.fullscreenQuad.attributes,
@@ -144,7 +163,7 @@ FXStage.prototype.drawFullScreenQuadAt = function (x, y, width, height, image, p
       }
     })
   }
-  this.cmd({
+  this.blitCmd({
     vert: program.vert,
     frag: program.frag,
     image: image,

@@ -12,14 +12,15 @@ FXStage.prototype.postprocess = function (options) {
   var source = this.getSourceTexture()
   var outputSize = this.getOutputSize(options.width, options.height)
   var rt = this.getRenderTarget(outputSize.width, outputSize.height, options.depth, options.bpp)
+  var cmd = this.getCommand(VERT, FRAG)
 
-  if (!this.cmd) {
+  if (!cmd) {
     // TODO: what if the viewport size / target output has changed?
     // FIXME: i don't know how to pass my uniform to drawFullScreenQuad command,
     // so i'm just doing all of it here
     // how can i inject new uniforms if i don't know their name in the
     // drawFullScreenQuad function, can cmd(props) take props.uniforms somehow?
-    this.cmd = regl({
+    cmd = this.addCommand(VERT, FRAG, regl({
       attributes: this.fullscreenQuad.attributes,
       elements: this.fullscreenQuad.elements,
       framebuffer: rt,
@@ -30,10 +31,10 @@ FXStage.prototype.postprocess = function (options) {
         image: regl.prop('image'),
         uExposure: regl.prop('exposure')
       }
-    })
+    }))
   }
 
-  this.cmd({
+  cmd({
     image: source,
     exposure: exposure
   })
