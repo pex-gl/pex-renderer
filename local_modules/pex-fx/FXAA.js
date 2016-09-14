@@ -29,7 +29,9 @@ FXStage.prototype.fxaa = function (options) {
       uniforms: {
         tex0: regl.prop('tex0'),
         rtWidth: regl.prop('rtWidth'),
-        rtHeight: regl.prop('rtHeight')
+        rtHeight: regl.prop('rtHeight'),
+        uOffset: [0, 0],
+        uSize: [1, 1]
       }
     }))
   }

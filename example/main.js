@@ -12,6 +12,7 @@ var GUI = require('../local_modules/pex-gui')
 var random = require('pex-random')
 var parseHdr = require('./local_modules/parse-hdr')
 var cosineGradient = require('cosine-gradient')
+var fitRect = require('fit-rect')
 
 var scheme = [[0.000, 0.500, 0.500], [0.000, 0.500, 0.500], [0.000, 0.500, 0.333], [0.000, 0.500, 0.667]]
 
@@ -170,7 +171,22 @@ Window.create({
       this.addEventListener(gui)
       gui.addHeader(APP_VERSION)
       gui.addParam('Sun Elevation', this, 'elevation', { min: -90, max: 180 }, this.updateSunPosition.bind(this))
-      var renderer = this.renderer = new Renderer(regl, this.getWidth(), this.getHeight())
+
+      var W = (this.getAspectRatio() > 1) ? 1280 : 720
+      var H = (this.getAspectRatio() > 1) ? 720 : 1280
+      var renderer = this.renderer = new Renderer(regl, W, H)
+
+      this.viewport = [0, 0, 0, 0]
+      this.updateViewport()
+
+      this.camera = new PerspCamera(45, W / H, 0.1, 50.0)
+      this.camera.lookAt([0, 3, 8], [0, 0, 0])
+      var cameraNode = renderer.createNode({
+        camera: this.camera
+      })
+      renderer.add(cameraNode)
+      this.arcball = new Arcball(this.camera, this.getWidth(), this.getHeight())
+      this.addEventListener(this.arcball)
 
       gui.addParam('Exposure', this.renderer._state, 'exposure', { min: 0.01, max: 5})
       // gui.addParam('Shadow Bias', this.renderer._state, 'bias', { min: 0.001, max: 0.1})
@@ -199,15 +215,7 @@ Window.create({
       gui.addTexture2D('Depth', renderer._frameDepthTex)
       // gui.addTexture2D('Reflection OctMap', renderer._reflectionProbe._reflectionOctMap, { hdr: true })
 
-      this.camera = new PerspCamera(45, this.getAspectRatio(), 0.1, 50.0)
-      this.camera.lookAt([0, 3, 8], [0, 0, 0])
-      var cameraNode = renderer.createNode({
-        camera: this.camera
-      })
-      renderer.add(cameraNode)
 
-      this.arcball = new Arcball(this.camera, this.getWidth(), this.getHeight())
-      this.addEventListener(this.arcball)
 
       // gui.addTexture2D('Shadow Map', renderer._sunLightNode.data.light._shadowMap)
 
@@ -312,6 +320,13 @@ Window.create({
   onKeyPress: function (e) {
     if (e.str === 'g') this.gui.toggleEnabled()
   },
+  onWindowResize: function (e) {
+    this.updateViewport()
+  },
+  updateViewport: function () {
+    var viewport = fitRect([0, 0, this.renderer._width, this.renderer._height], [0, 0, this.getWidth(), this.getHeight()], 'cover')
+    this.viewport = [ viewport[0] | 0, viewport[1] | 0, viewport[2] | 0, viewport[3] | 0]
+  },
   updateSunPosition: function () {
     Mat4.setRotation(this.elevationMat, this.elevation / 180 * Math.PI, [0, 0, 1])
     Mat4.setRotation(this.rotationMat, this.azimuth / 180 * Math.PI, [0, 1, 0])
@@ -347,7 +362,7 @@ Window.create({
 
     try {
       this.arcball.apply()
-      this.renderer.draw()
+      this.renderer.draw(this.viewport)
     } catch(e) {
       console.log(e)
       console.log(e.stack)

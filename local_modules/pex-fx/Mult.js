@@ -25,7 +25,9 @@ FXStage.prototype.mult = function (source2, options) {
       frag: FRAG,
       uniforms: {
         tex0: regl.prop('tex0'),
-        tex1: regl.prop('tex1')
+        tex1: regl.prop('tex1'),
+        uOffset: [0, 0],
+        uSize: [1, 1]
       }
     })
   }

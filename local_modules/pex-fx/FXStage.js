@@ -1,6 +1,7 @@
 var FXResourceMgr = require('./FXResourceMgr')
 var ScreenImage = require('./ScreenImage')
 var FXStageCount = 0
+var remap = require('pex-math/Utils').map
 
 function FXStage (regl, source, resourceMgr, fullscreenQuad) {
   this.id = FXStageCount++
@@ -152,22 +153,38 @@ FXStage.prototype.drawFullScreenQuadAt = function (x, y, width, height, image, p
   program = program || this.fullscreenQuad.program
   if (!this.blitCmd) {
     this.blitCmd = regl({
-      // depth: { enable: false },
-      // viewport: { x: x, y: y, width: width, height: height },
+      depth: { enable: false },
+      // viewport: regl.prop('viewport'),
       attributes: this.fullscreenQuad.attributes,
       elements: this.fullscreenQuad.elements,
       vert: regl.prop('vert'),
       frag: regl.prop('frag'),
       uniforms: {
-        image: regl.prop('image')
+        image: regl.prop('image'),
+        uOffset: function (context, props) {
+          // move from screen pos 0..W to normalized device pos -1..1
+          return [
+            remap(props.offset[0], 0, context.viewportWidth, 0, 2),
+            remap(props.offset[1], 0, context.viewportHeight, 0, 2)
+          ]
+        },
+        uSize: function (context, props) {
+          return [
+            remap(props.size[0], 0, context.viewportWidth, 0, 1),
+            remap(props.size[1], 0, context.viewportHeight, 0, 1)
+          ]
+        }
       }
     })
   }
   this.blitCmd({
+    // viewport: { x: x, y: y, width: width, height: height },
     vert: program.vert,
     frag: program.frag,
     image: image,
-    imageSize: [image.width, image.height]
+    imageSize: [image.width, image.height],
+    offset: [ x, y ],
+    size: [ width, height ]
   })
 }
 

@@ -640,7 +640,7 @@ Renderer.prototype.updateDirectionalLights = function (directionalLightNodes) {
   })
 }
 
-Renderer.prototype.draw = function () {
+Renderer.prototype.draw = function (viewport) {
   var regl = this._regl
 
   regl.clear({
@@ -752,8 +752,8 @@ Renderer.prototype.draw = function () {
       kernelMap: this.ssaoKernelMap,
       noiseMap: this.ssaoNoiseMap,
       camera: currentCamera,
-      width: this._width / State.ssaoDownsample,
-      height: this._height / State.ssaoDownsample,
+      width: (this._width / State.ssaoDownsample) | 0,
+      height: (this._height / State.ssaoDownsample) | 0,
       radius: State.ssaoRadius
     })
     ssao = ssao.bilateralBlur({ depthMap: this._frameDepthTex, camera: currentCamera, sharpness: State.ssaoSharpness })
@@ -779,7 +779,12 @@ Renderer.prototype.draw = function () {
   // if (State.profile) console.timeEnd('Renderer:postprocessing')
   // var viewport = ctx.getViewport()
   // // final = ssao
-  final.blit({ x: 0, y: 0, width: this._width, height: this._height })
+  final.blit({
+    x: viewport ? viewport[0] : 0,
+    y: viewport ? viewport[1] : 0,
+    width: viewport ? viewport[2] : this._width,
+    height: viewport ? viewport[3] : this._height
+  })
 
   // overlays
 

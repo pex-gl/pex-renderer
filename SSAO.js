@@ -37,7 +37,9 @@ FXStage.prototype.ssao = function (options) {
         fov: options.camera.getFov(),
         aspectRatio: options.camera.getAspectRatio(),
         radius: options.radius || 0.2,
-        uProjectionMatrix: options.camera.getProjectionMatrix()
+        uProjectionMatrix: options.camera.getProjectionMatrix(),
+        uOffset: [0, 0],
+        uSize: [1, 1]
       }
     })
   }
