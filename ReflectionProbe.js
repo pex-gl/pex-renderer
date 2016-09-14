@@ -38,9 +38,9 @@ function ReflectionProbe (regl, position) {
     console.log(e)
   }
 
-  // if (useOctohedralMaps) {
+  if (useOctohedralMaps) {
     // this._reflectionOctMap = ctx.createTexture2D(null, 512, 512, { type: ctx.HALF_FLOAT })
-  // }
+  }
 }
 
 ReflectionProbe.prototype.update = function (drawScene) {
@@ -52,18 +52,18 @@ ReflectionProbe.prototype.update = function (drawScene) {
   downsampleCubemap(regl, this._reflectionMap64, this._reflectionMap32)
   downsampleCubemap(regl, this._reflectionMap32, this._reflectionMap16)
   convolveCubemap(regl, this._reflectionMap16, this._irradianceMap)
-  // if (!isBrowser) {
-    // prefilterCubemap(cmdQueue, this._reflectionMap, this._reflectionPREM, { highQuality: !isMobile && !isBrowser })
-  // }
-  // if (useOctohedralMaps) {
-    // cubemapToOctmap(cmdQueue, this._reflectionMap, this._reflectionOctMap)
-  // }
+
+  if (!isBrowser) {
+    prefilterCubemap(regl, this._reflectionMap, this._reflectionPREM, { highQuality: !isMobile && !isBrowser })
+  }
+  if (useOctohedralMaps) {
+    cubemapToOctmap(regl, this._reflectionMap, this._reflectionOctMap)
+  }
 }
 
 ReflectionProbe.prototype.getReflectionMap = function () {
   // FIXME: re-enable blurry reflection in the browser
-  return this._reflectionMap
-  // return isBrowser ? this._reflectionMap : this._reflectionMapPRM
+  return isBrowser ? this._reflectionMap : this._reflectionPREM
 }
 
 ReflectionProbe.prototype.getIrradianceMap = function () {

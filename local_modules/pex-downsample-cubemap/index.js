@@ -28,9 +28,6 @@ function downsampleCubemap (regl, fromCubemap, toCubemap) {
   }
 
   renderToCubemap(regl, toCubemap, function () {
-    regl.clear({
-      color: [0, 0, 1, 1]
-    })
     drawQuadCommand({
       cubemap: fromCubemap,
       // TODO: this should be called targetCubemapSize, not cubemapSize
