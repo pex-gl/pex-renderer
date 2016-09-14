@@ -22,16 +22,22 @@ function renderToCubemap (regl, cubemap, drawScene/*, level*/) {
     projectionMatrix = Mat4.perspective(Mat4.create(), 90, 1, 0.001, 50.0)
     viewMatrix = Mat4.create()
 
-    cubeFbo = regl.framebufferCube({
-      radius: cubemap.width,
-      color: cubemap,
+    var GL_TEXTURE_CUBE_MAP_POSITIVE_X = 0x8515
+    cubeFbo = regl.framebuffer({
+      color: { target: GL_TEXTURE_CUBE_MAP_POSITIVE_X, data: cubemap },
       depth: false,
       stencil: false
     })
 
     drawCubeFace = regl({
       framebuffer: function (context, props, batchId) {
-        return cubeFbo.faces[batchId]
+        cubeFbo({
+          color: { target: GL_TEXTURE_CUBE_MAP_POSITIVE_X + batchId, data: this.cubemap },
+          depth: false,
+          stencil: false
+        })
+        return cubeFbo
+        // return cubeFbo.faces[batchId]
       },
       context: {
         projectionMatrix: projectionMatrix,
@@ -45,15 +51,15 @@ function renderToCubemap (regl, cubemap, drawScene/*, level*/) {
   }
   // TODO: add level
   // var levelScale = 1.0 / Math.pow(2.0, level)
-  cubeFbo({
-    radius: cubemap.width,
-    color: cubemap,
-    depth: false,
-    stencil: false
-  })
+  // cubeFbo({
+    // radius: cubemap.width,
+    // color: cubemap,
+    // depth: false,
+    // stencil: false
+  // })
 
   // drawCubeFace.call({ cubemap: cubemap }, 6, drawScene)
-  drawCubeFace(6, drawScene)
+  drawCubeFace.call({ cubemap: cubemap }, 6, drawScene)
   /*
   sides.forEach(function (side, sideIndex) {
 
