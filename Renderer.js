@@ -466,11 +466,17 @@ Renderer.prototype.drawMeshes = function (shadowMappingLight) {
     var cachedUniforms = material._uniforms
     cachedUniforms.uIor = 1.4
     cachedUniforms.uBaseColor = material.baseColor
-    // cachedUniforms.uBaseColorMap = material.baseColorMap
+    if (material.baseColorMap) {
+      cachedUniforms.uBaseColorMap = material.baseColorMap
+    }
     cachedUniforms.uEmissiveColor = material.emissiveColor
-    // cachedUniforms.uEmissiveColorMap = material.emissiveColorMap
+    if (material.emissiveColorMap) {
+      cachedUniforms.uEmissiveColorMap = material.emissiveColorMap
+    }
     cachedUniforms.uMetallic = material.metallic || 0.1
-    // cachedUniforms.uMetallicMap = material.metallicMap
+    if (material.metallicMap) {
+      cachedUniforms.uMetallicMap = material.metallicMap
+    }
     cachedUniforms.uRoughness = material.roughness || 1
     // cachedUniforms.uRoughnessMap = material.roughnessMap
     // cachedUniforms.uNormalMap = material.normalMap

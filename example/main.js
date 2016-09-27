@@ -13,6 +13,8 @@ var random = require('pex-random')
 var parseHdr = require('./local_modules/parse-hdr')
 var cosineGradient = require('cosine-gradient')
 var fitRect = require('fit-rect')
+var patchGL = require('./patch-gl')
+var ASSETS_DIR = isBrowser ? '/Assets' : '/Users/vorg/Downloads/Assets'
 
 var scheme = [[0.000, 0.500, 0.500], [0.000, 0.500, 0.500], [0.000, 0.500, 0.333], [0.000, 0.500, 0.667]]
 
@@ -28,6 +30,18 @@ function rand () {
 
 var gradient = cosineGradient(scheme[0], scheme[1], scheme[2], scheme[3])
 
+function canvasToPixels (canvas) {
+  var pixels = []
+  for (var y = canvas.height - 1; y >= 0; y--) {
+    for (var x = 0; x < canvas.width; x++) {
+      var i = (x + y * canvas.width) * 4
+      // SkiaCanvas is BGRA
+      pixels.push(canvas.pixels[i + 2], canvas.pixels[i + 1], canvas.pixels[i + 0], canvas.pixels[i + 3])
+    }
+  }
+  return pixels
+}
+
 Window.create({
   settings: {
     type: '3d',
@@ -37,6 +51,8 @@ Window.create({
     fullScreen: isBrowser
   },
   resources: {
+    envMap: { binary: ASSETS_DIR + '/textures/envmaps/garage/garage.hdr' }
+    // envMap: { image: ASSETS_DIR + '/textures/envmaps/pisa/pisa_latlong_256.png' }
   },
   sunPosition: [0, 5, -5],
   elevation: 65,
@@ -47,118 +63,13 @@ Window.create({
   init: function () {
     try {
       var res = this.getResources()
-      var ctx = this.getContext()
 
-      var gl = ctx.getGL()
+      var gl = this.getContext().getGL()
 
       var APP_VERSION = 'app-30'
 
-      function getEnumName (e) {
-        for (var name in gl) {
-          if (gl[name] === e) return name
-        }
-        return 'UNDEFINED-' + e
-      }
-
-      if (!gl.getContextAttributes) {
-        gl.getSupportedExtensions = function () {
-          return 'EXT_blend_minmax,EXT_sRGB,EXT_frag_depth,\
-          OES_texture_float,OES_texture_float_linear,\
-          OES_texture_half_float,OES_texture_half_float_linear,\
-          OES_standard_derivatives,EXT_shader_texture_lod,\
-          EXT_texture_filter_anisotropic,OES_vertex_array_object,\
-          OES_element_index_uint,WEBGL_lose_context,WEBGL_compressed_texture_s3tc,\
-          WEBGL_depth_texture,WEBGL_draw_buffers,ANGLE_instanced_arrays,\
-          WEBGL_debug_renderer_info'.toLowerCase().split(',')
-        }
-        var glPixelStorei = gl.pixelStorei
-        gl.pixelStorei = function () {
-          try {
-            glPixelStorei.apply(gl, arguments)
-          } catch (e) {
-            // console.log(e)
-          }
-        }
-        var glDrawingBufferWidth = gl.drawingBufferWidth
-        gl.drawingBufferWidth = function () {
-          console.log('drawingBufferWidth', arguments)
-          glDrawingBufferWidth.apply(gl, arguments)
-        }
-        var glTexImage2D = gl.texImage2D
-        gl.texImage2D = function () {
-          glTexImage2D.apply(gl, arguments)
-        }
-        gl.getExtension = function (name) {
-          if (name === 'oes_texture_float') return {}
-          if (name === 'oes_texture_float_linear') return {}
-          if (name === 'oes_texture_half_float') {
-            return {
-              HALF_FLOAT_OES: isBrowser ? 0x8D61 : gl.HALF_FLOAT
-            }
-          }
-          if (name === 'oes_texture_half_float_linear') return {}
-          if (name === 'webgl_depth_texture') return {}
-          if (name === 'webgl_draw_buffers') {
-            return {
-              drawBuffersWEBGL: function () {
-                // FIXME: first call is throwing error for some reason
-                try {
-                  gl.drawBuffers.apply(gl, arguments)
-                } catch (e) {
-                }
-              }
-            }
-          }
-        }
-        var GL_COMPRESSED_TEXTURE_FORMATS = 0x86A3
-        var glGetParameter = gl.getParameter
-        gl.getParameter = function (name) {
-          if (name === GL_COMPRESSED_TEXTURE_FORMATS) return []
-          if (name === gl.MAX_TEXTURE_SIZE) return 16384
-          if (name === gl.MAX_CUBE_MAP_TEXTURE_SIZE) return 16384
-          if (name === gl.MAX_DRAW_BUFFERS) return 4
-          if (name === gl.RED_BITS) return 8
-          if (name === gl.GREEN_BITS) return 8
-          if (name === gl.BLUE_BITS) return 8
-          if (name === gl.ALPHA_BITS) return 8
-          if (name === gl.DEPTH_BITS) return 24
-          if (name === gl.STENCIL_BITS) return 8
-          if (name === gl.MAX_COLOR_ATTACHMENTS) return 4
-          if (name === gl.MAX_RENDERBUFFER_SIZE) return 4096
-          if (name === gl.SUBPIXEL_BITS) return 8
-          // if (name === gl.ALIASED_POINT_SIZE_RANGE) return 0
-          // if (name === gl.ALIASED_LINE_WIDTH_RANGE) return 0
-          if (name === gl.MAX_VIEWPORT_DIMS) return [ 16384, 16384]
-          if (name === gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS) return 16
-          if (name === gl.MAX_TEXTURE_IMAGE_UNITS) return 16
-          if (name === gl.MAX_VERTEX_ATTRIBS) return 16
-          if (name === gl.MAX_VERTEX_UNIFORM_VECTORS) return 16
-          if (name === gl.MAX_VERTEX_TEXTURE_IMAGE_UNITS) return 16
-          if (name === gl.MAX_VARYING_VECTORS) return 16
-          if (name === gl.MAX_FRAGMENT_UNIFORM_VECTORS) return 16
-          console.log(getEnumName(name) + ' not supported')
-          glGetParameter.apply(gl, arguments)
-        }
-        gl.getContextAttributes = function () {
-          return {
-            alpha: true,
-            antialias: true,
-            depth: true,
-            failIfMajorPerformanceCaveat: false,
-            premultipliedAlpha: true,
-            preserveDrawingBuffer: false,
-            stencil: false
-          }
-        }
-        gl.isContextLost = function () {
-          return false
-        }
-      }
-
-      gl.getEnumName = getEnumName
-
       var regl = this._regl = require('regl')({
-        gl: gl,
+        gl: patchGL(gl),
         extensions: [
           'WEBGL_depth_texture',
           'WEBGL_draw_buffers',
@@ -200,11 +111,19 @@ Window.create({
       var envMapTex
       if (res.envMap) {
         if (res.envMap.width) {
-          envMapTex = ctx.createTexture2D(res.envMap)
+          envMapTex = regl.texture({
+            width: res.envMap.width,
+            height: res.envMap.height,
+            data: canvasToPixels(res.envMap)
+          })
         } else { // binary
           var envMapInfo = parseHdr(res.envMap)
-          envMapTex = ctx.createTexture2D(envMapInfo.data, envMapInfo.shape[0], envMapInfo.shape[1], {
-            type: ctx.FLOAT
+          envMapTex = regl.texture({
+            shape: envMapInfo.shape,
+            data: envMapInfo.data,
+            type: 'float',
+            min: 'linear',
+            mag: 'linear'
           })
         }
         // gui.addTexture2D('EnvMap', envMapTex, { hdr: true })
@@ -217,8 +136,6 @@ Window.create({
       gui.addTexture2D('Normals', renderer._frameNormalTex)
       gui.addTexture2D('Depth', renderer._frameDepthTex)
       // gui.addTexture2D('Reflection OctMap', renderer._reflectionProbe._reflectionOctMap, { hdr: true })
-
-
 
       // gui.addTexture2D('Shadow Map', renderer._sunLightNode.data.light._shadowMap)
 
@@ -297,15 +214,7 @@ Window.create({
         position: [2, 1, 0]
       }))
 
-      ctx.setLineWidth(5)
-
       var floorMesh = createCube(14, 0.02, 14)
-      renderer.add(renderer.createNode({
-        mesh: floorMesh,
-        position: [0, -0.3, 0]
-      }))
-
-      var floorMesh = createCube(1, 8, 1)
       renderer.add(renderer.createNode({
         mesh: floorMesh,
         position: [0, -0.3, 0]
@@ -340,16 +249,6 @@ Window.create({
     Vec3.multMat4(this.renderer._state.sunPosition, this.elevationMat)
     Vec3.multMat4(this.renderer._state.sunPosition, this.rotationMat)
   },
-  // buildMesh: function (geometry, primitiveType) {
-    // var ctx = this.getContext()
-    // var attributes = [
-      // { data: geometry.positions, location: ctx.ATTRIB_POSITION },
-      // { data: geometry.uvs || geometry.positions, location: ctx.ATTRIB_TEX_COORD_0 },
-      // { data: geometry.normals || geometry.positions, location: ctx.ATTRIB_NORMAL }
-    // ]
-    // var indices = { data: geometry.cells }
-    // return ctx.createMesh(attributes, geometry.cells ? indices : null, primitiveType)
-  // },
   draw: function () {
     if (this.getTime().getElapsedFrames() % 300 === 0) {
       this.getContext().getGL().finish()
@@ -380,9 +279,9 @@ Window.create({
       console.log(this._regl.stats)
     }
 
-    var sun = this.renderer._directionalLightNodes[0]
-    if (sun.data.light._shadowMap && !sun.guiElem) {
-      sun.guiElem = this.gui.addTexture2D('Sun shadow map', sun.data.light._shadowMap)
+    var sun = this.renderer._directionalLightNodes ? this.renderer._directionalLightNodes[0] : null
+    if (sun && sun.data.light._shadowMap && !sun.guiElem) {
+      // sun.guiElem = this.gui.addTexture2D('Sun shadow map', sun.data.light._shadowMap)
     }
     this.gui.draw()
     this._regl.poll()
