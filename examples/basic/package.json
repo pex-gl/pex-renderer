@@ -1,0 +1,27 @@
+{
+  "name": "pbr",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "budo index.js --open --live -- -t glslify"
+  },
+  "author": "Marcin Ignac <marcin.ignac@gmail.com> (http://marcinignac.com/)",
+  "license": "MIT",
+  "dependencies": {
+    "budo": "^9.4.7",
+    "glsl-gamma": "^2.0.0",
+    "glslify": "^6.0.2",
+    "pex-cam": "pex-gl/pex-cam#066b18cbd0a54086f2a0d8ae6c4f879e0e13a9fd",
+    "pex-context": "^2.0.0-9",
+    "pex-geom": "^1.0.0",
+    "pex-gl": "^2.1.0",
+    "pex-gui": "^2.0.1-0",
+    "pex-io": "^1.5.0",
+    "pex-math": "^1.0.1",
+    "primitive-capsule": "^3.0.0",
+    "primitive-rounded-cube": "^1.0.2",
+    "primitive-sphere": "^3.0.0",
+    "raf": "^3.3.0"
+  }
+}
