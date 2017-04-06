@@ -1,10 +1,10 @@
 {
-  "name": "example",
+  "name": "blocks",
   "version": "1.0.0",
   "description": "",
-  "main": "main.js",
+  "main": "index.js",
   "scripts": {
-    "start": "budo main.js:bundle.js --open --live -- -t glslify",
+    "start": "budo index.js:bundle.js --open --live -- -t glslify",
     "build": "browserify main.js -o bundle.js -t glslify"
   },
   "author": "Marcin Ignac <marcin.ignac@gmail.com> (http://marcinignac.com/)",
@@ -15,11 +15,11 @@
     "cosine-gradient": "^0.1.0",
     "geom-parse-obj": "../local_modules/geom-parse-obj",
     "is-browser": "^2.0.1",
-    "pex-cam": "^1.0.0-beta.2",
-    "pex-context": "^1.2.5",
+    "pex-cam": "^2.0.0",
+    "pex-context": "^2.0.0-9",
     "pex-draw": "^1.0.0-beta.2",
     "pex-geom": "^1.0.0-beta.2",
-    "pex-gui": "^1.3.0",
+    "pex-gui": "^2.0.1-0",
     "pex-io": "^1.1.0",
     "pex-materials": "^1.1.1",
     "pex-math": "^1.0.0",

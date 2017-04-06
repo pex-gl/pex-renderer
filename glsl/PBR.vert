@@ -23,6 +23,7 @@ void main() {
     vPositionView = vec3(uViewMatrix * vec4(vPositionWorld, 1.0));
 
     vNormalView = vec3(uNormalMatrix * aNormal);
+    // vNormalView = vec3(mat3(uViewMatrix * uModelMatrix) * aNormal);
     vNormalWorld = vec3(uInverseViewMatrix * vec4(vNormalView, 0.0));
 
     vEyeDirView = normalize(vec3(0.0, 0.0, 0.0) - vPositionView);

@@ -1,8 +1,4 @@
 #ifdef GL_ES
-precision highp float;
-#endif
-
-#ifdef GL_ES
   #extension GL_EXT_shader_texture_lod : require
   #extension GL_OES_standard_derivatives : require
   #extension GL_EXT_draw_buffers : require
@@ -10,6 +6,10 @@ precision highp float;
 #else
   #extension GL_ARB_shader_texture_lod : require
 #define GLSLIFY 1
+#endif
+
+#ifdef GL_ES
+precision highp float;
 #endif
 
 /**
@@ -981,6 +981,9 @@ void main() {
 #endif
 
     vec3 color = emissiveColor + indirectDiffuse + indirectSpecular + directDiffuse + directSpecular + indirectArea;
+    // vec3 color = emissiveColor + indirectDiffuse + indirectSpecular + directDiffuse + directSpecular + indirectArea;
+    // vec3 color = normalWorld;
+    // vec3 color = baseColor;
     /*vec3 color = indirectArea;*/
     //color = emissiveColor + indirectArea;
     /*color.r = 1.0;*/

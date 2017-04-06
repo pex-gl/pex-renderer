@@ -1,35 +1,37 @@
-var Vec3 = require('pex-math/Vec3')
-var Vec4 = require('pex-math/Vec4')
-var Mat4 = require('pex-math/Mat4')
-var Draw = require('pex-draw/Draw')
-var fx = require('pex-fx')
-var random = require('pex-random')
-var MathUtils = require('pex-math/Utils')
-var flatten = require('flatten')
-var Skybox = require('./Skybox')
-var SkyEnvMap = require('./SkyEnvMap')
-var ReflectionProbe = require('./ReflectionProbe')
-var fs = require('fs')
+const Vec3 = require('pex-math/Vec3')
+const Vec4 = require('pex-math/Vec4')
+const Mat3 = require('pex-math/Mat3')
+const Mat4 = require('pex-math/Mat4')
+// var Draw = require('pex-draw/Draw')
+// var fx = require('pex-fx')
+const random = require('pex-random')
+const MathUtils = require('pex-math/Utils')
+const flatten = require('flatten')
+// var Skybox = require('./Skybox')
+// var SkyEnvMap = require('./SkyEnvMap')
+// var ReflectionProbe = require('./ReflectionProbe')
+const glsl = require('glslify')
 var AreaLightsData = require('./AreaLightsData')
-var CommandQueue = require('./CommandQueue')
-var createTreeNode = require('scene-tree')
+const createTreeNode = require('scene-tree')
 
 // pex-fx extensions, extending FXStage
-require('./Postprocess')
-require('./BilateralBlur')
-require('./SSAO')
+// require('./Postprocess')
+// require('./BilateralBlur')
+// require('./SSAO')
 
-var SOLID_COLOR_VERT = fs.readFileSync(__dirname + '/glsl/SolidColor.vert', 'utf8')
-var SOLID_COLOR_VERT = fs.readFileSync(__dirname + '/glsl/SolidColor.vert', 'utf8')
-var SOLID_COLOR_FRAG = fs.readFileSync(__dirname + '/glsl/SolidColor.frag', 'utf8')
-var SHOW_COLORS_VERT = fs.readFileSync(__dirname + '/glsl/ShowColors.vert', 'utf8')
-var SHOW_COLORS_FRAG = fs.readFileSync(__dirname + '/glsl/ShowColors.frag', 'utf8')
-var OVERLAY_VERT = fs.readFileSync(__dirname + '/glsl/Overlay.vert', 'utf8')
-var OVERLAY_FRAG = fs.readFileSync(__dirname + '/glsl/Overlay.frag', 'utf8')
+const DEPTH_PASS_VERT = glsl(__dirname + '/glsl/DepthPass.vert')
+const DEPTH_PASS_FRAG = glsl(__dirname + '/glsl/DepthPass.frag')
+// var SOLID_COLOR_VERT = glsl(__dirname + '/glsl/SolidColor.vert')
+// var SOLID_COLOR_VERT = glsl(__dirname + '/glsl/SolidColor.vert')
+// var SOLID_COLOR_FRAG = fs.readFileSync(__dirname + '/glsl/SolidColor.frag', 'utf8')
+// var SHOW_COLORS_VERT = fs.readFileSync(__dirname + '/glsl/ShowColors.vert', 'utf8')
+// var SHOW_COLORS_FRAG = fs.readFileSync(__dirname + '/glsl/ShowColors.frag', 'utf8')
+const OVERLAY_VERT = glsl(__dirname + '/glsl/Overlay.vert')
+const OVERLAY_FRAG = glsl(__dirname + '/glsl/Overlay.frag')
 
 var State = {
   backgroundColor: [0.1, 0.1, 0.1, 1],
-  sunPosition: [3, 0, 0],
+  sunPosition: [3, 3, 0],
   sunColor: [1, 1, 1, 1],
   prevSunPosition: [0, 0, 0],
   exposure: 1,
@@ -52,18 +54,15 @@ function Renderer (ctx, width, height, initialState) {
   this._width = width
   this._height = height
 
-  this._cmdQueue = new CommandQueue(ctx)
-
-  this._debugDraw = new Draw(ctx)
+  // this._debugDraw = new Draw(ctx)
   this._debug = false
 
   this._root = createTreeNode()
   this._rootNodeList = this._root.list()
   this._rootPrevSortVersion = -1
 
-  this.initShadowmaps()
   this.initCommands()
-  this.initMaterials()
+  // this.initMaterials()
   this.initSkybox()
   this.initPostproces()
 
@@ -75,55 +74,62 @@ function Renderer (ctx, width, height, initialState) {
 }
 
 Renderer.prototype.initCommands = function () {
-  var cmdQueue = this._cmdQueue
-  this._clearCommand = cmdQueue.createClearCommand({
-    color: State.backgroundColor,
-    depth: 1
-  })
+  const ctx = this._ctx
+  this._clearCommand = {
+    pass: ctx.pass({
+      clearColor: State.backgroundColor,
+      clearDepth: 1
+    })
+  }
 }
 
-Renderer.prototype.initMaterials = function () {
-  var ctx = this._ctx
-  this._solidColorProgram = ctx.createProgram(SOLID_COLOR_VERT, SOLID_COLOR_FRAG)
-  this._showColorsProgram = ctx.createProgram(SHOW_COLORS_VERT, SHOW_COLORS_FRAG)
-}
-
-Renderer.prototype.initShadowmaps = function () {
-  var ctx = this._ctx
-  this._shadowMapFbo = ctx.createFramebuffer()
-}
+// Renderer.prototype.initMaterials = function () {
+  // var ctx = this._ctx
+  // this._solidColorProgram = ctx.createProgram(SOLID_COLOR_VERT, SOLID_COLOR_FRAG)
+  // this._showColorsProgram = ctx.createProgram(SHOW_COLORS_VERT, SHOW_COLORS_FRAG)
+// }
 
 // TODO: move ssao kernels to pex-fx
 Renderer.prototype.initPostproces = function () {
   var ctx = this._ctx
-  var cmdQueue = this._cmdQueue
 
   var fsqPositions = [[-1, -1], [1, -1], [1, 1], [-1, 1]]
-  var fsqFaces = [ [0, 1, 2], [0, 2, 3]]
-  var fsqAttributes = [
-    { data: fsqPositions, location: ctx.ATTRIB_POSITION }
-  ]
-  var fsqIndices = { data: fsqFaces }
-  this._fsqMesh = ctx.createMesh(fsqAttributes, fsqIndices)
+  var fsqFaces = [[0, 1, 2], [0, 2, 3]]
+  this._fsqMesh = {
+    attributes: {
+      aPosition: ctx.vertexBuffer(fsqPositions)
+    },
+    indices: ctx.indexBuffer(fsqFaces)
+  }
 
-  this._frameColorTex = ctx.createTexture2D(null, this._width, this._height, { type: ctx.HALF_FLOAT })
-  this._frameNormalTex = ctx.createTexture2D(null, this._width, this._height, { type: ctx.HALF_FLOAT })
-  this._frameDepthTex = ctx.createTexture2D(null, this._width, this._height, { format: ctx.DEPTH_COMPONENT, type: ctx.UNSIGNED_SHORT })
-  this._frameFbo = ctx.createFramebuffer([ { texture: this._frameColorTex }, { texture: this._frameNormalTex} ], { texture: this._frameDepthTex})
-  this._clearFrameFboCommand = cmdQueue.createClearCommand({
-    framebuffer: this._frameFbo,
-    color: [0, 0, 0, 1],
-    depth: 1
-  })
+  this._frameColorTex = ctx.texture2D({ width: this._width, height: this._height, format: ctx.PixelFormat.RGBA32F }) //TODO: half float?, format: ctx.PixelFormat.{ type: ctx.HALF_FLOAT })
+  this._frameNormalTex = ctx.texture2D({ width: this._width, height: this._height, format: ctx.PixelFormat.RGBA32F })// TODO: byte?, { type: ctx.HALF_FLOAT })
+  this._frameDepthTex = ctx.texture2D({ width: this._width, height: this._height, format: ctx.PixelFormat.Depth })
 
-  this._drawFrameFboCommand = cmdQueue.createDrawCommand({
-    framebuffer: this._frameFbo,
-    viewport: [0, 0, this._width, this._height]
-  })
+  this._drawFrameFboCommand = {
+    pass: ctx.pass({
+      color: [ this._frameColorTex, this._frameNormalTex ],
+      depth: this._frameDepthTex,
+      clearColor: [1, 1, 0, 1],
+      clearDepth: 1
+    })
+  }
 
-  this._overlayProgram = ctx.createProgram(OVERLAY_VERT, OVERLAY_FRAG)
+  // this._overlayProgram = ctx.program({ vert: OVERLAY_VERT, frag: OVERLAY_FRAG }) // TODO
+  this._blitCmd = {
+    pipeline: ctx.pipeline({
+      vert: OVERLAY_VERT,
+      frag: OVERLAY_FRAG
+    }),
+    attributes: this._fsqMesh.attributes,
+    indices: this._fsqMesh.indices,
+    uniforms: {
+      uScreenSize: [this._width, this._height],
+      uOverlay: this._frameColorTex
+    }
+  }
 
-  this._fx = fx(ctx)
+  // this._fx = fx(ctx) // TODO
 
   var ssaoKernel = []
   for (var i = 0; i < 64; i++) {
@@ -153,16 +159,20 @@ Renderer.prototype.initPostproces = function () {
   }
   var ssaoNoiseData = new Float32Array(flatten(ssaoNoise))
 
-  this.ssaoKernelMap = ctx.createTexture2D(ssaoKernelData, 8, 8, { format: ctx.RGBA, type: ctx.FLOAT, minFilter: ctx.NEAREST, magFilter: ctx.NEAREST, repeat: true })
-  this.ssaoNoiseMap = ctx.createTexture2D(ssaoNoiseData, 4, 4, { format: ctx.RGBA, type: ctx.FLOAT, minFilter: ctx.NEAREST, magFilter: ctx.NEAREST, repeat: true })
+  ctx.gl.getExtension('OES_texture_float ')
+  this.ssaoKernelMap = ctx.texture2D({ width: 8, height: 8, data: ssaoKernelData, format: ctx.PixelFormat.RGBA32F, wrap: ctx.Wrap.Repeat })
+  this.ssaoNoiseMap = ctx.texture2D({ width: 8, height: 8, data: ssaoNoiseData, format: ctx.PixelFormat.RGBA32F, wrap: ctx.Wrap.Repeat })
+  
+  var err =  ctx.gl.getError()
+  if (err) throw new Error(err)
 }
 
 Renderer.prototype.initSkybox = function () {
   var cmdQueue = this._cmdQueue
 
-  this._skyEnvMapTex = new SkyEnvMap(cmdQueue, State.sunPosition)
-  this._skybox = new Skybox(cmdQueue, this._skyEnvMapTex)
-  this._reflectionProbe = new ReflectionProbe(cmdQueue, [0, 0, 0])
+  // this._skyEnvMapTex = new SkyEnvMap(cmdQueue, State.sunPosition)
+  // this._skybox = new Skybox(cmdQueue, this._skyEnvMapTex)
+  // this._reflectionProbe = new ReflectionProbe(cmdQueue, [0, 0, 0])
 
   // No need to set default props as these will be automatically updated on first render
   this._sunLightNode = this.createNode({
@@ -201,65 +211,49 @@ Renderer.prototype.initNode = function (data) {
   data._globalTransform = Mat4.create()
   data._prevPosition = Vec3.copy(data.position)
 
-  if (data.mesh || data.vertexArray) {
+  if (data.mesh) {
     var material = data.material
     if (!material) { material = data.material = {} }
     if (!material.baseColorMap && (material.baseColor === undefined)) { material.baseColor = [0.95, 0.95, 0.95, 1] }
     if (!material.emissiveColorMap && (material.emissiveColor === undefined)) { material.emissiveColor = [0.0, 0.0, 0.0, 1] }
-    if (!material.metallicMap && (material.metallic === undefined)) { material.metallic = 0.0 }
+    if (!material.metallicMap && (material.metallic === undefined)) { material.metallic = 0.01 }
     if (!material.roughnessMap && (material.roughness === undefined)) { material.roughness = 0.5 }
-    if (!material._uniforms) { material._uniforms = {}}
+    if (!material._uniforms) { material._uniforms = {} }
 
-    // TODO: don't create mesh draw commands every frame
-    data._drawCommand = cmdQueue.createDrawCommand({
-      mesh: data.mesh,
-			vertexArray: data.vertexArray,
-			count: data.count,
-			primitiveType: data.primitiveType,
-      program: null,
-      uniforms: material._uniforms,
-      lineWidth: material.lineWidth,
-      depthTest: true,
-      cullFace: true,
-      cullFaceMode: ctx.BACK
-    })
-
+    data._drawCommand = {
+      name: 'DrawMesh_' + ((Math.random() * 100000) | 0), 
+      attributes: data.mesh.attributes,
+      indices: data.mesh.indices
+      // primitiveType: data.primitiveType, // TODO: add primitive type support
+      // uniforms: material._uniforms, // TODO: _uniforms support
+      // lineWidth: material.lineWidth, // TODO: lineWidth support
+      // depthTest: true,
+      // cullFace: true,
+      // cullFaceMode: ctx.BACK
+    }
   }
+
   if (data.light) {
     var light = data.light
     if (light.type === 'directional') {
       if (light.shadows === undefined) { light.shadows = true }
       if (light.color === undefined) { light.color = [1, 1, 1, 1] }
-      if (light.direction === undefined) { light.direction = [0, -1, 0] }
-      light._colorMap = ctx.createTexture2D(null, 1024, 1024) // FIXME: remove light color map
-      light._shadowMap = ctx.createTexture2D(null, 1024, 1024, { format: ctx.DEPTH_COMPONENT, type: ctx.UNSIGNED_SHORT})
+      if (light.direction === undefined) { light.direction = [1, -1, 0] }
+      light._colorMap = ctx.texture2D({ width: 1024, height: 1024 }) // FIXME: remove light color map
+      light._shadowMap = ctx.texture2D({ width: 1024, height: 1024, format: ctx.PixelFormat.Depth })
       light._viewMatrix = Mat4.create()
       light._projectionMatrix = Mat4.create()
       light._prevDirection = [0, 0, 0]
 
-      // FIXME: how Metal / Vulkan implement FBO clear on bind?
-      light._shadowMapClearCommand = cmdQueue.createClearCommand({
-        framebuffer: this._shadowMapFbo,
-        framebufferColorAttachments: {
-          '0': { target: light._colorMap.getTarget(), handle: light._colorMap.getHandle(), level: 0 }
-        },
-        framebufferDepthAttachment: { target: light._shadowMap.getTarget(), handle: light._shadowMap.getHandle(), level: 0},
-        color: [0, 0, 0, 1],
-        depth: 1
-      })
-
-      light._shadowMapDrawCommand = cmdQueue.createDrawCommand({
-        framebuffer: this._shadowMapFbo,
-        framebufferColorAttachments: {
-          '0': { target: light._colorMap.getTarget(), handle: light._colorMap.getHandle(), level: 0 }
-        },
-        framebufferDepthAttachment: { target: light._shadowMap.getTarget(), handle: light._shadowMap.getHandle(), level: 0},
-        viewport: [0, 0, light._shadowMap.getWidth(), light._shadowMap.getHeight()],
-        projectionMatrix: light._projectionMatrix,
-        viewMatrix: light._viewMatrix,
-        depthTest: true,
-        colorMask: [0, 0, 0, 0]
-      })
+      light._shadowMapDrawCommand = {
+        pass: ctx.pass({
+          color: [ light._colorMap ],
+          depth: light._shadowMap,
+          clearColor: [0, 0, 0, 1],
+          clearDepth: 1
+        })
+        // colorMask: [0, 0, 0, 0] //TODO
+      }
     } else if (data.light.type === 'point') {
       if (data.light.radius === undefined) { data.light.radius = 10 }
     } else if (data.light.type === 'area') {
@@ -276,26 +270,38 @@ Renderer.prototype.getNodes = function (type) {
 }
 
 Renderer.prototype.updateDirectionalLightShadowMap = function (lightNode) {
-  var cmdQueue = this._cmdQueue
-  var light = lightNode.data.light
+  const ctx = this._ctx
+  const light = lightNode.data.light
 
-  var target = Vec3.copy(lightNode.data.position)
+  const target = Vec3.copy(lightNode.data.position)
   Vec3.add(target, light.direction)
   Mat4.lookAt(light._viewMatrix, lightNode.data.position, target, [0, 1, 0])
   Mat4.ortho(light._projectionMatrix, light._left, light._right, light._bottom, light._top, light._near, light._far)
 
-  cmdQueue.submit(light._shadowMapClearCommand)
-  cmdQueue.submit(light._shadowMapDrawCommand, null, function () {
-    this.drawMeshes(true)
-  }.bind(this))
+  ctx.submit(light._shadowMapDrawCommand, () => {
+    this.drawMeshes(light)
+  })
 }
 
-var Vert = fs.readFileSync(__dirname + '/glsl/PBR.vert', 'utf8')
-var Frag = fs.readFileSync(__dirname + '/glsl/PBR.frag', 'utf8')
+var Vert = glsl(__dirname + '/glsl/PBR.vert')
+var Frag = glsl(__dirname + '/glsl/PBR.frag')
 
 // TODO: how fast is building these flag strings every frame for every object?
 Renderer.prototype.getMeshProgram = function (meshMaterial, options) {
   var ctx = this._ctx
+
+  if (!this._programCache) {
+    this._programCache = {}
+  }
+
+  if (options.depthPassOnly) {
+    const hash = 'DEPTH_PASS_ONLY'
+    let program = this._programCache[hash]
+    if (!program) {
+      program = this._programCache[hash] = ctx.program({ vert: DEPTH_PASS_VERT, frag: DEPTH_PASS_FRAG })
+    }
+    return program
+  }
 
   var flags = []
   flags.push('#define SHADOW_QUALITY_' + State.shadowQuality)
@@ -320,40 +326,46 @@ Renderer.prototype.getMeshProgram = function (meshMaterial, options) {
   }
   flags = flags.join('\n') + '\n'
 
-  if (!this._programCache) {
-    this._programCache = {}
-
-    if (State.watchShaders) {
-      fs.watch(__dirname + '/glsl/PBR.frag', {}, function () {
-        setTimeout(function () {
-          Frag = fs.readFileSync(__dirname + '/glsl/PBR.frag', 'utf8')
-          this._programCache = {}
-        }.bind(this), 500)
-      }.bind(this))
-    }
-  }
-
   var vertSrc = meshMaterial.vert || Vert
   var fragSrc = flags + (meshMaterial.frag || Frag)
   var hash = vertSrc + fragSrc
 
   var program = this._programCache[hash]
   if (!program) {
-    program = this._programCache[hash] = ctx.createProgram(vertSrc, fragSrc)
+    program = this._programCache[hash] = ctx.program({ vert: vertSrc, frag: fragSrc })
   }
   return program
+}
+
+Renderer.prototype.getMeshPipeline = function (material, opts) {
+  const ctx = this._ctx
+  const program = this.getMeshProgram(material, opts)
+  if (!this._pipelineCache) {
+    this._pipelineCache = {}
+  }
+  // TODO: better pipeline caching
+  let pipeline = this._pipelineCache[program.id]
+  if (!pipeline) {
+    pipeline = ctx.pipeline({
+      program: program,
+      depthEnabled: true
+    })
+    this._pipelineCache[program.id] = pipeline
+  }
+
+  return pipeline
 }
 
 Renderer.prototype.updateNodeLists = function () {
   this._cameraNodes = this.getNodes('camera')
   // TODO: reimplement node.enabled filtering
   this._meshNodes = this.getNodes('mesh')
-		.concat(this.getNodes('vertexArray'))
-		.filter(function (node) { return node.data.enabled })
+    .concat(this.getNodes('vertexArray'))
+    .filter(function (node) { return node.data.enabled })
   this._lightNodes = this.getNodes('light').filter(function (node) { return node.data.enabled })
-  this._directionalLightNodes = this._lightNodes.filter(function (node) { return node.data.light.type === 'directional'})
-  this._pointLightNodes = this._lightNodes.filter(function (node) { return node.data.light.type === 'point'})
-  this._areaLightNodes = this._lightNodes.filter(function (node) { return node.data.light.type === 'area'})
+  this._directionalLightNodes = this._lightNodes.filter(function (node) { return node.data.light.type === 'directional' })
+  this._pointLightNodes = this._lightNodes.filter(function (node) { return node.data.light.type === 'point' })
+  this._areaLightNodes = this._lightNodes.filter(function (node) { return node.data.light.type === 'area' })
 }
 
 // sort meshes by material
@@ -362,9 +374,8 @@ Renderer.prototype.updateNodeLists = function () {
 // set update transforms once per frame
 // draw + shadowmap @ 1000 objects x 30 uniforms = 60'000 setters / frame!!
 // transform feedback?
-Renderer.prototype.drawMeshes = function (shadowMappingPass) {
-  var ctx = this._ctx
-  var cmdQueue = this._cmdQueue
+Renderer.prototype.drawMeshes = function (shadowMappingLight) {
+  const ctx = this._ctx
 
   if (State.profile) ctx.getGL().finish()
   if (State.profile) console.time('Renderer:drawMeshes')
@@ -376,15 +387,27 @@ Renderer.prototype.drawMeshes = function (shadowMappingPass) {
   var areaLightNodes = this._areaLightNodes
 
   var sharedUniforms = this._sharedUniforms = this._sharedUniforms || {}
-  sharedUniforms.uReflectionMap = this._reflectionProbe.getReflectionMap()
-  sharedUniforms.uIrradianceMap = this._reflectionProbe.getIrradianceMap()
-  sharedUniforms.uReflectionMapFlipEnvMap = this._reflectionProbe.getReflectionMap().getFlipEnvMap ? this._reflectionProbe.getReflectionMap().getFlipEnvMap() : -1
-  sharedUniforms.uIrradianceMapFlipEnvMap = this._reflectionProbe.getIrradianceMap().getFlipEnvMap ? this._reflectionProbe.getIrradianceMap().getFlipEnvMap() : -1
-  sharedUniforms.uCameraPosition = cameraNodes[0].data.camera.getPosition()
+  // sharedUniforms.uReflectionMap = this._reflectionProbe.getReflectionMap()
+  // sharedUniforms.uIrradianceMap = this._reflectionProbe.getIrradianceMap()
+  // sharedUniforms.uReflectionMapFlipEnvMap = this._reflectionProbe.getReflectionMap().getFlipEnvMap ? this._reflectionProbe.getReflectionMap().getFlipEnvMap() : -1
+  // sharedUniforms.uIrradianceMapFlipEnvMap = this._reflectionProbe.getIrradianceMap().getFlipEnvMap ? this._reflectionProbe.getIrradianceMap().getFlipEnvMap() : -1
+  var camera = cameraNodes[0].data.camera
+  if (shadowMappingLight) {
+    sharedUniforms.uProjectionMatrix = shadowMappingLight._projectionMatrix
+    sharedUniforms.uViewMatrix = shadowMappingLight._viewMatrix
+  } else {
+    sharedUniforms.uCameraPosition = camera.position
+    sharedUniforms.uProjectionMatrix = camera.projectionMatrix
+    sharedUniforms.uViewMatrix = camera.viewMatrix
+    sharedUniforms.uInverseViewMatrix = Mat4.invert(Mat4.copy(camera.viewMatrix))
+  }
+
+
+
 
   if (!this.areaLightTextures) {
-    this.ltc_mat_texture = ctx.createTexture2D(new Float32Array(AreaLightsData.mat), 64, 64, { type: ctx.FLOAT, flipY: false })
-    this.ltc_mag_texture = ctx.createTexture2D(new Float32Array(AreaLightsData.mag), 64, 64, { type: ctx.FLOAT, format: ctx.getGL().ALPHA, flipY: false })
+    this.ltc_mat_texture = ctx.texture2D({ data: AreaLightsData.mat, width: 64, height: 64, format: ctx.PixelFormat.RGBA32F })
+    this.ltc_mag_texture = ctx.texture2D({ data: AreaLightsData.mag, width: 64, height: 64, format: ctx.PixelFormat.R32F })
     this.areaLightTextures = true
   }
   sharedUniforms.ltc_mat = this.ltc_mat_texture
@@ -400,7 +423,7 @@ Renderer.prototype.drawMeshes = function (shadowMappingPass) {
     sharedUniforms['uDirectionalLights[' + i + '].near'] = light._near
     sharedUniforms['uDirectionalLights[' + i + '].far'] = light._far
     sharedUniforms['uDirectionalLights[' + i + '].bias'] = State.bias
-    sharedUniforms['uDirectionalLights[' + i + '].shadowMapSize'] = [light._shadowMap.getWidth(), light._shadowMap.getHeight()]
+    sharedUniforms['uDirectionalLights[' + i + '].shadowMapSize'] = [light._shadowMap.width, light._shadowMap.height]
     sharedUniforms['uDirectionalLightShadowMaps[' + i + ']'] = light._shadowMap
   })
 
@@ -426,15 +449,20 @@ Renderer.prototype.drawMeshes = function (shadowMappingPass) {
     var material = meshNode.data.material
     var cachedUniforms = material._uniforms
     cachedUniforms.uIor = 1.4
-    cachedUniforms.uBaseColor = material.baseColor
-    cachedUniforms.uBaseColorMap = material.baseColorMap
-    cachedUniforms.uEmissiveColor = material.emissiveColor
-    cachedUniforms.uEmissiveColorMap = material.emissiveColorMap
-    cachedUniforms.uMetallic = material.metallic || 0.1
-    cachedUniforms.uMetallicMap = material.metallicMap
-    cachedUniforms.uRoughness = material.roughness || 1
-    cachedUniforms.uRoughnessMap = material.roughnessMap
-    cachedUniforms.uNormalMap = material.normalMap
+
+    if (material.baseColorMap) cachedUniforms.uBaseColorMap = material.baseColorMap
+    else cachedUniforms.uBaseColor = material.baseColor
+
+    if (material.emissiveColorMap) cachedUniforms.uEmissiveColorMap = material.emissiveColorMap
+    else cachedUniforms.uEmissiveColor = material.emissiveColor
+    
+    if (material.metallicMap) cachedUniforms.uMetallicMap = material.metallicMap
+    else cachedUniforms.uMetallic = material.metallic
+    
+    if (material.roughnessMap) cachedUniforms.uRoughnessMap = material.roughnessMap
+    else cachedUniforms.uRoughness = material.roughness
+    
+    if (material.normalMap) cachedUniforms.uNormalMap = material.normalMap
 
     if (material.uniforms) {
       for (var uniformName in material.uniforms) {
@@ -442,30 +470,61 @@ Renderer.prototype.drawMeshes = function (shadowMappingPass) {
       }
     }
 
-    var meshProgram
-
-    if (shadowMappingPass) {
-      meshProgram = material._shadowProgram = material._shadowProgram || this.getMeshProgram(material, {})
+    // TODO: add shadow mapping pass support
+    // var meshProgram
+    // if (shadowMappingPass) {
+      // meshProgram = material._shadowProgram = material._shadowProgram || this.getMeshProgram(material, {})
+    // } else {
+      // meshProgram = material._program = material._program || this.getMeshProgram(material, {
+        // numDirectionalLights: directionalLightNodes.length,
+        // numPointLights: pointLightNodes.length,
+        // numAreaLights: areaLightNodes.length,
+        // useReflectionProbes: true
+      // })
+    // }
+    let pipeline = null
+    if (shadowMappingLight) {
+      pipeline = this.getMeshPipeline(material, { depthPassOnly: true })
     } else {
-      meshProgram = material._program = material._program || this.getMeshProgram(material, {
+      pipeline = this.getMeshPipeline(material, {
         numDirectionalLights: directionalLightNodes.length,
         numPointLights: pointLightNodes.length,
         numAreaLights: areaLightNodes.length,
-        useReflectionProbes: true
+        useReflectionProbes: false // TODO: reflection probes true
       })
     }
 
-    if (meshProgram !== prevProgram) {
-      prevProgram = meshProgram
-      // this is a bit hacky but prevents checking the same uniforms over and over again
-      // this would be even better if we sort meshes by material
+    // TODO: shared uniforms HUH?
+    // if (meshProgram !== prevProgram) {
+      // prevProgram = meshProgram
+      // // this is a bit hacky but prevents checking the same uniforms over and over again
+      // // this would be even better if we sort meshes by material
       Object.assign(cachedUniforms, sharedUniforms)
+    // }
+
+    // TODO: is modelMatrix in command used?
+    // meshNode.data._drawCommand.modelMatrix = meshNode.modelMatrix
+    cachedUniforms.uModelMatrix = meshNode.modelMatrix
+    if (!meshNode.modelMatrix) {
+      throw new Error('Invalid mesh node')
     }
 
-    meshNode.data._drawCommand.modelMatrix = meshNode.modelMatrix
-    meshNode.data._drawCommand.program = meshProgram
+    // FIXME: this is expensive and not cached
+    if (!shadowMappingLight) {
+      var normalMat = Mat4.copy(camera.viewMatrix)
+      Mat4.mult(normalMat, meshNode.modelMatrix)
+      Mat4.invert(normalMat)
+      Mat4.transpose(normalMat)
+      cachedUniforms.uNormalMatrix = Mat3.fromMat4(Mat3.create(), normalMat)
+    }
 
-    cmdQueue.submit(meshNode.data._drawCommand)
+    // replacing program with pipeline
+    // meshNode.data._drawCommand.program = meshProgram
+    meshNode.data._drawCommand.pipeline = pipeline
+
+    meshNode.data._drawCommand.uniforms = cachedUniforms
+
+    ctx.submit(meshNode.data._drawCommand)
 
     // TODO: implement instancing support
     // if (meshNode.mesh._hasDivisor) {
@@ -525,8 +584,7 @@ Renderer.prototype.updateDirectionalLights = function (directionalLightNodes) {
 }
 
 Renderer.prototype.draw = function () {
-  var ctx = this._ctx
-  var cmdQueue = this._cmdQueue
+  const ctx = this._ctx
 
   this._root.tick()
   if (this._root.sortVersion !== this._rootPrevSortVersion) {
@@ -534,9 +592,7 @@ Renderer.prototype.draw = function () {
     this._rootPrevSortVersion = this._root.sortVersion
   }
 
-  ctx.pushState(ctx.ALL)
-
-  cmdQueue.submit(this._clearCommand) // FIXME: unnecesary?
+  ctx.submit(this._clearCommand)
 
   var cameraNodes = this._cameraNodes
   var directionalLightNodes = this._directionalLightNodes
@@ -553,11 +609,12 @@ Renderer.prototype.draw = function () {
     Vec3.set(State.prevSunPosition, State.sunPosition)
 
     // TODO: update sky only if it's used
-    this._skyEnvMapTex.setSunPosition(State.sunPosition)
-    this._skybox.setEnvMap(State.skyEnvMap || this._skyEnvMapTex)
-    this._reflectionProbe.update(function () {
-      this._skybox.draw()
-    }.bind(this))
+    // TODO: implement
+    // this._skyEnvMapTex.setSunPosition(State.sunPosition)
+    // this._skybox.setEnvMap(State.skyEnvMap || this._skyEnvMapTex)
+    // this._reflectionProbe.update(function () {
+      // this._skybox.draw()
+    // }.bind(this))
   }
 
   // draw scene
@@ -569,32 +626,33 @@ Renderer.prototype.draw = function () {
     if (positionHasChanged || directionHasChanged) {
       Vec3.set(lightNode.data._prevPosition, lightNode.data.position)
       Vec3.set(light._prevDirection, light.direction)
-      this.updateDirectionalLightShadowMap(lightNode)
+      this.updateDirectionalLightShadowMap(lightNode) // TODO
     }
   }.bind(this))
 
   var currentCamera = cameraNodes[0].data.camera
 
-  cmdQueue.submit(this._clearFrameFboCommand)
-
-  cmdQueue.submit(this._drawFrameFboCommand, {
-    projectionMatrix: currentCamera.getProjectionMatrix(),
-    viewMatrix: currentCamera.getViewMatrix()
-  }, function () {
-    this._skybox.draw()
-    if (State.profile) {
-      console.time('Renderer:drawMeshes')
-      console.time('Renderer:drawMeshes:finish')
-      State.uniformsSet = 0
-    }
+  // ctx.submit(this._drawFrameFboCommand, () => {
+    // projectionMatrix: currentCamera.getProjectionMatrix(),
+    // viewMatrix: currentCamera.getViewMatrix()
+  // }, function () {
+    // this._skybox.draw()
+    // if (State.profile) {
+      // console.time('Renderer:drawMeshes')
+      // console.time('Renderer:drawMeshes:finish')
+      // State.uniformsSet = 0
+    // }
     this.drawMeshes()
-    if (State.profile) {
-      console.timeEnd('Renderer:drawMeshes')
-      ctx.getGL().finish()
-      console.timeEnd('Renderer:drawMeshes:finish')
-      console.log('Renderer:uniformsSet', State.uniformsSet)
-    }
-  }.bind(this))
+    // if (State.profile) {
+      // console.timeEnd('Renderer:drawMeshes')
+      // ctx.getGL().finish()
+      // console.timeEnd('Renderer:drawMeshes:finish')
+      // console.log('Renderer:uniformsSet', State.uniformsSet)
+    // }
+  // })
+  // ctx.submit(this._blitCmd)
+  //
+  /*
 
   var W = this._width
   var H = this._height
@@ -668,6 +726,7 @@ Renderer.prototype.draw = function () {
   }
 
   cmdQueue.flush()
+  */
 }
 
 Renderer.prototype.drawDebug = function () {
