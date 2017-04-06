@@ -32,7 +32,7 @@ const OVERLAY_FRAG = glsl(__dirname + '/glsl/Overlay.frag')
 var State = {
   backgroundColor: [0.1, 0.1, 0.1, 1],
   sunPosition: [3, 3, 0],
-  sunColor: [1, 1, 1, 1],
+  sunColor: [5, 5, 5, 1],
   prevSunPosition: [0, 0, 0],
   exposure: 1,
   frame: 0,
@@ -46,7 +46,8 @@ var State = {
   bias: 0.1,
   debug: false,
   profile: false,
-  watchShaders: false
+  watchShaders: false,
+  useNewPBR: true
 }
 
 function Renderer (ctx, width, height, initialState) {
@@ -177,7 +178,8 @@ Renderer.prototype.initSkybox = function () {
   // No need to set default props as these will be automatically updated on first render
   this._sunLightNode = this.createNode({
     light: {
-      type: 'directional'
+      type: 'directional',
+      color: [1, 1, 1, 1]
     }
   })
   this._root.add(this._sunLightNode)
@@ -283,8 +285,10 @@ Renderer.prototype.updateDirectionalLightShadowMap = function (lightNode) {
   })
 }
 
-var Vert = glsl(__dirname + '/glsl/PBR.vert')
-var Frag = glsl(__dirname + '/glsl/PBR.frag')
+var PBRVert = glsl(__dirname + '/glsl/PBR.vert')
+var PBRFrag = glsl(__dirname + '/glsl/PBR.src.frag')
+var PBRNewVert = glsl(__dirname + '/glsl/PBR.vert')
+var PBRNewFrag = glsl(__dirname + '/glsl/PBR.new.frag')
 
 // TODO: how fast is building these flag strings every frame for every object?
 Renderer.prototype.getMeshProgram = function (meshMaterial, options) {
@@ -326,8 +330,8 @@ Renderer.prototype.getMeshProgram = function (meshMaterial, options) {
   }
   flags = flags.join('\n') + '\n'
 
-  var vertSrc = meshMaterial.vert || Vert
-  var fragSrc = flags + (meshMaterial.frag || Frag)
+  var vertSrc = meshMaterial.vert || (State.useNewPBR ? PBRNewVert : PBRVert)
+  var fragSrc = flags + (meshMaterial.frag || (State.useNewPBR ? PBRNewFrag : PBRFrag))
   var hash = vertSrc + fragSrc
 
   var program = this._programCache[hash]
@@ -402,9 +406,6 @@ Renderer.prototype.drawMeshes = function (shadowMappingLight) {
     sharedUniforms.uInverseViewMatrix = Mat4.invert(Mat4.copy(camera.viewMatrix))
   }
 
-
-
-
   if (!this.areaLightTextures) {
     this.ltc_mat_texture = ctx.texture2D({ data: AreaLightsData.mat, width: 64, height: 64, format: ctx.PixelFormat.RGBA32F })
     this.ltc_mag_texture = ctx.texture2D({ data: AreaLightsData.mag, width: 64, height: 64, format: ctx.PixelFormat.R32F })
@@ -415,6 +416,7 @@ Renderer.prototype.drawMeshes = function (shadowMappingLight) {
 
   directionalLightNodes.forEach(function (lightNode, i) {
     var light = lightNode.data.light
+    console.log(light.color)
     sharedUniforms['uDirectionalLights[' + i + '].position'] = lightNode.data.position
     sharedUniforms['uDirectionalLights[' + i + '].direction'] = light.direction
     sharedUniforms['uDirectionalLights[' + i + '].color'] = light.color

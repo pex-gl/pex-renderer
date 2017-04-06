@@ -915,9 +915,12 @@ void main() {
 #endif
 
     vec3 color = emissiveColor + indirectDiffuse + indirectSpecular + directDiffuse + directSpecular + indirectArea;
-    /*vec3 color = indirectArea;*/
-    //color = emissiveColor + indirectArea;
-    /*color.r = 1.0;*/
+
+    // tonemapping
+    color /= (1.0 + color);
+    // gamma
+    color = toGamma(color);
+
     gl_FragData[0] = vec4(color, 1.0);
     gl_FragData[1] = vec4(vNormalView * 0.5 + 0.5, 1.0);
 }
