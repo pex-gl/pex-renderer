@@ -8,7 +8,7 @@
 #endif
 
 #ifdef GL_ES
-precision highp float;
+precision mediump float;
 #endif
 
 #pragma glslify: envMapCube         = require(../local_modules/glsl-envmap-cubemap)
@@ -26,10 +26,10 @@ varying vec2 vTexCoord0;
 
 varying vec3 vPositionWorld;
 varying vec3 vPositionView;
-uniform mat4 uInverseViewMatrix;
-uniform mat4 uViewMatrix;
-uniform mat3 uNormalMatrix;
-uniform mat4 uModelMatrix;
+uniform highp mat4 uInverseViewMatrix;
+uniform highp mat4 uViewMatrix;
+uniform highp mat3 uNormalMatrix;
+uniform highp mat4 uModelMatrix;
 
 uniform vec3 uCameraPosition;
 
@@ -182,7 +182,7 @@ float saturate(float f) {
         vec3 normalRGB = texture2D(uNormalMap, vTexCoord0).rgb;
         vec3 normalMap = normalRGB * 2.0 - 1.0;
 
-        //normalMap.y *= -1.0;
+        // normalMap.y *= -1.0;
         /*normalMap.x *= -1.0;*/
 
         vec3 N = normalize(vNormalView);
@@ -418,9 +418,9 @@ void main() {
             vec3 kD = vec3(1.0) - kS;
 
             kD *= 1.0 - metallic;
-            float NDF = GGX(N, H, uRoughness);
+            float NDF = GGX(N, H, roughness);
 
-            float G = GeometrySmith(N, V, L, uRoughness);
+            float G = GeometrySmith(N, V, L, roughness);
 
             vec3 nominator = NDF * G * F;
             float denominator = 4.0 * NdotV * NdotL + 0.001;
@@ -459,7 +459,7 @@ void main() {
         AreaLight light = uAreaLights[i];
 
         //if (length(emissiveColor) == 0.0) {
-            indirectArea += evalAreaLight(light, vPositionWorld, normalWorld, diffuseColor, specularColor, roughness); //TEMP: fix roughness
+            indirectArea += evalAreaLight(light, vPositionWorld, normalWorld, baseColor, specularColor, roughness); //TEMP: fix roughness
             //indirectArea = evalAreaLight(light, vPositionWorld, normalWorld,roughness); //TEMP: fix roughness
             /*indirectArea = evalAreaLight(light, vPositionView, (uNormalMatrix*normalWorld).xyz, diffuseColor, specularColor, roughness); //TEMP: fix roughness*/
         //}
