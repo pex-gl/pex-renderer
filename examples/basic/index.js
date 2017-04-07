@@ -11,7 +11,7 @@ const createCube = require('primitive-cube')
 const createGUI = require('pex-gui')
 const random = require('pex-random')
 const createContext = require('pex-context')
-
+const io = require('pex-io')
 const ctx = createContext()
 ctx.gl.getExtension('EXT_shader_texture_lod')
 ctx.gl.getExtension('OES_standard_derivatives')
@@ -27,7 +27,8 @@ const State = {
   rotationMat: Mat4.create(),
   roughness: 0.5,
   metallic: 0.1,
-  baseColor: [0.8, 0.1, 0.1, 1.0]
+  baseColor: [0.8, 0.1, 0.1, 1.0],
+  materials: []
 }
 
 random.seed(10)
@@ -40,6 +41,7 @@ gui.addParam('New PBR', renderer._state, 'useNewPBR')
 gui.addHeader('Sun')
 gui.addParam('Sun Elevation', State, 'elevation', { min: -90, max: 180 }, updateSunPosition)
 gui.addParam('Sun Azimuth', State, 'azimuth', { min: -180, max: 180 }, updateSunPosition)
+gui.addTexture2D('Skybox', renderer._skyEnvMapTex.texture)
 
 function updateSunPosition () {
   Mat4.setRotation(State.elevationMat, State.elevation / 180 * Math.PI, [0, 0, 1])
@@ -63,7 +65,7 @@ function initCamera () {
     position: [0, 3, 8],
     target: [0, 0, 0],
     near: 0.1,
-    far: 50
+    far: 100
   })
 
   var cameraNode = renderer.createNode({
@@ -94,7 +96,8 @@ function initMeshes () {
   const nodes = []
   for (let i = 0; i < meshes.length; i++) {
     const mesh = meshes[i]
-    for (var j = -5; j <= 5; j += 2) {
+    let materialIndex = 0
+    for (var j = -5; j <= 5; j += 2, materialIndex++) {
       const x = j
       const y = 1.5 * (1 - i)
       const z = 0
@@ -103,8 +106,12 @@ function initMeshes () {
         position: [x, y, z],
         material: {
           baseColor: [0.8, 0.1, 0.1, 1],
+          baseColorMap: State.materials[materialIndex].baseColorTex,
           rougness: 0.5, // (k + 5) / 10,
-          metallic: 0.01// (j + 5) / 10
+          // roughnessMap: State.materials[materialIndex].roughnessTex,
+          metallic: 0.01,// (j + 5) / 10
+          // metallicMap: State.materials[materialIndex].metallicTex,
+          normalMap: State.materials[materialIndex].normalTex
         }
       })
       nodes.push(node)
@@ -113,13 +120,13 @@ function initMeshes () {
   }
   gui.addHeader('Material')
   gui.addParam('Roughness', State, 'roughness', {}, () => {
-    nodes.forEach((node) => node.data.material.roughness = State.roughness)
+    nodes.forEach((node) => { node.data.material.roughness = State.roughness })
   })
   gui.addParam('Metallic', State, 'metallic', {}, () => {
-    nodes.forEach((node) => node.data.material.metallic = State.metallic)
+    nodes.forEach((node) => { node.data.material.metallic = State.metallic })
   })
   gui.addParam('Base Color', State, 'baseColor', { type: 'color' }, () => {
-    nodes.forEach((node) => node.data.material.baseColor = State.baseColor)
+    nodes.forEach((node) => { node.data.material.baseColor = State.baseColor })
   })
 }
 
@@ -179,6 +186,52 @@ function initLights () {
   gui.addParam('AreaLight', areaLightNode.data.light, 'color', { type: 'color' })
   renderer.add(areaLightNode)
 }
+
+function imageFromFile (file, options) {
+  let tex = ctx.texture2D({ width: 1, height: 1})
+  io.loadImage(file, function (err, image) {
+    ctx.update(tex, { data: image, wrap: ctx.Wrap.Repeat, flipY: true })
+    // tex(Object.assign(canvasToPixels(image), {
+      // min: 'mipmap',
+      // mag: 'linear',
+      // wrap: 'repeat'
+    // }))
+  }, true)
+  return tex
+}
+
+function initMaterials () {
+  const ASSETS_DIR = 'http://localhost/assets'
+  const baseColorTextures = [
+    ASSETS_DIR + '/textures/gametextures_old_met/Brick_DustyRedSeattle_PBR/Brick_DustyRedSeattle_Base_Color.png',
+    ASSETS_DIR + '/textures/gametextures_old_met/Metal_FloorPanelModularPainted_pbr/Metal_FloorPanelModularPainted_Base_Color.png',
+    ASSETS_DIR + '/textures/gametextures_old_met/Metal_MatiasSciFiCieling/Metal_MatiasSciFiCieling_Base_Color.png',
+    ASSETS_DIR + '/textures/gametextures_old_met/Metal_PaintedWeatheredMetal/Metal_PaintedWeatheredMetal_Base_Color.png',
+    ASSETS_DIR + '/textures/gametextures_old_met/Metal_SciFiCompartmentPanels_PBR/Metal_SciFiCompartmentPanels_Base_Color.png',
+    ASSETS_DIR + '/textures/gametextures_old_met/Metal_SciFiFlatPlatingSquare_pbr/Metal_SciFiFlatPlatingSquare_Base_Color.png',
+    // ASSETS_DIR + '/textures/gametextures_old_met/Metal_ScifiTrimPieces_PBR/Metal_ScifiTrimPieces_Base_Color.png',
+    // ASSETS_DIR + '/textures/gametextures_old_met/Metal_SteelOxidized_PBR/Metal_SteelOxidized_Base_Color.png',
+    // ASSETS_DIR + '/textures/gametextures_old_met/Misc_BlackLeather_PBR/Misc_BlackLeather_Base_Color.png',
+    // ASSETS_DIR + '/textures/gametextures_old_met/Vorg_Var_Plastic/Vorg_Var_Plastic_Base_Color.png',
+    // ASSETS_DIR + '/textures/gametextures_old_met/Vorg_White_Base/Vorg_White_Base_Base_Color.png',
+    // ASSETS_DIR + '/textures/gametextures_old_met/Wood_LongWideFloorPlanks/Wood_LongWideFloorPlanks_Base_Color.png',
+		// ASSETS_DIR + '/textures/gametextures_old_met/Wood_OakBaseAged/Wood_OakBaseAged_Base_Color.png',
+    // ASSETS_DIR + '/textures/gametextures_old_met/Wood_RailwaySleeper/Wood_RailwaySleeper_Base_Color.png',
+    // ASSETS_DIR + '/textures/gametextures_old_met/ground_lavaflow_pbr/ground_lavaflow_Base_Color.png',
+    // ASSETS_DIR + '/textures/gametextures_old_met/metal_DiamondPlateFloor_PBR/metal_DiamondPlateFloor_Base_Color.png',
+    // ASSETS_DIR + '/textures/gametextures_old_met/tile_disgustingtilev2_PBR/tile_disgustingtilev2_Base_Color.png'
+  ]
+  for (let i = 0; i < baseColorTextures.length; i++) {
+    const mat = {}
+    mat.baseColorTex = imageFromFile(baseColorTextures[i], { flip: false, mipmap: true, repeat: true })
+    mat.normalTex = imageFromFile(baseColorTextures[i].replace('_Base_Color.', '_Normal.'), { flip: false, mipmap: true, repeat: true })
+    mat.roughnessTex = imageFromFile(baseColorTextures[i].replace('_Base_Color.', '_Roughness.'), { flip: false, mipmap: true, repeat: true })
+    mat.metallicTex = imageFromFile(baseColorTextures[i].replace('_Base_Color.', '_Metallic.'), { flip: false, mipmap: true, repeat: true })
+    State.materials.push(mat)
+  }
+}
+
+initMaterials()
 
 initCamera()
 initMeshes()
