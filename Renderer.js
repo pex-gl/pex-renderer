@@ -352,7 +352,9 @@ Renderer.prototype.getMeshPipeline = function (material, opts) {
   if (!pipeline) {
     pipeline = ctx.pipeline({
       program: program,
-      depthEnabled: true
+      depthEnabled: true,
+      cullFaceEnabled: true,
+      cullFace: ctx.Face.Back
     })
     this._pipelineCache[program.id] = pipeline
   }
@@ -416,7 +418,6 @@ Renderer.prototype.drawMeshes = function (shadowMappingLight) {
 
   directionalLightNodes.forEach(function (lightNode, i) {
     var light = lightNode.data.light
-    console.log(light.color)
     sharedUniforms['uDirectionalLights[' + i + '].position'] = lightNode.data.position
     sharedUniforms['uDirectionalLights[' + i + '].direction'] = light.direction
     sharedUniforms['uDirectionalLights[' + i + '].color'] = light.color
