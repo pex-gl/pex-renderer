@@ -1,47 +1,48 @@
-var fs = require('fs')
+const glsl = require('glslify')
 
-var SKYBOX_VERT = fs.readFileSync(__dirname + '/glsl/Skybox.vert', 'utf8')
-var SKYBOX_FRAG = fs.readFileSync(__dirname + '/glsl/Skybox.frag', 'utf8')
+const SKYBOX_VERT = glsl(__dirname + '/glsl/Skybox.vert')
+const SKYBOX_FRAG = glsl(__dirname + '/glsl/Skybox.frag')
 
-function Skybox (cmdQueue, envMap) {
-  this._cmdQueue = cmdQueue
-  var ctx = cmdQueue.getContext()
+function Skybox (ctx, envMap) {
+  this._ctx = ctx
   var skyboxPositions = [[-1, -1], [1, -1], [1, 1], [-1, 1]]
   var skyboxFaces = [ [0, 1, 2], [0, 2, 3]]
-  var skyboxAttributes = [
-    { data: skyboxPositions, location: ctx.ATTRIB_POSITION }
-  ]
-  var skyboxIndices = { data: skyboxFaces }
-  this._fsqMesh = ctx.createMesh(skyboxAttributes, skyboxIndices)
-
-  this._skyboxProgram = ctx.createProgram(SKYBOX_VERT, SKYBOX_FRAG)
 
   this._envMap = envMap
 
-  this._drawCommand = cmdQueue.createDrawCommand({
-    depthTest: false,
-    program: this._skyboxProgram,
-    mesh: this._fsqMesh,
+  this._drawCommand = {
+    name: 'draw skybox',
+    pipeline: ctx.pipeline({
+      vert: SKYBOX_VERT,
+      frag: SKYBOX_FRAG,
+      depthEnabled: true
+    }),
     uniforms: {
       uEnvMap: this._envMap,
       uFlipEnvMap: this._envMap.getFlipEnvMap ? this._envMap.getFlipEnvMap() : -1
-    }
-  })
-  this._drawCommand._type = 'draw skybox'
+    },
+    attributes: {
+      aPosition: ctx.vertexBuffer(skyboxPositions)
+    },
+    indices: ctx.indexBuffer(skyboxFaces)
+  }
 }
 
 Skybox.prototype.setEnvMap = function (envMap) {
   this._envMap = envMap
 }
 
-Skybox.prototype.draw = function () {
-  var cmdQueue = this._cmdQueue
+Skybox.prototype.draw = function (camera) {
+  var ctx = this._ctx
 
   // TODO: can we somehow avoid creating an object every frame here?
-  cmdQueue.submit(this._drawCommand, {
+  ctx.submit(this._drawCommand, {
     uniforms: {
+      uProjectionMatrix: camera.projectionMatrix,
+      uViewMatrix: camera.viewMatrix,
       uEnvMap: this._envMap,
-      uFlipEnvMap: this._envMap.getFlipEnvMap ? this._envMap.getFlipEnvMap() : -1
+      //TODO:  uFlipEnvMap: this._envMap.getFlipEnvMap ? this._envMap.getFlipEnvMap() : -1
+      uFlipEnvMap: 1
     }
   })
 }

@@ -40,6 +40,7 @@ uniform vec4 uSunColor;
 
 float pi = 3.14159;
 #define PI 3.14159265359
+#define TwoPI (2.0 * 3.14159265359)
 
 #if NUM_DIRECTIONAL_LIGHTS > 0
 
@@ -201,12 +202,22 @@ float saturate(float f) {
 
 uniform samplerCube uReflectionMap;
 uniform float uReflectionMapFlipEnvMap;
-uniform samplerCube uIrradianceMap;
+// uniform samplerCube uIrradianceMap; //TODO
+uniform sampler2D uIrradianceMap;
 uniform float uIrradianceMapFlipEnvMap;
+
+vec2 envMapEquirect(vec3 wcNormal, float flipEnvMap) {
+  //I assume envMap texture has been flipped the WebGL way (pixel 0,0 is a the bottom)
+  //therefore we flip wcNorma.y as acos(1) = 0
+  float phi = acos(-wcNormal.y);
+  float theta = atan(flipEnvMap * wcNormal.x, wcNormal.z) + PI;
+  return vec2(theta / TwoPI, phi / PI);
+}
 
 vec3 getIrradiance(vec3 eyeDirWorld, vec3 normalWorld) {
     vec3 R = envMapCube(normalWorld);
-    return textureCube(uIrradianceMap, R).rgb;
+    // return textureCube(uIrradianceMap, R).rgb;
+    return texture2D(uIrradianceMap, envMapEquirect(R, 1.0)).rgb;
 }
 
 vec3 EnvBRDFApprox( vec3 SpecularColor, float Roughness, float NoV ) {
@@ -363,6 +374,7 @@ void main() {
     // view vector in world space
     vec3 V = normalize(uCameraPosition - vPositionWorld);
 
+    // TODO: remove specular color, get kS from fresnel for area lights and IBL
     vec3 specularColor = mix(vec3(1.0), baseColor, metallic);
 
     vec3 indirectDiffuse = vec3(0.0);
@@ -376,10 +388,13 @@ void main() {
     float NdotV = saturate( dot( normalWorld, eyeDirWorld ) );
     vec3 reflectance = EnvBRDFApprox( F0, roughness, NdotV );
     vec3 irradianceColor = getIrradiance(eyeDirWorld, normalWorld);
-    vec3 reflectionColor = getPrefilteredReflection(eyeDirWorld, normalWorld, roughness);
-    indirectDiffuse = diffuseColor * irradianceColor;
-    indirectSpecular = reflectionColor * specularColor * reflectance;
-
+    // vec3 reflectionColor = getPrefilteredReflection(eyeDirWorld, normalWorld, roughness);
+    vec3 kS = F0;
+    vec3 kD = vec3(1.0) - kS;
+    kD *= 1.0 - metallic;
+    float fakeBlurDarker = 0.25;
+    indirectDiffuse = fakeBlurDarker * kD * baseColor * irradianceColor;
+    // indirectSpecular = kS * baseColor * reflectionColor * reflectance;
 #endif
 
     //lights
@@ -458,6 +473,7 @@ void main() {
     for(int i=0; i<NUM_AREA_LIGHTS; i++) {
         AreaLight light = uAreaLights[i];
 
+        // TODO: kD, kS
         //if (length(emissiveColor) == 0.0) {
             indirectArea += evalAreaLight(light, vPositionWorld, normalWorld, baseColor, specularColor, roughness); //TEMP: fix roughness
             //indirectArea = evalAreaLight(light, vPositionWorld, normalWorld,roughness); //TEMP: fix roughness
@@ -467,7 +483,6 @@ void main() {
 #endif
 
     vec3 color = emissiveColor + indirectDiffuse + indirectSpecular + directDiffuse + directSpecular + indirectArea;
-
     // tonemapping
     color /= (1.0 + color);
     // gamma

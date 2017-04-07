@@ -24,12 +24,10 @@ void main() {
   float v = vTexCoord0.y;
 
   float theta = PI * (u - 1.0);
-  float phi = PI * v;
+  float phi = PI * (1.0 - v);
 
-  //added "-" here to conform to flipped env map orientation 
-  float x = -sin(phi) * sin(theta);
+  float x = sin(phi) * sin(theta);
   float y = cos(phi);
-  //originally this z should be -sin * cos
   float z = sin(phi) * cos(theta);
 
   vec3 N = vec3(x,y,z);

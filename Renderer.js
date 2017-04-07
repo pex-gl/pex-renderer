@@ -7,8 +7,8 @@ const Mat4 = require('pex-math/Mat4')
 const random = require('pex-random')
 const MathUtils = require('pex-math/Utils')
 const flatten = require('flatten')
-// var Skybox = require('./Skybox')
-// var SkyEnvMap = require('./SkyEnvMap')
+var Skybox = require('./Skybox')
+var SkyEnvMap = require('./SkyEnvMap')
 // var ReflectionProbe = require('./ReflectionProbe')
 const glsl = require('glslify')
 var AreaLightsData = require('./AreaLightsData')
@@ -169,10 +169,10 @@ Renderer.prototype.initPostproces = function () {
 }
 
 Renderer.prototype.initSkybox = function () {
-  var cmdQueue = this._cmdQueue
+  const ctx = this._ctx
 
-  // this._skyEnvMapTex = new SkyEnvMap(cmdQueue, State.sunPosition)
-  // this._skybox = new Skybox(cmdQueue, this._skyEnvMapTex)
+  this._skyEnvMapTex = new SkyEnvMap(ctx, State.sunPosition)
+  this._skybox = new Skybox(ctx, this._skyEnvMapTex.texture)
   // this._reflectionProbe = new ReflectionProbe(cmdQueue, [0, 0, 0])
 
   // No need to set default props as these will be automatically updated on first render
@@ -395,8 +395,12 @@ Renderer.prototype.drawMeshes = function (shadowMappingLight) {
   var sharedUniforms = this._sharedUniforms = this._sharedUniforms || {}
   // sharedUniforms.uReflectionMap = this._reflectionProbe.getReflectionMap()
   // sharedUniforms.uIrradianceMap = this._reflectionProbe.getIrradianceMap()
+  sharedUniforms.uReflectionMap = this._skyEnvMapTex.texture
+  sharedUniforms.uIrradianceMap = this._skyEnvMapTex.texture
   // sharedUniforms.uReflectionMapFlipEnvMap = this._reflectionProbe.getReflectionMap().getFlipEnvMap ? this._reflectionProbe.getReflectionMap().getFlipEnvMap() : -1
   // sharedUniforms.uIrradianceMapFlipEnvMap = this._reflectionProbe.getIrradianceMap().getFlipEnvMap ? this._reflectionProbe.getIrradianceMap().getFlipEnvMap() : -1
+  sharedUniforms.uReflectionMapFlipEnvMap = 1 //todo, flip or not
+  sharedUniforms.uIrradianceMapFlipEnvMap = 1 //todo, flip or not
   var camera = cameraNodes[0].data.camera
   if (shadowMappingLight) {
     sharedUniforms.uProjectionMatrix = shadowMappingLight._projectionMatrix
@@ -493,7 +497,7 @@ Renderer.prototype.drawMeshes = function (shadowMappingLight) {
         numDirectionalLights: directionalLightNodes.length,
         numPointLights: pointLightNodes.length,
         numAreaLights: areaLightNodes.length,
-        useReflectionProbes: false // TODO: reflection probes true
+        useReflectionProbes: true // TODO: reflection probes true
       })
     }
 
@@ -613,8 +617,8 @@ Renderer.prototype.draw = function () {
 
     // TODO: update sky only if it's used
     // TODO: implement
-    // this._skyEnvMapTex.setSunPosition(State.sunPosition)
-    // this._skybox.setEnvMap(State.skyEnvMap || this._skyEnvMapTex)
+    this._skyEnvMapTex.setSunPosition(State.sunPosition)
+    this._skybox.setEnvMap(State.skyEnvMap || this._skyEnvMapTex.texture)
     // this._reflectionProbe.update(function () {
       // this._skybox.draw()
     // }.bind(this))
@@ -639,13 +643,13 @@ Renderer.prototype.draw = function () {
     // projectionMatrix: currentCamera.getProjectionMatrix(),
     // viewMatrix: currentCamera.getViewMatrix()
   // }, function () {
-    // this._skybox.draw()
     // if (State.profile) {
       // console.time('Renderer:drawMeshes')
       // console.time('Renderer:drawMeshes:finish')
       // State.uniformsSet = 0
     // }
     this.drawMeshes()
+    this._skybox.draw(currentCamera)
     // if (State.profile) {
       // console.timeEnd('Renderer:drawMeshes')
       // ctx.getGL().finish()
