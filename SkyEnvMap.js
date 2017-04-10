@@ -12,6 +12,7 @@ function SkyEnvMap (ctx, sunPosition) {
   console.log('quad', quad)
 
   this._drawCommand = {
+    name: 'sky env map',
     pass: ctx.pass({
       color: [ this.texture ],
       clearColor: [0, 0, 0, 0]

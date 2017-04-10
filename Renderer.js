@@ -77,6 +77,7 @@ function Renderer (ctx, width, height, initialState) {
 Renderer.prototype.initCommands = function () {
   const ctx = this._ctx
   this._clearCommand = {
+    name: 'clear',
     pass: ctx.pass({
       clearColor: State.backgroundColor,
       clearDepth: 1
@@ -108,6 +109,7 @@ Renderer.prototype.initPostproces = function () {
   this._frameDepthTex = ctx.texture2D({ width: this._width, height: this._height, format: ctx.PixelFormat.Depth })
 
   this._drawFrameFboCommand = {
+    name: 'drawFrame',
     pass: ctx.pass({
       color: [ this._frameColorTex, this._frameNormalTex ],
       depth: this._frameDepthTex,
@@ -118,6 +120,7 @@ Renderer.prototype.initPostproces = function () {
 
   // this._overlayProgram = ctx.program({ vert: OVERLAY_VERT, frag: OVERLAY_FRAG }) // TODO
   this._blitCmd = {
+    name: 'blit',
     pipeline: ctx.pipeline({
       vert: OVERLAY_VERT,
       frag: OVERLAY_FRAG
@@ -223,7 +226,7 @@ Renderer.prototype.initNode = function (data) {
     if (!material._uniforms) { material._uniforms = {} }
 
     data._drawCommand = {
-      name: 'DrawMesh_' + ((Math.random() * 100000) | 0), 
+      name: 'drawMesh_' + ((Math.random() * 100000) | 0), 
       attributes: data.mesh.attributes,
       indices: data.mesh.indices
       // primitiveType: data.primitiveType, // TODO: add primitive type support
@@ -248,6 +251,7 @@ Renderer.prototype.initNode = function (data) {
       light._prevDirection = [0, 0, 0]
 
       light._shadowMapDrawCommand = {
+        name: 'shadowMap',
         pass: ctx.pass({
           color: [ light._colorMap ],
           depth: light._shadowMap,
