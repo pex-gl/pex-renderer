@@ -60,7 +60,7 @@ function initCamera () {
   const camera = createCamera({
     fov: 45,
     aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
-    position: [0, 3, 8],
+    position: [0, 3, 4],
     target: [0, 0, 0],
     near: 0.1,
     far: 100
@@ -87,54 +87,79 @@ function buildMesh (geometry, primitiveType) {
 }
 
 function initMeshes () {
-  const cube = buildMesh(createCube(0.1))
+  const n = 15
+  const cube = buildMesh(createCube(0.75 * 2 / n))
   const offsets = []
   const colors = []
 
-  const center = [0.75, 0.75, 0.75]
-  const radius = 1.25
+  let time = 0
+  function update () {
+    State.azimuth += 0.01
+    updateSunPosition()
 
-  const center2 = [-0.75, -0.75, 0.75]
-  const radius2 = 1.25
+    time += 1 / 60
+    const center = [0.75, 0.75, 0.75]
+    const radius = 1.25
 
-  const n = 15
-  for (let x = 0; x < n; x++) {
-    for (let y = 0; y < n; y++) {
-      for (let z = 0; z < n; z++) {
-        const pos = [
-          remap(x, 0, n, -1, 1),
-          remap(y, 0, n, -1, 1),
-          remap(z, 0, n, -1, 1)
-        ]
-        const dist = Vec3.distance(pos, center)
-        if (dist < radius) {
-          const force = Vec3.sub(Vec3.copy(pos), center)
-          Vec3.normalize(force)
-          Vec3.scale(force, 1 - Math.sqrt(dist / radius))
-          Vec3.add(pos, force)
+    const center2 = [-0.75, -0.75, 0.75]
+    const radius2 = 1.25
+
+    center[0] = 1.15 * Math.sin(time)
+    center[1] = 0.75 * Math.cos(time)
+
+    center2[0] = -1.15 * Math.sin(time)
+    center2[1] = 0.75 * Math.sin(time)
+    center2[2] = 0.5 * Math.cos(time * 2) * Math.sin(time / 2)
+
+    let i = 0
+    for (let x = 0; x < n; x++) {
+      for (let y = 0; y < n; y++) {
+        for (let z = 0; z < n; z++) {
+          const pos = [
+            remap(x, 0, n, -1, 1),
+            remap(y, 0, n, -1, 1),
+            remap(z, 0, n, -1, 1)
+          ]
+          const dist = Vec3.distance(pos, center)
+          if (dist < radius) {
+            const force = Vec3.sub(Vec3.copy(pos), center)
+            Vec3.normalize(force)
+            Vec3.scale(force, 1 - Math.sqrt(dist / radius))
+            Vec3.add(pos, force)
+          }
+          const dist2 = Vec3.distance(pos, center2)
+          if (dist2 < radius2) {
+            const force = Vec3.sub(Vec3.copy(pos), center2)
+            Vec3.normalize(force)
+            Vec3.scale(force, 1 - Math.sqrt(dist2 / radius2))
+            Vec3.add(pos, force)
+          }
+          offsets[i] = pos
+          const value = Math.min(1, dist / radius)
+          const value2 = Math.min(1, dist2 / radius2)
+          // const color = Color.fromHSL((1 - Vec3.length(pos) / 100) + 0.4, 0.8, 0.5)
+          const colorBase = [0.1, 0.4, 0.7, 1.0]
+          const color = gradient(value)
+          const color2 = gradient2(value2)
+          // Vec3.set(color2, [0.0, 0.3, 0.7])
+          Vec3.lerp(colorBase, [0, 0, 0, 0], Math.sqrt(Math.max(0.01, 1 - value - value2)))
+          Vec3.lerp(color, [0, 0, 0, 0], value)
+          Vec3.lerp(color2, [0, 0, 0, 0], value2)
+          Vec3.add(colorBase, color)
+          Vec3.add(colorBase, color2)
+          colors[i] = colorBase
+          i++
         }
-        const dist2 = Vec3.distance(pos, center2)
-        if (dist2 < radius2) {
-          const force = Vec3.sub(Vec3.copy(pos), center2)
-          Vec3.normalize(force)
-          Vec3.scale(force, 1 - Math.sqrt(dist2 / radius2))
-          Vec3.add(pos, force)
-        }
-        offsets.push(pos)
-        const value = Math.min(1, dist / radius)
-        const value2 = Math.min(1, dist2 / radius2)
-        // const color = Color.fromHSL((1 - Vec3.length(pos) / 100) + 0.4, 0.8, 0.5)
-        const colorBase = [0.8, 0.1, 0.1, 1.0]
-        const color = gradient(value)
-        const color2 = gradient2(value2)
-        Vec3.lerp(colorBase, [0, 0, 0, 0], Math.max(0, 1 - value - value2))
-        // Vec3.scale(colorBase, 0)
-        Vec3.lerp(color, [0, 0, 0, 0], value)
-        Vec3.lerp(color2, [0, 0, 0, 0], value2)
-        Vec3.add(colorBase, color)
-        Vec3.add(colorBase, color2)
-        colors.push(colorBase)
-      }}}
+      }
+    }
+
+    if (cube.attributes.aOffset) {
+      ctx.update(cube.attributes.aOffset.buffer, { data: offsets })
+      ctx.update(cube.attributes.aColor.buffer, { data: colors })
+    }
+  }
+  update()
+  setInterval(update, 1000 / 60)
   cube.attributes.aOffset = {
     buffer: ctx.vertexBuffer(offsets),
     divisor: 1
@@ -171,27 +196,27 @@ function initLights () {
   const sphereMesh = buildMesh(createSphere(0.2))
   var pointLight = renderer.createNode({
     mesh: sphereMesh,
-    position: [2, 2, 2],
+    position: [0, 2, -5],
     material: {
-      baseColor: [1, 0, 0, 1],
-      emissiveColor: [1, 0, 0, 1]
+      baseColor: [0, 0, 0, 1],
+      emissiveColor: [1, 1, 1, 1]
     },
     light: {
       type: 'point',
-      position: [2, 2, 2],
-      color: [1, 0, 0, 1],
-      radius: 50
+      position: [0, 1, -3],
+      color: [1, 1, 1, 1],
+      radius: 20
     }
   })
   // renderer.add(pointLight)
 
   var areaLightMesh = buildMesh(createCube(1))
-  var areaLightColor = [0, 1, 0, 1]
+  var areaLightColor = [1, 1, 1, 1]
   var areaLightNode = renderer.createNode({
     enabled: true,
-    position: [5, 2, 0],
-    scale: [2, 5, 0.1],
-    rotation: Quat.fromDirection(Quat.create(), [-1, 0, 0]),
+    position: [0, 0, 0],
+    scale: [0.5, 0.5, 0.1],
+    rotation: Quat.fromDirection(Quat.create(), [0, 0, 1]),
     mesh: areaLightMesh,
     material: {
       emissiveColor: areaLightColor,
@@ -210,12 +235,12 @@ function initLights () {
   })
   gui.addParam('AreaLight Intensity', areaLightNode.data.light, 'intensity', { min: 0, max: 5 })
   gui.addParam('AreaLight', areaLightNode.data.light, 'color', { type: 'color' })
-  renderer.add(areaLightNode)
+  // renderer.add(areaLightNode)
 }
 
 initCamera()
 initMeshes()
-// initLights()
+initLights()
 
 let frameNumber = 0
 let debugOnce = false
