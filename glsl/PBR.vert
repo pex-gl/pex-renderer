@@ -1,7 +1,13 @@
 attribute vec3 aPosition;
 attribute vec3 aNormal;
 attribute vec2 aTexCoord0;
-
+#ifdef USE_INSTANCED_OFFSET
+attribute vec3 aOffset;
+#endif
+#ifdef USE_INSTANCED_COLOR
+attribute vec4 aColor;
+varying vec4 vColor;
+#endif
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
 uniform mat4 uModelMatrix;
@@ -19,7 +25,14 @@ varying vec3 vPositionWorld;
 varying vec3 vPositionView;
 
 void main() {
-    vPositionWorld = vec3(uModelMatrix * vec4(aPosition, 1.0));
+    vec3 position = aPosition;
+#ifdef USE_INSTANCED_OFFSET
+    position += aOffset; 
+#endif
+#ifdef USE_INSTANCED_COLOR
+    vColor = aColor; 
+#endif
+    vPositionWorld = vec3(uModelMatrix * vec4(position, 1.0));
     vPositionView = vec3(uViewMatrix * vec4(vPositionWorld, 1.0));
 
     vNormalView = vec3(uNormalMatrix * aNormal);

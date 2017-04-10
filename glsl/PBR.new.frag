@@ -26,10 +26,22 @@ varying vec2 vTexCoord0;
 
 varying vec3 vPositionWorld;
 varying vec3 vPositionView;
+
+#ifdef USE_INSTANCED_COLOR
+varying vec4 vColor;
+#endif
+
+#ifdef GL_ES
 uniform highp mat4 uInverseViewMatrix;
 uniform highp mat4 uViewMatrix;
 uniform highp mat3 uNormalMatrix;
 uniform highp mat4 uModelMatrix;
+#else
+uniform mat4 uInverseViewMatrix;
+uniform mat4 uViewMatrix;
+uniform mat3 uNormalMatrix;
+uniform mat4 uModelMatrix;
+#endif
 
 uniform vec3 uCameraPosition;
 
@@ -361,6 +373,9 @@ void main() {
     vec3 eyeDirWorld = normalize(vEyeDirWorld);
 
     vec3 baseColor = getBaseColor();
+#ifdef USE_INSTANCED_COLOR
+    baseColor *= toLinear(vColor.rgb);
+#endif
     vec3 emissiveColor = getEmissiveColor();
     float roughness = getRoughness();
     float metallic = getMetallic();

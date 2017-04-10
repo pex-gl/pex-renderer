@@ -291,35 +291,48 @@ var PBRNewVert = glsl(__dirname + '/glsl/PBR.vert')
 var PBRNewFrag = glsl(__dirname + '/glsl/PBR.new.frag')
 
 // TODO: how fast is building these flag strings every frame for every object?
-Renderer.prototype.getMeshProgram = function (meshMaterial, options) {
+Renderer.prototype.getMeshProgram = function (mesh, material, options) {
   var ctx = this._ctx
 
   if (!this._programCache) {
     this._programCache = {}
   }
 
+  var flags = []
+
+  if (mesh.attributes.aOffset) {
+    flags.push('#define USE_INSTANCED_OFFSET')
+  }
+
   if (options.depthPassOnly) {
-    const hash = 'DEPTH_PASS_ONLY'
+    const hash = 'DEPTH_PASS_ONLY_' + flags.join('-')
     let program = this._programCache[hash]
+    flags = flags.join('\n')
     if (!program) {
-      program = this._programCache[hash] = ctx.program({ vert: DEPTH_PASS_VERT, frag: DEPTH_PASS_FRAG })
+      program = this._programCache[hash] = ctx.program({
+        vert: flags + DEPTH_PASS_VERT,
+        frag: flags + DEPTH_PASS_FRAG
+      })
     }
     return program
   }
 
-  var flags = []
+  if (mesh.attributes.aColor) {
+    flags.push('#define USE_INSTANCED_COLOR')
+  }
+
   flags.push('#define SHADOW_QUALITY_' + State.shadowQuality)
 
-  if (meshMaterial.baseColorMap) {
+  if (material.baseColorMap) {
     flags.push('#define USE_BASE_COLOR_MAP')
   }
-  if (meshMaterial.metallicMap) {
+  if (material.metallicMap) {
     flags.push('#define USE_METALLIC_MAP')
   }
-  if (meshMaterial.roughnessMap) {
+  if (material.roughnessMap) {
     flags.push('#define USE_ROUGHNESS_MAP')
   }
-  if (meshMaterial.normalMap) {
+  if (material.normalMap) {
     flags.push('#define USE_NORMAL_MAP')
   }
   flags.push('#define NUM_DIRECTIONAL_LIGHTS ' + (options.numDirectionalLights || 0))
@@ -330,8 +343,8 @@ Renderer.prototype.getMeshProgram = function (meshMaterial, options) {
   }
   flags = flags.join('\n') + '\n'
 
-  var vertSrc = meshMaterial.vert || (State.useNewPBR ? PBRNewVert : PBRVert)
-  var fragSrc = flags + (meshMaterial.frag || (State.useNewPBR ? PBRNewFrag : PBRFrag))
+  var vertSrc = flags + (material.vert || (State.useNewPBR ? PBRNewVert : PBRVert))
+  var fragSrc = flags + (material.frag || (State.useNewPBR ? PBRNewFrag : PBRFrag))
   var hash = vertSrc + fragSrc
 
   var program = this._programCache[hash]
@@ -341,9 +354,9 @@ Renderer.prototype.getMeshProgram = function (meshMaterial, options) {
   return program
 }
 
-Renderer.prototype.getMeshPipeline = function (material, opts) {
+Renderer.prototype.getMeshPipeline = function (mesh, material, opts) {
   const ctx = this._ctx
-  const program = this.getMeshProgram(material, opts)
+  const program = this.getMeshProgram(mesh, material, opts)
   if (!this._pipelineCache) {
     this._pipelineCache = {}
   }
@@ -491,9 +504,9 @@ Renderer.prototype.drawMeshes = function (shadowMappingLight) {
     // }
     let pipeline = null
     if (shadowMappingLight) {
-      pipeline = this.getMeshPipeline(material, { depthPassOnly: true })
+      pipeline = this.getMeshPipeline(meshNode.data.mesh, material, { depthPassOnly: true })
     } else {
-      pipeline = this.getMeshPipeline(material, {
+      pipeline = this.getMeshPipeline(meshNode.data.mesh, material, {
         numDirectionalLights: directionalLightNodes.length,
         numPointLights: pointLightNodes.length,
         numAreaLights: areaLightNodes.length,
@@ -530,6 +543,12 @@ Renderer.prototype.drawMeshes = function (shadowMappingLight) {
     meshNode.data._drawCommand.pipeline = pipeline
 
     meshNode.data._drawCommand.uniforms = cachedUniforms
+
+    if (meshNode.data.mesh.attributes.aOffset) {
+      meshNode.data._drawCommand.instances = meshNode.data.mesh.attributes.aOffset.buffer.length / 3
+    } else {
+      meshNode.data._drawCommand.instances = null
+    }
 
     ctx.submit(meshNode.data._drawCommand)
 
