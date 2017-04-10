@@ -370,6 +370,7 @@ Renderer.prototype.getMeshPipeline = function (mesh, material, opts) {
     pipeline = ctx.pipeline({
       program: program,
       depthEnabled: true,
+      depthFunc: ctx.DepthFunc.LessEqual,
       cullFaceEnabled: true,
       cullFace: ctx.Face.Back
     })
@@ -671,6 +672,9 @@ Renderer.prototype.draw = function () {
       // console.time('Renderer:drawMeshes:finish')
       // State.uniformsSet = 0
     // }
+    ctx.gl.colorMask(0, 0, 0, 0)
+    this.drawMeshes()
+    ctx.gl.colorMask(1, 1, 1, 1)
     this.drawMeshes()
     this._skybox.draw(currentCamera)
     // if (State.profile) {
