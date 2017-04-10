@@ -477,8 +477,8 @@ void main() {
         float falloff = (distanceRatio * distanceRatio) / (dist * dist + 1.0);
 
         //TODO: specular light conservation
-        // directDiffuse += baseColor * dotNL * light.color.rgb * falloff;
-        // directSpecular += directSpecularGGX(normalWorld, eyeDirWorld, L, roughness, F0) * light.color.rgb * falloff;
+        directDiffuse += baseColor * dotNL * light.color.rgb * falloff;
+        directSpecular += directSpecularGGX(normalWorld, eyeDirWorld, L, roughness, F0) * light.color.rgb * falloff;
     }
 #endif
 
