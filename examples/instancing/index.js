@@ -91,6 +91,8 @@ function initMeshes () {
   const cube = buildMesh(createCube(0.75 * 2 / n))
   const offsets = []
   const colors = []
+  const scales = []
+  const rotations = []
 
   let time = 0
   function update () {
@@ -137,17 +139,18 @@ function initMeshes () {
           offsets[i] = pos
           const value = Math.min(1, dist / radius)
           const value2 = Math.min(1, dist2 / radius2)
-          // const color = Color.fromHSL((1 - Vec3.length(pos) / 100) + 0.4, 0.8, 0.5)
-          const colorBase = [0.1, 0.4, 0.7, 1.0]
+          const colorBase = [0.8, 0.1, 0.1, 1.0]
           const color = gradient(value)
           const color2 = gradient2(value2)
-          // Vec3.set(color2, [0.0, 0.3, 0.7])
           Vec3.lerp(colorBase, [0, 0, 0, 0], Math.sqrt(Math.max(0.01, 1 - value - value2)))
           Vec3.lerp(color, [0, 0, 0, 0], value)
           Vec3.lerp(color2, [0, 0, 0, 0], value2)
           Vec3.add(colorBase, color)
           Vec3.add(colorBase, color2)
           colors[i] = colorBase
+          scales[i] = [1, 1, 4]
+          const dir = Vec3.normalize(Vec3.sub(Vec3.copy(pos), center))
+          rotations[i] = Quat.fromDirection(Quat.create(), dir)
           i++
         }
       }
@@ -156,6 +159,8 @@ function initMeshes () {
     if (cube.attributes.aOffset) {
       ctx.update(cube.attributes.aOffset.buffer, { data: offsets })
       ctx.update(cube.attributes.aColor.buffer, { data: colors })
+      ctx.update(cube.attributes.aScale.buffer, { data: scales })
+      ctx.update(cube.attributes.aRotation.buffer, { data: rotations })
     }
   }
   update()
@@ -166,6 +171,14 @@ function initMeshes () {
   }
   cube.attributes.aColor = {
     buffer: ctx.vertexBuffer(colors),
+    divisor: 1
+  }
+  cube.attributes.aScale = {
+    buffer: ctx.vertexBuffer(scales),
+    divisor: 1
+  }
+  cube.attributes.aRotation = {
+    buffer: ctx.vertexBuffer(rotations),
     divisor: 1
   }
   const node = renderer.createNode({

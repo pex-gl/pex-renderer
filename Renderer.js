@@ -307,6 +307,12 @@ Renderer.prototype.getMeshProgram = function (mesh, material, options) {
   if (mesh.attributes.aOffset) {
     flags.push('#define USE_INSTANCED_OFFSET')
   }
+  if (mesh.attributes.aScale) {
+    flags.push('#define USE_INSTANCED_SCALE')
+  }
+  if (mesh.attributes.aRotation) {
+    flags.push('#define USE_INSTANCED_ROTATION')
+  }
 
   if (options.depthPassOnly) {
     const hash = 'DEPTH_PASS_ONLY_' + flags.join('-')

@@ -4,6 +4,12 @@ attribute vec2 aTexCoord0;
 #ifdef USE_INSTANCED_OFFSET
 attribute vec3 aOffset;
 #endif
+#ifdef USE_INSTANCED_SCALE
+attribute vec3 aScale;
+#endif
+#ifdef USE_INSTANCED_ROTATION
+attribute vec4 aRotation;
+#endif
 #ifdef USE_INSTANCED_COLOR
 attribute vec4 aColor;
 varying vec4 vColor;
@@ -24,15 +30,55 @@ varying vec2 vTexCoord0;
 varying vec3 vPositionWorld;
 varying vec3 vPositionView;
 
+#ifdef GL_ES
+mat4 transpose(mat4 m) {
+  return mat4(
+    m[0][0], m[1][0], m[2][0], m[3][0],
+    m[0][1], m[1][1], m[2][1], m[3][1],
+    m[0][2], m[1][2], m[2][2], m[3][2],
+    m[0][3], m[1][3], m[2][3], m[3][3]
+  );
+}
+#endif
+
+mat4 quatToMat4(vec4 q) {
+    float xs = q.x + q.x;
+    float ys = q.y + q.y;
+    float zs = q.z + q.z;
+    float wx = q.w * xs;
+    float wy = q.w * ys;
+    float wz = q.w * zs;
+    float xx = q.x * xs;
+    float xy = q.x * ys;
+    float xz = q.x * zs;
+    float yy = q.y * ys;
+    float yz = q.y * zs;
+    float zz = q.z * zs;
+    return transpose(
+        mat4(
+            1.0 - (yy + zz), xy - wz, xz + wy, 0.0,
+            xy + wz, 1.0 - (xx + zz), yz - wx, 0.0,
+            xz - wy, yz + wx, 1.0 - (xx + yy), 0.0,
+            0.0, 0.0, 0.0, 1.0
+        )
+    );
+}
+
 void main() {
-    vec3 position = aPosition;
+    vec4 position = vec4(aPosition, 1.0);
+#ifdef USE_INSTANCED_SCALE
+    position.xyz *= aScale; 
+#endif
+#ifdef USE_INSTANCED_ROTATION
+    position = quatToMat4(aRotation) * position;
+#endif
 #ifdef USE_INSTANCED_OFFSET
-    position += aOffset; 
+    position.xyz += aOffset; 
 #endif
 #ifdef USE_INSTANCED_COLOR
     vColor = aColor; 
 #endif
-    vPositionWorld = vec3(uModelMatrix * vec4(position, 1.0));
+    vPositionWorld = vec3(uModelMatrix * position);
     vPositionView = vec3(uViewMatrix * vec4(vPositionWorld, 1.0));
 
     vNormalView = vec3(uNormalMatrix * aNormal);
