@@ -54,7 +54,7 @@
   },
   "browserify": {
     "transform": [
-      "brfs"
+      "glslify"
     ]
   }
 }
