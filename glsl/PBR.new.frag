@@ -14,6 +14,7 @@ precision mediump float;
 #pragma glslify: envMapCube         = require(../local_modules/glsl-envmap-cubemap)
 #pragma glslify: toGamma            = require(glsl-gamma/out)
 #pragma glslify: toLinear           = require(glsl-gamma/in)
+#pragma glslify: envMapEquirect = require('../local_modules/glsl-envmap-equirect');
 
 uniform float uIor;
 
@@ -212,24 +213,15 @@ float saturate(float f) {
     }
 #endif
 
-uniform samplerCube uReflectionMap;
+// uniform samplerCube uReflectionMap;
+uniform sampler2D uReflectionMap;
 uniform float uReflectionMapFlipEnvMap;
 // uniform samplerCube uIrradianceMap; //TODO
 uniform sampler2D uIrradianceMap;
 uniform float uIrradianceMapFlipEnvMap;
 
-vec2 envMapEquirect(vec3 wcNormal, float flipEnvMap) {
-  //I assume envMap texture has been flipped the WebGL way (pixel 0,0 is a the bottom)
-  //therefore we flip wcNorma.y as acos(1) = 0
-  float phi = acos(-wcNormal.y);
-  float theta = atan(flipEnvMap * wcNormal.x, wcNormal.z) + PI;
-  return vec2(theta / TwoPI, phi / PI);
-}
-
 vec3 getIrradiance(vec3 eyeDirWorld, vec3 normalWorld) {
-    vec3 R = envMapCube(normalWorld);
-    // return textureCube(uIrradianceMap, R).rgb;
-    return texture2D(uIrradianceMap, envMapEquirect(R, 1.0)).rgb;
+    return texture2D(uIrradianceMap, envMapEquirect(normalWorld)).rgb;
 }
 
 vec3 EnvBRDFApprox( vec3 SpecularColor, float Roughness, float NoV ) {
@@ -244,6 +236,8 @@ vec3 EnvBRDFApprox( vec3 SpecularColor, float Roughness, float NoV ) {
 vec3 getPrefilteredReflection(vec3 eyeDirWorld, vec3 normalWorld, float roughness) {
     float maxMipMapLevel = 5.0; //TODO: const
     vec3 reflectionWorld = reflect(-eyeDirWorld, normalWorld);
+    return toLinear(texture2D(uReflectionMap, envMapEquirect(reflectionWorld)).rgb);
+    /*
     //vec3 R = envMapCube(data.normalWorld);
     vec3 R = envMapCube(reflectionWorld, uReflectionMapFlipEnvMap);
     float lod = roughness * maxMipMapLevel;
@@ -253,6 +247,7 @@ vec3 getPrefilteredReflection(vec3 eyeDirWorld, vec3 normalWorld, float roughnes
     vec3 b = textureCubeLod(uReflectionMap, R, downLod).rgb;
 
     return mix(a, b, lod - upLod);
+    */
 }
 
 float G1V(float dotNV, float k) {
@@ -402,14 +397,14 @@ void main() {
 #ifdef USE_REFLECTION_PROBES
     float NdotV = saturate( dot( normalWorld, eyeDirWorld ) );
     vec3 reflectance = EnvBRDFApprox( F0, roughness, NdotV );
-    vec3 irradianceColor = getIrradiance(eyeDirWorld, normalWorld);
-    // vec3 reflectionColor = getPrefilteredReflection(eyeDirWorld, normalWorld, roughness);
+    vec3 irradianceColor = toLinear(getIrradiance(eyeDirWorld, normalWorld));
+    vec3 reflectionColor = getPrefilteredReflection(eyeDirWorld, normalWorld, roughness);
     vec3 kS = F0;
     vec3 kD = vec3(1.0) - kS;
     kD *= 1.0 - metallic;
     float fakeBlurDarker = 0.25;
     indirectDiffuse = fakeBlurDarker * kD * baseColor * irradianceColor;
-    // indirectSpecular = kS * baseColor * reflectionColor * reflectance;
+    indirectSpecular = kS * baseColor * reflectionColor * reflectance;
 #endif
 
     //lights
@@ -492,17 +487,17 @@ void main() {
         //if (length(emissiveColor) == 0.0) {
             indirectArea += evalAreaLight(light, vPositionWorld, normalWorld, baseColor, specularColor, roughness); //TEMP: fix roughness
             //indirectArea = evalAreaLight(light, vPositionWorld, normalWorld,roughness); //TEMP: fix roughness
-            /*indirectArea = evalAreaLight(light, vPositionView, (uNormalMatrix*normalWorld).xyz, diffuseColor, specularColor, roughness); //TEMP: fix roughness*/
+            //indirectArea = evalAreaLight(light, vPositionView, (uNormalMatrix*normalWorld).xyz, diffuseColor, specularColor, roughness); //TEMP: fix roughness
         //}
     }
 #endif
 
     vec3 color = emissiveColor + indirectDiffuse + indirectSpecular + directDiffuse + directSpecular + indirectArea;
+    // color = irradianceColor;
     // tonemapping
     color /= (1.0 + color);
     // gamma
     color = toGamma(color);
-
     gl_FragData[0] = vec4(color, 1.0);
     gl_FragData[1] = vec4(vNormalView * 0.5 + 0.5, 1.0);
 }

@@ -20,15 +20,18 @@ void main() {
   // theta=pi*(u-1), phi=pi*v
   // (Dx,Dy,Dz) = (sin(phi)*sin(theta), cos(phi), -sin(phi)*cos(theta)).
 
-  float u = vTexCoord0.x * 2.0;
+  float u = vTexCoord0.x;
   float v = vTexCoord0.y;
 
-  float theta = PI * (u - 1.0);
-  float phi = PI * (1.0 - v);
+  float tx = 2.0 * u - 1.0;
+  float ty = 2.0 * v - 1.0;
 
-  float x = sin(phi) * sin(theta);
-  float y = cos(phi);
-  float z = sin(phi) * cos(theta);
+  float theta = -tx * PI;
+  float phi = ty * PI / 2.0;
+
+  float x = cos(phi) * cos(theta);
+  float y = sin(phi);
+  float z = cos(phi) * sin(theta);
 
   vec3 N = vec3(x,y,z);
  

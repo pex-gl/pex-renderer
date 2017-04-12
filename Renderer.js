@@ -47,7 +47,8 @@ var State = {
   debug: false,
   profile: false,
   watchShaders: false,
-  useNewPBR: true
+  useNewPBR: true,
+  skyEnvMap: null
 }
 
 function Renderer (ctx, width, height, initialState) {
@@ -407,7 +408,7 @@ Renderer.prototype.updateNodeLists = function () {
 Renderer.prototype.drawMeshes = function (shadowMappingLight) {
   const ctx = this._ctx
 
-  if (State.profile) ctx.getGL().finish()
+  if (State.profile) ctx.gl.finish()
   if (State.profile) console.time('Renderer:drawMeshes')
 
   var cameraNodes = this._cameraNodes
@@ -419,12 +420,9 @@ Renderer.prototype.drawMeshes = function (shadowMappingLight) {
   var sharedUniforms = this._sharedUniforms = this._sharedUniforms || {}
   // sharedUniforms.uReflectionMap = this._reflectionProbe.getReflectionMap()
   // sharedUniforms.uIrradianceMap = this._reflectionProbe.getIrradianceMap()
-  sharedUniforms.uReflectionMap = this._skyEnvMapTex.texture
+  sharedUniforms.uReflectionMap = State.skyEnvMap || this._skyEnvMapTex.texture
+  // sharedUniforms.uIrradianceMap = State.skyEnvMap || this._skyEnvMapTex.texture
   sharedUniforms.uIrradianceMap = this._skyEnvMapTex.texture
-  // sharedUniforms.uReflectionMapFlipEnvMap = this._reflectionProbe.getReflectionMap().getFlipEnvMap ? this._reflectionProbe.getReflectionMap().getFlipEnvMap() : -1
-  // sharedUniforms.uIrradianceMapFlipEnvMap = this._reflectionProbe.getIrradianceMap().getFlipEnvMap ? this._reflectionProbe.getIrradianceMap().getFlipEnvMap() : -1
-  sharedUniforms.uReflectionMapFlipEnvMap = 1 //todo, flip or not
-  sharedUniforms.uIrradianceMapFlipEnvMap = 1 //todo, flip or not
   var camera = cameraNodes[0].data.camera
   if (shadowMappingLight) {
     sharedUniforms.uProjectionMatrix = shadowMappingLight._projectionMatrix
@@ -591,7 +589,7 @@ Renderer.prototype.drawMeshes = function (shadowMappingLight) {
     // }
   }
 
-  if (State.profile) ctx.getGL().finish()
+  if (State.profile) ctx.gl.finish()
   if (State.profile) console.timeEnd('Renderer:drawMeshes')
 }
 
@@ -647,8 +645,12 @@ Renderer.prototype.draw = function () {
 
     // TODO: update sky only if it's used
     // TODO: implement
-    this._skyEnvMapTex.setSunPosition(State.sunPosition)
-    this._skybox.setEnvMap(State.skyEnvMap || this._skyEnvMapTex.texture)
+    if (State.skyEnvMap) {
+      this._skybox.setEnvMap(State.skyEnvMap)
+    } else {
+      this._skyEnvMapTex.setSunPosition(State.sunPosition)
+      this._skybox.setEnvMap(this._skyEnvMapTex.texture)
+    }
     // this._reflectionProbe.update(function () {
       // this._skybox.draw()
     // }.bind(this))
