@@ -12,6 +12,8 @@ const createGUI = require('pex-gui')
 const random = require('pex-random')
 const createContext = require('pex-context')
 const io = require('pex-io')
+const isBrowser = require('is-browser')
+
 const ctx = createContext()
 ctx.gl.getExtension('EXT_shader_texture_lod')
 ctx.gl.getExtension('OES_standard_derivatives')
@@ -190,6 +192,7 @@ function initLights () {
 function imageFromFile (file, options) {
   let tex = ctx.texture2D({ width: 1, height: 1})
   io.loadImage(file, function (err, image) {
+    if (err) console.log(err)
     ctx.update(tex, { data: image, wrap: ctx.Wrap.Repeat, flipY: true })
     // tex(Object.assign(canvasToPixels(image), {
       // min: 'mipmap',
@@ -201,7 +204,7 @@ function imageFromFile (file, options) {
 }
 
 function initMaterials () {
-  const ASSETS_DIR = 'http://localhost/assets'
+  const ASSETS_DIR = isBrowser ? 'http://localhost/assets' : '/Users/vorg/Workspace/assets'
   const baseColorTextures = [
     ASSETS_DIR + '/textures/gametextures_old_met/Brick_DustyRedSeattle_PBR/Brick_DustyRedSeattle_Base_Color.png',
     ASSETS_DIR + '/textures/gametextures_old_met/Metal_FloorPanelModularPainted_pbr/Metal_FloorPanelModularPainted_Base_Color.png',
