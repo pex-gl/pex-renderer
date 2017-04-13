@@ -4,6 +4,26 @@
 
 Phisically Based Renderer for Pex
 
+### API
+
+#### Renderer(opts)
+
+```javascript
+const renderer = new Renderer(ctx)
+opts = Context
+```
+
+```javascript
+const renderer = new Renderer(opts)
+opts = {
+  ctx: Context,
+  width: Number,
+  height: Number,
+  profile: Boolean,
+  pauseOnBlur: Boolean
+}
+```
+
 ## Usage
 
 [![NPM](https://nodei.co/npm/pex-renderer.png)](https://www.npmjs.com/package/pex-renderer)

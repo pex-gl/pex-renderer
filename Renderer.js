@@ -13,6 +13,8 @@ var SkyEnvMap = require('./SkyEnvMap')
 const glsl = require('glslify')
 var AreaLightsData = require('./AreaLightsData')
 const createTreeNode = require('scene-tree')
+const createProfiler = require('./profiler')
+const isBrowser = require('is-browser')
 
 // pex-fx extensions, extending FXStage
 // require('./Postprocess')
@@ -48,16 +50,35 @@ var State = {
   profile: false,
   watchShaders: false,
   useNewPBR: true,
-  skyEnvMap: null
+  skyEnvMap: null,
+  profiler: null,
+  paused: false
 }
 
-function Renderer (ctx, width, height, initialState) {
-  this._ctx = ctx
-  this._width = width
-  this._height = height
+// opts = Context
+// opts = { ctx: Context, width: Number, height: Number, profile: Boolean }
+function Renderer (opts) {
+  opts = opts.texture2D ? { ctx: opts } : opts
+
+  this._ctx = opts.ctx
+  this._width = opts.width || opts.ctx.gl.drawingBufferWidth
+  this._height = opts.height || opts.ctx.gl.drawingBufferHeight
 
   // this._debugDraw = new Draw(ctx)
   this._debug = false
+
+  if (opts.profile) {
+    State.profiler = createProfiler(opts.ctx)
+  }
+
+  if (opts.pauseOnBlur && isBrowser) {
+    window.addEventListener('focus', () => {
+      State.paused = false
+    })
+    window.addEventListener('blur', () => {
+      State.paused = true
+    })
+  }
 
   this._root = createTreeNode()
   this._rootNodeList = this._root.list()
@@ -70,9 +91,7 @@ function Renderer (ctx, width, height, initialState) {
 
   this._state = State
 
-  if (initialState) {
-    Object.assign(State, initialState)
-  }
+  Object.assign(State, opts)
 }
 
 Renderer.prototype.initCommands = function () {
@@ -408,8 +427,7 @@ Renderer.prototype.updateNodeLists = function () {
 Renderer.prototype.drawMeshes = function (shadowMappingLight) {
   const ctx = this._ctx
 
-  if (State.profile) ctx.gl.finish()
-  if (State.profile) console.time('Renderer:drawMeshes')
+  if (State.profiler) State.profiler.time('drawMeshes')
 
   var cameraNodes = this._cameraNodes
   var meshNodes = this._meshNodes
@@ -589,8 +607,7 @@ Renderer.prototype.drawMeshes = function (shadowMappingLight) {
     // }
   }
 
-  if (State.profile) ctx.gl.finish()
-  if (State.profile) console.timeEnd('Renderer:drawMeshes')
+  if (State.profiler) State.profiler.timeEnd('drawMeshes')
 }
 
 Renderer.prototype.updateDirectionalLights = function (directionalLightNodes) {
@@ -620,6 +637,10 @@ Renderer.prototype.updateDirectionalLights = function (directionalLightNodes) {
 
 Renderer.prototype.draw = function () {
   const ctx = this._ctx
+
+  if (State.paused) return
+
+  if (State.profiler) State.profiler.startFrame()
 
   this._root.tick()
   if (this._root.sortVersion !== this._rootPrevSortVersion) {
@@ -769,6 +790,7 @@ Renderer.prototype.draw = function () {
 
   cmdQueue.flush()
   */
+  if (State.profiler) State.profiler.endFrame()
 }
 
 Renderer.prototype.drawDebug = function () {
