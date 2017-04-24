@@ -9,6 +9,7 @@ function Skybox (ctx, envMap) {
   var skyboxFaces = [ [0, 1, 2], [0, 2, 3]]
 
   this._envMap = envMap
+  this._exposure = 1
 
   this._drawCommand = {
     name: 'draw skybox',
@@ -18,8 +19,7 @@ function Skybox (ctx, envMap) {
       depthEnabled: true
     }),
     uniforms: {
-      uEnvMap: this._envMap,
-      uFlipEnvMap: this._envMap.getFlipEnvMap ? this._envMap.getFlipEnvMap() : -1
+      uEnvMap: this._envMap
     },
     attributes: {
       aPosition: ctx.vertexBuffer(skyboxPositions)
@@ -41,6 +41,7 @@ Skybox.prototype.draw = function (camera) {
       uProjectionMatrix: camera.projectionMatrix,
       uViewMatrix: camera.viewMatrix,
       uEnvMap: this._envMap,
+      uExposure: this._exposure,
       //TODO:  uFlipEnvMap: this._envMap.getFlipEnvMap ? this._envMap.getFlipEnvMap() : -1
       uFlipEnvMap: 1
     }

@@ -3,6 +3,7 @@ precision highp float;
 #endif
 
 #pragma glslify: sky = require('../local_modules/glsl-sky')
+#pragma glslify: encodeRGBM = require('../local_modules/glsl-rgbm/encode')
 #pragma glslify: atmosphere = require(glsl-atmosphere) 
 
 #ifndef PI
@@ -33,10 +34,9 @@ void main() {
   float y = sin(phi);
   float z = cos(phi) * sin(theta);
 
-  vec3 N = vec3(x,y,z);
+  vec3 N = vec3(x, y, z);
  
   vec3 color = sky(uSunPosition, N);
 
-  gl_FragColor.rgb = color;
-  gl_FragColor.a = 1.0;
+  gl_FragColor = encodeRGBM(color);
 }

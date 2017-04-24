@@ -3,6 +3,9 @@ precision highp float;
 #endif
 
 #pragma glslify: envMapEquirect = require('../local_modules/glsl-envmap-equirect');
+#pragma glslify: toGamma = require(glsl-gamma/out)
+#pragma glslify: toLinear = require(glsl-gamma/in)
+#pragma glslify: encodeRGBM = require(../local_modules/glsl-rgbm/encode)
 
 //assuming texture in Linear Space
 //most likely HDR or Texture2D with sRGB Ext
@@ -13,6 +16,6 @@ varying vec3 wcNormal;
 void main() {
     vec3 N = normalize(wcNormal);
 
-    gl_FragColor.rgb = texture2D(uEnvMap, envMapEquirect(N)).rgb;
-    gl_FragColor.a = 1.0;
+    vec4 rgbmColor = texture2D(uEnvMap, envMapEquirect(N));
+    gl_FragColor = rgbmColor;
 }

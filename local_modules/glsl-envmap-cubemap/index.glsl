@@ -6,12 +6,12 @@
  * @return {vec4} - cubemap texture coordinate
  */
 vec3 envMapCubemap(vec3 wcNormal, float flipEnvMap) {
-    return vec3(flipEnvMap * wcNormal.x, wcNormal.y, wcNormal.z);
+    return vec3(wcNormal.x, wcNormal.y, -wcNormal.z);
 }
 
 vec3 envMapCubemap(vec3 wcNormal) {
     //-1.0 for left handed coorinate system oriented texture (usual case)
-    return envMapCubemap(wcNormal, -1.0);
+    return envMapCubemap(wcNormal, 1.0);
 }
 
 #pragma glslify: export(envMapCubemap)

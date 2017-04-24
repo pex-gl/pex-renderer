@@ -1,7 +1,7 @@
 #ifdef GL_ES
   #extension GL_EXT_shader_texture_lod : require
   #extension GL_OES_standard_derivatives : require
-  #extension GL_EXT_draw_buffers : require
+  // #extension GL_EXT_draw_buffers : require
   #define textureCubeLod textureCubeLodEXT
 #else
   #extension GL_ARB_shader_texture_lod : require
@@ -11,10 +11,11 @@
 precision mediump float;
 #endif
 
-#pragma glslify: envMapCube         = require(../local_modules/glsl-envmap-cubemap)
-#pragma glslify: toGamma            = require(glsl-gamma/out)
-#pragma glslify: toLinear           = require(glsl-gamma/in)
-#pragma glslify: envMapEquirect = require('../local_modules/glsl-envmap-equirect');
+#pragma glslify: toGamma = require(glsl-gamma/out)
+#pragma glslify: toLinear = require(glsl-gamma/in)
+#pragma glslify: envMapOctahedral = require(../glsl/EnvMapOctahedral.glsl)
+#pragma glslify: encodeRGBM = require(../local_modules/glsl-rgbm/encode)
+#pragma glslify: decodeRGBM = require(../local_modules/glsl-rgbm/decode)
 
 uniform float uIor;
 
@@ -196,7 +197,7 @@ float saturate(float f) {
         vec3 normalRGB = texture2D(uNormalMap, vTexCoord0).rgb;
         vec3 normalMap = normalRGB * 2.0 - 1.0;
 
-        // normalMap.y *= -1.0;
+        normalMap.y *= -1.0;
         /*normalMap.x *= -1.0;*/
 
         vec3 N = normalize(vNormalView);
@@ -213,15 +214,17 @@ float saturate(float f) {
     }
 #endif
 
-// uniform samplerCube uReflectionMap;
 uniform sampler2D uReflectionMap;
-uniform float uReflectionMapFlipEnvMap;
-// uniform samplerCube uIrradianceMap; //TODO
-uniform sampler2D uIrradianceMap;
-uniform float uIrradianceMapFlipEnvMap;
 
 vec3 getIrradiance(vec3 eyeDirWorld, vec3 normalWorld) {
-    return texture2D(uIrradianceMap, envMapEquirect(normalWorld)).rgb;
+  vec2 uv = envMapOctahedral(normalWorld);
+  float width = 2048.0;
+  float irrSize = 32.0;
+  uv += 0.5 / 32.0;
+  uv /= 32.0 / 31.0;
+  uv = (uv * 32.0 + vec2(2048.0 - 32.0)) / width;
+  vec3 irradiance = decodeRGBM(texture2D(uReflectionMap, uv));
+  return irradiance;
 }
 
 vec3 EnvBRDFApprox( vec3 SpecularColor, float Roughness, float NoV ) {
@@ -236,18 +239,14 @@ vec3 EnvBRDFApprox( vec3 SpecularColor, float Roughness, float NoV ) {
 vec3 getPrefilteredReflection(vec3 eyeDirWorld, vec3 normalWorld, float roughness) {
     float maxMipMapLevel = 5.0; //TODO: const
     vec3 reflectionWorld = reflect(-eyeDirWorld, normalWorld);
-    return toLinear(texture2D(uReflectionMap, envMapEquirect(reflectionWorld)).rgb);
-    /*
     //vec3 R = envMapCube(data.normalWorld);
-    vec3 R = envMapCube(reflectionWorld, uReflectionMapFlipEnvMap);
     float lod = roughness * maxMipMapLevel;
     float upLod = floor(lod);
     float downLod = ceil(lod);
-    vec3 a = textureCubeLod(uReflectionMap, R, upLod).rgb;
-    vec3 b = textureCubeLod(uReflectionMap, R, downLod).rgb;
+    vec3 a = decodeRGBM(texture2D(uReflectionMap, envMapOctahedral(reflectionWorld, 0.0, upLod)));
+    vec3 b = decodeRGBM(texture2D(uReflectionMap, envMapOctahedral(reflectionWorld, 0.0, downLod)));
 
     return mix(a, b, lod - upLod);
-    */
 }
 
 float G1V(float dotNV, float k) {
@@ -397,7 +396,7 @@ void main() {
 #ifdef USE_REFLECTION_PROBES
     float NdotV = saturate( dot( normalWorld, eyeDirWorld ) );
     vec3 reflectance = EnvBRDFApprox( F0, roughness, NdotV );
-    vec3 irradianceColor = toLinear(getIrradiance(eyeDirWorld, normalWorld));
+    vec3 irradianceColor = getIrradiance(eyeDirWorld, normalWorld);
     vec3 reflectionColor = getPrefilteredReflection(eyeDirWorld, normalWorld, roughness);
     vec3 kS = F0;
     vec3 kD = vec3(1.0) - kS;
@@ -493,11 +492,8 @@ void main() {
 #endif
 
     vec3 color = emissiveColor + indirectDiffuse + indirectSpecular + directDiffuse + directSpecular + indirectArea;
-    // color = irradianceColor;
-    // tonemapping
-    color /= (1.0 + color);
-    // gamma
-    color = toGamma(color);
-    gl_FragData[0] = vec4(color, 1.0);
-    gl_FragData[1] = vec4(vNormalView * 0.5 + 0.5, 1.0);
+    // color = reflectionColor;
+
+    gl_FragData[0] = encodeRGBM(color);
+    // gl_FragData[1] = vec4(vNormalView * 0.5 + 0.5, 1.0);
 }

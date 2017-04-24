@@ -7,11 +7,11 @@ const Mat4 = require('pex-math/Mat4')
 const random = require('pex-random')
 const MathUtils = require('pex-math/Utils')
 const flatten = require('flatten')
-var Skybox = require('./Skybox')
-var SkyEnvMap = require('./SkyEnvMap')
-// var ReflectionProbe = require('./ReflectionProbe')
+const Skybox = require('./Skybox')
+const SkyEnvMap = require('./SkyEnvMap')
+const ReflectionProbe = require('./ReflectionProbe')
 const glsl = require('glslify')
-var AreaLightsData = require('./AreaLightsData')
+const AreaLightsData = require('./AreaLightsData')
 const createTreeNode = require('scene-tree')
 const createProfiler = require('./profiler')
 const isBrowser = require('is-browser')
@@ -33,9 +33,10 @@ const OVERLAY_FRAG = glsl(__dirname + '/glsl/Overlay.frag')
 
 var State = {
   backgroundColor: [0.1, 0.1, 0.1, 1],
-  sunPosition: [3, 3, 0],
-  sunColor: [5, 5, 5, 1],
-  prevSunPosition: [0, 0, 0],
+  depthPrepass: true,
+  // sunPosition: [3, 3, 0],
+  // sunColor: [5, 5, 5, 1],
+  // prevSunPosition: [0, 0, 0],
   exposure: 1,
   frame: 0,
   ssao: true,
@@ -50,7 +51,7 @@ var State = {
   profile: false,
   watchShaders: false,
   useNewPBR: true,
-  skyEnvMap: null,
+  // skyEnvMap: null,
   profiler: null,
   paused: false
 }
@@ -58,6 +59,7 @@ var State = {
 // opts = Context
 // opts = { ctx: Context, width: Number, height: Number, profile: Boolean }
 function Renderer (opts) {
+  // check if we passed gl context or options object
   opts = opts.texture2D ? { ctx: opts } : opts
 
   this._ctx = opts.ctx
@@ -84,25 +86,13 @@ function Renderer (opts) {
   this._rootNodeList = this._root.list()
   this._rootPrevSortVersion = -1
 
-  this.initCommands()
-  // this.initMaterials()
-  this.initSkybox()
-  this.initPostproces()
-
+  // TODO: move from State object to internal probs and renderer({ opts }) setter?
+  Object.assign(State, opts)
   this._state = State
 
-  Object.assign(State, opts)
-}
-
-Renderer.prototype.initCommands = function () {
-  const ctx = this._ctx
-  this._clearCommand = {
-    name: 'clear',
-    pass: ctx.pass({
-      clearColor: State.backgroundColor,
-      clearDepth: 1
-    })
-  }
+  // this.initMaterials()
+  // this.initSkybox()
+  this.initPostproces()
 }
 
 // Renderer.prototype.initMaterials = function () {
@@ -124,16 +114,17 @@ Renderer.prototype.initPostproces = function () {
     indices: ctx.indexBuffer(fsqFaces)
   }
 
-  this._frameColorTex = ctx.texture2D({ width: this._width, height: this._height, format: ctx.PixelFormat.RGBA32F }) //TODO: half float?, format: ctx.PixelFormat.{ type: ctx.HALF_FLOAT })
-  this._frameNormalTex = ctx.texture2D({ width: this._width, height: this._height, format: ctx.PixelFormat.RGBA32F })// TODO: byte?, { type: ctx.HALF_FLOAT })
+  this._frameColorTex = ctx.texture2D({ width: this._width, height: this._height })
+  this._frameNormalTex = ctx.texture2D({ width: this._width, height: this._height })
   this._frameDepthTex = ctx.texture2D({ width: this._width, height: this._height, format: ctx.PixelFormat.Depth })
 
   this._drawFrameFboCommand = {
     name: 'drawFrame',
     pass: ctx.pass({
-      color: [ this._frameColorTex, this._frameNormalTex ],
+      // color: [ this._frameColorTex, this._frameNormalTex ],
+      color: [ this._frameColorTex ],
       depth: this._frameDepthTex,
-      clearColor: [1, 1, 0, 1],
+      clearColor: State.backgroundColor,
       clearDepth: 1
     })
   }
@@ -186,27 +177,23 @@ Renderer.prototype.initPostproces = function () {
   ctx.gl.getExtension('OES_texture_float ')
   this.ssaoKernelMap = ctx.texture2D({ width: 8, height: 8, data: ssaoKernelData, format: ctx.PixelFormat.RGBA32F, wrap: ctx.Wrap.Repeat })
   this.ssaoNoiseMap = ctx.texture2D({ width: 8, height: 8, data: ssaoNoiseData, format: ctx.PixelFormat.RGBA32F, wrap: ctx.Wrap.Repeat })
-  
-  var err =  ctx.gl.getError()
+
+  var err = ctx.gl.getError()
   if (err) throw new Error(err)
 }
 
-Renderer.prototype.initSkybox = function () {
-  const ctx = this._ctx
-
-  this._skyEnvMapTex = new SkyEnvMap(ctx, State.sunPosition)
-  this._skybox = new Skybox(ctx, this._skyEnvMapTex.texture)
-  // this._reflectionProbe = new ReflectionProbe(cmdQueue, [0, 0, 0])
+// Renderer.prototype.initSkybox = function () {
+  // const ctx = this._ctx
 
   // No need to set default props as these will be automatically updated on first render
-  this._sunLightNode = this.createNode({
-    light: {
-      type: 'directional',
-      color: [1, 1, 1, 1]
-    }
-  })
-  this._root.add(this._sunLightNode)
-}
+  // this._sunLightNode = this.createNode({
+    // light: {
+      // type: 'directional',
+      // color: [1, 1, 1, 1]
+    // }
+  // })
+  // this._root.add(this._sunLightNode)
+// }
 
 Renderer.prototype.add = function (node) {
   this._root.add(node)
@@ -223,7 +210,6 @@ Renderer.prototype.createNode = function (data) {
 
 Renderer.prototype.initNode = function (data) {
   var ctx = this._ctx
-  var cmdQueue = this._cmdQueue
 
   if (!data.position) data.position = [0, 0, 0]
   if (!data.scale) data.scale = [1, 1, 1]
@@ -246,7 +232,7 @@ Renderer.prototype.initNode = function (data) {
     if (!material._uniforms) { material._uniforms = {} }
 
     data._drawCommand = {
-      name: 'drawMesh_' + ((Math.random() * 100000) | 0), 
+      name: 'drawMesh_' + ((Math.random() * 100000) | 0),
       attributes: data.mesh.attributes,
       indices: data.mesh.indices
       // primitiveType: data.primitiveType, // TODO: add primitive type support
@@ -288,20 +274,33 @@ Renderer.prototype.initNode = function (data) {
     }
   }
 
-  return data
-}
+  if (data.skybox) {
+    var skybox = data.skybox
+    console.log('init skybox', skybox)
+    if (!skybox.sunPosition && !skybox.texture) {
+      throw new Error('Skybox requires either a sunPosition or a texture')
+    }
+    if (skybox.sunPosition) {
+      skybox._skyEnvMapTex = new SkyEnvMap(ctx, skybox.sunPosition)
+    }
+    skybox._skybox = new Skybox(ctx, skybox.texture || skybox._skyEnvMapTex.texture)
+  }
 
-Renderer.prototype.getNodes = function (type) {
-  return this._rootNodeList().filter(function (node) { return node.data[type] != null })
+  if (data.reflectionProbe) {
+    var reflectionProbe = data.reflectionProbe
+    reflectionProbe._reflectionProbe = new ReflectionProbe(ctx, reflectionProbe.origin || [0, 0, 0])
+  }
+
+  return data
 }
 
 Renderer.prototype.updateDirectionalLightShadowMap = function (lightNode) {
   const ctx = this._ctx
   const light = lightNode.data.light
-
-  const target = Vec3.copy(lightNode.data.position)
+  const position = lightNode.data.position
+  const target = Vec3.copy(position)
   Vec3.add(target, light.direction)
-  Mat4.lookAt(light._viewMatrix, lightNode.data.position, target, [0, 1, 0])
+  Mat4.lookAt(light._viewMatrix, position, target, [0, 1, 0])
   Mat4.ortho(light._projectionMatrix, light._left, light._right, light._bottom, light._top, light._near, light._far)
 
   ctx.submit(light._shadowMapDrawCommand, () => {
@@ -406,9 +405,13 @@ Renderer.prototype.getMeshPipeline = function (mesh, material, opts) {
   return pipeline
 }
 
+Renderer.prototype.getNodes = function (type) {
+  return this._rootNodeList().filter(function (node) { return node.data[type] != null })
+}
+
 Renderer.prototype.updateNodeLists = function () {
   this._cameraNodes = this.getNodes('camera')
-  // TODO: reimplement node.enabled filtering
+  // TODO: reimplement node.enabled filtering, why?
   this._meshNodes = this.getNodes('mesh')
     .concat(this.getNodes('vertexArray'))
     .filter(function (node) { return node.data.enabled })
@@ -416,6 +419,8 @@ Renderer.prototype.updateNodeLists = function () {
   this._directionalLightNodes = this._lightNodes.filter(function (node) { return node.data.light.type === 'directional' })
   this._pointLightNodes = this._lightNodes.filter(function (node) { return node.data.light.type === 'point' })
   this._areaLightNodes = this._lightNodes.filter(function (node) { return node.data.light.type === 'area' })
+  this._reflectionProbeNodes = this.getNodes('reflectionProbe')
+  this._skyboxNodes = this.getNodes('skybox')
 }
 
 // sort meshes by material
@@ -434,13 +439,14 @@ Renderer.prototype.drawMeshes = function (shadowMappingLight) {
   var directionalLightNodes = this._directionalLightNodes
   var pointLightNodes = this._pointLightNodes
   var areaLightNodes = this._areaLightNodes
+  var reflectionProbeNodes = this._reflectionProbeNodes
 
   var sharedUniforms = this._sharedUniforms = this._sharedUniforms || {}
-  // sharedUniforms.uReflectionMap = this._reflectionProbe.getReflectionMap()
-  // sharedUniforms.uIrradianceMap = this._reflectionProbe.getIrradianceMap()
-  sharedUniforms.uReflectionMap = State.skyEnvMap || this._skyEnvMapTex.texture
-  // sharedUniforms.uIrradianceMap = State.skyEnvMap || this._skyEnvMapTex.texture
-  sharedUniforms.uIrradianceMap = this._skyEnvMapTex.texture
+
+  // TODO:  find nearest reflection probe
+  if (reflectionProbeNodes.length > 0) {
+    sharedUniforms.uReflectionMap = reflectionProbeNodes[0].data.reflectionProbe._reflectionProbe.getReflectionMap()
+  }
   var camera = cameraNodes[0].data.camera
   if (shadowMappingLight) {
     sharedUniforms.uProjectionMatrix = shadowMappingLight._projectionMatrix
@@ -502,13 +508,13 @@ Renderer.prototype.drawMeshes = function (shadowMappingLight) {
 
     if (material.emissiveColorMap) cachedUniforms.uEmissiveColorMap = material.emissiveColorMap
     else cachedUniforms.uEmissiveColor = material.emissiveColor
-    
+
     if (material.metallicMap) cachedUniforms.uMetallicMap = material.metallicMap
     else cachedUniforms.uMetallic = material.metallic
-    
+
     if (material.roughnessMap) cachedUniforms.uRoughnessMap = material.roughnessMap
     else cachedUniforms.uRoughness = material.roughness
-    
+
     if (material.normalMap) cachedUniforms.uNormalMap = material.normalMap
 
     if (material.uniforms) {
@@ -537,7 +543,7 @@ Renderer.prototype.drawMeshes = function (shadowMappingLight) {
         numDirectionalLights: directionalLightNodes.length,
         numPointLights: pointLightNodes.length,
         numAreaLights: areaLightNodes.length,
-        useReflectionProbes: true // TODO: reflection probes true
+        useReflectionProbes: reflectionProbeNodes.length // TODO: reflection probes true
       })
     }
 
@@ -546,7 +552,7 @@ Renderer.prototype.drawMeshes = function (shadowMappingLight) {
       // prevProgram = meshProgram
       // // this is a bit hacky but prevents checking the same uniforms over and over again
       // // this would be even better if we sort meshes by material
-      Object.assign(cachedUniforms, sharedUniforms)
+    Object.assign(cachedUniforms, sharedUniforms)
     // }
 
     // TODO: is modelMatrix in command used?
@@ -611,6 +617,7 @@ Renderer.prototype.drawMeshes = function (shadowMappingLight) {
 }
 
 Renderer.prototype.updateDirectionalLights = function (directionalLightNodes) {
+  /*
   var sunLightNode = this._sunLightNode
   var sunLight = sunLightNode.data.light
 
@@ -622,7 +629,7 @@ Renderer.prototype.updateDirectionalLights = function (directionalLightNodes) {
   Vec3.normalize(sunLight.direction)
 
   Vec3.set(sunLight.color, State.sunColor)
-
+  */
   directionalLightNodes.forEach(function (lightNode) {
     var light = lightNode.data.light
     // TODO: sunLight frustum should come from the scene bounding box
@@ -648,10 +655,10 @@ Renderer.prototype.draw = function () {
     this._rootPrevSortVersion = this._root.sortVersion
   }
 
-  ctx.submit(this._clearCommand)
-
   var cameraNodes = this._cameraNodes
   var directionalLightNodes = this._directionalLightNodes
+  var skyboxNodes = this._skyboxNodes
+  var reflectionProbeNodes = this._reflectionProbeNodes
   // var pointLightNodes = lightNodes.filter(function (node) { return node.data.light.type === 'point'})
   // var overlayNodes = this.getNodes('overlay')
 
@@ -661,6 +668,9 @@ Renderer.prototype.draw = function () {
   }
 
   this.updateDirectionalLights(directionalLightNodes)
+
+  // TODO: update light probes
+  /*
   if (!Vec3.equals(State.prevSunPosition, State.sunPosition)) {
     Vec3.set(State.prevSunPosition, State.sunPosition)
 
@@ -672,10 +682,18 @@ Renderer.prototype.draw = function () {
       this._skyEnvMapTex.setSunPosition(State.sunPosition)
       this._skybox.setEnvMap(this._skyEnvMapTex.texture)
     }
-    // this._reflectionProbe.update(function () {
-      // this._skybox.draw()
-    // }.bind(this))
   }
+  */
+  reflectionProbeNodes.forEach((probe) => {
+    // TODO: this should be just node.reflectionProbe
+    if (probe.data.reflectionProbe._reflectionProbe.dirty) {
+      probe.data.reflectionProbe._reflectionProbe.update((camera) => {
+        if (skyboxNodes.length > 0) {
+          skyboxNodes[0].data.skybox._skybox.draw(camera)
+        }
+      })
+    }
+  })
 
   // draw scene
 
@@ -692,20 +710,20 @@ Renderer.prototype.draw = function () {
 
   var currentCamera = cameraNodes[0].data.camera
 
-  // ctx.submit(this._drawFrameFboCommand, () => {
-    // projectionMatrix: currentCamera.getProjectionMatrix(),
-    // viewMatrix: currentCamera.getViewMatrix()
-  // }, function () {
-    // if (State.profile) {
-      // console.time('Renderer:drawMeshes')
-      // console.time('Renderer:drawMeshes:finish')
-      // State.uniformsSet = 0
-    // }
-    ctx.gl.colorMask(0, 0, 0, 0)
+  ctx.submit(this._drawFrameFboCommand, () => {
+    // depth prepass
+    if (State.depthPrepass) {
+      ctx.gl.colorMask(0, 0, 0, 0)
+      this.drawMeshes()
+      ctx.gl.colorMask(1, 1, 1, 1)
+    }
     this.drawMeshes()
-    ctx.gl.colorMask(1, 1, 1, 1)
-    this.drawMeshes()
-    this._skybox.draw(currentCamera)
+
+    if (skyboxNodes.length > 0) {
+      skyboxNodes[0].data.skybox._skybox.draw(currentCamera)
+    }
+  })
+    // this._skybox.draw(currentCamera)
     // if (State.profile) {
       // console.timeEnd('Renderer:drawMeshes')
       // ctx.getGL().finish()
@@ -713,7 +731,11 @@ Renderer.prototype.draw = function () {
       // console.log('Renderer:uniformsSet', State.uniformsSet)
     // }
   // })
-  // ctx.submit(this._blitCmd)
+  ctx.submit(this._blitCmd, {
+    uniforms: {
+      uExposure: State.exposure
+    }
+  })
   //
   /*
 

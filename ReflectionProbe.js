@@ -1,68 +1,290 @@
-var renderToCubemap = require('./local_modules/pex-render-to-cubemap')
-var downsampleCubemap = require('./local_modules/pex-downsample-cubemap')
-var convolveCubemap = require('./local_modules/pex-convolve-cubemap')
-var prefilterCubemap = require('./local_modules/pex-prefilter-cubemap')
-var isMobile = require('is-mobile')()
-var isBrowser = require('is-browser')
-var cubemapToOctmap = require('./local_modules/cubemap-to-octmap')
+const Mat4 = require('pex-math/Mat4')
+const glsl = require('glslify')
+const hammersley = require('hammersley')
 
-var useOctohedralMaps = false
-
-// Mipmap levels
+// Octmap Mipmap levels
 //
-// 0 - 256
-// 1 - 128
-// 2 - 64
-// 3 - 32
-// 4 - 16
-// 5 - 8
+// 0 - 512
+// 1 - 256
+// 2 - 128
+// 3 - 64
+// 4 - 32
+// 5 - 16
 
-function ReflectionProbe (cmdQueue, position) {
-  this._cmdQueue = cmdQueue
+function ReflectionProbe (ctx, position) {
+  console.log('ctx', ctx)
+  this._ctx = ctx
+  this.dirty = true
 
-  var ctx = cmdQueue.getContext()
-  var gl = ctx.getGL()
+  const CUBEMAP_SIZE = 512
+  const dynamicCubemap = ctx.textureCube({
+    width: CUBEMAP_SIZE, height: CUBEMAP_SIZE
+  })
 
-  this._reflectionPREM = ctx.createTextureCube(null, 256, 256, { type: ctx.HALF_FLOAT, minFilter: ctx.LINEAR_MIPMAP_LINEAR, magFilter: ctx.LINEAR, flipEnvMap: 1 })
-  // FIXME: add mip mapping to TextureCube
-  ctx.bindTexture(this._reflectionPREM)
-  gl.generateMipmap(gl.TEXTURE_CUBE_MAP)
-  this._reflectionMap = ctx.createTextureCube(null, 256, 256, { minFilter: ctx.NEAREST, magFilter: ctx.NEAREST, type: ctx.HALF_FLOAT, flipEnvMap: 1 })
-  this._reflectionMap128 = ctx.createTextureCube(null, 128, 128, { minFilter: ctx.NEAREST, magFilter: ctx.NEAREST, type: ctx.HALF_FLOAT, flipEnvMap: 1 })
-  this._reflectionMap64 = ctx.createTextureCube(null, 64, 64, { minFilter: ctx.NEAREST, magFilter: ctx.NEAREST, type: ctx.HALF_FLOAT, flipEnvMap: 1 })
-  this._reflectionMap32 = ctx.createTextureCube(null, 32, 32, { minFilter: ctx.NEAREST, magFilter: ctx.NEAREST, type: ctx.HALF_FLOAT, flipEnvMap: 1 })
-  this._reflectionMap16 = ctx.createTextureCube(null, 16, 16, { minFilter: ctx.NEAREST, magFilter: ctx.NEAREST, type: ctx.HALF_FLOAT, flipEnvMap: 1 })
-  this._irradianceMap = ctx.createTextureCube(null, 16, 16, { type: ctx.HALF_FLOAT, flipEnvMap: 1 })
+  const sides = [
+    { bg: [0.5, 0.0, 0.0, 1.0], eye: [0, 0, 0], target: [1, 0, 0], up: [0, -1, 0] },
+    { bg: [0.25, 0.0, 0.0, 1.0], eye: [0, 0, 0], target: [-1, 0, 0], up: [0, -1, 0] },
+    { bg: [0.0, 0.5, 0.0, 1.0], eye: [0, 0, 0], target: [0, 1, 0], up: [0, 0, 1] },
+    { bg: [0.0, 0.25, 0.0, 1.0], eye: [0, 0, 0], target: [0, -1, 0], up: [0, 0, -1] },
+    { bg: [0.0, 0.0, 0.5, 1.0], eye: [0, 0, 0], target: [0, 0, 1], up: [0, -1, 0] },
+    { bg: [0.0, 0.0, 0.25, 1.0], eye: [0, 0, 0], target: [0, 0, -1], up: [0, -1, 0] }
+  ].map((side, i) => {
+    side.projectionMatrix = Mat4.perspective(Mat4.create(), 90, 1, 0.1, 100) // TODO: change this to radians
+    side.viewMatrix = Mat4.lookAt(Mat4.create(), side.eye, side.target, side.up)
+    side.drawPassCmd = {
+      pass: ctx.pass({
+        color: [{ texture: dynamicCubemap, target: ctx.gl.TEXTURE_CUBE_MAP_POSITIVE_X + i }],
+        clearColor: side.bg,
+        clearDepth: 1
+      })
+    }
+    return side
+  })
+  const quadPositions = [[-1, -1], [1, -1], [1, 1], [-1, 1]]
+  const quadTexCoords = [[0, 0], [1, 0], [1, 1], [0, 1]]
+  const quadFaces = [[0, 1, 2], [0, 2, 3]]
 
-  if (useOctohedralMaps) {
-    this._reflectionOctMap = ctx.createTexture2D(null, 512, 512, { type: ctx.HALF_FLOAT })
+  const octMap = ctx.texture2D({
+    width: 1024,
+    height: 1024
+  })
+
+  const irradianceOctMapSize = 32
+  const irradianceOctMap = ctx.texture2D({
+    width: irradianceOctMapSize,
+    height: irradianceOctMapSize,
+    min: ctx.Filter.Linear,
+    mag: ctx.Filter.Linear
+  })
+
+  const cubemapToOctMap = {
+    pass: ctx.pass({
+      color: [ octMap ]
+    }),
+    pipeline: ctx.pipeline({
+      vert: glsl(__dirname + '/glsl/FullscreenQuad.vert'),
+      frag: glsl(__dirname + '/glsl/CubemapToOctmap.frag')
+    }),
+    attributes: {
+      aPosition: ctx.vertexBuffer(quadPositions),
+      aTexCoord: ctx.vertexBuffer(quadTexCoords)
+    },
+    indices: ctx.indexBuffer(quadFaces),
+    uniforms: {
+      uTextureSize: irradianceOctMap.width,
+      uCubemap: null
+    }
   }
-}
 
-ReflectionProbe.prototype.update = function (drawScene) {
-  var cmdQueue = this._cmdQueue
-
-  renderToCubemap(cmdQueue, this._reflectionMap, drawScene)
-  downsampleCubemap(cmdQueue, this._reflectionMap, this._reflectionMap128)
-  downsampleCubemap(cmdQueue, this._reflectionMap128, this._reflectionMap64)
-  downsampleCubemap(cmdQueue, this._reflectionMap64, this._reflectionMap32)
-  downsampleCubemap(cmdQueue, this._reflectionMap32, this._reflectionMap16)
-  convolveCubemap(cmdQueue, this._reflectionMap16, this._irradianceMap)
-  if (!isBrowser) {
-    prefilterCubemap(cmdQueue, this._reflectionMap, this._reflectionPREM, { highQuality: !isMobile && !isBrowser })
+  const convolveOctmapAtlasToOctMap = {
+    pass: ctx.pass({
+      // color: [ irradianceOctMap ]
+      color: [ octMap ]
+    }),
+    pipeline: ctx.pipeline({
+      vert: glsl(__dirname + '/glsl/FullscreenQuad.vert'),
+      frag: glsl(__dirname + '/glsl/ConvolveOctMapAtlasToOctMap.frag')
+    }),
+    attributes: {
+      aPosition: ctx.vertexBuffer(quadPositions),
+      aTexCoord: ctx.vertexBuffer(quadTexCoords)
+    },
+    indices: ctx.indexBuffer(quadFaces),
+    uniforms: {
+      uTextureSize: irradianceOctMap.width,
+      uSource: null,
+      uSourceSize: null
+    }
   }
-  // if (useOctohedralMaps) {
-    // cubemapToOctmap(cmdQueue, this._reflectionMap, this._reflectionOctMap)
-  // }
+
+  const octMapAtlas = this._reflectionMap = ctx.texture2D({
+    width: 2 * 1024,
+    height: 2 * 1024,
+    min: ctx.Filter.Linear,
+    mag: ctx.Filter.Linear
+  })
+
+  const clearOctMapAtlasCmd = {
+    pass: ctx.pass({
+      color: [ octMapAtlas ],
+      clearColor: [0, 0, 0, 0]
+    })
+  }
+
+  const blitToOctMapAtlasCmd = {
+    pass: ctx.pass({
+      color: [ octMapAtlas ]
+    }),
+    pipeline: ctx.pipeline({
+      vert: glsl(__dirname + '/glsl/FullscreenQuad.vert'),
+      frag: glsl(__dirname + '/glsl/BlitToOctMapAtlas.frag')
+    }),
+    uniforms: {
+      uSource: octMap,
+      uSourceSize: octMap.width
+    },
+    attributes: {
+      aPosition: ctx.vertexBuffer(quadPositions),
+      aTexCoord: ctx.vertexBuffer(quadTexCoords)
+    },
+    indices: ctx.indexBuffer(quadFaces)
+  }
+
+  const downsampleFromOctMapAtlasCmd = {
+    pass: ctx.pass({
+      color: [ octMap ],
+      clearColor: [0, 1, 0, 1]
+    }),
+    pipeline: ctx.pipeline({
+      vert: glsl(__dirname + '/glsl/FullscreenQuad.vert'),
+      frag: glsl(__dirname + '/glsl/DownsampleFromOctMapAtlas.frag')
+    }),
+    uniforms: {
+      uSource: octMapAtlas,
+      uSourceSize: octMapAtlas.width
+    },
+    attributes: {
+      aPosition: ctx.vertexBuffer(quadPositions),
+      aTexCoord: ctx.vertexBuffer(quadTexCoords)
+    },
+    indices: ctx.indexBuffer(quadFaces)
+  }
+
+  const prefilterFromOctMapAtlasCmd = {
+    pass: ctx.pass({
+      color: [ octMap ],
+      clearColor: [0, 1, 0, 1]
+    }),
+    pipeline: ctx.pipeline({
+      vert: glsl(__dirname + '/glsl/FullscreenQuad.vert'),
+      frag: glsl(__dirname + '/glsl/PrefilterFromOctMapAtlas.frag')
+    }),
+    uniforms: {
+      uSource: octMapAtlas,
+      uSourceSize: octMapAtlas.width
+    },
+    attributes: {
+      aPosition: ctx.vertexBuffer(quadPositions),
+      aTexCoord: ctx.vertexBuffer(quadTexCoords)
+    },
+    indices: ctx.indexBuffer(quadFaces)
+  }
+
+  const numSamples = 128
+  const hammersleyPointSet = new Float32Array(4 * numSamples)
+  for (let i = 0; i < numSamples; i++) {
+    const p = hammersley(i, numSamples)
+    hammersleyPointSet[i * 4] = p[0]
+    hammersleyPointSet[i * 4 + 1] = p[1]
+    hammersleyPointSet[i * 4 + 2] = 0
+    hammersleyPointSet[i * 4 + 3] = 0
+  }
+
+  const hammersleyPointSetMap = ctx.texture2D({
+    data: hammersleyPointSet,
+    width: 1,
+    height: numSamples,
+    format: ctx.PixelFormat.RGBA32F
+  })
+
+  function blitToOctMapAtlasLevel (mipmapLevel, roughnessLevel, sourceRegionSize) {
+    const width = octMapAtlas.width
+    const levelSize = Math.max(64, width / (2 << mipmapLevel + roughnessLevel))
+    const roughnessLevelWidth = width / (2 << roughnessLevel)
+    const vOffset = width - Math.pow(2, Math.log2(width) - roughnessLevel)
+    const hOffset = 2 * roughnessLevelWidth - Math.pow(2, Math.log2(2 * roughnessLevelWidth) - mipmapLevel)
+    ctx.submit(blitToOctMapAtlasCmd, {
+      viewport: [hOffset, vOffset, levelSize, levelSize],
+      uniforms: {
+        uLevelSize: levelSize,
+        uSourceRegionSize: sourceRegionSize
+      }
+    })
+  }
+
+  function downsampleFromOctMapAtlasLevel (mipmapLevel, roughnessLevel, targetRegionSize) {
+    ctx.submit(downsampleFromOctMapAtlasCmd, {
+      viewport: [0, 0, targetRegionSize, targetRegionSize],
+      uniforms: {
+        uMipmapLevel: mipmapLevel,
+        uRoughnessLevel: roughnessLevel
+      }
+    })
+  }
+
+  function prefilterFromOctMapAtlasLevel (sourceMipmapLevel, sourceRoughnessLevel, roughnessLevel, targetRegionSize) {
+    ctx.submit(prefilterFromOctMapAtlasCmd, {
+      viewport: [0, 0, targetRegionSize, targetRegionSize],
+      uniforms: {
+        uSourceMipmapLevel: sourceMipmapLevel,
+        uSourceRoughnessLevel: sourceRoughnessLevel,
+        uRoughnessLevel: roughnessLevel,
+        uNumSamples: numSamples,
+        uHammersleyPointSetMap: hammersleyPointSetMap
+      }
+    })
+  }
+
+  this.update = function (drawScene) {
+    this.dirty = false
+    sides.forEach((side) => {
+      ctx.submit(side.drawPassCmd, () => drawScene(side))
+    })
+
+    ctx.submit(cubemapToOctMap, {
+      uniforms: {
+        uCubemap: dynamicCubemap
+      }
+    })
+
+    ctx.submit(clearOctMapAtlasCmd)
+
+    // mipmap levels go horizontally
+    // roughness levels go vertically
+
+    const maxLevel = 5
+    blitToOctMapAtlasLevel(0, 0, octMap.width)
+
+    for (let i = 0; i < maxLevel - 1; i++) {
+      downsampleFromOctMapAtlasLevel(i, 0, octMap.width / Math.pow(2, i + 1))
+      blitToOctMapAtlasLevel(i + 1, 0, octMap.width / Math.pow(2, 1 + i))
+    }
+    blitToOctMapAtlasLevel(maxLevel, 0, 64)
+
+    for (let i = 1; i <= maxLevel; i++) {
+      // prefilterFromOctMapAtlasLevel(i, 0, i, Math.max(64, octMap.width / Math.pow(2, i + 1)))
+      prefilterFromOctMapAtlasLevel(0, Math.max(0, i - 1), i, Math.max(64, octMap.width / Math.pow(2, i + 1)))
+      blitToOctMapAtlasLevel(0, i, Math.max(64, octMap.width / Math.pow(2, 1 + i)))
+    }
+
+    ctx.submit(cubemapToOctMap, {
+      viewport: [0, 0, 1024, 1024], // viewport bug
+      uniforms: {
+        uCubemap: dynamicCubemap
+      }
+    })
+
+    ctx.submit(convolveOctmapAtlasToOctMap, {
+      viewport: [0, 0, irradianceOctMapSize, irradianceOctMapSize], // viewport bug
+      uniforms: {
+        uSource: octMapAtlas,
+        uSourceSize: octMapAtlas.width,
+        uCubemap: dynamicCubemap
+      }
+    })
+
+    ctx.submit(blitToOctMapAtlasCmd, {
+      viewport: [octMapAtlas.width - irradianceOctMapSize, octMapAtlas.height - irradianceOctMapSize, irradianceOctMapSize, irradianceOctMapSize],
+      uniforms: {
+        uLevelSize: irradianceOctMapSize,
+        uSourceRegionSize: irradianceOctMapSize
+      }
+    })
+  }
 }
 
 ReflectionProbe.prototype.getReflectionMap = function () {
-  // FIXME: re-enable blurry reflection in the browser
-  return !isBrowser ? this._reflectionPREM : this._reflectionMap
-}
-
-ReflectionProbe.prototype.getIrradianceMap = function () {
-  return this._irradianceMap
+  return this._reflectionMap
 }
 
 module.exports = ReflectionProbe
