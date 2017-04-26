@@ -23,15 +23,17 @@
     "is-browser": "^2.0.1",
     "is-mobile": "^0.2.2",
     "is-plask": "^1.1.1",
-    "pex-context": "^2.0.0-13",
+    "pex-context": "^2.0.0-15",
     "pex-draw": "^1.0.0-beta.2",
     "pex-fx": "^1.4.0",
     "pex-geom": "^1.0.0-beta.1",
+    "pex-gl": "^2.4.1",
     "pex-math": "^1.0.0",
     "pex-random": "^1.0.0",
     "primitive-quad": "vorg/primitive-quad#e8dd4d7292db7a948c0b2ebc7e75cd9193910058",
     "primitive-sphere": "^3.0.0",
-    "scene-tree": "^2.0.1"
+    "scene-tree": "^2.0.1",
+    "signals": "^1.0.0"
   },
   "devDependencies": {
     "onchange": "^2.4.0"

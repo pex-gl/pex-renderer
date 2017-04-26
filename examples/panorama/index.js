@@ -3,7 +3,7 @@ const Quat = require('pex-math/Quat')
 const Vec3 = require('pex-math/Vec3')
 const createCamera = require('pex-cam/perspective')
 const createOrbiter = require('pex-cam/orbiter')
-const Renderer = require('../../Renderer')
+const createRenderer = require('../../../pex-renderer')
 const createRoundedCube = require('primitive-rounded-cube')
 const createSphere = require('primitive-sphere')
 const createCapsule = require('primitive-capsule')
@@ -25,7 +25,7 @@ ctx.gl.getExtension('OES_texture_float')
 const State = {
   sunPosition: [-5, 5, -5],
   elevation: 45,
-  azimuth: -45,
+  azimuth: 45,
   mie: 0.000021,
   elevationMat: Mat4.create(),
   rotationMat: Mat4.create(),
@@ -37,7 +37,12 @@ const State = {
 
 random.seed(10)
 
-const renderer = new Renderer({ ctx: ctx, profile: true, pauseOnBlur: true, backgroundColor: [1, 0, 0, 1] })
+const renderer = createRenderer({
+  ctx: ctx,
+  // profile: true,
+  pauseOnBlur: true,
+  backgroundColor: [0.2, 0.2, 0.2, 1]
+})
 
 const gui = createGUI(ctx)
 gui.toggleEnabled()
@@ -55,15 +60,15 @@ function updateSunPosition () {
   Vec3.multMat4(State.sunPosition, State.elevationMat)
   Vec3.multMat4(State.sunPosition, State.rotationMat)
 
-  if (State.sunNode) {
-    var sunDir = State.sunNode.data.light.direction
-    State.sunNode.setPosition(State.sunPosition)
+  if (State.sun) {
+    var sunDir = State.sun.direction
     Vec3.set(sunDir, [0, 0, 0])
     Vec3.sub(sunDir, State.sunPosition)
+    State.sun.set({ direction: sunDir })
   }
 
-  if (State.skyboxNode) {
-    State.skyboxNode.data.skybox._skyEnvMapTex.setSunPosition(State.sunPosition)
+  if (State.skybox) {
+    State.skybox.set({ sunPosition: State.sunPosition })
   }
 
   // todo, update nodes
@@ -84,88 +89,77 @@ function initCamera () {
     near: 0.1,
     far: 100
   })
-
-  var cameraNode = renderer.createNode({
-    camera: camera
-  })
-  renderer.add(cameraNode)
-
   createOrbiter({ camera: camera })
-}
 
-function buildMesh (geometry, primitiveType) {
-  if (primitiveType) throw new Error('primitiveType not supported yet')
-  return {
-    attributes: {
-      aPosition: ctx.vertexBuffer(geometry.positions),
-      aTexCoord0: ctx.vertexBuffer(geometry.uvs),
-      aNormal: ctx.vertexBuffer(geometry.normals)
-    },
-    indices: ctx.indexBuffer(geometry.cells)
-  }
+  renderer.entity([
+    renderer.camera({ camera: camera })
+  ])
 }
 
 function initMeshes () {
-  const roundedCubeMesh = buildMesh(createRoundedCube(1, 1, 1, 20, 20, 20, 0.2))
-  const capsuleMesh = buildMesh(createCapsule(0.3))
-  const sphereMesh = buildMesh(createSphere(0.5))
-  // const meshes = [capsuleMesh, roundedCubeMesh, sphereMesh]
-  const meshes = [roundedCubeMesh]
-  const nodes = []
-  var ground = renderer.createNode({
-    position: [0, -2.2, 0],
-    scale: [20, 0.2, 20],
-    mesh: roundedCubeMesh,
-    material: {
+  const groundCube = createRoundedCube(1, 1, 1, 20, 20, 20, 0.01)
+  const roundedCube = createRoundedCube(1, 1, 1, 20, 20, 20, 0.2)
+  const capsule = createCapsule(0.3)
+  const sphere = createSphere(0.5)
+  const geometries = [capsule, roundedCube, sphere]
+  const entities = []
+
+  renderer.entity([
+    renderer.transform({
+      position: [0, -2.2, 0],
+      scale: [20, 0.2, 3]
+    }),
+    renderer.geometry(groundCube),
+    renderer.material({
       baseColor: [0.15, 0.15, 0.2, 1.0],
       roughness: 1,
       metallic: 0
-    }
-  })
-  renderer.add(ground)
+    })
+  ])
 
-  var materialIndex = 0
-  for (var j = 0;  j < 25; j += 1) {
-    for (let i = 0; i < meshes.length; i++) {
-      const mesh = meshes[i]
-      const x = (j % 5) * 2
+  let materialIndex = 0
+  for (let j = -5; j <= 5; j += 2) {
+    for (let i = 0; i < geometries.length; i++) {
+      const geom = geometries[i]
+      const x = j
       const y = 1.5 * (1 - i)
-      const z = ((j / 5) | 0) * 2
-      const node = renderer.createNode({
-        mesh: mesh,
-        position: [x, y, z],
-        material: {
+      const z = 0
+      const entity = renderer.entity([
+        renderer.transform({
+          position: [x, y, z]
+        }),
+        renderer.geometry(geom),
+        renderer.material({
           baseColor: [0.9, 0.9, 0.9, 1],
-          baseColorMap: State.materials[materialIndex].baseColorTex,
-          roughness:  (j + 5) / 10,
-          roughnessMap: State.materials[materialIndex].roughnessTex,
-          metallic: 0.01, // (j + 5) / 10
-          metallicMap: State.materials[materialIndex].metallicTex,
+          baseColorMap: materialIndex ? State.materials[materialIndex].baseColorTex : null,
+          roughness: 0.01, //(j + 5) / 10,
+          roughnessMap: materialIndex ? State.materials[materialIndex].roughnessTex : null,
+          metallic: 1.0, // 0.01, // (j + 5) / 10
+          metallicMap: materialIndex ? State.materials[materialIndex].metallicTex : null,
           normalMap: State.materials[materialIndex].normalTex
-        }
-      })
-      nodes.push(node)
-      renderer.add(node)
+        })
+      ])
+      entities.push(entity)
     }
     materialIndex = (materialIndex + 1) % State.materials.length
   }
   gui.addHeader('Material')
   gui.addParam('Roughness', State, 'roughness', {}, () => {
-    nodes.forEach((node) => { node.data.material.roughness = State.roughness })
+    entities.forEach((entity) => { entity.getComponent('Material').set({ roughness: State.roughness }) })
   })
   gui.addParam('Metallic', State, 'metallic', {}, () => {
-    nodes.forEach((node) => { node.data.material.metallic = State.metallic })
+    entities.forEach((entity) => { entity.getComponent('Material').set({ metallic :State.metallic }) })
   })
   gui.addParam('Base Color', State, 'baseColor', { type: 'color' }, () => {
-    nodes.forEach((node) => { node.data.material.baseColor = State.baseColor })
+    entities.forEach((entity) => { entity.getComponent('Material').set({ baseColor: State.baseColor }) })
   })
 }
 
 function initLights () {
-  var sunDir = Vec3.normalize([1, -1, 1])
+  const sunDir = Vec3.normalize([1, -1, 1])
 
   const sphereMesh = buildMesh(createSphere(0.2))
-  var pointLight = renderer.createNode({
+  const pointLight = renderer.createNode({
     mesh: sphereMesh,
     position: [-2, 2, 2],
     material: {
@@ -181,9 +175,9 @@ function initLights () {
   })
   renderer.add(pointLight)
 
-  var areaLightMesh = buildMesh(createCube(1))
-  var areaLightColor = [1, 2, 2, 1]
-  var areaLightNode = renderer.createNode({
+  const areaLightMesh = buildMesh(createCube(1))
+  const areaLightColor = [1, 2, 2, 1]
+  const areaLightNode = renderer.createNode({
     enabled: true,
     position: [6, 0, 0],
     scale: [1, 10, 0.1],
@@ -210,7 +204,7 @@ function initLights () {
 }
 
 function imageFromFile (file, options) {
-  let tex = ctx.texture2D({ width: 1, height: 1})
+  const tex = ctx.texture2D({ width: 1, height: 1})
   io.loadImage(file, function (err, image) {
     console.log('image loaded', file)
     if (err) console.log(err)
@@ -325,7 +319,7 @@ function initMaterials () {
     var file = dir.replace('PBR_Metallic', '2k_basecolor.png')
     return ASSETS_DIR + `/gametextures_metallic/${dir}/${file}`
   })
-  baseColorTextures = baseColorTextures.slice(0, 30)
+  baseColorTextures = baseColorTextures.slice(43, 49)
   for (let i = 0; i < baseColorTextures.length; i++) {
     const mat = {}
     mat.baseColorTex = imageFromFile(baseColorTextures[i], { flip: false, mipmap: true, repeat: true })
@@ -337,42 +331,32 @@ function initMaterials () {
     // mat.metallicTex = imageFromFile(baseColorTextures[i].replace('_Base_Color.', '_Metallic.'), { flipY: true, mipmap: true, repeat: true })
     State.materials.push(mat)
   }
-
-  /*
-  */
 }
 
 function initSky (panorama) {
-  var sunNode = State.sunNode = renderer.createNode({
-    light: {
-      type: 'directional',
-      direction: Vec3.sub(Vec3.create(), State.sunPosition),
-      color: [5, 5, 4, 1]
-    }
+  const sun = State.sun = renderer.directionalLight({
+    direction: Vec3.sub(Vec3.create(), State.sunPosition),
+    color: [5, 5, 4, 1]
   })
-  renderer.add(sunNode)
+  gui.addTexture2D('Shadow map', sun._shadowMap).setPosition(10 + 170, 10)
 
-  var skyboxNode = State.skyboxNode = renderer.createNode({
-    skybox: {
-      sunPosition: State.sunPosition,
-      texture: panorama
-    }
+  const skybox = State.skybox = renderer.skybox({
+    sunPosition: State.sunPosition,
+    texture: panorama
   })
-  renderer.add(skyboxNode)
+  gui.addTexture2D('Sky', skybox._skyTexture)
 
   // currently this also includes light probe functionality
-  var reflectionProbeNode = renderer.createNode({
-    reflectionProbe: {
-      origin: [0, 0, 0],
-      size: [10, 10, 10],
-      boxProjection: false
-    }
+  const reflectionProbe = State.reflectionProbe = renderer.reflectionProbe({
+    origin: [0, 0, 0],
+    size: [10, 10, 10],
+    boxProjection: false
   })
-  renderer.add(reflectionProbeNode)
+  gui.addTexture2D('ReflectionMap', reflectionProbe._reflectionMap)
 
-  gui.addTexture2D('ReflectionMap', reflectionProbeNode.data.reflectionProbe._reflectionProbe.getReflectionMap())
-  // gui.addTexture2D('Skybox', State.skyboxNode.data.skybox._skyEnvMapTex.texture).setPosition(170 + 10, 10)
-  // gui.addTexture2D('Sun depth map', State.sunNode.data.light._shadowMap)
+  renderer.entity([ sun ])
+  renderer.entity([ skybox ])
+  renderer.entity([ reflectionProbe ])
 }
 
 initMaterials()
@@ -388,6 +372,13 @@ initMeshes()
 // })
 
 io.loadBinary('http://192.168.1.123/assets/envmaps/pisa/pisa.hdr', (err, buf) => {
+// io.loadBinary('http://192.168.1.123/assets/envmaps/Hamarikyu_Bridge/Hamarikyu_Bridge.hdr', (err, buf) => {
+// io.loadBinary('http://192.168.1.123/assets/envmaps/multi-area-light/multi-area-light.hdr', (err, buf) => {
+// io.loadBinary('http://192.168.1.123/assets/envmaps/hallstatt4_hd.hdr', (err, buf) => {
+// io.loadBinary('http://192.168.1.123/assets/envmaps/uprat5_hd.hdr', (err, buf) => {
+// io.loadBinary('http://192.168.1.123/assets/envmaps/OpenfootageNETHDRforrest03_small.hdr', (err, buf) => {
+// io.loadBinary('http://192.168.1.123/assets/envmaps/OpenfootageNET_Salzach_low.hdr', (err, buf) => {
+// io.loadBinary('http://192.168.1.123/assets/envmaps/OpenfootageNET_Staatsbridge_HDRI_low.hdr', (err, buf) => {
 // io.loadBinary('http://localhost/assets/envmaps/garage/garage.hdr', (err, buf) => {
 // io.loadBinary('http://localhost/assets/envmaps/grace-new/grace-new.hdr', (err, buf) => {
   const hdrImg = parseHdr(buf)
@@ -430,7 +421,7 @@ ctx.frame(() => {
   debugOnce = false
   renderer.draw()
 
-  renderer._state.profiler.time('GUI')
+  // renderer._state.profiler.time('GUI')
   gui.draw()
-  renderer._state.profiler.timeEnd('GUI')
+  // renderer._state.profiler.timeEnd('GUI')
 })

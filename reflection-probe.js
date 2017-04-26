@@ -1,18 +1,15 @@
+const Signal = require('signals')
 const Mat4 = require('pex-math/Mat4')
 const glsl = require('glslify')
 const hammersley = require('hammersley')
 
-// Octmap Mipmap levels
-//
-// 0 - 512
-// 1 - 256
-// 2 - 128
-// 3 - 64
-// 4 - 32
-// 5 - 16
+function ReflectionProbe (opts) {
+  this.type = 'ReflectionProbe'
+  this.changed = new Signal()
 
-function ReflectionProbe (ctx, position) {
-  console.log('ctx', ctx)
+  this.set(opts)
+
+  const ctx = opts.ctx
   this._ctx = ctx
   this.dirty = true
 
@@ -204,7 +201,6 @@ function ReflectionProbe (ctx, position) {
 
   function downsampleFromOctMapAtlasLevel (mipmapLevel, roughnessLevel, targetRegionSize) {
     ctx.submit(downsampleFromOctMapAtlasCmd, {
-      viewport: [0, 0, targetRegionSize, targetRegionSize],
       uniforms: {
         uMipmapLevel: mipmapLevel,
         uRoughnessLevel: roughnessLevel
@@ -214,7 +210,6 @@ function ReflectionProbe (ctx, position) {
 
   function prefilterFromOctMapAtlasLevel (sourceMipmapLevel, sourceRoughnessLevel, roughnessLevel, targetRegionSize) {
     ctx.submit(prefilterFromOctMapAtlasCmd, {
-      viewport: [0, 0, targetRegionSize, targetRegionSize],
       uniforms: {
         uSourceMipmapLevel: sourceMipmapLevel,
         uSourceRoughnessLevel: sourceRoughnessLevel,
@@ -226,6 +221,7 @@ function ReflectionProbe (ctx, position) {
   }
 
   this.update = function (drawScene) {
+    if (!drawScene) return
     this.dirty = false
     sides.forEach((side) => {
       ctx.submit(side.drawPassCmd, () => drawScene(side))
@@ -258,14 +254,12 @@ function ReflectionProbe (ctx, position) {
     }
 
     ctx.submit(cubemapToOctMap, {
-      viewport: [0, 0, 1024, 1024], // viewport bug
       uniforms: {
         uCubemap: dynamicCubemap
       }
     })
 
     ctx.submit(convolveOctmapAtlasToOctMap, {
-      viewport: [0, 0, irradianceOctMapSize, irradianceOctMapSize], // viewport bug
       uniforms: {
         uSource: octMapAtlas,
         uSourceSize: octMapAtlas.width,
@@ -283,8 +277,15 @@ function ReflectionProbe (ctx, position) {
   }
 }
 
-ReflectionProbe.prototype.getReflectionMap = function () {
-  return this._reflectionMap
+ReflectionProbe.prototype.init = function (entity) {
+  this.entity = entity
 }
 
-module.exports = ReflectionProbe
+ReflectionProbe.prototype.set = function (opts) {
+  Object.assign(this, opts)
+  Object.keys(opts).forEach((prop) => this.changed.dispatch(prop))
+}
+
+module.exports = function (opts) {
+  return new ReflectionProbe(opts)
+}
