@@ -418,13 +418,16 @@ void main() {
         float lightDeviceCoordsZ = lightDeviceCoordsPosition.z / lightDeviceCoordsPosition.w;
         vec2 lightUV = lightDeviceCoordsPositionNormalized.xy * 0.5 + 0.5;
 
-#ifdef SHADOW_QUALITY_0
+#if SHADOW_QUALITY == 0
         float illuminated = 1.0;
-#elseif SHADOW_QUALITY_1
-        float illuminated = texture2DCompare(uDirectionalLightShadowMaps[i], lightUV, lightDistView - uBias, light.near, light.far);
-#elseif SHADOW_QUALITY_2
+#endif
+#if SHADOW_QUALITY == 1
+        float illuminated = texture2DCompare(uDirectionalLightShadowMaps[i], lightUV, lightDistView - light.bias, light.near, light.far);
+#endif
+#if SHADOW_QUALITY == 2
         float illuminated = texture2DShadowLerp(uDirectionalLightShadowMaps[i], light.shadowMapSize, lightUV, lightDistView - light.bias, light.near, light.far);
-#else
+#endif
+#if SHADOW_QUALITY == 3
         float illuminated = PCF(uDirectionalLightShadowMaps[i], light.shadowMapSize, lightUV, lightDistView - light.bias, light.near, light.far);
 #endif
         if (illuminated > 0.0) {

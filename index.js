@@ -50,7 +50,7 @@ var State = {
   ssaoSharpness: 1,
   ssaoRadius: 0.2,
   shadows: true,
-  shadowQuality: 3,
+  shadowQuality: 2,
   debug: false,
   profile: false,
   watchShaders: false,
@@ -286,7 +286,7 @@ Renderer.prototype.getMaterialProgram = function (geometry, material, options) {
     flags.push('#define USE_INSTANCED_COLOR')
   }
 
-  flags.push('#define SHADOW_QUALITY_' + State.shadowQuality)
+  flags.push('#define SHADOW_QUALITY ' + State.shadowQuality)
 
   if (material.baseColorMap) {
     flags.push('#define USE_BASE_COLOR_MAP')
