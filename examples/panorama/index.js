@@ -39,7 +39,7 @@ random.seed(10)
 
 const renderer = createRenderer({
   ctx: ctx,
-  // profile: true,
+  profile: true,
   pauseOnBlur: true,
   backgroundColor: [0.2, 0.2, 0.2, 1]
 })
@@ -136,7 +136,7 @@ function initMeshes () {
           roughnessMap: materialIndex ? State.materials[materialIndex].roughnessTex : null,
           metallic: 1.0, // 0.01, // (j + 5) / 10
           metallicMap: materialIndex ? State.materials[materialIndex].metallicTex : null,
-          normalMap: State.materials[materialIndex].normalTex
+          // normalMap: State.materials[materialIndex].normalTex
         })
       ])
       entities.push(entity)
@@ -289,7 +289,7 @@ wall_GenericBrownStucco_PBR_Metallic
 wood_OldWideFloorPlanks_PBR_Metallic`
 
 function initMaterials () {
-  const ASSETS_DIR = isBrowser ? 'http://192.168.1.123/assets' : '/Users/vorg/Workspace/assets'
+  const ASSETS_DIR = isBrowser ? 'http://localhost/assets' : '/Users/vorg/Workspace/assets'
   let baseColorTextures = [
     // ASSETS_DIR + '/gametextures_metallic/Sci-Fi_SciFiWallSet_PBR_Metallic/Sci-Fi_SciFiWallSet_2k_basecolor.png',
     // ASSETS_DIR + '/gametextures_metallic/Metal_DamagedIron_PBR_Metallic/Metal_DamagedIron_2k_basecolor.png',
@@ -342,7 +342,7 @@ function initSky (panorama) {
 
   const skybox = State.skybox = renderer.skybox({
     sunPosition: State.sunPosition,
-    texture: panorama
+    // texture: panorama
   })
   gui.addTexture2D('Sky', skybox._skyTexture)
 
@@ -371,7 +371,7 @@ initMeshes()
   // initSky(panorama)
 // })
 
-io.loadBinary('http://192.168.1.123/assets/envmaps/pisa/pisa.hdr', (err, buf) => {
+io.loadBinary('http://localhost/assets/envmaps/pisa/pisa.hdr', (err, buf) => {
 // io.loadBinary('http://192.168.1.123/assets/envmaps/Hamarikyu_Bridge/Hamarikyu_Bridge.hdr', (err, buf) => {
 // io.loadBinary('http://192.168.1.123/assets/envmaps/multi-area-light/multi-area-light.hdr', (err, buf) => {
 // io.loadBinary('http://192.168.1.123/assets/envmaps/hallstatt4_hd.hdr', (err, buf) => {
@@ -410,7 +410,12 @@ io.loadBinary('http://192.168.1.123/assets/envmaps/pisa/pisa.hdr', (err, buf) =>
 let debugOnce = false
 
 window.addEventListener('keydown', (e) => {
-  if (e.key === 'd') debugOnce = true
+  if (e.key === 'd') {
+    debugOnce = true
+    State.azimuth += 0.1
+    renderer.getComponents('ReflectionProbe')[0].dirty = true
+    updateSunPosition()
+  }
   if (e.key === 'g') gui.toggleEnabled()
 })
 
