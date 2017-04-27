@@ -35,7 +35,6 @@ function Skybox (opts) {
   }
 
   var quad = createQuad()
-  console.log('quad', quad)
 
   this._skyTexture = ctx.texture2D({ width: 512, height: 256 })
   this._updateSkyTexture = {

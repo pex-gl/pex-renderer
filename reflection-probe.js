@@ -2,6 +2,7 @@ const Signal = require('signals')
 const Mat4 = require('pex-math/Mat4')
 const glsl = require('glslify')
 const hammersley = require('hammersley')
+const log = require('debug')('renderer:ReflectionProbe')
 
 function ReflectionProbe (opts) {
   this.type = 'ReflectionProbe'
@@ -29,6 +30,7 @@ function ReflectionProbe (opts) {
     side.projectionMatrix = Mat4.perspective(Mat4.create(), 90, 1, 0.1, 100) // TODO: change this to radians
     side.viewMatrix = Mat4.lookAt(Mat4.create(), side.eye, side.target, side.up)
     side.drawPassCmd = {
+      name: 'ReflectionProbe.sidePass',
       pass: ctx.pass({
         color: [{ texture: dynamicCubemap, target: ctx.gl.TEXTURE_CUBE_MAP_POSITIVE_X + i }],
         clearColor: side.bg,
@@ -55,6 +57,7 @@ function ReflectionProbe (opts) {
   })
 
   const cubemapToOctMap = {
+    name: 'ReflectionProbe.cubemapToOctMap',
     pass: ctx.pass({
       color: [ octMap ]
     }),
@@ -74,6 +77,7 @@ function ReflectionProbe (opts) {
   }
 
   const convolveOctmapAtlasToOctMap = {
+    name: 'ReflectionProbe.convolveOctmapAtlasToOctMap',
     pass: ctx.pass({
       // color: [ irradianceOctMap ]
       color: [ octMap ]
@@ -109,6 +113,7 @@ function ReflectionProbe (opts) {
   }
 
   const blitToOctMapAtlasCmd = {
+    name: 'ReflectionProbe.blitToOctMapAtlasCmd',
     pass: ctx.pass({
       color: [ octMapAtlas ]
     }),
@@ -128,6 +133,7 @@ function ReflectionProbe (opts) {
   }
 
   const downsampleFromOctMapAtlasCmd = {
+    name: 'ReflectionProbe.downsampleFromOctMapAtlasCmd',
     pass: ctx.pass({
       color: [ octMap ],
       clearColor: [0, 1, 0, 1]
@@ -148,6 +154,7 @@ function ReflectionProbe (opts) {
   }
 
   const prefilterFromOctMapAtlasCmd = {
+    name: 'ReflectionProbe.prefilterFromOctMapAtlasCmd',
     pass: ctx.pass({
       color: [ octMap ],
       clearColor: [0, 1, 0, 1]
@@ -223,6 +230,7 @@ function ReflectionProbe (opts) {
   this.update = function (drawScene) {
     if (!drawScene) return
     this.dirty = false
+    log('ReflectionProbe.update')
     sides.forEach((side) => {
       ctx.submit(side.drawPassCmd, () => drawScene(side))
     })
