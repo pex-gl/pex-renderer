@@ -208,6 +208,7 @@ function ReflectionProbe (opts) {
 
   function downsampleFromOctMapAtlasLevel (mipmapLevel, roughnessLevel, targetRegionSize) {
     ctx.submit(downsampleFromOctMapAtlasCmd, {
+      viewport: [0, 0, targetRegionSize, targetRegionSize],
       uniforms: {
         uMipmapLevel: mipmapLevel,
         uRoughnessLevel: roughnessLevel
@@ -217,6 +218,7 @@ function ReflectionProbe (opts) {
 
   function prefilterFromOctMapAtlasLevel (sourceMipmapLevel, sourceRoughnessLevel, roughnessLevel, targetRegionSize) {
     ctx.submit(prefilterFromOctMapAtlasCmd, {
+      viewport: [0, 0, targetRegionSize, targetRegionSize],
       uniforms: {
         uSourceMipmapLevel: sourceMipmapLevel,
         uSourceRoughnessLevel: sourceRoughnessLevel,
