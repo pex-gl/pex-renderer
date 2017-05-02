@@ -401,7 +401,7 @@ void main() {
     vec3 kD = vec3(1.0) - kS;
     kD *= 1.0 - metallic;
     float fakeBlurDarker = 0.25;
-    indirectDiffuse = fakeBlurDarker * kD * baseColor * irradianceColor;
+    indirectDiffuse = kD * baseColor * irradianceColor;
     indirectSpecular = kS * baseColor * reflectionColor * reflectance;
 #endif
 
