@@ -519,46 +519,14 @@ Renderer.prototype.drawMeshes = function (shadowMappingLight) {
       cachedUniforms.uNormalMatrix = Mat3.fromMat4(Mat3.create(), normalMat)
     }
 
-    let instances = null
-    if (geometry._attributes.aOffset) {
-      instances = geometry._attributes.aOffset.buffer.length / 3
-    }
-
     ctx.submit({
       name: 'drawGeometry',
       attributes: geometry._attributes,
       indices: geometry._indices,
       pipeline: pipeline,
       uniforms: cachedUniforms,
-      instances: instances
+      instances: geometry.instances
     })
-
-    // TODO: implement instancing support
-    // if (meshNode.mesh._hasDivisor) {
-    // ctx.bindProgram(this._standardInstancedProgram)
-    // this._standardInstancedProgram.setUniform('uAlbedoColor', meshNode.material._albedoColor)
-    // program = this._standardInstancedProgram
-    // }
-    // else if (meshNode.material._albedoColorTexture) {
-    // ctx.bindProgram(this._standardProgramTextured)
-    // this._standardProgramTextured.setUniform('uAlbedoColorTex', 2)
-    // ctx.bindTexture(meshNode.material._albedoColorTexture, 2)
-    // program = this._standardProgramTextured
-    // }
-    // else {
-    // ctx.bindProgram(this._standardProgram)
-    // this._standardProgram.setUniform('uAlbedoColor', meshNode.material._albedoColor)
-    // program = this._standardProgram
-    // }
-
-    // TODO: implement vertex arrays
-    // if (isVertexArray) {
-      // ctx.drawElements(meshNode.primitiveType, meshNode.count, 0)
-    // } else if (meshNode.mesh._hasDivisor) {
-      // ctx.drawMesh(meshNode.mesh.getAttribute(ctx.ATTRIB_CUSTOM_0).data.length)
-    // } else {
-      // ctx.drawMesh()
-    // }
   }
 
   if (State.profiler) State.profiler.timeEnd('drawMeshes')

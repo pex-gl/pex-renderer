@@ -52,7 +52,7 @@ Geometry.prototype.set = function (opts) {
     } else {
       ctx.update(this._offsetsBuf, { data: opts.offsets })
     }
-    this._attributes.aOffset = this._offsetsBuf
+    this._attributes.aOffset = { buffer: this._offsetsBuf, divisor: 1 }
   }
 
   if (opts.scales) {
@@ -61,7 +61,7 @@ Geometry.prototype.set = function (opts) {
     } else {
       ctx.update(this._scalesBuf, { data: opts.scales })
     }
-    this._attributes.aScale = this._scalesBuf
+    this._attributes.aScale = { buffer: this._scalesBuf, divisor: 1 }
   }
 
   if (opts.rotations) {
@@ -70,7 +70,7 @@ Geometry.prototype.set = function (opts) {
     } else {
       ctx.update(this._rotationsBuf, { data: opts.rotations })
     }
-    this._attributes.aRotation = this._rotationsBuf
+    this._attributes.aRotation = { buffer: this._rotationsBuf, divisor: 1 }
   }
 
   if (opts.colors) {
@@ -79,7 +79,7 @@ Geometry.prototype.set = function (opts) {
     } else {
       ctx.update(this._colorsBuf, { data: opts.colors })
     }
-    this._attributes.aColor = this._colorsBuf
+    this._attributes.aColor = { buffer: this._colorsBuf, divisor: 1 }
   }
 
   if (opts.indices || opts.cells) {
