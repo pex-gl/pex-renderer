@@ -21,7 +21,12 @@ function DirectionalLight (opts) {
   this._prevDirection = [0, 0, 0]
 
   this._colorMap = ctx.texture2D({ width: 1024, height: 1024 }) // FIXME: remove light color map
-  this._shadowMap = ctx.texture2D({ width: 1024, height: 1024, format: ctx.PixelFormat.Depth })
+  this._shadowMap = ctx.texture2D({
+    width: 1024, height: 1024,
+    format: ctx.PixelFormat.Depth,
+    min: ctx.Filter.Linear,
+    mag: ctx.Filter.Linear
+  })
   this._viewMatrix = Mat4.create()
   this._projectionMatrix = Mat4.create()
 
