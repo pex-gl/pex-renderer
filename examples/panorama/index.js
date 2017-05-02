@@ -1,3 +1,4 @@
+// require('debug').enable('*')
 const Mat4 = require('pex-math/Mat4')
 const Quat = require('pex-math/Quat')
 const Vec3 = require('pex-math/Vec3')
@@ -25,7 +26,7 @@ ctx.gl.getExtension('OES_texture_float')
 const State = {
   sunPosition: [-5, 5, -5],
   elevation: 45,
-  azimuth: 45,
+  azimuth: -45,
   mie: 0.000021,
   elevationMat: Mat4.create(),
   rotationMat: Mat4.create(),
@@ -69,6 +70,10 @@ function updateSunPosition () {
 
   if (State.skybox) {
     State.skybox.set({ sunPosition: State.sunPosition })
+  }
+
+  if (State.reflectionProbe) {
+    State.reflectionProbe.dirty = true // FIXME: hack
   }
 
   // todo, update nodes
@@ -136,7 +141,7 @@ function initMeshes () {
           roughnessMap: materialIndex ? State.materials[materialIndex].roughnessTex : null,
           metallic: 1.0, // 0.01, // (j + 5) / 10
           metallicMap: materialIndex ? State.materials[materialIndex].metallicTex : null,
-          // normalMap: State.materials[materialIndex].normalTex
+          normalMap: materialIndex ? State.materials[materialIndex].normalTex : null
         })
       ])
       entities.push(entity)
@@ -208,7 +213,15 @@ function imageFromFile (file, options) {
   io.loadImage(file, function (err, image) {
     console.log('image loaded', file)
     if (err) console.log(err)
-    ctx.update(tex, { data: image, wrap: ctx.Wrap.Repeat, flipY: true, min: ctx.Filter.Linear, mag: ctx.Filter.LinearMipmapLinear })
+    ctx.update(tex, {
+      data: image,
+      width: image.width,
+      height: image.height,
+      wrap: ctx.Wrap.Repeat,
+      flipY: true,
+      min: ctx.Filter.Linear,
+      mag: ctx.Filter.LinearMipmapLinear
+    })
     ctx.update(tex, { mipmap: true })
     // tex(Object.assign(canvasToPixels(image), {
       // min: 'mipmap',
@@ -288,8 +301,9 @@ ground_SquarePaversOnGrass_PBR_Metallic
 wall_GenericBrownStucco_PBR_Metallic
 wood_OldWideFloorPlanks_PBR_Metallic`
 
+const ASSETS_DIR = isBrowser ? 'http://localhost/assets' : '/Users/vorg/Workspace/assets'
+
 function initMaterials () {
-  const ASSETS_DIR = isBrowser ? 'http://localhost/assets' : '/Users/vorg/Workspace/assets'
   let baseColorTextures = [
     // ASSETS_DIR + '/gametextures_metallic/Sci-Fi_SciFiWallSet_PBR_Metallic/Sci-Fi_SciFiWallSet_2k_basecolor.png',
     // ASSETS_DIR + '/gametextures_metallic/Metal_DamagedIron_PBR_Metallic/Metal_DamagedIron_2k_basecolor.png',
@@ -319,7 +333,7 @@ function initMaterials () {
     var file = dir.replace('PBR_Metallic', '2k_basecolor.png')
     return ASSETS_DIR + `/gametextures_metallic/${dir}/${file}`
   })
-  baseColorTextures = baseColorTextures.slice(43, 49)
+  baseColorTextures = baseColorTextures.slice(4, 10)
   for (let i = 0; i < baseColorTextures.length; i++) {
     const mat = {}
     mat.baseColorTex = imageFromFile(baseColorTextures[i], { flip: false, mipmap: true, repeat: true })
@@ -371,7 +385,7 @@ initMeshes()
   // initSky(panorama)
 // })
 
-io.loadBinary('http://localhost/assets/envmaps/pisa/pisa.hdr', (err, buf) => {
+io.loadBinary(ASSETS_DIR + '/envmaps/pisa/pisa.hdr', (err, buf) => {
 // io.loadBinary('http://192.168.1.123/assets/envmaps/Hamarikyu_Bridge/Hamarikyu_Bridge.hdr', (err, buf) => {
 // io.loadBinary('http://192.168.1.123/assets/envmaps/multi-area-light/multi-area-light.hdr', (err, buf) => {
 // io.loadBinary('http://192.168.1.123/assets/envmaps/hallstatt4_hd.hdr', (err, buf) => {
@@ -427,6 +441,8 @@ ctx.frame(() => {
   renderer.draw()
 
   // renderer._state.profiler.time('GUI')
-  gui.draw()
+  if (!renderer._state.paused) {
+    gui.draw()
+  }
   // renderer._state.profiler.timeEnd('GUI')
 })
