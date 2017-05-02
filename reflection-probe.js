@@ -270,6 +270,7 @@ function ReflectionProbe (opts) {
     })
 
     ctx.submit(convolveOctmapAtlasToOctMap, {
+      viewport: [0, 0, irradianceOctMapSize, irradianceOctMapSize],
       uniforms: {
         uSource: octMapAtlas,
         uSourceSize: octMapAtlas.width,
