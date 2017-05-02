@@ -239,8 +239,6 @@ Renderer.prototype.updateDirectionalLightShadowMap = function (light) {
   Mat4.lookAt(light._viewMatrix, position, target, [0, 1, 0])
   Mat4.ortho(light._projectionMatrix, light._left, light._right, light._bottom, light._top, light._near, light._far)
 
-  console.log('ligh', position, light._viewMatrix, light._projectionMatrix)
-
   ctx.submit(light._shadowMapDrawCommand, () => {
     this.drawMeshes(light)
   })
@@ -319,7 +317,7 @@ Renderer.prototype.getMaterialProgram = function (geometry, material, options) {
   return program
 }
 
-Renderer.prototype.traverseTransformTree = function(transform, beforeCallback, afterCallback) {
+Renderer.prototype.traverseTransformTree = function (transform, beforeCallback, afterCallback) {
   beforeCallback(transform)
   transform.children.forEach((child) => {
     this.traverseTransformTree(child, beforeCallback, afterCallback)
@@ -637,7 +635,7 @@ Renderer.prototype.draw = function () {
   })
 
   var currentCamera = cameras[0]
-
+  
   ctx.submit(this._drawFrameFboCommand, () => {
     // depth prepass
     if (State.depthPrepass) {
@@ -651,20 +649,12 @@ Renderer.prototype.draw = function () {
       skyboxes[0].draw(currentCamera)
     }
   })
-    // this._skybox.draw(currentCamera)
-    // if (State.profile) {
-      // console.timeEnd('Renderer:drawMeshes')
-      // ctx.getGL().finish()
-      // console.timeEnd('Renderer:drawMeshes:finish')
-      // console.log('Renderer:uniformsSet', State.uniformsSet)
-    // }
-  // })
   ctx.submit(this._blitCmd, {
     uniforms: {
       uExposure: State.exposure
     }
   })
-  //
+
   /*
 
   var W = this._width
