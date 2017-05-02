@@ -22,17 +22,14 @@ void main() {
   // (Dx,Dy,Dz) = (sin(phi)*sin(theta), cos(phi), -sin(phi)*cos(theta)).
 
   float u = vTexCoord0.x;
-  float v = vTexCoord0.y;
+  float v = 1.0 - vTexCoord0.y; // uv's a Y flipped in WebGL
 
-  float tx = 2.0 * u - 1.0;
-  float ty = 2.0 * v - 1.0;
+  float theta = PI * (u * 2.0 - 1.0);
+  float phi = PI * v;
 
-  float theta = -tx * PI;
-  float phi = ty * PI / 2.0;
-
-  float x = cos(phi) * cos(theta);
-  float y = sin(phi);
-  float z = cos(phi) * sin(theta);
+  float x = sin(phi) * sin(theta);
+  float y = cos(phi);
+  float z = -sin(phi) * cos(theta);
 
   vec3 N = vec3(x, y, z);
  
