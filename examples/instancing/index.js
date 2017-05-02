@@ -3,14 +3,12 @@ const Quat = require('pex-math/Quat')
 const Vec3 = require('pex-math/Vec3')
 const createCamera = require('pex-cam/perspective')
 const createOrbiter = require('pex-cam/orbiter')
-const Renderer = require('../../Renderer')
+const Renderer = require('../../')
 const createCube = require('primitive-cube')
 const createSphere = require('primitive-sphere')
 const createGUI = require('pex-gui')
 const random = require('pex-random')
 const createContext = require('pex-context')
-const io = require('pex-io')
-const Color = require('pex-color')
 const remap = require('pex-math/Utils').map
 const cosineGradient = require('cosine-gradient')
 const ctx = createContext()
@@ -45,60 +43,67 @@ const gui = createGUI(ctx)
 gui.addHeader('Settings')
 gui.addParam('Sun Elevation', State, 'elevation', { min: -90, max: 180 }, updateSunPosition)
 gui.addParam('Sun Azimuth', State, 'azimuth', { min: -180, max: 180 }, updateSunPosition)
-gui.addTexture2D('Skybox', renderer._skyEnvMapTex.texture)
 
 function updateSunPosition () {
   Mat4.setRotation(State.elevationMat, State.elevation / 180 * Math.PI, [0, 0, 1])
   Mat4.setRotation(State.rotationMat, State.azimuth / 180 * Math.PI, [0, 1, 0])
 
-  Vec3.set3(renderer._state.sunPosition, 1, 0, 0)
-  Vec3.multMat4(renderer._state.sunPosition, State.elevationMat)
-  Vec3.multMat4(renderer._state.sunPosition, State.rotationMat)
+  Vec3.set3(State.sunPosition, 10, 0, 0)
+  Vec3.multMat4(State.sunPosition, State.elevationMat)
+  Vec3.multMat4(State.sunPosition, State.rotationMat)
+
+  if (State.sun) {
+    var sunDir = State.sun.direction
+    Vec3.set(sunDir, [0, 0, 0])
+    Vec3.sub(sunDir, State.sunPosition)
+    State.sun.set({ direction: sunDir })
+  }
+
+  if (State.skybox) {
+    State.skybox.set({ sunPosition: State.sunPosition })
+  }
+
+  if (State.reflectionProbe) {
+    State.reflectionProbe.dirty = true // FIXME: hack
+  }
 }
 
 function initCamera () {
   const camera = createCamera({
-    fov: 45,
+    fov: Math.PI / 3,
     aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
-    position: [0, 3, 4],
+    position: [0, 3, 8],
     target: [0, 0, 0],
     near: 0.1,
     far: 100
   })
-
-  var cameraNode = renderer.createNode({
-    camera: camera
-  })
-  renderer.add(cameraNode)
-
   createOrbiter({ camera: camera })
-}
 
-function buildMesh (geometry, primitiveType) {
-  if (primitiveType) throw new Error('primitiveType not supported yet')
-  return {
-    attributes: {
-      aPosition: ctx.vertexBuffer(geometry.positions),
-      aTexCoord0: ctx.vertexBuffer(geometry.uvs),
-      aNormal: ctx.vertexBuffer(geometry.normals)
-    },
-    indices: ctx.indexBuffer(geometry.cells)
-  }
+  renderer.entity([
+    renderer.camera({ camera: camera })
+  ])
 }
 
 function initMeshes () {
   const n = 15
-  const cube = buildMesh(createCube(0.75 * 2 / n))
+  const cube = createCube(0.75 * 2 / n)
   const offsets = []
   const colors = []
   const scales = []
   const rotations = []
 
   let time = 0
+  var geometry = renderer.geometry({
+    positions: cube.positions,
+    normals: cube.normals,
+    cells: cube.cells,
+    uvs: cube.uvs,
+    offsets: offsets,
+    scales: scales,
+    rotations: rotations,
+    colors: colors
+  })
   function update () {
-    State.azimuth += 0.01
-    updateSunPosition()
-
     time += 1 / 60
     const center = [0.75, 0.75, 0.75]
     const radius = 1.25
@@ -156,52 +161,62 @@ function initMeshes () {
       }
     }
 
-    if (cube.attributes.aOffset) {
-      ctx.update(cube.attributes.aOffset.buffer, { data: offsets })
-      ctx.update(cube.attributes.aColor.buffer, { data: colors })
-      ctx.update(cube.attributes.aScale.buffer, { data: scales })
-      ctx.update(cube.attributes.aRotation.buffer, { data: rotations })
-    }
+    geometry.set({
+      offsets: offsets,
+      scales: scales,
+      rotations: rotations,
+      colors: colors,
+      instances: offsets.length
+    })
   }
   update()
   setInterval(update, 1000 / 60)
-  cube.attributes.aOffset = {
-    buffer: ctx.vertexBuffer(offsets),
-    divisor: 1
-  }
-  cube.attributes.aColor = {
-    buffer: ctx.vertexBuffer(colors),
-    divisor: 1
-  }
-  cube.attributes.aScale = {
-    buffer: ctx.vertexBuffer(scales),
-    divisor: 1
-  }
-  cube.attributes.aRotation = {
-    buffer: ctx.vertexBuffer(rotations),
-    divisor: 1
-  }
-  const node = renderer.createNode({
-    mesh: cube,
-    position: [0, 0, 0],
-    material: {
-      // baseColor: [0.8, 0.1, 0.1, 1],
-      baseColor: [1, 1, 1, 1],
-      rougness: 0.5, // (k + 5) / 10,
-      metallic: 0.01 // (j + 5) / 10
-    }
-  })
-  renderer.add(node)
+  const entity = renderer.entity([
+    renderer.transform({
+      position: [0, 0, 0]
+    }),
+    geometry,
+    renderer.material({
+      baseColor: [0.9, 0.9, 0.9, 1],
+      roughness: 0.01,
+      metallic: 1.0
+    })
+  ])
   gui.addHeader('Material')
   gui.addParam('Roughness', State, 'roughness', {}, () => {
-    node.data.material.roughness = State.roughness
+    entity.getComponent('Material').set({ roughness: State.roughness })
   })
   gui.addParam('Metallic', State, 'metallic', {}, () => {
-    node.data.material.metallic = State.metallic
+    entity.getComponent('Material').set({ metallic: State.metallic })
   })
   gui.addParam('Base Color', State, 'baseColor', { type: 'color' }, () => {
-    node.data.material.baseColor = State.baseColor
+    entity.getComponent('Material').set({ baseColor: State.baseColor })
   })
+}
+
+function initSky () {
+  const sun = State.sun = renderer.directionalLight({
+    direction: Vec3.sub(Vec3.create(), State.sunPosition),
+    color: [5, 5, 4, 1]
+  })
+  gui.addTexture2D('Shadow map', sun._shadowMap).setPosition(10 + 170, 10)
+
+  const skybox = State.skybox = renderer.skybox({
+    sunPosition: State.sunPosition
+  })
+  gui.addTexture2D('Sky', skybox._skyTexture)
+
+  // currently this also includes light probe functionality
+  const reflectionProbe = State.reflectionProbe = renderer.reflectionProbe({
+    origin: [0, 0, 0],
+    size: [10, 10, 10],
+    boxProjection: false
+  })
+  gui.addTexture2D('ReflectionMap', reflectionProbe._reflectionMap)
+
+  renderer.entity([ sun ])
+  renderer.entity([ skybox ])
+  renderer.entity([ reflectionProbe ])
 }
 
 function initLights () {
@@ -253,7 +268,8 @@ function initLights () {
 
 initCamera()
 initMeshes()
-initLights()
+// initLights()
+initSky()
 
 let frameNumber = 0
 let debugOnce = false
