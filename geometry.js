@@ -70,7 +70,7 @@ Geometry.prototype.set = function (opts) {
     } else {
       ctx.update(this._rotationsBuf, { data: opts.rotations })
     }
-    this._attributes.aScale = this._rotationsBuf
+    this._attributes.aRotation = this._rotationsBuf
   }
 
   if (opts.colors) {
@@ -79,7 +79,7 @@ Geometry.prototype.set = function (opts) {
     } else {
       ctx.update(this._colorsBuf, { data: opts.colors })
     }
-    this._attributes.aScale = this._colorsBuf
+    this._attributes.aColor = this._colorsBuf
   }
 
   if (opts.indices || opts.cells) {
