@@ -66,11 +66,14 @@ mat4 quatToMat4(vec4 q) {
 
 void main() {
     vec4 position = vec4(aPosition, 1.0);
+    vec3 normal = aNormal;
 #ifdef USE_INSTANCED_SCALE
     position.xyz *= aScale; 
 #endif
 #ifdef USE_INSTANCED_ROTATION
-    position = quatToMat4(aRotation) * position;
+    mat4 rotationMat = quatToMat4(aRotation);
+    position = rotationMat * position;
+    normal = vec3(rotationMat * vec4(normal, 0.0));
 #endif
 #ifdef USE_INSTANCED_OFFSET
     position.xyz += aOffset; 
@@ -81,9 +84,9 @@ void main() {
     vPositionWorld = vec3(uModelMatrix * position);
     vPositionView = vec3(uViewMatrix * vec4(vPositionWorld, 1.0));
 
-    vNormalView = vec3(uNormalMatrix * aNormal);
+    vNormalView = vec3(uNormalMatrix * normal);
     // vNormalView = vec3(mat3(uViewMatrix * uModelMatrix) * aNormal);
-    vNormalWorld = vec3(uInverseViewMatrix * vec4(vNormalView, 0.0));
+    vNormalWorld = normalize(vec3(uInverseViewMatrix * vec4(vNormalView, 0.0)));
 
     vEyeDirView = normalize(vec3(0.0, 0.0, 0.0) - vPositionView);
     vEyeDirWorld = vec3(uInverseViewMatrix * vec4(vEyeDirView, 0.0));
