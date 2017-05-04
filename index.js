@@ -18,6 +18,8 @@ const createGeometry = require('./geometry')
 const createMaterial = require('./material')
 const createCamera = require('./camera')
 const createDirectionalLight = require('./directional-light')
+const createPointLight = require('./point-light')
+const createAreaLight = require('./area-light')
 const createReflectionProbe = require('./reflection-probe')
 const createSkybox = require('./skybox')
 
@@ -472,18 +474,6 @@ Renderer.prototype.drawMeshes = function (shadowMappingLight) {
       }
     }
 
-    // TODO: add shadow mapping pass support
-    // var meshProgram
-    // if (shadowMappingPass) {
-      // meshProgram = material._shadowProgram = material._shadowProgram || this.getMaterialProgram(material, {})
-    // } else {
-      // meshProgram = material._program = material._program || this.getMaterialProgram(material, {
-        // numDirectionalLights: directionalLightNodes.length,
-        // numPointLights: pointLightNodes.length,
-        // numAreaLights: areaLightNodes.length,
-        // useReflectionProbes: true
-      // })
-    // }
     let pipeline = null
     if (shadowMappingLight) {
       pipeline = this.getGeometryPipeline(geometry, material, {
@@ -506,8 +496,6 @@ Renderer.prototype.drawMeshes = function (shadowMappingLight) {
     Object.assign(cachedUniforms, sharedUniforms)
     // }
 
-    // TODO: is modelMatrix in command used?
-    // meshNode.data._drawCommand.modelMatrix = meshNode.modelMatrix
     cachedUniforms.uModelMatrix = transform.modelMatrix
 
     // FIXME: this is expensive and not cached
@@ -784,6 +772,14 @@ Renderer.prototype.camera = function (opts) {
 
 Renderer.prototype.directionalLight = function (opts) {
   return createDirectionalLight(Object.assign({ ctx: this._ctx }, opts))
+}
+
+Renderer.prototype.pointLight = function (opts) {
+  return createPointLight(Object.assign({ ctx: this._ctx }, opts))
+}
+
+Renderer.prototype.areaLight = function (opts) {
+  return createAreaLight(Object.assign({ ctx: this._ctx }, opts))
 }
 
 Renderer.prototype.reflectionProbe = function (opts) {
