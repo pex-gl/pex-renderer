@@ -1,3 +1,4 @@
+#pragma glslify: toLinear = require(glsl-gamma/in)
 
 const vec2  resolution = vec2(1280.0, 720.0);
 
@@ -450,7 +451,7 @@ vec3 evalAreaLight(AreaLight light, vec3 posWorld, vec3 normalWorld, vec3 diffus
 
     // Scene info
 
-    vec3 lcol = light.color.rgb * light.intensity;
+    vec3 lcol = toLinear(light.color.rgb) * light.intensity;
     vec3 dcol = diffuseColor;
     vec3 scol = specularColor;
     {

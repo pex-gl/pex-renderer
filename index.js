@@ -412,14 +412,6 @@ Renderer.prototype.drawMeshes = function (shadowMappingLight) {
     sharedUniforms.uInverseViewMatrix = Mat4.invert(Mat4.copy(camera.viewMatrix))
   }
 
-  // TODO: area light textures
-  // if (!this.areaLightTextures) {
-    // this.ltc_mat_texture = ctx.texture2D({ data: AreaLightsData.mat, width: 64, height: 64, format: ctx.PixelFormat.RGBA32F })
-    // this.ltc_mag_texture = ctx.texture2D({ data: AreaLightsData.mag, width: 64, height: 64, format: ctx.PixelFormat.R32F })
-    // this.areaLightTextures = true
-  // }
-  // sharedUniforms.ltc_mat = this.ltc_mat_texture
-  // sharedUniforms.ltc_mag = this.ltc_mag_texture
 
   directionalLights.forEach(function (light, i) {
     sharedUniforms['uDirectionalLights[' + i + '].direction'] = light.direction
@@ -440,10 +432,12 @@ Renderer.prototype.drawMeshes = function (shadowMappingLight) {
   })
 
   areaLights.forEach(function (light, i) {
+    sharedUniforms.ltc_mat = light.ltc_mat_texture
+    sharedUniforms.ltc_mag = light.ltc_mag_texture
     sharedUniforms['uAreaLights[' + i + '].position'] = light.entity.transform.position
     sharedUniforms['uAreaLights[' + i + '].color'] = light.color
     sharedUniforms['uAreaLights[' + i + '].intensity'] = light.intensity
-    sharedUniforms['uAreaLights[' + i + '].rotation'] = light.data.rotation
+    sharedUniforms['uAreaLights[' + i + '].rotation'] = light.entity.transform.rotation
     sharedUniforms['uAreaLights[' + i + '].size'] = [light.entity.transform.scale[0] / 2, light.entity.transform.scale[1] / 2]
   })
 

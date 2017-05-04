@@ -126,7 +126,18 @@ float texture2DShadowLerp(sampler2D depthMap, vec2 size, vec2 uv, float compare,
     return c;
 }
 
-float PCF(sampler2D depths, vec2 size, vec2 uv, float compare, float near, float far){
+float PCF3x3(sampler2D depths, vec2 size, vec2 uv, float compare, float near, float far){
+    float result = 0.0;
+    for(int x=-1; x<=1; x++){
+        for(int y=-1; y<=1; y++){
+            vec2 off = vec2(x,y)/float(size);
+            result += texture2DShadowLerp(depths, size, uv+off, compare, near, far);
+        }
+    }
+    return result/9.0;
+}
+
+float PCF5x5(sampler2D depths, vec2 size, vec2 uv, float compare, float near, float far){
     float result = 0.0;
     for(int x=-2; x<=2; x++){
         for(int y=-2; y<=2; y++){
@@ -430,7 +441,10 @@ void main() {
         float illuminated = texture2DShadowLerp(uDirectionalLightShadowMaps[i], light.shadowMapSize, lightUV, lightDistView - light.bias, light.near, light.far);
 #endif
 #if SHADOW_QUALITY == 3
-        float illuminated = PCF(uDirectionalLightShadowMaps[i], light.shadowMapSize, lightUV, lightDistView - light.bias, light.near, light.far);
+        float illuminated = PCF3x3(uDirectionalLightShadowMaps[i], light.shadowMapSize, lightUV, lightDistView - light.bias, light.near, light.far);
+#endif
+#if SHADOW_QUALITY == 4
+        float illuminated = PCF5x5(uDirectionalLightShadowMaps[i], light.shadowMapSize, lightUV, lightDistView - light.bias, light.near, light.far);
 #endif
         if (illuminated > 0.0) {
             vec3 L = normalize(-light.direction);
