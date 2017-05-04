@@ -1,6 +1,6 @@
 {
   "name": "pex-renderer",
-  "version": "2.0.1-11",
+  "version": "2.0.1-12",
   "description": "Physically Based Renderer for Pex",
   "main": "index.js",
   "license": "MIT",
