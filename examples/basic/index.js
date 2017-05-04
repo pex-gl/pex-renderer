@@ -41,7 +41,11 @@ const State = {
 
 random.seed(10)
 
-const renderer = createRenderer({ ctx: ctx })
+const renderer = createRenderer({
+  ctx: ctx,
+  // profile: true,
+  shadowQuality: 2
+})
 
 const gui = createGUI(ctx)
 gui.addHeader('Sun')
@@ -224,6 +228,27 @@ function initLights () {
 
   gui.addParam('Light 1 Pos', pointLight1.transform, 'position', { min: -5, max: 5 }, (value) => {
     pointLight1.transform.set({ position: value })
+  })
+
+  const areaLight = renderer.entity([
+    renderer.geometry(createCube()),
+    renderer.material({
+      baseColor: [0, 0, 0, 1],
+      emissiveColor: [1.0, 0.8, 0.0, 1]
+    }),
+    renderer.transform({
+      position: [0, 0, -3],
+      scale: [6, 2, 0.1],
+      rotation: Quat.fromDirection(Quat.create(), [1, 0, 1])
+    }),
+    renderer.areaLight({
+      color: [1.0, 0.8, 0.0, 1],
+      intensity: 2
+    })
+  ])
+  gui.addParam('Area Light 1 Col', areaLight.getComponent('AreaLight'), 'color', { type: 'color' }, (value) => {
+    areaLight.getComponent('AreaLight').set({ color: value })
+    areaLight.getComponent('Material').set({ emissiveColor: value })
   })
 
   /*
