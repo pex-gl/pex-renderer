@@ -8,6 +8,7 @@ function DirectionalLight (opts) {
   this.changed = new Signal()
   this.shadows = false
   this.color = [1, 1, 1, 1]
+  this.intensity = 1
   this.direction = [1, -1, 0]
   this.bias = 0.1
 
@@ -22,7 +23,8 @@ function DirectionalLight (opts) {
 
   this._colorMap = ctx.texture2D({ width: 1024, height: 1024 }) // FIXME: remove light color map
   this._shadowMap = ctx.texture2D({
-    width: 1024, height: 1024,
+    width: 1024,
+    height: 1024,
     format: ctx.PixelFormat.Depth,
     min: ctx.Filter.Linear,
     mag: ctx.Filter.Linear
@@ -51,6 +53,9 @@ DirectionalLight.prototype.init = function (entity) {
 
 DirectionalLight.prototype.set = function (opts) {
   Object.assign(this, opts)
+  if (opts.color !== undefined || opts.intensity !== undefined) {
+    this.color[3] = this.intensity;
+  }
   Object.keys(opts).forEach((prop) => this.changed.dispatch(prop))
 }
 

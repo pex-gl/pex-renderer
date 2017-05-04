@@ -371,6 +371,8 @@ void main() {
 #endif
     vec3 emissiveColor = getEmissiveColor();
     float roughness = getRoughness();
+    // avoid disappearing highlights at roughness 0
+    roughness = 0.004 + 0.996 * roughness;
     float metallic = getMetallic();
 
     // http://www.codinglabs.net/article_physically_based_rendering_cook_torrance.aspx
@@ -452,7 +454,9 @@ void main() {
             float denominator = 4.0 * NdotV * NdotL + 0.001;
             vec3 brdf = nominator / denominator;
 
-            vec3 light = NdotL * light.color.rgb * illuminated;
+            vec3 lightColor = toLinear(light.color.rgb);
+            lightColor *= light.color.a;
+            vec3 light = NdotL * lightColor * illuminated;
             directDiffuse += kD * baseColor / PI * light;
             directSpecular += brdf * light;
         }
@@ -472,8 +476,10 @@ void main() {
         float distanceRatio = clamp(1.0 - pow(dist/light.radius, 4.0), 0.0, 1.0);
         float falloff = (distanceRatio * distanceRatio) / (dist * dist + 1.0);
 
+        vec3 lightColor = toLinear(light.color.rgb);
+        lightColor *= light.color.a;
         //TODO: specular light conservation
-        directDiffuse += baseColor * dotNL * light.color.rgb * falloff;
+        directDiffuse += baseColor * dotNL * lightColor * falloff;
         directSpecular += directSpecularGGX(normalWorld, eyeDirWorld, L, roughness, F0) * light.color.rgb * falloff;
     }
 #endif
