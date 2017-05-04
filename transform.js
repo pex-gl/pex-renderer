@@ -78,10 +78,10 @@ Transform.prototype.update = function () {
 
     // TODO: multiply that by parent model matrix to get global rotation
     Mat4.identity(this.modelMatrix)
-    Mat4.translate(this.modelMatrix, this.worldPosition)
+    Mat4.translate(this.modelMatrix, this.position)
     // TODO: implement rotation
-    // Mat4.rotate(this.modelMatrix, Mat4.fromQuat(Mat4.create(), this.worldRotation)
-    Mat4.scale(this.modelMatrix, this.worldScale)
+    Mat4.mult(this.modelMatrix, Mat4.fromQuat(Mat4.create(), this.rotation))
+    Mat4.scale(this.modelMatrix, this.scale)
   }
 
   emptyABBB(this.bounds)
