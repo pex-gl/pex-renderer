@@ -151,10 +151,8 @@ function initMeshes () {
         })
       ])
       entities.push(entity)
-      break
     }
     materialIndex = (materialIndex + 1) % State.materials.length
-    break
   }
   gui.addHeader('Material')
   gui.addParam('Roughness', State, 'roughness', {}, () => {
