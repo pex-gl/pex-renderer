@@ -432,7 +432,8 @@ Renderer.prototype.drawMeshes = function (camera, shadowMappingLight) {
       indices: geometry._indices,
       pipeline: pipeline,
       uniforms: cachedUniforms,
-      instances: geometry.instances
+      instances: geometry.instances,
+      primitive: geometry.primitive
     })
   }
 
