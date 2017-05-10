@@ -67,6 +67,7 @@ mat4 quatToMat4(vec4 q) {
 void main() {
     vec4 position = vec4(aPosition, 1.0);
     vec3 normal = aNormal;
+
 #ifdef USE_INSTANCED_SCALE
     position.xyz *= aScale; 
 #endif
