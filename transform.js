@@ -68,21 +68,22 @@ Transform.prototype.set = function (opts) {
 }
 
 Transform.prototype.update = function () {
-  if (this.parent) {
-    Vec3.set(this.worldPosition, this.position)
-    Vec3.add(this.worldPosition, this.parent.worldPosition)
-    Vec3.set(this.worldScale, this.scale)
-    this.worldScale[0] *= this.parent.worldScale[0]
-    this.worldScale[1] *= this.parent.worldScale[1]
-    this.worldScale[2] *= this.parent.worldScale[2]
+  Mat4.identity(this.localModelMatrix)
+  Mat4.translate(this.localModelMatrix, this.position)
+  Mat4.mult(this.localModelMatrix, Mat4.fromQuat(Mat4.create(), this.rotation))
+  Mat4.scale(this.localModelMatrix, this.scale)
+  if (this.matrix) Mat4.mult(this.localModelMatrix, this.matrix)
 
-    // TODO: multiply that by parent model matrix to get global rotation
-    Mat4.identity(this.modelMatrix)
-    Mat4.translate(this.modelMatrix, this.position)
-    // TODO: implement rotation
-    Mat4.mult(this.modelMatrix, Mat4.fromQuat(Mat4.create(), this.rotation))
-    Mat4.scale(this.modelMatrix, this.scale)
+  Mat4.identity(this.modelMatrix)
+  var parents = []
+  var parent = this
+  while (parent) {
+    parents.unshift(parent)
+    parent = parent.parent
   }
+  parents.forEach((p) => {
+    Mat4.mult(this.modelMatrix, p.localModelMatrix)
+  })
 
   emptyABBB(this.bounds)
   if (this.geometry) {
