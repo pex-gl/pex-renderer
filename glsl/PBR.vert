@@ -18,6 +18,11 @@ varying vec4 vColor;
 uniform sampler2D uDisplacementMap;
 uniform mediump float uDisplacement;
 #endif
+#ifdef USE_SKIN
+attribute vec4 aJoint;
+attribute vec4 aWeight;
+uniform mat4 uJointMat[NUM_JOINTS];
+#endif
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
 uniform mat4 uModelMatrix;
@@ -105,7 +110,17 @@ void main() {
     vEyeDirView = normalize(vec3(0.0, 0.0, 0.0) - vPositionView);
     vEyeDirWorld = vec3(uInverseViewMatrix * vec4(vEyeDirView, 0.0));
 
+#ifdef USE_SKIN
+     mat4 skinMat =
+        aWeight.x * uJointMat[int(aJoint.x)] +
+        aWeight.y * uJointMat[int(aJoint.y)] +
+        aWeight.z * uJointMat[int(aJoint.z)] +
+        aWeight.w * uJointMat[int(aJoint.w)];
+
+    gl_Position = uProjectionMatrix * uViewMatrix * skinMat * position;
+#else
     gl_Position = uProjectionMatrix * vec4(vPositionView, 1.0);
+#endif
 
     //vTexCoord0 = fract(aTexCoord0 * uTexCoord0Scale * vec2(1.0, 0.5) + uTexCoord0Offset);
 

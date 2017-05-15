@@ -82,6 +82,25 @@ Geometry.prototype.set = function (opts) {
     this._attributes.aColor = { buffer: this._colorsBuf, divisor: 1 }
   }
 
+  if (opts.joints) {
+    if (!this._jointsBuf) {
+      this._jointsBuf = ctx.vertexBuffer(opts.joints)
+    } else {
+      ctx.update(this._jointsBuf, { data: opts.joints })
+    }
+    this._attributes.aJoint = this._jointsBuf
+  }
+
+  if (opts.weights) {
+    if (!this._weightsBuf) {
+      this._weightsBuf = ctx.vertexBuffer(opts.weights)
+    } else {
+      ctx.update(this._weightsBuf, { data: opts.weights })
+    }
+    console.log('is this happening', opts.weights)
+    this._attributes.aWeight = this._weightsBuf
+  }
+
   if (opts.indices || opts.cells) {
     if (!this.indicesBuf) {
       this._indicesBuf = ctx.indexBuffer(opts.indices || opts.cells)
