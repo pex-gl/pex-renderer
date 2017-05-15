@@ -7,6 +7,7 @@ const log = require('debug')('renderer:ReflectionProbe')
 function ReflectionProbe (opts) {
   this.type = 'ReflectionProbe'
   this.changed = new Signal()
+  this.rgbm = true
 
   this.set(opts)
 
@@ -16,7 +17,9 @@ function ReflectionProbe (opts) {
 
   const CUBEMAP_SIZE = 512
   const dynamicCubemap = ctx.textureCube({
-    width: CUBEMAP_SIZE, height: CUBEMAP_SIZE
+    width: CUBEMAP_SIZE, height: CUBEMAP_SIZE,
+    // format: this.rgbm ? ctx.PixelFormat.RGBA8 : ctx.PixelFormat.RGBA32F
+    format: this.rgbm ? null : ctx.PixelFormat.RGBA32F // FIXME: pex-context/texture fails on rgba8
   })
 
   const sides = [
@@ -45,15 +48,17 @@ function ReflectionProbe (opts) {
 
   const octMap = ctx.texture2D({
     width: 1024,
-    height: 1024
+    height: 1024,
+    format: this.rgbm ? null : ctx.PixelFormat.RGBA32F // FIXME: pex-context/texture fails on rgba8
   })
 
-  const irradianceOctMapSize = 32
+  const irradianceOctMapSize = 64
   const irradianceOctMap = ctx.texture2D({
     width: irradianceOctMapSize,
     height: irradianceOctMapSize,
     min: ctx.Filter.Linear,
-    mag: ctx.Filter.Linear
+    mag: ctx.Filter.Linear,
+    format: this.rgbm ? null : ctx.PixelFormat.RGBA32F // FIXME: pex-context/texture fails on rgba8
   })
 
   const cubemapToOctMap = {
@@ -94,7 +99,8 @@ function ReflectionProbe (opts) {
     uniforms: {
       uTextureSize: irradianceOctMap.width,
       uSource: null,
-      uSourceSize: null
+      uSourceSize: null,
+      uRGBM: this.rgbm
     }
   }
 
@@ -102,7 +108,8 @@ function ReflectionProbe (opts) {
     width: 2 * 1024,
     height: 2 * 1024,
     min: ctx.Filter.Linear,
-    mag: ctx.Filter.Linear
+    mag: ctx.Filter.Linear,
+    format: this.rgbm ? null : ctx.PixelFormat.RGBA32F // FIXME: pex-context/texture fails on rgba8
   })
 
   const clearOctMapAtlasCmd = {
@@ -165,7 +172,8 @@ function ReflectionProbe (opts) {
     }),
     uniforms: {
       uSource: octMapAtlas,
-      uSourceSize: octMapAtlas.width
+      uSourceSize: octMapAtlas.width,
+      uRGBM: this.rgbm
     },
     attributes: {
       aPosition: ctx.vertexBuffer(quadPositions),

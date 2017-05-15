@@ -17,6 +17,7 @@ uniform float uLevel;
 uniform float uSourceMipmapLevel;
 uniform float uSourceRoughnessLevel;
 uniform float uRoughnessLevel;
+uniform bool uRGBM;
 
 //if < 0 return -1, otherwise 1
 vec2 signed(vec2 v) {
@@ -53,12 +54,12 @@ vec3 ImportanceSampleGGX(vec2 Xi, float Roughness, vec3 N) {
   H.z = CosTheta;
 
   //Tangent space vectors
-  vec3 UpVector = abs(N.z) < 0.999 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
-  vec3 TangentX = normalize(cross(UpVector, N));
-  vec3 TangentY = normalize(cross(N, TangentX));
+  vec3 up = abs(N.z) < 0.999 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
+  vec3 tangent = normalize(cross(up, N));
+  vec3 bitangent = normalize(cross(N, tangent));
 
   //Tangent to World Space
-  return TangentX * H.x + TangentY * H.y + N * H.z;
+  return tangent * H.x + bitangent * H.y + N * H.z;
 
   //
   //vec3 n = N;
@@ -103,7 +104,11 @@ vec3 PrefilterEnvMap( float Roughness, vec3 R ) {
     vec3 L = 2.0 * dot( V, H ) * H - V;
     float NoL = saturate( dot( N, L ) );
     if( NoL > 0.0 ) {
-      PrefilteredColor += decodeRGBM(textureOctMapLod( uSource, envMapOctahedral(L))) * NoL;
+      if (uRGBM) {
+        PrefilteredColor += decodeRGBM(textureOctMapLod( uSource, envMapOctahedral(L))) * NoL;
+      } else {
+        PrefilteredColor += textureOctMapLod( uSource, envMapOctahedral(L)).rgb * NoL;
+      }
       TotalWeight += NoL;
     }
   }
@@ -112,6 +117,11 @@ vec3 PrefilterEnvMap( float Roughness, vec3 R ) {
 
 void main() {
   vec3 normal = octMapUVToDir(vTexCoord);
-  gl_FragColor = encodeRGBM(PrefilterEnvMap(uRoughnessLevel / 5.0, normal));
+  if (uRGBM) {
+    gl_FragColor = encodeRGBM(PrefilterEnvMap(uRoughnessLevel / 5.0, normal));
+  } else {
+    gl_FragColor.rgb = PrefilterEnvMap(uRoughnessLevel / 5.0, normal);
+    gl_FragColor.a = 1.0;
+  }
 }
 

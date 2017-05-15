@@ -12,6 +12,7 @@ uniform sampler2D uSource;
 uniform samplerCube uCubemap;
 uniform float uSourceSize;
 uniform float uTextureSize;
+uniform bool uRGBM;
 
 vec2 signed(vec2 v) {
   return step(0.0, v) * 2.0 - 1.0;
@@ -39,7 +40,11 @@ void main() {
       vec2 sampleUV = envMapOctahedral(sampleVector, 0.0, 0.0);
       // float s = 512.0;
       // sampleUV = (sampleUV * s + 0.5) / (s + 1.0);
-      sampledColor += decodeRGBM(texture2D( uSource, sampleUV)) * cos(theta) * sin(theta);
+      if (uRGBM) {
+        sampledColor += decodeRGBM(texture2D( uSource, sampleUV)) * cos(theta) * sin(theta);
+      } else {
+        sampledColor += texture2D( uSource, sampleUV).rgb * cos(theta) * sin(theta);
+      }
       index++;
     }
   }
@@ -51,5 +56,10 @@ void main() {
   // sampledColor = decodeRGBM(texture2D(uSource, sampleUV));
   // sampledColor = decodeRGBM(textureCube(uCubemap, N)));
 
-  gl_FragColor = encodeRGBM(sampledColor);
+  if (uRGBM) {
+    gl_FragColor = encodeRGBM(sampledColor);
+  } else {
+    gl_FragColor.rgb = sampledColor;
+    gl_FragColor.a = 1.0;
+  }
 }

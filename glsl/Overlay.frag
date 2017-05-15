@@ -8,10 +8,17 @@ precision highp float;
 uniform vec2 uScreenSize;
 uniform sampler2D uOverlay;
 uniform float uExposure;
+uniform bool uRGBM;
+
+varying vec2 vTexCoord0;
 
 void main() {
-    vec2 texCoord = gl_FragCoord.xy / uScreenSize.xy;
-    vec3 color = decodeRGBM(texture2D(uOverlay, texCoord));
+    vec3 color;
+    if (uRGBM) {
+      color = decodeRGBM(texture2D(uOverlay, vTexCoord0));
+    } else {
+      color = texture2D(uOverlay, vTexCoord0).rgb;
+    }
 
     color *= uExposure;
     color = color / (1.0 + color);

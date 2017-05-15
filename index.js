@@ -35,8 +35,6 @@ const DEPTH_PASS_FRAG = glsl(__dirname + '/glsl/DepthPass.frag')
 // var SOLID_COLOR_FRAG = fs.readFileSync(__dirname + '/glsl/SolidColor.frag', 'utf8')
 // var SHOW_COLORS_VERT = fs.readFileSync(__dirname + '/glsl/ShowColors.vert', 'utf8')
 // var SHOW_COLORS_FRAG = fs.readFileSync(__dirname + '/glsl/ShowColors.frag', 'utf8')
-const OVERLAY_VERT = glsl(__dirname + '/glsl/Overlay.vert')
-const OVERLAY_FRAG = glsl(__dirname + '/glsl/Overlay.frag')
 
 var State = {
   backgroundColor: [0.1, 0.1, 0.1, 1],
@@ -101,7 +99,6 @@ function Renderer (opts) {
 
   // this.initMaterials()
   // this.initSkybox()
-  this.initPostproces()
 }
 
 // Renderer.prototype.initMaterials = function () {
@@ -109,87 +106,6 @@ function Renderer (opts) {
   // this._solidColorProgram = ctx.createProgram(SOLID_COLOR_VERT, SOLID_COLOR_FRAG)
   // this._showColorsProgram = ctx.createProgram(SHOW_COLORS_VERT, SHOW_COLORS_FRAG)
 // }
-
-// TODO: move ssao kernels to pex-fx
-Renderer.prototype.initPostproces = function () {
-  var ctx = this._ctx
-
-  var fsqPositions = [[-1, -1], [1, -1], [1, 1], [-1, 1]]
-  var fsqFaces = [[0, 1, 2], [0, 2, 3]]
-  this._fsqMesh = {
-    attributes: {
-      aPosition: ctx.vertexBuffer(fsqPositions)
-    },
-    indices: ctx.indexBuffer(fsqFaces)
-  }
-
-  this._frameColorTex = ctx.texture2D({ width: this._width, height: this._height })
-  this._frameNormalTex = ctx.texture2D({ width: this._width, height: this._height })
-  this._frameDepthTex = ctx.texture2D({ width: this._width, height: this._height, format: ctx.PixelFormat.Depth })
-
-  this._drawFrameFboCommand = {
-    name: 'drawFrame',
-    pass: ctx.pass({
-      // color: [ this._frameColorTex, this._frameNormalTex ],
-      color: [ this._frameColorTex ],
-      depth: this._frameDepthTex,
-      clearColor: State.backgroundColor,
-      clearDepth: 1
-    })
-  }
-
-  // this._overlayProgram = ctx.program({ vert: OVERLAY_VERT, frag: OVERLAY_FRAG }) // TODO
-  this._blitCmd = {
-    name: 'blit',
-    pipeline: ctx.pipeline({
-      vert: OVERLAY_VERT,
-      frag: OVERLAY_FRAG
-    }),
-    attributes: this._fsqMesh.attributes,
-    indices: this._fsqMesh.indices,
-    uniforms: {
-      uScreenSize: [this._width, this._height],
-      uOverlay: this._frameColorTex
-    }
-  }
-
-  // this._fx = fx(ctx) // TODO
-
-  var ssaoKernel = []
-  for (var i = 0; i < 64; i++) {
-    var sample = [
-      random.float() * 2 - 1,
-      random.float() * 2 - 1,
-      random.float(),
-      1
-    ]
-    Vec3.normalize(sample)
-    var scale = random.float()
-    scale = MathUtils.lerp(0.1, 1.0, scale * scale)
-    Vec3.scale(sample, scale)
-    ssaoKernel.push(sample)
-  }
-  var ssaoKernelData = new Float32Array(flatten(ssaoKernel))
-
-  var ssaoNoise = []
-  for (var j = 0; j < 64; j++) {
-    var noiseSample = [
-      random.float() * 2 - 1,
-      random.float() * 2 - 1,
-      0,
-      1
-    ]
-    ssaoNoise.push(noiseSample)
-  }
-  var ssaoNoiseData = new Float32Array(flatten(ssaoNoise))
-
-  ctx.gl.getExtension('OES_texture_float ')
-  this.ssaoKernelMap = ctx.texture2D({ width: 8, height: 8, data: ssaoKernelData, format: ctx.PixelFormat.RGBA32F, wrap: ctx.Wrap.Repeat })
-  this.ssaoNoiseMap = ctx.texture2D({ width: 8, height: 8, data: ssaoNoiseData, format: ctx.PixelFormat.RGBA32F, wrap: ctx.Wrap.Repeat })
-
-  var err = ctx.gl.getError()
-  if (err) throw new Error(err)
-}
 
 // Renderer.prototype.initSkybox = function () {
   // const ctx = this._ctx
@@ -242,7 +158,7 @@ Renderer.prototype.updateDirectionalLightShadowMap = function (light) {
   Mat4.ortho(light._projectionMatrix, light._left, light._right, light._bottom, light._top, light._near, light._far)
 
   ctx.submit(light._shadowMapDrawCommand, () => {
-    this.drawMeshes(light)
+    this.drawMeshes(null, light)
   })
 }
 
@@ -383,13 +299,19 @@ Renderer.prototype.getComponents = function (type) {
 // set update transforms once per frame
 // draw + shadowmap @ 1000 objects x 30 uniforms = 60'000 setters / frame!!
 // transform feedback?
-Renderer.prototype.drawMeshes = function (shadowMappingLight) {
+Renderer.prototype.drawMeshes = function (camera, shadowMappingLight) {
   const ctx = this._ctx
 
   if (State.profiler) State.profiler.time('drawMeshes')
 
-  const cameraNodes = this.getComponents('Camera')
-  const geometries = this.getComponents('Geometry')
+  function byCameraTags(component) {
+    if (!camera) return true
+    if (!camera.entity.tags) return false
+    if (!component.entity.tags) return false
+    return component.entity.tags[0] === camera.entity.tags[0]
+  }
+
+  const geometries = this.getComponents('Geometry').filter(byCameraTags)
   const directionalLights = this.getComponents('DirectionalLight')
   const pointLights = this.getComponents('PointLight')
   const areaLights = this.getComponents('AreaLight')
@@ -401,7 +323,6 @@ Renderer.prototype.drawMeshes = function (shadowMappingLight) {
   if (reflectionProbes.length > 0) {
     sharedUniforms.uReflectionMap = reflectionProbes[0]._reflectionMap
   }
-  var camera = cameraNodes[0]
   if (shadowMappingLight) {
     sharedUniforms.uProjectionMatrix = shadowMappingLight._projectionMatrix
     sharedUniforms.uViewMatrix = shadowMappingLight._viewMatrix
@@ -410,8 +331,8 @@ Renderer.prototype.drawMeshes = function (shadowMappingLight) {
     sharedUniforms.uProjectionMatrix = camera.projectionMatrix
     sharedUniforms.uViewMatrix = camera.viewMatrix
     sharedUniforms.uInverseViewMatrix = Mat4.invert(Mat4.copy(camera.viewMatrix))
+    sharedUniforms.uRGBM = camera.rgbm
   }
-
 
   directionalLights.forEach(function (light, i) {
     sharedUniforms['uDirectionalLights[' + i + '].direction'] = light.direction
@@ -584,25 +505,26 @@ Renderer.prototype.draw = function () {
     }
   })
 
-  var currentCamera = cameras[0]
-  
-  ctx.submit(this._drawFrameFboCommand, () => {
-    // depth prepass
-    if (State.depthPrepass) {
-      ctx.gl.colorMask(0, 0, 0, 0)
-      this.drawMeshes()
-      ctx.gl.colorMask(1, 1, 1, 1)
-    }
-    this.drawMeshes()
+  cameras.forEach((camera, cameraIndex) => {
+    ctx.submit(camera._drawFrameFboCommand, () => {
+      // depth prepass
+      if (State.depthPrepass) {
+        ctx.gl.colorMask(0, 0, 0, 0)
+        this.drawMeshes(camera)
+        ctx.gl.colorMask(1, 1, 1, 1)
+      }
+      this.drawMeshes(camera)
 
-    if (skyboxes.length > 0) {
-      skyboxes[0].draw(currentCamera)
-    }
-  })
-  ctx.submit(this._blitCmd, {
-    uniforms: {
-      uExposure: State.exposure
-    }
+      if (skyboxes.length > 0) {
+        skyboxes[0].draw(camera)
+      }
+    })
+    ctx.submit(camera._blitCmd, {
+      uniforms: {
+        uExposure: State.exposure
+      },
+      viewport: camera.viewport
+    })
   })
 
   /*
@@ -739,8 +661,8 @@ Renderer.prototype.drawDebug = function () {
   */
 }
 
-Renderer.prototype.entity = function (components, parent) {
-  const entity = createEntity(components, parent || this.root)
+Renderer.prototype.entity = function (components, parent, tags) {
+  const entity = createEntity(components, parent || this.root, tags)
   this.entities.push(entity)
   return entity
 }

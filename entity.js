@@ -2,8 +2,9 @@ const createTransform = require('./transform')
 
 let entityId = 0
 
-function Entity (components, parent) {
+function Entity (components, parent, tags) {
   this.id = entityId++
+  this.tags = tags || []
 
   this.components = components ? components.slice(0) : []
 
@@ -29,6 +30,6 @@ Entity.prototype.getComponent = function (type) {
   return this.components.find((component) => component.type === type)
 }
 
-module.exports = function createEntity (components, parent) {
-  return new Entity(components, parent)
+module.exports = function createEntity (components, parent, tags) {
+  return new Entity(components, parent, tags)
 }

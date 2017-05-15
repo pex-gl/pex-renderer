@@ -47,6 +47,7 @@ uniform mat4 uModelMatrix;
 
 uniform vec3 uCameraPosition;
 
+uniform bool uRGBM;
 
 //sun
 uniform vec3 uSunPosition;
@@ -229,12 +230,16 @@ uniform sampler2D uReflectionMap;
 vec3 getIrradiance(vec3 eyeDirWorld, vec3 normalWorld) {
   vec2 uv = envMapOctahedral(normalWorld);
   float width = 2048.0;
-  float irrSize = 32.0;
-  uv += 0.5 / 32.0;
-  uv /= 32.0 / 31.0;
-  uv = (uv * 32.0 + vec2(2048.0 - 32.0)) / width;
-  vec3 irradiance = decodeRGBM(texture2D(uReflectionMap, uv));
-  return irradiance;
+  float irrSize = 64.0;
+  uv += 0.5 / irrSize;
+  uv /= irrSize / (irrSize - 1.0);
+  uv = (uv * irrSize + vec2(2048.0 - irrSize)) / width;
+  if (uRGBM) {
+    vec3 irradiance = decodeRGBM(texture2D(uReflectionMap, uv));
+    return irradiance;
+  } else {
+    return texture2D(uReflectionMap, uv).rgb;
+  }
 }
 
 vec3 EnvBRDFApprox( vec3 SpecularColor, float Roughness, float NoV ) {
@@ -253,10 +258,15 @@ vec3 getPrefilteredReflection(vec3 eyeDirWorld, vec3 normalWorld, float roughnes
     float lod = roughness * maxMipMapLevel;
     float upLod = floor(lod);
     float downLod = ceil(lod);
-    vec3 a = decodeRGBM(texture2D(uReflectionMap, envMapOctahedral(reflectionWorld, 0.0, upLod)));
-    vec3 b = decodeRGBM(texture2D(uReflectionMap, envMapOctahedral(reflectionWorld, 0.0, downLod)));
-
-    return mix(a, b, lod - upLod);
+    if (uRGBM) {
+      vec3 a = decodeRGBM(texture2D(uReflectionMap, envMapOctahedral(reflectionWorld, 0.0, upLod)));
+      vec3 b = decodeRGBM(texture2D(uReflectionMap, envMapOctahedral(reflectionWorld, 0.0, downLod)));
+      return mix(a, b, lod - upLod);
+    } else {
+      vec3 a = texture2D(uReflectionMap, envMapOctahedral(reflectionWorld, 0.0, upLod)).rgb;
+      vec3 b = texture2D(uReflectionMap, envMapOctahedral(reflectionWorld, 0.0, downLod)).rgb;
+      return mix(a, b, lod - upLod);
+    }
 }
 
 float G1V(float dotNV, float k) {
@@ -516,6 +526,11 @@ void main() {
     vec3 color = emissiveColor + indirectDiffuse + indirectSpecular + directDiffuse + directSpecular + indirectArea;
     // color = reflectionColor;
 
-    gl_FragData[0] = encodeRGBM(color);
+    if (uRGBM) {
+      gl_FragData[0] = encodeRGBM(color);
+    } else {
+      gl_FragData[0].rgb = color;
+      gl_FragData[0].a = 1.0;
+    }
     // gl_FragData[1] = vec4(vNormalView * 0.5 + 0.5, 1.0);
 }
