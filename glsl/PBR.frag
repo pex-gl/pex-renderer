@@ -192,12 +192,12 @@ float saturate(float f) {
 #ifdef USE_ROUGHNESS_MAP
     uniform sampler2D uRoughnessMap; //assumes sRGB color, not linear
     float getRoughness() {
-        return texture2D(uRoughnessMap, vTexCoord0).r;
+        return texture2D(uRoughnessMap, vTexCoord0).r + 0.01;
     }
 #else
     uniform float uRoughness;
     float getRoughness() {
-        return uRoughness;
+        return uRoughness + 0.01;
     }
 #endif
 
@@ -208,7 +208,7 @@ float saturate(float f) {
         vec3 normalRGB = texture2D(uNormalMap, vTexCoord0).rgb;
         vec3 normalMap = normalRGB * 2.0 - 1.0;
 
-        normalMap.y *= -1.0;
+        // normalMap.y *= -1.0;
         /*normalMap.x *= -1.0;*/
 
         vec3 N = normalize(vNormalView);
@@ -423,9 +423,9 @@ void main() {
     vec3 kS = F0;
     vec3 kD = vec3(1.0) - kS;
     kD *= 1.0 - metallic;
-    float fakeBlurDarker = 0.25;
     indirectDiffuse = kD * baseColor * irradianceColor;
-    indirectSpecular = kS * baseColor * reflectionColor * reflectance;
+    indirectSpecular = reflectionColor * reflectance;
+    // indirectSpecular = reflectance;
 #endif
 
     //lights
@@ -470,6 +470,7 @@ void main() {
             vec3 kD = vec3(1.0) - kS;
 
             kD *= 1.0 - metallic;
+
             float NDF = GGX(N, H, roughness);
 
             float G = GeometrySmith(N, V, L, roughness);
@@ -479,8 +480,11 @@ void main() {
             vec3 brdf = nominator / denominator;
 
             vec3 lightColor = toLinear(light.color.rgb);
-            lightColor *= light.color.a;
+            lightColor *= light.color.a; // intensity
+
+
             vec3 light = NdotL * lightColor * illuminated;
+
             directDiffuse += kD * baseColor / PI * light;
             directSpecular += brdf * light;
         }
@@ -499,12 +503,39 @@ void main() {
 
         float distanceRatio = clamp(1.0 - pow(dist/light.radius, 4.0), 0.0, 1.0);
         float falloff = (distanceRatio * distanceRatio) / (dist * dist + 1.0);
+        // float falloff = 1.0 / (dist * dist);
 
         vec3 lightColor = toLinear(light.color.rgb);
         lightColor *= light.color.a;
         //TODO: specular light conservation
-        directDiffuse += baseColor * dotNL * lightColor * falloff;
-        directSpecular += directSpecularGGX(normalWorld, eyeDirWorld, L, roughness, F0) * light.color.rgb * falloff;
+        // directDiffuse += baseColor * dotNL * lightColor * falloff;
+        // directSpecular += directSpecularGGX(normalWorld, eyeDirWorld, L, roughness, F0) * light.color.rgb * falloff;
+
+        vec3 N = normalWorld;
+        vec3 H = normalize(V + L);
+        float NdotL = max(0.0, dot(N, L));
+        float HdotV = max(0.0, dot(H, V));
+        float NdotV = max(0.0, dot(N, V));
+
+        vec3 F = FresnelSchlick(HdotV, F0);
+
+        vec3 kS = F;
+        vec3 kD = vec3(1.0) - kS;
+
+        kD *= 1.0 - metallic;
+
+        float NDF = GGX(N, H, roughness);
+
+        float G = GeometrySmith(N, V, L, roughness);
+
+        vec3 nominator = NDF * G * F;
+        float denominator = 4.0 * NdotV * NdotL + 0.001;
+        vec3 brdf = nominator / denominator;
+
+        vec3 radiance = lightColor * falloff;
+
+        directDiffuse += kD * baseColor / PI * NdotL * radiance;
+        directSpecular += brdf * NdotL * radiance;
     }
 #endif
 
@@ -524,7 +555,6 @@ void main() {
 #endif
 
     vec3 color = emissiveColor + indirectDiffuse + indirectSpecular + directDiffuse + directSpecular + indirectArea;
-    // color = reflectionColor;
 
     if (uRGBM) {
       gl_FragData[0] = encodeRGBM(color);
