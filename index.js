@@ -216,6 +216,9 @@ Renderer.prototype.getMaterialProgram = function (geometry, material, options) {
   if (material.normalMap) {
     flags.push('#define USE_NORMAL_MAP')
   }
+  if (material.emissiveColorMap) {
+    flags.push('#define USE_EMISSIVE_COLOR_MAP')
+  }
   flags.push('#define NUM_DIRECTIONAL_LIGHTS ' + (options.numDirectionalLights || 0))
   flags.push('#define NUM_POINT_LIGHTS ' + (options.numPointLights || 0))
   flags.push('#define NUM_AREA_LIGHTS ' + (options.numAreaLights || 0))
