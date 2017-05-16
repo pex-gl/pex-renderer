@@ -1,16 +1,19 @@
 const fs = require('fs')
+const assert = require('assert')
 const loadJSON = require('pex-io/loadJSON')
 const loadBinary = require('pex-io/loadBinary')
 const loadText = require('pex-io/loadText')
 const loadImage = require('pex-io/loadImage')
 const Mat4 = require('pex-math/Mat4')
 const Vec3 = require('pex-math/Vec3')
+const Quat = require('pex-math/Quat')
 const createSphere = require('primitive-sphere')
 const createCube = require('primitive-cube')
 const createRenderer = require('../../../../')
 const createCamera = require('pex-cam/perspective')
 const createOrbiter = require('pex-cam/orbiter')
 const createContext = require('pex-context')
+const async = require('async')
 
 const ctx = createContext()
 ctx.gl.getExtension('EXT_shader_texture_lod')
@@ -20,7 +23,8 @@ ctx.gl.getExtension('OES_texture_float')
 
 const renderer = createRenderer({
   ctx: ctx,
-  shadowQuality: 2
+  shadowQuality: 2,
+  pauseOnBlur: true
 })
 
 const State = {
@@ -79,12 +83,11 @@ initSky()
 initCamera()
 let debugOnce = false
 
-
-
 var WebGLConstants = {
   34963: 'ELEMENT_ARRAY_BUFFER',  // 0x8893
   34962: 'ARRAY_BUFFER',          // 0x8892
   5123: 'UNSIGNED_SHORT',         // 0x1403
+  5125: 'UNSIGNED_INT',
   5126: 'FLOAT',                  // 0x1406
   4: 'TRIANGLES',                 // 0x0004
   35678: 'SAMPLER_2D',            // 0x8B5E
@@ -94,218 +97,308 @@ var WebGLConstants = {
   35676: 'FLOAT_MAT4'             // 0x8B5C
 }
 
-var Quat = require('pex-math/Quat')
+const AttributeSizeMap = {
+  'SCALAR': 1,
+  'VEC4': 4,
+  'VEC3': 3,
+  'VEC2': 2,
+  'MAT4': 16
+}
 
-// loadJSON('Cube.gltf', function (err, json) {
-loadJSON('male.gltf', function (err, json) {
-  if (err) console.log('loadJSON', err)
-  /*
-  var c = createCube(1, 1, 2)
-  c.positions.forEach((p) => p[2] += 1)
-  var cube = renderer.entity([
-    renderer.transform({
-      position: [0, 0, 0],
-      rotation: Quat.fromDirection(Quat.create(), [0.1, 1, 0])
-    }),
-    renderer.geometry(c),
-    renderer.material({
-      baseColor: [1, 0, 0, 1]
+
+let loaded = false
+let animations = []
+
+function handleBufferView (bufferView, bufferData) {
+  bufferView.data = bufferData.slice(
+    bufferView.byteOffset,
+    bufferView.byteOffset + bufferView.byteLength
+  )
+}
+
+function handleAccessor (accessor, bufferView) {
+  const size = AttributeSizeMap[accessor.type]
+
+  if (accessor.componentType === 5123) {
+    data = new Uint16Array(bufferView.data.slice(
+      accessor.byteOffset,
+      accessor.byteOffset + accessor.count * size * 4
+    ))
+    accessor.data = data
+  } else if (accessor.componentType === 35664) {
+    data = new Float32Array(bufferView.data.slice(
+      accessor.byteOffset,
+      accessor.byteOffset + accessor.count * size * 4
+    ))
+    accessor.data = data
+  } else if (accessor.componentType === 5126) {
+    data = new Float32Array(bufferView.data.slice(
+      accessor.byteOffset,
+      accessor.byteOffset + accessor.count * size * 4
+    ))
+    accessor.data = data
+  } else if (accessor.componentType === 35665) {
+    data = new Float32Array(bufferView.data.slice(
+      accessor.byteOffset,
+      accessor.byteOffset + accessor.count * size * 4
+    ))
+    accessor.data = data
+  } else if (accessor.componentType === 35666) {
+    data = new Float32Array(bufferView.data.slice(
+      accessor.byteOffset,
+      accessor.byteOffset + accessor.count * size * 4
+    ))
+    accessor.data = data
+  } else if (accessor.componentType === 5125) {
+    data = new Uint16Array(bufferView.data.slice(
+      accessor.byteOffset,
+      accessor.byteOffset + accessor.count * size * 4
+    ))
+    accessor.data = data
+  } else {
+    // TODO
+    console.log('uncaught', accessor)
+  }
+}
+
+function handleNode (node, gltf) {
+  const transform = {
+    position: node.translation || [0, 0, 0],
+    rotation: node.rotation || [0, 0, 0, 1],
+    scale: node.scale || [1, 1, 1]
+  }
+  if (node.matrix) transform.matrix = node.matrix
+
+  const transformCmp = renderer.transform(transform)
+  if (node.mesh !== undefined) {
+    const mesh = gltf.meshes[node.mesh]
+
+    const positionAccessor = gltf.accessors[mesh.primitives[0].attributes.POSITION]
+    const normalAccessor = gltf.accessors[mesh.primitives[0].attributes.NORMAL]
+    const indicesAccessor = gltf.accessors[mesh.primitives[0].indices]
+    // TODO
+    const tx = []
+    positionAccessor.data.forEach(() => tx.push(0, 0))
+    const geometryCmp = renderer.geometry({
+      positions: positionAccessor.data,
+      normals: normalAccessor.data,
+      // texCoords: texcoordAccessor.data,
+      texCoords: tx,
+      indices: indicesAccessor.data,
     })
-  ])
-  var child = renderer.entity([
-    renderer.geometry(c),
-    renderer.transform({
-      position: [0, 0, 2],
-      rotation: Quat.fromDirection(Quat.create(), [1, 0, 0])
-    }),
-    renderer.material({
-      baseColor2: [0, 0, 1, 1]
+
+    const jointAccessor = gltf.accessors[mesh.primitives[0].attributes.JOINT]
+    if (jointAccessor) geometryCmp.set({ joints: jointAccessor.data })
+    const weightAccessor = gltf.accessors[mesh.primitives[0].attributes.WEIGHT]
+    if (weightAccessor) geometryCmp.set({ weights: weightAccessor.data })
+
+    const materialCmp = renderer.material({
+      baseColor: [0.15, 0.15, 0.2, 1.0],
+      roughness: 1,
+      metallic: 0
     })
-  ], cube)
 
-  var child2 = renderer.entity([
-    renderer.geometry(c),
-    renderer.transform({
-      position: [0, 0, 2],
-      rotation: Quat.fromDirection(Quat.create(), [0, 1, 0])
-    }),
-    renderer.material({
-      baseColor: [0, 1, 1, 1]
-    })
-  ], child)
-  */
+    node.entity = renderer.entity([
+      transformCmp,
+      geometryCmp,
+      materialCmp
+    ])
 
-  var firstBuffer = json.buffers[0]
-  if (firstBuffer.uri) {
-    loadBinary(firstBuffer.uri, function (err, data) {
-      firstBuffer.data = data
-      console.log('first buffer data', data)
+    if (node.skin !== undefined) {
+      const skin = gltf.skins[node.skin]
+      const data = gltf.accessors[skin.inverseBindMatrices].data
 
-      var accessors = json.accessors
-      var nodes = json.nodes
-      var bufferViews = json.bufferViews
-
-      var firstMesh = json.meshes[0]
-      var primitives = firstMesh.primitives[0]
-      var attributes = primitives.attributes
-      var normalAccessor = accessors[attributes.NORMAL]
-      console.log(normalAccessor)
-      var positionAccessor = accessors[attributes.POSITION]
-      console.log(positionAccessor)
-      // var tangentAccessor = accessors[attributes.TANGENT]
-      // console.log(tangentAccessor)
-      // var texcoordAccessor = accessors[attributes.TEXCOORD_0]
-      // console.log(texcoordAccessor)
-      var indicesAccessor = accessors[primitives.indices]
-
-      handleAccessor(normalAccessor)
-      console.log('normals', normalAccessor.data)
-
-      handleAccessor(positionAccessor)
-      console.log('positions', positionAccessor.data)
-
-      // handleAccessor(tangentAccessor)
-      // console.log('tangents', tangentAccessor.data)
-
-      // handleAccessor(texcoordAccessor)
-      // console.log('texcoords', texcoordAccessor.data)
-
-      handleAccessor(indicesAccessor)
-      console.log('indices', indicesAccessor.data)
-
-      // var material = materials[primitives.material]
-      //
-      nodes.forEach((node) => {
-        var transform = {
-          position: node.translation || [0, 0, 0],
-          rotation: node.rotation || [0, 0, 0, 1],
-          scale: node.scale || [1, 1, 1]
-        }
-        if (node.matrix) transform.matrix = node.matrix
-        // console.log('rotation', node, node.rotation)
-
-        // console.log('node mesh', node.mesh)
-
-        var transformCmp = renderer.transform(transform)
-        if (node.mesh === 0) {
-
-          console.log('vert leng', positionAccessor.data.length)
-          var tx = []
-          positionAccessor.data.forEach(() => tx.push(0, 0))
-
-          var geometryCmp = renderer.geometry({
-            positions: positionAccessor.data,
-            normals: normalAccessor.data,
-            // texCoords: texcoordAccessor.data,
-            texCoords: tx,
-            indices: indicesAccessor.data,
-            primitive: 'lines'
-          })
-
-          var materialCmp = renderer.material({
-            baseColor: [0.15, 0.15, 0.2, 1.0],
-            roughness: 1,
-            metallic: 0
-          })
-
-          node.entity = renderer.entity([
-            transformCmp,
-            geometryCmp,
-            materialCmp
-          ])
-        } else if (node.jointName) {
-          console.log(node.jointName)
-          // const sphere = createSphere(0.01)
-          const sphere = createCube(0.01, 0.1, 0.01)
-          node.entity = renderer.entity([
-            transformCmp,
-            renderer.geometry(sphere),
-            renderer.material({
-              baseColor: [0.8, 0.8, 0.8, 1.0],
-              roughness: 1,
-              metallic: 0
-            })
-          ])
-        } else {
-          node.entity = renderer.entity([
-            transformCmp
-          ])
-        }
-
-      })
-
-      nodes.forEach((node, index) => {
-        let parentTransform = nodes[index].entity.transform
-        if (node.children) {
-          node.children.forEach((child) => {
-            let childTransform = nodes[child].entity.transform
-            childTransform.set({ parent: parentTransform })
-          })
-        }
-        // parseNode(node, null)
-      })
-
-      function handleAccessor (accessor) {
-        const AttributeSizeMap = {
-          'SCALAR': 1,
-          'VEC4': 4,
-          'VEC3': 3,
-          'VEC2': 2,
-          'MAT4': 16
-        }
-
-        var size = AttributeSizeMap[accessor.type]
-
-
-        // gltf buffer = binary file
-        // gltf buffer view = slice of binary file = ctx buffer
-        // gltf accessor = attribute
-        //
-        // geometry should accept
-        // positions = Array of [x, y, z]
-        // positions = TypedArray
-        // positions = ctx.vertexBuffer
-        // positions = { buffer: ctx.vertexBuffer, offset: 0, stride: 0 }
-
-        // if (accessor.componentType === 5126) {
-          // float
-          var bufferView = bufferViews[accessor.bufferView]
-
-          if (bufferView.target === 34963) {
-            // element array buffer
-            data = new Uint16Array(firstBuffer.data.slice(
-              bufferView.byteOffset,
-              bufferView.byteOffset + accessor.count * size * 2
-            ))
-
-            accessor.data = data
-          }
-          if (bufferView.target === 34962) {
-            // array buffer
-            data = new Float32Array(firstBuffer.data.slice(
-                bufferView.byteOffset,
-                bufferView.byteOffset + bufferView.byteLength
-              ).slice(
-                accessor.byteOffset,
-                accessor.byteOffset + accessor.count * size * 4
-              )
-            )
-
-            accessor.data = data
-          }
-        // }
+      const inverseBindMatrices = []
+      for (let i = 0; i < data.length; i += 16) {
+        inverseBindMatrices.push(data.slice(i, i + 16))
       }
 
-    })
-  } else {
-    throw new Error('gltf/handleBuffer missing uri in ')
-  }
+      const skinCmp = renderer.skin({
+        bindShapeMatrix: skin.bindShapeMatrix,
+        inverseBindMatrices: inverseBindMatrices
+      })
+      node.entity.addComponent(skinCmp)
+    }
 
+  } else {
+    node.entity = renderer.entity([
+      transformCmp
+    ])
+  }
+}
+
+function buildHierarchy (nodes, gltf) {
+  nodes.forEach((node) => {
+    if (node.skin !== undefined) {
+      const skin = gltf.skins[node.skin]
+
+      const joints = skin.jointNames.map((jointName) => {
+        return nodes.find((n) => n.jointName == jointName).entity
+      })
+
+      node.entity.getComponent('Skin').set({
+        joints: joints
+      })
+    }
+  })
+
+  nodes.forEach((node, index) => {
+    let parentTransform = nodes[index].entity.transform
+    if (node.children) {
+      node.children.forEach((child) => {
+        let childTransform = nodes[child].entity.transform
+        childTransform.set({ parent: parentTransform })
+      })
+    }
+  })
+}
+
+function handleBuffer (buffer, cb) {
+  if (!buffer.uri) {
+    cb('gltf buffer.uri does not exist')
+    return
+  }
+  loadBinary(buffer.uri, function (err, data) {
+    console.log('data', data)
+    buffer.data = data
+    cb(err, data)
+  })
+}
+
+function handleAnimation (animation, gltf) {
+  return animation.channels.map((channel) => {
+    const sampler = animation.samplers[channel.sampler]
+    const input = gltf.accessors[sampler.input]
+    const output = gltf.accessors[sampler.output]
+    const inputData = input.data
+
+    const outputData = []
+    const od = output.data
+    const offset = AttributeSizeMap[output.type]
+    for (let i = 0; i < output.data.length; i+=offset) {
+      if (offset === 3) {
+        outputData.push([od[i], od[i + 1], od[i + 2]])
+      }
+      if (offset === 4) {
+        outputData.push([od[i], od[i + 1], od[i + 2], od[i + 3]])
+      }
+    }
+
+    const target = gltf.nodes[channel.target.node].entity
+
+    return {
+      sampler: {
+        input: input.data,
+        output: outputData,
+        interpolation: sampler.interpolation
+      },
+      target: {
+        node: target,
+        path: channel.target.path
+      }
+    }
+  })
+}
+
+// loadJSON('Monster.gltf', function (err, json) { // works
+// loadJSON('CesiumMan.gltf', function (err, json) { // works
+// loadJSON('BrainStem.gltf', function (err, json) { // does NOT work
+loadJSON('BrainStem.gltf', function (err, json) {
+  if (err) throw new Error(err)
+
+  async.map(json.buffers, handleBuffer, function (err, res) {
+    if (err) throw new Error(err)
+
+    json.bufferViews.map((bufferView) => {
+      handleBufferView(bufferView, json.buffers[bufferView.buffer].data)
+    })
+
+    json.accessors.map((accessor) => {
+      handleAccessor(accessor, json.bufferViews[accessor.bufferView])
+    })
+
+    json.nodes.map((node) => {
+      handleNode(node, json)
+    })
+
+    buildHierarchy(json.nodes, json)
+
+    animations = json.animations.map((animation) => {
+      return handleAnimation(animation, json)
+    })
+
+    loaded = true
+  })
 })
 
+var startTime = Date.now()
+
 ctx.frame(() => {
-    ctx.debug(debugOnce)
-    debugOnce = false
-    renderer.draw()
+  ctx.debug(debugOnce)
+  debugOnce = false
+  renderer.draw()
+
+  if (loaded) {
+    var elapsedTime = Date.now() - startTime
+    var ms = (elapsedTime / 1000).toFixed(3)
+
+    animations.forEach((channels, i) => {
+      channels.forEach((channel) => {
+        const inputData = channel.sampler.input
+        const outputData = channel.sampler.output
+        const target = channel.target.node
+        const path = channel.target.path
+
+        let prevInput = null
+        let nextInput = null
+        let prevOutput = null
+        let nextOutput = null
+
+        const animationLength = inputData[inputData.length - 1]
+        const currentTime = ms % animationLength
+
+        let prevIndex = undefined
+        let nextIndex = undefined
+        for (var i = 0; i < inputData.length; i++) {
+          nextIndex = i
+          if (inputData[i] >= currentTime) {
+            break
+          }
+          prevIndex = nextIndex
+        }
+
+        if (prevIndex !== undefined) {
+          prevInput = inputData[prevIndex]
+          nextInput = inputData[nextIndex]
+          prevOutput = outputData[prevIndex]
+          nextOutput = outputData[nextIndex]
+
+          const interpolationValue = ((currentTime) - prevInput) / (nextInput - prevInput)
+
+          const currentOutput = []
+          for (var k = 0; k < nextOutput.length; k++) {
+            currentOutput[k] =
+              prevOutput[k] + interpolationValue * (nextOutput[k] - prevOutput[k])
+          }
+
+          if (path === 'translation') {
+            target.transform.set({
+              position: currentOutput
+            })
+          }
+          if (path === 'rotation') {
+            target.transform.set({
+              rotation: currentOutput
+            })
+          }
+          if (path === 'scale') {
+            target.transform.set({
+              scale: currentOutput
+            })
+          }
+        }
+      })
+    })
+  }
 })
 

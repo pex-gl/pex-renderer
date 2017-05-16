@@ -10,6 +10,7 @@
     "url": "https://github.com/vorg"
   },
   "dependencies": {
+    "async": "^2.4.0",
     "flatten": "^1.0.2",
     "gl-constants": "^1.0.0",
     "glsl-atmosphere": "^1.0.1",
