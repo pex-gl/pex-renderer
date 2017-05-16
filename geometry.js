@@ -97,7 +97,6 @@ Geometry.prototype.set = function (opts) {
     } else {
       ctx.update(this._weightsBuf, { data: opts.weights })
     }
-    console.log('is this happening', opts.weights)
     this._attributes.aWeight = this._weightsBuf
   }
 
