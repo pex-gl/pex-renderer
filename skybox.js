@@ -18,6 +18,8 @@ function Skybox (opts) {
   this.texture = null
   this._dirtySunPosition = true
 
+  this.set(opts)
+
   const skyboxPositions = [[-1, -1], [1, -1], [1, 1], [-1, 1]]
   const skyboxFaces = [[0, 1, 2], [0, 2, 3]]
 
@@ -48,7 +50,8 @@ function Skybox (opts) {
       frag: SKYTEXTURE_FRAG
     }),
     uniforms: {
-      uSunPosition: [0, 0, 0]
+      uSunPosition: [0, 0, 0],
+      uRGBM: this.rgbm
     },
     attributes: {
       aPosition: ctx.vertexBuffer(quad.positions),
@@ -56,8 +59,6 @@ function Skybox (opts) {
     },
     indices: ctx.indexBuffer(quad.cells)
   }
-
-  this.set(opts)
 }
 
 Skybox.prototype.init = function (entity) {

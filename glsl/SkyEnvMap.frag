@@ -11,6 +11,7 @@ precision highp float;
 #endif
 
 uniform vec3 uSunPosition;
+uniform bool uRGBM;
 
 varying vec2 vTexCoord0;
 
@@ -35,5 +36,10 @@ void main() {
  
   vec3 color = sky(uSunPosition, N);
 
-  gl_FragColor = encodeRGBM(color);
+  if (uRGBM) {
+    gl_FragColor = encodeRGBM(color);
+  } else {
+    gl_FragColor.rgb = color;
+    gl_FragColor.a = 1.0;
+  }
 }
