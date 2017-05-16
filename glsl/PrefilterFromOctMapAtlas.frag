@@ -6,7 +6,6 @@ precision highp float;
 #pragma glslify: octMapUVToDir = require(./OctMapUVToDir)
 #pragma glslify: encodeRGBM = require(../local_modules/glsl-rgbm/encode)
 #pragma glslify: decodeRGBM = require(../local_modules/glsl-rgbm/decode)
-#pragma glslify: random = require(glsl-random/lowp)
 
 varying vec2 vTexCoord;
 uniform float uTextureSize;
@@ -44,8 +43,8 @@ vec2 Hammersley(int i, int N) {
 vec3 ImportanceSampleGGX(vec2 Xi, float Roughness, vec3 N) {
   //this is mapping 2d point to a hemisphere but additionally we add spread by roughness
   float a = Roughness * Roughness;
-  a *= 0.5; // to prevent overblurring as we sample from previous roughness level with smaller number of samples
-  float Phi = 2.0 * PI * Xi.x + random(N.xz) * 0.5;
+  a *= 0.75; // to prevent overblurring as we sample from previous roughness level with smaller number of samples
+  float Phi = 2.0 * PI * Xi.x;
   float CosTheta = sqrt((1.0 - Xi.y) / (1.0 + (a*a - 1.0) * Xi.y));
   float SinTheta = sqrt(1.0 - CosTheta * CosTheta);
   vec3 H;
@@ -60,15 +59,6 @@ vec3 ImportanceSampleGGX(vec2 Xi, float Roughness, vec3 N) {
 
   //Tangent to World Space
   return tangent * H.x + bitangent * H.y + N * H.z;
-
-  //
-  //vec3 n = N;
-  //float aa = 1.0 / (1.0 + n.z);
-  //float b = -n.x * n.y * aa;
-  //vec3 b1 = vec3(1.0 - n.x * n.x * aa, b, -n.x);
-  //vec3 b2 = vec3(b, 1.0 - n.y * n.y * aa, -n.y);
-  //mat3 vecSpace = mat3(b1, b2, n);
-  //return normalize(mix(vecSpace * H, N, 1.0 - Roughness));
 }
 
 //TODO: optimize this using sign()
@@ -89,7 +79,7 @@ vec4 textureOctMapLod(sampler2D tex, vec2 uv) {
   return texture2D(uSource, uv);
 }
 
-vec3 PrefilterEnvMap( float Roughness, vec3 R ) {
+vec3 PrefilterEnvMap( float roughness, vec3 R ) {
   vec3 N = R;
   vec3 V = R;
   vec3 PrefilteredColor = vec3(0.0);
@@ -100,7 +90,7 @@ vec3 PrefilterEnvMap( float Roughness, vec3 R ) {
       break;
     }
     vec2 Xi = Hammersley( i, uNumSamples );
-    vec3 H = ImportanceSampleGGX( Xi, Roughness, N );
+    vec3 H = ImportanceSampleGGX( Xi, roughness, N );
     vec3 L = 2.0 * dot( V, H ) * H - V;
     float NoL = saturate( dot( N, L ) );
     if( NoL > 0.0 ) {
