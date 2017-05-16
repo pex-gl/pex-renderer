@@ -37,9 +37,9 @@ void main() {
     for(float theta = 0.0; theta < 0.5 * PI; theta += dtheta) {
       vec3 temp = cos(phi) * right + sin(phi) * up;
       vec3 sampleVector = cos(theta) * normal + sin(theta) * temp;
-      vec2 sampleUV = envMapOctahedral(sampleVector, 0.0, 0.0);
-      // float s = 512.0;
-      // sampleUV = (sampleUV * s + 0.5) / (s + 1.0);
+      // in theory this should be sample from mipmap level e.g. 2.0, 0.0
+      // but sampling from prefiltered roughness gives much smoother results
+      vec2 sampleUV = envMapOctahedral(sampleVector, 0.0, 2.0);
       if (uRGBM) {
         sampledColor += decodeRGBM(texture2D( uSource, sampleUV)) * cos(theta) * sin(theta);
       } else {
@@ -50,11 +50,6 @@ void main() {
   }
 
   sampledColor = PI * sampledColor / index;
-  // vec2 sampleUV = envMapOctahedral(N, 0.0, 0.0);
-  // sampleUV = (vTexCoord * 0.5 * 1024.0 + 0.5) / (1024.0 + 1.0);
-  // sampleUV = vTexCoord / 2.0;
-  // sampledColor = decodeRGBM(texture2D(uSource, sampleUV));
-  // sampledColor = decodeRGBM(textureCube(uCubemap, N)));
 
   if (uRGBM) {
     gl_FragColor = encodeRGBM(sampledColor);
