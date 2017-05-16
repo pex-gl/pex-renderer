@@ -25,6 +25,11 @@ Entity.prototype.dispose = function () {
   this.transform.set({ parent: null })
 }
 
+Entity.prototype.addComponent = function (component) {
+  this.components.push(component)
+  component.init(this)
+}
+
 Entity.prototype.getComponent = function (type) {
   return this.components.find((component) => component.type === type)
 }
