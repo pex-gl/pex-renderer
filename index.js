@@ -756,9 +756,6 @@ Renderer.prototype.entity = function (components, parent) {
   return entity
 }
 
-Renderer.prototype.findComponents = function () {
-}
-
 Renderer.prototype.transform = function (opts) {
   return createTransform(Object.assign({ ctx: this._ctx }, opts))
 }
