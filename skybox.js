@@ -26,7 +26,7 @@ function Skybox (opts) {
     pipeline: ctx.pipeline({
       vert: SKYBOX_VERT,
       frag: SKYBOX_FRAG,
-      depthEnabled: true
+      depthTest: true
     }),
     attributes: {
       aPosition: ctx.vertexBuffer(skyboxPositions)
