@@ -36,10 +36,10 @@ void main() {
  
   vec3 color = sky(uSunPosition, N);
 
-  if (uRGBM) {
-    gl_FragColor = encodeRGBM(color);
-  } else {
+  // if (uRGBM) {
+    // gl_FragColor = encodeRGBM(color);
+  // } else {
     gl_FragColor.rgb = color;
     gl_FragColor.a = 1.0;
-  }
+  // }
 }

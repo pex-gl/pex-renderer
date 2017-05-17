@@ -49,9 +49,16 @@ uniform vec3 uCameraPosition;
 
 uniform bool uRGBM;
 
+#ifdef USE_AO
+uniform sampler2D uAO;
+uniform vec2 uScreenSize;
+#endif
+
 //sun
 uniform vec3 uSunPosition;
 uniform vec4 uSunColor;
+
+// uniform bool uOutputRGBM;
 
 float pi = 3.14159;
 #define PI 3.14159265359
@@ -210,8 +217,11 @@ float saturate(float f) {
 
         // normalMap.y *= -1.0;
         /*normalMap.x *= -1.0;*/
+        // vec3 dFdxPos = dFdx( vPositionView );
+        // vec3 dFdyPos = dFdy( vPositionView );
 
         vec3 N = normalize(vNormalView);
+        // N = normalize( cross(dFdxPos,dFdyPos ));
         vec3 V = normalize(vEyeDirView);
 
         vec3 normalView = perturb(normalMap, N, V, vTexCoord0);
@@ -219,10 +229,40 @@ float saturate(float f) {
         return normalWorld;
 
     }
-#else
+#endif
+
+// FIXME: why i can't do #elseif
+
+#ifdef USE_DISPLACEMENT_MAP
+    uniform sampler2D uDisplacementMap;
+    uniform float uDisplacement;
+    uniform float uDisplacementNormalScale;
     vec3 getNormal() {
+      float scale = uDisplacement * uDisplacementNormalScale;
+      float h = scale * texture2D(uDisplacementMap, vTexCoord0).r;
+      float hx = scale * texture2D(uDisplacementMap, vTexCoord0 + vec2(1.0 / 2048.0, 0.0)).r;
+      float hz = scale * texture2D(uDisplacementMap, vTexCoord0 + vec2(0.0, 1.0 / 2048.0)).r;
+      float meshSize = 20.0;
+      vec3 a = vec3(0.0, h, 0.0);
+      vec3 b = vec3(1.0 / 2048.0 * meshSize, hx, 0.0);
+      vec3 c = vec3(0.0, hz, 1.0 / 2048.0 * meshSize);
+      vec3 N = normalize(cross(normalize(c - a), normalize(b - a)));
+      // FIXME: this is model space normal, need to multiply by modelWorld
+      // N = mat3(uModelMatrix) * N;
+      return N;
+    }
+#else
+#ifndef USE_NORMAL_MAP
+    vec3 getNormal() {
+        // vec3 dFdxPos = dFdx( vPositionWorld );
+        // vec3 dFdyPos = dFdy( vPositionWorld );
+
+        // vec3 N = normalize( cross(dFdxPos,dFdyPos ));
+        // return N;
+
         return normalize(vNormalWorld);
     }
+#endif
 #endif
 
 uniform sampler2D uReflectionMap;
@@ -456,6 +496,7 @@ void main() {
 #if SHADOW_QUALITY == 4
         float illuminated = PCF5x5(uDirectionalLightShadowMaps[i], light.shadowMapSize, lightUV, lightDistView - light.bias, light.near, light.far);
 #endif
+
         if (illuminated > 0.0) {
             vec3 L = normalize(-light.direction);
             vec3 N = normalWorld;
@@ -554,13 +595,27 @@ void main() {
     }
 #endif
 
-    vec3 color = emissiveColor + indirectDiffuse + indirectSpecular + directDiffuse + directSpecular + indirectArea;
+    float ao = 1.0;
+#ifdef USE_AO
+    vec2 vUV = vec2(gl_FragCoord.x / uScreenSize.x, gl_FragCoord.y / uScreenSize.y);
+    ao = texture2D(uAO, vUV).r;
+#endif
+    ao = 1.0;
 
+    vec3 color = emissiveColor + ao * indirectDiffuse + indirectSpecular + directDiffuse + directSpecular + indirectArea;
+
+    // if (uOutputRGBM) {
+      // gl_FragData[0] = encodeRGBM(color);
+    // } else {
+      // color = color / (1.0 + color);
+      // color = toGamma(color);
+      // gl_FragData[0] = vec4(color, 1.0);
+    // }
     if (uRGBM) {
       gl_FragData[0] = encodeRGBM(color);
     } else {
       gl_FragData[0].rgb = color;
       gl_FragData[0].a = 1.0;
     }
-    // gl_FragData[1] = vec4(vNormalView * 0.5 + 0.5, 1.0);
+
 }

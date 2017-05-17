@@ -14,6 +14,10 @@ attribute vec4 aRotation;
 attribute vec4 aColor;
 varying vec4 vColor;
 #endif
+#ifdef USE_DISPLACEMENT_MAP
+uniform sampler2D uDisplacementMap;
+uniform mediump float uDisplacement;
+#endif
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
 uniform mat4 uModelMatrix;
@@ -67,6 +71,16 @@ mat4 quatToMat4(vec4 q) {
 void main() {
     vec4 position = vec4(aPosition, 1.0);
     vec3 normal = aNormal;
+#ifdef USE_DISPLACEMENT_MAP
+    float h = texture2D(uDisplacementMap, aTexCoord0).r;
+    // float hx = texture2D(uDisplacementMap, aTexCoord0 + vec2(1.0 / 2048.0, 0.0)).r;
+    // float hz = texture2D(uDisplacementMap, aTexCoord0 + vec2(0.0, 1.0 / 2048.0)).r;
+    // vec3 a = vec3(0.0, h, 0.0);
+    // vec3 b = vec3(0.1, hx, 0.0);
+    // vec3 c = vec3(0.0, hz, 0.1);
+    position.xyz += uDisplacement * h * normal;
+    // normal = normalize(cross(normalize(c - a), normalize(b - a)));
+#endif
 #ifdef USE_INSTANCED_SCALE
     position.xyz *= aScale; 
 #endif

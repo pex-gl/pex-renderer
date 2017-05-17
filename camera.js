@@ -1,8 +1,55 @@
 const Signal = require('signals')
 const glsl = require('glslify')
+const random = require('pex-random')
+const Vec3 = require('pex-math/Vec3')
+const MathUtils = require('pex-math/Utils')
+const flatten = require('flatten')
 
 const OVERLAY_VERT = glsl(__dirname + '/glsl/Overlay.vert')
 const OVERLAY_FRAG = glsl(__dirname + '/glsl/Overlay.frag')
+const SAO_FRAG = glsl(__dirname + '/glsl/SAO.frag')
+const BILATERAL_BLUR_FRAG = glsl(__dirname + '/glsl/BilateralBlur.frag')
+
+var ssaoKernel = []
+for (let i = 0; i < 64; i++) {
+  var sample = [
+    random.float() * 2 - 1,
+    random.float() * 2 - 1,
+    random.float(),
+    1
+  ]
+  Vec3.normalize(sample)
+  var scale = random.float()
+  scale = MathUtils.lerp(0.1, 1.0, scale * scale)
+  Vec3.scale(sample, scale)
+  ssaoKernel.push(sample)
+}
+var ssaoKernelData = new Float32Array(flatten(ssaoKernel))
+
+var ssaoNoise = []
+for (let j = 0; j < 64; j++) {
+  let noiseSample = [
+    random.float() * 2 - 1,
+    random.float() * 2 - 1,
+    0,
+    1
+  ]
+  ssaoNoise.push(noiseSample)
+}
+var ssaoNoiseData = new Float32Array(flatten(ssaoNoise))
+
+var ssaoNoiseHiRes = []
+for (let j = 0; j < 128 * 128; j++) {
+  let noiseSample = [
+    random.float() * 2 - 1,
+    random.float() * 2 - 1,
+    0,
+    1
+  ]
+  ssaoNoiseHiRes.push(noiseSample)
+}
+
+var ssaoNoiseDataHiRes = new Float32Array(flatten(ssaoNoiseHiRes))
 
 function Camera (opts) {
   this.type = 'Camera'
@@ -54,7 +101,15 @@ Camera.prototype.initPostproces = function () {
     height: H,
     format: this.rgbm ? null : ctx.PixelFormat.RGBA32F
   })
+
   this._frameDepthTex = ctx.texture2D({ width: W, height: H, format: ctx.PixelFormat.Depth })
+
+  this._frameAOTex = ctx.texture2D({ width: W, height: H })
+  this._frameAOBlurTex = ctx.texture2D({ width: W, height: H })
+
+  ctx.gl.getExtension('OES_texture_float ')
+  this._ssaoKernelMap = ctx.texture2D({ width: 8, height: 8, data: ssaoKernelData, format: ctx.PixelFormat.RGBA32F, wrap: ctx.Wrap.Repeat })
+  this._ssaoNoiseMap = ctx.texture2D({ width: 128, height: 128, data: ssaoNoiseDataHiRes, format: ctx.PixelFormat.RGBA32F, wrap: ctx.Wrap.Repeat, mag: ctx.Filter.Linear, min: ctx.Filter.Linear })
 
   this._drawFrameFboCommand = {
     name: 'drawFrame',
@@ -80,6 +135,114 @@ Camera.prototype.initPostproces = function () {
       uScreenSize: [W, H],
       uOverlay: this._frameColorTex,
       uRGBM: this.rgbm
+    }
+  }
+
+  this._saoCmd = {
+    name: 'sao',
+    pass: ctx.pass({
+      color: [ this._frameAOTex ],
+      clearColor: [1, 1, 0, 1]
+      // clearDepth: 1
+    }),
+    pipeline: ctx.pipeline({
+      vert: OVERLAY_VERT,
+      frag: SAO_FRAG
+    }),
+    attributes: this._fsqMesh.attributes,
+    indices: this._fsqMesh.indices,
+    uniforms: {
+      viewportResolution: [W, H],
+      sGBuffer: this._frameDepthTex,
+      sNoise: this._ssaoNoiseMap
+    }
+  }
+
+  this._bilateralBlurHCmd = {
+    name: 'bilateralBlurH',
+    pass: ctx.pass({
+      color: [ this._frameAOBlurTex ],
+      clearColor: [1, 1, 0, 1]
+    }),
+    pipeline: ctx.pipeline({
+      vert: OVERLAY_VERT,
+      frag: BILATERAL_BLUR_FRAG
+    }),
+    attributes: this._fsqMesh.attributes,
+    indices: this._fsqMesh.indices,
+    uniforms: {
+      depthMap: this._frameDepthTex,
+      depthMapSize: [W, H],
+      image: this._frameAOTex,
+      // direction: [State.bilateralBlurRadius, 0], // TODO:
+      direction: [0.5, 0],
+      uDOFDepth: 0,
+      uDOFRange: 0
+    }
+  }
+
+  this._bilateralBlurVCmd = {
+    name: 'bilateralBlurV',
+    pass: ctx.pass({
+      color: [ this._frameAOTex ],
+      clearColor: [1, 1, 0, 1]
+    }),
+    pipeline: ctx.pipeline({
+      vert: OVERLAY_VERT,
+      frag: BILATERAL_BLUR_FRAG
+    }),
+    attributes: this._fsqMesh.attributes,
+    indices: this._fsqMesh.indices,
+    uniforms: {
+      depthMap: this._frameDepthTex,
+      depthMapSize: [W, H],
+      image: this._frameAOBlurTex,
+      // direction: [0, State.bilateralBlurRadius], // TODO:
+      direction: [0, 0.5],
+      uDOFDepth: 0,
+      uDOFRange: 0
+    }
+  }
+
+  this._dofBlurHCmd = {
+    name: 'bilateralBlurH',
+    pass: ctx.pass({
+      color: [ this._frameAOBlurTex ],
+      clearColor: [1, 1, 0, 1]
+    }),
+    pipeline: ctx.pipeline({
+      vert: OVERLAY_VERT,
+      frag: BILATERAL_BLUR_FRAG
+    }),
+    attributes: this._fsqMesh.attributes,
+    indices: this._fsqMesh.indices,
+    uniforms: {
+      depthMap: this._frameDepthTex,
+      depthMapSize: [W, H],
+      image: this._frameColorTex,
+      // direction: [State.bilateralBlurRadius, 0] // TODO:
+      direction: [0.5, 0]
+    }
+  }
+
+  this._dofBlurVCmd = {
+    name: 'bilateralBlurV',
+    pass: ctx.pass({
+      color: [ this._frameColorTex ],
+      clearColor: [1, 1, 0, 1]
+    }),
+    pipeline: ctx.pipeline({
+      vert: OVERLAY_VERT,
+      frag: BILATERAL_BLUR_FRAG
+    }),
+    attributes: this._fsqMesh.attributes,
+    indices: this._fsqMesh.indices,
+    uniforms: {
+      depthMap: this._frameDepthTex,
+      depthMapSize: [W, H],
+      image: this._frameAOBlurTex,
+      // direction: [0, State.bilateralBlurRadius] // TODO:
+      direction: [0, 0.5]
     }
   }
 }

@@ -12,6 +12,7 @@ const Signal = require('signals')
 function Skybox (opts) {
   this.type = 'Skybox'
   this.changed = new Signal()
+  this.rgbm = true
 
   const ctx = this._ctx = opts.ctx
 
@@ -28,7 +29,7 @@ function Skybox (opts) {
     pipeline: ctx.pipeline({
       vert: SKYBOX_VERT,
       frag: SKYBOX_FRAG,
-      depthEnabled: true
+      depthTest: false
     }),
     attributes: {
       aPosition: ctx.vertexBuffer(skyboxPositions)
@@ -75,7 +76,7 @@ Skybox.prototype.set = function (opts) {
   Object.keys(opts).forEach((prop) => this.changed.dispatch(prop))
 }
 
-Skybox.prototype.draw = function (camera) {
+Skybox.prototype.draw = function (camera, opts) {
   var ctx = this._ctx
 
   if (!this.texture && this._dirtySunPosition) {
@@ -92,7 +93,8 @@ Skybox.prototype.draw = function (camera) {
     uniforms: {
       uProjectionMatrix: camera.projectionMatrix,
       uViewMatrix: camera.viewMatrix,
-      uEnvMap: this.texture || this._skyTexture
+      uEnvMap: this.texture || this._skyTexture,
+      // uOutputRGBM: opts && opts.rgbm
     }
   })
 }

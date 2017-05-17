@@ -10,6 +10,7 @@ function Material (opts) {
   this.emissiveColor = [0, 0, 0, 1]
   this.metallic = 0.01
   this.roughness = 0.5
+  this.displacement = 0
 
   this.set(opts)
 }

@@ -44,11 +44,20 @@ var State = {
   // prevSunPosition: [0, 0, 0],
   exposure: 1,
   frame: 0,
+  // fxaa: true,
+  postprocess: true,
+  dof: true,
+  dofIterations: 1,
+  dofDepth: 0,
+  dofRange: 5,
+  dofRadius: 1,
+  dofDepth: 6.76,
   ssao: true,
-  fxaa: true,
-  ssaoDownsample: 2,
-  ssaoSharpness: 1,
-  ssaoRadius: 0.2,
+  ssaoIntensity: 5,
+  ssaoRadius: 12,
+  ssaoBias: 0.01,
+  bilateralBlur: true,
+  bilateralBlurRadius: 0.5,
   shadows: true,
   shadowQuality: 2,
   debug: false,
@@ -96,29 +105,7 @@ function Renderer (opts) {
   // TODO: move from State object to internal probs and renderer({ opts }) setter?
   Object.assign(State, opts)
   this._state = State
-
-  // this.initMaterials()
-  // this.initSkybox()
 }
-
-// Renderer.prototype.initMaterials = function () {
-  // var ctx = this._ctx
-  // this._solidColorProgram = ctx.createProgram(SOLID_COLOR_VERT, SOLID_COLOR_FRAG)
-  // this._showColorsProgram = ctx.createProgram(SHOW_COLORS_VERT, SHOW_COLORS_FRAG)
-// }
-
-// Renderer.prototype.initSkybox = function () {
-  // const ctx = this._ctx
-
-  // No need to set default props as these will be automatically updated on first render
-  // this._sunLightNode = this.createNode({
-    // light: {
-      // type: 'directional',
-      // color: [1, 1, 1, 1]
-    // }
-  // })
-  // this._root.add(this._sunLightNode)
-// }
 
 Renderer.prototype.initNode = function (data) {
   if (!data.position) data.position = [0, 0, 0]
@@ -183,6 +170,12 @@ Renderer.prototype.getMaterialProgram = function (geometry, material, options) {
   }
   if (geometry._attributes.aRotation) {
     flags.push('#define USE_INSTANCED_ROTATION')
+  }
+  if (State.ssao) {
+    flags.push('#define USE_AO')
+  }
+  if (material.displacementMap) {
+    flags.push('#define USE_DISPLACEMENT_MAP')
   }
 
   if (options.depthPassOnly) {
@@ -321,6 +314,7 @@ Renderer.prototype.drawMeshes = function (camera, shadowMappingLight) {
   const reflectionProbes = this.getComponents('ReflectionProbe')
 
   var sharedUniforms = this._sharedUniforms = this._sharedUniforms || {}
+  // sharedUniforms.uOutputRGBM = State.postprocess
 
   // TODO:  find nearest reflection probe
   if (reflectionProbes.length > 0) {
@@ -335,6 +329,11 @@ Renderer.prototype.drawMeshes = function (camera, shadowMappingLight) {
     sharedUniforms.uViewMatrix = camera.viewMatrix
     sharedUniforms.uInverseViewMatrix = Mat4.invert(Mat4.copy(camera.viewMatrix))
     sharedUniforms.uRGBM = camera.rgbm
+  }
+
+  if (State.ssao && camera) {
+    sharedUniforms.uAO = camera._frameAOTex
+    sharedUniforms.uScreenSize = [ this._width, this._height ]
   }
 
   directionalLights.forEach(function (light, i) {
@@ -385,6 +384,11 @@ Renderer.prototype.drawMeshes = function (camera, shadowMappingLight) {
     else cachedUniforms.uRoughness = material.roughness
 
     if (material.normalMap) cachedUniforms.uNormalMap = material.normalMap
+    if (material.displacementMap) {
+      cachedUniforms.uDisplacementMap = material.displacementMap
+      cachedUniforms.uDisplacement = material.displacement
+      cachedUniforms.uDisplacementNormalScale = material.displacementNormalScale
+    }
 
     if (material.uniforms) {
       for (var uniformName in material.uniforms) {
@@ -492,7 +496,7 @@ Renderer.prototype.draw = function () {
     if (probe.dirty) {
       probe.update((camera) => {
         if (skyboxes.length > 0) {
-          skyboxes[0].draw(camera)
+          skyboxes[0].draw(camera, { rgbm: true })
         }
       })
     }
@@ -508,102 +512,138 @@ Renderer.prototype.draw = function () {
     }
   })
 
-  cameras.forEach((camera, cameraIndex) => {
-    ctx.submit(camera._drawFrameFboCommand, () => {
-      // depth prepass
-      if (State.depthPrepass) {
-        ctx.gl.colorMask(0, 0, 0, 0)
-        this.drawMeshes(camera)
-        ctx.gl.colorMask(1, 1, 1, 1)
-      }
-      this.drawMeshes(camera)
+  const currentCamera = cameras[0]
 
+  cameras.forEach((camera, cameraIndex) => {
+    ctx.gl.clear(ctx.gl.DEPTH_BUFFER_BIT | ctx.gl.COLOR_BUFFER_BIT)
+    // ctx.submit(camera._drawFrameFboCommand, () => {
+      // depth prepass
+      // if (State.depthPrepass) {
+        // ctx.gl.colorMask(0, 0, 0, 0)
+        // this.drawMeshes(camera)
+        // ctx.gl.colorMask(1, 1, 1, 1)
+      // }
+      // this.drawMeshes(camera)
       if (skyboxes.length > 0) {
         skyboxes[0].draw(camera)
       }
-    })
-    ctx.submit(camera._blitCmd, {
-      uniforms: {
-        uExposure: State.exposure
-      },
-      viewport: camera.viewport
-    })
+    // })
+    // ctx.submit(camera._blitCmd, {
+      // uniforms: {
+        // uExposure: State.exposure
+      // },
+      // viewport: camera.viewport
+    // })
   })
 
   /*
-
-  var W = this._width
-  var H = this._height
-
-  var root = this._fx.reset()
-  var color = root.asFXStage(this._frameColorTex, 'img')
-  var final = color
-
-  // FIXME: ssao internally needs uProjectionMatrix...
-  ctx.pushProjectionMatrix()
-  ctx.setProjectionMatrix(currentCamera.getProjectionMatrix())
-
-  if (State.profile) ctx.getGL().finish()
-  if (State.profile) console.time('Renderer:postprocessing')
-  if (State.profile) console.time('Renderer:ssao')
-  if (State.ssao) {
-    var ssao = root.ssao({
-      depthMap: this._frameDepthTex,
-      normalMap: this._frameNormalTex,
-      kernelMap: this.ssaoKernelMap,
-      noiseMap: this.ssaoNoiseMap,
-      camera: currentCamera,
-      width: W / State.ssaoDownsample,
-      height: H / State.ssaoDownsample,
-      radius: State.ssaoRadius
+  if (State.postprocess) {
+    ctx.submit(this._drawFramePrepassFboCmd, () => {
+      if (State.depthPrepass) {
+        ctx.gl.colorMask(0, 0, 0, 0)
+        this.drawMeshes()
+        ctx.gl.colorMask(1, 1, 1, 1)
+      }
     })
-    ssao = ssao.bilateralBlur({ depthMap: this._frameDepthTex, camera: currentCamera, sharpness: State.ssaoSharpness })
-    // TODO: this is incorrect, AO influences only indirect diffuse (irradiance) and indirect specular reflections
-    // this will also influence direct lighting (lights, sun)
-    final = color.mult(ssao, { bpp: 16 })
+  } else {
+    if (State.depthPrepass) {
+      ctx.submit(this._drawFramePrepassFboCmd, () => {
+        if (State.depthPrepass) {
+          ctx.gl.colorMask(0, 0, 0, 0)
+          this.drawMeshes()
+          ctx.gl.colorMask(1, 1, 1, 1)
+        }
+      })
+      ctx.gl.colorMask(0, 0, 0, 0)
+      this.drawMeshes()
+      ctx.gl.colorMask(1, 1, 1, 1)
+    }
   }
-  ctx.popProjectionMatrix()
-  if (State.profile) ctx.getGL().finish()
-  if (State.profile) console.timeEnd('Renderer:ssao')
-
-  if (State.profile) console.time('Renderer:postprocess')
-  final = final.postprocess({ exposure: State.exposure })
-  if (State.profile) ctx.getGL().finish()
-  if (State.profile) console.timeEnd('Renderer:postprocess')
-
-  if (State.profile) console.time('Renderer:fxaa')
-  if (State.fxaa) {
-    final = final.fxaa()
+  */
+  /*
+  if (State.ssao) {
+    ctx.submit(this._saoCmd, {
+      uniforms: {
+        uNear: currentCamera.camera.near,
+        uFar: currentCamera.camera.far,
+        uFov: currentCamera.camera.fov,
+        viewMatrix: currentCamera.camera.viewMatrix,
+        uInverseViewMatrix: Mat4.invert(Mat4.copy(currentCamera.camera.viewMatrix)),
+        viewProjectionInverseMatrix: Mat4.invert(Mat4.mult(Mat4.copy(currentCamera.camera.viewMatrix), currentCamera.camera.projectionMatrix)),
+        cameraPositionWorldSpace: currentCamera.camera.position,
+        uIntensity: State.ssaoIntensity,
+        uNoiseScale: [10, 10],
+        uSampleRadiusWS: State.ssaoRadius,
+        uBias: State.ssaoBias
+      }
+    })
   }
-  if (State.profile) ctx.getGL().finish()
-  if (State.profile) console.timeEnd('Renderer:fxaa')
-  if (State.profile) ctx.getGL().finish()
-  if (State.profile) console.timeEnd('Renderer:postprocessing')
-  var viewport = ctx.getViewport()
-  // final = ssao
-  final.blit({ x: viewport[0], y: viewport[1], width: viewport[2], height: viewport[3]})
-
-  // overlays
-
-  // TODO: Implement overlays
-  // ctx.bindProgram(this._overlayProgram)
-  // this._overlayProgram.setUniform('uScreenSize', [this._width, this._height])
-  // this._overlayProgram.setUniform('uOverlay', 0)
-  // ctx.bindMesh(this._fsqMesh)
-  // ctx.setDepthTest(false)
-  // ctx.setBlend(true)
-  // ctx.setBlendFunc(ctx.ONE, ctx.ONE)
-
-  // overlayNodes.forEach(function (overlayNode) {
-    // ctx.bindTexture(overlayNode.overlay)
-    // ctx.drawMesh()
-  // })
-
-  if (State.debug) {
-    this.drawDebug()
+  if (State.bilateralBlur) {
+    ctx.submit(this._bilateralBlurHCmd, {
+      uniforms: {
+        near: currentCamera.camera.near,
+        far: currentCamera.camera.far,
+        sharpness: 1,
+        imageSize: [this._width, this._height],
+        direction: [State.bilateralBlurRadius, 0]
+      }
+    })
+    ctx.submit(this._bilateralBlurVCmd, {
+      uniforms: {
+        near: currentCamera.camera.near,
+        far: currentCamera.camera.far,
+        sharpness: 1,
+        imageSize: [this._width, this._height],
+        direction: [0, State.bilateralBlurRadius]
+      }
+    })
   }
+  if (State.postprocess) {
+    ctx.submit(this._drawFrameFboCmd, () => {
+      this.drawMeshes()
 
-  cmdQueue.flush()
+      if (skyboxes.length > 0) {
+        skyboxes[0].draw(currentCamera, { rgbm: true })
+      }
+    })
+    if (State.dof) {
+      for (var i = 0; i < State.dofIterations; i++) {
+        ctx.submit(this._dofBlurHCmd, {
+          uniforms: {
+            near: currentCamera.camera.near,
+            far: currentCamera.camera.far,
+            sharpness: 1,
+            imageSize: [this._width, this._height],
+            direction: [State.dofRadius, 0],
+            uDOFDepth: State.dofDepth,
+            uDOFRange: State.dofRange
+          }
+        })
+        ctx.submit(this._dofBlurVCmd, {
+          uniforms: {
+            near: currentCamera.camera.near,
+            far: currentCamera.camera.far,
+            sharpness: 1,
+            imageSize: [this._width, this._height],
+            direction: [0, State.dofRadius],
+            uDOFDepth: State.dofDepth,
+            uDOFRange: State.dofRange
+          }
+        })
+      }
+    }
+    ctx.submit(this._blitCmd, {
+      uniforms: {
+        uExposure: State.exposure
+      }
+    })
+  } else {
+    this.drawMeshes()
+
+    if (skyboxes.length > 0) {
+      skyboxes[0].draw(currentCamera, { rgbm: false })
+    }
+  }
   */
   if (State.profiler) State.profiler.endFrame()
 }
