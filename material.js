@@ -1,7 +1,10 @@
 const Signal = require('signals')
 
+let MaterialID = 0
+
 function Material (opts) {
   this.type = 'Material'
+  this.id = 'Material_' + MaterialID++
   this.changed = new Signal()
 
   this._uniforms = {}
@@ -11,6 +14,9 @@ function Material (opts) {
   this.metallic = 0.01
   this.roughness = 0.5
   this.displacement = 0
+  this.depthTest = true
+  this.depthWrite = true
+  this.depthFunc = opts.ctx.DepthFunc.Less
 
   this.set(opts)
 }

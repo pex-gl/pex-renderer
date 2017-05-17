@@ -13,7 +13,11 @@ const createRenderer = require('../../../../')
 const createCamera = require('pex-cam/perspective')
 const createOrbiter = require('pex-cam/orbiter')
 const createContext = require('pex-context')
+const computeNormals = require('./local_modules/geom-compute-normals')
+const toFlatGeometry = require('./local_modules/geom-to-flat-geometry')
 const async = require('async')
+const io = require('pex-io')
+const parseThreeJSON = require('./parse-three.js')
 
 const ctx = createContext()
 ctx.gl.getExtension('EXT_shader_texture_lod')
@@ -67,7 +71,7 @@ function initCamera () {
   const camera = createCamera({
     fov: Math.PI / 3,
     aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
-    position: [0, 3, 8],
+    position: [0, 5, 18],
     target: [0, 0, 0],
     near: 0.1,
     far: 100
@@ -300,10 +304,218 @@ function handleAnimation (animation, gltf) {
   })
 }
 
+function partition (list, n) {
+  const result = []
+  for (var i = 0; i < list.length;) {
+    var item = []
+    for (var j = 0; j < n; j++) {
+      item[j] = list[i++]
+    }
+    result.push(item)
+  }
+  return result
+}
+
+function bindToOtherMeshSkeleton (geometry, otherGeometry) {
+  console.log('bindToOtherMeshSkeleton', geometry, otherGeometry)
+  var joints = [];
+  var weights = [];
+  var numBones = 0;
+  var bestVertexCache = [];
+
+  for(var vi=0; vi < geometry.positions.length; vi++) {
+    var currVertex = geometry.positions[vi];
+    var currentVertexHash = -1;
+    // if (this.geometry.instancePositions) {
+      // currVertex = this.geometry.instancePositions[vi];
+      // currentVertexHash = currVertex.toString();
+    // }
+
+    var bestVertex = null;
+    if (currentVertexHash != -1) {
+      bestVertex = bestVertexCache[currentVertexHash];
+    }
+
+    if (!bestVertex) {
+      bestVertex = otherGeometry.positions.reduce(function(bestVertex, vertex, vertexIndex) {
+        var dist = Vec3.distance(currVertex, vertex);
+        if (dist < bestVertex.dist) {
+          return {
+            position: vertex,
+            index: vertexIndex,
+            dist: dist
+          }
+        }
+        else {
+          return bestVertex;
+        }
+      }, { index: -1, dist: Infinity });
+      bestVertexCache[currentVertexHash] = bestVertex;
+    }
+    joints.push(otherGeometry.joints[bestVertex.index]);
+    weights.push(otherGeometry.weights[bestVertex.index]);
+  }
+
+  return {
+    joints: joints,
+    weights: weights
+  }
+}
+function initMeshes (geometry, color, body) {
+  const components = []
+  let bones = null
+  let skin = null
+  if (!body && geometry.bones) {
+    console.log('json bones', geometry.bones)
+    bones = geometry.bones.map((jsonBone) => {
+      const bone = renderer.entity([
+        renderer.transform({
+          position: jsonBone.pos,
+          rotation: jsonBone.rotq
+        }),
+        renderer.geometry(createCube(0.2)),
+        renderer.material({
+          baseColor: [0, 1, 0, 1]
+        })
+      ])
+      bone.name = jsonBone.name // TODO: entity.name is nott officially supported
+      return bone
+    })
+    bones.forEach((bone, index) => {
+      const jsonBone = geometry.bones[index]
+      if (jsonBone.parent !== -1) {
+        bone.transform.set({
+          parent: bones[jsonBone.parent].transform
+        })
+      }
+    })
+    skin = renderer.skin({
+      joints: bones,
+      inverseBindMatrices: bones.map((bone) => {
+        bone.transform.update() //we need data now!
+        return Mat4.invert(Mat4.copy(bone.transform.modelMatrix)) // TODO: this should be called transform
+      }),
+      bindShapeMatrix: Mat4.create()
+    })
+    components.push(skin)
+  }
+
+  if (geometry.animations && geometry.animations.length > 0) {
+    console.log('json anim', geometry.animations)
+    geometry.animations.forEach((animation) => {
+      var channels = animation.tracks.map((track) => {
+        const name = track[0]
+        let values = track[2]
+        const pathTokens = name.match(/\.(bones)\[(.+)\]\.(.+)/)
+        ".bones[Hip].rotation"
+        const animType = pathTokens[1]
+        const boneName = pathTokens[2]
+        const target = bones.find((bone) => { return bone.name === boneName })
+        let path = pathTokens[3]
+        if (path === 'position') {
+          path = 'translation'
+          values = partition(values, 3)
+        }
+        if (path === 'quaternion') {
+          path = 'rotation'
+          values = partition(values, 4)
+        }
+        if (path === 'scale') {
+          path = 'scale'
+          values = partition(values, 3)
+        }
+        const times = values.map((v, i, list) => animation.duration * i / (list.length - 1)) // FIXME: interpolate original times
+        return {
+          sampler: {
+            input: times,
+            output: values,
+            interpolation: 'LINEAR'
+          },
+          target: {
+            node: target,
+            path: path
+          }
+        }
+      })
+      animations.push(channels)
+      console.log('json anim', channels)
+    })
+  }
+  var normals = computeNormals(geometry.vertices, geometry.faces)
+  var uvs = geometry.vertices.map(() => [0, 0])
+
+  components.push(renderer.transform({
+  }))
+  components.push(renderer.geometry({
+    positions: geometry.vertices,
+    uvs: uvs,
+    normals: normals,
+    indices: geometry.faces,
+    joints: geometry.skinIndices,
+    weights: geometry.skinWeights.map(
+      (w) => {
+        const sum = w[0] + w[1]
+        return [w[0] / sum, w[1] / sum, 0, 0]
+      }
+    ),
+    // primitive: ctx.Primitive.Lines
+  }))
+  components.push(
+    renderer.material({
+      baseColor: color || [0.9, 0.1, 0.1, 1],
+      metallic: 0.9,
+      roughness: 0.1
+    })
+  )
+  var mesh = renderer.entity(components)
+  if (body) {
+    var geometry = mesh.getComponent('Geometry')
+    var otherGeometry = body.getComponent('Geometry')
+    var binding = bindToOtherMeshSkeleton(geometry, otherGeometry)
+    console.log('json binding', binding)
+    geometry.set({
+      joints: binding.joints,
+      weights: binding.weights
+    })
+    var bodySkin = body.getComponent('Skin')
+    mesh.addComponent(renderer.skin({
+      joints: bodySkin.joints,
+      bindShapeMatrix: bodySkin.bindShapeMatrix,
+      inverseBindMatrices: bodySkin.inverseBindMatrices
+    }))
+  }
+  return mesh
+}
+
+
+io.loadJSON('female_walking_lowpoly.js', (err, json) => {
+// io.loadJSON('assets/models/female_export_texturemap.js', (err, json) => {
+// io.loadJSON('assets/models/male_walking_lowpoly.js', (err, json) => {
+// io.loadJSON('/assets/female/femaleDress.js', (err, json) => {
+  console.log('json', err, json)
+  var body = initMeshes(parseThreeJSON(json), [1, 1, 1, 1])
+  console.log('json body', body)
+  io.loadJSON('femaleDress1.js', (err, json) => { // OK
+   // io.loadJSON('/assets/female/femaleDress2.js', (err, json) => { // OK
+  // io.loadJSON('/assets/female/femaleTop.js', (err, json) => { // ALMOST
+  // io.loadJSON('/assets/female/femaleSleeveless.js', (err, json) => { // OK
+  // io.loadJSON('/assets/female/femaleSkirt.js', (err, json) => { // OK
+  // io.loadJSON('/assets/female/femaleSkirtLong.js', (err, json) => { // OK
+  // io.loadJSON('/assets/female/femalePants2.js', (err, json) => { // OK
+  // io.loadJSON('/assets/female/juliayrenataShirt.js', (err, json) => { // OK
+    console.log('json', err, json)
+    initMeshes(parseThreeJSON(json), [1, 1, 0, 1], body)
+  })
+})
+
+
 // loadJSON('Monster.gltf', function (err, json) { // works
 // loadJSON('CesiumMan.gltf', function (err, json) { // works
 // loadJSON('BrainStem.gltf', function (err, json) { // does NOT work
-loadJSON('BrainStem.gltf', function (err, json) {
+// loadJSON('BrainStem.gltf', function (err, json) {
+loadJSON('male.gltf', function (err, json) {
+  loaded = true
+  return
   if (err) throw new Error(err)
 
   async.map(json.buffers, handleBuffer, function (err, res) {
@@ -323,9 +535,9 @@ loadJSON('BrainStem.gltf', function (err, json) {
 
     buildHierarchy(json.nodes, json)
 
-    animations = json.animations.map((animation) => {
+    animations = animations.concat(json.animations.map((animation) => {
       return handleAnimation(animation, json)
-    })
+    }))
 
     loaded = true
   })
@@ -386,12 +598,12 @@ ctx.frame(() => {
               position: currentOutput
             })
           }
-          if (path === 'rotation') {
+          else if (path === 'rotation') {
             target.transform.set({
               rotation: currentOutput
             })
           }
-          if (path === 'scale') {
+          else if (path === 'scale') {
             target.transform.set({
               scale: currentOutput
             })

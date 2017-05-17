@@ -264,17 +264,20 @@ Renderer.prototype.getGeometryPipeline = function (geometry, material, skin, opt
     this._pipelineCache = {}
   }
   // TODO: better pipeline caching
-  let pipeline = this._pipelineCache[program.id]
-  if (!pipeline) {
+  let pipeline = this._pipelineCache[material.id]
+  // if (!pipeline) {
     pipeline = ctx.pipeline({
       program: program,
-      depthTest: true,
+      depthTest: material.depthTest,
+      depthWrite: material.depthWrite,
+      depthFunc: material.depthFunc,
       depthFunc: ctx.DepthFunc.LessEqual,
       cullFaceEnabled: true,
-      cullFace: ctx.Face.Back
+      cullFace: ctx.Face.Back,
+      primitive: geometry.primitive
     })
-    this._pipelineCache[program.id] = pipeline
-  }
+    this._pipelineCache[material.id] = pipeline
+  // }
 
   return pipeline
 }
@@ -435,7 +438,7 @@ Renderer.prototype.drawMeshes = function (camera, shadowMappingLight) {
       Mat4.transpose(normalMat)
       cachedUniforms.uNormalMatrix = Mat3.fromMat4(Mat3.create(), normalMat)
     }
-
+  
     ctx.submit({
       name: 'drawGeometry',
       attributes: geometry._attributes,
@@ -443,7 +446,6 @@ Renderer.prototype.drawMeshes = function (camera, shadowMappingLight) {
       pipeline: pipeline,
       uniforms: cachedUniforms,
       instances: geometry.instances,
-      primitive: geometry.primitive
     })
   }
 
