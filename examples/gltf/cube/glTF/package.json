@@ -2,6 +2,7 @@
   "dependencies": {
     "async": "^2.4.0",
     "brfs": "^1.4.3",
-    "pex-cam": "^2.0.0"
+    "pex-cam": "^2.0.0",
+    "pex-context": "^2.0.0-17"
   }
 }
