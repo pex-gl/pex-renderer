@@ -12,6 +12,7 @@ const isBrowser = require('is-browser')
 const createEntity = require('./entity')
 const createTransform = require('./transform')
 const createSkin = require('./skin')
+const createMorph = require('./morph')
 const createGeometry = require('./geometry')
 const createMaterial = require('./material')
 const createCamera = require('./camera')
@@ -724,6 +725,10 @@ Renderer.prototype.transform = function (opts) {
 
 Renderer.prototype.skin = function (opts) {
   return createSkin(Object.assign({ ctx: this._ctx }, opts))
+}
+
+Renderer.prototype.morph = function (opts) {
+  return createMorph(Object.assign({ ctx: this._ctx }, opts))
 }
 
 Renderer.prototype.geometry = function (opts) {
