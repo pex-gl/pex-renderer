@@ -356,8 +356,9 @@ Renderer.prototype.getGeometryPipeline = function (geometry, material, skin, opt
     this._pipelineCache = {}
   }
   // TODO: better pipeline caching
-  let pipeline = this._pipelineCache[material.id]
-  // if (!pipeline) {
+  const hash = material.id + '_' + program.id
+  let pipeline = this._pipelineCache[hash]
+  if (!pipeline) {
     pipeline = ctx.pipeline({
       program: program,
       depthTest: material.depthTest,
@@ -368,8 +369,8 @@ Renderer.prototype.getGeometryPipeline = function (geometry, material, skin, opt
       cullFace: ctx.Face.Back,
       primitive: geometry.primitive
     })
-    this._pipelineCache[material.id] = pipeline
-  // }
+    this._pipelineCache[hash] = pipeline
+  }
 
   return pipeline
 }
