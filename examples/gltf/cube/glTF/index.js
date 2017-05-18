@@ -114,6 +114,7 @@ let loaded = false
 let animations = []
 
 function handleBufferView (bufferView, bufferData) {
+  if (bufferView.byteOffset === undefined) bufferView.byteOffset = 0
   bufferView.data = bufferData.slice(
     bufferView.byteOffset,
     bufferView.byteOffset + bufferView.byteLength
@@ -122,6 +123,7 @@ function handleBufferView (bufferView, bufferData) {
 
 function handleAccessor (accessor, bufferView) {
   const size = AttributeSizeMap[accessor.type]
+  if (accessor.byteOffset === undefined) accessor.byteOffset = 0
 
   if (accessor.componentType === 5123) {
     data = new Uint16Array(bufferView.data.slice(
@@ -176,10 +178,12 @@ function handleNode (node, gltf) {
   const transformCmp = renderer.transform(transform)
   if (node.mesh !== undefined) {
     const mesh = gltf.meshes[node.mesh]
+    const primitives = mesh.primitives[0]
+    const attributes = primitives.attributes
 
-    const positionAccessor = gltf.accessors[mesh.primitives[0].attributes.POSITION]
-    const normalAccessor = gltf.accessors[mesh.primitives[0].attributes.NORMAL]
-    const indicesAccessor = gltf.accessors[mesh.primitives[0].indices]
+    const positionAccessor = gltf.accessors[attributes.POSITION]
+    const normalAccessor = gltf.accessors[attributes.NORMAL]
+    const indicesAccessor = gltf.accessors[primitives.indices]
     // TODO
     const tx = []
     positionAccessor.data.forEach(() => tx.push(0, 0))
@@ -202,11 +206,32 @@ function handleNode (node, gltf) {
       metallic: 0
     })
 
-    node.entity = renderer.entity([
+    let components = [
       transformCmp,
       geometryCmp,
       materialCmp
-    ])
+    ]
+    if (primitives.targets) {
+      let targets = primitives.targets.map((target) => {
+        return gltf.accessors[target.POSITION].data
+      })
+      let morphCmp = renderer.morph({
+        // TODO the rest ?
+        targets: targets,
+        weights: mesh.weights
+      })
+      components.push(morphCmp)
+
+      document.addEventListener('mousemove', function (e) {
+        let weight1 = e.x / window.innerWidth
+        let weight2 = e.y / window.innerHeight
+        morphCmp.set({
+          weights: [weight1, 0]
+        })
+      })
+    }
+
+    node.entity = renderer.entity(components)
 
     if (node.skin !== undefined) {
       const skin = gltf.skins[node.skin]
@@ -458,7 +483,7 @@ function initMeshes (geometry, color, body) {
         return [w[0] / sum, w[1] / sum, 0, 0]
       }
     ),
-    // primitive: ctx.Primitive.Lines
+    primitive: ctx.Primitive.Lines
   }))
   components.push(
     renderer.material({
@@ -489,6 +514,7 @@ function initMeshes (geometry, color, body) {
 
 
 io.loadJSON('female_walking_lowpoly.js', (err, json) => {
+  return
 // io.loadJSON('assets/models/female_export_texturemap.js', (err, json) => {
 // io.loadJSON('assets/models/male_walking_lowpoly.js', (err, json) => {
 // io.loadJSON('/assets/female/femaleDress.js', (err, json) => {
@@ -508,14 +534,14 @@ io.loadJSON('female_walking_lowpoly.js', (err, json) => {
   })
 })
 
-
 // loadJSON('Monster.gltf', function (err, json) { // works
 // loadJSON('CesiumMan.gltf', function (err, json) { // works
 // loadJSON('BrainStem.gltf', function (err, json) { // does NOT work
 // loadJSON('BrainStem.gltf', function (err, json) {
-loadJSON('male.gltf', function (err, json) {
+// loadJSON('male.gltf', function (err, json) {
+loadJSON('AnimatedMorphCube.gltf', function (err, json) {
   loaded = true
-  return
+  // return
   if (err) throw new Error(err)
 
   async.map(json.buffers, handleBuffer, function (err, res) {
@@ -553,6 +579,8 @@ ctx.frame(() => {
   if (loaded) {
     var elapsedTime = Date.now() - startTime
     var ms = (elapsedTime / 1000).toFixed(3)
+
+    return
 
     animations.forEach((channels, i) => {
       channels.forEach((channel) => {
