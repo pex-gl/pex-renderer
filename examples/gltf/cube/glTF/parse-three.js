@@ -366,10 +366,10 @@ function parseMorphing( json, geometry ) {
 
       for ( var v = 0, vl = srcVertices.length; v < vl; v += 3 ) {
 
-        var vertex = new Vector3();
-        vertex.x = srcVertices[ v ] * scale;
-        vertex.y = srcVertices[ v + 1 ] * scale;
-        vertex.z = srcVertices[ v + 2 ] * scale;
+        var vertex = []
+        vertex[0] = srcVertices[ v ] * scale;
+        vertex[1] = srcVertices[ v + 1 ] * scale;
+        vertex[2] = srcVertices[ v + 2 ] * scale;
 
         dstVertices.push( vertex );
 
@@ -600,7 +600,8 @@ var AnimationClip = {
   },
 
   CreateClipsFromMorphTargetSequences: function (morph, fps) {
-    return {}
+    console.log('morph', morph)
+    return morph
   }
 }
 
@@ -639,13 +640,13 @@ function parseAnimations( json, geometry ) {
   }
 
   // parse implicit morph animations
-  if ( geometry.morphTargets ) {
+  // if ( geometry.morphTargets ) {
 
     // TODO: Figure out what an appropraite FPS is for morph target animations -- defaulting to 10, but really it is completely arbitrary.
-    var morphAnimationClips = AnimationClip.CreateClipsFromMorphTargetSequences( geometry.morphTargets, 10 );
-    outputAnimations = outputAnimations.concat( morphAnimationClips );
+    // var morphAnimationClips = AnimationClip.CreateClipsFromMorphTargetSequences( geometry.morphTargets, 10 );
+    // outputAnimations = outputAnimations.concat( morphAnimationClips );
 
-  }
+  // }
 
   if ( outputAnimations.length > 0 ) geometry.animations = outputAnimations;
 
@@ -659,10 +660,12 @@ function parse (json) {
     vertices: [],
     faces: [],
     skinWeights: [],
-    skinIndices: []
+    skinIndices: [],
+    morphTargets: []
   }
   parseModel(json, geometry)
   parseSkin(json, geometry)
+  parseMorphing(json, geometry)
   parseAnimations(json, geometry)
   return geometry
 }
