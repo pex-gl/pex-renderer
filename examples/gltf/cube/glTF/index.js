@@ -27,14 +27,23 @@ ctx.gl.getExtension('OES_texture_float')
 
 const renderer = createRenderer({
   ctx: ctx,
-  shadowQuality: 2,
+  shadowQuality: 4,
   pauseOnBlur: true
 })
 
+renderer.entity([
+  renderer.transform({
+    position: [0, -9, 0]
+  }),
+  renderer.geometry(createCube(20, 0.1, 20)),
+  renderer.material({
+  })
+])
+
 const State = {
-  sunPosition: [0, 5, -5],
+  sunPosition: [0, 5, 5],
   elevation: 65,
-  azimuth: -45,
+  azimuth: -0,
   mie: 0.000021,
   elevationMat: Mat4.create(),
   rotationMat: Mat4.create(),
@@ -48,7 +57,8 @@ function initSky (panorama) {
   const sun = State.sun = renderer.directionalLight({
     direction: Vec3.sub(Vec3.create(), State.sunPosition),
     color: [1, 1, 0.95, 1],
-    intensity: 10
+    intensity: 10,
+    bias: 1
   })
 
   const skybox = State.skybox = renderer.skybox({
@@ -389,7 +399,7 @@ function bindToOtherMeshSkeleton (geometry, otherGeometry) {
 function initMeshes (geometry, color, body) {
   const components = []
   let bones = null
-  let skin = null
+  let skinCmp = null
   if (!body && geometry.bones) {
     console.log('json bones', geometry.bones)
     bones = geometry.bones.map((jsonBone) => {
@@ -400,7 +410,7 @@ function initMeshes (geometry, color, body) {
         }),
         renderer.geometry(createCube(0.2)),
         renderer.material({
-          baseColor: [0, 1, 0, 1]
+          baseColor: [1, 1, 0, 1]
         })
       ])
       bone.name = jsonBone.name // TODO: entity.name is nott officially supported
@@ -414,7 +424,7 @@ function initMeshes (geometry, color, body) {
         })
       }
     })
-    skin = renderer.skin({
+    skinCmp = renderer.skin({
       joints: bones,
       inverseBindMatrices: bones.map((bone) => {
         bone.transform.update() //we need data now!
@@ -422,17 +432,38 @@ function initMeshes (geometry, color, body) {
       }),
       bindShapeMatrix: Mat4.create()
     })
-    components.push(skin)
+    components.push(skinCmp)
   }
 
-  if (geometry.animations && geometry.animations.length > 0) {
+  if (geometry.morphTargets) {
+    function flatten (list) {
+      return list.reduce((result, item) => result.concat(item), [])
+    }
+    var morphCmp = renderer.morph({
+      targets: geometry.morphTargets.map((m) => {
+        return m.vertices.map((v, i) => Vec3.sub(v, geometry.vertices[i]))
+      }),
+      weights: geometry.morphTargets.map(() => 0)
+    })
+    components.push(morphCmp)
+    document.addEventListener('mousemove', function (e) {
+      let weight1 = e.x / window.innerWidth
+      let weight2 = e.y / window.innerHeight
+      morphCmp.weights[1] = weight1
+      morphCmp.weights[9] = weight2
+      morphCmp.set({
+        weights: morphCmp.weights // update
+      })
+    })
+  }
+
+  if (!body && geometry.animations && geometry.animations.length > 0) {
     console.log('json anim', geometry.animations)
     geometry.animations.forEach((animation) => {
       var channels = animation.tracks.map((track) => {
         const name = track[0]
         let values = track[2]
         const pathTokens = name.match(/\.(bones)\[(.+)\]\.(.+)/)
-        ".bones[Hip].rotation"
         const animType = pathTokens[1]
         const boneName = pathTokens[2]
         const target = bones.find((bone) => { return bone.name === boneName })
@@ -483,13 +514,13 @@ function initMeshes (geometry, color, body) {
         return [w[0] / sum, w[1] / sum, 0, 0]
       }
     ),
-    primitive: ctx.Primitive.Lines
+    // primitive: ctx.Primitive.Lines
   }))
   components.push(
     renderer.material({
       baseColor: color || [0.9, 0.1, 0.1, 1],
-      metallic: 0.9,
-      roughness: 0.1
+      metallic: 0.2,
+      roughness: 0.5
     })
   )
   var mesh = renderer.entity(components)
@@ -512,14 +543,12 @@ function initMeshes (geometry, color, body) {
   return mesh
 }
 
-
 io.loadJSON('female_walking_lowpoly.js', (err, json) => {
-  return
 // io.loadJSON('assets/models/female_export_texturemap.js', (err, json) => {
 // io.loadJSON('assets/models/male_walking_lowpoly.js', (err, json) => {
 // io.loadJSON('/assets/female/femaleDress.js', (err, json) => {
   console.log('json', err, json)
-  var body = initMeshes(parseThreeJSON(json), [1, 1, 1, 1])
+  var body = initMeshes(parseThreeJSON(json), [0.2, 0.15, 0, 1])
   console.log('json body', body)
   io.loadJSON('femaleDress1.js', (err, json) => { // OK
    // io.loadJSON('/assets/female/femaleDress2.js', (err, json) => { // OK
@@ -530,7 +559,7 @@ io.loadJSON('female_walking_lowpoly.js', (err, json) => {
   // io.loadJSON('/assets/female/femalePants2.js', (err, json) => { // OK
   // io.loadJSON('/assets/female/juliayrenataShirt.js', (err, json) => { // OK
     console.log('json', err, json)
-    initMeshes(parseThreeJSON(json), [1, 1, 0, 1], body)
+    initMeshes(parseThreeJSON(json), [1, 0, 0, 1], body)
   })
 })
 
@@ -541,7 +570,7 @@ io.loadJSON('female_walking_lowpoly.js', (err, json) => {
 // loadJSON('male.gltf', function (err, json) {
 loadJSON('AnimatedMorphCube.gltf', function (err, json) {
   loaded = true
-  // return
+  return
   if (err) throw new Error(err)
 
   async.map(json.buffers, handleBuffer, function (err, res) {
@@ -576,11 +605,11 @@ ctx.frame(() => {
   debugOnce = false
   renderer.draw()
 
+  State.sun.direction[0] += 0.001 // force shadowmap to update every frame
+
   if (loaded) {
     var elapsedTime = Date.now() - startTime
     var ms = (elapsedTime / 1000).toFixed(3)
-
-    return
 
     animations.forEach((channels, i) => {
       channels.forEach((channel) => {
@@ -612,6 +641,10 @@ ctx.frame(() => {
           nextInput = inputData[nextIndex]
           prevOutput = outputData[prevIndex]
           nextOutput = outputData[nextIndex]
+          if (!nextOutput) {
+            console.log('nextOutput not found', nextIndex, outputData.length, channels)
+            return
+          }
 
           const interpolationValue = ((currentTime) - prevInput) / (nextInput - prevInput)
 
