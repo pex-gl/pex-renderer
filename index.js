@@ -184,7 +184,7 @@ Renderer.prototype.getMaterialProgram = function (geometry, material, skin, opti
   if (options.depthPassOnly) {
     const hash = 'DEPTH_PASS_ONLY_' + flags.join('-')
     let program = this._programCache[hash]
-    flags = flags.join('\n')
+    flags = flags.join('\n') + '\n'
     if (!program) {
       program = this._programCache[hash] = ctx.program({
         vert: flags + DEPTH_PASS_VERT,
