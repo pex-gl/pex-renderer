@@ -226,7 +226,7 @@ function handleNode (node, gltf) {
         let weight1 = e.x / window.innerWidth
         let weight2 = e.y / window.innerHeight
         morphCmp.set({
-          weights: [weight1, 0]
+          weights: [weight1, weight2]
         })
       })
     }
