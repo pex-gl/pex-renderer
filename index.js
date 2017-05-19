@@ -14,6 +14,8 @@ const createProfiler = require('./profiler')
 const isBrowser = require('is-browser')
 const createEntity = require('./entity')
 const createTransform = require('./transform')
+const createSkin = require('./skin')
+const createMorph = require('./morph')
 const createGeometry = require('./geometry')
 const createMaterial = require('./material')
 const createCamera = require('./camera')
@@ -166,7 +168,7 @@ var PBRVert = glsl(__dirname + '/glsl/PBR.vert')
 var PBRFrag = glsl(__dirname + '/glsl/PBR.frag')
 
 // TODO: how fast is building these flag strings every frame for every object?
-Renderer.prototype.getMaterialProgram = function (geometry, material, options) {
+Renderer.prototype.getMaterialProgram = function (geometry, material, skin, options) {
   var ctx = this._ctx
 
   if (!this._programCache) {
@@ -184,11 +186,15 @@ Renderer.prototype.getMaterialProgram = function (geometry, material, options) {
   if (geometry._attributes.aRotation) {
     flags.push('#define USE_INSTANCED_ROTATION')
   }
+  if (skin) {
+    flags.push('#define USE_SKIN')
+    flags.push('#define NUM_JOINTS ' + skin.joints.length)
+  }
 
   if (options.depthPassOnly) {
     const hash = 'DEPTH_PASS_ONLY_' + flags.join('-')
     let program = this._programCache[hash]
-    flags = flags.join('\n')
+    flags = flags.join('\n') + '\n'
     if (!program) {
       program = this._programCache[hash] = ctx.program({
         vert: flags + DEPTH_PASS_VERT,
@@ -262,23 +268,27 @@ Renderer.prototype.update = function () {
   )
 }
 
-Renderer.prototype.getGeometryPipeline = function (geometry, material, opts) {
+Renderer.prototype.getGeometryPipeline = function (geometry, material, skin, opts) {
   const ctx = this._ctx
-  const program = this.getMaterialProgram(geometry, material, opts)
+  const program = this.getMaterialProgram(geometry, material, skin, opts)
   if (!this._pipelineCache) {
     this._pipelineCache = {}
   }
   // TODO: better pipeline caching
-  let pipeline = this._pipelineCache[program.id]
+  const hash = material.id + '_' + program.id
+  let pipeline = this._pipelineCache[hash]
   if (!pipeline) {
     pipeline = ctx.pipeline({
       program: program,
-      depthEnabled: true,
+      depthTest: material.depthTest,
+      depthWrite: material.depthWrite,
+      depthFunc: material.depthFunc,
       depthFunc: ctx.DepthFunc.LessEqual,
       cullFaceEnabled: true,
-      cullFace: ctx.Face.Back
+      cullFace: ctx.Face.Back,
+      primitive: geometry.primitive
     })
-    this._pipelineCache[program.id] = pipeline
+    this._pipelineCache[hash] = pipeline
   }
 
   return pipeline
@@ -369,6 +379,7 @@ Renderer.prototype.drawMeshes = function (camera, shadowMappingLight) {
     const geometry = geometries[i]
     const transform = geometry.entity.transform
     const material = geometry.entity.getComponent('Material')
+    const skin = geometry.entity.getComponent('Skin')
     const cachedUniforms = material._uniforms
     cachedUniforms.uIor = 1.4
 
@@ -392,13 +403,17 @@ Renderer.prototype.drawMeshes = function (camera, shadowMappingLight) {
       }
     }
 
+    if (skin) {
+      cachedUniforms.uJointMat = skin.jointMatrices
+    }
+
     let pipeline = null
     if (shadowMappingLight) {
-      pipeline = this.getGeometryPipeline(geometry, material, {
+      pipeline = this.getGeometryPipeline(geometry, material, skin, {
         depthPassOnly: true
       })
     } else {
-      pipeline = this.getGeometryPipeline(geometry, material, {
+      pipeline = this.getGeometryPipeline(geometry, material, skin, {
         numDirectionalLights: directionalLights.length,
         numPointLights: pointLights.length,
         numAreaLights: areaLights.length,
@@ -431,7 +446,7 @@ Renderer.prototype.drawMeshes = function (camera, shadowMappingLight) {
       indices: geometry._indices,
       pipeline: pipeline,
       uniforms: cachedUniforms,
-      instances: geometry.instances
+      instances: geometry.instances,
     })
   }
 
@@ -670,11 +685,16 @@ Renderer.prototype.entity = function (components, parent, tags) {
   return entity
 }
 
-Renderer.prototype.findComponents = function () {
-}
-
 Renderer.prototype.transform = function (opts) {
   return createTransform(Object.assign({ ctx: this._ctx }, opts))
+}
+
+Renderer.prototype.skin = function (opts) {
+  return createSkin(Object.assign({ ctx: this._ctx }, opts))
+}
+
+Renderer.prototype.morph = function (opts) {
+  return createMorph(Object.assign({ ctx: this._ctx }, opts))
 }
 
 Renderer.prototype.geometry = function (opts) {

@@ -1,0 +1,9 @@
+{
+  "dependencies": {
+    "async": "^2.4.0",
+    "pex-cam": "^2.0.0",
+    "pex-context": "^2.0.0-17",
+    "pex-io": "^1.5.2",
+    "pex-math": "^1.0.1"
+  }
+}

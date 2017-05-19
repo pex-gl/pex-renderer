@@ -4,6 +4,8 @@ function Geometry (opts) {
   this.type = 'Geometry'
   this.changed = new Signal()
 
+  this.primitive = opts.ctx.Primitive.Triangles
+
   this._attributes = { }
 
   this.set(opts)
@@ -80,6 +82,25 @@ Geometry.prototype.set = function (opts) {
       ctx.update(this._colorsBuf, { data: opts.colors })
     }
     this._attributes.aColor = { buffer: this._colorsBuf, divisor: 1 }
+  }
+
+  if (opts.joints) {
+    if (!this._jointsBuf) {
+      this._jointsBuf = ctx.vertexBuffer(opts.joints)
+    } else {
+      ctx.update(this._jointsBuf, { data: opts.joints })
+    }
+    this._attributes.aJoint = this._jointsBuf
+  }
+
+  if (opts.weights) {
+    console.log('geometry set weight', opts.weights.slice(0, 16))
+    if (!this._weightsBuf) {
+      this._weightsBuf = ctx.vertexBuffer(opts.weights)
+    } else {
+      ctx.update(this._weightsBuf, { data: opts.weights })
+    }
+    this._attributes.aWeight = this._weightsBuf
   }
 
   if (opts.indices || opts.cells) {
