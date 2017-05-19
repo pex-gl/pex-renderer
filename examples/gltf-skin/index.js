@@ -1,8 +1,9 @@
 const loadJSON = require('pex-io/loadJSON')
+const createCube = require('primitive-cube')
 const loadBinary = require('pex-io/loadBinary')
 const Mat4 = require('pex-math/Mat4')
 const Vec3 = require('pex-math/Vec3')
-const createRenderer = require('../../../')
+const createRenderer = require('../../')
 const createCamera = require('pex-cam/perspective')
 const createOrbiter = require('pex-cam/orbiter')
 const createContext = require('pex-context')
@@ -16,7 +17,7 @@ ctx.gl.getExtension('OES_texture_float')
 
 const renderer = createRenderer({
   ctx: ctx,
-  shadowQuality: 2,
+  shadowQuality: 4,
   pauseOnBlur: true
 })
 
@@ -60,7 +61,7 @@ function initCamera () {
   const camera = createCamera({
     fov: Math.PI / 3,
     aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
-    position: [0, 5, 18],
+    position: [0, 2, 4],
     target: [0, 0, 0],
     near: 0.1,
     far: 100
@@ -189,7 +190,7 @@ function handleNode (node, gltf) {
     if (weightAccessor) geometryCmp.set({ weights: weightAccessor.data })
 
     const materialCmp = renderer.material({
-      baseColor: [0.15, 0.15, 0.2, 1.0],
+      baseColor: [1, 1, 1, 1.0],
       roughness: 1,
       metallic: 0
     })
@@ -347,10 +348,22 @@ loadJSON('CesiumMan.gltf', function (err, json) {
 
 var startTime = Date.now()
 
+renderer.entity([
+  renderer.transform({
+    position: [0, -0.05, 0]
+  }),
+  renderer.geometry(createCube(5, 0.1, 5)),
+  renderer.material({
+    baseColor: [0.8, 0.5, 0.5, 1]
+  })
+])
+
 ctx.frame(() => {
   ctx.debug(debugOnce)
   debugOnce = false
   renderer.draw()
+
+  State.sun.direction[0] += 0.001 // force shadowmap to update every frame
 
   if (loaded) {
     var elapsedTime = Date.now() - startTime
