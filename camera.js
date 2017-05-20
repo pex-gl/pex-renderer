@@ -42,8 +42,8 @@ var ssaoNoiseData = new Float32Array(flatten(ssaoNoise))
 function Camera (opts) {
   this.type = 'Camera'
   this.changed = new Signal()
-  this.backgroundColor = [1, 0, 0, 1]
   this.rgbm = true
+  this.backgroundColor = [0, 0, 0, 1]
 
   this.set(opts)
 
@@ -130,7 +130,7 @@ Camera.prototype.initPostproces = function () {
     name: 'sao',
     pass: ctx.pass({
       color: [ this._frameAOTex ],
-      clearColor: [1, 1, 0, 1]
+      clearColor: [0, 0, 0, 1]
       // clearDepth: 1
     }),
     pipeline: ctx.pipeline({

@@ -23,12 +23,12 @@ function ReflectionProbe (opts) {
   })
 
   const sides = [
-    { bg: [0.5, 0.0, 0.0, 1.0], eye: [0, 0, 0], target: [1, 0, 0], up: [0, -1, 0] },
-    { bg: [0.25, 0.0, 0.0, 1.0], eye: [0, 0, 0], target: [-1, 0, 0], up: [0, -1, 0] },
-    { bg: [0.0, 0.5, 0.0, 1.0], eye: [0, 0, 0], target: [0, 1, 0], up: [0, 0, 1] },
-    { bg: [0.0, 0.25, 0.0, 1.0], eye: [0, 0, 0], target: [0, -1, 0], up: [0, 0, -1] },
-    { bg: [0.0, 0.0, 0.5, 1.0], eye: [0, 0, 0], target: [0, 0, 1], up: [0, -1, 0] },
-    { bg: [0.0, 0.0, 0.25, 1.0], eye: [0, 0, 0], target: [0, 0, -1], up: [0, -1, 0] }
+    { eye: [0, 0, 0], target: [1, 0, 0], up: [0, -1, 0] },
+    { eye: [0, 0, 0], target: [-1, 0, 0], up: [0, -1, 0] },
+    { eye: [0, 0, 0], target: [0, 1, 0], up: [0, 0, 1] },
+    { eye: [0, 0, 0], target: [0, -1, 0], up: [0, 0, -1] },
+    { eye: [0, 0, 0], target: [0, 0, 1], up: [0, -1, 0] },
+    { eye: [0, 0, 0], target: [0, 0, -1], up: [0, -1, 0] }
   ].map((side, i) => {
     side.projectionMatrix = Mat4.perspective(Mat4.create(), 90, 1, 0.1, 100) // TODO: change this to radians
     side.viewMatrix = Mat4.lookAt(Mat4.create(), side.eye, side.target, side.up)
@@ -36,7 +36,7 @@ function ReflectionProbe (opts) {
       name: 'ReflectionProbe.sidePass',
       pass: ctx.pass({
         color: [{ texture: dynamicCubemap, target: ctx.gl.TEXTURE_CUBE_MAP_POSITIVE_X + i }],
-        clearColor: side.bg,
+        clearColor: [0, 0, 0, 1],
         clearDepth: 1
       })
     }
