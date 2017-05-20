@@ -27,7 +27,7 @@ for (let i = 0; i < 64; i++) {
 var ssaoKernelData = new Float32Array(flatten(ssaoKernel))
 
 var ssaoNoise = []
-for (let j = 0; j < 64; j++) {
+for (let j = 0; j < 128 * 128; j++) {
   let noiseSample = [
     random.float() * 2 - 1,
     random.float() * 2 - 1,
@@ -38,18 +38,6 @@ for (let j = 0; j < 64; j++) {
 }
 var ssaoNoiseData = new Float32Array(flatten(ssaoNoise))
 
-var ssaoNoiseHiRes = []
-for (let j = 0; j < 128 * 128; j++) {
-  let noiseSample = [
-    random.float() * 2 - 1,
-    random.float() * 2 - 1,
-    0,
-    1
-  ]
-  ssaoNoiseHiRes.push(noiseSample)
-}
-
-var ssaoNoiseDataHiRes = new Float32Array(flatten(ssaoNoiseHiRes))
 
 function Camera (opts) {
   this.type = 'Camera'
@@ -108,8 +96,8 @@ Camera.prototype.initPostproces = function () {
   this._frameAOBlurTex = ctx.texture2D({ width: W, height: H })
 
   ctx.gl.getExtension('OES_texture_float ')
-  this._ssaoKernelMap = ctx.texture2D({ width: 8, height: 8, data: ssaoKernelData, format: ctx.PixelFormat.RGBA32F, wrap: ctx.Wrap.Repeat })
-  this._ssaoNoiseMap = ctx.texture2D({ width: 128, height: 128, data: ssaoNoiseDataHiRes, format: ctx.PixelFormat.RGBA32F, wrap: ctx.Wrap.Repeat, mag: ctx.Filter.Linear, min: ctx.Filter.Linear })
+  this._ssaoKernelMap = ctx.texture2D({ width: 8, height: 8, data: ssaoKernelData, pixelFormat: ctx.PixelFormat.RGBA32F, encoding: ctx.Encoding.Linear, wrap: ctx.Wrap.Repeat })
+  this._ssaoNoiseMap = ctx.texture2D({ width: 128, height: 128, data: ssaoNoiseData, pixelFormat: ctx.PixelFormat.RGBA32F, encoding: ctx.Encoding.Linear, wrap: ctx.Wrap.Repeat, mag: ctx.Filter.Linear, min: ctx.Filter.Linear })
 
   this._drawFrameFboCommand = {
     name: 'drawFrame',
