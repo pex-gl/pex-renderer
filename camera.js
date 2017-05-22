@@ -114,7 +114,12 @@ Camera.prototype.initPostproces = function () {
 
   this._frameAOTex = ctx.texture2D({ width: W, height: H, pixelFormat: ctx.PixelFormat.RGBA8, encoding: ctx.Encoding.Linear })
   this._frameAOBlurTex = ctx.texture2D({ width: W, height: H, pixelFormat: ctx.PixelFormat.RGBA8, encoding: ctx.Encoding.Linear })
-  this._frameDofBlurTex = ctx.texture2D({ width: W, height: H, pixelFormat: ctx.PixelFormat.RGBA32F, encoding: ctx.Encoding.Linear })
+  this._frameDofBlurTex = ctx.texture2D({
+    width: W,
+    height: H,
+    pixelFormat: this.rgbm ? ctx.PixelFormat.RGBA8 : ctx.PixelFormat.RGBA32F,
+    encoding: this.rgbm ? ctx.Encoding.RGBM : ctx.Encoding.Linear
+  })
 
   ctx.gl.getExtension('OES_texture_float ')
   this._ssaoKernelMap = ctx.texture2D({ width: 8, height: 8, data: ssaoKernelData, pixelFormat: ctx.PixelFormat.RGBA32F, encoding: ctx.Encoding.Linear, wrap: ctx.Wrap.Repeat })
