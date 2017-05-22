@@ -28,8 +28,9 @@ ctx.gl.getExtension('OES_standard_derivatives')
 ctx.gl.getExtension('WEBGL_draw_buffers')
 ctx.gl.getExtension('OES_texture_float')
 
-const ASSETS_DIR = isBrowser ? 'http://localhost/assets' : '/Users/vorg/Workspace/assets'
-const TEX_DIR = isBrowser ? 'http://localhost/assets/textures/gametextures_old_met_selected' : '/Users/vorg/Workspace/assets/textures/gametextures_old_met_selected'
+const HOST = isBrowser ? document.location.hostname : ''
+const ASSETS_DIR = isBrowser ? `http://${HOST}/assets` : '/Users/vorg/Workspace/assets'
+const TEX_DIR = isBrowser ? `http://${HOST}/assets/textures/gametextures_old_met_selected` : '/Users/vorg/Workspace/assets/textures/gametextures_old_met_selected'
 
 window.addEventListener('keydown', (e) => {
   if (e.key == 'g') gui.toggleEnabled()
@@ -45,7 +46,8 @@ const State = {
   roughness: 0.5,
   metallic: 0.1,
   baseColor: [0.8, 0.1, 0.1, 1.0],
-  materials: []
+  materials: [],
+  rgbm: true
 }
 
 random.seed(10)
@@ -53,8 +55,8 @@ random.seed(10)
 const renderer = createRenderer({
   pauseOnBlur: true,
   ctx: ctx,
-  profile: true,
-  rgbm: true,
+  // profile: true,
+  rgbm: State.rgbm,
   shadowQuality: 2,
   exposure: 1.5
 })
@@ -98,16 +100,18 @@ function updateSunPosition () {
 
 const W = ctx.gl.drawingBufferWidth
 const H = ctx.gl.drawingBufferHeight
+const nW = 3
+const nH = 2
 
 // flip upside down as we are using viewport coordinates
-const cells = gridCells(W, H, 8, 4, 0).map((cell) => {
+let cells = gridCells(W, H, nW, nH, 0).map((cell) => {
   return [cell[0], H - cell[1] - cell[3], cell[2], cell[3]]
 })
 
 function initCamera () {
   const camera = createCamera({
     fov: Math.PI / 3,
-    aspect: (W / 8) / (H / 4),
+    aspect: (W / nW) / (H / nH),
     position: [0, 0, 1.6],
     target: [0, 0, 0],
     near: 0.1,
@@ -128,8 +132,13 @@ function initCamera () {
 }
 
 function imageFromFile (file, options) {
-  const tex = ctx.texture2D({ width: 1, height: 1})
-  io.loadImage(file, function (err, image) {
+  const tex = ctx.texture2D({
+    width: 1,
+    height: 1,
+    pixelFormat: ctx.PixelFormat.RGBA8,
+    encoding: ctx.Encoding.SRGB
+  })
+  io.loadImage(file, function (err, image, encoding) {
     console.log('image loaded', file)
     if (err) console.log(err)
     ctx.update(tex, {
@@ -139,7 +148,9 @@ function imageFromFile (file, options) {
       wrap: ctx.Wrap.Repeat,
       flipY: true,
       min: ctx.Filter.Linear,
-      mag: ctx.Filter.LinearMipmapLinear
+      mag: ctx.Filter.LinearMipmapLinear,
+      pixelFormat: ctx.PixelFormat.RGBA8,
+      encoding: encoding
     })
     ctx.update(tex, { mipmap: true })
     // tex(Object.assign(canvasToPixels(image), {
@@ -264,14 +275,15 @@ function initMeshes () {
     { roughness: 3 / 7, metallic: 0, baseColor: [0.1, 0.1, 0.1, 1.0] },
   ]
 
-  materials = materials.slice(0, materials.length / 2 | 0)
+  // materials = materials.slice(0, materials.length / 2 | 0 + 4)
+  materials = materials.filter((m, i) => i % 6 == 0)
 
   materials.forEach((mat) => {
-    if (mat.baseColorMap) mat.baseColorMap = imageFromFile(mat.baseColorMap)
-    if (mat.roughnessMap) mat.roughnessMap = imageFromFile(mat.roughnessMap)
-    if (mat.metallicMap) mat.metallicMap = imageFromFile(mat.metallicMap)
-    if (mat.normalMap) mat.normalMap = imageFromFile(mat.normalMap)
-    if (mat.emissiveColorMap) mat.emissiveColorMap = imageFromFile(mat.emissiveColorMap)
+    if (mat.baseColorMap) mat.baseColorMap = imageFromFile(mat.baseColorMap, ctx.Encoding.SRGB)
+    if (mat.roughnessMap) mat.roughnessMap = imageFromFile(mat.roughnessMap, ctx.Encoding.Linear)
+    if (mat.metallicMap) mat.metallicMap = imageFromFile(mat.metallicMap, ctx.Encoding.Linear)
+    if (mat.normalMap) mat.normalMap = imageFromFile(mat.normalMap, ctx.Encoding.Linear)
+    if (mat.emissiveColorMap) mat.emissiveColorMap = imageFromFile(mat.emissiveColorMap, ctx.Encoding.SRGB)
   })
 
   cells.forEach((cell, cellIndex) => {
@@ -304,13 +316,13 @@ function initMeshes () {
 
       const dot = State.dot = renderer.pointLight({
         color: [1, 0.01, 0.095, 1],
-        intensity: 15,
+        intensity: 10,
         radius: 20
       })
 
       const skybox = State.skybox = renderer.skybox({
         sunPosition: State.sunPosition,
-        // texture: panorama,
+        texture: panorama
       })
 
       // currently this also includes light probe functionality
@@ -319,6 +331,9 @@ function initMeshes () {
         size: [10, 10, 10],
         boxProjection: false
       })
+      gui.addTextureCube('Reflection Cubemap', reflectionProbe._dynamicCubemap).setPosition(180, 10)
+      gui.addTexture2D('Reflection OctMap', reflectionProbe._octMap)
+      gui.addTexture2D('Reflection OctMapAtlas', reflectionProbe._reflectionMap)
 
       renderer.entity([
         renderer.transform({
@@ -343,8 +358,8 @@ function initMeshes () {
     // io.loadBinary('http://192.168.1.123/assets/envmaps/OpenfootageNETHDRforrest03_small.hdr', (err, buf) => {
     // io.loadBinary('http://192.168.1.123/assets/envmaps/OpenfootageNET_Salzach_low.hdr', (err, buf) => {
     // io.loadBinary('http://192.168.1.123/assets/envmaps/OpenfootageNET_Staatsbridge_HDRI_low.hdr', (err, buf) => {
-    // io.loadBinary('http://localhost/assets/envmaps/garage/garage.hdr', (err, buf) => {
-    io.loadBinary('http://localhost/assets/envmaps/grace-new/grace-new.hdr', (err, buf) => {
+    io.loadBinary(`http://${HOST}/assets/envmaps/garage/garage.hdr`, (err, buf) => {
+    // io.loadBinary('http://192.168.1.123/assets/envmaps/grace-new/grace-new.hdr', (err, buf) => {
       const hdrImg = parseHdr(buf)
       const data = new Uint8Array(hdrImg.data.length)
       // const data = new Float32Array(hdrImg.data.length)
@@ -386,12 +401,11 @@ function initMeshes () {
         // hdrImg.data[i + 2] *= hdrImg.data[i + 2]
       }
       const panoramaRGBM = ctx.texture2D({
-        // data: State.rgbm ? data : hdrImg.data,
-        data: hdrImg.data,
+        data: State.rgbm ? data : hdrImg.data,
         width: hdrImg.shape[0],
         height: hdrImg.shape[1], 
-        // format: State.rgbm ? null : ctx.PixelFormat.RGBA32F,
-        format: ctx.PixelFormat.RGBA32F,
+        pixelFormat: State.rgbm ? ctx.PixelFormat.RGBA8 : ctx.PixelFormat.RGBA32F,
+        encoding: State.rgbm ? ctx.Encoding.RGBM : ctx.Encoding.Linear,
         flipY: true
       })
       gui.addTexture2D('Panorama', panoramaRGBM)
@@ -402,7 +416,10 @@ function initMeshes () {
     let debugOnce = false
 
     window.addEventListener('keydown', (e) => {
-      if (e.key === 'd') debugOnce = true
+      if (e.key === 'd') {
+        debugOnce = true
+        updateSunPosition()
+      }
     })
 
     updateSunPosition()
@@ -412,5 +429,7 @@ function initMeshes () {
       debugOnce = false
       renderer.draw()
 
-      gui.draw()
+      if (!renderer._state.paused) { // TODO: _state.something is messy
+        gui.draw()
+      }
     })

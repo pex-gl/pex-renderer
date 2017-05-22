@@ -11,11 +11,9 @@
 precision mediump float;
 #endif
 
-#pragma glslify: toGamma = require(glsl-gamma/out)
-#pragma glslify: toLinear = require(glsl-gamma/in)
-#pragma glslify: envMapOctahedral = require(../glsl/EnvMapOctahedral.glsl)
-#pragma glslify: encodeRGBM = require(../local_modules/glsl-rgbm/encode)
-#pragma glslify: decodeRGBM = require(../local_modules/glsl-rgbm/decode)
+#pragma glslify: envMapOctahedral = require(./EnvMapOctahedral.glsl)
+#pragma glslify: decode = require(./decode.glsl)
+#pragma glslify: encode = require(./encode.glsl)
 
 uniform float uIor;
 
@@ -47,18 +45,12 @@ uniform mat4 uModelMatrix;
 
 uniform vec3 uCameraPosition;
 
-uniform bool uRGBM;
-
 #ifdef USE_AO
 uniform sampler2D uAO;
 uniform vec2 uScreenSize;
 #endif
 
-//sun
-uniform vec3 uSunPosition;
-uniform vec4 uSunColor;
-
-// uniform bool uOutputRGBM;
+uniform int uOutputEncoding;
 
 float pi = 3.14159;
 #define PI 3.14159265359
@@ -163,29 +155,29 @@ float saturate(float f) {
 #ifdef USE_BASE_COLOR_MAP
     uniform sampler2D uBaseColorMap; //assumes sRGB color, not linear
     vec3 getBaseColor() {
-        return toLinear(texture2D(uBaseColorMap, vTexCoord0).rgb);
+        return decode(texture2D(uBaseColorMap, vTexCoord0), 3).rgb;
     }
 #else
     uniform vec4 uBaseColor; // TODO: gltf assumes sRGB color, not linear
     vec3 getBaseColor() {
-        return toLinear(uBaseColor.rgb);
+        return decode(uBaseColor, 3).rgb;
     }
 #endif
 
 #ifdef USE_EMISSIVE_COLOR_MAP
     uniform sampler2D uEmissiveColorMap; //assumes sRGB color, not linear
     vec3 getEmissiveColor() {
-        return toLinear(texture2D(uEmissiveColorMap, vTexCoord0).rgb);
+        return decode(texture2D(uEmissiveColorMap, vTexCoord0), 3).rgb;
     }
 #else
     uniform vec4 uEmissiveColor; //assumes sRGB color, not linear
     vec3 getEmissiveColor() {
-        return toLinear(uEmissiveColor.rgb);
+        return decode(uEmissiveColor, 3).rgb;
     }
 #endif
 
 #ifdef USE_METALLIC_MAP
-    uniform sampler2D uMetallicMap; //assumes linear
+    uniform sampler2D uMetallicMap; //assumes linear, TODO: check gltf
     float getMetallic() {
         return texture2D(uMetallicMap, vTexCoord0).r;
     }
@@ -197,7 +189,7 @@ float saturate(float f) {
 #endif
 
 #ifdef USE_ROUGHNESS_MAP
-    uniform sampler2D uRoughnessMap; //assumes sRGB color, not linear
+    uniform sampler2D uRoughnessMap; //assumes linear, TODO: check glTF
     float getRoughness() {
         return texture2D(uRoughnessMap, vTexCoord0).r + 0.01;
     }
@@ -266,20 +258,17 @@ float saturate(float f) {
 #endif
 
 uniform sampler2D uReflectionMap;
+uniform int uReflectionMapEncoding;
 
 vec3 getIrradiance(vec3 eyeDirWorld, vec3 normalWorld) {
   vec2 uv = envMapOctahedral(normalWorld);
   float width = 2048.0;
-  float irrSize = 64.0;
+  // float irrSize = 64.0;
+  float irrSize = 256.0;
   uv += 0.5 / irrSize;
   uv /= irrSize / (irrSize - 1.0);
   uv = (uv * irrSize + vec2(2048.0 - irrSize)) / width;
-  if (uRGBM) {
-    vec3 irradiance = decodeRGBM(texture2D(uReflectionMap, uv));
-    return irradiance;
-  } else {
-    return texture2D(uReflectionMap, uv).rgb;
-  }
+  return decode(texture2D(uReflectionMap, uv), uReflectionMapEncoding).rgb;
 }
 
 vec3 EnvBRDFApprox( vec3 SpecularColor, float Roughness, float NoV ) {
@@ -298,15 +287,9 @@ vec3 getPrefilteredReflection(vec3 eyeDirWorld, vec3 normalWorld, float roughnes
     float lod = roughness * maxMipMapLevel;
     float upLod = floor(lod);
     float downLod = ceil(lod);
-    if (uRGBM) {
-      vec3 a = decodeRGBM(texture2D(uReflectionMap, envMapOctahedral(reflectionWorld, 0.0, upLod)));
-      vec3 b = decodeRGBM(texture2D(uReflectionMap, envMapOctahedral(reflectionWorld, 0.0, downLod)));
-      return mix(a, b, lod - upLod);
-    } else {
-      vec3 a = texture2D(uReflectionMap, envMapOctahedral(reflectionWorld, 0.0, upLod)).rgb;
-      vec3 b = texture2D(uReflectionMap, envMapOctahedral(reflectionWorld, 0.0, downLod)).rgb;
-      return mix(a, b, lod - upLod);
-    }
+    vec3 a = decode(texture2D(uReflectionMap, envMapOctahedral(reflectionWorld, 0.0, upLod)), uReflectionMapEncoding).rgb;
+    vec3 b = decode(texture2D(uReflectionMap, envMapOctahedral(reflectionWorld, 0.0, downLod)), uReflectionMapEncoding).rgb;
+    return mix(a, b, lod - upLod);
 }
 
 float G1V(float dotNV, float k) {
@@ -350,8 +333,11 @@ float GGX(vec3 N, vec3 H, float a) {
   float nom = a2;
   float denom  = (NdotH2 * (a2 - 1.0) + 1.0);
   denom = PI * denom * denom;
-
-  return nom / denom;
+  if (denom > 0.0) {
+    return nom / denom;
+  } else {
+    return 1.0;
+  }
 }
 
 float GeometrySchlickGGX(float NdotV, float roughness) {
@@ -428,7 +414,7 @@ void main() {
 
     vec3 baseColor = getBaseColor();
 #ifdef USE_INSTANCED_COLOR
-    baseColor *= toLinear(vColor.rgb);
+    baseColor *= decode(vColor, 3).rgb;
 #endif
     vec3 emissiveColor = getEmissiveColor();
     float roughness = getRoughness();
@@ -465,7 +451,6 @@ void main() {
     kD *= 1.0 - metallic;
     indirectDiffuse = kD * baseColor * irradianceColor;
     indirectSpecular = reflectionColor * reflectance;
-    // indirectSpecular = reflectance;
 #endif
 
     //lights
@@ -520,7 +505,7 @@ void main() {
             float denominator = 4.0 * NdotV * NdotL + 0.001;
             vec3 brdf = nominator / denominator;
 
-            vec3 lightColor = toLinear(light.color.rgb);
+            vec3 lightColor = decode(light.color, 3).rgb;
             lightColor *= light.color.a; // intensity
 
 
@@ -546,7 +531,7 @@ void main() {
         float falloff = (distanceRatio * distanceRatio) / (dist * dist + 1.0);
         // float falloff = 1.0 / (dist * dist);
 
-        vec3 lightColor = toLinear(light.color.rgb);
+        vec3 lightColor = decode(light.color, 3).rgb;
         lightColor *= light.color.a;
         //TODO: specular light conservation
         // directDiffuse += baseColor * dotNL * lightColor * falloff;
@@ -600,22 +585,7 @@ void main() {
     vec2 vUV = vec2(gl_FragCoord.x / uScreenSize.x, gl_FragCoord.y / uScreenSize.y);
     ao = texture2D(uAO, vUV).r;
 #endif
-    ao = 1.0;
 
     vec3 color = emissiveColor + ao * indirectDiffuse + indirectSpecular + directDiffuse + directSpecular + indirectArea;
-
-    // if (uOutputRGBM) {
-      // gl_FragData[0] = encodeRGBM(color);
-    // } else {
-      // color = color / (1.0 + color);
-      // color = toGamma(color);
-      // gl_FragData[0] = vec4(color, 1.0);
-    // }
-    if (uRGBM) {
-      gl_FragData[0] = encodeRGBM(color);
-    } else {
-      gl_FragData[0].rgb = color;
-      gl_FragData[0].a = 1.0;
-    }
-
+    gl_FragData[0] = encode(vec4(color, 1.0), uOutputEncoding);
 }

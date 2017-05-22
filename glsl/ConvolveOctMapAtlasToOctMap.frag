@@ -4,15 +4,15 @@ precision highp float;
 
 #pragma glslify: octMapUVToDir = require(./OctMapUVToDir)
 #pragma glslify: envMapOctahedral = require(./EnvMapOctahedral)
-#pragma glslify: encodeRGBM = require(../local_modules/glsl-rgbm/encode)
-#pragma glslify: decodeRGBM = require(../local_modules/glsl-rgbm/decode)
+#pragma glslify: decode = require(./decode)
+#pragma glslify: encode = require(./encode)
 
 varying vec2 vTexCoord;
 uniform sampler2D uSource;
-uniform samplerCube uCubemap;
+uniform int uSourceEncoding;
 uniform float uSourceSize;
 uniform float uTextureSize;
-uniform bool uRGBM;
+uniform int uOutputEncoding;
 
 vec2 signed(vec2 v) {
   return step(0.0, v) * 2.0 - 1.0;
@@ -29,7 +29,7 @@ void main() {
   vec3 right = normalize(cross(up, normal));
   up = cross(normal,right);
 
-  vec3 sampledColor = vec3(0,0,0);
+  vec3 sampledColor = vec3(0.0, 0.0, 0.0);
   float index = 0.0;
   const float dphi = 2.0 * PI / 180.0 * 2.0;
   const float dtheta = 0.5 * PI / 64.0 * 2.0;
@@ -40,21 +40,12 @@ void main() {
       // in theory this should be sample from mipmap level e.g. 2.0, 0.0
       // but sampling from prefiltered roughness gives much smoother results
       vec2 sampleUV = envMapOctahedral(sampleVector, 0.0, 2.0);
-      if (uRGBM) {
-        sampledColor += decodeRGBM(texture2D( uSource, sampleUV)) * cos(theta) * sin(theta);
-      } else {
-        sampledColor += texture2D( uSource, sampleUV).rgb * cos(theta) * sin(theta);
-      }
-      index++;
+      vec4 color = texture2D( uSource, sampleUV);
+      sampledColor += decode(color, uSourceEncoding).rgb * cos(theta) * sin(theta);
+      index += 1.0;
     }
   }
 
   sampledColor = PI * sampledColor / index;
-
-  if (uRGBM) {
-    gl_FragColor = encodeRGBM(sampledColor);
-  } else {
-    gl_FragColor.rgb = sampledColor;
-    gl_FragColor.a = 1.0;
-  }
+  gl_FragColor = encode(vec4(sampledColor, 1.0), uOutputEncoding);
 }

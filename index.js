@@ -4,9 +4,6 @@ const Mat3 = require('pex-math/Mat3')
 const Mat4 = require('pex-math/Mat4')
 // var Draw = require('pex-draw/Draw')
 // var fx = require('pex-fx')
-const random = require('pex-random')
-const MathUtils = require('pex-math/Utils')
-const flatten = require('flatten')
 const glsl = require('glslify')
 // const AreaLightsData = require('./AreaLightsData')
 const createTreeNode = require('scene-tree')
@@ -22,14 +19,15 @@ const createPointLight = require('./point-light')
 const createAreaLight = require('./area-light')
 const createReflectionProbe = require('./reflection-probe')
 const createSkybox = require('./skybox')
+const path = require('path')
 
 // pex-fx extensions, extending FXStage
 // require('./Postprocess')
 // require('./BilateralBlur')
 // require('./SSAO')
 
-const DEPTH_PASS_VERT = glsl(__dirname + '/glsl/DepthPass.vert')
-const DEPTH_PASS_FRAG = glsl(__dirname + '/glsl/DepthPass.frag')
+const DEPTH_PASS_VERT = glsl(path.join(__dirname, 'glsl/DepthPass.vert'))
+const DEPTH_PASS_FRAG = glsl(path.join(__dirname, 'glsl/DepthPass.frag'))
 // var SOLID_COLOR_VERT = glsl(__dirname + '/glsl/SolidColor.vert')
 // var SOLID_COLOR_VERT = glsl(__dirname + '/glsl/SolidColor.vert')
 // var SOLID_COLOR_FRAG = fs.readFileSync(__dirname + '/glsl/SolidColor.frag', 'utf8')
@@ -45,18 +43,17 @@ var State = {
   exposure: 1,
   frame: 0,
   // fxaa: true,
-  postprocess: true,
-  dof: true,
+  postprocess: false,
+  dof: false,
   dofIterations: 1,
-  dofDepth: 0,
   dofRange: 5,
   dofRadius: 1,
   dofDepth: 6.76,
-  ssao: true,
+  ssao: false,
   ssaoIntensity: 5,
   ssaoRadius: 12,
   ssaoBias: 0.01,
-  bilateralBlur: true,
+  bilateralBlur: false,
   bilateralBlurRadius: 0.5,
   shadows: true,
   shadowQuality: 2,
@@ -149,8 +146,8 @@ Renderer.prototype.updateDirectionalLightShadowMap = function (light) {
   })
 }
 
-var PBRVert = glsl(__dirname + '/glsl/PBR.vert')
-var PBRFrag = glsl(__dirname + '/glsl/PBR.frag')
+var PBRVert = glsl(path.join(__dirname, 'glsl/PBR.vert'))
+var PBRFrag = glsl(path.join(__dirname, 'glsl/PBR.frag'))
 
 // TODO: how fast is building these flag strings every frame for every object?
 Renderer.prototype.getMaterialProgram = function (geometry, material, options) {
@@ -266,7 +263,7 @@ Renderer.prototype.getGeometryPipeline = function (geometry, material, opts) {
   if (!pipeline) {
     pipeline = ctx.pipeline({
       program: program,
-      depthEnabled: true,
+      depthTest: true,
       depthFunc: ctx.DepthFunc.LessEqual,
       cullFaceEnabled: true,
       cullFace: ctx.Face.Back
@@ -300,7 +297,7 @@ Renderer.prototype.drawMeshes = function (camera, shadowMappingLight) {
 
   if (State.profiler) State.profiler.time('drawMeshes')
 
-  function byCameraTags(component) {
+  function byCameraTags (component) {
     if (!camera) return true
     if (!camera.entity.tags) return false
     if (!component.entity.tags) return false
@@ -314,11 +311,12 @@ Renderer.prototype.drawMeshes = function (camera, shadowMappingLight) {
   const reflectionProbes = this.getComponents('ReflectionProbe')
 
   var sharedUniforms = this._sharedUniforms = this._sharedUniforms || {}
-  // sharedUniforms.uOutputRGBM = State.postprocess
+  sharedUniforms.uOutputEncoding = State.rgbm ? ctx.Encoding.RGBM : ctx.Encoding.Linear // TODO: State.postprocess
 
   // TODO:  find nearest reflection probe
   if (reflectionProbes.length > 0) {
     sharedUniforms.uReflectionMap = reflectionProbes[0]._reflectionMap
+    sharedUniforms.uReflectionMapEncoding = reflectionProbes[0]._reflectionMap.encoding
   }
   if (shadowMappingLight) {
     sharedUniforms.uProjectionMatrix = shadowMappingLight._projectionMatrix
@@ -328,7 +326,6 @@ Renderer.prototype.drawMeshes = function (camera, shadowMappingLight) {
     sharedUniforms.uProjectionMatrix = camera.projectionMatrix
     sharedUniforms.uViewMatrix = camera.viewMatrix
     sharedUniforms.uInverseViewMatrix = Mat4.invert(Mat4.copy(camera.viewMatrix))
-    sharedUniforms.uRGBM = camera.rgbm
   }
 
   if (State.ssao && camera) {
@@ -494,9 +491,9 @@ Renderer.prototype.draw = function () {
   reflectionProbes.forEach((probe) => {
     // TODO: this should be just node.reflectionProbe
     if (probe.dirty) {
-      probe.update((camera) => {
+      probe.update((camera, encoding) => {
         if (skyboxes.length > 0) {
-          skyboxes[0].draw(camera, { rgbm: true })
+          skyboxes[0].draw(camera, { outputEncoding: encoding })
         }
       })
     }
@@ -512,28 +509,26 @@ Renderer.prototype.draw = function () {
     }
   })
 
-  const currentCamera = cameras[0]
-
   cameras.forEach((camera, cameraIndex) => {
-    ctx.gl.clear(ctx.gl.DEPTH_BUFFER_BIT | ctx.gl.COLOR_BUFFER_BIT)
-    // ctx.submit(camera._drawFrameFboCommand, () => {
+    ctx.submit(camera._drawFrameFboCommand, () => {
       // depth prepass
-      // if (State.depthPrepass) {
-        // ctx.gl.colorMask(0, 0, 0, 0)
-        // this.drawMeshes(camera)
-        // ctx.gl.colorMask(1, 1, 1, 1)
-      // }
-      // this.drawMeshes(camera)
-      if (skyboxes.length > 0) {
-        skyboxes[0].draw(camera)
+      if (State.depthPrepass) {
+        ctx.gl.colorMask(0, 0, 0, 0)
+        this.drawMeshes(camera)
+        ctx.gl.colorMask(1, 1, 1, 1)
       }
-    // })
-    // ctx.submit(camera._blitCmd, {
-      // uniforms: {
-        // uExposure: State.exposure
-      // },
-      // viewport: camera.viewport
-    // })
+      this.drawMeshes(camera)
+      if (skyboxes.length > 0) {
+        skyboxes[0].draw(camera, { outputEncoding: camera._frameColorTex.encoding })
+      }
+    })
+    ctx.submit(camera._blitCmd, {
+      uniforms: {
+        uExposure: State.exposure,
+        uOutputEncoding: ctx.Encoding.Gamma
+      },
+      viewport: camera.viewport
+    })
   })
 
   /*
@@ -726,7 +721,7 @@ Renderer.prototype.material = function (opts) {
 }
 
 Renderer.prototype.camera = function (opts) {
-  return createCamera(Object.assign({ ctx: this._ctx }, opts))
+  return createCamera(Object.assign({ ctx: this._ctx, rgbm: State.rgbm }, opts))
 }
 
 Renderer.prototype.directionalLight = function (opts) {
@@ -742,11 +737,11 @@ Renderer.prototype.areaLight = function (opts) {
 }
 
 Renderer.prototype.reflectionProbe = function (opts) {
-  return createReflectionProbe(Object.assign({ ctx: this._ctx }, opts))
+  return createReflectionProbe(Object.assign({ ctx: this._ctx, rgbm: State.rgbm }, opts))
 }
 
 Renderer.prototype.skybox = function (opts) {
-  return createSkybox(Object.assign({ ctx: this._ctx }, opts))
+  return createSkybox(Object.assign({ ctx: this._ctx, rgbm: State.rgbm }, opts))
 }
 
 module.exports = function createRenderer (opts) {

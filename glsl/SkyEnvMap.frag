@@ -11,7 +11,6 @@ precision highp float;
 #endif
 
 uniform vec3 uSunPosition;
-uniform bool uRGBM;
 
 varying vec2 vTexCoord0;
 

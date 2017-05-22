@@ -7,7 +7,7 @@ const log = require('debug')('renderer:ReflectionProbe')
 function ReflectionProbe (opts) {
   this.type = 'ReflectionProbe'
   this.changed = new Signal()
-  this.rgbm = true
+  this.rgbm = false
 
   this.set(opts)
 
@@ -16,10 +16,11 @@ function ReflectionProbe (opts) {
   this.dirty = true
 
   const CUBEMAP_SIZE = 512
-  const dynamicCubemap = ctx.textureCube({
-    width: CUBEMAP_SIZE, height: CUBEMAP_SIZE,
-    // format: this.rgbm ? ctx.PixelFormat.RGBA8 : ctx.PixelFormat.RGBA32F
-    format: this.rgbm ? null : ctx.PixelFormat.RGBA32F // FIXME: pex-context/texture fails on rgba8
+  const dynamicCubemap = this._dynamicCubemap = ctx.textureCube({
+    width: CUBEMAP_SIZE,
+    height: CUBEMAP_SIZE,
+    pixelFormat: this.rgbm ? ctx.PixelFormat.RGBA8 : ctx.PixelFormat.RGBA32F,
+    encoding: this.rgbm ? ctx.Encoding.RGBM : ctx.Encoding.Linear
   })
 
   const sides = [
@@ -47,19 +48,22 @@ function ReflectionProbe (opts) {
   const quadTexCoords = [[0, 0], [1, 0], [1, 1], [0, 1]]
   const quadFaces = [[0, 1, 2], [0, 2, 3]]
 
-  const octMap = ctx.texture2D({
+  const octMap = this._octMap = ctx.texture2D({
     width: 1024,
     height: 1024,
-    format: this.rgbm ? null : ctx.PixelFormat.RGBA32F // FIXME: pex-context/texture fails on rgba8
+    pixelFormat: this.rgbm ? ctx.PixelFormat.RGBA8 : ctx.PixelFormat.RGBA32F,
+    encoding: this.rgbm ? ctx.Encoding.RGBM : ctx.Encoding.Linear
   })
 
   const irradianceOctMapSize = 64
-  const irradianceOctMap = ctx.texture2D({
-    width: irradianceOctMapSize,
-    height: irradianceOctMapSize,
+
+  const octMapAtlas = this._reflectionMap = ctx.texture2D({
+    width: 2 * 1024,
+    height: 2 * 1024,
     min: ctx.Filter.Linear,
     mag: ctx.Filter.Linear,
-    format: this.rgbm ? null : ctx.PixelFormat.RGBA32F // FIXME: pex-context/texture fails on rgba8
+    pixelFormat: this.rgbm ? ctx.PixelFormat.RGBA8 : ctx.PixelFormat.RGBA32F,
+    encoding: this.rgbm ? ctx.Encoding.RGBM : ctx.Encoding.Linear
   })
 
   const cubemapToOctMap = {
@@ -78,15 +82,14 @@ function ReflectionProbe (opts) {
     },
     indices: ctx.indexBuffer(quadFaces),
     uniforms: {
-      uTextureSize: irradianceOctMap.width,
-      uCubemap: null
+      uTextureSize: octMap.width,
+      uCubemap: dynamicCubemap
     }
   }
 
   const convolveOctmapAtlasToOctMap = {
     name: 'ReflectionProbe.convolveOctmapAtlasToOctMap',
     pass: ctx.pass({
-      // color: [ irradianceOctMap ]
       name: 'ReflectionProbe.convolveOctmapAtlasToOctMap',
       color: [ octMap ]
     }),
@@ -100,20 +103,13 @@ function ReflectionProbe (opts) {
     },
     indices: ctx.indexBuffer(quadFaces),
     uniforms: {
-      uTextureSize: irradianceOctMap.width,
-      uSource: null,
-      uSourceSize: null,
-      uRGBM: this.rgbm
+      uTextureSize: irradianceOctMapSize,
+      uSource: octMapAtlas,
+      uSourceSize: octMapAtlas.width,
+      uSourceEncoding: octMapAtlas.encoding,
+      uOutputEncoding: octMap.encoding
     }
   }
-
-  const octMapAtlas = this._reflectionMap = ctx.texture2D({
-    width: 2 * 1024,
-    height: 2 * 1024,
-    min: ctx.Filter.Linear,
-    mag: ctx.Filter.Linear,
-    format: this.rgbm ? null : ctx.PixelFormat.RGBA32F // FIXME: pex-context/texture fails on rgba8
-  })
 
   const clearOctMapAtlasCmd = {
     name: 'ReflectionProbe.clearOctMapAtlas',
@@ -181,7 +177,8 @@ function ReflectionProbe (opts) {
     uniforms: {
       uSource: octMapAtlas,
       uSourceSize: octMapAtlas.width,
-      uRGBM: this.rgbm
+      uSourceEncoding: octMapAtlas.encoding,
+      uOutputEncoding: octMap.encoding
     },
     attributes: {
       aPosition: ctx.vertexBuffer(quadPositions),
@@ -204,7 +201,8 @@ function ReflectionProbe (opts) {
     data: hammersleyPointSet,
     width: 1,
     height: numSamples,
-    format: ctx.PixelFormat.RGBA32F
+    pixelFormat: ctx.PixelFormat.RGBA32F,
+    encoding: ctx.Encoding.Linear
   })
 
   function blitToOctMapAtlasLevel (mipmapLevel, roughnessLevel, sourceRegionSize) {
@@ -250,14 +248,10 @@ function ReflectionProbe (opts) {
     this.dirty = false
     log('ReflectionProbe.update')
     sides.forEach((side) => {
-      ctx.submit(side.drawPassCmd, () => drawScene(side))
+      ctx.submit(side.drawPassCmd, () => drawScene(side, dynamicCubemap.encoding))
     })
 
-    ctx.submit(cubemapToOctMap, {
-      uniforms: {
-        uCubemap: dynamicCubemap
-      }
-    })
+    ctx.submit(cubemapToOctMap)
 
     ctx.submit(clearOctMapAtlasCmd)
 
@@ -279,25 +273,13 @@ function ReflectionProbe (opts) {
       blitToOctMapAtlasLevel(0, i, Math.max(64, octMap.width / Math.pow(2, 1 + i)))
     }
 
-    ctx.submit(cubemapToOctMap, {
-      uniforms: {
-        uCubemap: dynamicCubemap
-      }
-    })
-
     ctx.submit(convolveOctmapAtlasToOctMap, {
-      viewport: [0, 0, irradianceOctMapSize, irradianceOctMapSize],
-      uniforms: {
-        uSource: octMapAtlas,
-        uSourceSize: octMapAtlas.width,
-        uCubemap: dynamicCubemap
-      }
+      viewport: [0, 0, irradianceOctMapSize, irradianceOctMapSize]
     })
 
     ctx.submit(blitToOctMapAtlasCmd, {
       viewport: [octMapAtlas.width - irradianceOctMapSize, octMapAtlas.height - irradianceOctMapSize, irradianceOctMapSize, irradianceOctMapSize],
       uniforms: {
-        uLevelSize: irradianceOctMapSize,
         uSourceRegionSize: irradianceOctMapSize
       }
     })

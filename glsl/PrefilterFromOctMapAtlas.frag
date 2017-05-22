@@ -4,19 +4,20 @@ precision highp float;
 
 #pragma glslify: envMapOctahedral = require(./EnvMapOctahedral)
 #pragma glslify: octMapUVToDir = require(./OctMapUVToDir)
-#pragma glslify: encodeRGBM = require(../local_modules/glsl-rgbm/encode)
-#pragma glslify: decodeRGBM = require(../local_modules/glsl-rgbm/decode)
+#pragma glslify: decode = require(./decode)
+#pragma glslify: encode = require(./encode)
 
 varying vec2 vTexCoord;
 uniform float uTextureSize;
 uniform sampler2D uSource;
+uniform int uSourceEncoding;
 uniform sampler2D uHammersleyPointSetMap;
 uniform int uNumSamples;
 uniform float uLevel;
 uniform float uSourceMipmapLevel;
 uniform float uSourceRoughnessLevel;
 uniform float uRoughnessLevel;
-uniform bool uRGBM;
+uniform int uOutputEncoding;
 
 //if < 0 return -1, otherwise 1
 vec2 signed(vec2 v) {
@@ -94,11 +95,8 @@ vec3 PrefilterEnvMap( float roughness, vec3 R ) {
     vec3 L = 2.0 * dot( V, H ) * H - V;
     float NoL = saturate( dot( N, L ) );
     if( NoL > 0.0 ) {
-      if (uRGBM) {
-        PrefilteredColor += decodeRGBM(textureOctMapLod( uSource, envMapOctahedral(L))) * NoL;
-      } else {
-        PrefilteredColor += textureOctMapLod( uSource, envMapOctahedral(L)).rgb * NoL;
-      }
+      vec4 color = textureOctMapLod(uSource, envMapOctahedral(L));
+      PrefilteredColor += NoL * decode(color, uSourceEncoding).rgb;
       TotalWeight += NoL;
     }
   }
@@ -107,11 +105,7 @@ vec3 PrefilterEnvMap( float roughness, vec3 R ) {
 
 void main() {
   vec3 normal = octMapUVToDir(vTexCoord);
-  if (uRGBM) {
-    gl_FragColor = encodeRGBM(PrefilterEnvMap(uRoughnessLevel / 5.0, normal));
-  } else {
-    gl_FragColor.rgb = PrefilterEnvMap(uRoughnessLevel / 5.0, normal);
-    gl_FragColor.a = 1.0;
-  }
+  vec3 color = PrefilterEnvMap(uRoughnessLevel / 5.0, normal);
+  gl_FragColor = encode(vec4(color, 1.0), uOutputEncoding);
 }
 

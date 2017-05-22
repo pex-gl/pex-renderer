@@ -12,7 +12,7 @@ const Signal = require('signals')
 function Skybox (opts) {
   this.type = 'Skybox'
   this.changed = new Signal()
-  this.rgbm = true
+  this.rgbm = false
 
   const ctx = this._ctx = opts.ctx
 
@@ -29,7 +29,7 @@ function Skybox (opts) {
     pipeline: ctx.pipeline({
       vert: SKYBOX_VERT,
       frag: SKYBOX_FRAG,
-      depthTest: false
+      depthTest: true
     }),
     attributes: {
       aPosition: ctx.vertexBuffer(skyboxPositions)
@@ -39,7 +39,13 @@ function Skybox (opts) {
 
   var quad = createQuad()
 
-  this._skyTexture = ctx.texture2D({ width: 512, height: 256 })
+  this._skyTexture = ctx.texture2D({
+    width: 512,
+    height: 256,
+    pixelFormat: this.rgbm ? ctx.PixelFormat.RGBA8 : ctx.PixelFormat.RGBA32F,
+    encoding: this.rgbm ? ctx.Encoding.RGBM : ctx.Encoding.Linear
+  })
+
   this._updateSkyTexture = {
     name: 'Skybox.updateSkyTexture',
     pass: ctx.pass({
@@ -52,8 +58,7 @@ function Skybox (opts) {
       frag: SKYTEXTURE_FRAG
     }),
     uniforms: {
-      uSunPosition: [0, 0, 0],
-      uRGBM: this.rgbm
+      uSunPosition: [0, 0, 0]
     },
     attributes: {
       aPosition: ctx.vertexBuffer(quad.positions),
@@ -89,13 +94,15 @@ Skybox.prototype.draw = function (camera, opts) {
     })
   }
 
+  const texture = this.texture || this._skyTexture
   // TODO: can we somehow avoid creating an object every frame here?
   ctx.submit(this._drawCommand, {
     uniforms: {
       uProjectionMatrix: camera.projectionMatrix,
       uViewMatrix: camera.viewMatrix,
-      uEnvMap: this.texture || this._skyTexture,
-      // uOutputRGBM: opts && opts.rgbm
+      uEnvMap: texture,
+      uEnvMapEncoding: texture.encoding,
+      uOutputEncoding: opts.outputEncoding
     }
   })
 }

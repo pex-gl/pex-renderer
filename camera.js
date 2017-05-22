@@ -42,8 +42,8 @@ var ssaoNoiseData = new Float32Array(flatten(ssaoNoise))
 function Camera (opts) {
   this.type = 'Camera'
   this.changed = new Signal()
-  this.rgbm = true
   this.backgroundColor = [0, 0, 0, 1]
+  this.rgbm = false
 
   this.set(opts)
 
@@ -87,13 +87,19 @@ Camera.prototype.initPostproces = function () {
   this._frameColorTex = ctx.texture2D({
     width: W,
     height: H,
-    format: this.rgbm ? null : ctx.PixelFormat.RGBA32F
+    pixelFormat: this.rgbm ? ctx.PixelFormat.RGBA8 : ctx.PixelFormat.RGBA32F,
+    encoding: this.rgbm ? ctx.Encoding.RGBM : ctx.Encoding.Linear
   })
 
-  this._frameDepthTex = ctx.texture2D({ width: W, height: H, format: ctx.PixelFormat.Depth })
+  this._frameDepthTex = ctx.texture2D({
+    width: W,
+    height: H,
+    pixelFormat: ctx.PixelFormat.Depth,
+    encoding: ctx.Encoding.Linear
+  })
 
-  this._frameAOTex = ctx.texture2D({ width: W, height: H })
-  this._frameAOBlurTex = ctx.texture2D({ width: W, height: H })
+  this._frameAOTex = ctx.texture2D({ width: W, height: H, pixelFormat: ctx.PixelFormat.RGBA8, encoding: ctx.Encoding.Linear })
+  this._frameAOBlurTex = ctx.texture2D({ width: W, height: H, pixelFormat: ctx.PixelFormat.RGBA8, encoding: ctx.Encoding.Linear })
 
   ctx.gl.getExtension('OES_texture_float ')
   this._ssaoKernelMap = ctx.texture2D({ width: 8, height: 8, data: ssaoKernelData, pixelFormat: ctx.PixelFormat.RGBA32F, encoding: ctx.Encoding.Linear, wrap: ctx.Wrap.Repeat })
@@ -123,7 +129,7 @@ Camera.prototype.initPostproces = function () {
     uniforms: {
       uScreenSize: [W, H],
       uOverlay: this._frameColorTex,
-      uRGBM: this.rgbm
+      uOverlayEncoding: this._frameColorTex.encoding
     }
   }
 
