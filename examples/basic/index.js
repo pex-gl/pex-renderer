@@ -20,6 +20,8 @@ dragon.positions = centerAndNormalize(dragon.positions).map((v) => Vec3.scale(v,
 dragon.normals = normals(dragon.cells, dragon.positions)
 dragon.uvs = dragon.positions.map(() => [0, 0])
 
+const HOST = document.location.hostname
+
 const parseHdr = require('./local_modules/parse-hdr')
 const ctx = createContext()
 ctx.gl.getExtension('EXT_shader_texture_lod')
@@ -37,7 +39,8 @@ const State = {
   roughness: 0.5,
   metallic: 0.1,
   baseColor: [0.8, 0.1, 0.1, 1.0],
-  materials: []
+  materials: [],
+  rgbm: true
 }
 
 random.seed(10)
@@ -45,27 +48,15 @@ random.seed(10)
 const renderer = createRenderer({
   ctx: ctx,
   profile: true,
-  shadowQuality: 3
+  shadowQuality: 3,
+  pauseOnBlur: true,
+  rgbm: State.rgbm
 })
 
 const gui = createGUI(ctx)
 gui.addHeader('Sun')
 gui.addParam('Sun Elevation', State, 'elevation', { min: -90, max: 180 }, updateSunPosition)
 gui.addParam('Sun Azimuth', State, 'azimuth', { min: -180, max: 180 }, updateSunPosition)
-gui.addHeader('Postprocess')
-gui.addParam('Expsure', renderer._state, 'exposure')
-gui.addParam('Postprocess', renderer._state, 'postprocess')
-gui.addParam('DOF', renderer._state, 'dof')
-gui.addParam('DOF Iterations', renderer._state, 'dofIterations', { min: 1, max: 5, step: 1 })
-gui.addParam('DOF Depth', renderer._state, 'dofDepth', { min: 0, max: 20 })
-gui.addParam('DOF Range', renderer._state, 'dofRange', { min: 0, max: 20 })
-gui.addParam('DOF Radius', renderer._state, 'dofRadius', { min: 0, max: 20 })
-gui.addParam('SSAO', renderer._state, 'ssao')
-gui.addParam('SSAO radius', renderer._state, 'ssaoRadius', { min: 0, max: 30 })
-gui.addParam('SSAO intensity', renderer._state, 'ssaoIntensity', { min: 0, max: 10 })
-gui.addParam('SSAO bias', renderer._state, 'ssaoBias', { min: 0, max: 1 })
-gui.addParam('BilateralBlur', renderer._state, 'bilateralBlur')
-gui.addParam('BilateralBlur radius', renderer._state, 'bilateralBlurRadius', { min: 0, max: 5 })
 
 function updateSunPosition () {
   Mat4.setRotation(State.elevationMat, State.elevation / 180 * Math.PI, [0, 0, 1])
@@ -91,26 +82,44 @@ function updateSunPosition () {
   }
 }
 
-// gui.addParam('Exposure', renderer._state, 'exposure', { min: 0.01, max: 5 })
-// gui.addParam('Shadow Bias', renderer._state, 'bias', { min: 0.001, max: 0.1 })
-// gui.addParam('SSAO', renderer._state, 'ssao')
-// gui.addParam('SSAO Sharpness', renderer._state, 'ssaoSharpness', { min: 0, max: 100 })
-// gui.addParam('SSAO Radius', renderer._state, 'ssaoRadius', { min: 0, max: 1 })
-
 function initCamera () {
   const camera = createCamera({
     fov: Math.PI / 3,
     aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
     position: [0, 1, 10],
     target: [0, 0, 0],
-    near: 0.1,
+    near: 2,
     far: 100
   })
   createOrbiter({ camera: camera })
 
+  const cameraCmp = renderer.camera({
+    ssao: true,
+    // ssaoIntensity: 10,
+    // bilateralBlur: true,
+    // dof: true,
+    // depthPrepass: false,
+    camera: camera
+  })
   renderer.entity([
-    renderer.camera({ camera: camera })
+    cameraCmp
   ])
+
+  gui.addHeader('Postprocess').setPosition(180, 10)
+  gui.addParam('Expsure', cameraCmp, 'exposure', { min: 0, max: 5 })
+  gui.addParam('SSAO', cameraCmp, 'ssao')
+  gui.addParam('SSAO radius', cameraCmp, 'ssaoRadius', { min: 0, max: 30 })
+  gui.addParam('SSAO intensity', cameraCmp, 'ssaoIntensity', { min: 0, max: 10 })
+  gui.addParam('SSAO bias', cameraCmp, 'ssaoBias', { min: 0, max: 1 })
+  gui.addParam('BilateralBlur', cameraCmp, 'bilateralBlur')
+  gui.addParam('BilateralBlur radius', cameraCmp, 'bilateralBlurRadius', { min: 0, max: 5 })
+  gui.addParam('Postprocess', cameraCmp, 'postprocess')
+  gui.addParam('DOF', cameraCmp, 'dof')
+  gui.addParam('DOF Iterations', cameraCmp, 'dofIterations', { min: 1, max: 5, step: 1 })
+  gui.addParam('DOF Depth', cameraCmp, 'dofDepth', { min: 0, max: 20 })
+  gui.addParam('DOF Range', cameraCmp, 'dofRange', { min: 0, max: 20 })
+  gui.addParam('DOF Radius', cameraCmp, 'dofRadius', { min: 0, max: 20 })
+  gui.addParam('FXAA', cameraCmp, 'fxaa')
 }
 
 function initMeshes () {
@@ -123,6 +132,7 @@ function initMeshes () {
 
 
   random.seed(14)
+
   for (var i = 0; i < 20; i++) {
     renderer.entity([
       renderer.transform({
@@ -189,7 +199,7 @@ function initMeshes () {
     }
     materialIndex = (materialIndex + 1) % State.materials.length
   }
-  gui.addHeader('Material')
+  gui.addHeader('Material').setPosition(10, 150)
   gui.addParam('Roughness', State, 'roughness', {}, () => {
     entities.forEach((entity) => { entity.getComponent('Material').set({ roughness: State.roughness }) })
   })
@@ -199,8 +209,6 @@ function initMeshes () {
   gui.addParam('Base Color', State, 'baseColor', { type: 'color' }, () => {
     entities.forEach((entity) => { entity.getComponent('Material').set({ baseColor: State.baseColor }) })
   })
-  gui.addHeader('Tex')
-  gui.addTexture2D('Depth', renderer._frameDepthTex)
 }
 
 function initSky (panorama) {
@@ -212,7 +220,7 @@ function initSky (panorama) {
 
   const skybox = State.skybox = renderer.skybox({
     sunPosition: State.sunPosition,
-    // texture: panorama
+    texture: panorama
   })
 
   // currently this also includes light probe functionality
@@ -355,7 +363,7 @@ ground_SquarePaversOnGrass_PBR_Metallic
 wall_GenericBrownStucco_PBR_Metallic
 wood_OldWideFloorPlanks_PBR_Metallic`
 
-const ASSETS_DIR = isBrowser ? 'http://localhost/assets' : '/Users/vorg/Workspace/assets'
+const ASSETS_DIR = isBrowser ? `http://${HOST}/assets` : '/Users/vorg/Workspace/assets'
 
 function initMaterials () {
   let baseColorTextures = [
@@ -390,10 +398,10 @@ function initMaterials () {
   baseColorTextures = baseColorTextures.slice(46, 50)
   for (let i = 0; i < baseColorTextures.length; i++) {
     const mat = {}
-    mat.baseColorTex = imageFromFile(baseColorTextures[i], { flip: false, mipmap: true, repeat: true })
-    mat.normalTex = imageFromFile(baseColorTextures[i].replace('_basecolor.', '_n.'), { flipY: true, mipmap: true, repeat: true })
-    mat.roughnessTex = imageFromFile(baseColorTextures[i].replace('_basecolor.', '_roughness.'), { flipY: true, mipmap: true, repeat: true })
-    mat.metallicTex = imageFromFile(baseColorTextures[i].replace('_basecolor.', '_metallic.'), { flipY: true, mipmap: true, repeat: true })
+    mat.baseColorTex = imageFromFile(baseColorTextures[i], { flip: false, mipmap: true, repeat: true, encoding: ctx.Encoding.SRGB })
+    mat.normalTex = imageFromFile(baseColorTextures[i].replace('_basecolor.', '_n.'), { flipY: true, mipmap: true, repeat: true, encoding: ctx.Encoding.Linear })
+    mat.roughnessTex = imageFromFile(baseColorTextures[i].replace('_basecolor.', '_roughness.'), { flipY: true, mipmap: true, repeat: true, encoding: ctx.Encoding.Linear })
+    mat.metallicTex = imageFromFile(baseColorTextures[i].replace('_basecolor.', '_metallic.'), { flipY: true, mipmap: true, repeat: true, encoding: ctx.Encoding.Linear })
     // mat.normalTex = imageFromFile(baseColorTextures[i].replace('_Base_Color.', '_Normal.'), { flipY: true, mipmap: true, repeat: true })
     // mat.roughnessTex = imageFromFile(baseColorTextures[i].replace('_Base_Color.', '_Roughness.'), { flipY: true, mipmap: true, repeat: true })
     // mat.metallicTex = imageFromFile(baseColorTextures[i].replace('_Base_Color.', '_Metallic.'), { flipY: true, mipmap: true, repeat: true })
@@ -402,7 +410,17 @@ function initMaterials () {
 }
 
 function imageFromFile (file, options) {
-  const tex = ctx.texture2D({ width: 1, height: 1})
+  const tex = ctx.texture2D({
+    width: 1,
+    height: 1,
+    pixelFormat: ctx.PixelFormat.RGBA8,
+    encoding: options.encoding,
+    wrap: ctx.Wrap.Repeat,
+    flipY: true,
+    min: ctx.Filter.Linear,
+    mag: ctx.Filter.Linear,
+    aniso: 16
+  })
   io.loadImage(file, function (err, image) {
     console.log('image loaded', file)
     if (err) console.log(err)
@@ -410,10 +428,6 @@ function imageFromFile (file, options) {
       data: image,
       width: image.width,
       height: image.height,
-      wrap: ctx.Wrap.Repeat,
-      flipY: true,
-      min: ctx.Filter.Linear,
-      mag: ctx.Filter.LinearMipmapLinear
     })
     ctx.update(tex, { mipmap: true })
     // tex(Object.assign(canvasToPixels(image), {
@@ -425,14 +439,14 @@ function imageFromFile (file, options) {
   return tex
 }
 
-initMaterials()
+// initMaterials()
 initCamera()
 initMeshes()
-// io.loadBinary('http://localhost/assets/envmaps/grace-new/grace-new.hdr', (err, buf) => {
+io.loadBinary(`http://${HOST}/assets/envmaps/grace-new/grace-new.hdr`, (err, buf) => {
 // io.loadBinary('http://localhost/assets/envmaps/garage/garage.hdr', (err, buf) => {
 // io.loadBinary('http://192.168.1.123/assets/envmaps/OpenfootageNET_Salzach_low.hdr', (err, buf) => {
 // io.loadBinary('http://192.168.1.123/assets/envmaps/multi-area-light/multi-area-light.hdr', (err, buf) => {
-io.loadBinary('http://192.168.1.123/assets/envmaps/hallstatt4_hd.hdr', (err, buf) => {
+// io.loadBinary('http://192.168.1.123/assets/envmaps/hallstatt4_hd.hdr', (err, buf) => {
   const hdrImg = parseHdr(buf)
   const data = new Uint8Array(hdrImg.data.length)
   for (var i = 0; i < hdrImg.data.length; i+=4) {
@@ -454,7 +468,13 @@ io.loadBinary('http://192.168.1.123/assets/envmaps/hallstatt4_hd.hdr', (err, buf
     data[i + 2] = (b * 255) | 0
     data[i + 3] = (a * 255) | 0
   }
-  const panoramaRGBM = ctx.texture2D({ data: data, width: hdrImg.shape[0], height: hdrImg.shape[1], /*format: ctx.PixelFormat.RGBA8,*/ flipY: true })
+  const panoramaRGBM = ctx.texture2D({
+    data: State.rgbm ? data : hdrImg.data,
+    width: hdrImg.shape[0],
+    height: hdrImg.shape[1], 
+    pixelFormat: State.rgbm ? ctx.PixelFormat.RGBA8 : ctx.PixelFormat.RGBA32F,
+    encoding: State.rgbm ? ctx.Encoding.RGBM : ctx.Encoding.Linear,
+    flipY: true })
   gui.addTexture2D('Panorama', panoramaRGBM)
   initSky(panoramaRGBM)
 })
@@ -466,6 +486,7 @@ let debugOnce = false
 
 window.addEventListener('keydown', (e) => {
   if (e.key === 'd') debugOnce = true
+  if (e.key === 'g') gui.toggleEnabled()
 })
 
 updateSunPosition()
@@ -475,5 +496,7 @@ ctx.frame(() => {
   debugOnce = false
   renderer.draw()
 
-  gui.draw()
+  if (!renderer._state.paused) {
+    gui.draw()
+  }
 })
