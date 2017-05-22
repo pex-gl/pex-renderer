@@ -44,6 +44,20 @@ function Camera (opts) {
   this.changed = new Signal()
   this.backgroundColor = [0, 0, 0, 1]
   this.rgbm = false
+  this.depthPrepass = true
+  this.ssao = false
+  this.ssaoIntensity = 5
+  this.ssaoRadius = 12
+  this.ssaoBias = 0.01
+  this.dof = false
+  this.dofIterations = 1
+  this.dofRange = 5
+  this.dofRadius = 1
+  this.dofDepth = 6.76
+  this.bilateralBlur = false
+  this.bilateralBlurRadius = 0.5
+  this.exposure = 1
+  this.fxaa = false
 
   this.set(opts)
 
@@ -100,6 +114,7 @@ Camera.prototype.initPostproces = function () {
 
   this._frameAOTex = ctx.texture2D({ width: W, height: H, pixelFormat: ctx.PixelFormat.RGBA8, encoding: ctx.Encoding.Linear })
   this._frameAOBlurTex = ctx.texture2D({ width: W, height: H, pixelFormat: ctx.PixelFormat.RGBA8, encoding: ctx.Encoding.Linear })
+  this._frameDofBlurTex = ctx.texture2D({ width: W, height: H, pixelFormat: ctx.PixelFormat.RGBA32F, encoding: ctx.Encoding.Linear })
 
   ctx.gl.getExtension('OES_texture_float ')
   this._ssaoKernelMap = ctx.texture2D({ width: 8, height: 8, data: ssaoKernelData, pixelFormat: ctx.PixelFormat.RGBA32F, encoding: ctx.Encoding.Linear, wrap: ctx.Wrap.Repeat })
@@ -133,8 +148,8 @@ Camera.prototype.initPostproces = function () {
     }
   }
 
-  this._saoCmd = {
-    name: 'Camera.sao',
+  this._ssaoCmd = {
+    name: 'Camera.ssao',
     pass: ctx.pass({
       name: 'Camera.ssao',
       color: [ this._frameAOTex ],
@@ -206,7 +221,7 @@ Camera.prototype.initPostproces = function () {
     name: 'Camera.bilateralBlurH',
     pass: ctx.pass({
       name: 'Camera.dofBilateralBlurH',
-      color: [ this._frameAOBlurTex ],
+      color: [ this._frameDofBlurTex ],
       clearColor: [1, 1, 0, 1]
     }),
     pipeline: ctx.pipeline({
@@ -240,7 +255,7 @@ Camera.prototype.initPostproces = function () {
     uniforms: {
       depthMap: this._frameDepthTex,
       depthMapSize: [W, H],
-      image: this._frameAOBlurTex,
+      image: this._frameDofBlurTex,
       // direction: [0, State.bilateralBlurRadius] // TODO:
       direction: [0, 0.5]
     }

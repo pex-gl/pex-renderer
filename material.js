@@ -16,7 +16,7 @@ function Material (opts) {
   this.displacement = 0
   this.depthTest = true
   this.depthWrite = true
-  this.depthFunc = opts.ctx.DepthFunc.Less
+  this.depthFunc = opts.ctx.DepthFunc.LessEqual
 
   this.set(opts)
 }

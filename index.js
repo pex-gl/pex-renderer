@@ -37,33 +37,10 @@ const DEPTH_PASS_FRAG = glsl(path.join(__dirname, 'glsl/DepthPass.frag'))
 // var SHOW_COLORS_FRAG = fs.readFileSync(__dirname + '/glsl/ShowColors.frag', 'utf8')
 
 var State = {
-  backgroundColor: [0.1, 0.1, 0.1, 1],
-  depthPrepass: true,
-  // sunPosition: [3, 3, 0],
-  // sunColor: [5, 5, 5, 1],
-  // prevSunPosition: [0, 0, 0],
-  exposure: 1,
   frame: 0,
-  // fxaa: true,
-  postprocess: false,
-  dof: false,
-  dofIterations: 1,
-  dofRange: 5,
-  dofRadius: 1,
-  dofDepth: 6.76,
-  ssao: false,
-  ssaoIntensity: 5,
-  ssaoRadius: 12,
-  ssaoBias: 0.01,
-  bilateralBlur: false,
-  bilateralBlurRadius: 0.5,
-  shadows: true,
   shadowQuality: 2,
   debug: false,
   profile: false,
-  watchShaders: false,
-  useNewPBR: true,
-  // skyEnvMap: null,
   profiler: null,
   paused: false
 }
@@ -170,7 +147,7 @@ Renderer.prototype.getMaterialProgram = function (geometry, material, skin, opti
   if (geometry._attributes.aRotation) {
     flags.push('#define USE_INSTANCED_ROTATION')
   }
-  if (State.ssao) {
+  if (options.useSSAO) {
     flags.push('#define USE_AO')
   }
   if (material.displacementMap) {
@@ -273,7 +250,6 @@ Renderer.prototype.getGeometryPipeline = function (geometry, material, skin, opt
       depthTest: material.depthTest,
       depthWrite: material.depthWrite,
       depthFunc: material.depthFunc,
-      depthFunc: ctx.DepthFunc.LessEqual,
       cullFaceEnabled: true,
       cullFace: ctx.Face.Back,
       primitive: geometry.primitive
@@ -338,9 +314,9 @@ Renderer.prototype.drawMeshes = function (camera, shadowMappingLight) {
     sharedUniforms.uInverseViewMatrix = Mat4.invert(Mat4.copy(camera.viewMatrix))
   }
 
-  if (State.ssao && camera) {
+  if (camera && camera.ssao) {
     sharedUniforms.uAO = camera._frameAOTex
-    sharedUniforms.uScreenSize = [ this._width, this._height ]
+    sharedUniforms.uScreenSize = [ this._width, this._height ] // TODO: should this be camera viewport size?
   }
 
   directionalLights.forEach(function (light, i) {
@@ -418,7 +394,8 @@ Renderer.prototype.drawMeshes = function (camera, shadowMappingLight) {
         numDirectionalLights: directionalLights.length,
         numPointLights: pointLights.length,
         numAreaLights: areaLights.length,
-        useReflectionProbes: reflectionProbes.length // TODO: reflection probes true
+        useReflectionProbes: reflectionProbes.length, // TODO: reflection probes true
+        useSSAO: camera.ssao
       })
     }
 
@@ -440,14 +417,14 @@ Renderer.prototype.drawMeshes = function (camera, shadowMappingLight) {
       Mat4.transpose(normalMat)
       cachedUniforms.uNormalMatrix = Mat3.fromMat4(Mat3.create(), normalMat)
     }
-  
+
     ctx.submit({
       name: 'drawGeometry',
       attributes: geometry._attributes,
       indices: geometry._indices,
       pipeline: pipeline,
       uniforms: cachedUniforms,
-      instances: geometry.instances,
+      instances: geometry.instances
     })
   }
 
@@ -527,7 +504,7 @@ Renderer.prototype.draw = function () {
   cameras.forEach((camera, cameraIndex) => {
     ctx.submit(camera._drawFrameFboCommand, () => {
       // depth prepass
-      if (State.depthPrepass) {
+      if (camera.depthPrepass) {
         ctx.gl.colorMask(0, 0, 0, 0)
         this.drawMeshes(camera)
         ctx.gl.colorMask(1, 1, 1, 1)
@@ -537,9 +514,72 @@ Renderer.prototype.draw = function () {
         skyboxes[0].draw(camera, { outputEncoding: camera._frameColorTex.encoding })
       }
     })
+    if (camera.ssao) {
+      ctx.submit(camera._ssaoCmd, {
+        uniforms: {
+          uNear: camera.camera.near,
+          uFar: camera.camera.far,
+          uFov: camera.camera.fov,
+          viewMatrix: camera.camera.viewMatrix,
+          uInverseViewMatrix: Mat4.invert(Mat4.copy(camera.camera.viewMatrix)),
+          viewProjectionInverseMatrix: Mat4.invert(Mat4.mult(Mat4.copy(camera.camera.viewMatrix), camera.camera.projectionMatrix)),
+          cameraPositionWorldSpace: camera.camera.position,
+          uIntensity: camera.ssaoIntensity,
+          uNoiseScale: [10, 10],
+          uSampleRadiusWS: camera.ssaoRadius,
+          uBias: camera.ssaoBias
+        }
+      })
+    }
+    if (camera.ssao && camera.bilateralBlur) {
+      ctx.submit(camera._bilateralBlurHCmd, {
+        uniforms: {
+          near: camera.camera.near,
+          far: camera.camera.far,
+          sharpness: 1,
+          imageSize: [this._width, this._height],
+          direction: [camera.bilateralBlurRadius, 0]
+        }
+      })
+      ctx.submit(camera._bilateralBlurVCmd, {
+        uniforms: {
+          near: camera.camera.near,
+          far: camera.camera.far,
+          sharpness: 1,
+          imageSize: [this._width, this._height],
+          direction: [0, camera.bilateralBlurRadius]
+        }
+      })
+    }
+    if (camera.dof) {
+      for (var i = 0; i < camera.dofIterations; i++) {
+        ctx.submit(camera._dofBlurHCmd, {
+          uniforms: {
+            near: camera.camera.near,
+            far: camera.camera.far,
+            sharpness: 1,
+            imageSize: [this._width, this._height],
+            direction: [camera.dofRadius, 0],
+            uDOFDepth: camera.dofDepth,
+            uDOFRange: camera.dofRange
+          }
+        })
+        ctx.submit(camera._dofBlurVCmd, {
+          uniforms: {
+            near: camera.camera.near,
+            far: camera.camera.far,
+            sharpness: 1,
+            imageSize: [this._width, this._height],
+            direction: [0, camera.dofRadius],
+            uDOFDepth: camera.dofDepth,
+            uDOFRange: camera.dofRange
+          }
+        })
+      }
+    }
     ctx.submit(camera._blitCmd, {
       uniforms: {
-        uExposure: State.exposure,
+        uExposure: camera.exposure,
         uOutputEncoding: ctx.Encoding.Gamma
       },
       viewport: camera.viewport
@@ -571,43 +611,6 @@ Renderer.prototype.draw = function () {
   }
   */
   /*
-  if (State.ssao) {
-    ctx.submit(this._saoCmd, {
-      uniforms: {
-        uNear: currentCamera.camera.near,
-        uFar: currentCamera.camera.far,
-        uFov: currentCamera.camera.fov,
-        viewMatrix: currentCamera.camera.viewMatrix,
-        uInverseViewMatrix: Mat4.invert(Mat4.copy(currentCamera.camera.viewMatrix)),
-        viewProjectionInverseMatrix: Mat4.invert(Mat4.mult(Mat4.copy(currentCamera.camera.viewMatrix), currentCamera.camera.projectionMatrix)),
-        cameraPositionWorldSpace: currentCamera.camera.position,
-        uIntensity: State.ssaoIntensity,
-        uNoiseScale: [10, 10],
-        uSampleRadiusWS: State.ssaoRadius,
-        uBias: State.ssaoBias
-      }
-    })
-  }
-  if (State.bilateralBlur) {
-    ctx.submit(this._bilateralBlurHCmd, {
-      uniforms: {
-        near: currentCamera.camera.near,
-        far: currentCamera.camera.far,
-        sharpness: 1,
-        imageSize: [this._width, this._height],
-        direction: [State.bilateralBlurRadius, 0]
-      }
-    })
-    ctx.submit(this._bilateralBlurVCmd, {
-      uniforms: {
-        near: currentCamera.camera.near,
-        far: currentCamera.camera.far,
-        sharpness: 1,
-        imageSize: [this._width, this._height],
-        direction: [0, State.bilateralBlurRadius]
-      }
-    })
-  }
   if (State.postprocess) {
     ctx.submit(this._drawFrameFboCmd, () => {
       this.drawMeshes()
@@ -616,32 +619,6 @@ Renderer.prototype.draw = function () {
         skyboxes[0].draw(currentCamera, { rgbm: true })
       }
     })
-    if (State.dof) {
-      for (var i = 0; i < State.dofIterations; i++) {
-        ctx.submit(this._dofBlurHCmd, {
-          uniforms: {
-            near: currentCamera.camera.near,
-            far: currentCamera.camera.far,
-            sharpness: 1,
-            imageSize: [this._width, this._height],
-            direction: [State.dofRadius, 0],
-            uDOFDepth: State.dofDepth,
-            uDOFRange: State.dofRange
-          }
-        })
-        ctx.submit(this._dofBlurVCmd, {
-          uniforms: {
-            near: currentCamera.camera.near,
-            far: currentCamera.camera.far,
-            sharpness: 1,
-            imageSize: [this._width, this._height],
-            direction: [0, State.dofRadius],
-            uDOFDepth: State.dofDepth,
-            uDOFRange: State.dofRange
-          }
-        })
-      }
-    }
     ctx.submit(this._blitCmd, {
       uniforms: {
         uExposure: State.exposure
