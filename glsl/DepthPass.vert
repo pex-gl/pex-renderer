@@ -4,8 +4,6 @@ attribute vec3 aPosition;
 attribute vec3 aOffset;
 #endif
 
-attribute vec2 aTexCoord0;
-attribute vec3 aNormal;
 #ifdef USE_SKIN
 attribute vec4 aJoint;
 attribute vec4 aWeight;
@@ -15,6 +13,8 @@ uniform mat4 uJointMat[NUM_JOINTS];
 #ifdef USE_DISPLACEMENT_MAP
 uniform sampler2D uDisplacementMap;
 uniform float uDisplacement;
+attribute vec2 aTexCoord0;
+attribute vec3 aNormal;
 #endif
 
 uniform mat4 uProjectionMatrix;
