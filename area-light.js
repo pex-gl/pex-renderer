@@ -14,8 +14,20 @@ function AreaLight (opts) {
 
   // TODO: area light textures
   if (!AreaLight.areaLightTextures) {
-    AreaLight.ltc_mat_texture = ctx.texture2D({ data: AreaLightsData.mat, width: 64, height: 64, format: ctx.PixelFormat.RGBA32F })
-    AreaLight.ltc_mag_texture = ctx.texture2D({ data: AreaLightsData.mag, width: 64, height: 64, format: ctx.PixelFormat.R32F })
+    AreaLight.ltc_mat_texture = ctx.texture2D({
+      data: AreaLightsData.mat,
+      width: 64, 
+      height: 64,
+      pixelFormat: ctx.PixelFormat.RGBA32F,
+      encoding: ctx.Encoding.Linear
+    })
+    AreaLight.ltc_mag_texture = ctx.texture2D({
+      data: AreaLightsData.mag,
+      width: 64,
+      height: 64,
+      pixelFormat: ctx.PixelFormat.R32F,
+      encoding: ctx.Encoding.Linear
+    })
     AreaLight.areaLightTextures = true
   }
   this.ltc_mat_texture = AreaLight.ltc_mat_texture
