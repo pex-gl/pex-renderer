@@ -41,8 +41,9 @@ function Skybox (opts) {
 
   this._skyTexture = ctx.texture2D({ width: 512, height: 256 })
   this._updateSkyTexture = {
-    name: 'sky env map',
+    name: 'Skybox.updateSkyTexture',
     pass: ctx.pass({
+      name: 'Skybox.updateSkyTexture',
       color: [ this._skyTexture ],
       clearColor: [0, 0, 0, 0]
     }),

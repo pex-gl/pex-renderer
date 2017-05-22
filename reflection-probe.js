@@ -35,6 +35,7 @@ function ReflectionProbe (opts) {
     side.drawPassCmd = {
       name: 'ReflectionProbe.sidePass',
       pass: ctx.pass({
+        name: 'ReflectionProbe.sidePass',
         color: [{ texture: dynamicCubemap, target: ctx.gl.TEXTURE_CUBE_MAP_POSITIVE_X + i }],
         clearColor: [0, 0, 0, 1],
         clearDepth: 1
@@ -64,6 +65,7 @@ function ReflectionProbe (opts) {
   const cubemapToOctMap = {
     name: 'ReflectionProbe.cubemapToOctMap',
     pass: ctx.pass({
+      name: 'ReflectionProbe.cubemapToOctMap',
       color: [ octMap ]
     }),
     pipeline: ctx.pipeline({
@@ -85,6 +87,7 @@ function ReflectionProbe (opts) {
     name: 'ReflectionProbe.convolveOctmapAtlasToOctMap',
     pass: ctx.pass({
       // color: [ irradianceOctMap ]
+      name: 'ReflectionProbe.convolveOctmapAtlasToOctMap',
       color: [ octMap ]
     }),
     pipeline: ctx.pipeline({
@@ -113,7 +116,9 @@ function ReflectionProbe (opts) {
   })
 
   const clearOctMapAtlasCmd = {
+    name: 'ReflectionProbe.clearOctMapAtlas',
     pass: ctx.pass({
+      name: 'ReflectionProbe.clearOctMapAtlas',
       color: [ octMapAtlas ],
       clearColor: [0, 0, 0, 0]
     })
@@ -122,6 +127,7 @@ function ReflectionProbe (opts) {
   const blitToOctMapAtlasCmd = {
     name: 'ReflectionProbe.blitToOctMapAtlasCmd',
     pass: ctx.pass({
+      name: 'ReflectionProbe.blitToOctMapAtlasCmd',
       color: [ octMapAtlas ]
     }),
     pipeline: ctx.pipeline({
@@ -142,6 +148,7 @@ function ReflectionProbe (opts) {
   const downsampleFromOctMapAtlasCmd = {
     name: 'ReflectionProbe.downsampleFromOctMapAtlasCmd',
     pass: ctx.pass({
+      name: 'ReflectionProbe.downsampleFromOctMapAtlasCmd',
       color: [ octMap ],
       clearColor: [0, 1, 0, 1]
     }),
@@ -163,6 +170,7 @@ function ReflectionProbe (opts) {
   const prefilterFromOctMapAtlasCmd = {
     name: 'ReflectionProbe.prefilterFromOctMapAtlasCmd',
     pass: ctx.pass({
+      name: 'ReflectionProbe.prefilterFromOctMapAtlasCmd',
       color: [ octMap ],
       clearColor: [0, 1, 0, 1]
     }),

@@ -33,8 +33,9 @@ function DirectionalLight (opts) {
   this._projectionMatrix = Mat4.create()
 
   this._shadowMapDrawCommand = {
-    name: 'shadowMap',
+    name: 'DirectionalLight.shadowMap',
     pass: ctx.pass({
+      name: 'DirectionalLight.shadowMap',
       color: [ this._colorMap ],
       depth: this._shadowMap,
       clearColor: [0, 0, 0, 1],

@@ -100,8 +100,9 @@ Camera.prototype.initPostproces = function () {
   this._ssaoNoiseMap = ctx.texture2D({ width: 128, height: 128, data: ssaoNoiseData, pixelFormat: ctx.PixelFormat.RGBA32F, encoding: ctx.Encoding.Linear, wrap: ctx.Wrap.Repeat, mag: ctx.Filter.Linear, min: ctx.Filter.Linear })
 
   this._drawFrameFboCommand = {
-    name: 'drawFrame',
+    name: 'Camera.drawFrame',
     pass: ctx.pass({
+      name: 'Camera.drawFrame',
       // color: [ this._frameColorTex, this._frameNormalTex ],
       color: [ this._frameColorTex ],
       depth: this._frameDepthTex,
@@ -112,7 +113,7 @@ Camera.prototype.initPostproces = function () {
 
   // this._overlayProgram = ctx.program({ vert: OVERLAY_VERT, frag: OVERLAY_FRAG }) // TODO
   this._blitCmd = {
-    name: 'blit',
+    name: 'Camera.blit',
     pipeline: ctx.pipeline({
       vert: OVERLAY_VERT,
       frag: OVERLAY_FRAG
@@ -127,8 +128,9 @@ Camera.prototype.initPostproces = function () {
   }
 
   this._saoCmd = {
-    name: 'sao',
+    name: 'Camera.sao',
     pass: ctx.pass({
+      name: 'Camera.ssao',
       color: [ this._frameAOTex ],
       clearColor: [0, 0, 0, 1]
       // clearDepth: 1
@@ -147,8 +149,9 @@ Camera.prototype.initPostproces = function () {
   }
 
   this._bilateralBlurHCmd = {
-    name: 'bilateralBlurH',
+    name: 'Camera.bilateralBlurH',
     pass: ctx.pass({
+      name: 'Camera.bilateralBlurH',
       color: [ this._frameAOBlurTex ],
       clearColor: [1, 1, 0, 1]
     }),
@@ -170,8 +173,9 @@ Camera.prototype.initPostproces = function () {
   }
 
   this._bilateralBlurVCmd = {
-    name: 'bilateralBlurV',
+    name: 'Camera.bilateralBlurV',
     pass: ctx.pass({
+      name: 'Camera.bilateralBlurV',
       color: [ this._frameAOTex ],
       clearColor: [1, 1, 0, 1]
     }),
@@ -193,8 +197,9 @@ Camera.prototype.initPostproces = function () {
   }
 
   this._dofBlurHCmd = {
-    name: 'bilateralBlurH',
+    name: 'Camera.bilateralBlurH',
     pass: ctx.pass({
+      name: 'Camera.dofBilateralBlurH',
       color: [ this._frameAOBlurTex ],
       clearColor: [1, 1, 0, 1]
     }),
@@ -214,8 +219,9 @@ Camera.prototype.initPostproces = function () {
   }
 
   this._dofBlurVCmd = {
-    name: 'bilateralBlurV',
+    name: 'Camera.bilateralBlurV',
     pass: ctx.pass({
+      name: 'Camera.dofBilateralBlurV',
       color: [ this._frameColorTex ],
       clearColor: [1, 1, 0, 1]
     }),
