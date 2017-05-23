@@ -94,7 +94,6 @@ Geometry.prototype.set = function (opts) {
   }
 
   if (opts.weights) {
-    console.log('geometry set weight', opts.weights.slice(0, 16))
     if (!this._weightsBuf) {
       this._weightsBuf = ctx.vertexBuffer(opts.weights)
     } else {
