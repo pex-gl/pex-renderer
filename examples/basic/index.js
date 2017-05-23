@@ -12,7 +12,6 @@ const createGUI = require('pex-gui')
 const random = require('pex-random')
 const createContext = require('pex-context')
 const io = require('pex-io')
-const isBrowser = require('is-browser')
 const dragon = require('stanford-dragon/3')
 const normals = require('angle-normals')
 const centerAndNormalize = require('geom-center-and-normalize')
@@ -20,9 +19,6 @@ dragon.positions = centerAndNormalize(dragon.positions).map((v) => Vec3.scale(v,
 dragon.normals = normals(dragon.cells, dragon.positions)
 dragon.uvs = dragon.positions.map(() => [0, 0])
 
-const HOST = document.location.hostname
-
-const parseHdr = require('./local_modules/parse-hdr')
 const ctx = createContext()
 ctx.gl.getExtension('EXT_shader_texture_lod')
 ctx.gl.getExtension('OES_standard_derivatives')
@@ -30,8 +26,8 @@ ctx.gl.getExtension('WEBGL_draw_buffers')
 ctx.gl.getExtension('OES_texture_float')
 
 const State = {
-  sunPosition: [0, 5, -5],
-  elevation: 65,
+  sunPosition: [0, 1, -5],
+  elevation: 25,
   azimuth: -45,
   mie: 0.000021,
   elevationMat: Mat4.create(),
@@ -40,7 +36,7 @@ const State = {
   metallic: 0.1,
   baseColor: [0.8, 0.1, 0.1, 1.0],
   materials: [],
-  rgbm: true
+  rgbm: false
 }
 
 random.seed(10)
@@ -123,13 +119,16 @@ function initCamera () {
 }
 
 function initMeshes () {
+  const baseColorMap = imageFromFile('assets/plastic-basecolor.png', { encoding: ctx.Encoding.SRGB })
+  const normalMap = imageFromFile('assets/plastic-normal.png', { encoding: ctx.Encoding.Linear })
+  const metallicMap = imageFromFile('assets/plastic-metallic.png', { encoding: ctx.Encoding.Linear })
+  const roughnessMap = imageFromFile('assets/plastic-roughness.png', { encoding: ctx.Encoding.Linear })
   const groundCube = createRoundedCube(1, 1, 1, 20, 20, 20, 0.01)
   const roundedCube = createRoundedCube(1, 1, 1, 20, 20, 20, 0.2)
   const capsule = createCapsule(0.3)
   const sphere = createSphere(0.5)
   const geometries = [capsule, roundedCube, sphere]
   const entities = []
-
 
   random.seed(14)
 
@@ -140,8 +139,8 @@ function initMeshes () {
       }),
       renderer.geometry(sphere),
       renderer.material({
-        baseColor: [0.7, 0.7, 0.7, 1.0],
-        roughness: 1,
+        baseColor: [0.07, 0.06, 0.00, 1.0],
+        roughness: 0.2,
         metallic: 0
       })
     ])
@@ -173,7 +172,6 @@ function initMeshes () {
   ])
   entities.push(dragonEnt)
 
-  let materialIndex = 0
   for (let j = -5; j <= 5; j += 2) {
     for (let i = 0; i < geometries.length; i++) {
       const geom = geometries[i]
@@ -187,31 +185,30 @@ function initMeshes () {
         renderer.geometry(geom),
         renderer.material({
           baseColor: [0.9, 0.9, 0.9, 1],
-          baseColorMap: materialIndex ? State.materials[materialIndex].baseColorTex : null,
           roughness: (j + 5) / 10,
-          roughnessMap: materialIndex ? State.materials[materialIndex].roughnessTex : null,
-          metallic: 0.0, // 0.01, // (j + 5) / 10
-          metallicMap: materialIndex ? State.materials[materialIndex].metallicTex : null,
-          normalMap: materialIndex ? State.materials[materialIndex].normalTex : null
+          metallic: 0.0, // 0.01, // (j + 5) / 10,
+          baseColorMap: baseColorMap,
+          roughnessMap: roughnessMap,
+          metallicMap: metallicMap,
+          normalMap: normalMap
         })
       ])
       entities.push(entity)
     }
-    materialIndex = (materialIndex + 1) % State.materials.length
   }
   gui.addHeader('Material').setPosition(10, 150)
   gui.addParam('Roughness', State, 'roughness', {}, () => {
     entities.forEach((entity) => { entity.getComponent('Material').set({ roughness: State.roughness }) })
   })
   gui.addParam('Metallic', State, 'metallic', {}, () => {
-    entities.forEach((entity) => { entity.getComponent('Material').set({ metallic :State.metallic }) })
+    entities.forEach((entity) => { entity.getComponent('Material').set({ metallic: State.metallic }) })
   })
   gui.addParam('Base Color', State, 'baseColor', { type: 'color' }, () => {
     entities.forEach((entity) => { entity.getComponent('Material').set({ baseColor: State.baseColor }) })
   })
 }
 
-function initSky (panorama) {
+function initSky () {
   const sun = State.sun = renderer.directionalLight({
     direction: Vec3.sub(Vec3.create(), State.sunPosition),
     color: [1, 1, 0.95, 1],
@@ -219,8 +216,7 @@ function initSky (panorama) {
   })
 
   const skybox = State.skybox = renderer.skybox({
-    sunPosition: State.sunPosition,
-    texture: panorama
+    sunPosition: State.sunPosition
   })
 
   // currently this also includes light probe functionality
@@ -252,22 +248,6 @@ function initLights () {
     })
   ])
 
-  // const pointLight2 = renderer.entity([
-    // renderer.geometry(createSphere(0.2)),
-    // renderer.material({
-      // baseColor: [0, 0, 0, 1],
-      // emissiveColor: [0, 0.5, 1, 1]
-    // }),
-    // renderer.transform({
-      // position: [-2, 2, 2]
-    // }),
-    // renderer.pointLight({
-      // color: [0, 0.5, 1, 1],
-      // intensity: 3,
-      // radius: 10
-    // })
-  // ])
-
   gui.addParam('Light 1 Pos', pointLight1.transform, 'position', { min: -5, max: 5 }, (value) => {
     pointLight1.transform.set({ position: value })
   })
@@ -276,15 +256,15 @@ function initLights () {
     renderer.geometry(createCube()),
     renderer.material({
       baseColor: [0, 0, 0, 1],
-      emissiveColor: [1.0, 0.8, 0.0, 1]
+      emissiveColor: [2.0, 1.2, 0.1, 1]
     }),
     renderer.transform({
-      position: [0, 0, -3],
-      scale: [6, 2, 0.1],
-      rotation: Quat.fromDirection(Quat.create(), [1, 0, 1])
+      position: [0, 3, 0],
+      scale: [5, 1, 0.1],
+      rotation: Quat.fromDirection(Quat.create(), [0, -1, 0.001])
     }),
     renderer.areaLight({
-      color: [1.0, 0.8, 0.0, 1],
+      color: [2.0, 1.2, 0.1, 1],
       intensity: 2
     })
   ])
@@ -292,121 +272,6 @@ function initLights () {
     areaLight.getComponent('AreaLight').set({ color: value })
     areaLight.getComponent('Material').set({ emissiveColor: value })
   })
-}
-
-var files = `Brick_AssortedMedievalBrick_PBR_Metallic
-Concrete_ChunkybrokenWall_PBR_Metallic
-Concrete_ClayWithBrokenRubble_PBR_Metallic
-Concrete_MicroCrackWall_PBR_Metallic
-Concrete_OldCitySidewalk_PBR_Metallic
-Concrete_SmoothChipped_PBR_Metallic
-Concrete_StripedConcrete_PBR_Metallic
-Fabric_BasketWeaveCotton_PBR_Metallic
-Ground_CleanStreetConcrete_PBR_Metallic
-Ground_DrivewayConcrete_PBR_Metallic
-Ground_FineStones_PBR_Metallic
-Ground_SandyConcreteWithPebbles_PBR_Metallic
-Leather_CarLeather_PBR_Metallic
-Leather_ChesterfieldLeatherSofa_PBR_Metallic
-Leather_JerkyLeather_PBR_Metallic
-Leather_Plain_PBR_Metallic
-Leather_RoughBumpyLeather_PBR_Metallic
-Leather_ScratchyWrinkledLeather_PBR_Metallic
-Marble_CelticGoldAndMarbleFloor_PBR_Metallic
-Metal_AgedBrass_PBR_Metallic
-Metal_CleanPaintedWithChips_PBR_Metallic
-Metal_CorrodedSteel_PBR_Metallic
-Metal_DamagedIron_PBR_Metallic
-Metal_DerelictResearchVessel_PBR_Metallic
-Metal_LongMetalTiles_PBR_Metallic
-Metal_PaintedWeatheredMetal_PBR_Metallic
-Metal_SciFiMetalWithBars_PBR_Metallic
-Metal_SciFiMetalWithCircles_PBR_Metallic
-Metal_SciFiMetalWithIndustrialPattern_PBR_Metallic
-Metal_SciFiMetalWithSquares_PBR_Metallic
-Metal_SmoothBrushedSteel_PBR_Metallic
-Misc_BlackLeather_PBR_Metallic
-Misc_DeepOceanWaves_PBR_Metallic
-Misc_PersianRug_PBR_Metallic
-Misc_RadarDome_PBR_Metallic
-Misc_StylizedWater_PBR_Metallic
-Rock_CrackingLayerWall_PBR_Metallic
-Rock_CrumblingCaveStone_PBR_Metallic
-Rock_QuarryStone_PBR_Metallic
-Rock_RawFlint_PBR_Metallic
-Rock_Scoria_PBR_Metallic
-Rock_SharpCrumblingCliff_PBR_Metallic
-Rubber_SciFiRubberWithTriangles_PBR_Metallic
-Sci-Fi_SciFiFloorSet_PBR_Metallic
-Sci-Fi_SciFiMonitorsSetAbandoned_PBR_Metallic
-Sci-Fi_SciFiWallSet_PBR_Metallic
-Tile_BrokenOldTiling_PBR_Metallic
-Tile_InterlockedCircleSquareGold_PBR_Metallic
-Tile_NastyOld_PBR_Metallic
-Wood_DistressedWood_PBR_Metallic
-Wood_EbonyRiftCut_PBR_Metallic
-Wood_FineWalnut_PBR_Metallic
-Wood_LongWideFloorPlanks_PBR_Metallic
-Wood_OakVeneer_PBR_Metallic
-Wood_OldKnotty_PBR_Metallic
-Wood_OldPineBark_PBR_Metallic
-Wood_PatchedPlywood_PBR_Metallic
-Wood_RandomLongPlanks_PBR_Metallic
-Wood_SharpGrainyWood_PBR_Metallic
-Wood_TropicalHardwood_PBR_Metallic
-brick_MedievalBrickSlop_PBR_Metallic
-brick_houseBricksDamaged_PBR_Metallic
-ground_ForestCoverPolygonStone_PBR_Metallic
-ground_PebblesAndGrass_PBR_Metallic
-ground_SoilAndGravel_PBR_Metallic
-ground_SquarePaversOnGrass_PBR_Metallic
-wall_GenericBrownStucco_PBR_Metallic
-wood_OldWideFloorPlanks_PBR_Metallic`
-
-const ASSETS_DIR = isBrowser ? `http://${HOST}/assets` : '/Users/vorg/Workspace/assets'
-
-function initMaterials () {
-  let baseColorTextures = [
-    // ASSETS_DIR + '/gametextures_metallic/Sci-Fi_SciFiWallSet_PBR_Metallic/Sci-Fi_SciFiWallSet_2k_basecolor.png',
-    // ASSETS_DIR + '/gametextures_metallic/Metal_DamagedIron_PBR_Metallic/Metal_DamagedIron_2k_basecolor.png',
-    // ASSETS_DIR + '/gametextures_metallic/Misc_RadarDome_PBR_Metallic/Misc_RadarDome_2k_basecolor.png',
-    // ASSETS_DIR + '/gametextures_metallic/Marble_CelticGoldAndMarbleFloor_PBR_Metallic/Marble_CelticGoldAndMarbleFloor_2k_basecolor.png',
-    // ASSETS_DIR + '/gametextures_metallic/Tile_InterlockedCircleSquareGold_PBR_Metallic/Tile_InterlockedCircleSquareGold_2k_basecolor.png',
-    // ASSETS_DIR + '/gametextures_metallic/Leather_ChesterfieldLeatherSofa_PBR_Metallic/Leather_ChesterfieldLeatherSofa_2k_basecolor.png',
-    // ASSETS_DIR + '/textures/gametextures_old_met/Brick_DustyRedSeattle_PBR/Brick_DustyRedSeattle_Base_Color.png',
-    // ASSETS_DIR + '/textures/gametextures_old_met/Metal_FloorPanelModularPainted_pbr/Metal_FloorPanelModularPainted_Base_Color.png',
-    // ASSETS_DIR + '/textures/gametextures_old_met/Metal_MatiasSciFiCieling/Metal_MatiasSciFiCieling_Base_Color.png',
-    // ASSETS_DIR + '/textures/gametextures_old_met/Metal_PaintedWeatheredMetal/Metal_PaintedWeatheredMetal_Base_Color.png',
-    // ASSETS_DIR + '/textures/gametextures_old_met/Metal_SciFiCompartmentPanels_PBR/Metal_SciFiCompartmentPanels_Base_Color.png',
-    // ASSETS_DIR + '/textures/gametextures_old_met/Metal_SciFiFlatPlatingSquare_pbr/Metal_SciFiFlatPlatingSquare_Base_Color.png',
-    // ASSETS_DIR + '/textures/gametextures_old_met/Metal_ScifiTrimPieces_PBR/Metal_ScifiTrimPieces_Base_Color.png',
-    // ASSETS_DIR + '/textures/gametextures_old_met/Metal_SteelOxidized_PBR/Metal_SteelOxidized_Base_Color.png',
-    // ASSETS_DIR + '/textures/gametextures_old_met/Misc_BlackLeather_PBR/Misc_BlackLeather_Base_Color.png',
-    // ASSETS_DIR + '/textures/gametextures_old_met/Vorg_Var_Plastic/Vorg_Var_Plastic_Base_Color.png',
-    // ASSETS_DIR + '/textures/gametextures_old_met/Vorg_White_Base/Vorg_White_Base_Base_Color.png',
-    // ASSETS_DIR + '/textures/gametextures_old_met/Wood_LongWideFloorPlanks/Wood_LongWideFloorPlanks_Base_Color.png',
-    // ASSETS_DIR + '/textures/gametextures_old_met/Wood_OakBaseAged/Wood_OakBaseAged_Base_Color.png',
-    // ASSETS_DIR + '/textures/gametextures_old_met/Wood_RailwaySleeper/Wood_RailwaySleeper_Base_Color.png',
-    // ASSETS_DIR + '/textures/gametextures_old_met/ground_lavaflow_pbr/ground_lavaflow_Base_Color.png',
-    // ASSETS_DIR + '/textures/gametextures_old_met/metal_DiamondPlateFloor_PBR/metal_DiamondPlateFloor_Base_Color.png',
-    // ASSETS_DIR + '/textures/gametextures_old_met/tile_disgustingtilev2_PBR/tile_disgustingtilev2_Base_Color.png'
-  ]
-  baseColorTextures = files.split('\n').map((dir) => {
-    var file = dir.replace('PBR_Metallic', '2k_basecolor.png')
-    return ASSETS_DIR + `/gametextures_metallic/${dir}/${file}`
-  })
-  baseColorTextures = baseColorTextures.slice(46, 50)
-  for (let i = 0; i < baseColorTextures.length; i++) {
-    const mat = {}
-    mat.baseColorTex = imageFromFile(baseColorTextures[i], { flip: false, mipmap: true, repeat: true, encoding: ctx.Encoding.SRGB })
-    mat.normalTex = imageFromFile(baseColorTextures[i].replace('_basecolor.', '_n.'), { flipY: true, mipmap: true, repeat: true, encoding: ctx.Encoding.Linear })
-    mat.roughnessTex = imageFromFile(baseColorTextures[i].replace('_basecolor.', '_roughness.'), { flipY: true, mipmap: true, repeat: true, encoding: ctx.Encoding.Linear })
-    mat.metallicTex = imageFromFile(baseColorTextures[i].replace('_basecolor.', '_metallic.'), { flipY: true, mipmap: true, repeat: true, encoding: ctx.Encoding.Linear })
-    // mat.normalTex = imageFromFile(baseColorTextures[i].replace('_Base_Color.', '_Normal.'), { flipY: true, mipmap: true, repeat: true })
-    // mat.roughnessTex = imageFromFile(baseColorTextures[i].replace('_Base_Color.', '_Roughness.'), { flipY: true, mipmap: true, repeat: true })
-    // mat.metallicTex = imageFromFile(baseColorTextures[i].replace('_Base_Color.', '_Metallic.'), { flipY: true, mipmap: true, repeat: true })
-    State.materials.push(mat)
-  }
 }
 
 function imageFromFile (file, options) {
@@ -428,60 +293,18 @@ function imageFromFile (file, options) {
       data: image,
       width: image.width,
       height: image.height,
+      flipY: true
     })
     ctx.update(tex, { mipmap: true })
-    // tex(Object.assign(canvasToPixels(image), {
-      // min: 'mipmap',
-      // mag: 'linear',
-      // wrap: 'repeat'
-    // }))
   }, true)
   return tex
 }
 
-// initMaterials()
 initCamera()
 initMeshes()
-io.loadBinary(`http://${HOST}/assets/envmaps/grace-new/grace-new.hdr`, (err, buf) => {
-// io.loadBinary('http://localhost/assets/envmaps/garage/garage.hdr', (err, buf) => {
-// io.loadBinary('http://192.168.1.123/assets/envmaps/OpenfootageNET_Salzach_low.hdr', (err, buf) => {
-// io.loadBinary('http://192.168.1.123/assets/envmaps/multi-area-light/multi-area-light.hdr', (err, buf) => {
-// io.loadBinary('http://192.168.1.123/assets/envmaps/hallstatt4_hd.hdr', (err, buf) => {
-  const hdrImg = parseHdr(buf)
-  const data = new Uint8Array(hdrImg.data.length)
-  for (var i = 0; i < hdrImg.data.length; i+=4) {
-    let r = hdrImg.data[i]
-    let g = hdrImg.data[i + 1]
-    let b = hdrImg.data[i + 2]
-    r = 1 / 7 * Math.sqrt(r)
-    g = 1 / 7 * Math.sqrt(g)
-    b = 1 / 7 * Math.sqrt(b)
-    let a = Math.max(r, Math.max(g, b))
-    if (a > 1) a = 1
-    if (a < 1 / 255) a = 1 / 155
-    a = Math.ceil(a * 255) / 255
-    r /= a
-    g /= a
-    b /= a
-    data[i] = (r * 255) | 0
-    data[i + 1] = (g * 255) | 0
-    data[i + 2] = (b * 255) | 0
-    data[i + 3] = (a * 255) | 0
-  }
-  const panoramaRGBM = ctx.texture2D({
-    data: State.rgbm ? data : hdrImg.data,
-    width: hdrImg.shape[0],
-    height: hdrImg.shape[1], 
-    pixelFormat: State.rgbm ? ctx.PixelFormat.RGBA8 : ctx.PixelFormat.RGBA32F,
-    encoding: State.rgbm ? ctx.Encoding.RGBM : ctx.Encoding.Linear,
-    flipY: true })
-  gui.addTexture2D('Panorama', panoramaRGBM)
-  initSky(panoramaRGBM)
-})
-// initSky()
+initSky()
 initLights()
 
-let frameNumber = 0
 let debugOnce = false
 
 window.addEventListener('keydown', (e) => {
