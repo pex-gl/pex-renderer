@@ -693,8 +693,17 @@ Renderer.prototype.drawDebug = function () {
 
 Renderer.prototype.entity = function (components, parent, tags) {
   const entity = createEntity(components, parent || this.root, tags)
-  this.entities.push(entity)
   return entity
+}
+
+Renderer.prototype.add = function (entity) {
+  this.entities.push(entity)
+}
+
+Renderer.prototype.remove = function (entity) {
+  this.entities = this.entities.filter((e) => {
+    return e.id !== entity.id
+  })
 }
 
 Renderer.prototype.transform = function (opts) {
