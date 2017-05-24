@@ -3,6 +3,12 @@ attribute vec3 aPosition;
 #ifdef USE_INSTANCED_OFFSET
 attribute vec3 aOffset;
 #endif
+#ifdef USE_INSTANCED_SCALE
+attribute vec3 aScale;
+#endif
+#ifdef USE_INSTANCED_ROTATION
+attribute vec4 aRotation;
+#endif
 
 #ifdef USE_SKIN
 attribute vec4 aJoint;
@@ -30,8 +36,16 @@ void main() {
     float h = texture2D(uDisplacementMap, aTexCoord0).r;
     position.xyz += uDisplacement * h * normal * uDisplacementShadowStretch; 
 #endif
+#ifdef USE_INSTANCED_SCALE
+    position.xyz *= aScale; 
+#endif
+#ifdef USE_INSTANCED_ROTATION
+    mat4 rotationMat = quatToMat4(aRotation);
+    position = rotationMat * position;
+    normal = vec3(rotationMat * vec4(normal, 0.0));
+#endif
 #ifdef USE_INSTANCED_OFFSET
-    position += aOffset; 
+    position.xyz += aOffset; 
 #endif
 
 #ifdef USE_SKIN
