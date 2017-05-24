@@ -27,6 +27,7 @@ function createProfiler (ctx) {
   const gl = ctx.gl
   if (isBrowser && !canvas) {
     canvas = document.createElement('canvas')
+    canvas.id = 'pex-renderer-profiler'
     canvas.width = W * 2
     canvas.height = H * 2
     document.body.appendChild(canvas)
@@ -40,6 +41,7 @@ function createProfiler (ctx) {
   }
 
   const profiler = {
+    canvas: canvas,
     frame: 0,
     flush: true,
     measurements: {},
