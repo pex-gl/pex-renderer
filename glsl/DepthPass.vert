@@ -21,7 +21,7 @@ uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
 uniform mat4 uModelMatrix;
 
-float uDisplacementShadowStretch = 1.5;
+float uDisplacementShadowStretch = 1.3;
 
 void main() {
     vec3 position = aPosition;
