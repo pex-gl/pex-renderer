@@ -9,6 +9,8 @@ function Material (opts) {
 
   this._uniforms = {}
 
+  const ctx = opts.ctx
+
   this.baseColor = [0.95, 0.95, 0.95, 1]
   this.emissiveColor = [0, 0, 0, 1]
   this.metallic = 0.01
@@ -17,6 +19,11 @@ function Material (opts) {
   this.depthTest = true
   this.depthWrite = true
   this.depthFunc = opts.ctx.DepthFunc.LessEqual
+  this.blendEnabled = false
+  this.blendSrcRGBFactor = ctx.BlendFactor.ONE
+  this.blendSrcAlphaFactor = ctx.BlendFactor.ONE
+  this.blendDstRGBFactor = ctx.BlendFactor.ONE
+  this.blendDstAlphaFactor = ctx.BlendFactor.ONE
 
   this.set(opts)
 }

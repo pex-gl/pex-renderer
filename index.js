@@ -252,6 +252,11 @@ Renderer.prototype.getGeometryPipeline = function (geometry, material, skin, opt
       depthTest: material.depthTest,
       depthWrite: material.depthWrite,
       depthFunc: material.depthFunc,
+      blendEnabled: material.blendEnabled,
+      blendSrcRGBFactor: material.blendSrcRGBFactor,
+      blendSrcAlphaFactor: material.blendSrcAlphaFactor,
+      blendDstRGBFactor: material.blendDstRGBFactor,
+      blendDstAlphaFactor: material.blendDstAlphaFactor,
       cullFaceEnabled: true,
       cullFace: ctx.Face.Back,
       primitive: geometry.primitive
