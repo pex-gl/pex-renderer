@@ -97,9 +97,9 @@ function initCamera () {
     // depthPrepass: false,
     camera: camera
   })
-  renderer.entity([
+  renderer.add(renderer.entity([
     cameraCmp
-  ])
+  ]))
 
   gui.addHeader('Postprocess').setPosition(180, 10)
   gui.addParam('Expsure', cameraCmp, 'exposure', { min: 0, max: 5 })
@@ -133,7 +133,7 @@ function initMeshes () {
   random.seed(14)
 
   for (var i = 0; i < 20; i++) {
-    renderer.entity([
+    renderer.add(renderer.entity([
       renderer.transform({
         position: Vec3.scale(random.vec3(), 2)
       }),
@@ -143,10 +143,10 @@ function initMeshes () {
         roughness: 0.2,
         metallic: 0
       })
-    ])
+    ]))
   }
 
-  renderer.entity([
+  renderer.add(renderer.entity([
     renderer.transform({
       position: [0, -2.2, 0],
       scale: [20, 0.2, 7]
@@ -157,7 +157,7 @@ function initMeshes () {
       roughness: 1,
       metallic: 0
     })
-  ])
+  ]))
 
   const dragonEnt = renderer.entity([
     renderer.transform({
@@ -171,6 +171,7 @@ function initMeshes () {
     })
   ])
   entities.push(dragonEnt)
+  renderer.add(dragonEnt)
 
   for (let j = -5; j <= 5; j += 2) {
     for (let i = 0; i < geometries.length; i++) {
@@ -194,6 +195,7 @@ function initMeshes () {
         })
       ])
       entities.push(entity)
+      renderer.add(entity)
     }
   }
   gui.addHeader('Material').setPosition(10, 150)
@@ -226,9 +228,9 @@ function initSky () {
     boxProjection: false
   })
 
-  renderer.entity([ sun ])
-  renderer.entity([ skybox ])
-  renderer.entity([ reflectionProbe ])
+  renderer.add(renderer.entity([ sun ]))
+  renderer.add(renderer.entity([ skybox ]))
+  renderer.add(renderer.entity([ reflectionProbe ]))
 }
 
 function initLights () {
@@ -247,6 +249,7 @@ function initLights () {
       radius: 10
     })
   ])
+  renderer.add(pointLight1)
 
   gui.addParam('Light 1 Pos', pointLight1.transform, 'position', { min: -5, max: 5 }, (value) => {
     pointLight1.transform.set({ position: value })
@@ -268,6 +271,7 @@ function initLights () {
       intensity: 2
     })
   ])
+  renderer.add(areaLight)
   gui.addParam('Area Light 1 Col', areaLight.getComponent('AreaLight'), 'color', { type: 'color' }, (value) => {
     areaLight.getComponent('AreaLight').set({ color: value })
     areaLight.getComponent('Material').set({ emissiveColor: value })
