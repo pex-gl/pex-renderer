@@ -587,6 +587,7 @@ Renderer.prototype.draw = function () {
     ctx.submit(camera._blitCmd, {
       uniforms: {
         uExposure: camera.exposure,
+        uFXAA: camera.fxaa,
         uOutputEncoding: ctx.Encoding.Gamma
       },
       viewport: camera.viewport

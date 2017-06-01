@@ -14,6 +14,7 @@
     "flatten": "^1.0.2",
     "gl-constants": "^1.0.0",
     "glsl-atmosphere": "^1.0.1",
+    "glsl-fxaa": "^3.0.0",
     "glsl-gamma": "^2.0.0",
     "glsl-inverse": "^1.0.0",
     "glsl-perturb-normal": "^1.0.2",
