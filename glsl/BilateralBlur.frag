@@ -7,6 +7,7 @@ varying vec2 vTexCoord;
 
 uniform float near;
 uniform float far;
+uniform float fov;
 
 uniform sampler2D image;
 uniform vec2 imageSize;
@@ -49,8 +50,9 @@ vec4 bilateralBlur(sampler2D image, vec2 imageResolution, sampler2D depthMap, ve
   const float blurFalloff = 1.0 / (2.0*blurSigma*blurSigma);
   
   float centerDepth = readDepth(depthMap, uv);
+  float dist = 0.0;
   if (uDOFDepth > 0.0) {
-    float dist = max(0.0, min(abs(centerDepth - uDOFDepth) / uDOFRange, 1.0));
+    dist = max(0.0, min(abs(centerDepth - uDOFDepth) / uDOFRange, 1.0));
     direction *= dist;
   }
   float weightSum = 0.0;
