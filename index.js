@@ -83,31 +83,6 @@ function Renderer (opts) {
   this._state = State
 }
 
-Renderer.prototype.initNode = function (data) {
-  if (!data.position) data.position = [0, 0, 0]
-  if (!data.scale) data.scale = [1, 1, 1]
-  if (!data.rotation) data.rotation = [0, 0, 0, 1]
-  if (data.enabled === undefined) data.enabled = true
-
-  if (data.mesh) {
-    // remove this
-  }
-
-  if (data.light) {
-    var light = data.light
-    if (light.type === 'directional') {
-
-    } else if (data.light.type === 'point') {
-      if (data.light.radius === undefined) { data.light.radius = 10 }
-    } else if (data.light.type === 'area') {
-    } else {
-      throw new Error('Renderer.initNode unknown light type ' + data.light.type)
-    }
-  }
-
-  return data
-}
-
 Renderer.prototype.updateDirectionalLightShadowMap = function (light) {
   const ctx = this._ctx
   const position = light.entity.transform.position
