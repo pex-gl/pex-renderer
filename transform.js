@@ -30,6 +30,7 @@ function Transform (opts) {
   this.worldScale = [1, 1, 1]
   this.parent = null
   this.children = []
+  this.enabled = true
   // bounds of this node and it's children
   this.bounds = AABB.create()
   // bounds of this node and it's children in the world space

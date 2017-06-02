@@ -187,6 +187,7 @@ Renderer.prototype.getMaterialProgram = function (geometry, material, skin, opti
 }
 
 Renderer.prototype.traverseTransformTree = function (transform, beforeCallback, afterCallback) {
+  if (!transform.enabled) return
   beforeCallback(transform)
   transform.children.forEach((child) => {
     this.traverseTransformTree(child, beforeCallback, afterCallback)
@@ -332,6 +333,7 @@ Renderer.prototype.drawMeshes = function (camera, shadowMappingLight) {
   for (let i = 0; i < geometries.length; i++) {
     const geometry = geometries[i]
     const transform = geometry.entity.transform
+    if (!transform.enabled) continue
     const material = geometry.entity.getComponent('Material')
     const skin = geometry.entity.getComponent('Skin')
     const cachedUniforms = material._uniforms
