@@ -220,9 +220,11 @@ Renderer.prototype.traverseTransformTree = function (transform, beforeCallback, 
 }
 
 Renderer.prototype.update = function () {
+  this.entities = []
   this.traverseTransformTree(
     this.root.transform,
     (transform) => {
+      this.entities.push(transform.entity)
       transform.entity.components.forEach((component) => {
         if (component.update) component.update()
       })
@@ -691,19 +693,18 @@ Renderer.prototype.drawDebug = function () {
   */
 }
 
-Renderer.prototype.entity = function (components, parent, tags) {
-  const entity = createEntity(components, parent || this.root, tags)
-  return entity
+Renderer.prototype.entity = function (components, tags) {
+  return createEntity(components, tags)
 }
 
-Renderer.prototype.add = function (entity) {
-  this.entities.push(entity)
+Renderer.prototype.add = function (entity, parent) {
+  entity.transform.set({
+    parent: parent ? parent.tranform : this.root.transform
+  })
 }
 
 Renderer.prototype.remove = function (entity) {
-  this.entities = this.entities.filter((e) => {
-    return e.id !== entity.id
-  })
+  entity.transform.set({ parent: null })
 }
 
 Renderer.prototype.transform = function (opts) {

@@ -2,7 +2,7 @@ const createTransform = require('./transform')
 
 let entityId = 0
 
-function Entity (components, parent, tags) {
+function Entity (components, tags) {
   this.id = entityId++
   this.tags = tags || []
 
@@ -11,12 +11,10 @@ function Entity (components, parent, tags) {
   this.transform = this.getComponent('Transform')
   if (!this.transform) {
     this.transform = createTransform({
-      parent: parent ? parent.transform : null
+      parent: null
     })
     this.components.unshift(this.transform)
   }
-
-  this.transform.set({ parent: parent ? parent.transform : null })
 
   this.components.forEach((component) => component.init(this))
 }
