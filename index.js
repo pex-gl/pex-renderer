@@ -682,7 +682,7 @@ Renderer.prototype.entity = function (components, tags) {
 
 Renderer.prototype.add = function (entity, parent) {
   entity.transform.set({
-    parent: parent ? parent.tranform : this.root.transform
+    parent: parent ? parent.tranform : entity.transform.parent || this.root.transform
   })
 }
 
