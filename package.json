@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "async": "^2.4.0",
+    "debug": "^2.6.8",
     "flatten": "^1.0.2",
     "gl-constants": "^1.0.0",
     "glsl-atmosphere": "^1.0.1",
