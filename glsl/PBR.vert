@@ -1,6 +1,10 @@
 attribute vec3 aPosition;
+#ifdef USE_NORMALS
 attribute vec3 aNormal;
+#endif
+#ifdef USE_TEX_COORDS
 attribute vec2 aTexCoord0;
+#endif
 #ifdef USE_INSTANCED_OFFSET
 attribute vec3 aOffset;
 #endif
@@ -75,16 +79,18 @@ mat4 quatToMat4(vec4 q) {
 
 void main() {
     vec4 position = vec4(aPosition, 1.0);
-    vec3 normal = aNormal;
+    vec3 normal = vec3(0.0, 0.0, 0.0);
+    vec2 texCoord = vec2(0.0, 0.0);
+#ifdef USE_NORMALS
+    normal = aNormal;
+#endif
+#ifdef USE_TEX_COORDS
+    texCoord = aTexCoord0;
+#endif
+    vTexCoord0 = texCoord;
 #ifdef USE_DISPLACEMENT_MAP
     float h = texture2D(uDisplacementMap, aTexCoord0).r;
-    // float hx = texture2D(uDisplacementMap, aTexCoord0 + vec2(1.0 / 2048.0, 0.0)).r;
-    // float hz = texture2D(uDisplacementMap, aTexCoord0 + vec2(0.0, 1.0 / 2048.0)).r;
-    // vec3 a = vec3(0.0, h, 0.0);
-    // vec3 b = vec3(0.1, hx, 0.0);
-    // vec3 c = vec3(0.0, hz, 0.1);
     position.xyz += uDisplacement * h * normal;
-    // normal = normalize(cross(normalize(c - a), normalize(b - a)));
 #endif
 #ifdef USE_INSTANCED_SCALE
     position.xyz *= aScale; 
@@ -92,6 +98,7 @@ void main() {
 #ifdef USE_INSTANCED_ROTATION
     mat4 rotationMat = quatToMat4(aRotation);
     position = rotationMat * position;
+
     normal = vec3(rotationMat * vec4(normal, 0.0));
 #endif
 #ifdef USE_INSTANCED_OFFSET
@@ -104,7 +111,6 @@ void main() {
     vPositionView = vec3(uViewMatrix * vec4(vPositionWorld, 1.0));
 
     vNormalView = vec3(uNormalMatrix * normal);
-    // vNormalView = vec3(mat3(uViewMatrix * uModelMatrix) * aNormal);
     vNormalWorld = normalize(vec3(uInverseViewMatrix * vec4(vNormalView, 0.0)));
 
     vEyeDirView = normalize(vec3(0.0, 0.0, 0.0) - vPositionView);
@@ -124,5 +130,4 @@ void main() {
 
     //vTexCoord0 = fract(aTexCoord0 * uTexCoord0Scale * vec2(1.0, 0.5) + uTexCoord0Offset);
 
-    vTexCoord0 = aTexCoord0;
 }
