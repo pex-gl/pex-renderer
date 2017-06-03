@@ -28,9 +28,7 @@ ctx.gl.getExtension('OES_standard_derivatives')
 ctx.gl.getExtension('WEBGL_draw_buffers')
 ctx.gl.getExtension('OES_texture_float')
 
-const HOST = isBrowser ? document.location.hostname : ''
-const ASSETS_DIR = isBrowser ? `http://${HOST}/assets` : '/Users/vorg/Workspace/assets'
-const TEX_DIR = isBrowser ? `http://${HOST}/assets/textures/gametextures_old_met_selected` : '/Users/vorg/Workspace/assets/textures/gametextures_old_met_selected'
+const ASSETS_DIR = isBrowser ? 'assets' : __dirname + '/assets'
 
 window.addEventListener('keydown', (e) => {
   if (e.key == 'g') gui.toggleEnabled()
@@ -100,8 +98,8 @@ function updateSunPosition () {
 
 const W = ctx.gl.drawingBufferWidth
 const H = ctx.gl.drawingBufferHeight
-const nW = 3
-const nH = 2
+const nW = 6
+const nH = 3
 
 // flip upside down as we are using viewport coordinates
 let cells = gridCells(W, H, nW, nH, 0).map((cell) => {
@@ -125,9 +123,9 @@ function initCamera () {
       camera: camera,
       viewport: cell,
     })
-    renderer.entity([
+    renderer.add(renderer.entity([
       cameraCmp
-    ], null, tags)
+    ], null, tags))
   })
 }
 
@@ -153,11 +151,6 @@ function imageFromFile (file, options) {
       encoding: encoding
     })
     ctx.update(tex, { mipmap: true })
-    // tex(Object.assign(canvasToPixels(image), {
-      // min: 'mipmap',
-      // mag: 'linear',
-      // wrap: 'repeat'
-    // }))
   }, true)
   return tex
 }
@@ -168,115 +161,42 @@ function initMeshes () {
   const geom = createSphere(0.5)
 
   let materials = [
-    { roughness: 0 / 7, metallic: 0, baseColor: [0.8, 0.2, 0.2, 1.0] },
-    { roughness: 1 / 7, metallic: 0, baseColor: [0.8, 0.2, 0.2, 1.0] },
-    { roughness: 2 / 7, metallic: 0, baseColor: [0.8, 0.2, 0.2, 1.0] },
-    { roughness: 3 / 7, metallic: 0, baseColor: [0.8, 0.2, 0.2, 1.0] },
-    { roughness: 4 / 7, metallic: 0, baseColor: [0.8, 0.2, 0.2, 1.0] },
-    { roughness: 5 / 7, metallic: 0, baseColor: [0.8, 0.2, 0.2, 1.0] },
-    { roughness: 6 / 7, metallic: 0, baseColor: [0.8, 0.2, 0.2, 1.0] },
-    { roughness: 7 / 7, metallic: 0, baseColor: [0.8, 0.2, 0.2, 1.0] },
-    { roughness: 0 / 7, metallic: 1, baseColor: [1.0, 1.0, 1.0, 1.0] },
-    { roughness: 1 / 7, metallic: 1, baseColor: [1.0, 1.0, 1.0, 1.0] },
-    { roughness: 2 / 7, metallic: 1, baseColor: [1.0, 1.0, 1.0, 1.0] },
-    { roughness: 3 / 7, metallic: 1, baseColor: [1.0, 1.0, 1.0, 1.0] },
-    { roughness: 4 / 7, metallic: 1, baseColor: [1.0, 1.0, 1.0, 1.0] },
-    { roughness: 5 / 7, metallic: 1, baseColor: [1.0, 1.0, 1.0, 1.0] },
-    { roughness: 6 / 7, metallic: 1, baseColor: [1.0, 1.0, 1.0, 1.0] },
-    { roughness: 7 / 7, metallic: 1, baseColor: [1.0, 1.0, 1.0, 1.0] },
+    { roughness: 0 / 5, metallic: 0, baseColor: [0.8, 0.2, 0.2, 1.0] },
+    { roughness: 1 / 5, metallic: 0, baseColor: [0.8, 0.2, 0.2, 1.0] },
+    { roughness: 2 / 5, metallic: 0, baseColor: [0.8, 0.2, 0.2, 1.0] },
+    { roughness: 3 / 5, metallic: 0, baseColor: [0.8, 0.2, 0.2, 1.0] },
+    { roughness: 4 / 5, metallic: 0, baseColor: [0.8, 0.2, 0.2, 1.0] },
+    { roughness: 5 / 5, metallic: 0, baseColor: [0.8, 0.2, 0.2, 1.0] },
+    { roughness: 0 / 5, metallic: 1, baseColor: [1.0, 1.0, 1.0, 1.0] },
+    { roughness: 1 / 5, metallic: 1, baseColor: [1.0, 1.0, 1.0, 1.0] },
+    { roughness: 2 / 5, metallic: 1, baseColor: [1.0, 1.0, 1.0, 1.0] },
+    { roughness: 3 / 5, metallic: 1, baseColor: [1.0, 1.0, 1.0, 1.0] },
+    { roughness: 4 / 5, metallic: 1, baseColor: [1.0, 1.0, 1.0, 1.0] },
+    { roughness: 5 / 5, metallic: 1, baseColor: [1.0, 1.0, 1.0, 1.0] },
     {
-      baseColorMap: TEX_DIR + '/Metal_ScifiTrimPieces_Base_Color.png',
-      roughnessMap: TEX_DIR + '/Metal_ScifiTrimPieces_Roughness.png',
-      metallicMap: TEX_DIR + '/Metal_ScifiTrimPieces_Metallic.png',
-      normalMap: TEX_DIR + '/Metal_ScifiTrimPieces_Normal.png',
-      emissiveColorMap: TEX_DIR + '/SciFi_Emissive.png'
+      baseColorMap: ASSETS_DIR + '/plastic-basecolor.png',
+      roughnessMap: ASSETS_DIR + '/plastic-roughness.png',
+      metallicMap: ASSETS_DIR + '/plastic-metallic.png',
+      normalMap: ASSETS_DIR + '/plastic-normal.png'
     },
     {
-      baseColorMap: TEX_DIR + '/Metal_SciFiDetailKit_Base_Color.png',
-      roughnessMap: TEX_DIR + '/Metal_SciFiDetailKit_Roughness.png',
-      metallicMap: TEX_DIR + '/Metal_SciFiDetailKit_Metallic.png',
-      normalMap: TEX_DIR + '/Metal_SciFiDetailKit_Normal.png',
-      emissiveColorMap: TEX_DIR + '/SciFi_Emissive.png',
-    },
-    {
-      baseColorMap: TEX_DIR + '/Misc_PaintedBarrel_Base_Color.png',
-      roughnessMap: TEX_DIR + '/Misc_PaintedBarrel_Roughness.png',
-      metallicMap: TEX_DIR + '/Misc_PaintedBarrel_Metallic.png',
-      normalMap: TEX_DIR + '/Misc_PaintedBarrel_Normal.png'
-    },
-    {
-      baseColorMap: TEX_DIR + '/Wood_AlternatingSquareTiles_Base_Color_2.png',
-      roughnessMap: TEX_DIR + '/Wood_AlternatingSquareTiles_Roughness.png',
-      metallicMap: TEX_DIR + '/Wood_AlternatingSquareTiles_Metallic.png',
-      normalMap: TEX_DIR + '/Wood_AlternatingSquareTiles_Normal.png',
-      emissiveColorMap: TEX_DIR + '/SciFi_Emissive.png'
-    },
-    {
-      baseColorMap: TEX_DIR + '/Metal_Gold_Base_Color.png',
-      roughnessMap: TEX_DIR + '/Metal_Gold_Roughness.png',
-      metallicMap: TEX_DIR + '/Metal_Gold_Metallic.png',
-      normalMap: TEX_DIR + '/Metal_Gold_Normal.png'
-    },
-    {
-      baseColorMap: TEX_DIR + '/Metal_ChromeScratched_Base_Color.png',
-      roughnessMap: TEX_DIR + '/Metal_ChromeScratched_Roughness.png',
-      metallicMap: TEX_DIR + '/Metal_ChromeScratched_Metallic.png',
-      normalMap: TEX_DIR + '/Metal_ChromeScratched_Normal.png'
-    },
-    {
-      baseColorMap: TEX_DIR + '/Metal_AluminiumDirectional_Base_Color.png',
-      roughnessMap: TEX_DIR + '/Metal_AluminiumDirectional_Roughness.png',
-      metallicMap: TEX_DIR + '/Metal_AluminiumDirectional_Metallic.png',
-      normalMap: TEX_DIR + '/Metal_AluminiumDirectional_Normal.png'
-    },
-    {
-      baseColorMap: TEX_DIR + '/Tile_Disgusting_Base_Color.png',
-      roughnessMap: TEX_DIR + '/Tile_Disgusting_Roughness.png',
-      metallicMap: TEX_DIR + '/Tile_Disgusting_Metallic.png',
-      normalMap: TEX_DIR + '/Tile_Disgusting_Normal.png'
-    },
-    {
-      baseColorMap: TEX_DIR + '/Tile_CurveSandTiles_Base_Color.png',
-      roughnessMap: TEX_DIR + '/Tile_CurveSandTiles_Roughness.png',
-      metallicMap: TEX_DIR + '/Tile_CurveSandTiles_Metallic.png',
-      normalMap: TEX_DIR + '/Tile_CurveSandTiles_Normal.png'
-    },
-    {
-      baseColorMap: TEX_DIR + '/Concrete_EpoxyPaintedFloor_Base_Color.png',
-      roughnessMap: TEX_DIR + '/Concrete_EpoxyPaintedFloor_Roughness.png',
-      metallicMap: TEX_DIR + '/Concrete_EpoxyPaintedFloor_Metallic.png',
-      normalMap: TEX_DIR + '/Concrete_EpoxyPaintedFloor_Normal.png'
-    },
-    {
-      baseColorMap: TEX_DIR + '/COBBLESTONE-02-Demo/COBBLESTONE-02_Demo_Color_4k.jpg',
-      roughnessMap: TEX_DIR + '/COBBLESTONE-02-Demo/COBBLESTONE-02_Demo_Roughness_4k.jpg',
-      metallic: 0,
-      normalMap: TEX_DIR + '/COBBLESTONE-02-Demo/COBBLESTONE-02_Demo_Normal_4k.jpg'
-    },
-    {
-      baseColorMap: TEX_DIR + '/iSourceTextures - Metal07_ALBEDO.png',
-      roughnessMap: TEX_DIR + '/iSourceTextures - Metal07_SPEC.png',
-      metallicMap: TEX_DIR + '/iSourceTextures - Metal07_METTALIC.png',
-      normalMap: TEX_DIR + '/iSourceTextures - Metal07_NORM.png'
-    },
-    {
-      baseColorMap: TEX_DIR + '/Plastic_Base_Color.png',
-      roughnessMap: TEX_DIR + '/Plastic_Roughness.png',
-      metallicMap: TEX_DIR + '/Plastic_Metalness.png',
-      normalMap: TEX_DIR + '/Plastic_Normal.png'
-    },
-    {
-      baseColorMap: TEX_DIR + '/Plastic_Base_Color_2.png',
-      roughnessMap: TEX_DIR + '/Plastic_Roughness_2.png',
-      metallicMap: TEX_DIR + '/Plastic_Metalness_2.png',
-      normalMap: TEX_DIR + '/Plastic_Normal_2.png'
+      baseColorMap: ASSETS_DIR + '/plastic-basecolor-2.png',
+      roughnessMap: ASSETS_DIR + '/plastic-roughness-2.png',
+      metallicMap: ASSETS_DIR + '/plastic-metallic-2.png',
+      normalMap: ASSETS_DIR + '/plastic-normal-2.png'
     },
     { roughness: 2 / 7, metallic: 0, baseColor: [0.1, 0.5, 0.8, 1.0] },
     { roughness: 3 / 7, metallic: 0, baseColor: [0.1, 0.1, 0.1, 1.0] },
+    { roughness: 1, metallic: 0, baseColor: [0, 0, 0, 0], emissiveColor: [1, 0.5, 0, 1] },
+    { roughness: 0, metallic: 0, baseColor: [1, 1, 1, 0.2],
+      // FIXME: currently not working
+      blendEnabled: true, 
+      blendSrcRGBFactor: ctx.BlendFactor.SrcAlpha,
+      blendSrcAlphaFactor: ctx.BlendFactor.One,
+      blendDstRGBFactor: ctx.BlendFactor.OneMinusSrcAlpha,
+      blendDstAlphaFactor: ctx.BlendFactor.One
+    },
   ]
-
-  // materials = materials.slice(0, materials.length / 2 | 0 + 4)
-  materials = materials.filter((m, i) => i % 6 == 0)
 
   materials.forEach((mat) => {
     if (mat.baseColorMap) mat.baseColorMap = imageFromFile(mat.baseColorMap, ctx.Encoding.SRGB)
@@ -304,6 +224,7 @@ function initMeshes () {
       })
     ]
     const entity = renderer.entity(components, null, tags)
+    renderer.add(entity)
   })
     }
 
@@ -335,81 +256,33 @@ function initMeshes () {
       gui.addTexture2D('Reflection OctMap', reflectionProbe._octMap)
       gui.addTexture2D('Reflection OctMapAtlas', reflectionProbe._reflectionMap)
 
-      renderer.entity([
+      renderer.add(renderer.entity([
         renderer.transform({
           position: [5, 5, 5]
         }),
         dot
-      ])
+      ]))
       // renderer.entity([ sun ])
-      renderer.entity([ skybox ])
-      renderer.entity([ reflectionProbe ])
+      renderer.add(renderer.entity([ skybox ]))
+      renderer.add(renderer.entity([ reflectionProbe ]))
     }
 
     initCamera()
     initMeshes()
     // initSky()
 
-    // io.loadBinary(ASSETS_DIR + '/envmaps/pisa/pisa.hdr', (err, buf) => {
-    // io.loadBinary('http://192.168.1.123/assets/envmaps/Hamarikyu_Bridge/Hamarikyu_Bridge.hdr', (err, buf) => {
-    // io.loadBinary('http://192.168.1.123/assets/envmaps/multi-area-light/multi-area-light.hdr', (err, buf) => {
-    // io.loadBinary('http://192.168.1.123/assets/envmaps/hallstatt4_hd.hdr', (err, buf) => {
-    // io.loadBinary('http://192.168.1.123/assets/envmaps/uprat5_hd.hdr', (err, buf) => {
-    // io.loadBinary('http://192.168.1.123/assets/envmaps/OpenfootageNETHDRforrest03_small.hdr', (err, buf) => {
-    // io.loadBinary('http://192.168.1.123/assets/envmaps/OpenfootageNET_Salzach_low.hdr', (err, buf) => {
-    // io.loadBinary('http://192.168.1.123/assets/envmaps/OpenfootageNET_Staatsbridge_HDRI_low.hdr', (err, buf) => {
-    io.loadBinary(`http://${HOST}/assets/envmaps/garage/garage.hdr`, (err, buf) => {
-    // io.loadBinary('http://192.168.1.123/assets/envmaps/grace-new/grace-new.hdr', (err, buf) => {
+    io.loadBinary(`${ASSETS_DIR}/garage.hdr`, (err, buf) => {
       const hdrImg = parseHdr(buf)
-      const data = new Uint8Array(hdrImg.data.length)
-      // const data = new Float32Array(hdrImg.data.length)
-      // for (var i = 0; i < hdrImg.data.length; i++) {
-      // hdrImg.data[i] = Math.min(1, hdrImg.data[i])
-      // }
-      // r.xyz = (1.0 / 7.0) * sqrt(rgb);
-      // r.a = max(max(r.x, r.y), r.z);
-      // r.a = clamp(r.a, 1.0 / 255.0, 1.0);
-      // r.a = ceil(r.a * 255.0) / 255.0;
-      // r.xyz /= r.a;
-      var D = 7
-      for (var i = 0; i < hdrImg.data.length; i+=4) {
-        let r = hdrImg.data[i]
-        let g = hdrImg.data[i + 1]
-        let b = hdrImg.data[i + 2]
-        r = 1 / D * Math.sqrt(r)
-        g = 1 / D * Math.sqrt(g)
-        b = 1 / D * Math.sqrt(b)
-        let a = Math.max(r, Math.max(g, b))
-        if (a > 1) a = 1
-        if (a < 1 / 255) a = 1 / 255
-        a = Math.ceil(a * 255) / 255
-        r /= a
-        g /= a
-        b /= a
-        data[i] = (r * 255) | 0
-        data[i + 1] = (g * 255) | 0
-        data[i + 2] = (b * 255) | 0
-        data[i + 3] = (a * 255) | 0
-      }
-      console.log('data', data, hdrImg)
-      for (var i = 0; i < hdrImg.data.length; i+=4) {
-        // hdrImg.data[i] = data[i] / 255 * D * data[i + 3] / 255
-        // hdrImg.data[i + 1] = data[i + 1] / 255 * D * data[i + 3] / 255
-        // hdrImg.data[i + 2] = data[i + 2] / 255 * D * data[i + 3] / 255
-        // hdrImg.data[i] *= hdrImg.data[i]
-        // hdrImg.data[i + 1] *= hdrImg.data[i + 1]
-        // hdrImg.data[i + 2] *= hdrImg.data[i + 2]
-      }
-      const panoramaRGBM = ctx.texture2D({
-        data: State.rgbm ? data : hdrImg.data,
+      const panorama= ctx.texture2D({
+        data: hdrImg.data,
         width: hdrImg.shape[0],
         height: hdrImg.shape[1], 
-        pixelFormat: State.rgbm ? ctx.PixelFormat.RGBA8 : ctx.PixelFormat.RGBA32F,
-        encoding: State.rgbm ? ctx.Encoding.RGBM : ctx.Encoding.Linear,
+        pixelFormat: ctx.PixelFormat.RGBA32F,
+        encoding: ctx.Encoding.Linear,
         flipY: true
       })
-      gui.addTexture2D('Panorama', panoramaRGBM)
-      initSky(panoramaRGBM)
+      gui.addTexture2D('Panorama', panorama)
+      initSky(panorama)
     })
 
     let frameNumber = 0
