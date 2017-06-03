@@ -113,6 +113,12 @@ Renderer.prototype.getMaterialProgram = function (geometry, material, skin, opti
 
   var flags = []
 
+  if (geometry._attributes.aNormal) {
+    flags.push('#define USE_NORMALS')
+  }
+  if (geometry._attributes.aTexCoord0) {
+    flags.push('#define USE_TEX_COORDS')
+  }
   if (geometry._attributes.aOffset) {
     flags.push('#define USE_INSTANCED_OFFSET')
   }

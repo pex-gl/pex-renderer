@@ -438,8 +438,15 @@ void main() {
     vec3 directDiffuse = vec3(0.0);
     vec3 directSpecular = vec3(0.0);
 
+    float ao = 1.0;
+#ifdef USE_AO
+    vec2 vUV = vec2(gl_FragCoord.x / uScreenSize.x, gl_FragCoord.y / uScreenSize.y);
+    ao = texture2D(uAO, vUV).r;
+#endif
+
     //TODO: No kd? so not really energy conserving
     //we could use disney brdf for irradiance map to compensate for that like in Frostbite
+#ifdef USE_NORMALS
 #ifdef USE_REFLECTION_PROBES
     float NdotV = saturate( dot( normalWorld, eyeDirWorld ) );
     vec3 reflectance = EnvBRDFApprox( F0, roughness, NdotV );
@@ -506,8 +513,6 @@ void main() {
 
             vec3 lightColor = decode(light.color, 3).rgb;
             lightColor *= light.color.a; // intensity
-
-
             vec3 light = NdotL * lightColor * illuminated;
 
             directDiffuse += kD * baseColor / PI * light;
@@ -578,13 +583,10 @@ void main() {
         //}
     }
 #endif
-
-    float ao = 1.0;
-#ifdef USE_AO
-    vec2 vUV = vec2(gl_FragCoord.x / uScreenSize.x, gl_FragCoord.y / uScreenSize.y);
-    ao = texture2D(uAO, vUV).r;
-#endif
-
     vec3 color = emissiveColor + ao * indirectDiffuse + indirectSpecular + directDiffuse + directSpecular + indirectArea;
+#else  // USE_NORMALS
+    vec3 color = ao * baseColor;
+#endif // USE_NORMALS
+
     gl_FragData[0] = encode(vec4(color, 1.0), uOutputEncoding);
 }
