@@ -87,6 +87,19 @@ uniform PointLight uPointLights[NUM_POINT_LIGHTS];
 
 #endif
 
+#if NUM_SPOT_LIGHTS > 0
+
+struct SpotLight {
+    vec3 position;
+    vec3 direction;
+    vec4 color;
+    float angle;
+    float distance;
+};
+
+uniform SpotLight uSpotLights[NUM_SPOT_LIGHTS];
+
+#endif
 //fron depth buf normalized z to linear (eye space) z
 //http://stackoverflow.com/questions/6652253/getting-the-true-z-value-from-the-depth-buffer
 float ndcDepthToEyeSpaceProj(float ndcDepth, float near, float far) {
@@ -531,9 +544,9 @@ void main() {
 
         float dotNL = max(0.0, dot(normalWorld, L));
 
+        // Based on UE4
         float distanceRatio = clamp(1.0 - pow(dist/light.radius, 4.0), 0.0, 1.0);
         float falloff = (distanceRatio * distanceRatio) / (dist * dist + 1.0);
-        // float falloff = 1.0 / (dist * dist);
 
         vec3 lightColor = decode(light.color, 3).rgb;
         lightColor *= light.color.a;
@@ -566,6 +579,81 @@ void main() {
 
         directDiffuse += kD * baseColor / PI * NdotL * radiance;
         directSpecular += brdf * NdotL * radiance;
+    }
+#endif
+
+#if NUM_SPOT_LIGHTS > 0
+    for(int i=0; i<NUM_SPOT_LIGHTS; i++) {
+        SpotLight light = uSpotLights[i];
+
+        const float spotlightLinearAtt = 1.0;
+        float dist = distance(vPositionWorld, light.position);
+        vec3 vDir = (vPositionWorld - light.position) / dist;
+        float distAttenuation = 1.0/(dist * spotlightLinearAtt);
+
+        float fCosine = dot(light.direction, vDir);
+        float cutOff = cos(light.angle);
+
+        float fDif = 1.0 - cutOff;
+        float fFactor = clamp((fCosine - cutOff)/fDif, 0.0, 1.0);
+
+        fFactor = pow(fFactor, 2.0);
+
+        if (fCosine > cutOff) {
+          vec3 L = normalize(-light.direction);
+
+          float intensity = max(dot(normalWorld, L), 0.0);
+          //vec4 spec = vec4(0.0);
+          //if (intensity > 0.0) {
+          //  vec3 eye = vec3(0.0, 0.0, 1.0);
+          //  vec3 h = normalize(ecLightDir + eye);
+          //  float intSpec = max(dot(h, ecN), 0.0);
+          //  spec = vec4(1.0) * pow(intSpec, 128.0);
+          //}
+
+          const float distAttenuation = 1.0;
+          //return fFactor * distAttenuation * intensity * spotlightColor + spec;
+          directDiffuse += fFactor * distAttenuation * intensity * light.color.rgb;
+
+        }
+
+        /*
+        // Based on UE4
+        float distanceRatio = clamp(1.0 - pow(dist/light.radius, 4.0), 0.0, 1.0);
+        float falloff = (distanceRatio * distanceRatio) / (dist * dist + 1.0);
+
+        vec3 lightColor = decode(light.color, 3).rgb;
+        lightColor *= light.color.a;
+        //TODO: specular light conservation
+        // directDiffuse += baseColor * dotNL * lightColor * falloff;
+        // directSpecular += directSpecularGGX(normalWorld, eyeDirWorld, L, roughness, F0) * light.color.rgb * falloff;
+
+        vec3 N = normalWorld;
+        vec3 H = normalize(V + L);
+        float NdotL = max(0.0, dot(N, L));
+        float HdotV = max(0.0, dot(H, V));
+        float NdotV = max(0.0, dot(N, V));
+
+        vec3 F = FresnelSchlick(HdotV, F0);
+
+        vec3 kS = F;
+        vec3 kD = vec3(1.0) - kS;
+
+        kD *= 1.0 - metallic;
+
+        float NDF = GGX(N, H, roughness);
+
+        float G = GeometrySmith(N, V, L, roughness);
+
+        vec3 nominator = NDF * G * F;
+        float denominator = 4.0 * NdotV * NdotL + 0.001;
+        vec3 brdf = nominator / denominator;
+
+        vec3 radiance = lightColor * falloff;
+
+        directDiffuse += kD * baseColor / PI * NdotL * radiance;
+        directSpecular += brdf * NdotL * radiance;
+        */
     }
 #endif
 

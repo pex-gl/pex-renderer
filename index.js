@@ -18,6 +18,7 @@ const createMaterial = require('./material')
 const createCamera = require('./camera')
 const createDirectionalLight = require('./directional-light')
 const createPointLight = require('./point-light')
+const createSpotLight = require('./spot-light')
 const createAreaLight = require('./area-light')
 const createReflectionProbe = require('./reflection-probe')
 const createSkybox = require('./skybox')
@@ -83,9 +84,9 @@ function Renderer (opts) {
   this._state = State
 }
 
-Renderer.prototype.updateDirectionalLightShadowMap = function (light) {
+Renderer.prototype.updateDirectionalLightShadowMap = function (light, geometries) {
   const ctx = this._ctx
-  const position = light.entity.transform.position
+  const position = [0, 0, 0]
   Vec3.scale(position, 0)
   Vec3.sub(position, light.direction)
   Vec3.normalize(position)
@@ -96,7 +97,7 @@ Renderer.prototype.updateDirectionalLightShadowMap = function (light) {
   Mat4.ortho(light._projectionMatrix, light._left, light._right, light._bottom, light._top, light._near, light._far)
 
   ctx.submit(light._shadowMapDrawCommand, () => {
-    this.drawMeshes(null, light)
+    this.drawMeshes(null, light, geometries)
   })
 }
 
@@ -156,7 +157,7 @@ Renderer.prototype.getMaterialProgram = function (geometry, material, skin, opti
     flags.push('#define USE_INSTANCED_COLOR')
   }
 
-  flags.push('#define SHADOW_QUALITY ' + State.shadowQuality)
+  flags.push('#define SHADOW_QUALITY ' + (material.receiveShadows ? State.shadowQuality : 0))
 
   if (material.baseColorMap) {
     flags.push('#define USE_BASE_COLOR_MAP')
@@ -175,6 +176,7 @@ Renderer.prototype.getMaterialProgram = function (geometry, material, skin, opti
   }
   flags.push('#define NUM_DIRECTIONAL_LIGHTS ' + (options.numDirectionalLights || 0))
   flags.push('#define NUM_POINT_LIGHTS ' + (options.numPointLights || 0))
+  flags.push('#define NUM_SPOT_LIGHTS ' + (options.numSpotLights || 0))
   flags.push('#define NUM_AREA_LIGHTS ' + (options.numAreaLights || 0))
   if (options.useReflectionProbes) {
     flags.push('#define USE_REFLECTION_PROBES')
@@ -267,26 +269,40 @@ Renderer.prototype.getComponents = function (type) {
 // set update transforms once per frame
 // draw + shadowmap @ 1000 objects x 30 uniforms = 60'000 setters / frame!!
 // transform feedback?
-Renderer.prototype.drawMeshes = function (camera, shadowMappingLight) {
+Renderer.prototype.drawMeshes = function (camera, shadowMappingLight, geometries) {
   const ctx = this._ctx
 
   if (State.profiler) State.profiler.time('drawMeshes')
 
   function byCameraTags (component) {
     if (!camera) return true
-    if (!camera.entity.tags) return false
-    if (!component.entity.tags) return false
+    if (!camera.entity.tags.length) return true
+    if (!component.entity.tags.length) return true
     return component.entity.tags[0] === camera.entity.tags[0]
   }
 
-  const geometries = this.getComponents('Geometry').filter(byCameraTags)
-  const directionalLights = this.getComponents('DirectionalLight')
-  const pointLights = this.getComponents('PointLight')
-  const areaLights = this.getComponents('AreaLight')
-  const reflectionProbes = this.getComponents('ReflectionProbe')
+  geometries = geometries || this.getComponents('Geometry').filter(byCameraTags)
+  const directionalLights = this.getComponents('DirectionalLight').filter(byCameraTags)
+  const pointLights = this.getComponents('PointLight').filter(byCameraTags)
+  const spotLights = this.getComponents('SpotLight').filter(byCameraTags)
+  const areaLights = this.getComponents('AreaLight').filter(byCameraTags)
+  const reflectionProbes = this.getComponents('ReflectionProbe').filter(byCameraTags)
 
   var sharedUniforms = this._sharedUniforms = this._sharedUniforms || {}
   sharedUniforms.uOutputEncoding = State.rgbm ? ctx.Encoding.RGBM : ctx.Encoding.Linear // TODO: State.postprocess
+
+  if (!shadowMappingLight) {
+    directionalLights.forEach((light) => {
+      Vec3.set(light._prevDirection, light.direction)
+      if (light.castShadows) {
+        const shadowCasters = geometries.filter((geometry) => {
+          const material = geometry.entity.getComponent('Material')
+          return material && material.castShadows
+        })
+        this.updateDirectionalLightShadowMap(light, shadowCasters)
+      }
+    })
+  }
 
   // TODO:  find nearest reflection probe
   if (reflectionProbes.length > 0) {
@@ -326,12 +342,20 @@ Renderer.prototype.drawMeshes = function (camera, shadowMappingLight) {
     sharedUniforms['uPointLights[' + i + '].radius'] = light.radius
   })
 
+  spotLights.forEach(function (light, i) {
+    sharedUniforms['uSpotLights[' + i + '].position'] = light.entity.transform.position
+    sharedUniforms['uSpotLights[' + i + '].color'] = light.color
+    sharedUniforms['uSpotLights[' + i + '].distance'] = light.distance
+    sharedUniforms['uSpotLights[' + i + '].angle'] = light.angle
+    sharedUniforms['uSpotLights[' + i + '].direction'] = light.direction
+  })
+
   areaLights.forEach(function (light, i) {
     sharedUniforms.ltc_mat = light.ltc_mat_texture
     sharedUniforms.ltc_mag = light.ltc_mag_texture
     sharedUniforms['uAreaLights[' + i + '].position'] = light.entity.transform.position
     sharedUniforms['uAreaLights[' + i + '].color'] = light.color
-    sharedUniforms['uAreaLights[' + i + '].intensity'] = light.intensity
+    sharedUniforms['uAreaLights[' + i + '].intensity'] = light.intensity // FIXME: why area light has intensity and other lights don't?
     sharedUniforms['uAreaLights[' + i + '].rotation'] = light.entity.transform.rotation
     sharedUniforms['uAreaLights[' + i + '].size'] = [light.entity.transform.scale[0] / 2, light.entity.transform.scale[1] / 2]
   })
@@ -383,6 +407,7 @@ Renderer.prototype.drawMeshes = function (camera, shadowMappingLight) {
       pipeline = this.getGeometryPipeline(geometry, material, skin, {
         numDirectionalLights: directionalLights.length,
         numPointLights: pointLights.length,
+        numSpotLights: spotLights.length,
         numAreaLights: areaLights.length,
         useReflectionProbes: reflectionProbes.length, // TODO: reflection probes true
         useSSAO: camera.ssao
@@ -412,6 +437,7 @@ Renderer.prototype.drawMeshes = function (camera, shadowMappingLight) {
       name: 'drawGeometry',
       attributes: geometry._attributes,
       indices: geometry._indices,
+      count: geometry.count,
       pipeline: pipeline,
       uniforms: cachedUniforms,
       instances: geometry.instances
@@ -482,14 +508,6 @@ Renderer.prototype.draw = function () {
   })
 
   // draw scene
-
-  directionalLights.forEach((light) => {
-    var directionHasChanged = !Vec3.equals(light.direction, light._prevDirection)
-    if (directionHasChanged) {
-      Vec3.set(light._prevDirection, light.direction)
-      this.updateDirectionalLightShadowMap(light)
-    }
-  })
 
   cameras.forEach((camera, cameraIndex) => {
     ctx.submit(camera._drawFrameFboCommand, () => {
@@ -726,6 +744,10 @@ Renderer.prototype.directionalLight = function (opts) {
 
 Renderer.prototype.pointLight = function (opts) {
   return createPointLight(Object.assign({ ctx: this._ctx }, opts))
+}
+
+Renderer.prototype.spotLight = function (opts) {
+  return createSpotLight(Object.assign({ ctx: this._ctx }, opts))
 }
 
 Renderer.prototype.areaLight = function (opts) {
