@@ -24,6 +24,8 @@ function Material (opts) {
   this.blendSrcAlphaFactor = ctx.BlendFactor.ONE
   this.blendDstRGBFactor = ctx.BlendFactor.ONE
   this.blendDstAlphaFactor = ctx.BlendFactor.ONE
+  this.castShadows = false
+  this.receiveShadows = false
 
   this.set(opts)
 }

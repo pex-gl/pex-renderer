@@ -11,6 +11,7 @@ function DirectionalLight (opts) {
   this.intensity = 1
   this.direction = [1, -1, 0]
   this.bias = 0.1
+  this.castShadows = false
 
   this._left = -10
   this._right = 10

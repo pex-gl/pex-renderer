@@ -1,30 +1,32 @@
 const Signal = require('signals')
 
-function PointLight (opts) {
-  this.type = 'PointLight'
+function SpotLight (opts) {
+  this.type = 'SpotLight'
   this.changed = new Signal()
   this.color = [1, 1, 1, 1]
   this.intensity = 1
-  this.radius = 10
+  this.angle = Math.PI / 12
+  this.direction = [0, -1, 0]
+  this.distance = 10
   this.castShadows = false
 
   this.set(opts)
 }
 
-PointLight.prototype.init = function (entity) {
+SpotLight.prototype.init = function (entity) {
   this.entity = entity
 }
 
-PointLight.prototype.set = function (opts) {
+SpotLight.prototype.set = function (opts) {
   Object.assign(this, opts)
 
   if (opts.color !== undefined || opts.intensity !== undefined) {
-    this.color[3] = this.intensity;
+    this.color[3] = this.intensity
   }
 
   Object.keys(opts).forEach((prop) => this.changed.dispatch(prop))
 }
 
 module.exports = function (opts) {
-  return new PointLight(opts)
+  return new SpotLight(opts)
 }

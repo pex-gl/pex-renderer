@@ -9,6 +9,7 @@ function AreaLight (opts) {
   this.changed = new Signal()
   this.color = [1, 1, 1, 1]
   this.intensity = 1
+  this.castShadows = false
 
   this.set(opts)
 
