@@ -1,8 +1,10 @@
 const createTransform = require('./transform')
+const assert = require('assert')
 
 let entityId = 0
 
 function Entity (components, tags) {
+  assert(!tags || Array.isArray(tags), 'Entity tags must be an array or null')
   this.id = entityId++
   this.tags = tags || []
 
