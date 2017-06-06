@@ -15,6 +15,7 @@ const io = require('pex-io')
 const dragon = require('stanford-dragon/3')
 const normals = require('angle-normals')
 const centerAndNormalize = require('geom-center-and-normalize')
+const isBrowser = require('is-browser')
 dragon.positions = centerAndNormalize(dragon.positions).map((v) => Vec3.scale(v, 5))
 dragon.normals = normals(dragon.cells, dragon.positions)
 dragon.uvs = dragon.positions.map(() => [0, 0])
@@ -118,11 +119,13 @@ function initCamera () {
   gui.addParam('FXAA', cameraCmp, 'fxaa')
 }
 
+const ASSETS_DIR = isBrowser ? 'assets' : `${__dirname}/assets`
+
 function initMeshes () {
-  const baseColorMap = imageFromFile('assets/plastic-basecolor.png', { encoding: ctx.Encoding.SRGB })
-  const normalMap = imageFromFile('assets/plastic-normal.png', { encoding: ctx.Encoding.Linear })
-  const metallicMap = imageFromFile('assets/plastic-metallic.png', { encoding: ctx.Encoding.Linear })
-  const roughnessMap = imageFromFile('assets/plastic-roughness.png', { encoding: ctx.Encoding.Linear })
+  const baseColorMap = imageFromFile(ASSETS_DIR + '/plastic-basecolor.png', { encoding: ctx.Encoding.SRGB })
+  const normalMap = imageFromFile(ASSETS_DIR + '/plastic-normal.png', { encoding: ctx.Encoding.Linear })
+  const metallicMap = imageFromFile(ASSETS_DIR + '/plastic-metallic.png', { encoding: ctx.Encoding.Linear })
+  const roughnessMap = imageFromFile(ASSETS_DIR + '/plastic-roughness.png', { encoding: ctx.Encoding.Linear })
   const groundCube = createRoundedCube(1, 1, 1, 20, 20, 20, 0.01)
   const roundedCube = createRoundedCube(1, 1, 1, 20, 20, 20, 0.2)
   const capsule = createCapsule(0.3)
@@ -289,7 +292,9 @@ function initLights () {
 }
 
 function imageFromFile (file, options) {
+  console.log('loading', file)
   const tex = ctx.texture2D({
+    data: [],
     width: 1,
     height: 1,
     pixelFormat: ctx.PixelFormat.RGBA8,
