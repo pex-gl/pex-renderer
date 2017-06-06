@@ -4,9 +4,15 @@ const random = require('pex-random')
 const Vec3 = require('pex-math/Vec3')
 const MathUtils = require('pex-math/Utils')
 const flatten = require('flatten')
+const isPlask = require('is-plask')
 
 const OVERLAY_VERT = glsl(__dirname + '/glsl/Overlay.vert')
-const OVERLAY_FRAG = glsl(__dirname + '/glsl/Overlay.frag')
+let OVERLAY_FRAG = glsl(__dirname + '/glsl/Overlay.frag')
+
+if (isPlask) {
+  OVERLAY_FRAG = OVERLAY_FRAG.replace(/mediump/g,'')
+}
+
 const SAO_FRAG = glsl(__dirname + '/glsl/SAO.frag')
 const BILATERAL_BLUR_FRAG = glsl(__dirname + '/glsl/BilateralBlur.frag')
 

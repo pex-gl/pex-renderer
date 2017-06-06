@@ -3,9 +3,8 @@
 
 #ifdef GL_ES
 #extension GL_OES_standard_derivatives : enable
-#endif
-
 precision mediump float;
+#endif
 
 // total number of samples at each fragment
 #define NUM_SAMPLES 11
