@@ -141,7 +141,9 @@ function initMeshes () {
       renderer.material({
         baseColor: [0.07, 0.06, 0.00, 1.0],
         roughness: 0.2,
-        metallic: 0
+        metallic: 0,
+        castShadows: true,
+        receiveShadows: true
       })
     ]))
   }
@@ -155,7 +157,9 @@ function initMeshes () {
     renderer.material({
       baseColor: [0.15, 0.15, 0.2, 1.0],
       roughness: 1,
-      metallic: 0
+      metallic: 0,
+      castShadows: true,
+      receiveShadows: true
     })
   ]))
 
@@ -167,7 +171,9 @@ function initMeshes () {
     renderer.material({
       baseColor: [0.8, 0.8, 0.8, 1.0],
       roughness: 1,
-      metallic: 0
+      metallic: 0,
+      castShadows: true,
+      receiveShadows: true
     })
   ])
   entities.push(dragonEnt)
@@ -191,7 +197,9 @@ function initMeshes () {
           baseColorMap: baseColorMap,
           roughnessMap: roughnessMap,
           metallicMap: metallicMap,
-          normalMap: normalMap
+          normalMap: normalMap,
+          castShadows: true,
+          receiveShadows: true
         })
       ])
       entities.push(entity)
@@ -214,7 +222,8 @@ function initSky () {
   const sun = State.sun = renderer.directionalLight({
     direction: Vec3.sub(Vec3.create(), State.sunPosition),
     color: [1, 1, 0.95, 1],
-    intensity: 10
+    intensity: 10,
+    castShadows: true
   })
 
   const skybox = State.skybox = renderer.skybox({
@@ -268,7 +277,8 @@ function initLights () {
     }),
     renderer.areaLight({
       color: [2.0, 1.2, 0.1, 1],
-      intensity: 2
+      intensity: 2,
+      castShadows: true
     })
   ])
   renderer.add(areaLight)

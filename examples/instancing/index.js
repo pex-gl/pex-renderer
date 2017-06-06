@@ -79,9 +79,9 @@ function initCamera () {
   })
   createOrbiter({ camera: camera })
 
-  renderer.entity([
+  renderer.add(renderer.entity([
     renderer.camera({ camera: camera })
-  ])
+  ]))
 }
 
 function initMeshes () {
@@ -179,9 +179,13 @@ function initMeshes () {
     renderer.material({
       baseColor: [0.9, 0.9, 0.9, 1],
       roughness: 0.01,
-      metallic: 1.0
+      metallic: 1.0,
+      castShadows: true,
+      receiveShadows: true
     })
   ])
+  renderer.add(entity)
+
   gui.addHeader('Material')
   gui.addParam('Roughness', State, 'roughness', {}, () => {
     entity.getComponent('Material').set({ roughness: State.roughness })
@@ -197,7 +201,9 @@ function initMeshes () {
 function initSky () {
   const sun = State.sun = renderer.directionalLight({
     direction: Vec3.sub(Vec3.create(), State.sunPosition),
-    color: [5, 5, 4, 1]
+    color: [5, 5, 4, 1],
+    bias: 0.01,
+    castShadows: true
   })
   gui.addTexture2D('Shadow map', sun._shadowMap).setPosition(10 + 170, 10)
 
@@ -214,9 +220,9 @@ function initSky () {
   })
   gui.addTexture2D('ReflectionMap', reflectionProbe._reflectionMap)
 
-  renderer.entity([ sun ])
-  renderer.entity([ skybox ])
-  renderer.entity([ reflectionProbe ])
+  renderer.add(renderer.entity([ sun ]))
+  renderer.add(renderer.entity([ skybox ]))
+  renderer.add(renderer.entity([ reflectionProbe ]))
 }
 
 function initLights () {

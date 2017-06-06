@@ -209,7 +209,7 @@ function initLights () {
 }
 
 function imageFromFile (file, options) {
-  const tex = ctx.texture2D({ width: 1, height: 1})
+  const tex = ctx.texture2D({ width: 1, height: 1, pixelFormat: ctx.PixelFormat.RGBA8, encoding: options.encoding })
   io.loadImage(file, function (err, image) {
     console.log('image loaded', file)
     if (err) console.log(err)
@@ -301,7 +301,7 @@ ground_SquarePaversOnGrass_PBR_Metallic
 wall_GenericBrownStucco_PBR_Metallic
 wood_OldWideFloorPlanks_PBR_Metallic`
 
-const ASSETS_DIR = isBrowser ? 'http://localhost/assets' : '/Users/vorg/Workspace/assets'
+const ASSETS_DIR = isBrowser ? `http://localhost/assets` : '/Users/vorg/Workspace/assets'
 
 function initMaterials () {
   let baseColorTextures = [
@@ -336,10 +336,10 @@ function initMaterials () {
   baseColorTextures = baseColorTextures.slice(4, 10)
   for (let i = 0; i < baseColorTextures.length; i++) {
     const mat = {}
-    mat.baseColorTex = imageFromFile(baseColorTextures[i], { flip: false, mipmap: true, repeat: true })
-    mat.normalTex = imageFromFile(baseColorTextures[i].replace('_basecolor.', '_n.'), { flipY: true, mipmap: true, repeat: true })
-    mat.roughnessTex = imageFromFile(baseColorTextures[i].replace('_basecolor.', '_roughness.'), { flipY: true, mipmap: true, repeat: true })
-    mat.metallicTex = imageFromFile(baseColorTextures[i].replace('_basecolor.', '_metallic.'), { flipY: true, mipmap: true, repeat: true })
+    mat.baseColorTex = imageFromFile(baseColorTextures[i], { flip: false, mipmap: true, repeat: true, encoding: ctx.Encoding.SRGB })
+    mat.normalTex = imageFromFile(baseColorTextures[i].replace('_basecolor.', '_n.'), { flipY: true, mipmap: true, repeat: true, encoding: ctx.Encoding.Linear })
+    mat.roughnessTex = imageFromFile(baseColorTextures[i].replace('_basecolor.', '_roughness.'), { flipY: true, mipmap: true, repeat: true, encoding: ctx.Encoding.Linear })
+    mat.metallicTex = imageFromFile(baseColorTextures[i].replace('_basecolor.', '_metallic.'), { flipY: true, mipmap: true, repeat: true, encoding: ctx.Encoding.Linear })
     // mat.normalTex = imageFromFile(baseColorTextures[i].replace('_Base_Color.', '_Normal.'), { flipY: true, mipmap: true, repeat: true })
     // mat.roughnessTex = imageFromFile(baseColorTextures[i].replace('_Base_Color.', '_Roughness.'), { flipY: true, mipmap: true, repeat: true })
     // mat.metallicTex = imageFromFile(baseColorTextures[i].replace('_Base_Color.', '_Metallic.'), { flipY: true, mipmap: true, repeat: true })
