@@ -35,7 +35,7 @@
     "pex-math": "^1.0.1",
     "pex-random": "^1.0.0",
     "primitive-cube": "^2.0.1",
-    "primitive-quad": "vorg/primitive-quad#e8dd4d7292db7a948c0b2ebc7e75cd9193910058",
+    "primitive-quad": "^2.0.0",
     "primitive-sphere": "^3.0.0",
     "scene-tree": "^2.0.1",
     "signals": "^1.0.0"
