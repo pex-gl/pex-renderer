@@ -46,6 +46,7 @@ var ssaoNoiseData = new Float32Array(flatten(ssaoNoise))
 
 
 function Camera (opts) {
+  const gl = opts.ctx.gl
   this.type = 'Camera'
   this.changed = new Signal()
   this.backgroundColor = [0, 0, 0, 1]
@@ -72,6 +73,7 @@ function Camera (opts) {
   this.fogStart = 5
   this.fogDensity = 0.15
   this.sunPosition = [1, 1, 1]
+  this.viewport = [0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight]
 
   this.set(opts)
 
@@ -94,6 +96,16 @@ Camera.prototype.set = function (opts) {
     this.up = camera.up
   }
 
+  if (opts.viewport) {
+    const viewport = opts.viewport
+    this.camera({ aspect: viewport[2] / viewport[3] })
+    this._textures.forEach((tex) => {
+      if (tex.width !== viewport[2] || tex.height !== viewport[3]) {
+        this.ctx.update(tex, { width: viewport[2], height: viewport[3] })
+      }
+    })
+  }
+
   Object.keys(opts).forEach((prop) => this.changed.dispatch(prop))
 }
 
@@ -102,8 +114,8 @@ Camera.prototype.initPostproces = function () {
   var fsqPositions = [[-1, -1], [1, -1], [1, 1], [-1, 1]]
   var fsqFaces = [[0, 1, 2], [0, 2, 3]]
 
-  var W = this.viewport ? this.viewport[2] : ctx.gl.drawingBufferWidth
-  var H = this.viewport ? this.viewport[3] : ctx.gl.drawingBufferHeight
+  var W = this.viewport[2]
+  var H = this.viewport[3]
 
   this._fsqMesh = {
     attributes: {
@@ -135,6 +147,14 @@ Camera.prototype.initPostproces = function () {
     encoding: this.rgbm ? ctx.Encoding.RGBM : ctx.Encoding.Linear
   })
 
+  this._textures = [
+    this._frameColorTex,
+    this._frameDepthTex,
+    this._frameAOTex,
+    this._frameAOBlurTex,
+    this._frameDofBlurTex,
+  ]
+
   ctx.gl.getExtension('OES_texture_float ')
   this._ssaoKernelMap = ctx.texture2D({ width: 8, height: 8, data: ssaoKernelData, pixelFormat: ctx.PixelFormat.RGBA32F, encoding: ctx.Encoding.Linear, wrap: ctx.Wrap.Repeat })
   this._ssaoNoiseMap = ctx.texture2D({ width: 128, height: 128, data: ssaoNoiseData, pixelFormat: ctx.PixelFormat.RGBA32F, encoding: ctx.Encoding.Linear, wrap: ctx.Wrap.Repeat, mag: ctx.Filter.Linear, min: ctx.Filter.Linear })
@@ -161,7 +181,6 @@ Camera.prototype.initPostproces = function () {
     attributes: this._fsqMesh.attributes,
     indices: this._fsqMesh.indices,
     uniforms: {
-      uScreenSize: [W, H],
       uOverlay: this._frameColorTex,
       uOverlayEncoding: this._frameColorTex.encoding,
       uViewMatrix: this.viewMatrix,
@@ -185,7 +204,6 @@ Camera.prototype.initPostproces = function () {
     attributes: this._fsqMesh.attributes,
     indices: this._fsqMesh.indices,
     uniforms: {
-      viewportResolution: [W, H],
       sGBuffer: this._frameDepthTex,
       sNoise: this._ssaoNoiseMap
     }
@@ -206,7 +224,6 @@ Camera.prototype.initPostproces = function () {
     indices: this._fsqMesh.indices,
     uniforms: {
       depthMap: this._frameDepthTex,
-      depthMapSize: [W, H],
       image: this._frameAOTex,
       // direction: [State.bilateralBlurRadius, 0], // TODO:
       direction: [0.5, 0],
@@ -230,7 +247,6 @@ Camera.prototype.initPostproces = function () {
     indices: this._fsqMesh.indices,
     uniforms: {
       depthMap: this._frameDepthTex,
-      depthMapSize: [W, H],
       image: this._frameAOBlurTex,
       // direction: [0, State.bilateralBlurRadius], // TODO:
       direction: [0, 0.5],
@@ -254,7 +270,6 @@ Camera.prototype.initPostproces = function () {
     indices: this._fsqMesh.indices,
     uniforms: {
       depthMap: this._frameDepthTex,
-      depthMapSize: [W, H],
       image: this._frameColorTex,
       // direction: [State.bilateralBlurRadius, 0] // TODO:
       direction: [0.5, 0]
@@ -276,7 +291,6 @@ Camera.prototype.initPostproces = function () {
     indices: this._fsqMesh.indices,
     uniforms: {
       depthMap: this._frameDepthTex,
-      depthMapSize: [W, H],
       image: this._frameDofBlurTex,
       // direction: [0, State.bilateralBlurRadius] // TODO:
       direction: [0, 0.5]
