@@ -58,6 +58,14 @@ function Camera (opts) {
   this.bilateralBlurRadius = 0.5
   this.exposure = 1
   this.fxaa = false
+  this.fog = false
+  this.sunDispertion = 0.2
+  this.sunIntensity = 0.1
+  this.inscatteringCoeffs = [0.3, 0.3, 0.3]
+  this.fogColor = [0.5, 0.5, 0.5]
+  this.fogStart = 5
+  this.fogDensity = 0.15
+  this.sunPosition = [1, 1, 1]
 
   this.set(opts)
 
@@ -149,7 +157,10 @@ Camera.prototype.initPostproces = function () {
     uniforms: {
       uScreenSize: [W, H],
       uOverlay: this._frameColorTex,
-      uOverlayEncoding: this._frameColorTex.encoding
+      uOverlayEncoding: this._frameColorTex.encoding,
+      uViewMatrix: this.viewMatrix,
+      depthMap: this._frameDepthTex,
+      depthMapSize: [W, H],
     }
   }
 

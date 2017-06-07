@@ -589,7 +589,18 @@ Renderer.prototype.draw = function () {
       uniforms: {
         uExposure: camera.exposure,
         uFXAA: camera.fxaa,
-        uOutputEncoding: ctx.Encoding.Gamma
+        uFog: camera.fog,
+        uOutputEncoding: ctx.Encoding.Gamma,
+        uNear: camera.camera.near,
+        uFar: camera.camera.far,
+        uFov: camera.camera.fov,
+        uSunDispertion: camera.sunDispertion,
+        uSunIntensity: camera.sunIntensity,
+        uInscatteringCoeffs: camera.inscatteringCoeffs,
+        uFogColor: camera.fogColor,
+        uFogStart: camera.fogStart,
+        uFogDensity: camera.fogDensity,
+        uSunPosition: camera.sunPosition
       },
       viewport: camera.viewport
     })
