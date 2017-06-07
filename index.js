@@ -6,7 +6,6 @@ const Mat4 = require('pex-math/Mat4')
 // var fx = require('pex-fx')
 const glsl = require('glslify')
 // const AreaLightsData = require('./AreaLightsData')
-const createTreeNode = require('scene-tree')
 const createProfiler = require('./profiler')
 const isBrowser = require('is-browser')
 const createEntity = require('./entity')
@@ -74,10 +73,6 @@ function Renderer (opts) {
       State.paused = true
     })
   }
-
-  this._root = createTreeNode()
-  this._rootNodeList = this._root.list()
-  this._rootPrevSortVersion = -1
 
   // TODO: move from State object to internal probs and renderer({ opts }) setter?
   Object.assign(State, opts)
