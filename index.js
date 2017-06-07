@@ -712,8 +712,9 @@ Renderer.prototype.entity = function (components, tags) {
 
 Renderer.prototype.add = function (entity, parent) {
   entity.transform.set({
-    parent: parent ? parent.tranform : entity.transform.parent || this.root.transform
+    parent: parent ? parent.transform : entity.transform.parent || this.root.transform
   })
+  return entity
 }
 
 Renderer.prototype.remove = function (entity) {
