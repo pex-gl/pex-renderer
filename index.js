@@ -58,6 +58,9 @@ function Renderer (opts) {
   this._width = opts.width || opts.ctx.gl.drawingBufferWidth
   this._height = opts.height || opts.ctx.gl.drawingBufferHeight
 
+  const gl = opts.ctx.gl
+  gl.getExtension('OES_standard_derivatives')
+
   // this._debugDraw = new Draw(ctx)
   this._debug = false
 
