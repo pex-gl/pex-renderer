@@ -11,7 +11,6 @@ uniform vec3        uFogColor;
 vec4 fog(vec3 rgb, float dist, vec3 rayDir, vec3 sunDir) {
   vec3 sunColor = toLinear(vec3(0.98, 0.98, 0.7));
   vec3 fogColor = toLinear(uFogColor).rgb;
-  rgb = toLinear(vec4(rgb, 1)).rgb;
 
   float minSc         = 0.02;
   float density       = -(dist+1.0) * uFogDensity * 0.15 - dist * 0.0025;
