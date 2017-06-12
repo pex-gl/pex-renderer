@@ -433,15 +433,17 @@ Renderer.prototype.drawMeshes = function (camera, shadowMappingLight, geometries
       cachedUniforms.uNormalMatrix = Mat3.fromMat4(Mat3.create(), normalMat)
     }
 
-    ctx.submit({
-      name: 'drawGeometry',
-      attributes: geometry._attributes,
-      indices: geometry._indices,
-      count: geometry.count,
-      pipeline: pipeline,
-      uniforms: cachedUniforms,
-      instances: geometry.instances
-    })
+    if (geometry.count || (geometry._indicesBuf && geometry._indicesBuf.length)) {
+      ctx.submit({
+        name: 'drawGeometry',
+        attributes: geometry._attributes,
+        indices: geometry._indices,
+        count: geometry.count,
+        pipeline: pipeline,
+        uniforms: cachedUniforms,
+        instances: geometry.instances
+      })
+    }
   }
 
   if (State.profiler) State.profiler.timeEnd('drawMeshes')
