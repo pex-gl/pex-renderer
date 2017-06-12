@@ -3,9 +3,8 @@
 
 #ifdef GL_ES
 #extension GL_OES_standard_derivatives : enable
-#endif
-
 precision mediump float;
+#endif
 
 // total number of samples at each fragment
 #define NUM_SAMPLES 11
@@ -31,7 +30,7 @@ uniform float uFar;
 uniform float uFov;
 uniform mat4 viewProjectionInverseMatrix;
 uniform mat4 viewMatrix;
-uniform vec2 viewportResolution;
+uniform vec2 uScreenSize;
 uniform vec3 cameraPositionWorldSpace;
 
 // reconstructs view-space unit normal from view-space position
@@ -64,7 +63,7 @@ vec3 getPositionVSOld(vec2 uv) {
 
 vec3 getFarViewDir(vec2 tc) {
   float hfar = 2.0 * tan(uFov/2.0) * uFar;
-  float wfar = hfar * viewportResolution.x / viewportResolution.y;
+  float wfar = hfar * uScreenSize.x / uScreenSize.y;
   vec3 dir = (vec3(wfar * (tc.x - 0.5), hfar * (tc.y - 0.5), -uFar));
   return dir;
 }
@@ -102,7 +101,7 @@ vec2 tapLocation(int sampleNumber, float spinAngle, out float radiusSS) {
 }
 
 vec3 getOffsetPositionVS(vec2 uv, vec2 unitOffset, float radiusSS) {
-  uv = uv + radiusSS * unitOffset * (1.0 / viewportResolution);
+  uv = uv + radiusSS * unitOffset * (1.0 / uScreenSize);
   
   return getPositionVS(uv);
 }
@@ -161,7 +160,7 @@ float rand(vec2 co){
 }
 
 void main() {
-  vec2 vUV = vec2(gl_FragCoord.x / viewportResolution.x, gl_FragCoord.y / viewportResolution.y);
+  vec2 vUV = vec2(gl_FragCoord.x / uScreenSize.x, gl_FragCoord.y / uScreenSize.y);
   vec3 originVS = getPositionVS(vUV);
   
 // #if USE_ACTUAL_NORMALS

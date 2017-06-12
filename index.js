@@ -55,8 +55,9 @@ function Renderer (opts) {
   opts = opts.texture2D ? { ctx: opts } : opts
 
   this._ctx = opts.ctx
-  this._width = opts.width || opts.ctx.gl.drawingBufferWidth
-  this._height = opts.height || opts.ctx.gl.drawingBufferHeight
+
+  const gl = opts.ctx.gl
+  gl.getExtension('OES_standard_derivatives')
 
   // this._debugDraw = new Draw(ctx)
   this._debug = false
@@ -320,7 +321,7 @@ Renderer.prototype.drawMeshes = function (camera, shadowMappingLight, geometries
 
   if (camera && camera.ssao) {
     sharedUniforms.uAO = camera._frameAOTex
-    sharedUniforms.uScreenSize = [ this._width, this._height ] // TODO: should this be camera viewport size?
+    sharedUniforms.uScreenSize = [ camera.viewport[2], camera.viewport[3] ] // TODO: should this be camera viewport size?
   }
 
   directionalLights.forEach(function (light, i) {
@@ -509,6 +510,7 @@ Renderer.prototype.draw = function () {
   // draw scene
 
   cameras.forEach((camera, cameraIndex) => {
+    const screenSize = [camera.viewport[2], camera.viewport[3]]
     ctx.submit(camera._drawFrameFboCommand, () => {
       // depth prepass
       if (camera.depthPrepass) {
@@ -534,7 +536,8 @@ Renderer.prototype.draw = function () {
           uIntensity: camera.ssaoIntensity,
           uNoiseScale: [10, 10],
           uSampleRadiusWS: camera.ssaoRadius,
-          uBias: camera.ssaoBias
+          uBias: camera.ssaoBias,
+          uScreenSize: screenSize
         }
       })
     }
@@ -544,7 +547,8 @@ Renderer.prototype.draw = function () {
           near: camera.camera.near,
           far: camera.camera.far,
           sharpness: 1,
-          imageSize: [this._width, this._height],
+          imageSize: screenSize,
+          depthMapSize: screenSize,
           direction: [camera.bilateralBlurRadius, 0]
         }
       })
@@ -553,7 +557,8 @@ Renderer.prototype.draw = function () {
           near: camera.camera.near,
           far: camera.camera.far,
           sharpness: 1,
-          imageSize: [this._width, this._height],
+          imageSize: screenSize,
+          depthMapSize: screenSize,
           direction: [0, camera.bilateralBlurRadius]
         }
       })
@@ -565,7 +570,8 @@ Renderer.prototype.draw = function () {
             near: camera.camera.near,
             far: camera.camera.far,
             sharpness: 1,
-            imageSize: [this._width, this._height],
+            imageSize: screenSize,
+            depthMapSize: screenSize,
             direction: [camera.dofRadius, 0],
             uDOFDepth: camera.dofDepth,
             uDOFRange: camera.dofRange
@@ -576,7 +582,8 @@ Renderer.prototype.draw = function () {
             near: camera.camera.near,
             far: camera.camera.far,
             sharpness: 1,
-            imageSize: [this._width, this._height],
+            imageSize: screenSize,
+            depthMapSize: screenSize,
             direction: [0, camera.dofRadius],
             uDOFDepth: camera.dofDepth,
             uDOFRange: camera.dofRange
@@ -589,7 +596,6 @@ Renderer.prototype.draw = function () {
         uExposure: camera.exposure,
         uFXAA: camera.fxaa,
         uFog: camera.fog,
-        uOutputEncoding: ctx.Encoding.Gamma,
         uNear: camera.camera.near,
         uFar: camera.camera.far,
         uFov: camera.camera.fov,
@@ -599,7 +605,9 @@ Renderer.prototype.draw = function () {
         uFogColor: camera.fogColor,
         uFogStart: camera.fogStart,
         uFogDensity: camera.fogDensity,
-        uSunPosition: camera.sunPosition
+        uSunPosition: camera.sunPosition,
+        uOutputEncoding: ctx.Encoding.Gamma,
+        uScreenSize: screenSize
       },
       viewport: camera.viewport
     })
@@ -716,8 +724,9 @@ Renderer.prototype.entity = function (components, tags) {
 
 Renderer.prototype.add = function (entity, parent) {
   entity.transform.set({
-    parent: parent ? parent.tranform : entity.transform.parent || this.root.transform
+    parent: parent ? parent.transform : entity.transform.parent || this.root.transform
   })
+  return entity
 }
 
 Renderer.prototype.remove = function (entity) {

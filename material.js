@@ -26,6 +26,7 @@ function Material (opts) {
   this.blendDstAlphaFactor = ctx.BlendFactor.ONE
   this.castShadows = false
   this.receiveShadows = false
+  this.cullFaceEnabled = true
 
   this.set(opts)
 }
