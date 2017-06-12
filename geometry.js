@@ -1,13 +1,11 @@
 const Signal = require('signals')
 const AABB = require('pex-geom/AABB')
-const createLineBuilder = require('./line-builder')
-const lineBuilder = createLineBuilder()
 
 function Geometry (opts) {
   this.type = 'Geometry'
   this.changed = new Signal()
   this.bounds = AABB.create()
-  this.shouldDrawGizmo = false
+  this.drawDebug = false
   this.gizmoEntity = null
 
   this.primitive = opts.ctx.Primitive.Triangles
@@ -119,43 +117,9 @@ Geometry.prototype.set = function (opts) {
   }
 }
 
-Geometry.prototype.drawGizmo = function (opts) {
-  const ctx = opts.ctx
-  const renderer = opts.renderer
-  if (this.shouldDrawGizmo) {
-    lineBuilder.addBoundingBox(this.bounds)
-
-    const positions = lineBuilder.getPositions()
-
-    if (!this.gizmoEntity) {
-      const transformCmp = this.entity.getComponent('Transform')
-      let position = [0, 0, 0]
-      if (transformCmp) position = transformCmp.position
-      this.gizmoEntity = renderer.entity([
-        renderer.transform({
-          position: position,
-        }),
-        renderer.geometry({
-          positions: positions,
-          primitive: opts.ctx.Primitive.Lines,
-          count: positions.length
-        }),
-        renderer.material({
-          baseColor: [1, 1, 1, 1]
-        }),
-      ], ['geometryGizmo'])
-      renderer.add(this.gizmoEntity)
-    } else {
-      this.gizmoEntity.getComponent('Geometry').set({
-        positions: positions,
-        count: positions.length
-      })
-    }
-  } else {
-    renderer.remove(this.gizmoEntity)
-  }
-
-  lineBuilder.reset()
+Geometry.prototype._drawDebug = function (opts) {
+  const lineBuilder = opts.lineBuilder
+  lineBuilder.addBoundingBox(this.entity.transform.worldBounds)
 }
 
 module.exports = function (opts) {

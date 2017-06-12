@@ -22,6 +22,8 @@ const createAreaLight = require('./area-light')
 const createReflectionProbe = require('./reflection-probe')
 const createSkybox = require('./skybox')
 const path = require('path')
+const createLineBuilder = require('./line-builder')
+const lineBuilder = createLineBuilder()
 
 // pex-fx extensions, extending FXStage
 // require('./Postprocess')
@@ -49,12 +51,20 @@ var State = {
 // opts = { ctx: Context, width: Number, height: Number, profile: Boolean }
 function Renderer (opts) {
   this.entities = []
-  this.root = this.entity()
-
   // check if we passed gl context or options object
   opts = opts.texture2D ? { ctx: opts } : opts
 
   this._ctx = opts.ctx
+  this.root = this.entity([
+    this.geometry({
+      primitive: this._ctx.Primitive.Lines,
+      count: 0
+    }),
+    this.material({
+      baseColor: [1, 1, 1, 1]
+    })
+  ])
+
 
   const gl = opts.ctx.gl
   gl.getExtension('OES_standard_derivatives')
@@ -201,24 +211,30 @@ Renderer.prototype.traverseTransformTree = function (transform, beforeCallback, 
 
 Renderer.prototype.update = function () {
   this.entities = []
+  lineBuilder.reset()
   this.traverseTransformTree(
     this.root.transform,
     (transform) => {
       this.entities.push(transform.entity)
       transform.entity.components.forEach((component) => {
         if (component.update) component.update()
-        if (component.shouldDrawGizmo) component.drawGizmo({
-          ctx: this._ctx,
-          renderer: this
-        })
       })
     },
     (transform) => {
       transform.entity.components.forEach((component) => {
         if (component.afterUpdate) component.afterUpdate()
+        if (component.drawDebug) component._drawDebug({
+          lineBuilder: lineBuilder
+        })
       })
     }
   )
+
+  const positions = lineBuilder.getPositions()
+  this.root.getComponent('Geometry').set({
+    positions: positions,
+    count: positions.length
+  })
 }
 
 Renderer.prototype.getGeometryPipeline = function (geometry, material, skin, opts) {
