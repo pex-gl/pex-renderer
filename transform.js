@@ -41,6 +41,7 @@ function Transform (opts) {
   this.changed = new Signal()
   this.dirty = true
   this.position = [0, 0, 0]
+  this.worldPosition = [0, 0, 0]
   this.rotation = [0, 0, 0, 1]
   this.scale = [1, 1, 1]
   this.parent = null
@@ -124,6 +125,8 @@ Transform.prototype.afterUpdate = function () {
   const points = aabbToPoints(this.bounds)
   const pointsInWorldSpace = points.map((p) => Vec3.multMat4(Vec3.copy(p), this.modelMatrix))
   this.worldBounds = AABB.fromPoints(pointsInWorldSpace)
+  Vec3.scale(this.worldPosition, 0)
+  Vec3.multMat4(this.worldPosition, this.modelMatrix)
 }
 
 module.exports = function createTransform (opts) {
