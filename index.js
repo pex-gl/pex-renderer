@@ -2,6 +2,7 @@ const Vec3 = require('pex-math/Vec3')
 const Vec4 = require('pex-math/Vec4')
 const Mat3 = require('pex-math/Mat3')
 const Mat4 = require('pex-math/Mat4')
+const AABB = require('pex-geom/AABB')
 // var Draw = require('pex-draw/Draw')
 // var fx = require('pex-fx')
 const glsl = require('glslify')
@@ -43,6 +44,21 @@ var State = {
   profile: false,
   profiler: null,
   paused: false
+}
+
+// TODO remove, should be in AABB
+function aabbToPoints (aabb) {
+  if (AABB.isEmpty(aabb)) return []
+  return [
+    [aabb[0][0], aabb[0][1], aabb[0][2], 1],
+    [aabb[1][0], aabb[0][1], aabb[0][2], 1],
+    [aabb[1][0], aabb[0][1], aabb[1][2], 1],
+    [aabb[0][0], aabb[0][1], aabb[1][2], 1],
+    [aabb[0][0], aabb[1][1], aabb[0][2], 1],
+    [aabb[1][0], aabb[1][1], aabb[0][2], 1],
+    [aabb[1][0], aabb[1][1], aabb[1][2], 1],
+    [aabb[0][0], aabb[1][1], aabb[1][2], 1]
+  ]
 }
 
 // opts = Context
@@ -90,7 +106,27 @@ Renderer.prototype.updateDirectionalLightShadowMap = function (light, geometries
   const target = Vec3.copy(position)
   Vec3.add(target, light.direction)
   Mat4.lookAt(light._viewMatrix, position, target, [0, 1, 0])
-  Mat4.ortho(light._projectionMatrix, light._left, light._right, light._bottom, light._top, light._near, light._far)
+
+  const shadowBboxPoints = geometries.reduce((points, geometry) => {
+    return points.concat(aabbToPoints(geometry.entity.transform.worldBounds))
+  }, [])
+
+  const bboxPointsInLightSpace = shadowBboxPoints.map((p) => Vec3.multMat4(Vec3.copy(p), light._viewMatrix))
+  const sceneBboxInLightSpace = AABB.fromPoints(bboxPointsInLightSpace)
+
+  const lightNear = -sceneBboxInLightSpace[1][2]
+  const lightFar = -sceneBboxInLightSpace[0][2]
+
+  light.set({
+    _near: lightNear,
+    _far: lightFar
+  })
+
+  Mat4.ortho(light._projectionMatrix,
+    sceneBboxInLightSpace[0][0], sceneBboxInLightSpace[1][0],
+    sceneBboxInLightSpace[0][1], sceneBboxInLightSpace[1][1],
+    lightNear, lightFar
+  )
 
   ctx.submit(light._shadowMapDrawCommand, () => {
     this.drawMeshes(null, light, geometries)
