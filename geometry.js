@@ -1,8 +1,10 @@
 const Signal = require('signals')
+const AABB = require('pex-geom/AABB')
 
 function Geometry (opts) {
   this.type = 'Geometry'
   this.changed = new Signal()
+  this.bounds = AABB.create()
 
   this.primitive = opts.ctx.Primitive.Triangles
 
@@ -22,6 +24,7 @@ Geometry.prototype.set = function (opts) {
   Object.keys(opts).forEach((prop) => this.changed.dispatch(prop))
 
   if (opts.positions) {
+    this.bounds = AABB.fromPoints(opts.positions)
     if (!this._positionsBuf) {
       this._positionsBuf = ctx.vertexBuffer(opts.positions)
     } else {

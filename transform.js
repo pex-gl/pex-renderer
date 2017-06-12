@@ -88,7 +88,7 @@ Transform.prototype.update = function () {
 
   emptyABBB(this.bounds)
   if (this.geometry) {
-    // AABB.set(this.bounds, this.geometry.bounds)
+    AABB.set(this.bounds, this.geometry.bounds)
   }
 
   // TODO: update world bounds
@@ -106,7 +106,7 @@ Transform.prototype.afterUpdate = function () {
   })
 
   if (AABB.isEmpty(this.bounds)) {
-    // AABB.includePoint(this.bounds, [0, 0, 0])
+    AABB.includePoint(this.bounds, [0, 0, 0])
   }
 
   AABB.set(this.worldBounds, this.bounds)
