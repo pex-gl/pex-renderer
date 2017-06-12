@@ -206,6 +206,10 @@ Renderer.prototype.update = function () {
       this.entities.push(transform.entity)
       transform.entity.components.forEach((component) => {
         if (component.update) component.update()
+        if (component.shouldDrawGizmo) component.drawGizmo({
+          ctx: this._ctx,
+          renderer: this
+        })
       })
     },
     (transform) => {
