@@ -32,14 +32,14 @@ PointLight.prototype.drawGizmo = function (opts) {
   const ctx = opts.ctx
   const renderer = opts.renderer
   if (this.shouldDrawGizmo) {
-    lineBuilder.makePrism({ radius: 0.3 })
-    lineBuilder.makeCircle({
+    lineBuilder.addPrism({ radius: 0.3 })
+    lineBuilder.addCircle({
       center: [0, 0, 0], radius: this.radius, steps: 64, axis: [0, 1]
     })
-    lineBuilder.makeCircle({
+    lineBuilder.addCircle({
       center: [0, 0, 0], radius: this.radius, steps: 64, axis: [0, 2]
     })
-    lineBuilder.makeCircle({
+    lineBuilder.addCircle({
       center: [0, 0, 0], radius: this.radius, steps: 64, axis: [1, 2]
     })
 

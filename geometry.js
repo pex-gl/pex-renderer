@@ -123,7 +123,7 @@ Geometry.prototype.drawGizmo = function (opts) {
   const ctx = opts.ctx
   const renderer = opts.renderer
   if (this.shouldDrawGizmo) {
-    lineBuilder.makeBoundingBox(this.bounds)
+    lineBuilder.addBoundingBox(this.bounds)
 
     const positions = lineBuilder.getPositions()
 

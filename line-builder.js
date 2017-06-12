@@ -70,7 +70,7 @@ LineBuilder.prototype.addLine = function (from, to, colorFrom, colorTo) {
   this.lineIndex += 2
 }
 
-LineBuilder.prototype.makeCircle = function (opts) {
+LineBuilder.prototype.addCircle = function (opts) {
   const points = []
 
   for (let i = 0; i < opts.steps; i++) {
@@ -93,7 +93,7 @@ LineBuilder.prototype.makeCircle = function (opts) {
   })
 }
 
-LineBuilder.prototype.makePrism = function (opts) {
+LineBuilder.prototype.addPrism = function (opts) {
   const r = opts.radius
   const position = opts.position || [0, 0, 0]
   const points = [
@@ -125,7 +125,7 @@ LineBuilder.prototype.makePrism = function (opts) {
   })
 }
 
-LineBuilder.prototype.makeBoundingBox = function (bbox) {
+LineBuilder.prototype.addBoundingBox = function (bbox) {
   const points = [
     [-1, -1, 1],
     [ 1, -1, 1],
