@@ -3,12 +3,14 @@ const Vec3 = require('pex-math/Vec3')
 const Mat4 = require('pex-math/Mat4')
 const AABB = require('pex-geom/AABB')
 
+// TODO ?
 function multVec3 (a, b) {
   a[0] *= b[0]
   a[1] *= b[1]
   a[2] *= b[2]
 }
 
+// TODO remove, should in AABB
 function emptyABBB (a) {
   a[0][0] = Infinity
   a[0][1] = Infinity
@@ -16,6 +18,21 @@ function emptyABBB (a) {
   a[1][0] = -Infinity
   a[1][1] = -Infinity
   a[1][2] = -Infinity
+}
+
+// TODO remove, should in AABB
+function aabbToPoints (aabb) {
+  if (AABB.isEmpty(aabb)) return []
+  return [
+    [aabb[0][0], aabb[0][1], aabb[0][2], 1],
+    [aabb[1][0], aabb[0][1], aabb[0][2], 1],
+    [aabb[1][0], aabb[0][1], aabb[1][2], 1],
+    [aabb[0][0], aabb[0][1], aabb[1][2], 1],
+    [aabb[0][0], aabb[1][1], aabb[0][2], 1],
+    [aabb[1][0], aabb[1][1], aabb[0][2], 1],
+    [aabb[1][0], aabb[1][1], aabb[1][2], 1],
+    [aabb[0][0], aabb[1][1], aabb[1][2], 1]
+  ]
 }
 
 function Transform (opts) {
@@ -26,8 +43,6 @@ function Transform (opts) {
   this.position = [0, 0, 0]
   this.rotation = [0, 0, 0, 1]
   this.scale = [1, 1, 1]
-  this.worldPosition = [0, 0, 0]
-  this.worldScale = [1, 1, 1]
   this.parent = null
   this.children = []
   this.enabled = true
@@ -90,9 +105,6 @@ Transform.prototype.update = function () {
   if (this.geometry) {
     AABB.set(this.bounds, this.geometry.bounds)
   }
-
-  // TODO: update world bounds
-  emptyABBB(this.worldBounds)
 }
 
 Transform.prototype.afterUpdate = function () {
@@ -109,12 +121,9 @@ Transform.prototype.afterUpdate = function () {
     AABB.includePoint(this.bounds, [0, 0, 0])
   }
 
-  AABB.set(this.worldBounds, this.bounds)
-
-  multVec3(this.worldBounds[0], this.worldScale)
-  multVec3(this.worldBounds[1], this.worldScale)
-  Vec3.add(this.worldBounds[0], this.worldPosition)
-  Vec3.add(this.worldBounds[1], this.worldPosition)
+  const points = aabbToPoints(this.bounds)
+  const pointsInWorldSpace = points.map((p) => Vec3.multMat4(Vec3.copy(p), this.modelMatrix))
+  this.worldBounds = AABB.fromPoints(pointsInWorldSpace)
 }
 
 module.exports = function createTransform (opts) {
