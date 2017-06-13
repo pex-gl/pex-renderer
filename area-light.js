@@ -10,6 +10,7 @@ function AreaLight (opts) {
   this.color = [1, 1, 1, 1]
   this.intensity = 1
   this.castShadows = false
+  this.drawDebug = false
 
   this.set(opts)
 
@@ -17,7 +18,7 @@ function AreaLight (opts) {
   if (!AreaLight.areaLightTextures) {
     AreaLight.ltc_mat_texture = ctx.texture2D({
       data: AreaLightsData.mat,
-      width: 64, 
+      width: 64,
       height: 64,
       pixelFormat: ctx.PixelFormat.RGBA32F,
       encoding: ctx.Encoding.Linear
@@ -46,6 +47,10 @@ AreaLight.prototype.set = function (opts) {
   if (opts.color !== undefined || opts.intensity !== undefined) {
     this.color[3] = this.intensity;
   }
+}
+
+AreaLight.prototype._drawDebug = function (opts) {
+  // TODO implement
 }
 
 module.exports = function (opts) {
