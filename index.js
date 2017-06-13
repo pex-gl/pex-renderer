@@ -24,7 +24,6 @@ const createReflectionProbe = require('./reflection-probe')
 const createSkybox = require('./skybox')
 const path = require('path')
 const createLineBuilder = require('./line-builder')
-const lineBuilder = createLineBuilder()
 
 // pex-fx extensions, extending FXStage
 // require('./Postprocess')
@@ -70,6 +69,7 @@ function Renderer (opts) {
   // check if we passed gl context or options object
   opts = opts.texture2D ? { ctx: opts } : opts
 
+  this._lineBuilder = createLineBuilder()
   this._ctx = opts.ctx
   this.root = this.entity([
     this.geometry({
@@ -247,7 +247,7 @@ Renderer.prototype.traverseTransformTree = function (transform, beforeCallback, 
 
 Renderer.prototype.update = function () {
   this.entities = []
-  lineBuilder.reset()
+  this._lineBuilder.reset()
   this.traverseTransformTree(
     this.root.transform,
     (transform) => {
@@ -260,13 +260,13 @@ Renderer.prototype.update = function () {
       transform.entity.components.forEach((component) => {
         if (component.afterUpdate) component.afterUpdate()
         if (component.drawDebug) component._drawDebug({
-          lineBuilder: lineBuilder
+          lineBuilder: this._lineBuilder
         })
       })
     }
   )
 
-  const positions = lineBuilder.getPositions()
+  const positions = this._lineBuilder.getPositions()
   this.root.getComponent('Geometry').set({
     positions: positions,
     count: positions.length
