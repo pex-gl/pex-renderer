@@ -1,5 +1,6 @@
 const Signal = require('signals')
 const Mat4 = require('pex-math/Mat4')
+const Vec3 = require('pex-math/Vec3')
 
 function DirectionalLight (opts) {
   const ctx = opts.ctx
@@ -12,6 +13,7 @@ function DirectionalLight (opts) {
   this.direction = [1, -1, 0]
   this.bias = 0.1
   this.castShadows = false
+  this.drawDebug = false
 
   this._left = -10
   this._right = 10
@@ -65,6 +67,29 @@ DirectionalLight.prototype.set = function (opts) {
     this.color[3] = this.intensity;
   }
   Object.keys(opts).forEach((prop) => this.changed.dispatch(prop))
+}
+
+DirectionalLight.prototype._drawDebug = function (opts) {
+  const lineBuilder = opts.lineBuilder
+  lineBuilder.addPrism({
+    position: this.entity.transform.worldPosition,
+    radius: 0.3
+  })
+  const lines = [
+    [0, 0, 0.3],
+    [0.3, 0, 0],
+    [-0.3, 0, 0],
+    [0, 0.3, 0],
+    [0, -0.3, 0],
+    [0, 0, -0.3]
+  ]
+
+  lines.forEach((line) => {
+    lineBuilder.addLine(
+      Vec3.add(Vec3.copy(line), this.entity.transform.worldPosition),
+      Vec3.add(Vec3.add(Vec3.copy(line), this.entity.transform.worldPosition), this.direction)
+    )
+  })
 }
 
 module.exports = function (opts) {
