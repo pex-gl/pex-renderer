@@ -88,8 +88,7 @@ LineBuilder.prototype.addCircle = function (opts) {
   points.forEach((p, i) => {
     const from = p
     const to = points[(i + 1) % points.length]
-    // TODO add colors
-    this.addLine(p, to)
+    this.addLine(p, to, opts.colorFrom, opts.colorTo)
   })
 }
 
@@ -120,8 +119,7 @@ LineBuilder.prototype.addPrism = function (opts) {
     if (i === points.length - 1) return
 
     const to = points[i + 1]
-    // TODO add colors
-    this.addLine(p, to)
+    this.addLine(p, to, opts.colorFrom, opts.colorTo)
   })
 }
 
@@ -181,7 +179,7 @@ LineBuilder.prototype.addBoundingBox = function (bbox) {
   }
 
   lines.forEach((line) => {
-    this.addLine(points[line[0]], points[line[1]])
+    this.addLine(points[line[0]], points[line[1]], opts.colorFrom, opts.colorTo)
   })
 }
 
