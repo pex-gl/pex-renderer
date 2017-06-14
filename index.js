@@ -129,7 +129,7 @@ Renderer.prototype.updateDirectionalLightShadowMap = function (light, geometries
   )
 
   ctx.submit(light._shadowMapDrawCommand, () => {
-    this.drawMeshes(null, light, geometries)
+    this.drawMeshes(null, true, light, geometries)
   })
 }
 
@@ -301,7 +301,7 @@ Renderer.prototype.getComponents = function (type) {
 // set update transforms once per frame
 // draw + shadowmap @ 1000 objects x 30 uniforms = 60'000 setters / frame!!
 // transform feedback?
-Renderer.prototype.drawMeshes = function (camera, shadowMappingLight, geometries) {
+Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLight, geometries) {
   const ctx = this._ctx
 
   if (State.profiler) State.profiler.time('drawMeshes')
@@ -431,7 +431,7 @@ Renderer.prototype.drawMeshes = function (camera, shadowMappingLight, geometries
     }
 
     let pipeline = null
-    if (shadowMappingLight) {
+    if (shadowMapping) {
       pipeline = this.getGeometryPipeline(geometry, material, skin, {
         depthPassOnly: true
       })
@@ -457,13 +457,17 @@ Renderer.prototype.drawMeshes = function (camera, shadowMappingLight, geometries
     cachedUniforms.uModelMatrix = transform.modelMatrix
 
     // FIXME: this is expensive and not cached
-    if (!shadowMappingLight) {
-      var normalMat = Mat4.copy(camera.viewMatrix)
-      Mat4.mult(normalMat, transform.modelMatrix)
-      Mat4.invert(normalMat)
-      Mat4.transpose(normalMat)
-      cachedUniforms.uNormalMatrix = Mat3.fromMat4(Mat3.create(), normalMat)
+    var viewMatrix;
+    if (shadowMappingLight) {
+      viewMatrix = shadowMappingLight._viewMatrix
+    } else {
+      viewMatrix = camera.viewMatrix;
     }
+    var normalMat = Mat4.copy(viewMatrix)
+    Mat4.mult(normalMat, transform.modelMatrix)
+    Mat4.invert(normalMat)
+    Mat4.transpose(normalMat)
+    cachedUniforms.uNormalMatrix = Mat3.fromMat4(Mat3.create(), normalMat)
 
     ctx.submit({
       name: 'drawGeometry',
@@ -543,17 +547,9 @@ Renderer.prototype.draw = function () {
 
   cameras.forEach((camera, cameraIndex) => {
     const screenSize = [camera.viewport[2], camera.viewport[3]]
-    ctx.submit(camera._drawFrameFboCommand, () => {
+    ctx.submit(camera._drawFrameNormalsFboCommand, () => {
       // depth prepass
-      if (camera.depthPrepass) {
-        ctx.gl.colorMask(0, 0, 0, 0)
-        this.drawMeshes(camera)
-        ctx.gl.colorMask(1, 1, 1, 1)
-      }
-      this.drawMeshes(camera)
-      if (skyboxes.length > 0) {
-        skyboxes[0].draw(camera, { outputEncoding: camera._frameColorTex.encoding })
-      }
+      this.drawMeshes(camera, true)
     })
     if (camera.ssao) {
       ctx.submit(camera._ssaoCmd, {
@@ -573,6 +569,12 @@ Renderer.prototype.draw = function () {
         }
       })
     }
+    ctx.submit(camera._drawFrameFboCommand, () => {
+      this.drawMeshes(camera)
+      if (skyboxes.length > 0) {
+        skyboxes[0].draw(camera, { outputEncoding: camera._frameColorTex.encoding })
+      }
+    })
     if (camera.ssao && camera.bilateralBlur) {
       ctx.submit(camera._bilateralBlurHCmd, {
         uniforms: {

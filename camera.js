@@ -131,6 +131,13 @@ Camera.prototype.initPostproces = function () {
     encoding: this.rgbm ? ctx.Encoding.RGBM : ctx.Encoding.Linear
   })
 
+  this._frameNormalTex = ctx.texture2D({
+    width: W,
+    height: H,
+    pixelFormat: ctx.PixelFormat.RGBA8,
+    encoding: ctx.Encoding.Linear
+  })
+
   this._frameDepthTex = ctx.texture2D({
     width: W,
     height: H,
@@ -149,6 +156,7 @@ Camera.prototype.initPostproces = function () {
 
   this._textures = [
     this._frameColorTex,
+    this._frameNormalTex,
     this._frameDepthTex,
     this._frameAOTex,
     this._frameAOBlurTex,
@@ -159,15 +167,24 @@ Camera.prototype.initPostproces = function () {
   this._ssaoKernelMap = ctx.texture2D({ width: 8, height: 8, data: ssaoKernelData, pixelFormat: ctx.PixelFormat.RGBA32F, encoding: ctx.Encoding.Linear, wrap: ctx.Wrap.Repeat })
   this._ssaoNoiseMap = ctx.texture2D({ width: 128, height: 128, data: ssaoNoiseData, pixelFormat: ctx.PixelFormat.RGBA32F, encoding: ctx.Encoding.Linear, wrap: ctx.Wrap.Repeat, mag: ctx.Filter.Linear, min: ctx.Filter.Linear })
 
+  this._drawFrameNormalsFboCommand = {
+    name: 'Camera.drawFrameNormals',
+    pass: ctx.pass({
+      name: 'Camera.drawFrameNormals',
+      color: [ this._frameNormalTex ],
+      depth: this._frameDepthTex,
+      clearColor: [0, 0, 0, 0],
+      clearDepth: 1
+    })
+  }
+
   this._drawFrameFboCommand = {
     name: 'Camera.drawFrame',
     pass: ctx.pass({
       name: 'Camera.drawFrame',
-      // color: [ this._frameColorTex, this._frameNormalTex ],
       color: [ this._frameColorTex ],
       depth: this._frameDepthTex,
-      clearColor: this.backgroundColor,
-      clearDepth: 1
+      clearColor: this.backgroundColor
     })
   }
 
@@ -204,8 +221,9 @@ Camera.prototype.initPostproces = function () {
     attributes: this._fsqMesh.attributes,
     indices: this._fsqMesh.indices,
     uniforms: {
-      sGBuffer: this._frameDepthTex,
-      sNoise: this._ssaoNoiseMap
+      uDepthMap: this._frameDepthTex,
+      uNormalMap: this._frameNormalTex,
+      uNoiseMap: this._ssaoNoiseMap
     }
   }
 

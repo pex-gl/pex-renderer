@@ -30,25 +30,14 @@ float readDepth(sampler2D depthMap, vec2 coord) {
   return z_e;
 }
 
-
 //blur weight based on https://github.com/nvpro-samples/gl_ssao/blob/master/hbao_blur.frag.glsl
-
-vec4 bilataralSample(sampler2D image, vec2 imageResolution, sampler2D depthMap, vec2 depthMapResolution, vec2 uv, vec2 direction, float r, float centerDepth, float blurFalloff, out float weightSum) {
-    vec2 off = direction * r;
-    float sampleDepth = readDepth(depthMap, uv);
-    float diff = (sampleDepth - centerDepth) * sharpness;
-    float weight = exp2(-r * r * blurFalloff - diff * diff);
-    weightSum += weight;
-    return texture2D(image, uv + (off / imageResolution)) * weight;
-}
-
 vec4 bilateralBlur(sampler2D image, vec2 imageResolution, sampler2D depthMap, vec2 depthMapResolution, vec2 uv, vec2 direction) {
   vec4 color = vec4(0.0);
   const int numSamples = 9;
   const float blurRadius = float(numSamples) / 2.0;
   const float blurSigma = blurRadius * 0.5;
   const float blurFalloff = 1.0 / (2.0*blurSigma*blurSigma);
-  
+
   float centerDepth = readDepth(depthMap, uv);
   float dist = 0.0;
   if (uDOFDepth > 0.0) {
@@ -56,20 +45,20 @@ vec4 bilateralBlur(sampler2D image, vec2 imageResolution, sampler2D depthMap, ve
     direction *= dist;
   }
   float weightSum = 0.0;
-  color += bilataralSample(image, imageResolution, depthMap, depthMapResolution, uv, direction, -8.0, centerDepth, blurFalloff, weightSum);
-  color += bilataralSample(image, imageResolution, depthMap, depthMapResolution, uv, direction, -6.0, centerDepth, blurFalloff, weightSum);
-  color += bilataralSample(image, imageResolution, depthMap, depthMapResolution, uv, direction, -4.0, centerDepth, blurFalloff, weightSum);
-  color += bilataralSample(image, imageResolution, depthMap, depthMapResolution, uv, direction, -2.0, centerDepth, blurFalloff, weightSum);
-  color += bilataralSample(image, imageResolution, depthMap, depthMapResolution, uv, direction,  0.0, centerDepth, blurFalloff, weightSum);
-  color += bilataralSample(image, imageResolution, depthMap, depthMapResolution, uv, direction,  2.0, centerDepth, blurFalloff, weightSum);
-  color += bilataralSample(image, imageResolution, depthMap, depthMapResolution, uv, direction,  4.0, centerDepth, blurFalloff, weightSum);
-  color += bilataralSample(image, imageResolution, depthMap, depthMapResolution, uv, direction,  6.0, centerDepth, blurFalloff, weightSum);
-  color += bilataralSample(image, imageResolution, depthMap, depthMapResolution, uv, direction,  8.0, centerDepth, blurFalloff, weightSum);
+  for (float i = -8.0; i <= 8.0; i += 2.0) {
+    float r = i;
+    vec2 off = direction * r;
+    float sampleDepth = readDepth(depthMap, uv + (off / imageResolution));
+    float diff = (sampleDepth - centerDepth) * sharpness;
+    float weight = exp2(-r * r * blurFalloff - diff * diff);
+    weightSum += weight;
+    color += texture2D(image, uv + (off / imageResolution)) * weight;
+  }
   color /= weightSum;
   return color;
 }
 
 void main() {
-    vec2 vUV = vec2(gl_FragCoord.x / depthMapSize.x, gl_FragCoord.y / depthMapSize.y);
-    gl_FragColor = bilateralBlur(image, imageSize, depthMap, depthMapSize, vUV, direction);
+  vec2 vUV = vec2(gl_FragCoord.x / depthMapSize.x, gl_FragCoord.y / depthMapSize.y);
+  gl_FragColor = bilateralBlur(image, imageSize, depthMap, depthMapSize, vUV, direction);
 }

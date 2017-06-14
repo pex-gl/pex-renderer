@@ -29,8 +29,11 @@ attribute vec3 aNormal;
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
 uniform mat4 uModelMatrix;
+uniform mat3 uNormalMatrix;
 
 float uDisplacementShadowStretch = 1.3;
+
+varying vec3 vNormalView;
 
 #ifdef GL_ES
 mat4 transpose(mat4 m) {
@@ -98,4 +101,5 @@ void main() {
 #else
     gl_Position = uProjectionMatrix * uViewMatrix * uModelMatrix * position;
 #endif
+    vNormalView = uNormalMatrix * normal;
 }
