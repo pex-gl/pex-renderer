@@ -29,7 +29,7 @@
     "pex-context": "^2.0.0-21",
     "pex-draw": "^1.0.0-beta.2",
     "pex-fx": "^1.4.0",
-    "pex-geom": "^1.0.0-beta.1",
+    "pex-geom": "^1.0.0",
     "pex-gl": "^2.4.1",
     "pex-io": "^1.5.1",
     "pex-math": "^1.0.1",
