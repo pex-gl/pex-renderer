@@ -26,14 +26,14 @@ function DirectionalLight (opts) {
     width: 1024,
     height: 1024,
     pixelFormat: ctx.PixelFormat.RGBA8,
-    encoding: ctx.Encoding.Linear
+    encoding: ctx.Encoding.Linear,
+    min: ctx.Filter.Linear,
+    mag: ctx.Filter.Linear
   })
   this._shadowMap = ctx.texture2D({
     width: 1024,
     height: 1024,
     pixelFormat: ctx.PixelFormat.Depth,
-    min: ctx.Filter.Linear,
-    mag: ctx.Filter.Linear,
     encoding: ctx.Encoding.Linear
   })
   this._viewMatrix = Mat4.create()
