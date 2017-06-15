@@ -295,8 +295,8 @@ function imageFromFile (file, options) {
   console.log('loading', file)
   const tex = ctx.texture2D({
     data: [],
-    width: 1,
-    height: 1,
+    width: 0,
+    height: 0,
     pixelFormat: ctx.PixelFormat.RGBA8,
     encoding: options.encoding,
     wrap: ctx.Wrap.Repeat,
