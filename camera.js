@@ -125,6 +125,7 @@ Camera.prototype.initPostproces = function () {
   }
 
   this._frameColorTex = ctx.texture2D({
+    name: 'frameColorTex',
     width: W,
     height: H,
     pixelFormat: this.rgbm ? ctx.PixelFormat.RGBA8 : ctx.PixelFormat.RGBA32F,
@@ -132,6 +133,7 @@ Camera.prototype.initPostproces = function () {
   })
 
   this._frameNormalTex = ctx.texture2D({
+    name: 'frameNormalTex',
     width: W,
     height: H,
     pixelFormat: ctx.PixelFormat.RGBA8,
@@ -139,15 +141,17 @@ Camera.prototype.initPostproces = function () {
   })
 
   this._frameDepthTex = ctx.texture2D({
+    name: 'frameDepthTex',
     width: W,
     height: H,
     pixelFormat: ctx.PixelFormat.Depth,
     encoding: ctx.Encoding.Linear
   })
 
-  this._frameAOTex = ctx.texture2D({ width: W, height: H, pixelFormat: ctx.PixelFormat.RGBA8, encoding: ctx.Encoding.Linear })
-  this._frameAOBlurTex = ctx.texture2D({ width: W, height: H, pixelFormat: ctx.PixelFormat.RGBA8, encoding: ctx.Encoding.Linear })
+  this._frameAOTex = ctx.texture2D({ name: 'frameAOTex', width: W, height: H, pixelFormat: ctx.PixelFormat.RGBA8, encoding: ctx.Encoding.Linear })
+  this._frameAOBlurTex = ctx.texture2D({ name: 'frameAOBlurTex', width: W, height: H, pixelFormat: ctx.PixelFormat.RGBA8, encoding: ctx.Encoding.Linear })
   this._frameDofBlurTex = ctx.texture2D({
+    name: 'frameDofBlurTex',
     width: W,
     height: H,
     pixelFormat: this.rgbm ? ctx.PixelFormat.RGBA8 : ctx.PixelFormat.RGBA32F,
