@@ -64,7 +64,7 @@ DirectionalLight.prototype.init = function (entity) {
 DirectionalLight.prototype.set = function (opts) {
   Object.assign(this, opts)
   if (opts.color !== undefined || opts.intensity !== undefined) {
-    this.color[3] = this.intensity;
+    this.color[3] = this.intensity
   }
   Object.keys(opts).forEach((prop) => this.changed.dispatch(prop))
 }
