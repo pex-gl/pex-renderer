@@ -346,7 +346,14 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
     sharedUniforms.uViewMatrix = shadowMappingLight._viewMatrix
   } else {
     sharedUniforms.uCameraPosition = camera.position
-    sharedUniforms.uProjectionMatrix = camera.projectionMatrix
+    const far = camera.camera.far
+    if (shadowMapping) {
+      camera.camera({ far: far * 0.99 })
+    }
+    sharedUniforms.uProjectionMatrix = Mat4.copy(camera.projectionMatrix)
+    if (shadowMapping) {
+      camera.camera({ far: far })
+    }
     sharedUniforms.uViewMatrix = camera.viewMatrix
     sharedUniforms.uInverseViewMatrix = Mat4.invert(Mat4.copy(camera.viewMatrix))
   }
