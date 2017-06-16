@@ -161,6 +161,25 @@ float PCF5x5(sampler2D depths, vec2 size, vec2 uv, float compare, float near, fl
     return result/25.0;
 }
 
+float directionalShadow(sampler2D depths, vec2 size, vec2 uv, float compare, float near, float far) {
+#if SHADOW_QUALITY == 0
+  float illuminated = 1.0;
+#endif
+#if SHADOW_QUALITY == 1
+  float illuminated = texture2DCompare(depths, uv, compare, near, far);
+#endif
+#if SHADOW_QUALITY == 2
+  float illuminated = texture2DShadowLerp(depths, size, uv, compare, near, far);
+#endif
+#if SHADOW_QUALITY == 3
+  float illuminated = PCF3x3(depths, size, uv, compare, near, far);
+#endif
+#if SHADOW_QUALITY == 4
+  float illuminated = PCF5x5(depths, size, uv, compare, near, far);
+#endif
+  return illuminated;
+}
+
 float saturate(float f) {
     return clamp(f, 0.0, 1.0);
 }
@@ -485,20 +504,10 @@ void main() {
         float lightDeviceCoordsZ = lightDeviceCoordsPosition.z / lightDeviceCoordsPosition.w;
         vec2 lightUV = lightDeviceCoordsPositionNormalized.xy * 0.5 + 0.5;
 
-#if SHADOW_QUALITY == 0
-        float illuminated = 1.0;
-#endif
-#if SHADOW_QUALITY == 1
-        float illuminated = texture2DCompare(uDirectionalLightShadowMaps[i], lightUV, lightDistView - light.bias, light.near, light.far);
-#endif
-#if SHADOW_QUALITY == 2
-        float illuminated = texture2DShadowLerp(uDirectionalLightShadowMaps[i], light.shadowMapSize, lightUV, lightDistView - light.bias, light.near, light.far);
-#endif
-#if SHADOW_QUALITY == 3
-        float illuminated = PCF3x3(uDirectionalLightShadowMaps[i], light.shadowMapSize, lightUV, lightDistView - light.bias, light.near, light.far);
-#endif
-#if SHADOW_QUALITY == 4
-        float illuminated = PCF5x5(uDirectionalLightShadowMaps[i], light.shadowMapSize, lightUV, lightDistView - light.bias, light.near, light.far);
+        float illuminated = 0.0;
+        if (i == 0) illuminated += directionalShadow(uDirectionalLightShadowMaps[0], light.shadowMapSize, lightUV, lightDistView - light.bias, light.near, light.far);
+#if NUM_DIRECTIONAL_LIGHTS > 1
+        if (i == 1) illuminated += directionalShadow(uDirectionalLightShadowMaps[1], light.shadowMapSize, lightUV, lightDistView - light.bias, light.near, light.far);
 #endif
 
         if (illuminated > 0.0) {
@@ -675,6 +684,5 @@ void main() {
 #else  // USE_NORMALS
     vec3 color = ao * baseColor;
 #endif // USE_NORMALS
-
     gl_FragData[0] = encode(vec4(color, 1.0), uOutputEncoding);
 }
