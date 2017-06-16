@@ -35,16 +35,11 @@ uniform vec2 uScreenSize;
 uniform vec3 cameraPositionWorldSpace;
 
 // reconstructs view-space unit normal from view-space position
-vec3 reconstructNormalVS(vec3 positionVS) {
-  return normalize(cross(dFdx(positionVS), dFdy(positionVS)));
-}
-
 float readDepth(sampler2D depthMap, vec2 coord) {
   float z_b = texture2D(depthMap, coord).r;
   float z_n = 2.0 * z_b - 1.0;
   float z_e = 2.0 * uNear * uFar / (uFar + uNear - z_n * (uFar - uNear));
   return z_e;
-
 }
 
 vec3 getPositionVSOld(vec2 uv) {
