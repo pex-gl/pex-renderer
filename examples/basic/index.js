@@ -92,10 +92,8 @@ function initCamera () {
 
   const cameraCmp = renderer.camera({
     ssao: true,
-    // ssaoIntensity: 10,
-    // bilateralBlur: true,
-    // dof: true,
-    // depthPrepass: false,
+    dof: false,
+    fxaa: false,
     camera: camera
   })
   renderer.add(renderer.entity([
@@ -108,8 +106,8 @@ function initCamera () {
   gui.addParam('SSAO radius', cameraCmp, 'ssaoRadius', { min: 0, max: 30 })
   gui.addParam('SSAO intensity', cameraCmp, 'ssaoIntensity', { min: 0, max: 10 })
   gui.addParam('SSAO bias', cameraCmp, 'ssaoBias', { min: 0, max: 1 })
-  gui.addParam('BilateralBlur', cameraCmp, 'bilateralBlur')
-  gui.addParam('BilateralBlur radius', cameraCmp, 'bilateralBlurRadius', { min: 0, max: 5 })
+  gui.addParam('SSAO blur radius', cameraCmp, 'ssaoBlurRadius', { min: 0, max: 5 })
+  gui.addParam('SSAO blur sharpness', cameraCmp, 'ssaoBlurSharpness', { min: 0, max: 20 })
   gui.addParam('Postprocess', cameraCmp, 'postprocess')
   gui.addParam('DOF', cameraCmp, 'dof')
   gui.addParam('DOF Iterations', cameraCmp, 'dofIterations', { min: 1, max: 5, step: 1 })
@@ -117,6 +115,7 @@ function initCamera () {
   gui.addParam('DOF Range', cameraCmp, 'dofRange', { min: 0, max: 20 })
   gui.addParam('DOF Radius', cameraCmp, 'dofRadius', { min: 0, max: 20 })
   gui.addParam('FXAA', cameraCmp, 'fxaa')
+  gui.addTexture2D('Depth', cameraCmp._frameDepthTex).setPosition(180 * 2, 10)
 }
 
 const ASSETS_DIR = isBrowser ? 'assets' : `${__dirname}/assets`
