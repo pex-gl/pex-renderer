@@ -101,5 +101,5 @@ void main() {
 #else
     gl_Position = uProjectionMatrix * uViewMatrix * uModelMatrix * position;
 #endif
-    vNormalView = uNormalMatrix * normal;
+    vNormalView = normalize(uNormalMatrix * normal);
 }
