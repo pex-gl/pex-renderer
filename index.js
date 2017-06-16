@@ -464,11 +464,11 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
     cachedUniforms.uModelMatrix = transform.modelMatrix
 
     // FIXME: this is expensive and not cached
-    var viewMatrix;
+    var viewMatrix
     if (shadowMappingLight) {
       viewMatrix = shadowMappingLight._viewMatrix
     } else {
-      viewMatrix = camera.viewMatrix;
+      viewMatrix = camera.viewMatrix
     }
     var normalMat = Mat4.copy(viewMatrix)
     Mat4.mult(normalMat, transform.modelMatrix)
@@ -575,6 +575,26 @@ Renderer.prototype.draw = function () {
           uScreenSize: screenSize
         }
       })
+      ctx.submit(camera._bilateralBlurHCmd, {
+        uniforms: {
+          near: camera.camera.near,
+          far: camera.camera.far,
+          sharpness: camera.ssaoBlurSharpness,
+          imageSize: screenSize,
+          depthMapSize: screenSize,
+          direction: [camera.ssaoBlurRadius, 0]
+        }
+      })
+      ctx.submit(camera._bilateralBlurVCmd, {
+        uniforms: {
+          near: camera.camera.near,
+          far: camera.camera.far,
+          sharpness: camera.ssaoBlurSharpness,
+          imageSize: screenSize,
+          depthMapSize: screenSize,
+          direction: [0, camera.ssaoBlurRadius]
+        }
+      })
     }
     ctx.submit(camera._drawFrameFboCommand, () => {
       this.drawMeshes(camera)
@@ -582,35 +602,13 @@ Renderer.prototype.draw = function () {
         skyboxes[0].draw(camera, { outputEncoding: camera._frameColorTex.encoding })
       }
     })
-    if (camera.ssao && camera.bilateralBlur) {
-      ctx.submit(camera._bilateralBlurHCmd, {
-        uniforms: {
-          near: camera.camera.near,
-          far: camera.camera.far,
-          sharpness: 1,
-          imageSize: screenSize,
-          depthMapSize: screenSize,
-          direction: [camera.bilateralBlurRadius, 0]
-        }
-      })
-      ctx.submit(camera._bilateralBlurVCmd, {
-        uniforms: {
-          near: camera.camera.near,
-          far: camera.camera.far,
-          sharpness: 1,
-          imageSize: screenSize,
-          depthMapSize: screenSize,
-          direction: [0, camera.bilateralBlurRadius]
-        }
-      })
-    }
     if (camera.dof) {
       for (var i = 0; i < camera.dofIterations; i++) {
         ctx.submit(camera._dofBlurHCmd, {
           uniforms: {
             near: camera.camera.near,
             far: camera.camera.far,
-            sharpness: 1,
+            sharpness: 0,
             imageSize: screenSize,
             depthMapSize: screenSize,
             direction: [camera.dofRadius, 0],
@@ -622,7 +620,7 @@ Renderer.prototype.draw = function () {
           uniforms: {
             near: camera.camera.near,
             far: camera.camera.far,
-            sharpness: 1,
+            sharpness: 0,
             imageSize: screenSize,
             depthMapSize: screenSize,
             direction: [0, camera.dofRadius],

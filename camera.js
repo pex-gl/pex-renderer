@@ -56,13 +56,13 @@ function Camera (opts) {
   this.ssaoIntensity = 5
   this.ssaoRadius = 12
   this.ssaoBias = 0.01
+  this.ssaoBlurRadius = 2
+  this.ssaoBlurSharpness = 10
   this.dof = false
   this.dofIterations = 1
   this.dofRange = 5
   this.dofRadius = 1
   this.dofDepth = 6.76
-  this.bilateralBlur = false
-  this.bilateralBlurRadius = 0.5
   this.exposure = 1
   this.fxaa = false
   this.fog = false
