@@ -6,11 +6,11 @@ const MathUtils = require('pex-math/Utils')
 const flatten = require('flatten')
 const isPlask = require('is-plask')
 
-const OVERLAY_VERT = glsl(__dirname + '/glsl/Overlay.vert')
-let OVERLAY_FRAG = glsl(__dirname + '/glsl/Overlay.frag')
+const POSTPROCESS_VERT = glsl(__dirname + '/glsl/Postprocess.vert')
+let POSTPROCESS_FRAG = glsl(__dirname + '/glsl/Postprocess.frag')
 
 if (isPlask) {
-  OVERLAY_FRAG = OVERLAY_FRAG.replace(/mediump/g,'')
+  POSTPROCESS_FRAG = POSTPROCESS_FRAG.replace(/mediump/g,'')
 }
 
 const SAO_FRAG = glsl(__dirname + '/glsl/SAO.frag')
@@ -192,12 +192,12 @@ Camera.prototype.initPostproces = function () {
     })
   }
 
-  // this._overlayProgram = ctx.program({ vert: OVERLAY_VERT, frag: OVERLAY_FRAG }) // TODO
+  // this._overlayProgram = ctx.program({ vert: POSTPROCESS_VERT, frag: POSTPROCESS_FRAG }) // TODO
   this._blitCmd = {
     name: 'Camera.blit',
     pipeline: ctx.pipeline({
-      vert: OVERLAY_VERT,
-      frag: OVERLAY_FRAG
+      vert: POSTPROCESS_VERT,
+      frag: POSTPROCESS_FRAG
     }),
     attributes: this._fsqMesh.attributes,
     indices: this._fsqMesh.indices,
@@ -219,7 +219,7 @@ Camera.prototype.initPostproces = function () {
       // clearDepth: 1
     }),
     pipeline: ctx.pipeline({
-      vert: OVERLAY_VERT,
+      vert: POSTPROCESS_VERT,
       frag: SAO_FRAG
     }),
     attributes: this._fsqMesh.attributes,
@@ -239,7 +239,7 @@ Camera.prototype.initPostproces = function () {
       clearColor: [1, 1, 0, 1]
     }),
     pipeline: ctx.pipeline({
-      vert: OVERLAY_VERT,
+      vert: POSTPROCESS_VERT,
       frag: BILATERAL_BLUR_FRAG
     }),
     attributes: this._fsqMesh.attributes,
@@ -262,7 +262,7 @@ Camera.prototype.initPostproces = function () {
       clearColor: [1, 1, 0, 1]
     }),
     pipeline: ctx.pipeline({
-      vert: OVERLAY_VERT,
+      vert: POSTPROCESS_VERT,
       frag: BILATERAL_BLUR_FRAG
     }),
     attributes: this._fsqMesh.attributes,
@@ -285,7 +285,7 @@ Camera.prototype.initPostproces = function () {
       clearColor: [1, 1, 0, 1]
     }),
     pipeline: ctx.pipeline({
-      vert: OVERLAY_VERT,
+      vert: POSTPROCESS_VERT,
       frag: BILATERAL_BLUR_FRAG
     }),
     attributes: this._fsqMesh.attributes,
@@ -306,7 +306,7 @@ Camera.prototype.initPostproces = function () {
       clearColor: [1, 1, 0, 1]
     }),
     pipeline: ctx.pipeline({
-      vert: OVERLAY_VERT,
+      vert: POSTPROCESS_VERT,
       frag: BILATERAL_BLUR_FRAG
     }),
     attributes: this._fsqMesh.attributes,
