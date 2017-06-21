@@ -22,6 +22,7 @@ const createSpotLight = require('./spot-light')
 const createAreaLight = require('./area-light')
 const createReflectionProbe = require('./reflection-probe')
 const createSkybox = require('./skybox')
+const createOverlay = require('./overlay')
 const path = require('path')
 
 // pex-fx extensions, extending FXStage
@@ -31,6 +32,8 @@ const path = require('path')
 
 const DEPTH_PASS_VERT = glsl(path.join(__dirname, 'glsl/DepthPass.vert'))
 const DEPTH_PASS_FRAG = glsl(path.join(__dirname, 'glsl/DepthPass.frag'))
+const OVERLAY_VERT = glsl(path.join(__dirname, 'glsl/Overlay.vert'))
+const OVERLAY_FRAG = glsl(path.join(__dirname, 'glsl/Overlay.frag'))
 // var SOLID_COLOR_VERT = glsl(__dirname + '/glsl/SolidColor.vert')
 // var SOLID_COLOR_VERT = glsl(__dirname + '/glsl/SolidColor.vert')
 // var SOLID_COLOR_FRAG = fs.readFileSync(__dirname + '/glsl/SolidColor.frag', 'utf8')
@@ -283,6 +286,39 @@ Renderer.prototype.getGeometryPipeline = function (geometry, material, skin, opt
   return pipeline
 }
 
+Renderer.prototype.getOverlayCommand = function () {
+  const ctx = this._ctx
+  if (!this._drawOverlayCmd) {
+    const program = ctx.program({
+      vert: OVERLAY_VERT,
+      frag: OVERLAY_FRAG
+    })
+    this._drawOverlayCmd = {
+      // TODO: add blending equations?
+      attributes: {
+        aPosition: ctx.vertexBuffer([[-1, -1], [1, -1], [1, 1], [-1, 1]]),
+        aTexCoord0: ctx.vertexBuffer([[0, 0], [1, 0], [1, 1], [0, 1]])
+      },
+      indices: ctx.indexBuffer([[0, 1, 2], [0, 2, 3]]),
+      pipeline: ctx.pipeline({
+        program: program,
+        depthTest: false,
+        depthWrite: false,
+        blendEnabled: true,
+        blendSrcRGBFactor: ctx.BlendFactor.One,
+        blendDstRGBFactor: ctx.BlendFactor.OneMinusSrcAlpha,
+        blendSrcAlphaFactor: ctx.BlendFactor.One,
+        blendDstAlphaFactor: ctx.BlendFactor.OneMinusSrcAlpha,
+        cullFaceEnabled: true,
+        cullFace: ctx.Face.Back,
+        primitive: ctx.Primitive.Triangles
+      })
+    }
+  }
+
+  return this._drawOverlayCmd
+}
+
 Renderer.prototype.getComponents = function (type) {
   const result = []
   for (let i = 0; i < this.entities.length; i++) {
@@ -500,29 +536,9 @@ Renderer.prototype.draw = function () {
   if (State.profiler) State.profiler.startFrame()
 
   var cameras = this.getComponents('Camera')
-  var directionalLights = this.getComponents('DirectionalLight')
+  var overlays = this.getComponents('Overlay')
   var skyboxes = this.getComponents('Skybox')
   var reflectionProbes = this.getComponents('ReflectionProbe')
-
-  if (cameras.length === 0) {
-    console.log('WARN: Renderer.draw no cameras found')
-    return
-  }
-
-  directionalLights.forEach(function (light) {
-    // TODO: sunLight frustum should come from the scene bounding box
-    // var sunLightNode = this._sunLightNode
-    // var sunLight = sunLightNode.data.light
-
-    // // TODO: set sun light node position based on bounding box
-    // sunLightNode.setPosition([State.sunPosition[0] * 7.5, State.sunPosition[1] * 7.5, State.sunPosition[2] * 7.5])
-
-    // Vec3.set(sunLight.direction, State.sunPosition)
-    // Vec3.scale(sunLight.direction, -1.0)
-    // Vec3.normalize(sunLight.direction)
-
-    // Vec3.set(sunLight.color, State.sunColor)
-  })
 
   // TODO: update light probes
   /*
@@ -652,52 +668,24 @@ Renderer.prototype.draw = function () {
     })
   })
 
-  /*
-  if (State.postprocess) {
-    ctx.submit(this._drawFramePrepassFboCmd, () => {
-      if (State.depthPrepass) {
-        ctx.gl.colorMask(0, 0, 0, 0)
-        this.drawMeshes()
-        ctx.gl.colorMask(1, 1, 1, 1)
-      }
-    })
-  } else {
-    if (State.depthPrepass) {
-      ctx.submit(this._drawFramePrepassFboCmd, () => {
-        if (State.depthPrepass) {
-          ctx.gl.colorMask(0, 0, 0, 0)
-          this.drawMeshes()
-          ctx.gl.colorMask(1, 1, 1, 1)
-        }
-      })
-      ctx.gl.colorMask(0, 0, 0, 0)
-      this.drawMeshes()
-      ctx.gl.colorMask(1, 1, 1, 1)
+  overlays.forEach((overlay) => {
+    const bounds = [overlay.x, overlay.y, overlay.width, overlay.height]
+    if (overlay.x > 1 || overlay.y > 1 || overlay.width > 1 || overlay.height > 1) {
+      bounds[0] /= ctx.gl.drawingBufferWidth,
+        bounds[1] /= ctx.gl.drawingBufferHeight,
+        bounds[2] /= ctx.gl.drawingBufferWidth,
+        bounds[3] /= ctx.gl.drawingBufferHeight
     }
-  }
-  */
-  /*
-  if (State.postprocess) {
-    ctx.submit(this._drawFrameFboCmd, () => {
-      this.drawMeshes()
-
-      if (skyboxes.length > 0) {
-        skyboxes[0].draw(currentCamera, { rgbm: true })
-      }
-    })
-    ctx.submit(this._blitCmd, {
+    // overlay coordinates are from top left corner so we need to flip y
+    bounds[1] = 1.0 - bounds[1] - bounds[3]
+    ctx.submit(this.getOverlayCommand(), {
       uniforms: {
-        uExposure: State.exposure
+        uBounds: bounds,
+        uTexture: overlay.texture
       }
     })
-  } else {
-    this.drawMeshes()
+  })
 
-    if (skyboxes.length > 0) {
-      skyboxes[0].draw(currentCamera, { rgbm: false })
-    }
-  }
-  */
   if (State.profiler) State.profiler.endFrame()
 }
 
@@ -818,6 +806,10 @@ Renderer.prototype.reflectionProbe = function (opts) {
 
 Renderer.prototype.skybox = function (opts) {
   return createSkybox(Object.assign({ ctx: this._ctx, rgbm: State.rgbm }, opts))
+}
+
+Renderer.prototype.overlay = function (opts) {
+  return createOverlay(Object.assign({ ctx: this._ctx }, opts))
 }
 
 module.exports = function createRenderer (opts) {
