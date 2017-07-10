@@ -107,14 +107,6 @@ void main() {
 #ifdef USE_INSTANCED_COLOR
     vColor = aColor; 
 #endif
-    vPositionWorld = vec3(uModelMatrix * position);
-    vPositionView = vec3(uViewMatrix * vec4(vPositionWorld, 1.0));
-
-    vNormalView = vec3(uNormalMatrix * normal);
-    vNormalWorld = normalize(vec3(uInverseViewMatrix * vec4(vNormalView, 0.0)));
-
-    vEyeDirView = normalize(vec3(0.0, 0.0, 0.0) - vPositionView);
-    vEyeDirWorld = vec3(uInverseViewMatrix * vec4(vEyeDirView, 0.0));
 
 #ifdef USE_SKIN
      mat4 skinMat =
@@ -123,11 +115,22 @@ void main() {
         aWeight.z * uJointMat[int(aJoint.z)] +
         aWeight.w * uJointMat[int(aJoint.w)];
 
-    gl_Position = uProjectionMatrix * uViewMatrix * skinMat * position;
+    normal = mat3(skinMat) * normal;
+
+    vPositionWorld = vec3(skinMat * position);
+    vNormalView = mat3(uViewMatrix) * normal;
 #else
-    gl_Position = uProjectionMatrix * vec4(vPositionView, 1.0);
+    vPositionWorld = vec3(uModelMatrix * position);
+    vNormalView = vec3(uNormalMatrix * normal);
 #endif
 
-    //vTexCoord0 = fract(aTexCoord0 * uTexCoord0Scale * vec2(1.0, 0.5) + uTexCoord0Offset);
+    vPositionView = vec3(uViewMatrix * vec4(vPositionWorld, 1.0));
+    vNormalWorld = normalize(vec3(uInverseViewMatrix * vec4(vNormalView, 0.0)));
 
+    vEyeDirView = normalize(vec3(0.0, 0.0, 0.0) - vPositionView);
+    vEyeDirWorld = vec3(uInverseViewMatrix * vec4(vEyeDirView, 0.0));
+    gl_Position = uProjectionMatrix * vec4(vPositionView, 1.0);
+
+    //vTexCoord0 = fract(aTexCoord0 * uTexCoord0Scale * vec2(1.0, 0.5) + uTexCoord0Offset);
 }
+
