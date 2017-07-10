@@ -276,6 +276,7 @@ Renderer.prototype.getGeometryPipeline = function (geometry, material, skin, opt
       blendSrcAlphaFactor: material.blendSrcAlphaFactor,
       blendDstRGBFactor: material.blendDstRGBFactor,
       blendDstAlphaFactor: material.blendDstAlphaFactor,
+      // TODO make settable from material
       cullFaceEnabled: true,
       cullFace: ctx.Face.Back,
       primitive: geometry.primitive
