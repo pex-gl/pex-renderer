@@ -52,9 +52,9 @@ function initSky (panorama) {
     boxProjection: false
   })
 
-  renderer.entity([ sun ])
-  renderer.entity([ skybox ])
-  renderer.entity([ reflectionProbe ])
+  renderer.add(renderer.entity([ sun ]))
+  renderer.add(renderer.entity([ skybox ]))
+  renderer.add(renderer.entity([ reflectionProbe ]))
 }
 
 function initCamera () {
@@ -68,9 +68,9 @@ function initCamera () {
   })
   createOrbiter({ camera: camera })
 
-  renderer.entity([
+  renderer.add(renderer.entity([
     renderer.camera({ camera: camera })
-  ])
+  ]))
 }
 
 initSky()
@@ -221,7 +221,7 @@ function handleNode (node, gltf) {
       })
     }
 
-    node.entity = renderer.entity(components)
+    node.entity = renderer.add(renderer.entity(components))
 
     if (node.skin !== undefined) {
       const skin = gltf.skins[node.skin]
@@ -240,9 +240,9 @@ function handleNode (node, gltf) {
     }
 
   } else {
-    node.entity = renderer.entity([
+    node.entity = renderer.add(renderer.entity([
       transformCmp
-    ])
+    ]))
   }
 }
 
