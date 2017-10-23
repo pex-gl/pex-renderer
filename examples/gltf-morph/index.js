@@ -288,10 +288,15 @@ function handleAnimation (animation, gltf) {
     const sampler = animation.samplers[channel.sampler]
     const input = gltf.accessors[sampler.input]
     const output = gltf.accessors[sampler.output]
+    const target = gltf.nodes[channel.target.node].entity
 
     const outputData = []
     const od = output.data
-    const offset = AttributeSizeMap[output.type]
+    console.log('animation channel', channel, output.type, input, output, sampler, animation, channel)
+    let offset = AttributeSizeMap[output.type]
+    if (channel.target.path === 'weights') {
+        offset = target.getComponent('Morph').weights.length
+    }
     for (let i = 0; i < output.data.length; i += offset) {
       if (offset === 1) {
         outputData.push([od[i]])
@@ -307,7 +312,6 @@ function handleAnimation (animation, gltf) {
       }
     }
 
-    const target = gltf.nodes[channel.target.node].entity
 
     return {
       sampler: {
@@ -427,7 +431,8 @@ ctx.frame(() => {
             })
           } else if (path === 'weights') {
             target.getComponent('Morph').set({
-              weights: [nextOutput[0], 1]//wnextOutput
+              // weights: [nextOutput[0], 1] // FIXME: hardcoded
+              weights: nextOutput
             })
           }
         }
