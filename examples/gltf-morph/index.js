@@ -78,25 +78,25 @@ initCamera()
 let debugOnce = false
 
 var WebGLConstants = {
-  34963: 'ELEMENT_ARRAY_BUFFER',  // 0x8893
-  34962: 'ARRAY_BUFFER',          // 0x8892
-  5123: 'UNSIGNED_SHORT',         // 0x1403
-  5125: 'UNSIGNED_INT',
-  5126: 'FLOAT',                  // 0x1406
-  4: 'TRIANGLES',                 // 0x0004
-  35678: 'SAMPLER_2D',            // 0x8B5E
-  35664: 'FLOAT_VEC2',            // 0x8B50
-  35665: 'FLOAT_VEC3',            // 0x8B51
-  35666: 'FLOAT_VEC4',            // 0x8B52
-  35676: 'FLOAT_MAT4'             // 0x8B5C
+  ELEMENT_ARRAY_BUFFER: 34963,  // 0x8893
+  ARRAY_BUFFER: 34962,          // 0x8892
+  UNSIGNED_SHORT: 5123,         // 0x1403
+  UNSIGNED_INT: 5125,
+  FLOAT: 5126,                  // 0x1406
+  TRIANGLES: 4,                 // 0x0004
+  SAMPLER_2D: 35678,            // 0x8B5E
+  FLOAT_VEC2: 35664,            // 0x8B50
+  FLOAT_VEC3: 35665,            // 0x8B51
+  FLOAT_VEC4: 35666,            // 0x8B52
+  FLOAT_MAT4: 35676             // 0x8B5C
 }
 
 const AttributeSizeMap = {
-  'SCALAR': 1,
-  'VEC4': 4,
-  'VEC3': 3,
-  'VEC2': 2,
-  'MAT4': 16
+  SCALAR: 1,
+  VEC4: 4,
+  VEC3: 3,
+  VEC2: 2,
+  MAT4: 16
 }
 
 let loaded = false
@@ -114,38 +114,39 @@ function handleAccessor (accessor, bufferView) {
   const size = AttributeSizeMap[accessor.type]
   if (accessor.byteOffset === undefined) accessor.byteOffset = 0
 
-  if (accessor.componentType === 5123) {
-    data = new Uint16Array(bufferView.data.slice(
+  if (accessor.componentType === WebGLConstants.UNSIGNED_SHORT) {
+    const data = new Uint16Array(bufferView.data.slice(
       accessor.byteOffset,
       accessor.byteOffset + accessor.count * size * 4
     ))
     accessor.data = data
-  } else if (accessor.componentType === 35664) {
-    data = new Float32Array(bufferView.data.slice(
+  } else if (accessor.componentType === WebGLConstants.UNSIGNED_INT) {
+    // TODO: Is this valide buffer type?
+    const data = new Uint16Array(bufferView.data.slice(
       accessor.byteOffset,
       accessor.byteOffset + accessor.count * size * 4
     ))
     accessor.data = data
-  } else if (accessor.componentType === 5126) {
-    data = new Float32Array(bufferView.data.slice(
+  } else if (accessor.componentType === WebGLConstants.FLOAT) {
+    const data = new Float32Array(bufferView.data.slice(
       accessor.byteOffset,
       accessor.byteOffset + accessor.count * size * 4
     ))
     accessor.data = data
-  } else if (accessor.componentType === 35665) {
-    data = new Float32Array(bufferView.data.slice(
+  } else if (accessor.componentType === WebGLConstants.FLOAT_VEC2) {
+    const data = new Float32Array(bufferView.data.slice(
       accessor.byteOffset,
       accessor.byteOffset + accessor.count * size * 4
     ))
     accessor.data = data
-  } else if (accessor.componentType === 35666) {
-    data = new Float32Array(bufferView.data.slice(
+  } else if (accessor.componentType === WebGLConstants.FLOAT_VEC3) {
+    const data = new Float32Array(bufferView.data.slice(
       accessor.byteOffset,
       accessor.byteOffset + accessor.count * size * 4
     ))
     accessor.data = data
-  } else if (accessor.componentType === 5125) {
-    data = new Uint16Array(bufferView.data.slice(
+  } else if (accessor.componentType === WebGLConstants.FLOAT_VEC4) {
+    const data = new Float32Array(bufferView.data.slice(
       accessor.byteOffset,
       accessor.byteOffset + accessor.count * size * 4
     ))
@@ -181,7 +182,7 @@ function handleNode (node, gltf) {
       normals: normalAccessor.data,
       // texCoords: texcoordAccessor.data,
       texCoords: tx,
-      indices: indicesAccessor.data,
+      indices: indicesAccessor.data
     })
 
     const jointAccessor = gltf.accessors[mesh.primitives[0].attributes.JOINT]
@@ -238,7 +239,6 @@ function handleNode (node, gltf) {
       })
       node.entity.addComponent(skinCmp)
     }
-
   } else {
     node.entity = renderer.add(renderer.entity([
       transformCmp
@@ -252,7 +252,7 @@ function buildHierarchy (nodes, gltf) {
       const skin = gltf.skins[node.skin]
 
       const joints = skin.jointNames.map((jointName) => {
-        return nodes.find((n) => n.jointName == jointName).entity
+        return nodes.find((n) => n.jointName === jointName).entity
       })
 
       node.entity.getComponent('Skin').set({
@@ -274,7 +274,7 @@ function buildHierarchy (nodes, gltf) {
 
 function handleBuffer (buffer, cb) {
   if (!buffer.uri) {
-    cb('gltf buffer.uri does not exist')
+    cb(new Error('gltf buffer.uri does not exist'))
     return
   }
   loadBinary(buffer.uri, function (err, data) {
@@ -288,12 +288,17 @@ function handleAnimation (animation, gltf) {
     const sampler = animation.samplers[channel.sampler]
     const input = gltf.accessors[sampler.input]
     const output = gltf.accessors[sampler.output]
-    const inputData = input.data
 
     const outputData = []
     const od = output.data
     const offset = AttributeSizeMap[output.type]
-    for (let i = 0; i < output.data.length; i+=offset) {
+    for (let i = 0; i < output.data.length; i += offset) {
+      if (offset === 1) {
+        outputData.push([od[i]])
+      }
+      if (offset === 2) {
+        outputData.push([od[i], od[i + 1]])
+      }
       if (offset === 3) {
         outputData.push([od[i], od[i + 1], od[i + 2]])
       }
@@ -365,7 +370,6 @@ ctx.frame(() => {
 
   State.sun.direction[0] += 0.001 // force shadowmap to update every frame
 
-  return
   if (loaded) {
     var elapsedTime = Date.now() - startTime
     var ms = (elapsedTime / 1000).toFixed(3)
@@ -385,8 +389,8 @@ ctx.frame(() => {
         const animationLength = inputData[inputData.length - 1]
         const currentTime = ms % animationLength
 
-        let prevIndex = undefined
-        let nextIndex = undefined
+        let prevIndex
+        let nextIndex
         for (var i = 0; i < inputData.length; i++) {
           nextIndex = i
           if (inputData[i] >= currentTime) {
@@ -413,15 +417,17 @@ ctx.frame(() => {
             target.transform.set({
               position: currentOutput
             })
-          }
-          else if (path === 'rotation') {
+          } else if (path === 'rotation') {
             target.transform.set({
               rotation: currentOutput
             })
-          }
-          else if (path === 'scale') {
+          } else if (path === 'scale') {
             target.transform.set({
               scale: currentOutput
+            })
+          } else if (path === 'weights') {
+            target.getComponent('Morph').set({
+              weights: [nextOutput[0], 1]//wnextOutput
             })
           }
         }
@@ -429,4 +435,3 @@ ctx.frame(() => {
     })
   }
 })
-
