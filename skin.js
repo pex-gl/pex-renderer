@@ -1,5 +1,4 @@
 const Signal = require('signals')
-const Vec3 = require('pex-math/Vec3')
 const Mat4 = require('pex-math/Mat4')
 
 function Skin (opts) {
@@ -24,7 +23,6 @@ Skin.prototype.update = function () {
     var m = Mat4.create()
     Mat4.mult(m, joint.transform.modelMatrix)
     Mat4.mult(m, this.inverseBindMatrices[index])
-    Mat4.mult(m, this.bindShapeMatrix)
     return m
   })
 }
