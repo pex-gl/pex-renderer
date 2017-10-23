@@ -671,10 +671,10 @@ Renderer.prototype.draw = function () {
   overlays.forEach((overlay) => {
     const bounds = [overlay.x, overlay.y, overlay.width, overlay.height]
     if (overlay.x > 1 || overlay.y > 1 || overlay.width > 1 || overlay.height > 1) {
-      bounds[0] /= ctx.gl.drawingBufferWidth,
-        bounds[1] /= ctx.gl.drawingBufferHeight,
-        bounds[2] /= ctx.gl.drawingBufferWidth,
-        bounds[3] /= ctx.gl.drawingBufferHeight
+      bounds[0] /= ctx.gl.drawingBufferWidth
+      bounds[1] /= ctx.gl.drawingBufferHeight
+      bounds[2] /= ctx.gl.drawingBufferWidth
+      bounds[3] /= ctx.gl.drawingBufferHeight
     }
     // overlay coordinates are from top left corner so we need to flip y
     bounds[1] = 1.0 - bounds[1] - bounds[3]
