@@ -347,7 +347,7 @@ loadJSON('CesiumMan.gltf', function (err, json) {
 
 var startTime = Date.now()
 
-renderer.entity([
+renderer.add(renderer.entity([
   renderer.transform({
     position: [0, -0.05, 0]
   }),
@@ -355,7 +355,7 @@ renderer.entity([
   renderer.material({
     baseColor: [0.8, 0.5, 0.5, 1]
   })
-])
+]))
 
 ctx.frame(() => {
   ctx.debug(debugOnce)
