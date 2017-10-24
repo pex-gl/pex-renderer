@@ -12,9 +12,13 @@ function Material (opts) {
   const ctx = opts.ctx
 
   this.baseColor = [0.95, 0.95, 0.95, 1]
+  this.baseColorMap = null
   this.emissiveColor = [0, 0, 0, 1]
+  this.emissiveColorMap = null
   this.metallic = 0.01
+  this.matallicMap = null
   this.roughness = 0.5
+  this.roughnessMap = null
   this.displacement = 0
   this.depthTest = true
   this.depthWrite = true
