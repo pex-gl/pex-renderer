@@ -8,6 +8,7 @@ const createCamera = require('pex-cam/perspective')
 const createOrbiter = require('pex-cam/orbiter')
 const createContext = require('pex-context')
 const async = require('async')
+const path = require('path')
 
 const ctx = createContext()
 ctx.gl.getExtension('EXT_shader_texture_lod')
@@ -185,9 +186,9 @@ function handleNode (node, gltf) {
       indices: indicesAccessor.data
     })
 
-    const jointAccessor = gltf.accessors[mesh.primitives[0].attributes.JOINT]
+    const jointAccessor = gltf.accessors[mesh.primitives[0].attributes.JOINTS_0]
     if (jointAccessor) geometryCmp.set({ joints: jointAccessor.data })
-    const weightAccessor = gltf.accessors[mesh.primitives[0].attributes.WEIGHT]
+    const weightAccessor = gltf.accessors[mesh.primitives[0].attributes.WEIGHTS_0]
     if (weightAccessor) geometryCmp.set({ weights: weightAccessor.data })
 
     const materialCmp = renderer.material({
@@ -234,7 +235,6 @@ function handleNode (node, gltf) {
       }
 
       const skinCmp = renderer.skin({
-        bindShapeMatrix: skin.bindShapeMatrix,
         inverseBindMatrices: inverseBindMatrices
       })
       node.entity.addComponent(skinCmp)
@@ -251,8 +251,8 @@ function buildHierarchy (nodes, gltf) {
     if (node.skin !== undefined) {
       const skin = gltf.skins[node.skin]
 
-      const joints = skin.jointNames.map((jointName) => {
-        return nodes.find((n) => n.jointName === jointName).entity
+      const joints = skin.joints.map((i) => {
+        return nodes[i].entity
       })
 
       node.entity.getComponent('Skin').set({
@@ -317,8 +317,14 @@ function handleAnimation (animation, gltf) {
   })
 }
 
-loadJSON('CesiumMan.gltf', function (err, json) {
+const file = __dirname + '/CesiumMan.gltf'
+loadJSON(file, function (err, json) {
   if (err) throw new Error(err)
+  const basePath = path.dirname(file)
+
+  json.buffers.forEach((buffer) => {
+    buffer.uri = path.join(basePath, buffer.uri)
+  })
 
   async.map(json.buffers, handleBuffer, function (err, res) {
     if (err) throw new Error(err)
@@ -353,7 +359,7 @@ renderer.add(renderer.entity([
   }),
   renderer.geometry(createCube(5, 0.1, 5)),
   renderer.material({
-    baseColor: [0.8, 0.5, 0.5, 1]
+    baseColor: [0.5, 0.5, 0.5, 1]
   })
 ]))
 
