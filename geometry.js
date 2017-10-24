@@ -24,7 +24,11 @@ Geometry.prototype.set = function (opts) {
   Object.keys(opts).forEach((prop) => this.changed.dispatch(prop))
 
   if (opts.positions) {
-    this.bounds = AABB.fromPoints(opts.positions)
+    if (opts.positions[0] && !opts.positions[0].length) {
+      this.bounds = opts.bounds || AABB.create()
+    } else {
+      this.bounds = opts.bounds || AABB.fromPoints(opts.positions)
+    }
     if (!this._positionsBuf) {
       this._positionsBuf = ctx.vertexBuffer(opts.positions)
     } else {
