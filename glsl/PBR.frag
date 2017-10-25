@@ -208,6 +208,18 @@ float saturate(float f) {
     }
 #endif
 
+#ifdef USE_METALLIC_ROUGHNESS_MAP
+    // R = ?, G = roughness, B = metallic
+    uniform sampler2D uMetallicRoughnessMap;
+    // TODO: sampling the same texture twice
+    float getMetallic() {
+        return texture2D(uMetallicRoughnessMap, vTexCoord0).b;
+    }
+    float getRoughness() {
+        return texture2D(uMetallicRoughnessMap, vTexCoord0).g;
+    }
+#else
+
 #ifdef USE_METALLIC_MAP
     uniform sampler2D uMetallicMap; //assumes linear, TODO: check gltf
     float getMetallic() {
@@ -230,6 +242,9 @@ float saturate(float f) {
     float getRoughness() {
         return uRoughness + 0.01;
     }
+#endif
+
+//USE_METALLIC_ROUGHNESS_MAP
 #endif
 
 #ifdef USE_NORMAL_MAP

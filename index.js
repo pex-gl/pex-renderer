@@ -203,6 +203,9 @@ Renderer.prototype.getMaterialProgram = function (geometry, material, skin, opti
   if (material.roughnessMap) {
     flags.push('#define USE_ROUGHNESS_MAP')
   }
+  if (material.metallicRoughnessMap) {
+    flags.push('#define USE_METALLIC_ROUGHNESS_MAP')
+  }
   if (material.normalMap) {
     flags.push('#define USE_NORMAL_MAP')
   }
@@ -455,6 +458,8 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
 
     if (material.roughnessMap) cachedUniforms.uRoughnessMap = material.roughnessMap
     else cachedUniforms.uRoughness = material.roughness
+
+    if (material.metallicRoughnessMap) cachedUniforms.uMetallicRoughnessMap = material.metallicRoughnessMap
 
     if (material.normalMap) cachedUniforms.uNormalMap = material.normalMap
     if (material.displacementMap) {
