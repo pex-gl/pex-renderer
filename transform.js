@@ -115,6 +115,10 @@ Transform.prototype.afterUpdate = function () {
     multVec3(childBounds[1], child.scale)
     Vec3.add(childBounds[0], child.position)
     Vec3.add(childBounds[1], child.position)
+    if (child.matrix) {
+      Vec3.multMat4(childBounds[0], child.matrix)
+      Vec3.multMat4(childBounds[1], child.matrix)
+    }
     AABB.includeAABB(this.bounds, childBounds)
   })
 
