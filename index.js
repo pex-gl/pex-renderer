@@ -279,7 +279,7 @@ Renderer.prototype.getGeometryPipeline = function (geometry, material, skin, opt
       blendSrcAlphaFactor: material.blendSrcAlphaFactor,
       blendDstRGBFactor: material.blendDstRGBFactor,
       blendDstAlphaFactor: material.blendDstAlphaFactor,
-      cullFaceEnabled: true,
+      cullFaceEnabled: material.cullFaceEnabled,
       cullFace: ctx.Face.Back,
       primitive: geometry.primitive
     })
@@ -448,7 +448,7 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
     cachedUniforms.uIor = 1.4
 
     if (material.baseColorMap) cachedUniforms.uBaseColorMap = material.baseColorMap
-    else cachedUniforms.uBaseColor = material.baseColor
+    cachedUniforms.uBaseColor = material.baseColor
 
     if (material.emissiveColorMap) cachedUniforms.uEmissiveColorMap = material.emissiveColorMap
     else cachedUniforms.uEmissiveColor = material.emissiveColor

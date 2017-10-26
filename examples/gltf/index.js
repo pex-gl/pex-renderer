@@ -264,11 +264,11 @@ function loadTexture (materialTexture, gltf, basePath, encoding, cb) {
 function handleMaterial (material, gltf, basePath) {
   const materialCmp = renderer.material({
     baseColor: [1, 1, 1, 1.0],
-    roughness: 0.2,
-    metallic: 0.2,
+    roughness: 1.0,
+    metallic: 0.0,
     castShadows: true,
     receiveShadows: true,
-    cullFaceEnabled: false
+    cullFaceEnabled: !material.doubleSided
   })
 
   const pbrMetallicRoughness = material.pbrMetallicRoughness
