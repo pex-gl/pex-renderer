@@ -2,16 +2,19 @@ const loadJSON = require('pex-io/loadJSON')
 const loadText = require('pex-io/loadText')
 const loadImage = require('pex-io/loadImage')
 const createCube = require('primitive-cube')
+const createBox = require('primitive-box')
 const loadBinary = require('pex-io/loadBinary')
 const Mat4 = require('pex-math/Mat4')
 const Vec3 = require('pex-math/Vec3')
-const createRenderer = require('../../')
+const AABB = require('pex-geom/AABB')
+const createRenderer = require('../../../pex-renderer')
 const createCamera = require('pex-cam/perspective')
 const createOrbiter = require('pex-cam/orbiter')
 const createContext = require('pex-context')
 const async = require('async')
 const path = require('path')
 const GUI = require('pex-gui')
+const edges = require('geom-edges')
 
 const ctx = createContext()
 ctx.gl.getExtension('EXT_shader_texture_lod')
@@ -83,9 +86,9 @@ function initSky (panorama) {
     boxProjection: false
   })
 
-  renderer.add(renderer.entity([ sun ]))
-  renderer.add(renderer.entity([ skybox ]))
-  renderer.add(renderer.entity([ reflectionProbe ]))
+  renderer.add(renderer.entity([ sun ])).name = 'sun'
+  renderer.add(renderer.entity([ skybox ])).name = 'skybox'
+  renderer.add(renderer.entity([ reflectionProbe ])).name = 'reflectionProbe'
 
   updateSunPosition()
 }
@@ -102,8 +105,22 @@ function initCamera () {
   createOrbiter({ camera: camera })
 
   renderer.add(renderer.entity([
-    renderer.camera({ camera: camera })
-  ]))
+    renderer.camera({
+      camera: camera,
+      // dof: true,
+      dofIterations: 1,
+      dofRange: 0.5,
+      dofRadius: 1,
+      dofDepth: 1,
+      ssao: true,
+      ssaoIntensity: 5,
+      ssaoRadius: 6,
+      ssaoBias: 0.02,
+      ssaoBlurRadius: 0.05, // 2
+      ssaoBlurSharpness: 10// 10,
+      // ssaoRadius: 5,
+    })
+  ])).name = 'camera'
 }
 
 initSky()
@@ -126,10 +143,18 @@ var WebGLConstants = {
 
 const AttributeSizeMap = {
   SCALAR: 1,
-  VEC4: 4,
-  VEC3: 3,
   VEC2: 2,
+  VEC3: 3,
+  VEC4: 4,
   MAT4: 16
+}
+
+const AttributeNameMap = {
+  POSITION: 'positions',
+  NORMAL: 'normals',
+  TEXCOORD_0: 'texCoords',
+  JOINTS_0: 'joints',
+  WEIGHTS_0: 'weights'
 }
 
 function handleBufferView (bufferView, bufferData) {
@@ -147,12 +172,11 @@ function handleAccessor (accessor, bufferView) {
   if (accessor.componentType === WebGLConstants.UNSIGNED_SHORT) {
     const data = new Uint16Array(bufferView.data.slice(
       accessor.byteOffset,
-      accessor.byteOffset + accessor.count * size * 4
+      accessor.byteOffset + accessor.count * size * 2
     ))
     accessor.data = data
   } else if (accessor.componentType === WebGLConstants.UNSIGNED_INT) {
-    // TODO: Is this valide buffer type?
-    const data = new Uint16Array(bufferView.data.slice(
+    const data = new Uint32Array(bufferView.data.slice(
       accessor.byteOffset,
       accessor.byteOffset + accessor.count * size * 4
     ))
@@ -187,74 +211,115 @@ function handleAccessor (accessor, bufferView) {
   }
 }
 
-function handleNode (node, gltf, basePath) {
-  const transform = {
-    position: node.translation || [0, 0, 0],
-    rotation: node.rotation || [0, 0, 0, 1],
-    scale: node.scale || [1, 1, 1]
+function loadTexture (materialTexture, gltf, basePath, encoding, cb) {
+  let texture = gltf.textures[materialTexture.index]
+  let image = gltf.images[texture.source]
+  let url = path.join(basePath, image.uri)
+  loadImage(url, (err, img) => {
+    if (err) return cb(err, null)
+    var tex = ctx.texture2D({
+      data: img,
+      width: img.width,
+      height: img.height,
+      encoding: ctx.Encoding.SRGB,
+      pixelFormat: ctx.PixelFormat.RGBA8
+      // flipY: true // TODO: what does the spec says?
+    })
+    cb(null, tex)
+  })
+}
+
+function handleMaterial (material, gltf, basePath) {
+  const materialCmp = renderer.material({
+    baseColor: [1, 1, 1, 1.0],
+    roughness: 0.2,
+    metallic: 0.2,
+    castShadows: true,
+    receiveShadows: true,
+    cullFaceEnabled: false
+  })
+
+  const pbrMetallicRoughness = material.pbrMetallicRoughness
+  if (pbrMetallicRoughness) {
+    if (pbrMetallicRoughness.baseColorTexture) {
+      loadTexture(pbrMetallicRoughness.baseColorTexture, gltf, basePath, ctx.Encoding.SRGB, (err, tex) => {
+        if (err) throw err
+        materialCmp.set({ baseColorMap: tex })
+      })
+    }
+    if (pbrMetallicRoughness.metallicRoughnessTexture) {
+      loadTexture(pbrMetallicRoughness.metallicRoughnessTexture, gltf, basePath, ctx.Encoding.Linear, (err, tex) => {
+        if (err) throw err
+        materialCmp.set({ metallicRoughnessMap: tex })
+      })
+    }
+    if (pbrMetallicRoughness.baseColorFactor) {
+      materialCmp.set({ baseColor: pbrMetallicRoughness.baseColorFactor })
+    }
   }
-  if (node.matrix) transform.matrix = node.matrix
 
-  const transformCmp = renderer.transform(transform)
-  if (node.mesh !== undefined) {
-    const mesh = gltf.meshes[node.mesh]
-    const primitive = mesh.primitives[0]
-    const attributes = primitive.attributes
+  const pbrSpecularGlossiness = material.extensions ? material.extensions.KHR_materials_pbrSpecularGlossiness : null
+  console.log(material)
+  if (pbrSpecularGlossiness) {
+    if (pbrSpecularGlossiness.diffuseTexture) {
+      console.log('diffuseTexture')
+      loadTexture(pbrSpecularGlossiness.diffuseTexture, gltf, basePath, ctx.Encoding.SRGB, (err, tex) => {
+        if (err) throw err
+        materialCmp.set({ baseColorMap: tex })
+      })
+    }
+  }
 
-    const positionAccessor = gltf.accessors[attributes.POSITION]
-    const normalAccessor = gltf.accessors[attributes.NORMAL]
-    const texCoord0Accessor = gltf.accessors[attributes.TEXCOORD_0]
+  if (material.normalTexture) {
+    loadTexture(material.normalTexture, gltf, basePath, ctx.Encoding.Linear, (err, tex) => {
+      if (err) throw err
+      materialCmp.set({ normalMap: tex })
+    })
+  }
+
+  if (material.emissiveTexture) {
+    // TODO: double check sRGB
+    loadTexture(material.emissiveTexture, gltf, basePath, ctx.Encoding.SRGB, (err, tex) => {
+      if (err) throw err
+      materialCmp.set({ emissiveColorMap: tex })
+    })
+  }
+
+  return materialCmp
+}
+
+function handleMesh (mesh, gltf, basePath) {
+  return mesh.primitives.map((primitive) => {
+    const attributes = Object.keys(primitive.attributes).reduce((attributes, name) => {
+      const accessor = gltf.accessors[primitive.attributes[name]]
+      attributes[AttributeNameMap[name]] = accessor.data
+      return attributes
+    }, {})
+
+    console.log('attributes', attributes)
+
+    const positionAccessor = gltf.accessors[primitive.attributes.POSITION]
     const indicesAccessor = gltf.accessors[primitive.indices]
-    const geometryCmp = renderer.geometry({
-      positions: positionAccessor.data,
-      normals: normalAccessor.data,
-      texCoords: texCoord0Accessor.data,
+    console.log('positionAccessor', positionAccessor)
+    console.log('indicesAccessor', indicesAccessor)
+
+    const geometryCmp = renderer.geometry(attributes)
+    geometryCmp.set({
       indices: indicesAccessor.data,
       bounds: [positionAccessor.min, positionAccessor.max]
     })
 
-    const jointAccessor = gltf.accessors[mesh.primitives[0].attributes.JOINTS_0]
-    if (jointAccessor) geometryCmp.set({ joints: jointAccessor.data })
-    const weightAccessor = gltf.accessors[mesh.primitives[0].attributes.WEIGHTS_0]
-    if (weightAccessor) geometryCmp.set({ weights: weightAccessor.data })
-
-    const materialCmp = renderer.material({
-      baseColor: [1, 1, 1, 1.0],
-      roughness: 1,
-      metallic: 0,
-      castShadows: true,
-      receiveShadows: true
-    })
-
+    let materialCmp = null
     if (primitive.material !== undefined) {
       const material = gltf.materials[primitive.material]
-      let baseColorTexture = gltf.textures[material.pbrMetallicRoughness.baseColorTexture.index]
-      // TODO: sampler
-      let baseColorImage = gltf.images[baseColorTexture.source]
-      let url = path.join(basePath, baseColorImage.uri)
-      console.log('loadingImage', url)
-      loadImage(url, (err, img) => {
-        if (err) return console.log(err)
-        var tex = ctx.texture2D({
-          data: img,
-          width: img.width,
-          height: img.height,
-          encoding: ctx.Encoding.SRGB,
-          pixelFormat: ctx.PixelFormat.RGBA8
-          // flipY: true
-        })
-        console.log(tex)
-        materialCmp.set({
-          baseColorMap: tex
-        })
-      })
+      materialCmp = handleMaterial(material, gltf, basePath)
     }
 
     let components = [
-      transformCmp,
       geometryCmp,
       materialCmp
     ]
+
     if (primitive.targets) {
       let targets = primitive.targets.map((target) => {
         return gltf.accessors[target.POSITION].data
@@ -265,43 +330,83 @@ function handleNode (node, gltf, basePath) {
         weights: mesh.weights
       })
       components.push(morphCmp)
-
-      // TODO
-      document.addEventListener('mousemove', function (e) {
-        let weight1 = e.x / window.innerWidth
-        let weight2 = e.y / window.innerHeight
-        morphCmp.set({
-          weights: [weight1, weight2]
-        })
-      })
     }
 
-    node.entity = renderer.add(renderer.entity(components))
+    return components
+  })
+}
 
-    if (node.skin !== undefined) {
-      const skin = gltf.skins[node.skin]
-      const data = gltf.accessors[skin.inverseBindMatrices].data
+function handleNode (node, gltf, basePath, i) {
+  const transform = {
+    position: node.translation || [0, 0, 0],
+    rotation: node.rotation || [0, 0, 0, 1],
+    scale: node.scale || [1, 1, 1]
+  }
+  if (node.matrix) transform.matrix = node.matrix
+  const transformCmp = renderer.transform(transform)
 
-      const inverseBindMatrices = []
-      for (let i = 0; i < data.length; i += 16) {
-        inverseBindMatrices.push(data.slice(i, i + 16))
-      }
+  node.entity = renderer.add(renderer.entity([
+    transformCmp
+  ]))
+  node.entity.name = 'node_' + i
 
-      const skinCmp = renderer.skin({
-        inverseBindMatrices: inverseBindMatrices
-      })
-      node.entity.addComponent(skinCmp)
+  let skinCmp = null
+  if (node.skin !== undefined) {
+    const skin = gltf.skins[node.skin]
+    const data = gltf.accessors[skin.inverseBindMatrices].data
+
+    let inverseBindMatrices = []
+    for (let i = 0; i < data.length; i += 16) {
+      inverseBindMatrices.push(data.slice(i, i + 16))
     }
-  } else {
-    node.entity = renderer.add(renderer.entity([
-      transformCmp
-    ]))
+
+    skinCmp = renderer.skin({
+      inverseBindMatrices: inverseBindMatrices
+    })
   }
 
-  return node
+  if (node.mesh !== undefined) {
+    const primitives = handleMesh(gltf.meshes[node.mesh], gltf, basePath)
+    if (primitives.length === 1) {
+      primitives[0].forEach((component) => {
+        node.entity.addComponent(component)
+      })
+      if (skinCmp) node.entity.addComponent(skinCmp)
+      return node.entity
+    } else {
+      // create sub modes for each primitive
+      const primitiveNodes = primitives.map((components, j) => {
+        console.log('components', components)
+        const subMesh = renderer.add(renderer.entity(components))
+        subMesh.name = `node_${i}_${j}`
+        subMesh.transform.set({ parent: node.entity.transform })
+
+        // TODO: should skin component be shared?
+        if (skinCmp) subMesh.addComponent(skinCmp)
+        return subMesh
+      })
+      const nodes = [node.entity].concat(primitiveNodes)
+      return nodes
+    }
+  }
+  return node.entity
 }
 
 function buildHierarchy (nodes, gltf) {
+  nodes.forEach((node, index) => {
+    let parent = nodes[index]
+    if (!parent || !parent.entity) return // TEMP: for debuggin only, child should always exist
+    let parentTransform = parent.entity.transform
+    if (node.children) {
+      node.children.forEach((childIndex) => {
+        let child = nodes[childIndex]
+        if (!child || !child.entity) return // TEMP: for debuggin only, child should always exist
+        let childTransform = child.entity.transform
+        childTransform.set({ parent: parentTransform })
+      })
+    }
+  })
+
   nodes.forEach((node) => {
     if (node.skin !== undefined) {
       const skin = gltf.skins[node.skin]
@@ -310,19 +415,21 @@ function buildHierarchy (nodes, gltf) {
         return nodes[i].entity
       })
 
-      node.entity.getComponent('Skin').set({
-        joints: joints
-      })
-    }
-  })
-
-  nodes.forEach((node, index) => {
-    let parentTransform = nodes[index].entity.transform
-    if (node.children) {
-      node.children.forEach((child) => {
-        let childTransform = nodes[child].entity.transform
-        childTransform.set({ parent: parentTransform })
-      })
+      if (gltf.meshes[node.mesh].primitives.length === 1) {
+        node.entity.getComponent('Skin').set({
+          joints: joints
+        })
+      } else {
+        console.log(node.transform)
+        console.log(gltf.meshes[node.mesh])
+        node.entity.transform.children.forEach((child) => {
+          // FIXME: currently we share the same Skin component
+          // so this code is redundant after first child
+          child.entity.getComponent('Skin').set({
+            joints: joints
+          })
+        })
+      }
     }
   })
 }
@@ -343,11 +450,21 @@ function handleAnimation (animation, gltf) {
     const sampler = animation.samplers[channel.sampler]
     const input = gltf.accessors[sampler.input]
     const output = gltf.accessors[sampler.output]
+    const target = gltf.nodes[channel.target.node].entity
 
     const outputData = []
     const od = output.data
-    const offset = AttributeSizeMap[output.type]
+    let offset = AttributeSizeMap[output.type]
+    if (channel.target.path === 'weights') {
+      offset = target.getComponent('Morph').weights.length
+    }
     for (let i = 0; i < output.data.length; i += offset) {
+      if (offset === 1) {
+        outputData.push([od[i]])
+      }
+      if (offset === 2) {
+        outputData.push([od[i], od[i + 1]])
+      }
       if (offset === 3) {
         outputData.push([od[i], od[i + 1], od[i + 2]])
       }
@@ -355,8 +472,6 @@ function handleAnimation (animation, gltf) {
         outputData.push([od[i], od[i + 1], od[i + 2], od[i + 3]])
       }
     }
-
-    const target = gltf.nodes[channel.target.node].entity
 
     return {
       sampler: {
@@ -417,8 +532,19 @@ loadText(indexFile, (err, text) => {
       loadModel(`assets/gltf-sample-models/${model}/glTF/${model}.gltf`)
     })
     console.log('screenshots', screenshots)
+
+    var defaultModel = modelNames[2]
+    loadModel(`assets/gltf-sample-models/${defaultModel}/glTF/${defaultModel}.gltf`)
+    // loadModel(`assets/gltf/skull_downloadable/scene.gltf`)
+    // loadModel(`assets/gltf/damagedHelmet/damagedHelmet.gltf`)
+    // loadModel(`assets/gltf/hover_bike/scene.gltf`)
   })
 })
+
+function aabbToString (aabb) {
+  if (AABB.isEmpty(aabb)) return '[]'
+  return `[${aabb.map((v) => v.map((f) => f.toFixed(2)).join(', ')).join(', ')}]`
+}
 
 function loadModel (file) {
   console.log('loadModel', file)
@@ -431,45 +557,144 @@ function loadModel (file) {
   })
   State.entities = []
 
-  loadJSON(file, (err, json) => {
+  loadJSON(file, (err, gltf) => {
     if (err) throw new Error(err)
     const basePath = path.dirname(file)
 
-    json.buffers.forEach((buffer) => {
+    gltf.buffers.forEach((buffer) => {
       buffer.uri = path.join(basePath, buffer.uri)
     })
 
-    async.map(json.buffers, handleBuffer, function (err, res) {
+    async.map(gltf.buffers, handleBuffer, function (err, res) {
       if (err) throw new Error(err)
 
-      json.bufferViews.map((bufferView) => {
-        handleBufferView(bufferView, json.buffers[bufferView.buffer].data)
+      gltf.bufferViews.map((bufferView) => {
+        handleBufferView(bufferView, gltf.buffers[bufferView.buffer].data)
       })
 
-      json.accessors.map((accessor) => {
-        handleAccessor(accessor, json.bufferViews[accessor.bufferView])
+      gltf.accessors.map((accessor) => {
+        handleAccessor(accessor, gltf.bufferViews[accessor.bufferView])
       })
 
-      State.entities = json.nodes.map((node) => {
-        return handleNode(node, json, basePath).entity
+      const sceneRoot = renderer.add(renderer.entity())
+      renderer.root.name = 'root'
+      sceneRoot.name = 'sceneRoot'
+      State.entities = gltf.nodes.reduce((entities, node, i) => {
+        const result = handleNode(node, gltf, basePath, i)
+        if (result.length) {
+          result.forEach((primitive) => entities.push(primitive))
+        } else {
+          entities.push(result)
+        }
+        return entities
+      }, [])
+
+      console.log('entities', State.entities)
+
+      buildHierarchy(gltf.nodes, gltf)
+
+      State.entities.forEach((e) => {
+        if (e.transform.parent === renderer.root.transform) {
+          console.log('attaching to scene root', e)
+          e.transform.set({ parent: sceneRoot.transform })
+        }
       })
 
-      buildHierarchy(json.nodes, json)
+      // prune non geometry nodes (cameras, lights, etc) from the hierarchy
+      State.entities.forEach((e) => {
+        if (e.getComponent('Geometry')) {
+          e.used = true
+          while (e.transform.parent) {
+            e = e.transform.parent.entity
+            e.used = true
+          }
+        }
+      })
+      if (gltf.skins) {
+        gltf.skins.forEach((skin) => {
+          skin.joints.forEach((jointIndex) => {
+            let e = State.entities[jointIndex]
+            e.used = true
+            while (e.transform.parent) {
+              e = e.transform.parent.entity
+              e.used = true
+            }
+          })
+        })
+      }
+      // State.entities = State.entities.filter((e) => {
+        // if (!e.used) renderer.remove(e)
+        // return e.used
+      // })
+      console.log('entities pruned', State.entities)
 
-      State.animations = State.animations.concat(json.animations.map((animation) => {
-        return handleAnimation(animation, json)
-      }))
+      renderer.update() // refresh scene hierarchy
+
+      const sceneBounds = sceneRoot.transform.worldBounds
+      const sceneSize = AABB.size(sceneRoot.transform.worldBounds)
+      const sceneCenter = AABB.center(sceneRoot.transform.worldBounds)
+      const sceneScale = 1 / (sceneSize[1] || 1)
+      if (!AABB.isEmpty(sceneBounds)) {
+        sceneRoot.transform.set({
+          position: Vec3.scale([-sceneCenter[0], -sceneBounds[0][1], -sceneCenter[2]], sceneScale),
+          scale: [sceneScale, sceneScale, sceneScale]
+        })
+      }
+
+      renderer.update() // refresh scene hierarchy
+
+      State.entities.push(sceneRoot)
+
+      function printEntity (e, level, s) {
+        s = s || ''
+        level = '  ' + (level || '')
+        var g = e.getComponent('Geometry')
+        s += level + (e.name || 'child') + ' ' + aabbToString(e.transform.worldBounds) + ' ' + aabbToString(e.transform.bounds) + ' ' + (g ? aabbToString(g.bounds) : '') + '\n'
+        if (e.transform) {
+          e.transform.children.forEach((c) => {
+            s = printEntity(c.entity, level, s)
+          })
+        }
+        return s
+      }
+
+      const showBoundingBoxes = true
+      if (showBoundingBoxes) {
+        const bboxes = State.entities.map((e) => {
+          var size = AABB.size(e.transform.worldBounds)
+          var center = AABB.center(e.transform.worldBounds)
+
+          const bbox = renderer.add(renderer.entity([
+            renderer.transform({
+              scale: size,
+              position: center
+            }),
+            renderer.geometry(box),
+            renderer.material({
+              baseColor: [1, 0, 0, 1]
+            })
+          ]))
+          bbox.name = e.name + '_bbox'
+          return bbox
+        }).filter((e) => e)
+        State.entities = State.entities.concat(bboxes)
+      }
+
+      console.log('sceneRoot children', sceneRoot.transform.children.length)
+      console.log(printEntity(renderer.root))
+
+      if (gltf.animations) {
+        State.animations = State.animations.concat(gltf.animations.map((animation) => {
+          return handleAnimation(animation, gltf)
+        }))
+      }
     })
   })
 }
 
-const file = 'assets/gltf-sample-models/CesiumMan/gltf/CesiumMan.gltf'
-
-loadModel(file)
-
 var startTime = Date.now()
 
-renderer.add(renderer.entity([
+const floor = renderer.add(renderer.entity([
   renderer.transform({
     position: [0, -0.05, 0]
   }),
@@ -480,18 +705,24 @@ renderer.add(renderer.entity([
     receiveShadows: true
   })
 ]))
+floor.name = 'floor'
 
-renderer.add(renderer.entity([
+const origin = renderer.add(renderer.entity([
   renderer.transform({
-    position: [-1, 1, -1]
+    position: [0, 0.5, 0]
   }),
-  renderer.geometry(createCube(1)),
+  renderer.geometry(createCube(0.01, 1, 0.01)),
   renderer.material({
-    baseColor: [0.9, 0.8, 0.05, 1],
+    baseColor: [0, 1, 0, 1],
     castShadows: true,
     receiveShadows: true
   })
 ]))
+origin.name = 'origin'
+
+var box = createBox(1)
+box.cells = edges(box.cells)
+box.primitive = ctx.Primitive.Lines
 
 ctx.frame(() => {
   ctx.debug(debugOnce)
@@ -522,6 +753,7 @@ ctx.frame(() => {
 
       let prevIndex
       let nextIndex
+
       for (var i = 0; i < inputData.length; i++) {
         nextIndex = i
         if (inputData[i] >= currentTime) {
@@ -552,9 +784,13 @@ ctx.frame(() => {
           target.transform.set({
             rotation: currentOutput
           })
-        } else if (path === 'scale') {
+        } else if (path === 'rotation') {
           target.transform.set({
-            scale: currentOutput
+            rotation: currentOutput
+          })
+        } else if (path === 'weights') {
+          target.getComponent('Morph').set({
+            weights: nextOutput
           })
         }
       }

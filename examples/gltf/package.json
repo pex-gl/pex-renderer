@@ -10,10 +10,13 @@
   "license": "MIT",
   "dependencies": {
     "async": "^2.4.0",
+    "geom-edges": "^1.2.0",
+    "partition-into": "^1.0.0",
     "pex-cam": "^2.0.0",
-    "pex-context": "^2.0.0-17",
+    "pex-context": "^2.0.0-32",
     "pex-gui": "^2.0.1-2",
     "pex-io": "^1.5.3",
-    "pex-math": "^1.0.1"
+    "pex-math": "^1.0.1",
+    "primitive-box": "^1.0.0"
   }
 }
