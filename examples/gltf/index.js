@@ -336,9 +336,18 @@ function handleMesh (mesh, gltf, basePath) {
 
     const geometryCmp = renderer.geometry(attributes)
     geometryCmp.set({
-      indices: indicesAccessor.data,
       bounds: [positionAccessor.min, positionAccessor.max]
     })
+
+    if (indicesAccessor) {
+      geometryCmp.set({
+        indices: indicesAccessor.data
+      })
+    } else {
+      geometryCmp.set({
+        count: positionAccessor.data.length / 3
+      })
+    }
 
     let materialCmp = null
     if (primitive.material !== undefined) {
@@ -452,8 +461,6 @@ function buildHierarchy (nodes, gltf) {
           joints: joints
         })
       } else {
-        console.log(node.transform)
-        console.log(gltf.meshes[node.mesh])
         node.entity.transform.children.forEach((child) => {
           // FIXME: currently we share the same Skin component
           // so this code is redundant after first child
