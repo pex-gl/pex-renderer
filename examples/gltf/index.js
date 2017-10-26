@@ -565,7 +565,7 @@ loadText(indexFile, (err, text) => {
     })
     console.log('screenshots', screenshots)
 
-    var defaultModel = modelNames[2]
+    var defaultModel = modelNames[19]
     loadModel(`assets/gltf-sample-models/${defaultModel}/glTF/${defaultModel}.gltf`)
     // loadModel(`assets/gltf/skull_downloadable/scene.gltf`)
     // loadModel(`assets/gltf/damagedHelmet/damagedHelmet.gltf`)
@@ -665,7 +665,7 @@ function loadModel (file) {
       const sceneBounds = sceneRoot.transform.worldBounds
       const sceneSize = AABB.size(sceneRoot.transform.worldBounds)
       const sceneCenter = AABB.center(sceneRoot.transform.worldBounds)
-      const sceneScale = 1 / (sceneSize[1] || 1)
+      const sceneScale = 1 / (Math.max(sceneSize[0], Math.max(sceneSize[1], sceneSize[2])) || 1)
       if (!AABB.isEmpty(sceneBounds)) {
         sceneRoot.transform.set({
           position: Vec3.scale([-sceneCenter[0], -sceneBounds[0][1], -sceneCenter[2]], sceneScale),
@@ -690,7 +690,7 @@ function loadModel (file) {
         return s
       }
 
-      const showBoundingBoxes = true
+      const showBoundingBoxes = false
       if (showBoundingBoxes) {
         const bboxes = State.entities.map((e) => {
           var size = AABB.size(e.transform.worldBounds)
@@ -739,18 +739,44 @@ const floor = renderer.add(renderer.entity([
 ]))
 floor.name = 'floor'
 
-const origin = renderer.add(renderer.entity([
+const originX = renderer.add(renderer.entity([
   renderer.transform({
-    position: [0, 0.5, 0]
+    position: [1, 0, 0]
   }),
-  renderer.geometry(createCube(0.01, 1, 0.01)),
+  renderer.geometry(createCube(2, 0.02, 0.02)),
+  renderer.material({
+    baseColor: [1, 0, 0, 1],
+    castShadows: true,
+    receiveShadows: true
+  })
+]))
+originX.name = 'originX'
+
+const originY = renderer.add(renderer.entity([
+  renderer.transform({
+    position: [0, 1, 0]
+  }),
+  renderer.geometry(createCube(0.02, 2, 0.02)),
   renderer.material({
     baseColor: [0, 1, 0, 1],
     castShadows: true,
     receiveShadows: true
   })
 ]))
-origin.name = 'origin'
+originY.name = 'originY'
+
+const originZ = renderer.add(renderer.entity([
+  renderer.transform({
+    position: [0, 0, 1]
+  }),
+  renderer.geometry(createCube(0.02, 0.02, 2)),
+  renderer.material({
+    baseColor: [0, 0, 1, 1],
+    castShadows: true,
+    receiveShadows: true
+  })
+]))
+originZ.name = 'origin~'
 
 var box = createBox(1)
 box.cells = edges(box.cells)
