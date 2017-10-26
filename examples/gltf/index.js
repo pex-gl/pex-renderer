@@ -313,6 +313,8 @@ function handleMesh (mesh, gltf, basePath) {
     if (primitive.material !== undefined) {
       const material = gltf.materials[primitive.material]
       materialCmp = handleMaterial(material, gltf, basePath)
+    } else {
+      materialCmp = renderer.material({})
     }
 
     let components = [
