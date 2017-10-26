@@ -15,6 +15,8 @@ const async = require('async')
 const path = require('path')
 const GUI = require('pex-gui')
 const edges = require('geom-edges')
+const isPOT = require('is-power-of-two')
+const nextPOT = require('next-power-of-two')
 
 const ctx = createContext()
 ctx.gl.getExtension('EXT_shader_texture_lod')
@@ -211,20 +213,50 @@ function handleAccessor (accessor, bufferView) {
   }
 }
 
+// TODO: add texture cache so we don't load the same texture twice
 function loadTexture (materialTexture, gltf, basePath, encoding, cb) {
   let texture = gltf.textures[materialTexture.index]
   let image = gltf.images[texture.source]
+  let sampler = gltf.samplers ? gltf.samplers[texture.sampler] : {
+    minFilter: ctx.Filter.Linear,
+    magFilter: ctx.Filter.Linear
+  }
+  // set defaults as per GLTF 2.0 spec
+  if (!sampler.wrapS) sampler.wrapS = ctx.Wrap.Repeat
+  if (!sampler.wrapT) sampler.wrapS = ctx.Wrap.Repeat
+
   let url = path.join(basePath, image.uri)
   loadImage(url, (err, img) => {
     if (err) return cb(err, null)
+    if (!isPOT(img.width) || !isPOT(img.height)) {
+      // FIXME: this is WebGL1 limitation
+      if (sampler.wrapS !== ctx.Wrap.Clamp || sampler.wrapT !== ctx.Wrap.Clamp || (sampler.minFilter !== ctx.Filter.Nearest && sampler.minFilter !== ctx.Filter.Linear)) {
+        const nw = nextPOT(img.width)
+        const nh = nextPOT(img.height)
+        console.log(`Warning: NPOT Repeat Wrap mode and mipmapping is not supported for NPOT Textures. Resizing... ${img.width}x${img.height} -> ${nw}x${nh}`)
+        var canvas2d = document.createElement('canvas')
+        canvas2d.width = nw
+        canvas2d.height = nh
+        var ctx2d = canvas2d.getContext('2d')
+        ctx2d.drawImage(img, 0, 0, canvas2d.width, canvas2d.height)
+        img = canvas2d
+      }
+    }
     var tex = ctx.texture2D({
       data: img,
       width: img.width,
       height: img.height,
       encoding: ctx.Encoding.SRGB,
-      pixelFormat: ctx.PixelFormat.RGBA8
-      // flipY: true // TODO: what does the spec says?
+      pixelFormat: ctx.PixelFormat.RGBA8,
+      wrapS: sampler.wrapS,
+      wrapT: sampler.wrapT,
+      min: sampler.minFilter,
+      mag: sampler.magFilter,
+      flipY: false // this is confusing as
     })
+    if (sampler.minFilter !== ctx.Filter.Nearest && sampler.minFilter !== ctx.Filter.Linear) {
+      ctx.update(tex, { mipmap: true })
+    }
     cb(null, tex)
   })
 }
@@ -259,10 +291,9 @@ function handleMaterial (material, gltf, basePath) {
   }
 
   const pbrSpecularGlossiness = material.extensions ? material.extensions.KHR_materials_pbrSpecularGlossiness : null
-  console.log(material)
   if (pbrSpecularGlossiness) {
     if (pbrSpecularGlossiness.diffuseTexture) {
-      console.log('diffuseTexture')
+      console.log('handleMaterial.diffuseTexture')
       loadTexture(pbrSpecularGlossiness.diffuseTexture, gltf, basePath, ctx.Encoding.SRGB, (err, tex) => {
         if (err) throw err
         materialCmp.set({ baseColorMap: tex })
@@ -296,12 +327,12 @@ function handleMesh (mesh, gltf, basePath) {
       return attributes
     }, {})
 
-    console.log('attributes', attributes)
+    console.log('handleMesh.attributes', attributes)
 
     const positionAccessor = gltf.accessors[primitive.attributes.POSITION]
     const indicesAccessor = gltf.accessors[primitive.indices]
-    console.log('positionAccessor', positionAccessor)
-    console.log('indicesAccessor', indicesAccessor)
+    console.log('handleMesh.positionAccessor', positionAccessor)
+    console.log('handleMesh.indicesAccessor', indicesAccessor)
 
     const geometryCmp = renderer.geometry(attributes)
     geometryCmp.set({
@@ -378,7 +409,6 @@ function handleNode (node, gltf, basePath, i) {
     } else {
       // create sub modes for each primitive
       const primitiveNodes = primitives.map((components, j) => {
-        console.log('components', components)
         const subMesh = renderer.add(renderer.entity(components))
         subMesh.name = `node_${i}_${j}`
         subMesh.transform.set({ parent: node.entity.transform })
