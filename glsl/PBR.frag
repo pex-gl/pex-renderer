@@ -185,9 +185,10 @@ float saturate(float f) {
 }
 
 #ifdef USE_BASE_COLOR_MAP
+    uniform vec4 uBaseColor; // TODO: gltf assumes sRGB color, not linear
     uniform sampler2D uBaseColorMap; //assumes sRGB color, not linear
     vec3 getBaseColor() {
-        return decode(texture2D(uBaseColorMap, vTexCoord0), 3).rgb;
+        return decode(uBaseColor, 3).rgb * decode(texture2D(uBaseColorMap, vTexCoord0), 3).rgb;
     }
 #else
     uniform vec4 uBaseColor; // TODO: gltf assumes sRGB color, not linear
