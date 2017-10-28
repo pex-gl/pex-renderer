@@ -6,6 +6,7 @@ const createBox = require('primitive-box')
 const loadBinary = require('pex-io/loadBinary')
 const Mat4 = require('pex-math/Mat4')
 const Vec3 = require('pex-math/Vec3')
+const Quat = require('pex-math/Quat')
 const AABB = require('pex-geom/AABB')
 const createRenderer = require('../../../pex-renderer')
 const createCamera = require('pex-cam/perspective')
@@ -835,10 +836,16 @@ ctx.frame(() => {
 
         const interpolationValue = ((currentTime) - prevInput) / (nextInput - prevInput)
 
-        const currentOutput = []
-        for (var k = 0; k < nextOutput.length; k++) {
-          currentOutput[k] =
-            prevOutput[k] + interpolationValue * (nextOutput[k] - prevOutput[k])
+        let currentOutput = null
+        // TODO: stop creating new arrays every frame
+        if (path === 'rotation') {
+          currentOutput = Quat.copy(prevOutput)
+          Quat.slerp(currentOutput, nextOutput, interpolationValue)
+        } else {
+          currentOutput = []
+          for (var k = 0; k < nextOutput.length; k++) {
+            currentOutput[k] = prevOutput[k] + interpolationValue * (nextOutput[k] - prevOutput[k])
+          }
         }
 
         if (path === 'translation') {
@@ -849,9 +856,9 @@ ctx.frame(() => {
           target.transform.set({
             rotation: currentOutput
           })
-        } else if (path === 'rotation') {
+        } else if (path === 'scale') {
           target.transform.set({
-            rotation: currentOutput
+            scale: currentOutput
           })
         } else if (path === 'weights') {
           target.getComponent('Morph').set({
