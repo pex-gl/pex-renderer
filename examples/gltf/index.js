@@ -212,6 +212,7 @@ function handleAccessor (accessor, bufferView) {
     // TODO
     console.log('uncaught', accessor)
   }
+  accessor.stride = bufferView.byteStride
 }
 
 // TODO: add texture cache so we don't load the same texture twice
@@ -324,6 +325,7 @@ function handleMesh (mesh, gltf, basePath) {
   return mesh.primitives.map((primitive) => {
     const attributes = Object.keys(primitive.attributes).reduce((attributes, name) => {
       const accessor = gltf.accessors[primitive.attributes[name]]
+      // TODO: add stride support (requires update to pex-render/geometry
       attributes[AttributeNameMap[name]] = accessor.data
       return attributes
     }, {})
