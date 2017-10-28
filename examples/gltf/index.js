@@ -223,7 +223,7 @@ function loadTexture (materialTexture, gltf, basePath, encoding, cb) {
   }
   // set defaults as per GLTF 2.0 spec
   if (!sampler.wrapS) sampler.wrapS = ctx.Wrap.Repeat
-  if (!sampler.wrapT) sampler.wrapS = ctx.Wrap.Repeat
+  if (!sampler.wrapT) sampler.wrapT = ctx.Wrap.Repeat
 
   let url = path.join(basePath, image.uri)
   loadImage(url, (err, img) => {
