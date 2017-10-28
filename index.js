@@ -82,7 +82,8 @@ function Renderer (opts) {
   this._debug = false
 
   if (opts.profile) {
-    State.profiler = createProfiler(opts.ctx)
+    State.profiler = createProfiler(opts.ctx, this)
+    State.profiler.flush = opts.profileFlush
   }
 
   if (opts.pauseOnBlur && isBrowser) {
@@ -343,8 +344,6 @@ Renderer.prototype.getComponents = function (type) {
 Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLight, geometries) {
   const ctx = this._ctx
 
-  if (State.profiler) State.profiler.time('drawMeshes')
-
   function byCameraTags (component) {
     if (!camera) return true
     if (!camera.entity.tags.length) return true
@@ -527,8 +526,6 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
       instances: geometry.instances
     })
   }
-
-  if (State.profiler) State.profiler.timeEnd('drawMeshes')
 }
 
 Renderer.prototype.draw = function () {
@@ -575,10 +572,13 @@ Renderer.prototype.draw = function () {
 
   cameras.forEach((camera, cameraIndex) => {
     const screenSize = [camera.viewport[2], camera.viewport[3]]
+    if (State.profiler) State.profiler.time('depthPrepass')
     ctx.submit(camera._drawFrameNormalsFboCommand, () => {
       // depth prepass
       this.drawMeshes(camera, true)
     })
+    if (State.profiler) State.profiler.timeEnd('depthPrepass')
+    if (State.profiler) State.profiler.time('ssao')
     if (camera.ssao) {
       ctx.submit(camera._ssaoCmd, {
         uniforms: {
@@ -617,12 +617,16 @@ Renderer.prototype.draw = function () {
         }
       })
     }
+    if (State.profiler) State.profiler.timeEnd('ssao')
+    if (State.profiler) State.profiler.time('drawFrame')
     ctx.submit(camera._drawFrameFboCommand, () => {
       this.drawMeshes(camera)
       if (skyboxes.length > 0) {
         skyboxes[0].draw(camera, { outputEncoding: camera._frameColorTex.encoding })
       }
     })
+    if (State.profiler) State.profiler.timeEnd('drawFrame')
+    if (State.profiler) State.profiler.time('postprocess')
     if (camera.dof) {
       for (var i = 0; i < camera.dofIterations; i++) {
         ctx.submit(camera._dofBlurHCmd, {
@@ -671,6 +675,7 @@ Renderer.prototype.draw = function () {
       },
       viewport: camera.viewport
     })
+    if (State.profiler) State.profiler.time('postprocess')
   })
 
   overlays.forEach((overlay) => {

@@ -23,7 +23,7 @@ function pa3 (f) {
   return f
 }
 
-function createProfiler (ctx) {
+function createProfiler (ctx, renderer) {
   const gl = ctx.gl
   if (isBrowser && !canvas) {
     canvas = document.createElement('canvas')
@@ -120,6 +120,20 @@ function createProfiler (ctx) {
         const m = this.measurements[label]
         return `${label}: ${ms(m.avg)}`
       }))
+      lines.push('------')
+      lines.push(`Entities: ${pa3(renderer.entities.length)}`)
+      lines.push(`Geometries: ${pa3(renderer.getComponents('Geometry').length)}`)
+      lines.push(`Materials: ${pa3(renderer.getComponents('Material').length)}`)
+      lines.push(`Skins: ${pa3(renderer.getComponents('Skin').length)}`)
+      lines.push(`Animations: ${pa3(renderer.getComponents('Animation').length)}`)
+      lines.push(`Morphs: ${pa3(renderer.getComponents('Morph').length)}`)
+      lines.push(`Cameras: ${pa3(renderer.getComponents('Camera').length)}`)
+      lines.push(`Reflection Probes: ${pa3(renderer.getComponents('ReflectionProbe').length)}`)
+      lines.push(`Skyboxes: ${pa3(renderer.getComponents('Skybox').length)}`)
+      lines.push(`Point Lights: ${pa3(renderer.getComponents('PointLight').length)}`)
+      lines.push(`Directional Lights: ${pa3(renderer.getComponents('DirectionalLight').length)}`)
+      lines.push(`Spot Lights: ${pa3(renderer.getComponents('SpotLight').length)}`)
+      lines.push(`Area Lights: ${pa3(renderer.getComponents('AreaLight').length)}`)
       lines.push('------')
       lines.push(`Buffers: ${pa3(profiler.bufferCount)} / ${pa3(profiler.totalBufferCount)}`)
       lines.push(`Textures: ${pa3(profiler.textureCount)} / ${pa3(profiler.totalTextureCount)}`)
