@@ -41,8 +41,7 @@ const State = {
   elevationMat: Mat4.create(),
   rotationMat: Mat4.create(),
   selectedModel: '',
-  animations: [],
-  entities: []
+  scenes: []
 }
 
 function updateSunPosition () {
@@ -114,7 +113,7 @@ function initCamera () {
       dofRange: 0.5,
       dofRadius: 1,
       dofDepth: 1,
-      ssao: true,
+      // ssao: true,
       ssaoIntensity: 5,
       ssaoRadius: 6,
       ssaoBias: 0.02,
@@ -523,14 +522,12 @@ function handleAnimation (animation, gltf) {
     }
   })
 
-  // assuming all channels refer to the same entity 
-  const entity = channels[0].target
   const animationCmp = renderer.animation({
     channels: channels,
     autoplay: true,
     loop: true
   })
-  entity.addComponent(animationCmp)
+  return animationCmp
 }
 
 function loadScreenshot (name, cb) {
@@ -575,7 +572,7 @@ loadText(indexFile, (err, text) => {
       }
     }), 4, (model) => {
       console.log('model', model)
-      loadModel(`assets/gltf-sample-models/${model}/glTF/${model}.gltf`)
+      loadScene(`assets/gltf-sample-models/${model}/glTF/${model}.gltf`, onSceneLoaded)
     })
     console.log('screenshots', screenshots)
 
@@ -592,14 +589,21 @@ function aabbToString (aabb) {
   return `[${aabb.map((v) => v.map((f) => f.toFixed(2)).join(', ')).join(', ')}]`
 }
 
-function loadModel (file) {
-  console.log('loadModel', file)
+function onSceneLoaded (err, scene) {
+  while (State.scenes.length) {
+    const oldScene = State.scenes.shift()
+    oldScene.entities.forEach((e) => e.dispose())
+  }
 
-  // TODO: destroy materials and textures
-  State.entities.forEach((e) => {
-    renderer.remove(e)
-  })
-  State.entities = []
+  if (err) {
+    console.log(err)
+  } else {
+    State.scenes.push(scene)
+  }
+}
+
+function loadScene (file, cb) {
+  console.log('loadModel', file)
 
   loadJSON(file, (err, gltf) => {
     if (err) throw new Error(err)
@@ -620,10 +624,14 @@ function loadModel (file) {
         handleAccessor(accessor, gltf.bufferViews[accessor.bufferView])
       })
 
-      const sceneRoot = renderer.add(renderer.entity())
-      renderer.root.name = 'root'
-      sceneRoot.name = 'sceneRoot'
-      State.entities = gltf.nodes.reduce((entities, node, i) => {
+      const scene = {
+        root: null,
+        entities: null
+      }
+
+      scene.root = renderer.add(renderer.entity())
+      scene.root.name = 'sceneRoot'
+      scene.entities = gltf.nodes.reduce((entities, node, i) => {
         const result = handleNode(node, gltf, basePath, i)
         if (result.length) {
           result.forEach((primitive) => entities.push(primitive))
@@ -633,19 +641,17 @@ function loadModel (file) {
         return entities
       }, [])
 
-      console.log('entities', State.entities)
-
       buildHierarchy(gltf.nodes, gltf)
 
-      State.entities.forEach((e) => {
+      scene.entities.forEach((e) => {
         if (e.transform.parent === renderer.root.transform) {
           console.log('attaching to scene root', e)
-          e.transform.set({ parent: sceneRoot.transform })
+          e.transform.set({ parent: scene.root.transform })
         }
       })
 
       // prune non geometry nodes (cameras, lights, etc) from the hierarchy
-      State.entities.forEach((e) => {
+      scene.entities.forEach((e) => {
         if (e.getComponent('Geometry')) {
           e.used = true
           while (e.transform.parent) {
@@ -654,10 +660,18 @@ function loadModel (file) {
           }
         }
       })
+
+      if (gltf.animations) {
+        gltf.animations.map((animation) => {
+          const animationComponent = handleAnimation(animation, gltf)
+          scene.root.addComponent(animationComponent)
+        })
+      }
+
       if (gltf.skins) {
         gltf.skins.forEach((skin) => {
           skin.joints.forEach((jointIndex) => {
-            let e = State.entities[jointIndex]
+            let e = scene.entities[jointIndex]
             e.used = true
             while (e.transform.parent) {
               e = e.transform.parent.entity
@@ -674,12 +688,12 @@ function loadModel (file) {
 
       renderer.update() // refresh scene hierarchy
 
-      const sceneBounds = sceneRoot.transform.worldBounds
-      const sceneSize = AABB.size(sceneRoot.transform.worldBounds)
-      const sceneCenter = AABB.center(sceneRoot.transform.worldBounds)
+      const sceneBounds = scene.root.transform.worldBounds
+      const sceneSize = AABB.size(scene.root.transform.worldBounds)
+      const sceneCenter = AABB.center(scene.root.transform.worldBounds)
       const sceneScale = 1 / (Math.max(sceneSize[0], Math.max(sceneSize[1], sceneSize[2])) || 1)
       if (!AABB.isEmpty(sceneBounds)) {
-        sceneRoot.transform.set({
+        scene.root.transform.set({
           position: Vec3.scale([-sceneCenter[0], -sceneBounds[0][1], -sceneCenter[2]], sceneScale),
           scale: [sceneScale, sceneScale, sceneScale]
         })
@@ -687,7 +701,7 @@ function loadModel (file) {
 
       renderer.update() // refresh scene hierarchy
 
-      State.entities.push(sceneRoot)
+      scene.entities.push(scene.root)
 
       function printEntity (e, level, s) {
         s = s || ''
@@ -704,7 +718,7 @@ function loadModel (file) {
 
       const showBoundingBoxes = false
       if (showBoundingBoxes) {
-        const bboxes = State.entities.map((e) => {
+        const bboxes = scene.entities.map((e) => {
           var size = AABB.size(e.transform.worldBounds)
           var center = AABB.center(e.transform.worldBounds)
 
@@ -721,22 +735,15 @@ function loadModel (file) {
           bbox.name = e.name + '_bbox'
           return bbox
         }).filter((e) => e)
-        State.entities = State.entities.concat(bboxes)
+        scene.entities = scene.entities.concat(bboxes)
       }
 
-      console.log('sceneRoot children', sceneRoot.transform.children.length)
-      console.log(printEntity(renderer.root))
+      console.log(printEntity(scene.root))
 
-      if (gltf.animations) {
-        gltf.animations.map((animation) => {
-          handleAnimation(animation, gltf)
-        })
-      }
+      cb(null, scene)
     })
   })
 }
-
-var startTime = Date.now()
 
 const floor = renderer.add(renderer.entity([
   renderer.transform({
