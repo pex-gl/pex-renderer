@@ -6,7 +6,6 @@ const createBox = require('primitive-box')
 const loadBinary = require('pex-io/loadBinary')
 const Mat4 = require('pex-math/Mat4')
 const Vec3 = require('pex-math/Vec3')
-const Quat = require('pex-math/Quat')
 const AABB = require('pex-geom/AABB')
 const createRenderer = require('../../../pex-renderer')
 const createCamera = require('pex-cam/perspective')
@@ -488,7 +487,7 @@ function handleBuffer (buffer, cb) {
 }
 
 function handleAnimation (animation, gltf) {
-  return animation.channels.map((channel) => {
+  const channels = animation.channels.map((channel) => {
     const sampler = animation.samplers[channel.sampler]
     const input = gltf.accessors[sampler.input]
     const output = gltf.accessors[sampler.output]
@@ -516,17 +515,22 @@ function handleAnimation (animation, gltf) {
     }
 
     return {
-      sampler: {
-        input: input.data,
-        output: outputData,
-        interpolation: sampler.interpolation
-      },
-      target: {
-        node: target,
-        path: channel.target.path
-      }
+      input: input.data,
+      output: outputData,
+      interpolation: sampler.interpolation,
+      target: target,
+      path: channel.target.path
     }
   })
+
+  // assuming all channels refer to the same entity 
+  const entity = channels[0].target
+  const animationCmp = renderer.animation({
+    channels: channels,
+    autoplay: true,
+    loop: true
+  })
+  entity.addComponent(animationCmp)
 }
 
 function loadScreenshot (name, cb) {
@@ -590,8 +594,6 @@ function aabbToString (aabb) {
 
 function loadModel (file) {
   console.log('loadModel', file)
-
-  State.animations = []
 
   // TODO: destroy materials and textures
   State.entities.forEach((e) => {
@@ -726,9 +728,9 @@ function loadModel (file) {
       console.log(printEntity(renderer.root))
 
       if (gltf.animations) {
-        State.animations = State.animations.concat(gltf.animations.map((animation) => {
-          return handleAnimation(animation, gltf)
-        }))
+        gltf.animations.map((animation) => {
+          handleAnimation(animation, gltf)
+        })
       }
     })
   })
@@ -786,7 +788,7 @@ const originZ = renderer.add(renderer.entity([
     receiveShadows: true
   })
 ]))
-originZ.name = 'origin~'
+originZ.name = 'originZ'
 
 var box = createBox(1)
 box.cells = edges(box.cells)
@@ -800,74 +802,4 @@ ctx.frame(() => {
   if (!renderer._state.paused) {
     gui.draw()
   }
-
-  var elapsedTime = Date.now() - startTime
-  var ms = (elapsedTime / 1000).toFixed(3)
-
-  State.animations.forEach((channels, i) => {
-    channels.forEach((channel) => {
-      const inputData = channel.sampler.input
-      const outputData = channel.sampler.output
-      const target = channel.target.node
-      const path = channel.target.path
-
-      let prevInput = null
-      let nextInput = null
-      let prevOutput = null
-      let nextOutput = null
-
-      const animationLength = inputData[inputData.length - 1]
-      const currentTime = ms % animationLength
-
-      let prevIndex
-      let nextIndex
-
-      for (var i = 0; i < inputData.length; i++) {
-        nextIndex = i
-        if (inputData[i] >= currentTime) {
-          break
-        }
-        prevIndex = nextIndex
-      }
-
-      if (prevIndex !== undefined) {
-        prevInput = inputData[prevIndex]
-        nextInput = inputData[nextIndex]
-        prevOutput = outputData[prevIndex]
-        nextOutput = outputData[nextIndex]
-
-        const interpolationValue = ((currentTime) - prevInput) / (nextInput - prevInput)
-
-        let currentOutput = null
-        // TODO: stop creating new arrays every frame
-        if (path === 'rotation') {
-          currentOutput = Quat.copy(prevOutput)
-          Quat.slerp(currentOutput, nextOutput, interpolationValue)
-        } else {
-          currentOutput = []
-          for (var k = 0; k < nextOutput.length; k++) {
-            currentOutput[k] = prevOutput[k] + interpolationValue * (nextOutput[k] - prevOutput[k])
-          }
-        }
-
-        if (path === 'translation') {
-          target.transform.set({
-            position: currentOutput
-          })
-        } else if (path === 'rotation') {
-          target.transform.set({
-            rotation: currentOutput
-          })
-        } else if (path === 'scale') {
-          target.transform.set({
-            scale: currentOutput
-          })
-        } else if (path === 'weights') {
-          target.getComponent('Morph').set({
-            weights: nextOutput
-          })
-        }
-      }
-    })
-  })
 })

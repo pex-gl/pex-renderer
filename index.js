@@ -13,6 +13,7 @@ const createEntity = require('./entity')
 const createTransform = require('./transform')
 const createSkin = require('./skin')
 const createMorph = require('./morph')
+const createAnimation = require('./animation')
 const createGeometry = require('./geometry')
 const createMaterial = require('./material')
 const createCamera = require('./camera')
@@ -780,6 +781,10 @@ Renderer.prototype.skin = function (opts) {
 
 Renderer.prototype.morph = function (opts) {
   return createMorph(Object.assign({ ctx: this._ctx }, opts))
+}
+
+Renderer.prototype.animation = function (opts) {
+  return createAnimation(Object.assign({ ctx: this._ctx }, opts))
 }
 
 Renderer.prototype.geometry = function (opts) {
