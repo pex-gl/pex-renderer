@@ -390,7 +390,7 @@ function handleNode (node, gltf, basePath, i) {
   node.entity = renderer.add(renderer.entity([
     transformCmp
   ]))
-  node.entity.name = 'node_' + i
+  node.entity.name = node.name || ('node_' + i)
 
   let skinCmp = null
   if (node.skin !== undefined) {
