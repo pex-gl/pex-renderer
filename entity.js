@@ -22,6 +22,11 @@ function Entity (components, tags) {
 }
 
 Entity.prototype.dispose = function () {
+  this.components.forEach((component) => {
+    if (component.dispose) {
+      component.dispose()
+    }
+  })
   // detach from the hierarchy
   this.transform.set({ parent: null })
 }
