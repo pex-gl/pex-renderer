@@ -110,9 +110,6 @@ void main() {
     vPositionWorld = vec3(uModelMatrix * position);
     vPositionView = vec3(uViewMatrix * vec4(vPositionWorld, 1.0));
 
-    vNormalView = vec3(uNormalMatrix * normal);
-    vNormalWorld = normalize(vec3(uInverseViewMatrix * vec4(vNormalView, 0.0)));
-
     vEyeDirView = normalize(vec3(0.0, 0.0, 0.0) - vPositionView);
     vEyeDirWorld = vec3(uInverseViewMatrix * vec4(vEyeDirView, 0.0));
 
@@ -123,8 +120,14 @@ void main() {
         aWeight.z * uJointMat[int(aJoint.z)] +
         aWeight.w * uJointMat[int(aJoint.w)];
 
+    vNormalView = vec3(uViewMatrix * skinMat * vec4(normal, 0.0));
+    vNormalWorld = normalize(vec3(uInverseViewMatrix * vec4(vNormalView, 0.0)));
+
     gl_Position = uProjectionMatrix * uViewMatrix * skinMat * position;
 #else
+    vNormalView = vec3(uNormalMatrix * normal);
+    vNormalWorld = normalize(vec3(uInverseViewMatrix * vec4(vNormalView, 0.0)));
+
     gl_Position = uProjectionMatrix * vec4(vPositionView, 1.0);
 #endif
 
