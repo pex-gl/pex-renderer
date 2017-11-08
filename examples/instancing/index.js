@@ -98,10 +98,10 @@ function initMeshes () {
     normals: cube.normals,
     cells: cube.cells,
     uvs: cube.uvs,
-    offsets: offsets,
-    scales: scales,
-    rotations: rotations,
-    colors: colors
+    offsets: { data: offsets, divisor: 1 },
+    scales: { data: scales, divisor: 1 },
+    rotations: { data: rotations, divisor: 1 },
+    colors: { data: colors, divisor: 1}
   })
   function update () {
     time += 1 / 60
