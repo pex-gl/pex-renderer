@@ -10,15 +10,17 @@
   "license": "MIT",
   "dependencies": {
     "async": "^2.4.0",
+    "debug": "^3.1.0",
     "geom-edges": "^1.2.0",
     "is-power-of-two": "^1.0.0",
     "next-power-of-two": "^1.0.0",
+    "parse-hdr": "^1.0.0",
     "partition-into": "^1.0.0",
     "pex-cam": "^2.0.0",
-    "pex-context": "^2.0.0-33",
     "pex-gui": "^2.0.1-2",
     "pex-io": "^1.5.3",
     "pex-math": "^1.0.1",
-    "primitive-box": "^1.0.0"
+    "primitive-box": "^1.0.0",
+    "webgl-debug": "^1.0.2"
   }
 }
