@@ -166,6 +166,9 @@ Renderer.prototype.getMaterialProgram = function (geometry, material, skin, opti
   if (geometry._attributes.aRotation) {
     flags.push('#define USE_INSTANCED_ROTATION')
   }
+  if (geometry._attributes.aVertexColor) {
+    flags.push('#define USE_VERTEX_COLORS')
+  }
   if (options.useSSAO) {
     flags.push('#define USE_AO')
   }
@@ -196,6 +199,8 @@ Renderer.prototype.getMaterialProgram = function (geometry, material, skin, opti
 
   flags.push('#define SHADOW_QUALITY ' + (material.receiveShadows ? State.shadowQuality : 0))
 
+  var useSpecularGlossinessWorkflow = false
+
   if (material.baseColorMap) {
     flags.push('#define USE_BASE_COLOR_MAP')
   }
@@ -207,6 +212,29 @@ Renderer.prototype.getMaterialProgram = function (geometry, material, skin, opti
   }
   if (material.metallicRoughnessMap) {
     flags.push('#define USE_METALLIC_ROUGHNESS_MAP')
+  }
+  if (material.diffuse) {
+    useSpecularGlossinessWorkflow = true
+  }
+  if (material.specular) {
+    useSpecularGlossinessWorkflow = true
+  }
+  if (material.glossiness !== undefined) {
+    useSpecularGlossinessWorkflow = true
+  }
+  if (material.diffuseMap) {
+    useSpecularGlossinessWorkflow = true
+    flags.push('#define USE_DIFFUSE_MAP')
+  }
+  if (material.specularGlossinessMap) {
+    useSpecularGlossinessWorkflow = true
+    flags.push('#define USE_SPECULAR_GLOSSINESS_MAP')
+  }
+  if (useSpecularGlossinessWorkflow) {
+    flags.push('#define USE_SPECULAR_GLOSSINESS_WORKFLOW')
+  }
+  if (material.occlusionMap) {
+    flags.push('#define USE_OCCLUSION_MAP')
   }
   if (material.normalMap) {
     flags.push('#define USE_NORMAL_MAP')
@@ -461,7 +489,14 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
 
     if (material.metallicRoughnessMap) cachedUniforms.uMetallicRoughnessMap = material.metallicRoughnessMap
 
+    if (material.diffuse) cachedUniforms.uDiffuse = material.diffuse
+    if (material.specular) cachedUniforms.uSpecular = material.specular
+    if (material.glossiness !== undefined) cachedUniforms.uGlossiness = material.glossiness
+    if (material.diffuseMap) cachedUniforms.uDiffuseMap = material.diffuseMap
+    if (material.specularGlossinessMap) cachedUniforms.uSpecularGlossinessMap = material.specularGlossinessMap
+
     if (material.normalMap) cachedUniforms.uNormalMap = material.normalMap
+    if (material.occlusionMap) cachedUniforms.uOcclusionMap = material.occlusionMap
     if (material.displacementMap) {
       cachedUniforms.uDisplacementMap = material.displacementMap
       cachedUniforms.uDisplacement = material.displacement

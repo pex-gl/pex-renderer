@@ -6,6 +6,7 @@ const AttributesMap = {
   normals: 'aNormal',
   texCoords: 'aTexCoord0',
   uvs: 'aTexCoord0',
+  vertexColors: 'aVertexColor',
   offsets: 'aOffset',
   scales: 'aScale',
   rotations: 'aRotation',

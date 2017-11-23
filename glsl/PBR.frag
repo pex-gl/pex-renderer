@@ -244,8 +244,55 @@ float saturate(float f) {
         return uRoughness + 0.01;
     }
 #endif
-
 //USE_METALLIC_ROUGHNESS_MAP
+#endif
+
+#ifdef USE_SPECULAR_GLOSSINESS_WORKFLOW
+uniform vec4 uDiffuse;
+uniform vec3 uSpecular;
+uniform float uGlossiness;
+
+#ifdef USE_DIFFUSE_MAP
+    uniform sampler2D uDiffuseMap;
+    uniform float uDiffuseMapEncoding;
+    vec3 getDiffuse() {
+      // assumes sRGB texture
+      return decode(uDiffuse, 3).rgb * decode(texture2D(uDiffuseMap, vTexCoord0), 3).rgb;
+    }
+#else
+    vec3 getDiffuse() {
+      return decode(uDiffuse, 3).rgb;
+    }
+//USE_DIFFUSE_MAP
+#endif
+
+#ifdef USE_SPECULAR_GLOSSINESS_MAP
+    uniform sampler2D uSpecularGlossinessMap;
+    vec4 getSpecularGlossiness() {
+      // assumes specular is sRGB and glossiness is linear
+      vec4 specGloss = texture2D(uSpecularGlossinessMap, vTexCoord0);
+      return vec4(uSpecular, uGlossiness) * vec4(decode(vec4(specGloss.rgb, 1.0), 3).rgb, specGloss.a);
+    }
+#else
+    vec4 getSpecularGlossiness() {
+      return vec4(uSpecular, uGlossiness);
+    }
+//USE_SPECULAR_GLOSSINES_MAP
+#endif
+
+float solveMetallic(float diffuse, float specular, float oneMinusSpecularStrength) {
+  if (specular < 0.04) {
+    return 0.0;
+  }
+
+  float a = 0.04;
+  float b = diffuse * oneMinusSpecularStrength / (1.0 - a) + specular - 2.0 * a;
+  float c = a - specular;
+  float D = max(b * b - 4.0 * a * c, 0.0);
+  return clamp((-b + sqrt(D)) / (2.0 * a), 0.0, 1.0);
+}
+
+//USE_SPECULAR_GLOSSINESS_WORKFLOW
 #endif
 
 #ifdef USE_NORMAL_MAP
@@ -303,6 +350,10 @@ float saturate(float f) {
         return normalize(vNormalWorld);
     }
 #endif
+#endif
+
+#ifdef USE_OCCLUSION_MAP
+uniform sampler2D uOcclusionMap;
 #endif
 
 uniform sampler2D uReflectionMap;
@@ -372,8 +423,8 @@ vec3 directSpecularGGX(vec3 N, vec3 V, vec3 L, float roughness, vec3 F0) {
   return specular;
 }
 
-float GGX(vec3 N, vec3 H, float a) {
-  float a2 = a * a;
+float GGX(vec3 N, vec3 H, float roughness) {
+  float a2 = roughness * roughness;
   float NdotH  = max(dot(N, H), 0.0);
   float NdotH2 = NdotH * NdotH;
 
@@ -455,6 +506,15 @@ uniform mat4  view;
 
 #endif
 
+// assumes linear color
+float perceivedBrightness(vec3 c) {
+  return 0.299 * c.r + 0.587 * c.g + 0.114 * c.b;
+}
+
+float maxComponent(vec3 c) {
+  return max(c.r, max(c.b, c.g));
+}
+
 void main() {
     vec3 normalWorld = getNormal();
     vec3 eyeDirWorld = normalize(vEyeDirWorld);
@@ -473,7 +533,30 @@ void main() {
     // vec3 F0 = vec3(abs((1.0 - uIor) / (1.0 + uIor)));
     // F0 = F0; //0.04 is default for non-metals in UE4
     vec3 F0 = vec3(0.04);
+
+#ifdef USE_SPECULAR_GLOSSINESS_WORKFLOW
+    vec4 specularGlossiness = getSpecularGlossiness();
+    
+    vec3 specular = specularGlossiness.rgb;
+    F0 = specular;
+
+    float glossiness = specularGlossiness.a;
+    roughness = 1.0 - glossiness;
+    
+    vec3 diffuse = getDiffuse();
+    float epsilon = 1e-6;
+    float a = 0.04;
+    
+    // ported from https://github.com/KhronosGroup/glTF/blob/master/extensions/Khronos/KHR_materials_pbrSpecularGlossiness/examples/convert-between-workflows/js/three.pbrUtilities.js
+    float oneMinusSpecularStrength = 1.0 - maxComponent(specular);
+    metallic = solveMetallic(perceivedBrightness(diffuse), perceivedBrightness(specular), oneMinusSpecularStrength);
+
+    vec3 baseColorFromDiffuse = diffuse * oneMinusSpecularStrength / (1.0 - a) / max(1.0 - metallic, epsilon);
+    vec3 baseColorFromSpecular = (specular - a * (1.0 - metallic)) * (1.0 / max(metallic, epsilon));
+    baseColor = mix(baseColorFromDiffuse, baseColorFromSpecular, metallic * metallic);
+#else
     F0 = mix(F0, baseColor, metallic);
+#endif
 
     // view vector in world space
     vec3 V = normalize(uCameraPosition - vPositionWorld);
@@ -487,9 +570,12 @@ void main() {
     vec3 directSpecular = vec3(0.0);
 
     float ao = 1.0;
+#ifdef USE_OCCLUSION_MAP
+    ao *= texture2D(uOcclusionMap, vTexCoord0).r;
+#endif
 #ifdef USE_AO
     vec2 vUV = vec2(gl_FragCoord.x / uScreenSize.x, gl_FragCoord.y / uScreenSize.y);
-    ao = texture2D(uAO, vUV).r;
+    ao *= texture2D(uAO, vUV).r;
 #endif
 
     //TODO: No kd? so not really energy conserving
@@ -541,9 +627,9 @@ void main() {
 
             kD *= 1.0 - metallic;
 
-            float NDF = GGX(N, H, roughness);
+            float NDF = GGX(N, H, roughness * roughness); // TODO: roughtness^2 or not?
 
-            float G = GeometrySmith(N, V, L, roughness);
+            float G = GeometrySmith(N, V, L, roughness * roughness); // TODO: roughtness^2 or not?
 
             vec3 nominator = NDF * G * F;
             float denominator = 4.0 * NdotV * NdotL + 0.001;
@@ -594,7 +680,7 @@ void main() {
 
         float NDF = GGX(N, H, roughness);
 
-        float G = GeometrySmith(N, V, L, roughness);
+        float G = GeometrySmith(N, V, L, roughness * roughness);
 
         vec3 nominator = NDF * G * F;
         float denominator = 4.0 * NdotV * NdotL + 0.001;
@@ -696,7 +782,7 @@ void main() {
         //}
     }
 #endif
-    vec3 color = emissiveColor + ao * indirectDiffuse + indirectSpecular + directDiffuse + directSpecular + indirectArea;
+    vec3 color = emissiveColor + ao * indirectDiffuse + ao * indirectSpecular + directDiffuse + directSpecular + indirectArea;
 #else  // USE_NORMALS
     vec3 color = ao * baseColor;
 #endif // USE_NORMALS

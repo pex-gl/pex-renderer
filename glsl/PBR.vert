@@ -14,6 +14,10 @@ attribute vec3 aScale;
 #ifdef USE_INSTANCED_ROTATION
 attribute vec4 aRotation;
 #endif
+#ifdef USE_VERTEX_COLORS
+attribute vec4 aVertexColor;
+varying vec4 vColor;
+#endif
 #ifdef USE_INSTANCED_COLOR
 attribute vec4 aColor;
 varying vec4 vColor;
@@ -103,6 +107,9 @@ void main() {
 #endif
 #ifdef USE_INSTANCED_OFFSET
     position.xyz += aOffset; 
+#endif
+#ifdef USE_VERTEX_COLORS
+    vColor = aVertexColor; 
 #endif
 #ifdef USE_INSTANCED_COLOR
     vColor = aColor; 
