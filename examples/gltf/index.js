@@ -4,6 +4,7 @@ const loadImage = require('pex-io/loadImage')
 const loadBinary = require('pex-io/loadBinary')
 const createCube = require('primitive-cube')
 const createBox = require('primitive-box')
+const isBrowser = require('is-browser')
 const Mat4 = require('pex-math/Mat4')
 const Vec3 = require('pex-math/Vec3')
 const AABB = require('pex-geom/AABB')
@@ -19,32 +20,44 @@ const isPOT = require('is-power-of-two')
 const nextPOT = require('next-power-of-two')
 const assert = require('assert')
 const parseHdr = require('parse-hdr')
-// const debug = require('debug')('gltf')
+const random = require('pex-random')
+const log = require('debug')('gltf')
+const createLoft = require('./geom-loft')
+const triangulate = require('./geom-triangulate')
+const normals = require('angle-normals')
+const fs = require('fs')
 
-const ctx = createContext({ debug: true })
+const ctx = createContext({
+  width: window.innerWidth * 1,
+  height: window.innerHeight * 1,
+  powerPreference: 'high-performance'
+})
+ctx.gl.canvas.style.width = window.innerWidth + 'px'
+ctx.gl.canvas.style.height = window.innerHeight + 'px'
 ctx.gl.getExtension('EXT_shader_texture_lod')
 ctx.gl.getExtension('OES_standard_derivatives')
 ctx.gl.getExtension('WEBGL_draw_buffers')
 ctx.gl.getExtension('OES_texture_float')
 
-var WebGLDebugUtils = require('webgl-debug')
+// var WebGLDebugUtils = require('webgl-debug')
 
 function throwOnGLError (err, funcName, args) {
   console.log('Error', funcName, args)
   throw new Error(`${WebGLDebugUtils.glEnumToString(err)} was caused by call to ${funcName} ${WebGLDebugUtils.glFunctionArgsToString(funcName, args)}`)
 }
 
-ctx.gl = WebGLDebugUtils.makeDebugContext(ctx.gl, throwOnGLError)
+// ctx.gl = WebGLDebugUtils.makeDebugContext(ctx.gl, throwOnGLError)
 
 const renderer = createRenderer({
   ctx: ctx,
-  shadowQuality: 4,
-  pauseOnBlur: true,
-  profile: true,
+  shadowQuality: 2,
+  // pauseOnBlur: true,
+  // profile: true,
   profileFlush: false
 })
 
 const gui = new GUI(ctx)
+gui.toggleEnabled()
 gui.addHeader('Settings')
 
 const State = {
@@ -106,24 +119,30 @@ function initSky (panorama) {
     direction: Vec3.sub(Vec3.create(), State.sunPosition),
     color: [1, 1, 0.95, 1],
     intensity: 10,
-    castShadows: true
+    castShadows: true,
+    bias: 0.1
   })
 
   const light = State.light = renderer.pointLight({
-    position: [1, 1, 1],
-    color: [1, 1, 1, 1],
+    color: [1, 0, 0, 1],
+    // color: [0, 1, 1, 1],
+    radius: 5,
     intensity: 10,
     castShadows: true
   })
 
   const light2 = State.light2 = renderer.pointLight({
-    position: [1, 1, 1],
-    color: [1, 1, 1, 1],
+    color: [1, 0, 1, 1],
+    // color: [0, 1, 0, 1],
+    radius: 5,
     intensity: 2,
     castShadows: true
   })
 
   gui.addTexture2D('Shadow map', sun._shadowMap)
+  gui.addTexture2D('Color', State.camera._frameColorTex)
+  gui.addTexture2D('Bloom', State.camera._frameBloomVTex)
+  gui.addTexture2D('Emissive', State.camera._frameEmissiveTex)
 
   const skybox = State.skybox = renderer.skybox({
     sunPosition: State.sunPosition
@@ -136,10 +155,10 @@ function initSky (panorama) {
     boxProjection: false
   })
 
-  // renderer.add(renderer.entity([ light, renderer.transform({ position: [0.5, 0.5, 0.5]}) ])).name = 'light'
-  // renderer.add(renderer.entity([ light2, renderer.transform({ position: [-0.5, 0.5, 0.5]}) ])).name = 'light2'
+  renderer.add(renderer.entity([ light, renderer.transform({ position: [0.5, 0.5, 0.5]}) ])).name = 'light'
+  renderer.add(renderer.entity([ light2, renderer.transform({ position: [0, -0.5, 0]}) ])).name = 'light2'
   renderer.add(renderer.entity([ sun ])).name = 'sun'
-  renderer.add(renderer.entity([ skybox ])).name = 'skybox'
+  // renderer.add(renderer.entity([ skybox ])).name = 'skybox'
   renderer.add(renderer.entity([ reflectionProbe ])).name = 'reflectionProbe'
 
   updateSunPosition()
@@ -149,35 +168,38 @@ function initCamera () {
   const camera = createCamera({
     fov: Math.PI / 3,
     aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
-    position: [0, 2, 4],
+    position: [1, 1, 4],
     target: [0, 0, 0],
-    near: 0.1,
+    near: 0.01,
     far: 100
   })
   createOrbiter({ camera: camera })
 
+  const cameraCmp = State.camera = renderer.camera({
+    camera: camera,
+    exposure: 0.5,
+    fxaa: true,
+    // dof: true,
+    dofIterations: 1,
+    dofRange: 0.15,
+    dofRadius: 2,
+    dofDepth: 1,
+    ssao: true,
+    ssaoIntensity: 5,
+    ssaoRadius: 1,
+    ssaoBias: 0.02,
+    ssaoBlurRadius: 0.1, // 2
+    ssaoBlurSharpness: 10// 10,
+    // ssaoRadius: 5,
+  })
+
   renderer.add(renderer.entity([
-    renderer.camera({
-      camera: camera,
-      fxaa: true,
-      // dof: true,
-      dofIterations: 1,
-      dofRange: 0.5,
-      dofRadius: 1,
-      dofDepth: 1,
-      // ssao: true,
-      ssaoIntensity: 5,
-      ssaoRadius: 6,
-      ssaoBias: 0.02,
-      ssaoBlurRadius: 0.05, // 2
-      ssaoBlurSharpness: 10// 10,
-      // ssaoRadius: 5,
-    })
+    cameraCmp
   ])).name = 'camera'
 }
 
-initSky()
 initCamera()
+initSky()
 let debugOnce = false
 
 window.addEventListener('keypress', (e) => {
@@ -215,6 +237,7 @@ const AttributeNameMap = {
   TANGENT: 'tangents',
   TEXCOORD_0: 'texCoords',
   TEXCOORD_1: 'texCoords1',
+  TEXCOORD_2: 'texCoords2',
   JOINTS_0: 'joints',
   WEIGHTS_0: 'weights',
   COLOR_0: 'vertexColors'
@@ -333,7 +356,7 @@ function loadTexture (materialTexture, gltf, basePath, encoding, cb) {
       img = canvas2d
     }
   }
-  console.log(`min: ${WebGLDebugUtils.glEnumToString(sampler.minFilter)} mag: ${WebGLDebugUtils.glEnumToString(sampler.magFilter)}`)
+  // console.log(`min: ${WebGLDebugUtils.glEnumToString(sampler.minFilter)} mag: ${WebGLDebugUtils.glEnumToString(sampler.magFilter)}`)
   console.log('mag', img.width)
   var tex = texture._tex = ctx.texture2D({
     data: img,
@@ -343,8 +366,8 @@ function loadTexture (materialTexture, gltf, basePath, encoding, cb) {
     pixelFormat: ctx.PixelFormat.RGBA8,
     wrapS: sampler.wrapS,
     wrapT: sampler.wrapT,
-    min: sampler.minFilter,
-    mag: sampler.magFilter,
+    min: sampler.minFilter || ctx.Filter.Linear,
+    mag: sampler.magFilter || ctx.Filter.Linear,
     flipY: false // this is confusing as
   })
   if (sampler.minFilter !== ctx.Filter.Nearest && sampler.minFilter !== ctx.Filter.Linear) {
@@ -356,9 +379,6 @@ function loadTexture (materialTexture, gltf, basePath, encoding, cb) {
 
 function handleMaterial (material, gltf, basePath) {
   const materialCmp = renderer.material({
-    baseColor: [1, 1, 1, 1.0],
-    roughness: 0.0,
-    metallic: 1.0,
     castShadows: true,
     receiveShadows: true,
     cullFaceEnabled: !material.doubleSided
@@ -366,6 +386,18 @@ function handleMaterial (material, gltf, basePath) {
 
   const pbrMetallicRoughness = material.pbrMetallicRoughness
   if (pbrMetallicRoughness) {
+    materialCmp.set({
+      baseColor: [1, 1, 1, 1],
+      roughness: 1,
+      metallic: 1
+    })
+    log('material.pbrMatallicRoughness', pbrMetallicRoughness, materialCmp)
+    if (pbrMetallicRoughness.metallicFactor !== undefined) {
+      materialCmp.set({ metallic: pbrMetallicRoughness.metallicFactor })
+    }
+    if (pbrMetallicRoughness.baseColorFactor !== undefined) {
+      materialCmp.set({ baseColor: pbrMetallicRoughness.baseColorFactor })
+    }
     if (pbrMetallicRoughness.baseColorTexture) {
       loadTexture(pbrMetallicRoughness.baseColorTexture, gltf, basePath, ctx.Encoding.SRGB, (err, tex) => {
         if (err) throw err
@@ -378,18 +410,36 @@ function handleMaterial (material, gltf, basePath) {
         materialCmp.set({ metallicRoughnessMap: tex })
       })
     }
-    if (pbrMetallicRoughness.baseColorFactor) {
-      materialCmp.set({ baseColor: pbrMetallicRoughness.baseColorFactor })
-    }
   }
 
   const pbrSpecularGlossiness = material.extensions ? material.extensions.KHR_materials_pbrSpecularGlossiness : null
   if (pbrSpecularGlossiness) {
+    materialCmp.set({
+      diffuse: [1, 1, 1, 1],
+      specular: [1, 1, 1],
+      glossiness: 1
+    })
+    log('material.pbrSpecularGlossiness', pbrSpecularGlossiness, materialCmp)
+    if (pbrSpecularGlossiness.diffuseFactor !== undefined) {
+      materialCmp.set({ diffuse: pbrSpecularGlossiness.diffuseFactor })
+    }
+    if (pbrSpecularGlossiness.specularFactor !== undefined) {
+      materialCmp.set({ specular: pbrSpecularGlossiness.specularFactor })
+    }
+    if (pbrSpecularGlossiness.glossinessFactor !== undefined) {
+      materialCmp.set({ glossiness: pbrSpecularGlossiness.glossinessFactor })
+    }
     if (pbrSpecularGlossiness.diffuseTexture) {
-      console.log('handleMaterial.diffuseTexture')
       loadTexture(pbrSpecularGlossiness.diffuseTexture, gltf, basePath, ctx.Encoding.SRGB, (err, tex) => {
         if (err) throw err
-        materialCmp.set({ baseColorMap: tex })
+        materialCmp.set({ diffuseMap: tex })
+        log('setting diffuseMap', tex)
+      })
+    }
+    if (pbrSpecularGlossiness.specularGlossinessTexture) {
+      loadTexture(pbrSpecularGlossiness.specularGlossinessTexture, gltf, basePath, ctx.Encoding.Linear, (err, tex) => {
+        if (err) throw err
+        materialCmp.set({ specularGlossinessMap: tex })
       })
     }
   }
@@ -398,6 +448,13 @@ function handleMaterial (material, gltf, basePath) {
     loadTexture(material.normalTexture, gltf, basePath, ctx.Encoding.Linear, (err, tex) => {
       if (err) throw err
       materialCmp.set({ normalMap: tex })
+    })
+  }
+
+  if (material.occlusionTexture) {
+    loadTexture(material.occlusionTexture, gltf, basePath, ctx.Encoding.Linear, (err, tex) => {
+      if (err) throw err
+      materialCmp.set({ occlusionMap: tex })
     })
   }
 
@@ -625,7 +682,6 @@ function handleAnimation (animation, gltf) {
     if (channel.target.path === 'weights') {
       offset = target.getComponent('Morph').weights.length
     }
-    console.log(channel, output)
     for (let i = 0; i < od.length; i += offset) {
       if (offset === 1) {
         outputData.push([od[i]])
@@ -664,7 +720,13 @@ function loadScreenshot (name, cb) {
   function tryNextExt () {
     const ext = extensions.shift()
     if (!ext) return cb(new Error('Failed to load screenshot for ' + name), null)
-    const url = `assets/gltf-sample-models/${name}/screenshot/screenshot.${ext}`
+
+    const url = `${ASSETS_DIR}/gltf-sample-models/${name}/screenshot/screenshot.${ext}`
+    if (!isBrowser) {
+      if (!fs.existsSync(url)) {
+        return tryNextExt()
+      }
+    }
     console.log('trying to load ' + url)
     loadImage(url, (err, img) => {
       if (err) tryNextExt()
@@ -675,7 +737,194 @@ function loadScreenshot (name, cb) {
   tryNextExt()
 }
 
-const indexFile = 'assets/gltf-sample-models/index.txt'
+
+function snoise (x, y, z) {
+  return random.noise3(x, y, z)
+}
+
+function snoiseVec3 (x, y, z) {
+  var s  = snoise(x, y, z)
+  var s1 = snoise(y - 19.1 , z + 33.4 , x + 47.2)
+  var s2 = snoise(z + 74.2 , x - 124.5 , y + 99.4)
+  // var s1  = snoise(x + 0.1, y, z)
+  // var s2  = snoise(x, y - 0.12, z)
+  return [s, s1, s2]
+}
+
+// https://codepen.io/timseverien/pen/EmJNOR?editors=0010
+function curlNoise(p, t){
+  t = t || 0
+  const e = 0.1
+  var dx =  [e   , 0.0 , 0.0 ]
+  var dy =  [0.0 , e   , 0.0 ]
+  var dz =  [0.0 , 0.0 , e   ]
+
+  var p_x0 = snoiseVec3(p[0] - e, p[1], p[2])//(sub(p, dx))
+  var p_x1 = snoiseVec3(p[0] + e, p[1], p[2])//(add(p, dx))
+  var p_y0 = snoiseVec3(p[0], p[1] - e, p[2])//(sub(p, dy))
+  var p_y1 = snoiseVec3(p[0], p[1] + e, p[2])//(add(p, dy))
+  var p_z0 = snoiseVec3(p[0], p[1], p[2] - e)//(sub(p, dz))
+  var p_z1 = snoiseVec3(p[0], p[1], p[2] + e)//(add(p, dz))
+
+  var x = p_y1[2] - p_y0[2] - p_z1[1] + p_z0[1]
+  var y = p_z1[0] - p_z0[0] - p_x1[2] + p_x0[2]
+  var z = p_x1[1] - p_x0[1] - p_y1[0] + p_y0[0]
+
+  const divisor = 1.0 / ( 2.0 * e )
+  return Vec3.scale(Vec3.normalize([ x , y , z]), divisor)
+}
+
+var wirePositions = []
+var wireVertexColors = []
+var shape = []
+for (var i = 0; i < 5; i++) {
+  var a = i / 6 * Math.PI * 2
+  shape.push([
+    Math.cos(a),
+    Math.sin(a)
+  ])
+}
+function addWire(p, c, t, steps) {
+  t = t || 0
+  steps = steps || 150
+  var prev = p
+  var path = [p]
+  for (var i = 0; i < steps; i++) {
+    var v = curlNoise(p, t)
+    Vec3.scale(v, 0.01)
+    // Vec3.scale(v, 0.01 * 0.6)
+    var np = Vec3.add(Vec3.copy(p), v)
+    wirePositions.push(p, np)
+    wireVertexColors.push(c, c)
+    p = np
+    path.push(np)
+  }
+  let g = createLoft(path, shape, { caps: true, radius: 0.03 })
+  // let g = createLoft(path, shape, { caps: true, radius: 0.01 })
+  // let g = createLoft(path, shape, { caps: true, radius: 0.11 })
+  // let g = createLoft(path, shape, { caps: true, radius: 0.05 })
+  return g
+}
+
+random.seed(10)
+// random.seed(13)
+// random.seed(15)
+// random.seed(10)
+console.time('wire')
+var wireMeshes = []
+for (var i = 0; i < 15; i++) {
+  //var g = addWire([0 + i / 3000, 0, 1], [0, 1, 0, 1])
+  var g = addWire([0 + i / 1000, 0, 1], [0, 1, 0, 1])
+  wireMeshes.push(g)
+}
+console.timeEnd('wire')
+
+var wireGeom = renderer.geometry({
+  positions: wirePositions,
+  vertexColors: wireVertexColors,
+  normals: wirePositions,
+  count: wirePositions.length,
+  primitive: ctx.Primitive.Lines
+})
+
+var wire = renderer.entity([
+  wireGeom,
+  renderer.transform({
+    position: [0.04, 1.04, 0.04]
+    // position: [0.02, 1.02, 0.02]
+  }),
+  renderer.material({
+    baseColor: [0, 0.4, 0.8, 1],
+    emissiveColor: [0, 0.4, 0.8, 1]
+    // baseColor: [1, 0.4, 0.8, 1],
+    // emissiveColor: [1, 0.4, 0.8, 1]
+    // baseColor: [0, 0.3, 1, 1],
+    // baseColor: [0, 0.6, 1, 1],
+    // emissiveColor: [0, 0.6, 1, 1]
+    // baseColor: [1, 0.6, 1, 1],
+    // emissiveColor: [1, 0.6, 1, 1]
+  })
+])
+renderer.add(wire)
+
+var wireMeshesGeoms = wireMeshes.map((m) => {
+  var wireGeom = renderer.geometry({
+    positions: m.positions,
+    normals: normals(m.cells, m.positions),
+    indices: triangulate(m.cells),
+    // primitive: ctx.Primitive.Lines
+  })
+
+  var wire = renderer.entity([
+    renderer.transform({
+      position: [0, 1, 0]
+    }),
+    wireGeom,
+    renderer.material({
+      baseColor: [0.4, 0.4, 0.4, 1],
+      // baseColor: [0.04, 0.04, 0.04, 1],
+      // baseColor: [0.99, 0.99, 0.995, 1],
+      // baseColor: [0.99, 0.599, 0.42, 1],
+      // baseColor: [0.099, 0.0599, 0.042, 1],
+      // emissiveColor: [0.099, 0.099, 0.0995, 1],
+      metallic: 1,
+      roughness: 0.095,
+      // roughness: 0.95,
+      // roughness: 0.05,
+      // roughness: 0.2,
+      receiveShadows: true,
+      castShadows: true
+      // emissiveColor: [1, 0, 0, 1]
+    })
+  ])
+  renderer.add(wire)
+  return wireGeom
+})
+
+var time = 0
+var frameNumber = 0
+var jsZip = require('jszip')
+var zip = new jsZip()
+function animWire() {
+  frameNumber++
+  if (frameNumber >= 150) return
+  wirePositions.length = 0
+  wireVertexColors.length = 0
+  for (var i = 0; i < 15; i++) {
+    var m = addWire([0 + i / 1000, 0, 1], [0, 1, 0, 1], 0, frameNumber + 1)
+    wireMeshesGeoms[i].set({
+      positions: m.positions,
+      normals: normals(m.cells, m.positions),
+      indices: triangulate(m.cells),
+    })
+  }
+
+  wireGeom.set({
+    positions: wirePositions,
+    normals: wirePositions,
+    vertexColors: wireVertexColors,
+    count: wirePositions.length
+  })
+
+  if (frameNumber == 149) {
+     zip.generateAsync({type:"blob"})
+      .then(function(content) {
+        var file = 'screenshot-' + Date.now() + '.zip'
+        var element = document.createElement('a')
+        element.setAttribute('href', window.URL.createObjectURL(content))
+        element.setAttribute('download', file)
+        element.style.display = 'none'
+        document.body.appendChild(element)
+        element.click()
+        document.body.removeChild(element)
+      })
+  }
+}
+
+setInterval(animWire, 1 / 30)
+
+const ASSETS_DIR = isBrowser ? 'assets' : `${__dirname}/assets`
+const indexFile = `${ASSETS_DIR}/gltf-sample-models/index.txt`
 loadText(indexFile, (err, text) => {
   if (err) throw new Error(err)
   const modelNames = text.split('\n')
@@ -693,6 +942,9 @@ loadText(indexFile, (err, text) => {
         flipY: true
       })
     })
+    gui.addParam('Exposure', State.camera, 'exposure', { min: 0, max: 5 }, () => {
+      State.camera({ exposure: State.camera.exposure })
+    })
     gui.addTexture2DList('Models', State, 'selectedModel', thumbnails.map((tex, i) => {
       return {
         value: modelNames[i],
@@ -700,7 +952,7 @@ loadText(indexFile, (err, text) => {
       }
     }), 4, (model) => {
       console.log('model', model)
-      loadScene(`assets/gltf-sample-models/${model}/glTF/${model}.gltf`, onSceneLoaded)
+      loadScene(`${ASSETS_DIR}/gltf-sample-models/${model}/glTF/${model}.gltf`, onSceneLoaded)
     })
     console.log('screenshots', screenshots)
 
@@ -710,15 +962,26 @@ loadText(indexFile, (err, text) => {
         loadScene(`assets/gltf-sample-models/${defaultModel}/glTF/${defaultModel}.gltf`, onSceneLoaded)
       }
     } else {
-    // var defaultModel = modelNames[16]
+    var defaultModel = modelNames[19]
     // loadScene(`assets/gltf-sample-models/${defaultModel}/glTF/${defaultModel}.gltf`, onSceneLoaded)
     // loadScene(`assets/gltf/skull_downloadable/scene.gltf`, onSceneLoaded)
     // loadScene(`assets/gltf/busterDrone/busterDrone.gltf`, onSceneLoaded)
     // loadScene(`assets/gltf/damagedHelmet/damagedHelmet.gltf`, onSceneLoaded)
-    // loadScene(`assets/gltf/damagedHelmet/damagedHelmet.gltf`, onSceneLoaded)
     // loadScene(`assets/gltf/behemoth_from_horizon_zero_dawn/scene.gltf`, onSceneLoaded)
-    loadScene(`assets/gltf/hover_bike/scene.gltf`, onSceneLoaded)
+    // loadScene(`assets/gltf/hover_bike/scene.gltf`, onSceneLoaded)
+    // loadScene(`assets/gltf/cosmic_flower_vr/scene.gltf`, onSceneLoaded)
+    // loadScene(`assets/gltf/woman_warrior/scene.gltf`, onSceneLoaded)
+
+    // loadScene(`assets/gltf/microphone/microphone.gltf`, onSceneLoaded)
+    // loadScene(`assets/gltf/steampunkExplorer/steampunkExplorer.gltf`, onSceneLoaded)
+    // loadScene(`assets/gltf/1972_datsun_240k_gt/scene.gltf`, onSceneLoaded)
+    // loadScene(`assets/gltf/baba_yagas_hut/scene.gltf`, onSceneLoaded)
+    // loadScene(`assets/gltf/centurion/centurion.gltf`, onSceneLoaded)
+    // loadScene(`assets/gltf/darksiders_war/scene.gltf`, onSceneLoaded)
+    // loadScene(`assets/gltf/voodoo_skull/scene.gltf`, onSceneLoaded)
+    // loadScene(`assets/gltf/space_maintenance_robot/scene.gltf`, onSceneLoaded)
     // loadScene(`assets/gltf/adamHead/adamHead.gltf`, onSceneLoaded)
+    // loadScene(`assets/gltf/polly/project_polly.gltf`, onSceneLoaded)
     // loadScene(`assets/gltf/whipper_lingerie/scene.gltf`, onSceneLoaded)
       // loadScene(`assets/gltf/ballet/scene.gltf`, onSceneLoaded)
     }
@@ -905,7 +1168,9 @@ function loadScene (file, cb) {
 }
 
 // loadBinary('assets/envmaps/pisa/pisa_128.hdr', (err, buf) => {
-loadBinary('assets/envmaps/garage/garage.hdr', (err, buf) => {
+// loadBinary('assets/envmaps/garage/garage.hdr', (err, buf) => {
+// loadBinary('assets/envmaps/grace-new/grace-new.hdr', (err, buf) => {
+loadBinary(`${ASSETS_DIR}/envmaps/grace-new/grace-new_diffuse.hdr`, (err, buf) => {
 // loadBinary('assets/envmaps/grace-new/grace-new.hdr', (err, buf) => {
 // loadBinary('assets/envmaps/hdrihaven/preller_drive_2k.hdr', (err, buf) => {
   const hdrImg = parseHdr(buf)
@@ -922,18 +1187,20 @@ loadBinary('assets/envmaps/garage/garage.hdr', (err, buf) => {
 })
 
 
-const floor = renderer.add(renderer.entity([
+
+const floor = renderer.entity([
   renderer.transform({
-    position: [0, -0.05, 0]
+    position: [0, -1.1, 0]
   }),
-  renderer.geometry(createCube(11, 0.1, 11)),
+  renderer.geometry(createCube(4, 0.1, 4)),
   renderer.material({
-    baseColor: [0.5, 0.5, 0.5, 1],
+    baseColor: [0.25, 0.25, 0.25, 1],
     castShadows: true,
     receiveShadows: true
   })
-]))
+])
 floor.name = 'floor'
+// renderer.add(floor)
 
 /*
 const originX = renderer.add(renderer.entity([
@@ -1039,4 +1306,11 @@ ctx.frame(() => {
   if (!renderer._state.paused) {
     gui.draw()
   }
+
+  if (frameNumber > 0 && frameNumber <= 149) {
+    ctx.gl.canvas.toBlob((blob) => {
+      zip.file(`frame${frameNumber}.png`, blob)
+    })
+  }
+
 })

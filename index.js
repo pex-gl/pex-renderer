@@ -663,8 +663,28 @@ Renderer.prototype.draw = function () {
     })
     if (State.profiler) State.profiler.timeEnd('drawFrame')
     if (State.profiler) State.profiler.time('postprocess')
+    if (camera.bloom) {
+        ctx.submit(camera._thresholdCmd, {
+          uniforms: {
+            uExposure: camera.exposure
+          }
+        })
+
+      for (let i = 0; i < 5; i++) {
+        ctx.submit(camera._bloomHCmd, {
+          uniforms: {
+            direction: [1.5, 0]
+          }
+        })
+        ctx.submit(camera._bloomVCmd, {
+          uniforms: {
+            direction: [0, 1.5]
+          }
+        })
+      }
+    }
     if (camera.dof) {
-      for (var i = 0; i < camera.dofIterations; i++) {
+      for (let i = 0; i < camera.dofIterations; i++) {
         ctx.submit(camera._dofBlurHCmd, {
           uniforms: {
             near: camera.camera.near,

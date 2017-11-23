@@ -1,7 +1,7 @@
 #ifdef GL_ES
   #extension GL_EXT_shader_texture_lod : require
   #extension GL_OES_standard_derivatives : require
-  // #extension GL_EXT_draw_buffers : require
+  #extension GL_EXT_draw_buffers : require
   #define textureCubeLod textureCubeLodEXT
 #else
   #extension GL_ARB_shader_texture_lod : require
@@ -787,4 +787,5 @@ void main() {
     vec3 color = ao * baseColor;
 #endif // USE_NORMALS
     gl_FragData[0] = encode(vec4(color, 1.0), uOutputEncoding);
+    gl_FragData[1] = encode(vec4(emissiveColor, 1.0), uOutputEncoding);
 }

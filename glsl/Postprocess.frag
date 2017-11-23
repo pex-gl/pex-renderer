@@ -10,6 +10,8 @@ uniform vec2 uScreenSize;
 
 uniform sampler2D uOverlay;
 uniform sampler2D depthMap;
+uniform sampler2D uBloomMap;
+uniform sampler2D uEmissiveMap;
 uniform vec2 depthMapSize;
 uniform mat4 uViewMatrix;
 
@@ -49,6 +51,12 @@ float readDepth(sampler2D depthMap, vec2 coord) {
   return z_e;
 }
 
+//Based on Filmic Tonemapping Operators http://filmicgames.com/archives/75
+vec3 tonemapFilmic(vec3 color) {
+    vec3 x = max(vec3(0.0), color - 0.004);
+    return (x * (6.2 * x + 0.5)) / (x * (6.2 * x + 1.7) + 0.06);
+}
+
 void main() {
   vec4 color = vec4(0.0);
   if (uFXAA) {
@@ -68,6 +76,10 @@ void main() {
   }
 
   color.rgb *= uExposure;
+  color.rgb += texture2D(uBloomMap, vTexCoord0).rgb * 0.5;
   color.rgb = color.rgb / (1.0 + color.rgb);
+  // color.rgb = tonemapFilmic(color.rgb);
+  color.rgb += texture2D(uEmissiveMap, vTexCoord0).rgb;
+  // color.rgb = pow(color.rgb, vec3(2.2));
   gl_FragColor = encode(color, uOutputEncoding);
 }

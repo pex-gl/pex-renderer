@@ -15,6 +15,8 @@ if (isPlask) {
 
 const SAO_FRAG = glsl(__dirname + '/glsl/SAO.frag')
 const BILATERAL_BLUR_FRAG = glsl(__dirname + '/glsl/BilateralBlur.frag')
+const THRESHOLD_FRAG = glsl(__dirname + '/glsl/Threshold.frag')
+const BLOOM_FRAG = glsl(__dirname + '/glsl/Bloom.frag')
 
 var ssaoKernel = []
 for (let i = 0; i < 64; i++) {
@@ -66,6 +68,7 @@ function Camera (opts) {
   this.exposure = 1
   this.fxaa = false
   this.fog = false
+  this.bloom = true
   this.sunDispertion = 0.2
   this.sunIntensity = 0.1
   this.inscatteringCoeffs = [0.3, 0.3, 0.3]
@@ -132,6 +135,14 @@ Camera.prototype.initPostproces = function () {
     encoding: this.rgbm ? ctx.Encoding.RGBM : ctx.Encoding.Linear
   })
 
+  this._frameEmissiveTex = ctx.texture2D({
+    name: 'frameColorTex',
+    width: W,
+    height: H,
+    pixelFormat: this.rgbm ? ctx.PixelFormat.RGBA8 : ctx.PixelFormat.RGBA32F,
+    encoding: this.rgbm ? ctx.Encoding.RGBM : ctx.Encoding.Linear
+  })
+
   this._frameNormalTex = ctx.texture2D({
     name: 'frameNormalTex',
     width: W,
@@ -158,13 +169,40 @@ Camera.prototype.initPostproces = function () {
     encoding: this.rgbm ? ctx.Encoding.RGBM : ctx.Encoding.Linear
   })
 
+  this._frameThresholdTex = ctx.texture2D({
+    name: 'frameDofBlurTex',
+    width: W,
+    height: H,
+    pixelFormat: this.rgbm ? ctx.PixelFormat.RGBA8 : ctx.PixelFormat.RGBA32F,
+    encoding: this.rgbm ? ctx.Encoding.RGBM : ctx.Encoding.Linear
+  })
+
+  this._frameBloomHTex = ctx.texture2D({
+    name: 'frameBloomHTex',
+    width: W / 2,
+    height: H / 2,
+    pixelFormat: this.rgbm ? ctx.PixelFormat.RGBA8 : ctx.PixelFormat.RGBA32F,
+    encoding: this.rgbm ? ctx.Encoding.RGBM : ctx.Encoding.Linear
+  })
+
+  this._frameBloomVTex = ctx.texture2D({
+    name: 'frameBloomVTex',
+    width: W / 2,
+    height: H / 2,
+    pixelFormat: this.rgbm ? ctx.PixelFormat.RGBA8 : ctx.PixelFormat.RGBA32F,
+    encoding: this.rgbm ? ctx.Encoding.RGBM : ctx.Encoding.Linear
+  })
+
   this._textures = [
     this._frameColorTex,
+    this._frameEmissiveTex,
     this._frameNormalTex,
     this._frameDepthTex,
     this._frameAOTex,
     this._frameAOBlurTex,
     this._frameDofBlurTex,
+    this._frameBloomHTex,
+    this._frameBloomVTex
   ]
 
   ctx.gl.getExtension('OES_texture_float ')
@@ -186,28 +224,10 @@ Camera.prototype.initPostproces = function () {
     name: 'Camera.drawFrame',
     pass: ctx.pass({
       name: 'Camera.drawFrame',
-      color: [ this._frameColorTex ],
+      color: [ this._frameColorTex, this._frameEmissiveTex ],
       depth: this._frameDepthTex,
       clearColor: this.backgroundColor
     })
-  }
-
-  // this._overlayProgram = ctx.program({ vert: POSTPROCESS_VERT, frag: POSTPROCESS_FRAG }) // TODO
-  this._blitCmd = {
-    name: 'Camera.blit',
-    pipeline: ctx.pipeline({
-      vert: POSTPROCESS_VERT,
-      frag: POSTPROCESS_FRAG
-    }),
-    attributes: this._fsqMesh.attributes,
-    indices: this._fsqMesh.indices,
-    uniforms: {
-      uOverlay: this._frameColorTex,
-      uOverlayEncoding: this._frameColorTex.encoding,
-      uViewMatrix: this.viewMatrix,
-      depthMap: this._frameDepthTex,
-      depthMapSize: [W, H],
-    }
   }
 
   this._ssaoCmd = {
@@ -316,6 +336,90 @@ Camera.prototype.initPostproces = function () {
       image: this._frameDofBlurTex,
       // direction: [0, State.bilateralBlurRadius] // TODO:
       direction: [0, 0.5]
+    }
+  }
+
+  this._thresholdCmd = {
+    name: 'Camera.threshold',
+    pass: ctx.pass({
+      name: 'Camera.threshold',
+      color: [ this._frameBloomVTex ],
+      clearColor: [1, 1, 1, 1]
+    }),
+    pipeline: ctx.pipeline({
+      vert: POSTPROCESS_VERT,
+      frag: THRESHOLD_FRAG
+    }),
+    attributes: this._fsqMesh.attributes,
+    indices: this._fsqMesh.indices,
+    uniforms: {
+      image: this._frameColorTex,
+      emissiveTex: this._frameEmissiveTex,
+      // TODO: this should be called screenSize as it's used to calculate uv
+      imageSize: [this._frameBloomVTex.width, this._frameBloomVTex.height],
+    },
+    viewport: [0, 0, this._frameBloomVTex.width, this._frameBloomVTex.height],
+  }
+
+  this._bloomHCmd = {
+    name: 'Camera.bloomH',
+    pass: ctx.pass({
+      name: 'Camera.bloomH',
+      color: [ this._frameBloomHTex ],
+      clearColor: [1, 1, 1, 1]
+    }),
+    pipeline: ctx.pipeline({
+      vert: POSTPROCESS_VERT,
+      frag: BLOOM_FRAG
+    }),
+    attributes: this._fsqMesh.attributes,
+    indices: this._fsqMesh.indices,
+    uniforms: {
+      image: this._frameBloomVTex,
+      imageSize: [this._frameBloomVTex.width, this._frameBloomVTex.height],
+      direction: [0.5, 0]
+    },
+    viewport: [0, 0, this._frameBloomHTex.width, this._frameBloomHTex.height]
+  }
+
+  this._bloomVCmd = {
+    name: 'Camera.bloomV',
+    pass: ctx.pass({
+      name: 'Camera.bloomV',
+      color: [ this._frameBloomVTex ],
+      clearColor: [1, 1, 0, 1]
+    }),
+    pipeline: ctx.pipeline({
+      vert: POSTPROCESS_VERT,
+      frag: BLOOM_FRAG
+    }),
+    attributes: this._fsqMesh.attributes,
+    indices: this._fsqMesh.indices,
+    uniforms: {
+      image: this._frameBloomHTex,
+      imageSize: [this._frameBloomHTex.width, this._frameBloomHTex.height],
+      direction: [0, 0.5]
+    },
+    viewport: [0, 0, this._frameBloomVTex.width, this._frameBloomVTex.height]
+  }
+
+  // this._overlayProgram = ctx.program({ vert: POSTPROCESS_VERT, frag: POSTPROCESS_FRAG }) // TODO
+  this._blitCmd = {
+    name: 'Camera.blit',
+    pipeline: ctx.pipeline({
+      vert: POSTPROCESS_VERT,
+      frag: POSTPROCESS_FRAG
+    }),
+    attributes: this._fsqMesh.attributes,
+    indices: this._fsqMesh.indices,
+    uniforms: {
+      uOverlay: this._frameColorTex,
+      uOverlayEncoding: this._frameColorTex.encoding,
+      uViewMatrix: this.viewMatrix,
+      depthMap: this._frameDepthTex,
+      depthMapSize: [W, H],
+      uBloomMap: this._frameBloomVTex,
+      uEmissiveMap: this._frameEmissiveTex
     }
   }
 }
