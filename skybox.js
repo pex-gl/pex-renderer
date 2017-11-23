@@ -17,6 +17,7 @@ function Skybox (opts) {
   const ctx = this._ctx = opts.ctx
 
   this.texture = null
+  this.diffuseTexture = null
   this._dirtySunPosition = true
 
   this.set(opts)
@@ -94,7 +95,10 @@ Skybox.prototype.draw = function (camera, opts) {
     })
   }
 
-  const texture = this.texture || this._skyTexture
+  let texture = this.texture || this._skyTexture
+  if (opts.diffuse && this.diffuseTexture) {
+    texture = this.diffuseTexture
+  }
   // TODO: can we somehow avoid creating an object every frame here?
   ctx.submit(this._drawCommand, {
     uniforms: {
