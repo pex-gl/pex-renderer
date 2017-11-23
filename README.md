@@ -24,6 +24,18 @@ opts = {
 }
 ```
 
+### Entity
+
+#### entity = renderer.entity(components)
+
+#### entity.dispose()
+
+Removes entity from the scene and diposes all the components and their resources
+
+TODO: diposing? right now it's not recursive
+TODO: name in the constructor?
+TODO: what if e.g. material component shared a texture with another one?
+
 ## Usage
 
 [![NPM](https://nodei.co/npm/pex-renderer.png)](https://www.npmjs.com/package/pex-renderer)
