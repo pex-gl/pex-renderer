@@ -27,6 +27,7 @@
     "is-mobile": "^0.2.2",
     "is-plask": "^1.1.1",
     "pex-cam": "^2.4.0",
+    "pex-context": "^2.0.1",
     "pex-draw": "^1.0.0-beta.2",
     "pex-fx": "^1.4.0",
     "pex-geom": "^1.0.0",
