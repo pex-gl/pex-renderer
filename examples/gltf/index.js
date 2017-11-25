@@ -6,6 +6,7 @@ const createCube = require('primitive-cube')
 const createBox = require('primitive-box')
 const Mat4 = require('pex-math/Mat4')
 const Vec3 = require('pex-math/Vec3')
+const Quat = require('pex-math/Quat')
 const AABB = require('pex-geom/AABB')
 const createRenderer = require('../../../pex-renderer')
 const createCamera = require('pex-cam/perspective')
@@ -27,20 +28,20 @@ ctx.gl.getExtension('OES_standard_derivatives')
 ctx.gl.getExtension('WEBGL_draw_buffers')
 ctx.gl.getExtension('OES_texture_float')
 
-var WebGLDebugUtils = require('webgl-debug')
+// var WebGLDebugUtils = require('webgl-debug')
 
 function throwOnGLError (err, funcName, args) {
   console.log('Error', funcName, args)
   throw new Error(`${WebGLDebugUtils.glEnumToString(err)} was caused by call to ${funcName} ${WebGLDebugUtils.glFunctionArgsToString(funcName, args)}`)
 }
 
-ctx.gl = WebGLDebugUtils.makeDebugContext(ctx.gl, throwOnGLError)
+// ctx.gl = WebGLDebugUtils.makeDebugContext(ctx.gl, throwOnGLError)
 
 const renderer = createRenderer({
   ctx: ctx,
   shadowQuality: 4,
   pauseOnBlur: true,
-  profile: true,
+  profile: false,
   profileFlush: false
 })
 
@@ -50,7 +51,7 @@ gui.addHeader('Settings')
 const State = {
   sunPosition: [0, 1, -5],
   elevation: 60,
-  azimuth: -45,
+  azimuth: 45,
   mie: 0.000021,
   elevationMat: Mat4.create(),
   rotationMat: Mat4.create(),
@@ -100,12 +101,37 @@ function updateSunPosition () {
     State.reflectionProbe.dirty = true // FIXME: hack
   }
 }
+function makeQuad (opts) {
+  const w = opts.width
+  const h = opts.height
+  const position = opts.position || [0, 0, 0]
+  const points = [
+    [-1, -1, 0], [1, -1, 0],
+    [1, -1, 0], [1, 1, 0],
+    [1, 1, 0], [-1, 1, 0],
+    [-1, 1, 0], [-1, -1, 0],
+    [-1, -1, 0], [1, 1, 0],
+    [-1, 1, 0], [1, -1, 0],
+
+    [-1, -1, 0], [-1, -1, 1 / 2],
+    [1, -1, 0], [1, -1, 1 / 2],
+    [1, 1, 0], [1, 1, 1 / 2],
+    [-1, 1, 0], [-1, 1, 1 / 2],
+    [0, 0, 0], [0, 0, 1 / 2]
+  ]
+  points.forEach((p) => {
+    p[0] *= w / 2
+    p[1] *= h / 2
+    Vec3.add(p, position)
+  })
+  return points
+}
 
 function initSky (panorama) {
   const sun = State.sun = renderer.directionalLight({
     direction: Vec3.sub(Vec3.create(), State.sunPosition),
     color: [1, 1, 0.95, 1],
-    intensity: 10,
+    intensity: 5,
     castShadows: true
   })
 
@@ -122,6 +148,31 @@ function initSky (panorama) {
     intensity: 2,
     castShadows: true
   })
+
+  const areaLight = renderer.areaLight({
+    // color: [1, 0.15, 0.02, 1],
+    color: [0, 0.55, 1.02, 1],
+    intensity: 3,
+    castShadows: true
+  })
+  const areaLightGizmoPositions = makeQuad({ width: 1, height: 1})
+  var areaLightEntity = renderer.entity([
+    renderer.transform({
+      scale: [0.25, 1, 1],
+      position: [1, 0.15, 0],
+      rotation: Quat.fromDirection(Quat.create(), [-1, 0, 0])
+    }),
+    // renderer.geometry({
+      // positions: areaLightGizmoPositions,
+      // primitive: ctx.Primitive.Lines,
+      // count: areaLightGizmoPositions.length
+    // }),
+    // renderer.material({
+      // baseColor: [0, 1, 1, 1]
+    // }),
+    areaLight
+  ], ['cell3'])
+  // renderer.add(areaLightEntity)
 
   gui.addTexture2D('Shadow map', sun._shadowMap)
 
@@ -159,13 +210,14 @@ function initCamera () {
   renderer.add(renderer.entity([
     renderer.camera({
       camera: camera,
+      exposure: 0.95,
       fxaa: true,
-      // dof: true,
+      dof: true,
       dofIterations: 1,
       dofRange: 0.5,
       dofRadius: 1,
-      dofDepth: 1,
-      // ssao: true,
+      dofDepth: 1.5,
+      ssao: true,
       ssaoIntensity: 5,
       ssaoRadius: 6,
       ssaoBias: 0.02,
@@ -184,6 +236,9 @@ window.addEventListener('keypress', (e) => {
   if (e.key === 'd') {
     console.log('debug once')
     debugOnce = true
+  }
+  if (e.key === 'g') {
+    gui.toggleEnabled()
   }
 })
 
@@ -307,6 +362,7 @@ function loadTexture (materialTexture, gltf, basePath, encoding, cb) {
     minFilter: ctx.Filter.Linear,
     magFilter: ctx.Filter.Linear
   }
+  sampler.minFilter = ctx.Filter.LinearMipmapLinear
   // set defaults as per GLTF 2.0 spec
   if (!sampler.wrapS) sampler.wrapS = ctx.Wrap.Repeat
   if (!sampler.wrapT) sampler.wrapT = ctx.Wrap.Repeat
@@ -333,8 +389,8 @@ function loadTexture (materialTexture, gltf, basePath, encoding, cb) {
       img = canvas2d
     }
   }
-  console.log(`min: ${WebGLDebugUtils.glEnumToString(sampler.minFilter)} mag: ${WebGLDebugUtils.glEnumToString(sampler.magFilter)}`)
-  console.log('mag', img.width)
+  // console.log(`min: ${WebGLDebugUtils.glEnumToString(sampler.minFilter)} mag: ${WebGLDebugUtils.glEnumToString(sampler.magFilter)}`)
+  // console.log('mag', img.width)
   var tex = texture._tex = ctx.texture2D({
     data: img,
     width: img.width,
@@ -345,6 +401,7 @@ function loadTexture (materialTexture, gltf, basePath, encoding, cb) {
     wrapT: sampler.wrapT,
     min: sampler.minFilter,
     mag: sampler.magFilter,
+    mipmap: true,
     flipY: false // this is confusing as
   })
   if (sampler.minFilter !== ctx.Filter.Nearest && sampler.minFilter !== ctx.Filter.Linear) {
@@ -357,7 +414,7 @@ function loadTexture (materialTexture, gltf, basePath, encoding, cb) {
 function handleMaterial (material, gltf, basePath) {
   const materialCmp = renderer.material({
     baseColor: [1, 1, 1, 1.0],
-    roughness: 0.0,
+    roughness: 1.0,
     metallic: 1.0,
     castShadows: true,
     receiveShadows: true,
@@ -378,19 +435,45 @@ function handleMaterial (material, gltf, basePath) {
         materialCmp.set({ metallicRoughnessMap: tex })
       })
     }
-    if (pbrMetallicRoughness.baseColorFactor) {
+    if (pbrMetallicRoughness.baseColorFactor !== undefined) {
       materialCmp.set({ baseColor: pbrMetallicRoughness.baseColorFactor })
+    }
+    if (pbrMetallicRoughness.metallicFactor !== undefined) {
+      materialCmp.set({ metallic: pbrMetallicRoughness.metallicFactor })
+    }
+    if (pbrMetallicRoughness.roughnessFactor !== undefined) {
+      materialCmp.set({ roughness: pbrMetallicRoughness.roughnessFactor })
     }
   }
 
   const pbrSpecularGlossiness = material.extensions ? material.extensions.KHR_materials_pbrSpecularGlossiness : null
   if (pbrSpecularGlossiness) {
     if (pbrSpecularGlossiness.diffuseTexture) {
-      console.log('handleMaterial.diffuseTexture')
       loadTexture(pbrSpecularGlossiness.diffuseTexture, gltf, basePath, ctx.Encoding.SRGB, (err, tex) => {
         if (err) throw err
-        materialCmp.set({ baseColorMap: tex })
+        materialCmp.set({ diffuseMap: tex })
       })
+    }
+    if (pbrSpecularGlossiness.specularGlossinessTexture) {
+      loadTexture(pbrSpecularGlossiness.specularGlossinessTexture, gltf, basePath, ctx.Encoding.SRGB, (err, tex) => {
+        if (err) throw err
+        materialCmp.set({ specularGlossinessMap: tex })
+      })
+    }
+    if (pbrSpecularGlossiness.diffuseFactor !== undefined) {
+      materialCmp.set({ diffuse: pbrSpecularGlossiness.diffuseFactor })
+    } else {
+      materialCmp.set({ diffuse: [1, 1, 1, 1] })
+    }
+    if (pbrSpecularGlossiness.glossinessFactor !== undefined) {
+      materialCmp.set({ glossiness: pbrSpecularGlossiness.glossinessFactor })
+    } else {
+      materialCmp.set({ glossiness: 1 })
+    }
+    if (pbrSpecularGlossiness.specularFactor !== undefined) {
+      materialCmp.set({ specular: pbrSpecularGlossiness.specularFactor.slice(0, 3) })
+    } else {
+      materialCmp.set({ specular: [1, 1, 1] })
     }
   }
 
@@ -684,7 +767,7 @@ loadText(indexFile, (err, text) => {
     if (err) throw new Error(err)
 
     var thumbnails = screenshots.map((img) => {
-      return ctx.texture2D({
+      var tex = ctx.texture2D({
         data: img,
         width: img.width,
         height: img.height,
@@ -692,6 +775,8 @@ loadText(indexFile, (err, text) => {
         pixelFormat: ctx.PixelFormat.RGBA8,
         flipY: true
       })
+      console.log(tex)
+      return tex
     })
     gui.addTexture2DList('Models', State, 'selectedModel', thumbnails.map((tex, i) => {
       return {
@@ -717,8 +802,12 @@ loadText(indexFile, (err, text) => {
     // loadScene(`assets/gltf/damagedHelmet/damagedHelmet.gltf`, onSceneLoaded)
     // loadScene(`assets/gltf/damagedHelmet/damagedHelmet.gltf`, onSceneLoaded)
     // loadScene(`assets/gltf/behemoth_from_horizon_zero_dawn/scene.gltf`, onSceneLoaded)
-    loadScene(`assets/gltf/hover_bike/scene.gltf`, onSceneLoaded)
-    // loadScene(`assets/gltf/adamHead/adamHead.gltf`, onSceneLoaded)
+    // loadScene(`assets/gltf/voodoo_skull/scene.gltf`, onSceneLoaded)
+    // loadScene(`assets/gltf/mech_m-6k/scene.gltf`, onSceneLoaded)
+    // loadScene(`assets/gltf/mech_ghost/scene.gltf`, onSceneLoaded)
+    // loadScene(`assets/gltf/hover_bike/scene.gltf`, onSceneLoaded)
+    // loadScene(`assets/gltf-sample-models/BoomBox/glTF-pbrSpecularGlossiness/BoomBox.gltf`, onSceneLoaded)
+    loadScene(`assets/gltf/adamHead/adamHead.gltf`, onSceneLoaded)
     // loadScene(`assets/gltf/whipper_lingerie/scene.gltf`, onSceneLoaded)
       // loadScene(`assets/gltf/ballet/scene.gltf`, onSceneLoaded)
     }
@@ -905,7 +994,12 @@ function loadScene (file, cb) {
 }
 
 // loadBinary('assets/envmaps/pisa/pisa_128.hdr', (err, buf) => {
-loadBinary('assets/envmaps/garage/garage.hdr', (err, buf) => {
+// loadBinary('assets/envmaps/garage/garage.hdr', (err, buf) => {
+// loadBinary('assets/envmaps/Footprint_Court/Footprint_Court_2k.hdr', (err, buf) => {
+// loadBinary('assets/envmaps/Factory_Catwalk/Factory_Catwalk.hdr', (err, buf) => {
+loadBinary('assets/envmaps/hdrihaven/river_walk_1_2k.hdr', (err, buf) => {
+// loadBinary('assets/envmaps/Mono_Lake_B/Mono_Lake_2k.hdr', (err, buf) => {
+// loadBinary('assets/envmaps/Mono_Lake_B/Mono_Lake_B_2k.hdr', (err, buf) => {
 // loadBinary('assets/envmaps/grace-new/grace-new.hdr', (err, buf) => {
 // loadBinary('assets/envmaps/hdrihaven/preller_drive_2k.hdr', (err, buf) => {
   const hdrImg = parseHdr(buf)
@@ -921,8 +1015,26 @@ loadBinary('assets/envmaps/garage/garage.hdr', (err, buf) => {
   State.reflectionProbe.set({ dirty: true })
 })
 
+// loadBinary('assets/envmaps/Footprint_Court/Footprint_Court_Env.hdr', (err, buf) => {
+loadBinary('assets/envmaps/Factory_Catwalk/Factory_Catwalk_Env.hdr', (err, buf) => {
+// loadBinary('assets/envmaps/Mono_Lake_B/Mono_Lake_B_Env.hdr', (err, buf) => {
+// loadBinary('assets/envmaps/grace-new/grace-new.hdr', (err, buf) => {
+// loadBinary('assets/envmaps/hdrihaven/preller_drive_2k.hdr', (err, buf) => {
+  const hdrImg = parseHdr(buf)
+  const panorama = ctx.texture2D({
+    data: hdrImg.data,
+    width: hdrImg.shape[0],
+    height: hdrImg.shape[1],
+    encoding: ctx.Encoding.Linear,
+    pixelFormat: ctx.PixelFormat.RGBA32F,
+    min: ctx.Filter.Linear,
+    mag: ctx.Filter.Linear,
+    flipY: true
+  })
+  // State.skybox.set({ diffuseTexture: panorama })
+})
 
-const floor = renderer.add(renderer.entity([
+const floor = renderer.entity([
   renderer.transform({
     position: [0, -0.05, 0]
   }),
@@ -932,7 +1044,8 @@ const floor = renderer.add(renderer.entity([
     castShadows: true,
     receiveShadows: true
   })
-]))
+])
+//renderer.add(floor)
 floor.name = 'floor'
 
 /*
