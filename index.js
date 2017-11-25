@@ -658,7 +658,7 @@ Renderer.prototype.draw = function () {
     ctx.submit(camera._drawFrameFboCommand, () => {
       this.drawMeshes(camera)
       if (skyboxes.length > 0) {
-        skyboxes[0].draw(camera, { outputEncoding: camera._frameColorTex.encoding })
+        skyboxes[0].draw(camera, { outputEncoding: camera._frameColorTex.encoding, diffuse: true })
       }
     })
     if (State.profiler) State.profiler.timeEnd('drawFrame')
