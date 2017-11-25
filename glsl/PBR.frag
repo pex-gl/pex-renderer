@@ -783,6 +783,7 @@ void main() {
     }
 #endif
     vec3 color = emissiveColor + ao * indirectDiffuse + ao * indirectSpecular + directDiffuse + directSpecular + indirectArea;
+    // color = vec3(metallic);
 #else  // USE_NORMALS
     vec3 color = ao * baseColor;
 #endif // USE_NORMALS
