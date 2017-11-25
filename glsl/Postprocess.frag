@@ -5,7 +5,7 @@ precision highp float;
 #pragma glslify: decode = require(./decode)
 #pragma glslify: fxaa = require(glsl-fxaa)
 #pragma glslify: fog = require(./fog)
-
+#pragma glslify: tonemap = require(../local_modules/glsl-tonemap-uncharted2)
 uniform vec2 uScreenSize;
 
 uniform sampler2D uOverlay;
@@ -68,6 +68,6 @@ void main() {
   }
 
   color.rgb *= uExposure;
-  color.rgb = color.rgb / (1.0 + color.rgb);
+  color.rgb = tonemap(color.rgb);
   gl_FragColor = encode(color, uOutputEncoding);
 }
