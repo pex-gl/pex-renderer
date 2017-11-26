@@ -98,7 +98,7 @@ Camera.prototype.set = function (opts) {
 
   if (opts.viewport) {
     const viewport = opts.viewport
-    this.camera({ aspect: viewport[2] / viewport[3] })
+    this.camera.set({ aspect: viewport[2] / viewport[3] })
     this._textures.forEach((tex) => {
       if (tex.width !== viewport[2] || tex.height !== viewport[3]) {
         this.ctx.update(tex, { width: viewport[2], height: viewport[3] })
