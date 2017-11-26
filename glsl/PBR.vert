@@ -137,7 +137,4 @@ void main() {
 
     gl_Position = uProjectionMatrix * vec4(vPositionView, 1.0);
 #endif
-
-    //vTexCoord0 = fract(aTexCoord0 * uTexCoord0Scale * vec2(1.0, 0.5) + uTexCoord0Offset);
-
 }

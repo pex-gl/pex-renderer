@@ -309,7 +309,7 @@ Renderer.prototype.getGeometryPipeline = function (geometry, material, skin, opt
       blendSrcAlphaFactor: material.blendSrcAlphaFactor,
       blendDstRGBFactor: material.blendDstRGBFactor,
       blendDstAlphaFactor: material.blendDstAlphaFactor,
-      cullFace: material.cullFaceEnabled,
+      cullFace: material.cullFace,
       cullFaceMode: ctx.Face.Back,
       primitive: geometry.primitive
     })
