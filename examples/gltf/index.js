@@ -484,6 +484,15 @@ function handleMaterial (material, gltf, basePath) {
     })
   }
 
+  if (material.emissiveFactor) {
+      materialCmp.set({ emissiveColor: [
+        material.emissiveFactor[0],
+        material.emissiveFactor[1],
+        material.emissiveFactor[2],
+        1
+      ]})
+  }
+
   if (material.emissiveTexture) {
     // TODO: double check sRGB
     loadTexture(material.emissiveTexture, gltf, basePath, ctx.Encoding.SRGB, (err, tex) => {
