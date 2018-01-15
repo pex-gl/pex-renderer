@@ -17,7 +17,7 @@
     "parse-hdr": "^1.0.0",
     "partition-into": "^1.0.0",
     "pex-cam": "^2.4.0",
-    "pex-context": "^2.0.2",
+    "pex-context": "^2.1.0",
     "pex-gui": "^2.1.1",
     "pex-io": "^1.5.3",
     "pex-math": "^1.0.1",
