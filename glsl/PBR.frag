@@ -198,9 +198,10 @@ float saturate(float f) {
 #endif
 
 #ifdef USE_EMISSIVE_COLOR_MAP
+    uniform vec4 uEmissiveColor; // TODO: gltf assumes sRGB color, not linear
     uniform sampler2D uEmissiveColorMap; //assumes sRGB color, not linear
     vec3 getEmissiveColor() {
-        return decode(texture2D(uEmissiveColorMap, vTexCoord0), 3).rgb;
+        return decode(uEmissiveColor, 3).rgb * decode(texture2D(uEmissiveColorMap, vTexCoord0), 3).rgb;
     }
 #else
     uniform vec4 uEmissiveColor; //assumes sRGB color, not linear
