@@ -54,7 +54,7 @@ const renderer = createRenderer({
 })
 
 const gui = createGUI(ctx)
-gui.setEnabled(false)
+// gui.setEnabled(false)
 gui.addHeader('Sun')
 gui.addParam('Sun Elevation', State, 'elevation', { min: -90, max: 180 }, updateSunPosition)
 gui.addParam('Sun Azimuth', State, 'azimuth', { min: -180, max: 180 }, updateSunPosition)
@@ -72,7 +72,7 @@ function updateSunPosition () {
   if (State.sun) {
     var sunDir = State.sun.direction
     Vec3.set(sunDir, [0, 0, 0])
-    Vec3.sub(sunDir, State.sunPosition)
+    Vec3.sub(sunDir, sunPosition)
     State.sun.set({ direction: sunDir })
   }
 
@@ -106,16 +106,27 @@ function initCamera () {
   })
   createOrbiter({ camera: camera })
 
+  var cameraCmp0 = null
   cells.forEach((cell, cellIndex) => {
     const tags = ['cell' + cellIndex]
     const cameraCmp = renderer.camera({
       camera: camera,
-      viewport: cell
+      viewport: cell,
+      fxaa: true,
+      // ssao: true,
+      ssaoRadius: 2,
+      ssaoBlurRadius: 0.75
     })
+    if (cellIndex == 0) cameraCmp0 = cameraCmp
     renderer.add(renderer.entity([
       cameraCmp
     ], tags))
   })
+
+  gui.addParam('FXAA', cameraCmp0, 'fxaa')
+  gui.addParam('SSAO', cameraCmp0, 'ssao')
+  gui.addParam('SSAO radius', cameraCmp0, 'ssaoRadius', { min: 0, max: 5 })
+  gui.addParam('SSAO blur', cameraCmp0, 'ssaoBlurRadius', { min: 0, max: 5 })
 
   gui.addParam('Exposure',  State, 'exposure', { min: 0.01, max: 5 }, () => {
     renderer.getComponents('Camera').forEach((camera) => {
@@ -159,9 +170,9 @@ function initMeshes () {
   renderer.add(renderer.entity([
     renderer.geometry(dragon),
     renderer.material({
-      baseColor: [1, 1, 1, 1],
-      roughness: 0, //2 / 5,
-      metallic: 1,
+      baseColor: [0.5, 1, 0.7, 1],
+      roughness: 0.27,
+      metallic: 0.0,
       receiveShadows: true,
       castShadows: true
     })
@@ -169,14 +180,15 @@ function initMeshes () {
 
   renderer.add(renderer.entity([
     renderer.transform({
-      position: [0, -0.45, 0]
+      position: [0, -0.42, 0]
     }),
-    renderer.geometry(createCube(5, 0.2, 5)),
+    renderer.geometry(createCube(2, 0.1, 2)),
     renderer.material({
       baseColor: [1, 1, 1, 1],
       roughness: 2 / 5,
       metallic: 0,
-      receiveShadows: true
+      receiveShadows: true,
+      castShadows: true
     })
   ]))
 }
@@ -260,7 +272,7 @@ function initSky () {
   const directionalLight = renderer.directionalLight({
     direction: Vec3.normalize([-1, -1, -1]),
     color: [1, 1, 1, 1],
-    intensity: 1,
+    intensity: 2,
     castShadows: true
   })
   const directionalLightGizmoPositions = makePrism({ radius: 0.3 })
@@ -271,7 +283,9 @@ function initSky () {
     [0, 0.3, 0], [0, 0.3, 1],
     [0, -0.3, 0], [0, -0.3, 1]
   ])
+  State.sun = directionalLight
 
+  // if (false)
   renderer.add(renderer.entity([
     renderer.transform({
       position: [1, 1, 1],
@@ -288,10 +302,29 @@ function initSky () {
     directionalLight
   ], ['cell0']))
 
+  gui.addTexture2D('Light', directionalLight._shadowMap)
+
+  var numLights = 0
+  for (var i = 0; i < numLights; i++) {
+    var a = Math.PI * 2 * i / numLights
+    var x = Math.cos(a)
+    var y = Math.sin(a)
+    // var c = [Math.random(), Math.random(), Math.random(), 1]
+    var c = [1, 1, 1, 1]
+    const light = renderer.directionalLight({
+      direction: Vec3.normalize([x, -1 + 0.5 * Math.cos(a), y]),
+      color: c,
+      intensity: 1,
+      castShadows: true
+    })
+    renderer.add(renderer.entity([ light ], ['cell0']))
+    gui.addTexture2D('Light ' + i, light._shadowMap)
+  }
+
   const spotLight = renderer.spotLight({
     direction: Vec3.normalize([-1, -1, -1]),
     color: [1, 1, 1, 1],
-    intensity: 1,
+    intensity: 2,
     distance: 3,
     angle: Math.PI / 6,
     castShadows: true
@@ -327,8 +360,8 @@ function initSky () {
 
   const pointLight = renderer.pointLight({
     color: [1, 1, 1, 1],
-    intensity: 3,
-    radius: 2,
+    intensity: 2,
+    radius: 3,
     castShadows: true
   })
   const pointLightGizmoPositions = makePrism({ radius: 0.3 })
@@ -346,7 +379,7 @@ function initSky () {
 
   renderer.add(renderer.entity([
     renderer.transform({
-      position: [1, 0.5, 0]
+      position: [1, 1, 1]
     }),
     renderer.geometry({
       positions: pointLightGizmoPositions,
@@ -361,15 +394,15 @@ function initSky () {
 
   const areaLight = renderer.areaLight({
     color: [1, 1, 1, 1],
-    intensity: 3,
+    intensity: 2,
     castShadows: true
   })
   const areaLightGizmoPositions = makeQuad({ width: 1, height: 1})
   renderer.add(renderer.entity([
     renderer.transform({
       scale: [2, 0.5, 1],
-      position: [1, 0.15, 0],
-      rotation: Quat.fromDirection(Quat.create(), [-1, 0, 0])
+      position: [1, 1, 1],
+      rotation: Quat.fromDirection(Quat.create(), [-1, -1, -1])
     }),
     renderer.geometry({
       positions: areaLightGizmoPositions,
