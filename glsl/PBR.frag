@@ -608,8 +608,26 @@ void main() {
 
         float illuminated = 0.0;
         if (i == 0) illuminated += directionalShadow(uDirectionalLightShadowMaps[0], light.shadowMapSize, lightUV, lightDistView - light.bias, light.near, light.far);
-#if NUM_DIRECTIONAL_LIGHTS > 1
+#if NUM_DIRECTIONAL_LIGHTS >= 2
         if (i == 1) illuminated += directionalShadow(uDirectionalLightShadowMaps[1], light.shadowMapSize, lightUV, lightDistView - light.bias, light.near, light.far);
+#endif
+#if NUM_DIRECTIONAL_LIGHTS >= 3
+        if (i == 2) illuminated += directionalShadow(uDirectionalLightShadowMaps[2], light.shadowMapSize, lightUV, lightDistView - light.bias, light.near, light.far);
+#endif
+#if NUM_DIRECTIONAL_LIGHTS >= 4
+        if (i == 3) illuminated += directionalShadow(uDirectionalLightShadowMaps[3], light.shadowMapSize, lightUV, lightDistView - light.bias, light.near, light.far);
+#endif
+#if NUM_DIRECTIONAL_LIGHTS >= 5
+        if (i == 4) illuminated += directionalShadow(uDirectionalLightShadowMaps[4], light.shadowMapSize, lightUV, lightDistView - light.bias, light.near, light.far);
+#endif
+#if NUM_DIRECTIONAL_LIGHTS >= 6
+        if (i == 5) illuminated += directionalShadow(uDirectionalLightShadowMaps[5], light.shadowMapSize, lightUV, lightDistView - light.bias, light.near, light.far);
+#endif
+#if NUM_DIRECTIONAL_LIGHTS >= 7
+        if (i == 6) illuminated += directionalShadow(uDirectionalLightShadowMaps[6], light.shadowMapSize, lightUV, lightDistView - light.bias, light.near, light.far);
+#endif
+#if NUM_DIRECTIONAL_LIGHTS >= 8
+        if (i == 7) illuminated += directionalShadow(uDirectionalLightShadowMaps[7], light.shadowMapSize, lightUV, lightDistView - light.bias, light.near, light.far);
 #endif
 
         if (illuminated > 0.0) {
@@ -637,10 +655,10 @@ void main() {
 
             vec3 lightColor = decode(light.color, 3).rgb;
             lightColor *= light.color.a; // intensity
-            vec3 light = NdotL * lightColor * illuminated;
+            vec3 finalLight = NdotL * lightColor * illuminated;
 
-            directDiffuse += kD * baseColor / PI * light;
-            directSpecular += brdf * light;
+            directDiffuse += kD * baseColor / PI * finalLight;
+            directSpecular += brdf * finalLight;
         }
     }
 #endif
