@@ -23,7 +23,6 @@ uniform mat4 uJointMat[NUM_JOINTS];
 uniform sampler2D uDisplacementMap;
 uniform float uDisplacement;
 attribute vec2 aTexCoord0;
-attribute vec3 aNormal;
 #endif
 
 uniform mat4 uProjectionMatrix;
