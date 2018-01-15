@@ -607,14 +607,14 @@ Renderer.prototype.draw = function () {
 
   cameras.forEach((camera, cameraIndex) => {
     const screenSize = [camera.viewport[2], camera.viewport[3]]
-    if (State.profiler) State.profiler.time('depthPrepass')
+    if (State.profiler) State.profiler.time('depthPrepass', true)
     ctx.submit(camera._drawFrameNormalsFboCommand, () => {
       // depth prepass
       this.drawMeshes(camera, true)
     })
     if (State.profiler) State.profiler.timeEnd('depthPrepass')
-    if (State.profiler) State.profiler.time('ssao')
     if (camera.ssao) {
+      if (State.profiler) State.profiler.time('ssao', true)
       ctx.submit(camera._ssaoCmd, {
         uniforms: {
           uNear: camera.camera.near,
@@ -631,6 +631,8 @@ Renderer.prototype.draw = function () {
           uScreenSize: screenSize
         }
       })
+      if (State.profiler) State.profiler.timeEnd('ssao')
+      if (State.profiler) State.profiler.time('ssao-blur', true)
       ctx.submit(camera._bilateralBlurHCmd, {
         uniforms: {
           near: camera.camera.near,
@@ -652,8 +654,8 @@ Renderer.prototype.draw = function () {
         }
       })
     }
-    if (State.profiler) State.profiler.timeEnd('ssao')
-    if (State.profiler) State.profiler.time('drawFrame')
+    if (State.profiler) State.profiler.timeEnd('ssao-blur')
+    if (State.profiler) State.profiler.time('drawFrame', true)
     ctx.submit(camera._drawFrameFboCommand, () => {
       this.drawMeshes(camera)
       if (skyboxes.length > 0) {
@@ -663,6 +665,7 @@ Renderer.prototype.draw = function () {
     if (State.profiler) State.profiler.timeEnd('drawFrame')
     if (State.profiler) State.profiler.time('postprocess')
     if (camera.dof) {
+      if (State.profiler) State.profiler.time('dof', true)
       for (var i = 0; i < camera.dofIterations; i++) {
         ctx.submit(camera._dofBlurHCmd, {
           uniforms: {
@@ -689,6 +692,7 @@ Renderer.prototype.draw = function () {
           }
         })
       }
+      if (State.profiler) State.profiler.timeEnd('dof')
     }
     ctx.submit(camera._blitCmd, {
       uniforms: {
