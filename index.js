@@ -479,7 +479,7 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
     cachedUniforms.uBaseColor = material.baseColor
 
     if (material.emissiveColorMap) cachedUniforms.uEmissiveColorMap = material.emissiveColorMap
-    else cachedUniforms.uEmissiveColor = material.emissiveColor
+    cachedUniforms.uEmissiveColor = material.emissiveColor
 
     if (material.metallicMap) cachedUniforms.uMetallicMap = material.metallicMap
     else cachedUniforms.uMetallic = material.metallic
