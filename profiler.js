@@ -64,14 +64,19 @@ function createProfiler (ctx, renderer) {
     drawArraysCount: 0,
     drawArraysInstancedCount: 0,
     linesCount: 0,
-    time: function (label) {
+    time: function (label, gpu) {
       if (this.flush) gl.finish()
       if (this.flush) gl.flush()
       let m = this.measurements[label]
       if (!m) {
         m = this.measurements[label] = { begin: 0, end: 0, last: 0, total: 0, count: 0, avg: 0, max: 0 }
+        if (gpu) {
+          m.query = ctx.query()
+        }
       }
       this.measurements[label].start = window.performance ? window.performance.now() : Date.now()
+      if (m.query && m.query.result) m.gpu = m.query.result / 1000000
+      if (m.query) ctx.beginQuery(m.query)
     },
     timeEnd: function (label) {
       if (this.flush) gl.finish()
@@ -86,6 +91,7 @@ function createProfiler (ctx, renderer) {
       m.max = Math.max(m.max, m.last)
       m.count++
       m.avg = (m.avg * 9 + m.last * 1) / 10
+      if (m.query) ctx.endQuery(m.query)
     },
     add: function (command, label) {
       let callStack = null
@@ -118,7 +124,7 @@ function createProfiler (ctx, renderer) {
         return this.measurements[a].start - this.measurements[b].start
       }).map((label) => {
         const m = this.measurements[label]
-        return `${label}: ${ms(m.avg)}`
+        return `${label}: ${ms(m.avg)} ${m.gpu ? ' / ' + (Math.floor(m.gpu * 10)/10).toFixed(1) : ''}`
       }))
       lines.push('------')
       lines.push(`Entities: ${pa3(renderer.entities.length)}`)
