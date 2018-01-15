@@ -500,7 +500,6 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
     if (material.displacementMap) {
       cachedUniforms.uDisplacementMap = material.displacementMap
       cachedUniforms.uDisplacement = material.displacement
-      cachedUniforms.uDisplacementNormalScale = material.displacementNormalScale
     }
 
     if (material.uniforms) {
