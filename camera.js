@@ -74,6 +74,7 @@ function Camera (opts) {
   this.fogDensity = 0.15
   this.sunPosition = [1, 1, 1]
   this.viewport = [0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight]
+  this._textures = []
 
   this.set(opts)
 
