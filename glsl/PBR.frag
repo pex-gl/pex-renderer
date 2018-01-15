@@ -742,7 +742,7 @@ void main() {
 
           const float distAttenuation = 1.0;
           //return fFactor * distAttenuation * intensity * spotlightColor + spec;
-          directDiffuse += fFactor * distAttenuation * intensity * light.color.rgb;
+          directDiffuse += baseColor * fFactor * distAttenuation * intensity * light.color.rgb;
 
         }
 
