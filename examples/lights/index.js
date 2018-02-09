@@ -1,6 +1,6 @@
-const Mat4 = require('pex-math/Mat4')
-const Vec3 = require('pex-math/Vec3')
-const Quat = require('pex-math/Quat')
+const mat4 = require('pex-math/mat4')
+const vec3 = require('pex-math/vec3')
+const quat = require('pex-math/quat')
 const createCamera = require('pex-cam/perspective')
 const createOrbiter = require('pex-cam/orbiter')
 const createRenderer = require('../../')
@@ -35,8 +35,8 @@ const State = {
   elevation: 35,
   azimuth: -45,
   mie: 0.000021,
-  elevationMat: Mat4.create(),
-  rotationMat: Mat4.create(),
+  elevationMat: mat4.create(),
+  rotationMat: mat4.create(),
   roughness: 0.5,
   metallic: 0.1,
   baseColor: [0.8, 0.1, 0.1, 1.0],
@@ -60,19 +60,19 @@ gui.addParam('Sun Elevation', State, 'elevation', { min: -90, max: 180 }, update
 gui.addParam('Sun Azimuth', State, 'azimuth', { min: -180, max: 180 }, updateSunPosition)
 
 function updateSunPosition () {
-  const elevationMat = Mat4.create()
-  const rotationMat = Mat4.create()
-  Mat4.setRotation(elevationMat, State.elevation / 180 * Math.PI, [0, 0, 1])
-  Mat4.setRotation(rotationMat, State.azimuth / 180 * Math.PI, [0, 1, 0])
+  const elevationMat = mat4.create()
+  const rotationMat = mat4.create()
+  mat4.setRotation(elevationMat, State.elevation / 180 * Math.PI, [0, 0, 1])
+  mat4.setRotation(rotationMat, State.azimuth / 180 * Math.PI, [0, 1, 0])
 
   let sunPosition = [10, 0, 0]
-  Vec3.multMat4(sunPosition, elevationMat)
-  Vec3.multMat4(sunPosition, rotationMat)
+  vec3.multMat4(sunPosition, elevationMat)
+  vec3.multMat4(sunPosition, rotationMat)
 
   if (State.sun) {
     var sunDir = State.sun.direction
-    Vec3.set(sunDir, [0, 0, 0])
-    Vec3.sub(sunDir, sunPosition)
+    vec3.set(sunDir, [0, 0, 0])
+    vec3.sub(sunDir, sunPosition)
     State.sun.set({ direction: sunDir })
   }
 
@@ -203,8 +203,8 @@ function makeCircle (opts) {
     const pos = [0, 0, 0]
     pos[opts.axis ? opts.axis[0] : 0] = x
     pos[opts.axis ? opts.axis[1] : 1] = y
-    Vec3.scale(pos, opts.radius || 1)
-    Vec3.add(pos, opts.center || [0, 0, 0])
+    vec3.scale(pos, opts.radius || 1)
+    vec3.add(pos, opts.center || [0, 0, 0])
     points.push(pos)
   }
 
@@ -238,7 +238,7 @@ function makePrism (opts) {
     [r, 0, 0], [0, 0, r],
     [-r, 0, 0], [0, 0, r]
   ]
-  points.forEach((p) => Vec3.add(p, position))
+  points.forEach((p) => vec3.add(p, position))
   return points
 }
 
@@ -263,14 +263,14 @@ function makeQuad (opts) {
   points.forEach((p) => {
     p[0] *= w / 2
     p[1] *= h / 2
-    Vec3.add(p, position)
+    vec3.add(p, position)
   })
   return points
 }
 
 function initSky () {
   const directionalLight = renderer.directionalLight({
-    direction: Vec3.normalize([-1, -1, -1]),
+    direction: vec3.normalize([-1, -1, -1]),
     color: [1, 1, 1, 1],
     intensity: 2,
     castShadows: true
@@ -289,7 +289,7 @@ function initSky () {
   renderer.add(renderer.entity([
     renderer.transform({
       position: [1, 1, 1],
-      rotation: Quat.fromDirection(Quat.create(), directionalLight.direction)
+      rotation: quat.fromDirection(quat.create(), directionalLight.direction)
     }),
     renderer.geometry({
       positions: directionalLightGizmoPositions,
@@ -312,17 +312,29 @@ function initSky () {
     // var c = [Math.random(), Math.random(), Math.random(), 1]
     var c = [1, 1, 1, 1]
     const light = renderer.directionalLight({
-      direction: Vec3.normalize([x, -1 + 0.5 * Math.cos(a), y]),
+      direction: vec3.normalize([x, -1 + 0.5 * Math.cos(a), y]),
       color: c,
       intensity: 1,
       castShadows: true
     })
-    renderer.add(renderer.entity([ light ], ['cell0']))
+    var gizmo = renderer.geometry({
+      positions: directionalLightGizmoPositions,
+      primitive: ctx.Primitive.Lines,
+      count: directionalLightGizmoPositions.length
+    })
+    var mat = renderer.material({
+      baseColor: [1, 1, 0, 1]
+    })
+    var t = renderer.transform({
+      position: vec3.scale(vec3.copy(light.direction), -1),
+      rotation: quat.fromDirection(quat.create(), light.direction)
+    })
+    renderer.add(renderer.entity([ t, light, gizmo, mat ], ['cell0']))
     gui.addTexture2D('Light ' + i, light._shadowMap)
   }
 
   const spotLight = renderer.spotLight({
-    direction: Vec3.normalize([-1, -1, -1]),
+    direction: vec3.normalize([-1, -1, -1]),
     color: [1, 1, 1, 1],
     intensity: 2,
     distance: 3,
@@ -345,7 +357,7 @@ function initSky () {
   renderer.add(renderer.entity([
     renderer.transform({
       position: [1, 1, 1],
-      rotation: Quat.fromDirection(Quat.create(), spotLight.direction)
+      rotation: quat.fromDirection(quat.create(), spotLight.direction)
     }),
     renderer.geometry({
       positions: spotLightGizmoPositions,
@@ -402,7 +414,7 @@ function initSky () {
     renderer.transform({
       scale: [2, 0.5, 1],
       position: [1, 1, 1],
-      rotation: Quat.fromDirection(Quat.create(), [-1, -1, -1])
+      rotation: quat.fromDirection(quat.create(), [-1, -1, -1])
     }),
     renderer.geometry({
       positions: areaLightGizmoPositions,
@@ -416,7 +428,7 @@ function initSky () {
   ], ['cell3']))
 
   const skybox = State.skybox = renderer.skybox({
-    sunPosition: Vec3.normalize([1, 1, 1])
+    sunPosition: vec3.normalize([1, 1, 1])
   })
   // renderer.add(renderer.entity([ skybox ]))
 
