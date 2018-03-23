@@ -304,13 +304,13 @@ Renderer.prototype.getGeometryPipeline = function (geometry, material, skin, opt
       depthTest: material.depthTest,
       depthWrite: material.depthWrite,
       depthFunc: material.depthFunc,
-      blendEnabled: material.blendEnabled,
+      blend: material.blend,
       blendSrcRGBFactor: material.blendSrcRGBFactor,
       blendSrcAlphaFactor: material.blendSrcAlphaFactor,
       blendDstRGBFactor: material.blendDstRGBFactor,
       blendDstAlphaFactor: material.blendDstAlphaFactor,
-      cullFaceEnabled: material.cullFaceEnabled,
-      cullFace: ctx.Face.Back,
+      cullFace: material.cullFace,
+      cullFaceMode: ctx.Face.Back,
       primitive: geometry.primitive
     })
     this._pipelineCache[hash] = pipeline

@@ -9,6 +9,7 @@
   "author": "Marcin Ignac <marcin.ignac@gmail.com> (http://marcinignac.com/)",
   "license": "MIT",
   "dependencies": {
+    "angle-normals": "^1.0.0",
     "async": "^2.4.0",
     "debug": "^3.1.0",
     "geom-edges": "^1.2.0",
@@ -18,7 +19,7 @@
     "parse-hdr": "^1.0.0",
     "partition-into": "^1.0.0",
     "pex-cam": "^2.0.0",
-    "pex-gui": "^2.0.1-2",
+    "pex-gui": "^2.2.0",
     "pex-io": "^1.5.3",
     "pex-math": "^1.0.1",
     "primitive-box": "^1.0.0",

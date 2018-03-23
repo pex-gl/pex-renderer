@@ -354,7 +354,7 @@ function loadTexture (materialTexture, gltf, basePath, encoding, cb) {
     }
   }
   // console.log(`min: ${WebGLDebugUtils.glEnumToString(sampler.minFilter)} mag: ${WebGLDebugUtils.glEnumToString(sampler.magFilter)}`)
-  console.log('mag', img.width)
+  // console.log('mag', img.width)
   var tex = texture._tex = ctx.texture2D({
     data: img,
     width: img.width,
@@ -679,7 +679,7 @@ function handleAnimation (animation, gltf) {
     if (channel.target.path === 'weights') {
       offset = target.getComponent('Morph').weights.length
     }
-    console.log(channel, output)
+    // console.log(channel, output)
     for (let i = 0; i < od.length; i += offset) {
       if (offset === 1) {
         outputData.push([od[i]])
@@ -718,7 +718,7 @@ function loadScreenshot (name, cb) {
   function tryNextExt () {
     const ext = extensions.shift()
     if (!ext) return cb(new Error('Failed to load screenshot for ' + name), null)
-    const url = `assets/gltf-sample-models/${name}/screenshot/screenshot.${ext}`
+    const url = `assets/gltf-sample-models-old/${name}/screenshot/screenshot.${ext}`
     console.log('trying to load ' + url)
     loadImage(url, (err, img) => {
       if (err) tryNextExt()
@@ -761,7 +761,7 @@ function curlNoise(p){
   var y = p_z1[0] - p_z0[0] - p_x1[2] + p_x0[2]
   var z = p_x1[1] - p_x0[1] - p_y1[0] + p_y0[0]
 
-  console.log(p_x0, p_x1, p_y0, p_y1, p_z0, p_z1, x)
+  // console.log(p_x0, p_x1, p_y0, p_y1, p_z0, p_z1, x)
   if (isNaN(x)) throw new Error('NAN')
 
   const divisor = 1.0 / ( 2.0 * e )
@@ -870,7 +870,7 @@ wireMeshes.map((m) => {
   ])
   renderer.add(wire)
 })
-const indexFile = 'assets/gltf-sample-models/index.txt'
+const indexFile = 'assets/gltf-sample-models-old/index.txt'
 loadText(indexFile, (err, text) => {
   if (err) throw new Error(err)
   const modelNames = text.split('\n')

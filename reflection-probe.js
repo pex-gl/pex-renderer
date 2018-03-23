@@ -31,7 +31,7 @@ function ReflectionProbe (opts) {
     { eye: [0, 0, 0], target: [0, 0, 1], up: [0, -1, 0] },
     { eye: [0, 0, 0], target: [0, 0, -1], up: [0, -1, 0] }
   ].map((side, i) => {
-    side.projectionMatrix = Mat4.perspective(Mat4.create(), 90, 1, 0.1, 100) // TODO: change this to radians
+    side.projectionMatrix = Mat4.perspective(Mat4.create(), Math.PI / 2, 1, 0.1, 100) // TODO: change this to radians
     side.viewMatrix = Mat4.lookAt(Mat4.create(), side.eye, side.target, side.up)
     side.drawPassCmd = {
       name: 'ReflectionProbe.sidePass',

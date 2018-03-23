@@ -26,14 +26,14 @@ function Material (opts) {
   this.depthTest = true
   this.depthWrite = true
   this.depthFunc = opts.ctx.DepthFunc.LessEqual
-  this.blendEnabled = false
+  this.blend = false
   this.blendSrcRGBFactor = ctx.BlendFactor.ONE
   this.blendSrcAlphaFactor = ctx.BlendFactor.ONE
   this.blendDstRGBFactor = ctx.BlendFactor.ONE
   this.blendDstAlphaFactor = ctx.BlendFactor.ONE
   this.castShadows = false
   this.receiveShadows = false
-  this.cullFaceEnabled = true
+  this.cullFace = true
 
   this.set(opts)
 }

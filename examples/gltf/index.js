@@ -57,7 +57,7 @@ const renderer = createRenderer({
 })
 
 const gui = new GUI(ctx)
-gui.toggleEnabled()
+// gui.toggleEnabled()
 gui.addHeader('Settings')
 
 const State = {
@@ -155,10 +155,10 @@ function initSky (panorama) {
     boxProjection: false
   })
 
-  renderer.add(renderer.entity([ light, renderer.transform({ position: [0.5, 0.5, 0.5]}) ])).name = 'light'
-  renderer.add(renderer.entity([ light2, renderer.transform({ position: [0, -0.5, 0]}) ])).name = 'light2'
+  // renderer.add(renderer.entity([ light, renderer.transform({ position: [0.5, 0.5, 0.5]}) ])).name = 'light'
+  // renderer.add(renderer.entity([ light2, renderer.transform({ position: [0, -0.5, 0]}) ])).name = 'light2'
   renderer.add(renderer.entity([ sun ])).name = 'sun'
-  // renderer.add(renderer.entity([ skybox ])).name = 'skybox'
+  renderer.add(renderer.entity([ skybox ])).name = 'skybox'
   renderer.add(renderer.entity([ reflectionProbe ])).name = 'reflectionProbe'
 
   updateSunPosition()
@@ -721,7 +721,7 @@ function loadScreenshot (name, cb) {
     const ext = extensions.shift()
     if (!ext) return cb(new Error('Failed to load screenshot for ' + name), null)
 
-    const url = `${ASSETS_DIR}/gltf-sample-models/${name}/screenshot/screenshot.${ext}`
+    const url = `${ASSETS_DIR}/gltf-sample-models-old/${name}/screenshot/screenshot.${ext}`
     if (!isBrowser) {
       if (!fs.existsSync(url)) {
         return tryNextExt()
@@ -845,7 +845,7 @@ var wire = renderer.entity([
     // emissiveColor: [1, 0.6, 1, 1]
   })
 ])
-renderer.add(wire)
+// renderer.add(wire)
 
 var wireMeshesGeoms = wireMeshes.map((m) => {
   var wireGeom = renderer.geometry({
@@ -877,14 +877,14 @@ var wireMeshesGeoms = wireMeshes.map((m) => {
       // emissiveColor: [1, 0, 0, 1]
     })
   ])
-  renderer.add(wire)
+  // renderer.add(wire)
   return wireGeom
 })
 
 var time = 0
 var frameNumber = 0
 var jsZip = require('jszip')
-var zip = new jsZip()
+// var zip = new jsZip()
 function animWire() {
   frameNumber++
   if (frameNumber >= 150) return
@@ -907,24 +907,24 @@ function animWire() {
   })
 
   if (frameNumber == 149) {
-     zip.generateAsync({type:"blob"})
-      .then(function(content) {
-        var file = 'screenshot-' + Date.now() + '.zip'
-        var element = document.createElement('a')
-        element.setAttribute('href', window.URL.createObjectURL(content))
-        element.setAttribute('download', file)
-        element.style.display = 'none'
-        document.body.appendChild(element)
-        element.click()
-        document.body.removeChild(element)
-      })
+     // zip.generateAsync({type:"blob"})
+      // .then(function(content) {
+        // var file = 'screenshot-' + Date.now() + '.zip'
+        // var element = document.createElement('a')
+        // element.setAttribute('href', window.URL.createObjectURL(content))
+        // element.setAttribute('download', file)
+        // element.style.display = 'none'
+        // document.body.appendChild(element)
+        // element.click()
+        // document.body.removeChild(element)
+      // })
   }
 }
 
-setInterval(animWire, 1 / 30)
+// setInterval(animWire, 1 / 30)
 
 const ASSETS_DIR = isBrowser ? 'assets' : `${__dirname}/assets`
-const indexFile = `${ASSETS_DIR}/gltf-sample-models/index.txt`
+const indexFile = `${ASSETS_DIR}/gltf-sample-models-old/index.txt`
 loadText(indexFile, (err, text) => {
   if (err) throw new Error(err)
   const modelNames = text.split('\n')
@@ -966,7 +966,9 @@ loadText(indexFile, (err, text) => {
     // loadScene(`assets/gltf-sample-models/${defaultModel}/glTF/${defaultModel}.gltf`, onSceneLoaded)
     // loadScene(`assets/gltf/skull_downloadable/scene.gltf`, onSceneLoaded)
     // loadScene(`assets/gltf/busterDrone/busterDrone.gltf`, onSceneLoaded)
-    // loadScene(`assets/gltf/damagedHelmet/damagedHelmet.gltf`, onSceneLoaded)
+    loadScene(`assets/gltf/damagedHelmet/damagedHelmet.gltf`, onSceneLoaded)
+    // loadScene(`assets/gltf/FlightHelmet/gltf/FlightHelmet.gltf`, onSceneLoaded)
+    // loadScene('https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/FlightHelmet/glTF/FlightHelmet.gltf', onSceneLoaded)
     // loadScene(`assets/gltf/behemoth_from_horizon_zero_dawn/scene.gltf`, onSceneLoaded)
     // loadScene(`assets/gltf/hover_bike/scene.gltf`, onSceneLoaded)
     // loadScene(`assets/gltf/cosmic_flower_vr/scene.gltf`, onSceneLoaded)
@@ -1169,8 +1171,8 @@ function loadScene (file, cb) {
 
 // loadBinary('assets/envmaps/pisa/pisa_128.hdr', (err, buf) => {
 // loadBinary('assets/envmaps/garage/garage.hdr', (err, buf) => {
-// loadBinary('assets/envmaps/grace-new/grace-new.hdr', (err, buf) => {
-loadBinary(`${ASSETS_DIR}/envmaps/grace-new/grace-new_diffuse.hdr`, (err, buf) => {
+loadBinary('assets/envmaps/grace-new/grace-new.hdr', (err, buf) => {
+// loadBinary(`${ASSETS_DIR}/envmaps/grace-new/grace-new_diffuse.hdr`, (err, buf) => {
 // loadBinary('assets/envmaps/grace-new/grace-new.hdr', (err, buf) => {
 // loadBinary('assets/envmaps/hdrihaven/preller_drive_2k.hdr', (err, buf) => {
   const hdrImg = parseHdr(buf)
@@ -1200,7 +1202,7 @@ const floor = renderer.entity([
   })
 ])
 floor.name = 'floor'
-// renderer.add(floor)
+renderer.add(floor)
 
 /*
 const originX = renderer.add(renderer.entity([
@@ -1308,9 +1310,9 @@ ctx.frame(() => {
   }
 
   if (frameNumber > 0 && frameNumber <= 149) {
-    ctx.gl.canvas.toBlob((blob) => {
-      zip.file(`frame${frameNumber}.png`, blob)
-    })
+    // ctx.gl.canvas.toBlob((blob) => {
+      // zip.file(`frame${frameNumber}.png`, blob)
+    // })
   }
 
 })
