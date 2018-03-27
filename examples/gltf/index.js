@@ -42,21 +42,22 @@ const renderer = createRenderer({
   shadowQuality: 4,
   pauseOnBlur: true,
   profile: false,
-  profileFlush: false
+  profileFlush: false,
 })
 
 const gui = new GUI(ctx)
 gui.addHeader('Settings')
 
 const State = {
-  sunPosition: [0, 1, -5],
+  sunPosition: [0, 1, 5],
   elevation: 60,
   azimuth: 45,
   mie: 0.000021,
   elevationMat: Mat4.create(),
   rotationMat: Mat4.create(),
   selectedModel: '',
-  scenes: []
+  scenes: [],
+  // loadAll: true
 }
 
 const positions = [[0, 0, 0], [0, 0, 0]]
@@ -64,6 +65,15 @@ const indices = []
 function addLine (a, b) {
   positions.push(a, b)
 }
+// const sphere = renderer.add(renderer.entity([
+  // renderer.geometry(require('primitive-sphere')()),
+  // renderer.material({
+    // baseColor: [1, 0, 0, 1],
+    // metallic: 1,
+    // roughness: 0,
+    // castShadows: true
+  // })
+// ]))
 
 const lineBuilder = renderer.add(renderer.entity([
   renderer.geometry({
@@ -79,10 +89,11 @@ const lineBuilder = renderer.add(renderer.entity([
 ]))
 
 function updateSunPosition () {
-  Mat4.setRotation(State.elevationMat, State.elevation / 180 * Math.PI, [0, 0, 1])
-  Mat4.setRotation(State.rotationMat, State.azimuth / 180 * Math.PI, [0, 1, 0])
 
-  Vec3.set3(State.sunPosition, 10, 0, 0)
+  // Mat4.setRotation(State.elevationMat, State.elevation / 180 * Math.PI, [0, 0, 1])
+  // Mat4.setRotation(State.rotationMat, State.azimuth / 180 * Math.PI, [0, 1, 0])
+
+  // Vec3.set3(State.sunPosition, 10, 0, 0)
   Vec3.multMat4(State.sunPosition, State.elevationMat)
   Vec3.multMat4(State.sunPosition, State.rotationMat)
 
@@ -160,7 +171,7 @@ function initSky (panorama) {
     renderer.transform({
       scale: [0.25, 1, 1],
       position: [1, 0.15, 0],
-      rotation: Quat.fromDirection(Quat.create(), [-1, 0, 0])
+      // rotation: Quat.fromDirection(Quat.create(), [-1, 0, 0])
     }),
     // renderer.geometry({
       // positions: areaLightGizmoPositions,
@@ -174,6 +185,8 @@ function initSky (panorama) {
   ], ['cell3'])
   // renderer.add(areaLightEntity)
 
+  gui.addParam('Elevation', State, 'elevation', { min: 0, max: 90 }, updateSunPosition)
+  gui.addParam('Azimuth', State, 'azimuth', { min: 0, max: 360 }, updateSunPosition)
   gui.addTexture2D('Shadow map', sun._shadowMap)
 
   const skybox = State.skybox = renderer.skybox({
@@ -186,10 +199,11 @@ function initSky (panorama) {
     size: [10, 10, 10],
     boxProjection: false
   })
+  gui.addTexture2D('ReflectionMap', reflectionProbe._reflectionMap)
 
   // renderer.add(renderer.entity([ light, renderer.transform({ position: [0.5, 0.5, 0.5]}) ])).name = 'light'
   // renderer.add(renderer.entity([ light2, renderer.transform({ position: [-0.5, 0.5, 0.5]}) ])).name = 'light2'
-  renderer.add(renderer.entity([ sun ])).name = 'sun'
+  // renderer.add(renderer.entity([ sun ])).name = 'sun'
   renderer.add(renderer.entity([ skybox ])).name = 'skybox'
   renderer.add(renderer.entity([ reflectionProbe ])).name = 'reflectionProbe'
 
@@ -198,9 +212,9 @@ function initSky (panorama) {
 
 function initCamera () {
   const camera = createCamera({
-    fov: Math.PI / 3,
+    fov: 0.8,
     aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
-    position: [0, 2, 4],
+    position: [4.82, 2.588, 8.36],
     target: [0, 0, 0],
     near: 0.1,
     far: 100
@@ -210,16 +224,16 @@ function initCamera () {
   renderer.add(renderer.entity([
     renderer.camera({
       camera: camera,
-      exposure: 0.95,
+      exposure: 1,
       fxaa: true,
-      dof: true,
+      // dof: true,
       dofIterations: 1,
       dofRange: 0.5,
       dofRadius: 1,
       dofDepth: 1.5,
       ssao: true,
       ssaoIntensity: 5,
-      ssaoRadius: 6,
+      ssaoRadius: 3,
       ssaoBias: 0.02,
       ssaoBlurRadius: 0.05, // 2
       ssaoBlurSharpness: 10// 10,
@@ -756,7 +770,7 @@ function loadScreenshot (name, cb) {
   function tryNextExt () {
     const ext = extensions.shift()
     if (!ext) return cb(new Error('Failed to load screenshot for ' + name), null)
-    const url = `assets/gltf-sample-models/${name}/screenshot/screenshot.${ext}`
+    const url = `assets/glTF-Sample-Models/2.0/${name}/screenshot/screenshot.${ext}`
     console.log('trying to load ' + url)
     loadImage(url, (err, img) => {
       if (err) tryNextExt()
@@ -767,7 +781,7 @@ function loadScreenshot (name, cb) {
   tryNextExt()
 }
 
-const indexFile = 'assets/gltf-sample-models/index.txt'
+const indexFile = 'assets/glTF-Sample-Models/2.0/index.txt'
 loadText(indexFile, (err, text) => {
   if (err) throw new Error(err)
   const modelNames = text.split('\n')
@@ -794,18 +808,20 @@ loadText(indexFile, (err, text) => {
       }
     }), 4, (model) => {
       console.log('model', model)
-      loadScene(`assets/gltf-sample-models/${model}/glTF/${model}.gltf`, onSceneLoaded)
+      loadScene(`assets/glTF-Sample-Models/2.0/${model}/glTF/${model}.gltf`, onSceneLoaded)
     })
     console.log('screenshots', screenshots)
 
     if (State.loadAll) {
       for (var i = 0; i < modelNames.length; i++) {
         var defaultModel = modelNames[i]
-        loadScene(`assets/gltf-sample-models/${defaultModel}/glTF/${defaultModel}.gltf`, onSceneLoaded)
+        loadScene(`assets/glTF-Sample-Models/2.0/${defaultModel}/glTF/${defaultModel}.gltf`, onSceneLoaded)
       }
     } else {
-    // var defaultModel = modelNames[16]
-    // loadScene(`assets/gltf-sample-models/${defaultModel}/glTF/${defaultModel}.gltf`, onSceneLoaded)
+    // var defaultModel = modelNames[25]
+    // loadScene(`assets/gltf-sample-models/2.0/${defaultModel}/glTF/${defaultModel}.gltf`, onSceneLoaded)
+      let model = 'FlightHelmet'
+      loadScene(`assets/gltf-sample-models/2.0/${model}/glTF/${model}.gltf`, onSceneLoaded)
     // loadScene(`assets/gltf/skull_downloadable/scene.gltf`, onSceneLoaded)
     // loadScene(`assets/gltf/busterDrone/busterDrone.gltf`, onSceneLoaded)
     // loadScene(`assets/gltf/damagedHelmet/damagedHelmet.gltf`, onSceneLoaded)
@@ -816,7 +832,7 @@ loadText(indexFile, (err, text) => {
     // loadScene(`assets/gltf/mech_ghost/scene.gltf`, onSceneLoaded)
     // loadScene(`assets/gltf/hover_bike/scene.gltf`, onSceneLoaded)
     // loadScene(`assets/gltf-sample-models/BoomBox/glTF-pbrSpecularGlossiness/BoomBox.gltf`, onSceneLoaded)
-    loadScene(`assets/gltf/adamHead/adamHead.gltf`, onSceneLoaded)
+    //loadScene(`assets/gltf/adamHead/adamHead.gltf`, onSceneLoaded)
     // loadScene(`assets/gltf/whipper_lingerie/scene.gltf`, onSceneLoaded)
       // loadScene(`assets/gltf/ballet/scene.gltf`, onSceneLoaded)
     }
@@ -949,10 +965,10 @@ function loadScene (file, cb) {
       const sceneCenter = AABB.center(scene.root.transform.worldBounds)
       const sceneScale = 1 / (Math.max(sceneSize[0], Math.max(sceneSize[1], sceneSize[2])) || 1)
       if (!AABB.isEmpty(sceneBounds)) {
-        scene.root.transform.set({
-          position: Vec3.scale([-sceneCenter[0], -sceneBounds[0][1], -sceneCenter[2]], sceneScale),
-          scale: [sceneScale, sceneScale, sceneScale]
-        })
+        // scene.root.transform.set({
+          // position: Vec3.scale([-sceneCenter[0], -sceneBounds[0][1], -sceneCenter[2]], sceneScale),
+          // scale: [sceneScale, sceneScale, sceneScale]
+        // })
       }
 
       renderer.update() // refresh scene hierarchy
@@ -994,8 +1010,6 @@ function loadScene (file, cb) {
         scene.entities = scene.entities.concat(bboxes)
       }
 
-      console.log(printEntity(scene.root))
-
       cb(null, scene)
     })
     })
@@ -1006,11 +1020,12 @@ function loadScene (file, cb) {
 // loadBinary('assets/envmaps/garage/garage.hdr', (err, buf) => {
 // loadBinary('assets/envmaps/Footprint_Court/Footprint_Court_2k.hdr', (err, buf) => {
 // loadBinary('assets/envmaps/Factory_Catwalk/Factory_Catwalk.hdr', (err, buf) => {
-loadBinary('assets/envmaps/hdrihaven/river_walk_1_2k.hdr', (err, buf) => {
+// loadBinary('assets/envmaps/hdrihaven/river_walk_1_2k.hdr', (err, buf) => {
 // loadBinary('assets/envmaps/Mono_Lake_B/Mono_Lake_2k.hdr', (err, buf) => {
 // loadBinary('assets/envmaps/Mono_Lake_B/Mono_Lake_B_2k.hdr', (err, buf) => {
 // loadBinary('assets/envmaps/grace-new/grace-new.hdr', (err, buf) => {
 // loadBinary('assets/envmaps/hdrihaven/preller_drive_2k.hdr', (err, buf) => {
+loadBinary('assets/envmaps/vatican_road_2k.hdr', (err, buf) => {
   const hdrImg = parseHdr(buf)
   const panorama = ctx.texture2D({
     data: hdrImg.data,
@@ -1018,6 +1033,33 @@ loadBinary('assets/envmaps/hdrihaven/river_walk_1_2k.hdr', (err, buf) => {
     height: hdrImg.shape[1],
     encoding: ctx.Encoding.Linear,
     pixelFormat: ctx.PixelFormat.RGBA32F,
+    flipY: true
+  })
+  const data = new Uint8Array(hdrImg.data.length)
+  for (var i = 0; i < hdrImg.data.length; i+=4) {
+    let r = hdrImg.data[i]
+    let g = hdrImg.data[i + 1]
+    let b = hdrImg.data[i + 2]
+    r = 1 / 7 * Math.sqrt(r)
+    g = 1 / 7 * Math.sqrt(g)
+    b = 1 / 7 * Math.sqrt(b)
+    let a = Math.max(r, Math.max(g, b))
+    if (a > 1) a = 1
+    if (a < 1 / 255) a = 1 / 155
+    a = Math.ceil(a * 255) / 255
+    r /= a
+    g /= a
+    b /= a
+    data[i] = (r * 255) | 0
+    data[i + 1] = (g * 255) | 0
+    data[i + 2] = (b * 255) | 0
+    data[i + 3] = (a * 255) | 0
+  }
+  const panoramaRGBM = ctx.texture2D({
+    data: data,
+    width: hdrImg.shape[0],
+    height: hdrImg.shape[1],
+    encoding: ctx.Encoding.RGBM,
     flipY: true
   })
   State.skybox.set({ texture: panorama })
@@ -1043,19 +1085,19 @@ loadBinary('assets/envmaps/Factory_Catwalk/Factory_Catwalk_Env.hdr', (err, buf) 
   // State.skybox.set({ diffuseTexture: panorama })
 })
 
-const floor = renderer.entity([
-  renderer.transform({
-    position: [0, -0.05, 0]
-  }),
-  renderer.geometry(createCube(11, 0.1, 11)),
-  renderer.material({
-    baseColor: [0.5, 0.5, 0.5, 1],
-    castShadows: true,
-    receiveShadows: true
-  })
-])
-//renderer.add(floor)
-floor.name = 'floor'
+// const floor = renderer.entity([
+  // renderer.transform({
+    // position: [0, -0.05, 0]
+  // }),
+  // renderer.geometry(createCube(5, 0.1, 5)),
+  // renderer.material({
+    // baseColor: [0.5, 0.5, 0.5, 1],
+    // castShadows: true,
+    // receiveShadows: true
+  // })
+// ])
+// renderer.add(floor)
+// floor.name = 'floor'
 
 /*
 const originX = renderer.add(renderer.entity([
@@ -1159,6 +1201,6 @@ ctx.frame(() => {
   }
 
   if (!renderer._state.paused) {
-    gui.draw()
+    // gui.draw()
   }
 })
