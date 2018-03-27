@@ -34,7 +34,7 @@
     "pex-gl": "^2.4.1",
     "pex-gui": "^2.0.1-2",
     "pex-io": "^1.5.3",
-    "pex-math": "^2.0.0",
+    "pex-math": "^2.1.1",
     "pex-random": "^1.0.0",
     "primitive-cube": "^2.0.1",
     "primitive-quad": "^2.0.0",
