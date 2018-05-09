@@ -14,8 +14,8 @@ function Morph (opts) {
 Morph.prototype.init = function (entity) {
   this.entity = entity
   let geom = this.entity.getComponent('Geometry')
-  log('geom.positions', geom.positions)
-  this.originalPositions = geom.positions.buffer ? geom.positions.buffer.data.slice(0) : geom.positions.slice(0)
+  log('geom.positions', geom.positions, this)
+  this.originalPositions = (geom.positions.buffer && geom.positions.buffer.data) ? geom.positions.buffer.data.slice(0) : geom.positions.slice(0)
 }
 
 Morph.prototype.set = function (opts) {
