@@ -317,7 +317,7 @@ function handleAnimation (animation, gltf) {
   })
 }
 
-const file = __dirname + '/CesiumMan.gltf'
+const file = 'CesiumMan.gltf'
 loadJSON(file, function (err, json) {
   if (err) throw new Error(err)
   const basePath = path.dirname(file)
