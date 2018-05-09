@@ -3,7 +3,7 @@ const Quat = require('pex-math/Quat')
 const Vec3 = require('pex-math/Vec3')
 const createCamera = require('pex-cam/perspective')
 const createOrbiter = require('pex-cam/orbiter')
-const Renderer = require('../../Renderer')
+const Renderer = require('../../')
 const createSphere = require('primitive-sphere')
 const createCube = require('primitive-cube')
 const createGUI = require('pex-gui')
@@ -67,7 +67,7 @@ gui.addParam('SSAO Radius', renderer._state, 'ssaoRadius', { min: 0, max: 1 })
 
 function initCamera () {
   const camera = createCamera({
-    fov: 45,
+    fov: 45 / 180 * Math.PI,
     aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
     position: [0, 3, 8],
     target: [0, 0, 0],
@@ -75,10 +75,10 @@ function initCamera () {
     far: 50
   })
 
-  var cameraNode = renderer.createNode({
-    camera: camera
-  })
-  renderer.add(cameraNode)
+  var cameraEntity = renderer.entity([
+    renderer.camera({ camera: camera })
+  ])
+  renderer.add(cameraEntity)
 
   createOrbiter({ camera: camera })
 }
