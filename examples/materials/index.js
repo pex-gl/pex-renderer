@@ -192,7 +192,7 @@ function initMeshes () {
       metallic: 0,
       baseColor: [1, 1, 1, 0.2],
       // FIXME: currently not working
-      blendEnabled: true,
+      blend: true,
       blendSrcRGBFactor: ctx.BlendFactor.SrcAlpha,
       blendSrcAlphaFactor: ctx.BlendFactor.One,
       blendDstRGBFactor: ctx.BlendFactor.OneMinusSrcAlpha,
@@ -214,7 +214,7 @@ function initMeshes () {
     const components = [
       renderer.geometry(geom),
       renderer.material({
-        baseColor: material ? material.baseColor : [1, 1, 1, 1],
+        baseColor: material ? material.baseColor || [1, 1, 1, 1] : [1, 1, 1, 1],
         baseColorMap: material ? material.baseColorMap : null,
         roughness: material ? material.roughness : 1.0,
         roughnessMap: material ? material.roughnessMap : null,
