@@ -443,7 +443,7 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
   })
 
   pointLights.forEach(function (light, i) {
-    sharedUniforms['uPointLights[' + i + '].position'] = light.entity.transform.position
+    sharedUniforms['uPointLights[' + i + '].position'] = light.entity.transform.worldPosition
     sharedUniforms['uPointLights[' + i + '].color'] = light.color
     sharedUniforms['uPointLights[' + i + '].radius'] = light.radius
   })
