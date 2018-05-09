@@ -799,6 +799,10 @@ Renderer.prototype.entity = function (components, tags) {
 }
 
 Renderer.prototype.add = function (entity, parent) {
+  //console.warn('pex-renderer: renderer.add() is deprecated')
+  if (entity === this.root) {
+    return entity
+  }
   entity.transform.set({
     parent: parent ? parent.transform : entity.transform.parent || this.root.transform
   })
