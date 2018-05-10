@@ -17,6 +17,7 @@ function Material (opts) {
   this.emissiveColorMap = null
   this.metallic = 0.01
   this.matallicMap = null
+  this.occlusionMap = null
   // required for GLTF support
   // R = ?, G = roughness, B = metallic
   this.metallicRoughnessMap = null
