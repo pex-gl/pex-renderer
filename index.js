@@ -251,8 +251,8 @@ Renderer.prototype.getMaterialProgram = function (geometry, material, skin, opti
   }
   flags = flags.join('\n') + '\n'
 
-  var vertSrc = flags + PBRVert
-  var fragSrc = flags + PBRFrag
+  var vertSrc = flags + (material.vert || PBRVert)
+  var fragSrc = flags + (material.frag || PBRFrag)
   var hash = vertSrc + fragSrc
 
   var program = this._programCache[hash]
