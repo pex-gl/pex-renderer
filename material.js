@@ -28,10 +28,10 @@ function Material (opts) {
   this.depthWrite = true
   this.depthFunc = opts.ctx.DepthFunc.LessEqual
   this.blend = false
-  this.blendSrcRGBFactor = ctx.BlendFactor.ONE
-  this.blendSrcAlphaFactor = ctx.BlendFactor.ONE
-  this.blendDstRGBFactor = ctx.BlendFactor.ONE
-  this.blendDstAlphaFactor = ctx.BlendFactor.ONE
+  this.blendSrcRGBFactor = ctx.BlendFactor.One
+  this.blendSrcAlphaFactor = ctx.BlendFactor.One
+  this.blendDstRGBFactor = ctx.BlendFactor.One
+  this.blendDstAlphaFactor = ctx.BlendFactor.One
   this.castShadows = false
   this.receiveShadows = false
   this.cullFace = true

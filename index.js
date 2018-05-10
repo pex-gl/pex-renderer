@@ -370,11 +370,11 @@ Renderer.prototype.getComponents = function (type) {
 // set update transforms once per frame
 // draw + shadowmap @ 1000 objects x 30 uniforms = 60'000 setters / frame!!
 // transform feedback?
-Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLight, geometries) {
+Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLight, geometries, skybox) {
   const ctx = this._ctx
 
   function byCameraTags (component) {
-    if (!camera) return true
+    if (!camera || !camera.entity) return true
     if (!camera.entity.tags.length) return true
     if (!component.entity.tags.length) return true
     return component.entity.tags[0] === camera.entity.tags[0]
@@ -466,11 +466,27 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
     sharedUniforms['uAreaLights[' + i + '].size'] = [light.entity.transform.scale[0] / 2, light.entity.transform.scale[1] / 2]
   })
 
+  geometries.sort((a, b) => {
+    var matA = a.entity.getComponent('Material')
+    var matB = b.entity.getComponent('Material')
+    var transparentA = matA.blend ? 1 : 0
+    var transparentB = matB.blend ? 1 : 0
+    return transparentA - transparentB
+  })
+
+  var firstTransparent = geometries.findIndex((g) => g.entity.getComponent('Material').blend)
   for (let i = 0; i < geometries.length; i++) {
+    if (i === firstTransparent && skybox) {
+      skybox.draw(camera, { outputEncoding: camera._frameColorTex.encoding, diffuse: true })
+    }
     const geometry = geometries[i]
     const transform = geometry.entity.transform
     if (!transform.enabled) continue
     const material = geometry.entity.getComponent('Material')
+    if (material.blend && shadowMapping) {
+      continue
+    }
+
     const skin = geometry.entity.getComponent('Skin')
     const cachedUniforms = material._uniforms
     cachedUniforms.uIor = 1.4
@@ -657,10 +673,7 @@ Renderer.prototype.draw = function () {
     if (State.profiler) State.profiler.timeEnd('ssao-blur')
     if (State.profiler) State.profiler.time('drawFrame', true)
     ctx.submit(camera._drawFrameFboCommand, () => {
-      this.drawMeshes(camera)
-      if (skyboxes.length > 0) {
-        skyboxes[0].draw(camera, { outputEncoding: camera._frameColorTex.encoding, diffuse: true })
-      }
+      this.drawMeshes(camera, false, null, null, skyboxes[0])
     })
     if (State.profiler) State.profiler.timeEnd('drawFrame')
     if (State.profiler) State.profiler.time('postprocess')
@@ -799,7 +812,7 @@ Renderer.prototype.entity = function (components, tags) {
 }
 
 Renderer.prototype.add = function (entity, parent) {
-  //console.warn('pex-renderer: renderer.add() is deprecated')
+  // console.warn('pex-renderer: renderer.add() is deprecated')
   if (entity === this.root) {
     return entity
   }
