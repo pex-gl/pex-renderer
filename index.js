@@ -489,7 +489,6 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
 
     const skin = geometry.entity.getComponent('Skin')
     const cachedUniforms = material._uniforms
-    cachedUniforms.uIor = 1.4
 
     if (material.baseColorMap) cachedUniforms.uBaseColorMap = material.baseColorMap
     cachedUniforms.uBaseColor = material.baseColor
