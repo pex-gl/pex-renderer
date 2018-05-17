@@ -35,6 +35,8 @@ const DEPTH_PASS_VERT = glsl(path.join(__dirname, 'glsl/DepthPass.vert'))
 const DEPTH_PASS_FRAG = glsl(path.join(__dirname, 'glsl/DepthPass.frag'))
 const OVERLAY_VERT = glsl(path.join(__dirname, 'glsl/Overlay.vert'))
 const OVERLAY_FRAG = glsl(path.join(__dirname, 'glsl/Overlay.frag'))
+const ERROR_VERT = glsl(path.join(__dirname, 'glsl/Error.vert'))
+const ERROR_FRAG = glsl(path.join(__dirname, 'glsl/Error.frag'))
 // var SOLID_COLOR_VERT = glsl(__dirname + '/glsl/SolidColor.vert')
 // var SOLID_COLOR_VERT = glsl(__dirname + '/glsl/SolidColor.vert')
 // var SOLID_COLOR_FRAG = fs.readFileSync(__dirname + '/glsl/SolidColor.frag', 'utf8')
@@ -185,10 +187,15 @@ Renderer.prototype.getMaterialProgram = function (geometry, material, skin, opti
     let program = this._programCache[hash]
     flags = flags.join('\n') + '\n'
     if (!program) {
-      program = this._programCache[hash] = ctx.program({
-        vert: flags + DEPTH_PASS_VERT,
-        frag: flags + DEPTH_PASS_FRAG
-      })
+      try {
+        program = this._programCache[hash] = ctx.program({
+          vert: flags + DEPTH_PASS_VERT,
+          frag: flags + DEPTH_PASS_FRAG
+        })
+      } catch (e) {
+        console.log('pex-renderer glsl error', e)
+        program = this._programCache[hash] = ctx.program({ vert: ERROR_VERT, frag: ERROR_FRAG })
+      }
     }
     return program
   }
@@ -257,7 +264,12 @@ Renderer.prototype.getMaterialProgram = function (geometry, material, skin, opti
 
   var program = this._programCache[hash]
   if (!program) {
-    program = this._programCache[hash] = ctx.program({ vert: vertSrc, frag: fragSrc })
+    try {
+      program = this._programCache[hash] = ctx.program({ vert: vertSrc, frag: fragSrc })
+    } catch (e) {
+      console.log('pex-renderer glsl error', e)
+      program = this._programCache[hash] = ctx.program({ vert: ERROR_VERT, frag: ERROR_FRAG })
+    }
   }
   return program
 }
