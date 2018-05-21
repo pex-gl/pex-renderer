@@ -52,6 +52,10 @@ var State = {
   paused: false
 }
 
+function isNil (x) {
+  return x == null
+}
+
 // TODO remove, should be in AABB
 function aabbToPoints (aabb) {
   if (AABB.isEmpty(aabb)) return []
@@ -153,7 +157,9 @@ Renderer.prototype.getMaterialProgram = function (geometry, material, skin, opti
 
   var flags = []
 
-  if (geometry._attributes.aNormal) {
+  if (!geometry._attributes.aNormal) {
+    flags.push('#define USE_UNLIT_WORKFLOW')
+  } else {
     flags.push('#define USE_NORMALS')
   }
   if (geometry._attributes.aTexCoord0) {
@@ -210,15 +216,30 @@ Renderer.prototype.getMaterialProgram = function (geometry, material, skin, opti
 
   if (material.baseColorMap) {
     flags.push('#define USE_BASE_COLOR_MAP')
+    if (!material.baseColor) {
+      material.baseColor = [1, 1, 1, 1]
+    }
   }
   if (material.metallicMap) {
     flags.push('#define USE_METALLIC_MAP')
+    if (isNil(material.metallic)) {
+      material.metallic = 1
+    }
   }
   if (material.roughnessMap) {
     flags.push('#define USE_ROUGHNESS_MAP')
+    if (isNil(material.roughness)) {
+      material.roughness = 1
+    }
   }
   if (material.metallicRoughnessMap) {
     flags.push('#define USE_METALLIC_ROUGHNESS_MAP')
+    if (isNil(material.metallic)) {
+      material.metallic = 1
+    }
+    if (isNil(material.roughness)) {
+      material.roughness = 1
+    }
   }
   if (material.diffuse) {
     useSpecularGlossinessWorkflow = true
@@ -237,9 +258,6 @@ Renderer.prototype.getMaterialProgram = function (geometry, material, skin, opti
     useSpecularGlossinessWorkflow = true
     flags.push('#define USE_SPECULAR_GLOSSINESS_MAP')
   }
-  if (useSpecularGlossinessWorkflow) {
-    flags.push('#define USE_SPECULAR_GLOSSINESS_WORKFLOW')
-  }
   if (material.occlusionMap) {
     flags.push('#define USE_OCCLUSION_MAP')
   }
@@ -248,6 +266,25 @@ Renderer.prototype.getMaterialProgram = function (geometry, material, skin, opti
   }
   if (material.emissiveColorMap) {
     flags.push('#define USE_EMISSIVE_COLOR_MAP')
+    if (!material.emissiveColor) {
+      material.emissiveColor = [1, 1, 1, 1]
+    }
+  }
+  if (material.alphaTest) {
+    flags.push('#define USE_ALPHA_TEST')
+  }
+  if (material.blend) {
+    flags.push('#define USE_BLEND')
+  }
+
+  if (isNil(material.metallic) && isNil(material.roughness)) {
+    if (flags.indexOf('#define USE_UNLIT_WORKFLOW') === -1) {
+      flags.push('#define USE_UNLIT_WORKFLOW')
+    }
+  } else if (useSpecularGlossinessWorkflow) {
+    flags.push('#define USE_SPECULAR_GLOSSINESS_WORKFLOW')
+  } else {
+    flags.push('#define USE_METALLIC_ROUGHNESS_WORKFLOW')
   }
   flags.push('#define NUM_DIRECTIONAL_LIGHTS ' + (options.numDirectionalLights || 0))
   flags.push('#define NUM_POINT_LIGHTS ' + (options.numPointLights || 0))
@@ -264,6 +301,7 @@ Renderer.prototype.getMaterialProgram = function (geometry, material, skin, opti
 
   var program = this._programCache[hash]
   if (!program) {
+    console.log('added program', vertSrc, fragSrc)
     try {
       program = this._programCache[hash] = ctx.program({ vert: vertSrc, frag: fragSrc })
     } catch (e) {
@@ -382,7 +420,7 @@ Renderer.prototype.getComponents = function (type) {
 // set update transforms once per frame
 // draw + shadowmap @ 1000 objects x 30 uniforms = 60'000 setters / frame!!
 // transform feedback?
-Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLight, geometries, skybox) {
+Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLight, geometries, skybox, forward) {
   const ctx = this._ctx
 
   function byCameraTags (component) {
@@ -399,9 +437,6 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
   const areaLights = this.getComponents('AreaLight').filter(byCameraTags)
   const reflectionProbes = this.getComponents('ReflectionProbe').filter(byCameraTags)
 
-  var sharedUniforms = this._sharedUniforms = this._sharedUniforms || {}
-  sharedUniforms.uOutputEncoding = State.rgbm ? ctx.Encoding.RGBM : ctx.Encoding.Linear // TODO: State.postprocess
-
   if (!shadowMappingLight) {
     directionalLights.forEach((light) => {
       Vec3.set(light._prevDirection, light.direction)
@@ -413,6 +448,15 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
         this.updateDirectionalLightShadowMap(light, shadowCasters)
       }
     })
+  }
+
+  var sharedUniforms = this._sharedUniforms = this._sharedUniforms || {}
+  sharedUniforms.uOutputEncoding = State.rgbm ? ctx.Encoding.RGBM : ctx.Encoding.Linear // TODO: State.postprocess
+  if (forward) {
+    sharedUniforms.uOutputEncoding = ctx.Encoding.Gamma
+  }
+  if (ctx.debugMode) {
+    console.log('forward', forward, sharedUniforms.uOutputEncoding, ctx.Encoding.Gamma)
   }
 
   // TODO:  find nearest reflection probe
@@ -487,9 +531,14 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
   })
 
   var firstTransparent = geometries.findIndex((g) => g.entity.getComponent('Material').blend)
+
   for (let i = 0; i < geometries.length; i++) {
-    if (i === firstTransparent && skybox) {
-      skybox.draw(camera, { outputEncoding: camera._frameColorTex.encoding, diffuse: true })
+    // also drawn below if transparent objects don't exist
+    if ((firstTransparent === i) && skybox) {
+      skybox.draw(camera, {
+        outputEncoding: sharedUniforms.uOutputEncoding,
+        diffuse: true
+      })
     }
     const geometry = geometries[i]
     const transform = geometry.entity.transform
@@ -509,10 +558,10 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
     cachedUniforms.uEmissiveColor = material.emissiveColor
 
     if (material.metallicMap) cachedUniforms.uMetallicMap = material.metallicMap
-    else cachedUniforms.uMetallic = material.metallic
+    else if (!isNil(material.metallic)) cachedUniforms.uMetallic = material.metallic
 
     if (material.roughnessMap) cachedUniforms.uRoughnessMap = material.roughnessMap
-    else cachedUniforms.uRoughness = material.roughness
+    else if (!isNil(material.roughness)) cachedUniforms.uRoughness = material.roughness
 
     if (material.metallicRoughnessMap) cachedUniforms.uMetallicRoughnessMap = material.metallicRoughnessMap
 
@@ -588,6 +637,13 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
       instances: geometry.instances
     })
   }
+  // also drawn above if transparent objects exist
+  if ((firstTransparent === -1) && skybox) {
+    skybox.draw(camera, {
+      outputEncoding: sharedUniforms.uOutputEncoding,
+      diffuse: true
+    })
+  }
 }
 
 Renderer.prototype.draw = function () {
@@ -635,10 +691,12 @@ Renderer.prototype.draw = function () {
   cameras.forEach((camera, cameraIndex) => {
     const screenSize = [camera.viewport[2], camera.viewport[3]]
     if (State.profiler) State.profiler.time('depthPrepass', true)
-    ctx.submit(camera._drawFrameNormalsFboCommand, () => {
-      // depth prepass
-      this.drawMeshes(camera, true)
-    })
+    if (camera.postprocess) {
+      ctx.submit(camera._drawFrameNormalsFboCommand, () => {
+        // depth prepass
+        this.drawMeshes(camera, true)
+      })
+    }
     if (State.profiler) State.profiler.timeEnd('depthPrepass')
     if (camera.ssao) {
       if (State.profiler) State.profiler.time('ssao', true)
@@ -683,9 +741,15 @@ Renderer.prototype.draw = function () {
     }
     if (State.profiler) State.profiler.timeEnd('ssao-blur')
     if (State.profiler) State.profiler.time('drawFrame', true)
-    ctx.submit(camera._drawFrameFboCommand, () => {
-      this.drawMeshes(camera, false, null, null, skyboxes[0])
-    })
+    if (camera.postprocess) {
+      ctx.submit(camera._drawFrameFboCommand, () => {
+        this.drawMeshes(camera, false, null, null, skyboxes[0], false)
+      })
+    } else {
+      ctx.submit({ viewport: camera.viewport }, () => {
+        this.drawMeshes(camera, false, null, null, skyboxes[0], true)
+      })
+    }
     if (State.profiler) State.profiler.timeEnd('drawFrame')
     if (State.profiler) State.profiler.time('postprocess')
     if (camera.dof) {
@@ -718,26 +782,28 @@ Renderer.prototype.draw = function () {
       }
       if (State.profiler) State.profiler.timeEnd('dof')
     }
-    ctx.submit(camera._blitCmd, {
-      uniforms: {
-        uExposure: camera.exposure,
-        uFXAA: camera.fxaa,
-        uFog: camera.fog,
-        uNear: camera.camera.near,
-        uFar: camera.camera.far,
-        uFov: camera.camera.fov,
-        uSunDispertion: camera.sunDispertion,
-        uSunIntensity: camera.sunIntensity,
-        uInscatteringCoeffs: camera.inscatteringCoeffs,
-        uFogColor: camera.fogColor,
-        uFogStart: camera.fogStart,
-        uFogDensity: camera.fogDensity,
-        uSunPosition: camera.sunPosition,
-        uOutputEncoding: ctx.Encoding.Gamma,
-        uScreenSize: screenSize
-      },
-      viewport: camera.viewport
-    })
+    if (camera.postprocess) {
+      ctx.submit(camera._blitCmd, {
+        uniforms: {
+          uExposure: camera.exposure,
+          uFXAA: camera.fxaa,
+          uFog: camera.fog,
+          uNear: camera.camera.near,
+          uFar: camera.camera.far,
+          uFov: camera.camera.fov,
+          uSunDispertion: camera.sunDispertion,
+          uSunIntensity: camera.sunIntensity,
+          uInscatteringCoeffs: camera.inscatteringCoeffs,
+          uFogColor: camera.fogColor,
+          uFogStart: camera.fogStart,
+          uFogDensity: camera.fogDensity,
+          uSunPosition: camera.sunPosition,
+          uOutputEncoding: ctx.Encoding.Gamma,
+          uScreenSize: screenSize
+        },
+        viewport: camera.viewport
+      })
+    }
     if (State.profiler) State.profiler.time('postprocess')
   })
 

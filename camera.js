@@ -50,6 +50,7 @@ function Camera (opts) {
   this.type = 'Camera'
   this.changed = new Signal()
   this.backgroundColor = [0, 0, 0, 1]
+  this.postprocess = true
   this.rgbm = false
   this.depthPrepass = true
   this.ssao = false
