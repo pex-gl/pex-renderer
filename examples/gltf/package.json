@@ -9,10 +9,12 @@
   "author": "Marcin Ignac <marcin.ignac@gmail.com> (http://marcinignac.com/)",
   "license": "MIT",
   "dependencies": {
+    "angle-normals": "^1.0.0",
     "async": "^2.4.0",
     "debug": "^3.1.0",
     "geom-edges": "^1.2.0",
     "is-power-of-two": "^1.0.0",
+    "jszip": "^3.1.5",
     "next-power-of-two": "^1.0.0",
     "parse-hdr": "^1.0.0",
     "partition-into": "^1.0.0",
@@ -22,6 +24,8 @@
     "pex-io": "^1.5.3",
     "pex-math": "^2.1.1",
     "primitive-box": "^1.0.0",
+    "tinify": "^1.5.0",
+    "tinyify": "^2.3.0",
     "webgl-debug": "^1.0.2"
   }
 }

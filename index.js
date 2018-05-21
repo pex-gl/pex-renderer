@@ -690,6 +690,8 @@ Renderer.prototype.draw = function () {
 
   cameras.forEach((camera, cameraIndex) => {
     const screenSize = [camera.viewport[2], camera.viewport[3]]
+    const halfScreenSize = [Math.floor(camera.viewport[2] / 2), Math.floor(camera.viewport[3] / 2)]
+    const halfViewport = [0, 0, Math.floor(camera.viewport[2] / 2), Math.floor(camera.viewport[3] / 2)]
     if (State.profiler) State.profiler.time('depthPrepass', true)
     if (camera.postprocess) {
       ctx.submit(camera._drawFrameNormalsFboCommand, () => {
@@ -752,9 +754,35 @@ Renderer.prototype.draw = function () {
     }
     if (State.profiler) State.profiler.timeEnd('drawFrame')
     if (State.profiler) State.profiler.time('postprocess')
+    if (camera.bloom) {
+        ctx.submit(camera._thresholdCmd, {
+          uniforms: {
+            uExposure: camera.exposure,
+            imageSize: halfScreenSize
+          },
+          viewport: halfViewport
+        })
+
+      for (let i = 0; i < 5; i++) {
+        ctx.submit(camera._bloomHCmd, {
+          uniforms: {
+            direction: [camera.bloomRadius, 0],
+            imageSize: halfScreenSize
+          },
+          viewport: halfViewport
+        })
+        ctx.submit(camera._bloomVCmd, {
+          uniforms: {
+            direction: [0, camera.bloomRadius],
+            imageSize: halfScreenSize
+          },
+          viewport: halfViewport
+        })
+      }
+    }
     if (camera.dof) {
       if (State.profiler) State.profiler.time('dof', true)
-      for (var i = 0; i < camera.dofIterations; i++) {
+      for (let i = 0; i < camera.dofIterations; i++) {
         ctx.submit(camera._dofBlurHCmd, {
           uniforms: {
             near: camera.camera.near,
