@@ -57,7 +57,7 @@ const State = {
   rotationMat: Mat4.create(),
   selectedModel: '',
   scenes: [],
-  // loadAll: true
+  loadAll: false
 }
 
 const positions = [[0, 0, 0], [0, 0, 0]]
@@ -770,7 +770,7 @@ function loadScreenshot (name, cb) {
   function tryNextExt () {
     const ext = extensions.shift()
     if (!ext) return cb(new Error('Failed to load screenshot for ' + name), null)
-    const url = `assets/glTF-Sample-Models/2.0/${name}/screenshot/screenshot.${ext}`
+    const url = `assets/glTF-Sample-Models/${name}/screenshot/screenshot.${ext}`
     console.log('trying to load ' + url)
     loadImage(url, (err, img) => {
       if (err) tryNextExt()
@@ -781,14 +781,15 @@ function loadScreenshot (name, cb) {
   tryNextExt()
 }
 
-const indexFile = 'assets/glTF-Sample-Models/2.0/index.txt'
+const indexFile = 'assets/glTF-Sample-Models/index.txt'
 loadText(indexFile, (err, text) => {
   if (err) throw new Error(err)
   const modelNames = text.split('\n')
   async.map(modelNames, loadScreenshot, function (err, screenshots) {
-    if (err) console.log('screenshots error', err)
-    if (err) throw new Error(err)
+    // if (err) console.log('screenshots error', err)
+    // if (err) throw new Error(err)
 
+    /*
     var thumbnails = screenshots.map((img) => {
       var tex = ctx.texture2D({
         data: img,
@@ -808,22 +809,24 @@ loadText(indexFile, (err, text) => {
       }
     }), 4, (model) => {
       console.log('model', model)
-      loadScene(`assets/glTF-Sample-Models/2.0/${model}/glTF/${model}.gltf`, onSceneLoaded)
+      loadScene(`assets/glTF-Sample-Models/${model}/glTF/${model}.gltf`, onSceneLoaded)
     })
+    */
     console.log('screenshots', screenshots)
 
     if (State.loadAll) {
       for (var i = 0; i < modelNames.length; i++) {
         var defaultModel = modelNames[i]
-        loadScene(`assets/glTF-Sample-Models/2.0/${defaultModel}/glTF/${defaultModel}.gltf`, onSceneLoaded)
+        loadScene(`assets/glTF-Sample-Models/${defaultModel}/glTF/${defaultModel}.gltf`, onSceneLoaded)
       }
     } else {
     // var defaultModel = modelNames[25]
     // loadScene(`assets/gltf-sample-models/2.0/${defaultModel}/glTF/${defaultModel}.gltf`, onSceneLoaded)
+      console.log('loading scene')
       let model = 'FlightHelmet'
-      loadScene(`assets/gltf-sample-models/2.0/${model}/glTF/${model}.gltf`, onSceneLoaded)
+      // loadScene(`assets/gltf-sample-models/${model}/glTF/${model}.gltf`, onSceneLoaded)
     // loadScene(`assets/gltf/skull_downloadable/scene.gltf`, onSceneLoaded)
-    // loadScene(`assets/gltf/busterDrone/busterDrone.gltf`, onSceneLoaded)
+    loadScene(`assets/gltf/buster_drone/scene.gltf`, onSceneLoaded)
     // loadScene(`assets/gltf/damagedHelmet/damagedHelmet.gltf`, onSceneLoaded)
     // loadScene(`assets/gltf/damagedHelmet/damagedHelmet.gltf`, onSceneLoaded)
     // loadScene(`assets/gltf/behemoth_from_horizon_zero_dawn/scene.gltf`, onSceneLoaded)
@@ -851,6 +854,8 @@ function onSceneLoaded (err, scene) {
       oldScene.entities.forEach((e) => e.dispose())
     }
   }
+
+  console.log('onSceneLoaded', err, scene)
 
   if (err) {
     console.log(err)
@@ -1201,6 +1206,6 @@ ctx.frame(() => {
   }
 
   if (!renderer._state.paused) {
-    // gui.draw()
+    gui.draw()
   }
 })
