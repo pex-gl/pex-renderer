@@ -501,15 +501,15 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
   pointLights.forEach(function (light, i) {
     sharedUniforms['uPointLights[' + i + '].position'] = light.entity.transform.worldPosition
     sharedUniforms['uPointLights[' + i + '].color'] = light.color
-    sharedUniforms['uPointLights[' + i + '].radius'] = light.radius
+    sharedUniforms['uPointLights[' + i + '].range'] = light.range
   })
 
   spotLights.forEach(function (light, i) {
     sharedUniforms['uSpotLights[' + i + '].position'] = light.entity.transform.position
     sharedUniforms['uSpotLights[' + i + '].color'] = light.color
-    sharedUniforms['uSpotLights[' + i + '].distance'] = light.distance
     sharedUniforms['uSpotLights[' + i + '].angle'] = light.angle
     sharedUniforms['uSpotLights[' + i + '].direction'] = light.direction
+    sharedUniforms['uSpotLights[' + i + '].range'] = light.range
   })
 
   areaLights.forEach(function (light, i) {

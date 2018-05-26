@@ -5,7 +5,7 @@ function PointLight (opts) {
   this.changed = new Signal()
   this.color = [1, 1, 1, 1]
   this.intensity = 1
-  this.radius = 10
+  this.range = 10
   this.castShadows = false
 
   this.set(opts)
@@ -19,7 +19,7 @@ PointLight.prototype.set = function (opts) {
   Object.assign(this, opts)
 
   if (opts.color !== undefined || opts.intensity !== undefined) {
-    this.color[3] = this.intensity;
+    this.color[3] = this.intensity
   }
 
   Object.keys(opts).forEach((prop) => this.changed.dispatch(prop))
