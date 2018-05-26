@@ -28,6 +28,7 @@ uniform vec3 uSunPosition;
 
 uniform bool uFXAA;
 uniform bool uFog;
+uniform bool uBloom;
 
 varying vec2 vTexCoord0;
 
@@ -76,10 +77,12 @@ void main() {
   }
 
   color.rgb *= uExposure;
-  color.rgb += texture2D(uBloomMap, vTexCoord0).rgb * 0.5;
-  color.rgb = color.rgb / (1.0 + color.rgb); //tonemap reinhard
-  // color.rgb = tonemapFilmic(color.rgb);
-  color.rgb += texture2D(uEmissiveMap, vTexCoord0).rgb;
+  if (uBloom) {
+    color.rgb += texture2D(uBloomMap, vTexCoord0).rgb * 0.5;
+    //color.rgb = color.rgb / (1.0 + color.rgb); //tonemap reinhard
+    // color.rgb = pow(vec3(tonemapFilmic(color.rgb)), vec3(2.2));
+    color.rgb += texture2D(uEmissiveMap, vTexCoord0).rgb;
+  }
   // color.rgb = pow(color.rgb, vec3(2.2));
   gl_FragColor = encode(color, uOutputEncoding);
 }

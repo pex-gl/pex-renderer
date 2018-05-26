@@ -823,6 +823,7 @@ Renderer.prototype.draw = function () {
           uExposure: camera.exposure,
           uFXAA: camera.fxaa,
           uFog: camera.fog,
+          uBloom: camera.bloom,
           uNear: camera.camera.near,
           uFar: camera.camera.far,
           uFov: camera.camera.fov,
