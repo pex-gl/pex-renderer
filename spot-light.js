@@ -3,10 +3,10 @@ const Signal = require('signals')
 function SpotLight (opts) {
   this.type = 'SpotLight'
   this.changed = new Signal()
+  this.target = [0, 0, 0]
   this.color = [1, 1, 1, 1]
   this.intensity = 1
   this.angle = Math.PI / 12
-  this.direction = [0, -1, 0]
   this.range = 10
   this.castShadows = false
 

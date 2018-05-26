@@ -9,7 +9,7 @@ function DirectionalLight (opts) {
   this.shadows = false
   this.color = [1, 1, 1, 1]
   this.intensity = 1
-  this.direction = [1, -1, 0]
+  this.target = [0, 0, 0]
   this.bias = 0.1
   this.castShadows = false
 

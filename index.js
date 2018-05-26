@@ -435,7 +435,6 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
 
   if (!shadowMappingLight) {
     directionalLights.forEach((light) => {
-      Vec3.set(light._prevDirection, light.direction)
       if (light.castShadows) {
         const shadowCasters = geometries.filter((geometry) => {
           const material = geometry.entity.getComponent('Material')
@@ -483,7 +482,11 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
   }
 
   directionalLights.forEach(function (light, i) {
-    sharedUniforms['uDirectionalLights[' + i + '].direction'] = light.direction
+    var transform = light.entity.transform
+    var position = transform.worldPosition
+    var target = light.target
+    var dir = vec3.normalize(vec3.sub(vec3.copy(target), position))
+    sharedUniforms['uDirectionalLights[' + i + '].direction'] = dir
     sharedUniforms['uDirectionalLights[' + i + '].color'] = light.color
     sharedUniforms['uDirectionalLights[' + i + '].projectionMatrix'] = light._projectionMatrix
     sharedUniforms['uDirectionalLights[' + i + '].viewMatrix'] = light._viewMatrix
@@ -501,10 +504,14 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
   })
 
   spotLights.forEach(function (light, i) {
+    var transform = light.entity.transform
+    var position = transform.worldPosition
+    var target = light.target
+    var dir = vec3.normalize(vec3.sub(vec3.copy(target), position))
     sharedUniforms['uSpotLights[' + i + '].position'] = light.entity.transform.position
+    sharedUniforms['uSpotLights[' + i + '].direction'] = dir
     sharedUniforms['uSpotLights[' + i + '].color'] = light.color
     sharedUniforms['uSpotLights[' + i + '].angle'] = light.angle
-    sharedUniforms['uSpotLights[' + i + '].direction'] = light.direction
     sharedUniforms['uSpotLights[' + i + '].range'] = light.range
   })
 
