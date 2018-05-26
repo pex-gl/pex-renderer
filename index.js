@@ -1,8 +1,9 @@
-const Vec3 = require('pex-math/Vec3')
-const Vec4 = require('pex-math/Vec4')
-const Mat3 = require('pex-math/Mat3')
-const Mat4 = require('pex-math/Mat4')
-const AABB = require('pex-geom/AABB')
+const vec3 = require('pex-math/vec3')
+const vec4 = require('pex-math/vec4')
+const mat3 = require('pex-math/mat3')
+const mat4 = require('pex-math/mat4')
+const quat = require('pex-math/quat')
+const aabb = require('pex-geom/aabb')
 // var Draw = require('pex-draw/Draw')
 // var fx = require('pex-fx')
 const glsl = require('glslify')
@@ -57,17 +58,17 @@ function isNil (x) {
 }
 
 // TODO remove, should be in AABB
-function aabbToPoints (aabb) {
-  if (AABB.isEmpty(aabb)) return []
+function aabbToPoints (bbox) {
+  if (aabb.isEmpty(bbox)) return []
   return [
-    [aabb[0][0], aabb[0][1], aabb[0][2], 1],
-    [aabb[1][0], aabb[0][1], aabb[0][2], 1],
-    [aabb[1][0], aabb[0][1], aabb[1][2], 1],
-    [aabb[0][0], aabb[0][1], aabb[1][2], 1],
-    [aabb[0][0], aabb[1][1], aabb[0][2], 1],
-    [aabb[1][0], aabb[1][1], aabb[0][2], 1],
-    [aabb[1][0], aabb[1][1], aabb[1][2], 1],
-    [aabb[0][0], aabb[1][1], aabb[1][2], 1]
+    [bbox[0][0], bbox[0][1], bbox[0][2], 1],
+    [bbox[1][0], bbox[0][1], bbox[0][2], 1],
+    [bbox[1][0], bbox[0][1], bbox[1][2], 1],
+    [bbox[0][0], bbox[0][1], bbox[1][2], 1],
+    [bbox[0][0], bbox[1][1], bbox[0][2], 1],
+    [bbox[1][0], bbox[1][1], bbox[0][2], 1],
+    [bbox[1][0], bbox[1][1], bbox[1][2], 1],
+    [bbox[0][0], bbox[1][1], bbox[1][2], 1]
   ]
 }
 
@@ -109,21 +110,16 @@ function Renderer (opts) {
 
 Renderer.prototype.updateDirectionalLightShadowMap = function (light, geometries) {
   const ctx = this._ctx
-  const position = [0, 0, 0]
-  Vec3.scale(position, 0)
-  Vec3.sub(position, light.direction)
-  Vec3.normalize(position)
-  Vec3.scale(position, 7.5)
-  const target = Vec3.copy(position)
-  Vec3.add(target, light.direction)
-  Mat4.lookAt(light._viewMatrix, position, target, [0, 1, 0])
+  const position = light.entity.transform.worldPosition
+  const target = light.target
+  mat4.lookAt(light._viewMatrix, position, target, [0, 1, 0])
 
   const shadowBboxPoints = geometries.reduce((points, geometry) => {
     return points.concat(aabbToPoints(geometry.entity.transform.worldBounds))
   }, [])
 
-  const bboxPointsInLightSpace = shadowBboxPoints.map((p) => Vec3.multMat4(Vec3.copy(p), light._viewMatrix))
-  const sceneBboxInLightSpace = AABB.fromPoints(bboxPointsInLightSpace)
+  const bboxPointsInLightSpace = shadowBboxPoints.map((p) => vec3.multMat4(vec3.copy(p), light._viewMatrix))
+  const sceneBboxInLightSpace = aabb.fromPoints(bboxPointsInLightSpace)
 
   const lightNear = -sceneBboxInLightSpace[1][2]
   const lightFar = -sceneBboxInLightSpace[0][2]
@@ -133,7 +129,7 @@ Renderer.prototype.updateDirectionalLightShadowMap = function (light, geometries
     _far: lightFar
   })
 
-  Mat4.ortho(light._projectionMatrix,
+  mat4.ortho(light._projectionMatrix,
     sceneBboxInLightSpace[0][0], sceneBboxInLightSpace[1][0],
     sceneBboxInLightSpace[0][1], sceneBboxInLightSpace[1][1],
     lightNear, lightFar
@@ -473,12 +469,12 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
     if (shadowMapping) {
       camera.camera.set({ far: far * 0.99 })
     }
-    sharedUniforms.uProjectionMatrix = Mat4.copy(camera.projectionMatrix)
+    sharedUniforms.uProjectionMatrix = mat4.copy(camera.projectionMatrix)
     if (shadowMapping) {
       camera.camera.set({ far: far })
     }
     sharedUniforms.uViewMatrix = camera.viewMatrix
-    sharedUniforms.uInverseViewMatrix = Mat4.invert(Mat4.copy(camera.viewMatrix))
+    sharedUniforms.uInverseViewMatrix = mat4.invert(mat4.copy(camera.viewMatrix))
   }
 
   if (camera && camera.ssao) {
@@ -621,11 +617,15 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
     } else {
       viewMatrix = camera.viewMatrix
     }
-    var normalMat = Mat4.copy(viewMatrix)
-    Mat4.mult(normalMat, transform.modelMatrix)
-    Mat4.invert(normalMat)
-    Mat4.transpose(normalMat)
-    cachedUniforms.uNormalMatrix = Mat3.fromMat4(Mat3.create(), normalMat)
+    var normalMat = mat4.copy(viewMatrix)
+    mat4.mult(normalMat, transform.modelMatrix)
+    mat4.invert(normalMat)
+    mat4.transpose(normalMat)
+    cachedUniforms.uNormalMatrix = mat3.fromMat4(mat3.create(), normalMat)
+
+    if (ctx.debugMode) {
+      console.log('drawMeshes', 'pipeline', pipeline, cachedUniforms)
+    }
 
     ctx.submit({
       name: 'drawGeometry',
@@ -708,8 +708,8 @@ Renderer.prototype.draw = function () {
           uFar: camera.camera.far,
           uFov: camera.camera.fov,
           viewMatrix: camera.camera.viewMatrix,
-          uInverseViewMatrix: Mat4.invert(Mat4.copy(camera.camera.viewMatrix)),
-          viewProjectionInverseMatrix: Mat4.invert(Mat4.mult(Mat4.copy(camera.camera.viewMatrix), camera.camera.projectionMatrix)),
+          uInverseViewMatrix: mat4.invert(mat4.copy(camera.camera.viewMatrix)),
+          viewProjectionInverseMatrix: mat4.invert(mat4.mult(mat4.copy(camera.camera.viewMatrix), camera.camera.projectionMatrix)),
           cameraPositionWorldSpace: camera.camera.position,
           uIntensity: camera.ssaoIntensity,
           uNoiseScale: [10, 10],
@@ -866,11 +866,11 @@ Renderer.prototype.drawDebug = function () {
   this._debugDraw.setLineWidth(2)
   directionalLightNodes.forEach(function (lightNode) {
     var light = lightNode.data.light
-    var invProj = Mat4.invert(Mat4.copy(light._projectionMatrix))
-    var invView = Mat4.invert(Mat4.copy(light._viewMatrix))
+    var invProj = mat4.invert(mat4.copy(light._projectionMatrix))
+    var invView = mat4.invert(mat4.copy(light._viewMatrix))
     var corners = [[-1, -1, 1, 1], [1, -1, 1, 1], [1, 1, 1, 1], [-1, 1, 1, 1], [-1, -1, -1, 1], [1, -1, -1, 1], [1, 1, -1, 1], [-1, 1, -1, 1]].map(function (p) {
-      var v = Vec4.multMat4(Vec4.multMat4(Vec4.copy(p), invProj), invView)
-      Vec3.scale(v, 1 / v[3])
+      var v = vec4.multMat4(vec4.multMat4(vec4.copy(p), invProj), invView)
+      vec3.scale(v, 1 / v[3])
       return v
     })
 
