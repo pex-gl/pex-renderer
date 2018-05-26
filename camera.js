@@ -113,12 +113,6 @@ Camera.prototype.set = function (opts) {
         })
       }
     })
-    // if (this._bloomHCmd) {
-      // this._bloomHCmd.viewport[2] = Math.floor(viewport[2] / 2)
-      // this._bloomHCmd.viewport[3] = Math.floor(viewport[3] / 2)
-      // this._bloomVCmd.viewport[2] = Math.floor(viewport[2] / 2)
-      // this._bloomVCmd.viewport[3] = Math.floor(viewport[3] / 2)
-    // }
   }
 
   Object.keys(opts).forEach((prop) => this.changed.dispatch(prop))

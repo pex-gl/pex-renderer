@@ -762,13 +762,13 @@ Renderer.prototype.draw = function () {
     if (State.profiler) State.profiler.timeEnd('drawFrame')
     if (State.profiler) State.profiler.time('postprocess')
     if (camera.bloom) {
-        ctx.submit(camera._thresholdCmd, {
-          uniforms: {
-            uExposure: camera.exposure,
-            imageSize: halfScreenSize
-          },
-          viewport: halfViewport
-        })
+      ctx.submit(camera._thresholdCmd, {
+        uniforms: {
+          uExposure: camera.exposure,
+          imageSize: halfScreenSize
+        },
+        viewport: halfViewport
+      })
 
       for (let i = 0; i < 5; i++) {
         ctx.submit(camera._bloomHCmd, {
