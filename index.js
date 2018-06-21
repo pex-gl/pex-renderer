@@ -2,7 +2,6 @@ const vec3 = require('pex-math/vec3')
 const vec4 = require('pex-math/vec4')
 const mat3 = require('pex-math/mat3')
 const mat4 = require('pex-math/mat4')
-const quat = require('pex-math/quat')
 const aabb = require('pex-geom/aabb')
 // var Draw = require('pex-draw/Draw')
 // var fx = require('pex-fx')
@@ -18,6 +17,7 @@ const createAnimation = require('./animation')
 const createGeometry = require('./geometry')
 const createMaterial = require('./material')
 const createCamera = require('./camera')
+const createAmbientLight = require('./ambient-light')
 const createDirectionalLight = require('./directional-light')
 const createPointLight = require('./point-light')
 const createSpotLight = require('./spot-light')
@@ -282,6 +282,7 @@ Renderer.prototype.getMaterialProgram = function (geometry, material, skin, opti
   } else {
     flags.push('#define USE_METALLIC_ROUGHNESS_WORKFLOW')
   }
+  flags.push('#define NUM_AMBIENT_LIGHTS ' + (options.numAmbientLights || 0))
   flags.push('#define NUM_DIRECTIONAL_LIGHTS ' + (options.numDirectionalLights || 0))
   flags.push('#define NUM_POINT_LIGHTS ' + (options.numPointLights || 0))
   flags.push('#define NUM_SPOT_LIGHTS ' + (options.numSpotLights || 0))
@@ -427,6 +428,7 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
   }
 
   geometries = geometries || this.getComponents('Geometry').filter(byCameraTags)
+  const ambientLights = this.getComponents('AmbientLight').filter(byCameraTags)
   const directionalLights = this.getComponents('DirectionalLight').filter(byCameraTags)
   const pointLights = this.getComponents('PointLight').filter(byCameraTags)
   const spotLights = this.getComponents('SpotLight').filter(byCameraTags)
@@ -480,6 +482,10 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
     sharedUniforms.uAO = camera._frameAOTex
     sharedUniforms.uScreenSize = [ camera.viewport[2], camera.viewport[3] ] // TODO: should this be camera viewport size?
   }
+
+  ambientLights.forEach(function (light, i) {
+    sharedUniforms['uAmbientLights[' + i + '].color'] = light.color
+  })
 
   directionalLights.forEach(function (light, i) {
     var transform = light.entity.transform
@@ -598,6 +604,7 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
       })
     } else {
       pipeline = this.getGeometryPipeline(geometry, material, skin, {
+        numAmbientLights: ambientLights.length,
         numDirectionalLights: directionalLights.length,
         numPointLights: pointLights.length,
         numSpotLights: spotLights.length,
@@ -965,6 +972,10 @@ Renderer.prototype.material = function (opts) {
 
 Renderer.prototype.camera = function (opts) {
   return createCamera(Object.assign({ ctx: this._ctx, rgbm: State.rgbm }, opts))
+}
+
+Renderer.prototype.ambientLight = function (opts) {
+  return createAmbientLight(Object.assign({ ctx: this._ctx }, opts))
 }
 
 Renderer.prototype.directionalLight = function (opts) {
