@@ -27,6 +27,9 @@ varying vec2 vTexCoord0;
 varying vec3 vPositionWorld;
 varying vec3 vPositionView;
 
+#ifdef USE_VERTEX_COLORS
+varying vec4 vColor;
+#endif
 #ifdef USE_INSTANCED_COLOR
 varying vec4 vColor;
 #endif
@@ -521,6 +524,9 @@ void main() {
     vec3 eyeDirWorld = normalize(vEyeDirWorld);
 
     vec3 baseColor = getBaseColor();
+#ifdef USE_VERTEX_COLORS
+    baseColor *= decode(vColor, 3).rgb;
+#endif
 #ifdef USE_INSTANCED_COLOR
     baseColor *= decode(vColor, 3).rgb;
 #endif
