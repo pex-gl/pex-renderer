@@ -77,10 +77,10 @@ Transform.prototype.update = function () {
   var parents = []
   var parent = this
   while (parent) {
-    parents.unshift(parent)
+    parents.unshift(parent) // TODO: GC
     parent = parent.parent
   }
-  parents.forEach((p) => {
+  parents.forEach((p) => { // TODO: forEach
     Mat4.mult(this.modelMatrix, p.localModelMatrix)
   })
 
