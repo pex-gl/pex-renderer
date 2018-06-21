@@ -155,12 +155,28 @@ function makeFrames (points, tangents, closed, rot) {
       if (Vec3.length(v) > EPSILON) {
         Vec3.normalize(v)
         theta = Math.acos(Vec3.dot(prevTangent, tangent))
-        Quat.setAxisAngle(rotation, theta, v)
+        Quat.setAxisAngle(rotation, v, theta)
         Vec3.multQuat(normal, rotation)
       }
       Vec3.cross(Vec3.set(binormal, tangent), normal)
     }
-    var m = Mat4.set16(Mat4.create(), binormal[0], binormal[1], binormal[2], 0, normal[0], normal[1], normal[2], 0, tangent[0], tangent[1], tangent[2], 0, 0, 0, 0, 1)
+    var m = Mat4.create()
+    m[0] = binormal[0]
+    m[1] = binormal[1]
+    m[2] = binormal[2]
+    m[3] = 0
+    m[4] = normal[0]
+    m[5] = normal[1]
+    m[6] = normal[2]
+    m[7] = 0
+    m[8] = tangent[0]
+    m[9] = tangent[1]
+    m[10] = tangent[2]
+    m[11] = 0
+    m[12] = 0
+    m[13] = 0
+    m[14] = 0
+    m[15] = 1
     frames.push({
       tangent: tangent,
       normal: normal,
@@ -178,7 +194,7 @@ function makeFrames (points, tangents, closed, rot) {
       theta = -theta
     }
     frames.forEach(function (frame, frameIndex) {
-      Quat.setAxisAngle(rotation, theta * frameIndex, frame.tangent)
+      Quat.setAxisAngle(rotation, frame.tangent, theta * frameIndex)
       Vec3.multQuat(frame.normal, frame.rotation)
       Vec3.cross(Vec3.set(frame.binormal, frame.tangent), frame.normal)
       Mat4.set16(frame.m, binormal[0], binormal[1], binormal[2], 0, normal[0], normal[1], normal[2], 0, tangent[0], tangent[1], tangent[2], 0, 0, 0, 0, 1)
