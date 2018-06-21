@@ -44,7 +44,9 @@ function Skybox (opts) {
     width: 512,
     height: 256,
     pixelFormat: this.rgbm ? ctx.PixelFormat.RGBA8 : ctx.PixelFormat.RGBA32F,
-    encoding: this.rgbm ? ctx.Encoding.RGBM : ctx.Encoding.Linear
+    encoding: this.rgbm ? ctx.Encoding.RGBM : ctx.Encoding.Linear,
+    min: ctx.Filter.Linear,
+    mag: ctx.Filter.Linear
   })
 
   this._updateSkyTexture = {
