@@ -465,17 +465,17 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
     sharedUniforms.uProjectionMatrix = shadowMappingLight._projectionMatrix
     sharedUniforms.uViewMatrix = shadowMappingLight._viewMatrix
   } else {
-    sharedUniforms.uCameraPosition = camera.position
-    const far = camera.camera.far
+    sharedUniforms.uCameraPosition = camera.entity.transform.worldPosition
+    const far = camera.far
     if (shadowMapping) {
-      camera.camera.set({ far: far * 0.99 })
+      camera.set({ far: far * 0.99 }) // FIXME: this is causing problems (what kind of?)
     }
     sharedUniforms.uProjectionMatrix = mat4.copy(camera.projectionMatrix)
     if (shadowMapping) {
-      camera.camera.set({ far: far })
+      camera.set({ far: far })
     }
     sharedUniforms.uViewMatrix = camera.viewMatrix
-    sharedUniforms.uInverseViewMatrix = mat4.invert(mat4.copy(camera.viewMatrix))
+    sharedUniforms.uInverseViewMatrix = mat4.invert(mat4.copy(camera.viewMatrix)) // TODO: GC
   }
 
   if (camera && camera.ssao) {
@@ -488,10 +488,10 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
   })
 
   directionalLights.forEach(function (light, i) {
-    var transform = light.entity.transform
-    var position = transform.worldPosition
-    var target = light.target
-    var dir = vec3.normalize(vec3.sub(vec3.copy(target), position))
+    var dir4 = [0, 0, 1, 0] // TODO: GC
+    var dir = [0, 0, 0]
+    vec4.multMat4(dir4, light.entity.transform.modelMatrix)
+    vec3.set(dir, dir4)
     sharedUniforms['uDirectionalLights[' + i + '].direction'] = dir
     sharedUniforms['uDirectionalLights[' + i + '].color'] = light.color
     sharedUniforms['uDirectionalLights[' + i + '].projectionMatrix'] = light._projectionMatrix
@@ -718,13 +718,13 @@ Renderer.prototype.draw = function () {
       if (State.profiler) State.profiler.time('ssao', true)
       ctx.submit(camera._ssaoCmd, {
         uniforms: {
-          uNear: camera.camera.near,
-          uFar: camera.camera.far,
-          uFov: camera.camera.fov,
-          viewMatrix: camera.camera.viewMatrix,
-          uInverseViewMatrix: mat4.invert(mat4.copy(camera.camera.viewMatrix)),
-          viewProjectionInverseMatrix: mat4.invert(mat4.mult(mat4.copy(camera.camera.viewMatrix), camera.camera.projectionMatrix)),
-          cameraPositionWorldSpace: camera.camera.position,
+          uNear: camera.near,
+          uFar: camera.far,
+          uFov: camera.fov,
+          viewMatrix: camera.viewMatrix,
+          uInverseViewMatrix: mat4.invert(mat4.copy(camera.viewMatrix)),
+          viewProjectionInverseMatrix: mat4.invert(mat4.mult(mat4.copy(camera.viewMatrix), camera.projectionMatrix)), // TODO: GC
+          cameraPositionWorldSpace: camera.entity.transform.worldPosition,
           uIntensity: camera.ssaoIntensity,
           uNoiseScale: [10, 10],
           uSampleRadiusWS: camera.ssaoRadius,
@@ -736,8 +736,8 @@ Renderer.prototype.draw = function () {
       if (State.profiler) State.profiler.time('ssao-blur', true)
       ctx.submit(camera._bilateralBlurHCmd, {
         uniforms: {
-          near: camera.camera.near,
-          far: camera.camera.far,
+          near: camera.near,
+          far: camera.far,
           sharpness: camera.ssaoBlurSharpness,
           imageSize: screenSize,
           depthMapSize: screenSize,
@@ -746,8 +746,8 @@ Renderer.prototype.draw = function () {
       })
       ctx.submit(camera._bilateralBlurVCmd, {
         uniforms: {
-          near: camera.camera.near,
-          far: camera.camera.far,
+          near: camera.near,
+          far: camera.far,
           sharpness: camera.ssaoBlurSharpness,
           imageSize: screenSize,
           depthMapSize: screenSize,
@@ -799,8 +799,8 @@ Renderer.prototype.draw = function () {
       for (let i = 0; i < camera.dofIterations; i++) {
         ctx.submit(camera._dofBlurHCmd, {
           uniforms: {
-            near: camera.camera.near,
-            far: camera.camera.far,
+            near: camera.near,
+            far: camera.far,
             sharpness: 0,
             imageSize: screenSize,
             depthMapSize: screenSize,
@@ -811,8 +811,8 @@ Renderer.prototype.draw = function () {
         })
         ctx.submit(camera._dofBlurVCmd, {
           uniforms: {
-            near: camera.camera.near,
-            far: camera.camera.far,
+            near: camera.near,
+            far: camera.far,
             sharpness: 0,
             imageSize: screenSize,
             depthMapSize: screenSize,
@@ -831,9 +831,9 @@ Renderer.prototype.draw = function () {
           uFXAA: camera.fxaa,
           uFog: camera.fog,
           uBloom: camera.bloom,
-          uNear: camera.camera.near,
-          uFar: camera.camera.far,
-          uFov: camera.camera.fov,
+          uNear: camera.near,
+          uFar: camera.far,
+          uFov: camera.fov,
           uSunDispertion: camera.sunDispertion,
           uSunIntensity: camera.sunIntensity,
           uInscatteringCoeffs: camera.inscatteringCoeffs,

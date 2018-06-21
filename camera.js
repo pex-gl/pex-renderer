@@ -1,7 +1,8 @@
 const Signal = require('signals')
 const glsl = require('glslify')
 const random = require('pex-random')
-const Vec3 = require('pex-math/Vec3')
+const vec3 = require('pex-math/vec3')
+const mat4 = require('pex-math/mat4')
 const MathUtils = require('pex-math/Utils')
 const flatten = require('flatten')
 const isPlask = require('is-plask')
@@ -26,10 +27,10 @@ for (let i = 0; i < 64; i++) {
     random.float(),
     1
   ]
-  Vec3.normalize(sample)
+  vec3.normalize(sample)
   var scale = random.float()
   scale = MathUtils.lerp(0.1, 1.0, scale * scale)
-  Vec3.scale(sample, scale)
+  vec3.scale(sample, scale)
   ssaoKernel.push(sample)
 }
 var ssaoKernelData = new Float32Array(flatten(ssaoKernel))
@@ -51,7 +52,17 @@ function Camera (opts) {
   const gl = opts.ctx.gl
   this.type = 'Camera'
   this.changed = new Signal()
+
+  // camera
+  this.fov = Math.PI / 4
+  this.aspect = 1
+  this.near = 0.1
+  this.far = 100
   this.backgroundColor = [0, 0, 0, 1]
+  this.projectionMatrix = mat4.perspective(mat4.create(), this.fov, this.aspect, this.near, this.far)
+  this.viewMatrix = mat4.create()
+
+  // postprocessing
   this.postprocess = true
   this.rgbm = false
   this.depthPrepass = true
@@ -94,17 +105,24 @@ Camera.prototype.set = function (opts) {
   Object.assign(this, opts)
 
   if (opts.camera) {
-    const camera = this.camera = opts.camera
-    this.projectionMatrix = camera.projectionMatrix
-    this.viewMatrix = camera.viewMatrix
-    this.position = camera.position
-    this.target = this.target
-    this.up = camera.up
+    // const camera = this.camera = opts.camera
+    // this.projectionMatrix = camera.projectionMatrix
+    // this.viewMatrix = camera.viewMatrix
+    // this.position = camera.position
+    // this.target = this.target
+    // this.up = camera.up
+  }
+
+  if (opts.aspect || opts.near || opts.far || opts.fov) {
+    mat4.perspective(this.projectionMatrix, this.fov, this.aspect, this.near, this.far)
   }
 
   if (opts.viewport) {
     const viewport = opts.viewport
-    this.camera.set({ aspect: viewport[2] / viewport[3] })
+    const aspect = viewport[2] / viewport[3]
+    if (this.aspect !== aspect) {
+      this.set({ aspect: aspect })
+    }
     this._textures.forEach((tex) => {
       if (tex.width !== viewport[2] || tex.height !== viewport[3]) {
         this.ctx.update(tex, {
@@ -425,8 +443,8 @@ Camera.prototype.initPostproces = function () {
 }
 
 Camera.prototype.update = function () {
-  // TODO: copy position from camera to transform on camera change
-  // TODO: copy position from transform to camera on transform change?
+  mat4.set(this.viewMatrix, this.entity.transform.modelMatrix)
+  mat4.invert(this.viewMatrix)
 }
 
 module.exports = function createCamera (opts) {
