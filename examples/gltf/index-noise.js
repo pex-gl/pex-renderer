@@ -4,9 +4,9 @@ const loadImage = require('pex-io/loadImage')
 const loadBinary = require('pex-io/loadBinary')
 const createCube = require('primitive-cube')
 const createBox = require('primitive-box')
-const Mat4 = require('pex-math/Mat4')
-const Vec3 = require('pex-math/Vec3')
-const AABB = require('pex-geom/AABB')
+const Mat4 = require('pex-math/mat4')
+const Vec3 = require('pex-math/vec3')
+const AABB = require('pex-geom/aabb')
 const createRenderer = require('../../../pex-renderer')
 const createCamera = require('pex-cam/perspective')
 const createOrbiter = require('pex-cam/orbiter')
@@ -88,10 +88,12 @@ const lineBuilder = renderer.add(renderer.entity([
 ]))
 
 function updateSunPosition () {
-  Mat4.setRotation(State.elevationMat, State.elevation / 180 * Math.PI, [0, 0, 1])
-  Mat4.setRotation(State.rotationMat, State.azimuth / 180 * Math.PI, [0, 1, 0])
+  Mat4.identity(State.elevationMat)
+  Mat4.rotate(State.elevationMat, State.elevation / 180 * Math.PI, [0, 0, 1])
+  Mat4.identity(State.rotationMat)
+  Mat4.rotate(State.rotationMat, State.azimuth / 180 * Math.PI, [0, 1, 0])
 
-  Vec3.set3(State.sunPosition, 10, 0, 0)
+  Vec3.set(State.sunPosition, [10, 0, 0])
   Vec3.multMat4(State.sunPosition, State.elevationMat)
   Vec3.multMat4(State.sunPosition, State.rotationMat)
 
