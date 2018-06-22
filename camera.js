@@ -124,10 +124,13 @@ Camera.prototype.set = function (opts) {
       this.set({ aspect: aspect })
     }
     this._textures.forEach((tex) => {
-      if (tex.width !== viewport[2] || tex.height !== viewport[3]) {
+      const expectedWidth = Math.floor(viewport[2] * (tex.sizeScale || 1))
+      const expectedHeight = Math.floor(viewport[3] * (tex.sizeScale || 1))
+      if (tex.width !== expectedWidth || tex.height !== expectedHeight) {
+        console.log('update texture size', tex.width, expectedWidth, tex.height, expectedHeight)
         this.ctx.update(tex, {
-          width: Math.floor(viewport[2] * (tex.sizeScale || 1)),
-          height: Math.floor(viewport[3] * (tex.sizeScale || 1))
+          width: expectedWidth,
+          height: expectedHeight
         })
       }
     })
