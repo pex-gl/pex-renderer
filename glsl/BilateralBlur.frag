@@ -7,7 +7,6 @@ varying vec2 vTexCoord;
 
 uniform float near;
 uniform float far;
-uniform float fov;
 
 uniform sampler2D image;
 uniform vec2 imageSize;
