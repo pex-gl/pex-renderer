@@ -6,6 +6,7 @@ precision highp float;
 #pragma glslify: fxaa = require(glsl-fxaa)
 #pragma glslify: fog = require(./fog)
 #pragma glslify: tonemap = require(../local_modules/glsl-tonemap-uncharted2)
+//#pragma glslify: tonemap = require(../local_modules/glsl-tonemap-reinhard)
 uniform vec2 uScreenSize;
 
 uniform sampler2D uOverlay;
@@ -29,6 +30,7 @@ uniform vec3 uSunPosition;
 uniform bool uFXAA;
 uniform bool uFog;
 uniform bool uBloom;
+uniform float uBloomIntensity;
 
 varying vec2 vTexCoord0;
 
@@ -52,12 +54,6 @@ float readDepth(sampler2D depthMap, vec2 coord) {
   return z_e;
 }
 
-//Based on Filmic Tonemapping Operators http://filmicgames.com/archives/75
-vec3 tonemapFilmic(vec3 color) {
-    vec3 x = max(vec3(0.0), color - 0.004);
-    return (x * (6.2 * x + 0.5)) / (x * (6.2 * x + 1.7) + 0.06);
-}
-
 void main() {
   vec4 color = vec4(0.0);
   if (uFXAA) {
@@ -76,13 +72,11 @@ void main() {
     color = fog(color.rgb, rayLength - uFogStart, rayDir, sunDir);
   }
 
-  color.rgb *= uExposure;
   if (uBloom) {
-    color.rgb += texture2D(uBloomMap, vTexCoord0).rgb * 0.5;
-    //color.rgb = color.rgb / (1.0 + color.rgb); //tonemap reinhard
-    // color.rgb = pow(vec3(tonemapFilmic(color.rgb)), vec3(2.2));
-    color.rgb += texture2D(uEmissiveMap, vTexCoord0).rgb;
+    color.rgb += texture2D(uBloomMap, vTexCoord0).rgb * uBloomIntensity;
+    // color.rgb += texture2D(uEmissiveMap, vTexCoord0).rgb * 2.0;
   }
-  // color.rgb = pow(color.rgb, vec3(2.2));
+  color.rgb *= uExposure;
+  color.rgb = tonemap(color.rgb);
   gl_FragColor = encode(color, uOutputEncoding);
 }

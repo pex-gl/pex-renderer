@@ -13,9 +13,8 @@ uniform sampler2D image;
 uniform sampler2D emissiveTex;
 uniform vec2 imageSize;
 
-uniform vec2 direction;
-
 uniform float uExposure;
+uniform float uBloomThreshold;
 
 float perceivedBrightness(vec3 c) {
   return (c.r + c.g + c.b) / 3.0;
@@ -27,14 +26,10 @@ void main() {
   vec4 color = texture2D(image, vUV);
   color.rgb *= uExposure;
   float brightness = perceivedBrightness(color.rgb);
-  if (brightness > 1.0) {
-    if (brightness > 3.0) {
-      gl_FragColor = color * 3.0 / (1.0 + brightness);
-    } else {
-      gl_FragColor = color;
-    }
+  if (brightness > uBloomThreshold) {
+    gl_FragColor = color;
   } else {
-    gl_FragColor = vec4(0.0);
+    gl_FragColor = vec4(0.0, 0.0, 0.0, 0.0);
   }
 
   gl_FragColor += texture2D(emissiveTex, vUV);

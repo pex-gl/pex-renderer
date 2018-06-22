@@ -170,6 +170,9 @@ Renderer.prototype.getMaterialProgram = function (geometry, material, skin, opti
   if (geometry._attributes.aRotation) {
     flags.push('#define USE_INSTANCED_ROTATION')
   }
+  if (geometry._attributes.aColor) {
+    flags.push('#define USE_INSTANCED_COLOR')
+  }
   if (geometry._attributes.aVertexColor) {
     flags.push('#define USE_VERTEX_COLORS')
   }
@@ -200,10 +203,6 @@ Renderer.prototype.getMaterialProgram = function (geometry, material, skin, opti
       }
     }
     return program
-  }
-
-  if (geometry._attributes.aColor) {
-    flags.push('#define USE_INSTANCED_COLOR')
   }
 
   flags.push('#define SHADOW_QUALITY ' + (material.receiveShadows ? State.shadowQuality : 0))
@@ -772,6 +771,7 @@ Renderer.prototype.draw = function () {
       ctx.submit(camera._thresholdCmd, {
         uniforms: {
           uExposure: camera.exposure,
+          uBloomThreshold: camera.bloomThreshold,
           imageSize: halfScreenSize
         },
         viewport: halfViewport
@@ -831,6 +831,7 @@ Renderer.prototype.draw = function () {
           uFXAA: camera.fxaa,
           uFog: camera.fog,
           uBloom: camera.bloom,
+          uBloomIntensity: camera.bloomIntensity,
           uNear: camera.near,
           uFar: camera.far,
           uFov: camera.fov,
