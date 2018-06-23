@@ -210,8 +210,6 @@ struct PBRData {
   vec3 indirectSpecular; // contribution from IBL light probe
   vec3 directDiffuse;  // contribution from light sources
   vec3 directSpecular; // contribution from light sources
-  float clearCoat;
-  float clearCoatRoughness;
 };
 
 #ifndef USE_USE_UNLIT_WORKFLOW     
