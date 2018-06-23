@@ -23,6 +23,10 @@ varying vec2 vTexCoord0;
 varying vec3 vPositionWorld;
 varying vec3 vPositionView;
 
+#ifdef USE_VERTEX_COLORS
+varying vec4 vColor;
+#endif
+    
 #ifdef USE_INSTANCED_COLOR
 varying vec4 vColor;
 #endif
@@ -1406,6 +1410,10 @@ void main() {
 #ifdef USE_UNLIT_WORKFLOW 
   getBaseColor(data);
   vec3 color = data.baseColor;
+  #ifdef USE_VERTEX_COLORS
+    vec3 tint = decode(vColor, 3).rgb;
+  	color*= tint;
+  #endif
 // !USE_USE_UNLIT_WORKFLOW 
 #else    
     data.inverseViewMatrix = uInverseViewMatrix; 
@@ -1445,6 +1453,12 @@ void main() {
 #ifdef USE_ALPHA_TEST
     AlphaTest(data);
 #endif
+  
+#ifdef USE_VERTEX_COLORS
+    vec3 tint = decode(vColor, 3).rgb;
+    data.diffuseColor *= tint;
+    data.specularColor *= tint;
+#endif  
   
 #ifdef USE_INSTANCED_COLOR
     vec3 tint = decode(vColor, 3).rgb;
