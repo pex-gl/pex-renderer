@@ -1,5 +1,4 @@
 const Signal = require('signals')
-const Mat4 = require('pex-math/Mat4')
 const AreaLightsData = require('./local_modules/area-light-data')
 
 function AreaLight (opts) {
@@ -17,7 +16,7 @@ function AreaLight (opts) {
   if (!AreaLight.areaLightTextures) {
     AreaLight.ltc_mat_texture = ctx.texture2D({
       data: AreaLightsData.mat,
-      width: 64, 
+      width: 64,
       height: 64,
       pixelFormat: ctx.PixelFormat.RGBA32F,
       encoding: ctx.Encoding.Linear
@@ -44,7 +43,7 @@ AreaLight.prototype.set = function (opts) {
   Object.keys(opts).forEach((prop) => this.changed.dispatch(prop))
 
   if (opts.color !== undefined || opts.intensity !== undefined) {
-    this.color[3] = this.intensity;
+    this.color[3] = this.intensity
   }
 }
 
