@@ -1,7 +1,7 @@
 const Signal = require('signals')
-const Vec3 = require('pex-math/Vec3')
-const Mat4 = require('pex-math/Mat4')
-const AABB = require('pex-geom/AABB')
+const vec3 = require('pex-math/vec3')
+const mat4 = require('pex-math/mat4')
+const aabb = require('pex-geom/aabb')
 
 // TODO remove, should in AABB
 function emptyAABB (a) {
@@ -14,17 +14,17 @@ function emptyAABB (a) {
 }
 
 // TODO remove, should in AABB
-function aabbToPoints (aabb) {
-  if (AABB.isEmpty(aabb)) return []
+function aabbToPoints (box) {
+  if (aabb.isEmpty(box)) return []
   return [
-    [aabb[0][0], aabb[0][1], aabb[0][2], 1],
-    [aabb[1][0], aabb[0][1], aabb[0][2], 1],
-    [aabb[1][0], aabb[0][1], aabb[1][2], 1],
-    [aabb[0][0], aabb[0][1], aabb[1][2], 1],
-    [aabb[0][0], aabb[1][1], aabb[0][2], 1],
-    [aabb[1][0], aabb[1][1], aabb[0][2], 1],
-    [aabb[1][0], aabb[1][1], aabb[1][2], 1],
-    [aabb[0][0], aabb[1][1], aabb[1][2], 1]
+    [box[0][0], box[0][1], box[0][2], 1],
+    [box[1][0], box[0][1], box[0][2], 1],
+    [box[1][0], box[0][1], box[1][2], 1],
+    [box[0][0], box[0][1], box[1][2], 1],
+    [box[0][0], box[1][1], box[0][2], 1],
+    [box[1][0], box[1][1], box[0][2], 1],
+    [box[1][0], box[1][1], box[1][2], 1],
+    [box[0][0], box[1][1], box[1][2], 1]
   ]
 }
 
@@ -40,11 +40,11 @@ function Transform (opts) {
   this.children = []
   this.enabled = true
   // bounds of this node and it's children
-  this.bounds = AABB.create()
+  this.bounds = aabb.create()
   // bounds of this node and it's children in the world space
-  this.worldBounds = AABB.create()
-  this.localModelMatrix = Mat4.create()
-  this.modelMatrix = Mat4.create()
+  this.worldBounds = aabb.create()
+  this.localModelMatrix = mat4.create()
+  this.modelMatrix = mat4.create()
   this.geometry = null
   this.set(opts)
 }
@@ -67,13 +67,13 @@ Transform.prototype.set = function (opts) {
 }
 
 Transform.prototype.update = function () {
-  Mat4.identity(this.localModelMatrix)
-  Mat4.translate(this.localModelMatrix, this.position)
-  Mat4.mult(this.localModelMatrix, Mat4.fromQuat(Mat4.create(), this.rotation))
-  Mat4.scale(this.localModelMatrix, this.scale)
-  if (this.matrix) Mat4.mult(this.localModelMatrix, this.matrix)
+  mat4.identity(this.localModelMatrix)
+  mat4.translate(this.localModelMatrix, this.position)
+  mat4.mult(this.localModelMatrix, mat4.fromQuat(mat4.create(), this.rotation))
+  mat4.scale(this.localModelMatrix, this.scale)
+  if (this.matrix) mat4.mult(this.localModelMatrix, this.matrix)
 
-  Mat4.identity(this.modelMatrix)
+  mat4.identity(this.modelMatrix)
   var parents = []
   var parent = this
   while (parent) {
@@ -81,31 +81,31 @@ Transform.prototype.update = function () {
     parent = parent.parent
   }
   parents.forEach((p) => { // TODO: forEach
-    Mat4.mult(this.modelMatrix, p.localModelMatrix)
+    mat4.mult(this.modelMatrix, p.localModelMatrix)
   })
 
   emptyAABB(this.bounds)
   const geom = this.entity.getComponent('Geometry')
   if (geom) {
-    AABB.set(this.bounds, geom.bounds)
+    aabb.set(this.bounds, geom.bounds)
   }
 }
 
 Transform.prototype.afterUpdate = function () {
-  if (!AABB.isEmpty(this.bounds)) {
+  if (!aabb.isEmpty(this.bounds)) {
     const points = aabbToPoints(this.bounds)
-    const pointsInWorldSpace = points.map((p) => Vec3.multMat4(Vec3.copy(p), this.modelMatrix))
-    this.worldBounds = AABB.fromPoints(pointsInWorldSpace)
+    const pointsInWorldSpace = points.map((p) => vec3.multMat4(vec3.copy(p), this.modelMatrix))
+    this.worldBounds = aabb.fromPoints(pointsInWorldSpace)
   } else {
     emptyAABB(this.worldBounds)
   }
   this.children.forEach((child) => {
-    if (!AABB.isEmpty(child.worldBounds)) {
-      AABB.includeAABB(this.worldBounds, child.worldBounds)
+    if (!aabb.isEmpty(child.worldBounds)) {
+      aabb.includeAABB(this.worldBounds, child.worldBounds)
     }
   })
-  Vec3.scale(this.worldPosition, 0)
-  Vec3.multMat4(this.worldPosition, this.modelMatrix)
+  vec3.scale(this.worldPosition, 0)
+  vec3.multMat4(this.worldPosition, this.modelMatrix)
 }
 
 module.exports = function createTransform (opts) {
