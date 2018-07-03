@@ -362,7 +362,7 @@ uniform sampler2D uAmbientLightShadowMaps[NUM_AMBIENT_LIGHTS];
 void EvaluateAmbientLight(inout PBRData data, AmbientLight light, int i) {
   vec3 lightColor = decode(light.color, 3).rgb;
   lightColor *= light.color.a;
-  data.indirectDiffuse += lightColor;
+  data.indirectDiffuse += data.diffuseColor * lightColor;
 }
 #endif    
 
