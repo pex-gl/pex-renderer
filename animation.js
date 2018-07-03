@@ -1,4 +1,4 @@
-const Quat = require('pex-math/Quat')
+const quat = require('pex-math/quat')
 const Signal = require('signals')
 
 // Assumptions:
@@ -86,8 +86,8 @@ Animation.prototype.update = function () {
       let currentOutput = null
       // TODO: stop creating new arrays every frame
       if (path === 'rotation') {
-        currentOutput = Quat.copy(prevOutput)
-        Quat.slerp(currentOutput, nextOutput, interpolationValue)
+        currentOutput = quat.copy(prevOutput)
+        quat.slerp(currentOutput, nextOutput, interpolationValue)
       } else {
         currentOutput = []
         for (var k = 0; k < nextOutput.length; k++) {
