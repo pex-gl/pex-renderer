@@ -1,5 +1,5 @@
 const Signal = require('signals')
-const Mat4 = require('pex-math/Mat4')
+const mat4 = require('pex-math/mat4')
 
 function Skin (opts) {
   this.type = 'Skin'
@@ -20,9 +20,9 @@ Skin.prototype.set = function (opts) {
 
 Skin.prototype.update = function () {
   this.jointMatrices = this.joints.map((joint, index) => {
-    var m = Mat4.create()
-    Mat4.mult(m, joint.transform.modelMatrix)
-    Mat4.mult(m, this.inverseBindMatrices[index])
+    var m = mat4.create()
+    mat4.mult(m, joint.transform.modelMatrix)
+    mat4.mult(m, this.inverseBindMatrices[index])
     return m
   })
 }
