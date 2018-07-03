@@ -3,7 +3,7 @@ const glsl = require('glslify')
 const random = require('pex-random')
 const vec3 = require('pex-math/vec3')
 const mat4 = require('pex-math/mat4')
-const MathUtils = require('pex-math/Utils')
+const utils = require('pex-math/utils')
 const flatten = require('flatten')
 const isPlask = require('is-plask')
 
@@ -29,7 +29,7 @@ for (let i = 0; i < 64; i++) {
   ]
   vec3.normalize(sample)
   var scale = random.float()
-  scale = MathUtils.lerp(0.1, 1.0, scale * scale)
+  scale = utils.lerp(0.1, 1.0, scale * scale)
   vec3.scale(sample, scale)
   ssaoKernel.push(sample)
 }
