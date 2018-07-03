@@ -1,5 +1,5 @@
 const Signal = require('signals')
-const Mat4 = require('pex-math/Mat4')
+const mat4 = require('pex-math/mat4')
 
 function DirectionalLight (opts) {
   const ctx = opts.ctx
@@ -37,8 +37,8 @@ function DirectionalLight (opts) {
     pixelFormat: ctx.PixelFormat.Depth,
     encoding: ctx.Encoding.Linear
   })
-  this._viewMatrix = Mat4.create()
-  this._projectionMatrix = Mat4.create()
+  this._viewMatrix = mat4.create()
+  this._projectionMatrix = mat4.create()
 
   this._shadowMapDrawCommand = {
     name: 'DirectionalLight.shadowMap',
