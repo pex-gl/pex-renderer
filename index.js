@@ -111,13 +111,18 @@ function Renderer (opts) {
 Renderer.prototype.updateDirectionalLightShadowMap = function (light, geometries) {
   const ctx = this._ctx
   const position = light.entity.transform.worldPosition
-  const target = light.target
-  mat4.lookAt(light._viewMatrix, position, target, [0, 1, 0])
+  const target = [0, 0, 1, 0]
+  const up = [0, 1, 0, 0]
+  vec4.multMat4(target, light.entity.transform.modelMatrix)
+  vec3.add(target, position)
+  vec4.multMat4(up, light.entity.transform.modelMatrix)
+  mat4.lookAt(light._viewMatrix, position, target, up)
 
   const shadowBboxPoints = geometries.reduce((points, geometry) => {
     return points.concat(aabbToPoints(geometry.entity.transform.worldBounds))
   }, [])
 
+  // TODO: gc vec3.copy, all the bounding box creation
   const bboxPointsInLightSpace = shadowBboxPoints.map((p) => vec3.multMat4(vec3.copy(p), light._viewMatrix))
   const sceneBboxInLightSpace = aabb.fromPoints(bboxPointsInLightSpace)
 
