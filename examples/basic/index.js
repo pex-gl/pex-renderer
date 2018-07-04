@@ -64,10 +64,11 @@ function updateSunPosition () {
   Vec3.multMat4(State.sunPosition, State.rotationMat)
 
   if (State.sun) {
-    var sunDir = State.sun.direction
-    Vec3.set(sunDir, [0, 0, 0])
+    var sunDir = [0, 0, 0]
     Vec3.sub(sunDir, State.sunPosition)
-    State.sun.set({ direction: sunDir })
+    Vec3.normalize(sunDir)
+    var rotation = Quat.fromTo(Quat.create(), [0, 0, 1], sunDir, [0, 1, 0])
+    State.sun.entity.transform.set({ rotation: rotation })
   }
 
   if (State.skybox) {
@@ -79,6 +80,9 @@ function updateSunPosition () {
   }
 }
 
+let fakeCamera = null
+let cameraTransformCmp = null
+
 function initCamera () {
   const camera = createCamera({
     fov: Math.PI / 3,
@@ -88,8 +92,19 @@ function initCamera () {
     near: 2,
     far: 100
   })
-  createOrbiter({ camera: camera })
+  fakeCamera = createCamera({
+    fov: Math.PI / 3,
+    aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
+    position: [0, 5, 24],
+    target: [0, 0, 0],
+    near: 2,
+    far: 100
+  })
+  createOrbiter({ camera: fakeCamera })
 
+  cameraTransformCmp = renderer.transform({
+    position: [0, 5, 24]
+  })
   const cameraCmp = renderer.camera({
     ssao: true,
     dof: false,
@@ -97,6 +112,7 @@ function initCamera () {
     camera: camera
   })
   renderer.add(renderer.entity([
+    cameraTransformCmp,
     cameraCmp
   ]))
 
@@ -332,7 +348,19 @@ window.addEventListener('keydown', (e) => {
 
 updateSunPosition()
 
+var tempMat4 = Mat4.create()
 ctx.frame(() => {
+  // TODO: ugly
+  const transformCmp = cameraTransformCmp
+  var transformRotation = transformCmp.rotation
+  Mat4.set(tempMat4, fakeCamera.viewMatrix)
+  Mat4.invert(tempMat4)
+  Quat.fromMat4(transformRotation, tempMat4)
+  transformCmp.set({
+    position: fakeCamera.position,
+    rotation: transformRotation
+  })
+
   ctx.debug(debugOnce)
   debugOnce = false
   renderer.draw()
