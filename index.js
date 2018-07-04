@@ -186,6 +186,9 @@ Renderer.prototype.getMaterialProgram = function (geometry, material, skin, opti
     flags.push('#define USE_SKIN')
     flags.push('#define NUM_JOINTS ' + skin.joints.length)
   }
+  if (ctx.capabilities.multipleRenderTargets) {
+    flags.push('#define USE_DRAW_BUFFERS')
+  }
 
   if (options.depthPassOnly) {
     const hash = 'DEPTH_PASS_ONLY_' + flags.join('-')

@@ -1,11 +1,10 @@
 
 #ifdef GL_ES
-  #extension GL_EXT_shader_texture_lod : require
   #extension GL_OES_standard_derivatives : require
+#ifdef USE_DRAW_BUFFERS
   #extension GL_EXT_draw_buffers : require
-  #define textureCubeLod textureCubeLodEXT
+#endif
 #else
-  #extension GL_ARB_shader_texture_lod : require
 #endif
     
 #ifdef GL_ES
@@ -1534,7 +1533,9 @@ void main() {
 #endif // USE_USE_UNLIT_WORKFLOW
   //gl_FragData[0] = encode(vec4(color, 1.0), uOutputEncoding);
   gl_FragData[0] = encode(vec4(color, 1.0), uOutputEncoding);
+#ifdef USE_DRAW_BUFFERS
   gl_FragData[1] = encode(vec4(data.emissiveColor, 1.0), uOutputEncoding);
+#endif
   //gl_FragData[0] = vec4(toGamma(color), 1.0);
   #ifdef USE_BLEND
   gl_FragData[0].a = data.opacity;
