@@ -381,7 +381,7 @@ Renderer.prototype.getOverlayCommand = function () {
       frag: OVERLAY_FRAG
     })
     this._drawOverlayCmd = {
-      // TODO: add blending equations?
+      name: 'DrawOverlayCmd',
       attributes: {
         aPosition: ctx.vertexBuffer([[-1, -1], [1, -1], [1, 1], [-1, 1]]),
         aTexCoord0: ctx.vertexBuffer([[0, 0], [1, 0], [1, 1], [0, 1]])
@@ -396,8 +396,8 @@ Renderer.prototype.getOverlayCommand = function () {
         blendDstRGBFactor: ctx.BlendFactor.OneMinusSrcAlpha,
         blendSrcAlphaFactor: ctx.BlendFactor.One,
         blendDstAlphaFactor: ctx.BlendFactor.OneMinusSrcAlpha,
-        cullFaceEnabled: true,
-        cullFace: ctx.Face.Back,
+        cullFace: true,
+        cullFaceMode: ctx.Face.Back,
         primitive: ctx.Primitive.Triangles
       })
     }
@@ -880,6 +880,7 @@ Renderer.prototype.draw = function () {
   if (State.profiler) State.profiler.endFrame()
 }
 
+// TODO: remove unused code
 Renderer.prototype.drawDebug = function () {
   var ctx = this._ctx
 
