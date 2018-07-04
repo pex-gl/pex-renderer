@@ -1,5 +1,5 @@
 const Signal = require('signals')
-const Mat4 = require('pex-math/Mat4')
+const mat4 = require('pex-math/mat4')
 const glsl = require('glslify')
 const hammersley = require('hammersley')
 const log = require('debug')('renderer:ReflectionProbe')
@@ -31,8 +31,8 @@ function ReflectionProbe (opts) {
     { eye: [0, 0, 0], target: [0, 0, 1], up: [0, -1, 0] },
     { eye: [0, 0, 0], target: [0, 0, -1], up: [0, -1, 0] }
   ].map((side, i) => {
-    side.projectionMatrix = Mat4.perspective(Mat4.create(), Math.PI / 2, 1, 0.1, 100) // TODO: change this to radians
-    side.viewMatrix = Mat4.lookAt(Mat4.create(), side.eye, side.target, side.up)
+    side.projectionMatrix = mat4.perspective(mat4.create(), Math.PI / 2, 1, 0.1, 100) // TODO: change this to radians
+    side.viewMatrix = mat4.lookAt(mat4.create(), side.eye, side.target, side.up)
     side.drawPassCmd = {
       name: 'ReflectionProbe.sidePass',
       pass: ctx.pass({

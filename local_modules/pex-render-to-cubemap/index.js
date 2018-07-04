@@ -1,4 +1,4 @@
-var Mat4 = require('pex-math/Mat4')
+var mat4 = require('pex-math/mat4')
 
 // Flipping up by -1 inspired by http://www.mbroecker.com/project_dynamic_cubemaps.html
 var sides = [
@@ -21,14 +21,14 @@ function renderToCubemap (cmdQueue, cubemap, drawScene, level) {
   if (!fbo) {
     fbo = ctx.createFramebuffer()
     fbo.id = 'render-to-cubemap'
-    projectionMatrix = Mat4.perspective(Mat4.create(), 90, 1, 0.001, 50.0)
-    viewMatrix = Mat4.create()
+    projectionMatrix = mat4.perspective(mat4.create(), 90, 1, 0.001, 50.0)
+    viewMatrix = mat4.create()
   }
 
   var levelScale = 1.0 / Math.pow(2.0, level)
 
   sides.forEach(function (side, sideIndex) {
-    Mat4.lookAt(viewMatrix, side.eye, side.target, side.up)
+    mat4.lookAt(viewMatrix, side.eye, side.target, side.up)
 
     // TODO: color attacments are ugly
     // TODO: missing depth map, ok-ish because we only render sky

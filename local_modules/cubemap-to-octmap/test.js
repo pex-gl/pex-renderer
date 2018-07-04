@@ -11,8 +11,8 @@ mediump vec2 octahedralProjection(mediump vec3 dir) {
 }
 */
 
-var Vec3 = require('pex-math/Vec3')
-var Vec2 = require('pex-math/Vec2')
+var Vec3 = require('pex-math/vec3')
+var Vec2 = require('pex-math/vec2')
 var abs = Math.abs
 var random = Math.random
 
