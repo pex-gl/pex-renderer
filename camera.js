@@ -80,7 +80,7 @@ function Camera (opts) {
   this.exposure = 1
   this.fxaa = false
   this.fog = false
-  this.bloom = true
+  this.bloom = false
   this.bloomRadius = 1
   this.bloomThreshold = 1
   this.bloomIntensity = 1
