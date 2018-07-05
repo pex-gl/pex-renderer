@@ -5,10 +5,10 @@ const loadBinary = require('pex-io/loadBinary')
 const createCube = require('primitive-cube')
 const createBox = require('primitive-box')
 const isBrowser = require('is-browser')
-const Mat4 = require('pex-math/Mat4')
-const Vec3 = require('pex-math/Vec3')
-const Quat = require('pex-math/Quat')
-const AABB = require('pex-geom/AABB')
+const mat4 = require('pex-math/mat4')
+const vec3 = require('pex-math/vec3')
+const quat = require('pex-math/quat')
+const aabb = require('pex-geom/aabb')
 const createRenderer = require('../../../pex-renderer')
 const createCamera = require('pex-cam/perspective')
 const createOrbiter = require('pex-cam/orbiter')
@@ -26,7 +26,6 @@ const log = require('debug')('gltf')
 const createLoft = require('./geom-loft')
 const triangulate = require('./geom-triangulate')
 const normals = require('angle-normals')
-const fs = require('fs')
 
 const ctx = createContext({
   width: window.innerWidth * 1,
@@ -66,8 +65,8 @@ const State = {
   elevation: 60,
   azimuth: 45,
   mie: 0.000021,
-  elevationMat: Mat4.create(),
-  rotationMat: Mat4.create(),
+  elevationMat: mat4.create(),
+  rotationMat: mat4.create(),
   selectedModel: '',
   scenes: [],
   loadAll: false
@@ -103,17 +102,17 @@ const lineBuilder = renderer.add(renderer.entity([
 
 function updateSunPosition () {
 
-  // Mat4.setRotation(State.elevationMat, State.elevation / 180 * Math.PI, [0, 0, 1])
-  // Mat4.setRotation(State.rotationMat, State.azimuth / 180 * Math.PI, [0, 1, 0])
+  // mat4.setRotation(State.elevationMat, State.elevation / 180 * Math.PI, [0, 0, 1])
+  // mat4.setRotation(State.rotationMat, State.azimuth / 180 * Math.PI, [0, 1, 0])
 
-  // Vec3.set3(State.sunPosition, 10, 0, 0)
-  Vec3.multMat4(State.sunPosition, State.elevationMat)
-  Vec3.multMat4(State.sunPosition, State.rotationMat)
+  // vec3.set3(State.sunPosition, 10, 0, 0)
+  vec3.multMat4(State.sunPosition, State.elevationMat)
+  vec3.multMat4(State.sunPosition, State.rotationMat)
 
   if (State.sun) {
     var sunDir = State.sun.direction
-    Vec3.set(sunDir, [0, 0, 0])
-    Vec3.sub(sunDir, State.sunPosition)
+    vec3.set(sunDir, [0, 0, 0])
+    vec3.sub(sunDir, State.sunPosition)
     State.sun.set({ direction: sunDir })
   }
 
@@ -146,14 +145,14 @@ function makeQuad (opts) {
   points.forEach((p) => {
     p[0] *= w / 2
     p[1] *= h / 2
-    Vec3.add(p, position)
+    vec3.add(p, position)
   })
   return points
 }
 
 function initSky (panorama) {
   const sun = State.sun = renderer.directionalLight({
-    direction: Vec3.sub(Vec3.create(), State.sunPosition),
+    direction: vec3.sub(vec3.create(), State.sunPosition),
     color: [1, 1, 0.95, 1],
     intensity: 10,
     castShadows: true,
@@ -836,7 +835,7 @@ function snoise (x, y, z) {
   return random.noise3(x, y, z)
 }
 
-function snoiseVec3 (x, y, z) {
+function snoisevec3 (x, y, z) {
   var s  = snoise(x, y, z)
   var s1 = snoise(y - 19.1 , z + 33.4 , x + 47.2)
   var s2 = snoise(z + 74.2 , x - 124.5 , y + 99.4)
@@ -853,19 +852,19 @@ function curlNoise(p, t){
   var dy =  [0.0 , e   , 0.0 ]
   var dz =  [0.0 , 0.0 , e   ]
 
-  var p_x0 = snoiseVec3(p[0] - e, p[1], p[2])//(sub(p, dx))
-  var p_x1 = snoiseVec3(p[0] + e, p[1], p[2])//(add(p, dx))
-  var p_y0 = snoiseVec3(p[0], p[1] - e, p[2])//(sub(p, dy))
-  var p_y1 = snoiseVec3(p[0], p[1] + e, p[2])//(add(p, dy))
-  var p_z0 = snoiseVec3(p[0], p[1], p[2] - e)//(sub(p, dz))
-  var p_z1 = snoiseVec3(p[0], p[1], p[2] + e)//(add(p, dz))
+  var p_x0 = snoisevec3(p[0] - e, p[1], p[2])//(sub(p, dx))
+  var p_x1 = snoisevec3(p[0] + e, p[1], p[2])//(add(p, dx))
+  var p_y0 = snoisevec3(p[0], p[1] - e, p[2])//(sub(p, dy))
+  var p_y1 = snoisevec3(p[0], p[1] + e, p[2])//(add(p, dy))
+  var p_z0 = snoisevec3(p[0], p[1], p[2] - e)//(sub(p, dz))
+  var p_z1 = snoisevec3(p[0], p[1], p[2] + e)//(add(p, dz))
 
   var x = p_y1[2] - p_y0[2] - p_z1[1] + p_z0[1]
   var y = p_z1[0] - p_z0[0] - p_x1[2] + p_x0[2]
   var z = p_x1[1] - p_x0[1] - p_y1[0] + p_y0[0]
 
   const divisor = 1.0 / ( 2.0 * e )
-  return Vec3.scale(Vec3.normalize([ x , y , z]), divisor)
+  return vec3.scale(vec3.normalize([ x , y , z]), divisor)
 }
 
 var wirePositions = []
@@ -885,9 +884,9 @@ function addWire(p, c, t, steps) {
   var path = [p]
   for (var i = 0; i < steps; i++) {
     var v = curlNoise(p, t)
-    Vec3.scale(v, 0.01)
-    // Vec3.scale(v, 0.01 * 0.6)
-    var np = Vec3.add(Vec3.copy(p), v)
+    vec3.scale(v, 0.01)
+    // vec3.scale(v, 0.01 * 0.6)
+    var np = vec3.add(vec3.copy(p), v)
     wirePositions.push(p, np)
     wireVertexColors.push(c, c)
     p = np
@@ -1211,7 +1210,7 @@ function loadScene (file, cb) {
       const sceneScale = 1 / (Math.max(sceneSize[0], Math.max(sceneSize[1], sceneSize[2])) || 1)
       if (!AABB.isEmpty(sceneBounds)) {
         // scene.root.transform.set({
-          // position: Vec3.scale([-sceneCenter[0], -sceneBounds[0][1], -sceneCenter[2]], sceneScale),
+          // position: vec3.scale([-sceneCenter[0], -sceneBounds[0][1], -sceneCenter[2]], sceneScale),
           // scale: [sceneScale, sceneScale, sceneScale]
         // })
       }
@@ -1391,30 +1390,30 @@ ctx.frame(() => {
         State.positions[i * 3 + 2]
       ]
       var np = [0, 0, 0]
-      Vec3.add(np, Vec3.scale(Vec3.multMat4(Vec3.copy(p), skin.jointMatrices[State.joints[i * 4 + 0]]), State.weights[i * 4 + 0]))
-      Vec3.add(np, Vec3.scale(Vec3.multMat4(Vec3.copy(p), skin.jointMatrices[State.joints[i * 4 + 1]]), State.weights[i * 4 + 1]))
-      Vec3.add(np, Vec3.scale(Vec3.multMat4(Vec3.copy(p), skin.jointMatrices[State.joints[i * 4 + 2]]), State.weights[i * 4 + 2]))
-      Vec3.add(np, Vec3.scale(Vec3.multMat4(Vec3.copy(p), skin.jointMatrices[State.joints[i * 4 + 3]]), State.weights[i * 4 + 3]))
+      vec3.add(np, vec3.scale(vec3.multMat4(vec3.copy(p), skin.jointMatrices[State.joints[i * 4 + 0]]), State.weights[i * 4 + 0]))
+      vec3.add(np, vec3.scale(vec3.multMat4(vec3.copy(p), skin.jointMatrices[State.joints[i * 4 + 1]]), State.weights[i * 4 + 1]))
+      vec3.add(np, vec3.scale(vec3.multMat4(vec3.copy(p), skin.jointMatrices[State.joints[i * 4 + 2]]), State.weights[i * 4 + 2]))
+      vec3.add(np, vec3.scale(vec3.multMat4(vec3.copy(p), skin.jointMatrices[State.joints[i * 4 + 3]]), State.weights[i * 4 + 3]))
       var q = [
         State.positions[j * 3],
         State.positions[j * 3 + 1],
         State.positions[j * 3 + 2]
       ]
       var nq = [0, 0, 0]
-      Vec3.add(nq, Vec3.scale(Vec3.multMat4(Vec3.copy(q), skin.jointMatrices[State.joints[j * 4 + 0]]), State.weights[j * 4 + 0]))
-      Vec3.add(nq, Vec3.scale(Vec3.multMat4(Vec3.copy(q), skin.jointMatrices[State.joints[j * 4 + 1]]), State.weights[j * 4 + 1]))
-      Vec3.add(nq, Vec3.scale(Vec3.multMat4(Vec3.copy(q), skin.jointMatrices[State.joints[j * 4 + 2]]), State.weights[j * 4 + 2]))
-      Vec3.add(nq, Vec3.scale(Vec3.multMat4(Vec3.copy(q), skin.jointMatrices[State.joints[j * 4 + 3]]), State.weights[j * 4 + 3]))
+      vec3.add(nq, vec3.scale(vec3.multMat4(vec3.copy(q), skin.jointMatrices[State.joints[j * 4 + 0]]), State.weights[j * 4 + 0]))
+      vec3.add(nq, vec3.scale(vec3.multMat4(vec3.copy(q), skin.jointMatrices[State.joints[j * 4 + 1]]), State.weights[j * 4 + 1]))
+      vec3.add(nq, vec3.scale(vec3.multMat4(vec3.copy(q), skin.jointMatrices[State.joints[j * 4 + 2]]), State.weights[j * 4 + 2]))
+      vec3.add(nq, vec3.scale(vec3.multMat4(vec3.copy(q), skin.jointMatrices[State.joints[j * 4 + 3]]), State.weights[j * 4 + 3]))
 
       if (pp && pq) {
         // positions.length = 0
         addLine(pp, np)
         addLine(pq, nq)
-        // Vec3.set(np, p)
-        // Vec3.multMat4(np, State.body.transform.modelMatrix)
+        // vec3.set(np, p)
+        // vec3.multMat4(np, State.body.transform.modelMatrix)
         // addLine([0, 0, 0], np)
-        // Vec3.set(nq, q)
-        // Vec3.multMat4(nq, State.body.transform.modelMatrix)
+        // vec3.set(nq, q)
+        // vec3.multMat4(nq, State.body.transform.modelMatrix)
         if (frame++ % 10 === 0) {
           addLine(np, nq)
         }

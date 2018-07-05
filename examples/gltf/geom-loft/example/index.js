@@ -1,8 +1,8 @@
 'use strict'
 const gl = require('pex-gl')(1280, 720)
 const regl = require('regl')(gl)
-const Mat4 = require('pex-math/Mat4')
-const Vec2 = require('pex-math/Vec2')
+const mat4 = require('pex-math/mat4')
+const vec2 = require('pex-math/vec2')
 const createCube = require('primitive-cube')
 const glsl = require('glslify')
 const camera = require('pex-cam/perspective')({
@@ -18,7 +18,7 @@ const computeNormals = require('angle-normals')
 const triangulate = require('geom-triangulate')
 const splinePoints = require('../../geom-spline-points')
 
-const modelMatrix = Mat4.create()
+const modelMatrix = mat4.create()
 
 const shape = [[-1, -1], [1, -1], [1, 1], [-1, 1]]
 
@@ -123,7 +123,7 @@ const drawLine = regl({
   uniforms: {
     uProjectionMatrix: () => camera.projectionMatrix,
     uViewMatrix: () => camera.viewMatrix,
-    uModelMatrix: Mat4.create(),
+    uModelMatrix: mat4.create(),
     uColor: [1, 0, 0, 1]
   }
 })

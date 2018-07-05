@@ -1,6 +1,6 @@
-const Mat4 = require('pex-math/Mat4')
-const Quat = require('pex-math/Quat')
-const Vec3 = require('pex-math/Vec3')
+const mat4 = require('pex-math/mat4')
+const quat = require('pex-math/quat')
+const vec3 = require('pex-math/vec3')
 const createCamera = require('pex-cam/perspective')
 const createOrbiter = require('pex-cam/orbiter')
 const Renderer = require('../../')
@@ -39,8 +39,8 @@ const State = {
   elevation: 65,
   azimuth: 0,
   mie: 0.000021,
-  elevationMat: Mat4.create(),
-  rotationMat: Mat4.create()
+  elevationMat: mat4.create(),
+  rotationMat: mat4.create()
 }
 
 random.seed(10)
@@ -51,12 +51,12 @@ const gui = createGUI(ctx)
 gui.addParam('Sun Elevation', State, 'elevation', { min: -90, max: 180 }, updateSunPosition)
 
 function updateSunPosition () {
-  Mat4.setRotation(State.elevationMat, State.elevation / 180 * Math.PI, [0, 0, 1])
-  Mat4.setRotation(State.rotationMat, State.azimuth / 180 * Math.PI, [0, 1, 0])
+  mat4.setRotation(State.elevationMat, State.elevation / 180 * Math.PI, [0, 0, 1])
+  mat4.setRotation(State.rotationMat, State.azimuth / 180 * Math.PI, [0, 1, 0])
 
-  Vec3.set3(renderer._state.sunPosition, 1, 0, 0)
-  Vec3.multMat4(renderer._state.sunPosition, State.elevationMat)
-  Vec3.multMat4(renderer._state.sunPosition, State.rotationMat)
+  vec3.set3(renderer._state.sunPosition, 1, 0, 0)
+  vec3.multMat4(renderer._state.sunPosition, State.elevationMat)
+  vec3.multMat4(renderer._state.sunPosition, State.rotationMat)
 }
 
 gui.addParam('Exposure', renderer._state, 'exposure', { min: 0.01, max: 5 })
@@ -145,7 +145,7 @@ function initSpheres () {
 }
 
 function initLights () {
-  var sunDir = Vec3.normalize([1, -1, 1])
+  var sunDir = vec3.normalize([1, -1, 1])
   var sunLightNode = renderer.createNode({
     light: {
       type: 'directional',
@@ -179,7 +179,7 @@ function initLights () {
     enabled: true,
     position: [5, 2, 0],
     scale: [2, 5, 0.1],
-    rotation: Quat.fromDirection(Quat.create(), [-1, 0, 0]),
+    rotation: quat.fromDirection(quat.create(), [-1, 0, 0]),
     mesh: areaLightMesh,
     material: {
       emissiveColor: areaLightColor,
@@ -225,7 +225,6 @@ ctx.frame(() => {
   gui.draw()
 })
 
-
 /*
 Window.create({
       // this.renderer._state.debug = true
@@ -250,7 +249,6 @@ Window.create({
       gui.addTexture2D('Normals', renderer._frameNormalTex)
       gui.addTexture2D('Depth', renderer._frameDepthTex)
       // gui.addTexture2D('Reflection OctMap', renderer._reflectionProbe._reflectionOctMap, { hdr: true })
-
 
       // http://stackoverflow.com/a/36481059
 
@@ -279,7 +277,6 @@ Window.create({
       }))
 
       ctx.setLineWidth(5)
-
 
     } catch(e) {
       console.log(e)

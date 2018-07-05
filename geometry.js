@@ -1,5 +1,5 @@
 const Signal = require('signals')
-const AABB = require('pex-geom/AABB')
+const aabb = require('pex-geom/aabb')
 
 const AttributesMap = {
   positions: 'aPosition',
@@ -23,7 +23,7 @@ const IndicesMap = {
 function Geometry (opts) {
   this.type = 'Geometry'
   this.changed = new Signal()
-  this.bounds = AABB.create()
+  this.bounds = aabb.create()
 
   this.primitive = opts.ctx.Primitive.Triangles
 
@@ -73,7 +73,7 @@ Geometry.prototype.set = function (opts) {
           // If we have list of vectors we can calculate bounding box otherwise
           // the user has to provide it
           if (data[0].length) {
-            this.bounds = opts.bounds || AABB.fromPoints(data)
+            this.bounds = opts.bounds || aabb.fromPoints(data)
           }
         }
       } else if (val.buffer) {

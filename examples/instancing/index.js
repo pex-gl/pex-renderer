@@ -1,6 +1,6 @@
-const Mat4 = require('pex-math/Mat4')
-const Quat = require('pex-math/Quat')
-const Vec3 = require('pex-math/Vec3')
+const mat4 = require('pex-math/mat4')
+const quat = require('pex-math/quat')
+const vec3 = require('pex-math/vec3')
 const createCamera = require('pex-cam/perspective')
 const createOrbiter = require('pex-cam/orbiter')
 const Renderer = require('../../')
@@ -9,7 +9,7 @@ const createSphere = require('primitive-sphere')
 const createGUI = require('pex-gui')
 const random = require('pex-random')
 const createContext = require('pex-context')
-const remap = require('pex-math/Utils').map
+const remap = require('pex-math/utils').map
 const cosineGradient = require('cosine-gradient')
 const ctx = createContext()
 ctx.gl.getExtension('EXT_shader_texture_lod')
@@ -27,8 +27,8 @@ const State = {
   elevation: 65,
   azimuth: -45,
   mie: 0.000021,
-  elevationMat: Mat4.create(),
-  rotationMat: Mat4.create(),
+  elevationMat: mat4.create(),
+  rotationMat: mat4.create(),
   roughness: 0.5,
   metallic: 0.1,
   baseColor: [0.8, 0.1, 0.1, 1.0],
@@ -45,17 +45,17 @@ gui.addParam('Sun Elevation', State, 'elevation', { min: -90, max: 180 }, update
 gui.addParam('Sun Azimuth', State, 'azimuth', { min: -180, max: 180 }, updateSunPosition)
 
 function updateSunPosition () {
-  Mat4.setRotation(State.elevationMat, State.elevation / 180 * Math.PI, [0, 0, 1])
-  Mat4.setRotation(State.rotationMat, State.azimuth / 180 * Math.PI, [0, 1, 0])
+  mat4.setRotation(State.elevationMat, State.elevation / 180 * Math.PI, [0, 0, 1])
+  mat4.setRotation(State.rotationMat, State.azimuth / 180 * Math.PI, [0, 1, 0])
 
-  Vec3.set3(State.sunPosition, 10, 0, 0)
-  Vec3.multMat4(State.sunPosition, State.elevationMat)
-  Vec3.multMat4(State.sunPosition, State.rotationMat)
+  vec3.set3(State.sunPosition, 10, 0, 0)
+  vec3.multMat4(State.sunPosition, State.elevationMat)
+  vec3.multMat4(State.sunPosition, State.rotationMat)
 
   if (State.sun) {
     var sunDir = State.sun.direction
-    Vec3.set(sunDir, [0, 0, 0])
-    Vec3.sub(sunDir, State.sunPosition)
+    vec3.set(sunDir, [0, 0, 0])
+    vec3.sub(sunDir, State.sunPosition)
     State.sun.set({ direction: sunDir })
   }
 
@@ -127,19 +127,19 @@ function initMeshes () {
             remap(y, 0, n, -1, 1),
             remap(z, 0, n, -1, 1)
           ]
-          const dist = Vec3.distance(pos, center)
+          const dist = vec3.distance(pos, center)
           if (dist < radius) {
-            const force = Vec3.sub(Vec3.copy(pos), center)
-            Vec3.normalize(force)
-            Vec3.scale(force, 1 - Math.sqrt(dist / radius))
-            Vec3.add(pos, force)
+            const force = vec3.sub(vec3.copy(pos), center)
+            vec3.normalize(force)
+            vec3.scale(force, 1 - Math.sqrt(dist / radius))
+            vec3.add(pos, force)
           }
-          const dist2 = Vec3.distance(pos, center2)
+          const dist2 = vec3.distance(pos, center2)
           if (dist2 < radius2) {
-            const force = Vec3.sub(Vec3.copy(pos), center2)
-            Vec3.normalize(force)
-            Vec3.scale(force, 1 - Math.sqrt(dist2 / radius2))
-            Vec3.add(pos, force)
+            const force = vec3.sub(vec3.copy(pos), center2)
+            vec3.normalize(force)
+            vec3.scale(force, 1 - Math.sqrt(dist2 / radius2))
+            vec3.add(pos, force)
           }
           offsets[i] = pos
           const value = Math.min(1, dist / radius)
@@ -147,15 +147,15 @@ function initMeshes () {
           const colorBase = [0.8, 0.1, 0.1, 1.0]
           const color = gradient(value)
           const color2 = gradient2(value2)
-          Vec3.lerp(colorBase, [0, 0, 0, 0], Math.sqrt(Math.max(0.01, 1 - value - value2)))
-          Vec3.lerp(color, [0, 0, 0, 0], value)
-          Vec3.lerp(color2, [0, 0, 0, 0], value2)
-          Vec3.add(colorBase, color)
-          Vec3.add(colorBase, color2)
+          vec3.lerp(colorBase, [0, 0, 0, 0], Math.sqrt(Math.max(0.01, 1 - value - value2)))
+          vec3.lerp(color, [0, 0, 0, 0], value)
+          vec3.lerp(color2, [0, 0, 0, 0], value2)
+          vec3.add(colorBase, color)
+          vec3.add(colorBase, color2)
           colors[i] = colorBase
           scales[i] = [1, 1, 4]
-          const dir = Vec3.normalize(Vec3.sub(Vec3.copy(pos), center))
-          rotations[i] = Quat.fromDirection(Quat.create(), dir)
+          const dir = vec3.normalize(vec3.sub(vec3.copy(pos), center))
+          rotations[i] = quat.fromDirection(quat.create(), dir)
           i++
         }
       }
@@ -200,7 +200,7 @@ function initMeshes () {
 
 function initSky () {
   const sun = State.sun = renderer.directionalLight({
-    direction: Vec3.sub(Vec3.create(), State.sunPosition),
+    direction: vec3.sub(vec3.create(), State.sunPosition),
     color: [5, 5, 4, 1],
     bias: 0.01,
     castShadows: true
@@ -250,7 +250,7 @@ function initLights () {
     enabled: true,
     position: [0, 0, 0],
     scale: [0.5, 0.5, 0.1],
-    rotation: Quat.fromDirection(Quat.create(), [0, 0, 1]),
+    rotation: quat.fromDirection(quat.create(), [0, 0, 1]),
     mesh: areaLightMesh,
     material: {
       emissiveColor: areaLightColor,

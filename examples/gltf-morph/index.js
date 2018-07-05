@@ -1,8 +1,8 @@
 const loadJSON = require('pex-io/loadJSON')
 const createCube = require('primitive-cube')
 const loadBinary = require('pex-io/loadBinary')
-const Mat4 = require('pex-math/Mat4')
-const Vec3 = require('pex-math/Vec3')
+const mat4 = require('pex-math/mat4')
+const vec3 = require('pex-math/vec3')
 const createRenderer = require('../../')
 const createCamera = require('pex-cam/perspective')
 const createOrbiter = require('pex-cam/orbiter')
@@ -26,8 +26,8 @@ const State = {
   elevation: 65,
   azimuth: -45,
   mie: 0.000021,
-  elevationMat: Mat4.create(),
-  rotationMat: Mat4.create(),
+  elevationMat: mat4.create(),
+  rotationMat: mat4.create(),
   roughness: 0.5,
   metallic: 0.1,
   baseColor: [0.8, 0.1, 0.1, 1.0],
@@ -36,7 +36,7 @@ const State = {
 
 function initSky (panorama) {
   const sun = State.sun = renderer.directionalLight({
-    direction: Vec3.sub(Vec3.create(), State.sunPosition),
+    direction: vec3.sub(vec3.create(), State.sunPosition),
     color: [1, 1, 0.95, 1],
     intensity: 10
   })
@@ -295,7 +295,7 @@ function handleAnimation (animation, gltf) {
     console.log('animation channel', channel, output.type, input, output, sampler, animation, channel)
     let offset = AttributeSizeMap[output.type]
     if (channel.target.path === 'weights') {
-        offset = target.getComponent('Morph').weights.length
+      offset = target.getComponent('Morph').weights.length
     }
     for (let i = 0; i < output.data.length; i += offset) {
       if (offset === 1) {
@@ -311,7 +311,6 @@ function handleAnimation (animation, gltf) {
         outputData.push([od[i], od[i + 1], od[i + 2], od[i + 3]])
       }
     }
-
 
     return {
       sampler: {

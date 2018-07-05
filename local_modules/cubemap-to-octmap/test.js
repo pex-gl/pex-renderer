@@ -11,8 +11,8 @@ mediump vec2 octahedralProjection(mediump vec3 dir) {
 }
 */
 
-var Vec3 = require('pex-math/vec3')
-var Vec2 = require('pex-math/vec2')
+var vec3 = require('pex-math/vec3')
+var vec2 = require('pex-math/vec2')
 var abs = Math.abs
 var random = Math.random
 
@@ -22,28 +22,28 @@ var random = Math.random
 //https://github.com/mrdoob/three.js/issues/5847
 
 function dirToOctUv(dir) {
-    var dot = Vec3.dot([1,1,1], [abs(dir[0]), abs(dir[1]), abs(dir[2])])
-    dir = Vec3.scale(Vec3.copy(dir), 1/dot)
-    var rev = Vec2.sub([abs(dir[2]), abs(dir[0])], [1, 1])
+    var dot = vec3.dot([1,1,1], [abs(dir[0]), abs(dir[1]), abs(dir[2])])
+    dir = vec3.scale(vec3.copy(dir), 1/dot)
+    var rev = vec2.sub([abs(dir[2]), abs(dir[0])], [1, 1])
     var neg = [
         (dir[0] < 0) ? rev[0] : -rev[0],
         (dir[2] < 0) ? rev[1] : -rev[1],
     ]
     var uv = dir[1] < 0 ? neg : [dir[0], dir[2]]
-    Vec2.add(Vec2.scale(uv, 0.5), [0.5, 0.5])
+    vec2.add(vec2.scale(uv, 0.5), [0.5, 0.5])
     return uv
 }
 
 function dirToOctUv2(dir) {
     //#define sum(value) dot(clamp((value), 1.0, 1.0), (value))
-    var dot = Vec3.dot([1,1,1], [abs(dir[0]), abs(dir[1]), abs(dir[2])])
-    dir = Vec3.scale(Vec3.copy(dir), 1/dot)
+    var dot = vec3.dot([1,1,1], [abs(dir[0]), abs(dir[1]), abs(dir[2])])
+    dir = vec3.scale(vec3.copy(dir), 1/dot)
     var uv;
     if (dir[1] >= 0) {
         uv = [dir[0], dir[2]]
     }
     else {
-        var rev = Vec2.sub([abs(dir[2]), abs(dir[0])], [1, 1])
+        var rev = vec2.sub([abs(dir[2]), abs(dir[0])], [1, 1])
         uv = [
             (dir[0] < 0) ? rev[0] : -rev[0],
             (dir[2] < 0) ? rev[1] : -rev[1],
@@ -61,7 +61,7 @@ function dirToOctUv2(dir) {
         //   v = -(abs(dirX) - 1)
         //   v = 1..0
     }
-    return Vec2.add(Vec2.scale(uv, 0.5), [0.5, 0.5])
+    return vec2.add(vec2.scale(uv, 0.5), [0.5, 0.5])
 }
 
 var iter = 0;
@@ -76,10 +76,10 @@ function sectorize(uv) {
 function octUvToDir(uv) {
     var dir = [0,0,0]
     //uv = [0..1, 0..1]
-    uv = Vec2.sub(Vec2.scale(Vec2.copy(uv), 2), [1, 1])
+    uv = vec2.sub(vec2.scale(vec2.copy(uv), 2), [1, 1])
     //uv = [-1..1, -1..1]
     var auv = [abs(uv[0]), abs(uv[1])]
-    var len = Vec2.dot(auv, [1,1])
+    var len = vec2.dot(auv, [1,1])
     var suv = sectorize(uv)
     if (len > 1.0) {
         //y < 0 case
@@ -89,7 +89,7 @@ function octUvToDir(uv) {
         ]
     }
 
-    return Vec3.normalize([
+    return vec3.normalize([
         uv[0],
         1 - len,
         uv[1]
@@ -110,14 +110,14 @@ plask.simpleWindow({
         var W = 256
         var H = 256
         for(var i=0; i<100000; i++) {
-            var dir = Vec3.normalize([
+            var dir = vec3.normalize([
                 random() * 2 - 1,
                 random() * 2 - 1,
                 random() * 2 - 1
             ])
-            var dirOrig = Vec3.copy(dir)
+            var dirOrig = vec3.copy(dir)
             var uv = dirToOctUv2(dir)
-            var uvOrig = Vec2.copy(uv)
+            var uvOrig = vec2.copy(uv)
             dir = octUvToDir(uv)
             uv = dirToOctUv2(dir)
             var s = (dir[1] >= 0) ? 1 : 0.5

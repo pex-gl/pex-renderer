@@ -1,6 +1,6 @@
-const Mat4 = require('pex-math/Mat4')
-const Quat = require('pex-math/Quat')
-const Vec3 = require('pex-math/Vec3')
+const mat4 = require('pex-math/mat4')
+const quat = require('pex-math/quat')
+const vec3 = require('pex-math/vec3')
 const createCamera = require('pex-cam/perspective')
 const createOrbiter = require('pex-cam/orbiter')
 const createRenderer = require('../../')
@@ -16,7 +16,7 @@ const dragon = require('stanford-dragon/3')
 const normals = require('angle-normals')
 const centerAndNormalize = require('geom-center-and-normalize')
 const isBrowser = require('is-browser')
-dragon.positions = centerAndNormalize(dragon.positions).map((v) => Vec3.scale(v, 5))
+dragon.positions = centerAndNormalize(dragon.positions).map((v) => vec3.scale(v, 5))
 dragon.normals = normals(dragon.cells, dragon.positions)
 dragon.uvs = dragon.positions.map(() => [0, 0])
 
@@ -31,8 +31,8 @@ const State = {
   elevation: 25,
   azimuth: -45,
   mie: 0.000021,
-  elevationMat: Mat4.create(),
-  rotationMat: Mat4.create(),
+  elevationMat: mat4.create(),
+  rotationMat: mat4.create(),
   roughness: 0.5,
   metallic: 0.1,
   baseColor: [0.8, 0.1, 0.1, 1.0],
@@ -56,18 +56,18 @@ gui.addParam('Sun Elevation', State, 'elevation', { min: -90, max: 180 }, update
 gui.addParam('Sun Azimuth', State, 'azimuth', { min: -180, max: 180 }, updateSunPosition)
 
 function updateSunPosition () {
-  Mat4.setRotation(State.elevationMat, State.elevation / 180 * Math.PI, [0, 0, 1])
-  Mat4.setRotation(State.rotationMat, State.azimuth / 180 * Math.PI, [0, 1, 0])
+  mat4.setRotation(State.elevationMat, State.elevation / 180 * Math.PI, [0, 0, 1])
+  mat4.setRotation(State.rotationMat, State.azimuth / 180 * Math.PI, [0, 1, 0])
 
-  Vec3.set3(State.sunPosition, 10, 0, 0)
-  Vec3.multMat4(State.sunPosition, State.elevationMat)
-  Vec3.multMat4(State.sunPosition, State.rotationMat)
+  vec3.set3(State.sunPosition, 10, 0, 0)
+  vec3.multMat4(State.sunPosition, State.elevationMat)
+  vec3.multMat4(State.sunPosition, State.rotationMat)
 
   if (State.sun) {
     var sunDir = [0, 0, 0]
-    Vec3.sub(sunDir, State.sunPosition)
-    Vec3.normalize(sunDir)
-    var rotation = Quat.fromTo(Quat.create(), [0, 0, 1], sunDir, [0, 1, 0])
+    vec3.sub(sunDir, State.sunPosition)
+    vec3.normalize(sunDir)
+    var rotation = quat.fromTo(quat.create(), [0, 0, 1], sunDir, [0, 1, 0])
     State.sun.entity.transform.set({ rotation: rotation })
   }
 
@@ -84,14 +84,6 @@ let fakeCamera = null
 let cameraTransformCmp = null
 
 function initCamera () {
-  const camera = createCamera({
-    fov: Math.PI / 3,
-    aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
-    position: [0, 1, 10],
-    target: [0, 0, 0],
-    near: 2,
-    far: 100
-  })
   fakeCamera = createCamera({
     fov: Math.PI / 3,
     aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
@@ -106,10 +98,11 @@ function initCamera () {
     position: [0, 5, 24]
   })
   const cameraCmp = renderer.camera({
+    fov: Math.PI / 3,
+    aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
     ssao: true,
     dof: false,
-    fxaa: false,
-    camera: camera
+    fxaa: false
   })
   renderer.add(renderer.entity([
     cameraTransformCmp,
@@ -153,7 +146,7 @@ function initMeshes () {
   for (var i = 0; i < 20; i++) {
     renderer.add(renderer.entity([
       renderer.transform({
-        position: Vec3.scale(random.vec3(), 2)
+        position: vec3.scale(random.vec3(), 2)
       }),
       renderer.geometry(sphere),
       renderer.material({
@@ -238,7 +231,7 @@ function initMeshes () {
 
 function initSky () {
   const sun = State.sun = renderer.directionalLight({
-    direction: Vec3.sub(Vec3.create(), State.sunPosition),
+    direction: vec3.sub(vec3.create(), State.sunPosition),
     color: [1, 1, 0.95, 1],
     intensity: 10,
     castShadows: true
@@ -291,7 +284,7 @@ function initLights () {
     renderer.transform({
       position: [0, 3, 0],
       scale: [5, 1, 0.1],
-      rotation: Quat.fromDirection(Quat.create(), [0, -1, 0.001])
+      rotation: quat.fromDirection(quat.create(), [0, -1, 0.001])
     }),
     renderer.areaLight({
       color: [2.0, 1.2, 0.1, 1],
@@ -348,14 +341,14 @@ window.addEventListener('keydown', (e) => {
 
 updateSunPosition()
 
-var tempMat4 = Mat4.create()
+var tempmat4 = mat4.create()
 ctx.frame(() => {
   // TODO: ugly
   const transformCmp = cameraTransformCmp
   var transformRotation = transformCmp.rotation
-  Mat4.set(tempMat4, fakeCamera.viewMatrix)
-  Mat4.invert(tempMat4)
-  Quat.fromMat4(transformRotation, tempMat4)
+  mat4.set(tempmat4, fakeCamera.viewMatrix)
+  mat4.invert(tempmat4)
+  quat.fromMat4(transformRotation, tempmat4)
   transformCmp.set({
     position: fakeCamera.position,
     rotation: transformRotation

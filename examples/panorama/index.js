@@ -1,7 +1,7 @@
 // require('debug').enable('*')
-const Mat4 = require('pex-math/mat4')
-const Quat = require('pex-math/quat')
-const Vec3 = require('pex-math/vec3')
+const mat4 = require('pex-math/mat4')
+const quat = require('pex-math/quat')
+const vec3 = require('pex-math/vec3')
 const createCamera = require('pex-cam/perspective')
 const createOrbiter = require('pex-cam/orbiter')
 const createRenderer = require('../../../pex-renderer')
@@ -28,8 +28,8 @@ const State = {
   elevation: 45,
   azimuth: -45,
   mie: 0.000021,
-  elevationMat: Mat4.create(),
-  rotationMat: Mat4.create(),
+  elevationMat: mat4.create(),
+  rotationMat: mat4.create(),
   roughness: 0.5,
   metallic: 0.1,
   baseColor: [0.8, 0.1, 0.1, 1.0],
@@ -54,17 +54,17 @@ gui.addParam('Sun Elevation', State, 'elevation', { min: -90, max: 180 }, update
 gui.addParam('Sun Azimuth', State, 'azimuth', { min: -180, max: 180 }, updateSunPosition)
 
 function updateSunPosition () {
-  Mat4.setRotation(State.elevationMat, State.elevation / 180 * Math.PI, [0, 0, 1])
-  Mat4.setRotation(State.rotationMat, State.azimuth / 180 * Math.PI, [0, 1, 0])
+  mat4.setRotation(State.elevationMat, State.elevation / 180 * Math.PI, [0, 0, 1])
+  mat4.setRotation(State.rotationMat, State.azimuth / 180 * Math.PI, [0, 1, 0])
 
-  Vec3.set3(State.sunPosition, 10, 0, 0)
-  Vec3.multMat4(State.sunPosition, State.elevationMat)
-  Vec3.multMat4(State.sunPosition, State.rotationMat)
+  vec3.set3(State.sunPosition, 10, 0, 0)
+  vec3.multMat4(State.sunPosition, State.elevationMat)
+  vec3.multMat4(State.sunPosition, State.rotationMat)
 
   if (State.sun) {
     var sunDir = State.sun.direction
-    Vec3.set(sunDir, [0, 0, 0])
-    Vec3.sub(sunDir, State.sunPosition)
+    vec3.set(sunDir, [0, 0, 0])
+    vec3.sub(sunDir, State.sunPosition)
     State.sun.set({ direction: sunDir })
   }
 
@@ -161,7 +161,7 @@ function initMeshes () {
 }
 
 function initLights () {
-  const sunDir = Vec3.normalize([1, -1, 1])
+  const sunDir = vec3.normalize([1, -1, 1])
 
   const sphereMesh = buildMesh(createSphere(0.2))
   const pointLight = renderer.createNode({
@@ -186,7 +186,7 @@ function initLights () {
     enabled: true,
     position: [6, 0, 0],
     scale: [1, 10, 0.1],
-    rotation: Quat.fromDirection(Quat.create(), [-1, 0, 0]),
+    rotation: quat.fromDirection(quat.create(), [-1, 0, 0]),
     mesh: areaLightMesh,
     material: {
       emissiveColor: areaLightColor,
@@ -349,13 +349,13 @@ function initMaterials () {
 
 function initSky (panorama) {
   const sun = State.sun = renderer.directionalLight({
-    direction: Vec3.sub(Vec3.create(), State.sunPosition),
+    direction: vec3.sub(vec3.create(), State.sunPosition),
     color: [5, 5, 4, 1]
   })
   gui.addTexture2D('Shadow map', sun._shadowMap).setPosition(10 + 170, 10)
 
   const skybox = State.skybox = renderer.skybox({
-    sunPosition: State.sunPosition,
+    sunPosition: State.sunPosition
     // texture: panorama
   })
   gui.addTexture2D('Sky', skybox._skyTexture)

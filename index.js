@@ -683,8 +683,8 @@ Renderer.prototype.draw = function () {
 
   // TODO: update light probes
   /*
-  if (!Vec3.equals(State.prevSunPosition, State.sunPosition)) {
-    Vec3.set(State.prevSunPosition, State.sunPosition)
+  if (!vec3.equals(State.prevSunPosition, State.sunPosition)) {
+    vec3.set(State.prevSunPosition, State.sunPosition)
 
     // TODO: update sky only if it's used
     // TODO: implement

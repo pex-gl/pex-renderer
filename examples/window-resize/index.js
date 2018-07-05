@@ -4,7 +4,7 @@ const renderer = require('../../')({
   ctx: ctx,
   shadowQuality: 4
 })
-const Vec3 = require('pex-math/Vec3')
+const vec3 = require('pex-math/vec3')
 const createCube = require('primitive-cube')
 
 const camera = require('pex-cam/perspective')({
@@ -34,7 +34,7 @@ const cameraEnt = renderer.add(renderer.entity([
 
 renderer.add(renderer.entity([
   renderer.directionalLight({
-    direction: Vec3.normalize([-1, -1, -1]),
+    direction: vec3.normalize([-1, -1, -1]),
     castShadows: true
   }),
   renderer.skybox({
@@ -76,7 +76,7 @@ window.addEventListener('resize', () => {
 
 ctx.frame(() => {
   cameraEnt.getComponent('Camera').set({
-    dofDepth: Vec3.length(camera.position)
+    dofDepth: vec3.length(camera.position)
   })
   renderer.draw()
 })

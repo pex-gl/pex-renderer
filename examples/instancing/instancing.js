@@ -2,9 +2,9 @@ const createCube = require('primitive-cube')
 const bunny = require('bunny')
 const normals = require('normals')
 const centerAndNormalize = require('geom-center-and-normalize')
-const Vec3 = require('pex-math/Vec3')
-const Mat4 = require('pex-math/Mat4')
-const Quat = require('pex-math/Quat')
+const vec3 = require('pex-math/vec3')
+const mat4 = require('pex-math/mat4')
+const quat = require('pex-math/quat')
 const SimplexNoise = require('simplex-noise')
 const R = require('ramda')
 const random = require('pex-random')
@@ -235,7 +235,7 @@ const drawFloorCmd = {
   uniforms: {
     uProjectionMatrix: camera.projectionMatrix,
     uViewMatrix: camera.viewMatrix,
-    uModelMatrix: Mat4.create(),
+    uModelMatrix: mat4.create(),
     uWrap: 0,
     uLightNear: lightCamera.near,
     uLightFar: lightCamera.far,
@@ -269,7 +269,7 @@ const drawFloorDepthCmd = {
   uniforms: {
     uProjectionMatrix: lightCamera.projectionMatrix,
     uViewMatrix: lightCamera.viewMatrix,
-    uModelMatrix: Mat4.create()
+    uModelMatrix: mat4.create()
   },
   attributes: {
     aPosition: {
@@ -292,7 +292,7 @@ const colors = []
 const numBunnies = 200 // for some reason this is much slower than batching
 for (let i = 0; i < numBunnies; i++) {
   const pos = [random.float(-5, 5), random.float(0, 5), random.float(-5, 5)]
-  const rotation = Quat.fromDirection(Quat.create(), random.vec3())
+  const rotation = quat.fromDirection(quat.create(), random.vec3())
   const scale = [0.2, 0.2, 0.2]
   const color = [random.float(), random.float(), random.float(), 1.0]
 
@@ -302,9 +302,9 @@ for (let i = 0; i < numBunnies; i++) {
   colors.push(color)
 }
 
-const bunnyBaseVertices = centerAndNormalize(bunny.positions).map((p) => Vec3.scale(p, 2))
+const bunnyBaseVertices = centerAndNormalize(bunny.positions).map((p) => vec3.scale(p, 2))
 const bunnyBaseNormals = normals.vertexNormals(bunny.cells, bunny.positions)
-const bunnyNoiseVertices = centerAndNormalize(bunny.positions).map((p) => Vec3.scale(p, 2))
+const bunnyNoiseVertices = centerAndNormalize(bunny.positions).map((p) => vec3.scale(p, 2))
 
 const bunnyPositionBuffer = ctx.vertexBuffer(bunnyBaseVertices)
 const bunnyNormalBuffer = ctx.vertexBuffer(bunnyBaseNormals)
@@ -326,7 +326,7 @@ const drawBunnyCmd = {
     // doing anything, is that but or a feature? Should i cache and force uViewMatrix: () => camera.viewMatrix
     // to mark the uniform as "dynamic" ?
     uViewMatrix: camera.viewMatrix,
-    uModelMatrix: Mat4.translate(Mat4.create(), [0, 1, 0]),
+    uModelMatrix: mat4.translate(mat4.create(), [0, 1, 0]),
     uWrap: 0,
     uLightNear: lightCamera.near,
     uLightFar: lightCamera.far,
@@ -362,14 +362,14 @@ const drawBunnyDepthCmd = {
   uniforms: {
     uProjectionMatrix: lightCamera.projectionMatrix,
     uViewMatrix: lightCamera.viewMatrix,
-    uModelMatrix: Mat4.translate(Mat4.create(), [0, 1, 0])
+    uModelMatrix: mat4.translate(mat4.create(), [0, 1, 0])
   },
   attributes: {
     aPosition: { buffer: bunnyPositionBuffer },
     aNormal: { buffer: bunnyNormalBuffer },
     aOffset: { buffer: bunnyOffsetsBuffer, divisor: 1 },
     aRotation: { buffer: bunnyRotationsBuffer, divisor: 1 },
-    aScale: { buffer: bunnyScalesBuffer, divisor: 1 },
+    aScale: { buffer: bunnyScalesBuffer, divisor: 1 }
   },
   // FIXME: rename this to indexBuffer?
   indices: {
@@ -399,7 +399,7 @@ function updateBunny (ctx) {
   for (let i = 0; i < bunnyBaseVertices.length; i++) {
     const v = bunnyNoiseVertices[i]
     const n = bunnyBaseNormals[i]
-    Vec3.set(v, bunnyBaseVertices[i])
+    vec3.set(v, bunnyBaseVertices[i])
     const f = noise.noise3D(v[0] * noiseFrequency, v[1] * noiseFrequency, v[2] * noiseFrequency + elapsedSeconds)
     v[0] += n[0] * noiseScale * (f + 1)
     v[1] += n[1] * noiseScale * (f + 1)

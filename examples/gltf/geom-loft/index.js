@@ -2,7 +2,7 @@
 /*
 let splinePoints = require('./geom-spline-points')
 let interpolateArrays = require('interpolate-arrays')
-const Vec3 = require('pex-math/Vec3')
+const vec3 = require('pex-math/vec3')
 
 function pathBiTangents (path) {
   var bitangents = []
@@ -13,15 +13,15 @@ function pathBiTangents (path) {
   for (var i = 0; i < path.length - 1; i++) {
     var np = path[i + 1]
     var p = path[i]
-    Vec3.set(forward, np)
-    Vec3.sub(forward, p)
-    Vec3.normalize(forward)
-    Vec3.set(up, right)
-    Vec3.cross(up, forward)
-    Vec3.set(bitangent, forward)
-    Vec3.cross(bitangent, up)
-    Vec3.normalize(bitangent)
-    bitangents.push(Vec3.copy(bitangent))
+    vec3.set(forward, np)
+    vec3.sub(forward, p)
+    vec3.normalize(forward)
+    vec3.set(up, right)
+    vec3.cross(up, forward)
+    vec3.set(bitangent, forward)
+    vec3.cross(bitangent, up)
+    vec3.normalize(bitangent)
+    bitangents.push(vec3.copy(bitangent))
   }
   // repeat last bitangent
   bitangents.push(bitangents[bitangents.length-1])
@@ -37,12 +37,12 @@ function makeBranch (path, pathPoints) {
 // var merge = require('merge');
 // var geom = require('pex-geom');
 // var Geometry = geom.Geometry;
-// var Vec2 = geom.Vec2;
-// var Vec3 = geom.Vec3;
-const Vec3 = require('pex-math/Vec3')
-const Mat4 = require('pex-math/Mat4')
-const Quat = require('pex-math/Quat')
-const clamp = require('pex-math/Utils').clamp
+// var vec2 = geom.vec2;
+// var vec3 = geom.vec3;
+const vec3 = require('pex-math/vec3')
+const mat4 = require('pex-math/mat4')
+const quat = require('pex-math/quat')
+const clamp = require('pex-math/utils').clamp
 // var Mat4 = geom.Mat4;
 // var Quat = geom.Quat;
 // var Path = geom.Path;
@@ -64,7 +64,7 @@ var EPSILON = 0.00001
 //  - `shapePath` - shape to be extruded, if none a circle will be generated *{ Path = null }*
 //  - `xShapeScale` - distorion scale along extruded shape x axis *{ Number = 1 }*
 //  - `caps` - generate ending caps geometry *{ bool = false }*
-//  - `initialNormal` - starting frame normal *{ Vec3 = null }*
+//  - `initialNormal` - starting frame normal *{ vec3 = null }*
 function createLoft (path, shapePath, options) {
   options = options || { }
   // options = options || {};
@@ -94,10 +94,10 @@ function createLoft (path, shapePath, options) {
   const tangents = path.map((point, i, points) => {
     if (i < points.length - 1) {
       const nextPoint = points[i + 1]
-      return Vec3.normalize(Vec3.sub(Vec3.copy(nextPoint), point))
+      return vec3.normalize(vec3.sub(vec3.copy(nextPoint), point))
     } else {
       const prevPoint = points[i - 1]
-      return Vec3.normalize(Vec3.sub(Vec3.copy(point), prevPoint))
+      return vec3.normalize(vec3.sub(vec3.copy(point), prevPoint))
     }
   })
   const isClosed = false
@@ -107,11 +107,11 @@ function createLoft (path, shapePath, options) {
 
   path.forEach((p, i) => {
     g.debugLines.push(p)
-    g.debugLines.push(Vec3.add(Vec3.copy(p), Vec3.scale(Vec3.copy(frames[i].tangent), 0.2)))
+    g.debugLines.push(vec3.add(vec3.copy(p), vec3.scale(vec3.copy(frames[i].tangent), 0.2)))
     g.debugLines.push(p)
-    g.debugLines.push(Vec3.add(Vec3.copy(p), Vec3.scale(Vec3.copy(frames[i].normal), 0.2)))
+    g.debugLines.push(vec3.add(vec3.copy(p), vec3.scale(vec3.copy(frames[i].normal), 0.2)))
     g.debugLines.push(p)
-    g.debugLines.push(Vec3.add(Vec3.copy(p), Vec3.scale(Vec3.copy(frames[i].binormal), 0.2)))
+    g.debugLines.push(vec3.add(vec3.copy(p), vec3.scale(vec3.copy(frames[i].binormal), 0.2)))
   })
 
   return g
@@ -127,16 +127,16 @@ function makeFrames (points, tangents, closed, rot) {
   const atz = Math.abs(tangent[2])
   let v = null
   if (atz > atx && atz >= aty) {
-    v = Vec3.cross(Vec3.copy(tangent), [0, 1, 0])
+    v = vec3.cross(vec3.copy(tangent), [0, 1, 0])
   } else if (aty > atx && aty >= atz) {
-    v = Vec3.cross(Vec3.copy(tangent), [1, 0, 0])
+    v = vec3.cross(vec3.copy(tangent), [1, 0, 0])
   } else {
-    v = Vec3.cross(Vec3.copy(tangent), [0, 0, 1])
+    v = vec3.cross(vec3.copy(tangent), [0, 0, 1])
   }
 
-  // var normal = this.options.initialNormal || Vec3.create().asCross(tangent, v).normalize()
-  let normal = Vec3.normalize(Vec3.cross(Vec3.copy(tangent), v))
-  let binormal = Vec3.normalize(Vec3.cross(Vec3.copy(tangent), normal))
+  // var normal = this.options.initialNormal || vec3.create().asCross(tangent, v).normalize()
+  let normal = vec3.normalize(vec3.cross(vec3.copy(tangent), v))
+  let binormal = vec3.normalize(vec3.cross(vec3.copy(tangent), normal))
   // let prevBinormal = null
   // let prevNormal = null
   let prevTangent = null
@@ -148,19 +148,19 @@ function makeFrames (points, tangents, closed, rot) {
     var position = points[i]
     tangent = tangents[i]
     if (i > 0) {
-      normal = Vec3.copy(normal)
-      binormal = Vec3.copy(binormal)
+      normal = vec3.copy(normal)
+      binormal = vec3.copy(binormal)
       prevTangent = tangents[i - 1]
-      Vec3.cross(Vec3.set(v, prevTangent), tangent)
-      if (Vec3.length(v) > EPSILON) {
-        Vec3.normalize(v)
-        theta = Math.acos(Vec3.dot(prevTangent, tangent))
-        Quat.setAxisAngle(rotation, v, theta)
-        Vec3.multQuat(normal, rotation)
+      vec3.cross(vec3.set(v, prevTangent), tangent)
+      if (vec3.length(v) > EPSILON) {
+        vec3.normalize(v)
+        theta = Math.acos(vec3.dot(prevTangent, tangent))
+        quat.setAxisAngle(rotation, v, theta)
+        vec3.multQuat(normal, rotation)
       }
-      Vec3.cross(Vec3.set(binormal, tangent), normal)
+      vec3.cross(vec3.set(binormal, tangent), normal)
     }
-    var m = Mat4.create()
+    var m = mat4.create()
     m[0] = binormal[0]
     m[1] = binormal[1]
     m[2] = binormal[2]
@@ -190,14 +190,14 @@ function makeFrames (points, tangents, closed, rot) {
     const lastNormal = frames[frames.length - 1].normal
     theta = Math.acos(clamp(firstNormal.dot(lastNormal), 0, 1))
     theta /= frames.length - 1
-    if (Vec3.dot(tangents[0], Vec3.cross(Vec3.copy(firstNormal), lastNormal)) > 0) {
+    if (vec3.dot(tangents[0], vec3.cross(vec3.copy(firstNormal), lastNormal)) > 0) {
       theta = -theta
     }
     frames.forEach(function (frame, frameIndex) {
-      Quat.setAxisAngle(rotation, frame.tangent, theta * frameIndex)
-      Vec3.multQuat(frame.normal, frame.rotation)
-      Vec3.cross(Vec3.set(frame.binormal, frame.tangent), frame.normal)
-      Mat4.set16(frame.m, binormal[0], binormal[1], binormal[2], 0, normal[0], normal[1], normal[2], 0, tangent[0], tangent[1], tangent[2], 0, 0, 0, 0, 1)
+      quat.setAxisAngle(rotation, frame.tangent, theta * frameIndex)
+      vec3.multQuat(frame.normal, frame.rotation)
+      vec3.cross(vec3.set(frame.binormal, frame.tangent), frame.normal)
+      mat4.set16(frame.m, binormal[0], binormal[1], binormal[2], 0, normal[0], normal[1], normal[2], 0, tangent[0], tangent[1], tangent[2], 0, 0, 0, 0, 1)
     })
   }
   return frames
@@ -214,7 +214,7 @@ function buildGeometry (frames, shapePath, caps, radius) {
   for (let i = 0; i < frames.length; i++) {
     var frame = frames[i]
     for (let j = 0; j < shapePath.length; j++) {
-      var p = Vec3.copy(shapePath[j])
+      var p = vec3.copy(shapePath[j])
       p = [p[0], p[1], 0]
       if (radius) {
         //TODO: there is ambiguity between [r, r] and [rx, ry]
@@ -224,20 +224,20 @@ function buildGeometry (frames, shapePath, caps, radius) {
         p[0] *= rx
         p[1] *= ry
       }
-      Vec3.add(Vec3.multMat4(p, frame.m), frame.position)     
+      vec3.add(vec3.multMat4(p, frame.m), frame.position)
       positions.push(p)
       texCoords.push([j / (shapePath.length - 1), i / (frames.length - 1)])
-      normals.push(Vec3.normalize(Vec3.sub(Vec3.copy(p), frame.position)))
+      normals.push(vec3.normalize(vec3.sub(vec3.copy(p), frame.position)))
     }
   }
 
   if (caps) {
     positions.push(frames[0].position)
     texCoords.push([0, 0])
-    normals.push(Vec3.scale(Vec3.copy(frames[0].tangent), -1))
+    normals.push(vec3.scale(vec3.copy(frames[0].tangent), -1))
     positions.push(frames[frames.length - 1].position)
     texCoords.push([1, 1])
-    normals.push(Vec3.scale(Vec3.copy(frames[frames.length - 1].tangent), -1))
+    normals.push(vec3.scale(vec3.copy(frames[frames.length - 1].tangent), -1))
   }
 
   var numSegments = shapePath.length
