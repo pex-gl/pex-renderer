@@ -5,14 +5,9 @@ const vec3 = require('pex-math/vec3')
 const mat4 = require('pex-math/mat4')
 const utils = require('pex-math/utils')
 const flatten = require('flatten')
-const isPlask = require('is-plask')
 
 const POSTPROCESS_VERT = glsl(__dirname + '/glsl/Postprocess.vert')
 let POSTPROCESS_FRAG = glsl(__dirname + '/glsl/Postprocess.frag')
-
-if (isPlask) {
-  POSTPROCESS_FRAG = POSTPROCESS_FRAG.replace(/mediump/g,'')
-}
 
 const SAO_FRAG = glsl(__dirname + '/glsl/SAO.frag')
 const BILATERAL_BLUR_FRAG = glsl(__dirname + '/glsl/BilateralBlur.frag')

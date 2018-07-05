@@ -1,4 +1,4 @@
-const isBrowser = !require('is-plask')
+const isBrowser = require('is-browser')
 const log = require('debug')('profiler')
 let canvas = null
 let ctx2d = null
@@ -124,7 +124,7 @@ function createProfiler (ctx, renderer) {
         return this.measurements[a].start - this.measurements[b].start
       }).map((label) => {
         const m = this.measurements[label]
-        return `${label}: ${ms(m.avg)} ${m.gpu ? ' / ' + (Math.floor(m.gpu * 10)/10).toFixed(1) : ''}`
+        return `${label}: ${ms(m.avg)} ${m.gpu ? ' / ' + (Math.floor(m.gpu * 10) / 10).toFixed(1) : ''}`
       }))
       lines.push('------')
       lines.push(`Entities: ${pa3(renderer.entities.length)}`)
