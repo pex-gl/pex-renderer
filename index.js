@@ -442,7 +442,7 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
   const areaLights = this.getComponents('AreaLight').filter(byCameraTags)
   const reflectionProbes = this.getComponents('ReflectionProbe').filter(byCameraTags)
 
-  if (!shadowMappingLight) {
+  if (!shadowMapping && !shadowMappingLight) {
     directionalLights.forEach((light) => {
       if (light.castShadows) {
         const shadowCasters = geometries.filter((geometry) => {
