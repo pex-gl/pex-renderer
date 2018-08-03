@@ -45,18 +45,33 @@ const State = {
 
 random.seed(10)
 
-const renderer = new Renderer(ctx, ctx.gl.drawingBufferWidth, ctx.gl.drawingBufferHeight)
+const renderer = new Renderer({
+  ctx: ctx,
+  width: ctx.gl.drawingBufferWidth,
+  height: ctx.gl.drawingBufferHeight
+})
 
 const gui = createGUI(ctx)
+gui.addFPSMeeter()
 gui.addParam('Sun Elevation', State, 'elevation', { min: -90, max: 180 }, updateSunPosition)
 
 function updateSunPosition () {
-  mat4.setRotation(State.elevationMat, State.elevation / 180 * Math.PI, [0, 0, 1])
-  mat4.setRotation(State.rotationMat, State.azimuth / 180 * Math.PI, [0, 1, 0])
+  mat4.identity(State.elevationMat)
+  mat4.identity(State.rotationMat)
+  mat4.rotate(State.elevationMat, State.elevation / 180 * Math.PI, [0, 0, 1])
+  mat4.rotate(State.rotationMat, State.azimuth / 180 * Math.PI, [0, 1, 0])
 
-  vec3.set3(renderer._state.sunPosition, 1, 0, 0)
-  vec3.multMat4(renderer._state.sunPosition, State.elevationMat)
-  vec3.multMat4(renderer._state.sunPosition, State.rotationMat)
+  var sunPos = [2, 0, 0]
+  vec3.multMat4(sunPos, State.elevationMat)
+  vec3.multMat4(sunPos, State.rotationMat)
+
+  var dir = vec3.normalize(vec3.sub([0, 0, 0], sunPos))
+  sunTransform.set({
+    position: sunPos,
+    rotation: quat.fromTo(sunTransform.rotation, [0, 0, 1], dir, [0, 1, 0])
+  })
+  skybox.set({ sunPosition: sunPos })
+  reflectionProbe.set({ dirty: true })
 }
 
 gui.addParam('Exposure', renderer._state, 'exposure', { min: 0.01, max: 5 })
@@ -65,8 +80,14 @@ gui.addParam('SSAO', renderer._state, 'ssao')
 gui.addParam('SSAO Sharpness', renderer._state, 'ssaoSharpness', { min: 0, max: 100 })
 gui.addParam('SSAO Radius', renderer._state, 'ssaoRadius', { min: 0, max: 1 })
 
+let fakeCamera = null
+let cameraTransformCmp = null
+let sunTransform = null
+let skybox = null
+let reflectionProbe = null
+
 function initCamera () {
-  const camera = createCamera({
+  fakeCamera = createCamera({
     fov: 45 / 180 * Math.PI,
     aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
     position: [0, 3, 8],
@@ -74,131 +95,177 @@ function initCamera () {
     near: 0.1,
     far: 50
   })
+  createOrbiter({ camera: fakeCamera })
 
+  cameraTransformCmp = renderer.transform({
+    position: fakeCamera.position,
+    rotation: quat.fromTo([0, 0, -1], vec3.normalize(vec3.sub(vec3.copy(fakeCamera.target), fakeCamera.position)), [0, 1, 0])
+  })
   var cameraEntity = renderer.entity([
-    renderer.camera({ camera: camera })
+    cameraTransformCmp,
+    renderer.camera({
+      fov: Math.PI / 3,
+      aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
+      postprocess: true,
+      exposure: 2,
+      ssao: true,
+      ssaoRadius: 4,
+      dof: true,
+      fxaa: true
+    })
   ])
   renderer.add(cameraEntity)
-
-  createOrbiter({ camera: camera })
 }
 
 function buildMesh (geometry, primitiveType) {
   if (primitiveType) throw new Error('primitiveType not supported yet')
   return {
-    attributes: {
-      aPosition: ctx.vertexBuffer(geometry.positions),
-      aTexCoord0: ctx.vertexBuffer(geometry.uvs),
-      aNormal: ctx.vertexBuffer(geometry.normals)
-    },
-    indices: ctx.indexBuffer(geometry.cells)
+    positions: { buffer: ctx.vertexBuffer(geometry.positions) },
+    texCoords: { buffer: ctx.vertexBuffer(geometry.uvs) },
+    normals: { buffer: ctx.vertexBuffer(geometry.normals) },
+    indices: { buffer: ctx.indexBuffer(geometry.cells) }
   }
 }
 
 function initCubes () {
-  var mesh = buildMesh(createCube(0.2, 0.5 + Math.random(), 0.2))
+  const cube = buildMesh(createCube(0.2, 0.5 + Math.random(), 0.2))
   for (let i = 0; i < 1000; i++) {
     const x = randnBM() * 8 / 3
     const z = randnBM() * 8 / 3
     const y = 2 * random.noise2(x / 2, z / 2) + random.noise2(2 * x, 2 * z)
     const s = Math.max(0.0, 3.0 - Math.sqrt(x * x + z * z) / 2)
     const c = random.float(0.7, 0.9)
-    renderer.add(renderer.createNode({
-      mesh: mesh,
-      position: [x, y, z],
-      scale: [1, s, 1],
-      material: {
+    renderer.add(renderer.entity([
+      renderer.geometry(cube),
+      renderer.transform({
+        position: [x, y, z],
+        scale: [1, s, 1]
+      }),
+      renderer.material({
         baseColor: [c, c, c, 1],
         rougness: 0.7,
-        metallic: 0.0
-      }
-    }))
+        metallic: 0.0,
+        castShadows: true,
+        receiveShadows: true
+      })
+    ]))
   }
 }
 
 function initFloor () {
-  const floorMesh = buildMesh(createCube(14, 0.02, 14))
-  renderer.add(renderer.createNode({
-    mesh: floorMesh,
-    position: [0, -0.3, 0]
-  }))
+  const floor = createCube(14, 0.02, 14)
+  renderer.add(renderer.entity([
+    renderer.geometry(floor),
+    renderer.transform({
+      position: [0, -0.3, 0]
+    }),
+    renderer.material({
+      baseColor: [1, 1, 1, 1],
+      castShadows: true,
+      receiveShadows: true
+    })
+  ]))
 }
 
 function initSpheres () {
-  const sphereMesh = buildMesh(createSphere(0.2 + Math.random()))
+  const sphere = buildMesh(createSphere(0.2 + Math.random() * 0.25))
   for (let i = 0; i < 100; i++) {
     const x = rand() * 8 / 3
     const z = rand() * 8 / 3
     const y = 2 * random.noise2(x / 2, z / 2) + random.noise2(2 * x, 2 * z)
     const s = Math.max(0.0, 3.0 - Math.sqrt(x * x + z * z) / 2)
-    renderer.add(renderer.createNode({
-      mesh: sphereMesh,
-      position: [x, y, z],
-      scale: [s, s, s],
-      material: {
+    renderer.add(renderer.entity([
+      renderer.geometry(sphere),
+      renderer.transform({
+        position: [x, y, z],
+        scale: [s, s, s]
+      }),
+      renderer.material({
         baseColor: gradient(Math.random()).concat(1),
         rougness: 0.91,
-        metallic: 1.0
-      }
-    }))
+        metallic: 1.0,
+        castShadows: true,
+        receiveShadows: true
+      })
+    ]))
   }
 }
 
 function initLights () {
   var sunDir = vec3.normalize([1, -1, 1])
-  var sunLightNode = renderer.createNode({
-    light: {
-      type: 'directional',
-      color: [1, 1, 0, 1],
-      direction: sunDir
-    }
+  var sunPosition = vec3.addScaled([0, 0, 0], sunDir, -2)
+  var sunLight = renderer.directionalLight({
+    color: [1, 1, 1, 1],
+    intensity: 2,
+    castShadows: true,
+    bias: 0.01
   })
-  // renderer.add(sunLightNode)
-
-  gui.addTexture2D('Shadow Map', renderer._sunLightNode.data.light._shadowMap)
-  const sphereMesh = buildMesh(createSphere(0.2))
-  var pointLight = renderer.createNode({
-    mesh: sphereMesh,
+  sunTransform = renderer.transform({
     position: [2, 2, 2],
-    material: {
+    rotation: quat.fromTo([0, 0, 1], vec3.normalize([-1, -1, -1]), [0, 1, 0])
+  })
+  var sunEnt = renderer.entity([
+    sunTransform,
+    sunLight
+  ])
+  renderer.add(sunEnt)
+
+  gui.addTexture2D('Shadow Map', sunLight._shadowMap)
+
+  skybox = renderer.skybox({
+    sunPosition: sunPosition
+  })
+  reflectionProbe = renderer.reflectionProbe()
+  var skyboxEnt = renderer.entity([
+    skybox,
+    reflectionProbe
+  ])
+  renderer.add(skyboxEnt)
+
+  const sphere = buildMesh(createSphere(0.2))
+  var pointLightEnt = renderer.entity([
+    renderer.transform({
+      position: [2, 2, 2]
+    }),
+    renderer.geometry(sphere),
+    renderer.material({
       baseColor: [1, 0, 0, 1],
       emissiveColor: [1, 0, 0, 1]
-    },
-    light: {
-      type: 'point',
-      position: [2, 2, 2],
+    }),
+    renderer.pointLight({
       color: [1, 0, 0, 1],
       radius: 50
-    }
-  })
-  // renderer.add(pointLight)
+    })
+  ])
+  renderer.add(pointLightEnt)
 
   var areaLightMesh = buildMesh(createCube(1))
   var areaLightColor = [0, 1, 0, 1]
-  var areaLightNode = renderer.createNode({
-    enabled: true,
-    position: [5, 2, 0],
-    scale: [2, 5, 0.1],
-    rotation: quat.fromDirection(quat.create(), [-1, 0, 0]),
-    mesh: areaLightMesh,
-    material: {
+  var areaLightEnt = renderer.entity([
+    renderer.transform({
+      position: [5, 2, 0],
+      scale: [2, 5, 0.1],
+      rotation: quat.fromTo(quat.create(), [0, 0, 1], [-1, 0, 0], [0, 1, 0])
+    }),
+    renderer.geometry(areaLightMesh),
+    renderer.material({
       emissiveColor: areaLightColor,
       baseColor: [0, 0, 0, 1],
       metallic: 1.0,
       roughness: 0.74
-    },
-    light: {
-      type: 'area',
-      intensity: 2,
+    }),
+    renderer.areaLight({
+      intensity: 5,
       color: areaLightColor
-    }
+    })
+  ])
+  renderer.add(areaLightEnt)
+
+  gui.addParam('AreaLight Size', areaLightEnt.transform, 'scale', { min: 0, max: 5 }, (value) => {
+    areaLightEnt.transform.set({ scale: [value[0], value[1], value[2]] })
   })
-  gui.addParam('AreaLight Size', areaLightNode.data, 'scale', { min: 0, max: 5 }, (value) => {
-    areaLightNode.setScale(value[0], value[1], value[2])
-  })
-  gui.addParam('AreaLight Intensity', areaLightNode.data.light, 'intensity', { min: 0, max: 5 })
-  gui.addParam('AreaLight', areaLightNode.data.light, 'color', { type: 'color' })
-  renderer.add(areaLightNode)
+  gui.addParam('AreaLight Intensity', areaLightEnt.getComponent('AreaLight'), 'intensity', { min: 0, max: 5 })
+  gui.addParam('AreaLight', areaLightEnt.getComponent('AreaLight'), 'color', { type: 'color' })
 }
 
 initCamera()
@@ -216,8 +283,19 @@ window.addEventListener('keydown', (e) => {
 
 updateSunPosition()
 
+var tempmat4 = mat4.create()
 ctx.frame(() => {
-  // ctx.debug(frameNumber++ == 1)
+  const transformCmp = cameraTransformCmp
+  var transformRotation = transformCmp.rotation
+  mat4.set(tempmat4, fakeCamera.viewMatrix)
+  mat4.invert(tempmat4)
+  quat.fromMat4(transformRotation, tempmat4)
+  transformCmp.set({
+    position: fakeCamera.position,
+    rotation: transformRotation
+  })
+
+  ctx.debug(frameNumber++ === 1)
   ctx.debug(debugOnce)
   debugOnce = false
   renderer.draw()
