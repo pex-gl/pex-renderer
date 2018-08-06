@@ -127,28 +127,54 @@ function buildMesh (geometry, primitiveType) {
   }
 }
 
-function initCubes () {
+function initCubes (instanced) {
   const cube = buildMesh(createCube(0.2, 0.5 + Math.random(), 0.2))
+  const offsets = []
+  const scales = []
+  const colors = []
   for (let i = 0; i < 1000; i++) {
     const x = randnBM() * 8 / 3
     const z = randnBM() * 8 / 3
     const y = 2 * random.noise2(x / 2, z / 2) + random.noise2(2 * x, 2 * z)
     const s = Math.max(0.0, 3.0 - Math.sqrt(x * x + z * z) / 2)
     const c = random.float(0.7, 0.9)
+    offsets.push([x, y, z])
+    scales.push([1, s, 1])
+    colors.push([c, c, c, 1])
+  }
+  if (instanced) {
+    cube.offsets = { buffer: ctx.vertexBuffer(offsets), divisor: 1 }
+    cube.scales = { buffer: ctx.vertexBuffer(scales), divisor: 1 }
+    cube.instances = offsets.length
     renderer.add(renderer.entity([
       renderer.geometry(cube),
       renderer.transform({
-        position: [x, y, z],
-        scale: [1, s, 1]
       }),
       renderer.material({
-        baseColor: [c, c, c, 1],
+        baseColor: colors[0],
         rougness: 0.7,
         metallic: 0.0,
         castShadows: true,
         receiveShadows: true
       })
     ]))
+  } else {
+    offsets.forEach((offset, i) => {
+      renderer.add(renderer.entity([
+        renderer.geometry(cube),
+        renderer.transform({
+          position: offset,
+          scale: scales[i]
+        }),
+        renderer.material({
+          baseColor: colors[i],
+          rougness: 0.7,
+          metallic: 0.0,
+          castShadows: true,
+          receiveShadows: true
+        })
+      ]))
+    })
   }
 }
 
@@ -183,7 +209,7 @@ function initSpheres () {
       renderer.material({
         baseColor: gradient(Math.random()).concat(1),
         rougness: 0.91,
-        metallic: 1.0,
+        metallic: 0.0,
         castShadows: true,
         receiveShadows: true
       })
@@ -269,7 +295,7 @@ function initLights () {
 }
 
 initCamera()
-initCubes()
+initCubes(true)
 initFloor()
 initSpheres()
 initLights()
