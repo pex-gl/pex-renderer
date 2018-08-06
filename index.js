@@ -475,7 +475,9 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
     sharedUniforms.uCameraPosition = camera.entity.transform.worldPosition
     const far = camera.far
     if (shadowMapping) {
-      camera.set({ far: far * 0.99 }) // FIXME: this is causing problems (what kind of?)
+      // TODO: Far clipping plane scaling fixes depth buffer precision artifacts
+      // but breaks shadows on large scale scenes (eg maps)
+      camera.set({ far: far * 0.99 })
     }
     sharedUniforms.uProjectionMatrix = mat4.copy(camera.projectionMatrix)
     if (shadowMapping) {
