@@ -305,7 +305,7 @@ Renderer.prototype.getMaterialProgram = function (geometry, material, skin, opti
 
   var program = this._programCache[hash]
   if (!program) {
-    console.log('added program', vertSrc, fragSrc)
+    // console.log('added program', vertSrc, fragSrc)
     try {
       program = this._programCache[hash] = ctx.program({ vert: vertSrc, frag: fragSrc })
     } catch (e) {
