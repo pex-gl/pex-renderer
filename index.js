@@ -17,6 +17,7 @@ const createAnimation = require('./animation')
 const createGeometry = require('./geometry')
 const createMaterial = require('./material')
 const createCamera = require('./camera')
+const createOrbiter = require('./orbiter')
 const createAmbientLight = require('./ambient-light')
 const createDirectionalLight = require('./directional-light')
 const createPointLight = require('./point-light')
@@ -984,6 +985,10 @@ Renderer.prototype.material = function (opts) {
 
 Renderer.prototype.camera = function (opts) {
   return createCamera(Object.assign({ ctx: this._ctx, rgbm: State.rgbm }, opts))
+}
+
+Renderer.prototype.orbiter = function (opts) {
+  return createOrbiter(Object.assign({ ctx: this._ctx }, opts))
 }
 
 Renderer.prototype.ambientLight = function (opts) {
