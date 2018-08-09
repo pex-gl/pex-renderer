@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "@babel/runtime": "^7.0.0-beta.56",
-    "debug": "^3.1.0",
+    "debug": "github:visionmedia/debug#207a6a2d53507ec9dd57c94c46cc7d3dd272306d",
     "flatten": "^1.0.2",
     "glsl-atmosphere": "^2.0.0",
     "glsl-fxaa": "^3.0.0",
@@ -46,7 +46,8 @@
   "scripts": {
     "build": "rollup -c",
     "dev": "rollup -c -w",
-    "format": "prettier-standard './*.js'"
+    "format": "prettier-standard './*.js'",
+    "prepublishOnly": "npm run build"
   },
   "files": [
     "dist"
