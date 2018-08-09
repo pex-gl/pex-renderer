@@ -1,5 +1,6 @@
-const isBrowser = require('is-browser')
+import isBrowser from 'is-browser'
 const log = require('debug')('profiler')
+
 let canvas = null
 let ctx2d = null
 const W = 250
@@ -7,23 +8,23 @@ const H = 800
 const M = 10
 const LINE_H = 16
 const FONT_H = 11
-const FONT = FONT_H + 'px Droid Sans Mono, Andale Mono, monospace'
+const FONT = `${FONT_H}px Droid Sans Mono, Andale Mono, monospace`
 
-function ms (time) {
-  var f = Math.floor(time * 10) / 10
-  var s = '' + f
+function ms(time) {
+  const f = Math.floor(time * 10) / 10
+  let s = `${f}`
   if (f % 1 === 0) s += '.0'
-  if (f < 10) s = ' ' + s
-  return s + ''
+  if (f < 10) s = ` ${s}`
+  return `${s}`
 }
 
-function pa3 (f) {
-  if (f < 10) return '  ' + f
-  if (f < 100) return ' ' + f
+function pa3(f) {
+  if (f < 10) return `  ${f}`
+  if (f < 100) return ` ${f}`
   return f
 }
 
-function createProfiler (ctx, renderer) {
+function createProfiler(ctx, renderer) {
   const gl = ctx.gl
   if (isBrowser && !canvas) {
     canvas = document.createElement('canvas')
@@ -32,21 +33,21 @@ function createProfiler (ctx, renderer) {
     canvas.height = H * 2
     document.body.appendChild(canvas)
     canvas.style.position = 'fixed'
-    canvas.style.width = W + 'px'
-    canvas.style.height = H + 'px'
-    canvas.style.top = M + 'px'
-    canvas.style.right = M + 'px'
+    canvas.style.width = `${W}px`
+    canvas.style.height = `${H}px`
+    canvas.style.top = `${M}px`
+    canvas.style.right = `${M}px`
     canvas.style.zIndex = 1000
     ctx2d = canvas.getContext('2d')
   }
 
   const profiler = {
-    canvas: canvas,
+    canvas,
     frame: 0,
     flush: true,
     measurements: {},
     commands: [],
-    ctx2d: ctx2d,
+    ctx2d,
     bufferCount: 0,
     totalBufferCount: 0,
     textureCount: 0,
@@ -64,12 +65,20 @@ function createProfiler (ctx, renderer) {
     drawArraysCount: 0,
     drawArraysInstancedCount: 0,
     linesCount: 0,
-    time: function (label, gpu) {
+    time(label, gpu) {
       if (this.flush) gl.finish()
       if (this.flush) gl.flush()
       let m = this.measurements[label]
       if (!m) {
-        m = this.measurements[label] = { begin: 0, end: 0, last: 0, total: 0, count: 0, avg: 0, max: 0 }
+        m = this.measurements[label] = {
+          begin: 0,
+          end: 0,
+          last: 0,
+          total: 0,
+          count: 0,
+          avg: 0,
+          max: 0
+        }
         if (gpu) {
           m.query = ctx.query()
         }
@@ -78,7 +87,7 @@ function createProfiler (ctx, renderer) {
       if (m.query && m.query.result) m.gpu = m.query.result / 1000000
       if (m.query) ctx.beginQuery(m.query)
     },
-    timeEnd: function (label) {
+    timeEnd(label) {
       if (this.flush) gl.finish()
       if (this.flush) gl.flush()
       const m = this.measurements[label]
@@ -93,7 +102,7 @@ function createProfiler (ctx, renderer) {
       m.avg = (m.avg * 9 + m.last * 1) / 10
       if (m.query) ctx.endQuery(m.query)
     },
-    add: function (command, label) {
+    add(command, label) {
       let callStack = null
       try {
         throw new Error('Call stack capture')
@@ -101,16 +110,16 @@ function createProfiler (ctx, renderer) {
         callStack = e.stack
       }
       this.commands.push({
-        command: command,
+        command,
         stack: callStack,
-        label: label
+        label
       })
     },
-    setFlush: function (state) {
+    setFlush(state) {
       this.flush = state
     },
-    summary: function () {
-      var lines = []
+    summary() {
+      let lines = []
       const frameMeasurement = this.measurements['Frame']
       if (frameMeasurement) {
         lines.push(`FPS: ${(1000 / frameMeasurement.avg).toFixed(3)}`)
@@ -120,12 +129,18 @@ function createProfiler (ctx, renderer) {
         lines.push(`FPS (RAF): ${(1000 / frameRAFMeasurement.avg).toFixed(3)}`)
       }
       lines.push('------')
-      lines = lines.concat(Object.keys(this.measurements).sort((a, b) => {
-        return this.measurements[a].start - this.measurements[b].start
-      }).map((label) => {
-        const m = this.measurements[label]
-        return `${label}: ${ms(m.avg)} ${m.gpu ? ' / ' + (Math.floor(m.gpu * 10) / 10).toFixed(1) : ''}`
-      }))
+      lines = lines.concat(
+        Object.keys(this.measurements)
+          .sort((a, b) => {
+            return this.measurements[a].start - this.measurements[b].start
+          })
+          .map(label => {
+            const m = this.measurements[label]
+            return `${label}: ${ms(m.avg)} ${
+              m.gpu ? ` / ${(Math.floor(m.gpu * 10) / 10).toFixed(1)}` : ''
+            }`
+          })
+      )
       lines.push('------')
       lines.push(`Entities: ${pa3(renderer.entities.length)}`)
       lines.push(`Geometries: ${pa3(renderer.getComponents('Geometry').length)}`)
@@ -141,11 +156,21 @@ function createProfiler (ctx, renderer) {
       lines.push(`Spot Lights: ${pa3(renderer.getComponents('SpotLight').length)}`)
       lines.push(`Area Lights: ${pa3(renderer.getComponents('AreaLight').length)}`)
       lines.push('------')
-      lines.push(`Programs: ${pa3(renderer._ctx.resources.filter((r) => r.class === 'program').length)}`)
-      lines.push(`Passes: ${pa3(renderer._ctx.resources.filter((r) => r.class === 'passe').length)}`)
-      lines.push(`Pipelines: ${pa3(renderer._ctx.resources.filter((r) => r.class === 'pipeline').length)}`)
-      lines.push(`Textures 2D: ${pa3(renderer._ctx.resources.filter((r) => r.class === 'texture2D').length)}`)
-      lines.push(`Textures Cube: ${pa3(renderer._ctx.resources.filter((r) => r.class === 'textureCube').length)}`)
+      lines.push(
+        `Programs: ${pa3(renderer._ctx.resources.filter(r => r.class === 'program').length)}`
+      )
+      lines.push(`Passes: ${pa3(renderer._ctx.resources.filter(r => r.class === 'passe').length)}`)
+      lines.push(
+        `Pipelines: ${pa3(renderer._ctx.resources.filter(r => r.class === 'pipeline').length)}`
+      )
+      lines.push(
+        `Textures 2D: ${pa3(renderer._ctx.resources.filter(r => r.class === 'texture2D').length)}`
+      )
+      lines.push(
+        `Textures Cube: ${pa3(
+          renderer._ctx.resources.filter(r => r.class === 'textureCube').length
+        )}`
+      )
       lines.push('------')
       lines.push(`Buffers: ${pa3(profiler.bufferCount)} / ${pa3(profiler.totalBufferCount)}`)
       lines.push(`Textures: ${pa3(profiler.textureCount)} / ${pa3(profiler.totalTextureCount)}`)
@@ -165,37 +190,39 @@ function createProfiler (ctx, renderer) {
       lines.push(`Draw Arrays : ${pa3(profiler.drawArraysCount)}`)
       lines.push(`Instanced Draw Arrays: ${pa3(profiler.drawArraysInstancedCount)}`)
       lines.push('------')
-      lines = lines.concat(this.commands.map((cmd) => {
-        // const cpu = cmd.command.stats.cpuTime / cmd.command.stats.count
-        // const gpu = cmd.command.stats.gpuTime / cmd.command.stats.count
-        // if (cmd.command.stats.count >= 30) {
+      lines = lines.concat(
+        this.commands.map(cmd => {
+          // const cpu = cmd.command.stats.cpuTime / cmd.command.stats.count
+          // const gpu = cmd.command.stats.gpuTime / cmd.command.stats.count
+          // if (cmd.command.stats.count >= 30) {
           // cmd.command.stats.gpuTime = 0
           // cmd.command.stats.cpuTime = 0
           // cmd.command.stats.count = 0
-        // }
-        // return `${cmd.label}: ${ms(cpu)} ${ms(gpu)}`
-        return `${cmd.label}: N/A`
-      }))
+          // }
+          // return `${cmd.label}: ${ms(cpu)} ${ms(gpu)}`
+          return `${cmd.label}: N/A`
+        })
+      )
       return lines
     },
-    setEnabled: function (state) {
+    setEnabled(state) {
       if (isBrowser) {
         canvas.style.display = state ? 'block' : 'none'
       }
     },
-    startFrame: function () {
+    startFrame() {
       this.timeEnd('FrameRAF')
       this.time('FrameRAF')
       this.time('Frame')
       resetFrameStats()
     },
-    endFrame: function () {
+    endFrame() {
       this.timeEnd('Frame')
       draw()
     }
   }
 
-  function draw () {
+  function draw() {
     profiler.frame++
     if (!ctx2d) {
       if (profiler.frame % 30 === 0) {
@@ -219,11 +246,11 @@ function createProfiler (ctx, renderer) {
   }
 
   // function wrapRes (fn, counter) {
-    // const ctxFn = ctx[fn]
-    // ctx[fn] = function () {
-      // profiler[counter]++
-      // return ctxFn.apply(this, arguments)
-    // }
+  // const ctxFn = ctx[fn]
+  // ctx[fn] = function () {
+  // profiler[counter]++
+  // return ctxFn.apply(this, arguments)
+  // }
   // }
 
   // TODO:
@@ -234,9 +261,9 @@ function createProfiler (ctx, renderer) {
   // wrapRes('cube', 'totalTextureCubeCount')
   // wrapRes('framebuffer', 'totalFramebufferCount')
 
-  function wrapGLCall (fn, callback) {
+  function wrapGLCall(fn, callback) {
     const glFn = gl[fn]
-    gl[fn] = function () {
+    gl[fn] = function() {
       callback(arguments)
       return glFn.apply(this, arguments)
     }
@@ -278,14 +305,14 @@ function createProfiler (ctx, renderer) {
   wrapGLCall('bindTexture', () => profiler.bindTextureCount++)
   wrapGLCall('useProgram', () => profiler.useProgramCount++)
 
-  wrapGLCall('drawElements', (args) => {
+  wrapGLCall('drawElements', args => {
     const mode = args[0]
     const count = args[1]
     if (mode === gl.LINES) profiler.linesCount += count
     if (mode === gl.TRIANGLES) profiler.trianglesCount += count
     profiler.drawElementsCount++
   })
-  wrapGLCall('drawArrays', (args) => {
+  wrapGLCall('drawArrays', args => {
     const mode = args[0]
     const count = args[2]
     if (mode === gl.LINES) profiler.linesCount += count
@@ -299,20 +326,20 @@ function createProfiler (ctx, renderer) {
     }
   }
 
-  function wrapGLExtCall (ext, fn, callback) {
+  function wrapGLExtCall(ext, fn, callback) {
     if (!ext) {
       console.log(`Ext ${ext} it not available`)
       return
     }
     const extFn = ext[fn]
-    ext[fn] = function () {
+    ext[fn] = function() {
       callback(arguments)
       return extFn.apply(ext, arguments)
     }
   }
 
   // TODO: what about webgl2?
-  wrapGLExtCall(gl.getExtension('ANGLE_instanced_arrays'), 'drawElementsInstancedANGLE', (args) => {
+  wrapGLExtCall(gl.getExtension('ANGLE_instanced_arrays'), 'drawElementsInstancedANGLE', args => {
     const mode = args[0]
     const count = args[1]
     const primcount = args[4]
@@ -320,7 +347,7 @@ function createProfiler (ctx, renderer) {
     if (mode === gl.TRIANGLES) profiler.instancedTrianglesCount += count * primcount // assuming divisor 1
     profiler.drawElementsInstancedCount++
   })
-  wrapGLExtCall(gl.getExtension('ANGLE_instanced_arrays'), 'drawArraysInstancedANGLE', (args) => {
+  wrapGLExtCall(gl.getExtension('ANGLE_instanced_arrays'), 'drawArraysInstancedANGLE', args => {
     const mode = args[0]
     const count = args[2]
     const primcount = args[3]
@@ -329,7 +356,7 @@ function createProfiler (ctx, renderer) {
     profiler.drawArraysInstancedCount++
   })
 
-  function resetFrameStats () {
+  function resetFrameStats() {
     profiler.bindTextureCount = 0
     profiler.useProgramCount = 0
     profiler.setUniformCount = 0
@@ -346,4 +373,4 @@ function createProfiler (ctx, renderer) {
   return profiler
 }
 
-module.exports = createProfiler
+export default createProfiler

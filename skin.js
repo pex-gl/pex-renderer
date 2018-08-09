@@ -1,32 +1,34 @@
-const Signal = require('signals')
-const mat4 = require('pex-math/mat4')
+import Signal from 'signals'
+import { mat4 } from 'pex-math'
 
-function Skin (opts) {
-  this.type = 'Skin'
-  this.entity = null
-  this.joints = []
-  this.changed = new Signal()
-  this.set(opts)
+class Skin {
+  constructor(opts) {
+    this.type = 'Skin'
+    this.entity = null
+    this.joints = []
+    this.changed = new Signal()
+    this.set(opts)
+  }
+
+  init(entity) {
+    this.entity = entity
+  }
+
+  set(opts) {
+    Object.assign(this, opts)
+    Object.keys(opts).forEach(prop => this.changed.dispatch(prop))
+  }
+
+  update() {
+    this.jointMatrices = this.joints.map((joint, index) => {
+      const m = mat4.create()
+      mat4.mult(m, joint.transform.modelMatrix)
+      mat4.mult(m, this.inverseBindMatrices[index])
+      return m
+    })
+  }
 }
 
-Skin.prototype.init = function (entity) {
-  this.entity = entity
-}
-
-Skin.prototype.set = function (opts) {
-  Object.assign(this, opts)
-  Object.keys(opts).forEach((prop) => this.changed.dispatch(prop))
-}
-
-Skin.prototype.update = function () {
-  this.jointMatrices = this.joints.map((joint, index) => {
-    var m = mat4.create()
-    mat4.mult(m, joint.transform.modelMatrix)
-    mat4.mult(m, this.inverseBindMatrices[index])
-    return m
-  })
-}
-
-module.exports = function createSkin (opts) {
+export default function createSkin(opts) {
   return new Skin(opts)
 }

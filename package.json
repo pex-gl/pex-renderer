@@ -2,7 +2,9 @@
   "name": "pex-renderer",
   "version": "3.0.0-4",
   "description": "Physically Based Renderer for Pex",
-  "main": "index.js",
+  "main": "dist/pex-renderer.cjs.js",
+  "module": "dist/pex-renderer.esm.js",
+  "browser": "dist/pex-renderer.umd.js",
   "license": "MIT",
   "author": {
     "name": "Marcin Ignac",
@@ -10,12 +12,12 @@
     "url": "https://github.com/vorg"
   },
   "dependencies": {
+    "@babel/runtime": "^7.0.0-beta.56",
     "debug": "^3.1.0",
     "flatten": "^1.0.2",
     "glsl-atmosphere": "^2.0.0",
     "glsl-fxaa": "^3.0.0",
     "glsl-gamma": "^2.0.0",
-    "glslify": "^6.2.1",
     "hammersley": "^1.0.0",
     "interpolate-angle": "^1.0.2",
     "is-browser": "^2.0.1",
@@ -29,12 +31,23 @@
     "xyz-to-latlon": "^1.0.2"
   },
   "devDependencies": {
-    "onchange": "^2.4.0"
+    "@babel/core": "^7.0.0-beta.56",
+    "@babel/preset-env": "^7.0.0-beta.56",
+    "glslify": "^6.2.1",
+    "rollup": "^0.64.1",
+    "rollup-plugin-babel": "^4.0.0-beta.8",
+    "rollup-plugin-commonjs": "^9.1.4",
+    "rollup-plugin-glslify": "^1.0.5",
+    "rollup-plugin-node-builtins": "^2.1.2",
+    "rollup-plugin-node-resolve": "^3.3.0"
   },
   "scripts": {
-    "build-glsl": "glslify glsl/PBR.src.frag > glsl/PBR.frag",
-    "watch-glsl": "onchange '**/*.src.frag' -- npm run build-glsl"
+    "build": "rollup -c",
+    "dev": "rollup -c -w"
   },
+  "files": [
+    "dist"
+  ],
   "keywords": [
     "webgl",
     "pbr",
@@ -48,9 +61,9 @@
   "bugs": {
     "url": "https://github.com/pex-gl/pex-renderer/issues"
   },
-  "browserify": {
-    "transform": [
-      "glslify"
-    ]
+  "prettier": {
+    "printWidth": 100,
+    "semi": false,
+    "singleQuote": true
   }
 }
