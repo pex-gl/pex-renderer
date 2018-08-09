@@ -18,7 +18,7 @@ const plugins = [
       [
         '@babel/preset-env',
         {
-          modules: false,
+          modules: false
           // targets: {
           //   node: '6.10'
           // }
@@ -34,14 +34,18 @@ export default [
     output: {
       name: 'PexRenderer',
       file: pkg.browser,
-      format: 'umd'
+      format: 'umd',
+      sourcemap: true
     },
     plugins
   },
   {
     input,
     external: Object.keys(pkg.dependencies) || {},
-    output: [{ file: pkg.main, format: 'cjs' }, { file: pkg.module, format: 'es' }],
+    output: [
+      { file: pkg.main, format: 'cjs', sourcemap: true },
+      { file: pkg.module, format: 'es', sourcemap: true }
+    ],
     plugins
   }
 ]
