@@ -4,7 +4,6 @@
   "description": "Physically Based Renderer for Pex",
   "main": "dist/pex-renderer.cjs.js",
   "module": "dist/pex-renderer.esm.js",
-  "browser": "dist/pex-renderer.umd.js",
   "license": "MIT",
   "author": {
     "name": "Marcin Ignac",
@@ -33,6 +32,7 @@
   "devDependencies": {
     "@babel/core": "^7.0.0-beta.56",
     "@babel/preset-env": "^7.0.0-beta.56",
+    "eslint": "^4.19.1",
     "glslify": "^6.2.1",
     "rollup": "^0.64.1",
     "rollup-plugin-babel": "^4.0.0-beta.8",
@@ -41,11 +41,13 @@
     "rollup-plugin-node-builtins": "^2.1.2",
     "rollup-plugin-node-globals": "^1.2.1",
     "rollup-plugin-node-resolve": "^3.3.0",
+    "rollup-plugin-uglify": "^4.0.0",
     "standard": "^11.0.1"
   },
   "scripts": {
     "build": "rollup -c",
     "dev": "rollup -c -w",
+    "clean": "rm -rf dist",
     "format": "standard --fix './*.js'",
     "prepublishOnly": "npm run build"
   },

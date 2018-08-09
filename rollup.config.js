@@ -4,7 +4,11 @@ import nodeGlobals from 'rollup-plugin-node-globals'
 import builtins from 'rollup-plugin-node-builtins'
 import babel from 'rollup-plugin-babel'
 import glslify from 'rollup-plugin-glslify'
+import { uglify } from 'rollup-plugin-uglify'
+
 import pkg from './package.json'
+
+const isDev = process.env.NODE_ENV === 'development'
 
 const input = 'index.js'
 
@@ -15,7 +19,6 @@ const plugins = [
   builtins(),
   glslify(),
   babel({
-    exclude: ['node_modules/**'],
     presets: [
       [
         '@babel/preset-env',
@@ -30,24 +33,35 @@ const plugins = [
   })
 ]
 
+const external = Object.keys(pkg.dependencies) || {}
+
 export default [
+  // IIFE: bundle including all dependencies in a single file.
+  // Usage: directly in browser as a <script> tag
   {
     input,
     output: {
       name: 'PexRenderer',
-      file: pkg.browser,
-      format: 'umd',
-      sourcemap: true
+      file: 'dist/pex-renderer.bundle.js',
+      format: 'iife',
+      sourcemap: false
     },
-    plugins
+    plugins: [...plugins, isDev ? 0 : uglify()].filter(Boolean)
   },
+  // CJS: for node js pre ES modules era (using CJS require syntax).
+  // Usage: nodejs and browserify
   {
     input,
-    external: Object.keys(pkg.dependencies) || {},
-    output: [
-      { file: pkg.main, format: 'cjs', sourcemap: true },
-      { file: pkg.module, format: 'es', sourcemap: true }
-    ],
+    external,
+    output: { file: pkg.main, format: 'cjs', sourcemap: true },
+    plugins
+  },
+  // ES: for modern bundler/services resolving the "module" field
+  // Usage: webpack, unpkg
+  {
+    input,
+    external,
+    output: { file: pkg.module, format: 'es', sourcemap: true },
     plugins
   }
 ]
