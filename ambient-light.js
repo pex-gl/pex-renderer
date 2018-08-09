@@ -1,4 +1,4 @@
-import Signal from 'signals';
+import Signal from 'signals'
 
 class AmbientLight {
   constructor(opts) {

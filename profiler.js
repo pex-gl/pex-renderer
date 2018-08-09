@@ -1,5 +1,7 @@
 import isBrowser from 'is-browser'
-const log = require('debug')('profiler')
+import debug from 'debug'
+
+const log = debug('profiler')
 
 let canvas = null
 let ctx2d = null

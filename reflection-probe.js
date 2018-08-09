@@ -1,7 +1,7 @@
 import Signal from 'signals'
 import { mat4 } from 'pex-math'
 import hammersley from 'hammersley'
-const log = require('debug')('renderer:ReflectionProbe')
+import debug from 'debug'
 
 import FULLSCREEN_QUAD_VERT from './glsl/FullscreenQuad.vert'
 import CUBEMAP_TO_OCTMAP_FRAG from './glsl/CubemapToOctmap.frag'
@@ -9,6 +9,8 @@ import CONVOLVE_OCT_MAP_ATLAS_TO_OCT_MAP_FRAG from './glsl/ConvolveOctMapAtlasTo
 import BLIT_TO_OCT_MAP_ATLAS_FRAG from './glsl/BlitToOctMapAtlas.frag'
 import DOWNSAMPLE_FROM_OCT_MAP_ATLAS_FRAG from './glsl/DownsampleFromOctMapAtlas.frag'
 import PREFILTER_FROM_OCT_MAP_ATLAS_FRAG from './glsl/PrefilterFromOctMapAtlas.frag'
+
+const log = debug('renderer:ReflectionProbe')
 
 class ReflectionProbe {
   constructor(opts) {

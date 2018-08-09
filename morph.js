@@ -1,5 +1,7 @@
 import Signal from 'signals'
-const log = require('debug')('pex-renderer/morph')
+import debug from 'debug'
+
+const log = debug('pex-renderer/morph')
 
 class Morph {
   constructor(opts) {
