@@ -2,7 +2,7 @@ import Signal from 'signals'
 import { mat4 } from 'pex-math'
 
 class DirectionalLight {
-  constructor(opts) {
+  constructor (opts) {
     const ctx = opts.ctx
 
     this.type = 'DirectionalLight'
@@ -57,11 +57,11 @@ class DirectionalLight {
     this.set(opts)
   }
 
-  init(entity) {
+  init (entity) {
     this.entity = entity
   }
 
-  set(opts) {
+  set (opts) {
     Object.assign(this, opts)
     if (opts.color !== undefined || opts.intensity !== undefined) {
       this.color[3] = this.intensity

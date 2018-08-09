@@ -1,7 +1,7 @@
 import Signal from 'signals'
 
 class PointLight {
-  constructor(opts) {
+  constructor (opts) {
     this.type = 'PointLight'
     this.changed = new Signal()
     this.color = [1, 1, 1, 1]
@@ -12,11 +12,11 @@ class PointLight {
     this.set(opts)
   }
 
-  init(entity) {
+  init (entity) {
     this.entity = entity
   }
 
-  set(opts) {
+  set (opts) {
     Object.assign(this, opts)
 
     if (opts.color !== undefined || opts.intensity !== undefined) {

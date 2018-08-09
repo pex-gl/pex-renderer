@@ -2,7 +2,7 @@ import Signal from 'signals'
 
 // Overlay position and size if relative to screen size if < 1 or in pixels if > 1
 class Overlay {
-  constructor(opts) {
+  constructor (opts) {
     this.type = 'Overlay'
     this.entity = null
     this.dirty = false
@@ -15,18 +15,18 @@ class Overlay {
     this.set(opts)
   }
 
-  init(entity) {
+  init (entity) {
     this.entity = entity
   }
 
-  set(opts) {
+  set (opts) {
     Object.assign(this, opts)
     Object.keys(opts).forEach(prop => this.changed.dispatch(prop))
   }
 
-  update() {}
+  update () {}
 }
 
-export default function createOverlay(opts) {
+export default function createOverlay (opts) {
   return new Overlay(opts)
 }

@@ -4,7 +4,7 @@ import assert from 'assert'
 let entityId = 0
 
 class Entity {
-  constructor(components, tags) {
+  constructor (components, tags) {
     assert(!tags || Array.isArray(tags), 'Entity tags must be an array or null')
     this.id = entityId++
     this.tags = tags || []
@@ -22,7 +22,7 @@ class Entity {
     this.components.forEach(component => component.init(this))
   }
 
-  dispose() {
+  dispose () {
     this.components.forEach(component => {
       if (component.dispose) {
         component.dispose()
@@ -32,16 +32,16 @@ class Entity {
     this.transform.set({ parent: null })
   }
 
-  addComponent(component) {
+  addComponent (component) {
     this.components.push(component)
     component.init(this)
   }
 
-  getComponent(type) {
+  getComponent (type) {
     return this.components.find(component => component.type === type)
   }
 }
 
-export default function createEntity(components, parent, tags) {
+export default function createEntity (components, parent, tags) {
   return new Entity(components, parent, tags)
 }

@@ -13,7 +13,7 @@ import PREFILTER_FROM_OCT_MAP_ATLAS_FRAG from './glsl/PrefilterFromOctMapAtlas.f
 const log = debug('renderer:ReflectionProbe')
 
 class ReflectionProbe {
-  constructor(opts) {
+  constructor (opts) {
     this.type = 'ReflectionProbe'
     this.changed = new Signal()
     this.rgbm = false
@@ -214,7 +214,7 @@ class ReflectionProbe {
       encoding: ctx.Encoding.Linear
     })
 
-    function blitToOctMapAtlasLevel(mipmapLevel, roughnessLevel, sourceRegionSize) {
+    function blitToOctMapAtlasLevel (mipmapLevel, roughnessLevel, sourceRegionSize) {
       const width = octMapAtlas.width
       const levelSize = Math.max(64, width / (2 << (mipmapLevel + roughnessLevel)))
       const roughnessLevelWidth = width / (2 << roughnessLevel)
@@ -230,7 +230,7 @@ class ReflectionProbe {
       })
     }
 
-    function downsampleFromOctMapAtlasLevel(mipmapLevel, roughnessLevel, targetRegionSize) {
+    function downsampleFromOctMapAtlasLevel (mipmapLevel, roughnessLevel, targetRegionSize) {
       ctx.submit(downsampleFromOctMapAtlasCmd, {
         viewport: [0, 0, targetRegionSize, targetRegionSize],
         uniforms: {
@@ -240,7 +240,7 @@ class ReflectionProbe {
       })
     }
 
-    function prefilterFromOctMapAtlasLevel(
+    function prefilterFromOctMapAtlasLevel (
       sourceMipmapLevel,
       sourceRoughnessLevel,
       roughnessLevel,
@@ -258,7 +258,7 @@ class ReflectionProbe {
       })
     }
 
-    this.update = function(drawScene) {
+    this.update = function (drawScene) {
       if (!drawScene) return
       this.dirty = false
       log('ReflectionProbe.update')
@@ -311,11 +311,11 @@ class ReflectionProbe {
     }
   }
 
-  init(entity) {
+  init (entity) {
     this.entity = entity
   }
 
-  set(opts) {
+  set (opts) {
     Object.assign(this, opts)
     Object.keys(opts).forEach(prop => this.changed.dispatch(prop))
   }

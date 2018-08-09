@@ -21,7 +21,7 @@ const IndicesMap = {
 }
 
 class Geometry {
-  constructor(opts) {
+  constructor (opts) {
     this.type = 'Geometry'
     this.changed = new Signal()
     this.bounds = aabb.create()
@@ -35,11 +35,11 @@ class Geometry {
     this.set(opts)
   }
 
-  init(entity) {
+  init (entity) {
     this.entity = entity
   }
 
-  set(opts) {
+  set (opts) {
     const ctx = opts.ctx || this.ctx
 
     // This is a bit messy because indices will could ovewrite this.indices

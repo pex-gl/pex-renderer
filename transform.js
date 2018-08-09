@@ -3,7 +3,7 @@ import { vec3, mat4 } from 'pex-math'
 import { aabb } from 'pex-geom'
 
 // TODO remove, should in AABB
-function emptyAABB(a) {
+function emptyAABB (a) {
   a[0][0] = Infinity
   a[0][1] = Infinity
   a[0][2] = Infinity
@@ -13,7 +13,7 @@ function emptyAABB(a) {
 }
 
 // TODO remove, should in AABB
-function aabbToPoints(box) {
+function aabbToPoints (box) {
   if (aabb.isEmpty(box)) return []
   return [
     [box[0][0], box[0][1], box[0][2], 1],
@@ -28,7 +28,7 @@ function aabbToPoints(box) {
 }
 
 class Transform {
-  constructor(opts) {
+  constructor (opts) {
     this.type = 'Transform'
     this.entity = null
     this.changed = new Signal()
@@ -49,11 +49,11 @@ class Transform {
     this.set(opts)
   }
 
-  init(entity) {
+  init (entity) {
     this.entity = entity
   }
 
-  set(opts) {
+  set (opts) {
     if (opts.parent !== undefined) {
       if (this.parent) {
         this.parent.children.splice(this.parent.children.indexOf(this), 1)
@@ -66,7 +66,7 @@ class Transform {
     Object.keys(opts).forEach(prop => this.changed.dispatch(prop))
   }
 
-  update() {
+  update () {
     mat4.identity(this.localModelMatrix)
     mat4.translate(this.localModelMatrix, this.position)
     mat4.mult(this.localModelMatrix, mat4.fromQuat(mat4.create(), this.rotation))
@@ -92,7 +92,7 @@ class Transform {
     }
   }
 
-  afterUpdate() {
+  afterUpdate () {
     if (!aabb.isEmpty(this.bounds)) {
       const points = aabbToPoints(this.bounds)
       const pointsInWorldSpace = points.map(p => vec3.multMat4(vec3.copy(p), this.modelMatrix))
@@ -110,6 +110,6 @@ class Transform {
   }
 }
 
-export default function createTransform(opts) {
+export default function createTransform (opts) {
   return new Transform(opts)
 }

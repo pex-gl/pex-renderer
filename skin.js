@@ -2,7 +2,7 @@ import Signal from 'signals'
 import { mat4 } from 'pex-math'
 
 class Skin {
-  constructor(opts) {
+  constructor (opts) {
     this.type = 'Skin'
     this.entity = null
     this.joints = []
@@ -10,16 +10,16 @@ class Skin {
     this.set(opts)
   }
 
-  init(entity) {
+  init (entity) {
     this.entity = entity
   }
 
-  set(opts) {
+  set (opts) {
     Object.assign(this, opts)
     Object.keys(opts).forEach(prop => this.changed.dispatch(prop))
   }
 
-  update() {
+  update () {
     this.jointMatrices = this.joints.map((joint, index) => {
       const m = mat4.create()
       mat4.mult(m, joint.transform.modelMatrix)
@@ -29,6 +29,6 @@ class Skin {
   }
 }
 
-export default function createSkin(opts) {
+export default function createSkin (opts) {
   return new Skin(opts)
 }

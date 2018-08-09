@@ -3,7 +3,7 @@ import Signal from 'signals'
 let MaterialID = 0
 
 class Material {
-  constructor(opts) {
+  constructor (opts) {
     this.type = 'Material'
     this.id = `Material_${MaterialID++}`
     this.changed = new Signal()
@@ -40,11 +40,11 @@ class Material {
     this.set(opts)
   }
 
-  init(entity) {
+  init (entity) {
     this.entity = entity
   }
 
-  set(opts) {
+  set (opts) {
     Object.assign(this, opts)
     Object.keys(opts).forEach(prop => this.changed.dispatch(prop))
   }

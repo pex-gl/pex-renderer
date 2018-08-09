@@ -7,7 +7,7 @@ import SKYTEXTURE_VERT from './glsl/SkyEnvMap.vert'
 import SKYTEXTURE_FRAG from './glsl/SkyEnvMap.frag'
 
 class Skybox {
-  constructor(opts) {
+  constructor (opts) {
     this.type = 'Skybox'
     this.changed = new Signal()
     this.rgbm = false
@@ -69,11 +69,11 @@ class Skybox {
     }
   }
 
-  init(entity) {
+  init (entity) {
     this.entity = entity
   }
 
-  set(opts) {
+  set (opts) {
     Object.assign(this, opts)
 
     if (opts.sunPosition) {
@@ -83,7 +83,7 @@ class Skybox {
     Object.keys(opts).forEach(prop => this.changed.dispatch(prop))
   }
 
-  draw(camera, opts) {
+  draw (camera, opts) {
     const ctx = this._ctx
 
     if (!this.texture && this._dirtySunPosition) {
@@ -112,7 +112,7 @@ class Skybox {
   }
 }
 
-export default function createSkybox(opts) {
+export default function createSkybox (opts) {
   if (!opts.sunPosition && !opts.texture) {
     throw new Error('Skybox requires either a sunPosition or a texture')
   }

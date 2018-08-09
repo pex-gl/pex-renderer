@@ -2,7 +2,7 @@ import Signal from 'signals'
 import AreaLightsData from './local_modules/area-light-data'
 
 class AreaLight {
-  constructor(opts) {
+  constructor (opts) {
     const ctx = opts.ctx
 
     this.type = 'AreaLight'
@@ -35,11 +35,11 @@ class AreaLight {
     this.ltc_mag_texture = AreaLight.ltc_mag_texture
   }
 
-  init(entity) {
+  init (entity) {
     this.entity = entity
   }
 
-  set(opts) {
+  set (opts) {
     Object.assign(this, opts)
     Object.keys(opts).forEach(prop => this.changed.dispatch(prop))
 

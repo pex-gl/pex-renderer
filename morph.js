@@ -4,7 +4,7 @@ import debug from 'debug'
 const log = debug('pex-renderer/morph')
 
 class Morph {
-  constructor(opts) {
+  constructor (opts) {
     this.type = 'Morph'
     this.entity = null
     this.dirty = false
@@ -14,7 +14,7 @@ class Morph {
     this.set(opts)
   }
 
-  init(entity) {
+  init (entity) {
     this.entity = entity
     let geom = this.entity.getComponent('Geometry')
     log('geom.positions', geom.positions, this)
@@ -24,13 +24,13 @@ class Morph {
         : geom.positions.slice(0)
   }
 
-  set(opts) {
+  set (opts) {
     Object.assign(this, opts)
     Object.keys(opts).forEach(prop => this.changed.dispatch(prop))
     this.dirty = true
   }
 
-  update() {
+  update () {
     if (!this.dirty) return
     this.dirty = false
 
@@ -67,6 +67,6 @@ class Morph {
   }
 }
 
-export default function createMorph(opts) {
+export default function createMorph (opts) {
   return new Morph(opts)
 }

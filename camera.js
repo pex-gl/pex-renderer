@@ -29,7 +29,7 @@ for (let j = 0; j < 128 * 128; j++) {
 const ssaoNoiseData = new Float32Array(flatten(ssaoNoise))
 
 class Camera {
-  constructor(opts) {
+  constructor (opts) {
     const gl = opts.ctx.gl
     this.type = 'Camera'
     this.changed = new Signal()
@@ -86,11 +86,11 @@ class Camera {
     this.initPostproces()
   }
 
-  init(entity) {
+  init (entity) {
     this.entity = entity
   }
 
-  set(opts) {
+  set (opts) {
     Object.assign(this, opts)
 
     if (opts.camera) {
@@ -128,7 +128,7 @@ class Camera {
     Object.keys(opts).forEach(prop => this.changed.dispatch(prop))
   }
 
-  initPostproces() {
+  initPostproces () {
     const ctx = this.ctx
     const fsqPositions = [[-1, -1], [1, -1], [1, 1], [-1, 1]]
     const fsqFaces = [[0, 1, 2], [0, 2, 3]]
@@ -462,12 +462,12 @@ class Camera {
     }
   }
 
-  update() {
+  update () {
     mat4.set(this.viewMatrix, this.entity.transform.modelMatrix)
     mat4.invert(this.viewMatrix)
   }
 }
 
-export default function createCamera(opts) {
+export default function createCamera (opts) {
   return new Camera(opts)
 }

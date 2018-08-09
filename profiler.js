@@ -12,7 +12,7 @@ const LINE_H = 16
 const FONT_H = 11
 const FONT = `${FONT_H}px Droid Sans Mono, Andale Mono, monospace`
 
-function ms(time) {
+function ms (time) {
   const f = Math.floor(time * 10) / 10
   let s = `${f}`
   if (f % 1 === 0) s += '.0'
@@ -20,13 +20,13 @@ function ms(time) {
   return `${s}`
 }
 
-function pa3(f) {
+function pa3 (f) {
   if (f < 10) return `  ${f}`
   if (f < 100) return ` ${f}`
   return f
 }
 
-function createProfiler(ctx, renderer) {
+function createProfiler (ctx, renderer) {
   const gl = ctx.gl
   if (isBrowser && !canvas) {
     canvas = document.createElement('canvas')
@@ -67,7 +67,7 @@ function createProfiler(ctx, renderer) {
     drawArraysCount: 0,
     drawArraysInstancedCount: 0,
     linesCount: 0,
-    time(label, gpu) {
+    time (label, gpu) {
       if (this.flush) gl.finish()
       if (this.flush) gl.flush()
       let m = this.measurements[label]
@@ -89,7 +89,7 @@ function createProfiler(ctx, renderer) {
       if (m.query && m.query.result) m.gpu = m.query.result / 1000000
       if (m.query) ctx.beginQuery(m.query)
     },
-    timeEnd(label) {
+    timeEnd (label) {
       if (this.flush) gl.finish()
       if (this.flush) gl.flush()
       const m = this.measurements[label]
@@ -104,7 +104,7 @@ function createProfiler(ctx, renderer) {
       m.avg = (m.avg * 9 + m.last * 1) / 10
       if (m.query) ctx.endQuery(m.query)
     },
-    add(command, label) {
+    add (command, label) {
       let callStack = null
       try {
         throw new Error('Call stack capture')
@@ -117,10 +117,10 @@ function createProfiler(ctx, renderer) {
         label
       })
     },
-    setFlush(state) {
+    setFlush (state) {
       this.flush = state
     },
-    summary() {
+    summary () {
       let lines = []
       const frameMeasurement = this.measurements['Frame']
       if (frameMeasurement) {
@@ -207,24 +207,24 @@ function createProfiler(ctx, renderer) {
       )
       return lines
     },
-    setEnabled(state) {
+    setEnabled (state) {
       if (isBrowser) {
         canvas.style.display = state ? 'block' : 'none'
       }
     },
-    startFrame() {
+    startFrame () {
       this.timeEnd('FrameRAF')
       this.time('FrameRAF')
       this.time('Frame')
       resetFrameStats()
     },
-    endFrame() {
+    endFrame () {
       this.timeEnd('Frame')
       draw()
     }
   }
 
-  function draw() {
+  function draw () {
     profiler.frame++
     if (!ctx2d) {
       if (profiler.frame % 30 === 0) {
@@ -263,9 +263,9 @@ function createProfiler(ctx, renderer) {
   // wrapRes('cube', 'totalTextureCubeCount')
   // wrapRes('framebuffer', 'totalFramebufferCount')
 
-  function wrapGLCall(fn, callback) {
+  function wrapGLCall (fn, callback) {
     const glFn = gl[fn]
-    gl[fn] = function() {
+    gl[fn] = function () {
       callback(arguments)
       return glFn.apply(this, arguments)
     }
@@ -328,13 +328,13 @@ function createProfiler(ctx, renderer) {
     }
   }
 
-  function wrapGLExtCall(ext, fn, callback) {
+  function wrapGLExtCall (ext, fn, callback) {
     if (!ext) {
       console.log(`Ext ${ext} it not available`)
       return
     }
     const extFn = ext[fn]
-    ext[fn] = function() {
+    ext[fn] = function () {
       callback(arguments)
       return extFn.apply(ext, arguments)
     }
@@ -358,7 +358,7 @@ function createProfiler(ctx, renderer) {
     profiler.drawArraysInstancedCount++
   })
 
-  function resetFrameStats() {
+  function resetFrameStats () {
     profiler.bindTextureCount = 0
     profiler.useProgramCount = 0
     profiler.setUniformCount = 0

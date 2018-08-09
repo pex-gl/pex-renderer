@@ -24,9 +24,9 @@ import createSkybox from './skybox'
 import createOverlay from './overlay'
 
 // pex-fx extensions, extending FXStage
-//import './Postprocess'
-//import './BilateralBlur'
-//import './SSAO'
+// import './Postprocess'
+// import './BilateralBlur'
+// import './SSAO'
 
 import DEPTH_PASS_VERT from './glsl/DepthPass.vert'
 import DEPTH_PASS_FRAG from './glsl/DepthPass.frag'
@@ -42,7 +42,6 @@ import PBR_FRAG from './glsl/PBR.frag'
 // var SHOW_COLORS_VERT = fs.readFileSync(__dirname + '/glsl/ShowColors.vert', 'utf8')
 // var SHOW_COLORS_FRAG = fs.readFileSync(__dirname + '/glsl/ShowColors.frag', 'utf8')
 
-
 const State = {
   frame: 0,
   shadowQuality: 2,
@@ -52,12 +51,12 @@ const State = {
   paused: false
 }
 
-function isNil(x) {
+function isNil (x) {
   return x == null
 }
 
 // TODO remove, should be in AABB
-function aabbToPoints(bbox) {
+function aabbToPoints (bbox) {
   if (aabb.isEmpty(bbox)) return []
   return [
     [bbox[0][0], bbox[0][1], bbox[0][2], 1],
@@ -74,7 +73,7 @@ function aabbToPoints(bbox) {
 // opts = Context
 // opts = { ctx: Context, width: Number, height: Number, profile: Boolean }
 class Renderer {
-  constructor(opts) {
+  constructor (opts) {
     this.entities = []
     this.root = this.entity()
 
@@ -108,7 +107,7 @@ class Renderer {
     this._state = State
   }
 
-  updateDirectionalLightShadowMap(light, geometries) {
+  updateDirectionalLightShadowMap (light, geometries) {
     const ctx = this._ctx
     const position = light.entity.transform.worldPosition
     const target = [0, 0, 1, 0]
@@ -152,7 +151,7 @@ class Renderer {
   }
 
   // TODO: how fast is building these flag strings every frame for every object?
-  getMaterialProgram(geometry, material, skin, options) {
+  getMaterialProgram (geometry, material, skin, options) {
     const ctx = this._ctx
 
     if (!this._programCache) {
@@ -319,7 +318,7 @@ class Renderer {
     return program
   }
 
-  traverseTransformTree(transform, beforeCallback, afterCallback) {
+  traverseTransformTree (transform, beforeCallback, afterCallback) {
     if (!transform.enabled) return
     beforeCallback(transform)
     transform.children.forEach(child => {
@@ -328,7 +327,7 @@ class Renderer {
     if (afterCallback) afterCallback(transform)
   }
 
-  update() {
+  update () {
     this.entities = []
     this.traverseTransformTree(
       this.root.transform,
@@ -346,7 +345,7 @@ class Renderer {
     )
   }
 
-  getGeometryPipeline(geometry, material, skin, opts) {
+  getGeometryPipeline (geometry, material, skin, opts) {
     const ctx = this._ctx
     const program = this.getMaterialProgram(geometry, material, skin, opts)
     if (!this._pipelineCache) {
@@ -376,7 +375,7 @@ class Renderer {
     return pipeline
   }
 
-  getOverlayCommand() {
+  getOverlayCommand () {
     const ctx = this._ctx
     if (!this._drawOverlayCmd) {
       const program = ctx.program({
@@ -409,7 +408,7 @@ class Renderer {
     return this._drawOverlayCmd
   }
 
-  getComponents(type) {
+  getComponents (type) {
     const result = []
 
     for (const entity of this.entities) {
@@ -428,10 +427,10 @@ class Renderer {
   // set update transforms once per frame
   // draw + shadowmap @ 1000 objects x 30 uniforms = 60'000 setters / frame!!
   // transform feedback?
-  drawMeshes(camera, shadowMapping, shadowMappingLight, geometries, skybox, forward) {
+  drawMeshes (camera, shadowMapping, shadowMappingLight, geometries, skybox, forward) {
     const ctx = this._ctx
 
-    function byCameraTags(component) {
+    function byCameraTags (component) {
       if (!camera || !camera.entity) return true
       if (!camera.entity.tags.length) return true
       if (!component.entity.tags.length) return true
@@ -584,15 +583,13 @@ class Renderer {
       if (material.roughnessMap) cachedUniforms.uRoughnessMap = material.roughnessMap
       if (!isNil(material.roughness)) cachedUniforms.uRoughness = material.roughness
 
-      if (material.metallicRoughnessMap)
-        cachedUniforms.uMetallicRoughnessMap = material.metallicRoughnessMap
+      if (material.metallicRoughnessMap) { cachedUniforms.uMetallicRoughnessMap = material.metallicRoughnessMap }
 
       if (material.diffuse) cachedUniforms.uDiffuse = material.diffuse
       if (material.specular) cachedUniforms.uSpecular = material.specular
       if (material.glossiness !== undefined) cachedUniforms.uGlossiness = material.glossiness
       if (material.diffuseMap) cachedUniforms.uDiffuseMap = material.diffuseMap
-      if (material.specularGlossinessMap)
-        cachedUniforms.uSpecularGlossinessMap = material.specularGlossinessMap
+      if (material.specularGlossinessMap) { cachedUniforms.uSpecularGlossinessMap = material.specularGlossinessMap }
 
       if (material.normalMap) cachedUniforms.uNormalMap = material.normalMap
       if (material.occlusionMap) cachedUniforms.uOcclusionMap = material.occlusionMap
@@ -675,7 +672,7 @@ class Renderer {
     }
   }
 
-  draw() {
+  draw () {
     const ctx = this._ctx
 
     if (State.paused) return
@@ -899,7 +896,7 @@ class Renderer {
   }
 
   // TODO: remove unused code
-  drawDebug() {
+  drawDebug () {
     const ctx = this._ctx
 
     const directionalLightNodes = this._directionalLightNodes
@@ -964,11 +961,11 @@ class Renderer {
     */
   }
 
-  entity(components, tags) {
+  entity (components, tags) {
     return createEntity(components, tags)
   }
 
-  add(entity, parent) {
+  add (entity, parent) {
     // console.warn('pex-renderer: renderer.add() is deprecated')
     if (entity === this.root) {
       return entity
@@ -979,75 +976,75 @@ class Renderer {
     return entity
   }
 
-  remove(entity) {
+  remove (entity) {
     entity.transform.set({ parent: null })
   }
 
-  transform(opts) {
+  transform (opts) {
     return createTransform(Object.assign({ ctx: this._ctx }, opts))
   }
 
-  skin(opts) {
+  skin (opts) {
     return createSkin(Object.assign({ ctx: this._ctx }, opts))
   }
 
-  morph(opts) {
+  morph (opts) {
     return createMorph(Object.assign({ ctx: this._ctx }, opts))
   }
 
-  animation(opts) {
+  animation (opts) {
     return createAnimation(Object.assign({ ctx: this._ctx }, opts))
   }
 
-  geometry(opts) {
+  geometry (opts) {
     return createGeometry(Object.assign({ ctx: this._ctx }, opts))
   }
 
-  material(opts) {
+  material (opts) {
     return createMaterial(Object.assign({ ctx: this._ctx }, opts))
   }
 
-  camera(opts) {
+  camera (opts) {
     return createCamera(Object.assign({ ctx: this._ctx, rgbm: State.rgbm }, opts))
   }
 
-  orbiter(opts) {
+  orbiter (opts) {
     return createOrbiter(Object.assign({ ctx: this._ctx }, opts))
   }
 
-  ambientLight(opts) {
+  ambientLight (opts) {
     return createAmbientLight(Object.assign({ ctx: this._ctx }, opts))
   }
 
-  directionalLight(opts) {
+  directionalLight (opts) {
     return createDirectionalLight(Object.assign({ ctx: this._ctx }, opts))
   }
 
-  pointLight(opts) {
+  pointLight (opts) {
     return createPointLight(Object.assign({ ctx: this._ctx }, opts))
   }
 
-  spotLight(opts) {
+  spotLight (opts) {
     return createSpotLight(Object.assign({ ctx: this._ctx }, opts))
   }
 
-  areaLight(opts) {
+  areaLight (opts) {
     return createAreaLight(Object.assign({ ctx: this._ctx }, opts))
   }
 
-  reflectionProbe(opts) {
+  reflectionProbe (opts) {
     return createReflectionProbe(Object.assign({ ctx: this._ctx, rgbm: State.rgbm }, opts))
   }
 
-  skybox(opts) {
+  skybox (opts) {
     return createSkybox(Object.assign({ ctx: this._ctx, rgbm: State.rgbm }, opts))
   }
 
-  overlay(opts) {
+  overlay (opts) {
     return createOverlay(Object.assign({ ctx: this._ctx }, opts))
   }
 }
 
-export default function createRenderer(opts) {
+export default function createRenderer (opts) {
   return new Renderer(opts)
 }

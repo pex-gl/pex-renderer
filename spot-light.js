@@ -1,7 +1,7 @@
 import Signal from 'signals'
 
 class SpotLight {
-  constructor(opts) {
+  constructor (opts) {
     this.type = 'SpotLight'
     this.changed = new Signal()
     this.target = [0, 0, 0]
@@ -14,11 +14,11 @@ class SpotLight {
     this.set(opts)
   }
 
-  init(entity) {
+  init (entity) {
     this.entity = entity
   }
 
-  set(opts) {
+  set (opts) {
     Object.assign(this, opts)
 
     if (opts.color !== undefined || opts.intensity !== undefined) {

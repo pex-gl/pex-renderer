@@ -7,7 +7,7 @@ import xyzToLatLon from 'xyz-to-latlon'
 import offset from 'mouse-event-offset'
 
 class Orbiter {
-  constructor(opts) {
+  constructor (opts) {
     this.type = 'Orbiter'
     this.entity = null
     this.dirty = false
@@ -51,12 +51,12 @@ class Orbiter {
     this.set(opts)
   }
 
-  init(entity) {
+  init (entity) {
     this.entity = entity
     this.setup()
   }
 
-  set(opts) {
+  set (opts) {
     console.log('set', opts, this)
     Object.assign(this, opts)
     if (opts.target || opts.position) {
@@ -74,7 +74,7 @@ class Orbiter {
     Object.keys(opts).forEach(prop => this.changed.dispatch(prop))
   }
 
-  update() {
+  update () {
     this.updateCamera()
     const camera = this.entity.getComponent('Camera')
 
@@ -89,7 +89,7 @@ class Orbiter {
     })
   }
 
-  updateWindowSize() {
+  updateWindowSize () {
     const width = this.element.clientWidth || this.element.innerWidth
     const height = this.element.clientHeight || this.element.innerHeight
     if (width !== this.width) {
@@ -99,7 +99,7 @@ class Orbiter {
     }
   }
 
-  updateCamera() {
+  updateCamera () {
     const position = this.position
     const target = this.target
     const camera = this.entity.getComponent('Camera')
@@ -134,11 +134,11 @@ class Orbiter {
     mat4.lookAt(camera.viewMatrix, position, target, up)
   }
 
-  setup() {
+  setup () {
     const orbiter = this
     const camera = this.entity.getComponent('Camera')
 
-    function down(x, y, shift) {
+    function down (x, y, shift) {
       orbiter.dragging = true
       orbiter.dragPos[0] = x
       orbiter.dragPos[1] = y
@@ -175,7 +175,7 @@ class Orbiter {
       }
     }
 
-    function move(x, y, shift) {
+    function move (x, y, shift) {
       if (!orbiter.dragging) {
         return
       }
@@ -226,12 +226,12 @@ class Orbiter {
       }
     }
 
-    function up() {
+    function up () {
       orbiter.dragging = false
       orbiter.panPlane = null
     }
 
-    function scroll(dy) {
+    function scroll (dy) {
       if (!orbiter.zoom) {
         return
       }
@@ -240,27 +240,27 @@ class Orbiter {
       orbiter.updateCamera()
     }
 
-    function onMouseDown(e) {
+    function onMouseDown (e) {
       orbiter.updateWindowSize()
       const pos = offset(e, window)
       down(pos[0], pos[1], e.shiftKey || (e.touches && e.touches.length === 2))
     }
 
-    function onMouseMove(e) {
+    function onMouseMove (e) {
       const pos = offset(e, window)
       move(pos[0], pos[1], e.shiftKey || (e.touches && e.touches.length === 2))
     }
 
-    function onMouseUp(e) {
+    function onMouseUp (e) {
       up()
     }
 
-    function onWheel(e) {
+    function onWheel (e) {
       scroll(e.deltaY)
       e.preventDefault()
     }
 
-    function onTouchStart(e) {
+    function onTouchStart (e) {
       e.preventDefault()
       onMouseDown(e)
     }
@@ -282,7 +282,7 @@ class Orbiter {
     this.updateCamera()
   }
 
-  dispose() {
+  dispose () {
     this.element.removeEventListener('mousedown', this._onMouseDown)
     this.element.removeEventListener('touchstart', this._onTouchStart)
     this.element.removeEventListener('wheel', this._onWheel)
@@ -295,6 +295,6 @@ class Orbiter {
 
 const tempmat4 = mat4.create()
 
-export default function createOrbiter(opts) {
+export default function createOrbiter (opts) {
   return new Orbiter(opts)
 }

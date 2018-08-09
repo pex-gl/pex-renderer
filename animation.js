@@ -6,7 +6,7 @@ import { quat } from 'pex-math'
 // - animation channels can reference other entities
 // - currently all animations track time by themselves
 class Animation {
-  constructor(opts) {
+  constructor (opts) {
     this.type = 'Animation'
     this.entity = null
     this.playing = false
@@ -18,11 +18,11 @@ class Animation {
     this.set(opts)
   }
 
-  init(entity) {
+  init (entity) {
     this.entity = entity
   }
 
-  set(opts) {
+  set (opts) {
     Object.assign(this, opts)
     Object.keys(opts).forEach(prop => this.changed.dispatch(prop))
 
@@ -34,7 +34,7 @@ class Animation {
     }
   }
 
-  update() {
+  update () {
     if (!this.playing) return
 
     // assuming same length for all
@@ -118,6 +118,6 @@ class Animation {
   }
 }
 
-export default function createMorph(opts) {
+export default function createMorph (opts) {
   return new Animation(opts)
 }
