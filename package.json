@@ -45,10 +45,5 @@
   "homepage": "https://github.com/pex-gl/pex-renderer",
   "bugs": {
     "url": "https://github.com/pex-gl/pex-renderer/issues"
-  },
-  "browserify": {
-    "transform": [
-      "glslify"
-    ]
   }
 }

@@ -4,8 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "budo index.js:bundle.js --open --live -- -t glslify",
-    "build": "browserify main.js -o bundle.js -t glslify"
+    "start": "budo index.js:bundle.js --open --live",
+    "build": "browserify main.js -o bundle.js"
   },
   "author": "Marcin Ignac <marcin.ignac@gmail.com> (http://marcinignac.com/)",
   "license": "MIT",

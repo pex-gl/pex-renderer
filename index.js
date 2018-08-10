@@ -5,7 +5,6 @@ const mat4 = require('pex-math/mat4')
 const aabb = require('pex-geom/aabb')
 // var Draw = require('pex-draw/Draw')
 // var fx = require('pex-fx')
-const glsl = require('glslify')
 // const AreaLightsData = require('./AreaLightsData')
 const createProfiler = require('./profiler')
 const isBrowser = require('is-browser')
@@ -33,12 +32,12 @@ const path = require('path')
 // require('./BilateralBlur')
 // require('./SSAO')
 
-const DEPTH_PASS_VERT = glsl(path.join(__dirname, 'glsl/DepthPass.vert'))
-const DEPTH_PASS_FRAG = glsl(path.join(__dirname, 'glsl/DepthPass.frag'))
-const OVERLAY_VERT = glsl(path.join(__dirname, 'glsl/Overlay.vert'))
-const OVERLAY_FRAG = glsl(path.join(__dirname, 'glsl/Overlay.frag'))
-const ERROR_VERT = glsl(path.join(__dirname, 'glsl/Error.vert'))
-const ERROR_FRAG = glsl(path.join(__dirname, 'glsl/Error.frag'))
+const DEPTH_PASS_VERT = require('./glsl/DepthPass.vert.js')
+const DEPTH_PASS_FRAG = require('./glsl/DepthPass.frag.js')
+const OVERLAY_VERT = require('./glsl/Overlay.vert.js')
+const OVERLAY_FRAG = require('./glsl/Overlay.frag.js')
+const ERROR_VERT = require('./glsl/Error.vert.js')
+const ERROR_FRAG = require('./glsl/Error.frag.js')
 // var SOLID_COLOR_VERT = glsl(__dirname + '/glsl/SolidColor.vert')
 // var SOLID_COLOR_VERT = glsl(__dirname + '/glsl/SolidColor.vert')
 // var SOLID_COLOR_FRAG = fs.readFileSync(__dirname + '/glsl/SolidColor.frag', 'utf8')
@@ -146,8 +145,8 @@ Renderer.prototype.updateDirectionalLightShadowMap = function (light, geometries
   })
 }
 
-var PBRVert = glsl(path.join(__dirname, 'glsl/PBR.vert'))
-var PBRFrag = glsl(path.join(__dirname, 'glsl/PBR.frag'))
+var PBRVert = require('./glsl/PBR.vert.js')
+var PBRFrag = require('./glsl/PBR.frag.js')
 
 // TODO: how fast is building these flag strings every frame for every object?
 Renderer.prototype.getMaterialProgram = function (geometry, material, skin, options) {

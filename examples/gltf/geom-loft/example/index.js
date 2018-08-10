@@ -4,7 +4,6 @@ const regl = require('regl')(gl)
 const mat4 = require('pex-math/mat4')
 const vec2 = require('pex-math/vec2')
 const createCube = require('primitive-cube')
-const glsl = require('glslify')
 const camera = require('pex-cam/perspective')({
   fov: Math.PI / 3,
   aspect: gl.canvas.width / gl.canvas.height,
@@ -45,7 +44,7 @@ const drawMesh = regl({
   elements: g.cells,
   // count: g.positions.length,
   // primitive: 'lines',
-  vert: glsl`
+  vert: `
     #ifdef GL_ES
     #pragma glslify: transpose = require(glsl-transpose)
     #endif
