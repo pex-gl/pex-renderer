@@ -1,5 +1,5 @@
-const octMapUVToDir = require('./octMapUVToDir.glsl.js')
-const envMapOctahedral = require('./envMapOctahedral.glsl.js')
+const octMapUVToDir = require('./OctMapUVToDir.glsl.js')
+const envMapOctahedral = require('./EnvMapOctahedral.glsl.js')
 const decode = require('./decode.glsl.js')
 const encode = require('./encode.glsl.js')
 module.exports = `
