@@ -1,11 +1,10 @@
-const glsl = require('glslify')
 const createQuad = require('primitive-quad')
 
-const SKYBOX_VERT = glsl(__dirname + '/glsl/Skybox.vert')
-const SKYBOX_FRAG = glsl(__dirname + '/glsl/Skybox.frag')
+const SKYBOX_VERT = require('./glsl/Skybox.vert.js')
+const SKYBOX_FRAG = require('./glsl/Skybox.frag.js')
 
-const SKYTEXTURE_VERT = glsl(__dirname + '/glsl/SkyEnvMap.vert')
-const SKYTEXTURE_FRAG = glsl(__dirname + '/glsl/SkyEnvMap.frag')
+const SKYTEXTURE_VERT = require('./glsl/SkyEnvMap.vert.js')
+const SKYTEXTURE_FRAG = require('./glsl/SkyEnvMap.frag.js')
 
 const Signal = require('signals')
 

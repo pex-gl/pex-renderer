@@ -13,7 +13,6 @@ const createContext = require('../../pex-context')
 const raf = require('raf')
 const createCamera = require('pex-cam/perspective')
 const createOrbiter = require('pex-cam/orbiter')
-const glsl = require('glslify')
 
 const ctx = createContext()
 
@@ -79,7 +78,7 @@ void main() {
 }
 `
 
-const showNormalsInstancedVert = glsl`
+const showNormalsInstancedVert = `
 attribute vec3 aPosition;
 attribute vec3 aNormal;
 attribute vec3 aOffset;
@@ -133,7 +132,7 @@ void main() {
 }
 `
 
-const shadowMappedInstancedVert = glsl`
+const shadowMappedInstancedVert = `
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
 uniform mat4 uModelMatrix;
@@ -162,7 +161,7 @@ void main() {
 }
 `
 
-const shadowMappedFrag = glsl`
+const shadowMappedFrag = `
 #ifdef GL_ES
 precision highp float;
 #endif
@@ -210,7 +209,7 @@ void main() {
   vec2 lightUV = lightDeviceCoordsPositionNormalized.xy * 0.5 + 0.5;
   float bias = 0.1;
   float lightDist2 = readDepth(uDepthMap, lightUV);
-  
+
   gl_FragColor.rgb = ambient + NdotL * diffuse;
 
   if (lightDist1 < lightDist2 + bias)

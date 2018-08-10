@@ -1,18 +1,17 @@
 const Signal = require('signals')
-const glsl = require('glslify')
 const random = require('pex-random')
 const vec3 = require('pex-math/vec3')
 const mat4 = require('pex-math/mat4')
 const utils = require('pex-math/utils')
 const flatten = require('flatten')
 
-const POSTPROCESS_VERT = glsl(__dirname + '/glsl/Postprocess.vert')
-let POSTPROCESS_FRAG = glsl(__dirname + '/glsl/Postprocess.frag')
+const POSTPROCESS_VERT = require('./glsl/Postprocess.vert.js')
+let POSTPROCESS_FRAG = require('./glsl/Postprocess.frag.js')
 
-const SAO_FRAG = glsl(__dirname + '/glsl/SAO.frag')
-const BILATERAL_BLUR_FRAG = glsl(__dirname + '/glsl/BilateralBlur.frag')
-const THRESHOLD_FRAG = glsl(__dirname + '/glsl/Threshold.frag')
-const BLOOM_FRAG = glsl(__dirname + '/glsl/Bloom.frag')
+const SAO_FRAG = require('./glsl/SAO.frag.js')
+const BILATERAL_BLUR_FRAG = require('./glsl/BilateralBlur.frag.js')
+const THRESHOLD_FRAG = require('./glsl/Threshold.frag.js')
+const BLOOM_FRAG = require('./glsl/Bloom.frag.js')
 
 var ssaoKernel = []
 for (let i = 0; i < 64; i++) {

@@ -1,8 +1,6 @@
 const Signal = require('signals')
 const mat4 = require('pex-math/mat4')
-const glsl = require('glslify')
 const hammersley = require('hammersley')
-const log = require('debug')('renderer:ReflectionProbe')
 
 function ReflectionProbe (opts) {
   this.type = 'ReflectionProbe'
@@ -73,8 +71,8 @@ function ReflectionProbe (opts) {
       color: [ octMap ]
     }),
     pipeline: ctx.pipeline({
-      vert: glsl(__dirname + '/glsl/FullscreenQuad.vert'),
-      frag: glsl(__dirname + '/glsl/CubemapToOctmap.frag')
+      vert: require('./glsl/FullscreenQuad.vert.js'),
+      frag: require('./glsl/CubemapToOctmap.frag.js')
     }),
     attributes: {
       aPosition: ctx.vertexBuffer(quadPositions),
@@ -94,8 +92,8 @@ function ReflectionProbe (opts) {
       color: [ octMap ]
     }),
     pipeline: ctx.pipeline({
-      vert: glsl(__dirname + '/glsl/FullscreenQuad.vert'),
-      frag: glsl(__dirname + '/glsl/ConvolveOctMapAtlasToOctMap.frag')
+      vert: require('./glsl/FullscreenQuad.vert.js'),
+      frag: require('./glsl/ConvolveOctMapAtlasToOctMap.frag.js')
     }),
     attributes: {
       aPosition: ctx.vertexBuffer(quadPositions),
@@ -127,8 +125,8 @@ function ReflectionProbe (opts) {
       color: [ octMapAtlas ]
     }),
     pipeline: ctx.pipeline({
-      vert: glsl(__dirname + '/glsl/FullscreenQuad.vert'),
-      frag: glsl(__dirname + '/glsl/BlitToOctMapAtlas.frag')
+      vert: require('./glsl/FullscreenQuad.vert.js'),
+      frag: require('./glsl/BlitToOctMapAtlas.frag.js')
     }),
     uniforms: {
       uSource: octMap,
@@ -149,8 +147,8 @@ function ReflectionProbe (opts) {
       clearColor: [0, 1, 0, 1]
     }),
     pipeline: ctx.pipeline({
-      vert: glsl(__dirname + '/glsl/FullscreenQuad.vert'),
-      frag: glsl(__dirname + '/glsl/DownsampleFromOctMapAtlas.frag')
+      vert: require('./glsl/FullscreenQuad.vert.js'),
+      frag: require('./glsl/DownsampleFromOctMapAtlas.frag.js')
     }),
     uniforms: {
       uSource: octMapAtlas,
@@ -171,8 +169,8 @@ function ReflectionProbe (opts) {
       clearColor: [0, 1, 0, 1]
     }),
     pipeline: ctx.pipeline({
-      vert: glsl(__dirname + '/glsl/FullscreenQuad.vert'),
-      frag: glsl(__dirname + '/glsl/PrefilterFromOctMapAtlas.frag')
+      vert: require('./glsl/FullscreenQuad.vert.js'),
+      frag: require('./glsl/PrefilterFromOctMapAtlas.frag.js')
     }),
     uniforms: {
       uSource: octMapAtlas,
@@ -246,7 +244,7 @@ function ReflectionProbe (opts) {
   this.update = function (drawScene) {
     if (!drawScene) return
     this.dirty = false
-    log('ReflectionProbe.update')
+    console.log('ReflectionProbe.update')
     sides.forEach((side) => {
       ctx.submit(side.drawPassCmd, () => drawScene(side, dynamicCubemap.encoding))
     })

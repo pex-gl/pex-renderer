@@ -36,8 +36,8 @@ function Orbiter (opts) {
     dragPosWindow: [0, 0],
     distance: 1,
     currentDistance: 1,
-    minDistance: 1,
-    maxDistance: 1,
+    minDistance: 0.1,
+    maxDistance: 10,
     zoomSlowdown: 400,
     zoom: true,
     pan: true,
@@ -62,7 +62,6 @@ Orbiter.prototype.init = function (entity) {
 }
 
 Orbiter.prototype.set = function (opts) {
-  console.log('set', opts, this)
   Object.assign(this, opts)
   if (opts.target || opts.position) {
     const distance = vec3.distance(this.position, this.target)
