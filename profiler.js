@@ -1,5 +1,4 @@
 const isBrowser = require('is-browser')
-const log = require('debug')('profiler')
 let canvas = null
 let ctx2d = null
 const W = 250
@@ -199,7 +198,7 @@ function createProfiler (ctx, renderer) {
     profiler.frame++
     if (!ctx2d) {
       if (profiler.frame % 30 === 0) {
-        log(profiler.summary())
+        console.log('profiler', profiler.summary())
       }
       return
     }
@@ -301,7 +300,7 @@ function createProfiler (ctx, renderer) {
 
   function wrapGLExtCall (ext, fn, callback) {
     if (!ext) {
-      console.log(`Ext ${ext} it not available`)
+      console.log('profiler', `Ext ${ext} it not available`)
       return
     }
     const extFn = ext[fn]

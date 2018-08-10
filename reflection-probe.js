@@ -1,8 +1,6 @@
 const Signal = require('signals')
 const mat4 = require('pex-math/mat4')
-const glsl = require('glslify')
 const hammersley = require('hammersley')
-const log = require('debug')('renderer:ReflectionProbe')
 
 function ReflectionProbe (opts) {
   this.type = 'ReflectionProbe'
@@ -246,7 +244,7 @@ function ReflectionProbe (opts) {
   this.update = function (drawScene) {
     if (!drawScene) return
     this.dirty = false
-    log('ReflectionProbe.update')
+    console.log('ReflectionProbe.update')
     sides.forEach((side) => {
       ctx.submit(side.drawPassCmd, () => drawScene(side, dynamicCubemap.encoding))
     })

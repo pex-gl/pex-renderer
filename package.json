@@ -10,12 +10,10 @@
     "url": "https://github.com/vorg"
   },
   "dependencies": {
-    "debug": "^3.1.0",
     "flatten": "^1.0.2",
     "glsl-atmosphere": "^2.0.0",
     "glsl-fxaa": "^3.0.0",
     "glsl-gamma": "^2.0.0",
-    "glslify": "^6.2.1",
     "hammersley": "^1.0.0",
     "interpolate-angle": "^1.0.2",
     "is-browser": "^2.0.1",

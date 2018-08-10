@@ -62,7 +62,6 @@ Orbiter.prototype.init = function (entity) {
 }
 
 Orbiter.prototype.set = function (opts) {
-  console.log('set', opts, this)
   Object.assign(this, opts)
   if (opts.target || opts.position) {
     const distance = vec3.distance(this.position, this.target)
