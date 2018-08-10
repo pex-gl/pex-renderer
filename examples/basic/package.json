@@ -5,12 +5,16 @@
   "main": "index.js",
   "scripts": {
     "start": "budo index.js:bundle.js --open --live -- -t glslify",
-    "build": "browserify main.js -o bundle.js -t glslify"
+    "build": "browserify index.js -o bundle.js -t glslify"
   },
   "author": "Marcin Ignac <marcin.ignac@gmail.com> (http://marcinignac.com/)",
   "license": "MIT",
   "dependencies": {
+    "browserify": "^16.2.2",
     "pex-context": "^2.6.0",
     "primitive-sphere": "^3.0.0"
+  },
+  "devDependencies": {
+    "budo": "^11.3.2"
   }
 }
