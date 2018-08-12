@@ -1,14 +1,16 @@
 # pex-renderer v3
 
+![](screenshot.jpg)
+
 Phisically based renderer (PBR) and scene graph for [PEX](http://pex.gl).
 
 This is an **experimental** API and it's likely to change in the future.
 
-Key dependencies:
+#### Key dependencies:
 - [pex-context](http://github.com/pex-gl/pex-context) modern WebGL wrapper (buffers, textures, pipelines, commands etc)
 - [pex-math](http://github.com/pex-gl/pex-math) array based math (vec3, mat4, quaternions etc)
 
-TOC
+# Contents
 - [Usage](#usage)
 - [Example](#example)
 - [API](#api)
