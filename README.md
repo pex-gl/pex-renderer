@@ -153,6 +153,8 @@ Updates transforms, shadowmaps, reflection probes, materials, shaders, renders t
 
 Entitites are collection of [components](#components) representing an object in the scene graph.
 
+*NOTE: It's worth mentioning that in it's current form PEX Renderer doesn't implement [Entity-Component-System](https://en.wikipedia.org/wiki/Entity–component–system) architecture.* Components are self contained and fully functional not merely buckets of data to be processed by a collection of systems. In that regard it's comparable to [Unity](http://unity3d.com) and it's GameObject and MonoBehaviour implementation.
+
 #### entity = renderer.entity(components, tags)
 
 Creates an entity from a list of components.
