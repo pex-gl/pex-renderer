@@ -5,6 +5,7 @@ function Skin (opts) {
   this.type = 'Skin'
   this.entity = null
   this.joints = []
+  this.inverseBindMatrices = []
   this.changed = new Signal()
   this.set(opts)
 }
