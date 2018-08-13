@@ -12,7 +12,7 @@ This is an **experimental** API and it's likely to change in the future.
 
 # Contents
 - [Usage](#usage)
-- [Example](#example)
+- [Examples](#examples)
 - [API](#api)
   - [Creating renderer](#creating-renderer)
   - [Entities](#entities)
@@ -38,7 +38,7 @@ This will install v3 with the beta release number after the dash e.g. pex-render
 
 PEX Renderer is a CommonJS module and you will need a bundler (e.g. [Browserify](http://browserify.org)) to run it in the browser.
 
-# Example
+# Examples
 
 ```javascript
 const createContext = require('pex-context')
@@ -104,6 +104,24 @@ npm i
 npm run start
 ```
 
+#### Examples porting status
+
+- [ ] basic
+- [ ] blocks
+- [ ] gltf
+- [ ] gltf-morph
+- [ ] gltf-nodes
+- [ ] gltf-skin
+- [ ] instancing
+- [ ] lights
+- [ ] materials
+- [ ] overlays
+- [ ] panorama
+- [ ] postprocessing
+- [ ] skin-shader
+- [ ] window-resize
+
+
 # API
 
 ## Renderer
@@ -122,13 +140,25 @@ const renderer = createRendererer({
   shadowQuality: 2,
   rgbm: false,
   profile: false,
-  profiler: null,
   pauseOnBlur: true
 })
 ```
 
 - renderer.paused
 - renderer.profiler
+
+
+| property | info | type | default |
+| -------- | ---- | ---- | ------- |
+| `ctx` | rendering context | pex-context.Context | null |
+| `shadowQuality` | shadow smoothness | Integer 0-4 | 2 |
+| `rgbm` | use RGBM color packing for rendering pipeline | Boolean | falsse |
+| `profile` | enable profiling | Boolean | false |
+| `pauseOnBlur` | stop rendering when window looses focus | Boolean | false |
+| `entities`* | list of entities in the scene | Array of Entity | [] |
+
+&nbsp;* required
+&nbsp;* read only
 
 #### renderer.draw()
 
@@ -153,7 +183,7 @@ Updates transforms, shadowmaps, reflection probes, materials, shaders, renders t
 
 Entitites are collection of [components](#components) representing an object in the scene graph.
 
-*NOTE: It's worth mentioning that in it's current form PEX Renderer doesn't implement [Entity-Component-System](https://en.wikipedia.org/wiki/Entity–component–system) architecture.* Components are self contained and fully functional not merely buckets of data to be processed by a collection of systems. In that regard it's comparable to [Unity](http://unity3d.com) and it's GameObject and MonoBehaviour implementation.
+*NOTE: It's worth mentioning that in its current form PEX Renderer doesn't implement [Entity-Component-System](https://en.wikipedia.org/wiki/Entity–component–system) architecture.* Components are self contained and fully functional not merely buckets of data to be processed by a collection of systems. In that regard it's comparable to [Unity](http://unity3d.com) and its GameObject and MonoBehaviour implementation.
 
 #### entity = renderer.entity(components, tags)
 
@@ -163,6 +193,7 @@ Creates an entity from a list of components.
 - `tags` - Array of String - list of tags
 
 *Note: entities are not added to the scene graph automatically.*
+
 *Note on tagging: Camera component also accepts tags. Only entities matching one or more camera tags will be renderered. If camera doesn't have any tags only untagged entities will be rendererd.*
 
 ```javascript
@@ -193,8 +224,9 @@ var pointLightEntity = renderer.entity([
 entity.getComponent('PointLight')
 ```
 
-Gets component by it's class name. The convention is that all component names start with Uppercase.
+Gets component by it's class name.
 
+- `type` - upper camel case name of the component class
 
 #### entity.dispose()
 
@@ -204,39 +236,199 @@ Removes entity from the scene and diposes all the components and their resources
 
 Components are bits of functionality (transform, light type, geometry, material etc) that are added to an entity.
 
+#### Properties shared by all components:
+
+| property | info | type | default |
+| -------- | ---- | ---- | ------- |
+| `type`* | component class name | String | '' |
+| `entity`* | entity the component is attached to | Entity | null |
+| `changed`* | event emitted whenever component's property changes | [Signal](https://millermedeiros.github.io/js-signals/) | null |
+
+<sup>*</sup> required
+
+#### Observing component changes
+
+```javascript
+function onParamChange (name) {
+  console.log('param ${name} has changed')
+}
+
+// start listening
+entity.transform.changed.add(onParamChange)
+
+// done internaly by transform whenever position changes
+entity.transform.dispatch('position')
+
+// stop listening
+entity.transform.changed.remove(onParamChange)
+```
+
+#### component.dispose()
+
+- TODO: https://github.com/pex-gl/pex-renderer/issues/75
+
 ## Scene Components
 
 ### transform = renderer.transform(opts)
 
+```javascript
+transform = renderer.transform({
+  position: [0, 0, 0],
+  scale: [1, 1, 1],
+  rotation: [0, 0, 0, 1]
+})
 ```
 
-```
+| property | info | type | default |
+| -------- | ---- | ---- | ------- |
+| `position` | entity position relatively to it's parent | vec3 / [x, y, z] | [0, 0, 0] |
+| `scale` | entity scale relatively to it's parent | vec3 / [x, y, z] | [1, 1, 1] |
+| `rotation` | entity rotation relatively to it's parent | quat / [x, y, z, w] | [0, 0, 0, 1] |
+| `parent` | entity's parent entity | Entity | null |
+| `enabled` | should the entity be rendered | Boolean | true |
+| `children`* |  | Array of Entity | false |
+| `bounds`* | | | |
+| `worldBounds`* | | | |
+| `localModelMatrix`* | | | |
+| `modelMatrix`* | | | |
+
+<sup>*</sup> read only
 
 ### camera = renderer.camera(opts)
+
+Defines rendering viewport, perspective and postprocessing.
+
+```javascript
+camera = renderer.camera({
+  fov: Math.PI / 2,
+  aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
+  near: 0.1,
+  far: 100,
+  postprocess: true,
+  ssao: true,
+  fxaa: true
+})
+```
+
 ### overlay = renderer.overlay(opts)
+
+Flat 2D overlay, useful for tex and logos.
+
+```javascript
+overlay = renderer.overlay({
+  x: 0,
+  y: 0,
+  width: 1,
+  height: 1,
+  texture: ctx.Texture
+})
+```
 
 ## Geometry Components
 
-### animation = renderer.animation(opts)
 ### geometry = renderer.geometry(opts)
+
+```javascript
+geometry = renderer.geometry({
+  positons: [[0, 0, 1], [1, 2, 3], ...],
+  normals: [[0, 0, 1], [0, 0, 1], ...],
+  uvs: [[0, 0], [0, 1], ...],
+  indices: [[0, 1, 2], [3, 4, 5], ...]
+})
+```
+
 ### material = renderer.material(opts)
+
+```javascript
+material = renderer.material({
+  baseColor: [0.95, 0.95, 0.95, 1],
+  baseColorMap: null,
+  emissiveColor: [0, 0, 0, 1],
+  emissiveColorMap: null,
+  metallic: 0.01,
+  matallicMap: null,
+  occlusionMap: null,
+  roughness: 0.5,
+  roughnessMap: null,
+  castShadows: false,
+  receiveShadows: false
+})
+```
+
+### animation = renderer.animation(opts)
+
+```javascript
+animation = renderer.animation({
+  TODO
+})
+```
+
 ### morph = renderer.morph(opts)
+
+```javascript
+morph = renderer.morph({
+  TODO
+})
+```
+
 ### skin = renderer.skin(opts)
+
+```javascript
+skin = renderer.skin({
+  TODO
+})
+```
+
 
 ## Lighting Components
 
 ### ambientLight = renderer.ambientLight(opts)
+
+```javascript
+ambientLight = renderer.ambientLight({
+  TODO
+})
+```
+
 ### directionalLight = renderer.directionalLight(opts)
+
+```javascript
+directionalLight = renderer.directionalLight({
+  TODO
+})
+```
+
 ### areaLight = renderer.areaLight(opts)
+
+```javascript
+areaLight = renderer.areaLight({
+  TODO
+})
+```
+
 ### spotLight = renderer.spotLight(opts)
+
+```javascript
+spotLight = renderer.spotLight({
+  TODO
+})
+```
+
 ### skybox = renderer.skybox(opts)
+
+```javascript
+skybox = renderer.skybox({
+  TODO
+})
+```
+
 ### reflectionProbe = renderer.reflectionProbe(opts)
 
-## Disposing Components
-
-- TODO: diposing? right now it's not recursive
-- TODO: name in the constructor?
-- TODO: what if e.g. material component shared a texture with another one?
+```javascript
+reflectionProbe = renderer.reflectionProbe({
+  TODO
+})
+```
 
 ## Creating Custom Components
 
