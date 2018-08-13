@@ -8,13 +8,13 @@ This is an **experimental** API and it's likely to change in the future.
 
 #### Key dependencies:
 - [pex-context](http://github.com/pex-gl/pex-context) modern WebGL wrapper (buffers, textures, pipelines, commands etc)
-- [pex-math](http://github.com/pex-gl/pex-math) array based math (vec3, mat4, quaternions etc)
+- [pex-math](http://github.com/pex-gl/pex-math) array based math (vec3, mat4, quat etc)
 
 # Contents
 - [Usage](#usage)
 - [Examples](#examples)
 - [API](#api)
-  - [Creating renderer](#creating-renderer)
+  - [Renderer](#renderer)
   - [Entities](#entities)
   - [Components](#components)
   - [Scene Components](#scene-components)
@@ -23,7 +23,6 @@ This is an **experimental** API and it's likely to change in the future.
     - animation, geometry, material, morph, skin
   - [Lighting Components](#lighting-components)
     - ambientLight, directionalLight, areaLight, spotLight, skybox, reflectionProbe
-  - [Disposing Components](#disposing-components)
   - [Creating Custom Components](#creating-custom-components)
 
 # Usage
@@ -244,7 +243,7 @@ Components are bits of functionality (transform, light type, geometry, material 
 | `entity`* | entity the component is attached to | Entity | null |
 | `changed`* | event emitted whenever component's property changes | [Signal](https://millermedeiros.github.io/js-signals/) | null |
 
-<sup>*</sup> required
+<sup>*</sup> read only
 
 #### Observing component changes
 
@@ -292,7 +291,7 @@ transform = renderer.transform({
 | `localModelMatrix`* | | | |
 | `modelMatrix`* | | | |
 
-<sup>*</sup> read only
+<sup>* </sup> read only
 
 ### camera = renderer.camera(opts)
 
@@ -328,12 +327,42 @@ overlay = renderer.overlay({
 
 ### geometry = renderer.geometry(opts)
 
+Represents 3d mesh geometry attributes.
+
 ```javascript
 geometry = renderer.geometry({
   positons: [[0, 0, 1], [1, 2, 3], ...],
   normals: [[0, 0, 1], [0, 0, 1], ...],
   uvs: [[0, 0], [0, 1], ...],
-  indices: [[0, 1, 2], [3, 4, 5], ...]
+  indices: [[0, 1, 2], [3, 4, 5], ...],
+  offsets: { data: [[0, 0, 0], [0, 1, 0], ...] , divisor: 1 }
+})
+```
+
+| property | info | type | default |
+| -------- | ---- | ---- | ------- |
+| `positions` | vertex positions | Array of Vec3 [x, y, z] | null |
+| `normals` | vertex normals | Array of Vec3 [x, y, z] | null |
+| `texCoords` | vertex tex coords | Array of Vec2 [u, v] | null |
+| `uvs`<sup>1</sup> | alias of `texCoords` | Array of Vec2 [u, v] | null |
+| `colors` | vertex colors | Array of Vec4 [r, g, b, a] | null |
+| `indices` | `indices` | Array of Vec3 | null |
+| `cells`<sup>1</sup> | geometry faces | Array of Vec3 of Int [i, j, j] | null |
+| `offsets`<sup>2</sup> | instances positions | Array of Quat/Vec4 [x, y, z, w] | null |
+| `rotations`<sup>2</sup> | instances rotations | Array of Quat/Vec4 [x, y, z, w] | null |
+| `rotations`<sup>2</sup> | instances scales | Array of Quat/Vec4 [x, y, z, w] | null |
+| `tints`<sup>2</sup> | instanced rotations | Array of Color/Vec4 [r, g, b, a] | null |
+
+
+<sup>1</sup> write only aliases, `uvs` data will be stored in `texCoords`, `cells` data will be stored in `indices`
+
+<sup>2</sup> those attributes are always instanced and need to be defined with a divisor and additionally number of instances needs to be specified:
+```javascript
+const offsets = [[x, y, z], ...]
+const g = renderer.geometry({
+  positions: [[x, y, z], ...],
+  offsets: { data: offsets, divisor: 1 },
+  instances: offsets.length
 })
 ```
 
@@ -382,53 +411,88 @@ skin = renderer.skin({
 
 ## Lighting Components
 
+Components representing light sources used for rendering of the scene.
+
+*Note on position and orientation of lights:* Similar as camera light components position and orientation is controlled via transform component of the entity the light is attached to.
+
+```javaScript
+directionalLightEnity = renderer.entity([
+  renderer.transform([
+    rotation: quat.fromAxisAngle(quat.create(), [0, 0, 1], Math.PI/2)
+  ]),
+  renderer.directionalLight({
+    color: [1, 1, 1, 1],
+    intensity: 1
+  })
+])
+```
+
 ### ambientLight = renderer.ambientLight(opts)
 
 ```javascript
 ambientLight = renderer.ambientLight({
-  TODO
+  color: [1, 1, 1, 1],
+  intensity: 1
 })
 ```
 
 ### directionalLight = renderer.directionalLight(opts)
 
 ```javascript
-directionalLight = renderer.directionalLight({
-  TODO
+renderer.directionalLight({
+  color: [1, 1, 1, 1],
+  intensity: 1
 })
 ```
+
+*Note: `directionalLight` `direction` is derived from `entity.transform.rotation`*
 
 ### areaLight = renderer.areaLight(opts)
 
+Rectangular area light.
+
 ```javascript
 areaLight = renderer.areaLight({
-  TODO
+  color: [1, 1, 1, 1],
+  intensity: 1
 })
 ```
+
+*Note: `areaLight` `position/rotation/size` are derived from `entity.transform.position/rotation/scale`*
+
 
 ### spotLight = renderer.spotLight(opts)
 
 ```javascript
 spotLight = renderer.spotLight({
-  TODO
+  color: [1, 1, 1, 1],
+  intensity: 1
 })
 ```
+
+*Note: `spotLight` `direction` is derived from `entity.transform.rotation`*
 
 ### skybox = renderer.skybox(opts)
 
 ```javascript
 skybox = renderer.skybox({
-  TODO
+  sunPosition: [1, 1, 1],
+  texture: ctx.texture2D({ .. })
 })
 ```
+
+*Note: By default a sky background is rendered unless hdr equirect panorama texture is provided.*
 
 ### reflectionProbe = renderer.reflectionProbe(opts)
 
+Captures environmental map of the scene for Image Based Lighting (IBL) specular reflection and irradiance diffuse. Currently requires Skybox component to be present in the scene as only Skybox background is captured.
+
 ```javascript
 reflectionProbe = renderer.reflectionProbe({
-  TODO
 })
 ```
+
+*Note: Due to the cost of updating and prefiltering environment map the ReflectionProbe is no updated automtically and requires `reflectionProbe.set({ dirty: true })` whenver Skybox changes. The dirty flag is true by default so the Reflection Probe will get updated once on init*.
 
 ## Creating Custom Components
 
