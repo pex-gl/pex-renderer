@@ -297,6 +297,8 @@ transform = renderer.transform({
 
 Defines rendering viewport, perspective and postprocessing.
 
+*Note: `camera` `position/rotation` are derived from `entity.transform.position/rotation`. It's probably easier to use `Orbiter` component at the moment.*
+
 ```javascript
 camera = renderer.camera({
   fov: Math.PI / 2,
@@ -306,6 +308,22 @@ camera = renderer.camera({
   postprocess: true,
   ssao: true,
   fxaa: true
+})
+```
+
+### orbiter = renderer.orbiter(opts)
+
+Orbiter controller for camera component.
+
+*Note: orbiter actually doesn't modify the camera but the entity's transform therefore both Oriber and Camera should be attached to the same entity.*
+
+```javascript
+orbiter = renderer.orbiter({
+  target: [0, 0, 0],
+  position: [1, 1, 1],
+  lat: 0
+  lon: Math.PI / 2,
+  easing: 1
 })
 ```
 
@@ -368,6 +386,8 @@ const g = renderer.geometry({
 
 ### material = renderer.material(opts)
 
+Physicaly based material description.
+
 ```javascript
 material = renderer.material({
   baseColor: [0.95, 0.95, 0.95, 1],
@@ -384,27 +404,51 @@ material = renderer.material({
 })
 ```
 
+*Note on unlit (without lighting / shadowing) support: you can disable lighting calculations and render geometry with the colors provided by setting `roughness: null` and `metallic: null` when reacting the material.*
+
 ### animation = renderer.animation(opts)
+
+Geometry attribute animations based on [glTF 2.0 Spec / Animations](https://github.com/KhronosGroup/glTF/tree/master/specification/2.0#animations).
+
 
 ```javascript
 animation = renderer.animation({
-  TODO
+  channels: Array of Channels,
+  autoplay: true,
+  loop: true
 })
+```
+
+```javaScript
+//TODO
+Channel = {
+  input: ?
+  output: ?
+  interpolation: ?
+  target: ?,
+  path: ?
+}
 ```
 
 ### morph = renderer.morph(opts)
 
+Geometry morph targets based on [glTF 2.0 Spec / Morph Targets](https://github.com/KhronosGroup/glTF/tree/master/specification/2.0#morph-targets).
+
 ```javascript
 morph = renderer.morph({
-  TODO
+  targets: [vertexBuffer, vertexBuffer, ...],
+  weights: [0.0, 0.0, ...]
 })
 ```
 
 ### skin = renderer.skin(opts)
 
+Geometry vertex skin based on [glTF 2.0 Spec / Skin](https://github.com/KhronosGroup/glTF/tree/master/specification/2.0#skins).
+
 ```javascript
 skin = renderer.skin({
-  TODO
+  joints: [entity, entity, ...],
+  inverseBindMatrices: [mat4, mat4, ...]
 })
 ```
 
@@ -422,7 +466,8 @@ directionalLightEnity = renderer.entity([
   ]),
   renderer.directionalLight({
     color: [1, 1, 1, 1],
-    intensity: 1
+    intensity: 1,
+    castShadows: true
   })
 ])
 ```
@@ -441,7 +486,8 @@ ambientLight = renderer.ambientLight({
 ```javascript
 renderer.directionalLight({
   color: [1, 1, 1, 1],
-  intensity: 1
+  intensity: 1,
+  castShadows: true
 })
 ```
 
