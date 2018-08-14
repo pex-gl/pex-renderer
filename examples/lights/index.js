@@ -1,8 +1,6 @@
 const mat4 = require('pex-math/mat4')
 const vec3 = require('pex-math/vec3')
 const quat = require('pex-math/quat')
-const createCamera = require('pex-cam/perspective')
-const createOrbiter = require('pex-cam/orbiter')
 const createRenderer = require('../../')
 const createCube = require('primitive-cube')
 const createGUI = require('pex-gui')
@@ -96,21 +94,14 @@ let cells = gridCells(W, H, nW, nH, 0).map((cell) => {
 })
 
 function initCamera () {
-  const camera = createCamera({
-    fov: Math.PI / 3,
-    aspect: (W / nW) / (H / nH),
-    position: [0, 0, 1.6],
-    target: [0, 0, 0],
-    near: 0.1,
-    far: 100
-  })
-  createOrbiter({ camera: camera })
-
   var cameraCmp0 = null
   cells.forEach((cell, cellIndex) => {
     const tags = ['cell' + cellIndex]
     const cameraCmp = renderer.camera({
-      camera: camera,
+      fov: Math.PI / 3,
+      aspect: (W / nW) / (H / nH),
+      near: 0.1,
+      far: 100,
       viewport: cell,
       fxaa: true,
       // ssao: true,
@@ -119,7 +110,8 @@ function initCamera () {
     })
     if (cellIndex == 0) cameraCmp0 = cameraCmp
     renderer.add(renderer.entity([
-      cameraCmp
+      cameraCmp,
+      renderer.orbiter()
     ], tags))
   })
 
