@@ -460,10 +460,10 @@ Components representing light sources used for rendering of the scene.
 *Note on position and orientation of lights:* Similar as camera light components position and orientation is controlled via transform component of the entity the light is attached to.
 
 ```javaScript
-directionalLightEnity = renderer.entity([
-  renderer.transform([
-    rotation: quat.fromAxisAngle(quat.create(), [0, 0, 1], Math.PI/2)
-  ]),
+directionalLightEntity = renderer.entity([
+  renderer.transform({
+    rotation: quat.setAxisAngle(quat.create(), [0, 0, 1], Math.PI/2)
+  }),
   renderer.directionalLight({
     color: [1, 1, 1, 1],
     intensity: 1,
