@@ -103,24 +103,6 @@ npm i
 npm run start
 ```
 
-#### Examples porting status
-
-- [ ] basic
-- [ ] blocks
-- [ ] gltf
-- [ ] gltf-morph
-- [ ] gltf-nodes
-- [ ] gltf-skin
-- [ ] instancing
-- [ ] lights
-- [ ] materials
-- [ ] overlays
-- [ ] panorama
-- [ ] postprocessing
-- [ ] skin-shader
-- [ ] window-resize
-
-
 # API
 
 ## Renderer
