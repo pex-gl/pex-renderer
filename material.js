@@ -14,6 +14,7 @@ function Material (opts) {
   this.baseColor = [0.95, 0.95, 0.95, 1]
   this.baseColorMap = null
   this.emissiveColor = [0, 0, 0, 1]
+  this.emissiveIntensity = 1
   this.emissiveColorMap = null
   this.metallic = 0.01
   this.matallicMap = null

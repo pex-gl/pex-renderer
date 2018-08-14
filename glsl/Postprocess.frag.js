@@ -80,7 +80,6 @@ void main() {
 
   if (uBloom) {
     color.rgb += texture2D(uBloomMap, vTexCoord0).rgb * uBloomIntensity;
-    // color.rgb += texture2D(uEmissiveMap, vTexCoord0).rgb * 2.0;
   }
   color.rgb *= uExposure;
   color.rgb = tonemapUncharted2(color.rgb);

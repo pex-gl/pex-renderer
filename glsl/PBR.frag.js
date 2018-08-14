@@ -1228,13 +1228,15 @@ void getNormal(inout PBRData data) {
 #ifdef USE_EMISSIVE_COLOR_MAP
     uniform vec4 uEmissiveColor; // TODO: gltf assumes sRGB color, not linear
     uniform sampler2D uEmissiveColorMap; //assumes sRGB color, not linear
+    uniform float uEmissiveIntensity;
     void getEmissiveColor(inout PBRData data) {
-      data.emissiveColor = decode(uEmissiveColor, 3).rgb * decode(texture2D(uEmissiveColorMap, vTexCoord0), 3).rgb;
+      data.emissiveColor = uEmissiveIntensity * decode(uEmissiveColor, 3).rgb * decode(texture2D(uEmissiveColorMap, vTexCoord0), 3).rgb;
     }
 #else
     uniform vec4 uEmissiveColor; //assumes sRGB color, not linear
+    uniform float uEmissiveIntensity;
     void getEmissiveColor(inout PBRData data) {
-      data.emissiveColor = decode(uEmissiveColor, 3).rgb;
+      data.emissiveColor = uEmissiveIntensity * decode(uEmissiveColor, 3).rgb;
     }
 #endif
 
@@ -1521,12 +1523,10 @@ void main() {
 #endif
   vec3 color = data.emissiveColor + ao * data.indirectDiffuse + ao * data.indirectSpecular + data.directDiffuse + data.directSpecular;
 #endif // USE_USE_UNLIT_WORKFLOW
-  //gl_FragData[0] = encode(vec4(color, 1.0), uOutputEncoding);
   gl_FragData[0] = encode(vec4(color, 1.0), uOutputEncoding);
 #ifdef USE_DRAW_BUFFERS
   gl_FragData[1] = encode(vec4(data.emissiveColor, 1.0), uOutputEncoding);
 #endif
-  //gl_FragData[0] = vec4(toGamma(color), 1.0);
   #ifdef USE_BLEND
   gl_FragData[0].a = data.opacity;
   #endif
