@@ -40,33 +40,6 @@ random.seed(10)
 const renderer = new Renderer(ctx, ctx.gl.drawingBufferWidth, ctx.gl.drawingBufferHeight)
 
 const gui = createGUI(ctx)
-gui.addHeader('Settings')
-gui.addParam('Sun Elevation', State, 'elevation', { min: -90, max: 180 }, updateSunPosition)
-gui.addParam('Sun Azimuth', State, 'azimuth', { min: -180, max: 180 }, updateSunPosition)
-
-function updateSunPosition () {
-  mat4.setRotation(State.elevationMat, State.elevation / 180 * Math.PI, [0, 0, 1])
-  mat4.setRotation(State.rotationMat, State.azimuth / 180 * Math.PI, [0, 1, 0])
-
-  vec3.set3(State.sunPosition, 10, 0, 0)
-  vec3.multMat4(State.sunPosition, State.elevationMat)
-  vec3.multMat4(State.sunPosition, State.rotationMat)
-
-  if (State.sun) {
-    var sunDir = State.sun.direction
-    vec3.set(sunDir, [0, 0, 0])
-    vec3.sub(sunDir, State.sunPosition)
-    State.sun.set({ direction: sunDir })
-  }
-
-  if (State.skybox) {
-    State.skybox.set({ sunPosition: State.sunPosition })
-  }
-
-  if (State.reflectionProbe) {
-    State.reflectionProbe.dirty = true // FIXME: hack
-  }
-}
 
 function initCamera () {
   const camera = createCamera({
@@ -80,7 +53,13 @@ function initCamera () {
   createOrbiter({ camera: camera })
 
   renderer.add(renderer.entity([
-    renderer.camera({ camera: camera })
+    renderer.camera({
+      fov: Math.PI / 3,
+      aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
+      near: 0.1,
+      far: 100
+    }),
+    renderer.orbiter({ position: [3, 3, 3] })
   ]))
 }
 
@@ -155,7 +134,7 @@ function initMeshes () {
           colors[i] = colorBase
           scales[i] = [1, 1, 4]
           const dir = vec3.normalize(vec3.sub(vec3.copy(pos), center))
-          rotations[i] = quat.fromDirection(quat.create(), dir)
+          rotations[i] = quat.fromTo(quat.create(), [0, 0, 1], dir)
           i++
         }
       }
@@ -283,8 +262,6 @@ let debugOnce = false
 window.addEventListener('keydown', (e) => {
   if (e.key === 'd') debugOnce = true
 })
-
-updateSunPosition()
 
 ctx.frame(() => {
   ctx.debug(frameNumber++ < 2 || debugOnce)
