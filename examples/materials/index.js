@@ -1,5 +1,6 @@
 const mat4 = require('pex-math/mat4')
 const vec3 = require('pex-math/vec3')
+const quat = require('pex-math/quat')
 const createRenderer = require('../../')
 const createSphere = require('primitive-sphere')
 const createGUI = require('pex-gui')
@@ -7,17 +8,18 @@ const random = require('pex-random')
 const createContext = require('pex-context')
 const io = require('pex-io')
 const isBrowser = require('is-browser')
-const normals = require('angle-normals')
-const centerAndNormalize = require('geom-center-and-normalize')
 const gridCells = require('grid-cells')
 const parseHdr = require('parse-hdr')
 const path = require('path')
 
-const ctx = createContext()
+const ctx = createContext({
+  powerPreference: 'high-performance'
+})
 ctx.gl.getExtension('EXT_shader_texture_lod')
 ctx.gl.getExtension('OES_standard_derivatives')
 ctx.gl.getExtension('WEBGL_draw_buffers')
 ctx.gl.getExtension('OES_texture_float')
+ctx.gl.getExtension('EXT_texture_filter_anisotropic')
 
 const ASSETS_DIR = isBrowser ? 'assets' : path.join(__dirname, 'assets')
 
@@ -36,7 +38,7 @@ const State = {
   metallic: 0.1,
   baseColor: [0.8, 0.1, 0.1, 1.0],
   materials: [],
-  rgbm: true,
+  rgbm: false,
   exposure: 1
 }
 
@@ -57,32 +59,32 @@ gui.addParam('Sun Elevation', State, 'elevation', { min: -90, max: 180 }, update
 gui.addParam('Sun Azimuth', State, 'azimuth', { min: -180, max: 180 }, updateSunPosition)
 
 function updateSunPosition () {
-  mat4.setRotation(State.elevationMat, State.elevation / 180 * Math.PI, [0, 0, 1])
-  mat4.setRotation(State.rotationMat, State.azimuth / 180 * Math.PI, [0, 1, 0])
+  // mat4.setRotation(State.elevationMat, State.elevation / 180 * Math.PI, [0, 0, 1])
+  // mat4.setRotation(State.rotationMat, State.azimuth / 180 * Math.PI, [0, 1, 0])
 
-  vec3.set3(State.sunPosition, 10, 0, 0)
-  vec3.multMat4(State.sunPosition, State.elevationMat)
-  vec3.multMat4(State.sunPosition, State.rotationMat)
+  // vec3.set3(State.sunPosition, 10, 0, 0)
+  // vec3.multMat4(State.sunPosition, State.elevationMat)
+  // vec3.multMat4(State.sunPosition, State.rotationMat)
 
-  if (State.sun) {
-    var sunDir = State.sun.direction
-    vec3.set(sunDir, [0, 0, 0])
-    vec3.sub(sunDir, State.sunPosition)
-    State.sun.set({ direction: sunDir })
-  }
+  // if (State.sun) {
+    // var sunDir = State.sun.direction
+    // vec3.set(sunDir, [0, 0, 0])
+    // vec3.sub(sunDir, State.sunPosition)
+    // State.sun.set({ direction: sunDir })
+  // }
 
-  if (State.skybox) {
-    State.skybox.set({ sunPosition: State.sunPosition })
-  }
+  // if (State.skybox) {
+    // State.skybox.set({ sunPosition: State.sunPosition })
+  // }
 
-  if (State.reflectionProbe) {
-    State.reflectionProbe.dirty = true // FIXME: hack
-  }
+  // if (State.reflectionProbe) {
+    // State.reflectionProbe.dirty = true // FIXME: hack
+  // }
 }
 
 const W = ctx.gl.drawingBufferWidth
 const H = ctx.gl.drawingBufferHeight
-const nW = 6
+const nW = 7
 const nH = 3
 
 // flip upside down as we are using viewport coordinates
@@ -93,13 +95,25 @@ let cells = gridCells(W, H, nW, nH, 0).map((cell) => {
 function initCamera () {
   cells.forEach((cell, cellIndex) => {
     const tags = ['cell' + cellIndex]
+    const material = materials[cellIndex]
     const cameraCmp = renderer.camera({
       fov: Math.PI / 3,
       aspect: (W / nW) / (H / nH),
       near: 0.1,
       far: 100,
-      viewport: cell
+      viewport: cell,
+      postprocess: true,
+      fxaa: true,
+      exposure: State.exposure
     })
+    if (material.emissiveColor) {
+      cameraCmp.set({
+        bloom: true,
+        bloomIntensity: 0.5,
+        bloomThreshold: 3,
+        bloomRadius: 1.25
+      })
+    }
     renderer.add(renderer.entity([
       cameraCmp,
       renderer.orbiter({
@@ -135,8 +149,9 @@ function imageFromFile (file, options) {
       height: image.height,
       wrap: ctx.Wrap.Repeat,
       flipY: true,
-      min: ctx.Filter.Linear,
-      mag: ctx.Filter.LinearMipmapLinear,
+      mag: ctx.Filter.Linear,
+      min: ctx.Filter.LinearMipmapLinear,
+      aniso: 16,
       pixelFormat: ctx.PixelFormat.RGBA8,
       encoding: encoding
     })
@@ -145,48 +160,62 @@ function imageFromFile (file, options) {
   return tex
 }
 
+let materials = [
+  { baseColor: [0.8, 0.2, 0.2, 1.0], metallic: 0, roughness: 0 / 6 },
+  { baseColor: [0.8, 0.2, 0.2, 1.0], metallic: 0, roughness: 1 / 6 },
+  { baseColor: [0.8, 0.2, 0.2, 1.0], metallic: 0, roughness: 2 / 6 },
+  { baseColor: [0.8, 0.2, 0.2, 1.0], metallic: 0, roughness: 3 / 6 },
+  { baseColor: [0.8, 0.2, 0.2, 1.0], metallic: 0, roughness: 4 / 6 },
+  { baseColor: [0.8, 0.2, 0.2, 1.0], metallic: 0, roughness: 5 / 6 },
+  { baseColor: [0.8, 0.2, 0.2, 1.0], metallic: 0, roughness: 6 / 6 },
+  { baseColor: [1.0, 1.0, 1.0, 1.0], metallic: 1, roughness: 0 / 6 },
+  { baseColor: [1.0, 1.0, 1.0, 1.0], metallic: 1, roughness: 1 / 6 },
+  { baseColor: [1.0, 1.0, 1.0, 1.0], metallic: 1, roughness: 2 / 6 },
+  { baseColor: [1.0, 1.0, 1.0, 1.0], metallic: 1, roughness: 3 / 6 },
+  { baseColor: [1.0, 1.0, 1.0, 1.0], metallic: 1, roughness: 4 / 6 },
+  { baseColor: [1.0, 1.0, 1.0, 1.0], metallic: 1, roughness: 5 / 6 },
+  { baseColor: [1.0, 1.0, 1.0, 1.0], metallic: 1, roughness: 6 / 6 },
+  { roughness: null,
+    metallic: null,
+    baseColor: [1, 1, 1, 0.5],
+    baseColorMap: ASSETS_DIR + '/plastic-green.material/plastic-green_basecolor.png'
+  },
+  {
+    baseColorMap: ASSETS_DIR + '/plastic-green.material/plastic-green_basecolor.png',
+    roughnessMap: ASSETS_DIR + '/plastic-green.material/plastic-green_roughness.png',
+    metallicMap: ASSETS_DIR + '/plastic-green.material/plastic-green_metallic.png',
+    normalMap: ASSETS_DIR + '/plastic-green.material/plastic-green_n.png'
+  },
+  {
+    baseColorMap: ASSETS_DIR + '/plastic-red.material/plastic-red_basecolor.png',
+    roughnessMap: ASSETS_DIR + '/plastic-red.material/plastic-red_roughness.png',
+    metallicMap: ASSETS_DIR + '/plastic-red.material/plastic-red_metallic.png',
+    normalMap: ASSETS_DIR + '/plastic-red.material/plastic-red_n.png'
+  },
+  {
+    baseColorMap: ASSETS_DIR + '/plastic-glow.material/plastic-glow_basecolor.png',
+    roughnessMap: ASSETS_DIR + '/plastic-glow.material/plastic-glow_roughness.png',
+    metallicMap: ASSETS_DIR + '/plastic-glow.material/plastic-glow_metallic.png',
+    normalMap: ASSETS_DIR + '/plastic-glow.material/plastic-glow_n.png',
+    emissiveColor: [1, 1, 1, 1],
+    emissiveColorMap: ASSETS_DIR + '/plastic-glow.material/plastic-glow_emissive.png',
+    emissiveIntensity: 4
+  },
+  { roughness: 2 / 7, metallic: 0, baseColor: [0.1, 0.5, 0.8, 1.0] },
+  { roughness: 3 / 7, metallic: 0, baseColor: [0.1, 0.1, 0.1, 1.0] },
+  { roughness: 0.5,
+    metallic: 0,
+    baseColor: [1, 1, 1, 0.5],
+    blend: true,
+    blendSrcRGBFactor: ctx.BlendFactor.SrcAlpha,
+    blendSrcAlphaFactor: ctx.BlendFactor.One,
+    blendDstRGBFactor: ctx.BlendFactor.OneMinusSrcAlpha,
+    blendDstAlphaFactor: ctx.BlendFactor.One
+  }
+]
+
 function initMeshes () {
   const geom = createSphere(0.5)
-
-  let materials = [
-    { roughness: 0 / 5, metallic: 0, baseColor: [0.8, 0.2, 0.2, 1.0] },
-    { roughness: 1 / 5, metallic: 0, baseColor: [0.8, 0.2, 0.2, 1.0] },
-    { roughness: 2 / 5, metallic: 0, baseColor: [0.8, 0.2, 0.2, 1.0] },
-    { roughness: 3 / 5, metallic: 0, baseColor: [0.8, 0.2, 0.2, 1.0] },
-    { roughness: 4 / 5, metallic: 0, baseColor: [0.8, 0.2, 0.2, 1.0] },
-    { roughness: 5 / 5, metallic: 0, baseColor: [0.8, 0.2, 0.2, 1.0] },
-    { roughness: 0 / 5, metallic: 1, baseColor: [1.0, 1.0, 1.0, 1.0] },
-    { roughness: 1 / 5, metallic: 1, baseColor: [1.0, 1.0, 1.0, 1.0] },
-    { roughness: 2 / 5, metallic: 1, baseColor: [1.0, 1.0, 1.0, 1.0] },
-    { roughness: 3 / 5, metallic: 1, baseColor: [1.0, 1.0, 1.0, 1.0] },
-    { roughness: 4 / 5, metallic: 1, baseColor: [1.0, 1.0, 1.0, 1.0] },
-    { roughness: 5 / 5, metallic: 1, baseColor: [1.0, 1.0, 1.0, 1.0] },
-    {
-      baseColorMap: ASSETS_DIR + '/plastic-basecolor.png',
-      roughnessMap: ASSETS_DIR + '/plastic-roughness.png',
-      metallicMap: ASSETS_DIR + '/plastic-metallic.png',
-      normalMap: ASSETS_DIR + '/plastic-normal.png'
-    },
-    {
-      baseColorMap: ASSETS_DIR + '/plastic-basecolor-2.png',
-      roughnessMap: ASSETS_DIR + '/plastic-roughness-2.png',
-      metallicMap: ASSETS_DIR + '/plastic-metallic-2.png',
-      normalMap: ASSETS_DIR + '/plastic-normal-2.png'
-    },
-    { roughness: 2 / 7, metallic: 0, baseColor: [0.1, 0.5, 0.8, 1.0] },
-    { roughness: 3 / 7, metallic: 0, baseColor: [0.1, 0.1, 0.1, 1.0] },
-    { roughness: 1, metallic: 0, baseColor: [0, 0, 0, 0], emissiveColor: [1, 0.5, 0, 1] }
-    // { roughness: 0,
-      // metallic: 0,
-      // baseColor: [1, 1, 1, 0.2],
-      // // FIXME: currently not working
-      // blend: true,
-      // blendSrcRGBFactor: ctx.BlendFactor.SrcAlpha,
-      // blendSrcAlphaFactor: ctx.BlendFactor.One,
-      // blendDstRGBFactor: ctx.BlendFactor.OneMinusSrcAlpha,
-      // blendDstAlphaFactor: ctx.BlendFactor.One
-    // }
-  ]
 
   materials.forEach((mat) => {
     if (mat.baseColorMap) mat.baseColorMap = imageFromFile(mat.baseColorMap, ctx.Encoding.SRGB)
@@ -200,45 +229,35 @@ function initMeshes () {
     const tags = ['cell' + cellIndex]
     const material = materials[cellIndex]
     if (!material) return
-    material.metallic = 0
-    material.roughness = 1
-    console.log('material', material)
     const components = [
       renderer.geometry(geom),
-      renderer.material({
-        baseColor: material ? material.baseColor || [1, 1, 1, 1] : [1, 1, 1, 1],
-        baseColorMap: material ? material.baseColorMap : null,
-        roughness: material ? material.roughness : 1.0,
-        roughnessMap: material ? material.roughnessMap : null,
-        metallic: material ? material.metallic : 0,
-        metallicMap: material ? material.metallicMap : null,
-        normalMap: material ? material.normalMap : null,
-        emissiveColor: material ? (material.emissiveColor || [0, 0, 0, 1]) : [0, 0, 0, 1],
-        emissiveColorMap: material ? material.emissiveColorMap : null
-      })
+      renderer.material(material)
     ]
     const entity = renderer.entity(components, tags)
+    console.log(entity)
     renderer.add(entity)
   })
 }
 
 function initSky (panorama) {
   const sun = State.sun = renderer.directionalLight({
-    direction: vec3.sub(vec3.create(), State.sunPosition),
     color: [1, 1, 0.95, 1],
-    intensity: 5.5
+    intensity: 2
   })
-
-  const dot = State.dot = renderer.pointLight({
-    color: [1, 0.01, 0.095, 1],
-    intensity: 10,
-    radius: 20
+  const sunTransform = renderer.transform({
+    position: [2, 2, 2],
+    rotation: quat.fromTo(quat.create(), [0, 0, 1], vec3.normalize([-2, -2, -2]))
   })
+  renderer.add(renderer.entity([
+    sunTransform,
+    sun
+  ]))
 
   const skybox = State.skybox = renderer.skybox({
     sunPosition: State.sunPosition,
     texture: panorama
   })
+  renderer.add(renderer.entity([ skybox ]))
 
   // currently this also includes light probe functionality
   const reflectionProbe = State.reflectionProbe = renderer.reflectionProbe({
@@ -246,19 +265,10 @@ function initSky (panorama) {
     size: [10, 10, 10],
     boxProjection: false
   })
+  renderer.add(renderer.entity([ reflectionProbe ]))
   gui.addTextureCube('Reflection Cubemap', reflectionProbe._dynamicCubemap).setPosition(180, 10)
   gui.addTexture2D('Reflection OctMap', reflectionProbe._octMap)
   gui.addTexture2D('Reflection OctMapAtlas', reflectionProbe._reflectionMap)
-
-  renderer.add(renderer.entity([
-    renderer.transform({
-      position: [5, 5, 5]
-    }),
-    dot
-  ]))
-  renderer.entity([ sun ])
-  renderer.add(renderer.entity([ skybox ]))
-  renderer.add(renderer.entity([ reflectionProbe ]))
 }
 
 initCamera()

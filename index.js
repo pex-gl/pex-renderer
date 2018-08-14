@@ -225,24 +225,12 @@ Renderer.prototype.getMaterialProgram = function (geometry, material, skin, opti
   }
   if (material.metallicMap) {
     flags.push('#define USE_METALLIC_MAP')
-    if (isNil(material.metallic)) {
-      material.metallic = 1
-    }
   }
   if (material.roughnessMap) {
     flags.push('#define USE_ROUGHNESS_MAP')
-    if (isNil(material.roughness)) {
-      material.roughness = 1
-    }
   }
   if (material.metallicRoughnessMap) {
     flags.push('#define USE_METALLIC_ROUGHNESS_MAP')
-    if (isNil(material.metallic)) {
-      material.metallic = 1
-    }
-    if (isNil(material.roughness)) {
-      material.roughness = 1
-    }
   }
   if (material.diffuse) {
     useSpecularGlossinessWorkflow = true

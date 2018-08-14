@@ -21,7 +21,7 @@
     "pex-gl": "^2.1.0",
     "pex-gui": "^2.2.0",
     "pex-io": "^1.5.1",
-    "pex-math": "^1.0.1",
+    "pex-math": "^3.0.0-0",
     "primitive-capsule": "^3.0.1",
     "primitive-plane": "^2.0.0",
     "primitive-rounded-cube": "^1.0.2",
