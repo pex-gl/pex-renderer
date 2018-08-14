@@ -15,8 +15,8 @@
     "glsl-gamma": "^2.0.0",
     "glslify": "^6.0.2",
     "grid-cells": "^1.1.0",
-    "pex-cam": "^2.6.0",
-    "pex-context": "^2.5.0",
+    "parse-hdr": "^1.0.0",
+    "pex-context": "^2.6.0",
     "pex-geom": "^1.0.0",
     "pex-gl": "^2.1.0",
     "pex-gui": "^2.2.0",
@@ -26,7 +26,6 @@
     "primitive-plane": "^2.0.0",
     "primitive-rounded-cube": "^1.0.2",
     "primitive-sphere": "^3.0.0",
-    "raf": "^3.3.0",
-    "stanford-dragon": "^1.1.1"
+    "raf": "^3.3.0"
   }
 }

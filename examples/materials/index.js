@@ -1,7 +1,5 @@
 const mat4 = require('pex-math/mat4')
 const vec3 = require('pex-math/vec3')
-const createCamera = require('pex-cam/perspective')
-const createOrbiter = require('pex-cam/orbiter')
 const createRenderer = require('../../')
 const createSphere = require('primitive-sphere')
 const createGUI = require('pex-gui')
@@ -9,15 +7,11 @@ const random = require('pex-random')
 const createContext = require('pex-context')
 const io = require('pex-io')
 const isBrowser = require('is-browser')
-const dragon = require('stanford-dragon/3')
 const normals = require('angle-normals')
 const centerAndNormalize = require('geom-center-and-normalize')
 const gridCells = require('grid-cells')
-const parseHdr = require('./local_modules/parse-hdr')
+const parseHdr = require('parse-hdr')
 const path = require('path')
-dragon.positions = centerAndNormalize(dragon.positions).map((v) => vec3.scale(v, 5))
-dragon.normals = normals(dragon.cells, dragon.positions)
-dragon.uvs = dragon.positions.map(() => [0, 0])
 
 const ctx = createContext()
 ctx.gl.getExtension('EXT_shader_texture_lod')
@@ -97,25 +91,20 @@ let cells = gridCells(W, H, nW, nH, 0).map((cell) => {
 })
 
 function initCamera () {
-  const camera = createCamera({
-    fov: Math.PI / 3,
-    aspect: (W / nW) / (H / nH),
-    position: [0, 0, 1.6],
-    target: [0, 0, 0],
-    near: 0.1,
-    far: 100,
-    fxaa: true
-  })
-  createOrbiter({ camera: camera })
-
   cells.forEach((cell, cellIndex) => {
     const tags = ['cell' + cellIndex]
     const cameraCmp = renderer.camera({
-      camera: camera,
+      fov: Math.PI / 3,
+      aspect: (W / nW) / (H / nH),
+      near: 0.1,
+      far: 100,
       viewport: cell
     })
     renderer.add(renderer.entity([
-      cameraCmp
+      cameraCmp,
+      renderer.orbiter({
+        position: [0, 0, 1.5]
+      })
     ], tags))
   })
 
@@ -186,17 +175,17 @@ function initMeshes () {
     },
     { roughness: 2 / 7, metallic: 0, baseColor: [0.1, 0.5, 0.8, 1.0] },
     { roughness: 3 / 7, metallic: 0, baseColor: [0.1, 0.1, 0.1, 1.0] },
-    { roughness: 1, metallic: 0, baseColor: [0, 0, 0, 0], emissiveColor: [1, 0.5, 0, 1] },
-    { roughness: 0,
-      metallic: 0,
-      baseColor: [1, 1, 1, 0.2],
-      // FIXME: currently not working
-      blend: true,
-      blendSrcRGBFactor: ctx.BlendFactor.SrcAlpha,
-      blendSrcAlphaFactor: ctx.BlendFactor.One,
-      blendDstRGBFactor: ctx.BlendFactor.OneMinusSrcAlpha,
-      blendDstAlphaFactor: ctx.BlendFactor.One
-    }
+    { roughness: 1, metallic: 0, baseColor: [0, 0, 0, 0], emissiveColor: [1, 0.5, 0, 1] }
+    // { roughness: 0,
+      // metallic: 0,
+      // baseColor: [1, 1, 1, 0.2],
+      // // FIXME: currently not working
+      // blend: true,
+      // blendSrcRGBFactor: ctx.BlendFactor.SrcAlpha,
+      // blendSrcAlphaFactor: ctx.BlendFactor.One,
+      // blendDstRGBFactor: ctx.BlendFactor.OneMinusSrcAlpha,
+      // blendDstAlphaFactor: ctx.BlendFactor.One
+    // }
   ]
 
   materials.forEach((mat) => {
@@ -210,6 +199,10 @@ function initMeshes () {
   cells.forEach((cell, cellIndex) => {
     const tags = ['cell' + cellIndex]
     const material = materials[cellIndex]
+    if (!material) return
+    material.metallic = 0
+    material.roughness = 1
+    console.log('material', material)
     const components = [
       renderer.geometry(geom),
       renderer.material({
