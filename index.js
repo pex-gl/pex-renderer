@@ -191,7 +191,7 @@ Renderer.prototype.getMaterialProgram = function (geometry, material, skin, opti
     flags.push('#define USE_SKIN')
     flags.push('#define NUM_JOINTS ' + skin.joints.length)
   }
-  if (ctx.capabilities.multipleRenderTargets) {
+  if (ctx.capabilities.maxColorAttachments > 1) {
     flags.push('#define USE_DRAW_BUFFERS')
   }
 
