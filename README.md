@@ -386,6 +386,8 @@ material = renderer.material({
 })
 ```
 
+*Note on default values: metallic: 0, roughness: 0.5 while in gltf both are equal 1 by default.*
+
 *Note on unlit (without lighting / shadowing) support: you can disable lighting calculations and render geometry with the colors provided by setting `roughness: null` and `metallic: null` when reacting the material.*
 
 ### animation = renderer.animation(opts)
