@@ -24,6 +24,8 @@ function Material (opts) {
   this.metallicRoughnessMap = null
   this.roughness = 0.5
   this.roughnessMap = null
+  this.normalMap = null
+  this.normalScale = 1
   this.displacement = 0
   this.depthTest = true
   this.depthWrite = true

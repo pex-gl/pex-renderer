@@ -14,8 +14,6 @@ precision mediump float;
 
 varying vec3 vNormalWorld;
 varying vec3 vNormalView;
-varying vec3 vEyeDirWorld;
-varying vec3 vEyeDirView;
 
 varying vec2 vTexCoord0;
 
@@ -1147,6 +1145,7 @@ void EvaluateLightProbe(inout PBRData data) {
 
 #ifdef USE_NORMAL_MAP
 uniform sampler2D uNormalMap;
+uniform float uNormalScale;
 
 //http://www.thetenthplanet.de/archives/1180
 mat3 cotangentFrame(vec3 N, vec3 p, vec2 uv) {
@@ -1175,6 +1174,8 @@ vec3 perturb(vec3 map, vec3 N, vec3 V, vec2 texcoord) {
 void getNormal(inout PBRData data) {
   vec3 normalRGB = texture2D(uNormalMap, data.texCoord0).rgb;
   vec3 normalMap = normalRGB * 2.0 - 1.0;
+  normalMap.y *= uNormalScale;
+  normalMap = normalize(normalMap);
 
   // normalMap.y *= -1.0;
   /*normalMap.x *= -1.0;*/
@@ -1188,7 +1189,7 @@ void getNormal(inout PBRData data) {
   vec3 normalView = perturb(normalMap, N, V, data.texCoord0);
   vec3 normalWorld = vec3(data.inverseViewMatrix * vec4(normalView, 0.0));
 
-  data.normalWorld = normalWorld;
+  data.normalWorld = normalize(normalWorld);
 }
 #endif
 
@@ -1419,8 +1420,8 @@ void main() {
   	data.positionWorld = vPositionWorld;
   	data.positionView = vPositionView;
     data.normalView = normalize(vNormalView); //TODO: normalization needed?
-    data.eyeDirView = normalize(vEyeDirView); //TODO: normalization needed?
-    data.eyeDirWorld = normalize(vEyeDirWorld); //TODO: normalization needed?
+    data.eyeDirView = normalize(-vPositionView); //TODO: normalization needed?
+    data.eyeDirWorld = vec3(uInverseViewMatrix * vec4(data.eyeDirView, 0.0));
     data.normalWorld = normalize(vNormalWorld);
     data.indirectDiffuse = vec3(0.0);
     data.indirectSpecular = vec3(0.0);

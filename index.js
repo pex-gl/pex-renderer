@@ -578,7 +578,10 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
     if (material.diffuseMap) cachedUniforms.uDiffuseMap = material.diffuseMap
     if (material.specularGlossinessMap) cachedUniforms.uSpecularGlossinessMap = material.specularGlossinessMap
 
-    if (material.normalMap) cachedUniforms.uNormalMap = material.normalMap
+    if (material.normalMap) {
+      cachedUniforms.uNormalMap = material.normalMap
+      cachedUniforms.uNormalScale = material.normalScale
+    }
     if (material.occlusionMap) cachedUniforms.uOcclusionMap = material.occlusionMap
     if (material.displacementMap) {
       cachedUniforms.uDisplacementMap = material.displacementMap

@@ -42,8 +42,6 @@ uniform vec2 uTexCoord0Offset;
 
 varying vec3 vNormalWorld;
 varying vec3 vNormalView;
-varying vec3 vEyeDirWorld;
-varying vec3 vEyeDirView;
 varying vec2 vTexCoord0;
 varying vec3 vPositionWorld;
 varying vec3 vPositionView;
@@ -117,9 +115,6 @@ void main() {
 #endif
     vPositionWorld = vec3(uModelMatrix * position);
     vPositionView = vec3(uViewMatrix * vec4(vPositionWorld, 1.0));
-
-    vEyeDirView = normalize(vec3(0.0, 0.0, 0.0) - vPositionView);
-    vEyeDirWorld = vec3(uInverseViewMatrix * vec4(vEyeDirView, 0.0));
 
 #ifdef USE_SKIN
      mat4 skinMat =
