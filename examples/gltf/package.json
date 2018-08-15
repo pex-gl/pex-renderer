@@ -24,8 +24,12 @@
     "pex-io": "^1.5.3",
     "pex-math": "^2.1.1",
     "primitive-box": "^1.0.0",
+    "primitive-cube": "^2.0.1",
     "tinify": "^1.5.0",
     "tinyify": "^2.3.0",
     "webgl-debug": "^1.0.2"
+  },
+  "devDependencies": {
+    "glslify": "^6.2.1"
   }
 }

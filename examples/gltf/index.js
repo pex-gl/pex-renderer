@@ -6,12 +6,10 @@ const createCube = require('primitive-cube')
 const createBox = require('primitive-box')
 const isBrowser = require('is-browser')
 const mat4 = require('pex-math/mat4')
-const vec3 = require('pex-math/vec3')
-const quat = require('pex-math/quat')
 const aabb = require('pex-geom/aabb')
+const quat = require('pex-math/quat')
+const vec3 = require('pex-math/vec3')
 const createRenderer = require('../../../pex-renderer')
-const createCamera = require('pex-cam/perspective')
-const createOrbiter = require('pex-cam/orbiter')
 const createContext = require('pex-context')
 const async = require('async')
 const path = require('path')
@@ -28,8 +26,6 @@ const triangulate = require('./geom-triangulate')
 const normals = require('angle-normals')
 
 const ctx = createContext({
-  width: window.innerWidth * 1,
-  height: window.innerHeight * 1,
   powerPreference: 'high-performance'
 })
 ctx.gl.canvas.style.width = window.innerWidth + 'px'
@@ -39,29 +35,21 @@ ctx.gl.getExtension('OES_standard_derivatives')
 ctx.gl.getExtension('WEBGL_draw_buffers')
 ctx.gl.getExtension('OES_texture_float')
 
-// var WebGLDebugUtils = require('webgl-debug')
-
-function throwOnGLError (err, funcName, args) {
-  console.log('Error', funcName, args)
-  throw new Error(`${WebGLDebugUtils.glEnumToString(err)} was caused by call to ${funcName} ${WebGLDebugUtils.glFunctionArgsToString(funcName, args)}`)
-}
-
-// ctx.gl = WebGLDebugUtils.makeDebugContext(ctx.gl, throwOnGLError)
-
 const renderer = createRenderer({
   ctx: ctx,
-  shadowQuality: 4,
-  pauseOnBlur: true,
-  profile: false,
-  profileFlush: false,
+  shadowQuality: 2,
+  // pauseOnBlur: true,
+  // profile: true,
+  profileFlush: false
 })
 
 const gui = new GUI(ctx)
+gui.addFPSMeeter()
 // gui.toggleEnabled()
 gui.addHeader('Settings')
 
 const State = {
-  sunPosition: [0, 1, 5],
+  sunPosition: [2, 2, 2],
   elevation: 60,
   azimuth: 45,
   mie: 0.000021,
@@ -69,23 +57,13 @@ const State = {
   rotationMat: mat4.create(),
   selectedModel: '',
   scenes: [],
-  loadAll: false
+  loadAll: true
 }
 
 const positions = [[0, 0, 0], [0, 0, 0]]
-const indices = []
 function addLine (a, b) {
   positions.push(a, b)
 }
-// const sphere = renderer.add(renderer.entity([
-  // renderer.geometry(require('primitive-sphere')()),
-  // renderer.material({
-    // baseColor: [1, 0, 0, 1],
-    // metallic: 1,
-    // roughness: 0,
-    // castShadows: true
-  // })
-// ]))
 
 const lineBuilder = renderer.add(renderer.entity([
   renderer.geometry({
@@ -100,30 +78,6 @@ const lineBuilder = renderer.add(renderer.entity([
   })
 ]))
 
-function updateSunPosition () {
-
-  // mat4.setRotation(State.elevationMat, State.elevation / 180 * Math.PI, [0, 0, 1])
-  // mat4.setRotation(State.rotationMat, State.azimuth / 180 * Math.PI, [0, 1, 0])
-
-  // vec3.set3(State.sunPosition, 10, 0, 0)
-  vec3.multMat4(State.sunPosition, State.elevationMat)
-  vec3.multMat4(State.sunPosition, State.rotationMat)
-
-  if (State.sun) {
-    var sunDir = State.sun.direction
-    vec3.set(sunDir, [0, 0, 0])
-    vec3.sub(sunDir, State.sunPosition)
-    State.sun.set({ direction: sunDir })
-  }
-
-  if (State.skybox) {
-    State.skybox.set({ sunPosition: State.sunPosition })
-  }
-
-  if (State.reflectionProbe) {
-    State.reflectionProbe.dirty = true // FIXME: hack
-  }
-}
 function makeQuad (opts) {
   const w = opts.width
   const h = opts.height
@@ -158,58 +112,18 @@ function initSky (panorama) {
     castShadows: true,
     bias: 0.1
   })
-
-  const light = State.light = renderer.pointLight({
-    color: [1, 0, 0, 1],
-    // color: [0, 1, 1, 1],
-    radius: 5,
-    intensity: 10,
-    castShadows: true
-  })
-
-  const light2 = State.light2 = renderer.pointLight({
-    color: [1, 0, 1, 1],
-    // color: [0, 1, 0, 1],
-    radius: 5,
-    intensity: 2,
-    castShadows: true
-  })
-
-  const areaLight = renderer.areaLight({
-    // color: [1, 0.15, 0.02, 1],
-    color: [0, 0.55, 1.02, 1],
-    intensity: 3,
-    castShadows: true
-  })
-  const areaLightGizmoPositions = makeQuad({ width: 1, height: 1})
-  var areaLightEntity = renderer.entity([
+  renderer.add(renderer.entity([
     renderer.transform({
-      scale: [0.25, 1, 1],
-      position: [1, 0.15, 0],
-      // rotation: Quat.fromDirection(Quat.create(), [-1, 0, 0])
+      position: State.sunPosition,
+      rotation: quat.fromTo(quat.create(), [0, 0, 1], vec3.normalize([-2, -2, -2]))
     }),
-    // renderer.geometry({
-      // positions: areaLightGizmoPositions,
-      // primitive: ctx.Primitive.Lines,
-      // count: areaLightGizmoPositions.length
-    // }),
-    // renderer.material({
-      // baseColor: [0, 1, 1, 1]
-    // }),
-    areaLight
-  ], ['cell3'])
-  // renderer.add(areaLightEntity)
-
-  gui.addParam('Elevation', State, 'elevation', { min: 0, max: 90 }, updateSunPosition)
-  gui.addParam('Azimuth', State, 'azimuth', { min: 0, max: 360 }, updateSunPosition)
-  gui.addTexture2D('Shadow map', sun._shadowMap)
-  gui.addTexture2D('Color', State.camera._frameColorTex)
-  gui.addTexture2D('Bloom', State.camera._frameBloomVTex)
-  gui.addTexture2D('Emissive', State.camera._frameEmissiveTex)
+    sun
+  ])).name = 'sun'
 
   const skybox = State.skybox = renderer.skybox({
     sunPosition: State.sunPosition
   })
+  renderer.add(renderer.entity([ skybox ])).name = 'skybox'
 
   // currently this also includes light probe functionality
   const reflectionProbe = State.reflectionProbe = renderer.reflectionProbe({
@@ -217,38 +131,22 @@ function initSky (panorama) {
     size: [10, 10, 10],
     boxProjection: false
   })
-  gui.addTexture2D('ReflectionMap', reflectionProbe._reflectionMap)
-
-  // renderer.add(renderer.entity([ light, renderer.transform({ position: [0.5, 0.5, 0.5]}) ])).name = 'light'
-  // renderer.add(renderer.entity([ light2, renderer.transform({ position: [0, -0.5, 0]}) ])).name = 'light2'
-  // renderer.add(renderer.entity([ sun ])).name = 'sun'
-  renderer.add(renderer.entity([ skybox ])).name = 'skybox'
   renderer.add(renderer.entity([ reflectionProbe ])).name = 'reflectionProbe'
-
-  updateSunPosition()
 }
 
 function initCamera () {
-  const camera = createCamera({
+  const cameraCmp = State.camera = renderer.camera({
     fov: 0.8,
     aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
-    position: [4.82, 2.588, 8.36],
-    target: [0, 0, 0],
     near: 0.01,
-    far: 100
-  })
-  createOrbiter({ camera: camera })
-
-  const cameraCmp = State.camera = renderer.camera({
-    camera: camera,
-    exposure: 0.5,
+    far: 100,
+    exposure: 1,
     fxaa: true,
-    // dof: true,
-    dofIterations: 1,
-    dofRange: 0.15,
-    dofRadius: 2,
-    dofDepth: 1,
-    bloom: true,
+     // dof: true,
+    // dofIterations: 1,
+    // dofRange: 0.15,
+    // dofRadius: 2,
+    // dofDepth: 1,
     ssao: true,
     ssaoIntensity: 5,
     ssaoRadius: 1,
@@ -257,10 +155,14 @@ function initCamera () {
     ssaoBlurSharpness: 10// 10,
     // ssaoRadius: 5,
   })
+  const orbiterCmp = renderer.orbiter({
+      position: [4, 4, 4]
+  })
 
   renderer.add(renderer.entity([
-    cameraCmp
-  ])).name = 'camera'
+    cameraCmp,
+    orbiterCmp
+  ])).name = 'camera' // TODO: set name in entity constructor?
 }
 
 initCamera()
@@ -410,7 +312,7 @@ function loadTexture (materialTexture, gltf, basePath, encoding, cb) {
   let img = image._img
   // let url = path.join(basePath, image.uri)
   // loadImage(url, (err, img) => {
-    //if (err) return cb(err, null)
+    // if (err) return cb(err, null)
   if (!isPOT(img.width) || !isPOT(img.height)) {
     // FIXME: this is WebGL1 limitation
     if (sampler.wrapS !== ctx.Wrap.Clamp || sampler.wrapT !== ctx.Wrap.Clamp || (sampler.minFilter !== ctx.Filter.Nearest && sampler.minFilter !== ctx.Filter.Linear)) {
@@ -542,12 +444,12 @@ function handleMaterial (material, gltf, basePath) {
   }
 
   if (material.emissiveFactor) {
-      materialCmp.set({ emissiveColor: [
-        material.emissiveFactor[0],
-        material.emissiveFactor[1],
-        material.emissiveFactor[2],
-        1
-      ]})
+    materialCmp.set({ emissiveColor: [
+      material.emissiveFactor[0],
+      material.emissiveFactor[1],
+      material.emissiveFactor[2],
+      1
+    ]})
   }
   if (material.occlusionTexture) {
     loadTexture(material.occlusionTexture, gltf, basePath, ctx.Encoding.Linear, (err, tex) => {
@@ -813,12 +715,12 @@ function handleAnimation (animation, gltf) {
 }
 
 function loadScreenshot (name, cb) {
-  const extensions = ['jpg']
+  const extensions = ['jpg', 'png', 'gif']
 
   function tryNextExt () {
     const ext = extensions.shift()
     if (!ext) return cb(new Error('Failed to load screenshot for ' + name), null)
-    const url = `assets/glTF-Sample-Models/${name}/screenshot/screenshot.${ext}`
+    const url = `glTF-Sample-Models/${name}/screenshot/screenshot.${ext}`
     console.log('trying to load ' + url)
     loadImage(url, (err, img) => {
       if (err) tryNextExt()
@@ -829,42 +731,42 @@ function loadScreenshot (name, cb) {
   tryNextExt()
 }
 
-const indexFile = 'assets/glTF-Sample-Models/index.txt'
+const indexFile = 'glTF-Sample-Models/index.txt'
 
 function snoise (x, y, z) {
   return random.noise3(x, y, z)
 }
 
 function snoisevec3 (x, y, z) {
-  var s  = snoise(x, y, z)
-  var s1 = snoise(y - 19.1 , z + 33.4 , x + 47.2)
-  var s2 = snoise(z + 74.2 , x - 124.5 , y + 99.4)
+  var s = snoise(x, y, z)
+  var s1 = snoise(y - 19.1, z + 33.4, x + 47.2)
+  var s2 = snoise(z + 74.2, x - 124.5, y + 99.4)
   // var s1  = snoise(x + 0.1, y, z)
   // var s2  = snoise(x, y - 0.12, z)
   return [s, s1, s2]
 }
 
 // https://codepen.io/timseverien/pen/EmJNOR?editors=0010
-function curlNoise(p, t){
+function curlNoise (p, t) {
   t = t || 0
   const e = 0.1
-  var dx =  [e   , 0.0 , 0.0 ]
-  var dy =  [0.0 , e   , 0.0 ]
-  var dz =  [0.0 , 0.0 , e   ]
+  var dx = [e, 0.0, 0.0 ]
+  var dy = [0.0, e, 0.0 ]
+  var dz = [0.0, 0.0, e ]
 
-  var p_x0 = snoisevec3(p[0] - e, p[1], p[2])//(sub(p, dx))
-  var p_x1 = snoisevec3(p[0] + e, p[1], p[2])//(add(p, dx))
-  var p_y0 = snoisevec3(p[0], p[1] - e, p[2])//(sub(p, dy))
-  var p_y1 = snoisevec3(p[0], p[1] + e, p[2])//(add(p, dy))
-  var p_z0 = snoisevec3(p[0], p[1], p[2] - e)//(sub(p, dz))
-  var p_z1 = snoisevec3(p[0], p[1], p[2] + e)//(add(p, dz))
+  var p_x0 = snoisevec3(p[0] - e, p[1], p[2])// (sub(p, dx))
+  var p_x1 = snoisevec3(p[0] + e, p[1], p[2])// (add(p, dx))
+  var p_y0 = snoisevec3(p[0], p[1] - e, p[2])// (sub(p, dy))
+  var p_y1 = snoisevec3(p[0], p[1] + e, p[2])// (add(p, dy))
+  var p_z0 = snoisevec3(p[0], p[1], p[2] - e)// (sub(p, dz))
+  var p_z1 = snoisevec3(p[0], p[1], p[2] + e)// (add(p, dz))
 
   var x = p_y1[2] - p_y0[2] - p_z1[1] + p_z0[1]
   var y = p_z1[0] - p_z0[0] - p_x1[2] + p_x0[2]
   var z = p_x1[1] - p_x0[1] - p_y1[0] + p_y0[0]
 
-  const divisor = 1.0 / ( 2.0 * e )
-  return vec3.scale(vec3.normalize([ x , y , z]), divisor)
+  const divisor = 1.0 / (2.0 * e)
+  return vec3.scale(vec3.normalize([ x, y, z]), divisor)
 }
 
 var wirePositions = []
@@ -877,7 +779,7 @@ for (var i = 0; i < 5; i++) {
     Math.sin(a)
   ])
 }
-function addWire(p, c, t, steps) {
+function addWire (p, c, t, steps) {
   t = t || 0
   steps = steps || 150
   var prev = p
@@ -906,7 +808,7 @@ random.seed(10)
 console.time('wire')
 var wireMeshes = []
 for (var i = 0; i < 15; i++) {
-  //var g = addWire([0 + i / 3000, 0, 1], [0, 1, 0, 1])
+  // var g = addWire([0 + i / 3000, 0, 1], [0, 1, 0, 1])
   var g = addWire([0 + i / 1000, 0, 1], [0, 1, 0, 1])
   wireMeshes.push(g)
 }
@@ -944,7 +846,7 @@ var wireMeshesGeoms = wireMeshes.map((m) => {
   var wireGeom = renderer.geometry({
     positions: m.positions,
     normals: normals(m.cells, m.positions),
-    indices: triangulate(m.cells),
+    indices: triangulate(m.cells)
     // primitive: ctx.Primitive.Lines
   })
 
@@ -978,7 +880,7 @@ var time = 0
 var frameNumber = 0
 var jsZip = require('jszip')
 // var zip = new jsZip()
-function animWire() {
+function animWire () {
   frameNumber++
   if (frameNumber >= 150) return
   wirePositions.length = 0
@@ -988,7 +890,7 @@ function animWire() {
     wireMeshesGeoms[i].set({
       positions: m.positions,
       normals: normals(m.cells, m.positions),
-      indices: triangulate(m.cells),
+      indices: triangulate(m.cells)
     })
   }
 
@@ -1022,10 +924,9 @@ loadText(indexFile, (err, text) => {
   if (err) throw new Error(err)
   const modelNames = text.split('\n')
   async.map(modelNames, loadScreenshot, function (err, screenshots) {
-    // if (err) console.log('screenshots error', err)
-    // if (err) throw new Error(err)
+    if (err) console.log('screenshots error', err)
+    if (err) throw new Error(err)
 
-    /*
     var thumbnails = screenshots.map((img) => {
       var tex = ctx.texture2D({
         data: img,
@@ -1048,42 +949,29 @@ loadText(indexFile, (err, text) => {
       }
     }), 4, (model) => {
       console.log('model', model)
-      loadScene(`assets/glTF-Sample-Models/${model}/glTF/${model}.gltf`, onSceneLoaded)
+      loadScene(`glTF-Sample-Models/${model}/glTF/${model}.gltf`, onSceneLoaded)
     })
-    */
+
     console.log('screenshots', screenshots)
 
     if (State.loadAll) {
       for (var i = 0; i < modelNames.length; i++) {
         var defaultModel = modelNames[i]
-        loadScene(`assets/glTF-Sample-Models/${defaultModel}/glTF/${defaultModel}.gltf`, onSceneLoaded)
+        loadScene(`glTF-Sample-Models/${defaultModel}/glTF/${defaultModel}.gltf`, onSceneLoaded)
       }
     } else {
     // var defaultModel = modelNames[25]
     // loadScene(`assets/gltf-sample-models/2.0/${defaultModel}/glTF/${defaultModel}.gltf`, onSceneLoaded)
       console.log('loading scene')
       let model = 'DamagedHelmet'
-      loadScene(`assets/gltf-sample-models/${model}/glTF/${model}.gltf`, onSceneLoaded)
-    // loadScene(`assets/gltf/skull_downloadable/scene.gltf`, onSceneLoaded)
-    // loadScene(`assets/gltf/buster_drone/scene.gltf`, onSceneLoaded)
-    // loadScene(`assets/gltf/damagedHelmet/damagedHelmet.gltf`, onSceneLoaded)
-    // loadScene(`assets/gltf/damagedHelmet/damagedHelmet.gltf`, onSceneLoaded)
-    // loadScene(`assets/gltf/behemoth_from_horizon_zero_dawn/scene.gltf`, onSceneLoaded)
-    // loadScene(`assets/gltf/voodoo_skull/scene.gltf`, onSceneLoaded)
-    // loadScene(`assets/gltf/mech_m-6k/scene.gltf`, onSceneLoaded)
-    // loadScene(`assets/gltf/mech_ghost/scene.gltf`, onSceneLoaded)
-    // loadScene(`assets/gltf/hover_bike/scene.gltf`, onSceneLoaded)
-    // loadScene(`assets/gltf-sample-models/BoomBox/glTF-pbrSpecularGlossiness/BoomBox.gltf`, onSceneLoaded)
-    //loadScene(`assets/gltf/adamHead/adamHead.gltf`, onSceneLoaded)
-    // loadScene(`assets/gltf/whipper_lingerie/scene.gltf`, onSceneLoaded)
-      // loadScene(`assets/gltf/ballet/scene.gltf`, onSceneLoaded)
+      loadScene(`glTF-Sample-Models/${model}/glTF/${model}.gltf`, onSceneLoaded)
     }
   })
 })
 
-function aabbToString (aabb) {
-  if (AABB.isEmpty(aabb)) return '[]'
-  return `[${aabb.map((v) => v.map((f) => f.toFixed(2)).join(', ')).join(', ')}]`
+function aabbToString (bbox) {
+  if (aabb.isEmpty(bbox)) return '[]'
+  return `[${bbox.map((v) => v.map((f) => f.toFixed(2)).join(', ')).join(', ')}]`
 }
 
 function onSceneLoaded (err, scene) {
@@ -1100,8 +988,8 @@ function onSceneLoaded (err, scene) {
     console.log(err)
   } else {
     var i = State.scenes.length
-    var x = 2 * (i % 7) - 7
-    var z = 2 * (Math.floor(i / 7)) - 7
+    var x = 2 * (i % 7) - 7 + 1
+    var z = 2 * (Math.floor(i / 7)) - 7 + 1
     if (!State.loadAll) {
       x = z = 0
     }
@@ -1129,147 +1017,138 @@ function loadScene (file, cb) {
       })
     }
     async.map(gltf.buffers, handleBuffer, function (err, res) {
-    async.map(gltf.images, handleImage, function (err, res) {
-      if (err) throw new Error(err)
+      async.map(gltf.images, handleImage, function (err, res) {
+        if (err) throw new Error(err)
 
-      gltf.bufferViews.map((bufferView) => {
-        handleBufferView(bufferView, gltf.buffers[bufferView.buffer]._data)
-      })
+        gltf.bufferViews.map((bufferView) => {
+          handleBufferView(bufferView, gltf.buffers[bufferView.buffer]._data)
+        })
 
-      gltf.accessors.map((accessor) => {
-        handleAccessor(accessor, gltf.bufferViews[accessor.bufferView])
-      })
+        gltf.accessors.map((accessor) => {
+          handleAccessor(accessor, gltf.bufferViews[accessor.bufferView])
+        })
 
-      const scene = {
-        root: null,
-        entities: null
-      }
-
-      scene.root = renderer.add(renderer.entity())
-      scene.root.name = 'sceneRoot'
-      scene.entities = gltf.nodes.reduce((entities, node, i) => {
-        const result = handleNode(node, gltf, basePath, i)
-        if (result.length) {
-          result.forEach((primitive) => entities.push(primitive))
-        } else {
-          entities.push(result)
+        const scene = {
+          root: null,
+          entities: null
         }
-        return entities
-      }, [])
 
-      buildHierarchy(gltf.nodes, gltf)
+        scene.root = renderer.add(renderer.entity())
+        scene.root.name = 'sceneRoot'
+        scene.entities = gltf.nodes.reduce((entities, node, i) => {
+          const result = handleNode(node, gltf, basePath, i)
+          if (result.length) {
+            result.forEach((primitive) => entities.push(primitive))
+          } else {
+            entities.push(result)
+          }
+          return entities
+        }, [])
 
-      scene.entities.forEach((e) => {
-        if (e.transform.parent === renderer.root.transform) {
-          console.log('attaching to scene root', e)
-          e.transform.set({ parent: scene.root.transform })
-        }
-      })
+        buildHierarchy(gltf.nodes, gltf)
+
+        scene.entities.forEach((e) => {
+          if (e.transform.parent === renderer.root.transform) {
+            console.log('attaching to scene root', e)
+            e.transform.set({ parent: scene.root.transform })
+          }
+        })
 
       // prune non geometry nodes (cameras, lights, etc) from the hierarchy
-      scene.entities.forEach((e) => {
-        if (e.getComponent('Geometry')) {
-          e.used = true
-          while (e.transform.parent) {
-            e = e.transform.parent.entity
-            e.used = true
-          }
-        }
-      })
-
-      if (gltf.animations) {
-        gltf.animations.map((animation) => {
-          const animationComponent = handleAnimation(animation, gltf)
-          scene.root.addComponent(animationComponent)
-        })
-      }
-
-      if (gltf.skins) {
-        gltf.skins.forEach((skin) => {
-          skin.joints.forEach((jointIndex) => {
-            let e = scene.entities[jointIndex]
+        scene.entities.forEach((e) => {
+          if (e.getComponent('Geometry')) {
             e.used = true
             while (e.transform.parent) {
               e = e.transform.parent.entity
               e.used = true
             }
-          })
+          }
         })
-      }
+
+        if (gltf.animations) {
+          gltf.animations.map((animation) => {
+            const animationComponent = handleAnimation(animation, gltf)
+            scene.root.addComponent(animationComponent)
+          })
+        }
+
+        if (gltf.skins) {
+          gltf.skins.forEach((skin) => {
+            skin.joints.forEach((jointIndex) => {
+              let e = scene.entities[jointIndex]
+              e.used = true
+              while (e.transform.parent) {
+                e = e.transform.parent.entity
+                e.used = true
+              }
+            })
+          })
+        }
       // State.entities = State.entities.filter((e) => {
         // if (!e.used) renderer.remove(e)
         // return e.used
       // })
-      console.log('entities pruned', State.entities)
+        console.log('entities pruned', State.entities)
 
-      renderer.update() // refresh scene hierarchy
+        renderer.update() // refresh scene hierarchy
 
-      const sceneBounds = scene.root.transform.worldBounds
-      const sceneSize = AABB.size(scene.root.transform.worldBounds)
-      const sceneCenter = AABB.center(scene.root.transform.worldBounds)
-      const sceneScale = 1 / (Math.max(sceneSize[0], Math.max(sceneSize[1], sceneSize[2])) || 1)
-      if (!AABB.isEmpty(sceneBounds)) {
-        // scene.root.transform.set({
-          // position: vec3.scale([-sceneCenter[0], -sceneBounds[0][1], -sceneCenter[2]], sceneScale),
-          // scale: [sceneScale, sceneScale, sceneScale]
-        // })
-      }
-
-      renderer.update() // refresh scene hierarchy
-
-      scene.entities.push(scene.root)
-
-      function printEntity (e, level, s) {
-        s = s || ''
-        level = '  ' + (level || '')
-        var g = e.getComponent('Geometry')
-        s += level + (e.name || 'child') + ' ' + aabbToString(e.transform.worldBounds) + ' ' + aabbToString(e.transform.bounds) + ' ' + (g ? aabbToString(g.bounds) : '') + '\n'
-        if (e.transform) {
-          e.transform.children.forEach((c) => {
-            s = printEntity(c.entity, level, s)
-          })
+        const sceneBounds = scene.root.transform.worldBounds
+        const sceneSize = aabb.size(scene.root.transform.worldBounds)
+        const sceneCenter = aabb.center(scene.root.transform.worldBounds)
+        const sceneScale = 1 / (Math.max(sceneSize[0], Math.max(sceneSize[1], sceneSize[2])) || 1)
+        if (!aabb.isEmpty(sceneBounds)) {
+        scene.root.transform.set({
+          position: vec3.scale([-sceneCenter[0], -sceneBounds[0][1], -sceneCenter[2]], sceneScale),
+          scale: [sceneScale, sceneScale, sceneScale]
+        })
         }
-        return s
-      }
 
-      const showBoundingBoxes = false
-      if (showBoundingBoxes) {
-        const bboxes = scene.entities.map((e) => {
-          var size = AABB.size(e.transform.worldBounds)
-          var center = AABB.center(e.transform.worldBounds)
+        renderer.update() // refresh scene hierarchy
 
-          const bbox = renderer.add(renderer.entity([
-            renderer.transform({
-              scale: size,
-              position: center
-            }),
-            renderer.geometry(box),
-            renderer.material({
-              baseColor: [1, 0, 0, 1]
+        scene.entities.push(scene.root)
+
+        function printEntity (e, level, s) {
+          s = s || ''
+          level = '  ' + (level || '')
+          var g = e.getComponent('Geometry')
+          s += level + (e.name || 'child') + ' ' + aabbToString(e.transform.worldBounds) + ' ' + aabbToString(e.transform.bounds) + ' ' + (g ? aabbToString(g.bounds) : '') + '\n'
+          if (e.transform) {
+            e.transform.children.forEach((c) => {
+              s = printEntity(c.entity, level, s)
             })
-          ]))
-          bbox.name = e.name + '_bbox'
-          return bbox
-        }).filter((e) => e)
-        scene.entities = scene.entities.concat(bboxes)
-      }
+          }
+          return s
+        }
 
-      cb(null, scene)
-    })
+        const showBoundingBoxes = false
+        if (showBoundingBoxes) {
+          const bboxes = scene.entities.map((e) => {
+            var size = AABB.size(e.transform.worldBounds)
+            var center = AABB.center(e.transform.worldBounds)
+
+            const bbox = renderer.add(renderer.entity([
+              renderer.transform({
+                scale: size,
+                position: center
+              }),
+              renderer.geometry(box),
+              renderer.material({
+                baseColor: [1, 0, 0, 1]
+              })
+            ]))
+            bbox.name = e.name + '_bbox'
+            return bbox
+          }).filter((e) => e)
+          scene.entities = scene.entities.concat(bboxes)
+        }
+
+        cb(null, scene)
+      })
     })
   })
 }
 
-// loadBinary('assets/envmaps/pisa/pisa_128.hdr', (err, buf) => {
-// loadBinary('assets/envmaps/garage/garage.hdr', (err, buf) => {
-// loadBinary('assets/envmaps/Footprint_Court/Footprint_Court_2k.hdr', (err, buf) => {
-// loadBinary('assets/envmaps/Factory_Catwalk/Factory_Catwalk.hdr', (err, buf) => {
-// loadBinary('assets/envmaps/hdrihaven/river_walk_1_2k.hdr', (err, buf) => {
-// loadBinary('assets/envmaps/Mono_Lake_B/Mono_Lake_2k.hdr', (err, buf) => {
-// loadBinary('assets/envmaps/Mono_Lake_B/Mono_Lake_B_2k.hdr', (err, buf) => {
-loadBinary('assets/envmaps/grace-new/grace-new.hdr', (err, buf) => {
-// loadBinary('assets/envmaps/hdrihaven/preller_drive_2k.hdr', (err, buf) => {
-// loadBinary('assets/envmaps/vatican_road_2k.hdr', (err, buf) => {
+loadBinary('assets/envmaps/garage/garage.hdr', (err, buf) => {
   const hdrImg = parseHdr(buf)
   const panorama = ctx.texture2D({
     data: hdrImg.data,
@@ -1280,7 +1159,7 @@ loadBinary('assets/envmaps/grace-new/grace-new.hdr', (err, buf) => {
     flipY: true
   })
   const data = new Uint8Array(hdrImg.data.length)
-  for (var i = 0; i < hdrImg.data.length; i+=4) {
+  for (var i = 0; i < hdrImg.data.length; i += 4) {
     let r = hdrImg.data[i]
     let g = hdrImg.data[i + 1]
     let b = hdrImg.data[i + 2]
@@ -1313,14 +1192,15 @@ loadBinary('assets/envmaps/grace-new/grace-new.hdr', (err, buf) => {
   State.reflectionProbe.set({ dirty: true })
 })
 
-
 const floor = renderer.entity([
   renderer.transform({
-    position: [0, -1.1, 0]
+    position: [0, -0.051, 0]
   }),
-  renderer.geometry(createCube(4, 0.1, 4)),
+  renderer.geometry(createCube(State.loadAll ? 14 : 4, 0.1, State.loadAll ? 14 : 4)),
   renderer.material({
-    baseColor: [0.25, 0.25, 0.25, 1],
+    baseColor: [0.8, 0.8, 0.8, 1],
+    metallic: 0,
+    roughness: 1,
     castShadows: true,
     receiveShadows: true
   })
@@ -1438,5 +1318,4 @@ ctx.frame(() => {
       // zip.file(`frame${frameNumber}.png`, blob)
     // })
   }
-
 })
