@@ -4,8 +4,6 @@ const loadBinary = require('pex-io/loadBinary')
 const mat4 = require('pex-math/mat4')
 const vec3 = require('pex-math/vec3')
 const createRenderer = require('../../')
-const createCamera = require('pex-cam/perspective')
-const createOrbiter = require('pex-cam/orbiter')
 const createContext = require('pex-context')
 const async = require('async')
 
@@ -58,18 +56,16 @@ function initSky (panorama) {
 }
 
 function initCamera () {
-  const camera = createCamera({
-    fov: Math.PI / 3,
-    aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
-    position: [0, 2, 4],
-    target: [0, 0, 0],
-    near: 0.1,
-    far: 100
-  })
-  createOrbiter({ camera: camera })
-
   renderer.add(renderer.entity([
-    renderer.camera({ camera: camera })
+    renderer.camera({
+      fov: Math.PI / 3,
+      aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
+      near: 0.1,
+      far: 100
+    }),
+    renderer.orbiter({
+      position: [3, 3, 3]
+    })
   ]))
 }
 
@@ -211,15 +207,6 @@ function handleNode (node, gltf) {
         weights: mesh.weights
       })
       components.push(morphCmp)
-
-      // TODO
-      document.addEventListener('mousemove', function (e) {
-        let weight1 = e.x / window.innerWidth
-        let weight2 = e.y / window.innerHeight
-        morphCmp.set({
-          weights: [weight1, weight2]
-        })
-      })
     }
 
     node.entity = renderer.add(renderer.entity(components))

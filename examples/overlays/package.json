@@ -4,13 +4,13 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "budo index.js --open --live -- -t glslify"
+    "start": "budo index.js --open --live"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
     "is-browser": "^2.0.1",
-    "pex-context": "^2.0.0-25",
+    "pex-context": "^2.6.0",
     "pex-io": "^1.5.2"
   }
 }
