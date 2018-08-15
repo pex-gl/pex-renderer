@@ -1,8 +1,6 @@
 const mat4 = require('pex-math/mat4')
 const quat = require('pex-math/quat')
 const vec3 = require('pex-math/vec3')
-const createCamera = require('pex-cam/perspective')
-const createOrbiter = require('pex-cam/orbiter')
 const createRenderer = require('../../')
 const createRoundedCube = require('primitive-rounded-cube')
 const createSphere = require('primitive-sphere')
@@ -19,7 +17,7 @@ const isBrowser = require('is-browser')
 dragon.positions = centerAndNormalize(dragon.positions).map((v) => vec3.scale(v, 5))
 dragon.normals = normals(dragon.cells, dragon.positions)
 dragon.uvs = dragon.positions.map(() => [0, 0])
-
+const parseHdr = require('parse-hdr')
 const ctx = createContext()
 ctx.gl.getExtension('EXT_shader_texture_lod')
 ctx.gl.getExtension('OES_standard_derivatives')
@@ -55,59 +53,47 @@ gui.addHeader('Sun')
 gui.addParam('Sun Elevation', State, 'elevation', { min: -90, max: 180 }, updateSunPosition)
 gui.addParam('Sun Azimuth', State, 'azimuth', { min: -180, max: 180 }, updateSunPosition)
 
+var sunEntity = null
+var reflectionProbeEntity = null
+var skyboxEntity = null
+var cameraEntity = null
+
 function updateSunPosition () {
-  mat4.setRotation(State.elevationMat, State.elevation / 180 * Math.PI, [0, 0, 1])
-  mat4.setRotation(State.rotationMat, State.azimuth / 180 * Math.PI, [0, 1, 0])
+  mat4.identity(State.elevationMat)
+  mat4.identity(State.rotationMat)
+  mat4.rotate(State.elevationMat, State.elevation / 180 * Math.PI, [0, 0, 1])
+  mat4.rotate(State.rotationMat, State.azimuth / 180 * Math.PI, [0, 1, 0])
 
-  vec3.set3(State.sunPosition, 10, 0, 0)
-  vec3.multMat4(State.sunPosition, State.elevationMat)
-  vec3.multMat4(State.sunPosition, State.rotationMat)
+  var sunPos = [2, 0, 0]
+  vec3.multMat4(sunPos, State.elevationMat)
+  vec3.multMat4(sunPos, State.rotationMat)
 
-  if (State.sun) {
-    var sunDir = [0, 0, 0]
-    vec3.sub(sunDir, State.sunPosition)
-    vec3.normalize(sunDir)
-    var rotation = quat.fromTo(quat.create(), [0, 0, 1], sunDir, [0, 1, 0])
-    State.sun.entity.transform.set({ rotation: rotation })
-  }
-
-  if (State.skybox) {
-    State.skybox.set({ sunPosition: State.sunPosition })
-  }
-
-  if (State.reflectionProbe) {
-    State.reflectionProbe.dirty = true // FIXME: hack
-  }
+  var dir = vec3.normalize(vec3.sub([0, 0, 0], sunPos))
+  sunEntity.transform.set({
+    position: sunPos,
+    rotation: quat.fromTo(sunEntity.transform.rotation, [0, 0, 1], dir, [0, 1, 0])
+  })
+  skyboxEntity.getComponent('Skybox').set({ sunPosition: sunPos })
+  reflectionProbeEntity.getComponent('ReflectionProbe').set({ dirty: true })
 }
 
-let fakeCamera = null
-let cameraTransformCmp = null
-
 function initCamera () {
-  fakeCamera = createCamera({
-    fov: Math.PI / 3,
-    aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
-    position: [0, 5, 24],
-    target: [0, 0, 0],
-    near: 2,
-    far: 100
-  })
-  createOrbiter({ camera: fakeCamera })
-
-  cameraTransformCmp = renderer.transform({
-    position: [0, 5, 24]
-  })
-  const cameraCmp = renderer.camera({
-    fov: Math.PI / 3,
-    aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
-    ssao: true,
-    dof: false,
-    fxaa: false
-  })
-  renderer.add(renderer.entity([
-    cameraTransformCmp,
-    cameraCmp
+  cameraEntity = renderer.add(renderer.entity([
+    renderer.camera({
+      fov: Math.PI / 3,
+      aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
+      ssao: true,
+      fxaa: false,
+      dof: true,
+      dofDepth: 18,
+      exposure: 2
+    }),
+    renderer.orbiter({
+      position: [0, 2, 20]
+    })
   ]))
+
+  const cameraCmp = cameraEntity.getComponent('Camera')
 
   gui.addHeader('Postprocess').setPosition(180, 10)
   gui.addParam('Expsure', cameraCmp, 'exposure', { min: 0, max: 5 })
@@ -229,28 +215,36 @@ function initMeshes () {
   })
 }
 
-function initSky () {
-  const sun = State.sun = renderer.directionalLight({
-    direction: vec3.sub(vec3.create(), State.sunPosition),
-    color: [1, 1, 0.95, 1],
-    intensity: 10,
-    castShadows: true
-  })
+function initSky (panorama) {
+  sunEntity = renderer.add(renderer.entity([
+    renderer.transform({
+      position: State.sunPosition,
+      rotation: quat.fromTo(quat.create(), [0, 0, 1], vec3.normalize(vec3.scale(vec3.copy(State.sunPosition), -1)))
+    }),
+    renderer.directionalLight({
+      color: [1, 1, 0.95, 1],
+      intensity: 4,
+      castShadows: true
+    })
+  ]))
 
-  const skybox = State.skybox = renderer.skybox({
-    sunPosition: State.sunPosition
-  })
+  skyboxEntity = renderer.add(renderer.entity([
+    renderer.skybox({
+      sunPosition: State.sunPosition,
+      texture: panorama
+    })
+  ]))
 
   // currently this also includes light probe functionality
-  const reflectionProbe = State.reflectionProbe = renderer.reflectionProbe({
-    origin: [0, 0, 0],
-    size: [10, 10, 10],
-    boxProjection: false
-  })
+  reflectionProbeEntity = renderer.add(renderer.entity([
+    renderer.reflectionProbe({
+      origin: [0, 0, 0],
+      size: [10, 10, 10],
+      boxProjection: false
+    })
+  ]))
 
-  renderer.add(renderer.entity([ sun ]))
-  renderer.add(renderer.entity([ skybox ]))
-  renderer.add(renderer.entity([ reflectionProbe ]))
+  updateSunPosition()
 }
 
 function initLights () {
@@ -284,7 +278,7 @@ function initLights () {
     renderer.transform({
       position: [0, 3, 0],
       scale: [5, 1, 0.1],
-      rotation: quat.fromDirection(quat.create(), [0, -1, 0.001])
+      rotation: quat.fromTo(quat.create(), [0, 0, 1], vec3.normalize([0, -1, 0.001]))
     }),
     renderer.areaLight({
       color: [2.0, 1.2, 0.1, 1],
@@ -329,8 +323,22 @@ function imageFromFile (file, options) {
 
 initCamera()
 initMeshes()
-initSky()
 initLights()
+
+io.loadBinary(`${ASSETS_DIR}/Mono_Lake_B.hdr`, (err, buf) => {
+  if (err) console.log('Loading HDR file failed', err)
+  const hdrImg = parseHdr(buf)
+  const panorama = ctx.texture2D({
+    data: hdrImg.data,
+    width: hdrImg.shape[0],
+    height: hdrImg.shape[1],
+    pixelFormat: ctx.PixelFormat.RGBA32F,
+    encoding: ctx.Encoding.Linear,
+    flipY: true
+  })
+  gui.addTexture2D('Panorama', panorama)
+  initSky(panorama)
+})
 
 let debugOnce = false
 
@@ -339,24 +347,16 @@ window.addEventListener('keydown', (e) => {
   if (e.key === 'g') gui.toggleEnabled()
 })
 
-updateSunPosition()
-
-var tempmat4 = mat4.create()
 ctx.frame(() => {
-  // TODO: ugly
-  const transformCmp = cameraTransformCmp
-  var transformRotation = transformCmp.rotation
-  mat4.set(tempmat4, fakeCamera.viewMatrix)
-  mat4.invert(tempmat4)
-  quat.fromMat4(transformRotation, tempmat4)
-  transformCmp.set({
-    position: fakeCamera.position,
-    rotation: transformRotation
-  })
-
   ctx.debug(debugOnce)
   debugOnce = false
   renderer.draw()
+
+  var dist = vec3.distance(cameraEntity.transform.position, [0, 0.4, 2])
+  cameraEntity.getComponent('Camera').set({
+    dofDepth: dist,
+    dofRange: dist / 4
+  })
 
   if (!renderer._state.paused) {
     gui.draw()
