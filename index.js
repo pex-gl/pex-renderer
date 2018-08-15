@@ -3,9 +3,6 @@ const vec4 = require('pex-math/vec4')
 const mat3 = require('pex-math/mat3')
 const mat4 = require('pex-math/mat4')
 const aabb = require('pex-geom/aabb')
-// var Draw = require('pex-draw/Draw')
-// var fx = require('pex-fx')
-// const AreaLightsData = require('./AreaLightsData')
 const createProfiler = require('./profiler')
 const isBrowser = require('is-browser')
 const createEntity = require('./entity')
@@ -25,12 +22,6 @@ const createAreaLight = require('./area-light')
 const createReflectionProbe = require('./reflection-probe')
 const createSkybox = require('./skybox')
 const createOverlay = require('./overlay')
-const path = require('path')
-
-// pex-fx extensions, extending FXStage
-// require('./Postprocess')
-// require('./BilateralBlur')
-// require('./SSAO')
 
 const DEPTH_PASS_VERT = require('./glsl/DepthPass.vert.js')
 const DEPTH_PASS_FRAG = require('./glsl/DepthPass.frag.js')
@@ -38,11 +29,6 @@ const OVERLAY_VERT = require('./glsl/Overlay.vert.js')
 const OVERLAY_FRAG = require('./glsl/Overlay.frag.js')
 const ERROR_VERT = require('./glsl/Error.vert.js')
 const ERROR_FRAG = require('./glsl/Error.frag.js')
-// var SOLID_COLOR_VERT = glsl(__dirname + '/glsl/SolidColor.vert')
-// var SOLID_COLOR_VERT = glsl(__dirname + '/glsl/SolidColor.vert')
-// var SOLID_COLOR_FRAG = fs.readFileSync(__dirname + '/glsl/SolidColor.frag', 'utf8')
-// var SHOW_COLORS_VERT = fs.readFileSync(__dirname + '/glsl/ShowColors.vert', 'utf8')
-// var SHOW_COLORS_FRAG = fs.readFileSync(__dirname + '/glsl/ShowColors.frag', 'utf8')
 
 var State = {
   frame: 0,
@@ -86,7 +72,6 @@ function Renderer (opts) {
   const gl = opts.ctx.gl
   gl.getExtension('OES_standard_derivatives')
 
-  // this._debugDraw = new Draw(ctx)
   this._debug = false
 
   if (opts.profile) {
@@ -874,69 +859,11 @@ Renderer.prototype.draw = function () {
   if (State.profiler) State.profiler.endFrame()
 }
 
-// TODO: remove unused code
-Renderer.prototype.drawDebug = function () {
-  var ctx = this._ctx
-
-  var directionalLightNodes = this._directionalLightNodes
-  ctx.bindProgram(this._showColorsProgram)
-  this._debugDraw.setColor([1, 0, 0, 1])
-
-  this._debugDraw.setLineWidth(2)
-  directionalLightNodes.forEach(function (lightNode) {
-    var light = lightNode.data.light
-    var invProj = mat4.invert(mat4.copy(light._projectionMatrix))
-    var invView = mat4.invert(mat4.copy(light._viewMatrix))
-    var corners = [[-1, -1, 1, 1], [1, -1, 1, 1], [1, 1, 1, 1], [-1, 1, 1, 1], [-1, -1, -1, 1], [1, -1, -1, 1], [1, 1, -1, 1], [-1, 1, -1, 1]].map(function (p) {
-      var v = vec4.multMat4(vec4.multMat4(vec4.copy(p), invProj), invView)
-      vec3.scale(v, 1 / v[3])
-      return v
-    })
-
-    var position = lightNode.data.position
-    this._debugDraw.drawLine(position, corners[0 + 4])
-    this._debugDraw.drawLine(position, corners[1 + 4])
-    this._debugDraw.drawLine(position, corners[2 + 4])
-    this._debugDraw.drawLine(position, corners[3 + 4])
-    this._debugDraw.drawLine(corners[3], corners[0])
-    this._debugDraw.drawLine(corners[0], corners[1])
-    this._debugDraw.drawLine(corners[1], corners[2])
-    this._debugDraw.drawLine(corners[2], corners[3])
-    this._debugDraw.drawLine(corners[3], corners[4 + 3])
-    this._debugDraw.drawLine(corners[0], corners[4 + 0])
-    this._debugDraw.drawLine(corners[1], corners[4 + 1])
-    this._debugDraw.drawLine(corners[2], corners[4 + 2])
-    this._debugDraw.drawLine(corners[4 + 3], corners[4 + 0])
-    this._debugDraw.drawLine(corners[4 + 0], corners[4 + 1])
-    this._debugDraw.drawLine(corners[4 + 1], corners[4 + 2])
-    this._debugDraw.drawLine(corners[4 + 2], corners[4 + 3])
-  }.bind(this))
-
-  ctx.bindProgram(this._solidColorProgram)
-  this._solidColorProgram.setUniform('uColor', [1, 0, 0, 1])
-
-  /*
-  // TODO: don't calculate debug node stack unless in debug
-  this._nodes.forEach(function (node) {
-    ctx.pushModelMatrix()
-    if (node._globalTransform) {
-      ctx.loadIdentity()
-      ctx.multMatrix(node._globalTransform)
-    }
-    if (this._debug && node._bbox) {
-      this._debugDraw.debugAABB(node._bbox)
-    }
-    ctx.popModelMatrix()
-  }.bind(this))
-  */
-}
-
 Renderer.prototype.entity = function (components, tags) {
   return createEntity(components, tags)
 }
 
 Renderer.prototype.add = function (entity, parent) {
-  // console.warn('pex-renderer: renderer.add() is deprecated')
   if (entity === this.root) {
     return entity
   }
