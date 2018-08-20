@@ -54,6 +54,8 @@ uniform int uOutputEncoding;
 
 vec2 envMapOctahedral(vec3 dir) {
   dir /= dot(vec3(1.0), abs(dir));
+  // Add epsylon to avoid bottom face flickering when sampling irradiance
+  dir += 0.00001;
   if (dir.y < 0.0) {
     dir.xy = vec2(1.0 - abs(dir.zx)) * sign(dir.xz);
   }
