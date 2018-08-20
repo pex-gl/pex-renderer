@@ -20,14 +20,14 @@ const camera = renderer.entity([
 ])
 renderer.add(camera)
 
-const cube = renderer.entity([
+const geom = renderer.entity([
   renderer.transform({ position: [0, 0, 0] }),
   renderer.geometry(createSphere(1)),
   renderer.material({
     baseColor: [1, 0, 0, 1]
   })
 ])
-renderer.add(cube)
+renderer.add(geom)
 
 const skybox = renderer.entity([
   renderer.skybox({
