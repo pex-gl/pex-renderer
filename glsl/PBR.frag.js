@@ -292,6 +292,9 @@ float directionalShadow(sampler2D depths, vec2 size, vec2 uv, float compare, flo
   return illuminated;
 }
 
+#ifdef USE_ALPHA_MAP
+uniform sampler2D uAlphaMap;
+#endif
 
 #ifdef USE_ALPHA_TEST
   uniform float uAlphaTest; //assumes sRGB color, not linear
@@ -1420,9 +1423,15 @@ void main() {
   	data.positionWorld = vPositionWorld;
   	data.positionView = vPositionView;
     data.normalView = normalize(vNormalView); //TODO: normalization needed?
+    if (!gl_FrontFacing) {
+      data.normalView *= -1.0;
+    }
+    data.normalWorld = normalize(vNormalWorld);
+    if (!gl_FrontFacing) {
+      data.normalWorld *= -1.0;
+    }
     data.eyeDirView = normalize(-vPositionView); //TODO: normalization needed?
     data.eyeDirWorld = vec3(uInverseViewMatrix * vec4(data.eyeDirView, 0.0));
-    data.normalWorld = normalize(vNormalWorld);
     data.indirectDiffuse = vec3(0.0);
     data.indirectSpecular = vec3(0.0);
     data.directDiffuse = vec3(0.0);
@@ -1450,8 +1459,11 @@ void main() {
     data.diffuseColor = data.baseColor;
 #endif
 
+#ifdef USE_ALPHA_MAP
+  data.opacity *= texture2D(uAlphaMap, data.texCoord0).r;
+#endif
 #ifdef USE_ALPHA_TEST
-    AlphaTest(data);
+  AlphaTest(data);
 #endif
 
 #ifdef USE_VERTEX_COLORS

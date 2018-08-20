@@ -4,6 +4,10 @@ attribute vec3 aPosition;
 attribute vec3 aNormal;
 #endif
 
+#ifdef USE_TEX_COORDS
+attribute vec2 aTexCoord0;
+#endif
+
 #ifdef USE_INSTANCED_OFFSET
 attribute vec3 aOffset;
 #endif
@@ -23,7 +27,6 @@ uniform mat4 uJointMat[NUM_JOINTS];
 #ifdef USE_DISPLACEMENT_MAP
 uniform sampler2D uDisplacementMap;
 uniform float uDisplacement;
-attribute vec2 aTexCoord0;
 #endif
 
 uniform mat4 uProjectionMatrix;
@@ -34,6 +37,7 @@ uniform mat3 uNormalMatrix;
 float uDisplacementShadowStretch = 1.3;
 
 varying vec3 vNormalView;
+varying vec2 vTexCoord0;
 
 #ifdef GL_ES
 mat4 transpose(mat4 m) {
@@ -74,6 +78,11 @@ void main() {
 #ifdef USE_NORMALS
     normal = aNormal;
 #endif
+    vec2 texCoord = vec2(0.0, 0.0);
+#ifdef USE_TEX_COORDS
+    texCoord = aTexCoord0;
+#endif
+    vTexCoord0 = texCoord;
 #ifdef USE_DISPLACEMENT_MAP
     float h = texture2D(uDisplacementMap, aTexCoord0).r;
     position.xyz += uDisplacement * h * normal * uDisplacementShadowStretch;

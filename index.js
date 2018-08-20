@@ -179,6 +179,18 @@ Renderer.prototype.getMaterialProgram = function (geometry, material, skin, opti
   if (ctx.capabilities.maxColorAttachments > 1) {
     flags.push('#define USE_DRAW_BUFFERS')
   }
+  if (material.baseColorMap) {
+    flags.push('#define USE_BASE_COLOR_MAP')
+    if (!material.baseColor) {
+      material.baseColor = [1, 1, 1, 1]
+    }
+  }
+  if (material.alphaMap) {
+    flags.push('#define USE_ALPHA_MAP')
+  }
+  if (material.alphaTest) {
+    flags.push('#define USE_ALPHA_TEST')
+  }
 
   if (options.depthPassOnly) {
     const hash = 'DEPTH_PASS_ONLY_' + flags.join('-')
@@ -202,12 +214,6 @@ Renderer.prototype.getMaterialProgram = function (geometry, material, skin, opti
 
   var useSpecularGlossinessWorkflow = false
 
-  if (material.baseColorMap) {
-    flags.push('#define USE_BASE_COLOR_MAP')
-    if (!material.baseColor) {
-      material.baseColor = [1, 1, 1, 1]
-    }
-  }
   if (material.metallicMap) {
     flags.push('#define USE_METALLIC_MAP')
   }
@@ -245,9 +251,6 @@ Renderer.prototype.getMaterialProgram = function (geometry, material, skin, opti
     if (!material.emissiveColor) {
       material.emissiveColor = [1, 1, 1, 1]
     }
-  }
-  if (material.alphaTest) {
-    flags.push('#define USE_ALPHA_TEST')
   }
   if (material.blend) {
     flags.push('#define USE_BLEND')
@@ -573,6 +576,8 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
       cachedUniforms.uDisplacement = material.displacement
     }
 
+    if (material.alphaMap) cachedUniforms.uAlphaMap = material.alphaMap
+
     if (material.uniforms) {
       for (var uniformName in material.uniforms) {
         cachedUniforms[uniformName] = material.uniforms[uniformName]
@@ -598,6 +603,10 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
         useReflectionProbes: reflectionProbes.length, // TODO: reflection probes true
         useSSAO: camera.ssao
       })
+    }
+
+    if (material.alphaTest !== undefined) {
+      sharedUniforms.uAlphaTest = material.alphaTest
     }
 
     // TODO: shared uniforms HUH?

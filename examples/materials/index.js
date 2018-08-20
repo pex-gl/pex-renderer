@@ -84,7 +84,7 @@ function updateSunPosition () {
 
 const W = ctx.gl.drawingBufferWidth
 const H = ctx.gl.drawingBufferHeight
-const nW = 7
+const nW = 8
 const nH = 3
 
 // flip upside down as we are using viewport coordinates
@@ -106,6 +106,8 @@ function initCamera () {
       fxaa: true,
       exposure: State.exposure
     })
+    gui.addTexture2D('Depth Map', cameraCmp._frameDepthTex)
+    gui.addTexture2D('Normal Map', cameraCmp._frameNormalTex)
     if (material.emissiveColor) {
       cameraCmp.set({
         bloom: true,
@@ -117,7 +119,7 @@ function initCamera () {
     renderer.add(renderer.entity([
       cameraCmp,
       renderer.orbiter({
-        position: [0, 0, 1.5]
+        position: [0, 0, 1.9]
       })
     ], tags))
   })
@@ -161,6 +163,7 @@ function imageFromFile (file, options) {
 }
 
 let materials = [
+  { baseColor: [1.0, 1.0, 1.0, 1.0], metallic: 0, roughness: 1, baseColorMap: ASSETS_DIR + '/uv-wide.png' },
   { baseColor: [0.8, 0.2, 0.2, 1.0], metallic: 0, roughness: 0 / 6 },
   { baseColor: [0.8, 0.2, 0.2, 1.0], metallic: 0, roughness: 1 / 6 },
   { baseColor: [0.8, 0.2, 0.2, 1.0], metallic: 0, roughness: 2 / 6 },
@@ -168,6 +171,7 @@ let materials = [
   { baseColor: [0.8, 0.2, 0.2, 1.0], metallic: 0, roughness: 4 / 6 },
   { baseColor: [0.8, 0.2, 0.2, 1.0], metallic: 0, roughness: 5 / 6 },
   { baseColor: [0.8, 0.2, 0.2, 1.0], metallic: 0, roughness: 6 / 6 },
+  { baseColor: [1.0, 1.0, 0.9, 1.0], metallic: 1, roughness: 1, roughnessMap: ASSETS_DIR + '/roughness-test.png' },
   { baseColor: [1.0, 1.0, 1.0, 1.0], metallic: 1, roughness: 0 / 6 },
   { baseColor: [1.0, 1.0, 1.0, 1.0], metallic: 1, roughness: 1 / 6 },
   { baseColor: [1.0, 1.0, 1.0, 1.0], metallic: 1, roughness: 2 / 6 },
@@ -211,6 +215,15 @@ let materials = [
     blendSrcAlphaFactor: ctx.BlendFactor.One,
     blendDstRGBFactor: ctx.BlendFactor.OneMinusSrcAlpha,
     blendDstAlphaFactor: ctx.BlendFactor.One
+  },
+  {
+    roughness: 0.5,
+    metallic: 0,
+    baseColor: [1, 1, 1, 1],
+    alphaTest: 0.5,
+    cullFace: false,
+    baseColorMap: ASSETS_DIR + '/alpha-test-mask.png',
+    alphaMap: ASSETS_DIR + '/checkerboard.png'
   }
 ]
 
@@ -222,7 +235,10 @@ function initMeshes () {
     if (mat.roughnessMap) mat.roughnessMap = imageFromFile(mat.roughnessMap, ctx.Encoding.Linear)
     if (mat.metallicMap) mat.metallicMap = imageFromFile(mat.metallicMap, ctx.Encoding.Linear)
     if (mat.normalMap) mat.normalMap = imageFromFile(mat.normalMap, ctx.Encoding.Linear)
+    if (mat.alphaMap) mat.alphaMap = imageFromFile(mat.alphaMap, ctx.Encoding.Linear)
     if (mat.emissiveColorMap) mat.emissiveColorMap = imageFromFile(mat.emissiveColorMap, ctx.Encoding.SRGB)
+    mat.castShadows = true
+    mat.receiveShadows = true
   })
 
   cells.forEach((cell, cellIndex) => {
@@ -242,8 +258,10 @@ function initMeshes () {
 function initSky (panorama) {
   const sun = State.sun = renderer.directionalLight({
     color: [1, 1, 0.95, 1],
-    intensity: 2
+    intensity: 2,
+    castShadows: true
   })
+  gui.addTexture2D('ShadowMap', sun._shadowMap)
   const sunTransform = renderer.transform({
     position: [2, 2, 2],
     rotation: quat.fromTo(quat.create(), [0, 0, 1], vec3.normalize([-2, -2, -2]))

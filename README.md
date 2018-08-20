@@ -382,7 +382,9 @@ material = renderer.material({
   roughness: 0.5,
   roughnessMap: null,
   castShadows: false,
-  receiveShadows: false
+  receiveShadows: false,
+  alphaTest: 0.5,
+  alphaMap: ctx.Texture2D
 })
 ```
 
