@@ -19,13 +19,46 @@ ${decode}
 uniform sampler2D uEnvMap;
 uniform int uEnvMapEncoding;
 uniform int uOutputEncoding;
+uniform float uBackgroundBlur;
 
 varying vec3 wcNormal;
+
+vec2 envMapOctahedral(vec3 dir) {
+  dir /= dot(vec3(1.0), abs(dir));
+  // Add epsylon to avoid bottom face flickering when sampling irradiance
+  dir += 0.00001;
+  if (dir.y < 0.0) {
+    dir.xy = vec2(1.0 - abs(dir.zx)) * sign(dir.xz);
+  }
+  else {
+    dir.xy = dir.xz;
+  }
+  dir.xy = dir.xy * 0.5;
+  dir.xy += 0.5; // move to center
+  // dir.xy = (dir.xy * 64.0 + 1.0) / 66.0;
+  return dir.xy;
+}
+
+vec3 getIrradiance(vec3 normalWorld) {
+  vec2 uv = envMapOctahedral(normalWorld);
+  float width = 2048.0;
+  float irrSize = 64.0;
+  uv += 0.5 / irrSize;
+  uv /= irrSize / (irrSize - 1.0);
+  uv = (uv * irrSize + vec2(2048.0 - irrSize)) / width;
+  return decode(texture2D(uEnvMap, uv), uEnvMapEncoding).rgb;
+}
 
 void main() {
     vec3 N = normalize(wcNormal);
 
-    vec4 color = decode(texture2D(uEnvMap, envMapEquirect(N)), uEnvMapEncoding);
+    vec4 color = vec4(0.0);
+    
+    if (uBackgroundBlur <= 0.0) {
+      color = decode(texture2D(uEnvMap, envMapEquirect(N)), uEnvMapEncoding);
+    } else {
+      color = vec4(getIrradiance(N), 1.0);
+    }
     gl_FragData[0] = encode(color, uOutputEncoding);
 #ifdef USE_DRAW_BUFFERS
     gl_FragData[1] = vec4(0.0);

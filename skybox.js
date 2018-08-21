@@ -12,6 +12,7 @@ function Skybox (opts) {
   this.type = 'Skybox'
   this.changed = new Signal()
   this.rgbm = false
+  this.backgroundBlur = 0
 
   const ctx = this._ctx = opts.ctx
 
@@ -86,7 +87,6 @@ Skybox.prototype.set = function (opts) {
 
 Skybox.prototype.draw = function (camera, opts) {
   var ctx = this._ctx
-
   if (!this.texture && this._dirtySunPosition) {
     this._dirtySunPosition = false
     ctx.submit(this._updateSkyTexture, {
@@ -97,9 +97,24 @@ Skybox.prototype.draw = function (camera, opts) {
   }
 
   let texture = this.texture || this._skyTexture
-  if (opts.diffuse && this.diffuseTexture) {
-    texture = this.diffuseTexture
+  let backgroundBlur = 0
+  if (opts.backgroundMode) {
+    if (this.backgroundTexture) {
+      texture = this.backgroundTexture
+    }
+
+    if (this.backgroundBlur > 0) {
+      backgroundBlur = this.backgroundBlur
+      if (!this._reflectionProbe) {
+        console.log(this.entity)
+         this._reflectionProbe = this.entity.renderer.getComponents('ReflectionProbe')[0]
+      }
+      if (this._reflectionProbe) {
+        texture = this._reflectionProbe._reflectionMap
+      }
+    }
   }
+
   // TODO: can we somehow avoid creating an object every frame here?
   ctx.submit(this._drawCommand, {
     uniforms: {
@@ -107,7 +122,8 @@ Skybox.prototype.draw = function (camera, opts) {
       uViewMatrix: camera.viewMatrix,
       uEnvMap: texture,
       uEnvMapEncoding: texture.encoding,
-      uOutputEncoding: opts.outputEncoding
+      uOutputEncoding: opts.outputEncoding,
+      uBackgroundBlur: backgroundBlur
     }
   })
 }

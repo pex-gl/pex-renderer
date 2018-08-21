@@ -531,7 +531,7 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
     if ((firstTransparent === i) && skybox) {
       skybox.draw(camera, {
         outputEncoding: sharedUniforms.uOutputEncoding,
-        diffuse: true
+        backgroundMode: true
       })
     }
     const geometry = geometries[i]
@@ -650,7 +650,7 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
   if ((firstTransparent === -1) && skybox) {
     skybox.draw(camera, {
       outputEncoding: sharedUniforms.uOutputEncoding,
-      diffuse: true
+      backgroundMode: true
     })
   }
 }

@@ -508,8 +508,10 @@ spotLight = renderer.spotLight({
 
 ```javascript
 skybox = renderer.skybox({
-  sunPosition: [1, 1, 1],
-  texture: ctx.texture2D({ .. })
+  sunPosition: [1, 1, 1], // sky gradient used for reflections
+  texture: ctx.texture2D({ .. }), // used for reflections instad of sky
+  backgroundTexture: ctx.texture2D() // used for background rendering, not reflections,
+  backgroundBlur: 0, //if set to 1, blurs texture for background rendering, not reflections
 })
 ```
 
