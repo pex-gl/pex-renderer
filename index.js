@@ -869,7 +869,7 @@ Renderer.prototype.draw = function () {
 }
 
 Renderer.prototype.entity = function (components, tags) {
-  return createEntity(components, tags)
+  return createEntity(components, tags, this)
 }
 
 Renderer.prototype.add = function (entity, parent) {

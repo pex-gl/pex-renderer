@@ -3,10 +3,11 @@ const assert = require('assert')
 
 let entityId = 0
 
-function Entity (components, tags) {
+function Entity (components, tags, renderer) {
   assert(!tags || Array.isArray(tags), 'Entity tags must be an array or null')
   this.id = entityId++
   this.tags = tags || []
+  this.renderer = renderer
 
   this.components = components ? components.slice(0) : []
 
