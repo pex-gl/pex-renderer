@@ -12,6 +12,29 @@ const latLonToXyz = require('latlon-to-xyz')
 const xyzToLatLon = require('xyz-to-latlon')
 const offset = require('mouse-event-offset')
 
+function getViewRay (camera, x, y, windowWidth, windowHeight) {
+  if (camera.frustum) {
+    x += camera.frustum.offset[0]
+    y += camera.frustum.offset[1]
+    windowWidth = camera.frustum.totalSize[0]
+    windowHeight = camera.frustum.totalSize[1]
+  }
+  let nx = 2 * x / windowWidth - 1
+  let ny = 1 - 2 * y / windowHeight
+
+  let hNear = 2 * Math.tan(camera.fov / 2) * camera.near
+  let wNear = hNear * camera.aspect
+
+  nx *= (wNear * 0.5)
+  ny *= (hNear * 0.5)
+
+  let origin = [0, 0, 0]
+  let direction = vec3.normalize([nx, ny, -camera.near])
+  let ray = [origin, direction]
+
+  return ray
+}
+
 function Orbiter (opts) {
   this.type = 'Orbiter'
   this.entity = null
@@ -154,13 +177,13 @@ Orbiter.prototype.setup = function () {
       const targetInViewSpace = vec3.multMat4(vec3.copy(orbiter.clickTarget), camera.viewMatrix)
       orbiter.panPlane = [targetInViewSpace, [0, 0, 1]]
       ray.hitTestPlane(
-        camera.getViewRay(orbiter.clickPosWindow[0], orbiter.clickPosWindow[1], orbiter.width, orbiter.height),
+        getViewRay(camera, orbiter.clickPosWindow[0], orbiter.clickPosWindow[1], orbiter.width, orbiter.height),
         orbiter.panPlane[0],
         orbiter.panPlane[1],
         orbiter.clickPosPlane
       )
       ray.hitTestPlane(
-        camera.getViewRay(orbiter.dragPosWindow[0], orbiter.dragPosWindow[1], orbiter.width, orbiter.height),
+        getViewRay(camera, orbiter.dragPosWindow[0], orbiter.dragPosWindow[1], orbiter.width, orbiter.height),
         orbiter.panPlane[0],
         orbiter.panPlane[1],
         orbiter.dragPosPlane
@@ -178,13 +201,13 @@ Orbiter.prototype.setup = function () {
       orbiter.dragPosWindow[0] = x
       orbiter.dragPosWindow[1] = y
       ray.hitTestPlane(
-        camera.getViewRay(orbiter.clickPosWindow[0], orbiter.clickPosWindow[1], orbiter.width, orbiter.height),
+        getViewRay(camera, orbiter.clickPosWindow[0], orbiter.clickPosWindow[1], orbiter.width, orbiter.height),
         orbiter.panPlane[0],
         orbiter.panPlane[1],
         orbiter.clickPosPlane
       )
       ray.hitTestPlane(
-        camera.getViewRay(orbiter.dragPosWindow[0], orbiter.dragPosWindow[1], orbiter.width, orbiter.height),
+        getViewRay(camera, orbiter.dragPosWindow[0], orbiter.dragPosWindow[1], orbiter.width, orbiter.height),
         orbiter.panPlane[0],
         orbiter.panPlane[1],
         orbiter.dragPosPlane
