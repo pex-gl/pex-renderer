@@ -1,4 +1,4 @@
-//TODO: this is already browserified, need to split back to chunks 
+//TODO: this is already browserified, need to split back to chunks
 module.exports = `
 #ifdef GL_ES
   #extension GL_OES_standard_derivatives : require
@@ -19,6 +19,10 @@ varying vec2 vTexCoord0;
 
 varying vec3 vPositionWorld;
 varying vec3 vPositionView;
+
+#ifdef USE_TANGENTS
+varying vec3 vTangentView;
+#endif
 
 #ifdef USE_VERTEX_COLORS
 varying vec4 vColor;
@@ -185,6 +189,7 @@ struct PBRData {
   mat4 inverseViewMatrix;
   vec2 texCoord0;
   vec3 normalView;
+  vec3 tangentView;
   vec3 positionWorld;
   vec3 positionView;
   vec3 eyeDirView;
@@ -1192,7 +1197,16 @@ void getNormal(inout PBRData data) {
   vec3 V = normalize(data.eyeDirView);
 
   vec3 normalView = perturb(normalMap, N, V, data.texCoord0);
-  vec3 normalWorld = vec3(data.inverseViewMatrix * vec4(normalView, 0.0));
+  vec3 normalWorld;
+
+  #ifndef USE_TANGENTS
+    normalWorld = vec3(data.inverseViewMatrix * vec4(normalView, 0.0));
+  #else
+    mat3 TBN = mat3(data.tangentView, cross(normalView, data.tangentView), normalView);
+    N = normalize(TBN * normalMap);
+    // TODO: use tangent w
+    normalWorld = vec3((dot(N, normalize(vec3(1.0, 1.0, 1.0))) + 0.5)/ 1.5);
+  #endif
 
   data.normalWorld = normalize(normalWorld);
 }
@@ -1425,6 +1439,9 @@ void main() {
   	data.positionWorld = vPositionWorld;
   	data.positionView = vPositionView;
     data.normalView = normalize(vNormalView); //TODO: normalization needed?
+    #ifdef USE_TANGENTS
+      data.tangentView = normalize(vTangentView);
+    #endif
     if (!gl_FrontFacing) {
       data.normalView *= -1.0;
     }

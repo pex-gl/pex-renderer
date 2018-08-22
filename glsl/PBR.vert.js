@@ -3,6 +3,10 @@ attribute vec3 aPosition;
 #ifdef USE_NORMALS
 attribute vec3 aNormal;
 #endif
+#ifdef USE_TANGENTS
+attribute vec3 aTangent;
+varying vec3 vTangentView;
+#endif
 #ifdef USE_TEX_COORDS
 attribute vec2 aTexCoord0;
 #endif
@@ -87,6 +91,9 @@ void main() {
 #ifdef USE_NORMALS
     normal = aNormal;
 #endif
+#ifdef USE_TANGENTS
+    vec3 tangent = aTangent;
+#endif
 #ifdef USE_TEX_COORDS
     texCoord = aTexCoord0;
 #endif
@@ -124,11 +131,17 @@ void main() {
         aWeight.w * uJointMat[int(aJoint.w)];
 
     vNormalView = vec3(uViewMatrix * skinMat * vec4(normal, 0.0));
+    #ifdef USE_TANGENTS
+      vTangentView = vec3(uViewMatrix * skinMat * vec4(tangent, 0.0));
+    #endif
     vNormalWorld = normalize(vec3(uInverseViewMatrix * vec4(vNormalView, 0.0)));
 
     gl_Position = uProjectionMatrix * uViewMatrix * skinMat * position;
 #else
     vNormalView = vec3(uNormalMatrix * normal);
+    #ifdef USE_TANGENTS
+      vTangentView = vec3(uNormalMatrix * tangent);
+    #endif
     vNormalWorld = normalize(vec3(uInverseViewMatrix * vec4(vNormalView, 0.0)));
 
     gl_Position = uProjectionMatrix * vec4(vPositionView, 1.0);
