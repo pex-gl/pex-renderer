@@ -1168,7 +1168,7 @@ mat3 cotangentFrame(vec3 N, vec3 p, vec2 uv) {
 
   // construct a scale-invariant frame
   float invmax = 1.0 / sqrt(max(dot(T,T), dot(B,B)));
-  return mat3(T * invmax, B * invmax, N);
+  return mat3(normalize(T * invmax), normalize(B * invmax), N);
 }
 
 vec3 perturb(vec3 map, vec3 N, vec3 V, vec2 texcoord) {
