@@ -415,13 +415,13 @@ void EvaluateDirectionalLight(inout PBRData data, DirectionalLight light, int i)
   if (i == 4) illuminated += directionalShadow(uDirectionalLightShadowMaps[4], light.shadowMapSize, lightUV, lightDistView - light.bias, light.near, light.far);
 #endif
 #if NUM_DIRECTIONAL_LIGHTS >= 6
-	if (i == 5) illuminated += directionalShadow(uDirectionalLightShadowMaps[5], light.shadowMapSize, lightUV, lightDistView - light.bias, light.near, light.far);
+  if (i == 5) illuminated += directionalShadow(uDirectionalLightShadowMaps[5], light.shadowMapSize, lightUV, lightDistView - light.bias, light.near, light.far);
 #endif
 #if NUM_DIRECTIONAL_LIGHTS >= 7
-	if (i == 6) illuminated += directionalShadow(uDirectionalLightShadowMaps[6], light.shadowMapSize, lightUV, lightDistView - light.bias, light.near, light.far);
+  if (i == 6) illuminated += directionalShadow(uDirectionalLightShadowMaps[6], light.shadowMapSize, lightUV, lightDistView - light.bias, light.near, light.far);
 #endif
 #if NUM_DIRECTIONAL_LIGHTS >= 8
-	if (i == 7) illuminated += directionalShadow(uDirectionalLightShadowMaps[7], light.shadowMapSize, lightUV, lightDistView - light.bias, light.near, light.far);
+  if (i == 7) illuminated += directionalShadow(uDirectionalLightShadowMaps[7], light.shadowMapSize, lightUV, lightDistView - light.bias, light.near, light.far);
 #endif
 
   if (illuminated > 0.0) {
@@ -499,8 +499,8 @@ void EvaluatePointLight(inout PBRData data, PointLight light, int i) {
     vec3 lightColor = decode(light.color, 3).rgb;
     lightColor *= light.color.a; // intensity
 
-  	float distanceRatio = clamp(1.0 - pow(dist/light.range, 4.0), 0.0, 1.0);
-  	float falloff = (distanceRatio * distanceRatio) / (max(dist * dist, 0.01));
+    float distanceRatio = clamp(1.0 - pow(dist/light.range, 4.0), 0.0, 1.0);
+    float falloff = (distanceRatio * distanceRatio) / (max(dist * dist, 0.01));
 
     //TODO: is irradiance the right name? Three.js is using it
     vec3 irradiance = data.NdotL * lightColor * illuminated;
@@ -1424,20 +1424,20 @@ void getBaseColorAndMetallicRoughnessFromSpecularGlossines(inout PBRData data) {
 #endif
 
 void main() {
-	PBRData data;
+  PBRData data;
   data.texCoord0 = vTexCoord0;
 #ifdef USE_UNLIT_WORKFLOW
   getBaseColor(data);
   vec3 color = data.baseColor;
   #ifdef USE_VERTEX_COLORS
     vec3 tint = decode(vColor, 3).rgb;
-  	color*= tint;
+    color*= tint;
   #endif
 // !USE_USE_UNLIT_WORKFLOW
 #else
     data.inverseViewMatrix = uInverseViewMatrix;
-  	data.positionWorld = vPositionWorld;
-  	data.positionView = vPositionView;
+    data.positionWorld = vPositionWorld;
+    data.positionView = vPositionView;
     data.normalView = normalize(vNormalView); //TODO: normalization needed?
     #ifdef USE_TANGENTS
       data.tangentView = normalize(vTangentView);
