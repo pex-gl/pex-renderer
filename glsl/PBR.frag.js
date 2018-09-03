@@ -1,4 +1,4 @@
-//TODO: this is already browserified, need to split back to chunks 
+// TODO: this is already browserified, need to split back to chunks
 module.exports = `
 #ifdef GL_ES
   #extension GL_OES_standard_derivatives : require
@@ -19,6 +19,10 @@ varying vec2 vTexCoord0;
 
 varying vec3 vPositionWorld;
 varying vec3 vPositionView;
+
+#ifdef USE_TANGENTS
+varying vec4 vTangentView;
+#endif
 
 #ifdef USE_VERTEX_COLORS
 varying vec4 vColor;
@@ -185,6 +189,7 @@ struct PBRData {
   mat4 inverseViewMatrix;
   vec2 texCoord0;
   vec3 normalView;
+  vec4 tangentView;
   vec3 positionWorld;
   vec3 positionView;
   vec3 eyeDirView;
@@ -410,13 +415,13 @@ void EvaluateDirectionalLight(inout PBRData data, DirectionalLight light, int i)
   if (i == 4) illuminated += directionalShadow(uDirectionalLightShadowMaps[4], light.shadowMapSize, lightUV, lightDistView - light.bias, light.near, light.far);
 #endif
 #if NUM_DIRECTIONAL_LIGHTS >= 6
-	if (i == 5) illuminated += directionalShadow(uDirectionalLightShadowMaps[5], light.shadowMapSize, lightUV, lightDistView - light.bias, light.near, light.far);
+  if (i == 5) illuminated += directionalShadow(uDirectionalLightShadowMaps[5], light.shadowMapSize, lightUV, lightDistView - light.bias, light.near, light.far);
 #endif
 #if NUM_DIRECTIONAL_LIGHTS >= 7
-	if (i == 6) illuminated += directionalShadow(uDirectionalLightShadowMaps[6], light.shadowMapSize, lightUV, lightDistView - light.bias, light.near, light.far);
+  if (i == 6) illuminated += directionalShadow(uDirectionalLightShadowMaps[6], light.shadowMapSize, lightUV, lightDistView - light.bias, light.near, light.far);
 #endif
 #if NUM_DIRECTIONAL_LIGHTS >= 8
-	if (i == 7) illuminated += directionalShadow(uDirectionalLightShadowMaps[7], light.shadowMapSize, lightUV, lightDistView - light.bias, light.near, light.far);
+  if (i == 7) illuminated += directionalShadow(uDirectionalLightShadowMaps[7], light.shadowMapSize, lightUV, lightDistView - light.bias, light.near, light.far);
 #endif
 
   if (illuminated > 0.0) {
@@ -494,8 +499,8 @@ void EvaluatePointLight(inout PBRData data, PointLight light, int i) {
     vec3 lightColor = decode(light.color, 3).rgb;
     lightColor *= light.color.a; // intensity
 
-  	float distanceRatio = clamp(1.0 - pow(dist/light.range, 4.0), 0.0, 1.0);
-  	float falloff = (distanceRatio * distanceRatio) / (max(dist * dist, 0.01));
+    float distanceRatio = clamp(1.0 - pow(dist/light.range, 4.0), 0.0, 1.0);
+    float falloff = (distanceRatio * distanceRatio) / (max(dist * dist, 0.01));
 
     //TODO: is irradiance the right name? Three.js is using it
     vec3 irradiance = data.NdotL * lightColor * illuminated;
@@ -551,7 +556,7 @@ void EvaluateSpotLight(inout PBRData data, SpotLight light, int i) {
     lightColor *= light.color.a; // intensity
 
     float distanceRatio = clamp(1.0 - pow(dist/light.range, 4.0), 0.0, 1.0);
-  	float distanceFalloff = (distanceRatio * distanceRatio) / (max(dist * dist, 0.01));
+    float distanceFalloff = (distanceRatio * distanceRatio) / (max(dist * dist, 0.01));
 
     float fCosine = max(0.0, dot(light.direction, -L));
     float cutOff = cos(light.angle);
@@ -1182,18 +1187,21 @@ void getNormal(inout PBRData data) {
   normalMap.y *= uNormalScale;
   normalMap = normalize(normalMap);
 
-  // normalMap.y *= -1.0;
-  /*normalMap.x *= -1.0;*/
-  // vec3 dFdxPos = dFdx( vPositionView );
-  // vec3 dFdyPos = dFdy( vPositionView );
-
   vec3 N = normalize(data.normalView);
-  // N = normalize( cross(dFdxPos,dFdyPos ));
   vec3 V = normalize(data.eyeDirView);
 
-  vec3 normalView = perturb(normalMap, N, V, data.texCoord0);
-  vec3 normalWorld = vec3(data.inverseViewMatrix * vec4(normalView, 0.0));
+  vec3 normalView;
+  #ifdef USE_TANGENTS
+    vec3 bitangent = cross(N, data.tangentView.xyz) * sign(data.tangentView.w);
+    mat3 TBN = mat3(data.tangentView.xyz, bitangent, N);
+    normalView = normalize(TBN * normalMap);
+  #else
+    //make the output normalView match glTF expected right handed orientation
+    normalMap.y *= -1.0;
+    normalView = perturb(normalMap, N, V, data.texCoord0);
+  #endif
 
+  vec3 normalWorld = vec3(data.inverseViewMatrix * vec4(normalView, 0.0));
   data.normalWorld = normalize(normalWorld);
 }
 #endif
@@ -1391,7 +1399,7 @@ void getBaseColorAndMetallicRoughnessFromSpecularGlossines(inout PBRData data) {
     data.roughness = 1.0 - glossiness;
 
     vec4 diffuseRGBA = getDiffuse();
-  	vec3 diffuse = diffuseRGBA.rgb;
+    vec3 diffuse = diffuseRGBA.rgb;
     data.opacity = diffuseRGBA.a;
     float epsilon = 1e-6;
     float a = 0.04;
@@ -1410,21 +1418,24 @@ void getBaseColorAndMetallicRoughnessFromSpecularGlossines(inout PBRData data) {
 #endif
 
 void main() {
-	PBRData data;
+  PBRData data;
   data.texCoord0 = vTexCoord0;
 #ifdef USE_UNLIT_WORKFLOW
   getBaseColor(data);
   vec3 color = data.baseColor;
   #ifdef USE_VERTEX_COLORS
     vec3 tint = decode(vColor, 3).rgb;
-  	color*= tint;
+    color*= tint;
   #endif
 // !USE_USE_UNLIT_WORKFLOW
 #else
     data.inverseViewMatrix = uInverseViewMatrix;
-  	data.positionWorld = vPositionWorld;
-  	data.positionView = vPositionView;
+    data.positionWorld = vPositionWorld;
+    data.positionView = vPositionView;
     data.normalView = normalize(vNormalView); //TODO: normalization needed?
+    #ifdef USE_TANGENTS
+      data.tangentView = normalize(vTangentView);
+    #endif
     if (!gl_FrontFacing) {
       data.normalView *= -1.0;
     }

@@ -4,6 +4,7 @@ const aabb = require('pex-geom/aabb')
 const AttributesMap = {
   positions: 'aPosition',
   normals: 'aNormal',
+  tangents: 'aTangent',
   texCoords: 'aTexCoord0',
   uvs: 'aTexCoord0',
   vertexColors: 'aVertexColor',

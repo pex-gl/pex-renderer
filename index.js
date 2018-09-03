@@ -148,6 +148,9 @@ Renderer.prototype.getMaterialProgram = function (geometry, material, skin, opti
   } else {
     flags.push('#define USE_NORMALS')
   }
+  if (geometry._attributes.aTangent) {
+    flags.push('#define USE_TANGENTS')
+  }
   if (geometry._attributes.aTexCoord0) {
     flags.push('#define USE_TEX_COORDS')
   }
