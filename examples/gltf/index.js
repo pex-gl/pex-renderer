@@ -36,7 +36,7 @@ const renderer = createRenderer({
   ctx: ctx,
   shadowQuality: 2,
   // pauseOnBlur: true,
-  // profile: true,
+  profile: true,
   profileFlush: false
 })
 
@@ -75,7 +75,7 @@ const lineBuilder = renderer.add(renderer.entity([
   })
 ]))
 
-async function loadScene (url) {
+async function loadScene (url, cb) {
   if (!State.loadAll && State.scene) {
     renderer.remove(State.scene.root)
     //TODO: dispose old scene
@@ -84,13 +84,14 @@ async function loadScene (url) {
   const gltf = await loadGltf(url)
   const scene = State.scene = buildGltf(gltf, ctx, renderer)
   renderer.add(scene.root)
+  cb(null, scene)
 }
 
 function initSky (panorama) {
   const sun = State.sun = renderer.directionalLight({
     direction: vec3.sub(vec3.create(), State.sunPosition),
     color: [1, 1, 0.95, 1],
-    intensity: 10,
+    intensity: 5,
     castShadows: true,
     bias: 0.2
   })
@@ -129,9 +130,9 @@ function initCamera () {
     // dofRange: 0.15,
     // dofRadius: 2,
     // dofDepth: 1,
-    postprocess: false,
+    postprocess: true,
     ssao: true,
-    ssaoIntensity: 5,
+    ssaoIntensity: 2,
     ssaoRadius: 1,
     ssaoBias: 0.02,
     ssaoBlurRadius: 0.1, // 2
@@ -161,8 +162,8 @@ window.addEventListener('keypress', (e) => {
     gui.toggleEnabled()
   }
 })
-
-const modelsPath = 'glTF-Sample-Models'
+// const modelsPath = 'glTF-Sample-Models'
+const modelsPath = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0'
 
 function textureFromImage (img) {
   var tex = ctx.texture2D({
@@ -183,7 +184,7 @@ async function init () {
 
   const models = await loadJSON(`${modelsPath}/model-index.json`)
   const screenshots = await Promise.all(
-    models.map((model) => loadImage(`${modelsPath}/${model.name}/${model.screenshot}`))
+    models.map((model) => loadImage({ url: `${modelsPath}/${model.name}/${model.screenshot}`, crossOrigin: 'anonymous' }), null)
   )
   var thumbnails = screenshots.map(textureFromImage).map((tex, i) => ({
     value: models[i],
@@ -200,6 +201,8 @@ async function init () {
     })
   } else {
     let modelName = 'DamagedHelmet'
+    modelName = 'NormalTangentMirrorTest'
+    modelName = 'NormalTangentTest'
     loadScene(`${modelsPath}/${modelName}/glTF/${modelName}.gltf`, onSceneLoaded)
   }
 }

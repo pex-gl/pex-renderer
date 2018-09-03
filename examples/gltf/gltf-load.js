@@ -18,7 +18,7 @@ async function loadGltf (file, cb) {
   if (gltf.images) {
     for (let image of gltf.images) {
       const uri = path.join(basePath, image.uri).replace(/%/g, '%25') // TODO why are we replacing uri encoded spaces?
-      image._img = await loadImage(uri)
+      image._img = await loadImage({ url: uri, crossOrigin: 'anonymous' })
     }
   }
 
