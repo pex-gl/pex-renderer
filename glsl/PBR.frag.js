@@ -1,4 +1,4 @@
-//TODO: this is already browserified, need to split back to chunks
+// TODO: this is already browserified, need to split back to chunks
 module.exports = `
 #ifdef GL_ES
   #extension GL_OES_standard_derivatives : require
@@ -21,7 +21,7 @@ varying vec3 vPositionWorld;
 varying vec3 vPositionView;
 
 #ifdef USE_TANGENTS
-varying vec3 vTangentView;
+varying vec4 vTangentView;
 #endif
 
 #ifdef USE_VERTEX_COLORS
@@ -189,7 +189,7 @@ struct PBRData {
   mat4 inverseViewMatrix;
   vec2 texCoord0;
   vec3 normalView;
-  vec3 tangentView;
+  vec4 tangentView;
   vec3 positionWorld;
   vec3 positionView;
   vec3 eyeDirView;
@@ -556,7 +556,7 @@ void EvaluateSpotLight(inout PBRData data, SpotLight light, int i) {
     lightColor *= light.color.a; // intensity
 
     float distanceRatio = clamp(1.0 - pow(dist/light.range, 4.0), 0.0, 1.0);
-  	float distanceFalloff = (distanceRatio * distanceRatio) / (max(dist * dist, 0.01));
+    float distanceFalloff = (distanceRatio * distanceRatio) / (max(dist * dist, 0.01));
 
     float fCosine = max(0.0, dot(light.direction, -L));
     float cutOff = cos(light.angle);
@@ -1173,7 +1173,7 @@ mat3 cotangentFrame(vec3 N, vec3 p, vec2 uv) {
 
   // construct a scale-invariant frame
   float invmax = 1.0 / sqrt(max(dot(T,T), dot(B,B)));
-  return mat3(T * invmax, B * invmax, N);
+  return mat3(normalize(T * invmax), normalize(B * invmax), N);
 }
 
 vec3 perturb(vec3 map, vec3 N, vec3 V, vec2 texcoord) {
@@ -1187,27 +1187,21 @@ void getNormal(inout PBRData data) {
   normalMap.y *= uNormalScale;
   normalMap = normalize(normalMap);
 
-  // normalMap.y *= -1.0;
-  /*normalMap.x *= -1.0;*/
-  // vec3 dFdxPos = dFdx( vPositionView );
-  // vec3 dFdyPos = dFdy( vPositionView );
-
   vec3 N = normalize(data.normalView);
-  // N = normalize( cross(dFdxPos,dFdyPos ));
   vec3 V = normalize(data.eyeDirView);
 
-  vec3 normalView = perturb(normalMap, N, V, data.texCoord0);
-  vec3 normalWorld;
-
-  #ifndef USE_TANGENTS
-    normalWorld = vec3(data.inverseViewMatrix * vec4(normalView, 0.0));
+  vec3 normalView;
+  #ifdef USE_TANGENTS
+    vec3 bitangent = cross(N, data.tangentView.xyz) * sign(data.tangentView.w);
+    mat3 TBN = mat3(data.tangentView.xyz, bitangent, N);
+    normalView = normalize(TBN * normalMap);
   #else
-    mat3 TBN = mat3(data.tangentView, cross(normalView, data.tangentView), normalView);
-    N = normalize(TBN * normalMap);
-    // TODO: use tangent w
-    normalWorld = vec3((dot(N, normalize(vec3(1.0, 1.0, 1.0))) + 0.5)/ 1.5);
+    //make the output normalView match glTF expected right handed orientation
+    normalMap.y *= -1.0;
+    normalView = perturb(normalMap, N, V, data.texCoord0);
   #endif
 
+  vec3 normalWorld = vec3(data.inverseViewMatrix * vec4(normalView, 0.0));
   data.normalWorld = normalize(normalWorld);
 }
 #endif
@@ -1405,7 +1399,7 @@ void getBaseColorAndMetallicRoughnessFromSpecularGlossines(inout PBRData data) {
     data.roughness = 1.0 - glossiness;
 
     vec4 diffuseRGBA = getDiffuse();
-  	vec3 diffuse = diffuseRGBA.rgb;
+    vec3 diffuse = diffuseRGBA.rgb;
     data.opacity = diffuseRGBA.a;
     float epsilon = 1e-6;
     float a = 0.04;

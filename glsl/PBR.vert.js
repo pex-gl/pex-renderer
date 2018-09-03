@@ -4,8 +4,8 @@ attribute vec3 aPosition;
 attribute vec3 aNormal;
 #endif
 #ifdef USE_TANGENTS
-attribute vec3 aTangent;
-varying vec3 vTangentView;
+attribute vec4 aTangent;
+varying vec4 vTangentView;
 #endif
 #ifdef USE_TEX_COORDS
 attribute vec2 aTexCoord0;
@@ -92,7 +92,7 @@ void main() {
     normal = aNormal;
 #endif
 #ifdef USE_TANGENTS
-    vec3 tangent = aTangent;
+    vec4 tangent = aTangent;
 #endif
 #ifdef USE_TEX_COORDS
     texCoord = aTexCoord0;
@@ -132,7 +132,8 @@ void main() {
 
     vNormalView = vec3(uViewMatrix * skinMat * vec4(normal, 0.0));
     #ifdef USE_TANGENTS
-      vTangentView = vec3(uViewMatrix * skinMat * vec4(tangent, 0.0));
+      vTangentView.xyz = vec4(uViewMatrix * skinMat * vec4(tangent, 0.0));
+      vTangentView.w = tangent.w;
     #endif
     vNormalWorld = normalize(vec3(uInverseViewMatrix * vec4(vNormalView, 0.0)));
 
@@ -140,7 +141,8 @@ void main() {
 #else
     vNormalView = vec3(uNormalMatrix * normal);
     #ifdef USE_TANGENTS
-      vTangentView = vec3(uNormalMatrix * tangent);
+      vTangentView.xyz = vec3(uNormalMatrix * tangent.xyz);
+      vTangentView.w = tangent.w;
     #endif
     vNormalWorld = normalize(vec3(uInverseViewMatrix * vec4(vNormalView, 0.0)));
 
