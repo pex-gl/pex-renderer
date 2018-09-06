@@ -132,6 +132,12 @@ Camera.prototype.set = function (opts) {
     })
   }
 
+  if (this.postprocess && this.ctx.capabilities.maxColorAttachments < 2) {
+    this.postprocess = false
+    console.log('pex-renderer', `disabling postprocess as MAX_COLOR_ATTACHMENTS=${opts.ctx.capabilities.maxColorAttachments}`)
+    console.log('pex-renderer ctx', this.ctx.capabilities)
+  }
+
   Object.keys(opts).forEach((prop) => this.changed.dispatch(prop))
 }
 
