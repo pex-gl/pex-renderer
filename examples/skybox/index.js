@@ -72,6 +72,7 @@ var gui = new GUI(ctx)
 gui.addHeader('Settings')
 gui.addParam('BG Blur', skyboxCmp, 'backgroundBlur', {}, () => {
 })
+gui.addTexture2D('Reflection Probe', reflectionProbe.getComponent('ReflectionProbe')._reflectionMap)
 
 ctx.frame(() => {
   renderer.draw()

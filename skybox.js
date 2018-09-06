@@ -43,7 +43,7 @@ function Skybox (opts) {
   this._skyTexture = ctx.texture2D({
     width: 512,
     height: 256,
-    pixelFormat: this.rgbm ? ctx.PixelFormat.RGBA8 : ctx.PixelFormat.RGBA32F,
+    pixelFormat: this.rgbm ? ctx.PixelFormat.RGBA8 : ctx.PixelFormat.RGBA16F,
     encoding: this.rgbm ? ctx.Encoding.RGBM : ctx.Encoding.Linear,
     min: ctx.Filter.Linear,
     mag: ctx.Filter.Linear

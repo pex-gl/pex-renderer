@@ -72,7 +72,7 @@ function Camera (opts) {
   this.dofRadius = 1
   this.dofDepth = 6.76
   this.exposure = 1
-  this.fxaa = false
+  this.fxaa = true
   this.fog = false
   this.bloom = false
   this.bloomRadius = 1
@@ -154,7 +154,7 @@ Camera.prototype.initPostproces = function () {
     name: 'frameColorTex',
     width: W,
     height: H,
-    pixelFormat: this.rgbm ? ctx.PixelFormat.RGBA8 : ctx.PixelFormat.RGBA32F,
+    pixelFormat: this.rgbm ? ctx.PixelFormat.RGBA8 : ctx.PixelFormat.RGBA16F,
     encoding: this.rgbm ? ctx.Encoding.RGBM : ctx.Encoding.Linear
   })
 
@@ -162,7 +162,7 @@ Camera.prototype.initPostproces = function () {
     name: 'frameColorTex',
     width: W,
     height: H,
-    pixelFormat: this.rgbm ? ctx.PixelFormat.RGBA8 : ctx.PixelFormat.RGBA32F,
+    pixelFormat: this.rgbm ? ctx.PixelFormat.RGBA8 : ctx.PixelFormat.RGBA16F,
     encoding: this.rgbm ? ctx.Encoding.RGBM : ctx.Encoding.Linear
   })
 
@@ -188,7 +188,7 @@ Camera.prototype.initPostproces = function () {
     name: 'frameDofBlurTex',
     width: W,
     height: H,
-    pixelFormat: this.rgbm ? ctx.PixelFormat.RGBA8 : ctx.PixelFormat.RGBA32F,
+    pixelFormat: this.rgbm ? ctx.PixelFormat.RGBA8 : ctx.PixelFormat.RGBA16F,
     encoding: this.rgbm ? ctx.Encoding.RGBM : ctx.Encoding.Linear
   })
 
@@ -196,7 +196,7 @@ Camera.prototype.initPostproces = function () {
     name: 'frameBloomHTex',
     width: W / 2,
     height: H / 2,
-    pixelFormat: this.rgbm ? ctx.PixelFormat.RGBA8 : ctx.PixelFormat.RGBA32F,
+    pixelFormat: this.rgbm ? ctx.PixelFormat.RGBA8 : ctx.PixelFormat.RGBA16F,
     encoding: this.rgbm ? ctx.Encoding.RGBM : ctx.Encoding.Linear
   })
   this._frameBloomHTex.sizeScale = 0.5
@@ -205,7 +205,7 @@ Camera.prototype.initPostproces = function () {
     name: 'frameBloomVTex',
     width: W / 2,
     height: H / 2,
-    pixelFormat: this.rgbm ? ctx.PixelFormat.RGBA8 : ctx.PixelFormat.RGBA32F,
+    pixelFormat: this.rgbm ? ctx.PixelFormat.RGBA8 : ctx.PixelFormat.RGBA16F,
     encoding: this.rgbm ? ctx.Encoding.RGBM : ctx.Encoding.Linear
   })
   this._frameBloomVTex.sizeScale = 0.5
@@ -223,8 +223,8 @@ Camera.prototype.initPostproces = function () {
   ]
 
   ctx.gl.getExtension('OES_texture_float ')
-  this._ssaoKernelMap = ctx.texture2D({ width: 8, height: 8, data: ssaoKernelData, pixelFormat: ctx.PixelFormat.RGBA32F, encoding: ctx.Encoding.Linear, wrap: ctx.Wrap.Repeat })
-  this._ssaoNoiseMap = ctx.texture2D({ width: 128, height: 128, data: ssaoNoiseData, pixelFormat: ctx.PixelFormat.RGBA32F, encoding: ctx.Encoding.Linear, wrap: ctx.Wrap.Repeat, mag: ctx.Filter.Linear, min: ctx.Filter.Linear })
+  this._ssaoKernelMap = ctx.texture2D({ width: 8, height: 8, data: ssaoKernelData, pixelFormat: ctx.PixelFormat.RGBA16F, encoding: ctx.Encoding.Linear, wrap: ctx.Wrap.Repeat })
+  this._ssaoNoiseMap = ctx.texture2D({ width: 128, height: 128, data: ssaoNoiseData, pixelFormat: ctx.PixelFormat.RGBA16F, encoding: ctx.Encoding.Linear, wrap: ctx.Wrap.Repeat, mag: ctx.Filter.Linear, min: ctx.Filter.Linear })
 
   this._drawFrameNormalsFboCommand = {
     name: 'Camera.drawFrameNormals',
