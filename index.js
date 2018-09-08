@@ -276,6 +276,9 @@ Renderer.prototype.getMaterialProgram = function (geometry, material, skin, opti
   if (options.useReflectionProbes) {
     flags.push('#define USE_REFLECTION_PROBES')
   }
+  if (options.useTonemapping) {
+    flags.push('#define USE_TONEMAPPING')
+  }
   flags = flags.join('\n') + '\n'
 
   var vertSrc = flags + (material.vert || PBRVert)
@@ -604,12 +607,17 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
         numSpotLights: spotLights.length,
         numAreaLights: areaLights.length,
         useReflectionProbes: reflectionProbes.length, // TODO: reflection probes true
-        useSSAO: camera.ssao
+        useSSAO: camera.ssao,
+        useTonemapping: !camera.postprocess
       })
     }
 
     if (material.alphaTest !== undefined) {
       sharedUniforms.uAlphaTest = material.alphaTest
+    }
+
+    if (!camera.postprocess) {
+      sharedUniforms.uExposure = camera.exposure
     }
 
     // TODO: shared uniforms HUH?

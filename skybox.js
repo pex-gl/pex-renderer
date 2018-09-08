@@ -35,7 +35,11 @@ function Skybox (opts) {
     attributes: {
       aPosition: ctx.vertexBuffer(skyboxPositions)
     },
-    indices: ctx.indexBuffer(skyboxFaces)
+    indices: ctx.indexBuffer(skyboxFaces),
+    uniforms: {
+      uUseTonemapping: false,
+      uExposure: 1
+    }
   }
 
   var quad = createQuad()
@@ -123,7 +127,9 @@ Skybox.prototype.draw = function (camera, opts) {
       uEnvMap: texture,
       uEnvMapEncoding: texture.encoding,
       uOutputEncoding: opts.outputEncoding,
-      uBackgroundBlur: backgroundBlur
+      uBackgroundBlur: backgroundBlur,
+      uUseTonemapping: opts.backgroundMode ? !camera.postprocess : false,
+      uExposure: opts.backgroundMode ? camera.exposure : 1
     }
   })
 }

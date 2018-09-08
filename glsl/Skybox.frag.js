@@ -1,6 +1,7 @@
 const envMapEquirect = require('./lib/glsl-envmap-equirect/index.glsl.js');
 const encode = require('./encode.glsl.js')
 const decode = require('./decode.glsl.js')
+const tonemapUncharted2 = require('./lib/glsl-tonemap-uncharted2/index.glsl.js')
 
 module.exports = `
 #ifdef GL_ES
@@ -13,6 +14,13 @@ precision highp float;
 ${envMapEquirect}
 ${encode}
 ${decode}
+
+#define USE_TONEMAPPING
+uniform bool uUseTonemapping;
+#ifdef USE_TONEMAPPING
+${tonemapUncharted2}
+uniform float uExposure;
+#endif
 
 //assuming texture in Linear Space
 //most likely HDR or Texture2D with sRGB Ext
@@ -59,6 +67,12 @@ void main() {
     } else {
       color = vec4(getIrradiance(N), 1.0);
     }
+#ifdef USE_TONEMAPPING
+  if (uUseTonemapping) {
+    color.rgb *= uExposure;
+    color.rgb = tonemapUncharted2(color.rgb);
+  }
+#endif // USE_TONEMAPPING
     gl_FragData[0] = encode(color, uOutputEncoding);
 #ifdef USE_DRAW_BUFFERS
     gl_FragData[1] = vec4(0.0);

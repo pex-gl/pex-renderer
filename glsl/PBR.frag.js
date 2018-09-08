@@ -1,4 +1,5 @@
 // TODO: this is already browserified, need to split back to chunks
+const tonemapUncharted2 = require('./lib/glsl-tonemap-uncharted2/index.glsl.js')
 module.exports = `
 #ifdef GL_ES
   #extension GL_OES_standard_derivatives : require
@@ -10,6 +11,11 @@ module.exports = `
 
 #ifdef GL_ES
 precision mediump float;
+#endif
+
+#ifdef USE_TONEMAPPING
+${tonemapUncharted2}
+uniform float uExposure;
 #endif
 
 varying vec3 vNormalWorld;
@@ -1548,6 +1554,10 @@ void main() {
   }
 #endif
   vec3 color = data.emissiveColor + ao * data.indirectDiffuse + ao * data.indirectSpecular + data.directDiffuse + data.directSpecular;
+#ifdef USE_TONEMAPPING
+  color.rgb *= uExposure;
+  color.rgb = tonemapUncharted2(color.rgb);
+#endif // USE_TONEMAPPING
 #endif // USE_USE_UNLIT_WORKFLOW
   gl_FragData[0] = encode(vec4(color, 1.0), uOutputEncoding);
 #ifdef USE_DRAW_BUFFERS
