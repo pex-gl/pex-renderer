@@ -18,7 +18,8 @@ const camera = renderer.entity([
     fov: Math.PI / 3,
     aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
     near: 0.1,
-    far: 100
+    far: 100,
+    postprocess: false
   }),
   renderer.orbiter({
     position: [0, 0, 3]
@@ -64,14 +65,17 @@ loadBinary(`assets/Mono_Lake_B.hdr`, (err, buf) => {
     flipY: true
   })
   skybox.getComponent('Skybox').set({ texture: panorama })
-  skybox.getComponent('Skybox').set({ reflectionProbe: reflectionProbe.getComponent('ReflectionProbe') })
+  reflectionProbe.getComponent('ReflectionProbe').set({ dirty: true })
 })
 
 var skyboxCmp = skybox.getComponent('Skybox')
+var materialCmp = geom.getComponent('Material')
+var cameraCmp = camera.getComponent('Camera')
 var gui = new GUI(ctx)
 gui.addHeader('Settings')
-gui.addParam('BG Blur', skyboxCmp, 'backgroundBlur', {}, () => {
-})
+gui.addParam('BG Blur', skyboxCmp, 'backgroundBlur', {}, () => { })
+gui.addParam('Exposure', cameraCmp, 'exposure', { min: 0, max: 2 }, () => { })
+gui.addParam('Roughness', materialCmp, 'roughness', {}, () => { })
 gui.addTexture2D('Reflection Probe', reflectionProbe.getComponent('ReflectionProbe')._reflectionMap)
 
 ctx.frame(() => {
