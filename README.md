@@ -305,7 +305,7 @@ orbiter = renderer.orbiter({
   position: [1, 1, 1],
   lat: 0
   lon: Math.PI / 2,
-  easing: 1
+  easing: 0.1
 })
 ```
 

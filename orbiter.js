@@ -55,7 +55,7 @@ function Orbiter (opts) {
     lon: 0, // XZ
     currentLat: 0,
     currentLon: 0,
-    easing: 1,
+    easing: 0.1,
     element: opts.element || window,
     width: 0,
     height: 0,
