@@ -10,7 +10,12 @@ const toRadians = require('pex-math/utils').toRadians
 const toDegrees = require('pex-math/utils').toDegrees
 const latLonToXyz = require('latlon-to-xyz')
 const xyzToLatLon = require('xyz-to-latlon')
-const offset = require('mouse-event-offset')
+const eventOffset = require('mouse-event-offset')
+
+function offset (e, target) {
+  if (e.touches) return eventOffset(e.touches[0], target)
+  else return eventOffset(e, target)
+}
 
 function getViewRay (camera, x, y, windowWidth, windowHeight) {
   if (camera.frustum) {
@@ -281,9 +286,15 @@ Orbiter.prototype.setup = function () {
     onMouseDown(e)
   }
 
+  function onTouchMove (e) {
+    e.preventDefault()
+    onMouseMove(e)
+  }
+
   this._onMouseDown = onMouseDown
   this._onTouchStart = onTouchStart
   this._onMouseMove = onMouseMove
+  this._onTouchMove = onTouchMove
   this._onMouseUp = onMouseUp
   this._onWheel = onWheel
 
@@ -291,7 +302,7 @@ Orbiter.prototype.setup = function () {
   this.element.addEventListener('touchstart', onTouchStart)
   this.element.addEventListener('wheel', onWheel)
   window.addEventListener('mousemove', onMouseMove)
-  window.addEventListener('touchmove', onMouseMove)
+  window.addEventListener('touchmove', onTouchMove, { passive: false })
   window.addEventListener('mouseup', onMouseUp)
   window.addEventListener('touchend', onMouseUp)
 
