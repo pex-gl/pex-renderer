@@ -469,9 +469,14 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
     sharedUniforms.uInverseViewMatrix = mat4.invert(mat4.copy(camera.viewMatrix)) // TODO: GC
   }
 
-  if (camera && camera.ssao) {
-    sharedUniforms.uAO = camera._frameAOTex
-    sharedUniforms.uScreenSize = [ camera.viewport[2], camera.viewport[3] ] // TODO: should this be camera viewport size?
+  if (camera) {
+    if (camera.ssao) {
+      sharedUniforms.uAO = camera._frameAOTex
+      sharedUniforms.uScreenSize = [ camera.viewport[2], camera.viewport[3] ] // TODO: should this be camera viewport size?
+    }
+    if (!camera.postprocess) {
+      sharedUniforms.uExposure = camera.exposure
+    }
   }
 
   ambientLights.forEach(function (light, i) {
@@ -614,10 +619,6 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
 
     if (material.alphaTest !== undefined) {
       sharedUniforms.uAlphaTest = material.alphaTest
-    }
-
-    if (!camera.postprocess) {
-      sharedUniforms.uExposure = camera.exposure
     }
 
     // TODO: shared uniforms HUH?
