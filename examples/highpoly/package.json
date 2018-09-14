@@ -1,0 +1,22 @@
+{
+  "name": "highpoly",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "budo index.js --open --live"
+  },
+  "author": "Marcin Ignac <marcin.ignac@gmail.com>",
+  "license": "ISC",
+  "dependencies": {
+    "geom-edges": "^1.2.0",
+    "geom-normals": "^1.0.0",
+    "pex-context": "^2.6.0",
+    "pex-gui": "^2.2.0",
+    "pex-math": "^3.0.0-0",
+    "pex-random": "^1.0.1",
+    "primitive-cube": "^2.0.1",
+    "primitive-icosphere": "^1.0.2",
+    "primitive-sphere": "^3.0.0"
+  }
+}
