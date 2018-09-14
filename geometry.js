@@ -90,25 +90,27 @@ Geometry.prototype.set = function (opts) {
       }
       attrib.type = attrib.buffer.type
     }
+  }
 
+  for (let prop in opts) {
     if (IndicesMap[prop]) {
+      // this would be wrong estimate for interlaved geometry but still should work
+      const numPositions = this._attributes['aPosition'].buffer.length / 3
       const val = opts[prop]
       let indices = this._indices
+      const type = (numPositions >= 65536) ? ctx.DataType.Uint32 : ctx.DataType.Uint16
       if (!indices) {
         indices = this._indices = {
           buffer: null,
-          offset: 0,
-          type: ctx.DataType.Uint16
+          offset: 0
         }
       }
       const data = (val.length !== undefined) ? val : val.data
       if (data) {
         if (!indices.buffer) {
-          indices.buffer = ctx.indexBuffer(data)
-          // TODO: replace with ctx.DataType.fromArray(data)
-          indices.type = indices.buffer.type // FIXE: deprecated
+          indices.buffer = ctx.indexBuffer({ data: data, type: type })
         } else {
-          ctx.update(indices.buffer, { data: data })
+          ctx.update(indices.buffer, { data: data, type: type })
         }
       } else if (val.buffer) {
         // TODO: should we delete previous buffer?
