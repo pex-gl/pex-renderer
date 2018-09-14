@@ -64,8 +64,6 @@ Geometry.prototype.set = function (opts) {
       if (data) {
         if (!attrib.buffer) {
           attrib.buffer = ctx.vertexBuffer(data)
-          // TODO: replace with ctx.DataType.fromArray(data)
-          attrib.type = attrib.buffer.type // FIXE: deprecated
         } else {
           ctx.update(attrib.buffer, { data: data })
         }
@@ -90,9 +88,7 @@ Geometry.prototype.set = function (opts) {
       if (val.divisor !== undefined) {
         attrib.divisor = val.divisor
       }
-      if (val.type !== undefined) {
-        attrib.type = val.type
-      }
+      attrib.type = attrib.buffer.type
     }
 
     if (IndicesMap[prop]) {
@@ -127,6 +123,7 @@ Geometry.prototype.set = function (opts) {
       if (val.count !== undefined) {
         indices.count = val.count
       }
+      indices.type = indices.buffer.type
     }
 
     this.changed.dispatch(prop)
