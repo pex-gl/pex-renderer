@@ -1442,13 +1442,9 @@ void main() {
     #ifdef USE_TANGENTS
       data.tangentView = normalize(vTangentView);
     #endif
-    if (!gl_FrontFacing) {
-      data.normalView *= -1.0;
-    }
+    data.normalView *= float(gl_FrontFacing) * 2.0 - 1.0;
     data.normalWorld = normalize(vNormalWorld);
-    if (!gl_FrontFacing) {
-      data.normalWorld *= -1.0;
-    }
+    data.normalWorld *= float(gl_FrontFacing) * 2.0 - 1.0;
     data.eyeDirView = normalize(-vPositionView); //TODO: normalization needed?
     data.eyeDirWorld = vec3(uInverseViewMatrix * vec4(data.eyeDirView, 0.0));
     data.indirectDiffuse = vec3(0.0);
