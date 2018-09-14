@@ -28,7 +28,7 @@ const camera = renderer.entity([
   }),
   renderer.orbiter({
     easing: 0.1,
-    distance: 5
+    distance: 3
   })
 ])
 renderer.add(camera)
@@ -67,7 +67,8 @@ gui.addLabel('Sphere verts: ' + g.positions.length)
 
 const skybox = renderer.entity([
   renderer.skybox({
-    sunPosition: [1, 1, 1]
+    sunPosition: [1, 1, 1],
+    backgroundBlur: 1
   })
 ])
 renderer.add(skybox)

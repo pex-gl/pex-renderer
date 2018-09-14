@@ -10,7 +10,7 @@
   "license": "ISC",
   "dependencies": {
     "is-browser": "^2.0.1",
-    "pex-context": "^2.6.0",
+    "pex-context": "^2.7.0",
     "pex-io": "^1.5.2"
   }
 }

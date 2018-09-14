@@ -16,7 +16,7 @@
     "geom-parse-obj": "^1.0.0",
     "is-browser": "^2.0.1",
     "pex-cam": "^2.6.0",
-    "pex-context": "^2.6.0",
+    "pex-context": "^2.7.0",
     "pex-draw": "^1.0.0-beta.2",
     "pex-geom": "^2.0.2",
     "pex-gui": "^2.2.0",

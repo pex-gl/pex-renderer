@@ -3,7 +3,7 @@ const createContext = require('pex-context')
 const createRenderer = require('../..')
 const createSphere = require('primitive-sphere')
 
-const ctx = createContext({ width: 800, height: 600 })
+const ctx = createContext({})
 
 const renderer = createRenderer({
   ctx: ctx

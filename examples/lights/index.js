@@ -6,13 +6,10 @@ const createCube = require('primitive-cube')
 const createGUI = require('pex-gui')
 const random = require('pex-random')
 const createContext = require('pex-context')
-const io = require('pex-io')
-const isBrowser = require('is-browser')
 const dragon = require('stanford-dragon/3')
 const normals = require('angle-normals')
 const centerAndNormalize = require('geom-center-and-normalize')
 const gridCells = require('grid-cells')
-const path = require('path')
 dragon.positions = centerAndNormalize(dragon.positions)
 dragon.normals = normals(dragon.cells, dragon.positions)
 dragon.uvs = dragon.positions.map(() => [0, 0])
@@ -22,8 +19,6 @@ ctx.gl.getExtension('EXT_shader_texture_lod')
 ctx.gl.getExtension('OES_standard_derivatives')
 ctx.gl.getExtension('WEBGL_draw_buffers')
 ctx.gl.getExtension('OES_texture_float')
-
-const ASSETS_DIR = isBrowser ? 'assets' : path.join(__dirname, 'assets')
 
 window.addEventListener('keydown', (e) => {
   if (e.key === 'g') gui.toggleEnabled()
@@ -52,36 +47,6 @@ const renderer = createRenderer({
 })
 
 const gui = createGUI(ctx)
-// gui.setEnabled(false)
-gui.addHeader('Sun')
-gui.addParam('Sun Elevation', State, 'elevation', { min: -90, max: 180 }, updateSunPosition)
-gui.addParam('Sun Azimuth', State, 'azimuth', { min: -180, max: 180 }, updateSunPosition)
-
-function updateSunPosition () {
-  const elevationMat = mat4.create()
-  const rotationMat = mat4.create()
-  mat4.setRotation(elevationMat, State.elevation / 180 * Math.PI, [0, 0, 1])
-  mat4.setRotation(rotationMat, State.azimuth / 180 * Math.PI, [0, 1, 0])
-
-  let sunPosition = [10, 0, 0]
-  vec3.multMat4(sunPosition, elevationMat)
-  vec3.multMat4(sunPosition, rotationMat)
-
-  if (State.sun) {
-    var sunDir = State.sun.direction
-    vec3.set(sunDir, [0, 0, 0])
-    vec3.sub(sunDir, sunPosition)
-    State.sun.set({ direction: sunDir })
-  }
-
-  if (State.skybox) {
-    State.skybox.set({ sunPosition: State.sunPosition })
-  }
-
-  if (State.reflectionProbe) {
-    State.reflectionProbe.dirty = true // FIXME: hack
-  }
-}
 
 const W = ctx.gl.drawingBufferWidth
 const H = ctx.gl.drawingBufferHeight
@@ -94,7 +59,6 @@ let cells = gridCells(W, H, nW, nH, 0).map((cell) => {
 })
 
 function initCamera () {
-  var cameraCmp0 = null
   cells.forEach((cell, cellIndex) => {
     const tags = ['cell' + cellIndex]
     const cameraCmp = renderer.camera({
@@ -108,54 +72,11 @@ function initCamera () {
       ssaoRadius: 2,
       ssaoBlurRadius: 0.75
     })
-    if (cellIndex == 0) cameraCmp0 = cameraCmp
     renderer.add(renderer.entity([
       cameraCmp,
       renderer.orbiter()
     ], tags))
   })
-
-  gui.addParam('FXAA', cameraCmp0, 'fxaa')
-  gui.addParam('SSAO', cameraCmp0, 'ssao')
-  gui.addParam('SSAO radius', cameraCmp0, 'ssaoRadius', { min: 0, max: 5 })
-  gui.addParam('SSAO blur', cameraCmp0, 'ssaoBlurRadius', { min: 0, max: 5 })
-
-  gui.addParam('Exposure',  State, 'exposure', { min: 0.01, max: 5 }, () => {
-    renderer.getComponents('Camera').forEach((camera) => {
-      camera.set({ exposure: State.exposure })
-    })
-  })
-// gui.addParam('Shadow Bias', renderer._state, 'bias', { min: 0.001, max: 0.1 })
-// gui.addParam('SSAO', renderer._state, 'ssao')
-// gui.addParam('SSAO Sharpness', renderer._state, 'ssaoSharpness', { min: 0, max: 100 })
-// gui.addParam('SSAO Radius', renderer._state, 'ssaoRadius', { min: 0, max: 1 })
-
-}
-
-function imageFromFile (file, options) {
-  const tex = ctx.texture2D({
-    width: 1,
-    height: 1,
-    pixelFormat: ctx.PixelFormat.RGBA8,
-    encoding: ctx.Encoding.SRGB
-  })
-  io.loadImage(file, function (err, image, encoding) {
-    console.log('image loaded', file)
-    if (err) console.log(err)
-    ctx.update(tex, {
-      data: image,
-      width: image.width,
-      height: image.height,
-      wrap: ctx.Wrap.Repeat,
-      flipY: true,
-      min: ctx.Filter.Linear,
-      mag: ctx.Filter.LinearMipmapLinear,
-      pixelFormat: ctx.PixelFormat.RGBA8,
-      encoding: encoding
-    })
-    ctx.update(tex, { mipmap: true })
-  }, true)
-  return tex
 }
 
 function initMeshes () {
@@ -170,11 +91,12 @@ function initMeshes () {
     })
   ]))
 
+  // floor
   renderer.add(renderer.entity([
     renderer.transform({
       position: [0, -0.42, 0]
     }),
-    renderer.geometry(createCube(2, 0.1, 2)),
+    renderer.geometry(createCube(5, 0.1, 5)),
     renderer.material({
       baseColor: [1, 1, 1, 1],
       roughness: 2 / 5,
@@ -294,7 +216,8 @@ function initSky () {
     directionalLight
   ], ['cell0']))
 
-  gui.addTexture2D('Light', directionalLight._shadowMap)
+  gui.addHeader('Directional').setPosition(10, 10)
+  gui.addTexture2D('Directional Shadowmap', directionalLight._shadowMap)
 
   var numLights = 0
   for (var i = 0; i < numLights; i++) {
@@ -341,7 +264,9 @@ function initSky () {
     [0, 0, 0], [0, spotLightRadius, spotLight.distance],
     [0, 0, 0], [0, -spotLightRadius, spotLight.distance]
   ])
-  .concat(makeCircle({ radius: spotLightRadius, center: [0, 0, spotLight.distance], steps: 64, axis: [0, 1]}))
+  .concat(makeCircle({ radius: spotLightRadius, center: [0, 0, spotLight.distance], steps: 64, axis: [0, 1] }))
+
+  gui.addHeader('Spot').setPosition(W / 2 + 10, 10)
   gui.addParam('Spotlight angle', spotLight, 'angle', { min: 0, max: Math.PI / 2 }, () => {
     spotLight.set({ angle: spotLight.angle })
   })
@@ -381,6 +306,8 @@ function initSky () {
     [0, 0, -0.3], [0, 0, -0.6]
   ])
 
+  gui.addHeader('Point').setPosition(10, H / 2 + 10)
+
   renderer.add(renderer.entity([
     renderer.transform({
       position: [1, 1, 1]
@@ -401,7 +328,10 @@ function initSky () {
     intensity: 2,
     castShadows: true
   })
-  const areaLightGizmoPositions = makeQuad({ width: 1, height: 1})
+  const areaLightGizmoPositions = makeQuad({ width: 1, height: 1 })
+
+  gui.addHeader('Area').setPosition(W / 2 + 10, H / 2 + 10)
+
   renderer.add(renderer.entity([
     renderer.transform({
       scale: [2, 0.5, 1],
@@ -418,19 +348,6 @@ function initSky () {
     }),
     areaLight
   ], ['cell3']))
-
-  const skybox = State.skybox = renderer.skybox({
-    sunPosition: vec3.normalize([1, 1, 1])
-  })
-  // renderer.add(renderer.entity([ skybox ]))
-
-  // currently this also includes light probe functionality
-  const reflectionProbe = State.reflectionProbe = renderer.reflectionProbe({
-    origin: [0, 0, 0],
-    size: [10, 10, 10],
-    boxProjection: false
-  })
-  // renderer.add(renderer.entity([ reflectionProbe ]))
 }
 
 initCamera()
@@ -442,11 +359,8 @@ let debugOnce = false
 window.addEventListener('keydown', (e) => {
   if (e.key === 'd') {
     debugOnce = true
-    updateSunPosition()
   }
 })
-
-updateSunPosition()
 
 ctx.frame(() => {
   ctx.debug(debugOnce)
