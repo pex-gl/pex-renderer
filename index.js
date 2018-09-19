@@ -196,14 +196,23 @@ Renderer.prototype.getMaterialProgram = function (geometry, material, skin, opti
   }
 
   if (options.depthPassOnly) {
-    const hash = 'DEPTH_PASS_ONLY_' + flags.join('-')
-    let program = this._programCache[hash]
+    flags.push('#define DEPTH_PASS_ONLY')
+    flags.push('#define SHADOW_QUALITY ' + (0))
+    flags.push('#define NUM_AMBIENT_LIGHTS ' + (0))
+    flags.push('#define NUM_DIRECTIONAL_LIGHTS ' + (0))
+    flags.push('#define NUM_POINT_LIGHTS ' + (0))
+    flags.push('#define NUM_SPOT_LIGHTS ' + (0))
+    flags.push('#define NUM_AREA_LIGHTS ' + (0))
     flags = flags.join('\n') + '\n'
+    var vertSrc = flags + (material.vert || DEPTH_PASS_VERT)
+    var fragSrc = flags + (material.frag || DEPTH_PASS_FRAG)
+    var hash = vertSrc + fragSrc
+    let program = this._programCache[hash]
     if (!program) {
       try {
         program = this._programCache[hash] = ctx.program({
-          vert: flags + DEPTH_PASS_VERT,
-          frag: flags + DEPTH_PASS_FRAG
+          vert: vertSrc,
+          frag: fragSrc
         })
       } catch (e) {
         console.log('pex-renderer glsl error', e)
@@ -591,7 +600,7 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
 
     if (material.uniforms) {
       for (var uniformName in material.uniforms) {
-        cachedUniforms[uniformName] = material.uniforms[uniformName]
+        sharedUniforms[uniformName] = material.uniforms[uniformName]
       }
     }
 
