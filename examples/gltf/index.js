@@ -203,6 +203,7 @@ async function init () {
     let modelName = 'DamagedHelmet'
     modelName = 'NormalTangentMirrorTest'
     modelName = 'NormalTangentTest'
+    modelName = 'FlightHelmet'
     loadScene(`${modelsPath}/${modelName}/glTF/${modelName}.gltf`, onSceneLoaded)
   }
 }

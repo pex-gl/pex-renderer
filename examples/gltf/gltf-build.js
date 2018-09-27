@@ -176,6 +176,23 @@ function handleMaterial (material, gltf, ctx, renderer) {
     cullFaceEnabled: !material.doubleSided
   })
 
+  if (material.alphaMode === "BLEND") {
+    // TODO: support alpha cutout
+    materialCmp.set({
+      depthWrite: false,
+      blend: true,
+      blendSrcRGBFactor: ctx.BlendFactor.SrcAlpha,
+      blendSrcAlphaFactor: ctx.BlendFactor.One,
+      blendDstRGBFactor: ctx.BlendFactor.OneMinusSrcAlpha,
+      blendDstAlphaFactor: ctx.BlendFactor.One
+    })
+  }
+  if (material.alphaMode === "MASK" && material.alphaCutoff) {
+    materialCmp.set({
+      alphaTest: material.alphaCutoff
+    })
+  }
+
   const pbrMetallicRoughness = material.pbrMetallicRoughness
   if (pbrMetallicRoughness) {
     log('pbrMetallicRoughness')
