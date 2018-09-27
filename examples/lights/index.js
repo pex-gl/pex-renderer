@@ -305,13 +305,16 @@ function initSky () {
     [0, 0, 0.3], [0, 0, 0.6],
     [0, 0, -0.3], [0, 0, -0.6]
   ])
+  const pointLightTransform = renderer.transform({
+    position: [1, 1, 1]
+  })
 
   gui.addHeader('Point').setPosition(10, H / 2 + 10)
+  gui.addTextureCube('Point Shadowmap', pointLight._shadowCubemap)
+  gui.addParam('Point light position', pointLightTransform, 'position', { min: -2, max: 2 })
 
   renderer.add(renderer.entity([
-    renderer.transform({
-      position: [1, 1, 1]
-    }),
+    pointLightTransform,
     renderer.geometry({
       positions: pointLightGizmoPositions,
       primitive: ctx.Primitive.Lines,

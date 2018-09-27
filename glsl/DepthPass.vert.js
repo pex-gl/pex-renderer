@@ -38,6 +38,7 @@ float uDisplacementShadowStretch = 1.3;
 
 varying vec3 vNormalView;
 varying vec2 vTexCoord0;
+varying vec3 vPositionView;
 
 #ifdef GL_ES
 mat4 transpose(mat4 m) {
@@ -99,6 +100,7 @@ void main() {
     position.xyz += aOffset;
 #endif
 
+    vec4 positionView = vec4(0.0);
 #ifdef USE_SKIN
      mat4 skinMat =
         aWeight.x * uJointMat[int(aJoint.x)] +
@@ -106,10 +108,12 @@ void main() {
         aWeight.z * uJointMat[int(aJoint.z)] +
         aWeight.w * uJointMat[int(aJoint.w)];
 
-    gl_Position = uProjectionMatrix * uViewMatrix * skinMat * position;
+    positionView = uViewMatrix * skinMat * position;
 #else
-    gl_Position = uProjectionMatrix * uViewMatrix * uModelMatrix * position;
+    positionView = uViewMatrix * uModelMatrix * position;
 #endif
+    gl_Position = uProjectionMatrix * positionView;
+    vPositionView = positionView.xyz;
     vNormalView = normalize(uNormalMatrix * normal);
 }
 `
