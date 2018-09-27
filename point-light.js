@@ -19,6 +19,13 @@ function PointLight (opts) {
     pixelFormat: this.rgbm ? ctx.PixelFormat.RGBA8 : ctx.PixelFormat.RGBA16F,
     encoding: this.rgbm ? ctx.Encoding.RGBM : ctx.Encoding.Linear
   })
+  this._shadowMap = ctx.texture2D({
+    name: 'directionalLightShadowMap',
+    width: 512,
+    height: 512,
+    pixelFormat: ctx.PixelFormat.Depth,
+    encoding: ctx.Encoding.Linear
+  })
 
   const sides = this._sides = [
     { eye: [0, 0, 0], target: [1, 0, 0], up: [0, -1, 0] },
@@ -34,6 +41,7 @@ function PointLight (opts) {
       name: 'ReflectionProbe.sidePass',
       pass: ctx.pass({
         name: 'ReflectionProbe.sidePass',
+        depth: this._shadowMap,
         color: [{ texture: shadowCubemap, target: ctx.gl.TEXTURE_CUBE_MAP_POSITIVE_X + i }],
         clearColor: [0, 0, 0, 1],
         clearDepth: 1
