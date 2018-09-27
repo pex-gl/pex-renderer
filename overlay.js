@@ -11,6 +11,7 @@ function Overlay (opts) {
   this.width = 1
   this.height = 1
   this.texture = null
+  this.alpha = 1
   this.set(opts)
 }
 
