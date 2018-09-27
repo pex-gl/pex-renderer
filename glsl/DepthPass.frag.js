@@ -61,6 +61,8 @@ void main() {
     normal *= -1.0;
   }
   gl_FragColor = vec4(normal * 0.5 + 0.5, 1.0);
-  gl_FragColor = vec4(packDepth(length(vPositionView)));
+  float far = 10.0;
+  gl_FragColor = packDepth(length(vPositionView) / far);
+  // gl_FragColor = vec4(length(vPositionView));
 }
 `

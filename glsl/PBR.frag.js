@@ -490,8 +490,10 @@ void EvaluatePointLight(inout PBRData data, PointLight light, int i) {
   
   // TODO: hardcoded shadowmap index
   vec3 N = -normalize(data.lightWorld);
-  float depth = unpackDepth(textureCube(uPointLightShadowMaps[0], N));
-  if (depth < dist - 0.01) {
+  float far = 10.0;
+  float depth = unpackDepth(textureCube(uPointLightShadowMaps[0], N)) * far;
+  // float depth = textureCube(uPointLightShadowMaps[0], N).r;
+  if (dist - 0.05 > depth) {
     illuminated = 0.0;
   }
   // illuminated = (depth - dist);
@@ -499,8 +501,8 @@ void EvaluatePointLight(inout PBRData data, PointLight light, int i) {
 
   // data.directDiffuse = vec3(fract(depth));
   // data.directDiffuse = vec3(fract(dist));
-  data.directDiffuse = vec3(illuminated);
-  return;
+  // data.directDiffuse = vec3(illuminated);
+  // return;
 
   if (illuminated > 0.0) {
     data.lightWorld /= dist;
