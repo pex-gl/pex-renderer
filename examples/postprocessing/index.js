@@ -49,14 +49,16 @@ const renderer = createRenderer({
 })
 
 const gui = createGUI(ctx)
-gui.addHeader('Sun')
-gui.addParam('Sun Elevation', State, 'elevation', { min: -90, max: 180 }, updateSunPosition)
-gui.addParam('Sun Azimuth', State, 'azimuth', { min: -180, max: 180 }, updateSunPosition)
 
-var sunEntity = null
-var reflectionProbeEntity = null
-var skyboxEntity = null
-var cameraEntity = null
+let debugOnce = false
+let sunEntity = null
+let reflectionProbeEntity = null
+let skyboxEntity = null
+let cameraEntity = null
+let pointLight1 = null
+let areaLight = null
+let panorama = null
+let entities = []
 
 function updateSunPosition () {
   mat4.identity(State.elevationMat)
@@ -92,25 +94,6 @@ function initCamera () {
       position: [0, 2, 20]
     })
   ]))
-
-  const cameraCmp = cameraEntity.getComponent('Camera')
-
-  gui.addHeader('Postprocess').setPosition(180, 10)
-  gui.addParam('Expsure', cameraCmp, 'exposure', { min: 0, max: 5 })
-  gui.addParam('SSAO', cameraCmp, 'ssao')
-  gui.addParam('SSAO radius', cameraCmp, 'ssaoRadius', { min: 0, max: 30 })
-  gui.addParam('SSAO intensity', cameraCmp, 'ssaoIntensity', { min: 0, max: 10 })
-  gui.addParam('SSAO bias', cameraCmp, 'ssaoBias', { min: 0, max: 1 })
-  gui.addParam('SSAO blur radius', cameraCmp, 'ssaoBlurRadius', { min: 0, max: 5 })
-  gui.addParam('SSAO blur sharpness', cameraCmp, 'ssaoBlurSharpness', { min: 0, max: 20 })
-  gui.addParam('Postprocess', cameraCmp, 'postprocess')
-  gui.addParam('DOF', cameraCmp, 'dof')
-  gui.addParam('DOF Iterations', cameraCmp, 'dofIterations', { min: 1, max: 5, step: 1 })
-  gui.addParam('DOF Depth', cameraCmp, 'dofDepth', { min: 0, max: 20 })
-  gui.addParam('DOF Range', cameraCmp, 'dofRange', { min: 0, max: 20 })
-  gui.addParam('DOF Radius', cameraCmp, 'dofRadius', { min: 0, max: 20 })
-  gui.addParam('FXAA', cameraCmp, 'fxaa')
-  gui.addTexture2D('Depth', cameraCmp._frameDepthTex).setPosition(180 * 2, 10)
 }
 
 const ASSETS_DIR = isBrowser ? 'assets' : `${__dirname}/assets`
@@ -120,12 +103,12 @@ function initMeshes () {
   const normalMap = imageFromFile(ASSETS_DIR + '/plastic-normal.png', { encoding: ctx.Encoding.Linear })
   const metallicMap = imageFromFile(ASSETS_DIR + '/plastic-metallic.png', { encoding: ctx.Encoding.Linear })
   const roughnessMap = imageFromFile(ASSETS_DIR + '/plastic-roughness.png', { encoding: ctx.Encoding.Linear })
+  const alphaMap = imageFromFile(ASSETS_DIR + '/checker.png', { encoding: ctx.Encoding.Linear })
   const groundCube = createRoundedCube(1, 1, 1, 20, 20, 20, 0.01)
   const roundedCube = createRoundedCube(1, 1, 1, 20, 20, 20, 0.2)
   const capsule = createCapsule(0.3)
   const sphere = createSphere(0.5)
   const geometries = [capsule, roundedCube, sphere]
-  const entities = []
 
   random.seed(14)
 
@@ -155,6 +138,8 @@ function initMeshes () {
       baseColor: [0.15, 0.15, 0.2, 1.0],
       roughness: 1,
       metallic: 0,
+      // alphaMap: alphaMap,
+      // alphaTest: 0.5,
       castShadows: true,
       receiveShadows: true
     })
@@ -203,16 +188,6 @@ function initMeshes () {
       renderer.add(entity)
     }
   }
-  gui.addHeader('Material').setPosition(10, 150)
-  gui.addParam('Roughness', State, 'roughness', {}, () => {
-    entities.forEach((entity) => { entity.getComponent('Material').set({ roughness: State.roughness }) })
-  })
-  gui.addParam('Metallic', State, 'metallic', {}, () => {
-    entities.forEach((entity) => { entity.getComponent('Material').set({ metallic: State.metallic }) })
-  })
-  gui.addParam('Base Color', State, 'baseColor', { type: 'color' }, () => {
-    entities.forEach((entity) => { entity.getComponent('Material').set({ baseColor: State.baseColor }) })
-  })
 }
 
 function initSky (panorama) {
@@ -248,7 +223,7 @@ function initSky (panorama) {
 }
 
 function initLights () {
-  const pointLight1 = renderer.entity([
+  pointLight1 = renderer.entity([
     renderer.geometry(createSphere(0.2)),
     renderer.material({
       baseColor: [0, 0, 0, 1],
@@ -265,11 +240,7 @@ function initLights () {
   ])
   renderer.add(pointLight1)
 
-  gui.addParam('Light 1 Pos', pointLight1.transform, 'position', { min: -5, max: 5 }, (value) => {
-    pointLight1.transform.set({ position: value })
-  })
-
-  const areaLight = renderer.entity([
+  areaLight = renderer.entity([
     renderer.geometry(createCube()),
     renderer.material({
       baseColor: [0, 0, 0, 1],
@@ -287,38 +258,89 @@ function initLights () {
     })
   ])
   renderer.add(areaLight)
-  gui.addParam('Area Light 1 Col', areaLight.getComponent('AreaLight'), 'color', { type: 'color' }, (value) => {
-    areaLight.getComponent('AreaLight').set({ color: value })
-    areaLight.getComponent('Material').set({ emissiveColor: value })
-  })
 }
 
 function imageFromFile (file, options) {
-  console.log('loading', file)
+  // console.log('loading', file)
   const tex = ctx.texture2D({
-    data: [],
-    width: 0,
-    height: 0,
+    data: [0, 0, 0, 0],
+    width: 1,
+    height: 1,
     pixelFormat: ctx.PixelFormat.RGBA8,
     encoding: options.encoding,
     wrap: ctx.Wrap.Repeat,
     flipY: true,
-    min: ctx.Filter.Linear,
-    mag: ctx.Filter.Linear,
+    min: ctx.Filter.LinearMipmapLinear,
+    mipmap: true,
     aniso: 16
   })
   io.loadImage(file, function (err, image) {
-    console.log('image loaded', file)
+    // console.log('image loaded', file)
     if (err) console.log(err)
     ctx.update(tex, {
       data: image,
       width: image.width,
       height: image.height,
-      flipY: true
+      mipmap: true,
+      min: ctx.Filter.LinearMipmapLinear
     })
-    ctx.update(tex, { mipmap: true })
   }, true)
   return tex
+}
+
+function initGUI () {
+  const cameraCmp = cameraEntity.getComponent('Camera')
+
+  // Scene
+  gui.addTab('Scene')
+  gui.addColumn('Environment')
+  gui.addHeader('Sun')
+  gui.addParam('Sun Elevation', State, 'elevation', { min: -90, max: 180 }, updateSunPosition)
+  gui.addParam('Sun Azimuth', State, 'azimuth', { min: -180, max: 180 }, updateSunPosition)
+  gui.addHeader('Panorama')
+  gui.addTexture2D('Env map', panorama)
+
+  gui.addColumn('Material')
+  gui.addParam('Base Color', State, 'baseColor', { type: 'color' }, () => {
+    entities.forEach((entity) => { entity.getComponent('Material').set({ baseColor: State.baseColor }) })
+  })
+  gui.addParam('Roughness', State, 'roughness', {}, () => {
+    entities.forEach((entity) => { entity.getComponent('Material').set({ roughness: State.roughness }) })
+  })
+  gui.addParam('Metallic', State, 'metallic', {}, () => {
+    entities.forEach((entity) => { entity.getComponent('Material').set({ metallic: State.metallic }) })
+  })
+
+  gui.addColumn('Lights')
+  gui.addParam('Light 1 Pos', pointLight1.transform, 'position', { min: -5, max: 5 }, (value) => {
+    pointLight1.transform.set({ position: value })
+  })
+  gui.addParam('Area Light 1 Col', areaLight.getComponent('AreaLight'), 'color', { type: 'color' }, (value) => {
+    areaLight.getComponent('AreaLight').set({ color: value })
+    areaLight.getComponent('Material').set({ emissiveColor: value })
+  })
+
+  // PostProcess
+  const postProcessTab = gui.addTab('PostProcess')
+  postProcessTab.setActive()
+  gui.addColumn('Parameters')
+  gui.addParam('Enabled', cameraCmp, 'postprocess')
+  gui.addParam('Exposure', cameraCmp, 'exposure', { min: 0, max: 5 })
+  gui.addParam('SSAO', cameraCmp, 'ssao')
+  gui.addParam('SSAO radius', cameraCmp, 'ssaoRadius', { min: 0, max: 30 })
+  gui.addParam('SSAO intensity', cameraCmp, 'ssaoIntensity', { min: 0, max: 10 })
+  gui.addParam('SSAO bias', cameraCmp, 'ssaoBias', { min: 0, max: 1 })
+  gui.addParam('SSAO blur radius', cameraCmp, 'ssaoBlurRadius', { min: 0, max: 5 })
+  gui.addParam('SSAO blur sharpness', cameraCmp, 'ssaoBlurSharpness', { min: 0, max: 20 })
+  gui.addParam('DOF', cameraCmp, 'dof')
+  gui.addParam('DOF Iterations', cameraCmp, 'dofIterations', { min: 1, max: 5, step: 1 })
+  gui.addParam('DOF Depth', cameraCmp, 'dofDepth', { min: 0, max: 20 })
+  gui.addParam('DOF Range', cameraCmp, 'dofRange', { min: 0, max: 20 })
+  gui.addParam('DOF Radius', cameraCmp, 'dofRadius', { min: 0, max: 20 })
+  gui.addParam('FXAA', cameraCmp, 'fxaa')
+
+  gui.addColumn('Render targets')
+  gui.addTexture2D('Depth', cameraCmp._frameDepthTex)
 }
 
 initCamera()
@@ -328,7 +350,7 @@ initLights()
 io.loadBinary(`${ASSETS_DIR}/Mono_Lake_B.hdr`, (err, buf) => {
   if (err) console.log('Loading HDR file failed', err)
   const hdrImg = parseHdr(buf)
-  const panorama = ctx.texture2D({
+  panorama = ctx.texture2D({
     data: hdrImg.data,
     width: hdrImg.shape[0],
     height: hdrImg.shape[1],
@@ -336,11 +358,10 @@ io.loadBinary(`${ASSETS_DIR}/Mono_Lake_B.hdr`, (err, buf) => {
     encoding: ctx.Encoding.Linear,
     flipY: true
   })
-  gui.addTexture2D('Panorama', panorama)
-  initSky(panorama)
-})
 
-let debugOnce = false
+  initSky(panorama)
+  initGUI()
+})
 
 window.addEventListener('keydown', (e) => {
   if (e.key === 'd') debugOnce = true
@@ -361,4 +382,17 @@ ctx.frame(() => {
   if (!renderer._state.paused) {
     gui.draw()
   }
+})
+
+window.addEventListener('resize', () => {
+  const W = window.innerWidth
+  const H = window.innerHeight
+  ctx.set({
+    width: W,
+    height: H
+  })
+  cameraEntity.getComponent('Camera').set({
+    viewport: [0, 0, W, H],
+    aspect: W / H
+  })
 })
