@@ -130,6 +130,24 @@ Renderer.prototype.updateDirectionalLightShadowMap = function (light, geometries
   })
 }
 
+Renderer.prototype.updatePointLightShadowMap = function (light, geometries) {
+  const ctx = this._ctx
+  light._sides.forEach((side) => {
+    var target = [0, 0, 0]
+    ctx.submit(side.drawPassCmd, () => {
+      const position = light.entity.transform.worldPosition
+      vec3.set(target, position)
+      vec3.add(target, side.target)
+      mat4.lookAt(side.viewMatrix, position, target, side.up)
+      var sideLight = {
+        _projectionMatrix: side.projectionMatrix,
+        _viewMatrix: side.viewMatrix
+      }
+      this.drawMeshes(null, true, sideLight, geometries)
+    })
+  })
+}
+
 var PBRVert = require('./glsl/PBR.vert.js')
 var PBRFrag = require('./glsl/PBR.frag.js')
 
@@ -215,7 +233,11 @@ Renderer.prototype.getMaterialProgram = function (geometry, material, skin, opti
           frag: fragSrc
         })
       } catch (e) {
-        console.log('pex-renderer glsl error', e)
+        console.warn('pex-renderer glsl error', e)
+        console.warn('vert')
+        console.warn(vertSrc)
+        console.warn('frag')
+        console.warn(fragSrc)
         program = this._programCache[hash] = ctx.program({ vert: ERROR_VERT, frag: ERROR_FRAG })
       }
     }
@@ -445,6 +467,18 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
     })
   }
 
+  if (!shadowMapping && !shadowMappingLight) {
+    pointLights.forEach((light) => {
+      if (light.castShadows) {
+        const shadowCasters = geometries.filter((geometry) => {
+          const material = geometry.entity.getComponent('Material')
+          return material && material.castShadows
+        })
+        this.updatePointLightShadowMap(light, shadowCasters)
+      }
+    })
+  }
+
   var sharedUniforms = this._sharedUniforms = this._sharedUniforms || {}
   sharedUniforms.uOutputEncoding = State.rgbm ? ctx.Encoding.RGBM : ctx.Encoding.Linear // TODO: State.postprocess
   if (forward) {
@@ -512,6 +546,7 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
     sharedUniforms['uPointLights[' + i + '].position'] = light.entity.transform.worldPosition
     sharedUniforms['uPointLights[' + i + '].color'] = light.color
     sharedUniforms['uPointLights[' + i + '].range'] = light.range
+    sharedUniforms['uPointLightShadowMaps[' + i + ']'] = light._shadowCubemap
   })
 
   spotLights.forEach(function (light, i) {

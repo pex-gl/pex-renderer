@@ -475,12 +475,36 @@ struct PointLight {
 };
 
 uniform PointLight uPointLights[NUM_POINT_LIGHTS];
+uniform samplerCube uPointLightShadowMaps[NUM_POINT_LIGHTS];
+
+float unpackDepth (const in vec4 rgba_depth) {
+  const vec4 bit_shift = vec4(1.0/(256.0*256.0*256.0), 1.0/(256.0*256.0), 1.0/256.0, 1.0);
+  float depth = dot(rgba_depth, bit_shift);
+  return depth;
+}
 
 void EvaluatePointLight(inout PBRData data, PointLight light, int i) {
   float illuminated = 1.0; // no shadows yet
+  data.lightWorld = light.position - data.positionWorld;
+  float dist = length(data.lightWorld);
+  
+  // TODO: hardcoded shadowmap index
+  vec3 N = -normalize(data.lightWorld);
+  float far = 10.0;
+  float depth = unpackDepth(textureCube(uPointLightShadowMaps[0], N)) * far;
+  // float depth = textureCube(uPointLightShadowMaps[0], N).r;
+  if (dist - 0.05 > depth) {
+    illuminated = 0.0;
+  }
+  // illuminated = (depth - dist);
+  // illuminated = step(dist, depth / 2.0);
+
+  // data.directDiffuse = vec3(fract(depth));
+  // data.directDiffuse = vec3(fract(dist));
+  // data.directDiffuse = vec3(illuminated);
+  // return;
+
   if (illuminated > 0.0) {
-    data.lightWorld = light.position - vPositionWorld;
-    float dist = length(data.lightWorld);
     data.lightWorld /= dist;
 
     vec3 N = data.normalWorld;
