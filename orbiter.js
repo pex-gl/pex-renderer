@@ -49,6 +49,7 @@ function Orbiter (opts) {
   const initialState = {
     target: [0, 0, 0],
     position: [0, 0, 5],
+    matrix: mat4.create(),
     invViewMatrix: mat4.create(),
     dragging: false,
     lat: 0, // Y
@@ -106,20 +107,23 @@ Orbiter.prototype.set = function (opts) {
   Object.keys(opts).forEach((prop) => this.changed.dispatch(prop))
 }
 
-const tempmat4 = mat4.create()
 Orbiter.prototype.update = function () {
-  this.updateCamera()
   const camera = this.entity.getComponent('Camera')
-
+  this.updateMatrix()
   const transformCmp = this.entity.transform
   const transformRotation = transformCmp.rotation
-  mat4.set(tempmat4, camera.viewMatrix)
-  mat4.invert(tempmat4)
-  quat.fromMat4(transformRotation, tempmat4)
-  transformCmp.set({
-    position: this.position,
-    rotation: transformRotation
-  })
+  quat.fromMat4(transformRotation, this.matrix)
+
+  if (camera) {
+    transformCmp.set({
+      position: this.position,
+      rotation: transformRotation
+    })
+  } else {
+    transformCmp.set({
+      rotation: transformRotation
+    })
+  }
 }
 
 Orbiter.prototype.updateWindowSize = function () {
@@ -132,10 +136,10 @@ Orbiter.prototype.updateWindowSize = function () {
   }
 }
 
-Orbiter.prototype.updateCamera = function () {
+Orbiter.prototype.updateMatrix = function () {
+  const camera = this.entity.getComponent('Camera')
   const position = this.position
   const target = this.target
-  const camera = this.entity.getComponent('Camera')
 
   this.lat = clamp(this.lat, -89.5, 89.5)
   this.lon = this.lon % (360)
@@ -161,21 +165,25 @@ Orbiter.prototype.updateCamera = function () {
   latLonToXyz(this.currentLat, this.currentLon, position)
   vec3.scale(position, this.currentDistance)
   vec3.add(position, target)
-  mat4.identity(camera.viewMatrix)
+  mat4.identity(this.matrix)
 
   var up = [0, 1, 0]
-  mat4.lookAt(camera.viewMatrix, position, target, up)
+  mat4.lookAt(this.matrix, position, target, up)
+
+  if (camera) {
+    mat4.invert(this.matrix)
+  }
 }
 
 Orbiter.prototype.setup = function () {
   const orbiter = this
-  const camera = this.entity.getComponent('Camera')
 
   function down (x, y, shift) {
+    const camera = orbiter.entity.getComponent('Camera')
     orbiter.dragging = true
     orbiter.dragPos[0] = x
     orbiter.dragPos[1] = y
-    if (shift && orbiter.pan) {
+    if (camera && shift && orbiter.pan) {
       orbiter.clickPosWindow[0] = x
       orbiter.clickPosWindow[1] = y
       vec3.set(orbiter.clickTarget, orbiter.target)
@@ -199,10 +207,11 @@ Orbiter.prototype.setup = function () {
   }
 
   function move (x, y, shift) {
+    const camera = orbiter.entity.getComponent('Camera')
     if (!orbiter.dragging) {
       return
     }
-    if (shift && orbiter.panPlane) {
+    if (camera && shift && orbiter.panPlane) {
       orbiter.dragPosWindow[0] = x
       orbiter.dragPosWindow[1] = y
       ray.hitTestPlane(
@@ -224,7 +233,6 @@ Orbiter.prototype.setup = function () {
       const diffWorld = vec3.sub(vec3.copy(orbiter.dragPosWorld), orbiter.clickPosWorld)
       const target = vec3.sub(vec3.copy(orbiter.clickTarget), diffWorld)
       orbiter.set({ target: target })
-      orbiter.updateCamera()
     } else if (orbiter.drag) {
       const dx = x - orbiter.dragPos[0]
       const dy = y - orbiter.dragPos[1]
@@ -233,9 +241,6 @@ Orbiter.prototype.setup = function () {
 
       orbiter.lat += dy / orbiter.dragSlowdown
       orbiter.lon -= dx / orbiter.dragSlowdown
-
-      // TODO: how to have resolution independed scaling? will this code behave differently with retina/pixelRatio=2?
-      orbiter.updateCamera()
     }
   }
 
@@ -250,7 +255,6 @@ Orbiter.prototype.setup = function () {
     }
     orbiter.distance *= 1 + dy / orbiter.zoomSlowdown
     orbiter.distance = clamp(orbiter.distance, orbiter.minDistance, orbiter.maxDistance)
-    orbiter.updateCamera()
   }
 
   function onMouseDown (e) {
@@ -305,8 +309,6 @@ Orbiter.prototype.setup = function () {
   window.addEventListener('touchmove', onTouchMove, { passive: false })
   window.addEventListener('mouseup', onMouseUp)
   window.addEventListener('touchend', onMouseUp)
-
-  this.updateCamera()
 }
 
 Orbiter.prototype.dispose = function () {
