@@ -45,6 +45,12 @@ function ReflectionProbe (opts) {
   const quadPositions = [[-1, -1], [1, -1], [1, 1], [-1, 1]]
   const quadTexCoords = [[0, 0], [1, 0], [1, 1], [0, 1]]
   const quadFaces = [[0, 1, 2], [0, 2, 3]]
+  const attributes = {
+    aPosition: ctx.vertexBuffer(quadPositions),
+    aTexCoord: ctx.vertexBuffer(quadTexCoords)
+  }
+
+  const indices = ctx.indexBuffer(quadFaces)
 
   const octMap = this._octMap = ctx.texture2D({
     width: 1024,
@@ -74,11 +80,8 @@ function ReflectionProbe (opts) {
       vert: require('./glsl/FullscreenQuad.vert.js'),
       frag: require('./glsl/CubemapToOctmap.frag.js')
     }),
-    attributes: {
-      aPosition: ctx.vertexBuffer(quadPositions),
-      aTexCoord: ctx.vertexBuffer(quadTexCoords)
-    },
-    indices: ctx.indexBuffer(quadFaces),
+    attributes: attributes,
+    indices: indices,
     uniforms: {
       uTextureSize: octMap.width,
       uCubemap: dynamicCubemap
@@ -95,11 +98,8 @@ function ReflectionProbe (opts) {
       vert: require('./glsl/FullscreenQuad.vert.js'),
       frag: require('./glsl/ConvolveOctMapAtlasToOctMap.frag.js')
     }),
-    attributes: {
-      aPosition: ctx.vertexBuffer(quadPositions),
-      aTexCoord: ctx.vertexBuffer(quadTexCoords)
-    },
-    indices: ctx.indexBuffer(quadFaces),
+    attributes: attributes,
+    indices: indices,
     uniforms: {
       uTextureSize: irradianceOctMapSize,
       uSource: octMapAtlas,
@@ -132,11 +132,8 @@ function ReflectionProbe (opts) {
       uSource: octMap,
       uSourceSize: octMap.width
     },
-    attributes: {
-      aPosition: ctx.vertexBuffer(quadPositions),
-      aTexCoord: ctx.vertexBuffer(quadTexCoords)
-    },
-    indices: ctx.indexBuffer(quadFaces)
+    attributes: attributes,
+    indices: indices
   }
 
   const downsampleFromOctMapAtlasCmd = {
@@ -154,11 +151,8 @@ function ReflectionProbe (opts) {
       uSource: octMapAtlas,
       uSourceSize: octMapAtlas.width
     },
-    attributes: {
-      aPosition: ctx.vertexBuffer(quadPositions),
-      aTexCoord: ctx.vertexBuffer(quadTexCoords)
-    },
-    indices: ctx.indexBuffer(quadFaces)
+    attributes: attributes,
+    indices: indices
   }
 
   const prefilterFromOctMapAtlasCmd = {
@@ -178,11 +172,8 @@ function ReflectionProbe (opts) {
       uSourceEncoding: octMapAtlas.encoding,
       uOutputEncoding: octMap.encoding
     },
-    attributes: {
-      aPosition: ctx.vertexBuffer(quadPositions),
-      aTexCoord: ctx.vertexBuffer(quadTexCoords)
-    },
-    indices: ctx.indexBuffer(quadFaces)
+    attributes: attributes,
+    indices: indices
   }
 
   const numSamples = 128
