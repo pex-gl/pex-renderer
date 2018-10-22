@@ -103,7 +103,6 @@ function initMeshes () {
   const normalMap = imageFromFile(ASSETS_DIR + '/plastic-normal.png', { encoding: ctx.Encoding.Linear })
   const metallicMap = imageFromFile(ASSETS_DIR + '/plastic-metallic.png', { encoding: ctx.Encoding.Linear })
   const roughnessMap = imageFromFile(ASSETS_DIR + '/plastic-roughness.png', { encoding: ctx.Encoding.Linear })
-  const alphaMap = imageFromFile(ASSETS_DIR + '/checker.png', { encoding: ctx.Encoding.Linear })
   const groundCube = createRoundedCube(1, 1, 1, 20, 20, 20, 0.01)
   const roundedCube = createRoundedCube(1, 1, 1, 20, 20, 20, 0.2)
   const capsule = createCapsule(0.3)
@@ -341,6 +340,7 @@ function initGUI () {
 
   gui.addColumn('Render targets')
   gui.addTexture2D('Depth', cameraCmp._frameDepthTex)
+  gui.addTexture2D('Normal', cameraCmp._frameNormalTex)
 }
 
 initCamera()

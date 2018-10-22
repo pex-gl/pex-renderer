@@ -37,15 +37,6 @@ uniform sampler2D uAlphaMap;
   }
 #endif
 
-//from http://spidergl.org/example.php?id=6
-vec4 packDepth(const in float depth) {
-  const vec4 bit_shift = vec4(256.0*256.0*256.0, 256.0*256.0, 256.0, 1.0);
-  const vec4 bit_mask  = vec4(0.0, 1.0/256.0, 1.0/256.0, 1.0/256.0);
-  vec4 res = fract(depth * bit_shift);
-  res -= res.xxyz * bit_mask;
-  return res;
-}
-
 void main() {
   PBRData data;
   data.texCoord0 = vTexCoord0;
@@ -56,7 +47,10 @@ void main() {
   #ifdef USE_ALPHA_TEST
     AlphaTest(data);
   #endif
-  float far = 10.0; // TODO: hardcoded far for depth pass
-  gl_FragColor = packDepth(length(vPositionView) / far);
+  vec3 normal = vNormalView;
+  if (!gl_FrontFacing) {
+    normal *= -1.0;
+  }
+  gl_FragColor = vec4(normal * 0.5 + 0.5, 1.0);
 }
 `

@@ -25,6 +25,7 @@ const createOverlay = require('./overlay')
 
 const DEPTH_PASS_VERT = require('./glsl/DepthPass.vert.js')
 const DEPTH_PASS_FRAG = require('./glsl/DepthPass.frag.js')
+const DEPTH_PRE_PASS_FRAG = require('./glsl/DepthPrePass.frag.js')
 const OVERLAY_VERT = require('./glsl/Overlay.vert.js')
 const OVERLAY_FRAG = require('./glsl/Overlay.frag.js')
 const ERROR_VERT = require('./glsl/Error.vert.js')
@@ -211,6 +212,37 @@ Renderer.prototype.getMaterialProgram = function (geometry, material, skin, opti
   }
   if (material.alphaTest) {
     flags.push('#define USE_ALPHA_TEST')
+  }
+
+  if (options.depthPrePassOnly) {
+    flags.push('#define DEPTH_PRE_PASS_ONLY')
+    flags.push('#define SHADOW_QUALITY ' + (0))
+    flags.push('#define NUM_AMBIENT_LIGHTS ' + (0))
+    flags.push('#define NUM_DIRECTIONAL_LIGHTS ' + (0))
+    flags.push('#define NUM_POINT_LIGHTS ' + (0))
+    flags.push('#define NUM_SPOT_LIGHTS ' + (0))
+    flags.push('#define NUM_AREA_LIGHTS ' + (0))
+    flags = flags.join('\n') + '\n'
+    var vertSrc = flags + (material.vert || DEPTH_PASS_VERT)
+    var fragSrc = flags + (material.frag || DEPTH_PRE_PASS_FRAG)
+    var hash = vertSrc + fragSrc
+    let program = this._programCache[hash]
+    if (!program) {
+      try {
+        program = this._programCache[hash] = ctx.program({
+          vert: vertSrc,
+          frag: fragSrc
+        })
+      } catch (e) {
+        console.warn('pex-renderer glsl error', e)
+        console.warn('vert')
+        console.warn(vertSrc)
+        console.warn('frag')
+        console.warn(fragSrc)
+        program = this._programCache[hash] = ctx.program({ vert: ERROR_VERT, frag: ERROR_FRAG })
+      }
+    }
+    return program
   }
 
   if (options.depthPassOnly) {
@@ -644,7 +676,11 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
     }
 
     let pipeline = null
-    if (shadowMapping) {
+    if (shadowMapping && !shadowMappingLight) {
+      pipeline = this.getGeometryPipeline(geometry, material, skin, {
+        depthPrePassOnly: true
+      })
+    } else if (shadowMapping) {
       pipeline = this.getGeometryPipeline(geometry, material, skin, {
         depthPassOnly: true
       })
