@@ -30,7 +30,7 @@ function Material (opts) {
   this.depthTest = true
   this.depthWrite = true
   this.depthFunc = opts.ctx.DepthFunc.LessEqual
-  this.alphaTest = null
+  this.alphaTest = undefined
   this.blend = false
   this.blendSrcRGBFactor = ctx.BlendFactor.One
   this.blendSrcAlphaFactor = ctx.BlendFactor.One
