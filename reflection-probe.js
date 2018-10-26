@@ -235,7 +235,6 @@ function ReflectionProbe (opts) {
   this.update = function (drawScene) {
     if (!drawScene) return
     this.dirty = false
-    console.log('ReflectionProbe.update')
     sides.forEach((side) => {
       ctx.submit(side.drawPassCmd, () => drawScene(side, dynamicCubemap.encoding))
     })
