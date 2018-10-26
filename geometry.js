@@ -89,6 +89,11 @@ Geometry.prototype.set = function (opts) {
         attrib.divisor = val.divisor
       }
       attrib.type = attrib.buffer.type
+
+      // TODO: in GLTF buffers are typeless and it's actually the attribute that defines it's type
+      if (val.type !== undefined) {
+        attrib.type = val.type
+      }
     }
   }
 
