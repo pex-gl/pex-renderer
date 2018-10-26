@@ -21,6 +21,7 @@ const IndicesMap = {
   cells: 'indices'
 }
 
+
 function Geometry (opts) {
   this.type = 'Geometry'
   this.changed = new Signal()
@@ -57,15 +58,17 @@ Geometry.prototype.set = function (opts) {
           offset: 0,
           stride: 0,
           divisor: 0,
-          type: ctx.DataType.Float32
+          type: undefined
         }
       }
       const data = (val.length !== undefined) ? val : val.data
+
+      //TODO: test different type configurations
       if (data) {
         if (!attrib.buffer) {
-          attrib.buffer = ctx.vertexBuffer(data)
+          attrib.buffer = ctx.vertexBuffer({ data: data, type: val.type || attrib.type })
         } else {
-          ctx.update(attrib.buffer, { data: data })
+          ctx.update(attrib.buffer, { data: data, type: val.type || attrib.type })
         }
 
         if (attribName === 'aPosition') {
@@ -76,9 +79,16 @@ Geometry.prototype.set = function (opts) {
           }
         }
       } else if (val.buffer) {
+        // can we read data from the buffer
         // TODO: should we delete previous buffer?
         attrib.buffer = val.buffer
       }
+
+      // Update attrib data type from buffer
+      // It will be either re-used from val.type or attrib.type 
+      // or guessed from the typed array
+      attrib.type = val.type || attrib.buffer.type
+      
       if (val.offset !== undefined) {
         attrib.offset = val.offset
       }
@@ -88,34 +98,34 @@ Geometry.prototype.set = function (opts) {
       if (val.divisor !== undefined) {
         attrib.divisor = val.divisor
       }
-      attrib.type = attrib.buffer.type
 
-      // TODO: in GLTF buffers are typeless and it's actually the attribute that defines it's type
-      if (val.type !== undefined) {
-        attrib.type = val.type
+      if (!attrib.type) {
+        throw new Error(`Unknown ${attribName} attrib type`)
       }
+
     }
   }
 
   for (let prop in opts) {
     if (IndicesMap[prop]) {
-      // this would be wrong estimate for interlaved geometry but still should work
-      const numPositions = this._attributes['aPosition'].buffer.length / 3
+      // TODO: this is just a guestimate, we should probably push creating flat uint32 array to the user space
+      const numPositions = this._attributes['aPosition'].count
       const val = opts[prop]
       let indices = this._indices
-      const type = (numPositions >= 65536) ? ctx.DataType.Uint32 : ctx.DataType.Uint16
+
       if (!indices) {
         indices = this._indices = {
           buffer: null,
-          offset: 0
+          offset: 0,
+          type: undefined
         }
       }
       const data = (val.length !== undefined) ? val : val.data
       if (data) {
         if (!indices.buffer) {
-          indices.buffer = ctx.indexBuffer({ data: data, type: type })
+          indices.buffer = ctx.indexBuffer({ data: data, type: val.type || indices.type })
         } else {
-          ctx.update(indices.buffer, { data: data, type: type })
+          ctx.update(indices.buffer, { data: data, type: val.type || indices.type })
         }
       } else if (val.buffer) {
         // TODO: should we delete previous buffer?
@@ -124,13 +134,15 @@ Geometry.prototype.set = function (opts) {
       if (val.offset !== undefined) {
         indices.offset = val.offset
       }
-      if (val.type !== undefined) {
-        indices.type = val.type
-      }
       if (val.count !== undefined) {
         indices.count = val.count
       }
-      indices.type = indices.buffer.type
+
+      indices.type = val.type || indices.buffer.type
+
+      if (!indices.type) {
+        throw new Error(`Unknown indices type`)
+      }
     }
 
     this.changed.dispatch(prop)
