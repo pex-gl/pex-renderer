@@ -1,7 +1,16 @@
 const Signal = require('signals')
 const vec3 = require('pex-math/vec3')
+const vec4 = require('pex-math/vec4')
 const mat4 = require('pex-math/mat4')
 const aabb = require('pex-geom/aabb')
+
+function vec4set4 (v, x, y, z, w) {
+  v[0] = x
+  v[1] = y
+  v[2] = z
+  v[3] = w
+  return v
+}
 
 // TODO remove, should in AABB
 function emptyAABB (a) {
@@ -14,18 +23,33 @@ function emptyAABB (a) {
 }
 
 // TODO remove, should in AABB
-function aabbToPoints (box) {
-  if (aabb.isEmpty(box)) return []
-  return [
-    [box[0][0], box[0][1], box[0][2], 1],
-    [box[1][0], box[0][1], box[0][2], 1],
-    [box[1][0], box[0][1], box[1][2], 1],
-    [box[0][0], box[0][1], box[1][2], 1],
-    [box[0][0], box[1][1], box[0][2], 1],
-    [box[1][0], box[1][1], box[0][2], 1],
-    [box[1][0], box[1][1], box[1][2], 1],
-    [box[0][0], box[1][1], box[1][2], 1]
-  ]
+function aabbToPoints (points, box) {
+  vec4set4(points[0], box[0][0], box[0][1], box[0][2], 1)
+  vec4set4(points[1], box[1][0], box[0][1], box[0][2], 1)
+  vec4set4(points[2], box[1][0], box[0][1], box[1][2], 1)
+  vec4set4(points[3], box[0][0], box[0][1], box[1][2], 1)
+  vec4set4(points[4], box[0][0], box[1][1], box[0][2], 1)
+  vec4set4(points[5], box[1][0], box[1][1], box[0][2], 1)
+  vec4set4(points[6], box[1][0], box[1][1], box[1][2], 1)
+  vec4set4(points[7], box[0][0], box[1][1], box[1][2], 1)
+  return points
+}
+
+function aabbFromPoints (aabb, points) {
+  var min = aabb[0]
+  var max = aabb[1]
+
+  for (var i = 0, len = points.length; i < len; i++) {
+    var p = points[i]
+    min[0] = Math.min(min[0], p[0])
+    min[1] = Math.min(min[1], p[1])
+    min[2] = Math.min(min[2], p[2])
+    max[0] = Math.max(max[0], p[0])
+    max[1] = Math.max(max[1], p[1])
+    max[2] = Math.max(max[2], p[2])
+  }
+
+  return aabb
 }
 
 function Transform (opts) {
@@ -41,6 +65,7 @@ function Transform (opts) {
   this.enabled = true
   // bounds of this node and it's children
   this.bounds = aabb.create()
+  this._boundsPoints = new Array(8).fill(0).map(() => vec4.create())
   // bounds of this node and it's children in the world space
   this.worldBounds = aabb.create()
   this.localModelMatrix = mat4.create()
@@ -93,9 +118,11 @@ Transform.prototype.update = function () {
 
 Transform.prototype.afterUpdate = function () {
   if (!aabb.isEmpty(this.bounds)) {
-    const points = aabbToPoints(this.bounds)
-    const pointsInWorldSpace = points.map((p) => vec3.multMat4(vec3.copy(p), this.modelMatrix))
-    this.worldBounds = aabb.fromPoints(pointsInWorldSpace)
+    aabbToPoints(this._boundsPoints, this.bounds)
+    for (var i = 0; i < this._boundsPoints.length; i++) {
+      vec3.multMat4(this._boundsPoints[i], this.modelMatrix)
+    }
+    aabbFromPoints(this.worldBounds, this._boundsPoints)
   } else {
     emptyAABB(this.worldBounds)
   }
