@@ -5,6 +5,7 @@ function Skin (opts) {
   this.type = 'Skin'
   this.entity = null
   this.joints = []
+  this.jointMatrices = []
   this.inverseBindMatrices = []
   this.changed = new Signal()
   this.set(opts)
@@ -17,15 +18,23 @@ Skin.prototype.init = function (entity) {
 Skin.prototype.set = function (opts) {
   Object.assign(this, opts)
   Object.keys(opts).forEach((prop) => this.changed.dispatch(prop))
+
+  if (opts.joints) {
+    this.jointMatrices.length = this.joints.length
+    for (let i = 0; i < this.joints.length; i++) {
+      this.jointMatrices[i] = this.jointMatrices[i] || mat4.create()
+    }
+  }
 }
 
 Skin.prototype.update = function () {
-  this.jointMatrices = this.joints.map((joint, index) => {
-    var m = mat4.create()
+  for (let i = 0; i < this.joints.length; i++) {
+    const joint = this.joints[i]
+    const m = this.jointMatrices[i]
+    mat4.identity(m)
     mat4.mult(m, joint.transform.modelMatrix)
-    mat4.mult(m, this.inverseBindMatrices[index])
-    return m
-  })
+    mat4.mult(m, this.inverseBindMatrices[i])
+  }
 }
 
 module.exports = function createSkin (opts) {
