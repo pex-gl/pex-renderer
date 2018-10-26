@@ -3,7 +3,6 @@ const random = require('pex-random')
 const vec3 = require('pex-math/vec3')
 const mat4 = require('pex-math/mat4')
 const utils = require('pex-math/utils')
-const flatten = require('flatten')
 
 const POSTPROCESS_VERT = require('./glsl/Postprocess.vert.js')
 let POSTPROCESS_FRAG = require('./glsl/Postprocess.frag.js')
@@ -13,7 +12,7 @@ const BILATERAL_BLUR_FRAG = require('./glsl/BilateralBlur.frag.js')
 const THRESHOLD_FRAG = require('./glsl/Threshold.frag.js')
 const BLOOM_FRAG = require('./glsl/Bloom.frag.js')
 
-var ssaoKernel = []
+var ssaoKernelData = new Float32Array(64 * 4)
 for (let i = 0; i < 64; i++) {
   var sample = [
     random.float() * 2 - 1,
@@ -25,22 +24,25 @@ for (let i = 0; i < 64; i++) {
   var scale = random.float()
   scale = utils.lerp(0.1, 1.0, scale * scale)
   vec3.scale(sample, scale)
-  ssaoKernel.push(sample)
+  ssaoKernelData[i * 4 + 0] = sample[0]
+  ssaoKernelData[i * 4 + 1] = sample[1]
+  ssaoKernelData[i * 4 + 2] = sample[2]
+  ssaoKernelData[i * 4 + 3] = sample[3]
 }
-var ssaoKernelData = new Float32Array(flatten(ssaoKernel))
 
-var ssaoNoise = []
-for (let j = 0; j < 128 * 128; j++) {
+var ssaoNoiseData = new Float32Array(128 * 128 * 4)
+for (let i = 0; i < 128 * 128; i++) {
   let noiseSample = [
     random.float() * 2 - 1,
     random.float() * 2 - 1,
     0,
     1
   ]
-  ssaoNoise.push(noiseSample)
+  ssaoNoiseData[i * 4 + 0] = sample[0]
+  ssaoNoiseData[i * 4 + 1] = sample[1]
+  ssaoNoiseData[i * 4 + 2] = sample[2]
+  ssaoNoiseData[i * 4 + 3] = sample[3]
 }
-var ssaoNoiseData = new Float32Array(flatten(ssaoNoise))
-
 
 function Camera (opts) {
   const gl = opts.ctx.gl
