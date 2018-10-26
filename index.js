@@ -74,6 +74,33 @@ function Renderer (opts) {
   gl.getExtension('OES_standard_derivatives')
 
   this._debug = false
+  this._programCache = {}
+  this._programCacheMap = {
+    values: [],
+    getValue: function (flags, vert, frag) {
+      for (var i = 0; i < this.values.length; i++) {
+        var v = this.values[i]
+        if (v.frag === frag && v.vert === vert) {
+          if (v.flags.length == flags.length) {
+            var found = true
+            for (var j = 0; j < flags.length; j++) {
+              if (v.flags[j] !== flags[j]) {
+                found = false
+                break
+              }
+            }
+            if (found) {
+              return v.program
+            }
+          }
+        }
+      }
+      return false
+    },
+    setValue: function (flags, vert, frag, program) {
+      this.values.push({ flags, vert, frag, program })
+    }
+  }
 
   if (opts.profile) {
     State.profiler = createProfiler(opts.ctx, this)
@@ -152,13 +179,8 @@ Renderer.prototype.updatePointLightShadowMap = function (light, geometries) {
 var PBRVert = require('./glsl/PBR.vert.js')
 var PBRFrag = require('./glsl/PBR.frag.js')
 
-// TODO: how fast is building these flag strings every frame for every object?
-Renderer.prototype.getMaterialProgram = function (geometry, material, skin, options) {
+Renderer.prototype.getMaterialProgramAndFlags = function (geometry, material, skin, options) {
   var ctx = this._ctx
-
-  if (!this._programCache) {
-    this._programCache = {}
-  }
 
   var flags = []
 
@@ -222,27 +244,11 @@ Renderer.prototype.getMaterialProgram = function (geometry, material, skin, opti
     flags.push('#define NUM_POINT_LIGHTS ' + (0))
     flags.push('#define NUM_SPOT_LIGHTS ' + (0))
     flags.push('#define NUM_AREA_LIGHTS ' + (0))
-    flags = flags.join('\n') + '\n'
-    var vertSrc = flags + (material.vert || DEPTH_PASS_VERT)
-    var fragSrc = flags + (material.frag || DEPTH_PRE_PASS_FRAG)
-    var hash = vertSrc + fragSrc
-    let program = this._programCache[hash]
-    if (!program) {
-      try {
-        program = this._programCache[hash] = ctx.program({
-          vert: vertSrc,
-          frag: fragSrc
-        })
-      } catch (e) {
-        console.warn('pex-renderer glsl error', e)
-        console.warn('vert')
-        console.warn(vertSrc)
-        console.warn('frag')
-        console.warn(fragSrc)
-        program = this._programCache[hash] = ctx.program({ vert: ERROR_VERT, frag: ERROR_FRAG })
-      }
+    return {
+      flags: flags,
+      vert: (material.vert || DEPTH_PASS_VERT),
+      frag: (material.frag || DEPTH_PRE_PASS_FRAG)
     }
-    return program
   }
 
   if (options.depthPassOnly) {
@@ -253,27 +259,11 @@ Renderer.prototype.getMaterialProgram = function (geometry, material, skin, opti
     flags.push('#define NUM_POINT_LIGHTS ' + (0))
     flags.push('#define NUM_SPOT_LIGHTS ' + (0))
     flags.push('#define NUM_AREA_LIGHTS ' + (0))
-    flags = flags.join('\n') + '\n'
-    var vertSrc = flags + (material.vert || DEPTH_PASS_VERT)
-    var fragSrc = flags + (material.frag || DEPTH_PASS_FRAG)
-    var hash = vertSrc + fragSrc
-    let program = this._programCache[hash]
-    if (!program) {
-      try {
-        program = this._programCache[hash] = ctx.program({
-          vert: vertSrc,
-          frag: fragSrc
-        })
-      } catch (e) {
-        console.warn('pex-renderer glsl error', e)
-        console.warn('vert')
-        console.warn(vertSrc)
-        console.warn('frag')
-        console.warn(fragSrc)
-        program = this._programCache[hash] = ctx.program({ vert: ERROR_VERT, frag: ERROR_FRAG })
-      }
+    return {
+      flags: flags,
+      vert: (material.vert || DEPTH_PASS_VERT),
+      frag: (material.frag || DEPTH_PASS_FRAG)
     }
-    return program
   }
 
   flags.push('#define SHADOW_QUALITY ' + (material.receiveShadows ? State.shadowQuality : 0))
@@ -342,21 +332,52 @@ Renderer.prototype.getMaterialProgram = function (geometry, material, skin, opti
   if (options.useTonemapping) {
     flags.push('#define USE_TONEMAPPING')
   }
-  flags = flags.join('\n') + '\n'
+  return {
+    flags: flags,
+    vert: (material.vert || PBRVert),
+    frag: (material.frag || PBRFrag)
+  }
+}
 
-  var vertSrc = flags + (material.vert || PBRVert)
-  var fragSrc = flags + (material.frag || PBRFrag)
+Renderer.prototype.buildProgram = function (vertSrc, fragSrc) {
+  var ctx = this._ctx
+  let program = null
+  try {
+    program = ctx.program({ vert: vertSrc, frag: fragSrc })
+  } catch (e) {
+    //console.log('pex-renderer glsl error', e)
+    progaram = ctx.program({ vert: ERROR_VERT, frag: ERROR_FRAG })
+  }
+  return program
+}
+
+Renderer.prototype.getMaterialProgramOld = function (geometry, material, skin, options) {
+  var ctx = this._ctx
+
+  var { flags, vert, frag } = this.getMaterialProgramAndFlags(geometry, material, skin, options)
+  var flagsStr = flags.join('\n') + '\n'
+  var vertSrc = flagsStr + vert
+  var fragSrc = flagsStr + frag
   var hash = vertSrc + fragSrc
-
   var program = this._programCache[hash]
   if (!program) {
-    // console.log('added program', vertSrc, fragSrc)
-    try {
-      program = this._programCache[hash] = ctx.program({ vert: vertSrc, frag: fragSrc })
-    } catch (e) {
-      console.log('pex-renderer glsl error', e)
-      program = this._programCache[hash] = ctx.program({ vert: ERROR_VERT, frag: ERROR_FRAG })
-    }
+    program = this._programCache[hash] = this.buildProgram(vertSrc, fragSrc)
+  }
+  return program
+}
+
+Renderer.prototype.getMaterialProgram = function (geometry, material, skin, options) {
+  var ctx = this._ctx
+
+  var { flags, vert, frag } = this.getMaterialProgramAndFlags(geometry, material, skin, options)
+  var flagsStr = flags.join('\n') + '\n'
+  var vertSrc = flagsStr + vert
+  var fragSrc = flagsStr + frag
+  var hash = vertSrc + fragSrc
+  var program = this._programCacheMap.getValue(flags, vert, frag)
+  if (!program) {
+    program = this.buildProgram(vertSrc, fragSrc)
+    this._programCacheMap.setValue(flags, vert, frag, program)
   }
   return program
 }
