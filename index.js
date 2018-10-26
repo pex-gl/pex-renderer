@@ -541,12 +541,12 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
       // but breaks shadows on large scale scenes (eg maps)
       camera.set({ far: far * 0.99 })
     }
-    sharedUniforms.uProjectionMatrix = mat4.copy(camera.projectionMatrix)
+    sharedUniforms.uProjectionMatrix = camera.projectionMatrix
     if (shadowMapping) {
       camera.set({ far: far })
     }
     sharedUniforms.uViewMatrix = camera.viewMatrix
-    sharedUniforms.uInverseViewMatrix = mat4.invert(mat4.copy(camera.viewMatrix)) // TODO: GC
+    sharedUniforms.uInverseViewMatrix = camera.inverseViewMatrix
   }
 
   if (camera) {

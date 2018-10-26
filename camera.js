@@ -57,6 +57,7 @@ function Camera (opts) {
   this.backgroundColor = [0, 0, 0, 1]
   this.projectionMatrix = mat4.perspective(mat4.create(), this.fov, this.aspect, this.near, this.far)
   this.viewMatrix = mat4.create()
+  this.inverseViewMatrix = mat4.create()
 
   // postprocessing
   this.postprocess = true
@@ -450,6 +451,7 @@ Camera.prototype.initPostproces = function () {
 }
 
 Camera.prototype.update = function () {
+  mat4.set(this.inverseViewMatrix, this.entity.transform.modelMatrix)
   mat4.set(this.viewMatrix, this.entity.transform.modelMatrix)
   mat4.invert(this.viewMatrix)
 }
