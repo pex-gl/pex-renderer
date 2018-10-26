@@ -74,7 +74,6 @@ function Renderer (opts) {
   gl.getExtension('OES_standard_derivatives')
 
   this._debug = false
-  this._programCache = {}
   this._programCacheMap = {
     values: [],
     getValue: function (flags, vert, frag) {
@@ -347,21 +346,6 @@ Renderer.prototype.buildProgram = function (vertSrc, fragSrc) {
   } catch (e) {
     //console.log('pex-renderer glsl error', e)
     progaram = ctx.program({ vert: ERROR_VERT, frag: ERROR_FRAG })
-  }
-  return program
-}
-
-Renderer.prototype.getMaterialProgramOld = function (geometry, material, skin, options) {
-  var ctx = this._ctx
-
-  var { flags, vert, frag } = this.getMaterialProgramAndFlags(geometry, material, skin, options)
-  var flagsStr = flags.join('\n') + '\n'
-  var vertSrc = flagsStr + vert
-  var fragSrc = flagsStr + frag
-  var hash = vertSrc + fragSrc
-  var program = this._programCache[hash]
-  if (!program) {
-    program = this._programCache[hash] = this.buildProgram(vertSrc, fragSrc)
   }
   return program
 }
