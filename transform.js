@@ -52,6 +52,13 @@ function aabbFromPoints (aabb, points) {
   return aabb
 }
 
+var tempMat4multQuatMat4 = mat4.create()
+function mat4multQuat (m, q) {
+  mat4.fromQuat(tempMat4multQuatMat4, q)
+  mat4.mult(m, tempMat4multQuatMat4)
+  return m
+}
+
 function Transform (opts) {
   this.type = 'Transform'
   this.entity = null
@@ -94,7 +101,7 @@ Transform.prototype.set = function (opts) {
 Transform.prototype.update = function () {
   mat4.identity(this.localModelMatrix)
   mat4.translate(this.localModelMatrix, this.position)
-  mat4.mult(this.localModelMatrix, mat4.fromQuat(mat4.create(), this.rotation))
+  mat4multQuat(this.localModelMatrix, this.rotation)
   mat4.scale(this.localModelMatrix, this.scale)
   if (this.matrix) mat4.mult(this.localModelMatrix, this.matrix)
 
