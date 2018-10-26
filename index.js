@@ -550,7 +550,7 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
   }
 
   if (camera) {
-    if (camera.ssao) {
+    if (camera.postprocess && camera.ssao) {
       sharedUniforms.uAO = camera._frameAOTex
       sharedUniforms.uScreenSize = [ camera.viewport[2], camera.viewport[3] ] // TODO: should this be camera viewport size?
     }
@@ -697,7 +697,7 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
         numSpotLights: spotLights.length,
         numAreaLights: areaLights.length,
         useReflectionProbes: reflectionProbes.length, // TODO: reflection probes true
-        useSSAO: camera.ssao,
+        useSSAO: camera.postprocess && camera.ssao,
         useTonemapping: !camera.postprocess
       })
     }
@@ -806,7 +806,7 @@ Renderer.prototype.draw = function () {
       })
     }
     if (State.profiler) State.profiler.timeEnd('depthPrepass')
-    if (camera.ssao) {
+    if (camera.postprocess && camera.ssao) {
       if (State.profiler) State.profiler.time('ssao', true)
       ctx.submit(camera._ssaoCmd, {
         uniforms: {
