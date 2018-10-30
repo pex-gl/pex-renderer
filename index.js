@@ -23,13 +23,15 @@ const createReflectionProbe = require('./reflection-probe')
 const createSkybox = require('./skybox')
 const createOverlay = require('./overlay')
 
-const DEPTH_PASS_VERT = require('./glsl/DepthPass.vert.js')
-const DEPTH_PASS_FRAG = require('./glsl/DepthPass.frag.js')
-const DEPTH_PRE_PASS_FRAG = require('./glsl/DepthPrePass.frag.js')
-const OVERLAY_VERT = require('./glsl/Overlay.vert.js')
-const OVERLAY_FRAG = require('./glsl/Overlay.frag.js')
-const ERROR_VERT = require('./glsl/Error.vert.js')
-const ERROR_FRAG = require('./glsl/Error.frag.js')
+const PBR_VERT = require('./shaders/pipeline/Material.vert.js')
+const PBR_FRAG = require('./shaders/pipeline/Material.frag.js')
+const DEPTH_PASS_VERT = require('./shaders/pipeline/DepthPass.vert.js')
+const DEPTH_PASS_FRAG = require('./shaders/pipeline/DepthPass.frag.js')
+const DEPTH_PRE_PASS_FRAG = require('./shaders/pipeline/DepthPrePass.frag.js')
+const OVERLAY_VERT = require('./shaders/pipeline/Overlay.vert.js')
+const OVERLAY_FRAG = require('./shaders/pipeline/Overlay.frag.js')
+const ERROR_VERT = require('./shaders/error/Error.vert.js')
+const ERROR_FRAG = require('./shaders/error/Error.frag.js')
 
 var State = {
   frame: 0,
@@ -148,9 +150,6 @@ Renderer.prototype.updatePointLightShadowMap = function (light, geometries) {
     })
   })
 }
-
-var PBRVert = require('./glsl/PBR.vert.js')
-var PBRFrag = require('./glsl/PBR.frag.js')
 
 // TODO: how fast is building these flag strings every frame for every object?
 Renderer.prototype.getMaterialProgram = function (geometry, material, skin, options) {
@@ -344,8 +343,8 @@ Renderer.prototype.getMaterialProgram = function (geometry, material, skin, opti
   }
   flags = flags.join('\n') + '\n'
 
-  var vertSrc = flags + (material.vert || PBRVert)
-  var fragSrc = flags + (material.frag || PBRFrag)
+  var vertSrc = flags + (material.vert || PBR_VERT)
+  var fragSrc = flags + (material.frag || PBR_FRAG)
   var hash = vertSrc + fragSrc
 
   var program = this._programCache[hash]

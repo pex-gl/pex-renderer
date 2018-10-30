@@ -1,10 +1,10 @@
 const createQuad = require('primitive-quad')
 
-const SKYBOX_VERT = require('./glsl/Skybox.vert.js')
-const SKYBOX_FRAG = require('./glsl/Skybox.frag.js')
+const SKYBOX_VERT = require('./shaders/skybox/Skybox.vert.js')
+const SKYBOX_FRAG = require('./shaders/skybox/Skybox.frag.js')
 
-const SKYTEXTURE_VERT = require('./glsl/SkyEnvMap.vert.js')
-const SKYTEXTURE_FRAG = require('./glsl/SkyEnvMap.frag.js')
+const SKYTEXTURE_VERT = require('./shaders/skybox/SkyEnvMap.vert.js')
+const SKYTEXTURE_FRAG = require('./shaders/skybox/SkyEnvMap.frag.js')
 
 const Signal = require('signals')
 

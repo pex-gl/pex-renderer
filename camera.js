@@ -5,13 +5,13 @@ const mat4 = require('pex-math/mat4')
 const utils = require('pex-math/utils')
 const flatten = require('flatten')
 
-const POSTPROCESS_VERT = require('./glsl/Postprocess.vert.js')
-let POSTPROCESS_FRAG = require('./glsl/Postprocess.frag.js')
+const POSTPROCESS_VERT = require('./shaders/post-processing/Postprocess.vert.js')
+const POSTPROCESS_FRAG = require('./shaders/post-processing/Postprocess.frag.js')
 
-const SAO_FRAG = require('./glsl/SAO.frag.js')
-const BILATERAL_BLUR_FRAG = require('./glsl/BilateralBlur.frag.js')
-const THRESHOLD_FRAG = require('./glsl/Threshold.frag.js')
-const BLOOM_FRAG = require('./glsl/Bloom.frag.js')
+const SAO_FRAG = require('./shaders/post-processing/SAO.frag.js')
+const BILATERAL_BLUR_FRAG = require('./shaders/post-processing/BilateralBlur.frag.js')
+const THRESHOLD_FRAG = require('./shaders/post-processing/Threshold.frag.js')
+const BLOOM_FRAG = require('./shaders/post-processing/Bloom.frag.js')
 
 var ssaoKernel = []
 for (let i = 0; i < 64; i++) {
@@ -123,7 +123,7 @@ Camera.prototype.set = function (opts) {
       const expectedWidth = Math.floor(viewport[2] * (tex.sizeScale || 1))
       const expectedHeight = Math.floor(viewport[3] * (tex.sizeScale || 1))
       if (tex.width !== expectedWidth || tex.height !== expectedHeight) {
-        console.log('update texture size', tex.width, expectedWidth, tex.height, expectedHeight)
+        // console.log('update texture size', tex.width, expectedWidth, tex.height, expectedHeight)
         this.ctx.update(tex, {
           width: expectedWidth,
           height: expectedHeight
