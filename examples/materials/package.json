@@ -10,7 +10,7 @@
   "license": "MIT",
   "dependencies": {
     "angle-normals": "^1.0.0",
-    "budo": "^9.4.7",
+    "budo": "^11.5.0",
     "geom-center-and-normalize": "^1.0.1",
     "glsl-gamma": "^2.0.0",
     "glslify": "^6.0.2",

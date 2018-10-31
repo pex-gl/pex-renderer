@@ -5,13 +5,13 @@ const mat4 = require('pex-math/mat4')
 const utils = require('pex-math/utils')
 const flatten = require('flatten')
 
-const POSTPROCESS_VERT = require('./shaders/post-processing/Postprocess.vert.js')
-const POSTPROCESS_FRAG = require('./shaders/post-processing/Postprocess.frag.js')
+const POSTPROCESS_VERT = require('./shaders/post-processing/post-processing.vert.js')
+const POSTPROCESS_FRAG = require('./shaders/post-processing/post-processing.frag.js')
 
-const SAO_FRAG = require('./shaders/post-processing/SAO.frag.js')
-const BILATERAL_BLUR_FRAG = require('./shaders/post-processing/BilateralBlur.frag.js')
-const THRESHOLD_FRAG = require('./shaders/post-processing/Threshold.frag.js')
-const BLOOM_FRAG = require('./shaders/post-processing/Bloom.frag.js')
+const SAO_FRAG = require('./shaders/post-processing/sao.frag.js')
+const BILATERAL_BLUR_FRAG = require('./shaders/post-processing/bilateral-blur.frag.js')
+const THRESHOLD_FRAG = require('./shaders/post-processing/threshold.frag.js')
+const BLOOM_FRAG = require('./shaders/post-processing/bloom.frag.js')
 
 var ssaoKernel = []
 for (let i = 0; i < 64; i++) {

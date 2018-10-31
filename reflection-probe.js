@@ -2,13 +2,13 @@ const Signal = require('signals')
 const mat4 = require('pex-math/mat4')
 const hammersley = require('hammersley')
 
-const FULLSCREEN_QUAD = require('./shaders/reflection-probe/FullscreenQuad.vert.js')
+const FULLSCREEN_QUAD = require('./shaders/reflection-probe/fullscreen-quad.vert.js')
 
-const CUBEMAP_TO_OCTMAP = require('./shaders/reflection-probe/CubemapToOctmap.frag.js')
-const CONVOLVE_OCT_MAP_ATLAS_TO_OCT_MAP = require('./shaders/reflection-probe/ConvolveOctMapAtlasToOctMap.frag.js')
-const BLIT_TO_OCT_MAP_ATLAS = require('./shaders/reflection-probe/BlitToOctMapAtlas.frag.js')
-const DOWNSAMPLE_FROM_OCT_MAP_ATLAS = require('./shaders/reflection-probe/DownsampleFromOctMapAtlas.frag.js')
-const PREFILTER_FROM_OCT_MAP_ATLAS = require('./shaders/reflection-probe/PrefilterFromOctMapAtlas.frag.js')
+const CUBEMAP_TO_OCTMAP = require('./shaders/reflection-probe/cubemap-to-octmap.frag.js')
+const CONVOLVE_OCT_MAP_ATLAS_TO_OCT_MAP = require('./shaders/reflection-probe/convolve-oct-map-atlas-to-oct-map.frag.js')
+const BLIT_TO_OCT_MAP_ATLAS = require('./shaders/reflection-probe/blit-to-oct-map-atlas.frag.js')
+const DOWNSAMPLE_FROM_OCT_MAP_ATLAS = require('./shaders/reflection-probe/downsample-from-oct-map-atlas.frag.js')
+const PREFILTER_FROM_OCT_MAP_ATLAS = require('./shaders/reflection-probe/prefilter-from-oct-map-atlas.frag.js')
 
 function ReflectionProbe (opts) {
   this.type = 'ReflectionProbe'
