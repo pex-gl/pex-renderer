@@ -32,6 +32,7 @@ const OVERLAY_VERT = require('./shaders/pipeline/overlay.vert.js')
 const OVERLAY_FRAG = require('./shaders/pipeline/overlay.frag.js')
 const ERROR_VERT = require('./shaders/error/error.vert.js')
 const ERROR_FRAG = require('./shaders/error/error.frag.js')
+const SHADERS_CHUNKS = require('./shaders/chunks')
 
 var State = {
   frame: 0,
@@ -120,6 +121,16 @@ function Renderer (opts) {
   // TODO: move from State object to internal probs and renderer({ opts }) setter?
   Object.assign(State, opts)
   this._state = State
+
+  this.shaders = {
+    chunks: SHADERS_CHUNKS,
+    pipeline: {
+      material: {
+        vert: PBR_VERT,
+        frag: PBR_FRAG
+      }
+    }
+  }
 }
 
 Renderer.prototype.updateDirectionalLightShadowMap = function (light, geometries) {
