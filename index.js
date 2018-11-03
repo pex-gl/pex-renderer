@@ -80,7 +80,7 @@ function Renderer (opts) {
       for (var i = 0; i < this.values.length; i++) {
         var v = this.values[i]
         if (v.frag === frag && v.vert === vert) {
-          if (v.flags.length == flags.length) {
+          if (v.flags.length === flags.length) {
             var found = true
             for (var j = 0; j < flags.length; j++) {
               if (v.flags[j] !== flags[j]) {
@@ -344,20 +344,17 @@ Renderer.prototype.buildProgram = function (vertSrc, fragSrc) {
   try {
     program = ctx.program({ vert: vertSrc, frag: fragSrc })
   } catch (e) {
-    //console.log('pex-renderer glsl error', e)
+    // console.log('pex-renderer glsl error', e)
     progaram = ctx.program({ vert: ERROR_VERT, frag: ERROR_FRAG })
   }
   return program
 }
 
 Renderer.prototype.getMaterialProgram = function (geometry, material, skin, options) {
-  var ctx = this._ctx
-
   var { flags, vert, frag } = this.getMaterialProgramAndFlags(geometry, material, skin, options)
   var flagsStr = flags.join('\n') + '\n'
   var vertSrc = flagsStr + vert
   var fragSrc = flagsStr + frag
-  var hash = vertSrc + fragSrc
   var program = this._programCacheMap.getValue(flags, vert, frag)
   if (!program) {
     program = this.buildProgram(vertSrc, fragSrc)
