@@ -76,6 +76,32 @@ function Renderer (opts) {
   gl.getExtension('OES_standard_derivatives')
 
   this._debug = false
+  this._programCacheMap = {
+    values: [],
+    getValue: function (flags, vert, frag) {
+      for (var i = 0; i < this.values.length; i++) {
+        var v = this.values[i]
+        if (v.frag === frag && v.vert === vert) {
+          if (v.flags.length === flags.length) {
+            var found = true
+            for (var j = 0; j < flags.length; j++) {
+              if (v.flags[j] !== flags[j]) {
+                found = false
+                break
+              }
+            }
+            if (found) {
+              return v.program
+            }
+          }
+        }
+      }
+      return false
+    },
+    setValue: function (flags, vert, frag, program) {
+      this.values.push({ flags, vert, frag, program })
+    }
+  }
 
   if (opts.profile) {
     State.profiler = createProfiler(opts.ctx, this)
@@ -151,13 +177,8 @@ Renderer.prototype.updatePointLightShadowMap = function (light, geometries) {
   })
 }
 
-// TODO: how fast is building these flag strings every frame for every object?
-Renderer.prototype.getMaterialProgram = function (geometry, material, skin, options) {
+Renderer.prototype.getMaterialProgramAndFlags = function (geometry, material, skin, options) {
   var ctx = this._ctx
-
-  if (!this._programCache) {
-    this._programCache = {}
-  }
 
   var flags = []
 
@@ -221,27 +242,11 @@ Renderer.prototype.getMaterialProgram = function (geometry, material, skin, opti
     flags.push('#define NUM_POINT_LIGHTS ' + (0))
     flags.push('#define NUM_SPOT_LIGHTS ' + (0))
     flags.push('#define NUM_AREA_LIGHTS ' + (0))
-    flags = flags.join('\n') + '\n'
-    var vertSrc = flags + (material.vert || DEPTH_PASS_VERT)
-    var fragSrc = flags + (material.frag || DEPTH_PRE_PASS_FRAG)
-    var hash = vertSrc + fragSrc
-    let program = this._programCache[hash]
-    if (!program) {
-      try {
-        program = this._programCache[hash] = ctx.program({
-          vert: vertSrc,
-          frag: fragSrc
-        })
-      } catch (e) {
-        console.warn('pex-renderer glsl error', e)
-        console.warn('vert')
-        console.warn(vertSrc)
-        console.warn('frag')
-        console.warn(fragSrc)
-        program = this._programCache[hash] = ctx.program({ vert: ERROR_VERT, frag: ERROR_FRAG })
-      }
+    return {
+      flags: flags,
+      vert: (material.vert || DEPTH_PASS_VERT),
+      frag: (material.frag || DEPTH_PRE_PASS_FRAG)
     }
-    return program
   }
 
   if (options.depthPassOnly) {
@@ -252,27 +257,11 @@ Renderer.prototype.getMaterialProgram = function (geometry, material, skin, opti
     flags.push('#define NUM_POINT_LIGHTS ' + (0))
     flags.push('#define NUM_SPOT_LIGHTS ' + (0))
     flags.push('#define NUM_AREA_LIGHTS ' + (0))
-    flags = flags.join('\n') + '\n'
-    var vertSrc = flags + (material.vert || DEPTH_PASS_VERT)
-    var fragSrc = flags + (material.frag || DEPTH_PASS_FRAG)
-    var hash = vertSrc + fragSrc
-    let program = this._programCache[hash]
-    if (!program) {
-      try {
-        program = this._programCache[hash] = ctx.program({
-          vert: vertSrc,
-          frag: fragSrc
-        })
-      } catch (e) {
-        console.warn('pex-renderer glsl error', e)
-        console.warn('vert')
-        console.warn(vertSrc)
-        console.warn('frag')
-        console.warn(fragSrc)
-        program = this._programCache[hash] = ctx.program({ vert: ERROR_VERT, frag: ERROR_FRAG })
-      }
+    return {
+      flags: flags,
+      vert: (material.vert || DEPTH_PASS_VERT),
+      frag: (material.frag || DEPTH_PASS_FRAG)
     }
-    return program
   }
 
   flags.push('#define SHADOW_QUALITY ' + (material.receiveShadows ? State.shadowQuality : 0))
@@ -341,21 +330,34 @@ Renderer.prototype.getMaterialProgram = function (geometry, material, skin, opti
   if (options.useTonemapping) {
     flags.push('#define USE_TONEMAPPING')
   }
-  flags = flags.join('\n') + '\n'
+  return {
+    flags: flags,
+    vert: (material.vert || PBR_VERT),
+    frag: (material.frag || PBR_FRAG)
+  }
+}
 
-  var vertSrc = flags + (material.vert || PBR_VERT)
-  var fragSrc = flags + (material.frag || PBR_FRAG)
-  var hash = vertSrc + fragSrc
+Renderer.prototype.buildProgram = function (vertSrc, fragSrc) {
+  var ctx = this._ctx
+  let program = null
+  try {
+    program = ctx.program({ vert: vertSrc, frag: fragSrc })
+  } catch (e) {
+    // console.log('pex-renderer glsl error', e)
+    progaram = ctx.program({ vert: ERROR_VERT, frag: ERROR_FRAG })
+  }
+  return program
+}
 
-  var program = this._programCache[hash]
+Renderer.prototype.getMaterialProgram = function (geometry, material, skin, options) {
+  var { flags, vert, frag } = this.getMaterialProgramAndFlags(geometry, material, skin, options)
+  var flagsStr = flags.join('\n') + '\n'
+  var vertSrc = flagsStr + vert
+  var fragSrc = flagsStr + frag
+  var program = this._programCacheMap.getValue(flags, vert, frag)
   if (!program) {
-    // console.log('added program', vertSrc, fragSrc)
-    try {
-      program = this._programCache[hash] = ctx.program({ vert: vertSrc, frag: fragSrc })
-    } catch (e) {
-      console.log('pex-renderer glsl error', e)
-      program = this._programCache[hash] = ctx.program({ vert: ERROR_VERT, frag: ERROR_FRAG })
-    }
+    program = this.buildProgram(vertSrc, fragSrc)
+    this._programCacheMap.setValue(flags, vert, frag, program)
   }
   return program
 }
@@ -535,16 +537,16 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
       // but breaks shadows on large scale scenes (eg maps)
       camera.set({ far: far * 0.99 })
     }
-    sharedUniforms.uProjectionMatrix = mat4.copy(camera.projectionMatrix)
+    sharedUniforms.uProjectionMatrix = camera.projectionMatrix
     if (shadowMapping) {
       camera.set({ far: far })
     }
     sharedUniforms.uViewMatrix = camera.viewMatrix
-    sharedUniforms.uInverseViewMatrix = mat4.invert(mat4.copy(camera.viewMatrix)) // TODO: GC
+    sharedUniforms.uInverseViewMatrix = camera.inverseViewMatrix
   }
 
   if (camera) {
-    if (camera.ssao) {
+    if (camera.postprocess && camera.ssao) {
       sharedUniforms.uAO = camera._frameAOTex
       sharedUniforms.uScreenSize = [ camera.viewport[2], camera.viewport[3] ] // TODO: should this be camera viewport size?
     }
@@ -622,7 +624,14 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
     }
     const geometry = geometries[i]
     const transform = geometry.entity.transform
-    if (!transform.enabled) continue
+    if (!transform.enabled) {
+			continue
+		}
+
+    // don't draw uninitialized geometries
+		if (!geometry._attributes.aPosition) {
+		  continue
+		}
     const material = geometry.entity.getComponent('Material')
     if (material.blend && shadowMapping) {
       continue
@@ -691,7 +700,7 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
         numSpotLights: spotLights.length,
         numAreaLights: areaLights.length,
         useReflectionProbes: reflectionProbes.length, // TODO: reflection probes true
-        useSSAO: camera.ssao,
+        useSSAO: camera.postprocess && camera.ssao,
         useTonemapping: !camera.postprocess
       })
     }
@@ -800,7 +809,7 @@ Renderer.prototype.draw = function () {
       })
     }
     if (State.profiler) State.profiler.timeEnd('depthPrepass')
-    if (camera.ssao) {
+    if (camera.postprocess && camera.ssao) {
       if (State.profiler) State.profiler.time('ssao', true)
       ctx.submit(camera._ssaoCmd, {
         uniforms: {

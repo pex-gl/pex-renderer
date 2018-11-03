@@ -3,7 +3,6 @@ const random = require('pex-random')
 const vec3 = require('pex-math/vec3')
 const mat4 = require('pex-math/mat4')
 const utils = require('pex-math/utils')
-const flatten = require('flatten')
 
 const POSTPROCESS_VERT = require('./shaders/post-processing/post-processing.vert.js')
 const POSTPROCESS_FRAG = require('./shaders/post-processing/post-processing.frag.js')
@@ -13,7 +12,7 @@ const BILATERAL_BLUR_FRAG = require('./shaders/post-processing/bilateral-blur.fr
 const THRESHOLD_FRAG = require('./shaders/post-processing/threshold.frag.js')
 const BLOOM_FRAG = require('./shaders/post-processing/bloom.frag.js')
 
-var ssaoKernel = []
+var ssaoKernelData = new Float32Array(64 * 4)
 for (let i = 0; i < 64; i++) {
   var sample = [
     random.float() * 2 - 1,
@@ -25,22 +24,25 @@ for (let i = 0; i < 64; i++) {
   var scale = random.float()
   scale = utils.lerp(0.1, 1.0, scale * scale)
   vec3.scale(sample, scale)
-  ssaoKernel.push(sample)
+  ssaoKernelData[i * 4 + 0] = sample[0]
+  ssaoKernelData[i * 4 + 1] = sample[1]
+  ssaoKernelData[i * 4 + 2] = sample[2]
+  ssaoKernelData[i * 4 + 3] = sample[3]
 }
-var ssaoKernelData = new Float32Array(flatten(ssaoKernel))
 
-var ssaoNoise = []
-for (let j = 0; j < 128 * 128; j++) {
+var ssaoNoiseData = new Float32Array(128 * 128 * 4)
+for (let i = 0; i < 128 * 128; i++) {
   let noiseSample = [
     random.float() * 2 - 1,
     random.float() * 2 - 1,
     0,
     1
   ]
-  ssaoNoise.push(noiseSample)
+  ssaoNoiseData[i * 4 + 0] = sample[0]
+  ssaoNoiseData[i * 4 + 1] = sample[1]
+  ssaoNoiseData[i * 4 + 2] = sample[2]
+  ssaoNoiseData[i * 4 + 3] = sample[3]
 }
-var ssaoNoiseData = new Float32Array(flatten(ssaoNoise))
-
 
 function Camera (opts) {
   const gl = opts.ctx.gl
@@ -55,6 +57,7 @@ function Camera (opts) {
   this.backgroundColor = [0, 0, 0, 1]
   this.projectionMatrix = mat4.perspective(mat4.create(), this.fov, this.aspect, this.near, this.far)
   this.viewMatrix = mat4.create()
+  this.inverseViewMatrix = mat4.create()
 
   // postprocessing
   this.postprocess = true
@@ -134,7 +137,7 @@ Camera.prototype.set = function (opts) {
 
   if (this.postprocess && this.ctx.capabilities.maxColorAttachments < 2) {
     this.postprocess = false
-    console.log('pex-renderer', `disabling postprocess as MAX_COLOR_ATTACHMENTS=${opts.ctx.capabilities.maxColorAttachments}`)
+    console.log('pex-renderer', `disabling postprocess as MAX_COLOR_ATTACHMENTS=${this.ctx.capabilities.maxColorAttachments}`)
     console.log('pex-renderer ctx', this.ctx.capabilities)
   }
 
@@ -448,6 +451,7 @@ Camera.prototype.initPostproces = function () {
 }
 
 Camera.prototype.update = function () {
+  mat4.set(this.inverseViewMatrix, this.entity.transform.modelMatrix)
   mat4.set(this.viewMatrix, this.entity.transform.modelMatrix)
   mat4.invert(this.viewMatrix)
 }
