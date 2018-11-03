@@ -23,13 +23,15 @@ const createReflectionProbe = require('./reflection-probe')
 const createSkybox = require('./skybox')
 const createOverlay = require('./overlay')
 
-const DEPTH_PASS_VERT = require('./glsl/DepthPass.vert.js')
-const DEPTH_PASS_FRAG = require('./glsl/DepthPass.frag.js')
-const DEPTH_PRE_PASS_FRAG = require('./glsl/DepthPrePass.frag.js')
-const OVERLAY_VERT = require('./glsl/Overlay.vert.js')
-const OVERLAY_FRAG = require('./glsl/Overlay.frag.js')
-const ERROR_VERT = require('./glsl/Error.vert.js')
-const ERROR_FRAG = require('./glsl/Error.frag.js')
+const PBR_VERT = require('./shaders/pipeline/material.vert.js')
+const PBR_FRAG = require('./shaders/pipeline/material.frag.js')
+const DEPTH_PASS_VERT = require('./shaders/pipeline/depth-pass.vert.js')
+const DEPTH_PASS_FRAG = require('./shaders/pipeline/depth-pass.frag.js')
+const DEPTH_PRE_PASS_FRAG = require('./shaders/pipeline/depth-pre-pass.frag.js')
+const OVERLAY_VERT = require('./shaders/pipeline/overlay.vert.js')
+const OVERLAY_FRAG = require('./shaders/pipeline/overlay.frag.js')
+const ERROR_VERT = require('./shaders/error/error.vert.js')
+const ERROR_FRAG = require('./shaders/error/error.frag.js')
 
 var State = {
   frame: 0,
@@ -174,9 +176,6 @@ Renderer.prototype.updatePointLightShadowMap = function (light, geometries) {
     })
   })
 }
-
-var PBRVert = require('./glsl/PBR.vert.js')
-var PBRFrag = require('./glsl/PBR.frag.js')
 
 Renderer.prototype.getMaterialProgramAndFlags = function (geometry, material, skin, options) {
   var ctx = this._ctx
@@ -333,8 +332,8 @@ Renderer.prototype.getMaterialProgramAndFlags = function (geometry, material, sk
   }
   return {
     flags: flags,
-    vert: (material.vert || PBRVert),
-    frag: (material.frag || PBRFrag)
+    vert: (material.vert || PBR_VERT),
+    frag: (material.frag || PBR_FRAG)
   }
 }
 

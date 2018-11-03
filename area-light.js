@@ -1,5 +1,5 @@
 const Signal = require('signals')
-const AreaLightsData = require('./local_modules/area-light-data')
+const AreaLightsData = require('./area-light-data')
 
 function AreaLight (opts) {
   const ctx = opts.ctx
