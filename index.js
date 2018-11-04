@@ -542,16 +542,7 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
     sharedUniforms.uViewMatrix = shadowMappingLight._viewMatrix
   } else {
     sharedUniforms.uCameraPosition = camera.entity.transform.worldPosition
-    const far = camera.far
-    if (shadowMapping) {
-      // TODO: Far clipping plane scaling fixes depth buffer precision artifacts
-      // but breaks shadows on large scale scenes (eg maps)
-      camera.set({ far: far * 0.99 })
-    }
     sharedUniforms.uProjectionMatrix = camera.projectionMatrix
-    if (shadowMapping) {
-      camera.set({ far: far })
-    }
     sharedUniforms.uViewMatrix = camera.viewMatrix
     sharedUniforms.uInverseViewMatrix = camera.inverseViewMatrix
   }
@@ -815,8 +806,12 @@ Renderer.prototype.draw = function () {
     if (State.profiler) State.profiler.time('depthPrepass', true)
     if (camera.postprocess) {
       ctx.submit(camera._drawFrameNormalsFboCommand, () => {
-        // depth prepass
+        const far = camera.far
+        // TODO: Far clipping plane scaling fixes depth buffer precision artifacts
+        // but breaks shadows on large scale scenes (eg maps)
+        camera.set({ far: far * 0.99 })
         this.drawMeshes(camera, true)
+        camera.set({ far: far })
       })
     }
     if (State.profiler) State.profiler.timeEnd('depthPrepass')
