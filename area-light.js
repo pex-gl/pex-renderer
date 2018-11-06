@@ -19,14 +19,18 @@ function AreaLight (opts) {
       width: 64,
       height: 64,
       pixelFormat: ctx.PixelFormat.RGBA32F,
-      encoding: ctx.Encoding.Linear
+      encoding: ctx.Encoding.Linear,
+      min: ctx.Filter.Linear,
+      mag: ctx.Filter.Linear
     })
     AreaLight.ltc_mag_texture = ctx.texture2D({
       data: AreaLightsData.mag,
       width: 64,
       height: 64,
       pixelFormat: ctx.PixelFormat.R32F,
-      encoding: ctx.Encoding.Linear
+      encoding: ctx.Encoding.Linear,
+      min: ctx.Filter.Linear,
+      mag: ctx.Filter.Linear
     })
     AreaLight.areaLightTextures = true
   }
