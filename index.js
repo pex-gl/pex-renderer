@@ -355,7 +355,7 @@ Renderer.prototype.buildProgram = function (vertSrc, fragSrc) {
     program = ctx.program({ vert: vertSrc, frag: fragSrc })
   } catch (e) {
     // console.log('pex-renderer glsl error', e)
-    progaram = ctx.program({ vert: ERROR_VERT, frag: ERROR_FRAG })
+    program = ctx.program({ vert: ERROR_VERT, frag: ERROR_FRAG })
   }
   return program
 }
