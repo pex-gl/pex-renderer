@@ -627,13 +627,13 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
     const geometry = geometries[i]
     const transform = geometry.entity.transform
     if (!transform.enabled) {
-			continue
-		}
+      continue
+    }
 
     // don't draw uninitialized geometries
-		if (!geometry._attributes.aPosition) {
-		  continue
-		}
+    if (!geometry._attributes.aPosition) {
+      continue
+    }
     const material = geometry.entity.getComponent('Material')
     if (material.blend && shadowMapping) {
       continue
