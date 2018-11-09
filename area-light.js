@@ -13,7 +13,7 @@ function AreaLight (opts) {
   this.set(opts)
 
   // TODO: area light textures
-  if (!AreaLight.areaLightTextures) {
+  if (!AreaLight.areaLightTexturesRefs) {
     AreaLight.ltc_mat_texture = ctx.texture2D({
       data: AreaLightsData.mat,
       width: 64,
@@ -32,8 +32,8 @@ function AreaLight (opts) {
       min: ctx.Filter.Linear,
       mag: ctx.Filter.Linear
     })
-    AreaLight.areaLightTextures = true
   }
+  AreaLight.areaLightTexturesRefs = (AreaLight.areaLightTexturesRefs || 0) + 1
   this.ltc_mat_texture = AreaLight.ltc_mat_texture
   this.ltc_mag_texture = AreaLight.ltc_mag_texture
 }
@@ -48,6 +48,15 @@ AreaLight.prototype.set = function (opts) {
 
   if (opts.color !== undefined || opts.intensity !== undefined) {
     this.color[3] = this.intensity
+  }
+}
+
+AreaLight.prototype.dispose = function () {
+  if (--AreaLight.areaLightTexturesRefs === 0) {
+    this.ctx.dispose(AreaLight.ltc_mat_texture)
+    AreaLight.ltc_mat_texture = null
+    this.ctx.dispose(AreaLight.ltc_mag_texture)
+    AreaLight.ltc_mag_texture = null
   }
 }
 
