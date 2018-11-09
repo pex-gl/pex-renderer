@@ -110,7 +110,6 @@ Skybox.prototype.draw = function (camera, opts) {
     if (this.backgroundBlur > 0) {
       backgroundBlur = this.backgroundBlur
       if (!this._reflectionProbe) {
-        console.log(this.entity)
          this._reflectionProbe = this.entity.renderer.getComponents('ReflectionProbe')[0]
       }
       if (this._reflectionProbe) {
