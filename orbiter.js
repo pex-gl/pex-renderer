@@ -57,7 +57,7 @@ function Orbiter (opts) {
     currentLat: 0,
     currentLon: 0,
     easing: 0.1,
-    element: opts.element || window,
+    element: opts.element || document,
     width: 0,
     height: 0,
     clickPosWindow: [0, 0],
@@ -303,22 +303,26 @@ Orbiter.prototype.setup = function () {
   this._onWheel = onWheel
 
   this.element.addEventListener('mousedown', onMouseDown)
-  this.element.addEventListener('touchstart', onTouchStart)
   this.element.addEventListener('wheel', onWheel)
-  window.addEventListener('mousemove', onMouseMove)
-  window.addEventListener('touchmove', onTouchMove, { passive: false })
-  window.addEventListener('mouseup', onMouseUp)
-  window.addEventListener('touchend', onMouseUp)
+
+  this.element.addEventListener('touchstart', onTouchStart)
+  this.element.addEventListener('touchmove', onTouchMove, { passive: false })
+  this.element.addEventListener('touchend', onMouseUp)
+
+  document.addEventListener('mousemove', onMouseMove)
+  document.addEventListener('mouseup', onMouseUp)
 }
 
 Orbiter.prototype.dispose = function () {
   this.element.removeEventListener('mousedown', this._onMouseDown)
-  this.element.removeEventListener('touchstart', this._onTouchStart)
   this.element.removeEventListener('wheel', this._onWheel)
-  window.removeEventListener('mousemove', this._onMouseMove)
-  window.removeEventListener('touchmove', this._onMouseMove)
-  window.removeEventListener('mouseup', this._onMouseUp)
-  window.removeEventListener('touchend', this._onMouseUp)
+
+  this.element.removeEventListener('touchstart', this._onTouchStart)
+  this.element.removeEventListener('touchmove', this._onMouseMove)
+  this.element.removeEventListener('touchend', this._onMouseUp)
+
+  document.removeEventListener('mousemove', this._onMouseMove)
+  document.removeEventListener('mouseup', this._onMouseUp)
 }
 
 module.exports = function createOrbiter (opts) {
