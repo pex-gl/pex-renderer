@@ -67,8 +67,8 @@ function Orbiter (opts) {
     currentDistance: 1,
     minDistance: 0.1,
     maxDistance: 10,
-    minLat: -90,
-    maxLat: 90,
+    minLat: -89.5,
+    maxLat: 89.5,
     minLon: -Infinity,
     maxLon: Infinity,
     zoomSlowdown: 400,
@@ -107,8 +107,8 @@ Orbiter.prototype.set = function (opts) {
     this.currentDistance = this.distance
     this.minDistance = opts.minDistance || distance / 10
     this.maxDistance = opts.maxDistance || distance * 10
-    this.minLat = opts.minLat || -90
-    this.maxLat = opts.maxLat || 90
+    this.minLat = opts.minLat || -89.5
+    this.maxLat = opts.maxLat || 89.5
     this.minLon = opts.minLon || -Infinity
     this.maxLon = opts.maxLon || Infinity
   }
