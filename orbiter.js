@@ -67,6 +67,10 @@ function Orbiter (opts) {
     currentDistance: 1,
     minDistance: 0.1,
     maxDistance: 10,
+    minLat: -89.5,
+    maxLat: 89.5,
+    minLon: -Infinity,
+    maxLon: Infinity,
     zoomSlowdown: 400,
     zoom: true,
     pan: true,
@@ -103,6 +107,10 @@ Orbiter.prototype.set = function (opts) {
     this.currentDistance = this.distance
     this.minDistance = opts.minDistance || distance / 10
     this.maxDistance = opts.maxDistance || distance * 10
+    this.minLat = opts.minLat || -89.5
+    this.maxLat = opts.maxLat || 89.5
+    this.minLon = opts.minLon || -Infinity
+    this.maxLon = opts.maxLon || Infinity
   }
   Object.keys(opts).forEach((prop) => this.changed.dispatch(prop))
 }
@@ -141,8 +149,8 @@ Orbiter.prototype.updateMatrix = function () {
   const position = this.position
   const target = this.target
 
-  this.lat = clamp(this.lat, -89.5, 89.5)
-  this.lon = this.lon % (360)
+  this.lat = clamp(this.lat, this.minLat, this.maxLat)
+  this.lon = clamp(this.lon, this.minLon, this.maxLon) % 360
 
   this.currentLat = toDegrees(
     interpolateAngle(
