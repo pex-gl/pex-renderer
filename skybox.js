@@ -95,7 +95,8 @@ Skybox.prototype.draw = function (camera, opts) {
     this._dirtySunPosition = false
     ctx.submit(this._updateSkyTexture, {
       uniforms: {
-        uSunPosition: this.sunPosition
+        uSunPosition: this.sunPosition,
+        uRGBM: this.rgbm
       }
     })
   }

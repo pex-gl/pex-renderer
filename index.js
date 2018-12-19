@@ -40,7 +40,8 @@ var State = {
   debug: false,
   profile: false,
   profiler: null,
-  paused: false
+  paused: false,
+  rgbm: false
 }
 
 function isNil (x) {

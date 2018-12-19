@@ -5,10 +5,14 @@ precision highp float;
 
 ${SHADERS.math.PI}
 ${SHADERS.sky}
+${SHADERS.rgbm}
+${SHADERS.gamma}
+${SHADERS.encodeDecode}
 
 uniform vec3 uSunPosition;
 
 varying vec2 vTexCoord0;
+uniform bool uRGBM;
 
 void main() {
   //Texture coordinates to Normal is Based on
@@ -31,11 +35,11 @@ void main() {
 
   vec3 color = sky(uSunPosition, N);
 
-  // if (uRGBM) {
-    // gl_FragColor = encodeRGBM(color);
-  // } else {
+   if (uRGBM) {
+     gl_FragColor = encodeRGBM(color);
+  } else {
     gl_FragColor.rgb = color;
     gl_FragColor.a = 1.0;
-  // }
+  }
 }
 `
