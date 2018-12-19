@@ -870,7 +870,7 @@ Renderer.prototype.draw = function () {
     }
     if (State.profiler) State.profiler.timeEnd('drawFrame')
     if (State.profiler) State.profiler.time('postprocess')
-    if (camera.bloom) {
+    if (camera.postprocess && camera.bloom) {
       ctx.submit(camera._thresholdCmd, {
         uniforms: {
           uExposure: camera.exposure,
@@ -897,7 +897,7 @@ Renderer.prototype.draw = function () {
         })
       }
     }
-    if (camera.dof) {
+    if (camera.postprocess && camera.dof) {
       if (State.profiler) State.profiler.time('dof', true)
       for (let i = 0; i < camera.dofIterations; i++) {
         ctx.submit(camera._dofBlurHCmd, {

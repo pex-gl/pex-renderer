@@ -92,8 +92,6 @@ function Camera (opts) {
   this._textures = []
 
   this.set(opts)
-
-  this.initPostproces()
 }
 
 Camera.prototype.init = function (entity) {
@@ -139,6 +137,10 @@ Camera.prototype.set = function (opts) {
     this.postprocess = false
     console.log('pex-renderer', `disabling postprocess as MAX_COLOR_ATTACHMENTS=${this.ctx.capabilities.maxColorAttachments}`)
     console.log('pex-renderer ctx', this.ctx.capabilities)
+  }
+
+  if (this.postprocess && !this._fsqMesh) {
+    this.initPostproces()
   }
 
   Object.keys(opts).forEach((prop) => this.changed.dispatch(prop))
