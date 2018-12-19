@@ -88,7 +88,8 @@ function initCamera () {
       fxaa: false,
       dof: true,
       dofDepth: 18,
-      exposure: 2
+      exposure: 2,
+      postprocess: true
     }),
     renderer.orbiter({
       position: [0, 2, 20]
@@ -324,7 +325,10 @@ function initGUI () {
   const postProcessTab = gui.addTab('PostProcess')
   postProcessTab.setActive()
   gui.addColumn('Parameters')
-  gui.addParam('Enabled', cameraCmp, 'postprocess')
+  gui.addParam('Enabled', cameraCmp, 'postprocess', {}, () => {
+    // trigger update
+    cameraCmp.set({ postprocess: cameraCmp.postprocess })
+  })
   gui.addParam('Exposure', cameraCmp, 'exposure', { min: 0, max: 5 })
   gui.addParam('SSAO', cameraCmp, 'ssao')
   gui.addParam('SSAO radius', cameraCmp, 'ssaoRadius', { min: 0, max: 30 })
