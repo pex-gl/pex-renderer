@@ -125,6 +125,28 @@ function createProfiler (ctx, renderer) {
         const m = this.measurements[label]
         return `${label}: ${ms(m.avg)} ${m.gpu ? ' / ' + (Math.floor(m.gpu * 10) / 10).toFixed(1) : ''}`
       }))
+      var ctx = renderer._ctx
+      var textures = ctx.resources.filter((r) => r.class === 'texture')
+      var textureVRAM = 0
+      textures.forEach((texture) => {
+        var bits = 8
+        var channels = 4
+        if (texture.pixelFormat === ctx.PixelFormat.RGBA32F) {
+          bits = 32
+        }
+        if (texture.pixelFormat === ctx.PixelFormat.RGBA16F) {
+          bits = 16
+        }
+        if (texture.pixelFormat === ctx.PixelFormat.Depth) {
+          bits = 24 // estimate
+        }
+        var bpp = bits / 8 * channels
+        if (texture.target === ctx.gl.TEXTURE_2D) {
+          textureVRAM += texture.width * texture.height * bpp
+        } else if (texture.target === ctx.gl.TEXTURE_CUBE_MAP) {
+          textureVRAM += texture.width * texture.height * bpp * 6
+        }
+      })
       lines.push('------')
       lines.push(`Entities: ${pa3(renderer.entities.length)}`)
       lines.push(`Geometries: ${pa3(renderer.getComponents('Geometry').length)}`)
@@ -145,6 +167,7 @@ function createProfiler (ctx, renderer) {
       lines.push(`Pipelines: ${pa3(renderer._ctx.resources.filter((r) => r.class === 'pipeline').length)}`)
       lines.push(`Textures 2D: ${pa3(renderer._ctx.resources.filter((r) => r.class === 'texture' && r.target === ctx.gl.TEXTURE_2D).length)}`)
       lines.push(`Textures Cube: ${pa3(renderer._ctx.resources.filter((r) => r.class === 'texture' && r.target === ctx.gl.TEXTURE_CUBE_MAP).length)}`)
+      lines.push(`Texture VRAM: ${(textureVRAM / (1024 * 1024)).toFixed(0)}MB`)
       lines.push('------')
       lines.push(`Buffers: ${pa3(profiler.bufferCount)} / ${pa3(profiler.totalBufferCount)}`)
       lines.push(`Textures: ${pa3(profiler.textureCount)} / ${pa3(profiler.totalTextureCount)}`)
