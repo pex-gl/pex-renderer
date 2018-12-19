@@ -804,8 +804,8 @@ Renderer.prototype.draw = function () {
     const screenSize = [camera.viewport[2], camera.viewport[3]]
     const halfScreenSize = [Math.floor(camera.viewport[2] / 2), Math.floor(camera.viewport[3] / 2)]
     const halfViewport = [0, 0, Math.floor(camera.viewport[2] / 2), Math.floor(camera.viewport[3] / 2)]
-    if (State.profiler) State.profiler.time('depthPrepass', true)
     if (camera.postprocess) {
+      if (State.profiler) State.profiler.time('depthPrepass', true)
       ctx.submit(camera._drawFrameNormalsFboCommand, () => {
         const far = camera.far
         // TODO: Far clipping plane scaling fixes depth buffer precision artifacts
@@ -814,8 +814,8 @@ Renderer.prototype.draw = function () {
         this.drawMeshes(camera, true)
         camera.set({ far: far })
       })
+      if (State.profiler) State.profiler.timeEnd('depthPrepass')
     }
-    if (State.profiler) State.profiler.timeEnd('depthPrepass')
     if (camera.postprocess && camera.ssao) {
       if (State.profiler) State.profiler.time('ssao', true)
       ctx.submit(camera._ssaoCmd, {
@@ -856,8 +856,8 @@ Renderer.prototype.draw = function () {
           direction: [0, camera.ssaoBlurRadius]
         }
       })
+      if (State.profiler) State.profiler.timeEnd('ssao-blur')
     }
-    if (State.profiler) State.profiler.timeEnd('ssao-blur')
     if (State.profiler) State.profiler.time('drawFrame', true)
     if (camera.postprocess) {
       ctx.submit(camera._drawFrameFboCommand, () => {
@@ -950,8 +950,8 @@ Renderer.prototype.draw = function () {
         },
         viewport: camera.viewport
       })
+      if (State.profiler) State.profiler.timeEnd('postprocess')
     }
-    if (State.profiler) State.profiler.time('postprocess')
   })
 
   overlays.forEach((overlay) => {
