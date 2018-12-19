@@ -2,7 +2,7 @@ const SHADERS = require('../chunks/index.js')
 
 module.exports = /* glsl */`
 #ifdef USE_DRAW_BUFFERS
-  #extension GL_EXT_draw_buffers : require
+  #extension GL_EXT_draw_buffers : enable
 #endif
 
 precision highp float;

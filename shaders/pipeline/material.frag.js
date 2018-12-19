@@ -3,7 +3,7 @@ const SHADERS = require('../chunks/index.js')
 module.exports = /* glsl */`
 #extension GL_OES_standard_derivatives : require
 #ifdef USE_DRAW_BUFFERS
-  #extension GL_EXT_draw_buffers : require
+  #extension GL_EXT_draw_buffers : enable
 #endif
 
 precision mediump float;
