@@ -72,10 +72,14 @@ function Renderer (opts) {
   // check if we passed gl context or options object
   opts = opts.texture2D ? { ctx: opts } : opts
 
-  this._ctx = opts.ctx
+  const ctx = this._ctx = opts.ctx
 
   const gl = opts.ctx.gl
   gl.getExtension('OES_standard_derivatives')
+
+
+  this._dummyTexture2D = ctx.texture2D({ width: 4, height: 4 })
+  this._dummyTextureCube = ctx.textureCube({ width: 4, height: 4 })
 
   this._debug = false
   this._programCacheMap = {
@@ -574,8 +578,8 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
     sharedUniforms['uDirectionalLights[' + i + '].near'] = light._near
     sharedUniforms['uDirectionalLights[' + i + '].far'] = light._far
     sharedUniforms['uDirectionalLights[' + i + '].bias'] = light.bias
-    sharedUniforms['uDirectionalLights[' + i + '].shadowMapSize'] = [light._shadowMap.width, light._shadowMap.height]
-    sharedUniforms['uDirectionalLightShadowMaps[' + i + ']'] = light._shadowMap
+    sharedUniforms['uDirectionalLights[' + i + '].shadowMapSize'] = light.castShadows ? [light._shadowMap.width, light._shadowMap.height] : [0, 0]
+    sharedUniforms['uDirectionalLightShadowMaps[' + i + ']'] = light.castShadows ? light._shadowMap : this._dummyTexture2D
   })
 
   pointLights.forEach((light, i) => {

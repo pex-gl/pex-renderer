@@ -3,6 +3,7 @@ const mat4 = require('pex-math/mat4')
 
 function DirectionalLight (opts) {
   const ctx = opts.ctx
+  this._ctx = ctx
 
   this.type = 'DirectionalLight'
   this.changed = new Signal()
@@ -19,39 +20,8 @@ function DirectionalLight (opts) {
   this._near = 2
   this._far = 40
 
-  this._prevDirection = [0, 0, 0]
-
-  this._colorMap = ctx.texture2D({
-    name: 'directionalLightColorMap',
-    width: 1024,
-    height: 1024,
-    pixelFormat: ctx.PixelFormat.RGBA8,
-    encoding: ctx.Encoding.Linear,
-    min: ctx.Filter.Linear,
-    mag: ctx.Filter.Linear
-  })
-  this._shadowMap = ctx.texture2D({
-    name: 'directionalLightShadowMap',
-    width: 1024,
-    height: 1024,
-    pixelFormat: ctx.PixelFormat.Depth,
-    encoding: ctx.Encoding.Linear
-  })
   this._viewMatrix = mat4.create()
   this._projectionMatrix = mat4.create()
-
-  this._shadowMapDrawCommand = {
-    name: 'DirectionalLight.shadowMap',
-    pass: ctx.pass({
-      name: 'DirectionalLight.shadowMap',
-      color: [ this._colorMap ],
-      depth: this._shadowMap,
-      clearColor: [0, 0, 0, 1],
-      clearDepth: 1
-    }),
-    viewport: [0, 0, 1024, 1024] // TODO: viewport bug
-    // colorMask: [0, 0, 0, 0] // TODO
-  }
 
   this.set(opts)
 }
@@ -66,6 +36,68 @@ DirectionalLight.prototype.set = function (opts) {
     this.color[3] = this.intensity
   }
   Object.keys(opts).forEach((prop) => this.changed.dispatch(prop))
+
+  if (opts.castShadows && !this._ctx.capabilities.depthTexture) {
+    console.warn('DirectionalLight.castShadows is not supported. WEBGL_depth_texture missing.')
+    this.castShadows = false
+  }
+
+  if (this.castShadows && !this._colorMap) {
+    this.allocateResources()
+  } else {
+    this.disposeResources()
+  }
+}
+
+DirectionalLight.prototype.allocateResources = function () {
+  const ctx = this._ctx
+
+  this._colorMap = ctx.texture2D({
+    name: 'directionalLightColorMap',
+    width: 1024,
+    height: 1024,
+    pixelFormat: ctx.PixelFormat.RGBA8,
+    encoding: ctx.Encoding.Linear,
+    min: ctx.Filter.Linear,
+    mag: ctx.Filter.Linear
+  })
+
+  this._shadowMap = ctx.texture2D({
+    name: 'directionalLightShadowMap',
+    width: 1024,
+    height: 1024,
+    pixelFormat: ctx.PixelFormat.Depth,
+    encoding: ctx.Encoding.Linear
+  })
+
+  this._shadowMapDrawCommand = {
+    name: 'DirectionalLight.shadowMap',
+    pass: ctx.pass({
+      name: 'DirectionalLight.shadowMap',
+      color: [ this._colorMap ],
+      depth: this._shadowMap,
+      clearColor: [0, 0, 0, 1],
+      clearDepth: 1
+    }),
+    viewport: [0, 0, 1024, 1024] // TODO: viewport bug
+    // colorMask: [0, 0, 0, 0] // TODO
+  }
+}
+
+DirectionalLight.prototype.disposeResources = function () {
+  const ctx = this._ctx
+  if (this._colorMap) {
+    ctx.dispose(this._colorMap)
+    this._colorMap = null
+  }
+  if (this._shadowMap) {
+    ctx.dispose(this._shadowMap)
+    this._shadowMap = null
+  }
+  if (this._shadowMapDrawCommand) {
+    ctx.dispose(this._shadowMapDrawCommand)
+    this._shadowMapDrawCommand = null
+  }
 }
 
 module.exports = function (opts) {
