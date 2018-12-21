@@ -22,6 +22,23 @@ function pa3 (f) {
   return f
 }
 
+function prop (name) {
+  return function (o) {
+    return o[name]
+  }
+}
+
+function groupBy (fn, list) {
+  return list.reduce((acc, o) => {
+    var val = fn(o)
+    if (!acc[val]) {
+      acc[val] = []
+    }
+    acc[val].push(o)
+    return acc
+  }, {})
+}
+
 function createProfiler (ctx, renderer) {
   const gl = ctx.gl
   if (isBrowser && !canvas) {
@@ -128,6 +145,8 @@ function createProfiler (ctx, renderer) {
       var ctx = renderer._ctx
       var textures = ctx.resources.filter((r) => r.class === 'texture')
       var textureVRAM = 0
+      var texture2DByPixelFormat = groupBy(prop('pixelFormat'), textures.filter((tex) => tex.target === ctx.gl.TEXTURE_2D))
+      var textureCubeByPixelFormat = groupBy(prop('pixelFormat'), textures.filter((tex) => tex.target === ctx.gl.TEXTURE_CUBE_MAP))
       textures.forEach((texture) => {
         var bits = 8
         var channels = 4
@@ -166,7 +185,13 @@ function createProfiler (ctx, renderer) {
       lines.push(`Passes: ${pa3(renderer._ctx.resources.filter((r) => r.class === 'pass').length)}`)
       lines.push(`Pipelines: ${pa3(renderer._ctx.resources.filter((r) => r.class === 'pipeline').length)}`)
       lines.push(`Textures 2D: ${pa3(renderer._ctx.resources.filter((r) => r.class === 'texture' && r.target === ctx.gl.TEXTURE_2D).length)}`)
+      Object.keys(texture2DByPixelFormat).forEach((format) => {
+      lines.push(`${format.toUpperCase()}: ${pa3(texture2DByPixelFormat[format].length)}`)
+      })
       lines.push(`Textures Cube: ${pa3(renderer._ctx.resources.filter((r) => r.class === 'texture' && r.target === ctx.gl.TEXTURE_CUBE_MAP).length)}`)
+      Object.keys(textureCubeByPixelFormat).forEach((format) => {
+      lines.push(`${format.toUpperCase()}: ${pa3(textureCubeByPixelFormat[format].length)}`)
+      })
       lines.push(`Texture VRAM: ${(textureVRAM / (1024 * 1024)).toFixed(0)}MB`)
       lines.push('------')
       lines.push(`Buffers: ${pa3(profiler.bufferCount)} / ${pa3(profiler.totalBufferCount)}`)
