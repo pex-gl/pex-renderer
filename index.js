@@ -558,11 +558,11 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
     }
   }
 
-  ambientLights.forEach(function (light, i) {
+  ambientLights.forEach((light, i) => {
     sharedUniforms['uAmbientLights[' + i + '].color'] = light.color
   })
 
-  directionalLights.forEach(function (light, i) {
+  directionalLights.forEach((light, i) => {
     var dir4 = [0, 0, 1, 0] // TODO: GC
     var dir = [0, 0, 0]
     vec4.multMat4(dir4, light.entity.transform.modelMatrix)
@@ -578,14 +578,14 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
     sharedUniforms['uDirectionalLightShadowMaps[' + i + ']'] = light._shadowMap
   })
 
-  pointLights.forEach(function (light, i) {
+  pointLights.forEach((light, i) => {
     sharedUniforms['uPointLights[' + i + '].position'] = light.entity.transform.worldPosition
     sharedUniforms['uPointLights[' + i + '].color'] = light.color
     sharedUniforms['uPointLights[' + i + '].range'] = light.range
     sharedUniforms['uPointLightShadowMaps[' + i + ']'] = light._shadowCubemap
   })
 
-  spotLights.forEach(function (light, i) {
+  spotLights.forEach((light, i) => {
     var transform = light.entity.transform
     var position = transform.worldPosition
     var target = light.target
@@ -597,7 +597,7 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
     sharedUniforms['uSpotLights[' + i + '].range'] = light.range
   })
 
-  areaLights.forEach(function (light, i) {
+  areaLights.forEach((light, i) => {
     sharedUniforms.ltc_mat = light.ltc_mat_texture
     sharedUniforms.ltc_mag = light.ltc_mag_texture
     sharedUniforms['uAreaLights[' + i + '].position'] = light.entity.transform.position
