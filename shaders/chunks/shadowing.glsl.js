@@ -64,6 +64,9 @@ float PCF5x5(sampler2D depths, vec2 size, vec2 uv, float compare, float near, fl
 }
 
 float directionalShadow(sampler2D depths, vec2 size, vec2 uv, float compare, float near, float far) {
+  if (uv.x < 0.0 || uv.y < 0.0 || uv.x > 1.0 || uv.y > 1.0) {
+    return 1.0;
+  }
   #if SHADOW_QUALITY == 0
     float illuminated = 1.0;
   #endif

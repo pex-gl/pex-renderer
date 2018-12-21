@@ -573,6 +573,7 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
     vec3.set(dir, dir4)
     sharedUniforms['uDirectionalLights[' + i + '].direction'] = dir
     sharedUniforms['uDirectionalLights[' + i + '].color'] = light.color
+    sharedUniforms['uDirectionalLights[' + i + '].castShadows'] = light.castShadows
     sharedUniforms['uDirectionalLights[' + i + '].projectionMatrix'] = light._projectionMatrix
     sharedUniforms['uDirectionalLights[' + i + '].viewMatrix'] = light._viewMatrix
     sharedUniforms['uDirectionalLights[' + i + '].near'] = light._near
