@@ -1,5 +1,6 @@
 const Signal = require('signals')
 const mat4 = require('pex-math/mat4')
+const log = require('debug')('pex-renderer:directional-light')
 
 function DirectionalLight (opts) {
   const ctx = opts.ctx
