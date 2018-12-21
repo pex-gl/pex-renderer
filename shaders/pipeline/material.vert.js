@@ -55,8 +55,6 @@ uniform mat4 uViewMatrix;
 uniform mat4 uModelMatrix;
 uniform mat3 uNormalMatrix;
 uniform mat4 uInverseViewMatrix;
-uniform float uTexCoord0Scale;
-uniform vec2 uTexCoord0Offset;
 
 varying vec3 vNormalWorld;
 varying vec3 vNormalView;
