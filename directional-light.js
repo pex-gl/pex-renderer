@@ -43,14 +43,16 @@ DirectionalLight.prototype.set = function (opts) {
     this.castShadows = false
   }
 
-  if (this.castShadows && !this._colorMap) {
-    this.allocateResources()
+  if (this.castShadows) {
+    if (!this._colorMap) this.allocateResources()
   } else {
-    this.disposeResources()
+    if (this._colorMap) this.disposeResources()
   }
 }
 
 DirectionalLight.prototype.allocateResources = function () {
+  log('allocatedResources')
+
   const ctx = this._ctx
 
   this._colorMap = ctx.texture2D({
@@ -86,19 +88,18 @@ DirectionalLight.prototype.allocateResources = function () {
 }
 
 DirectionalLight.prototype.disposeResources = function () {
+  log('disposeResources')
+
   const ctx = this._ctx
-  if (this._colorMap) {
-    ctx.dispose(this._colorMap)
-    this._colorMap = null
-  }
-  if (this._shadowMap) {
-    ctx.dispose(this._shadowMap)
-    this._shadowMap = null
-  }
-  if (this._shadowMapDrawCommand) {
-    ctx.dispose(this._shadowMapDrawCommand)
-    this._shadowMapDrawCommand = null
-  }
+
+  ctx.dispose(this._colorMap)
+  this._colorMap = null
+
+  ctx.dispose(this._shadowMap)
+  this._shadowMap = null
+
+  ctx.dispose(this._shadowMapDrawCommand.pipeline)
+  this._shadowMapDrawCommand = null
 }
 
 module.exports = function (opts) {

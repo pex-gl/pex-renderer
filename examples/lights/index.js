@@ -102,7 +102,7 @@ function initMeshes () {
       roughness: 2 / 5,
       metallic: 0,
       receiveShadows: true,
-      castShadows: true
+      castShadows: false
     })
   ]))
 }
@@ -217,6 +217,9 @@ function initSky () {
   ], ['cell0']))
 
   gui.addHeader('Directional').setPosition(10, 10)
+  gui.addParam('Directional Shadows', directionalLight, 'castShadows', {}, (value) => {
+    directionalLight.set({ castShadows: value })
+  })
   gui.addTexture2D('Directional Shadowmap', directionalLight._shadowMap)
 
   var numLights = 0
