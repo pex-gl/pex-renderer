@@ -6,7 +6,6 @@ struct AmbientLight {
 };
 
 uniform AmbientLight uAmbientLights[NUM_AMBIENT_LIGHTS];
-uniform sampler2D uAmbientLightShadowMaps[NUM_AMBIENT_LIGHTS];
 
 void EvaluateAmbientLight(inout PBRData data, AmbientLight light, int i) {
   vec3 lightColor = decode(light.color, 3).rgb;
