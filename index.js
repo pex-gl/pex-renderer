@@ -359,7 +359,7 @@ Renderer.prototype.buildProgram = function (vertSrc, fragSrc) {
   try {
     program = ctx.program({ vert: vertSrc, frag: fragSrc })
   } catch (e) {
-    console.log('pex-renderer glsl error', e)
+    console.error('pex-renderer glsl error', e)
     program = ctx.program({ vert: ERROR_VERT, frag: ERROR_FRAG })
   }
   return program
@@ -532,9 +532,6 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
   sharedUniforms.uOutputEncoding = State.rgbm ? ctx.Encoding.RGBM : ctx.Encoding.Linear // TODO: State.postprocess
   if (forward) {
     sharedUniforms.uOutputEncoding = ctx.Encoding.Gamma
-  }
-  if (ctx.debugMode) {
-    console.log('forward', forward, sharedUniforms.uOutputEncoding, ctx.Encoding.Gamma)
   }
 
   // TODO:  find nearest reflection probe
@@ -739,10 +736,6 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
     mat4.invert(normalMat)
     mat4.transpose(normalMat)
     cachedUniforms.uNormalMatrix = mat3.fromMat4(mat3.create(), normalMat)
-
-    if (ctx.debugMode) {
-      console.log('drawMeshes', 'pipeline', pipeline, cachedUniforms)
-    }
 
     ctx.submit({
       name: 'drawGeometry',
