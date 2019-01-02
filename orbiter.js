@@ -140,7 +140,6 @@ Orbiter.prototype.updateWindowSize = function () {
   if (width !== this.width) {
     this.width = width
     this.height = height
-    this.radius = Math.min(this.width / 2, this.height / 2)
   }
 }
 
@@ -192,6 +191,7 @@ Orbiter.prototype.setup = function () {
     orbiter.dragPos[0] = x
     orbiter.dragPos[1] = y
     if (camera && shift && orbiter.pan) {
+      orbiter.updateWindowSize()
       orbiter.clickPosWindow[0] = x
       orbiter.clickPosWindow[1] = y
       vec3.set(orbiter.clickTarget, orbiter.target)
@@ -266,7 +266,6 @@ Orbiter.prototype.setup = function () {
   }
 
   function onMouseDown (e) {
-    orbiter.updateWindowSize()
     const pos = offset(e, window)
     down(
       pos[0],
