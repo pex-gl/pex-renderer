@@ -34,11 +34,13 @@ ctx.gl.getExtension('OES_texture_float')
 
 const renderer = createRenderer({
   ctx: ctx,
-  shadowQuality: 2,
-  // pauseOnBlur: true,
+  shadowQuality: 3,
+  pauseOnBlur: false,
   profile: true,
   profileFlush: false
 })
+
+window.renderer = renderer
 
 const gui = new GUI(ctx)
 gui.addFPSMeeter()
@@ -54,7 +56,8 @@ const State = {
   rotationMat: mat4.create(),
   selectedModel: '',
   scenes: [],
-  loadAll: false
+  gridSize: 1,
+  shadows: false // TODO: disabled for benchmarking
 }
 
 const positions = [[0, 0, 0], [0, 0, 0]]
@@ -62,7 +65,7 @@ function addLine (a, b) {
   positions.push(a, b)
 }
 
-const lineBuilder = renderer.add(renderer.entity([
+const lineBuilder = renderer.entity([
   renderer.geometry({
     positions: positions,
     count: 2,
@@ -70,19 +73,32 @@ const lineBuilder = renderer.add(renderer.entity([
   }),
   renderer.material({
     baseColor: [1, 0, 0, 1],
-    castShadows: true,
-    receiveShadows: true
+    castShadows: State.shadows,
+    receiveShadows: State.shadows
   })
-]))
+])
+//renderer.add(lineBuilder)
 
 async function loadScene (url, cb) {
-  if (!State.loadAll && State.scene) {
+  if (State.selectedModel && State.scene) {
     renderer.remove(State.scene.root)
-    //TODO: dispose old scene
+    // TODO: dispose old scene
   }
   debug(`Loading scene from ${url}`)
   const gltf = await loadGltf(url)
+  console.time('building ' + url)
   const scene = State.scene = buildGltf(gltf, ctx, renderer)
+  scene.entities.forEach((e) => {
+    var mat = e.getComponent('Material')
+    if (mat) {
+      mat.set({
+        castShadows: State.shadows,
+        receiveShadows: State.shadows
+      })
+    }
+  })
+  console.timeEnd('building ' + url)
+  scene.url = url
   renderer.add(scene.root)
   cb(null, scene)
 }
@@ -92,7 +108,7 @@ function initSky (panorama) {
     direction: vec3.sub(vec3.create(), State.sunPosition),
     color: [1, 1, 0.95, 1],
     intensity: 5,
-    castShadows: true,
+    castShadows: State.shadows,
     bias: 0.2
   })
   renderer.add(renderer.entity([
@@ -130,7 +146,7 @@ function initCamera () {
     // dofRange: 0.15,
     // dofRadius: 2,
     // dofDepth: 1,
-    postprocess: true,
+    postprocess: false,
     ssao: true,
     ssaoIntensity: 2,
     ssaoRadius: 1,
@@ -162,8 +178,8 @@ window.addEventListener('keypress', (e) => {
     gui.toggleEnabled()
   }
 })
-// const modelsPath = 'glTF-Sample-Models'
-const modelsPath = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0'
+const modelsPath = 'glTF-Sample-Models'
+// const modelsPath = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0'
 
 function textureFromImage (img) {
   var tex = ctx.texture2D({
@@ -182,7 +198,7 @@ async function init () {
     State.camera({ exposure: State.camera.exposure })
   })
 
-  const models = await loadJSON(`${modelsPath}/model-index.json`)
+  let models = await loadJSON(`${modelsPath}/model-index.json`)
   const screenshots = await Promise.all(
     models.map((model) => loadImage({ url: `${modelsPath}/${model.name}/${model.screenshot}`, crossOrigin: 'anonymous' }), null)
   )
@@ -195,38 +211,43 @@ async function init () {
     loadScene(`${modelsPath}/${model.name}/glTF/${model.name}.gltf`, onSceneLoaded)
   })
 
-  if (State.loadAll) {
-    models.forEach((model) => {
-      loadScene(`${modelsPath}/${model.name}/glTF/${model.name}.gltf`, onSceneLoaded)
-    })
-  } else {
-    let modelName = 'DamagedHelmet'
-    modelName = 'NormalTangentMirrorTest'
-    modelName = 'NormalTangentTest'
-    modelName = 'FlightHelmet'
-    loadScene(`${modelsPath}/${modelName}/glTF/${modelName}.gltf`, onSceneLoaded)
-  }
+  models = [
+    { name: '2CylinderEngine' },
+    { name: 'BrainStem' },
+    { name: 'DamagedHelmet' },
+    { name: 'AlphaBlendModeTest' },
+    { name: 'Duck' },
+    { name: 'FlightHelmet' },
+    { name: 'CesiumMan' }
+  ]
+
+  State.gridSize = Math.ceil(Math.sqrt(models.length))
+
+  models.forEach((model) => {
+    loadScene(`${modelsPath}/${model.name}/glTF/${model.name}.gltf`, onSceneLoaded)
+  })
 }
 
 init()
 
 function onSceneLoaded (err, scene) {
-  if (!State.loadAll) {
+  if (State.selectedModel) {
     while (State.scenes.length) {
       const oldScene = State.scenes.shift()
       oldScene.entities.forEach((e) => e.dispose())
     }
   }
 
-  console.log('onSceneLoaded', err, scene)
+  // console.log('onSceneLoaded', err, scene)
 
   if (err) {
     console.log(err)
   } else {
+    var n = State.gridSize
     var i = State.scenes.length
-    var x = 2 * (i % 7) - 7 + 1
-    var z = 2 * (Math.floor(i / 7)) - 7 + 1
-    if (!State.loadAll) {
+    var x = 2 * (i % n) - n + 1
+    var z = 2 * (Math.floor(i / n)) - n + 1
+    if (State.selectedModel) {
       x = z = 0
     }
     scene.root.transform.set({
@@ -240,13 +261,13 @@ const floor = renderer.entity([
   renderer.transform({
     position: [0, -0.051, 0]
   }),
-  renderer.geometry(createCube(State.loadAll ? 14 : 4, 0.1, State.loadAll ? 14 : 4)),
+  renderer.geometry(createCube(6, 0.1, 6)),
   renderer.material({
     baseColor: [0.8, 0.8, 0.8, 1],
     metallic: 0,
     roughness: 1,
-    castShadows: true,
-    receiveShadows: true
+    castShadows: State.shadows,
+    receiveShadows: State.shadows
   })
 ])
 floor.name = 'floor'
@@ -335,10 +356,39 @@ function addPointLine (skin, i, j) {
   pq = nq
 }
 
+var debugCommandsOpt = null
+function optimizeCommands (commands) {
+  return commands
+}
+
 ctx.frame(() => {
   ctx.debug(debugOnce)
   debugOnce = false
-  renderer.draw()
+
+  if (ctx.debugCommands && ctx.debugCommands.length) {
+    if (!debugCommandsOpt) {
+      debugCommandsOpt = optimizeCommands(ctx.debugCommands)
+    }
+    if (renderer._state.profiler) {
+      renderer._state.profiler.startFrame()
+    }
+    var camera = renderer.getComponents('Camera')[0]
+    var orbiter = renderer.getComponents('Orbiter')[0]
+    orbiter.update()
+    camera.entity.transform.update()
+    camera.update()
+    for (let cmd of debugCommandsOpt) {
+      if (cmd.uniforms) {
+        cmd.uniforms.viewMatrix = camera.viewMatrix
+      }
+      ctx.apply(cmd)
+    }
+    if (renderer._state.profiler) {
+      renderer._state.profiler.endFrame()
+    }
+  } else {
+    renderer.draw()
+  }
 
   if (State.body) {
     // var worldMatrix = State.body.transform.worldMatrix
