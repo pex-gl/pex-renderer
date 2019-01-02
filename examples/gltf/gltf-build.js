@@ -48,6 +48,7 @@ function handleBufferView (bufferView, bufferData, ctx, renderer) {
     bufferView.byteOffset + bufferView.byteLength
   )
 
+  console.log('handleBufferView', bufferView)
   if (bufferView.target === WebGLConstants.ELEMENT_ARRAY_BUFFER) {
     bufferView._indexBuffer = ctx.indexBuffer(bufferView._data)
   } else if (bufferView.target === WebGLConstants.ARRAY_BUFFER) {
@@ -108,7 +109,7 @@ function handleAccessor (accessor, bufferView, ctx, renderer) {
     accessor._data = data
   } else {
     // TODO
-    console.log('uncaught', accessor)
+    log('uncaught', accessor)
   }
 }
 
@@ -136,7 +137,7 @@ function loadTexture (materialTexture, gltf, encoding, ctx, renderer) {
     if (sampler.wrapS !== ctx.Wrap.Clamp || sampler.wrapT !== ctx.Wrap.Clamp || (sampler.minFilter !== ctx.Filter.Nearest && sampler.minFilter !== ctx.Filter.Linear)) {
       const nw = nextPOT(img.width)
       const nh = nextPOT(img.height)
-      console.log(`Warning: NPOT Repeat Wrap mode and mipmapping is not supported for NPOT Textures. Resizing... ${img.width}x${img.height} -> ${nw}x${nh}`)
+      log(`Warning: NPOT Repeat Wrap mode and mipmapping is not supported for NPOT Textures. Resizing... ${img.width}x${img.height} -> ${nw}x${nh}`)
       var canvas2d = document.createElement('canvas')
       canvas2d.width = nw
       canvas2d.height = nh
@@ -145,7 +146,6 @@ function loadTexture (materialTexture, gltf, encoding, ctx, renderer) {
       img = canvas2d
     }
   }
-  // console.log(`min: ${WebGLDebugUtils.glEnumToString(sampler.minFilter)} mag: ${WebGLDebugUtils.glEnumToString(sampler.magFilter)}`)
   var tex = texture._tex = ctx.texture2D({
     data: img,
     width: img.width,
@@ -176,7 +176,7 @@ function handleMaterial (material, gltf, ctx, renderer) {
     cullFaceEnabled: !material.doubleSided
   })
 
-  if (material.alphaMode === "BLEND") {
+  if (material.alphaMode === 'BLEND') {
     // TODO: support alpha cutout
     materialCmp.set({
       depthWrite: false,
@@ -187,7 +187,7 @@ function handleMaterial (material, gltf, ctx, renderer) {
       blendDstAlphaFactor: ctx.BlendFactor.One
     })
   }
-  if (material.alphaMode === "MASK" && material.alphaCutoff) {
+  if (material.alphaMode === 'MASK' && material.alphaCutoff) {
     materialCmp.set({
       alphaTest: material.alphaCutoff
     })
@@ -314,12 +314,12 @@ function handleMesh (mesh, gltf, ctx, renderer) {
       return attributes
     }, {})
 
-    console.log('handleMesh.attributes', attributes)
+    log('handleMesh.attributes', attributes)
 
     const positionAccessor = gltf.accessors[primitive.attributes.POSITION]
     const indicesAccessor = gltf.accessors[primitive.indices]
-    console.log('handleMesh.positionAccessor', positionAccessor)
-    console.log('handleMesh.indicesAccessor', indicesAccessor)
+    log('handleMesh.positionAccessor', positionAccessor)
+    log('handleMesh.indicesAccessor', indicesAccessor)
 
     const geometryCmp = renderer.geometry(attributes)
     geometryCmp.set({
@@ -328,7 +328,7 @@ function handleMesh (mesh, gltf, ctx, renderer) {
 
     if (indicesAccessor) {
       if (indicesAccessor._buffer) {
-        console.log('indicesAccessor._buffer', indicesAccessor)
+        log('indicesAccessor._buffer', indicesAccessor)
         geometryCmp.set({
           indices: {
             buffer: indicesAccessor._buffer,
@@ -528,7 +528,7 @@ function handleAnimation (animation, gltf, ctx, renderer) {
 
 function build (gltf, ctx, renderer) {
   log('build', gltf)
-  gltf.bufferViews.map((bufferView) => {
+  gltf.bufferViews.map((bufferView, i) => {
     handleBufferView(bufferView, gltf.buffers[bufferView.buffer]._data, ctx, renderer)
   })
 
@@ -557,7 +557,7 @@ function build (gltf, ctx, renderer) {
 
   scene.entities.forEach((e) => {
     if (e.transform.parent === renderer.root.transform) {
-      console.log('attaching to scene root', e)
+      log('attaching to scene root', e)
       e.transform.set({ parent: scene.root.transform })
     }
   })
