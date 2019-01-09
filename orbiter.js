@@ -266,7 +266,7 @@ Orbiter.prototype.setup = function () {
   }
 
   function onMouseDown (e) {
-    const pos = offset(e, window)
+    const pos = offset(e, orbiter.element)
     down(
       pos[0],
       pos[1],
@@ -275,7 +275,7 @@ Orbiter.prototype.setup = function () {
   }
 
   function onMouseMove (e) {
-    const pos = offset(e, window)
+    const pos = offset(e, orbiter.element)
     move(
       pos[0],
       pos[1],
