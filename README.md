@@ -357,9 +357,9 @@ const geometry = renderer.geometry({
 | `colors` | vertex colors | Array of Vec4 [r, g, b, a] | null |
 | `indices` | `indices` | Array of Vec3 | null |
 | `cells`<sup>1</sup> | geometry faces | Array of Vec3 of Int [i, j, j] | null |
-| `offsets`<sup>2</sup> | instances positions | Array of Quat/Vec4 [x, y, z, w] | null |
+| `offsets`<sup>2</sup> | instances offsets | Array of Vec3 [x, y, z] | null |
 | `rotations`<sup>2</sup> | instances rotations | Array of Quat/Vec4 [x, y, z, w] | null |
-| `rotations`<sup>2</sup> | instances scales | Array of Quat/Vec4 [x, y, z, w] | null |
+| `scales`<sup>2</sup> | instances scales | Array of Vec3 [x, y, z] | null |
 | `tints`<sup>2</sup> | instanced rotations | Array of Color/Vec4 [r, g, b, a] | null |
 
 
