@@ -32,6 +32,7 @@ const ctx = createContext()
 ctx.gl.getExtension('EXT_shader_texture_lod')
 ctx.gl.getExtension('OES_standard_derivatives')
 ctx.gl.getExtension('WEBGL_draw_buffers')
+ctx.gl.getExtension('WEBGL_depth_texture')
 ctx.gl.getExtension('OES_texture_float')
 
 const State = {

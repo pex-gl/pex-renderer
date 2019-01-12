@@ -10,7 +10,7 @@
   "author": "Marcin Ignac <marcin.ignac@gmail.com> (http://marcinignac.com/)",
   "license": "MIT",
   "dependencies": {
-    "pex-context": "^2.7.0",
+    "pex-context": "^2.8.0",
     "primitive-sphere": "^3.0.0"
   }
 }

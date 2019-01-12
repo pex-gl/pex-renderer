@@ -1,16 +1,13 @@
 {
   "dependencies": {
-    "async": "^2.4.0",
-    "pex-cam": "^2.6.0",
-    "pex-context": "^2.7.0",
-    "pex-io": "^1.5.2",
-    "pex-math": "^1.0.1",
+    "async": "^2.6.1",
+    "pex-cam": "^2.7.1",
+    "pex-context": "^2.8.0",
+    "pex-io": "^2.1.0",
+    "pex-math": "^2.1.1",
     "primitive-cube": "^2.0.1"
   },
   "scripts": {
-    "start": "budo index.js --open --live -- -t glslify"
-  },
-  "devDependencies": {
-    "glslify": "^6.2.1"
+    "start": "budo index.js --open --live"
   }
 }

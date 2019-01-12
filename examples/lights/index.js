@@ -1,6 +1,6 @@
 const mat4 = require('pex-math/mat4')
 const vec3 = require('pex-math/vec3')
-const quat = require('pex-math/quat')
+const quat = require('pex-math/quat') // TODO: use latest pex-math
 const createRenderer = require('../../')
 const createCube = require('primitive-cube')
 const createGUI = require('pex-gui')
