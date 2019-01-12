@@ -938,6 +938,7 @@ Renderer.prototype.draw = function () {
           uFov: camera.fov,
           uSunDispertion: camera.sunDispertion,
           uSunIntensity: camera.sunIntensity,
+          uSunColor: camera.sunColor,
           uInscatteringCoeffs: camera.inscatteringCoeffs,
           uFogColor: camera.fogColor,
           uFogStart: camera.fogStart,

@@ -81,6 +81,7 @@ function Camera (opts) {
   this.bloomRadius = 1
   this.bloomThreshold = 1
   this.bloomIntensity = 1
+  this.sunColor = [0.98, 0.98, 0.7]
   this.sunDispertion = 0.2
   this.sunIntensity = 0.1
   this.inscatteringCoeffs = [0.3, 0.3, 0.3]
