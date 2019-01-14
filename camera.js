@@ -148,12 +148,13 @@ Camera.prototype.set = function (opts) {
 }
 
 Camera.prototype.initPostproces = function () {
-  var ctx = this.ctx
-  var fsqPositions = [[-1, -1], [1, -1], [1, 1], [-1, 1]]
-  var fsqFaces = [[0, 1, 2], [0, 2, 3]]
+  const ctx = this.ctx
+  const precisionStr = `precision ${ctx.capabilities.maxPrecision} float;\n`
+  const fsqPositions = [[-1, -1], [1, -1], [1, 1], [-1, 1]]
+  const fsqFaces = [[0, 1, 2], [0, 2, 3]]
 
-  var W = this.viewport[2]
-  var H = this.viewport[3]
+  const W = this.viewport[2]
+  const H = this.viewport[3]
 
   this._fsqMesh = {
     attributes: {
@@ -268,8 +269,8 @@ Camera.prototype.initPostproces = function () {
       // clearDepth: 1
     }),
     pipeline: ctx.pipeline({
-      vert: POSTPROCESS_VERT,
-      frag: SAO_FRAG
+      vert: precisionStr + POSTPROCESS_VERT,
+      frag: precisionStr + SAO_FRAG
     }),
     attributes: this._fsqMesh.attributes,
     indices: this._fsqMesh.indices,
@@ -288,8 +289,8 @@ Camera.prototype.initPostproces = function () {
       clearColor: [1, 1, 0, 1]
     }),
     pipeline: ctx.pipeline({
-      vert: POSTPROCESS_VERT,
-      frag: BILATERAL_BLUR_FRAG
+      vert: precisionStr + POSTPROCESS_VERT,
+      frag: precisionStr + BILATERAL_BLUR_FRAG
     }),
     attributes: this._fsqMesh.attributes,
     indices: this._fsqMesh.indices,
@@ -311,8 +312,8 @@ Camera.prototype.initPostproces = function () {
       clearColor: [1, 1, 0, 1]
     }),
     pipeline: ctx.pipeline({
-      vert: POSTPROCESS_VERT,
-      frag: BILATERAL_BLUR_FRAG
+      vert: precisionStr + POSTPROCESS_VERT,
+      frag: precisionStr + BILATERAL_BLUR_FRAG
     }),
     attributes: this._fsqMesh.attributes,
     indices: this._fsqMesh.indices,
@@ -334,8 +335,8 @@ Camera.prototype.initPostproces = function () {
       clearColor: [1, 1, 0, 1]
     }),
     pipeline: ctx.pipeline({
-      vert: POSTPROCESS_VERT,
-      frag: BILATERAL_BLUR_FRAG
+      vert: precisionStr + POSTPROCESS_VERT,
+      frag: precisionStr + BILATERAL_BLUR_FRAG
     }),
     attributes: this._fsqMesh.attributes,
     indices: this._fsqMesh.indices,
@@ -355,8 +356,8 @@ Camera.prototype.initPostproces = function () {
       clearColor: [1, 1, 0, 1]
     }),
     pipeline: ctx.pipeline({
-      vert: POSTPROCESS_VERT,
-      frag: BILATERAL_BLUR_FRAG
+      vert: precisionStr + POSTPROCESS_VERT,
+      frag: precisionStr + BILATERAL_BLUR_FRAG
     }),
     attributes: this._fsqMesh.attributes,
     indices: this._fsqMesh.indices,
@@ -376,8 +377,8 @@ Camera.prototype.initPostproces = function () {
       clearColor: [1, 1, 1, 1]
     }),
     pipeline: ctx.pipeline({
-      vert: POSTPROCESS_VERT,
-      frag: THRESHOLD_FRAG
+      vert: precisionStr + POSTPROCESS_VERT,
+      frag: precisionStr + THRESHOLD_FRAG
     }),
     attributes: this._fsqMesh.attributes,
     indices: this._fsqMesh.indices,
@@ -398,8 +399,8 @@ Camera.prototype.initPostproces = function () {
       clearColor: [1, 1, 1, 1]
     }),
     pipeline: ctx.pipeline({
-      vert: POSTPROCESS_VERT,
-      frag: BLOOM_FRAG
+      vert: precisionStr + POSTPROCESS_VERT,
+      frag: precisionStr + BLOOM_FRAG
     }),
     attributes: this._fsqMesh.attributes,
     indices: this._fsqMesh.indices,
@@ -419,8 +420,8 @@ Camera.prototype.initPostproces = function () {
       clearColor: [1, 1, 0, 1]
     }),
     pipeline: ctx.pipeline({
-      vert: POSTPROCESS_VERT,
-      frag: BLOOM_FRAG
+      vert: precisionStr + POSTPROCESS_VERT,
+      frag: precisionStr + BLOOM_FRAG
     }),
     attributes: this._fsqMesh.attributes,
     indices: this._fsqMesh.indices,
@@ -436,8 +437,8 @@ Camera.prototype.initPostproces = function () {
   this._blitCmd = {
     name: 'Camera.blit',
     pipeline: ctx.pipeline({
-      vert: POSTPROCESS_VERT,
-      frag: POSTPROCESS_FRAG
+      vert: precisionStr + POSTPROCESS_VERT,
+      frag: precisionStr + POSTPROCESS_FRAG
     }),
     attributes: this._fsqMesh.attributes,
     indices: this._fsqMesh.indices,

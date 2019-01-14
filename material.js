@@ -36,6 +36,7 @@ function Material (opts) {
   this.blendSrcAlphaFactor = ctx.BlendFactor.One
   this.blendDstRGBFactor = ctx.BlendFactor.One
   this.blendDstAlphaFactor = ctx.BlendFactor.One
+  this.precision = opts.precision ? ctx.getMaxPrecision(opts.precision) : null
   this.castShadows = false
   this.receiveShadows = false
   this.cullFace = true

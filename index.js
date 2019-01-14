@@ -36,6 +36,7 @@ const SHADERS_CHUNKS = require('./shaders/chunks')
 
 var State = {
   frame: 0,
+  precision: 'highp',
   shadowQuality: 2,
   debug: false,
   profile: false,
@@ -77,16 +78,16 @@ function Renderer (opts) {
   const gl = opts.ctx.gl
   gl.getExtension('OES_standard_derivatives')
 
-
   this._dummyTexture2D = ctx.texture2D({ width: 4, height: 4 })
   this._dummyTextureCube = ctx.textureCube({ width: 4, height: 4 })
 
   this._debug = false
   this._programCacheMap = {
     values: [],
-    getValue: function (flags, vert, frag) {
+    getValue: function (precision, flags, vert, frag) {
       for (var i = 0; i < this.values.length; i++) {
         var v = this.values[i]
+        if (v.precision !== precision) break
         if (v.frag === frag && v.vert === vert) {
           if (v.flags.length === flags.length) {
             var found = true
@@ -104,8 +105,8 @@ function Renderer (opts) {
       }
       return false
     },
-    setValue: function (flags, vert, frag, program) {
-      this.values.push({ flags, vert, frag, program })
+    setValue: function (precision, flags, vert, frag, program) {
+      this.values.push({ precision, flags, vert, frag, program })
     }
   }
 
@@ -126,6 +127,8 @@ function Renderer (opts) {
   // TODO: move from State object to internal probs and renderer({ opts }) setter?
   Object.assign(State, opts)
   this._state = State
+
+  this.precision = opts.precision ? ctx.getMaxPrecision(State.precision) : ctx.capabilities.maxPrecision
 
   this.shaders = {
     chunks: SHADERS_CHUNKS,
@@ -193,8 +196,16 @@ Renderer.prototype.updatePointLightShadowMap = function (light, geometries) {
   })
 }
 
+Renderer.prototype.getPrecisionString = function (precision) {
+  return `precision ${precision} float;
+precision ${precision} int;
+`
+}
+
 Renderer.prototype.getMaterialProgramAndFlags = function (geometry, material, skin, options) {
   var ctx = this._ctx
+
+  const precision = material.precision || this.precision
 
   var flags = []
 
@@ -259,7 +270,8 @@ Renderer.prototype.getMaterialProgramAndFlags = function (geometry, material, sk
     flags.push('#define NUM_SPOT_LIGHTS ' + (0))
     flags.push('#define NUM_AREA_LIGHTS ' + (0))
     return {
-      flags: flags,
+      precision,
+      flags,
       vert: (material.vert || DEPTH_PASS_VERT),
       frag: (material.frag || DEPTH_PRE_PASS_FRAG)
     }
@@ -274,7 +286,8 @@ Renderer.prototype.getMaterialProgramAndFlags = function (geometry, material, sk
     flags.push('#define NUM_SPOT_LIGHTS ' + (0))
     flags.push('#define NUM_AREA_LIGHTS ' + (0))
     return {
-      flags: flags,
+      precision,
+      flags,
       vert: (material.vert || DEPTH_PASS_VERT),
       frag: (material.frag || DEPTH_PASS_FRAG)
     }
@@ -346,8 +359,10 @@ Renderer.prototype.getMaterialProgramAndFlags = function (geometry, material, sk
   if (options.useTonemapping) {
     flags.push('#define USE_TONEMAPPING')
   }
+
   return {
-    flags: flags,
+    precision,
+    flags,
     vert: (material.vert || PBR_VERT),
     frag: (material.frag || PBR_FRAG)
   }
@@ -359,21 +374,23 @@ Renderer.prototype.buildProgram = function (vertSrc, fragSrc) {
   try {
     program = ctx.program({ vert: vertSrc, frag: fragSrc })
   } catch (e) {
-    console.error('pex-renderer glsl error', e)
-    program = ctx.program({ vert: ERROR_VERT, frag: ERROR_FRAG })
+    console.error('pex-renderer glsl error', e, vertSrc)
+    const precisionStr = this.getPrecisionString(this.precision)
+    program = ctx.program({ vert: precisionStr + ERROR_VERT, frag: precisionStr + ERROR_FRAG })
   }
   return program
 }
 
 Renderer.prototype.getMaterialProgram = function (geometry, material, skin, options) {
-  var { flags, vert, frag } = this.getMaterialProgramAndFlags(geometry, material, skin, options)
-  var flagsStr = flags.join('\n') + '\n'
-  var vertSrc = flagsStr + vert
-  var fragSrc = flagsStr + frag
-  var program = this._programCacheMap.getValue(flags, vert, frag)
+  const { precision, flags, vert, frag } = this.getMaterialProgramAndFlags(geometry, material, skin, options)
+  const precisionStr = this.getPrecisionString(precision)
+  const flagsStr = flags.join('\n') + '\n'
+  const vertSrc = precisionStr + flagsStr + vert
+  const fragSrc = precisionStr + flagsStr + frag
+  let program = this._programCacheMap.getValue(precision, flags, vert, frag)
   if (!program) {
     program = this.buildProgram(vertSrc, fragSrc)
-    this._programCacheMap.setValue(flags, vert, frag, program)
+    this._programCacheMap.setValue(precision, flags, vert, frag, program)
   }
   return program
 }
@@ -438,9 +455,10 @@ Renderer.prototype.getGeometryPipeline = function (geometry, material, skin, opt
 Renderer.prototype.getOverlayCommand = function () {
   const ctx = this._ctx
   if (!this._drawOverlayCmd) {
+    const precisionStr = this.getPrecisionString(this.precision)
     const program = ctx.program({
-      vert: OVERLAY_VERT,
-      frag: OVERLAY_FRAG
+      vert: precisionStr + OVERLAY_VERT,
+      frag: precisionStr + OVERLAY_FRAG
     })
     this._drawOverlayCmd = {
       name: 'DrawOverlayCmd',

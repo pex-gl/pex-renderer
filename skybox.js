@@ -22,14 +22,15 @@ function Skybox (opts) {
 
   this.set(opts)
 
+  const precisionStr = `precision ${ctx.capabilities.maxPrecision} float;\n`
   const skyboxPositions = [[-1, -1], [1, -1], [1, 1], [-1, 1]]
   const skyboxFaces = [[0, 1, 2], [0, 2, 3]]
 
   this._drawCommand = {
     name: 'Skybox.draw',
     pipeline: ctx.pipeline({
-      vert: SKYBOX_VERT,
-      frag: SKYBOX_FRAG,
+      vert: precisionStr + SKYBOX_VERT,
+      frag: precisionStr + SKYBOX_FRAG,
       depthTest: true
     }),
     attributes: {
@@ -61,8 +62,8 @@ function Skybox (opts) {
       clearColor: [0, 0, 0, 0]
     }),
     pipeline: ctx.pipeline({
-      vert: SKYTEXTURE_VERT,
-      frag: SKYTEXTURE_FRAG
+      vert: precisionStr + SKYTEXTURE_VERT,
+      frag: precisionStr + SKYTEXTURE_FRAG
     }),
     uniforms: {
       uSunPosition: [0, 0, 0]

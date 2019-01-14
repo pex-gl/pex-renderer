@@ -1,8 +1,6 @@
 const SHADERS = require('../chunks/index.js')
 
 module.exports = /* glsl */`
-precision highp float;
-
 // Variables
 uniform vec2 uScreenSize;
 

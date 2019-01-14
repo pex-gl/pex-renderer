@@ -5,8 +5,6 @@ module.exports = /* glsl */`
   #extension GL_EXT_draw_buffers : enable
 #endif
 
-precision highp float;
-
 #define USE_TONEMAPPING
 
 // Variables

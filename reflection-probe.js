@@ -21,6 +21,7 @@ function ReflectionProbe (opts) {
   this._ctx = ctx
   this.dirty = true
 
+  const precisionStr = `precision ${ctx.capabilities.maxPrecision} float;\n`
   const CUBEMAP_SIZE = 512
   const dynamicCubemap = this._dynamicCubemap = ctx.textureCube({
     width: CUBEMAP_SIZE,
@@ -85,8 +86,8 @@ function ReflectionProbe (opts) {
       color: [ octMap ]
     }),
     pipeline: ctx.pipeline({
-      vert: FULLSCREEN_QUAD,
-      frag: CUBEMAP_TO_OCTMAP
+      vert: precisionStr + FULLSCREEN_QUAD,
+      frag: precisionStr + CUBEMAP_TO_OCTMAP
     }),
     attributes: attributes,
     indices: indices,
@@ -103,8 +104,8 @@ function ReflectionProbe (opts) {
       color: [ octMap ]
     }),
     pipeline: ctx.pipeline({
-      vert: FULLSCREEN_QUAD,
-      frag: CONVOLVE_OCT_MAP_ATLAS_TO_OCT_MAP
+      vert: precisionStr + FULLSCREEN_QUAD,
+      frag: precisionStr + CONVOLVE_OCT_MAP_ATLAS_TO_OCT_MAP
     }),
     attributes: attributes,
     indices: indices,
@@ -133,8 +134,8 @@ function ReflectionProbe (opts) {
       color: [ octMapAtlas ]
     }),
     pipeline: ctx.pipeline({
-      vert: FULLSCREEN_QUAD,
-      frag: BLIT_TO_OCT_MAP_ATLAS
+      vert: precisionStr + FULLSCREEN_QUAD,
+      frag: precisionStr + BLIT_TO_OCT_MAP_ATLAS
     }),
     uniforms: {
       uSource: octMap,
@@ -152,8 +153,8 @@ function ReflectionProbe (opts) {
       clearColor: [0, 1, 0, 1]
     }),
     pipeline: ctx.pipeline({
-      vert: FULLSCREEN_QUAD,
-      frag: DOWNSAMPLE_FROM_OCT_MAP_ATLAS
+      vert: precisionStr + FULLSCREEN_QUAD,
+      frag: precisionStr + DOWNSAMPLE_FROM_OCT_MAP_ATLAS
     }),
     uniforms: {
       uSource: octMapAtlas,
@@ -171,8 +172,8 @@ function ReflectionProbe (opts) {
       clearColor: [0, 1, 0, 1]
     }),
     pipeline: ctx.pipeline({
-      vert: FULLSCREEN_QUAD,
-      frag: PREFILTER_FROM_OCT_MAP_ATLAS
+      vert: precisionStr + FULLSCREEN_QUAD,
+      frag: precisionStr + PREFILTER_FROM_OCT_MAP_ATLAS
     }),
     uniforms: {
       uSource: octMapAtlas,

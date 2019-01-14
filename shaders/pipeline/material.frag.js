@@ -6,13 +6,11 @@ module.exports = /* glsl */`
   #extension GL_EXT_draw_buffers : enable
 #endif
 
-precision mediump float;
-
 // Variables
-uniform highp mat4 uInverseViewMatrix;
-uniform highp mat4 uViewMatrix;
-uniform highp mat3 uNormalMatrix;
-uniform highp mat4 uModelMatrix;
+uniform mat4 uInverseViewMatrix;
+uniform mat4 uViewMatrix;
+uniform mat3 uNormalMatrix;
+uniform mat4 uModelMatrix;
 
 uniform vec3 uCameraPosition;
 

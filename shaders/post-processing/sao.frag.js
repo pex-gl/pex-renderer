@@ -3,8 +3,6 @@ module.exports = /* glsl */`
 // Updated by marcin.ignac@gmail.com 2017-05-08
 #extension GL_OES_standard_derivatives : enable
 
-precision mediump float;
-
 // total number of samples at each fragment
 #define NUM_SAMPLES 11
 
