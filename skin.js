@@ -3,11 +3,12 @@ const mat4 = require('pex-math/mat4')
 
 function Skin (opts) {
   this.type = 'Skin'
+  this.enabled = true
+  this.changed = new Signal()
   this.entity = null
   this.joints = []
   this.jointMatrices = []
   this.inverseBindMatrices = []
-  this.changed = new Signal()
   this.set(opts)
 }
 
@@ -28,6 +29,8 @@ Skin.prototype.set = function (opts) {
 }
 
 Skin.prototype.update = function () {
+  if (!this.enabled) return
+
   for (let i = 0; i < this.joints.length; i++) {
     const joint = this.joints[i]
     const m = this.jointMatrices[i]
