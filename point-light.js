@@ -27,7 +27,7 @@ function PointLight (opts) {
     encoding: ctx.Encoding.Linear
   })
 
-  const sides = this._sides = [
+  this._sides = [
     { eye: [0, 0, 0], target: [1, 0, 0], up: [0, -1, 0] },
     { eye: [0, 0, 0], target: [-1, 0, 0], up: [0, -1, 0] },
     { eye: [0, 0, 0], target: [0, 1, 0], up: [0, 0, 1] },

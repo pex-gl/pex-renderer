@@ -46,5 +46,14 @@
   "homepage": "https://github.com/pex-gl/pex-renderer",
   "bugs": {
     "url": "https://github.com/pex-gl/pex-renderer/issues"
+  },
+  "eslintConfig": {
+    "extends": "standard",
+    "plugins": [
+      "markdown"
+    ],
+    "env": {
+      "browser": true
+    }
   }
 }
