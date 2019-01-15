@@ -622,7 +622,7 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
 
   for (let i = 0; i < geometries.length; i++) {
     // also drawn below if transparent objects don't exist
-    if ((firstTransparent === i) && skybox) {
+    if ((firstTransparent === i) && skybox && skybox.enabled) {
       skybox.draw(camera, {
         outputEncoding: sharedUniforms.uOutputEncoding,
         backgroundMode: true
@@ -749,7 +749,7 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
     })
   }
   // also drawn above if transparent objects exist
-  if ((firstTransparent === -1) && skybox) {
+  if ((firstTransparent === -1) && skybox && skybox.enabled) {
     skybox.draw(camera, {
       outputEncoding: sharedUniforms.uOutputEncoding,
       backgroundMode: true

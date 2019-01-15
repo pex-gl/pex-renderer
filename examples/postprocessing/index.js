@@ -291,6 +291,8 @@ function imageFromFile (file, options) {
 
 function initGUI () {
   const cameraCmp = cameraEntity.getComponent('Camera')
+  const skyboxCmp = skyboxEntity.getComponent('Skybox')
+  const reflectionProbeCmp = reflectionProbeEntity.getComponent('ReflectionProbe')
 
   // Scene
   gui.addTab('Scene')
@@ -301,8 +303,15 @@ function initGUI () {
   })
   gui.addParam('Sun Elevation', State, 'elevation', { min: -90, max: 180 }, updateSunPosition)
   gui.addParam('Sun Azimuth', State, 'azimuth', { min: -180, max: 180 }, updateSunPosition)
-  gui.addHeader('Panorama')
-  gui.addTexture2D('Env map', panorama)
+  gui.addHeader('Skybox')
+  gui.addParam('Enabled', skyboxCmp, 'enabled', {}, (value) => {
+    skyboxCmp.set({ enabled: value })
+  })
+  gui.addTexture2D('Env map', skyboxCmp.texture)
+  gui.addHeader('Reflection probes')
+  gui.addParam('Enabled', reflectionProbeCmp, 'enabled', {}, (value) => {
+    reflectionProbeCmp.set({ enabled: value })
+  })
 
   gui.addColumn('Material')
   gui.addParam('Base Color', State, 'baseColor', { type: 'color' }, () => {
