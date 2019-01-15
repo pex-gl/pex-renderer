@@ -1,8 +1,6 @@
 const SHADERS = require('../chunks/index.js')
 
 module.exports = /* glsl */`
-precision highp float;
-
 // Variables
 varying vec3 vNormalView;
 varying vec2 vTexCoord0;

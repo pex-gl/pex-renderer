@@ -18,7 +18,7 @@ dragon.positions = centerAndNormalize(dragon.positions).map((v) => vec3.scale(v,
 dragon.normals = normals(dragon.cells, dragon.positions)
 dragon.uvs = dragon.positions.map(() => [0, 0])
 const parseHdr = require('parse-hdr')
-const ctx = createContext()
+const ctx = createContext({ precision: 'mediump' })
 ctx.gl.getExtension('EXT_shader_texture_lod')
 ctx.gl.getExtension('OES_standard_derivatives')
 ctx.gl.getExtension('WEBGL_draw_buffers')

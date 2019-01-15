@@ -1,8 +1,6 @@
 const SHADERS = require('../chunks/index.js')
 
 module.exports = /* glsl */`
-precision highp float;
-
 ${SHADERS.octMapUvToDir}
 ${SHADERS.octMap}
 ${SHADERS.rgbm}

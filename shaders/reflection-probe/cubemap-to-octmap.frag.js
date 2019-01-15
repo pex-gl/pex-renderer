@@ -1,8 +1,6 @@
 const SHADERS = require('../chunks/index.js')
 
 module.exports = /* glsl */`
-precision highp float;
-
 ${SHADERS.octMapUvToDir}
 
 varying vec2 vTexCoord;
