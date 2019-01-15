@@ -77,7 +77,6 @@ function Renderer (opts) {
   const gl = opts.ctx.gl
   gl.getExtension('OES_standard_derivatives')
 
-
   this._dummyTexture2D = ctx.texture2D({ width: 4, height: 4 })
   this._dummyTextureCube = ctx.textureCube({ width: 4, height: 4 })
 
@@ -716,9 +715,9 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
 
     // TODO: shared uniforms HUH?
     // if (meshProgram !== prevProgram) {
-      // prevProgram = meshProgram
-      // // this is a bit hacky but prevents checking the same uniforms over and over again
-      // // this would be even better if we sort meshes by material
+    // prevProgram = meshProgram
+    // // this is a bit hacky but prevents checking the same uniforms over and over again
+    // // this would be even better if we sort meshes by material
     Object.assign(cachedUniforms, sharedUniforms)
     // }
 
@@ -938,6 +937,7 @@ Renderer.prototype.draw = function () {
           uFov: camera.fov,
           uSunDispertion: camera.sunDispertion,
           uSunIntensity: camera.sunIntensity,
+          uSunColor: camera.sunColor,
           uInscatteringCoeffs: camera.inscatteringCoeffs,
           uFogColor: camera.fogColor,
           uFogStart: camera.fogStart,

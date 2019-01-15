@@ -32,12 +32,12 @@ for (let i = 0; i < 64; i++) {
 
 var ssaoNoiseData = new Float32Array(128 * 128 * 4)
 for (let i = 0; i < 128 * 128; i++) {
-  let noiseSample = [
-    random.float() * 2 - 1,
-    random.float() * 2 - 1,
-    0,
-    1
-  ]
+  // let noiseSample = [
+  //   random.float() * 2 - 1,
+  //   random.float() * 2 - 1,
+  //   0,
+  //   1
+  // ]
   ssaoNoiseData[i * 4 + 0] = sample[0]
   ssaoNoiseData[i * 4 + 1] = sample[1]
   ssaoNoiseData[i * 4 + 2] = sample[2]
@@ -81,6 +81,7 @@ function Camera (opts) {
   this.bloomRadius = 1
   this.bloomThreshold = 1
   this.bloomIntensity = 1
+  this.sunColor = [0.98, 0.98, 0.7]
   this.sunDispertion = 0.2
   this.sunIntensity = 0.1
   this.inscatteringCoeffs = [0.3, 0.3, 0.3]
@@ -384,9 +385,9 @@ Camera.prototype.initPostproces = function () {
       image: this._frameColorTex,
       emissiveTex: this._frameEmissiveTex,
       // TODO: this should be called screenSize as it's used to calculate uv
-      imageSize: [this._frameBloomVTex.width, this._frameBloomVTex.height],
+      imageSize: [this._frameBloomVTex.width, this._frameBloomVTex.height]
     },
-    viewport: [0, 0, this._frameBloomVTex.width, this._frameBloomVTex.height],
+    viewport: [0, 0, this._frameBloomVTex.width, this._frameBloomVTex.height]
   }
 
   this._bloomHCmd = {

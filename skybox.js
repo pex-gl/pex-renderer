@@ -111,7 +111,7 @@ Skybox.prototype.draw = function (camera, opts) {
     if (this.backgroundBlur > 0) {
       backgroundBlur = this.backgroundBlur
       if (!this._reflectionProbe) {
-         this._reflectionProbe = this.entity.renderer.getComponents('ReflectionProbe')[0]
+        this._reflectionProbe = this.entity.renderer.getComponents('ReflectionProbe')[0]
       }
       if (this._reflectionProbe) {
         texture = this._reflectionProbe._reflectionMap
