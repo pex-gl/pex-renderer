@@ -953,7 +953,7 @@ Renderer.prototype.draw = function () {
     }
   })
 
-  overlays.forEach((overlay) => {
+  overlays.filter(overlay => overlay.enabled).forEach((overlay) => {
     const bounds = [overlay.x, overlay.y, overlay.width, overlay.height]
     if (overlay.x > 1 || overlay.y > 1 || overlay.width > 1 || overlay.height > 1) {
       bounds[0] /= ctx.gl.drawingBufferWidth
