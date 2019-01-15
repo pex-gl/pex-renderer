@@ -798,8 +798,7 @@ Renderer.prototype.draw = function () {
   })
 
   // draw scene
-
-  cameras.forEach((camera, cameraIndex) => {
+  cameras.filter(camera => camera.enabled).forEach((camera, cameraIndex) => {
     const screenSize = [camera.viewport[2], camera.viewport[3]]
     const halfScreenSize = [Math.floor(camera.viewport[2] / 2), Math.floor(camera.viewport[3] / 2)]
     const halfViewport = [0, 0, Math.floor(camera.viewport[2] / 2), Math.floor(camera.viewport[3] / 2)]
