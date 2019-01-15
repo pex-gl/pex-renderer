@@ -639,7 +639,7 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
       continue
     }
     const material = geometry.entity.getComponent('Material')
-    if (material.blend && shadowMapping) {
+    if (!material.enabled || (material.blend && shadowMapping)) {
       continue
     }
 
