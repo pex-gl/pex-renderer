@@ -13,16 +13,13 @@ const gridCells = require('grid-cells')
 dragon.positions = centerAndNormalize(dragon.positions)
 dragon.normals = normals(dragon.cells, dragon.positions)
 dragon.uvs = dragon.positions.map(() => [0, 0])
+// dragon.enabled = false
 
 const ctx = createContext()
 ctx.gl.getExtension('EXT_shader_texture_lod')
 ctx.gl.getExtension('OES_standard_derivatives')
 ctx.gl.getExtension('WEBGL_draw_buffers')
 ctx.gl.getExtension('OES_texture_float')
-
-window.addEventListener('keydown', (e) => {
-  if (e.key === 'g') gui.toggleEnabled()
-})
 
 const State = {
   elevation: 35,
@@ -217,6 +214,9 @@ function initSky () {
   ], ['cell0']))
 
   gui.addHeader('Directional').setPosition(10, 10)
+  gui.addParam('Enabled', directionalLight, 'enabled', {}, (value) => {
+    directionalLight.set({ enabled: value })
+  })
   gui.addParam('Directional Shadows', directionalLight, 'castShadows', {}, (value) => {
     directionalLight.set({ castShadows: value })
   })
@@ -270,6 +270,9 @@ function initSky () {
   .concat(makeCircle({ radius: spotLightRadius, center: [0, 0, spotLight.distance], steps: 64, axis: [0, 1] }))
 
   gui.addHeader('Spot').setPosition(W / 2 + 10, 10)
+  gui.addParam('Enabled', spotLight, 'enabled', {}, (value) => {
+    spotLight.set({ enabled: value })
+  })
   gui.addParam('Spotlight angle', spotLight, 'angle', { min: 0, max: Math.PI / 2 }, () => {
     spotLight.set({ angle: spotLight.angle })
   })
@@ -313,6 +316,9 @@ function initSky () {
   })
 
   gui.addHeader('Point').setPosition(10, H / 2 + 10)
+  gui.addParam('Enabled', pointLight, 'enabled', {}, (value) => {
+    pointLight.set({ enabled: value })
+  })
   gui.addTextureCube('Point Shadowmap', pointLight._shadowCubemap)
   gui.addParam('Point light position', pointLightTransform, 'position', { min: -2, max: 2 })
 
@@ -337,6 +343,9 @@ function initSky () {
   const areaLightGizmoPositions = makeQuad({ width: 1, height: 1 })
 
   gui.addHeader('Area').setPosition(W / 2 + 10, H / 2 + 10)
+  gui.addParam('Enabled', areaLight, 'enabled', {}, (value) => {
+    areaLight.set({ enabled: value })
+  })
 
   renderer.add(renderer.entity([
     renderer.transform({
@@ -363,9 +372,8 @@ initSky()
 let debugOnce = false
 
 window.addEventListener('keydown', (e) => {
-  if (e.key === 'd') {
-    debugOnce = true
-  }
+  if (e.key === 'g') gui.toggleEnabled()
+  if (e.key === 'd') debugOnce = true
 })
 
 ctx.frame(() => {

@@ -3,16 +3,17 @@ const mat4 = require('pex-math/mat4')
 const log = require('debug')('pex-renderer:directional-light')
 
 function DirectionalLight (opts) {
-  const ctx = opts.ctx
-  this._ctx = ctx
-
   this.type = 'DirectionalLight'
+  this.enabled = true
   this.changed = new Signal()
   this.shadows = false
   this.color = [1, 1, 1, 1]
   this.intensity = 1
   this.bias = 0.1
   this.castShadows = false
+
+  const ctx = opts.ctx
+  this._ctx = ctx
 
   this._left = -10
   this._right = 10

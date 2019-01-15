@@ -489,20 +489,21 @@ Renderer.prototype.getComponents = function (type) {
 Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLight, geometries, skybox, forward) {
   const ctx = this._ctx
 
-  function byCameraTags (component) {
+  function byEnabledAndCameraTags (component) {
+    if (!component.enabled) return false
     if (!camera || !camera.entity) return true
     if (!camera.entity.tags.length) return true
     if (!component.entity.tags.length) return true
     return component.entity.tags[0] === camera.entity.tags[0]
   }
 
-  geometries = geometries || this.getComponents('Geometry').filter(byCameraTags)
-  const ambientLights = this.getComponents('AmbientLight').filter(byCameraTags)
-  const directionalLights = this.getComponents('DirectionalLight').filter(byCameraTags)
-  const pointLights = this.getComponents('PointLight').filter(byCameraTags)
-  const spotLights = this.getComponents('SpotLight').filter(byCameraTags)
-  const areaLights = this.getComponents('AreaLight').filter(byCameraTags)
-  const reflectionProbes = this.getComponents('ReflectionProbe').filter(byCameraTags)
+  geometries = geometries || this.getComponents('Geometry').filter(byEnabledAndCameraTags)
+  const ambientLights = this.getComponents('AmbientLight').filter(byEnabledAndCameraTags)
+  const directionalLights = this.getComponents('DirectionalLight').filter(byEnabledAndCameraTags)
+  const pointLights = this.getComponents('PointLight').filter(byEnabledAndCameraTags)
+  const spotLights = this.getComponents('SpotLight').filter(byEnabledAndCameraTags)
+  const areaLights = this.getComponents('AreaLight').filter(byEnabledAndCameraTags)
+  const reflectionProbes = this.getComponents('ReflectionProbe').filter(byEnabledAndCameraTags)
 
   if (!shadowMapping && !shadowMappingLight) {
     directionalLights.forEach((light) => {

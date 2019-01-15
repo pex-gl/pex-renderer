@@ -296,6 +296,9 @@ function initGUI () {
   gui.addTab('Scene')
   gui.addColumn('Environment')
   gui.addHeader('Sun')
+  gui.addParam('Enabled', sunEntity.getComponent('DirectionalLight'), 'enabled', {}, (value) => {
+    sunEntity.getComponent('DirectionalLight').set({ enabled: value })
+  })
   gui.addParam('Sun Elevation', State, 'elevation', { min: -90, max: 180 }, updateSunPosition)
   gui.addParam('Sun Azimuth', State, 'azimuth', { min: -180, max: 180 }, updateSunPosition)
   gui.addHeader('Panorama')
@@ -313,8 +316,16 @@ function initGUI () {
   })
 
   gui.addColumn('Lights')
+  gui.addParam('Light 1 Enabled', pointLight1.getComponent('PointLight'), 'enabled', {}, (value) => {
+    pointLight1.getComponent('PointLight').set({ enabled: value })
+    pointLight1.getComponent('Transform').set({ enabled: value })
+  })
   gui.addParam('Light 1 Pos', pointLight1.transform, 'position', { min: -5, max: 5 }, (value) => {
     pointLight1.transform.set({ position: value })
+  })
+  gui.addParam('Area Light 1 Enabled', areaLight.getComponent('AreaLight'), 'enabled', {}, (value) => {
+    areaLight.getComponent('AreaLight').set({ enabled: value })
+    areaLight.getComponent('Transform').set({ enabled: value })
   })
   gui.addParam('Area Light 1 Col', areaLight.getComponent('AreaLight'), 'color', { type: 'color' }, (value) => {
     areaLight.getComponent('AreaLight').set({ color: value })

@@ -24,6 +24,7 @@ const IndicesMap = {
 
 function Geometry (opts) {
   this.type = 'Geometry'
+  this.enabled = true
   this.changed = new Signal()
   this.bounds = aabb.create()
 
@@ -85,10 +86,10 @@ Geometry.prototype.set = function (opts) {
       }
 
       // Update attrib data type from buffer
-      // It will be either re-used from val.type or attrib.type 
+      // It will be either re-used from val.type or attrib.type
       // or guessed from the typed array
       attrib.type = val.type || attrib.buffer.type
-      
+
       if (val.offset !== undefined) {
         attrib.offset = val.offset
       }
