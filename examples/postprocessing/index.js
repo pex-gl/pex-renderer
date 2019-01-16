@@ -91,12 +91,7 @@ function initCamera () {
     renderer.camera({
       fov: Math.PI / 3,
       aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
-      ssao: true,
-      fxaa: false,
-      dof: true,
-      dofDepth: 18,
-      exposure: 2,
-      postprocess: true
+      exposure: 2
     }),
     renderer.orbiter({
       position: [0, 2, 20]

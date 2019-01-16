@@ -96,6 +96,15 @@ function PostProcessing (opts) {
 PostProcessing.prototype.init = function (entity) {
   this.entity = entity
 
+  const camera = this.entity && this.entity.getComponent('Camera')
+
+  if (camera) {
+    this.set({
+      viewport: camera.viewport,
+      viewMatrix: camera.viewMatrix
+    })
+  }
+
   if (this.enabled && this.ctx.capabilities.maxColorAttachments < 2) {
     this.enabled = false
     console.log(`pex-renderer disabling postprocess as MAX_COLOR_ATTACHMENTS=${this.ctx.capabilities.maxColorAttachments}`)
