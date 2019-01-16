@@ -102,14 +102,15 @@ function initCamera () {
       near: 0.1,
       far: 100,
       viewport: cell,
-      postprocess: true,
-      fxaa: true,
       exposure: State.exposure
     })
-    gui.addTexture2D('Depth Map', cameraCmp._frameDepthTex)
-    gui.addTexture2D('Normal Map', cameraCmp._frameNormalTex)
+    const postProcessingCmp = renderer.postProcessing({
+      fxaa: true
+    })
+    gui.addTexture2D('Depth Map', postProcessingCmp._frameDepthTex)
+    gui.addTexture2D('Normal Map', postProcessingCmp._frameNormalTex)
     if (material.emissiveColor) {
-      cameraCmp.set({
+      postProcessingCmp.set({
         bloom: true,
         bloomIntensity: 0.5,
         bloomThreshold: 3,
@@ -117,6 +118,7 @@ function initCamera () {
       })
     }
     renderer.add(renderer.entity([
+      postProcessingCmp,
       cameraCmp,
       renderer.orbiter({
         position: [0, 0, 1.9]

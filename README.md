@@ -18,7 +18,7 @@ This is an **experimental** API and it's likely to change in the future.
   - [Entities](#entities)
   - [Components](#components)
   - [Scene Components](#scene-components)
-    - transform, camera, overlay
+    - transform, camera, postProcessing, overlay
   - [Geometry Components](#geometry-components)
     - animation, geometry, material, morph, skin
   - [Lighting Components](#lighting-components)
@@ -282,7 +282,7 @@ const transform = renderer.transform({
 
 ### camera = renderer.camera(opts)
 
-Defines rendering viewport, perspective and post-processing.
+Defines rendering viewport and perspective.
 
 *Note: `camera` `position/rotation` are derived from `entity.transform.position/rotation`. It's probably easier to use `Orbiter` component at the moment.*
 
@@ -292,10 +292,21 @@ const camera = renderer.camera({
   fov: Math.PI / 2,
   aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
   near: 0.1,
-  far: 100,
-  postprocess: true,
+  far: 100
+})
+```
+
+### postProcessing = renderer.postProcessing(opts)
+
+Defines rendering post-processing.
+
+<!-- eslint-disable no-unused-vars -->
+```javascript
+const postProcessing = renderer.postProcessing({
+  fxaa: true,
   ssao: true,
-  fxaa: true
+  dof: true,
+  bloom: true
 })
 ```
 

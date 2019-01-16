@@ -104,15 +104,16 @@ function initCamera () {
   })
   var cameraEntity = renderer.entity([
     cameraTransformCmp,
-    renderer.camera({
-      fov: Math.PI / 3,
-      aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
-      postprocess: true,
+    renderer.postProcessing({
       exposure: 2,
       ssao: true,
       ssaoRadius: 4,
       dof: true,
       fxaa: true
+    }),
+    renderer.camera({
+      fov: Math.PI / 3,
+      aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight
     })
   ])
   renderer.add(cameraEntity)
