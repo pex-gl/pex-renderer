@@ -555,7 +555,7 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
       sharedUniforms.uAO = postProcessingCmp._frameAOTex
       sharedUniforms.uScreenSize = [ camera.viewport[2], camera.viewport[3] ] // TODO: should this be camera viewport size?
     }
-    if (!postProcessingCmp || (postProcessingCmp && !postProcessingCmp.enabled)) {
+    if (!postProcessingCmp && !postProcessingCmp.enabled) {
       sharedUniforms.uExposure = camera.exposure
     }
   }
@@ -708,7 +708,7 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
         numAreaLights: areaLights.length,
         useReflectionProbes: reflectionProbes.length, // TODO: reflection probes true
         useSSAO: postProcessingCmp && postProcessingCmp.enabled && postProcessingCmp.ssao,
-        useTonemapping: !postProcessingCmp || (postProcessingCmp && !postProcessingCmp.enabled)
+        useTonemapping: !postProcessingCmp && !postProcessingCmp.enabled
       })
     }
 
