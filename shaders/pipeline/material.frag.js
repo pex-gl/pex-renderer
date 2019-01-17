@@ -42,6 +42,7 @@ varying vec3 vPositionView;
 struct PBRData {
   mat4 inverseViewMatrix;
   vec2 texCoord0;
+  vec4 color;
   vec3 normalView;
   vec4 tangentView;
   vec3 positionWorld;
@@ -104,13 +105,19 @@ void main() {
   PBRData data;
   data.texCoord0 = vTexCoord0;
 
+  #if defined(USE_VERTEX_COLORS) || defined(USE_INSTANCED_COLOR)
+    data.color = vColor;
+  #else
+    data.color = vec4(1.0);
+  #endif
+
   #ifdef USE_UNLIT_WORKFLOW
     getBaseColor(data);
     vec3 color = data.baseColor;
 
     #if defined(USE_VERTEX_COLORS) || defined(USE_INSTANCED_COLOR)
-      vec3 tint = decode(vColor, 3).rgb;
-      color*= tint;
+      vec3 tint = decode(data.color, 3).rgb;
+      color *= tint;
     #endif
   #else
     data.inverseViewMatrix = uInverseViewMatrix;
@@ -160,7 +167,7 @@ void main() {
     #endif
 
     #if defined(USE_VERTEX_COLORS) || defined(USE_INSTANCED_COLOR)
-      vec3 tint = decode(vColor, 3).rgb;
+      vec3 tint = decode(data.color, 3).rgb;
       data.diffuseColor *= tint;
       data.specularColor *= tint;
     #endif

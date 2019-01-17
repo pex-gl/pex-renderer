@@ -10,6 +10,7 @@ varying vec3 vPositionView;
 
 struct PBRData {
   vec2 texCoord0;
+  vec4 color;
   float opacity;
 };
 

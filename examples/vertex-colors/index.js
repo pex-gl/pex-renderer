@@ -20,12 +20,20 @@ const camera = renderer.entity([
 renderer.add(camera)
 
 const geometry = createCube()
-geometry.vertexColors = geometry.uvs.map(uv => [...uv, 0, 1])
+geometry.vertexColors = geometry.uvs.map(uv => [...uv, 0, 0.5])
 delete geometry.normals // USE_UNLIT_WORKFLOW
 
 const cubeEntity = renderer.entity([
   renderer.geometry(geometry),
-  renderer.material()
+  renderer.material({
+    baseColor: [1, 1, 1, 0.5],
+    depthWrite: false,
+    blend: true,
+    blendSrcRGBFactor: ctx.BlendFactor.SrcAlpha,
+    blendSrcAlphaFactor: ctx.BlendFactor.One,
+    blendDstRGBFactor: ctx.BlendFactor.OneMinusSrcAlpha,
+    blendDstAlphaFactor: ctx.BlendFactor.One
+  })
 ])
 renderer.add(cubeEntity)
 
