@@ -2,9 +2,7 @@ TODO:
 - [ ] automatically add directional light for sun, remove that
 - [ ] check if resource creation modifies state
 - [ ] how vulkan binds textures to uniforms and framebuffers?
-- [ ] add back support for instancing
 - [ ] move SSAO init to pex-fx/ssao
-- [ ] move all shaders to glsl/
 - [ ] move debug drawing to a separate file
 
 Context state mapping to Command properties

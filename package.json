@@ -9,12 +9,12 @@
     "email": "marcin.ignac@gmail.com",
     "url": "https://github.com/vorg"
   },
+  "contributors": [
+    "Damien Seguin (https://github.com/dmnsgn)",
+    "Nick Nikolov (https://github.com/nicknikolov)"
+  ],
   "dependencies": {
     "debug": "^4.1.0",
-    "flatten": "^1.0.2",
-    "glsl-atmosphere": "^2.0.0",
-    "glsl-fxaa": "^3.0.0",
-    "glsl-gamma": "^2.0.0",
     "hammersley": "^1.0.0",
     "interpolate-angle": "^1.0.2",
     "is-browser": "^2.0.1",
@@ -36,10 +36,6 @@
     "eslint-plugin-promise": "^4.0.1",
     "eslint-plugin-standard": "^4.0.0",
     "onchange": "^2.4.0"
-  },
-  "scripts": {
-    "build-glsl": "glslify glsl/PBR.src.frag > glsl/PBR.frag",
-    "watch-glsl": "onchange '**/*.src.frag' -- npm run build-glsl"
   },
   "keywords": [
     "webgl",
