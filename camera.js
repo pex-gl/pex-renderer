@@ -1,5 +1,6 @@
 const Signal = require('signals')
 const mat4 = require('pex-math/mat4')
+const vec3 = require('pex-math/vec3')
 
 function Camera (opts) {
   const gl = opts.ctx.gl
@@ -60,6 +61,29 @@ Camera.prototype.set = function (opts) {
   }
 
   Object.keys(opts).forEach((prop) => this.changed.dispatch(prop))
+}
+
+Camera.prototype.getViewRay = function (x, y, windowWidth, windowHeight) {
+  if (this.frustum) {
+    x += this.frustum.offset[0]
+    y += this.frustum.offset[1]
+    windowWidth = this.frustum.totalSize[0]
+    windowHeight = this.frustum.totalSize[1]
+  }
+  let nx = 2 * x / windowWidth - 1
+  let ny = 1 - 2 * y / windowHeight
+
+  let hNear = 2 * Math.tan(this.fov / 2) * this.near
+  let wNear = hNear * this.aspect
+
+  nx *= (wNear * 0.5)
+  ny *= (hNear * 0.5)
+
+  let origin = [0, 0, 0]
+  let direction = vec3.normalize([nx, ny, -this.near])
+  let ray = [origin, direction]
+
+  return ray
 }
 
 Camera.prototype.update = function () {
