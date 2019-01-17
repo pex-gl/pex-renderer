@@ -14,10 +14,10 @@
     "Nick Nikolov (https://github.com/nicknikolov)"
   ],
   "dependencies": {
-    "debug": "^4.1.0",
+    "debug": "^4.1.1",
     "hammersley": "^1.0.0",
     "interpolate-angle": "^1.0.2",
-    "is-browser": "^2.0.1",
+    "is-browser": "^2.1.0",
     "latlon-to-xyz": "^1.0.1",
     "mouse-event-offset": "^3.0.2",
     "pex-geom": "^2.0.2",
@@ -34,8 +34,7 @@
     "eslint-plugin-markdown": "^1.0.0",
     "eslint-plugin-node": "^8.0.1",
     "eslint-plugin-promise": "^4.0.1",
-    "eslint-plugin-standard": "^4.0.0",
-    "onchange": "^2.4.0"
+    "eslint-plugin-standard": "^4.0.0"
   },
   "keywords": [
     "webgl",
