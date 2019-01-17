@@ -108,7 +108,7 @@ void main() {
     getBaseColor(data);
     vec3 color = data.baseColor;
 
-    #ifdef USE_VERTEX_COLORS
+    #if defined(USE_VERTEX_COLORS) || defined(USE_INSTANCED_COLOR)
       vec3 tint = decode(vColor, 3).rgb;
       color*= tint;
     #endif
@@ -159,12 +159,7 @@ void main() {
       alphaTest(data);
     #endif
 
-    #ifdef USE_VERTEX_COLORS
-      vec3 tint = decode(vColor, 3).rgb;
-      data.diffuseColor *= tint;
-      data.specularColor *= tint;
-    #endif
-    #ifdef USE_INSTANCED_COLOR
+    #if defined(USE_VERTEX_COLORS) || defined(USE_INSTANCED_COLOR)
       vec3 tint = decode(vColor, 3).rgb;
       data.diffuseColor *= tint;
       data.specularColor *= tint;

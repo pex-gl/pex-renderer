@@ -31,11 +31,13 @@ attribute vec4 aRotation;
 
 #ifdef USE_VERTEX_COLORS
 attribute vec4 aVertexColor;
-varying vec4 vColor;
 #endif
 
 #ifdef USE_INSTANCED_COLOR
 attribute vec4 aColor;
+#endif
+
+#if defined(USE_VERTEX_COLORS) || defined(USE_INSTANCED_COLOR)
 varying vec4 vColor;
 #endif
 
@@ -105,12 +107,16 @@ void main() {
   position.xyz += aOffset;
 #endif
 
-#ifdef USE_VERTEX_COLORS
-  vColor = aVertexColor;
-#endif
+#if defined(USE_VERTEX_COLORS) && defined(USE_INSTANCED_COLOR)
+ vColor = mix(vec4(0.0), aColor, aVertexColor);
+#else
+  #ifdef USE_INSTANCED_COLOR
+    vColor = aColor;
+  #endif
 
-#ifdef USE_INSTANCED_COLOR
-  vColor = aColor;
+  #ifdef USE_VERTEX_COLORS
+    vColor = aVertexColor;
+  #endif
 #endif
 
   vPositionWorld = vec3(uModelMatrix * position);
