@@ -2,6 +2,7 @@ const Signal = require('signals')
 
 function AmbientLight (opts) {
   this.type = 'AmbientLight'
+  this.enabled = true
   this.changed = new Signal()
   this.color = [1, 1, 1, 1]
   this.intensity = 1

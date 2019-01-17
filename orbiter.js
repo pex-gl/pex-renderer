@@ -42,9 +42,10 @@ function getViewRay (camera, x, y, windowWidth, windowHeight) {
 
 function Orbiter (opts) {
   this.type = 'Orbiter'
+  this.enabled = true
+  this.changed = new Signal()
   this.entity = null
   this.dirty = false
-  this.changed = new Signal()
 
   const initialState = {
     target: [0, 0, 0],
@@ -258,14 +259,15 @@ Orbiter.prototype.setup = function () {
   }
 
   function scroll (dy) {
-    if (!orbiter.zoom) {
-      return
-    }
+    if (!orbiter.zoom) return
+
     orbiter.distance *= 1 + dy / orbiter.zoomSlowdown
     orbiter.distance = clamp(orbiter.distance, orbiter.minDistance, orbiter.maxDistance)
   }
 
   function onMouseDown (e) {
+    if (!orbiter.enabled) return
+
     const pos = offset(e, orbiter.element)
     down(
       pos[0],
@@ -275,6 +277,8 @@ Orbiter.prototype.setup = function () {
   }
 
   function onMouseMove (e) {
+    if (!orbiter.enabled) return
+
     const pos = offset(e, orbiter.element)
     move(
       pos[0],
@@ -284,20 +288,28 @@ Orbiter.prototype.setup = function () {
   }
 
   function onMouseUp (e) {
+    if (!orbiter.enabled) return
+
     up()
   }
 
   function onWheel (e) {
+    if (!orbiter.enabled) return
+
     scroll(e.deltaY)
     e.preventDefault()
   }
 
   function onTouchStart (e) {
+    if (!orbiter.enabled) return
+
     e.preventDefault()
     onMouseDown(e)
   }
 
   function onTouchMove (e) {
+    if (!orbiter.enabled) return
+
     e.preventDefault()
     onMouseMove(e)
   }

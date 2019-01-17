@@ -34,7 +34,7 @@ Animation.prototype.set = function (opts) {
 }
 
 Animation.prototype.update = function () {
-  if (!this.playing) return
+  if (!this.playing || !this.enabled) return
 
   // assuming same length for all
   const animationLength = this.channels[0].input[this.channels[0].input.length - 1]

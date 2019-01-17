@@ -47,6 +47,7 @@ for (let i = 0; i < 128 * 128; i++) {
 function Camera (opts) {
   const gl = opts.ctx.gl
   this.type = 'Camera'
+  this.enabled = true
   this.changed = new Signal()
 
   // camera

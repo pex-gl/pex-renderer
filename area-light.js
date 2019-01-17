@@ -2,15 +2,16 @@ const Signal = require('signals')
 const AreaLightsData = require('./area-light-data')
 
 function AreaLight (opts) {
-  const ctx = opts.ctx
-
   this.type = 'AreaLight'
+  this.enabled = true
   this.changed = new Signal()
   this.color = [1, 1, 1, 1]
   this.intensity = 1
   this.castShadows = false
 
   this.set(opts)
+
+  const ctx = opts.ctx
 
   // TODO: area light textures
   if (!AreaLight.areaLightTexturesRefs) {

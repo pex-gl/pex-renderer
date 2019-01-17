@@ -291,15 +291,27 @@ function imageFromFile (file, options) {
 
 function initGUI () {
   const cameraCmp = cameraEntity.getComponent('Camera')
+  const skyboxCmp = skyboxEntity.getComponent('Skybox')
+  const reflectionProbeCmp = reflectionProbeEntity.getComponent('ReflectionProbe')
 
   // Scene
   gui.addTab('Scene')
   gui.addColumn('Environment')
   gui.addHeader('Sun')
+  gui.addParam('Enabled', sunEntity.getComponent('DirectionalLight'), 'enabled', {}, (value) => {
+    sunEntity.getComponent('DirectionalLight').set({ enabled: value })
+  })
   gui.addParam('Sun Elevation', State, 'elevation', { min: -90, max: 180 }, updateSunPosition)
   gui.addParam('Sun Azimuth', State, 'azimuth', { min: -180, max: 180 }, updateSunPosition)
-  gui.addHeader('Panorama')
-  gui.addTexture2D('Env map', panorama)
+  gui.addHeader('Skybox')
+  gui.addParam('Enabled', skyboxCmp, 'enabled', {}, (value) => {
+    skyboxCmp.set({ enabled: value })
+  })
+  gui.addTexture2D('Env map', skyboxCmp.texture)
+  gui.addHeader('Reflection probes')
+  gui.addParam('Enabled', reflectionProbeCmp, 'enabled', {}, (value) => {
+    reflectionProbeCmp.set({ enabled: value })
+  })
 
   gui.addColumn('Material')
   gui.addParam('Base Color', State, 'baseColor', { type: 'color' }, () => {
@@ -313,8 +325,16 @@ function initGUI () {
   })
 
   gui.addColumn('Lights')
+  gui.addParam('Light 1 Enabled', pointLight1.getComponent('PointLight'), 'enabled', {}, (value) => {
+    pointLight1.getComponent('PointLight').set({ enabled: value })
+    pointLight1.getComponent('Transform').set({ enabled: value })
+  })
   gui.addParam('Light 1 Pos', pointLight1.transform, 'position', { min: -5, max: 5 }, (value) => {
     pointLight1.transform.set({ position: value })
+  })
+  gui.addParam('Area Light 1 Enabled', areaLight.getComponent('AreaLight'), 'enabled', {}, (value) => {
+    areaLight.getComponent('AreaLight').set({ enabled: value })
+    areaLight.getComponent('Transform').set({ enabled: value })
   })
   gui.addParam('Area Light 1 Col', areaLight.getComponent('AreaLight'), 'color', { type: 'color' }, (value) => {
     areaLight.getComponent('AreaLight').set({ color: value })
