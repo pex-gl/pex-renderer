@@ -81,15 +81,17 @@ function updateSunPosition () {
 
 function initCamera () {
   cameraEntity = renderer.add(renderer.entity([
-    renderer.camera({
-      fov: Math.PI / 3,
-      aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
+    renderer.postProcessing({
+      // enabled: false,
       ssao: true,
       fxaa: false,
       dof: true,
-      dofDepth: 18,
-      exposure: 2,
-      postprocess: true
+      dofDepth: 18
+    }),
+    renderer.camera({
+      fov: Math.PI / 3,
+      aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
+      exposure: 2
     }),
     renderer.orbiter({
       position: [0, 2, 20]
@@ -104,7 +106,7 @@ function initMeshes () {
   const normalMap = imageFromFile(ASSETS_DIR + '/plastic-normal.png', { encoding: ctx.Encoding.Linear })
   const metallicMap = imageFromFile(ASSETS_DIR + '/plastic-metallic.png', { encoding: ctx.Encoding.Linear })
   const roughnessMap = imageFromFile(ASSETS_DIR + '/plastic-roughness.png', { encoding: ctx.Encoding.Linear })
-  const alphaMap = imageFromFile(ASSETS_DIR + '/checker.png', { encoding: ctx.Encoding.Linear })
+  // const alphaMap = imageFromFile(ASSETS_DIR + '/checker.png', { encoding: ctx.Encoding.Linear })
   const groundCube = createRoundedCube(1, 1, 1, 20, 20, 20, 0.01)
   const roundedCube = createRoundedCube(1, 1, 1, 20, 20, 20, 0.2)
   const capsule = createCapsule(0.3)
@@ -291,6 +293,7 @@ function imageFromFile (file, options) {
 
 function initGUI () {
   const cameraCmp = cameraEntity.getComponent('Camera')
+  const postProcessingCmp = cameraEntity.getComponent('PostProcessing')
   const skyboxCmp = skyboxEntity.getComponent('Skybox')
   const reflectionProbeCmp = reflectionProbeEntity.getComponent('ReflectionProbe')
 
@@ -345,27 +348,26 @@ function initGUI () {
   const postProcessTab = gui.addTab('PostProcess')
   postProcessTab.setActive()
   gui.addColumn('Parameters')
-  gui.addParam('Enabled', cameraCmp, 'postprocess', {}, () => {
-    // trigger update
-    cameraCmp.set({ postprocess: cameraCmp.postprocess })
-  })
+  gui.addParam('Enabled', postProcessingCmp, 'enabled')
   gui.addParam('Exposure', cameraCmp, 'exposure', { min: 0, max: 5 })
-  gui.addParam('SSAO', cameraCmp, 'ssao')
-  gui.addParam('SSAO radius', cameraCmp, 'ssaoRadius', { min: 0, max: 30 })
-  gui.addParam('SSAO intensity', cameraCmp, 'ssaoIntensity', { min: 0, max: 10 })
-  gui.addParam('SSAO bias', cameraCmp, 'ssaoBias', { min: 0, max: 1 })
-  gui.addParam('SSAO blur radius', cameraCmp, 'ssaoBlurRadius', { min: 0, max: 5 })
-  gui.addParam('SSAO blur sharpness', cameraCmp, 'ssaoBlurSharpness', { min: 0, max: 20 })
-  gui.addParam('DOF', cameraCmp, 'dof')
-  gui.addParam('DOF Iterations', cameraCmp, 'dofIterations', { min: 1, max: 5, step: 1 })
-  gui.addParam('DOF Depth', cameraCmp, 'dofDepth', { min: 0, max: 20 })
-  gui.addParam('DOF Range', cameraCmp, 'dofRange', { min: 0, max: 20 })
-  gui.addParam('DOF Radius', cameraCmp, 'dofRadius', { min: 0, max: 20 })
-  gui.addParam('FXAA', cameraCmp, 'fxaa')
+  gui.addParam('SSAO', postProcessingCmp, 'ssao')
+  gui.addParam('SSAO radius', postProcessingCmp, 'ssaoRadius', { min: 0, max: 30 })
+  gui.addParam('SSAO intensity', postProcessingCmp, 'ssaoIntensity', { min: 0, max: 10 })
+  gui.addParam('SSAO bias', postProcessingCmp, 'ssaoBias', { min: 0, max: 1 })
+  gui.addParam('SSAO blur radius', postProcessingCmp, 'ssaoBlurRadius', { min: 0, max: 5 })
+  gui.addParam('SSAO blur sharpness', postProcessingCmp, 'ssaoBlurSharpness', { min: 0, max: 20 })
+  gui.addParam('DOF', postProcessingCmp, 'dof')
+  gui.addParam('DOF Iterations', postProcessingCmp, 'dofIterations', { min: 1, max: 5, step: 1 })
+  gui.addParam('DOF Depth', postProcessingCmp, 'dofDepth', { min: 0, max: 20 })
+  gui.addParam('DOF Range', postProcessingCmp, 'dofRange', { min: 0, max: 20 })
+  gui.addParam('DOF Radius', postProcessingCmp, 'dofRadius', { min: 0, max: 20 })
+  gui.addParam('FXAA', postProcessingCmp, 'fxaa')
 
   gui.addColumn('Render targets')
-  gui.addTexture2D('Depth', cameraCmp._frameDepthTex)
-  gui.addTexture2D('Normal', cameraCmp._frameNormalTex)
+  if (postProcessingCmp.enabled) {
+    gui.addTexture2D('Depth', postProcessingCmp._frameDepthTex)
+    gui.addTexture2D('Normal', postProcessingCmp._frameNormalTex)
+  }
 }
 
 initCamera()
