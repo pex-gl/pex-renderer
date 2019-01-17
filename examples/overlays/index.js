@@ -13,6 +13,7 @@ load({
 
   renderer.add(renderer.entity([
     renderer.overlay({
+      // enabled: false,
       texture: ctx.texture2D({
         data: res.rainbow,
         width: res.rainbow.width,

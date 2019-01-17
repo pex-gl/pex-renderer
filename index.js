@@ -489,20 +489,21 @@ Renderer.prototype.getComponents = function (type) {
 Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLight, geometries, skybox, forward) {
   const ctx = this._ctx
 
-  function byCameraTags (component) {
+  function byEnabledAndCameraTags (component) {
+    if (!component.enabled) return false
     if (!camera || !camera.entity) return true
     if (!camera.entity.tags.length) return true
     if (!component.entity.tags.length) return true
     return component.entity.tags[0] === camera.entity.tags[0]
   }
 
-  geometries = geometries || this.getComponents('Geometry').filter(byCameraTags)
-  const ambientLights = this.getComponents('AmbientLight').filter(byCameraTags)
-  const directionalLights = this.getComponents('DirectionalLight').filter(byCameraTags)
-  const pointLights = this.getComponents('PointLight').filter(byCameraTags)
-  const spotLights = this.getComponents('SpotLight').filter(byCameraTags)
-  const areaLights = this.getComponents('AreaLight').filter(byCameraTags)
-  const reflectionProbes = this.getComponents('ReflectionProbe').filter(byCameraTags)
+  geometries = geometries || this.getComponents('Geometry').filter(byEnabledAndCameraTags)
+  const ambientLights = this.getComponents('AmbientLight').filter(byEnabledAndCameraTags)
+  const directionalLights = this.getComponents('DirectionalLight').filter(byEnabledAndCameraTags)
+  const pointLights = this.getComponents('PointLight').filter(byEnabledAndCameraTags)
+  const spotLights = this.getComponents('SpotLight').filter(byEnabledAndCameraTags)
+  const areaLights = this.getComponents('AreaLight').filter(byEnabledAndCameraTags)
+  const reflectionProbes = this.getComponents('ReflectionProbe').filter(byEnabledAndCameraTags)
 
   if (!shadowMapping && !shadowMappingLight) {
     directionalLights.forEach((light) => {
@@ -622,7 +623,7 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
 
   for (let i = 0; i < geometries.length; i++) {
     // also drawn below if transparent objects don't exist
-    if ((firstTransparent === i) && skybox) {
+    if ((firstTransparent === i) && skybox && skybox.enabled) {
       skybox.draw(camera, {
         outputEncoding: sharedUniforms.uOutputEncoding,
         backgroundMode: true
@@ -639,7 +640,7 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
       continue
     }
     const material = geometry.entity.getComponent('Material')
-    if (material.blend && shadowMapping) {
+    if (!material.enabled || (material.blend && shadowMapping)) {
       continue
     }
 
@@ -750,7 +751,7 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
     })
   }
   // also drawn above if transparent objects exist
-  if ((firstTransparent === -1) && skybox) {
+  if ((firstTransparent === -1) && skybox && skybox.enabled) {
     skybox.draw(camera, {
       outputEncoding: sharedUniforms.uOutputEncoding,
       backgroundMode: true
@@ -799,8 +800,7 @@ Renderer.prototype.draw = function () {
   })
 
   // draw scene
-
-  cameras.forEach((camera, cameraIndex) => {
+  cameras.filter(camera => camera.enabled).forEach((camera, cameraIndex) => {
     const screenSize = [camera.viewport[2], camera.viewport[3]]
     const halfScreenSize = [Math.floor(camera.viewport[2] / 2), Math.floor(camera.viewport[3] / 2)]
     const halfViewport = [0, 0, Math.floor(camera.viewport[2] / 2), Math.floor(camera.viewport[3] / 2)]
@@ -956,7 +956,7 @@ Renderer.prototype.draw = function () {
     }
   })
 
-  overlays.forEach((overlay) => {
+  overlays.filter(overlay => overlay.enabled).forEach((overlay) => {
     const bounds = [overlay.x, overlay.y, overlay.width, overlay.height]
     if (overlay.x > 1 || overlay.y > 1 || overlay.width > 1 || overlay.height > 1) {
       bounds[0] /= ctx.gl.drawingBufferWidth

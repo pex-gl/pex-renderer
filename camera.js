@@ -4,6 +4,7 @@ const mat4 = require('pex-math/mat4')
 function Camera (opts) {
   const gl = opts.ctx.gl
   this.type = 'Camera'
+  this.enabled = true
   this.changed = new Signal()
 
   this.fov = Math.PI / 4

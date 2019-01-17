@@ -39,6 +39,7 @@ const camera = renderer.entity([
     far: 100
   }),
   renderer.orbiter({
+    // enabled: false,
     element: ctx.gl.canvas,
     distance: 2,
     minLat: -30,

@@ -23,6 +23,7 @@ const IndicesMap = {
 
 function Geometry (opts) {
   this.type = 'Geometry'
+  this.enabled = true
   this.changed = new Signal()
   this.bounds = aabb.create()
 
