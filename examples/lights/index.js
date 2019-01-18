@@ -1,11 +1,9 @@
-const mat4 = require('pex-math/mat4')
+const createRenderer = require('../../')
+const createContext = require('pex-context')
+const createGUI = require('pex-gui')
 const vec3 = require('pex-math/vec3')
 const quat = require('pex-math/quat') // TODO: use latest pex-math
-const createRenderer = require('../../')
 const createCube = require('primitive-cube')
-const createGUI = require('pex-gui')
-const random = require('pex-random')
-const createContext = require('pex-context')
 const dragon = require('stanford-dragon/3')
 const normals = require('angle-normals')
 const centerAndNormalize = require('geom-center-and-normalize')
@@ -21,23 +19,7 @@ ctx.gl.getExtension('OES_standard_derivatives')
 ctx.gl.getExtension('WEBGL_draw_buffers')
 ctx.gl.getExtension('OES_texture_float')
 
-const State = {
-  elevation: 35,
-  azimuth: -45,
-  mie: 0.000021,
-  elevationMat: mat4.create(),
-  rotationMat: mat4.create(),
-  roughness: 0.5,
-  metallic: 0.1,
-  baseColor: [0.8, 0.1, 0.1, 1.0],
-  materials: [],
-  exposure: 1
-}
-
-random.seed(10)
-
 const renderer = createRenderer({
-  pauseOnBlur: true,
   ctx: ctx,
   // profile: true,
   shadowQuality: 2
@@ -51,28 +33,22 @@ const nW = 2
 const nH = 2
 
 // flip upside down as we are using viewport coordinates
-let cells = gridCells(W, H, nW, nH, 0).map((cell) => {
+const cells = gridCells(W, H, nW, nH, 0).map((cell) => {
   return [cell[0], H - cell[1] - cell[3], cell[2], cell[3]]
 })
 
-function initCamera () {
+function initCameras () {
   cells.forEach((cell, cellIndex) => {
     const tags = ['cell' + cellIndex]
-    const cameraCmp = renderer.camera({
-      fov: Math.PI / 3,
-      aspect: (W / nW) / (H / nH),
-      near: 0.1,
-      far: 100,
-      viewport: cell,
-      fxaa: true,
-      // ssao: true,
-      ssaoRadius: 2,
-      ssaoBlurRadius: 0.75
-    })
-    renderer.add(renderer.entity([
-      cameraCmp,
+    const cameraEntity = renderer.entity([
+      renderer.camera({
+        fov: Math.PI / 3,
+        aspect: (W / nW) / (H / nH),
+        viewport: cell
+      }),
       renderer.orbiter()
-    ], tags))
+    ], tags)
+    renderer.add(cameraEntity)
   })
 }
 
@@ -187,14 +163,13 @@ function initSky () {
     castShadows: true
   })
   const directionalLightGizmoPositions = makePrism({ radius: 0.3 })
-  .concat([
-    [0, 0, 0.3], [0, 0, 1],
-    [0.3, 0, 0], [0.3, 0, 1],
-    [-0.3, 0, 0], [-0.3, 0, 1],
-    [0, 0.3, 0], [0, 0.3, 1],
-    [0, -0.3, 0], [0, -0.3, 1]
-  ])
-  State.sun = directionalLight
+    .concat([
+      [0, 0, 0.3], [0, 0, 1],
+      [0.3, 0, 0], [0.3, 0, 1],
+      [-0.3, 0, 0], [-0.3, 0, 1],
+      [0, 0.3, 0], [0, 0.3, 1],
+      [0, -0.3, 0], [0, -0.3, 1]
+    ])
 
   // if (false)
   renderer.add(renderer.entity([
@@ -261,13 +236,13 @@ function initSky () {
   })
   const spotLightRadius = spotLight.distance * Math.tan(spotLight.angle)
   const spotLightGizmoPositions = makePrism({ radius: 0.3 })
-  .concat([
-    [0, 0, 0], [spotLightRadius, 0, spotLight.distance],
-    [0, 0, 0], [-spotLightRadius, 0, spotLight.distance],
-    [0, 0, 0], [0, spotLightRadius, spotLight.distance],
-    [0, 0, 0], [0, -spotLightRadius, spotLight.distance]
-  ])
-  .concat(makeCircle({ radius: spotLightRadius, center: [0, 0, spotLight.distance], steps: 64, axis: [0, 1] }))
+    .concat([
+      [0, 0, 0], [spotLightRadius, 0, spotLight.distance],
+      [0, 0, 0], [-spotLightRadius, 0, spotLight.distance],
+      [0, 0, 0], [0, spotLightRadius, spotLight.distance],
+      [0, 0, 0], [0, -spotLightRadius, spotLight.distance]
+    ])
+    .concat(makeCircle({ radius: spotLightRadius, center: [0, 0, spotLight.distance], steps: 64, axis: [0, 1] }))
 
   gui.addHeader('Spot').setPosition(W / 2 + 10, 10)
   gui.addParam('Enabled', spotLight, 'enabled', {}, (value) => {
@@ -300,17 +275,17 @@ function initSky () {
     castShadows: true
   })
   const pointLightGizmoPositions = makePrism({ radius: 0.3 })
-  .concat(makeCircle({ center: [0, 0, 0], radius: pointLight.radius, steps: 64, axis: [0, 1] }))
-  .concat(makeCircle({ center: [0, 0, 0], radius: pointLight.radius, steps: 64, axis: [0, 2] }))
-  .concat(makeCircle({ center: [0, 0, 0], radius: pointLight.radius, steps: 64, axis: [1, 2] }))
-  .concat([
-    [0, 0.3, 0], [0, 0.6, 0],
-    [0, -0.3, 0], [0, -0.6, 0],
-    [0.3, 0, 0], [0.6, 0, 0],
-    [-0.3, 0, 0], [-0.6, 0, 0],
-    [0, 0, 0.3], [0, 0, 0.6],
-    [0, 0, -0.3], [0, 0, -0.6]
-  ])
+    .concat(makeCircle({ center: [0, 0, 0], radius: pointLight.radius, steps: 64, axis: [0, 1] }))
+    .concat(makeCircle({ center: [0, 0, 0], radius: pointLight.radius, steps: 64, axis: [0, 2] }))
+    .concat(makeCircle({ center: [0, 0, 0], radius: pointLight.radius, steps: 64, axis: [1, 2] }))
+    .concat([
+      [0, 0.3, 0], [0, 0.6, 0],
+      [0, -0.3, 0], [0, -0.6, 0],
+      [0.3, 0, 0], [0.6, 0, 0],
+      [-0.3, 0, 0], [-0.6, 0, 0],
+      [0, 0, 0.3], [0, 0, 0.6],
+      [0, 0, -0.3], [0, 0, -0.6]
+    ])
   const pointLightTransform = renderer.transform({
     position: [1, 1, 1]
   })
@@ -365,7 +340,7 @@ function initSky () {
   ], ['cell3']))
 }
 
-initCamera()
+initCameras()
 initMeshes()
 initSky()
 
@@ -381,7 +356,5 @@ ctx.frame(() => {
   debugOnce = false
   renderer.draw()
 
-  if (!renderer._state.paused) { // TODO: _state.something is messy
-    gui.draw()
-  }
+  gui.draw()
 })
