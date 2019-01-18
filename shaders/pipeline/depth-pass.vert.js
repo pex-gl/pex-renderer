@@ -15,11 +15,25 @@ attribute vec2 aTexCoord0;
 #ifdef USE_INSTANCED_OFFSET
 attribute vec3 aOffset;
 #endif
+
 #ifdef USE_INSTANCED_SCALE
 attribute vec3 aScale;
 #endif
+
 #ifdef USE_INSTANCED_ROTATION
 attribute vec4 aRotation;
+#endif
+
+#ifdef USE_INSTANCED_COLOR
+attribute vec4 aColor;
+#endif
+
+#ifdef USE_VERTEX_COLORS
+attribute vec4 aVertexColor;
+#endif
+
+#if defined(USE_VERTEX_COLORS) || defined(USE_INSTANCED_COLOR)
+varying vec4 vColor;
 #endif
 
 #ifdef USE_SKIN
@@ -81,6 +95,18 @@ void main() {
 
   #ifdef USE_INSTANCED_OFFSET
     position.xyz += aOffset;
+  #endif
+
+  #if defined(USE_VERTEX_COLORS) && defined(USE_INSTANCED_COLOR)
+    vColor = aVertexColor * aColor;
+  #else
+    #ifdef USE_INSTANCED_COLOR
+      vColor = aColor;
+    #endif
+
+    #ifdef USE_VERTEX_COLORS
+      vColor = aVertexColor;
+    #endif
   #endif
 
   #ifdef USE_SKIN

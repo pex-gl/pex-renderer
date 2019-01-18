@@ -29,12 +29,12 @@ attribute vec3 aScale;
 attribute vec4 aRotation;
 #endif
 
-#ifdef USE_VERTEX_COLORS
-attribute vec4 aVertexColor;
-#endif
-
 #ifdef USE_INSTANCED_COLOR
 attribute vec4 aColor;
+#endif
+
+#ifdef USE_VERTEX_COLORS
+attribute vec4 aVertexColor;
 #endif
 
 #if defined(USE_VERTEX_COLORS) || defined(USE_INSTANCED_COLOR)
@@ -108,7 +108,7 @@ void main() {
 #endif
 
 #if defined(USE_VERTEX_COLORS) && defined(USE_INSTANCED_COLOR)
- vColor = mix(vec4(0.0), aColor, aVertexColor);
+  vColor = aVertexColor * aColor;
 #else
   #ifdef USE_INSTANCED_COLOR
     vColor = aColor;

@@ -11,7 +11,11 @@ uniform vec4 uBaseColor; // TODO: gltf assumes sRGB color, not linear
       data.baseColor = decode(uBaseColor, 3).rgb * decode(texelColor, 3).rgb;
     #endif
 
-    data.opacity = uBaseColor.a * texelColor.a * data.color.a;
+    #if defined(USE_VERTEX_COLORS) || defined(USE_INSTANCED_COLOR)
+      data.opacity = uBaseColor.a * texelColor.a * vColor.a;
+    #else
+      data.opacity = uBaseColor.a * texelColor.a;
+    #endif
   }
 #else
   void getBaseColor(inout PBRData data) {
@@ -19,7 +23,11 @@ uniform vec4 uBaseColor; // TODO: gltf assumes sRGB color, not linear
       data.baseColor = decode(uBaseColor, 3).rgb;
     #endif
 
-    data.opacity = uBaseColor.a * data.color.a;
+    #if defined(USE_VERTEX_COLORS) || defined(USE_INSTANCED_COLOR)
+      data.opacity = uBaseColor.a * vColor.a;
+    #else
+      data.opacity = uBaseColor.a;
+    #endif
   }
 #endif
 `

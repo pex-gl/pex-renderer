@@ -20,6 +20,7 @@ const octMap = require('./oct-map.glsl.js')
 const octMapUvToDir = require('./oct-map-uv-to-dir.glsl.js')
 
 const baseColor = require('./base-color.glsl.js')
+const tintColor = require('./tint-color.glsl.js')
 const emissiveColor = require('./emissive-color.glsl.js')
 const alpha = require('./alpha.glsl.js')
 const ambientOcclusion = require('./ambient-occlusion.glsl.js')
@@ -58,6 +59,7 @@ module.exports = {
   octMapUvToDir,
 
   baseColor,
+  tintColor,
   emissiveColor,
   alpha,
   ambientOcclusion,

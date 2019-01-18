@@ -80,8 +80,8 @@ function initMeshes () {
     offsets: { data: offsets, divisor: 1 },
     scales: { data: scales, divisor: 1 },
     rotations: { data: rotations, divisor: 1 },
-    colors: { data: colors, divisor: 1 },
-    // vertexColors: cube.uvs.map(uv => [...uv, 0, 1])
+    colors: { data: colors, divisor: 1 }
+    // vertexColors: cube.uvs.map(uv => [...uv, 0, 0.1])
   })
   function update () {
     time += 1 / 60
@@ -162,6 +162,12 @@ function initMeshes () {
       metallic: 1.0,
       castShadows: true,
       receiveShadows: true
+      // depthWrite: false,
+      // blend: true,
+      // blendSrcRGBFactor: ctx.BlendFactor.SrcAlpha,
+      // blendSrcAlphaFactor: ctx.BlendFactor.One,
+      // blendDstRGBFactor: ctx.BlendFactor.OneMinusSrcAlpha,
+      // blendDstAlphaFactor: ctx.BlendFactor.One
     })
   ])
   renderer.add(entity)
