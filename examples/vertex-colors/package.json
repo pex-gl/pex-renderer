@@ -4,13 +4,16 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "budo index.js:bundle.js --open --live",
-    "build": "browserify main.js -o bundle.js"
+    "start": "budo index.js --open --live",
+    "build": "browserify index.js -o bundle.js"
   },
   "author": "Damien Seguin (https://dmnsgn.me)",
   "license": "MIT",
   "dependencies": {
     "pex-context": "^2.8.0",
     "primitive-cube": "^2.0.1"
+  },
+  "devDependencies": {
+    "budo": "^11.6.0"
   }
 }
