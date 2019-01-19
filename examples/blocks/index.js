@@ -49,33 +49,12 @@ const renderer = createRenderer(ctx)
 
 const gui = createGUI(ctx)
 gui.addFPSMeeter()
-gui.addParam('Sun Elevation', State, 'elevation', { min: -90, max: 180 }, updateSunPosition)
 
-let sunTransform = null
 let skybox = null
-let reflectionProbe = null
 let frameNumber = 0
 let debugOnce = false
 
-function updateSunPosition () {
-  mat4.identity(State.elevationMat)
-  mat4.identity(State.rotationMat)
-  mat4.rotate(State.elevationMat, State.elevation / 180 * Math.PI, [0, 0, 1])
-  mat4.rotate(State.rotationMat, State.azimuth / 180 * Math.PI, [0, 1, 0])
-
-  const sunPos = [2, 0, 0]
-  vec3.multMat4(sunPos, State.elevationMat)
-  vec3.multMat4(sunPos, State.rotationMat)
-
-  const dir = vec3.normalize(vec3.sub([0, 0, 0], sunPos))
-  sunTransform.set({
-    position: sunPos,
-    rotation: quat.fromTo(sunTransform.rotation, [0, 0, 1], dir, [0, 1, 0])
-  })
-  skybox.set({ sunPosition: sunPos })
-  reflectionProbe.set({ dirty: true })
-}
-
+// Camera
 const cameraEntity = renderer.entity([
   renderer.postProcessing({
     ssao: true,
@@ -187,7 +166,7 @@ const sunLight = renderer.directionalLight({
   castShadows: true,
   bias: 0.01
 })
-sunTransform = renderer.transform({
+const sunTransform = renderer.transform({
   position: [2, 2, 2],
   rotation: quat.fromTo([0, 0, 1], vec3.normalize([-1, -1, -1]), [0, 1, 0])
 })
@@ -199,15 +178,15 @@ renderer.add(sunEntity)
 
 gui.addTexture2D('Shadow Map', sunLight._shadowMap)
 
-skybox = renderer.skybox({
+const skyboxCmp = renderer.skybox({
   sunPosition: sunPosition
 })
-reflectionProbe = renderer.reflectionProbe()
-const skyboxEnt = renderer.entity([
-  skybox,
-  reflectionProbe
+const reflectionProbeCmp = renderer.reflectionProbe()
+const skyEntity = renderer.entity([
+  skyboxCmp,
+  reflectionProbeCmp
 ])
-renderer.add(skyboxEnt)
+renderer.add(skyEntity)
 
 const pointLightEnt = renderer.entity([
   renderer.transform({
@@ -247,11 +226,32 @@ const areaLightEntity = renderer.entity([
 ])
 renderer.add(areaLightEntity)
 
+// GUI
 gui.addParam('AreaLight Size', areaLightEntity.transform, 'scale', { min: 0, max: 5 }, (value) => {
   areaLightEntity.transform.set({ scale: [value[0], value[1], value[2]] })
 })
 gui.addParam('AreaLight Intensity', areaLightEntity.getComponent('AreaLight'), 'intensity', { min: 0, max: 5 })
 gui.addParam('AreaLight', areaLightEntity.getComponent('AreaLight'), 'color', { type: 'color' })
+
+function updateSunPosition () {
+  mat4.identity(State.elevationMat)
+  mat4.identity(State.rotationMat)
+  mat4.rotate(State.elevationMat, State.elevation / 180 * Math.PI, [0, 0, 1])
+  mat4.rotate(State.rotationMat, State.azimuth / 180 * Math.PI, [0, 1, 0])
+
+  const sunPosition = [2, 0, 0]
+  vec3.multMat4(sunPosition, State.elevationMat)
+  vec3.multMat4(sunPosition, State.rotationMat)
+
+  const dir = vec3.normalize(vec3.sub([0, 0, 0], sunPosition))
+  sunTransform.set({
+    position: sunPosition,
+    rotation: quat.fromTo(sunTransform.rotation, [0, 0, 1], dir, [0, 1, 0])
+  })
+  skyboxCmp.set({ sunPosition })
+  reflectionProbeCmp.set({ dirty: true })
+}
+gui.addParam('Sun Elevation', State, 'elevation', { min: -90, max: 180 }, updateSunPosition)
 
 updateSunPosition()
 

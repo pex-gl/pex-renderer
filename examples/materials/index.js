@@ -1,39 +1,18 @@
-const mat4 = require('pex-math/mat4')
+const path = require('path')
+const createRenderer = require('../../')
+const createContext = require('pex-context')
+const createGUI = require('pex-gui')
 const vec3 = require('pex-math/vec3')
 const quat = require('pex-math/quat')
-const createRenderer = require('../../')
-const createSphere = require('primitive-sphere')
-const createGUI = require('pex-gui')
 const random = require('pex-random')
-const createContext = require('pex-context')
 const io = require('pex-io')
+const createSphere = require('primitive-sphere')
 const isBrowser = require('is-browser')
 const gridCells = require('grid-cells')
 const parseHdr = require('parse-hdr')
-const path = require('path')
-
-const ctx = createContext({
-  powerPreference: 'high-performance'
-})
-ctx.gl.getExtension('EXT_shader_texture_lod')
-ctx.gl.getExtension('OES_standard_derivatives')
-ctx.gl.getExtension('WEBGL_draw_buffers')
-ctx.gl.getExtension('OES_texture_float')
-ctx.gl.getExtension('EXT_texture_filter_anisotropic')
-
-const ASSETS_DIR = isBrowser ? 'assets' : path.join(__dirname, 'assets')
-
-window.addEventListener('keydown', (e) => {
-  if (e.key === 'g') gui.toggleEnabled()
-})
 
 const State = {
   sunPosition: [0, 5, -5],
-  elevation: 65,
-  azimuth: -45,
-  mie: 0.000021,
-  elevationMat: mat4.create(),
-  rotationMat: mat4.create(),
   roughness: 0.5,
   metallic: 0.1,
   baseColor: [0.8, 0.1, 0.1, 1.0],
@@ -44,126 +23,33 @@ const State = {
 
 random.seed(10)
 
+const ctx = createContext({
+  powerPreference: 'high-performance'
+})
+ctx.gl.getExtension('EXT_shader_texture_lod')
+ctx.gl.getExtension('OES_standard_derivatives')
+ctx.gl.getExtension('WEBGL_draw_buffers')
+ctx.gl.getExtension('OES_texture_float')
+ctx.gl.getExtension('EXT_texture_filter_anisotropic')
+
 const renderer = createRenderer({
+  ctx,
   pauseOnBlur: true,
-  ctx: ctx,
-  // profile: true,
   rgbm: State.rgbm,
   shadowQuality: 2
 })
 
 const gui = createGUI(ctx)
 gui.setEnabled(false)
-gui.addHeader('Sun')
-gui.addParam('Sun Elevation', State, 'elevation', { min: -90, max: 180 }, updateSunPosition)
-gui.addParam('Sun Azimuth', State, 'azimuth', { min: -180, max: 180 }, updateSunPosition)
 
-function updateSunPosition () {
-  // mat4.setRotation(State.elevationMat, State.elevation / 180 * Math.PI, [0, 0, 1])
-  // mat4.setRotation(State.rotationMat, State.azimuth / 180 * Math.PI, [0, 1, 0])
-
-  // vec3.set3(State.sunPosition, 10, 0, 0)
-  // vec3.multMat4(State.sunPosition, State.elevationMat)
-  // vec3.multMat4(State.sunPosition, State.rotationMat)
-
-  // if (State.sun) {
-    // var sunDir = State.sun.direction
-    // vec3.set(sunDir, [0, 0, 0])
-    // vec3.sub(sunDir, State.sunPosition)
-    // State.sun.set({ direction: sunDir })
-  // }
-
-  // if (State.skybox) {
-    // State.skybox.set({ sunPosition: State.sunPosition })
-  // }
-
-  // if (State.reflectionProbe) {
-    // State.reflectionProbe.dirty = true // FIXME: hack
-  // }
-}
-
+const ASSETS_DIR = isBrowser ? 'assets' : path.join(__dirname, 'assets')
 const W = ctx.gl.drawingBufferWidth
 const H = ctx.gl.drawingBufferHeight
 const nW = 8
 const nH = 3
+let debugOnce = false
 
-// flip upside down as we are using viewport coordinates
-let cells = gridCells(W, H, nW, nH, 0).map((cell) => {
-  return [cell[0], H - cell[1] - cell[3], cell[2], cell[3]]
-})
-
-function initCamera () {
-  cells.forEach((cell, cellIndex) => {
-    const tags = ['cell' + cellIndex]
-    const material = materials[cellIndex]
-    const cameraCmp = renderer.camera({
-      fov: Math.PI / 3,
-      aspect: (W / nW) / (H / nH),
-      near: 0.1,
-      far: 100,
-      viewport: cell,
-      exposure: State.exposure
-    })
-    const postProcessingCmp = renderer.postProcessing({
-      fxaa: true
-    })
-    gui.addTexture2D('Depth Map', postProcessingCmp._frameDepthTex)
-    gui.addTexture2D('Normal Map', postProcessingCmp._frameNormalTex)
-    if (material.emissiveColor) {
-      postProcessingCmp.set({
-        bloom: true,
-        bloomIntensity: 0.5,
-        bloomThreshold: 3,
-        bloomRadius: 1.25
-      })
-    }
-    renderer.add(renderer.entity([
-      postProcessingCmp,
-      cameraCmp,
-      renderer.orbiter({
-        position: [0, 0, 1.9]
-      })
-    ], tags))
-  })
-
-  gui.addParam('Exposure', State, 'exposure', { min: 0.01, max: 5 }, () => {
-    renderer.getComponents('Camera').forEach((camera) => {
-      camera.set({ exposure: State.exposure })
-    })
-  })
-// gui.addParam('Shadow Bias', renderer._state, 'bias', { min: 0.001, max: 0.1 })
-// gui.addParam('SSAO', renderer._state, 'ssao')
-// gui.addParam('SSAO Sharpness', renderer._state, 'ssaoSharpness', { min: 0, max: 100 })
-// gui.addParam('SSAO Radius', renderer._state, 'ssaoRadius', { min: 0, max: 1 })
-}
-
-function imageFromFile (file, options) {
-  const tex = ctx.texture2D({
-    width: 1,
-    height: 1,
-    pixelFormat: ctx.PixelFormat.RGBA8,
-    encoding: ctx.Encoding.SRGB
-  })
-  io.loadImage(file, function (err, image, encoding) {
-    console.log('image loaded', file)
-    if (err) console.log(err)
-    ctx.update(tex, {
-      data: image,
-      width: image.width,
-      height: image.height,
-      wrap: ctx.Wrap.Repeat,
-      flipY: true,
-      mag: ctx.Filter.Linear,
-      min: ctx.Filter.LinearMipmapLinear,
-      aniso: 16,
-      pixelFormat: ctx.PixelFormat.RGBA8,
-      encoding: encoding
-    })
-    ctx.update(tex, { mipmap: true })
-  }, true)
-  return tex
-}
-
+// Materials
 let materials = [
   { baseColor: [1.0, 1.0, 1.0, 1.0], metallic: 0, roughness: 1, baseColorMap: ASSETS_DIR + '/uv-wide.png' },
   { baseColor: [0.8, 0.2, 0.2, 1.0], metallic: 0, roughness: 0 / 6 },
@@ -181,7 +67,8 @@ let materials = [
   { baseColor: [1.0, 1.0, 1.0, 1.0], metallic: 1, roughness: 4 / 6 },
   { baseColor: [1.0, 1.0, 1.0, 1.0], metallic: 1, roughness: 5 / 6 },
   { baseColor: [1.0, 1.0, 1.0, 1.0], metallic: 1, roughness: 6 / 6 },
-  { roughness: null,
+  {
+    roughness: null,
     metallic: null,
     baseColor: [1, 1, 1, 0.5],
     baseColorMap: ASSETS_DIR + '/plastic-green.material/plastic-green_basecolor.png'
@@ -229,74 +116,106 @@ let materials = [
   }
 ]
 
-function initMeshes () {
-  const geom = createSphere(0.5)
+// Utils
+let cells = gridCells(W, H, nW, nH, 0).map((cell) => {
+  // flip upside down as we are using viewport coordinates
+  return [cell[0], H - cell[1] - cell[3], cell[2], cell[3]]
+})
 
-  materials.forEach((mat) => {
-    if (mat.baseColorMap) mat.baseColorMap = imageFromFile(mat.baseColorMap, ctx.Encoding.SRGB)
-    if (mat.roughnessMap) mat.roughnessMap = imageFromFile(mat.roughnessMap, ctx.Encoding.Linear)
-    if (mat.metallicMap) mat.metallicMap = imageFromFile(mat.metallicMap, ctx.Encoding.Linear)
-    if (mat.normalMap) mat.normalMap = imageFromFile(mat.normalMap, ctx.Encoding.Linear)
-    if (mat.alphaMap) mat.alphaMap = imageFromFile(mat.alphaMap, ctx.Encoding.Linear)
-    if (mat.emissiveColorMap) mat.emissiveColorMap = imageFromFile(mat.emissiveColorMap, ctx.Encoding.SRGB)
-    mat.castShadows = true
-    mat.receiveShadows = true
+cells.forEach((cell, cellIndex) => {
+  const tags = ['cell' + cellIndex]
+  const material = materials[cellIndex]
+  const cameraCmp = renderer.camera({
+    fov: Math.PI / 3,
+    aspect: (W / nW) / (H / nH),
+    viewport: cell,
+    exposure: State.exposure
+  })
+  const postProcessingCmp = renderer.postProcessing({
+    fxaa: true
   })
 
-  cells.forEach((cell, cellIndex) => {
-    const tags = ['cell' + cellIndex]
-    const material = materials[cellIndex]
-    if (!material) return
-    const components = [
-      renderer.geometry(geom),
-      renderer.material(material)
-    ]
-    const entity = renderer.entity(components, tags)
-    console.log(entity)
-    renderer.add(entity)
+  if (material.emissiveColor) {
+    postProcessingCmp.set({
+      bloom: true,
+      bloomIntensity: 0.5,
+      bloomThreshold: 3,
+      bloomRadius: 1.25
+    })
+  }
+
+  const cameraEntity = renderer.entity([
+    postProcessingCmp,
+    cameraCmp,
+    renderer.orbiter({
+      position: [0, 0, 1.9]
+    })
+  ], tags)
+  renderer.add(cameraEntity)
+
+  gui.addTexture2D('Depth Map', postProcessingCmp._frameDepthTex)
+  gui.addTexture2D('Normal Map', postProcessingCmp._frameNormalTex)
+})
+gui.addParam('Exposure', State, 'exposure', { min: 0.01, max: 5 }, () => {
+  renderer.getComponents('Camera').forEach((camera) => {
+    camera.set({ exposure: State.exposure })
   })
+})
+
+function imageFromFile (file, options) {
+  const tex = ctx.texture2D({
+    width: 1,
+    height: 1,
+    pixelFormat: ctx.PixelFormat.RGBA8,
+    encoding: ctx.Encoding.SRGB
+  })
+  io.loadImage(file, function (err, image, encoding) {
+    if (err) console.log(err)
+    ctx.update(tex, {
+      data: image,
+      width: image.width,
+      height: image.height,
+      wrap: ctx.Wrap.Repeat,
+      flipY: true,
+      mag: ctx.Filter.Linear,
+      min: ctx.Filter.LinearMipmapLinear,
+      aniso: 16,
+      pixelFormat: ctx.PixelFormat.RGBA8,
+      encoding: encoding
+    })
+    ctx.update(tex, { mipmap: true })
+  }, true)
+  return tex
 }
 
-function initSky (panorama) {
-  const sun = State.sun = renderer.directionalLight({
-    color: [1, 1, 0.95, 1],
-    intensity: 2,
-    castShadows: true
-  })
-  gui.addTexture2D('ShadowMap', sun._shadowMap)
-  const sunTransform = renderer.transform({
-    position: [2, 2, 2],
-    rotation: quat.fromTo(quat.create(), [0, 0, 1], vec3.normalize([-2, -2, -2]))
-  })
-  renderer.add(renderer.entity([
-    sunTransform,
-    sun
-  ]))
+// Meshes
+materials.forEach((material) => {
+  if (material.baseColorMap) material.baseColorMap = imageFromFile(material.baseColorMap, ctx.Encoding.SRGB)
+  if (material.roughnessMap) material.roughnessMap = imageFromFile(material.roughnessMap, ctx.Encoding.Linear)
+  if (material.metallicMap) material.metallicMap = imageFromFile(material.metallicMap, ctx.Encoding.Linear)
+  if (material.normalMap) material.normalMap = imageFromFile(material.normalMap, ctx.Encoding.Linear)
+  if (material.alphaMap) material.alphaMap = imageFromFile(material.alphaMap, ctx.Encoding.Linear)
+  if (material.emissiveColorMap) material.emissiveColorMap = imageFromFile(material.emissiveColorMap, ctx.Encoding.SRGB)
+  material.castShadows = true
+  material.receiveShadows = true
+})
 
-  const skybox = State.skybox = renderer.skybox({
-    sunPosition: State.sunPosition,
-    texture: panorama
-  })
-  renderer.add(renderer.entity([ skybox ]))
+cells.forEach((cell, cellIndex) => {
+  const tags = ['cell' + cellIndex]
+  const material = materials[cellIndex]
+  if (!material) return
 
-  // currently this also includes light probe functionality
-  const reflectionProbe = State.reflectionProbe = renderer.reflectionProbe({
-    origin: [0, 0, 0],
-    size: [10, 10, 10],
-    boxProjection: false
-  })
-  renderer.add(renderer.entity([ reflectionProbe ]))
-  gui.addTextureCube('Reflection Cubemap', reflectionProbe._dynamicCubemap).setPosition(180, 10)
-  gui.addTexture2D('Reflection OctMap', reflectionProbe._octMap)
-  gui.addTexture2D('Reflection OctMapAtlas', reflectionProbe._reflectionMap)
-}
+  const materialEntity = renderer.entity([
+    renderer.geometry(createSphere(0.5)),
+    renderer.material(material)
+  ], tags)
+  renderer.add(materialEntity)
+})
 
-initCamera()
-initMeshes()
-
-io.loadBinary(`${ASSETS_DIR}/garage.hdr`, (err, buf) => {
-  if (err) console.log('Loading HDR file failed', err)
-  const hdrImg = parseHdr(buf)
+// Sky
+;(async () => {
+  const buffer = await io.loadBinary(`${ASSETS_DIR}/garage.hdr`)
+  const hdrImg = parseHdr(buffer)
   const panorama = ctx.texture2D({
     data: hdrImg.data,
     width: hdrImg.shape[0],
@@ -305,27 +224,54 @@ io.loadBinary(`${ASSETS_DIR}/garage.hdr`, (err, buf) => {
     encoding: ctx.Encoding.Linear,
     flipY: true
   })
-  gui.addTexture2D('Panorama', panorama)
-  initSky(panorama)
-})
 
-let debugOnce = false
+  const sun = renderer.directionalLight({
+    color: [1, 1, 0.95, 1],
+    intensity: 2,
+    castShadows: true
+  })
+  const sunEntity = renderer.entity([
+    renderer.transform({
+      position: [2, 2, 2],
+      rotation: quat.fromTo(quat.create(), [0, 0, 1], vec3.normalize([-2, -2, -2]))
+    }),
+    sun
+  ])
+  renderer.add(sunEntity)
+  gui.addTexture2D('ShadowMap', sun._shadowMap)
+
+  const skybox = renderer.skybox({
+    sunPosition: State.sunPosition,
+    texture: panorama
+  })
+
+  const reflectionProbe = renderer.reflectionProbe({
+    origin: [0, 0, 0],
+    size: [10, 10, 10],
+    boxProjection: false
+  })
+
+  const skyEntity = renderer.entity([
+    skybox,
+    reflectionProbe
+  ])
+  renderer.add(skyEntity)
+
+  gui.addTexture2D('Panorama', panorama)
+  gui.addTextureCube('Reflection Cubemap', reflectionProbe._dynamicCubemap).setPosition(180, 10)
+  gui.addTexture2D('Reflection OctMap', reflectionProbe._octMap)
+  gui.addTexture2D('Reflection OctMapAtlas', reflectionProbe._reflectionMap)
+})()
 
 window.addEventListener('keydown', (e) => {
-  if (e.key === 'd') {
-    debugOnce = true
-    updateSunPosition()
-  }
+  if (e.key === 'g') gui.toggleEnabled()
+  if (e.key === 'd') debugOnce = true
 })
-
-updateSunPosition()
 
 ctx.frame(() => {
   ctx.debug(debugOnce)
   debugOnce = false
   renderer.draw()
 
-  if (!renderer._state.paused) { // TODO: _state.something is messy
-    gui.draw()
-  }
+  gui.draw()
 })
