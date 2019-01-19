@@ -1,16 +1,17 @@
-const createContext = require('pex-context')
+const path = require('path')
 const createRenderer = require('../..')
+const createContext = require('pex-context')
+const io = require('pex-io')
+const GUI = require('pex-gui')
 const createSphere = require('primitive-sphere')
 const parseHdr = require('parse-hdr')
-const loadBinary = require('pex-io').loadBinary
-const loadImage = require('pex-io').loadImage
-const GUI = require('pex-gui')
+const isBrowser = require('is-browser')
 
-const ctx = createContext({})
+const ctx = createContext()
+const renderer = createRenderer(ctx)
+const gui = new GUI(ctx)
 
-const renderer = createRenderer({
-  ctx: ctx
-})
+const ASSETS_DIR = isBrowser ? 'assets' : path.join(__dirname, 'assets')
 
 const camera = renderer.entity([
   renderer.transform({ position: [0, 0, 3] }),
@@ -51,32 +52,33 @@ const reflectionProbe = renderer.entity([
 ])
 renderer.add(reflectionProbe)
 
-loadBinary(`assets/Mono_Lake_B.hdr`, (err, buf) => {
-  if (err) console.log('Loading HDR file failed', err)
-  const hdrImg = parseHdr(buf)
+;(async () => {
+  const buffer = await io.loadBinary(`${ASSETS_DIR}/Mono_Lake_B.hdr`)
+  const hdrImg = parseHdr(buffer)
   const panorama = ctx.texture2D({
     data: hdrImg.data,
     width: hdrImg.shape[0],
     height: hdrImg.shape[1],
     pixelFormat: ctx.PixelFormat.RGBA32F,
     encoding: ctx.Encoding.Linear,
-    min: ctx.Filter.Linear,
-    mag: ctx.Filter.Linear,
     flipY: true
   })
+
   skybox.getComponent('Skybox').set({ texture: panorama })
   reflectionProbe.getComponent('ReflectionProbe').set({ dirty: true })
-})
 
-var skyboxCmp = skybox.getComponent('Skybox')
-var materialCmp = geom.getComponent('Material')
-var cameraCmp = camera.getComponent('Camera')
-var gui = new GUI(ctx)
-gui.addHeader('Settings')
-gui.addParam('BG Blur', skyboxCmp, 'backgroundBlur', {}, () => { })
-gui.addParam('Exposure', cameraCmp, 'exposure', { min: 0, max: 2 }, () => { })
-gui.addParam('Roughness', materialCmp, 'roughness', {}, () => { })
-gui.addTexture2D('Reflection Probe', reflectionProbe.getComponent('ReflectionProbe')._reflectionMap)
+  const skyboxCmp = skybox.getComponent('Skybox')
+  const materialCmp = geom.getComponent('Material')
+  const cameraCmp = camera.getComponent('Camera')
+  gui.addHeader('Settings')
+  gui.addParam('Enabled', skyboxCmp, 'enabled', {}, (value) => {
+    skyboxCmp.set({ enabled: value })
+  })
+  gui.addParam('BG Blur', skyboxCmp, 'backgroundBlur', {}, () => { })
+  gui.addParam('Exposure', cameraCmp, 'exposure', { min: 0, max: 2 }, () => { })
+  gui.addParam('Roughness', materialCmp, 'roughness', {}, () => { })
+  gui.addTexture2D('Reflection Probe', reflectionProbe.getComponent('ReflectionProbe')._reflectionMap)
+})()
 
 ctx.frame(() => {
   renderer.draw()

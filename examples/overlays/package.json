@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "budo index.js --open --live"
+    "start": "budo index.js --open --live",
+    "build": "browserify index.js -o bundle.js"
   },
   "author": "",
   "license": "ISC",
@@ -12,5 +13,8 @@
     "is-browser": "^2.1.0",
     "pex-context": "^2.8.0",
     "pex-io": "^2.1.0"
+  },
+  "devDependencies": {
+    "budo": "^11.6.0"
   }
 }

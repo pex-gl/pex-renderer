@@ -4,27 +4,20 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "budo index.js:bundle.js --open --live",
-    "build": "browserify main.js -o bundle.js"
+    "start": "budo index.js --open --live",
+    "build": "browserify index.js -o bundle.js"
   },
   "author": "Marcin Ignac <marcin.ignac@gmail.com> (http://marcinignac.com/)",
   "license": "MIT",
   "dependencies": {
-    "browserify": "^16.2.3",
-    "budo": "^11.5.0",
     "cosine-gradient": "^0.3.0",
-    "geom-parse-obj": "^1.0.0",
-    "is-browser": "^2.1.0",
-    "pex-cam": "^2.7.1",
     "pex-context": "^2.8.0",
-    "pex-draw": "^1.0.0-beta.2",
-    "pex-geom": "^2.0.2",
     "pex-gui": "^2.3.0",
-    "pex-io": "^2.1.0",
-    "pex-materials": "^1.1.1",
     "pex-math": "^3.0.0-0",
-    "pex-sys": "^1.7.0",
     "primitive-cube": "^2.0.1",
     "primitive-sphere": "^3.0.0"
+  },
+  "devDependencies": {
+    "budo": "^11.6.0"
   }
 }

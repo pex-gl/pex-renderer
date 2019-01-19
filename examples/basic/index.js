@@ -1,46 +1,51 @@
-const createContext = require('pex-context')
-//const createRenderer = require('pex-renderer')
 const createRenderer = require('../..')
+const createContext = require('pex-context')
 const createSphere = require('primitive-sphere')
 
-const ctx = createContext({})
+const ctx = createContext()
+const renderer = createRenderer(ctx)
 
-const renderer = createRenderer({
-  ctx: ctx
-})
-
-const camera = renderer.entity([
-  renderer.transform({ position: [0, 0, 3] }),
+const cameraEntity = renderer.entity([
+  renderer.transform({ position: [0, 0, 5] }),
   renderer.camera({
-    fov: Math.PI / 2,
-    aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
-    near: 0.1,
-    far: 100
+    aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight
   })
 ])
-renderer.add(camera)
+renderer.add(cameraEntity)
 
-const geom = renderer.entity([
-  renderer.transform({ position: [0, 0, 0] }),
-  renderer.geometry(createSphere(1)),
+const sphereEntity = renderer.entity([
+  renderer.transform(),
+  renderer.geometry(createSphere()),
   renderer.material({
-    baseColor: [1, 0, 0, 1]
+    baseColor: [1, 0, 0, 1],
+    metallic: 1
   })
 ])
-renderer.add(geom)
+renderer.add(sphereEntity)
 
-const skybox = renderer.entity([
+const skyboxEntity = renderer.entity([
   renderer.skybox({
-    sunPosition: [1, 1, 1]
+    sunPosition: [1, 0.1, 1]
   })
 ])
-renderer.add(skybox)
+renderer.add(skyboxEntity)
 
-const reflectionProbe = renderer.entity([
+const reflectionProbeEntity = renderer.entity([
   renderer.reflectionProbe()
 ])
-renderer.add(reflectionProbe)
+renderer.add(reflectionProbeEntity)
 
 ctx.frame(() => {
+  const now = Date.now() * 0.0005
+
+  const skybox = skyboxEntity.getComponent('Skybox')
+  skybox.set({
+    sunPosition: [
+      1 * Math.cos(now),
+      0.1,
+      1 * Math.sin(now)
+    ]
+  })
+
   renderer.draw()
 })

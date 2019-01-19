@@ -1,48 +1,52 @@
-const ctx = require('pex-context')()
+const path = require('path')
+const createRenderer = require('../..')
+const createContext = require('pex-context')
+const io = require('pex-io')
 const isBrowser = require('is-browser')
-const load = require('pex-io/load')
-const renderer = require('../../../pex-renderer')(ctx)
 
-var ASSETS_DIR = isBrowser ? 'assets' : `${__dirname}/assets`
+const ASSETS_DIR = isBrowser ? 'assets' : path.join(__dirname, 'assets')
 
-load({
-  rainbow: { image: ASSETS_DIR + '/rainbow.jpg' },
-  logo: { image: ASSETS_DIR + '/PEX.png' }
-}, (err, res) => {
-  if (err) console.log(err)
+const ctx = createContext()
+const renderer = createRenderer(ctx)
 
-  renderer.add(renderer.entity([
+;(async () => {
+  const rainbow = await io.loadImage(`${ASSETS_DIR}/rainbow.jpg`)
+  const logo = await io.loadImage(`${ASSETS_DIR}/PEX.png`)
+
+  const rainbowEntity = renderer.entity([
     renderer.overlay({
       texture: ctx.texture2D({
-        data: res.rainbow,
-        width: res.rainbow.width,
-        height: res.rainbow.height,
+        data: rainbow,
+        width: rainbow.width,
+        height: rainbow.height,
         pixelFormat: ctx.PixelFormat.RGBA8,
         encoding: ctx.Encoding.SRGB,
         flipY: true
       })
     })
-  ]))
+  ])
+  renderer.add(rainbowEntity)
 
-  renderer.add(renderer.entity([
+  const logoEntity = renderer.entity([
     renderer.overlay({
       x: 100,
       y: 100,
-      width: res.logo.width,
-      height: res.logo.height,
+      width: logo.width,
+      height: logo.height,
       texture: ctx.texture2D({
-        data: res.logo,
-        width: res.logo.width,
-        height: res.logo.height,
+        data: logo,
+        width: logo.width,
+        height: logo.height,
         pixelFormat: ctx.PixelFormat.RGBA8,
         encoding: ctx.Encoding.SRGB,
         flipY: true,
         premultiplayAlpha: true
       })
     })
-  ]))
+  ])
+  renderer.add(logoEntity)
+})()
 
-  ctx.frame(() => {
-    renderer.draw()
-  })
+ctx.frame(() => {
+  renderer.draw()
 })

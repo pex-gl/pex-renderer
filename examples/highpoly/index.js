@@ -1,74 +1,66 @@
-const createContext = require('pex-context')
 const createRenderer = require('../..')
-const createSphere = require('primitive-sphere')
-const normals = require('geom-normals')
+const createContext = require('pex-context')
+const vec3 = require('pex-math/vec3')
 const GUI = require('pex-gui')
 const random = require('pex-random')
-const vec3 = require('pex-math').vec3
+const normals = require('geom-normals')
+const createSphere = require('primitive-sphere')
 
-const ctx = createContext({ })
+const ctx = createContext()
+const renderer = createRenderer(ctx)
+
 const gui = new GUI(ctx)
 gui.addFPSMeeter()
 gui.addHeader('Meshes')
 
 random.seed(0)
 
-const renderer = createRenderer({
-  ctx: ctx
-})
-
-const camera = renderer.entity([
-  renderer.transform({ position: [0, 0, 3] }),
+const cameraEntity = renderer.entity([
   renderer.camera({
     fov: Math.PI / 2,
-    aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
-    near: 0.01,
-    far: 100,
-    postprocess: false
+    aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight
   }),
   renderer.orbiter({
-    easing: 0.1,
-    distance: 3
+    position: [0, 0, 3]
   })
 ])
-renderer.add(camera)
+renderer.add(cameraEntity)
 
-var g = createSphere(1, { segments: 400 })
-var scale = 1
+const sphere = createSphere(1, { segments: 400 })
+const scale = 1
 
 function perlin (p) {
-  var s = scale
-  var n = 0
-  for (var i = 0; i < 5; i++) {
+  let s = scale
+  let n = 0
+  for (let i = 0; i < 5; i++) {
     n += random.noise3(p[0] * s, p[1] * s, p[2] * s) / s
     s *= 2
   }
   return n
 }
-for (var i = 0; i < g.positions.length; i++) {
-  var p = g.positions[i]
-  var n = perlin(p)
-  vec3.addScaled(p, g.normals[i], n * 0.4)
+for (let i = 0; i < sphere.positions.length; i++) {
+  const p = sphere.positions[i]
+  const n = perlin(p)
+  vec3.addScaled(p, sphere.normals[i], n * 0.1)
 }
-g.normals = normals(g.positions, g.cells)
+sphere.normals = normals(sphere.positions, sphere.cells)
 
-const geom = renderer.entity([
+const sphereEntity = renderer.entity([
   renderer.transform({ position: [0, 0, 0] }),
-  renderer.geometry(g),
+  renderer.geometry(sphere),
   renderer.material({
     baseColor: [1, 0, 0, 1],
-    rougness: 0.096,
+    roughness: 0.096,
     metallic: 0,
     cullFace: false
   })
 ])
-renderer.add(geom)
-gui.addLabel('Sphere verts: ' + g.positions.length)
+renderer.add(sphereEntity)
+gui.addLabel('Sphere verts: ' + sphere.positions.length)
 
 const skybox = renderer.entity([
   renderer.skybox({
-    sunPosition: [1, 1, 1],
-    backgroundBlur: 1
+    sunPosition: [1, 1, 1]
   })
 ])
 renderer.add(skybox)

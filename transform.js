@@ -61,15 +61,15 @@ function mat4multQuat (m, q) {
 
 function Transform (opts) {
   this.type = 'Transform'
-  this.entity = null
+  this.enabled = true
   this.changed = new Signal()
+  this.entity = null
   this.position = [0, 0, 0]
   this.worldPosition = [0, 0, 0]
   this.rotation = [0, 0, 0, 1]
   this.scale = [1, 1, 1]
   this.parent = null
   this.children = []
-  this.enabled = true
   // bounds of this node and it's children
   this.bounds = aabb.create()
   this._boundsPoints = new Array(8).fill(0).map(() => vec4.create())

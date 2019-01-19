@@ -10,6 +10,7 @@ const Signal = require('signals')
 
 function Skybox (opts) {
   this.type = 'Skybox'
+  this.enabled = true
   this.changed = new Signal()
   this.rgbm = false
   this.backgroundBlur = 0

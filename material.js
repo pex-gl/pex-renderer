@@ -5,6 +5,7 @@ let MaterialID = 0
 function Material (opts) {
   this.type = 'Material'
   this.id = 'Material_' + MaterialID++
+  this.enabled = true
   this.changed = new Signal()
 
   this._uniforms = {}

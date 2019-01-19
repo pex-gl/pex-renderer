@@ -2,6 +2,7 @@ const Signal = require('signals')
 
 function SpotLight (opts) {
   this.type = 'SpotLight'
+  this.enabled = true
   this.changed = new Signal()
   this.target = [0, 0, 0]
   this.color = [1, 1, 1, 1]

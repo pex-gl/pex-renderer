@@ -1,38 +1,36 @@
-const ctx = require('pex-context')()
-
-const renderer = require('../../')({
-  ctx: ctx,
-  shadowQuality: 4
-})
+const createRenderer = require('../..')
+const createContext = require('pex-context')
 const vec3 = require('pex-math/vec3')
 const createCube = require('primitive-cube')
 
-const camera = require('pex-cam/perspective')({
-  aspect: ctx.gl.canvas.width / ctx.gl.canvas.height,
-  fov: Math.PI / 3,
-  near: 0.1,
-  far: 100,
-  position: [0, 0, -5],
-  target: [0, 0, 0]
+const ctx = createContext()
+const renderer = createRenderer({
+  ctx,
+  shadowQuality: 4
 })
 
-require('pex-cam/orbiter')({ camera: camera })
+const postProcessingCmp = renderer.postProcessing({
+  ssao: true,
+  ssaoRadius: 3,
+  ssaoIntensity: 0.5,
+  bilateralBlur: true,
+  dof: true,
+  dofDepth: 4,
+  dofRange: 2,
+  fxaa: true
+})
 
-const cameraEnt = renderer.add(renderer.entity([
+const cameraEntity = renderer.entity([
+  renderer.transform({ position: [0, 0, 5] }),
   renderer.camera({
-    camera: camera,
-    ssao: true,
-    ssaoRadius: 3,
-    ssaoIntensity: 0.5,
-    bilateralBlur: true,
-    dof: true,
-    dofDepth: 4,
-    dofRange: 2,
-    fxaa: true
-  })
-]))
+    aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight
+  }),
+  postProcessingCmp,
+  renderer.orbiter()
+])
+renderer.add(cameraEntity)
 
-renderer.add(renderer.entity([
+const skyEntity = renderer.entity([
   renderer.directionalLight({
     direction: vec3.normalize([-1, -1, -1]),
     castShadows: true
@@ -42,9 +40,10 @@ renderer.add(renderer.entity([
   }),
   renderer.reflectionProbe({
   })
-]))
+])
+renderer.add(skyEntity)
 
-renderer.add(renderer.entity([
+const groundEntity = renderer.entity([
   renderer.transform({
     position: [0, -0.55, 0]
   }),
@@ -53,30 +52,33 @@ renderer.add(renderer.entity([
     receiveShadows: true,
     castShadows: true
   })
-]))
+])
+renderer.add(groundEntity)
 
-renderer.add(renderer.entity([
+const cubeEntity = renderer.entity([
   renderer.geometry(createCube(1, 1, 1)),
   renderer.material({
     baseColor: [1, 1, 1, 1],
     receiveShadows: true,
     castShadows: true
   })
-]))
+])
+renderer.add(cubeEntity)
 
 window.addEventListener('resize', () => {
   const W = window.innerWidth
   const H = window.innerHeight
   ctx.gl.canvas.width = W
   ctx.gl.canvas.height = H
-  cameraEnt.getComponent('Camera').set({
+  cameraEntity.getComponent('Camera').set({
     viewport: [0, 0, W, H]
   })
 })
 
 ctx.frame(() => {
-  cameraEnt.getComponent('Camera').set({
-    dofDepth: vec3.length(camera.position)
+  cameraEntity.getComponent('Camera').set({
+    dofDepth: vec3.length(cameraEntity.transform.position)
   })
+
   renderer.draw()
 })

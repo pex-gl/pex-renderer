@@ -134,32 +134,35 @@ function initSky (panorama) {
 }
 
 function initCamera () {
+  // const postProcessingCmp = renderer.postProcessing({
+  //   fxaa: true,
+  //   // dof: true,
+  //   // dofIterations: 1,
+  //   // dofRange: 0.15,
+  //   // dofRadius: 2,
+  //   // dofDepth: 1,
+  //   postprocess: false,
+  //   ssao: true,
+  //   ssaoIntensity: 2,
+  //   ssaoRadius: 1,
+  //   ssaoBias: 0.02,
+  //   ssaoBlurRadius: 0.1, // 2
+  //   ssaoBlurSharpness: 10// 10,
+  //   // ssaoRadius: 5,
+  // })
   const cameraCmp = State.camera = renderer.camera({
     fov: 0.8,
     aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
     near: 0.1,
     far: 100,
-    exposure: 1,
-    fxaa: true,
-     // dof: true,
-    // dofIterations: 1,
-    // dofRange: 0.15,
-    // dofRadius: 2,
-    // dofDepth: 1,
-    postprocess: false,
-    ssao: true,
-    ssaoIntensity: 2,
-    ssaoRadius: 1,
-    ssaoBias: 0.02,
-    ssaoBlurRadius: 0.1, // 2
-    ssaoBlurSharpness: 10// 10,
-    // ssaoRadius: 5,
+    exposure: 1
   })
   const orbiterCmp = renderer.orbiter({
     position: [4, 4, 4]
   })
 
   renderer.add(renderer.entity([
+    // postProcessingCmp,
     cameraCmp,
     orbiterCmp
   ])).name = 'camera' // TODO: set name in entity constructor?
@@ -178,8 +181,8 @@ window.addEventListener('keypress', (e) => {
     gui.toggleEnabled()
   }
 })
-const modelsPath = 'glTF-Sample-Models'
-// const modelsPath = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0'
+// const modelsPath = 'glTF-Sample-Models'
+const modelsPath = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0'
 
 function textureFromImage (img) {
   var tex = ctx.texture2D({

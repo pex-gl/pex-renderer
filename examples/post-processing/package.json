@@ -1,31 +1,30 @@
 {
-  "name": "pbr",
+  "name": "post-processing",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "budo index.js --open --live"
+    "start": "budo index.js --open --live",
+    "build": "browserify index.js -o bundle.js"
   },
   "author": "Marcin Ignac <marcin.ignac@gmail.com> (http://marcinignac.com/)",
   "license": "MIT",
   "dependencies": {
     "angle-normals": "^1.0.0",
-    "budo": "^11.5.0",
     "geom-center-and-normalize": "^1.0.2",
     "parse-hdr": "^1.0.0",
-    "pex-cam": "^2.7.1",
     "pex-context": "^2.8.0",
-    "pex-geom": "^2.0.2",
-    "pex-gl": "^2.7.0",
     "pex-gui": "^2.3.0",
     "pex-io": "^2.1.0",
     "pex-math": "^3.0.0-0",
     "pex-random": "^1.0.1",
     "primitive-capsule": "^3.0.1",
-    "primitive-plane": "^2.0.0",
+    "primitive-cube": "^2.0.1",
     "primitive-rounded-cube": "^1.0.2",
     "primitive-sphere": "^3.0.0",
-    "raf": "^3.4.1",
     "stanford-dragon": "^1.1.1"
+  },
+  "devDependencies": {
+    "budo": "^11.6.0"
   }
 }
