@@ -68,8 +68,10 @@ renderer.add(cubeEntity)
 window.addEventListener('resize', () => {
   const W = window.innerWidth
   const H = window.innerHeight
-  ctx.gl.canvas.width = W
-  ctx.gl.canvas.height = H
+  ctx.set({
+    width: W,
+    height: H
+  })
   cameraEntity.getComponent('Camera').set({
     viewport: [0, 0, W, H]
   })
