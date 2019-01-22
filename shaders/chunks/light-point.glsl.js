@@ -5,6 +5,7 @@ struct PointLight {
   vec3 position;
   vec4 color;
   float range;
+  bool castShadows;
 };
 
 uniform PointLight uPointLights[NUM_POINT_LIGHTS];
@@ -15,21 +16,25 @@ void EvaluatePointLight(inout PBRData data, PointLight light, int i) {
   data.lightWorld = light.position - data.positionWorld;
   float dist = length(data.lightWorld);
 
-  // TODO: hardcoded shadowmap index
-  vec3 N = -normalize(data.lightWorld);
-  float far = 10.0;
-  float depth = unpackDepth(textureCube(uPointLightShadowMaps[0], N)) * far;
-  // float depth = textureCube(uPointLightShadowMaps[0], N).r;
-  if (dist - 0.05 > depth) {
-    illuminated = 0.0;
-  }
-  // illuminated = (depth - dist);
-  // illuminated = step(dist, depth / 2.0);
+  if (light.castShadows) {
+    // TODO: hardcoded shadowmap index
+    vec3 N = -normalize(data.lightWorld);
+    float far = 10.0;
+    float depth = unpackDepth(textureCube(uPointLightShadowMaps[0], N)) * far;
+    // float depth = textureCube(uPointLightShadowMaps[0], N).r;
+    if (dist - 0.05 > depth) {
+      illuminated = 0.0;
+    }
+    // illuminated = (depth - dist);
+    // illuminated = step(dist, depth / 2.0);
 
-  // data.directDiffuse = vec3(fract(depth));
-  // data.directDiffuse = vec3(fract(dist));
-  // data.directDiffuse = vec3(illuminated);
-  // return;
+    // data.directDiffuse = vec3(fract(depth));
+    // data.directDiffuse = vec3(fract(dist));
+    // data.directDiffuse = vec3(illuminated);
+    // return;
+  } else {
+    illuminated = 1.0;
+  }
 
   if (illuminated > 0.0) {
     data.lightWorld /= dist;
