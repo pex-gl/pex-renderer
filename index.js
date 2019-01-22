@@ -586,6 +586,7 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
     sharedUniforms['uPointLights[' + i + '].position'] = light.entity.transform.worldPosition
     sharedUniforms['uPointLights[' + i + '].color'] = light.color
     sharedUniforms['uPointLights[' + i + '].range'] = light.range
+    sharedUniforms['uPointLights[' + i + '].castShadows'] = light.castShadows
     sharedUniforms['uPointLightShadowMaps[' + i + ']'] = light._shadowCubemap
   })
 
