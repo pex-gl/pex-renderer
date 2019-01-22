@@ -28,29 +28,9 @@ void EvaluateDirectionalLight(inout PBRData data, DirectionalLight light, int i)
   float illuminated = 0.0;
 
   if (light.castShadows) {
-    if (i == 0) illuminated += directionalShadow(uDirectionalLightShadowMaps[0], light.shadowMapSize, lightUV, lightDistView - light.bias, light.near, light.far);
-
-    #if NUM_DIRECTIONAL_LIGHTS >= 2
-      if (i == 1) illuminated += directionalShadow(uDirectionalLightShadowMaps[1], light.shadowMapSize, lightUV, lightDistView - light.bias, light.near, light.far);
-    #endif
-    #if NUM_DIRECTIONAL_LIGHTS >= 3
-      if (i == 2) illuminated += directionalShadow(uDirectionalLightShadowMaps[2], light.shadowMapSize, lightUV, lightDistView - light.bias, light.near, light.far);
-    #endif
-    #if NUM_DIRECTIONAL_LIGHTS >= 4
-      if (i == 3) illuminated += directionalShadow(uDirectionalLightShadowMaps[3], light.shadowMapSize, lightUV, lightDistView - light.bias, light.near, light.far);
-    #endif
-    #if NUM_DIRECTIONAL_LIGHTS >= 5
-      if (i == 4) illuminated += directionalShadow(uDirectionalLightShadowMaps[4], light.shadowMapSize, lightUV, lightDistView - light.bias, light.near, light.far);
-    #endif
-    #if NUM_DIRECTIONAL_LIGHTS >= 6
-      if (i == 5) illuminated += directionalShadow(uDirectionalLightShadowMaps[5], light.shadowMapSize, lightUV, lightDistView - light.bias, light.near, light.far);
-    #endif
-    #if NUM_DIRECTIONAL_LIGHTS >= 7
-      if (i == 6) illuminated += directionalShadow(uDirectionalLightShadowMaps[6], light.shadowMapSize, lightUV, lightDistView - light.bias, light.near, light.far);
-    #endif
-    #if NUM_DIRECTIONAL_LIGHTS >= 8
-      if (i == 7) illuminated += directionalShadow(uDirectionalLightShadowMaps[7], light.shadowMapSize, lightUV, lightDistView - light.bias, light.near, light.far);
-    #endif
+    for (int i = 0; i < NUM_DIRECTIONAL_LIGHTS; i++) {
+      illuminated += bool(light.castShadows) ? getShadow(uDirectionalLightShadowMaps[i], light.shadowMapSize, lightUV, lightDistView - light.bias, light.near, light.far) : 0.0;
+    }
   } else {
     illuminated = 1.0;
   }

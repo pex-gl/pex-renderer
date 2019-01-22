@@ -81,6 +81,7 @@ ${SHADERS.baseColor}
 #ifndef USE_UNLIT_WORKFLOW
   // Lighting
   ${SHADERS.octMap}
+  ${SHADERS.depthUnpack}
   ${SHADERS.shadowing}
   ${SHADERS.brdf}
   ${SHADERS.irradiance}

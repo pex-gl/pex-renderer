@@ -2,17 +2,44 @@ module.exports = /* glsl */`
 #if NUM_SPOT_LIGHTS > 0
 
 struct SpotLight {
-    vec3 position;
-    vec3 direction;
-    vec4 color;
-    float angle;
-    float range;
+  vec3 position;
+  vec3 direction;
+  vec4 color;
+  float angle;
+  float range;
+  mat4 projectionMatrix;
+  mat4 viewMatrix;
+  bool castShadows;
+  float near;
+  float far;
+  float bias;
+  vec2 shadowMapSize;
 };
 
 uniform SpotLight uSpotLights[NUM_SPOT_LIGHTS];
+uniform sampler2D uSpotLightShadowMaps[NUM_SPOT_LIGHTS];
 
 void EvaluateSpotLight(inout PBRData data, SpotLight light, int i) {
-  float illuminated = 1.0; // no shadows yet
+  // float illuminated = 1.0; // no shadows yet
+
+  // Shadows
+  vec4 lightViewPosition = light.viewMatrix * vec4(vPositionWorld, 1.0);
+  float lightDistView = -lightViewPosition.z;
+  vec4 lightDeviceCoordsPosition = light.projectionMatrix * lightViewPosition;
+  vec2 lightDeviceCoordsPositionNormalized = lightDeviceCoordsPosition.xy / lightDeviceCoordsPosition.w;
+  float lightDeviceCoordsZ = lightDeviceCoordsPosition.z / lightDeviceCoordsPosition.w;
+  vec2 lightUV = lightDeviceCoordsPositionNormalized.xy * 0.5 + 0.5;
+
+  float illuminated = 0.0;
+
+  if (light.castShadows) {
+    for (int i = 0; i < NUM_SPOT_LIGHTS; i++) {
+      illuminated += bool(light.castShadows) ? getShadow(uSpotLightShadowMaps[i], light.shadowMapSize, lightUV, lightDistView - light.bias, light.near, light.far) : 0.0;
+    }
+  } else {
+    illuminated = 1.0;
+  }
+
   if (illuminated > 0.0) {
     data.lightWorld = light.position - data.positionWorld;
     float dist = length(data.lightWorld);

@@ -193,6 +193,39 @@ Renderer.prototype.updatePointLightShadowMap = function (light, geometries) {
   })
 }
 
+Renderer.prototype.updateSpotLightShadowMap = function (light, geometries) {
+  const ctx = this._ctx
+  mat4.lookAt(light._viewMatrix, light.entity.transform.position, light.target, [0, 1, 0])
+
+  const shadowBboxPoints = geometries.reduce((points, geometry) => {
+    return points.concat(aabbToPoints(geometry.entity.transform.worldBounds))
+  }, [])
+
+  // TODO: gc vec3.copy, all the bounding box creation
+  const bboxPointsInLightSpace = shadowBboxPoints.map((p) => vec3.multMat4(vec3.copy(p), light._viewMatrix))
+  const sceneBboxInLightSpace = aabb.fromPoints(bboxPointsInLightSpace)
+
+  const lightNear = -sceneBboxInLightSpace[1][2]
+  const lightFar = -sceneBboxInLightSpace[0][2]
+
+  light.set({
+    _near: lightNear,
+    _far: lightFar
+  })
+
+  mat4.perspective(
+    light._projectionMatrix,
+    light.angle,
+    sceneBboxInLightSpace[0][1] / sceneBboxInLightSpace[1][1],
+    lightNear,
+    lightFar
+  )
+
+  ctx.submit(light._shadowMapDrawCommand, () => {
+    this.drawMeshes(null, true, light, geometries)
+  })
+}
+
 Renderer.prototype.getMaterialProgramAndFlags = function (geometry, material, skin, options) {
   var ctx = this._ctx
 
@@ -529,6 +562,18 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
     })
   }
 
+  if (!shadowMapping && !shadowMappingLight) {
+    spotLights.forEach((light) => {
+      if (light.castShadows) {
+        const shadowCasters = geometries.filter((geometry) => {
+          const material = geometry.entity.getComponent('Material')
+          return material && material.castShadows
+        })
+        this.updateSpotLightShadowMap(light, shadowCasters)
+      }
+    })
+  }
+
   var sharedUniforms = this._sharedUniforms = this._sharedUniforms || {}
   sharedUniforms.uOutputEncoding = State.rgbm ? ctx.Encoding.RGBM : ctx.Encoding.Linear // TODO: State.postprocess
   if (forward) {
@@ -599,6 +644,14 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
     sharedUniforms['uSpotLights[' + i + '].color'] = light.color
     sharedUniforms['uSpotLights[' + i + '].angle'] = light.angle
     sharedUniforms['uSpotLights[' + i + '].range'] = light.range
+    sharedUniforms['uSpotLights[' + i + '].castShadows'] = light.castShadows
+    sharedUniforms['uSpotLights[' + i + '].projectionMatrix'] = light._projectionMatrix
+    sharedUniforms['uSpotLights[' + i + '].viewMatrix'] = light._viewMatrix
+    sharedUniforms['uSpotLights[' + i + '].near'] = light._near
+    sharedUniforms['uSpotLights[' + i + '].far'] = light._far
+    sharedUniforms['uSpotLights[' + i + '].bias'] = light.bias
+    sharedUniforms['uSpotLights[' + i + '].shadowMapSize'] = light.castShadows ? [light._shadowMap.width, light._shadowMap.height] : [0, 0]
+    sharedUniforms['uSpotLightsShadowMaps[' + i + ']'] = light.castShadows ? light._shadowMap : this._dummyTexture2D
   })
 
   areaLights.forEach((light, i) => {

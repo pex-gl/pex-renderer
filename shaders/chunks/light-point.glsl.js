@@ -1,5 +1,3 @@
-const depthUnpack = require('./depth-unpack.glsl.js')
-
 module.exports = /* glsl */`
 #if NUM_POINT_LIGHTS > 0
 
@@ -11,8 +9,6 @@ struct PointLight {
 
 uniform PointLight uPointLights[NUM_POINT_LIGHTS];
 uniform samplerCube uPointLightShadowMaps[NUM_POINT_LIGHTS];
-
-${depthUnpack}
 
 void EvaluatePointLight(inout PBRData data, PointLight light, int i) {
   float illuminated = 1.0; // no shadows yet

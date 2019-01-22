@@ -46,10 +46,12 @@ cells.forEach((cell, cellIndex) => {
       fov: Math.PI / 3,
       aspect: (W / nW) / (H / nH),
       viewport: cell
+      // viewport: tags[0] === 'cell1' ? [0, 0, window.innerWidth, window.innerHeight] : cell
     }),
     renderer.orbiter()
   ], tags)
   renderer.add(cameraEntity)
+  // if (tags[0] === 'cell1') renderer.add(cameraEntity)
 })
 
 // Geometry
@@ -123,7 +125,7 @@ gui.addHeader('Directional').setPosition(10, 10)
 gui.addParam('Enabled', directionalLightCmp, 'enabled', {}, (value) => {
   directionalLightCmp.set({ enabled: value })
 })
-gui.addTexture2D('Directional Shadowmap', directionalLightCmp._shadowMap)
+gui.addTexture2D('Shadowmap', directionalLightCmp._shadowMap)
 gui.addParam('Shadows', directionalLightCmp, 'castShadows', {}, (value) => {
   directionalLightCmp.set({ castShadows: value })
 })
@@ -170,6 +172,10 @@ gui.addParam('Enabled', spotLightCmp, 'enabled', {}, (value) => {
 })
 gui.addParam('Spotlight angle', spotLightCmp, 'angle', { min: 0, max: Math.PI / 2 }, () => {
   spotLightCmp.set({ angle: spotLightCmp.angle })
+})
+gui.addTexture2D('Shadowmap', spotLightCmp._shadowMap)
+gui.addParam('Shadows', spotLightCmp, 'castShadows', {}, (value) => {
+  spotLightCmp.set({ castShadows: value })
 })
 
 // Point
@@ -255,6 +261,18 @@ window.addEventListener('keydown', (e) => {
 })
 
 ctx.frame(() => {
+  const now = Date.now() * 0.0005
+  const position = [
+    3 * Math.cos(now),
+    3,
+    3 * Math.sin(now)
+  ]
+  const rotation = quat.fromDirection([0, 0, 0, 1], position.map(n => -n), [0, 1, 0])
+
+  directionalLightEntity.getComponent('Transform').set({ position, rotation })
+  spotLightEntity.getComponent('Transform').set({ position, rotation })
+  pointLightEntity.getComponent('Transform').set({ position })
+
   ctx.debug(debugOnce)
   debugOnce = false
   renderer.draw()
