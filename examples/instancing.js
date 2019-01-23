@@ -164,8 +164,7 @@ gui.addParam('Base Color', State, 'baseColor', { type: 'color' }, () => {
 })
 
 // Sky
-const sun = State.sun = renderer.directionalLight({
-  direction: vec3.sub(vec3.create(), State.sunPosition),
+const sun = renderer.directionalLight({
   color: [5, 5, 4, 1],
   bias: 0.01,
   castShadows: true
@@ -185,6 +184,10 @@ const reflectionProbe = renderer.reflectionProbe({
 gui.addTexture2D('ReflectionMap', reflectionProbe._reflectionMap)
 
 renderer.add(renderer.entity([
+  renderer.transform({
+    position: State.sunPosition,
+    rotation: quat.fromTo(quat.create(), [0, 0, 1], vec3.normalize(vec3.sub([0, 0, 0], State.sunPosition)))
+  }),
   sun,
   skybox,
   reflectionProbe

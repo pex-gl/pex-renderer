@@ -3,6 +3,7 @@ const createCube = require('primitive-cube')
 const loadBinary = require('pex-io/loadBinary')
 const mat4 = require('pex-math/mat4')
 const vec3 = require('pex-math/vec3')
+const quat = require('pex-math/quat')
 const createRenderer = require('../')
 const createContext = require('pex-context')
 const async = require('async')
@@ -21,7 +22,7 @@ const renderer = createRenderer({
 })
 
 const State = {
-  sunPosition: [0, 5, -5],
+  sunPosition: [1, 1, 1],
   elevation: 65,
   azimuth: -45,
   mie: 0.000021,
@@ -34,24 +35,29 @@ const State = {
 }
 
 function initSky (panorama) {
-  const sun = State.sun = renderer.directionalLight({
-    direction: vec3.sub(vec3.create(), State.sunPosition),
+  const sun = renderer.directionalLight({
     color: [1, 1, 0.95, 1],
-    intensity: 10
+    intensity: 10,
+    castShadows: true
   })
 
-  const skybox = State.skybox = renderer.skybox({
+  const skybox = renderer.skybox({
     sunPosition: State.sunPosition
   })
 
-  // currently this also includes light probe functionality
-  const reflectionProbe = State.reflectionProbe = renderer.reflectionProbe({
+  const reflectionProbe = renderer.reflectionProbe({
     origin: [0, 0, 0],
     size: [10, 10, 10],
     boxProjection: false
   })
 
-  renderer.add(renderer.entity([ sun ]))
+  renderer.add(renderer.entity([
+    renderer.transform({
+      position: State.sunPosition,
+      rotation: quat.fromTo(quat.create(), [0, 0, 1], vec3.normalize(vec3.sub([0, 0, 0], State.sunPosition)))
+    }),
+    sun
+  ]))
   renderer.add(renderer.entity([ skybox ]))
   renderer.add(renderer.entity([ reflectionProbe ]))
 }
@@ -181,6 +187,9 @@ function handleNode (node, gltf) {
       texCoords: tx,
       indices: indicesAccessor.data
     })
+    geometryCmp.set({
+      bounds: [positionAccessor.min, positionAccessor.max]
+    })
 
     const jointAccessor = gltf.accessors[mesh.primitives[0].attributes.JOINTS_0]
     if (jointAccessor) geometryCmp.set({ joints: jointAccessor.data })
@@ -190,7 +199,9 @@ function handleNode (node, gltf) {
     const materialCmp = renderer.material({
       baseColor: [1, 1, 1, 1.0],
       roughness: 1,
-      metallic: 0
+      metallic: 0,
+      receiveShadows: true,
+      castShadows: true
     })
 
     let components = [
@@ -355,7 +366,8 @@ renderer.add(renderer.entity([
   }),
   renderer.geometry(createCube(5, 0.1, 5)),
   renderer.material({
-    baseColor: [0.5, 0.5, 0.5, 1]
+    baseColor: [0.5, 0.5, 0.5, 1],
+    receiveShadows: true
   })
 ]))
 
@@ -363,8 +375,6 @@ ctx.frame(() => {
   ctx.debug(debugOnce)
   debugOnce = false
   renderer.draw()
-
-  State.sun.direction[0] += 0.001 // force shadowmap to update every frame
 
   if (loaded) {
     var elapsedTime = Date.now() - startTime

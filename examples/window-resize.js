@@ -30,18 +30,17 @@ const cameraEntity = renderer.entity([
 ])
 renderer.add(cameraEntity)
 
-const skyEntity = renderer.entity([
-  renderer.directionalLight({
-    direction: vec3.normalize([-1, -1, -1]),
-    castShadows: true
-  }),
+const skyboxEntity = renderer.entity([
   renderer.skybox({
     sunPosition: [1, 1, 1]
-  }),
-  renderer.reflectionProbe({
   })
 ])
-renderer.add(skyEntity)
+renderer.add(skyboxEntity)
+
+const reflectionProbeEntity = renderer.entity([
+  renderer.reflectionProbe()
+])
+renderer.add(reflectionProbeEntity)
 
 const groundEntity = renderer.entity([
   renderer.transform({

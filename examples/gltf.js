@@ -104,7 +104,6 @@ async function loadScene (url, cb) {
 
 function initSky (panorama) {
   const sun = State.sun = renderer.directionalLight({
-    direction: vec3.sub(vec3.create(), State.sunPosition),
     color: [1, 1, 0.95, 1],
     intensity: 5,
     castShadows: State.shadows,

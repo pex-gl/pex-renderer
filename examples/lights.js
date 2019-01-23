@@ -135,7 +135,6 @@ renderer.add(floorEntity)
 // Lights
 // Directional
 const directionalLightCmp = renderer.directionalLight({
-  direction: vec3.normalize([-1, -1, -1]),
   color: [1, 1, 1, 1],
   intensity: 2,
   castShadows: true
@@ -152,7 +151,7 @@ const directionalLightGizmoPositions = makePrism({ radius: 0.3 })
 const directionalLightEntity = renderer.entity([
   renderer.transform({
     position: [1, 1, 1],
-    rotation: quat.fromMat4(quat.create(), targetTo(mat4.create(), directionalLightCmp.direction, [1, 1, 1]))
+    rotation: quat.fromMat4(quat.create(), targetTo(mat4.create(), [0, 0, 0], [1, 1, 1]))
   }),
   renderer.geometry({
     positions: directionalLightGizmoPositions,
@@ -177,7 +176,6 @@ gui.addParam('Shadows', directionalLightCmp, 'castShadows', {}, (value) => {
 
 // Spot
 const spotLightCmp = renderer.spotLight({
-  direction: vec3.normalize([-1, -1, -1]),
   color: [1, 1, 1, 1],
   intensity: 2,
   distance: 3,
@@ -197,7 +195,7 @@ const spotLightGizmoPositions = makePrism({ radius: 0.3 })
 const spotLightEntity = renderer.entity([
   renderer.transform({
     position: [1, 1, 1],
-    rotation: quat.fromMat4(quat.create(), targetTo(mat4.create(), spotLightCmp.direction, [1, 1, 1]))
+    rotation: quat.fromMat4(quat.create(), targetTo(mat4.create(), [0, 0, 0], [1, 1, 1]))
   }),
   renderer.geometry({
     positions: spotLightGizmoPositions,
@@ -277,7 +275,7 @@ const areaLightEntity = renderer.entity([
   renderer.transform({
     scale: [2, 0.5, 1],
     position: [1, 1, 1],
-    rotation: quat.fromMat4(quat.create(), targetTo(mat4.create(), [-1, -1, -1], [1, 1, 1]))
+    rotation: quat.fromMat4(quat.create(), targetTo(mat4.create(), [0, 0, 0], [1, 1, 1]))
   }),
   renderer.geometry({
     positions: areaLightGizmoPositions,
