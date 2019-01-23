@@ -1,0 +1,37 @@
+{
+  "name": "pex-renderer-examples",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "clean": "rm -f *.bundle.js common.js",
+    "build": "npm run clean && node build.js"
+  },
+  "author": "Damien Seguin (https://dmnsgn.me)",
+  "license": "MIT",
+  "dependencies": {
+    "angle-normals": "^1.0.0",
+    "async": "^2.6.1",
+    "cosine-gradient": "^0.3.0",
+    "geom-center-and-normalize": "^1.0.2",
+    "geom-normals": "^1.0.1",
+    "grid-cells": "^2.0.0",
+    "is-browser": "^2.1.0",
+    "parse-hdr": "^1.0.0",
+    "pex-context": "^2.8.0",
+    "pex-gui": "^2.3.0",
+    "pex-io": "^2.1.0",
+    "pex-math": "^3.0.0-0",
+    "pex-random": "^1.0.1",
+    "primitive-capsule": "^3.0.1",
+    "primitive-cube": "^2.0.1",
+    "primitive-rounded-cube": "^1.0.2",
+    "primitive-sphere": "^3.0.0",
+    "stanford-dragon": "^1.1.1"
+  },
+  "devDependencies": {
+    "browserify": "^16.2.3",
+    "budo": "^11.6.0",
+    "factor-bundle": "^2.5.0"
+  }
+}

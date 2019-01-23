@@ -10,28 +10,16 @@
   "author": "Marcin Ignac <marcin.ignac@gmail.com> (http://marcinignac.com/)",
   "license": "MIT",
   "dependencies": {
-    "angle-normals": "^1.0.0",
     "async": "^2.6.1",
-    "brfs": "^2.0.1",
     "browserify-versionify": "^1.0.6",
     "debug": "^4.1.1",
     "geom-edges": "^1.2.0",
     "gltf-loader-ts": "^0.3.1",
     "is-power-of-two": "^1.0.0",
-    "jszip": "^3.1.5",
     "next-power-of-two": "^1.0.0",
-    "parse-hdr": "^1.0.0",
-    "partition-into": "^1.0.0",
-    "pex-cam": "^2.7.1",
-    "pex-context": "^2.8.0",
-    "pex-gui": "^2.3.0",
+    "pex-geom": "^2.0.2",
     "pex-io": "^2.1.0",
     "pex-math": "^2.1.1",
-    "primitive-box": "^1.0.0",
-    "primitive-cube": "^2.0.1",
-    "tinify": "^1.6.0-beta.2",
-    "tinyify": "^2.5.0",
-    "util.promisify": "^1.0.0",
-    "webgl-debug": "^2.0.1"
+    "primitive-box": "^1.0.0"
   }
 }
