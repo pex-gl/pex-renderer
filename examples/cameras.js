@@ -1,12 +1,10 @@
 const createContext = require('pex-context')
-const createRenderer = require('../..')
+const createRenderer = require('../')
 const createCube = require('primitive-cube')
 
 const ctx = createContext()
 
-const renderer = createRenderer({
-  ctx
-})
+const renderer = createRenderer(ctx)
 
 const viewportWidth = window.innerWidth * 0.5
 const viewportHeight = window.innerHeight
