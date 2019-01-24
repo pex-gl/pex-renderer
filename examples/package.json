@@ -26,8 +26,7 @@
     "primitive-capsule": "^3.0.1",
     "primitive-cube": "^2.0.1",
     "primitive-rounded-cube": "^1.0.2",
-    "primitive-sphere": "^3.0.0",
-    "stanford-dragon": "^1.1.1"
+    "primitive-sphere": "^3.0.0"
   },
   "devDependencies": {
     "browserify": "^16.2.3",

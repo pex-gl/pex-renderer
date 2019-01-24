@@ -15,7 +15,7 @@ const normals = require('angle-normals')
 const centerAndNormalize = require('geom-center-and-normalize')
 const parseHdr = require('parse-hdr')
 const isBrowser = require('is-browser')
-const dragon = require('stanford-dragon/3')
+const dragon = require('./assets/stanford-dragon')
 
 const ASSETS_DIR = isBrowser ? 'assets' : path.join(__dirname, 'assets')
 
