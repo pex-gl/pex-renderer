@@ -1,5 +1,5 @@
+const createRenderer = require('../')
 const createContext = require('pex-context')
-const createRenderer = require('../..')
 const createCube = require('primitive-cube')
 
 const ctx = createContext()
