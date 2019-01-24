@@ -12,7 +12,5 @@ example/main.web.js
 experiments
 tags
 old
-examples/gltf/assets
-examples/gltf-morph/assets
 examples/gltf-nodes
-examples/gltf/glTF-Sample-Models
+examples/glTF-Sample-Models
