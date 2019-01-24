@@ -179,8 +179,8 @@ window.addEventListener('keypress', (e) => {
     gui.toggleEnabled()
   }
 })
-// const modelsPath = 'glTF-Sample-Models'
-const modelsPath = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0'
+const modelsPath = 'glTF-Sample-Models'
+// const modelsPath = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0'
 
 function textureFromImage (img) {
   var tex = ctx.texture2D({
