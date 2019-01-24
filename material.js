@@ -12,7 +12,7 @@ function Material (opts) {
 
   const ctx = opts.ctx
 
-  this.baseColor = [0.95, 0.95, 0.95, 1]
+  this.baseColor = [1, 1, 1, 1]
   this.baseColorMap = null
   this.emissiveColor = [0, 0, 0, 1]
   this.emissiveIntensity = 1
