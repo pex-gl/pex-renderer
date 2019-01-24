@@ -8,6 +8,10 @@ varying vec3 vNormalView;
 varying vec2 vTexCoord0;
 varying vec3 vPositionView;
 
+#if defined(USE_VERTEX_COLORS) || defined(USE_INSTANCED_COLOR)
+  varying vec4 vColor;
+#endif
+
 struct PBRData {
   vec2 texCoord0;
   float opacity;
