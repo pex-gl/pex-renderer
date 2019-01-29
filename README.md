@@ -245,6 +245,13 @@ entity.transform.dispatch('position')
 entity.transform.changed.remove(onParamChange)
 ```
 
+#### Update components
+```javascript
+transformComponent.set({
+  position: [Math.cos(time), 0, 0]
+})
+```
+
 #### component.dispose()
 
 - TODO: https://github.com/pex-gl/pex-renderer/issues/75
