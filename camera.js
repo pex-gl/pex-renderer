@@ -86,6 +86,42 @@ Camera.prototype.getViewRay = function (x, y, windowWidth, windowHeight) {
   return ray
 }
 
+function normalizePlane(plane) {
+  const mag = vec3.length(plane)
+  return plane.map(p => p / mag)
+}
+
+Camera.prototype.getFrustum = function () {
+  const [
+    m00,
+    m01,
+    m02,
+    m03,
+    m10,
+    m11,
+    m12,
+    m13,
+    m20,
+    m21,
+    m22,
+    m23,
+    m30,
+    m31,
+    m32,
+    m33
+  ] = mat4.mult([...this.inverseViewMatrix], this.projectionMatrix)
+
+  // Get planes
+  return [
+    normalizePlane([m30 + m00, m31 + m01, m32 + m02, m33 + m03]), // Left
+    normalizePlane([m30 - m00, m31 - m01, m32 - m02, m33 - m03]), // Right
+    normalizePlane([m30 + m10, m31 + m11, m32 + m12, m33 + m13]), // Bottom
+    normalizePlane([m30 - m10, m31 - m11, m32 - m12, m33 - m13]), // Top
+    normalizePlane([m30 + m20, m31 + m21, m32 + m22, m33 + m23]), // Near
+    normalizePlane([m30 - m20, m31 - m21, m32 - m22, m33 - m23]), // Far
+  ]
+}
+
 Camera.prototype.update = function () {
   mat4.set(this.inverseViewMatrix, this.entity.transform.modelMatrix)
   mat4.set(this.viewMatrix, this.entity.transform.modelMatrix)

@@ -9,9 +9,13 @@ const cameraEntity = renderer.entity([
   renderer.transform({ position: [0, 0, 5] }),
   renderer.camera({
     aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight
-  })
+  }),
+  renderer.orbiter()
 ])
 renderer.add(cameraEntity)
+
+const frustum = cameraEntity.getComponent('Camera').getFrustum()
+console.log(frustum);
 
 const sphereEntity = renderer.entity([
   renderer.transform(),
@@ -22,6 +26,18 @@ const sphereEntity = renderer.entity([
   })
 ])
 renderer.add(sphereEntity)
+
+const outsideFrustumEntity = renderer.entity([
+  renderer.transform({
+    position: [0, 0, 2]
+  }),
+  renderer.geometry(createSphere()),
+  renderer.material({
+    baseColor: [0, 1, 0, 1],
+    metallic: 1
+  })
+])
+renderer.add(outsideFrustumEntity)
 
 const skyboxEntity = renderer.entity([
   renderer.skybox({

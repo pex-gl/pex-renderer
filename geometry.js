@@ -26,6 +26,7 @@ function Geometry (opts) {
   this.enabled = true
   this.changed = new Signal()
   this.bounds = aabb.create()
+  this.frustumCulled = true
 
   this.primitive = opts.ctx.Primitive.Triangles
 
