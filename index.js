@@ -13,6 +13,7 @@ const createAnimation = require('./animation')
 const createGeometry = require('./geometry')
 const createMaterial = require('./material')
 const createCamera = require('./camera')
+const createPostProcessing = require('./post-processing')
 const createOrbiter = require('./orbiter')
 const createAmbientLight = require('./ambient-light')
 const createDirectionalLight = require('./directional-light')
@@ -76,7 +77,6 @@ function Renderer (opts) {
 
   const gl = opts.ctx.gl
   gl.getExtension('OES_standard_derivatives')
-
 
   this._dummyTexture2D = ctx.texture2D({ width: 4, height: 4 })
   this._dummyTextureCube = ctx.textureCube({ width: 4, height: 4 })
@@ -490,20 +490,21 @@ Renderer.prototype.getComponents = function (type) {
 Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLight, geometries, skybox, forward) {
   const ctx = this._ctx
 
-  function byCameraTags (component) {
+  function byEnabledAndCameraTags (component) {
+    if (!component.enabled) return false
     if (!camera || !camera.entity) return true
     if (!camera.entity.tags.length) return true
     if (!component.entity.tags.length) return true
     return component.entity.tags[0] === camera.entity.tags[0]
   }
 
-  geometries = geometries || this.getComponents('Geometry').filter(byCameraTags)
-  const ambientLights = this.getComponents('AmbientLight').filter(byCameraTags)
-  const directionalLights = this.getComponents('DirectionalLight').filter(byCameraTags)
-  const pointLights = this.getComponents('PointLight').filter(byCameraTags)
-  const spotLights = this.getComponents('SpotLight').filter(byCameraTags)
-  const areaLights = this.getComponents('AreaLight').filter(byCameraTags)
-  const reflectionProbes = this.getComponents('ReflectionProbe').filter(byCameraTags)
+  geometries = geometries || this.getComponents('Geometry').filter(byEnabledAndCameraTags)
+  const ambientLights = this.getComponents('AmbientLight').filter(byEnabledAndCameraTags)
+  const directionalLights = this.getComponents('DirectionalLight').filter(byEnabledAndCameraTags)
+  const pointLights = this.getComponents('PointLight').filter(byEnabledAndCameraTags)
+  const spotLights = this.getComponents('SpotLight').filter(byEnabledAndCameraTags)
+  const areaLights = this.getComponents('AreaLight').filter(byEnabledAndCameraTags)
+  const reflectionProbes = this.getComponents('ReflectionProbe').filter(byEnabledAndCameraTags)
 
   if (!shadowMapping && !shadowMappingLight) {
     directionalLights.forEach((light) => {
@@ -551,11 +552,12 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
   }
 
   if (camera) {
-    if (camera.postprocess && camera.ssao) {
-      sharedUniforms.uAO = camera._frameAOTex
+    const postProcessingCmp = camera.entity.getComponent('PostProcessing')
+    if (postProcessingCmp && postProcessingCmp.ssao) {
+      sharedUniforms.uAO = postProcessingCmp._frameAOTex
       sharedUniforms.uScreenSize = [ camera.viewport[2], camera.viewport[3] ] // TODO: should this be camera viewport size?
     }
-    if (!camera.postprocess) {
+    if (!(postProcessingCmp && postProcessingCmp.enabled)) {
       sharedUniforms.uExposure = camera.exposure
     }
   }
@@ -585,6 +587,7 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
     sharedUniforms['uPointLights[' + i + '].position'] = light.entity.transform.worldPosition
     sharedUniforms['uPointLights[' + i + '].color'] = light.color
     sharedUniforms['uPointLights[' + i + '].range'] = light.range
+    sharedUniforms['uPointLights[' + i + '].castShadows'] = light.castShadows
     sharedUniforms['uPointLightShadowMaps[' + i + ']'] = light._shadowCubemap
   })
 
@@ -622,7 +625,7 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
 
   for (let i = 0; i < geometries.length; i++) {
     // also drawn below if transparent objects don't exist
-    if ((firstTransparent === i) && skybox) {
+    if ((firstTransparent === i) && skybox && skybox.enabled) {
       skybox.draw(camera, {
         outputEncoding: sharedUniforms.uOutputEncoding,
         backgroundMode: true
@@ -639,7 +642,7 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
       continue
     }
     const material = geometry.entity.getComponent('Material')
-    if (material.blend && shadowMapping) {
+    if (!material.enabled || (material.blend && shadowMapping)) {
       continue
     }
 
@@ -699,6 +702,7 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
         depthPassOnly: true
       })
     } else {
+      const postProcessingCmp = camera.entity.getComponent('PostProcessing')
       pipeline = this.getGeometryPipeline(geometry, material, skin, {
         numAmbientLights: ambientLights.length,
         numDirectionalLights: directionalLights.length,
@@ -706,8 +710,8 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
         numSpotLights: spotLights.length,
         numAreaLights: areaLights.length,
         useReflectionProbes: reflectionProbes.length, // TODO: reflection probes true
-        useSSAO: camera.postprocess && camera.ssao,
-        useTonemapping: !camera.postprocess
+        useSSAO: postProcessingCmp && postProcessingCmp.enabled && postProcessingCmp.ssao,
+        useTonemapping: !(postProcessingCmp && postProcessingCmp.enabled)
       })
     }
 
@@ -717,9 +721,9 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
 
     // TODO: shared uniforms HUH?
     // if (meshProgram !== prevProgram) {
-      // prevProgram = meshProgram
-      // // this is a bit hacky but prevents checking the same uniforms over and over again
-      // // this would be even better if we sort meshes by material
+    // prevProgram = meshProgram
+    // // this is a bit hacky but prevents checking the same uniforms over and over again
+    // // this would be even better if we sort meshes by material
     Object.assign(cachedUniforms, sharedUniforms)
     // }
 
@@ -749,7 +753,7 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
     })
   }
   // also drawn above if transparent objects exist
-  if ((firstTransparent === -1) && skybox) {
+  if ((firstTransparent === -1) && skybox && skybox.enabled) {
     skybox.draw(camera, {
       outputEncoding: sharedUniforms.uOutputEncoding,
       backgroundMode: true
@@ -798,14 +802,14 @@ Renderer.prototype.draw = function () {
   })
 
   // draw scene
-
-  cameras.forEach((camera, cameraIndex) => {
+  cameras.filter(camera => camera.enabled).forEach((camera, cameraIndex) => {
     const screenSize = [camera.viewport[2], camera.viewport[3]]
     const halfScreenSize = [Math.floor(camera.viewport[2] / 2), Math.floor(camera.viewport[3] / 2)]
     const halfViewport = [0, 0, Math.floor(camera.viewport[2] / 2), Math.floor(camera.viewport[3] / 2)]
-    if (camera.postprocess) {
+    const postProcessingCmp = camera.entity.getComponent('PostProcessing')
+    if (postProcessingCmp && postProcessingCmp.enabled) {
       if (State.profiler) State.profiler.time('depthPrepass', true)
-      ctx.submit(camera._drawFrameNormalsFboCommand, () => {
+      ctx.submit(postProcessingCmp._drawFrameNormalsFboCommand, () => {
         const far = camera.far
         // TODO: Far clipping plane scaling fixes depth buffer precision artifacts
         // but breaks shadows on large scale scenes (eg maps)
@@ -815,9 +819,9 @@ Renderer.prototype.draw = function () {
       })
       if (State.profiler) State.profiler.timeEnd('depthPrepass')
     }
-    if (camera.postprocess && camera.ssao) {
+    if (postProcessingCmp && postProcessingCmp.enabled && postProcessingCmp.ssao) {
       if (State.profiler) State.profiler.time('ssao', true)
-      ctx.submit(camera._ssaoCmd, {
+      ctx.submit(postProcessingCmp._ssaoCmd, {
         uniforms: {
           uNear: camera.near,
           uFar: camera.far,
@@ -826,40 +830,40 @@ Renderer.prototype.draw = function () {
           uInverseViewMatrix: mat4.invert(mat4.copy(camera.viewMatrix)),
           viewProjectionInverseMatrix: mat4.invert(mat4.mult(mat4.copy(camera.viewMatrix), camera.projectionMatrix)), // TODO: GC
           cameraPositionWorldSpace: camera.entity.transform.worldPosition,
-          uIntensity: camera.ssaoIntensity,
+          uIntensity: postProcessingCmp.ssaoIntensity,
           uNoiseScale: [10, 10],
-          uSampleRadiusWS: camera.ssaoRadius,
-          uBias: camera.ssaoBias,
+          uSampleRadiusWS: postProcessingCmp.ssaoRadius,
+          uBias: postProcessingCmp.ssaoBias,
           uScreenSize: screenSize
         }
       })
       if (State.profiler) State.profiler.timeEnd('ssao')
       if (State.profiler) State.profiler.time('ssao-blur', true)
-      ctx.submit(camera._bilateralBlurHCmd, {
+      ctx.submit(postProcessingCmp._bilateralBlurHCmd, {
         uniforms: {
           near: camera.near,
           far: camera.far,
-          sharpness: camera.ssaoBlurSharpness,
+          sharpness: postProcessingCmp.ssaoBlurSharpness,
           imageSize: screenSize,
           depthMapSize: screenSize,
-          direction: [camera.ssaoBlurRadius, 0]
+          direction: [postProcessingCmp.ssaoBlurRadius, 0]
         }
       })
-      ctx.submit(camera._bilateralBlurVCmd, {
+      ctx.submit(postProcessingCmp._bilateralBlurVCmd, {
         uniforms: {
           near: camera.near,
           far: camera.far,
-          sharpness: camera.ssaoBlurSharpness,
+          sharpness: postProcessingCmp.ssaoBlurSharpness,
           imageSize: screenSize,
           depthMapSize: screenSize,
-          direction: [0, camera.ssaoBlurRadius]
+          direction: [0, postProcessingCmp.ssaoBlurRadius]
         }
       })
       if (State.profiler) State.profiler.timeEnd('ssao-blur')
     }
     if (State.profiler) State.profiler.time('drawFrame', true)
-    if (camera.postprocess) {
-      ctx.submit(camera._drawFrameFboCommand, () => {
+    if (postProcessingCmp && postProcessingCmp.enabled) {
+      ctx.submit(postProcessingCmp._drawFrameFboCommand, () => {
         this.drawMeshes(camera, false, null, null, skyboxes[0], false)
       })
     } else {
@@ -869,81 +873,82 @@ Renderer.prototype.draw = function () {
     }
     if (State.profiler) State.profiler.timeEnd('drawFrame')
     if (State.profiler) State.profiler.time('postprocess')
-    if (camera.postprocess && camera.bloom) {
-      ctx.submit(camera._thresholdCmd, {
+    if (postProcessingCmp && postProcessingCmp.enabled && postProcessingCmp.bloom) {
+      ctx.submit(postProcessingCmp._thresholdCmd, {
         uniforms: {
           uExposure: camera.exposure,
-          uBloomThreshold: camera.bloomThreshold,
+          uBloomThreshold: postProcessingCmp.bloomThreshold,
           imageSize: halfScreenSize
         },
         viewport: halfViewport
       })
 
       for (let i = 0; i < 5; i++) {
-        ctx.submit(camera._bloomHCmd, {
+        ctx.submit(postProcessingCmp._bloomHCmd, {
           uniforms: {
-            direction: [camera.bloomRadius, 0],
+            direction: [postProcessingCmp.bloomRadius, 0],
             imageSize: halfScreenSize
           },
           viewport: halfViewport
         })
-        ctx.submit(camera._bloomVCmd, {
+        ctx.submit(postProcessingCmp._bloomVCmd, {
           uniforms: {
-            direction: [0, camera.bloomRadius],
+            direction: [0, postProcessingCmp.bloomRadius],
             imageSize: halfScreenSize
           },
           viewport: halfViewport
         })
       }
     }
-    if (camera.postprocess && camera.dof) {
+    if (postProcessingCmp && postProcessingCmp.enabled && postProcessingCmp.dof) {
       if (State.profiler) State.profiler.time('dof', true)
-      for (let i = 0; i < camera.dofIterations; i++) {
-        ctx.submit(camera._dofBlurHCmd, {
+      for (let i = 0; i < postProcessingCmp.dofIterations; i++) {
+        ctx.submit(postProcessingCmp._dofBlurHCmd, {
           uniforms: {
             near: camera.near,
             far: camera.far,
             sharpness: 0,
             imageSize: screenSize,
             depthMapSize: screenSize,
-            direction: [camera.dofRadius, 0],
-            uDOFDepth: camera.dofDepth,
-            uDOFRange: camera.dofRange
+            direction: [postProcessingCmp.dofRadius, 0],
+            uDOFDepth: postProcessingCmp.dofDepth,
+            uDOFRange: postProcessingCmp.dofRange
           }
         })
-        ctx.submit(camera._dofBlurVCmd, {
+        ctx.submit(postProcessingCmp._dofBlurVCmd, {
           uniforms: {
             near: camera.near,
             far: camera.far,
             sharpness: 0,
             imageSize: screenSize,
             depthMapSize: screenSize,
-            direction: [0, camera.dofRadius],
-            uDOFDepth: camera.dofDepth,
-            uDOFRange: camera.dofRange
+            direction: [0, postProcessingCmp.dofRadius],
+            uDOFDepth: postProcessingCmp.dofDepth,
+            uDOFRange: postProcessingCmp.dofRange
           }
         })
       }
       if (State.profiler) State.profiler.timeEnd('dof')
     }
-    if (camera.postprocess) {
-      ctx.submit(camera._blitCmd, {
+    if (postProcessingCmp && postProcessingCmp.enabled) {
+      ctx.submit(postProcessingCmp._blitCmd, {
         uniforms: {
-          uExposure: camera.exposure,
-          uFXAA: camera.fxaa,
-          uFog: camera.fog,
-          uBloom: camera.bloom,
-          uBloomIntensity: camera.bloomIntensity,
           uNear: camera.near,
           uFar: camera.far,
           uFov: camera.fov,
-          uSunDispertion: camera.sunDispertion,
-          uSunIntensity: camera.sunIntensity,
-          uInscatteringCoeffs: camera.inscatteringCoeffs,
-          uFogColor: camera.fogColor,
-          uFogStart: camera.fogStart,
-          uFogDensity: camera.fogDensity,
-          uSunPosition: camera.sunPosition,
+          uExposure: camera.exposure,
+          uFXAA: postProcessingCmp.fxaa,
+          uFog: postProcessingCmp.fog,
+          uBloom: postProcessingCmp.bloom,
+          uBloomIntensity: postProcessingCmp.bloomIntensity,
+          uSunDispertion: postProcessingCmp.sunDispertion,
+          uSunIntensity: postProcessingCmp.sunIntensity,
+          uSunColor: postProcessingCmp.sunColor,
+          uInscatteringCoeffs: postProcessingCmp.inscatteringCoeffs,
+          uFogColor: postProcessingCmp.fogColor,
+          uFogStart: postProcessingCmp.fogStart,
+          uFogDensity: postProcessingCmp.fogDensity,
+          uSunPosition: postProcessingCmp.sunPosition,
           uOutputEncoding: ctx.Encoding.Gamma,
           uScreenSize: screenSize
         },
@@ -953,7 +958,7 @@ Renderer.prototype.draw = function () {
     }
   })
 
-  overlays.forEach((overlay) => {
+  overlays.filter(overlay => overlay.enabled).forEach((overlay) => {
     const bounds = [overlay.x, overlay.y, overlay.width, overlay.height]
     if (overlay.x > 1 || overlay.y > 1 || overlay.width > 1 || overlay.height > 1) {
       bounds[0] /= ctx.gl.drawingBufferWidth
@@ -1018,6 +1023,10 @@ Renderer.prototype.material = function (opts) {
 
 Renderer.prototype.camera = function (opts) {
   return createCamera(Object.assign({ ctx: this._ctx, rgbm: State.rgbm }, opts))
+}
+
+Renderer.prototype.postProcessing = function (opts) {
+  return createPostProcessing(Object.assign({ ctx: this._ctx, rgbm: State.rgbm }, opts))
 }
 
 Renderer.prototype.orbiter = function (opts) {

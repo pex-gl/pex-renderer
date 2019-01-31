@@ -5,13 +5,14 @@ let MaterialID = 0
 function Material (opts) {
   this.type = 'Material'
   this.id = 'Material_' + MaterialID++
+  this.enabled = true
   this.changed = new Signal()
 
   this._uniforms = {}
 
   const ctx = opts.ctx
 
-  this.baseColor = [0.95, 0.95, 0.95, 1]
+  this.baseColor = [1, 1, 1, 1]
   this.baseColorMap = null
   this.emissiveColor = [0, 0, 0, 1]
   this.emissiveIntensity = 1

@@ -3,11 +3,13 @@ const mat4 = require('pex-math').mat4
 
 function PointLight (opts) {
   this.type = 'PointLight'
+  this.enabled = true
   this.changed = new Signal()
   this.color = [1, 1, 1, 1]
   this.intensity = 1
   this.range = 10
   this.castShadows = false
+
   const ctx = opts.ctx
   this._ctx = ctx
 
@@ -27,7 +29,7 @@ function PointLight (opts) {
     encoding: ctx.Encoding.Linear
   })
 
-  const sides = this._sides = [
+  this._sides = [
     { eye: [0, 0, 0], target: [1, 0, 0], up: [0, -1, 0] },
     { eye: [0, 0, 0], target: [-1, 0, 0], up: [0, -1, 0] },
     { eye: [0, 0, 0], target: [0, 1, 0], up: [0, 0, 1] },

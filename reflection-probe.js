@@ -12,6 +12,7 @@ const PREFILTER_FROM_OCT_MAP_ATLAS = require('./shaders/reflection-probe/prefilt
 
 function ReflectionProbe (opts) {
   this.type = 'ReflectionProbe'
+  this.enabled = true
   this.changed = new Signal()
   this.rgbm = false
 

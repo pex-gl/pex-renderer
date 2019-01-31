@@ -10,6 +10,7 @@ const Signal = require('signals')
 
 function Skybox (opts) {
   this.type = 'Skybox'
+  this.enabled = true
   this.changed = new Signal()
   this.rgbm = false
   this.backgroundBlur = 0
@@ -111,7 +112,7 @@ Skybox.prototype.draw = function (camera, opts) {
     if (this.backgroundBlur > 0) {
       backgroundBlur = this.backgroundBlur
       if (!this._reflectionProbe) {
-         this._reflectionProbe = this.entity.renderer.getComponents('ReflectionProbe')[0]
+        this._reflectionProbe = this.entity.renderer.getComponents('ReflectionProbe')[0]
       }
       if (this._reflectionProbe) {
         texture = this._reflectionProbe._reflectionMap

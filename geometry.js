@@ -21,9 +21,9 @@ const IndicesMap = {
   cells: 'indices'
 }
 
-
 function Geometry (opts) {
   this.type = 'Geometry'
+  this.enabled = true
   this.changed = new Signal()
   this.bounds = aabb.create()
 
@@ -63,7 +63,7 @@ Geometry.prototype.set = function (opts) {
       }
       const data = (val.length !== undefined) ? val : val.data
 
-      //TODO: test different type configurations
+      // TODO: test different type configurations
       if (data) {
         if (!attrib.buffer) {
           attrib.buffer = ctx.vertexBuffer({ data: data, type: val.type || attrib.type })
@@ -85,10 +85,10 @@ Geometry.prototype.set = function (opts) {
       }
 
       // Update attrib data type from buffer
-      // It will be either re-used from val.type or attrib.type 
+      // It will be either re-used from val.type or attrib.type
       // or guessed from the typed array
       attrib.type = val.type || attrib.buffer.type
-      
+
       if (val.offset !== undefined) {
         attrib.offset = val.offset
       }
@@ -102,14 +102,13 @@ Geometry.prototype.set = function (opts) {
       if (!attrib.type) {
         throw new Error(`Unknown ${attribName} attrib type`)
       }
-
     }
   }
 
   for (let prop in opts) {
     if (IndicesMap[prop]) {
       // TODO: this is just a guestimate, we should probably push creating flat uint32 array to the user space
-      const numPositions = this._attributes['aPosition'].count
+      // const numPositions = this._attributes['aPosition'].count
       const val = opts[prop]
       let indices = this._indices
 

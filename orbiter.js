@@ -12,39 +12,12 @@ const latLonToXyz = require('latlon-to-xyz')
 const xyzToLatLon = require('xyz-to-latlon')
 const eventOffset = require('mouse-event-offset')
 
-function offset (e, target) {
-  if (e.touches) return eventOffset(e.touches[0], target)
-  else return eventOffset(e, target)
-}
-
-function getViewRay (camera, x, y, windowWidth, windowHeight) {
-  if (camera.frustum) {
-    x += camera.frustum.offset[0]
-    y += camera.frustum.offset[1]
-    windowWidth = camera.frustum.totalSize[0]
-    windowHeight = camera.frustum.totalSize[1]
-  }
-  let nx = 2 * x / windowWidth - 1
-  let ny = 1 - 2 * y / windowHeight
-
-  let hNear = 2 * Math.tan(camera.fov / 2) * camera.near
-  let wNear = hNear * camera.aspect
-
-  nx *= (wNear * 0.5)
-  ny *= (hNear * 0.5)
-
-  let origin = [0, 0, 0]
-  let direction = vec3.normalize([nx, ny, -camera.near])
-  let ray = [origin, direction]
-
-  return ray
-}
-
 function Orbiter (opts) {
   this.type = 'Orbiter'
+  this.enabled = true
+  this.changed = new Signal()
   this.entity = null
   this.dirty = false
-  this.changed = new Signal()
 
   const initialState = {
     target: [0, 0, 0],
@@ -185,6 +158,11 @@ Orbiter.prototype.updateMatrix = function () {
 Orbiter.prototype.setup = function () {
   const orbiter = this
 
+  function offset (e, target) {
+    if (e.touches) return eventOffset(e.touches[0], target)
+    else return eventOffset(e, target)
+  }
+
   function down (x, y, shift) {
     const camera = orbiter.entity.getComponent('Camera')
     orbiter.dragging = true
@@ -198,13 +176,13 @@ Orbiter.prototype.setup = function () {
       const targetInViewSpace = vec3.multMat4(vec3.copy(orbiter.clickTarget), camera.viewMatrix)
       orbiter.panPlane = [targetInViewSpace, [0, 0, 1]]
       ray.hitTestPlane(
-        getViewRay(camera, orbiter.clickPosWindow[0], orbiter.clickPosWindow[1], orbiter.width, orbiter.height),
+        camera.getViewRay(orbiter.clickPosWindow[0], orbiter.clickPosWindow[1], orbiter.width, orbiter.height),
         orbiter.panPlane[0],
         orbiter.panPlane[1],
         orbiter.clickPosPlane
       )
       ray.hitTestPlane(
-        getViewRay(camera, orbiter.dragPosWindow[0], orbiter.dragPosWindow[1], orbiter.width, orbiter.height),
+        camera.getViewRay(orbiter.dragPosWindow[0], orbiter.dragPosWindow[1], orbiter.width, orbiter.height),
         orbiter.panPlane[0],
         orbiter.panPlane[1],
         orbiter.dragPosPlane
@@ -223,13 +201,13 @@ Orbiter.prototype.setup = function () {
       orbiter.dragPosWindow[0] = x
       orbiter.dragPosWindow[1] = y
       ray.hitTestPlane(
-        getViewRay(camera, orbiter.clickPosWindow[0], orbiter.clickPosWindow[1], orbiter.width, orbiter.height),
+        camera.getViewRay(orbiter.clickPosWindow[0], orbiter.clickPosWindow[1], orbiter.width, orbiter.height),
         orbiter.panPlane[0],
         orbiter.panPlane[1],
         orbiter.clickPosPlane
       )
       ray.hitTestPlane(
-        getViewRay(camera, orbiter.dragPosWindow[0], orbiter.dragPosWindow[1], orbiter.width, orbiter.height),
+        camera.getViewRay(orbiter.dragPosWindow[0], orbiter.dragPosWindow[1], orbiter.width, orbiter.height),
         orbiter.panPlane[0],
         orbiter.panPlane[1],
         orbiter.dragPosPlane
@@ -258,14 +236,15 @@ Orbiter.prototype.setup = function () {
   }
 
   function scroll (dy) {
-    if (!orbiter.zoom) {
-      return
-    }
+    if (!orbiter.zoom) return
+
     orbiter.distance *= 1 + dy / orbiter.zoomSlowdown
     orbiter.distance = clamp(orbiter.distance, orbiter.minDistance, orbiter.maxDistance)
   }
 
   function onMouseDown (e) {
+    if (!orbiter.enabled) return
+
     const pos = offset(e, orbiter.element)
     down(
       pos[0],
@@ -275,6 +254,8 @@ Orbiter.prototype.setup = function () {
   }
 
   function onMouseMove (e) {
+    if (!orbiter.enabled) return
+
     const pos = offset(e, orbiter.element)
     move(
       pos[0],
@@ -284,20 +265,28 @@ Orbiter.prototype.setup = function () {
   }
 
   function onMouseUp (e) {
+    if (!orbiter.enabled) return
+
     up()
   }
 
   function onWheel (e) {
+    if (!orbiter.enabled) return
+
     scroll(e.deltaY)
     e.preventDefault()
   }
 
   function onTouchStart (e) {
+    if (!orbiter.enabled) return
+
     e.preventDefault()
     onMouseDown(e)
   }
 
   function onTouchMove (e) {
+    if (!orbiter.enabled) return
+
     e.preventDefault()
     onMouseMove(e)
   }

@@ -186,11 +186,11 @@ function createProfiler (ctx, renderer) {
       lines.push(`Pipelines: ${pa3(renderer._ctx.resources.filter((r) => r.class === 'pipeline').length)}`)
       lines.push(`Textures 2D: ${pa3(renderer._ctx.resources.filter((r) => r.class === 'texture' && r.target === ctx.gl.TEXTURE_2D).length)}`)
       Object.keys(texture2DByPixelFormat).forEach((format) => {
-      lines.push(`${format.toUpperCase()}: ${pa3(texture2DByPixelFormat[format].length)}`)
+        lines.push(`${format.toUpperCase()}: ${pa3(texture2DByPixelFormat[format].length)}`)
       })
       lines.push(`Textures Cube: ${pa3(renderer._ctx.resources.filter((r) => r.class === 'texture' && r.target === ctx.gl.TEXTURE_CUBE_MAP).length)}`)
       Object.keys(textureCubeByPixelFormat).forEach((format) => {
-      lines.push(`${format.toUpperCase()}: ${pa3(textureCubeByPixelFormat[format].length)}`)
+        lines.push(`${format.toUpperCase()}: ${pa3(textureCubeByPixelFormat[format].length)}`)
       })
       lines.push(`Texture VRAM: ${(textureVRAM / (1024 * 1024)).toFixed(0)}MB`)
       lines.push('------')
@@ -216,9 +216,9 @@ function createProfiler (ctx, renderer) {
         // const cpu = cmd.command.stats.cpuTime / cmd.command.stats.count
         // const gpu = cmd.command.stats.gpuTime / cmd.command.stats.count
         // if (cmd.command.stats.count >= 30) {
-          // cmd.command.stats.gpuTime = 0
-          // cmd.command.stats.cpuTime = 0
-          // cmd.command.stats.count = 0
+        // cmd.command.stats.gpuTime = 0
+        // cmd.command.stats.cpuTime = 0
+        // cmd.command.stats.count = 0
         // }
         // return `${cmd.label}: ${ms(cpu)} ${ms(gpu)}`
         return `${cmd.label}: N/A`
@@ -266,11 +266,11 @@ function createProfiler (ctx, renderer) {
   }
 
   // function wrapRes (fn, counter) {
-    // const ctxFn = ctx[fn]
-    // ctx[fn] = function () {
-      // profiler[counter]++
-      // return ctxFn.apply(this, arguments)
-    // }
+  // const ctxFn = ctx[fn]
+  // ctx[fn] = function () {
+  // profiler[counter]++
+  // return ctxFn.apply(this, arguments)
+  // }
   // }
 
   // TODO:

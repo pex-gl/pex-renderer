@@ -2,11 +2,12 @@ const Signal = require('signals')
 
 function Morph (opts) {
   this.type = 'Morph'
+  this.enabled = true
+  this.changed = new Signal()
   this.entity = null
   this.dirty = false
   this.targets = opts.targets || []
   this.weights = opts.weights || []
-  this.changed = new Signal()
   this.set(opts)
 }
 
@@ -24,7 +25,7 @@ Morph.prototype.set = function (opts) {
 }
 
 Morph.prototype.update = function () {
-  if (!this.dirty) return
+  if (!this.dirty || !this.enabled) return
   this.dirty = false
 
   let geom = this.entity.getComponent('Geometry')
