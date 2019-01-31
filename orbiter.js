@@ -1,13 +1,14 @@
 const Signal = require('signals')
 const mat4 = require('pex-math/mat4')
+const vec2 = require('pex-math/vec2')
 const vec3 = require('pex-math/vec3')
 const quat = require('pex-math/quat')
-const ray = require('pex-geom/ray')
-const interpolateAngle = require('interpolate-angle')
 const clamp = require('pex-math/utils').clamp
 const lerp = require('pex-math/utils').lerp
 const toRadians = require('pex-math/utils').toRadians
 const toDegrees = require('pex-math/utils').toDegrees
+const ray = require('pex-geom/ray')
+const interpolateAngle = require('interpolate-angle')
 const latLonToXyz = require('latlon-to-xyz')
 const xyzToLatLon = require('xyz-to-latlon')
 const eventOffset = require('mouse-event-offset')
@@ -16,50 +17,63 @@ function Orbiter (opts) {
   this.type = 'Orbiter'
   this.enabled = true
   this.changed = new Signal()
-  this.entity = null
-  this.dirty = false
 
-  const initialState = {
-    target: [0, 0, 0],
-    position: [0, 0, 5],
-    matrix: mat4.create(),
-    invViewMatrix: mat4.create(),
-    dragging: false,
-    lat: 0, // Y
-    lon: 0, // XZ
-    currentLat: 0,
-    currentLon: 0,
-    easing: 0.1,
-    element: opts.element || document,
-    width: 0,
-    height: 0,
-    clickPosWindow: [0, 0],
-    dragPos: [0, 0, 0],
-    dragPosWindow: [0, 0],
-    distance: 1,
-    currentDistance: 1,
-    minDistance: 0.1,
-    maxDistance: 10,
-    minLat: -89.5,
-    maxLat: 89.5,
-    minLon: -Infinity,
-    maxLon: Infinity,
-    zoomSlowdown: 400,
-    zoom: true,
-    pan: true,
-    drag: true,
-    dragSlowdown: 4,
-    clickTarget: [0, 0, 0],
-    clickPosPlane: [0, 0, 0],
-    dragPosPlane: [0, 0, 0],
-    clickPosWorld: [0, 0, 0],
-    dragPosWorld: [0, 0, 0],
-    panPlane: null,
-    autoUpdate: true
-  }
+  // User options
+  this.element = opts.element || document
+  this.position = [0, 0, 2]
+  this.target = [0, 0, 0]
+  this.easing = 0.1
+  this.zoom = true
+  this.pan = true
+  this.drag = true
+  this.minDistance = 0.1
+  this.maxDistance = 10
+  this.minLat = -89.5
+  this.maxLat = 89.5
+  this.minLon = -Infinity
+  this.maxLon = Infinity
+  this.panSlowdown = 4
+  this.zoomSlowdown = 400
+  this.dragSlowdown = 4
 
-  this.set(initialState)
-  this.set(opts)
+  // Internals
+  // Set initially by .set
+  this.lat = null // Y
+  this.lon = null // XZ
+  this.currentLat = null
+  this.currentLon = null
+  this.distance = null
+  this.currentDistance = null
+
+  // Updated by user interaction
+  this.matrix = mat4.create()
+  this.invViewMatrix = mat4.create()
+  this.up = [0, 1, 0]
+  this.panning = false
+  this.dragging = false
+  this.zooming = false
+  this.width = 0
+  this.height = 0
+
+  this.zoomTouchDistance = null
+
+  this.clickTarget = [0, 0, 0]
+  this.clickPosWorld = [0, 0, 0]
+  this.clickPosWindow = [0, 0]
+  this.clickPosPlane = [0, 0, 0]
+
+  this.dragPos = [0, 0, 0]
+  this.dragPosWorld = [0, 0, 0]
+  this.dragPosWindow = [0, 0]
+  this.dragPosPlane = [0, 0, 0]
+  this.panPlane = null
+
+  // TODO: add ability to set lat/lng instead of position/target
+  this.set({
+    position: this.position,
+    target: this.target,
+    ...opts
+  })
 }
 
 Orbiter.prototype.init = function (entity) {
@@ -69,58 +83,41 @@ Orbiter.prototype.init = function (entity) {
 
 Orbiter.prototype.set = function (opts) {
   Object.assign(this, opts)
-  if (opts.target || opts.position) {
-    const distance = vec3.distance(this.position, this.target)
+
+  if (opts.position || opts.target) {
     const latLon = xyzToLatLon(vec3.normalize(vec3.sub(vec3.copy(this.position), this.target)))
+    const distance = opts.distance || vec3.distance(this.position, this.target)
+
     this.lat = latLon[0]
     this.lon = latLon[1]
     this.currentLat = this.lat
     this.currentLon = this.lon
     this.distance = distance
     this.currentDistance = this.distance
-    this.minDistance = opts.minDistance || distance / 10
-    this.maxDistance = opts.maxDistance || distance * 10
-    this.minLat = opts.minLat || -89.5
-    this.maxLat = opts.maxLat || 89.5
-    this.minLon = opts.minLon || -Infinity
-    this.maxLon = opts.maxLon || Infinity
   }
+
   Object.keys(opts).forEach((prop) => this.changed.dispatch(prop))
 }
 
 Orbiter.prototype.update = function () {
-  const camera = this.entity.getComponent('Camera')
   this.updateMatrix()
-  const transformCmp = this.entity.transform
-  const transformRotation = transformCmp.rotation
-  quat.fromMat4(transformRotation, this.matrix)
 
-  if (camera) {
+  const transformCmp = this.entity.transform
+  const rotation = quat.fromMat4([...transformCmp.rotation], this.matrix)
+
+  if (this.entity.getComponent('Camera')) {
     transformCmp.set({
       position: this.position,
-      rotation: transformRotation
+      rotation
     })
   } else {
     transformCmp.set({
-      rotation: transformRotation
+      rotation
     })
-  }
-}
-
-Orbiter.prototype.updateWindowSize = function () {
-  const width = this.element.clientWidth || this.element.innerWidth
-  const height = this.element.clientHeight || this.element.innerHeight
-  if (width !== this.width) {
-    this.width = width
-    this.height = height
   }
 }
 
 Orbiter.prototype.updateMatrix = function () {
-  const camera = this.entity.getComponent('Camera')
-  const position = this.position
-  const target = this.target
-
   this.lat = clamp(this.lat, this.minLat, this.maxLat)
   this.lon = clamp(this.lon, this.minLon, this.maxLon) % 360
 
@@ -140,185 +137,206 @@ Orbiter.prototype.updateMatrix = function () {
   )
   this.currentDistance = lerp(this.currentDistance, this.distance, this.easing)
 
-  // set new camera position according to the current
-  // rotation at distance relative to target
-  latLonToXyz(this.currentLat, this.currentLon, position)
-  vec3.scale(position, this.currentDistance)
-  vec3.add(position, target)
+  // Set position from lat/lon
+  latLonToXyz(this.currentLat, this.currentLon, this.position)
+
+  // Move position according to distance and target
+  vec3.scale(this.position, this.currentDistance)
+  vec3.add(this.position, this.target)
+
+  // Update matrix
   mat4.identity(this.matrix)
+  mat4.lookAt(this.matrix, this.position, this.target, this.up)
 
-  var up = [0, 1, 0]
-  mat4.lookAt(this.matrix, position, target, up)
-
-  if (camera) {
+  if (this.entity.getComponent('Camera')) {
     mat4.invert(this.matrix)
   }
 }
 
+Orbiter.prototype.updateWindowSize = function () {
+  const width = this.element.clientWidth || this.element.innerWidth
+  const height = this.element.clientHeight || this.element.innerHeight
+
+  if (width !== this.width) {
+    this.width = width
+    this.height = height
+  }
+}
+
+// User interaction events
+Orbiter.prototype.handleDragStart = function (position) {
+  this.dragging = true
+  this.dragPos = position
+}
+
+Orbiter.prototype.handlePanZoomStart = function (touch0, touch1) {
+  this.dragging = false
+
+  if (this.zoom && touch1) {
+    this.zooming = true
+    this.zoomTouchDistance = vec2.distance(touch1, touch0)
+  }
+
+  const camera = this.entity.getComponent('Camera')
+
+  if (this.pan && camera) {
+    this.panning = true
+    this.updateWindowSize()
+
+    // TODO: use dragPos?
+    this.clickPosWindow = touch1 ? [(touch0[0] + touch1[0]) * 0.5, (touch0[1] + touch1[1]) * 0.5] : touch0
+    vec3.set(this.clickTarget, this.target)
+
+    const targetInViewSpace = vec3.multMat4(vec3.copy(this.clickTarget), camera.viewMatrix)
+    this.panPlane = [targetInViewSpace, [0, 0, 1]]
+
+    ray.hitTestPlane(
+      camera.getViewRay(this.clickPosWindow[0], this.clickPosWindow[1], this.width, this.height),
+      this.panPlane[0],
+      this.panPlane[1],
+      this.clickPosPlane
+    )
+    ray.hitTestPlane(
+      camera.getViewRay(this.dragPosWindow[0], this.dragPosWindow[1], this.width, this.height),
+      this.panPlane[0],
+      this.panPlane[1],
+      this.dragPosPlane
+    )
+  }
+}
+
+Orbiter.prototype.handleDragMove = function (position) {
+  const dx = position[0] - this.dragPos[0]
+  const dy = position[1] - this.dragPos[1]
+
+  this.dragPos = position
+
+  this.lat += dy / this.dragSlowdown
+  this.lon -= dx / this.dragSlowdown
+}
+
+Orbiter.prototype.handlePanZoomMove = function (touch0, touch1) {
+  if (this.zoom && touch1) {
+    const distance = vec2.distance(touch1, touch0)
+    this.handleZoom(this.zoomTouchDistance - distance)
+    this.zoomTouchDistance = distance
+  }
+
+  const camera = this.entity.getComponent('Camera')
+
+  if (this.pan && camera) {
+    this.dragPosWindow = touch1 ? [(touch0[0] + touch1[0]) * 0.5, (touch0[1] + touch1[1]) * 0.5] : touch0
+
+    ray.hitTestPlane(
+      camera.getViewRay(this.clickPosWindow[0], this.clickPosWindow[1], this.width, this.height),
+      this.panPlane[0],
+      this.panPlane[1],
+      this.clickPosPlane
+    )
+    ray.hitTestPlane(
+      camera.getViewRay(this.dragPosWindow[0], this.dragPosWindow[1], this.width, this.height),
+      this.panPlane[0],
+      this.panPlane[1],
+      this.dragPosPlane
+    )
+    mat4.set(this.invViewMatrix, camera.viewMatrix)
+    mat4.invert(this.invViewMatrix)
+    vec3.multMat4(vec3.set(this.clickPosWorld, this.clickPosPlane), this.invViewMatrix)
+    vec3.multMat4(vec3.set(this.dragPosWorld, this.dragPosPlane), this.invViewMatrix)
+
+    const diffWorld = vec3.sub(vec3.copy(this.dragPosWorld), this.clickPosWorld)
+    this.set({
+      distance: this.distance,
+      target: vec3.sub(vec3.copy(this.clickTarget), diffWorld)
+    })
+  }
+}
+
+Orbiter.prototype.handleZoom = function (dy) {
+  this.distance *= 1 + dy / this.zoomSlowdown
+  this.distance = clamp(this.distance, this.minDistance, this.maxDistance)
+}
+
+Orbiter.prototype.handleEnd = function () {
+  this.dragging = false
+  this.panning = false
+  this.zooming = false
+  this.panPlane = null
+}
+
 Orbiter.prototype.setup = function () {
-  const orbiter = this
+  this.onPointerDown = (event) => {
+    if (!this.enabled) return
 
-  function offset (e, target) {
-    if (e.touches) return eventOffset(e.touches[0], target)
-    else return eventOffset(e, target)
-  }
+    const pan = (event.ctrlKey || event.metaKey || event.shiftKey) || (event.touches && event.touches.length === 2)
 
-  function down (x, y, shift) {
-    const camera = orbiter.entity.getComponent('Camera')
-    orbiter.dragging = true
-    orbiter.dragPos[0] = x
-    orbiter.dragPos[1] = y
-    if (camera && shift && orbiter.pan) {
-      orbiter.updateWindowSize()
-      orbiter.clickPosWindow[0] = x
-      orbiter.clickPosWindow[1] = y
-      vec3.set(orbiter.clickTarget, orbiter.target)
-      const targetInViewSpace = vec3.multMat4(vec3.copy(orbiter.clickTarget), camera.viewMatrix)
-      orbiter.panPlane = [targetInViewSpace, [0, 0, 1]]
-      ray.hitTestPlane(
-        camera.getViewRay(orbiter.clickPosWindow[0], orbiter.clickPosWindow[1], orbiter.width, orbiter.height),
-        orbiter.panPlane[0],
-        orbiter.panPlane[1],
-        orbiter.clickPosPlane
-      )
-      ray.hitTestPlane(
-        camera.getViewRay(orbiter.dragPosWindow[0], orbiter.dragPosWindow[1], orbiter.width, orbiter.height),
-        orbiter.panPlane[0],
-        orbiter.panPlane[1],
-        orbiter.dragPosPlane
-      )
-    } else {
-      orbiter.panPlane = null
+    const touch0 = eventOffset(event.touches ? event.touches[0] : event, this.element)
+    if (this.drag && !pan) {
+      this.handleDragStart(touch0);
+    } else if ((this.pan || this.zoom) && pan) {
+      const touch1 = event.touches && eventOffset(event.touches[1], this.element)
+      this.handlePanZoomStart(touch0, touch1);
     }
   }
 
-  function move (x, y, shift) {
-    const camera = orbiter.entity.getComponent('Camera')
-    if (!orbiter.dragging) {
-      return
-    }
-    if (camera && shift && orbiter.panPlane) {
-      orbiter.dragPosWindow[0] = x
-      orbiter.dragPosWindow[1] = y
-      ray.hitTestPlane(
-        camera.getViewRay(orbiter.clickPosWindow[0], orbiter.clickPosWindow[1], orbiter.width, orbiter.height),
-        orbiter.panPlane[0],
-        orbiter.panPlane[1],
-        orbiter.clickPosPlane
-      )
-      ray.hitTestPlane(
-        camera.getViewRay(orbiter.dragPosWindow[0], orbiter.dragPosWindow[1], orbiter.width, orbiter.height),
-        orbiter.panPlane[0],
-        orbiter.panPlane[1],
-        orbiter.dragPosPlane
-      )
-      mat4.set(orbiter.invViewMatrix, camera.viewMatrix)
-      mat4.invert(orbiter.invViewMatrix)
-      vec3.multMat4(vec3.set(orbiter.clickPosWorld, orbiter.clickPosPlane), orbiter.invViewMatrix)
-      vec3.multMat4(vec3.set(orbiter.dragPosWorld, orbiter.dragPosPlane), orbiter.invViewMatrix)
-      const diffWorld = vec3.sub(vec3.copy(orbiter.dragPosWorld), orbiter.clickPosWorld)
-      const target = vec3.sub(vec3.copy(orbiter.clickTarget), diffWorld)
-      orbiter.set({ target: target })
-    } else if (orbiter.drag) {
-      const dx = x - orbiter.dragPos[0]
-      const dy = y - orbiter.dragPos[1]
-      orbiter.dragPos[0] = x
-      orbiter.dragPos[1] = y
+  this.onPointerMove = (event) => {
+    if (!this.enabled) return
 
-      orbiter.lat += dy / orbiter.dragSlowdown
-      orbiter.lon -= dx / orbiter.dragSlowdown
+    const touch0 = eventOffset(event.touches ? event.touches[0] : event, this.element)
+    if (this.dragging) {
+      this.handleDragMove(touch0)
+    } else if (this.panning || this.zooming) {
+      const touch1 = event.touches && eventOffset(event.touches[1], this.element)
+      this.handlePanZoomMove(touch0, touch1)
     }
   }
 
-  function up () {
-    orbiter.dragging = false
-    orbiter.panPlane = null
+  this.onPointerUp = () => {
+    if (!this.enabled) return
+
+    this.handleEnd()
   }
 
-  function scroll (dy) {
-    if (!orbiter.zoom) return
+  this.onTouchStart = (event) => {
+    event.preventDefault()
 
-    orbiter.distance *= 1 + dy / orbiter.zoomSlowdown
-    orbiter.distance = clamp(orbiter.distance, orbiter.minDistance, orbiter.maxDistance)
+    if (event.touches.length <= 2) this.onPointerDown(event)
   }
 
-  function onMouseDown (e) {
-    if (!orbiter.enabled) return
+  this.onTouchMove = (event) => {
+    event.preventDefault()
 
-    const pos = offset(e, orbiter.element)
-    down(
-      pos[0],
-      pos[1],
-      e.shiftKey || (e.touches && e.touches.length === 2)
-    )
+    if (event.touches.length <= 2) this.onPointerMove(event)
   }
 
-  function onMouseMove (e) {
-    if (!orbiter.enabled) return
+  this.onWheel = (event) => {
+    if (!this.enabled || !this.zoom) return
 
-    const pos = offset(e, orbiter.element)
-    move(
-      pos[0],
-      pos[1],
-      e.shiftKey || (e.touches && e.touches.length === 2)
-    )
+    event.preventDefault()
+    this.handleZoom(event.deltaY)
   }
 
-  function onMouseUp (e) {
-    if (!orbiter.enabled) return
+  this.element.addEventListener('mousedown', this.onPointerDown)
+  this.element.addEventListener('wheel', this.onWheel)
 
-    up()
-  }
+  this.element.addEventListener('touchstart', this.onTouchStart)
+  this.element.addEventListener('touchmove', this.onTouchMove, { passive: false })
+  this.element.addEventListener('touchend', this.onPointerUp)
 
-  function onWheel (e) {
-    if (!orbiter.enabled) return
-
-    scroll(e.deltaY)
-    e.preventDefault()
-  }
-
-  function onTouchStart (e) {
-    if (!orbiter.enabled) return
-
-    e.preventDefault()
-    onMouseDown(e)
-  }
-
-  function onTouchMove (e) {
-    if (!orbiter.enabled) return
-
-    e.preventDefault()
-    onMouseMove(e)
-  }
-
-  this._onMouseDown = onMouseDown
-  this._onTouchStart = onTouchStart
-  this._onMouseMove = onMouseMove
-  this._onTouchMove = onTouchMove
-  this._onMouseUp = onMouseUp
-  this._onWheel = onWheel
-
-  this.element.addEventListener('mousedown', onMouseDown)
-  this.element.addEventListener('wheel', onWheel)
-
-  this.element.addEventListener('touchstart', onTouchStart)
-  this.element.addEventListener('touchmove', onTouchMove, { passive: false })
-  this.element.addEventListener('touchend', onMouseUp)
-
-  document.addEventListener('mousemove', onMouseMove)
-  document.addEventListener('mouseup', onMouseUp)
+  document.addEventListener('mousemove', this.onPointerMove)
+  document.addEventListener('mouseup', this.onPointerUp)
 }
 
 Orbiter.prototype.dispose = function () {
-  this.element.removeEventListener('mousedown', this._onMouseDown)
-  this.element.removeEventListener('wheel', this._onWheel)
+  this.element.removeEventListener('mousedown', this.onPointerDown)
+  this.element.removeEventListener('wheel', this.onWheel)
 
-  this.element.removeEventListener('touchstart', this._onTouchStart)
-  this.element.removeEventListener('touchmove', this._onMouseMove)
-  this.element.removeEventListener('touchend', this._onMouseUp)
+  this.element.removeEventListener('touchstart', this.onTouchStart)
+  this.element.removeEventListener('touchmove', this.onPointerMove)
+  this.element.removeEventListener('touchend', this.onPointerUp)
 
-  document.removeEventListener('mousemove', this._onMouseMove)
-  document.removeEventListener('mouseup', this._onMouseUp)
+  document.removeEventListener('mousemove', this.onPointerMove)
+  document.removeEventListener('mouseup', this.onPointerUp)
 }
 
 module.exports = function createOrbiter (opts) {

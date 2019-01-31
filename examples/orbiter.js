@@ -1,6 +1,7 @@
 const createRenderer = require('../')
 const createContext = require('pex-context')
 const createCube = require('primitive-cube')
+const { makeAxes } = require('./helpers')
 
 const ctx = createContext({
   width: window.innerWidth * 0.8,
@@ -31,15 +32,12 @@ for (let i = 0; i < 20; i++) {
 }
 
 const cameraEntity = renderer.entity([
-  renderer.transform({ position: [0, 0, 2] }),
   renderer.camera({
     fov: Math.PI / 2,
     aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight
   }),
   renderer.orbiter({
-    // enabled: false,
     element: ctx.gl.canvas,
-    distance: 2,
     minLat: -30,
     maxLat: 30,
     minLon: -90,
@@ -48,7 +46,7 @@ const cameraEntity = renderer.entity([
 ])
 renderer.add(cameraEntity)
 
-const sphereEntity = renderer.entity([
+const cubeEntity = renderer.entity([
   renderer.transform(),
   renderer.geometry(createCube()),
   renderer.material({
@@ -56,7 +54,29 @@ const sphereEntity = renderer.entity([
     metallic: 1
   })
 ])
-renderer.add(sphereEntity)
+renderer.add(cubeEntity)
+
+const axes = makeAxes(10)
+const axesEntity = renderer.entity([
+  renderer.transform(),
+  renderer.geometry({
+    positions: axes,
+    primitive: ctx.Primitive.Lines,
+    count: axes.length,
+    vertexColors: [
+      [1, 0, 0, 1],
+      [1, 0.8, 0, 1],
+      [0, 1, 0, 1],
+      [0.8, 1, 0, 1],
+      [0, 0, 1, 1],
+      [0, 0.8, 1, 1]
+    ]
+  }),
+  renderer.material({
+    baseColor: [1, 1, 1, 1]
+  })
+])
+renderer.add(axesEntity)
 
 const skyboxEntity = renderer.entity([
   renderer.skybox({
