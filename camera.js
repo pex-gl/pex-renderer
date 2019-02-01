@@ -64,26 +64,17 @@ Camera.prototype.set = function (opts) {
 }
 
 Camera.prototype.getViewRay = function (x, y, windowWidth, windowHeight) {
-  if (this.frustum) {
-    x += this.frustum.offset[0]
-    y += this.frustum.offset[1]
-    windowWidth = this.frustum.totalSize[0]
-    windowHeight = this.frustum.totalSize[1]
-  }
   let nx = 2 * x / windowWidth - 1
   let ny = 1 - 2 * y / windowHeight
 
-  let hNear = 2 * Math.tan(this.fov / 2) * this.near
-  let wNear = hNear * this.aspect
+  const hNear = 2 * Math.tan(this.fov / 2) * this.near
+  const wNear = hNear * this.aspect
 
   nx *= (wNear * 0.5)
   ny *= (hNear * 0.5)
 
-  let origin = [0, 0, 0]
-  let direction = vec3.normalize([nx, ny, -this.near])
-  let ray = [origin, direction]
-
-  return ray
+  // [origin, direction]
+  return [[0, 0, 0], vec3.normalize([nx, ny, -this.near])]
 }
 
 Camera.prototype.update = function () {

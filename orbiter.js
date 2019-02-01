@@ -20,7 +20,7 @@ function Orbiter (opts) {
 
   // User options
   this.element = opts.element || document
-  this.position = [0, 0, 2]
+  this.position = [0, 0, 5]
   this.target = [0, 0, 0]
   this.easing = 0.1
   this.zoom = true
@@ -47,7 +47,6 @@ function Orbiter (opts) {
 
   // Updated by user interaction
   this.matrix = mat4.create()
-  this.invViewMatrix = mat4.create()
   this.up = [0, 1, 0]
   this.panning = false
   this.dragging = false
@@ -57,16 +56,13 @@ function Orbiter (opts) {
 
   this.zoomTouchDistance = null
 
+  this.panPlane = null
   this.clickTarget = [0, 0, 0]
   this.clickPosWorld = [0, 0, 0]
-  this.clickPosWindow = [0, 0]
   this.clickPosPlane = [0, 0, 0]
-
   this.dragPos = [0, 0, 0]
   this.dragPosWorld = [0, 0, 0]
-  this.dragPosWindow = [0, 0]
   this.dragPosPlane = [0, 0, 0]
-  this.panPlane = null
 
   // TODO: add ability to set lat/lng instead of position/target
   this.set({
@@ -103,7 +99,7 @@ Orbiter.prototype.update = function () {
   this.updateMatrix()
 
   const transformCmp = this.entity.transform
-  const rotation = quat.fromMat4([...transformCmp.rotation], this.matrix)
+  const rotation = quat.fromMat4(quat.copy(transformCmp.rotation), this.matrix)
 
   if (this.entity.getComponent('Camera')) {
     transformCmp.set({
@@ -154,16 +150,13 @@ Orbiter.prototype.updateMatrix = function () {
 }
 
 Orbiter.prototype.updateWindowSize = function () {
-  const width = this.element.clientWidth || this.element.innerWidth
-  const height = this.element.clientHeight || this.element.innerHeight
+  const width = this.domElement.clientWidth || this.domElement.innerWidth
+  const height = this.domElement.clientHeight || this.domElement.innerHeight
 
-  if (width !== this.width) {
-    this.width = width
-    this.height = height
-  }
+  if (width !== this.width) this.width = width
+  if (height !== this.height) this.height = height
 }
 
-// User interaction events
 Orbiter.prototype.handleDragStart = function (position) {
   this.dragging = true
   this.dragPos = position
@@ -184,23 +177,17 @@ Orbiter.prototype.handlePanZoomStart = function (touch0, touch1) {
     this.updateWindowSize()
 
     // TODO: use dragPos?
-    this.clickPosWindow = touch1 ? [(touch0[0] + touch1[0]) * 0.5, (touch0[1] + touch1[1]) * 0.5] : touch0
-    vec3.set(this.clickTarget, this.target)
+    const clickPosWindow = touch1 ? [(touch0[0] + touch1[0]) * 0.5, (touch0[1] + touch1[1]) * 0.5] : touch0
 
+    vec3.set(this.clickTarget, this.target)
     const targetInViewSpace = vec3.multMat4(vec3.copy(this.clickTarget), camera.viewMatrix)
     this.panPlane = [targetInViewSpace, [0, 0, 1]]
 
     ray.hitTestPlane(
-      camera.getViewRay(this.clickPosWindow[0], this.clickPosWindow[1], this.width, this.height),
+      camera.getViewRay(clickPosWindow[0], clickPosWindow[1], this.width, this.height),
       this.panPlane[0],
       this.panPlane[1],
       this.clickPosPlane
-    )
-    ray.hitTestPlane(
-      camera.getViewRay(this.dragPosWindow[0], this.dragPosWindow[1], this.width, this.height),
-      this.panPlane[0],
-      this.panPlane[1],
-      this.dragPosPlane
     )
   }
 }
@@ -209,10 +196,10 @@ Orbiter.prototype.handleDragMove = function (position) {
   const dx = position[0] - this.dragPos[0]
   const dy = position[1] - this.dragPos[1]
 
-  this.dragPos = position
-
   this.lat += dy / this.dragSlowdown
   this.lon -= dx / this.dragSlowdown
+
+  this.dragPos = position
 }
 
 Orbiter.prototype.handlePanZoomMove = function (touch0, touch1) {
@@ -224,25 +211,18 @@ Orbiter.prototype.handlePanZoomMove = function (touch0, touch1) {
 
   const camera = this.entity.getComponent('Camera')
 
-  if (this.pan && camera) {
-    this.dragPosWindow = touch1 ? [(touch0[0] + touch1[0]) * 0.5, (touch0[1] + touch1[1]) * 0.5] : touch0
+  if (this.pan && camera && this.panPlane) {
+    const dragPosWindow = touch1 ? [(touch0[0] + touch1[0]) * 0.5, (touch0[1] + touch1[1]) * 0.5] : touch0
 
     ray.hitTestPlane(
-      camera.getViewRay(this.clickPosWindow[0], this.clickPosWindow[1], this.width, this.height),
-      this.panPlane[0],
-      this.panPlane[1],
-      this.clickPosPlane
-    )
-    ray.hitTestPlane(
-      camera.getViewRay(this.dragPosWindow[0], this.dragPosWindow[1], this.width, this.height),
+      camera.getViewRay(dragPosWindow[0], dragPosWindow[1], this.width, this.height),
       this.panPlane[0],
       this.panPlane[1],
       this.dragPosPlane
     )
-    mat4.set(this.invViewMatrix, camera.viewMatrix)
-    mat4.invert(this.invViewMatrix)
-    vec3.multMat4(vec3.set(this.clickPosWorld, this.clickPosPlane), this.invViewMatrix)
-    vec3.multMat4(vec3.set(this.dragPosWorld, this.dragPosPlane), this.invViewMatrix)
+
+    vec3.multMat4(vec3.set(this.clickPosWorld, this.clickPosPlane), camera.inverseViewMatrix)
+    vec3.multMat4(vec3.set(this.dragPosWorld, this.dragPosPlane), camera.inverseViewMatrix)
 
     const diffWorld = vec3.sub(vec3.copy(this.dragPosWorld), this.clickPosWorld)
     this.set({
@@ -270,11 +250,11 @@ Orbiter.prototype.setup = function () {
 
     const pan = (event.ctrlKey || event.metaKey || event.shiftKey) || (event.touches && event.touches.length === 2)
 
-    const touch0 = eventOffset(event.touches ? event.touches[0] : event, this.element)
+    const touch0 = eventOffset(event.touches ? event.touches[0] : event, this.domElement)
     if (this.drag && !pan) {
       this.handleDragStart(touch0);
     } else if ((this.pan || this.zoom) && pan) {
-      const touch1 = event.touches && eventOffset(event.touches[1], this.element)
+      const touch1 = event.touches && eventOffset(event.touches[1], this.domElement)
       this.handlePanZoomStart(touch0, touch1);
     }
   }
@@ -282,11 +262,12 @@ Orbiter.prototype.setup = function () {
   this.onPointerMove = (event) => {
     if (!this.enabled) return
 
-    const touch0 = eventOffset(event.touches ? event.touches[0] : event, this.element)
+    const touch0 = eventOffset(event.touches ? event.touches[0] : event, this.domElement)
     if (this.dragging) {
       this.handleDragMove(touch0)
     } else if (this.panning || this.zooming) {
-      const touch1 = event.touches && eventOffset(event.touches[1], this.element)
+      if (event.touches && !event.touches[1]) return
+      const touch1 = event.touches && eventOffset(event.touches[1], this.domElement)
       this.handlePanZoomMove(touch0, touch1)
     }
   }
@@ -304,7 +285,7 @@ Orbiter.prototype.setup = function () {
   }
 
   this.onTouchMove = (event) => {
-    event.preventDefault()
+    !!event.cancelable && event.preventDefault()
 
     if (event.touches.length <= 2) this.onPointerMove(event)
   }
@@ -338,6 +319,12 @@ Orbiter.prototype.dispose = function () {
   document.removeEventListener('mousemove', this.onPointerMove)
   document.removeEventListener('mouseup', this.onPointerUp)
 }
+
+Object.defineProperty(Orbiter.prototype, 'domElement', {
+  get() {
+    return this.element === document ? this.element.body : this.element;
+  }
+});
 
 module.exports = function createOrbiter (opts) {
   return new Orbiter(opts)
