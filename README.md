@@ -97,7 +97,7 @@ cd examples
 npm i
 
 # run the example in your default browser window
-budo example-name.js --open --start
+npx budo example-name.js --open --start
 ```
 
 # API
