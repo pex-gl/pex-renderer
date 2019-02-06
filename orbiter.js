@@ -11,7 +11,10 @@ const ray = require('pex-geom/ray')
 const interpolateAngle = require('interpolate-angle')
 const latLonToXyz = require('latlon-to-xyz')
 const xyzToLatLon = require('xyz-to-latlon')
-const eventOffset = require('mouse-event-offset')
+// const eventOffset = require('mouse-event-offset')
+const eventOffset = function (event) {
+  return [event.clientX, event.clientY]
+}
 
 function Orbiter (opts) {
   this.type = 'Orbiter'
@@ -34,7 +37,10 @@ function Orbiter (opts) {
   this.maxLon = Infinity
   this.panSlowdown = 4
   this.zoomSlowdown = 400
-  this.dragSlowdown = 4
+  this.dragSlowdown = 2
+
+  this.rotation = quat.create()
+  this.currentRotation = quat.create()
 
   // Internals
   // Set initially by .set
@@ -113,24 +119,63 @@ Orbiter.prototype.update = function () {
   }
 }
 
+function quatFromSpherical(lat, lon) {
+  const clat = Math.cos(lat * 0.5);
+  const clon = Math.cos(lon * 0.5);
+  const slat = Math.sin(lat * 0.5);
+  const slon = Math.sin(lon * 0.5);
+  // lat-lng
+  return [
+    clat * slon,
+    slat * clon,
+    -slat * slon,
+    clat * clon,
+  ]
+}
+
+function eulerFromQuat(q) {
+  return [
+    Math.atan2(2 * (q[3] * q[0] + q[1] * q[2]), 1 - 2 * (Math.pow(q[0], 2) + Math.pow(q[1], 2))),
+    Math.asin(2 * (q[3] * q[1] - q[0] * q[2])),
+    Math.atan2(2 * (q[3] * q[2] + q[0] * q[1]), 1 - 2 * (Math.pow(q[1], 2) + Math.pow(q[2], 2)))
+  ]
+}
+
 Orbiter.prototype.updateMatrix = function () {
   this.lat = clamp(this.lat, this.minLat, this.maxLat)
-  this.lon = clamp(this.lon, this.minLon, this.maxLon) % 360
+  // this.lon = clamp(this.lon, this.minLon, this.maxLon) % 360 // -360 <= lon <= 360
+  this.lon = (clamp(this.lon, this.minLon, this.maxLon) + 360) % 360 // 0 <= lon < 360
+  // this.lon = clamp(this.lon, this.minLon, this.maxLon)
 
-  this.currentLat = toDegrees(
-    interpolateAngle(
-      (toRadians(this.currentLat) + 2 * Math.PI) % (2 * Math.PI),
-      (toRadians(this.lat) + 2 * Math.PI) % (2 * Math.PI),
-      this.easing
-    )
-  )
-  this.currentLon = toDegrees(
-    interpolateAngle(
-      (toRadians(this.currentLon) + 2 * Math.PI) % (2 * Math.PI),
-      (toRadians(this.lon) + 2 * Math.PI) % (2 * Math.PI),
-      this.easing
-    )
-  )
+  // console.log(this.lon, +this.currentLon.toFixed(0));
+
+  // this.currentLat = toDegrees(
+  //   interpolateAngle(
+  //     toRadians(this.currentLat),
+  //     toRadians(this.lat),
+  //     this.easing
+  //   )
+  // )
+  // this.currentLon = toDegrees(
+  //   interpolateAngle(
+  //     toRadians(this.currentLon),
+  //     toRadians(this.lon),
+  //     this.easing
+  //   )
+  // )
+
+  // Interpolate rotation
+  this.currentRotation = quatFromSpherical(toRadians(this.currentLat), toRadians(this.currentLon))
+  this.rotation = quatFromSpherical(toRadians(this.lat), toRadians(this.lon))
+
+  quat.slerp(this.currentRotation, this.rotation, this.easing)
+
+  const rotation = eulerFromQuat(this.currentRotation)
+  this.currentLat = toDegrees(rotation[1])
+  this.currentLon = (clamp(toDegrees(rotation[0]), this.minLon, this.maxLon) + 360) % 360
+  // this.currentLon = toDegrees(rotation[0])
+
+  // Interpolate distance
   this.currentDistance = lerp(this.currentDistance, this.distance, this.easing)
 
   // Set position from lat/lon
@@ -196,8 +241,8 @@ Orbiter.prototype.handleDragMove = function (position) {
   const dx = position[0] - this.dragPos[0]
   const dy = position[1] - this.dragPos[1]
 
-  this.lat += dy / this.dragSlowdown
   this.lon -= dx / this.dragSlowdown
+  this.lat += dy / this.dragSlowdown
 
   this.dragPos = position
 }
