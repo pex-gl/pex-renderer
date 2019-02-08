@@ -28,8 +28,8 @@ varying vec3 vNormalView;
 
 varying vec2 vTexCoord0;
 
-varying vec3 vPositionWorld;
-varying vec3 vPositionView;
+varying highp vec3 vPositionWorld;
+varying highp vec3 vPositionView;
 
 #ifdef USE_TANGENTS
   varying vec4 vTangentView;
