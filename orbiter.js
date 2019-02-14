@@ -115,7 +115,10 @@ Orbiter.prototype.update = function () {
 
 Orbiter.prototype.updateMatrix = function () {
   this.lat = clamp(this.lat, this.minLat, this.maxLat)
-  this.lon = clamp(this.lon, this.minLon, this.maxLon) % 360
+
+  if (this.minLon !== -Infinity && this.maxLon !== Infinity) {
+    this.lon = clamp(this.lon, this.minLon, this.maxLon) % 360
+  }
 
   this.currentLat = toDegrees(
     interpolateAngle(
@@ -124,13 +127,9 @@ Orbiter.prototype.updateMatrix = function () {
       this.easing
     )
   )
-  this.currentLon = toDegrees(
-    interpolateAngle(
-      (toRadians(this.currentLon) + 2 * Math.PI) % (2 * Math.PI),
-      (toRadians(this.lon) + 2 * Math.PI) % (2 * Math.PI),
-      this.easing
-    )
-  )
+
+  this.currentLon += (this.lon - this.currentLon) * this.easing
+
   this.currentDistance = lerp(this.currentDistance, this.distance, this.easing)
 
   // Set position from lat/lon
