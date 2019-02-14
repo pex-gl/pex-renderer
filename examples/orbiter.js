@@ -33,15 +33,15 @@ for (let i = 0; i < 20; i++) {
 
 const cameraEntity = renderer.entity([
   renderer.camera({
-    fov: Math.PI / 4,
+    fov: Math.PI / 2,
     aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight
   }),
   renderer.orbiter({
     element: ctx.gl.canvas,
-    // minLat: -30,
-    // maxLat: 30,
-    // minLon: -90,
-    // maxLon: 90
+    minLat: -30,
+    maxLat: 30,
+    minLon: -90,
+    maxLon: 90
   })
 ])
 renderer.add(cameraEntity)
