@@ -834,8 +834,9 @@ Renderer.prototype.draw = function () {
           uNoiseScale: [10, 10],
           uSampleRadiusWS: postProcessingCmp.ssaoRadius,
           uBias: postProcessingCmp.ssaoBias,
-          uScreenSize: screenSize
-        }
+          uScreenSize: halfScreenSize
+        },
+        viewport: halfViewport
       })
       if (State.profiler) State.profiler.timeEnd('ssao')
       if (State.profiler) State.profiler.time('ssao-blur', true)
@@ -844,20 +845,22 @@ Renderer.prototype.draw = function () {
           near: camera.near,
           far: camera.far,
           sharpness: postProcessingCmp.ssaoBlurSharpness,
-          imageSize: screenSize,
+          imageSize: halfScreenSize,
           depthMapSize: screenSize,
           direction: [postProcessingCmp.ssaoBlurRadius, 0]
-        }
+        },
+        viewport: halfViewport
       })
       ctx.submit(postProcessingCmp._bilateralBlurVCmd, {
         uniforms: {
           near: camera.near,
           far: camera.far,
           sharpness: postProcessingCmp.ssaoBlurSharpness,
-          imageSize: screenSize,
+          imageSize: halfScreenSize,
           depthMapSize: screenSize,
           direction: [0, postProcessingCmp.ssaoBlurRadius]
-        }
+        },
+        viewport: halfViewport
       })
       if (State.profiler) State.profiler.timeEnd('ssao-blur')
     }

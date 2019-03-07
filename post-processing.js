@@ -180,27 +180,34 @@ PostProcessing.prototype.initPostproces = function () {
     pixelFormat: ctx.PixelFormat.Depth,
     encoding: ctx.Encoding.Linear
   })
+
   this._frameAOTex = ctx.texture2D({
     name: 'frameAOTex',
-    width: W,
-    height: H,
+    width: W / 2,
+    height: H / 2,
     pixelFormat: ctx.PixelFormat.RGBA8,
     encoding: ctx.Encoding.Linear
   })
+  this._frameAOTex.sizeScale = 0.5
+
   this._frameAOBlurTex = ctx.texture2D({
     name: 'frameAOBlurTex',
-    width: W,
-    height: H,
+    width: W / 2,
+    height: H / 2,
     pixelFormat: ctx.PixelFormat.RGBA8,
     encoding: ctx.Encoding.Linear
   })
+  this._frameAOBlurTex.sizeScale = 0.5
+
   this._frameDofBlurTex = ctx.texture2D({
     name: 'frameDofBlurTex',
-    width: W,
-    height: H,
+    width: W / 2,
+    height: H / 2,
     pixelFormat: this.rgbm ? ctx.PixelFormat.RGBA8 : ctx.PixelFormat.RGBA16F,
     encoding: this.rgbm ? ctx.Encoding.RGBM : ctx.Encoding.Linear
   })
+  this._frameDofBlurTex.sizeScale = 0.5
+
   this._frameBloomHTex = ctx.texture2D({
     name: 'frameBloomHTex',
     width: W / 2,
