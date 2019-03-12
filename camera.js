@@ -2,6 +2,11 @@ const Signal = require('signals')
 const mat4 = require('pex-math/mat4')
 const vec3 = require('pex-math/vec3')
 
+function normalizePlane(plane) {
+  const mag = vec3.length(plane)
+  return plane.map(p => p / mag)
+}
+
 function Camera (opts) {
   const gl = opts.ctx.gl
   this.type = 'Camera'
@@ -18,6 +23,7 @@ function Camera (opts) {
   this.inverseViewMatrix = mat4.create()
 
   this.viewport = [0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight]
+  this.frustum = []
   this._textures = []
 
   this.set(opts)
@@ -64,12 +70,6 @@ Camera.prototype.set = function (opts) {
 }
 
 Camera.prototype.getViewRay = function (x, y, windowWidth, windowHeight) {
-  if (this.frustum) {
-    x += this.frustum.offset[0]
-    y += this.frustum.offset[1]
-    windowWidth = this.frustum.totalSize[0]
-    windowHeight = this.frustum.totalSize[1]
-  }
   let nx = 2 * x / windowWidth - 1
   let ny = 1 - 2 * y / windowHeight
 
@@ -86,46 +86,21 @@ Camera.prototype.getViewRay = function (x, y, windowWidth, windowHeight) {
   return ray
 }
 
-function normalizePlane(plane) {
-  const mag = vec3.length(plane)
-  return plane.map(p => p / mag)
-}
-
-Camera.prototype.getFrustum = function () {
-  const [
-    m00,
-    m01,
-    m02,
-    m03,
-    m10,
-    m11,
-    m12,
-    m13,
-    m20,
-    m21,
-    m22,
-    m23,
-    m30,
-    m31,
-    m32,
-    m33
-  ] = mat4.mult([...this.inverseViewMatrix], this.projectionMatrix)
-
-  // Get planes
-  return [
-    normalizePlane([m30 + m00, m31 + m01, m32 + m02, m33 + m03]), // Left
-    normalizePlane([m30 - m00, m31 - m01, m32 - m02, m33 - m03]), // Right
-    normalizePlane([m30 + m10, m31 + m11, m32 + m12, m33 + m13]), // Bottom
-    normalizePlane([m30 - m10, m31 - m11, m32 - m12, m33 - m13]), // Top
-    normalizePlane([m30 + m20, m31 + m21, m32 + m22, m33 + m23]), // Near
-    normalizePlane([m30 - m20, m31 - m21, m32 - m22, m33 - m23]), // Far
-  ]
-}
-
 Camera.prototype.update = function () {
   mat4.set(this.inverseViewMatrix, this.entity.transform.modelMatrix)
   mat4.set(this.viewMatrix, this.entity.transform.modelMatrix)
   mat4.invert(this.viewMatrix)
+
+  const m = mat4.mult(mat4.copy(this.projectionMatrix), mat4.copy(this.viewMatrix))
+
+  this.frustum = [
+    normalizePlane([m[3] - m[0], m[7] - m[4], m[11] - m[8], m[15] - m[12]]), // -x
+    normalizePlane([m[3] + m[0], m[7] + m[4], m[11] + m[8], m[15] + m[12]]), // +x
+    normalizePlane([m[3] + m[1], m[7] + m[5], m[11] + m[9], m[15] + m[13]]), // +y
+    normalizePlane([m[3] - m[1], m[7] - m[5], m[11] - m[9], m[15] - m[13]]), // -y
+    normalizePlane([m[3] - m[2], m[7] - m[6], m[11] - m[10], m[15] - m[14]]), // +z (far)
+    normalizePlane([m[3] + m[2], m[7] + m[6], m[11] + m[10], m[15] + m[14]]), // -z (near)
+  ]
 }
 
 module.exports = function createCamera (opts) {

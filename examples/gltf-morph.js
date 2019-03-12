@@ -183,6 +183,7 @@ function handleNode (node, gltf) {
     const tx = []
     positionAccessor.data.forEach(() => tx.push(0, 0))
     const geometryCmp = renderer.geometry({
+      frustumCulled: false,
       positions: positionAccessor.data,
       normals: normalAccessor.data,
       // texCoords: texcoordAccessor.data,

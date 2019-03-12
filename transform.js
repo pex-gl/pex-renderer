@@ -103,19 +103,13 @@ Transform.prototype.set = function (opts) {
 }
 
 Transform.prototype.isInFrustum = function (planes) {
-  // console.table(planes);
-
-  const bounds = this.worldBounds
-
   for (let i = 0; i < planes.length; i++) {
     const plane = planes[i]
     const point = [
-      plane[0] >= 0 ? bounds[1][0] : bounds[0][0],
-      plane[1] >= 0 ? bounds[1][1] : bounds[0][1],
-      plane[2] >= 0 ? bounds[1][2] : bounds[0][2]
+      plane[0] >= 0 ? this.worldBounds[1][0] : this.worldBounds[0][0],
+      plane[1] >= 0 ? this.worldBounds[1][1] : this.worldBounds[0][1],
+      plane[2] >= 0 ? this.worldBounds[1][2] : this.worldBounds[0][2]
     ]
-
-    // console.log(bounds, plane, point, distanceFromPlaneToPoint(plane, point));
 
     if (distanceFromPlaneToPoint(plane, point) < 0) {
       return false

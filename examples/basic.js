@@ -1,6 +1,7 @@
 const createRenderer = require('../')
 const createContext = require('pex-context')
 const createSphere = require('primitive-sphere')
+const { makeAxes } = require('./helpers')
 
 const ctx = createContext()
 const renderer = createRenderer(ctx)
@@ -14,9 +15,6 @@ const cameraEntity = renderer.entity([
 ])
 renderer.add(cameraEntity)
 
-const frustum = cameraEntity.getComponent('Camera').getFrustum()
-console.log(frustum);
-
 const sphereEntity = renderer.entity([
   renderer.transform(),
   renderer.geometry(createSphere()),
@@ -27,21 +25,31 @@ const sphereEntity = renderer.entity([
 ])
 renderer.add(sphereEntity)
 
-const outsideFrustumEntity = renderer.entity([
-  renderer.transform({
-    position: [0, 0, 2]
+const axes = makeAxes(2)
+const axesEntity = renderer.entity([
+  renderer.transform(),
+  renderer.geometry({
+    positions: axes,
+    primitive: ctx.Primitive.Lines,
+    count: axes.length,
+    vertexColors: [
+      [1, 0, 0, 1],
+      [1, 0.8, 0, 1],
+      [0, 1, 0, 1],
+      [0.8, 1, 0, 1],
+      [0, 0, 1, 1],
+      [0, 0.8, 1, 1]
+    ]
   }),
-  renderer.geometry(createSphere()),
   renderer.material({
-    baseColor: [0, 1, 0, 1],
-    metallic: 1
+    baseColor: [1, 1, 1, 1]
   })
 ])
-renderer.add(outsideFrustumEntity)
+renderer.add(axesEntity)
 
 const skyboxEntity = renderer.entity([
   renderer.skybox({
-    sunPosition: [1, 0.1, 1]
+    sunPosition: [1, 1, 1]
   })
 ])
 renderer.add(skyboxEntity)
@@ -52,16 +60,5 @@ const reflectionProbeEntity = renderer.entity([
 renderer.add(reflectionProbeEntity)
 
 ctx.frame(() => {
-  const now = Date.now() * 0.0005
-
-  const skybox = skyboxEntity.getComponent('Skybox')
-  skybox.set({
-    sunPosition: [
-      1 * Math.cos(now),
-      0.1,
-      1 * Math.sin(now)
-    ]
-  })
-
   renderer.draw()
 })

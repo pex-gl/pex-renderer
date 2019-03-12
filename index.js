@@ -622,8 +622,6 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
 
   var firstTransparent = geometries.findIndex((g) => g.entity.getComponent('Material').blend)
 
-  const frustum = camera && camera.getFrustum()
-
   for (let i = 0; i < geometries.length; i++) {
     // also drawn below if transparent objects don't exist
     if ((firstTransparent === i) && skybox && skybox.enabled) {
@@ -638,13 +636,8 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
       continue
     }
 
-    // console.log(transform.isInFrustum(frustum));
-    // debugger
-
     // Don't draw if worldBounds are outside the frustum
-    if (geometry.frustumCulled && frustum && !transform.isInFrustum(frustum)) {
-      console.log("not drawn");
-
+    if (camera && geometry.frustumCulled && !transform.isInFrustum(camera.frustum)) {
       continue
     }
 
