@@ -91,7 +91,7 @@ Camera.prototype.update = function () {
   mat4.set(this.viewMatrix, this.entity.transform.modelMatrix)
   mat4.invert(this.viewMatrix)
 
-  const m = mat4.mult(mat4.copy(this.projectionMatrix), mat4.copy(this.viewMatrix))
+  const m = mat4.mult(mat4.copy(this.projectionMatrix), this.viewMatrix)
 
   this.frustum = [
     normalizePlane([m[3] - m[0], m[7] - m[4], m[11] - m[8], m[15] - m[12]]), // -x
