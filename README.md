@@ -90,17 +90,14 @@ ctx.frame(() => {
 You can find runnable examples in the `/examples` folder in this repository. To run an example install [Node.js](http://nodejs.org), clone or download this repository and then.
 
 ```sh
-# install browserify development server
-npm i -g budo
-
 # go to the example folder
-cd /path-to-pex-renderer/examples/basic
+cd examples
 
-# install example specific dependencies
+# install examples dependencies
 npm i
 
 # run the example in your default browser window
-npm run start
+npx budo example-name.js --open --start
 ```
 
 # API
@@ -246,6 +243,13 @@ entity.transform.dispatch('position')
 
 // stop listening
 entity.transform.changed.remove(onParamChange)
+```
+
+#### Update components
+```javascript
+transformComponent.set({
+  position: [Math.cos(time), 0, 0]
+})
 ```
 
 #### component.dispose()

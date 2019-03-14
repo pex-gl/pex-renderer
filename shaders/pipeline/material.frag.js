@@ -28,8 +28,8 @@ varying vec3 vNormalView;
 
 varying vec2 vTexCoord0;
 
-varying vec3 vPositionWorld;
-varying vec3 vPositionView;
+varying highp vec3 vPositionWorld;
+varying highp vec3 vPositionView;
 
 #ifdef USE_TANGENTS
   varying vec4 vTangentView;
@@ -76,6 +76,7 @@ ${SHADERS.math.PI}
 ${SHADERS.rgbm}
 ${SHADERS.gamma}
 ${SHADERS.encodeDecode}
+${SHADERS.tintColor}
 ${SHADERS.baseColor}
 
 #ifndef USE_UNLIT_WORKFLOW
@@ -102,17 +103,19 @@ ${SHADERS.baseColor}
 #endif
 
 void main() {
+  vec3 color;
+
   PBRData data;
   data.texCoord0 = vTexCoord0;
 
   #ifdef USE_UNLIT_WORKFLOW
     getBaseColor(data);
-    vec3 color = data.baseColor;
 
-    #ifdef USE_VERTEX_COLORS
-      vec3 tint = decode(vColor, 3).rgb;
-      color*= tint;
+    #if defined(USE_VERTEX_COLORS) || defined(USE_INSTANCED_COLOR)
+      getTintColor(data);
     #endif
+
+    color = data.baseColor;
   #else
     data.inverseViewMatrix = uInverseViewMatrix;
     data.positionWorld = vPositionWorld;
@@ -160,15 +163,8 @@ void main() {
       alphaTest(data);
     #endif
 
-    #ifdef USE_VERTEX_COLORS
-      vec3 tint = decode(vColor, 3).rgb;
-      data.diffuseColor *= tint;
-      data.specularColor *= tint;
-    #endif
-    #ifdef USE_INSTANCED_COLOR
-      vec3 tint = decode(vColor, 3).rgb;
-      data.diffuseColor *= tint;
-      data.specularColor *= tint;
+    #if defined(USE_VERTEX_COLORS) || defined(USE_INSTANCED_COLOR)
+      getTintColor(data);
     #endif
 
     data.alphaRoughness = data.roughness * data.roughness;
@@ -224,7 +220,7 @@ void main() {
         EvaluateAreaLight(data, light, i);
       }
     #endif
-      vec3 color = data.emissiveColor + ao * data.indirectDiffuse + ao * data.indirectSpecular + data.directDiffuse + data.directSpecular;
+    color = data.emissiveColor + ao * data.indirectDiffuse + ao * data.indirectSpecular + data.directDiffuse + data.directSpecular;
     #ifdef USE_TONEMAPPING
       color.rgb *= uExposure;
       color.rgb = tonemapUncharted2(color.rgb);

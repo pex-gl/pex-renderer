@@ -1,7 +1,6 @@
-const promisify = require('util.promisify')
-const loadJSON = promisify(require('pex-io/loadJSON'))
-const loadImage = promisify(require('pex-io/loadImage'))
-const loadBinary = promisify(require('pex-io/loadBinary'))
+const loadJSON = require('pex-io/loadJSON')
+const loadImage = require('pex-io/loadImage')
+const loadBinary = require('pex-io/loadBinary')
 const path = require('path')
 
 async function loadGltf (file, cb) {

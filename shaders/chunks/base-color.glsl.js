@@ -8,18 +8,26 @@ uniform vec4 uBaseColor; // TODO: gltf assumes sRGB color, not linear
     vec4 texelColor = texture2D(uBaseColorMap, data.texCoord0);
 
     #if !defined(DEPTH_PASS_ONLY) && !defined(DEPTH_PRE_PASS_ONLY)
-    data.baseColor = decode(uBaseColor, 3).rgb * decode(texelColor, 3).rgb;
+      data.baseColor = decode(uBaseColor, 3).rgb * decode(texelColor, 3).rgb;
     #endif
 
-    data.opacity = uBaseColor.a * texelColor.a;
+    #if defined(USE_VERTEX_COLORS) || defined(USE_INSTANCED_COLOR)
+      data.opacity = uBaseColor.a * texelColor.a * vColor.a;
+    #else
+      data.opacity = uBaseColor.a * texelColor.a;
+    #endif
   }
 #else
   void getBaseColor(inout PBRData data) {
     #if !defined(DEPTH_PASS_ONLY) && !defined(DEPTH_PRE_PASS_ONLY)
-    data.baseColor = decode(uBaseColor, 3).rgb;
+      data.baseColor = decode(uBaseColor, 3).rgb;
     #endif
 
-    data.opacity = uBaseColor.a;
+    #if defined(USE_VERTEX_COLORS) || defined(USE_INSTANCED_COLOR)
+      data.opacity = uBaseColor.a * vColor.a;
+    #else
+      data.opacity = uBaseColor.a;
+    #endif
   }
 #endif
 `
