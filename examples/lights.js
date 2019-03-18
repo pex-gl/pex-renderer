@@ -121,7 +121,7 @@ renderer.add(dragonEntity)
 
 const floorEntity = renderer.entity([
   renderer.transform({
-    position: [0, -0.42, 0]
+    position: [0, -0.4, 0]
   }),
   renderer.geometry(createCube(5, 0.1, 5)),
   renderer.material({
@@ -135,10 +135,18 @@ const floorEntity = renderer.entity([
 renderer.add(floorEntity)
 
 // Lights
+// Ambient
+const ambientLightEntity = renderer.entity([
+  renderer.ambientLight({
+    color: [0.1, 0.1, 0.1, 1]
+  })
+])
+renderer.add(ambientLightEntity)
+
 // Directional
 const directionalLightCmp = renderer.directionalLight({
   color: [1, 1, 1, 1],
-  intensity: 2,
+  intensity: 1,
   castShadows: true
 })
 const directionalLightGizmoPositions = makePrism({ radius: 0.3 })
@@ -179,8 +187,8 @@ gui.addParam('Shadows', directionalLightCmp, 'castShadows', {}, (value) => {
 // Spot
 const spotLightCmp = renderer.spotLight({
   color: [1, 1, 1, 1],
-  intensity: 2,
-  distance: 3,
+  intensity: 10,
+  distance: 2,
   angle: Math.PI / 6,
   castShadows: true
 })
@@ -196,7 +204,7 @@ const spotLightGizmoPositions = makePrism({ radius: 0.3 })
 
 const spotLightEntity = renderer.entity([
   renderer.transform({
-    position: [1, 1, 1],
+    position: [1, 0.5, 1],
     rotation: quat.fromMat4(quat.create(), targetTo(mat4.create(), [0, 0, 0], [1, 1, 1]))
   }),
   renderer.geometry({
@@ -215,7 +223,7 @@ gui.addHeader('Spot').setPosition(W / 2 + 10, 10)
 gui.addParam('Enabled', spotLightCmp, 'enabled', {}, (value) => {
   spotLightCmp.set({ enabled: value })
 })
-gui.addParam('Spotlight angle', spotLightCmp, 'angle', { min: 0, max: Math.PI / 2 }, () => {
+gui.addParam('Spotlight angle', spotLightCmp, 'angle', { min: 0, max: Math.PI / 3 }, () => {
   spotLightCmp.set({ angle: spotLightCmp.angle })
 })
 gui.addTexture2D('Shadowmap', spotLightCmp._shadowMap)
@@ -305,18 +313,29 @@ window.addEventListener('keydown', (e) => {
   if (e.key === 'd') debugOnce = true
 })
 
-ctx.frame(() => {
-  const now = Date.now() * 0.0005
-  const position = [
-    3 * Math.cos(now),
-    3,
-    3 * Math.sin(now)
-  ]
-  const rotation = quat.fromDirection([0, 0, 0, 1], position.map(n => -n), [0, 1, 0])
+let rotate = true
+let delta = true
+let drag = false;
 
-  directionalLightEntity.getComponent('Transform').set({ position, rotation })
-  spotLightEntity.getComponent('Transform').set({ position, rotation })
-  pointLightEntity.getComponent('Transform').set({ position })
+document.addEventListener('mousedown', () => drag = false);
+document.addEventListener('mousemove', () => drag = true);
+document.addEventListener('mouseup', () => (!drag && (rotate = !rotate)));
+
+ctx.frame(() => {
+  if (rotate) {
+    delta += 0.005
+    const position = [
+      2 * Math.cos(delta),
+      1,
+      2 * Math.sin(delta)
+    ]
+    const rotation = quat.fromMat4(quat.create(), targetTo(mat4.create(), position.map(n => -n), [0, 0, 0]))
+
+    directionalLightEntity.getComponent('Transform').set({ position, rotation })
+    spotLightEntity.getComponent('Transform').set({ position, rotation })
+    pointLightEntity.getComponent('Transform').set({ position })
+    areaLightEntity.getComponent('Transform').set({ position, rotation })
+  }
 
   ctx.debug(debugOnce)
   debugOnce = false

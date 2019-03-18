@@ -20,14 +20,10 @@ uniform SpotLight uSpotLights[NUM_SPOT_LIGHTS];
 uniform sampler2D uSpotLightShadowMaps[NUM_SPOT_LIGHTS];
 
 void EvaluateSpotLight(inout PBRData data, SpotLight light, int i) {
-  // float illuminated = 1.0; // no shadows yet
-
-  // Shadows
-  vec4 lightViewPosition = light.viewMatrix * vec4(vPositionWorld, 1.0);
+  vec4 lightViewPosition = light.viewMatrix * vec4(vPositionWorld, 1.0); // TODO: move in the vertex shader
   float lightDistView = -lightViewPosition.z;
   vec4 lightDeviceCoordsPosition = light.projectionMatrix * lightViewPosition;
-  vec2 lightDeviceCoordsPositionNormalized = lightDeviceCoordsPosition.xy / lightDeviceCoordsPosition.w;
-  float lightDeviceCoordsZ = lightDeviceCoordsPosition.z / lightDeviceCoordsPosition.w;
+  vec3 lightDeviceCoordsPositionNormalized = lightDeviceCoordsPosition.xyz / lightDeviceCoordsPosition.w;
   vec2 lightUV = lightDeviceCoordsPositionNormalized.xy * 0.5 + 0.5;
 
   float illuminated = 0.0;
@@ -42,6 +38,7 @@ void EvaluateSpotLight(inout PBRData data, SpotLight light, int i) {
 
   if (illuminated > 0.0) {
     data.lightWorld = light.position - data.positionWorld;
+
     float dist = length(data.lightWorld);
     data.lightWorld /= dist;
 
@@ -49,7 +46,6 @@ void EvaluateSpotLight(inout PBRData data, SpotLight light, int i) {
     vec3 V = data.viewWorld;
     vec3 L = data.lightWorld;
     vec3 H = normalize(V + L);
-    float NdotV = max(0.0, dot(N, V));
 
     data.NdotL = clamp(dot(N, L), 0.001, 1.0);
     data.HdotV = max(0.0, dot(H, V));
@@ -67,7 +63,8 @@ void EvaluateSpotLight(inout PBRData data, SpotLight light, int i) {
     vec3 lightColor = decode(light.color, 3).rgb;
     lightColor *= light.color.a; // intensity
 
-    float distanceRatio = clamp(1.0 - pow(dist/light.range, 4.0), 0.0, 1.0);
+    // Compute falloff and cutOff
+    float distanceRatio = clamp(1.0 - pow(dist / light.range, 4.0), 0.0, 1.0);
     float distanceFalloff = (distanceRatio * distanceRatio) / (max(dist * dist, 0.01));
 
     float fCosine = max(0.0, dot(light.direction, -L));
@@ -80,6 +77,7 @@ void EvaluateSpotLight(inout PBRData data, SpotLight light, int i) {
     //TODO: (1 - F) comes from glTF spec, three.js doesn't have it? Schlick BRDF
     vec3 irradiance = data.NdotL * lightColor * illuminated;
     irradiance *= falloff;
+
     data.directDiffuse += (1.0 - F) * DiffuseLambert(data.diffuseColor) * irradiance;
     data.directSpecular += specularBrdf * irradiance;
   }

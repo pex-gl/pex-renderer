@@ -175,27 +175,14 @@ Renderer.prototype.updateDirectionalLightShadowMap = function (light, geometries
   })
 }
 
-Renderer.prototype.updatePointLightShadowMap = function (light, geometries) {
-  const ctx = this._ctx
-  light._sides.forEach((side) => {
-    var target = [0, 0, 0]
-    ctx.submit(side.drawPassCmd, () => {
-      const position = light.entity.transform.worldPosition
-      vec3.set(target, position)
-      vec3.add(target, side.target)
-      mat4.lookAt(side.viewMatrix, position, target, side.up)
-      var sideLight = {
-        _projectionMatrix: side.projectionMatrix,
-        _viewMatrix: side.viewMatrix
-      }
-      this.drawMeshes(null, true, sideLight, geometries)
-    })
-  })
-}
-
 Renderer.prototype.updateSpotLightShadowMap = function (light, geometries) {
-  const ctx = this._ctx
-  mat4.lookAt(light._viewMatrix, light.entity.transform.position, light.target, [0, 1, 0])
+  const position = light.entity.transform.worldPosition
+  const target = [0, 0, 1, 0]
+  const up = [0, 1, 0, 0]
+  vec4.multMat4(target, light.entity.transform.modelMatrix)
+  // vec3.add(target, position)
+  vec4.multMat4(up, light.entity.transform.modelMatrix)
+  mat4.lookAt(light._viewMatrix, position, target, up)
 
   const shadowBboxPoints = geometries.reduce((points, geometry) => {
     return points.concat(aabbToPoints(geometry.entity.transform.worldBounds))
@@ -216,13 +203,32 @@ Renderer.prototype.updateSpotLightShadowMap = function (light, geometries) {
   mat4.perspective(
     light._projectionMatrix,
     light.angle,
-    sceneBboxInLightSpace[0][1] / sceneBboxInLightSpace[1][1],
+    1,
     lightNear,
     lightFar
   )
 
+  const ctx = this._ctx
   ctx.submit(light._shadowMapDrawCommand, () => {
     this.drawMeshes(null, true, light, geometries)
+  })
+}
+
+Renderer.prototype.updatePointLightShadowMap = function (light, geometries) {
+  const ctx = this._ctx
+  light._sides.forEach((side) => {
+    var target = [0, 0, 0]
+    ctx.submit(side.drawPassCmd, () => {
+      const position = light.entity.transform.worldPosition
+      vec3.set(target, position)
+      vec3.add(target, side.target)
+      mat4.lookAt(side.viewMatrix, position, target, side.up)
+      var sideLight = {
+        _projectionMatrix: side.projectionMatrix,
+        _viewMatrix: side.viewMatrix
+      }
+      this.drawMeshes(null, true, sideLight, geometries)
+    })
   })
 }
 
@@ -612,9 +618,9 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
   })
 
   directionalLights.forEach((light, i) => {
-    var dir4 = [0, 0, 1, 0] // TODO: GC
-    var dir = [0, 0, 0]
-    vec4.multMat4(dir4, light.entity.transform.modelMatrix)
+    const dir4 = [0, 0, 1, 0] // TODO: GC
+    const dir = [0, 0, 0]
+    vec4.multMat4(dir4, light.entity.transform.modelMatrix) // TOFIX: updateDirectionalLightShadowMap
     vec3.set(dir, dir4)
     sharedUniforms['uDirectionalLights[' + i + '].direction'] = dir
     sharedUniforms['uDirectionalLights[' + i + '].color'] = light.color
@@ -628,19 +634,12 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
     sharedUniforms['uDirectionalLightShadowMaps[' + i + ']'] = light.castShadows ? light._shadowMap : this._dummyTexture2D
   })
 
-  pointLights.forEach((light, i) => {
-    sharedUniforms['uPointLights[' + i + '].position'] = light.entity.transform.worldPosition
-    sharedUniforms['uPointLights[' + i + '].color'] = light.color
-    sharedUniforms['uPointLights[' + i + '].range'] = light.range
-    sharedUniforms['uPointLights[' + i + '].castShadows'] = light.castShadows
-    sharedUniforms['uPointLightShadowMaps[' + i + ']'] = light._shadowCubemap
-  })
-
   spotLights.forEach((light, i) => {
-    var transform = light.entity.transform
-    var position = transform.worldPosition
-    var target = light.target
-    var dir = vec3.normalize(vec3.sub(vec3.copy(target), position))
+    const dir4 = [0, 0, 1, 0] // TODO: GC
+    const dir = [0, 0, 0]
+    vec4.multMat4(dir4, light.entity.transform.modelMatrix)
+    vec3.set(dir, dir4)
+
     sharedUniforms['uSpotLights[' + i + '].position'] = light.entity.transform.position
     sharedUniforms['uSpotLights[' + i + '].direction'] = dir
     sharedUniforms['uSpotLights[' + i + '].color'] = light.color
@@ -654,6 +653,14 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
     sharedUniforms['uSpotLights[' + i + '].bias'] = light.bias
     sharedUniforms['uSpotLights[' + i + '].shadowMapSize'] = light.castShadows ? [light._shadowMap.width, light._shadowMap.height] : [0, 0]
     sharedUniforms['uSpotLightsShadowMaps[' + i + ']'] = light.castShadows ? light._shadowMap : this._dummyTexture2D
+  })
+
+  pointLights.forEach((light, i) => {
+    sharedUniforms['uPointLights[' + i + '].position'] = light.entity.transform.worldPosition
+    sharedUniforms['uPointLights[' + i + '].color'] = light.color
+    sharedUniforms['uPointLights[' + i + '].range'] = light.range
+    sharedUniforms['uPointLights[' + i + '].castShadows'] = light.castShadows
+    sharedUniforms['uPointLightShadowMaps[' + i + ']'] = light._shadowCubemap
   })
 
   areaLights.forEach((light, i) => {

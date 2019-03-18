@@ -1,13 +1,15 @@
 module.exports = /* glsl */`
 //fron depth buf normalized z to linear (eye space) z
 //http://stackoverflow.com/questions/6652253/getting-the-true-z-value-from-the-depth-buffer
-float ndcDepthToEyeSpaceProj(float ndcDepth, float near, float far) {
-  return 2.0 * near * far / (far + near - ndcDepth * (far - near));
-}
+// float ndcDepthToEyeSpaceProj(float ndcDepth, float near, float far) {
+//   return 2.0 * near * far / (far + near - ndcDepth * (far - near));
+// }
 
 //otho
 //z = (f - n) * (zn + (f + n)/(f-n))/2
 //http://www.ogldev.org/www/tutorial47/tutorial47.html
+const float DEPTH_TOLERANCE = 0.000001;
+
 float ndcDepthToEyeSpace(float ndcDepth, float near, float far) {
   return (far - near) * (ndcDepth + (far + near) / (far - near)) / 2.0;
 }
@@ -21,6 +23,7 @@ float readDepth(sampler2D depthMap, vec2 coord, float near, float far) {
 
 float texture2DCompare(sampler2D depthMap, vec2 uv, float compare, float near, float far) {
   float depth = readDepth(depthMap, uv, near, far);
+  if (depth >= far - DEPTH_TOLERANCE) return 1.0;
   if (depth >= far) return 1.0;
   return step(compare, depth);
 }
