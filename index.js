@@ -202,8 +202,8 @@ Renderer.prototype.updateSpotLightShadowMap = function (light, geometries) {
 
   mat4.perspective(
     light._projectionMatrix,
-    light.angle,
-    1,
+    2 * light.angle,
+    light._shadowMap.width / light._shadowMap.height,
     lightNear,
     lightFar
   )

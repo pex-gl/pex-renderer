@@ -221,7 +221,7 @@ gui.addHeader('Spot').setPosition(W / 2 + 10, 10)
 gui.addParam('Enabled', spotLightCmp, 'enabled', {}, (value) => {
   spotLightCmp.set({ enabled: value })
 })
-gui.addParam('Spotlight angle', spotLightCmp, 'angle', { min: 0, max: Math.PI / 3 }, () => {
+gui.addParam('Spotlight angle', spotLightCmp, 'angle', { min: 0, max: Math.PI / 2 - 0.001 }, () => {
   spotLightCmp.set({ angle: spotLightCmp.angle })
 })
 gui.addTexture2D('Shadowmap', spotLightCmp._shadowMap)
