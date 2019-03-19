@@ -24,7 +24,6 @@ float readDepth(sampler2D depthMap, vec2 coord, float near, float far) {
 float texture2DCompare(sampler2D depthMap, vec2 uv, float compare, float near, float far) {
   float depth = readDepth(depthMap, uv, near, far);
   if (depth >= far - DEPTH_TOLERANCE) return 1.0;
-  if (depth >= far) return 1.0;
   return step(compare, depth);
 }
 

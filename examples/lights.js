@@ -93,12 +93,10 @@ cells.forEach((cell, cellIndex) => {
       fov: Math.PI / 3,
       aspect: (W / nW) / (H / nH),
       viewport: cell
-      // viewport: tags[0] === 'cell1' ? [0, 0, window.innerWidth, window.innerHeight] : cell
     }),
     renderer.orbiter()
   ], tags)
   renderer.add(cameraEntity)
-  // if (tags[0] === 'cell1') renderer.add(cameraEntity)
 })
 
 // Geometry
@@ -313,29 +311,22 @@ window.addEventListener('keydown', (e) => {
   if (e.key === 'd') debugOnce = true
 })
 
-let rotate = true
 let delta = true
-let drag = false;
-
-document.addEventListener('mousedown', () => drag = false);
-document.addEventListener('mousemove', () => drag = true);
-document.addEventListener('mouseup', () => (!drag && (rotate = !rotate)));
 
 ctx.frame(() => {
-  if (rotate) {
-    delta += 0.005
-    const position = [
-      2 * Math.cos(delta),
-      1,
-      2 * Math.sin(delta)
-    ]
-    const rotation = quat.fromMat4(quat.create(), targetTo(mat4.create(), position.map(n => -n), [0, 0, 0]))
+  delta += 0.005
 
-    directionalLightEntity.getComponent('Transform').set({ position, rotation })
-    spotLightEntity.getComponent('Transform').set({ position, rotation })
-    pointLightEntity.getComponent('Transform').set({ position })
-    areaLightEntity.getComponent('Transform').set({ position, rotation })
-  }
+  const position = [
+    2 * Math.cos(delta),
+    1,
+    2 * Math.sin(delta)
+  ]
+  const rotation = quat.fromMat4(quat.create(), targetTo(mat4.create(), position.map(n => -n), [0, 0, 0]))
+
+  directionalLightEntity.getComponent('Transform').set({ position, rotation })
+  spotLightEntity.getComponent('Transform').set({ position, rotation })
+  pointLightEntity.getComponent('Transform').set({ position })
+  areaLightEntity.getComponent('Transform').set({ position, rotation })
 
   ctx.debug(debugOnce)
   debugOnce = false
