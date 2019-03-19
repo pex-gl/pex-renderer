@@ -616,8 +616,9 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
   directionalLights.forEach((light, i) => {
     const dir4 = [0, 0, 1, 0] // TODO: GC
     const dir = [0, 0, 0]
-    vec4.multMat4(dir4, light.entity.transform.modelMatrix) // TOFIX: updateDirectionalLightShadowMap
+    vec4.multMat4(dir4, light.entity.transform.modelMatrix)
     vec3.set(dir, dir4)
+
     sharedUniforms['uDirectionalLights[' + i + '].direction'] = dir
     sharedUniforms['uDirectionalLights[' + i + '].color'] = light.color
     sharedUniforms['uDirectionalLights[' + i + '].castShadows'] = light.castShadows
@@ -648,7 +649,7 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
     sharedUniforms['uSpotLights[' + i + '].far'] = light._far
     sharedUniforms['uSpotLights[' + i + '].bias'] = light.bias
     sharedUniforms['uSpotLights[' + i + '].shadowMapSize'] = light.castShadows ? [light._shadowMap.width, light._shadowMap.height] : [0, 0]
-    sharedUniforms['uSpotLightsShadowMaps[' + i + ']'] = light.castShadows ? light._shadowMap : this._dummyTexture2D
+    sharedUniforms['uSpotLightShadowMaps[' + i + ']'] = light.castShadows ? light._shadowMap : this._dummyTexture2D
   })
 
   pointLights.forEach((light, i) => {
