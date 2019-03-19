@@ -11,17 +11,16 @@ struct PointLight {
 uniform PointLight uPointLights[NUM_POINT_LIGHTS];
 uniform samplerCube uPointLightShadowMaps[NUM_POINT_LIGHTS];
 
-void EvaluatePointLight(inout PBRData data, PointLight light, int i) {
+void EvaluatePointLight(inout PBRData data, PointLight light, samplerCube shadowMap) {
   float illuminated = 1.0; // no shadows yet
   data.lightWorld = light.position - data.positionWorld;
   float dist = length(data.lightWorld);
 
   if (light.castShadows) {
-    // TODO: hardcoded shadowmap index
     vec3 N = -normalize(data.lightWorld);
     float far = 10.0;
-    float depth = unpackDepth(textureCube(uPointLightShadowMaps[0], N)) * far;
-    // float depth = textureCube(uPointLightShadowMaps[0], N).r;
+    float depth = unpackDepth(textureCube(shadowMap, N)) * far;
+    // float depth = textureCube(shadowMap, N).r;
     if (dist - 0.05 > depth) {
       illuminated = 0.0;
     }

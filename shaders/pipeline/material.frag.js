@@ -193,25 +193,25 @@ void main() {
     #if NUM_AMBIENT_LIGHTS > 0
       for(int i = 0; i < NUM_AMBIENT_LIGHTS; i++) {
         AmbientLight light = uAmbientLights[i];
-        EvaluateAmbientLight(data, light, i);
+        EvaluateAmbientLight(data, light);
       }
     #endif
     #if NUM_DIRECTIONAL_LIGHTS > 0
       for(int i = 0; i < NUM_DIRECTIONAL_LIGHTS; i++) {
         DirectionalLight light = uDirectionalLights[i];
-        EvaluateDirectionalLight(data, light, i);
+        EvaluateDirectionalLight(data, light, uDirectionalLightShadowMaps[i]);
       }
     #endif
     #if NUM_POINT_LIGHTS > 0
       for(int i = 0; i < NUM_POINT_LIGHTS; i++) {
         PointLight light = uPointLights[i];
-        EvaluatePointLight(data, light, i);
+        EvaluatePointLight(data, light, uPointLightShadowMaps[i]);
       }
     #endif
     #if NUM_SPOT_LIGHTS > 0
       for(int i = 0; i < NUM_SPOT_LIGHTS; i++) {
         SpotLight light = uSpotLights[i];
-        EvaluateSpotLight(data, light, i);
+        EvaluateSpotLight(data, light, uSpotLightShadowMaps[i]);
       }
     #endif
     #if NUM_AREA_LIGHTS > 0

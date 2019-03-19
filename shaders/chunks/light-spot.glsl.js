@@ -19,22 +19,14 @@ struct SpotLight {
 uniform SpotLight uSpotLights[NUM_SPOT_LIGHTS];
 uniform sampler2D uSpotLightShadowMaps[NUM_SPOT_LIGHTS];
 
-void EvaluateSpotLight(inout PBRData data, SpotLight light, int i) {
+void EvaluateSpotLight(inout PBRData data, SpotLight light, sampler2D shadowMap) {
   vec4 lightViewPosition = light.viewMatrix * vec4(vPositionWorld, 1.0); // TODO: move in the vertex shader
   float lightDistView = -lightViewPosition.z;
   vec4 lightDeviceCoordsPosition = light.projectionMatrix * lightViewPosition;
   vec3 lightDeviceCoordsPositionNormalized = lightDeviceCoordsPosition.xyz / lightDeviceCoordsPosition.w;
   vec2 lightUV = lightDeviceCoordsPositionNormalized.xy * 0.5 + 0.5;
 
-  float illuminated = 0.0;
-
-  if (light.castShadows) {
-    for (int i = 0; i < NUM_SPOT_LIGHTS; i++) {
-      illuminated += bool(light.castShadows) ? getShadow(uSpotLightShadowMaps[i], light.shadowMapSize, lightUV, lightDistView - light.bias, light.near, light.far) : 0.0;
-    }
-  } else {
-    illuminated = 1.0;
-  }
+  float illuminated = bool(light.castShadows) ? getShadow(shadowMap, light.shadowMapSize, lightUV, lightDistView - light.bias, light.near, light.far) : 1.0;
 
   if (illuminated > 0.0) {
     data.lightWorld = light.position - data.positionWorld;
