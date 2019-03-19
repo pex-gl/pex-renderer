@@ -555,9 +555,7 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
         this.updateDirectionalLightShadowMap(light, shadowCasters)
       }
     })
-  }
 
-  if (!shadowMapping && !shadowMappingLight) {
     pointLights.forEach((light) => {
       if (light.castShadows) {
         const shadowCasters = geometries.filter((geometry) => {
@@ -567,9 +565,7 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
         this.updatePointLightShadowMap(light, shadowCasters)
       }
     })
-  }
 
-  if (!shadowMapping && !shadowMappingLight) {
     spotLights.forEach((light) => {
       if (light.castShadows) {
         const shadowCasters = geometries.filter((geometry) => {
