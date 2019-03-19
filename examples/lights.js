@@ -185,20 +185,20 @@ gui.addParam('Shadows', directionalLightCmp, 'castShadows', {}, (value) => {
 // Spot
 const spotLightCmp = renderer.spotLight({
   color: [1, 1, 1, 1],
-  intensity: 10,
-  distance: 2,
+  intensity: 4,
   angle: Math.PI / 6,
   castShadows: true
 })
-const spotLightRadius = spotLightCmp.distance * Math.tan(spotLightCmp.angle)
+const spotLightDistance = 2
+const spotLightRadius = spotLightDistance * Math.tan(spotLightCmp.angle)
 const spotLightGizmoPositions = makePrism({ radius: 0.3 })
   .concat([
-    [0, 0, 0], [spotLightRadius, 0, spotLightCmp.distance],
-    [0, 0, 0], [-spotLightRadius, 0, spotLightCmp.distance],
-    [0, 0, 0], [0, spotLightRadius, spotLightCmp.distance],
-    [0, 0, 0], [0, -spotLightRadius, spotLightCmp.distance]
+    [0, 0, 0], [spotLightRadius, 0, spotLightDistance],
+    [0, 0, 0], [-spotLightRadius, 0, spotLightDistance],
+    [0, 0, 0], [0, spotLightRadius, spotLightDistance],
+    [0, 0, 0], [0, -spotLightRadius, spotLightDistance]
   ])
-  .concat(makeCircle({ radius: spotLightRadius, center: [0, 0, spotLightCmp.distance], steps: 64, axis: [0, 1] }))
+  .concat(makeCircle({ radius: spotLightRadius, center: [0, 0, spotLightDistance], steps: 64, axis: [0, 1] }))
 
 const spotLightEntity = renderer.entity([
   renderer.transform({
@@ -232,7 +232,7 @@ gui.addParam('Shadows', spotLightCmp, 'castShadows', {}, (value) => {
 // Point
 const pointLightCmp = renderer.pointLight({
   color: [1, 1, 1, 1],
-  intensity: 2,
+  intensity: 4,
   radius: 3,
   castShadows: true
 })
@@ -278,7 +278,7 @@ gui.addParam('Shadows', pointLightCmp, 'castShadows', {}, (value) => {
 // Area
 const areaLightCmp = renderer.areaLight({
   color: [1, 1, 1, 1],
-  intensity: 2,
+  intensity: 4,
   castShadows: true
 })
 const areaLightGizmoPositions = makeQuad({ width: 1, height: 1 })
@@ -311,7 +311,7 @@ window.addEventListener('keydown', (e) => {
   if (e.key === 'd') debugOnce = true
 })
 
-let delta = true
+let delta = 0
 
 ctx.frame(() => {
   delta += 0.005
