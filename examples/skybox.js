@@ -2,6 +2,7 @@ const path = require('path')
 const createRenderer = require('../')
 const createContext = require('pex-context')
 const io = require('pex-io')
+const { quat } = require('pex-math')
 const GUI = require('pex-gui')
 const createSphere = require('primitive-sphere')
 const parseHdr = require('parse-hdr')
@@ -40,6 +41,9 @@ const geom = renderer.entity([
 renderer.add(geom)
 
 const skybox = renderer.entity([
+  renderer.transform({
+    rotation: quat.fromAxisAngle(quat.create(), [0, 1, 0], -Math.PI / 2)
+  }),
   renderer.skybox({
     sunPosition: [1, 1, 1],
     backgroundBlur: 0
