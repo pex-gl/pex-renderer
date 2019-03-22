@@ -29,6 +29,7 @@ const normal = require('./normal.glsl.js')
 const metallicRoughness = require('./metallic-roughness.glsl.js')
 const specularGlossiness = require('./specular-glossiness.glsl.js')
 
+const depthRead = require('./depth-read.glsl.js')
 const depthUnpack = require('./depth-unpack.glsl.js')
 const depthPack = require('./depth-pack.glsl.js')
 
@@ -68,6 +69,7 @@ module.exports = {
   metallicRoughness,
   specularGlossiness,
 
+  depthRead,
   depthUnpack,
   depthPack,
 

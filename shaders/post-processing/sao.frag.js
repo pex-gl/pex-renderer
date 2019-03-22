@@ -1,3 +1,5 @@
+const SHADERS = require('../chunks/index.js')
+
 module.exports = /* glsl */`
 // https://gist.github.com/fisch0920/6770311
 // Updated by marcin.ignac@gmail.com 2017-05-08
@@ -34,16 +36,11 @@ uniform vec2 uScreenSize;
 uniform vec3 cameraPositionWorldSpace;
 
 // reconstructs view-space unit normal from view-space position
-float readDepth(sampler2D depthMap, vec2 coord) {
-  float z_b = texture2D(depthMap, coord).r;
-  float z_n = 2.0 * z_b - 1.0;
-  float z_e = 2.0 * uNear * uFar / (uFar + uNear - z_n * (uFar - uNear));
-  return z_e;
-}
+${SHADERS.depthRead}
 
 vec3 getPositionVSOld(vec2 uv) {
   // float depth = decodeGBufferDepth(uDepthMap, uv, clipFar);
-  float depth = readDepth(uDepthMap, uv);
+  float depth = readDepth(uDepthMap, uv, uNear, uFar);
 
   vec2 uv2  = uv * 2.0 - vec2(1.0);
   vec4 temp = viewProjectionInverseMatrix * vec4(uv2, -1.0, 1.0);
@@ -80,7 +77,7 @@ vec3 reconstructPositionFromDepth(vec2 texCoord, float z) {
 }
 
 vec3 getPositionVS(vec2 uv) {
-  float depth = readDepth(uDepthMap, uv);
+  float depth = readDepth(uDepthMap, uv, uNear, uFar);
   return reconstructPositionFromDepth(uv, depth);
 }
 
