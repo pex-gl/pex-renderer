@@ -10,6 +10,9 @@ const edges = require('geom-edges')
 var WebGLConstants = {
   ELEMENT_ARRAY_BUFFER: 34963,  // 0x8893
   ARRAY_BUFFER: 34962,          // 0x8892
+  BYTE: 5120,                   // 0x1400
+  UNSIGNED_BYTE: 5121,          // 0x1401
+  SHORT: 5122,                  // 0x1402
   UNSIGNED_SHORT: 5123,         // 0x1403
   UNSIGNED_INT: 5125,
   FLOAT: 5126,                  // 0x1406
@@ -71,7 +74,28 @@ function handleAccessor (accessor, bufferView, ctx, renderer) {
     // return
   }
 
-  if (accessor.componentType === WebGLConstants.UNSIGNED_SHORT) {
+  // https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/README.md#accessor-element-size
+  // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Typed_arrays#Typed_array_views
+  // https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/Constants#Data_types
+  if (accessor.componentType === WebGLConstants.BYTE) {
+    const data = new Int8Array(bufferView._data.slice(
+      accessor.byteOffset,
+      accessor.byteOffset + accessor.count * size * 1
+    ))
+    accessor._data = data
+  } else if (accessor.componentType === WebGLConstants.UNSIGNED_BYTE) {
+    const data = new Uint8Array(bufferView._data.slice(
+      accessor.byteOffset,
+      accessor.byteOffset + accessor.count * size * 1
+    ))
+    accessor._data = data
+  } else if (accessor.componentType === WebGLConstants.SHORT) {
+    const data = new Int16Array(bufferView._data.slice(
+      accessor.byteOffset,
+      accessor.byteOffset + accessor.count * size * 2
+    ))
+    accessor._data = data
+  } else if (accessor.componentType === WebGLConstants.UNSIGNED_SHORT) {
     const data = new Uint16Array(bufferView._data.slice(
       accessor.byteOffset,
       accessor.byteOffset + accessor.count * size * 2
