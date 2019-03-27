@@ -48,7 +48,7 @@ function handleBufferView (bufferView, bufferData, ctx, renderer) {
     bufferView.byteOffset + bufferView.byteLength
   )
 
-  console.log('handleBufferView', bufferView)
+  // console.log('handleBufferView', bufferView)
   if (bufferView.target === WebGLConstants.ELEMENT_ARRAY_BUFFER) {
     bufferView._indexBuffer = ctx.indexBuffer(bufferView._data)
   } else if (bufferView.target === WebGLConstants.ARRAY_BUFFER) {
@@ -187,9 +187,9 @@ function handleMaterial (material, gltf, ctx, renderer) {
       blendDstAlphaFactor: ctx.BlendFactor.One
     })
   }
-  if (material.alphaMode === 'MASK' && material.alphaCutoff) {
+  if (material.alphaMode === 'MASK') {
     materialCmp.set({
-      alphaTest: material.alphaCutoff
+      alphaTest: material.alphaCutoff || 0.5
     })
   }
 
