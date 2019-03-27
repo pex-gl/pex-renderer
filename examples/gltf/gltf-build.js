@@ -312,6 +312,13 @@ function handleMaterial (material, gltf, ctx, renderer) {
     materialCmp.set({ emissiveColorMap: tex })
   }
 
+  if (material.extensions && material.extensions.KHR_materials_unlit) {
+    materialCmp.set({
+      roughness: null,
+      metallic: null
+    })
+  }
+
   return materialCmp
 }
 
