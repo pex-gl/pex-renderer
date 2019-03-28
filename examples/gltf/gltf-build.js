@@ -197,7 +197,7 @@ function handleMaterial (material, gltf, ctx, renderer) {
     metallic: 1.0,
     castShadows: true,
     receiveShadows: true,
-    cullFaceEnabled: !material.doubleSided
+    cullFace: !material.doubleSided
   })
 
   if (material.alphaMode === 'BLEND') {
