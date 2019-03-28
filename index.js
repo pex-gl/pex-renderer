@@ -207,7 +207,10 @@ Renderer.prototype.getMaterialProgramAndFlags = function (geometry, material, sk
     flags.push('#define USE_TANGENTS')
   }
   if (geometry._attributes.aTexCoord0) {
-    flags.push('#define USE_TEX_COORDS')
+    flags.push('#define USE_TEXCOORD_0')
+  }
+  if (geometry._attributes.aTexCoord1) {
+    flags.push('#define USE_TEXCOORD_1')
   }
   if (geometry._attributes.aOffset) {
     flags.push('#define USE_INSTANCED_OFFSET')
@@ -649,38 +652,66 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
     const skin = geometry.entity.getComponent('Skin')
     const cachedUniforms = material._uniforms
 
-    if (material.baseColorMap) cachedUniforms.uBaseColorMap = material.baseColorMap
+    if (material.baseColorMap) {
+      cachedUniforms.uBaseColorMap = material.baseColorMap
+      cachedUniforms.uBaseColorMapTexCoordIndex = material.baseColorMap.texCoord || 0
+    }
     cachedUniforms.uBaseColor = material.baseColor
 
-    if (material.emissiveColorMap) cachedUniforms.uEmissiveColorMap = material.emissiveColorMap
+    if (material.emissiveColorMap) {
+      cachedUniforms.uEmissiveColorMap = material.emissiveColorMap
+      cachedUniforms.uEmissiveColorMapTexCoordIndex = material.emissiveColorMap.texCoord || 0
+    }
     cachedUniforms.uEmissiveColor = material.emissiveColor
     cachedUniforms.uEmissiveIntensity = material.emissiveIntensity
 
-    if (material.metallicMap) cachedUniforms.uMetallicMap = material.metallicMap
+    if (material.metallicMap) {
+      cachedUniforms.uMetallicMap = material.metallicMap
+      cachedUniforms.uMetallicMapTexCoordIndex = material.metallicMap.texCoord || 0
+    }
     if (!isNil(material.metallic)) cachedUniforms.uMetallic = material.metallic
 
-    if (material.roughnessMap) cachedUniforms.uRoughnessMap = material.roughnessMap
+    if (material.roughnessMap) {
+      cachedUniforms.uRoughnessMap = material.roughnessMap
+      cachedUniforms.uRoughnessMapTexCoordIndex = material.roughnessMap.texCoord || 0
+    }
     if (!isNil(material.roughness)) cachedUniforms.uRoughness = material.roughness
 
-    if (material.metallicRoughnessMap) cachedUniforms.uMetallicRoughnessMap = material.metallicRoughnessMap
+    if (material.metallicRoughnessMap) {
+      cachedUniforms.uMetallicRoughnessMap = material.metallicRoughnessMap
+      cachedUniforms.uMetallicRoughnessMapTexCoordIndex = material.metallicRoughnessMap.texCoord || 0
+    }
 
     if (material.diffuse) cachedUniforms.uDiffuse = material.diffuse
     if (material.specular) cachedUniforms.uSpecular = material.specular
     if (material.glossiness !== undefined) cachedUniforms.uGlossiness = material.glossiness
-    if (material.diffuseMap) cachedUniforms.uDiffuseMap = material.diffuseMap
-    if (material.specularGlossinessMap) cachedUniforms.uSpecularGlossinessMap = material.specularGlossinessMap
+    if (material.diffuseMap) {
+      cachedUniforms.uDiffuseMap = material.diffuseMap
+      cachedUniforms.uDiffuseMapTexCoordIndex = material.diffuseMap.texCoord || 0
+    }
+    if (material.specularGlossinessMap) {
+      cachedUniforms.uSpecularGlossinessMap = material.specularGlossinessMap
+      cachedUniforms.uSpecularGlossinessMapTexCoordIndex = material.specularGlossinessMap.texCoord || 0
+    }
 
     if (material.normalMap) {
       cachedUniforms.uNormalMap = material.normalMap
+      cachedUniforms.uNormalMapTexCoordIndex = material.normalMap.texCoord || 0
       cachedUniforms.uNormalScale = material.normalScale
     }
-    if (material.occlusionMap) cachedUniforms.uOcclusionMap = material.occlusionMap
+    if (material.occlusionMap) {
+      cachedUniforms.uOcclusionMap = material.occlusionMap
+      cachedUniforms.uOcclusionMapTexCoordIndex = material.occlusionMap.texCoord || 0
+    }
     if (material.displacementMap) {
       cachedUniforms.uDisplacementMap = material.displacementMap
       cachedUniforms.uDisplacement = material.displacement
     }
 
-    if (material.alphaMap) cachedUniforms.uAlphaMap = material.alphaMap
+    if (material.alphaMap) {
+      cachedUniforms.uAlphaMap = material.alphaMap
+      cachedUniforms.uAlphaMapTexCoordIndex = material.alphaMap.texCoord || 0
+    }
 
     if (material.uniforms) {
       for (var uniformName in material.uniforms) {

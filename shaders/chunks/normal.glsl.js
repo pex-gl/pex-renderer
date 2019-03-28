@@ -1,6 +1,7 @@
 module.exports = /* glsl */`
 #ifdef USE_NORMAL_MAP
 uniform sampler2D uNormalMap;
+uniform int uNormalMapTexCoordIndex;
 uniform float uNormalScale;
 
 //http://www.thetenthplanet.de/archives/1180
@@ -28,7 +29,8 @@ vec3 perturb(vec3 map, vec3 N, vec3 V, vec2 texcoord) {
 }
 
 void getNormal(inout PBRData data) {
-  vec3 normalRGB = texture2D(uNormalMap, data.texCoord0).rgb;
+  vec2 uv = getTextureCoordinates(data, uNormalMapTexCoordIndex);
+  vec3 normalRGB = texture2D(uNormalMap, uv).rgb;
   vec3 normalMap = normalRGB * 2.0 - 1.0;
   normalMap.y *= uNormalScale;
   normalMap = normalize(normalMap);
@@ -45,7 +47,7 @@ void getNormal(inout PBRData data) {
   #else
     // make the output normalView match glTF expected right handed orientation
     normalMap.y *= -1.0;
-    normalView = perturb(normalMap, N, V, data.texCoord0);
+    normalView = perturb(normalMap, N, V, uv);
   #endif
 
   vec3 normalWorld = vec3(data.inverseViewMatrix * vec4(normalView, 0.0));
@@ -58,9 +60,9 @@ void getNormal(inout PBRData data) {
 
 //   vec3 getNormal() {
 //     float scale = uDisplacement * uDisplacementNormalScale;
-//     float h = scale * texture2D(uDisplacementMap, vTexCoord0).r;
-//     float hx = scale * texture2D(uDisplacementMap, vTexCoord0 + vec2(1.0 / 2048.0, 0.0)).r;
-//     float hz = scale * texture2D(uDisplacementMap, vTexCoord0 + vec2(0.0, 1.0 / 2048.0)).r;
+//     float h = scale * texture2D(uDisplacementMap, uv).r;
+//     float hx = scale * texture2D(uDisplacementMap, uv + vec2(1.0 / 2048.0, 0.0)).r;
+//     float hz = scale * texture2D(uDisplacementMap, uv + vec2(0.0, 1.0 / 2048.0)).r;
 //     float meshSize = 20.0;
 //     vec3 a = vec3(0.0, h, 0.0);
 //     vec3 b = vec3(1.0 / 2048.0 * meshSize, hx, 0.0);

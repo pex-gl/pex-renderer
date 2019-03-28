@@ -27,6 +27,9 @@ varying vec3 vNormalWorld;
 varying vec3 vNormalView;
 
 varying vec2 vTexCoord0;
+#ifdef USE_TEXCOORD_1
+  varying vec2 vTexCoord1;
+#endif
 
 varying highp vec3 vPositionWorld;
 varying highp vec3 vPositionView;
@@ -42,6 +45,7 @@ varying highp vec3 vPositionView;
 struct PBRData {
   mat4 inverseViewMatrix;
   vec2 texCoord0;
+  vec2 texCoord1;
   vec3 normalView;
   vec4 tangentView;
   vec3 positionWorld;
@@ -76,6 +80,7 @@ ${SHADERS.math.PI}
 ${SHADERS.rgbm}
 ${SHADERS.gamma}
 ${SHADERS.encodeDecode}
+${SHADERS.textureCoordinates}
 ${SHADERS.tintColor}
 ${SHADERS.baseColor}
 
@@ -106,6 +111,10 @@ void main() {
 
   PBRData data;
   data.texCoord0 = vTexCoord0;
+
+  #ifdef USE_TEXCOORD_1
+    data.texCoord1 = vTexCoord1;
+  #endif
 
   #ifdef USE_UNLIT_WORKFLOW
     getBaseColor(data);
@@ -155,7 +164,7 @@ void main() {
     #endif
 
     #ifdef USE_ALPHA_MAP
-      data.opacity *= texture2D(uAlphaMap, data.texCoord0).r;
+      data.opacity *= texture2D(uAlphaMap, getTextureCoordinates(data, uAlphaMapTexCoordIndex)).r;
     #endif
     #ifdef USE_ALPHA_TEST
       alphaTest(data);
@@ -176,7 +185,7 @@ void main() {
 
     float ao = 1.0;
     #ifdef USE_OCCLUSION_MAP
-      ao *= texture2D(uOcclusionMap, vTexCoord0).r;
+      ao *= texture2D(uOcclusionMap, getTextureCoordinates(data, uOcclusionMapTexCoordIndex)).r;
     #endif
     #ifdef USE_AO
       vec2 vUV = vec2(gl_FragCoord.x / uScreenSize.x, gl_FragCoord.y / uScreenSize.y);

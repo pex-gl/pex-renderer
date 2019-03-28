@@ -38,7 +38,6 @@ const AttributeNameMap = {
   TANGENT: 'tangents',
   TEXCOORD_0: 'texCoords',
   TEXCOORD_1: 'texCoords1',
-  TEXCOORD_2: 'texCoords2',
   JOINTS_0: 'joints',
   WEIGHTS_0: 'weights',
   COLOR_0: 'vertexColors'
@@ -232,6 +231,7 @@ function handleMaterial (material, gltf, ctx, renderer) {
     if (pbrMetallicRoughness.baseColorTexture) {
       let tex = loadTexture(pbrMetallicRoughness.baseColorTexture, gltf, ctx.Encoding.SRGB, ctx, renderer)
       log('baseColorTexture', tex)
+      tex.texCoord = pbrMetallicRoughness.baseColorTexture.texCoord || 0
       materialCmp.set({ baseColorMap: tex })
     }
     if (pbrMetallicRoughness.metallicFactor !== undefined) {
@@ -242,6 +242,7 @@ function handleMaterial (material, gltf, ctx, renderer) {
     }
     if (pbrMetallicRoughness.metallicRoughnessTexture) {
       let tex = loadTexture(pbrMetallicRoughness.metallicRoughnessTexture, gltf, ctx.Encoding.Linear, ctx, renderer)
+      tex.texCoord = pbrMetallicRoughness.metallicRoughnessTexture.texCoord || 0
       materialCmp.set({ metallicRoughnessMap: tex })
     }
   }
@@ -265,16 +266,19 @@ function handleMaterial (material, gltf, ctx, renderer) {
     }
     if (pbrSpecularGlossiness.diffuseTexture) {
       let tex = loadTexture(pbrSpecularGlossiness.diffuseTexture, gltf, ctx.Encoding.SRGB, ctx, renderer)
+      tex.texCoord = pbrSpecularGlossiness.diffuseTexture.texCoord || 0
       materialCmp.set({ diffuseMap: tex })
     }
     if (pbrSpecularGlossiness.specularGlossinessTexture) {
       let tex = loadTexture(pbrSpecularGlossiness.specularGlossinessTexture, gltf, ctx.Encoding.SRGB, ctx, renderer)
+      tex.texCoord = pbrSpecularGlossiness.specularGlossinessTexture.texCoord || 0
       materialCmp.set({ specularGlossinessMap: tex })
     }
   }
 
   if (material.normalTexture) {
     let tex = loadTexture(material.normalTexture, gltf, ctx.Encoding.Linear, ctx, renderer)
+    tex.texCoord = material.occlusionTexture.texCoord || 0
     materialCmp.set({ normalMap: tex })
   }
 
@@ -288,12 +292,14 @@ function handleMaterial (material, gltf, ctx, renderer) {
   }
   if (material.occlusionTexture) {
     let tex = loadTexture(material.occlusionTexture, gltf, ctx.Encoding.Linear, ctx, renderer)
+    tex.texCoord = material.occlusionTexture.texCoord || 0
     materialCmp.set({ occlusionMap: tex })
   }
 
   if (material.emissiveTexture) {
     // TODO: double check sRGB
     var tex = loadTexture(material.emissiveTexture, gltf, ctx.Encoding.SRGB, ctx, renderer)
+    tex.texCoord = material.emissiveTexture.texCoord || 0
     materialCmp.set({ emissiveColorMap: tex })
   }
 
@@ -392,6 +398,7 @@ function handleMesh (mesh, gltf, ctx, renderer) {
       })
       let morphCmp = renderer.morph({
         // TODO the rest ?
+        originalPositions: positionAccessor._data,
         targets: targets,
         weights: mesh.weights
       })

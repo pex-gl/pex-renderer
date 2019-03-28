@@ -8,8 +8,12 @@ attribute vec3 aPosition;
 attribute vec3 aNormal;
 #endif
 
-#ifdef USE_TEX_COORDS
+#ifdef USE_TEXCOORD_0
 attribute vec2 aTexCoord0;
+#endif
+
+#ifdef USE_TEXCOORD_1
+attribute vec2 aTexCoord1;
 #endif
 
 #ifdef USE_INSTANCED_OFFSET
@@ -56,6 +60,9 @@ float uDisplacementShadowStretch = 1.3;
 
 varying vec3 vNormalView;
 varying vec2 vTexCoord0;
+#ifdef USE_TEXCOORD_1
+varying vec2 vTexCoord1;
+#endif
 varying vec3 vPositionView;
 
 // Includes
@@ -72,11 +79,15 @@ void main() {
     normal = aNormal;
   #endif
 
-  #ifdef USE_TEX_COORDS
+  #ifdef USE_TEXCOORD_0
     texCoord = aTexCoord0;
   #endif
 
   vTexCoord0 = texCoord;
+
+  #ifdef USE_TEXCOORD_1
+    vTexCoord1 = aTexCoord1;
+  #endif
 
   #ifdef USE_DISPLACEMENT_MAP
     float h = texture2D(uDisplacementMap, aTexCoord0).r;

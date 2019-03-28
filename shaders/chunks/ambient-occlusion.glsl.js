@@ -6,5 +6,6 @@ module.exports = /* glsl */`
 
 #ifdef USE_OCCLUSION_MAP
   uniform sampler2D uOcclusionMap;
+  uniform int uOcclusionMapTexCoordIndex;
 #endif
 `
