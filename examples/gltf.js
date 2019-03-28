@@ -3,12 +3,15 @@ const createContext = require('pex-context')
 const createGUI = require('pex-gui')
 const loadJSON = require('pex-io/loadJSON')
 const loadImage = require('pex-io/loadImage')
+const loadBinary = require('pex-io/loadBinary')
 const mat4 = require('pex-math/mat4')
 const quat = require('pex-math/quat')
 const vec3 = require('pex-math/vec3')
 const createCube = require('primitive-cube')
 const debug = require('debug')('gltf')
 // const log = require('debug')('gltf')
+const parseHdr = require('parse-hdr')
+const isBrowser = require('is-browser')
 
 const loadGltf = require('./gltf/gltf-load')
 const buildGltf = require('./gltf/gltf-build')
@@ -16,12 +19,14 @@ const { makeAxes } = require('./helpers')
 
 const MODELS_PATH = 'glTF-Sample-Models'
 // const MODELS_PATH = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0'
+const ASSETS_DIR = isBrowser ? 'assets' : path.join(__dirname, 'assets')
 
 const State = {
   sunPosition: [2, 2, 2],
   selectedModel: '',
   scenes: [],
   gridSize: 1,
+  useEnvMap: false,
   shadows: false // TODO: disabled for benchmarking
 }
 
@@ -116,6 +121,24 @@ const reflectionProbeEntity = renderer.entity([
   renderer.reflectionProbe()
 ])
 renderer.add(reflectionProbeEntity)
+
+const addEnvmap = (async () => {
+  const buffer = await loadBinary(`${ASSETS_DIR}/garage.hdr`)
+  const hdrImg = parseHdr(buffer)
+  const panorama = ctx.texture2D({
+    data: hdrImg.data,
+    width: hdrImg.shape[0],
+    height: hdrImg.shape[1],
+    pixelFormat: ctx.PixelFormat.RGBA32F,
+    encoding: ctx.Encoding.Linear,
+    flipY: true
+  })
+
+  skyboxEntity.getComponent('Skybox').set({ texture: panorama })
+  reflectionProbeEntity.getComponent('ReflectionProbe').set({ dirty: true })
+})
+
+if (State.useEnvMap) addEnvmap()
 
 const cameraEntity = renderer.entity([
   renderer.camera({
