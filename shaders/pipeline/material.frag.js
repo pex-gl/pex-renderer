@@ -151,8 +151,7 @@ void main() {
     #endif
     #ifdef USE_SPECULAR_GLOSSINESS_WORKFLOW
       getBaseColorAndMetallicRoughnessFromSpecularGlossiness(data);
-      // TODO: verify we don't need to multiply by 1 - metallic like above
-      data.diffuseColor = data.baseColor;
+      data.diffuseColor = data.baseColor * (1.0 - data.metallic);
     #endif
 
     #ifdef USE_ALPHA_MAP

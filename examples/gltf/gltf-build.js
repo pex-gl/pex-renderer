@@ -271,21 +271,6 @@ function handleMaterial (material, gltf, ctx, renderer) {
       let tex = loadTexture(pbrSpecularGlossiness.specularGlossinessTexture, gltf, ctx.Encoding.SRGB, ctx, renderer)
       materialCmp.set({ specularGlossinessMap: tex })
     }
-    if (pbrSpecularGlossiness.diffuseFactor !== undefined) {
-      materialCmp.set({ diffuse: pbrSpecularGlossiness.diffuseFactor })
-    } else {
-      materialCmp.set({ diffuse: [1, 1, 1, 1] })
-    }
-    if (pbrSpecularGlossiness.glossinessFactor !== undefined) {
-      materialCmp.set({ glossiness: pbrSpecularGlossiness.glossinessFactor })
-    } else {
-      materialCmp.set({ glossiness: 1 })
-    }
-    if (pbrSpecularGlossiness.specularFactor !== undefined) {
-      materialCmp.set({ specular: pbrSpecularGlossiness.specularFactor.slice(0, 3) })
-    } else {
-      materialCmp.set({ specular: [1, 1, 1] })
-    }
   }
 
   if (material.normalTexture) {
