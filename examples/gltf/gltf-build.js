@@ -142,11 +142,11 @@ function handleAccessor (accessor, bufferView, ctx, renderer) {
 function loadTexture (materialTexture, gltf, encoding, ctx, renderer) {
   let texture = gltf.textures[materialTexture.index]
   let image = gltf.images[texture.source]
-  let sampler = gltf.samplers ? gltf.samplers[texture.sampler] : {
-    minFilter: ctx.Filter.Linear,
-    magFilter: ctx.Filter.Linear
+  let sampler = gltf.samplers && gltf.samplers[texture.sampler] ? gltf.samplers[texture.sampler] : {
+    minFilter: ctx.Filter.Linear, // Default WebGL value
+    magFilter: ctx.Filter.Linear // Default WebGL value
   }
-  sampler.minFilter = ctx.Filter.LinearMipmapLinear
+  // sampler.minFilter = ctx.Filter.LinearMipmapLinear
   // set defaults as per GLTF 2.0 spec
   if (!sampler.wrapS) sampler.wrapS = ctx.Wrap.Repeat
   if (!sampler.wrapT) sampler.wrapT = ctx.Wrap.Repeat
