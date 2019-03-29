@@ -7,8 +7,6 @@ const vec3 = require('pex-math/vec3')
 const createBox = require('primitive-box')
 const edges = require('geom-edges')
 
-log.enabled = true
-
 var WebGLConstants = {
   ELEMENT_ARRAY_BUFFER: 34963,  // 0x8893
   ARRAY_BUFFER: 34962,          // 0x8892
