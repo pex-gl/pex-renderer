@@ -38,7 +38,6 @@ const AttributeNameMap = {
   TANGENT: 'tangents',
   TEXCOORD_0: 'texCoords',
   TEXCOORD_1: 'texCoords1',
-  TEXCOORD_2: 'texCoords2',
   JOINTS_0: 'joints',
   WEIGHTS_0: 'weights',
   COLOR_0: 'vertexColors'
@@ -230,9 +229,14 @@ function handleMaterial (material, gltf, ctx, renderer) {
       materialCmp.set({ baseColor: pbrMetallicRoughness.baseColorFactor })
     }
     if (pbrMetallicRoughness.baseColorTexture) {
-      let tex = loadTexture(pbrMetallicRoughness.baseColorTexture, gltf, ctx.Encoding.SRGB, ctx, renderer)
-      log('baseColorTexture', tex)
-      materialCmp.set({ baseColorMap: tex })
+      const texture = loadTexture(pbrMetallicRoughness.baseColorTexture, gltf, ctx.Encoding.SRGB, ctx, renderer)
+      log('baseColorTexture', texture)
+      materialCmp.set({
+        baseColorMap: {
+          texture,
+          texCoord: pbrMetallicRoughness.baseColorTexture.texCoord || 0
+        }
+      })
     }
     if (pbrMetallicRoughness.metallicFactor !== undefined) {
       materialCmp.set({ metallic: pbrMetallicRoughness.metallicFactor })
@@ -241,8 +245,13 @@ function handleMaterial (material, gltf, ctx, renderer) {
       materialCmp.set({ roughness: pbrMetallicRoughness.roughnessFactor })
     }
     if (pbrMetallicRoughness.metallicRoughnessTexture) {
-      let tex = loadTexture(pbrMetallicRoughness.metallicRoughnessTexture, gltf, ctx.Encoding.Linear, ctx, renderer)
-      materialCmp.set({ metallicRoughnessMap: tex })
+      const texture = loadTexture(pbrMetallicRoughness.metallicRoughnessTexture, gltf, ctx.Encoding.Linear, ctx, renderer)
+      materialCmp.set({
+        metallicRoughnessMap: {
+          texture,
+          texCoord: pbrMetallicRoughness.metallicRoughnessTexture.texCoord || 0
+        }
+      })
     }
   }
 
@@ -264,18 +273,33 @@ function handleMaterial (material, gltf, ctx, renderer) {
       materialCmp.set({ glossiness: pbrSpecularGlossiness.glossinessFactor })
     }
     if (pbrSpecularGlossiness.diffuseTexture) {
-      let tex = loadTexture(pbrSpecularGlossiness.diffuseTexture, gltf, ctx.Encoding.SRGB, ctx, renderer)
-      materialCmp.set({ diffuseMap: tex })
+      const texture = loadTexture(pbrSpecularGlossiness.diffuseTexture, gltf, ctx.Encoding.SRGB, ctx, renderer)
+      materialCmp.set({
+        diffuseMap: {
+          texture,
+          texCoord: pbrSpecularGlossiness.diffuseTexture.texCoord || 0
+        }
+      })
     }
     if (pbrSpecularGlossiness.specularGlossinessTexture) {
-      let tex = loadTexture(pbrSpecularGlossiness.specularGlossinessTexture, gltf, ctx.Encoding.SRGB, ctx, renderer)
-      materialCmp.set({ specularGlossinessMap: tex })
+      const texture = loadTexture(pbrSpecularGlossiness.specularGlossinessTexture, gltf, ctx.Encoding.SRGB, ctx, renderer)
+      materialCmp.set({
+        specularGlossinessMap: {
+          texture,
+          texCoord: pbrSpecularGlossiness.specularGlossinessTexture.texCoord || 0
+        }
+      })
     }
   }
 
   if (material.normalTexture) {
-    let tex = loadTexture(material.normalTexture, gltf, ctx.Encoding.Linear, ctx, renderer)
-    materialCmp.set({ normalMap: tex })
+    const texture = loadTexture(material.normalTexture, gltf, ctx.Encoding.Linear, ctx, renderer)
+    materialCmp.set({
+      normalMap: {
+        texture,
+        texCoord: material.occlusionTexture.texCoord || 0
+      }
+    })
   }
 
   if (material.emissiveFactor) {
@@ -287,14 +311,24 @@ function handleMaterial (material, gltf, ctx, renderer) {
     ]})
   }
   if (material.occlusionTexture) {
-    let tex = loadTexture(material.occlusionTexture, gltf, ctx.Encoding.Linear, ctx, renderer)
-    materialCmp.set({ occlusionMap: tex })
+    const texture = loadTexture(material.occlusionTexture, gltf, ctx.Encoding.Linear, ctx, renderer)
+    materialCmp.set({
+      occlusionMap: {
+        texture,
+        texCoord: material.occlusionTexture.texCoord || 0
+      }
+    })
   }
 
   if (material.emissiveTexture) {
     // TODO: double check sRGB
-    var tex = loadTexture(material.emissiveTexture, gltf, ctx.Encoding.SRGB, ctx, renderer)
-    materialCmp.set({ emissiveColorMap: tex })
+    const texture = loadTexture(material.emissiveTexture, gltf, ctx.Encoding.SRGB, ctx, renderer)
+    materialCmp.set({
+      emissiveColorMap: {
+        texture,
+        texCoord: material.emissiveTexture.texCoord || 0
+      }
+    });
   }
 
   if (material.extensions && material.extensions.KHR_materials_unlit) {

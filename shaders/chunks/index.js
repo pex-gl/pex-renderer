@@ -19,6 +19,7 @@ const envMapEquirect = require('./env-map-equirect.glsl.js')
 const octMap = require('./oct-map.glsl.js')
 const octMapUvToDir = require('./oct-map-uv-to-dir.glsl.js')
 
+const textureCoordinates = require('./texture-coordinates.glsl.js')
 const baseColor = require('./base-color.glsl.js')
 const tintColor = require('./tint-color.glsl.js')
 const emissiveColor = require('./emissive-color.glsl.js')
@@ -59,6 +60,7 @@ module.exports = {
   octMap,
   octMapUvToDir,
 
+  textureCoordinates,
   baseColor,
   tintColor,
   emissiveColor,
