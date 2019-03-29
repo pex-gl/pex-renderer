@@ -426,7 +426,6 @@ function handleMesh (mesh, gltf, ctx, renderer) {
       })
       let morphCmp = renderer.morph({
         // TODO the rest ?
-        originalPositions: positionAccessor._data,
         targets: targets,
         weights: mesh.weights
       })
