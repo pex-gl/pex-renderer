@@ -3,6 +3,10 @@ module.exports = /* glsl */`
 uniform sampler2D uNormalMap;
 uniform float uNormalScale;
 
+#ifdef USE_NORMAL_MAP_TEX_COORD_TRANSFORM
+  uniform mat3 uNormalMapTexCoordTransform;
+#endif
+
 //http://www.thetenthplanet.de/archives/1180
 mat3 cotangentFrame(vec3 N, vec3 p, vec2 uv) {
   // get edge vectors of the pixel triangle
@@ -28,8 +32,13 @@ vec3 perturb(vec3 map, vec3 N, vec3 V, vec2 texcoord) {
 }
 
 void getNormal(inout PBRData data) {
-  vec2 uv = getTextureCoordinates(data, NORMAL_MAP_TEX_COORD_INDEX);
-  vec3 normalRGB = texture2D(uNormalMap, uv).rgb;
+  #ifdef USE_NORMAL_MAP_TEX_COORD_TRANSFORM
+    vec2 texCoord = getTextureCoordinates(data, NORMAL_MAP_TEX_COORD_INDEX, uNormalMapTexCoordTransform);
+  #else
+    vec2 texCoord = getTextureCoordinates(data, NORMAL_MAP_TEX_COORD_INDEX);
+  #endif
+
+  vec3 normalRGB = texture2D(uNormalMap, texCoord).rgb;
   vec3 normalMap = normalRGB * 2.0 - 1.0;
   normalMap.y *= uNormalScale;
   normalMap = normalize(normalMap);
@@ -46,7 +55,7 @@ void getNormal(inout PBRData data) {
   #else
     // make the output normalView match glTF expected right handed orientation
     normalMap.y *= -1.0;
-    normalView = perturb(normalMap, N, V, uv);
+    normalView = perturb(normalMap, N, V, texCoord);
   #endif
 
   vec3 normalWorld = vec3(data.inverseViewMatrix * vec4(normalView, 0.0));
@@ -59,9 +68,9 @@ void getNormal(inout PBRData data) {
 
 //   vec3 getNormal() {
 //     float scale = uDisplacement * uDisplacementNormalScale;
-//     float h = scale * texture2D(uDisplacementMap, uv).r;
-//     float hx = scale * texture2D(uDisplacementMap, uv + vec2(1.0 / 2048.0, 0.0)).r;
-//     float hz = scale * texture2D(uDisplacementMap, uv + vec2(0.0, 1.0 / 2048.0)).r;
+//     float h = scale * texture2D(uDisplacementMap, texCoord).r;
+//     float hx = scale * texture2D(uDisplacementMap, texCoord + vec2(1.0 / 2048.0, 0.0)).r;
+//     float hz = scale * texture2D(uDisplacementMap, texCoord + vec2(0.0, 1.0 / 2048.0)).r;
 //     float meshSize = 20.0;
 //     vec3 a = vec3(0.0, h, 0.0);
 //     vec3 b = vec3(1.0 / 2048.0 * meshSize, hx, 0.0);

@@ -7,6 +7,8 @@ const vec3 = require('pex-math/vec3')
 const createBox = require('primitive-box')
 const edges = require('geom-edges')
 
+// log.enabled = true
+
 var WebGLConstants = {
   ELEMENT_ARRAY_BUFFER: 34963,  // 0x8893
   ARRAY_BUFFER: 34962,          // 0x8892
@@ -136,59 +138,83 @@ function handleAccessor (accessor, bufferView, ctx, renderer) {
   }
 }
 
-// TODO: add texture cache so we don't load the same texture twice
-// TODO: make it sync as the data is loaded already
-function loadTexture (materialTexture, gltf, encoding, ctx, renderer) {
-  let texture = gltf.textures[materialTexture.index]
-  let image = gltf.images[texture.source]
-  let sampler = gltf.samplers && gltf.samplers[texture.sampler] ? gltf.samplers[texture.sampler] : {
-    minFilter: ctx.Filter.Linear, // Default WebGL value
-    magFilter: ctx.Filter.Linear // Default WebGL value
-  }
+function getPexMaterialMap(materialTexture, gltf, encoding, ctx) {
+  // Retrieve glTF root object properties
+  // https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/schema/texture.schema.json
+  const texture = gltf.textures[materialTexture.index]
+
+  // https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/schema/image.schema.json
+  const image = gltf.images[texture.source]
+
+  // https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/schema/sampler.schema.json
+  const sampler =
+    gltf.samplers && gltf.samplers[texture.sampler]
+      ? gltf.samplers[texture.sampler]
+      : {
+          minFilter: ctx.Filter.Linear, // Default WebGL value
+          magFilter: ctx.Filter.Linear // Default WebGL value
+        }
+
   // sampler.minFilter = ctx.Filter.LinearMipmapLinear
-  // set defaults as per GLTF 2.0 spec
   if (!sampler.wrapS) sampler.wrapS = ctx.Wrap.Repeat
   if (!sampler.wrapT) sampler.wrapT = ctx.Wrap.Repeat
 
-  if (texture._tex) {
-    return texture._tex
-  }
+  // Set pex-context texture to glTF texture object
+  if (!texture._tex) {
+    let img = image._img
 
-  let img = image._img
-  if (!isPOT(img.width) || !isPOT(img.height)) {
-    // FIXME: this is WebGL1 limitation
-    if (sampler.wrapS !== ctx.Wrap.Clamp || sampler.wrapT !== ctx.Wrap.Clamp || (sampler.minFilter !== ctx.Filter.Nearest && sampler.minFilter !== ctx.Filter.Linear)) {
-      const nw = nextPOT(img.width)
-      const nh = nextPOT(img.height)
-      log(`Warning: NPOT Repeat Wrap mode and mipmapping is not supported for NPOT Textures. Resizing... ${img.width}x${img.height} -> ${nw}x${nh}`)
-      var canvas2d = document.createElement('canvas')
-      canvas2d.width = nw
-      canvas2d.height = nh
-      var ctx2d = canvas2d.getContext('2d')
-      ctx2d.drawImage(img, 0, 0, canvas2d.width, canvas2d.height)
-      img = canvas2d
+    if (!isPOT(img.width) || !isPOT(img.height)) {
+      // FIXME: this is WebGL1 limitation
+      if (sampler.wrapS !== ctx.Wrap.Clamp || sampler.wrapT !== ctx.Wrap.Clamp || (sampler.minFilter !== ctx.Filter.Nearest && sampler.minFilter !== ctx.Filter.Linear)) {
+        const nw = nextPOT(img.width)
+        const nh = nextPOT(img.height)
+        log(`Warning: NPOT Repeat Wrap mode and mipmapping is not supported for NPOT Textures. Resizing... ${img.width}x${img.height} -> ${nw}x${nh}`)
+        const canvas2d = document.createElement('canvas')
+        canvas2d.width = nw
+        canvas2d.height = nh
+        const ctx2d = canvas2d.getContext('2d')
+        ctx2d.drawImage(img, 0, 0, canvas2d.width, canvas2d.height)
+        img = canvas2d
+      }
+    }
+    const tex = ctx.texture2D({
+      data: img,
+      width: img.width,
+      height: img.height,
+      encoding: encoding || ctx.Encoding.SRGB,
+      pixelFormat: ctx.PixelFormat.RGBA8,
+      wrapS: sampler.wrapS,
+      wrapT: sampler.wrapT,
+      min: sampler.minFilter,
+      mag: sampler.magFilter,
+      mipmap: true,
+      aniso: 16,
+      flipY: false // this is confusing as
+    })
+    texture._tex = tex
+    if (sampler.minFilter !== ctx.Filter.Nearest && sampler.minFilter !== ctx.Filter.Linear) {
+      ctx.update(tex, { mipmap: true })
     }
   }
-  var tex = texture._tex = ctx.texture2D({
-    data: img,
-    width: img.width,
-    height: img.height,
-    encoding: encoding || ctx.Encoding.SRGB,
-    pixelFormat: ctx.PixelFormat.RGBA8,
-    wrapS: sampler.wrapS,
-    wrapT: sampler.wrapT,
-    min: sampler.minFilter,
-    mag: sampler.magFilter,
-    mipmap: true,
-    aniso: 16,
-    flipY: false // this is confusing as
-  })
-  if (sampler.minFilter !== ctx.Filter.Nearest && sampler.minFilter !== ctx.Filter.Linear) {
-    ctx.update(tex, { mipmap: true })
+
+  // https://github.com/KhronosGroup/glTF/blob/master/extensions/2.0/Khronos/KHR_texture_transform/schema/KHR_texture_transform.textureInfo.schema.json
+  const textureTransform =
+    materialTexture.extensions &&
+    materialTexture.extensions.KHR_texture_transform;
+
+  // https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/schema/textureInfo.schema.json
+  const texCoord = materialTexture.texCoord;
+
+  return !texCoord && !textureTransform ? texture._tex : {
+    texture: texture._tex,
+    // textureInfo
+    texCoord: texCoord || 0,
+    // textureTransform.texCoord: Overrides the textureInfo texCoord value if supplied.
+    ...(textureTransform || {})
   }
-  return tex
 }
 
+// https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/schema/material.schema.json
 function handleMaterial (material, gltf, ctx, renderer) {
   const materialCmp = renderer.material({
     baseColor: [1, 1, 1, 1.0],
@@ -199,23 +225,7 @@ function handleMaterial (material, gltf, ctx, renderer) {
     cullFace: !material.doubleSided
   })
 
-  if (material.alphaMode === 'BLEND') {
-    // TODO: support alpha cutout
-    materialCmp.set({
-      depthWrite: false,
-      blend: true,
-      blendSrcRGBFactor: ctx.BlendFactor.SrcAlpha,
-      blendSrcAlphaFactor: ctx.BlendFactor.One,
-      blendDstRGBFactor: ctx.BlendFactor.OneMinusSrcAlpha,
-      blendDstAlphaFactor: ctx.BlendFactor.One
-    })
-  }
-  if (material.alphaMode === 'MASK') {
-    materialCmp.set({
-      alphaTest: material.alphaCutoff || 0.5
-    })
-  }
-
+  //  Metallic/Roughness workflow
   const pbrMetallicRoughness = material.pbrMetallicRoughness
   if (pbrMetallicRoughness) {
     log('pbrMetallicRoughness')
@@ -229,13 +239,8 @@ function handleMaterial (material, gltf, ctx, renderer) {
       materialCmp.set({ baseColor: pbrMetallicRoughness.baseColorFactor })
     }
     if (pbrMetallicRoughness.baseColorTexture) {
-      const texture = loadTexture(pbrMetallicRoughness.baseColorTexture, gltf, ctx.Encoding.SRGB, ctx, renderer)
-      log('baseColorTexture', texture)
       materialCmp.set({
-        baseColorMap: {
-          texture,
-          texCoord: pbrMetallicRoughness.baseColorTexture.texCoord || 0
-        }
+        baseColorMap: getPexMaterialMap(pbrMetallicRoughness.baseColorTexture, gltf, ctx.Encoding.SRGB, ctx)
       })
     }
     if (pbrMetallicRoughness.metallicFactor !== undefined) {
@@ -245,16 +250,13 @@ function handleMaterial (material, gltf, ctx, renderer) {
       materialCmp.set({ roughness: pbrMetallicRoughness.roughnessFactor })
     }
     if (pbrMetallicRoughness.metallicRoughnessTexture) {
-      const texture = loadTexture(pbrMetallicRoughness.metallicRoughnessTexture, gltf, ctx.Encoding.Linear, ctx, renderer)
       materialCmp.set({
-        metallicRoughnessMap: {
-          texture,
-          texCoord: pbrMetallicRoughness.metallicRoughnessTexture.texCoord || 0
-        }
+        metallicRoughnessMap: getPexMaterialMap(pbrMetallicRoughness.metallicRoughnessTexture, gltf, ctx.Encoding.Linear, ctx)
       })
     }
   }
 
+  // Specular/Glossiness workflow
   const pbrSpecularGlossiness = material.extensions ? material.extensions.KHR_materials_pbrSpecularGlossiness : null
   if (pbrSpecularGlossiness) {
     materialCmp.set({
@@ -273,33 +275,35 @@ function handleMaterial (material, gltf, ctx, renderer) {
       materialCmp.set({ glossiness: pbrSpecularGlossiness.glossinessFactor })
     }
     if (pbrSpecularGlossiness.diffuseTexture) {
-      const texture = loadTexture(pbrSpecularGlossiness.diffuseTexture, gltf, ctx.Encoding.SRGB, ctx, renderer)
       materialCmp.set({
-        diffuseMap: {
-          texture,
-          texCoord: pbrSpecularGlossiness.diffuseTexture.texCoord || 0
-        }
+        diffuseMap: getPexMaterialMap(pbrSpecularGlossiness.diffuseTexture, gltf, ctx.Encoding.SRGB, ctx)
       })
     }
     if (pbrSpecularGlossiness.specularGlossinessTexture) {
-      const texture = loadTexture(pbrSpecularGlossiness.specularGlossinessTexture, gltf, ctx.Encoding.SRGB, ctx, renderer)
       materialCmp.set({
-        specularGlossinessMap: {
-          texture,
-          texCoord: pbrSpecularGlossiness.specularGlossinessTexture.texCoord || 0
-        }
+        specularGlossinessMap: getPexMaterialMap(pbrSpecularGlossiness.specularGlossinessTexture, gltf, ctx.Encoding.SRGB, ctx)
       })
     }
   }
 
+  // Additional Maps
   if (material.normalTexture) {
-    const texture = loadTexture(material.normalTexture, gltf, ctx.Encoding.Linear, ctx, renderer)
     materialCmp.set({
-      normalMap: {
-        texture,
-        texCoord: material.occlusionTexture.texCoord || 0
-      }
+      normalMap: getPexMaterialMap(material.normalTexture, gltf, ctx.Encoding.Linear, ctx)
     })
+  }
+
+  if (material.occlusionTexture) {
+    materialCmp.set({
+      occlusionMap: getPexMaterialMap(material.occlusionTexture, gltf, ctx.Encoding.Linear, ctx)
+    })
+  }
+
+  if (material.emissiveTexture) {
+    // TODO: double check sRGB
+    materialCmp.set({
+      emissiveColorMap: getPexMaterialMap(material.emissiveTexture, gltf, ctx.Encoding.SRGB, ctx)
+    });
   }
 
   if (material.emissiveFactor) {
@@ -310,27 +314,25 @@ function handleMaterial (material, gltf, ctx, renderer) {
       1
     ]})
   }
-  if (material.occlusionTexture) {
-    const texture = loadTexture(material.occlusionTexture, gltf, ctx.Encoding.Linear, ctx, renderer)
+
+  // Alpha Coverage
+  if (material.alphaMode === 'BLEND') {
     materialCmp.set({
-      occlusionMap: {
-        texture,
-        texCoord: material.occlusionTexture.texCoord || 0
-      }
+      depthWrite: false,
+      blend: true,
+      blendSrcRGBFactor: ctx.BlendFactor.SrcAlpha,
+      blendSrcAlphaFactor: ctx.BlendFactor.One,
+      blendDstRGBFactor: ctx.BlendFactor.OneMinusSrcAlpha,
+      blendDstAlphaFactor: ctx.BlendFactor.One
+    })
+  }
+  if (material.alphaMode === 'MASK') {
+    materialCmp.set({
+      alphaTest: material.alphaCutoff || 0.5
     })
   }
 
-  if (material.emissiveTexture) {
-    // TODO: double check sRGB
-    const texture = loadTexture(material.emissiveTexture, gltf, ctx.Encoding.SRGB, ctx, renderer)
-    materialCmp.set({
-      emissiveColorMap: {
-        texture,
-        texCoord: material.emissiveTexture.texCoord || 0
-      }
-    });
-  }
-
+  // KHR_materials_unlit
   if (material.extensions && material.extensions.KHR_materials_unlit) {
     materialCmp.set({
       roughness: null,
@@ -576,8 +578,21 @@ function handleAnimation (animation, gltf, ctx, renderer) {
   return animationCmp
 }
 
+const SUPPORTED_EXTENSIONS = [
+  'KHR_materials_unlit',
+  'KHR_materials_pbrSpecularGlossiness',
+  'KHR_texture_transform',
+]
+
 function build (gltf, ctx, renderer) {
   log('build', gltf)
+  if (gltf.extensionsRequired) {
+    const unsupportedExtensions = gltf.extensionsRequired.filter(extension => !SUPPORTED_EXTENSIONS.includes(extension))
+    if (unsupportedExtensions.length) {
+      log('unsupported extensions', unsupportedExtensions);
+    }
+  }
+
   gltf.bufferViews.map((bufferView, i) => {
     handleBufferView(bufferView, gltf.buffers[bufferView.buffer]._data, ctx, renderer)
   })
