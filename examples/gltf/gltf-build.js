@@ -395,7 +395,7 @@ function handleMesh (mesh, gltf, ctx, renderer) {
       }
     } else {
       geometryCmp.set({
-        count: positionAccessor.buffer.length / 3
+        count: positionAccessor._data.length / 3
       })
     }
 
