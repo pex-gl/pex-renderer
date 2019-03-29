@@ -7,6 +7,8 @@ const vec3 = require('pex-math/vec3')
 const createBox = require('primitive-box')
 const edges = require('geom-edges')
 
+log.enabled = true
+
 var WebGLConstants = {
   ELEMENT_ARRAY_BUFFER: 34963,  // 0x8893
   ARRAY_BUFFER: 34962,          // 0x8892
@@ -421,12 +423,25 @@ function handleMesh (mesh, gltf, ctx, renderer) {
     log('components', components)
 
     if (primitive.targets) {
-      let targets = primitive.targets.map((target) => {
-        return gltf.accessors[target.POSITION]._data
-      })
-      let morphCmp = renderer.morph({
-        // TODO the rest ?
-        targets: targets,
+      let sources = {}
+      const targets = primitive.targets.reduce((targets, target) => {
+        const targetKeys = Object.keys(target)
+
+        targetKeys.forEach(targetKey => {
+          const targetName = AttributeNameMap[targetKey] || `${targetKey.toLowerCase()}`
+          targets[targetName] = targets[targetName] || []
+          targets[targetName].push(gltf.accessors[target[targetKey]]._data)
+
+          if (!sources[targetName]) {
+            sources[targetName] = gltf.accessors[primitive.attributes[targetKey]]._data
+          }
+        })
+        return targets
+      }, {})
+
+      const morphCmp = renderer.morph({
+        sources,
+        targets,
         weights: mesh.weights
       })
       components.push(morphCmp)

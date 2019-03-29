@@ -9,6 +9,8 @@ const createRenderer = require('../')
 const createContext = require('pex-context')
 const async = require('async')
 const isBrowser = require('is-browser')
+const log = require('debug')('gltf-build')
+const assert = require('assert')
 
 const ASSETS_DIR = isBrowser ? 'assets' : path.join(__dirname, 'assets')
 
@@ -17,6 +19,18 @@ ctx.gl.getExtension('EXT_shader_texture_lod')
 ctx.gl.getExtension('OES_standard_derivatives')
 ctx.gl.getExtension('WEBGL_draw_buffers')
 ctx.gl.getExtension('OES_texture_float')
+
+const AttributeNameMap = {
+  POSITION: 'positions',
+  NORMAL: 'normals',
+  TANGENT: 'tangents',
+  TEXCOORD_0: 'texCoords',
+  TEXCOORD_1: 'texCoords1',
+  JOINTS_0: 'joints',
+  WEIGHTS_0: 'weights',
+  COLOR_0: 'vertexColors'
+}
+
 
 const renderer = createRenderer({
   ctx: ctx,
@@ -162,84 +176,171 @@ function handleAccessor (accessor, bufferView) {
   }
 }
 
-function handleNode (node, gltf) {
+log.enabled = true
+
+function handleMesh (mesh, gltf) {
+  return mesh.primitives.map((primitive) => {
+    const attributes = Object.keys(primitive.attributes).reduce((attributes, name) => {
+
+      const accessor = gltf.accessors[primitive.attributes[name]]
+
+      // TODO: add stride support (requires update to pex-render/geometry
+      if (accessor._buffer) {
+        const attributeName = AttributeNameMap[name]
+
+        assert(attributeName, `GLTF: Unknown attribute '${name}'`)
+        attributes[attributeName] = {
+          buffer: accessor._buffer,
+          offset: accessor.byteOffset,
+          type: accessor.componentType,
+          stride: accessor._bufferView.stride
+        }
+      } else {
+        const attributeName = AttributeNameMap[name]
+        assert(attributeName, `GLTF: Unknown attribute '${name}'`)
+        attributes[attributeName] = accessor.data
+      }
+      return attributes
+    }, {})
+
+    log('handleMesh.attributes', attributes)
+
+    const positionAccessor = gltf.accessors[primitive.attributes.POSITION]
+    const indicesAccessor = gltf.accessors[primitive.indices]
+    log('handleMesh.positionAccessor', positionAccessor)
+    log('handleMesh.indicesAccessor', indicesAccessor)
+
+    const geometryCmp = renderer.geometry(attributes)
+    geometryCmp.set({
+      bounds: [positionAccessor.min, positionAccessor.max]
+    })
+
+    if (indicesAccessor) {
+      if (indicesAccessor._buffer) {
+        log('indicesAccessor._buffer', indicesAccessor)
+        geometryCmp.set({
+          indices: {
+            buffer: indicesAccessor._buffer,
+            offset: indicesAccessor.byteOffset,
+            type: indicesAccessor.componentType,
+            count: indicesAccessor.count
+          }
+        })
+      } else {
+        // TODO: does it ever happen?
+        geometryCmp.set({
+          indices: indicesAccessor.data
+        })
+      }
+    } else {
+      geometryCmp.set({
+        count: positionAccessor.buffer.length / 3
+      })
+    }
+
+    let materialCmp = null
+    // if (primitive.material !== undefined) {
+    //   const material = gltf.materials[primitive.material]
+    //   materialCmp = handleMaterial(material, gltf, ctx, renderer)
+    // } else {
+    //   materialCmp = renderer.material({})
+    // }
+      materialCmp = renderer.material({
+        roughness: 0.1,
+        metallic: 0,
+        baseColor: [1, 0.2, 0.2, 1],
+        castShadows: true,
+        receiveShadows: true
+      })
+
+    let components = [
+      geometryCmp,
+      materialCmp
+    ]
+    log('components', components)
+
+    if (primitive.targets) {
+      let sources = {}
+      const targets = primitive.targets.reduce((targets, target) => {
+        const targetKeys = Object.keys(target)
+
+        targetKeys.forEach(targetKey => {
+          const targetName = AttributeNameMap[targetKey] || `${targetKey.toLowerCase()}`
+          targets[targetName] = targets[targetName] || []
+          targets[targetName].push(gltf.accessors[target[targetKey]].data)
+
+          if (!sources[targetName]) {
+            sources[targetName] = gltf.accessors[primitive.attributes[targetKey]].data
+          }
+        })
+        return targets
+      }, {})
+
+      const morphCmp = renderer.morph({
+        sources,
+        targets,
+        weights: mesh.weights
+      })
+      components.push(morphCmp)
+    }
+
+    return components
+  })
+}
+
+function handleNode (node, gltf, i) {
   const transform = {
     position: node.translation || [0, 0, 0],
     rotation: node.rotation || [0, 0, 0, 1],
     scale: node.scale || [1, 1, 1]
   }
   if (node.matrix) transform.matrix = node.matrix
-
   const transformCmp = renderer.transform(transform)
-  if (node.mesh !== undefined) {
-    const mesh = gltf.meshes[node.mesh]
-    const primitives = mesh.primitives[0]
-    const attributes = primitives.attributes
 
-    const positionAccessor = gltf.accessors[attributes.POSITION]
-    const normalAccessor = gltf.accessors[attributes.NORMAL]
-    const indicesAccessor = gltf.accessors[primitives.indices]
-    // TODO handle tex coords
-    const tx = []
-    positionAccessor.data.forEach(() => tx.push(0, 0))
-    const geometryCmp = renderer.geometry({
-      positions: positionAccessor.data,
-      normals: normalAccessor.data,
-      // texCoords: texcoordAccessor.data,
-      texCoords: tx,
-      indices: indicesAccessor.data
-    })
+  node.entity = renderer.add(renderer.entity([
+    transformCmp
+  ]))
+  node.entity.name = node.name || ('node_' + i)
 
-    const jointAccessor = gltf.accessors[mesh.primitives[0].attributes.JOINT]
-    if (jointAccessor) geometryCmp.set({ joints: jointAccessor.data })
-    const weightAccessor = gltf.accessors[mesh.primitives[0].attributes.WEIGHT]
-    if (weightAccessor) geometryCmp.set({ weights: weightAccessor.data })
+  let skinCmp = null
+  if (node.skin !== undefined) {
+    const skin = gltf.skins[node.skin]
+    const data = gltf.accessors[skin.inverseBindMatrices]._data
 
-    const materialCmp = renderer.material({
-      baseColor: [1, 1, 1, 1.0],
-      roughness: 1,
-      metallic: 0
-    })
-
-    let components = [
-      transformCmp,
-      geometryCmp,
-      materialCmp
-    ]
-    if (primitives.targets) {
-      let targets = primitives.targets.map((target) => {
-        return gltf.accessors[target.POSITION].data
-      })
-      let morphCmp = renderer.morph({
-        // TODO the rest ?
-        targets: targets,
-        weights: mesh.weights
-      })
-      components.push(morphCmp)
+    let inverseBindMatrices = []
+    for (let i = 0; i < data.length; i += 16) {
+      inverseBindMatrices.push(data.slice(i, i + 16))
     }
 
-    node.entity = renderer.add(renderer.entity(components))
-
-    if (node.skin !== undefined) {
-      const skin = gltf.skins[node.skin]
-      const data = gltf.accessors[skin.inverseBindMatrices].data
-
-      const inverseBindMatrices = []
-      for (let i = 0; i < data.length; i += 16) {
-        inverseBindMatrices.push(data.slice(i, i + 16))
-      }
-
-      const skinCmp = renderer.skin({
-        bindShapeMatrix: skin.bindShapeMatrix,
-        inverseBindMatrices: inverseBindMatrices
-      })
-      node.entity.addComponent(skinCmp)
-    }
-  } else {
-    node.entity = renderer.add(renderer.entity([
-      transformCmp
-    ]))
+    skinCmp = renderer.skin({
+      inverseBindMatrices: inverseBindMatrices
+    })
   }
+
+  if (node.mesh !== undefined) {
+    const primitives = handleMesh(gltf.meshes[node.mesh], gltf, ctx, renderer)
+    if (primitives.length === 1) {
+      primitives[0].forEach((component) => {
+        node.entity.addComponent(component)
+      })
+      if (skinCmp) node.entity.addComponent(skinCmp)
+      return node.entity
+    } else {
+      // create sub modes for each primitive
+      const primitiveNodes = primitives.map((components, j) => {
+        const subMesh = renderer.add(renderer.entity(components))
+        subMesh.name = `node_${i}_${j}`
+        subMesh.transform.set({ parent: node.entity.transform })
+
+        // TODO: should skin component be shared?
+        if (skinCmp) subMesh.addComponent(skinCmp)
+        return subMesh
+      })
+      const nodes = [node.entity].concat(primitiveNodes)
+      return nodes
+    }
+  }
+  return node.entity
 }
 
 function buildHierarchy (nodes, gltf) {
