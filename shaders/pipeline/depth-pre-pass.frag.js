@@ -37,7 +37,7 @@ void main() {
   getBaseColor(data);
 
   #ifdef USE_ALPHA_MAP
-    data.opacity *= texture2D(uAlphaMap, getTextureCoordinates(data, uAlphaMapTexCoordIndex)).r;
+    data.opacity *= texture2D(uAlphaMap, getTextureCoordinates(data, ALPHA_MAP_TEX_COORD_INDEX)).r;
   #endif
 
   #ifdef USE_ALPHA_TEST

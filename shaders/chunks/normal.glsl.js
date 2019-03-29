@@ -1,7 +1,6 @@
 module.exports = /* glsl */`
 #ifdef USE_NORMAL_MAP
 uniform sampler2D uNormalMap;
-uniform int uNormalMapTexCoordIndex;
 uniform float uNormalScale;
 
 //http://www.thetenthplanet.de/archives/1180
@@ -29,7 +28,7 @@ vec3 perturb(vec3 map, vec3 N, vec3 V, vec2 texcoord) {
 }
 
 void getNormal(inout PBRData data) {
-  vec2 uv = getTextureCoordinates(data, uNormalMapTexCoordIndex);
+  vec2 uv = getTextureCoordinates(data, NORMAL_MAP_TEX_COORD_INDEX);
   vec3 normalRGB = texture2D(uNormalMap, uv).rgb;
   vec3 normalMap = normalRGB * 2.0 - 1.0;
   normalMap.y *= uNormalScale;

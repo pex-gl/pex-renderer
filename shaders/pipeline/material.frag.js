@@ -164,7 +164,7 @@ void main() {
     #endif
 
     #ifdef USE_ALPHA_MAP
-      data.opacity *= texture2D(uAlphaMap, getTextureCoordinates(data, uAlphaMapTexCoordIndex)).r;
+      data.opacity *= texture2D(uAlphaMap, getTextureCoordinates(data, ALPHA_MAP_TEX_COORD_INDEX)).r;
     #endif
     #ifdef USE_ALPHA_TEST
       alphaTest(data);
@@ -185,7 +185,7 @@ void main() {
 
     float ao = 1.0;
     #ifdef USE_OCCLUSION_MAP
-      ao *= texture2D(uOcclusionMap, getTextureCoordinates(data, uOcclusionMapTexCoordIndex)).r;
+      ao *= texture2D(uOcclusionMap, getTextureCoordinates(data, OCCLUSION_MAP_TEX_COORD_INDEX)).r;
     #endif
     #ifdef USE_AO
       vec2 vUV = vec2(gl_FragCoord.x / uScreenSize.x, gl_FragCoord.y / uScreenSize.y);

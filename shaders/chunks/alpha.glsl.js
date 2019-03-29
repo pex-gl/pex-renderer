@@ -1,7 +1,6 @@
 module.exports = /* glsl */`
 #ifdef USE_ALPHA_MAP
   uniform sampler2D uAlphaMap;
-  uniform int uAlphaMapTexCoordIndex;
 #endif
 
 #ifdef USE_ALPHA_TEST

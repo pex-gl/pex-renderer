@@ -6,12 +6,11 @@ module.exports = /* glsl */`
 
   #ifdef USE_DIFFUSE_MAP
     uniform sampler2D uDiffuseMap;
-    uniform int uDiffuseMapTexCoordIndex;
     uniform float uDiffuseMapEncoding;
 
     vec4 getDiffuse() {
       // assumes sRGB texture
-      vec4 texelColor = texture2D(uDiffuseMap, getTextureCoordinates(data, uDiffuseMapTexCoordIndex));
+      vec4 texelColor = texture2D(uDiffuseMap, getTextureCoordinates(data, DIFFUSE_MAP_TEX_COORD_INDEX));
       return vec4(decode(uDiffuse, 3).rgb, uDiffuse.a) * vec4(decode(texelColor, 3).rgb, texelColor.a);
     }
   #else
@@ -22,11 +21,10 @@ module.exports = /* glsl */`
 
   #ifdef USE_SPECULAR_GLOSSINESS_MAP
     uniform sampler2D uSpecularGlossinessMap;
-    uniform int uSpecularGlossinessMapTexCoordIndex;
 
     vec4 getSpecularGlossiness() {
       // assumes specular is sRGB and glossiness is linear
-      vec4 specGloss = texture2D(uSpecularGlossinessMap, getTextureCoordinates(data, uSpecularGlossinessMapTexCoordIndex));
+      vec4 specGloss = texture2D(uSpecularGlossinessMap, getTextureCoordinates(data, SPECULAR_GLOSSINESS_MAP_TEX_COORD_INDEX));
       //TODO: should i move uSpecular to linear?
       return vec4(uSpecular, uGlossiness) * vec4(decode(vec4(specGloss.rgb, 1.0), 3).rgb, specGloss.a);
     }
