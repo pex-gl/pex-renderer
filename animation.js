@@ -95,33 +95,31 @@ Animation.prototype.update = function () {
           currentOutput = outputData[prevIndex]
           break;
         case 'CUBICSPLINE':
-          //console.log(channel)
           //intangent = index
           //position = index+1
           //outtangent = index+2
-          
-          
+              
           let prevInTangent,prevOutTangent,prevPosition,nextInTangent,nextOutTangent,nextPos;
 
           if(path === 'rotation') {
-            prevInTangent = vec4.create(); 
+            //prevInTangent = vec4.create(); 
             prevOutTangent = vec4.create(); 
             prevPosition = vec4.create(); 
             nextInTangent = vec4.create();
-            nextOutTangent = vec4.create(); 
+            //nextOutTangent = vec4.create(); 
             nextPos = vec4.create();
           }else{
-            prevInTangent = vec3.create(); 
+            //prevInTangent = vec3.create(); 
             prevOutTangent = vec3.create(); 
             prevPosition = vec3.create(); 
             nextInTangent = vec3.create();
-            nextOutTangent = vec3.create(); 
+            //nextOutTangent = vec3.create(); 
             nextPos = vec3.create();
           }
 
 
           if(prevIndex){
-            prevInTangent = outputData[prevIndex*3].slice()
+            //prevInTangent = outputData[prevIndex*3].slice()
             prevOutTangent = outputData[(prevIndex*3) +2].slice()
           }
           //p0
@@ -131,7 +129,7 @@ Animation.prototype.update = function () {
           if(nextIndex < (inputData.length - 1)){
             //m1
             nextInTangent = outputData[(nextIndex*3)].slice()
-            nextOutTangent = outputData[(nextIndex*3) +2].slice()
+            //nextOutTangent = outputData[(nextIndex*3) +2].slice()
           }
           //p1
           nextPos = outputData[(nextIndex*3) +1].slice()
