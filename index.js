@@ -653,32 +653,34 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
     const cachedUniforms = material._uniforms
 
     if (material.baseColorMap) {
-      cachedUniforms.uBaseColorMap = material.baseColorMap
+      cachedUniforms.uBaseColorMap = material.baseColorMap.texture || material.baseColorMap
       cachedUniforms.uBaseColorMapTexCoordIndex = material.baseColorMap.texCoord || 0
     }
     cachedUniforms.uBaseColor = material.baseColor
 
     if (material.emissiveColorMap) {
-      cachedUniforms.uEmissiveColorMap = material.emissiveColorMap
+      cachedUniforms.uEmissiveColorMap = material.emissiveColorMap.texture || material.emissiveColorMap
       cachedUniforms.uEmissiveColorMapTexCoordIndex = material.emissiveColorMap.texCoord || 0
+      // console.log(cachedUniforms.uEmissiveColorMapTexCoordIndex);
+
     }
     cachedUniforms.uEmissiveColor = material.emissiveColor
     cachedUniforms.uEmissiveIntensity = material.emissiveIntensity
 
     if (material.metallicMap) {
-      cachedUniforms.uMetallicMap = material.metallicMap
+      cachedUniforms.uMetallicMap = material.metallicMap.texture || material.metallicMap
       cachedUniforms.uMetallicMapTexCoordIndex = material.metallicMap.texCoord || 0
     }
     if (!isNil(material.metallic)) cachedUniforms.uMetallic = material.metallic
 
     if (material.roughnessMap) {
-      cachedUniforms.uRoughnessMap = material.roughnessMap
+      cachedUniforms.uRoughnessMap = material.roughnessMap.texture || material.roughnessMap
       cachedUniforms.uRoughnessMapTexCoordIndex = material.roughnessMap.texCoord || 0
     }
     if (!isNil(material.roughness)) cachedUniforms.uRoughness = material.roughness
 
     if (material.metallicRoughnessMap) {
-      cachedUniforms.uMetallicRoughnessMap = material.metallicRoughnessMap
+      cachedUniforms.uMetallicRoughnessMap = material.metallicRoughnessMap.texture || material.metallicRoughnessMap
       cachedUniforms.uMetallicRoughnessMapTexCoordIndex = material.metallicRoughnessMap.texCoord || 0
     }
 
@@ -686,21 +688,21 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
     if (material.specular) cachedUniforms.uSpecular = material.specular
     if (material.glossiness !== undefined) cachedUniforms.uGlossiness = material.glossiness
     if (material.diffuseMap) {
-      cachedUniforms.uDiffuseMap = material.diffuseMap
+      cachedUniforms.uDiffuseMap = material.diffuseMap.texture || material.diffuseMap
       cachedUniforms.uDiffuseMapTexCoordIndex = material.diffuseMap.texCoord || 0
     }
     if (material.specularGlossinessMap) {
-      cachedUniforms.uSpecularGlossinessMap = material.specularGlossinessMap
+      cachedUniforms.uSpecularGlossinessMap = material.specularGlossinessMap.texture || material.specularGlossinessMap
       cachedUniforms.uSpecularGlossinessMapTexCoordIndex = material.specularGlossinessMap.texCoord || 0
     }
 
     if (material.normalMap) {
-      cachedUniforms.uNormalMap = material.normalMap
+      cachedUniforms.uNormalMap = material.normalMap.texture || material.normalMap
       cachedUniforms.uNormalMapTexCoordIndex = material.normalMap.texCoord || 0
       cachedUniforms.uNormalScale = material.normalScale
     }
     if (material.occlusionMap) {
-      cachedUniforms.uOcclusionMap = material.occlusionMap
+      cachedUniforms.uOcclusionMap = material.occlusionMap.texture || material.occlusionMap
       cachedUniforms.uOcclusionMapTexCoordIndex = material.occlusionMap.texCoord || 0
     }
     if (material.displacementMap) {
@@ -709,7 +711,7 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
     }
 
     if (material.alphaMap) {
-      cachedUniforms.uAlphaMap = material.alphaMap
+      cachedUniforms.uAlphaMap = material.alphaMap.texture || material.alphaMap
       cachedUniforms.uAlphaMapTexCoordIndex = material.alphaMap.texCoord || 0
     }
 
