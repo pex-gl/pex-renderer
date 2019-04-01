@@ -128,14 +128,16 @@ void main() {
     data.inverseViewMatrix = uInverseViewMatrix;
     data.positionWorld = vPositionWorld;
     data.positionView = vPositionView;
-    data.normalView = normalize(vNormalView); //TODO: normalization needed?
+    // TODO: is normalization needed for normalView, tangentView, normalWorld?
+    data.normalView = normalize(vNormalView);
+    data.normalView *= float(gl_FrontFacing) * 2.0 - 1.0;
     #ifdef USE_TANGENTS
       data.tangentView = normalize(vTangentView);
+      data.tangentView *= float(gl_FrontFacing) * 2.0 - 1.0;
     #endif
-    data.normalView *= float(gl_FrontFacing) * 2.0 - 1.0;
     data.normalWorld = normalize(vNormalWorld);
     data.normalWorld *= float(gl_FrontFacing) * 2.0 - 1.0;
-    data.eyeDirView = normalize(-vPositionView); //TODO: normalization needed?
+    data.eyeDirView = normalize(-vPositionView);
     data.eyeDirWorld = vec3(uInverseViewMatrix * vec4(data.eyeDirView, 0.0));
     data.indirectDiffuse = vec3(0.0);
     data.indirectSpecular = vec3(0.0);
