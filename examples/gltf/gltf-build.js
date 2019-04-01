@@ -356,7 +356,7 @@ function handleMesh (mesh, gltf, ctx, renderer) {
           buffer: accessor._buffer,
           offset: accessor.byteOffset,
           type: accessor.componentType,
-          stride: accessor._bufferView.stride
+          stride: accessor._bufferView.byteStride
         }
       } else {
         const attributeName = AttributeNameMap[name]
@@ -397,7 +397,7 @@ function handleMesh (mesh, gltf, ctx, renderer) {
       }
     } else {
       geometryCmp.set({
-        count: positionAccessor.buffer.length / 3
+        count: positionAccessor._data.length / 3
       })
     }
 
