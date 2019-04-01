@@ -32,39 +32,37 @@ Morph.prototype.update = function () {
   if (!this.dirty || !this.enabled) return
   this.dirty = false
 
-  const geometryCmp = this.entity.getComponent('Geometry')
-
   Object.keys(this.sources).forEach(key => {
-    const sources = this.sources[key]
-    const targets = this.targets[key]
+    const sourceAttributes = this.sources[key]
+    const targetAttributes = this.targets[key]
 
-    this.current[key] = sources.map((source, i) => {
-      let newAttribute = source.length ? [0, 0, 0] : 0
+    this.current[key] = sourceAttributes.map((source, i) => {
+      let attribute = source.length ? [0, 0, 0] : 0
 
-      targets.forEach((target, j) => {
+      targetAttributes.forEach((target, j) => {
         const weight = this.weights[j]
-        const targetVertex = target[i]
+        const targetAttribute = target[i]
 
         if (source.length) {
-          newAttribute[0] += targetVertex[0] * weight
-          newAttribute[1] += targetVertex[1] * weight
-          newAttribute[2] += targetVertex[2] * weight
+          attribute[0] += targetAttribute[0] * weight
+          attribute[1] += targetAttribute[1] * weight
+          attribute[2] += targetAttribute[2] * weight
         } else {
-          newAttribute += targetVertex * weight
+          attribute += targetAttribute * weight
         }
       })
       if (source.length) {
-        newAttribute[0] += source[0]
-        newAttribute[1] += source[1]
-        newAttribute[2] += source[2]
+        attribute[0] += source[0]
+        attribute[1] += source[1]
+        attribute[2] += source[2]
       } else {
-        newAttribute += source
+        attribute += source
       }
-      return newAttribute
+      return attribute
     })
   })
 
-  geometryCmp.set(this.current)
+  this.entity.getComponent('Geometry').set(this.current)
 }
 
 module.exports = function createMorph (opts) {
