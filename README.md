@@ -453,7 +453,8 @@ Geometry morph targets based on [glTF 2.0 Spec / Morph Targets](https://github.c
 <!-- eslint-disable no-unused-vars -->
 ```javascript
 const morph = renderer.morph({
-  targets: [vertexBuffer, vertexBuffer, ...vertexBuffers],
+  sources: { positions, normals, tangents, ...attributes },
+  targets: { positions, normals, tangents, ...attributes },
   weights: [0.0, 0.0, ...weights]
 })
 ```

@@ -421,12 +421,25 @@ function handleMesh (mesh, gltf, ctx, renderer) {
     log('components', components)
 
     if (primitive.targets) {
-      let targets = primitive.targets.map((target) => {
-        return gltf.accessors[target.POSITION]._data
-      })
-      let morphCmp = renderer.morph({
-        // TODO the rest ?
-        targets: targets,
+      let sources = {}
+      const targets = primitive.targets.reduce((targets, target) => {
+        const targetKeys = Object.keys(target)
+
+        targetKeys.forEach(targetKey => {
+          const targetName = AttributeNameMap[targetKey] || targetKey
+          targets[targetName] = targets[targetName] || []
+          targets[targetName].push(gltf.accessors[target[targetKey]]._data)
+
+          if (!sources[targetName]) {
+            sources[targetName] = gltf.accessors[primitive.attributes[targetKey]]._data
+          }
+        })
+        return targets
+      }, {})
+
+      const morphCmp = renderer.morph({
+        sources,
+        targets,
         weights: mesh.weights
       })
       components.push(morphCmp)
