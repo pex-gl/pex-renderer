@@ -7,30 +7,53 @@ const vec3 = require('pex-math/vec3')
 const createBox = require('primitive-box')
 const edges = require('geom-edges')
 
-// log.enabled = true
-
-var WebGLConstants = {
+// Constants
+const WEBGL_CONSTANTS = {
+  // https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/Constants#Buffers
   ELEMENT_ARRAY_BUFFER: 34963,  // 0x8893
   ARRAY_BUFFER: 34962,          // 0x8892
+
+  // https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/Constants#Data_types
   BYTE: 5120,                   // 0x1400
   UNSIGNED_BYTE: 5121,          // 0x1401
   SHORT: 5122,                  // 0x1402
   UNSIGNED_SHORT: 5123,         // 0x1403
-  UNSIGNED_INT: 5125,
+  UNSIGNED_INT: 5125,           // 0x1405
   FLOAT: 5126,                  // 0x1406
+
+  // https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/Constants#Rendering_primitives
   TRIANGLES: 4,                 // 0x0004
+
   SAMPLER_2D: 35678,            // 0x8B5E
-  FLOAT_VEC2: 35664,            // 0x8B50
-  FLOAT_VEC3: 35665,            // 0x8B51
-  FLOAT_VEC4: 35666,            // 0x8B52
-  FLOAT_MAT4: 35676             // 0x8B5C
 }
 
-const AttributeSizeMap = {
+// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Typed_arrays#Typed_array_views
+const WEBGL_TYPED_ARRAY_BY_COMPONENT_TYPES = {
+  [WEBGL_CONSTANTS.BYTE]: Int8Array,
+  [WEBGL_CONSTANTS.UNSIGNED_BYTE]: Uint8Array,
+  [WEBGL_CONSTANTS.SHORT]: Int16Array,
+  [WEBGL_CONSTANTS.UNSIGNED_SHORT]: Uint16Array,
+  [WEBGL_CONSTANTS.UNSIGNED_INT]: Uint32Array,
+  [WEBGL_CONSTANTS.FLOAT]: Float32Array
+}
+
+// https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/README.md#accessor-element-size
+const GLTF_ACCESSOR_COMPONENT_TYPE_SIZE = {
+  [WEBGL_CONSTANTS.BYTE]: 1,
+  [WEBGL_CONSTANTS.UNSIGNED_BYTE]: 1,
+  [WEBGL_CONSTANTS.SHORT]: 2,
+  [WEBGL_CONSTANTS.UNSIGNED_SHORT]: 2,
+  [WEBGL_CONSTANTS.UNSIGNED_INT]: 4,
+  [WEBGL_CONSTANTS.FLOAT]: 4
+}
+
+const GLTF_ACCESSOR_TYPE_COMPONENTS_NUMBER = {
   SCALAR: 1,
   VEC2: 2,
   VEC3: 3,
   VEC4: 4,
+  MAT2: 4,
+  MAT3: 9,
   MAT4: 16
 }
 
@@ -45,6 +68,7 @@ const AttributeNameMap = {
   COLOR_0: 'vertexColors'
 }
 
+// https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/schema/bufferView.schema.json
 function handleBufferView (bufferView, bufferData, ctx, renderer) {
   if (bufferView.byteOffset === undefined) bufferView.byteOffset = 0
   bufferView._data = bufferData.slice(
@@ -53,88 +77,65 @@ function handleBufferView (bufferView, bufferData, ctx, renderer) {
   )
 
   // console.log('handleBufferView', bufferView)
-  if (bufferView.target === WebGLConstants.ELEMENT_ARRAY_BUFFER) {
+  if (bufferView.target === WEBGL_CONSTANTS.ELEMENT_ARRAY_BUFFER) {
     bufferView._indexBuffer = ctx.indexBuffer(bufferView._data)
-  } else if (bufferView.target === WebGLConstants.ARRAY_BUFFER) {
+  } else if (bufferView.target === WEBGL_CONSTANTS.ARRAY_BUFFER) {
     bufferView._vertexBuffer = ctx.vertexBuffer(bufferView._data)
   }
 }
 
-function handleAccessor (accessor, bufferView, ctx, renderer) {
-  const size = AttributeSizeMap[accessor.type]
+// https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/schema/accessor.schema.json
+function handleAccessor (accessor, bufferView, ctx, renderer, bufferViews) {
+  const numberOfComponents = GLTF_ACCESSOR_TYPE_COMPONENTS_NUMBER[accessor.type]
   if (accessor.byteOffset === undefined) accessor.byteOffset = 0
 
   accessor._bufferView = bufferView
 
   if (bufferView._indexBuffer) {
     accessor._buffer = bufferView._indexBuffer
-    // return
   }
   if (bufferView._vertexBuffer) {
     accessor._buffer = bufferView._vertexBuffer
-    // return
   }
 
-  // https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/README.md#accessor-element-size
-  // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Typed_arrays#Typed_array_views
-  // https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/Constants#Data_types
-  if (accessor.componentType === WebGLConstants.BYTE) {
-    const data = new Int8Array(bufferView._data.slice(
-      accessor.byteOffset,
-      accessor.byteOffset + accessor.count * size * 1
-    ))
-    accessor._data = data
-  } else if (accessor.componentType === WebGLConstants.UNSIGNED_BYTE) {
-    const data = new Uint8Array(bufferView._data.slice(
-      accessor.byteOffset,
-      accessor.byteOffset + accessor.count * size * 1
-    ))
-    accessor._data = data
-  } else if (accessor.componentType === WebGLConstants.SHORT) {
-    const data = new Int16Array(bufferView._data.slice(
-      accessor.byteOffset,
-      accessor.byteOffset + accessor.count * size * 2
-    ))
-    accessor._data = data
-  } else if (accessor.componentType === WebGLConstants.UNSIGNED_SHORT) {
-    const data = new Uint16Array(bufferView._data.slice(
-      accessor.byteOffset,
-      accessor.byteOffset + accessor.count * size * 2
-    ))
-    accessor._data = data
-  } else if (accessor.componentType === WebGLConstants.UNSIGNED_INT) {
-    const data = new Uint32Array(bufferView._data.slice(
-      accessor.byteOffset,
-      accessor.byteOffset + accessor.count * size * 4
-    ))
-    accessor._data = data
-  } else if (accessor.componentType === WebGLConstants.FLOAT) {
-    const data = new Float32Array(bufferView._data.slice(
-      accessor.byteOffset,
-      accessor.byteOffset + accessor.count * size * 4
-    ))
-    accessor._data = data
-  } else if (accessor.componentType === WebGLConstants.FLOAT_VEC2) {
-    const data = new Float32Array(bufferView._data.slice(
-      accessor.byteOffset,
-      accessor.byteOffset + accessor.count * size * 4
-    ))
-    accessor._data = data
-  } else if (accessor.componentType === WebGLConstants.FLOAT_VEC3) {
-    const data = new Float32Array(bufferView._data.slice(
-      accessor.byteOffset,
-      accessor.byteOffset + accessor.count * size * 4
-    ))
-    accessor._data = data
-  } else if (accessor.componentType === WebGLConstants.FLOAT_VEC4) {
-    const data = new Float32Array(bufferView._data.slice(
-      accessor.byteOffset,
-      accessor.byteOffset + accessor.count * size * 4
-    ))
-    accessor._data = data
-  } else {
-    // TODO
-    log('uncaught', accessor)
+  const TypedArrayConstructor = WEBGL_TYPED_ARRAY_BY_COMPONENT_TYPES[accessor.componentType];
+  const byteSize = GLTF_ACCESSOR_COMPONENT_TYPE_SIZE[accessor.componentType];
+
+  const data = new TypedArrayConstructor(bufferView._data.slice(
+    accessor.byteOffset,
+    accessor.byteOffset + accessor.count * numberOfComponents * byteSize
+  ))
+  accessor._data = data
+
+  // Sparse accessors
+  // https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/README.md#sparse-accessors
+  if (accessor.sparse !== undefined) {
+    const TypedArrayIndicesConstructor =
+      WEBGL_TYPED_ARRAY_BY_COMPONENT_TYPES[accessor.sparse.indices.componentType];
+
+    const sparseIndices = new TypedArrayIndicesConstructor(
+      bufferViews[accessor.sparse.indices.bufferView]._data,
+      accessor.sparse.indices.byteOffset || 0,
+      accessor.sparse.count * 1
+    );
+
+    const sparseValues = new TypedArrayConstructor(
+      bufferViews[accessor.sparse.values.bufferView]._data,
+      accessor.sparse.values.byteOffset || 0,
+      accessor.sparse.count * numberOfComponents
+    );
+
+    if (accessor._data !== null) {
+      accessor._data = accessor._data.slice();
+    }
+
+    let valuesIndex = 0;
+    for (let indicesIndex = 0; indicesIndex < sparseIndices.length; indicesIndex++) {
+      let dataIndex = sparseIndices[indicesIndex] * numberOfComponents;
+      for (let componentIndex = 0; componentIndex < numberOfComponents; componentIndex++) {
+        accessor._data[dataIndex++] = sparseValues[valuesIndex++];
+      }
+    }
   }
 }
 
@@ -400,6 +401,7 @@ function handleMesh (mesh, gltf, ctx, renderer) {
         count: positionAccessor._data.length / 3
       })
     }
+    // TODO: handle primitive.mode
 
     let materialCmp = null
     if (primitive.material !== undefined) {
@@ -408,6 +410,7 @@ function handleMesh (mesh, gltf, ctx, renderer) {
     } else {
       materialCmp = renderer.material({})
     }
+
       // materialCmp = renderer.material({
         // roughness: 0.1,
         // metallic: 0,
@@ -423,12 +426,25 @@ function handleMesh (mesh, gltf, ctx, renderer) {
     log('components', components)
 
     if (primitive.targets) {
-      let targets = primitive.targets.map((target) => {
-        return gltf.accessors[target.POSITION]._data
-      })
-      let morphCmp = renderer.morph({
-        // TODO the rest ?
-        targets: targets,
+      let sources = {}
+      const targets = primitive.targets.reduce((targets, target) => {
+        const targetKeys = Object.keys(target)
+
+        targetKeys.forEach(targetKey => {
+          const targetName = AttributeNameMap[targetKey] || targetKey
+          targets[targetName] = targets[targetName] || []
+          targets[targetName].push(gltf.accessors[target[targetKey]]._data)
+
+          if (!sources[targetName]) {
+            sources[targetName] = gltf.accessors[primitive.attributes[targetKey]]._data
+          }
+        })
+        return targets
+      }, {})
+
+      const morphCmp = renderer.morph({
+        sources,
+        targets,
         weights: mesh.weights
       })
       components.push(morphCmp)
@@ -542,7 +558,7 @@ function handleAnimation (animation, gltf, ctx, renderer) {
 
     const outputData = []
     const od = output._data
-    let offset = AttributeSizeMap[output.type]
+    let offset = GLTF_ACCESSOR_TYPE_COMPONENTS_NUMBER[output.type]
     if (channel.target.path === 'weights') {
       offset = target.getComponent('Morph').weights.length
     }
@@ -598,7 +614,7 @@ function build (gltf, ctx, renderer) {
   })
 
   gltf.accessors.map((accessor) => {
-    handleAccessor(accessor, gltf.bufferViews[accessor.bufferView], ctx, renderer)
+    handleAccessor(accessor, gltf.bufferViews[accessor.bufferView], ctx, renderer, gltf.bufferViews)
   })
 
   const scene = {

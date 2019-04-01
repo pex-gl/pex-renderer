@@ -53,6 +53,7 @@ void getNormal(inout PBRData data) {
     mat3 TBN = mat3(data.tangentView.xyz, bitangent, N);
     normalView = normalize(TBN * normalMap);
   #else
+    normalMap.xy *= float(gl_FrontFacing) * 2.0 - 1.0;
     // make the output normalView match glTF expected right handed orientation
     normalMap.y *= -1.0;
     normalView = perturb(normalMap, N, V, texCoord);
