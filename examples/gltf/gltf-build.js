@@ -426,7 +426,7 @@ function handleMesh (mesh, gltf, ctx, renderer) {
         const targetKeys = Object.keys(target)
 
         targetKeys.forEach(targetKey => {
-          const targetName = AttributeNameMap[targetKey] || `${targetKey.toLowerCase()}`
+          const targetName = AttributeNameMap[targetKey] || targetKey
           targets[targetName] = targets[targetName] || []
           targets[targetName].push(gltf.accessors[target[targetKey]]._data)
 
