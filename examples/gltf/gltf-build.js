@@ -297,7 +297,7 @@ function handleMaterial (material, gltf, ctx, renderer) {
     materialCmp.set({
       normalMap: {
         texture,
-        texCoord: material.occlusionTexture.texCoord || 0
+        texCoord: material.normalTexture.texCoord || 0
       }
     })
   }
