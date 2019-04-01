@@ -97,7 +97,7 @@ cd examples
 npm i
 
 # run the example in your default browser window
-budo example-name.js --open --start
+npx budo example-name.js --open --start
 ```
 
 # API
@@ -243,6 +243,13 @@ entity.transform.dispatch('position')
 
 // stop listening
 entity.transform.changed.remove(onParamChange)
+```
+
+#### Update components
+```javascript
+transformComponent.set({
+  position: [Math.cos(time), 0, 0]
+})
 ```
 
 #### component.dispose()
@@ -446,7 +453,8 @@ Geometry morph targets based on [glTF 2.0 Spec / Morph Targets](https://github.c
 <!-- eslint-disable no-unused-vars -->
 ```javascript
 const morph = renderer.morph({
-  targets: [vertexBuffer, vertexBuffer, ...vertexBuffers],
+  sources: { positions, normals, tangents, ...attributes },
+  targets: { positions, normals, tangents, ...attributes },
   weights: [0.0, 0.0, ...weights]
 })
 ```
