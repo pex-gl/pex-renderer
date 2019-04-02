@@ -601,7 +601,7 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
     sharedUniforms['uPointLights[' + i + '].color'] = light.color
     sharedUniforms['uPointLights[' + i + '].range'] = light.range
     sharedUniforms['uPointLights[' + i + '].castShadows'] = light.castShadows
-    sharedUniforms['uPointLightShadowMaps[' + i + ']'] = light._shadowCubemap
+    sharedUniforms['uPointLightShadowMaps[' + i + ']'] = light.castShadows ? light._shadowCubemap : this._dummyTextureCube
   })
 
   spotLights.forEach((light, i) => {

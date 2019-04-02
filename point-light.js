@@ -14,17 +14,46 @@ function PointLight (opts) {
   this._ctx = ctx
 
   this.set(opts)
+}
+
+PointLight.prototype.init = function (entity) {
+  this.entity = entity
+}
+
+PointLight.prototype.set = function (opts) {
+  Object.assign(this, opts)
+
+  if (opts.color !== undefined || opts.intensity !== undefined) {
+    this.color[3] = this.intensity
+  }
+
+  if (opts.castShadows && !this._ctx.capabilities.depthTexture) {
+    console.warn('PointLight.castShadows is not supported. WEBGL_depth_texture missing.')
+    this.castShadows = false
+  }
+  Object.keys(opts).forEach((prop) => this.changed.dispatch(prop))
+
+  if (this.castShadows) {
+    if (!this._shadowCubemap) this.allocateResources()
+  } else {
+    if (this._shadowCubemap) this.disposeResources()
+  }
+}
+
+PointLight.prototype.allocateResources = function () {
+  const ctx = this._ctx
+
   const CUBEMAP_SIZE = 512
-  const shadowCubemap = this._shadowCubemap = ctx.textureCube({
+  this._shadowCubemap = ctx.textureCube({
     width: CUBEMAP_SIZE,
     height: CUBEMAP_SIZE,
     pixelFormat: this.rgbm ? ctx.PixelFormat.RGBA8 : ctx.PixelFormat.RGBA16F,
     encoding: this.rgbm ? ctx.Encoding.RGBM : ctx.Encoding.Linear
   })
   this._shadowMap = ctx.texture2D({
-    name: 'directionalLightShadowMap',
-    width: 512,
-    height: 512,
+    name: 'pointLightShadowMap',
+    width: CUBEMAP_SIZE,
+    height: CUBEMAP_SIZE,
     pixelFormat: ctx.PixelFormat.Depth,
     encoding: ctx.Encoding.Linear
   })
@@ -40,11 +69,11 @@ function PointLight (opts) {
     side.projectionMatrix = mat4.perspective(mat4.create(), Math.PI / 2, 1, 0.1, 100) // TODO: change this to radians
     side.viewMatrix = mat4.lookAt(mat4.create(), side.eye, side.target, side.up)
     side.drawPassCmd = {
-      name: 'ReflectionProbe.sidePass',
+      name: 'PointLight.sidePass',
       pass: ctx.pass({
-        name: 'ReflectionProbe.sidePass',
+        name: 'PointLight.sidePass',
         depth: this._shadowMap,
-        color: [{ texture: shadowCubemap, target: ctx.gl.TEXTURE_CUBE_MAP_POSITIVE_X + i }],
+        color: [{ texture: this._shadowCubemap, target: ctx.gl.TEXTURE_CUBE_MAP_POSITIVE_X + i }],
         clearColor: [0, 0, 0, 1],
         clearDepth: 1
       })
@@ -53,18 +82,19 @@ function PointLight (opts) {
   })
 }
 
-PointLight.prototype.init = function (entity) {
-  this.entity = entity
-}
+PointLight.prototype.disposeResources = function () {
+  const ctx = this._ctx
 
-PointLight.prototype.set = function (opts) {
-  Object.assign(this, opts)
+  ctx.dispose(this._shadowCubemap)
+  this._shadowCubemap = null
 
-  if (opts.color !== undefined || opts.intensity !== undefined) {
-    this.color[3] = this.intensity
-  }
+  ctx.dispose(this._shadowMap)
+  this._shadowMap = null
 
-  Object.keys(opts).forEach((prop) => this.changed.dispatch(prop))
+  this._sides.forEach(side => {
+    ctx.dispose(side.drawPassCmd.pass)
+  })
+  this._sides = null
 }
 
 module.exports = function (opts) {
