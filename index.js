@@ -246,10 +246,16 @@ Renderer.prototype.getMaterialProgramAndFlags = function (geometry, material, sk
       material.baseColor = [1, 1, 1, 1]
     }
     flags.push(`#define BASE_COLOR_MAP_TEX_COORD_INDEX ${material.baseColorMap.texCoord || 0}`)
+    if (material.baseColorMap.texCoordTransformMatrix) {
+      flags.push('#define USE_BASE_COLOR_MAP_TEX_COORD_TRANSFORM')
+    }
   }
   if (material.alphaMap) {
     flags.push('#define USE_ALPHA_MAP')
     flags.push(`#define ALPHA_MAP_TEX_COORD_INDEX ${material.alphaMap.texCoord || 0}`)
+    if (material.alphaMap.texCoordTransformMatrix) {
+      flags.push('#define USE_ALPHA_MAP_TEX_COORD_TRANSFORM')
+    }
   }
   if (material.alphaTest) {
     flags.push('#define USE_ALPHA_TEST')
@@ -292,14 +298,23 @@ Renderer.prototype.getMaterialProgramAndFlags = function (geometry, material, sk
   if (material.metallicMap) {
     flags.push('#define USE_METALLIC_MAP')
     flags.push(`#define METALLIC_MAP_TEX_COORD_INDEX ${material.metallicMap.texCoord || 0}`)
+    if (material.metallicMap.texCoordTransformMatrix) {
+      flags.push('#define USE_METALLIC_MAP_TEX_COORD_TRANSFORM')
+    }
   }
   if (material.roughnessMap) {
     flags.push('#define USE_ROUGHNESS_MAP')
     flags.push(`#define ROUGHNESS_MAP_TEX_COORD_INDEX ${material.roughnessMap.texCoord || 0}`)
+    if (material.roughnessMap.texCoordTransformMatrix) {
+      flags.push('#define USE_ROUGHNESS_MAP_TEX_COORD_TRANSFORM')
+    }
   }
   if (material.metallicRoughnessMap) {
     flags.push('#define USE_METALLIC_ROUGHNESS_MAP')
     flags.push(`#define METALLIC_ROUGHNESS_MAP_TEX_COORD_INDEX ${material.metallicRoughnessMap.texCoord || 0}`)
+    if (material.metallicRoughnessMap.texCoordTransformMatrix) {
+      flags.push('#define USE_METALLIC_ROUGHNESS_MAP_TEX_COORD_TRANSFORM')
+    }
   }
   if (material.diffuse) {
     useSpecularGlossinessWorkflow = true
@@ -314,19 +329,31 @@ Renderer.prototype.getMaterialProgramAndFlags = function (geometry, material, sk
     useSpecularGlossinessWorkflow = true
     flags.push('#define USE_DIFFUSE_MAP')
     flags.push(`#define DIFFUSE_MAP_TEX_COORD_INDEX ${material.diffuseMap.texCoord || 0}`)
+    if (material.diffuseMap.texCoordTransformMatrix) {
+      flags.push('#define USE_DIFFUSE_MAP_TEX_COORD_TRANSFORM')
+    }
   }
   if (material.specularGlossinessMap) {
     useSpecularGlossinessWorkflow = true
     flags.push('#define USE_SPECULAR_GLOSSINESS_MAP')
     flags.push(`#define SPECULAR_GLOSSINESS_MAP_TEX_COORD_INDEX ${material.specularGlossinessMap.texCoord || 0}`)
+    if (material.specularGlossinessMap.texCoordTransformMatrix) {
+      flags.push('#define USE_SPECULAR_GLOSSINESS_MAP_TEX_COORD_TRANSFORM')
+    }
   }
   if (material.occlusionMap) {
     flags.push('#define USE_OCCLUSION_MAP')
     flags.push(`#define OCCLUSION_MAP_TEX_COORD_INDEX ${material.occlusionMap.texCoord || 0}`)
+    if (material.occlusionMap.texCoordTransformMatrix) {
+      flags.push('#define USE_OCCLUSION_MAP_TEX_COORD_TRANSFORM')
+    }
   }
   if (material.normalMap) {
     flags.push('#define USE_NORMAL_MAP')
     flags.push(`#define NORMAL_MAP_TEX_COORD_INDEX ${material.normalMap.texCoord || 0}`)
+    if (material.normalMap.texCoordTransformMatrix) {
+      flags.push('#define USE_NORMAL_MAP_TEX_COORD_TRANSFORM')
+    }
   }
   if (material.emissiveColorMap) {
     flags.push('#define USE_EMISSIVE_COLOR_MAP')
@@ -334,6 +361,9 @@ Renderer.prototype.getMaterialProgramAndFlags = function (geometry, material, sk
       material.emissiveColor = [1, 1, 1, 1]
     }
     flags.push(`#define EMISSIVE_COLOR_MAP_TEX_COORD_INDEX ${material.emissiveColorMap.texCoord || 0}`)
+    if (material.emissiveColorMap.texCoordTransformMatrix) {
+      flags.push('#define USE_EMISSIVE_COLOR_MAP_TEX_COORD_TRANSFORM')
+    }
   }
   if (material.blend) {
     flags.push('#define USE_BLEND')
@@ -664,27 +694,42 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
 
     if (material.baseColorMap) {
       cachedUniforms.uBaseColorMap = material.baseColorMap.texture || material.baseColorMap
+      if (material.baseColorMap.texCoordTransformMatrix) {
+        cachedUniforms.uBaseColorMapTexCoordTransform = material.baseColorMap.texCoordTransformMatrix
+      }
     }
     cachedUniforms.uBaseColor = material.baseColor
 
     if (material.emissiveColorMap) {
       cachedUniforms.uEmissiveColorMap = material.emissiveColorMap.texture || material.emissiveColorMap
+      if (material.emissiveColorMap.texCoordTransformMatrix) {
+        cachedUniforms.uEmissiveColorMapTexCoordTransform = material.emissiveColorMap.texCoordTransformMatrix
+      }
     }
     cachedUniforms.uEmissiveColor = material.emissiveColor
     cachedUniforms.uEmissiveIntensity = material.emissiveIntensity
 
     if (material.metallicMap) {
       cachedUniforms.uMetallicMap = material.metallicMap.texture || material.metallicMap
+      if (material.metallicMap.texCoordTransformMatrix) {
+        cachedUniforms.uMetallicMapTexCoordTransform = material.metallicMap.texCoordTransformMatrix
+      }
     }
     if (!isNil(material.metallic)) cachedUniforms.uMetallic = material.metallic
 
     if (material.roughnessMap) {
       cachedUniforms.uRoughnessMap = material.roughnessMap.texture || material.roughnessMap
+      if (material.roughnessMap.texCoordTransformMatrix) {
+        cachedUniforms.uRoughnessMapTexCoordTransform = material.roughnessMap.texCoordTransformMatrix
+      }
     }
     if (!isNil(material.roughness)) cachedUniforms.uRoughness = material.roughness
 
     if (material.metallicRoughnessMap) {
       cachedUniforms.uMetallicRoughnessMap = material.metallicRoughnessMap.texture || material.metallicRoughnessMap
+      if (material.metallicRoughnessMap.texCoordTransformMatrix) {
+        cachedUniforms.uMetallicRoughnessMapTexCoordTransform = material.metallicRoughnessMap.texCoordTransformMatrix
+      }
     }
 
     if (material.diffuse) cachedUniforms.uDiffuse = material.diffuse
@@ -692,17 +737,29 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
     if (material.glossiness !== undefined) cachedUniforms.uGlossiness = material.glossiness
     if (material.diffuseMap) {
       cachedUniforms.uDiffuseMap = material.diffuseMap.texture || material.diffuseMap
+      if (material.diffuseMap.texCoordTransformMatrix) {
+        cachedUniforms.uDiffuseMapTexCoordTransform = material.diffuseMap.texCoordTransformMatrix
+      }
     }
     if (material.specularGlossinessMap) {
       cachedUniforms.uSpecularGlossinessMap = material.specularGlossinessMap.texture || material.specularGlossinessMap
+      if (material.specularGlossinessMap.texCoordTransformMatrix) {
+        cachedUniforms.uSpecularGlossinessMapTexCoordTransform = material.specularGlossinessMap.texCoordTransformMatrix
+      }
     }
 
     if (material.normalMap) {
       cachedUniforms.uNormalMap = material.normalMap.texture || material.normalMap
       cachedUniforms.uNormalScale = material.normalScale
+      if (material.normalMap.texCoordTransformMatrix) {
+        cachedUniforms.uNormalMapTexCoordTransform = material.normalMap.texCoordTransformMatrix
+      }
     }
     if (material.occlusionMap) {
       cachedUniforms.uOcclusionMap = material.occlusionMap.texture || material.occlusionMap
+      if (material.occlusionMap.texCoordTransformMatrix) {
+        cachedUniforms.uOcclusionMapTexCoordTransform = material.occlusionMap.texCoordTransformMatrix
+      }
     }
     if (material.displacementMap) {
       cachedUniforms.uDisplacementMap = material.displacementMap
@@ -711,6 +768,9 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
 
     if (material.alphaMap) {
       cachedUniforms.uAlphaMap = material.alphaMap.texture || material.alphaMap
+      if (material.alphaMap.texCoordTransformMatrix) {
+        cachedUniforms.uAlphaMapTexCoordTransform = material.alphaMap.texCoordTransformMatrix
+      }
     }
 
     if (material.uniforms) {

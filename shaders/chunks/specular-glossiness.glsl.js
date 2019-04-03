@@ -8,13 +8,22 @@ module.exports = /* glsl */`
     uniform sampler2D uDiffuseMap;
     uniform float uDiffuseMapEncoding;
 
-    vec4 getDiffuse(inout PBRData data) {
+    #ifdef USE_DIFFUSE_MAP_TEX_COORD_TRANSFORM
+      uniform mat3 uDiffuseMapTexCoordTransform;
+    #endif
+
+    vec4 getDiffuse(in PBRData data) {
       // assumes sRGB texture
-      vec4 texelColor = texture2D(uDiffuseMap, getTextureCoordinates(data, DIFFUSE_MAP_TEX_COORD_INDEX));
+      #ifdef USE_DIFFUSE_MAP_TEX_COORD_TRANSFORM
+        vec2 texCoord = getTextureCoordinates(data, DIFFUSE_MAP_TEX_COORD_INDEX, uDiffuseMapTexCoordTransform);
+      #else
+        vec2 texCoord = getTextureCoordinates(data, DIFFUSE_MAP_TEX_COORD_INDEX);
+      #endif
+      vec4 texelColor = texture2D(uDiffuseMap, texCoord);
       return vec4(decode(uDiffuse, 3).rgb, uDiffuse.a) * vec4(decode(texelColor, 3).rgb, texelColor.a);
     }
   #else
-    vec4 getDiffuse(inout PBRData data) {
+    vec4 getDiffuse(in PBRData data) {
       return vec4(decode(uDiffuse, 3).rgb, uDiffuse.a);
     }
   #endif
@@ -22,14 +31,23 @@ module.exports = /* glsl */`
   #ifdef USE_SPECULAR_GLOSSINESS_MAP
     uniform sampler2D uSpecularGlossinessMap;
 
-    vec4 getSpecularGlossiness(inout PBRData data) {
+    #ifdef USE_SPECULAR_GLOSSINESS_MAP_TEX_COORD_TRANSFORM
+      uniform mat3 uSpecularGlossinessMapTexCoordTransform;
+    #endif
+
+    vec4 getSpecularGlossiness(in PBRData data) {
       // assumes specular is sRGB and glossiness is linear
-      vec4 specGloss = texture2D(uSpecularGlossinessMap, getTextureCoordinates(data, SPECULAR_GLOSSINESS_MAP_TEX_COORD_INDEX));
+      #ifdef USE_SPECULAR_GLOSSINESS_MAP_TEX_COORD_TRANSFORM
+        vec2 texCoord = getTextureCoordinates(data, SPECULAR_GLOSSINESS_MAP_TEX_COORD_INDEX, uSpecularGlossinessMapTexCoordTransform);
+      #else
+        vec2 texCoord = getTextureCoordinates(data, SPECULAR_GLOSSINESS_MAP_TEX_COORD_INDEX);
+      #endif
+      vec4 specGloss = texture2D(uSpecularGlossinessMap, texCoord);
       //TODO: should i move uSpecular to linear?
       return vec4(uSpecular, uGlossiness) * vec4(decode(vec4(specGloss.rgb, 1.0), 3).rgb, specGloss.a);
     }
   #else
-    vec4 getSpecularGlossiness(inout PBRData data) {
+    vec4 getSpecularGlossiness(in PBRData data) {
       return vec4(uSpecular, uGlossiness);
     }
   #endif

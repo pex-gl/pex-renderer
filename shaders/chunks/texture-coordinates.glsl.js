@@ -6,4 +6,10 @@ vec2 getTextureCoordinates(in PBRData data, in int index) {
 
   return data.texCoord0;
 }
+
+vec2 getTextureCoordinates(in PBRData data, in int index, in mat3 texCoordTransform) {
+  vec2 texCoord = getTextureCoordinates(data, index);
+
+  return (texCoordTransform * vec3(texCoord.xy, 1)).xy;
+}
 `
