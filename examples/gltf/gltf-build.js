@@ -259,6 +259,7 @@ function handleMaterial (material, gltf, ctx, renderer) {
   if (pbrSpecularGlossiness) {
     materialProps = {
       ...materialProps,
+      useSpecularGlossinessWorkflow: true,
       diffuse: [1, 1, 1, 1],
       specular: [1, 1, 1],
       glossiness: 1

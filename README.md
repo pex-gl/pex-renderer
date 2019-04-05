@@ -395,20 +395,15 @@ const g = renderer.geometry({
 
 ### material = renderer.material(opts)
 
-Physically based material description.
+Physically based material description. Default to a Metallic Roughness workflow but can also use a Specular Glossiness workflow or even be unlit.
 
 <!-- eslint-disable no-unused-vars -->
 ```javascript
 const material = renderer.material({
-  baseColor: [0.95, 0.95, 0.95, 1],
-  baseColorMap: null,
+  baseColor: [1, 1, 1, 1],
   emissiveColor: [0, 0, 0, 1],
-  emissiveColorMap: null,
-  metallic: 0.01,
-  matallicMap: null,
-  occlusionMap: null,
-  roughness: 0.5,
-  roughnessMap: null,
+  metallic: 0.8,
+  roughness: 0.2,
   castShadows: false,
   receiveShadows: false,
   alphaTest: 0.5,
@@ -416,9 +411,47 @@ const material = renderer.material({
 })
 ```
 
-*Note on default values: metallic: 0, roughness: 0.5 while in gltf both are equal 1 by default.*
+| property                        | info                                                                          | type                                                                                                   | default                 |
+| ------------------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | ----------------------- |
+| `baseColor`                     | albedo                                                                        | Array of Color/Vec4 [r, g, b, a]                                                                       | [1, 1, 1, 1]            |
+| `baseColorMap`                  | base color texture. Multiplied by `baseColor`.                                | ctx.Texture \| { texture: ctx.Texture, offset?: Vec2 [x, y], rotation?: Radians, scale?: Vec2 [x, y] } | null                    |
+| `unlit`                         | no lighting / shadowing. Use `baseColor`.                                     | Boolean                                                                                                | false                   |
+| `metallic`                      | metallic factor. Used if no `metallicMap` is provided.                        | Number                                                                                                 | 1                       |
+| `metallicMap`                   | metallic texture. Used if no `metallicRoughnessMap` is provided.              | ctx.Texture \| { texture: ctx.Texture, offset?: Vec2 [x, y], rotation?: Radians, scale?: Vec2 [x, y] } | null                    |
+| `roughness`                     | roughness factor. Used if no `roughnessMap` is provided.                      | Number                                                                                                 | 1                       |
+| `roughnessMap`                  | roughness texture. Used if no `metallicRoughnessMap` is provided.             | ctx.Texture \| { texture: ctx.Texture, offset?: Vec2 [x, y], rotation?: Radians, scale?: Vec2 [x, y] } | null                    |
+| `metallicRoughnessMap`          | metallic (b channel) and roughness (g channel) combined in a texture.         | ctx.Texture \| { texture: ctx.Texture, offset?: Vec2 [x, y], rotation?: Radians, scale?: Vec2 [x, y] } | null                    |
+| `useSpecularGlossinessWorkflow` | use a specular/glossiness PBR workflow instead of above Metallic/Roughness    | Boolean                                                                                                | false                   |
+| `diffuse`                       | diffuse color. Used if no `uDiffuseMap` is provided.                          | Array of Color/Vec4 [r, g, b, a]                                                                       | 1                       |
+| `diffuseMap`                    | specular (b channel) and roughness (g channel) combined in a texture.         | ctx.Texture \| { texture: ctx.Texture, offset?: Vec2 [x, y], rotation?: Radians, scale?: Vec2 [x, y] } | null                    |
+| `specular`                      | specular color. Used if no `specularGlossinessMap` is provided.               | Array of Color/Vec3 [r, g, b]                                                                          | 1                       |
+| `glossiness`                    | glossiness or smoothness. Used if no `specularGlossinessMap` is provided.     | Number                                                                                                 | 1                       |
+| `specularGlossinessMap`         | specular and glossiness combined in a texture.                                | ctx.Texture \| { texture: ctx.Texture, offset?: Vec2 [x, y], rotation?: Radians, scale?: Vec2 [x, y] } | null                    |
+| `normalMap`                     | normal texture. Doesn't modify vertices positions, only impacts lighting.     | ctx.Texture \| { texture: ctx.Texture, offset?: Vec2 [x, y], rotation?: Radians, scale?: Vec2 [x, y] } | null                    |
+| `normalScale`                   | normal factor. Control how much the `normalMap` affects lighting.             | Number                                                                                                 | 1                       |
+| `displacementMap`               | displacement texture. Modifies vertices positions (r channel).                | ctx.Texture \| { texture: ctx.Texture, offset?: Vec2 [x, y], rotation?: Radians, scale?: Vec2 [x, y] } | null                    |
+| `displacement`                  | displacement factor. Control how much the `displacementMap` affects vertices. | Number                                                                                                 | 0                       |
+| `emissiveColor`                 | light emitted                                                                 | Array of Color/Vec4 [r, g, b, a]                                                                       | [0, 0, 0, 1]            |
+| `emissiveIntensity`             | emissive factor                                                               | Number                                                                                                 | 1                       |
+| `emissiveColorMap`              | base color texture. Multiplied by `emissiveColor` and `emissiveIntensity`.    | ctx.Texture \| { texture: ctx.Texture, offset?: Vec2 [x, y], rotation?: Radians, scale?: Vec2 [x, y] } | null                    |
+| `occlusionMap`                  | occlusion texture. Indicates areas of indirect lighting.                      | ctx.Texture \| { texture: ctx.Texture, offset?: Vec2 [x, y], rotation?: Radians, scale?: Vec2 [x, y] } | null                    |
+| `alphaMap`                      | alpha texture. Impacts opacity (r channel).                                   | ctx.Texture \| { texture: ctx.Texture, offset?: Vec2 [x, y], rotation?: Radians, scale?: Vec2 [x, y] } | null                    |
+| `alphaTest`                     | value against which to test alpha.                                            | Number 0-1                                                                                             | true                    |
+| `depthWrite`                    | depth write mask                                                              | Boolean                                                                                                | true                    |
+| `depthTest`                     | depth test on/off                                                             | Boolean                                                                                                | true                    |
+| `depthFunc`                     | depth test function                                                           | ctx.DepthFunc                                                                                          | ctx.DepthFunc.LessEqual |
+| `blend`                         | blending on/off                                                               | Boolean                                                                                                | false                   |
+| `blendSrcRGBFactor`             | blending source color factor                                                  | ctx.BlendFactor                                                                                        | ctx.BlendFactor.One     |
+| `blendSrcAlphaFactor`           | blending source alpha factor                                                  | ctx.BlendFactor                                                                                        | ctx.BlendFactor.One     |
+| `blendDstRGBFactor`             | blending destination color factor                                             | ctx.BlendFactor                                                                                        | ctx.BlendFactor.One     |
+| `blendDstAlphaFactor`           | blending destination alpha factor                                             | ctx.BlendFactor                                                                                        | ctx.BlendFactor.One     |
+| `cullFace`                      | face culling on/off                                                           | Boolean                                                                                                | false                   |
+| `cullFaceMode`                  | face culling mode                                                             | ctx.Face                                                                                               | ctx.Face.Back           |
+| `castShadows`                   | impact shadow casting                                                         | Boolean                                                                                                | false                   |
+| `receiveShadows`                | receive potential shadowing                                                   | Boolean                                                                                                | false                   |
 
-*Note on unlit (without lighting / shadowing) support: you can disable lighting calculations and render geometry with the colors provided by setting `roughness: null` and `metallic: null` when reacting the material.*
+
+*Texture transforms are achieved by optionally passing an object with offset, rotation and/or scale alongside the texture itself.*
 
 ### animation = renderer.animation(opts)
 

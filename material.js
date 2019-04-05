@@ -74,32 +74,53 @@ function Material (opts) {
 
   this.baseColor = [1, 1, 1, 1]
   this.baseColorMap = null
+
+  this.useSpecularGlossinessWorkflow = opts.useSpecularGlossinessWorkflow || false
+  this.unlit = opts.unlit || false
+  if (opts.useSpecularGlossinessWorkflow) {
+    // Specular Glossiness workflow
+    this.diffuse = [1, 1, 1, 1]
+    this.diffuseMap = null
+    this.specular = [1, 1, 1]
+    this.glossiness = 1
+    this.specularGlossinessMap = null
+  } else if (!this.unlit) {
+    // Metallic Roughness workflow
+    this.metallic = 1
+    this.matallicMap = null
+    this.roughness = 1
+    this.roughnessMap = null
+    this.metallicRoughnessMap = null
+  }
+
+  this.normalMap = null
+  this.normalScale = 1
+
+  this.displacementMap = null
+  this.displacement = 0
+
   this.emissiveColor = [0, 0, 0, 1]
   this.emissiveIntensity = 1
   this.emissiveColorMap = null
-  this.metallic = 0.01
-  this.matallicMap = null
+
   this.occlusionMap = null
-  // required for GLTF support
-  // R = ?, G = roughness, B = metallic
-  this.metallicRoughnessMap = null
-  this.roughness = 0.5
-  this.roughnessMap = null
-  this.normalMap = null
-  this.normalScale = 1
-  this.displacement = 0
+
+  this.alphaMap = null
+  this.alphaTest = undefined
   this.depthTest = true
   this.depthWrite = true
-  this.depthFunc = opts.ctx.DepthFunc.LessEqual
-  this.alphaTest = undefined
+  this.depthFunc = ctx.DepthFunc.LessEqual
   this.blend = false
   this.blendSrcRGBFactor = ctx.BlendFactor.One
   this.blendSrcAlphaFactor = ctx.BlendFactor.One
   this.blendDstRGBFactor = ctx.BlendFactor.One
   this.blendDstAlphaFactor = ctx.BlendFactor.One
+  this.cullFace = true
+  this.cullFaceMode = ctx.Face.Back
+
   this.castShadows = false
   this.receiveShadows = false
-  this.cullFace = true
+
   this.set(opts)
 }
 
