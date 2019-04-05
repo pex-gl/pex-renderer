@@ -286,7 +286,7 @@ const transform = renderer.transform({
 
 ### camera = renderer.camera(opts)
 
-Defines rendering viewport and perspective.
+Defines rendering viewport and projection.
 
 *Note: `camera` `position/rotation` are derived from `entity.transform.position/rotation`. It's probably easier to use `Orbiter` component at the moment.*
 
@@ -299,6 +299,23 @@ const camera = renderer.camera({
   far: 100
 })
 ```
+
+| property                         | info                        | type                            | default                                               |
+| -------------------------------- | --------------------------- | ------------------------------- | ----------------------------------------------------- |
+| `projection`                     | camera projection type      | 'perspective' \| 'orthographic' | 'perspective'                                         |
+| `viewport`                       | camera viewport             | Array [x, y, width, height]     | [0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight] |
+| `near`                           | near plane distance         | Number                          | 0.1                                                   |
+| `far`                            | far plane distance          | Number                          | 100                                                   |
+| `aspect`                         | aspect ratio                | Number                          | 1                                                     |
+| `exposure`                       | exposure value              | Number                          | 1                                                     |
+| `fov`                            | perspective field of view   | Number                          | Math.PI / 4                                           |
+| `left`, `right`, `top`, `bottom` | orthographic frustum bounds | Number                          | 1                                                     |
+| `zoom`                           | orthographic zoom           | Number                          | 1                                                     |
+| `projectionMatrix`\*             |                             |                                 |                                                       |
+| `viewMatrix`\*                   |                             |                                 |                                                       |
+| `inverseViewMatrix`\*            |                             |                                 |                                                       |
+
+<sup>*</sup> read only
 
 ### postProcessing = renderer.postProcessing(opts)
 
@@ -410,44 +427,45 @@ const material = renderer.material({
   alphaMap: ctx.Texture2D
 })
 ```
-| property                        | info                                                                          | type                             | default                 |
-| ------------------------------- | ----------------------------------------------------------------------------- | -------------------------------- | ----------------------- |
-| `baseColor`                     | albedo                                                                        | Array of Color/Vec4 [r, g, b, a] | [1, 1, 1, 1]            |
-| `baseColorMap`                  | base color texture. Multiplied by `baseColor`.                                | ctx.Texture \| TextureMap        | null                    |
-| `unlit`                         | no lighting / shadowing. Use `baseColor`.                                     | Boolean                          | false                   |
-| `metallic`                      | metallic factor. Used if no `metallicMap` is provided.                        | Number                           | 1                       |
-| `metallicMap`                   | metallic texture. Used if no `metallicRoughnessMap` is provided.              | ctx.Texture \| TextureMap        | null                    |
-| `roughness`                     | roughness factor. Used if no `roughnessMap` is provided.                      | Number                           | 1                       |
-| `roughnessMap`                  | roughness texture. Used if no `metallicRoughnessMap` is provided.             | ctx.Texture \| TextureMap        | null                    |
-| `metallicRoughnessMap`          | metallic (b channel) and roughness (g channel) combined in a texture.         | ctx.Texture \| TextureMap        | null                    |
-| `useSpecularGlossinessWorkflow` | use a specular/glossiness PBR workflow instead of above Metallic/Roughness    | Boolean                          | false                   |
-| `diffuse`                       | diffuse color. Used if no `uDiffuseMap` is provided.                          | Array of Color/Vec4 [r, g, b, a] | 1                       |
-| `diffuseMap`                    | specular (b channel) and roughness (g channel) combined in a texture.         | ctx.Texture \| TextureMap        | null                    |
-| `specular`                      | specular color. Used if no `specularGlossinessMap` is provided.               | Array of Color/Vec3 [r, g, b]    | 1                       |
-| `glossiness`                    | glossiness or smoothness. Used if no `specularGlossinessMap` is provided.     | Number                           | 1                       |
-| `specularGlossinessMap`         | specular and glossiness combined in a texture.                                | ctx.Texture \| TextureMap        | null                    |
-| `normalMap`                     | normal texture. Doesn't modify vertices positions, only impacts lighting.     | ctx.Texture \| TextureMap        | null                    |
-| `normalScale`                   | normal factor. Control how much the `normalMap` affects lighting.             | Number                           | 1                       |
-| `displacementMap`               | displacement texture. Modifies vertices positions (r channel).                | ctx.Texture \| TextureMap        | null                    |
-| `displacement`                  | displacement factor. Control how much the `displacementMap` affects vertices. | Number                           | 0                       |
-| `emissiveColor`                 | light emitted                                                                 | Array of Color/Vec4 [r, g, b, a] | [0, 0, 0, 1]            |
-| `emissiveIntensity`             | emissive factor                                                               | Number                           | 1                       |
-| `emissiveColorMap`              | base color texture. Multiplied by `emissiveColor` and `emissiveIntensity`.    | ctx.Texture \| TextureMap        | null                    |
-| `occlusionMap`                  | occlusion texture. Indicates areas of indirect lighting.                      | ctx.Texture \| TextureMap        | null                    |
-| `alphaMap`                      | alpha texture. Impacts opacity (r channel).                                   | ctx.Texture \| TextureMap        | null                    |
-| `alphaTest`                     | value against which to test alpha.                                            | Number 0-1                       | true                    |
-| `depthWrite`                    | depth write mask                                                              | Boolean                          | true                    |
-| `depthTest`                     | depth test on/off                                                             | Boolean                          | true                    |
-| `depthFunc`                     | depth test function                                                           | ctx.DepthFunc                    | ctx.DepthFunc.LessEqual |
-| `blend`                         | blending on/off                                                               | Boolean                          | false                   |
-| `blendSrcRGBFactor`             | blending source color factor                                                  | ctx.BlendFactor                  | ctx.BlendFactor.One     |
-| `blendSrcAlphaFactor`           | blending source alpha factor                                                  | ctx.BlendFactor                  | ctx.BlendFactor.One     |
-| `blendDstRGBFactor`             | blending destination color factor                                             | ctx.BlendFactor                  | ctx.BlendFactor.One     |
-| `blendDstAlphaFactor`           | blending destination alpha factor                                             | ctx.BlendFactor                  | ctx.BlendFactor.One     |
-| `cullFace`                      | face culling on/off                                                           | Boolean                          | false                   |
-| `cullFaceMode`                  | face culling mode                                                             | ctx.Face                         | ctx.Face.Back           |
-| `castShadows`                   | impact shadow casting                                                         | Boolean                          | false                   |
-| `receiveShadows`                | receive potential shadowing                                                   | Boolean                          | false                   |
+
+| property                        | info                                                                          | type                      | default                 |
+| ------------------------------- | ----------------------------------------------------------------------------- | ------------------------- | ----------------------- |
+| `baseColor`                     | albedo                                                                        | Color/Vec4 [r, g, b, a]   | [1, 1, 1, 1]            |
+| `baseColorMap`                  | base color texture. Multiplied by `baseColor`.                                | ctx.Texture \| TextureMap | null                    |
+| `unlit`                         | no lighting / shadowing. Use `baseColor`.                                     | Boolean                   | false                   |
+| `metallic`                      | metallic factor. Used if no `metallicMap` is provided.                        | Number                    | 1                       |
+| `metallicMap`                   | metallic texture. Used if no `metallicRoughnessMap` is provided.              | ctx.Texture \| TextureMap | null                    |
+| `roughness`                     | roughness factor. Used if no `roughnessMap` is provided.                      | Number                    | 1                       |
+| `roughnessMap`                  | roughness texture. Used if no `metallicRoughnessMap` is provided.             | ctx.Texture \| TextureMap | null                    |
+| `metallicRoughnessMap`          | metallic (b channel) and roughness (g channel) combined in a texture.         | ctx.Texture \| TextureMap | null                    |
+| `useSpecularGlossinessWorkflow` | use a specular/glossiness PBR workflow instead of above Metallic/Roughness    | Boolean                   | false                   |
+| `diffuse`                       | diffuse color. Used if no `uDiffuseMap` is provided.                          | Color/Vec4 [r, g, b, a]   | 1                       |
+| `diffuseMap`                    | specular (b channel) and roughness (g channel) combined in a texture.         | ctx.Texture \| TextureMap | null                    |
+| `specular`                      | specular color. Used if no `specularGlossinessMap` is provided.               | Color/Vec3 [r, g, b]      | 1                       |
+| `glossiness`                    | glossiness or smoothness. Used if no `specularGlossinessMap` is provided.     | Number                    | 1                       |
+| `specularGlossinessMap`         | specular and glossiness combined in a texture.                                | ctx.Texture \| TextureMap | null                    |
+| `normalMap`                     | normal texture. Doesn't modify vertices positions, only impacts lighting.     | ctx.Texture \| TextureMap | null                    |
+| `normalScale`                   | normal factor. Control how much the `normalMap` affects lighting.             | Number                    | 1                       |
+| `displacementMap`               | displacement texture. Modifies vertices positions (r channel).                | ctx.Texture \| TextureMap | null                    |
+| `displacement`                  | displacement factor. Control how much the `displacementMap` affects vertices. | Number                    | 0                       |
+| `emissiveColor`                 | light emitted                                                                 | Color/Vec4 [r, g, b, a]   | [0, 0, 0, 1]            |
+| `emissiveIntensity`             | emissive factor                                                               | Number                    | 1                       |
+| `emissiveColorMap`              | base color texture. Multiplied by `emissiveColor` and `emissiveIntensity`.    | ctx.Texture \| TextureMap | null                    |
+| `occlusionMap`                  | occlusion texture. Indicates areas of indirect lighting.                      | ctx.Texture \| TextureMap | null                    |
+| `alphaMap`                      | alpha texture. Impacts opacity (r channel).                                   | ctx.Texture \| TextureMap | null                    |
+| `alphaTest`                     | value against which to test alpha.                                            | Number 0-1                | true                    |
+| `depthWrite`                    | depth write mask                                                              | Boolean                   | true                    |
+| `depthTest`                     | depth test on/off                                                             | Boolean                   | true                    |
+| `depthFunc`                     | depth test function                                                           | ctx.DepthFunc             | ctx.DepthFunc.LessEqual |
+| `blend`                         | blending on/off                                                               | Boolean                   | false                   |
+| `blendSrcRGBFactor`             | blending source color factor                                                  | ctx.BlendFactor           | ctx.BlendFactor.One     |
+| `blendSrcAlphaFactor`           | blending source alpha factor                                                  | ctx.BlendFactor           | ctx.BlendFactor.One     |
+| `blendDstRGBFactor`             | blending destination color factor                                             | ctx.BlendFactor           | ctx.BlendFactor.One     |
+| `blendDstAlphaFactor`           | blending destination alpha factor                                             | ctx.BlendFactor           | ctx.BlendFactor.One     |
+| `cullFace`                      | face culling on/off                                                           | Boolean                   | false                   |
+| `cullFaceMode`                  | face culling mode                                                             | ctx.Face                  | ctx.Face.Back           |
+| `castShadows`                   | impact shadow casting                                                         | Boolean                   | false                   |
+| `receiveShadows`                | receive potential shadowing                                                   | Boolean                   | false                   |
 
 
 *Texture transforms are achieved by optionally passing a TextureMap object with offset, rotation and/or scale alongside the texture itself: `{ texture: ctx.Texture, offset?: Vec2 [x, y], rotation?: Radians, scale?: Vec2 [x, y] }`*
