@@ -8,6 +8,7 @@ const Signal = require('signals')
 function Animation (opts) {
   this.type = 'Animation'
   this.entity = null
+  this.enabled = true
   this.playing = false
   this.loop = false
   this.time = 0 // seconds

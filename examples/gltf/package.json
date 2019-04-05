@@ -10,16 +10,9 @@
   "author": "Marcin Ignac <marcin.ignac@gmail.com> (http://marcinignac.com/)",
   "license": "MIT",
   "dependencies": {
-    "async": "^2.6.1",
-    "browserify-versionify": "^1.0.6",
     "debug": "^4.1.1",
-    "geom-edges": "^1.2.0",
-    "gltf-loader-ts": "^0.3.1",
     "is-power-of-two": "^1.0.0",
     "next-power-of-two": "^1.0.0",
-    "pex-geom": "^2.0.2",
-    "pex-io": "^2.1.0",
-    "pex-math": "^2.1.1",
-    "primitive-box": "^1.0.0"
+    "pex-io": "^2.1.0"
   }
 }
