@@ -18,8 +18,7 @@ uniform int uOutputEncoding;
 
 // Includes
 ${SHADERS.math.PI}
-${SHADERS.math.saturateVec3}
-${SHADERS.math.saturateFloat}
+${SHADERS.math.saturate}
 ${SHADERS.octMap}
 ${SHADERS.octMapUvToDir}
 ${SHADERS.rgbm}

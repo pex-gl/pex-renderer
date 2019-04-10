@@ -12,7 +12,9 @@ const lightArea = require('./light-area.glsl.js')
 
 const shadowing = require('./shadowing.glsl.js')
 const brdf = require('./brdf.glsl.js')
+const clearCoat = require('./clear-coat.glsl.js')
 const irradiance = require('./irradiance.glsl.js')
+const direct = require('./direct.glsl.js')
 const indirect = require('./indirect.glsl.js')
 
 const envMapEquirect = require('./env-map-equirect.glsl.js')
@@ -53,7 +55,9 @@ module.exports = {
   lightArea,
   shadowing,
   brdf,
+  clearCoat,
   irradiance,
+  direct,
   indirect,
 
   envMapEquirect,

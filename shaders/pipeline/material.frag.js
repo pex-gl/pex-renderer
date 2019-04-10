@@ -61,12 +61,17 @@ struct PBRData {
   float LdotH;
   float HdotV;
 
+  vec3 color;
   vec3 baseColor;
   vec3 emissiveColor;
   float opacity;
   float roughness; // roughness value, as authored by the model creator (input to shader)
   float metallic; // metallic value at the surface
   float alphaRoughness; // roughness mapped to a more linear change in the roughness (proposed by [2])
+  float linearRoughness; // roughness mapped to a more linear change in the roughness (proposed by [2])
+  vec3 f0; // Reflectance at normal incidence
+  float clearCoatLinearRoughness;
+  vec3 clearCoatNormal;
   vec3 diffuseColor; // color contribution from diffuse lighting
   vec3 specularColor; // color contribution from specular lighting
   vec3 indirectDiffuse; // contribution from IBL light probe
@@ -77,6 +82,7 @@ struct PBRData {
 
 // Includes
 ${SHADERS.math.PI}
+${SHADERS.math.saturate}
 ${SHADERS.rgbm}
 ${SHADERS.gamma}
 ${SHADERS.encodeDecode}
@@ -89,8 +95,10 @@ ${SHADERS.baseColor}
   ${SHADERS.octMap}
   ${SHADERS.shadowing}
   ${SHADERS.brdf}
+  ${SHADERS.clearCoat}
   ${SHADERS.irradiance}
   ${SHADERS.indirect}
+  ${SHADERS.direct}
   ${SHADERS.lightAmbient}
   ${SHADERS.lightDirectional}
   ${SHADERS.lightPoint}
@@ -149,16 +157,22 @@ void main() {
     getEmissiveColor(data);
 
     #ifdef USE_METALLIC_ROUGHNESS_WORKFLOW
-      vec3 F0 = vec3(0.04);
       getBaseColor(data);
       getRoughness(data);
       // TODO: avoid disappearing highlights at roughness 0
-      data.roughness = 0.004 + 0.996 * data.roughness;
+      // data.roughness = 0.004 + 0.996 * data.roughness;
+      data.roughness = clamp(data.roughness, MIN_ROUGHNESS, 1.0);
       getMetallic(data);
 
       // http://www.codinglabs.net/article_physically_based_rendering_cook_torrance.aspx
-      data.diffuseColor = data.baseColor * (1.0 - F0) * (1.0 - data.metallic);
-      data.specularColor = mix(F0, data.baseColor, data.metallic);
+      // vec3 F0 = vec3(0.04);
+      // data.diffuseColor = data.baseColor * (1.0 - F0) * (1.0 - data.metallic);
+      // data.specularColor = mix(F0, data.baseColor, data.metallic);
+
+      // Compute F0 for both dielectric and metallic materials
+      data.f0 = 0.16 * uReflectance * uReflectance * (1.0 - data.metallic) + data.baseColor.rgb * data.metallic;
+      data.diffuseColor = data.baseColor * (1.0 - data.metallic);
+      data.specularColor = mix(data.f0, data.baseColor, data.metallic);
     #endif
     #ifdef USE_SPECULAR_GLOSSINESS_WORKFLOW
       getBaseColorAndMetallicRoughnessFromSpecularGlossiness(data);
@@ -182,6 +196,15 @@ void main() {
     #endif
 
     data.alphaRoughness = data.roughness * data.roughness;
+    data.linearRoughness = data.roughness * data.roughness;
+
+    #ifdef USE_CLEAR_COAT
+      data.clearCoatLinearRoughness = uClearCoatRoughness * uClearCoatRoughness;
+      data.f0 = mix(data.f0, f0ClearCoatToSurface(data.f0), uClearCoat);
+      data.roughness = max(data.roughness, uClearCoatRoughness);
+
+      getClearCoatNormal(data);
+    #endif
 
     // view vector in world space
     data.viewWorld = normalize(uCameraPosition - vPositionWorld);
@@ -218,7 +241,7 @@ void main() {
     #if NUM_DIRECTIONAL_LIGHTS > 0
       for(int i = 0; i < NUM_DIRECTIONAL_LIGHTS; i++) {
         DirectionalLight light = uDirectionalLights[i];
-        EvaluateDirectionalLight(data, light, i);
+        EvaluateDirectionalLight(data, light, i, ao);
       }
     #endif
     #if NUM_POINT_LIGHTS > 0
@@ -239,7 +262,8 @@ void main() {
         EvaluateAreaLight(data, light, i);
       }
     #endif
-    color = data.emissiveColor + ao * data.indirectDiffuse + ao * data.indirectSpecular + data.directDiffuse + data.directSpecular;
+    color += data.color + data.emissiveColor + ao * data.indirectDiffuse + ao * data.indirectSpecular;
+    // color = data.emissiveColor + ao * data.indirectDiffuse + ao * data.indirectSpecular + data.directDiffuse + data.directSpecular;
     #ifdef USE_TONEMAPPING
       color.rgb *= uExposure;
       color.rgb = tonemapUncharted2(color.rgb);

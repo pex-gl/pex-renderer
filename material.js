@@ -105,6 +105,12 @@ function Material (opts) {
 
   this.occlusionMap = null
 
+  this.reflectance = 0.5
+  this.clearCoat = null
+  this.clearCoatRoughness = null
+  this.clearCoatNormalMap = null
+  this.clearCoatNormalMapScale = 1
+
   this.alphaMap = null
   this.alphaTest = undefined
   this.depthTest = true

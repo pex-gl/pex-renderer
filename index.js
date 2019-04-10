@@ -198,6 +198,9 @@ Renderer.prototype.getMaterialProgramAndFlags = function (geometry, material, sk
 
   var flags = []
 
+  if (this.targetMobile) {
+    flags.push('#define TARGET_MOBILE')
+  }
   if (!geometry._attributes.aNormal) {
     flags.push('#define USE_UNLIT_WORKFLOW')
   } else {
@@ -362,6 +365,16 @@ Renderer.prototype.getMaterialProgramAndFlags = function (geometry, material, sk
     flags.push(`#define EMISSIVE_COLOR_MAP_TEX_COORD_INDEX ${material.emissiveColorMap.texCoord || 0}`)
     if (material.emissiveColorMap.texCoordTransformMatrix) {
       flags.push('#define USE_EMISSIVE_COLOR_MAP_TEX_COORD_TRANSFORM')
+    }
+  }
+  if (!isNil(material.clearCoat)) {
+    flags.push('#define USE_CLEAR_COAT')
+  }
+  if (material.clearCoatNormalMap) {
+    flags.push('#define USE_CLEAR_COAT_NORMAL_MAP')
+    flags.push(`#define CLEAR_COAT_NORMAL_MAP_TEX_COORD_INDEX ${material.clearCoatNormalMap.texCoord || 0}`)
+    if (material.clearCoatNormalMap.texCoordTransformMatrix) {
+      flags.push('#define USE_CLEAR_COAT_NORMAL_MAP_TEX_COORD_TRANSFORM')
     }
   }
   if (material.blend) {
@@ -633,6 +646,7 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
     sharedUniforms['uSpotLights[' + i + '].direction'] = dir
     sharedUniforms['uSpotLights[' + i + '].color'] = light.color
     sharedUniforms['uSpotLights[' + i + '].angle'] = light.angle
+    sharedUniforms['uSpotLights[' + i + '].innerAngle'] = light.innerAngle
     sharedUniforms['uSpotLights[' + i + '].range'] = light.range
   })
 
@@ -738,6 +752,16 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
           cachedUniforms.uMetallicRoughnessMapTexCoordTransform = material.metallicRoughnessMap.texCoordTransformMatrix
         }
       }
+    }
+
+    cachedUniforms.uReflectance = material.reflectance
+    if (!isNil(material.clearCoat)) {
+      cachedUniforms.uClearCoat = material.clearCoat
+      cachedUniforms.uClearCoatRoughness = material.clearCoatRoughness || 0.04
+    }
+    if (material.clearCoatNormalMap) {
+      cachedUniforms.uClearCoatNormalMap = material.clearCoatNormalMap
+      cachedUniforms.uClearCoatNormalMapScale = material.clearCoatNormalMapScale
     }
 
     if (material.normalMap) {
