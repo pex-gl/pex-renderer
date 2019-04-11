@@ -3,9 +3,8 @@ const loadImage = require('pex-io/loadImage')
 const loadBinary = require('pex-io/loadBinary')
 const path = require('path')
 
+// https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/README.md#uris
 async function loadGltf (file, cb) {
-  console.log('loadModel', file)
-
   const gltf = await loadJSON(file)
   const basePath = path.dirname(file) // TODO: fill this work with urls?
 

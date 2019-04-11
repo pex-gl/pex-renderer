@@ -68,8 +68,7 @@ let materials = [
   { baseColor: [1.0, 1.0, 1.0, 1.0], metallic: 1, roughness: 5 / 6 },
   { baseColor: [1.0, 1.0, 1.0, 1.0], metallic: 1, roughness: 6 / 6 },
   {
-    roughness: null,
-    metallic: null,
+    unlit: true,
     baseColor: [1, 1, 1, 0.5],
     baseColorMap: ASSETS_DIR + '/plastic-green.material/plastic-green_basecolor.png'
   },
