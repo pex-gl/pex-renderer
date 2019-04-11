@@ -164,11 +164,6 @@ void main() {
       data.roughness = clamp(data.roughness, MIN_ROUGHNESS, 1.0);
       getMetallic(data);
 
-      // http://www.codinglabs.net/article_physically_based_rendering_cook_torrance.aspx
-      // vec3 F0 = vec3(0.04);
-      // data.diffuseColor = data.baseColor * (1.0 - F0) * (1.0 - data.metallic);
-      // data.specularColor = mix(F0, data.baseColor, data.metallic);
-
       // Compute F0 for both dielectric and metallic materials
       data.f0 = 0.16 * uReflectance * uReflectance * (1.0 - data.metallic) + data.baseColor.rgb * data.metallic;
       data.diffuseColor = data.baseColor * (1.0 - data.metallic);
@@ -241,7 +236,7 @@ void main() {
     #if NUM_DIRECTIONAL_LIGHTS > 0
       for(int i = 0; i < NUM_DIRECTIONAL_LIGHTS; i++) {
         DirectionalLight light = uDirectionalLights[i];
-        EvaluateDirectionalLight(data, light, i, ao);
+        EvaluateDirectionalLight(data, light, i);
       }
     #endif
     #if NUM_POINT_LIGHTS > 0

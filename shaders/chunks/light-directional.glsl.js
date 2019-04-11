@@ -16,7 +16,7 @@ struct DirectionalLight {
 uniform DirectionalLight uDirectionalLights[NUM_DIRECTIONAL_LIGHTS];
 uniform sampler2D uDirectionalLightShadowMaps[NUM_DIRECTIONAL_LIGHTS]; //TODO: is it ok to sample depth texture as sampler2D?
 
-void EvaluateDirectionalLight(inout PBRData data, DirectionalLight light, int i, float occlusion) {
+void EvaluateDirectionalLight(inout PBRData data, DirectionalLight light, int i) {
   // Shadows
   vec4 lightViewPosition = light.viewMatrix * vec4(vPositionWorld, 1.0);
   float lightDistView = -lightViewPosition.z;
