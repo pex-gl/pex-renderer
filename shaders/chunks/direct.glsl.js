@@ -31,6 +31,9 @@ void getSurfaceShading(inout PBRData data, Light light, float occlusion) {
 
   float NdotV = saturate(abs(dot(N, V)) + FLT_EPS);
   float NdotL = saturate(dot(N, L));
+
+  if (NdotL <= 0.0) return;
+
   float NdotH = saturate(dot(N, H));
   float LdotH = saturate(dot(L, H));
 
