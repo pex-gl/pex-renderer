@@ -37,7 +37,7 @@ void getSurfaceShading(inout PBRData data, Light light, float occlusion) {
   float NdotH = saturate(dot(N, H));
   float LdotH = saturate(dot(L, H));
 
-  float D = distribution(data.linearRoughness, NdotH, H);
+  float D = distribution(data.linearRoughness, NdotH, H, data.normalWorld);
   float G = visibility(data.linearRoughness, NdotV, NdotL);
   vec3 F = fresnel(data.f0, LdotH);
 

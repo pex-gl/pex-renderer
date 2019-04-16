@@ -63,7 +63,7 @@ module.exports = /* glsl */ `
     #else
       float clearCoatNoH = NoH;
     #endif
-    float D = distributionClearCoat(data.clearCoatLinearRoughness, clearCoatNoH, h);
+    float D = distributionClearCoat(data.clearCoatLinearRoughness, clearCoatNoH, h, data.normalWorld);
     float V = visibilityClearCoat(uClearCoatRoughness, data.clearCoatLinearRoughness, LoH);
     // IOR = 1.5, F0 = 0.04
     float F = F_Schlick(0.04, 1.0, LoH) * uClearCoat;

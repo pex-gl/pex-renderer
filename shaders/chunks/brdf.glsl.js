@@ -4,9 +4,9 @@ uniform float uReflectance;
 // https://google.github.io/filament/Filament.md.html#materialsystem/specularbrdf
 // Distribution
 // Walter et al. 2007, "Microfacet Models for Refraction through Rough Surfaces"
-float D_GGX(float linearRoughness, float NoH, const vec3 h) {
+float D_GGX(float linearRoughness, float NoH, const vec3 h, const vec3 normalWorld) {
 #if defined(TARGET_MOBILE)
-  vec3 NxH = cross(shading_normal, h);
+  vec3 NxH = cross(normalWorld, h);
   float oneMinusNoHSquared = dot(NxH, NxH);
 #else
   float oneMinusNoHSquared = 1.0 - NoH * NoH;
@@ -27,16 +27,16 @@ float D_GGX_Anisotropic(float at, float ab, float ToH, float BoH, float NoH) {
   return a2 * b2 * b2 * (1.0 / PI);
 }
 
-float distribution(float linearRoughness, float NoH, const vec3 h) {
-  return D_GGX(linearRoughness, NoH, h);
+float distribution(float linearRoughness, float NoH, const vec3 h, const vec3 normalWorld) {
+  return D_GGX(linearRoughness, NoH, h, normalWorld);
 }
 
 float distributionAnisotropic(float at, float ab, float ToH, float BoH, float NoH) {
   return D_GGX_Anisotropic(at, ab, ToH, BoH, NoH);
 }
 
-float distributionClearCoat(float linearRoughness, float NoH, const vec3 h) {
-  return D_GGX(linearRoughness, NoH, h);
+float distributionClearCoat(float linearRoughness, float NoH, const vec3 h, const vec3 normalWorld) {
+  return D_GGX(linearRoughness, NoH, h, normalWorld);
 }
 
 // Visibility
