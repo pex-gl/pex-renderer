@@ -18,21 +18,8 @@ float D_GGX(float linearRoughness, float NoH, const vec3 h, const vec3 normalWor
   return saturateMediump(d);
 }
 
-// Burley 2012, "Physically-Based Shading at Disney"
-float D_GGX_Anisotropic(float at, float ab, float ToH, float BoH, float NoH) {
-  float a2 = at * ab;
-  highp vec3 d = vec3(ab * ToH, at * BoH, a2 * NoH);
-  highp float d2 = dot(d, d);
-  float b2 = a2 / d2;
-  return a2 * b2 * b2 * (1.0 / PI);
-}
-
 float distribution(float linearRoughness, float NoH, const vec3 h, const vec3 normalWorld) {
   return D_GGX(linearRoughness, NoH, h, normalWorld);
-}
-
-float distributionAnisotropic(float at, float ab, float ToH, float BoH, float NoH) {
-  return D_GGX_Anisotropic(at, ab, ToH, BoH, NoH);
 }
 
 float distributionClearCoat(float linearRoughness, float NoH, const vec3 h, const vec3 normalWorld) {
@@ -58,14 +45,6 @@ float V_SmithGGXCorrelated_Fast(float linearRoughness, float NoV, float NoL) {
   return saturateMediump(v);
 }
 
-// Heitz 2014, "Understanding the Masking-Shadowing Function in Microfacet-Based BRDFs"
-float V_SmithGGXCorrelated_Anisotropic(float at, float ab, float ToV, float BoV, float ToL, float BoL, float NoV, float NoL) {
-  float lambdaV = NoL * length(vec3(at * ToV, ab * BoV, NoV));
-  float lambdaL = NoV * length(vec3(at * ToL, ab * BoL, NoL));
-  float v = 0.5 / (lambdaV + lambdaL);
-  return saturateMediump(v);
-}
-
 // Kelemen 2001, "A Microfacet Based Coupled Specular-Matte BRDF Model with Importance Sampling"
 float V_Kelemen(float LoH) {
   return saturateMediump(0.25 / (LoH * LoH));
@@ -81,14 +60,6 @@ float visibility(float linearRoughness, float NoV, float NoL) {
     return V_SmithGGXCorrelated(linearRoughness, NoV, NoL);
   #else
     return V_SmithGGXCorrelated_Fast(linearRoughness, NoV, NoL);
-  #endif
-}
-
-float visibilityAnisotropic(float linearRoughness, float at, float ab, float ToV, float BoV, float ToL, float BoL, float NoV, float NoL) {
-  #if !defined(TARGET_MOBILE)
-    return V_SmithGGXCorrelated(linearRoughness, NoV, NoL);
-  #else
-    return V_SmithGGXCorrelated_Anisotropic(at, ab, ToV, BoV, ToL, BoL, NoV, NoL);
   #endif
 }
 
