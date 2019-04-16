@@ -107,7 +107,7 @@ const sunEntity = renderer.entity([
   }),
   renderer.directionalLight({
     color: [1, 1, 0.95, 1],
-    intensity: 5,
+    intensity: 2,
     castShadows: State.shadows,
     bias: 0.2
   })
