@@ -253,7 +253,6 @@ void main() {
       }
     #endif
     color = data.emissiveColor + data.indirectDiffuse + data.indirectSpecular + data.directColor;
-    // color = data.emissiveColor + ao * data.indirectDiffuse + ao * data.indirectSpecular + data.directDiffuse + data.directSpecular;
     #ifdef USE_TONEMAPPING
       color.rgb *= uExposure;
       color.rgb = tonemapUncharted2(color.rgb);

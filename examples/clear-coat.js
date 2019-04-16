@@ -18,6 +18,7 @@ const gridSize = 5
 
 const State = {
   lights: true,
+  shadows: false,
   clearCoat: true
 }
 
@@ -36,14 +37,6 @@ const cameraEntity = renderer.entity([
 renderer.add(cameraEntity)
 
 const geometry = createSphere(0.4)
-const materialProperties = {
-  baseColor: [1, 1, 1, 1],
-  roughness: 0.8,
-  metallic: 1,
-  clearCoatNormalMapScale: 1,
-  // castShadows: true,
-  // receiveShadows: true
-}
 
 const directionalLightEntity = renderer.entity([
   renderer.transform({
@@ -53,7 +46,7 @@ const directionalLightEntity = renderer.entity([
   renderer.directionalLight({
     color: [1, 0, 0, 1],
     intensity: 2,
-    castShadows: true
+    castShadows: State.shadows
   }),
   renderer.geometry(createSphere(0.05)),
   renderer.material({ unlit: true, baseColor: [1, 0, 0, 1] })
@@ -67,7 +60,7 @@ const pointLightEntity = renderer.entity([
   renderer.pointLight({
     color: [0, 1, 0, 1],
     intensity: 2,
-    castShadows: true
+    castShadows: State.shadows
   }),
   renderer.geometry(createSphere(0.05)),
   renderer.material({ unlit: true, baseColor: [0, 1, 0, 1] })
@@ -84,7 +77,7 @@ const spotLightEntity = renderer.entity([
     intensity: 10,
     innerAngle: 0,
     angle: Math.PI / 4,
-    castShadows: true
+    castShadows: State.shadows
   }),
   renderer.geometry(createSphere(0.05)),
   renderer.material({ unlit: true, baseColor: [0, 0, 1, 1] })
@@ -99,8 +92,8 @@ const areaLightEntity = renderer.entity([
   }),
   renderer.areaLight({
     color: [1, 0, 1, 1],
-    intensity: 10,
-    castShadows: true
+    intensity: 2,
+    castShadows: State.shadows
   }),
   renderer.geometry(createPlane(1)),
   renderer.material({ unlit: true, baseColor: [1, 0, 1, 1] })
@@ -120,40 +113,18 @@ const reflectionProbe = renderer.entity([
 ])
 renderer.add(reflectionProbe)
 
-function getMaterialMaps (maps) {
-  return Object.entries(maps).reduce(
-    (currentValue, [key, image]) => ({
-      ...currentValue,
-      [key]: ctx.texture2D({
-        data: image,
-        width: 256,
-        height: 256,
-        min: ctx.Filter.LinearMipmapLinear,
-        mag: ctx.Filter.Linear,
-        flipY: true,
-        mipmap: true,
-        ...(key === 'emissiveColorMap' || key === 'baseColorMap'
-          ? ctx.Encoding.SRGB
-          : ctx.Encoding.Linear)
-      })
-    }),
-    {}
-  )
-}
-
 ;(async () => {
-  const baseColorMap = await io.loadImage(`${ASSETS_DIR}/plastic-green.material/plastic-green_basecolor.png`)
-  const normalMap = await io.loadImage(`${ASSETS_DIR}/plastic-green.material/plastic-green_n.png`)
-  const metallicMap = await io.loadImage(`${ASSETS_DIR}/plastic-green.material/plastic-green_metallic.png`)
-  const roughnessMap = await io.loadImage(`${ASSETS_DIR}/plastic-green.material/plastic-green_roughness.png`)
-  const clearCoatNormalMap = await io.loadImage(`${ASSETS_DIR}/orange-peel-normal.jpg`)
+  const normalMap = await io.loadImage(`${ASSETS_DIR}/carbon-fiber.jpg`)
 
-  const maps = getMaterialMaps({
-    baseColorMap,
-    normalMap,
-    metallicMap,
-    roughnessMap,
-    clearCoatNormalMap
+  const clearCoatNormalMap = ctx.texture2D({
+    data: normalMap,
+    width: 256,
+    height: 256,
+    min: ctx.Filter.LinearMipmapLinear,
+    mag: ctx.Filter.Linear,
+    flipY: true,
+    mipmap: true,
+    encoding: ctx.Encoding.Linear
   })
 
   const spheresEntities = []
@@ -162,7 +133,7 @@ function getMaterialMaps (maps) {
       for (let z = 0; z < gridSize; z++) {
         const clearCoatProperties = {
           clearCoat: x / (gridSize - 1),
-          clearCoatRoughness: 0.8 * y / (gridSize - 1),
+          clearCoatRoughness: 0.6 * y / (gridSize - 1),
           reflectance: z / (gridSize - 1)
         }
         const coatedSphereEntity = renderer.entity([
@@ -171,8 +142,13 @@ function getMaterialMaps (maps) {
           }),
           renderer.geometry(geometry),
           renderer.material({
-            ...materialProperties,
-            ...maps,
+            baseColor: [1, 1, 1, 1],
+            roughness: 0.8,
+            metallic: 1,
+            castShadows: State.shadows,
+            receiveShadows: State.shadows,
+            // clearCoatNormalMap,
+            clearCoatNormalMapScale: 1,
             ...clearCoatProperties
           })
         ])
@@ -183,7 +159,7 @@ function getMaterialMaps (maps) {
     }
   }
 
-  const buffer = await io.loadBinary(`${ASSETS_DIR}/garage.hdr`)
+  const buffer = await io.loadBinary(`${ASSETS_DIR}/Mono_Lake_B.hdr`)
   const hdrImg = parseHdr(buffer)
   const panorama = ctx.texture2D({
     data: hdrImg.data,
@@ -197,8 +173,11 @@ function getMaterialMaps (maps) {
   skybox.getComponent('Skybox').set({ texture: panorama })
   reflectionProbe.getComponent('ReflectionProbe').set({ dirty: true })
 
-  gui.addHeader('Clear coat')
-  gui.addFPSMeeter()
+  gui.addColumn('Clear coat')
+  gui.addLabel('X: clearcoat [0..1]')
+  gui.addLabel('Y: roughness [0..1]')
+  gui.addLabel('Z: reflectance [0..1]')
+  gui.addColumn('Parameters')
   gui.addParam('enabled', State, 'clearCoat', {}, (value) => {
     if (value) {
       spheresEntities.forEach(sphere => sphere.getComponent('Material').set(sphere.clearCoatProperties))
