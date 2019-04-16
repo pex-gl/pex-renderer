@@ -1,7 +1,11 @@
 const quat = require('pex-math/quat')
 const vec3 = require('pex-math/vec3')
 const vec4 = require('pex-math/vec4')
+const utils = require('pex-math/utils')
 const Signal = require('signals')
+
+let currentOutputVec3 = vec3.create()
+let currentOutputQuat = quat.create()
 
 // Assumptions:
 // - all channels have the same time length
@@ -17,8 +21,6 @@ function Animation (opts) {
   this.prevTime = Date.now() // ms
   this.channels = opts.channels || []
   this.changed = new Signal()
-  this.currentOutputVec3 = vec3.create()
-  this.currentOutputQuat = quat.create()
   this.set(opts)
 }
 
@@ -92,9 +94,9 @@ Animation.prototype.update = function () {
       switch (interpolationType) {
         case 'STEP':
           if (path === 'rotation') {
-            this.currentOutputQuat = quat.copy(outputData[prevIndex])
+            currentOutputQuat = quat.copy(outputData[prevIndex])
           } else {
-            this.currentOutputVec3 = vec3.copy(outputData[prevIndex])
+            currentOutputVec3 = vec3.copy(outputData[prevIndex])
           }
           break
         case 'CUBICSPLINE':
@@ -138,7 +140,7 @@ Animation.prototype.update = function () {
 
           if (path === 'rotation') {
             // currentOutput = tempOutputTest;
-            this.currentOutputQuat = [1, 1, 1, 1]
+            currentOutputQuat = [1, 1, 1, 1]
 
             let p0Calc = vec4.scale(prevPosition, ((2 * ttt) - (3 * tt) + 1))
             let m0Calc = vec4.scale(prevOutTangent, (ttt - (2 * tt) + t))
@@ -150,44 +152,42 @@ Animation.prototype.update = function () {
               p0Calc[1] + m0Calc[1] + p1Calc[1] + m1Calc[1],
               p0Calc[2] + m0Calc[2] + p1Calc[2] + m1Calc[2],
               p0Calc[3] + m0Calc[3] + p1Calc[3] + m1Calc[3]
-
             ]
-            this.currentOutputQuat = quat.normalize(tempOutputTest)
+            currentOutputQuat = quat.normalize(tempOutputTest)
           } else {
             let p0Calc = vec3.scale(prevPosition, ((2 * ttt) - (3 * tt) + 1))
             let m0Calc = vec3.scale(prevOutTangent, (ttt - (2 * tt) + t))
             let p1Calc = vec3.scale(nextPos, ((-2 * ttt) + (3 * tt)))
             let m1Calc = vec3.scale(nextInTangent, (ttt - tt))
 
-            this.currentOutputVec3 = vec3.add(vec3.add(vec3.add(p0Calc, m0Calc), p1Calc), m1Calc)
+            currentOutputVec3 = vec3.add(vec3.add(vec3.add(p0Calc, m0Calc), p1Calc), m1Calc)
           }
 
           break
-        default:
-          // default to LINEAR
-          // TODO: stop creating new arrays every frame
+        default: // LINEAR
           if (path === 'rotation') {
-            this.currentOutputQuat = quat.copy(prevOutput)
-            quat.slerp(this.currentOutputQuat, nextOutput, interpolationValue)
+            currentOutputQuat = quat.copy(prevOutput)
+            quat.slerp(currentOutputQuat, nextOutput, interpolationValue)
           } else {
-            currentOutput = []
+            const tempOutputTest = []
             for (var k = 0; k < nextOutput.length; k++) {
-              this.currentOutputVec3[k] = prevOutput[k] + interpolationValue * (nextOutput[k] - prevOutput[k])
+              tempOutputTest[k] = utils.lerp(prevOutput[k], nextOutput[k], interpolationValue)
             }
+            currentOutputVec3 = vec3.copy(tempOutputTest)
           }
       }
 
       if (path === 'translation') {
         target.transform.set({
-          position: this.currentOutputVec3
+          position: currentOutputVec3
         })
       } else if (path === 'rotation') {
         target.transform.set({
-          rotation: this.currentOutputQuat
+          rotation: currentOutputQuat
         })
       } else if (path === 'scale') {
         target.transform.set({
-          scale: this.currentOutputVec3
+          scale: currentOutputVec3
         })
       } else if (path === 'weights') {
         target.getComponent('Morph').set({
