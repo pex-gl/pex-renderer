@@ -57,14 +57,13 @@ Animation.prototype.update = function () {
       this.set({ playing: false })
     }
   }
-  
+
   this.channels.forEach((channel) => {
     const inputData = channel.input
     const outputData = channel.output
     const target = channel.target
     const path = channel.path
     const interpolationType = channel.interpolation
-
 
     let prevInput = null
     let nextInput = null
@@ -90,85 +89,80 @@ Animation.prototype.update = function () {
 
       const interpolationValue = (this.time - prevInput) / (nextInput - prevInput)
 
-      switch(interpolationType){
+      switch (interpolationType) {
         case 'STEP':
-          if(path === 'rotation'){
+          if (path === 'rotation') {
             this.currentOutputQuat = quat.copy(outputData[prevIndex])
           } else {
             this.currentOutputVec3 = vec3.copy(outputData[prevIndex])
           }
-          break;
+          break
         case 'CUBICSPLINE':
-          //intangent = index
-          //position = index+1
-          //outtangent = index+2
-                
-          let prevOutTangent = path === 'rotation' ? vec4.create() : vec3.create() 
-          let prevPosition = path === 'rotation' ? vec4.create() : vec3.create() 
-          let nextInTangent = path === 'rotation' ? vec4.create() : vec3.create() 
-          let nextPos = path === 'rotation' ? vec4.create() : vec3.create() 
+          // intangent = index
+          // position = index+1
+          // outtangent = index+2
 
+          let prevOutTangent = path === 'rotation' ? vec4.create() : vec3.create()
+          let prevPosition = path === 'rotation' ? vec4.create() : vec3.create()
+          let nextInTangent = path === 'rotation' ? vec4.create() : vec3.create()
+          let nextPos = path === 'rotation' ? vec4.create() : vec3.create()
 
-          if(prevIndex){ 
-            //m0 = (tk+1 - tk)bk
-            prevOutTangent = path === 'rotation' ? vec4.scale(outputData[(prevIndex*3) +2].slice(),(nextInput - prevInput)) : vec3.scale(outputData[(prevIndex*3) +2].slice(),(nextInput - prevInput))
-          } else { 
-            prevOutTangent = path === 'rotation' ? vec4.scale([0,0,0,0],(nextInput - prevInput)) : vec3.scale([0,0,0],(nextInput - prevInput))
-          }
-          //p0
-          prevPosition = outputData[(prevIndex*3) +1].slice()
-          
-
-          if(nextIndex !== (inputData.length - 1)){
-            //m1 = (tk+1 - tk)ak+1
-            nextInTangent = path === 'rotation' ? vec4.scale(outputData[(prevIndex*3)].slice(),(nextInput - prevInput)) : vec3.scale(outputData[(prevIndex*3)].slice(),(nextInput - prevInput))
+          if (prevIndex) {
+            // m0 = (tk+1 - tk)bk
+            prevOutTangent = path === 'rotation' ? vec4.scale(outputData[(prevIndex * 3) + 2].slice(), (nextInput - prevInput)) : vec3.scale(outputData[(prevIndex * 3) + 2].slice(), (nextInput - prevInput))
           } else {
-            nextInTangent = path === 'rotation' ? vec4.scale([0,0,0,0],(nextInput - prevInput)) : vec3.scale([0,0,0],(nextInput - prevInput))
+            prevOutTangent = path === 'rotation' ? vec4.scale([0, 0, 0, 0], (nextInput - prevInput)) : vec3.scale([0, 0, 0], (nextInput - prevInput))
           }
-          //p1
-          nextPos = outputData[(nextIndex*3) +1].slice()
-          
-          //p(t) = 
+          // p0
+          prevPosition = outputData[(prevIndex * 3) + 1].slice()
+
+          if (nextIndex !== (inputData.length - 1)) {
+            // m1 = (tk+1 - tk)ak+1
+            nextInTangent = path === 'rotation' ? vec4.scale(outputData[(prevIndex * 3)].slice(), (nextInput - prevInput)) : vec3.scale(outputData[(prevIndex * 3)].slice(), (nextInput - prevInput))
+          } else {
+            nextInTangent = path === 'rotation' ? vec4.scale([0, 0, 0, 0], (nextInput - prevInput)) : vec3.scale([0, 0, 0], (nextInput - prevInput))
+          }
+          // p1
+          nextPos = outputData[(nextIndex * 3) + 1].slice()
+
+          // p(t) =
           //  (2t^3 - 3t^2 + 1)p0 + //p0Calc
           //  (t^3 - 2t^2 + t)m0 +  //m0Calc
           //  (-2t^3 + 3t^2)p1 +  //p1Calc
           //  (t^3 - t^2)m1 //m1Calc
 
-          //interpolationValue is t
+          // interpolationValue is t
           let t = interpolationValue
-          let tt  = t*t
-          let ttt = tt*t
-        
-          if(path === 'rotation') {
-            
-            //currentOutput = tempOutputTest;
-            this.currentOutputQuat = [1,1,1,1]
-          
-            let p0Calc = vec4.scale(prevPosition,((2*ttt) - (3*tt) + 1))
-            let m0Calc = vec4.scale(prevOutTangent,(ttt - (2*tt)+t))
-            let p1Calc = vec4.scale(nextPos,((-2*ttt) + (3*tt)))
-            let m1Calc = vec4.scale(nextInTangent,(ttt-tt))
-  
+          let tt = t * t
+          let ttt = tt * t
+
+          if (path === 'rotation') {
+            // currentOutput = tempOutputTest;
+            this.currentOutputQuat = [1, 1, 1, 1]
+
+            let p0Calc = vec4.scale(prevPosition, ((2 * ttt) - (3 * tt) + 1))
+            let m0Calc = vec4.scale(prevOutTangent, (ttt - (2 * tt) + t))
+            let p1Calc = vec4.scale(nextPos, ((-2 * ttt) + (3 * tt)))
+            let m1Calc = vec4.scale(nextInTangent, (ttt - tt))
+
             let tempOutputTest = [
               p0Calc[0] + m0Calc[0] + p1Calc[0] + m1Calc[0],
               p0Calc[1] + m0Calc[1] + p1Calc[1] + m1Calc[1],
               p0Calc[2] + m0Calc[2] + p1Calc[2] + m1Calc[2],
-              p0Calc[3] + m0Calc[3] + p1Calc[3] + m1Calc[3],
-              
+              p0Calc[3] + m0Calc[3] + p1Calc[3] + m1Calc[3]
+
             ]
             this.currentOutputQuat = quat.normalize(tempOutputTest)
-
           } else {
-            let p0Calc = vec3.scale(prevPosition,((2*ttt) - (3*tt) + 1))
-            let m0Calc = vec3.scale(prevOutTangent,(ttt - (2*tt)+t))
-            let p1Calc = vec3.scale(nextPos,((-2*ttt) + (3*tt)))
-            let m1Calc = vec3.scale(nextInTangent,(ttt-tt))
-  
-            this.currentOutputVec3 =  vec3.add(vec3.add(vec3.add(p0Calc,m0Calc),p1Calc),m1Calc)
-          }
-          
+            let p0Calc = vec3.scale(prevPosition, ((2 * ttt) - (3 * tt) + 1))
+            let m0Calc = vec3.scale(prevOutTangent, (ttt - (2 * tt) + t))
+            let p1Calc = vec3.scale(nextPos, ((-2 * ttt) + (3 * tt)))
+            let m1Calc = vec3.scale(nextInTangent, (ttt - tt))
 
-          break;
+            this.currentOutputVec3 = vec3.add(vec3.add(vec3.add(p0Calc, m0Calc), p1Calc), m1Calc)
+          }
+
+          break
         default:
           // default to LINEAR
           // TODO: stop creating new arrays every frame
