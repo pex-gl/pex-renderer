@@ -61,23 +61,21 @@ struct PBRData {
   float LdotH;
   float HdotV;
 
-  vec3 color;
   vec3 baseColor;
   vec3 emissiveColor;
   float opacity;
   float roughness; // roughness value, as authored by the model creator (input to shader)
   float metallic; // metallic value at the surface
-  float alphaRoughness; // roughness mapped to a more linear change in the roughness (proposed by [2])
   float linearRoughness; // roughness mapped to a more linear change in the roughness (proposed by [2])
   vec3 f0; // Reflectance at normal incidence
   float clearCoatLinearRoughness;
   vec3 clearCoatNormal;
+  vec3 reflectionWorld;
+  vec3 directColor;
   vec3 diffuseColor; // color contribution from diffuse lighting
   vec3 specularColor; // color contribution from specular lighting
-  vec3 indirectDiffuse; // contribution from IBL light probe
-  vec3 indirectSpecular; // contribution from IBL light probe
-  vec3 directDiffuse; // contribution from light sources
-  vec3 directSpecular; // contribution from light sources
+  vec3 indirectDiffuse; // contribution from IBL light probe and Ambient Light
+  vec3 indirectSpecular; // contribution from IBL light probe and Area Light
 };
 
 // Includes
@@ -93,10 +91,11 @@ ${SHADERS.baseColor}
 #ifndef USE_UNLIT_WORKFLOW
   // Lighting
   ${SHADERS.octMap}
+  ${SHADERS.normalPerturb}
+  ${SHADERS.irradiance}
   ${SHADERS.shadowing}
   ${SHADERS.brdf}
   ${SHADERS.clearCoat}
-  ${SHADERS.irradiance}
   ${SHADERS.indirect}
   ${SHADERS.direct}
   ${SHADERS.lightAmbient}
@@ -149,8 +148,6 @@ void main() {
     data.eyeDirWorld = vec3(uInverseViewMatrix * vec4(data.eyeDirView, 0.0));
     data.indirectDiffuse = vec3(0.0);
     data.indirectSpecular = vec3(0.0);
-    data.directDiffuse = vec3(0.0);
-    data.directSpecular = vec3(0.0);
     data.opacity = 1.0;
 
     getNormal(data);
@@ -190,7 +187,6 @@ void main() {
       getTintColor(data);
     #endif
 
-    data.alphaRoughness = data.roughness * data.roughness;
     data.linearRoughness = data.roughness * data.roughness;
 
     #ifdef USE_CLEAR_COAT
@@ -204,9 +200,7 @@ void main() {
     // view vector in world space
     data.viewWorld = normalize(uCameraPosition - vPositionWorld);
 
-    vec3 N = data.normalWorld;
-    vec3 V = data.viewWorld;
-    data.NdotV = clamp(dot(N, V), 0.001, 1.0);
+    data.NdotV = abs(dot(data.normalWorld, data.viewWorld)) + FLT_EPS;
 
     float ao = 1.0;
     #ifdef USE_OCCLUSION_MAP
@@ -225,12 +219,13 @@ void main() {
     //TODO: No kd? so not really energy conserving
     //we could use disney brdf for irradiance map to compensate for that like in Frostbite
     #ifdef USE_REFLECTION_PROBES
-      EvaluateLightProbe(data);
+      data.reflectionWorld = reflect(-data.eyeDirWorld, data.normalWorld);
+      EvaluateLightProbe(data, ao);
     #endif
     #if NUM_AMBIENT_LIGHTS > 0
       for(int i = 0; i < NUM_AMBIENT_LIGHTS; i++) {
         AmbientLight light = uAmbientLights[i];
-        EvaluateAmbientLight(data, light, i);
+        EvaluateAmbientLight(data, light, i, ao);
       }
     #endif
     #if NUM_DIRECTIONAL_LIGHTS > 0
@@ -254,10 +249,10 @@ void main() {
     #if NUM_AREA_LIGHTS > 0
       for(int i = 0; i < NUM_AREA_LIGHTS; i++) {
         AreaLight light = uAreaLights[i];
-        EvaluateAreaLight(data, light, i);
+        EvaluateAreaLight(data, light, i, ao);
       }
     #endif
-    color += data.color + data.emissiveColor + ao * data.indirectDiffuse + ao * data.indirectSpecular;
+    color = data.emissiveColor + data.indirectDiffuse + data.indirectSpecular + data.directColor;
     // color = data.emissiveColor + ao * data.indirectDiffuse + ao * data.indirectSpecular + data.directDiffuse + data.directSpecular;
     #ifdef USE_TONEMAPPING
       color.rgb *= uExposure;

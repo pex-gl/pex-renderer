@@ -27,6 +27,7 @@
     "primitive-box": "^1.0.0",
     "primitive-capsule": "^3.0.1",
     "primitive-cube": "^2.0.1",
+    "primitive-plane": "^2.0.0",
     "primitive-rounded-cube": "^1.0.2",
     "primitive-sphere": "^3.0.0"
   },

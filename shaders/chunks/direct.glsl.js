@@ -61,7 +61,7 @@ void getSurfaceShading(inout PBRData data, Light light, float occlusion) {
       float clearCoatNoL = saturate(dot(data.clearCoatNormal, light.l));
       color += clearCoat * clearCoatNoL;
 
-      data.color += (color * lightColor) * (light.color.w * light.attenuation * occlusion);
+      data.directColor += (color * lightColor) * (light.color.w * light.attenuation * occlusion);
       return;
     #else
       vec3 color = (Fd + Fr * (energyCompensation * attenuation)) * attenuation + clearCoat;
@@ -70,6 +70,6 @@ void getSurfaceShading(inout PBRData data, Light light, float occlusion) {
     vec3 color = Fd + Fr * energyCompensation;
   #endif
 
-  data.color += (color * lightColor) * (light.color.a * light.attenuation * NdotL * occlusion);
+  data.directColor += (color * lightColor) * (light.color.a * light.attenuation * NdotL * occlusion);
 }
 `

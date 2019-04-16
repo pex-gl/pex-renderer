@@ -12,8 +12,6 @@ module.exports = /* glsl */ `
     #endif
 
     void getClearCoatNormal(inout PBRData data) {
-      vec3 normalWorld = vec3(data.inverseViewMatrix * vec4(normalize(data.normalView), 0.0));
-
       #ifdef USE_CLEAR_COAT_NORMAL_MAP_TEX_COORD_TRANSFORM
         vec2 texCoord = getTextureCoordinates(data, CLEAR_COAT_NORMAL_MAP_TEX_COORD_INDEX, uClearCoatNormalMapTexCoordTransform);
       #else
@@ -23,14 +21,29 @@ module.exports = /* glsl */ `
       vec3 normalMap = texture2D(uClearCoatNormalMap, texCoord).rgb * 2.0 - 1.0;
       normalMap.y *= uClearCoatNormalMapScale;
       normalMap = normalize(normalMap);
-      normalMap.xy *= float(gl_FrontFacing) * 2.0 - 1.0;
-      normalMap.y *= -1.0;
 
-      data.clearCoatNormal = normalize(normalWorld * normalMap);
+      vec3 N = normalize(data.normalView);
+      vec3 V = normalize(data.eyeDirView);
+
+      vec3 normalView;
+
+      #ifdef USE_TANGENTS
+        vec3 bitangent = cross(N, data.tangentView.xyz) * sign(data.tangentView.w);
+        mat3 TBN = mat3(data.tangentView.xyz, bitangent, N);
+        normalView = normalize(TBN * normalMap);
+      #else
+        normalMap.xy *= float(gl_FrontFacing) * 2.0 - 1.0;
+        // make the output normalView match glTF expected right handed orientation
+        normalMap.y *= -1.0;
+        normalView = perturb(normalMap, N, V, texCoord);
+      #endif
+
+      data.clearCoatNormal = normalize(vec3(data.inverseViewMatrix * vec4(normalView, 0.0)));
     }
   #else
     void getClearCoatNormal(inout PBRData data) {
-      data.clearCoatNormal = vec3(data.inverseViewMatrix * vec4(normalize(data.normalView), 0.0)); // normalWorld
+      // geometric normal without perturbation from normalMap
+      data.clearCoatNormal = normalize(vec3(data.inverseViewMatrix * vec4(normalize(data.normalView), 0.0)));
     }
   #endif
 

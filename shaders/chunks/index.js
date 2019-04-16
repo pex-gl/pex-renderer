@@ -28,6 +28,7 @@ const emissiveColor = require('./emissive-color.glsl.js')
 const alpha = require('./alpha.glsl.js')
 const ambientOcclusion = require('./ambient-occlusion.glsl.js')
 const normal = require('./normal.glsl.js')
+const normalPerturb = require('./normal-perturb.glsl.js')
 
 const metallicRoughness = require('./metallic-roughness.glsl.js')
 const specularGlossiness = require('./specular-glossiness.glsl.js')
@@ -71,6 +72,7 @@ module.exports = {
   alpha,
   ambientOcclusion,
   normal,
+  normalPerturb,
 
   metallicRoughness,
   specularGlossiness,

@@ -5,6 +5,7 @@ const io = require('pex-io')
 const GUI = require('pex-gui')
 const { quat, mat4 } = require('pex-math')
 const createSphere = require('primitive-sphere')
+const createPlane = require('primitive-plane')
 const parseHdr = require('parse-hdr')
 const isBrowser = require('is-browser')
 
@@ -16,10 +17,11 @@ const ASSETS_DIR = isBrowser ? 'assets' : path.join(__dirname, 'assets')
 const gridSize = 5
 
 const State = {
+  lights: true,
   clearCoat: true
 }
 
-const camera = renderer.entity([
+const cameraEntity = renderer.entity([
   renderer.transform({ position: [0, 0, 3] }),
   renderer.camera({
     fov: Math.PI / 3,
@@ -31,7 +33,7 @@ const camera = renderer.entity([
     position: [0, 0, gridSize * 1.3]
   })
 ])
-renderer.add(camera)
+renderer.add(cameraEntity)
 
 const geometry = createSphere(0.4)
 const materialProperties = {
@@ -45,7 +47,7 @@ const materialProperties = {
 
 const directionalLightEntity = renderer.entity([
   renderer.transform({
-    position: [1, 1, 1],
+    position: [1.3 * gridSize / 2, 0, 0],
     rotation: quat.fromMat4(quat.create(), mat4.lookAt(mat4.create(), [1, 1, 0], [0, 0, 0], [0, 1, 0]))
   }),
   renderer.directionalLight({
@@ -53,10 +55,10 @@ const directionalLightEntity = renderer.entity([
     intensity: 2,
     castShadows: true
   }),
-  // renderer.geometry(createSphere(0.1)),
-  // renderer.material({ baseColor: [1, 0, 0, 1] })
+  renderer.geometry(createSphere(0.05)),
+  renderer.material({ unlit: true, baseColor: [1, 0, 0, 1] })
 ])
-renderer.add(directionalLightEntity)
+State.lights && renderer.add(directionalLightEntity)
 
 const pointLightEntity = renderer.entity([
   renderer.transform({
@@ -67,10 +69,10 @@ const pointLightEntity = renderer.entity([
     intensity: 2,
     castShadows: true
   }),
-  // renderer.geometry(createSphere(0.1)),
-  // renderer.material({ baseColor: [0, 1, 0, 1] })
+  renderer.geometry(createSphere(0.05)),
+  renderer.material({ unlit: true, baseColor: [0, 1, 0, 1] })
 ])
-renderer.add(pointLightEntity)
+State.lights && renderer.add(pointLightEntity)
 
 const spotLightEntity = renderer.entity([
   renderer.transform({
@@ -84,10 +86,26 @@ const spotLightEntity = renderer.entity([
     angle: Math.PI / 4,
     castShadows: true
   }),
-  // renderer.geometry(createSphere(0.1)),
-  // renderer.material({ baseColor: [0, 0, 1, 1] })
+  renderer.geometry(createSphere(0.05)),
+  renderer.material({ unlit: true, baseColor: [0, 0, 1, 1] })
 ])
-renderer.add(spotLightEntity)
+State.lights && renderer.add(spotLightEntity)
+
+const areaLightEntity = renderer.entity([
+  renderer.transform({
+    scale: [2, 0.5, 1],
+    position: [-1.3 * gridSize / 2, 0, 0],
+    rotation: quat.fromMat4(quat.create(), mat4.lookAt(mat4.create(), [-1, 0, 0], [0, 0, 0], [0, 1, 0]))
+  }),
+  renderer.areaLight({
+    color: [1, 0, 1, 1],
+    intensity: 10,
+    castShadows: true
+  }),
+  renderer.geometry(createPlane(1)),
+  renderer.material({ unlit: true, baseColor: [1, 0, 1, 1] })
+])
+State.lights && renderer.add(areaLightEntity)
 
 const skybox = renderer.entity([
   renderer.skybox({
@@ -135,7 +153,7 @@ function getMaterialMaps (maps) {
     normalMap,
     metallicMap,
     roughnessMap,
-    // clearCoatNormalMap
+    clearCoatNormalMap
   })
 
   const spheresEntities = []
@@ -180,6 +198,7 @@ function getMaterialMaps (maps) {
   reflectionProbe.getComponent('ReflectionProbe').set({ dirty: true })
 
   gui.addHeader('Clear coat')
+  gui.addFPSMeeter()
   gui.addParam('enabled', State, 'clearCoat', {}, (value) => {
     if (value) {
       spheresEntities.forEach(sphere => sphere.getComponent('Material').set(sphere.clearCoatProperties))
@@ -188,6 +207,24 @@ function getMaterialMaps (maps) {
     }
   })
 })()
+
+// Events
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'g') gui.toggleEnabled()
+})
+
+window.addEventListener('resize', () => {
+  const W = window.innerWidth
+  const H = window.innerHeight
+  ctx.set({
+    width: W,
+    height: H
+  })
+  cameraEntity.getComponent('Camera').set({
+    viewport: [0, 0, W, H],
+    aspect: W / H
+  })
+})
 
 ctx.frame(() => {
   renderer.draw()
