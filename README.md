@@ -452,6 +452,11 @@ const material = renderer.material({
 | `emissiveIntensity`             | emissive factor                                                               | Number                    | 1                       |
 | `emissiveColorMap`              | base color texture. Multiplied by `emissiveColor` and `emissiveIntensity`.    | ctx.Texture \| TextureMap | null                    |
 | `occlusionMap`                  | occlusion texture. Indicates areas of indirect lighting.                      | ctx.Texture \| TextureMap | null                    |
+| `reflectance`                   | control specular intensity on non-metallic surfaces.                          | Number 0-1                | 0.5                     |
+| `clearCoat`                     | strength of the clear coat layer.                                             | Number 0-1                | null                    |
+| `clearCoatRoughness`            | roughness of the clear coat layer.                                            | Number 0-1                | null                    |
+| `clearCoatNormalMap`            | normal texture for the clear coat layer.                                      | ctx.Texture \| TextureMap | null                    |
+| `clearCoatNormalMapScale`       | clear coat normal factor.                                                     | Number                    | 1                       |
 | `alphaMap`                      | alpha texture. Impacts opacity (r channel).                                   | ctx.Texture \| TextureMap | null                    |
 | `alphaTest`                     | value against which to test alpha.                                            | Number 0-1                | true                    |
 | `depthWrite`                    | depth write mask                                                              | Boolean                   | true                    |
