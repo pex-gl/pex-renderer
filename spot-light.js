@@ -8,7 +8,7 @@ function SpotLight (opts) {
   this.color = [1, 1, 1, 1]
   this.intensity = 1
   this.angle = Math.PI / 4
-  this.innerAngle = Math.PI / 6
+  this.innerAngle = 0
   this.range = 10
   this.castShadows = false
 
