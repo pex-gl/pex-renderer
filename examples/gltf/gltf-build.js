@@ -1,34 +1,57 @@
 const isPOT = require('is-power-of-two')
 const nextPOT = require('next-power-of-two')
-const log = require('debug')('gltf-build')
 const assert = require('assert')
-const aabb = require('pex-geom/aabb')
-const vec3 = require('pex-math/vec3')
-const createBox = require('primitive-box')
-const edges = require('geom-edges')
 
-var WebGLConstants = {
+// Constants
+const SUPPORTED_EXTENSIONS = [
+  'KHR_materials_unlit',
+  'KHR_materials_pbrSpecularGlossiness',
+  'KHR_texture_transform',
+]
+
+const WEBGL_CONSTANTS = {
+  // https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/Constants#Buffers
   ELEMENT_ARRAY_BUFFER: 34963,  // 0x8893
   ARRAY_BUFFER: 34962,          // 0x8892
+
+  // https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/Constants#Data_types
   BYTE: 5120,                   // 0x1400
   UNSIGNED_BYTE: 5121,          // 0x1401
   SHORT: 5122,                  // 0x1402
   UNSIGNED_SHORT: 5123,         // 0x1403
-  UNSIGNED_INT: 5125,
+  UNSIGNED_INT: 5125,           // 0x1405
   FLOAT: 5126,                  // 0x1406
-  TRIANGLES: 4,                 // 0x0004
+
   SAMPLER_2D: 35678,            // 0x8B5E
-  FLOAT_VEC2: 35664,            // 0x8B50
-  FLOAT_VEC3: 35665,            // 0x8B51
-  FLOAT_VEC4: 35666,            // 0x8B52
-  FLOAT_MAT4: 35676             // 0x8B5C
 }
 
-const AttributeSizeMap = {
+// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Typed_arrays#Typed_array_views
+const WEBGL_TYPED_ARRAY_BY_COMPONENT_TYPES = {
+  [WEBGL_CONSTANTS.BYTE]: Int8Array,
+  [WEBGL_CONSTANTS.UNSIGNED_BYTE]: Uint8Array,
+  [WEBGL_CONSTANTS.SHORT]: Int16Array,
+  [WEBGL_CONSTANTS.UNSIGNED_SHORT]: Uint16Array,
+  [WEBGL_CONSTANTS.UNSIGNED_INT]: Uint32Array,
+  [WEBGL_CONSTANTS.FLOAT]: Float32Array
+}
+
+// https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/README.md#accessor-element-size
+const GLTF_ACCESSOR_COMPONENT_TYPE_SIZE = {
+  [WEBGL_CONSTANTS.BYTE]: 1,
+  [WEBGL_CONSTANTS.UNSIGNED_BYTE]: 1,
+  [WEBGL_CONSTANTS.SHORT]: 2,
+  [WEBGL_CONSTANTS.UNSIGNED_SHORT]: 2,
+  [WEBGL_CONSTANTS.UNSIGNED_INT]: 4,
+  [WEBGL_CONSTANTS.FLOAT]: 4
+}
+
+const GLTF_ACCESSOR_TYPE_COMPONENTS_NUMBER = {
   SCALAR: 1,
   VEC2: 2,
   VEC3: 3,
   VEC4: 4,
+  MAT2: 4,
+  MAT3: 9,
   MAT4: 16
 }
 
@@ -43,334 +66,323 @@ const AttributeNameMap = {
   COLOR_0: 'vertexColors'
 }
 
-function handleBufferView (bufferView, bufferData, ctx, renderer) {
+// https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/schema/bufferView.schema.json
+function handleBufferView (bufferView, bufferData, ctx) {
   if (bufferView.byteOffset === undefined) bufferView.byteOffset = 0
   bufferView._data = bufferData.slice(
     bufferView.byteOffset,
     bufferView.byteOffset + bufferView.byteLength
   )
 
-  // console.log('handleBufferView', bufferView)
-  if (bufferView.target === WebGLConstants.ELEMENT_ARRAY_BUFFER) {
+  if (bufferView.target === WEBGL_CONSTANTS.ELEMENT_ARRAY_BUFFER) {
     bufferView._indexBuffer = ctx.indexBuffer(bufferView._data)
-  } else if (bufferView.target === WebGLConstants.ARRAY_BUFFER) {
+  } else if (bufferView.target === WEBGL_CONSTANTS.ARRAY_BUFFER) {
     bufferView._vertexBuffer = ctx.vertexBuffer(bufferView._data)
   }
 }
 
-function handleAccessor (accessor, bufferView, ctx, renderer) {
-  const size = AttributeSizeMap[accessor.type]
+// https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/schema/accessor.schema.json
+function handleAccessor (accessor, bufferView, bufferViews) {
+  const numberOfComponents = GLTF_ACCESSOR_TYPE_COMPONENTS_NUMBER[accessor.type]
   if (accessor.byteOffset === undefined) accessor.byteOffset = 0
 
   accessor._bufferView = bufferView
 
   if (bufferView._indexBuffer) {
     accessor._buffer = bufferView._indexBuffer
-    // return
   }
   if (bufferView._vertexBuffer) {
     accessor._buffer = bufferView._vertexBuffer
-    // return
   }
 
-  // https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/README.md#accessor-element-size
-  // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Typed_arrays#Typed_array_views
-  // https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/Constants#Data_types
-  if (accessor.componentType === WebGLConstants.BYTE) {
-    const data = new Int8Array(bufferView._data.slice(
-      accessor.byteOffset,
-      accessor.byteOffset + accessor.count * size * 1
-    ))
-    accessor._data = data
-  } else if (accessor.componentType === WebGLConstants.UNSIGNED_BYTE) {
-    const data = new Uint8Array(bufferView._data.slice(
-      accessor.byteOffset,
-      accessor.byteOffset + accessor.count * size * 1
-    ))
-    accessor._data = data
-  } else if (accessor.componentType === WebGLConstants.SHORT) {
-    const data = new Int16Array(bufferView._data.slice(
-      accessor.byteOffset,
-      accessor.byteOffset + accessor.count * size * 2
-    ))
-    accessor._data = data
-  } else if (accessor.componentType === WebGLConstants.UNSIGNED_SHORT) {
-    const data = new Uint16Array(bufferView._data.slice(
-      accessor.byteOffset,
-      accessor.byteOffset + accessor.count * size * 2
-    ))
-    accessor._data = data
-  } else if (accessor.componentType === WebGLConstants.UNSIGNED_INT) {
-    const data = new Uint32Array(bufferView._data.slice(
-      accessor.byteOffset,
-      accessor.byteOffset + accessor.count * size * 4
-    ))
-    accessor._data = data
-  } else if (accessor.componentType === WebGLConstants.FLOAT) {
-    const data = new Float32Array(bufferView._data.slice(
-      accessor.byteOffset,
-      accessor.byteOffset + accessor.count * size * 4
-    ))
-    accessor._data = data
-  } else if (accessor.componentType === WebGLConstants.FLOAT_VEC2) {
-    const data = new Float32Array(bufferView._data.slice(
-      accessor.byteOffset,
-      accessor.byteOffset + accessor.count * size * 4
-    ))
-    accessor._data = data
-  } else if (accessor.componentType === WebGLConstants.FLOAT_VEC3) {
-    const data = new Float32Array(bufferView._data.slice(
-      accessor.byteOffset,
-      accessor.byteOffset + accessor.count * size * 4
-    ))
-    accessor._data = data
-  } else if (accessor.componentType === WebGLConstants.FLOAT_VEC4) {
-    const data = new Float32Array(bufferView._data.slice(
-      accessor.byteOffset,
-      accessor.byteOffset + accessor.count * size * 4
-    ))
-    accessor._data = data
-  } else {
-    // TODO
-    log('uncaught', accessor)
-  }
-}
+  const TypedArrayConstructor = WEBGL_TYPED_ARRAY_BY_COMPONENT_TYPES[accessor.componentType]
+  const byteSize = GLTF_ACCESSOR_COMPONENT_TYPE_SIZE[accessor.componentType]
 
-// TODO: add texture cache so we don't load the same texture twice
-// TODO: make it sync as the data is loaded already
-function loadTexture (materialTexture, gltf, encoding, ctx, renderer) {
-  let texture = gltf.textures[materialTexture.index]
-  let image = gltf.images[texture.source]
-  let sampler = gltf.samplers && gltf.samplers[texture.sampler] ? gltf.samplers[texture.sampler] : {
-    minFilter: ctx.Filter.Linear, // Default WebGL value
-    magFilter: ctx.Filter.Linear // Default WebGL value
-  }
-  // sampler.minFilter = ctx.Filter.LinearMipmapLinear
-  // set defaults as per GLTF 2.0 spec
-  if (!sampler.wrapS) sampler.wrapS = ctx.Wrap.Repeat
-  if (!sampler.wrapT) sampler.wrapT = ctx.Wrap.Repeat
+  const data = new TypedArrayConstructor(bufferView._data.slice(
+    accessor.byteOffset,
+    accessor.byteOffset + accessor.count * numberOfComponents * byteSize
+  ))
+  accessor._data = data
 
-  if (texture._tex) {
-    return texture._tex
-  }
+  // Sparse accessors
+  // https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/schema/accessor.sparse.schema.json
+  if (accessor.sparse !== undefined) {
+    const TypedArrayIndicesConstructor =
+      WEBGL_TYPED_ARRAY_BY_COMPONENT_TYPES[accessor.sparse.indices.componentType]
 
-  let img = image._img
-  if (!isPOT(img.width) || !isPOT(img.height)) {
-    // FIXME: this is WebGL1 limitation
-    if (sampler.wrapS !== ctx.Wrap.Clamp || sampler.wrapT !== ctx.Wrap.Clamp || (sampler.minFilter !== ctx.Filter.Nearest && sampler.minFilter !== ctx.Filter.Linear)) {
-      const nw = nextPOT(img.width)
-      const nh = nextPOT(img.height)
-      log(`Warning: NPOT Repeat Wrap mode and mipmapping is not supported for NPOT Textures. Resizing... ${img.width}x${img.height} -> ${nw}x${nh}`)
-      var canvas2d = document.createElement('canvas')
-      canvas2d.width = nw
-      canvas2d.height = nh
-      var ctx2d = canvas2d.getContext('2d')
-      ctx2d.drawImage(img, 0, 0, canvas2d.width, canvas2d.height)
-      img = canvas2d
+    // https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/schema/accessor.sparse.indices.schema.json
+    const sparseIndices = new TypedArrayIndicesConstructor(
+      bufferViews[accessor.sparse.indices.bufferView]._data,
+      accessor.sparse.indices.byteOffset || 0,
+      accessor.sparse.count
+    )
+
+    // https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/schema/accessor.sparse.values.schema.json
+    const sparseValues = new TypedArrayConstructor(
+      bufferViews[accessor.sparse.values.bufferView]._data,
+      accessor.sparse.values.byteOffset || 0,
+      accessor.sparse.count * numberOfComponents
+    )
+
+    if (accessor._data !== null) {
+      accessor._data = accessor._data.slice()
+    }
+
+    let valuesIndex = 0
+    for (let indicesIndex = 0; indicesIndex < sparseIndices.length; indicesIndex++) {
+      let dataIndex = sparseIndices[indicesIndex] * numberOfComponents
+      for (let componentIndex = 0; componentIndex < numberOfComponents; componentIndex++) {
+        accessor._data[dataIndex++] = sparseValues[valuesIndex++]
+      }
     }
   }
-  var tex = texture._tex = ctx.texture2D({
-    data: img,
-    width: img.width,
-    height: img.height,
-    encoding: encoding || ctx.Encoding.SRGB,
-    pixelFormat: ctx.PixelFormat.RGBA8,
-    wrapS: sampler.wrapS,
-    wrapT: sampler.wrapT,
-    min: sampler.minFilter,
-    mag: sampler.magFilter,
-    mipmap: true,
-    aniso: 16,
-    flipY: false // this is confusing as
-  })
-  if (sampler.minFilter !== ctx.Filter.Nearest && sampler.minFilter !== ctx.Filter.Linear) {
-    ctx.update(tex, { mipmap: true })
-  }
-  return tex
 }
 
+function getPexMaterialMap(materialTexture, gltf, ctx, encoding) {
+  // Retrieve glTF root object properties
+  // https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/schema/texture.schema.json
+  const texture = gltf.textures[materialTexture.index]
+
+  // https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/schema/image.schema.json
+  const image = gltf.images[texture.source]
+
+  // https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/schema/sampler.schema.json
+  const sampler =
+    gltf.samplers && gltf.samplers[texture.sampler]
+      ? gltf.samplers[texture.sampler]
+      : {}
+
+  sampler.minFilter = sampler.minFilter || ctx.Filter.LinearMipmapLinear
+  sampler.magFilter = sampler.magFilter || ctx.Filter.Linear
+  sampler.wrapS = sampler.wrapS || ctx.Wrap.Repeat
+  sampler.wrapT = sampler.wrapT || ctx.Wrap.Repeat
+
+  const hasMipMap = (sampler.minFilter !== ctx.Filter.Nearest && sampler.minFilter !== ctx.Filter.Linear)
+
+  if (!texture._tex) {
+    let img = image._img
+
+    if (!isPOT(img.width) || !isPOT(img.height)) {
+      // https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/README.md#samplers
+      if (
+        sampler.wrapS !== ctx.Wrap.Clamp ||
+        sampler.wrapT !== ctx.Wrap.Clamp ||
+        hasMipMap
+      ) {
+        const canvas2d = document.createElement('canvas')
+        canvas2d.width = nextPOT(img.width)
+        canvas2d.height = nextPOT(img.height)
+        const ctx2d = canvas2d.getContext('2d')
+        ctx2d.drawImage(img, 0, 0, canvas2d.width, canvas2d.height)
+        img = canvas2d
+      }
+    }
+    texture._tex = ctx.texture2D({
+      data: img,
+      width: img.width,
+      height: img.height,
+      encoding: encoding || ctx.Encoding.Linear,
+      pixelFormat: ctx.PixelFormat.RGBA8,
+      wrapS: sampler.wrapS,
+      wrapT: sampler.wrapT,
+      min: sampler.minFilter,
+      mag: sampler.magFilter,
+    })
+    if (hasMipMap) ctx.update(texture._tex, { mipmap: true, aniso: 16 })
+  }
+
+  // https://github.com/KhronosGroup/glTF/blob/master/extensions/2.0/Khronos/KHR_texture_transform/schema/KHR_texture_transform.textureInfo.schema.json
+  const textureTransform =
+    materialTexture.extensions &&
+    materialTexture.extensions.KHR_texture_transform
+
+  // https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/schema/textureInfo.schema.json
+  const texCoord = materialTexture.texCoord
+
+  return !texCoord && !textureTransform ? texture._tex : {
+    texture: texture._tex,
+    // textureInfo
+    texCoord: texCoord || 0,
+    // textureTransform.texCoord: Overrides the textureInfo texCoord value if supplied.
+    ...(textureTransform || {})
+  }
+}
+
+// https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/schema/material.schema.json
 function handleMaterial (material, gltf, ctx, renderer) {
-  const materialCmp = renderer.material({
-    baseColor: [1, 1, 1, 1.0],
-    roughness: 1.0,
-    metallic: 1.0,
+  let materialProps = {
+    baseColor: [1, 1, 1, 1],
+    roughness: 1,
+    metallic: 1,
     castShadows: true,
     receiveShadows: true,
     cullFace: !material.doubleSided
-  })
+  }
 
+  //  Metallic/Roughness workflow
+  const pbrMetallicRoughness = material.pbrMetallicRoughness
+  if (pbrMetallicRoughness) {
+    materialProps = {
+      ...materialProps,
+      baseColor: [1, 1, 1, 1],
+      roughness: 1,
+      metallic: 1
+    }
+    if (pbrMetallicRoughness.baseColorFactor) {
+      materialProps.baseColor = pbrMetallicRoughness.baseColorFactor
+    }
+    if (pbrMetallicRoughness.baseColorTexture) {
+      materialProps.baseColorMap = getPexMaterialMap(
+        pbrMetallicRoughness.baseColorTexture,
+        gltf,
+        ctx,
+        ctx.Encoding.SRGB
+      )
+    }
+    if (pbrMetallicRoughness.metallicFactor) {
+      materialProps.metallic = pbrMetallicRoughness.metallicFactor
+    }
+    if (pbrMetallicRoughness.roughnessFactor) {
+      materialProps.roughness = pbrMetallicRoughness.roughnessFactor
+    }
+    if (pbrMetallicRoughness.metallicRoughnessTexture) {
+      materialProps.metallicRoughnessMap = getPexMaterialMap(
+        pbrMetallicRoughness.metallicRoughnessTexture,
+        gltf,
+        ctx
+      )
+    }
+  }
+
+  // Specular/Glossiness workflow
+  const pbrSpecularGlossiness = material.extensions ? material.extensions.KHR_materials_pbrSpecularGlossiness : null
+  if (pbrSpecularGlossiness) {
+    materialProps = {
+      ...materialProps,
+      useSpecularGlossinessWorkflow: true,
+      diffuse: [1, 1, 1, 1],
+      specular: [1, 1, 1],
+      glossiness: 1
+    }
+    if (pbrSpecularGlossiness.diffuseFactor) {
+      materialProps.diffuse = pbrSpecularGlossiness.diffuseFactor
+    }
+    if (pbrSpecularGlossiness.specularFactor) {
+      materialProps.specular = pbrSpecularGlossiness.specularFactor
+    }
+    if (pbrSpecularGlossiness.glossinessFactor) {
+      materialProps.glossiness = pbrSpecularGlossiness.glossinessFactor
+    }
+    if (pbrSpecularGlossiness.diffuseTexture) {
+      materialProps.diffuseMap = getPexMaterialMap(
+        pbrSpecularGlossiness.diffuseTexture,
+        gltf,
+        ctx,
+        ctx.Encoding.SRGB
+      )
+    }
+    if (pbrSpecularGlossiness.specularGlossinessTexture) {
+      materialProps.specularGlossinessMap = getPexMaterialMap(
+        pbrSpecularGlossiness.specularGlossinessTexture,
+        gltf,
+        ctx,
+        ctx.Encoding.SRGB
+      )
+    }
+  }
+
+  // Additional Maps
+  if (material.normalTexture) {
+    materialProps.normalMap = getPexMaterialMap(
+      material.normalTexture,
+      gltf,
+      ctx
+    )
+  }
+
+  if (material.occlusionTexture) {
+    materialProps.occlusionMap = getPexMaterialMap(
+      material.occlusionTexture,
+      gltf,
+      ctx
+    )
+  }
+
+  if (material.emissiveTexture) {
+    materialProps.emissiveColorMap = getPexMaterialMap(
+      material.emissiveTexture,
+      gltf,
+      ctx,
+      ctx.Encoding.SRGB
+    )
+  }
+
+  if (material.emissiveFactor) {
+    materialProps = {
+      ...materialProps,
+      emissiveColor: [
+        material.emissiveFactor[0],
+        material.emissiveFactor[1],
+        material.emissiveFactor[2],
+        1
+      ]
+    }
+  }
+
+  // Alpha Coverage
   if (material.alphaMode === 'BLEND') {
-    // TODO: support alpha cutout
-    materialCmp.set({
+    materialProps = {
+      ...materialProps,
       depthWrite: false,
       blend: true,
       blendSrcRGBFactor: ctx.BlendFactor.SrcAlpha,
       blendSrcAlphaFactor: ctx.BlendFactor.One,
       blendDstRGBFactor: ctx.BlendFactor.OneMinusSrcAlpha,
       blendDstAlphaFactor: ctx.BlendFactor.One
-    })
+    }
   }
   if (material.alphaMode === 'MASK') {
-    materialCmp.set({
-      alphaTest: material.alphaCutoff || 0.5
-    })
+    materialProps.alphaTest = material.alphaCutoff || 0.5
   }
 
-  const pbrMetallicRoughness = material.pbrMetallicRoughness
-  if (pbrMetallicRoughness) {
-    log('pbrMetallicRoughness')
-    materialCmp.set({
-      baseColor: [1, 1, 1, 1],
-      roughness: 1,
-      metallic: 1
-    })
-    log('material.pbrMatallicRoughness', pbrMetallicRoughness, materialCmp)
-    if (pbrMetallicRoughness.baseColorFactor !== undefined) {
-      materialCmp.set({ baseColor: pbrMetallicRoughness.baseColorFactor })
-    }
-    if (pbrMetallicRoughness.baseColorTexture) {
-      const texture = loadTexture(pbrMetallicRoughness.baseColorTexture, gltf, ctx.Encoding.SRGB, ctx, renderer)
-      log('baseColorTexture', texture)
-      materialCmp.set({
-        baseColorMap: {
-          texture,
-          texCoord: pbrMetallicRoughness.baseColorTexture.texCoord || 0
-        }
-      })
-    }
-    if (pbrMetallicRoughness.metallicFactor !== undefined) {
-      materialCmp.set({ metallic: pbrMetallicRoughness.metallicFactor })
-    }
-    if (pbrMetallicRoughness.roughnessFactor !== undefined) {
-      materialCmp.set({ roughness: pbrMetallicRoughness.roughnessFactor })
-    }
-    if (pbrMetallicRoughness.metallicRoughnessTexture) {
-      const texture = loadTexture(pbrMetallicRoughness.metallicRoughnessTexture, gltf, ctx.Encoding.Linear, ctx, renderer)
-      materialCmp.set({
-        metallicRoughnessMap: {
-          texture,
-          texCoord: pbrMetallicRoughness.metallicRoughnessTexture.texCoord || 0
-        }
-      })
-    }
-  }
-
-  const pbrSpecularGlossiness = material.extensions ? material.extensions.KHR_materials_pbrSpecularGlossiness : null
-  if (pbrSpecularGlossiness) {
-    materialCmp.set({
-      diffuse: [1, 1, 1, 1],
-      specular: [1, 1, 1],
-      glossiness: 1
-    })
-    log('material.pbrSpecularGlossiness', pbrSpecularGlossiness, materialCmp)
-    if (pbrSpecularGlossiness.diffuseFactor !== undefined) {
-      materialCmp.set({ diffuse: pbrSpecularGlossiness.diffuseFactor })
-    }
-    if (pbrSpecularGlossiness.specularFactor !== undefined) {
-      materialCmp.set({ specular: pbrSpecularGlossiness.specularFactor })
-    }
-    if (pbrSpecularGlossiness.glossinessFactor !== undefined) {
-      materialCmp.set({ glossiness: pbrSpecularGlossiness.glossinessFactor })
-    }
-    if (pbrSpecularGlossiness.diffuseTexture) {
-      const texture = loadTexture(pbrSpecularGlossiness.diffuseTexture, gltf, ctx.Encoding.SRGB, ctx, renderer)
-      materialCmp.set({
-        diffuseMap: {
-          texture,
-          texCoord: pbrSpecularGlossiness.diffuseTexture.texCoord || 0
-        }
-      })
-    }
-    if (pbrSpecularGlossiness.specularGlossinessTexture) {
-      const texture = loadTexture(pbrSpecularGlossiness.specularGlossinessTexture, gltf, ctx.Encoding.SRGB, ctx, renderer)
-      materialCmp.set({
-        specularGlossinessMap: {
-          texture,
-          texCoord: pbrSpecularGlossiness.specularGlossinessTexture.texCoord || 0
-        }
-      })
-    }
-  }
-
-  if (material.normalTexture) {
-    const texture = loadTexture(material.normalTexture, gltf, ctx.Encoding.Linear, ctx, renderer)
-    materialCmp.set({
-      normalMap: {
-        texture,
-        texCoord: material.occlusionTexture.texCoord || 0
-      }
-    })
-  }
-
-  if (material.emissiveFactor) {
-    materialCmp.set({ emissiveColor: [
-      material.emissiveFactor[0],
-      material.emissiveFactor[1],
-      material.emissiveFactor[2],
-      1
-    ]})
-  }
-  if (material.occlusionTexture) {
-    const texture = loadTexture(material.occlusionTexture, gltf, ctx.Encoding.Linear, ctx, renderer)
-    materialCmp.set({
-      occlusionMap: {
-        texture,
-        texCoord: material.occlusionTexture.texCoord || 0
-      }
-    })
-  }
-
-  if (material.emissiveTexture) {
-    // TODO: double check sRGB
-    const texture = loadTexture(material.emissiveTexture, gltf, ctx.Encoding.SRGB, ctx, renderer)
-    materialCmp.set({
-      emissiveColorMap: {
-        texture,
-        texCoord: material.emissiveTexture.texCoord || 0
-      }
-    });
-  }
-
+  // KHR_materials_unlit
   if (material.extensions && material.extensions.KHR_materials_unlit) {
-    materialCmp.set({
+    materialProps = {
+      ...materialProps,
       roughness: null,
       metallic: null
-    })
+    }
   }
 
-  return materialCmp
+  return renderer.material(materialProps)
 }
 
 function handleMesh (mesh, gltf, ctx, renderer) {
   return mesh.primitives.map((primitive) => {
+    // Format attributes for pex-context
     const attributes = Object.keys(primitive.attributes).reduce((attributes, name) => {
-      const accessor = gltf.accessors[primitive.attributes[name]]
-      // TODO: add stride support (requires update to pex-render/geometry
-      if (accessor._buffer) {
-        const attributeName = AttributeNameMap[name]
+      const attributeName = AttributeNameMap[name]
+      assert(attributeName, `GLTF: Unknown attribute '${name}'`)
 
-        assert(attributeName, `GLTF: Unknown attribute '${name}'`)
+      const accessor = gltf.accessors[primitive.attributes[name]]
+
+      if (accessor._buffer) {
         attributes[attributeName] = {
           buffer: accessor._buffer,
           offset: accessor.byteOffset,
           type: accessor.componentType,
-          stride: accessor._bufferView.stride
+          stride: accessor._bufferView.byteStride
         }
       } else {
-        const attributeName = AttributeNameMap[name]
-        assert(attributeName, `GLTF: Unknown attribute '${name}'`)
         attributes[attributeName] = accessor._data
       }
       return attributes
     }, {})
 
-    log('handleMesh.attributes', attributes)
-
     const positionAccessor = gltf.accessors[primitive.attributes.POSITION]
     const indicesAccessor = gltf.accessors[primitive.indices]
-    log('handleMesh.positionAccessor', positionAccessor)
-    log('handleMesh.indicesAccessor', indicesAccessor)
 
+    // Create geometry
     const geometryCmp = renderer.geometry(attributes)
     geometryCmp.set({
       bounds: [positionAccessor.min, positionAccessor.max]
@@ -378,7 +390,6 @@ function handleMesh (mesh, gltf, ctx, renderer) {
 
     if (indicesAccessor) {
       if (indicesAccessor._buffer) {
-        log('indicesAccessor._buffer', indicesAccessor)
         geometryCmp.set({
           indices: {
             buffer: indicesAccessor._buffer,
@@ -388,45 +399,60 @@ function handleMesh (mesh, gltf, ctx, renderer) {
           }
         })
       } else {
-        // TODO: does it ever happen?
         geometryCmp.set({
           indices: indicesAccessor._data
         })
       }
     } else {
+    geometryCmp.set({
+      count: positionAccessor._data.length / 3
+    })
+    }
+
+    // https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/README.md#primitivemode
+    if (primitive.mode) {
       geometryCmp.set({
-        count: positionAccessor.buffer.length / 3
+        primitive: primitive.mode
       })
     }
 
-    let materialCmp = null
-    if (primitive.material !== undefined) {
-      const material = gltf.materials[primitive.material]
-      materialCmp = handleMaterial(material, gltf, ctx, renderer)
-    } else {
-      materialCmp = renderer.material({})
-    }
-      // materialCmp = renderer.material({
-        // roughness: 0.1,
-        // metallic: 0,
-        // baseColor: [1, 0.2, 0.2, 1],
-        // castShadows: true,
-        // receiveShadows: true
-      // })
+    // Create material
+    const materialCmp =
+      primitive.material !== undefined
+        ? handleMaterial(
+            gltf.materials[primitive.material],
+            gltf,
+            ctx,
+            renderer
+          )
+        : renderer.material();
 
-    let components = [
+    const components = [
       geometryCmp,
       materialCmp
     ]
-    log('components', components)
 
+    // Create morph
     if (primitive.targets) {
-      let targets = primitive.targets.map((target) => {
-        return gltf.accessors[target.POSITION]._data
-      })
-      let morphCmp = renderer.morph({
-        // TODO the rest ?
-        targets: targets,
+      let sources = {}
+      const targets = primitive.targets.reduce((targets, target) => {
+        const targetKeys = Object.keys(target)
+
+        targetKeys.forEach(targetKey => {
+          const targetName = AttributeNameMap[targetKey] || targetKey
+          targets[targetName] = targets[targetName] || []
+          targets[targetName].push(gltf.accessors[target[targetKey]]._data)
+
+          if (!sources[targetName]) {
+            sources[targetName] = gltf.accessors[primitive.attributes[targetKey]]._data
+          }
+        })
+        return targets
+      }, {})
+
+      const morphCmp = renderer.morph({
+        sources,
+        targets,
         weights: mesh.weights
       })
       components.push(morphCmp)
@@ -467,6 +493,7 @@ function handleNode (node, gltf, i, ctx, renderer) {
 
   if (node.mesh !== undefined) {
     const primitives = handleMesh(gltf.meshes[node.mesh], gltf, ctx, renderer)
+
     if (primitives.length === 1) {
       primitives[0].forEach((component) => {
         node.entity.addComponent(component)
@@ -474,7 +501,7 @@ function handleNode (node, gltf, i, ctx, renderer) {
       if (skinCmp) node.entity.addComponent(skinCmp)
       return node.entity
     } else {
-      // create sub modes for each primitive
+      // create sub nodes for each primitive
       const primitiveNodes = primitives.map((components, j) => {
         const subMesh = renderer.add(renderer.entity(components))
         subMesh.name = `node_${i}_${j}`
@@ -509,10 +536,7 @@ function buildHierarchy (nodes, gltf) {
   nodes.forEach((node) => {
     if (node.skin !== undefined) {
       const skin = gltf.skins[node.skin]
-
-      const joints = skin.joints.map((i) => {
-        return nodes[i].entity
-      })
+      const joints = skin.joints.map((i) => nodes[i].entity);
 
       if (gltf.meshes[node.mesh].primitives.length === 1) {
         node.entity.getComponent('Skin').set({
@@ -531,7 +555,7 @@ function buildHierarchy (nodes, gltf) {
   })
 }
 
-function handleAnimation (animation, gltf, ctx, renderer) {
+function handleAnimation (animation, gltf, renderer) {
   const channels = animation.channels.map((channel) => {
     const sampler = animation.samplers[channel.sampler]
     const input = gltf.accessors[sampler.input]
@@ -540,7 +564,7 @@ function handleAnimation (animation, gltf, ctx, renderer) {
 
     const outputData = []
     const od = output._data
-    let offset = AttributeSizeMap[output.type]
+    let offset = GLTF_ACCESSOR_TYPE_COMPONENTS_NUMBER[output.type]
     if (channel.target.path === 'weights') {
       offset = target.getComponent('Morph').weights.length
     }
@@ -568,29 +592,36 @@ function handleAnimation (animation, gltf, ctx, renderer) {
     }
   })
 
-  const animationCmp = renderer.animation({
+  return renderer.animation({
     channels: channels,
     autoplay: true,
     loop: true
   })
-  return animationCmp
 }
 
 function build (gltf, ctx, renderer) {
-  log('build', gltf)
-  gltf.bufferViews.map((bufferView, i) => {
-    handleBufferView(bufferView, gltf.buffers[bufferView.buffer]._data, ctx, renderer)
-  })
-
-  gltf.accessors.map((accessor) => {
-    handleAccessor(accessor, gltf.bufferViews[accessor.bufferView], ctx, renderer)
-  })
-
-  const scene = {
-    root: null,
-    entities: null
+  // Check required extensions
+  if (gltf.extensionsRequired) {
+    const unsupportedExtensions = gltf.extensionsRequired.filter(extension => !SUPPORTED_EXTENSIONS.includes(extension))
+    if (unsupportedExtensions.length) {
+      console.warn('glTF loader: unsupported extensions', unsupportedExtensions)
+    }
   }
 
+  // Handle binary data retrieval
+  // https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/README.md#binary-data-storage
+  for (let i = 0; i < gltf.bufferViews.length; i++) {
+    const bufferView = gltf.bufferViews[i]
+    handleBufferView(bufferView, gltf.buffers[bufferView.buffer]._data, ctx)
+  }
+
+  for (let j = 0; j < gltf.accessors.length; j++) {
+    const accessor = gltf.accessors[j]
+    handleAccessor(accessor, gltf.bufferViews[accessor.bufferView], gltf.bufferViews)
+  }
+
+  // Build pex-renderer scene
+  const scene = {}
   scene.root = renderer.add(renderer.entity())
   scene.root.name = 'sceneRoot'
   scene.entities = gltf.nodes.reduce((entities, node, i) => {
@@ -605,13 +636,13 @@ function build (gltf, ctx, renderer) {
 
   buildHierarchy(gltf.nodes, gltf)
 
-  scene.entities.forEach((e) => {
-    if (e.transform.parent === renderer.root.transform) {
-      log('attaching to scene root', e)
-      e.transform.set({ parent: scene.root.transform })
+  scene.entities.forEach((entity) => {
+    if (entity.transform.parent === renderer.root.transform) {
+      entity.transform.set({ parent: scene.root.transform })
     }
   })
 
+  // TODO: handle camera and lights
   // prune non geometry nodes (cameras, lights, etc) from the hierarchy
   scene.entities.forEach((e) => {
     if (e.getComponent('Geometry')) {
@@ -625,7 +656,7 @@ function build (gltf, ctx, renderer) {
 
   if (gltf.animations) {
     gltf.animations.map((animation) => {
-      const animationComponent = handleAnimation(animation, gltf, ctx, renderer)
+      const animationComponent = handleAnimation(animation, gltf, renderer)
       scene.root.addComponent(animationComponent)
     })
   }
@@ -642,62 +673,10 @@ function build (gltf, ctx, renderer) {
       })
     })
   }
-  log('entities pruned', scene.entities)
 
-  renderer.update() // refresh scene hierarchy
-
-  const sceneBounds = scene.root.transform.worldBounds
-  const sceneSize = aabb.size(scene.root.transform.worldBounds)
-  const sceneCenter = aabb.center(scene.root.transform.worldBounds)
-  const sceneScale = 1 / (Math.max(sceneSize[0], Math.max(sceneSize[1], sceneSize[2])) || 1)
-  if (!aabb.isEmpty(sceneBounds)) {
-    scene.root.transform.set({
-      position: vec3.scale([-sceneCenter[0], -sceneBounds[0][1], -sceneCenter[2]], sceneScale),
-      scale: [sceneScale, sceneScale, sceneScale]
-    })
-  }
-
-  renderer.update() // refresh scene hierarchy
+  renderer.update()
 
   scene.entities.push(scene.root)
-
-  // function printEntity (e, level, s) {
-    // s = s || ''
-    // level = '  ' + (level || '')
-    // var g = e.getComponent('Geometry')
-    // s += level + (e.name || 'child') + ' ' + aabbToString(e.transform.worldBounds) + ' ' + aabbToString(e.transform.bounds) + ' ' + (g ? aabbToString(g.bounds) : '') + '\n'
-    // if (e.transform) {
-      // e.transform.children.forEach((c) => {
-        // s = printEntity(c.entity, level, s)
-      // })
-    // }
-    // return s
-  // }
-  var box = createBox(1)
-  box.cells = edges(box.cells)
-  box.primitive = ctx.Primitive.Lines
-
-  const showBoundingBoxes = false
-  if (showBoundingBoxes) {
-    const bboxes = scene.entities.map((e) => {
-      var size = aabb.size(e.transform.worldBounds)
-      var center = aabb.center(e.transform.worldBounds)
-
-      const bbox = renderer.add(renderer.entity([
-        renderer.transform({
-          scale: size,
-          position: center
-        }),
-        renderer.geometry(box),
-        renderer.material({
-          baseColor: [1, 0, 0, 1]
-        })
-      ]))
-      bbox.name = e.name + '_bbox'
-      return bbox
-    }).filter((e) => e)
-    scene.entities = scene.entities.concat(bboxes)
-  }
 
   return scene
 }

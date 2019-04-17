@@ -128,14 +128,16 @@ void main() {
     data.inverseViewMatrix = uInverseViewMatrix;
     data.positionWorld = vPositionWorld;
     data.positionView = vPositionView;
-    data.normalView = normalize(vNormalView); //TODO: normalization needed?
+    // TODO: is normalization needed for normalView, tangentView, normalWorld?
+    data.normalView = normalize(vNormalView);
+    data.normalView *= float(gl_FrontFacing) * 2.0 - 1.0;
     #ifdef USE_TANGENTS
       data.tangentView = normalize(vTangentView);
+      data.tangentView *= float(gl_FrontFacing) * 2.0 - 1.0;
     #endif
-    data.normalView *= float(gl_FrontFacing) * 2.0 - 1.0;
     data.normalWorld = normalize(vNormalWorld);
     data.normalWorld *= float(gl_FrontFacing) * 2.0 - 1.0;
-    data.eyeDirView = normalize(-vPositionView); //TODO: normalization needed?
+    data.eyeDirView = normalize(-vPositionView);
     data.eyeDirWorld = vec3(uInverseViewMatrix * vec4(data.eyeDirView, 0.0));
     data.indirectDiffuse = vec3(0.0);
     data.indirectSpecular = vec3(0.0);
@@ -164,7 +166,12 @@ void main() {
     #endif
 
     #ifdef USE_ALPHA_MAP
-      data.opacity *= texture2D(uAlphaMap, getTextureCoordinates(data, ALPHA_MAP_TEX_COORD_INDEX)).r;
+      #ifdef USE_ALPHA_MAP_TEX_COORD_TRANSFORM
+        vec2 alphaTexCoord = getTextureCoordinates(data, ALPHA_MAP_TEX_COORD_INDEX, uAlphaMapTexCoordTransform);
+      #else
+        vec2 alphaTexCoord = getTextureCoordinates(data, ALPHA_MAP_TEX_COORD_INDEX);
+      #endif
+      data.opacity *= texture2D(uAlphaMap, alphaTexCoord).r;
     #endif
     #ifdef USE_ALPHA_TEST
       alphaTest(data);
@@ -185,7 +192,12 @@ void main() {
 
     float ao = 1.0;
     #ifdef USE_OCCLUSION_MAP
-      ao *= texture2D(uOcclusionMap, getTextureCoordinates(data, OCCLUSION_MAP_TEX_COORD_INDEX)).r;
+      #ifdef USE_OCCLUSION_MAP_TEX_COORD_TRANSFORM
+        vec2 aoTexCoord = getTextureCoordinates(data, OCCLUSION_MAP_TEX_COORD_INDEX, uOcclusionMapTexCoordTransform);
+      #else
+        vec2 aoTexCoord = getTextureCoordinates(data, OCCLUSION_MAP_TEX_COORD_INDEX);
+      #endif
+      ao *= texture2D(uOcclusionMap, aoTexCoord).r;
     #endif
     #ifdef USE_AO
       vec2 vUV = vec2(gl_FragCoord.x / uScreenSize.x, gl_FragCoord.y / uScreenSize.y);

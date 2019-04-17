@@ -100,6 +100,9 @@ Orbiter.prototype.update = function () {
       position: this.position,
       rotation: transformRotation
     })
+    if (camera.projection === 'orthographic') {
+      camera.set({ zoom: this.distance })
+    }
   } else {
     transformCmp.set({
       rotation: transformRotation
