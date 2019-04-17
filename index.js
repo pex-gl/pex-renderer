@@ -198,7 +198,7 @@ Renderer.prototype.getMaterialProgramAndFlags = function (geometry, material, sk
 
   var flags = []
 
-  if (this.targetMobile) {
+  if (this._state.targetMobile) {
     flags.push('#define TARGET_MOBILE')
   }
   if (!geometry._attributes.aNormal) {
