@@ -138,24 +138,24 @@ Animation.prototype.update = function () {
             vec3.set(currentOutputVec3, outputData[nextIndex].map((output, index) => utils.lerp(outputData[prevIndex][index], output, t)))
           }
       }
-    }
 
-    if (isRotation) {
-      channel.target.transform.set({
-        rotation: quat.copy(currentOutputQuat)
-      })
-    } else if (channel.path === 'translation') {
-      channel.target.transform.set({
-        position: vec3.copy(currentOutputVec3)
-      })
-    } else if (channel.path === 'scale') {
-      channel.target.transform.set({
-        scale: vec3.copy(currentOutputVec3)
-      })
-    } else if (channel.path === 'weights') {
-      channel.target.getComponent('Morph').set({
-        weights: outputData[nextIndex].slice()
-      })
+      if (isRotation) {
+        channel.target.transform.set({
+          rotation: quat.copy(currentOutputQuat)
+        })
+      } else if (channel.path === 'translation') {
+        channel.target.transform.set({
+          position: vec3.copy(currentOutputVec3)
+        })
+      } else if (channel.path === 'scale') {
+        channel.target.transform.set({
+          scale: vec3.copy(currentOutputVec3)
+        })
+      } else if (channel.path === 'weights') {
+        channel.target.getComponent('Morph').set({
+          weights: outputData[nextIndex].slice()
+        })
+      }
     }
   }
 }
