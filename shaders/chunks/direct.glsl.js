@@ -22,8 +22,7 @@ float getAngleAttenuation(const vec3 lightDir, const vec3 l, const vec2 scaleOff
   return attenuation * attenuation;
 }
 
-// occlusion = illuminated
-void getSurfaceShading(inout PBRData data, Light light, float occlusion) {
+void getSurfaceShading(inout PBRData data, Light light, float illuminated) {
   vec3 N = data.normalWorld;
   vec3 V = data.viewWorld;
   vec3 L = normalize(light.l);
@@ -61,7 +60,7 @@ void getSurfaceShading(inout PBRData data, Light light, float occlusion) {
       float clearCoatNoL = saturate(dot(data.clearCoatNormal, light.l));
       color += clearCoat * clearCoatNoL;
 
-      data.directColor += (color * lightColor) * (light.color.w * light.attenuation * occlusion);
+      data.directColor += (color * lightColor) * (light.color.w * light.attenuation * illuminated);
       return;
     #else
       vec3 color = (Fd + Fr * (energyCompensation * attenuation)) * attenuation + clearCoat;
@@ -70,6 +69,6 @@ void getSurfaceShading(inout PBRData data, Light light, float occlusion) {
     vec3 color = Fd + Fr * energyCompensation;
   #endif
 
-  data.directColor += (color * lightColor) * (light.color.a * light.attenuation * NdotL * occlusion);
+  data.directColor += (color * lightColor) * (light.color.a * light.attenuation * NdotL * illuminated);
 }
 `
