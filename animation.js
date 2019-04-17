@@ -43,11 +43,10 @@ Animation.prototype.set = function (opts) {
 Animation.prototype.update = function () {
   if (!this.playing || !this.enabled) return
 
-  // assuming same length for all
   const animationLength = this.channels[0].input[this.channels[0].input.length - 1]
-
   const now = Date.now()
   const deltaTime = (now - this.prevTime) / 1000
+
   this.prevTime = now
   this.time += deltaTime
 
@@ -77,106 +76,84 @@ Animation.prototype.update = function () {
 
     if (prevIndex === undefined) return
 
+    if (channel.path === 'weights') {
+      channel.target.getComponent('Morph').set({
+        weights: channel.output[nextIndex].slice()
+      })
+      return
+    }
+
     const isRotation = channel.path === 'rotation'
     const outputData = channel.output
     const prevInput = inputData[prevIndex]
     const nextInput = inputData[nextIndex]
-    const prevOutput = outputData[prevIndex]
-    const nextOutput = outputData[nextIndex]
+    const scale = nextInput - prevInput
 
-    const t = (this.time - prevInput) / (nextInput - prevInput)
+    const t = (this.time - prevInput) / scale
 
     switch (channel.interpolation) {
       case 'STEP':
-        if (isRotation) {
-          currentOutputQuat = quat.copy(outputData[prevIndex])
-        } else {
-          currentOutputVec3 = vec3.copy(outputData[prevIndex])
-        }
+        isRotation
+          ? quat.set(currentOutputQuat, outputData[prevIndex])
+          : vec3.set(currentOutputVec3, outputData[prevIndex])
         break
       case 'CUBICSPLINE':
-        // intangent = index
-        // position = index+1
-        // outtangent = index+2
-
-        let prevOutTangent = isRotation ? vec4.create() : vec3.create()
-        let prevPosition = isRotation ? vec4.create() : vec3.create()
-        let nextInTangent = isRotation ? vec4.create() : vec3.create()
-        let nextPos = isRotation ? vec4.create() : vec3.create()
-
-        if (prevIndex) {
-          // m0 = (tk+1 - tk)bk
-          prevOutTangent = isRotation ? vec4.scale(outputData[(prevIndex * 3) + 2].slice(), (nextInput - prevInput)) : vec3.scale(outputData[(prevIndex * 3) + 2].slice(), (nextInput - prevInput))
-        } else {
-          prevOutTangent = isRotation ? vec4.scale([0, 0, 0, 0], (nextInput - prevInput)) : vec3.scale([0, 0, 0], (nextInput - prevInput))
-        }
-        // p0
-        prevPosition = outputData[(prevIndex * 3) + 1].slice()
-
-        if (nextIndex !== (inputData.length - 1)) {
-          // m1 = (tk+1 - tk)ak+1
-          nextInTangent = isRotation ? vec4.scale(outputData[(prevIndex * 3)].slice(), (nextInput - prevInput)) : vec3.scale(outputData[(prevIndex * 3)].slice(), (nextInput - prevInput))
-        } else {
-          nextInTangent = isRotation ? vec4.scale([0, 0, 0, 0], (nextInput - prevInput)) : vec3.scale([0, 0, 0], (nextInput - prevInput))
-        }
-        // p1
-        nextPos = outputData[(nextIndex * 3) + 1].slice()
-
-        // p(t) =
-        //  (2t^3 - 3t^2 + 1)p0 + //p0Calc
-        //  (t^3 - 2t^2 + t)m0 +  //m0Calc
-        //  (-2t^3 + 3t^2)p1 +  //p1Calc
-        //  (t^3 - t^2)m1 //m1Calc
-
+        const vec = isRotation ? vec4 : vec3
         const tt = t * t
         const ttt = tt * t
 
+        // Each input value corresponds to three output values of the same type: in-tangent, data point, and out-tangent.
+        // p0
+        const prevPosition = vec.copy(outputData[(prevIndex * 3) + 1])
+
+        // p1
+        const nextPos = vec.copy(outputData[(nextIndex * 3) + 1])
+
+        // m0 = (tk+1 - tk)bk
+        const prevOutTangent = prevIndex
+          ? vec.scale(vec.copy(outputData[prevIndex * 3 + 2]), scale)
+          : vec.create()
+
+        // m1 = (tk+1 - tk)ak+1
+        const nextInTangent = nextIndex !== inputData.length - 1
+          ? vec.scale(vec.copy(outputData[(prevIndex * 3)]), scale)
+          : vec.create()
+
+        // p(t) = (2t³ - 3t² + 1)p0 + (t³ - 2t² + t)m0 + (-2t³ + 3t²)p1 + (t³ - t²)m1
+        const p0 = vec.scale(prevPosition, 2 * ttt - 3 * tt + 1)
+        const m0 = vec.scale(prevOutTangent, ttt - 2 * tt + t)
+        const p1 = vec.scale(nextPos, -2 * ttt + 3 * tt)
+        const m1 = vec.scale(nextInTangent, ttt - tt)
+
         if (isRotation) {
-          const p0Calc = vec4.scale(prevPosition, ((2 * ttt) - (3 * tt) + 1))
-          const m0Calc = vec4.scale(prevOutTangent, (ttt - (2 * tt) + t))
-          const p1Calc = vec4.scale(nextPos, ((-2 * ttt) + (3 * tt)))
-          const m1Calc = vec4.scale(nextInTangent, (ttt - tt))
-
-          currentOutputQuat = quat.normalize([
-            p0Calc[0] + m0Calc[0] + p1Calc[0] + m1Calc[0],
-            p0Calc[1] + m0Calc[1] + p1Calc[1] + m1Calc[1],
-            p0Calc[2] + m0Calc[2] + p1Calc[2] + m1Calc[2],
-            p0Calc[3] + m0Calc[3] + p1Calc[3] + m1Calc[3]
-          ])
+          quat.set(currentOutputQuat, quat.normalize([
+            p0[0] + m0[0] + p1[0] + m1[0],
+            p0[1] + m0[1] + p1[1] + m1[1],
+            p0[2] + m0[2] + p1[2] + m1[2],
+            p0[3] + m0[3] + p1[3] + m1[3]
+          ]))
         } else {
-          const p0Calc = vec3.scale(prevPosition, ((2 * ttt) - (3 * tt) + 1))
-          const m0Calc = vec3.scale(prevOutTangent, (ttt - (2 * tt) + t))
-          const p1Calc = vec3.scale(nextPos, ((-2 * ttt) + (3 * tt)))
-          const m1Calc = vec3.scale(nextInTangent, (ttt - tt))
-
-          currentOutputVec3 = vec3.add(vec3.add(vec3.add(p0Calc, m0Calc), p1Calc), m1Calc)
+          vec3.set(currentOutputVec3, vec3.add(vec3.add(vec3.add(p0, m0), p1), m1))
         }
 
         break
       default: // LINEAR
-        if (isRotation) {
-          currentOutputQuat = quat.copy(prevOutput)
-          quat.slerp(currentOutputQuat, nextOutput, t)
-        } else {
-          currentOutputVec3 = nextOutput.map((output, index) => utils.lerp(prevOutput[index], output, t))
-        }
+        isRotation
+          ? quat.slerp(quat.set(currentOutputQuat, outputData[prevIndex]), outputData[nextIndex], t)
+          : vec3.set(currentOutputVec3, outputData[nextIndex].map((output, index) => utils.lerp(outputData[prevIndex][index], output, t)))
     }
 
     if (isRotation) {
       channel.target.transform.set({
-        rotation: currentOutputQuat
+        rotation: quat.copy(currentOutputQuat)
       })
     } else if (channel.path === 'translation') {
       channel.target.transform.set({
-        position: currentOutputVec3
+        position: vec3.copy(currentOutputVec3)
       })
     } else if (channel.path === 'scale') {
       channel.target.transform.set({
-        scale: currentOutputVec3
-      })
-    } else if (channel.path === 'weights') {
-      channel.target.getComponent('Morph').set({
-        weights: nextOutput
+        scale: vec3.copy(currentOutputVec3)
       })
     }
   }
