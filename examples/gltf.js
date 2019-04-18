@@ -12,6 +12,9 @@ const debug = require('debug')('gltf')
 // const log = require('debug')('gltf')
 const parseHdr = require('parse-hdr')
 const isBrowser = require('is-browser')
+const createBox = require('primitive-box')
+const edges = require('geom-edges')
+const aabb = require('pex-geom/aabb')
 
 const loadGltf = require('./gltf/gltf-load')
 const buildGltf = require('./gltf/gltf-build')
@@ -26,6 +29,7 @@ const State = {
   selectedModel: '',
   scenes: [],
   gridSize: 1,
+  showBoundingBoxes: false,
   useEnvMap: false,
   shadows: false // TODO: disabled for benchmarking
 }
@@ -232,6 +236,58 @@ function onSceneLoaded (err, scene) {
       position: [x, scene.root.transform.position[1], z]
     })
     State.scenes.push(scene)
+
+    // Debug scene
+    // function printEntity (e, level, s) {
+      // s = s || ''
+      // level = '  ' + (level || '')
+      // var g = e.getComponent('Geometry')
+      // s += level + (e.name || 'child') + ' ' + aabbToString(e.transform.worldBounds) + ' ' + aabbToString(e.transform.bounds) + ' ' + (g ? aabbToString(g.bounds) : '') + '\n'
+      // if (e.transform) {
+        // e.transform.children.forEach((c) => {
+          // s = printEntity(c.entity, level, s)
+        // })
+      // }
+      // return s
+    // }
+
+    const sceneBounds = scene.root.transform.worldBounds
+    const sceneSize = aabb.size(scene.root.transform.worldBounds)
+    const sceneCenter = aabb.center(scene.root.transform.worldBounds)
+    const sceneScale = 1 / (Math.max(sceneSize[0], Math.max(sceneSize[1], sceneSize[2])) || 1)
+    if (!aabb.isEmpty(sceneBounds)) {
+      scene.root.transform.set({
+        position: vec3.scale([-sceneCenter[0], -sceneBounds[0][1], -sceneCenter[2]], sceneScale),
+        scale: [sceneScale, sceneScale, sceneScale]
+      })
+    }
+
+    renderer.update() // refresh scene hierarchy
+
+    var box = createBox(1)
+    box.cells = edges(box.cells)
+    box.primitive = ctx.Primitive.Lines
+
+    if (State.showBoundingBoxes) {
+      const bboxes = scene.entities.map((e) => {
+        var size = aabb.size(e.transform.worldBounds)
+        var center = aabb.center(e.transform.worldBounds)
+
+        const bbox = renderer.add(renderer.entity([
+          renderer.transform({
+            scale: size,
+            position: center
+          }),
+          renderer.geometry(box),
+          renderer.material({
+            baseColor: [1, 0, 0, 1]
+          })
+        ]))
+        bbox.name = e.name + '_bbox'
+        return bbox
+      }).filter((e) => e)
+      scene.entities = scene.entities.concat(bboxes)
+    }
   }
 }
 
@@ -288,7 +344,7 @@ async function init () {
 
   // Filter models
   models = [
-    { name: 'AnimatedMorphCube' },
+    { name: 'DamagedHelmet' },
     // { name: '2CylinderEngine' },
     // { name: 'BrainStem' },
     // { name: 'DamagedHelmet' },
