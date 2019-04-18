@@ -113,18 +113,34 @@ const reflectionProbe = renderer.entity([
 ])
 renderer.add(reflectionProbe)
 
-;(async () => {
-  const normalMap = await io.loadImage(`${ASSETS_DIR}/carbon-fiber.jpg`)
+function getMaterialMaps (maps, options) {
+  return Object.entries(maps).reduce(
+    (currentValue, [key, image]) => ({
+      ...currentValue,
+      [key]: ctx.texture2D({
+        data: image,
+        width: 256,
+        height: 256,
+        min: ctx.Filter.LinearMipmapLinear,
+        mag: ctx.Filter.Linear,
+        flipY: true,
+        mipmap: true,
+        encoding: key === 'emissiveColorMap' || key === 'baseColorMap'
+          ? ctx.Encoding.SRGB
+          : ctx.Encoding.Linear
+      })
+    }),
+    {}
+  )
+}
 
-  const clearCoatNormalMap = ctx.texture2D({
-    data: normalMap,
-    width: 256,
-    height: 256,
-    min: ctx.Filter.LinearMipmapLinear,
-    mag: ctx.Filter.Linear,
-    flipY: true,
-    mipmap: true,
-    encoding: ctx.Encoding.Linear
+;(async () => {
+  const materialMaps = getMaterialMaps({
+    baseColorMap: await io.loadImage(`${ASSETS_DIR}/materials/carbon-fiber/carbon-fiber-color.jpg`),
+    displacementMap: await io.loadImage(`${ASSETS_DIR}/materials/carbon-fiber/carbon-fiber-displacement.jpg`),
+    normalMap: await io.loadImage(`${ASSETS_DIR}/materials/carbon-fiber/carbon-fiber-normal.jpg`),
+    roughnessMap: await io.loadImage(`${ASSETS_DIR}/materials/carbon-fiber/carbon-fiber-roughness.jpg`),
+    clearCoatNormalMap: await io.loadImage(`${ASSETS_DIR}/materials/painted-plaster-normal.jpg`)
   })
 
   const spheresEntities = []
@@ -134,7 +150,8 @@ renderer.add(reflectionProbe)
         const clearCoatProperties = {
           clearCoat: x / (gridSize - 1),
           clearCoatRoughness: 0.6 * y / (gridSize - 1),
-          reflectance: z / (gridSize - 1)
+          reflectance: z / (gridSize - 1),
+          clearCoatNormalMapScale: 1
         }
         const coatedSphereEntity = renderer.entity([
           renderer.transform({
@@ -142,13 +159,11 @@ renderer.add(reflectionProbe)
           }),
           renderer.geometry(geometry),
           renderer.material({
-            baseColor: [1, 1, 1, 1],
-            roughness: 0.8,
             metallic: 1,
             castShadows: State.shadows,
             receiveShadows: State.shadows,
-            // clearCoatNormalMap,
-            clearCoatNormalMapScale: 1,
+            displacement: 0.01,
+            ...materialMaps,
             ...clearCoatProperties
           })
         ])
