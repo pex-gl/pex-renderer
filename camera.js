@@ -46,6 +46,7 @@ function Camera (opts) {
   }
 
   this.viewport = [0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight]
+  this.view = null
 
   this.set(opts)
 }
@@ -59,22 +60,42 @@ Camera.prototype.set = function (opts) {
 
   if (
     this.projection === 'perspective' &&
-    (opts.aspect || opts.near || opts.far || opts.fov)
+    (opts.aspect || opts.near || opts.far || opts.fov || opts.view)
   ) {
-    mat4.perspective(this.projectionMatrix, this.fov, this.aspect, this.near, this.far)
+    if (this.view) {
+      const aspectRatio = this.view.totalSize[0] / this.view.totalSize[1]
+
+      const top = Math.tan(this.fov * 0.5) * this.near
+      const bottom = -top
+      const left = aspectRatio * bottom
+      const right = aspectRatio * top
+      const width = Math.abs(right - left)
+      const height = Math.abs(top - bottom)
+      const widthNormalized = width / this.view.totalSize[0]
+      const heightNormalized = height / this.view.totalSize[1]
+
+      const l = left + this.view.offset[0] * widthNormalized
+      const r = left + (this.view.offset[0] + this.view.size[0]) * widthNormalized
+      const b = top - (this.view.offset[1] + this.view.size[1]) * heightNormalized
+      const t = top - this.view.offset[1] * heightNormalized
+
+      mat4.frustum(this.projectionMatrix, l, r, b, t, this.near, this.far)
+    } else {
+      mat4.perspective(this.projectionMatrix, this.fov, this.aspect, this.near, this.far)
+    }
   } else if (
     this.projection === 'orthographic' &&
-    (opts.left || opts.right || opts.bottom || opts.top || opts.zoom || opts.near || opts.far)
+    (opts.left || opts.right || opts.bottom || opts.top || opts.zoom || opts.near || opts.far || opts.view)
   ) {
     const dx = (this.right - this.left) / (2 / this.zoom)
     const dy = (this.top - this.bottom) / (2 / this.zoom)
     const cx = (this.right + this.left) / 2
     const cy = (this.top + this.bottom) / 2
 
-    const left = cx - dx
-    const right = cx + dx
-    const top = cy + dy
-    const bottom = cy - dy
+    let left = cx - dx
+    let right = cx + dx
+    let top = cy + dy
+    let bottom = cy - dy
 
     mat4.ortho(
       this.projectionMatrix,
@@ -108,11 +129,11 @@ Camera.prototype.set = function (opts) {
 }
 
 Camera.prototype.getViewRay = function (x, y, windowWidth, windowHeight) {
-  if (this.frustum) {
-    x += this.frustum.offset[0]
-    y += this.frustum.offset[1]
-    windowWidth = this.frustum.totalSize[0]
-    windowHeight = this.frustum.totalSize[1]
+  if (this.view) {
+    x += this.view.offset[0]
+    y += this.view.offset[1]
+    windowWidth = this.view.totalSize[0]
+    windowHeight = this.view.totalSize[1]
   }
   let nx = 2 * x / windowWidth - 1
   let ny = 1 - 2 * y / windowHeight

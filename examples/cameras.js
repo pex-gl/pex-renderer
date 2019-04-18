@@ -13,6 +13,7 @@ const aspect = ctx.gl.drawingBufferWidth * 0.5 / ctx.gl.drawingBufferHeight
 const cubeCount = 100
 const offset = 2
 const gridSize = 10
+const viewSize = gridSize / 2
 
 const perspectiveCamera = renderer.entity([
   renderer.camera({
@@ -20,22 +21,21 @@ const perspectiveCamera = renderer.entity([
     aspect,
     viewport: [0, 0, viewportWidth, viewportHeight]
   }),
-  renderer.orbiter({ position: [10,10,10] })
+  renderer.orbiter({ position: [10, 10, 10] })
 ])
 renderer.add(perspectiveCamera)
 
-const frustumSize = gridSize / 2
 const orthographicCamera = renderer.entity([
   renderer.camera({
     projection: 'orthographic',
     aspect,
-    left: -0.5 * frustumSize * aspect / 2,
-    right: 0.5 * frustumSize * aspect / 2,
-    top: 0.5 * frustumSize / 2,
-    bottom: -0.5 * frustumSize / 2,
+    left: -0.5 * viewSize * aspect / 2,
+    right: 0.5 * viewSize * aspect / 2,
+    top: 0.5 * viewSize / 2,
+    bottom: -0.5 * viewSize / 2,
     viewport: [window.innerWidth * 0.5, 0, viewportWidth, viewportHeight]
   }),
-  renderer.orbiter({ position: [10,10,10] })
+  renderer.orbiter({ position: [10, 10, 10] })
 ])
 renderer.add(orthographicCamera)
 
