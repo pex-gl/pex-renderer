@@ -260,6 +260,8 @@ cells.forEach((cell, cellIndex) => {
   gui.addTextureCube('Reflection Cubemap', reflectionProbe._dynamicCubemap).setPosition(180, 10)
   gui.addTexture2D('Reflection OctMap', reflectionProbe._octMap)
   gui.addTexture2D('Reflection OctMapAtlas', reflectionProbe._reflectionMap)
+
+  window.dispatchEvent(new CustomEvent('pex-screenshot'))
 })()
 
 window.addEventListener('keydown', (e) => {

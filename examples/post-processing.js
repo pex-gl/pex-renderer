@@ -45,7 +45,6 @@ const renderer = createRenderer({
   ctx: ctx,
   profile: true,
   shadowQuality: 3,
-  pauseOnBlur: true,
   rgbm: State.rgbm
 })
 
@@ -374,6 +373,8 @@ renderer.add(areaLightEntity)
     gui.addTexture2D('Depth', postProcessingCmp._frameDepthTex)
     gui.addTexture2D('Normal', postProcessingCmp._frameNormalTex)
   }
+
+  window.dispatchEvent(new CustomEvent('pex-screenshot'))
 })()
 
 // Events

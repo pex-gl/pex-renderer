@@ -78,6 +78,8 @@ renderer.add(reflectionProbe)
   gui.addParam('Exposure', cameraCmp, 'exposure', { min: 0, max: 2 }, () => { })
   gui.addParam('Roughness', materialCmp, 'roughness', {}, () => { })
   gui.addTexture2D('Reflection Probe', reflectionProbe.getComponent('ReflectionProbe')._reflectionMap)
+
+  window.dispatchEvent(new CustomEvent('pex-screenshot'))
 })()
 
 ctx.frame(() => {

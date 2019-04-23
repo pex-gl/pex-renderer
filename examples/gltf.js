@@ -356,9 +356,11 @@ async function init () {
 
   State.gridSize = Math.ceil(Math.sqrt(models.length))
 
-  models.forEach((model) => {
-    loadScene(`${MODELS_PATH}/${model.name}/glTF/${model.name}.gltf`, onSceneLoaded)
+  models.forEach(async (model) => {
+    await loadScene(`${MODELS_PATH}/${model.name}/glTF/${model.name}.gltf`, onSceneLoaded)
   })
+
+  window.dispatchEvent(new CustomEvent('pex-screenshot'))
 }
 
 init()

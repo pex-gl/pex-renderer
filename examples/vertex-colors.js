@@ -44,4 +44,5 @@ renderer.add(ambientLightEntity)
 
 ctx.frame(() => {
   renderer.draw()
+  window.dispatchEvent(new CustomEvent('pex-screenshot'))
 })
