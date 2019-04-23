@@ -39,6 +39,7 @@
     "pixelmatch": "^4.0.2",
     "pngjs": "^3.4.0",
     "puppeteer": "^1.14.0",
+    "request": "^2.88.0",
     "webpack": "^4.29.6",
     "webpack-cli": "^3.3.0",
     "webpack-dev-server": "^3.2.1"

@@ -1,17 +1,16 @@
 const fs = require('fs')
+const request = require('request')
 const PNG = require('pngjs').PNG
 const pixelmatch = require('pixelmatch')
 
 const currentExample = process.argv[2]
-const screenshotFolder = 'examples/screenshots'
 
-const sourceFilePath = `https://raw.githubusercontent.com/pex-gl/pex-renderer/master/${screenshotFolder}/${currentExample}.png`
-const comparisonFilePath = `${screenshotFolder}/${currentExample}.png`
+const sourceFileURL = `https://raw.githubusercontent.com/pex-gl/pex-renderer/master/examples/screenshots/${currentExample}.png`
+const comparisonFilePath = `screenshots/${currentExample}.png`
 
 let filesRead = 0
 
-const sourceImage = fs
-  .createReadStream(sourceFilePath)
+const sourceImage = request(sourceFileURL)
   .pipe(new PNG())
   .on('parsed', onFileParse)
 
