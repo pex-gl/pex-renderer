@@ -75,8 +75,23 @@ function makeQuad (opts) {
   return points
 }
 
+function makeAxes(size = 10) {
+  return [
+    // X axis
+    [0, 0, 0],
+    [size, 0, 0],
+    // Y axis
+    [0, 0, 0],
+    [0, size, 0],
+    // Z axis
+    [0, 0, 0],
+    [0, 0, size]
+  ]
+}
+
 module.exports = {
   makeCircle,
   makePrism,
-  makeQuad
+  makeQuad,
+  makeAxes
 }

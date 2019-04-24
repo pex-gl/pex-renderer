@@ -13,8 +13,12 @@ attribute vec4 aTangent;
 varying vec4 vTangentView;
 #endif
 
-#ifdef USE_TEX_COORDS
+#ifdef USE_TEXCOORD_0
 attribute vec2 aTexCoord0;
+#endif
+
+#ifdef USE_TEXCOORD_1
+attribute vec2 aTexCoord1;
 #endif
 
 #ifdef USE_INSTANCED_OFFSET
@@ -61,6 +65,9 @@ uniform mat4 uInverseViewMatrix;
 varying vec3 vNormalWorld;
 varying vec3 vNormalView;
 varying vec2 vTexCoord0;
+#ifdef USE_TEXCOORD_1
+varying vec2 vTexCoord1;
+#endif
 varying vec3 vPositionWorld;
 varying vec3 vPositionView;
 
@@ -81,11 +88,15 @@ void main() {
   vec4 tangent = aTangent;
 #endif
 
-#ifdef USE_TEX_COORDS
+#ifdef USE_TEXCOORD_0
   texCoord = aTexCoord0;
 #endif
 
   vTexCoord0 = texCoord;
+
+#ifdef USE_TEXCOORD_1
+  vTexCoord1 = aTexCoord1;
+#endif
 
 #ifdef USE_DISPLACEMENT_MAP
   float h = texture2D(uDisplacementMap, aTexCoord0).r;

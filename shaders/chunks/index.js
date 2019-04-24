@@ -19,6 +19,7 @@ const envMapEquirect = require('./env-map-equirect.glsl.js')
 const octMap = require('./oct-map.glsl.js')
 const octMapUvToDir = require('./oct-map-uv-to-dir.glsl.js')
 
+const textureCoordinates = require('./texture-coordinates.glsl.js')
 const baseColor = require('./base-color.glsl.js')
 const tintColor = require('./tint-color.glsl.js')
 const emissiveColor = require('./emissive-color.glsl.js')
@@ -29,6 +30,7 @@ const normal = require('./normal.glsl.js')
 const metallicRoughness = require('./metallic-roughness.glsl.js')
 const specularGlossiness = require('./specular-glossiness.glsl.js')
 
+const depthRead = require('./depth-read.glsl.js')
 const depthUnpack = require('./depth-unpack.glsl.js')
 const depthPack = require('./depth-pack.glsl.js')
 
@@ -58,6 +60,7 @@ module.exports = {
   octMap,
   octMapUvToDir,
 
+  textureCoordinates,
   baseColor,
   tintColor,
   emissiveColor,
@@ -68,6 +71,7 @@ module.exports = {
   metallicRoughness,
   specularGlossiness,
 
+  depthRead,
   depthUnpack,
   depthPack,
 
