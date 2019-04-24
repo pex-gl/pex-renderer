@@ -134,6 +134,7 @@ const renderer = createRenderer({
 | `rgbm` | use RGBM color packing for rendering pipeline | Boolean | false |
 | `profile` | enable profiling | Boolean | false |
 | `pauseOnBlur` | stop rendering when window looses focus | Boolean | false |
+| `targetMobile` | use some approximation in the shader to enhance performances on mobile | Boolean | false |
 | `entities`* | list of entities in the scene | Array of Entity | [] |
 
 &nbsp;* required
