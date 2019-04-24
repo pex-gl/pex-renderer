@@ -149,8 +149,8 @@ function getMaterialMaps (maps, options) {
       for (let z = 0; z < gridSize; z++) {
         const clearCoatProperties = {
           clearCoat: x / (gridSize - 1),
-          clearCoatRoughness: 0.6 * y / (gridSize - 1),
-          reflectance: z / (gridSize - 1),
+          clearCoatRoughness: 0.6 * (y / (gridSize - 1)),
+          reflectance: 0.35 + 0.65 * (z / (gridSize - 1)),
           clearCoatNormalMapScale: 1
         }
         const coatedSphereEntity = renderer.entity([

@@ -476,6 +476,8 @@ const material = renderer.material({
 
 *Texture transforms are achieved by optionally passing a TextureMap object with offset, rotation and/or scale alongside the texture itself: `{ texture: ctx.Texture, offset?: Vec2 [x, y], rotation?: Radians, scale?: Vec2 [x, y] }`*
 
+*The reflectance value represents a remapping of a percentage of reflectance (with a default of 4%: 0.16 * pow(0.5, 2) = 0.04) and replaces an explicit index of refraction (IOR)*
+
 ### animation = renderer.animation(opts)
 
 Geometry attribute animations based on [glTF 2.0 Spec / Animations](https://github.com/KhronosGroup/glTF/tree/master/specification/2.0#animations).
