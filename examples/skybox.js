@@ -8,6 +8,10 @@ const createSphere = require('primitive-sphere')
 const parseHdr = require('parse-hdr')
 const isBrowser = require('is-browser')
 
+const State = {
+  rotation: 1.5 * Math.PI
+}
+
 const ctx = createContext()
 const renderer = createRenderer(ctx)
 const gui = new GUI(ctx)
@@ -42,7 +46,7 @@ renderer.add(geom)
 
 const skybox = renderer.entity([
   renderer.transform({
-    rotation: quat.fromAxisAngle(quat.create(), [0, 1, 0], -Math.PI / 2)
+    rotation: quat.fromAxisAngle(quat.create(), [0, 1, 0], State.rotation)
   }),
   renderer.skybox({
     sunPosition: [1, 1, 1],
@@ -77,6 +81,12 @@ renderer.add(reflectionProbe)
   gui.addHeader('Settings')
   gui.addParam('Enabled', skyboxCmp, 'enabled', {}, (value) => {
     skyboxCmp.set({ enabled: value })
+  })
+  gui.addParam('Rotation', State, 'rotation', { min: 0, max: 2 * Math.PI }, () => {
+    skybox.getComponent('Transform').set({
+      rotation: quat.fromAxisAngle(quat.create(), [0, 1, 0], State.rotation)
+    })
+    reflectionProbe.getComponent('ReflectionProbe').set({ dirty: true })
   })
   gui.addParam('BG Blur', skyboxCmp, 'backgroundBlur', {}, () => { })
   gui.addParam('Exposure', cameraCmp, 'exposure', { min: 0, max: 2 }, () => { })
