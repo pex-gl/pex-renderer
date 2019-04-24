@@ -464,6 +464,7 @@ const material = renderer.material({
 | `blendDstAlphaFactor`           | blending destination alpha factor                                             | ctx.BlendFactor           | ctx.BlendFactor.One     |
 | `cullFace`                      | face culling on/off                                                           | Boolean                   | false                   |
 | `cullFaceMode`                  | face culling mode                                                             | ctx.Face                  | ctx.Face.Back           |
+| `pointSize`                     | set `gl_PointSize` for `ctx.Primitive.Points`                                 | Number                    | 1                       |
 | `castShadows`                   | impact shadow casting                                                         | Boolean                   | false                   |
 | `receiveShadows`                | receive potential shadowing                                                   | Boolean                   | false                   |
 
