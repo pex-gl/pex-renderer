@@ -616,6 +616,7 @@ const skybox = renderer.skybox({
 ```
 
 *Note: By default a sky background is rendered unless hdr equirect panorama texture is provided.*
+*Note: Skybox orientation differ from engine to engine; to update it, set the entity's transform component rotation and set any reflection probe to dirty.*
 
 ### reflectionProbe = renderer.reflectionProbe(opts)
 
