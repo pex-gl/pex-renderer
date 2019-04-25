@@ -145,7 +145,7 @@ Material.prototype.set = function (opts) {
   if (mapKeys.length) {
     for (let i = 0; i < mapKeys.length; i++) {
       const map = this[mapKeys[i]]
-      if (map.texture) {
+      if (map && map.texture) {
         map.texCoordTransformMatrix = mat3FromTranslationRotationScale(
           map.offset || [0, 0],
           -map.rotation || 0,
