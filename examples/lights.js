@@ -177,6 +177,9 @@ gui.addHeader('Directional').setPosition(10, 10)
 gui.addParam('Enabled', directionalLightCmp, 'enabled', {}, (value) => {
   directionalLightCmp.set({ enabled: value })
 })
+gui.addParam('Intensity', directionalLightCmp, 'intensity', { min: 0, max: 20 }, () => {
+  directionalLightCmp.set({ intensity: directionalLightCmp.intensity })
+})
 gui.addTexture2D('Shadowmap', directionalLightCmp._shadowMap)
 gui.addParam('Shadows', directionalLightCmp, 'castShadows', {}, (value) => {
   directionalLightCmp.set({ castShadows: value })
@@ -185,7 +188,8 @@ gui.addParam('Shadows', directionalLightCmp, 'castShadows', {}, (value) => {
 // Spot
 const spotLightCmp = renderer.spotLight({
   color: [1, 1, 1, 1],
-  intensity: 4,
+  intensity: 2,
+  range: 5,
   angle: Math.PI / 6,
   innerAngle: Math.PI / 12,
   castShadows: true
@@ -222,9 +226,15 @@ gui.addHeader('Spot').setPosition(W / 2 + 10, 10)
 gui.addParam('Enabled', spotLightCmp, 'enabled', {}, (value) => {
   spotLightCmp.set({ enabled: value })
 })
-gui.addParam('Spotlight angle', spotLightCmp, 'angle', { min: 0, max: Math.PI / 2 }, () => {
-  spotLightCmp.set({ angle: spotLightCmp.angle, innerAngle: spotLightCmp.angle * 0.5 })
+gui.addParam('Range', spotLightCmp, 'range', {
+  min: 0,
+  max: 20
 })
+gui.addParam('Intensity', spotLightCmp, 'intensity', { min: 0, max: 20 }, () => {
+  spotLightCmp.set({ intensity: spotLightCmp.intensity })
+})
+gui.addParam('Angle', spotLightCmp, 'angle', { min: 0, max: Math.PI / 2 - Number.EPSILON })
+gui.addParam('Inner angle', spotLightCmp, 'innerAngle', { min: 0, max: Math.PI / 2 - Number.EPSILON })
 gui.addTexture2D('Shadowmap', spotLightCmp._shadowMap)
 gui.addParam('Shadows', spotLightCmp, 'castShadows', {}, (value) => {
   spotLightCmp.set({ castShadows: value })
@@ -234,7 +244,7 @@ gui.addParam('Shadows', spotLightCmp, 'castShadows', {}, (value) => {
 const pointLightCmp = renderer.pointLight({
   color: [1, 1, 1, 1],
   intensity: 2,
-  range: 3,
+  range: 5,
   castShadows: true
 })
 const pointLightGizmoPositions = makePrism({ radius: 0.3 })
@@ -274,8 +284,10 @@ gui.addParam('Range', pointLightCmp, 'range', {
   min: 0,
   max: 20
 })
+gui.addParam('Intensity', pointLightCmp, 'intensity', { min: 0, max: 20 }, () => {
+  pointLightCmp.set({ intensity: pointLightCmp.intensity })
+})
 gui.addTextureCube('Shadowmap', pointLightCmp._shadowCubemap)
-gui.addParam('Position', pointLightEntity.getComponent('Transform'), 'position', { min: -2, max: 2 })
 gui.addParam('Shadows', pointLightCmp, 'castShadows', {}, (value) => {
   pointLightCmp.set({ castShadows: value })
 })

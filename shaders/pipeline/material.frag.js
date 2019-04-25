@@ -54,7 +54,6 @@ struct PBRData {
   vec3 eyeDirWorld;
   vec3 normalWorld; // N, world space
   vec3 viewWorld; // V, view vector from position to camera, world space
-  vec3 lightWorld; // L, light vector from position to light, world space
   float NdotV;
   float NdotL;
   float NdotH;
