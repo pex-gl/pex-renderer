@@ -69,7 +69,7 @@ ctx.gl.getExtension('OES_texture_float')
 
 const renderer = createRenderer({
   ctx,
-  shadowQuality: 2
+  shadowQuality: 4
 })
 
 const gui = createGUI(ctx)
@@ -187,6 +187,7 @@ const spotLightCmp = renderer.spotLight({
   color: [1, 1, 1, 1],
   intensity: 4,
   angle: Math.PI / 6,
+  innerAngle: Math.PI / 12,
   castShadows: true
 })
 const spotLightDistance = 2
@@ -221,8 +222,8 @@ gui.addHeader('Spot').setPosition(W / 2 + 10, 10)
 gui.addParam('Enabled', spotLightCmp, 'enabled', {}, (value) => {
   spotLightCmp.set({ enabled: value })
 })
-gui.addParam('Spotlight angle', spotLightCmp, 'angle', { min: 0, max: Math.PI / 2 - 0.001 }, () => {
-  spotLightCmp.set({ angle: spotLightCmp.angle })
+gui.addParam('Spotlight angle', spotLightCmp, 'angle', { min: 0, max: Math.PI / 2 }, () => {
+  spotLightCmp.set({ angle: spotLightCmp.angle, innerAngle: spotLightCmp.angle * 0.5 })
 })
 gui.addTexture2D('Shadowmap', spotLightCmp._shadowMap)
 gui.addParam('Shadows', spotLightCmp, 'castShadows', {}, (value) => {
@@ -232,14 +233,14 @@ gui.addParam('Shadows', spotLightCmp, 'castShadows', {}, (value) => {
 // Point
 const pointLightCmp = renderer.pointLight({
   color: [1, 1, 1, 1],
-  intensity: 4,
-  radius: 3,
+  intensity: 2,
+  range: 3,
   castShadows: true
 })
 const pointLightGizmoPositions = makePrism({ radius: 0.3 })
-  .concat(makeCircle({ center: [0, 0, 0], radius: pointLightCmp.radius, steps: 64, axis: [0, 1] }))
-  .concat(makeCircle({ center: [0, 0, 0], radius: pointLightCmp.radius, steps: 64, axis: [0, 2] }))
-  .concat(makeCircle({ center: [0, 0, 0], radius: pointLightCmp.radius, steps: 64, axis: [1, 2] }))
+  .concat(makeCircle({ center: [0, 0, 0], radius: pointLightCmp.range, steps: 64, axis: [0, 1] }))
+  .concat(makeCircle({ center: [0, 0, 0], radius: pointLightCmp.range, steps: 64, axis: [0, 2] }))
+  .concat(makeCircle({ center: [0, 0, 0], radius: pointLightCmp.range, steps: 64, axis: [1, 2] }))
   .concat([
     [0, 0.3, 0], [0, 0.6, 0],
     [0, -0.3, 0], [0, -0.6, 0],
@@ -268,6 +269,10 @@ renderer.add(pointLightEntity)
 gui.addHeader('Point').setPosition(10, H / 2 + 10)
 gui.addParam('Enabled', pointLightCmp, 'enabled', {}, (value) => {
   pointLightCmp.set({ enabled: value })
+})
+gui.addParam('Range', pointLightCmp, 'range', {
+  min: 0,
+  max: 20
 })
 gui.addTextureCube('Shadowmap', pointLightCmp._shadowCubemap)
 gui.addParam('Position', pointLightEntity.getComponent('Transform'), 'position', { min: -2, max: 2 })

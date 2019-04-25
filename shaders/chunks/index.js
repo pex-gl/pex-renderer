@@ -12,7 +12,9 @@ const lightArea = require('./light-area.glsl.js')
 
 const shadowing = require('./shadowing.glsl.js')
 const brdf = require('./brdf.glsl.js')
+const clearCoat = require('./clear-coat.glsl.js')
 const irradiance = require('./irradiance.glsl.js')
+const direct = require('./direct.glsl.js')
 const indirect = require('./indirect.glsl.js')
 
 const envMapEquirect = require('./env-map-equirect.glsl.js')
@@ -26,6 +28,7 @@ const emissiveColor = require('./emissive-color.glsl.js')
 const alpha = require('./alpha.glsl.js')
 const ambientOcclusion = require('./ambient-occlusion.glsl.js')
 const normal = require('./normal.glsl.js')
+const normalPerturb = require('./normal-perturb.glsl.js')
 
 const metallicRoughness = require('./metallic-roughness.glsl.js')
 const specularGlossiness = require('./specular-glossiness.glsl.js')
@@ -53,7 +56,9 @@ module.exports = {
   lightArea,
   shadowing,
   brdf,
+  clearCoat,
   irradiance,
+  direct,
   indirect,
 
   envMapEquirect,
@@ -67,6 +72,7 @@ module.exports = {
   alpha,
   ambientOcclusion,
   normal,
+  normalPerturb,
 
   metallicRoughness,
   specularGlossiness,

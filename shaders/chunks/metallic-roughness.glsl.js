@@ -1,5 +1,8 @@
 module.exports = /* glsl */`
 #ifdef USE_METALLIC_ROUGHNESS_WORKFLOW
+
+  #define MIN_ROUGHNESS 0.045
+
   #ifdef USE_METALLIC_ROUGHNESS_MAP
     // R = ?, G = roughness, B = metallic
     uniform sampler2D uMetallicRoughnessMap;

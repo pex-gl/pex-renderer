@@ -105,6 +105,12 @@ function Material (opts) {
 
   this.occlusionMap = null
 
+  this.reflectance = 0.5
+  this.clearCoat = null
+  this.clearCoatRoughness = null
+  this.clearCoatNormalMap = null
+  this.clearCoatNormalMapScale = 1
+
   this.alphaMap = null
   this.alphaTest = undefined
   this.depthTest = true
@@ -117,6 +123,8 @@ function Material (opts) {
   this.blendDstAlphaFactor = ctx.BlendFactor.One
   this.cullFace = true
   this.cullFaceMode = ctx.Face.Back
+
+  this.pointSize = 1
 
   this.castShadows = false
   this.receiveShadows = false
@@ -137,7 +145,7 @@ Material.prototype.set = function (opts) {
   if (mapKeys.length) {
     for (let i = 0; i < mapKeys.length; i++) {
       const map = this[mapKeys[i]]
-      if (map.texture) {
+      if (map && map.texture) {
         map.texCoordTransformMatrix = mat3FromTranslationRotationScale(
           map.offset || [0, 0],
           -map.rotation || 0,
