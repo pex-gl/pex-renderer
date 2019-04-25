@@ -295,18 +295,19 @@ async function loadScene (url, cb) {
     }
   })
 
+  const far = 10000
+  const sceneBounds = scene.root.transform.worldBounds
+  // const sceneSize = aabb.size(scene.root.transform.worldBounds)
+  const sceneCenter = aabb.center(scene.root.transform.worldBounds)
+
+  const boundingSphereRadius = Math.max.apply(Math, sceneBounds.map(bound => vec3.distance(sceneCenter, bound)))
+
   cameraEntity = scene.entities.find(entity => entity.components.find(component => component.type === 'Camera'))
 
   if (!cameraEntity) {
     debug(`No camera component in the scene, addding default`)
 
-    const far = 10000
     const fov = Math.PI / 4
-    const sceneBounds = scene.root.transform.worldBounds
-    // const sceneSize = aabb.size(scene.root.transform.worldBounds)
-    const sceneCenter = aabb.center(scene.root.transform.worldBounds)
-
-    const boundingSphereRadius = Math.max.apply(Math, sceneBounds.map(bound => vec3.distance(sceneCenter, bound)))
     const distance = (boundingSphereRadius * 2) / Math.tan(fov / 2)
 
     cameraEntity = renderer.entity([
@@ -331,14 +332,18 @@ async function loadScene (url, cb) {
     scene.entities.push(cameraEntity)
     renderer.add(cameraEntity)
   } else {
-    cameraEntity.getComponent('Camera').set({
+    const cameraCmp = cameraEntity.getComponent('Camera')
+    cameraCmp.set({
       aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight
     })
-    // cameraEntity.addComponent(renderer.orbiter({
-    //   target: [0, 0, 0],
-    //   position: cameraEntity.transform.position
-    //   // distance: 2
-    // }))
+
+    const distance = (boundingSphereRadius * 2) / Math.tan(cameraCmp.fov / 2)
+
+    cameraEntity.addComponent(renderer.orbiter({
+      minDistance: cameraCmp.near,
+      maxDistance: cameraCmp.far,
+      distance: distance
+    }))
   }
 
   console.timeEnd('building ' + url)

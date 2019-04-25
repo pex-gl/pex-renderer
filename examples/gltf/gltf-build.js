@@ -1,7 +1,7 @@
 const isPOT = require('is-power-of-two')
 const nextPOT = require('next-power-of-two')
 const assert = require('assert')
-const { mat4 } = require('pex-math')
+const { quat } = require('pex-math')
 
 // Constants
 const SUPPORTED_EXTENSIONS = [
@@ -466,7 +466,17 @@ function handleMesh (mesh, gltf, ctx, renderer) {
 function handleNode (node, gltf, i, ctx, renderer) {
   const transform = node.matrix
     ? {
-      matrix: node.matrix
+      position: [
+        node.matrix[12],
+        node.matrix[13],
+        node.matrix[14]
+      ],
+      rotation: quat.fromMat4(quat.create(), node.matrix),
+      scale: [
+        Math.hypot(node.matrix[0], node.matrix[1], node.matrix[2]),
+        Math.hypot(node.matrix[4], node.matrix[5], node.matrix[6]),
+        Math.hypot(node.matrix[8], node.matrix[9], node.matrix[10])
+      ]
     }
     : {
       position: node.translation || [0, 0, 0],
@@ -481,8 +491,6 @@ function handleNode (node, gltf, i, ctx, renderer) {
   node.entity.name = node.name || `node_${i}`
 
   if (Number.isInteger(node.camera)) {
-    console.log(node);
-
     node.entity.addComponent(handleCamera(gltf.cameras[node.camera], renderer, ctx))
   }
 
@@ -565,11 +573,18 @@ function buildHierarchy (nodes, gltf) {
   })
 }
 
+let firstCameraEnabled = true
 // https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/schema/camera.schema.json
 function handleCamera (camera, renderer, ctx) {
+  let enabled = false
+  if (firstCameraEnabled) {
+    firstCameraEnabled = false
+    enabled = true
+  }
   if (camera.type === 'orthographic') {
     // https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/schema/camera.orthographic.schema.json
     return renderer.camera({
+      enabled,
       name: camera.name,
       projection: 'orthographic',
       near: camera.orthographic.znear,
@@ -583,6 +598,7 @@ function handleCamera (camera, renderer, ctx) {
 
   // https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/schema/camera.perspective.schema.json
   return renderer.camera({
+    enabled,
     name: camera.name,
     near: camera.perspective.znear,
     far: camera.perspective.zfar || Infinity,
@@ -636,6 +652,7 @@ function handleAnimation (animation, gltf, renderer) {
 }
 
 function build (gltf, ctx, renderer) {
+  firstCameraEnabled = true
   // Check required extensions
   if (gltf.extensionsRequired) {
     const unsupportedExtensions = gltf.extensionsRequired.filter(extension => !SUPPORTED_EXTENSIONS.includes(extension))
