@@ -30,7 +30,7 @@ const State = {
   scenes: [],
   gridSize: 1,
   showBoundingBoxes: false,
-  useEnvMap: false,
+  useEnvMap: true,
   shadows: false // TODO: disabled for benchmarking
 }
 
@@ -144,24 +144,6 @@ const addEnvmap = (async () => {
 
 if (State.useEnvMap) addEnvmap()
 
-const cameraEntity = renderer.entity([
-  renderer.camera({
-    aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight
-  }),
-  // renderer.postProcessing({
-  //   fxaa: true,
-  //   ssao: true,
-  //   dof: true,
-  //   bloom: true
-  // }),
-  renderer.orbiter({
-    position: [2, 2, 2]
-  })
-])
-renderer.add(cameraEntity)
-
-gui.addParam('Exposure', cameraEntity.getComponent('Camera'), 'exposure', { min: 0, max: 5 })
-
 const floorEntity = renderer.entity([
   renderer.transform({
     position: [0, -0.051, 0]
@@ -175,7 +157,7 @@ const floorEntity = renderer.entity([
     receiveShadows: State.shadows
   })
 ])
-renderer.add(floorEntity)
+// renderer.add(floorEntity)
 
 const axes = makeAxes(1)
 const axesEntity = renderer.entity([
@@ -251,16 +233,16 @@ function onSceneLoaded (err, scene) {
       // return s
     // }
 
-    const sceneBounds = scene.root.transform.worldBounds
-    const sceneSize = aabb.size(scene.root.transform.worldBounds)
-    const sceneCenter = aabb.center(scene.root.transform.worldBounds)
-    const sceneScale = 1 / (Math.max(sceneSize[0], Math.max(sceneSize[1], sceneSize[2])) || 1)
-    if (!aabb.isEmpty(sceneBounds)) {
-      scene.root.transform.set({
-        position: vec3.scale([-sceneCenter[0], -sceneBounds[0][1], -sceneCenter[2]], sceneScale),
-        scale: [sceneScale, sceneScale, sceneScale]
-      })
-    }
+    // const sceneBounds = scene.root.transform.worldBounds
+    // const sceneSize = aabb.size(scene.root.transform.worldBounds)
+    // const sceneCenter = aabb.center(scene.root.transform.worldBounds)
+    // const sceneScale = 1 / (Math.max(sceneSize[0], Math.max(sceneSize[1], sceneSize[2])) || 1)
+    // if (!aabb.isEmpty(sceneBounds)) {
+    //   scene.root.transform.set({
+    //     position: vec3.scale([-sceneCenter[0], -sceneBounds[0][1], -sceneCenter[2]], sceneScale),
+    //     scale: [sceneScale, sceneScale, sceneScale]
+    //   })
+    // }
 
     renderer.update() // refresh scene hierarchy
 
@@ -291,6 +273,9 @@ function onSceneLoaded (err, scene) {
   }
 }
 
+debug.enabled = true
+
+let cameraEntity
 async function loadScene (url, cb) {
   if (State.selectedModel && State.scene) {
     renderer.remove(State.scene.root)
@@ -309,9 +294,57 @@ async function loadScene (url, cb) {
       })
     }
   })
+
+  cameraEntity = scene.entities.find(entity => entity.components.find(component => component.type === 'Camera'))
+
+  if (!cameraEntity) {
+    debug(`No camera component in the scene, addding default`)
+
+    const far = 10000
+    const fov = Math.PI / 4
+    const sceneBounds = scene.root.transform.worldBounds
+    // const sceneSize = aabb.size(scene.root.transform.worldBounds)
+    const sceneCenter = aabb.center(scene.root.transform.worldBounds)
+
+    const boundingSphereRadius = Math.max.apply(Math, sceneBounds.map(bound => vec3.distance(sceneCenter, bound)))
+    const distance = (boundingSphereRadius * 2) / Math.tan(fov / 2)
+
+    cameraEntity = renderer.entity([
+      renderer.camera({
+        near: 0.01,
+        far,
+        fov,
+        aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight
+      }),
+      // renderer.postProcessing({
+      //   fxaa: true,
+      //   ssao: true,
+      //   dof: true,
+      //   bloom: true
+      // }),
+      renderer.orbiter({
+        maxDistance: far,
+        target: sceneCenter,
+        position: [sceneCenter[0], sceneCenter[1], distance]
+      })
+    ])
+    scene.entities.push(cameraEntity)
+    renderer.add(cameraEntity)
+  } else {
+    cameraEntity.getComponent('Camera').set({
+      aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight
+    })
+    // cameraEntity.addComponent(renderer.orbiter({
+    //   target: [0, 0, 0],
+    //   position: cameraEntity.transform.position
+    //   // distance: 2
+    // }))
+  }
+
   console.timeEnd('building ' + url)
   scene.url = url
   renderer.add(scene.root)
+
   cb(null, scene)
 }
 
@@ -344,7 +377,7 @@ async function init () {
 
   // Filter models
   models = [
-    { name: 'DamagedHelmet' },
+    { name: 'Cameras' },
     // { name: '2CylinderEngine' },
     // { name: 'BrainStem' },
     // { name: 'DamagedHelmet' },
@@ -402,17 +435,17 @@ ctx.frame(() => {
     if (renderer._state.profiler) {
       renderer._state.profiler.startFrame()
     }
-    var camera = renderer.getComponents('Camera')[0]
-    var orbiter = renderer.getComponents('Orbiter')[0]
-    orbiter.update()
-    camera.entity.transform.update()
-    camera.update()
-    for (let cmd of debugCommandsOpt) {
-      if (cmd.uniforms) {
-        cmd.uniforms.viewMatrix = camera.viewMatrix
-      }
-      ctx.apply(cmd)
-    }
+    // var camera = renderer.getComponents('Camera')[0]
+    // var orbiter = renderer.getComponents('Orbiter')[0]
+    // orbiter.update()
+    // camera.entity.transform.update()
+    // camera.update()
+    // for (let cmd of debugCommandsOpt) {
+    //   if (cmd.uniforms) {
+    //     cmd.uniforms.viewMatrix = camera.viewMatrix
+    //   }
+    //   ctx.apply(cmd)
+    // }
     if (renderer._state.profiler) {
       renderer._state.profiler.endFrame()
     }

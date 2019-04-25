@@ -1,6 +1,7 @@
 const isPOT = require('is-power-of-two')
 const nextPOT = require('next-power-of-two')
 const assert = require('assert')
+const { mat4 } = require('pex-math')
 
 // Constants
 const SUPPORTED_EXTENSIONS = [
@@ -404,9 +405,9 @@ function handleMesh (mesh, gltf, ctx, renderer) {
         })
       }
     } else {
-    geometryCmp.set({
-      count: positionAccessor._data.length / 3
-    })
+      geometryCmp.set({
+        count: positionAccessor._data.length / 3
+      })
     }
 
     // https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/README.md#primitivemode
@@ -420,11 +421,11 @@ function handleMesh (mesh, gltf, ctx, renderer) {
     const materialCmp =
       primitive.material !== undefined
         ? handleMaterial(
-            gltf.materials[primitive.material],
-            gltf,
-            ctx,
-            renderer
-          )
+          gltf.materials[primitive.material],
+          gltf,
+          ctx,
+          renderer
+        )
         : renderer.material();
 
     const components = [
@@ -463,18 +464,27 @@ function handleMesh (mesh, gltf, ctx, renderer) {
 }
 
 function handleNode (node, gltf, i, ctx, renderer) {
-  const transform = {
-    position: node.translation || [0, 0, 0],
-    rotation: node.rotation || [0, 0, 0, 1],
-    scale: node.scale || [1, 1, 1]
-  }
-  if (node.matrix) transform.matrix = node.matrix
+  const transform = node.matrix
+    ? {
+      matrix: node.matrix
+    }
+    : {
+      position: node.translation || [0, 0, 0],
+      rotation: node.rotation || [0, 0, 0, 1],
+      scale: node.scale || [1, 1, 1]
+    }
   const transformCmp = renderer.transform(transform)
 
   node.entity = renderer.add(renderer.entity([
     transformCmp
   ]))
-  node.entity.name = node.name || ('node_' + i)
+  node.entity.name = node.name || `node_${i}`
+
+  if (Number.isInteger(node.camera)) {
+    console.log(node);
+
+    node.entity.addComponent(handleCamera(gltf.cameras[node.camera], renderer, ctx))
+  }
 
   let skinCmp = null
   if (node.skin !== undefined) {
@@ -552,6 +562,32 @@ function buildHierarchy (nodes, gltf) {
         })
       }
     }
+  })
+}
+
+// https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/schema/camera.schema.json
+function handleCamera (camera, renderer, ctx) {
+  if (camera.type === 'orthographic') {
+    // https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/schema/camera.orthographic.schema.json
+    return renderer.camera({
+      name: camera.name,
+      projection: 'orthographic',
+      near: camera.orthographic.znear,
+      far: camera.orthographic.zfar,
+      left: -camera.orthographic.xmag / 2,
+      right: camera.orthographic.xmag / 2,
+      top: camera.orthographic.ymag / 2,
+      bottom: camera.orthographic.ymag / 2
+    })
+  }
+
+  // https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/schema/camera.perspective.schema.json
+  return renderer.camera({
+    name: camera.name,
+    near: camera.perspective.znear,
+    far: camera.perspective.zfar || Infinity,
+    fov: camera.perspective.yfov,
+    aspect: camera.perspective.aspectRatio || ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight
   })
 }
 
