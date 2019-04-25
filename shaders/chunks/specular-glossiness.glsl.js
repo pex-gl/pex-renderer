@@ -78,6 +78,7 @@ module.exports = /* glsl */`
 
     vec3 specular = specularGlossiness.rgb;
     data.specularColor = specular;
+    data.f0 = specular;
 
     float glossiness = specularGlossiness.a;
     data.roughness = 1.0 - glossiness;

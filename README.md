@@ -134,6 +134,7 @@ const renderer = createRenderer({
 | `rgbm` | use RGBM color packing for rendering pipeline | Boolean | false |
 | `profile` | enable profiling | Boolean | false |
 | `pauseOnBlur` | stop rendering when window looses focus | Boolean | false |
+| `targetMobile` | use some approximation in the shader to enhance performances on mobile | Boolean | false |
 | `entities`* | list of entities in the scene | Array of Entity | [] |
 
 &nbsp;* required
@@ -452,6 +453,11 @@ const material = renderer.material({
 | `emissiveIntensity`             | emissive factor                                                               | Number                    | 1                       |
 | `emissiveColorMap`              | base color texture. Multiplied by `emissiveColor` and `emissiveIntensity`.    | ctx.Texture \| TextureMap | null                    |
 | `occlusionMap`                  | occlusion texture. Indicates areas of indirect lighting.                      | ctx.Texture \| TextureMap | null                    |
+| `reflectance`                   | control specular intensity on non-metallic surfaces.                          | Number 0-1                | 0.5                     |
+| `clearCoat`                     | strength of the clear coat layer.                                             | Number 0-1                | null                    |
+| `clearCoatRoughness`            | roughness of the clear coat layer.                                            | Number 0-1                | null                    |
+| `clearCoatNormalMap`            | normal texture for the clear coat layer.                                      | ctx.Texture \| TextureMap | null                    |
+| `clearCoatNormalMapScale`       | clear coat normal factor.                                                     | Number                    | 1                       |
 | `alphaMap`                      | alpha texture. Impacts opacity (r channel).                                   | ctx.Texture \| TextureMap | null                    |
 | `alphaTest`                     | value against which to test alpha.                                            | Number 0-1                | true                    |
 | `depthWrite`                    | depth write mask                                                              | Boolean                   | true                    |
@@ -470,6 +476,8 @@ const material = renderer.material({
 
 
 *Texture transforms are achieved by optionally passing a TextureMap object with offset, rotation and/or scale alongside the texture itself: `{ texture: ctx.Texture, offset?: Vec2 [x, y], rotation?: Radians, scale?: Vec2 [x, y] }`*
+
+*The reflectance value represents a remapping of a percentage of reflectance (with a default of 4%: 0.16 * pow(0.5, 2) = 0.04) and replaces an explicit index of refraction (IOR)*
 
 ### animation = renderer.animation(opts)
 

@@ -180,6 +180,7 @@ const spotLightCmp = renderer.spotLight({
   intensity: 2,
   distance: 3,
   angle: Math.PI / 6,
+  innerAngle: Math.PI / 12,
   castShadows: true
 })
 const spotLightRadius = spotLightCmp.distance * Math.tan(spotLightCmp.angle)
@@ -214,20 +215,20 @@ gui.addParam('Enabled', spotLightCmp, 'enabled', {}, (value) => {
   spotLightCmp.set({ enabled: value })
 })
 gui.addParam('Spotlight angle', spotLightCmp, 'angle', { min: 0, max: Math.PI / 2 }, () => {
-  spotLightCmp.set({ angle: spotLightCmp.angle })
+  spotLightCmp.set({ angle: spotLightCmp.angle, innerAngle: spotLightCmp.angle * 0.5 })
 })
 
 // Point
 const pointLightCmp = renderer.pointLight({
   color: [1, 1, 1, 1],
   intensity: 2,
-  radius: 3,
+  range: 3,
   castShadows: true
 })
 const pointLightGizmoPositions = makePrism({ radius: 0.3 })
-  .concat(makeCircle({ center: [0, 0, 0], radius: pointLightCmp.radius, steps: 64, axis: [0, 1] }))
-  .concat(makeCircle({ center: [0, 0, 0], radius: pointLightCmp.radius, steps: 64, axis: [0, 2] }))
-  .concat(makeCircle({ center: [0, 0, 0], radius: pointLightCmp.radius, steps: 64, axis: [1, 2] }))
+  .concat(makeCircle({ center: [0, 0, 0], radius: pointLightCmp.range, steps: 64, axis: [0, 1] }))
+  .concat(makeCircle({ center: [0, 0, 0], radius: pointLightCmp.range, steps: 64, axis: [0, 2] }))
+  .concat(makeCircle({ center: [0, 0, 0], radius: pointLightCmp.range, steps: 64, axis: [1, 2] }))
   .concat([
     [0, 0.3, 0], [0, 0.6, 0],
     [0, -0.3, 0], [0, -0.6, 0],
@@ -256,6 +257,10 @@ renderer.add(pointLightEntity)
 gui.addHeader('Point').setPosition(10, H / 2 + 10)
 gui.addParam('Enabled', pointLightCmp, 'enabled', {}, (value) => {
   pointLightCmp.set({ enabled: value })
+})
+gui.addParam('Range', pointLightCmp, 'range', {
+  min: 0,
+  max: 20
 })
 gui.addTextureCube('Shadowmap', pointLightCmp._shadowCubemap)
 gui.addParam('Position', pointLightEntity.getComponent('Transform'), 'position', { min: -2, max: 2 })
