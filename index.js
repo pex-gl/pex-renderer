@@ -802,6 +802,8 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
       sharedUniforms.uAlphaTest = material.alphaTest
     }
 
+    sharedUniforms.uPointSize = material.pointSize
+
     // TODO: shared uniforms HUH?
     // if (meshProgram !== prevProgram) {
     // prevProgram = meshProgram

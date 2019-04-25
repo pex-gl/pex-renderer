@@ -62,6 +62,8 @@ uniform mat4 uModelMatrix;
 uniform mat3 uNormalMatrix;
 uniform mat4 uInverseViewMatrix;
 
+uniform float uPointSize;
+
 varying vec3 vNormalWorld;
 varying vec3 vNormalView;
 varying vec2 vTexCoord0;
@@ -162,5 +164,6 @@ void main() {
 
   gl_Position = uProjectionMatrix * vec4(vPositionView, 1.0);
 #endif
+  gl_PointSize = uPointSize;
 }
 `

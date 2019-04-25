@@ -118,6 +118,8 @@ function Material (opts) {
   this.cullFace = true
   this.cullFaceMode = ctx.Face.Back
 
+  this.pointSize = 1
+
   this.castShadows = false
   this.receiveShadows = false
 
