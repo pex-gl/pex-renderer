@@ -4,7 +4,6 @@ const createGUI = require('pex-gui')
 const loadJSON = require('pex-io/loadJSON')
 const loadImage = require('pex-io/loadImage')
 const loadBinary = require('pex-io/loadBinary')
-const mat4 = require('pex-math/mat4')
 const quat = require('pex-math/quat')
 const vec3 = require('pex-math/vec3')
 const createCube = require('primitive-cube')
@@ -30,7 +29,7 @@ const State = {
   scenes: [],
   gridSize: 1,
   showBoundingBoxes: false,
-  useEnvMap: true,
+  useEnvMap: false,
   shadows: false // TODO: disabled for benchmarking
 }
 
@@ -135,6 +134,8 @@ const addEnvmap = (async () => {
     height: hdrImg.shape[1],
     pixelFormat: ctx.PixelFormat.RGBA32F,
     encoding: ctx.Encoding.Linear,
+    min: ctx.Filter.Linear,
+    mag: ctx.Filter.Linear,
     flipY: true
   })
 
@@ -334,16 +335,22 @@ async function loadScene (url, cb) {
   } else {
     const cameraCmp = cameraEntity.getComponent('Camera')
     cameraCmp.set({
+      near: 0.5,
       aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight
     })
 
-    const distance = (boundingSphereRadius * 2) / Math.tan(cameraCmp.fov / 2)
+    // const distance = (boundingSphereRadius * 2) / Math.tan(cameraCmp.fov / 2)
 
-    cameraEntity.addComponent(renderer.orbiter({
-      minDistance: cameraCmp.near,
-      maxDistance: cameraCmp.far,
-      distance: distance
-    }))
+    // Clipped models: Problematic models: 2CylinderEngine, EnvironmentTest, MultiUVTest
+    if (State.selectedModel.name !== 'MultiUVTest') {
+      cameraEntity.addComponent(renderer.orbiter({
+        // target: sceneCenter,
+        position: cameraEntity.transform.position,
+        minDistance: cameraCmp.near,
+        maxDistance: cameraCmp.far,
+        // distance: distance
+      }))
+    }
   }
 
   console.timeEnd('building ' + url)
