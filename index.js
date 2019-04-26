@@ -232,6 +232,31 @@ Renderer.prototype.updatePointLightShadowMap = function (light, geometries) {
   })
 }
 
+Renderer.prototype.parseShader = function (string, options) {
+  // Unroll loop
+  const unrollLoopPattern = /#pragma unroll_loop[\s]+?for \(int i = (\d+); i < (\d+|\D+); i\+\+\) \{([\s\S]+?)(?=\})\}/g
+
+  string = string.replace(unrollLoopPattern, function (match, start, end, snippet) {
+    let unroll = ''
+
+    // Replace lights number
+    end = end
+      .replace(/NUM_AMBIENT_LIGHTS/g, options.numAmbientLights || 0)
+      .replace(/NUM_DIRECTIONAL_LIGHTS/g, options.numDirectionalLights || 0)
+      .replace(/NUM_POINT_LIGHTS/g, options.numPointLights || 0)
+      .replace(/NUM_SPOT_LIGHTS/g, options.numSpotLights || 0)
+      .replace(/NUM_AREA_LIGHTS/g, options.numAreaLights || 0)
+
+    for (let i = Number.parseInt(start); i < Number.parseInt(end); i++) {
+      unroll += snippet.replace(/\[i\]/g, `[${i}]`)
+    }
+
+    return unroll
+  })
+
+  return string
+}
+
 Renderer.prototype.getMaterialProgramAndFlags = function (geometry, material, skin, options) {
   var ctx = this._ctx
 
@@ -458,7 +483,7 @@ Renderer.prototype.getMaterialProgram = function (geometry, material, skin, opti
   var fragSrc = flagsStr + frag
   var program = this._programCacheMap.getValue(flags, vert, frag)
   if (!program) {
-    program = this.buildProgram(vertSrc, fragSrc)
+    program = this.buildProgram(this.parseShader(vertSrc, options), this.parseShader(fragSrc, options))
     this._programCacheMap.setValue(flags, vert, frag, program)
   }
   return program

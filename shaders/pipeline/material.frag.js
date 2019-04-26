@@ -223,33 +223,33 @@ void main() {
       EvaluateLightProbe(data, ao);
     #endif
     #if NUM_AMBIENT_LIGHTS > 0
-      for(int i = 0; i < NUM_AMBIENT_LIGHTS; i++) {
-        AmbientLight light = uAmbientLights[i];
-        EvaluateAmbientLight(data, light, ao);
+      #pragma unroll_loop
+      for (int i = 0; i < NUM_AMBIENT_LIGHTS; i++) {
+        EvaluateAmbientLight(data, uAmbientLights[i], ao);
       }
     #endif
     #if NUM_DIRECTIONAL_LIGHTS > 0
-      for(int i = 0; i < NUM_DIRECTIONAL_LIGHTS; i++) {
-        DirectionalLight light = uDirectionalLights[i];
-        EvaluateDirectionalLight(data, light, uDirectionalLightShadowMaps[i]);
+      #pragma unroll_loop
+      for (int i = 0; i < NUM_DIRECTIONAL_LIGHTS; i++) {
+        EvaluateDirectionalLight(data, uDirectionalLights[i], uDirectionalLightShadowMaps[i]);
       }
     #endif
     #if NUM_POINT_LIGHTS > 0
-      for(int i = 0; i < NUM_POINT_LIGHTS; i++) {
-        PointLight light = uPointLights[i];
-        EvaluatePointLight(data, light, uPointLightShadowMaps[i]);
+      #pragma unroll_loop
+      for (int i = 0; i < NUM_POINT_LIGHTS; i++) {
+        EvaluatePointLight(data, uPointLights[i], uPointLightShadowMaps[i]);
       }
     #endif
     #if NUM_SPOT_LIGHTS > 0
-      for(int i = 0; i < NUM_SPOT_LIGHTS; i++) {
-        SpotLight light = uSpotLights[i];
-        EvaluateSpotLight(data, light, uSpotLightShadowMaps[i]);
+      #pragma unroll_loop
+      for (int i = 0; i < NUM_SPOT_LIGHTS; i++) {
+        EvaluateSpotLight(data, uSpotLights[i], uSpotLightShadowMaps[i]);
       }
     #endif
     #if NUM_AREA_LIGHTS > 0
-      for(int i = 0; i < NUM_AREA_LIGHTS; i++) {
-        AreaLight light = uAreaLights[i];
-        EvaluateAreaLight(data, light, ao);
+      #pragma unroll_loop
+      for (int i = 0; i < NUM_AREA_LIGHTS; i++) {
+        EvaluateAreaLight(data, uAreaLights[i], ao);
       }
     #endif
     color = data.emissiveColor + data.indirectDiffuse + data.indirectSpecular + data.directColor;

@@ -185,6 +185,27 @@ gui.addParam('Shadows', directionalLightCmp, 'castShadows', {}, (value) => {
   directionalLightCmp.set({ castShadows: value })
 })
 
+const fixDirectionalLightEntity = renderer.entity([
+  renderer.transform({
+    position: [1, 1, 1],
+    rotation: quat.fromMat4(quat.create(), targetTo(mat4.create(), [0, 0, 0], [1, 1, 1]))
+  }),
+  renderer.geometry({
+    positions: directionalLightGizmoPositions,
+    primitive: ctx.Primitive.Lines,
+    count: directionalLightGizmoPositions.length
+  }),
+  renderer.material({
+    baseColor: [1, 1, 0, 1]
+  }),
+  renderer.directionalLight({
+    color: [1, 1, 0, 1],
+    intensity: 1,
+    castShadows: true
+  })
+], ['cell0'])
+renderer.add(fixDirectionalLightEntity)
+
 // Spot
 const spotLightCmp = renderer.spotLight({
   color: [1, 1, 1, 1],
@@ -240,6 +261,30 @@ gui.addParam('Shadows', spotLightCmp, 'castShadows', {}, (value) => {
   spotLightCmp.set({ castShadows: value })
 })
 
+const fixSpotLightEntity = renderer.entity([
+  renderer.transform({
+    position: [1, 0.5, 1],
+    rotation: quat.fromMat4(quat.create(), targetTo(mat4.create(), [0, 0, 0], [1, 1, 1]))
+  }),
+  renderer.geometry({
+    positions: spotLightGizmoPositions,
+    primitive: ctx.Primitive.Lines,
+    count: spotLightGizmoPositions.length
+  }),
+  renderer.material({
+    baseColor: [1, 0, 1, 1]
+  }),
+  renderer.spotLight({
+    color: [1, 1, 0, 1],
+    intensity: 2,
+    range: 5,
+    angle: Math.PI / 6,
+    innerAngle: Math.PI / 12,
+    castShadows: true
+  })
+], ['cell1'])
+renderer.add(fixSpotLightEntity)
+
 // Point
 const pointLightCmp = renderer.pointLight({
   color: [1, 1, 1, 1],
@@ -292,6 +337,27 @@ gui.addParam('Shadows', pointLightCmp, 'castShadows', {}, (value) => {
   pointLightCmp.set({ castShadows: value })
 })
 
+const fixPointLightEntity = renderer.entity([
+  renderer.transform({
+    position: [1, 1, 1]
+  }),
+  renderer.geometry({
+    positions: pointLightGizmoPositions,
+    primitive: ctx.Primitive.Lines,
+    count: pointLightGizmoPositions.length
+  }),
+  renderer.material({
+    baseColor: [1, 1, 1, 1]
+  }),
+  renderer.pointLight({
+    color: [1, 1, 0, 1],
+    intensity: 2,
+    range: 5,
+    castShadows: true
+  })
+], ['cell2'])
+renderer.add(fixPointLightEntity)
+
 // Area
 const areaLightCmp = renderer.areaLight({
   color: [1, 1, 1, 1],
@@ -322,6 +388,28 @@ gui.addHeader('Area').setPosition(W / 2 + 10, H / 2 + 10)
 gui.addParam('Enabled', areaLightCmp, 'enabled', {}, (value) => {
   areaLightCmp.set({ enabled: value })
 })
+
+const fixAreaLightEntity = renderer.entity([
+  renderer.transform({
+    scale: [2, 0.5, 1],
+    position: [1, 1, 1],
+    rotation: quat.fromMat4(quat.create(), targetTo(mat4.create(), [0, 0, 0], [1, 1, 1]))
+  }),
+  renderer.geometry({
+    positions: areaLightGizmoPositions,
+    primitive: ctx.Primitive.Lines,
+    count: areaLightGizmoPositions.length
+  }),
+  renderer.material({
+    baseColor: [0, 1, 1, 1]
+  }),
+  renderer.areaLight({
+    color: [1, 1, 0, 1],
+    intensity: 4,
+    castShadows: true
+  })
+], ['cell3'])
+renderer.add(fixAreaLightEntity)
 
 window.addEventListener('keydown', (e) => {
   if (e.key === 'g') gui.toggleEnabled()
