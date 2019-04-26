@@ -1,6 +1,7 @@
 const isPOT = require('is-power-of-two')
 const nextPOT = require('next-power-of-two')
 const assert = require('assert')
+const { quat } = require('pex-math')
 
 // Constants
 const SUPPORTED_EXTENSIONS = [
@@ -404,9 +405,9 @@ function handleMesh (mesh, gltf, ctx, renderer) {
         })
       }
     } else {
-    geometryCmp.set({
-      count: positionAccessor._data.length / 3
-    })
+      geometryCmp.set({
+        count: positionAccessor._data.length / 3
+      })
     }
 
     // https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/README.md#primitivemode
@@ -420,12 +421,12 @@ function handleMesh (mesh, gltf, ctx, renderer) {
     const materialCmp =
       primitive.material !== undefined
         ? handleMaterial(
-            gltf.materials[primitive.material],
-            gltf,
-            ctx,
-            renderer
-          )
-        : renderer.material();
+          gltf.materials[primitive.material],
+          gltf,
+          ctx,
+          renderer
+        )
+        : renderer.material()
 
     const components = [
       geometryCmp,
@@ -462,19 +463,43 @@ function handleMesh (mesh, gltf, ctx, renderer) {
   })
 }
 
-function handleNode (node, gltf, i, ctx, renderer) {
-  const transform = {
-    position: node.translation || [0, 0, 0],
-    rotation: node.rotation || [0, 0, 0, 1],
-    scale: node.scale || [1, 1, 1]
-  }
-  if (node.matrix) transform.matrix = node.matrix
+function handleNode (node, gltf, i, ctx, renderer, options) {
+  const transform = node.matrix
+    ? {
+      position: [
+        node.matrix[12],
+        node.matrix[13],
+        node.matrix[14]
+      ],
+      rotation: quat.fromMat4(quat.create(), node.matrix),
+      scale: [
+        Math.hypot(node.matrix[0], node.matrix[1], node.matrix[2]),
+        Math.hypot(node.matrix[4], node.matrix[5], node.matrix[6]),
+        Math.hypot(node.matrix[8], node.matrix[9], node.matrix[10])
+      ]
+    }
+    : {
+      position: node.translation || [0, 0, 0],
+      rotation: node.rotation || [0, 0, 0, 1],
+      scale: node.scale || [1, 1, 1]
+    }
   const transformCmp = renderer.transform(transform)
 
   node.entity = renderer.add(renderer.entity([
     transformCmp
   ]))
-  node.entity.name = node.name || ('node_' + i)
+  node.entity.name = node.name || `node_${i}`
+
+  if (!options.skipCameras && Number.isInteger(node.camera)) {
+    node.entity.addComponent(
+      handleCamera(
+        gltf.cameras[node.camera],
+        renderer,
+        ctx,
+        options.enabledCameras.includes(node.camera)
+      )
+    )
+  }
 
   let skinCmp = null
   if (node.skin !== undefined) {
@@ -536,7 +561,7 @@ function buildHierarchy (nodes, gltf) {
   nodes.forEach((node) => {
     if (node.skin !== undefined) {
       const skin = gltf.skins[node.skin]
-      const joints = skin.joints.map((i) => nodes[i].entity);
+      const joints = skin.joints.map((i) => nodes[i].entity)
 
       if (gltf.meshes[node.mesh].primitives.length === 1) {
         node.entity.getComponent('Skin').set({
@@ -552,6 +577,34 @@ function buildHierarchy (nodes, gltf) {
         })
       }
     }
+  })
+}
+
+// https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/schema/camera.schema.json
+function handleCamera (camera, renderer, ctx, enabled = false) {
+  if (camera.type === 'orthographic') {
+    // https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/schema/camera.orthographic.schema.json
+    return renderer.camera({
+      enabled,
+      name: camera.name,
+      projection: 'orthographic',
+      near: camera.orthographic.znear,
+      far: camera.orthographic.zfar,
+      left: -camera.orthographic.xmag / 2,
+      right: camera.orthographic.xmag / 2,
+      top: camera.orthographic.ymag / 2,
+      bottom: camera.orthographic.ymag / 2
+    })
+  }
+
+  // https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/schema/camera.perspective.schema.json
+  return renderer.camera({
+    enabled,
+    name: camera.name,
+    near: camera.perspective.znear,
+    far: camera.perspective.zfar || Infinity,
+    fov: camera.perspective.yfov,
+    aspect: camera.perspective.aspectRatio || ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight
   })
 }
 
@@ -599,7 +652,14 @@ function handleAnimation (animation, gltf, renderer) {
   })
 }
 
-function build (gltf, ctx, renderer) {
+const defaultOptions = {
+  enabledCameras: [0],
+  skipCameras: false
+}
+
+function build (gltf, ctx, renderer, options) {
+  const opts = Object.assign(defaultOptions, options)
+
   // Check required extensions
   if (gltf.extensionsRequired) {
     const unsupportedExtensions = gltf.extensionsRequired.filter(extension => !SUPPORTED_EXTENSIONS.includes(extension))
@@ -625,7 +685,7 @@ function build (gltf, ctx, renderer) {
   scene.root = renderer.add(renderer.entity())
   scene.root.name = 'sceneRoot'
   scene.entities = gltf.nodes.reduce((entities, node, i) => {
-    const result = handleNode(node, gltf, i, ctx, renderer)
+    const result = handleNode(node, gltf, i, ctx, renderer, opts)
     if (result.length) {
       result.forEach((primitive) => entities.push(primitive))
     } else {
