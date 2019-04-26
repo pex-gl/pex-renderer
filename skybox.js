@@ -125,6 +125,7 @@ Skybox.prototype.draw = function (camera, opts) {
     uniforms: {
       uProjectionMatrix: camera.projectionMatrix,
       uViewMatrix: camera.viewMatrix,
+      uModelMatrix: this.entity.transform.modelMatrix,
       uEnvMap: texture,
       uEnvMapEncoding: texture.encoding,
       uOutputEncoding: opts.outputEncoding,

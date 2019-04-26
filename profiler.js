@@ -2,7 +2,7 @@ const isBrowser = require('is-browser')
 let canvas = null
 let ctx2d = null
 const W = 250
-const H = 800
+const H = 860
 const M = 10
 const LINE_H = 16
 const FONT_H = 11
@@ -174,6 +174,7 @@ function createProfiler (ctx, renderer) {
       lines.push(`Animations: ${pa3(renderer.getComponents('Animation').length)}`)
       lines.push(`Morphs: ${pa3(renderer.getComponents('Morph').length)}`)
       lines.push(`Cameras: ${pa3(renderer.getComponents('Camera').length)}`)
+      lines.push(`Orbiters: ${pa3(renderer.getComponents('Orbiter').length)}`)
       lines.push(`Reflection Probes: ${pa3(renderer.getComponents('ReflectionProbe').length)}`)
       lines.push(`Skyboxes: ${pa3(renderer.getComponents('Skybox').length)}`)
       lines.push(`Point Lights: ${pa3(renderer.getComponents('PointLight').length)}`)
