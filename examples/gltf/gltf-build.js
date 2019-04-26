@@ -426,7 +426,7 @@ function handleMesh (mesh, gltf, ctx, renderer) {
           ctx,
           renderer
         )
-        : renderer.material();
+        : renderer.material()
 
     const components = [
       geometryCmp,
@@ -463,7 +463,7 @@ function handleMesh (mesh, gltf, ctx, renderer) {
   })
 }
 
-function handleNode (node, gltf, i, ctx, renderer) {
+function handleNode (node, gltf, i, ctx, renderer, options) {
   const transform = node.matrix
     ? {
       position: [
@@ -490,8 +490,15 @@ function handleNode (node, gltf, i, ctx, renderer) {
   ]))
   node.entity.name = node.name || `node_${i}`
 
-  if (Number.isInteger(node.camera)) {
-    node.entity.addComponent(handleCamera(gltf.cameras[node.camera], renderer, ctx))
+  if (!options.skipCameras && Number.isInteger(node.camera)) {
+    node.entity.addComponent(
+      handleCamera(
+        gltf.cameras[node.camera],
+        renderer,
+        ctx,
+        options.enabledCameras.includes(node.camera)
+      )
+    )
   }
 
   let skinCmp = null
@@ -554,7 +561,7 @@ function buildHierarchy (nodes, gltf) {
   nodes.forEach((node) => {
     if (node.skin !== undefined) {
       const skin = gltf.skins[node.skin]
-      const joints = skin.joints.map((i) => nodes[i].entity);
+      const joints = skin.joints.map((i) => nodes[i].entity)
 
       if (gltf.meshes[node.mesh].primitives.length === 1) {
         node.entity.getComponent('Skin').set({
@@ -573,14 +580,8 @@ function buildHierarchy (nodes, gltf) {
   })
 }
 
-let firstCameraEnabled = true
 // https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/schema/camera.schema.json
-function handleCamera (camera, renderer, ctx) {
-  let enabled = false
-  if (firstCameraEnabled) {
-    firstCameraEnabled = false
-    enabled = true
-  }
+function handleCamera (camera, renderer, ctx, enabled = false) {
   if (camera.type === 'orthographic') {
     // https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/schema/camera.orthographic.schema.json
     return renderer.camera({
@@ -651,8 +652,14 @@ function handleAnimation (animation, gltf, renderer) {
   })
 }
 
-function build (gltf, ctx, renderer) {
-  firstCameraEnabled = true
+const defaultOptions = {
+  enabledCameras: [0],
+  skipCameras: false
+}
+
+function build (gltf, ctx, renderer, options) {
+  const opts = Object.assign(defaultOptions, options)
+
   // Check required extensions
   if (gltf.extensionsRequired) {
     const unsupportedExtensions = gltf.extensionsRequired.filter(extension => !SUPPORTED_EXTENSIONS.includes(extension))
@@ -678,7 +685,7 @@ function build (gltf, ctx, renderer) {
   scene.root = renderer.add(renderer.entity())
   scene.root.name = 'sceneRoot'
   scene.entities = gltf.nodes.reduce((entities, node, i) => {
-    const result = handleNode(node, gltf, i, ctx, renderer)
+    const result = handleNode(node, gltf, i, ctx, renderer, opts)
     if (result.length) {
       result.forEach((primitive) => entities.push(primitive))
     } else {
