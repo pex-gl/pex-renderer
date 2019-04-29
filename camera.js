@@ -97,6 +97,18 @@ Camera.prototype.set = function (opts) {
     let top = cy + dy
     let bottom = cy - dy
 
+    if (this.view) {
+      const zoomW = 1 / this.zoom / (this.view.size[0] / this.view.totalSize[0])
+      const zoomH = 1 / this.zoom / (this.view.size[1] / this.view.totalSize[1])
+      const scaleW = (this.right - this.left) / this.view.size[0]
+      const scaleH = (this.top - this.bottom) / this.view.size[1]
+
+      left += scaleW * (this.view.offset[0] / zoomW)
+      right = left + scaleW * (this.view.size[0] / zoomW)
+      top -= scaleH * (this.view.offset[1] / zoomH)
+      bottom = top - scaleH * (this.view.size[1] / zoomH)
+    }
+
     mat4.ortho(
       this.projectionMatrix,
       left,

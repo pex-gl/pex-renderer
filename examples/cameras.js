@@ -18,10 +18,11 @@ const viewSize = gridSize / 2
 const perspectiveCamera = renderer.entity([
   renderer.camera({
     fov: Math.PI / 2,
+    far: 100,
     aspect,
     viewport: [0, 0, viewportWidth, viewportHeight]
   }),
-  renderer.orbiter({ position: [10, 10, 10] })
+  renderer.orbiter({ position: [10, 10, 10], maxDistance: 100 })
 ])
 renderer.add(perspectiveCamera)
 
