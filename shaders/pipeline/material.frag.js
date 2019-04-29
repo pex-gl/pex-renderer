@@ -56,10 +56,6 @@ struct PBRData {
   vec3 viewWorld; // V, view vector from position to camera, world space
   vec3 lightWorld; // L, light vector from position to light, world space
   float NdotV;
-  float NdotL;
-  float NdotH;
-  float LdotH;
-  float HdotV;
 
   vec3 baseColor;
   vec3 emissiveColor;

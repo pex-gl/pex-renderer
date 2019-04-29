@@ -322,7 +322,7 @@ async function loadScene (url, skipCameras) {
         aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight
       })
 
-      // Clipped models: Problematic models: 2CylinderEngine, EnvironmentTest, MultiUVTest
+      // Clipped models: 2CylinderEngine, EnvironmentTest
       // MultiUVTest: wrong position
       if (State.selectedModel.name !== 'MultiUVTest') {
         cameraEntity.addComponent(renderer.orbiter({
