@@ -54,7 +54,6 @@ struct PBRData {
   vec3 eyeDirWorld;
   vec3 normalWorld; // N, world space
   vec3 viewWorld; // V, view vector from position to camera, world space
-  vec3 lightWorld; // L, light vector from position to light, world space
   float NdotV;
 
   vec3 baseColor;
@@ -87,6 +86,7 @@ ${SHADERS.baseColor}
 #ifndef USE_UNLIT_WORKFLOW
   // Lighting
   ${SHADERS.octMap}
+  ${SHADERS.depthUnpack}
   ${SHADERS.normalPerturb}
   ${SHADERS.irradiance}
   ${SHADERS.shadowing}
@@ -219,33 +219,33 @@ void main() {
       EvaluateLightProbe(data, ao);
     #endif
     #if NUM_AMBIENT_LIGHTS > 0
-      for(int i = 0; i < NUM_AMBIENT_LIGHTS; i++) {
-        AmbientLight light = uAmbientLights[i];
-        EvaluateAmbientLight(data, light, i, ao);
+      #pragma unroll_loop
+      for (int i = 0; i < NUM_AMBIENT_LIGHTS; i++) {
+        EvaluateAmbientLight(data, uAmbientLights[i], ao);
       }
     #endif
     #if NUM_DIRECTIONAL_LIGHTS > 0
-      for(int i = 0; i < NUM_DIRECTIONAL_LIGHTS; i++) {
-        DirectionalLight light = uDirectionalLights[i];
-        EvaluateDirectionalLight(data, light, i);
+      #pragma unroll_loop
+      for (int i = 0; i < NUM_DIRECTIONAL_LIGHTS; i++) {
+        EvaluateDirectionalLight(data, uDirectionalLights[i], uDirectionalLightShadowMaps[i]);
       }
     #endif
     #if NUM_POINT_LIGHTS > 0
-      for(int i = 0; i < NUM_POINT_LIGHTS; i++) {
-        PointLight light = uPointLights[i];
-        EvaluatePointLight(data, light, i);
+      #pragma unroll_loop
+      for (int i = 0; i < NUM_POINT_LIGHTS; i++) {
+        EvaluatePointLight(data, uPointLights[i], uPointLightShadowMaps[i]);
       }
     #endif
     #if NUM_SPOT_LIGHTS > 0
-      for(int i = 0; i < NUM_SPOT_LIGHTS; i++) {
-        SpotLight light = uSpotLights[i];
-        EvaluateSpotLight(data, light, i);
+      #pragma unroll_loop
+      for (int i = 0; i < NUM_SPOT_LIGHTS; i++) {
+        EvaluateSpotLight(data, uSpotLights[i], uSpotLightShadowMaps[i]);
       }
     #endif
     #if NUM_AREA_LIGHTS > 0
-      for(int i = 0; i < NUM_AREA_LIGHTS; i++) {
-        AreaLight light = uAreaLights[i];
-        EvaluateAreaLight(data, light, i, ao);
+      #pragma unroll_loop
+      for (int i = 0; i < NUM_AREA_LIGHTS; i++) {
+        EvaluateAreaLight(data, uAreaLights[i], ao);
       }
     #endif
     color = data.emissiveColor + data.indirectDiffuse + data.indirectSpecular + data.directColor;
