@@ -54,29 +54,28 @@ struct PBRData {
   vec3 eyeDirWorld;
   vec3 normalWorld; // N, world space
   vec3 viewWorld; // V, view vector from position to camera, world space
-  vec3 lightWorld; // L, light vector from position to light, world space
   float NdotV;
-  float NdotL;
-  float NdotH;
-  float LdotH;
-  float HdotV;
 
   vec3 baseColor;
   vec3 emissiveColor;
   float opacity;
   float roughness; // roughness value, as authored by the model creator (input to shader)
   float metallic; // metallic value at the surface
-  float alphaRoughness; // roughness mapped to a more linear change in the roughness (proposed by [2])
+  float linearRoughness; // roughness mapped to a more linear change in the roughness (proposed by [2])
+  vec3 f0; // Reflectance at normal incidence
+  float clearCoatLinearRoughness;
+  vec3 clearCoatNormal;
+  vec3 reflectionWorld;
+  vec3 directColor;
   vec3 diffuseColor; // color contribution from diffuse lighting
   vec3 specularColor; // color contribution from specular lighting
-  vec3 indirectDiffuse; // contribution from IBL light probe
-  vec3 indirectSpecular; // contribution from IBL light probe
-  vec3 directDiffuse; // contribution from light sources
-  vec3 directSpecular; // contribution from light sources
+  vec3 indirectDiffuse; // contribution from IBL light probe and Ambient Light
+  vec3 indirectSpecular; // contribution from IBL light probe and Area Light
 };
 
 // Includes
 ${SHADERS.math.PI}
+${SHADERS.math.saturate}
 ${SHADERS.rgbm}
 ${SHADERS.gamma}
 ${SHADERS.encodeDecode}
@@ -87,10 +86,14 @@ ${SHADERS.baseColor}
 #ifndef USE_UNLIT_WORKFLOW
   // Lighting
   ${SHADERS.octMap}
+  ${SHADERS.depthUnpack}
+  ${SHADERS.normalPerturb}
+  ${SHADERS.irradiance}
   ${SHADERS.shadowing}
   ${SHADERS.brdf}
-  ${SHADERS.irradiance}
+  ${SHADERS.clearCoat}
   ${SHADERS.indirect}
+  ${SHADERS.direct}
   ${SHADERS.lightAmbient}
   ${SHADERS.lightDirectional}
   ${SHADERS.lightPoint}
@@ -141,24 +144,23 @@ void main() {
     data.eyeDirWorld = vec3(uInverseViewMatrix * vec4(data.eyeDirView, 0.0));
     data.indirectDiffuse = vec3(0.0);
     data.indirectSpecular = vec3(0.0);
-    data.directDiffuse = vec3(0.0);
-    data.directSpecular = vec3(0.0);
     data.opacity = 1.0;
 
     getNormal(data);
     getEmissiveColor(data);
 
     #ifdef USE_METALLIC_ROUGHNESS_WORKFLOW
-      vec3 F0 = vec3(0.04);
       getBaseColor(data);
       getRoughness(data);
       // TODO: avoid disappearing highlights at roughness 0
-      data.roughness = 0.004 + 0.996 * data.roughness;
+      // data.roughness = 0.004 + 0.996 * data.roughness;
+      data.roughness = clamp(data.roughness, MIN_ROUGHNESS, 1.0);
       getMetallic(data);
 
-      // http://www.codinglabs.net/article_physically_based_rendering_cook_torrance.aspx
-      data.diffuseColor = data.baseColor * (1.0 - F0) * (1.0 - data.metallic);
-      data.specularColor = mix(F0, data.baseColor, data.metallic);
+      // Compute F0 for both dielectric and metallic materials
+      data.f0 = 0.16 * uReflectance * uReflectance * (1.0 - data.metallic) + data.baseColor.rgb * data.metallic;
+      data.diffuseColor = data.baseColor * (1.0 - data.metallic);
+      data.specularColor = mix(data.f0, data.baseColor, data.metallic);
     #endif
     #ifdef USE_SPECULAR_GLOSSINESS_WORKFLOW
       getBaseColorAndMetallicRoughnessFromSpecularGlossiness(data);
@@ -181,14 +183,20 @@ void main() {
       getTintColor(data);
     #endif
 
-    data.alphaRoughness = data.roughness * data.roughness;
+    data.linearRoughness = data.roughness * data.roughness;
+
+    #ifdef USE_CLEAR_COAT
+      data.clearCoatLinearRoughness = uClearCoatRoughness * uClearCoatRoughness;
+      data.f0 = mix(data.f0, f0ClearCoatToSurface(data.f0), uClearCoat);
+      data.roughness = max(data.roughness, uClearCoatRoughness);
+
+      getClearCoatNormal(data);
+    #endif
 
     // view vector in world space
     data.viewWorld = normalize(uCameraPosition - vPositionWorld);
 
-    vec3 N = data.normalWorld;
-    vec3 V = data.viewWorld;
-    data.NdotV = clamp(dot(N, V), 0.001, 1.0);
+    data.NdotV = abs(dot(data.normalWorld, data.viewWorld)) + FLT_EPS;
 
     float ao = 1.0;
     #ifdef USE_OCCLUSION_MAP
@@ -207,39 +215,40 @@ void main() {
     //TODO: No kd? so not really energy conserving
     //we could use disney brdf for irradiance map to compensate for that like in Frostbite
     #ifdef USE_REFLECTION_PROBES
-      EvaluateLightProbe(data);
+      data.reflectionWorld = reflect(-data.eyeDirWorld, data.normalWorld);
+      EvaluateLightProbe(data, ao);
     #endif
     #if NUM_AMBIENT_LIGHTS > 0
-      for(int i = 0; i < NUM_AMBIENT_LIGHTS; i++) {
-        AmbientLight light = uAmbientLights[i];
-        EvaluateAmbientLight(data, light, i);
+      #pragma unroll_loop
+      for (int i = 0; i < NUM_AMBIENT_LIGHTS; i++) {
+        EvaluateAmbientLight(data, uAmbientLights[i], ao);
       }
     #endif
     #if NUM_DIRECTIONAL_LIGHTS > 0
-      for(int i = 0; i < NUM_DIRECTIONAL_LIGHTS; i++) {
-        DirectionalLight light = uDirectionalLights[i];
-        EvaluateDirectionalLight(data, light, i);
+      #pragma unroll_loop
+      for (int i = 0; i < NUM_DIRECTIONAL_LIGHTS; i++) {
+        EvaluateDirectionalLight(data, uDirectionalLights[i], uDirectionalLightShadowMaps[i]);
       }
     #endif
     #if NUM_POINT_LIGHTS > 0
-      for(int i = 0; i < NUM_POINT_LIGHTS; i++) {
-        PointLight light = uPointLights[i];
-        EvaluatePointLight(data, light, i);
+      #pragma unroll_loop
+      for (int i = 0; i < NUM_POINT_LIGHTS; i++) {
+        EvaluatePointLight(data, uPointLights[i], uPointLightShadowMaps[i]);
       }
     #endif
     #if NUM_SPOT_LIGHTS > 0
-      for(int i = 0; i < NUM_SPOT_LIGHTS; i++) {
-        SpotLight light = uSpotLights[i];
-        EvaluateSpotLight(data, light, i);
+      #pragma unroll_loop
+      for (int i = 0; i < NUM_SPOT_LIGHTS; i++) {
+        EvaluateSpotLight(data, uSpotLights[i], uSpotLightShadowMaps[i]);
       }
     #endif
     #if NUM_AREA_LIGHTS > 0
-      for(int i = 0; i < NUM_AREA_LIGHTS; i++) {
-        AreaLight light = uAreaLights[i];
-        EvaluateAreaLight(data, light, i);
+      #pragma unroll_loop
+      for (int i = 0; i < NUM_AREA_LIGHTS; i++) {
+        EvaluateAreaLight(data, uAreaLights[i], ao);
       }
     #endif
-    color = data.emissiveColor + ao * data.indirectDiffuse + ao * data.indirectSpecular + data.directDiffuse + data.directSpecular;
+    color = data.emissiveColor + data.indirectDiffuse + data.indirectSpecular + data.directColor;
     #ifdef USE_TONEMAPPING
       color.rgb *= uExposure;
       color.rgb = tonemapUncharted2(color.rgb);

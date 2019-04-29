@@ -5,15 +5,19 @@ const TWO_PI = /* glsl */`
 const float TWO_PI = 6.28318530718;
 `
 
-const saturateFloat = /* glsl */`
-float saturate(float f) {
-  return clamp(f, 0.0, 1.0);
-}
-`
-const saturateVec3 = /* glsl */`
-vec3 saturate(vec3 v) {
-  return clamp(v, vec3(0.0), vec3(1.0));
-}
+const saturate = /* glsl */`
+#define MEDIUMP_FLT_MAX    65504.0
+#define MEDIUMP_FLT_MIN    0.00006103515625
+
+#ifdef TARGET_MOBILE
+#define FLT_EPS            MEDIUMP_FLT_MIN
+#define saturateMediump(x) min(x, MEDIUMP_FLT_MAX)
+#else
+#define FLT_EPS            1e-5
+#define saturateMediump(x) x
+#endif
+
+#define saturate(x) clamp(x, 0.0, 1.0)
 `
 
 const quatToMat4 = /* glsl */`
@@ -145,8 +149,7 @@ mat4 inverse(mat4 m) {
 module.exports = {
   PI,
   TWO_PI,
-  saturateFloat,
-  saturateVec3,
+  saturate,
   transposeMat4,
   quatToMat4,
   transposeMat3,

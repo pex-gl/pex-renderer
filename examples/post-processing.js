@@ -252,7 +252,7 @@ renderer.add(areaLightEntity)
     }),
     renderer.directionalLight({
       color: [1, 1, 0.95, 1],
-      intensity: 4,
+      intensity: 2,
       castShadows: true
     })
   ])
