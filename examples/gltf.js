@@ -477,10 +477,10 @@ async function init () {
   }
 
   // Render scene(s)
-  models.forEach(async (model) => {
+  await Promise.all(models.map(async (model) => {
     const scene = await loadScene(`${MODELS_PATH}/${model.name}/glTF/${model.name}.gltf`, grid)
     onSceneLoaded(scene, grid)
-  })
+  }))
 
   window.dispatchEvent(new CustomEvent('pex-screenshot'))
 }

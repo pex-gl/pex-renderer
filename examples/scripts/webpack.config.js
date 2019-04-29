@@ -8,6 +8,6 @@ module.exports = {
   },
   plugins: [
   ],
-  externals: ['puppeteer'],
+  externals: ['puppeteer', 'request'],
   node: { fs: 'empty' }
 }

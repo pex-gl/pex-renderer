@@ -4,18 +4,21 @@ const puppeteer = require('puppeteer')
 const allExamples = require('./examples.js')
 
 let timer = null
-const TIMEOUT = 15000
+const TIMEOUT = 5 * 60 * 1000
 
-const examples = [process.argv[2]] || allExamples
+const examples = process.argv[2] ? [process.argv[2]] : allExamples
 const url = process.argv[3] || 'http://localhost:8080/'
 
 const folder = `screenshots`
 mkdirp.sync(folder)
 
 async function takeScreenshots () {
-  const browser = await puppeteer.launch()
+  const browser = await puppeteer.launch({
+    timeout: 0,
+    args: ["--proxy-server='direct://'", '--proxy-bypass-list=*']
+  })
   const page = await browser.newPage()
-  page.setDefaultNavigationTimeout(TIMEOUT)
+  // page.setDefaultNavigationTimeout(2 * TIMEOUT)
 
   let promiseResolve
   let pScreenshotEvent
@@ -28,6 +31,7 @@ async function takeScreenshots () {
 
   for (let example of examples) {
     console.log(`• Start screenshot for ${example}:`)
+    console.time('  Duration')
 
     // Listen for custom event
     await page.evaluateOnNewDocument(type => {
@@ -55,6 +59,7 @@ async function takeScreenshots () {
     // Take the screenshot when ready
     await page.screenshot({ path: `${folder}/${example}.png` })
     console.log(`  Screenshot: ${folder}/${example}.png`)
+    console.timeEnd('  Duration')
   }
 
   await page.close()

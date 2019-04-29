@@ -223,6 +223,7 @@ cells.forEach((cell, cellIndex) => {
     reflectionProbe
   ])
   renderer.add(skyEntity)
+  window.dispatchEvent(new CustomEvent('pex-screenshot'))
 })()
 
 window.addEventListener('keydown', (e) => {
