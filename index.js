@@ -359,13 +359,13 @@ Renderer.prototype.getMaterialProgramAndFlags = function (geometry, material, sk
   }
   if (material.emissiveColorMap) {
     flags.push('#define USE_EMISSIVE_COLOR_MAP')
-    if (!material.emissiveColor) {
-      material.emissiveColor = [1, 1, 1, 1]
-    }
     flags.push(`#define EMISSIVE_COLOR_MAP_TEX_COORD_INDEX ${material.emissiveColorMap.texCoord || 0}`)
     if (material.emissiveColorMap.texCoordTransformMatrix) {
       flags.push('#define USE_EMISSIVE_COLOR_MAP_TEX_COORD_TRANSFORM')
     }
+  }
+  if (!isNil(material.emissiveColor)) {
+    flags.push('#define USE_EMISSIVE_COLOR')
   }
   if (!isNil(material.clearCoat)) {
     flags.push('#define USE_CLEAR_COAT')
@@ -710,8 +710,10 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
         cachedUniforms.uEmissiveColorMapTexCoordTransform = material.emissiveColorMap.texCoordTransformMatrix
       }
     }
-    cachedUniforms.uEmissiveColor = material.emissiveColor
-    cachedUniforms.uEmissiveIntensity = material.emissiveIntensity
+    if (!isNil(material.emissiveColor)) {
+      cachedUniforms.uEmissiveColor = material.emissiveColor
+      cachedUniforms.uEmissiveIntensity = material.emissiveIntensity
+    }
 
     if (material.useSpecularGlossinessWorkflow) {
       if (material.diffuse) cachedUniforms.uDiffuse = material.diffuse

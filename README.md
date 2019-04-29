@@ -449,7 +449,7 @@ const material = renderer.material({
 | `normalScale`                   | normal factor. Control how much the `normalMap` affects lighting.             | Number                    | 1                       |
 | `displacementMap`               | displacement texture. Modifies vertices positions (r channel).                | ctx.Texture \| TextureMap | null                    |
 | `displacement`                  | displacement factor. Control how much the `displacementMap` affects vertices. | Number                    | 0                       |
-| `emissiveColor`                 | light emitted                                                                 | Color/Vec4 [r, g, b, a]   | [0, 0, 0, 1]            |
+| `emissiveColor`                 | light emitted                                                                 | Color/Vec4 [r, g, b, a]   | null                    |
 | `emissiveIntensity`             | emissive factor                                                               | Number                    | 1                       |
 | `emissiveColorMap`              | base color texture. Multiplied by `emissiveColor` and `emissiveIntensity`.    | ctx.Texture \| TextureMap | null                    |
 | `occlusionMap`                  | occlusion texture. Indicates areas of indirect lighting.                      | ctx.Texture \| TextureMap | null                    |

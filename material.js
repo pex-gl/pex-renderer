@@ -54,7 +54,7 @@ function Material (opts) {
   this.displacementMap = null
   this.displacement = 0
 
-  this.emissiveColor = [0, 0, 0, 1]
+  this.emissiveColor = null
   this.emissiveIntensity = 1
   this.emissiveColorMap = null
 
