@@ -68,13 +68,16 @@ const AttributeNameMap = {
 }
 
 // https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/schema/bufferView.schema.json
-function handleBufferView (bufferView, bufferData, ctx) {
+function setupBufferView (bufferView, buffers, ctx) {
+  const bufferData = buffers[bufferView.buffer]._data
   if (bufferView.byteOffset === undefined) bufferView.byteOffset = 0
+
   bufferView._data = bufferData.slice(
     bufferView.byteOffset,
     bufferView.byteOffset + bufferView.byteLength
   )
 
+  // Set buffer if target is present
   if (bufferView.target === WEBGL_CONSTANTS.ELEMENT_ARRAY_BUFFER) {
     bufferView._indexBuffer = ctx.indexBuffer(bufferView._data)
   } else if (bufferView.target === WEBGL_CONSTANTS.ARRAY_BUFFER) {
@@ -83,23 +86,18 @@ function handleBufferView (bufferView, bufferData, ctx) {
 }
 
 // https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/schema/accessor.schema.json
-function handleAccessor (accessor, bufferView, bufferViews) {
+function setupAccessor (accessor, bufferViews) {
+  if (accessor._data) return
+
   const numberOfComponents = GLTF_ACCESSOR_TYPE_COMPONENTS_NUMBER[accessor.type]
   if (accessor.byteOffset === undefined) accessor.byteOffset = 0
 
-  accessor._bufferView = bufferView
-
-  if (bufferView._indexBuffer) {
-    accessor._buffer = bufferView._indexBuffer
-  }
-  if (bufferView._vertexBuffer) {
-    accessor._buffer = bufferView._vertexBuffer
-  }
+  accessor._bufferView = bufferViews[accessor.bufferView]
 
   const TypedArrayConstructor = WEBGL_TYPED_ARRAY_BY_COMPONENT_TYPES[accessor.componentType]
   const byteSize = GLTF_ACCESSOR_COMPONENT_TYPE_SIZE[accessor.componentType]
 
-  const data = new TypedArrayConstructor(bufferView._data.slice(
+  const data = new TypedArrayConstructor(accessor._bufferView._data.slice(
     accessor.byteOffset,
     accessor.byteOffset + accessor.count * numberOfComponents * byteSize
   ))
@@ -366,17 +364,22 @@ function handleMesh (mesh, gltf, ctx, renderer) {
       assert(attributeName, `GLTF: Unknown attribute '${name}'`)
 
       const accessor = gltf.accessors[primitive.attributes[name]]
+      setupAccessor(accessor, gltf.bufferViews)
 
-      if (accessor._buffer) {
+      if (accessor.sparse) {
+        attributes[attributeName] = accessor._data
+      } else {
+        if (!accessor._bufferView._vertexBuffer) {
+          accessor._bufferView._vertexBuffer = ctx.vertexBuffer(accessor._bufferView._data)
+        }
         attributes[attributeName] = {
-          buffer: accessor._buffer,
+          buffer: accessor._bufferView._vertexBuffer,
           offset: accessor.byteOffset,
           type: accessor.componentType,
           stride: accessor._bufferView.byteStride
         }
-      } else {
-        attributes[attributeName] = accessor._data
       }
+
       return attributes
     }, {})
 
@@ -390,20 +393,19 @@ function handleMesh (mesh, gltf, ctx, renderer) {
     })
 
     if (indicesAccessor) {
-      if (indicesAccessor._buffer) {
-        geometryCmp.set({
-          indices: {
-            buffer: indicesAccessor._buffer,
-            offset: indicesAccessor.byteOffset,
-            type: indicesAccessor.componentType,
-            count: indicesAccessor.count
-          }
-        })
-      } else {
-        geometryCmp.set({
-          indices: indicesAccessor._data
-        })
+      setupAccessor(indicesAccessor, gltf.bufferViews)
+
+      if (!indicesAccessor._bufferView._indexBuffer) {
+        indicesAccessor._bufferView._indexBuffer = ctx.indexBuffer(indicesAccessor._bufferView._data)
       }
+      geometryCmp.set({
+        indices: {
+          buffer: indicesAccessor._bufferView._indexBuffer,
+          offset: indicesAccessor.byteOffset,
+          type: indicesAccessor.componentType,
+          count: indicesAccessor.count
+        }
+      })
     } else {
       geometryCmp.set({
         count: positionAccessor._data.length / 3
@@ -442,10 +444,16 @@ function handleMesh (mesh, gltf, ctx, renderer) {
         targetKeys.forEach(targetKey => {
           const targetName = AttributeNameMap[targetKey] || targetKey
           targets[targetName] = targets[targetName] || []
-          targets[targetName].push(gltf.accessors[target[targetKey]]._data)
+
+          const accessor = gltf.accessors[target[targetKey]]
+          setupAccessor(accessor, gltf.bufferViews)
+
+          targets[targetName].push(accessor._data)
 
           if (!sources[targetName]) {
-            sources[targetName] = gltf.accessors[primitive.attributes[targetKey]]._data
+            const sourceAccessor = gltf.accessors[primitive.attributes[targetKey]]
+            setupAccessor(sourceAccessor, gltf.bufferViews)
+            sources[targetName] = sourceAccessor._data
           }
         })
         return targets
@@ -504,7 +512,9 @@ function handleNode (node, gltf, i, ctx, renderer, options) {
   let skinCmp = null
   if (node.skin !== undefined) {
     const skin = gltf.skins[node.skin]
-    const data = gltf.accessors[skin.inverseBindMatrices]._data
+    const accessor = gltf.accessors[skin.inverseBindMatrices]
+    setupAccessor(accessor, gltf.bufferViews)
+    const data = accessor._data
 
     let inverseBindMatrices = []
     for (let i = 0; i < data.length; i += 16) {
@@ -615,6 +625,9 @@ function handleAnimation (animation, gltf, renderer) {
     const output = gltf.accessors[sampler.output]
     const target = gltf.nodes[channel.target.node].entity
 
+    setupAccessor(input, gltf.bufferViews)
+    setupAccessor(output, gltf.bufferViews)
+
     const outputData = []
     const od = output._data
     let offset = GLTF_ACCESSOR_TYPE_COMPONENTS_NUMBER[output.type]
@@ -671,13 +684,7 @@ function build (gltf, ctx, renderer, options) {
   // Handle binary data retrieval
   // https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/README.md#binary-data-storage
   for (let i = 0; i < gltf.bufferViews.length; i++) {
-    const bufferView = gltf.bufferViews[i]
-    handleBufferView(bufferView, gltf.buffers[bufferView.buffer]._data, ctx)
-  }
-
-  for (let j = 0; j < gltf.accessors.length; j++) {
-    const accessor = gltf.accessors[j]
-    handleAccessor(accessor, gltf.bufferViews[accessor.bufferView], gltf.bufferViews)
+    setupBufferView(gltf.bufferViews[i], gltf.buffers, ctx)
   }
 
   // Build pex-renderer scene

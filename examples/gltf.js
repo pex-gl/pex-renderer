@@ -29,8 +29,21 @@ const State = {
   gridSize: 1,
   showBoundingBoxes: false,
   useEnvMap: false,
-  shadows: false
+  shadows: false,
+  formats: [
+    'glTF',
+    'glTF-Binary',
+    'glTF-Draco',
+    'glTF-Embedded'
+  ],
+  currentFormat: 1
 }
+
+const FORMAT_EXTENSION = new Map()
+  .set('glTF', 'gltf')
+  .set('glTF-Binary', 'glb')
+  .set('glTF-Draco', 'gltf')
+  .set('glTF-Embedded', 'gltf')
 
 // Utils
 const positions = [[0, 0, 0], [0, 0, 0]]
@@ -269,7 +282,12 @@ let floorEntity
 let cameraEntity
 
 async function loadScene (url, skipCameras) {
-  const gltf = await loadGltf(url)
+  let gltf
+  try {
+    gltf = await loadGltf(url)
+  } catch (e) {
+    return e
+  }
 
   console.time('building ' + url)
   const scene = State.scene = buildGltf(gltf, ctx, renderer, {
@@ -343,6 +361,31 @@ async function loadScene (url, skipCameras) {
   return scene
 }
 
+async function renderModel (model, overrideFormat, grid) {
+  const format = overrideFormat || State.formats[State.currentFormat]
+
+  try {
+    const scene = await loadScene(
+      `${MODELS_PATH}/${model.name}/${format}/${
+        model.name
+      }.${FORMAT_EXTENSION.get(format)}`,
+      grid
+    )
+
+    if (scene instanceof Error) {
+      throw scene
+    } else {
+      onSceneLoaded(scene, grid)
+    }
+  } catch (e) {
+    console.error(e)
+    console.warn(`No format ${format} supported for model ${model.name}. Defaulting to glTF.`)
+    if (!overrideFormat) {
+      renderModel(model, 'glTF', grid)
+    }
+  }
+}
+
 async function init () {
   // Get list of models locally or from the glTF repo
   let models = await loadJSON(`${MODELS_PATH}/model-index.json`)
@@ -366,6 +409,10 @@ async function init () {
       value: models[i],
       texture: tex
     }))
+  gui.addRadioList('Format', State, 'currentFormat', State.formats.map((name, value) => ({
+    name,
+    value
+  })))
   gui.addTexture2DList('Models', State, 'selectedModel', thumbnails, 4, async (model) => {
     // Clean up
     if (State.selectedModel) {
@@ -380,72 +427,70 @@ async function init () {
 
     renderer.remove(cameraEntity)
 
-    // Render scene
-    const scene = await loadScene(`${MODELS_PATH}/${model.name}/glTF/${model.name}.gltf`)
-    onSceneLoaded(scene)
+    renderModel(model)
   })
 
   // Filter models
-  models = [
-    // { name: '2CylinderEngine' },
-    // { name: 'AlphaBlendModeTest' },
-    // { name: 'AnimatedCube' },
-    // { name: 'AnimatedMorphCube' },
-    // { name: 'AnimatedMorphSphere' },
-    // { name: 'AnimatedTriangle' },
-    // { name: 'AntiqueCamera' },
-    // { name: 'Avocado' },
-    // { name: 'BarramundiFish' },
-    // { name: 'BoomBox' },
-    // { name: 'BoomBoxWithAxes' },
-    // { name: 'Box' },
-    // { name: 'BoxAnimated' },
-    // { name: 'BoxInterleaved' },
-    // { name: 'BoxTextured' },
-    // { name: 'BoxTexturedNonPowerOfTwo' },
-    // { name: 'BoxVertexColors' },
-    // { name: 'BrainStem' },
-    // { name: 'Buggy' },
-    // { name: 'Cameras' },
-    // { name: 'CesiumMan' },
-    // { name: 'CesiumMilkTruck' },
-    // { name: 'Corset' },
-    // { name: 'Cube' },
-    // { name: 'DamagedHelmet' },
-    // { name: 'Duck' },
-    // { name: 'EnvironmentTest' },
-    { name: 'FlightHelmet' },
-    // { name: 'GearboxAssy' },
-    // { name: 'InterpolationTest' },
-    // { name: 'Lantern' },
-    // { name: 'MetalRoughSpheres' },
-    // { name: 'Monster' },
-    // { name: 'MorphPrimitivesTest' },
-    // { name: 'MultiUVTest' },
-    // { name: 'NormalTangentMirrorTest' },
-    // { name: 'NormalTangentTest' },
-    // { name: 'OrientationTest' },
-    // { name: 'ReciprocatingSaw' },
-    // { name: 'RiggedFigure' },
-    // { name: 'RiggedSimple' },
-    // { name: 'SciFiHelmet' },
-    // { name: 'SimpleMeshes' },
-    // { name: 'SimpleMorph' },
-    // { name: 'SimpleSparseAccessor' },
-    // { name: 'SpecGlossVsMetalRough' },
-    // { name: 'Sponza' },
-    // { name: 'Suzanne' },
-    // { name: 'TextureCoordinateTest' },
-    // { name: 'TextureSettingsTest' },
-    // { name: 'TextureTransformTest' },
-    // { name: 'Triangle' },
-    // { name: 'TriangleWithoutIndices' },
-    // { name: 'TwoSidedPlane' },
-    // { name: 'UnlitTest' },
-    // { name: 'VC' },
-    // { name: 'VertexColorTest' },
-    // { name: 'WaterBottle' }
-  ]
+  // models = [
+  //   // { name: '2CylinderEngine' },
+  //   // { name: 'AlphaBlendModeTest' },
+  //   // { name: 'AnimatedCube' },
+  //   // { name: 'AnimatedMorphCube' },
+  //   // { name: 'AnimatedMorphSphere' },
+  //   // { name: 'AnimatedTriangle' },
+  //   // { name: 'AntiqueCamera' },
+  //   // { name: 'Avocado' },
+  //   // { name: 'BarramundiFish' },
+  //   // { name: 'BoomBox' },
+  //   // { name: 'BoomBoxWithAxes' },
+  //   // { name: 'Box' },
+  //   // { name: 'BoxAnimated' },
+  //   // { name: 'BoxInterleaved' },
+  //   // { name: 'BoxTextured' },
+  //   // { name: 'BoxTexturedNonPowerOfTwo' },
+  //   // { name: 'BoxVertexColors' },
+  //   // { name: 'BrainStem' },
+  //   // { name: 'Buggy' },
+  //   // { name: 'Cameras' },
+  //   // { name: 'CesiumMan' },
+  //   // { name: 'CesiumMilkTruck' },
+  //   // { name: 'Corset' },
+  //   // { name: 'Cube' },
+  //   // { name: 'DamagedHelmet' },
+  //   // { name: 'Duck' },
+  //   // { name: 'EnvironmentTest' },
+  //   // { name: 'FlightHelmet' },
+  //   // { name: 'GearboxAssy' },
+  //   // { name: 'InterpolationTest' },
+  //   // { name: 'Lantern' },
+  //   // { name: 'MetalRoughSpheres' },
+  //   // { name: 'Monster' },
+  //   // { name: 'MorphPrimitivesTest' },
+  //   // { name: 'MultiUVTest' },
+  //   // { name: 'NormalTangentMirrorTest' },
+  //   // { name: 'NormalTangentTest' },
+  //   // { name: 'OrientationTest' },
+  //   // { name: 'ReciprocatingSaw' },
+  //   // { name: 'RiggedFigure' },
+  //   // { name: 'RiggedSimple' },
+  //   // { name: 'SciFiHelmet' },
+  //   // { name: 'SimpleMeshes' },
+  //   // { name: 'SimpleMorph' },
+  //   // { name: 'SimpleSparseAccessor' },
+  //   // { name: 'SpecGlossVsMetalRough' },
+  //   // { name: 'Sponza' },
+  //   // { name: 'Suzanne' },
+  //   // { name: 'TextureCoordinateTest' },
+  //   // { name: 'TextureSettingsTest' },
+  //   // { name: 'TextureTransformTest' },
+  //   // { name: 'Triangle' },
+  //   // { name: 'TriangleWithoutIndices' },
+  //   // { name: 'TwoSidedPlane' },
+  //   // { name: 'UnlitTest' },
+  //   // { name: 'VC' },
+  //   // { name: 'VertexColorTest' },
+  //   // { name: 'WaterBottle' }
+  // ]
 
   const grid = models.length > 1
 
@@ -478,8 +523,7 @@ async function init () {
 
   // Render scene(s)
   models.forEach(async (model) => {
-    const scene = await loadScene(`${MODELS_PATH}/${model.name}/glTF/${model.name}.gltf`, grid)
-    onSceneLoaded(scene, grid)
+    renderModel(model, null, grid)
   })
 }
 
