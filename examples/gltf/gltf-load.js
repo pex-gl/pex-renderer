@@ -3,6 +3,10 @@ const loadImage = require('pex-io/loadImage')
 const loadBinary = require('pex-io/loadBinary')
 const path = require('path')
 
+function uint8ArrayToArrayBuffer(arr) {
+  return arr.buffer.slice(arr.byteOffset, arr.byteLength + arr.byteOffset)
+}
+
 class BinaryReader {
   constructor (arrayBuffer) {
     this._arrayBuffer = arrayBuffer
@@ -121,12 +125,27 @@ function loadData (data) {
 
     return {
       json: JSON.parse(unpacked.json),
-      // Convert back to ArrayBuffer
-      bin: unpacked.bin.buffer.slice(unpacked.bin.byteOffset, unpacked.bin.byteLength + unpacked.bin.byteOffset)
+      bin: uint8ArrayToArrayBuffer(unpacked.bin)
     }
   }
 
   return { json: data }
+}
+
+function isBase64 (uri) {
+  return uri.length < 5 ? false : uri.substr(0, 5) === 'data:';
+}
+
+function decodeBase64 (uri) {
+  const decodedString = atob(uri.split(',')[1])
+  const bufferLength = decodedString.length
+  const bufferView = new Uint8Array(new ArrayBuffer(bufferLength))
+
+  for (let i = 0; i < bufferLength; i++) {
+    bufferView[i] = decodedString.charCodeAt(i);
+  }
+
+  return bufferView.buffer
 }
 
 async function loadGltf (url) {
@@ -140,8 +159,11 @@ async function loadGltf (url) {
     if (isBinary) {
       buffer._data = bin
     } else {
-      const uri = path.join(basePath, buffer.uri)
-      buffer._data = await loadBinary(uri)
+      if (isBase64(buffer.uri)) {
+        buffer._data = decodeBase64(buffer.uri)
+      } else {
+        buffer._data = await loadBinary(path.join(basePath, buffer.uri))
+      }
     }
   }
 
@@ -160,8 +182,12 @@ async function loadGltf (url) {
         const uri = URL.createObjectURL(blob)
         image._img = await loadImage({ url: uri, crossOrigin: 'anonymous' })
       } else {
-        const uri = path.join(basePath, image.uri).replace(/%/g, '%25') // TODO why are we replacing uri encoded spaces?
-        image._img = await loadImage({ url: uri, crossOrigin: 'anonymous' })
+        if (isBase64(image.uri)) {
+          image._img = await loadImage({ url: image.uri, crossOrigin: 'anonymous' })
+        } else {
+          // TODO why are we replacing uri encoded spaces?
+          image._img = await loadImage({ url: path.join(basePath, image.uri).replace(/%/g, '%25'), crossOrigin: 'anonymous' })
+        }
       }
     }
   }

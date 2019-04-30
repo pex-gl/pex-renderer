@@ -36,7 +36,7 @@ const State = {
     'glTF-Draco',
     'glTF-Embedded'
   ],
-  currentFormat: 1
+  currentFormat: 3
 }
 
 const FORMAT_EXTENSION = new Map()
