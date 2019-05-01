@@ -242,13 +242,13 @@ function rescaleScene (scene) {
 }
 
 function onSceneLoaded (scene, grid) {
+  State.scenes.push(scene)
+  renderer.update() // refresh scene hierarchy
+
   if (grid) {
     rescaleScene(scene)
     repositionModel(scene)
   }
-
-  State.scenes.push(scene)
-  renderer.update() // refresh scene hierarchy
 
   if (State.showBoundingBoxes) {
     const box = createBox(1)
@@ -525,7 +525,7 @@ async function init () {
 
   // Render scene(s)
   models.forEach(async (model) => {
-    renderModel(model, null, grid)
+    await renderModel(model, null, grid)
   })
 }
 
