@@ -638,7 +638,7 @@ const reflectionProbe = renderer.reflectionProbe({
 Load a 3D model as a scene: an object containing a root entity hierarchy that you can add to the renderer like any other entity.
 
 ```js
-const scene = await renderer.loadGltf('model.gltf')
+const scene = await renderer.loadScene('model.gltf')
 renderer.add(scene.root)
 ```
 
