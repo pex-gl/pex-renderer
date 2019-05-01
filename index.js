@@ -1,3 +1,4 @@
+const path = require('path')
 const vec3 = require('pex-math/vec3')
 const vec4 = require('pex-math/vec4')
 const mat3 = require('pex-math/mat3')
@@ -23,6 +24,7 @@ const createAreaLight = require('./area-light')
 const createReflectionProbe = require('./reflection-probe')
 const createSkybox = require('./skybox')
 const createOverlay = require('./overlay')
+const loadGltf = require('./loaders/glTF')
 
 const PBR_VERT = require('./shaders/pipeline/material.vert.js')
 const PBR_FRAG = require('./shaders/pipeline/material.frag.js')
@@ -34,6 +36,10 @@ const OVERLAY_FRAG = require('./shaders/pipeline/overlay.frag.js')
 const ERROR_VERT = require('./shaders/error/error.vert.js')
 const ERROR_FRAG = require('./shaders/error/error.frag.js')
 const SHADERS_CHUNKS = require('./shaders/chunks')
+
+const LOADERS = new Map()
+  .set(['.gltf', '.glb'], loadGltf)
+const LOADERS_ENTRIES = Array.from(LOADERS.entries())
 
 var State = {
   frame: 0,
@@ -1180,9 +1186,11 @@ Renderer.prototype.add = function (entity, parent) {
   if (entity === this.root) {
     return entity
   }
+
   entity.transform.set({
     parent: parent ? parent.transform : entity.transform.parent || this.root.transform
   })
+
   return entity
 }
 
@@ -1256,6 +1264,22 @@ Renderer.prototype.skybox = function (opts) {
 
 Renderer.prototype.overlay = function (opts) {
   return createOverlay(Object.assign({ ctx: this._ctx }, opts))
+}
+
+Renderer.prototype.loadScene = async function (url, opts = {}) {
+  const extension = path.extname(url)
+
+  const [, loader] =
+    opts.loader ||
+    LOADERS_ENTRIES.find(([extensions]) => extensions.includes(extension)) ||
+    []
+
+  if (loader) {
+    const scenes = await loader(url, this, opts)
+    return scenes.length > 1 ? scenes : scenes[0]
+  } else {
+    console.error(`pex-renderer: No loader found for file extension ${extension}`)
+  }
 }
 
 module.exports = function createRenderer (opts) {

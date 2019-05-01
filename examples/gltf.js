@@ -14,8 +14,6 @@ const createBox = require('primitive-box')
 const edges = require('geom-edges')
 const aabb = require('pex-geom/aabb')
 
-const loadGltf = require('./gltf/gltf-load')
-const buildGltf = require('./gltf/gltf-build')
 const { makeAxes } = require('./helpers')
 
 const MODELS_PATH = 'glTF-Sample-Models'
@@ -29,8 +27,21 @@ const State = {
   gridSize: 1,
   showBoundingBoxes: false,
   useEnvMap: false,
-  shadows: false
+  shadows: false,
+  formats: [
+    'glTF',
+    'glTF-Binary',
+    'glTF-Draco',
+    'glTF-Embedded'
+  ],
+  currentFormat: 0
 }
+
+const FORMAT_EXTENSION = new Map()
+  .set('glTF', 'gltf')
+  .set('glTF-Binary', 'glb')
+  .set('glTF-Draco', 'gltf')
+  .set('glTF-Embedded', 'gltf')
 
 // Utils
 const positions = [[0, 0, 0], [0, 0, 0]]
@@ -231,13 +242,13 @@ function rescaleScene (scene) {
 }
 
 function onSceneLoaded (scene, grid) {
+  State.scenes.push(scene)
+  renderer.update() // refresh scene hierarchy
+
   if (grid) {
     rescaleScene(scene)
     repositionModel(scene)
   }
-
-  State.scenes.push(scene)
-  renderer.update() // refresh scene hierarchy
 
   if (State.showBoundingBoxes) {
     const box = createBox(1)
@@ -269,14 +280,20 @@ let floorEntity
 let cameraEntity
 
 async function loadScene (url, skipCameras) {
-  const gltf = await loadGltf(url)
+  let scene
+  try {
+    console.time('building ' + url)
+    // All examples only have one scene
+    State.scene = scene = await renderer.loadScene(url, {
+      skipCameras
+    })
+  } catch (e) {
+    console.timeEnd('building ' + url)
+    return e
+  }
 
-  console.time('building ' + url)
-  const scene = State.scene = buildGltf(gltf, ctx, renderer, {
-    skipCameras
-  })
-  scene.entities.forEach((e) => {
-    const materialCmp = e.getComponent('Material')
+  scene.entities.forEach((entity) => {
+    const materialCmp = entity.getComponent('Material')
     if (materialCmp) {
       materialCmp.set({
         castShadows: State.shadows,
@@ -285,18 +302,22 @@ async function loadScene (url, skipCameras) {
     }
   })
 
+  renderer.add(scene.root)
+
   // Add camera for models lacking one
   if (!skipCameras) {
-    const far = 10000
-    const sceneBounds = scene.root.transform.worldBounds
-    // const sceneSize = aabb.size(scene.root.transform.worldBounds)
-    const sceneCenter = aabb.center(scene.root.transform.worldBounds)
-
-    const boundingSphereRadius = Math.max.apply(Math, sceneBounds.map(bound => vec3.distance(sceneCenter, bound)))
-
     cameraEntity = scene.entities.find(entity => entity.components.find(component => component.type === 'Camera'))
 
     if (!cameraEntity) {
+      // Update needed for transform.worldBounds
+      renderer.update()
+      const far = 10000
+      const sceneBounds = scene.root.transform.worldBounds
+      // const sceneSize = aabb.size(scene.root.transform.worldBounds)
+      const sceneCenter = aabb.center(scene.root.transform.worldBounds)
+
+      const boundingSphereRadius = Math.max.apply(Math, sceneBounds.map(bound => vec3.distance(sceneCenter, bound)))
+
       const fov = Math.PI / 4
       const distance = (boundingSphereRadius * 2) / Math.tan(fov / 2)
 
@@ -337,10 +358,34 @@ async function loadScene (url, skipCameras) {
 
     console.timeEnd('building ' + url)
     scene.url = url
-    renderer.add(scene.root)
   }
 
   return scene
+}
+
+async function renderModel (model, overrideFormat, grid) {
+  const format = overrideFormat || State.formats[State.currentFormat]
+
+  try {
+    const scene = await loadScene(
+      `${MODELS_PATH}/${model.name}/${format}/${
+        model.name
+      }.${FORMAT_EXTENSION.get(format)}`,
+      grid
+    )
+
+    if (scene instanceof Error) {
+      throw scene
+    } else {
+      onSceneLoaded(scene, grid)
+    }
+  } catch (e) {
+    console.error(e)
+    console.warn(`No format ${format} supported for model ${model.name}. Defaulting to glTF.`)
+    if (!overrideFormat) {
+      renderModel(model, 'glTF', grid)
+    }
+  }
 }
 
 async function init () {
@@ -366,6 +411,10 @@ async function init () {
       value: models[i],
       texture: tex
     }))
+  gui.addRadioList('Format', State, 'currentFormat', State.formats.map((name, value) => ({
+    name,
+    value
+  })))
   gui.addTexture2DList('Models', State, 'selectedModel', thumbnails, 4, async (model) => {
     // Clean up
     if (State.selectedModel) {
@@ -380,72 +429,70 @@ async function init () {
 
     renderer.remove(cameraEntity)
 
-    // Render scene
-    const scene = await loadScene(`${MODELS_PATH}/${model.name}/glTF/${model.name}.gltf`)
-    onSceneLoaded(scene)
+    renderModel(model)
   })
 
   // Filter models
-  models = [
-    // { name: '2CylinderEngine' },
-    // { name: 'AlphaBlendModeTest' },
-    // { name: 'AnimatedCube' },
-    // { name: 'AnimatedMorphCube' },
-    // { name: 'AnimatedMorphSphere' },
-    // { name: 'AnimatedTriangle' },
-    // { name: 'AntiqueCamera' },
-    // { name: 'Avocado' },
-    // { name: 'BarramundiFish' },
-    // { name: 'BoomBox' },
-    // { name: 'BoomBoxWithAxes' },
-    // { name: 'Box' },
-    // { name: 'BoxAnimated' },
-    // { name: 'BoxInterleaved' },
-    // { name: 'BoxTextured' },
-    // { name: 'BoxTexturedNonPowerOfTwo' },
-    // { name: 'BoxVertexColors' },
-    // { name: 'BrainStem' },
-    // { name: 'Buggy' },
-    // { name: 'Cameras' },
-    // { name: 'CesiumMan' },
-    // { name: 'CesiumMilkTruck' },
-    // { name: 'Corset' },
-    // { name: 'Cube' },
-    // { name: 'DamagedHelmet' },
-    // { name: 'Duck' },
-    // { name: 'EnvironmentTest' },
-    { name: 'FlightHelmet' },
-    // { name: 'GearboxAssy' },
-    // { name: 'InterpolationTest' },
-    // { name: 'Lantern' },
-    // { name: 'MetalRoughSpheres' },
-    // { name: 'Monster' },
-    // { name: 'MorphPrimitivesTest' },
-    // { name: 'MultiUVTest' },
-    // { name: 'NormalTangentMirrorTest' },
-    // { name: 'NormalTangentTest' },
-    // { name: 'OrientationTest' },
-    // { name: 'ReciprocatingSaw' },
-    // { name: 'RiggedFigure' },
-    // { name: 'RiggedSimple' },
-    // { name: 'SciFiHelmet' },
-    // { name: 'SimpleMeshes' },
-    // { name: 'SimpleMorph' },
-    // { name: 'SimpleSparseAccessor' },
-    // { name: 'SpecGlossVsMetalRough' },
-    // { name: 'Sponza' },
-    // { name: 'Suzanne' },
-    // { name: 'TextureCoordinateTest' },
-    // { name: 'TextureSettingsTest' },
-    // { name: 'TextureTransformTest' },
-    // { name: 'Triangle' },
-    // { name: 'TriangleWithoutIndices' },
-    // { name: 'TwoSidedPlane' },
-    // { name: 'UnlitTest' },
-    // { name: 'VC' },
-    // { name: 'VertexColorTest' },
-    // { name: 'WaterBottle' }
-  ]
+  models = models.filter(model => [
+    // '2CylinderEngine',
+    // 'AlphaBlendModeTest',
+    // 'AnimatedCube',
+    // 'AnimatedMorphCube',
+    // 'AnimatedMorphSphere',
+    // 'AnimatedTriangle',
+    // 'AntiqueCamera',
+    // 'Avocado',
+    // 'BarramundiFish',
+    // 'BoomBox',
+    // 'BoomBoxWithAxes',
+    // 'Box',
+    // 'BoxAnimated',
+    // 'BoxInterleaved',
+    // 'BoxTextured',
+    // 'BoxTexturedNonPowerOfTwo',
+    // 'BoxVertexColors',
+    // 'BrainStem',
+    // 'Buggy',
+    // 'Cameras',
+    // 'CesiumMan',
+    // 'CesiumMilkTruck',
+    // 'Corset',
+    // 'Cube',
+    'DamagedHelmet',
+    // 'Duck',
+    // 'EnvironmentTest',
+    // 'FlightHelmet',
+    // 'GearboxAssy',
+    // 'InterpolationTest',
+    // 'Lantern',
+    // 'MetalRoughSpheres',
+    // 'Monster',
+    // 'MorphPrimitivesTest',
+    // 'MultiUVTest',
+    // 'NormalTangentMirrorTest',
+    // 'NormalTangentTest',
+    // 'OrientationTest',
+    // 'ReciprocatingSaw',
+    // 'RiggedFigure',
+    // 'RiggedSimple',
+    // 'SciFiHelmet',
+    // 'SimpleMeshes',
+    // 'SimpleMorph',
+    // 'SimpleSparseAccessor',
+    // 'SpecGlossVsMetalRough',
+    // 'Sponza',
+    // 'Suzanne',
+    // 'TextureCoordinateTest',
+    // 'TextureSettingsTest',
+    // 'TextureTransformTest',
+    // 'Triangle',
+    // 'TriangleWithoutIndices',
+    // 'TwoSidedPlane',
+    // 'UnlitTest',
+    // 'VC',
+    // 'VertexColorTest',
+    // 'WaterBottle'
+  ].includes(model.name))
 
   const grid = models.length > 1
 
@@ -478,8 +525,7 @@ async function init () {
 
   // Render scene(s)
   await Promise.all(models.map(async (model) => {
-    const scene = await loadScene(`${MODELS_PATH}/${model.name}/glTF/${model.name}.gltf`, grid)
-    onSceneLoaded(scene, grid)
+    await renderModel(model, null, grid)
   }))
 
   window.dispatchEvent(new CustomEvent('pex-screenshot'))
