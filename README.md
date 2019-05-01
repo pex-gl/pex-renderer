@@ -23,6 +23,7 @@ This is an **experimental** API and it's likely to change in the future.
     - animation, geometry, material, morph, skin
   - [Lighting Components](#lighting-components)
     - ambientLight, directionalLight, areaLight, spotLight, skybox, reflectionProbe
+  - [Loaders](#loaders)
   - [Creating Custom Components](#creating-custom-components)
 
 # Usage
@@ -629,6 +630,19 @@ const reflectionProbe = renderer.reflectionProbe({
 ```
 
 *Note: Due to the cost of updating and pre-filtering environment map the ReflectionProbe is no updated automatically and requires `reflectionProbe.set({ dirty: true })` whenever Skybox changes. The dirty flag is true by default so the Reflection Probe will get updated once on init*.
+
+## Loaders
+
+### scene = renderer.loadScene(url, opts)
+
+Load a 3D model as a scene: an object containing a root entity hierarchy that you can add to the renderer like any other entity.
+
+```js
+const scene = await renderer.loadGltf('model.gltf')
+renderer.add(scene.root)
+```
+
+*Note: Currently only glTF is supported (JSON, binary and Embedded).*
 
 ## Creating Custom Components
 

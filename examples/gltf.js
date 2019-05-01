@@ -14,8 +14,6 @@ const createBox = require('primitive-box')
 const edges = require('geom-edges')
 const aabb = require('pex-geom/aabb')
 
-const loadGltf = require('./gltf/gltf-load')
-const buildGltf = require('./gltf/gltf-build')
 const { makeAxes } = require('./helpers')
 
 const MODELS_PATH = 'glTF-Sample-Models'
@@ -36,7 +34,7 @@ const State = {
     'glTF-Draco',
     'glTF-Embedded'
   ],
-  currentFormat: 3
+  currentFormat: 0
 }
 
 const FORMAT_EXTENSION = new Map()
@@ -282,19 +280,20 @@ let floorEntity
 let cameraEntity
 
 async function loadScene (url, skipCameras) {
-  let gltf
+  let scene
   try {
-    gltf = await loadGltf(url)
+    console.time('building ' + url)
+    // All examples only have one scene
+    State.scene = scene = await renderer.loadScene(url, {
+      skipCameras
+    })
   } catch (e) {
+    console.timeEnd('building ' + url)
     return e
   }
 
-  console.time('building ' + url)
-  const scene = State.scene = buildGltf(gltf, ctx, renderer, {
-    skipCameras
-  })
-  scene.entities.forEach((e) => {
-    const materialCmp = e.getComponent('Material')
+  scene.entities.forEach((entity) => {
+    const materialCmp = entity.getComponent('Material')
     if (materialCmp) {
       materialCmp.set({
         castShadows: State.shadows,
@@ -303,18 +302,22 @@ async function loadScene (url, skipCameras) {
     }
   })
 
+  renderer.add(scene.root)
+
   // Add camera for models lacking one
   if (!skipCameras) {
-    const far = 10000
-    const sceneBounds = scene.root.transform.worldBounds
-    // const sceneSize = aabb.size(scene.root.transform.worldBounds)
-    const sceneCenter = aabb.center(scene.root.transform.worldBounds)
-
-    const boundingSphereRadius = Math.max.apply(Math, sceneBounds.map(bound => vec3.distance(sceneCenter, bound)))
-
     cameraEntity = scene.entities.find(entity => entity.components.find(component => component.type === 'Camera'))
 
     if (!cameraEntity) {
+      // Update needed for transform.worldBounds
+      renderer.update()
+      const far = 10000
+      const sceneBounds = scene.root.transform.worldBounds
+      // const sceneSize = aabb.size(scene.root.transform.worldBounds)
+      const sceneCenter = aabb.center(scene.root.transform.worldBounds)
+
+      const boundingSphereRadius = Math.max.apply(Math, sceneBounds.map(bound => vec3.distance(sceneCenter, bound)))
+
       const fov = Math.PI / 4
       const distance = (boundingSphereRadius * 2) / Math.tan(fov / 2)
 
@@ -355,7 +358,6 @@ async function loadScene (url, skipCameras) {
 
     console.timeEnd('building ' + url)
     scene.url = url
-    renderer.add(scene.root)
   }
 
   return scene
