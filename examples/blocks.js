@@ -21,17 +21,22 @@ const State = {
 random.seed(10)
 
 // Utils
-const scheme = [[0.000, 0.500, 0.500], [0.000, 0.500, 0.500], [0.000, 0.500, 0.333], [0.000, 0.500, 0.667]]
+const scheme = [
+  [0.0, 0.5, 0.5],
+  [0.0, 0.5, 0.5],
+  [0.0, 0.5, 0.333],
+  [0.0, 0.5, 0.667]
+]
 
 // Standard Normal constiate using Box-Muller transform.
 // http://stackoverflow.com/a/36481059
-function randnBM () {
+function randnBM() {
   const u = 1 - Math.random() // Subtraction to flip [0, 1) to (0, 1].
   const v = 1 - Math.random()
   return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v)
 }
 
-function rand () {
+function rand() {
   return (Math.random() * 2 - 1) * 3
 }
 
@@ -50,7 +55,6 @@ const renderer = createRenderer(ctx)
 const gui = createGUI(ctx)
 gui.addFPSMeeter()
 
-let skybox = null
 let frameNumber = 0
 let debugOnce = false
 
@@ -91,8 +95,8 @@ const offsets = []
 const scales = []
 const colors = []
 for (let i = 0; i < 1000; i++) {
-  const x = randnBM() * 8 / 3
-  const z = randnBM() * 8 / 3
+  const x = (randnBM() * 8) / 3
+  const z = (randnBM() * 8) / 3
   const y = 2 * random.noise2(x / 2, z / 2) + random.noise2(2 * x, 2 * z)
   const s = Math.max(0.0, 3.0 - Math.sqrt(x * x + z * z) / 2)
   const c = random.float(0.7, 0.9)
@@ -104,57 +108,62 @@ if (instanced) {
   cube.offsets = { buffer: ctx.vertexBuffer(offsets), divisor: 1 }
   cube.scales = { buffer: ctx.vertexBuffer(scales), divisor: 1 }
   cube.instances = offsets.length
-  renderer.add(renderer.entity([
-    renderer.geometry(cube),
-    renderer.transform({
-    }),
-    renderer.material({
-      baseColor: colors[0],
-      rougness: 0.7,
-      metallic: 0.0,
-      castShadows: true,
-      receiveShadows: true
-    })
-  ]))
-} else {
-  offsets.forEach((offset, i) => {
-    renderer.add(renderer.entity([
+  renderer.add(
+    renderer.entity([
       renderer.geometry(cube),
-      renderer.transform({
-        position: offset,
-        scale: scales[i]
-      }),
+      renderer.transform({}),
       renderer.material({
-        baseColor: colors[i],
+        baseColor: colors[0],
         rougness: 0.7,
         metallic: 0.0,
         castShadows: true,
         receiveShadows: true
       })
-    ]))
+    ])
+  )
+} else {
+  offsets.forEach((offset, i) => {
+    renderer.add(
+      renderer.entity([
+        renderer.geometry(cube),
+        renderer.transform({
+          position: offset,
+          scale: scales[i]
+        }),
+        renderer.material({
+          baseColor: colors[i],
+          rougness: 0.7,
+          metallic: 0.0,
+          castShadows: true,
+          receiveShadows: true
+        })
+      ])
+    )
   })
 }
 
 const sphere = createSphere(0.2 + Math.random() * 0.25)
 for (let i = 0; i < 100; i++) {
-  const x = rand() * 8 / 3
-  const z = rand() * 8 / 3
+  const x = (rand() * 8) / 3
+  const z = (rand() * 8) / 3
   const y = 2 * random.noise2(x / 2, z / 2) + random.noise2(2 * x, 2 * z)
   const s = Math.max(0.0, 3.0 - Math.sqrt(x * x + z * z) / 2)
-  renderer.add(renderer.entity([
-    renderer.geometry(sphere),
-    renderer.transform({
-      position: [x, y, z],
-      scale: [s, s, s]
-    }),
-    renderer.material({
-      baseColor: gradient(Math.random()).concat(1),
-      rougness: 0.91,
-      metallic: 0.0,
-      castShadows: true,
-      receiveShadows: true
-    })
-  ]))
+  renderer.add(
+    renderer.entity([
+      renderer.geometry(sphere),
+      renderer.transform({
+        position: [x, y, z],
+        scale: [s, s, s]
+      }),
+      renderer.material({
+        baseColor: gradient(Math.random()).concat(1),
+        rougness: 0.91,
+        metallic: 0.0,
+        castShadows: true,
+        receiveShadows: true
+      })
+    ])
+  )
 }
 
 // Lights
@@ -170,10 +179,7 @@ const sunTransform = renderer.transform({
   position: [2, 2, 2],
   rotation: quat.fromTo([0, 0, 1], vec3.normalize([-1, -1, -1]), [0, 1, 0])
 })
-const sunEntity = renderer.entity([
-  sunTransform,
-  sunLight
-])
+const sunEntity = renderer.entity([sunTransform, sunLight])
 renderer.add(sunEntity)
 
 gui.addTexture2D('Shadow Map', sunLight._shadowMap)
@@ -182,10 +188,7 @@ const skyboxCmp = renderer.skybox({
   sunPosition: sunPosition
 })
 const reflectionProbeCmp = renderer.reflectionProbe()
-const skyEntity = renderer.entity([
-  skyboxCmp,
-  reflectionProbeCmp
-])
+const skyEntity = renderer.entity([skyboxCmp, reflectionProbeCmp])
 renderer.add(skyEntity)
 
 const pointLightEnt = renderer.entity([
@@ -227,17 +230,30 @@ const areaLightEntity = renderer.entity([
 renderer.add(areaLightEntity)
 
 // GUI
-gui.addParam('AreaLight Size', areaLightEntity.transform, 'scale', { min: 0, max: 5 }, (value) => {
-  areaLightEntity.transform.set({ scale: [value[0], value[1], value[2]] })
+gui.addParam(
+  'AreaLight Size',
+  areaLightEntity.transform,
+  'scale',
+  { min: 0, max: 5 },
+  (value) => {
+    areaLightEntity.transform.set({ scale: [value[0], value[1], value[2]] })
+  }
+)
+gui.addParam(
+  'AreaLight Intensity',
+  areaLightEntity.getComponent('AreaLight'),
+  'intensity',
+  { min: 0, max: 5 }
+)
+gui.addParam('AreaLight', areaLightEntity.getComponent('AreaLight'), 'color', {
+  type: 'color'
 })
-gui.addParam('AreaLight Intensity', areaLightEntity.getComponent('AreaLight'), 'intensity', { min: 0, max: 5 })
-gui.addParam('AreaLight', areaLightEntity.getComponent('AreaLight'), 'color', { type: 'color' })
 
-function updateSunPosition () {
+function updateSunPosition() {
   mat4.identity(State.elevationMat)
   mat4.identity(State.rotationMat)
-  mat4.rotate(State.elevationMat, State.elevation / 180 * Math.PI, [0, 0, 1])
-  mat4.rotate(State.rotationMat, State.azimuth / 180 * Math.PI, [0, 1, 0])
+  mat4.rotate(State.elevationMat, (State.elevation / 180) * Math.PI, [0, 0, 1])
+  mat4.rotate(State.rotationMat, (State.azimuth / 180) * Math.PI, [0, 1, 0])
 
   const sunPosition = [2, 0, 0]
   vec3.multMat4(sunPosition, State.elevationMat)
@@ -251,7 +267,13 @@ function updateSunPosition () {
   skyboxCmp.set({ sunPosition })
   reflectionProbeCmp.set({ dirty: true })
 }
-gui.addParam('Sun Elevation', State, 'elevation', { min: -90, max: 180 }, updateSunPosition)
+gui.addParam(
+  'Sun Elevation',
+  State,
+  'elevation',
+  { min: -90, max: 180 },
+  updateSunPosition
+)
 
 updateSunPosition()
 

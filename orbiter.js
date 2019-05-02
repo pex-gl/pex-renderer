@@ -12,7 +12,7 @@ const latLonToXyz = require('latlon-to-xyz')
 const xyzToLatLon = require('xyz-to-latlon')
 const eventOffset = require('mouse-event-offset')
 
-function Orbiter (opts) {
+function Orbiter(opts) {
   this.type = 'Orbiter'
   this.enabled = true
   this.changed = new Signal()
@@ -62,16 +62,18 @@ function Orbiter (opts) {
   this.set(opts)
 }
 
-Orbiter.prototype.init = function (entity) {
+Orbiter.prototype.init = function(entity) {
   this.entity = entity
   this.setup()
 }
 
-Orbiter.prototype.set = function (opts) {
+Orbiter.prototype.set = function(opts) {
   Object.assign(this, opts)
   if (opts.target || opts.position) {
     const distance = vec3.distance(this.position, this.target)
-    const latLon = xyzToLatLon(vec3.normalize(vec3.sub(vec3.copy(this.position), this.target)))
+    const latLon = xyzToLatLon(
+      vec3.normalize(vec3.sub(vec3.copy(this.position), this.target))
+    )
     this.lat = latLon[0]
     this.lon = latLon[1]
     this.currentLat = this.lat
@@ -88,7 +90,7 @@ Orbiter.prototype.set = function (opts) {
   Object.keys(opts).forEach((prop) => this.changed.dispatch(prop))
 }
 
-Orbiter.prototype.update = function () {
+Orbiter.prototype.update = function() {
   const camera = this.entity.getComponent('Camera')
   this.updateMatrix()
   const transformCmp = this.entity.transform
@@ -110,7 +112,7 @@ Orbiter.prototype.update = function () {
   }
 }
 
-Orbiter.prototype.updateWindowSize = function () {
+Orbiter.prototype.updateWindowSize = function() {
   const width = this.element.clientWidth || this.element.innerWidth
   const height = this.element.clientHeight || this.element.innerHeight
   if (width !== this.width) {
@@ -119,7 +121,7 @@ Orbiter.prototype.updateWindowSize = function () {
   }
 }
 
-Orbiter.prototype.updateMatrix = function () {
+Orbiter.prototype.updateMatrix = function() {
   const camera = this.entity.getComponent('Camera')
   const position = this.position
   const target = this.target
@@ -158,15 +160,15 @@ Orbiter.prototype.updateMatrix = function () {
   }
 }
 
-Orbiter.prototype.setup = function () {
+Orbiter.prototype.setup = function() {
   const orbiter = this
 
-  function offset (e, target) {
+  function offset(e, target) {
     if (e.touches) return eventOffset(e.touches[0], target)
     else return eventOffset(e, target)
   }
 
-  function down (x, y, shift) {
+  function down(x, y, shift) {
     const camera = orbiter.entity.getComponent('Camera')
     orbiter.dragging = true
     orbiter.dragPos[0] = x
@@ -176,16 +178,29 @@ Orbiter.prototype.setup = function () {
       orbiter.clickPosWindow[0] = x
       orbiter.clickPosWindow[1] = y
       vec3.set(orbiter.clickTarget, orbiter.target)
-      const targetInViewSpace = vec3.multMat4(vec3.copy(orbiter.clickTarget), camera.viewMatrix)
+      const targetInViewSpace = vec3.multMat4(
+        vec3.copy(orbiter.clickTarget),
+        camera.viewMatrix
+      )
       orbiter.panPlane = [targetInViewSpace, [0, 0, 1]]
       ray.hitTestPlane(
-        camera.getViewRay(orbiter.clickPosWindow[0], orbiter.clickPosWindow[1], orbiter.width, orbiter.height),
+        camera.getViewRay(
+          orbiter.clickPosWindow[0],
+          orbiter.clickPosWindow[1],
+          orbiter.width,
+          orbiter.height
+        ),
         orbiter.panPlane[0],
         orbiter.panPlane[1],
         orbiter.clickPosPlane
       )
       ray.hitTestPlane(
-        camera.getViewRay(orbiter.dragPosWindow[0], orbiter.dragPosWindow[1], orbiter.width, orbiter.height),
+        camera.getViewRay(
+          orbiter.dragPosWindow[0],
+          orbiter.dragPosWindow[1],
+          orbiter.width,
+          orbiter.height
+        ),
         orbiter.panPlane[0],
         orbiter.panPlane[1],
         orbiter.dragPosPlane
@@ -195,7 +210,7 @@ Orbiter.prototype.setup = function () {
     }
   }
 
-  function move (x, y, shift) {
+  function move(x, y, shift) {
     const camera = orbiter.entity.getComponent('Camera')
     if (!orbiter.dragging) {
       return
@@ -204,22 +219,41 @@ Orbiter.prototype.setup = function () {
       orbiter.dragPosWindow[0] = x
       orbiter.dragPosWindow[1] = y
       ray.hitTestPlane(
-        camera.getViewRay(orbiter.clickPosWindow[0], orbiter.clickPosWindow[1], orbiter.width, orbiter.height),
+        camera.getViewRay(
+          orbiter.clickPosWindow[0],
+          orbiter.clickPosWindow[1],
+          orbiter.width,
+          orbiter.height
+        ),
         orbiter.panPlane[0],
         orbiter.panPlane[1],
         orbiter.clickPosPlane
       )
       ray.hitTestPlane(
-        camera.getViewRay(orbiter.dragPosWindow[0], orbiter.dragPosWindow[1], orbiter.width, orbiter.height),
+        camera.getViewRay(
+          orbiter.dragPosWindow[0],
+          orbiter.dragPosWindow[1],
+          orbiter.width,
+          orbiter.height
+        ),
         orbiter.panPlane[0],
         orbiter.panPlane[1],
         orbiter.dragPosPlane
       )
       mat4.set(orbiter.invViewMatrix, camera.viewMatrix)
       mat4.invert(orbiter.invViewMatrix)
-      vec3.multMat4(vec3.set(orbiter.clickPosWorld, orbiter.clickPosPlane), orbiter.invViewMatrix)
-      vec3.multMat4(vec3.set(orbiter.dragPosWorld, orbiter.dragPosPlane), orbiter.invViewMatrix)
-      const diffWorld = vec3.sub(vec3.copy(orbiter.dragPosWorld), orbiter.clickPosWorld)
+      vec3.multMat4(
+        vec3.set(orbiter.clickPosWorld, orbiter.clickPosPlane),
+        orbiter.invViewMatrix
+      )
+      vec3.multMat4(
+        vec3.set(orbiter.dragPosWorld, orbiter.dragPosPlane),
+        orbiter.invViewMatrix
+      )
+      const diffWorld = vec3.sub(
+        vec3.copy(orbiter.dragPosWorld),
+        orbiter.clickPosWorld
+      )
       const target = vec3.sub(vec3.copy(orbiter.clickTarget), diffWorld)
       orbiter.set({ target: target })
     } else if (orbiter.drag) {
@@ -233,61 +267,57 @@ Orbiter.prototype.setup = function () {
     }
   }
 
-  function up () {
+  function up() {
     orbiter.dragging = false
     orbiter.panPlane = null
   }
 
-  function scroll (dy) {
+  function scroll(dy) {
     if (!orbiter.zoom) return
 
     orbiter.distance *= 1 + dy / orbiter.zoomSlowdown
-    orbiter.distance = clamp(orbiter.distance, orbiter.minDistance, orbiter.maxDistance)
-  }
-
-  function onMouseDown (e) {
-    if (!orbiter.enabled) return
-
-    const pos = offset(e, orbiter.element)
-    down(
-      pos[0],
-      pos[1],
-      e.shiftKey || (e.touches && e.touches.length === 2)
+    orbiter.distance = clamp(
+      orbiter.distance,
+      orbiter.minDistance,
+      orbiter.maxDistance
     )
   }
 
-  function onMouseMove (e) {
+  function onMouseDown(e) {
     if (!orbiter.enabled) return
 
     const pos = offset(e, orbiter.element)
-    move(
-      pos[0],
-      pos[1],
-      e.shiftKey || (e.touches && e.touches.length === 2)
-    )
+    down(pos[0], pos[1], e.shiftKey || (e.touches && e.touches.length === 2))
   }
 
-  function onMouseUp (e) {
+  function onMouseMove(e) {
+    if (!orbiter.enabled) return
+
+    const pos = offset(e, orbiter.element)
+    move(pos[0], pos[1], e.shiftKey || (e.touches && e.touches.length === 2))
+  }
+
+  function onMouseUp() {
     if (!orbiter.enabled) return
 
     up()
   }
 
-  function onWheel (e) {
+  function onWheel(e) {
     if (!orbiter.enabled) return
 
     scroll(e.deltaY)
     e.preventDefault()
   }
 
-  function onTouchStart (e) {
+  function onTouchStart(e) {
     if (!orbiter.enabled) return
 
     e.preventDefault()
     onMouseDown(e)
   }
 
-  function onTouchMove (e) {
+  function onTouchMove(e) {
     if (!orbiter.enabled) return
 
     e.preventDefault()
@@ -312,7 +342,7 @@ Orbiter.prototype.setup = function () {
   document.addEventListener('mouseup', onMouseUp)
 }
 
-Orbiter.prototype.dispose = function () {
+Orbiter.prototype.dispose = function() {
   this.element.removeEventListener('mousedown', this._onMouseDown)
   this.element.removeEventListener('wheel', this._onWheel)
 
@@ -324,6 +354,6 @@ Orbiter.prototype.dispose = function () {
   document.removeEventListener('mouseup', this._onMouseUp)
 }
 
-module.exports = function createOrbiter (opts) {
+module.exports = function createOrbiter(opts) {
   return new Orbiter(opts)
 }

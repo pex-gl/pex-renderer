@@ -1,6 +1,6 @@
 const Signal = require('signals')
 
-function Morph (opts) {
+function Morph(opts) {
   this.type = 'Morph'
   this.enabled = true
   this.changed = new Signal()
@@ -13,26 +13,28 @@ function Morph (opts) {
   this.set(opts)
 }
 
-Morph.prototype.init = function (entity) {
+Morph.prototype.init = function(entity) {
   this.entity = entity
 
-  this.current = this.current || Object.keys(this.sources).reduce((current, attribute) => {
-    current[attribute] = [...this.sources[attribute]]
-    return current;
-  }, {});
+  this.current =
+    this.current ||
+    Object.keys(this.sources).reduce((current, attribute) => {
+      current[attribute] = [...this.sources[attribute]]
+      return current
+    }, {})
 }
 
-Morph.prototype.set = function (opts) {
+Morph.prototype.set = function(opts) {
   Object.assign(this, opts)
   Object.keys(opts).forEach((prop) => this.changed.dispatch(prop))
   this.dirty = true
 }
 
-Morph.prototype.update = function () {
+Morph.prototype.update = function() {
   if (!this.dirty || !this.enabled) return
   this.dirty = false
 
-  Object.keys(this.sources).forEach(key => {
+  Object.keys(this.sources).forEach((key) => {
     const sourceAttributes = this.sources[key]
     const targetAttributes = this.targets[key]
 
@@ -65,6 +67,6 @@ Morph.prototype.update = function () {
   this.entity.getComponent('Geometry').set(this.current)
 }
 
-module.exports = function createMorph (opts) {
+module.exports = function createMorph(opts) {
   return new Morph(opts)
 }

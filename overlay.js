@@ -1,7 +1,7 @@
 const Signal = require('signals')
 
 // Overlay position and size if relative to screen size if < 1 or in pixels if > 1
-function Overlay (opts) {
+function Overlay(opts) {
   this.type = 'Overlay'
   this.enabled = true
   this.changed = new Signal()
@@ -16,18 +16,17 @@ function Overlay (opts) {
   this.set(opts)
 }
 
-Overlay.prototype.init = function (entity) {
+Overlay.prototype.init = function(entity) {
   this.entity = entity
 }
 
-Overlay.prototype.set = function (opts) {
+Overlay.prototype.set = function(opts) {
   Object.assign(this, opts)
   Object.keys(opts).forEach((prop) => this.changed.dispatch(prop))
 }
 
-Overlay.prototype.update = function () {
-}
+Overlay.prototype.update = function() {}
 
-module.exports = function createOverlay (opts) {
+module.exports = function createOverlay(opts) {
   return new Overlay(opts)
 }

@@ -37,9 +37,7 @@ const skyboxEntity = renderer.entity([
 ])
 renderer.add(skyboxEntity)
 
-const reflectionProbeEntity = renderer.entity([
-  renderer.reflectionProbe()
-])
+const reflectionProbeEntity = renderer.entity([renderer.reflectionProbe()])
 renderer.add(reflectionProbeEntity)
 
 const groundEntity = renderer.entity([

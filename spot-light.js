@@ -1,7 +1,7 @@
 const Signal = require('signals')
 const mat4 = require('pex-math').mat4
 
-function SpotLight (opts) {
+function SpotLight(opts) {
   this.type = 'SpotLight'
   this.enabled = true
   this.changed = new Signal()
@@ -25,11 +25,11 @@ function SpotLight (opts) {
   this.set(opts)
 }
 
-SpotLight.prototype.init = function (entity) {
+SpotLight.prototype.init = function(entity) {
   this.entity = entity
 }
 
-SpotLight.prototype.set = function (opts) {
+SpotLight.prototype.set = function(opts) {
   Object.assign(this, opts)
 
   if (opts.color !== undefined || opts.intensity !== undefined) {
@@ -37,7 +37,9 @@ SpotLight.prototype.set = function (opts) {
   }
 
   if (opts.castShadows && !this._ctx.capabilities.depthTexture) {
-    console.warn('SpotLight.castShadows is not supported. WEBGL_depth_texture missing.')
+    console.warn(
+      'SpotLight.castShadows is not supported. WEBGL_depth_texture missing.'
+    )
     this.castShadows = false
   }
 
@@ -50,7 +52,7 @@ SpotLight.prototype.set = function (opts) {
   Object.keys(opts).forEach((prop) => this.changed.dispatch(prop))
 }
 
-SpotLight.prototype.allocateResources = function () {
+SpotLight.prototype.allocateResources = function() {
   const ctx = this._ctx
 
   this._colorMap = ctx.texture2D({
@@ -75,7 +77,7 @@ SpotLight.prototype.allocateResources = function () {
     name: 'SpotLight.shadowMap',
     pass: ctx.pass({
       name: 'SpotLight.shadowMap',
-      color: [ this._colorMap ],
+      color: [this._colorMap],
       depth: this._shadowMap,
       clearColor: [0, 0, 0, 1],
       clearDepth: 1
@@ -85,7 +87,7 @@ SpotLight.prototype.allocateResources = function () {
   }
 }
 
-SpotLight.prototype.disposeResources = function () {
+SpotLight.prototype.disposeResources = function() {
   const ctx = this._ctx
 
   ctx.dispose(this._colorMap)
@@ -98,6 +100,6 @@ SpotLight.prototype.disposeResources = function () {
   this._shadowMapDrawCommand = null
 }
 
-module.exports = function (opts) {
+module.exports = function(opts) {
   return new SpotLight(opts)
 }

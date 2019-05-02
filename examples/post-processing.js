@@ -54,7 +54,7 @@ let debugOnce = false
 let entities = []
 
 // Utils
-function imageFromFile (file, options) {
+function imageFromFile(file, options) {
   const tex = ctx.texture2D({
     data: [0, 0, 0, 0],
     width: 1,
@@ -67,48 +67,68 @@ function imageFromFile (file, options) {
     mipmap: true,
     aniso: 16
   })
-  io.loadImage(file, function (err, image) {
-    if (err) console.log(err)
-    ctx.update(tex, {
-      data: image,
-      width: image.width,
-      height: image.height,
-      mipmap: true,
-      min: ctx.Filter.LinearMipmapLinear
-    })
-  }, true)
+  io.loadImage(
+    file,
+    function(err, image) {
+      if (err) throw err
+      ctx.update(tex, {
+        data: image,
+        width: image.width,
+        height: image.height,
+        mipmap: true,
+        min: ctx.Filter.LinearMipmapLinear
+      })
+    },
+    true
+  )
   return tex
 }
 
 // Geometry
-dragon.positions = centerAndNormalize(dragon.positions).map((v) => vec3.scale(v, 5))
+dragon.positions = centerAndNormalize(dragon.positions).map((v) =>
+  vec3.scale(v, 5)
+)
 dragon.normals = normals(dragon.cells, dragon.positions)
 dragon.uvs = dragon.positions.map(() => [0, 0])
 
 // Camera
-const cameraEntity = renderer.add(renderer.entity([
-  renderer.postProcessing({
-    // enabled: false,
-    ssao: true,
-    fxaa: false,
-    dof: true,
-    dofDepth: 18
-  }),
-  renderer.camera({
-    fov: Math.PI / 3,
-    aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
-    exposure: 2
-  }),
-  renderer.orbiter({
-    position: [0, 2, 20]
-  })
-]))
+const cameraEntity = renderer.add(
+  renderer.entity([
+    renderer.postProcessing({
+      // enabled: false,
+      ssao: true,
+      fxaa: false,
+      dof: true,
+      dofDepth: 18
+    }),
+    renderer.camera({
+      fov: Math.PI / 3,
+      aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
+      exposure: 2
+    }),
+    renderer.orbiter({
+      position: [0, 2, 20]
+    })
+  ])
+)
 
 // Meshes
-const baseColorMap = imageFromFile(ASSETS_DIR + '/plastic-green.material/plastic-green_basecolor.png', { encoding: ctx.Encoding.SRGB })
-const normalMap = imageFromFile(ASSETS_DIR + '/plastic-green.material/plastic-green_n.png', { encoding: ctx.Encoding.Linear })
-const metallicMap = imageFromFile(ASSETS_DIR + '/plastic-green.material/plastic-green_metallic.png', { encoding: ctx.Encoding.Linear })
-const roughnessMap = imageFromFile(ASSETS_DIR + '/plastic-green.material/plastic-green_roughness.png', { encoding: ctx.Encoding.Linear })
+const baseColorMap = imageFromFile(
+  ASSETS_DIR + '/plastic-green.material/plastic-green_basecolor.png',
+  { encoding: ctx.Encoding.SRGB }
+)
+const normalMap = imageFromFile(
+  ASSETS_DIR + '/plastic-green.material/plastic-green_n.png',
+  { encoding: ctx.Encoding.Linear }
+)
+const metallicMap = imageFromFile(
+  ASSETS_DIR + '/plastic-green.material/plastic-green_metallic.png',
+  { encoding: ctx.Encoding.Linear }
+)
+const roughnessMap = imageFromFile(
+  ASSETS_DIR + '/plastic-green.material/plastic-green_roughness.png',
+  { encoding: ctx.Encoding.Linear }
+)
 const groundCube = createRoundedCube(1, 1, 1, 20, 20, 20, 0.01)
 const roundedCube = createRoundedCube(1, 1, 1, 20, 20, 20, 0.2)
 const capsule = createCapsule(0.3)
@@ -140,7 +160,7 @@ for (let i = 0; i < 20; i++) {
     }),
     renderer.geometry(sphere),
     renderer.material({
-      baseColor: [0.07, 0.06, 0.00, 1.0],
+      baseColor: [0.07, 0.06, 0.0, 1.0],
       roughness: 0.2,
       metallic: 0,
       castShadows: true,
@@ -222,7 +242,11 @@ const areaLightEntity = renderer.entity([
   renderer.transform({
     position: [0, 3, 0],
     scale: [5, 1, 0.1],
-    rotation: quat.fromTo(quat.create(), [0, 0, 1], vec3.normalize([0, -1, 0.001]))
+    rotation: quat.fromTo(
+      quat.create(),
+      [0, 0, 1],
+      vec3.normalize([0, -1, 0.001])
+    )
   }),
   renderer.areaLight({
     color: [2.0, 1.2, 0.1, 1],
@@ -231,7 +255,6 @@ const areaLightEntity = renderer.entity([
   })
 ])
 renderer.add(areaLightEntity)
-
 ;(async () => {
   // Sky
   const buffer = await io.loadBinary(`${ASSETS_DIR}/Mono_Lake_B.hdr`)
@@ -248,7 +271,11 @@ renderer.add(areaLightEntity)
   const sunEntity = renderer.entity([
     renderer.transform({
       position: State.sunPosition,
-      rotation: quat.fromTo(quat.create(), [0, 0, 1], vec3.normalize(vec3.scale(vec3.copy(State.sunPosition), -1)))
+      rotation: quat.fromTo(
+        quat.create(),
+        [0, 0, 1],
+        vec3.normalize(vec3.scale(vec3.copy(State.sunPosition), -1))
+      )
     }),
     renderer.directionalLight({
       color: [1, 1, 0.95, 1],
@@ -269,17 +296,18 @@ renderer.add(areaLightEntity)
     boxProjection: false
   })
 
-  const skyEntity = renderer.entity([
-    skybox,
-    reflectionProbe
-  ])
+  const skyEntity = renderer.entity([skybox, reflectionProbe])
   renderer.add(skyEntity)
 
-  function updateSunPosition () {
+  function updateSunPosition() {
     mat4.identity(State.elevationMat)
     mat4.identity(State.rotationMat)
-    mat4.rotate(State.elevationMat, State.elevation / 180 * Math.PI, [0, 0, 1])
-    mat4.rotate(State.rotationMat, State.azimuth / 180 * Math.PI, [0, 1, 0])
+    mat4.rotate(State.elevationMat, (State.elevation / 180) * Math.PI, [
+      0,
+      0,
+      1
+    ])
+    mat4.rotate(State.rotationMat, (State.azimuth / 180) * Math.PI, [0, 1, 0])
 
     const sunPosition = [2, 0, 0]
     vec3.multMat4(sunPosition, State.elevationMat)
@@ -288,7 +316,11 @@ renderer.add(areaLightEntity)
     const dir = vec3.normalize(vec3.sub([0, 0, 0], sunPosition))
     sunEntity.transform.set({
       position: sunPosition,
-      rotation: quat.fromTo(sunEntity.transform.rotation, [0, 0, 1], dir, [0, 1, 0])
+      rotation: quat.fromTo(sunEntity.transform.rotation, [0, 0, 1], dir, [
+        0,
+        1,
+        0
+      ])
     })
     skyEntity.getComponent('Skybox').set({ sunPosition })
     skyEntity.getComponent('ReflectionProbe').set({ dirty: true })
@@ -306,11 +338,29 @@ renderer.add(areaLightEntity)
   gui.addTab('Scene')
   gui.addColumn('Environment')
   gui.addHeader('Sun')
-  gui.addParam('Enabled', sunEntity.getComponent('DirectionalLight'), 'enabled', {}, (value) => {
-    sunEntity.getComponent('DirectionalLight').set({ enabled: value })
-  })
-  gui.addParam('Sun Elevation', State, 'elevation', { min: -90, max: 180 }, updateSunPosition)
-  gui.addParam('Sun Azimuth', State, 'azimuth', { min: -180, max: 180 }, updateSunPosition)
+  gui.addParam(
+    'Enabled',
+    sunEntity.getComponent('DirectionalLight'),
+    'enabled',
+    {},
+    (value) => {
+      sunEntity.getComponent('DirectionalLight').set({ enabled: value })
+    }
+  )
+  gui.addParam(
+    'Sun Elevation',
+    State,
+    'elevation',
+    { min: -90, max: 180 },
+    updateSunPosition
+  )
+  gui.addParam(
+    'Sun Azimuth',
+    State,
+    'azimuth',
+    { min: -180, max: 180 },
+    updateSunPosition
+  )
   gui.addHeader('Skybox')
   gui.addParam('Enabled', skyboxCmp, 'enabled', {}, (value) => {
     skyboxCmp.set({ enabled: value })
@@ -323,31 +373,61 @@ renderer.add(areaLightEntity)
 
   gui.addColumn('Material')
   gui.addParam('Base Color', State, 'baseColor', { type: 'color' }, () => {
-    entities.forEach((entity) => { entity.getComponent('Material').set({ baseColor: State.baseColor }) })
+    entities.forEach((entity) => {
+      entity.getComponent('Material').set({ baseColor: State.baseColor })
+    })
   })
   gui.addParam('Roughness', State, 'roughness', {}, () => {
-    entities.forEach((entity) => { entity.getComponent('Material').set({ roughness: State.roughness }) })
+    entities.forEach((entity) => {
+      entity.getComponent('Material').set({ roughness: State.roughness })
+    })
   })
   gui.addParam('Metallic', State, 'metallic', {}, () => {
-    entities.forEach((entity) => { entity.getComponent('Material').set({ metallic: State.metallic }) })
+    entities.forEach((entity) => {
+      entity.getComponent('Material').set({ metallic: State.metallic })
+    })
   })
 
   gui.addColumn('Lights')
-  gui.addParam('Point Light Enabled', pointLightEntity.getComponent('PointLight'), 'enabled', {}, (value) => {
-    pointLightEntity.getComponent('PointLight').set({ enabled: value })
-    pointLightEntity.getComponent('Transform').set({ enabled: value })
-  })
-  gui.addParam('Point Light Pos', pointLightEntity.transform, 'position', { min: -5, max: 5 }, (value) => {
-    pointLightEntity.transform.set({ position: value })
-  })
-  gui.addParam('Area Light Enabled', areaLightEntity.getComponent('AreaLight'), 'enabled', {}, (value) => {
-    areaLightEntity.getComponent('AreaLight').set({ enabled: value })
-    areaLightEntity.getComponent('Transform').set({ enabled: value })
-  })
-  gui.addParam('Area Light Col', areaLightEntity.getComponent('AreaLight'), 'color', { type: 'color' }, (value) => {
-    areaLightEntity.getComponent('AreaLight').set({ color: value })
-    areaLightEntity.getComponent('Material').set({ emissiveColor: value })
-  })
+  gui.addParam(
+    'Point Light Enabled',
+    pointLightEntity.getComponent('PointLight'),
+    'enabled',
+    {},
+    (value) => {
+      pointLightEntity.getComponent('PointLight').set({ enabled: value })
+      pointLightEntity.getComponent('Transform').set({ enabled: value })
+    }
+  )
+  gui.addParam(
+    'Point Light Pos',
+    pointLightEntity.transform,
+    'position',
+    { min: -5, max: 5 },
+    (value) => {
+      pointLightEntity.transform.set({ position: value })
+    }
+  )
+  gui.addParam(
+    'Area Light Enabled',
+    areaLightEntity.getComponent('AreaLight'),
+    'enabled',
+    {},
+    (value) => {
+      areaLightEntity.getComponent('AreaLight').set({ enabled: value })
+      areaLightEntity.getComponent('Transform').set({ enabled: value })
+    }
+  )
+  gui.addParam(
+    'Area Light Col',
+    areaLightEntity.getComponent('AreaLight'),
+    'color',
+    { type: 'color' },
+    (value) => {
+      areaLightEntity.getComponent('AreaLight').set({ color: value })
+      areaLightEntity.getComponent('Material').set({ emissiveColor: value })
+    }
+  )
 
   // PostProcess
   const postProcessTab = gui.addTab('PostProcess')
@@ -356,16 +436,35 @@ renderer.add(areaLightEntity)
   gui.addParam('Enabled', postProcessingCmp, 'enabled')
   gui.addParam('Exposure', cameraCmp, 'exposure', { min: 0, max: 5 })
   gui.addParam('SSAO', postProcessingCmp, 'ssao')
-  gui.addParam('SSAO radius', postProcessingCmp, 'ssaoRadius', { min: 0, max: 30 })
-  gui.addParam('SSAO intensity', postProcessingCmp, 'ssaoIntensity', { min: 0, max: 10 })
+  gui.addParam('SSAO radius', postProcessingCmp, 'ssaoRadius', {
+    min: 0,
+    max: 30
+  })
+  gui.addParam('SSAO intensity', postProcessingCmp, 'ssaoIntensity', {
+    min: 0,
+    max: 10
+  })
   gui.addParam('SSAO bias', postProcessingCmp, 'ssaoBias', { min: 0, max: 1 })
-  gui.addParam('SSAO blur radius', postProcessingCmp, 'ssaoBlurRadius', { min: 0, max: 5 })
-  gui.addParam('SSAO blur sharpness', postProcessingCmp, 'ssaoBlurSharpness', { min: 0, max: 20 })
+  gui.addParam('SSAO blur radius', postProcessingCmp, 'ssaoBlurRadius', {
+    min: 0,
+    max: 5
+  })
+  gui.addParam('SSAO blur sharpness', postProcessingCmp, 'ssaoBlurSharpness', {
+    min: 0,
+    max: 20
+  })
   gui.addParam('DOF', postProcessingCmp, 'dof')
-  gui.addParam('DOF Iterations', postProcessingCmp, 'dofIterations', { min: 1, max: 5, step: 1 })
+  gui.addParam('DOF Iterations', postProcessingCmp, 'dofIterations', {
+    min: 1,
+    max: 5,
+    step: 1
+  })
   gui.addParam('DOF Depth', postProcessingCmp, 'dofDepth', { min: 0, max: 20 })
   gui.addParam('DOF Range', postProcessingCmp, 'dofRange', { min: 0, max: 20 })
-  gui.addParam('DOF Radius', postProcessingCmp, 'dofRadius', { min: 0, max: 20 })
+  gui.addParam('DOF Radius', postProcessingCmp, 'dofRadius', {
+    min: 0,
+    max: 20
+  })
   gui.addParam('FXAA', postProcessingCmp, 'fxaa')
 
   gui.addColumn('Render targets')

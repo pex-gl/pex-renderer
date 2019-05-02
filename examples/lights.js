@@ -1,7 +1,6 @@
 const createRenderer = require('../')
 const createContext = require('pex-context')
 const createGUI = require('pex-gui')
-const vec3 = require('pex-math/vec3')
 const mat4 = require('pex-math/mat4')
 const quat = require('pex-math/quat')
 const createCube = require('primitive-cube')
@@ -9,13 +8,9 @@ const dragon = require('./assets/stanford-dragon')
 const normals = require('angle-normals')
 const centerAndNormalize = require('geom-center-and-normalize')
 const gridCells = require('grid-cells')
-const {
-  makeCircle,
-  makePrism,
-  makeQuad
-} = require('./helpers.js')
+const { makeCircle, makePrism, makeQuad } = require('./helpers.js')
 
-function targetTo (out, eye, target, up = [0, 1, 0]) {
+function targetTo(out, eye, target, up = [0, 1, 0]) {
   let eyex = eye[0]
   let eyey = eye[1]
   let eyez = eye[2]
@@ -88,14 +83,17 @@ const cells = gridCells(W, H, nW, nH, 0).map((cell) => {
 
 cells.forEach((cell, cellIndex) => {
   const tags = ['cell' + cellIndex]
-  const cameraEntity = renderer.entity([
-    renderer.camera({
-      fov: Math.PI / 3,
-      aspect: (W / nW) / (H / nH),
-      viewport: cell
-    }),
-    renderer.orbiter()
-  ], tags)
+  const cameraEntity = renderer.entity(
+    [
+      renderer.camera({
+        fov: Math.PI / 3,
+        aspect: W / nW / (H / nH),
+        viewport: cell
+      }),
+      renderer.orbiter()
+    ],
+    tags
+  )
   renderer.add(cameraEntity)
 })
 
@@ -147,63 +145,82 @@ const directionalLightCmp = renderer.directionalLight({
   intensity: 1,
   castShadows: true
 })
-const directionalLightGizmoPositions = makePrism({ radius: 0.3 })
-  .concat([
+const directionalLightGizmoPositions = makePrism({ radius: 0.3 }).concat(
+  /* prettier-ignore */ [
     [0, 0, 0.3], [0, 0, 1],
     [0.3, 0, 0], [0.3, 0, 1],
     [-0.3, 0, 0], [-0.3, 0, 1],
     [0, 0.3, 0], [0, 0.3, 1],
     [0, -0.3, 0], [0, -0.3, 1]
-  ])
+  ]
+)
 
-const directionalLightEntity = renderer.entity([
-  renderer.transform({
-    position: [1, 1, 1],
-    rotation: quat.fromMat4(quat.create(), targetTo(mat4.create(), [0, 0, 0], [1, 1, 1]))
-  }),
-  renderer.geometry({
-    positions: directionalLightGizmoPositions,
-    primitive: ctx.Primitive.Lines,
-    count: directionalLightGizmoPositions.length
-  }),
-  renderer.material({
-    baseColor: [1, 1, 0, 1]
-  }),
-  directionalLightCmp
-], ['cell0'])
+const directionalLightEntity = renderer.entity(
+  [
+    renderer.transform({
+      position: [1, 1, 1],
+      rotation: quat.fromMat4(
+        quat.create(),
+        targetTo(mat4.create(), [0, 0, 0], [1, 1, 1])
+      )
+    }),
+    renderer.geometry({
+      positions: directionalLightGizmoPositions,
+      primitive: ctx.Primitive.Lines,
+      count: directionalLightGizmoPositions.length
+    }),
+    renderer.material({
+      baseColor: [1, 1, 0, 1]
+    }),
+    directionalLightCmp
+  ],
+  ['cell0']
+)
 renderer.add(directionalLightEntity)
 
 gui.addHeader('Directional').setPosition(10, 10)
 gui.addParam('Enabled', directionalLightCmp, 'enabled', {}, (value) => {
   directionalLightCmp.set({ enabled: value })
 })
-gui.addParam('Intensity', directionalLightCmp, 'intensity', { min: 0, max: 20 }, () => {
-  directionalLightCmp.set({ intensity: directionalLightCmp.intensity })
-})
+gui.addParam(
+  'Intensity',
+  directionalLightCmp,
+  'intensity',
+  { min: 0, max: 20 },
+  () => {
+    directionalLightCmp.set({ intensity: directionalLightCmp.intensity })
+  }
+)
 gui.addTexture2D('Shadowmap', directionalLightCmp._shadowMap)
 gui.addParam('Shadows', directionalLightCmp, 'castShadows', {}, (value) => {
   directionalLightCmp.set({ castShadows: value })
 })
 
-const fixDirectionalLightEntity = renderer.entity([
-  renderer.transform({
-    position: [1, 1, 1],
-    rotation: quat.fromMat4(quat.create(), targetTo(mat4.create(), [0, 0, 0], [1, 1, 1]))
-  }),
-  renderer.geometry({
-    positions: directionalLightGizmoPositions,
-    primitive: ctx.Primitive.Lines,
-    count: directionalLightGizmoPositions.length
-  }),
-  renderer.material({
-    baseColor: [1, 1, 0, 1]
-  }),
-  renderer.directionalLight({
-    color: [1, 1, 0, 1],
-    intensity: 1,
-    castShadows: true
-  })
-], ['cell0'])
+const fixDirectionalLightEntity = renderer.entity(
+  [
+    renderer.transform({
+      position: [1, 1, 1],
+      rotation: quat.fromMat4(
+        quat.create(),
+        targetTo(mat4.create(), [0, 0, 0], [1, 1, 1])
+      )
+    }),
+    renderer.geometry({
+      positions: directionalLightGizmoPositions,
+      primitive: ctx.Primitive.Lines,
+      count: directionalLightGizmoPositions.length
+    }),
+    renderer.material({
+      baseColor: [1, 1, 0, 1]
+    }),
+    renderer.directionalLight({
+      color: [1, 1, 0, 1],
+      intensity: 1,
+      castShadows: true
+    })
+  ],
+  ['cell0']
+)
 renderer.add(fixDirectionalLightEntity)
 
 // Spot
@@ -219,28 +236,45 @@ const spotLightDistance = 2
 const spotLightRadius = spotLightDistance * Math.tan(spotLightCmp.angle)
 const spotLightGizmoPositions = makePrism({ radius: 0.3 })
   .concat([
-    [0, 0, 0], [spotLightRadius, 0, spotLightDistance],
-    [0, 0, 0], [-spotLightRadius, 0, spotLightDistance],
-    [0, 0, 0], [0, spotLightRadius, spotLightDistance],
-    [0, 0, 0], [0, -spotLightRadius, spotLightDistance]
+    [0, 0, 0],
+    [spotLightRadius, 0, spotLightDistance],
+    [0, 0, 0],
+    [-spotLightRadius, 0, spotLightDistance],
+    [0, 0, 0],
+    [0, spotLightRadius, spotLightDistance],
+    [0, 0, 0],
+    [0, -spotLightRadius, spotLightDistance]
   ])
-  .concat(makeCircle({ radius: spotLightRadius, center: [0, 0, spotLightDistance], steps: 64, axis: [0, 1] }))
+  .concat(
+    makeCircle({
+      radius: spotLightRadius,
+      center: [0, 0, spotLightDistance],
+      steps: 64,
+      axis: [0, 1]
+    })
+  )
 
-const spotLightEntity = renderer.entity([
-  renderer.transform({
-    position: [1, 0.5, 1],
-    rotation: quat.fromMat4(quat.create(), targetTo(mat4.create(), [0, 0, 0], [1, 1, 1]))
-  }),
-  renderer.geometry({
-    positions: spotLightGizmoPositions,
-    primitive: ctx.Primitive.Lines,
-    count: spotLightGizmoPositions.length
-  }),
-  renderer.material({
-    baseColor: [1, 0, 1, 1]
-  }),
-  spotLightCmp
-], ['cell1'])
+const spotLightEntity = renderer.entity(
+  [
+    renderer.transform({
+      position: [1, 0.5, 1],
+      rotation: quat.fromMat4(
+        quat.create(),
+        targetTo(mat4.create(), [0, 0, 0], [1, 1, 1])
+      )
+    }),
+    renderer.geometry({
+      positions: spotLightGizmoPositions,
+      primitive: ctx.Primitive.Lines,
+      count: spotLightGizmoPositions.length
+    }),
+    renderer.material({
+      baseColor: [1, 0, 1, 1]
+    }),
+    spotLightCmp
+  ],
+  ['cell1']
+)
 renderer.add(spotLightEntity)
 
 gui.addHeader('Spot').setPosition(W / 2 + 10, 10)
@@ -251,38 +285,56 @@ gui.addParam('Range', spotLightCmp, 'range', {
   min: 0,
   max: 20
 })
-gui.addParam('Intensity', spotLightCmp, 'intensity', { min: 0, max: 20 }, () => {
-  spotLightCmp.set({ intensity: spotLightCmp.intensity })
+gui.addParam(
+  'Intensity',
+  spotLightCmp,
+  'intensity',
+  { min: 0, max: 20 },
+  () => {
+    spotLightCmp.set({ intensity: spotLightCmp.intensity })
+  }
+)
+gui.addParam('Angle', spotLightCmp, 'angle', {
+  min: 0,
+  max: Math.PI / 2 - Number.EPSILON
 })
-gui.addParam('Angle', spotLightCmp, 'angle', { min: 0, max: Math.PI / 2 - Number.EPSILON })
-gui.addParam('Inner angle', spotLightCmp, 'innerAngle', { min: 0, max: Math.PI / 2 - Number.EPSILON })
+gui.addParam('Inner angle', spotLightCmp, 'innerAngle', {
+  min: 0,
+  max: Math.PI / 2 - Number.EPSILON
+})
 gui.addTexture2D('Shadowmap', spotLightCmp._shadowMap)
 gui.addParam('Shadows', spotLightCmp, 'castShadows', {}, (value) => {
   spotLightCmp.set({ castShadows: value })
 })
 
-const fixSpotLightEntity = renderer.entity([
-  renderer.transform({
-    position: [1, 0.5, 1],
-    rotation: quat.fromMat4(quat.create(), targetTo(mat4.create(), [0, 0, 0], [1, 1, 1]))
-  }),
-  renderer.geometry({
-    positions: spotLightGizmoPositions,
-    primitive: ctx.Primitive.Lines,
-    count: spotLightGizmoPositions.length
-  }),
-  renderer.material({
-    baseColor: [1, 0, 1, 1]
-  }),
-  renderer.spotLight({
-    color: [1, 1, 0, 1],
-    intensity: 2,
-    range: 5,
-    angle: Math.PI / 6,
-    innerAngle: Math.PI / 12,
-    castShadows: true
-  })
-], ['cell1'])
+const fixSpotLightEntity = renderer.entity(
+  [
+    renderer.transform({
+      position: [1, 0.5, 1],
+      rotation: quat.fromMat4(
+        quat.create(),
+        targetTo(mat4.create(), [0, 0, 0], [1, 1, 1])
+      )
+    }),
+    renderer.geometry({
+      positions: spotLightGizmoPositions,
+      primitive: ctx.Primitive.Lines,
+      count: spotLightGizmoPositions.length
+    }),
+    renderer.material({
+      baseColor: [1, 0, 1, 1]
+    }),
+    renderer.spotLight({
+      color: [1, 1, 0, 1],
+      intensity: 2,
+      range: 5,
+      angle: Math.PI / 6,
+      innerAngle: Math.PI / 12,
+      castShadows: true
+    })
+  ],
+  ['cell1']
+)
 renderer.add(fixSpotLightEntity)
 
 // Point
@@ -293,32 +345,58 @@ const pointLightCmp = renderer.pointLight({
   castShadows: true
 })
 const pointLightGizmoPositions = makePrism({ radius: 0.3 })
-  .concat(makeCircle({ center: [0, 0, 0], radius: pointLightCmp.range, steps: 64, axis: [0, 1] }))
-  .concat(makeCircle({ center: [0, 0, 0], radius: pointLightCmp.range, steps: 64, axis: [0, 2] }))
-  .concat(makeCircle({ center: [0, 0, 0], radius: pointLightCmp.range, steps: 64, axis: [1, 2] }))
-  .concat([
-    [0, 0.3, 0], [0, 0.6, 0],
-    [0, -0.3, 0], [0, -0.6, 0],
-    [0.3, 0, 0], [0.6, 0, 0],
-    [-0.3, 0, 0], [-0.6, 0, 0],
-    [0, 0, 0.3], [0, 0, 0.6],
-    [0, 0, -0.3], [0, 0, -0.6]
-  ])
+  .concat(
+    makeCircle({
+      center: [0, 0, 0],
+      radius: pointLightCmp.range,
+      steps: 64,
+      axis: [0, 1]
+    })
+  )
+  .concat(
+    makeCircle({
+      center: [0, 0, 0],
+      radius: pointLightCmp.range,
+      steps: 64,
+      axis: [0, 2]
+    })
+  )
+  .concat(
+    makeCircle({
+      center: [0, 0, 0],
+      radius: pointLightCmp.range,
+      steps: 64,
+      axis: [1, 2]
+    })
+  )
+  .concat(
+    /* prettier-ignore */ [
+      [0, 0.3, 0], [0, 0.6, 0],
+      [0, -0.3, 0], [0, -0.6, 0],
+      [0.3, 0, 0], [0.6, 0, 0],
+      [-0.3, 0, 0], [-0.6, 0, 0],
+      [0, 0, 0.3], [0, 0, 0.6],
+      [0, 0, -0.3], [0, 0, -0.6]
+    ]
+  )
 
-const pointLightEntity = renderer.entity([
-  renderer.transform({
-    position: [1, 1, 1]
-  }),
-  renderer.geometry({
-    positions: pointLightGizmoPositions,
-    primitive: ctx.Primitive.Lines,
-    count: pointLightGizmoPositions.length
-  }),
-  renderer.material({
-    baseColor: [1, 1, 1, 1]
-  }),
-  pointLightCmp
-], ['cell2'])
+const pointLightEntity = renderer.entity(
+  [
+    renderer.transform({
+      position: [1, 1, 1]
+    }),
+    renderer.geometry({
+      positions: pointLightGizmoPositions,
+      primitive: ctx.Primitive.Lines,
+      count: pointLightGizmoPositions.length
+    }),
+    renderer.material({
+      baseColor: [1, 1, 1, 1]
+    }),
+    pointLightCmp
+  ],
+  ['cell2']
+)
 renderer.add(pointLightEntity)
 
 gui.addHeader('Point').setPosition(10, H / 2 + 10)
@@ -329,33 +407,42 @@ gui.addParam('Range', pointLightCmp, 'range', {
   min: 0,
   max: 20
 })
-gui.addParam('Intensity', pointLightCmp, 'intensity', { min: 0, max: 20 }, () => {
-  pointLightCmp.set({ intensity: pointLightCmp.intensity })
-})
+gui.addParam(
+  'Intensity',
+  pointLightCmp,
+  'intensity',
+  { min: 0, max: 20 },
+  () => {
+    pointLightCmp.set({ intensity: pointLightCmp.intensity })
+  }
+)
 gui.addTextureCube('Shadowmap', pointLightCmp._shadowCubemap)
 gui.addParam('Shadows', pointLightCmp, 'castShadows', {}, (value) => {
   pointLightCmp.set({ castShadows: value })
 })
 
-const fixPointLightEntity = renderer.entity([
-  renderer.transform({
-    position: [1, 1, 1]
-  }),
-  renderer.geometry({
-    positions: pointLightGizmoPositions,
-    primitive: ctx.Primitive.Lines,
-    count: pointLightGizmoPositions.length
-  }),
-  renderer.material({
-    baseColor: [1, 1, 1, 1]
-  }),
-  renderer.pointLight({
-    color: [1, 1, 0, 1],
-    intensity: 2,
-    range: 5,
-    castShadows: true
-  })
-], ['cell2'])
+const fixPointLightEntity = renderer.entity(
+  [
+    renderer.transform({
+      position: [1, 1, 1]
+    }),
+    renderer.geometry({
+      positions: pointLightGizmoPositions,
+      primitive: ctx.Primitive.Lines,
+      count: pointLightGizmoPositions.length
+    }),
+    renderer.material({
+      baseColor: [1, 1, 1, 1]
+    }),
+    renderer.pointLight({
+      color: [1, 1, 0, 1],
+      intensity: 2,
+      range: 5,
+      castShadows: true
+    })
+  ],
+  ['cell2']
+)
 renderer.add(fixPointLightEntity)
 
 // Area
@@ -366,22 +453,28 @@ const areaLightCmp = renderer.areaLight({
 })
 const areaLightGizmoPositions = makeQuad({ width: 1, height: 1 })
 
-const areaLightEntity = renderer.entity([
-  renderer.transform({
-    scale: [2, 0.5, 1],
-    position: [1, 1, 1],
-    rotation: quat.fromMat4(quat.create(), targetTo(mat4.create(), [0, 0, 0], [1, 1, 1]))
-  }),
-  renderer.geometry({
-    positions: areaLightGizmoPositions,
-    primitive: ctx.Primitive.Lines,
-    count: areaLightGizmoPositions.length
-  }),
-  renderer.material({
-    baseColor: [0, 1, 1, 1]
-  }),
-  areaLightCmp
-], ['cell3'])
+const areaLightEntity = renderer.entity(
+  [
+    renderer.transform({
+      scale: [2, 0.5, 1],
+      position: [1, 1, 1],
+      rotation: quat.fromMat4(
+        quat.create(),
+        targetTo(mat4.create(), [0, 0, 0], [1, 1, 1])
+      )
+    }),
+    renderer.geometry({
+      positions: areaLightGizmoPositions,
+      primitive: ctx.Primitive.Lines,
+      count: areaLightGizmoPositions.length
+    }),
+    renderer.material({
+      baseColor: [0, 1, 1, 1]
+    }),
+    areaLightCmp
+  ],
+  ['cell3']
+)
 renderer.add(areaLightEntity)
 
 gui.addHeader('Area').setPosition(W / 2 + 10, H / 2 + 10)
@@ -389,26 +482,32 @@ gui.addParam('Enabled', areaLightCmp, 'enabled', {}, (value) => {
   areaLightCmp.set({ enabled: value })
 })
 
-const fixAreaLightEntity = renderer.entity([
-  renderer.transform({
-    scale: [2, 0.5, 1],
-    position: [1, 1, 1],
-    rotation: quat.fromMat4(quat.create(), targetTo(mat4.create(), [0, 0, 0], [1, 1, 1]))
-  }),
-  renderer.geometry({
-    positions: areaLightGizmoPositions,
-    primitive: ctx.Primitive.Lines,
-    count: areaLightGizmoPositions.length
-  }),
-  renderer.material({
-    baseColor: [0, 1, 1, 1]
-  }),
-  renderer.areaLight({
-    color: [1, 1, 0, 1],
-    intensity: 4,
-    castShadows: true
-  })
-], ['cell3'])
+const fixAreaLightEntity = renderer.entity(
+  [
+    renderer.transform({
+      scale: [2, 0.5, 1],
+      position: [1, 1, 1],
+      rotation: quat.fromMat4(
+        quat.create(),
+        targetTo(mat4.create(), [0, 0, 0], [1, 1, 1])
+      )
+    }),
+    renderer.geometry({
+      positions: areaLightGizmoPositions,
+      primitive: ctx.Primitive.Lines,
+      count: areaLightGizmoPositions.length
+    }),
+    renderer.material({
+      baseColor: [0, 1, 1, 1]
+    }),
+    renderer.areaLight({
+      color: [1, 1, 0, 1],
+      intensity: 4,
+      castShadows: true
+    })
+  ],
+  ['cell3']
+)
 renderer.add(fixAreaLightEntity)
 
 window.addEventListener('keydown', (e) => {
@@ -421,12 +520,11 @@ let delta = 0
 ctx.frame(() => {
   delta += 0.005
 
-  const position = [
-    2 * Math.cos(delta),
-    1,
-    2 * Math.sin(delta)
-  ]
-  const rotation = quat.fromMat4(quat.create(), targetTo(mat4.create(), position.map(n => -n), [0, 0, 0]))
+  const position = [2 * Math.cos(delta), 1, 2 * Math.sin(delta)]
+  const rotation = quat.fromMat4(
+    quat.create(),
+    targetTo(mat4.create(), position.map((n) => -n), [0, 0, 0])
+  )
 
   directionalLightEntity.getComponent('Transform').set({ position, rotation })
   spotLightEntity.getComponent('Transform').set({ position, rotation })

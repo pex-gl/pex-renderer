@@ -29,7 +29,7 @@ renderer.add(cameraEntity)
 const sphere = createSphere(1, { segments: 400 })
 const scale = 1
 
-function perlin (p) {
+function perlin(p) {
   let s = scale
   let n = 0
   for (let i = 0; i < 5; i++) {
@@ -65,9 +65,7 @@ const skybox = renderer.entity([
 ])
 renderer.add(skybox)
 
-const reflectionProbe = renderer.entity([
-  renderer.reflectionProbe()
-])
+const reflectionProbe = renderer.entity([renderer.reflectionProbe()])
 renderer.add(reflectionProbe)
 
 ctx.frame(() => {

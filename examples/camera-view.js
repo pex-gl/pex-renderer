@@ -25,16 +25,21 @@ for (let i = 0; i < rows; i++) {
   // projection = 'orthographic'
   // projection = 'perspective'
 
-  gui.addHeader(`${projection} ${Math.floor(i / 2)}`).setPosition(10, 10 + dy * viewportHeight)
+  gui
+    .addHeader(`${projection} ${Math.floor(i / 2)}`)
+    .setPosition(10, 10 + dy * viewportHeight)
 
-  const options = projection === 'orthographic' ? {
-    left: (-0.5 * viewSize * aspect) / 2,
-    right: (0.5 * viewSize * aspect) / 2,
-    top: (0.5 * viewSize) / 2,
-    bottom: (-0.5 * viewSize) / 2
-  } : {
-    fov: Math.PI / 2
-  }
+  const options =
+    projection === 'orthographic'
+      ? {
+          left: (-0.5 * viewSize * aspect) / 2,
+          right: (0.5 * viewSize * aspect) / 2,
+          top: (0.5 * viewSize) / 2,
+          bottom: (-0.5 * viewSize) / 2
+        }
+      : {
+          fov: Math.PI / 2
+        }
 
   for (let j = 0; j < columns; j++) {
     const dx = j / columns
@@ -44,7 +49,12 @@ for (let i = 0; i < rows; i++) {
         projection,
         exposure: j % 2 ? 2 : 1,
         aspect,
-        viewport: [dx * viewportWidth, dy * viewportHeight, viewWidth, viewHeight],
+        viewport: [
+          dx * viewportWidth,
+          dy * viewportHeight,
+          viewWidth,
+          viewHeight
+        ],
         view: {
           offset: [dx * viewportWidth, viewHeight * (rows - 1) * 0.5],
           size: [viewWidth, viewHeight],
@@ -95,9 +105,7 @@ const skybox = renderer.entity([
 ])
 renderer.add(skybox)
 
-const reflectionProbe = renderer.entity([
-  renderer.reflectionProbe()
-])
+const reflectionProbe = renderer.entity([renderer.reflectionProbe()])
 renderer.add(reflectionProbe)
 
 ctx.frame(() => {
