@@ -73,4 +73,5 @@ renderer.add(reflectionProbe)
 ctx.frame(() => {
   renderer.draw()
   gui.draw()
+  window.dispatchEvent(new CustomEvent('pex-screenshot'))
 })

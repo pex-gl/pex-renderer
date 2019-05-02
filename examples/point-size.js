@@ -165,3 +165,7 @@ ctx.frame(() => {
   renderer.draw()
   gui.draw()
 })
+
+setTimeout(() => {
+  window.dispatchEvent(new CustomEvent('pex-screenshot'))
+}, 10000)

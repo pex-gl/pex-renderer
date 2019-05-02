@@ -1,26 +1,46 @@
-let currentExample = null
+const path = require('path')
 
-function getURLSearchParam (name) {
-  const match = RegExp('[?&]' + name + '=([^&]*)').exec(window.location.search)
-  return match && decodeURIComponent(match[1].replace(/\+/g, ' '))
+let examples = require.context('./', false, /\.js$/).keys()
+
+examples = examples
+  .filter(example => !['./index.js', './helpers.js', './webpack.config.js'].includes(example))
+
+examplesNames = examples.map(example => path.basename(example, path.extname(example)))
+
+const ExamplesModules = Object.fromEntries(
+  new Map(
+    examplesNames.map(example => [
+      example,
+      () => import(
+        /* webpackChunkName: "[request]" */
+        /* webpackExclude: /scripts$/ */
+        `./${example}.js`)
+    ])
+  )
+);
+
+const searchParams = new URLSearchParams(window.location.search)
+const currentExample = searchParams.get('name')
+
+if (currentExample && ExamplesModules[currentExample]) {
+  const header = document.querySelector('.MainHeader')
+  header.style.display = 'none'
+
+  ExamplesModules[currentExample]()
 }
-
-const searchParamName = getURLSearchParam('name')
 
 const list = document.querySelector('.Examples-list')
-
-let listItems = ''
-window.EXAMPLES.forEach(function (example) {
-  const name = example.split('.')[0]
-  if (searchParamName === name) currentExample = name
-  listItems += `<div><a href="?name=${name}">${name}</a></div>`
-})
-
-list.innerHTML = listItems
-
 if (currentExample) {
-  const script = document.createElement('script')
-  script.type = 'text/javascript'
-  script.src = `${currentExample}.bundle.js`
-  document.body.appendChild(script)
+  list.classList.add('Examples-list--side')
 }
+
+const listItems = !currentExample
+  ? ''
+  : '<div class="Examples-list-item"><a href="/"><h3>home</h3></a></div>';
+list.innerHTML = examplesNames.reduce(
+  (html, example) =>
+    (html += `<div class="Examples-list-item"><a href="?name=${example}">${
+      currentExample ? "" : `<img src="screenshots/${example}.png" />`
+    }<h3>${example}</h3></a></div>`),
+  listItems
+)

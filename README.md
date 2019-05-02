@@ -40,6 +40,8 @@ PEX Renderer is a CommonJS module and you will need a bundler (e.g. [Browserify]
 
 # Examples
 
+Open [live examples here](https://pex-gl.github.io/pex-renderer/examples/index.html).
+
 ```javascript
 const createContext = require('pex-context')
 const createRenderer = require('pex-renderer')
@@ -88,17 +90,17 @@ ctx.frame(() => {
 })
 ```
 
-You can find runnable examples in the `/examples` folder in this repository. To run an example install [Node.js](http://nodejs.org), clone or download this repository and then.
+You can find runnable examples in the `/examples` folder in this repository. To run an example install [Node.js](http://nodejs.org), clone or download this repository and then:
 
 ```sh
 # go to the example folder
 cd examples
 
-# install examples dependencies
-npm i
+# install dependencies
+npm install
 
-# run the example in your default browser window
-npx budo example-name.js --open --start
+# start a webpack-dev-server to run all the examples
+npm start
 ```
 
 # API
