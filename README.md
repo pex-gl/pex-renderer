@@ -7,10 +7,12 @@ Physically based renderer (PBR) and scene graph for [PEX](http://pex.gl).
 This is an **experimental** API and it's likely to change in the future.
 
 #### Key dependencies:
+
 - [pex-context](http://github.com/pex-gl/pex-context) modern WebGL wrapper (buffers, textures, pipelines, commands etc)
 - [pex-math](http://github.com/pex-gl/pex-math) array based math (vec3, mat4, quat etc)
 
 # Contents
+
 - [Usage](#usage)
 - [Examples](#examples)
 - [API](#api)
@@ -80,9 +82,7 @@ const skybox = renderer.entity([
 ])
 renderer.add(skybox)
 
-const reflectionProbe = renderer.entity([
-  renderer.reflectionProbe()
-])
+const reflectionProbe = renderer.entity([renderer.reflectionProbe()])
 renderer.add(reflectionProbe)
 
 ctx.frame(() => {
@@ -110,11 +110,12 @@ npm start
 Main class responsible for managing scene hierarchy and rendering.
 You add your entities to the renderer and call draw every frame.
 
-*Note: PEX Renderer doesn't currently have a concept of a scene. This can be simulated by creating multiple root entities with their own scene hierarchies and adding / removing them as necessary.*
+_Note: PEX Renderer doesn't currently have a concept of a scene. This can be simulated by creating multiple root entities with their own scene hierarchies and adding / removing them as necessary._
 
 #### renderer = createRenderer(opts)
 
 <!-- eslint-disable no-unused-vars -->
+
 ```javascript
 const createRenderer = require('pex-renderer')
 const renderer = createRenderer({
@@ -129,24 +130,23 @@ const renderer = createRenderer({
 - renderer.paused
 - renderer.profiler
 
+| property        | info                                                                   | type                | default |
+| --------------- | ---------------------------------------------------------------------- | ------------------- | ------- |
+| `ctx`           | rendering context                                                      | pex-context.Context | null    |
+| `shadowQuality` | shadow smoothness                                                      | Integer 0-4         | 2       |
+| `rgbm`          | use RGBM color packing for rendering pipeline                          | Boolean             | false   |
+| `profile`       | enable profiling                                                       | Boolean             | false   |
+| `pauseOnBlur`   | stop rendering when window looses focus                                | Boolean             | false   |
+| `targetMobile`  | use some approximation in the shader to enhance performances on mobile | Boolean             | false   |
+| `entities`\*    | list of entities in the scene                                          | Array of Entity     | []      |
 
-| property | info | type | default |
-| -------- | ---- | ---- | ------- |
-| `ctx` | rendering context | pex-context.Context | null |
-| `shadowQuality` | shadow smoothness | Integer 0-4 | 2 |
-| `rgbm` | use RGBM color packing for rendering pipeline | Boolean | false |
-| `profile` | enable profiling | Boolean | false |
-| `pauseOnBlur` | stop rendering when window looses focus | Boolean | false |
-| `targetMobile` | use some approximation in the shader to enhance performances on mobile | Boolean | false |
-| `entities`* | list of entities in the scene | Array of Entity | [] |
-
-&nbsp;* required
-&nbsp;* read only
+&nbsp;_ required
+&nbsp;_ read only
 
 #### renderer.draw()
 
 ```javascript
-function frame () {
+function frame() {
   renderer.draw()
   requestAnimationFrame(frame)
 }
@@ -165,7 +165,7 @@ Updates transforms, shadow-maps, reflection probes, materials, shaders, renders 
 
 Entities are collection of [components](#components) representing an object in the scene graph.
 
-*NOTE: It's worth mentioning that in its current form PEX Renderer doesn't implement [Entity-Component-System](https://en.wikipedia.org/wiki/Entity–component–system) architecture.* Components are self contained and fully functional not merely buckets of data to be processed by a collection of systems. In that regard it's comparable to [Unity](http://unity3d.com) and its GameObject and MonoBehaviour implementation.
+_NOTE: It's worth mentioning that in its current form PEX Renderer doesn't implement [Entity-Component-System](https://en.wikipedia.org/wiki/Entity–component–system) architecture._ Components are self contained and fully functional not merely buckets of data to be processed by a collection of systems. In that regard it's comparable to [Unity](http://unity3d.com) and its GameObject and MonoBehaviour implementation.
 
 #### entity = renderer.entity(components, tags)
 
@@ -174,17 +174,21 @@ Creates an entity from a list of components.
 - `components`: Array of Component - list of components that the entity is made of
 - `tags` - Array of String - list of tags
 
-*Note: entities are not added to the scene graph automatically.*
+_Note: entities are not added to the scene graph automatically._
 
-*Note on tagging: Camera component also accepts tags. Only entities matching one or more camera tags will be rendered. If camera doesn't have any tags only untagged entities will be rendered.*
+_Note on tagging: Camera component also accepts tags. Only entities matching one or more camera tags will be rendered. If camera doesn't have any tags only untagged entities will be rendered._
 
 <!-- eslint-disable no-unused-vars -->
+
 ```javascript
-const entity = renderer.entity([
-  renderer.transform({ position: [0, 1, 0] }),
-  renderer.geometry({ positions: [], normals: [], cells: [] }),
-  renderer.material({ baseColor: [1, 0, 0, 1] })
-], ['opaque', 'debug-only'])
+const entity = renderer.entity(
+  [
+    renderer.transform({ position: [0, 1, 0] }),
+    renderer.geometry({ positions: [], normals: [], cells: [] }),
+    renderer.material({ baseColor: [1, 0, 0, 1] })
+  ],
+  ['opaque', 'debug-only']
+)
 ```
 
 #### entity = renderer.add(entity, parent)
@@ -200,10 +204,9 @@ Removes entity from the scene graph.
 Adds component to an entity.
 
 #### component = entity.getComponent(type)
+
 ```javascript
-const entity = renderer.entity([
-  renderer.pointLight()
-])
+const entity = renderer.entity([renderer.pointLight()])
 entity.getComponent('PointLight')
 ```
 
@@ -221,21 +224,19 @@ Components are bits of functionality (transform, light type, geometry, material 
 
 #### Properties shared by all components:
 
-| property | info | type | default |
-| -------- | ---- | ---- | ------- |
-| `type`* | component class name | String | '' |
-| `entity`* | entity the component is attached to | Entity | null |
-| `changed`* | event emitted whenever component's property changes | [Signal](https://millermedeiros.github.io/js-signals/) | null |
+| property    | info                                                | type                                                   | default |
+| ----------- | --------------------------------------------------- | ------------------------------------------------------ | ------- |
+| `type`\*    | component class name                                | String                                                 | ''      |
+| `entity`\*  | entity the component is attached to                 | Entity                                                 | null    |
+| `changed`\* | event emitted whenever component's property changes | [Signal](https://millermedeiros.github.io/js-signals/) | null    |
 
-<sup>*</sup> read only
+<sup>\*</sup> read only
 
 #### Observing component changes
 
 ```javascript
-const entity = renderer.entity([
-  renderer.transform()
-])
-function onParamChange (name) {
+const entity = renderer.entity([renderer.transform()])
+function onParamChange(name) {
   console.log(`param ${name} has changed`)
 }
 
@@ -250,6 +251,7 @@ entity.transform.changed.remove(onParamChange)
 ```
 
 #### Update components
+
 ```javascript
 transformComponent.set({
   position: [Math.cos(time), 0, 0]
@@ -265,6 +267,7 @@ transformComponent.set({
 ### transform = renderer.transform(opts)
 
 <!-- eslint-disable no-unused-vars -->
+
 ```javascript
 const transform = renderer.transform({
   position: [0, 0, 0],
@@ -273,28 +276,29 @@ const transform = renderer.transform({
 })
 ```
 
-| property | info | type | default |
-| -------- | ---- | ---- | ------- |
-| `position` | entity position relatively to it's parent | Vec3 / [x, y, z] | [0, 0, 0] |
-| `scale` | entity scale relatively to it's parent | Vec3 / [x, y, z] | [1, 1, 1] |
-| `rotation` | entity rotation relatively to it's parent | Quat / [x, y, z, w] | [0, 0, 0, 1] |
-| `parent` | entity's parent entity | Entity | null |
-| `enabled` | should the entity be rendered | Boolean | true |
-| `children`* |  | Array of Entity | false |
-| `bounds`* | | | |
-| `worldBounds`* | | | |
-| `localModelMatrix`* | | | |
-| `modelMatrix`* | | | |
+| property             | info                                      | type                | default      |
+| -------------------- | ----------------------------------------- | ------------------- | ------------ |
+| `position`           | entity position relatively to it's parent | Vec3 / [x, y, z]    | [0, 0, 0]    |
+| `scale`              | entity scale relatively to it's parent    | Vec3 / [x, y, z]    | [1, 1, 1]    |
+| `rotation`           | entity rotation relatively to it's parent | Quat / [x, y, z, w] | [0, 0, 0, 1] |
+| `parent`             | entity's parent entity                    | Entity              | null         |
+| `enabled`            | should the entity be rendered             | Boolean             | true         |
+| `children`\*         |                                           | Array of Entity     | false        |
+| `bounds`\*           |                                           |                     |              |
+| `worldBounds`\*      |                                           |                     |              |
+| `localModelMatrix`\* |                                           |                     |              |
+| `modelMatrix`\*      |                                           |                     |              |
 
-<sup>* </sup> read only
+<sup>\* </sup> read only
 
 ### camera = renderer.camera(opts)
 
 Defines rendering viewport and projection.
 
-*Note: `camera` `position/rotation` are derived from `entity.transform.position/rotation`. It's probably easier to use `Orbiter` component at the moment.*
+_Note: `camera` `position/rotation` are derived from `entity.transform.position/rotation`. It's probably easier to use `Orbiter` component at the moment._
 
 <!-- eslint-disable no-unused-vars -->
+
 ```javascript
 const camera = renderer.camera({
   fov: Math.PI / 2,
@@ -319,13 +323,14 @@ const camera = renderer.camera({
 | `viewMatrix`\*                   |                             |                                 |                                                       |
 | `inverseViewMatrix`\*            |                             |                                 |                                                       |
 
-<sup>*</sup> read only
+<sup>\*</sup> read only
 
 ### postProcessing = renderer.postProcessing(opts)
 
 Defines rendering post-processing.
 
 <!-- eslint-disable no-unused-vars -->
+
 ```javascript
 const postProcessing = renderer.postProcessing({
   fxaa: true,
@@ -339,9 +344,10 @@ const postProcessing = renderer.postProcessing({
 
 Orbiter controller for camera component.
 
-*Note: orbiter actually doesn't modify the camera but the entity's transform therefore both Orbiter and Camera should be attached to the same entity.*
+_Note: orbiter actually doesn't modify the camera but the entity's transform therefore both Orbiter and Camera should be attached to the same entity._
 
 <!-- eslint-disable no-unused-vars -->
+
 ```javascript
 const orbiter = renderer.orbiter({
   target: [0, 0, 0],
@@ -357,6 +363,7 @@ const orbiter = renderer.orbiter({
 Flat 2D overlay, useful for tex and logos.
 
 <!-- eslint-disable no-unused-vars -->
+
 ```javascript
 const overlay = renderer.overlay({
   x: 0,
@@ -374,6 +381,7 @@ const overlay = renderer.overlay({
 Represents 3d mesh geometry attributes.
 
 <!-- eslint-disable no-unused-vars -->
+
 ```javascript
 const geometry = renderer.geometry({
   positons: [[0, 0, 1], [1, 2, 3], ...[]],
@@ -384,20 +392,19 @@ const geometry = renderer.geometry({
 })
 ```
 
-| property | info | type | default |
-| -------- | ---- | ---- | ------- |
-| `positions` | vertex positions | Array of Vec3 [x, y, z] | null |
-| `normals` | vertex normals | Array of Vec3 [x, y, z] | null |
-| `texCoords` | vertex tex coords | Array of Vec2 [u, v] | null |
-| `uvs`<sup>1</sup> | alias of `texCoords` | Array of Vec2 [u, v] | null |
-| `colors` | vertex colors | Array of Vec4 [r, g, b, a] | null |
-| `indices` | `indices` | Array of Vec3 | null |
-| `cells`<sup>1</sup> | geometry faces | Array of Vec3 of Int [i, j, j] | null |
-| `offsets`<sup>2</sup> | instances offsets | Array of Vec3 [x, y, z] | null |
-| `rotations`<sup>2</sup> | instances rotations | Array of Quat/Vec4 [x, y, z, w] | null |
-| `scales`<sup>2</sup> | instances scales | Array of Vec3 [x, y, z] | null |
-| `tints`<sup>2</sup> | instanced rotations | Array of Color/Vec4 [r, g, b, a] | null |
-
+| property                | info                 | type                             | default |
+| ----------------------- | -------------------- | -------------------------------- | ------- |
+| `positions`             | vertex positions     | Array of Vec3 [x, y, z]          | null    |
+| `normals`               | vertex normals       | Array of Vec3 [x, y, z]          | null    |
+| `texCoords`             | vertex tex coords    | Array of Vec2 [u, v]             | null    |
+| `uvs`<sup>1</sup>       | alias of `texCoords` | Array of Vec2 [u, v]             | null    |
+| `colors`                | vertex colors        | Array of Vec4 [r, g, b, a]       | null    |
+| `indices`               | `indices`            | Array of Vec3                    | null    |
+| `cells`<sup>1</sup>     | geometry faces       | Array of Vec3 of Int [i, j, j]   | null    |
+| `offsets`<sup>2</sup>   | instances offsets    | Array of Vec3 [x, y, z]          | null    |
+| `rotations`<sup>2</sup> | instances rotations  | Array of Quat/Vec4 [x, y, z, w]  | null    |
+| `scales`<sup>2</sup>    | instances scales     | Array of Vec3 [x, y, z]          | null    |
+| `tints`<sup>2</sup>     | instanced rotations  | Array of Color/Vec4 [r, g, b, a] | null    |
 
 <sup>1</sup> write only aliases, `uvs` data will be stored in `texCoords`, `cells` data will be stored in `indices`
 
@@ -405,6 +412,7 @@ const geometry = renderer.geometry({
 
 <!-- eslint-disable no-undef -->
 <!-- eslint-disable no-unused-vars -->
+
 ```javascript
 const offsets = [[x, y, z], ...[]]
 const g = renderer.geometry({
@@ -419,6 +427,7 @@ const g = renderer.geometry({
 Physically based material description. Default to a Metallic Roughness workflow but can also use a Specular Glossiness workflow or even be unlit.
 
 <!-- eslint-disable no-unused-vars -->
+
 ```javascript
 const material = renderer.material({
   baseColor: [1, 1, 1, 1],
@@ -477,17 +486,16 @@ const material = renderer.material({
 | `castShadows`                   | impact shadow casting                                                         | Boolean                   | false                   |
 | `receiveShadows`                | receive potential shadowing                                                   | Boolean                   | false                   |
 
+_Texture transforms are achieved by optionally passing a TextureMap object with offset, rotation and/or scale alongside the texture itself: `{ texture: ctx.Texture, offset?: Vec2 [x, y], rotation?: Radians, scale?: Vec2 [x, y] }`_
 
-*Texture transforms are achieved by optionally passing a TextureMap object with offset, rotation and/or scale alongside the texture itself: `{ texture: ctx.Texture, offset?: Vec2 [x, y], rotation?: Radians, scale?: Vec2 [x, y] }`*
-
-*The reflectance value represents a remapping of a percentage of reflectance (with a default of 4%: 0.16 * pow(0.5, 2) = 0.04) and replaces an explicit index of refraction (IOR)*
+_The reflectance value represents a remapping of a percentage of reflectance (with a default of 4%: 0.16 _ pow(0.5, 2) = 0.04) and replaces an explicit index of refraction (IOR)\*
 
 ### animation = renderer.animation(opts)
 
 Geometry attribute animations based on [glTF 2.0 Spec / Animations](https://github.com/KhronosGroup/glTF/tree/master/specification/2.0#animations).
 
-
 <!-- eslint-disable no-unused-vars -->
+
 ```javascript
 const animation = renderer.animation({
   channels: [], // Array of Channels
@@ -513,6 +521,7 @@ Geometry morph targets based on [glTF 2.0 Spec / Morph Targets](https://github.c
 
 <!-- eslint-disable no-undef -->
 <!-- eslint-disable no-unused-vars -->
+
 ```javascript
 const morph = renderer.morph({
   sources: { positions, normals, tangents, ...attributes },
@@ -527,6 +536,7 @@ Geometry vertex skin based on [glTF 2.0 Spec / Skin](https://github.com/KhronosG
 
 <!-- eslint-disable no-undef -->
 <!-- eslint-disable no-unused-vars -->
+
 ```javascript
 const skin = renderer.skin({
   joints: [entity, entity, ...entities],
@@ -534,15 +544,15 @@ const skin = renderer.skin({
 })
 ```
 
-
 ## Lighting Components
 
 Components representing light sources used for rendering of the scene.
 
-*Note on position and orientation of lights:* Similar as camera light components position and orientation is controlled via transform component of the entity the light is attached to.
+_Note on position and orientation of lights:_ Similar as camera light components position and orientation is controlled via transform component of the entity the light is attached to.
 
 <!-- eslint-disable no-unused-vars -->
 <!-- eslint-disable no-undef -->
+
 ```javaScript
 const directionalLightEnity = renderer.entity([
   renderer.transform({
@@ -559,6 +569,7 @@ const directionalLightEnity = renderer.entity([
 ### ambientLight = renderer.ambientLight(opts)
 
 <!-- eslint-disable no-unused-vars -->
+
 ```javascript
 const ambientLight = renderer.ambientLight({
   color: [1, 1, 1, 1],
@@ -569,6 +580,7 @@ const ambientLight = renderer.ambientLight({
 ### directionalLight = renderer.directionalLight(opts)
 
 <!-- eslint-disable no-unused-vars -->
+
 ```javascript
 const directionalLight = renderer.directionalLight({
   color: [1, 1, 1, 1],
@@ -577,13 +589,14 @@ const directionalLight = renderer.directionalLight({
 })
 ```
 
-*Note: `directionalLight` `direction` is derived from `entity.transform.rotation`*
+_Note: `directionalLight` `direction` is derived from `entity.transform.rotation`_
 
 ### areaLight = renderer.areaLight(opts)
 
 Rectangular area light.
 
 <!-- eslint-disable no-unused-vars -->
+
 ```javascript
 const areaLight = renderer.areaLight({
   color: [1, 1, 1, 1],
@@ -591,12 +604,12 @@ const areaLight = renderer.areaLight({
 })
 ```
 
-*Note: `areaLight` `position/rotation/size` are derived from `entity.transform.position/rotation/scale`*
-
+_Note: `areaLight` `position/rotation/size` are derived from `entity.transform.position/rotation/scale`_
 
 ### spotLight = renderer.spotLight(opts)
 
 <!-- eslint-disable no-unused-vars -->
+
 ```javascript
 const spotLight = renderer.spotLight({
   color: [1, 1, 1, 1],
@@ -604,11 +617,12 @@ const spotLight = renderer.spotLight({
 })
 ```
 
-*Note: `spotLight` `direction` is derived from `entity.transform.rotation`*
+_Note: `spotLight` `direction` is derived from `entity.transform.rotation`_
 
 ### skybox = renderer.skybox(opts)
 
 <!-- eslint-disable no-unused-vars -->
+
 ```javascript
 const skybox = renderer.skybox({
   sunPosition: [1, 1, 1], // sky gradient used for reflections
@@ -618,20 +632,20 @@ const skybox = renderer.skybox({
 })
 ```
 
-*Note: By default a sky background is rendered unless hdr equirect panorama texture is provided.*
-*Note: Skybox orientation differ from engine to engine; to update it, set the entity's transform component rotation and set any reflection probe to dirty.*
+_Note: By default a sky background is rendered unless hdr equirect panorama texture is provided._
+_Note: Skybox orientation differ from engine to engine; to update it, set the entity's transform component rotation and set any reflection probe to dirty._
 
 ### reflectionProbe = renderer.reflectionProbe(opts)
 
 Captures environmental map of the scene for Image Based Lighting (IBL) specular reflection and irradiance diffuse. Currently requires Skybox component to be present in the scene as only Skybox background is captured.
 
 <!-- eslint-disable no-unused-vars -->
+
 ```javascript
-const reflectionProbe = renderer.reflectionProbe({
-})
+const reflectionProbe = renderer.reflectionProbe({})
 ```
 
-*Note: Due to the cost of updating and pre-filtering environment map the ReflectionProbe is no updated automatically and requires `reflectionProbe.set({ dirty: true })` whenever Skybox changes. The dirty flag is true by default so the Reflection Probe will get updated once on init*.
+_Note: Due to the cost of updating and pre-filtering environment map the ReflectionProbe is no updated automatically and requires `reflectionProbe.set({ dirty: true })` whenever Skybox changes. The dirty flag is true by default so the Reflection Probe will get updated once on init_.
 
 ## Loaders
 
@@ -644,18 +658,19 @@ const scene = await renderer.loadScene('model.gltf')
 renderer.add(scene.root)
 ```
 
-*Note: Currently only glTF is supported (JSON, binary and Embedded).*
+_Note: Currently only glTF is supported (JSON, binary and Embedded)._
 
 ## Creating Custom Components
 
 Start by creating new class as follows:
 
 <!-- eslint-disable no-unused-vars -->
+
 ```javascript
 // MyComponent.js
 const Signal = require('signals')
 
-function MyComponent (opts) {
+function MyComponent(opts) {
   this.type = 'MyComponent'
   this.entity = null
   this.numberParameter = 1
@@ -667,17 +682,17 @@ function MyComponent (opts) {
 
 // this function gets called when the component is added
 // to an enity
-MyComponent.prototype.init = function (entity) {
+MyComponent.prototype.init = function(entity) {
   this.entity = entity
 }
 
-MyComponent.prototype.set = function (opts) {
+MyComponent.prototype.set = function(opts) {
   Object.assign(this, opts)
   this.dirty = true
   Object.keys(opts).forEach((prop) => this.changed.dispatch(prop))
 }
 
-MyComponent.prototype.update = function () {
+MyComponent.prototype.update = function() {
   if (!this.dirty) return
   this.dirty = false
 
@@ -690,7 +705,7 @@ MyComponent.prototype.update = function () {
 
 // by pex-renderer convention we export factory function
 // instead of the class type
-module.exports = function createMyComponent (opts) {
+module.exports = function createMyComponent(opts) {
   return new MyComponent(opts)
 }
 ```
@@ -698,13 +713,12 @@ module.exports = function createMyComponent (opts) {
 Create instance of your component and add it to an entity.
 
 <!-- eslint-disable no-unused-vars -->
+
 ```javascript
 const createMyComponent = require('/path/to/MyComponent')
 
 const myComponent = createMyComponent({ numberParameter: 1 })
-const entity = renderer.entity([
-  myComponent
-])
+const entity = renderer.entity([myComponent])
 ```
 
 ## License
