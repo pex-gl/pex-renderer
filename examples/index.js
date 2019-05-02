@@ -3,7 +3,7 @@ const path = require('path')
 let examples = require.context('./', false, /\.js$/).keys()
 
 examples = examples
-  .filter(example => !['./index.js', './helpers.js'].includes(example))
+  .filter(example => !['./index.js', './helpers.js', './webpack.config.js'].includes(example))
 
 examplesNames = examples.map(example => path.basename(example, path.extname(example)))
 

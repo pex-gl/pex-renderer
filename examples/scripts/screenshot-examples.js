@@ -8,7 +8,8 @@ const allExamples = glob
     cwd: path.resolve(__dirname, "../")
   })
   .map(example => `./${example}`)
-  .filter(example => !['./index.js', './helpers.js'].includes(example))
+  .filter(example => !['./index.js', './helpers.js', './webpack.config.js'].includes(example))
+  .map(example => path.basename(example, path.extname(example)))
 
 let timer = null
 const TIMEOUT = 5 * 60 * 1000
