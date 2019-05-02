@@ -11,7 +11,10 @@ const ExamplesModules = Object.fromEntries(
   new Map(
     examplesNames.map(example => [
       example,
-      () => import(/* webpackChunkName: "[request]" */ `./${example}.js`)
+      () => import(
+        /* webpackChunkName: "[request]" */
+        /* webpackExclude: /scripts$/ */
+        `./${example}.js`)
     ])
   )
 );
