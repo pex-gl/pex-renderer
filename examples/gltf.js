@@ -16,8 +16,10 @@ const aabb = require('pex-geom/aabb')
 
 const { makeAxes } = require('./helpers')
 
-const MODELS_PATH = 'glTF-Sample-Models'
-// const MODELS_PATH = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0'
+const MODELS_PATH = ['localhost', '0.0.0.0'].includes(window.location.hostname) ?
+  'glTF-Sample-Models' :
+  'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0'
+
 const ASSETS_DIR = isBrowser ? 'assets' : path.join(__dirname, 'assets')
 
 const State = {
@@ -279,13 +281,13 @@ function onSceneLoaded (scene, grid) {
 let floorEntity
 let cameraEntity
 
-async function loadScene (url, skipCameras) {
+async function loadScene (url, grid) {
   let scene
   try {
     console.time('building ' + url)
     // All examples only have one scene
     State.scene = scene = await renderer.loadScene(url, {
-      skipCameras
+      includeCameras: !grid
     })
   } catch (e) {
     console.timeEnd('building ' + url)
@@ -305,7 +307,7 @@ async function loadScene (url, skipCameras) {
   renderer.add(scene.root)
 
   // Add camera for models lacking one
-  if (!skipCameras) {
+  if (!grid) {
     cameraEntity = scene.entities.find(entity => entity.components.find(component => component.type === 'Camera'))
 
     if (!cameraEntity) {
