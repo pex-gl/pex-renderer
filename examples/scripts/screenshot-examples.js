@@ -1,7 +1,14 @@
 const mkdirp = require('mkdirp')
 const puppeteer = require('puppeteer')
+const path = require('path')
+const glob = require('glob')
 
-const allExamples = require('./examples.js')
+const allExamples = glob
+  .sync("*.js", {
+    cwd: path.resolve(__dirname, "../")
+  })
+  .map(example => `./${example}`)
+  .filter(example => !['./index.js', './helpers.js'].includes(example))
 
 let timer = null
 const TIMEOUT = 5 * 60 * 1000

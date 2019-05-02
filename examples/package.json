@@ -4,8 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "webpack-dev-server --open --config=scripts/webpack.config.js",
-    "build": "npm run clean && webpack --config=scripts/webpack.config.js",
+    "start": "webpack-dev-server --open",
+    "build": "npm run clean && webpack",
     "screenshots": "node ./scripts/screenshot-examples.js",
     "diff": "node ./scripts/screenshot-diff.js",
     "clean": "rm -rf build"

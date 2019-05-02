@@ -1,10 +1,17 @@
-const examples = require('./examples.js')
+const path = require('path')
+
+let examples = require.context('./', false, /\.js$/).keys()
+
+examples = examples
+  .filter(example => !['./index.js', './helpers.js'].includes(example))
+
+examplesNames = examples.map(example => path.basename(example, path.extname(example)))
 
 const ExamplesModules = Object.fromEntries(
   new Map(
-    examples.map(example => [
+    examplesNames.map(example => [
       example,
-      () => import(/* webpackChunkName: "[request]" */ `../${example}.js`)
+      () => import(/* webpackChunkName: "[request]" */ `./${example}.js`)
     ])
   )
 );
@@ -27,7 +34,7 @@ if (currentExample) {
 const listItems = !currentExample
   ? ''
   : '<div class="Examples-list-item"><a href="/"><h3>home</h3></a></div>';
-list.innerHTML = examples.reduce(
+list.innerHTML = examplesNames.reduce(
   (html, example) =>
     (html += `<div class="Examples-list-item"><a href="?name=${example}">${
       currentExample ? "" : `<img src="screenshots/${example}.png" />`

@@ -1,1 +1,0 @@
-(window.webpackJsonp=window.webpackJsonp||[]).push([[12],{263:function(n,e,p){(function(e){const s=p(9);n.exports={entry:"./scripts/index.js",output:{filename:"build/[name].js",path:s.join(e,"../")},plugins:[],externals:["puppeteer"],node:{fs:"empty"}}}).call(this,"/")}}]);
