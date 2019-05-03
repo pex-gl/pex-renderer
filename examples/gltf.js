@@ -28,7 +28,7 @@ const State = {
   scenes: [],
   gridSize: 1,
   showBoundingBoxes: false,
-  useEnvMap: false,
+  useEnvMap: true,
   shadows: false,
   formats: ['glTF', 'glTF-Binary', 'glTF-Draco', 'glTF-Embedded'],
   currentFormat: 0
