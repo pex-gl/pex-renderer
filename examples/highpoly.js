@@ -45,6 +45,8 @@ for (let i = 0; i < sphere.positions.length; i++) {
 }
 sphere.normals = normals(sphere.positions, sphere.cells)
 
+sphere.cells = new Uint32Array(sphere.cells.flat())
+
 const sphereEntity = renderer.entity([
   renderer.transform({ position: [0, 0, 0] }),
   renderer.geometry(sphere),
