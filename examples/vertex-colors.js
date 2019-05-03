@@ -20,7 +20,7 @@ const camera = renderer.entity([
 renderer.add(camera)
 
 const geometry = createCube()
-geometry.vertexColors = geometry.uvs.map(uv => [...uv, 0, 0.5])
+geometry.vertexColors = geometry.uvs.map((uv) => [...uv, 0, 0.5])
 delete geometry.normals // USE_UNLIT_WORKFLOW
 
 const cubeEntity = renderer.entity([
@@ -37,11 +37,10 @@ const cubeEntity = renderer.entity([
 ])
 renderer.add(cubeEntity)
 
-const ambientLightEntity = renderer.entity([
-  renderer.ambientLight()
-])
+const ambientLightEntity = renderer.entity([renderer.ambientLight()])
 renderer.add(ambientLightEntity)
 
 ctx.frame(() => {
   renderer.draw()
+  window.dispatchEvent(new CustomEvent('pex-screenshot'))
 })

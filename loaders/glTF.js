@@ -500,7 +500,7 @@ function handleNode (node, gltf, i, ctx, renderer, options) {
       }
   ))
 
-  if (!options.skipCameras && Number.isInteger(node.camera)) {
+  if (options.includeCameras && Number.isInteger(node.camera)) {
     const camera = gltf.cameras[node.camera]
     const enabled = options.enabledCameras.includes(node.camera)
 
@@ -772,7 +772,8 @@ function decodeBase64 (uri) {
 const DEFAULT_OPTIONS = {
   enabledCameras: [0],
   enabledScene: undefined,
-  skipCameras: false
+  includeCameras: false,
+  includeLights: false,
 }
 
 async function loadGltf (url, renderer, options = {}) {

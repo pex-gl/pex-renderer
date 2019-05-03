@@ -8,7 +8,7 @@ const renderer = createRenderer(ctx)
 
 const viewportWidth = window.innerWidth * 0.5
 const viewportHeight = window.innerHeight
-const aspect = ctx.gl.drawingBufferWidth * 0.5 / ctx.gl.drawingBufferHeight
+const aspect = (ctx.gl.drawingBufferWidth * 0.5) / ctx.gl.drawingBufferHeight
 
 const cubeCount = 100
 const offset = 2
@@ -30,10 +30,10 @@ const orthographicCamera = renderer.entity([
   renderer.camera({
     projection: 'orthographic',
     aspect,
-    left: -0.5 * viewSize * aspect / 2,
-    right: 0.5 * viewSize * aspect / 2,
-    top: 0.5 * viewSize / 2,
-    bottom: -0.5 * viewSize / 2,
+    left: (-0.5 * viewSize * aspect) / 2,
+    right: (0.5 * viewSize * aspect) / 2,
+    top: (0.5 * viewSize) / 2,
+    bottom: (-0.5 * viewSize) / 2,
     viewport: [window.innerWidth * 0.5, 0, viewportWidth, viewportHeight]
   }),
   renderer.orbiter({ position: [10, 10, 10] })
@@ -66,11 +66,11 @@ const skybox = renderer.entity([
 ])
 renderer.add(skybox)
 
-const reflectionProbe = renderer.entity([
-  renderer.reflectionProbe()
-])
+const reflectionProbe = renderer.entity([renderer.reflectionProbe()])
 renderer.add(reflectionProbe)
 
 ctx.frame(() => {
   renderer.draw()
+
+  window.dispatchEvent(new CustomEvent('pex-screenshot'))
 })

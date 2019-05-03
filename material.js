@@ -17,7 +17,7 @@ const MATERIAL_MAPS = [
   'specularGlossinessMap'
 ]
 
-function Material (opts) {
+function Material(opts) {
   this.type = 'Material'
   this.id = 'Material_' + MaterialID++
   this.enabled = true
@@ -30,7 +30,8 @@ function Material (opts) {
   this.baseColor = [1, 1, 1, 1]
   this.baseColorMap = null
 
-  this.useSpecularGlossinessWorkflow = opts.useSpecularGlossinessWorkflow || false
+  this.useSpecularGlossinessWorkflow =
+    opts.useSpecularGlossinessWorkflow || false
   this.unlit = opts.unlit || false
   if (opts.useSpecularGlossinessWorkflow) {
     // Specular Glossiness workflow
@@ -87,16 +88,16 @@ function Material (opts) {
   this.set(opts)
 }
 
-Material.prototype.init = function (entity) {
+Material.prototype.init = function(entity) {
   this.entity = entity
 }
 
-Material.prototype.set = function (opts) {
+Material.prototype.set = function(opts) {
   Object.assign(this, opts)
 
   const optsKeys = Object.keys(opts)
 
-  const mapKeys = optsKeys.filter(opt => MATERIAL_MAPS.includes(opt))
+  const mapKeys = optsKeys.filter((opt) => MATERIAL_MAPS.includes(opt))
   if (mapKeys.length) {
     for (let i = 0; i < mapKeys.length; i++) {
       const map = this[mapKeys[i]]
@@ -119,6 +120,6 @@ Material.prototype.set = function (opts) {
   optsKeys.forEach((prop) => this.changed.dispatch(prop))
 }
 
-module.exports = function (opts) {
+module.exports = function(opts) {
   return new Material(opts)
 }

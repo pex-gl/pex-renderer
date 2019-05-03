@@ -49,7 +49,7 @@ const curlNoise = (p) => {
   return vec3.scale(vec3.normalize([x, y, z]), divisor)
 }
 
-function Curl (opts) {
+function Curl(opts) {
   this.type = 'Curl'
   this.size = 10
   this.particleCount = 1000
@@ -59,41 +59,38 @@ function Curl (opts) {
 
   this.set(opts)
 
-  this.particles = Array.from(
-    { length: this.particleCount },
-    () => {
-      const position = rndVec3()
+  this.particles = Array.from({ length: this.particleCount }, () => {
+    const position = rndVec3()
 
-      return {
-        initialPosition: position,
-        currentPosition: vec3.copy(position),
-        velocity: vec3.create()
-      }
+    return {
+      initialPosition: position,
+      currentPosition: vec3.copy(position),
+      velocity: vec3.create()
     }
-  )
+  })
 }
 
-Curl.prototype.set = function (opts) {
+Curl.prototype.set = function(opts) {
   Object.assign(this, opts)
 }
 
-Curl.prototype.init = function (entity) {
+Curl.prototype.init = function(entity) {
   this.entity = entity
 
   this.field = Array.from({ length: this.size }, (a, x) => {
     return Array.from({ length: this.size }, (b, y) => {
       return Array.from({ length: this.size }, (c, z) => {
-        return curlNoise([
-          x - this.size / 2,
-          y - this.size / 2,
-          z - this.size / 2
-        ].map(p => p * this.modding))
+        return curlNoise(
+          [x - this.size / 2, y - this.size / 2, z - this.size / 2].map(
+            (p) => p * this.modding
+          )
+        )
       })
     })
   })
 }
 
-Curl.prototype.update = function () {
+Curl.prototype.update = function() {
   for (let i = 0; i < this.particles.length; i++) {
     const particle = this.particles[i]
     let value = this.getValue(particle.currentPosition)
@@ -116,15 +113,15 @@ Curl.prototype.update = function () {
   }
 
   this.entity.getComponent('Geometry').set({
-    positions: this.particles.map(p => p.currentPosition),
-    colors: this.particles.map(p => {
+    positions: this.particles.map((p) => p.currentPosition),
+    colors: this.particles.map((p) => {
       const [r, g, b] = p.velocity
       return [r * 6, g, b, 1]
     })
   })
 }
 
-Curl.prototype.getValue = function ([x, y, z]) {
+Curl.prototype.getValue = function([x, y, z]) {
   x += this.size / 2
   y += this.size / 2
   z += this.size / 2
@@ -159,9 +156,18 @@ const particleEntity = renderer.entity([
 ])
 renderer.add(particleEntity)
 
-gui.addParam('Point size', particleEntity.getComponent('Material'), 'pointSize', { min: 0.5, max: 40 })
+gui.addParam(
+  'Point size',
+  particleEntity.getComponent('Material'),
+  'pointSize',
+  { min: 0.5, max: 40 }
+)
 
 ctx.frame(() => {
   renderer.draw()
   gui.draw()
 })
+
+setTimeout(() => {
+  window.dispatchEvent(new CustomEvent('pex-screenshot'))
+}, 10000)

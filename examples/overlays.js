@@ -49,4 +49,5 @@ const renderer = createRenderer(ctx)
 
 ctx.frame(() => {
   renderer.draw()
+  window.dispatchEvent(new CustomEvent('pex-screenshot'))
 })

@@ -23,7 +23,7 @@ const IndicesMap = {
   cells: 'indices'
 }
 
-function Geometry (opts) {
+function Geometry(opts) {
   this.type = 'Geometry'
   this.enabled = true
   this.changed = new Signal()
@@ -33,16 +33,16 @@ function Geometry (opts) {
 
   this.count = undefined
   this._indices = null
-  this._attributes = { }
+  this._attributes = {}
 
   this.set(opts)
 }
 
-Geometry.prototype.init = function (entity) {
+Geometry.prototype.init = function(entity) {
   this.entity = entity
 }
 
-Geometry.prototype.set = function (opts) {
+Geometry.prototype.set = function(opts) {
   const ctx = opts.ctx || this.ctx
 
   // This is a bit messy because indices will could ovewrite this.indices
@@ -63,14 +63,20 @@ Geometry.prototype.set = function (opts) {
           type: undefined
         }
       }
-      const data = (val.length !== undefined) ? val : val.data
+      const data = val.length !== undefined ? val : val.data
 
       // TODO: test different type configurations
       if (data) {
         if (!attrib.buffer) {
-          attrib.buffer = ctx.vertexBuffer({ data: data, type: val.type || attrib.type })
+          attrib.buffer = ctx.vertexBuffer({
+            data: data,
+            type: val.type || attrib.type
+          })
         } else {
-          ctx.update(attrib.buffer, { data: data, type: val.type || attrib.type })
+          ctx.update(attrib.buffer, {
+            data: data,
+            type: val.type || attrib.type
+          })
         }
 
         if (attribName === 'aPosition') {
@@ -121,12 +127,18 @@ Geometry.prototype.set = function (opts) {
           type: undefined
         }
       }
-      const data = (val.length !== undefined) ? val : val.data
+      const data = val.length !== undefined ? val : val.data
       if (data) {
         if (!indices.buffer) {
-          indices.buffer = ctx.indexBuffer({ data: data, type: val.type || indices.type })
+          indices.buffer = ctx.indexBuffer({
+            data: data,
+            type: val.type || indices.type
+          })
         } else {
-          ctx.update(indices.buffer, { data: data, type: val.type || indices.type })
+          ctx.update(indices.buffer, {
+            data: data,
+            type: val.type || indices.type
+          })
         }
       } else if (val.buffer) {
         // TODO: should we delete previous buffer?
@@ -150,6 +162,6 @@ Geometry.prototype.set = function (opts) {
   }
 }
 
-module.exports = function (opts) {
+module.exports = function(opts) {
   return new Geometry(opts)
 }

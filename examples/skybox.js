@@ -55,11 +55,8 @@ const skybox = renderer.entity([
 ])
 renderer.add(skybox)
 
-const reflectionProbe = renderer.entity([
-  renderer.reflectionProbe()
-])
+const reflectionProbe = renderer.entity([renderer.reflectionProbe()])
 renderer.add(reflectionProbe)
-
 ;(async () => {
   const buffer = await io.loadBinary(`${ASSETS_DIR}/Mono_Lake_B.hdr`)
   const hdrImg = parseHdr(buffer)
@@ -82,16 +79,27 @@ renderer.add(reflectionProbe)
   gui.addParam('Enabled', skyboxCmp, 'enabled', {}, (value) => {
     skyboxCmp.set({ enabled: value })
   })
-  gui.addParam('Rotation', State, 'rotation', { min: 0, max: 2 * Math.PI }, () => {
-    skybox.getComponent('Transform').set({
-      rotation: quat.fromAxisAngle(quat.create(), [0, 1, 0], State.rotation)
-    })
-    reflectionProbe.getComponent('ReflectionProbe').set({ dirty: true })
-  })
-  gui.addParam('BG Blur', skyboxCmp, 'backgroundBlur', {}, () => { })
-  gui.addParam('Exposure', cameraCmp, 'exposure', { min: 0, max: 2 }, () => { })
-  gui.addParam('Roughness', materialCmp, 'roughness', {}, () => { })
-  gui.addTexture2D('Reflection Probe', reflectionProbe.getComponent('ReflectionProbe')._reflectionMap)
+  gui.addParam(
+    'Rotation',
+    State,
+    'rotation',
+    { min: 0, max: 2 * Math.PI },
+    () => {
+      skybox.getComponent('Transform').set({
+        rotation: quat.fromAxisAngle(quat.create(), [0, 1, 0], State.rotation)
+      })
+      reflectionProbe.getComponent('ReflectionProbe').set({ dirty: true })
+    }
+  )
+  gui.addParam('BG Blur', skyboxCmp, 'backgroundBlur', {}, () => {})
+  gui.addParam('Exposure', cameraCmp, 'exposure', { min: 0, max: 2 }, () => {})
+  gui.addParam('Roughness', materialCmp, 'roughness', {}, () => {})
+  gui.addTexture2D(
+    'Reflection Probe',
+    reflectionProbe.getComponent('ReflectionProbe')._reflectionMap
+  )
+
+  window.dispatchEvent(new CustomEvent('pex-screenshot'))
 })()
 
 ctx.frame(() => {

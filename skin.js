@@ -1,7 +1,7 @@
 const Signal = require('signals')
 const mat4 = require('pex-math/mat4')
 
-function Skin (opts) {
+function Skin(opts) {
   this.type = 'Skin'
   this.enabled = true
   this.changed = new Signal()
@@ -12,11 +12,11 @@ function Skin (opts) {
   this.set(opts)
 }
 
-Skin.prototype.init = function (entity) {
+Skin.prototype.init = function(entity) {
   this.entity = entity
 }
 
-Skin.prototype.set = function (opts) {
+Skin.prototype.set = function(opts) {
   Object.assign(this, opts)
   Object.keys(opts).forEach((prop) => this.changed.dispatch(prop))
 
@@ -28,7 +28,7 @@ Skin.prototype.set = function (opts) {
   }
 }
 
-Skin.prototype.update = function () {
+Skin.prototype.update = function() {
   if (!this.enabled) return
 
   for (let i = 0; i < this.joints.length; i++) {
@@ -40,6 +40,6 @@ Skin.prototype.update = function () {
   }
 }
 
-module.exports = function createSkin (opts) {
+module.exports = function createSkin(opts) {
   return new Skin(opts)
 }

@@ -1,10 +1,10 @@
 const vec3 = require('pex-math/vec3')
 
-function makeCircle (opts) {
+function makeCircle(opts) {
   const points = []
 
   for (let i = 0; i < opts.steps; i++) {
-    const t = i / opts.steps * 2 * Math.PI
+    const t = (i / opts.steps) * 2 * Math.PI
     const x = Math.cos(t)
     const y = Math.sin(t)
     const pos = [0, 0, 0]
@@ -24,9 +24,10 @@ function makeCircle (opts) {
   return lines
 }
 
-function makePrism (opts) {
+function makePrism(opts) {
   const r = opts.radius
   const position = opts.position || [0, 0, 0]
+  // prettier-ignore
   const points = [
     [0, r, 0], [r, 0, 0],
     [0, -r, 0], [r, 0, 0],
@@ -49,10 +50,11 @@ function makePrism (opts) {
   return points
 }
 
-function makeQuad (opts) {
+function makeQuad(opts) {
   const w = opts.width
   const h = opts.height
   const position = opts.position || [0, 0, 0]
+  // prettier-ignore
   const points = [
     [-1, -1, 0], [1, -1, 0],
     [1, -1, 0], [1, 1, 0],
@@ -76,6 +78,7 @@ function makeQuad (opts) {
 }
 
 function makeAxes(size = 10) {
+  // prettier-ignore
   return [
     // X axis
     [0, 0, 0],
