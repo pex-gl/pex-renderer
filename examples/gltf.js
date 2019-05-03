@@ -16,9 +16,8 @@ const aabb = require('pex-geom/aabb')
 
 const { makeAxes } = require('./helpers')
 
-const MODELS_PATH = ['localhost', '0.0.0.0'].includes(window.location.hostname)
-  ? 'glTF-Sample-Models'
-  : 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0'
+const MODELS_PATH =
+  'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0'
 
 const ASSETS_DIR = isBrowser ? 'assets' : path.join(__dirname, 'assets')
 
