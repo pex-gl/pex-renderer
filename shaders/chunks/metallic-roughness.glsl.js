@@ -1,4 +1,4 @@
-module.exports = /* glsl */`
+module.exports = /* glsl */ `
 #ifdef USE_METALLIC_ROUGHNESS_WORKFLOW
 
   #define MIN_ROUGHNESS 0.045

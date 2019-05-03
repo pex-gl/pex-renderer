@@ -1,4 +1,4 @@
-module.exports = /* glsl */`
+module.exports = /* glsl */ `
 struct Light {
   vec3 l;
   vec4 color;

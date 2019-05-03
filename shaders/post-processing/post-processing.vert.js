@@ -1,4 +1,4 @@
-module.exports = /* glsl */`
+module.exports = /* glsl */ `
 attribute vec2 aPosition;
 
 varying vec2 vTexCoord0;

@@ -1,4 +1,4 @@
-module.exports = /* glsl */`
+module.exports = /* glsl */ `
 #ifdef USE_EMISSIVE_COLOR
   uniform vec4 uEmissiveColor; // TODO: gltf assumes sRGB color, not linear
   uniform float uEmissiveIntensity;

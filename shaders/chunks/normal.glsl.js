@@ -1,4 +1,4 @@
-module.exports = /* glsl */`
+module.exports = /* glsl */ `
 #ifdef USE_NORMAL_MAP
 uniform sampler2D uNormalMap;
 uniform float uNormalScale;

@@ -1,5 +1,5 @@
 // https://github.com/mattdesl/glsl-fxaa
-module.exports = /* glsl */`
+module.exports = /* glsl */ `
 #ifndef FXAA_REDUCE_MIN
     #define FXAA_REDUCE_MIN   (1.0/ 128.0)
 #endif

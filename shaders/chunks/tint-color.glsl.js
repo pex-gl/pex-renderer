@@ -1,4 +1,4 @@
-module.exports = /* glsl */`
+module.exports = /* glsl */ `
 #if defined(USE_VERTEX_COLORS) || defined(USE_INSTANCED_COLOR)
   void getTintColor(inout PBRData data) {
     vec3 tintColor = decode(vColor, 3).rgb;

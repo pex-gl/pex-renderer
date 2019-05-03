@@ -1,4 +1,4 @@
-module.exports = /* glsl */`
+module.exports = /* glsl */ `
 #ifdef USE_SPECULAR_GLOSSINESS_WORKFLOW
   uniform vec4 uDiffuse;
   uniform vec3 uSpecular;

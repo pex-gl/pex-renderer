@@ -8,7 +8,7 @@
  * @description Based on http://http.developer.nvidia.com/GPUGems/gpugems_ch17.html and http://gl.ict.usc.edu/Data/HighResProbes/
  */
 
-module.exports = /* glsl */`
+module.exports = /* glsl */ `
 vec2 envMapEquirect(vec3 wcNormal) {
   float flipEnvMap = -1.0;
 

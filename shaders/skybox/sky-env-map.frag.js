@@ -1,6 +1,6 @@
 const SHADERS = require('../chunks/index.js')
 
-module.exports = /* glsl */`
+module.exports = /* glsl */ `
 precision highp float;
 
 ${SHADERS.math.PI}

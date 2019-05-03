@@ -1,11 +1,11 @@
-const PI = /* glsl */`
+const PI = /* glsl */ `
 const float PI = 3.14159265359;
 `
-const TWO_PI = /* glsl */`
+const TWO_PI = /* glsl */ `
 const float TWO_PI = 6.28318530718;
 `
 
-const saturate = /* glsl */`
+const saturate = /* glsl */ `
 #define MEDIUMP_FLT_MAX    65504.0
 #define MEDIUMP_FLT_MIN    0.00006103515625
 
@@ -20,7 +20,7 @@ const saturate = /* glsl */`
 #define saturate(x) clamp(x, 0.0, 1.0)
 `
 
-const quatToMat4 = /* glsl */`
+const quatToMat4 = /* glsl */ `
 mat4 quatToMat4(vec4 q) {
   float xs = q.x + q.x;
   float ys = q.y + q.y;
@@ -57,14 +57,14 @@ mat4 quatToMat4(vec4 q) {
 //               m[0][1], m[1][1]);
 // }`
 
-const transposeMat3 = /* glsl */`
+const transposeMat3 = /* glsl */ `
 mat3 transpose(mat3 m) {
   return mat3(m[0][0], m[1][0], m[2][0],
               m[0][1], m[1][1], m[2][1],
               m[0][2], m[1][2], m[2][2]);
 }`
 
-const transposeMat4 = /* glsl */`
+const transposeMat4 = /* glsl */ `
 mat4 transpose(mat4 m) {
   return mat4(
     m[0][0], m[1][0], m[2][0], m[3][0],
@@ -104,7 +104,7 @@ mat4 transpose(mat4 m) {
 //               b21, (-a21 * a00 + a01 * a20), (a11 * a00 - a01 * a10)) / det;
 // }`
 
-const inverseMat4 = /* glsl */`
+const inverseMat4 = /* glsl */ `
 mat4 inverse(mat4 m) {
   float
       a00 = m[0][0], a01 = m[0][1], a02 = m[0][2], a03 = m[0][3],

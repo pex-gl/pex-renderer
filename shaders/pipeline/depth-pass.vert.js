@@ -1,6 +1,6 @@
 const SHADERS = require('../chunks/index.js')
 
-module.exports = /* glsl */`
+module.exports = /* glsl */ `
 // Variables
 attribute vec3 aPosition;
 

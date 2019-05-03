@@ -1,4 +1,4 @@
-module.exports = /* glsl */`
+module.exports = /* glsl */ `
 uniform float uReflectance;
 
 // https://google.github.io/filament/Filament.md.html#materialsystem/specularbrdf

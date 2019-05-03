@@ -1,4 +1,4 @@
-module.exports = /* glsl */`
+module.exports = /* glsl */ `
 #if NUM_AREA_LIGHTS > 0
 
 struct AreaLight {

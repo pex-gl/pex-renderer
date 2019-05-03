@@ -1,4 +1,4 @@
-module.exports = /* glsl */`
+module.exports = /* glsl */ `
 #ifdef USE_REFLECTION_PROBES
   uniform sampler2D uReflectionMap;
   uniform int uReflectionMapEncoding;

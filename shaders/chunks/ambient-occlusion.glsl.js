@@ -1,4 +1,4 @@
-module.exports = /* glsl */`
+module.exports = /* glsl */ `
 #ifdef USE_AO
   uniform sampler2D uAO;
   uniform vec2 uScreenSize;
