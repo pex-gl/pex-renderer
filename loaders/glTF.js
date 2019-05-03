@@ -344,8 +344,7 @@ function handleMaterial (material, gltf, ctx) {
   if (material.extensions && material.extensions.KHR_materials_unlit) {
     materialProps = {
       ...materialProps,
-      roughness: null,
-      metallic: null
+      unlit: true
     }
   }
 
