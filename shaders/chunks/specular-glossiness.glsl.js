@@ -96,6 +96,13 @@ module.exports = /* glsl */ `
     vec3 baseColorFromDiffuse = diffuse * oneMinusSpecularStrength / (1.0 - a) / max(1.0 - data.metallic, epsilon);
     vec3 baseColorFromSpecular = (specular - a * (1.0 - data.metallic)) * (1.0 / max(data.metallic, epsilon));
     data.baseColor = mix(baseColorFromDiffuse, baseColorFromSpecular, data.metallic * data.metallic);
+
+    #if defined(USE_VERTEX_COLORS) || defined(USE_INSTANCED_COLOR)
+      vec3 tint = decode(vColor, SRGB).rgb;
+      data.baseColor *= tint;
+      data.specularColor *= tint;
+      data.opacity *= vColor.a;
+    #endif
   }
 #endif
 `

@@ -21,6 +21,7 @@ uniform vec4 uBaseColor; // TODO: gltf assumes sRGB color, not linear
     #endif
 
     #if defined(USE_VERTEX_COLORS) || defined(USE_INSTANCED_COLOR)
+      data.baseColor *= decode(vColor, 3).rgb;
       data.opacity = uBaseColor.a * texelColor.a * vColor.a;
     #else
       data.opacity = uBaseColor.a * texelColor.a;
@@ -33,6 +34,7 @@ uniform vec4 uBaseColor; // TODO: gltf assumes sRGB color, not linear
     #endif
 
     #if defined(USE_VERTEX_COLORS) || defined(USE_INSTANCED_COLOR)
+      data.baseColor *= decode(vColor, 3).rgb;
       data.opacity = uBaseColor.a * vColor.a;
     #else
       data.opacity = uBaseColor.a;

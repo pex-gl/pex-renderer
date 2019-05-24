@@ -80,7 +80,6 @@ ${SHADERS.rgbm}
 ${SHADERS.gamma}
 ${SHADERS.encodeDecode}
 ${SHADERS.textureCoordinates}
-${SHADERS.tintColor}
 ${SHADERS.baseColor}
 
 #ifndef USE_UNLIT_WORKFLOW
@@ -121,10 +120,6 @@ void main() {
 
   #ifdef USE_UNLIT_WORKFLOW
     getBaseColor(data);
-
-    #if defined(USE_VERTEX_COLORS) || defined(USE_INSTANCED_COLOR)
-      getTintColor(data);
-    #endif
 
     color = data.baseColor;
   #else
@@ -177,10 +172,6 @@ void main() {
     #endif
     #ifdef USE_ALPHA_TEST
       alphaTest(data);
-    #endif
-
-    #if defined(USE_VERTEX_COLORS) || defined(USE_INSTANCED_COLOR)
-      getTintColor(data);
     #endif
 
     data.linearRoughness = data.roughness * data.roughness;
