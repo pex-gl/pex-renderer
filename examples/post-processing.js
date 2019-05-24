@@ -96,10 +96,31 @@ const cameraEntity = renderer.add(
   renderer.entity([
     renderer.postProcessing({
       // enabled: false,
-      ssao: true,
       fxaa: false,
-      dof: true,
-      dofDepth: 18
+
+      fog: false,
+      fogColor: [0.5, 0.5, 0.5],
+      fogStart: 5,
+      fogDensity: 0.15,
+      inscatteringCoeffs: [0.3, 0.3, 0.3],
+
+      ssao: false,
+      ssaoIntensity: 5,
+      ssaoRadius: 12,
+      ssaoBias: 0.01,
+      ssaoBlurRadius: 2,
+      ssaoBlurSharpness: 10,
+
+      dof: false,
+      dofIterations: 1,
+      dofRange: 5,
+      dofRadius: 1,
+      dofDepth: 18,
+
+      bloom: true,
+      bloomThreshold: 2,
+      bloomIntensity: 1,
+      bloomRadius: 1
     }),
     renderer.camera({
       fov: Math.PI / 3,
@@ -453,6 +474,19 @@ renderer.add(areaLightEntity)
     min: 0,
     max: 20
   })
+  gui.addParam('Bloom', postProcessingCmp, 'bloom')
+  gui.addParam('Bloom intensity', postProcessingCmp, 'bloomIntensity', {
+    min: 0,
+    max: 10
+  })
+  gui.addParam('Bloom threshold', postProcessingCmp, 'bloomThreshold', {
+    min: 0,
+    max: 2
+  })
+  gui.addParam('Bloom radius', postProcessingCmp, 'bloomRadius', {
+    min: 0,
+    max: 2
+  })
   gui.addParam('DOF', postProcessingCmp, 'dof')
   gui.addParam('DOF Iterations', postProcessingCmp, 'dofIterations', {
     min: 1,
@@ -471,6 +505,13 @@ renderer.add(areaLightEntity)
   if (postProcessingCmp.enabled) {
     gui.addTexture2D('Depth', postProcessingCmp._frameDepthTex)
     gui.addTexture2D('Normal', postProcessingCmp._frameNormalTex)
+    if (postProcessingCmp.bloom) {
+      gui.addTexture2D(
+        'Down Sample',
+        postProcessingCmp._frameDownSampleTextures[4]
+      )
+      gui.addTexture2D('Bloom', postProcessingCmp._frameBloomTex)
+    }
   }
 
   window.dispatchEvent(new CustomEvent('pex-screenshot'))
