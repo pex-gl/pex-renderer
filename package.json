@@ -1,6 +1,6 @@
 {
   "name": "pex-renderer",
-  "version": "3.0.0-34",
+  "version": "3.0.0-35",
   "description": "Physically Based Renderer for Pex",
   "main": "index.js",
   "scripts": {
