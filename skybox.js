@@ -26,11 +26,16 @@ function Skybox(opts) {
   const skyboxPositions = [[-1, -1], [1, -1], [1, 1], [-1, 1]]
   const skyboxFaces = [[0, 1, 2], [0, 2, 3]]
 
+  const flags = []
+  if (ctx.capabilities.maxColorAttachments > 1) {
+    flags.push('#define USE_DRAW_BUFFERS')
+  }
+
   this._drawCommand = {
     name: 'Skybox.draw',
     pipeline: ctx.pipeline({
       vert: SKYBOX_VERT,
-      frag: SKYBOX_FRAG,
+      frag: flags.join('\n') + '\n' + SKYBOX_FRAG,
       depthTest: true
     }),
     attributes: {
