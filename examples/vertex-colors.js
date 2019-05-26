@@ -21,12 +21,27 @@ renderer.add(camera)
 
 const geometry = createCube()
 geometry.vertexColors = geometry.uvs.map((uv) => [...uv, 0, 0.5])
-delete geometry.normals // USE_UNLIT_WORKFLOW
+
+const skyboxEntity = renderer.entity([
+  renderer.skybox({
+    sunPosition: [1, 1, 1]
+  })
+])
+renderer.add(skyboxEntity)
+
+const reflectionProbeEntity = renderer.entity([renderer.reflectionProbe()])
+renderer.add(reflectionProbeEntity)
 
 const cubeEntity = renderer.entity([
   renderer.geometry(geometry),
   renderer.material({
     baseColor: [1, 1, 1, 0.5],
+    // or
+    // useSpecularGlossinessWorkflow: true,
+    // diffuse: [1, 1, 1, 0.5],
+    // glossiness: 0,
+    // or
+    // unlit: true,
     depthWrite: false,
     blend: true,
     blendSrcRGBFactor: ctx.BlendFactor.SrcAlpha,
