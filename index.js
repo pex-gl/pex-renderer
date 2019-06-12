@@ -899,7 +899,11 @@ Renderer.prototype.drawMeshes = function(
     }
 
     // Don't draw if worldBounds are outside the frustum
-    if (camera && geometry.frustumCulled && !transform.isInFrustum(camera.frustum)) {
+    if (
+      camera &&
+      geometry.frustumCulled &&
+      !transform.isInFrustum(camera.frustum)
+    ) {
       continue
     }
 
