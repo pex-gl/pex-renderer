@@ -46,8 +46,8 @@ function createProfiler(ctx, renderer) {
     canvas.id = 'pex-renderer-profiler'
     canvas.width = W * 2
     canvas.height = H * 2
-    document.body.appendChild(canvas)
-    canvas.style.position = 'fixed'
+    ctx.gl.canvas.parentElement.appendChild(canvas)
+    canvas.style.position = 'absolute'
     canvas.style.width = W + 'px'
     canvas.style.height = H + 'px'
     canvas.style.top = M + 'px'
