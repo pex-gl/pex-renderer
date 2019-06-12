@@ -246,7 +246,7 @@ void main() {
     #endif
   #endif // USE_UNLIT_WORKFLOW
 
-  gl_FragData[0] = encode(vec4(ao, ao, ao, 1.0), uOutputEncoding);
+  gl_FragData[0] = encode(vec4(color, 1.0), uOutputEncoding);
   #ifdef USE_DRAW_BUFFERS
     gl_FragData[1] = encode(vec4(data.emissiveColor, 1.0), uOutputEncoding);
   #endif
