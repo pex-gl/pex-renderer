@@ -1,4 +1,4 @@
-module.exports = /* glsl */`
+module.exports = /* glsl */ `
 uniform vec4 uBaseColor; // TODO: gltf assumes sRGB color, not linear
 
 #ifdef USE_BASE_COLOR_MAP
@@ -21,6 +21,9 @@ uniform vec4 uBaseColor; // TODO: gltf assumes sRGB color, not linear
     #endif
 
     #if defined(USE_VERTEX_COLORS) || defined(USE_INSTANCED_COLOR)
+      #if !defined(DEPTH_PASS_ONLY) && !defined(DEPTH_PRE_PASS_ONLY)
+        data.baseColor *= decode(vColor, 3).rgb;
+      #endif
       data.opacity = uBaseColor.a * texelColor.a * vColor.a;
     #else
       data.opacity = uBaseColor.a * texelColor.a;
@@ -33,6 +36,9 @@ uniform vec4 uBaseColor; // TODO: gltf assumes sRGB color, not linear
     #endif
 
     #if defined(USE_VERTEX_COLORS) || defined(USE_INSTANCED_COLOR)
+      #if !defined(DEPTH_PASS_ONLY) && !defined(DEPTH_PRE_PASS_ONLY)
+        data.baseColor *= decode(vColor, 3).rgb;
+      #endif
       data.opacity = uBaseColor.a * vColor.a;
     #else
       data.opacity = uBaseColor.a;

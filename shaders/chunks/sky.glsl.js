@@ -1,4 +1,4 @@
-module.exports = /* glsl */`
+module.exports = /* glsl */ `
 /*
 
 Based on "A Practical Analytic Model for Daylight"

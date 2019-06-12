@@ -19,8 +19,18 @@ const State = {
 random.seed(10)
 
 // Utils
-const scheme = [[0.650, 0.500, 0.310], [-0.650, 0.500, 0.600], [0.333, 0.278, 0.278], [0.660, 0.000, 0.667]]
-const scheme2 = [[0.500, 0.500, 0.000], [0.500, 0.500, 0.000], [0.100, 0.500, 0.000], [0.000, 0.000, 0.000]]
+const scheme = [
+  [0.65, 0.5, 0.31],
+  [-0.65, 0.5, 0.6],
+  [0.333, 0.278, 0.278],
+  [0.66, 0.0, 0.667]
+]
+const scheme2 = [
+  [0.5, 0.5, 0.0],
+  [0.5, 0.5, 0.0],
+  [0.1, 0.5, 0.0],
+  [0.0, 0.0, 0.0]
+]
 const gradient = cosineGradient(scheme)
 const gradient2 = cosineGradient(scheme2)
 
@@ -51,7 +61,7 @@ renderer.add(cameraEntity)
 
 // Meshes
 const n = 15
-const cube = createCube(0.75 * 2 / n)
+const cube = createCube((0.75 * 2) / n)
 const offsets = []
 const colors = []
 const scales = []
@@ -68,7 +78,7 @@ const geometry = renderer.geometry({
   rotations: { data: rotations, divisor: 1 },
   colors: { data: colors, divisor: 1 }
 })
-function update () {
+function update() {
   time += 1 / 60
   const center = [0.75, 0.75, 0.75]
   const radius = 1.25
@@ -112,7 +122,11 @@ function update () {
         const colorBase = [0.8, 0.1, 0.1, 1.0]
         const color = gradient(value)
         const color2 = gradient2(value2)
-        vec3.lerp(colorBase, [0, 0, 0, 0], Math.sqrt(Math.max(0.01, 1 - value - value2)))
+        vec3.lerp(
+          colorBase,
+          [0, 0, 0, 0],
+          Math.sqrt(Math.max(0.01, 1 - value - value2))
+        )
         vec3.lerp(color, [0, 0, 0, 0], value)
         vec3.lerp(color2, [0, 0, 0, 0], value2)
         vec3.add(colorBase, color)
@@ -183,15 +197,21 @@ const reflectionProbe = renderer.reflectionProbe({
 })
 gui.addTexture2D('ReflectionMap', reflectionProbe._reflectionMap)
 
-renderer.add(renderer.entity([
-  renderer.transform({
-    position: State.sunPosition,
-    rotation: quat.fromTo(quat.create(), [0, 0, 1], vec3.normalize(vec3.sub([0, 0, 0], State.sunPosition)))
-  }),
-  sun,
-  skybox,
-  reflectionProbe
-]))
+renderer.add(
+  renderer.entity([
+    renderer.transform({
+      position: State.sunPosition,
+      rotation: quat.fromTo(
+        quat.create(),
+        [0, 0, 1],
+        vec3.normalize(vec3.sub([0, 0, 0], State.sunPosition))
+      )
+    }),
+    sun,
+    skybox,
+    reflectionProbe
+  ])
+)
 
 window.addEventListener('keydown', (e) => {
   if (e.key === 'd') debugOnce = true
@@ -206,4 +226,5 @@ ctx.frame(() => {
   renderer.draw()
 
   gui.draw()
+  window.dispatchEvent(new CustomEvent('pex-screenshot'))
 })

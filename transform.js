@@ -4,7 +4,7 @@ const vec4 = require('pex-math/vec4')
 const mat4 = require('pex-math/mat4')
 const aabb = require('pex-geom/aabb')
 
-function vec4set4 (v, x, y, z, w) {
+function vec4set4(v, x, y, z, w) {
   v[0] = x
   v[1] = y
   v[2] = z
@@ -13,7 +13,7 @@ function vec4set4 (v, x, y, z, w) {
 }
 
 // TODO remove, should in AABB
-function emptyAABB (a) {
+function emptyAABB(a) {
   a[0][0] = Infinity
   a[0][1] = Infinity
   a[0][2] = Infinity
@@ -23,7 +23,7 @@ function emptyAABB (a) {
 }
 
 // TODO remove, should in AABB
-function aabbToPoints (points, box) {
+function aabbToPoints(points, box) {
   vec4set4(points[0], box[0][0], box[0][1], box[0][2], 1)
   vec4set4(points[1], box[1][0], box[0][1], box[0][2], 1)
   vec4set4(points[2], box[1][0], box[0][1], box[1][2], 1)
@@ -35,7 +35,7 @@ function aabbToPoints (points, box) {
   return points
 }
 
-function aabbFromPoints (aabb, points) {
+function aabbFromPoints(aabb, points) {
   var min = aabb[0]
   var max = aabb[1]
 
@@ -52,18 +52,18 @@ function aabbFromPoints (aabb, points) {
   return aabb
 }
 
-function distanceFromPlaneToPoint (plane, point) {
+function distanceFromPlaneToPoint(plane, point) {
   return vec3.dot(plane, point) + plane[3]
 }
 
 var tempMat4multQuatMat4 = mat4.create()
-function mat4multQuat (m, q) {
+function mat4multQuat(m, q) {
   mat4.fromQuat(tempMat4multQuatMat4, q)
   mat4.mult(m, tempMat4multQuatMat4)
   return m
 }
 
-function Transform (opts) {
+function Transform(opts) {
   this.type = 'Transform'
   this.enabled = true
   this.changed = new Signal()
@@ -85,11 +85,11 @@ function Transform (opts) {
   this.set(opts)
 }
 
-Transform.prototype.init = function (entity) {
+Transform.prototype.init = function(entity) {
   this.entity = entity
 }
 
-Transform.prototype.set = function (opts) {
+Transform.prototype.set = function(opts) {
   if (opts.parent !== undefined) {
     if (this.parent) {
       this.parent.children.splice(this.parent.children.indexOf(this), 1)
@@ -102,7 +102,7 @@ Transform.prototype.set = function (opts) {
   Object.keys(opts).forEach((prop) => this.changed.dispatch(prop))
 }
 
-Transform.prototype.isInFrustum = function (planes) {
+Transform.prototype.isInFrustum = function(planes) {
   for (let i = 0; i < planes.length; i++) {
     const plane = planes[i]
     const point = [
@@ -119,7 +119,7 @@ Transform.prototype.isInFrustum = function (planes) {
   return true
 }
 
-Transform.prototype.update = function () {
+Transform.prototype.update = function() {
   mat4.identity(this.localModelMatrix)
   mat4.translate(this.localModelMatrix, this.position)
   mat4multQuat(this.localModelMatrix, this.rotation)
@@ -133,7 +133,8 @@ Transform.prototype.update = function () {
     parents.unshift(parent) // TODO: GC
     parent = parent.parent
   }
-  parents.forEach((p) => { // TODO: forEach
+  parents.forEach((p) => {
+    // TODO: forEach
     mat4.mult(this.modelMatrix, p.localModelMatrix)
   })
 
@@ -144,7 +145,7 @@ Transform.prototype.update = function () {
   }
 }
 
-Transform.prototype.afterUpdate = function () {
+Transform.prototype.afterUpdate = function() {
   if (!aabb.isEmpty(this.bounds)) {
     aabbToPoints(this._boundsPoints, this.bounds)
     for (var i = 0; i < this._boundsPoints.length; i++) {
@@ -163,6 +164,6 @@ Transform.prototype.afterUpdate = function () {
   vec3.multMat4(this.worldPosition, this.modelMatrix)
 }
 
-module.exports = function createTransform (opts) {
+module.exports = function createTransform(opts) {
   return new Transform(opts)
 }

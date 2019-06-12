@@ -1,6 +1,6 @@
 const Signal = require('signals')
 
-function AmbientLight (opts) {
+function AmbientLight(opts) {
   this.type = 'AmbientLight'
   this.enabled = true
   this.changed = new Signal()
@@ -10,11 +10,11 @@ function AmbientLight (opts) {
   this.set(opts)
 }
 
-AmbientLight.prototype.init = function (entity) {
+AmbientLight.prototype.init = function(entity) {
   this.entity = entity
 }
 
-AmbientLight.prototype.set = function (opts) {
+AmbientLight.prototype.set = function(opts) {
   Object.assign(this, opts)
 
   if (opts.color !== undefined || opts.intensity !== undefined) {
@@ -24,6 +24,6 @@ AmbientLight.prototype.set = function (opts) {
   Object.keys(opts).forEach((prop) => this.changed.dispatch(prop))
 }
 
-module.exports = function (opts) {
+module.exports = function(opts) {
   return new AmbientLight(opts)
 }

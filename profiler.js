@@ -2,13 +2,13 @@ const isBrowser = require('is-browser')
 let canvas = null
 let ctx2d = null
 const W = 250
-const H = 800
+const H = 860
 const M = 10
 const LINE_H = 16
 const FONT_H = 11
 const FONT = FONT_H + 'px Droid Sans Mono, Andale Mono, monospace'
 
-function ms (time) {
+function ms(time) {
   var f = Math.floor(time * 10) / 10
   var s = '' + f
   if (f % 1 === 0) s += '.0'
@@ -16,19 +16,19 @@ function ms (time) {
   return s + ''
 }
 
-function pa3 (f) {
+function pa3(f) {
   if (f < 10) return '  ' + f
   if (f < 100) return ' ' + f
   return f
 }
 
-function prop (name) {
-  return function (o) {
+function prop(name) {
+  return function(o) {
     return o[name]
   }
 }
 
-function groupBy (fn, list) {
+function groupBy(fn, list) {
   return list.reduce((acc, o) => {
     var val = fn(o)
     if (!acc[val]) {
@@ -39,15 +39,15 @@ function groupBy (fn, list) {
   }, {})
 }
 
-function createProfiler (ctx, renderer) {
+function createProfiler(ctx, renderer) {
   const gl = ctx.gl
   if (isBrowser && !canvas) {
     canvas = document.createElement('canvas')
     canvas.id = 'pex-renderer-profiler'
     canvas.width = W * 2
     canvas.height = H * 2
-    document.body.appendChild(canvas)
-    canvas.style.position = 'fixed'
+    ctx.gl.canvas.parentElement.appendChild(canvas)
+    canvas.style.position = 'absolute'
     canvas.style.width = W + 'px'
     canvas.style.height = H + 'px'
     canvas.style.top = M + 'px'
@@ -80,21 +80,31 @@ function createProfiler (ctx, renderer) {
     drawArraysCount: 0,
     drawArraysInstancedCount: 0,
     linesCount: 0,
-    time: function (label, gpu) {
+    time: function(label, gpu) {
       if (this.flush) gl.finish()
       if (this.flush) gl.flush()
       let m = this.measurements[label]
       if (!m) {
-        m = this.measurements[label] = { begin: 0, end: 0, last: 0, total: 0, count: 0, avg: 0, max: 0 }
+        m = this.measurements[label] = {
+          begin: 0,
+          end: 0,
+          last: 0,
+          total: 0,
+          count: 0,
+          avg: 0,
+          max: 0
+        }
         if (gpu) {
           m.query = ctx.query()
         }
       }
-      this.measurements[label].start = window.performance ? window.performance.now() : Date.now()
+      this.measurements[label].start = window.performance
+        ? window.performance.now()
+        : Date.now()
       if (m.query && m.query.result) m.gpu = m.query.result / 1000000
       if (m.query) ctx.beginQuery(m.query)
     },
-    timeEnd: function (label) {
+    timeEnd: function(label) {
       if (this.flush) gl.finish()
       if (this.flush) gl.flush()
       const m = this.measurements[label]
@@ -109,7 +119,7 @@ function createProfiler (ctx, renderer) {
       m.avg = (m.avg * 9 + m.last * 1) / 10
       if (m.query) ctx.endQuery(m.query)
     },
-    add: function (command, label) {
+    add: function(command, label) {
       let callStack = null
       try {
         throw new Error('Call stack capture')
@@ -122,10 +132,10 @@ function createProfiler (ctx, renderer) {
         label: label
       })
     },
-    setFlush: function (state) {
+    setFlush: function(state) {
       this.flush = state
     },
-    summary: function () {
+    summary: function() {
       var lines = []
       const frameMeasurement = this.measurements['Frame']
       if (frameMeasurement) {
@@ -136,17 +146,29 @@ function createProfiler (ctx, renderer) {
         lines.push(`FPS (RAF): ${(1000 / frameRAFMeasurement.avg).toFixed(3)}`)
       }
       lines.push('------')
-      lines = lines.concat(Object.keys(this.measurements).sort((a, b) => {
-        return this.measurements[a].start - this.measurements[b].start
-      }).map((label) => {
-        const m = this.measurements[label]
-        return `${label}: ${ms(m.avg)} ${m.gpu ? ' / ' + (Math.floor(m.gpu * 10) / 10).toFixed(1) : ''}`
-      }))
+      lines = lines.concat(
+        Object.keys(this.measurements)
+          .sort((a, b) => {
+            return this.measurements[a].start - this.measurements[b].start
+          })
+          .map((label) => {
+            const m = this.measurements[label]
+            return `${label}: ${ms(m.avg)} ${
+              m.gpu ? ' / ' + (Math.floor(m.gpu * 10) / 10).toFixed(1) : ''
+            }`
+          })
+      )
       var ctx = renderer._ctx
       var textures = ctx.resources.filter((r) => r.class === 'texture')
       var textureVRAM = 0
-      var texture2DByPixelFormat = groupBy(prop('pixelFormat'), textures.filter((tex) => tex.target === ctx.gl.TEXTURE_2D))
-      var textureCubeByPixelFormat = groupBy(prop('pixelFormat'), textures.filter((tex) => tex.target === ctx.gl.TEXTURE_CUBE_MAP))
+      var texture2DByPixelFormat = groupBy(
+        prop('pixelFormat'),
+        textures.filter((tex) => tex.target === ctx.gl.TEXTURE_2D)
+      )
+      var textureCubeByPixelFormat = groupBy(
+        prop('pixelFormat'),
+        textures.filter((tex) => tex.target === ctx.gl.TEXTURE_CUBE_MAP)
+      )
       textures.forEach((texture) => {
         var bits = 8
         var channels = 4
@@ -159,7 +181,7 @@ function createProfiler (ctx, renderer) {
         if (texture.pixelFormat === ctx.PixelFormat.Depth) {
           bits = 24 // estimate
         }
-        var bpp = bits / 8 * channels
+        var bpp = (bits / 8) * channels
         if (texture.target === ctx.gl.TEXTURE_2D) {
           textureVRAM += texture.width * texture.height * bpp
         } else if (texture.target === ctx.gl.TEXTURE_CUBE_MAP) {
@@ -168,36 +190,103 @@ function createProfiler (ctx, renderer) {
       })
       lines.push('------')
       lines.push(`Entities: ${pa3(renderer.entities.length)}`)
-      lines.push(`Geometries: ${pa3(renderer.getComponents('Geometry').length)}`)
+      lines.push(
+        `Geometries: ${pa3(renderer.getComponents('Geometry').length)}`
+      )
       lines.push(`Materials: ${pa3(renderer.getComponents('Material').length)}`)
       lines.push(`Skins: ${pa3(renderer.getComponents('Skin').length)}`)
-      lines.push(`Animations: ${pa3(renderer.getComponents('Animation').length)}`)
+      lines.push(
+        `Animations: ${pa3(renderer.getComponents('Animation').length)}`
+      )
       lines.push(`Morphs: ${pa3(renderer.getComponents('Morph').length)}`)
       lines.push(`Cameras: ${pa3(renderer.getComponents('Camera').length)}`)
-      lines.push(`Reflection Probes: ${pa3(renderer.getComponents('ReflectionProbe').length)}`)
+      lines.push(`Orbiters: ${pa3(renderer.getComponents('Orbiter').length)}`)
+      lines.push(
+        `Reflection Probes: ${pa3(
+          renderer.getComponents('ReflectionProbe').length
+        )}`
+      )
       lines.push(`Skyboxes: ${pa3(renderer.getComponents('Skybox').length)}`)
-      lines.push(`Point Lights: ${pa3(renderer.getComponents('PointLight').length)}`)
-      lines.push(`Directional Lights: ${pa3(renderer.getComponents('DirectionalLight').length)}`)
-      lines.push(`Spot Lights: ${pa3(renderer.getComponents('SpotLight').length)}`)
-      lines.push(`Area Lights: ${pa3(renderer.getComponents('AreaLight').length)}`)
+      lines.push(
+        `Point Lights: ${pa3(renderer.getComponents('PointLight').length)}`
+      )
+      lines.push(
+        `Directional Lights: ${pa3(
+          renderer.getComponents('DirectionalLight').length
+        )}`
+      )
+      lines.push(
+        `Spot Lights: ${pa3(renderer.getComponents('SpotLight').length)}`
+      )
+      lines.push(
+        `Area Lights: ${pa3(renderer.getComponents('AreaLight').length)}`
+      )
       lines.push('------')
-      lines.push(`Programs: ${pa3(renderer._ctx.resources.filter((r) => r.class === 'program').length)}`)
-      lines.push(`Passes: ${pa3(renderer._ctx.resources.filter((r) => r.class === 'pass').length)}`)
-      lines.push(`Pipelines: ${pa3(renderer._ctx.resources.filter((r) => r.class === 'pipeline').length)}`)
-      lines.push(`Textures 2D: ${pa3(renderer._ctx.resources.filter((r) => r.class === 'texture' && r.target === ctx.gl.TEXTURE_2D).length)}`)
+      lines.push(
+        `Programs: ${pa3(
+          renderer._ctx.resources.filter((r) => r.class === 'program').length
+        )}`
+      )
+      lines.push(
+        `Passes: ${pa3(
+          renderer._ctx.resources.filter((r) => r.class === 'pass').length
+        )}`
+      )
+      lines.push(
+        `Pipelines: ${pa3(
+          renderer._ctx.resources.filter((r) => r.class === 'pipeline').length
+        )}`
+      )
+      lines.push(
+        `Textures 2D: ${pa3(
+          renderer._ctx.resources.filter(
+            (r) => r.class === 'texture' && r.target === ctx.gl.TEXTURE_2D
+          ).length
+        )}`
+      )
       Object.keys(texture2DByPixelFormat).forEach((format) => {
-        lines.push(`${format.toUpperCase()}: ${pa3(texture2DByPixelFormat[format].length)}`)
+        lines.push(
+          `${format.toUpperCase()}: ${pa3(
+            texture2DByPixelFormat[format].length
+          )}`
+        )
       })
-      lines.push(`Textures Cube: ${pa3(renderer._ctx.resources.filter((r) => r.class === 'texture' && r.target === ctx.gl.TEXTURE_CUBE_MAP).length)}`)
+      lines.push(
+        `Textures Cube: ${pa3(
+          renderer._ctx.resources.filter(
+            (r) => r.class === 'texture' && r.target === ctx.gl.TEXTURE_CUBE_MAP
+          ).length
+        )}`
+      )
       Object.keys(textureCubeByPixelFormat).forEach((format) => {
-        lines.push(`${format.toUpperCase()}: ${pa3(textureCubeByPixelFormat[format].length)}`)
+        lines.push(
+          `${format.toUpperCase()}: ${pa3(
+            textureCubeByPixelFormat[format].length
+          )}`
+        )
       })
       lines.push(`Texture VRAM: ${(textureVRAM / (1024 * 1024)).toFixed(0)}MB`)
       lines.push('------')
-      lines.push(`Buffers: ${pa3(profiler.bufferCount)} / ${pa3(profiler.totalBufferCount)}`)
-      lines.push(`Textures: ${pa3(profiler.textureCount)} / ${pa3(profiler.totalTextureCount)}`)
-      lines.push(`Programs: ${pa3(profiler.programCount)} / ${pa3(profiler.totalProgramCount)}`)
-      lines.push(`FBOs: ${pa3(profiler.framebufferCount)} / ${pa3(profiler.totalFramebufferCount)}`)
+      lines.push(
+        `Buffers: ${pa3(profiler.bufferCount)} / ${pa3(
+          profiler.totalBufferCount
+        )}`
+      )
+      lines.push(
+        `Textures: ${pa3(profiler.textureCount)} / ${pa3(
+          profiler.totalTextureCount
+        )}`
+      )
+      lines.push(
+        `Programs: ${pa3(profiler.programCount)} / ${pa3(
+          profiler.totalProgramCount
+        )}`
+      )
+      lines.push(
+        `FBOs: ${pa3(profiler.framebufferCount)} / ${pa3(
+          profiler.totalFramebufferCount
+        )}`
+      )
       lines.push('------')
       lines.push(`Lines: ${profiler.linesCount}`)
       lines.push(`Triangles: ${profiler.trianglesCount}`)
@@ -208,41 +297,47 @@ function createProfiler (ctx, renderer) {
       lines.push(`Use Program: ${pa3(profiler.useProgramCount)}`)
       lines.push(`Set Uniform: ${pa3(profiler.setUniformCount)}`)
       lines.push(`Draw Elements : ${pa3(profiler.drawElementsCount)}`)
-      lines.push(`Instanced Draw Elements: ${pa3(profiler.drawElementsInstancedCount)}`)
+      lines.push(
+        `Instanced Draw Elements: ${pa3(profiler.drawElementsInstancedCount)}`
+      )
       lines.push(`Draw Arrays : ${pa3(profiler.drawArraysCount)}`)
-      lines.push(`Instanced Draw Arrays: ${pa3(profiler.drawArraysInstancedCount)}`)
+      lines.push(
+        `Instanced Draw Arrays: ${pa3(profiler.drawArraysInstancedCount)}`
+      )
       lines.push('------')
-      lines = lines.concat(this.commands.map((cmd) => {
-        // const cpu = cmd.command.stats.cpuTime / cmd.command.stats.count
-        // const gpu = cmd.command.stats.gpuTime / cmd.command.stats.count
-        // if (cmd.command.stats.count >= 30) {
-        // cmd.command.stats.gpuTime = 0
-        // cmd.command.stats.cpuTime = 0
-        // cmd.command.stats.count = 0
-        // }
-        // return `${cmd.label}: ${ms(cpu)} ${ms(gpu)}`
-        return `${cmd.label}: N/A`
-      }))
+      lines = lines.concat(
+        this.commands.map((cmd) => {
+          // const cpu = cmd.command.stats.cpuTime / cmd.command.stats.count
+          // const gpu = cmd.command.stats.gpuTime / cmd.command.stats.count
+          // if (cmd.command.stats.count >= 30) {
+          // cmd.command.stats.gpuTime = 0
+          // cmd.command.stats.cpuTime = 0
+          // cmd.command.stats.count = 0
+          // }
+          // return `${cmd.label}: ${ms(cpu)} ${ms(gpu)}`
+          return `${cmd.label}: N/A`
+        })
+      )
       return lines
     },
-    setEnabled: function (state) {
+    setEnabled: function(state) {
       if (isBrowser) {
         canvas.style.display = state ? 'block' : 'none'
       }
     },
-    startFrame: function () {
+    startFrame: function() {
       this.timeEnd('FrameRAF')
       this.time('FrameRAF')
       this.time('Frame')
       resetFrameStats()
     },
-    endFrame: function () {
+    endFrame: function() {
       this.timeEnd('Frame')
       draw()
     }
   }
 
-  function draw () {
+  function draw() {
     profiler.frame++
     if (!ctx2d) {
       if (profiler.frame % 30 === 0) {
@@ -281,9 +376,9 @@ function createProfiler (ctx, renderer) {
   // wrapRes('cube', 'totalTextureCubeCount')
   // wrapRes('framebuffer', 'totalFramebufferCount')
 
-  function wrapGLCall (fn, callback) {
+  function wrapGLCall(fn, callback) {
     const glFn = gl[fn]
-    gl[fn] = function () {
+    gl[fn] = function() {
       callback(arguments)
       return glFn.apply(this, arguments)
     }
@@ -346,37 +441,48 @@ function createProfiler (ctx, renderer) {
     }
   }
 
-  function wrapGLExtCall (ext, fn, callback) {
+  function wrapGLExtCall(ext, fn, callback) {
     if (!ext) {
       console.log('profiler', `Ext ${ext} it not available`)
       return
     }
     const extFn = ext[fn]
-    ext[fn] = function () {
+    ext[fn] = function() {
       callback(arguments)
       return extFn.apply(ext, arguments)
     }
   }
 
   // TODO: what about webgl2?
-  wrapGLExtCall(gl.getExtension('ANGLE_instanced_arrays'), 'drawElementsInstancedANGLE', (args) => {
-    const mode = args[0]
-    const count = args[1]
-    const primcount = args[4]
-    if (mode === gl.LINES) profiler.instancedLinesCount += count * primcount // assuming divisor 1
-    if (mode === gl.TRIANGLES) profiler.instancedTrianglesCount += count * primcount // assuming divisor 1
-    profiler.drawElementsInstancedCount++
-  })
-  wrapGLExtCall(gl.getExtension('ANGLE_instanced_arrays'), 'drawArraysInstancedANGLE', (args) => {
-    const mode = args[0]
-    const count = args[2]
-    const primcount = args[3]
-    if (mode === gl.LINES) profiler['instancedLinesCount'] += count * primcount // assuming divisor 1
-    if (mode === gl.TRIANGLES) profiler['instancedTrianglesCount'] += count * primcount // assuming divisor 1
-    profiler.drawArraysInstancedCount++
-  })
+  wrapGLExtCall(
+    gl.getExtension('ANGLE_instanced_arrays'),
+    'drawElementsInstancedANGLE',
+    (args) => {
+      const mode = args[0]
+      const count = args[1]
+      const primcount = args[4]
+      if (mode === gl.LINES) profiler.instancedLinesCount += count * primcount // assuming divisor 1
+      if (mode === gl.TRIANGLES)
+        profiler.instancedTrianglesCount += count * primcount // assuming divisor 1
+      profiler.drawElementsInstancedCount++
+    }
+  )
+  wrapGLExtCall(
+    gl.getExtension('ANGLE_instanced_arrays'),
+    'drawArraysInstancedANGLE',
+    (args) => {
+      const mode = args[0]
+      const count = args[2]
+      const primcount = args[3]
+      if (mode === gl.LINES)
+        profiler['instancedLinesCount'] += count * primcount // assuming divisor 1
+      if (mode === gl.TRIANGLES)
+        profiler['instancedTrianglesCount'] += count * primcount // assuming divisor 1
+      profiler.drawArraysInstancedCount++
+    }
+  )
 
-  function resetFrameStats () {
+  function resetFrameStats() {
     profiler.bindTextureCount = 0
     profiler.useProgramCount = 0
     profiler.setUniformCount = 0

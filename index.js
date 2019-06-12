@@ -1,3 +1,4 @@
+const path = require('path')
 const vec3 = require('pex-math/vec3')
 const vec4 = require('pex-math/vec4')
 const mat3 = require('pex-math/mat3')
@@ -23,6 +24,7 @@ const createAreaLight = require('./area-light')
 const createReflectionProbe = require('./reflection-probe')
 const createSkybox = require('./skybox')
 const createOverlay = require('./overlay')
+const loadGltf = require('./loaders/glTF')
 
 const PBR_VERT = require('./shaders/pipeline/material.vert.js')
 const PBR_FRAG = require('./shaders/pipeline/material.frag.js')
@@ -35,6 +37,9 @@ const ERROR_VERT = require('./shaders/error/error.vert.js')
 const ERROR_FRAG = require('./shaders/error/error.frag.js')
 const SHADERS_CHUNKS = require('./shaders/chunks')
 
+const LOADERS = new Map().set(['.gltf', '.glb'], loadGltf)
+const LOADERS_ENTRIES = Array.from(LOADERS.entries())
+
 var State = {
   frame: 0,
   shadowQuality: 2,
@@ -45,12 +50,12 @@ var State = {
   rgbm: false
 }
 
-function isNil (x) {
+function isNil(x) {
   return x == null
 }
 
 // TODO remove, should be in AABB
-function aabbToPoints (bbox) {
+function aabbToPoints(bbox) {
   if (aabb.isEmpty(bbox)) return []
   return [
     [bbox[0][0], bbox[0][1], bbox[0][2], 1],
@@ -66,14 +71,14 @@ function aabbToPoints (bbox) {
 
 // opts = Context
 // opts = { ctx: Context, width: Number, height: Number, profile: Boolean }
-function Renderer (opts) {
+function Renderer(opts) {
   this.entities = []
   this.root = this.entity()
 
   // check if we passed gl context or options object
   opts = opts.texture2D ? { ctx: opts } : opts
 
-  const ctx = this._ctx = opts.ctx
+  const ctx = (this._ctx = opts.ctx)
 
   const gl = opts.ctx.gl
   gl.getExtension('OES_standard_derivatives')
@@ -84,7 +89,7 @@ function Renderer (opts) {
   this._debug = false
   this._programCacheMap = {
     values: [],
-    getValue: function (flags, vert, frag) {
+    getValue: function(flags, vert, frag) {
       for (var i = 0; i < this.values.length; i++) {
         var v = this.values[i]
         if (v.frag === frag && v.vert === vert) {
@@ -104,7 +109,7 @@ function Renderer (opts) {
       }
       return false
     },
-    setValue: function (flags, vert, frag, program) {
+    setValue: function(flags, vert, frag, program) {
       this.values.push({ flags, vert, frag, program })
     }
   }
@@ -138,7 +143,10 @@ function Renderer (opts) {
   }
 }
 
-Renderer.prototype.updateDirectionalLightShadowMap = function (light, geometries) {
+Renderer.prototype.updateDirectionalLightShadowMap = function(
+  light,
+  geometries
+) {
   const ctx = this._ctx
   const position = light.entity.transform.worldPosition
   const target = [0, 0, 1, 0]
@@ -153,7 +161,9 @@ Renderer.prototype.updateDirectionalLightShadowMap = function (light, geometries
   }, [])
 
   // TODO: gc vec3.copy, all the bounding box creation
-  const bboxPointsInLightSpace = shadowBboxPoints.map((p) => vec3.multMat4(vec3.copy(p), light._viewMatrix))
+  const bboxPointsInLightSpace = shadowBboxPoints.map((p) =>
+    vec3.multMat4(vec3.copy(p), light._viewMatrix)
+  )
   const sceneBboxInLightSpace = aabb.fromPoints(bboxPointsInLightSpace)
 
   const lightNear = -sceneBboxInLightSpace[1][2]
@@ -164,10 +174,14 @@ Renderer.prototype.updateDirectionalLightShadowMap = function (light, geometries
     _far: lightFar
   })
 
-  mat4.ortho(light._projectionMatrix,
-    sceneBboxInLightSpace[0][0], sceneBboxInLightSpace[1][0],
-    sceneBboxInLightSpace[0][1], sceneBboxInLightSpace[1][1],
-    lightNear, lightFar
+  mat4.ortho(
+    light._projectionMatrix,
+    sceneBboxInLightSpace[0][0],
+    sceneBboxInLightSpace[1][0],
+    sceneBboxInLightSpace[0][1],
+    sceneBboxInLightSpace[1][1],
+    lightNear,
+    lightFar
   )
 
   ctx.submit(light._shadowMapDrawCommand, () => {
@@ -175,7 +189,48 @@ Renderer.prototype.updateDirectionalLightShadowMap = function (light, geometries
   })
 }
 
-Renderer.prototype.updatePointLightShadowMap = function (light, geometries) {
+Renderer.prototype.updateSpotLightShadowMap = function(light, geometries) {
+  const position = light.entity.transform.worldPosition
+  const target = [0, 0, 1, 0]
+  const up = [0, 1, 0, 0]
+  vec4.multMat4(target, light.entity.transform.modelMatrix)
+  // vec3.add(target, position)
+  vec4.multMat4(up, light.entity.transform.modelMatrix)
+  mat4.lookAt(light._viewMatrix, position, target, up)
+
+  const shadowBboxPoints = geometries.reduce((points, geometry) => {
+    return points.concat(aabbToPoints(geometry.entity.transform.worldBounds))
+  }, [])
+
+  // TODO: gc vec3.copy, all the bounding box creation
+  const bboxPointsInLightSpace = shadowBboxPoints.map((p) =>
+    vec3.multMat4(vec3.copy(p), light._viewMatrix)
+  )
+  const sceneBboxInLightSpace = aabb.fromPoints(bboxPointsInLightSpace)
+
+  const lightNear = -sceneBboxInLightSpace[1][2]
+  const lightFar = -sceneBboxInLightSpace[0][2]
+
+  light.set({
+    _near: lightNear,
+    _far: lightFar
+  })
+
+  mat4.perspective(
+    light._projectionMatrix,
+    2 * light.angle,
+    light._shadowMap.width / light._shadowMap.height,
+    lightNear,
+    lightFar
+  )
+
+  const ctx = this._ctx
+  ctx.submit(light._shadowMapDrawCommand, () => {
+    this.drawMeshes(null, true, light, geometries)
+  })
+}
+
+Renderer.prototype.updatePointLightShadowMap = function(light, geometries) {
   const ctx = this._ctx
   light._sides.forEach((side) => {
     var target = [0, 0, 0]
@@ -193,11 +248,49 @@ Renderer.prototype.updatePointLightShadowMap = function (light, geometries) {
   })
 }
 
-Renderer.prototype.getMaterialProgramAndFlags = function (geometry, material, skin, options) {
+Renderer.prototype.parseShader = function(string, options) {
+  // Unroll loop
+  const unrollLoopPattern = /#pragma unroll_loop[\s]+?for \(int i = (\d+); i < (\d+|\D+); i\+\+\) \{([\s\S]+?)(?=\})\}/g
+
+  string = string.replace(unrollLoopPattern, function(
+    match,
+    start,
+    end,
+    snippet
+  ) {
+    let unroll = ''
+
+    // Replace lights number
+    end = end
+      .replace(/NUM_AMBIENT_LIGHTS/g, options.numAmbientLights || 0)
+      .replace(/NUM_DIRECTIONAL_LIGHTS/g, options.numDirectionalLights || 0)
+      .replace(/NUM_POINT_LIGHTS/g, options.numPointLights || 0)
+      .replace(/NUM_SPOT_LIGHTS/g, options.numSpotLights || 0)
+      .replace(/NUM_AREA_LIGHTS/g, options.numAreaLights || 0)
+
+    for (let i = Number.parseInt(start); i < Number.parseInt(end); i++) {
+      unroll += snippet.replace(/\[i\]/g, `[${i}]`)
+    }
+
+    return unroll
+  })
+
+  return string
+}
+
+Renderer.prototype.getMaterialProgramAndFlags = function(
+  geometry,
+  material,
+  skin,
+  options
+) {
   var ctx = this._ctx
 
   var flags = []
 
+  if (this._state.targetMobile) {
+    flags.push('#define TARGET_MOBILE')
+  }
   if (!geometry._attributes.aNormal) {
     flags.push('#define USE_UNLIT_WORKFLOW')
   } else {
@@ -245,14 +338,19 @@ Renderer.prototype.getMaterialProgramAndFlags = function (geometry, material, sk
     if (!material.baseColor) {
       material.baseColor = [1, 1, 1, 1]
     }
-    flags.push(`#define BASE_COLOR_MAP_TEX_COORD_INDEX ${material.baseColorMap.texCoord || 0}`)
+    flags.push(
+      `#define BASE_COLOR_MAP_TEX_COORD_INDEX ${material.baseColorMap
+        .texCoord || 0}`
+    )
     if (material.baseColorMap.texCoordTransformMatrix) {
       flags.push('#define USE_BASE_COLOR_MAP_TEX_COORD_TRANSFORM')
     }
   }
   if (material.alphaMap) {
     flags.push('#define USE_ALPHA_MAP')
-    flags.push(`#define ALPHA_MAP_TEX_COORD_INDEX ${material.alphaMap.texCoord || 0}`)
+    flags.push(
+      `#define ALPHA_MAP_TEX_COORD_INDEX ${material.alphaMap.texCoord || 0}`
+    )
     if (material.alphaMap.texCoordTransformMatrix) {
       flags.push('#define USE_ALPHA_MAP_TEX_COORD_TRANSFORM')
     }
@@ -263,35 +361,38 @@ Renderer.prototype.getMaterialProgramAndFlags = function (geometry, material, sk
 
   if (options.depthPrePassOnly) {
     flags.push('#define DEPTH_PRE_PASS_ONLY')
-    flags.push('#define SHADOW_QUALITY ' + (0))
-    flags.push('#define NUM_AMBIENT_LIGHTS ' + (0))
-    flags.push('#define NUM_DIRECTIONAL_LIGHTS ' + (0))
-    flags.push('#define NUM_POINT_LIGHTS ' + (0))
-    flags.push('#define NUM_SPOT_LIGHTS ' + (0))
-    flags.push('#define NUM_AREA_LIGHTS ' + (0))
+    flags.push('#define SHADOW_QUALITY ' + 0)
+    flags.push('#define NUM_AMBIENT_LIGHTS ' + 0)
+    flags.push('#define NUM_DIRECTIONAL_LIGHTS ' + 0)
+    flags.push('#define NUM_POINT_LIGHTS ' + 0)
+    flags.push('#define NUM_SPOT_LIGHTS ' + 0)
+    flags.push('#define NUM_AREA_LIGHTS ' + 0)
     return {
       flags: flags,
-      vert: (material.vert || DEPTH_PASS_VERT),
-      frag: (material.frag || DEPTH_PRE_PASS_FRAG)
+      vert: material.vert || DEPTH_PASS_VERT,
+      frag: material.frag || DEPTH_PRE_PASS_FRAG
     }
   }
 
   if (options.depthPassOnly) {
     flags.push('#define DEPTH_PASS_ONLY')
-    flags.push('#define SHADOW_QUALITY ' + (0))
-    flags.push('#define NUM_AMBIENT_LIGHTS ' + (0))
-    flags.push('#define NUM_DIRECTIONAL_LIGHTS ' + (0))
-    flags.push('#define NUM_POINT_LIGHTS ' + (0))
-    flags.push('#define NUM_SPOT_LIGHTS ' + (0))
-    flags.push('#define NUM_AREA_LIGHTS ' + (0))
+    flags.push('#define SHADOW_QUALITY ' + 0)
+    flags.push('#define NUM_AMBIENT_LIGHTS ' + 0)
+    flags.push('#define NUM_DIRECTIONAL_LIGHTS ' + 0)
+    flags.push('#define NUM_POINT_LIGHTS ' + 0)
+    flags.push('#define NUM_SPOT_LIGHTS ' + 0)
+    flags.push('#define NUM_AREA_LIGHTS ' + 0)
     return {
       flags: flags,
-      vert: (material.vert || DEPTH_PASS_VERT),
-      frag: (material.frag || DEPTH_PASS_FRAG)
+      vert: material.vert || DEPTH_PASS_VERT,
+      frag: material.frag || DEPTH_PASS_FRAG
     }
   }
 
-  flags.push('#define SHADOW_QUALITY ' + (material.receiveShadows ? State.shadowQuality : 0))
+  flags.push(
+    '#define SHADOW_QUALITY ' +
+      (material.receiveShadows ? State.shadowQuality : 0)
+  )
 
   if (material.unlit) {
     if (flags.indexOf('#define USE_UNLIT_WORKFLOW') === -1) {
@@ -302,14 +403,20 @@ Renderer.prototype.getMaterialProgramAndFlags = function (geometry, material, sk
 
     if (material.diffuseMap) {
       flags.push('#define USE_DIFFUSE_MAP')
-      flags.push(`#define DIFFUSE_MAP_TEX_COORD_INDEX ${material.diffuseMap.texCoord || 0}`)
+      flags.push(
+        `#define DIFFUSE_MAP_TEX_COORD_INDEX ${material.diffuseMap.texCoord ||
+          0}`
+      )
       if (material.diffuseMap.texCoordTransformMatrix) {
         flags.push('#define USE_DIFFUSE_MAP_TEX_COORD_TRANSFORM')
       }
     }
     if (material.specularGlossinessMap) {
       flags.push('#define USE_SPECULAR_GLOSSINESS_MAP')
-      flags.push(`#define SPECULAR_GLOSSINESS_MAP_TEX_COORD_INDEX ${material.specularGlossinessMap.texCoord || 0}`)
+      flags.push(
+        `#define SPECULAR_GLOSSINESS_MAP_TEX_COORD_INDEX ${material
+          .specularGlossinessMap.texCoord || 0}`
+      )
       if (material.specularGlossinessMap.texCoordTransformMatrix) {
         flags.push('#define USE_SPECULAR_GLOSSINESS_MAP_TEX_COORD_TRANSFORM')
       }
@@ -319,21 +426,30 @@ Renderer.prototype.getMaterialProgramAndFlags = function (geometry, material, sk
 
     if (material.metallicMap) {
       flags.push('#define USE_METALLIC_MAP')
-      flags.push(`#define METALLIC_MAP_TEX_COORD_INDEX ${material.metallicMap.texCoord || 0}`)
+      flags.push(
+        `#define METALLIC_MAP_TEX_COORD_INDEX ${material.metallicMap.texCoord ||
+          0}`
+      )
       if (material.metallicMap.texCoordTransformMatrix) {
         flags.push('#define USE_METALLIC_MAP_TEX_COORD_TRANSFORM')
       }
     }
     if (material.roughnessMap) {
       flags.push('#define USE_ROUGHNESS_MAP')
-      flags.push(`#define ROUGHNESS_MAP_TEX_COORD_INDEX ${material.roughnessMap.texCoord || 0}`)
+      flags.push(
+        `#define ROUGHNESS_MAP_TEX_COORD_INDEX ${material.roughnessMap
+          .texCoord || 0}`
+      )
       if (material.roughnessMap.texCoordTransformMatrix) {
         flags.push('#define USE_ROUGHNESS_MAP_TEX_COORD_TRANSFORM')
       }
     }
     if (material.metallicRoughnessMap) {
       flags.push('#define USE_METALLIC_ROUGHNESS_MAP')
-      flags.push(`#define METALLIC_ROUGHNESS_MAP_TEX_COORD_INDEX ${material.metallicRoughnessMap.texCoord || 0}`)
+      flags.push(
+        `#define METALLIC_ROUGHNESS_MAP_TEX_COORD_INDEX ${material
+          .metallicRoughnessMap.texCoord || 0}`
+      )
       if (material.metallicRoughnessMap.texCoordTransformMatrix) {
         flags.push('#define USE_METALLIC_ROUGHNESS_MAP_TEX_COORD_TRANSFORM')
       }
@@ -342,26 +458,47 @@ Renderer.prototype.getMaterialProgramAndFlags = function (geometry, material, sk
 
   if (material.occlusionMap) {
     flags.push('#define USE_OCCLUSION_MAP')
-    flags.push(`#define OCCLUSION_MAP_TEX_COORD_INDEX ${material.occlusionMap.texCoord || 0}`)
+    flags.push(
+      `#define OCCLUSION_MAP_TEX_COORD_INDEX ${material.occlusionMap.texCoord ||
+        0}`
+    )
     if (material.occlusionMap.texCoordTransformMatrix) {
       flags.push('#define USE_OCCLUSION_MAP_TEX_COORD_TRANSFORM')
     }
   }
   if (material.normalMap) {
     flags.push('#define USE_NORMAL_MAP')
-    flags.push(`#define NORMAL_MAP_TEX_COORD_INDEX ${material.normalMap.texCoord || 0}`)
+    flags.push(
+      `#define NORMAL_MAP_TEX_COORD_INDEX ${material.normalMap.texCoord || 0}`
+    )
     if (material.normalMap.texCoordTransformMatrix) {
       flags.push('#define USE_NORMAL_MAP_TEX_COORD_TRANSFORM')
     }
   }
   if (material.emissiveColorMap) {
     flags.push('#define USE_EMISSIVE_COLOR_MAP')
-    if (!material.emissiveColor) {
-      material.emissiveColor = [1, 1, 1, 1]
-    }
-    flags.push(`#define EMISSIVE_COLOR_MAP_TEX_COORD_INDEX ${material.emissiveColorMap.texCoord || 0}`)
+    flags.push(
+      `#define EMISSIVE_COLOR_MAP_TEX_COORD_INDEX ${material.emissiveColorMap
+        .texCoord || 0}`
+    )
     if (material.emissiveColorMap.texCoordTransformMatrix) {
       flags.push('#define USE_EMISSIVE_COLOR_MAP_TEX_COORD_TRANSFORM')
+    }
+  }
+  if (!isNil(material.emissiveColor)) {
+    flags.push('#define USE_EMISSIVE_COLOR')
+  }
+  if (!isNil(material.clearCoat)) {
+    flags.push('#define USE_CLEAR_COAT')
+  }
+  if (material.clearCoatNormalMap) {
+    flags.push('#define USE_CLEAR_COAT_NORMAL_MAP')
+    flags.push(
+      `#define CLEAR_COAT_NORMAL_MAP_TEX_COORD_INDEX ${material
+        .clearCoatNormalMap.texCoord || 0}`
+    )
+    if (material.clearCoatNormalMap.texCoordTransformMatrix) {
+      flags.push('#define USE_CLEAR_COAT_NORMAL_MAP_TEX_COORD_TRANSFORM')
     }
   }
   if (material.blend) {
@@ -369,7 +506,9 @@ Renderer.prototype.getMaterialProgramAndFlags = function (geometry, material, sk
   }
 
   flags.push('#define NUM_AMBIENT_LIGHTS ' + (options.numAmbientLights || 0))
-  flags.push('#define NUM_DIRECTIONAL_LIGHTS ' + (options.numDirectionalLights || 0))
+  flags.push(
+    '#define NUM_DIRECTIONAL_LIGHTS ' + (options.numDirectionalLights || 0)
+  )
   flags.push('#define NUM_POINT_LIGHTS ' + (options.numPointLights || 0))
   flags.push('#define NUM_SPOT_LIGHTS ' + (options.numSpotLights || 0))
   flags.push('#define NUM_AREA_LIGHTS ' + (options.numAreaLights || 0))
@@ -381,12 +520,12 @@ Renderer.prototype.getMaterialProgramAndFlags = function (geometry, material, sk
   }
   return {
     flags: flags,
-    vert: (material.vert || PBR_VERT),
-    frag: (material.frag || PBR_FRAG)
+    vert: material.vert || PBR_VERT,
+    frag: material.frag || PBR_FRAG
   }
 }
 
-Renderer.prototype.buildProgram = function (vertSrc, fragSrc) {
+Renderer.prototype.buildProgram = function(vertSrc, fragSrc) {
   var ctx = this._ctx
   let program = null
   try {
@@ -399,20 +538,37 @@ Renderer.prototype.buildProgram = function (vertSrc, fragSrc) {
   return program
 }
 
-Renderer.prototype.getMaterialProgram = function (geometry, material, skin, options) {
-  var { flags, vert, frag } = this.getMaterialProgramAndFlags(geometry, material, skin, options)
+Renderer.prototype.getMaterialProgram = function(
+  geometry,
+  material,
+  skin,
+  options
+) {
+  var { flags, vert, frag } = this.getMaterialProgramAndFlags(
+    geometry,
+    material,
+    skin,
+    options
+  )
   var flagsStr = flags.join('\n') + '\n'
   var vertSrc = flagsStr + vert
   var fragSrc = flagsStr + frag
   var program = this._programCacheMap.getValue(flags, vert, frag)
   if (!program) {
-    program = this.buildProgram(vertSrc, fragSrc)
+    program = this.buildProgram(
+      this.parseShader(vertSrc, options),
+      this.parseShader(fragSrc, options)
+    )
     this._programCacheMap.setValue(flags, vert, frag, program)
   }
   return program
 }
 
-Renderer.prototype.traverseTransformTree = function (transform, beforeCallback, afterCallback) {
+Renderer.prototype.traverseTransformTree = function(
+  transform,
+  beforeCallback,
+  afterCallback
+) {
   if (!transform.enabled) return
   beforeCallback(transform)
   transform.children.forEach((child) => {
@@ -421,7 +577,7 @@ Renderer.prototype.traverseTransformTree = function (transform, beforeCallback, 
   if (afterCallback) afterCallback(transform)
 }
 
-Renderer.prototype.update = function () {
+Renderer.prototype.update = function() {
   this.entities = []
   this.traverseTransformTree(
     this.root.transform,
@@ -439,7 +595,12 @@ Renderer.prototype.update = function () {
   )
 }
 
-Renderer.prototype.getGeometryPipeline = function (geometry, material, skin, opts) {
+Renderer.prototype.getGeometryPipeline = function(
+  geometry,
+  material,
+  skin,
+  opts
+) {
   const ctx = this._ctx
   const program = this.getMaterialProgram(geometry, material, skin, opts)
   if (!this._pipelineCache) {
@@ -469,7 +630,7 @@ Renderer.prototype.getGeometryPipeline = function (geometry, material, skin, opt
   return pipeline
 }
 
-Renderer.prototype.getOverlayCommand = function () {
+Renderer.prototype.getOverlayCommand = function() {
   const ctx = this._ctx
   if (!this._drawOverlayCmd) {
     const program = ctx.program({
@@ -502,7 +663,7 @@ Renderer.prototype.getOverlayCommand = function () {
   return this._drawOverlayCmd
 }
 
-Renderer.prototype.getComponents = function (type) {
+Renderer.prototype.getComponents = function(type) {
   const result = []
   for (let i = 0; i < this.entities.length; i++) {
     const entity = this.entities[i]
@@ -520,10 +681,17 @@ Renderer.prototype.getComponents = function (type) {
 // set update transforms once per frame
 // draw + shadowmap @ 1000 objects x 30 uniforms = 60'000 setters / frame!!
 // transform feedback?
-Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLight, geometries, skybox, forward) {
+Renderer.prototype.drawMeshes = function(
+  camera,
+  shadowMapping,
+  shadowMappingLight,
+  geometries,
+  skybox,
+  forward
+) {
   const ctx = this._ctx
 
-  function byEnabledAndCameraTags (component) {
+  function byEnabledAndCameraTags(component) {
     if (!component.enabled) return false
     if (!camera || !camera.entity) return true
     if (!camera.entity.tags.length) return true
@@ -531,13 +699,26 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
     return component.entity.tags[0] === camera.entity.tags[0]
   }
 
-  geometries = geometries || this.getComponents('Geometry').filter(byEnabledAndCameraTags)
-  const ambientLights = this.getComponents('AmbientLight').filter(byEnabledAndCameraTags)
-  const directionalLights = this.getComponents('DirectionalLight').filter(byEnabledAndCameraTags)
-  const pointLights = this.getComponents('PointLight').filter(byEnabledAndCameraTags)
-  const spotLights = this.getComponents('SpotLight').filter(byEnabledAndCameraTags)
-  const areaLights = this.getComponents('AreaLight').filter(byEnabledAndCameraTags)
-  const reflectionProbes = this.getComponents('ReflectionProbe').filter(byEnabledAndCameraTags)
+  geometries =
+    geometries || this.getComponents('Geometry').filter(byEnabledAndCameraTags)
+  const ambientLights = this.getComponents('AmbientLight').filter(
+    byEnabledAndCameraTags
+  )
+  const directionalLights = this.getComponents('DirectionalLight').filter(
+    byEnabledAndCameraTags
+  )
+  const pointLights = this.getComponents('PointLight').filter(
+    byEnabledAndCameraTags
+  )
+  const spotLights = this.getComponents('SpotLight').filter(
+    byEnabledAndCameraTags
+  )
+  const areaLights = this.getComponents('AreaLight').filter(
+    byEnabledAndCameraTags
+  )
+  const reflectionProbes = this.getComponents('ReflectionProbe').filter(
+    byEnabledAndCameraTags
+  )
 
   if (!shadowMapping && !shadowMappingLight) {
     directionalLights.forEach((light) => {
@@ -549,9 +730,7 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
         this.updateDirectionalLightShadowMap(light, shadowCasters)
       }
     })
-  }
 
-  if (!shadowMapping && !shadowMappingLight) {
     pointLights.forEach((light) => {
       if (light.castShadows) {
         const shadowCasters = geometries.filter((geometry) => {
@@ -561,10 +740,22 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
         this.updatePointLightShadowMap(light, shadowCasters)
       }
     })
+
+    spotLights.forEach((light) => {
+      if (light.castShadows) {
+        const shadowCasters = geometries.filter((geometry) => {
+          const material = geometry.entity.getComponent('Material')
+          return material && material.castShadows
+        })
+        this.updateSpotLightShadowMap(light, shadowCasters)
+      }
+    })
   }
 
-  var sharedUniforms = this._sharedUniforms = this._sharedUniforms || {}
-  sharedUniforms.uOutputEncoding = State.rgbm ? ctx.Encoding.RGBM : ctx.Encoding.Linear // TODO: State.postprocess
+  var sharedUniforms = (this._sharedUniforms = this._sharedUniforms || {})
+  sharedUniforms.uOutputEncoding = State.rgbm
+    ? ctx.Encoding.RGBM
+    : ctx.Encoding.Linear // TODO: State.postprocess
   if (forward) {
     sharedUniforms.uOutputEncoding = ctx.Encoding.Gamma
   }
@@ -572,7 +763,8 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
   // TODO:  find nearest reflection probe
   if (reflectionProbes.length > 0) {
     sharedUniforms.uReflectionMap = reflectionProbes[0]._reflectionMap
-    sharedUniforms.uReflectionMapEncoding = reflectionProbes[0]._reflectionMap.encoding
+    sharedUniforms.uReflectionMapEncoding =
+      reflectionProbes[0]._reflectionMap.encoding
   }
   if (shadowMappingLight) {
     sharedUniforms.uProjectionMatrix = shadowMappingLight._projectionMatrix
@@ -588,7 +780,7 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
     const postProcessingCmp = camera.entity.getComponent('PostProcessing')
     if (postProcessingCmp && postProcessingCmp.ssao) {
       sharedUniforms.uAO = postProcessingCmp._frameAOTex
-      sharedUniforms.uScreenSize = [ camera.viewport[2], camera.viewport[3] ] // TODO: should this be camera viewport size?
+      sharedUniforms.uScreenSize = [camera.viewport[2], camera.viewport[3]] // TODO: should this be camera viewport size?
     }
     if (!(postProcessingCmp && postProcessingCmp.enabled)) {
       sharedUniforms.uExposure = camera.exposure
@@ -600,50 +792,84 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
   })
 
   directionalLights.forEach((light, i) => {
-    var dir4 = [0, 0, 1, 0] // TODO: GC
-    var dir = [0, 0, 0]
+    const dir4 = [0, 0, 1, 0] // TODO: GC
+    const dir = [0, 0, 0]
     vec4.multMat4(dir4, light.entity.transform.modelMatrix)
     vec3.set(dir, dir4)
+
     sharedUniforms['uDirectionalLights[' + i + '].direction'] = dir
     sharedUniforms['uDirectionalLights[' + i + '].color'] = light.color
-    sharedUniforms['uDirectionalLights[' + i + '].castShadows'] = light.castShadows
-    sharedUniforms['uDirectionalLights[' + i + '].projectionMatrix'] = light._projectionMatrix
-    sharedUniforms['uDirectionalLights[' + i + '].viewMatrix'] = light._viewMatrix
+    sharedUniforms['uDirectionalLights[' + i + '].castShadows'] =
+      light.castShadows
+    sharedUniforms['uDirectionalLights[' + i + '].projectionMatrix'] =
+      light._projectionMatrix
+    sharedUniforms['uDirectionalLights[' + i + '].viewMatrix'] =
+      light._viewMatrix
     sharedUniforms['uDirectionalLights[' + i + '].near'] = light._near
     sharedUniforms['uDirectionalLights[' + i + '].far'] = light._far
     sharedUniforms['uDirectionalLights[' + i + '].bias'] = light.bias
-    sharedUniforms['uDirectionalLights[' + i + '].shadowMapSize'] = light.castShadows ? [light._shadowMap.width, light._shadowMap.height] : [0, 0]
-    sharedUniforms['uDirectionalLightShadowMaps[' + i + ']'] = light.castShadows ? light._shadowMap : this._dummyTexture2D
+    sharedUniforms[
+      'uDirectionalLights[' + i + '].shadowMapSize'
+    ] = light.castShadows
+      ? [light._shadowMap.width, light._shadowMap.height]
+      : [0, 0]
+    sharedUniforms['uDirectionalLightShadowMaps[' + i + ']'] = light.castShadows
+      ? light._shadowMap
+      : this._dummyTexture2D
   })
 
   pointLights.forEach((light, i) => {
-    sharedUniforms['uPointLights[' + i + '].position'] = light.entity.transform.worldPosition
+    sharedUniforms['uPointLights[' + i + '].position'] =
+      light.entity.transform.worldPosition
     sharedUniforms['uPointLights[' + i + '].color'] = light.color
     sharedUniforms['uPointLights[' + i + '].range'] = light.range
     sharedUniforms['uPointLights[' + i + '].castShadows'] = light.castShadows
-    sharedUniforms['uPointLightShadowMaps[' + i + ']'] = light.castShadows ? light._shadowCubemap : this._dummyTextureCube
+    sharedUniforms['uPointLightShadowMaps[' + i + ']'] = light.castShadows
+      ? light._shadowCubemap
+      : this._dummyTextureCube
   })
 
   spotLights.forEach((light, i) => {
-    var transform = light.entity.transform
-    var position = transform.worldPosition
-    var target = light.target
-    var dir = vec3.normalize(vec3.sub(vec3.copy(target), position))
-    sharedUniforms['uSpotLights[' + i + '].position'] = light.entity.transform.position
+    const dir4 = [0, 0, 1, 0] // TODO: GC
+    const dir = [0, 0, 0]
+    vec4.multMat4(dir4, light.entity.transform.modelMatrix)
+    vec3.set(dir, dir4)
+
+    sharedUniforms['uSpotLights[' + i + '].position'] =
+      light.entity.transform.position
     sharedUniforms['uSpotLights[' + i + '].direction'] = dir
     sharedUniforms['uSpotLights[' + i + '].color'] = light.color
     sharedUniforms['uSpotLights[' + i + '].angle'] = light.angle
+    sharedUniforms['uSpotLights[' + i + '].innerAngle'] = light.innerAngle
     sharedUniforms['uSpotLights[' + i + '].range'] = light.range
+    sharedUniforms['uSpotLights[' + i + '].castShadows'] = light.castShadows
+    sharedUniforms['uSpotLights[' + i + '].projectionMatrix'] =
+      light._projectionMatrix
+    sharedUniforms['uSpotLights[' + i + '].viewMatrix'] = light._viewMatrix
+    sharedUniforms['uSpotLights[' + i + '].near'] = light._near
+    sharedUniforms['uSpotLights[' + i + '].far'] = light._far
+    sharedUniforms['uSpotLights[' + i + '].bias'] = light.bias
+    sharedUniforms['uSpotLights[' + i + '].shadowMapSize'] = light.castShadows
+      ? [light._shadowMap.width, light._shadowMap.height]
+      : [0, 0]
+    sharedUniforms['uSpotLightShadowMaps[' + i + ']'] = light.castShadows
+      ? light._shadowMap
+      : this._dummyTexture2D
   })
 
   areaLights.forEach((light, i) => {
     sharedUniforms.ltc_mat = light.ltc_mat_texture
     sharedUniforms.ltc_mag = light.ltc_mag_texture
-    sharedUniforms['uAreaLights[' + i + '].position'] = light.entity.transform.position
+    sharedUniforms['uAreaLights[' + i + '].position'] =
+      light.entity.transform.position
     sharedUniforms['uAreaLights[' + i + '].color'] = light.color
     sharedUniforms['uAreaLights[' + i + '].intensity'] = light.intensity // FIXME: why area light has intensity and other lights don't?
-    sharedUniforms['uAreaLights[' + i + '].rotation'] = light.entity.transform.rotation
-    sharedUniforms['uAreaLights[' + i + '].size'] = [light.entity.transform.scale[0] / 2, light.entity.transform.scale[1] / 2]
+    sharedUniforms['uAreaLights[' + i + '].rotation'] =
+      light.entity.transform.rotation
+    sharedUniforms['uAreaLights[' + i + '].size'] = [
+      light.entity.transform.scale[0] / 2,
+      light.entity.transform.scale[1] / 2
+    ]
   })
 
   geometries.sort((a, b) => {
@@ -654,11 +880,13 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
     return transparentA - transparentB
   })
 
-  var firstTransparent = geometries.findIndex((g) => g.entity.getComponent('Material').blend)
+  var firstTransparent = geometries.findIndex(
+    (g) => g.entity.getComponent('Material').blend
+  )
 
   for (let i = 0; i < geometries.length; i++) {
     // also drawn below if transparent objects don't exist
-    if ((firstTransparent === i) && skybox && skybox.enabled) {
+    if (firstTransparent === i && skybox && skybox.enabled) {
       skybox.draw(camera, {
         outputEncoding: sharedUniforms.uOutputEncoding,
         backgroundMode: true
@@ -688,74 +916,108 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
     const cachedUniforms = material._uniforms
 
     if (material.baseColorMap) {
-      cachedUniforms.uBaseColorMap = material.baseColorMap.texture || material.baseColorMap
+      cachedUniforms.uBaseColorMap =
+        material.baseColorMap.texture || material.baseColorMap
       if (material.baseColorMap.texCoordTransformMatrix) {
-        cachedUniforms.uBaseColorMapTexCoordTransform = material.baseColorMap.texCoordTransformMatrix
+        cachedUniforms.uBaseColorMapTexCoordTransform =
+          material.baseColorMap.texCoordTransformMatrix
       }
     }
     cachedUniforms.uBaseColor = material.baseColor
 
     if (material.emissiveColorMap) {
-      cachedUniforms.uEmissiveColorMap = material.emissiveColorMap.texture || material.emissiveColorMap
+      cachedUniforms.uEmissiveColorMap =
+        material.emissiveColorMap.texture || material.emissiveColorMap
       if (material.emissiveColorMap.texCoordTransformMatrix) {
-        cachedUniforms.uEmissiveColorMapTexCoordTransform = material.emissiveColorMap.texCoordTransformMatrix
+        cachedUniforms.uEmissiveColorMapTexCoordTransform =
+          material.emissiveColorMap.texCoordTransformMatrix
       }
     }
-    cachedUniforms.uEmissiveColor = material.emissiveColor
-    cachedUniforms.uEmissiveIntensity = material.emissiveIntensity
+    if (!isNil(material.emissiveColor)) {
+      cachedUniforms.uEmissiveColor = material.emissiveColor
+      cachedUniforms.uEmissiveIntensity = material.emissiveIntensity
+    }
 
     if (material.useSpecularGlossinessWorkflow) {
       if (material.diffuse) cachedUniforms.uDiffuse = material.diffuse
       if (material.specular) cachedUniforms.uSpecular = material.specular
-      if (!isNil(material.glossiness)) cachedUniforms.uGlossiness = material.glossiness
+      if (!isNil(material.glossiness))
+        cachedUniforms.uGlossiness = material.glossiness
       if (material.diffuseMap) {
-        cachedUniforms.uDiffuseMap = material.diffuseMap.texture || material.diffuseMap
+        cachedUniforms.uDiffuseMap =
+          material.diffuseMap.texture || material.diffuseMap
         if (material.diffuseMap.texCoordTransformMatrix) {
-          cachedUniforms.uDiffuseMapTexCoordTransform = material.diffuseMap.texCoordTransformMatrix
+          cachedUniforms.uDiffuseMapTexCoordTransform =
+            material.diffuseMap.texCoordTransformMatrix
         }
       }
       if (material.specularGlossinessMap) {
-        cachedUniforms.uSpecularGlossinessMap = material.specularGlossinessMap.texture || material.specularGlossinessMap
+        cachedUniforms.uSpecularGlossinessMap =
+          material.specularGlossinessMap.texture ||
+          material.specularGlossinessMap
         if (material.specularGlossinessMap.texCoordTransformMatrix) {
-          cachedUniforms.uSpecularGlossinessMapTexCoordTransform = material.specularGlossinessMap.texCoordTransformMatrix
+          cachedUniforms.uSpecularGlossinessMapTexCoordTransform =
+            material.specularGlossinessMap.texCoordTransformMatrix
         }
       }
     } else if (!material.unlit) {
       if (material.metallicMap) {
-        cachedUniforms.uMetallicMap = material.metallicMap.texture || material.metallicMap
+        cachedUniforms.uMetallicMap =
+          material.metallicMap.texture || material.metallicMap
         if (material.metallicMap.texCoordTransformMatrix) {
-          cachedUniforms.uMetallicMapTexCoordTransform = material.metallicMap.texCoordTransformMatrix
+          cachedUniforms.uMetallicMapTexCoordTransform =
+            material.metallicMap.texCoordTransformMatrix
         }
       }
-      if (!isNil(material.metallic)) cachedUniforms.uMetallic = material.metallic
+      if (!isNil(material.metallic))
+        cachedUniforms.uMetallic = material.metallic
 
       if (material.roughnessMap) {
-        cachedUniforms.uRoughnessMap = material.roughnessMap.texture || material.roughnessMap
+        cachedUniforms.uRoughnessMap =
+          material.roughnessMap.texture || material.roughnessMap
         if (material.roughnessMap.texCoordTransformMatrix) {
-          cachedUniforms.uRoughnessMapTexCoordTransform = material.roughnessMap.texCoordTransformMatrix
+          cachedUniforms.uRoughnessMapTexCoordTransform =
+            material.roughnessMap.texCoordTransformMatrix
         }
       }
-      if (!isNil(material.roughness)) cachedUniforms.uRoughness = material.roughness
+      if (!isNil(material.roughness))
+        cachedUniforms.uRoughness = material.roughness
 
       if (material.metallicRoughnessMap) {
-        cachedUniforms.uMetallicRoughnessMap = material.metallicRoughnessMap.texture || material.metallicRoughnessMap
+        cachedUniforms.uMetallicRoughnessMap =
+          material.metallicRoughnessMap.texture || material.metallicRoughnessMap
         if (material.metallicRoughnessMap.texCoordTransformMatrix) {
-          cachedUniforms.uMetallicRoughnessMapTexCoordTransform = material.metallicRoughnessMap.texCoordTransformMatrix
+          cachedUniforms.uMetallicRoughnessMapTexCoordTransform =
+            material.metallicRoughnessMap.texCoordTransformMatrix
         }
       }
+    }
+
+    cachedUniforms.uReflectance = material.reflectance
+    if (!isNil(material.clearCoat)) {
+      cachedUniforms.uClearCoat = material.clearCoat
+      cachedUniforms.uClearCoatRoughness = material.clearCoatRoughness || 0.04
+    }
+    if (material.clearCoatNormalMap) {
+      cachedUniforms.uClearCoatNormalMap = material.clearCoatNormalMap
+      cachedUniforms.uClearCoatNormalMapScale = material.clearCoatNormalMapScale
     }
 
     if (material.normalMap) {
-      cachedUniforms.uNormalMap = material.normalMap.texture || material.normalMap
+      cachedUniforms.uNormalMap =
+        material.normalMap.texture || material.normalMap
       cachedUniforms.uNormalScale = material.normalScale
       if (material.normalMap.texCoordTransformMatrix) {
-        cachedUniforms.uNormalMapTexCoordTransform = material.normalMap.texCoordTransformMatrix
+        cachedUniforms.uNormalMapTexCoordTransform =
+          material.normalMap.texCoordTransformMatrix
       }
     }
     if (material.occlusionMap) {
-      cachedUniforms.uOcclusionMap = material.occlusionMap.texture || material.occlusionMap
+      cachedUniforms.uOcclusionMap =
+        material.occlusionMap.texture || material.occlusionMap
       if (material.occlusionMap.texCoordTransformMatrix) {
-        cachedUniforms.uOcclusionMapTexCoordTransform = material.occlusionMap.texCoordTransformMatrix
+        cachedUniforms.uOcclusionMapTexCoordTransform =
+          material.occlusionMap.texCoordTransformMatrix
       }
     }
     if (material.displacementMap) {
@@ -766,7 +1028,8 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
     if (material.alphaMap) {
       cachedUniforms.uAlphaMap = material.alphaMap.texture || material.alphaMap
       if (material.alphaMap.texCoordTransformMatrix) {
-        cachedUniforms.uAlphaMapTexCoordTransform = material.alphaMap.texCoordTransformMatrix
+        cachedUniforms.uAlphaMapTexCoordTransform =
+          material.alphaMap.texCoordTransformMatrix
       }
     }
 
@@ -798,7 +1061,10 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
         numSpotLights: spotLights.length,
         numAreaLights: areaLights.length,
         useReflectionProbes: reflectionProbes.length, // TODO: reflection probes true
-        useSSAO: postProcessingCmp && postProcessingCmp.enabled && postProcessingCmp.ssao,
+        useSSAO:
+          postProcessingCmp &&
+          postProcessingCmp.enabled &&
+          postProcessingCmp.ssao,
         useTonemapping: !(postProcessingCmp && postProcessingCmp.enabled)
       })
     }
@@ -806,6 +1072,8 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
     if (material.alphaTest !== undefined) {
       sharedUniforms.uAlphaTest = material.alphaTest
     }
+
+    sharedUniforms.uPointSize = material.pointSize
 
     // TODO: shared uniforms HUH?
     // if (meshProgram !== prevProgram) {
@@ -841,7 +1109,7 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
     })
   }
   // also drawn above if transparent objects exist
-  if ((firstTransparent === -1) && skybox && skybox.enabled) {
+  if (firstTransparent === -1 && skybox && skybox.enabled) {
     skybox.draw(camera, {
       outputEncoding: sharedUniforms.uOutputEncoding,
       backgroundMode: true
@@ -849,7 +1117,7 @@ Renderer.prototype.drawMeshes = function (camera, shadowMapping, shadowMappingLi
   }
 }
 
-Renderer.prototype.draw = function () {
+Renderer.prototype.draw = function() {
   const ctx = this._ctx
 
   if (State.paused) return
@@ -890,269 +1158,326 @@ Renderer.prototype.draw = function () {
   })
 
   // draw scene
-  cameras.filter(camera => camera.enabled).forEach((camera, cameraIndex) => {
-    const screenSize = [camera.viewport[2], camera.viewport[3]]
-    const halfScreenSize = [Math.floor(camera.viewport[2] / 2), Math.floor(camera.viewport[3] / 2)]
-    const halfViewport = [0, 0, Math.floor(camera.viewport[2] / 2), Math.floor(camera.viewport[3] / 2)]
-    const postProcessingCmp = camera.entity.getComponent('PostProcessing')
-    if (postProcessingCmp && postProcessingCmp.enabled) {
-      if (State.profiler) State.profiler.time('depthPrepass', true)
-      ctx.submit(postProcessingCmp._drawFrameNormalsFboCommand, () => {
-        const far = camera.far
-        // TODO: Far clipping plane scaling fixes depth buffer precision artifacts
-        // but breaks shadows on large scale scenes (eg maps)
-        camera.set({ far: far * 0.99 })
-        this.drawMeshes(camera, true)
-        camera.set({ far: far })
-      })
-      if (State.profiler) State.profiler.timeEnd('depthPrepass')
-    }
-    if (postProcessingCmp && postProcessingCmp.enabled && postProcessingCmp.ssao) {
-      if (State.profiler) State.profiler.time('ssao', true)
-      ctx.submit(postProcessingCmp._ssaoCmd, {
-        uniforms: {
-          uNear: camera.near,
-          uFar: camera.far,
-          uFov: camera.fov,
-          viewMatrix: camera.viewMatrix,
-          uInverseViewMatrix: mat4.invert(mat4.copy(camera.viewMatrix)),
-          viewProjectionInverseMatrix: mat4.invert(mat4.mult(mat4.copy(camera.viewMatrix), camera.projectionMatrix)), // TODO: GC
-          cameraPositionWorldSpace: camera.entity.transform.worldPosition,
-          uIntensity: postProcessingCmp.ssaoIntensity,
-          uNoiseScale: [10, 10],
-          uSampleRadiusWS: postProcessingCmp.ssaoRadius,
-          uBias: postProcessingCmp.ssaoBias,
-          uScreenSize: screenSize
-        }
-      })
-      if (State.profiler) State.profiler.timeEnd('ssao')
-      if (State.profiler) State.profiler.time('ssao-blur', true)
-      ctx.submit(postProcessingCmp._bilateralBlurHCmd, {
-        uniforms: {
-          near: camera.near,
-          far: camera.far,
-          sharpness: postProcessingCmp.ssaoBlurSharpness,
-          imageSize: screenSize,
-          depthMapSize: screenSize,
-          direction: [postProcessingCmp.ssaoBlurRadius, 0]
-        }
-      })
-      ctx.submit(postProcessingCmp._bilateralBlurVCmd, {
-        uniforms: {
-          near: camera.near,
-          far: camera.far,
-          sharpness: postProcessingCmp.ssaoBlurSharpness,
-          imageSize: screenSize,
-          depthMapSize: screenSize,
-          direction: [0, postProcessingCmp.ssaoBlurRadius]
-        }
-      })
-      if (State.profiler) State.profiler.timeEnd('ssao-blur')
-    }
-    if (State.profiler) State.profiler.time('drawFrame', true)
-    if (postProcessingCmp && postProcessingCmp.enabled) {
-      ctx.submit(postProcessingCmp._drawFrameFboCommand, () => {
-        this.drawMeshes(camera, false, null, null, skyboxes[0], false)
-      })
-    } else {
-      ctx.submit({ viewport: camera.viewport }, () => {
-        this.drawMeshes(camera, false, null, null, skyboxes[0], true)
-      })
-    }
-    if (State.profiler) State.profiler.timeEnd('drawFrame')
-    if (State.profiler) State.profiler.time('postprocess')
-    if (postProcessingCmp && postProcessingCmp.enabled && postProcessingCmp.bloom) {
-      ctx.submit(postProcessingCmp._thresholdCmd, {
-        uniforms: {
-          uExposure: camera.exposure,
-          uBloomThreshold: postProcessingCmp.bloomThreshold,
-          imageSize: halfScreenSize
-        },
-        viewport: halfViewport
-      })
-
-      for (let i = 0; i < 5; i++) {
-        ctx.submit(postProcessingCmp._bloomHCmd, {
+  cameras
+    .filter((camera) => camera.enabled)
+    .forEach((camera) => {
+      const screenSize = [camera.viewport[2], camera.viewport[3]]
+      const halfScreenSize = [
+        Math.floor(camera.viewport[2] / 2),
+        Math.floor(camera.viewport[3] / 2)
+      ]
+      const halfViewport = [
+        0,
+        0,
+        Math.floor(camera.viewport[2] / 2),
+        Math.floor(camera.viewport[3] / 2)
+      ]
+      const postProcessingCmp = camera.entity.getComponent('PostProcessing')
+      if (postProcessingCmp && postProcessingCmp.enabled) {
+        if (State.profiler) State.profiler.time('depthPrepass', true)
+        ctx.submit(postProcessingCmp._drawFrameNormalsFboCommand, () => {
+          const far = camera.far
+          // TODO: Far clipping plane scaling fixes depth buffer precision artifacts
+          // but breaks shadows on large scale scenes (eg maps)
+          camera.set({ far: far * 0.99 })
+          this.drawMeshes(camera, true)
+          camera.set({ far: far })
+        })
+        if (State.profiler) State.profiler.timeEnd('depthPrepass')
+      }
+      if (
+        postProcessingCmp &&
+        postProcessingCmp.enabled &&
+        postProcessingCmp.ssao
+      ) {
+        if (State.profiler) State.profiler.time('ssao', true)
+        ctx.submit(postProcessingCmp._ssaoCmd, {
           uniforms: {
-            direction: [postProcessingCmp.bloomRadius, 0],
+            uNear: camera.near,
+            uFar: camera.far,
+            uFov: camera.fov,
+            viewMatrix: camera.viewMatrix,
+            uInverseViewMatrix: mat4.invert(mat4.copy(camera.viewMatrix)),
+            viewProjectionInverseMatrix: mat4.invert(
+              mat4.mult(mat4.copy(camera.viewMatrix), camera.projectionMatrix)
+            ), // TODO: GC
+            cameraPositionWorldSpace: camera.entity.transform.worldPosition,
+            uIntensity: postProcessingCmp.ssaoIntensity,
+            uNoiseScale: [10, 10],
+            uSampleRadiusWS: postProcessingCmp.ssaoRadius,
+            uBias: postProcessingCmp.ssaoBias,
+            uScreenSize: screenSize
+          }
+        })
+        if (State.profiler) State.profiler.timeEnd('ssao')
+        if (State.profiler) State.profiler.time('ssao-blur', true)
+        ctx.submit(postProcessingCmp._bilateralBlurHCmd, {
+          uniforms: {
+            near: camera.near,
+            far: camera.far,
+            sharpness: postProcessingCmp.ssaoBlurSharpness,
+            imageSize: screenSize,
+            depthMapSize: screenSize,
+            direction: [postProcessingCmp.ssaoBlurRadius, 0]
+          }
+        })
+        ctx.submit(postProcessingCmp._bilateralBlurVCmd, {
+          uniforms: {
+            near: camera.near,
+            far: camera.far,
+            sharpness: postProcessingCmp.ssaoBlurSharpness,
+            imageSize: screenSize,
+            depthMapSize: screenSize,
+            direction: [0, postProcessingCmp.ssaoBlurRadius]
+          }
+        })
+        if (State.profiler) State.profiler.timeEnd('ssao-blur')
+      }
+      if (State.profiler) State.profiler.time('drawFrame', true)
+      if (postProcessingCmp && postProcessingCmp.enabled) {
+        ctx.submit(postProcessingCmp._drawFrameFboCommand, () => {
+          this.drawMeshes(camera, false, null, null, skyboxes[0], false)
+        })
+      } else {
+        ctx.submit({ viewport: camera.viewport }, () => {
+          this.drawMeshes(camera, false, null, null, skyboxes[0], true)
+        })
+      }
+      if (State.profiler) State.profiler.timeEnd('drawFrame')
+      if (State.profiler) State.profiler.time('postprocess')
+      if (
+        postProcessingCmp &&
+        postProcessingCmp.enabled &&
+        postProcessingCmp.bloom
+      ) {
+        ctx.submit(postProcessingCmp._thresholdCmd, {
+          uniforms: {
+            uExposure: camera.exposure,
+            uBloomThreshold: postProcessingCmp.bloomThreshold,
             imageSize: halfScreenSize
           },
           viewport: halfViewport
         })
-        ctx.submit(postProcessingCmp._bloomVCmd, {
-          uniforms: {
-            direction: [0, postProcessingCmp.bloomRadius],
-            imageSize: halfScreenSize
-          },
-          viewport: halfViewport
-        })
-      }
-    }
-    if (postProcessingCmp && postProcessingCmp.enabled && postProcessingCmp.dof) {
-      if (State.profiler) State.profiler.time('dof', true)
-      for (let i = 0; i < postProcessingCmp.dofIterations; i++) {
-        ctx.submit(postProcessingCmp._dofBlurHCmd, {
-          uniforms: {
-            near: camera.near,
-            far: camera.far,
-            sharpness: 0,
-            imageSize: screenSize,
-            depthMapSize: screenSize,
-            direction: [postProcessingCmp.dofRadius, 0],
-            uDOFDepth: postProcessingCmp.dofDepth,
-            uDOFRange: postProcessingCmp.dofRange
-          }
-        })
-        ctx.submit(postProcessingCmp._dofBlurVCmd, {
-          uniforms: {
-            near: camera.near,
-            far: camera.far,
-            sharpness: 0,
-            imageSize: screenSize,
-            depthMapSize: screenSize,
-            direction: [0, postProcessingCmp.dofRadius],
-            uDOFDepth: postProcessingCmp.dofDepth,
-            uDOFRange: postProcessingCmp.dofRange
-          }
-        })
-      }
-      if (State.profiler) State.profiler.timeEnd('dof')
-    }
-    if (postProcessingCmp && postProcessingCmp.enabled) {
-      ctx.submit(postProcessingCmp._blitCmd, {
-        uniforms: {
-          uNear: camera.near,
-          uFar: camera.far,
-          uFov: camera.fov,
-          uExposure: camera.exposure,
-          uFXAA: postProcessingCmp.fxaa,
-          uFog: postProcessingCmp.fog,
-          uBloom: postProcessingCmp.bloom,
-          uBloomIntensity: postProcessingCmp.bloomIntensity,
-          uSunDispertion: postProcessingCmp.sunDispertion,
-          uSunIntensity: postProcessingCmp.sunIntensity,
-          uSunColor: postProcessingCmp.sunColor,
-          uInscatteringCoeffs: postProcessingCmp.inscatteringCoeffs,
-          uFogColor: postProcessingCmp.fogColor,
-          uFogStart: postProcessingCmp.fogStart,
-          uFogDensity: postProcessingCmp.fogDensity,
-          uSunPosition: postProcessingCmp.sunPosition,
-          uOutputEncoding: ctx.Encoding.Gamma,
-          uScreenSize: screenSize
-        },
-        viewport: camera.viewport
-      })
-      if (State.profiler) State.profiler.timeEnd('postprocess')
-    }
-  })
 
-  overlays.filter(overlay => overlay.enabled).forEach((overlay) => {
-    const bounds = [overlay.x, overlay.y, overlay.width, overlay.height]
-    if (overlay.x > 1 || overlay.y > 1 || overlay.width > 1 || overlay.height > 1) {
-      bounds[0] /= ctx.gl.drawingBufferWidth
-      bounds[1] /= ctx.gl.drawingBufferHeight
-      bounds[2] /= ctx.gl.drawingBufferWidth
-      bounds[3] /= ctx.gl.drawingBufferHeight
-    }
-    // overlay coordinates are from top left corner so we need to flip y
-    bounds[1] = 1.0 - bounds[1] - bounds[3]
-    ctx.submit(this.getOverlayCommand(), {
-      uniforms: {
-        uBounds: bounds,
-        uTexture: overlay.texture
+        for (let i = 0; i < 5; i++) {
+          ctx.submit(postProcessingCmp._bloomHCmd, {
+            uniforms: {
+              direction: [postProcessingCmp.bloomRadius, 0],
+              imageSize: halfScreenSize
+            },
+            viewport: halfViewport
+          })
+          ctx.submit(postProcessingCmp._bloomVCmd, {
+            uniforms: {
+              direction: [0, postProcessingCmp.bloomRadius],
+              imageSize: halfScreenSize
+            },
+            viewport: halfViewport
+          })
+        }
+      }
+      if (
+        postProcessingCmp &&
+        postProcessingCmp.enabled &&
+        postProcessingCmp.dof
+      ) {
+        if (State.profiler) State.profiler.time('dof', true)
+        for (let i = 0; i < postProcessingCmp.dofIterations; i++) {
+          ctx.submit(postProcessingCmp._dofBlurHCmd, {
+            uniforms: {
+              near: camera.near,
+              far: camera.far,
+              sharpness: 0,
+              imageSize: screenSize,
+              depthMapSize: screenSize,
+              direction: [postProcessingCmp.dofRadius, 0],
+              uDOFDepth: postProcessingCmp.dofDepth,
+              uDOFRange: postProcessingCmp.dofRange
+            }
+          })
+          ctx.submit(postProcessingCmp._dofBlurVCmd, {
+            uniforms: {
+              near: camera.near,
+              far: camera.far,
+              sharpness: 0,
+              imageSize: screenSize,
+              depthMapSize: screenSize,
+              direction: [0, postProcessingCmp.dofRadius],
+              uDOFDepth: postProcessingCmp.dofDepth,
+              uDOFRange: postProcessingCmp.dofRange
+            }
+          })
+        }
+        if (State.profiler) State.profiler.timeEnd('dof')
+      }
+      if (postProcessingCmp && postProcessingCmp.enabled) {
+        ctx.submit(postProcessingCmp._blitCmd, {
+          uniforms: {
+            uNear: camera.near,
+            uFar: camera.far,
+            uFov: camera.fov,
+            uExposure: camera.exposure,
+            uFXAA: postProcessingCmp.fxaa,
+            uFog: postProcessingCmp.fog,
+            uBloom: postProcessingCmp.bloom,
+            uBloomIntensity: postProcessingCmp.bloomIntensity,
+            uSunDispertion: postProcessingCmp.sunDispertion,
+            uSunIntensity: postProcessingCmp.sunIntensity,
+            uSunColor: postProcessingCmp.sunColor,
+            uInscatteringCoeffs: postProcessingCmp.inscatteringCoeffs,
+            uFogColor: postProcessingCmp.fogColor,
+            uFogStart: postProcessingCmp.fogStart,
+            uFogDensity: postProcessingCmp.fogDensity,
+            uSunPosition: postProcessingCmp.sunPosition,
+            uOutputEncoding: ctx.Encoding.Gamma,
+            uScreenSize: screenSize
+          },
+          viewport: camera.viewport
+        })
+        if (State.profiler) State.profiler.timeEnd('postprocess')
       }
     })
-  })
+
+  overlays
+    .filter((overlay) => overlay.enabled)
+    .forEach((overlay) => {
+      const bounds = [overlay.x, overlay.y, overlay.width, overlay.height]
+      if (
+        overlay.x > 1 ||
+        overlay.y > 1 ||
+        overlay.width > 1 ||
+        overlay.height > 1
+      ) {
+        bounds[0] /= ctx.gl.drawingBufferWidth
+        bounds[1] /= ctx.gl.drawingBufferHeight
+        bounds[2] /= ctx.gl.drawingBufferWidth
+        bounds[3] /= ctx.gl.drawingBufferHeight
+      }
+      // overlay coordinates are from top left corner so we need to flip y
+      bounds[1] = 1.0 - bounds[1] - bounds[3]
+      ctx.submit(this.getOverlayCommand(), {
+        uniforms: {
+          uBounds: bounds,
+          uTexture: overlay.texture
+        }
+      })
+    })
 
   if (State.profiler) State.profiler.endFrame()
 }
 
-Renderer.prototype.entity = function (components, tags) {
+Renderer.prototype.entity = function(components, tags) {
   return createEntity(components, tags, this)
 }
 
-Renderer.prototype.add = function (entity, parent) {
+Renderer.prototype.add = function(entity, parent) {
   if (entity === this.root) {
     return entity
   }
+
   entity.transform.set({
-    parent: parent ? parent.transform : entity.transform.parent || this.root.transform
+    parent: parent
+      ? parent.transform
+      : entity.transform.parent || this.root.transform
   })
+
   return entity
 }
 
-Renderer.prototype.remove = function (entity) {
+Renderer.prototype.remove = function(entity) {
   entity.transform.set({ parent: null })
 }
 
-Renderer.prototype.transform = function (opts) {
+Renderer.prototype.transform = function(opts) {
   return createTransform(Object.assign({ ctx: this._ctx }, opts))
 }
 
-Renderer.prototype.skin = function (opts) {
+Renderer.prototype.skin = function(opts) {
   return createSkin(Object.assign({ ctx: this._ctx }, opts))
 }
 
-Renderer.prototype.morph = function (opts) {
+Renderer.prototype.morph = function(opts) {
   return createMorph(Object.assign({ ctx: this._ctx }, opts))
 }
 
-Renderer.prototype.animation = function (opts) {
+Renderer.prototype.animation = function(opts) {
   return createAnimation(Object.assign({ ctx: this._ctx }, opts))
 }
 
-Renderer.prototype.geometry = function (opts) {
+Renderer.prototype.geometry = function(opts) {
   return createGeometry(Object.assign({ ctx: this._ctx }, opts))
 }
 
-Renderer.prototype.material = function (opts) {
+Renderer.prototype.material = function(opts) {
   return createMaterial(Object.assign({ ctx: this._ctx }, opts))
 }
 
-Renderer.prototype.camera = function (opts) {
+Renderer.prototype.camera = function(opts) {
   return createCamera(Object.assign({ ctx: this._ctx, rgbm: State.rgbm }, opts))
 }
 
-Renderer.prototype.postProcessing = function (opts) {
-  return createPostProcessing(Object.assign({ ctx: this._ctx, rgbm: State.rgbm }, opts))
+Renderer.prototype.postProcessing = function(opts) {
+  return createPostProcessing(
+    Object.assign({ ctx: this._ctx, rgbm: State.rgbm }, opts)
+  )
 }
 
-Renderer.prototype.orbiter = function (opts) {
+Renderer.prototype.orbiter = function(opts) {
   return createOrbiter(Object.assign({ ctx: this._ctx }, opts))
 }
 
-Renderer.prototype.ambientLight = function (opts) {
+Renderer.prototype.ambientLight = function(opts) {
   return createAmbientLight(Object.assign({ ctx: this._ctx }, opts))
 }
 
-Renderer.prototype.directionalLight = function (opts) {
+Renderer.prototype.directionalLight = function(opts) {
   return createDirectionalLight(Object.assign({ ctx: this._ctx }, opts))
 }
 
-Renderer.prototype.pointLight = function (opts) {
+Renderer.prototype.pointLight = function(opts) {
   return createPointLight(Object.assign({ ctx: this._ctx }, opts))
 }
 
-Renderer.prototype.spotLight = function (opts) {
+Renderer.prototype.spotLight = function(opts) {
   return createSpotLight(Object.assign({ ctx: this._ctx }, opts))
 }
 
-Renderer.prototype.areaLight = function (opts) {
+Renderer.prototype.areaLight = function(opts) {
   return createAreaLight(Object.assign({ ctx: this._ctx }, opts))
 }
 
-Renderer.prototype.reflectionProbe = function (opts) {
-  return createReflectionProbe(Object.assign({ ctx: this._ctx, rgbm: State.rgbm }, opts))
+Renderer.prototype.reflectionProbe = function(opts) {
+  return createReflectionProbe(
+    Object.assign({ ctx: this._ctx, rgbm: State.rgbm }, opts)
+  )
 }
 
-Renderer.prototype.skybox = function (opts) {
+Renderer.prototype.skybox = function(opts) {
   return createSkybox(Object.assign({ ctx: this._ctx, rgbm: State.rgbm }, opts))
 }
 
-Renderer.prototype.overlay = function (opts) {
+Renderer.prototype.overlay = function(opts) {
   return createOverlay(Object.assign({ ctx: this._ctx }, opts))
 }
 
-module.exports = function createRenderer (opts) {
+Renderer.prototype.loadScene = async function(url, opts = {}) {
+  const extension = path.extname(url)
+
+  const [, loader] =
+    opts.loader ||
+    LOADERS_ENTRIES.find(([extensions]) => extensions.includes(extension)) ||
+    []
+
+  if (loader) {
+    const scenes = await loader(url, this, opts)
+    return scenes.length > 1 ? scenes : scenes[0]
+  } else {
+    console.error(
+      `pex-renderer: No loader found for file extension ${extension}`
+    )
+  }
+}
+
+module.exports = function createRenderer(opts) {
   return new Renderer(opts)
 }

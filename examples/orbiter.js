@@ -24,8 +24,8 @@ document.body.appendChild(container)
 for (let i = 0; i < 20; i++) {
   const block = document.createElement('div')
   block.style.background = '#DDDDEE'
-  block.style.width = (50 + Math.random() * 50) + '%'
-  block.style.height = (50) + 'px'
+  block.style.width = 50 + Math.random() * 50 + '%'
+  block.style.height = 50 + 'px'
   block.style.margin = '0 0 20px 0'
   container.appendChild(block)
 }
@@ -65,11 +65,10 @@ const skyboxEntity = renderer.entity([
 ])
 renderer.add(skyboxEntity)
 
-const reflectionProbeEntity = renderer.entity([
-  renderer.reflectionProbe()
-])
+const reflectionProbeEntity = renderer.entity([renderer.reflectionProbe()])
 renderer.add(reflectionProbeEntity)
 
 ctx.frame(() => {
   renderer.draw()
+  window.dispatchEvent(new CustomEvent('pex-screenshot'))
 })

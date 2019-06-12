@@ -1,6 +1,6 @@
 const SHADERS = require('../chunks/index.js')
 
-module.exports = /* glsl */`
+module.exports = /* glsl */ `
 // https://gist.github.com/fisch0920/6770311
 // Updated by marcin.ignac@gmail.com 2017-05-08
 #extension GL_OES_standard_derivatives : enable

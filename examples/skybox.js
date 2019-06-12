@@ -2,10 +2,15 @@ const path = require('path')
 const createRenderer = require('../')
 const createContext = require('pex-context')
 const io = require('pex-io')
+const { quat } = require('pex-math')
 const GUI = require('pex-gui')
 const createSphere = require('primitive-sphere')
 const parseHdr = require('parse-hdr')
 const isBrowser = require('is-browser')
+
+const State = {
+  rotation: 1.5 * Math.PI
+}
 
 const ctx = createContext()
 const renderer = createRenderer(ctx)
@@ -40,6 +45,9 @@ const geom = renderer.entity([
 renderer.add(geom)
 
 const skybox = renderer.entity([
+  renderer.transform({
+    rotation: quat.fromAxisAngle(quat.create(), [0, 1, 0], State.rotation)
+  }),
   renderer.skybox({
     sunPosition: [1, 1, 1],
     backgroundBlur: 0
@@ -47,11 +55,8 @@ const skybox = renderer.entity([
 ])
 renderer.add(skybox)
 
-const reflectionProbe = renderer.entity([
-  renderer.reflectionProbe()
-])
+const reflectionProbe = renderer.entity([renderer.reflectionProbe()])
 renderer.add(reflectionProbe)
-
 ;(async () => {
   const buffer = await io.loadBinary(`${ASSETS_DIR}/Mono_Lake_B.hdr`)
   const hdrImg = parseHdr(buffer)
@@ -74,10 +79,27 @@ renderer.add(reflectionProbe)
   gui.addParam('Enabled', skyboxCmp, 'enabled', {}, (value) => {
     skyboxCmp.set({ enabled: value })
   })
-  gui.addParam('BG Blur', skyboxCmp, 'backgroundBlur', {}, () => { })
-  gui.addParam('Exposure', cameraCmp, 'exposure', { min: 0, max: 2 }, () => { })
-  gui.addParam('Roughness', materialCmp, 'roughness', {}, () => { })
-  gui.addTexture2D('Reflection Probe', reflectionProbe.getComponent('ReflectionProbe')._reflectionMap)
+  gui.addParam(
+    'Rotation',
+    State,
+    'rotation',
+    { min: 0, max: 2 * Math.PI },
+    () => {
+      skybox.getComponent('Transform').set({
+        rotation: quat.fromAxisAngle(quat.create(), [0, 1, 0], State.rotation)
+      })
+      reflectionProbe.getComponent('ReflectionProbe').set({ dirty: true })
+    }
+  )
+  gui.addParam('BG Blur', skyboxCmp, 'backgroundBlur', {}, () => {})
+  gui.addParam('Exposure', cameraCmp, 'exposure', { min: 0, max: 2 }, () => {})
+  gui.addParam('Roughness', materialCmp, 'roughness', {}, () => {})
+  gui.addTexture2D(
+    'Reflection Probe',
+    reflectionProbe.getComponent('ReflectionProbe')._reflectionMap
+  )
+
+  window.dispatchEvent(new CustomEvent('pex-screenshot'))
 })()
 
 ctx.frame(() => {

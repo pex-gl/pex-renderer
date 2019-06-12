@@ -1,6 +1,6 @@
 const SHADERS = require('../chunks/index.js')
 
-module.exports = /* glsl */`
+module.exports = /* glsl */ `
 // Variables
 attribute vec3 aPosition;
 
@@ -55,6 +55,8 @@ uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
 uniform mat4 uModelMatrix;
 uniform mat3 uNormalMatrix;
+
+uniform float uPointSize;
 
 float uDisplacementShadowStretch = 1.3;
 
@@ -133,6 +135,8 @@ void main() {
   #endif
 
   gl_Position = uProjectionMatrix * positionView;
+  gl_PointSize = uPointSize;
+
   vPositionView = positionView.xyz;
   vNormalView = normalize(uNormalMatrix * normal);
 }

@@ -4,10 +4,10 @@ const vec3 = require('pex-math/vec3')
 
 function normalizePlane(plane) {
   const mag = vec3.length(plane)
-  return plane.map(p => p / mag)
+  return plane.map((p) => p / mag)
 }
 
-function Camera (opts) {
+function Camera(opts) {
   const gl = opts.ctx.gl
   this.type = 'Camera'
   this.projection = opts.projection || 'perspective'
@@ -52,35 +52,83 @@ function Camera (opts) {
 
   this.viewport = [0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight]
   this.frustum = []
+  this.view = null
 
   this.set(opts)
 }
 
-Camera.prototype.init = function (entity) {
+Camera.prototype.init = function(entity) {
   this.entity = entity
 }
 
-Camera.prototype.set = function (opts) {
+Camera.prototype.set = function(opts) {
   Object.assign(this, opts)
 
   if (
     this.projection === 'perspective' &&
-    (opts.aspect || opts.near || opts.far || opts.fov)
+    (opts.aspect || opts.near || opts.far || opts.fov || opts.view)
   ) {
-    mat4.perspective(this.projectionMatrix, this.fov, this.aspect, this.near, this.far)
+    if (this.view) {
+      const aspectRatio = this.view.totalSize[0] / this.view.totalSize[1]
+
+      const top = Math.tan(this.fov * 0.5) * this.near
+      const bottom = -top
+      const left = aspectRatio * bottom
+      const right = aspectRatio * top
+      const width = Math.abs(right - left)
+      const height = Math.abs(top - bottom)
+      const widthNormalized = width / this.view.totalSize[0]
+      const heightNormalized = height / this.view.totalSize[1]
+
+      const l = left + this.view.offset[0] * widthNormalized
+      const r =
+        left + (this.view.offset[0] + this.view.size[0]) * widthNormalized
+      const b =
+        top - (this.view.offset[1] + this.view.size[1]) * heightNormalized
+      const t = top - this.view.offset[1] * heightNormalized
+
+      mat4.frustum(this.projectionMatrix, l, r, b, t, this.near, this.far)
+    } else {
+      mat4.perspective(
+        this.projectionMatrix,
+        this.fov,
+        this.aspect,
+        this.near,
+        this.far
+      )
+    }
   } else if (
     this.projection === 'orthographic' &&
-    (opts.left || opts.right || opts.bottom || opts.top || opts.zoom || opts.near || opts.far)
+    (opts.left ||
+      opts.right ||
+      opts.bottom ||
+      opts.top ||
+      opts.zoom ||
+      opts.near ||
+      opts.far ||
+      opts.view)
   ) {
     const dx = (this.right - this.left) / (2 / this.zoom)
     const dy = (this.top - this.bottom) / (2 / this.zoom)
     const cx = (this.right + this.left) / 2
     const cy = (this.top + this.bottom) / 2
 
-    const left = cx - dx
-    const right = cx + dx
-    const top = cy + dy
-    const bottom = cy - dy
+    let left = cx - dx
+    let right = cx + dx
+    let top = cy + dy
+    let bottom = cy - dy
+
+    if (this.view) {
+      const zoomW = 1 / this.zoom / (this.view.size[0] / this.view.totalSize[0])
+      const zoomH = 1 / this.zoom / (this.view.size[1] / this.view.totalSize[1])
+      const scaleW = (this.right - this.left) / this.view.size[0]
+      const scaleH = (this.top - this.bottom) / this.view.size[1]
+
+      left += scaleW * (this.view.offset[0] / zoomW)
+      right = left + scaleW * (this.view.size[0] / zoomW)
+      top -= scaleH * (this.view.offset[1] / zoomH)
+      bottom = top - scaleH * (this.view.size[1] / zoomH)
+    }
 
     mat4.ortho(
       this.projectionMatrix,
@@ -101,7 +149,8 @@ Camera.prototype.set = function (opts) {
       this.set({ aspect })
     }
 
-    const postProcessingCmp = this.entity && this.entity.getComponent('PostProcessing')
+    const postProcessingCmp =
+      this.entity && this.entity.getComponent('PostProcessing')
     if (postProcessingCmp) {
       postProcessingCmp.set({
         viewport,
@@ -113,15 +162,21 @@ Camera.prototype.set = function (opts) {
   Object.keys(opts).forEach((prop) => this.changed.dispatch(prop))
 }
 
-Camera.prototype.getViewRay = function (x, y, windowWidth, windowHeight) {
-  let nx = 2 * x / windowWidth - 1
-  let ny = 1 - 2 * y / windowHeight
+Camera.prototype.getViewRay = function(x, y, windowWidth, windowHeight) {
+  if (this.view) {
+    x += this.view.offset[0]
+    y += this.view.offset[1]
+    windowWidth = this.view.totalSize[0]
+    windowHeight = this.view.totalSize[1]
+  }
+  let nx = (2 * x) / windowWidth - 1
+  let ny = 1 - (2 * y) / windowHeight
 
   let hNear = 2 * Math.tan(this.fov / 2) * this.near
   let wNear = hNear * this.aspect
 
-  nx *= (wNear * 0.5)
-  ny *= (hNear * 0.5)
+  nx *= wNear * 0.5
+  ny *= hNear * 0.5
 
   let origin = [0, 0, 0]
   let direction = vec3.normalize([nx, ny, -this.near])
@@ -130,7 +185,7 @@ Camera.prototype.getViewRay = function (x, y, windowWidth, windowHeight) {
   return ray
 }
 
-Camera.prototype.update = function () {
+Camera.prototype.update = function() {
   mat4.set(this.inverseViewMatrix, this.entity.transform.modelMatrix)
   mat4.set(this.viewMatrix, this.entity.transform.modelMatrix)
   mat4.invert(this.viewMatrix)
@@ -143,10 +198,10 @@ Camera.prototype.update = function () {
     normalizePlane([m[3] + m[1], m[7] + m[5], m[11] + m[9], m[15] + m[13]]), // +y
     normalizePlane([m[3] - m[1], m[7] - m[5], m[11] - m[9], m[15] - m[13]]), // -y
     normalizePlane([m[3] - m[2], m[7] - m[6], m[11] - m[10], m[15] - m[14]]), // +z (far)
-    normalizePlane([m[3] + m[2], m[7] + m[6], m[11] + m[10], m[15] + m[14]]), // -z (near)
+    normalizePlane([m[3] + m[2], m[7] + m[6], m[11] + m[10], m[15] + m[14]]) // -z (near)
   ]
 }
 
-module.exports = function createCamera (opts) {
+module.exports = function createCamera(opts) {
   return new Camera(opts)
 }

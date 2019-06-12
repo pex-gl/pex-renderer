@@ -1,4 +1,4 @@
-module.exports = /* glsl */`
+module.exports = /* glsl */ `
 float A = 0.15;
 float B = 0.50;
 float C = 0.10;

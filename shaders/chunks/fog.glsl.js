@@ -1,4 +1,4 @@
-module.exports = /* glsl */`
+module.exports = /* glsl */ `
 uniform float       uFogDensity;
 
 uniform vec3        uSunColor;

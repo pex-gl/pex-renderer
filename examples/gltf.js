@@ -4,24 +4,21 @@ const createGUI = require('pex-gui')
 const loadJSON = require('pex-io/loadJSON')
 const loadImage = require('pex-io/loadImage')
 const loadBinary = require('pex-io/loadBinary')
-const mat4 = require('pex-math/mat4')
 const quat = require('pex-math/quat')
 const vec3 = require('pex-math/vec3')
+const path = require('path')
 const createCube = require('primitive-cube')
-const debug = require('debug')('gltf')
-// const log = require('debug')('gltf')
 const parseHdr = require('parse-hdr')
 const isBrowser = require('is-browser')
 const createBox = require('primitive-box')
 const edges = require('geom-edges')
 const aabb = require('pex-geom/aabb')
 
-const loadGltf = require('./gltf/gltf-load')
-const buildGltf = require('./gltf/gltf-build')
 const { makeAxes } = require('./helpers')
 
-const MODELS_PATH = 'glTF-Sample-Models'
-// const MODELS_PATH = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0'
+const MODELS_PATH =
+  'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0'
+
 const ASSETS_DIR = isBrowser ? 'assets' : path.join(__dirname, 'assets')
 
 const State = {
@@ -30,9 +27,17 @@ const State = {
   scenes: [],
   gridSize: 1,
   showBoundingBoxes: false,
-  useEnvMap: false,
-  shadows: false // TODO: disabled for benchmarking
+  useEnvMap: true,
+  shadows: false,
+  formats: ['glTF', 'glTF-Binary', 'glTF-Draco', 'glTF-Embedded'],
+  currentFormat: 0
 }
+
+const FORMAT_EXTENSION = new Map()
+  .set('glTF', 'gltf')
+  .set('glTF-Binary', 'glb')
+  .set('glTF-Draco', 'gltf')
+  .set('glTF-Embedded', 'gltf')
 
 // Utils
 const positions = [[0, 0, 0], [0, 0, 0]]
@@ -41,27 +46,75 @@ const addLine = (a, b) => positions.push(a, b)
 let pp = null
 let pq = null
 let frame = 0
-function addPointLine (skin, i, j) {
+function addPointLine(skin, i, j) {
   var p = [
     State.positions[i * 3],
     State.positions[i * 3 + 1],
     State.positions[i * 3 + 2]
   ]
   var np = [0, 0, 0]
-  vec3.add(np, vec3.scale(vec3.multMat4(vec3.copy(p), skin.jointMatrices[State.joints[i * 4 + 0]]), State.weights[i * 4 + 0]))
-  vec3.add(np, vec3.scale(vec3.multMat4(vec3.copy(p), skin.jointMatrices[State.joints[i * 4 + 1]]), State.weights[i * 4 + 1]))
-  vec3.add(np, vec3.scale(vec3.multMat4(vec3.copy(p), skin.jointMatrices[State.joints[i * 4 + 2]]), State.weights[i * 4 + 2]))
-  vec3.add(np, vec3.scale(vec3.multMat4(vec3.copy(p), skin.jointMatrices[State.joints[i * 4 + 3]]), State.weights[i * 4 + 3]))
+  vec3.add(
+    np,
+    vec3.scale(
+      vec3.multMat4(vec3.copy(p), skin.jointMatrices[State.joints[i * 4 + 0]]),
+      State.weights[i * 4 + 0]
+    )
+  )
+  vec3.add(
+    np,
+    vec3.scale(
+      vec3.multMat4(vec3.copy(p), skin.jointMatrices[State.joints[i * 4 + 1]]),
+      State.weights[i * 4 + 1]
+    )
+  )
+  vec3.add(
+    np,
+    vec3.scale(
+      vec3.multMat4(vec3.copy(p), skin.jointMatrices[State.joints[i * 4 + 2]]),
+      State.weights[i * 4 + 2]
+    )
+  )
+  vec3.add(
+    np,
+    vec3.scale(
+      vec3.multMat4(vec3.copy(p), skin.jointMatrices[State.joints[i * 4 + 3]]),
+      State.weights[i * 4 + 3]
+    )
+  )
   var q = [
     State.positions[j * 3],
     State.positions[j * 3 + 1],
     State.positions[j * 3 + 2]
   ]
   var nq = [0, 0, 0]
-  vec3.add(nq, vec3.scale(vec3.multMat4(vec3.copy(q), skin.jointMatrices[State.joints[j * 4 + 0]]), State.weights[j * 4 + 0]))
-  vec3.add(nq, vec3.scale(vec3.multMat4(vec3.copy(q), skin.jointMatrices[State.joints[j * 4 + 1]]), State.weights[j * 4 + 1]))
-  vec3.add(nq, vec3.scale(vec3.multMat4(vec3.copy(q), skin.jointMatrices[State.joints[j * 4 + 2]]), State.weights[j * 4 + 2]))
-  vec3.add(nq, vec3.scale(vec3.multMat4(vec3.copy(q), skin.jointMatrices[State.joints[j * 4 + 3]]), State.weights[j * 4 + 3]))
+  vec3.add(
+    nq,
+    vec3.scale(
+      vec3.multMat4(vec3.copy(q), skin.jointMatrices[State.joints[j * 4 + 0]]),
+      State.weights[j * 4 + 0]
+    )
+  )
+  vec3.add(
+    nq,
+    vec3.scale(
+      vec3.multMat4(vec3.copy(q), skin.jointMatrices[State.joints[j * 4 + 1]]),
+      State.weights[j * 4 + 1]
+    )
+  )
+  vec3.add(
+    nq,
+    vec3.scale(
+      vec3.multMat4(vec3.copy(q), skin.jointMatrices[State.joints[j * 4 + 2]]),
+      State.weights[j * 4 + 2]
+    )
+  )
+  vec3.add(
+    nq,
+    vec3.scale(
+      vec3.multMat4(vec3.copy(q), skin.jointMatrices[State.joints[j * 4 + 3]]),
+      State.weights[j * 4 + 3]
+    )
+  )
 
   if (pp && pq) {
     // positions.length = 0
@@ -103,11 +156,15 @@ gui.addFPSMeeter()
 const sunEntity = renderer.entity([
   renderer.transform({
     position: State.sunPosition,
-    rotation: quat.fromTo(quat.create(), [0, 0, 1], vec3.normalize([-2, -2, -2]))
+    rotation: quat.fromTo(
+      quat.create(),
+      [0, 0, 1],
+      vec3.normalize([-2, -2, -2])
+    )
   }),
   renderer.directionalLight({
     color: [1, 1, 0.95, 1],
-    intensity: 5,
+    intensity: 2,
     castShadows: State.shadows,
     bias: 0.2
   })
@@ -121,12 +178,10 @@ const skyboxEntity = renderer.entity([
 ])
 renderer.add(skyboxEntity)
 
-const reflectionProbeEntity = renderer.entity([
-  renderer.reflectionProbe()
-])
+const reflectionProbeEntity = renderer.entity([renderer.reflectionProbe()])
 renderer.add(reflectionProbeEntity)
 
-const addEnvmap = (async () => {
+const addEnvmap = async () => {
   const buffer = await loadBinary(`${ASSETS_DIR}/garage.hdr`)
   const hdrImg = parseHdr(buffer)
   const panorama = ctx.texture2D({
@@ -135,47 +190,16 @@ const addEnvmap = (async () => {
     height: hdrImg.shape[1],
     pixelFormat: ctx.PixelFormat.RGBA32F,
     encoding: ctx.Encoding.Linear,
+    min: ctx.Filter.Linear,
+    mag: ctx.Filter.Linear,
     flipY: true
   })
 
   skyboxEntity.getComponent('Skybox').set({ texture: panorama })
   reflectionProbeEntity.getComponent('ReflectionProbe').set({ dirty: true })
-})
+}
 
 if (State.useEnvMap) addEnvmap()
-
-const cameraEntity = renderer.entity([
-  renderer.camera({
-    aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight
-  }),
-  // renderer.postProcessing({
-  //   fxaa: true,
-  //   ssao: true,
-  //   dof: true,
-  //   bloom: true
-  // }),
-  renderer.orbiter({
-    position: [2, 2, 2]
-  })
-])
-renderer.add(cameraEntity)
-
-gui.addParam('Exposure', cameraEntity.getComponent('Camera'), 'exposure', { min: 0, max: 5 })
-
-const floorEntity = renderer.entity([
-  renderer.transform({
-    position: [0, -0.051, 0]
-  }),
-  renderer.geometry(createCube(4, 0.1, 4)),
-  renderer.material({
-    baseColor: [0.8, 0.8, 0.8, 1],
-    metallic: 0,
-    roughness: 1,
-    castShadows: State.shadows,
-    receiveShadows: State.shadows
-  })
-])
-renderer.add(floorEntity)
 
 const axes = makeAxes(1)
 const axesEntity = renderer.entity([
@@ -211,120 +235,220 @@ const lineBuilder = renderer.entity([
     receiveShadows: State.shadows
   })
 ])
-//renderer.add(lineBuilder)
+// renderer.add(lineBuilder)
 
 // glTF
-function onSceneLoaded (err, scene) {
+function repositionModel(scene) {
+  var n = State.gridSize
+  var i = State.scenes.length
+  var x = 2 * (i % n) - n + 1
+  var z = 2 * Math.floor(i / n) - n + 1
   if (State.selectedModel) {
-    while (State.scenes.length) {
-      const oldScene = State.scenes.shift()
-      oldScene.entities.forEach((e) => e.dispose())
-    }
+    x = z = 0
   }
+  scene.root.transform.set({
+    position: [x, scene.root.transform.position[1], z]
+  })
+}
 
-  if (err) {
-    console.log(err)
-  } else {
-    var n = State.gridSize
-    var i = State.scenes.length
-    var x = 2 * (i % n) - n + 1
-    var z = 2 * (Math.floor(i / n)) - n + 1
-    if (State.selectedModel) {
-      x = z = 0
-    }
+function rescaleScene(scene) {
+  const sceneBounds = scene.root.transform.worldBounds
+  const sceneSize = aabb.size(scene.root.transform.worldBounds)
+  const sceneCenter = aabb.center(scene.root.transform.worldBounds)
+  const sceneScale =
+    1 / (Math.max(sceneSize[0], Math.max(sceneSize[1], sceneSize[2])) || 1)
+  if (!aabb.isEmpty(sceneBounds)) {
     scene.root.transform.set({
-      position: [x, scene.root.transform.position[1], z]
+      position: vec3.scale(
+        [-sceneCenter[0], -sceneBounds[0][1], -sceneCenter[2]],
+        sceneScale
+      ),
+      scale: [sceneScale, sceneScale, sceneScale]
     })
-    State.scenes.push(scene)
-
-    // Debug scene
-    // function printEntity (e, level, s) {
-      // s = s || ''
-      // level = '  ' + (level || '')
-      // var g = e.getComponent('Geometry')
-      // s += level + (e.name || 'child') + ' ' + aabbToString(e.transform.worldBounds) + ' ' + aabbToString(e.transform.bounds) + ' ' + (g ? aabbToString(g.bounds) : '') + '\n'
-      // if (e.transform) {
-        // e.transform.children.forEach((c) => {
-          // s = printEntity(c.entity, level, s)
-        // })
-      // }
-      // return s
-    // }
-
-    const sceneBounds = scene.root.transform.worldBounds
-    const sceneSize = aabb.size(scene.root.transform.worldBounds)
-    const sceneCenter = aabb.center(scene.root.transform.worldBounds)
-    const sceneScale = 1 / (Math.max(sceneSize[0], Math.max(sceneSize[1], sceneSize[2])) || 1)
-    if (!aabb.isEmpty(sceneBounds)) {
-      scene.root.transform.set({
-        position: vec3.scale([-sceneCenter[0], -sceneBounds[0][1], -sceneCenter[2]], sceneScale),
-        scale: [sceneScale, sceneScale, sceneScale]
-      })
-    }
-
-    renderer.update() // refresh scene hierarchy
-
-    var box = createBox(1)
-    box.cells = edges(box.cells)
-    box.primitive = ctx.Primitive.Lines
-
-    if (State.showBoundingBoxes) {
-      const bboxes = scene.entities.map((e) => {
-        var size = aabb.size(e.transform.worldBounds)
-        var center = aabb.center(e.transform.worldBounds)
-
-        const bbox = renderer.add(renderer.entity([
-          renderer.transform({
-            scale: size,
-            position: center
-          }),
-          renderer.geometry(box),
-          renderer.material({
-            baseColor: [1, 0, 0, 1]
-          })
-        ]))
-        bbox.name = e.name + '_bbox'
-        return bbox
-      }).filter((e) => e)
-      scene.entities = scene.entities.concat(bboxes)
-    }
   }
 }
 
-async function loadScene (url, cb) {
-  if (State.selectedModel && State.scene) {
-    renderer.remove(State.scene.root)
-    // TODO: dispose old scene
+function onSceneLoaded(scene, grid) {
+  State.scenes.push(scene)
+  renderer.update() // refresh scene hierarchy
+
+  if (grid) {
+    rescaleScene(scene)
+    repositionModel(scene)
   }
-  debug(`Loading scene from ${url}`)
-  const gltf = await loadGltf(url)
-  console.time('building ' + url)
-  const scene = State.scene = buildGltf(gltf, ctx, renderer)
-  scene.entities.forEach((e) => {
-    var mat = e.getComponent('Material')
-    if (mat) {
-      mat.set({
+
+  if (State.showBoundingBoxes) {
+    const box = createBox(1)
+    box.cells = edges(box.cells)
+    box.primitive = ctx.Primitive.Lines
+
+    const bboxes = scene.entities
+      .map((e) => {
+        const size = aabb.size(e.transform.worldBounds)
+        const center = aabb.center(e.transform.worldBounds)
+
+        const bbox = renderer.add(
+          renderer.entity([
+            renderer.transform({
+              scale: size,
+              position: center
+            }),
+            renderer.geometry(box),
+            renderer.material({
+              baseColor: [1, 0, 0, 1]
+            })
+          ])
+        )
+        bbox.name = e.name + '_bbox'
+        return bbox
+      })
+      .filter((e) => e)
+    scene.entities = scene.entities.concat(bboxes)
+  }
+}
+
+let floorEntity
+let cameraEntity
+
+async function loadScene(url, grid) {
+  let scene
+  try {
+    // console.time('building ' + url)
+    // All examples only have one scene
+    State.scene = scene = await renderer.loadScene(url, {
+      includeCameras: !grid
+    })
+  } catch (e) {
+    // console.timeEnd('building ' + url)
+    return e
+  }
+
+  scene.entities.forEach((entity) => {
+    const materialCmp = entity.getComponent('Material')
+    if (materialCmp) {
+      materialCmp.set({
         castShadows: State.shadows,
         receiveShadows: State.shadows
       })
     }
   })
-  console.timeEnd('building ' + url)
-  scene.url = url
+
   renderer.add(scene.root)
-  cb(null, scene)
+
+  // Add camera for models lacking one
+  if (!grid) {
+    cameraEntity = scene.entities.find((entity) =>
+      entity.components.find((component) => component.type === 'Camera')
+    )
+
+    if (!cameraEntity) {
+      // Update needed for transform.worldBounds
+      renderer.update()
+      const far = 10000
+      const sceneBounds = scene.root.transform.worldBounds
+      // const sceneSize = aabb.size(scene.root.transform.worldBounds)
+      const sceneCenter = aabb.center(scene.root.transform.worldBounds)
+
+      const boundingSphereRadius = Math.max.apply(
+        Math,
+        sceneBounds.map((bound) => vec3.distance(sceneCenter, bound))
+      )
+
+      const fov = Math.PI / 4
+      const distance = (boundingSphereRadius * 2) / Math.tan(fov / 2)
+
+      cameraEntity = renderer.entity([
+        renderer.camera({
+          near: 0.01,
+          far,
+          fov,
+          aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight
+        }),
+        renderer.orbiter({
+          maxDistance: far,
+          target: sceneCenter,
+          position: [sceneCenter[0], sceneCenter[1], distance]
+        })
+      ])
+      scene.entities.push(cameraEntity)
+      renderer.add(cameraEntity)
+    } else {
+      const cameraCmp = cameraEntity.getComponent('Camera')
+      cameraCmp.set({
+        near: 0.5,
+        aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight
+      })
+
+      // Clipped models: 2CylinderEngine, EnvironmentTest
+      // MultiUVTest: wrong position
+      if (State.selectedModel.name !== 'MultiUVTest') {
+        cameraEntity.addComponent(
+          renderer.orbiter({
+            // target: sceneCenter,
+            // distance: (boundingSphereRadius * 2) / Math.tan(cameraCmp.fov / 2),
+            position: cameraEntity.transform.position,
+            minDistance: cameraCmp.near,
+            maxDistance: cameraCmp.far
+          })
+        )
+      }
+    }
+
+    // console.timeEnd('building ' + url)
+    scene.url = url
+  }
+
+  return scene
 }
 
-async function init () {
+async function renderModel(model, overrideFormat, grid) {
+  const format = overrideFormat || State.formats[State.currentFormat]
+
+  try {
+    const scene = await loadScene(
+      `${MODELS_PATH}/${model.name}/${format}/${
+        model.name
+      }.${FORMAT_EXTENSION.get(format)}`,
+      grid
+    )
+
+    if (scene instanceof Error) {
+      throw scene
+    } else {
+      onSceneLoaded(scene, grid)
+    }
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.error(e)
+    // eslint-disable-next-line no-console
+    console.warn(
+      `No format ${format} supported for model ${
+        model.name
+      }. Defaulting to glTF.`
+    )
+    if (!overrideFormat) {
+      renderModel(model, 'glTF', grid)
+    }
+  }
+}
+
+async function init() {
   // Get list of models locally or from the glTF repo
   let models = await loadJSON(`${MODELS_PATH}/model-index.json`)
 
   // Add screenshots to the GUI
   const screenshots = await Promise.all(
-    models.map((model) => loadImage({ url: `${MODELS_PATH}/${model.name}/${model.screenshot}`, crossOrigin: 'anonymous' }), null)
+    models.map(
+      (model) =>
+        loadImage({
+          url: `${MODELS_PATH}/${model.name}/${model.screenshot}`,
+          crossOrigin: 'anonymous'
+        }),
+      null
+    )
   )
   const thumbnails = screenshots
-    .map((img) => (
+    .map((img) =>
       ctx.texture2D({
         data: img,
         width: img.width,
@@ -333,38 +457,153 @@ async function init () {
         pixelFormat: ctx.PixelFormat.RGBA8,
         flipY: true
       })
-    ))
+    )
     .map((tex, i) => ({
       value: models[i],
       texture: tex
     }))
-  gui.addTexture2DList('Models', State, 'selectedModel', thumbnails, 4, (model) => {
-    loadScene(`${MODELS_PATH}/${model.name}/glTF/${model.name}.gltf`, onSceneLoaded)
-  })
+  gui.addRadioList(
+    'Format',
+    State,
+    'currentFormat',
+    State.formats.map((name, value) => ({
+      name,
+      value
+    }))
+  )
+  gui.addTexture2DList(
+    'Models',
+    State,
+    'selectedModel',
+    thumbnails,
+    4,
+    async (model) => {
+      // Clean up
+      if (State.selectedModel) {
+        while (State.scenes.length) {
+          const oldScene = State.scenes.shift()
+          oldScene.entities.forEach((e) => e.dispose())
+        }
+
+        if (State.scene) renderer.remove(State.scene.root)
+        if (floorEntity) renderer.remove(floorEntity)
+      }
+
+      renderer.remove(cameraEntity)
+
+      renderModel(model)
+    }
+  )
 
   // Filter models
-  models = [
-    { name: 'DamagedHelmet' },
-    // { name: '2CylinderEngine' },
-    // { name: 'BrainStem' },
-    // { name: 'DamagedHelmet' },
-    // { name: 'AlphaBlendModeTest' },
-    // { name: 'Duck' },
-    // { name: 'FlightHelmet' },
-    // { name: 'CesiumMan' }
-  ]
+  models = models.filter((model) =>
+    [
+      // '2CylinderEngine',
+      // 'AlphaBlendModeTest',
+      // 'AnimatedCube',
+      // 'AnimatedMorphCube',
+      // 'AnimatedMorphSphere',
+      // 'AnimatedTriangle',
+      // 'AntiqueCamera',
+      // 'Avocado',
+      // 'BarramundiFish',
+      // 'BoomBox',
+      // 'BoomBoxWithAxes',
+      // 'Box',
+      // 'BoxAnimated',
+      // 'BoxInterleaved',
+      // 'BoxTextured',
+      // 'BoxTexturedNonPowerOfTwo',
+      // 'BoxVertexColors',
+      // 'BrainStem',
+      // 'Buggy',
+      // 'Cameras',
+      // 'CesiumMan',
+      // 'CesiumMilkTruck',
+      // 'Corset',
+      // 'Cube',
+      'DamagedHelmet'
+      // 'Duck',
+      // 'EnvironmentTest',
+      // 'FlightHelmet',
+      // 'GearboxAssy',
+      // 'InterpolationTest',
+      // 'Lantern',
+      // 'MetalRoughSpheres',
+      // 'Monster',
+      // 'MorphPrimitivesTest',
+      // 'MultiUVTest',
+      // 'NormalTangentMirrorTest',
+      // 'NormalTangentTest',
+      // 'OrientationTest',
+      // 'ReciprocatingSaw',
+      // 'RiggedFigure',
+      // 'RiggedSimple',
+      // 'SciFiHelmet',
+      // 'SimpleMeshes',
+      // 'SimpleMorph',
+      // 'SimpleSparseAccessor',
+      // 'SpecGlossVsMetalRough',
+      // 'Sponza',
+      // 'Suzanne',
+      // 'TextureCoordinateTest',
+      // 'TextureSettingsTest',
+      // 'TextureTransformTest',
+      // 'Triangle',
+      // 'TriangleWithoutIndices',
+      // 'TwoSidedPlane',
+      // 'UnlitTest',
+      // 'VC',
+      // 'VertexColorTest',
+      // 'WaterBottle'
+    ].includes(model.name)
+  )
 
-  State.gridSize = Math.ceil(Math.sqrt(models.length))
+  const grid = models.length > 1
 
-  models.forEach((model) => {
-    loadScene(`${MODELS_PATH}/${model.name}/glTF/${model.name}.gltf`, onSceneLoaded)
-  })
+  // Setup for grid view
+  if (grid) {
+    State.gridSize = Math.ceil(Math.sqrt(models.length))
+
+    cameraEntity = renderer.entity([
+      renderer.camera({
+        aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight
+      }),
+      renderer.orbiter({
+        position: new Array(3).fill(State.gridSize * 2)
+      })
+    ])
+    renderer.add(cameraEntity)
+
+    floorEntity = renderer.entity([
+      renderer.geometry(
+        createCube(2 * State.gridSize, 0.1, 2 * State.gridSize)
+      ),
+      renderer.material({
+        baseColor: [0.8, 0.8, 0.8, 1],
+        metallic: 0,
+        roughness: 1,
+        castShadows: State.shadows,
+        receiveShadows: State.shadows
+      })
+    ])
+    renderer.add(floorEntity)
+  }
+
+  // Render scene(s)
+  await Promise.all(
+    models.map(async (model) => {
+      await renderModel(model, null, grid)
+    })
+  )
+
+  window.dispatchEvent(new CustomEvent('pex-screenshot'))
 }
 
 init()
 
 var debugCommandsOpt = null
-function optimizeCommands (commands) {
+function optimizeCommands(commands) {
   return commands
 }
 
@@ -402,17 +641,17 @@ ctx.frame(() => {
     if (renderer._state.profiler) {
       renderer._state.profiler.startFrame()
     }
-    var camera = renderer.getComponents('Camera')[0]
-    var orbiter = renderer.getComponents('Orbiter')[0]
-    orbiter.update()
-    camera.entity.transform.update()
-    camera.update()
-    for (let cmd of debugCommandsOpt) {
-      if (cmd.uniforms) {
-        cmd.uniforms.viewMatrix = camera.viewMatrix
-      }
-      ctx.apply(cmd)
-    }
+    // var camera = renderer.getComponents('Camera')[0]
+    // var orbiter = renderer.getComponents('Orbiter')[0]
+    // orbiter.update()
+    // camera.entity.transform.update()
+    // camera.update()
+    // for (let cmd of debugCommandsOpt) {
+    //   if (cmd.uniforms) {
+    //     cmd.uniforms.viewMatrix = camera.viewMatrix
+    //   }
+    //   ctx.apply(cmd)
+    // }
     if (renderer._state.profiler) {
       renderer._state.profiler.endFrame()
     }
