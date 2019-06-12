@@ -1,65 +1,72 @@
 const Signal = require('signals')
 
-function Morph (opts) {
+function Morph(opts) {
   this.type = 'Morph'
   this.enabled = true
   this.changed = new Signal()
   this.entity = null
   this.dirty = false
-  this.targets = opts.targets || []
+  this.sources = opts.sources
+  this.current = opts.current
+  this.targets = opts.targets
   this.weights = opts.weights || []
   this.set(opts)
 }
 
-Morph.prototype.init = function (entity) {
+Morph.prototype.init = function(entity) {
   this.entity = entity
-  let geom = this.entity.getComponent('Geometry')
-  console.log('geom.positions', geom.positions, this)
-  this.originalPositions = (geom.positions.buffer && geom.positions.buffer.data) ? geom.positions.buffer.data.slice(0) : geom.positions.slice(0)
+
+  this.current =
+    this.current ||
+    Object.keys(this.sources).reduce((current, attribute) => {
+      current[attribute] = [...this.sources[attribute]]
+      return current
+    }, {})
 }
 
-Morph.prototype.set = function (opts) {
+Morph.prototype.set = function(opts) {
   Object.assign(this, opts)
   Object.keys(opts).forEach((prop) => this.changed.dispatch(prop))
   this.dirty = true
 }
 
-Morph.prototype.update = function () {
+Morph.prototype.update = function() {
   if (!this.dirty || !this.enabled) return
   this.dirty = false
 
-  let geom = this.entity.getComponent('Geometry')
-  let newGeom = this.originalPositions.map((pos, i) => {
-    let newPos = 0
-    if (pos.length) {
-      newPos = [0, 0, 0]
-    }
-    let originalPos = this.originalPositions[i]
-    this.targets.forEach((target, k) => {
-      let weight = this.weights[k]
-      let targetVertex = target[i]
-      if (pos.length) {
-        newPos[0] += targetVertex[0] * weight
-        newPos[1] += targetVertex[1] * weight
-        newPos[2] += targetVertex[2] * weight
+  Object.keys(this.sources).forEach((key) => {
+    const sourceAttributes = this.sources[key]
+    const targetAttributes = this.targets[key]
+
+    this.current[key] = sourceAttributes.map((source, i) => {
+      let attribute = source.length ? [0, 0, 0] : 0
+
+      targetAttributes.forEach((target, j) => {
+        const weight = this.weights[j]
+        const targetAttribute = target[i]
+
+        if (source.length) {
+          attribute[0] += targetAttribute[0] * weight
+          attribute[1] += targetAttribute[1] * weight
+          attribute[2] += targetAttribute[2] * weight
+        } else {
+          attribute += targetAttribute * weight
+        }
+      })
+      if (source.length) {
+        attribute[0] += source[0]
+        attribute[1] += source[1]
+        attribute[2] += source[2]
       } else {
-        newPos += targetVertex * weight
+        attribute += source
       }
+      return attribute
     })
-    if (pos.length) {
-      newPos[0] += originalPos[0]
-      newPos[1] += originalPos[1]
-      newPos[2] += originalPos[2]
-    } else {
-      newPos += originalPos
-    }
-    return newPos
   })
-  geom.set({
-    positions: newGeom
-  })
+
+  this.entity.getComponent('Geometry').set(this.current)
 }
 
-module.exports = function createMorph (opts) {
+module.exports = function createMorph(opts) {
   return new Morph(opts)
 }

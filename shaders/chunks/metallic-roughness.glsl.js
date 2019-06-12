@@ -1,12 +1,24 @@
-module.exports = /* glsl */`
+module.exports = /* glsl */ `
 #ifdef USE_METALLIC_ROUGHNESS_WORKFLOW
+
+  #define MIN_ROUGHNESS 0.045
+
   #ifdef USE_METALLIC_ROUGHNESS_MAP
     // R = ?, G = roughness, B = metallic
     uniform sampler2D uMetallicRoughnessMap;
 
+    #ifdef USE_METALLIC_ROUGHNESS_MAP_TEX_COORD_TRANSFORM
+      uniform mat3 uMetallicRoughnessMapTexCoordTransform;
+    #endif
+
     // TODO: sampling the same texture twice
     void getMetallic(inout PBRData data) {
-      vec4 texelColor = texture2D(uMetallicRoughnessMap, vTexCoord0);
+      #ifdef USE_METALLIC_ROUGHNESS_MAP_TEX_COORD_TRANSFORM
+        vec2 texCoord = getTextureCoordinates(data, METALLIC_ROUGHNESS_MAP_TEX_COORD_INDEX, uMetallicRoughnessMapTexCoordTransform);
+      #else
+        vec2 texCoord = getTextureCoordinates(data, METALLIC_ROUGHNESS_MAP_TEX_COORD_INDEX);
+      #endif
+      vec4 texelColor = texture2D(uMetallicRoughnessMap, texCoord);
       data.metallic = texelColor.b;
       data.roughness = texelColor.g;
     }
@@ -21,8 +33,17 @@ module.exports = /* glsl */`
     #ifdef USE_METALLIC_MAP
       uniform sampler2D uMetallicMap; //assumes linear, TODO: check gltf
 
+      #ifdef USE_METALLIC_MAP_TEX_COORD_TRANSFORM
+        uniform mat3 uMetallicMapTexCoordTransform;
+      #endif
+
       void getMetallic(inout PBRData data) {
-        data.metallic = uMetallic * texture2D(uMetallicMap, vTexCoord0).r;
+        #ifdef USE_METALLIC_MAP_TEX_COORD_TRANSFORM
+          vec2 texCoord = getTextureCoordinates(data, METALLIC_MAP_TEX_COORD_INDEX, uMetallicMapTexCoordTransform);
+        #else
+          vec2 texCoord = getTextureCoordinates(data, METALLIC_MAP_TEX_COORD_INDEX);
+        #endif
+        data.metallic = uMetallic * texture2D(uMetallicMap, texCoord).r;
       }
     #else
       void getMetallic(inout PBRData data) {
@@ -32,8 +53,18 @@ module.exports = /* glsl */`
 
     #ifdef USE_ROUGHNESS_MAP
       uniform sampler2D uRoughnessMap; //assumes linear, TODO: check glTF
+
+      #ifdef USE_ROUGHNESS_MAP_TEX_COORD_TRANSFORM
+        uniform mat3 uRoughnessMapTexCoordTransform;
+      #endif
+
       void getRoughness(inout PBRData data) {
-        data.roughness = uRoughness * texture2D(uRoughnessMap, vTexCoord0).r + 0.01;
+        #ifdef USE_ROUGHNESS_MAP_TEX_COORD_TRANSFORM
+          vec2 texCoord = getTextureCoordinates(data, ROUGHNESS_MAP_TEX_COORD_INDEX, uRoughnessMapTexCoordTransform);
+        #else
+          vec2 texCoord = getTextureCoordinates(data, ROUGHNESS_MAP_TEX_COORD_INDEX);
+        #endif
+        data.roughness = uRoughness * texture2D(uRoughnessMap, getTextureCoordinates(data, ROUGHNESS_MAP_TEX_COORD_INDEX)).r + 0.01;
       }
     #else
       void getRoughness(inout PBRData data) {

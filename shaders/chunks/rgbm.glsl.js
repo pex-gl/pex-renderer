@@ -1,6 +1,6 @@
 // source http://webglinsights.github.io/downloads/WebGL-Insights-Chapter-16.pdf
 
-module.exports = /* glsl */`
+module.exports = /* glsl */ `
 #define LINEAR 1
 #define GAMMA 2
 #define SRGB 3

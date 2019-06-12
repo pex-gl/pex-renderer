@@ -29,7 +29,7 @@ renderer.add(cameraEntity)
 const sphere = createSphere(1, { segments: 400 })
 const scale = 1
 
-function perlin (p) {
+function perlin(p) {
   let s = scale
   let n = 0
   for (let i = 0; i < 5; i++) {
@@ -44,6 +44,8 @@ for (let i = 0; i < sphere.positions.length; i++) {
   vec3.addScaled(p, sphere.normals[i], n * 0.1)
 }
 sphere.normals = normals(sphere.positions, sphere.cells)
+
+sphere.cells = new Uint32Array(sphere.cells.flat())
 
 const sphereEntity = renderer.entity([
   renderer.transform({ position: [0, 0, 0] }),
@@ -65,12 +67,11 @@ const skybox = renderer.entity([
 ])
 renderer.add(skybox)
 
-const reflectionProbe = renderer.entity([
-  renderer.reflectionProbe()
-])
+const reflectionProbe = renderer.entity([renderer.reflectionProbe()])
 renderer.add(reflectionProbe)
 
 ctx.frame(() => {
   renderer.draw()
   gui.draw()
+  window.dispatchEvent(new CustomEvent('pex-screenshot'))
 })

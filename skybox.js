@@ -8,14 +8,14 @@ const SKYTEXTURE_FRAG = require('./shaders/skybox/sky-env-map.frag.js')
 
 const Signal = require('signals')
 
-function Skybox (opts) {
+function Skybox(opts) {
   this.type = 'Skybox'
   this.enabled = true
   this.changed = new Signal()
   this.rgbm = false
   this.backgroundBlur = 0
 
-  const ctx = this._ctx = opts.ctx
+  const ctx = (this._ctx = opts.ctx)
 
   this.texture = null
   this.diffuseTexture = null
@@ -26,11 +26,16 @@ function Skybox (opts) {
   const skyboxPositions = [[-1, -1], [1, -1], [1, 1], [-1, 1]]
   const skyboxFaces = [[0, 1, 2], [0, 2, 3]]
 
+  const flags = []
+  if (ctx.capabilities.maxColorAttachments > 1) {
+    flags.push('#define USE_DRAW_BUFFERS')
+  }
+
   this._drawCommand = {
     name: 'Skybox.draw',
     pipeline: ctx.pipeline({
       vert: SKYBOX_VERT,
-      frag: SKYBOX_FRAG,
+      frag: flags.join('\n') + '\n' + SKYBOX_FRAG,
       depthTest: true
     }),
     attributes: {
@@ -58,7 +63,7 @@ function Skybox (opts) {
     name: 'Skybox.updateSkyTexture',
     pass: ctx.pass({
       name: 'Skybox.updateSkyTexture',
-      color: [ this._skyTexture ],
+      color: [this._skyTexture],
       clearColor: [0, 0, 0, 0]
     }),
     pipeline: ctx.pipeline({
@@ -76,11 +81,11 @@ function Skybox (opts) {
   }
 }
 
-Skybox.prototype.init = function (entity) {
+Skybox.prototype.init = function(entity) {
   this.entity = entity
 }
 
-Skybox.prototype.set = function (opts) {
+Skybox.prototype.set = function(opts) {
   Object.assign(this, opts)
 
   if (opts.sunPosition) {
@@ -90,7 +95,7 @@ Skybox.prototype.set = function (opts) {
   Object.keys(opts).forEach((prop) => this.changed.dispatch(prop))
 }
 
-Skybox.prototype.draw = function (camera, opts) {
+Skybox.prototype.draw = function(camera, opts) {
   var ctx = this._ctx
   if (!this.texture && this._dirtySunPosition) {
     this._dirtySunPosition = false
@@ -112,7 +117,9 @@ Skybox.prototype.draw = function (camera, opts) {
     if (this.backgroundBlur > 0) {
       backgroundBlur = this.backgroundBlur
       if (!this._reflectionProbe) {
-        this._reflectionProbe = this.entity.renderer.getComponents('ReflectionProbe')[0]
+        this._reflectionProbe = this.entity.renderer.getComponents(
+          'ReflectionProbe'
+        )[0]
       }
       if (this._reflectionProbe) {
         texture = this._reflectionProbe._reflectionMap
@@ -125,6 +132,7 @@ Skybox.prototype.draw = function (camera, opts) {
     uniforms: {
       uProjectionMatrix: camera.projectionMatrix,
       uViewMatrix: camera.viewMatrix,
+      uModelMatrix: this.entity.transform.modelMatrix,
       uEnvMap: texture,
       uEnvMapEncoding: texture.encoding,
       uOutputEncoding: opts.outputEncoding,
@@ -135,7 +143,7 @@ Skybox.prototype.draw = function (camera, opts) {
   })
 }
 
-module.exports = function createSkybox (opts) {
+module.exports = function createSkybox(opts) {
   if (!opts.sunPosition && !opts.texture) {
     throw new Error('Skybox requires either a sunPosition or a texture')
   }

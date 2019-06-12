@@ -1,6 +1,6 @@
 const SHADERS = require('../chunks/index.js')
 
-module.exports = /* glsl */`
+module.exports = /* glsl */ `
 precision highp float;
 
 // Variables
@@ -35,10 +35,10 @@ varying vec2 vTexCoord0;
 ${SHADERS.rgbm}
 ${SHADERS.gamma}
 ${SHADERS.encodeDecode}
+${SHADERS.depthRead}
 ${SHADERS.fxaa}
 ${SHADERS.fog}
 ${SHADERS.tonemapUncharted2}
-
 
 vec3 getFarViewDir(vec2 tc) {
   float hfar = 2.0 * tan(uFov/2.0) * uFar;
@@ -53,13 +53,6 @@ vec3 reconstructPositionFromDepth(vec2 texCoord, float z) {
   return pos * z / uFar;
 }
 
-float readDepth(sampler2D depthMap, vec2 coord) {
-  float z_b = texture2D(depthMap, coord).r;
-  float z_n = 2.0 * z_b - 1.0;
-  float z_e = 2.0 * uNear * uFar / (uFar + uNear - z_n * (uFar - uNear));
-  return z_e;
-}
-
 void main() {
   vec4 color = vec4(0.0);
 
@@ -71,7 +64,7 @@ void main() {
   color = decode(color, uOverlayEncoding);
 
   if (uFog) {
-    float z = readDepth(depthMap, vTexCoord0);
+    float z = readDepth(depthMap, vTexCoord0, uNear, uFar);
     vec3 pos = reconstructPositionFromDepth(vTexCoord0, z);
     float rayLength = length(pos);
     vec3 rayDir = pos / rayLength;

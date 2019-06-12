@@ -44,7 +44,7 @@ for (let i = 0; i < 128 * 128; i++) {
   ssaoNoiseData[i * 4 + 3] = sample[3]
 }
 
-function PostProcessing (opts) {
+function PostProcessing(opts) {
   const gl = opts.ctx.gl
   this.type = 'PostProcessing'
   this.enabled = true
@@ -93,7 +93,7 @@ function PostProcessing (opts) {
   this.set(opts)
 }
 
-PostProcessing.prototype.init = function (entity) {
+PostProcessing.prototype.init = function(entity) {
   this.entity = entity
 
   const camera = this.entity && this.entity.getComponent('Camera')
@@ -107,7 +107,11 @@ PostProcessing.prototype.init = function (entity) {
 
   if (this.enabled && this.ctx.capabilities.maxColorAttachments < 2) {
     this.enabled = false
-    console.log(`pex-renderer disabling postprocess as MAX_COLOR_ATTACHMENTS=${this.ctx.capabilities.maxColorAttachments}`)
+    console.log(
+      `pex-renderer disabling postprocess as MAX_COLOR_ATTACHMENTS=${
+        this.ctx.capabilities.maxColorAttachments
+      }`
+    )
     console.log('pex-renderer ctx', this.ctx.capabilities)
   }
 
@@ -116,15 +120,22 @@ PostProcessing.prototype.init = function (entity) {
   }
 }
 
-PostProcessing.prototype.set = function (opts) {
+PostProcessing.prototype.set = function(opts) {
   Object.assign(this, opts)
 
   // Update textures
   if (opts.viewport) {
     this._textures.forEach((texture) => {
-      const expectedWidth = Math.floor(opts.viewport[2] * (texture.sizeScale || 1))
-      const expectedHeight = Math.floor(opts.viewport[3] * (texture.sizeScale || 1))
-      if (texture.width !== expectedWidth || texture.height !== expectedHeight) {
+      const expectedWidth = Math.floor(
+        opts.viewport[2] * (texture.sizeScale || 1)
+      )
+      const expectedHeight = Math.floor(
+        opts.viewport[3] * (texture.sizeScale || 1)
+      )
+      if (
+        texture.width !== expectedWidth ||
+        texture.height !== expectedHeight
+      ) {
         this.ctx.update(texture, {
           width: expectedWidth,
           height: expectedHeight
@@ -136,7 +147,7 @@ PostProcessing.prototype.set = function (opts) {
   Object.keys(opts).forEach((prop) => this.changed.dispatch(prop))
 }
 
-PostProcessing.prototype.initPostproces = function () {
+PostProcessing.prototype.initPostproces = function() {
   const ctx = this.ctx
   const fsqPositions = [[-1, -1], [1, -1], [1, 1], [-1, 1]]
   const fsqFaces = [[0, 1, 2], [0, 2, 3]]
@@ -264,7 +275,7 @@ PostProcessing.prototype.initPostproces = function () {
     name: 'PostProcessing.drawFrameNormals',
     pass: ctx.pass({
       name: 'PostProcessing.drawFrameNormals',
-      color: [ this._frameNormalTex ],
+      color: [this._frameNormalTex],
       depth: this._frameDepthTex,
       clearColor: [0, 0, 0, 0],
       clearDepth: 1
@@ -275,7 +286,7 @@ PostProcessing.prototype.initPostproces = function () {
     name: 'PostProcessing.drawFrame',
     pass: ctx.pass({
       name: 'PostProcessing.drawFrame',
-      color: [ this._frameColorTex, this._frameEmissiveTex ],
+      color: [this._frameColorTex, this._frameEmissiveTex],
       depth: this._frameDepthTex,
       clearColor: this.backgroundColor
     })
@@ -285,7 +296,7 @@ PostProcessing.prototype.initPostproces = function () {
     name: 'PostProcessing.ssao',
     pass: ctx.pass({
       name: 'PostProcessing.ssao',
-      color: [ this._frameAOTex ],
+      color: [this._frameAOTex],
       clearColor: [0, 0, 0, 1]
       // clearDepth: 1
     }),
@@ -306,7 +317,7 @@ PostProcessing.prototype.initPostproces = function () {
     name: 'PostProcessing.bilateralBlurH',
     pass: ctx.pass({
       name: 'PostProcessing.bilateralBlurH',
-      color: [ this._frameAOBlurTex ],
+      color: [this._frameAOBlurTex],
       clearColor: [1, 1, 0, 1]
     }),
     pipeline: ctx.pipeline({
@@ -329,7 +340,7 @@ PostProcessing.prototype.initPostproces = function () {
     name: 'PostProcessing.bilateralBlurV',
     pass: ctx.pass({
       name: 'PostProcessing.bilateralBlurV',
-      color: [ this._frameAOTex ],
+      color: [this._frameAOTex],
       clearColor: [1, 1, 0, 1]
     }),
     pipeline: ctx.pipeline({
@@ -352,7 +363,7 @@ PostProcessing.prototype.initPostproces = function () {
     name: 'PostProcessing.bilateralBlurH',
     pass: ctx.pass({
       name: 'PostProcessing.dofBilateralBlurH',
-      color: [ this._frameDofBlurTex ],
+      color: [this._frameDofBlurTex],
       clearColor: [1, 1, 0, 1]
     }),
     pipeline: ctx.pipeline({
@@ -373,7 +384,7 @@ PostProcessing.prototype.initPostproces = function () {
     name: 'PostProcessing.bilateralBlurV',
     pass: ctx.pass({
       name: 'PostProcessing.dofBilateralBlurV',
-      color: [ this._frameColorTex ],
+      color: [this._frameColorTex],
       clearColor: [1, 1, 0, 1]
     }),
     pipeline: ctx.pipeline({
@@ -394,7 +405,7 @@ PostProcessing.prototype.initPostproces = function () {
     name: 'PostProcessing.threshold',
     pass: ctx.pass({
       name: 'PostProcessing.threshold',
-      color: [ this._frameBloomVTex ],
+      color: [this._frameBloomVTex],
       clearColor: [1, 1, 1, 1]
     }),
     pipeline: ctx.pipeline({
@@ -416,7 +427,7 @@ PostProcessing.prototype.initPostproces = function () {
     name: 'PostProcessing.bloomH',
     pass: ctx.pass({
       name: 'PostProcessing.bloomH',
-      color: [ this._frameBloomHTex ],
+      color: [this._frameBloomHTex],
       clearColor: [1, 1, 1, 1]
     }),
     pipeline: ctx.pipeline({
@@ -437,7 +448,7 @@ PostProcessing.prototype.initPostproces = function () {
     name: 'PostProcessing.bloomV',
     pass: ctx.pass({
       name: 'PostProcessing.bloomV',
-      color: [ this._frameBloomVTex ],
+      color: [this._frameBloomVTex],
       clearColor: [1, 1, 0, 1]
     }),
     pipeline: ctx.pipeline({
@@ -475,6 +486,6 @@ PostProcessing.prototype.initPostproces = function () {
   }
 }
 
-module.exports = function createPostProcessing (opts) {
+module.exports = function createPostProcessing(opts) {
   return new PostProcessing(opts)
 }

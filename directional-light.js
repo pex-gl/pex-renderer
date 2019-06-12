@@ -2,7 +2,7 @@ const Signal = require('signals')
 const mat4 = require('pex-math/mat4')
 const log = require('debug')('pex-renderer:directional-light')
 
-function DirectionalLight (opts) {
+function DirectionalLight(opts) {
   this.type = 'DirectionalLight'
   this.enabled = true
   this.changed = new Signal()
@@ -28,11 +28,11 @@ function DirectionalLight (opts) {
   this.set(opts)
 }
 
-DirectionalLight.prototype.init = function (entity) {
+DirectionalLight.prototype.init = function(entity) {
   this.entity = entity
 }
 
-DirectionalLight.prototype.set = function (opts) {
+DirectionalLight.prototype.set = function(opts) {
   Object.assign(this, opts)
   if (opts.color !== undefined || opts.intensity !== undefined) {
     this.color[3] = this.intensity
@@ -40,7 +40,9 @@ DirectionalLight.prototype.set = function (opts) {
   Object.keys(opts).forEach((prop) => this.changed.dispatch(prop))
 
   if (opts.castShadows && !this._ctx.capabilities.depthTexture) {
-    console.warn('DirectionalLight.castShadows is not supported. WEBGL_depth_texture missing.')
+    console.warn(
+      'DirectionalLight.castShadows is not supported. WEBGL_depth_texture missing.'
+    )
     this.castShadows = false
   }
 
@@ -51,7 +53,7 @@ DirectionalLight.prototype.set = function (opts) {
   }
 }
 
-DirectionalLight.prototype.allocateResources = function () {
+DirectionalLight.prototype.allocateResources = function() {
   log('allocatedResources')
 
   const ctx = this._ctx
@@ -78,7 +80,7 @@ DirectionalLight.prototype.allocateResources = function () {
     name: 'DirectionalLight.shadowMap',
     pass: ctx.pass({
       name: 'DirectionalLight.shadowMap',
-      color: [ this._colorMap ],
+      color: [this._colorMap],
       depth: this._shadowMap,
       clearColor: [0, 0, 0, 1],
       clearDepth: 1
@@ -88,7 +90,7 @@ DirectionalLight.prototype.allocateResources = function () {
   }
 }
 
-DirectionalLight.prototype.disposeResources = function () {
+DirectionalLight.prototype.disposeResources = function() {
   log('disposeResources')
 
   const ctx = this._ctx
@@ -103,6 +105,6 @@ DirectionalLight.prototype.disposeResources = function () {
   this._shadowMapDrawCommand = null
 }
 
-module.exports = function (opts) {
+module.exports = function(opts) {
   return new DirectionalLight(opts)
 }

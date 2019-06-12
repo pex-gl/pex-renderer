@@ -1,4 +1,4 @@
-module.exports = /* glsl */`
+module.exports = /* glsl */ `
 precision highp float;
 
 varying vec2 vTexCoord;

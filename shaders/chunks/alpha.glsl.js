@@ -1,6 +1,10 @@
-module.exports = /* glsl */`
+module.exports = /* glsl */ `
 #ifdef USE_ALPHA_MAP
   uniform sampler2D uAlphaMap;
+
+  #ifdef ALPHA_MAP_TEX_COORD_TRANSFORM
+    uniform mat3 uAlphaMapTexCoordTransform;
+  #endif
 #endif
 
 #ifdef USE_ALPHA_TEST

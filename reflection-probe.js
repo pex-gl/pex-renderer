@@ -10,7 +10,7 @@ const BLIT_TO_OCT_MAP_ATLAS = require('./shaders/reflection-probe/blit-to-oct-ma
 const DOWNSAMPLE_FROM_OCT_MAP_ATLAS = require('./shaders/reflection-probe/downsample-from-oct-map-atlas.frag.js')
 const PREFILTER_FROM_OCT_MAP_ATLAS = require('./shaders/reflection-probe/prefilter-from-oct-map-atlas.frag.js')
 
-function ReflectionProbe (opts) {
+function ReflectionProbe(opts) {
   this.type = 'ReflectionProbe'
   this.enabled = true
   this.changed = new Signal()
@@ -23,12 +23,12 @@ function ReflectionProbe (opts) {
   this.dirty = true
 
   const CUBEMAP_SIZE = 512
-  const dynamicCubemap = this._dynamicCubemap = ctx.textureCube({
+  const dynamicCubemap = (this._dynamicCubemap = ctx.textureCube({
     width: CUBEMAP_SIZE,
     height: CUBEMAP_SIZE,
     pixelFormat: this.rgbm ? ctx.PixelFormat.RGBA8 : ctx.PixelFormat.RGBA16F,
     encoding: this.rgbm ? ctx.Encoding.RGBM : ctx.Encoding.Linear
-  })
+  }))
 
   const sides = [
     { eye: [0, 0, 0], target: [1, 0, 0], up: [0, -1, 0] },
@@ -38,13 +38,24 @@ function ReflectionProbe (opts) {
     { eye: [0, 0, 0], target: [0, 0, 1], up: [0, -1, 0] },
     { eye: [0, 0, 0], target: [0, 0, -1], up: [0, -1, 0] }
   ].map((side, i) => {
-    side.projectionMatrix = mat4.perspective(mat4.create(), Math.PI / 2, 1, 0.1, 100) // TODO: change this to radians
+    side.projectionMatrix = mat4.perspective(
+      mat4.create(),
+      Math.PI / 2,
+      1,
+      0.1,
+      100
+    ) // TODO: change this to radians
     side.viewMatrix = mat4.lookAt(mat4.create(), side.eye, side.target, side.up)
     side.drawPassCmd = {
       name: 'ReflectionProbe.sidePass',
       pass: ctx.pass({
         name: 'ReflectionProbe.sidePass',
-        color: [{ texture: dynamicCubemap, target: ctx.gl.TEXTURE_CUBE_MAP_POSITIVE_X + i }],
+        color: [
+          {
+            texture: dynamicCubemap,
+            target: ctx.gl.TEXTURE_CUBE_MAP_POSITIVE_X + i
+          }
+        ],
         clearColor: [0, 0, 0, 1],
         clearDepth: 1
       })
@@ -61,29 +72,29 @@ function ReflectionProbe (opts) {
 
   const indices = ctx.indexBuffer(quadFaces)
 
-  const octMap = this._octMap = ctx.texture2D({
+  const octMap = (this._octMap = ctx.texture2D({
     width: 1024,
     height: 1024,
     pixelFormat: this.rgbm ? ctx.PixelFormat.RGBA8 : ctx.PixelFormat.RGBA16F,
     encoding: this.rgbm ? ctx.Encoding.RGBM : ctx.Encoding.Linear
-  })
+  }))
 
   const irradianceOctMapSize = 64
 
-  const octMapAtlas = this._reflectionMap = ctx.texture2D({
+  const octMapAtlas = (this._reflectionMap = ctx.texture2D({
     width: 2 * 1024,
     height: 2 * 1024,
     min: ctx.Filter.Linear,
     mag: ctx.Filter.Linear,
     pixelFormat: this.rgbm ? ctx.PixelFormat.RGBA8 : ctx.PixelFormat.RGBA16F,
     encoding: this.rgbm ? ctx.Encoding.RGBM : ctx.Encoding.Linear
-  })
+  }))
 
   const cubemapToOctMap = {
     name: 'ReflectionProbe.cubemapToOctMap',
     pass: ctx.pass({
       name: 'ReflectionProbe.cubemapToOctMap',
-      color: [ octMap ]
+      color: [octMap]
     }),
     pipeline: ctx.pipeline({
       vert: FULLSCREEN_QUAD,
@@ -101,7 +112,7 @@ function ReflectionProbe (opts) {
     name: 'ReflectionProbe.convolveOctmapAtlasToOctMap',
     pass: ctx.pass({
       name: 'ReflectionProbe.convolveOctmapAtlasToOctMap',
-      color: [ octMap ]
+      color: [octMap]
     }),
     pipeline: ctx.pipeline({
       vert: FULLSCREEN_QUAD,
@@ -122,7 +133,7 @@ function ReflectionProbe (opts) {
     name: 'ReflectionProbe.clearOctMapAtlas',
     pass: ctx.pass({
       name: 'ReflectionProbe.clearOctMapAtlas',
-      color: [ octMapAtlas ],
+      color: [octMapAtlas],
       clearColor: [0, 0, 0, 0]
     })
   }
@@ -131,7 +142,7 @@ function ReflectionProbe (opts) {
     name: 'ReflectionProbe.blitToOctMapAtlasCmd',
     pass: ctx.pass({
       name: 'ReflectionProbe.blitToOctMapAtlasCmd',
-      color: [ octMapAtlas ]
+      color: [octMapAtlas]
     }),
     pipeline: ctx.pipeline({
       vert: FULLSCREEN_QUAD,
@@ -149,7 +160,7 @@ function ReflectionProbe (opts) {
     name: 'ReflectionProbe.downsampleFromOctMapAtlasCmd',
     pass: ctx.pass({
       name: 'ReflectionProbe.downsampleFromOctMapAtlasCmd',
-      color: [ octMap ],
+      color: [octMap],
       clearColor: [0, 1, 0, 1]
     }),
     pipeline: ctx.pipeline({
@@ -168,7 +179,7 @@ function ReflectionProbe (opts) {
     name: 'ReflectionProbe.prefilterFromOctMapAtlasCmd',
     pass: ctx.pass({
       name: 'ReflectionProbe.prefilterFromOctMapAtlasCmd',
-      color: [ octMap ],
+      color: [octMap],
       clearColor: [0, 1, 0, 1]
     }),
     pipeline: ctx.pipeline({
@@ -203,12 +214,21 @@ function ReflectionProbe (opts) {
     encoding: ctx.Encoding.Linear
   })
 
-  function blitToOctMapAtlasLevel (mipmapLevel, roughnessLevel, sourceRegionSize) {
+  function blitToOctMapAtlasLevel(
+    mipmapLevel,
+    roughnessLevel,
+    sourceRegionSize
+  ) {
     const width = octMapAtlas.width
-    const levelSize = Math.max(64, width / (2 << mipmapLevel + roughnessLevel))
+    const levelSize = Math.max(
+      64,
+      width / (2 << (mipmapLevel + roughnessLevel))
+    )
     const roughnessLevelWidth = width / (2 << roughnessLevel)
     const vOffset = width - Math.pow(2, Math.log2(width) - roughnessLevel)
-    const hOffset = 2 * roughnessLevelWidth - Math.pow(2, Math.log2(2 * roughnessLevelWidth) - mipmapLevel)
+    const hOffset =
+      2 * roughnessLevelWidth -
+      Math.pow(2, Math.log2(2 * roughnessLevelWidth) - mipmapLevel)
     ctx.submit(blitToOctMapAtlasCmd, {
       viewport: [hOffset, vOffset, levelSize, levelSize],
       uniforms: {
@@ -218,7 +238,11 @@ function ReflectionProbe (opts) {
     })
   }
 
-  function downsampleFromOctMapAtlasLevel (mipmapLevel, roughnessLevel, targetRegionSize) {
+  function downsampleFromOctMapAtlasLevel(
+    mipmapLevel,
+    roughnessLevel,
+    targetRegionSize
+  ) {
     ctx.submit(downsampleFromOctMapAtlasCmd, {
       viewport: [0, 0, targetRegionSize, targetRegionSize],
       uniforms: {
@@ -228,7 +252,12 @@ function ReflectionProbe (opts) {
     })
   }
 
-  function prefilterFromOctMapAtlasLevel (sourceMipmapLevel, sourceRoughnessLevel, roughnessLevel, targetRegionSize) {
+  function prefilterFromOctMapAtlasLevel(
+    sourceMipmapLevel,
+    sourceRoughnessLevel,
+    roughnessLevel,
+    targetRegionSize
+  ) {
     ctx.submit(prefilterFromOctMapAtlasCmd, {
       viewport: [0, 0, targetRegionSize, targetRegionSize],
       uniforms: {
@@ -241,12 +270,14 @@ function ReflectionProbe (opts) {
     })
   }
 
-  this.update = function (drawScene) {
+  this.update = function(drawScene) {
     if (!drawScene) return
     this.dirty = false
 
     sides.forEach((side) => {
-      ctx.submit(side.drawPassCmd, () => drawScene(side, dynamicCubemap.encoding))
+      ctx.submit(side.drawPassCmd, () =>
+        drawScene(side, dynamicCubemap.encoding)
+      )
     })
 
     ctx.submit(cubemapToOctMap)
@@ -267,8 +298,17 @@ function ReflectionProbe (opts) {
 
     for (let i = 1; i <= maxLevel; i++) {
       // prefilterFromOctMapAtlasLevel(i, 0, i, Math.max(64, octMap.width / Math.pow(2, i + 1)))
-      prefilterFromOctMapAtlasLevel(0, Math.max(0, i - 1), i, Math.max(64, octMap.width / Math.pow(2, i + 1)))
-      blitToOctMapAtlasLevel(0, i, Math.max(64, octMap.width / Math.pow(2, 1 + i)))
+      prefilterFromOctMapAtlasLevel(
+        0,
+        Math.max(0, i - 1),
+        i,
+        Math.max(64, octMap.width / Math.pow(2, i + 1))
+      )
+      blitToOctMapAtlasLevel(
+        0,
+        i,
+        Math.max(64, octMap.width / Math.pow(2, 1 + i))
+      )
     }
 
     ctx.submit(convolveOctmapAtlasToOctMap, {
@@ -276,7 +316,12 @@ function ReflectionProbe (opts) {
     })
 
     ctx.submit(blitToOctMapAtlasCmd, {
-      viewport: [octMapAtlas.width - irradianceOctMapSize, octMapAtlas.height - irradianceOctMapSize, irradianceOctMapSize, irradianceOctMapSize],
+      viewport: [
+        octMapAtlas.width - irradianceOctMapSize,
+        octMapAtlas.height - irradianceOctMapSize,
+        irradianceOctMapSize,
+        irradianceOctMapSize
+      ],
       uniforms: {
         uSourceRegionSize: irradianceOctMapSize
       }
@@ -284,15 +329,15 @@ function ReflectionProbe (opts) {
   }
 }
 
-ReflectionProbe.prototype.init = function (entity) {
+ReflectionProbe.prototype.init = function(entity) {
   this.entity = entity
 }
 
-ReflectionProbe.prototype.set = function (opts) {
+ReflectionProbe.prototype.set = function(opts) {
   Object.assign(this, opts)
   Object.keys(opts).forEach((prop) => this.changed.dispatch(prop))
 }
 
-module.exports = function (opts) {
+module.exports = function(opts) {
   return new ReflectionProbe(opts)
 }

@@ -1,8 +1,23 @@
 const Signal = require('signals')
+const { mat3, mat2x3 } = require('pex-math')
 
 let MaterialID = 0
 
-function Material (opts) {
+const tempMat2x3 = mat2x3.create()
+
+const MATERIAL_MAPS = [
+  'baseColorMap',
+  'emissiveColorMap',
+  'matallicMap',
+  'roughnessMap',
+  'metallicRoughnessMap',
+  'normalMap',
+  'occlusionMap',
+  'diffuseMap',
+  'specularGlossinessMap'
+]
+
+function Material(opts) {
   this.type = 'Material'
   this.id = 'Material_' + MaterialID++
   this.enabled = true
@@ -14,44 +29,97 @@ function Material (opts) {
 
   this.baseColor = [1, 1, 1, 1]
   this.baseColorMap = null
-  this.emissiveColor = [0, 0, 0, 1]
-  this.emissiveIntensity = 1
-  this.emissiveColorMap = null
-  this.metallic = 0.01
-  this.matallicMap = null
-  this.occlusionMap = null
-  // required for GLTF support
-  // R = ?, G = roughness, B = metallic
-  this.metallicRoughnessMap = null
-  this.roughness = 0.5
-  this.roughnessMap = null
+
+  this.useSpecularGlossinessWorkflow =
+    opts.useSpecularGlossinessWorkflow || false
+  this.unlit = opts.unlit || false
+  if (opts.useSpecularGlossinessWorkflow) {
+    // Specular Glossiness workflow
+    this.diffuse = [1, 1, 1, 1]
+    this.diffuseMap = null
+    this.specular = [1, 1, 1]
+    this.glossiness = 1
+    this.specularGlossinessMap = null
+  } else if (!this.unlit) {
+    // Metallic Roughness workflow
+    this.metallic = 1
+    this.matallicMap = null
+    this.roughness = 1
+    this.roughnessMap = null
+    this.metallicRoughnessMap = null
+  }
+
   this.normalMap = null
   this.normalScale = 1
+
+  this.displacementMap = null
   this.displacement = 0
+
+  this.emissiveColor = null
+  this.emissiveIntensity = 1
+  this.emissiveColorMap = null
+
+  this.occlusionMap = null
+
+  this.reflectance = 0.5
+  this.clearCoat = null
+  this.clearCoatRoughness = null
+  this.clearCoatNormalMap = null
+  this.clearCoatNormalMapScale = 1
+
+  this.alphaMap = null
+  this.alphaTest = undefined
   this.depthTest = true
   this.depthWrite = true
-  this.depthFunc = opts.ctx.DepthFunc.LessEqual
-  this.alphaTest = undefined
+  this.depthFunc = ctx.DepthFunc.LessEqual
   this.blend = false
   this.blendSrcRGBFactor = ctx.BlendFactor.One
   this.blendSrcAlphaFactor = ctx.BlendFactor.One
   this.blendDstRGBFactor = ctx.BlendFactor.One
   this.blendDstAlphaFactor = ctx.BlendFactor.One
+  this.cullFace = true
+  this.cullFaceMode = ctx.Face.Back
+
+  this.pointSize = 1
+
   this.castShadows = false
   this.receiveShadows = false
-  this.cullFace = true
+
   this.set(opts)
 }
 
-Material.prototype.init = function (entity) {
+Material.prototype.init = function(entity) {
   this.entity = entity
 }
 
-Material.prototype.set = function (opts) {
+Material.prototype.set = function(opts) {
   Object.assign(this, opts)
-  Object.keys(opts).forEach((prop) => this.changed.dispatch(prop))
+
+  const optsKeys = Object.keys(opts)
+
+  const mapKeys = optsKeys.filter((opt) => MATERIAL_MAPS.includes(opt))
+  if (mapKeys.length) {
+    for (let i = 0; i < mapKeys.length; i++) {
+      const map = this[mapKeys[i]]
+      if (map && map.texture) {
+        mat2x3.identity(tempMat2x3)
+        mat2x3.translate(tempMat2x3, map.offset || [0, 0])
+        mat2x3.rotate(tempMat2x3, -map.rotation || 0)
+        mat2x3.scale(tempMat2x3, map.scale || [1, 1])
+
+        map.texCoordTransformMatrix = mat3.fromMat2x3(
+          map.texCoordTransformMatrix
+            ? mat3.identity(map.texCoordTransformMatrix)
+            : mat3.create(),
+          tempMat2x3
+        )
+      }
+    }
+  }
+
+  optsKeys.forEach((prop) => this.changed.dispatch(prop))
 }
 
-module.exports = function (opts) {
+module.exports = function(opts) {
   return new Material(opts)
 }

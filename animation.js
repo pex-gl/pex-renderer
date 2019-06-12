@@ -1,13 +1,20 @@
 const quat = require('pex-math/quat')
+const vec3 = require('pex-math/vec3')
+const vec4 = require('pex-math/vec4')
+const utils = require('pex-math/utils')
 const Signal = require('signals')
+
+let currentOutputVec3 = vec3.create()
+let currentOutputQuat = quat.create()
 
 // Assumptions:
 // - all channels have the same time length
 // - animation channels can reference other entities
 // - currently all animations track time by themselves
-function Animation (opts) {
+function Animation(opts) {
   this.type = 'Animation'
   this.entity = null
+  this.enabled = true
   this.playing = false
   this.loop = false
   this.time = 0 // seconds
@@ -17,11 +24,11 @@ function Animation (opts) {
   this.set(opts)
 }
 
-Animation.prototype.init = function (entity) {
+Animation.prototype.init = function(entity) {
   this.entity = entity
 }
 
-Animation.prototype.set = function (opts) {
+Animation.prototype.set = function(opts) {
   Object.assign(this, opts)
   Object.keys(opts).forEach((prop) => this.changed.dispatch(prop))
 
@@ -33,14 +40,15 @@ Animation.prototype.set = function (opts) {
   }
 }
 
-Animation.prototype.update = function () {
+Animation.prototype.update = function() {
   if (!this.playing || !this.enabled) return
 
-  // assuming same length for all
-  const animationLength = this.channels[0].input[this.channels[0].input.length - 1]
-
+  const animationLength = this.channels[0].input[
+    this.channels[0].input.length - 1
+  ]
   const now = Date.now()
   const deltaTime = (now - this.prevTime) / 1000
+
   this.prevTime = now
   this.time += deltaTime
 
@@ -53,69 +61,125 @@ Animation.prototype.update = function () {
     }
   }
 
-  this.channels.forEach((channel) => {
+  for (let i = 0; i < this.channels.length; i++) {
+    const channel = this.channels[i]
     const inputData = channel.input
-    const outputData = channel.output
-    const target = channel.target
-    const path = channel.path
-
-    let prevInput = null
-    let nextInput = null
-    let prevOutput = null
-    let nextOutput = null
 
     let prevIndex
     let nextIndex
 
-    for (var i = 0; i < inputData.length; i++) {
-      nextIndex = i
-      if (inputData[i] >= this.time) {
+    for (let j = 0; j < inputData.length; j++) {
+      nextIndex = j
+      if (inputData[j] >= this.time) {
         break
       }
       prevIndex = nextIndex
     }
 
+    const isRotation = channel.path === 'rotation'
+    const outputData = channel.output
+    const prevInput = inputData[prevIndex]
+    const nextInput = inputData[nextIndex]
+    const scale = nextInput - prevInput
+
+    const t = (this.time - prevInput) / scale
+
     if (prevIndex !== undefined) {
-      prevInput = inputData[prevIndex]
-      nextInput = inputData[nextIndex]
-      prevOutput = outputData[prevIndex]
-      nextOutput = outputData[nextIndex]
+      switch (channel.interpolation) {
+        case 'STEP':
+          if (isRotation) {
+            quat.set(currentOutputQuat, outputData[prevIndex])
+          } else {
+            vec3.set(currentOutputVec3, outputData[prevIndex])
+          }
+          break
+        case 'CUBICSPLINE': {
+          const vec = isRotation ? vec4 : vec3
+          const tt = t * t
+          const ttt = tt * t
 
-      const interpolationValue = (this.time - prevInput) / (nextInput - prevInput)
+          // Each input value corresponds to three output values of the same type: in-tangent, data point, and out-tangent.
+          // p0
+          const prevPosition = vec.copy(outputData[prevIndex * 3 + 1])
 
-      let currentOutput = null
-      // TODO: stop creating new arrays every frame
-      if (path === 'rotation') {
-        currentOutput = quat.copy(prevOutput)
-        quat.slerp(currentOutput, nextOutput, interpolationValue)
-      } else {
-        currentOutput = []
-        for (var k = 0; k < nextOutput.length; k++) {
-          currentOutput[k] = prevOutput[k] + interpolationValue * (nextOutput[k] - prevOutput[k])
+          // p1
+          const nextPos = vec.copy(outputData[nextIndex * 3 + 1])
+
+          // m0 = (tk+1 - tk)bk
+          const prevOutTangent = prevIndex
+            ? vec.scale(vec.copy(outputData[prevIndex * 3 + 2]), scale)
+            : vec.create()
+
+          // m1 = (tk+1 - tk)ak+1
+          const nextInTangent =
+            nextIndex !== inputData.length - 1
+              ? vec.scale(vec.copy(outputData[prevIndex * 3]), scale)
+              : vec.create()
+
+          // p(t) = (2t³ - 3t² + 1)p0 + (t³ - 2t² + t)m0 + (-2t³ + 3t²)p1 + (t³ - t²)m1
+          const p0 = vec.scale(prevPosition, 2 * ttt - 3 * tt + 1)
+          const m0 = vec.scale(prevOutTangent, ttt - 2 * tt + t)
+          const p1 = vec.scale(nextPos, -2 * ttt + 3 * tt)
+          const m1 = vec.scale(nextInTangent, ttt - tt)
+
+          if (isRotation) {
+            quat.set(
+              currentOutputQuat,
+              quat.normalize([
+                p0[0] + m0[0] + p1[0] + m1[0],
+                p0[1] + m0[1] + p1[1] + m1[1],
+                p0[2] + m0[2] + p1[2] + m1[2],
+                p0[3] + m0[3] + p1[3] + m1[3]
+              ])
+            )
+          } else {
+            vec3.set(
+              currentOutputVec3,
+              vec3.add(vec3.add(vec3.add(p0, m0), p1), m1)
+            )
+          }
+
+          break
         }
+        default:
+          // LINEAR
+          if (isRotation) {
+            quat.slerp(
+              quat.set(currentOutputQuat, outputData[prevIndex]),
+              outputData[nextIndex],
+              t
+            )
+          } else {
+            vec3.set(
+              currentOutputVec3,
+              outputData[nextIndex].map((output, index) =>
+                utils.lerp(outputData[prevIndex][index], output, t)
+              )
+            )
+          }
       }
 
-      if (path === 'translation') {
-        target.transform.set({
-          position: currentOutput
+      if (isRotation) {
+        channel.target.transform.set({
+          rotation: quat.copy(currentOutputQuat)
         })
-      } else if (path === 'rotation') {
-        target.transform.set({
-          rotation: currentOutput
+      } else if (channel.path === 'translation') {
+        channel.target.transform.set({
+          position: vec3.copy(currentOutputVec3)
         })
-      } else if (path === 'scale') {
-        target.transform.set({
-          scale: currentOutput
+      } else if (channel.path === 'scale') {
+        channel.target.transform.set({
+          scale: vec3.copy(currentOutputVec3)
         })
-      } else if (path === 'weights') {
-        target.getComponent('Morph').set({
-          weights: nextOutput
+      } else if (channel.path === 'weights') {
+        channel.target.getComponent('Morph').set({
+          weights: outputData[nextIndex].slice()
         })
       }
     }
-  })
+  }
 }
 
-module.exports = function createMorph (opts) {
+module.exports = function createMorph(opts) {
   return new Animation(opts)
 }

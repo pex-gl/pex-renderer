@@ -1,4 +1,4 @@
-module.exports = /* glsl */`
+module.exports = /* glsl */ `
 vec2 signed(vec2 v) {
   return step(0.0, v) * 2.0 - 1.0;
 }

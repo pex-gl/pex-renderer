@@ -30,9 +30,7 @@ const skyboxEntity = renderer.entity([
 ])
 renderer.add(skyboxEntity)
 
-const reflectionProbeEntity = renderer.entity([
-  renderer.reflectionProbe()
-])
+const reflectionProbeEntity = renderer.entity([renderer.reflectionProbe()])
 renderer.add(reflectionProbeEntity)
 
 ctx.frame(() => {
@@ -40,12 +38,10 @@ ctx.frame(() => {
 
   const skybox = skyboxEntity.getComponent('Skybox')
   skybox.set({
-    sunPosition: [
-      1 * Math.cos(now),
-      0.1,
-      1 * Math.sin(now)
-    ]
+    sunPosition: [1 * Math.cos(now), 0.1, 1 * Math.sin(now)]
   })
 
   renderer.draw()
+
+  window.dispatchEvent(new CustomEvent('pex-screenshot'))
 })

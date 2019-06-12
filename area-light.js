@@ -1,7 +1,7 @@
 const Signal = require('signals')
 const AreaLightsData = require('./area-light-data')
 
-function AreaLight (opts) {
+function AreaLight(opts) {
   this.type = 'AreaLight'
   this.enabled = true
   this.changed = new Signal()
@@ -39,11 +39,11 @@ function AreaLight (opts) {
   this.ltc_mag_texture = AreaLight.ltc_mag_texture
 }
 
-AreaLight.prototype.init = function (entity) {
+AreaLight.prototype.init = function(entity) {
   this.entity = entity
 }
 
-AreaLight.prototype.set = function (opts) {
+AreaLight.prototype.set = function(opts) {
   Object.assign(this, opts)
   Object.keys(opts).forEach((prop) => this.changed.dispatch(prop))
 
@@ -52,7 +52,7 @@ AreaLight.prototype.set = function (opts) {
   }
 }
 
-AreaLight.prototype.dispose = function () {
+AreaLight.prototype.dispose = function() {
   if (--AreaLight.areaLightTexturesRefs === 0) {
     this.ctx.dispose(AreaLight.ltc_mat_texture)
     AreaLight.ltc_mat_texture = null
@@ -61,6 +61,6 @@ AreaLight.prototype.dispose = function () {
   }
 }
 
-module.exports = function (opts) {
+module.exports = function(opts) {
   return new AreaLight(opts)
 }
