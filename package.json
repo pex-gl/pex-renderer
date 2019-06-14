@@ -4,9 +4,9 @@
   "description": "Physically Based Renderer for Pex",
   "main": "index.js",
   "scripts": {
-    "lint": "npx eslint {examples/*,shaders/**/*,*}.js",
-    "format": "npx prettier {examples/*,shaders/**/*,*}.js --write",
-    "format:check": "npx prettier {examples/*,shaders/**/*,*}.js --check"
+    "lint": "npx eslint {examples/*,loaders/*,shaders/**/*,*}.js",
+    "format": "npx prettier {examples/*,loaders/*,shaders/**/*,*}.js --write",
+    "format:check": "npx prettier {examples/*,loaders/*,shaders/**/*,*}.js --check"
   },
   "license": "MIT",
   "author": {
