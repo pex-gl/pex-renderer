@@ -20,17 +20,22 @@ const State = {
 random.seed(100)
 
 // Utils
-const scheme = [[0.000, 0.500, 0.500], [0.000, 0.500, 0.500], [0.000, 0.500, 0.333], [0.000, 0.500, 0.667]]
+const scheme = [
+  [0.0, 0.5, 0.5],
+  [0.0, 0.5, 0.5],
+  [0.0, 0.5, 0.333],
+  [0.0, 0.5, 0.667]
+]
 
 // Standard Normal constiate using Box-Muller transform.
 // http://stackoverflow.com/a/36481059
-function randnBM () {
+function randnBM() {
   const u = 1 - Math.random() // Subtraction to flip [0, 1) to (0, 1].
   const v = 1 - Math.random()
   return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v)
 }
 
-function rand () {
+function rand() {
   return (Math.random() * 2 - 1) * 3
 }
 
@@ -46,11 +51,10 @@ ctx.gl.getExtension('OES_texture_float')
 
 const renderer = createRenderer({
   ctx,
-  shadowQuality: 4,
+  shadowQuality: 4
 })
 
 const gui = createGUI(ctx)
-//gui.addFPSMeeter()
 
 let skybox = null
 let frameNumber = 0
@@ -71,12 +75,10 @@ const cameraEntity = renderer.entity([
     near: 0.1,
     far: 25
   }),
-  renderer.flycontrols(
-    {
-      position: [0, 3, 8],
-      developerMode : true
-    }
-  )
+  renderer.flyControls({
+    position: [0, 3, 8],
+    releaseOnMouseUp: true
+  })
 ])
 renderer.add(cameraEntity)
 
@@ -100,9 +102,9 @@ const offsets = []
 const scales = []
 const colors = []
 for (let i = 0; i < 100; i++) {
-  const x = (Math.random()*10) -5
-  const z = (Math.random()*10) -5
-  const y = (Math.random()*3) 
+  const x = Math.random() * 10 - 5
+  const z = Math.random() * 10 - 5
+  const y = Math.random() * 3
   const s = Math.max(0.0, 12 - Math.sqrt(x * x + z * z) / 2)
   const c = random.float(0.7, 0.9)
   offsets.push([x, y, z])
@@ -113,38 +115,39 @@ if (instanced) {
   cube.offsets = { buffer: ctx.vertexBuffer(offsets), divisor: 1 }
   cube.scales = { buffer: ctx.vertexBuffer(scales), divisor: 1 }
   cube.instances = offsets.length
-  renderer.add(renderer.entity([
-    renderer.geometry(cube),
-    renderer.transform({
-    }),
-    renderer.material({
-      baseColor: colors[0],
-      rougness: 0.7,
-      metallic: 0.0,
-      castShadows: true,
-      receiveShadows: true
-    })
-  ]))
-} else {
-  offsets.forEach((offset, i) => {
-    renderer.add(renderer.entity([
+  renderer.add(
+    renderer.entity([
       renderer.geometry(cube),
-      renderer.transform({
-        position: offset,
-        scale: scales[i]
-      }),
+      renderer.transform({}),
       renderer.material({
-        baseColor: colors[i],
+        baseColor: colors[0],
         rougness: 0.7,
         metallic: 0.0,
         castShadows: true,
         receiveShadows: true
       })
-    ]))
+    ])
+  )
+} else {
+  offsets.forEach((offset, i) => {
+    renderer.add(
+      renderer.entity([
+        renderer.geometry(cube),
+        renderer.transform({
+          position: offset,
+          scale: scales[i]
+        }),
+        renderer.material({
+          baseColor: colors[i],
+          rougness: 0.7,
+          metallic: 0.0,
+          castShadows: true,
+          receiveShadows: true
+        })
+      ])
+    )
   })
 }
-
-
 
 // Lights
 const sunDir = vec3.normalize([1, -1, 1])
@@ -159,36 +162,25 @@ const sunTransform = renderer.transform({
   position: [1, 1, 2],
   rotation: quat.fromTo([0, 0, 1], vec3.normalize([-1, -1, -1]), [0, 1, 0])
 })
-const sunEntity = renderer.entity([
-  sunTransform,
-  sunLight
-])
+const sunEntity = renderer.entity([sunTransform, sunLight])
 renderer.add(sunEntity)
 
 gui.addTexture2D('Shadow Map', sunLight._shadowMap)
-
-
-
 
 const skyboxCmp = renderer.skybox({
   sunPosition: sunPosition
 })
 const reflectionProbeCmp = renderer.reflectionProbe()
-const skyEntity = renderer.entity([
-  skyboxCmp,
-  reflectionProbeCmp
-])
+const skyEntity = renderer.entity([skyboxCmp, reflectionProbeCmp])
 renderer.add(skyEntity)
-
-
 
 // GUI
 
-function updateSunPosition () {
+function updateSunPosition() {
   mat4.identity(State.elevationMat)
   mat4.identity(State.rotationMat)
-  mat4.rotate(State.elevationMat, State.elevation / 180 * Math.PI, [0, 0, 1])
-  mat4.rotate(State.rotationMat, State.azimuth / 180 * Math.PI, [0, 1, 0])
+  mat4.rotate(State.elevationMat, (State.elevation / 180) * Math.PI, [0, 0, 1])
+  mat4.rotate(State.rotationMat, (State.azimuth / 180) * Math.PI, [0, 1, 0])
 
   const sunPosition = [5, 0, 0]
   vec3.multMat4(sunPosition, State.elevationMat)
@@ -202,13 +194,17 @@ function updateSunPosition () {
   skyboxCmp.set({ sunPosition })
   reflectionProbeCmp.set({ dirty: true })
 }
-gui.addParam('Sun Elevation', State, 'elevation', { min: -90, max: 180 }, updateSunPosition)
+gui.addParam(
+  'Sun Elevation',
+  State,
+  'elevation',
+  { min: -90, max: 180 },
+  updateSunPosition
+)
 
 updateSunPosition()
 
-
-
-let debugAdded = 0;
+let debugAdded = 0
 
 ctx.frame(() => {
   ctx.debug(frameNumber++ === 1)
@@ -217,9 +213,8 @@ ctx.frame(() => {
   renderer.draw()
 
   gui.draw()
-  if(renderer.testTex && !debugAdded){
+  if (renderer.testTex && !debugAdded) {
     gui.addTexture2D('my pipeline', renderer.testTex)
-    debugAdded = 1;
+    debugAdded = 1
   }
-  
 })

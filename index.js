@@ -16,7 +16,7 @@ const createMaterial = require('./material')
 const createCamera = require('./camera')
 const createPostProcessing = require('./post-processing')
 const createOrbiter = require('./orbiter')
-const createFlycontrols = require('./flycontrols')
+const createFlyControls = require('./flycontrols')
 const createAmbientLight = require('./ambient-light')
 const createDirectionalLight = require('./directional-light')
 const createPointLight = require('./point-light')
@@ -1422,8 +1422,8 @@ Renderer.prototype.orbiter = function(opts) {
   return createOrbiter(Object.assign({ ctx: this._ctx }, opts))
 }
 
-Renderer.prototype.flycontrols = function(opts) {
-  return createFlycontrols(Object.assign({ ctx: this._ctx }, opts))
+Renderer.prototype.flyControls = function(opts) {
+  return createFlyControls(Object.assign({ ctx: this._ctx }, opts))
 }
 
 Renderer.prototype.ambientLight = function(opts) {
