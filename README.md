@@ -398,29 +398,16 @@ const geometry = renderer.geometry({
 | `normals`               | vertex normals       | Array of Vec3 [x, y, z]          | null    |
 | `texCoords`             | vertex tex coords    | Array of Vec2 [u, v]             | null    |
 | `uvs`<sup>1</sup>       | alias of `texCoords` | Array of Vec2 [u, v]             | null    |
-| `colors`                | vertex colors        | Array of Vec4 [r, g, b, a]       | null    |
+| `vertexColors`          | vertex colors        | Array of Vec4 [r, g, b, a]       | null    |
 | `indices`               | `indices`            | Array of Vec3                    | null    |
 | `cells`<sup>1</sup>     | geometry faces       | Array of Vec3 of Int [i, j, j]   | null    |
-| `offsets`<sup>2</sup>   | instances offsets    | Array of Vec3 [x, y, z]          | null    |
-| `rotations`<sup>2</sup> | instances rotations  | Array of Quat/Vec4 [x, y, z, w]  | null    |
-| `scales`<sup>2</sup>    | instances scales     | Array of Vec3 [x, y, z]          | null    |
-| `tints`<sup>2</sup>     | instanced rotations  | Array of Color/Vec4 [r, g, b, a] | null    |
+| `instanceOffsets`       | instances offsets    | Array of Vec3 [x, y, z]          | null    |
+| `instanceRotations`     | instances rotations  | Array of Quat/Vec4 [x, y, z, w]  | null    |
+| `instanceScales`        | instances scales     | Array of Vec3 [x, y, z]          | null    |
+| `instanceColors`        | instanced colors     | Array of Color/Vec4 [r, g, b, a] | null    |
 
 <sup>1</sup> write only aliases, `uvs` data will be stored in `texCoords`, `cells` data will be stored in `indices`
 
-<sup>2</sup> those attributes are always instanced and need to be defined with a divisor and additionally number of instances needs to be specified:
-
-<!-- eslint-disable no-undef -->
-<!-- eslint-disable no-unused-vars -->
-
-```javascript
-const offsets = [[x, y, z], ...[]]
-const g = renderer.geometry({
-  positions: [[x, y, z], ...[]],
-  offsets: { data: offsets, divisor: 1 },
-  instances: offsets.length
-})
-```
 
 ### material = renderer.material(opts)
 

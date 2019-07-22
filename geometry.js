@@ -10,10 +10,10 @@ const AttributesMap = {
   uvs: 'aTexCoord0',
   uvs2: 'aTexCoord1',
   vertexColors: 'aVertexColor',
-  offsets: 'aOffset',
-  scales: 'aScale',
-  rotations: 'aRotation',
-  colors: 'aColor',
+  instanceOffsets: 'aOffset',
+  instanceScales: 'aScale',
+  instanceRotations: 'aRotation',
+  instanceColors: 'aColor',
   joints: 'aJoint',
   weights: 'aWeight'
 }
@@ -59,7 +59,7 @@ Geometry.prototype.set = function(opts) {
           buffer: null,
           offset: 0,
           stride: 0,
-          divisor: 0,
+          divisor: ["aOffset","aRotation","aScale","aColor"].includes(attribName) ? 1 : 0,
           type: undefined
         }
       }

@@ -73,10 +73,10 @@ const geometry = renderer.geometry({
   normals: cube.normals,
   cells: cube.cells,
   uvs: cube.uvs,
-  offsets: { data: offsets, divisor: 1 },
-  scales: { data: scales, divisor: 1 },
-  rotations: { data: rotations, divisor: 1 },
-  colors: { data: colors, divisor: 1 }
+  instanceOffsets: offsets,
+  instanceScales: scales,
+  instanceRotations: rotations,
+  instanceColors: colors
 })
 function update() {
   time += 1 / 60
@@ -141,10 +141,10 @@ function update() {
   }
 
   geometry.set({
-    offsets: offsets,
-    scales: scales,
-    rotations: rotations,
-    colors: colors,
+    instanceOffsets: offsets,
+    instanceScales: scales,
+    instanceRotations: rotations,
+    instanceColors: colors,
     instances: offsets.length
   })
 }
