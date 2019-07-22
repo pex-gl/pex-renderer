@@ -404,7 +404,7 @@ const geometry = renderer.geometry({
 | `instanceOffsets`       | instances offsets    | Array of Vec3 [x, y, z]          | null    |
 | `instanceRotations`     | instances rotations  | Array of Quat/Vec4 [x, y, z, w]  | null    |
 | `instanceScales`        | instances scales     | Array of Vec3 [x, y, z]          | null    |
-| `instanceColors`        | instanced colors     | Array of Color/Vec4 [r, g, b, a] | null    |
+| `instanceColors`        | instanced colors     | Array of Vec4 [r, g, b, a]       | null    |
 
 <sup>1</sup> write only aliases, `uvs` data will be stored in `texCoords`, `cells` data will be stored in `indices`
 
