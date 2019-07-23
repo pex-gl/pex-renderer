@@ -11,6 +11,7 @@ const SAO_FRAG = require('./shaders/post-processing/sao.frag.js')
 const BILATERAL_BLUR_FRAG = require('./shaders/post-processing/bilateral-blur.frag.js')
 const THRESHOLD_FRAG = require('./shaders/post-processing/threshold.frag.js')
 const BLOOM_FRAG = require('./shaders/post-processing/bloom.frag.js')
+const DOF_FRAG = require('./shaders/post-processing/dof.frag.js')
 
 const ssaoKernelData = new Float32Array(64 * 4)
 for (let i = 0; i < 64; i++) {
@@ -352,47 +353,25 @@ PostProcessing.prototype.initPostproces = function() {
     }
   }
 
-  this._dofBlurHCmd = {
-    name: 'PostProcessing.bilateralBlurH',
+  this._dofCmd = {
+    name: 'PostProcessing.dof',
     pass: ctx.pass({
-      name: 'PostProcessing.dofBilateralBlurH',
+      name: 'PostProcessing.dof',
       color: [this._frameDofBlurTex],
-      clearColor: [1, 1, 0, 1]
+      clearColor: [1, 1, 1, 1]
     }),
     pipeline: ctx.pipeline({
       vert: POSTPROCESS_VERT,
-      frag: BILATERAL_BLUR_FRAG
+      frag: DOF_FRAG
     }),
     attributes: this._fsqMesh.attributes,
     indices: this._fsqMesh.indices,
     uniforms: {
       depthMap: this._frameDepthTex,
       image: this._frameColorTex,
-      // direction: [State.bilateralBlurRadius, 0] // TODO:
-      direction: [0.5, 0]
     }
   }
 
-  this._dofBlurVCmd = {
-    name: 'PostProcessing.bilateralBlurV',
-    pass: ctx.pass({
-      name: 'PostProcessing.dofBilateralBlurV',
-      color: [this._frameColorTex],
-      clearColor: [1, 1, 0, 1]
-    }),
-    pipeline: ctx.pipeline({
-      vert: POSTPROCESS_VERT,
-      frag: BILATERAL_BLUR_FRAG
-    }),
-    attributes: this._fsqMesh.attributes,
-    indices: this._fsqMesh.indices,
-    uniforms: {
-      depthMap: this._frameDepthTex,
-      image: this._frameDofBlurTex,
-      // direction: [0, State.bilateralBlurRadius] // TODO:
-      direction: [0, 0.5]
-    }
-  }
 
   this._thresholdCmd = {
     name: 'PostProcessing.threshold',
