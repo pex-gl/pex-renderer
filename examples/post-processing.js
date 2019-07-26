@@ -99,7 +99,9 @@ const cameraEntity = renderer.add(
       ssao: true,
       fxaa: false,
       dof: true,
-      dofDepth: 18
+      dofDepth: 18,
+      dofScale: 15
+
     }),
     renderer.camera({
       fov: Math.PI / 3,
@@ -454,17 +456,9 @@ renderer.add(areaLightEntity)
     max: 20
   })
   gui.addParam('DOF', postProcessingCmp, 'dof')
-  gui.addParam('DOF Iterations', postProcessingCmp, 'dofIterations', {
-    min: 1,
-    max: 5,
-    step: 1
-  })
   gui.addParam('DOF Depth', postProcessingCmp, 'dofDepth', { min: 0, max: 20 })
-  gui.addParam('DOF Range', postProcessingCmp, 'dofRange', { min: 0, max: 20 })
-  gui.addParam('DOF Radius', postProcessingCmp, 'dofRadius', {
-    min: 0,
-    max: 20
-  })
+  gui.addParam('DOF Scale', postProcessingCmp, 'dofScale', { min: 0, max: 100 })
+
   gui.addParam('FXAA', postProcessingCmp, 'fxaa')
 
   gui.addColumn('Render targets')
@@ -499,12 +493,6 @@ window.addEventListener('resize', () => {
 ctx.frame(() => {
   ctx.debug(debugOnce)
   debugOnce = false
-
-  const dist = vec3.distance(cameraEntity.transform.position, [0, 0.4, 2])
-  cameraEntity.getComponent('Camera').set({
-    dofDepth: dist,
-    dofRange: dist / 4
-  })
 
   renderer.draw()
   gui.draw()

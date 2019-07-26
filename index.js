@@ -1287,7 +1287,7 @@ Renderer.prototype.draw = function() {
             depthMapSize: screenSize,
             uPixelSize :  [1/ctx.gl.drawingBufferWidth, 1/ctx.gl.drawingBufferHeight],
             uFocusPoint : postProcessingCmp.dofDepth,
-            uFocusScale : postProcessingCmp.dofRange
+            uFocusScale : postProcessingCmp.dofScale
           }
         })
         if (State.profiler) State.profiler.timeEnd('dof')

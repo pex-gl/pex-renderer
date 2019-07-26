@@ -74,10 +74,8 @@ function PostProcessing(opts) {
   this.ssaoBlurSharpness = 10
 
   this.dof = false
-  this.dofIterations = 1
-  this.dofRange = 5
-  this.dofRadius = 1
-  this.dofDepth = 6.76
+  this.dofDepth = 1
+  this.dofScale = 5
 
   this.bloom = false
   this.bloomRadius = 1
@@ -326,7 +324,7 @@ PostProcessing.prototype.initPostproces = function() {
       // direction: [State.bilateralBlurRadius, 0], // TODO:
       direction: [0.5, 0],
       uDOFDepth: 0,
-      uDOFRange: 0
+      udofScale: 0
     }
   }
 
@@ -349,7 +347,7 @@ PostProcessing.prototype.initPostproces = function() {
       // direction: [0, State.bilateralBlurRadius], // TODO:
       direction: [0, 0.5],
       uDOFDepth: 0,
-      uDOFRange: 0
+      udofScale: 0
     }
   }
 
