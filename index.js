@@ -1316,8 +1316,6 @@ Renderer.prototype.draw = function() {
             uSunPosition: postProcessingCmp.sunPosition,
             uOutputEncoding: ctx.Encoding.Gamma,
             uOverlay:
-              postProcessingCmp &&
-              postProcessingCmp.enabled &&
               postProcessingCmp.dof
                 ? postProcessingCmp._frameDofBlurTex
                 : postProcessingCmp._frameColorTex,
