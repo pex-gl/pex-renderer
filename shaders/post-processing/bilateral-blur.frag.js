@@ -17,8 +17,6 @@ uniform vec2 depthMapSize;
 uniform vec2 direction;
 
 uniform float sharpness;
-uniform float uDOFDepth;
-uniform float udofScale;
 
 ${SHADERS.depthRead}
 
@@ -32,10 +30,7 @@ vec4 bilateralBlur(sampler2D image, vec2 imageResolution, sampler2D depthMap, ve
 
   float centerDepth = readDepth(depthMap, uv, near, far);
   float dist = 0.0;
-  if (uDOFDepth > 0.0) {
-    dist = max(0.0, min(abs(centerDepth - uDOFDepth) / udofScale, 1.0));
-    direction *= dist;
-  }
+  
   float weightSum = 0.0;
   for (float i = -8.0; i <= 8.0; i += 2.0) {
     float r = i;
