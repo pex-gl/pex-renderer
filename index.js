@@ -1312,6 +1312,7 @@ Renderer.prototype.draw = function() {
             uFogDensity: postProcessingCmp.fogDensity,
             uSunPosition: postProcessingCmp.sunPosition,
             uOutputEncoding: ctx.Encoding.Gamma,
+            uOverlay: (postProcessingCmp && postProcessingCmp.enabled && postProcessingCmp.dof) ? postProcessingCmp._frameDofBlurTex : postProcessingCmp._frameColorTex, 
             uScreenSize: screenSize
           },
           viewport: camera.viewport
