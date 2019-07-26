@@ -324,7 +324,7 @@ PostProcessing.prototype.initPostproces = function() {
       // direction: [State.bilateralBlurRadius, 0], // TODO:
       direction: [0.5, 0],
       uDOFDepth: 0,
-      udofScale: 0
+      uDOFRange: 0
     }
   }
 
@@ -347,7 +347,7 @@ PostProcessing.prototype.initPostproces = function() {
       // direction: [0, State.bilateralBlurRadius], // TODO:
       direction: [0, 0.5],
       uDOFDepth: 0,
-      udofScale: 0
+      uDOFRange: 0
     }
   }
 
