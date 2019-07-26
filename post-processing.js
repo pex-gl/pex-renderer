@@ -366,10 +366,9 @@ PostProcessing.prototype.initPostproces = function() {
     indices: this._fsqMesh.indices,
     uniforms: {
       depthMap: this._frameDepthTex,
-      image: this._frameColorTex,
+      image: this._frameColorTex
     }
   }
-
 
   this._thresholdCmd = {
     name: 'PostProcessing.threshold',

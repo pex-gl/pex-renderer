@@ -101,7 +101,6 @@ const cameraEntity = renderer.add(
       dof: true,
       dofDepth: 18,
       dofScale: 15
-
     }),
     renderer.camera({
       fov: Math.PI / 3,

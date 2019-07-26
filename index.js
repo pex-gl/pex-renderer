@@ -1281,13 +1281,16 @@ Renderer.prototype.draw = function() {
         if (State.profiler) State.profiler.time('dof', true)
         ctx.submit(postProcessingCmp._dofCmd, {
           uniforms: {
-            uFar : camera.far,
+            uFar: camera.far,
             uNear: camera.near,
             imageSize: screenSize,
             depthMapSize: screenSize,
-            uPixelSize :  [1/ctx.gl.drawingBufferWidth, 1/ctx.gl.drawingBufferHeight],
-            uFocusPoint : postProcessingCmp.dofDepth,
-            uFocusScale : postProcessingCmp.dofScale
+            uPixelSize: [
+              1 / ctx.gl.drawingBufferWidth,
+              1 / ctx.gl.drawingBufferHeight
+            ],
+            uFocusPoint: postProcessingCmp.dofDepth,
+            uFocusScale: postProcessingCmp.dofScale
           }
         })
         if (State.profiler) State.profiler.timeEnd('dof')
@@ -1312,7 +1315,12 @@ Renderer.prototype.draw = function() {
             uFogDensity: postProcessingCmp.fogDensity,
             uSunPosition: postProcessingCmp.sunPosition,
             uOutputEncoding: ctx.Encoding.Gamma,
-            uOverlay: (postProcessingCmp && postProcessingCmp.enabled && postProcessingCmp.dof) ? postProcessingCmp._frameDofBlurTex : postProcessingCmp._frameColorTex, 
+            uOverlay:
+              postProcessingCmp &&
+              postProcessingCmp.enabled &&
+              postProcessingCmp.dof
+                ? postProcessingCmp._frameDofBlurTex
+                : postProcessingCmp._frameColorTex,
             uScreenSize: screenSize
           },
           viewport: camera.viewport
