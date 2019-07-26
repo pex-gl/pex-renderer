@@ -16,7 +16,7 @@ const postProcessingCmp = renderer.postProcessing({
   bilateralBlur: true,
   dof: true,
   dofDepth: 4,
-  dofRange: 2,
+  dofScale: 2,
   fxaa: true
 })
 
