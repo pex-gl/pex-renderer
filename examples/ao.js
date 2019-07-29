@@ -133,7 +133,7 @@ renderer.add(
 const levelHeight = 0.04
 const geom = {
   ...createCube(),
-  offsets: {
+  instanceOffsets: {
     data: rects.map((rect) => {
       return [
         rect[0] + rect[2] / 2,
@@ -143,14 +143,14 @@ const geom = {
     }),
     divisor: 1
   },
-  scales: {
+  instanceScales: {
     data: rects.map((rect) => {
       // return [rect[2] * Math.pow(0.9, rect[4]), levelHeight, rect[3] * Math.pow(0.9, rect[4])]
       return [rect[2], levelHeight, rect[3]]
     }),
     divisor: 1
   },
-  colors: {
+  instanceColors: {
     data: rects.map((rect, i) => {
       // return fromHSL(0.5 + random.float(0.1), 0.4, 0.4)
       if (random.chance(0.9)) return [1, 1, 1, 1]

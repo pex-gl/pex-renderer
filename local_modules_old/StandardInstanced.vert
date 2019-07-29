@@ -1,4 +1,4 @@
-attribute vec4 aColor;
+attribute vec4 aInstanceColor;
 attribute vec4 aPosition;
 attribute vec3 aNormal;
 attribute vec3 aCustom0; //offset

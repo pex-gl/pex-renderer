@@ -105,8 +105,8 @@ for (let i = 0; i < 1000; i++) {
   colors.push([c, c, c, 1])
 }
 if (instanced) {
-  cube.offsets = { buffer: ctx.vertexBuffer(offsets), divisor: 1 }
-  cube.scales = { buffer: ctx.vertexBuffer(scales), divisor: 1 }
+  cube.instanceOffsets = offsets 
+  cube.instanceScales = scales
   cube.instances = offsets.length
   renderer.add(
     renderer.entity([
