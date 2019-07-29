@@ -1,4 +1,4 @@
-attribute vec4 aColor;
+attribute vec4 aInstanceColor;
 attribute vec4 aPosition;
 
 uniform mat4 uProjectionMatrix;

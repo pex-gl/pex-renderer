@@ -305,16 +305,16 @@ Renderer.prototype.getMaterialProgramAndFlags = function(
   if (geometry._attributes.aTexCoord1) {
     flags.push('#define USE_TEXCOORD_1')
   }
-  if (geometry._attributes.aOffset) {
+  if (geometry._attributes.aInstanceOffset) {
     flags.push('#define USE_INSTANCED_OFFSET')
   }
-  if (geometry._attributes.aScale) {
+  if (geometry._attributes.aInstanceScale) {
     flags.push('#define USE_INSTANCED_SCALE')
   }
-  if (geometry._attributes.aRotation) {
+  if (geometry._attributes.aInstanceRotation) {
     flags.push('#define USE_INSTANCED_ROTATION')
   }
-  if (geometry._attributes.aColor) {
+  if (geometry._attributes.aInstanceColor) {
     flags.push('#define USE_INSTANCED_COLOR')
   }
   if (geometry._attributes.aVertexColor) {

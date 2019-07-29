@@ -17,19 +17,19 @@ attribute vec2 aTexCoord1;
 #endif
 
 #ifdef USE_INSTANCED_OFFSET
-attribute vec3 aOffset;
+attribute vec3 aInstanceOffset;
 #endif
 
 #ifdef USE_INSTANCED_SCALE
-attribute vec3 aScale;
+attribute vec3 aInstanceScale;
 #endif
 
 #ifdef USE_INSTANCED_ROTATION
-attribute vec4 aRotation;
+attribute vec4 aInstanceRotation;
 #endif
 
 #ifdef USE_INSTANCED_COLOR
-attribute vec4 aColor;
+attribute vec4 aInstanceColor;
 #endif
 
 #ifdef USE_VERTEX_COLORS
@@ -97,24 +97,24 @@ void main() {
   #endif
 
   #ifdef USE_INSTANCED_SCALE
-    position.xyz *= aScale;
+    position.xyz *= aInstanceScale;
   #endif
 
   #ifdef USE_INSTANCED_ROTATION
-    mat4 rotationMat = quatToMat4(aRotation);
+    mat4 rotationMat = quatToMat4(aInstanceRotation);
     position = rotationMat * position;
     normal = vec3(rotationMat * vec4(normal, 0.0));
   #endif
 
   #ifdef USE_INSTANCED_OFFSET
-    position.xyz += aOffset;
+    position.xyz += aInstanceOffset;
   #endif
 
   #if defined(USE_VERTEX_COLORS) && defined(USE_INSTANCED_COLOR)
-    vColor = aVertexColor * aColor;
+    vColor = aVertexColor * aInstanceColor;
   #else
     #ifdef USE_INSTANCED_COLOR
-      vColor = aColor;
+      vColor = aInstanceColor;
     #endif
 
     #ifdef USE_VERTEX_COLORS
