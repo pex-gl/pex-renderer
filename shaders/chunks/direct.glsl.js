@@ -41,7 +41,6 @@ void getSurfaceShading(inout PBRData data, Light light, float illuminated) {
   vec3 F = fresnel(data.f0, LdotH);
 
   vec3 lightColor = decode(light.color, 3).rgb;
-  lightColor *= light.color.a; // intensity
 
   vec3 Fd = DiffuseLambert() * data.diffuseColor;
   // vec3 Fd = DiffuseBurley(data.linearRoughness, NdotV, NdotL, LdotH) * data.diffuseColor;

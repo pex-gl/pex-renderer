@@ -193,7 +193,7 @@ const lightEnt = renderer.entity([
   }),
   renderer.directionalLight({
     color: [1, 1, 1, 1],
-    intensity: 2,
+    intensity: 5,
     castShadows: true,
     bias: 0.01
   })
