@@ -34,11 +34,49 @@ void getSurfaceShading(inout PBRData data, Light light, float illuminated) {
   if (NdotL <= 0.0) return;
 
   float NdotH = saturate(dot(N, H));
+  float HdotV = max(0.0, dot(H, V));
+
+  // TODO: decide on F0 vs specularColor
+  vec3 F = SpecularReflection(data.specularColor, HdotV);
+  
+  float D = MicrofacetDistribution(data.linearRoughness, NdotH);
+  float G = GeometricOcclusion(data.linearRoughness, NdotL, NdotV);
+
+  //TODO: which bug is this epsilon fixing?
+  float denominator = 4.0 * NdotV * NdotL + 0.001;
+  float Vis = G / denominator;
+
+  //TODO: switch to linear colors
+  vec3 lightColor = decode(light.color, 3).rgb;
+
+  vec3 Fd = DiffuseLambert() * data.diffuseColor;
+  vec3 Fr = F * Vis * D;
+
+  //TODO: energy compensation
+  float energyCompensation = 1.0;
+  
+  vec3 color = Fd + Fr * energyCompensation;
+
+  data.directColor += (color * lightColor) * (light.color.a * light.attenuation * NdotL * illuminated);
+}
+
+void getSurfaceShadingFilament(inout PBRData data, Light light, float illuminated) {
+  vec3 N = data.normalWorld;
+  vec3 V = data.viewWorld;
+  vec3 L = normalize(light.l);
+  vec3 H = normalize(V + L);
+
+  float NdotV = saturate(abs(dot(N, V)) + FLT_EPS);
+  float NdotL = saturate(dot(N, L));
+
+  if (NdotL <= 0.0) return;
+
+  float NdotH = saturate(dot(N, H));
   float LdotH = saturate(dot(L, H));
 
-  float D = distribution(data.linearRoughness, NdotH, H, data.normalWorld);
-  float G = visibility(data.linearRoughness, NdotV, NdotL);
-  vec3 F = fresnel(data.f0, LdotH);
+  float D = Filament_distribution(data.linearRoughness, NdotH, H, data.normalWorld);
+  float G = Filament_visibility(data.linearRoughness, NdotV, NdotL);
+  vec3 F = Filament_fresnel(data.f0, LdotH);
 
   vec3 lightColor = decode(light.color, 3).rgb;
 
