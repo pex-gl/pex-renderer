@@ -34,6 +34,7 @@ void getSurfaceShading(inout PBRData data, Light light, float illuminated) {
   if (NdotL <= 0.0) return;
 
   float NdotH = saturate(dot(N, H));
+  float LdotH = saturate(dot(L, H));
   float HdotV = max(0.0, dot(H, V));
 
   // TODO: decide on F0 vs specularColor
@@ -55,7 +56,27 @@ void getSurfaceShading(inout PBRData data, Light light, float illuminated) {
   //TODO: energy compensation
   float energyCompensation = 1.0;
   
-  vec3 color = Fd + Fr * energyCompensation;
+  #ifdef USE_CLEAR_COAT
+    float Fcc;
+    float clearCoat = clearCoatLobe(data, H, NdotH, LdotH, Fcc);
+    float attenuation = 1.0 - Fcc;
+
+    // direct light still uses NdotL but clear coat needs separate dot product when using normal map
+    // TODO: is "if defined(USE_NORMAL_MAP)" needed? in that case original N will be already modified so clearCoatNoL == NdotL, isn't it?
+    #if defined(USE_NORMAL_MAP) || defined(USE_CLEAR_COAT_NORMAL_MAP)
+      vec3 color = (Fd + Fr * (energyCompensation * attenuation)) * attenuation * NdotL;
+
+      float clearCoatNoL = saturate(dot(data.clearCoatNormal, light.l));
+      color += clearCoat * clearCoatNoL;
+
+      data.directColor += (color * lightColor) * (light.color.w * light.attenuation * illuminated);
+      return;
+    #else
+      vec3 color = (Fd + Fr * (energyCompensation * attenuation)) * attenuation + clearCoat;
+    #endif
+  #else
+    vec3 color = Fd + Fr * energyCompensation;
+  #endif
 
   data.directColor += (color * lightColor) * (light.color.a * light.attenuation * NdotL * illuminated);
 }
