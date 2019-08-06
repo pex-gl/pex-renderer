@@ -19,67 +19,16 @@ float D_GGX(float linearRoughness, float NoH, const vec3 h, const vec3 normalWor
   return saturateMediump(d);
 }
 
-// Visibility
-// Heitz 2014, "Understanding the Masking-Shadowing Function in Microfacet-Based BRDFs"
-float Filament_V_SmithGGXCorrelated(float linearRoughness, float NoV, float NoL) {
-  float a2 = linearRoughness * linearRoughness;
-  float lambdaV = NoL * sqrt((NoV - a2 * NoV) * NoV + a2);
-  float lambdaL = NoV * sqrt((NoL - a2 * NoL) * NoL + a2);
-  float v = 0.5 / (lambdaV + lambdaL);
-  // a2=0 => v = 1 / 4*NoL*NoV   => min=1/4, max=+inf
-  // a2=1 => v = 1 / 2*(NoL+NoV) => min=1/4, max=+inf
-  // clamp to the maximum value representable in mediump
-  return saturateMediump(v);
-}
-
-// Hammon 2017, "PBR Diffuse Lighting for GGX+Smith Microsurfaces"
-float Filament_V_SmithGGXCorrelated_Fast(float linearRoughness, float NoV, float NoL) {
-  float v = 0.5 / mix(2.0 * NoL * NoV, NoL + NoV, linearRoughness);
-  return saturateMediump(v);
-}
-
 // TODO: Used by clearCoat
 // Kelemen 2001, "A Microfacet Based Coupled Specular-Matte BRDF Model with Importance Sampling"
 float V_Kelemen(float LoH) {
   return saturateMediump(0.25 / (LoH * LoH));
 }
 
-// Neubelt and Pettineo 2013, "Crafting a Next-gen Material Pipeline for The Order: 1886"
-float Filament_V_Neubelt(float NoV, float NoL) {
-  return saturateMediump(1.0 / (4.0 * (NoL + NoV - NoL * NoV)));
-}
-
-float Filament_visibility(float linearRoughness, float NoV, float NoL) {
-  #if !defined(TARGET_MOBILE)
-    return Filament_V_SmithGGXCorrelated(linearRoughness, NoV, NoL);
-  #else
-    return Filament_V_SmithGGXCorrelated_Fast(linearRoughness, NoV, NoL);
-  #endif
-}
-
-// Fresnel
-// Schlick 1994, "An Inexpensive BRDF Model for Physically-Based Rendering"
-vec3 Filament_F_Schlick(const vec3 f0, float f90, float VoH) {
-  return f0 + (f90 - f0) * pow(1.0 - VoH, 5.0);
-}
-
-vec3 Filament_F_Schlick(const vec3 f0, float VoH) {
-  float f = pow(1.0 - VoH, 5.0);
-  return f + f0 * (1.0 - f);
-}
 
 // TODO: used by clearCoat e.g. in indirect.glsl.js
 float F_Schlick(float f0, float f90, float VoH) {
   return f0 + (f90 - f0) * pow(1.0 - VoH, 5.0);
-}
-
-vec3 Filament_fresnel(const vec3 f0, float LoH) {
-  #if defined(TARGET_MOBILE)
-    return Filament_F_Schlick(f0, LoH); // f90 = 1.0
-  #else
-    float f90 = saturate(dot(f0, vec3(50.0 * 0.33)));
-    return Filament_F_Schlick(f0, f90, LoH);
-  #endif
 }
 
 // Diffuse
@@ -87,20 +36,9 @@ float DiffuseLambert() {
   return 1.0 / PI;
 }
 
-// Burley 2012, "Physically-Based Shading at Disney"
-float Filament_DiffuseBurley(float linearRoughness, float NoV, float NoL, float LoH) {
-  float f90 = 0.5 + 2.0 * linearRoughness * LoH * LoH;
-  float lightScatter = F_Schlick(1.0, f90, NoL);
-  float viewScatter  = F_Schlick(1.0, f90, NoV);
-  return lightScatter * viewScatter * (1.0 / PI);
-}
-
-// OLD BACK PORT
-
-
 // GGX, Trowbridge-Reitz
 // Same as glTF2.0 PBR Spec
-// TODO: alphaRoughness = linearRoughness
+// TODO: alphaRoughness = linearRoughness?
 float MicrofacetDistribution(float alphaRoughness, float NdotH) {
   float a2 = alphaRoughness * alphaRoughness;
   float NdotH2 = NdotH * NdotH;
