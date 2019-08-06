@@ -58,75 +58,23 @@ void getSurfaceShading(inout PBRData data, Light light, float illuminated) {
   
   #ifdef USE_CLEAR_COAT
     float Fcc;
-    float clearCoat = clearCoatLobe(data, H, NdotH, LdotH, Fcc);
+    float clearCoat = clearCoatBRDF(data, H, NdotH, LdotH, Fcc);
     float attenuation = 1.0 - Fcc;
+    
+    vec3 color = (Fd + Fr * (energyCompensation * attenuation)) * attenuation * NdotL;
 
     // direct light still uses NdotL but clear coat needs separate dot product when using normal map
-    // TODO: is "if defined(USE_NORMAL_MAP)" needed? in that case original N will be already modified so clearCoatNoL == NdotL, isn't it?
+    // if only normal map is present not clear coat normal map, we will get smooth coating on top of bumpy surface
     #if defined(USE_NORMAL_MAP) || defined(USE_CLEAR_COAT_NORMAL_MAP)
-      vec3 color = (Fd + Fr * (energyCompensation * attenuation)) * attenuation * NdotL;
-
       float clearCoatNoL = saturate(dot(data.clearCoatNormal, light.l));
       color += clearCoat * clearCoatNoL;
-
-      data.directColor += (color * lightColor) * (light.color.w * light.attenuation * illuminated);
-      return;
     #else
-      vec3 color = (Fd + Fr * (energyCompensation * attenuation)) * attenuation + clearCoat;
-    #endif
+      color += clearCoat * NdotL;      
+    #endif    
   #else
-    vec3 color = Fd + Fr * energyCompensation;
-  #endif
+    vec3 color = (Fd + Fr * energyCompensation) * NdotL;    
+  #endif  
 
-  data.directColor += (color * lightColor) * (light.color.a * light.attenuation * NdotL * illuminated);
-}
-
-void getSurfaceShadingFilament(inout PBRData data, Light light, float illuminated) {
-  vec3 N = data.normalWorld;
-  vec3 V = data.viewWorld;
-  vec3 L = normalize(light.l);
-  vec3 H = normalize(V + L);
-
-  float NdotV = saturate(abs(dot(N, V)) + FLT_EPS);
-  float NdotL = saturate(dot(N, L));
-
-  if (NdotL <= 0.0) return;
-
-  float NdotH = saturate(dot(N, H));
-  float LdotH = saturate(dot(L, H));
-
-  float D = Filament_distribution(data.linearRoughness, NdotH, H, data.normalWorld);
-  float G = Filament_visibility(data.linearRoughness, NdotV, NdotL);
-  vec3 F = Filament_fresnel(data.f0, LdotH);
-
-  vec3 lightColor = decode(light.color, 3).rgb;
-
-  vec3 Fd = DiffuseLambert() * data.diffuseColor;
-  // vec3 Fd = DiffuseBurley(data.linearRoughness, NdotV, NdotL, LdotH) * data.diffuseColor;
-  vec3 Fr = (D * G) * F;
-  // TODO
-  float energyCompensation = 1.0;
-
-  #ifdef USE_CLEAR_COAT
-    float Fcc;
-    float clearCoat = clearCoatLobe(data, H, NdotH, LdotH, Fcc);
-    float attenuation = 1.0 - Fcc;
-
-    #if defined(USE_NORMAL_MAP) || defined(USE_CLEAR_COAT_NORMAL_MAP)
-      vec3 color = (Fd + Fr * (energyCompensation * attenuation)) * attenuation * NdotL;
-
-      float clearCoatNoL = saturate(dot(data.clearCoatNormal, light.l));
-      color += clearCoat * clearCoatNoL;
-
-      data.directColor += (color * lightColor) * (light.color.w * light.attenuation * illuminated);
-      return;
-    #else
-      vec3 color = (Fd + Fr * (energyCompensation * attenuation)) * attenuation + clearCoat;
-    #endif
-  #else
-    vec3 color = Fd + Fr * energyCompensation;
-  #endif
-
-  data.directColor += (color * lightColor) * (light.color.a * light.attenuation * NdotL * illuminated);
+  data.directColor += (color * lightColor) * (light.color.a * light.attenuation * illuminated);
 }
 `

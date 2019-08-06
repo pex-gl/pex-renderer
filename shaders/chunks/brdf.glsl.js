@@ -19,15 +19,6 @@ float D_GGX(float linearRoughness, float NoH, const vec3 h, const vec3 normalWor
   return saturateMediump(d);
 }
 
-float Filament_distribution(float linearRoughness, float NoH, const vec3 h, const vec3 normalWorld) {
-  return D_GGX(linearRoughness, NoH, h, normalWorld);
-}
-
-// TODO: used by clearCoat
-float distributionClearCoat(float linearRoughness, float NoH, const vec3 h, const vec3 normalWorld) {
-  return D_GGX(linearRoughness, NoH, h, normalWorld);
-}
-
 // Visibility
 // Heitz 2014, "Understanding the Masking-Shadowing Function in Microfacet-Based BRDFs"
 float Filament_V_SmithGGXCorrelated(float linearRoughness, float NoV, float NoL) {
@@ -64,11 +55,6 @@ float Filament_visibility(float linearRoughness, float NoV, float NoL) {
   #else
     return Filament_V_SmithGGXCorrelated_Fast(linearRoughness, NoV, NoL);
   #endif
-}
-
-// TODO: Used by clearCoat
-float visibilityClearCoat(float roughness, float linearRoughness, float LoH) {
-  return V_Kelemen(LoH);
 }
 
 // Fresnel

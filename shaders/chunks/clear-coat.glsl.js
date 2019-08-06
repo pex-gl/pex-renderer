@@ -43,12 +43,15 @@ module.exports = /* glsl */ `
   #else
     void getClearCoatNormal(inout PBRData data) {
       // geometric normal without perturbation from normalMap
+      // this normal is in world space
       data.clearCoatNormal = normalize(vec3(data.inverseViewMatrix * vec4(normalize(data.normalView), 0.0)));
     }
   #endif
 
 
   // IOR = 1.5, F0 = 0.04
+  // as material is no longer in contact with air we calculate new IOR on the 
+  // clear coat and material interface
   vec3 f0ClearCoatToSurface(const vec3 f0) {
     #if defined(TARGET_MOBILE)
       return saturate(f0 * (f0 * 0.526868 + 0.529324) - 0.0482256);
@@ -57,15 +60,15 @@ module.exports = /* glsl */ `
     #endif
   }
 
-  float clearCoatLobe(const PBRData data, const vec3 h, float NoH, float LoH, out float Fcc) {
+  float clearCoatBRDF(const PBRData data, const vec3 h, float NoH, float LoH, out float Fcc) {
     #if defined(USE_NORMAL_MAP) || defined(USE_CLEAR_COAT_NORMAL_MAP)
       float clearCoatNoH = saturate(dot(data.clearCoatNormal, h));
     #else
       float clearCoatNoH = NoH;
     #endif
-    float D = distributionClearCoat(data.clearCoatLinearRoughness, clearCoatNoH, h, data.normalWorld);
-    float V = visibilityClearCoat(uClearCoatRoughness, data.clearCoatLinearRoughness, LoH);
-    // IOR = 1.5, F0 = 0.04
+    float D = D_GGX(data.clearCoatLinearRoughness, clearCoatNoH, h, data.normalWorld);
+    float V = V_Kelemen(LoH);
+    // air-polyurethane interface has IOR = 1.5 -> F0 = 0.04
     float F = F_Schlick(0.04, 1.0, LoH) * uClearCoat;
 
     Fcc = F;
