@@ -288,9 +288,6 @@ Renderer.prototype.getMaterialProgramAndFlags = function(
 
   var flags = []
 
-  if (this._state.targetMobile) {
-    flags.push('#define TARGET_MOBILE')
-  }
   if (!geometry._attributes.aNormal) {
     flags.push('#define USE_UNLIT_WORKFLOW')
   } else {

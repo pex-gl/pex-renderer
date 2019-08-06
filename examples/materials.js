@@ -37,7 +37,6 @@ const renderer = createRenderer({
   pauseOnBlur: true,
   rgbm: State.rgbm,
   shadowQuality: 2
-  // targetMobile: true
 })
 
 const gui = createGUI(ctx)

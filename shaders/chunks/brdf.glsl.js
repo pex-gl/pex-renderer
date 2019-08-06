@@ -6,12 +6,7 @@ uniform float uReflectance;
 // Distribution
 // Walter et al. 2007, "Microfacet Models for Refraction through Rough Surfaces"
 float D_GGX(float linearRoughness, float NoH, const vec3 h, const vec3 normalWorld) {
-#if defined(TARGET_MOBILE)
-  vec3 NxH = cross(normalWorld, h);
-  float oneMinusNoHSquared = dot(NxH, NxH);
-#else
   float oneMinusNoHSquared = 1.0 - NoH * NoH;
-#endif
 
   float a = NoH * linearRoughness;
   float k = linearRoughness / (oneMinusNoHSquared + a * a);

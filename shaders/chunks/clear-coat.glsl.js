@@ -53,11 +53,7 @@ module.exports = /* glsl */ `
   // as material is no longer in contact with air we calculate new IOR on the 
   // clear coat and material interface
   vec3 f0ClearCoatToSurface(const vec3 f0) {
-    #if defined(TARGET_MOBILE)
-      return saturate(f0 * (f0 * 0.526868 + 0.529324) - 0.0482256);
-    #else
-      return saturate(f0 * (f0 * (0.941892 - 0.263008 * f0) + 0.346479) - 0.0285998);
-    #endif
+    return saturate(f0 * (f0 * (0.941892 - 0.263008 * f0) + 0.346479) - 0.0285998);
   }
 
   float clearCoatBRDF(const PBRData data, const vec3 h, float NoH, float LoH, out float Fcc) {

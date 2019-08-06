@@ -9,13 +9,11 @@ const saturate = /* glsl */ `
 #define MEDIUMP_FLT_MAX    65504.0
 #define MEDIUMP_FLT_MIN    0.00006103515625
 
-#ifdef TARGET_MOBILE
+// Could be 1e-5 on Desktop
 #define FLT_EPS            MEDIUMP_FLT_MIN
+
+// Could be NOP on desktop
 #define saturateMediump(x) min(x, MEDIUMP_FLT_MAX)
-#else
-#define FLT_EPS            1e-5
-#define saturateMediump(x) x
-#endif
 
 #define saturate(x) clamp(x, 0.0, 1.0)
 `
