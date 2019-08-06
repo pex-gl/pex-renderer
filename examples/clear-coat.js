@@ -42,7 +42,8 @@ for (var i = 0; i < 3; i++) {
       }),
       renderer.postProcessing({
         fxaa: true,
-        ssao: true
+        ssao: true,
+        ssaoStrength: 5
       })
     ],
     ['camera-' + (i + 1)]
@@ -86,13 +87,10 @@ function getMaterialMaps(maps, options) {
 
 const directionalLight = renderer.entity([
   renderer.transform({
-    rotation: quat.fromTo(
-      quat.create(),
-      [0, 0, 1],
-      vec3.normalize([-1, -1, -1])
-    )
+    rotation: quat.fromTo(quat.create(), [0, 0, 1], vec3.normalize([1, -3, -1]))
   }),
   renderer.directionalLight({
+    castShadows: true,
     color: [1, 1, 1, 1]
   })
 ])
@@ -101,12 +99,10 @@ renderer.add(directionalLight)
 const reflectionProbe = renderer.entity([renderer.reflectionProbe()])
 renderer.add(reflectionProbe)
 ;(async () => {
-  const buffer = await io.loadBinary(`${ASSETS_DIR}/Road_to_MonumentValley.hdr`)
-  // const buffer = await io.loadBinary(`${ASSETS_DIR}/Zion_7_Sunsetpeek_Ref.hdr`)
+  const buffer = await io.loadBinary(
+    `${ASSETS_DIR}/envmaps/Road_to_MonumentValley/Road_to_MonumentValley.hdr`
+  )
   const hdrImg = parseHdr(buffer)
-  for (var i = 0; i < hdrImg.data.length; i++) {
-    hdrImg.data[i] *= 1
-  }
   const panorama = ctx.texture2D({
     data: hdrImg.data,
     width: hdrImg.shape[0],
@@ -127,13 +123,16 @@ renderer.add(reflectionProbe)
       `${ASSETS_DIR}/materials/carbon-fiber/carbon-fiber-normal.jpg`
     ),
     clearCoatNormalMap: await io.loadImage(
-      `${ASSETS_DIR}/textures/Metal05/Metal05_nrm.jpg`
+      `${ASSETS_DIR}/materials/Metal05/Metal05_nrm.jpg`
+    ),
+    aoMap: await io.loadImage(
+      `${ASSETS_DIR}/models/substance-sample-scene/substance-sample-scene_ao.jpg`
     )
   })
 
   const materialGeom = parseObj(
     await loadText(
-      `${ASSETS_DIR}/substance-sample-scene/substance-sample-scene.obj`
+      `${ASSETS_DIR}/models/substance-sample-scene/substance-sample-scene.obj`
     )
   )
 
@@ -151,7 +150,13 @@ renderer.add(reflectionProbe)
         roughness: 0.25,
         metallic: 0,
         clearCoat: 1,
-        clearCoatRoughness: 0.1
+        clearCoatRoughness: 0.1,
+        castShadows: true,
+        receiveShadows: true,
+        occlusionMap: {
+          texture: materialMaps.aoMap,
+          scale: [1, 1]
+        }
       })
     ],
     ['camera-1']
@@ -168,9 +173,15 @@ renderer.add(reflectionProbe)
         metallic: 0,
         clearCoat: 1,
         clearCoatRoughness: 0.1,
+        castShadows: true,
+        receiveShadows: true,
         normalMap: {
           texture: materialMaps.normalMap,
           scale: [4, 4]
+        },
+        occlusionMap: {
+          texture: materialMaps.aoMap,
+          scale: [1, 1]
         }
       })
     ],
@@ -188,6 +199,8 @@ renderer.add(reflectionProbe)
         metallic: 0,
         clearCoat: 1,
         clearCoatRoughness: 0.1,
+        castShadows: true,
+        receiveShadows: true,
         normalMap: {
           texture: materialMaps.normalMap,
           scale: [4, 4]
@@ -196,7 +209,10 @@ renderer.add(reflectionProbe)
           texture: materialMaps.clearCoatNormalMap,
           scale: [8, 8]
         },
-        normalScale: 2
+        occlusionMap: {
+          texture: materialMaps.aoMap,
+          scale: [1, 1]
+        }
       })
     ],
     ['camera-3']
@@ -234,10 +250,9 @@ renderer.add(reflectionProbe)
     }
   )
 
-  window.dispatchEvent(new CustomEvent('pex-screenshot'))
+  ctx.frame(() => {
+    renderer.draw()
+    gui.draw()
+    window.dispatchEvent(new CustomEvent('pex-screenshot'))
+  })
 })()
-
-ctx.frame(() => {
-  renderer.draw()
-  gui.draw()
-})

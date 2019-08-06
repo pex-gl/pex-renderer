@@ -40,7 +40,7 @@ ctx.frame(() => {
 
   const skybox = skyboxEntity.getComponent('Skybox')
   skybox.set({
-    sunPosition: [1 * Math.cos(now), 0.1, 1 * Math.sin(now)]
+    sunPosition: [1 * Math.cos(now), 1, 1 * Math.sin(now)]
   })
 
   renderer.draw()

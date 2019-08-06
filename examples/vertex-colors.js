@@ -1,6 +1,9 @@
 const createRenderer = require('../')
 const createContext = require('pex-context')
 const createCube = require('primitive-cube')
+const random = require('pex-random')
+
+random.seed(0)
 
 const ctx = createContext()
 
@@ -15,39 +18,23 @@ const camera = renderer.entity([
     near: 0.1,
     far: 100
   }),
-  renderer.orbiter({ position: [0, 0, 3] })
+  renderer.orbiter({ position: [1, 1, 1] })
 ])
 renderer.add(camera)
 
 const geometry = createCube()
-geometry.vertexColors = geometry.uvs.map((uv) => [...uv, 0, 0.5])
-
-const skyboxEntity = renderer.entity([
-  renderer.skybox({
-    sunPosition: [1, 1, 1]
-  })
+geometry.vertexColors = geometry.uvs.map(() => [
+  random.float(),
+  random.float(),
+  random.float(),
+  0.5
 ])
-renderer.add(skyboxEntity)
-
-const reflectionProbeEntity = renderer.entity([renderer.reflectionProbe()])
-renderer.add(reflectionProbeEntity)
 
 const cubeEntity = renderer.entity([
   renderer.geometry(geometry),
   renderer.material({
     baseColor: [1, 1, 1, 0.5],
-    // or
-    // useSpecularGlossinessWorkflow: true,
-    // diffuse: [1, 1, 1, 0.5],
-    // glossiness: 0,
-    // or
-    // unlit: true,
-    depthWrite: false,
-    blend: true,
-    blendSrcRGBFactor: ctx.BlendFactor.SrcAlpha,
-    blendSrcAlphaFactor: ctx.BlendFactor.One,
-    blendDstRGBFactor: ctx.BlendFactor.OneMinusSrcAlpha,
-    blendDstAlphaFactor: ctx.BlendFactor.One
+    unlit: true
   })
 ])
 renderer.add(cubeEntity)
