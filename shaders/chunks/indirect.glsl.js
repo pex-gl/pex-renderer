@@ -17,13 +17,13 @@ module.exports = /* glsl */ `
     return mix(a, b, lod - upLod);
   }
 
-  vec3 EnvBRDFApprox( vec3 SpecularColor, float Roughness, float NoV ) {
+  vec3 EnvBRDFApprox( vec3 specularColor, float roughness, float NoV ) {
     const vec4 c0 = vec4(-1.0, -0.0275, -0.572, 0.022 );
     const vec4 c1 = vec4( 1.0, 0.0425, 1.04, -0.04 );
-    vec4 r = Roughness * c0 + c1;
+    vec4 r = roughness * c0 + c1;
     float a004 = min( r.x * r.x, exp2( -9.28 * NoV ) ) * r.x + r.y;
     vec2 AB = vec2( -1.04, 1.04 ) * a004 + r.zw;
-    return SpecularColor * AB.x + AB.y;
+    return specularColor * AB.x + AB.y;
   }
 
   #if defined(USE_CLEAR_COAT)
@@ -52,7 +52,7 @@ module.exports = /* glsl */ `
     vec3 diffuseIrradiance = getIrradiance(data.normalWorld, uReflectionMap, uReflectionMapEncoding);
     vec3 Fd = data.diffuseColor * diffuseIrradiance * ao;
 
-    vec3 specularReflectance = EnvBRDFApprox(data.specularColor, data.roughness, data.NdotV);
+    vec3 specularReflectance = EnvBRDFApprox(data.f0, data.roughness, data.NdotV);
     vec3 prefilteredRadiance = getPrefilteredReflection(data.reflectionWorld, data.roughness);    
 
     vec3 Fr = specularReflectance * prefilteredRadiance * ao;

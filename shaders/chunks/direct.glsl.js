@@ -37,8 +37,7 @@ void getSurfaceShading(inout PBRData data, Light light, float illuminated) {
   float LdotH = saturate(dot(L, H));
   float HdotV = max(0.0, dot(H, V));
 
-  // TODO: decide on F0 vs specularColor
-  vec3 F = SpecularReflection(data.specularColor, HdotV);
+  vec3 F = SpecularReflection(data.f0, HdotV);
   
   float D = MicrofacetDistribution(data.linearRoughness, NdotH);
   float G = GeometricOcclusion(data.linearRoughness, NdotL, NdotV);

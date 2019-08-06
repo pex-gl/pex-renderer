@@ -62,13 +62,12 @@ struct PBRData {
   float roughness; // roughness value, as authored by the model creator (input to shader)
   float metallic; // metallic value at the surface
   float linearRoughness; // roughness mapped to a more linear change in the roughness (proposed by [2])
-  vec3 f0; // Reflectance at normal incidence
+  vec3 f0; // Reflectance at normal incidence, specular color
   float clearCoatLinearRoughness;
   vec3 clearCoatNormal;
   vec3 reflectionWorld;
   vec3 directColor;
   vec3 diffuseColor; // color contribution from diffuse lighting
-  vec3 specularColor; // color contribution from specular lighting
   vec3 indirectDiffuse; // contribution from IBL light probe and Ambient Light
   vec3 indirectSpecular; // contribution from IBL light probe and Area Light
 };
@@ -155,7 +154,6 @@ void main() {
       // Compute F0 for both dielectric and metallic materials
       data.f0 = 0.16 * uReflectance * uReflectance * (1.0 - data.metallic) + data.baseColor.rgb * data.metallic;
       data.diffuseColor = data.baseColor * (1.0 - data.metallic);
-      data.specularColor = mix(data.f0, data.baseColor, data.metallic);
     #endif
     #ifdef USE_SPECULAR_GLOSSINESS_WORKFLOW
       getBaseColorAndMetallicRoughnessFromSpecularGlossiness(data);
