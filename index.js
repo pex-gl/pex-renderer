@@ -994,7 +994,12 @@ Renderer.prototype.drawMeshes = function(
       cachedUniforms.uClearCoatRoughness = material.clearCoatRoughness || 0.04
     }
     if (material.clearCoatNormalMap) {
-      cachedUniforms.uClearCoatNormalMap = material.clearCoatNormalMap
+      cachedUniforms.uClearCoatNormalMap =
+        material.clearCoatNormalMap.texture || material.clearCoatNormalMap
+      if (material.clearCoatNormalMap.texCoordTransformMatrix) {
+        cachedUniforms.uClearCoatNormalMapTexCoordTransform =
+          material.clearCoatNormalMap.texCoordTransformMatrix
+      }
       cachedUniforms.uClearCoatNormalMapScale = material.clearCoatNormalMapScale
     }
 

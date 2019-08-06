@@ -12,6 +12,7 @@ const MATERIAL_MAPS = [
   'roughnessMap',
   'metallicRoughnessMap',
   'normalMap',
+  'clearCoatNormalMap',
   'occlusionMap',
   'diffuseMap',
   'specularGlossinessMap'
@@ -65,7 +66,7 @@ function Material(opts) {
   this.clearCoat = null
   this.clearCoatRoughness = null
   this.clearCoatNormalMap = null
-  this.clearCoatNormalMapScale = 1
+  this.clearCoatNormalMapScale = 1 //TODO: what's clearCoatNormalMapScale
 
   this.alphaMap = null
   this.alphaTest = undefined
