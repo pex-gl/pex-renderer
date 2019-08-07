@@ -238,9 +238,9 @@ cells.forEach((cell, cellIndex) => {
 
 // Sky
 ;(async () => {
-  const buffer = await io.loadBinary(`${ASSETS_DIR}/Ditch-River_2k.hdr`)
-  //const buffer = await io.loadBinary(`${ASSETS_DIR}/garage.hdr`)
-  // const buffer = await io.loadBinary(`${ASSETS_DIR}/Mono_Lake_B.hdr`)
+  const buffer = await io.loadBinary(`${ASSETS_DIR}/envmaps/Ditch-River_2k.hdr`)
+  //const buffer = await io.loadBinary(`${ASSETS_DIR}/envmaps/garage.hdr`)
+  // const buffer = await io.loadBinary(`${ASSETS_DIR}/envmaps/Mono_Lake_B.hdr`)
   const hdrImg = parseHdr(buffer)
   for (var i = 0; i < hdrImg.data.length; i += 4) {
     hdrImg.data[i + 0] *= 0.8
