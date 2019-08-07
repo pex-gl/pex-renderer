@@ -55,7 +55,7 @@ let materials = [
     baseColor: [1.0, 1.0, 1.0, 1.0],
     metallic: 0,
     roughness: 1,
-    baseColorMap: ASSETS_DIR + '/textures/uv-wide.png'
+    baseColorMap: ASSETS_DIR + '/textures/uv-wide/uv-wide.png'
   },
   { baseColor: [0.8, 0.2, 0.2, 1.0], metallic: 0, roughness: 0 / 6 },
   { baseColor: [0.8, 0.2, 0.2, 1.0], metallic: 0, roughness: 1 / 6 },
@@ -68,7 +68,7 @@ let materials = [
     baseColor: [1.0, 1.0, 0.9, 1.0],
     metallic: 1,
     roughness: 1,
-    roughnessMap: ASSETS_DIR + '/textures/roughness-test.png'
+    roughnessMap: ASSETS_DIR + '/textures/roughness-test/roughness-test.png'
   },
   { baseColor: [1.0, 1.0, 1.0, 1.0], metallic: 1, roughness: 0 / 6 },
   { baseColor: [1.0, 1.0, 1.0, 1.0], metallic: 1, roughness: 1 / 6 },
@@ -131,8 +131,8 @@ let materials = [
     baseColor: [1, 1, 1, 1],
     alphaTest: 0.5,
     cullFace: false,
-    baseColorMap: ASSETS_DIR + '/textures/alpha-test-mask.png',
-    alphaMap: ASSETS_DIR + '/textures/checkerboard.png'
+    baseColorMap: ASSETS_DIR + '/textures/alpha-test-mask/alpha-test-mask.png',
+    alphaMap: ASSETS_DIR + '/textures/checkerboard/checkerboard.png'
   }
 ]
 
@@ -259,7 +259,7 @@ cells.forEach((cell, cellIndex) => {
 
 // Sky
 ;(async () => {
-  const buffer = await io.loadBinary(`${ASSETS_DIR}/envmaps/garage.hdr`)
+  const buffer = await io.loadBinary(`${ASSETS_DIR}/envmaps/garage/garage.hdr`)
   const hdrImg = parseHdr(buffer)
   const panorama = ctx.texture2D({
     data: hdrImg.data,

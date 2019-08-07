@@ -238,7 +238,7 @@ cells.forEach((cell, cellIndex) => {
 
 // Sky
 ;(async () => {
-  const buffer = await io.loadBinary(`${ASSETS_DIR}/envmaps/Ditch-River_2k.hdr`)
+  const buffer = await io.loadBinary(`${ASSETS_DIR}/envmaps/Ditch-River_2k/Ditch-River_2k.hdr`)
   //const buffer = await io.loadBinary(`${ASSETS_DIR}/envmaps/garage.hdr`)
   // const buffer = await io.loadBinary(`${ASSETS_DIR}/envmaps/Mono_Lake_B.hdr`)
   const hdrImg = parseHdr(buffer)

@@ -15,7 +15,7 @@ const normals = require('angle-normals')
 const centerAndNormalize = require('geom-center-and-normalize')
 const parseHdr = require('parse-hdr')
 const isBrowser = require('is-browser')
-const dragon = require('./assets/models/stanford-dragon')
+const dragon = require('./assets/models/stanford-dragon/stanford-dragon')
 
 const ASSETS_DIR = isBrowser ? 'assets' : path.join(__dirname, 'assets')
 
@@ -258,7 +258,7 @@ const areaLightEntity = renderer.entity([
 renderer.add(areaLightEntity)
 ;(async () => {
   // Sky
-  const buffer = await io.loadBinary(`${ASSETS_DIR}/envmaps/Mono_Lake_B.hdr`)
+  const buffer = await io.loadBinary(`${ASSETS_DIR}/envmaps/Mono_Lake_B/Mono_Lake_B.hdr`)
   const hdrImg = parseHdr(buffer)
   const panorama = ctx.texture2D({
     data: hdrImg.data,

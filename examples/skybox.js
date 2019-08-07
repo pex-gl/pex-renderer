@@ -58,7 +58,7 @@ renderer.add(skybox)
 const reflectionProbe = renderer.entity([renderer.reflectionProbe()])
 renderer.add(reflectionProbe)
 ;(async () => {
-  const buffer = await io.loadBinary(`${ASSETS_DIR}/envmaps/Mono_Lake_B.hdr`)
+  const buffer = await io.loadBinary(`${ASSETS_DIR}/envmaps/Mono_Lake_B/Mono_Lake_B.hdr`)
   const hdrImg = parseHdr(buffer)
   const panorama = ctx.texture2D({
     data: hdrImg.data,
