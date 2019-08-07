@@ -55,12 +55,23 @@ vec3 SpecularReflection(vec3 specularColor, float HdotV) {
   return specularColor + (1.0 - specularColor) * pow(1.0 - cosTheta, 5.0);
 }
 
-// Smith G
-float GeometricOcclusion(float linearRoughness, float NdotL, float NdotV) {
-  float r = linearRoughness;
+// Smith Joint GGX
+// Sometimes called Smith GGX Correlated 
+// Note: Vis = G / (4 * NdotL * NdotV)
+// see Eric Heitz. 2014. Understanding the Masking-Shadowing Function in Microfacet-Based BRDFs. Journal of Computer Graphics Techniques, 3
+// see Real-Time Rendering. Page 331 to 336.
+// see https://google.github.io/filament/Filament.md.html#materialsystem/specularbrdf/geometricshadowing(specularg)
+float VisibilityOcclusion(float linearRoughness, float NdotL, float NdotV) {
+  float linearRoughnessSq = linearRoughness * linearRoughness;
 
-  float attenuationL = 2.0 * NdotL / (NdotL + sqrt(r * r + (1.0 - r * r) * (NdotL * NdotL)));
-  float attenuationV = 2.0 * NdotV / (NdotV + sqrt(r * r + (1.0 - r * r) * (NdotV * NdotV)));
-  return attenuationL * attenuationV;
+  float GGXV = NdotL * sqrt(NdotV * NdotV * (1.0 - linearRoughnessSq) + linearRoughnessSq);
+  float GGXL = NdotV * sqrt(NdotL * NdotL * (1.0 - linearRoughnessSq) + linearRoughnessSq);
+
+  float GGX = GGXV + GGXL;
+  if (GGX > 0.0) {
+      return 0.5 / GGX;
+  }
+  return 0.0;
 }
+
 `

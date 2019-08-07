@@ -39,12 +39,8 @@ void getSurfaceShading(inout PBRData data, Light light, float illuminated) {
 
   vec3 F = SpecularReflection(data.f0, HdotV);
   
-  float D = MicrofacetDistribution(data.linearRoughness, NdotH);
-  float G = GeometricOcclusion(data.linearRoughness, NdotL, NdotV);
-
-  //TODO: which bug is this epsilon fixing?
-  float denominator = 4.0 * NdotV * NdotL + 0.001;
-  float Vis = G / denominator;
+  float D = MicrofacetDistribution(data.linearRoughness, NdotH);  
+  float Vis = VisibilityOcclusion(data.linearRoughness, NdotL, NdotV);
 
   //TODO: switch to linear colors
   vec3 lightColor = decode(light.color, 3).rgb;
