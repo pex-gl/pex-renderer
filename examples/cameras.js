@@ -53,7 +53,8 @@ for (let i = 0; i < cubeCount; i++) {
     }),
     renderer.geometry(geometry),
     renderer.material({
-      baseColor: [0.5, 0, 0, 1]
+      baseColor: [0, 0.5, 1, 1],
+      metallic: 0
     })
   ])
   renderer.add(cubeEntity)

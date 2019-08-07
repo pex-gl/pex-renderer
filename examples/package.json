@@ -19,6 +19,7 @@
     "geom-center-and-normalize": "^1.0.2",
     "geom-edges": "^1.2.0",
     "geom-normals": "^1.0.1",
+    "geom-parse-obj": "^1.0.0",
     "grid-cells": "^2.0.0",
     "is-browser": "^2.1.0",
     "is-power-of-two": "^1.0.0",

@@ -6,8 +6,9 @@ const ctx = createContext()
 const renderer = createRenderer(ctx)
 
 const cameraEntity = renderer.entity([
-  renderer.transform({ position: [0, 0, 5] }),
+  renderer.transform({ position: [0, 0, 3] }),
   renderer.camera({
+    fov: Math.PI / 2,
     aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight
   })
 ])
@@ -18,14 +19,15 @@ const sphereEntity = renderer.entity([
   renderer.geometry(createSphere()),
   renderer.material({
     baseColor: [1, 0, 0, 1],
-    metallic: 1
+    metallic: 0,
+    roughness: 0.5
   })
 ])
 renderer.add(sphereEntity)
 
 const skyboxEntity = renderer.entity([
   renderer.skybox({
-    sunPosition: [1, 0.1, 1]
+    sunPosition: [1, 1, 1]
   })
 ])
 renderer.add(skyboxEntity)
@@ -38,7 +40,7 @@ ctx.frame(() => {
 
   const skybox = skyboxEntity.getComponent('Skybox')
   skybox.set({
-    sunPosition: [1 * Math.cos(now), 0.1, 1 * Math.sin(now)]
+    sunPosition: [1 * Math.cos(now), 1, 1 * Math.sin(now)]
   })
 
   renderer.draw()

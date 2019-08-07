@@ -35,39 +35,41 @@ void getSurfaceShading(inout PBRData data, Light light, float illuminated) {
 
   float NdotH = saturate(dot(N, H));
   float LdotH = saturate(dot(L, H));
+  float HdotV = max(0.0, dot(H, V));
 
-  float D = distribution(data.linearRoughness, NdotH, H, data.normalWorld);
-  float G = visibility(data.linearRoughness, NdotV, NdotL);
-  vec3 F = fresnel(data.f0, LdotH);
+  vec3 F = SpecularReflection(data.f0, HdotV);
+  
+  float D = MicrofacetDistribution(data.linearRoughness, NdotH);  
+  float Vis = VisibilityOcclusion(data.linearRoughness, NdotL, NdotV);
 
+  //TODO: switch to linear colors
   vec3 lightColor = decode(light.color, 3).rgb;
 
   vec3 Fd = DiffuseLambert() * data.diffuseColor;
-  // vec3 Fd = DiffuseBurley(data.linearRoughness, NdotV, NdotL, LdotH) * data.diffuseColor;
-  vec3 Fr = (D * G) * F;
-  // TODO
-  float energyCompensation = 1.0;
+  vec3 Fr = F * Vis * D;
 
+  //TODO: energy compensation
+  float energyCompensation = 1.0;
+  
   #ifdef USE_CLEAR_COAT
     float Fcc;
-    float clearCoat = clearCoatLobe(data, H, NdotH, LdotH, Fcc);
+    float clearCoat = clearCoatBRDF(data, H, NdotH, LdotH, Fcc);
     float attenuation = 1.0 - Fcc;
+    
+    vec3 color = (Fd + Fr * (energyCompensation * attenuation)) * attenuation * NdotL;
 
+    // direct light still uses NdotL but clear coat needs separate dot product when using normal map
+    // if only normal map is present not clear coat normal map, we will get smooth coating on top of bumpy surface
     #if defined(USE_NORMAL_MAP) || defined(USE_CLEAR_COAT_NORMAL_MAP)
-      vec3 color = (Fd + Fr * (energyCompensation * attenuation)) * attenuation * NdotL;
-
       float clearCoatNoL = saturate(dot(data.clearCoatNormal, light.l));
       color += clearCoat * clearCoatNoL;
-
-      data.directColor += (color * lightColor) * (light.color.w * light.attenuation * illuminated);
-      return;
     #else
-      vec3 color = (Fd + Fr * (energyCompensation * attenuation)) * attenuation + clearCoat;
-    #endif
+      color += clearCoat * NdotL;      
+    #endif    
   #else
-    vec3 color = Fd + Fr * energyCompensation;
-  #endif
+    vec3 color = (Fd + Fr * energyCompensation) * NdotL;    
+  #endif  
 
-  data.directColor += (color * lightColor) * (light.color.a * light.attenuation * NdotL * illuminated);
+  data.directColor += (color * lightColor) * (light.color.a * light.attenuation * illuminated);
 }
 `

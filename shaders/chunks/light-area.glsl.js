@@ -525,7 +525,7 @@ vec3 evalAreaLight(AreaLight light, vec3 posWorld, vec3 normalWorld, vec3 diffus
 
 
 void EvaluateAreaLight(inout PBRData data, AreaLight light, float ao) {
-  data.indirectSpecular += ao * evalAreaLight(light, data.positionWorld, data.normalWorld, data.baseColor, data.specularColor, data.roughness);
+  data.indirectSpecular += ao * evalAreaLight(light, data.positionWorld, data.normalWorld, data.baseColor, data.f0, data.roughness);
 }
 #endif
 `

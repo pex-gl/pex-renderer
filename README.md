@@ -130,15 +130,14 @@ const renderer = createRenderer({
 - renderer.paused
 - renderer.profiler
 
-| property        | info                                                                   | type                | default |
-| --------------- | ---------------------------------------------------------------------- | ------------------- | ------- |
-| `ctx`           | rendering context                                                      | pex-context.Context | null    |
-| `shadowQuality` | shadow smoothness                                                      | Integer 0-4         | 2       |
-| `rgbm`          | use RGBM color packing for rendering pipeline                          | Boolean             | false   |
-| `profile`       | enable profiling                                                       | Boolean             | false   |
-| `pauseOnBlur`   | stop rendering when window looses focus                                | Boolean             | false   |
-| `targetMobile`  | use some approximation in the shader to enhance performances on mobile | Boolean             | false   |
-| `entities`\*    | list of entities in the scene                                          | Array of Entity     | []      |
+| property        | info                                          | type                | default |
+| --------------- | --------------------------------------------- | ------------------- | ------- |
+| `ctx`           | rendering context                             | pex-context.Context | null    |
+| `shadowQuality` | shadow smoothness                             | Integer 0-4         | 2       |
+| `rgbm`          | use RGBM color packing for rendering pipeline | Boolean             | false   |
+| `profile`       | enable profiling                              | Boolean             | false   |
+| `pauseOnBlur`   | stop rendering when window looses focus       | Boolean             | false   |
+| `entities`\*    | list of entities in the scene                 | Array of Entity     | []      |
 
 &nbsp;_ required
 &nbsp;_ read only

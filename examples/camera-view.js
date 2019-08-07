@@ -93,7 +93,7 @@ renderer.add(axesEntity)
 const cubeEntity = renderer.entity([
   renderer.geometry(createCube()),
   renderer.material({
-    baseColor: [0.5, 0, 0, 1]
+    baseColor: [1, 0, 0, 1]
   })
 ])
 renderer.add(cubeEntity)
