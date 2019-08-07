@@ -288,9 +288,6 @@ Renderer.prototype.getMaterialProgramAndFlags = function(
 
   var flags = []
 
-  if (this._state.targetMobile) {
-    flags.push('#define TARGET_MOBILE')
-  }
   if (!geometry._attributes.aNormal) {
     flags.push('#define USE_UNLIT_WORKFLOW')
   } else {
@@ -994,7 +991,12 @@ Renderer.prototype.drawMeshes = function(
       cachedUniforms.uClearCoatRoughness = material.clearCoatRoughness || 0.04
     }
     if (material.clearCoatNormalMap) {
-      cachedUniforms.uClearCoatNormalMap = material.clearCoatNormalMap
+      cachedUniforms.uClearCoatNormalMap =
+        material.clearCoatNormalMap.texture || material.clearCoatNormalMap
+      if (material.clearCoatNormalMap.texCoordTransformMatrix) {
+        cachedUniforms.uClearCoatNormalMapTexCoordTransform =
+          material.clearCoatNormalMap.texCoordTransformMatrix
+      }
       cachedUniforms.uClearCoatNormalMapScale = material.clearCoatNormalMapScale
     }
 

@@ -48,15 +48,15 @@ const cameraEntity = renderer.entity([
 ])
 renderer.add(cameraEntity)
 
-const sphereEntity = renderer.entity([
+const cubeEntity = renderer.entity([
   renderer.transform(),
   renderer.geometry(createCube()),
   renderer.material({
-    baseColor: [1, 0, 0, 1],
-    metallic: 1
+    baseColor: [0.75, 0, 0, 1],
+    metallic: 0
   })
 ])
-renderer.add(sphereEntity)
+renderer.add(cubeEntity)
 
 const skyboxEntity = renderer.entity([
   renderer.skybox({

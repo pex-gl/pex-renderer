@@ -1,6 +1,6 @@
 const createRenderer = require('../')
 const createContext = require('pex-context')
-const vec3 = require('pex-math/vec3')
+const { quat, vec3 } = require('pex-math')
 const createCube = require('primitive-cube')
 
 const ctx = createContext()
@@ -40,6 +40,22 @@ renderer.add(skyboxEntity)
 const reflectionProbeEntity = renderer.entity([renderer.reflectionProbe()])
 renderer.add(reflectionProbeEntity)
 
+const directionalLight = renderer.entity([
+  renderer.transform({
+    rotation: quat.fromTo(
+      quat.create(),
+      [0, 0, 1],
+      vec3.normalize([-1, -2, -3])
+    )
+  }),
+  renderer.directionalLight({
+    castShadows: true,
+    color: [1, 1, 1, 1],
+    intensity: 2
+  })
+])
+renderer.add(directionalLight)
+
 const groundEntity = renderer.entity([
   renderer.transform({
     position: [0, -0.55, 0]
@@ -47,7 +63,9 @@ const groundEntity = renderer.entity([
   renderer.geometry(createCube(10, 0.1, 10)),
   renderer.material({
     receiveShadows: true,
-    castShadows: true
+    castShadows: true,
+    metallic: 0,
+    roughness: 1
   })
 ])
 renderer.add(groundEntity)
@@ -56,6 +74,8 @@ const cubeEntity = renderer.entity([
   renderer.geometry(createCube(1, 1, 1)),
   renderer.material({
     baseColor: [1, 1, 1, 1],
+    metallic: 0,
+    roughness: 1,
     receiveShadows: true,
     castShadows: true
   })

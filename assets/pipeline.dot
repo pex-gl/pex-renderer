@@ -1,0 +1,61 @@
+digraph {
+  rankdir=LR;
+
+  subgraph cluster_Prepass {
+    label="Prepass";
+    DepthAndNormal [shape="record"]
+    PrepassOut [shape="record" label="<depth>depth|<normal>normal"]
+    DepthAndNormal -> PrepassOut
+  }
+  subgraph cluster_SSAO {
+    label="SSAO";
+    SAO [shape="record"]
+    SSAOOut [shape="record" label="<occlusion> occlusion"]
+    SAO -> SSAOOut
+    PrepassOut:depth -> SAO
+    PrepassOut:normal -> SAO
+  }
+
+  subgraph cluster_DrawFrame {
+    label="DrawFrame";
+    DrawFrame [shape=record]
+    drawFrameOut [shape=record label="<color> color|<emissive> emissive"]
+    PrepassOut:depth -> DrawFrame
+    SSAOOut:occlusion -> DrawFrame
+    DrawFrame -> drawFrameOut
+  }
+
+  subgraph cluster_Bloom {
+    label="Bloom";
+    Threshold [shape=record]
+    BloomH [shape=record]
+    BloomV [shape=record]
+    drawFrameOut:color -> Threshold
+    drawFrameOut:emissive -> Threshold
+    Threshold -> BloomH;
+    BloomH -> BloomV;
+    BloomV -> BloomH;
+    BloomV -> bloom
+    bloom [shape=record label="bloom color"]
+  }
+
+  subgraph cluster_DOF {
+    label="DOF";
+    DOFBlurH [shape=record]
+    DOFBlurV [shape=record]
+    dofColor [shape=record label="blurred color"]
+    drawFrameOut:color -> DOFBlurH
+    PrepassOut:depth -> DOFBlurH
+    DOFBlurH -> DOFBlurV;
+    DOFBlurV -> DOFBlurH;
+    DOFBlurV -> dofColor
+  }
+
+  subgraph cluster_Postprocess {
+    label="Postprocess";
+    Blit [shape=record label="FXAA + Bloom + Tonemap + Gamma"]
+    dofColor -> Blit
+    bloom -> Blit
+    drawFrameOut:emissive -> Blit
+  }
+}

@@ -77,7 +77,6 @@ module.exports = /* glsl */ `
     vec4 specularGlossiness = getSpecularGlossiness(data);
 
     vec3 specular = specularGlossiness.rgb;
-    data.specularColor = specular;
     data.f0 = specular;
 
     float glossiness = specularGlossiness.a;
@@ -100,7 +99,7 @@ module.exports = /* glsl */ `
     #if defined(USE_VERTEX_COLORS) || defined(USE_INSTANCED_COLOR)
       vec3 tint = decode(vColor, SRGB).rgb;
       data.baseColor *= tint;
-      data.specularColor *= tint;
+      data.f0 *= tint;
       data.opacity *= vColor.a;
     #endif
   }

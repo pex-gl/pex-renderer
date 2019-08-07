@@ -1,0 +1,18 @@
+digraph {
+  rankdir=LR;
+
+  subgraph cluster_Prepass {
+    label="Prepass";
+    DepthAndNormal [shape="record"]
+    PrepassOut [shape="record" label="<depth>depth|<normal>normal"]
+    DepthAndNormal -> PrepassOut
+  }
+
+  subgraph cluster_DrawFrame {
+    label="DrawFrame";
+    DrawFrame [shape=record]
+    drawFrameOut [shape=record label="{color|Tonemap + Gamma}"]
+    PrepassOut:depth -> DrawFrame
+    DrawFrame -> drawFrameOut
+  }
+}
