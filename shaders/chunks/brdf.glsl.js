@@ -33,9 +33,8 @@ float DiffuseLambert() {
 
 // GGX, Trowbridge-Reitz
 // Same as glTF2.0 PBR Spec
-// TODO: alphaRoughness = linearRoughness?
-float MicrofacetDistribution(float alphaRoughness, float NdotH) {
-  float a2 = alphaRoughness * alphaRoughness;
+float MicrofacetDistribution(float linearRoughness, float NdotH) {
+  float a2 = linearRoughness * linearRoughness;
   float NdotH2 = NdotH * NdotH;
 
   float nom = a2;
@@ -56,10 +55,9 @@ vec3 SpecularReflection(vec3 specularColor, float HdotV) {
   return specularColor + (1.0 - specularColor) * pow(1.0 - cosTheta, 5.0);
 }
 
-// TODO: rename alpha roughness to linear roughness
 // Smith G
-float GeometricOcclusion(float alphaRoughness, float NdotL, float NdotV) {
-  float r = alphaRoughness;
+float GeometricOcclusion(float linearRoughness, float NdotL, float NdotV) {
+  float r = linearRoughness;
 
   float attenuationL = 2.0 * NdotL / (NdotL + sqrt(r * r + (1.0 - r * r) * (NdotL * NdotL)));
   float attenuationV = 2.0 * NdotV / (NdotV + sqrt(r * r + (1.0 - r * r) * (NdotV * NdotV)));
