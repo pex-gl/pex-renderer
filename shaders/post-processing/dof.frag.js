@@ -9,8 +9,8 @@ uniform sampler2D depthMap; //Linear depth, where 1.0 == far plane
 uniform vec2 uPixelSize; //The size of a pixel: vec2(1.0/width, 1.0/height) 
 uniform float uFar; // Far plane  
 uniform float uNear;
-uniform float uFocusPoint;
-uniform float uFocusScale;
+uniform float uFocusDistance;
+uniform float uAperture;
 
 const float GOLDEN_ANGLE = 2.39996323; 
 const float MAX_BLUR_SIZE = 20.0; 
@@ -52,7 +52,7 @@ vec3 depthOfField(vec2 texCoord, float focusPoint, float focusScale)
 }
 
 void main () {
-    vec3 color = depthOfField(vTexCoord0,uFocusPoint,uFocusScale);
+    vec3 color = depthOfField(vTexCoord0,uFocusDistance,uAperture);
     gl_FragColor = vec4(color,1);
 }
 

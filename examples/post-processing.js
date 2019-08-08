@@ -99,8 +99,8 @@ const cameraEntity = renderer.add(
       ssao: true,
       fxaa: false,
       dof: true,
-      dofDepth: 18,
-      dofScale: 15
+      dofFocusDistance: 18,
+      dofAperture: 15
     }),
     renderer.camera({
       fov: Math.PI / 3,
@@ -456,8 +456,8 @@ renderer.add(areaLightEntity)
     max: 20
   })
   gui.addParam('DOF', postProcessingCmp, 'dof')
-  gui.addParam('DOF Depth', postProcessingCmp, 'dofDepth', { min: 0, max: 20 })
-  gui.addParam('DOF Scale', postProcessingCmp, 'dofScale', { min: 0, max: 100 })
+  gui.addParam('DOF Focus Distance', postProcessingCmp, 'dofFocusDistance', { min: 0, max: 20 })
+  gui.addParam('DOF Aperture', postProcessingCmp, 'dofAperture', { min: 0, max: 100 })
 
   gui.addParam('FXAA', postProcessingCmp, 'fxaa')
 

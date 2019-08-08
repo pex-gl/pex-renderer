@@ -15,8 +15,8 @@ const postProcessingCmp = renderer.postProcessing({
   ssaoIntensity: 0.5,
   bilateralBlur: true,
   dof: true,
-  dofDepth: 4,
-  dofScale: 2,
+  dofFocusDistance: 4,
+  dofAperture: 2,
   fxaa: true
 })
 
@@ -96,7 +96,7 @@ window.addEventListener('resize', () => {
 
 ctx.frame(() => {
   cameraEntity.getComponent('Camera').set({
-    dofDepth: vec3.length(cameraEntity.transform.position)
+    dofFocusDistance: vec3.length(cameraEntity.transform.position)
   })
 
   renderer.draw()
