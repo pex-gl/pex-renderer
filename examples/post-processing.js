@@ -366,6 +366,7 @@ renderer.add(areaLightEntity)
   gui.addParam('Enabled', skyboxCmp, 'enabled', {}, (value) => {
     skyboxCmp.set({ enabled: value })
   })
+  gui.addParam('Background Blur', skyboxCmp, 'backgroundBlur')
   gui.addTexture2D('Env map', skyboxCmp.texture)
   gui.addHeader('Reflection probes')
   gui.addParam('Enabled', reflectionProbeCmp, 'enabled', {}, (value) => {
