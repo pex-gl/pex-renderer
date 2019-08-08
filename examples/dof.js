@@ -11,7 +11,7 @@ const renderer = createRenderer(ctx)
 
 const viewportWidth = window.innerWidth * 0.34
 const viewportHeight = window.innerHeight
-const aspect = (ctx.gl.drawingBufferWidth * 0.5) / ctx.gl.drawingBufferHeight
+const aspect = (ctx.gl.drawingBufferWidth * 0.333333) / ctx.gl.drawingBufferHeight
 
 const cubeCount = 100
 const offset = 2
@@ -156,51 +156,35 @@ gui.addParam(
   }
 )
 
-// let C1p4Cam = perspectiveCamera1p4.getComponent('Camera')
-// let C18Cam = perspectiveCamera18.getComponent('Camera')
-// let C32Cam = perspectiveCamera32.getComponent('Camera')
-
-// gui.addHeader('Resolution Scale')
-// gui.addButton('0.5', () => {
-//   C1p4Cam.set({viewport: [0, 0, viewportWidth/2, viewportHeight/2]})
-//   C18Cam.set({viewport: [viewportWidth, 0, viewportWidth/2, viewportHeight/2]})
-//   C32Cam.set({viewport: [ viewportWidth + viewportWidth - 1, 0, viewportWidth/2, viewportHeight/2] })
-// })
-// gui.addButton('1', () => {
-//   C1p4Cam.set({viewport: [0, 0, viewportWidth, viewportHeight]})
-//   C18Cam.set({viewport: [viewportWidth, 0, viewportWidth, viewportHeight]})
-//   C32Cam.set({viewport: [ viewportWidth + viewportWidth - 1, 0, viewportWidth, viewportHeight] })
-// })
-// gui.addButton('2', () => {
-//   C1p4Cam.set({viewport: [0, 0, viewportWidth*2, viewportHeight*2]})
-//   C18Cam.set({viewport: [viewportWidth, 0, viewportWidth*2, viewportHeight*2]})
-//   C32Cam.set({viewport: [ viewportWidth + viewportWidth - 1, 0, viewportWidth*2, viewportHeight*2] })
-// })
-
 
 gui.addHeader('Resolution Scale')
 gui.addButton('0.5', () => {
-  ctx.gl.canvas.style.width = window.innerWidth/2
-  ctx.gl.canvas.style.height = window.innerHeight/2
-  ctx.gl.canvas.style.transform = "scale(2,2)"
-  ctx.gl.canvas.style.transformOrigin = "top left"
-})
-gui.addButton('1', () => {
+  ctx.gl.canvas.width = window.innerWidth/2
+  ctx.gl.canvas.height = window.innerHeight/2
   ctx.gl.canvas.style.width = window.innerWidth
   ctx.gl.canvas.style.height = window.innerHeight
-  ctx.gl.canvas.style.transform = "scale(1,1)"
-  ctx.gl.canvas.style.transformOrigin = "top left"
+  ctx.gl.canvas.style.position = "absolute";
+  ctx.gl.canvas.style.transform = "translate3d(0,0,0)";
+
+})
+gui.addButton('1', () => {
+  ctx.gl.canvas.width = window.innerWidth
+  ctx.gl.canvas.height = window.innerHeight
+  ctx.gl.canvas.style.width = window.innerWidth
+  ctx.gl.canvas.style.height = window.innerHeight
 })
 gui.addButton('2', () => {
-  ctx.gl.canvas.style.width = window.innerWidth*2
-  ctx.gl.canvas.style.height = window.innerHeight*2
-  ctx.gl.canvas.style.transform = "scale(0.5,0.5)"
-  ctx.gl.canvas.style.transformOrigin = "top left"
+  // ctx.gl.canvas.width = window.innerWidth*2
+  // ctx.gl.canvas.height = window.innerHeight*2
+  // ctx.gl.canvas.style.width = window.innerWidth*2
+  // ctx.gl.canvas.style.height = window.innerHeight*2
 })
 
 ctx.frame(() => {
   renderer.draw()
   gui.draw()
+
+  console.log(ctx.gl.drawingBufferWidth)
   window.dispatchEvent(new CustomEvent('pex-screenshot'))
 })
 
