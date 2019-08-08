@@ -19,14 +19,12 @@ const float RAD_SCALE = 0.5; // Smaller = nicer blur, larger = faster
 
 ${SHADERS.depthRead}
 
-float getBlurSize(float depth, float focusPoint, float focusScale)
-{
-float coc = clamp((1.0 / focusPoint - 1.0 / depth)*focusScale, -1.0, 1.0);
-return abs(coc) * MAX_BLUR_SIZE;
+float getBlurSize(float depth, float focusPoint, float focusScale) {
+    float coc = clamp((1.0 / focusPoint - 1.0 / depth) * focusScale, -1.0, 1.0);
+    return abs(coc) * MAX_BLUR_SIZE;
 }
 
-vec3 depthOfField(vec2 texCoord, float focusPoint, float focusScale)
-{
+vec3 depthOfField(vec2 texCoord, float focusPoint, float focusScale) {
     float centerDepth = readDepth(depthMap, texCoord,uNear,uFar);
     float centerSize = getBlurSize(centerDepth, focusPoint, focusScale);
     //return vec3(centerSize/2.0);
@@ -52,8 +50,10 @@ vec3 depthOfField(vec2 texCoord, float focusPoint, float focusScale)
 }
 
 void main () {
-    vec3 color = depthOfField(vTexCoord0,uFocusDistance,uAperture);
-    gl_FragColor = vec4(color,1);
+    // remap 1..32 to 32..0
+    float focusScale = 32.0 * clamp(1.0 - (uAperture - 1.0) / 32.0, 0.0, 1.0);
+    vec3 color = depthOfField(vTexCoord0, uFocusDistance, focusScale);
+    gl_FragColor = vec4(color, 1.0);
 }
 
 `
