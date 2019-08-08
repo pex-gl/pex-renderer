@@ -74,8 +74,8 @@ function PostProcessing(opts) {
   this.ssaoBlurSharpness = 10
 
   this.dof = false
-  this.dofDepth = 1
-  this.dofScale = 1
+  this.dofFocusDistance = 1
+  this.dofAperture = 1
 
   this.bloom = false
   this.bloomRadius = 1

@@ -64,8 +64,8 @@ const cameraEntity = renderer.entity([
     ssao: true,
     ssaoRadius: 4,
     dof: true,
-    dofScale: 1,
-    dofDepth: 5,
+    dofAperture: 1,
+    dofFocusDistance: 5,
     fxaa: true
   }),
   renderer.camera({

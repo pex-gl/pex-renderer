@@ -1289,8 +1289,8 @@ Renderer.prototype.draw = function() {
               1 / ctx.gl.drawingBufferWidth,
               1 / ctx.gl.drawingBufferHeight
             ],
-            uFocusPoint: postProcessingCmp.dofDepth,
-            uFocusScale: postProcessingCmp.dofScale
+            uFocusDistance: postProcessingCmp.dofFocusDistance,
+            uAperture: postProcessingCmp.dofAperture
           }
         })
         if (State.profiler) State.profiler.timeEnd('dof')
