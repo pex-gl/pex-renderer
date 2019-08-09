@@ -1,6 +1,7 @@
 const createContext = require('pex-context')
 const createRenderer = require('../')
 const createCube = require('primitive-cube')
+const createPlane = require('primitive-plane')
 const createGUI = require('pex-gui')
 const io = require('pex-io')
 const isBrowser = require('is-browser')
@@ -103,9 +104,15 @@ const roughnessMap = imageFromFile(
   { encoding: ctx.Encoding.Linear }
 )
 
+const distancesMap = imageFromFile(
+  ASSETS_DIR + '/textures/Distances/Distances.png',
+  { encoding: ctx.Encoding.Linear }
+)
+
 const geometry = createCube(0.7)
+const plane = createPlane(0.5,0.25)
 const cubeDistances = [1,2,4,8,16,32,64]
-cubeDistances.forEach((val)=>{
+cubeDistances.forEach((val,i)=>{
   const cubeEntity = renderer.entity([
     renderer.transform({
       position: [0, 0, -val]
@@ -124,6 +131,34 @@ cubeDistances.forEach((val)=>{
     })
   ])
   renderer.add(cubeEntity)
+
+  let planeMat = renderer.material({
+    baseColor: [1,1,1,1],
+    roughness: 0.2,
+    metallic: 0.0,
+    baseColorMap: distancesMap,
+    alphaTest: 0.5,
+    castShadows: true,
+    receiveShadows: true,
+  })
+
+  const planeEntity = renderer.entity([
+    renderer.transform({
+      position: [0, 0.5, -val + 0.3],
+      rotation : [ 0, 0.0000427, 0, -1 ],
+      scale : [1+(i*0.4),1+(i*0.4),1+(i*0.4)]
+    }),
+    renderer.geometry(plane),
+    planeMat
+  ])
+
+  planeMat.set({ baseColorMap: {
+    texture: distancesMap,
+    offset: [0, 1-(0.1428571429*(i+1))],
+    scale: [1, 0.1428571429]
+  }})
+
+  renderer.add(planeEntity)
 })
 
 
@@ -157,34 +192,35 @@ gui.addParam(
 )
 
 
+let C1p4Cam = perspectiveCamera1p4.getComponent('Camera')
+let C18Cam = perspectiveCamera18.getComponent('Camera')
+let C32Cam = perspectiveCamera32.getComponent('Camera')
+
 gui.addHeader('Resolution Scale')
 gui.addButton('0.5', () => {
-  ctx.gl.canvas.width = window.innerWidth/2
-  ctx.gl.canvas.height = window.innerHeight/2
-  ctx.gl.canvas.style.width = window.innerWidth
-  ctx.gl.canvas.style.height = window.innerHeight
-  ctx.gl.canvas.style.position = "absolute";
-  ctx.gl.canvas.style.transform = "translate3d(0,0,0)";
-
+  ctx.set({ pixelRatio: 0.5 })
+  C1p4Cam.set({viewport:[0, 0, viewportWidth/2, viewportHeight/2]})
+  C18Cam.set({viewport:[viewportWidth/2, 0, viewportWidth/2, viewportHeight/2]})
+  C32Cam.set({viewport: [viewportWidth/2 + viewportWidth/2 - 1,0,viewportWidth/2,viewportHeight/2]})
 })
 gui.addButton('1', () => {
-  ctx.gl.canvas.width = window.innerWidth
-  ctx.gl.canvas.height = window.innerHeight
-  ctx.gl.canvas.style.width = window.innerWidth
-  ctx.gl.canvas.style.height = window.innerHeight
+  ctx.set({ pixelRatio: 1 })
+  C1p4Cam.set({viewport:[0, 0, viewportWidth, viewportHeight]})
+  C18Cam.set({viewport:[viewportWidth, 0, viewportWidth, viewportHeight]})
+  C32Cam.set({viewport: [viewportWidth + viewportWidth - 1,0,viewportWidth,viewportHeight]})
+  
 })
 gui.addButton('2', () => {
-  // ctx.gl.canvas.width = window.innerWidth*2
-  // ctx.gl.canvas.height = window.innerHeight*2
-  // ctx.gl.canvas.style.width = window.innerWidth*2
-  // ctx.gl.canvas.style.height = window.innerHeight*2
+  ctx.set({ pixelRatio: 2 })
+  C1p4Cam.set({viewport:[0, 0, viewportWidth*2, viewportHeight*2]})
+  C18Cam.set({viewport:[viewportWidth*2, 0, viewportWidth*2, viewportHeight*2]})
+  C32Cam.set({viewport: [viewportWidth*2 + viewportWidth*2 - 1,0,viewportWidth*2,viewportHeight*2]})
 })
 
 ctx.frame(() => {
   renderer.draw()
   gui.draw()
 
-  console.log(ctx.gl.drawingBufferWidth)
   window.dispatchEvent(new CustomEvent('pex-screenshot'))
 })
 
@@ -196,7 +232,7 @@ function imageFromFile(file, options) {
     height: 1,
     pixelFormat: ctx.PixelFormat.RGBA8,
     encoding: options.encoding,
-    wrap: ctx.Wrap.Repeat,
+    wrap: ctx.Wrap.ClampToEdge,
     flipY: true,
     min: ctx.Filter.LinearMipmapLinear,
     mipmap: true,
