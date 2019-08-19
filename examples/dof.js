@@ -41,7 +41,7 @@ const perspectiveCamera1p4 = renderer.entity([
     dofAperture: 1.4,
     dofFocusDistance: State.dofFocusDistance
   })
-])
+],['1.4'])
 renderer.add(perspectiveCamera1p4)
 
 const perspectiveCamera18 = renderer.entity([
@@ -60,7 +60,7 @@ const perspectiveCamera18 = renderer.entity([
     dofAperture: 18,
     dofFocusDistance: State.dofFocusDistance
   })
-])
+],['18'])
 renderer.add(perspectiveCamera18)
 
 const perspectiveCamera32 = renderer.entity([
@@ -84,29 +84,37 @@ const perspectiveCamera32 = renderer.entity([
     dofAperture: 32,
     dofFocusDistance: State.dofFocusDistance
   })
-])
+],['32'])
 renderer.add(perspectiveCamera32)
+
+
+
 
 const baseColorMap = imageFromFile(
   ASSETS_DIR + '/plastic-green.material/plastic-green_basecolor.png',
-  { encoding: ctx.Encoding.SRGB }
+  { encoding: ctx.Encoding.SRGB },
+  true
 )
 const normalMap = imageFromFile(
   ASSETS_DIR + '/plastic-green.material/plastic-green_n.png',
-  { encoding: ctx.Encoding.Linear }
+  { encoding: ctx.Encoding.Linear },
+  true
 )
 const metallicMap = imageFromFile(
   ASSETS_DIR + '/plastic-green.material/plastic-green_metallic.png',
-  { encoding: ctx.Encoding.Linear }
+  { encoding: ctx.Encoding.Linear },
+  true
 )
 const roughnessMap = imageFromFile(
   ASSETS_DIR + '/plastic-green.material/plastic-green_roughness.png',
-  { encoding: ctx.Encoding.Linear }
+  { encoding: ctx.Encoding.Linear },
+  true
 )
 
 const distancesMap = imageFromFile(
   ASSETS_DIR + '/textures/Distances/Distances.png',
-  { encoding: ctx.Encoding.Linear }
+  { encoding: ctx.Encoding.Linear },
+  false
 )
 
 const geometry = createCube(0.7)
@@ -154,11 +162,46 @@ cubeDistances.forEach((val,i)=>{
 
   planeMat.set({ baseColorMap: {
     texture: distancesMap,
-    offset: [0, 1-(0.1428571429*(i+1))],
-    scale: [1, 0.1428571429]
+    offset: [0, 1-(0.1*(i+1))],
+    scale: [1, 0.1]
   }})
 
   renderer.add(planeEntity)
+})
+
+
+const aps = ['1.4','18','32'];
+aps.forEach((letter,i) => {
+  let plane = createPlane(0.5,0.25)
+  
+  let planeMat = renderer.material({
+    baseColor: [1,1,1,1],
+    roughness: 0.2,
+    metallic: 0.0,
+    baseColorMap: distancesMap,
+    alphaTest: 0.5,
+    castShadows: true,
+    receiveShadows: true,
+  })
+
+  const planeEntity = renderer.entity([
+    renderer.transform({
+      position: [0, 0.7, -0.32],
+      rotation : [ -0.4794255, 0, 0, 0.8775826 ],
+      //rotation : [ 0, 0.0000427, 0, -1 ],
+      scale : [0.7,0.7,0.7]
+    }),
+    renderer.geometry(plane),
+    planeMat
+  ],[aps[i]])
+
+  planeMat.set({ baseColorMap: {
+    texture: distancesMap,
+    offset: [0, 1-(0.1*(cubeDistances.length + i + 1))],
+    scale: [1, 0.1]
+  }})
+  renderer.add(planeEntity)
+  console.log(12333)
 })
 
 
@@ -181,7 +224,7 @@ gui.addParam(
   State,
   'dofFocusDistance',
   {
-    min: 1.1,
+    min: 0.7,
     max: 70
   },
   (value) => {
@@ -225,19 +268,35 @@ ctx.frame(() => {
 })
 
 // Utils
-function imageFromFile(file, options) {
-  const tex = ctx.texture2D({
-    data: [0, 0, 0, 0],
-    width: 1,
-    height: 1,
-    pixelFormat: ctx.PixelFormat.RGBA8,
-    encoding: options.encoding,
-    wrap: ctx.Wrap.ClampToEdge,
-    flipY: true,
-    min: ctx.Filter.LinearMipmapLinear,
-    mipmap: true,
-    aniso: 16
-  })
+function imageFromFile(file, options,mipmap) {
+  let tex
+  if(mipmap){
+    tex = ctx.texture2D({
+      data: [0, 0, 0, 0],
+      width: 1,
+      height: 1,
+      pixelFormat: ctx.PixelFormat.RGBA8,
+      encoding: options.encoding,
+      wrap: ctx.Wrap.ClampToEdge,
+      flipY: true,
+      min: ctx.Filter.LinearMipmapLinear,
+      mipmap: true,
+      aniso: 16
+    })
+  } else {
+    tex = ctx.texture2D({
+      data: [0, 0, 0, 0],
+      width: 1,
+      height: 1,
+      pixelFormat: ctx.PixelFormat.RGBA8,
+      encoding: options.encoding,
+      wrap: ctx.Wrap.ClampToEdge,
+      flipY: true,
+      min: ctx.Filter.Nearest,
+      mipmap: false,
+      aniso: 16
+    })
+  }
   io.loadImage(
     file,
     function(err, image) {
@@ -246,8 +305,8 @@ function imageFromFile(file, options) {
         data: image,
         width: image.width,
         height: image.height,
-        mipmap: true,
-        min: ctx.Filter.LinearMipmapLinear
+        mipmap: false,
+        min: ctx.Filter.Nearest
       })
     },
     true
