@@ -224,13 +224,14 @@ gui.addParam(
   State,
   'dofFocusDistance',
   {
-    min: 0.7,
-    max: 70
+    min: 1,
+    max: 10
   },
   (value) => {
-    C1p4Post.set({ dofFocusDistance: value })
-    C18Post.set({ dofFocusDistance: value })
-    C32Post.set({ dofFocusDistance: value })
+    let logVal = Math.pow(1.5,value)
+    C1p4Post.set({ dofFocusDistance: (logVal - 1) })
+    C18Post.set({ dofFocusDistance: (logVal - 1) })
+    C32Post.set({ dofFocusDistance: (logVal - 1) })
   }
 )
 
