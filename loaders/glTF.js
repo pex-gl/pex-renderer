@@ -907,7 +907,7 @@ async function loadGltf(url, renderer, options = {}) {
   if (json.images) {
     for (let image of json.images) {
       // https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/README.md#uris
-      if (isBinary) {
+      if (isBinary || image.bufferView) {
         const bufferView = json.bufferViews[image.bufferView]
         bufferView.byteOffset = bufferView.byteOffset || 0
         const buffer = json.buffers[bufferView.buffer]
