@@ -17,6 +17,11 @@ function Camera(opts) {
   this.viewMatrix = mat4.create()
   this.inverseViewMatrix = mat4.create()
 
+  this.focalLength = 50 // mm
+
+  this.sensorSize = [36, 24] //mm
+  this.sensorFit = 'vertical'
+
   if (this.projection === 'perspective') {
     this.fov = Math.PI / 4
 
