@@ -61,6 +61,7 @@ gui.addRadioList(
 
 let sensorRectOverlay = null
 let camera = null
+let postProcessing = null
 
 gui.addHeader('Camera Lens')
 let cameraInfoLabel = gui.addLabel('Info')
@@ -130,6 +131,13 @@ async function initScene() {
   const cameraEnt = scene.entities.filter((e) => e.getComponent('Camera'))[0]
   camera = cameraEnt.getComponent('Camera')
 
+  postProcessing = renderer.postProcessing({
+    dof: true,
+    dofAperture: 32,
+    dofFocusDistance: 10
+  })
+  cameraEnt.addComponent(postProcessing)
+
   gui.addParam(
     'fieldOfView (rad)',
     camera,
@@ -189,6 +197,18 @@ async function initScene() {
       resize()
     }
   )
+
+  // postProcessing.set({ dofDebug: true })
+  gui.addHeader('Depth of Field')
+  gui.addParam('Debug', postProcessing, 'dofDebug')
+  gui.addParam('Focus distance', postProcessing, 'dofFocusDistance', {
+    min: 0,
+    max: 100
+  })
+  gui.addParam('Aperture', postProcessing, 'dofAperture', {
+    min: 1.4,
+    max: 32
+  })
 
   let rectCanvas = document.createElement('canvas')
   rectCanvas.width = camera.sensorSize[0] * 10

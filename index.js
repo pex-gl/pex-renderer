@@ -1290,7 +1290,9 @@ Renderer.prototype.draw = function() {
               1 / ctx.gl.drawingBufferHeight
             ],
             uFocusDistance: postProcessingCmp.dofFocusDistance,
-            uAperture: postProcessingCmp.dofAperture
+            uFocalLength: camera.focalLength,
+            uAperture: postProcessingCmp.dofAperture,
+            uDOFDebug: postProcessingCmp.dofDebug
           }
         })
         if (State.profiler) State.profiler.timeEnd('dof')
@@ -1315,10 +1317,9 @@ Renderer.prototype.draw = function() {
             uFogDensity: postProcessingCmp.fogDensity,
             uSunPosition: postProcessingCmp.sunPosition,
             uOutputEncoding: ctx.Encoding.Gamma,
-            uOverlay:
-              postProcessingCmp.dof
-                ? postProcessingCmp._frameDofBlurTex
-                : postProcessingCmp._frameColorTex,
+            uOverlay: postProcessingCmp.dof
+              ? postProcessingCmp._frameDofBlurTex
+              : postProcessingCmp._frameColorTex,
             uScreenSize: screenSize
           },
           viewport: camera.viewport
