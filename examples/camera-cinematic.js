@@ -130,9 +130,6 @@ async function initScene() {
   const cameraEnt = scene.entities.filter((e) => e.getComponent('Camera'))[0]
   camera = cameraEnt.getComponent('Camera')
 
-  // cameraState.focalLength = filmHeight / 2 / Math.tan(camera.fov / 2)
-  cameraState.focalLength = 50
-
   gui.addParam(
     'fieldOfView (rad)',
     camera,

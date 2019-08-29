@@ -69,40 +69,38 @@ Camera.prototype.set = function(opts) {
       this.entity && this.entity.getComponent('PostProcessing')
     if (postProcessingCmp) {
       postProcessingCmp.set({
-        viewport,
+        viewport: this.viewport,
         viewMatrix: this.viewMatrix
       })
     }
   }
 
   // calculate new fov based on sensor size and focal length
-  if (opts.sensorSize || opts.sensorFit || opts.focalLength || opts.viewport) {
-    let yfov = Math.PI / 2
+  if (
+    opts.sensorSize ||
+    opts.sensorFit ||
+    opts.focalLength ||
+    opts.viewport ||
+    opts.fov
+  ) {
     let sensorWidth = this.sensorSize[0]
     let sensorHeight = this.sensorSize[1]
     const sensorAspectRatio = sensorWidth / sensorHeight
     if (this.aspect > sensorAspectRatio) {
-      if (this.sensorFit === 'vertical' || this.sensorFit === 'overscan') {
-        yfov = 2 * Math.atan(sensorHeight / 2 / this.focalLength)
-      } else {
-        //horizontal || fill
+      if (this.sensorFit === 'horizontal' || this.sensorFit === 'fill') {
         sensorHeight = sensorWidth / this.aspect
-        yfov = 2 * Math.atan(sensorHeight / 2 / this.focalLength)
       }
     } else {
+      //this.aspect <= sensorAspectRatio
       if (this.sensorFit === 'horizontal' || this.sensorFit === 'overscan') {
         sensorHeight = sensorWidth / this.aspect
-        yfov = 2 * Math.atan(sensorHeight / 2 / this.focalLength)
-      } else {
-        //vertical || fill
-        yfov = 2 * Math.atan(sensorHeight / 2 / this.focalLength)
       }
     }
-    this.fov = yfov
-  }
-
-  // TODO: calculate new focal length based on desired fov
-  if (opts.fov) {
+    if (opts.fov) {
+      this.focalLength = sensorHeight / 2 / Math.tan(this.fov / 2)
+    } else {
+      this.fov = 2 * Math.atan(sensorHeight / 2 / this.focalLength)
+    }
   }
 
   if (
