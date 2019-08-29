@@ -54,21 +54,18 @@ gui.addRadioList(
   [
     { name: '1920 x 1080 (16:9)', value: 0 },
     { name: '1080 x 1910 (9:16)', value: 1 },
-    { name: 'Window W x Window H (free)', value: 2 }
+    { name: 'Full Window (W:H)', value: 2 }
   ],
   resize
 )
 
-let camera = null
 let sensorRectOverlay = null
+let camera = null
+
+gui.addHeader('Camera Lens')
+let cameraInfoLabel = gui.addLabel('Info')
 
 const cameraState = {
-  focalLength: 50,
-  aspect: 1,
-  xfov: 60,
-  yfov: 60,
-  // xfov: ((camera.fov * camera.aspect) / Math.PI) * 180,
-  // yfov: (camera.fov / Math.PI) * 180,
   resolutionPreset: '16 x 9'
 }
 
@@ -136,33 +133,24 @@ async function initScene() {
   // cameraState.focalLength = filmHeight / 2 / Math.tan(camera.fov / 2)
   cameraState.focalLength = 50
 
-  gui.addHeader('Camera Lens')
-  gui.addParam('fov', camera, 'fov')
-  gui.addParam('aspect', camera, 'aspect')
   gui.addParam(
-    'focalLength (mm)',
-    cameraState,
-    'focalLength',
-    { min: 0, max: 100 },
-    () => {
-      /*
-      const focalLength = cameraState.focalLength
-      const filmHeight = cameraState.filmHeight
-      const yfov = 2 * Math.atan(filmHeight / 2 / focalLength)
-      cameraState.yfov = toDegrees(yfov)
-      cameraState.xfov = toDegrees(yfov * cameraState.aspect)
-      camera.set({ fov: yfov })
-      */
+    'fieldOfView (rad)',
+    camera,
+    'fov',
+    { min: 0, max: (120 / 180) * Math.PI },
+    (fov) => {
+      camera.set({ fov })
     }
   )
-  gui.addParam('xfov', cameraState, 'xfov', { min: 0, max: 180 }, () => {
-    // camera.set({ fov: (cameraState.yfov / 180) * Math.PI })
-  })
-
-  gui.addParam('yfov', cameraState, 'yfov', { min: 0, max: 180 }, () => {
-    camera.set({ fov: (cameraState.yfov / 180) * Math.PI })
-  })
-  console.log(scene, camera)
+  gui.addParam(
+    'focalLength (mm)',
+    camera,
+    'focalLength',
+    { min: 0, max: 100 },
+    (focalLength) => {
+      camera.set({ focalLength })
+    }
+  )
 
   gui.addHeader('Camera Sensor')
   gui.addParam(
@@ -244,6 +232,18 @@ ctx.frame(() => {
   })
 
   renderer.draw()
+
+  if (camera) {
+    let aspectRatio = camera.aspect
+    let yfov = camera.fov
+    let xfov = 2 * Math.atan(aspectRatio * Math.tan(camera.fov / 2))
+    let str = [
+      `X FOV : ${toDegrees(xfov).toFixed(0)}°`,
+      `Y FOV : ${toDegrees(yfov).toFixed(0)}°`,
+      `ASPECT : ${aspectRatio.toFixed(2)}`
+    ]
+    cameraInfoLabel.setTitle(str.join('\n'))
+  }
 
   gui.draw()
 
