@@ -63,9 +63,59 @@ Camera.prototype.init = function(entity) {
 Camera.prototype.set = function(opts) {
   Object.assign(this, opts)
 
+  if (opts.viewport) {
+    this.aspect = this.viewport[2] / this.viewport[3]
+    const postProcessingCmp =
+      this.entity && this.entity.getComponent('PostProcessing')
+    if (postProcessingCmp) {
+      postProcessingCmp.set({
+        viewport,
+        viewMatrix: this.viewMatrix
+      })
+    }
+  }
+
+  // calculate new fov based on sensor size and focal length
+  if (opts.sensorSize || opts.sensorFit || opts.focalLength || opts.viewport) {
+    let yfov = Math.PI / 2
+    let sensorWidth = this.sensorSize[0]
+    let sensorHeight = this.sensorSize[1]
+    const sensorAspectRatio = sensorWidth / sensorHeight
+    if (this.aspect > sensorAspectRatio) {
+      if (this.sensorFit === 'vertical' || this.sensorFit === 'overscan') {
+        yfov = 2 * Math.atan(sensorHeight / 2 / this.focalLength)
+      } else {
+        //horizontal || fill
+        sensorHeight = sensorWidth / this.aspect
+        yfov = 2 * Math.atan(sensorHeight / 2 / this.focalLength)
+      }
+    } else {
+      if (this.sensorFit === 'horizontal' || this.sensorFit === 'overscan') {
+        sensorHeight = sensorWidth / this.aspect
+        yfov = 2 * Math.atan(sensorHeight / 2 / this.focalLength)
+      } else {
+        //vertical || fill
+        yfov = 2 * Math.atan(sensorHeight / 2 / this.focalLength)
+      }
+    }
+    this.fov = yfov
+  }
+
+  // TODO: calculate new focal length based on desired fov
+  if (opts.fov) {
+  }
+
   if (
     this.projection === 'perspective' &&
-    (opts.aspect || opts.near || opts.far || opts.fov || opts.view)
+    (opts.aspect ||
+      opts.near ||
+      opts.far ||
+      opts.fov ||
+      opts.view ||
+      opts.viewport ||
+      opts.sensorSize ||
+      opts.sensorFit ||
+      opts.focalLength)
   ) {
     if (this.view) {
       const aspectRatio = this.view.totalSize[0] / this.view.totalSize[1]
@@ -138,24 +188,6 @@ Camera.prototype.set = function(opts) {
       this.near,
       this.far
     )
-  }
-
-  if (opts.viewport) {
-    const viewport = opts.viewport
-    const aspect = viewport[2] / viewport[3]
-
-    if (this.aspect !== aspect) {
-      this.set({ aspect })
-    }
-
-    const postProcessingCmp =
-      this.entity && this.entity.getComponent('PostProcessing')
-    if (postProcessingCmp) {
-      postProcessingCmp.set({
-        viewport,
-        viewMatrix: this.viewMatrix
-      })
-    }
   }
 
   Object.keys(opts).forEach((prop) => this.changed.dispatch(prop))

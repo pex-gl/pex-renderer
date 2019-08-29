@@ -39,7 +39,11 @@ renderer.add(sunEntity)
 
 const rendererState = {
   resolutionPreset: 0,
-  resolutions: [[1920, 1080], [1080, 1920]]
+  resolutions: [
+    [1920, 1080],
+    [1080, 1920],
+    [window.innerWidth, window.innerHeight]
+  ]
 }
 
 gui.addHeader('Render Viewport')
@@ -49,7 +53,8 @@ gui.addRadioList(
   'resolutionPreset',
   [
     { name: '1920 x 1080 (16:9)', value: 0 },
-    { name: '1080 x 1910 (9:16)', value: 1 }
+    { name: '1080 x 1910 (9:16)', value: 1 },
+    { name: 'Window W x Window H (free)', value: 2 }
   ],
   resize
 )
@@ -75,6 +80,7 @@ function resize() {
   const windowBounds = [0, 0, window.innerWidth, window.innerHeight]
 
   ctx.set({ width: windowBounds[2], height: windowBounds[3] })
+  rendererState.resolutions[2] = [windowBounds[2], windowBounds[3]]
 
   const [renderWidth, renderHeight] = rendererState.resolutions[
     rendererState.resolutionPreset
@@ -86,28 +92,21 @@ function resize() {
 
   const sensorAspectRatio = camera.sensorSize[0] / camera.sensorSize[1]
   const cameraAspectRatio = renderWidth / renderHeight
-  let yfov = Math.PI / 2
   let sensorWidth = camera.sensorSize[0]
   let sensorHeight = camera.sensorSize[1]
   if (cameraAspectRatio > sensorAspectRatio) {
     if (camera.sensorFit === 'vertical' || camera.sensorFit === 'overscan') {
       sensorFitBounds = fitRect(sensorBounds, cameraViewport)
-      yfov = 2 * Math.atan(sensorHeight / 2 / camera.focalLength)
     } else {
       //horizontal || fill
       sensorFitBounds = fitRect(sensorBounds, cameraViewport, 'cover')
-      sensorHeight = sensorWidth / cameraAspectRatio
-      yfov = 2 * Math.atan(sensorHeight / 2 / camera.focalLength)
     }
   } else {
     if (camera.sensorFit === 'horizontal' || camera.sensorFit === 'overscan') {
       sensorFitBounds = fitRect(sensorBounds, cameraViewport)
-      sensorHeight = sensorWidth / cameraAspectRatio
-      yfov = 2 * Math.atan(sensorHeight / 2 / camera.focalLength)
     } else {
       //vertical || fill
       sensorFitBounds = fitRect(sensorBounds, cameraViewport, 'cover')
-      yfov = 2 * Math.atan(sensorHeight / 2 / camera.focalLength)
     }
   }
 
@@ -120,7 +119,6 @@ function resize() {
   })
 
   camera.set({ viewport: cameraViewport })
-  camera.set({ fov: yfov })
 }
 
 window.addEventListener('resize', resize)
@@ -139,6 +137,8 @@ async function initScene() {
   cameraState.focalLength = 50
 
   gui.addHeader('Camera Lens')
+  gui.addParam('fov', camera, 'fov')
+  gui.addParam('aspect', camera, 'aspect')
   gui.addParam(
     'focalLength (mm)',
     cameraState,
