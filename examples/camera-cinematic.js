@@ -151,7 +151,6 @@ async function initScene() {
 
   postProcessing = renderer.postProcessing({
     dof: true,
-    dofAperture: 2.4,
     dofFocusDistance: 10
   })
   cameraEnt.addComponent(postProcessing)
@@ -174,6 +173,10 @@ async function initScene() {
       camera.set({ focalLength })
     }
   )
+  gui.addParam('F-Stop', camera, 'fStop', {
+    min: 1.4,
+    max: 32
+  })
 
   gui.addHeader('Camera Sensor')
   gui.addParam(
@@ -223,10 +226,6 @@ async function initScene() {
   gui.addParam('Focus distance', postProcessing, 'dofFocusDistance', {
     min: 0,
     max: 100
-  })
-  gui.addParam('Aperture', postProcessing, 'dofAperture', {
-    min: 1.4,
-    max: 32
   })
 
   let rectCanvas = document.createElement('canvas')
