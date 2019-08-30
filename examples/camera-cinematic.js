@@ -38,12 +38,10 @@ const sunEntity = renderer.entity([
 renderer.add(sunEntity)
 
 const rendererState = {
-  resolutionPreset: 0,
-  resolutions: [
-    [1920, 1080],
-    [1080, 1920],
-    [window.innerWidth, window.innerHeight]
-  ]
+  resolutionPreset: 1,
+  resolutions: [0.5, 1, 2],
+  aspectRatioPreset: 0,
+  aspectRatios: [[16, 9], [9, 16], [window.innerWidth, window.innerHeight]]
 }
 
 gui.addHeader('Render Viewport')
@@ -52,9 +50,20 @@ gui.addRadioList(
   rendererState,
   'resolutionPreset',
   [
-    { name: '1920 x 1080 (16:9)', value: 0 },
-    { name: '1080 x 1910 (9:16)', value: 1 },
-    { name: 'Full Window (W:H)', value: 2 }
+    { name: '0.5x', value: 0 },
+    { name: '1x', value: 1 },
+    { name: '2x', value: 2 }
+  ],
+  resize
+)
+gui.addRadioList(
+  'Camera aspect ratio',
+  rendererState,
+  'aspectRatioPreset',
+  [
+    { name: '16:9', value: 0 },
+    { name: '9:16', value: 1 },
+    { name: 'W:H', value: 2 }
   ],
   resize
 )
@@ -66,30 +75,36 @@ let postProcessing = null
 gui.addHeader('Camera Lens')
 let cameraInfoLabel = gui.addLabel('Info')
 
-const cameraState = {
-  resolutionPreset: '16 x 9'
-}
-
 function resize() {
   console.log('resize')
 
   if (!camera) return
 
-  const windowBounds = [0, 0, window.innerWidth, window.innerHeight]
-
-  ctx.set({ width: windowBounds[2], height: windowBounds[3] })
-  rendererState.resolutions[2] = [windowBounds[2], windowBounds[3]]
-
-  const [renderWidth, renderHeight] = rendererState.resolutions[
-    rendererState.resolutionPreset
+  const pixelRatio = rendererState.resolutions[rendererState.resolutionPreset]
+  const windowBounds = [
+    0,
+    0,
+    window.innerWidth * pixelRatio,
+    window.innerHeight * pixelRatio
   ]
-  const rendererBounds = [0, 0, renderWidth, renderHeight]
-  const cameraViewport = fitRect(rendererBounds, windowBounds)
+
+  ctx.set({
+    width: window.innerWidth,
+    height: window.innerHeight,
+    pixelRatio: pixelRatio
+  })
+  rendererState.aspectRatios[2] = [windowBounds[2], windowBounds[3]]
+
+  const [cameraWidth, cameraHeight] = rendererState.aspectRatios[
+    rendererState.aspectRatioPreset
+  ]
+  const cameraBounds = [0, 0, cameraWidth, cameraHeight]
+  const cameraViewport = fitRect(cameraBounds, windowBounds)
   const sensorBounds = [0, 0, camera.sensorSize[0], camera.sensorSize[1]]
   let sensorFitBounds = [0, 0, 0.1, 0.1]
 
   const sensorAspectRatio = camera.sensorSize[0] / camera.sensorSize[1]
-  const cameraAspectRatio = renderWidth / renderHeight
+  const cameraAspectRatio = cameraWidth / cameraHeight
   let sensorWidth = camera.sensorSize[0]
   let sensorHeight = camera.sensorSize[1]
   if (cameraAspectRatio > sensorAspectRatio) {
@@ -133,7 +148,7 @@ async function initScene() {
 
   postProcessing = renderer.postProcessing({
     dof: true,
-    dofAperture: 32,
+    dofAperture: 2.4,
     dofFocusDistance: 10
   })
   cameraEnt.addComponent(postProcessing)
@@ -200,6 +215,7 @@ async function initScene() {
 
   // postProcessing.set({ dofDebug: true })
   gui.addHeader('Depth of Field')
+  gui.addParam('Enabled', postProcessing, 'dof')
   gui.addParam('Debug', postProcessing, 'dofDebug')
   gui.addParam('Focus distance', postProcessing, 'dofFocusDistance', {
     min: 0,
@@ -254,6 +270,7 @@ ctx.frame(() => {
     let aspectRatio = camera.aspect
     let yfov = camera.fov
     let xfov = 2 * Math.atan(aspectRatio * Math.tan(camera.fov / 2))
+    let sensorHeight = camera.actualSensorHeight
     let str = [
       `X FOV : ${toDegrees(xfov).toFixed(0)}°`,
       `Y FOV : ${toDegrees(yfov).toFixed(0)}°`,
