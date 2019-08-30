@@ -77,10 +77,8 @@ void main () {
 
     // uAperture is actually F-Stop, so aperture as a diameter is 1 / uAperture
     float fStop = uAperture;
-    float lensDiameter = 50.0; //mm
-    float A = lensDiameter / fStop;
+    float A = uFocalLength / fStop;
     float focusDistance = uFocusDistance / 1000.0; // m -> mm
-    // float maxCoC = A * F / (uFocusDistance - F);
     float maxCoC = A * F / (focusDistance - F);
 
     vec3 color = depthOfField(vTexCoord0, focusDistance, maxCoC);
