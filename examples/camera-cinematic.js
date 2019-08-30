@@ -7,7 +7,10 @@ const { toDegrees } = utils
 const fitRect = require('fit-rect')
 
 const ctx = createContext({})
-const renderer = createRenderer(ctx)
+const renderer = createRenderer({
+  ctx: ctx,
+  shadowQuality: 3
+})
 const gui = createGUI(ctx)
 const skyboxEntity = renderer.entity([
   renderer.skybox({
