@@ -1289,7 +1289,7 @@ Renderer.prototype.draw = function() {
             uFocusDistance: postProcessingCmp.dofFocusDistance,
             uSensorHeight: camera.actualSensorHeight,
             uFocalLength: camera.focalLength,
-            uAperture: postProcessingCmp.dofAperture,
+            uFStop: camera.fStop,
             uDOFDebug: postProcessingCmp.dofDebug
           }
         })
