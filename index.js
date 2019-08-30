@@ -1285,11 +1285,9 @@ Renderer.prototype.draw = function() {
             uNear: camera.near,
             imageSize: screenSize,
             depthMapSize: screenSize,
-            uPixelSize: [
-              1 / ctx.gl.drawingBufferWidth,
-              1 / ctx.gl.drawingBufferHeight
-            ],
+            uPixelSize: [1 / screenSize[0], 1 / screenSize[1]],
             uFocusDistance: postProcessingCmp.dofFocusDistance,
+            uSensorHeight: camera.actualSensorHeight,
             uFocalLength: camera.focalLength,
             uAperture: postProcessingCmp.dofAperture,
             uDOFDebug: postProcessingCmp.dofDebug

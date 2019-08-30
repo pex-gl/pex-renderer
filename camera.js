@@ -20,6 +20,7 @@ function Camera(opts) {
   this.focalLength = 50 // mm
 
   this.sensorSize = [36, 24] //mm
+  this.actualSensorHeight = 24 //mm
   this.sensorFit = 'vertical'
 
   if (this.projection === 'perspective') {
@@ -101,6 +102,7 @@ Camera.prototype.set = function(opts) {
     } else {
       this.fov = 2 * Math.atan(sensorHeight / 2 / this.focalLength)
     }
+    this.actualSensorHeight = sensorHeight
   }
 
   if (
