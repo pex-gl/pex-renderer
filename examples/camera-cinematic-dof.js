@@ -1,7 +1,7 @@
 const createRenderer = require('../')
 const createContext = require('pex-context')
 const createGUI = require('pex-gui')
-const { utils } = require('pex-math')
+const { utils, vec3, quat } = require('pex-math')
 const { toDegrees } = utils
 
 const fitRect = require('fit-rect')
@@ -14,7 +14,7 @@ const renderer = createRenderer({
 const gui = createGUI(ctx)
 const skyboxEntity = renderer.entity([
   renderer.skybox({
-    sunPosition: [1, 1, 1]
+    sunPosition: [0.2, 1, 0.2]
   })
 ])
 renderer.add(skyboxEntity)
@@ -24,21 +24,32 @@ renderer.add(reflectionProbeEntity)
 
 const sunEntity = renderer.entity([
   renderer.transform({
-    position: [4.708013534545898, 13.164156913757324, -8.227595329284668],
-    rotation: [
-      0.4214527904987335,
-      -0.16269956529140472,
-      -0.2949129343032837,
-      0.8419814705848694
-    ]
+    position: skyboxEntity.getComponent('Skybox').sunPosition,
+    rotation: quat.fromTo(
+      quat.create(),
+      [0, 0, 1],
+      vec3.normalize([-1, -1, -1])
+    )
   }),
   renderer.directionalLight({
     color: [1, 1, 1, 1],
-    intensity: 100,
+    intensity: 5,
     castShadows: true
   })
 ])
 renderer.add(sunEntity)
+
+const pointLightEntity = renderer.entity([
+  renderer.transform({
+    position: [-1, 2, -8]
+  }),
+  renderer.pointLight({
+    color: [2, 1, 1, 1],
+    intensity: 2,
+    castShadows: true
+  })
+])
+renderer.add(pointLightEntity)
 
 const rendererState = {
   resolutionPreset: 1,
@@ -142,16 +153,18 @@ window.addEventListener('resize', resize)
 
 async function initScene() {
   const scene = await renderer.loadScene(
-    'assets/models/dof-reference/dof-reference-columns-modified-postapply.gltf',
+    'assets/models/dof-reference-poe/dof-reference-poe.gltf',
     { includeCameras: true }
   )
   renderer.add(scene.root)
 
   const cameraEnt = scene.entities.filter((e) => e.getComponent('Camera'))[0]
   camera = cameraEnt.getComponent('Camera')
+  camera.set({ exposure: 0.6 })
 
   postProcessing = renderer.postProcessing({
-    dof: true
+    dof: true,
+    dofFocusDistance: 8
   })
   cameraEnt.addComponent(postProcessing)
 
@@ -168,13 +181,13 @@ async function initScene() {
     'focalLength (mm)',
     camera,
     'focalLength',
-    { min: 0, max: 100 },
+    { min: 0, max: 200 },
     (focalLength) => {
       camera.set({ focalLength })
     }
   )
   gui.addParam('F-Stop', camera, 'fStop', {
-    min: 1.4,
+    min: 1.2,
     max: 32
   })
 
@@ -260,13 +273,6 @@ async function initScene() {
 initScene()
 
 ctx.frame(() => {
-  const now = Date.now() * 0.0005
-
-  const skybox = skyboxEntity.getComponent('Skybox')
-  skybox.set({
-    sunPosition: [1 * Math.cos(now), 1, 1 * Math.sin(now)]
-  })
-
   renderer.draw()
 
   if (camera) {
