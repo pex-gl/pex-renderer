@@ -74,7 +74,8 @@ function PostProcessing(opts) {
   this.ssaoBlurSharpness = 10
 
   this.dof = false
-  this.dofFocusDistance = 1
+  this.dofDebug = false
+  this.dofFocusDistance = 5
   this.dofAperture = 1
 
   this.bloom = false
@@ -322,7 +323,7 @@ PostProcessing.prototype.initPostproces = function() {
       depthMap: this._frameDepthTex,
       image: this._frameAOTex,
       // direction: [State.bilateralBlurRadius, 0], // TODO:
-      direction: [0.5, 0],
+      direction: [0.5, 0]
     }
   }
 
@@ -343,7 +344,7 @@ PostProcessing.prototype.initPostproces = function() {
       depthMap: this._frameDepthTex,
       image: this._frameAOBlurTex,
       // direction: [0, State.bilateralBlurRadius], // TODO:
-      direction: [0, 0.5],
+      direction: [0, 0.5]
     }
   }
 

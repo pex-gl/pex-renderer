@@ -1285,12 +1285,12 @@ Renderer.prototype.draw = function() {
             uNear: camera.near,
             imageSize: screenSize,
             depthMapSize: screenSize,
-            uPixelSize: [
-              1 / ctx.gl.drawingBufferWidth,
-              1 / ctx.gl.drawingBufferHeight
-            ],
+            uPixelSize: [1 / screenSize[0], 1 / screenSize[1]],
             uFocusDistance: postProcessingCmp.dofFocusDistance,
-            uAperture: postProcessingCmp.dofAperture
+            uSensorHeight: camera.actualSensorHeight,
+            uFocalLength: camera.focalLength,
+            uFStop: camera.fStop,
+            uDOFDebug: postProcessingCmp.dofDebug
           }
         })
         if (State.profiler) State.profiler.timeEnd('dof')
@@ -1315,10 +1315,9 @@ Renderer.prototype.draw = function() {
             uFogDensity: postProcessingCmp.fogDensity,
             uSunPosition: postProcessingCmp.sunPosition,
             uOutputEncoding: ctx.Encoding.Gamma,
-            uOverlay:
-              postProcessingCmp.dof
-                ? postProcessingCmp._frameDofBlurTex
-                : postProcessingCmp._frameColorTex,
+            uOverlay: postProcessingCmp.dof
+              ? postProcessingCmp._frameDofBlurTex
+              : postProcessingCmp._frameColorTex,
             uScreenSize: screenSize
           },
           viewport: camera.viewport

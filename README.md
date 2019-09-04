@@ -307,20 +307,24 @@ const camera = renderer.camera({
 })
 ```
 
-| property                         | info                        | type                            | default                                               |
-| -------------------------------- | --------------------------- | ------------------------------- | ----------------------------------------------------- |
-| `projection`                     | camera projection type      | 'perspective' \| 'orthographic' | 'perspective'                                         |
-| `viewport`                       | camera viewport             | Array [x, y, width, height]     | [0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight] |
-| `near`                           | near plane distance         | Number                          | 0.1                                                   |
-| `far`                            | far plane distance          | Number                          | 100                                                   |
-| `aspect`                         | aspect ratio                | Number                          | 1                                                     |
-| `exposure`                       | exposure value              | Number                          | 1                                                     |
-| `fov`                            | perspective field of view   | Number                          | Math.PI / 4                                           |
-| `left`, `right`, `top`, `bottom` | orthographic frustum bounds | Number                          | 1                                                     |
-| `zoom`                           | orthographic zoom           | Number                          | 1                                                     |
-| `projectionMatrix`\*             |                             |                                 |                                                       |
-| `viewMatrix`\*                   |                             |                                 |                                                       |
-| `inverseViewMatrix`\*            |                             |                                 |                                                       |
+| property                         | info                                                             | type                                              | default                                               |
+| -------------------------------- | ---------------------------------------------------------------- | ------------------------------------------------- | ----------------------------------------------------- |
+| `projection`                     | camera projection type                                           | 'perspective' \| 'orthographic'                   | 'perspective'                                         |
+| `viewport`                       | camera viewport                                                  | Array [x, y, width, height]                       | [0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight] |
+| `near`                           | near plane distance                                              | Number                                            | 0.1                                                   |
+| `far`                            | far plane distance                                               | Number                                            | 100                                                   |
+| `aspect`                         | aspect ratio                                                     | Number                                            | 1                                                     |
+| `exposure`                       | exposure value                                                   | Number                                            | 1                                                     |
+| `fov`                            | perspective vertical field of view (yfov)                        | Number [rad]                                      | Math.PI / 4                                           |
+| `focalLength`                    | focal length of the camera lens [10mm - 200mm]                   | Number [mm]                                       | 50                                                    |
+| `fStop`                          | ratio of camera lens opening, f-number, f/N, aperture [1.2 - 32] | Number                                            | 2.8                                                   |
+| `sensorSize`                     | physical camera sensor or film size [sensorWidth, sensorHeight]  | Vec2 [mm, mm]                                     | [36, 24]                                              |
+| `sensorFit`                      | how camera frame matches sensor frame                            | 'vertical' \| 'horizontal' \| 'fit' \| 'overscan' | 'vertical'                                            |
+| `left`, `right`, `top`, `bottom` | orthographic frustum bounds                                      | Number                                            | 1                                                     |
+| `zoom`                           | orthographic zoom                                                | Number                                            | 1                                                     |
+| `projectionMatrix`\*             |                                                                  |                                                   |                                                       |
+| `viewMatrix`\*                   |                                                                  |                                                   |                                                       |
+| `inverseViewMatrix`\*            |                                                                  |                                                   |                                                       |
 
 <sup>\*</sup> read only
 
@@ -338,6 +342,43 @@ const postProcessing = renderer.postProcessing({
   bloom: true
 })
 ```
+
+#### Antialiasing
+
+| property | info                   | type    | default |
+| -------- | ---------------------- | ------- | ------- |
+| `fxaa`   | FXX antaliasing on/off | Boolean | false   |
+
+#### Screen Space Ambient Occlusion
+
+| property                    | info         | type    | default |
+| --------------------------- | ------------ | ------- | ------- |
+| `ssao`                      | SSAO on/off  | Boolean | false   |
+| `ssaoIntensity`             | SSAO shadows | Number  | 5       |
+| `ssaoRadius`                | SSAO shadows | Number  | 12      |
+| `ssaoBias`                  | SSAO shadows | Number  | 0.01    |
+| `ssaoBlurRadius`            | SSAO shadows | Number  | 2       |
+| `ssaossaoBlurSharpnessBias` | SSAO shadows | Number  | 10      |
+
+#### Depth Of Field
+
+| property           | info                    | type            | default |
+| ------------------ | ----------------------- | --------------- | ------- |
+| `dof`              | DoF on/off              | Boolean         | false   |
+| `dofFocusDistance` | Distance to focus plane | Number [meters] | 5       |
+
+#### Bloom
+
+| property         | info                                                           | type    | default |
+| ---------------- | -------------------------------------------------------------- | ------- | ------- |
+| `bloom`          | Bloom on/off                                                   | Boolean | false   |
+| `bloomRadius`    | Amount of bloom blur                                           | Number  | 1       |
+| `bloomThreshold` | Bloom color cut off (default 1 = only "hdr" colors will bloom) | Number  | 1       |
+| `bloomIntensity` | Amount of the bloom to add to the scene                        | Number  | 1       |
+
+#### Fog
+
+TODO: _fog, fogColor, fogStart, fogDensity, inscatteringCoeffs, sunPosition, sunColor, sunDispertion, sunIntensity_
 
 ### orbiter = renderer.orbiter(opts)
 
