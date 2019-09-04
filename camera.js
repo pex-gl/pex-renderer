@@ -18,7 +18,7 @@ function Camera(opts) {
   this.inverseViewMatrix = mat4.create()
 
   this.focalLength = 50 // mm
-  this.fStop = 5.6
+  this.fStop = 2.8
 
   this.sensorSize = [36, 24] //mm
   this.actualSensorHeight = 24 //mm
