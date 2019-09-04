@@ -286,6 +286,7 @@ ctx.frame(() => {
       `ASPECT : ${aspectRatio.toFixed(2)}`
     ]
     cameraInfoLabel.setTitle(str.join('\n'))
+    window.dispatchEvent(new CustomEvent('pex-screenshot'))
   }
 
   if (sensorRectOverlay) {
@@ -293,6 +294,4 @@ ctx.frame(() => {
   }
 
   gui.draw()
-
-  window.dispatchEvent(new CustomEvent('pex-screenshot'))
 })
