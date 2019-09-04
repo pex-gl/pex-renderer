@@ -150,8 +150,7 @@ async function initScene() {
   camera = cameraEnt.getComponent('Camera')
 
   postProcessing = renderer.postProcessing({
-    dof: true,
-    dofFocusDistance: 10
+    dof: true
   })
   cameraEnt.addComponent(postProcessing)
 
@@ -219,7 +218,7 @@ async function initScene() {
     }
   )
 
-  // postProcessing.set({ dofDebug: true })
+  postProcessing.set({ dofDebug: true })
   gui.addHeader('Depth of Field')
   gui.addParam('Enabled', postProcessing, 'dof')
   gui.addParam('Debug', postProcessing, 'dofDebug')
