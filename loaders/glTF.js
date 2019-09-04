@@ -248,10 +248,10 @@ function handleMaterial(material, gltf, ctx) {
         ctx.Encoding.SRGB
       )
     }
-    if (pbrMetallicRoughness.metallicFactor) {
+    if (pbrMetallicRoughness.metallicFactor !== undefined) {
       materialProps.metallic = pbrMetallicRoughness.metallicFactor
     }
-    if (pbrMetallicRoughness.roughnessFactor) {
+    if (pbrMetallicRoughness.roughnessFactor !== undefined) {
       materialProps.roughness = pbrMetallicRoughness.roughnessFactor
     }
     if (pbrMetallicRoughness.metallicRoughnessTexture) {
@@ -282,7 +282,7 @@ function handleMaterial(material, gltf, ctx) {
     if (pbrSpecularGlossiness.specularFactor) {
       materialProps.specular = pbrSpecularGlossiness.specularFactor
     }
-    if (pbrSpecularGlossiness.glossinessFactor) {
+    if (pbrSpecularGlossiness.glossinessFactor !== undefined) {
       materialProps.glossiness = pbrSpecularGlossiness.glossinessFactor
     }
     if (pbrSpecularGlossiness.diffuseTexture) {
