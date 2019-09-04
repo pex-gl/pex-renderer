@@ -74,6 +74,15 @@ const PEX_ATTRIBUTE_NAME_MAP = {
   COLOR_0: 'vertexColors'
 }
 
+function linearToSrgb(color) {
+  return [
+    Math.pow(color[0], 1.0 / 2.2),
+    Math.pow(color[1], 1.0 / 2.2),
+    Math.pow(color[2], 1.0 / 2.2),
+    color.length == 4 ? color[3] : 1
+  ]
+}
+
 // Build
 // https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/schema/accessor.schema.json
 function getAccessor(accessor, bufferViews) {
@@ -238,7 +247,9 @@ function handleMaterial(material, gltf, ctx) {
       metallic: 1
     }
     if (pbrMetallicRoughness.baseColorFactor) {
-      materialProps.baseColor = pbrMetallicRoughness.baseColorFactor
+      materialProps.baseColor = linearToSrgb(
+        pbrMetallicRoughness.baseColorFactor
+      )
     }
     if (pbrMetallicRoughness.baseColorTexture) {
       materialProps.baseColorMap = getPexMaterialTexture(
@@ -277,10 +288,12 @@ function handleMaterial(material, gltf, ctx) {
       glossiness: 1
     }
     if (pbrSpecularGlossiness.diffuseFactor) {
-      materialProps.diffuse = pbrSpecularGlossiness.diffuseFactor
+      materialProps.diffuse = linearToSrgb(pbrSpecularGlossiness.diffuseFactor)
     }
     if (pbrSpecularGlossiness.specularFactor) {
-      materialProps.specular = pbrSpecularGlossiness.specularFactor
+      materialProps.specular = linearToSrgb(
+        pbrSpecularGlossiness.specularFactor
+      )
     }
     if (pbrSpecularGlossiness.glossinessFactor !== undefined) {
       materialProps.glossiness = pbrSpecularGlossiness.glossinessFactor
@@ -334,12 +347,7 @@ function handleMaterial(material, gltf, ctx) {
   if (material.emissiveFactor) {
     materialProps = {
       ...materialProps,
-      emissiveColor: [
-        material.emissiveFactor[0],
-        material.emissiveFactor[1],
-        material.emissiveFactor[2],
-        1
-      ]
+      emissiveColor: linearToSrgb(material.emissiveFactor)
     }
   }
 
