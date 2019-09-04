@@ -282,7 +282,9 @@ ctx.frame(() => {
     cameraInfoLabel.setTitle(str.join('\n'))
   }
 
-  sensorRectOverlay.enabled = rendererState.showSensorFrame
+  if (sensorRectOverlay) {
+    sensorRectOverlay.enabled = rendererState.showSensorFrame
+  }
 
   gui.draw()
 
