@@ -343,6 +343,43 @@ const postProcessing = renderer.postProcessing({
 })
 ```
 
+#### Antialiasing
+
+| property | info                   | type    | default |
+| -------- | ---------------------- | ------- | ------- |
+| `fxaa`   | FXX antaliasing on/off | Boolean | false   |
+
+#### Screen Space Ambient Occlusion
+
+| property                    | info         | type    | default |
+| --------------------------- | ------------ | ------- | ------- |
+| `ssao`                      | SSAO on/off  | Boolean | false   |
+| `ssaoIntensity`             | SSAO shadows | Number  | 5       |
+| `ssaoRadius`                | SSAO shadows | Number  | 12      |
+| `ssaoBias`                  | SSAO shadows | Number  | 0.01    |
+| `ssaoBlurRadius`            | SSAO shadows | Number  | 2       |
+| `ssaossaoBlurSharpnessBias` | SSAO shadows | Number  | 10      |
+
+#### Depth Of Field
+
+| property           | info                    | type            | default |
+| ------------------ | ----------------------- | --------------- | ------- |
+| `dof`              | DoF on/off              | Boolean         | false   |
+| `dofFocusDistance` | Distance to focus plane | Number [meters] | 5       |
+
+#### Bloom
+
+| property         | info                                                           | type    | default |
+| ---------------- | -------------------------------------------------------------- | ------- | ------- |
+| `bloom`          | Bloom on/off                                                   | Boolean | false   |
+| `bloomRadius`    | Amount of bloom blur                                           | Number  | 1       |
+| `bloomThreshold` | Bloom color cut off (default 1 = only "hdr" colors will bloom) | Number  | 1       |
+| `bloomIntensity` | Amount of the bloom to add to the scene                        | Number  | 1       |
+
+#### Fog
+
+TODO: _fog, fogColor, fogStart, fogDensity, inscatteringCoeffs, sunPosition, sunColor, sunDispertion, sunIntensity_
+
 ### orbiter = renderer.orbiter(opts)
 
 Orbiter controller for camera component.
