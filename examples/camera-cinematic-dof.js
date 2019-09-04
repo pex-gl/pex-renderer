@@ -44,7 +44,8 @@ const rendererState = {
   resolutionPreset: 1,
   resolutions: [0.5, 1, 2],
   aspectRatioPreset: 0,
-  aspectRatios: [[16, 9], [9, 16], [window.innerWidth, window.innerHeight]]
+  aspectRatios: [[16, 9], [9, 16], [window.innerWidth, window.innerHeight]],
+  showSensorFrame: true
 }
 
 gui.addHeader('Render Viewport')
@@ -141,7 +142,7 @@ window.addEventListener('resize', resize)
 
 async function initScene() {
   const scene = await renderer.loadScene(
-    'assets/models/dof-reference/dof-reference.gltf',
+    'assets/models/dof-reference/dof-reference-columns-modified-postapply.gltf',
     { includeCameras: true }
   )
   renderer.add(scene.root)
@@ -178,6 +179,7 @@ async function initScene() {
   })
 
   gui.addHeader('Camera Sensor')
+  gui.addParam('Show sensor frame', rendererState, 'showSensorFrame')
   gui.addParam(
     'Sensor width (mm)',
     camera.sensorSize,
@@ -279,6 +281,8 @@ ctx.frame(() => {
     ]
     cameraInfoLabel.setTitle(str.join('\n'))
   }
+
+  sensorRectOverlay.enabled = rendererState.showSensorFrame
 
   gui.draw()
 
