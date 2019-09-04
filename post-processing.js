@@ -75,7 +75,7 @@ function PostProcessing(opts) {
 
   this.dof = false
   this.dofDebug = false
-  this.dofFocusDistance = 1
+  this.dofFocusDistance = 4
   this.dofAperture = 1
 
   this.bloom = false
