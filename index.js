@@ -1279,32 +1279,20 @@ Renderer.prototype.draw = function() {
         postProcessingCmp.dof
       ) {
         if (State.profiler) State.profiler.time('dof', true)
-        for (let i = 0; i < postProcessingCmp.dofIterations; i++) {
-          ctx.submit(postProcessingCmp._dofBlurHCmd, {
-            uniforms: {
-              near: camera.near,
-              far: camera.far,
-              sharpness: 0,
-              imageSize: screenSize,
-              depthMapSize: screenSize,
-              direction: [postProcessingCmp.dofRadius, 0],
-              uDOFDepth: postProcessingCmp.dofDepth,
-              uDOFRange: postProcessingCmp.dofRange
-            }
-          })
-          ctx.submit(postProcessingCmp._dofBlurVCmd, {
-            uniforms: {
-              near: camera.near,
-              far: camera.far,
-              sharpness: 0,
-              imageSize: screenSize,
-              depthMapSize: screenSize,
-              direction: [0, postProcessingCmp.dofRadius],
-              uDOFDepth: postProcessingCmp.dofDepth,
-              uDOFRange: postProcessingCmp.dofRange
-            }
-          })
-        }
+        ctx.submit(postProcessingCmp._dofCmd, {
+          uniforms: {
+            uFar: camera.far,
+            uNear: camera.near,
+            imageSize: screenSize,
+            depthMapSize: screenSize,
+            uPixelSize: [
+              1 / ctx.gl.drawingBufferWidth,
+              1 / ctx.gl.drawingBufferHeight
+            ],
+            uFocusDistance: postProcessingCmp.dofFocusDistance,
+            uAperture: postProcessingCmp.dofAperture
+          }
+        })
         if (State.profiler) State.profiler.timeEnd('dof')
       }
       if (postProcessingCmp && postProcessingCmp.enabled) {
@@ -1327,6 +1315,10 @@ Renderer.prototype.draw = function() {
             uFogDensity: postProcessingCmp.fogDensity,
             uSunPosition: postProcessingCmp.sunPosition,
             uOutputEncoding: ctx.Encoding.Gamma,
+            uOverlay:
+              postProcessingCmp.dof
+                ? postProcessingCmp._frameDofBlurTex
+                : postProcessingCmp._frameColorTex,
             uScreenSize: screenSize
           },
           viewport: camera.viewport

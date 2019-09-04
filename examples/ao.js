@@ -111,10 +111,6 @@ const cameraEntity = renderer.entity([
     ssaoBlurRadius: 0.5,
     ssaoSharpness: 5,
     ssaoIntensity: 0.5
-    // dof: true,
-    // dofRange: 1,
-    // dofDepth: 6,
-    // dofRadius: 2
   })
 ])
 renderer.add(cameraEntity)
