@@ -2,7 +2,7 @@ const createRenderer = require('../')
 const createContext = require('pex-context')
 const createCube = require('primitive-cube')
 const random = require('pex-random')
-const { fromHex, fromHSL } = require('pex-color')
+const { fromHex } = require('pex-color')
 const { quat, vec3 } = require('pex-math')
 const dutchPalette = [
   '#FFC312',
@@ -147,7 +147,7 @@ const geom = {
     divisor: 1
   },
   colors: {
-    data: rects.map((rect, i) => {
+    data: rects.map(() => {
       // return fromHSL(0.5 + random.float(0.1), 0.4, 0.4)
       if (random.chance(0.9)) return [1, 1, 1, 1]
       // if (random.chance(0.6)) return dutchPalette[1]

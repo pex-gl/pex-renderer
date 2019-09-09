@@ -456,8 +456,14 @@ renderer.add(areaLightEntity)
     max: 20
   })
   gui.addParam('DOF', postProcessingCmp, 'dof')
-  gui.addParam('DOF Focus Distance', postProcessingCmp, 'dofFocusDistance', { min: 0, max: 20 })
-  gui.addParam('DOF Aperture', postProcessingCmp, 'dofAperture', { min: 0, max: 100 })
+  gui.addParam('DOF Focus Distance', postProcessingCmp, 'dofFocusDistance', {
+    min: 0,
+    max: 20
+  })
+  gui.addParam('DOF Aperture', postProcessingCmp, 'dofAperture', {
+    min: 0,
+    max: 100
+  })
 
   gui.addParam('FXAA', postProcessingCmp, 'fxaa')
 

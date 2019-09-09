@@ -4,7 +4,6 @@ const createContext = require('pex-context')
 const io = require('pex-io')
 const { quat, vec3 } = require('pex-math')
 const GUI = require('pex-gui')
-const createSphere = require('primitive-sphere')
 const parseHdr = require('parse-hdr')
 const parseObj = require('geom-parse-obj')
 const isBrowser = require('is-browser')
@@ -62,7 +61,7 @@ const skybox = renderer.entity([
 ])
 renderer.add(skybox)
 
-function getMaterialMaps(maps, options) {
+function getMaterialMaps(maps) {
   return Object.entries(maps).reduce(
     (currentValue, [key, image]) => ({
       ...currentValue,
@@ -135,11 +134,6 @@ renderer.add(reflectionProbe)
       `${ASSETS_DIR}/models/substance-sample-scene/substance-sample-scene.obj`
     )
   )
-
-  var clearCoatNormalMap = {
-    texture: materialMaps.normalMap,
-    scale: [2, 2]
-  }
 
   const geom1 = renderer.entity(
     [

@@ -120,8 +120,6 @@ function resize() {
 
   const sensorAspectRatio = camera.sensorSize[0] / camera.sensorSize[1]
   const cameraAspectRatio = cameraWidth / cameraHeight
-  let sensorWidth = camera.sensorSize[0]
-  let sensorHeight = camera.sensorSize[1]
   if (cameraAspectRatio > sensorAspectRatio) {
     if (camera.sensorFit === 'vertical' || camera.sensorFit === 'overscan') {
       sensorFitBounds = fitRect(sensorBounds, cameraViewport)
@@ -279,7 +277,6 @@ ctx.frame(() => {
     let aspectRatio = camera.aspect
     let yfov = camera.fov
     let xfov = 2 * Math.atan(aspectRatio * Math.tan(camera.fov / 2))
-    let sensorHeight = camera.actualSensorHeight
     let str = [
       `X FOV : ${toDegrees(xfov).toFixed(0)}°`,
       `Y FOV : ${toDegrees(yfov).toFixed(0)}°`,
