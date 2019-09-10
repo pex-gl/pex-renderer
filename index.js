@@ -26,7 +26,7 @@ const createSkybox = require('./skybox')
 const createOverlay = require('./overlay')
 const loadGltf = require('./loaders/glTF')
 
-const geomBuilder = require('geom-builder')
+const createGeomBuilder = require('geom-builder')
 
 const PBR_VERT = require('./shaders/pipeline/material.vert.js')
 const PBR_FRAG = require('./shaders/pipeline/material.frag.js')
@@ -1330,11 +1330,14 @@ Renderer.prototype.draw = function() {
 
 
 
-    let arrayOfRandomPoints = []
-    for (let no = 0; no < 100; no++) {
-      arrayOfRandomPoints.push([Math.random(),Math.random(),Math.random()])
-      
-    }
+    let arrayOfRandomPoints = [[0,0,0]]
+    
+
+    let a1 = new Float32Array(arrayOfRandomPoints)
+    let a2 = new Float32Array(arrayOfRandomPoints.map(() => [1, 1, 1, 1]))
+    
+    let vBuf = ctx.vertexBuffer({data: a1})
+    let vBuf2 = ctx.vertexBuffer({data: a2})
     
     
     var drawLinesCmd = {
@@ -1363,8 +1366,8 @@ Renderer.prototype.draw = function() {
         primitive: ctx.Primitive.Lines
       }),
       attributes: {
-        aPosition: ctx.vertexBuffer(arrayOfRandomPoints),
-        aVertexColor: ctx.vertexBuffer(arrayOfRandomPoints.map(() => [1, 1, 1, 1]))
+        aPosition: vBuf,
+        aVertexColor: vBuf2
       },
       count: arrayOfRandomPoints.length,
       uniforms: {
@@ -1376,29 +1379,30 @@ Renderer.prototype.draw = function() {
     
     
 
-    function drawBBox(geomBuilder, bounds, color) {
-      //draw right bottom edge
-      geomBuilder.addPosition(bounds[0][0]) //minx
-      geomBuilder.addPosition(bounds[1][0]) //max
+    function drawBBox(geomBuilder, bbox, color) {
+
+      geomBuilder.addPosition(bbox[0]),
+      geomBuilder.addPosition(bbox[1]),
+
       geomBuilder.addColor(color)
       geomBuilder.addColor(color)
+
   }
 
     this.entities.forEach(ent =>{
+      let geomBuilder = createGeomBuilder({ colors:1, positions:1 })
+      if(ent.getComponent('BoundingBoxHelper')){
+        let eTransform = ent.getComponent('Transform')
+        drawBBox(geomBuilder, eTransform.worldBounds,[1,0,0,1])
 
-
-
+        ctx.update(vBuf, {data: geomBuilder.positions})
+        ctx.update(vBuf2, {data: geomBuilder.colors})
+        drawLinesCmd.count = geomBuilder.count
+        ctx.submit( drawLinesCmd,)
+      }   
     })
-  
-  //drawBBox(geomBuilder, entity.transform.worldBounds)
-
-    // ctx.update(positionsBuffer, geomBuilder.positions)
-    // ctx.update(vertexColorsBuffer, geomBuilder.colors)
-    // drawSphereCmd.count = geomBuilder.count
-
-
-    ctx.submit( drawLinesCmd)
-  
+    
+    
 
 
   overlays

@@ -157,7 +157,8 @@ const directionalLight = renderer.entity([
   }),
   renderer.directionalLight({
     castShadows: true,
-    color: [1, 1, 1, 1]
+    color: [1, 1, 1, 1],
+    intensity: 5
   })
 ])
 renderer.add(directionalLight)
@@ -244,7 +245,6 @@ loadScene(`${ASSETS_DIR}/models/CesiumMan/CesiumMan.gltf`, {
   position: [0.5, -0.35, 0]
 })
 
-console.log(dragonEntity) 
 //instanced mesh
 const gridSize = 3
 let grid = []
@@ -269,8 +269,13 @@ const instGeometry = renderer.geometry({
 })
 let instEntity = renderer.entity([
   instGeometry,
-  renderer.material({ baseColor: [1, 0, 0, 1] }),
-  renderer.transform({position: [1.7,-0.2,0]})
+  renderer.material({ 
+    baseColor: [1, 0, 0, 1],
+    castShadows : true,
+    receiveShadows : true
+  }),
+  renderer.transform({position: [1.7,-0.2,0]}),
+  helperBBox()
 ])
 
 renderer.add(instEntity)

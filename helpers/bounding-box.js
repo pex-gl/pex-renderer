@@ -4,9 +4,10 @@ const Signal = require('signals')
 function BoundingBoxHelper(opts) {
   this.type = 'BoundingBoxHelper'
   this.entity = null
-
+  this.color = [1,1,1,1]
   this.changed = new Signal()
   this.dirty = false
+  
   this.set(opts)
 }
 
@@ -20,9 +21,7 @@ BoundingBoxHelper.prototype.set = function(opts) {
   Object.assign(this, opts)
   this.dirty = true
 
-  // TODO
-  // NEEDS ATTENTION CANNOT SET
-
+  //SET IS GIVING ERRORS
   //Object.keys(opts).forEach((prop) => this.changed.dispatch(prop))
 }
 
