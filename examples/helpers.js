@@ -304,6 +304,7 @@ async function loadScene(url, transformProps) {
     if (transformCmp && transformProps) {
       transformCmp.set(transformProps)
     }
+    entity.addComponent(helperBBox())
   })
 
   renderer.add(scene.root)
