@@ -300,7 +300,7 @@ _Note: `camera` `position/rotation` are derived from `entity.transform.position/
 
 ```javascript
 const camera = renderer.camera({
-  fov: Math.PI / 2,
+  fov: Math.PI / 4,
   aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
   near: 0.1,
   far: 100
@@ -315,7 +315,7 @@ const camera = renderer.camera({
 | `far`                            | far plane distance                                               | Number                                            | 100                                                   |
 | `aspect`                         | aspect ratio                                                     | Number                                            | 1                                                     |
 | `exposure`                       | exposure value                                                   | Number                                            | 1                                                     |
-| `fov`                            | perspective vertical field of view (yfov)                        | Number [rad]                                      | Math.PI / 4                                           |
+| `fov`                            | perspective vertical field of view (yfov)                        | Number [rad]                                      | Math.PI / 4<sup>1</sup>                                          |
 | `focalLength`                    | focal length of the camera lens [10mm - 200mm]                   | Number [mm]                                       | 50                                                    |
 | `fStop`                          | ratio of camera lens opening, f-number, f/N, aperture [1.2 - 32] | Number                                            | 2.8                                                   |
 | `sensorSize`                     | physical camera sensor or film size [sensorWidth, sensorHeight]  | Vec2 [mm, mm]                                     | [36, 24]                                              |
@@ -327,6 +327,7 @@ const camera = renderer.camera({
 | `inverseViewMatrix`\*            |                                                                  |                                                   |                                                       |
 
 <sup>\*</sup> read only
+<sup>1</sup> depends on viewport aspect ratio, focalLength and sensorFit
 
 ### postProcessing = renderer.postProcessing(opts)
 
