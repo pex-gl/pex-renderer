@@ -14,7 +14,7 @@ const createBox = require('primitive-box')
 const edges = require('geom-edges')
 const aabb = require('pex-geom/aabb')
 
-const { makeAxes } = require('./helpers')
+const { makeAxes } = require('./helpers-backup')
 
 const MODELS_PATH =
   'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0'
