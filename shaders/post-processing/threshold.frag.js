@@ -24,8 +24,11 @@ void main() {
   vec4 color = texture2D(image, vUV);
   color.rgb *= uExposure;
   float brightness = perceivedBrightness(color.rgb);
-  if (brightness > uBloomThreshold) {
-    gl_FragColor = color;
+  float smoothRange = 0.1;
+  float t1 = uBloomThreshold * (1.0 - smoothRange);
+  float t2 = uBloomThreshold * (1.0 + smoothRange);
+  if (brightness > t1) {
+    gl_FragColor = color * smoothstep(t1, t2, brightness);
   } else {
     gl_FragColor = vec4(0.0, 0.0, 0.0, 0.0);
   }
