@@ -33,6 +33,7 @@
   },
   "dependencies": {
     "debug": "^4.1.1",
+    "geom-builder": "^2.1.0",
     "hammersley": "^1.0.0",
     "interpolate-angle": "^1.0.2",
     "is-browser": "^2.1.0",
