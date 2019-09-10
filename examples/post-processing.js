@@ -518,6 +518,12 @@ let postProcessingCmp
 
   gui.addParam('FXAA', postProcessingCmp, 'fxaa')
 
+  gui.addParam('Bloom', postProcessingCmp, 'bloom')
+  gui.addParam('Bloom threshold', postProcessingCmp, 'bloomThreshold', { min: 0, max: 2 })
+  gui.addParam('Bloom intensity', postProcessingCmp, 'bloomIntensity', { min: 0, max: 5 })
+  gui.addParam('Bloom radius', postProcessingCmp, 'bloomRadius', { min: 0, max: 10 })
+
+
   gui.addColumn('Render targets')
   if (postProcessingCmp.enabled) {
     gui.addTexture2D('Depth', postProcessingCmp._frameDepthTex)
