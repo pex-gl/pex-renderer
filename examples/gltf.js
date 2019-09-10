@@ -182,7 +182,7 @@ const reflectionProbeEntity = renderer.entity([renderer.reflectionProbe()])
 renderer.add(reflectionProbeEntity)
 
 const addEnvmap = async () => {
-  const buffer = await loadBinary(`${ASSETS_DIR}/garage.hdr`)
+  const buffer = await loadBinary(`${ASSETS_DIR}/envmaps/garage/garage.hdr`)
   const hdrImg = parseHdr(buffer)
   const panorama = ctx.texture2D({
     data: hdrImg.data,

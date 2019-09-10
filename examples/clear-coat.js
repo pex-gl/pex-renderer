@@ -117,10 +117,10 @@ renderer.add(reflectionProbe)
 
   const materialMaps = getMaterialMaps({
     baseColorMap: await io.loadImage(
-      `${ASSETS_DIR}/materials/carbon-fiber/carbon-fiber-color.jpg`
+      `${ASSETS_DIR}/materials/Fabric04/Fabric04_col.jpg`
     ),
     normalMap: await io.loadImage(
-      `${ASSETS_DIR}/materials/carbon-fiber/carbon-fiber-normal.jpg`
+      `${ASSETS_DIR}/materials/Fabric04/Fabric04_nrm.jpg`
     ),
     clearCoatNormalMap: await io.loadImage(
       `${ASSETS_DIR}/materials/Metal05/Metal05_nrm.jpg`

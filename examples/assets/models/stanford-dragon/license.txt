@@ -1,0 +1,9 @@
+From: http://graphics.stanford.edu/data/3Dscanrep/
+
+Please acknowledge...
+
+Please be sure to acknowledge the source of the data and models you take from this repository. In each of the listings below, we have cited the source of the range data and reconstructed models. You are welcome to use the data and models for research purposes. You are also welcome to mirror or redistribute them for free. Finally, you may publish images made using these models, or the images on this web site, in a scholarly article or book - as long as credit is given to the Stanford Computer Graphics Laboratory. However, such models or images are not to be used for commercial purposes, nor should they appear in a product for sale (with the exception of scholarly journals or books), without our permission.
+
+Inappropriate uses of these models
+
+As you browse this repository and think about how you might use our 3D models and range datasets, please remember that several of these artifacts have religious or cultural significance. Aside from the buddha, which is a religious symbol revered by hundreds of millions of people, the dragon is a symbol of Chinese culture, the Thai statue contains elements of religious significance to Hindus, and Lucy is a Christian angel; statues like her are commonly seen in Italian churches. Keep your renderings and other uses of these particular models in good taste. Don't animate or morph them, don't apply Boolean operators to them, and don't simulate nasty things happening to them (like breaking, exploding, melting, etc.). Choose another model for these sorts of experiments. (You can do anything you want to the Stanford bunny or the armadillo.)

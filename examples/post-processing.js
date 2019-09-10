@@ -15,7 +15,7 @@ const normals = require('angle-normals')
 const centerAndNormalize = require('geom-center-and-normalize')
 const parseHdr = require('parse-hdr')
 const isBrowser = require('is-browser')
-const dragon = require('./assets/stanford-dragon')
+const dragon = require('./assets/models/stanford-dragon/stanford-dragon')
 
 const ASSETS_DIR = isBrowser ? 'assets' : path.join(__dirname, 'assets')
 
@@ -115,19 +115,19 @@ const cameraEntity = renderer.add(
 
 // Meshes
 const baseColorMap = imageFromFile(
-  ASSETS_DIR + '/plastic-green.material/plastic-green_basecolor.png',
+  ASSETS_DIR + '/materials/plastic-green.material/plastic-green_basecolor.png',
   { encoding: ctx.Encoding.SRGB }
 )
 const normalMap = imageFromFile(
-  ASSETS_DIR + '/plastic-green.material/plastic-green_n.png',
+  ASSETS_DIR + '/materials/plastic-green.material/plastic-green_n.png',
   { encoding: ctx.Encoding.Linear }
 )
 const metallicMap = imageFromFile(
-  ASSETS_DIR + '/plastic-green.material/plastic-green_metallic.png',
+  ASSETS_DIR + '/materials/plastic-green.material/plastic-green_metallic.png',
   { encoding: ctx.Encoding.Linear }
 )
 const roughnessMap = imageFromFile(
-  ASSETS_DIR + '/plastic-green.material/plastic-green_roughness.png',
+  ASSETS_DIR + '/materials/plastic-green.material/plastic-green_roughness.png',
   { encoding: ctx.Encoding.Linear }
 )
 const groundCube = createRoundedCube(1, 1, 1, 20, 20, 20, 0.01)
@@ -258,7 +258,7 @@ const areaLightEntity = renderer.entity([
 renderer.add(areaLightEntity)
 ;(async () => {
   // Sky
-  const buffer = await io.loadBinary(`${ASSETS_DIR}/Mono_Lake_B.hdr`)
+  const buffer = await io.loadBinary(`${ASSETS_DIR}/envmaps/Mono_Lake_B/Mono_Lake_B.hdr`)
   const hdrImg = parseHdr(buffer)
   const panorama = ctx.texture2D({
     data: hdrImg.data,
