@@ -288,9 +288,6 @@ Renderer.prototype.getMaterialProgramAndFlags = function(
 
   var flags = []
 
-  if (this._state.targetMobile) {
-    flags.push('#define TARGET_MOBILE')
-  }
   if (!geometry._attributes.aNormal) {
     flags.push('#define USE_UNLIT_WORKFLOW')
   } else {
@@ -994,7 +991,12 @@ Renderer.prototype.drawMeshes = function(
       cachedUniforms.uClearCoatRoughness = material.clearCoatRoughness || 0.04
     }
     if (material.clearCoatNormalMap) {
-      cachedUniforms.uClearCoatNormalMap = material.clearCoatNormalMap
+      cachedUniforms.uClearCoatNormalMap =
+        material.clearCoatNormalMap.texture || material.clearCoatNormalMap
+      if (material.clearCoatNormalMap.texCoordTransformMatrix) {
+        cachedUniforms.uClearCoatNormalMapTexCoordTransform =
+          material.clearCoatNormalMap.texCoordTransformMatrix
+      }
       cachedUniforms.uClearCoatNormalMapScale = material.clearCoatNormalMapScale
     }
 
@@ -1275,32 +1277,20 @@ Renderer.prototype.draw = function() {
         postProcessingCmp.dof
       ) {
         if (State.profiler) State.profiler.time('dof', true)
-        for (let i = 0; i < postProcessingCmp.dofIterations; i++) {
-          ctx.submit(postProcessingCmp._dofBlurHCmd, {
-            uniforms: {
-              near: camera.near,
-              far: camera.far,
-              sharpness: 0,
-              imageSize: screenSize,
-              depthMapSize: screenSize,
-              direction: [postProcessingCmp.dofRadius, 0],
-              uDOFDepth: postProcessingCmp.dofDepth,
-              uDOFRange: postProcessingCmp.dofRange
-            }
-          })
-          ctx.submit(postProcessingCmp._dofBlurVCmd, {
-            uniforms: {
-              near: camera.near,
-              far: camera.far,
-              sharpness: 0,
-              imageSize: screenSize,
-              depthMapSize: screenSize,
-              direction: [0, postProcessingCmp.dofRadius],
-              uDOFDepth: postProcessingCmp.dofDepth,
-              uDOFRange: postProcessingCmp.dofRange
-            }
-          })
-        }
+        ctx.submit(postProcessingCmp._dofCmd, {
+          uniforms: {
+            uFar: camera.far,
+            uNear: camera.near,
+            imageSize: screenSize,
+            depthMapSize: screenSize,
+            uPixelSize: [1 / screenSize[0], 1 / screenSize[1]],
+            uFocusDistance: postProcessingCmp.dofFocusDistance,
+            uSensorHeight: camera.actualSensorHeight,
+            uFocalLength: camera.focalLength,
+            uFStop: camera.fStop,
+            uDOFDebug: postProcessingCmp.dofDebug
+          }
+        })
         if (State.profiler) State.profiler.timeEnd('dof')
       }
       if (postProcessingCmp && postProcessingCmp.enabled) {
@@ -1323,6 +1313,9 @@ Renderer.prototype.draw = function() {
             uFogDensity: postProcessingCmp.fogDensity,
             uSunPosition: postProcessingCmp.sunPosition,
             uOutputEncoding: ctx.Encoding.Gamma,
+            uOverlay: postProcessingCmp.dof
+              ? postProcessingCmp._frameDofBlurTex
+              : postProcessingCmp._frameColorTex,
             uScreenSize: screenSize
           },
           viewport: camera.viewport

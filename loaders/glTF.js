@@ -1,6 +1,6 @@
 const path = require('path')
 const { loadJSON, loadImage, loadBinary } = require('pex-io')
-const { quat, utils } = require('pex-math')
+const { quat, mat4, utils } = require('pex-math')
 
 // Constants
 // https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/README.md#specifying-extensions
@@ -55,12 +55,12 @@ const GLTF_ACCESSOR_TYPE_COMPONENTS_NUMBER = {
 }
 
 // https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/README.md#header
-const MAGIC = 0x46546C67 // glTF
+const MAGIC = 0x46546c67 // glTF
 
 // https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/README.md#chunks
 const CHUNK_TYPE = {
-  JSON: 0x4E4F534A,
-  BIN: 0x004E4942
+  JSON: 0x4e4f534a,
+  BIN: 0x004e4942
 }
 
 const PEX_ATTRIBUTE_NAME_MAP = {
@@ -74,9 +74,18 @@ const PEX_ATTRIBUTE_NAME_MAP = {
   COLOR_0: 'vertexColors'
 }
 
+function linearToSrgb(color) {
+  return [
+    Math.pow(color[0], 1.0 / 2.2),
+    Math.pow(color[1], 1.0 / 2.2),
+    Math.pow(color[2], 1.0 / 2.2),
+    color.length == 4 ? color[3] : 1
+  ]
+}
+
 // Build
 // https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/schema/accessor.schema.json
-function getAccessor (accessor, bufferViews) {
+function getAccessor(accessor, bufferViews) {
   if (accessor._data) return accessor
 
   const numberOfComponents = GLTF_ACCESSOR_TYPE_COMPONENTS_NUMBER[accessor.type]
@@ -84,20 +93,25 @@ function getAccessor (accessor, bufferViews) {
 
   accessor._bufferView = bufferViews[accessor.bufferView]
 
-  const TypedArrayConstructor = WEBGL_TYPED_ARRAY_BY_COMPONENT_TYPES[accessor.componentType]
+  const TypedArrayConstructor =
+    WEBGL_TYPED_ARRAY_BY_COMPONENT_TYPES[accessor.componentType]
   const byteSize = GLTF_ACCESSOR_COMPONENT_TYPE_SIZE[accessor.componentType]
 
-  const data = new TypedArrayConstructor(accessor._bufferView._data.slice(
-    accessor.byteOffset,
-    accessor.byteOffset + accessor.count * numberOfComponents * byteSize
-  ))
+  const data = new TypedArrayConstructor(
+    accessor._bufferView._data.slice(
+      accessor.byteOffset,
+      accessor.byteOffset + accessor.count * numberOfComponents * byteSize
+    )
+  )
   accessor._data = data
 
   // Sparse accessors
   // https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/schema/accessor.sparse.schema.json
   if (accessor.sparse !== undefined) {
     const TypedArrayIndicesConstructor =
-      WEBGL_TYPED_ARRAY_BY_COMPONENT_TYPES[accessor.sparse.indices.componentType]
+      WEBGL_TYPED_ARRAY_BY_COMPONENT_TYPES[
+        accessor.sparse.indices.componentType
+      ]
 
     // https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/schema/accessor.sparse.indices.schema.json
     const sparseIndices = new TypedArrayIndicesConstructor(
@@ -118,9 +132,17 @@ function getAccessor (accessor, bufferViews) {
     }
 
     let valuesIndex = 0
-    for (let indicesIndex = 0; indicesIndex < sparseIndices.length; indicesIndex++) {
+    for (
+      let indicesIndex = 0;
+      indicesIndex < sparseIndices.length;
+      indicesIndex++
+    ) {
       let dataIndex = sparseIndices[indicesIndex] * numberOfComponents
-      for (let componentIndex = 0; componentIndex < numberOfComponents; componentIndex++) {
+      for (
+        let componentIndex = 0;
+        componentIndex < numberOfComponents;
+        componentIndex++
+      ) {
         accessor._data[dataIndex++] = sparseValues[valuesIndex++]
       }
     }
@@ -129,7 +151,7 @@ function getAccessor (accessor, bufferViews) {
   return accessor
 }
 
-function getPexMaterialTexture (materialTexture, gltf, ctx, encoding) {
+function getPexMaterialTexture(materialTexture, gltf, ctx, encoding) {
   // Retrieve glTF root object properties
   // https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/schema/texture.schema.json
   const texture = gltf.textures[materialTexture.index]
@@ -148,7 +170,9 @@ function getPexMaterialTexture (materialTexture, gltf, ctx, encoding) {
   sampler.wrapS = sampler.wrapS || ctx.Wrap.Repeat
   sampler.wrapT = sampler.wrapT || ctx.Wrap.Repeat
 
-  const hasMipMap = (sampler.minFilter !== ctx.Filter.Nearest && sampler.minFilter !== ctx.Filter.Linear)
+  const hasMipMap =
+    sampler.minFilter !== ctx.Filter.Nearest &&
+    sampler.minFilter !== ctx.Filter.Linear
 
   if (!texture._tex) {
     let img = image._img
@@ -190,17 +214,19 @@ function getPexMaterialTexture (materialTexture, gltf, ctx, encoding) {
   // https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/schema/textureInfo.schema.json
   const texCoord = materialTexture.texCoord
 
-  return !texCoord && !textureTransform ? texture._tex : {
-    texture: texture._tex,
-    // textureInfo
-    texCoord: texCoord || 0,
-    // textureTransform.texCoord: Overrides the textureInfo texCoord value if supplied.
-    ...(textureTransform || {})
-  }
+  return !texCoord && !textureTransform
+    ? texture._tex
+    : {
+        texture: texture._tex,
+        // textureInfo
+        texCoord: texCoord || 0,
+        // textureTransform.texCoord: Overrides the textureInfo texCoord value if supplied.
+        ...(textureTransform || {})
+      }
 }
 
 // https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/schema/material.schema.json
-function handleMaterial (material, gltf, ctx) {
+function handleMaterial(material, gltf, ctx) {
   let materialProps = {
     baseColor: [1, 1, 1, 1],
     roughness: 1,
@@ -221,7 +247,9 @@ function handleMaterial (material, gltf, ctx) {
       metallic: 1
     }
     if (pbrMetallicRoughness.baseColorFactor) {
-      materialProps.baseColor = pbrMetallicRoughness.baseColorFactor
+      materialProps.baseColor = linearToSrgb(
+        pbrMetallicRoughness.baseColorFactor
+      )
     }
     if (pbrMetallicRoughness.baseColorTexture) {
       materialProps.baseColorMap = getPexMaterialTexture(
@@ -231,10 +259,10 @@ function handleMaterial (material, gltf, ctx) {
         ctx.Encoding.SRGB
       )
     }
-    if (pbrMetallicRoughness.metallicFactor) {
+    if (pbrMetallicRoughness.metallicFactor !== undefined) {
       materialProps.metallic = pbrMetallicRoughness.metallicFactor
     }
-    if (pbrMetallicRoughness.roughnessFactor) {
+    if (pbrMetallicRoughness.roughnessFactor !== undefined) {
       materialProps.roughness = pbrMetallicRoughness.roughnessFactor
     }
     if (pbrMetallicRoughness.metallicRoughnessTexture) {
@@ -248,7 +276,9 @@ function handleMaterial (material, gltf, ctx) {
 
   // Specular/Glossiness workflow
   // https://github.com/KhronosGroup/glTF/blob/master/extensions/2.0/Khronos/KHR_materials_pbrSpecularGlossiness/schema/glTF.KHR_materials_pbrSpecularGlossiness.schema.json
-  const pbrSpecularGlossiness = material.extensions ? material.extensions.KHR_materials_pbrSpecularGlossiness : null
+  const pbrSpecularGlossiness = material.extensions
+    ? material.extensions.KHR_materials_pbrSpecularGlossiness
+    : null
   if (pbrSpecularGlossiness) {
     materialProps = {
       ...materialProps,
@@ -258,12 +288,14 @@ function handleMaterial (material, gltf, ctx) {
       glossiness: 1
     }
     if (pbrSpecularGlossiness.diffuseFactor) {
-      materialProps.diffuse = pbrSpecularGlossiness.diffuseFactor
+      materialProps.diffuse = linearToSrgb(pbrSpecularGlossiness.diffuseFactor)
     }
     if (pbrSpecularGlossiness.specularFactor) {
-      materialProps.specular = pbrSpecularGlossiness.specularFactor
+      materialProps.specular = linearToSrgb(
+        pbrSpecularGlossiness.specularFactor
+      )
     }
-    if (pbrSpecularGlossiness.glossinessFactor) {
+    if (pbrSpecularGlossiness.glossinessFactor !== undefined) {
       materialProps.glossiness = pbrSpecularGlossiness.glossinessFactor
     }
     if (pbrSpecularGlossiness.diffuseTexture) {
@@ -315,12 +347,7 @@ function handleMaterial (material, gltf, ctx) {
   if (material.emissiveFactor) {
     materialProps = {
       ...materialProps,
-      emissiveColor: [
-        material.emissiveFactor[0],
-        material.emissiveFactor[1],
-        material.emissiveFactor[2],
-        1
-      ]
+      emissiveColor: linearToSrgb(material.emissiveFactor)
     }
   }
 
@@ -352,35 +379,46 @@ function handleMaterial (material, gltf, ctx) {
 }
 
 // https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/schema/mesh.primitive.schema.json
-function handlePrimitive (primitive, gltf, ctx) {
+function handlePrimitive(primitive, gltf, ctx) {
   let geometryProps = {}
 
   // Format attributes for pex-context
-  const attributes = Object.keys(primitive.attributes).reduce((attributes, name) => {
-    const attributeName = PEX_ATTRIBUTE_NAME_MAP[name]
-    if (!attributeName) console.warn(`glTF Loader: Unknown attribute '${name}'`)
+  const attributes = Object.keys(primitive.attributes).reduce(
+    (attributes, name) => {
+      const attributeName = PEX_ATTRIBUTE_NAME_MAP[name]
+      if (!attributeName)
+        console.warn(`glTF Loader: Unknown attribute '${name}'`)
 
-    const accessor = getAccessor(gltf.accessors[primitive.attributes[name]], gltf.bufferViews)
+      const accessor = getAccessor(
+        gltf.accessors[primitive.attributes[name]],
+        gltf.bufferViews
+      )
 
-    if (accessor.sparse) {
-      attributes[attributeName] = accessor._data
-    } else {
-      if (!accessor._bufferView._vertexBuffer) {
-        accessor._bufferView._vertexBuffer = ctx.vertexBuffer(accessor._bufferView._data)
+      if (accessor.sparse) {
+        attributes[attributeName] = accessor._data
+      } else {
+        if (!accessor._bufferView._vertexBuffer) {
+          accessor._bufferView._vertexBuffer = ctx.vertexBuffer(
+            accessor._bufferView._data
+          )
+        }
+        attributes[attributeName] = {
+          buffer: accessor._bufferView._vertexBuffer,
+          offset: accessor.byteOffset,
+          type: accessor.componentType,
+          stride: accessor._bufferView.byteStride
+        }
       }
-      attributes[attributeName] = {
-        buffer: accessor._bufferView._vertexBuffer,
-        offset: accessor.byteOffset,
-        type: accessor.componentType,
-        stride: accessor._bufferView.byteStride
-      }
-    }
 
-    return attributes
-  }, {})
+      return attributes
+    },
+    {}
+  )
 
   const positionAccessor = gltf.accessors[primitive.attributes.POSITION]
-  const indicesAccessor = gltf.accessors[primitive.indices] && getAccessor(gltf.accessors[primitive.indices], gltf.bufferViews)
+  const indicesAccessor =
+    gltf.accessors[primitive.indices] &&
+    getAccessor(gltf.accessors[primitive.indices], gltf.bufferViews)
 
   // Create geometry
   geometryProps = {
@@ -391,7 +429,9 @@ function handlePrimitive (primitive, gltf, ctx) {
 
   if (indicesAccessor) {
     if (!indicesAccessor._bufferView._indexBuffer) {
-      indicesAccessor._bufferView._indexBuffer = ctx.indexBuffer(indicesAccessor._bufferView._data)
+      indicesAccessor._bufferView._indexBuffer = ctx.indexBuffer(
+        indicesAccessor._bufferView._data
+      )
     }
     geometryProps = {
       ...geometryProps,
@@ -421,7 +461,7 @@ function handlePrimitive (primitive, gltf, ctx) {
 }
 
 // https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/schema/mesh.schema.json
-function handleMesh (mesh, gltf, ctx, renderer) {
+function handleMesh(mesh, gltf, ctx, renderer) {
   return mesh.primitives.map((primitive) => {
     const geometryCmp = renderer.geometry(
       handlePrimitive(primitive, gltf, ctx, renderer)
@@ -429,19 +469,16 @@ function handleMesh (mesh, gltf, ctx, renderer) {
     const materialCmp =
       primitive.material !== undefined
         ? renderer.material(
-          handleMaterial(
-            gltf.materials[primitive.material],
-            gltf,
-            ctx,
-            renderer
+            handleMaterial(
+              gltf.materials[primitive.material],
+              gltf,
+              ctx,
+              renderer
+            )
           )
-        )
         : renderer.material()
 
-    const components = [
-      geometryCmp,
-      materialCmp
-    ]
+    const components = [geometryCmp, materialCmp]
 
     // Create morph
     if (primitive.targets) {
@@ -449,16 +486,22 @@ function handleMesh (mesh, gltf, ctx, renderer) {
       const targets = primitive.targets.reduce((targets, target) => {
         const targetKeys = Object.keys(target)
 
-        targetKeys.forEach(targetKey => {
+        targetKeys.forEach((targetKey) => {
           const targetName = PEX_ATTRIBUTE_NAME_MAP[targetKey] || targetKey
           targets[targetName] = targets[targetName] || []
 
-          const accessor = getAccessor(gltf.accessors[target[targetKey]], gltf.bufferViews)
+          const accessor = getAccessor(
+            gltf.accessors[target[targetKey]],
+            gltf.bufferViews
+          )
 
           targets[targetName].push(accessor._data)
 
           if (!sources[targetName]) {
-            const sourceAccessor = getAccessor(gltf.accessors[primitive.attributes[targetKey]], gltf.bufferViews)
+            const sourceAccessor = getAccessor(
+              gltf.accessors[primitive.attributes[targetKey]],
+              gltf.bufferViews
+            )
             sources[targetName] = sourceAccessor._data
           }
         })
@@ -478,26 +521,38 @@ function handleMesh (mesh, gltf, ctx, renderer) {
 }
 
 // https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/schema/node.schema.json
-function handleNode (node, gltf, i, ctx, renderer, options) {
+function handleNode(node, gltf, i, ctx, renderer, options) {
   const components = []
 
-  components.push(renderer.transform(
-    node.matrix
-      ? {
-        position: [node.matrix[12], node.matrix[13], node.matrix[14]],
-        rotation: quat.fromMat4(quat.create(), node.matrix),
-        scale: [
-          Math.hypot(node.matrix[0], node.matrix[1], node.matrix[2]),
-          Math.hypot(node.matrix[4], node.matrix[5], node.matrix[6]),
-          Math.hypot(node.matrix[8], node.matrix[9], node.matrix[10])
-        ]
-      }
-      : {
-        position: node.translation || [0, 0, 0],
-        rotation: node.rotation || [0, 0, 0, 1],
-        scale: node.scale || [1, 1, 1]
-      }
-  ))
+  let transform
+
+  if (node.matrix) {
+    const mn = mat4.create()
+    const scale = [
+      Math.hypot(node.matrix[0], node.matrix[1], node.matrix[2]),
+      Math.hypot(node.matrix[4], node.matrix[5], node.matrix[6]),
+      Math.hypot(node.matrix[8], node.matrix[9], node.matrix[10])
+    ]
+    for (const col of [0, 1, 2]) {
+      mn[col] = node.matrix[col] / scale[0]
+      mn[col + 4] = node.matrix[col + 4] / scale[1]
+      mn[col + 8] = node.matrix[col + 8] / scale[2]
+    }
+
+    transform = {
+      position: [node.matrix[12], node.matrix[13], node.matrix[14]],
+      rotation: quat.fromMat4(quat.create(), mn),
+      scale
+    }
+  } else {
+    transform = {
+      position: node.translation || [0, 0, 0],
+      rotation: node.rotation || [0, 0, 0, 1],
+      scale: node.scale || [1, 1, 1]
+    }
+  }
+
+  components.push(renderer.transform(transform))
 
   if (options.includeCameras && Number.isInteger(node.camera)) {
     const camera = gltf.cameras[node.camera]
@@ -506,27 +561,33 @@ function handleNode (node, gltf, i, ctx, renderer, options) {
     // https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/schema/camera.schema.json
     if (camera.type === 'orthographic') {
       // https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/schema/camera.orthographic.schema.json
-      components.push(renderer.camera({
-        enabled,
-        name: camera.name || `camera_${node.camera}`,
-        projection: 'orthographic',
-        near: camera.orthographic.znear,
-        far: camera.orthographic.zfar,
-        left: -camera.orthographic.xmag / 2,
-        right: camera.orthographic.xmag / 2,
-        top: camera.orthographic.ymag / 2,
-        bottom: camera.orthographic.ymag / 2
-      }))
+      components.push(
+        renderer.camera({
+          enabled,
+          name: camera.name || `camera_${node.camera}`,
+          projection: 'orthographic',
+          near: camera.orthographic.znear,
+          far: camera.orthographic.zfar,
+          left: -camera.orthographic.xmag / 2,
+          right: camera.orthographic.xmag / 2,
+          top: camera.orthographic.ymag / 2,
+          bottom: camera.orthographic.ymag / 2
+        })
+      )
     } else {
       // https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/schema/camera.perspective.schema.json
-      components.push(renderer.camera({
-        enabled,
-        name: camera.name || `camera_${node.camera}`,
-        near: camera.perspective.znear,
-        far: camera.perspective.zfar || Infinity,
-        fov: camera.perspective.yfov,
-        aspect: camera.perspective.aspectRatio || ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight
-      }))
+      components.push(
+        renderer.camera({
+          enabled,
+          name: camera.name || `camera_${node.camera}`,
+          near: camera.perspective.znear,
+          far: camera.perspective.zfar || Infinity,
+          fov: camera.perspective.yfov,
+          aspect:
+            camera.perspective.aspectRatio ||
+            ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight
+        })
+      )
     }
   }
 
@@ -537,7 +598,10 @@ function handleNode (node, gltf, i, ctx, renderer, options) {
   let skinCmp = null
   if (Number.isInteger(node.skin)) {
     const skin = gltf.skins[node.skin]
-    const accessor = getAccessor(gltf.accessors[skin.inverseBindMatrices], gltf.bufferViews)
+    const accessor = getAccessor(
+      gltf.accessors[skin.inverseBindMatrices],
+      gltf.bufferViews
+    )
 
     let inverseBindMatrices = []
     for (let i = 0; i < accessor._data.length; i += 16) {
@@ -577,7 +641,7 @@ function handleNode (node, gltf, i, ctx, renderer, options) {
   return node.entity
 }
 
-function handleAnimation (animation, gltf, renderer) {
+function handleAnimation(animation, gltf, renderer) {
   // https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/schema/animation.schema.json
   // https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/schema/animation.channel.schema.json
   const channels = animation.channels.map((channel) => {
@@ -628,43 +692,43 @@ function handleAnimation (animation, gltf, renderer) {
 
 // LOADER
 // =============================================================================
-function uint8ArrayToArrayBuffer (arr) {
+function uint8ArrayToArrayBuffer(arr) {
   return arr.buffer.slice(arr.byteOffset, arr.byteLength + arr.byteOffset)
 }
 
 class BinaryReader {
-  constructor (arrayBuffer) {
+  constructor(arrayBuffer) {
     this._arrayBuffer = arrayBuffer
     this._dataView = new DataView(arrayBuffer)
     this._byteOffset = 0
   }
 
-  getPosition () {
+  getPosition() {
     return this._byteOffset
   }
 
-  getLength () {
+  getLength() {
     return this._arrayBuffer.byteLength
   }
 
-  readUint32 () {
+  readUint32() {
     const value = this._dataView.getUint32(this._byteOffset, true)
     this._byteOffset += 4
     return value
   }
 
-  readUint8Array (length) {
+  readUint8Array(length) {
     const value = new Uint8Array(this._arrayBuffer, this._byteOffset, length)
     this._byteOffset += length
     return value
   }
 
-  skipBytes (length) {
+  skipBytes(length) {
     this._byteOffset += length
   }
 }
 
-function unpackBinary (data) {
+function unpackBinary(data) {
   const binaryReader = new BinaryReader(data)
 
   // Check header
@@ -694,7 +758,8 @@ function unpackBinary (data) {
   // JSON
   const chunkLength = binaryReader.readUint32()
   const chunkType = binaryReader.readUint32()
-  if (chunkType !== CHUNK_TYPE.JSON) throw new Error('First chunk format is not JSON')
+  if (chunkType !== CHUNK_TYPE.JSON)
+    throw new Error('First chunk format is not JSON')
 
   // Decode Buffer to Text
   const buffer = binaryReader.readUint8Array(chunkLength)
@@ -739,7 +804,7 @@ function unpackBinary (data) {
   }
 }
 
-function loadData (data) {
+function loadData(data) {
   if (data instanceof ArrayBuffer) {
     const unpacked = unpackBinary(data)
 
@@ -752,11 +817,11 @@ function loadData (data) {
   return { json: data }
 }
 
-function isBase64 (uri) {
+function isBase64(uri) {
   return uri.length < 5 ? false : uri.substr(0, 5) === 'data:'
 }
 
-function decodeBase64 (uri) {
+function decodeBase64(uri) {
   const decodedString = atob(uri.split(',')[1])
   const bufferLength = decodedString.length
   const bufferView = new Uint8Array(new ArrayBuffer(bufferLength))
@@ -772,10 +837,10 @@ const DEFAULT_OPTIONS = {
   enabledCameras: [0],
   enabledScene: undefined,
   includeCameras: false,
-  includeLights: false,
+  includeLights: false
 }
 
-async function loadGltf (url, renderer, options = {}) {
+async function loadGltf(url, renderer, options = {}) {
   const opts = Object.assign({}, DEFAULT_OPTIONS, options)
   const ctx = renderer._ctx
 
@@ -786,12 +851,16 @@ async function loadGltf (url, renderer, options = {}) {
   const isBinary = extension === '.glb'
 
   // https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/schema/glTF.schema.json
-  const { json, bin } = loadData(isBinary ? await loadBinary(url) : await loadJSON(url))
+  const { json, bin } = loadData(
+    isBinary ? await loadBinary(url) : await loadJSON(url)
+  )
 
   // Check required extensions
   // https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/README.md#specifying-extensions
   if (json.extensionsRequired) {
-    const unsupportedExtensions = json.extensionsRequired.filter(extension => !SUPPORTED_EXTENSIONS.includes(extension))
+    const unsupportedExtensions = json.extensionsRequired.filter(
+      (extension) => !SUPPORTED_EXTENSIONS.includes(extension)
+    )
     if (unsupportedExtensions.length) {
       console.warn('glTF loader: unsupported extensions', unsupportedExtensions)
     }
@@ -801,7 +870,9 @@ async function loadGltf (url, renderer, options = {}) {
   // https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/schema/asset.schema.json
   const version = parseInt(json.asset.version)
   if (!version || version < 2) {
-    console.warn(`glTF Loader: Invalid or unsupported version: ${json.asset.version}`)
+    console.warn(
+      `glTF Loader: Invalid or unsupported version: ${json.asset.version}`
+    )
   }
 
   // Data setup
@@ -844,7 +915,7 @@ async function loadGltf (url, renderer, options = {}) {
   if (json.images) {
     for (let image of json.images) {
       // https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/README.md#uris
-      if (isBinary) {
+      if (isBinary || image.bufferView) {
         const bufferView = json.bufferViews[image.bufferView]
         bufferView.byteOffset = bufferView.byteOffset || 0
         const buffer = json.buffers[bufferView.buffer]
@@ -856,10 +927,16 @@ async function loadGltf (url, renderer, options = {}) {
         const uri = URL.createObjectURL(blob)
         image._img = await loadImage({ url: uri, crossOrigin: 'anonymous' })
       } else if (isBase64(image.uri)) {
-        image._img = await loadImage({ url: image.uri, crossOrigin: 'anonymous' })
+        image._img = await loadImage({
+          url: image.uri,
+          crossOrigin: 'anonymous'
+        })
       } else {
         // TODO why are we replacing uri encoded spaces?
-        image._img = await loadImage({ url: path.join(basePath, image.uri).replace(/%/g, '%25'), crossOrigin: 'anonymous' })
+        image._img = await loadImage({
+          url: path.join(basePath, image.uri).replace(/%/g, '%25'),
+          crossOrigin: 'anonymous'
+        })
       }
     }
   }

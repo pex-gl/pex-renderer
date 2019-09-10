@@ -12,6 +12,7 @@ const BILATERAL_BLUR_FRAG = require('./shaders/post-processing/bilateral-blur.fr
 const THRESHOLD_FRAG = require('./shaders/post-processing/threshold.frag.js')
 const BLOOM_FRAG = require('./shaders/post-processing/bloom.frag.js')
 const DOWN_SAMPLE_FRAG = require('./shaders/post-processing/down-sample.frag.js')
+const DOF_FRAG = require('./shaders/post-processing/dof.frag.js')
 
 const ssaoKernelData = new Float32Array(64 * 4)
 for (let i = 0; i < 64; i++) {
@@ -74,10 +75,9 @@ function PostProcessing(opts) {
   this.ssaoBlurSharpness = 10
 
   this.dof = false
-  this.dofIterations = 1
-  this.dofRange = 5
-  this.dofRadius = 1
-  this.dofDepth = 6.76
+  this.dofDebug = false
+  this.dofFocusDistance = 5
+  this.dofAperture = 1
 
   this.bloom = false
   this.bloomRadius = 1
@@ -189,7 +189,7 @@ PostProcessing.prototype.initPostproces = function() {
     name: 'frameDepthTex',
     width: W,
     height: H,
-    pixelFormat: ctx.PixelFormat.Depth,
+    pixelFormat: ctx.PixelFormat.Depth24,
     encoding: ctx.Encoding.Linear
   })
   this._frameAOTex = ctx.texture2D({
@@ -331,9 +331,7 @@ PostProcessing.prototype.initPostproces = function() {
       depthMap: this._frameDepthTex,
       image: this._frameAOTex,
       // direction: [State.bilateralBlurRadius, 0], // TODO:
-      direction: [0.5, 0],
-      uDOFDepth: 0,
-      uDOFRange: 0
+      direction: [0.5, 0]
     }
   }
 
@@ -354,51 +352,26 @@ PostProcessing.prototype.initPostproces = function() {
       depthMap: this._frameDepthTex,
       image: this._frameAOBlurTex,
       // direction: [0, State.bilateralBlurRadius], // TODO:
-      direction: [0, 0.5],
-      uDOFDepth: 0,
-      uDOFRange: 0
-    }
-  }
-
-  this._dofBlurHCmd = {
-    name: 'PostProcessing.bilateralBlurH',
-    pass: ctx.pass({
-      name: 'PostProcessing.dofBilateralBlurH',
-      color: [this._frameDofBlurTex],
-      clearColor: [1, 1, 0, 1]
-    }),
-    pipeline: ctx.pipeline({
-      vert: POSTPROCESS_VERT,
-      frag: BILATERAL_BLUR_FRAG
-    }),
-    attributes: this._fsqMesh.attributes,
-    indices: this._fsqMesh.indices,
-    uniforms: {
-      depthMap: this._frameDepthTex,
-      image: this._frameColorTex,
-      // direction: [State.bilateralBlurRadius, 0] // TODO:
-      direction: [0.5, 0]
-    }
-  }
-
-  this._dofBlurVCmd = {
-    name: 'PostProcessing.bilateralBlurV',
-    pass: ctx.pass({
-      name: 'PostProcessing.dofBilateralBlurV',
-      color: [this._frameColorTex],
-      clearColor: [1, 1, 0, 1]
-    }),
-    pipeline: ctx.pipeline({
-      vert: POSTPROCESS_VERT,
-      frag: BILATERAL_BLUR_FRAG
-    }),
-    attributes: this._fsqMesh.attributes,
-    indices: this._fsqMesh.indices,
-    uniforms: {
-      depthMap: this._frameDepthTex,
-      image: this._frameDofBlurTex,
-      // direction: [0, State.bilateralBlurRadius] // TODO:
       direction: [0, 0.5]
+    }
+  }
+
+  this._dofCmd = {
+    name: 'PostProcessing.dof',
+    pass: ctx.pass({
+      name: 'PostProcessing.dof',
+      color: [this._frameDofBlurTex],
+      clearColor: [1, 1, 1, 1]
+    }),
+    pipeline: ctx.pipeline({
+      vert: POSTPROCESS_VERT,
+      frag: DOF_FRAG
+    }),
+    attributes: this._fsqMesh.attributes,
+    indices: this._fsqMesh.indices,
+    uniforms: {
+      depthMap: this._frameDepthTex,
+      image: this._frameColorTex
     }
   }
 

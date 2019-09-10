@@ -2,7 +2,7 @@ const createRenderer = require('../')
 const createContext = require('pex-context')
 const createCube = require('primitive-cube')
 const random = require('pex-random')
-const { fromHex, fromHSL } = require('pex-color')
+const { fromHex } = require('pex-color')
 const { quat, vec3 } = require('pex-math')
 const dutchPalette = [
   '#FFC312',
@@ -111,10 +111,6 @@ const cameraEntity = renderer.entity([
     ssaoBlurRadius: 0.5,
     ssaoSharpness: 5,
     ssaoIntensity: 0.5
-    // dof: true,
-    // dofRange: 1,
-    // dofDepth: 6,
-    // dofRadius: 2
   })
 ])
 renderer.add(cameraEntity)
@@ -151,7 +147,7 @@ const geom = {
     divisor: 1
   },
   colors: {
-    data: rects.map((rect, i) => {
+    data: rects.map(() => {
       // return fromHSL(0.5 + random.float(0.1), 0.4, 0.4)
       if (random.chance(0.9)) return [1, 1, 1, 1]
       // if (random.chance(0.6)) return dutchPalette[1]
@@ -193,7 +189,7 @@ const lightEnt = renderer.entity([
   }),
   renderer.directionalLight({
     color: [1, 1, 1, 1],
-    intensity: 2,
+    intensity: 5,
     castShadows: true,
     bias: 0.01
   })

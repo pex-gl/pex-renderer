@@ -1,7 +1,10 @@
 module.exports = /* glsl */ `
 #ifdef USE_METALLIC_ROUGHNESS_WORKFLOW
 
-  #define MIN_ROUGHNESS 0.045
+  // Source: Google/Filament/Overview/4.8.3.3 Roughness remapping and clamping, 07/2019
+  // Minimum roughness to avoid division by zerio when 1/a^2 and to limit specular aliasing
+  // This could be 0.045 when using single precision float fp32
+  #define MIN_ROUGHNESS 0.089
 
   #ifdef USE_METALLIC_ROUGHNESS_MAP
     // R = ?, G = roughness, B = metallic

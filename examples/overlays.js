@@ -10,8 +10,8 @@ const ctx = createContext()
 const renderer = createRenderer(ctx)
 
 ;(async () => {
-  const rainbow = await io.loadImage(`${ASSETS_DIR}/rainbow.jpg`)
-  const logo = await io.loadImage(`${ASSETS_DIR}/PEX.png`)
+  const rainbow = await io.loadImage(`${ASSETS_DIR}/textures/rainbow/rainbow.jpg`)
+  const logo = await io.loadImage(`${ASSETS_DIR}/textures/PEX/PEX.png`)
 
   const rainbowEntity = renderer.entity([
     renderer.overlay({
