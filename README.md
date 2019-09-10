@@ -375,7 +375,7 @@ const postProcessing = renderer.postProcessing({
 | `bloom`          | Bloom on/off                                                   | Boolean | false   |
 | `bloomRadius`    | Amount of bloom blur                                           | Number  | 1       |
 | `bloomThreshold` | Bloom color cut off (default 1 = only "hdr" colors will bloom) | Number  | 1       |
-| `bloomIntensity` | Amount of the bloom to add to the scene                        | Number  | 1       |
+| `bloomIntensity` | Amount of the bloom to add to the scene                        | Number  | 0.1       |
 
 #### Fog
 

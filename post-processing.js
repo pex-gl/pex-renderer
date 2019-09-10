@@ -82,7 +82,7 @@ function PostProcessing(opts) {
   this.bloom = false
   this.bloomRadius = 1
   this.bloomThreshold = 1
-  this.bloomIntensity = 1
+  this.bloomIntensity = 0.1
 
   this.sunPosition = [1, 1, 1]
   this.sunColor = [0.98, 0.98, 0.7]
