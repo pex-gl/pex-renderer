@@ -14,9 +14,6 @@ const postProcessingCmp = renderer.postProcessing({
   ssaoRadius: 3,
   ssaoIntensity: 0.5,
   bilateralBlur: true,
-  dof: true,
-  dofFocusDistance: 4,
-  dofAperture: 2,
   fxaa: true
 })
 
