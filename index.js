@@ -26,6 +26,8 @@ const createSkybox = require('./skybox')
 const createOverlay = require('./overlay')
 const loadGltf = require('./loaders/glTF')
 
+const geomBuilder = require('geom-builder')
+
 const PBR_VERT = require('./shaders/pipeline/material.vert.js')
 const PBR_FRAG = require('./shaders/pipeline/material.frag.js')
 const DEPTH_PASS_VERT = require('./shaders/pipeline/depth-pass.vert.js')
@@ -1325,6 +1327,79 @@ Renderer.prototype.draw = function() {
         if (State.profiler) State.profiler.timeEnd('postprocess')
       }
     })
+
+
+
+    let arrayOfRandomPoints = []
+    for (let no = 0; no < 100; no++) {
+      arrayOfRandomPoints.push([Math.random(),Math.random(),Math.random()])
+      
+    }
+    
+    
+    var drawLinesCmd = {
+      pipeline: ctx.pipeline({
+        vert: `
+        attribute vec3 aPosition;
+        attribute vec4 aVertexColor;
+        uniform mat4 uProjectionMatrix;
+        uniform mat4 uViewMatrix;
+        varying vec4 vColor;
+        void main () {
+          vColor = aVertexColor;
+          gl_Position = uProjectionMatrix * uViewMatrix * vec4(aPosition, 1.0);
+        }
+        `,
+        frag: `
+        #ifdef GL_ES
+        precision highp float;
+        #endif
+         varying vec4 vColor;
+        void main () {
+          gl_FragColor = vColor;
+        }
+        `,
+        depthTest: true,
+        primitive: ctx.Primitive.Lines
+      }),
+      attributes: {
+        aPosition: ctx.vertexBuffer(arrayOfRandomPoints),
+        aVertexColor: ctx.vertexBuffer(arrayOfRandomPoints.map(() => [1, 1, 1, 1]))
+      },
+      count: arrayOfRandomPoints.length,
+      uniforms: {
+        uProjectionMatrix: cameras[0].projectionMatrix,
+        uViewMatrix: cameras[0].viewMatrix
+      }
+    }
+    
+    
+    
+
+    function drawBBox(geomBuilder, bounds, color) {
+      //draw right bottom edge
+      geomBuilder.addPosition(bounds[0][0]) //minx
+      geomBuilder.addPosition(bounds[1][0]) //max
+      geomBuilder.addColor(color)
+      geomBuilder.addColor(color)
+  }
+
+    this.entities.forEach(ent =>{
+
+
+
+    })
+  
+  //drawBBox(geomBuilder, entity.transform.worldBounds)
+
+    // ctx.update(positionsBuffer, geomBuilder.positions)
+    // ctx.update(vertexColorsBuffer, geomBuilder.colors)
+    // drawSphereCmd.count = geomBuilder.count
+
+
+    ctx.submit( drawLinesCmd)
+  
+
 
   overlays
     .filter((overlay) => overlay.enabled)

@@ -18,6 +18,8 @@ const dragon = require('./assets/models/stanford-dragon/stanford-dragon')
 const normals = require('angle-normals')
 const centerAndNormalize = require('geom-center-and-normalize')
 
+const helperBBox = require('../helpers/bounding-box')
+
 const State = {
   rotation: 1.5 * Math.PI
 }
@@ -225,7 +227,8 @@ const dragonEntity = renderer.entity([
   }),
   renderer.transform({
     position: [-1.5, 0, 0]
-  })
+  }),
+  helperBBox()
 ])
 renderer.add(dragonEntity)
 
@@ -241,6 +244,7 @@ loadScene(`${ASSETS_DIR}/models/CesiumMan/CesiumMan.gltf`, {
   position: [0.5, -0.35, 0]
 })
 
+console.log(dragonEntity) 
 //instanced mesh
 const gridSize = 3
 let grid = []
@@ -251,6 +255,7 @@ for (let i = 0; i < gridSize; i++) {
     }  
   }
 }
+
 
 let cubeG = createCube(0.1,0.1,0.1)
 console.log(grid)
