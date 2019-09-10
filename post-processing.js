@@ -188,7 +188,7 @@ PostProcessing.prototype.initPostproces = function() {
     name: 'frameDepthTex',
     width: W,
     height: H,
-    pixelFormat: ctx.PixelFormat.Depth,
+    pixelFormat: ctx.PixelFormat.Depth24,
     encoding: ctx.Encoding.Linear
   })
   this._frameAOTex = ctx.texture2D({

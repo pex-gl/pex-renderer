@@ -5,6 +5,7 @@ const createGUI = require('pex-gui')
 const mat4 = require('pex-math/mat4')
 const quat = require('pex-math/quat')
 const vec3 = require('pex-math/vec3')
+const aabb = require('pex-geom/aabb')
 const random = require('pex-random')
 const io = require('pex-io')
 const createRoundedCube = require('primitive-rounded-cube')
@@ -30,7 +31,8 @@ const State = {
   metallic: 0.1,
   baseColor: [0.8, 0.1, 0.1, 1.0],
   materials: [],
-  rgbm: false
+  rgbm: false,
+  autofocus: true
 }
 
 random.seed(14)
@@ -84,12 +86,19 @@ function imageFromFile(file, options) {
   return tex
 }
 
+// Scale scene to macro, 1m -> 5cm
+const s = 0.05
+const scene = renderer.entity([
+  renderer.transform({ scale: [s, s, s] })
+])
+
+renderer.add(scene)
+
 // Geometry
-dragon.positions = centerAndNormalize(dragon.positions).map((v) =>
-  vec3.scale(v, 5)
-)
+dragon.positions = centerAndNormalize(dragon.positions).map((v) => vec3.scale(v, 2))
 dragon.normals = normals(dragon.cells, dragon.positions)
 dragon.uvs = dragon.positions.map(() => [0, 0])
+const dragonBounds = aabb.fromPoints(dragon.positions)
 
 // Camera
 const cameraEntity = renderer.add(
@@ -99,16 +108,16 @@ const cameraEntity = renderer.add(
       ssao: true,
       fxaa: false,
       dof: true,
-      dofFocusDistance: 18,
-      dofAperture: 15
+      dofFocusDistance: 18
     }),
     renderer.camera({
-      fov: Math.PI / 3,
+      fov: Math.PI / 4,
       aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
-      exposure: 2
+      exposure: 2,
+      fStop: 1.4
     }),
     renderer.orbiter({
-      position: [0, 2, 20]
+      position: [0, 0.2, 1]
     })
   ])
 )
@@ -130,17 +139,16 @@ const roughnessMap = imageFromFile(
   ASSETS_DIR + '/materials/plastic-green.material/plastic-green_roughness.png',
   { encoding: ctx.Encoding.Linear }
 )
-const groundCube = createRoundedCube(1, 1, 1, 20, 20, 20, 0.01)
-const roundedCube = createRoundedCube(1, 1, 1, 20, 20, 20, 0.2)
-const capsule = createCapsule(0.3)
-const sphere = createSphere(0.5)
+const groundCube = createCube(10, 0.02, 5)
+const roundedCube = createRoundedCube(0.75, 0.75, 0.75, 20, 20, 20, 0.2)
+const capsule = createCapsule(0.25)
+const sphere = createSphere(0.3)
 const geometries = [capsule, roundedCube, sphere]
 
 // Ground
 const groundEntity = renderer.entity([
   renderer.transform({
-    position: [0, -2.2, 0],
-    scale: [20, 0.2, 7]
+    position: [0, -0.02 / 2, 1]
   }),
   renderer.geometry(groundCube),
   renderer.material({
@@ -151,13 +159,21 @@ const groundEntity = renderer.entity([
     receiveShadows: true
   })
 ])
-renderer.add(groundEntity)
+renderer.add(groundEntity, scene)
+
+const backgroundStuffParent = renderer.entity([
+  renderer.transform({
+    position: [0, 0, 0],
+    scale: [1, 1, 1]
+  })
+])
+renderer.add(backgroundStuffParent, scene)
 
 // Black Spheres
 for (let i = 0; i < 20; i++) {
   const sphereEntity = renderer.entity([
     renderer.transform({
-      position: vec3.scale(random.vec3(), 2)
+      position: vec3.add(random.vec3(), [0, 1, 0])
     }),
     renderer.geometry(sphere),
     renderer.material({
@@ -168,12 +184,12 @@ for (let i = 0; i < 20; i++) {
       receiveShadows: true
     })
   ])
-  renderer.add(sphereEntity)
+  renderer.add(sphereEntity, backgroundStuffParent)
 }
 
-const dragonEntitty = renderer.entity([
+const dragonEntity = renderer.entity([
   renderer.transform({
-    position: [0, -0.4, 2]
+    position: [0, -dragonBounds[0][1], 2.5]
   }),
   renderer.geometry(dragon),
   renderer.material({
@@ -184,15 +200,16 @@ const dragonEntitty = renderer.entity([
     receiveShadows: true
   })
 ])
-renderer.add(dragonEntitty)
-entities.push(dragonEntitty)
+renderer.add(dragonEntity, scene)
+entities.push(dragonEntity)
 
+const heights = [2.5, 1.4, 0.5]
 // Capsules, rounded cubes, spheres
 for (let j = -5; j <= 5; j += 2) {
   for (let i = 0; i < geometries.length; i++) {
     const geometry = geometries[i]
-    const x = j
-    const y = 1.5 * (1 - i)
+    const x = j * 0.6
+    let y = heights[i]
     const z = 0
     const entity = renderer.entity([
       renderer.transform({
@@ -211,14 +228,14 @@ for (let j = -5; j <= 5; j += 2) {
         receiveShadows: true
       })
     ])
-    renderer.add(entity)
+    renderer.add(entity, backgroundStuffParent)
     entities.push(entity)
   }
 }
 
 // Lights
 const pointLightEntity = renderer.entity([
-  renderer.geometry(createSphere(0.2)),
+  renderer.geometry(createSphere(0.1)),
   renderer.material({
     baseColor: [0, 0, 0, 1],
     emissiveColor: [1, 0, 0, 1]
@@ -228,11 +245,11 @@ const pointLightEntity = renderer.entity([
   }),
   renderer.pointLight({
     color: [1, 0, 0, 1],
-    intensity: 3,
-    radius: 10
+    intensity: 0.05,
+    radius: 3
   })
 ])
-renderer.add(pointLightEntity)
+renderer.add(pointLightEntity, scene)
 
 const areaLightEntity = renderer.entity([
   renderer.geometry(createCube()),
@@ -241,7 +258,7 @@ const areaLightEntity = renderer.entity([
     emissiveColor: [2.0, 1.2, 0.1, 1]
   }),
   renderer.transform({
-    position: [0, 3, 0],
+    position: [0, 3.5, 0],
     scale: [5, 1, 0.1],
     rotation: quat.fromTo(
       quat.create(),
@@ -255,10 +272,15 @@ const areaLightEntity = renderer.entity([
     castShadows: true
   })
 ])
-renderer.add(areaLightEntity)
+renderer.add(areaLightEntity, backgroundStuffParent)
+
+let cameraCmp
+let postProcessingCmp
 ;(async () => {
   // Sky
-  const buffer = await io.loadBinary(`${ASSETS_DIR}/envmaps/Mono_Lake_B/Mono_Lake_B.hdr`)
+  const buffer = await io.loadBinary(
+    `${ASSETS_DIR}/envmaps/Mono_Lake_B/Mono_Lake_B.hdr`
+  )
   const hdrImg = parseHdr(buffer)
   const panorama = ctx.texture2D({
     data: hdrImg.data,
@@ -266,6 +288,8 @@ renderer.add(areaLightEntity)
     height: hdrImg.shape[1],
     pixelFormat: ctx.PixelFormat.RGBA32F,
     encoding: ctx.Encoding.Linear,
+    mag: ctx.Filter.Linear,
+    min: ctx.Filter.Linear,
     flipY: true
   })
 
@@ -281,7 +305,8 @@ renderer.add(areaLightEntity)
     renderer.directionalLight({
       color: [1, 1, 0.95, 1],
       intensity: 2,
-      castShadows: true
+      castShadows: true,
+      bias: 0.01
     })
   ])
   renderer.add(sunEntity)
@@ -330,8 +355,8 @@ renderer.add(areaLightEntity)
   updateSunPosition()
 
   // GUI
-  const cameraCmp = cameraEntity.getComponent('Camera')
-  const postProcessingCmp = cameraEntity.getComponent('PostProcessing')
+  cameraCmp = cameraEntity.getComponent('Camera')
+  postProcessingCmp = cameraEntity.getComponent('PostProcessing')
   const skyboxCmp = skyEntity.getComponent('Skybox')
   const reflectionProbeCmp = skyEntity.getComponent('ReflectionProbe')
 
@@ -456,13 +481,39 @@ renderer.add(areaLightEntity)
     max: 20
   })
   gui.addParam('DOF', postProcessingCmp, 'dof')
+  gui.addParam('DOF Debug', postProcessingCmp, 'dofDebug')
   gui.addParam('DOF Focus Distance', postProcessingCmp, 'dofFocusDistance', {
     min: 0,
-    max: 20
-  })
-  gui.addParam('DOF Aperture', postProcessingCmp, 'dofAperture', {
-    min: 0,
     max: 100
+  })
+  gui.addParam('DOF Autofocus', State, 'autofocus')
+  gui.addParam(
+    'Camera FoV',
+    cameraCmp,
+    'fov',
+    {
+      min: 0,
+      max: (Math.PI / 3) * 2
+    },
+    () => {
+      cameraCmp.set({ fov: cameraCmp.fov })
+    }
+  )
+  gui.addParam(
+    'Camera FocalLength',
+    cameraCmp,
+    'focalLength',
+    {
+      min: 10,
+      max: 200
+    },
+    () => {
+      cameraCmp.set({ focalLength: cameraCmp.focalLength })
+    }
+  )
+  gui.addParam('Camera f-stop', cameraCmp, 'fStop', {
+    min: 0,
+    max: 5.6
   })
 
   gui.addParam('FXAA', postProcessingCmp, 'fxaa')
@@ -499,6 +550,18 @@ window.addEventListener('resize', () => {
 ctx.frame(() => {
   ctx.debug(debugOnce)
   debugOnce = false
+
+  if (State.autofocus && cameraCmp) {
+    const distance = vec3.distance(
+      dragonEntity.transform.worldPosition,
+      cameraCmp.entity.transform.worldPosition
+    )
+    if (postProcessingCmp.dofFocuDistance !== distance) {
+      postProcessingCmp.set({ dofFocusDistance: distance })
+      // force redraw
+      gui.items[0].dirty = true
+    }
+  }
 
   renderer.draw()
   gui.draw()
