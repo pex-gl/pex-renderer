@@ -1148,7 +1148,7 @@ Renderer.prototype.draw = function() {
     if (probe.dirty) {
       probe.update((camera, encoding) => {
         if (skyboxes.length > 0) {
-          skyboxes[0].draw(camera, { outputEncoding: encoding })
+          skyboxes[0].draw(camera, { outputEncoding: encoding, backgroundMode: false })
         }
       })
     }

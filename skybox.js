@@ -127,6 +127,8 @@ Skybox.prototype.draw = function(camera, opts) {
     }
   }
 
+  const postProcessingCmp = camera.entity ? camera.entity.getComponent('PostProcessing') : null
+  const useTonemapping = !(postProcessingCmp && postProcessingCmp.enabled)
   // TODO: can we somehow avoid creating an object every frame here?
   ctx.submit(this._drawCommand, {
     uniforms: {
@@ -137,7 +139,7 @@ Skybox.prototype.draw = function(camera, opts) {
       uEnvMapEncoding: texture.encoding,
       uOutputEncoding: opts.outputEncoding,
       uBackgroundBlur: backgroundBlur,
-      uUseTonemapping: opts.backgroundMode ? !camera.postprocess : false,
+      uUseTonemapping: opts.backgroundMode ? useTonemapping : false,
       uExposure: opts.backgroundMode ? camera.exposure : 1
     }
   })
