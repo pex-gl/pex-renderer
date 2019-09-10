@@ -1329,20 +1329,18 @@ Renderer.prototype.draw = function() {
     })
 
 
+  // THIS IS NOT ON A CAMERA BY CAMERA BASIS
+  let arrayOfRandomPoints = [[0, 0, 0]]
 
-    let arrayOfRandomPoints = [[0,0,0]]
-    
+  let a1 = new Float32Array(arrayOfRandomPoints)
+  let a2 = new Float32Array(arrayOfRandomPoints.map(() => [1, 1, 1, 1]))
 
-    let a1 = new Float32Array(arrayOfRandomPoints)
-    let a2 = new Float32Array(arrayOfRandomPoints.map(() => [1, 1, 1, 1]))
-    
-    let vBuf = ctx.vertexBuffer({data: a1})
-    let vBuf2 = ctx.vertexBuffer({data: a2})
-    
-    
-    var drawLinesCmd = {
-      pipeline: ctx.pipeline({
-        vert: `
+  let vBuf = ctx.vertexBuffer({ data: a1 })
+  let vBuf2 = ctx.vertexBuffer({ data: a2 })
+
+  var drawLinesCmd = {
+    pipeline: ctx.pipeline({
+      vert: `
         attribute vec3 aPosition;
         attribute vec4 aVertexColor;
         uniform mat4 uProjectionMatrix;
@@ -1353,7 +1351,7 @@ Renderer.prototype.draw = function() {
           gl_Position = uProjectionMatrix * uViewMatrix * vec4(aPosition, 1.0);
         }
         `,
-        frag: `
+      frag: `
         #ifdef GL_ES
         precision highp float;
         #endif
@@ -1362,48 +1360,85 @@ Renderer.prototype.draw = function() {
           gl_FragColor = vColor;
         }
         `,
-        depthTest: true,
-        primitive: ctx.Primitive.Lines
-      }),
-      attributes: {
-        aPosition: vBuf,
-        aVertexColor: vBuf2
-      },
-      count: arrayOfRandomPoints.length,
-      uniforms: {
-        uProjectionMatrix: cameras[0].projectionMatrix,
-        uViewMatrix: cameras[0].viewMatrix
-      }
+      depthTest: true,
+      primitive: ctx.Primitive.Lines
+    }),
+    attributes: {
+      aPosition: vBuf,
+      aVertexColor: vBuf2
+    },
+    count: arrayOfRandomPoints.length,
+    uniforms: {
+      uProjectionMatrix: cameras[0].projectionMatrix,
+      uViewMatrix: cameras[0].viewMatrix
     }
-    
-    
-    
-
-    function drawBBox(geomBuilder, bbox, color) {
-
-      geomBuilder.addPosition(bbox[0]),
-      geomBuilder.addPosition(bbox[1]),
-
-      geomBuilder.addColor(color)
-      geomBuilder.addColor(color)
-
   }
 
-    this.entities.forEach(ent =>{
-      let geomBuilder = createGeomBuilder({ colors:1, positions:1 })
-      if(ent.getComponent('BoundingBoxHelper')){
-        let eTransform = ent.getComponent('Transform')
-        drawBBox(geomBuilder, eTransform.worldBounds,[1,0,0,1])
+  function drawBBox(geomBuilder, bbox, color) {
+    geomBuilder.addPosition([bbox[0][0], bbox[0][1], bbox[0][2]]),
+    geomBuilder.addPosition([bbox[1][0], bbox[0][1], bbox[0][2]]),
+    geomBuilder.addPosition([bbox[0][0], bbox[0][1], bbox[0][2]]),
+    geomBuilder.addPosition([bbox[0][0], bbox[1][1], bbox[0][2]]),
+    geomBuilder.addPosition([bbox[0][0], bbox[0][1], bbox[0][2]]),
+    geomBuilder.addPosition([bbox[0][0], bbox[0][1], bbox[1][2]]),
+    geomBuilder.addPosition([bbox[1][0], bbox[1][1], bbox[1][2]]),
+    geomBuilder.addPosition([bbox[0][0], bbox[1][1], bbox[1][2]]),
+    geomBuilder.addPosition([bbox[1][0], bbox[1][1], bbox[1][2]]),
+    geomBuilder.addPosition([bbox[1][0], bbox[0][1], bbox[1][2]]),
+    geomBuilder.addPosition([bbox[1][0], bbox[1][1], bbox[1][2]]),
+    geomBuilder.addPosition([bbox[1][0], bbox[1][1], bbox[0][2]]),
+    geomBuilder.addPosition([bbox[1][0], bbox[0][1], bbox[0][2]]),
+    geomBuilder.addPosition([bbox[1][0], bbox[0][1], bbox[1][2]]),
+    geomBuilder.addPosition([bbox[1][0], bbox[0][1], bbox[0][2]]),
+    geomBuilder.addPosition([bbox[1][0], bbox[1][1], bbox[0][2]]),
+    geomBuilder.addPosition([bbox[0][0], bbox[1][1], bbox[0][2]]),
+    geomBuilder.addPosition([bbox[1][0], bbox[1][1], bbox[0][2]]),
+    geomBuilder.addPosition([bbox[0][0], bbox[1][1], bbox[0][2]]),
+    geomBuilder.addPosition([bbox[0][0], bbox[1][1], bbox[1][2]]),
+    geomBuilder.addPosition([bbox[0][0], bbox[0][1], bbox[1][2]]),
+    geomBuilder.addPosition([bbox[0][0], bbox[1][1], bbox[1][2]]),
+    geomBuilder.addPosition([bbox[0][0], bbox[0][1], bbox[1][2]]),
+    geomBuilder.addPosition([bbox[1][0], bbox[0][1], bbox[1][2]]),
 
-        ctx.update(vBuf, {data: geomBuilder.positions})
-        ctx.update(vBuf2, {data: geomBuilder.colors})
-        drawLinesCmd.count = geomBuilder.count
-        ctx.submit( drawLinesCmd,)
-      }   
-    })
-    
-    
 
+    geomBuilder.addColor(color)
+    geomBuilder.addColor(color)
+    geomBuilder.addColor(color)
+    geomBuilder.addColor(color)
+    geomBuilder.addColor(color)
+    geomBuilder.addColor(color)
+    geomBuilder.addColor(color)
+    geomBuilder.addColor(color)
+    geomBuilder.addColor(color)
+    geomBuilder.addColor(color)
+    geomBuilder.addColor(color)
+    geomBuilder.addColor(color)
+    geomBuilder.addColor(color)
+    geomBuilder.addColor(color) 
+    geomBuilder.addColor(color)
+    geomBuilder.addColor(color)
+    geomBuilder.addColor(color)
+    geomBuilder.addColor(color)
+    geomBuilder.addColor(color)
+    geomBuilder.addColor(color)
+    geomBuilder.addColor(color)
+    geomBuilder.addColor(color)
+    geomBuilder.addColor(color)
+    geomBuilder.addColor(color)
+  }
+
+  this.entities.forEach((ent) => {
+    let geomBuilder = createGeomBuilder({ colors: 1, positions: 1 })
+    if (ent.getComponent('BoundingBoxHelper')) {
+      let eTransform = ent.getComponent('Transform')
+      drawBBox(geomBuilder, eTransform.worldBounds, [1, 0, 0, 1])
+
+      ctx.update(vBuf, { data: geomBuilder.positions })
+      ctx.update(vBuf2, { data: geomBuilder.colors })
+      drawLinesCmd.count = geomBuilder.count
+      ctx.submit(drawLinesCmd)
+    }
+  })
 
   overlays
     .filter((overlay) => overlay.enabled)
