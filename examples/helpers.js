@@ -135,11 +135,12 @@ const areaLight = renderer.entity([
       [0, 0, 1],
       vec3.normalize([1, -3, -1])
     ),
-    position: [1, 1, 0]
+    position: [-1, 1, 1]
   }),
   renderer.areaLight({
     castShadows: true,
-    color: [1, 1, 1, 1]
+    color: [0, 1, 1, 1],
+    intensity: 15
   }),
   helperLight()
 ])

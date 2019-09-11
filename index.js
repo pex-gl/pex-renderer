@@ -1416,12 +1416,18 @@ Renderer.prototype.draw = function() {
               geomBuilder.addPosition(pos)
               geomBuilder.addColor([0,1,1,1])
             })
-            console.log(geomBuilder)
-
         }
         lType = ent.getComponent('AreaLight')
         if(lType){
+          draw = true
           //area light
+          let areaLightTransform = ent.getComponent('Transform')
+          const areaLightGizmoPositions = makeQuad({ width: 1, height: 1 })
+          areaLightGizmoPositions.forEach((pos)=>{
+            vec3.multMat4(pos, areaLightTransform.modelMatrix)
+            geomBuilder.addPosition(pos)
+            geomBuilder.addColor([1,0,1,1])
+          })
         }
         lType = ent.getComponent('PointLight')
         if(lType){
@@ -1429,8 +1435,8 @@ Renderer.prototype.draw = function() {
         }
         lType = ent.getComponent('SpotLight')
         if(lType){
-          draw = true;
           //spotlight
+          draw = true;
           let spotlightTransform = ent.getComponent('Transform')
           //the range seemed way too large ?
           const spotLightDistance = lType.range/5
