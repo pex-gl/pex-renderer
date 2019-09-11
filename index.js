@@ -1375,6 +1375,8 @@ Renderer.prototype.draw = function() {
   }
 
   function drawBBox(geomBuilder, bbox, color) {
+
+    // i didnt like the cross lines. 
     geomBuilder.addPosition([bbox[0][0], bbox[0][1], bbox[0][2]]),
     geomBuilder.addPosition([bbox[1][0], bbox[0][1], bbox[0][2]]),
     geomBuilder.addPosition([bbox[0][0], bbox[0][1], bbox[0][2]]),
@@ -1429,9 +1431,9 @@ Renderer.prototype.draw = function() {
 
   this.entities.forEach((ent) => {
     let geomBuilder = createGeomBuilder({ colors: 1, positions: 1 })
-    if (ent.getComponent('BoundingBoxHelper')) {
-      let eTransform = ent.getComponent('Transform')
-      drawBBox(geomBuilder, eTransform.worldBounds, [1, 0, 0, 1])
+    let bbh = ent.getComponent('BoundingBoxHelper')
+    if (bbh) {
+      drawBBox(geomBuilder, ent.transform.worldBounds, bbh.color)
 
       ctx.update(vBuf, { data: geomBuilder.positions })
       ctx.update(vBuf2, { data: geomBuilder.colors })

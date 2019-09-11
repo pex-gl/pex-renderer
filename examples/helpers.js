@@ -229,7 +229,7 @@ const dragonEntity = renderer.entity([
   renderer.transform({
     position: [-1.5, 0, 0]
   }),
-  helperBBox()
+  helperBBox({color: [1,1,0,1]})
 ])
 renderer.add(dragonEntity)
 
@@ -270,7 +270,7 @@ const instGeometry = renderer.geometry({
 let instEntity = renderer.entity([
   instGeometry,
   renderer.material({ 
-    baseColor: [1, 0, 0, 1],
+    baseColor: [0.5, 1, 0.7, 1],
     castShadows : true,
     receiveShadows : true
   }),

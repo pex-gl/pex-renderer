@@ -1,14 +1,13 @@
-//no use right now
 const Signal = require('signals')
 
 function BoundingBoxHelper(opts) {
   this.type = 'BoundingBoxHelper'
   this.entity = null
-  this.color = [1,1,1,1]
+  this.color = [1,0,0,1]
   this.changed = new Signal()
   this.dirty = false
-  
-  this.set(opts)
+
+  if(opts)this.set(opts)
 }
 
 // this function gets called when the component is added
@@ -18,11 +17,9 @@ BoundingBoxHelper.prototype.init = function(entity) {
 }
 
 BoundingBoxHelper.prototype.set = function(opts) {
-  Object.assign(this, opts)
-  this.dirty = true
-
-  //SET IS GIVING ERRORS
-  //Object.keys(opts).forEach((prop) => this.changed.dispatch(prop))
+    Object.assign(this, opts)
+    this.dirty = true
+    Object.keys(opts).forEach((prop) => this.changed.dispatch(prop))
 }
 
 BoundingBoxHelper.prototype.update = function() {
