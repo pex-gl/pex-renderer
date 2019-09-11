@@ -18,7 +18,8 @@ const dragon = require('./assets/models/stanford-dragon/stanford-dragon')
 const normals = require('angle-normals')
 const centerAndNormalize = require('geom-center-and-normalize')
 
-const helperBBox = require('../helpers/bounding-box')
+const helperBBox = require('../helpers/bounding-box-helper')
+const helperLight = require('../helpers/light-helper')
 
 const State = {
   rotation: 1.5 * Math.PI
@@ -40,7 +41,7 @@ const orbitCameraEntity = renderer.entity([
       [ 
         0,
         0,
-        window.innerWidth,
+        Math.floor(0.75 * window.innerWidth),
         window.innerHeight
       ]
   }),
@@ -48,7 +49,6 @@ const orbitCameraEntity = renderer.entity([
   renderer.orbiter({ position: [0.5, 0.5, 2] })
 ])
 renderer.add(orbitCameraEntity)
-
 
 
 const persCameraEntity = renderer.entity([
@@ -60,10 +60,10 @@ const persCameraEntity = renderer.entity([
     postprocess: false,
     viewport: 
       [ 
-        0,
-        window.innerHeight - (Math.floor((1 / 4) * window.innerHeight)),
-        Math.floor((1 / 4) * window.innerWidth),
-        Math.floor((1 / 4) * window.innerHeight)
+        Math.floor(0.75 * window.innerWidth),
+        window.innerHeight - (Math.floor((1 / 2) * window.innerHeight)),
+        Math.floor(0.25 * window.innerWidth),
+        Math.floor((1 / 2) * window.innerHeight)
       ]
   }),
   renderer.transform({ 
@@ -76,16 +76,18 @@ renderer.add(persCameraEntity)
 const orthoCameraEntity = renderer.entity([
   renderer.camera({
     fov: Math.PI / 3,
+    projection: 'orthographic',
     aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
     near: 0.1,
     far: 100,
+    zoom : 3,
     postprocess: false,
     viewport: 
       [ 
+        Math.floor(0.75 * window.innerWidth),
         0,
-        0,
-        Math.floor((1 / 4) * window.innerWidth),
-        Math.floor((1 / 4) * window.innerHeight)
+        Math.floor(0.25 * window.innerWidth),
+        Math.floor((1 / 2) * window.innerHeight)
       ]
   }),
   renderer.transform({ 
@@ -120,7 +122,8 @@ const directionalLight = renderer.entity([
     castShadows: true,
     color: [1, 1, 1, 1],
     intensity: 5
-  })
+  }),
+  helperLight()
 ])
 renderer.add(directionalLight)
 
@@ -136,7 +139,8 @@ const areaLight = renderer.entity([
   renderer.areaLight({
     castShadows: true,
     color: [1, 1, 1, 1]
-  })
+  }),
+  helperLight()
 ])
 renderer.add(areaLight)
 const spotLight = renderer.entity([
@@ -150,8 +154,10 @@ const spotLight = renderer.entity([
   }),
   renderer.spotLight({
     castShadows: true,
-    color: [1, 1, 1, 1]
-  })
+    color: [1, 1, 1, 1],
+    intensity: 50
+  }),
+  helperLight()
 ])
 renderer.add(spotLight)
 
@@ -218,7 +224,6 @@ for (let i = 0; i < gridSize; i++) {
   }
 }
 
-
 let cubeG = createCube(0.1,0.1,0.1)
 console.log(grid)
 const instGeometry = renderer.geometry({
@@ -241,7 +246,6 @@ let instEntity = renderer.entity([
 ])
 
 renderer.add(instEntity)
-
 ctx.frame(() => {
   renderer.draw()
   gui.draw()

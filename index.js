@@ -1329,6 +1329,7 @@ Renderer.prototype.draw = function() {
     })
 
 
+
   // THIS IS NOT ON A CAMERA BY CAMERA BASIS
   let arrayOfRandomPoints = [[0, 0, 0]]
 
@@ -1337,43 +1338,132 @@ Renderer.prototype.draw = function() {
 
   let vBuf = ctx.vertexBuffer({ data: a1 })
   let vBuf2 = ctx.vertexBuffer({ data: a2 })
+  
+  cameras.forEach((camera) => {
+  
+    var drawLinesCmd = {
+      pipeline: ctx.pipeline({
+        vert: `
+          attribute vec3 aPosition;
+          attribute vec4 aVertexColor;
 
-  var drawLinesCmd = {
-    pipeline: ctx.pipeline({
-      vert: `
-        attribute vec3 aPosition;
-        attribute vec4 aVertexColor;
-        uniform mat4 uProjectionMatrix;
-        uniform mat4 uViewMatrix;
-        varying vec4 vColor;
-        void main () {
-          vColor = aVertexColor;
-          gl_Position = uProjectionMatrix * uViewMatrix * vec4(aPosition, 1.0);
-        }
-        `,
-      frag: `
-        #ifdef GL_ES
-        precision highp float;
-        #endif
-         varying vec4 vColor;
-        void main () {
-          gl_FragColor = vColor;
-        }
-        `,
-      depthTest: true,
-      primitive: ctx.Primitive.Lines
-    }),
-    attributes: {
-      aPosition: vBuf,
-      aVertexColor: vBuf2
-    },
-    count: arrayOfRandomPoints.length,
-    uniforms: {
-      uProjectionMatrix: cameras[0].projectionMatrix,
-      uViewMatrix: cameras[0].viewMatrix
+          uniform mat4 uProjectionMatrix;
+          uniform mat4 uViewMatrix;
+
+          varying vec4 vColor;
+
+          void main () {
+            vColor = aVertexColor;
+            gl_Position = uProjectionMatrix * uViewMatrix * vec4(aPosition, 1.0);
+          }
+          `,
+        frag: `
+          #ifdef GL_ES
+          precision highp float;
+          #endif
+          varying vec4 vColor;
+          void main () {
+            gl_FragColor = vColor;
+          }
+          `,
+        depthTest: true,
+        primitive: ctx.Primitive.Lines
+      }),
+      attributes: {
+        aPosition: vBuf,
+        aVertexColor: vBuf2
+      },
+      count: arrayOfRandomPoints.length,
+      uniforms: {
+        uProjectionMatrix: camera.projectionMatrix,
+        uViewMatrix: camera.viewMatrix,
+      },
+      viewport : camera.viewport
     }
-  }
 
+    
+
+    this.entities.forEach((ent) => {
+      let draw = false;
+
+      let geomBuilder = createGeomBuilder({ colors: 1, positions: 1 })
+      // bounding box helper
+      let bbh = ent.getComponent('BoundingBoxHelper')
+      if (bbh) {
+        drawBBox(geomBuilder, ent.transform.worldBounds, bbh.color)
+        draw = true;
+        
+      }
+      //lightHelper
+      let lightHelper = ent.getComponent('LightHelper')
+      if(lightHelper){
+
+        let lType;
+        lType = ent.getComponent('DirectionalLight')
+        if(lType){
+          // directional light
+
+        }
+        lType = ent.getComponent('AreaLight')
+        if(lType){
+          //area light
+        }
+        lType = ent.getComponent('PointLight')
+        if(lType){
+          //pointlight
+        }
+        lType = ent.getComponent('SpotLight')
+        if(lType){
+          draw = true;
+          //spotlight
+          let spotlightTransform = ent.getComponent('Transform')
+          console.log(lType )
+          //the range seemed way too large ?
+          const spotLightDistance = lType.range/5
+          const spotLightRadius = spotLightDistance * Math.tan(lType.angle)
+          const spotLightGizmoPositions = makePrism({ radius: 0.3 })
+            .concat([
+              [0, 0, 0],
+              [spotLightRadius, 0, spotLightDistance],
+              [0, 0, 0],
+              [-spotLightRadius, 0, spotLightDistance],
+              [0, 0, 0],
+              [0, spotLightRadius, spotLightDistance],
+              [0, 0, 0],
+              [0, -spotLightRadius, spotLightDistance]
+            ])
+            // .concat(
+            //   makeCircle({
+            //     radius: spotLightRadius,
+            //     center: [0, 0, spotLightDistance],
+            //     steps: 64,
+            //     axis: [0, 1]
+            //   })
+            //)
+
+            spotLightGizmoPositions.forEach((pos)=>{
+             
+              vec3.multMat4(pos, spotlightTransform.modelMatrix)
+              geomBuilder.addPosition(pos)
+              geomBuilder.addColor([1,0,1,1])
+            })
+            
+        }
+      }
+
+
+      if(draw){
+        ctx.update(vBuf, { data: geomBuilder.positions })
+        ctx.update(vBuf2, { data: geomBuilder.colors })
+        drawLinesCmd.count = geomBuilder.count
+        ctx.submit(drawLinesCmd)
+      }
+    })
+
+
+
+  })
+  // DRAW BBOX FUNCTION NEEDS SEVERE OPTIMISATION AND MOVING
   function drawBBox(geomBuilder, bbox, color) {
 
     // i didnt like the cross lines. 
@@ -1428,19 +1518,141 @@ Renderer.prototype.draw = function() {
     geomBuilder.addColor(color)
     geomBuilder.addColor(color)
   }
-
-  this.entities.forEach((ent) => {
-    let geomBuilder = createGeomBuilder({ colors: 1, positions: 1 })
-    let bbh = ent.getComponent('BoundingBoxHelper')
-    if (bbh) {
-      drawBBox(geomBuilder, ent.transform.worldBounds, bbh.color)
-
-      ctx.update(vBuf, { data: geomBuilder.positions })
-      ctx.update(vBuf2, { data: geomBuilder.colors })
-      drawLinesCmd.count = geomBuilder.count
-      ctx.submit(drawLinesCmd)
+  // taken from old lighting example helper
+  function makeCircle(opts) {
+    const points = []
+  
+    for (let i = 0; i < opts.steps; i++) {
+      const t = (i / opts.steps) * 2 * Math.PI
+      const x = Math.cos(t)
+      const y = Math.sin(t)
+      const pos = [0, 0, 0]
+      pos[opts.axis ? opts.axis[0] : 0] = x
+      pos[opts.axis ? opts.axis[1] : 1] = y
+      vec3.scale(pos, opts.radius || 1)
+      vec3.add(pos, opts.center || [0, 0, 0])
+      points.push(pos)
     }
-  })
+  
+    const lines = points.reduce((lines, p, i) => {
+      lines.push(p)
+      lines.push(points[(i + 1) % points.length])
+      return lines
+    }, [])
+  
+    return lines
+  }
+  function makePrism(opts) {
+    const r = opts.radius
+    const position = opts.position || [0, 0, 0]
+    // prettier-ignore
+    const points = [
+      [0, r, 0], [r, 0, 0],
+      [0, -r, 0], [r, 0, 0],
+  
+      [0, r, 0], [-r, 0, 0],
+      [0, -r, 0], [-r, 0, 0],
+  
+      [0, r, 0], [0, 0, r],
+      [0, -r, 0], [0, 0, r],
+  
+      [0, r, 0], [0, 0, -r],
+      [0, -r, 0], [0, 0, -r],
+  
+      [-r, 0, 0], [0, 0, -r],
+      [r, 0, 0], [0, 0, -r],
+      [r, 0, 0], [0, 0, r],
+      [-r, 0, 0], [0, 0, r]
+    ]
+    points.forEach((p) => vec3.add(p, position))
+    return points
+  } 
+  function makeQuad(opts) {
+    const w = opts.width
+    const h = opts.height
+    const position = opts.position || [0, 0, 0]
+    // prettier-ignore
+    const points = [
+      [-1, -1, 0], [1, -1, 0],
+      [1, -1, 0], [1, 1, 0],
+      [1, 1, 0], [-1, 1, 0],
+      [-1, 1, 0], [-1, -1, 0],
+      [-1, -1, 0], [1, 1, 0],
+      [-1, 1, 0], [1, -1, 0],
+  
+      [-1, -1, 0], [-1, -1, 1 / 2],
+      [1, -1, 0], [1, -1, 1 / 2],
+      [1, 1, 0], [1, 1, 1 / 2],
+      [-1, 1, 0], [-1, 1, 1 / 2],
+      [0, 0, 0], [0, 0, 1 / 2]
+    ]
+    points.forEach((p) => {
+      p[0] *= w / 2
+      p[1] *= h / 2
+      vec3.add(p, position)
+    })
+    return points
+  }
+  function makeAxes(size = 10) {
+    // prettier-ignore
+    return [
+      // X axis
+      [0, 0, 0],
+      [size, 0, 0],
+      // Y axis
+      [0, 0, 0],
+      [0, size, 0],
+      // Z axis
+      [0, 0, 0],
+      [0, 0, size]
+    ]
+  }
+  function targetTo(out, eye, target, up = [0, 1, 0]) {
+    let eyex = eye[0]
+    let eyey = eye[1]
+    let eyez = eye[2]
+    let upx = up[0]
+    let upy = up[1]
+    let upz = up[2]
+    let z0 = eyex - target[0]
+    let z1 = eyey - target[1]
+    let z2 = eyez - target[2]
+    let len = z0 * z0 + z1 * z1 + z2 * z2
+    if (len > 0) {
+      len = 1 / Math.sqrt(len)
+      z0 *= len
+      z1 *= len
+      z2 *= len
+    }
+    let x0 = upy * z2 - upz * z1
+    let x1 = upz * z0 - upx * z2
+    let x2 = upx * z1 - upy * z0
+    len = x0 * x0 + x1 * x1 + x2 * x2
+    if (len > 0) {
+      len = 1 / Math.sqrt(len)
+      x0 *= len
+      x1 *= len
+      x2 *= len
+    }
+    out[0] = x0
+    out[1] = x1
+    out[2] = x2
+    out[3] = 0
+    out[4] = z1 * x2 - z2 * x1
+    out[5] = z2 * x0 - z0 * x2
+    out[6] = z0 * x1 - z1 * x0
+    out[7] = 0
+    out[8] = z0
+    out[9] = z1
+    out[10] = z2
+    out[11] = 0
+    out[12] = eyex
+    out[13] = eyey
+    out[14] = eyez
+    out[15] = 1
+    return out
+  }
+  
 
   overlays
     .filter((overlay) => overlay.enabled)

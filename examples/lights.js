@@ -8,7 +8,7 @@ const dragon = require('./assets/models/stanford-dragon/stanford-dragon')
 const normals = require('angle-normals')
 const centerAndNormalize = require('geom-center-and-normalize')
 const gridCells = require('grid-cells')
-const { makeCircle, makePrism, makeQuad } = require('./helpers.js')
+const { makeCircle, makePrism, makeQuad } = require('./helpers-backup.js')
 
 function targetTo(out, eye, target, up = [0, 1, 0]) {
   let eyex = eye[0]
