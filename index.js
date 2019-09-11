@@ -1397,11 +1397,26 @@ Renderer.prototype.draw = function() {
       //lightHelper
       let lightHelper = ent.getComponent('LightHelper')
       if(lightHelper){
-
         let lType;
         lType = ent.getComponent('DirectionalLight')
         if(lType){
-          // directional light
+          draw = true
+          let dirLightTransform = ent.getComponent('Transform')
+          const directionalLightGizmoPositions = makePrism({ radius: 0.3 }).concat(
+            /* prettier-ignore */ [
+              [0, 0, 0.3], [0, 0, 1],
+              [0.3, 0, 0], [0.3, 0, 1],
+              [-0.3, 0, 0], [-0.3, 0, 1],
+              [0, 0.3, 0], [0, 0.3, 1],
+              [0, -0.3, 0], [0, -0.3, 1]
+            ])
+            
+            directionalLightGizmoPositions.forEach((pos)=>{
+              vec3.multMat4(pos, dirLightTransform.modelMatrix)
+              geomBuilder.addPosition(pos)
+              geomBuilder.addColor([0,1,1,1])
+            })
+            console.log(geomBuilder)
 
         }
         lType = ent.getComponent('AreaLight')
@@ -1417,7 +1432,6 @@ Renderer.prototype.draw = function() {
           draw = true;
           //spotlight
           let spotlightTransform = ent.getComponent('Transform')
-          console.log(lType )
           //the range seemed way too large ?
           const spotLightDistance = lType.range/5
           const spotLightRadius = spotLightDistance * Math.tan(lType.angle)
@@ -1442,7 +1456,6 @@ Renderer.prototype.draw = function() {
             //)
 
             spotLightGizmoPositions.forEach((pos)=>{
-             
               vec3.multMat4(pos, spotlightTransform.modelMatrix)
               geomBuilder.addPosition(pos)
               geomBuilder.addColor([1,0,1,1])

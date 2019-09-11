@@ -116,7 +116,8 @@ renderer.add(reflectionProbe)
 //lights
 const directionalLight = renderer.entity([
   renderer.transform({
-    rotation: quat.fromTo(quat.create(), [0, 0, 1], vec3.normalize([1, -3, -1]))
+    rotation: quat.fromTo(quat.create(), [0, 0, 1], vec3.normalize([1, -3, -1])),
+    position : [-1, 2,-1]
   }),
   renderer.directionalLight({
     castShadows: true,
