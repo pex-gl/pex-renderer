@@ -29,47 +29,6 @@ const gui = new GUI(ctx)
 
 const ASSETS_DIR = isBrowser ? 'assets' : path.join(__dirname, 'assets')
 
-// for (var i = 0; i < 3; i++) {
-//   let orbiter = renderer.orbiter({ position: [0.5, 0.5, 2] })
-//   let cameraCmp = false
-//   let viewport = [
-//     i * Math.floor((1 / 3) * window.innerWidth),
-//     0,
-//     Math.floor((1 / 3) * window.innerWidth),
-//     window.innerHeight
-//   ]
-
-//   //// needs refactor
-//   if (i == 1) {
-//     cameraCmp = renderer.camera({
-//       fov: Math.PI / 3,
-//       projection: 'orthographic',
-//       aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
-//       near: 0.1,
-//       far: 100,
-//       postprocess: false,
-//       viewport: viewport
-//     })
-//   } else {
-//     cameraCmp = renderer.camera({
-//       fov: Math.PI / 3,
-//       aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
-//       near: 0.1,
-//       far: 100,
-//       postprocess: false,
-//       viewport: viewport
-//     })
-//   }
-//   const camera = renderer.entity([
-//     renderer.transform({ position: [0, 2, 3] }),
-//     cameraCmp
-//   ])
-//   if (i == 2) {
-//     camera.addComponent(orbiter)
-//   }
-//   renderer.add(camera)
-// }
-
 const orbitCameraEntity = renderer.entity([
   renderer.camera({
     fov: Math.PI / 3,
@@ -116,21 +75,23 @@ renderer.add(persCameraEntity)
 
 const orthoCameraEntity = renderer.entity([
   renderer.camera({
-    projection : 'orthographic',
+    fov: Math.PI / 3,
     aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
     near: 0.1,
     far: 100,
+    postprocess: false,
     viewport: 
       [ 
-        [ 
-          Math.floor((1 / 4) * window.innerWidth),
-          window.innerHeight - (Math.floor((1 / 4) * window.innerHeight)),
-          Math.floor((1 / 4) * window.innerWidth),
-          Math.floor((1 / 4) * window.innerHeight)
-        ]
+        0,
+        0,
+        Math.floor((1 / 4) * window.innerWidth),
+        Math.floor((1 / 4) * window.innerHeight)
       ]
   }),
-  renderer.transform({ position: [1, 5, 5] }),
+  renderer.transform({ 
+    position: [0, 2, 3],
+    rotation: quat.fromEuler(quat.create(), [-Math.PI/5,0,0])
+  }),
 ])
 renderer.add(orthoCameraEntity)
 
@@ -208,7 +169,8 @@ const floorEntity = renderer.entity([
     metallic: 0,
     receiveShadows: true,
     castShadows: false
-  })
+  }),
+  helperBBox()
 ])
 renderer.add(floorEntity)
 
