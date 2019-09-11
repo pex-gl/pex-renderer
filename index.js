@@ -1432,6 +1432,48 @@ Renderer.prototype.draw = function() {
         lType = ent.getComponent('PointLight')
         if(lType){
           //pointlight
+          draw = true
+          let pointLightTransform = ent.getComponent('Transform')
+          const pointLightGizmoPositions = makePrism({ radius: 0.3 })
+          // .concat(
+          //   makeCircle({
+          //     center: [0, 0, 0],
+          //     radius: lType.range,
+          //     steps: 64,
+          //     axis: [0, 1]
+          //   })
+          // )
+          // .concat(
+          //   makeCircle({
+          //     center: [0, 0, 0],
+          //     radius: lType.range,
+          //     steps: 64,
+          //     axis: [0, 2]
+          //   })
+          // )
+          // .concat(
+          //   makeCircle({
+          //     center: [0, 0, 0],
+          //     radius: lType.range,
+          //     steps: 64,
+          //     axis: [1, 2]
+          //   })
+          // )
+          .concat(
+            /* prettier-ignore */ [
+              [0, 0.3, 0], [0, 0.6, 0],
+              [0, -0.3, 0], [0, -0.6, 0],
+              [0.3, 0, 0], [0.6, 0, 0],
+              [-0.3, 0, 0], [-0.6, 0, 0],
+              [0, 0, 0.3], [0, 0, 0.6],
+              [0, 0, -0.3], [0, 0, -0.6]
+            ]
+          )
+          pointLightGizmoPositions.forEach((pos)=>{
+            vec3.multMat4(pos, pointLightTransform.modelMatrix)
+            geomBuilder.addPosition(pos)
+            geomBuilder.addColor([1,0,1,1])
+          })
         }
         lType = ent.getComponent('SpotLight')
         if(lType){

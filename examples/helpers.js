@@ -128,6 +128,20 @@ const directionalLight = renderer.entity([
 ])
 renderer.add(directionalLight)
 
+const pointLight = renderer.entity([
+  renderer.transform({
+    rotation: quat.fromTo(quat.create(), [0, 0, 1], vec3.normalize([1, -3, -1])),
+    position : [1,0.1,1.5]
+  }),
+  renderer.pointLight({
+    castShadows: true,
+    color: [0, 1, 0, 1],
+    intensity: 6
+  }),
+  helperLight()
+])
+renderer.add(pointLight)
+
 const areaLight = renderer.entity([
   renderer.transform({
     rotation: quat.fromTo(
