@@ -2,7 +2,7 @@ const createContext = require('pex-context')
 const createRenderer = require('../')
 const createGUI = require('pex-gui')
 const createCube = require('primitive-cube')
-const { makeAxes } = require('./helpers')
+const { makeAxes } = require('./helpers-backup')
 
 const ctx = createContext()
 const gui = createGUI(ctx)

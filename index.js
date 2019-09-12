@@ -1381,8 +1381,6 @@ Renderer.prototype.draw = function() {
       viewport : camera.viewport
     }
 
-    
-
     this.entities.forEach((ent) => {
       let draw = false;
 
@@ -1402,7 +1400,7 @@ Renderer.prototype.draw = function() {
         if(lType){
           draw = true
           let dirLightTransform = ent.getComponent('Transform')
-          const directionalLightGizmoPositions = makePrism({ radius: 0.3 }).concat(
+          const directionalLightGizmoPositions = makePrism({ radius: 0.2 }).concat(
             /* prettier-ignore */ [
               [0, 0, 0.3], [0, 0, 1],
               [0.3, 0, 0], [0.3, 0, 1],
@@ -1414,7 +1412,7 @@ Renderer.prototype.draw = function() {
             directionalLightGizmoPositions.forEach((pos)=>{
               vec3.multMat4(pos, dirLightTransform.modelMatrix)
               geomBuilder.addPosition(pos)
-              geomBuilder.addColor([0,1,1,1])
+              geomBuilder.addColor(lType.color)
             })
         }
         lType = ent.getComponent('AreaLight')
@@ -1426,7 +1424,7 @@ Renderer.prototype.draw = function() {
           areaLightGizmoPositions.forEach((pos)=>{
             vec3.multMat4(pos, areaLightTransform.modelMatrix)
             geomBuilder.addPosition(pos)
-            geomBuilder.addColor([1,0,1,1])
+            geomBuilder.addColor(lType.color)
           })
         }
         lType = ent.getComponent('PointLight')
@@ -1434,7 +1432,7 @@ Renderer.prototype.draw = function() {
           //pointlight
           draw = true
           let pointLightTransform = ent.getComponent('Transform')
-          const pointLightGizmoPositions = makePrism({ radius: 0.3 })
+          const pointLightGizmoPositions = makePrism({ radius: 0.2 })
           // .concat(
           //   makeCircle({
           //     center: [0, 0, 0],
@@ -1461,18 +1459,18 @@ Renderer.prototype.draw = function() {
           // )
           .concat(
             /* prettier-ignore */ [
-              [0, 0.3, 0], [0, 0.6, 0],
-              [0, -0.3, 0], [0, -0.6, 0],
-              [0.3, 0, 0], [0.6, 0, 0],
-              [-0.3, 0, 0], [-0.6, 0, 0],
-              [0, 0, 0.3], [0, 0, 0.6],
-              [0, 0, -0.3], [0, 0, -0.6]
+              [0, 0.0, 0], [0, 0.6, 0],
+              [0, -0.0, 0], [0, -0.6, 0],
+              [0.0, 0, 0], [0.6, 0, 0],
+              [-0.0, 0, 0], [-0.6, 0, 0],
+              [0, 0, 0.0], [0, 0, 0.6],
+              [0, 0, -0.0], [0, 0, -0.6]
             ]
           )
           pointLightGizmoPositions.forEach((pos)=>{
             vec3.multMat4(pos, pointLightTransform.modelMatrix)
             geomBuilder.addPosition(pos)
-            geomBuilder.addColor([1,0,1,1])
+            geomBuilder.addColor(lType.color)
           })
         }
         lType = ent.getComponent('SpotLight')
@@ -1483,7 +1481,7 @@ Renderer.prototype.draw = function() {
           //the range seemed way too large ?
           const spotLightDistance = lType.range/5
           const spotLightRadius = spotLightDistance * Math.tan(lType.angle)
-          const spotLightGizmoPositions = makePrism({ radius: 0.3 })
+          const spotLightGizmoPositions = makePrism({ radius: 0.2 })
             .concat([
               [0, 0, 0],
               [spotLightRadius, 0, spotLightDistance],
@@ -1506,9 +1504,45 @@ Renderer.prototype.draw = function() {
             spotLightGizmoPositions.forEach((pos)=>{
               vec3.multMat4(pos, spotlightTransform.modelMatrix)
               geomBuilder.addPosition(pos)
-              geomBuilder.addColor([1,0,1,1])
-            })
-            
+              geomBuilder.addColor(lType.color)
+            })        
+        }
+      }
+
+      //camera
+      let cameraHelper = ent.getComponent('CameraHelper')
+      if(cameraHelper){
+        let cType;
+        cType = ent.getComponent('Camera')
+        if(cType.projection == 'orthographic'){
+           
+        }
+        if(cType.projection == 'perspective'){
+          //draw = true;
+          let perspectiveCameraTransform = ent.getComponent('Transform')
+          //the range seemed way too large ?
+          // const perspectiveCameraDistance = cType.far
+          // const perspectiveCameraRadius = perspectiveCameraDistance * Math.tan(cType.fov)
+          // const perspectiveCameraGiszmoPositions = [
+          //   [0, 0, 0],
+          //   [perspectiveCameraRadius, 0, -perspectiveCameraDistance],
+          //   [0, 0, 0],
+          //   [-perspectiveCameraRadius, 0, -perspectiveCameraDistance],
+          //   [0, 0, 0],
+          //   [0, perspectiveCameraRadius, -perspectiveCameraDistance],
+          //   [0, 0, 0],
+          //   [0, -perspectiveCameraRadius, -perspectiveCameraDistance]
+          // ]
+          const perspectiveCameraGiszmoPositions = []
+          perspectiveCameraGiszmoPositions.forEach((pos)=>{
+            vec3.multMat4(pos, perspectiveCameraTransform.modelMatrix)
+            geomBuilder.addPosition(pos)
+            geomBuilder.addColor(cameraHelper.color)
+          })  
+
+
+          
+          
         }
       }
 

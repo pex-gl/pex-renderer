@@ -20,6 +20,7 @@ const centerAndNormalize = require('geom-center-and-normalize')
 
 const helperBBox = require('../helpers/bounding-box-helper')
 const helperLight = require('../helpers/light-helper')
+const helperCamera = require('../helpers/camera-helper')
 
 const State = {
   rotation: 1.5 * Math.PI
@@ -70,6 +71,7 @@ const persCameraEntity = renderer.entity([
     position: [0, 2, 3],
     rotation: quat.fromEuler(quat.create(), [-Math.PI/5,0,0])
   }),
+  helperCamera()
 ])
 renderer.add(persCameraEntity)
 
@@ -94,6 +96,7 @@ const orthoCameraEntity = renderer.entity([
     position: [0, 2, 3],
     rotation: quat.fromEuler(quat.create(), [-Math.PI/5,0,0])
   }),
+  helperCamera()
 ])
 renderer.add(orthoCameraEntity)
 

@@ -1,8 +1,9 @@
 const Signal = require('signals')
 
-function LightHelper(opts) {
-  this.type = 'LightHelper'
+function CameraHelper(opts) {
+  this.type = 'CameraHelper'
   this.entity = null
+  this.color = [1,0,0,1]
   this.changed = new Signal()
   this.dirty = false
 
@@ -11,23 +12,23 @@ function LightHelper(opts) {
 
 // this function gets called when the component is added
 // to an enity
-LightHelper.prototype.init = function(entity) {
+CameraHelper.prototype.init = function(entity) {
   this.entity = entity
 }
 
-LightHelper.prototype.set = function(opts) {
+CameraHelper.prototype.set = function(opts) {
     Object.assign(this, opts)
     this.dirty = true
     Object.keys(opts).forEach((prop) => this.changed.dispatch(prop))
 }
 
-LightHelper.prototype.update = function() {
+CameraHelper.prototype.update = function() {
   if (!this.dirty) return
   this.dirty = false
 }
 
 // by pex-renderer convention we export factory function
 // instead of the class type
-module.exports = function createLightHelper(opts) {
-  return new LightHelper(opts)
+module.exports = function createCameraHelper(opts) {
+  return new CameraHelper(opts)
 }
