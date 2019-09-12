@@ -1449,7 +1449,7 @@ Renderer.prototype.draw = function() {
             draw = true
             let spotlightTransform = ent.getComponent('Transform')
             //the range seemed way too large ?
-            const spotLightDistance = lType.range / 5
+            const spotLightDistance = lType.range
             const spotLightRadius = spotLightDistance * Math.tan(lType.angle)
             const spotLightHelperPositions = getPrismPositions({ radius: 0.2 })
               .concat([

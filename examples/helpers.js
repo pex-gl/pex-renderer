@@ -1,10 +1,3 @@
-// 3 cameras (perspective, ortho, perspective debug 3rd eye view)
-//  4 lights (one per type)
-//  static mesh
-//  animated mesh
-//  animated skinned mesh (cesium man from the repo would work)
-//  instanced mesh
-
 const path = require('path')
 const createRenderer = require('../')
 const createContext = require('pex-context')
@@ -41,24 +34,25 @@ const orbitCameraEntity = renderer.entity([
     viewport: [0, 0, Math.floor(0.75 * window.innerWidth), window.innerHeight]
   }),
   renderer.transform({ position: [0, 2, 3] }),
-  renderer.orbiter({ position: [0.5, 0.5, 2] })
+  renderer.orbiter({ position: [2, 2, -2] })
 ])
 renderer.add(orbitCameraEntity)
 
+const persCameraCmp = renderer.camera({
+  fov: Math.PI / 4,
+  aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
+  near: 1,
+  far: 8,
+  postprocess: false,
+  viewport: [
+    Math.floor(0.75 * window.innerWidth),
+    window.innerHeight - Math.floor((1 / 2) * window.innerHeight),
+    Math.floor(0.25 * window.innerWidth),
+    Math.floor((1 / 2) * window.innerHeight)
+  ]
+})
 const persCameraEntity = renderer.entity([
-  renderer.camera({
-    fov: Math.PI / 4,
-    aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
-    near: 1,
-    far: 8,
-    postprocess: false,
-    viewport: [
-      Math.floor(0.75 * window.innerWidth),
-      window.innerHeight - Math.floor((1 / 2) * window.innerHeight),
-      Math.floor(0.25 * window.innerWidth),
-      Math.floor((1 / 2) * window.innerHeight)
-    ]
-  }),
+  persCameraCmp,
   renderer.transform({
     position: [0, 2, 3],
     rotation: quat.fromEuler(quat.create(), [-Math.PI / 5, 0, 0])
@@ -66,6 +60,8 @@ const persCameraEntity = renderer.entity([
   helperCamera({ color: [1, 0.7, 0, 1] })
 ])
 renderer.add(persCameraEntity)
+
+
 
 const orthoCameraEntity = renderer.entity([
   renderer.camera({
@@ -106,6 +102,11 @@ const reflectionProbe = renderer.entity([renderer.reflectionProbe()])
 renderer.add(reflectionProbe)
 
 //lights
+const directionalLightCmp = renderer.directionalLight({
+  castShadows: true,
+  color: [1, 1, 1, 1],
+  intensity: 5
+})
 const directionalLight = renderer.entity([
   renderer.transform({
     rotation: quat.fromTo(
@@ -115,14 +116,30 @@ const directionalLight = renderer.entity([
     ),
     position: [-1, 2, -1]
   }),
-  renderer.directionalLight({
-    castShadows: true,
-    color: [1, 1, 1, 1],
-    intensity: 5
-  }),
+  directionalLightCmp,
   helperLight()
 ])
 renderer.add(directionalLight)
+gui.addColumn('Lights')
+gui.addHeader('Directional Light')
+gui.addParam('Enabled', directionalLightCmp, 'enabled', {}, (value) => {
+  directionalLightCmp.set({ enabled: value })
+})
+gui.addParam(
+  'Intensity',
+  directionalLightCmp,
+  'intensity',
+  { min: 0, max: 20 },
+  () => {
+    directionalLightCmp.set({ intensity: directionalLightCmp.intensity })
+  }
+)
+
+const pointLightCmp = renderer.pointLight({
+  castShadows: true,
+  color: [0, 1, 0, 1],
+  intensity: 6
+})
 const pointLight = renderer.entity([
   renderer.transform({
     rotation: quat.fromTo(
@@ -132,14 +149,36 @@ const pointLight = renderer.entity([
     ),
     position: [1, 0.1, 1.5]
   }),
-  renderer.pointLight({
-    castShadows: true,
-    color: [0, 1, 0, 1],
-    intensity: 6
-  }),
+  pointLightCmp,
   helperLight()
 ])
 renderer.add(pointLight)
+
+gui.addHeader('Point Light')
+gui.addParam('Enabled', pointLightCmp, 'enabled', {}, (value) => {
+  pointLightCmp.set({ enabled: value })
+})
+gui.addParam('Enabled', pointLightCmp, 'enabled', {}, (value) => {
+  pointLightCmp.set({ enabled: value })
+})
+gui.addParam('Range', pointLightCmp, 'range', {
+  min: 0,
+  max: 20
+})
+gui.addParam(
+  'Intensity',
+  pointLightCmp,
+  'intensity',
+  { min: 0, max: 20 },
+  () => {
+    pointLightCmp.set({ intensity: pointLightCmp.intensity })
+  }
+)
+gui.addParam('Shadows', pointLightCmp, 'castShadows', {}, (value) => {
+  pointLightCmp.set({ castShadows: value })
+})
+
+
 const areaLight = renderer.entity([
   renderer.transform({
     rotation: quat.fromTo(
@@ -157,6 +196,37 @@ const areaLight = renderer.entity([
   helperLight()
 ])
 renderer.add(areaLight)
+const areaLightCmp = areaLight.getComponent('AreaLight')
+// GUI
+gui.addHeader('Area Light')
+gui.addParam('Enabled', areaLightCmp, 'enabled', {}, (value) => {
+  areaLightCmp.set({ enabled: value })
+})
+gui.addParam(
+  'AreaLight Size',
+  areaLight.transform,
+  'scale',
+  { min: 0, max: 5 },
+  (value) => {
+    areaLight.transform.set({ scale: [value[0], value[1], value[2]] })
+  }
+)
+gui.addParam(
+  'AreaLight Intensity',
+  areaLight.getComponent('AreaLight'),
+  'intensity',
+  { min: 0, max: 70 }
+)
+gui.addParam('AreaLight', areaLight.getComponent('AreaLight'), 'color', {
+  type: 'color'
+})
+
+const spotLightCmp = renderer.spotLight({
+  castShadows: true,
+  color: [1, 1, 1, 1],
+  intensity: 50,
+  range: 3
+})
 const spotLight = renderer.entity([
   renderer.transform({
     rotation: quat.fromTo(
@@ -166,14 +236,36 @@ const spotLight = renderer.entity([
     ),
     position: [2, 1, 0]
   }),
-  renderer.spotLight({
-    castShadows: true,
-    color: [1, 1, 1, 1],
-    intensity: 50
-  }),
+  spotLightCmp,
   helperLight()
 ])
 renderer.add(spotLight)
+
+gui.addHeader('Spot Light')
+gui.addParam('Enabled', spotLightCmp, 'enabled', {}, (value) => {
+  spotLightCmp.set({ enabled: value })
+})
+gui.addParam('Range', spotLightCmp, 'range', {
+  min: 0,
+  max: 20
+})
+gui.addParam(
+  'Intensity',
+  spotLightCmp,
+  'intensity',
+  { min: 0, max: 70 },
+  () => {
+    spotLightCmp.set({ intensity: spotLightCmp.intensity })
+  }
+)
+gui.addParam('Angle', spotLightCmp, 'angle', {
+  min: 0,
+  max: Math.PI / 2 - Number.EPSILON
+})
+gui.addParam('Inner angle', spotLightCmp, 'innerAngle', {
+  min: 0,
+  max: Math.PI / 2 - Number.EPSILON
+})
 
 //floor
 const floorEntity = renderer.entity([
@@ -196,7 +288,6 @@ renderer.add(floorEntity)
 dragon.positions = centerAndNormalize(dragon.positions)
 dragon.normals = normals(dragon.cells, dragon.positions)
 dragon.uvs = dragon.positions.map(() => [0, 0])
-
 const dragonEntity = renderer.entity([
   renderer.geometry(dragon),
   renderer.material({
@@ -256,8 +347,41 @@ let instEntity = renderer.entity([
   renderer.transform({ position: [1.7, -0.2, 0] }),
   helperBBox()
 ])
-
 renderer.add(instEntity)
+
+
+
+
+gui.addColumn('Cameras')
+gui.addHeader('Perspective Cam')
+gui.addParam(
+  'fieldOfView (rad)',
+  persCameraCmp,
+  'fov',
+  { min: 0, max: (120 / 180) * Math.PI },
+  (fov) => {
+    persCameraCmp.set({ fov })
+  }
+)
+gui.addParam(
+  'Near',
+  persCameraCmp,
+  'near',
+  { min: 0, max: 5 },
+  (near) => {
+    persCameraCmp.set({ near })
+  }
+)
+gui.addParam(
+  'Far',
+  persCameraCmp,
+  'far',
+  { min: 5, max: 50 },
+  (far) => {
+    persCameraCmp.set({ far })
+  }
+)
+
 ctx.frame(() => {
   renderer.draw()
   gui.draw()
