@@ -54,10 +54,10 @@ renderer.add(orbitCameraEntity)
 
 const persCameraEntity = renderer.entity([
   renderer.camera({
-    fov: Math.PI / 3,
+    fov: Math.PI / 4,
     aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
-    near: 0.1,
-    far: 100,
+    near: 1,
+    far: 70,
     postprocess: false,
     viewport: 
       [ 
@@ -71,7 +71,7 @@ const persCameraEntity = renderer.entity([
     position: [0, 2, 3],
     rotation: quat.fromEuler(quat.create(), [-Math.PI/5,0,0])
   }),
-  helperCamera()
+  helperCamera({color : [1,0.7,0,1]})
 ])
 renderer.add(persCameraEntity)
 

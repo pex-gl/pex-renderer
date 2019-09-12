@@ -1400,7 +1400,7 @@ Renderer.prototype.draw = function() {
         if(lType){
           draw = true
           let dirLightTransform = ent.getComponent('Transform')
-          const directionalLightGizmoPositions = makePrism({ radius: 0.2 }).concat(
+          const directionalLightGizmoPositions = makePrism({ radius: 0.3 }).concat(
             /* prettier-ignore */ [
               [0, 0, 0.3], [0, 0, 1],
               [0.3, 0, 0], [0.3, 0, 1],
@@ -1492,18 +1492,18 @@ Renderer.prototype.draw = function() {
               [0, 0, 0],
               [0, -spotLightRadius, spotLightDistance]
             ])
-            // .concat(
-            //   makeCircle({
-            //     radius: spotLightRadius,
-            //     center: [0, 0, spotLightDistance],
-            //     steps: 64,
-            //     axis: [0, 1]
-            //   })
-            //)
+            .concat(
+              makeCircle({
+                radius: spotLightRadius,
+                center: [0, 0, spotLightDistance],
+                steps: 64,
+                axis: [0, 1]
+              })
+            )
 
             spotLightGizmoPositions.forEach((pos)=>{
-              vec3.multMat4(pos, spotlightTransform.modelMatrix)
-              geomBuilder.addPosition(pos)
+              
+              geomBuilder.addPosition(vec3.multMat4(vec3.copy(pos), spotlightTransform.modelMatrix))
               geomBuilder.addColor(lType.color)
             })        
         }
@@ -1518,30 +1518,64 @@ Renderer.prototype.draw = function() {
            
         }
         if(cType.projection == 'perspective'){
-          //draw = true;
+          draw = true;
           let perspectiveCameraTransform = ent.getComponent('Transform')
-          //the range seemed way too large ?
-          // const perspectiveCameraDistance = cType.far
-          // const perspectiveCameraRadius = perspectiveCameraDistance * Math.tan(cType.fov)
-          // const perspectiveCameraGiszmoPositions = [
-          //   [0, 0, 0],
-          //   [perspectiveCameraRadius, 0, -perspectiveCameraDistance],
-          //   [0, 0, 0],
-          //   [-perspectiveCameraRadius, 0, -perspectiveCameraDistance],
-          //   [0, 0, 0],
-          //   [0, perspectiveCameraRadius, -perspectiveCameraDistance],
-          //   [0, 0, 0],
-          //   [0, -perspectiveCameraRadius, -perspectiveCameraDistance]
-          // ]
-          const perspectiveCameraGiszmoPositions = []
+
+          let farCenter = [0,0,cType.far]
+          let nearCenter = [0,0,cType.near]
+
+          let nearHeight = 2 * Math.tan(cType.fov/ 2) * cType.near;
+          let farHeight = 2 * Math.tan(cType.fov / 2) * cType.far;
+
+          let nearWidth = nearHeight * camera.aspect;
+          let farWidth = farHeight * camera.aspect;
+        
+          let farTopLeft = [-(farWidth*0.5),(farHeight*0.5),-cType.far];   
+          let farTopRight = [(farWidth*0.5),(farHeight*0.5),-cType.far];   
+          let farBottomLeft = [-(farWidth*0.5),-(farHeight*0.5),-cType.far];
+          let farBottomRight = [(farWidth*0.5),-(farHeight*0.5),-cType.far];
+
+          let nearTopLeft = [-(nearWidth*0.5),(nearHeight*0.5),-cType.near];   
+          let nearTopRight = [(nearWidth*0.5),(nearHeight*0.5),-cType.near];   
+          let nearBottomLeft = [-(nearWidth*0.5),-(nearHeight*0.5),-cType.near];
+          let nearBottomRight = [(nearWidth*0.5),-(nearHeight*0.5),-cType.near];
+
+
+
+          const perspectiveCameraGiszmoPositions = [
+            [0,0,0],
+            farTopLeft,
+            [0,0,0],
+            farTopRight,
+            [0,0,0],
+            farBottomLeft,
+            [0,0,0],
+            farBottomRight,
+
+            farTopLeft,
+            farTopRight,
+            farTopRight,
+            farBottomRight,
+            farBottomRight,
+            farBottomLeft,
+            farBottomLeft,
+            farTopLeft,
+
+            nearTopLeft,
+            nearTopRight,
+            nearTopRight,
+            nearBottomRight,
+            nearBottomRight,
+            nearBottomLeft,
+            nearBottomLeft,
+            nearTopLeft,
+          ]
           perspectiveCameraGiszmoPositions.forEach((pos)=>{
-            vec3.multMat4(pos, perspectiveCameraTransform.modelMatrix)
-            geomBuilder.addPosition(pos)
+            // vec3.multMat4(vec3.copy(pos), perspectiveCameraTransform.modelMatrix)
+            geomBuilder.addPosition(vec3.multMat4(vec3.copy(pos), perspectiveCameraTransform.modelMatrix))
             geomBuilder.addColor(cameraHelper.color)
           })  
-
-
-          
+          console.log(ent) 
           
         }
       }
