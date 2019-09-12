@@ -38,40 +38,32 @@ const orbitCameraEntity = renderer.entity([
     near: 0.1,
     far: 100,
     postprocess: false,
-    viewport: 
-      [ 
-        0,
-        0,
-        Math.floor(0.75 * window.innerWidth),
-        window.innerHeight
-      ]
+    viewport: [0, 0, Math.floor(0.75 * window.innerWidth), window.innerHeight]
   }),
   renderer.transform({ position: [0, 2, 3] }),
   renderer.orbiter({ position: [0.5, 0.5, 2] })
 ])
 renderer.add(orbitCameraEntity)
 
-
 const persCameraEntity = renderer.entity([
   renderer.camera({
     fov: Math.PI / 4,
     aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
     near: 1,
-    far: 70,
+    far: 8,
     postprocess: false,
-    viewport: 
-      [ 
-        Math.floor(0.75 * window.innerWidth),
-        window.innerHeight - (Math.floor((1 / 2) * window.innerHeight)),
-        Math.floor(0.25 * window.innerWidth),
-        Math.floor((1 / 2) * window.innerHeight)
-      ]
+    viewport: [
+      Math.floor(0.75 * window.innerWidth),
+      window.innerHeight - Math.floor((1 / 2) * window.innerHeight),
+      Math.floor(0.25 * window.innerWidth),
+      Math.floor((1 / 2) * window.innerHeight)
+    ]
   }),
-  renderer.transform({ 
+  renderer.transform({
     position: [0, 2, 3],
-    rotation: quat.fromEuler(quat.create(), [-Math.PI/5,0,0])
+    rotation: quat.fromEuler(quat.create(), [-Math.PI / 5, 0, 0])
   }),
-  helperCamera({color : [1,0.7,0,1]})
+  helperCamera({ color: [1, 0.7, 0, 1] })
 ])
 renderer.add(persCameraEntity)
 
@@ -82,25 +74,22 @@ const orthoCameraEntity = renderer.entity([
     aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
     near: 0.1,
     far: 100,
-    zoom : 3,
+    zoom: 3,
     postprocess: false,
-    viewport: 
-      [ 
-        Math.floor(0.75 * window.innerWidth),
-        0,
-        Math.floor(0.25 * window.innerWidth),
-        Math.floor((1 / 2) * window.innerHeight)
-      ]
+    viewport: [
+      Math.floor(0.75 * window.innerWidth),
+      0,
+      Math.floor(0.25 * window.innerWidth),
+      Math.floor((1 / 2) * window.innerHeight)
+    ]
   }),
-  renderer.transform({ 
+  renderer.transform({
     position: [0, 2, 3],
-    rotation: quat.fromEuler(quat.create(), [-Math.PI/5,0,0])
+    rotation: quat.fromEuler(quat.create(), [-Math.PI / 5, 0, 0])
   }),
   helperCamera()
 ])
 renderer.add(orthoCameraEntity)
-
-
 
 // skybox and  reflection probe
 const skybox = renderer.entity([
@@ -119,8 +108,12 @@ renderer.add(reflectionProbe)
 //lights
 const directionalLight = renderer.entity([
   renderer.transform({
-    rotation: quat.fromTo(quat.create(), [0, 0, 1], vec3.normalize([1, -3, -1])),
-    position : [-1, 2,-1]
+    rotation: quat.fromTo(
+      quat.create(),
+      [0, 0, 1],
+      vec3.normalize([1, -3, -1])
+    ),
+    position: [-1, 2, -1]
   }),
   renderer.directionalLight({
     castShadows: true,
@@ -130,11 +123,14 @@ const directionalLight = renderer.entity([
   helperLight()
 ])
 renderer.add(directionalLight)
-
 const pointLight = renderer.entity([
   renderer.transform({
-    rotation: quat.fromTo(quat.create(), [0, 0, 1], vec3.normalize([1, -3, -1])),
-    position : [1,0.1,1.5]
+    rotation: quat.fromTo(
+      quat.create(),
+      [0, 0, 1],
+      vec3.normalize([1, -3, -1])
+    ),
+    position: [1, 0.1, 1.5]
   }),
   renderer.pointLight({
     castShadows: true,
@@ -144,7 +140,6 @@ const pointLight = renderer.entity([
   helperLight()
 ])
 renderer.add(pointLight)
-
 const areaLight = renderer.entity([
   renderer.transform({
     rotation: quat.fromTo(
@@ -180,8 +175,6 @@ const spotLight = renderer.entity([
 ])
 renderer.add(spotLight)
 
-
-
 //floor
 const floorEntity = renderer.entity([
   renderer.transform({
@@ -216,7 +209,7 @@ const dragonEntity = renderer.entity([
   renderer.transform({
     position: [-1.5, 0, 0]
   }),
-  helperBBox({color: [1,1,0,1]})
+  helperBBox({ color: [1, 1, 0, 1] })
 ])
 renderer.add(dragonEntity)
 
@@ -238,12 +231,12 @@ let grid = []
 for (let i = 0; i < gridSize; i++) {
   for (let j = 0; j < gridSize; j++) {
     for (let k = 0; k < gridSize; k++) {
-      grid.push([i/4, j/4 , k/4])
-    }  
+      grid.push([i / 4, j / 4, k / 4])
+    }
   }
 }
 
-let cubeG = createCube(0.1,0.1,0.1)
+let cubeG = createCube(0.1, 0.1, 0.1)
 console.log(grid)
 const instGeometry = renderer.geometry({
   positions: cubeG.positions,
@@ -255,12 +248,12 @@ const instGeometry = renderer.geometry({
 })
 let instEntity = renderer.entity([
   instGeometry,
-  renderer.material({ 
+  renderer.material({
     baseColor: [0.5, 1, 0.7, 1],
-    castShadows : true,
-    receiveShadows : true
+    castShadows: true,
+    receiveShadows: true
   }),
-  renderer.transform({position: [1.7,-0.2,0]}),
+  renderer.transform({ position: [1.7, -0.2, 0] }),
   helperBBox()
 ])
 
