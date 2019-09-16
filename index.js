@@ -1479,6 +1479,9 @@ Renderer.prototype.draw = function() {
     .filter((camera) => camera.enabled)
     .forEach((camera) => {
       this.entities.forEach((ent) => {
+        let intersection = ent.tags.filter(element => camera.entity.tags.includes(element));
+        if(camera.entity.tags.length && !intersection.length) return
+     
         let draw = false
         let geomBuilder = createGeomBuilder({ colors: 1, positions: 1 })
         // bounding box helper
