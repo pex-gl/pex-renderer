@@ -1508,7 +1508,6 @@ Renderer.prototype.draw = function() {
               right = left + scaleW * (cType.view.size[0] / zoomW)
               top -= scaleH * (cType.view.offset[1] / zoomH)
               bottom = top - scaleH * (cType.view.size[1] / zoomH)
-
             }
             let orthoHelperPositions = getBBoxPositionsList([[left,top,-cType.near],[right, bottom, -cType.far]])
             orthoHelperPositions.forEach((pos) => {

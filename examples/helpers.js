@@ -63,22 +63,23 @@ renderer.add(persCameraEntity)
 
 
 
+const orthoCameraCmp = renderer.camera({
+  fov: Math.PI / 3,
+  projection: 'orthographic',
+  aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
+  near: 0.1,
+  far: 10,
+  zoom: 3,
+  postprocess: false,
+  viewport: [
+    Math.floor(0.75 * window.innerWidth),
+    0,
+    Math.floor(0.25 * window.innerWidth),
+    Math.floor((1 / 2) * window.innerHeight)
+  ]
+})
 const orthoCameraEntity = renderer.entity([
-  renderer.camera({
-    fov: Math.PI / 3,
-    projection: 'orthographic',
-    aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
-    near: 0.1,
-    far: 10,
-    zoom: 3,
-    postprocess: false,
-    viewport: [
-      Math.floor(0.75 * window.innerWidth),
-      0,
-      Math.floor(0.25 * window.innerWidth),
-      Math.floor((1 / 2) * window.innerHeight)
-    ]
-  }),
+  orthoCameraCmp,
   renderer.transform({
     position: [0, 2, 3],
     rotation: quat.fromEuler(quat.create(), [-Math.PI / 5, 0, 0])
@@ -351,7 +352,6 @@ renderer.add(instEntity)
 
 
 
-
 gui.addColumn('Cameras')
 gui.addHeader('Perspective Cam')
 gui.addParam(
@@ -381,7 +381,39 @@ gui.addParam(
     persCameraCmp.set({ far })
   }
 )
-gui.addFPSMeeter()
+
+gui.addHeader('Orthographic Cam')
+gui.addParam(
+  'Near',
+  orthoCameraCmp,
+  'near',
+  { min: 0, max: 5 },
+  (near) => {
+    orthoCameraCmp.set({ near })
+  }
+)
+gui.addParam(
+  'Far',
+  orthoCameraCmp,
+  'far',
+  { min: 5, max: 20},
+  (far) => {
+    orthoCameraCmp.set({ far })
+  }
+)
+gui.addParam(
+  'Zoom',
+  orthoCameraCmp,
+  'zoom',
+  { min: 1, max: 5 },
+  (zoom) => {
+    orthoCameraCmp.set({ zoom })
+  }
+)
+
+
+
+// gui.addFPSMeeter()
 ctx.frame(() => {
   renderer.draw()
   gui.draw()
