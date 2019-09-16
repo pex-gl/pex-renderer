@@ -144,9 +144,9 @@ function Renderer(opts) {
     }
   }
 
-  this.vBuf = ctx.vertexBuffer({ data: [0, 0, 0] })
-  this.vBuf2 = ctx.vertexBuffer({ data: [0, 0, 0, 0] })
-  this.drawLinesCmd = {
+  this.helperPositionVBuffer = ctx.vertexBuffer({ data: [0, 0, 0] })
+  this.helperColorVBuffer = ctx.vertexBuffer({ data: [0, 0, 0, 0] })
+  this.drawHelperLinesCmd = {
     pipeline: ctx.pipeline({
       vert: `
         attribute vec3 aPosition;
@@ -175,8 +175,8 @@ function Renderer(opts) {
       primitive: ctx.Primitive.Lines
     }),
     attributes: {
-      aPosition: this.vBuf,
-      aVertexColor: this.vBuf2
+      aPosition: this.helperPositionVBuffer,
+      aVertexColor: this.helperColorVBuffer
     },
     count: 1
   }
@@ -1365,291 +1365,6 @@ Renderer.prototype.draw = function() {
       }
     })
 
-  cameras
-    .filter((camera) => camera.enabled)
-    .forEach((camera) => {
-      this.entities.forEach((ent) => {
-        let draw = false
-        let geomBuilder = createGeomBuilder({ colors: 1, positions: 1 })
-        // bounding box helper
-        let bbh = ent.getComponent('BoundingBoxHelper')
-        if (bbh) {
-          getBBoxGeometry(geomBuilder, ent.transform.worldBounds, bbh.color)
-          draw = true
-        }
-        //lightHelper
-        let lightHelper = ent.getComponent('LightHelper')
-        if (lightHelper) {
-          let lType
-          lType = ent.getComponent('DirectionalLight')
-          if (lType) {
-            draw = true
-            let dirLightTransform = ent.getComponent('Transform')
-            const directionalLightGizmoPositions = getPrismPositions({
-              radius: 0.3
-            }).concat(
-              /* prettier-ignore */ [
-              [0, 0, 0.3], [0, 0, 1],
-              [0.3, 0, 0], [0.3, 0, 1],
-              [-0.3, 0, 0], [-0.3, 0, 1],
-              [0, 0.3, 0], [0, 0.3, 1],
-              [0, -0.3, 0], [0, -0.3, 1]
-            ]
-            )
-
-            directionalLightGizmoPositions.forEach((pos) => {
-              vec3.multMat4(pos, dirLightTransform.modelMatrix)
-              geomBuilder.addPosition(pos)
-              geomBuilder.addColor(lType.color)
-            })
-          }
-          lType = ent.getComponent('AreaLight')
-          if (lType) {
-            draw = true
-            //area light
-            let areaLightTransform = ent.getComponent('Transform')
-            const areaLightHelperPositions = getQuadPositions({
-              width: 1,
-              height: 1
-            })
-            areaLightHelperPositions.forEach((pos) => {
-              vec3.multMat4(pos, areaLightTransform.modelMatrix)
-              geomBuilder.addPosition(pos)
-              geomBuilder.addColor(lType.color)
-            })
-          }
-          lType = ent.getComponent('PointLight')
-          if (lType) {
-            //pointlight
-            draw = true
-            let pointLightTransform = ent.getComponent('Transform')
-            const pointLightHelperPositions = getPrismPositions({
-              radius: 0.2
-            }).concat(
-              /* prettier-ignore */ [
-              [0, 0.0, 0], [0, 0.6, 0],
-              [0, -0.0, 0], [0, -0.6, 0],
-              [0.0, 0, 0], [0.6, 0, 0],
-              [-0.0, 0, 0], [-0.6, 0, 0],
-              [0, 0, 0.0], [0, 0, 0.6],
-              [0, 0, -0.0], [0, 0, -0.6]
-            ]
-            )
-            pointLightHelperPositions.forEach((pos) => {
-              vec3.multMat4(pos, pointLightTransform.modelMatrix)
-              geomBuilder.addPosition(pos)
-              geomBuilder.addColor(lType.color)
-            })
-          }
-          lType = ent.getComponent('SpotLight')
-          if (lType) {
-            //spotlight
-            draw = true
-            let spotlightTransform = ent.getComponent('Transform')
-            //the range seemed way too large ?
-            const spotLightDistance = lType.range
-            const spotLightRadius = spotLightDistance * Math.tan(lType.angle)
-            const spotLightHelperPositions = getPrismPositions({ radius: 0.2 })
-              .concat([
-                [0, 0, 0],
-                [spotLightRadius, 0, spotLightDistance],
-                [0, 0, 0],
-                [-spotLightRadius, 0, spotLightDistance],
-                [0, 0, 0],
-                [0, spotLightRadius, spotLightDistance],
-                [0, 0, 0],
-                [0, -spotLightRadius, spotLightDistance]
-              ])
-              .concat(
-                getCirclePositions({
-                  radius: spotLightRadius,
-                  center: [0, 0, spotLightDistance],
-                  steps: 64,
-                  axis: [0, 1]
-                })
-              )
-
-            spotLightHelperPositions.forEach((pos) => {
-              geomBuilder.addPosition(
-                vec3.multMat4(vec3.copy(pos), spotlightTransform.modelMatrix)
-              )
-              geomBuilder.addColor(lType.color)
-            })
-          }
-        }
-        //camera
-        let cameraHelper = ent.getComponent('CameraHelper')
-        if (cameraHelper) {
-          let cType
-          cType = ent.getComponent('Camera')
-          if (cType.projection == 'orthographic') {
-            draw = true
-            let orthoTransform = ent.getComponent('Transform')
-
-            const dx = (cType.right - cType.left) / (2 / cType.zoom)
-            const dy = (cType.top - cType.bottom) / (2 / cType.zoom)
-            const cx = (cType.right + cType.left) / 2
-            const cy = (cType.top + cType.bottom) / 2
-
-            let left = cx - dx
-            let right = cx + dx
-            let top = cy + dy
-            let bottom = cy - dy
-
-            if (cType.view) {
-              const zoomW =
-                1 / cType.zoom / (cType.view.size[0] / cType.view.totalSize[0])
-              const zoomH =
-                1 / cType.zoom / (cType.view.size[1] / cType.view.totalSize[1])
-              const scaleW = (cType.right - cType.left) / cType.view.size[0]
-              const scaleH = (cType.top - cType.bottom) / cType.view.size[1]
-
-              left += scaleW * (cType.view.offset[0] / zoomW)
-              right = left + scaleW * (cType.view.size[0] / zoomW)
-              top -= scaleH * (cType.view.offset[1] / zoomH)
-              bottom = top - scaleH * (cType.view.size[1] / zoomH)
-            }
-            let orthoHelperPositions = getBBoxPositionsList([
-              [left, top, -cType.near],
-              [right, bottom, -cType.far]
-            ])
-            orthoHelperPositions.forEach((pos) => {
-              geomBuilder.addPosition(
-                vec3.multMat4(vec3.copy(pos), orthoTransform.modelMatrix)
-              )
-              geomBuilder.addColor(cameraHelper.color)
-            })
-          }
-          if (cType.projection == 'perspective') {
-            draw = true
-            let perspectiveCameraTransform = ent.getComponent('Transform')
-
-            let farCenter = [0, 0, cType.far]
-            let nearCenter = [0, 0, cType.near]
-
-            let nearHeight = 2 * Math.tan(cType.fov / 2) * cType.near
-            let farHeight = 2 * Math.tan(cType.fov / 2) * cType.far
-
-            let nearWidth = nearHeight * camera.aspect
-            let farWidth = farHeight * camera.aspect
-
-            let farTopLeft = [-(farWidth * 0.5), farHeight * 0.5, -cType.far]
-            let farTopRight = [farWidth * 0.5, farHeight * 0.5, -cType.far]
-            let farBottomLeft = [
-              -(farWidth * 0.5),
-              -(farHeight * 0.5),
-              -cType.far
-            ]
-            let farBottomRight = [
-              farWidth * 0.5,
-              -(farHeight * 0.5),
-              -cType.far
-            ]
-
-            let nearTopLeft = [
-              -(nearWidth * 0.5),
-              nearHeight * 0.5,
-              -cType.near
-            ]
-            let nearTopRight = [nearWidth * 0.5, nearHeight * 0.5, -cType.near]
-            let nearBottomLeft = [
-              -(nearWidth * 0.5),
-              -(nearHeight * 0.5),
-              -cType.near
-            ]
-            let nearBottomRight = [
-              nearWidth * 0.5,
-              -(nearHeight * 0.5),
-              -cType.near
-            ]
-
-            const perspectiveCameraHelperPositions = [
-              [0, 0, 0],
-              farTopLeft,
-              [0, 0, 0],
-              farTopRight,
-              [0, 0, 0],
-              farBottomLeft,
-              [0, 0, 0],
-              farBottomRight,
-
-              farTopLeft,
-              farTopRight,
-              farTopRight,
-              farBottomRight,
-              farBottomRight,
-              farBottomLeft,
-              farBottomLeft,
-              farTopLeft,
-
-              nearTopLeft,
-              nearTopRight,
-              nearTopRight,
-              nearBottomRight,
-              nearBottomRight,
-              nearBottomLeft,
-              nearBottomLeft,
-              nearTopLeft
-            ]
-            perspectiveCameraHelperPositions.forEach((pos) => {
-              geomBuilder.addPosition(
-                vec3.multMat4(
-                  vec3.copy(pos),
-                  perspectiveCameraTransform.modelMatrix
-                )
-              )
-              geomBuilder.addColor(cameraHelper.color)
-            })
-          }
-        }
-        // axisHelper
-        let axisHelper = ent.getComponent('AxisHelper')
-        if(axisHelper){
-          draw = true
-          geomBuilder.addPosition([0,0,0])
-          geomBuilder.addColor(axisHelper.color)
-          geomBuilder.addPosition([0,axisHelper.scale,0])
-          geomBuilder.addColor(axisHelper.color)
-          geomBuilder.addPosition([0,0,0])
-          geomBuilder.addColor(axisHelper.color)
-          geomBuilder.addPosition([axisHelper.scale,0,0])
-          geomBuilder.addColor(axisHelper.color)
-          geomBuilder.addPosition([0,0,0])
-          geomBuilder.addColor(axisHelper.color)
-          geomBuilder.addPosition([0,0,axisHelper.scale])   
-          geomBuilder.addColor(axisHelper.color)       
-        }
-        //gridHelper
-        let gridHelper = ent.getComponent('GridHelper')
-        if(gridHelper){
-          for (let i = -gridHelper.size/2; i <= gridHelper.size/2; i++) {
-            geomBuilder.addPosition([gridHelper.size/2,0,i])
-            geomBuilder.addPosition([-gridHelper.size/2,0,i])
-            geomBuilder.addColor(gridHelper.color)
-            geomBuilder.addColor(gridHelper.color)
-          }
-          for (let i = -gridHelper.size/2; i <= gridHelper.size/2; i++) {
-            geomBuilder.addPosition([i,0,gridHelper.size/2])
-            geomBuilder.addPosition([i,0,-gridHelper.size/2])
-            geomBuilder.addColor(gridHelper.color)
-            geomBuilder.addColor(gridHelper.color)
-          }
-        }
-        if (draw) {
-          ctx.update(this.vBuf, { data: geomBuilder.positions })
-          ctx.update(this.vBuf2, { data: geomBuilder.colors })
-          this.drawLinesCmd.count = geomBuilder.count
-          ctx.submit(this.drawLinesCmd, {
-            uniforms: {
-              uProjectionMatrix: camera.projectionMatrix,
-              uViewMatrix: camera.viewMatrix
-            },
-            viewport: camera.viewport
-          })
-        }
-      })
-    })
-  // DRAW BBOX FUNCTION SEEMS SUBOPTIMAL
   function getBBoxGeometry(geomBuilder, bbox, color) {
     let positions = getBBoxPositionsList(bbox)
     positions.forEach((pos) => {
@@ -1759,6 +1474,286 @@ Renderer.prototype.draw = function() {
     })
     return points
   }
+
+  cameras
+    .filter((camera) => camera.enabled)
+    .forEach((camera) => {
+      this.entities.forEach((ent) => {
+        let draw = false
+        let geomBuilder = createGeomBuilder({ colors: 1, positions: 1 })
+        // bounding box helper
+        let thisHelper = ent.getComponent('BoundingBoxHelper')
+        if (thisHelper) {
+          getBBoxGeometry(geomBuilder, ent.transform.worldBounds, thisHelper.color)
+          draw = true
+        }
+        //lights
+        thisHelper = ent.getComponent('LightHelper')
+        if (thisHelper) {
+          let lType
+          lType = ent.getComponent('DirectionalLight')
+          if (lType) {
+            draw = true
+            let dirLightTransform = ent.getComponent('Transform')
+            const directionalLightGizmoPositions = getPrismPositions({
+              radius: 0.3
+            }).concat(
+              /* prettier-ignore */ [
+              [0, 0, 0.3], [0, 0, 1],
+              [0.3, 0, 0], [0.3, 0, 1],
+              [-0.3, 0, 0], [-0.3, 0, 1],
+              [0, 0.3, 0], [0, 0.3, 1],
+              [0, -0.3, 0], [0, -0.3, 1]
+            ]
+            )
+
+            directionalLightGizmoPositions.forEach((pos) => {
+              vec3.multMat4(pos, dirLightTransform.modelMatrix)
+              geomBuilder.addPosition(pos)
+              geomBuilder.addColor(lType.color)
+            })
+          }
+          lType = ent.getComponent('AreaLight')
+          if (lType) {
+            draw = true
+            //area light
+            let areaLightTransform = ent.getComponent('Transform')
+            const areaLightHelperPositions = getQuadPositions({
+              width: 1,
+              height: 1
+            })
+            areaLightHelperPositions.forEach((pos) => {
+              vec3.multMat4(pos, areaLightTransform.modelMatrix)
+              geomBuilder.addPosition(pos)
+              geomBuilder.addColor(lType.color)
+            })
+          }
+          lType = ent.getComponent('PointLight')
+          if (lType) {
+            //pointlight
+            draw = true
+            let pointLightTransform = ent.getComponent('Transform')
+            const pointLightHelperPositions = getPrismPositions({
+              radius: 0.2
+            }).concat(
+              /* prettier-ignore */ [
+              [0, 0.0, 0], [0, 0.6, 0],
+              [0, -0.0, 0], [0, -0.6, 0],
+              [0.0, 0, 0], [0.6, 0, 0],
+              [-0.0, 0, 0], [-0.6, 0, 0],
+              [0, 0, 0.0], [0, 0, 0.6],
+              [0, 0, -0.0], [0, 0, -0.6]
+            ]
+            )
+            pointLightHelperPositions.forEach((pos) => {
+              vec3.multMat4(pos, pointLightTransform.modelMatrix)
+              geomBuilder.addPosition(pos)
+              geomBuilder.addColor(lType.color)
+            })
+          }
+          lType = ent.getComponent('SpotLight')
+          if (lType) {
+            //spotlight
+            draw = true
+            let spotlightTransform = ent.getComponent('Transform')
+            //the range seemed way too large ?
+            const spotLightDistance = lType.range
+            const spotLightRadius = spotLightDistance * Math.tan(lType.angle)
+            const spotLightHelperPositions = getPrismPositions({ radius: 0.2 })
+              .concat([
+                [0, 0, 0],
+                [spotLightRadius, 0, spotLightDistance],
+                [0, 0, 0],
+                [-spotLightRadius, 0, spotLightDistance],
+                [0, 0, 0],
+                [0, spotLightRadius, spotLightDistance],
+                [0, 0, 0],
+                [0, -spotLightRadius, spotLightDistance]
+              ])
+              .concat(
+                getCirclePositions({
+                  radius: spotLightRadius,
+                  center: [0, 0, spotLightDistance],
+                  steps: 64,
+                  axis: [0, 1]
+                })
+              )
+
+            spotLightHelperPositions.forEach((pos) => {
+              geomBuilder.addPosition(
+                vec3.multMat4(vec3.copy(pos), spotlightTransform.modelMatrix)
+              )
+              geomBuilder.addColor(lType.color)
+            })
+          }
+        }
+        //camera
+        thisHelper = ent.getComponent('CameraHelper')
+        if (thisHelper) {
+          let cType
+          cType = ent.getComponent('Camera')
+          if (cType.projection == 'orthographic') {
+            draw = true
+            let orthoTransform = ent.getComponent('Transform')
+
+            let left = ((cType.right + cType.left) / 2) - ((cType.right - cType.left) / (2 / cType.zoom))
+            let right = ((cType.right + cType.left) / 2) + ((cType.right - cType.left) / (2 / cType.zoom))
+            let top = ((cType.top + cType.bottom) / 2) + ((cType.top - cType.bottom) / (2 / cType.zoom))
+            let bottom = ((cType.top + cType.bottom) / 2) - ((cType.top - cType.bottom) / (2 / cType.zoom))
+
+            if (cType.view) {
+              const zoomW =
+                1 / cType.zoom / (cType.view.size[0] / cType.view.totalSize[0])
+              const zoomH =
+                1 / cType.zoom / (cType.view.size[1] / cType.view.totalSize[1])
+              const scaleW = (cType.right - cType.left) / cType.view.size[0]
+              const scaleH = (cType.top - cType.bottom) / cType.view.size[1]
+
+              left += scaleW * (cType.view.offset[0] / zoomW)
+              right = left + scaleW * (cType.view.size[0] / zoomW)
+              top -= scaleH * (cType.view.offset[1] / zoomH)
+              bottom = top - scaleH * (cType.view.size[1] / zoomH)
+            }
+            let orthoHelperPositions = getBBoxPositionsList([
+              [left, top, -cType.near],
+              [right, bottom, -cType.far]
+            ])
+            orthoHelperPositions.forEach((pos) => {
+              geomBuilder.addPosition(
+                vec3.multMat4(vec3.copy(pos), orthoTransform.modelMatrix)
+              )
+              geomBuilder.addColor(thisHelper.color)
+            })
+          }
+          if (cType.projection == 'perspective') {
+            draw = true
+            const perspectiveCameraTransform = ent.getComponent('Transform')
+
+            const farCenter = [0, 0, cType.far]
+            const nearCenter = [0, 0, cType.near]
+
+            const nearHeight = 2 * Math.tan(cType.fov / 2) * cType.near
+            const farHeight = 2 * Math.tan(cType.fov / 2) * cType.far
+
+            const nearWidth = nearHeight * camera.aspect
+            const farWidth = farHeight * camera.aspect
+
+            const farTopLeft = [-(farWidth * 0.5), farHeight * 0.5, -cType.far]
+            const farTopRight = [farWidth * 0.5, farHeight * 0.5, -cType.far]
+            const farBottomLeft = [
+              -(farWidth * 0.5),
+              -(farHeight * 0.5),
+              -cType.far
+            ]
+            const farBottomRight = [
+              farWidth * 0.5,
+              -(farHeight * 0.5),
+              -cType.far
+            ]
+
+            const nearTopLeft = [
+              -(nearWidth * 0.5),
+              nearHeight * 0.5,
+              -cType.near
+            ]
+            const nearTopRight = [nearWidth * 0.5, nearHeight * 0.5, -cType.near]
+            const nearBottomLeft = [
+              -(nearWidth * 0.5),
+              -(nearHeight * 0.5),
+              -cType.near
+            ]
+            const nearBottomRight = [
+              nearWidth * 0.5,
+              -(nearHeight * 0.5),
+              -cType.near
+            ]
+
+            const perspectiveCameraHelperPositions = [
+              [0, 0, 0],
+              farTopLeft,
+              [0, 0, 0],
+              farTopRight,
+              [0, 0, 0],
+              farBottomLeft,
+              [0, 0, 0],
+              farBottomRight,
+
+              farTopLeft,
+              farTopRight,
+              farTopRight,
+              farBottomRight,
+              farBottomRight,
+              farBottomLeft,
+              farBottomLeft,
+              farTopLeft,
+
+              nearTopLeft,
+              nearTopRight,
+              nearTopRight,
+              nearBottomRight,
+              nearBottomRight,
+              nearBottomLeft,
+              nearBottomLeft,
+              nearTopLeft
+            ]
+            perspectiveCameraHelperPositions.forEach((pos) => {
+              geomBuilder.addPosition(
+                vec3.multMat4(
+                  vec3.copy(pos),
+                  perspectiveCameraTransform.modelMatrix
+                )
+              )
+              geomBuilder.addColor(thisHelper.color)
+            })
+          }
+        }
+        // axis
+        thisHelper = ent.getComponent('AxisHelper')
+        if(thisHelper){
+          draw = true
+          geomBuilder.addPosition([0,0,0])
+          geomBuilder.addColor(thisHelper.color)
+          geomBuilder.addPosition([0,thisHelper.scale,0])
+          geomBuilder.addColor(thisHelper.color)
+          geomBuilder.addPosition([0,0,0])
+          geomBuilder.addColor(thisHelper.color)
+          geomBuilder.addPosition([thisHelper.scale,0,0])
+          geomBuilder.addColor(thisHelper.color)
+          geomBuilder.addPosition([0,0,0])
+          geomBuilder.addColor(thisHelper.color)
+          geomBuilder.addPosition([0,0,thisHelper.scale])   
+          geomBuilder.addColor(thisHelper.color)       
+        }
+        //grid
+        thisHelper = ent.getComponent('GridHelper')
+        if(thisHelper){
+          for (let i = -thisHelper.size/2; i <= thisHelper.size/2; i++) {
+            geomBuilder.addPosition([thisHelper.size/2,0,i])
+            geomBuilder.addPosition([-thisHelper.size/2,0,i])
+            geomBuilder.addColor(thisHelper.color)
+            geomBuilder.addColor(thisHelper.color)
+          }
+          for (let i = -thisHelper.size/2; i <= thisHelper.size/2; i++) {
+            geomBuilder.addPosition([i,0,thisHelper.size/2])
+            geomBuilder.addPosition([i,0,-thisHelper.size/2])
+            geomBuilder.addColor(thisHelper.color)
+            geomBuilder.addColor(thisHelper.color)
+          }
+        }
+        if (draw) {
+          ctx.update(this.helperPositionVBuffer, { data: geomBuilder.positions })
+          ctx.update(this.helperColorVBuffer, { data: geomBuilder.colors })
+          this.drawHelperLinesCmd.count = geomBuilder.count
+          ctx.submit(this.drawHelperLinesCmd, {
+            uniforms: {
+              uProjectionMatrix: camera.projectionMatrix,
+              uViewMatrix: camera.viewMatrix
+            },
+            viewport: camera.viewport
+          })
+        }
+      })
+    })
 
   overlays
     .filter((overlay) => overlay.enabled)
