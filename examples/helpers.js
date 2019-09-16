@@ -69,7 +69,7 @@ const orthoCameraEntity = renderer.entity([
     projection: 'orthographic',
     aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
     near: 0.1,
-    far: 100,
+    far: 10,
     zoom: 3,
     postprocess: false,
     viewport: [
@@ -381,7 +381,7 @@ gui.addParam(
     persCameraCmp.set({ far })
   }
 )
-
+gui.addFPSMeeter()
 ctx.frame(() => {
   renderer.draw()
   gui.draw()
