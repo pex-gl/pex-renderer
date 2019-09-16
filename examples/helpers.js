@@ -161,9 +161,6 @@ gui.addHeader('Point Light')
 gui.addParam('Enabled', pointLightCmp, 'enabled', {}, (value) => {
   pointLightCmp.set({ enabled: value })
 })
-gui.addParam('Enabled', pointLightCmp, 'enabled', {}, (value) => {
-  pointLightCmp.set({ enabled: value })
-})
 gui.addParam('Range', pointLightCmp, 'range', {
   min: 0,
   max: 20
