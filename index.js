@@ -71,8 +71,6 @@ function aabbToPoints(bbox) {
   ]
 }
 
-
-
 // opts = Context
 // opts = { ctx: Context, width: Number, height: Number, profile: Boolean }
 function Renderer(opts) {
@@ -1367,8 +1365,6 @@ Renderer.prototype.draw = function() {
       }
     })
 
-
-  
   cameras
     .filter((camera) => camera.enabled)
     .forEach((camera) => {
@@ -1412,7 +1408,10 @@ Renderer.prototype.draw = function() {
             draw = true
             //area light
             let areaLightTransform = ent.getComponent('Transform')
-            const areaLightHelperPositions = getQuadPositions({ width: 1, height: 1 })
+            const areaLightHelperPositions = getQuadPositions({
+              width: 1,
+              height: 1
+            })
             areaLightHelperPositions.forEach((pos) => {
               vec3.multMat4(pos, areaLightTransform.modelMatrix)
               geomBuilder.addPosition(pos)
@@ -1424,9 +1423,10 @@ Renderer.prototype.draw = function() {
             //pointlight
             draw = true
             let pointLightTransform = ent.getComponent('Transform')
-            const pointLightHelperPositions = getPrismPositions({ radius: 0.2 })
-              .concat(
-                /* prettier-ignore */ [
+            const pointLightHelperPositions = getPrismPositions({
+              radius: 0.2
+            }).concat(
+              /* prettier-ignore */ [
               [0, 0.0, 0], [0, 0.6, 0],
               [0, -0.0, 0], [0, -0.6, 0],
               [0.0, 0, 0], [0.6, 0, 0],
@@ -1434,7 +1434,7 @@ Renderer.prototype.draw = function() {
               [0, 0, 0.0], [0, 0, 0.6],
               [0, 0, -0.0], [0, 0, -0.6]
             ]
-              )
+            )
             pointLightHelperPositions.forEach((pos) => {
               vec3.multMat4(pos, pointLightTransform.modelMatrix)
               geomBuilder.addPosition(pos)
@@ -1483,38 +1483,42 @@ Renderer.prototype.draw = function() {
           let cType
           cType = ent.getComponent('Camera')
           if (cType.projection == 'orthographic') {
-            draw = true 
+            draw = true
             let orthoTransform = ent.getComponent('Transform')
 
             const dx = (cType.right - cType.left) / (2 / cType.zoom)
             const dy = (cType.top - cType.bottom) / (2 / cType.zoom)
             const cx = (cType.right + cType.left) / 2
             const cy = (cType.top + cType.bottom) / 2
-        
+
             let left = cx - dx
             let right = cx + dx
             let top = cy + dy
             let bottom = cy - dy
-        
+
             if (cType.view) {
-              const zoomW = 1 / cType.zoom / (cType.view.size[0] / cType.view.totalSize[0])
-              const zoomH = 1 / cType.zoom / (cType.view.size[1] / cType.view.totalSize[1])
+              const zoomW =
+                1 / cType.zoom / (cType.view.size[0] / cType.view.totalSize[0])
+              const zoomH =
+                1 / cType.zoom / (cType.view.size[1] / cType.view.totalSize[1])
               const scaleW = (cType.right - cType.left) / cType.view.size[0]
               const scaleH = (cType.top - cType.bottom) / cType.view.size[1]
-        
+
               left += scaleW * (cType.view.offset[0] / zoomW)
               right = left + scaleW * (cType.view.size[0] / zoomW)
               top -= scaleH * (cType.view.offset[1] / zoomH)
               bottom = top - scaleH * (cType.view.size[1] / zoomH)
             }
-            let orthoHelperPositions = getBBoxPositionsList([[left,top,-cType.near],[right, bottom, -cType.far]])
+            let orthoHelperPositions = getBBoxPositionsList([
+              [left, top, -cType.near],
+              [right, bottom, -cType.far]
+            ])
             orthoHelperPositions.forEach((pos) => {
               geomBuilder.addPosition(
                 vec3.multMat4(vec3.copy(pos), orthoTransform.modelMatrix)
               )
               geomBuilder.addColor(cameraHelper.color)
             })
-            
           }
           if (cType.projection == 'perspective') {
             draw = true
@@ -1598,6 +1602,12 @@ Renderer.prototype.draw = function() {
             })
           }
         }
+        // axisHelper
+        let axisHelper = ent.getComponent('AxisHelper')
+
+        //gridHelper
+        let gridHelper = ent.getComponent('GridHelper')
+
         if (draw) {
           ctx.update(this.vBuf, { data: geomBuilder.positions })
           ctx.update(this.vBuf2, { data: geomBuilder.colors })
@@ -1614,37 +1624,39 @@ Renderer.prototype.draw = function() {
     })
   // DRAW BBOX FUNCTION SEEMS SUBOPTIMAL
   function getBBoxGeometry(geomBuilder, bbox, color) {
-    let positions = getBBoxPositionsList(bbox);
-    positions.forEach((pos)=>{
+    let positions = getBBoxPositionsList(bbox)
+    positions.forEach((pos) => {
       geomBuilder.addPosition(pos)
       geomBuilder.addColor(color)
     })
   }
-  function getBBoxPositionsList(bbox){
-    return [[bbox[0][0], bbox[0][1], bbox[0][2]],
-    [bbox[1][0], bbox[0][1], bbox[0][2]],
-    [bbox[0][0], bbox[0][1], bbox[0][2]],
-    [bbox[0][0], bbox[1][1], bbox[0][2]],
-    [bbox[0][0], bbox[0][1], bbox[0][2]],
-    [bbox[0][0], bbox[0][1], bbox[1][2]],
-    [bbox[1][0], bbox[1][1], bbox[1][2]],
-    [bbox[0][0], bbox[1][1], bbox[1][2]],
-    [bbox[1][0], bbox[1][1], bbox[1][2]],
-    [bbox[1][0], bbox[0][1], bbox[1][2]],
-    [bbox[1][0], bbox[1][1], bbox[1][2]],
-    [bbox[1][0], bbox[1][1], bbox[0][2]],
-    [bbox[1][0], bbox[0][1], bbox[0][2]],
-    [bbox[1][0], bbox[0][1], bbox[1][2]],
-    [bbox[1][0], bbox[0][1], bbox[0][2]],
-    [bbox[1][0], bbox[1][1], bbox[0][2]],
-    [bbox[0][0], bbox[1][1], bbox[0][2]],
-    [bbox[1][0], bbox[1][1], bbox[0][2]],
-    [bbox[0][0], bbox[1][1], bbox[0][2]],
-    [bbox[0][0], bbox[1][1], bbox[1][2]],
-    [bbox[0][0], bbox[0][1], bbox[1][2]],
-    [bbox[0][0], bbox[1][1], bbox[1][2]],
-    [bbox[0][0], bbox[0][1], bbox[1][2]],
-    [bbox[1][0], bbox[0][1], bbox[1][2]]]
+  function getBBoxPositionsList(bbox) {
+    return [
+      [bbox[0][0], bbox[0][1], bbox[0][2]],
+      [bbox[1][0], bbox[0][1], bbox[0][2]],
+      [bbox[0][0], bbox[0][1], bbox[0][2]],
+      [bbox[0][0], bbox[1][1], bbox[0][2]],
+      [bbox[0][0], bbox[0][1], bbox[0][2]],
+      [bbox[0][0], bbox[0][1], bbox[1][2]],
+      [bbox[1][0], bbox[1][1], bbox[1][2]],
+      [bbox[0][0], bbox[1][1], bbox[1][2]],
+      [bbox[1][0], bbox[1][1], bbox[1][2]],
+      [bbox[1][0], bbox[0][1], bbox[1][2]],
+      [bbox[1][0], bbox[1][1], bbox[1][2]],
+      [bbox[1][0], bbox[1][1], bbox[0][2]],
+      [bbox[1][0], bbox[0][1], bbox[0][2]],
+      [bbox[1][0], bbox[0][1], bbox[1][2]],
+      [bbox[1][0], bbox[0][1], bbox[0][2]],
+      [bbox[1][0], bbox[1][1], bbox[0][2]],
+      [bbox[0][0], bbox[1][1], bbox[0][2]],
+      [bbox[1][0], bbox[1][1], bbox[0][2]],
+      [bbox[0][0], bbox[1][1], bbox[0][2]],
+      [bbox[0][0], bbox[1][1], bbox[1][2]],
+      [bbox[0][0], bbox[0][1], bbox[1][2]],
+      [bbox[0][0], bbox[1][1], bbox[1][2]],
+      [bbox[0][0], bbox[0][1], bbox[1][2]],
+      [bbox[1][0], bbox[0][1], bbox[1][2]]
+    ]
   }
   function getCirclePositions(opts) {
     const points = []
