@@ -1604,10 +1604,37 @@ Renderer.prototype.draw = function() {
         }
         // axisHelper
         let axisHelper = ent.getComponent('AxisHelper')
-
+        if(axisHelper){
+          draw = true
+          geomBuilder.addPosition([0,0,0])
+          geomBuilder.addColor(axisHelper.color)
+          geomBuilder.addPosition([0,axisHelper.scale,0])
+          geomBuilder.addColor(axisHelper.color)
+          geomBuilder.addPosition([0,0,0])
+          geomBuilder.addColor(axisHelper.color)
+          geomBuilder.addPosition([axisHelper.scale,0,0])
+          geomBuilder.addColor(axisHelper.color)
+          geomBuilder.addPosition([0,0,0])
+          geomBuilder.addColor(axisHelper.color)
+          geomBuilder.addPosition([0,0,axisHelper.scale])   
+          geomBuilder.addColor(axisHelper.color)       
+        }
         //gridHelper
         let gridHelper = ent.getComponent('GridHelper')
-
+        if(gridHelper){
+          for (let i = -gridHelper.size/2; i <= gridHelper.size/2; i++) {
+            geomBuilder.addPosition([gridHelper.size/2,0,i])
+            geomBuilder.addPosition([-gridHelper.size/2,0,i])
+            geomBuilder.addColor(gridHelper.color)
+            geomBuilder.addColor(gridHelper.color)
+          }
+          for (let i = -gridHelper.size/2; i <= gridHelper.size/2; i++) {
+            geomBuilder.addPosition([i,0,gridHelper.size/2])
+            geomBuilder.addPosition([i,0,-gridHelper.size/2])
+            geomBuilder.addColor(gridHelper.color)
+            geomBuilder.addColor(gridHelper.color)
+          }
+        }
         if (draw) {
           ctx.update(this.vBuf, { data: geomBuilder.positions })
           ctx.update(this.vBuf2, { data: geomBuilder.colors })

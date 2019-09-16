@@ -4,6 +4,7 @@ function AxisHelper(opts) {
   this.type = 'AxisHelper'
   this.entity = null
   this.color = [1,0,0,1]
+  this.scale = 1
   this.changed = new Signal()
   this.dirty = false
 

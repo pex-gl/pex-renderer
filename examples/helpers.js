@@ -14,6 +14,8 @@ const centerAndNormalize = require('geom-center-and-normalize')
 const helperBBox = require('../helpers/bounding-box-helper')
 const helperLight = require('../helpers/light-helper')
 const helperCamera = require('../helpers/camera-helper')
+const helperAxis = require('../helpers/axis-helper')
+const helperGrid = require('../helpers/grid-helper')
 
 const State = {
   rotation: 1.5 * Math.PI
@@ -417,13 +419,21 @@ gui.addParam(
   }
 )
 
+const axisCmp = helperAxis({color : [0,0,1,1],scale : 3})
+const gridCmp = helperGrid()
 
+const helperEntity = renderer.entity(
+  [
+    axisCmp,
+    gridCmp
+  ]
+)
+renderer.add(helperEntity)
 
 gui.addFPSMeeter()
 ctx.frame(() => {
   renderer.draw()
   gui.draw()
-  //window.dispatchEvent(new CustomEvent('pex-screenshot'))
 })
 
 async function loadScene(url, transformProps) {
@@ -450,4 +460,5 @@ async function loadScene(url, transformProps) {
   }
 
   renderer.add(scene.root)
+  //window.dispatchEvent(new CustomEvent('pex-screenshot'))
 }
