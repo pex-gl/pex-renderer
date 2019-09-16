@@ -2,7 +2,8 @@ const createContext = require('pex-context')
 const createRenderer = require('../')
 const createGUI = require('pex-gui')
 const createCube = require('primitive-cube')
-const { makeAxes } = require('./helpers-backup')
+
+const axisHelper = require('../helpers/axis-helper')
 
 const ctx = createContext()
 const gui = createGUI(ctx)
@@ -68,25 +69,9 @@ for (let i = 0; i < rows; i++) {
   }
 }
 
-const axes = makeAxes(1)
+
 const axesEntity = renderer.entity([
-  renderer.transform(),
-  renderer.geometry({
-    positions: axes,
-    primitive: ctx.Primitive.Lines,
-    count: axes.length,
-    vertexColors: [
-      [1, 0, 0, 1],
-      [1, 0.8, 0, 1],
-      [0, 1, 0, 1],
-      [0.8, 1, 0, 1],
-      [0, 0, 1, 1],
-      [0, 0.8, 1, 1]
-    ]
-  }),
-  renderer.material({
-    baseColor: [1, 1, 1, 1]
-  })
+  axisHelper()
 ])
 renderer.add(axesEntity)
 
