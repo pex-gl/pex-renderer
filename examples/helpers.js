@@ -306,15 +306,21 @@ const dragonEntity = renderer.entity([
 renderer.add(dragonEntity)
 
 //animated mesh
-loadScene(`${ASSETS_DIR}/models/AnimatedMorphCube/AnimatedMorphCube.gltf`, {
-  scale: [30, 30, 30],
-  position: [-0.3, 0, 0]
-})
+// loadScene(`${ASSETS_DIR}/models/AnimatedMorphCube/AnimatedMorphCube.gltf`, {
+//   scale: [30, 30, 30],
+//   position: [-0.3, 0, 0]
+// })
 
 //animated skinned mesh
 loadScene(`${ASSETS_DIR}/models/CesiumMan/CesiumMan.gltf`, {
   scale: [0.8, 0.8, 0.8],
   position: [0.5, -0.35, 0]
+})
+
+//buster drone
+loadScene(`${ASSETS_DIR}/models/buster-drone/scene.gltf`, {
+  scale: [0.006, 0.006, 0.006],
+  position: [-0.3, 0.25, 0]
 })
 
 //instanced mesh
@@ -413,7 +419,7 @@ gui.addParam(
 
 
 
-// gui.addFPSMeeter()
+gui.addFPSMeeter()
 ctx.frame(() => {
   renderer.draw()
   gui.draw()
@@ -431,15 +437,17 @@ async function loadScene(url, transformProps) {
     if (materialCmp) {
       materialCmp.set({
         castShadows: true,
-        receiveShadows: true
+        receiveShadows: true,
+        depthWrite: true
       })
     }
-    const transformCmp = entity.getComponent('Transform')
-    if (transformCmp && transformProps) {
-      transformCmp.set(transformProps)
-    }
+    
     entity.addComponent(helperBBox())
   })
+  const transformCmp = scene.root.getComponent('Transform')
+  if (transformCmp && transformProps) {
+    transformCmp.set(transformProps)
+  }
 
   renderer.add(scene.root)
 }

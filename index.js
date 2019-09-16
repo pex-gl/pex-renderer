@@ -1374,7 +1374,6 @@ Renderer.prototype.draw = function() {
     .forEach((camera) => {
       this.entities.forEach((ent) => {
         let draw = false
-
         let geomBuilder = createGeomBuilder({ colors: 1, positions: 1 })
         // bounding box helper
         let bbh = ent.getComponent('BoundingBoxHelper')
