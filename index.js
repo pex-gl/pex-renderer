@@ -1485,7 +1485,6 @@ Renderer.prototype.draw = function() {
           cType = ent.getComponent('Camera')
           if (cType.projection == 'orthographic') {
             draw = true 
-            console.log(cType)
             let orthoTransform = ent.getComponent('Transform')
 
             const dx = (cType.right - cType.left) / (2 / cType.zoom)
