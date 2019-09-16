@@ -75,7 +75,8 @@ Geometry.prototype.set = function(opts) {
         } else {
           ctx.update(attrib.buffer, {
             data: data,
-            type: val.type || attrib.type
+            type: val.type || attrib.type,
+            offset: attrib.offset || 0
           })
         }
 
