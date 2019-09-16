@@ -125,14 +125,13 @@ Transform.prototype.update = function() {
 }
 
 Transform.prototype.afterUpdate = function() {
+  emptyAABB(this.worldBounds)
   if (!aabb.isEmpty(this.bounds)) {
     aabbToPoints(this._boundsPoints, this.bounds)
     for (var i = 0; i < this._boundsPoints.length; i++) {
       vec3.multMat4(this._boundsPoints[i], this.modelMatrix)
     }
     aabbFromPoints(this.worldBounds, this._boundsPoints)
-  } else {
-    emptyAABB(this.worldBounds)
   }
   this.children.forEach((child) => {
     if (!aabb.isEmpty(child.worldBounds)) {
