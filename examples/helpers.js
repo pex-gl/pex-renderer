@@ -36,7 +36,7 @@ const orbitCameraEntity = renderer.entity([
     viewport: [0, 0, Math.floor(0.75 * window.innerWidth), window.innerHeight]
   }),
   renderer.transform({ position: [0, 2, 3] }),
-  renderer.orbiter({ position: [2, 2, -2] })
+  renderer.orbiter({ position: [2, 2, -2] }),
 ])
 renderer.add(orbitCameraEntity)
 

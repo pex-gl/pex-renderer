@@ -6,6 +6,7 @@ function GridHelper(opts) {
   this.color = [0.7,0.7,0.7,1]
   this.size = 10
   this.step = 1
+  this.enabled = true
   this.changed = new Signal()
   this.dirty = false
 
@@ -27,6 +28,22 @@ GridHelper.prototype.set = function(opts) {
 GridHelper.prototype.update = function() {
   if (!this.dirty) return
   this.dirty = false
+}
+
+GridHelper.prototype.draw = function(geomBuilder){
+  for (let i = -this.size/2; i <= this.size/2; i += this.step) {
+    geomBuilder.addPosition([this.size/2,0,i])
+    geomBuilder.addPosition([-this.size/2,0,i])
+    geomBuilder.addColor(this.color)
+    geomBuilder.addColor(this.color)
+  }
+  for (let i = -this.size/2; i <= this.size/2; i += this.step) {
+    geomBuilder.addPosition([i,0,this.size/2])
+    geomBuilder.addPosition([i,0,-this.size/2])
+    geomBuilder.addColor(this.color)
+    geomBuilder.addColor(this.color)
+  }
+
 }
 
 // by pex-renderer convention we export factory function

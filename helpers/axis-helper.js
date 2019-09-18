@@ -6,6 +6,7 @@ function AxisHelper(opts) {
   this.scale = 1
   this.changed = new Signal()
   this.dirty = false
+  this.enabled = true
 
   if(opts)this.set(opts)
 }
@@ -25,6 +26,24 @@ AxisHelper.prototype.set = function(opts) {
 AxisHelper.prototype.update = function() {
   if (!this.dirty) return
   this.dirty = false
+}
+
+AxisHelper.prototype.draw = function(geomBuilder){
+  geomBuilder.addPosition([0,0,0])
+  geomBuilder.addColor([1,0,0,1])
+  geomBuilder.addPosition([this.scale,0,0])
+  geomBuilder.addColor([1,0,0,1])
+
+  geomBuilder.addPosition([0,0,0])
+  geomBuilder.addColor([0,1,0,1])
+  geomBuilder.addPosition([0,this.scale,0])
+  geomBuilder.addColor([0,1,0,1])
+
+  
+  geomBuilder.addPosition([0,0,0])
+  geomBuilder.addColor([0,0,1,1])
+  geomBuilder.addPosition([0,0,this.scale])   
+  geomBuilder.addColor([0,0,1,1])       
 }
 
 // by pex-renderer convention we export factory function
