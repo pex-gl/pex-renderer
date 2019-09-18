@@ -1715,28 +1715,31 @@ Renderer.prototype.draw = function() {
         if(thisHelper){
           draw = true
           geomBuilder.addPosition([0,0,0])
-          geomBuilder.addColor(thisHelper.color)
-          geomBuilder.addPosition([0,thisHelper.scale,0])
-          geomBuilder.addColor(thisHelper.color)
-          geomBuilder.addPosition([0,0,0])
-          geomBuilder.addColor(thisHelper.color)
+          geomBuilder.addColor([1,0,0,1])
           geomBuilder.addPosition([thisHelper.scale,0,0])
-          geomBuilder.addColor(thisHelper.color)
+          geomBuilder.addColor([1,0,0,1])
+
           geomBuilder.addPosition([0,0,0])
-          geomBuilder.addColor(thisHelper.color)
+          geomBuilder.addColor([0,1,0,1])
+          geomBuilder.addPosition([0,thisHelper.scale,0])
+          geomBuilder.addColor([0,1,0,1])
+
+          
+          geomBuilder.addPosition([0,0,0])
+          geomBuilder.addColor([0,0,1,1])
           geomBuilder.addPosition([0,0,thisHelper.scale])   
-          geomBuilder.addColor(thisHelper.color)       
+          geomBuilder.addColor([0,0,1,1])       
         }
         //grid
         thisHelper = ent.getComponent('GridHelper')
         if(thisHelper){
-          for (let i = -thisHelper.size/2; i <= thisHelper.size/2; i++) {
+          for (let i = -thisHelper.size/2; i <= thisHelper.size/2; i += thisHelper.step) {
             geomBuilder.addPosition([thisHelper.size/2,0,i])
             geomBuilder.addPosition([-thisHelper.size/2,0,i])
             geomBuilder.addColor(thisHelper.color)
             geomBuilder.addColor(thisHelper.color)
           }
-          for (let i = -thisHelper.size/2; i <= thisHelper.size/2; i++) {
+          for (let i = -thisHelper.size/2; i <= thisHelper.size/2; i += thisHelper.step) {
             geomBuilder.addPosition([i,0,thisHelper.size/2])
             geomBuilder.addPosition([i,0,-thisHelper.size/2])
             geomBuilder.addColor(thisHelper.color)

@@ -4,7 +4,8 @@ function GridHelper(opts) {
   this.type = 'GridHelper'
   this.entity = null
   this.color = [0.7,0.7,0.7,1]
-  this.size = 30
+  this.size = 10
+  this.step = 1
   this.changed = new Signal()
   this.dirty = false
 

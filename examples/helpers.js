@@ -416,8 +416,8 @@ gui.addParam(
   }
 )
 
-const axisCmp = axisHelper({color : [0,0,1,1],scale : 3})
-const gridCmp = gridHelper()
+const axisCmp = axisHelper({scale : 3})
+const gridCmp = gridHelper({size: 30, step: 0.5})
 
 const helperEntity = renderer.entity(
   [
