@@ -24,6 +24,11 @@ const createAreaLight = require('./area-light')
 const createReflectionProbe = require('./reflection-probe')
 const createSkybox = require('./skybox')
 const createOverlay = require('./overlay')
+const createBoundingBoxHelper = require('./helpers/bounding-box-helper')
+const createLightHelper = require('./helpers/light-helper')
+const createCameraHelper = require('./helpers/camera-helper')
+const createAxisHelper = require('./helpers/axis-helper')
+const createGridHelper = require('./helpers/grid-helper')
 const loadGltf = require('./loaders/glTF')
 
 const createGeomBuilder = require('geom-builder')
@@ -1557,6 +1562,26 @@ Renderer.prototype.skybox = function(opts) {
 
 Renderer.prototype.overlay = function(opts) {
   return createOverlay(Object.assign({ ctx: this._ctx }, opts))
+}
+
+Renderer.prototype.boundingBoxHelper = function(opts) {
+  return createBoundingBoxHelper(opts)
+}
+
+Renderer.prototype.lightHelper = function(opts) {
+  return createLightHelper(opts)
+}
+
+Renderer.prototype.cameraHelper = function(opts) {
+  return createCameraHelper(opts)
+}
+
+Renderer.prototype.axisHelper = function(opts) {
+  return createAxisHelper(opts)
+}
+
+Renderer.prototype.gridHelper = function(opts) {
+  return createGridHelper(opts)
 }
 
 Renderer.prototype.loadScene = async function(url, opts = {}) {

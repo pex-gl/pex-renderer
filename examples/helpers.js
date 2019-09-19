@@ -11,12 +11,6 @@ const dragon = require('./assets/models/stanford-dragon/stanford-dragon')
 const normals = require('angle-normals')
 const centerAndNormalize = require('geom-center-and-normalize')
 
-const bBoxHelper = require('../helpers/bounding-box-helper')
-const lightHelper = require('../helpers/light-helper')
-const cameraHelper = require('../helpers/camera-helper')
-const axisHelper = require('../helpers/axis-helper')
-const gridHelper = require('../helpers/grid-helper')
-
 const State = {
   rotation: 1.5 * Math.PI
 }
@@ -59,7 +53,7 @@ const persCameraEntity = renderer.entity([
     position: [0, 2, 3],
     rotation: quat.fromEuler(quat.create(), [-Math.PI / 5, 0, 0])
   }),
-  cameraHelper({ color: [1, 0.7, 0, 1] })
+  renderer.cameraHelper({ color: [1, 0.7, 0, 1] })
 ])
 renderer.add(persCameraEntity)
 
@@ -86,7 +80,7 @@ const orthoCameraEntity = renderer.entity([
     position: [0, 2, 3],
     rotation: quat.fromEuler(quat.create(), [-Math.PI / 5, 0, 0])
   }),
-  cameraHelper()
+  renderer.cameraHelper()
 ])
 renderer.add(orthoCameraEntity)
 
@@ -120,7 +114,7 @@ const directionalLight = renderer.entity([
     position: [-1, 2, -1]
   }),
   directionalLightCmp,
-  lightHelper()
+  renderer.lightHelper()
 ])
 renderer.add(directionalLight)
 gui.addColumn('Lights')
@@ -153,7 +147,7 @@ const pointLight = renderer.entity([
     position: [1, 0.1, 1.5]
   }),
   pointLightCmp,
-  lightHelper()
+  renderer.lightHelper()
 ])
 renderer.add(pointLight)
 
@@ -193,7 +187,7 @@ const areaLight = renderer.entity([
     color: [0, 1, 1, 1],
     intensity: 15
   }),
-  lightHelper()
+  renderer.lightHelper()
 ])
 renderer.add(areaLight)
 const areaLightCmp = areaLight.getComponent('AreaLight')
@@ -237,7 +231,7 @@ const spotLight = renderer.entity([
     position: [2, 1, 0]
   }),
   spotLightCmp,
-  lightHelper()
+  renderer.lightHelper()
 ])
 renderer.add(spotLight)
 
@@ -280,7 +274,7 @@ const floorEntity = renderer.entity([
     receiveShadows: true,
     castShadows: false
   }),
-  bBoxHelper()
+  renderer.boundingBoxHelper()
 ])
 renderer.add(floorEntity)
 
@@ -300,7 +294,7 @@ const dragonEntity = renderer.entity([
   renderer.transform({
     position: [-1.5, 0, 0]
   }),
-  bBoxHelper({ color: [1, 1, 0, 1] })
+  renderer.boundingBoxHelper({ color: [1, 1, 0, 1] })
 ])
 renderer.add(dragonEntity)
 
@@ -351,7 +345,7 @@ let instEntity = renderer.entity([
     receiveShadows: true
   }),
   renderer.transform({ position: [1.7, -0.2, 0] }),
-  bBoxHelper()
+  renderer.boundingBoxHelper()
 ])
 renderer.add(instEntity)
 
@@ -416,8 +410,8 @@ gui.addParam(
   }
 )
 
-const axisCmp = axisHelper({scale : 3})
-const gridCmp = gridHelper({size: 30, step: 0.5})
+const axisCmp = renderer.axisHelper({scale : 3})
+const gridCmp = renderer.gridHelper({size: 30, step: 0.5})
 
 const helperEntity = renderer.entity(
   [
@@ -449,7 +443,7 @@ async function loadScene(url, transformProps) {
       })
     }
     
-    entity.addComponent(bBoxHelper())
+    entity.addComponent(renderer.boundingBoxHelper())
   })
   const transformCmp = scene.root.getComponent('Transform')
   if (transformCmp && transformProps) {
