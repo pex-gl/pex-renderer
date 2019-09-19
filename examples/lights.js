@@ -8,7 +8,6 @@ const dragon = require('./assets/models/stanford-dragon/stanford-dragon')
 const normals = require('angle-normals')
 const centerAndNormalize = require('geom-center-and-normalize')
 const gridCells = require('grid-cells')
-const lightHelper = require('../helpers/light-helper')
 
 
 function targetTo(out, eye, target, up = [0, 1, 0]) {
@@ -162,7 +161,7 @@ const directionalLightEntity = renderer.entity(
       baseColor: [1, 1, 0, 1]
     }),
     directionalLightCmp,
-    lightHelper()
+    renderer.lightHelper()
   ],
   ['cell0']
 )
@@ -203,7 +202,7 @@ const fixDirectionalLightEntity = renderer.entity(
       intensity: 1,
       castShadows: true
     }),
-    lightHelper()
+    renderer.lightHelper()
   ],
   ['cell0']
 )
@@ -233,7 +232,7 @@ const spotLightEntity = renderer.entity(
       baseColor: [1, 0, 1, 1]
     }),
     spotLightCmp,
-    lightHelper()
+    renderer.lightHelper()
   ],
   ['cell1']
 )
@@ -289,7 +288,7 @@ const fixSpotLightEntity = renderer.entity(
       innerAngle: Math.PI / 12,
       castShadows: true
     }),
-    lightHelper()
+    renderer.lightHelper()
   ],
   ['cell1']
 )
@@ -313,7 +312,7 @@ const pointLightEntity = renderer.entity(
       baseColor: [1, 1, 1, 1]
     }),
     pointLightCmp,
-    lightHelper()
+    renderer.lightHelper()
   ],
   ['cell2']
 )
@@ -355,7 +354,7 @@ const fixPointLightEntity = renderer.entity(
       range: 5,
       castShadows: true
     }),
-    lightHelper()
+    renderer.lightHelper()
   ],
   ['cell2']
 )
@@ -382,7 +381,7 @@ const areaLightEntity = renderer.entity(
       baseColor: [0, 1, 1, 1]
     }),
     areaLightCmp,
-    lightHelper()
+    renderer.lightHelper()
   ],
   ['cell3']
 )
@@ -411,7 +410,7 @@ const fixAreaLightEntity = renderer.entity(
       intensity: 4,
       castShadows: true
     }),
-    lightHelper()
+    renderer.lightHelper()
   ],
   ['cell3']
 )
