@@ -26,6 +26,8 @@ const createSkybox = require('./skybox')
 const createOverlay = require('./overlay')
 const loadGltf = require('./loaders/glTF')
 
+const createGeomBuilder = require('geom-builder')
+
 const PBR_VERT = require('./shaders/pipeline/material.vert.js')
 const PBR_FRAG = require('./shaders/pipeline/material.frag.js')
 const DEPTH_PASS_VERT = require('./shaders/pipeline/depth-pass.vert.js')
@@ -140,6 +142,43 @@ function Renderer(opts) {
         frag: PBR_FRAG
       }
     }
+  }
+
+  this.helperPositionVBuffer = ctx.vertexBuffer({ data: [0, 0, 0] })
+  this.helperColorVBuffer = ctx.vertexBuffer({ data: [0, 0, 0, 0] })
+  this.drawHelperLinesCmd = {
+    pipeline: ctx.pipeline({
+      vert: `
+        attribute vec3 aPosition;
+        attribute vec4 aVertexColor;
+
+        uniform mat4 uProjectionMatrix;
+        uniform mat4 uViewMatrix;
+
+        varying vec4 vColor;
+
+        void main () {
+          vColor = aVertexColor;
+          gl_Position = uProjectionMatrix * uViewMatrix * vec4(aPosition, 1.0);
+        }
+        `,
+      frag: `
+        #ifdef GL_ES
+        precision highp float;
+        #endif
+        varying vec4 vColor;
+        void main () {
+          gl_FragColor = vColor;
+        }
+        `,
+      depthTest: true,
+      primitive: ctx.Primitive.Lines
+    }),
+    attributes: {
+      aPosition: this.helperPositionVBuffer,
+      aVertexColor: this.helperColorVBuffer
+    },
+    count: 1
   }
 }
 
@@ -1114,6 +1153,71 @@ Renderer.prototype.drawMeshes = function(
   }
 }
 
+Renderer.prototype.drawHelpers = function(camera, ctx) {
+  function byEnabledAndCameraTags(component) {
+    if (!component.enabled) return false
+    if (!camera || !camera.entity) return true
+    if (!camera.entity.tags.length) return true
+    if (!component.entity.tags.length) return true
+    return component.entity.tags[0] === camera.entity.tags[0]
+  }
+
+  let draw = false
+  let geomBuilder = createGeomBuilder({ colors: 1, positions: 1 })
+
+  // bounding box helper
+  let thisHelpers = this.getComponents('BoundingBoxHelper').filter(
+    byEnabledAndCameraTags
+  )
+  thisHelpers.forEach((thisHelper) => {
+    thisHelper.draw(geomBuilder)
+    draw = true
+  })
+
+  //light helper
+  thisHelpers = this.getComponents('LightHelper').filter(byEnabledAndCameraTags)
+  thisHelpers.forEach((thisHelper) => {
+    thisHelper.draw(geomBuilder)
+    draw = true
+  })
+
+  //camera helper
+  thisHelpers = this.getComponents('CameraHelper').filter(
+    byEnabledAndCameraTags
+  )
+  thisHelpers.forEach((thisHelper) => {
+    thisHelper.draw(geomBuilder, camera)
+    draw = true
+  })
+
+  //grid helper
+  thisHelpers = this.getComponents('GridHelper').filter(byEnabledAndCameraTags)
+  thisHelpers.forEach((thisHelper) => {
+    thisHelper.draw(geomBuilder, camera)
+    draw = true
+  })
+
+  //axis helper
+  thisHelpers = this.getComponents('AxisHelper').filter(byEnabledAndCameraTags)
+  thisHelpers.forEach((thisHelper) => {
+    thisHelper.draw(geomBuilder)
+    draw = true
+  })
+
+  if (draw) {
+    ctx.update(this.helperPositionVBuffer, { data: geomBuilder.positions })
+    ctx.update(this.helperColorVBuffer, { data: geomBuilder.colors })
+    this.drawHelperLinesCmd.count = geomBuilder.count
+    ctx.submit(this.drawHelperLinesCmd, {
+      uniforms: {
+        uProjectionMatrix: camera.projectionMatrix,
+        uViewMatrix: camera.viewMatrix
+      },
+      viewport: camera.viewport
+    })
+  }
+}
+
 Renderer.prototype.draw = function() {
   const ctx = this._ctx
 
@@ -1324,6 +1428,13 @@ Renderer.prototype.draw = function() {
         })
         if (State.profiler) State.profiler.timeEnd('postprocess')
       }
+    })
+
+  //draw gizmos
+  cameras
+    .filter((camera) => camera.enabled)
+    .forEach((camera) => {
+      this.drawHelpers(camera, ctx)
     })
 
   overlays

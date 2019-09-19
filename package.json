@@ -33,11 +33,13 @@
   },
   "dependencies": {
     "debug": "^4.1.1",
+    "geom-builder": "^2.1.0",
     "hammersley": "^1.0.0",
     "interpolate-angle": "^1.0.2",
     "is-browser": "^2.1.0",
     "latlon-to-xyz": "^1.0.1",
     "mouse-event-offset": "^3.0.2",
+    "pex-context": "^2.10.0",
     "pex-geom": "^2.0.2",
     "pex-io": "^2.1.0",
     "pex-math": "^3.0.0-2",

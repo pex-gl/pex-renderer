@@ -4,7 +4,7 @@ let examples = require.context('./', false, /\.js$/).keys()
 
 examples = examples.filter(
   (example) =>
-    !['./index.js', './helpers.js', './webpack.config.js'].includes(example)
+    !['./index.js', './webpack.config.js'].includes(example)
 )
 
 examplesNames = examples.map((example) =>
