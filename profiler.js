@@ -208,6 +208,9 @@ function createProfiler(ctx, renderer) {
       )
       lines.push(`Skyboxes: ${pa3(renderer.getComponents('Skybox').length)}`)
       lines.push(
+        `Ambient Lights: ${pa3(renderer.getComponents('AmbientLight').length)}`
+      )
+      lines.push(
         `Point Lights: ${pa3(renderer.getComponents('PointLight').length)}`
       )
       lines.push(
