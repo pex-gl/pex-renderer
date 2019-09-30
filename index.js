@@ -142,6 +142,14 @@ function Renderer(opts) {
   this.shaders = {
     chunks: SHADERS_CHUNKS,
     pipeline: {
+      depthPrePass: {
+        vert: DEPTH_PASS_VERT,
+        frag: DEPTH_PRE_PASS_FRAG
+      },
+      depthPass: {
+        vert: DEPTH_PASS_VERT,
+        frag: DEPTH_PASS_FRAG
+      },
       material: {
         vert: PBR_VERT,
         frag: PBR_FRAG
