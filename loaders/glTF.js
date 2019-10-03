@@ -886,7 +886,7 @@ async function loadGltf(url, renderer, options = {}) {
       if (isBase64(buffer.uri)) {
         buffer._data = decodeBase64(buffer.uri)
       } else {
-        buffer._data = await loadBinary(path.join(basePath, buffer.uri))
+        buffer._data = await loadBinary([basePath, buffer.uri].join('/'))
       }
     }
   }
@@ -934,7 +934,7 @@ async function loadGltf(url, renderer, options = {}) {
       } else {
         // TODO why are we replacing uri encoded spaces?
         image._img = await loadImage({
-          url: path.join(basePath, image.uri).replace(/%/g, '%25'),
+          url: [basePath, image.uri].join('/').replace(/%/g, '%25'),
           crossOrigin: 'anonymous'
         })
       }
