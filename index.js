@@ -656,9 +656,10 @@ Renderer.prototype.getGeometryPipeline = function(
     this._pipelineCache = {}
   }
   // TODO: better pipeline caching
-  const hash = material.id + '_' + program.id
+  const hash = material.id + '_' + program.id + '_' + geometry.primitive
   let pipeline = this._pipelineCache[hash]
-  if (!pipeline) {
+  if (!pipeline || material.needsPipelineUpdate) {
+    material.needsPipelineUpdate = false
     pipeline = ctx.pipeline({
       program: program,
       depthTest: material.depthTest,

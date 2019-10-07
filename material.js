@@ -18,6 +18,19 @@ const MATERIAL_MAPS = [
   'specularGlossinessMap'
 ]
 
+const PIPELINE_PROPS = [
+  'depthTest',
+  'depthWrite',
+  'depthFunc',
+  'blend',
+  'blendSrcRGBFactor',
+  'blendSrcAlphaFactor',
+  'blendDstRGBFactor',
+  'blendDstAlphaFactor',
+  'cullFace',
+  'cullFaceMode'
+]
+
 function Material(opts) {
   this.type = 'Material'
   this.id = 'Material_' + MaterialID++
@@ -70,6 +83,8 @@ function Material(opts) {
 
   this.alphaMap = null
   this.alphaTest = undefined
+
+  // pipeline props
   this.depthTest = true
   this.depthWrite = true
   this.depthFunc = ctx.DepthFunc.LessEqual
@@ -85,6 +100,8 @@ function Material(opts) {
 
   this.castShadows = false
   this.receiveShadows = false
+
+  this.needsPipelineUpdate = false
 
   this.set(opts)
 }
@@ -115,6 +132,12 @@ Material.prototype.set = function(opts) {
           tempMat2x3
         )
       }
+    }
+  }
+
+  for (let pipelineProp of PIPELINE_PROPS) {
+    if (opts[pipelineProp] !== undefined) {
+      this.needsPipelineUpdate = true
     }
   }
 
