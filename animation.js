@@ -21,6 +21,7 @@ function Animation(opts) {
   this.prevTime = Date.now() // ms
   this.channels = opts.channels || []
   this.changed = new Signal()
+  this.needsUpdate = true
   this.set(opts)
 }
 
@@ -38,28 +39,39 @@ Animation.prototype.set = function(opts) {
     this.time = 0
     this.prevTime = Date.now()
   }
+
+  this.needsUpdate = true
 }
 
 Animation.prototype.update = function() {
-  if (!this.playing || !this.enabled) return
+  if (!this.enabled) return
 
-  const animationLength = this.channels[0].input[
-    this.channels[0].input.length - 1
-  ]
-  const now = Date.now()
-  const deltaTime = (now - this.prevTime) / 1000
 
-  this.prevTime = now
-  this.time += deltaTime
+  if (this.playing) {
+    const animationLength = this.channels[0].input[
+      this.channels[0].input.length - 1
+    ]
+    const now = Date.now()
+    const deltaTime = (now - this.prevTime) / 1000
 
-  if (this.time > animationLength) {
-    if (this.loop) {
-      this.time %= animationLength
-    } else {
-      this.time = 0
-      this.set({ playing: false })
+    this.prevTime = now
+    this.time += deltaTime
+
+    if (this.time > animationLength) {
+      if (this.loop) {
+        this.time %= animationLength
+      } else {
+        this.time = 0
+        this.set({ playing: false })
+      }
     }
+
+    this.needsUpdate = true
   }
+
+  if (!this.needsUpdate) return
+
+  this.needsUpdate = false
 
   for (let i = 0; i < this.channels.length; i++) {
     const channel = this.channels[i]
