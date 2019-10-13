@@ -35,7 +35,7 @@ vec4 bilateralBlur(sampler2D image, vec2 imageResolution, sampler2D depthMap, ve
   for (float i = -8.0; i <= 8.0; i += 2.0) {
     float r = i;
     vec2 off = direction * r;
-    float sampleDepth = readDepth(depthMap, uv + (off / imageResolution), near, far);
+    float sampleDepth = readDepth(depthMap, uv + (off / depthMapResolution), near, far);
     float diff = (sampleDepth - centerDepth) * sharpness;
     float weight = exp2(-r * r * blurFalloff - diff * diff);
     weightSum += weight;
@@ -46,7 +46,7 @@ vec4 bilateralBlur(sampler2D image, vec2 imageResolution, sampler2D depthMap, ve
 }
 
 void main() {
-  vec2 vUV = vec2(gl_FragCoord.x / depthMapSize.x, gl_FragCoord.y / depthMapSize.y);
+  vec2 vUV = vec2(gl_FragCoord.x / imageSize.x, gl_FragCoord.y / imageSize.y);
   gl_FragColor = bilateralBlur(image, imageSize, depthMap, depthMapSize, vUV, direction);
 }
 `

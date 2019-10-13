@@ -4,6 +4,7 @@ const createCube = require('primitive-cube')
 const random = require('pex-random')
 const { fromHex } = require('pex-color')
 const { quat, vec3 } = require('pex-math')
+const createGUI = require('pex-gui')
 const dutchPalette = [
   '#FFC312',
   '#F79F1F',
@@ -114,6 +115,28 @@ const cameraEntity = renderer.entity([
   })
 ])
 renderer.add(cameraEntity)
+
+const postProcessingCmp = cameraEntity.getComponent('PostProcessing')
+const gui = createGUI(ctx)
+
+gui.addParam('SSAO', postProcessingCmp, 'ssao')
+gui.addParam('SSAO radius', postProcessingCmp, 'ssaoRadius', {
+  min: 0,
+  max: 30
+})
+gui.addParam('SSAO intensity', postProcessingCmp, 'ssaoIntensity', {
+  min: 0,
+  max: 10
+})
+gui.addParam('SSAO bias', postProcessingCmp, 'ssaoBias', { min: 0, max: 1 })
+gui.addParam('SSAO blur radius', postProcessingCmp, 'ssaoBlurRadius', {
+  min: 0,
+  max: 5
+})
+gui.addParam('SSAO blur sharpness', postProcessingCmp, 'ssaoBlurSharpness', {
+  min: 0,
+  max: 20
+})
 
 renderer.add(
   renderer.entity([
@@ -234,6 +257,7 @@ renderer.add(reflectionProbeEntity)
 
 ctx.frame(() => {
   renderer.draw()
+  gui.draw()
 
   window.dispatchEvent(new CustomEvent('pex-screenshot'))
 })
