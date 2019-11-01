@@ -438,9 +438,9 @@ function handlePrimitive(primitive, gltf, ctx) {
       indices: {
         buffer: indicesAccessor._bufferView._indexBuffer,
         offset: indicesAccessor.byteOffset,
-        type: indicesAccessor.componentType,
-        count: indicesAccessor.count
-      }
+        type: indicesAccessor.componentType
+      },
+      count: indicesAccessor.count
     }
   } else {
     geometryProps = {
