@@ -3,10 +3,10 @@ module.exports = /* glsl */ `
   //http://www.thetenthplanet.de/archives/1180
   mat3 cotangentFrame(vec3 N, vec3 p, vec2 uv) {
     // get edge vectors of the pixel triangle
-    vec3 dp1 = dFdx(p);
-    vec3 dp2 = dFdy(p);
-    vec2 duv1 = dFdx(uv);
-    vec2 duv2 = dFdy(uv);
+    highp vec3 dp1 = dFdx(p);
+    highp vec3 dp2 = dFdy(p);
+    highp vec2 duv1 = dFdx(uv);
+    highp vec2 duv2 = dFdy(uv);
 
     // solve the linear system
     vec3 dp2perp = cross(dp2, N);
