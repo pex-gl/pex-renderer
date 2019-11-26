@@ -457,9 +457,8 @@ function createProfiler(ctx, renderer) {
   }
 
   // TODO: what about webgl2?
-  wrapGLExtCall(
-    gl.getExtension('ANGLE_instanced_arrays'),
-    'drawElementsInstancedANGLE',
+  wrapGLCall(
+    'drawElementsInstanced',
     (args) => {
       const mode = args[0]
       const count = args[1]
@@ -470,9 +469,8 @@ function createProfiler(ctx, renderer) {
       profiler.drawElementsInstancedCount++
     }
   )
-  wrapGLExtCall(
-    gl.getExtension('ANGLE_instanced_arrays'),
-    'drawArraysInstancedANGLE',
+  wrapGLCall(
+    'drawArraysInstanced',
     (args) => {
       const mode = args[0]
       const count = args[2]
