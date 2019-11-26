@@ -158,9 +158,23 @@ cells.forEach((cell, cellIndex) => {
   if (material.emissiveColor) {
     postProcessingCmp.set({
       bloom: true,
-      bloomIntensity: 0.5,
-      bloomThreshold: 3,
-      bloomRadius: 1.25
+      bloomIntensity: 3,
+      bloomRadius: 0.55,
+      bloomThreshold: 1
+    })
+
+    gui.addParam('Bloom', postProcessingCmp, 'bloom')
+    gui.addParam('Bloom intensity', postProcessingCmp, 'bloomIntensity', {
+      min: 0,
+      max: 10
+    })
+    gui.addParam('Bloom threshold', postProcessingCmp, 'bloomThreshold', {
+      min: 0,
+      max: 2
+    })
+    gui.addParam('Bloom radius', postProcessingCmp, 'bloomRadius', {
+      min: 0,
+      max: 2
     })
   }
 
@@ -169,21 +183,21 @@ cells.forEach((cell, cellIndex) => {
       postProcessingCmp,
       cameraCmp,
       renderer.orbiter({
-        position: [0, 0, 1.9]
+        position: [0, 0, 2.5]
       })
     ],
     tags
   )
   renderer.add(cameraEntity)
 
-  gui.addTexture2D('Depth Map', postProcessingCmp._frameDepthTex)
-  gui.addTexture2D('Normal Map', postProcessingCmp._frameNormalTex)
+  // gui.addTexture2D('Depth Map', postProcessingCmp._frameDepthTex)
+  // gui.addTexture2D('Normal Map', postProcessingCmp._frameNormalTex)
 })
-gui.addParam('Exposure', State, 'exposure', { min: 0.01, max: 5 }, () => {
-  renderer.getComponents('Camera').forEach((camera) => {
-    camera.set({ exposure: State.exposure })
-  })
-})
+// gui.addParam('Exposure', State, 'exposure', { min: 0.01, max: 5 }, () => {
+//   renderer.getComponents('Camera').forEach((camera) => {
+//     camera.set({ exposure: State.exposure })
+//   })
+// })
 
 function imageFromFile(file) {
   const tex = ctx.texture2D({

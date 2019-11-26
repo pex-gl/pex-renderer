@@ -1266,7 +1266,7 @@ Renderer.prototype.draw = function() {
     if (probe.dirty) {
       probe.update((camera, encoding) => {
         if (skyboxes.length > 0) {
-          skyboxes[0].draw(camera, { outputEncoding: encoding })
+          skyboxes[0].draw(camera, { outputEncoding: encoding, backgroundMode: false })
         }
       })
     }
@@ -1369,25 +1369,23 @@ Renderer.prototype.draw = function() {
           uniforms: {
             uExposure: camera.exposure,
             uBloomThreshold: postProcessingCmp.bloomThreshold,
-            imageSize: halfScreenSize
-          },
-          viewport: halfViewport
+            imageSize: screenSize
+          }
         })
 
-        for (let i = 0; i < 5; i++) {
-          ctx.submit(postProcessingCmp._bloomHCmd, {
+        for (let i = 0; i < postProcessingCmp._downSampleCmds.length; i++) {
+          ctx.submit(postProcessingCmp._downSampleCmds[i], {
             uniforms: {
-              direction: [postProcessingCmp.bloomRadius, 0],
-              imageSize: halfScreenSize
-            },
-            viewport: halfViewport
+              intensity: postProcessingCmp.bloomRadius
+            }
           })
-          ctx.submit(postProcessingCmp._bloomVCmd, {
+        }
+
+        for (let i = 0; i < postProcessingCmp._bloomCmds.length; i++) {
+          ctx.submit(postProcessingCmp._bloomCmds[i], {
             uniforms: {
-              direction: [0, postProcessingCmp.bloomRadius],
-              imageSize: halfScreenSize
-            },
-            viewport: halfViewport
+              imageSize: screenSize
+            }
           })
         }
       }
