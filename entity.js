@@ -21,7 +21,7 @@ function Entity(components, tags, renderer) {
     this.transform = createTransform({
       parent: null
     })
-    this.components.unshift(this.transform)
+    this.addComponent(this.transform)
   }
 
   this.components.forEach((component) => component.init(this))
