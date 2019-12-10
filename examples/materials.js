@@ -77,6 +77,7 @@ let materials = [
   { baseColor: [1.0, 1.0, 1.0, 1.0], metallic: 1, roughness: 4 / 6 },
   { baseColor: [1.0, 1.0, 1.0, 1.0], metallic: 1, roughness: 5 / 6 },
   { baseColor: [1.0, 1.0, 1.0, 1.0], metallic: 1, roughness: 6 / 6 },
+  null,
   {
     unlit: true,
     baseColor: [1, 1, 1, 0.5],
@@ -114,7 +115,6 @@ let materials = [
     emissiveIntensity: 4
   },
   { roughness: 2 / 7, metallic: 0, baseColor: [0.1, 0.5, 0.8, 1.0] },
-  { roughness: 3 / 7, metallic: 0, baseColor: [0.1, 0.1, 0.1, 1.0] },
   {
     roughness: 0.5,
     metallic: 0,
@@ -155,7 +155,7 @@ cells.forEach((cell, cellIndex) => {
     fxaa: true
   })
 
-  if (material.emissiveColor) {
+  if (material && material.emissiveColor) {
     postProcessingCmp.set({
       bloom: true,
       bloomIntensity: 3,
@@ -231,6 +231,7 @@ function imageFromFile(file) {
 
 // Meshes
 materials.forEach((material) => {
+  if (!material) return
   if (material.baseColorMap)
     material.baseColorMap = imageFromFile(
       material.baseColorMap,
@@ -262,12 +263,14 @@ materials.forEach((material) => {
 cells.forEach((cell, cellIndex) => {
   const tags = ['cell' + cellIndex]
   const material = materials[cellIndex]
-  if (!material) return
 
   const materialEntity = renderer.entity(
-    [renderer.geometry(createSphere(0.5)), renderer.material(material)],
+    [renderer.geometry(createSphere(0.5))],
     tags
   )
+  if (material) {
+    materialEntity.addComponent(renderer.material(material))
+  }
   renderer.add(materialEntity)
 })
 

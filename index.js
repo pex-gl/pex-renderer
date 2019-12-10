@@ -93,6 +93,12 @@ function Renderer(opts) {
   this._dummyTexture2D = ctx.texture2D({ width: 4, height: 4 })
   this._dummyTextureCube = ctx.textureCube({ width: 4, height: 4 })
 
+  this._defaultMaterial = createMaterial({
+    ctx: ctx,
+    unlit: true,
+    baseColor: [1, 0, 0, 1]
+  })
+
   this._debug = false
   this._programCacheMap = {
     values: [],
@@ -923,15 +929,15 @@ Renderer.prototype.drawMeshes = function(
   })
 
   geometries.sort((a, b) => {
-    var matA = a.entity.getComponent('Material')
-    var matB = b.entity.getComponent('Material')
+    var matA = a.entity.getComponent('Material') || this._defaultMaterial
+    var matB = b.entity.getComponent('Material') || this._defaultMaterial
     var transparentA = matA.blend ? 1 : 0
     var transparentB = matB.blend ? 1 : 0
     return transparentA - transparentB
   })
 
   var firstTransparent = geometries.findIndex(
-    (g) => g.entity.getComponent('Material').blend
+    (g) => (g.entity.getComponent('Material') || this._defaultMaterial).blend
   )
 
   for (let i = 0; i < geometries.length; i++) {
@@ -952,7 +958,7 @@ Renderer.prototype.drawMeshes = function(
     if (!geometry._attributes.aPosition) {
       continue
     }
-    const material = geometry.entity.getComponent('Material')
+    const material = geometry.entity.getComponent('Material') || this._defaultMaterial
     if (!material.enabled || (material.blend && shadowMapping)) {
       continue
     }
