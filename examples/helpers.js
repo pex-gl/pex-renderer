@@ -26,8 +26,10 @@ const orbitCameraEntity = renderer.entity([
     aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
     near: 0.1,
     far: 100,
-    postprocess: false,
+    exposure: 0.6,
     viewport: [0, 0, Math.floor(0.75 * window.innerWidth), window.innerHeight]
+  }),
+  renderer.postProcessing({
   }),
   renderer.transform({ position: [0, 2, 3] }),
   renderer.orbiter({ position: [2, 2, -2] }),
