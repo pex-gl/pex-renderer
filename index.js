@@ -187,7 +187,11 @@ function Renderer(opts) {
         #endif
         varying vec4 vColor;
         void main () {
-          gl_FragColor = vColor;
+
+        gl_FragData[0] = vColor * 2.0;
+        #ifdef USE_DRAW_BUFFERS
+          gl_FragData[1] = vec4(0.0);
+        #endif
         }
         `,
       depthTest: true,
@@ -1358,10 +1362,12 @@ Renderer.prototype.draw = function() {
       if (postProcessingCmp && postProcessingCmp.enabled) {
         ctx.submit(postProcessingCmp._drawFrameFboCommand, () => {
           this.drawMeshes(camera, false, null, null, skyboxes[0], false)
+          this.drawHelpers(camera, ctx)
         })
       } else {
         ctx.submit({ viewport: camera.viewport }, () => {
           this.drawMeshes(camera, false, null, null, skyboxes[0], true)
+          this.drawHelpers(camera, ctx)
         })
       }
       if (State.profiler) State.profiler.timeEnd('drawFrame')
@@ -1446,13 +1452,6 @@ Renderer.prototype.draw = function() {
         })
         if (State.profiler) State.profiler.timeEnd('postprocess')
       }
-    })
-
-  //draw gizmos
-  cameras
-    .filter((camera) => camera.enabled)
-    .forEach((camera) => {
-      this.drawHelpers(camera, ctx)
     })
 
   overlays
