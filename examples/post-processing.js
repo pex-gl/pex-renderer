@@ -562,7 +562,7 @@ ctx.frame(() => {
       dragonEntity.transform.worldPosition,
       cameraCmp.entity.transform.worldPosition
     )
-    if (postProcessingCmp.dofFocuDistance !== distance) {
+    if (postProcessingCmp.dofFocusDistance !== distance) {
       postProcessingCmp.set({ dofFocusDistance: distance })
       // force redraw
       gui.items[0].dirty = true
