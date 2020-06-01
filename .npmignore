@@ -11,10 +11,11 @@ LICENSE.md
 *.swp
 .tern-project
 .tern-port
-.atom-buid.json
+.atom-build.json
 experiments/
 tags
 old
 assets
 screenshot.jpg
 local_modules_old
+.vscode/

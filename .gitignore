@@ -16,3 +16,4 @@ examples/gltf-nodes
 examples/glTF-Sample-Models
 examples/screenshots/*-diff.png
 examples/build/main.js
+.vscode/settings.json
