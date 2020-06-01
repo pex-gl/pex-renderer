@@ -40,6 +40,8 @@ const DEPTH_PASS_FRAG = require('./shaders/pipeline/depth-pass.frag.js')
 const DEPTH_PRE_PASS_FRAG = require('./shaders/pipeline/depth-pre-pass.frag.js')
 const OVERLAY_VERT = require('./shaders/pipeline/overlay.vert.js')
 const OVERLAY_FRAG = require('./shaders/pipeline/overlay.frag.js')
+const HELPER_VERT = require('./shaders/pipeline/helper.vert.js')
+const HELPER_FRAG = require('./shaders/pipeline/helper.frag.js')
 const ERROR_VERT = require('./shaders/error/error.vert.js')
 const ERROR_FRAG = require('./shaders/error/error.frag.js')
 const SHADERS_CHUNKS = require('./shaders/chunks')
@@ -168,31 +170,28 @@ function Renderer(opts) {
   this.drawHelperLinesCmd = {
     pipeline: ctx.pipeline({
       vert: `
-        attribute vec3 aPosition;
-        attribute vec4 aVertexColor;
-
-        uniform mat4 uProjectionMatrix;
-        uniform mat4 uViewMatrix;
-
-        varying vec4 vColor;
-
-        void main () {
-          vColor = aVertexColor;
-          gl_Position = uProjectionMatrix * uViewMatrix * vec4(aPosition, 1.0);
-        }
+        ${HELPER_VERT}
         `,
       frag: `
-        #ifdef GL_ES
-        precision highp float;
-        #endif
-        varying vec4 vColor;
-        void main () {
-
-        gl_FragData[0] = vColor * 2.0;
-        #ifdef USE_DRAW_BUFFERS
-          gl_FragData[1] = vec4(0.0);
-        #endif
-        }
+        ${HELPER_FRAG}
+        `,
+      depthTest: true,
+      primitive: ctx.Primitive.Lines
+    }),
+    attributes: {
+      aPosition: this.helperPositionVBuffer,
+      aVertexColor: this.helperColorVBuffer
+    },
+    count: 1
+  }
+  this.drawHelperLinesPostProcCmd = {
+    pipeline: ctx.pipeline({
+      vert: `
+        ${HELPER_VERT}
+        `,
+      frag: `       
+        ${ctx.capabilities.maxColorAttachments ? '#define USE_DRAW_BUFFERS' : '' }
+        ${HELPER_FRAG}
         `,
       depthTest: true,
       primitive: ctx.Primitive.Lines
@@ -1177,7 +1176,7 @@ Renderer.prototype.drawMeshes = function(
   }
 }
 
-Renderer.prototype.drawHelpers = function(camera, ctx) {
+Renderer.prototype.drawHelpers = function(camera, postprocessing, ctx) {
   function byEnabledAndCameraTags(component) {
     if (!component.enabled) return false
     if (!camera || !camera.entity) return true
@@ -1229,13 +1228,18 @@ Renderer.prototype.drawHelpers = function(camera, ctx) {
   })
 
   if (draw) {
+    const outputEncoding = State.rgbm
+    ? ctx.Encoding.RGBM
+    : ctx.Encoding.Linear // TODO: State.postprocess
     ctx.update(this.helperPositionVBuffer, { data: geomBuilder.positions })
     ctx.update(this.helperColorVBuffer, { data: geomBuilder.colors })
-    this.drawHelperLinesCmd.count = geomBuilder.count
-    ctx.submit(this.drawHelperLinesCmd, {
+    const cmd = postprocessing ? this.drawHelperLinesPostProcCmd : this.drawHelperLinesCmd
+    cmd.count = geomBuilder.count
+    ctx.submit(cmd, {
       uniforms: {
         uProjectionMatrix: camera.projectionMatrix,
-        uViewMatrix: camera.viewMatrix
+        uViewMatrix: camera.viewMatrix,
+        uOutputEncoding: outputEncoding
       },
       viewport: camera.viewport
     })
@@ -1362,12 +1366,12 @@ Renderer.prototype.draw = function() {
       if (postProcessingCmp && postProcessingCmp.enabled) {
         ctx.submit(postProcessingCmp._drawFrameFboCommand, () => {
           this.drawMeshes(camera, false, null, null, skyboxes[0], false)
-          this.drawHelpers(camera, ctx)
+          this.drawHelpers(camera, true, ctx)
         })
       } else {
         ctx.submit({ viewport: camera.viewport }, () => {
           this.drawMeshes(camera, false, null, null, skyboxes[0], true)
-          this.drawHelpers(camera, ctx)
+          this.drawHelpers(camera, false, ctx)
         })
       }
       if (State.profiler) State.profiler.timeEnd('drawFrame')
