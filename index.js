@@ -190,7 +190,7 @@ function Renderer(opts) {
         ${HELPER_VERT}
         `,
       frag: `       
-        ${ctx.capabilities.maxColorAttachments ? '#define USE_DRAW_BUFFERS' : '' }
+        ${ctx.capabilities.maxColorAttachments > 1 ? '#define USE_DRAW_BUFFERS' : '' }
         ${HELPER_FRAG}
         `,
       depthTest: true,
