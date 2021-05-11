@@ -18,8 +18,15 @@ const axisHelper = require('../helpers/axis-helper')
 
 const MODELS_PATH =
   'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0'
+// 'assets/models'
 
 const ASSETS_DIR = isBrowser ? 'assets' : path.join(__dirname, 'assets')
+
+const FORMAT_EXTENSION = new Map()
+  .set('glTF', 'gltf')
+  .set('glTF-Binary', 'glb')
+  .set('glTF-Draco', 'gltf')
+  .set('glTF-Embedded', 'gltf')
 
 const State = {
   sunPosition: [2, 2, 2],
@@ -29,15 +36,9 @@ const State = {
   showBoundingBoxes: false,
   useEnvMap: true,
   shadows: false,
-  formats: ['glTF', 'glTF-Binary', 'glTF-Draco', 'glTF-Embedded'],
+  formats: Array.from(FORMAT_EXTENSION.keys()),
   currentFormat: 0
 }
-
-const FORMAT_EXTENSION = new Map()
-  .set('glTF', 'gltf')
-  .set('glTF-Binary', 'glb')
-  .set('glTF-Draco', 'gltf')
-  .set('glTF-Embedded', 'gltf')
 
 // Utils
 const positions = [[0, 0, 0], [0, 0, 0]]
@@ -201,10 +202,7 @@ const addEnvmap = async () => {
 
 if (State.useEnvMap) addEnvmap()
 
-
-const axesEntity = renderer.entity([
-  axisHelper()
-])
+const axesEntity = renderer.entity([axisHelper()])
 renderer.add(axesEntity)
 
 const lineBuilder = renderer.entity([
@@ -598,9 +596,12 @@ window.addEventListener('resize', () => {
     width: W,
     height: H
   })
-  cameraEntity.getComponent('Camera').set({
-    viewport: [0, 0, W, H]
-  })
+
+  if (cameraEntity) {
+    cameraEntity.getComponent('Camera').set({
+      viewport: [0, 0, W, H]
+    })
+  }
 })
 
 window.addEventListener('keypress', (e) => {

@@ -1,0 +1,13 @@
+BarramundiFish: https://github.com/google/model-viewer/tree/master/packages/shared-assets/models
+
+FlightHelmet: https://github.com/cx20/gltf-test/tree/master/tutorialModels/FlightHelmet/glTF-BasisU
+
+Avocado: https://github.com/KhronosGroup/glTF/issues/1750#issuecomment-583715322
+
+FlightHelmet ktx2:
+- https://github.com/KhronosGroup/glTF/issues/1750#issuecomment-665965234
+- https://drive.google.com/drive/folders/1oIHf65_KxjefkRZWUkeBGImxigxYPTzD
+
+Sponza ktx2:
+- https://github.com/KhronosGroup/glTF/issues/1750#issuecomment-665965234
+- https://drive.google.com/drive/folders/1GjrffYOL8O71PUDYryhFi7Hz1vCOJcGC

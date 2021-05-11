@@ -27,7 +27,7 @@
     "next-power-of-two": "^1.0.0",
     "parse-hdr": "^1.0.0",
     "pex-color": "^1.1.1",
-    "pex-context": "^2.10.3",
+    "pex-context": "github:pex-gl/pex-context#99-compressed-texture",
     "pex-gen": "^0.1.2",
     "pex-gui": "^2.4.0",
     "pex-io": "^2.1.0",

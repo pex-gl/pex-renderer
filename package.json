@@ -32,11 +32,13 @@
     "url": "https://github.com/pex-gl/pex-renderer/issues"
   },
   "dependencies": {
+    "assert": "^2.0.0",
     "debug": "^4.1.1",
     "geom-builder": "^2.1.0",
     "hammersley": "^1.0.0",
     "interpolate-angle": "^1.0.2",
     "is-browser": "^2.1.0",
+    "ktx-parse": "^0.2.1",
     "latlon-to-xyz": "^1.0.1",
     "mouse-event-offset": "^3.0.2",
     "pex-geom": "^2.0.2",
@@ -45,7 +47,8 @@
     "pex-random": "^1.0.1",
     "primitive-quad": "^2.0.0",
     "signals": "^1.0.0",
-    "xyz-to-latlon": "^1.0.2"
+    "xyz-to-latlon": "^1.0.2",
+    "zstddec": "^0.0.2"
   },
   "devDependencies": {
     "eslint": "^5.15.1",
