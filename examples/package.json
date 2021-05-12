@@ -14,10 +14,9 @@
   "license": "MIT",
   "dependencies": {
     "angle-normals": "^1.0.0",
-    "async": "^3.1.0",
     "cosine-gradient": "^0.3.0",
     "fit-rect": "^1.0.3",
-    "geom-center-and-normalize": "^1.0.2",
+    "geom-center-and-normalize": "^1.0.3",
     "geom-edges": "^1.2.0",
     "geom-normals": "^1.0.1",
     "geom-parse-obj": "^1.0.0",
@@ -27,7 +26,7 @@
     "next-power-of-two": "^1.0.0",
     "parse-hdr": "^1.0.0",
     "pex-color": "^1.1.1",
-    "pex-context": "^2.10.3",
+    "pex-context": "^2.10.4",
     "pex-gen": "^0.1.2",
     "pex-gui": "^2.4.0",
     "pex-io": "^2.1.0",
@@ -36,19 +35,18 @@
     "primitive-box": "^1.0.0",
     "primitive-capsule": "^3.0.1",
     "primitive-cube": "^2.0.1",
-    "primitive-plane": "^2.0.0",
     "primitive-rounded-cube": "^1.0.2",
     "primitive-sphere": "^3.0.0"
   },
   "devDependencies": {
-    "glob": "^7.1.4",
-    "mkdirp": "^0.5.1",
-    "pixelmatch": "^5.0.2",
-    "pngjs": "^3.4.0",
-    "puppeteer": "^1.19.0",
+    "glob": "^7.1.7",
+    "mkdirp": "^1.0.4",
+    "pixelmatch": "^5.2.1",
+    "pngjs": "^6.0.0",
+    "puppeteer": "^9.1.1",
     "request": "^2.88.0",
-    "webpack": "^4.39.3",
-    "webpack-cli": "^3.3.8",
-    "webpack-dev-server": "^3.8.0"
+    "webpack": "^4.46.0",
+    "webpack-cli": "^3.3.12",
+    "webpack-dev-server": "^3.11.2"
   }
 }
