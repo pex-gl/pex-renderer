@@ -187,8 +187,8 @@ function getPexMaterialTexture(materialTexture, gltf, ctx, encoding) {
     if (!utils.isPowerOfTwo(img.width) || !utils.isPowerOfTwo(img.height)) {
       // https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/README.md#samplers
       if (
-        sampler.wrapS !== ctx.Wrap.Clamp ||
-        sampler.wrapT !== ctx.Wrap.Clamp ||
+        sampler.wrapS !== ctx.Wrap.ClampToEdge ||
+        sampler.wrapT !== ctx.Wrap.ClampToEdge ||
         hasMipMap
       ) {
         const canvas2d = document.createElement('canvas')
