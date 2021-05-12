@@ -2,6 +2,11 @@ const Signal = require('signals')
 const mat4 = require('pex-math/mat4')
 const vec3 = require('pex-math/vec3')
 
+function normalizePlane(plane) {
+  const mag = vec3.length(plane)
+  return plane.map((p) => p / mag)
+}
+
 function Camera(opts) {
   const gl = opts.ctx.gl
   this.type = 'Camera'
@@ -53,6 +58,7 @@ function Camera(opts) {
   }
 
   this.viewport = [0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight]
+  this.frustum = []
   this.view = null
 
   this.set(opts)
@@ -221,6 +227,17 @@ Camera.prototype.update = function() {
   mat4.set(this.inverseViewMatrix, this.entity.transform.modelMatrix)
   mat4.set(this.viewMatrix, this.entity.transform.modelMatrix)
   mat4.invert(this.viewMatrix)
+
+  const m = mat4.mult(mat4.copy(this.projectionMatrix), this.viewMatrix)
+
+  this.frustum = [
+    normalizePlane([m[3] - m[0], m[7] - m[4], m[11] - m[8], m[15] - m[12]]), // -x
+    normalizePlane([m[3] + m[0], m[7] + m[4], m[11] + m[8], m[15] + m[12]]), // +x
+    normalizePlane([m[3] + m[1], m[7] + m[5], m[11] + m[9], m[15] + m[13]]), // +y
+    normalizePlane([m[3] - m[1], m[7] - m[5], m[11] - m[9], m[15] - m[13]]), // -y
+    normalizePlane([m[3] - m[2], m[7] - m[6], m[11] - m[10], m[15] - m[14]]), // +z (far)
+    normalizePlane([m[3] + m[2], m[7] + m[6], m[11] + m[10], m[15] + m[14]]) // -z (near)
+  ]
 }
 
 module.exports = function createCamera(opts) {

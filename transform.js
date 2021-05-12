@@ -52,6 +52,10 @@ function aabbFromPoints(aabb, points) {
   return aabb
 }
 
+function distanceFromPlaneToPoint(plane, point) {
+  return vec3.dot(plane, point) + plane[3]
+}
+
 var tempMat4multQuatMat4 = mat4.create()
 function mat4multQuat(m, q) {
   mat4.fromQuat(tempMat4multQuatMat4, q)
@@ -96,6 +100,23 @@ Transform.prototype.set = function(opts) {
   }
   Object.assign(this, opts)
   Object.keys(opts).forEach((prop) => this.changed.dispatch(prop))
+}
+
+Transform.prototype.isInFrustum = function(planes) {
+  for (let i = 0; i < planes.length; i++) {
+    const plane = planes[i]
+    const point = [
+      plane[0] >= 0 ? this.worldBounds[1][0] : this.worldBounds[0][0],
+      plane[1] >= 0 ? this.worldBounds[1][1] : this.worldBounds[0][1],
+      plane[2] >= 0 ? this.worldBounds[1][2] : this.worldBounds[0][2]
+    ]
+
+    if (distanceFromPlaneToPoint(plane, point) < 0) {
+      return false
+    }
+  }
+
+  return true
 }
 
 Transform.prototype.update = function() {
