@@ -1,6 +1,9 @@
 const { loadBinary } = require('pex-io')
 
 const BasisWorker = require('./basis-worker.js')
+const WorkerPool = require('./worker-pool.js')
+
+let workerPool
 
 // Constants
 const BasisFormat = {
@@ -66,101 +69,62 @@ const getTranscoder = async (transcoderPath) =>
     await (await fetch(`${transcoderPath}basis_transcoder.wasm`)).arrayBuffer()
   ])
 
-// Worker pool helper
-let workerLimit
-let workerConfig = null
-
-let workerPool = []
-let workerNextTaskID = 1
-const taskCache = new WeakMap()
-
-const getWorker = async (taskCost) => {
-  const [workerSourceURL, transcoderBinary] = await transcoderPending
-
-  if (workerPool.length < workerLimit) {
-    const worker = new Worker(workerSourceURL)
-
-    worker._callbacks = {}
-    worker._taskLoad = 0
-
-    worker.postMessage({
-      type: 'init',
-      config: workerConfig,
-      transcoderBinary
-    })
-
-    worker.onmessage = function(e) {
-      const message = e.data
-
-      switch (message.type) {
-        case 'transcode':
-          const { type, id, hasAlpha, ...texture } = message
-          worker._callbacks[message.id].resolve({
-            compressed: texture.internalFormat !== InternalFormat.RGBAFormat,
-            ...texture
-          })
-          break
-        case 'error':
-          worker._callbacks[message.id].reject(message)
-          break
-        default:
-          // eslint-disable-next-line no-console
-          console.error(message)
-      }
-    }
-
-    workerPool.push(worker)
-  } else {
-    workerPool.sort((a, b) => (a._taskLoad > b._taskLoad ? -1 : 1))
-  }
-
-  const worker = workerPool[workerPool.length - 1]
-  worker._taskLoad += taskCost
-  return worker
-}
-
 // Texture creation
-const loadCompressedTexture = async (buffers, config) => {
-  let worker
-  let taskID
+const loadCompressedTexture = async (buffers, taskConfig = {}) => {
+  const taskKey = JSON.stringify(taskConfig)
 
-  let taskConfig = config || {}
+  const cachedTask = workerPool.hasTask(taskKey, buffers[0])
+  if (cachedTask) return cachedTask
+
+  let worker
+  let taskId
   let taskCost = 0
 
   for (let i = 0; i < buffers.length; i++) {
     taskCost += buffers[i].byteLength
   }
 
-  const texturePending = getWorker(taskCost).then((_worker) => {
-    worker = _worker
-    taskID = workerNextTaskID++
+  const texturePending = workerPool
+    .getWorker(transcoderPending, taskCost)
+    .then((workerData) => {
+      ;({ worker: worker, taskId: taskId } = workerData)
 
-    return new Promise((resolve, reject) => {
-      worker._callbacks[taskID] = { resolve, reject }
+      return new Promise((resolve, reject) => {
+        worker._callbacks[taskId] = { resolve, reject }
 
-      worker.postMessage(
-        {
-          type: 'transcode',
-          id: taskID,
-          buffers: buffers,
-          taskConfig: taskConfig
-        },
-        buffers
-      )
+        worker.postMessage(
+          {
+            type: 'decode',
+            id: taskId,
+            taskConfig,
+            buffers
+          },
+          buffers
+        )
+      })
     })
-  })
+    .then((message) => {
+      const { type, id, hasAlpha, ...texture } = message
 
-  // Note: replaced '.finally()' with '.catch().then()' block - iOS 11 support (#19416)
-  texturePending
-    .catch(() => true)
-    .then(() => {
-      if (worker && taskID) {
-        worker._taskLoad -= taskCost
-        delete worker._callbacks[taskID]
+      return {
+        compressed: texture.internalFormat !== InternalFormat.RGBAFormat,
+        ...texture
       }
     })
 
-  taskCache.set(buffers[0], { promise: texturePending })
+  // Remove task from the task list.
+  texturePending
+    .catch(() => true)
+    .then(() => {
+      if (worker && taskId) {
+        workerPool.releaseTask(worker, taskId)
+      }
+    })
+
+  workerPool.taskCache.set(buffers[0], {
+    key: taskKey,
+    promise: texturePending
+  })
 
   return texturePending
 }
@@ -172,22 +136,20 @@ async function loadBasis(
   {
     transcoderPath = 'assets/',
     transcodeConfig = {},
-    workerLimit: limit = 4,
-    workerConfig: config = {}
+    workerLimit,
+    workerConfig = {
+      astcSupported: !!gl.getExtension('WEBGL_compressed_texture_astc'),
+      etc1Supported: !!gl.getExtension('WEBGL_compressed_texture_etc1'),
+      etc2Supported: !!gl.getExtension('WEBGL_compressed_texture_etc'),
+      dxtSupported: !!gl.getExtension('WEBGL_compressed_texture_s3tc'),
+      bptcSupported: !!gl.getExtension('EXT_texture_compression_bptc'),
+      pvrtcSupported:
+        !!gl.getExtension('WEBGL_compressed_texture_pvrtc') ||
+        !!gl.getExtension('WEBKIT_WEBGL_compressed_texture_pvrtc')
+    }
   } = {}
 ) {
-  workerLimit = limit
-  workerConfig = {
-    astcSupported: !!gl.getExtension('WEBGL_compressed_texture_astc'),
-    etc1Supported: !!gl.getExtension('WEBGL_compressed_texture_etc1'),
-    etc2Supported: !!gl.getExtension('WEBGL_compressed_texture_etc'),
-    dxtSupported: !!gl.getExtension('WEBGL_compressed_texture_s3tc'),
-    bptcSupported: !!gl.getExtension('EXT_texture_compression_bptc'),
-    pvrtcSupported:
-      !!gl.getExtension('WEBGL_compressed_texture_pvrtc') ||
-      !!gl.getExtension('WEBKIT_WEBGL_compressed_texture_pvrtc'),
-    ...config
-  }
+  if (!workerPool) workerPool = new WorkerPool(workerLimit, workerConfig)
 
   transcoderPending = getTranscoder(transcoderPath)
 
@@ -198,12 +160,6 @@ async function loadBasis(
     : data instanceof ArrayBuffer
     ? [data]
     : [await loadBinary(data)]
-
-  // TODO: same logic for many buffers
-  if (!hasManyBuffers && taskCache.has(buffers[0])) {
-    const cachedTask = taskCache.get(buffers[0])
-    return cachedTask.promise
-  }
 
   return await loadCompressedTexture(buffers, transcodeConfig)
 }

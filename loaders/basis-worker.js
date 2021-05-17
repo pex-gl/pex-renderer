@@ -13,7 +13,7 @@ function BasisWorker(InternalFormat, TranscoderFormat, BasisFormat) {
         config = message.config
         transcoderPending = new Promise((resolve) => {
           BasisModule = {
-            wasmBinary: message.transcoderBinary,
+            wasmBinary: config.wasmBinary,
             onRuntimeInitialized: resolve
           }
           BASIS(BasisModule)
@@ -22,7 +22,7 @@ function BasisWorker(InternalFormat, TranscoderFormat, BasisFormat) {
         })
         break
 
-      case 'transcode':
+      case 'decode':
         transcoderPending.then(() => {
           try {
             const { width, height, hasAlpha, data, internalFormat } = message
@@ -38,7 +38,7 @@ function BasisWorker(InternalFormat, TranscoderFormat, BasisFormat) {
 
             self.postMessage(
               {
-                type: 'transcode',
+                type: 'decode',
                 id: message.id,
                 width,
                 height,
