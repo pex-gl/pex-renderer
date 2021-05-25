@@ -641,7 +641,7 @@ function handleNode(node, gltf, i, ctx, renderer, options) {
   return node.entity
 }
 
-function handleAnimation(animation, gltf, renderer) {
+function handleAnimation(animation, gltf, renderer, index) {
   // https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/schema/animation.schema.json
   // https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/schema/animation.channel.schema.json
   const channels = animation.channels.map((channel) => {
@@ -684,9 +684,10 @@ function handleAnimation(animation, gltf, renderer) {
   })
 
   return renderer.animation({
-    channels: channels,
-    autoplay: true,
-    loop: true
+    name: animation.name || `animation_${index}`,
+    channels: channels
+    // autoplay: true,
+    // loop: true
   })
 }
 
@@ -1006,8 +1007,13 @@ async function loadGltf(url, renderer, options = {}) {
     })
 
     if (json.animations) {
-      json.animations.forEach((animation) => {
-        const animationComponent = handleAnimation(animation, json, renderer)
+      json.animations.forEach((animation, index) => {
+        const animationComponent = handleAnimation(
+          animation,
+          json,
+          renderer,
+          index
+        )
         scene.root.addComponent(animationComponent)
       })
     }

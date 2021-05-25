@@ -11,6 +11,7 @@ const createTransform = require('./transform')
 const createSkin = require('./skin')
 const createMorph = require('./morph')
 const createAnimation = require('./animation')
+const createAnimationMixer = require('./animation-mixer')
 const createGeometry = require('./geometry')
 const createMaterial = require('./material')
 const createCamera = require('./camera')
@@ -189,8 +190,12 @@ function Renderer(opts) {
       vert: `
         ${HELPER_VERT}
         `,
-      frag: `       
-        ${ctx.capabilities.maxColorAttachments > 1 ? '#define USE_DRAW_BUFFERS' : '' }
+      frag: `
+        ${
+          ctx.capabilities.maxColorAttachments > 1
+            ? '#define USE_DRAW_BUFFERS'
+            : ''
+        }
         ${HELPER_FRAG}
         `,
       depthTest: true,
@@ -961,7 +966,8 @@ Renderer.prototype.drawMeshes = function(
     if (!geometry._attributes.aPosition) {
       continue
     }
-    const material = geometry.entity.getComponent('Material') || this._defaultMaterial
+    const material =
+      geometry.entity.getComponent('Material') || this._defaultMaterial
     if (!material.enabled || (material.blend && shadowMapping)) {
       continue
     }
@@ -1228,12 +1234,12 @@ Renderer.prototype.drawHelpers = function(camera, postprocessing, ctx) {
   })
 
   if (draw) {
-    const outputEncoding = State.rgbm
-    ? ctx.Encoding.RGBM
-    : ctx.Encoding.Linear // TODO: State.postprocess
+    const outputEncoding = State.rgbm ? ctx.Encoding.RGBM : ctx.Encoding.Linear // TODO: State.postprocess
     ctx.update(this.helperPositionVBuffer, { data: geomBuilder.positions })
     ctx.update(this.helperColorVBuffer, { data: geomBuilder.colors })
-    const cmd = postprocessing ? this.drawHelperLinesPostProcCmd : this.drawHelperLinesCmd
+    const cmd = postprocessing
+      ? this.drawHelperLinesPostProcCmd
+      : this.drawHelperLinesCmd
     cmd.count = geomBuilder.count
     ctx.submit(cmd, {
       uniforms: {
@@ -1280,7 +1286,10 @@ Renderer.prototype.draw = function() {
     if (probe.dirty) {
       probe.update((camera, encoding) => {
         if (skyboxes.length > 0) {
-          skyboxes[0].draw(camera, { outputEncoding: encoding, backgroundMode: false })
+          skyboxes[0].draw(camera, {
+            outputEncoding: encoding,
+            backgroundMode: false
+          })
         }
       })
     }
@@ -1522,6 +1531,10 @@ Renderer.prototype.morph = function(opts) {
 
 Renderer.prototype.animation = function(opts) {
   return createAnimation(Object.assign({ ctx: this._ctx }, opts))
+}
+
+Renderer.prototype.animationMixer = function(opts) {
+  return createAnimationMixer(Object.assign({ ctx: this._ctx }, opts))
 }
 
 Renderer.prototype.geometry = function(opts) {
