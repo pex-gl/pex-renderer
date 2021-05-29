@@ -18,6 +18,11 @@ function Animation(opts) {
   this.playing = false
   this.loop = false
   this.time = 0 // seconds
+  this.duration = 0 // seconds
+  // Delegate applying transformation of target to the mixer
+  this.mixed = false
+  // Influence of this action, used to blend between several actions
+  this.weight = 1
   this.prevTime = Date.now() // ms
   this.channels = opts.channels || []
   this.changed = new Signal()
@@ -35,6 +40,7 @@ Animation.prototype.set = function(opts) {
 
   if (opts.autoplay || opts.playing) {
     this.playing = true
+    this.duration = this.channels[0].input[this.channels[0].input.length - 1]
     // reset timer to avoid jumps
     this.time = 0
     this.prevTime = Date.now()
@@ -43,23 +49,64 @@ Animation.prototype.set = function(opts) {
   this.needsUpdate = true
 }
 
+Animation.prototype.fadeIn = function(duration) {
+  const now = Date.now()
+  this.startFadeTime = now
+  this.endFadeTime = now + duration
+  this.weight = 0
+  this.startFadeWeight = this.weight
+  this.endFadeWeight = 1
+}
+Animation.prototype.fadeOut = function(duration) {
+  const now = Date.now()
+  this.startFadeTime = now
+  this.endFadeTime = now + duration
+  this.startFadeWeight = this.weight
+  this.endFadeWeight = 0
+}
+
 Animation.prototype.update = function() {
   if (!this.enabled) return
 
-
+  // TODO: maybe move all time and loop related code to animation-mixer?
   if (this.playing) {
-    const animationLength = this.channels[0].input[
-      this.channels[0].input.length - 1
-    ]
     const now = Date.now()
     const deltaTime = (now - this.prevTime) / 1000
 
     this.prevTime = now
     this.time += deltaTime
 
-    if (this.time > animationLength) {
+    if (this.mixed && this.startFadeTime) {
+      // Interpolate weight
+      const t =
+        (now - this.startFadeTime) / (this.endFadeTime - this.startFadeTime)
+      const currentWeight =
+        this.startFadeWeight + t * (this.endFadeWeight - this.startFadeWeight)
+
+      this.weight = currentWeight
+
+
+      if (currentWeight >= 1) {
+        this.startFadeTime = null
+        this.endFadeTime = null
+        this.startFadeWeight = null
+        this.endFadeWeight = null
+        this.weight = 1
+      } else if (currentWeight <= 0) {
+        this.time = 0
+        // TODO: Is this the right place to reset?
+        this.set({ playing: false, weight: 1 })
+
+        this.startFadeTime = null
+        this.endFadeTime = null
+        this.startFadeWeight = null
+        this.endFadeWeight = null
+      }
+    }
+
+    if (this.time > this.duration) {
       if (this.loop) {
-        this.time %= animationLength
+        this.time %= this.duration
       } else {
         this.time = 0
         this.set({ playing: false })
@@ -92,7 +139,7 @@ Animation.prototype.update = function() {
     const outputData = channel.output
     const prevInput = inputData[prevIndex]
     const nextInput = inputData[nextIndex]
-    const scale = nextInput - prevInput
+    const scale = nextInput - prevInput || 1
 
     const t = (this.time - prevInput) / scale
 
@@ -172,21 +219,51 @@ Animation.prototype.update = function() {
       }
 
       if (isRotation) {
-        channel.target.transform.set({
-          rotation: quat.copy(currentOutputQuat)
-        })
+        const rotation = quat.copy(currentOutputQuat)
+        // TODO: make more general (enforcing animation mixer?)
+        if (this.mixed) {
+          // They need to be reset on every frame (done in mixer)
+          channel.target.rotations = channel.target.rotations || []
+          // TODO: adding value to array object, this is ugly
+          rotation.weight = this.weight
+          channel.target.rotations.push(rotation)
+        } else {
+          channel.target.transform.set({
+            rotation
+          })
+        }
       } else if (channel.path === 'translation') {
-        channel.target.transform.set({
-          position: vec3.copy(currentOutputVec3)
-        })
+        const position = vec3.copy(currentOutputVec3)
+        if (this.mixed) {
+          channel.target.positions = channel.target.positions || []
+          position.weight = this.weight
+          channel.target.positions.push(position)
+        } else {
+          channel.target.transform.set({
+            position
+          })
+        }
       } else if (channel.path === 'scale') {
-        channel.target.transform.set({
-          scale: vec3.copy(currentOutputVec3)
-        })
+        const scale = vec3.copy(currentOutputVec3)
+        if (this.mixed) {
+          channel.target.scales = channel.target.scales || []
+          scale.weight = this.weight
+          channel.target.scales.push(scale)
+        } else {
+          channel.target.transform.set({
+            scale
+          })
+        }
       } else if (channel.path === 'weights') {
-        channel.target.getComponent('Morph').set({
-          weights: outputData[nextIndex].slice()
-        })
+        const weights = outputData[nextIndex].slice()
+        if (this.mixed) {
+          channel.target.weights = channel.target.weights || []
+          channel.target.weights.push(weights)
+        } else {
+          channel.target.getComponent('Morph').set({
+            weights
+          })
+        }
       }
     }
   }
