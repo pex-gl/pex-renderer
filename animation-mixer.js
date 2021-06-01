@@ -41,14 +41,14 @@ AnimationMixer.prototype.set = function(opts) {
 }
 
 function averageWeightedQuatArray(quats) {
-  const out = quat.create()
+  const out = [...quats[0]]
   const cumulativeWeight = quats.map((q) => q.weight).reduce((a, b) => a + b, 0)
 
-  for (let i = 0; i < quats.length; i++) {
+  for (let i = 1; i < quats.length; i++) {
     const q = quats[i]
     const weight = q.weight
     // Add (mult) q scaled by their weight against the total weight
-    quat.slerp(out, q, 0.5 + 0.5 * (weight / cumulativeWeight))
+    quat.slerp(out, q, weight / cumulativeWeight)
   }
   return out
 }
