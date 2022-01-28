@@ -1,0 +1,24 @@
+/*!
+ * The buffer module from node.js, for the browser.
+ *
+ * @author   Feross Aboukhadijeh <feross@feross.org> <http://feross.org>
+ * @license  MIT
+ */
+
+/*!
+ * The buffer module from node.js, for the browser.
+ *
+ * @author   Feross Aboukhadijeh <https://feross.org>
+ * @license  MIT
+ */
+
+/*! ieee754. BSD-3-Clause License. Feross Aboukhadijeh <https://feross.org/opensource> */
+
+/** @license
+ * JS Signals <http://millermedeiros.github.com/js-signals/>
+ * Released under the MIT license
+ * Author: Miller Medeiros
+ * Version: 1.0.0 - Build: 268 (2012/11/29 05:48 PM)
+ */
+
+//![](http://www.felixgers.de/teaching/jogl/frustrum.gif)
