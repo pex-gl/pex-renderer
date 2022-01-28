@@ -49,7 +49,7 @@ async function takeScreenshots() {
       window.addEventListener(type, window.onCustomEvent)
     }, 'pex-screenshot')
 
-    await page.goto(`${url}?name=${example}&nosidebar`, { waitUntil: 'load' })
+    await page.goto(`${url}?name=${example}&screenshot`, { waitUntil: 'load' })
 
     // Reset promise
     pScreenshotEvent = new Promise((resolve) => (promiseResolve = resolve))
