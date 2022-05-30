@@ -1,6 +1,6 @@
-const SHADERS = require('../chunks/index.js')
+import SHADERS from "../chunks/index.js";
 
-module.exports = /* glsl */ `
+export default /* glsl */ `
 precision highp float;
 
 // Variables
@@ -53,4 +53,4 @@ void main() {
   float far = 10.0; // TODO: hardcoded far for depth pass
   gl_FragColor = packDepth(length(vPositionView) / far);
 }
-`
+`;

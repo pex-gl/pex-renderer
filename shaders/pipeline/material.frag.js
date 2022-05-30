@@ -1,11 +1,6 @@
-const SHADERS = require('../chunks/index.js')
+import SHADERS from "../chunks/index.js";
 
-module.exports = /* glsl */ `
-#extension GL_OES_standard_derivatives : require
-#ifdef USE_DRAW_BUFFERS
-  #extension GL_EXT_draw_buffers : enable
-#endif
-
+export default /* glsl */ `
 precision mediump float;
 
 // Variables
@@ -252,4 +247,4 @@ void main() {
     gl_FragData[0].a = data.opacity;
   #endif
 }
-`
+`;

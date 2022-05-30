@@ -8,7 +8,7 @@
  * @description Based on http://http.developer.nvidia.com/GPUGems/gpugems_ch17.html and http://gl.ict.usc.edu/Data/HighResProbes/
  */
 
-module.exports = /* glsl */ `
+export default /* glsl */ `
 vec2 envMapEquirect(vec3 wcNormal) {
   float flipEnvMap = -1.0;
 
@@ -18,4 +18,4 @@ vec2 envMapEquirect(vec3 wcNormal) {
   float theta = atan(wcNormal.x, flipEnvMap * wcNormal.z) + PI;
   return vec2(theta / TWO_PI, phi / PI);
 }
-`
+`;

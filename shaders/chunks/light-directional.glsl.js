@@ -1,4 +1,4 @@
-module.exports = /* glsl */ `
+export default /* glsl */ `
 #if NUM_DIRECTIONAL_LIGHTS > 0
 
 struct DirectionalLight {
@@ -34,4 +34,4 @@ void EvaluateDirectionalLight(inout PBRData data, DirectionalLight light, sample
   }
 }
 #endif
-`
+`;

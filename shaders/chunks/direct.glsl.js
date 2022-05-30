@@ -1,4 +1,4 @@
-module.exports = /* glsl */ `
+export default /* glsl */ `
 struct Light {
   vec3 l;
   vec4 color;
@@ -38,8 +38,8 @@ void getSurfaceShading(inout PBRData data, Light light, float illuminated) {
   float HdotV = max(0.0, dot(H, V));
 
   vec3 F = SpecularReflection(data.f0, HdotV);
-  
-  float D = MicrofacetDistribution(data.linearRoughness, NdotH);  
+
+  float D = MicrofacetDistribution(data.linearRoughness, NdotH);
   float Vis = VisibilityOcclusion(data.linearRoughness, NdotL, NdotV);
 
   //TODO: switch to linear colors
@@ -50,12 +50,12 @@ void getSurfaceShading(inout PBRData data, Light light, float illuminated) {
 
   //TODO: energy compensation
   float energyCompensation = 1.0;
-  
+
   #ifdef USE_CLEAR_COAT
     float Fcc;
     float clearCoat = clearCoatBRDF(data, H, NdotH, LdotH, Fcc);
     float attenuation = 1.0 - Fcc;
-    
+
     vec3 color = (Fd + Fr * (energyCompensation * attenuation)) * attenuation * NdotL;
 
     // direct light still uses NdotL but clear coat needs separate dot product when using normal map
@@ -64,12 +64,12 @@ void getSurfaceShading(inout PBRData data, Light light, float illuminated) {
       float clearCoatNoL = saturate(dot(data.clearCoatNormal, light.l));
       color += clearCoat * clearCoatNoL;
     #else
-      color += clearCoat * NdotL;      
-    #endif    
+      color += clearCoat * NdotL;
+    #endif
   #else
-    vec3 color = (Fd + Fr * energyCompensation) * NdotL;    
-  #endif  
+    vec3 color = (Fd + Fr * energyCompensation) * NdotL;
+  #endif
 
   data.directColor += (color * lightColor) * (light.color.a * light.attenuation * illuminated);
 }
-`
+`;

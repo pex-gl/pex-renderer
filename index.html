@@ -1,16 +1,16 @@
+<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta http-equiv="X-UA-Compatible" content="ie=edge" />
-    <title>PEX - Examples</title>
+    <title>pex-renderer by pex-gl (https://github.com/pex-gl)</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap"
       rel="stylesheet"
     />
-
     <style>
       :root {
         --font-heading: 'Space Grotesk', sans-serif;
@@ -155,6 +155,9 @@
         <div class="Example"></div>
       </div>
     </main>
-    <script src="build/main.js"></script>
+    <script async src="web_modules/es-module-shims.js" type="module"></script>
+    <script src="web_modules/import-map.json" type="importmap-shim"></script>
+
+    <script src="./examples/index.js" type="module-shim"></script>
   </body>
 </html>

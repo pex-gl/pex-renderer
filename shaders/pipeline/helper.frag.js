@@ -1,6 +1,6 @@
-const SHADERS = require('../chunks/index.js')
+import SHADERS from "../chunks/index.js";
 
-module.exports = /* glsl */ `
+export default /* glsl */ `
 #ifdef USE_DRAW_BUFFERS
   #extension GL_EXT_draw_buffers : enable
 #endif
@@ -25,4 +25,4 @@ void main () {
   gl_FragData[0] = vColor;
 #endif
 }
-`
+`;

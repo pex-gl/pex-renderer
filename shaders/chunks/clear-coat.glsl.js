@@ -1,4 +1,4 @@
-module.exports = /* glsl */ `
+export default /* glsl */ `
 #ifdef USE_CLEAR_COAT
   uniform float uClearCoat;
   uniform float uClearCoatRoughness;
@@ -50,7 +50,7 @@ module.exports = /* glsl */ `
 
 
   // IOR = 1.5, F0 = 0.04
-  // as material is no longer in contact with air we calculate new IOR on the 
+  // as material is no longer in contact with air we calculate new IOR on the
   // clear coat and material interface
   vec3 f0ClearCoatToSurface(const vec3 f0) {
     return saturate(f0 * (f0 * (0.941892 - 0.263008 * f0) + 0.346479) - 0.0285998);
@@ -71,4 +71,4 @@ module.exports = /* glsl */ `
     return D * V * F;
   }
 #endif
-`
+`;

@@ -1,4 +1,4 @@
-module.exports = /* glsl */ `
+export default /* glsl */ `
 #ifdef USE_METALLIC_ROUGHNESS_WORKFLOW
 
   // Source: Google/Filament/Overview/4.8.3.3 Roughness remapping and clamping, 07/2019
@@ -76,4 +76,4 @@ module.exports = /* glsl */ `
     #endif
   #endif
 #endif
-`
+`;

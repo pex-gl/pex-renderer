@@ -1,4 +1,4 @@
-module.exports = /* glsl */ `
+export default /* glsl */ `
   attribute vec3 aPosition;
   attribute vec4 aVertexColor;
 
@@ -11,4 +11,4 @@ module.exports = /* glsl */ `
     vColor = aVertexColor;
     gl_Position = uProjectionMatrix * uViewMatrix * vec4(aPosition, 1.0);
   }
-`
+`;

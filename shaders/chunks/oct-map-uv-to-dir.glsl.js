@@ -1,4 +1,4 @@
-module.exports = /* glsl */ `
+export default /* glsl */ `
 vec2 signed(vec2 v) {
   return step(0.0, v) * 2.0 - 1.0;
 }
@@ -58,4 +58,4 @@ vec3 octMapUVToDir (vec2 uv) {
   }
   return normalize(vec3(uv.x, 1.0 - len, uv.y));
 }
-`
+`;

@@ -1,4 +1,4 @@
-module.exports = /* glsl */ `
+export default /* glsl */ `
 float A = 0.15;
 float B = 0.50;
 float C = 0.10;
@@ -19,4 +19,4 @@ vec3 tonemapUncharted2(vec3 color) {
   vec3 whiteScale = 1.0 / Uncharted2Tonemap(vec3(W));
   return curr * whiteScale;
 }
-`
+`;

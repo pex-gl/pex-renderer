@@ -1,4 +1,4 @@
-module.exports = /* glsl */ `
+export default /* glsl */ `
 #ifdef USE_ALPHA_MAP
   uniform sampler2D uAlphaMap;
 
@@ -16,4 +16,4 @@ module.exports = /* glsl */ `
     // else data.baseColor = vec3(1.0, 0.0, 0.0);
   }
 #endif
-`
+`;

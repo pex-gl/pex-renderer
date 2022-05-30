@@ -1,6 +1,6 @@
-const SHADERS = require('../chunks/index.js')
+import SHADERS from "../chunks/index.js";
 
-module.exports = /* glsl */ `
+export default /* glsl */ `
 // Variables
 attribute vec3 aPosition;
 
@@ -166,4 +166,4 @@ void main() {
 #endif
   gl_PointSize = uPointSize;
 }
-`
+`;

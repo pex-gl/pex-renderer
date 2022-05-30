@@ -1,4 +1,4 @@
-module.exports = /* glsl */ `
+export default /* glsl */ `
 #if NUM_AREA_LIGHTS > 0
 
 struct AreaLight {
@@ -113,6 +113,7 @@ int modi(int x, int y)
     return int(mod(float(x), float(y)));
 }
 
+#if (__VERSION__ < 300)
 mat3 transpose(mat3 v)
 {
     mat3 tmp;
@@ -122,6 +123,7 @@ mat3 transpose(mat3 v)
 
     return tmp;
 }
+#endif
 
 struct SphQuad
 {
@@ -528,4 +530,4 @@ void EvaluateAreaLight(inout PBRData data, AreaLight light, float ao) {
   data.indirectSpecular += ao * evalAreaLight(light, data.positionWorld, data.normalWorld, data.baseColor, data.f0, data.roughness);
 }
 #endif
-`
+`;

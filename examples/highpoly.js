@@ -1,77 +1,82 @@
-const createRenderer = require('../')
-const createContext = require('pex-context')
-const vec3 = require('pex-math/vec3')
-const GUI = require('pex-gui')
-const random = require('pex-random')
-const normals = require('geom-normals')
-const createSphere = require('primitive-sphere')
+import createRenderer from "../index.js";
 
-const ctx = createContext()
-const renderer = createRenderer(ctx)
+import createContext from "pex-context";
+import { vec3 } from "pex-math";
+import createGUI from "pex-gui";
+import random from "pex-random";
 
-const gui = new GUI(ctx)
-gui.addFPSMeeter()
-gui.addHeader('Meshes')
+import { sphere } from "primitive-geometry";
+import { computeNormals } from "./utils.js";
 
-random.seed(0)
+const ctx = createContext();
+const renderer = createRenderer(ctx);
+
+const gui = createGUI(ctx);
+gui.addFPSMeeter();
+gui.addHeader("Meshes");
+
+random.seed(0);
 
 const cameraEntity = renderer.entity([
   renderer.camera({
     fov: Math.PI / 2,
-    aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight
+    aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
   }),
   renderer.orbiter({
-    position: [0, 0, 3]
-  })
-])
-renderer.add(cameraEntity)
+    position: [0, 0, 3],
+  }),
+]);
+renderer.add(cameraEntity);
 
-const sphere = createSphere(1, { segments: 400 })
-const scale = 1
+const geom = sphere({ radius: 1, nx: 400, ny: 400 });
+const scale = 1;
 
 function perlin(p) {
-  let s = scale
-  let n = 0
+  let s = scale;
+  let n = 0;
   for (let i = 0; i < 5; i++) {
-    n += random.noise3(p[0] * s, p[1] * s, p[2] * s) / s
-    s *= 2
+    n += random.noise3(p[0] * s, p[1] * s, p[2] * s) / s;
+    s *= 2;
   }
-  return n
+  return n;
 }
-for (let i = 0; i < sphere.positions.length; i++) {
-  const p = sphere.positions[i]
-  const n = perlin(p)
-  vec3.addScaled(p, sphere.normals[i], n * 0.1)
-}
-sphere.normals = normals(sphere.positions, sphere.cells)
 
-sphere.cells = new Uint32Array(sphere.cells.flat())
+for (let i = 0; i < geom.positions.length / 3; i++) {
+  const index = i * 3;
+  const position = geom.positions.slice(index, index + 3);
+  const normal = geom.normals.slice(index, index + 3);
+  const n = perlin(position);
+  vec3.addScaled(position, normal, n * 0.1);
+  geom.positions.set(position, index);
+}
+
+geom.normals = computeNormals(geom.positions, geom.cells);
 
 const sphereEntity = renderer.entity([
   renderer.transform({ position: [0, 0, 0] }),
-  renderer.geometry(sphere),
+  renderer.geometry(geom),
   renderer.material({
     baseColor: [1, 0, 0, 1],
     roughness: 0.096,
     metallic: 0,
-    cullFace: false
-  })
-])
-renderer.add(sphereEntity)
-gui.addLabel('Sphere verts: ' + sphere.positions.length)
+    cullFace: false,
+  }),
+]);
+renderer.add(sphereEntity);
+gui.addLabel(`Sphere verts: ${geom.positions.length}`);
 
 const skybox = renderer.entity([
   renderer.skybox({
-    sunPosition: [1, 1, 1]
-  })
-])
-renderer.add(skybox)
+    sunPosition: [1, 1, 1],
+  }),
+]);
+renderer.add(skybox);
 
-const reflectionProbe = renderer.entity([renderer.reflectionProbe()])
-renderer.add(reflectionProbe)
+const reflectionProbe = renderer.entity([renderer.reflectionProbe()]);
+renderer.add(reflectionProbe);
 
 ctx.frame(() => {
-  renderer.draw()
-  gui.draw()
-  window.dispatchEvent(new CustomEvent('pex-screenshot'))
-})
+  renderer.draw();
+  gui.draw();
+  window.dispatchEvent(new CustomEvent("pex-screenshot"));
+});

@@ -1,4 +1,4 @@
-module.exports = /* glsl */ `
+export default /* glsl */ `
 precision highp float;
 
 varying vec2 vTexCoord0;
@@ -38,4 +38,4 @@ void main () {
   vec4 color = (s1 * s1w + s2 * s2w + s3 * s3w + s4 * s4w) * one_div_wsum;
   gl_FragColor = color * intensity;
 }
-`
+`;

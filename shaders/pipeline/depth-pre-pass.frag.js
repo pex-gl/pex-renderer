@@ -1,6 +1,6 @@
-const SHADERS = require('../chunks/index.js')
+import SHADERS from "../chunks/index.js";
 
-module.exports = /* glsl */ `
+export default /* glsl */ `
 precision highp float;
 
 // Variables
@@ -54,4 +54,4 @@ void main() {
 
   gl_FragColor = vec4(normal * 0.5 + 0.5, 1.0);
 }
-`
+`;

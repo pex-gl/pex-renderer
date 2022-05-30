@@ -1,48 +1,45 @@
-const createRenderer = require('../')
-const createContext = require('pex-context')
-const createCube = require('primitive-cube')
-const random = require('pex-random')
+import createRenderer from "../index.js";
+import createContext from "pex-context";
+import { cube } from "primitive-geometry";
+import random from "pex-random";
 
-random.seed(0)
+random.seed(0);
 
-const ctx = createContext()
+const ctx = createContext();
 
 const renderer = createRenderer({
-  ctx: ctx
-})
+  ctx,
+});
 
 const camera = renderer.entity([
   renderer.camera({
     fov: Math.PI / 2,
     aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
     near: 0.1,
-    far: 100
+    far: 100,
   }),
-  renderer.orbiter({ position: [1, 1, 1] })
-])
-renderer.add(camera)
+  renderer.orbiter({ position: [1, 1, 1] }),
+]);
+renderer.add(camera);
 
-const geometry = createCube()
-geometry.vertexColors = geometry.uvs.map(() => [
-  random.float(),
-  random.float(),
-  random.float(),
-  0.5
-])
+const geometry = cube();
+geometry.vertexColors = new Float32Array(
+  (geometry.positions.length / 3) * 4
+).map((_, index) => (index % 4 === 0 ? 0.5 : random.float()));
 
 const cubeEntity = renderer.entity([
   renderer.geometry(geometry),
   renderer.material({
     baseColor: [1, 1, 1, 0.5],
-    unlit: true
-  })
-])
-renderer.add(cubeEntity)
+    unlit: true,
+  }),
+]);
+renderer.add(cubeEntity);
 
-const ambientLightEntity = renderer.entity([renderer.ambientLight()])
-renderer.add(ambientLightEntity)
+const ambientLightEntity = renderer.entity([renderer.ambientLight()]);
+renderer.add(ambientLightEntity);
 
 ctx.frame(() => {
-  renderer.draw()
-  window.dispatchEvent(new CustomEvent('pex-screenshot'))
-})
+  renderer.draw();
+  window.dispatchEvent(new CustomEvent("pex-screenshot"));
+});

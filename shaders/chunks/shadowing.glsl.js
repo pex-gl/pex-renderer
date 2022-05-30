@@ -1,4 +1,4 @@
-module.exports = /* glsl */ `
+export default /* glsl */ `
 
 #if NUM_DIRECTIONAL_LIGHTS > 0 || NUM_SPOT_LIGHTS > 0
 
@@ -114,4 +114,4 @@ module.exports = /* glsl */ `
     // data.directDiffuse = vec3(illuminated);
   }
 #endif
-`
+`;

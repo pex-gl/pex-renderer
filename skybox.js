@@ -1,153 +1,169 @@
-const createQuad = require('primitive-quad')
+import createQuad from "primitive-quad";
+import SKYBOX_VERT from "./shaders/skybox/skybox.vert.js";
+import SKYBOX_FRAG from "./shaders/skybox/skybox.frag.js";
+import SKYTEXTURE_VERT from "./shaders/skybox/sky-env-map.vert.js";
+import SKYTEXTURE_FRAG from "./shaders/skybox/sky-env-map.frag.js";
+import Signal from "signals";
+import { es300Fragment, es300Vertex } from "./utils.js";
 
-const SKYBOX_VERT = require('./shaders/skybox/skybox.vert.js')
-const SKYBOX_FRAG = require('./shaders/skybox/skybox.frag.js')
+class Skybox {
+  constructor(opts) {
+    this.type = "Skybox";
+    this.enabled = true;
+    this.changed = new Signal();
+    this.rgbm = false;
+    this.backgroundBlur = 0;
 
-const SKYTEXTURE_VERT = require('./shaders/skybox/sky-env-map.vert.js')
-const SKYTEXTURE_FRAG = require('./shaders/skybox/sky-env-map.frag.js')
+    const ctx = (this._ctx = opts.ctx);
 
-const Signal = require('signals')
+    this.texture = null;
+    this.diffuseTexture = null;
+    this._dirtySunPosition = true;
 
-function Skybox(opts) {
-  this.type = 'Skybox'
-  this.enabled = true
-  this.changed = new Signal()
-  this.rgbm = false
-  this.backgroundBlur = 0
+    this.set(opts);
 
-  const ctx = (this._ctx = opts.ctx)
+    const skyboxPositions = [
+      [-1, -1],
+      [1, -1],
+      [1, 1],
+      [-1, 1],
+    ];
+    const skyboxFaces = [
+      [0, 1, 2],
+      [0, 2, 3],
+    ];
 
-  this.texture = null
-  this.diffuseTexture = null
-  this._dirtySunPosition = true
-
-  this.set(opts)
-
-  const skyboxPositions = [[-1, -1], [1, -1], [1, 1], [-1, 1]]
-  const skyboxFaces = [[0, 1, 2], [0, 2, 3]]
-
-  const flags = []
-  if (ctx.capabilities.maxColorAttachments > 1) {
-    flags.push('#define USE_DRAW_BUFFERS')
-  }
-
-  this._drawCommand = {
-    name: 'Skybox.draw',
-    pipeline: ctx.pipeline({
-      vert: SKYBOX_VERT,
-      frag: flags.join('\n') + '\n' + SKYBOX_FRAG,
-      depthTest: true
-    }),
-    attributes: {
-      aPosition: ctx.vertexBuffer(skyboxPositions)
-    },
-    indices: ctx.indexBuffer(skyboxFaces),
-    uniforms: {
-      uUseTonemapping: false,
-      uExposure: 1
-    }
-  }
-
-  var quad = createQuad()
-
-  this._skyTexture = ctx.texture2D({
-    width: 512,
-    height: 256,
-    pixelFormat: this.rgbm ? ctx.PixelFormat.RGBA8 : ctx.PixelFormat.RGBA16F,
-    encoding: this.rgbm ? ctx.Encoding.RGBM : ctx.Encoding.Linear,
-    min: ctx.Filter.Linear,
-    mag: ctx.Filter.Linear
-  })
-
-  this._updateSkyTexture = {
-    name: 'Skybox.updateSkyTexture',
-    pass: ctx.pass({
-      name: 'Skybox.updateSkyTexture',
-      color: [this._skyTexture],
-      clearColor: [0, 0, 0, 0]
-    }),
-    pipeline: ctx.pipeline({
-      vert: SKYTEXTURE_VERT,
-      frag: SKYTEXTURE_FRAG
-    }),
-    uniforms: {
-      uSunPosition: [0, 0, 0]
-    },
-    attributes: {
-      aPosition: ctx.vertexBuffer(quad.positions),
-      aTexCoord0: ctx.vertexBuffer(quad.uvs)
-    },
-    indices: ctx.indexBuffer(quad.cells)
-  }
-}
-
-Skybox.prototype.init = function(entity) {
-  this.entity = entity
-}
-
-Skybox.prototype.set = function(opts) {
-  Object.assign(this, opts)
-
-  if (opts.sunPosition) {
-    this._dirtySunPosition = true
-  }
-
-  Object.keys(opts).forEach((prop) => this.changed.dispatch(prop))
-}
-
-Skybox.prototype.draw = function(camera, opts) {
-  var ctx = this._ctx
-  if (!this.texture && this._dirtySunPosition) {
-    this._dirtySunPosition = false
-    ctx.submit(this._updateSkyTexture, {
+    this._drawCommand = {
+      name: "Skybox.draw",
+      pipeline: ctx.pipeline({
+        vert: ctx.capabilities.isWebGL2
+          ? es300Vertex(SKYBOX_VERT)
+          : /* glsl */ `
+${ctx.capabilities.maxColorAttachments > 1 ? "#define USE_DRAW_BUFFERS" : ""}
+    ${SKYBOX_VERT}`,
+        frag: ctx.capabilities.isWebGL2
+          ? es300Fragment(SKYBOX_FRAG, 2)
+          : /* glsl */ `
+${ctx.capabilities.maxColorAttachments > 1 ? "#define USE_DRAW_BUFFERS" : ""}
+${SKYBOX_FRAG}`,
+        depthTest: true,
+      }),
+      attributes: {
+        aPosition: ctx.vertexBuffer(skyboxPositions),
+      },
+      indices: ctx.indexBuffer(skyboxFaces),
       uniforms: {
-        uSunPosition: this.sunPosition,
-        uRGBM: this.rgbm
-      }
-    })
+        uUseTonemapping: false,
+        uExposure: 1,
+      },
+    };
+
+    const quad = createQuad();
+
+    this._skyTexture = ctx.texture2D({
+      width: 512,
+      height: 256,
+      // pixelFormat: this.rgbm ? ctx.PixelFormat.RGBA8 : ctx.PixelFormat.RGBA16F,
+      pixelFormat: this.rgbm ? ctx.PixelFormat.RGBA8 : ctx.PixelFormat.RGBA,
+      encoding: this.rgbm ? ctx.Encoding.RGBM : ctx.Encoding.Linear,
+      min: ctx.Filter.Linear,
+      mag: ctx.Filter.Linear,
+    });
+
+    this._updateSkyTexture = {
+      name: "Skybox.updateSkyTexture",
+      pass: ctx.pass({
+        name: "Skybox.updateSkyTexture",
+        color: [this._skyTexture],
+        clearColor: [0, 0, 0, 0],
+      }),
+      pipeline: ctx.pipeline({
+        vert: SKYTEXTURE_VERT,
+        frag: SKYTEXTURE_FRAG,
+      }),
+      uniforms: {
+        uSunPosition: [0, 0, 0],
+      },
+      attributes: {
+        aPosition: ctx.vertexBuffer(quad.positions),
+        aTexCoord0: ctx.vertexBuffer(quad.uvs),
+      },
+      indices: ctx.indexBuffer(quad.cells),
+    };
   }
 
-  let texture = this.texture || this._skyTexture
-  let backgroundBlur = 0
-  if (opts.backgroundMode) {
-    if (this.backgroundTexture) {
-      texture = this.backgroundTexture
-    }
-
-    if (this.backgroundBlur > 0) {
-      backgroundBlur = this.backgroundBlur
-      if (!this._reflectionProbe) {
-        this._reflectionProbe = this.entity.renderer.getComponents(
-          'ReflectionProbe'
-        )[0]
-      }
-      if (this._reflectionProbe) {
-        texture = this._reflectionProbe._reflectionMap
-      }
-    }
+  init(entity) {
+    this.entity = entity;
   }
 
-  const postProcessingCmp = camera.entity ? camera.entity.getComponent('PostProcessing') : null
-  const useTonemapping = !(postProcessingCmp && postProcessingCmp.enabled)
-  // TODO: can we somehow avoid creating an object every frame here?
-  ctx.submit(this._drawCommand, {
-    uniforms: {
-      uProjectionMatrix: camera.projectionMatrix,
-      uViewMatrix: camera.viewMatrix,
-      uModelMatrix: this.entity.transform.modelMatrix,
-      uEnvMap: texture,
-      uEnvMapEncoding: texture.encoding,
-      uOutputEncoding: opts.outputEncoding,
-      uBackgroundBlur: backgroundBlur,
-      uUseTonemapping: opts.backgroundMode ? useTonemapping : false,
-      uExposure: opts.backgroundMode ? camera.exposure : 1
+  set(opts) {
+    Object.assign(this, opts);
+
+    if (opts.sunPosition) {
+      this._dirtySunPosition = true;
     }
-  })
+
+    Object.keys(opts).forEach((prop) => this.changed.dispatch(prop));
+  }
+
+  draw(
+    { entity, projectionMatrix, viewMatrix, exposure },
+    { backgroundMode, outputEncoding }
+  ) {
+    const ctx = this._ctx;
+    if (!this.texture && this._dirtySunPosition) {
+      this._dirtySunPosition = false;
+      ctx.submit(this._updateSkyTexture, {
+        uniforms: {
+          uSunPosition: this.sunPosition,
+          uRGBM: this.rgbm,
+        },
+      });
+    }
+
+    let texture = this.texture || this._skyTexture;
+    let backgroundBlur = 0;
+    if (backgroundMode) {
+      if (this.backgroundTexture) {
+        texture = this.backgroundTexture;
+      }
+
+      if (this.backgroundBlur > 0) {
+        backgroundBlur = this.backgroundBlur;
+        if (!this._reflectionProbe) {
+          this._reflectionProbe =
+            this.entity.renderer.getComponents("ReflectionProbe")[0];
+        }
+        if (this._reflectionProbe) {
+          texture = this._reflectionProbe._reflectionMap;
+        }
+      }
+    }
+
+    const postProcessingCmp = entity
+      ? entity.getComponent("PostProcessing")
+      : null;
+    const useTonemapping = !(postProcessingCmp && postProcessingCmp.enabled);
+    // TODO: can we somehow avoid creating an object every frame here?
+    ctx.submit(this._drawCommand, {
+      uniforms: {
+        uProjectionMatrix: projectionMatrix,
+        uViewMatrix: viewMatrix,
+        uModelMatrix: this.entity.transform.modelMatrix,
+        uEnvMap: texture,
+        uEnvMapEncoding: texture.encoding,
+        uOutputEncoding: outputEncoding,
+        uBackgroundBlur: backgroundBlur,
+        uUseTonemapping: backgroundMode ? useTonemapping : false,
+        uExposure: backgroundMode ? exposure : 1,
+      },
+    });
+  }
 }
 
-module.exports = function createSkybox(opts) {
+export default function createSkybox(opts) {
   if (!opts.sunPosition && !opts.texture) {
-    throw new Error('Skybox requires either a sunPosition or a texture')
+    throw new Error("Skybox requires either a sunPosition or a texture");
   }
-  return new Skybox(opts)
+  return new Skybox(opts);
 }

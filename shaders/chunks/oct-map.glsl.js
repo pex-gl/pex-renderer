@@ -1,4 +1,4 @@
-module.exports = /* glsl */ `
+export default /* glsl */ `
 vec2 envMapOctahedral(vec3 dir) {
   dir /= dot(vec3(1.0), abs(dir));
   // Add epsylon to avoid bottom face flickering when sampling irradiance
@@ -46,4 +46,4 @@ vec2 envMapOctahedral(vec3 dir, float mipmapLevel, float roughnessLevel) {
 
   return (uv + vec2(hOffset, vOffset)) / width;
 }
-`
+`;

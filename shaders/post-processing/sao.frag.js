@@ -1,9 +1,11 @@
-const SHADERS = require('../chunks/index.js')
+import SHADERS from "../chunks/index.js";
 
-module.exports = /* glsl */ `
+export default /* glsl */ `
 // https://gist.github.com/fisch0920/6770311
 // Updated by marcin.ignac@gmail.com 2017-05-08
-#extension GL_OES_standard_derivatives : enable
+#ifdef USE_STANDARD_DERIVATIVES
+  #extension GL_OES_standard_derivatives : require
+#endif
 
 precision mediump float;
 
@@ -189,4 +191,4 @@ void main() {
   occlusion = clamp(pow(occlusion, 1.0 + uIntensity), 0.0, 1.0);
   gl_FragColor = vec4(occlusion, occlusion, occlusion, 1.0);
 }
-`
+`;

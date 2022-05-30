@@ -1,4 +1,4 @@
-module.exports = /* glsl */ `
+export default /* glsl */ `
 #define LINEAR 1
 #define GAMMA 2
 #define SRGB 3
@@ -19,4 +19,4 @@ vec4 encode(vec4 pixel, int encoding) {
   if (encoding == RGBM) return encodeRGBM(pixel.rgb);
   return pixel;
 }
-`
+`;

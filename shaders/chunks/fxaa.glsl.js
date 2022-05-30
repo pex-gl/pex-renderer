@@ -1,5 +1,5 @@
 // https://github.com/mattdesl/glsl-fxaa
-module.exports = /* glsl */ `
+export default /* glsl */ `
 #ifndef FXAA_REDUCE_MIN
     #define FXAA_REDUCE_MIN   (1.0/ 128.0)
 #endif
@@ -85,4 +85,4 @@ vec4 fxaa(sampler2D tex, vec2 fragCoord, vec2 resolution) {
 	// compute FXAA
 	return fxaa_calc(tex, fragCoord, resolution, v_rgbNW, v_rgbNE, v_rgbSW, v_rgbSE, v_rgbM);
 }
-`
+`;

@@ -1,4 +1,4 @@
-module.exports = /* glsl */ `
+export default /* glsl */ `
 uniform vec4 uBaseColor; // TODO: gltf assumes sRGB color, not linear
 
 #ifdef USE_BASE_COLOR_MAP
@@ -45,4 +45,4 @@ uniform vec4 uBaseColor; // TODO: gltf assumes sRGB color, not linear
     #endif
   }
 #endif
-`
+`;

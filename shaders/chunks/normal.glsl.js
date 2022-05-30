@@ -1,4 +1,4 @@
-module.exports = /* glsl */ `
+export default /* glsl */ `
 #ifdef USE_NORMAL_MAP
 uniform sampler2D uNormalMap;
 uniform float uNormalScale;
@@ -60,4 +60,4 @@ void getNormal(inout PBRData data) {
   // NOP
 }
 #endif
-`
+`;

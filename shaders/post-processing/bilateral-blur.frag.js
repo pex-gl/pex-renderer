@@ -1,6 +1,6 @@
-const SHADERS = require('../chunks/index.js')
+import SHADERS from "../chunks/index.js";
 
-module.exports = /* glsl */ `
+export default /* glsl */ `
 precision highp float;
 
 varying vec2 vTexCoord;
@@ -30,7 +30,7 @@ vec4 bilateralBlur(sampler2D image, vec2 imageResolution, sampler2D depthMap, ve
 
   float centerDepth = readDepth(depthMap, uv, near, far);
   float dist = 0.0;
-  
+
   float weightSum = 0.0;
   for (float i = -8.0; i <= 8.0; i += 2.0) {
     float r = i;
@@ -49,4 +49,4 @@ void main() {
   vec2 vUV = vec2(gl_FragCoord.x / depthMapSize.x, gl_FragCoord.y / depthMapSize.y);
   gl_FragColor = bilateralBlur(image, imageSize, depthMap, depthMapSize, vUV, direction);
 }
-`
+`;

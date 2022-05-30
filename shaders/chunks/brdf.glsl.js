@@ -1,4 +1,4 @@
-module.exports = /* glsl */ `
+export default /* glsl */ `
 uniform float uReflectance;
 
 // TODO: used by clearCoat
@@ -56,7 +56,7 @@ vec3 SpecularReflection(vec3 specularColor, float HdotV) {
 }
 
 // Smith Joint GGX
-// Sometimes called Smith GGX Correlated 
+// Sometimes called Smith GGX Correlated
 // Note: Vis = G / (4 * NdotL * NdotV)
 // see Eric Heitz. 2014. Understanding the Masking-Shadowing Function in Microfacet-Based BRDFs. Journal of Computer Graphics Techniques, 3
 // see Real-Time Rendering. Page 331 to 336.
@@ -74,4 +74,4 @@ float VisibilityOcclusion(float linearRoughness, float NdotL, float NdotV) {
   return 0.0;
 }
 
-`
+`;

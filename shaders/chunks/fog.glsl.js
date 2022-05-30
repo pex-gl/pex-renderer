@@ -1,4 +1,4 @@
-module.exports = /* glsl */ `
+export default /* glsl */ `
 uniform float       uFogDensity;
 
 uniform vec3        uSunColor;
@@ -27,4 +27,4 @@ vec4 fog(vec3 rgb, float dist, vec3 rayDir, vec3 sunDir) {
 
   return vec4(mix(rgb, sunFogColor, insColor), 1.0);
 }
-`
+`;

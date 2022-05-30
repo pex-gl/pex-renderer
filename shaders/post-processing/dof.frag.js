@@ -1,5 +1,6 @@
-const SHADERS = require('../chunks/index.js')
-module.exports = /* glsl */ `
+import SHADERS from "../chunks/index.js";
+
+export default /* glsl */ `
 // based on Bokeh depth of field in a single pass
 // http://blog.tuxedolabs.com/2018/05/04/bokeh-depth-of-field-in-single-pass.html
 precision highp float;
@@ -40,7 +41,7 @@ vec3 depthOfField(vec2 texCoord, float focusDistance, float maxCoC) {
     float coc = (1.0 - focusDistance / centerDepth) * maxCoC;
     if (texCoord.x > 0.90) {
       float depth = texCoord.y * 1000.0 * 100.0; //100m
-      if (texCoord.x <= 0.95) { 
+      if (texCoord.x <= 0.95) {
         float t = (texCoord.x - 0.9) * 20.0;
         float coc = (1.0 - focusDistance / depth) * maxCoC * 10.0;
         coc = abs(coc);
@@ -106,4 +107,4 @@ void main () {
 }
 
 
-`
+`;

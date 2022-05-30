@@ -1,4 +1,4 @@
-module.exports = /* glsl */ `
+export default /* glsl */ `
 const float gamma = 2.2;
 
 // Linear
@@ -34,4 +34,4 @@ vec3 toGamma(vec3 v) {
 vec4 toGamma(vec4 v) {
   return vec4(toGamma(v.rgb), v.a);
 }
-`
+`;

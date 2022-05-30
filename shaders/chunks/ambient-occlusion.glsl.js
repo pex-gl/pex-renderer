@@ -1,4 +1,4 @@
-module.exports = /* glsl */ `
+export default /* glsl */ `
 #ifdef USE_AO
   uniform sampler2D uAO;
   uniform vec2 uScreenSize;
@@ -11,4 +11,4 @@ module.exports = /* glsl */ `
     uniform mat3 uOcclusionMapTexCoordTransform;
   #endif
 #endif
-`
+`;

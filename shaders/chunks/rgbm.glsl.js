@@ -1,6 +1,6 @@
 // source http://webglinsights.github.io/downloads/WebGL-Insights-Chapter-16.pdf
 
-module.exports = /* glsl */ `
+export default /* glsl */ `
 #define LINEAR 1
 #define GAMMA 2
 #define SRGB 3
@@ -20,4 +20,4 @@ vec4 encodeRGBM (vec3 rgb_0) {
   r.xyz /= r.a;
   return r;
 }
-`
+`;

@@ -1,6 +1,6 @@
-const SHADERS = require('../chunks/index.js')
+import SHADERS from "../chunks/index.js";
 
-module.exports = /* glsl */ `
+export default /* glsl */ `
 precision highp float;
 
 ${SHADERS.octMapUvToDir}
@@ -14,4 +14,4 @@ void main() {
   vec3 N = octMapUVToDir(vTexCoord, uTextureSize);
   gl_FragColor = textureCube(uCubemap, N);
 }
-`
+`;

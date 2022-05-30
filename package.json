@@ -1,83 +1,62 @@
 {
   "name": "pex-renderer",
   "version": "3.1.0",
-  "description": "Physically Based Renderer for Pex",
-  "main": "index.js",
-  "scripts": {
-    "lint": "npx eslint {examples/*,loaders/*,shaders/**/*,*}.js",
-    "format": "npx prettier {examples/*,loaders/*,shaders/**/*,*}.js --write",
-    "format:check": "npx prettier {examples/*,loaders/*,shaders/**/*,*}.js --check"
-  },
+  "description": "Physically based renderer (PBR) and scene graph for PEX.",
+  "keywords": [
+    "pex",
+    "renderer",
+    "webgl",
+    "3d",
+    "gltf",
+    "ecs"
+  ],
+  "homepage": "https://github.com/pex-gl/pex-renderer",
+  "bugs": "https://github.com/pex-gl/pex-renderer/issues",
+  "repository": "pex-gl/pex-renderer",
   "license": "MIT",
-  "author": {
-    "name": "Marcin Ignac",
-    "email": "marcin.ignac@gmail.com",
-    "url": "https://github.com/vorg"
-  },
+  "author": "Marcin Ignac <marcin.ignac@gmail.com> (http://marcinignac.com)",
   "contributors": [
     "Damien Seguin (https://github.com/dmnsgn)",
     "Nick Nikolov (https://github.com/nicknikolov)"
   ],
-  "keywords": [
-    "webgl",
-    "pbr",
-    "pex"
-  ],
-  "repository": {
-    "type": "git",
-    "url": "git://github.com/pex-gl/pex-renderer.git"
-  },
-  "homepage": "https://github.com/pex-gl/pex-renderer",
-  "bugs": {
-    "url": "https://github.com/pex-gl/pex-renderer/issues"
+  "type": "module",
+  "exports": "./index.js",
+  "main": "index.js",
+  "types": "types/index.d.ts",
+  "scripts": {
+    "build": "snowdev build",
+    "dev": "snowdev dev",
+    "release": "snowdev release"
   },
   "dependencies": {
-    "debug": "^4.1.1",
     "geom-builder": "^2.1.0",
     "hammersley": "^1.0.0",
-    "interpolate-angle": "^1.0.2",
-    "is-browser": "^2.1.0",
-    "latlon-to-xyz": "^1.0.1",
-    "mouse-event-offset": "^3.0.2",
-    "pex-geom": "^2.0.2",
-    "pex-io": "^2.1.0",
-    "pex-math": "^3.0.0-2",
-    "pex-random": "^1.0.1",
+    "pex-cam": "github:pex-gl/pex-cam#v3",
+    "pex-geom": "github:pex-gl/pex-geom#v3",
+    "pex-io": "github:pex-gl/pex-io#v3",
+    "pex-math": "github:pex-gl/pex-math#v4",
+    "pex-random": "github:pex-gl/pex-random#v2",
     "primitive-quad": "^2.0.0",
-    "signals": "^1.0.0",
-    "xyz-to-latlon": "^1.0.2"
+    "signals": "^1.0.0"
   },
   "devDependencies": {
-    "eslint": "^5.15.1",
-    "eslint-config-prettier": "^4.1.0",
-    "eslint-plugin-markdown": "^1.0.0",
-    "eslint-plugin-prettier": "^3.0.1",
-    "prettier": "1.16.4"
+    "angle-normals": "^1.0.0",
+    "cosine-gradient": "^0.3.0",
+    "es-module-shims": "^1.5.4",
+    "fit-rect": "^1.0.3",
+    "geom-center-and-normalize": "^1.0.3",
+    "geom-edges": "^1.2.0",
+    "geom-normals": "^1.0.1",
+    "geom-parse-obj": "^1.0.0",
+    "grid-cells": "^2.0.0",
+    "parse-hdr": "^1.0.0",
+    "pex-color": "github:pex-gl/pex-color#v2",
+    "pex-context": "github:pex-gl/pex-context#v3",
+    "pex-gui": "github:pex-gl/pex-gui#v3",
+    "primitive-geometry": "^2.6.0"
   },
-  "prettier": {
-    "semi": false,
-    "singleQuote": true,
-    "arrowParens": "always"
-  },
-  "eslintConfig": {
-    "extends": [
-      "eslint:recommended",
-      "plugin:prettier/recommended"
-    ],
-    "plugins": [
-      "prettier",
-      "markdown"
-    ],
-    "rules": {
-      "prettier/prettier": "error"
-    },
-    "parserOptions": {
-      "ecmaVersion": 2019
-    },
-    "env": {
-      "es6": true,
-      "browser": true,
-      "node": true
-    }
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=7.0.0"
   }
 }

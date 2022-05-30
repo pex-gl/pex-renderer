@@ -1,7 +1,7 @@
-const SHADERS = require('../chunks/index.js')
+import SHADERS from "../chunks/index.js";
 
 // Based on http://gamedev.stackexchange.com/questions/60313/implementing-a-skybox-with-glsl-version-330
-module.exports = /* glsl */ `
+export default /* glsl */ `
 attribute vec2 aPosition;
 
 ${SHADERS.math.inverseMat4}
@@ -21,4 +21,4 @@ void main() {
 
   gl_Position = vec4(aPosition, 0.9999, 1.0);
 }
-`
+`;

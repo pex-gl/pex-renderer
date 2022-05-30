@@ -1,4 +1,4 @@
-module.exports = /* glsl */ `
+export default /* glsl */ `
 #if NUM_AMBIENT_LIGHTS > 0
 
 struct AmbientLight {
@@ -13,4 +13,4 @@ void EvaluateAmbientLight(inout PBRData data, AmbientLight light, float ao) {
   data.indirectDiffuse += ao * (data.diffuseColor * lightColor);
 }
 #endif
-`
+`;

@@ -1,4 +1,4 @@
-module.exports = /* glsl */ `
+export default /* glsl */ `
 #extension GL_EXT_shader_texture_lod : enable
 
 precision highp float;
@@ -28,4 +28,4 @@ void main () {
   gl_FragColor.rgb = sampleBloom(image, vTexCoord0);
   gl_FragColor.a = 1.0;
 }
-`
+`;

@@ -1,6 +1,6 @@
-const SHADERS = require('../chunks/index.js')
+import SHADERS from "../chunks/index.js";
 
-module.exports = /* glsl */ `
+export default /* glsl */ `
 precision highp float;
 
 // Variables
@@ -79,4 +79,4 @@ void main() {
   color.rgb = tonemapUncharted2(color.rgb);
   gl_FragColor = encode(color, uOutputEncoding);
 }
-`
+`;

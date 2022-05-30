@@ -1,4 +1,4 @@
-module.exports = /* glsl */ `
+export default /* glsl */ `
 #if NUM_POINT_LIGHTS > 0
 
 struct PointLight {
@@ -28,4 +28,4 @@ void EvaluatePointLight(inout PBRData data, PointLight light, samplerCube shadow
   }
 }
 #endif
-`
+`;

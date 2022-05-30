@@ -1,4 +1,4 @@
-module.exports = /* glsl */ `
+export default /* glsl */ `
 /*
 
 Based on "A Practical Analytic Model for Daylight"
@@ -199,4 +199,4 @@ vec3 sky(vec3 sunPosition, vec3 worldNormal) {
     retColor = pow(retColor, vec3(2.2));
     return retColor;
 }
-`
+`;

@@ -1,47 +1,39 @@
-const math = require('./math.glsl.js')
+import math from "./math.glsl.js";
+import encodeDecode from "./encode-decode.glsl.js";
+import rgbm from "./rgbm.glsl.js";
+import gamma from "./gamma.glsl.js";
+import lightAmbient from "./light-ambient.glsl.js";
+import lightDirectional from "./light-directional.glsl.js";
+import lightPoint from "./light-point.glsl.js";
+import lightSpot from "./light-spot.glsl.js";
+import lightArea from "./light-area.glsl.js";
+import shadowing from "./shadowing.glsl.js";
+import brdf from "./brdf.glsl.js";
+import clearCoat from "./clear-coat.glsl.js";
+import irradiance from "./irradiance.glsl.js";
+import direct from "./direct.glsl.js";
+import indirect from "./indirect.glsl.js";
+import envMapEquirect from "./env-map-equirect.glsl.js";
+import octMap from "./oct-map.glsl.js";
+import octMapUvToDir from "./oct-map-uv-to-dir.glsl.js";
+import textureCoordinates from "./texture-coordinates.glsl.js";
+import baseColor from "./base-color.glsl.js";
+import emissiveColor from "./emissive-color.glsl.js";
+import alpha from "./alpha.glsl.js";
+import ambientOcclusion from "./ambient-occlusion.glsl.js";
+import normal from "./normal.glsl.js";
+import normalPerturb from "./normal-perturb.glsl.js";
+import metallicRoughness from "./metallic-roughness.glsl.js";
+import specularGlossiness from "./specular-glossiness.glsl.js";
+import depthRead from "./depth-read.glsl.js";
+import depthUnpack from "./depth-unpack.glsl.js";
+import depthPack from "./depth-pack.glsl.js";
+import sky from "./sky.glsl.js";
+import fog from "./fog.glsl.js";
+import tonemapUncharted2 from "./tonemap-uncharted2.glsl.js";
+import fxaa from "./fxaa.glsl.js";
 
-const encodeDecode = require('./encode-decode.glsl.js')
-const rgbm = require('./rgbm.glsl.js')
-const gamma = require('./gamma.glsl.js')
-
-const lightAmbient = require('./light-ambient.glsl.js')
-const lightDirectional = require('./light-directional.glsl.js')
-const lightPoint = require('./light-point.glsl.js')
-const lightSpot = require('./light-spot.glsl.js')
-const lightArea = require('./light-area.glsl.js')
-
-const shadowing = require('./shadowing.glsl.js')
-const brdf = require('./brdf.glsl.js')
-const clearCoat = require('./clear-coat.glsl.js')
-const irradiance = require('./irradiance.glsl.js')
-const direct = require('./direct.glsl.js')
-const indirect = require('./indirect.glsl.js')
-
-const envMapEquirect = require('./env-map-equirect.glsl.js')
-const octMap = require('./oct-map.glsl.js')
-const octMapUvToDir = require('./oct-map-uv-to-dir.glsl.js')
-
-const textureCoordinates = require('./texture-coordinates.glsl.js')
-const baseColor = require('./base-color.glsl.js')
-const emissiveColor = require('./emissive-color.glsl.js')
-const alpha = require('./alpha.glsl.js')
-const ambientOcclusion = require('./ambient-occlusion.glsl.js')
-const normal = require('./normal.glsl.js')
-const normalPerturb = require('./normal-perturb.glsl.js')
-
-const metallicRoughness = require('./metallic-roughness.glsl.js')
-const specularGlossiness = require('./specular-glossiness.glsl.js')
-
-const depthRead = require('./depth-read.glsl.js')
-const depthUnpack = require('./depth-unpack.glsl.js')
-const depthPack = require('./depth-pack.glsl.js')
-
-const sky = require('./sky.glsl.js')
-const fog = require('./fog.glsl.js')
-const tonemapUncharted2 = require('./tonemap-uncharted2.glsl.js')
-const fxaa = require('./fxaa.glsl.js')
-
-module.exports = {
+export default {
   math,
 
   encodeDecode,
@@ -82,5 +74,5 @@ module.exports = {
   sky,
   fog,
   tonemapUncharted2,
-  fxaa
-}
+  fxaa,
+};
