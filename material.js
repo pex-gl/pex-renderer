@@ -16,6 +16,7 @@ const MATERIAL_MAPS = [
   "occlusionMap",
   "diffuseMap",
   "specularGlossinessMap",
+  "sheenColorMap",
   "clearCoatMap",
   "clearCoatRoughnessMap",
 ];
@@ -85,6 +86,10 @@ class Material {
     this.clearCoatRoughnessMap = null;
     this.clearCoatNormalMap = null;
     this.clearCoatNormalMapScale = 1; //TODO: what's clearCoatNormalMapScale
+
+    this.sheenColor = null;
+    this.sheenColorMap = null;
+    this.sheenRoughness = null;
 
     this.alphaMap = null;
     this.alphaTest = undefined;

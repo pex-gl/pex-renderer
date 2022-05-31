@@ -67,6 +67,9 @@ struct PBRData {
   vec3 diffuseColor; // color contribution from diffuse lighting
   vec3 indirectDiffuse; // contribution from IBL light probe and Ambient Light
   vec3 indirectSpecular; // contribution from IBL light probe and Area Light
+  vec3 sheenColor;
+  float sheenRoughness;
+  vec3 sheen;
 };
 
 // Includes
@@ -77,6 +80,7 @@ ${SHADERS.gamma}
 ${SHADERS.encodeDecode}
 ${SHADERS.textureCoordinates}
 ${SHADERS.baseColor}
+${SHADERS.sheenColor}
 
 #ifndef USE_UNLIT_WORKFLOW
   // Lighting
@@ -135,6 +139,7 @@ void main() {
     data.eyeDirWorld = vec3(uInverseViewMatrix * vec4(data.eyeDirView, 0.0));
     data.indirectDiffuse = vec3(0.0);
     data.indirectSpecular = vec3(0.0);
+    data.sheen = vec3(0.0);
     data.opacity = 1.0;
 
     getNormal(data);
@@ -186,6 +191,10 @@ void main() {
     data.viewWorld = normalize(uCameraPosition - vPositionWorld);
 
     data.NdotV = abs(dot(data.normalWorld, data.viewWorld)) + FLT_EPS;
+
+    #ifdef USE_SHEEN
+      getSheenColor(data);
+    #endif
 
     float ao = 1.0;
     #ifdef USE_OCCLUSION_MAP

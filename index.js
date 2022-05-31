@@ -615,6 +615,20 @@ ${
         flags.push("#define USE_CLEAR_COAT_NORMAL_MAP_TEX_COORD_TRANSFORM");
       }
     }
+    if (!isNil(material.sheenColor)) {
+      flags.push("#define USE_SHEEN");
+    }
+    if (material.sheenColorMap) {
+      flags.push("#define USE_SHEEN_COLOR_MAP");
+      flags.push(
+        `#define SHEEN_COLOR_MAP_TEX_COORD_INDEX ${
+          material.sheenColorMap.texCoord || 0
+        }`
+      );
+      if (material.sheenColorMap.texCoordTransformMatrix) {
+        flags.push("#define USE_SHEEN_COLOR_MAP_TEX_COORD_TRANSFORM");
+      }
+    }
     if (material.blend) {
       flags.push("#define USE_BLEND");
     }
@@ -1144,6 +1158,18 @@ ${
         }
         cachedUniforms.uClearCoatNormalMapScale =
           material.clearCoatNormalMapScale;
+      }
+      if (!isNil(material.sheenColor)) {
+        cachedUniforms.uSheenColor = material.sheenColor;
+        cachedUniforms.uSheenRoughness = material.sheenRoughness || 0.04;
+      }
+      if (material.sheenColorMap) {
+        cachedUniforms.uSheenColorMap =
+          material.sheenColorMap.texture || material.sheenColorMap;
+        if (material.sheenColorMap.texCoordTransformMatrix) {
+          cachedUniforms.uSheenColorMapTexCoordTransform =
+            material.sheenColorMap.texCoordTransformMatrix;
+        }
       }
 
       if (material.normalMap) {

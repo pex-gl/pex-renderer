@@ -18,6 +18,7 @@ import octMap from "./oct-map.glsl.js";
 import octMapUvToDir from "./oct-map-uv-to-dir.glsl.js";
 import textureCoordinates from "./texture-coordinates.glsl.js";
 import baseColor from "./base-color.glsl.js";
+import sheenColor from "./sheen-color.glsl.js";
 import emissiveColor from "./emissive-color.glsl.js";
 import alpha from "./alpha.glsl.js";
 import ambientOcclusion from "./ambient-occlusion.glsl.js";
@@ -58,6 +59,7 @@ export default {
 
   textureCoordinates,
   baseColor,
+  sheenColor,
   emissiveColor,
   alpha,
   ambientOcclusion,

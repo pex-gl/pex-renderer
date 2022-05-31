@@ -6,8 +6,8 @@ export default /* glsl */ `
   #define MAX_MIPMAP_LEVEL 5.0
 
   vec3 getPrefilteredReflection(vec3 reflected, float roughness) {
-    // float lod = pow(roughness, 2.0) * MAX_MIPMAP_LEVEL; // TODO: verify reflection probe blurring code
-    float lod = pow(roughness, 1.5) * MAX_MIPMAP_LEVEL;
+    float lod = pow(roughness, 2.0) * MAX_MIPMAP_LEVEL; // TODO: verify reflection probe blurring code
+    // float lod = pow(roughness, 1.5) * MAX_MIPMAP_LEVEL;
     float upLod = floor(lod);
     float downLod = ceil(lod);
 

@@ -47,16 +47,21 @@ void getSurfaceShading(inout PBRData data, Light light, float illuminated) {
 
   vec3 Fd = DiffuseLambert() * data.diffuseColor;
   vec3 Fr = F * Vis * D;
+  vec3 Fs = vec3(0.0);
 
   //TODO: energy compensation
   float energyCompensation = 1.0;
+
+  #ifdef USE_SHEEN
+    Fs = EvaluateSheen(data, NdotH, NdotV, NdotL);
+  #endif
 
   #ifdef USE_CLEAR_COAT
     float Fcc;
     float clearCoat = clearCoatBRDF(data, H, NdotH, LdotH, Fcc);
     float attenuation = 1.0 - Fcc;
 
-    vec3 color = (Fd + Fr * (energyCompensation * attenuation)) * attenuation * NdotL;
+    vec3 color = (Fs + Fd + Fr * (energyCompensation * attenuation)) * attenuation * NdotL;
 
     // direct light still uses NdotL but clear coat needs separate dot product when using normal map
     // if only normal map is present not clear coat normal map, we will get smooth coating on top of bumpy surface
@@ -67,8 +72,10 @@ void getSurfaceShading(inout PBRData data, Light light, float illuminated) {
       color += clearCoat * NdotL;
     #endif
   #else
-    vec3 color = (Fd + Fr * energyCompensation) * NdotL;
+    vec3 color = (Fs + Fd + Fr * energyCompensation) * NdotL;
   #endif
+
+
 
   data.directColor += (color * lightColor) * (light.color.a * light.attenuation * illuminated);
 }
