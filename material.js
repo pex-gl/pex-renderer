@@ -16,6 +16,8 @@ const MATERIAL_MAPS = [
   "occlusionMap",
   "diffuseMap",
   "specularGlossinessMap",
+  "clearCoatMap",
+  "clearCoatRoughnessMap",
 ];
 
 const PIPELINE_PROPS = [
@@ -78,7 +80,9 @@ class Material {
 
     this.reflectance = 0.5;
     this.clearCoat = null;
+    this.clearCoatMap = null;
     this.clearCoatRoughness = null;
+    this.clearCoatRoughnessMap = null;
     this.clearCoatNormalMap = null;
     this.clearCoatNormalMapScale = 1; //TODO: what's clearCoatNormalMapScale
 

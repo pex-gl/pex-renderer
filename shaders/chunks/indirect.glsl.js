@@ -37,10 +37,10 @@ export default /* glsl */ `
         vec3 clearCoatR = data.reflectionWorld;
       #endif
       // The clear coat layer assumes an IOR of 1.5 (4% reflectance)
-      float Fc = F_Schlick(0.04, 1.0, clearCoatNoV) * uClearCoat;
+      float Fc = F_Schlick(0.04, 1.0, clearCoatNoV) * data.clearCoat;
       float attenuation = 1.0 - Fc;
       Fr *= (attenuation * attenuation);
-      Fr += getPrefilteredReflection(clearCoatR, uClearCoatRoughness) * (ao * Fc);
+      Fr += getPrefilteredReflection(clearCoatR, data.clearCoatRoughness) * (ao * Fc);
       Fd *= attenuation;
     }
   #endif

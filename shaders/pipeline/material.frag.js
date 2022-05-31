@@ -58,6 +58,8 @@ struct PBRData {
   float metallic; // metallic value at the surface
   float linearRoughness; // roughness mapped to a more linear change in the roughness (proposed by [2])
   vec3 f0; // Reflectance at normal incidence, specular color
+  float clearCoat;
+  float clearCoatRoughness;
   float clearCoatLinearRoughness;
   vec3 clearCoatNormal;
   vec3 reflectionWorld;
@@ -170,9 +172,12 @@ void main() {
     data.linearRoughness = data.roughness * data.roughness;
 
     #ifdef USE_CLEAR_COAT
-      data.clearCoatLinearRoughness = uClearCoatRoughness * uClearCoatRoughness;
-      data.f0 = mix(data.f0, f0ClearCoatToSurface(data.f0), uClearCoat);
-      data.roughness = max(data.roughness, uClearCoatRoughness);
+      getClearCoat(data);
+      getClearCoatRoughness(data);
+
+      data.clearCoatLinearRoughness = data.clearCoatRoughness * data.clearCoatRoughness;
+      data.f0 = mix(data.f0, f0ClearCoatToSurface(data.f0), data.clearCoat);
+      data.roughness = max(data.roughness, data.clearCoatRoughness);
 
       getClearCoatNormal(data);
     #endif

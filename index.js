@@ -582,6 +582,28 @@ ${
     if (!isNil(material.clearCoat)) {
       flags.push("#define USE_CLEAR_COAT");
     }
+    if (material.clearCoatMap) {
+      flags.push("#define USE_CLEAR_COAT_MAP");
+      flags.push(
+        `#define CLEAR_COAT_MAP_TEX_COORD_INDEX ${
+          material.clearCoatMap.texCoord || 0
+        }`
+      );
+      if (material.clearCoatMap.texCoordTransformMatrix) {
+        flags.push("#define USE_CLEAR_COAT_MAP_TEX_COORD_TRANSFORM");
+      }
+    }
+    if (material.clearCoatRoughnessMap) {
+      flags.push("#define USE_CLEAR_COAT_ROUGHNESS_MAP");
+      flags.push(
+        `#define CLEAR_COAT_ROUGHNESS_MAP_TEX_COORD_INDEX ${
+          material.clearCoatRoughnessMap.texCoord || 0
+        }`
+      );
+      if (material.clearCoatRoughnessMap.texCoordTransformMatrix) {
+        flags.push("#define USE_CLEAR_COAT_ROUGHNESS_MAP_TEX_COORD_TRANSFORM");
+      }
+    }
     if (material.clearCoatNormalMap) {
       flags.push("#define USE_CLEAR_COAT_NORMAL_MAP");
       flags.push(
@@ -1095,6 +1117,23 @@ ${
         cachedUniforms.uClearCoat = material.clearCoat;
         cachedUniforms.uClearCoatRoughness =
           material.clearCoatRoughness || 0.04;
+      }
+      if (material.clearCoatMap) {
+        cachedUniforms.uClearCoatMap =
+          material.clearCoatMap.texture || material.clearCoatMap;
+        if (material.clearCoatMap.texCoordTransformMatrix) {
+          cachedUniforms.uClearCoatMapTexCoordTransform =
+            material.clearCoatMap.texCoordTransformMatrix;
+        }
+      }
+      if (material.clearCoatRoughnessMap) {
+        cachedUniforms.uClearCoatRoughnessMap =
+          material.clearCoatRoughnessMap.texture ||
+          material.clearCoatRoughnessMap;
+        if (material.clearCoatRoughnessMap.texCoordTransformMatrix) {
+          cachedUniforms.uClearCoatRoughnessMapTexCoordTransform =
+            material.clearCoatRoughnessMap.texCoordTransformMatrix;
+        }
       }
       if (material.clearCoatNormalMap) {
         cachedUniforms.uClearCoatNormalMap =
