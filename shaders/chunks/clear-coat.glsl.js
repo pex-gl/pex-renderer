@@ -90,7 +90,7 @@ export default /* glsl */ `
     void getClearCoatNormal(inout PBRData data) {
       // geometric normal without perturbation from normalMap
       // this normal is in world space
-      data.clearCoatNormal = normalize(vec3(data.inverseViewMatrix * vec4(normalize(data.normalView), 0.0)));
+      data.clearCoatNormal = normalize(vec3(data.inverseViewMatrix * vec4(normalize(vNormalView), 0.0)));
     }
   #endif
 
