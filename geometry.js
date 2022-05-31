@@ -84,7 +84,7 @@ class Geometry {
           if (attribName === "aPosition") {
             // If we have list of vectors we can calculate bounding box otherwise
             // the user has to provide it
-            if (data[0].length) {
+            if (data[0]?.length) {
               this.bounds = opts.bounds || aabb.fromPoints(this.bounds, data);
             }
           }
