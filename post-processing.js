@@ -1,15 +1,7 @@
 import Signal from "signals";
 import random from "pex-random";
 import { vec3, mat4, utils } from "pex-math";
-
-import POSTPROCESS_VERT from "./shaders/post-processing/post-processing.vert.js";
-import POSTPROCESS_FRAG from "./shaders/post-processing/post-processing.frag.js";
-import SAO_FRAG from "./shaders/post-processing/sao.frag.js";
-import BILATERAL_BLUR_FRAG from "./shaders/post-processing/bilateral-blur.frag.js";
-import THRESHOLD_FRAG from "./shaders/post-processing/threshold.frag.js";
-import BLOOM_FRAG from "./shaders/post-processing/bloom.frag.js";
-import DOWN_SAMPLE_FRAG from "./shaders/post-processing/down-sample.frag.js";
-import DOF_FRAG from "./shaders/post-processing/dof.frag.js";
+import { postProcessing as SHADERS } from "pex-shaderlib";
 
 const ssaoKernelData = new Float32Array(64 * 4);
 for (let i = 0; i < 64; i++) {
@@ -306,8 +298,8 @@ class PostProcessing {
         // clearDepth: 1
       }),
       pipeline: ctx.pipeline({
-        vert: POSTPROCESS_VERT,
-        frag: SAO_FRAG,
+        vert: SHADERS.postProcessing.vert,
+        frag: SHADERS.sao.frag,
       }),
       attributes: this._fsqMesh.attributes,
       indices: this._fsqMesh.indices,
@@ -326,8 +318,8 @@ class PostProcessing {
         clearColor: [1, 1, 0, 1],
       }),
       pipeline: ctx.pipeline({
-        vert: POSTPROCESS_VERT,
-        frag: BILATERAL_BLUR_FRAG,
+        vert: SHADERS.postProcessing.vert,
+        frag: SHADERS.bilateralBlur.frag,
       }),
       attributes: this._fsqMesh.attributes,
       indices: this._fsqMesh.indices,
@@ -347,8 +339,8 @@ class PostProcessing {
         clearColor: [1, 1, 0, 1],
       }),
       pipeline: ctx.pipeline({
-        vert: POSTPROCESS_VERT,
-        frag: BILATERAL_BLUR_FRAG,
+        vert: SHADERS.postProcessing.vert,
+        frag: SHADERS.bilateralBlur.frag,
       }),
       attributes: this._fsqMesh.attributes,
       indices: this._fsqMesh.indices,
@@ -368,8 +360,8 @@ class PostProcessing {
         clearColor: [1, 1, 1, 1],
       }),
       pipeline: ctx.pipeline({
-        vert: POSTPROCESS_VERT,
-        frag: DOF_FRAG,
+        vert: SHADERS.postProcessing.vert,
+        frag: SHADERS.dof.frag,
       }),
       attributes: this._fsqMesh.attributes,
       indices: this._fsqMesh.indices,
@@ -387,8 +379,8 @@ class PostProcessing {
         clearColor: [1, 1, 1, 1],
       }),
       pipeline: ctx.pipeline({
-        vert: POSTPROCESS_VERT,
-        frag: THRESHOLD_FRAG,
+        vert: SHADERS.postProcessing.vert,
+        frag: SHADERS.threshold.frag,
       }),
       attributes: this._fsqMesh.attributes,
       indices: this._fsqMesh.indices,
@@ -411,8 +403,8 @@ class PostProcessing {
           color: [texture],
         }),
         pipeline: ctx.pipeline({
-          vert: POSTPROCESS_VERT,
-          frag: DOWN_SAMPLE_FRAG,
+          vert: SHADERS.postProcessing.vert,
+          frag: SHADERS.downSample.frag,
         }),
         attributes: this._fsqMesh.attributes,
         indices: this._fsqMesh.indices,
@@ -435,8 +427,8 @@ class PostProcessing {
         }),
 
         pipeline: ctx.pipeline({
-          vert: POSTPROCESS_VERT,
-          frag: BLOOM_FRAG,
+          vert: SHADERS.postProcessing.vert,
+          frag: SHADERS.bloom.frag,
           blend: true,
         }),
 
@@ -449,12 +441,12 @@ class PostProcessing {
         },
       }));
 
-    // this._overlayProgram = ctx.program({ vert: POSTPROCESS_VERT, frag: POSTPROCESS_FRAG }) // TODO
+    // this._overlayProgram = ctx.program({ vert: SHADERS.postProcessing.vert, frag: SHADERS.postProcessing.frag }) // TODO
     this._blitCmd = {
       name: "PostProcessing.blit",
       pipeline: ctx.pipeline({
-        vert: POSTPROCESS_VERT,
-        frag: POSTPROCESS_FRAG,
+        vert: SHADERS.postProcessing.vert,
+        frag: SHADERS.postProcessing.frag,
       }),
       attributes: this._fsqMesh.attributes,
       indices: this._fsqMesh.indices,

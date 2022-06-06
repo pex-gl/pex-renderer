@@ -1,5 +1,6 @@
 import { vec3, vec4, mat3, mat4 } from "pex-math";
 import { aabb } from "pex-geom";
+import { pipeline as SHADERS, chunks as SHADERS_CHUNKS } from "pex-shaderlib";
 import createGeomBuilder from "geom-builder";
 
 import createProfiler from "./profiler.js";
@@ -30,19 +31,6 @@ import createGridHelper from "./helpers/grid-helper.js";
 import loadGltf from "./loaders/glTF.js";
 
 import { es300Fragment, es300Vertex, getFileExtension } from "./utils.js";
-
-import PBR_VERT from "./shaders/pipeline/material.vert.js";
-import PBR_FRAG from "./shaders/pipeline/material.frag.js";
-import DEPTH_PASS_VERT from "./shaders/pipeline/depth-pass.vert.js";
-import DEPTH_PASS_FRAG from "./shaders/pipeline/depth-pass.frag.js";
-import DEPTH_PRE_PASS_FRAG from "./shaders/pipeline/depth-pre-pass.frag.js";
-import OVERLAY_VERT from "./shaders/pipeline/overlay.vert.js";
-import OVERLAY_FRAG from "./shaders/pipeline/overlay.frag.js";
-import HELPER_VERT from "./shaders/pipeline/helper.vert.js";
-import HELPER_FRAG from "./shaders/pipeline/helper.frag.js";
-import ERROR_VERT from "./shaders/error/error.vert.js";
-import ERROR_FRAG from "./shaders/error/error.frag.js";
-import SHADERS_CHUNKS from "./shaders/chunks/index.js";
 
 const LOADERS = new Map().set([".gltf", ".glb"], loadGltf);
 const LOADERS_ENTRIES = Array.from(LOADERS.entries());
@@ -155,16 +143,16 @@ class Renderer {
       chunks: SHADERS_CHUNKS,
       pipeline: {
         depthPrePass: {
-          vert: DEPTH_PASS_VERT,
-          frag: DEPTH_PRE_PASS_FRAG,
+          vert: SHADERS.depthPass.vert,
+          frag: SHADERS.depthPrePass.frag,
         },
         depthPass: {
-          vert: DEPTH_PASS_VERT,
-          frag: DEPTH_PASS_FRAG,
+          vert: SHADERS.depthPass.vert,
+          frag: SHADERS.depthPass.frag,
         },
         material: {
-          vert: PBR_VERT,
-          frag: PBR_FRAG,
+          vert: SHADERS.material.vert,
+          frag: SHADERS.material.frag,
         },
       },
     };
@@ -174,17 +162,17 @@ class Renderer {
     this.drawHelperLinesCmd = {
       pipeline: ctx.pipeline({
         vert: ctx.capabilities.isWebGL2
-          ? es300Vertex(HELPER_VERT)
+          ? es300Vertex(SHADERS.helper.vert)
           : /* glsl */ `
 ${ctx.capabilities.maxColorAttachments > 1 ? "#define USE_DRAW_BUFFERS" : ""}
 #define USE_STANDARD_DERIVATIVES
-      ${HELPER_VERT}`,
+      ${SHADERS.helper.vert}`,
         frag: ctx.capabilities.isWebGL2
-          ? es300Fragment(HELPER_FRAG, 2)
+          ? es300Fragment(SHADERS.helper.frag, 3)
           : /* glsl */ `
 ${ctx.capabilities.maxColorAttachments > 1 ? "#define USE_DRAW_BUFFERS" : ""}
 #define USE_STANDARD_DERIVATIVES
-${HELPER_FRAG}`,
+${SHADERS.helper.frag}`,
         depthTest: true,
         primitive: ctx.Primitive.Lines,
       }),
@@ -197,17 +185,17 @@ ${HELPER_FRAG}`,
     this.drawHelperLinesPostProcCmd = {
       pipeline: ctx.pipeline({
         vert: ctx.capabilities.isWebGL2
-          ? es300Vertex(HELPER_VERT)
+          ? es300Vertex(SHADERS.helper.vert)
           : /* glsl */ `
 ${ctx.capabilities.maxColorAttachments > 1 ? "#define USE_DRAW_BUFFERS" : ""}
 #define USE_STANDARD_DERIVATIVES
-      ${HELPER_VERT}`,
+      ${SHADERS.helper.vert}`,
         frag: ctx.capabilities.isWebGL2
-          ? es300Fragment(HELPER_FRAG, 2)
+          ? es300Fragment(SHADERS.helper.frag, 3)
           : /* glsl */ `
 ${ctx.capabilities.maxColorAttachments > 1 ? "#define USE_DRAW_BUFFERS" : ""}
 #define USE_STANDARD_DERIVATIVES
-${HELPER_FRAG}`,
+${SHADERS.helper.frag}`,
         depthTest: true,
         primitive: ctx.Primitive.Lines,
       }),
@@ -452,8 +440,8 @@ ${
       flags.push(`#define NUM_AREA_LIGHTS ${0}`);
       return {
         flags,
-        vert: material.vert || DEPTH_PASS_VERT,
-        frag: material.frag || DEPTH_PRE_PASS_FRAG,
+        vert: material.vert || SHADERS.depthPass.vert,
+        frag: material.frag || SHADERS.depthPrePass.frag,
       };
     }
 
@@ -467,8 +455,8 @@ ${
       flags.push(`#define NUM_AREA_LIGHTS ${0}`);
       return {
         flags,
-        vert: material.vert || DEPTH_PASS_VERT,
-        frag: material.frag || DEPTH_PASS_FRAG,
+        vert: material.vert || SHADERS.depthPass.vert,
+        frag: material.frag || SHADERS.depthPass.frag,
       };
     }
 
@@ -660,7 +648,10 @@ ${
       program = ctx.program({ vert: vertSrc, frag: fragSrc });
     } catch (e) {
       console.error("pex-renderer glsl error", e, fragSrc);
-      program = ctx.program({ vert: ERROR_VERT, frag: ERROR_FRAG });
+      program = ctx.program({
+        vert: SHADERS.error.vert,
+        frag: SHADERS.error.frag,
+      });
       throw e;
     }
     return program;
@@ -685,7 +676,7 @@ ${
           options
         ),
         this.parseShader(
-          this._ctx.capabilities.isWebGL2 ? es300Fragment(fragSrc, 2) : fragSrc,
+          this._ctx.capabilities.isWebGL2 ? es300Fragment(fragSrc, 3) : fragSrc,
           options
         )
       );
@@ -756,8 +747,8 @@ ${
     const ctx = this._ctx;
     if (!this._drawOverlayCmd) {
       const program = ctx.program({
-        vert: OVERLAY_VERT,
-        frag: OVERLAY_FRAG,
+        vert: SHADERS.overlay.vert,
+        frag: SHADERS.overlay.frag,
       });
       this._drawOverlayCmd = {
         name: "DrawOverlayCmd",

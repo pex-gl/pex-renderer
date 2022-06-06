@@ -1,8 +1,6 @@
+import { skybox } from "pex-shaderlib";
 import createQuad from "primitive-quad";
-import SKYBOX_VERT from "./shaders/skybox/skybox.vert.js";
-import SKYBOX_FRAG from "./shaders/skybox/skybox.frag.js";
-import SKYTEXTURE_VERT from "./shaders/skybox/sky-env-map.vert.js";
-import SKYTEXTURE_FRAG from "./shaders/skybox/sky-env-map.frag.js";
+
 import Signal from "signals";
 import { es300Fragment, es300Vertex } from "./utils.js";
 
@@ -37,15 +35,15 @@ class Skybox {
       name: "Skybox.draw",
       pipeline: ctx.pipeline({
         vert: ctx.capabilities.isWebGL2
-          ? es300Vertex(SKYBOX_VERT)
+          ? es300Vertex(skybox.skybox.vert)
           : /* glsl */ `
 ${ctx.capabilities.maxColorAttachments > 1 ? "#define USE_DRAW_BUFFERS" : ""}
-    ${SKYBOX_VERT}`,
+    ${skybox.skybox.vert}`,
         frag: ctx.capabilities.isWebGL2
-          ? es300Fragment(SKYBOX_FRAG, 2)
+          ? es300Fragment(skybox.skybox.frag, 2)
           : /* glsl */ `
 ${ctx.capabilities.maxColorAttachments > 1 ? "#define USE_DRAW_BUFFERS" : ""}
-${SKYBOX_FRAG}`,
+${skybox.skybox.frag}`,
         depthTest: true,
       }),
       attributes: {
@@ -78,8 +76,8 @@ ${SKYBOX_FRAG}`,
         clearColor: [0, 0, 0, 0],
       }),
       pipeline: ctx.pipeline({
-        vert: SKYTEXTURE_VERT,
-        frag: SKYTEXTURE_FRAG,
+        vert: skybox.skyEnvMap.vert,
+        frag: skybox.skyEnvMap.frag,
       }),
       uniforms: {
         uSunPosition: [0, 0, 0],

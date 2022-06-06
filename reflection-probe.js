@@ -1,12 +1,7 @@
 import Signal from "signals";
 import { mat4 } from "pex-math";
+import { reflectionProbe as SHADERS } from "pex-shaderlib";
 import hammersley from "hammersley";
-import FULLSCREEN_QUAD from "./shaders/reflection-probe/fullscreen-quad.vert.js";
-import CUBEMAP_TO_OCTMAP from "./shaders/reflection-probe/cubemap-to-octmap.frag.js";
-import CONVOLVE_OCT_MAP_ATLAS_TO_OCT_MAP from "./shaders/reflection-probe/convolve-oct-map-atlas-to-oct-map.frag.js";
-import BLIT_TO_OCT_MAP_ATLAS from "./shaders/reflection-probe/blit-to-oct-map-atlas.frag.js";
-import DOWNSAMPLE_FROM_OCT_MAP_ATLAS from "./shaders/reflection-probe/downsample-from-oct-map-atlas.frag.js";
-import PREFILTER_FROM_OCT_MAP_ATLAS from "./shaders/reflection-probe/prefilter-from-oct-map-atlas.frag.js";
 
 class ReflectionProbe {
   constructor(opts) {
@@ -114,8 +109,8 @@ class ReflectionProbe {
         color: [octMap],
       }),
       pipeline: ctx.pipeline({
-        vert: FULLSCREEN_QUAD,
-        frag: CUBEMAP_TO_OCTMAP,
+        vert: SHADERS.fullscreenQuad.vert,
+        frag: SHADERS.cubemapToOctMap.frag,
       }),
       attributes,
       indices,
@@ -132,8 +127,8 @@ class ReflectionProbe {
         color: [octMap],
       }),
       pipeline: ctx.pipeline({
-        vert: FULLSCREEN_QUAD,
-        frag: CONVOLVE_OCT_MAP_ATLAS_TO_OCT_MAP,
+        vert: SHADERS.fullscreenQuad.vert,
+        frag: SHADERS.convolveOctMapAtlasToOctMap.frag,
       }),
       attributes,
       indices,
@@ -162,8 +157,8 @@ class ReflectionProbe {
         color: [octMapAtlas],
       }),
       pipeline: ctx.pipeline({
-        vert: FULLSCREEN_QUAD,
-        frag: BLIT_TO_OCT_MAP_ATLAS,
+        vert: SHADERS.fullscreenQuad.vert,
+        frag: SHADERS.blitToOctMapAtlas.frag,
       }),
       uniforms: {
         uSource: octMap,
@@ -181,8 +176,8 @@ class ReflectionProbe {
         clearColor: [0, 1, 0, 1],
       }),
       pipeline: ctx.pipeline({
-        vert: FULLSCREEN_QUAD,
-        frag: DOWNSAMPLE_FROM_OCT_MAP_ATLAS,
+        vert: SHADERS.fullscreenQuad.vert,
+        frag: SHADERS.downsampleFromOctMapAtlas.frag,
       }),
       uniforms: {
         uSource: octMapAtlas,
@@ -200,8 +195,8 @@ class ReflectionProbe {
         clearColor: [0, 1, 0, 1],
       }),
       pipeline: ctx.pipeline({
-        vert: FULLSCREEN_QUAD,
-        frag: PREFILTER_FROM_OCT_MAP_ATLAS,
+        vert: SHADERS.fullscreenQuad.vert,
+        frag: SHADERS.prefilterFromOctMapAtlas.frag,
       }),
       uniforms: {
         uSource: octMapAtlas,
