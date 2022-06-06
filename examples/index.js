@@ -51,7 +51,11 @@
       document.body
     ).getPropertyValue("--color-grey");
 
-    await importShim(`./examples/${id}.js`);
+    try {
+      await importShim(`./examples/${id}.js`);
+    } catch (error) {
+      console.error(error);
+    }
 
     list.querySelector(`a[href="?id=${id}"]`)?.scrollIntoView(true);
   }
