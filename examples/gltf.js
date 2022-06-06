@@ -11,8 +11,8 @@ import parseHdr from "parse-hdr";
 import axisHelper from "../helpers/axis-helper.js";
 import { computeEdges, getURL } from "./utils.js";
 
-const MODELS_PATH =
-  "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0";
+const MODELS_PATH = "examples/glTF-Sample-Models/2.0";
+// "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0";
 
 const State = {
   sunPosition: [2, 2, 2],
@@ -170,6 +170,7 @@ renderer.add(sunEntity);
 const skyboxEntity = renderer.entity([
   renderer.skybox({
     sunPosition: [1, 1, 1],
+    backgroundBlur: 1
   }),
 ]);
 renderer.add(skyboxEntity);
@@ -178,7 +179,9 @@ const reflectionProbeEntity = renderer.entity([renderer.reflectionProbe()]);
 renderer.add(reflectionProbeEntity);
 
 const addEnvmap = async () => {
-  const buffer = await loadArrayBuffer(getURL(`assets/envmaps/garage/garage.hdr`));
+  const buffer = await loadArrayBuffer(
+    getURL(`assets/envmaps/garage/garage.hdr`)
+  );
   const hdrImg = parseHdr(buffer);
   const panorama = ctx.texture2D({
     data: hdrImg.data,
@@ -294,11 +297,26 @@ async function loadScene(url, grid) {
     // All examples only have one scene
     State.scene = scene = await renderer.loadScene(url, {
       includeCameras: !grid,
+      includeLights: !grid,
+      dracoOptions: {
+        transcoderPath: new URL(
+          "assets/decoders/draco/",
+          import.meta.url
+        ).toString(),
+      },
+      basisOptions: {
+        transcoderPath: new URL(
+          "assets/decoders/draco/",
+          import.meta.url
+        ).toString(),
+      },
     });
   } catch (e) {
     // console.timeEnd('building ' + url)
     return e;
   }
+
+  console.log(scene);
 
   scene.entities.forEach((entity) => {
     const materialCmp = entity.getComponent("Material");
@@ -474,64 +492,93 @@ async function init() {
   // Filter models
   models = models.filter(({ name }) =>
     [
-      '2CylinderEngine',
-      // 'AlphaBlendModeTest',
-      // 'AnimatedCube',
-      // 'AnimatedMorphCube',
-      // 'AnimatedMorphSphere',
-      // 'AnimatedTriangle',
-      // 'AntiqueCamera',
-      // 'Avocado',
-      // 'BarramundiFish',
-      // 'BoomBox',
-      // 'BoomBoxWithAxes',
-      // 'Box',
-      // 'BoxAnimated',
-      // 'BoxInterleaved',
-      // 'BoxTextured',
-      // 'BoxTexturedNonPowerOfTwo',
-      // 'BoxVertexColors',
-      // 'BrainStem',
-      // 'Buggy',
-      // 'Cameras',
-      // 'CesiumMan',
-      // 'CesiumMilkTruck',
-      // 'Corset',
-      // 'Cube',
-      // "DamagedHelmet",
-      // 'Duck',
-      // 'EnvironmentTest',
-      // 'FlightHelmet',
-      // 'GearboxAssy',
-      // 'InterpolationTest',
-      // 'Lantern',
-      // 'MetalRoughSpheres',
-      // 'Monster',
-      // 'MorphPrimitivesTest',
-      // 'MultiUVTest',
-      // 'NormalTangentMirrorTest',
-      // 'NormalTangentTest',
-      // 'OrientationTest',
-      // 'ReciprocatingSaw',
-      // 'RiggedFigure',
-      // 'RiggedSimple',
-      // 'SciFiHelmet',
-      // 'SimpleMeshes',
-      // 'SimpleMorph',
-      // 'SimpleSparseAccessor',
-      // 'SpecGlossVsMetalRough',
-      // 'Sponza',
-      // 'Suzanne',
-      // 'TextureCoordinateTest',
-      // 'TextureSettingsTest',
-      // 'TextureTransformTest',
-      // 'Triangle',
-      // 'TriangleWithoutIndices',
-      // 'TwoSidedPlane',
-      // 'UnlitTest',
-      // 'VC',
-      // 'VertexColorTest',
-      // 'WaterBottle'
+      // "2CylinderEngine",
+      // "AlphaBlendModeTest",
+      // "AnimatedCube",
+      // "AnimatedMorphCube",
+      // "AnimatedMorphSphere",
+      // "AnimatedTriangle",
+      // "AntiqueCamera",
+      // "AttenuationTest",
+      // "Avocado",
+      // "BarramundiFish",
+      // "BoomBox",
+      // "BoomBoxWithAxes",
+      // "Box",
+      // "Box With Spaces",
+      // "BoxAnimated",
+      // "BoxInterleaved",
+      // "BoxTextured",
+      // "BoxTexturedNonPowerOfTwo",
+      // "BoxVertexColors",
+      // "BrainStem",
+      // "Buggy",
+      // "Cameras",
+      // "CesiumMan",
+      // "CesiumMilkTruck",
+      // "ClearCoatTest",
+      // "Corset",
+      // "Cube",
+      "DamagedHelmet",
+      // "DragonAttenuation",
+      // "Duck",
+      // "EmissiveStrengthTest",
+      // "EnvironmentTest",
+      // "FlightHelmet",
+      // "Fox",
+      // "GearboxAssy",
+      // "GlamVelvetSofa",
+      // "InterpolationTest",
+      // "IridescenceDielectricSpheres",
+      // "IridescenceLamp",
+      // "IridescenceMetallicSpheres",
+      // "IridescenceSuzanne",
+      // "IridescentDishWithOlives",
+      // "Lantern",
+      // "LightsPunctualLamp",
+      // "MaterialsVariantsShoe",
+      // "MetalRoughSpheres",
+      // "MetalRoughSpheresNoTextures",
+      // "MorphPrimitivesTest",
+      // "MorphStressTest",
+      // "MosquitoInAmber",
+      // "MultiUVTest",
+      // "NormalTangentMirrorTest",
+      // "NormalTangentTest",
+      // "OrientationTest",
+      // "ReciprocatingSaw",
+      // "RecursiveSkeletons",
+      // "RiggedFigure",
+      // "RiggedSimple",
+      // "SciFiHelmet",
+      // "SheenChair",
+      // "SheenCloth",
+      // "SimpleMeshes",
+      // "SimpleMorph",
+      // "SimpleSkin",
+      // "SimpleSparseAccessor",
+      // "SpecGlossVsMetalRough",
+      // "SpecularTest",
+      // "Sponza",
+      // "StainedGlassLamp",
+      // "Suzanne",
+      // "TextureCoordinateTest",
+      // "TextureEncodingTest",
+      // "TextureLinearInterpolationTest",
+      // "TextureSettingsTest",
+      // "TextureTransformMultiTest",
+      // "TextureTransformTest",
+      // "ToyCar",
+      // "TransmissionRoughnessTest",
+      // "TransmissionTest",
+      // "Triangle",
+      // "TriangleWithoutIndices",
+      // "TwoSidedPlane",
+      // "Unicode\u2764\u267bTest",
+      // "UnlitTest",
+      // "VC",
+      // "VertexColorTest",
+      // "WaterBottle",
     ].includes(name)
   );
 
@@ -590,9 +637,11 @@ window.addEventListener("resize", () => {
     width: W,
     height: H,
   });
-  cameraEntity.getComponent("Camera").set({
-    viewport: [0, 0, W, H],
-  });
+  if (cameraEntity) {
+    cameraEntity.getComponent("Camera").set({
+      viewport: [0, 0, W, H],
+    });
+  }
 });
 
 window.addEventListener("keypress", ({ key }) => {
