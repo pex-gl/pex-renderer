@@ -69,7 +69,7 @@ class Entity {
 
 export default function createEntity(components = {}) {
   const entity = {
-    id: entityId,
+    id: entityId++,
     ...components,
   };
   return entity;
