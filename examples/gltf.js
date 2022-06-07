@@ -317,7 +317,7 @@ async function loadScene(url, grid) {
       },
       basisOptions: {
         transcoderPath: new URL(
-          "assets/decoders/draco/",
+          "assets/decoders/basis/",
           import.meta.url
         ).toString(),
       },
