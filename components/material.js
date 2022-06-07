@@ -155,6 +155,10 @@ class Material {
   }
 }
 
-export default (opts) => {
-  return new Material(opts);
+export default (opts = {}) => {
+  //return new Material(opts);
+  return {
+    baseColor: [1, 1, 1, 1],
+    ...opts,
+  };
 };
