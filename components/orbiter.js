@@ -84,6 +84,9 @@ class Orbiter {
   }
 }
 
-export default function createOrbiter(opts) {
-  return new Orbiter(opts);
+export default function createOrbiter(opts = {}) {
+  // return new Orbiter(opts);
+  return {
+    ...opts,
+  };
 }

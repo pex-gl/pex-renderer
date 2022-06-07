@@ -1,5 +1,5 @@
 import Signal from "signals";
-import { vec3, vec4, mat4 } from "pex-math";
+import { vec3, vec4, mat4, quat } from "pex-math";
 import { aabb } from "pex-geom";
 
 function vec4set4(v, x, y, z, w) {
@@ -145,5 +145,7 @@ class Transform {
 export default function createTransform(opts) {
   return {
     position: [0, 0, 0],
+    rotation: quat.create(),
+    ...opts,
   };
 }
