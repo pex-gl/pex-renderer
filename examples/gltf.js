@@ -22,7 +22,15 @@ const State = {
   showBoundingBoxes: true,
   useEnvMap: true,
   shadows: false,
-  formats: ["glTF", "glTF-Binary", "glTF-Draco", "glTF-Embedded"],
+  formats: [
+    "glTF",
+    "glTF-Binary",
+    "glTF-Draco",
+    "glTF-Embedded",
+    "glTF-Quantized",
+    "glTF-KTX-BasisU",
+    "glTF-JPG-PNG",
+  ],
   currentFormat: 0,
 };
 
@@ -30,7 +38,10 @@ const FORMAT_EXTENSION = new Map()
   .set("glTF", "gltf")
   .set("glTF-Binary", "glb")
   .set("glTF-Draco", "gltf")
-  .set("glTF-Embedded", "gltf");
+  .set("glTF-Embedded", "gltf")
+  .set("glTF-Quantized", "gltf")
+  .set("glTF-KTX-BasisU", "gltf")
+  .set("glTF-JPG-PNG", "gltf");
 
 // Utils
 const positions = [
@@ -170,7 +181,7 @@ renderer.add(sunEntity);
 const skyboxEntity = renderer.entity([
   renderer.skybox({
     sunPosition: [1, 1, 1],
-    backgroundBlur: 1
+    backgroundBlur: 1,
   }),
 ]);
 renderer.add(skyboxEntity);
