@@ -1,4 +1,4 @@
-import createTransform from "./transform.js";
+import createTransform from "./components/transform.js";
 
 let entityId = 0;
 
@@ -48,7 +48,10 @@ class Entity {
 
   removeComponent(component) {
     const idx = this.components.indexOf(component);
-    console.assert(idx !== -1, `Removing component that doesn't belong to this entity`);
+    console.assert(
+      idx !== -1,
+      `Removing component that doesn't belong to this entity`
+    );
     this.components.splice(idx, 1);
     this.componentsMap.delete(component.type);
     this.components.forEach((otherComponent) => {
@@ -64,6 +67,10 @@ class Entity {
   }
 }
 
-export default function createEntity(components, parent, tags) {
-  return new Entity(components, parent, tags);
+export default function createEntity(components = {}) {
+  const entity = {
+    id: entityId,
+    ...components,
+  };
+  return entity;
 }
