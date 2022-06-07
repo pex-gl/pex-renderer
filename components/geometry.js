@@ -165,6 +165,8 @@ class Geometry {
   }
 }
 
-export default (opts) => {
-  return new Geometry(opts);
+export default (opts = {}) => {
+  return {
+    ...opts,
+  };
 };

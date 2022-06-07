@@ -2,7 +2,7 @@ import { skybox } from "pex-shaderlib";
 import createQuad from "primitive-quad";
 
 import Signal from "signals";
-import { es300Fragment, es300Vertex } from "./utils.js";
+import { es300Fragment, es300Vertex } from "../utils.js";
 
 class Skybox {
   constructor(opts) {
@@ -163,5 +163,8 @@ export default function createSkybox(opts) {
   if (!opts.sunPosition && !opts.texture) {
     throw new Error("Skybox requires either a sunPosition or a texture");
   }
-  return new Skybox(opts);
+  // return new Skybox(opts);
+  return {
+    ...opts,
+  };
 }

@@ -348,5 +348,6 @@ class ReflectionProbe {
 }
 
 export default (opts) => {
-  return new ReflectionProbe(opts);
+  return {};
+  // return new ReflectionProbe(opts);
 };

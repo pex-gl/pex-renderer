@@ -143,5 +143,7 @@ class Transform {
 }
 
 export default function createTransform(opts) {
-  return new Transform(opts);
+  return {
+    position: [0, 0, 0],
+  };
 }
