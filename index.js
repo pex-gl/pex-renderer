@@ -13,6 +13,7 @@ import createTransform from "./components/transform.js";
 
 import createCameraSystem from "./systems/camera-system.js";
 import createGeometrySystem from "./systems/geometry-system.js";
+import createRenderSystem from "./systems/render-system.js";
 import createTransformSystem from "./systems/transform-system.js";
 
 import loadGltf from "./loaders/glTF.js";
@@ -147,6 +148,13 @@ class Renderer {
     });
   }
 
+  renderSystem(opts = {}) {
+    return createRenderSystem({
+      ...opts,
+      ctx: this._ctx,
+    });
+  }
+
   transformSystem(opts = {}) {
     return createTransformSystem(opts);
   }
@@ -162,33 +170,38 @@ class Renderer {
   }
 
   draw() {
-    this.update();
-    const ctx = this._ctx;
-    ctx.submit(this._clearCmd);
-
-    const camera = this.entities.find((e) => e.camera).camera;
-
-    const geometryEntities = this.entities.filter((e) => e.geometry);
-
-    let i = 0;
-    for (let entity of geometryEntities) {
-      i++;
-      // if (i != 5) continue;
-      const cachedGeometry = entity._geometry;
-      const cachedTransform = entity._transform;
-      ctx.submit(this._drawSth, {
-        name: "drawMesh",
-        indices: cachedGeometry.indices,
-        attributes: cachedGeometry.attributes,
-        uniforms: {
-          uProjectionMatrix: camera._projectionMatrix,
-          uViewMatrix: camera._viewMatrix,
-          uModelMatrix: cachedTransform.modelMatrix,
-          uBaseColor: entity.material.baseColor || [0, 0, 0, 1],
-        },
-        count: cachedGeometry.count,
-      });
+    try {
+      this.update();
+    } catch (e) {
+      console.error(e);
+      this.update = () => {};
     }
+
+    const ctx = this._ctx;
+
+    // const camera = this.entities.find((e) => e.camera).camera;
+
+    // const geometryEntities = this.entities.filter((e) => e.geometry);
+
+    // let i = 0;
+    // for (let entity of geometryEntities) {
+    //   i++;
+    //   // if (i != 5) continue;
+    //   const cachedGeometry = entity._geometry;
+    //   const cachedTransform = entity._transform;
+    //   ctx.submit(this._drawSth, {
+    //     name: "drawMesh",
+    //     indices: cachedGeometry.indices,
+    //     attributes: cachedGeometry.attributes,
+    //     uniforms: {
+    //       uProjectionMatrix: camera._projectionMatrix,
+    //       uViewMatrix: camera._viewMatrix,
+    //       uModelMatrix: cachedTransform.modelMatrix,
+    //       uBaseColor: entity.material.baseColor || [0, 0, 0, 1],
+    //     },
+    //     count: cachedGeometry.count,
+    //   });
+    // }
   }
 }
 

@@ -255,7 +255,8 @@ export default function createCamera(opts = {}) {
     camera.target,
     camera.up
   );
-  camera._projectionMatrix = projectionMatrix;
-  camera._viewMatrix = viewMatrix;
+  camera.projectionMatrix = projectionMatrix;
+  camera.viewMatrix = viewMatrix;
+  camera.inverseViewMatrix = mat4.create();
   return camera;
 }
