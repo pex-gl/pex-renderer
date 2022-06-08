@@ -1237,6 +1237,7 @@ const DEFAULT_OPTIONS = {
 async function loadGltf(url, renderer, options = {}) {
   const opts = Object.assign({}, DEFAULT_OPTIONS, options);
   const ctx = renderer._ctx;
+  if (!ctx.capabilities.isWebGL2) opts.supportImageBitmap = false;
 
   // Load and unpack data
   // https://www.khronos.org/registry/glTF/specs/2.0/glTF-2.0.html#glb-file-format-specification
