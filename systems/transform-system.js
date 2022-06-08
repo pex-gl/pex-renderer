@@ -67,7 +67,7 @@ function aabbFromPoints(aabb, points) {
 export default function createTransformSystem(opts) {
   const transformSystem = {
     cache: {},
-    debug: true,
+    debug: false,
   };
 
   function updateModelMatrixHierarchy(matrix, transform) {

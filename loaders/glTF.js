@@ -708,7 +708,10 @@ async function handleMesh(
             )
           : renderer.material();
 
-      const components = [geometryCmp, materialCmp];
+      const components = {
+        geometry: geometryCmp,
+        material: materialCmp,
+      };
 
       // Create morph
       if (primitive.targets) {
@@ -753,12 +756,11 @@ async function handleMesh(
           return targets;
         }, {});
 
-        const morphCmp = renderer.morph({
+        components.morph = renderer.morph({
           sources,
           targets,
           weights,
         });
-        components.push(morphCmp);
       }
 
       return components;
@@ -777,9 +779,11 @@ function getLight(light, renderer) {
   switch (light.type) {
     case "directional":
       light._light = renderer.directionalLight(formatLight(light));
+      light._type = "directionalLight";
       break;
     case "point":
       light._light = renderer.pointLight(formatLight(light));
+      light._type = "pointLight";
       break;
     case "spot":
       light._light = renderer.spotLight({
@@ -787,6 +791,7 @@ function getLight(light, renderer) {
         innerAngle: light.spot?.innerConeAngle || 0,
         angle: light.spot?.outerConeAngle || Math.PI / 4.0,
       });
+      light._type = "spotLight";
       break;
 
     default:
@@ -798,7 +803,7 @@ function getLight(light, renderer) {
 
 // https://github.com/KhronosGroup/glTF/blob/main/specification/2.0/schema/node.schema.json
 async function handleNode(node, gltf, i, ctx, renderer, options) {
-  const components = [];
+  const components = {};
   // const entity = {};
 
   let transform;
@@ -829,7 +834,7 @@ async function handleNode(node, gltf, i, ctx, renderer, options) {
     };
   }
 
-  components.push(renderer.transform(transform));
+  components.transform = renderer.transform(transform);
   // entity.transform = transform;
   // transform.entity = entity;
 
@@ -840,33 +845,29 @@ async function handleNode(node, gltf, i, ctx, renderer, options) {
     // https://github.com/KhronosGroup/glTF/blob/main/specification/2.0/schema/camera.schema.json
     if (camera.type === "orthographic") {
       // https://github.com/KhronosGroup/glTF/blob/main/specification/2.0/schema/camera.orthographic.schema.json
-      components.push(
-        renderer.camera({
-          enabled,
-          name: camera.name || `camera_${node.camera}`,
-          projection: "orthographic",
-          near: camera.orthographic.znear,
-          far: camera.orthographic.zfar,
-          left: -camera.orthographic.xmag / 2,
-          right: camera.orthographic.xmag / 2,
-          top: camera.orthographic.ymag / 2,
-          bottom: camera.orthographic.ymag / 2,
-        })
-      );
+      components.camera = renderer.camera({
+        enabled,
+        name: camera.name || `camera_${node.camera}`,
+        projection: "orthographic",
+        near: camera.orthographic.znear,
+        far: camera.orthographic.zfar,
+        left: -camera.orthographic.xmag / 2,
+        right: camera.orthographic.xmag / 2,
+        top: camera.orthographic.ymag / 2,
+        bottom: camera.orthographic.ymag / 2,
+      });
     } else {
       // https://github.com/KhronosGroup/glTF/blob/main/specification/2.0/schema/camera.perspective.schema.json
-      components.push(
-        renderer.camera({
-          enabled,
-          name: camera.name || `camera_${node.camera}`,
-          near: camera.perspective.znear,
-          far: camera.perspective.zfar || Infinity,
-          fov: camera.perspective.yfov,
-          aspect:
-            camera.perspective.aspectRatio ||
-            ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
-        })
-      );
+      components.camera = renderer.camera({
+        enabled,
+        name: camera.name || `camera_${node.camera}`,
+        near: camera.perspective.znear,
+        far: camera.perspective.zfar || Infinity,
+        fov: camera.perspective.yfov,
+        aspect:
+          camera.perspective.aspectRatio ||
+          ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
+      });
     }
   }
 
@@ -880,7 +881,8 @@ async function handleNode(node, gltf, i, ctx, renderer, options) {
         node.extensions.KHR_lights_punctual.light
       ];
     if (light) {
-      components.push(getLight(light, renderer));
+      const { _light, _type } = getLight(light, renderer);
+      components[_type] = _light;
     }
   }
 
@@ -955,10 +957,10 @@ async function handleNode(node, gltf, i, ctx, renderer, options) {
     }
 
     if (primitives.length === 1) {
-      primitives[0].forEach((component) => {
-        node.entity.addComponent(component);
-      });
-      if (skinCmp) node.entity.addComponent(skinCmp);
+      Object.assign(node.entity, primitives[0]);
+      if (skinCmp) {
+        node.entity.skin = skinCmp;
+      }
 
       // const components = primitives[0];
       // Object.assign(entity, components);
@@ -974,6 +976,7 @@ async function handleNode(node, gltf, i, ctx, renderer, options) {
       // create sub nodes for each primitive
       const primitiveNodes = primitives.map((components, j) => {
         const subEntity = renderer.entity(components);
+        console.log("subEntity", subEntity);
         // const subEntity = {
         //   ...components,
         //   transform: {},
@@ -981,11 +984,14 @@ async function handleNode(node, gltf, i, ctx, renderer, options) {
         // };
         // subEntity.transform.entity = subEntity;
         subEntity.name = `node_${i}_${j}`;
-        subEntity.transform.set({ parent: node.entity.transform });
+        subEntity.transform = {
+          ...(subEntity.transform || {}),
+          parent: node.entity.transform,
+        };
         // subEntity.transform.parent = node.entity.transform;
 
         // TODO: should skin component be shared?
-        if (skinCmp) subEntity.addComponent(skinCmp);
+        if (skinCmp) subEntity.skin = skinCmp;
         // if (skinCmp) {
         //   subEntity.skin = skinCmp;
         // }
@@ -1035,7 +1041,7 @@ function handleAnimation(
 
     let offset = GLTF_ACCESSOR_TYPE_COMPONENTS_NUMBER[output.type];
     if (channel.target.path === "weights") {
-      offset = target.getComponent("Morph").weights.length;
+      offset = target.morph.weights.length;
     }
     for (let i = 0; i < od.length; i += offset) {
       if (offset === 1) {
@@ -1363,11 +1369,11 @@ async function loadGltf(url, renderer, options = {}) {
   let scenes = await Promise.all(
     (json.scenes || [{}]).map(async (scene, index) => {
       // Create scene root entity
-      scene.root = renderer.entity([
-        renderer.transform({
+      scene.root = renderer.entity({
+        transform: renderer.transform({
           enabled: opts.enabledScene || index === (json.scene || 0),
         }),
-      ]);
+      });
       scene.root.name = scene.name || `scene_${index}`;
 
       // Add scene entities for each node and its children
@@ -1397,7 +1403,7 @@ async function loadGltf(url, renderer, options = {}) {
 
         // Default to scene root
         if (!parentNode.entity.transform.parent) {
-          parentNode.entity.transform.set({ parent: scene.root.transform });
+          parentNode.entity.transform.parent = scene.root.transform;
         }
 
         if (children) {
@@ -1405,7 +1411,7 @@ async function loadGltf(url, renderer, options = {}) {
             const child = json.nodes[childIndex];
             const childTransform = child.entity.transform;
 
-            childTransform.set({ parent: parentTransform });
+            childTransform.parent = parentTransform;
           });
         }
       });
@@ -1416,16 +1422,12 @@ async function loadGltf(url, renderer, options = {}) {
           const joints = skin.joints.map((i) => json.nodes[i].entity);
 
           if (json.meshes[node.mesh].primitives.length === 1) {
-            node.entity.getComponent("Skin").set({
-              joints,
-            });
+            node.entity.skin.joints = joints;
           } else {
             node.entity.transform.children.forEach(({ entity }) => {
               // FIXME: currently we share the same Skin component
               // so this code is redundant after first child
-              entity.getComponent("Skin").set({
-                joints,
-              });
+              entity.skin.joints = joints;
             });
           }
         }
@@ -1439,7 +1441,7 @@ async function loadGltf(url, renderer, options = {}) {
             renderer,
             index
           );
-          scene.root.addComponent(animationComponent);
+          scene.root.animation = animationComponent;
         });
       }
 

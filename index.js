@@ -1,9 +1,11 @@
 import { vec3, vec4, mat3, mat4 } from "pex-math";
 
 import createEntity from "./entity.js";
+import createAnimation from "./components/animation.js";
 import createCamera from "./components/camera.js";
 import createGeometry from "./components/geometry.js";
 import createMaterial from "./components/material.js";
+import createMorph from "./components/morph.js";
 import createOrbiter from "./components/orbiter.js";
 import createReflectionProbe from "./components/reflection-probe.js";
 import createSkybox from "./components/skybox.js";
@@ -12,6 +14,8 @@ import createTransform from "./components/transform.js";
 import createCameraSystem from "./systems/camera-system.js";
 import createGeometrySystem from "./systems/geometry-system.js";
 import createTransformSystem from "./systems/transform-system.js";
+
+import loadGltf from "./loaders/glTF.js";
 
 class Renderer {
   constructor(opts) {
@@ -22,6 +26,8 @@ class Renderer {
     opts = opts.texture2D ? { ctx: opts } : opts;
 
     const ctx = (this._ctx = opts.ctx);
+
+    ctx.gl.getExtension("OES_element_index_uint");
 
     this._clearCmd = {
       pass: ctx.pass({
@@ -36,15 +42,21 @@ class Renderer {
         uniform mat4 uViewMatrix;
         uniform mat4 uModelMatrix;
         attribute vec3 aPosition;
+        attribute vec3 aNormal;
+
+        varying vec3 vNormal;
         void main() {
           gl_Position = uProjectionMatrix * uViewMatrix * uModelMatrix * vec4(aPosition, 1.0);
+          vNormal = aNormal;
         }
         `,
         frag: /*glsl*/ `
         precision highp float;
         uniform vec4 uBaseColor;
+        varying vec3 vNormal;
         void main() {
           gl_FragColor = uBaseColor;
+          gl_FragColor.rgb = vNormal * 0.5 + 0.5;
         }
         `,
         depthTest: true,
@@ -88,6 +100,10 @@ class Renderer {
     return createEntity(components);
   }
 
+  animation(opts) {
+    return createAnimation(opts);
+  }
+
   camera(opts) {
     return createCamera(opts);
   }
@@ -98,6 +114,10 @@ class Renderer {
 
   material(opts) {
     return createMaterial(opts);
+  }
+
+  morph(opts) {
+    return createMorph(opts);
   }
 
   orbiter(opts) {
@@ -131,6 +151,10 @@ class Renderer {
     return createTransformSystem(opts);
   }
 
+  loadScene(url) {
+    return loadGltf(url, this);
+  }
+
   update() {
     this.systems.forEach((system) => {
       system.update(this.entities);
@@ -146,18 +170,23 @@ class Renderer {
 
     const geometryEntities = this.entities.filter((e) => e.geometry);
 
+    let i = 0;
     for (let entity of geometryEntities) {
+      i++;
+      // if (i != 5) continue;
       const cachedGeometry = entity._geometry;
       const cachedTransform = entity._transform;
       ctx.submit(this._drawSth, {
+        name: "drawMesh",
         indices: cachedGeometry.indices,
         attributes: cachedGeometry.attributes,
         uniforms: {
           uProjectionMatrix: camera._projectionMatrix,
           uViewMatrix: camera._viewMatrix,
           uModelMatrix: cachedTransform.modelMatrix,
-          uBaseColor: entity.material.baseColor,
+          uBaseColor: entity.material.baseColor || [0, 0, 0, 1],
         },
+        count: cachedGeometry.count,
       });
     }
   }
