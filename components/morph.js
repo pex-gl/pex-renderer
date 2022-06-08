@@ -69,6 +69,7 @@ class Morph {
   }
 }
 
-export default function createMorph(opts) {
-  return new Morph(opts);
+export default function createMorph(opts = {}) {
+  return { ...opts };
+  // return new Morph(opts);
 }

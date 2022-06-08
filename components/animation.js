@@ -188,6 +188,7 @@ class Animation {
   }
 }
 
-export default function createMorph(opts) {
-  return new Animation(opts);
+export default function createAnimation(opts = {}) {
+  return { ...opts };
+  //return new Animation(opts);
 }
