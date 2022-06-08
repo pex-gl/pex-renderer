@@ -34,8 +34,10 @@
     "pex-cam": "github:pex-gl/pex-cam#v3",
     "pex-geom": "github:pex-gl/pex-geom#v3",
     "pex-io": "github:pex-gl/pex-io#v3",
+    "pex-loaders": "github:pex-gl/pex-loaders#014ee1d716d460591fcf87af5e16ea0d47d468a7",
     "pex-math": "github:pex-gl/pex-math#v4",
     "pex-random": "github:pex-gl/pex-random#v2",
+    "pex-shaderlib": "github:pex-gl/pex-shaderlib#d3967fa20dc00db8fd6b96f20cd214df63ab9757",
     "primitive-quad": "^2.0.0",
     "signals": "^1.0.0"
   },
@@ -53,8 +55,6 @@
     "pex-color": "github:pex-gl/pex-color#v2",
     "pex-context": "github:pex-gl/pex-context#v3",
     "pex-gui": "github:pex-gl/pex-gui#v3",
-    "pex-loaders": "github:pex-gl/pex-loaders",
-    "pex-shaderlib": "github:pex-gl/pex-shaderlib#d3967fa20dc00db8fd6b96f20cd214df63ab9757",
     "primitive-geometry": "^2.6.0"
   },
   "engines": {
