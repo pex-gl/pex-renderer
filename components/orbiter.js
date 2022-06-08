@@ -12,7 +12,7 @@ class Orbiter {
     this.entity = null;
     this.dirty = false;
 
-    this.position = [0, 0, 5];
+    this.position = [0, 0, 1];
     this.target = [0, 0, 0];
     this.matrix = mat4.create();
 
@@ -38,7 +38,7 @@ class Orbiter {
         camera: {
           position: this.position,
           target: this.target,
-          zoom: this.entity?.getComponent("Camera")?.zoom,
+          zoom: this.entity?.camera?.zoom,
         },
       });
     }

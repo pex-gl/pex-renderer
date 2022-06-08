@@ -22,15 +22,19 @@ export default function createCameraSystem() {
               element: entity.orbiter.element,
               autoUpdate: false,
               camera: proxyCamera,
+              distance: 2,
             });
           } else {
             entity.orbiter._orbiter.updateCamera();
             mat4.lookAt(
-              camera._viewMatrix,
+              camera.viewMatrix,
               camera.position,
               camera.target,
               camera.up
             );
+
+            mat4.set(camera.inverseViewMatrix, camera.viewMatrix);
+            mat4.invert(camera.inverseViewMatrix);
           }
         }
       }
