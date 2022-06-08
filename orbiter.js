@@ -38,7 +38,6 @@ class Orbiter {
         camera: {
           position: this.position,
           target: this.target,
-          zoom: this.entity?.getComponent("Camera")?.zoom,
         },
       });
     }
@@ -47,13 +46,15 @@ class Orbiter {
 
   update() {
     const camera = this.entity.getComponent("Camera");
-    this.control.camera ||= {};
+    this.control.camera = { ...camera };
     this.control.camera.position = this.position;
     this.control.camera.target = this.target;
-    this.control.camera.zoom = camera.zoom;
+    this.control.camera.invViewMatrix = camera.inverseViewMatrix;
+    this.control.camera.getViewRay = camera.getViewRay;
 
-    this.control.camera.set = ({ position, zoom }) => {
+    this.control.camera.set = ({ position, target, zoom }) => {
       if (position) this.position = position;
+      if (target) this.target = target;
 
       mat4.identity(this.matrix);
       mat4.lookAt(this.matrix, this.position, this.target, up);
