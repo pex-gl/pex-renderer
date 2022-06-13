@@ -171,9 +171,9 @@ export default function createRenderSystem(opts) {
         !material.useSpecularGlossinessWorkflow &&
           "USE_METALLIC_ROUGHNESS_WORKFLOW",
         // TODO: is checking for "null" required here
-        material.emissiveColor !== null && "USE_EMISSIVE_COLOR",
-        material.clearCoat !== null && "USE_CLEAR_COAT",
-        material.sheenColor !== null && "USE_SHEEN",
+        material.emissiveColor != null && "USE_EMISSIVE_COLOR",
+        material.clearCoat != null && "USE_CLEAR_COAT",
+        material.sheenColor != null && "USE_SHEEN",
         `NUM_AMBIENT_LIGHTS ${options.numAmbientLights || 0}`,
         `NUM_DIRECTIONAL_LIGHTS ${options.numDirectionalLights || 0}`,
         `NUM_POINT_LIGHTS ${options.numPointLights || 0}`,
