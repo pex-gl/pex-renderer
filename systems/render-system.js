@@ -1,9 +1,13 @@
 import { pipeline as SHADERS, chunks as SHADERS_CHUNKS } from "pex-shaderlib";
 import { es300Fragment, es300Vertex, getFileExtension } from "../utils.js";
-import { mat3, mat4 } from "pex-math";
+import { vec3, vec4, mat3, mat4 } from "pex-math";
 
 export default function createRenderSystem(opts) {
   const ctx = opts.ctx;
+
+  const dummyTexture2D = ctx.texture2D({ width: 4, height: 4 });
+  const dummyTextureCube = ctx.textureCube({ width: 4, height: 4 });
+  const tempMat4 = mat4.create(); //FIXME
 
   let clearCmd = {
     pass: ctx.pass({
@@ -125,7 +129,7 @@ export default function createRenderSystem(opts) {
     return program;
   }
 
-  function getMaterialProgramAndFlags(
+  function getMaterialProgramAndFlagsOld(
     ctx,
     entity,
     options = {},
@@ -195,6 +199,80 @@ export default function createRenderSystem(opts) {
     };
   }
 
+  // prettier-ignore
+  const flagDefs = [
+    [["options", "ambientLights", "length"], "NUM_AMBIENT_LIGHTS", { type: "counter" }],
+    [["options", "directionalLights", "length"], "NUM_DIRECTIONAL_LIGHTS", { type: "counter" }],
+    [["options", "pointLights", "length"], "NUM_POINT_LIGHTS", { type: "counter" }],
+    [["options", "spotLights", "length"], "NUM_SPOT_LIGHTS", { type: "counter" }],
+    [["options", "areaLights", "length"], "NUM_AREA_LIGHTS", { type: "counter" }],
+    [["material", "baseColorMap"], "BASE_COLOR_MAP", { type: "textureMap", uniform: "uBaseColorMap"}],
+    [["geometry", "attributes", "aNormal"], "USE_NORMALS"],
+    [["geometry", "attributes", "aTangent"], "USE_TANGENTS"],
+    [["geometry", "attributes", "aTexCoord0"], "USE_TEXCOORD_0"],
+    [["geometry", "attributes", "aTexCoord1"], "USE_TEXCOORD_1"],
+    [["geometry", "attributes", "aOffset"], "USE_INSTANCED_OFFSET"],
+    [["geometry", "attributes", "aScale"], "USE_INSTANCED_SCALE"],
+    [["geometry", "attributes", "aRotation"], "USE_INSTANCED_ROTATION"],
+    [["geometry", "attributes", "aColor"], "USE_INSTANCED_COLOR"],
+    [["geometry", "attributes", "aVertexColor"], "USE_VERTEX_COLORS"],
+  ];
+
+  function getMaterialProgramAndFlags(
+    ctx,
+    entity,
+    options = {},
+    // TODO: pass shadowQuality as option
+    State
+  ) {
+    const { _geometry: geometry, material, skin } = entity;
+    const obj = {
+      geometry,
+      material,
+      options,
+    };
+
+    let flags = [
+      //[["ctx", "capabilities", "maxColorAttachments"], "USE_DRAW_BUFFERS"
+      ctx.capabilities.maxColorAttachments > 1 && "USE_DRAW_BUFFERS",
+      (!geometry.attributes.aNormal || material.unlit) && "USE_UNLIT_WORKFLOW",
+      // "USE_UNLIT_WORKFLOW",
+      "USE_METALLIC_ROUGHNESS_WORKFLOW",
+    ];
+
+    for (let i = 0; i < flagDefs.length; i++) {
+      const [path, defineName, opts = {}] = flagDefs[i];
+
+      let value = obj;
+      for (let j = 0; j < path.length; j++) {
+        value = value[path[j]];
+      }
+
+      if (opts.type == "counter") flags.push(`${defineName} ${value}`);
+      else if (opts.type == "textureMap" && value) {
+        flags.push(`USE_${defineName}`);
+        flags.push(`${defineName}_TEX_COORD_INDEX 0`);
+      } else if (value) {
+        flags.push(defineName);
+      }
+    }
+
+    // console.log("flags", flags);
+
+    let { vert, frag } = material;
+
+    vert ||= SHADERS.material.vert;
+    frag ||= SHADERS.material.frag;
+    return {
+      flags: flags
+        .flat()
+        .filter(Boolean)
+        .map((flag) => `#define ${flag}`),
+      vert,
+      frag,
+    };
+  }
+
   function getExtensions() {
     return ctx.capabilities.isWebGL2
       ? ""
@@ -245,18 +323,24 @@ ${
     const vertSrc = flagsStr + vert;
     const fragSrc = extensions + flagsStr + frag;
     let program = programCacheMap.getValue(flags, vert, frag);
-    if (!program) {
-      program = buildProgram(
-        parseShader(
-          ctx.capabilities.isWebGL2 ? es300Vertex(vertSrc) : vertSrc,
-          options
-        ),
-        parseShader(
-          ctx.capabilities.isWebGL2 ? es300Fragment(fragSrc, 3) : fragSrc,
-          options
-        )
-      );
-      programCacheMap.setValue(flags, vert, frag, program);
+    try {
+      if (!program) {
+        program = buildProgram(
+          parseShader(
+            ctx.capabilities.isWebGL2 ? es300Vertex(vertSrc) : vertSrc,
+            options
+          ),
+          parseShader(
+            ctx.capabilities.isWebGL2 ? es300Fragment(fragSrc, 3) : fragSrc,
+            options
+          )
+        );
+        programCacheMap.setValue(flags, vert, frag, program);
+      }
+    } catch (e) {
+      console.error(e);
+      console.log(vert);
+      // console.log(frag);
     }
     return program;
   }
@@ -275,14 +359,14 @@ ${
         program,
         depthTest: material.depthTest,
         depthWrite: material.depthWrite,
-        depthFunc: material.depthFunc,
+        depthFunc: material.depthFunc || ctx.DepthFunc.Less,
         // blend: material.blend,
         // blendSrcRGBFactor: material.blendSrcRGBFactor,
         // blendSrcAlphaFactor: material.blendSrcAlphaFactor,
         // blendDstRGBFactor: material.blendDstRGBFactor,
         // blendDstAlphaFactor: material.blendDstAlphaFactor,
-        cullFace: material.cullFace,
-        cullFaceMode: material.cullFaceMode,
+        cullFace: material.cullFace || true,
+        cullFaceMode: material.cullFaceMode || ctx.Face.Back,
         primitive: geometry.primitive || ctx.Primitive.Triangles,
       });
       pipelineCache[hash] = pipeline;
@@ -302,14 +386,12 @@ ${
   ) {
     const camera = cameraEntity.camera;
 
-    const sharedUniforms = {};
+    const sharedUniforms = {
+      uOutputEncoding: ctx.Encoding.Gamma,
+    };
     const ambientLights = entities.filter((e) => e.ambientLight);
     const directionalLights = entities.filter((e) => e.directionalLight);
-    console.log(
-      "directionalLights",
-      directionalLights.length,
-      directionalLights
-    );
+
     const pointLights = entities.filter((e) => e.pointLight);
     const spotLights = entities.filter((e) => e.spotLight);
     const areaLights = entities.filter((e) => e.areaLight);
@@ -320,6 +402,34 @@ ${
     sharedUniforms.uProjectionMatrix = camera.projectionMatrix;
     sharedUniforms.uViewMatrix = camera.viewMatrix;
     sharedUniforms.uInverseViewMatrix = camera.inverseViewMatrix; //TODO
+    sharedUniforms.uCameraPosition = cameraEntity._transform.worldPosition;
+
+    directionalLights.forEach((lightEntity, i) => {
+      const light = lightEntity.directionalLight;
+      const dir4 = [0, 0, 1, 0]; // TODO: GC
+      const dir = [0, 0, 0];
+      vec4.multMat4(dir4, lightEntity._transform.modelMatrix);
+      vec3.set(dir, dir4);
+
+      sharedUniforms[`uDirectionalLights[${i}].direction`] = dir;
+      sharedUniforms[`uDirectionalLights[${i}].color`] = light.color;
+      sharedUniforms[`uDirectionalLights[${i}].castShadows`] =
+        light.castShadows;
+      sharedUniforms[`uDirectionalLights[${i}].projectionMatrix`] =
+        light._projectionMatrix || tempMat4; //FIXME
+      sharedUniforms[`uDirectionalLights[${i}].viewMatrix`] =
+        light._viewMatrix || tempMat4; //FIXME;
+      sharedUniforms[`uDirectionalLights[${i}].near`] = light._near || 0.1;
+      sharedUniforms[`uDirectionalLights[${i}].far`] = light._far || 100;
+      sharedUniforms[`uDirectionalLights[${i}].bias`] = light.bias || 0;
+      sharedUniforms[`uDirectionalLights[${i}].shadowMapSize`] =
+        light.castShadows
+          ? [light._shadowMap.width, light._shadowMap.height]
+          : [0, 0];
+      sharedUniforms[`uDirectionalLightShadowMaps[${i}]`] = light.castShadows
+        ? light._shadowMap
+        : dummyTexture2D;
+    });
 
     for (let i = 0; i < renderableEntities.length; i++) {
       const renderableEntity = renderableEntities[i];
@@ -335,13 +445,22 @@ ${
       cachedUniforms.uBaseColor = material.baseColor;
       cachedUniforms.uBaseColorMap = material.baseColorMap;
 
+      cachedUniforms.uPointSize = 1;
+
+      // uPointSize, uCameraPosition, uExposure, uSheenColor, uSheenRoughness, uReflectance, uClearCoat, uClearCoatRoughness, uReflectionMapEncoding, uEmissiveColor, uEmissiveIntensity, uMetallic, uRoughness, uReflectionMap
+
       const pipeline = getGeometryPipeline(ctx, renderableEntity, {
         numAmbientLights: ambientLights.length,
         numDirectionalLights: directionalLights.length,
         numPointLights: pointLights.length,
         numSpotLights: spotLights.length,
         numAreaLights: areaLights.length,
-        useReflectionProbes: reflectionProbes.length, // TODO: reflection probes true
+        ambientLights,
+        directionalLights,
+        pointLights,
+        spotLights,
+        areaLights,
+        reflectionProbes,
         useSSAO: false,
         // postProcessingCmp &&
         // postProcessingCmp.enabled &&
