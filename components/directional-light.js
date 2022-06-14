@@ -106,6 +106,9 @@ class DirectionalLight {
   }
 }
 
-export default (opts) => {
-  return new DirectionalLight(opts);
+export default (opts = {}) => {
+  return {
+    ...opts,
+    castShadows: false, //TODO: temp overwrite
+  };
 };

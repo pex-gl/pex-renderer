@@ -1,17 +1,20 @@
 import createRenderer from "../index.js";
 import createContext from "pex-context";
-import { sphere, torus } from "primitive-geometry";
+import { cube, torus } from "primitive-geometry";
 import { vec3, quat, mat4 } from "pex-math";
+import * as io from "pex-io";
 import { aabb } from "pex-geom";
 import createGUI from "pex-gui";
+import parseHdr from "parse-hdr";
+import { getURL } from "./utils.js";
 
 const ctx = createContext();
 ctx.gl.getExtension("OES_element_index_uint"); //TEMP
 
 const renderer = createRenderer(ctx);
 
-function aabbToString(aabb) {
-  return aabb.map((v) => v.map((f) => Math.floor(f * 1000) / 1000));
+function aabbToString(bbox) {
+  return bbox.map((v) => v.map((f) => Math.floor(f * 1000) / 1000));
 }
 
 function targetTo(out, eye, target, up = [0, 1, 0]) {
@@ -83,7 +86,7 @@ gui.addButton("Tree", () => {
     console.log(
       " ".repeat(depth * 5),
       e.id,
-      aabbToString(e.transform.worldBounds),
+      aabbToString(e.transform.worldBounds || "[No world bounds]"),
       e
     );
   });
@@ -99,21 +102,20 @@ const cameraEntity = renderer.entity({
     element: ctx.gl.canvas,
   }),
 });
-
 renderer.add(cameraEntity);
 
-const sphereEntity = renderer.entity({
+const cubeEntity = renderer.entity({
   transform: renderer.transform({
-    position: [2, 0, 0],
+    position: [0, 0, 0],
   }),
-  geometry: renderer.geometry(sphere()),
+  geometry: renderer.geometry(cube({ sx: 2, sy: 0.1, sz: 2 })),
   material: renderer.material({
-    baseColor: [1, 0, 0, 1],
+    baseColor: [0, 1, 0, 1],
     metallic: 0,
-    roughness: 0.5,
+    roughness: 0.2,
   }),
 });
-// renderer.add(sphereEntity);
+renderer.add(cubeEntity);
 
 const torusEntity = renderer.entity({
   transform: renderer.transform({
@@ -128,28 +130,54 @@ const torusEntity = renderer.entity({
 });
 renderer.add(torusEntity);
 
-const skyboxEntity = renderer.entity({
+const skyboxEnt = renderer.entity({
   skybox: renderer.skybox({
     sunPosition: [1, 1, 1],
   }),
 });
-renderer.add(skyboxEntity);
+renderer.add(skyboxEnt);
 
-const reflectionProbeEntity = renderer.entity({
+const reflectionProbeEnt = renderer.entity({
   reflectionProbe: renderer.reflectionProbe(),
 });
-renderer.add(reflectionProbeEntity);
+renderer.add(reflectionProbeEnt);
 
-renderer.addSystem(renderer.cameraSystem());
+const directionalLightEntity = renderer.entity(
+  {
+    transform: renderer.transform({
+      position: [2, 2, 2],
+      rotation: quat.fromMat4(
+        quat.create(),
+        targetTo(mat4.create(), [0, 0, 0], [1, 1, 1])
+      ),
+    }),
+    directionalLight: renderer.directionalLight({
+      color: [1, 1, 1, 2], //FIXME: instencity is copied to alpha in pex-renderer
+      intensity: 1,
+      castShadows: true,
+    }),
+    // ambientLight: renderer.ambientLight({
+    //   color: [1, 1, 1, 1], //FIXME: instencity is copied to alpha in pex-renderer
+    //   intensity: 1,
+    //   castShadows: true,
+    // }),
+    // renderer.lightHelper(), //TODO:
+  }
+  // ["cell0"]
+);
+renderer.add(directionalLightEntity);
+
 renderer.addSystem(renderer.geometrySystem());
 renderer.addSystem(renderer.transformSystem());
 renderer.addSystem(renderer.cameraSystem());
+renderer.addSystem(renderer.skyboxSystem());
+renderer.addSystem(renderer.reflectionProbeSystem());
 renderer.addSystem(renderer.renderSystem());
 
 function rescaleScene(root) {
   const sceneBounds = root.transform.worldBounds;
-  const sceneSize = aabb.size(root.transform.worldBounds);
-  const sceneCenter = aabb.center(root.transform.worldBounds);
+  const sceneSize = aabb.size(sceneBounds);
+  const sceneCenter = aabb.center(sceneBounds);
   const sceneScale =
     2 / (Math.max(sceneSize[0], Math.max(sceneSize[1], sceneSize[2])) || 1);
   if (!aabb.isEmpty(sceneBounds)) {
@@ -177,13 +205,15 @@ async function loadScene() {
     renderer.entities.push(...sceneEntities);
     renderer.entities.forEach((e) => {
       if (e.material) {
-        e.material.unlit = true;
+        // e.material.unlit = false;
         e.material.depthTest = true;
         e.material.depthWrite = true;
+        e.material.needsPipelineUpdate = true;
       }
     });
+    console.log("updating systems");
     renderer.update(); //force scene hierarchy update
-    rescaleScene(sceneEntities[0]);
+    rescaleScene(sceneEntities[0]); //TODO: race condition: sometime scene bounding box is not yet updated and null
 
     console.log("entities", renderer.entities);
   } catch (e) {
@@ -193,6 +223,44 @@ async function loadScene() {
 
 loadScene();
 
+(async () => {
+  // const buffer = await io.loadArrayBuffer(
+  //   getURL(`assets/envmaps/Mono_Lake_B/Mono_Lake_B.hdr`)
+  // );
+  const buffer = await io.loadArrayBuffer(
+    `examples/assets/envmaps/Mono_Lake_B/Mono_Lake_B.hdr`
+  );
+  const hdrImg = parseHdr(buffer);
+  const panorama = ctx.texture2D({
+    data: hdrImg.data,
+    width: hdrImg.shape[0],
+    height: hdrImg.shape[1],
+    pixelFormat: ctx.PixelFormat.RGBA32F,
+    encoding: ctx.Encoding.Linear,
+    flipY: true, //TODO: flipY on non dom elements is deprecated
+  });
+
+  skyboxEnt._skybox.texture = panorama;
+  skyboxEnt._skybox.dirty = true; //TODO: check if this works
+
+  renderer.draw(); //force update reflection probe
+  console.log("reflectionProbeEnt", reflectionProbeEnt);
+  reflectionProbeEnt._reflectionProbe.dirty = true;
+
+  gui.addHeader("Settings");
+  gui.addParam("BG Blur", skyboxEnt.skybox, "backgroundBlur", {}, () => {});
+  gui.addTexture2D(
+    "Skybox",
+    skyboxEnt.skybox.texture || skyboxEnt._skybox._skyTexture
+  );
+  gui.addTexture2D(
+    "Reflection Probe",
+    reflectionProbeEnt._reflectionProbe._reflectionMap
+  );
+
+  window.dispatchEvent(new CustomEvent("pex-screenshot"));
+})();
+
 ctx.frame(() => {
   const now = Date.now() * 0.0005;
   if (debugNextFrame) {
@@ -201,7 +269,7 @@ ctx.frame(() => {
     ctx.debug(true);
   }
 
-  skyboxEntity.skybox.sunPosition = [1 * Math.cos(now), 1, 1 * Math.sin(now)];
+  skyboxEnt.skybox.sunPosition = [1 * Math.cos(now), 1, 1 * Math.sin(now)];
   quat.fromAxisAngle(
     torusEntity.transform.rotation,
     [0, 1, 0],

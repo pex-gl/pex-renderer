@@ -11,7 +11,7 @@ export default function createRenderSystem(opts) {
 
   let clearCmd = {
     pass: ctx.pass({
-      clearColor: [0, 0.75, 0.5, 1],
+      clearColor: [0, 0, 0, 1],
     }),
   };
 
@@ -206,7 +206,10 @@ export default function createRenderSystem(opts) {
     [["options", "pointLights", "length"], "NUM_POINT_LIGHTS", { type: "counter" }],
     [["options", "spotLights", "length"], "NUM_SPOT_LIGHTS", { type: "counter" }],
     [["options", "areaLights", "length"], "NUM_AREA_LIGHTS", { type: "counter" }],
+    [["options", "reflectionProbes", "length"], "USE_REFLECTION_PROBES"],    
     [["material", "baseColorMap"], "BASE_COLOR_MAP", { type: "textureMap", uniform: "uBaseColorMap"}],
+    [["material", "normalMap"], "NORMAL_MAP", { type: "textureMap", uniform: "uNormalMap"}],
+    [["material", "metallicRoughnessMap"], "METALLIC_ROUGHNESS_MAP", { type: "textureMap", uniform: "uMetallicRoughnessMap"}],
     [["geometry", "attributes", "aNormal"], "USE_NORMALS"],
     [["geometry", "attributes", "aTangent"], "USE_TANGENTS"],
     [["geometry", "attributes", "aTexCoord0"], "USE_TEXCOORD_0"],
@@ -235,9 +238,10 @@ export default function createRenderSystem(opts) {
     let flags = [
       //[["ctx", "capabilities", "maxColorAttachments"], "USE_DRAW_BUFFERS"
       ctx.capabilities.maxColorAttachments > 1 && "USE_DRAW_BUFFERS",
-      (!geometry.attributes.aNormal || material.unlit) && "USE_UNLIT_WORKFLOW",
+      // (!geometry.attributes.aNormal || material.unlit) && "USE_UNLIT_WORKFLOW",
       // "USE_UNLIT_WORKFLOW",
       "USE_METALLIC_ROUGHNESS_WORKFLOW",
+      "SHADOW_QUALITY 0",
     ];
 
     for (let i = 0; i < flagDefs.length; i++) {
@@ -325,6 +329,7 @@ ${
     let program = programCacheMap.getValue(flags, vert, frag);
     try {
       if (!program) {
+        console.log("render-system", "New program", flags, entity);
         program = buildProgram(
           parseShader(
             ctx.capabilities.isWebGL2 ? es300Vertex(vertSrc) : vertSrc,
@@ -404,6 +409,15 @@ ${
     sharedUniforms.uInverseViewMatrix = camera.inverseViewMatrix; //TODO
     sharedUniforms.uCameraPosition = cameraEntity._transform.worldPosition;
 
+    ambientLights.forEach((lightEntity, i) => {
+      // console.log(
+      //   "lightEntity.ambientLight.color",
+      //   lightEntity.ambientLight.color
+      // );
+      sharedUniforms[`uAmbientLights[${i}].color`] =
+        lightEntity.ambientLight.color;
+    });
+
     directionalLights.forEach((lightEntity, i) => {
       const light = lightEntity.directionalLight;
       const dir4 = [0, 0, 1, 0]; // TODO: GC
@@ -411,25 +425,28 @@ ${
       vec4.multMat4(dir4, lightEntity._transform.modelMatrix);
       vec3.set(dir, dir4);
 
+      // prettier-ignore
+      {
       sharedUniforms[`uDirectionalLights[${i}].direction`] = dir;
       sharedUniforms[`uDirectionalLights[${i}].color`] = light.color;
-      sharedUniforms[`uDirectionalLights[${i}].castShadows`] =
-        light.castShadows;
-      sharedUniforms[`uDirectionalLights[${i}].projectionMatrix`] =
-        light._projectionMatrix || tempMat4; //FIXME
-      sharedUniforms[`uDirectionalLights[${i}].viewMatrix`] =
-        light._viewMatrix || tempMat4; //FIXME;
+      sharedUniforms[`uDirectionalLights[${i}].castShadows`] = light.castShadows;
+      sharedUniforms[`uDirectionalLights[${i}].projectionMatrix`] = light._projectionMatrix || tempMat4; //FIXME
+      sharedUniforms[`uDirectionalLights[${i}].viewMatrix`] = light._viewMatrix || tempMat4; //FIXME;
       sharedUniforms[`uDirectionalLights[${i}].near`] = light._near || 0.1;
       sharedUniforms[`uDirectionalLights[${i}].far`] = light._far || 100;
       sharedUniforms[`uDirectionalLights[${i}].bias`] = light.bias || 0;
-      sharedUniforms[`uDirectionalLights[${i}].shadowMapSize`] =
-        light.castShadows
-          ? [light._shadowMap.width, light._shadowMap.height]
-          : [0, 0];
-      sharedUniforms[`uDirectionalLightShadowMaps[${i}]`] = light.castShadows
-        ? light._shadowMap
-        : dummyTexture2D;
+      sharedUniforms[`uDirectionalLights[${i}].shadowMapSize`] = light.castShadows ? [light._shadowMap.width, light._shadowMap.height] : [0, 0];
+      sharedUniforms[`uDirectionalLightShadowMaps[${i}]`] = light.castShadows ? light._shadowMap : dummyTexture2D;
+      }
     });
+
+    if (reflectionProbes.length > 0) {
+      // && reflectionProbes[0]._reflectionMap) {
+      sharedUniforms.uReflectionMap =
+        reflectionProbes[0]._reflectionProbe._reflectionMap;
+      sharedUniforms.uReflectionMapEncoding =
+        reflectionProbes[0]._reflectionProbe._reflectionMap.encoding;
+    }
 
     for (let i = 0; i < renderableEntities.length; i++) {
       const renderableEntity = renderableEntities[i];
@@ -444,8 +461,14 @@ ${
       cachedUniforms.uModelMatrix = transform.modelMatrix; //FIXME: bypasses need for transformSystem access
       cachedUniforms.uBaseColor = material.baseColor;
       cachedUniforms.uBaseColorMap = material.baseColorMap;
+      cachedUniforms.uRoughness = material.roughness;
+      cachedUniforms.uMetallic = material.metallic;
+      cachedUniforms.uNormalMap = material.normalMap;
+      cachedUniforms.uNormalScale = 1;
+      cachedUniforms.uReflectance = 0.5;
 
       cachedUniforms.uPointSize = 1;
+      cachedUniforms.uMetallicRoughnessMap = material.metallicRoughnessMap;
 
       // uPointSize, uCameraPosition, uExposure, uSheenColor, uSheenRoughness, uReflectance, uClearCoat, uClearCoatRoughness, uReflectionMapEncoding, uEmissiveColor, uEmissiveIntensity, uMetallic, uRoughness, uReflectionMap
 

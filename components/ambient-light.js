@@ -27,5 +27,8 @@ class AmbientLight {
 }
 
 export default (opts) => {
-  return new AmbientLight(opts);
+  return {
+    ...opts,
+  };
+  //return new AmbientLight(opts);
 };

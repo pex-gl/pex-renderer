@@ -1,11 +1,11 @@
-import Signal from "signals";
+// import Signal from "signals";
 import * as AreaLightsData from "./area-light-data.js";
 
 class AreaLight {
   constructor(opts) {
     this.type = "AreaLight";
     this.enabled = true;
-    this.changed = new Signal();
+    // this.changed = new Signal();
     this.color = [1, 1, 1, 1];
     this.intensity = 1;
     this.castShadows = false;
