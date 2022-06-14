@@ -226,19 +226,16 @@ class Camera {
   }
 }
 
-const DefaultCameraSettings = {
-  fov: Math.PI / 4,
-  aspect: 1,
-  near: 0.1,
-  far: 1000,
-  position: [0, 1, 5],
-  target: [0, 0, 0],
-  up: [0, 1, 0],
-};
-
 export default function createCamera(opts = {}) {
   const camera = {
-    ...DefaultCameraSettings,
+    fov: Math.PI / 4,
+    aspect: 1,
+    near: 0.1,
+    far: 1000,
+    position: [0, 1, 5],
+    target: [0, 0, 0],
+    up: [0, 1, 0],
+    exposure: 1,
     ...opts,
   };
   //should this be in systems?

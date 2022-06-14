@@ -1,8 +1,11 @@
-import { vec3, vec4, mat3, mat4 } from "pex-math";
-
 import createEntity from "./entity.js";
 import createAnimation from "./components/animation.js";
 import createCamera from "./components/camera.js";
+import createAmbientLight from "./components/ambient-light.js";
+import createDirectionalLight from "./components/directional-light.js";
+import createPointLight from "./components/point-light.js";
+import createAreaLight from "./components/area-light.js";
+
 import createGeometry from "./components/geometry.js";
 import createMaterial from "./components/material.js";
 import createMorph from "./components/morph.js";
@@ -13,7 +16,9 @@ import createTransform from "./components/transform.js";
 
 import createCameraSystem from "./systems/camera-system.js";
 import createGeometrySystem from "./systems/geometry-system.js";
+import createReflectionProbeSystem from "./systems/reflection-probe-system.js";
 import createRenderSystem from "./systems/render-system.js";
+import createSkyboxSystem from "./systems/skybox-system.js";
 import createTransformSystem from "./systems/transform-system.js";
 
 import loadGltf from "./loaders/glTF.js";
@@ -27,14 +32,6 @@ class Renderer {
     opts = opts.texture2D ? { ctx: opts } : opts;
 
     const ctx = (this._ctx = opts.ctx);
-
-    ctx.gl.getExtension("OES_element_index_uint");
-
-    this._clearCmd = {
-      pass: ctx.pass({
-        clearColor: [0, 0.75, 0.5, 1],
-      }),
-    };
 
     this._drawSth = {
       pipeline: ctx.pipeline({
@@ -109,6 +106,26 @@ class Renderer {
     return createCamera(opts);
   }
 
+  ambientLight(opts) {
+    return createAmbientLight(opts);
+  }
+
+  areaLight(opts) {
+    return createAreaLight(opts);
+  }
+
+  directionalLight(opts) {
+    return createDirectionalLight(opts);
+  }
+
+  pointLight(opts) {
+    return createPointLight(opts);
+  }
+
+  spotLight(opts) {
+    return createSpotLight(opts);
+  }
+
   geometry(opts) {
     return createGeometry(opts);
   }
@@ -148,8 +165,22 @@ class Renderer {
     });
   }
 
+  reflectionProbeSystem(opts = {}) {
+    return createReflectionProbeSystem({
+      ...opts,
+      ctx: this._ctx,
+    });
+  }
+
   renderSystem(opts = {}) {
     return createRenderSystem({
+      ...opts,
+      ctx: this._ctx,
+    });
+  }
+
+  skyboxSystem(opts = {}) {
+    return createSkyboxSystem({
       ...opts,
       ctx: this._ctx,
     });

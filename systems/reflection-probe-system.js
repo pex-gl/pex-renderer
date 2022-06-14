@@ -1,4 +1,3 @@
-import Signal from "signals";
 import { mat4 } from "pex-math";
 import { reflectionProbe as SHADERS } from "pex-shaderlib";
 import hammersley from "hammersley";
@@ -7,7 +6,6 @@ class ReflectionProbe {
   constructor(opts) {
     this.type = "ReflectionProbe";
     this.enabled = true;
-    this.changed = new Signal();
     this.rgbm = false;
 
     this.set(opts);
@@ -343,13 +341,43 @@ class ReflectionProbe {
 
   set(opts) {
     Object.assign(this, opts);
-    Object.keys(opts).forEach((prop) => this.changed.dispatch(prop));
   }
 }
 
-export default (opts = {}) => {
-  return {
-    ...opts,
+export default function createReflectionProbeSystem(opts) {
+  const reflectionProbeSystem = {
+    type: "reflection-probe-system",
+    cache: {},
+    debug: false,
   };
-  // return new ReflectionProbe(opts);
-};
+
+  reflectionProbeSystem.update = (entities) => {
+    const skyboxEntities = entities.filter((e) => e.skybox);
+    const reflectionProbeEntities = entities.filter((e) => e.reflectionProbe);
+    for (let reflectionProbeEntity of reflectionProbeEntities) {
+      let reflectionProbe =
+        reflectionProbeSystem.cache[reflectionProbeEntity.id];
+      if (!reflectionProbe) {
+        reflectionProbe = new ReflectionProbe({
+          ...reflectionProbeEntity.reflectionProbe,
+          ctx: opts.ctx,
+        });
+        reflectionProbeSystem.cache[reflectionProbeEntity.id] = reflectionProbe;
+        reflectionProbeEntity._reflectionProbe = reflectionProbe;
+      }
+      // TODO: this should be just node.reflectionProbe
+      if (reflectionProbeEntity._reflectionProbe.dirty) {
+        reflectionProbeEntity._reflectionProbe.update((camera, encoding) => {
+          if (skyboxEntities.length > 0) {
+            skyboxEntities[0]._skybox.draw(camera, {
+              outputEncoding: encoding,
+              backgroundMode: false,
+            });
+          }
+        });
+      }
+    }
+  };
+
+  return reflectionProbeSystem;
+}
