@@ -193,11 +193,11 @@ function rescaleScene(root) {
 async function loadScene() {
   try {
     const scene = await renderer.loadScene(
-      "examples/assets/models/buster_drone/scene.gltf" //ok
+      // "examples/assets/models/buster_drone/scene.gltf" //ok
       // "examples/assets/models/buster-drone-etc1s-draco.glb"
       // "examples/assets/models/duck/glTF/Duck.gltf" //ok
       // "examples/assets/models/CesiumMilkTruck/glTF/CesiumMilkTruck.gltf" //ok
-      // "examples/assets/models/DamagedHelmet/glTF/DamagedHelmet.gltf" //ok
+      "examples/assets/models/DamagedHelmet/glTF/DamagedHelmet.gltf" //ok
     ); //ok
     const sceneEntities = scene[0].entities;
     //scene[0].entities.forEach((entity) => renderer.add(entity));
@@ -237,6 +237,8 @@ loadScene();
     height: hdrImg.shape[1],
     pixelFormat: ctx.PixelFormat.RGBA32F,
     encoding: ctx.Encoding.Linear,
+    min: ctx.Filter.Linear,
+    mag: ctx.Filter.Linear,
     flipY: true, //TODO: flipY on non dom elements is deprecated
   });
 

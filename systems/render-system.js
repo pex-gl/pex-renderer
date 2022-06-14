@@ -509,6 +509,12 @@ ${
         instances: geometry.instances,
       });
     }
+
+    //TODO: draw skybox before first transparent
+    skybox.draw(camera, {
+      outputEncoding: sharedUniforms.uOutputEncoding,
+      backgroundMode: true,
+    });
   }
 
   renderSystem.update = (entities) => {
@@ -519,6 +525,7 @@ ${
     );
 
     const cameraEntities = entities.filter((e) => e.camera);
+    const skyboxEntities = entities.filter((e) => e.skybox);
 
     drawMeshes(
       cameraEntities[0],
@@ -526,7 +533,7 @@ ${
       null,
       entities,
       rendererableEntities,
-      null,
+      skyboxEntities[0]?._skybox,
       true
     );
   };

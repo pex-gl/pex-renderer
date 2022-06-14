@@ -15,6 +15,7 @@ export default function createCameraSystem() {
         const camera = entity.camera;
         if (!orbiter._orbiter) {
           const proxyCamera = {
+            viewMatrix: mat4.create(),
             position: camera.position,
             target: camera.target,
             set({ position }) {
