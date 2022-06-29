@@ -227,6 +227,8 @@ class Camera {
 }
 
 export default function createCamera(opts = {}) {
+  //TODO: just return pex-cam object for now not to duplicate functionality
+  //TODO: how do we handle setters
   const camera = {
     fov: Math.PI / 4,
     aspect: 1,

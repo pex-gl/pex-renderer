@@ -499,7 +499,7 @@ ${
       mat4.transpose(normalMat);
       cachedUniforms.uNormalMatrix = mat3.fromMat4(mat3.create(), normalMat);
 
-      ctx.submit({
+      const cmd = {
         name: "drawGeometry",
         attributes: geometry.attributes,
         indices: geometry.indices,
@@ -507,14 +507,22 @@ ${
         pipeline,
         uniforms: cachedUniforms,
         instances: geometry.instances,
-      });
+      };
+      if (camera.viewport) {
+        cmd.viewport = camera.viewport;
+        cmd.scissor = camera.viewport;
+      }
+      ctx.submit(cmd);
     }
 
     //TODO: draw skybox before first transparent
-    skybox.draw(camera, {
-      outputEncoding: sharedUniforms.uOutputEncoding,
-      backgroundMode: true,
-    });
+    if (skybox) {
+      // TEMP
+      skybox.draw(camera, {
+        outputEncoding: sharedUniforms.uOutputEncoding,
+        backgroundMode: true,
+      });
+    }
   }
 
   renderSystem.update = (entities) => {
@@ -527,15 +535,23 @@ ${
     const cameraEntities = entities.filter((e) => e.camera);
     const skyboxEntities = entities.filter((e) => e.skybox);
 
-    drawMeshes(
-      cameraEntities[0],
-      false,
-      null,
-      entities,
-      rendererableEntities,
-      skyboxEntities[0]?._skybox,
-      true
-    );
+    cameraEntities.forEach((camera) => {
+      let entitiesToDraw = rendererableEntities;
+      if (camera.layer) {
+        entitiesToDraw = rendererableEntities.filter((e) => {
+          return !e.layer || e.layer == camera.layer;
+        });
+      }
+      drawMeshes(
+        camera,
+        false,
+        null,
+        entities,
+        entitiesToDraw,
+        skyboxEntities[0]?._skybox,
+        true
+      );
+    });
   };
 
   return renderSystem;
