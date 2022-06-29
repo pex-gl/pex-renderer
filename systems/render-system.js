@@ -425,6 +425,18 @@ ${
       vec4.multMat4(dir4, lightEntity._transform.modelMatrix);
       vec3.set(dir, dir4);
 
+      const position = lightEntity._transform.worldPosition;
+      const target = [0, 0, 1, 0];
+      const up = [0, 1, 0, 0];
+      vec4.multMat4(target, lightEntity._transform.modelMatrix);
+      vec3.add(target, position);
+      vec4.multMat4(up, lightEntity._transform.modelMatrix);
+      if (!light._viewMatrix) {
+        light._viewMatrix = mat4.create();
+      }
+      mat4.lookAt(light._viewMatrix, position, target, up);
+      // console.log("light._viewMatrix", light._viewMatrix, position, target, up);
+
       // prettier-ignore
       {
       sharedUniforms[`uDirectionalLights[${i}].direction`] = dir;
