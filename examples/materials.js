@@ -5,6 +5,7 @@ import { vec3, quat } from "pex-math";
 import random from "pex-random";
 import * as io from "pex-io";
 import { sphere } from "primitive-geometry";
+import { cube, torus } from "primitive-geometry";
 import gridCells from "grid-cells";
 import parseHdr from "parse-hdr";
 import { getTexture, getURL } from "./utils.js";
@@ -23,6 +24,7 @@ random.seed(10);
 
 const ctx = createContext({
   powerPreference: "high-performance",
+  type: "webgl",
 });
 ctx.gl.getExtension("EXT_shader_texture_lod");
 ctx.gl.getExtension("OES_standard_derivatives");
@@ -38,7 +40,9 @@ const renderer = createRenderer({
 });
 
 const gui = createGUI(ctx);
-gui.enabled = false;
+gui.responsive = false;
+gui.scale = 3;
+gui.enabled = true;
 
 const W = ctx.gl.drawingBufferWidth;
 const H = ctx.gl.drawingBufferHeight;
@@ -159,51 +163,54 @@ let cells = gridCells(W, H, nW, nH, 0).map(
 );
 
 cells.forEach((cell, cellIndex) => {
-  const tags = [`cell${cellIndex}`];
+  const layer = `cell${cellIndex}`;
   const material = materials[cellIndex];
   const cameraCmp = renderer.camera({
+    position: [0, 0, 2.5],
     fov: Math.PI / 3,
     aspect: W / nW / (H / nH),
     viewport: cell,
     exposure: State.exposure,
   });
-  const postProcessingCmp = renderer.postProcessing({
-    fxaa: true,
+  // const postProcessingCmp = renderer.postProcessing({
+  //  fxaa: true,
+  // });
+
+  // if (material && material.emissiveColor) {
+  //   postProcessingCmp.set({
+  //     bloom: true,
+  //     bloomIntensity: 3,
+  //     bloomRadius: 0.55,
+  //     bloomThreshold: 1,
+  //   });
+
+  //   gui.addParam("Bloom", postProcessingCmp, "bloom");
+  //   gui.addParam("Bloom intensity", postProcessingCmp, "bloomIntensity", {
+  //     min: 0,
+  //     max: 10,
+  //   });
+  //   gui.addParam("Bloom threshold", postProcessingCmp, "bloomThreshold", {
+  //     min: 0,
+  //     max: 2,
+  //   });
+  //   gui.addParam("Bloom radius", postProcessingCmp, "bloomRadius", {
+  //     min: 0,
+  //     max: 2,
+  //   });
+  // }
+
+  const cameraEntity = renderer.entity({
+    camera: cameraCmp,
+    transform: renderer.transform({
+      positions: [0, 0, 2.5],
+    }),
+    orbiter: renderer.orbiter({
+      position: [0, 0, 2.5],
+      distance: 2.5, //FIXME: this is needed?
+      element: ctx.gl.canvas,
+    }),
+    layer: layer,
   });
-
-  if (material && material.emissiveColor) {
-    postProcessingCmp.set({
-      bloom: true,
-      bloomIntensity: 3,
-      bloomRadius: 0.55,
-      bloomThreshold: 1,
-    });
-
-    gui.addParam("Bloom", postProcessingCmp, "bloom");
-    gui.addParam("Bloom intensity", postProcessingCmp, "bloomIntensity", {
-      min: 0,
-      max: 10,
-    });
-    gui.addParam("Bloom threshold", postProcessingCmp, "bloomThreshold", {
-      min: 0,
-      max: 2,
-    });
-    gui.addParam("Bloom radius", postProcessingCmp, "bloomRadius", {
-      min: 0,
-      max: 2,
-    });
-  }
-
-  const cameraEntity = renderer.entity(
-    [
-      postProcessingCmp,
-      cameraCmp,
-      renderer.orbiter({
-        position: [0, 0, 2.5],
-      }),
-    ],
-    tags
-  );
   renderer.add(cameraEntity);
 
   // gui.addTexture2D('Depth Map', postProcessingCmp._frameDepthTex)
@@ -261,14 +268,20 @@ await Promise.allSettled(
 );
 
 cells.forEach((cell, cellIndex) => {
-  const tags = [`cell${cellIndex}`];
+  const layer = `cell${cellIndex}`;
   const material = materials[cellIndex];
 
-  const materialEntity = renderer.entity([renderer.geometry(sphere())], tags);
   if (material) {
-    materialEntity.addComponent(renderer.material(material));
+    const materialEntity = renderer.entity({
+      geometry: renderer.geometry(sphere()),
+      material: renderer.material(material),
+      transform: renderer.transform({
+        position: [0, 0, 0],
+      }),
+      layer: layer,
+    });
+    renderer.add(materialEntity);
   }
-  renderer.add(materialEntity);
 });
 
 // Sky
@@ -291,19 +304,19 @@ cells.forEach((cell, cellIndex) => {
     intensity: 2,
     castShadows: true,
   });
-  const sunEntity = renderer.entity([
-    renderer.transform({
-      position: [2, 2, 2],
+  const sunEntity = renderer.entity({
+    directionalLight: sun,
+    transform: renderer.transform({
+      position: [2, 2, 2], //TODO: used or not?
       rotation: quat.fromTo(
         quat.create(),
         [0, 0, 1],
         vec3.normalize([-2, -2, -2])
       ),
     }),
-    sun,
-  ]);
+  });
   renderer.add(sunEntity);
-  gui.addTexture2D("ShadowMap", sun._shadowMap);
+  // gui.addTexture2D("ShadowMap", sun._shadowMap); //TODO
 
   const skybox = renderer.skybox({
     sunPosition: State.sunPosition,
@@ -316,28 +329,54 @@ cells.forEach((cell, cellIndex) => {
     boxProjection: false,
   });
 
-  const skyEntity = renderer.entity([skybox, reflectionProbe]);
+  const skyEntity = renderer.entity({
+    skybox: skybox,
+    reflectionProbe: reflectionProbe,
+  });
   renderer.add(skyEntity);
 
   gui.addTexture2D("Panorama", panorama);
-  gui
-    .addTextureCube("Reflection Cubemap", reflectionProbe._dynamicCubemap)
-    .setPosition(180, 10);
-  gui.addTexture2D("Reflection OctMap", reflectionProbe._octMap);
-  gui.addTexture2D("Reflection OctMapAtlas", reflectionProbe._reflectionMap);
+  // gui;
+  // .addTextureCube("Reflection Cubemap", reflectionProbe._dynamicCubemap)
+  // .setPosition(180, 10);
+  // gui.addTexture2D("Reflection OctMap", reflectionProbe._octMap);
+  // gui.addTexture2D("Reflection OctMapAtlas", reflectionProbe._reflectionMap);
 
   window.dispatchEvent(new CustomEvent("pex-screenshot"));
 })();
 
 window.addEventListener("keydown", ({ key }) => {
-  if (key === "g") gui.toggleEnabled();
+  if (key === "g") gui.toggleEnabled(); //TODO: not implemented?
   if (key === "d") debugOnce = true;
 });
 
+window.renderer = renderer;
+
+renderer.addSystem(renderer.geometrySystem());
+renderer.addSystem(renderer.transformSystem());
+renderer.addSystem(renderer.cameraSystem());
+renderer.addSystem(renderer.skyboxSystem());
+renderer.addSystem(renderer.reflectionProbeSystem());
+renderer.addSystem(renderer.renderSystem());
+
+let textureGUI;
 ctx.frame(() => {
   ctx.debug(debugOnce);
   debugOnce = false;
   renderer.draw();
+
+  const skyEntity = renderer.entities.find((e) => e.skybox);
+  if (skyEntity?._reflectionProbe?._reflectionMap && !textureGUI) {
+    textureGUI = gui.addTexture2D(
+      "Skybox",
+      skyEntity.skybox.texture || skyEntity._skybox._skyTexture
+    );
+    gui.addTexture2D(
+      "Reflection Probe",
+      skyEntity._reflectionProbe._reflectionMap
+    );
+    gui.addTexture2D("OctMap", skyEntity._reflectionProbe._octMap);
+  }
 
   gui.draw();
 });
