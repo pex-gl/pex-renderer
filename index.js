@@ -69,9 +69,6 @@ class Renderer {
       },
       indices: ctx.indexBuffer([0, 1, 2]),
     };
-
-    const cameraSystem = createCameraSystem();
-    this.systems.push(cameraSystem);
   }
 
   add(entity) {
@@ -201,6 +198,9 @@ class Renderer {
   }
 
   draw() {
+    if (this.systems.length == 0) {
+      console.warn("No systems present. There is nothing to draw.");
+    }
     try {
       this.update();
     } catch (e) {
