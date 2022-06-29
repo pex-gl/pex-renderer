@@ -147,6 +147,8 @@ ${skybox.skybox.frag}`,
 
     // TODO: can we somehow avoid creating an object every frame here?
     ctx.submit(this._drawCommand, {
+      viewport: camera.viewport,
+      scissor: camera.viewport,
       uniforms: {
         uProjectionMatrix: projectionMatrix,
         uViewMatrix: viewMatrix,
