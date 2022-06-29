@@ -1,6 +1,6 @@
 import Signal from "signals";
 import { mat4 } from "pex-math";
-import { reflectionProbe as SHADERS } from "pex-shaderlib";
+import { reflectionProbe as SHADERS } from "pex-shaders";
 import hammersley from "hammersley";
 
 class ReflectionProbe {

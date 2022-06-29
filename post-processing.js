@@ -1,7 +1,7 @@
 import Signal from "signals";
 import random from "pex-random";
 import { vec3, mat4, utils } from "pex-math";
-import { postProcessing as SHADERS } from "pex-shaderlib";
+import { postProcessing as SHADERS } from "pex-shaders";
 
 const ssaoKernelData = new Float32Array(64 * 4);
 for (let i = 0; i < 64; i++) {

@@ -1,4 +1,4 @@
-import { pipeline as SHADERS, chunks as SHADERS_CHUNKS } from "pex-shaderlib";
+import { pipeline as SHADERS, chunks as SHADERS_CHUNKS } from "pex-shaders";
 import { es300Fragment, es300Vertex, getFileExtension } from "../utils.js";
 import { vec3, vec4, mat3, mat4 } from "pex-math";
 
