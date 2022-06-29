@@ -1,4 +1,4 @@
-import { skybox } from "pex-shaderlib";
+import { skybox } from "pex-shaders";
 import createQuad from "primitive-quad";
 import { es300Fragment, es300Vertex } from "../utils.js";
 import { mat4 } from "pex-math";
