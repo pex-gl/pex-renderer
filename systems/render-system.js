@@ -220,6 +220,8 @@ export default function createRenderSystem(opts) {
     [["material", "metallicRoughnessMap"], "METALLIC_ROUGHNESS_MAP", { type: "textureMap", uniform: "uMetallicRoughnessMap"}],
     [["material", "alphaTest"], "USE_ALPHA_TEST"],
     [["material", "alphaMap"], "ALPHA_MAP", { type: "textureMap", uniform: "uAlphaMap"}],
+    [["material", "clearCoat"], "USE_CLEAR_COAT", { type: "float", uniform: "uClearCoat"}],
+    [["material", "clearCoatRoughness"], "USE_CLEAR_COAT_ROUGHNESS", { type: "float", uniform: "uClearCoatRoughness"}],    
     [["geometry", "attributes", "aNormal"], "USE_NORMALS"],
     [["geometry", "attributes", "aTangent"], "USE_TANGENTS"],
     [["geometry", "attributes", "aTexCoord0"], "USE_TEXCOORD_0"],
