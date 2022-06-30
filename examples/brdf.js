@@ -89,7 +89,7 @@ for (let i = 0; i <= 10; i++) {
     metallic: 1,
     roughness: 0.5,
     clearCoat: i / 10,
-    clearCoatRoughness: 0,
+    clearCoatRoughness: 0.04,
   });
 }
 
