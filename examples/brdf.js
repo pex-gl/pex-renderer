@@ -23,6 +23,7 @@ random.seed(10);
 
 const ctx = createContext({
   powerPreference: "high-performance",
+  type: "webgl",
 });
 ctx.gl.getExtension("EXT_shader_texture_lod");
 ctx.gl.getExtension("OES_standard_derivatives");
@@ -36,6 +37,8 @@ const renderer = createRenderer({
   rgbm: State.rgbm,
   shadowQuality: 2,
 });
+
+window.renderer = renderer; //TODO: temp window.renderer
 
 const gui = createGUI(ctx);
 const W = ctx.gl.drawingBufferWidth;
@@ -127,7 +130,7 @@ gui
   .setPosition(10, 10 + (ctx.gl.drawingBufferHeight * 5) / 6);
 
 cells.forEach((cell, cellIndex) => {
-  const tags = [`cell${cellIndex}`];
+  const layer = `cell${cellIndex}`;
   const material = materials[cellIndex];
   if (!material) return;
   const cameraCmp = renderer.camera({
@@ -136,29 +139,31 @@ cells.forEach((cell, cellIndex) => {
     viewport: cell,
     exposure: State.exposure,
   });
-  const postProcessingCmp = renderer.postProcessing({
-    fxaa: true,
-  });
+  // const postProcessingCmp = renderer.postProcessing({
+  //   fxaa: true,
+  // });
 
   if (material.emissiveColor) {
-    postProcessingCmp.set({
-      bloom: true,
-      bloomIntensity: 0.5,
-      bloomThreshold: 3,
-      bloomRadius: 1.25,
-    });
+    // postProcessingCmp.set({
+    //   bloom: true,
+    //   bloomIntensity: 0.5,
+    //   bloomThreshold: 3,
+    //   bloomRadius: 1.25,
+    // });
   }
 
-  const cameraEntity = renderer.entity(
-    [
-      postProcessingCmp,
-      cameraCmp,
-      renderer.orbiter({
-        position: [0, 0, 1.2],
-      }),
-    ],
-    tags
-  );
+  const cameraEntity = renderer.entity({
+    camera: cameraCmp,
+    transform: renderer.transform({
+      positions: [0, 0, 1.2],
+    }),
+    orbiter: renderer.orbiter({
+      position: [0, 0, 1.2],
+      distance: 1.2, //FIXME: this is needed?
+      element: ctx.gl.canvas,
+    }),
+    layer: layer,
+  });
   renderer.add(cameraEntity);
 });
 
@@ -207,14 +212,16 @@ await Promise.allSettled(
 );
 
 cells.forEach((cell, cellIndex) => {
-  const tags = [`cell${cellIndex}`];
+  const layer = `cell${cellIndex}`;
   const material = materials[cellIndex];
   if (!material) return;
 
-  const materialEntity = renderer.entity(
-    [renderer.geometry(sphere()), renderer.material(material)],
-    tags
-  );
+  const materialEntity = renderer.entity({
+    transform: renderer.transform(),
+    geometry: renderer.geometry(sphere()),
+    material: renderer.material(material),
+    layer: layer,
+  });
   renderer.add(materialEntity);
 });
 
@@ -241,12 +248,12 @@ cells.forEach((cell, cellIndex) => {
   });
 
   const sun = renderer.directionalLight({
-    color: [1, 1, 0.95, 1],
+    color: [1, 1, 0.95, 2],
     intensity: 2,
     castShadows: true,
   });
-  const sunEntity = renderer.entity([
-    renderer.transform({
+  const sunEntity = renderer.entity({
+    transform: renderer.transform({
       position: [-2, 2, 2],
       rotation: quat.fromTo(
         quat.create(),
@@ -254,8 +261,8 @@ cells.forEach((cell, cellIndex) => {
         vec3.normalize([2, -2, -1])
       ),
     }),
-    sun,
-  ]);
+    directionalLight: sun,
+  });
   renderer.add(sunEntity);
 
   const skybox = renderer.skybox({
@@ -269,7 +276,10 @@ cells.forEach((cell, cellIndex) => {
     boxProjection: false,
   });
 
-  const skyEntity = renderer.entity([skybox, reflectionProbe]);
+  const skyEntity = renderer.entity({
+    skybox: skybox,
+    reflectionProbe: reflectionProbe,
+  });
   renderer.add(skyEntity);
   window.dispatchEvent(new CustomEvent("pex-screenshot"));
 })();
@@ -279,15 +289,22 @@ window.addEventListener("keydown", ({ key }) => {
   if (key === "d") debugOnce = true;
 });
 
+renderer.addSystem(renderer.geometrySystem());
+renderer.addSystem(renderer.transformSystem());
+renderer.addSystem(renderer.cameraSystem());
+renderer.addSystem(renderer.skyboxSystem());
+renderer.addSystem(renderer.reflectionProbeSystem());
+renderer.addSystem(renderer.renderSystem());
+
 ctx.frame(() => {
   ctx.debug(debugOnce);
   debugOnce = false;
   renderer.draw();
 
-  const skybox = renderer.getComponents("Skybox")[0];
-  if (skybox) {
-    skybox.entity.removeComponent(skybox);
-  }
+  // const skybox = renderer.getComponents("Skybox")[0];
+  // if (skybox) {
+  //   skybox.entity.removeComponent(skybox);
+  // }
 
   gui.draw();
 });
