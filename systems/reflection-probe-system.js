@@ -18,7 +18,7 @@ class ReflectionProbe {
     const dynamicCubemap = (this._dynamicCubemap = ctx.textureCube({
       width: CUBEMAP_SIZE,
       height: CUBEMAP_SIZE,
-      pixelFormat: this.rgbm ? ctx.PixelFormat.RGBA8 : ctx.PixelFormat.RGBA,
+      pixelFormat: this.rgbm ? ctx.PixelFormat.RGBA8 : ctx.PixelFormat.RGBA16F,
       encoding: this.rgbm ? ctx.Encoding.RGBM : ctx.Encoding.Linear,
     }));
 
@@ -85,7 +85,7 @@ class ReflectionProbe {
     const octMap = (this._octMap = ctx.texture2D({
       width: 1024,
       height: 1024,
-      pixelFormat: this.rgbm ? ctx.PixelFormat.RGBA8 : ctx.PixelFormat.RGBA,
+      pixelFormat: this.rgbm ? ctx.PixelFormat.RGBA8 : ctx.PixelFormat.RGBA16F,
       encoding: this.rgbm ? ctx.Encoding.RGBM : ctx.Encoding.Linear,
     }));
 
@@ -96,7 +96,7 @@ class ReflectionProbe {
       height: 2 * 1024,
       min: ctx.Filter.Linear,
       mag: ctx.Filter.Linear,
-      pixelFormat: this.rgbm ? ctx.PixelFormat.RGBA8 : ctx.PixelFormat.RGBA,
+      pixelFormat: this.rgbm ? ctx.PixelFormat.RGBA8 : ctx.PixelFormat.RGBA16F,
       encoding: this.rgbm ? ctx.Encoding.RGBM : ctx.Encoding.Linear,
     }));
 

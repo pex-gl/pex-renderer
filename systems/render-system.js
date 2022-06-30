@@ -284,6 +284,9 @@ export default function createRenderSystem(opts) {
   }
 
   function getExtensions() {
+    ctx.gl.getExtension("WEBGL_color_buffer_float")
+    ctx.gl.getExtension("EXT_color_buffer_half_float")
+
     return ctx.capabilities.isWebGL2
       ? ""
       : /* glsl */ `
