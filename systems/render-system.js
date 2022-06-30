@@ -289,6 +289,7 @@ export default function createRenderSystem(opts) {
 
   function getExtensions() {
     ctx.gl.getExtension("WEBGL_color_buffer_float");
+    ctx.gl.getExtension("WEBGL_color_buffer_half_float");
     ctx.gl.getExtension("EXT_color_buffer_half_float");
 
     return ctx.capabilities.isWebGL2
@@ -520,7 +521,8 @@ ${
         cachedUniforms.uNormalScale = 1;
         cachedUniforms.uAlphaTest = material.alphaTest || 1;
         cachedUniforms.uAlphaMap = material.alphaMap;
-        cachedUniforms.uReflectance = 0.5;
+        cachedUniforms.uReflectance =
+          material.reflectance !== undefined ? material.reflectance : 0.5;
         cachedUniforms.uExposure = 1.0;
 
         cachedUniforms.uPointSize = 1;
