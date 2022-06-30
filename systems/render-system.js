@@ -207,9 +207,14 @@ export default function createRenderSystem(opts) {
     [["options", "spotLights", "length"], "NUM_SPOT_LIGHTS", { type: "counter" }],
     [["options", "areaLights", "length"], "NUM_AREA_LIGHTS", { type: "counter" }],
     [["options", "reflectionProbes", "length"], "USE_REFLECTION_PROBES"],    
+    [["material", "unlit"], "USE_UNLIT_WORKFLOW"],
     [["material", "baseColorMap"], "BASE_COLOR_MAP", { type: "textureMap", uniform: "uBaseColorMap"}],
     [["material", "normalMap"], "NORMAL_MAP", { type: "textureMap", uniform: "uNormalMap"}],
+    [["material", "roughnessMap"], "ROUGHNESS_MAP", { type: "textureMap", uniform: "uRoughnessMap"}],
+    [["material", "metallicMap"], "METALLIC_MAP", { type: "textureMap", uniform: "uMetallicMap"}],
     [["material", "metallicRoughnessMap"], "METALLIC_ROUGHNESS_MAP", { type: "textureMap", uniform: "uMetallicRoughnessMap"}],
+    [["material", "alphaTest"], "USE_ALPHA_TEST"],
+    [["material", "alphaMap"], "ALPHA_MAP", { type: "textureMap", uniform: "uAlphaMap"}],
     [["geometry", "attributes", "aNormal"], "USE_NORMALS"],
     [["geometry", "attributes", "aTangent"], "USE_TANGENTS"],
     [["geometry", "attributes", "aTexCoord0"], "USE_TEXCOORD_0"],
@@ -370,7 +375,7 @@ ${
         // blendSrcAlphaFactor: material.blendSrcAlphaFactor,
         // blendDstRGBFactor: material.blendDstRGBFactor,
         // blendDstAlphaFactor: material.blendDstAlphaFactor,
-        cullFace: material.cullFace || true,
+        cullFace: material.cullFace !== undefined ? material.cullFace : true,
         cullFaceMode: material.cullFaceMode || ctx.Face.Back,
         primitive: geometry.primitive || ctx.Primitive.Triangles,
       });
@@ -474,9 +479,13 @@ ${
       cachedUniforms.uBaseColor = material.baseColor;
       cachedUniforms.uBaseColorMap = material.baseColorMap;
       cachedUniforms.uRoughness = material.roughness;
+      cachedUniforms.uRoughnessMap = material.roughnessMap;
       cachedUniforms.uMetallic = material.metallic;
+      cachedUniforms.uMetallicMap = material.metallicMap;
       cachedUniforms.uNormalMap = material.normalMap;
       cachedUniforms.uNormalScale = 1;
+      cachedUniforms.uAlphaTest = material.alphaTest || 1;
+      cachedUniforms.uAlphaMap = material.alphaMap;
       cachedUniforms.uReflectance = 0.5;
 
       cachedUniforms.uPointSize = 1;
