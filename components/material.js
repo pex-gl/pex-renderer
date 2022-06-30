@@ -159,8 +159,8 @@ export default (opts = {}) => {
   //return new Material(opts);
   return {
     baseColor: [1, 1, 1, 1],
-    metallic: 0,
-    roughness: 0.5,
+    metallic: 1,
+    roughness: 1,
     depthTest: true,
     depthWrite: true,
     ...opts,
