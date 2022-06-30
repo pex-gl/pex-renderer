@@ -40,9 +40,11 @@ const renderer = createRenderer({
 });
 
 const gui = createGUI(ctx);
-gui.responsive = false;
-gui.scale = 3;
-gui.enabled = true;
+// gui.responsive = false;
+// gui.scale = 3;
+// gui.enabled = true;
+// gui.toggleEnabled()
+gui.enabled = false
 
 const W = ctx.gl.drawingBufferWidth;
 const H = ctx.gl.drawingBufferHeight;
@@ -301,7 +303,7 @@ cells.forEach((cell, cellIndex) => {
 
   const sun = renderer.directionalLight({
     color: [1, 1, 0.95, 1],
-    intensity: 2,
+    intensity: 1, //TODO: directionalLight intensity is not used?
     castShadows: true,
   });
   const sunEntity = renderer.entity({
@@ -316,7 +318,7 @@ cells.forEach((cell, cellIndex) => {
     }),
   });
   renderer.add(sunEntity);
-  // gui.addTexture2D("ShadowMap", sun._shadowMap); //TODO
+  // gui.addTexture2D("ShadowMap", sun._shadowMap); //TODO: _shadowMap
 
   const skybox = renderer.skybox({
     sunPosition: State.sunPosition,
@@ -375,7 +377,6 @@ ctx.frame(() => {
       "Reflection Probe",
       skyEntity._reflectionProbe._reflectionMap
     );
-    gui.addTexture2D("OctMap", skyEntity._reflectionProbe._octMap);
   }
 
   gui.draw();
