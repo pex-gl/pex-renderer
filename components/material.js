@@ -163,6 +163,7 @@ export default (opts = {}) => {
     roughness: 1,
     depthTest: true,
     depthWrite: true,
+    blend: false,
     ...opts,
   };
 };

@@ -141,6 +141,7 @@ let materials = [
     metallic: 0,
     baseColor: [1, 1, 1, 0.5],
     blend: true,
+    depthWrite: false,
     blendSrcRGBFactor: ctx.BlendFactor.SrcAlpha,
     blendSrcAlphaFactor: ctx.BlendFactor.One,
     blendDstRGBFactor: ctx.BlendFactor.OneMinusSrcAlpha,

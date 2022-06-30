@@ -209,6 +209,7 @@ export default function createRenderSystem(opts) {
     [["options", "reflectionProbes", "length"], "USE_REFLECTION_PROBES"],    
     [["options", "useTonemapping"], "USE_TONEMAPPING"],
     [["material", "unlit"], "USE_UNLIT_WORKFLOW"],
+    [["material", "blend"], "USE_BLEND"],
     [["material", "baseColorMap"], "BASE_COLOR_MAP", { type: "textureMap", uniform: "uBaseColorMap"}],
     [["material", "normalMap"], "NORMAL_MAP", { type: "textureMap", uniform: "uNormalMap"}],
     [["material", "roughnessMap"], "ROUGHNESS_MAP", { type: "textureMap", uniform: "uRoughnessMap"}],
@@ -284,8 +285,8 @@ export default function createRenderSystem(opts) {
   }
 
   function getExtensions() {
-    ctx.gl.getExtension("WEBGL_color_buffer_float")
-    ctx.gl.getExtension("EXT_color_buffer_half_float")
+    ctx.gl.getExtension("WEBGL_color_buffer_float");
+    ctx.gl.getExtension("EXT_color_buffer_half_float");
 
     return ctx.capabilities.isWebGL2
       ? ""
@@ -374,11 +375,11 @@ ${
         depthTest: material.depthTest,
         depthWrite: material.depthWrite,
         depthFunc: material.depthFunc || ctx.DepthFunc.Less,
-        // blend: material.blend,
-        // blendSrcRGBFactor: material.blendSrcRGBFactor,
-        // blendSrcAlphaFactor: material.blendSrcAlphaFactor,
-        // blendDstRGBFactor: material.blendDstRGBFactor,
-        // blendDstAlphaFactor: material.blendDstAlphaFactor,
+        blend: material.blend,
+        blendSrcRGBFactor: material.blendSrcRGBFactor,
+        blendSrcAlphaFactor: material.blendSrcAlphaFactor,
+        blendDstRGBFactor: material.blendDstRGBFactor,
+        blendDstAlphaFactor: material.blendDstAlphaFactor,
         cullFace: material.cullFace !== undefined ? material.cullFace : true,
         cullFaceMode: material.cullFaceMode || ctx.Face.Back,
         primitive: geometry.primitive || ctx.Primitive.Triangles,
@@ -411,6 +412,13 @@ ${
     const areaLights = entities.filter((e) => e.areaLight);
     const reflectionProbes = entities.filter((e) => e.reflectionProbe);
     // const areaLights = entities.filter((e) => e.areaLight);
+
+    const opaqueEntities = renderableEntities.filter((e) => !e.material.blend);
+
+    //TODO: add some basic sorting of transparentEntities
+    const transparentEntities = renderableEntities.filter(
+      (e) => e.material.blend
+    );
 
     // sharedUniforms.uCameraPosition = camera.entity.transform.worldPosition;
     sharedUniforms.uProjectionMatrix = camera.projectionMatrix;
@@ -469,86 +477,93 @@ ${
         reflectionProbes[0]._reflectionProbe._reflectionMap.encoding;
     }
 
-    for (let i = 0; i < renderableEntities.length; i++) {
-      const renderableEntity = renderableEntities[i];
-      const {
-        _geometry: geometry,
-        _transform: transform,
-        material,
-        skin,
-      } = renderableEntity;
-      // const cachedUniforms = material._uniforms;
-      const cachedUniforms = {};
-      cachedUniforms.uModelMatrix = transform.modelMatrix; //FIXME: bypasses need for transformSystem access
-      cachedUniforms.uBaseColor = material.baseColor;
-      cachedUniforms.uBaseColorMap = material.baseColorMap;
-      cachedUniforms.uRoughness = material.roughness;
-      cachedUniforms.uRoughnessMap = material.roughnessMap;
-      cachedUniforms.uMetallic = material.metallic;
-      cachedUniforms.uMetallicMap = material.metallicMap;
-      cachedUniforms.uNormalMap = material.normalMap;
-      cachedUniforms.uNormalScale = 1;
-      cachedUniforms.uAlphaTest = material.alphaTest || 1;
-      cachedUniforms.uAlphaMap = material.alphaMap;
-      cachedUniforms.uReflectance = 0.5;
-      cachedUniforms.uExposure = 1.0;
+    const geometryPasses = [opaqueEntities, transparentEntities];
 
-      cachedUniforms.uPointSize = 1;
-      cachedUniforms.uMetallicRoughnessMap = material.metallicRoughnessMap;
+    for (let passIndex = 0; passIndex < geometryPasses.length; passIndex++) {
+      const passEntities = geometryPasses[passIndex];
 
-      // uPointSize, uCameraPosition, uSheenColor, uSheenRoughness, uReflectance, uClearCoat, uClearCoatRoughness, uReflectionMapEncoding, uEmissiveColor, uEmissiveIntensity, uMetallic, uRoughness, uReflectionMap
-
-      const pipeline = getGeometryPipeline(ctx, renderableEntity, {
-        numAmbientLights: ambientLights.length,
-        numDirectionalLights: directionalLights.length,
-        numPointLights: pointLights.length,
-        numSpotLights: spotLights.length,
-        numAreaLights: areaLights.length,
-        ambientLights,
-        directionalLights,
-        pointLights,
-        spotLights,
-        areaLights,
-        reflectionProbes,
-        useSSAO: false,
-        // postProcessingCmp &&
-        // postProcessingCmp.enabled &&
-        // postProcessingCmp.ssao,
-        useTonemapping: true, //!(postProcessingCmp && postProcessingCmp.enabled),
-      });
-
-      Object.assign(cachedUniforms, sharedUniforms);
-
-      const normalMat = mat4.copy(camera.viewMatrix);
-      mat4.mult(normalMat, transform.modelMatrix);
-      mat4.invert(normalMat);
-      mat4.transpose(normalMat);
-      cachedUniforms.uNormalMatrix = mat3.fromMat4(mat3.create(), normalMat);
-
-      const cmd = {
-        name: "drawGeometry",
-        attributes: geometry.attributes,
-        indices: geometry.indices,
-        count: geometry.count,
-        pipeline,
-        uniforms: cachedUniforms,
-        instances: geometry.instances,
-      };
-      if (camera.viewport) {
-        cmd.viewport = camera.viewport;
-        cmd.scissor = camera.viewport;
+      // Draw skybox before transparent meshes
+      if (passEntities == transparentEntities && skybox) {
+        skybox.draw(camera, {
+          outputEncoding: sharedUniforms.uOutputEncoding,
+          backgroundMode: true,
+        });
       }
-      ctx.submit(cmd);
+
+      for (let i = 0; i < passEntities.length; i++) {
+        const renderableEntity = passEntities[i];
+        const {
+          _geometry: geometry,
+          _transform: transform,
+          material,
+          skin,
+        } = renderableEntity;
+        // const cachedUniforms = material._uniforms;
+        const cachedUniforms = {};
+        cachedUniforms.uModelMatrix = transform.modelMatrix; //FIXME: bypasses need for transformSystem access
+        cachedUniforms.uBaseColor = material.baseColor;
+        cachedUniforms.uBaseColorMap = material.baseColorMap;
+        cachedUniforms.uRoughness = material.roughness;
+        cachedUniforms.uRoughnessMap = material.roughnessMap;
+        cachedUniforms.uMetallic = material.metallic;
+        cachedUniforms.uMetallicMap = material.metallicMap;
+        cachedUniforms.uNormalMap = material.normalMap;
+        cachedUniforms.uNormalScale = 1;
+        cachedUniforms.uAlphaTest = material.alphaTest || 1;
+        cachedUniforms.uAlphaMap = material.alphaMap;
+        cachedUniforms.uReflectance = 0.5;
+        cachedUniforms.uExposure = 1.0;
+
+        cachedUniforms.uPointSize = 1;
+        cachedUniforms.uMetallicRoughnessMap = material.metallicRoughnessMap;
+
+        // uPointSize, uCameraPosition, uSheenColor, uSheenRoughness, uReflectance, uClearCoat, uClearCoatRoughness, uReflectionMapEncoding, uEmissiveColor, uEmissiveIntensity, uMetallic, uRoughness, uReflectionMap
+
+        const pipeline = getGeometryPipeline(ctx, renderableEntity, {
+          numAmbientLights: ambientLights.length,
+          numDirectionalLights: directionalLights.length,
+          numPointLights: pointLights.length,
+          numSpotLights: spotLights.length,
+          numAreaLights: areaLights.length,
+          ambientLights,
+          directionalLights,
+          pointLights,
+          spotLights,
+          areaLights,
+          reflectionProbes,
+          useSSAO: false,
+          // postProcessingCmp &&
+          // postProcessingCmp.enabled &&
+          // postProcessingCmp.ssao,
+          useTonemapping: true, //!(postProcessingCmp && postProcessingCmp.enabled),
+        });
+
+        Object.assign(cachedUniforms, sharedUniforms);
+
+        const normalMat = mat4.copy(camera.viewMatrix);
+        mat4.mult(normalMat, transform.modelMatrix);
+        mat4.invert(normalMat);
+        mat4.transpose(normalMat);
+        cachedUniforms.uNormalMatrix = mat3.fromMat4(mat3.create(), normalMat);
+
+        const cmd = {
+          name: "drawGeometry",
+          attributes: geometry.attributes,
+          indices: geometry.indices,
+          count: geometry.count,
+          pipeline,
+          uniforms: cachedUniforms,
+          instances: geometry.instances,
+        };
+        if (camera.viewport) {
+          cmd.viewport = camera.viewport;
+          cmd.scissor = camera.viewport;
+        }
+        ctx.submit(cmd);
+      }
     }
 
     //TODO: draw skybox before first transparent
-    if (skybox) {
-      // TEMP
-      skybox.draw(camera, {
-        outputEncoding: sharedUniforms.uOutputEncoding,
-        backgroundMode: true,
-      });
-    }
   }
 
   renderSystem.update = (entities) => {
