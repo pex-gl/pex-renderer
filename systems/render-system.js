@@ -207,6 +207,7 @@ export default function createRenderSystem(opts) {
     [["options", "spotLights", "length"], "NUM_SPOT_LIGHTS", { type: "counter" }],
     [["options", "areaLights", "length"], "NUM_AREA_LIGHTS", { type: "counter" }],
     [["options", "reflectionProbes", "length"], "USE_REFLECTION_PROBES"],    
+    [["options", "useTonemapping"], "USE_TONEMAPPING"],
     [["material", "unlit"], "USE_UNLIT_WORKFLOW"],
     [["material", "baseColorMap"], "BASE_COLOR_MAP", { type: "textureMap", uniform: "uBaseColorMap"}],
     [["material", "normalMap"], "NORMAL_MAP", { type: "textureMap", uniform: "uNormalMap"}],
@@ -487,11 +488,12 @@ ${
       cachedUniforms.uAlphaTest = material.alphaTest || 1;
       cachedUniforms.uAlphaMap = material.alphaMap;
       cachedUniforms.uReflectance = 0.5;
+      cachedUniforms.uExposure = 1.0;
 
       cachedUniforms.uPointSize = 1;
       cachedUniforms.uMetallicRoughnessMap = material.metallicRoughnessMap;
 
-      // uPointSize, uCameraPosition, uExposure, uSheenColor, uSheenRoughness, uReflectance, uClearCoat, uClearCoatRoughness, uReflectionMapEncoding, uEmissiveColor, uEmissiveIntensity, uMetallic, uRoughness, uReflectionMap
+      // uPointSize, uCameraPosition, uSheenColor, uSheenRoughness, uReflectance, uClearCoat, uClearCoatRoughness, uReflectionMapEncoding, uEmissiveColor, uEmissiveIntensity, uMetallic, uRoughness, uReflectionMap
 
       const pipeline = getGeometryPipeline(ctx, renderableEntity, {
         numAmbientLights: ambientLights.length,
