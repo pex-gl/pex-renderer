@@ -39,12 +39,14 @@ const renderer = createRenderer({
   shadowQuality: 2,
 });
 
+window.renderer = renderer; //TODO: temp window.renderer
+
 const gui = createGUI(ctx);
 // gui.responsive = false;
 // gui.scale = 3;
 // gui.enabled = true;
 // gui.toggleEnabled()
-gui.enabled = false
+gui.enabled = false;
 
 const W = ctx.gl.drawingBufferWidth;
 const H = ctx.gl.drawingBufferHeight;
@@ -80,7 +82,7 @@ let materials = [
   { baseColor: [1.0, 1.0, 1.0, 1.0], metallic: 1, roughness: 4 / 6 },
   { baseColor: [1.0, 1.0, 1.0, 1.0], metallic: 1, roughness: 5 / 6 },
   { baseColor: [1.0, 1.0, 1.0, 1.0], metallic: 1, roughness: 6 / 6 },
-  null,
+  {}, //default material
   {
     unlit: true,
     baseColor: [1, 1, 1, 0.5],
@@ -117,6 +119,7 @@ let materials = [
     ),
   },
   {
+    baseColor: [1, 1, 1, 1],
     baseColorMap: getURL(
       `assets/materials/plastic-glow.material/plastic-glow_basecolor.png`
     ),
@@ -303,8 +306,8 @@ cells.forEach((cell, cellIndex) => {
   });
 
   const sun = renderer.directionalLight({
-    color: [1, 1, 0.95, 1],
-    intensity: 1, //TODO: directionalLight intensity is not used?
+    color: [1, 1, 0.95, 2],
+    intensity: 2, //TODO: directionalLight intensity is not used?
     castShadows: true,
   });
   const sunEntity = renderer.entity({
@@ -352,8 +355,6 @@ window.addEventListener("keydown", ({ key }) => {
   if (key === "g") gui.toggleEnabled(); //TODO: not implemented?
   if (key === "d") debugOnce = true;
 });
-
-window.renderer = renderer;
 
 renderer.addSystem(renderer.geometrySystem());
 renderer.addSystem(renderer.transformSystem());
