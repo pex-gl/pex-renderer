@@ -257,6 +257,7 @@ export default function createRenderSystem(opts) {
       "USE_METALLIC_ROUGHNESS_WORKFLOW",
       "SHADOW_QUALITY 0",
     ];
+    let materialUniforms = {};
 
     for (let i = 0; i < flagDefs.length; i++) {
       const [path, defineName, opts = {}] = flagDefs[i];
@@ -266,12 +267,16 @@ export default function createRenderSystem(opts) {
         value = value[path[j]];
       }
 
-      if (opts.type == "counter") flags.push(`${defineName} ${value}`);
-      else if (opts.type == "textureMap" && value) {
+      if (opts.type == "counter") {
+        flags.push(`${defineName} ${value}`);
+      } else if (opts.type == "textureMap" && value) {
         flags.push(`USE_${defineName}`);
         flags.push(`${defineName}_TEX_COORD_INDEX 0`);
       } else if (value) {
         flags.push(defineName);
+      }
+      if (value !== undefined && opts.uniform) {
+        materialUniforms[opts.uniform] = value;
       }
     }
 
@@ -286,6 +291,7 @@ export default function createRenderSystem(opts) {
         .map((flag) => `#define ${flag}`),
       vert,
       frag,
+      materialUniforms,
     };
   }
 
@@ -333,7 +339,7 @@ ${
   }
 
   function getMaterialProgram(ctx, entity, options) {
-    const { flags, vert, frag } = getMaterialProgramAndFlags(
+    const { flags, vert, frag, materialUniforms } = getMaterialProgramAndFlags(
       ctx,
       entity,
       options
@@ -363,12 +369,12 @@ ${
       console.log(vert);
       // console.log(frag);
     }
-    return program;
+    return { program, materialUniforms };
   }
 
   function getGeometryPipeline(ctx, entity, opts) {
     const { material, _geometry: geometry } = entity;
-    const program = getMaterialProgram(ctx, entity, opts);
+    const { program, materialUniforms } = getMaterialProgram(ctx, entity, opts);
     if (!pipelineCache) {
       pipelineCache = {};
     }
@@ -393,7 +399,7 @@ ${
       pipelineCache[hash] = pipeline;
     }
 
-    return pipeline;
+    return { pipeline, materialUniforms };
   }
 
   function drawMeshes(
@@ -532,30 +538,35 @@ ${
 
         // uPointSize, uCameraPosition, uSheenColor, uSheenRoughness, uReflectance, uClearCoat, uClearCoatRoughness, uReflectionMapEncoding, uEmissiveColor, uEmissiveIntensity, uMetallic, uRoughness, uReflectionMap
 
-        if (material.emissiveColor && frameCount++ < 100) {
-          console.log("cachedUniforms", cachedUniforms);
-        }
+        // if (material.emissiveColor && frameCount++ < 100) {
+        //   console.log("cachedUniforms", cachedUniforms);
+        // }
 
-        const pipeline = getGeometryPipeline(ctx, renderableEntity, {
-          numAmbientLights: ambientLights.length,
-          numDirectionalLights: directionalLights.length,
-          numPointLights: pointLights.length,
-          numSpotLights: spotLights.length,
-          numAreaLights: areaLights.length,
-          ambientLights,
-          directionalLights,
-          pointLights,
-          spotLights,
-          areaLights,
-          reflectionProbes,
-          useSSAO: false,
-          // postProcessingCmp &&
-          // postProcessingCmp.enabled &&
-          // postProcessingCmp.ssao,
-          useTonemapping: true, //!(postProcessingCmp && postProcessingCmp.enabled),
-        });
+        const { pipeline, materialUniforms } = getGeometryPipeline(
+          ctx,
+          renderableEntity,
+          {
+            numAmbientLights: ambientLights.length,
+            numDirectionalLights: directionalLights.length,
+            numPointLights: pointLights.length,
+            numSpotLights: spotLights.length,
+            numAreaLights: areaLights.length,
+            ambientLights,
+            directionalLights,
+            pointLights,
+            spotLights,
+            areaLights,
+            reflectionProbes,
+            useSSAO: false,
+            // postProcessingCmp &&
+            // postProcessingCmp.enabled &&
+            // postProcessingCmp.ssao,
+            useTonemapping: true, //!(postProcessingCmp && postProcessingCmp.enabled),
+          }
+        );
 
         Object.assign(cachedUniforms, sharedUniforms);
+        Object.assign(cachedUniforms, materialUniforms);
 
         const normalMat = mat4.copy(camera.viewMatrix);
         mat4.mult(normalMat, transform.modelMatrix);
