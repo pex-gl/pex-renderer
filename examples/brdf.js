@@ -301,10 +301,12 @@ ctx.frame(() => {
   debugOnce = false;
   renderer.draw();
 
-  // const skybox = renderer.getComponents("Skybox")[0];
-  // if (skybox) {
-  //   skybox.entity.removeComponent(skybox);
-  // }
+  // Hide skybox after first frame
+  const skyboxEntity = renderer.entities.find((e) => e.skybox);
+  if (skyboxEntity) {
+    //TODO: who will dispose removed skybox?
+    skyboxEntity.skybox = null;
+  }
 
   gui.draw();
 });
