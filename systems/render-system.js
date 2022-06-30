@@ -210,7 +210,10 @@ export default function createRenderSystem(opts) {
     [["options", "useTonemapping"], "USE_TONEMAPPING"],
     [["material", "unlit"], "USE_UNLIT_WORKFLOW"],
     [["material", "blend"], "USE_BLEND"],
+    [["material", "emissiveColor"], "USE_EMISSIVE_COLOR", { type: "vec4", uniform: "uEmissiveColor"}],
+    [["material", "emissiveIntensity"], "USE_EMISSIVE_INTENSITY", { type: "float", uniform: "uEmissiveIntensity"}],
     [["material", "baseColorMap"], "BASE_COLOR_MAP", { type: "textureMap", uniform: "uBaseColorMap"}],
+    [["material", "emissiveColorMap"], "EMISSIVE_COLOR_MAP", { type: "textureMap", uniform: "uEmissiveColorMap"}],
     [["material", "normalMap"], "NORMAL_MAP", { type: "textureMap", uniform: "uNormalMap"}],
     [["material", "roughnessMap"], "ROUGHNESS_MAP", { type: "textureMap", uniform: "uRoughnessMap"}],
     [["material", "metallicMap"], "METALLIC_MAP", { type: "textureMap", uniform: "uMetallicMap"}],
@@ -227,6 +230,8 @@ export default function createRenderSystem(opts) {
     [["geometry", "attributes", "aColor"], "USE_INSTANCED_COLOR"],
     [["geometry", "attributes", "aVertexColor"], "USE_VERTEX_COLORS"],
   ];
+
+  let frameCount = 0;
 
   function getMaterialProgramAndFlags(
     ctx,
@@ -267,8 +272,6 @@ export default function createRenderSystem(opts) {
         flags.push(defineName);
       }
     }
-
-    // console.log("flags", flags);
 
     let { vert, frag } = material;
 
@@ -508,6 +511,12 @@ ${
         cachedUniforms.uMetallic = material.metallic;
         cachedUniforms.uMetallicMap = material.metallicMap;
         cachedUniforms.uNormalMap = material.normalMap;
+        cachedUniforms.uEmissiveColor = material.emissiveColor;
+        cachedUniforms.uEmissiveIntensity =
+          material.emissiveIntensity !== undefined
+            ? material.emissiveIntensity
+            : 0;
+        cachedUniforms.uEmissiveColorMap = material.emissiveColorMap;
         cachedUniforms.uNormalScale = 1;
         cachedUniforms.uAlphaTest = material.alphaTest || 1;
         cachedUniforms.uAlphaMap = material.alphaMap;
@@ -518,6 +527,10 @@ ${
         cachedUniforms.uMetallicRoughnessMap = material.metallicRoughnessMap;
 
         // uPointSize, uCameraPosition, uSheenColor, uSheenRoughness, uReflectance, uClearCoat, uClearCoatRoughness, uReflectionMapEncoding, uEmissiveColor, uEmissiveIntensity, uMetallic, uRoughness, uReflectionMap
+
+        if (material.emissiveColor && frameCount++ < 100) {
+          console.log("cachedUniforms", cachedUniforms);
+        }
 
         const pipeline = getGeometryPipeline(ctx, renderableEntity, {
           numAmbientLights: ambientLights.length,
