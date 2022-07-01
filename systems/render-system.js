@@ -5,6 +5,15 @@ import { vec3, vec4, mat3, mat4 } from "pex-math";
 export default function createRenderSystem(opts) {
   const ctx = opts.ctx;
 
+  ctx.gl.getExtension("WEBGL_color_buffer_float");
+  ctx.gl.getExtension("WEBGL_color_buffer_half_float");
+  ctx.gl.getExtension("EXT_color_buffer_half_float");
+  ctx.gl.getExtension("EXT_color_buffer_half_float");
+  ctx.gl.getExtension("EXT_shader_texture_lod");
+  ctx.gl.getExtension("OES_standard_derivatives");
+  ctx.gl.getExtension("WEBGL_draw_buffers");
+  ctx.gl.getExtension("OES_texture_float");
+
   const dummyTexture2D = ctx.texture2D({ width: 4, height: 4 });
   const dummyTextureCube = ctx.textureCube({ width: 4, height: 4 });
   const tempMat4 = mat4.create(); //FIXME
@@ -296,10 +305,6 @@ export default function createRenderSystem(opts) {
   }
 
   function getExtensions() {
-    ctx.gl.getExtension("WEBGL_color_buffer_float");
-    ctx.gl.getExtension("WEBGL_color_buffer_half_float");
-    ctx.gl.getExtension("EXT_color_buffer_half_float");
-
     return ctx.capabilities.isWebGL2
       ? ""
       : /* glsl */ `
@@ -412,6 +417,10 @@ ${
     forward
   ) {
     const camera = cameraEntity.camera;
+    if (!cameraEntity._transform) {
+      // camera not ready yet
+      return;
+    }
 
     const sharedUniforms = {
       uOutputEncoding: ctx.Encoding.Gamma,
@@ -524,7 +533,7 @@ ${
         cachedUniforms.uEmissiveIntensity =
           material.emissiveIntensity !== undefined
             ? material.emissiveIntensity
-            : 0;
+            : 1;
         cachedUniforms.uEmissiveColorMap = material.emissiveColorMap;
         cachedUniforms.uNormalScale = 1;
         cachedUniforms.uAlphaTest = material.alphaTest || 1;
