@@ -139,6 +139,10 @@ class Renderer {
     return createOrbiter(opts);
   }
 
+  skin(opts) {
+    return {}; //TODO: implement skin
+  }
+
   skybox(opts) {
     return createSkybox(opts);
   }
