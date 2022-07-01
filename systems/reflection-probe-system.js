@@ -366,7 +366,14 @@ export default function createReflectionProbeSystem(opts) {
         reflectionProbeEntity._reflectionProbe = reflectionProbe;
       }
       // TODO: this should be just node.reflectionProbe
-      if (reflectionProbeEntity._reflectionProbe.dirty) {
+      // TODO: data ownership reflectionProbe vs _reflectionProbe
+      if (
+        reflectionProbeEntity.reflectionProbe.dirty ||
+        reflectionProbeEntity._reflectionProbe.dirty
+      ) {
+        reflectionProbeEntity.reflectionProbe.dirty = false;
+        reflectionProbeEntity._reflectionProbe.dirty = false;
+        console.log("reflection-probe", "update", skyboxEntities);
         reflectionProbeEntity._reflectionProbe.update((camera, encoding) => {
           if (skyboxEntities.length > 0) {
             skyboxEntities[0]._skybox.draw(camera, {
