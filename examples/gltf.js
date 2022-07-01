@@ -11,15 +11,16 @@ import parseHdr from "parse-hdr";
 import axisHelper from "../helpers/axis-helper.js";
 import { computeEdges, getURL } from "./utils.js";
 
-const MODELS_PATH = "examples/glTF-Sample-Models/2.0";
-// "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0";
+// const MODELS_PATH = "examples/glTF-Sample-Models/2.0";
+const MODELS_PATH =
+  "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0";
 
 const State = {
   sunPosition: [2, 2, 2],
   selectedModel: "",
   scenes: [],
   gridSize: 1,
-  showBoundingBoxes: true,
+  showBoundingBoxes: false,
   useEnvMap: true,
   shadows: false,
   formats: [
@@ -143,11 +144,8 @@ function addPointLine({ jointMatrices }, i, j) {
 // Start
 const ctx = createContext({
   powerPreference: "high-performance",
+  type: "webgl",
 });
-ctx.gl.getExtension("EXT_shader_texture_lod");
-ctx.gl.getExtension("OES_standard_derivatives");
-ctx.gl.getExtension("WEBGL_draw_buffers");
-ctx.gl.getExtension("OES_texture_float");
 
 const renderer = createRenderer({
   ctx,
@@ -156,12 +154,20 @@ const renderer = createRenderer({
   profile: true,
   profileFlush: false,
 });
+window.renderer = renderer;
+
+renderer.addSystem(renderer.geometrySystem());
+renderer.addSystem(renderer.transformSystem());
+renderer.addSystem(renderer.cameraSystem());
+renderer.addSystem(renderer.skyboxSystem());
+renderer.addSystem(renderer.reflectionProbeSystem());
+renderer.addSystem(renderer.renderSystem());
 
 const gui = createGUI(ctx);
 gui.addFPSMeeter();
 
-const sunEntity = renderer.entity([
-  renderer.transform({
+const sunEntity = renderer.entity({
+  transform: renderer.transform({
     position: State.sunPosition,
     rotation: quat.fromTo(
       quat.create(),
@@ -169,24 +175,26 @@ const sunEntity = renderer.entity([
       vec3.normalize([-2, -2, -2])
     ),
   }),
-  renderer.directionalLight({
+  directionalLight: renderer.directionalLight({
     color: [1, 1, 0.95, 1],
     intensity: 5,
     castShadows: State.shadows,
     bias: 0.2,
   }),
-]);
+});
 renderer.add(sunEntity);
 
-const skyboxEntity = renderer.entity([
-  renderer.skybox({
+const skyboxEntity = renderer.entity({
+  skybox: renderer.skybox({
     sunPosition: [1, 1, 1],
-    backgroundBlur: 1,
+    backgroundBlur: 0,
   }),
-]);
+});
 renderer.add(skyboxEntity);
 
-const reflectionProbeEntity = renderer.entity([renderer.reflectionProbe()]);
+const reflectionProbeEntity = renderer.entity({
+  reflectionProbe: renderer.reflectionProbe(),
+});
 renderer.add(reflectionProbeEntity);
 
 const addEnvmap = async () => {
@@ -205,27 +213,30 @@ const addEnvmap = async () => {
     flipY: true,
   });
 
-  skyboxEntity.getComponent("Skybox").set({ texture: panorama });
-  reflectionProbeEntity.getComponent("ReflectionProbe").set({ dirty: true });
+  skyboxEntity.skybox.texture = panorama;
+  skyboxEntity._skybox.texture = panorama; //TODO: data ownership skybox vs _skybox
+  reflectionProbeEntity.reflectionProbe.dirty = true; //TODO: check if reflectionProbe.dirty is implemented
 };
 
 if (State.useEnvMap) addEnvmap();
 
-const axesEntity = renderer.entity([axisHelper()]);
-renderer.add(axesEntity);
+// TODO: implement axis helper
+// const axesEntity = renderer.entity([axisHelper()]);
+// renderer.add(axesEntity);
 
-const lineBuilder = renderer.entity([
-  renderer.geometry({
+const lineBuilder = renderer.entity({
+  transform: renderer.transform(),
+  geometry: renderer.geometry({
     positions,
     count: 2,
-    primitive: ctx.Primitive.Lines,
+    primitive: ctx.Primitive.Lines, //TODO: check Primitive.Lines support
   }),
-  renderer.material({
+  material: renderer.material({
     baseColor: [1, 0, 0, 1],
     castShadows: State.shadows,
     receiveShadows: State.shadows,
   }),
-]);
+});
 // renderer.add(lineBuilder)
 
 // glTF
@@ -302,54 +313,57 @@ let floorEntity;
 let cameraEntity;
 
 async function loadScene(url, grid) {
+  console.log("loadScene", url);
   let scene;
   try {
     // console.time('building ' + url)
     // All examples only have one scene
-    State.scene = scene = await renderer.loadScene(url, {
-      includeCameras: !grid,
-      includeLights: !grid,
-      dracoOptions: {
-        transcoderPath: new URL(
-          "assets/decoders/draco/",
-          import.meta.url
-        ).toString(),
-      },
-      basisOptions: {
-        transcoderPath: new URL(
-          "assets/decoders/basis/",
-          import.meta.url
-        ).toString(),
-      },
-    });
+    State.scene = scene = (
+      await renderer.loadScene(url, {
+        includeCameras: !grid,
+        includeLights: !grid,
+        dracoOptions: {
+          transcoderPath: new URL(
+            "assets/decoders/draco/",
+            import.meta.url
+          ).toString(),
+        },
+        basisOptions: {
+          transcoderPath: new URL(
+            "assets/decoders/basis/",
+            import.meta.url
+          ).toString(),
+        },
+      })
+    )[0]; //TODO: selecting first scene by default
   } catch (e) {
+    console.error(e);
     // console.timeEnd('building ' + url)
     return e;
   }
 
-  console.log(scene);
+  // TODO: add shadows on/off
+  // scene.entities.forEach((entity) => {
+  //   const materialCmp = entity.getComponent("Material");
+  //   if (materialCmp) {
+  //     materialCmp.set({
+  //       castShadows: State.shadows,
+  //       receiveShadows: State.shadows,
+  //     });
+  //   }
+  // });
 
-  scene.entities.forEach((entity) => {
-    const materialCmp = entity.getComponent("Material");
-    if (materialCmp) {
-      materialCmp.set({
-        castShadows: State.shadows,
-        receiveShadows: State.shadows,
-      });
-    }
-  });
-
-  renderer.add(scene.root);
+  scene.entities.forEach((e) => renderer.add(e));
+  console.log("scene", scene);
 
   // Add camera for models lacking one
   if (!grid) {
-    cameraEntity = scene.entities.find(({ components }) =>
-      components.find(({ type }) => type === "Camera")
-    );
+    cameraEntity = scene.entities.find((e) => e.camera);
 
     if (!cameraEntity) {
       // Update needed for transform.worldBounds
-      renderer.update();
+      renderer.update(); //TODO: check if that call updates transform.worldBounds
+
       const far = 10000;
       const sceneBounds = scene.root.transform.worldBounds;
       // const sceneSize = aabb.size(scene.root.transform.worldBounds)
@@ -362,40 +376,40 @@ async function loadScene(url, grid) {
       const fov = Math.PI / 4;
       const distance = (boundingSphereRadius * 2) / Math.tan(fov / 2);
 
-      cameraEntity = renderer.entity([
-        renderer.camera({
+      cameraEntity = renderer.entity({
+        transform: renderer.transform(),
+        camera: renderer.camera({
           near: 0.01,
           far,
           fov,
           aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
+          position: [sceneCenter[0], sceneCenter[1], distance],
         }),
-        renderer.orbiter({
+        orbiter: renderer.orbiter({
           maxDistance: far,
+          distance: distance,
           target: sceneCenter,
           position: [sceneCenter[0], sceneCenter[1], distance],
         }),
-      ]);
+      });
       scene.entities.push(cameraEntity);
       renderer.add(cameraEntity);
     } else {
-      const cameraCmp = cameraEntity.getComponent("Camera");
-      cameraCmp.set({
-        near: 0.5,
-        aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
-      });
+      //TODO: do i need to set dirty for camera to update?
+      cameraEntity.camera.near = 0.5;
+      cameraEntity.camera.aspect =
+        ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight;
 
       // Clipped models: 2CylinderEngine, EnvironmentTest
       // MultiUVTest: wrong position
       if (State.selectedModel.name !== "MultiUVTest") {
-        cameraEntity.addComponent(
-          renderer.orbiter({
-            // target: sceneCenter,
-            // distance: (boundingSphereRadius * 2) / Math.tan(cameraCmp.fov / 2),
-            position: cameraEntity.transform.position,
-            minDistance: cameraCmp.near,
-            maxDistance: cameraCmp.far,
-          })
-        );
+        cameraEntity.orbiter = renderer.orbiter({
+          // target: sceneCenter,
+          // distance: (boundingSphereRadius * 2) / Math.tan(cameraCmp.fov / 2),
+          position: cameraEntity.transform.position,
+          minDistance: cameraCmp.near,
+          maxDistance: cameraCmp.far,
+        });
       }
     }
 
@@ -485,14 +499,20 @@ async function init() {
       if (State.selectedModel) {
         while (State.scenes.length) {
           const oldScene = State.scenes.shift();
-          oldScene.entities.forEach((e) => e.dispose());
+          // oldScene.entities.forEach((e) => e.dispose()); //TODO: dispose
         }
 
-        if (State.scene) renderer.remove(State.scene.root);
-        if (floorEntity) renderer.remove(floorEntity);
+        if (State.scene) {
+          //renderer.remove(State.scene.root); //TODO: renderer.remove()
+          State.scene.entities.forEach((e) => {
+            const idx = renderer.entities.indexOf(e);
+            renderer.entities.splice(idx, 1);
+          });
+        }
+        // if (floorEntity) renderer.remove(floorEntity); //renderer.remove()
       }
 
-      renderer.remove(cameraEntity);
+      // renderer.remove(cameraEntity);
 
       console.log(model);
 
@@ -674,9 +694,11 @@ ctx.frame(() => {
     if (!debugCommandsOpt) {
       debugCommandsOpt = optimizeCommands(ctx.debugCommands);
     }
-    if (renderer._state.profiler) {
-      renderer._state.profiler.startFrame();
-    }
+    // TODO: implement profiler
+    // if (renderer._state.profiler) {
+    // renderer._state.profiler.startFrame();
+    // }
+
     // var camera = renderer.getComponents('Camera')[0]
     // var orbiter = renderer.getComponents('Orbiter')[0]
     // orbiter.update()
@@ -688,9 +710,11 @@ ctx.frame(() => {
     //   }
     //   ctx.apply(cmd)
     // }
-    if (renderer._state.profiler) {
-      renderer._state.profiler.endFrame();
-    }
+
+    // TODO: implement profiler
+    // if (renderer._state.profiler) {
+    // renderer._state.profiler.endFrame();
+    // }
   } else {
     renderer.draw();
   }
@@ -705,7 +729,8 @@ ctx.frame(() => {
     });
   }
 
-  if (!renderer._state.paused) {
-    gui.draw();
-  }
+  // TODO: implement pause on blur
+  // if (!renderer._state.paused) {
+  gui.draw();
+  // }
 });
