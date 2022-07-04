@@ -31,7 +31,7 @@
   "dependencies": {
     "geom-builder": "^2.1.0",
     "hammersley": "^1.0.0",
-    "pex-cam": "github:pex-gl/pex-cam#v3",
+    "pex-cam": "^3.0.0-alpha.1",
     "pex-geom": "github:pex-gl/pex-geom#v3",
     "pex-io": "github:pex-gl/pex-io#v3",
     "pex-loaders": "github:pex-gl/pex-loaders#014ee1d716d460591fcf87af5e16ea0d47d468a7",
