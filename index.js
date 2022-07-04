@@ -15,6 +15,7 @@ import createSkin from "./components/skin.js";
 import createSkybox from "./components/skybox.js";
 import createTransform from "./components/transform.js";
 
+import createAnimationSystem from "./systems/animation-system.js";
 import createCameraSystem from "./systems/camera-system.js";
 import createGeometrySystem from "./systems/geometry-system.js";
 import createReflectionProbeSystem from "./systems/reflection-probe-system.js";
@@ -155,6 +156,10 @@ class Renderer {
 
   transform(opts) {
     return createTransform(opts);
+  }
+
+  animationSystem(opts = {}) {
+    return createAnimationSystem(opts);
   }
 
   cameraSystem(opts = {}) {
