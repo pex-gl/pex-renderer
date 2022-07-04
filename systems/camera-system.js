@@ -32,7 +32,7 @@ export default function createCameraSystem() {
             autoUpdate: false,
             camera: proxyCamera,
             position: entity.orbiter.position || [0, 0, 2.5], //TODO: orbiter position vs distance is confusing, shoudln't it come from camera anyway?
-            distance: entity.orbiter.distance || 2,
+            maxDistance: camera.far * 0.9,
           });
         } else {
           entity.orbiter._orbiter.updateCamera();
