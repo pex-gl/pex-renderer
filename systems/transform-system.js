@@ -120,13 +120,14 @@ export default function createTransformSystem(opts) {
     if (
       cachedTransform.transform !== transform ||
       needsFirstUpdate ||
-      cachedTransform.transform.dirty
+      transform.dirty
     ) {
-      cachedTransform.transform = false;
+      transform.dirty = false;
       if (transformSystem.debug) console.debug("update transform", transform);
       cachedTransform.transform = transform;
       if (transformSystem.debug) console.debug("update", transform);
 
+      // console.log("localModelMatrix", cachedTransform.localModelMatrix);
       updateModelMatrix(cachedTransform.localModelMatrix, transform);
     }
   };

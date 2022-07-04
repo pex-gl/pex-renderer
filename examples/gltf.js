@@ -157,6 +157,7 @@ const renderer = createRenderer({
 window.renderer = renderer;
 
 renderer.addSystem(renderer.geometrySystem());
+renderer.addSystem(renderer.animationSystem());
 renderer.addSystem(renderer.transformSystem());
 renderer.addSystem(renderer.cameraSystem());
 renderer.addSystem(renderer.skyboxSystem());
@@ -371,6 +372,7 @@ async function loadScene(url, grid) {
       await renderer.loadScene(url, {
         // includeCameras: !grid,
         includeCameras: includeCameras,
+        includeAnimations: true,
         includeLights: !grid,
         dracoOptions: {
           transcoderPath: new URL(

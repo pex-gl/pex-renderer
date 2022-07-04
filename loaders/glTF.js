@@ -977,7 +977,6 @@ async function handleNode(node, gltf, i, ctx, renderer, options) {
       // create sub nodes for each primitive
       const primitiveNodes = primitives.map((components, j) => {
         const subEntity = renderer.entity(components);
-        console.log("subEntity", subEntity);
         // const subEntity = {
         //   ...components,
         //   transform: {},
@@ -1435,7 +1434,8 @@ async function loadGltf(url, renderer, options = {}) {
         }
       });
 
-      if (json.animations) {
+      if (json.animations && options.includeAnimations !== false) {
+        scene.root.animations = [];
         json.animations.forEach((animation, index) => {
           const animationComponent = handleAnimation(
             animation,
@@ -1443,7 +1443,10 @@ async function loadGltf(url, renderer, options = {}) {
             renderer,
             index
           );
-          scene.root.animation = animationComponent;
+          if (index == 0) {
+            scene.root.animation = animationComponent;
+          }
+          scene.root.animations.push(animationComponent);
         });
       }
 
