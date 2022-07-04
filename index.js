@@ -191,8 +191,8 @@ class Renderer {
     return createTransformSystem(opts);
   }
 
-  loadScene(url) {
-    return loadGltf(url, this);
+  loadScene(url, options) {
+    return loadGltf(url, this, options);
   }
 
   update() {
