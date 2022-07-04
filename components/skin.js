@@ -1,4 +1,3 @@
-import Signal from "signals";
 import { mat4 } from "pex-math";
 
 class Skin {
@@ -42,5 +41,8 @@ class Skin {
 }
 
 export default function createSkin(opts) {
-  return new Skin(opts);
+  return {
+    ...opts,
+  };
+  // return new Skin(opts);
 }

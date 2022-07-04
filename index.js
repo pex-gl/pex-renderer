@@ -11,6 +11,7 @@ import createMaterial from "./components/material.js";
 import createMorph from "./components/morph.js";
 import createOrbiter from "./components/orbiter.js";
 import createReflectionProbe from "./components/reflection-probe.js";
+import createSkin from "./components/skin.js";
 import createSkybox from "./components/skybox.js";
 import createTransform from "./components/transform.js";
 
@@ -22,6 +23,7 @@ import createSkyboxSystem from "./systems/skybox-system.js";
 import createTransformSystem from "./systems/transform-system.js";
 
 import loadGltf from "./loaders/glTF.js";
+// import { create } from "pex-math/mat2x3.js";
 
 class Renderer {
   constructor(opts) {
@@ -140,7 +142,7 @@ class Renderer {
   }
 
   skin(opts) {
-    return {}; //TODO: implement skin
+    return createSkin(opts);
   }
 
   skybox(opts) {
