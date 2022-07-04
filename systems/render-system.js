@@ -219,6 +219,9 @@ export default function createRenderSystem(opts) {
     [["options", "useTonemapping"], "USE_TONEMAPPING"],
     [["material", "unlit"], "USE_UNLIT_WORKFLOW"],
     [["material", "blend"], "USE_BLEND"],
+    [["material", "baseColor"], "", { type: "vec4", uniform: "uBaseColor"}],
+    [["material", "metallic"], "", { type: "float", uniform: "uMetallic"}],
+    [["material", "roughness"], "", { type: "float", uniform: "uRoughness"}],
     [["material", "emissiveColor"], "USE_EMISSIVE_COLOR", { type: "vec4", uniform: "uEmissiveColor"}],
     [["material", "emissiveIntensity"], "USE_EMISSIVE_INTENSITY", { type: "float", uniform: "uEmissiveIntensity"}],
     [["material", "baseColorMap"], "BASE_COLOR_MAP", { type: "textureMap", uniform: "uBaseColorMap"}],
@@ -281,11 +284,16 @@ export default function createRenderSystem(opts) {
       } else if (opts.type == "textureMap" && value) {
         flags.push(`USE_${defineName}`);
         flags.push(`${defineName}_TEX_COORD_INDEX 0`);
+        materialUniforms[opts.uniform] = value.texture || value;
+        if (value.texCoordTransformMatrix) {
+          materialUniforms[opts.uniform + "TexCoordTransform"] =
+            value.texCoordTransformMatrix;
+        }
       } else if (value) {
         flags.push(defineName);
-      }
-      if (value !== undefined && opts.uniform) {
-        materialUniforms[opts.uniform] = value;
+        if (opts.uniform) {
+          materialUniforms[opts.uniform] = value;
+        }
       }
     }
 
@@ -522,19 +530,19 @@ ${
         // const cachedUniforms = material._uniforms;
         const cachedUniforms = {};
         cachedUniforms.uModelMatrix = transform.modelMatrix; //FIXME: bypasses need for transformSystem access
-        cachedUniforms.uBaseColor = material.baseColor;
-        cachedUniforms.uBaseColorMap = material.baseColorMap;
-        cachedUniforms.uRoughness = material.roughness;
-        cachedUniforms.uRoughnessMap = material.roughnessMap;
-        cachedUniforms.uMetallic = material.metallic;
-        cachedUniforms.uMetallicMap = material.metallicMap;
-        cachedUniforms.uNormalMap = material.normalMap;
-        cachedUniforms.uEmissiveColor = material.emissiveColor;
-        cachedUniforms.uEmissiveIntensity =
-          material.emissiveIntensity !== undefined
-            ? material.emissiveIntensity
-            : 1;
-        cachedUniforms.uEmissiveColorMap = material.emissiveColorMap;
+        // cachedUniforms.uBaseColor = material.baseColor;
+        // cachedUniforms.uBaseColorMap = material.baseColorMap;
+        // cachedUniforms.uRoughness = material.roughness;
+        // cachedUniforms.uRoughnessMap = material.roughnessMap;
+        // cachedUniforms.uMetallic = material.metallic;
+        // cachedUniforms.uMetallicMap = material.metallicMap;
+        // cachedUniforms.uNormalMap = material.normalMap;
+        // cachedUniforms.uEmissiveColor = material.emissiveColor;
+        // cachedUniforms.uEmissiveIntensity =
+        //   material.emissiveIntensity !== undefined
+        //     ? material.emissiveIntensity
+        //     : 1;
+        // cachedUniforms.uEmissiveColorMap = material.emissiveColorMap;
         cachedUniforms.uNormalScale = 1;
         cachedUniforms.uAlphaTest = material.alphaTest || 1;
         cachedUniforms.uAlphaMap = material.alphaMap;
