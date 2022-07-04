@@ -46,6 +46,7 @@ ${ctx.capabilities.maxColorAttachments > 1 ? "#define USE_DRAW_BUFFERS" : ""}
 ${ctx.capabilities.maxColorAttachments > 1 ? "#define USE_DRAW_BUFFERS" : ""}
 ${skybox.skybox.frag}`,
         depthTest: true,
+        depthWrite: false,
       }),
       attributes: {
         aPosition: ctx.vertexBuffer(skyboxPositions),
