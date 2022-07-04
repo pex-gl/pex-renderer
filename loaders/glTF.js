@@ -888,6 +888,7 @@ async function handleNode(node, gltf, i, ctx, renderer, options) {
 
   node.entity = renderer.entity(components);
   node.entity.name = node.name || `node_${i}`;
+
   // node.entity = entity;
   // node.entity.name = node.name || `node_${i}`;
 
@@ -1424,11 +1425,12 @@ async function loadGltf(url, renderer, options = {}) {
           if (json.meshes[node.mesh].primitives.length === 1) {
             node.entity.skin.joints = joints;
           } else {
-            node.entity.transform.children.forEach(({ entity }) => {
-              // FIXME: currently we share the same Skin component
-              // so this code is redundant after first child
-              entity.skin.joints = joints;
-            });
+            // TODO: implement joints
+            // node.entity.transform.children.forEach(({ entity }) => {
+            // FIXME: currently we share the same Skin component
+            // so this code is redundant after first child
+            // entity.skin.joints = joints;
+            // });
           }
         }
       });

@@ -2,10 +2,10 @@ import createRenderer from "../index.js";
 import createContext from "pex-context";
 import createGUI from "pex-gui";
 import { loadJson, loadImage, loadArrayBuffer } from "pex-io";
-import { quat, vec3 } from "pex-math";
+import { quat, vec3, mat4 } from "pex-math";
 import { aabb } from "pex-geom";
 
-import { box as createBox, cube } from "primitive-geometry";
+import { box as createBox, cube as createCube } from "primitive-geometry";
 import parseHdr from "parse-hdr";
 
 import axisHelper from "../helpers/axis-helper.js";
@@ -20,7 +20,7 @@ const State = {
   selectedModel: "",
   scenes: [],
   gridSize: 1,
-  showBoundingBoxes: false,
+  showBoundingBoxes: true,
   useEnvMap: true,
   shadows: false,
   formats: [
@@ -163,8 +163,33 @@ renderer.addSystem(renderer.skyboxSystem());
 renderer.addSystem(renderer.reflectionProbeSystem());
 renderer.addSystem(renderer.renderSystem());
 
+function aabbToString(aabb) {
+  if (!aabb) return "[]";
+  return `[${aabb[0].map((f) => f.toFixed(0.1))} .. ${aabb[1].map((f) =>
+    f.toFixed(0.1)
+  )}]`;
+}
+
 const gui = createGUI(ctx);
 gui.addFPSMeeter();
+
+function debugScene() {
+  let s = "";
+  renderer.entities.forEach((e, i) => {
+    let pad = "";
+    let transform = e.transform;
+    while (transform) {
+      pad += "--";
+      transform = transform.parent;
+    }
+    let bbox = aabbToString(e.transform?.worldBounds);
+    s += `${pad} ${i} ${e.name} ${Object.keys(e).join(" | ")} | ${bbox} \n`;
+  });
+  console.log(s);
+  console.log("renderer.entities", renderer.entities);
+}
+
+gui.addButton("Debug Scene Tree", debugScene);
 
 const sunEntity = renderer.entity({
   transform: renderer.transform({
@@ -176,7 +201,7 @@ const sunEntity = renderer.entity({
     ),
   }),
   directionalLight: renderer.directionalLight({
-    color: [1, 1, 0.95, 1],
+    color: [1, 1, 0.95, 5],
     intensity: 5,
     castShadows: State.shadows,
     bias: 0.2,
@@ -214,7 +239,9 @@ const addEnvmap = async () => {
   });
 
   skyboxEntity.skybox.texture = panorama;
-  skyboxEntity._skybox.texture = panorama; //TODO: data ownership skybox vs _skybox
+  if (skyboxEntity._skybox) {
+    skyboxEntity._skybox.texture = panorama; //TODO: data ownership skybox vs _skybox
+  }
   reflectionProbeEntity.reflectionProbe.dirty = true; //TODO: check if reflectionProbe.dirty is implemented
 };
 
@@ -245,28 +272,34 @@ function repositionModel({ root }) {
   const i = State.scenes.length;
   let x = 2 * (i % n) - n + 1;
   let z = 2 * Math.floor(i / n) - n + 1;
+
   if (State.selectedModel) {
     x = z = 0;
   }
-  root.transform.set({
-    position: [x, root.transform.position[1], z],
-  });
+  root.transform.position = [x, root.transform.position[1], z];
+  root.transform = {
+    ...root.transform,
+  };
 }
 
 function rescaleScene({ root }) {
   const sceneBounds = root.transform.worldBounds;
   const sceneSize = aabb.size(root.transform.worldBounds);
   const sceneCenter = aabb.center(root.transform.worldBounds);
-  const sceneScale =
-    1 / (Math.max(sceneSize[0], Math.max(sceneSize[1], sceneSize[2])) || 1);
+  let maxSize = Math.max(sceneSize[0], Math.max(sceneSize[1], sceneSize[2]));
+  if (maxSize == 0 || maxSize == Infinity) maxSize = 1;
+  const sceneScale = 1 / maxSize;
+
   if (!aabb.isEmpty(sceneBounds)) {
-    root.transform.set({
-      position: vec3.scale(
-        [-sceneCenter[0], -sceneBounds[0][1], -sceneCenter[2]],
-        sceneScale
-      ),
-      scale: [sceneScale, sceneScale, sceneScale],
-    });
+    root.transform.position = vec3.scale(
+      [-sceneCenter[0], -sceneBounds[0][1], -sceneCenter[2]],
+      sceneScale
+    );
+    root.root = true;
+    root.transform.scale = [sceneScale, sceneScale, sceneScale];
+    root.transform = {
+      ...root.transform,
+    };
   }
 }
 
@@ -274,9 +307,24 @@ function onSceneLoaded(scene, grid) {
   State.scenes.push(scene);
   renderer.update(); // refresh scene hierarchy
 
-  if (grid) {
+  debugScene();
+
+  if (grid || true) {
+    //TEMP: auto scaling
     rescaleScene(scene);
-    repositionModel(scene);
+    // repositionModel(scene);
+    renderer.update(); //update bounding boxes after rescaling
+  }
+
+  const addFloor = true;
+  if (addFloor) {
+    const cube = createCube({ sx: 1, sy: 0.05, sz: 1 });
+    const floorEnt = renderer.entity({
+      transform: renderer.transform({ position: [0, -0.025, 0] }),
+      geometry: renderer.geometry(cube),
+      material: renderer.material({ baseColor: [0.5, 0.5, 0.5, 1] }),
+    });
+    renderer.add(floorEnt);
   }
 
   if (State.showBoundingBoxes) {
@@ -288,18 +336,20 @@ function onSceneLoaded(scene, grid) {
       .map(({ transform, name }) => {
         const size = aabb.size(transform.worldBounds);
         const center = aabb.center(transform.worldBounds);
+        // const size = [1, 1, 1];
 
         const bbox = renderer.add(
-          renderer.entity([
-            renderer.transform({
+          renderer.entity({
+            transform: renderer.transform({
               scale: size,
               position: center,
             }),
-            renderer.geometry(box),
-            renderer.material({
+            geometry: renderer.geometry(box),
+            material: renderer.material({
+              unlit: true,
               baseColor: [1, 0, 0, 1],
             }),
-          ])
+          })
         );
         bbox.name = `${name}_bbox`;
         return bbox;
@@ -313,14 +363,14 @@ let floorEntity;
 let cameraEntity;
 
 async function loadScene(url, grid) {
-  console.log("loadScene", url);
+  const includeCameras = false;
   let scene;
   try {
-    // console.time('building ' + url)
     // All examples only have one scene
     State.scene = scene = (
       await renderer.loadScene(url, {
-        includeCameras: !grid,
+        // includeCameras: !grid,
+        includeCameras: includeCameras,
         includeLights: !grid,
         dracoOptions: {
           transcoderPath: new URL(
@@ -342,6 +392,23 @@ async function loadScene(url, grid) {
     return e;
   }
 
+  // sort entities by depth
+  scene.entities.forEach((e) => {
+    var parent = e.transform;
+    var depth = 0;
+    var watchdog = 0;
+    while (parent && watchdog++ < 100) {
+      parent = parent.parent;
+      depth++;
+    }
+    e.transform.depth = depth;
+    e.transform.worldBounds = aabb.create();
+  });
+
+  scene.entities.sort((a, b) => {
+    return a.transform.depth - b.transform.depth;
+  });
+
   // TODO: add shadows on/off
   // scene.entities.forEach((entity) => {
   //   const materialCmp = entity.getComponent("Material");
@@ -354,7 +421,6 @@ async function loadScene(url, grid) {
   // });
 
   scene.entities.forEach((e) => renderer.add(e));
-  console.log("scene", scene);
 
   // Add camera for models lacking one
   if (!grid) {
@@ -364,10 +430,15 @@ async function loadScene(url, grid) {
       // Update needed for transform.worldBounds
       renderer.update(); //TODO: check if that call updates transform.worldBounds
 
-      const far = 10000;
+      const far = 100;
       const sceneBounds = scene.root.transform.worldBounds;
       // const sceneSize = aabb.size(scene.root.transform.worldBounds)
       const sceneCenter = aabb.center(scene.root.transform.worldBounds);
+      if (isNaN(sceneCenter[0])) {
+        sceneCenter[0] = 0;
+        sceneCenter[1] = 0;
+        sceneCenter[2] = 0;
+      }
 
       const boundingSphereRadius = Math.max(
         ...sceneBounds.map((bound) => vec3.distance(sceneCenter, bound))
@@ -375,41 +446,49 @@ async function loadScene(url, grid) {
 
       const fov = Math.PI / 4;
       const distance = (boundingSphereRadius * 2) / Math.tan(fov / 2);
+      const position = includeCameras
+        ? [distance, distance, distance]
+        : [2, 2, 2];
 
       cameraEntity = renderer.entity({
         transform: renderer.transform(),
         camera: renderer.camera({
-          near: 0.01,
+          near: 0.1,
           far,
           fov,
           aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
-          position: [sceneCenter[0], sceneCenter[1], distance],
+          position: position,
         }),
         orbiter: renderer.orbiter({
-          maxDistance: far,
-          distance: distance,
+          // maxDistance: far,
           target: sceneCenter,
-          position: [sceneCenter[0], sceneCenter[1], distance],
+          position: position,
         }),
       });
       scene.entities.push(cameraEntity);
       renderer.add(cameraEntity);
     } else {
       //TODO: do i need to set dirty for camera to update?
-      cameraEntity.camera.near = 0.5;
       cameraEntity.camera.aspect =
         ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight;
+      cameraEntity.camera.projectionMatrix = mat4.perspective(
+        mat4.create(),
+        cameraEntity.camera.fov,
+        cameraEntity.camera.aspect,
+        cameraEntity.camera.near,
+        cameraEntity.camera.far
+      );
 
       // Clipped models: 2CylinderEngine, EnvironmentTest
       // MultiUVTest: wrong position
       if (State.selectedModel.name !== "MultiUVTest") {
-        cameraEntity.orbiter = renderer.orbiter({
-          // target: sceneCenter,
-          // distance: (boundingSphereRadius * 2) / Math.tan(cameraCmp.fov / 2),
-          position: cameraEntity.transform.position,
-          minDistance: cameraCmp.near,
-          maxDistance: cameraCmp.far,
-        });
+        // cameraEntity.orbiter = renderer.orbiter({
+        //   // target: sceneCenter,
+        //   // distance: (boundingSphereRadius * 2) / Math.tan(cameraCmp.fov / 2),
+        //   position: cameraEntity.transform.position,
+        //   minDistance: cameraEntity.camera.near,
+        //   maxDistance: cameraEntity.camera.far,
+        // });
       }
     }
 
@@ -514,8 +593,6 @@ async function init() {
 
       // renderer.remove(cameraEntity);
 
-      console.log(model);
-
       renderModel(model);
     }
   );
@@ -619,28 +696,30 @@ async function init() {
   if (grid) {
     State.gridSize = Math.ceil(Math.sqrt(models.length));
 
-    cameraEntity = renderer.entity([
-      renderer.camera({
+    cameraEntity = renderer.entity({
+      transform: renderer.transform(),
+      camera: renderer.camera({
         aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
       }),
-      renderer.orbiter({
+      orbiter: renderer.orbiter({
         position: new Array(3).fill(State.gridSize * 2),
       }),
-    ]);
+    });
     renderer.add(cameraEntity);
 
-    floorEntity = renderer.entity([
-      renderer.geometry(
+    floorEntity = renderer.entity({
+      transform: renderer.transform(),
+      geometry: renderer.geometry(
         cube({ sx: 2 * State.gridSize, sy: 0.1, sz: 2 * State.gridSize })
       ),
-      renderer.material({
+      material: renderer.material({
         baseColor: [0.8, 0.8, 0.8, 1],
         metallic: 0,
         roughness: 1,
         castShadows: State.shadows,
         receiveShadows: State.shadows,
       }),
-    ]);
+    });
     renderer.add(floorEntity);
   }
 
@@ -669,9 +748,8 @@ window.addEventListener("resize", () => {
     height: H,
   });
   if (cameraEntity) {
-    cameraEntity.getComponent("Camera").set({
-      viewport: [0, 0, W, H],
-    });
+    cameraEntity.camera.viewport = [0, 0, W, H];
+    cameraEntity.camera.aspect = W / H;
   }
 });
 
