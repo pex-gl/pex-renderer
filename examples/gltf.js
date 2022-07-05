@@ -172,7 +172,6 @@ function aabbToString(aabb) {
 }
 
 const gui = createGUI(ctx);
-gui.addFPSMeeter();
 
 function debugScene() {
   let s = "";
@@ -190,7 +189,9 @@ function debugScene() {
   console.log("renderer.entities", renderer.entities);
 }
 
-gui.addButton("Debug Scene Tree", debugScene);
+function debugGL() {
+  debugOnce = true;
+}
 
 const sunEntity = renderer.entity({
   transform: renderer.transform({
@@ -560,15 +561,8 @@ async function init() {
       value: models[i],
       texture: tex,
     }));
-  gui.addRadioList(
-    "Format",
-    State,
-    "currentFormat",
-    State.formats.map((name, value) => ({
-      name,
-      value,
-    }))
-  );
+
+  gui.addColumn("GLTF");
   gui.addTexture2DList(
     "Models",
     State,
@@ -597,6 +591,22 @@ async function init() {
 
       renderModel(model);
     }
+  );
+
+  gui.addColumn("Options");
+  gui.addFPSMeeter();
+
+  gui.addButton("Debug Scene Tree", debugScene);
+
+  gui.addButton("Debug GL", debugGL);
+  gui.addRadioList(
+    "Format",
+    State,
+    "currentFormat",
+    State.formats.map((name, value) => ({
+      name,
+      value,
+    }))
   );
 
   // Filter models
