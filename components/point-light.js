@@ -122,5 +122,8 @@ class PointLight {
 }
 
 export default (opts) => {
-  return new PointLight(opts);
+  return {
+    ...opts,
+  };
+  //return new PointLight(opts);
 };
