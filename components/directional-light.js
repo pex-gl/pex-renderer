@@ -109,6 +109,5 @@ class DirectionalLight {
 export default (opts = {}) => {
   return {
     ...opts,
-    castShadows: false, //TODO: temp overwrite
   };
 };
