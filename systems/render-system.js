@@ -237,6 +237,7 @@ export default function createRenderSystem(opts) {
     [["material", "alphaMap"], "ALPHA_MAP", { type: "texture", uniform: "uAlphaMap"}],
     [["material", "clearCoat"], "USE_CLEAR_COAT", { uniform: "uClearCoat"}],
     [["material", "clearCoatRoughness"], "USE_CLEAR_COAT_ROUGHNESS", { uniform: "uClearCoatRoughness"}],
+    [["geometry", "attributes", "aNormal"], "USE_NORMALS", { fallback: "USE_UNLIT_WORKFLOW" }],
     [["geometry", "attributes", "aTangent"], "USE_TANGENTS"],
     [["geometry", "attributes", "aTexCoord0"], "USE_TEXCOORD_0"],
     [["geometry", "attributes", "aTexCoord1"], "USE_TEXCOORD_1"],
