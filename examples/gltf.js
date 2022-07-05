@@ -157,8 +157,8 @@ const renderer = createRenderer({
 window.renderer = renderer;
 
 renderer.addSystem(renderer.geometrySystem());
-renderer.addSystem(renderer.animationSystem());
 renderer.addSystem(renderer.transformSystem());
+renderer.addSystem(renderer.animationSystem());
 renderer.addSystem(renderer.cameraSystem());
 renderer.addSystem(renderer.skyboxSystem());
 renderer.addSystem(renderer.reflectionProbeSystem());
@@ -776,6 +776,8 @@ window.addEventListener("keypress", ({ key }) => {
 
 let debugOnce = false;
 
+let prevTime = Date.now();
+
 ctx.frame(() => {
   ctx.debug(debugOnce);
   debugOnce = false;
@@ -806,7 +808,10 @@ ctx.frame(() => {
     // renderer._state.profiler.endFrame();
     // }
   } else {
-    renderer.draw();
+    const now = Date.now();
+    const deltaTime = (now - prevTime) / 1000;
+    prevTime = now;
+    renderer.draw(deltaTime);
   }
 
   if (State.body) {

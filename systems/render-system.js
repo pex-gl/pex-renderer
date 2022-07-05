@@ -219,22 +219,24 @@ export default function createRenderSystem(opts) {
     [["options", "useTonemapping"], "USE_TONEMAPPING"],
     [["material", "unlit"], "USE_UNLIT_WORKFLOW"],
     [["material", "blend"], "USE_BLEND"],
-    [["material", "baseColor"], "", { type: "vec4", uniform: "uBaseColor"}],
-    [["material", "metallic"], "", { type: "float", uniform: "uMetallic"}],
-    [["material", "roughness"], "", { type: "float", uniform: "uRoughness"}],
-    [["material", "emissiveColor"], "USE_EMISSIVE_COLOR", { type: "vec4", uniform: "uEmissiveColor"}],
-    [["material", "emissiveIntensity"], "USE_EMISSIVE_INTENSITY", { type: "float", uniform: "uEmissiveIntensity"}],
-    [["material", "baseColorMap"], "BASE_COLOR_MAP", { type: "textureMap", uniform: "uBaseColorMap"}],
-    [["material", "emissiveColorMap"], "EMISSIVE_COLOR_MAP", { type: "textureMap", uniform: "uEmissiveColorMap"}],
-    [["material", "normalMap"], "NORMAL_MAP", { type: "textureMap", uniform: "uNormalMap"}],
-    [["material", "roughnessMap"], "ROUGHNESS_MAP", { type: "textureMap", uniform: "uRoughnessMap"}],
-    [["material", "metallicMap"], "METALLIC_MAP", { type: "textureMap", uniform: "uMetallicMap"}],
-    [["material", "metallicRoughnessMap"], "METALLIC_ROUGHNESS_MAP", { type: "textureMap", uniform: "uMetallicRoughnessMap"}],
+    [["skin"], "USE_SKIN"],
+    [["skin", "joints", "length"], "NUM_JOINTS", { type: "counter", requires: "USE_SKIN" }],
+    [["skin", "jointMatrices"], "", { uniform: "uJointMat", requires: "USE_SKIN" }],
+    [["material", "baseColor"], "", { uniform: "uBaseColor"}],
+    [["material", "metallic"], "", { uniform: "uMetallic"}],
+    [["material", "roughness"], "", { uniform: "uRoughness"}],
+    [["material", "emissiveColor"], "USE_EMISSIVE_COLOR", { uniform: "uEmissiveColor"}],
+    [["material", "emissiveIntensity"], "", { uniform: "uEmissiveIntensity", default: 1}],
+    [["material", "baseColorMap"], "BASE_COLOR_MAP", { type: "texture", uniform: "uBaseColorMap"}],
+    [["material", "emissiveColorMap"], "EMISSIVE_COLOR_MAP", { type: "texture", uniform: "uEmissiveColorMap"}],
+    [["material", "normalMap"], "NORMAL_MAP", { type: "texture", uniform: "uNormalMap"}],
+    [["material", "roughnessMap"], "ROUGHNESS_MAP", { type: "texture", uniform: "uRoughnessMap"}],
+    [["material", "metallicMap"], "METALLIC_MAP", { type: "texture", uniform: "uMetallicMap"}],
+    [["material", "metallicRoughnessMap"], "METALLIC_ROUGHNESS_MAP", { type: "texture", uniform: "uMetallicRoughnessMap"}],
     [["material", "alphaTest"], "USE_ALPHA_TEST"],
-    [["material", "alphaMap"], "ALPHA_MAP", { type: "textureMap", uniform: "uAlphaMap"}],
-    [["material", "clearCoat"], "USE_CLEAR_COAT", { type: "float", uniform: "uClearCoat"}],
-    [["material", "clearCoatRoughness"], "USE_CLEAR_COAT_ROUGHNESS", { type: "float", uniform: "uClearCoatRoughness"}],    
-    [["geometry", "attributes", "aNormal"], "USE_NORMALS"],
+    [["material", "alphaMap"], "ALPHA_MAP", { type: "texture", uniform: "uAlphaMap"}],
+    [["material", "clearCoat"], "USE_CLEAR_COAT", { uniform: "uClearCoat"}],
+    [["material", "clearCoatRoughness"], "USE_CLEAR_COAT_ROUGHNESS", { uniform: "uClearCoatRoughness"}],
     [["geometry", "attributes", "aTangent"], "USE_TANGENTS"],
     [["geometry", "attributes", "aTexCoord0"], "USE_TEXCOORD_0"],
     [["geometry", "attributes", "aTexCoord1"], "USE_TEXCOORD_1"],
@@ -254,12 +256,7 @@ export default function createRenderSystem(opts) {
     // TODO: pass shadowQuality as option
     State
   ) {
-    const { _geometry: geometry, material, skin } = entity;
-    const obj = {
-      geometry,
-      material,
-      options,
-    };
+    const { _geometry: geometry, material } = entity;
 
     let flags = [
       //[["ctx", "capabilities", "maxColorAttachments"], "USE_DRAW_BUFFERS"
@@ -274,14 +271,25 @@ export default function createRenderSystem(opts) {
     for (let i = 0; i < flagDefs.length; i++) {
       const [path, defineName, opts = {}] = flagDefs[i];
 
+      if (opts.requires && !flags.includes(opts.requires)) {
+        continue;
+      }
+
+      //TODO: GC
+      const obj = {
+        ...entity,
+        geometry,
+        options,
+      };
       let value = obj;
+
       for (let j = 0; j < path.length; j++) {
         value = value[path[j]];
       }
 
       if (opts.type == "counter") {
         flags.push(`${defineName} ${value}`);
-      } else if (opts.type == "textureMap" && value) {
+      } else if (opts.type == "texture" && value) {
         flags.push(`USE_${defineName}`);
         flags.push(`${defineName}_TEX_COORD_INDEX 0`);
         materialUniforms[opts.uniform] = value.texture || value;
@@ -289,11 +297,14 @@ export default function createRenderSystem(opts) {
           materialUniforms[opts.uniform + "TexCoordTransform"] =
             value.texCoordTransformMatrix;
         }
-      } else if (value) {
+      } else if (value !== undefined || opts.default !== undefined) {
         flags.push(defineName);
         if (opts.uniform) {
-          materialUniforms[opts.uniform] = value;
+          materialUniforms[opts.uniform] =
+            value !== undefined ? value : opts.default;
         }
+      } else if (opts.fallback) {
+        flags.push(opts.fallback);
       }
     }
 

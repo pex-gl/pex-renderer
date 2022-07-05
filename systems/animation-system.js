@@ -207,7 +207,7 @@ export default function createAnimationSystem(opts) {
         const joint = entity.skin.joints[i];
         const m = entity.skin.jointMatrices[i];
         mat4.identity(m);
-        const modelMatrix = transformSystem.cache[joint.id].modelMatrix;
+        const modelMatrix = joint._transform.modelMatrix;
         mat4.mult(m, modelMatrix);
         mat4.mult(m, entity.skin.inverseBindMatrices[i]);
         // console.log(m)
@@ -215,10 +215,12 @@ export default function createAnimationSystem(opts) {
     }
   };
 
-  animationSystem.update = (entities) => {
+  animationSystem.update = (entities, deltaTime) => {
     const animationEntities = entities.filter((e) => e.animation);
+    animationSystem.updateAnimations(animationEntities, deltaTime);
 
-    animationSystem.updateAnimations(animationEntities, 1 / 30);
+    const skinEntities = entities.filter((e) => e.skin);
+    animationSystem.updateSkins(skinEntities, deltaTime);
   };
 
   return animationSystem;
