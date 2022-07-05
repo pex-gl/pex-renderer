@@ -33,6 +33,7 @@ const State = {
     "glTF-JPG-PNG",
   ],
   currentFormat: 0,
+  modelName: "-",
 };
 
 const FORMAT_EXTENSION = new Map()
@@ -155,6 +156,7 @@ const renderer = createRenderer({
   profileFlush: false,
 });
 window.renderer = renderer;
+window.state = State;
 
 renderer.addSystem(renderer.geometrySystem());
 renderer.addSystem(renderer.transformSystem());
@@ -193,6 +195,15 @@ function debugGL() {
   debugOnce = true;
 }
 
+function openModelURL() {
+  window.open(
+    State.url.replace(
+      "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/",
+      "https://github.com/KhronosGroup/glTF-Sample-Models/blob/master/2.0/"
+    )
+  );
+}
+
 const sunEntity = renderer.entity({
   transform: renderer.transform({
     position: State.sunPosition,
@@ -203,8 +214,8 @@ const sunEntity = renderer.entity({
     ),
   }),
   directionalLight: renderer.directionalLight({
-    color: [1, 1, 0.95, 5],
-    intensity: 5,
+    color: [1, 1, 0.95, 1],
+    intensity: 0,
     castShadows: State.shadows,
     bias: 0.2,
   }),
@@ -314,7 +325,7 @@ function onSceneLoaded(scene, grid) {
   if (grid || true) {
     //TEMP: auto scaling
     rescaleScene(scene);
-    // repositionModel(scene);
+    if (grid) repositionModel(scene);
     renderer.update(); //update bounding boxes after rescaling
   }
 
@@ -436,7 +447,7 @@ async function loadScene(url, grid) {
       const far = 100;
       const sceneBounds = scene.root.transform.worldBounds;
       // const sceneSize = aabb.size(scene.root.transform.worldBounds)
-      const sceneCenter = aabb.center(scene.root.transform.worldBounds);
+      let sceneCenter = aabb.center(scene.root.transform.worldBounds);
       if (isNaN(sceneCenter[0])) {
         sceneCenter[0] = 0;
         sceneCenter[1] = 0;
@@ -449,9 +460,12 @@ async function loadScene(url, grid) {
 
       const fov = Math.PI / 4;
       const distance = (boundingSphereRadius * 2) / Math.tan(fov / 2);
-      const position = includeCameras
+      let position = includeCameras
         ? [distance, distance, distance]
         : [2, 2, 2];
+
+      position = [0, 0.5, 1.5];
+      sceneCenter = [0, 0.5, 0];
 
       cameraEntity = renderer.entity({
         transform: renderer.transform(),
@@ -460,9 +474,11 @@ async function loadScene(url, grid) {
           far,
           fov,
           aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
+          target: sceneCenter,
           position: position,
         }),
         orbiter: renderer.orbiter({
+          element: ctx.gl.canvas,
           // maxDistance: far,
           target: sceneCenter,
           position: position,
@@ -505,13 +521,14 @@ async function loadScene(url, grid) {
 async function renderModel(model, overrideFormat, grid) {
   const format = overrideFormat || State.formats[State.currentFormat];
 
+  const url = `${MODELS_PATH}/${model.name}/${format}/${
+    model.name
+  }.${FORMAT_EXTENSION.get(format)}`;
+  State.url = url;
+  State.modelName = model.name;
+
   try {
-    const scene = await loadScene(
-      `${MODELS_PATH}/${model.name}/${format}/${
-        model.name
-      }.${FORMAT_EXTENSION.get(format)}`,
-      grid
-    );
+    const scene = await loadScene(url, grid);
 
     if (scene instanceof Error) {
       throw scene;
@@ -597,8 +614,9 @@ async function init() {
   gui.addFPSMeeter();
 
   gui.addButton("Debug Scene Tree", debugScene);
-
   gui.addButton("Debug GL", debugGL);
+  gui.addButton("Open Model URL", openModelURL);
+  gui.addParam("Model name", State, "modelName");
   gui.addRadioList(
     "Format",
     State,
@@ -636,10 +654,10 @@ async function init() {
       // "Cameras",
       // "CesiumMan",
       // "CesiumMilkTruck",
-      // "ClearCoatTest",
+      "ClearCoatTest",
       // "Corset",
       // "Cube",
-      "DamagedHelmet",
+      // "DamagedHelmet",
       // "DragonAttenuation",
       // "Duck",
       // "EmissiveStrengthTest",
@@ -722,7 +740,7 @@ async function init() {
     floorEntity = renderer.entity({
       transform: renderer.transform(),
       geometry: renderer.geometry(
-        cube({ sx: 2 * State.gridSize, sy: 0.1, sz: 2 * State.gridSize })
+        createCube({ sx: 2 * State.gridSize, sy: 0.1, sz: 2 * State.gridSize })
       ),
       material: renderer.material({
         baseColor: [0.8, 0.8, 0.8, 1],
