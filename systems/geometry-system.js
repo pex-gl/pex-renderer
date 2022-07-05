@@ -1,3 +1,5 @@
+import { aabb } from "pex-geom";
+
 export default function createGeometrySystem(opts) {
   const ctx = opts.ctx;
   const geometrySystem = {
@@ -21,6 +23,18 @@ export default function createGeometrySystem(opts) {
     rotations: { attribute: "aRotation", instanced: true },
     colors: { attribute: "aColor", instanced: true },
   };
+
+  function splitEvery(n, list) {
+    const result = [];
+    for (let i = 0; i < list.length; i++) {
+      var a = [];
+      for (let j = 0; j < n; j++, i++) {
+        a.push(list[i]);
+      }
+      result.push(a);
+    }
+    return result;
+  }
 
   const vertexAttributeProps = Object.keys(vertexAttributeMap);
   const indicesProps = ["cells", "indices"];
@@ -82,7 +96,29 @@ export default function createGeometrySystem(opts) {
 
       for (let attributePropName of vertexAttributeProps) {
         const attributeValue = geometry[attributePropName];
+
         if (attributeValue) {
+          const data = attributeValue.data || attributeValue;
+          console.log("data", attributePropName, attributeValue, data);
+          // If we have list of vectors we can calculate bounding box otherwise
+          if (
+            (attributePropName == "positions" ||
+              attributePropName == "offsets") &&
+            !geometry.bounds
+          ) {
+            if (Array.isArray(data) && Array.isArray(data[0])) {
+              geometry.bounds = aabb.fromPoints(
+                geometry.bounds || aabb.create(),
+                data
+              );
+            } else {
+              geometry.bounds = aabb.fromPoints(
+                geometry.bounds || aabb.create(),
+                splitEvery(3, data)
+              );
+            }
+          }
+
           const { attribute: attributeName, instanced } =
             vertexAttributeMap[attributePropName];
 
@@ -120,8 +156,6 @@ export default function createGeometrySystem(opts) {
         updateGeometry(geometryEntity.id, geometryEntity.geometry);
         geometryEntity._geometry = geometrySystem.cache[geometryEntity.id];
       } catch (e) {
-        debugger;
-        node.error = `Geometry update failed ${geometryEntity.id} due to "${e.message}"`;
         geometryEntity.error = `Geometry system update failed due to "${e.message}"`;
         console.error("Geometry update failed", e);
         console.error("Geometry update failed", geometryEntity);
