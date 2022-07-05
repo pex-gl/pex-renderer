@@ -798,7 +798,7 @@ function getLight(light, renderer) {
       throw new Error(`Unexpected light type: ${light.type}`);
   }
 
-  return light._light;
+  return light;
 }
 
 // https://github.com/KhronosGroup/glTF/blob/main/specification/2.0/schema/node.schema.json
