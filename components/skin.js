@@ -44,5 +44,4 @@ export default function createSkin(opts) {
   return {
     ...opts,
   };
-  // return new Skin(opts);
 }

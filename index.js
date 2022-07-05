@@ -202,18 +202,18 @@ class Renderer {
     return loadGltf(url, this, options);
   }
 
-  update() {
+  update(deltaTime = 0) {
     this.systems.forEach((system) => {
-      system.update(this.entities);
+      system.update(this.entities, deltaTime);
     });
   }
 
-  draw() {
+  draw(deltaTime) {
     if (this.systems.length == 0) {
       console.warn("No systems present. There is nothing to draw.");
     }
     try {
-      this.update();
+      this.update(deltaTime);
     } catch (e) {
       console.error(e);
       this.update = () => {};

@@ -1450,6 +1450,33 @@ async function loadGltf(url, renderer, options = {}) {
         });
       }
 
+      //prep skins
+      json.nodes.forEach((node) => {
+        if (node.skin !== undefined) {
+          const skin = json.skins[node.skin];
+          const joints = skin.joints.map((i) => json.nodes[i].entity);
+
+          if (json.meshes[node.mesh].primitives.length === 1) {
+            // node.entity.getComponent("Skin").set({
+            //   joints: joints,
+            // });
+            node.entity.skin.joints = joints;
+            node.entity.skin.jointMatrices = joints.map(() => mat4.create());
+          } else {
+            scene.entities
+              .filter((e) => {
+                return e.transform.parent == node.entity.transform;
+              })
+              .forEach((childEntity) => {
+                childEntity.skin.joints = joints;
+                childEntity.skin.jointMatrices = joints.map(() =>
+                  mat4.create()
+                );
+              });
+          }
+        }
+      });
+
       renderer.update();
 
       return scene;
