@@ -65,5 +65,7 @@ class AreaLight {
 }
 
 export default (opts) => {
-  return new AreaLight(opts);
+  return {
+    ...opts,
+  };
 };
