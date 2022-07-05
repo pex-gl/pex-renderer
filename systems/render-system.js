@@ -237,6 +237,8 @@ export default function createRenderSystem(opts) {
     [["material", "alphaMap"], "ALPHA_MAP", { type: "texture", uniform: "uAlphaMap"}],
     [["material", "clearCoat"], "USE_CLEAR_COAT", { uniform: "uClearCoat"}],
     [["material", "clearCoatRoughness"], "USE_CLEAR_COAT_ROUGHNESS", { uniform: "uClearCoatRoughness"}],
+    [["material", "clearCoatMap"], "CLEAR_COAT_MAP", { type: "texture", uniform: "uClearCoatMap"}],
+    [["material", "clearCoatNormalMap"], "CLEAR_COAT_NORMAL_MAP", { type: "texture", uniform: "uClearCoatNormalMap"}],
     [["material", "sheenColor"], "USE_SHEEN", { uniform: "uSheenColor"}],
     [["material", "sheenRoughness"], "", { uniform: "uSheenRoughness", requires: "USE_SHEEN"}],
     [["geometry", "attributes", "aNormal"], "USE_NORMALS", { fallback: "USE_UNLIT_WORKFLOW" }],
