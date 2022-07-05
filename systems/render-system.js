@@ -215,7 +215,7 @@ export default function createRenderSystem(opts) {
     [["options", "pointLights", "length"], "NUM_POINT_LIGHTS", { type: "counter" }],
     [["options", "spotLights", "length"], "NUM_SPOT_LIGHTS", { type: "counter" }],
     [["options", "areaLights", "length"], "NUM_AREA_LIGHTS", { type: "counter" }],
-    [["options", "reflectionProbes", "length"], "USE_REFLECTION_PROBES"],    
+    [["options", "reflectionProbes", "length"], "USE_REFLECTION_PROBES"],
     [["options", "useTonemapping"], "USE_TONEMAPPING"],
     [["material", "unlit"], "USE_UNLIT_WORKFLOW", { fallback: "USE_METALLIC_ROUGHNESS_WORKFLOW" }],
     [["material", "blend"], "USE_BLEND"],
