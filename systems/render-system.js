@@ -58,71 +58,6 @@ export default function createRenderSystem(opts) {
     shadowQuality: 1,
   };
 
-  const getFlagsFromObject = (obj, flags, fn = (flag) => flag) =>
-    Object.values(
-      Object.fromEntries(
-        Object.entries(flags)
-          .filter(([key]) => obj[key])
-          .map(([key, flag]) => [key, fn(flag, obj[key])])
-      )
-    );
-
-  const parseMapFlags = (flag, map) => [
-    `USE_${flag}`,
-    `${flag}_TEX_COORD_INDEX ${map.texCoord || 0}`,
-    map.texCoordTransformMatrix && `USE_${flag}_TEX_COORD_TRANSFORM`,
-  ];
-
-  const ATTRIBUTES_FLAGS = {
-    aNormal: "USE_NORMALS",
-    aTangent: "USE_TANGENTS",
-    aTexCoord0: "USE_TEXCOORD_0",
-    aTexCoord1: "USE_TEXCOORD_1",
-    aOffset: "USE_INSTANCED_OFFSET",
-    aScale: "USE_INSTANCED_SCALE",
-    aRotation: "USE_INSTANCED_ROTATION",
-    aColor: "USE_INSTANCED_COLOR",
-    aVertexColor: "USE_VERTEX_COLORS",
-  };
-
-  const SHARED_MATERIALS_FLAGS = {
-    displacementMap: "USE_DISPLACEMENT_MAP", // Not a glTF material property
-    alphaTest: "USE_ALPHA_TEST",
-  };
-
-  const SHARED_MATERIAL_MAPS_FLAGS = {
-    baseColorMap: "BASE_COLOR_MAP",
-    alphaMap: "ALPHA_MAP",
-  };
-
-  const MATERIALS_FLAGS = {
-    useSpecularGlossinessWorkflow: "USE_SPECULAR_GLOSSINESS_WORKFLOW",
-    blend: "USE_BLEND",
-  };
-  const MATERIAL_MAPS_FLAGS = {
-    diffuseMap: "DIFFUSE_MAP",
-    specularGlossinessMap: "SPECULAR_GLOSSINESS_MAP",
-    metallicMap: "METALLIC_MAP",
-    roughnessMap: "ROUGHNESS_MAP",
-    metallicRoughnessMap: "METALLIC_ROUGHNESS_MAP",
-    occlusionMap: "OCCLUSION_MAP",
-    normalMap: "NORMAL_MAP",
-    emissiveColorMap: "EMISSIVE_COLOR_MAP",
-    clearCoatMap: "CLEAR_COAT_MAP",
-    clearCoatRoughnessMap: "CLEAR_COAT_ROUGHNESS_MAP",
-    clearCoatNormalMap: "CLEAR_COAT_NORMAL_MAP",
-    sheenColorMap: "SHEEN_COLOR_MAP",
-  };
-
-  const DEPTH_PASS_FLAGS = [
-    "SHADOW_QUALITY 0",
-    "NUM_AMBIENT_LIGHTS 0",
-    "NUM_DIRECTIONAL_LIGHTS 0",
-    "NUM_POINT_LIGHTS 0",
-    "NUM_SPOT_LIGHTS 0",
-    "NUM_AREA_LIGHTS 0",
-  ];
-
   function buildProgram(vertSrc, fragSrc) {
     let program = null;
     try {
@@ -138,78 +73,9 @@ export default function createRenderSystem(opts) {
     return program;
   }
 
-  function getMaterialProgramAndFlagsOld(
-    ctx,
-    entity,
-    options = {},
-    // TODO: pass shadowQuality as option
-    State
-  ) {
-    const { _geometry: geometry, material, skin } = entity;
-    const flags = [
-      ctx.capabilities.maxColorAttachments > 1 && "USE_DRAW_BUFFERS", // TODO: move into getExtensions
-      (!geometry.attributes.aNormal || material.unlit) && "USE_UNLIT_WORKFLOW",
-      ...getFlagsFromObject(geometry.attributes, ATTRIBUTES_FLAGS),
-      ...getFlagsFromObject(material, SHARED_MATERIALS_FLAGS),
-      ...getFlagsFromObject(
-        material,
-        SHARED_MATERIAL_MAPS_FLAGS,
-        parseMapFlags
-      ),
-      skin && ["USE_SKIN", `NUM_JOINTS ${skin.joints.length}`],
-    ];
-
-    let { vert, frag } = material;
-
-    if (options.depthPrePassOnly) {
-      vert ||= SHADERS.depthPass.vert;
-      frag ||= SHADERS.depthPrePass.frag;
-
-      flags.push("DEPTH_PRE_PASS_ONLY", ...DEPTH_PASS_FLAGS);
-    } else if (options.depthPassOnly) {
-      vert ||= SHADERS.depthPass.vert;
-      frag ||= SHADERS.depthPass.frag;
-
-      flags.push("DEPTH_PASS_ONLY", ...DEPTH_PASS_FLAGS);
-    } else {
-      vert ||= SHADERS.material.vert;
-      frag ||= SHADERS.material.frag;
-
-      flags.push(
-        `SHADOW_QUALITY ${
-          material.receiveShadows ? renderSystem.shadowQuality : 0
-        }`,
-        ...getFlagsFromObject(material, MATERIALS_FLAGS),
-        ...getFlagsFromObject(material, MATERIAL_MAPS_FLAGS, parseMapFlags),
-        !material.useSpecularGlossinessWorkflow &&
-          "USE_METALLIC_ROUGHNESS_WORKFLOW",
-        // TODO: is checking for "null" required here
-        material.emissiveColor != null && "USE_EMISSIVE_COLOR",
-        material.clearCoat != null && "USE_CLEAR_COAT",
-        material.sheenColor != null && "USE_SHEEN",
-        `NUM_AMBIENT_LIGHTS ${options.numAmbientLights || 0}`,
-        `NUM_DIRECTIONAL_LIGHTS ${options.numDirectionalLights || 0}`,
-        `NUM_POINT_LIGHTS ${options.numPointLights || 0}`,
-        `NUM_SPOT_LIGHTS ${options.numSpotLights || 0}`,
-        `NUM_AREA_LIGHTS ${options.numAreaLights || 0}`,
-        options.useSSAO && "USE_AO",
-        options.useReflectionProbes && "USE_REFLECTION_PROBES",
-        options.useTonemapping && "USE_TONEMAPPING"
-      );
-    }
-
-    return {
-      flags: flags
-        .flat()
-        .filter(Boolean)
-        .map((flag) => `#define ${flag}`),
-      vert,
-      frag,
-    };
-  }
-
   // prettier-ignore
   const flagDefs = [
+    [["options", "depthPassOnly"], "DEPTH_PASS_ONLY", { type: "boolean" }],
     [["options", "ambientLights", "length"], "NUM_AMBIENT_LIGHTS", { type: "counter" }],
     [["options", "directionalLights", "length"], "NUM_DIRECTIONAL_LIGHTS", { type: "counter" }],
     [["options", "pointLights", "length"], "NUM_POINT_LIGHTS", { type: "counter" }],
@@ -542,22 +408,8 @@ ${
           material,
           skin,
         } = renderableEntity;
-        // const cachedUniforms = material._uniforms;
         const cachedUniforms = {};
         cachedUniforms.uModelMatrix = transform.modelMatrix; //FIXME: bypasses need for transformSystem access
-        // cachedUniforms.uBaseColor = material.baseColor;
-        // cachedUniforms.uBaseColorMap = material.baseColorMap;
-        // cachedUniforms.uRoughness = material.roughness;
-        // cachedUniforms.uRoughnessMap = material.roughnessMap;
-        // cachedUniforms.uMetallic = material.metallic;
-        // cachedUniforms.uMetallicMap = material.metallicMap;
-        // cachedUniforms.uNormalMap = material.normalMap;
-        // cachedUniforms.uEmissiveColor = material.emissiveColor;
-        // cachedUniforms.uEmissiveIntensity =
-        //   material.emissiveIntensity !== undefined
-        //     ? material.emissiveIntensity
-        //     : 1;
-        // cachedUniforms.uEmissiveColorMap = material.emissiveColorMap;
         cachedUniforms.uNormalScale = 1;
         cachedUniforms.uAlphaTest = material.alphaTest || 1;
         cachedUniforms.uAlphaMap = material.alphaMap;
@@ -568,21 +420,10 @@ ${
         cachedUniforms.uPointSize = 1;
         cachedUniforms.uMetallicRoughnessMap = material.metallicRoughnessMap;
 
-        // uPointSize, uCameraPosition, uSheenColor, uSheenRoughness, uReflectance, uClearCoat, uClearCoatRoughness, uReflectionMapEncoding, uEmissiveColor, uEmissiveIntensity, uMetallic, uRoughness, uReflectionMap
-
-        // if (material.emissiveColor && frameCount++ < 100) {
-        //   console.log("cachedUniforms", cachedUniforms);
-        // }
-
         const { pipeline, materialUniforms } = getGeometryPipeline(
           ctx,
           renderableEntity,
           {
-            numAmbientLights: ambientLights.length,
-            numDirectionalLights: directionalLights.length,
-            numPointLights: pointLights.length,
-            numSpotLights: spotLights.length,
-            numAreaLights: areaLights.length,
             ambientLights,
             directionalLights,
             pointLights,
