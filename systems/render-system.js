@@ -217,7 +217,7 @@ export default function createRenderSystem(opts) {
     [["options", "areaLights", "length"], "NUM_AREA_LIGHTS", { type: "counter" }],
     [["options", "reflectionProbes", "length"], "USE_REFLECTION_PROBES"],    
     [["options", "useTonemapping"], "USE_TONEMAPPING"],
-    [["material", "unlit"], "USE_UNLIT_WORKFLOW"],
+    [["material", "unlit"], "USE_UNLIT_WORKFLOW", { fallback: "USE_METALLIC_ROUGHNESS_WORKFLOW" }],
     [["material", "blend"], "USE_BLEND"],
     [["skin"], "USE_SKIN"],
     [["skin", "joints", "length"], "NUM_JOINTS", { type: "counter", requires: "USE_SKIN" }],
@@ -266,7 +266,6 @@ export default function createRenderSystem(opts) {
       ctx.capabilities.maxColorAttachments > 1 && "USE_DRAW_BUFFERS",
       // (!geometry.attributes.aNormal || material.unlit) && "USE_UNLIT_WORKFLOW",
       // "USE_UNLIT_WORKFLOW",
-      "USE_METALLIC_ROUGHNESS_WORKFLOW",
       "SHADOW_QUALITY 0",
     ];
     let materialUniforms = {};
