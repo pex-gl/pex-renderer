@@ -1,6 +1,8 @@
 import { pipeline as SHADERS, chunks as SHADERS_CHUNKS } from "pex-shaders";
 import { es300Fragment, es300Vertex, getFileExtension } from "../utils.js";
 import { vec3, vec4, mat3, mat4 } from "pex-math";
+import { aabb } from "pex-geom";
+import directionalLight from "../components/directional-light.js";
 
 export default function createRenderSystem(opts) {
   const ctx = opts.ctx;
@@ -55,7 +57,7 @@ export default function createRenderSystem(opts) {
   const renderSystem = {
     cache: {},
     debug: true,
-    shadowQuality: 1,
+    shadowQuality: 1, //TODO: not implemented  shadowQuality
   };
 
   function buildProgram(vertSrc, fragSrc) {
@@ -76,6 +78,7 @@ export default function createRenderSystem(opts) {
   // prettier-ignore
   const flagDefs = [
     [["options", "depthPassOnly"], "DEPTH_PASS_ONLY", { type: "boolean" }],
+    [["options", "depthPassOnly"], "USE_UNLIT_WORKFLOW", { type: "boolean" }], //force unlit in depth pass mode
     [["options", "ambientLights", "length"], "NUM_AMBIENT_LIGHTS", { type: "counter" }],
     [["options", "directionalLights", "length"], "NUM_DIRECTIONAL_LIGHTS", { type: "counter" }],
     [["options", "pointLights", "length"], "NUM_POINT_LIGHTS", { type: "counter" }],
@@ -134,7 +137,7 @@ export default function createRenderSystem(opts) {
       ctx.capabilities.maxColorAttachments > 1 && "USE_DRAW_BUFFERS",
       // (!geometry.attributes.aNormal || material.unlit) && "USE_UNLIT_WORKFLOW",
       // "USE_UNLIT_WORKFLOW",
-      "SHADOW_QUALITY 0",
+      "SHADOW_QUALITY 3",
     ];
     let materialUniforms = {};
 
@@ -168,7 +171,9 @@ export default function createRenderSystem(opts) {
             value.texCoordTransformMatrix;
         }
       } else if (value !== undefined || opts.default !== undefined) {
-        flags.push(defineName);
+        if (opts.type !== "boolean" || value) {
+          flags.push(defineName);
+        }
         if (opts.uniform) {
           materialUniforms[opts.uniform] =
             value !== undefined ? value : opts.default;
@@ -240,6 +245,7 @@ ${
     );
     const extensions = getExtensions();
     const flagsStr = `${flags.join("\n")}\n`;
+    entity._flags = flags;
     const vertSrc = flagsStr + vert;
     const fragSrc = extensions + flagsStr + frag;
     let program = programCacheMap.getValue(flags, vert, frag);
@@ -305,36 +311,47 @@ ${
     skybox,
     forward
   ) {
-    const camera = cameraEntity.camera;
-    if (!cameraEntity._transform) {
-      // camera not ready yet
-      return;
-    }
+    const camera = cameraEntity?.camera;
+    // if (!cameraEntity._transform) {
+    // camera not ready yet
+    // return;
+    // }
 
     const sharedUniforms = {
       uOutputEncoding: ctx.Encoding.Gamma,
     };
-    const ambientLights = entities.filter((e) => e.ambientLight);
-    const directionalLights = entities.filter((e) => e.directionalLight);
 
-    const pointLights = entities.filter((e) => e.pointLight);
-    const spotLights = entities.filter((e) => e.spotLight);
-    const areaLights = entities.filter((e) => e.areaLight);
-    const reflectionProbes = entities.filter((e) => e.reflectionProbe);
-    // const areaLights = entities.filter((e) => e.areaLight);
+    // prettier-ignore
+    const ambientLights = shadowMapping ? [] : entities.filter((e) => e.ambientLight);
+    // prettier-ignore
+    const directionalLights = shadowMapping ? [] : entities.filter((e) => e.directionalLight);
+    // prettier-ignore
+    const pointLights = shadowMapping ? [] : entities.filter((e) => e.pointLight);
+    // prettier-ignore
+    const spotLights = shadowMapping ? [] : entities.filter((e) => e.spotLight);
+    // prettier-ignore
+    const areaLights = shadowMapping ? [] : entities.filter((e) => e.areaLight);
+    // prettier-ignore
+    const reflectionProbes = shadowMapping ? [] : entities.filter((e) => e.reflectionProbe);
 
     const opaqueEntities = renderableEntities.filter((e) => !e.material.blend);
 
     //TODO: add some basic sorting of transparentEntities
-    const transparentEntities = renderableEntities.filter(
-      (e) => e.material.blend
-    );
+    // prettier-ignore
+    const transparentEntities = shadowMapping ? [] : renderableEntities.filter((e) => e.material.blend);
 
     // sharedUniforms.uCameraPosition = camera.entity.transform.worldPosition;
-    sharedUniforms.uProjectionMatrix = camera.projectionMatrix;
-    sharedUniforms.uViewMatrix = camera.viewMatrix;
-    sharedUniforms.uInverseViewMatrix = camera.inverseViewMatrix; //TODO
-    sharedUniforms.uCameraPosition = cameraEntity._transform.worldPosition;
+    if (shadowMappingLight) {
+      sharedUniforms.uProjectionMatrix = shadowMappingLight._projectionMatrix;
+      sharedUniforms.uViewMatrix = shadowMappingLight._viewMatrix;
+      sharedUniforms.uInverseViewMatrix = mat4.create();
+      sharedUniforms.uCameraPosition = [0, 0, 5];
+    } else {
+      sharedUniforms.uProjectionMatrix = camera.projectionMatrix;
+      sharedUniforms.uViewMatrix = camera.viewMatrix;
+      sharedUniforms.uInverseViewMatrix = camera.inverseViewMatrix; //TODO
+      sharedUniforms.uCameraPosition = cameraEntity._transform.worldPosition;
+    }
 
     ambientLights.forEach((lightEntity, i) => {
       // console.log(
@@ -393,7 +410,11 @@ ${
       const passEntities = geometryPasses[passIndex];
 
       // Draw skybox before transparent meshes
-      if (passEntities == transparentEntities && skybox) {
+      if (
+        passEntities == transparentEntities &&
+        skybox &&
+        !shadowMappingLight
+      ) {
         skybox.draw(camera, {
           outputEncoding: sharedUniforms.uOutputEncoding,
           backgroundMode: true,
@@ -419,6 +440,7 @@ ${
 
         cachedUniforms.uPointSize = 1;
         cachedUniforms.uMetallicRoughnessMap = material.metallicRoughnessMap;
+        renderableEntity._uniforms = cachedUniforms;
 
         const { pipeline, materialUniforms } = getGeometryPipeline(
           ctx,
@@ -430,6 +452,7 @@ ${
             spotLights,
             areaLights,
             reflectionProbes,
+            depthPassOnly: shadowMapping,
             useSSAO: false,
             // postProcessingCmp &&
             // postProcessingCmp.enabled &&
@@ -441,7 +464,15 @@ ${
         Object.assign(cachedUniforms, sharedUniforms);
         Object.assign(cachedUniforms, materialUniforms);
 
-        const normalMat = mat4.copy(camera.viewMatrix);
+        // FIXME: this is expensive and not cached
+        let viewMatrix;
+        if (shadowMappingLight) {
+          viewMatrix = shadowMappingLight._viewMatrix;
+        } else {
+          viewMatrix = camera.viewMatrix;
+        }
+
+        const normalMat = mat4.copy(viewMatrix);
         mat4.mult(normalMat, transform.modelMatrix);
         mat4.invert(normalMat);
         mat4.transpose(normalMat);
@@ -456,7 +487,7 @@ ${
           uniforms: cachedUniforms,
           instances: geometry.instances,
         };
-        if (camera.viewport) {
+        if (camera?.viewport) {
           cmd.viewport = camera.viewport;
           cmd.scissor = camera.viewport;
         }
@@ -467,6 +498,110 @@ ${
     //TODO: draw skybox before first transparent
   }
 
+  // TODO remove, should be in AABB
+  function aabbToPoints(bbox) {
+    if (aabb.isEmpty(bbox)) return [];
+    return [
+      [bbox[0][0], bbox[0][1], bbox[0][2], 1],
+      [bbox[1][0], bbox[0][1], bbox[0][2], 1],
+      [bbox[1][0], bbox[0][1], bbox[1][2], 1],
+      [bbox[0][0], bbox[0][1], bbox[1][2], 1],
+      [bbox[0][0], bbox[1][1], bbox[0][2], 1],
+      [bbox[1][0], bbox[1][1], bbox[0][2], 1],
+      [bbox[1][0], bbox[1][1], bbox[1][2], 1],
+      [bbox[0][0], bbox[1][1], bbox[1][2], 1],
+    ];
+  }
+
+  renderSystem.updateDirectionalLightShadowMap = function (
+    lightEnt,
+    entities,
+    shadowCastingEntities
+  ) {
+    const light = lightEnt.directionalLight;
+    const position = lightEnt._transform.worldPosition;
+    const target = [0, 0, 1, 0];
+    const up = [0, 1, 0, 0];
+    vec4.multMat4(target, lightEnt._transform.modelMatrix);
+    vec3.add(target, position);
+    vec4.multMat4(up, lightEnt._transform.modelMatrix);
+    mat4.lookAt(light._viewMatrix, position, target, up);
+
+    const shadowBboxPoints = shadowCastingEntities.reduce(
+      (points, entity) =>
+        points.concat(aabbToPoints(entity.transform.worldBounds)),
+      []
+    );
+
+    // console.log("shadowBboxPoints", shadowBboxPoints);
+
+    // TODO: gc vec3.copy, all the bounding box creation
+    const bboxPointsInLightSpace = shadowBboxPoints.map((p) =>
+      vec3.multMat4(vec3.copy(p), light._viewMatrix)
+    );
+    const sceneBboxInLightSpace = aabb.create();
+    aabb.fromPoints(sceneBboxInLightSpace, bboxPointsInLightSpace);
+
+    // console.log("sceneBboxInLightSpace", ...sceneBboxInLightSpace);
+
+    const lightNear = -sceneBboxInLightSpace[1][2];
+    const lightFar = -sceneBboxInLightSpace[0][2];
+
+    light._near = lightNear;
+    light._far = lightFar;
+
+    mat4.ortho(
+      light._projectionMatrix,
+      sceneBboxInLightSpace[0][0],
+      sceneBboxInLightSpace[1][0],
+      sceneBboxInLightSpace[0][1],
+      sceneBboxInLightSpace[1][1],
+      lightNear,
+      lightFar
+    );
+
+    ctx.submit(light._shadowMapDrawCommand, () => {
+      drawMeshes(null, true, light, entities, shadowCastingEntities);
+    });
+  };
+
+  renderSystem.patchDirectionalLight = (directionalLight) => {
+    directionalLight._viewMatrix = mat4.create();
+    directionalLight._projectionMatrix = mat4.create();
+
+    //TODO: who will release those?
+    directionalLight._colorMap = ctx.texture2D({
+      name: "directionalLightColorMap",
+      width: 1024,
+      height: 1024,
+      pixelFormat: ctx.PixelFormat.RGBA8,
+      encoding: ctx.Encoding.Linear,
+      min: ctx.Filter.Linear,
+      mag: ctx.Filter.Linear,
+    });
+
+    directionalLight._shadowMap = ctx.texture2D({
+      name: "directionalLightShadowMap",
+      width: 1024,
+      height: 1024,
+      pixelFormat: ctx.PixelFormat.DEPTH_COMPONENT16,
+      encoding: ctx.Encoding.Linear,
+    });
+
+    directionalLight._shadowMapDrawCommand = {
+      name: "DirectionalLight.shadowMap",
+      pass: ctx.pass({
+        name: "DirectionalLight.shadowMap",
+        color: [directionalLight._colorMap],
+        depth: directionalLight._shadowMap,
+        clearColor: [0, 0, 0, 1],
+        clearDepth: 1,
+      }),
+      viewport: [0, 0, 1024, 1024], // TODO: viewport bug
+      // colorMask: [0, 0, 0, 0] // TODO
+    };
+  };
+
   renderSystem.update = (entities) => {
     ctx.submit(clearCmd);
 
@@ -476,6 +611,23 @@ ${
 
     const cameraEntities = entities.filter((e) => e.camera);
     const skyboxEntities = entities.filter((e) => e.skybox);
+    const directionalLightEntities = entities.filter((e) => e.directionalLight);
+    const shadowCastingEntities = rendererableEntities.filter(
+      (e) => e.material.castShadows
+    );
+
+    directionalLightEntities.forEach((lightEntity) => {
+      if (!lightEntity.directionalLight._shadowMap) {
+        renderSystem.patchDirectionalLight(lightEntity.directionalLight);
+      }
+      if (lightEntity.directionalLight.castShadows) {
+        renderSystem.updateDirectionalLightShadowMap(
+          lightEntity,
+          entities,
+          shadowCastingEntities
+        );
+      }
+    });
 
     cameraEntities.forEach((camera) => {
       let entitiesToDraw = rendererableEntities;
