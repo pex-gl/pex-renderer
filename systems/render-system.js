@@ -221,11 +221,14 @@ ${
 
       // Replace lights number
       end = end
-        .replace(/NUM_AMBIENT_LIGHTS/g, options.numAmbientLights || 0)
-        .replace(/NUM_DIRECTIONAL_LIGHTS/g, options.numDirectionalLights || 0)
-        .replace(/NUM_POINT_LIGHTS/g, options.numPointLights || 0)
-        .replace(/NUM_SPOT_LIGHTS/g, options.numSpotLights || 0)
-        .replace(/NUM_AREA_LIGHTS/g, options.numAreaLights || 0);
+        .replace(/NUM_AMBIENT_LIGHTS/g, options.ambientLights.length || 0)
+        .replace(
+          /NUM_DIRECTIONAL_LIGHTS/g,
+          options.directionalLights.length || 0
+        )
+        .replace(/NUM_POINT_LIGHTS/g, options.pointLights.length || 0)
+        .replace(/NUM_SPOT_LIGHTS/g, options.spotLights.length || 0)
+        .replace(/NUM_AREA_LIGHTS/g, options.areaLights.length || 0);
 
       for (let i = Number.parseInt(start); i < Number.parseInt(end); i++) {
         unroll += snippet.replace(/\[i\]/g, `[${i}]`);
