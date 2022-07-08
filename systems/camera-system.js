@@ -43,8 +43,8 @@ export default function createCameraSystem() {
             camera.up
           );
 
-          mat4.set(camera.inverseViewMatrix, camera.viewMatrix);
-          mat4.invert(camera.inverseViewMatrix);
+          mat4.set(camera.invViewMatrix, camera.viewMatrix);
+          mat4.invert(camera.invViewMatrix);
         }
       }
     }
