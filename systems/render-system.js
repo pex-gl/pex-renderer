@@ -1,5 +1,5 @@
 import { pipeline as SHADERS, chunks as SHADERS_CHUNKS } from "pex-shaders";
-import { es300Fragment, es300Vertex, getFileExtension } from "../utils.js";
+import { patchVS, patchFS } from "../utils.js";
 import { vec3, vec4, mat3, mat4 } from "pex-math";
 import { aabb } from "pex-geom";
 import directionalLight from "../components/directional-light.js";
@@ -257,11 +257,11 @@ ${
         console.log("render-system", "New program", flags, entity);
         program = buildProgram(
           parseShader(
-            ctx.capabilities.isWebGL2 ? es300Vertex(vertSrc) : vertSrc,
+            ctx.capabilities.isWebGL2 ? patchVS(vertSrc) : vertSrc,
             options
           ),
           parseShader(
-            ctx.capabilities.isWebGL2 ? es300Fragment(fragSrc, 3) : fragSrc,
+            ctx.capabilities.isWebGL2 ? patchFS(fragSrc, 3) : fragSrc,
             options
           )
         );

@@ -25,17 +25,42 @@ export const getDirname = (path) => {
   return path.slice(0, end);
 };
 
-export const es300Vertex = (shader) => /* glsl */ `#version 300 es
-#define attribute in
-#define varying out
-${shader}`;
+export const patchVS = function (s) {
+  // if (!graph.ctx.capabilities.isWebGL2) return s; //TODO: pass ctx here?
+  s = "#version 300 es\n" + s;
+  s = s.replace(/attribute/g, "in");
+  s = s.replace(/varying/g, "out");
+  s = s.replace(/texture2D/g, "texture");
+  s = s.replace(/textureCube/g, "texture");
+  s = s.replace("mat4 transpose(mat4 m) {", "mat4 transposeOld(mat4 m) {");
+  s = s.replace("mat3 transpose(mat3 m) {", "mat3 transposeOld(mat3 m) {");
+  s = s.replace("mat4 inverse(mat4 m) {", "mat4 inverseOld(mat4 m) {");
+  return s;
+};
 
-export const es300Fragment = (shader, size = 1) => /* glsl */ `#version 300 es
-precision highp float;
-#define varying in
-#define texture2D texture
-#define textureCube texture
-#define gl_FragData FragData
-#define gl_FragColor gl_FragData[0]
-out vec4 FragData[${size}];
-${shader}`;
+export const patchFS = function (s) {
+  // if (!graph.ctx.capabilities.isWebGL2) return s; //TODO: pass ctx here?
+  s = "#version 300 es\n" + s;
+  s = s.replace(/texture2D/g, "texture");
+  s = s.replace(/textureCube/g, "texture");
+  s = s.replace("mat4 transpose(mat4 m) {", "mat4 transposeOld(mat4 m) {");
+  s = s.replace("mat3 transpose(mat3 m) {", "mat3 transposeOld(mat3 m) {");
+  s = s.replace("mat4 inverse(mat4 m) {", "mat4 inverseOld(mat4 m) {");
+  s = s.replace("#extension GL_OES_standard_derivatives : require", "");
+  s = s.replace("#extension GL_EXT_draw_buffers : enable", "");
+  s = s.replace("precision mediump float", "precision highp float");
+  s = s.replace(
+    /precision highp float;/,
+    `precision highp float;
+    layout (location = 0) out vec4 outColor;
+    layout (location = 1) out vec4 outEmissiveColor;
+    layout (location = 2) out vec4 outNormal;
+    `
+  );
+  s = s.replace(/varying/g, "in");
+  s = s.replace(/gl_FragData\[0\]/g, "outColor");
+  s = s.replace(/gl_FragColor/g, "outColor");
+  s = s.replace(/gl_FragData\[1\]/g, "outEmissiveColor");
+  s = s.replace(/gl_FragData\[2\]/g, "outNormal");
+  return s;
+};

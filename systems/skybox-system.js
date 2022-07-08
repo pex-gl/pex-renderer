@@ -1,6 +1,6 @@
 import { skybox } from "pex-shaders";
 import createQuad from "primitive-quad";
-import { es300Fragment, es300Vertex } from "../utils.js";
+import { patchVS, patchFS } from "../utils.js";
 import { mat4 } from "pex-math";
 const identityMatrix = mat4.create();
 
@@ -36,12 +36,12 @@ class Skybox {
       name: "Skybox.draw",
       pipeline: ctx.pipeline({
         vert: ctx.capabilities.isWebGL2
-          ? es300Vertex(skybox.skybox.vert)
+          ? patchVS(skybox.skybox.vert)
           : /* glsl */ `
 ${ctx.capabilities.maxColorAttachments > 1 ? "#define USE_DRAW_BUFFERS" : ""}
     ${skybox.skybox.vert}`,
         frag: ctx.capabilities.isWebGL2
-          ? es300Fragment(skybox.skybox.frag, 2)
+          ? patchFS(skybox.skybox.frag)
           : /* glsl */ `
 ${ctx.capabilities.maxColorAttachments > 1 ? "#define USE_DRAW_BUFFERS" : ""}
 ${skybox.skybox.frag}`,
