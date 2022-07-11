@@ -22,7 +22,7 @@ export default function createRenderSystem(opts) {
 
   let clearCmd = {
     pass: ctx.pass({
-      clearColor: [0, 0, 0, 1],
+      clearColor: [0, 0, 0, 0],
     }),
   };
 
@@ -137,7 +137,7 @@ export default function createRenderSystem(opts) {
       ctx.capabilities.maxColorAttachments > 1 && "USE_DRAW_BUFFERS",
       // (!geometry.attributes.aNormal || material.unlit) && "USE_UNLIT_WORKFLOW",
       // "USE_UNLIT_WORKFLOW",
-      "SHADOW_QUALITY 3",
+      "SHADOW_QUALITY 2",
     ];
     let materialUniforms = {};
 
@@ -325,7 +325,8 @@ ${
     // }
 
     const sharedUniforms = {
-      uOutputEncoding: ctx.Encoding.Gamma,
+      // uOutputEncoding: ctx.Encoding.Gamma,
+      uOutputEncoding: ctx.Encoding.Linear,
     };
 
     // prettier-ignore
@@ -356,8 +357,10 @@ ${
     } else {
       sharedUniforms.uProjectionMatrix = camera.projectionMatrix;
       sharedUniforms.uViewMatrix = camera.viewMatrix;
-      sharedUniforms.uInverseViewMatrix = camera.inverseViewMatrix; //TODO
-      sharedUniforms.uCameraPosition = cameraEntity._transform.worldPosition;
+      sharedUniforms.uInverseViewMatrix =
+        camera.invViewMatrix || camera.inverseViewMatrix; //TODO: settle on invViewMatrix
+      sharedUniforms.uCameraPosition =
+        cameraEntity.camera.position || cameraEntity.transform.worldPosition; //TODO: ugly
     }
 
     ambientLights.forEach((lightEntity, i) => {
@@ -369,29 +372,69 @@ ${
         lightEntity.ambientLight.color;
     });
 
+    /*
+    const light = lightEntity.directionalLight;
+    const dir4 = [0, 0, 0, 1]; // TODO: GC
+    const dir = [0, 0, 0];
+    vec4.multMat4(dir4, lightEntity._transform.modelMatrix);
+    vec3.set(dir, dir4);
+    vec3.scale(dir, -1);
+    vec3.normalize(dir);
+
+    const position = lightEntity._transform.worldPosition;
+    const target = [0, 0, 0, 0];
+    const up = [0, 1, 0, 0];
+    vec4.multMat4(up, lightEntity._transform.modelMatrix);
+    if (!light._viewMatrix) {
+      light._viewMatrix = mat4.create();
+    }
+    mat4.lookAt(light._viewMatrix, position, target, up);
+    */
+
     directionalLights.forEach((lightEntity, i) => {
       const light = lightEntity.directionalLight;
-      const dir4 = [0, 0, 1, 0]; // TODO: GC
-      const dir = [0, 0, 0];
-      vec4.multMat4(dir4, lightEntity._transform.modelMatrix);
-      vec3.set(dir, dir4);
+      // const dir4 = [0, 0, 0]; // TODO: GC
+      // const dir = [0, 0, 0];
+      const dir = [...lightEntity._transform.worldPosition];
+      vec3.scale(dir, -1);
+      vec3.normalize(dir);
+      // vec4.multMat4(dir4, lightEntity._transform.modelMatrix);
+      // vec3.set(dir, dir4);
 
-      const position = lightEntity._transform.worldPosition;
-      const target = [0, 0, 1, 0];
-      const up = [0, 1, 0, 0];
-      vec4.multMat4(target, lightEntity._transform.modelMatrix);
-      vec3.add(target, position);
-      vec4.multMat4(up, lightEntity._transform.modelMatrix);
-      if (!light._viewMatrix) {
-        light._viewMatrix = mat4.create();
+      let useNodeNodeOrientationLikeOldPexRenderer = true;
+      if (useNodeNodeOrientationLikeOldPexRenderer) {
+        const position = lightEntity._transform.worldPosition;
+        const target = [0, 0, 1, 0];
+        const up = [0, 1, 0];
+        vec4.multMat4(target, lightEntity._transform.modelMatrix);
+        vec3.add(target, position);
+        // vec4.multMat4(up, lightEntity._transform.modelMatrix);
+        if (!light._viewMatrix) {
+          light._viewMatrix = mat4.create();
+        }
+        mat4.lookAt(light._viewMatrix, position, target, up);
+      } else {
+        const position = lightEntity._transform.worldPosition;
+        const target = [0, 0, 0];
+        const up = [0, 1, 0, 0];
+        vec4.multMat4(up, lightEntity._transform.modelMatrix);
+        if (!light._viewMatrix) {
+          light._viewMatrix = mat4.create();
+        }
+        mat4.lookAt(light._viewMatrix, position, target, up);
       }
-      mat4.lookAt(light._viewMatrix, position, target, up);
-      // console.log("light._viewMatrix", light._viewMatrix, position, target, up);
 
       // prettier-ignore
       {
       sharedUniforms[`uDirectionalLights[${i}].direction`] = dir;
-      sharedUniforms[`uDirectionalLights[${i}].color`] = light.color;
+      sharedUniforms[`uDirectionalLights[${i}].color`] = light.color.map((c, j) => {
+        if (j < 3)
+          return Math.pow(
+            c * light.intensity,
+            1.0 / 2.2
+          );
+        else return c;
+      });;
       sharedUniforms[`uDirectionalLights[${i}].castShadows`] = light.castShadows;
       sharedUniforms[`uDirectionalLights[${i}].projectionMatrix`] = light._projectionMatrix || tempMat4; //FIXME
       sharedUniforms[`uDirectionalLights[${i}].viewMatrix`] = light._viewMatrix || tempMat4; //FIXME;
@@ -464,7 +507,7 @@ ${
             // postProcessingCmp &&
             // postProcessingCmp.enabled &&
             // postProcessingCmp.ssao,
-            useTonemapping: true, //!(postProcessingCmp && postProcessingCmp.enabled),
+            useTonemapping: false, //!(postProcessingCmp && postProcessingCmp.enabled),
           }
         );
 
@@ -495,8 +538,8 @@ ${
           instances: geometry.instances,
         };
         if (camera?.viewport) {
-          cmd.viewport = camera.viewport;
-          cmd.scissor = camera.viewport;
+          // cmd.viewport = camera.viewport;
+          // cmd.scissor = camera.viewport;
         }
         ctx.submit(cmd);
       }
@@ -526,21 +569,19 @@ ${
     shadowCastingEntities
   ) {
     const light = lightEnt.directionalLight;
-    const position = lightEnt._transform.worldPosition;
-    const target = [0, 0, 1, 0];
-    const up = [0, 1, 0, 0];
-    vec4.multMat4(target, lightEnt._transform.modelMatrix);
-    vec3.add(target, position);
-    vec4.multMat4(up, lightEnt._transform.modelMatrix);
-    mat4.lookAt(light._viewMatrix, position, target, up);
+    // const position = lightEnt._transform.worldPosition;
+    // const target = [0, 0, 1, 0];
+    // const up = [0, 1, 0, 0];
+    // vec4.multMat4(target, lightEnt._transform.modelMatrix);
+    // vec3.add(target, position);
+    // vec4.multMat4(up, lightEnt._transform.modelMatrix);
+    // mat4.lookAt(light._viewMatrix, position, target, up);
 
     const shadowBboxPoints = shadowCastingEntities.reduce(
       (points, entity) =>
         points.concat(aabbToPoints(entity.transform.worldBounds)),
       []
     );
-
-    // console.log("shadowBboxPoints", shadowBboxPoints);
 
     // TODO: gc vec3.copy, all the bounding box creation
     const bboxPointsInLightSpace = shadowBboxPoints.map((p) =>
@@ -567,6 +608,8 @@ ${
       lightFar
     );
 
+    light.sceneBboxInLightSpace = sceneBboxInLightSpace;
+
     ctx.submit(light._shadowMapDrawCommand, () => {
       drawMeshes(null, true, light, entities, shadowCastingEntities);
     });
@@ -579,21 +622,25 @@ ${
     //TODO: who will release those?
     directionalLight._colorMap = ctx.texture2D({
       name: "directionalLightColorMap",
-      width: 1024,
-      height: 1024,
+      width: 2048,
+      height: 2048,
       pixelFormat: ctx.PixelFormat.RGBA8,
       encoding: ctx.Encoding.Linear,
       min: ctx.Filter.Linear,
       mag: ctx.Filter.Linear,
     });
 
-    directionalLight._shadowMap = ctx.texture2D({
-      name: "directionalLightShadowMap",
-      width: 1024,
-      height: 1024,
-      pixelFormat: ctx.PixelFormat.DEPTH_COMPONENT16,
-      encoding: ctx.Encoding.Linear,
-    });
+    directionalLight._shadowMap =
+      directionalLight._shadowMap ||
+      ctx.texture2D({
+        name: "directionalLightShadowMap",
+        width: 2048,
+        height: 2048,
+        pixelFormat: ctx.PixelFormat.Depth,
+        encoding: ctx.Encoding.Linear,
+        min: ctx.Filter.Nearest,
+        mag: ctx.Filter.Nearest,
+      });
 
     directionalLight._shadowMapDrawCommand = {
       name: "DirectionalLight.shadowMap",
@@ -604,7 +651,7 @@ ${
         clearColor: [0, 0, 0, 1],
         clearDepth: 1,
       }),
-      viewport: [0, 0, 1024, 1024], // TODO: viewport bug
+      viewport: [0, 0, 2048, 2048], // TODO: viewport bug
       // colorMask: [0, 0, 0, 0] // TODO
     };
   };
@@ -624,7 +671,7 @@ ${
     );
 
     directionalLightEntities.forEach((lightEntity) => {
-      if (!lightEntity.directionalLight._shadowMap) {
+      if (!lightEntity.directionalLight._viewMatrix) {
         renderSystem.patchDirectionalLight(lightEntity.directionalLight);
       }
       if (lightEntity.directionalLight.castShadows) {
