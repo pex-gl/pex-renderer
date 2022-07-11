@@ -84,10 +84,10 @@ export default function createRenderSystem(opts) {
     [["options", "pointLights", "length"], "NUM_POINT_LIGHTS", { type: "counter" }],
     [["options", "spotLights", "length"], "NUM_SPOT_LIGHTS", { type: "counter" }],
     [["options", "areaLights", "length"], "NUM_AREA_LIGHTS", { type: "counter" }],
-    [["options", "reflectionProbes", "length"], "USE_REFLECTION_PROBES"],
-    [["options", "useTonemapping"], "USE_TONEMAPPING"],
-    [["material", "unlit"], "USE_UNLIT_WORKFLOW", { fallback: "USE_METALLIC_ROUGHNESS_WORKFLOW" }],
-    [["material", "blend"], "USE_BLEND"],
+    [["options", "reflectionProbes", "length"], "USE_REFLECTION_PROBES", { type: "boolean" }],
+    [["options", "useTonemapping"], "USE_TONEMAPPING", { type: "boolean" }],
+    [["material", "unlit"], "USE_UNLIT_WORKFLOW", { type: "boolean", fallback: "USE_METALLIC_ROUGHNESS_WORKFLOW" }],
+    [["material", "blend"], "USE_BLEND", { type: "boolean" }],
     [["skin"], "USE_SKIN"],
     [["skin", "joints", "length"], "NUM_JOINTS", { type: "counter", requires: "USE_SKIN" }],
     [["skin", "jointMatrices"], "", { uniform: "uJointMat", requires: "USE_SKIN" }],
@@ -173,6 +173,10 @@ export default function createRenderSystem(opts) {
       } else if (value !== undefined || opts.default !== undefined) {
         if (opts.type !== "boolean" || value) {
           flags.push(defineName);
+        } else {
+          if (opts.fallback) {
+            flags.push(opts.fallback);
+          }
         }
         if (opts.uniform) {
           materialUniforms[opts.uniform] =
