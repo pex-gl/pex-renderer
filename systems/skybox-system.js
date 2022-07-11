@@ -105,7 +105,7 @@ ${skybox.skybox.frag}`,
     this.dirty = false;
     ctx.submit(this._updateSkyTexture, {
       uniforms: {
-        uSunPosition: this.sunPosition,
+        uSunPosition: this.sunPosition || [0, 0, 0],
         uRGBM: this.rgbm,
       },
     });
@@ -161,7 +161,7 @@ ${skybox.skybox.frag}`,
         uOutputEncoding: outputEncoding,
         uBackgroundBlur: backgroundBlur,
         uUseTonemapping: backgroundMode ? useTonemapping : false,
-        uExposure: backgroundMode ? exposure : 1,
+        uExposure: backgroundMode ? exposure || 1 : 1, //TODO: hardcoded default from camera.exposure
       },
     });
   }
