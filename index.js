@@ -5,7 +5,6 @@ import createAmbientLight from "./components/ambient-light.js";
 import createDirectionalLight from "./components/directional-light.js";
 import createPointLight from "./components/point-light.js";
 import createAreaLight from "./components/area-light.js";
-
 import createGeometry from "./components/geometry.js";
 import createMaterial from "./components/material.js";
 import createMorph from "./components/morph.js";
@@ -250,3 +249,13 @@ class Renderer {
 export default function createRenderer(opts) {
   return new Renderer(opts);
 }
+
+export let systems = {
+  animation: createAnimationSystem,
+  camera: createCameraSystem,
+  geometry: createGeometrySystem,
+  reflectionProbe: createReflectionProbeSystem,
+  render: createRenderSystem,
+  skybox: createSkyboxSystem,
+  transform: createTransformSystem,
+};
