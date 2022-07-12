@@ -691,9 +691,13 @@ async function handlePrimitive(
 async function handleMesh({ primitives, weights }, gltf, ctx, options) {
   return await Promise.all(
     primitives.map(async (primitive) => {
-      const geometryCmp = components.geometry(
-        await handlePrimitive(primitive, gltf, ctx, options)
+      const decodedPrimitive = await handlePrimitive(
+        primitive,
+        gltf,
+        ctx,
+        options
       );
+      const geometryCmp = components.geometry(decodedPrimitive);
       const materialCmp =
         primitive.material !== undefined
           ? components.material(
