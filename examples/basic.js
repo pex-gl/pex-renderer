@@ -1,4 +1,10 @@
-import createRenderer from "../index.js";
+import {
+  world as createWorld,
+  entity as createEntity,
+  systems,
+  components,
+  loaders,
+} from "../index.js";
 import createContext from "pex-context";
 import { cube, torus } from "primitive-geometry";
 import { vec3, quat, mat4 } from "pex-math";
@@ -8,10 +14,23 @@ import createGUI from "pex-gui";
 import parseHdr from "parse-hdr";
 import { getURL } from "./utils.js";
 
-const ctx = createContext();
+const {
+  camera,
+  directionalLight,
+  geometry,
+  material,
+  orbiter,
+  skybox,
+  reflectionProbe,
+  transform,
+} = components;
+
+const ctx = createContext({
+  type: "webgl",
+});
 ctx.gl.getExtension("OES_element_index_uint"); //TEMP
 
-const renderer = createRenderer(ctx);
+const world = createWorld();
 
 function aabbToString(bbox) {
   return bbox.map((v) => v.map((f) => Math.floor(f * 1000) / 1000));
@@ -73,7 +92,7 @@ gui.addButton("Debug", () => {
 });
 
 gui.addButton("Tree", () => {
-  renderer.entities.forEach((e) => {
+  world.entities.forEach((e) => {
     if (!e.transform) {
       return;
     }
@@ -92,87 +111,87 @@ gui.addButton("Tree", () => {
   });
 });
 
-const cameraEntity = renderer.entity({
-  transform: renderer.transform({ position: [0, 0, 3] }),
-  camera: renderer.camera({
+const cameraEntity = createEntity({
+  transform: transform({ position: [0, 0, 3] }),
+  camera: camera({
     fov: Math.PI / 2,
     aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
   }),
-  orbiter: renderer.orbiter({
+  orbiter: orbiter({
     element: ctx.gl.canvas,
   }),
 });
-renderer.add(cameraEntity);
+world.add(cameraEntity);
 
-const cubeEntity = renderer.entity({
-  transform: renderer.transform({
+const cubeEntity = createEntity({
+  transform: transform({
     position: [0, 0, 0],
   }),
-  geometry: renderer.geometry(cube({ sx: 2, sy: 0.1, sz: 2 })),
-  material: renderer.material({
+  geometry: geometry(cube({ sx: 2, sy: 0.1, sz: 2 })),
+  material: material({
     baseColor: [0, 1, 0, 1],
     metallic: 0,
     roughness: 0.2,
   }),
 });
-renderer.add(cubeEntity);
+world.add(cubeEntity);
 
-const torusEntity = renderer.entity({
-  transform: renderer.transform({
+const torusEntity = createEntity({
+  transform: transform({
     position: [0, 0, 0],
   }),
-  geometry: renderer.geometry(torus({ radius: 1 })),
-  material: renderer.material({
+  geometry: geometry(torus({ radius: 1 })),
+  material: material({
     baseColor: [0, 0, 1, 1],
     metallic: 0,
     roughness: 0.5,
   }),
 });
-renderer.add(torusEntity);
+world.add(torusEntity);
 
-const skyboxEnt = renderer.entity({
-  skybox: renderer.skybox({
+const skyboxEnt = createEntity({
+  skybox: skybox({
     sunPosition: [1, 1, 1],
   }),
 });
-renderer.add(skyboxEnt);
+world.add(skyboxEnt);
 
-const reflectionProbeEnt = renderer.entity({
-  reflectionProbe: renderer.reflectionProbe(),
+const reflectionProbeEnt = createEntity({
+  reflectionProbe: reflectionProbe(),
 });
-renderer.add(reflectionProbeEnt);
+world.add(reflectionProbeEnt);
 
-const directionalLightEntity = renderer.entity(
+const directionalLightEntity = createEntity(
   {
-    transform: renderer.transform({
+    transform: transform({
       position: [2, 2, 2],
       rotation: quat.fromMat4(
         quat.create(),
         targetTo(mat4.create(), [0, 0, 0], [1, 1, 1])
       ),
     }),
-    directionalLight: renderer.directionalLight({
+    directionalLight: directionalLight({
       color: [1, 1, 1, 2], //FIXME: instencity is copied to alpha in pex-renderer
       intensity: 1,
       castShadows: true,
     }),
-    // ambientLight: renderer.ambientLight({
+    // ambientLight: ambientLight({
     //   color: [1, 1, 1, 1], //FIXME: instencity is copied to alpha in pex-renderer
     //   intensity: 1,
     //   castShadows: true,
     // }),
-    // renderer.lightHelper(), //TODO:
+    // lightHelper(), //TODO:
   }
   // ["cell0"]
 );
-renderer.add(directionalLightEntity);
+world.add(directionalLightEntity);
 
-renderer.addSystem(renderer.geometrySystem());
-renderer.addSystem(renderer.transformSystem());
-renderer.addSystem(renderer.cameraSystem());
-renderer.addSystem(renderer.skyboxSystem());
-renderer.addSystem(renderer.reflectionProbeSystem());
-renderer.addSystem(renderer.renderSystem());
+world.addSystem(systems.geometry({ ctx }));
+world.addSystem(systems.transform());
+world.addSystem(systems.camera());
+world.addSystem(systems.skybox({ ctx }));
+world.addSystem(systems.reflectionProbe({ ctx }));
+world.addSystem(systems.render({ ctx }));
 
 function rescaleScene(root) {
   const sceneBounds = root.transform.worldBounds;
@@ -191,19 +210,37 @@ function rescaleScene(root) {
 }
 
 async function loadScene() {
+  console.log("loaders.gltf");
+  // debugger;
   try {
-    const scene = await renderer.loadScene(
-      // "examples/assets/models/buster_drone/scene.gltf" //ok
-      // "examples/assets/models/buster-drone-etc1s-draco.glb"
+    const scene = await loaders.gltf(
+      // "examples/assets/models/buster-drone/scene.gltf", //ok
+      "examples/assets/models/buster-drone-etc1s-draco.glb",
       // "examples/assets/models/duck/glTF/Duck.gltf" //ok
       // "examples/assets/models/CesiumMilkTruck/glTF/CesiumMilkTruck.gltf" //ok
-      "examples/assets/models/DamagedHelmet/glTF/DamagedHelmet.gltf" //ok
+      // "examples/assets/models/DamagedHelmet/glTF/DamagedHelmet.gltf" //ok
+      {
+        ctx,
+        dracoOptions: {
+          transcoderPath: new URL(
+            "assets/decoders/draco/",
+            import.meta.url
+          ).toString(),
+        },
+        basisOptions: {
+          transcoderPath: new URL(
+            "assets/decoders/basis/",
+            import.meta.url
+          ).toString(),
+        },
+      }
     ); //ok
+    console.log("Scene", scene);
     const sceneEntities = scene[0].entities;
-    //scene[0].entities.forEach((entity) => renderer.add(entity));
-    window.renderer = renderer;
-    renderer.entities.push(...sceneEntities);
-    renderer.entities.forEach((e) => {
+    //scene[0].entities.forEach((entity) => world.add(entity));
+    window.world = world;
+    world.entities.push(...sceneEntities);
+    entities.forEach((e) => {
       if (e.material) {
         // e.material.unlit = false;
         e.material.depthTest = true;
@@ -212,10 +249,10 @@ async function loadScene() {
       }
     });
     console.log("updating systems");
-    renderer.update(); //force scene hierarchy update
+    update(); //force scene hierarchy update
     rescaleScene(sceneEntities[0]); //TODO: race condition: sometime scene bounding box is not yet updated and null
 
-    console.log("entities", renderer.entities);
+    console.log("entities", entities);
   } catch (e) {
     console.error(e);
   }
@@ -242,10 +279,10 @@ loadScene();
     flipY: true, //TODO: flipY on non dom elements is deprecated
   });
 
-  skyboxEnt._skybox.texture = panorama;
+  world.update(); //force update reflection probe
+  skyboxEnt._skybox.texture = panorama; //TODO: remove _skybox
   skyboxEnt._skybox.dirty = true; //TODO: check if this works
 
-  renderer.draw(); //force update reflection probe
   console.log("reflectionProbeEnt", reflectionProbeEnt);
   reflectionProbeEnt._reflectionProbe.dirty = true;
 
@@ -280,7 +317,7 @@ ctx.frame(() => {
   torusEntity.transform.dirty = true; //UGH
 
   try {
-    renderer.draw();
+    world.update();
   } catch (e) {
     console.error(e);
   }

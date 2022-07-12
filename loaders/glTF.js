@@ -1,7 +1,7 @@
 import { loadJson, loadImage, loadArrayBuffer, loadBlob } from "pex-io";
 import { quat, mat4, utils } from "pex-math";
 import { getDirname, getFileExtension } from "../utils.js";
-
+import { components, entity } from "../index.js";
 import { loadDraco, loadKtx2 } from "pex-loaders";
 
 const isSafari =
@@ -522,7 +522,6 @@ async function handlePrimitive(
   primitive,
   { bufferViews, accessors },
   ctx,
-  renderer,
   { dracoOptions }
 ) {
   let geometryProps = {};
@@ -561,7 +560,7 @@ async function handlePrimitive(
 
     // If the loader does support the Draco extension, but will not process KHR_draco_mesh_compression, then the loader must load the glTF asset ignoring KHR_draco_mesh_compression in primitive.
     try {
-      geometryProps = await loadDraco(bufferView._data, renderer, {
+      geometryProps = await loadDraco(bufferView._data, ctx.gl, {
         transcodeConfig: {
           attributeIDs,
           attributeTypes,
@@ -689,26 +688,20 @@ async function handlePrimitive(
 }
 
 // https://github.com/KhronosGroup/glTF/blob/main/specification/2.0/schema/mesh.schema.json
-async function handleMesh(
-  { primitives, weights },
-  gltf,
-  ctx,
-  renderer,
-  options
-) {
+async function handleMesh({ primitives, weights }, gltf, ctx, options) {
   return await Promise.all(
     primitives.map(async (primitive) => {
-      const geometryCmp = renderer.geometry(
-        await handlePrimitive(primitive, gltf, ctx, renderer, options)
+      const geometryCmp = components.geometry(
+        await handlePrimitive(primitive, gltf, ctx, options)
       );
       const materialCmp =
         primitive.material !== undefined
-          ? renderer.material(
+          ? components.material(
               handleMaterial(gltf.materials[primitive.material], gltf, ctx)
             )
-          : renderer.material();
+          : components.material();
 
-      const components = {
+      const entityComponents = {
         geometry: geometryCmp,
         material: materialCmp,
       };
@@ -756,14 +749,14 @@ async function handleMesh(
           return targets;
         }, {});
 
-        components.morph = renderer.morph({
+        entityComponents.morph = components.morph({
           sources,
           targets,
           weights,
         });
       }
 
-      return components;
+      return entityComponents;
     })
   );
 }
@@ -773,20 +766,20 @@ const formatLight = ({ type, name, color, ...rest }) => ({
   color: [...(color || [1, 1, 1]), 1],
 });
 
-function getLight(light, renderer) {
+function getLight(light) {
   if (light._light) return light._light;
 
   switch (light.type) {
     case "directional":
-      light._light = renderer.directionalLight(formatLight(light));
+      light._light = components.directionalLight(formatLight(light));
       light._type = "directionalLight";
       break;
     case "point":
-      light._light = renderer.pointLight(formatLight(light));
+      light._light = components.pointLight(formatLight(light));
       light._type = "pointLight";
       break;
     case "spot":
-      light._light = renderer.spotLight({
+      light._light = components.spotLight({
         ...formatLight(light),
         innerAngle: light.spot?.innerConeAngle || 0,
         angle: light.spot?.outerConeAngle || Math.PI / 4.0,
@@ -802,8 +795,8 @@ function getLight(light, renderer) {
 }
 
 // https://github.com/KhronosGroup/glTF/blob/main/specification/2.0/schema/node.schema.json
-async function handleNode(node, gltf, i, ctx, renderer, options) {
-  const components = {};
+async function handleNode(node, gltf, i, ctx, options) {
+  const entityComponents = {};
   // const entity = {};
 
   let transform;
@@ -834,7 +827,7 @@ async function handleNode(node, gltf, i, ctx, renderer, options) {
     };
   }
 
-  components.transform = renderer.transform(transform);
+  entityComponents.transform = components.transform(transform);
   // entity.transform = transform;
   // transform.entity = entity;
 
@@ -845,7 +838,7 @@ async function handleNode(node, gltf, i, ctx, renderer, options) {
     // https://github.com/KhronosGroup/glTF/blob/main/specification/2.0/schema/camera.schema.json
     if (camera.type === "orthographic") {
       // https://github.com/KhronosGroup/glTF/blob/main/specification/2.0/schema/camera.orthographic.schema.json
-      components.camera = renderer.camera({
+      entityComponents.camera = components.camera({
         enabled,
         name: camera.name || `camera_${node.camera}`,
         projection: "orthographic",
@@ -858,7 +851,7 @@ async function handleNode(node, gltf, i, ctx, renderer, options) {
       });
     } else {
       // https://github.com/KhronosGroup/glTF/blob/main/specification/2.0/schema/camera.perspective.schema.json
-      components.camera = renderer.camera({
+      entityComponents.camera = components.camera({
         enabled,
         name: camera.name || `camera_${node.camera}`,
         near: camera.perspective.znear,
@@ -881,12 +874,12 @@ async function handleNode(node, gltf, i, ctx, renderer, options) {
         node.extensions.KHR_lights_punctual.light
       ];
     if (light) {
-      const { _light, _type } = getLight(light, renderer);
+      const { _light, _type } = getLight(light);
       components[_type] = _light;
     }
   }
 
-  node.entity = renderer.entity(components);
+  node.entity = entity(entityComponents);
   node.entity.name = node.name || `node_${i}`;
 
   // node.entity = entity;
@@ -906,7 +899,7 @@ async function handleNode(node, gltf, i, ctx, renderer, options) {
       inverseBindMatrices.push(accessor._data.slice(i, i + 16));
     }
 
-    skinCmp = renderer.skin({
+    skinCmp = components.skin({
       inverseBindMatrices: inverseBindMatrices,
     });
 
@@ -920,7 +913,6 @@ async function handleNode(node, gltf, i, ctx, renderer, options) {
       gltf.meshes[node.mesh],
       gltf,
       ctx,
-      renderer,
       options
     );
     let instances = null;
@@ -976,7 +968,7 @@ async function handleNode(node, gltf, i, ctx, renderer, options) {
     } else {
       // create sub nodes for each primitive
       const primitiveNodes = primitives.map((components, j) => {
-        const subEntity = renderer.entity(components);
+        const subEntity = entity(components);
         // const subEntity = {
         //   ...components,
         //   transform: {},
@@ -1006,12 +998,7 @@ async function handleNode(node, gltf, i, ctx, renderer, options) {
   return node.entity;
 }
 
-function handleAnimation(
-  animation,
-  { accessors, bufferViews, nodes },
-  renderer,
-  index
-) {
+function handleAnimation(animation, { accessors, bufferViews, nodes }, index) {
   // https://github.com/KhronosGroup/glTF/blob/main/specification/2.0/schema/animation.schema.json
   // https://github.com/KhronosGroup/glTF/blob/main/specification/2.0/schema/animation.channel.schema.json
   const channels = animation.channels.map((channel) => {
@@ -1067,7 +1054,7 @@ function handleAnimation(
     };
   });
 
-  // return renderer.animation({
+  // return components.animation({
   //   channels: channels,
   //   autoplay: true,
   //   loop: true,
@@ -1078,7 +1065,7 @@ function handleAnimation(
     0
   );
 
-  return renderer.animation({
+  return components.animation({
     name: animation.name || `Animation ${index}`,
     channels,
     duration,
@@ -1240,20 +1227,25 @@ const DEFAULT_OPTIONS = {
   supportImageBitmap: !isSafari,
 };
 
-async function loadGltf(url, renderer, options = {}) {
+async function loadGltf(url, options = {}) {
   const opts = Object.assign({}, DEFAULT_OPTIONS, options);
-  const ctx = renderer._ctx;
+  const { ctx } = options;
+
+  console.log("loaders.gltf", url, options, opts);
 
   // Load and unpack data
   // https://www.khronos.org/registry/glTF/specs/2.0/glTF-2.0.html#glb-file-format-specification
   const extension = getFileExtension(url);
   const basePath = getDirname(url);
-  const isBinary = extension === ".glb";
+  const isBinary = extension === "glb";
 
+  console.log("loaders.gltf", url, extension, isBinary);
   // https://github.com/KhronosGroup/glTF/blob/main/specification/2.0/schema/glTF.schema.json
   const { json, bin } = loadData(
     isBinary ? await loadArrayBuffer(url) : await loadJson(url)
   );
+
+  console.log("loaders.gltf", json, bin);
 
   // Check required extensions
   // https://www.khronos.org/registry/glTF/specs/2.0/glTF-2.0.html#specifying-extensions
@@ -1369,8 +1361,8 @@ async function loadGltf(url, renderer, options = {}) {
   let scenes = await Promise.all(
     (json.scenes || [{}]).map(async (scene, index) => {
       // Create scene root entity
-      scene.root = renderer.entity({
-        transform: renderer.transform({
+      scene.root = entity({
+        transform: components.transform({
           enabled: opts.enabledScene || index === (json.scene || 0),
         }),
       });
@@ -1379,7 +1371,7 @@ async function loadGltf(url, renderer, options = {}) {
       // Add scene entities for each node and its children
       // TODO: scene.entities is just convenience. We could use a user-friendly entity traverse.
       // scene.entities = json.nodes.reduce(async (entities, node, i) => {
-      //   const result = await handleNode(node, json, i, ctx, renderer, opts);
+      //   const result = await handleNode(node, json, i, ctx, opts);
       //   if (result.length) {
       //     result.forEach((primitive) => entities.push(primitive));
       //   } else {
@@ -1389,8 +1381,7 @@ async function loadGltf(url, renderer, options = {}) {
       // }, []);
       scene.entities = await Promise.all(
         json.nodes.map(
-          async (node, i) =>
-            await handleNode(node, json, i, ctx, renderer, opts)
+          async (node, i) => await handleNode(node, json, i, ctx, opts)
         )
       );
       scene.entities = scene.entities.flat();
@@ -1437,12 +1428,7 @@ async function loadGltf(url, renderer, options = {}) {
       if (json.animations && options.includeAnimations !== false) {
         scene.root.animations = [];
         json.animations.forEach((animation, index) => {
-          const animationComponent = handleAnimation(
-            animation,
-            json,
-            renderer,
-            index
-          );
+          const animationComponent = handleAnimation(animation, json, index);
           if (index == 0) {
             scene.root.animation = animationComponent;
           }
@@ -1476,8 +1462,6 @@ async function loadGltf(url, renderer, options = {}) {
           }
         }
       });
-
-      renderer.update();
 
       return scene;
     })
