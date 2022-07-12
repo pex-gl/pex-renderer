@@ -68,6 +68,12 @@ class Entity {
 }
 
 export default function createEntity(components = {}) {
+  if (Array.isArray(components)) {
+    throw new Error(
+      "Arrays of components are deprecated. Use props object instead."
+    );
+  }
+
   const entity = {
     id: entityId++,
     ...components,
