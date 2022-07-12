@@ -236,7 +236,7 @@ async function loadScene() {
     //scene[0].entities.forEach((entity) => world.add(entity));
     window.world = world;
     world.entities.push(...sceneEntities);
-    entities.forEach((e) => {
+    sceneEntities.forEach((e) => {
       if (e.material) {
         // e.material.unlit = false;
         e.material.depthTest = true;
@@ -245,7 +245,7 @@ async function loadScene() {
       }
     });
     console.log("updating systems");
-    update(); //force scene hierarchy update
+    world.update(); //force scene hierarchy update
     rescaleScene(sceneEntities[0]); //TODO: race condition: sometime scene bounding box is not yet updated and null
 
     console.log("entities", entities);
