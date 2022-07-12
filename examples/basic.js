@@ -214,11 +214,7 @@ async function loadScene() {
   // debugger;
   try {
     const scene = await loaders.gltf(
-      // "examples/assets/models/buster-drone/scene.gltf", //ok
-      "examples/assets/models/buster-drone-etc1s-draco.glb",
-      // "examples/assets/models/duck/glTF/Duck.gltf" //ok
-      // "examples/assets/models/CesiumMilkTruck/glTF/CesiumMilkTruck.gltf" //ok
-      // "examples/assets/models/DamagedHelmet/glTF/DamagedHelmet.gltf" //ok
+      "examples/assets/models/buster-drone/buster-drone-etc1s-draco.glb",
       {
         ctx,
         dracoOptions: {
