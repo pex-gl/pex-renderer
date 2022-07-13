@@ -4,7 +4,7 @@ import { vec3, vec4, mat3, mat4 } from "pex-math";
 import { aabb } from "pex-geom";
 import directionalLight from "../components/directional-light.js";
 
-export default function createRenderSystem(opts) {
+export default function createrendererSystem(opts) {
   const ctx = opts.ctx;
 
   ctx.gl.getExtension("WEBGL_color_buffer_float");
@@ -54,7 +54,7 @@ export default function createRenderSystem(opts) {
     },
   };
 
-  const renderSystem = {
+  const rendererSystem = {
     cache: {},
     debug: true,
     shadowQuality: 1, //TODO: not implemented  shadowQuality
@@ -563,7 +563,7 @@ ${
     ];
   }
 
-  renderSystem.updateDirectionalLightShadowMap = function (
+  rendererSystem.updateDirectionalLightShadowMap = function (
     lightEnt,
     entities,
     shadowCastingEntities
@@ -615,7 +615,7 @@ ${
     });
   };
 
-  renderSystem.patchDirectionalLight = (directionalLight) => {
+  rendererSystem.patchDirectionalLight = (directionalLight) => {
     directionalLight._viewMatrix = mat4.create();
     directionalLight._projectionMatrix = mat4.create();
 
@@ -656,7 +656,7 @@ ${
     };
   };
 
-  renderSystem.update = (entities) => {
+  rendererSystem.update = (entities) => {
     ctx.submit(clearCmd);
 
     const rendererableEntities = entities.filter(
@@ -672,10 +672,10 @@ ${
 
     directionalLightEntities.forEach((lightEntity) => {
       if (!lightEntity.directionalLight._viewMatrix) {
-        renderSystem.patchDirectionalLight(lightEntity.directionalLight);
+        rendererSystem.patchDirectionalLight(lightEntity.directionalLight);
       }
       if (lightEntity.directionalLight.castShadows) {
-        renderSystem.updateDirectionalLightShadowMap(
+        rendererSystem.updateDirectionalLightShadowMap(
           lightEntity,
           entities,
           shadowCastingEntities
@@ -702,5 +702,5 @@ ${
     });
   };
 
-  return renderSystem;
+  return rendererSystem;
 }
