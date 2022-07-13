@@ -159,11 +159,18 @@ export default (opts = {}) => {
   //return new Material(opts);
   return {
     baseColor: [1, 1, 1, 1],
+    emissiveColor: undefined,
     metallic: 1,
     roughness: 1,
     depthTest: true,
     depthWrite: true,
     blend: false,
+    blendSrcRGBFactor: undefined,
+    blendSrcAlphaFactor: undefined,
+    blendDstRGBFactor: undefined,
+    blendDstAlphaFactor: undefined,
+    castShadows: true,
+    receiveShadows: true,
     ...opts,
   };
 };
