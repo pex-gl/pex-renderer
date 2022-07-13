@@ -1,4 +1,11 @@
-import createRenderer from "../index.js";
+import {
+  world as createWorld,
+  entity as createEntity,
+  systems,
+  components,
+  loaders,
+  entity,
+} from "../index.js";
 import createContext from "pex-context";
 import createGUI from "pex-gui";
 import { loadJson, loadImage, loadArrayBuffer } from "pex-io";
@@ -11,16 +18,28 @@ import parseHdr from "parse-hdr";
 import axisHelper from "../helpers/axis-helper.js";
 import { computeEdges, getURL } from "./utils.js";
 
-// const MODELS_PATH = "examples/glTF-Sample-Models/2.0";
-const MODELS_PATH =
-  "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0";
+const {
+  camera,
+  directionalLight,
+  geometry,
+  material,
+  orbiter,
+  skybox,
+  reflectionProbe,
+  transform,
+} = components;
+
+const MODELS_PATH = "examples/glTF-Sample-Models/2.0";
+// const MODELS_PATH =
+//   "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0";
 
 const State = {
   sunPosition: [2, 2, 2],
   selectedModel: "",
   scenes: [],
   gridSize: 1,
-  showBoundingBoxes: true,
+  boundingBoxes: true,
+  floor: true,
   useEnvMap: true,
   shadows: false,
   formats: [
@@ -45,167 +64,32 @@ const FORMAT_EXTENSION = new Map()
   .set("glTF-KTX-BasisU", "gltf")
   .set("glTF-JPG-PNG", "gltf");
 
-// Utils
-const positions = [
-  [0, 0, 0],
-  [0, 0, 0],
-];
-const addLine = (a, b) => positions.push(a, b);
-
-let pp = null;
-let pq = null;
-let frame = 0;
-function addPointLine({ jointMatrices }, i, j) {
-  const p = [
-    State.positions[i * 3],
-    State.positions[i * 3 + 1],
-    State.positions[i * 3 + 2],
-  ];
-  const np = [0, 0, 0];
-  vec3.add(
-    np,
-    vec3.scale(
-      vec3.multMat4(vec3.copy(p), jointMatrices[State.joints[i * 4 + 0]]),
-      State.weights[i * 4 + 0]
-    )
-  );
-  vec3.add(
-    np,
-    vec3.scale(
-      vec3.multMat4(vec3.copy(p), jointMatrices[State.joints[i * 4 + 1]]),
-      State.weights[i * 4 + 1]
-    )
-  );
-  vec3.add(
-    np,
-    vec3.scale(
-      vec3.multMat4(vec3.copy(p), jointMatrices[State.joints[i * 4 + 2]]),
-      State.weights[i * 4 + 2]
-    )
-  );
-  vec3.add(
-    np,
-    vec3.scale(
-      vec3.multMat4(vec3.copy(p), jointMatrices[State.joints[i * 4 + 3]]),
-      State.weights[i * 4 + 3]
-    )
-  );
-  const q = [
-    State.positions[j * 3],
-    State.positions[j * 3 + 1],
-    State.positions[j * 3 + 2],
-  ];
-  const nq = [0, 0, 0];
-  vec3.add(
-    nq,
-    vec3.scale(
-      vec3.multMat4(vec3.copy(q), jointMatrices[State.joints[j * 4 + 0]]),
-      State.weights[j * 4 + 0]
-    )
-  );
-  vec3.add(
-    nq,
-    vec3.scale(
-      vec3.multMat4(vec3.copy(q), jointMatrices[State.joints[j * 4 + 1]]),
-      State.weights[j * 4 + 1]
-    )
-  );
-  vec3.add(
-    nq,
-    vec3.scale(
-      vec3.multMat4(vec3.copy(q), jointMatrices[State.joints[j * 4 + 2]]),
-      State.weights[j * 4 + 2]
-    )
-  );
-  vec3.add(
-    nq,
-    vec3.scale(
-      vec3.multMat4(vec3.copy(q), jointMatrices[State.joints[j * 4 + 3]]),
-      State.weights[j * 4 + 3]
-    )
-  );
-
-  if (pp && pq) {
-    // positions.length = 0
-    addLine(pp, np);
-    addLine(pq, nq);
-    // vec3.set(np, p)
-    // vec3.multMat4(np, State.body.transform.modelMatrix)
-    // addLine([0, 0, 0], np)
-    // vec3.set(nq, q)
-    // vec3.multMat4(nq, State.body.transform.modelMatrix)
-    if (frame++ % 10 === 0) {
-      addLine(np, nq);
-    }
-  }
-  pp = np;
-  pq = nq;
-}
-
 // Start
 const ctx = createContext({
   powerPreference: "high-performance",
-  type: "webgl",
 });
 
-const renderer = createRenderer({
-  ctx,
-  shadowQuality: 3,
-  pauseOnBlur: false,
-  profile: true,
-  profileFlush: false,
+const world = createWorld({
+  //   shadowQuality: 3,
+  //   pauseOnBlur: false,
+  //   profile: true,
+  //   profileFlush: false,
 });
-window.renderer = renderer;
+window.world = world;
 window.state = State;
 
-renderer.addSystem(renderer.geometrySystem());
-renderer.addSystem(renderer.transformSystem());
-renderer.addSystem(renderer.animationSystem());
-renderer.addSystem(renderer.cameraSystem());
-renderer.addSystem(renderer.skyboxSystem());
-renderer.addSystem(renderer.reflectionProbeSystem());
-renderer.addSystem(renderer.renderSystem());
-
-function aabbToString(aabb) {
-  if (!aabb) return "[]";
-  return `[${aabb[0].map((f) => f.toFixed(0.1))} .. ${aabb[1].map((f) =>
-    f.toFixed(0.1)
-  )}]`;
-}
+world.addSystem(systems.geometry({ ctx }));
+world.addSystem(systems.transform());
+world.addSystem(systems.animation());
+world.addSystem(systems.camera());
+world.addSystem(systems.skybox({ ctx }));
+world.addSystem(systems.reflectionProbe({ ctx }));
+world.addSystem(systems.render({ ctx }));
 
 const gui = createGUI(ctx);
 
-function debugScene() {
-  let s = "";
-  renderer.entities.forEach((e, i) => {
-    let pad = "";
-    let transform = e.transform;
-    while (transform) {
-      pad += "--";
-      transform = transform.parent;
-    }
-    let bbox = aabbToString(e.transform?.worldBounds);
-    s += `${pad} ${i} ${e.name} ${Object.keys(e).join(" | ")} | ${bbox} \n`;
-  });
-  console.log(s);
-  console.log("renderer.entities", renderer.entities);
-}
-
-function debugGL() {
-  debugOnce = true;
-}
-
-function openModelURL() {
-  window.open(
-    State.url.replace(
-      "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/",
-      "https://github.com/KhronosGroup/glTF-Sample-Models/blob/master/2.0/"
-    )
-  );
-}
-
-const sunEntity = renderer.entity({
-  transform: renderer.transform({
+const sunEntity = createEntity({
+  transform: transform({
     position: State.sunPosition,
     rotation: quat.fromTo(
       quat.create(),
@@ -213,27 +97,34 @@ const sunEntity = renderer.entity({
       vec3.normalize([-2, -2, -2])
     ),
   }),
-  directionalLight: renderer.directionalLight({
+  directionalLight: directionalLight({
     color: [1, 1, 0.95, 1],
     intensity: 0,
     castShadows: State.shadows,
     bias: 0.2,
   }),
 });
-renderer.add(sunEntity);
+world.add(sunEntity);
 
-const skyboxEntity = renderer.entity({
-  skybox: renderer.skybox({
+const skyboxEntity = createEntity({
+  skybox: skybox({
     sunPosition: [1, 1, 1],
     backgroundBlur: 0,
   }),
 });
-renderer.add(skyboxEntity);
+world.add(skyboxEntity);
 
-const reflectionProbeEntity = renderer.entity({
-  reflectionProbe: renderer.reflectionProbe(),
+const reflectionProbeEntity = createEntity({
+  reflectionProbe: reflectionProbe(),
 });
-renderer.add(reflectionProbeEntity);
+world.add(reflectionProbeEntity);
+
+let floorEntity;
+let cameraEntity;
+
+const unitBox = createBox();
+unitBox.cells = computeEdges(unitBox.positions, unitBox.cells, 4);
+unitBox.primitive = ctx.Primitive.Lines;
 
 const addEnvmap = async () => {
   const buffer = await loadArrayBuffer(
@@ -261,38 +152,57 @@ const addEnvmap = async () => {
 if (State.useEnvMap) addEnvmap();
 
 // TODO: implement axis helper
-// const axesEntity = renderer.entity([axisHelper()]);
-// renderer.add(axesEntity);
+// const axesEntity = createEntity(axisHelper());
+// world.add(axesEntity);
 
-const lineBuilder = renderer.entity({
-  transform: renderer.transform(),
-  geometry: renderer.geometry({
-    positions,
-    count: 2,
-    primitive: ctx.Primitive.Lines, //TODO: check Primitive.Lines support
-  }),
-  material: renderer.material({
-    baseColor: [1, 0, 0, 1],
-    castShadows: State.shadows,
-    receiveShadows: State.shadows,
-  }),
-});
-// renderer.add(lineBuilder)
+// Utils
+let debugOnce = false;
+let prevTime = Date.now();
+
+let debugCommandsOpt = null;
+function optimizeCommands(commands) {
+  return commands;
+}
+
+function debugScene() {
+  let s = "";
+  world.entities.forEach((e, i) => {
+    let pad = "";
+    let transform = e.transform;
+    while (transform) {
+      pad += "--";
+      transform = transform.parent;
+    }
+    let bbox = e.transform?.worldBounds
+      ? aabb.toString(e.transform.worldBounds)
+      : "[]";
+    s += `${pad} ${i} ${e.name} ${Object.keys(e).join(" | ")} | ${bbox} \n`;
+  });
+  console.log(s);
+  console.log("world.entities", world.entities);
+}
+
+function debugGL() {
+  debugOnce = true;
+}
+
+function openModelURL() {
+  window.open(
+    State.url.replace(
+      "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/",
+      "https://github.com/KhronosGroup/glTF-Sample-Models/blob/master/2.0/"
+    )
+  );
+}
 
 // glTF
 function repositionModel({ root }) {
   const n = State.gridSize;
   const i = State.scenes.length;
-  let x = 2 * (i % n) - n + 1;
-  let z = 2 * Math.floor(i / n) - n + 1;
+  const x = 2 * (i % n) - n + 1;
+  const z = 2 * Math.floor(i / n) - n + 1;
 
-  if (State.selectedModel) {
-    x = z = 0;
-  }
-  root.transform.position = [x, root.transform.position[1], z];
-  root.transform = {
-    ...root.transform,
-  };
+  vec3.add(root.transform.position, [x, 0, z]);
 }
 
 function rescaleScene({ root }) {
@@ -305,66 +215,55 @@ function rescaleScene({ root }) {
 
   if (!aabb.isEmpty(sceneBounds)) {
     root.transform.position = vec3.scale(
-      [-sceneCenter[0], -sceneBounds[0][1], -sceneCenter[2]],
+      sceneCenter.map((n) => -n),
       sceneScale
     );
     root.root = true;
     root.transform.scale = [sceneScale, sceneScale, sceneScale];
-    root.transform = {
-      ...root.transform,
-    };
+    root.transform = { ...root.transform };
   }
 }
 
 function onSceneLoaded(scene, grid) {
   State.scenes.push(scene);
-  renderer.update(); // refresh scene hierarchy
+  world.update(); // refresh scene hierarchy
 
   debugScene();
 
-  if (grid || true) {
-    //TEMP: auto scaling
-    rescaleScene(scene);
-    if (grid) repositionModel(scene);
-    renderer.update(); //update bounding boxes after rescaling
-  }
+  rescaleScene(scene);
+  if (grid) repositionModel(scene);
+  world.update();
 
-  const addFloor = true;
-  if (addFloor) {
+  if (State.floor) {
     const cube = createCube({ sx: 1, sy: 0.05, sz: 1 });
-    const floorEnt = renderer.entity({
-      transform: renderer.transform({ position: [0, -0.025, 0] }),
-      geometry: renderer.geometry(cube),
-      material: renderer.material({ baseColor: [0.5, 0.5, 0.5, 1] }),
+    floorEntity = createEntity({
+      transform: transform({ position: [0, -0.525, 0] }),
+      geometry: geometry(cube),
+      material: material({ baseColor: [0.5, 0.5, 0.5, 1] }),
     });
-    renderer.add(floorEnt);
+    world.add(floorEntity);
   }
 
-  if (State.showBoundingBoxes) {
-    const box = createBox();
-    box.cells = computeEdges(box.positions, box.cells, 4);
-    box.primitive = ctx.Primitive.Lines;
-
+  if (State.boundingBoxes) {
     const bboxes = scene.entities
-      .map(({ transform, name }) => {
-        const size = aabb.size(transform.worldBounds);
-        const center = aabb.center(transform.worldBounds);
-        // const size = [1, 1, 1];
+      .map((entity) => {
+        const size = aabb.size(entity.transform.worldBounds);
+        const center = aabb.center(entity.transform.worldBounds);
 
-        const bbox = renderer.add(
-          renderer.entity({
-            transform: renderer.transform({
+        const bbox = world.add(
+          createEntity({
+            transform: transform({
               scale: size,
               position: center,
             }),
-            geometry: renderer.geometry(box),
-            material: renderer.material({
+            geometry: geometry(unitBox),
+            material: material({
               unlit: true,
               baseColor: [1, 0, 0, 1],
             }),
           })
         );
-        bbox.name = `${name}_bbox`;
+        bbox.name = `${entity.name}_bbox`;
         return bbox;
       })
       .filter((e) => e);
@@ -372,18 +271,14 @@ function onSceneLoaded(scene, grid) {
   }
 }
 
-let floorEntity;
-let cameraEntity;
-
 async function loadScene(url, grid) {
-  const includeCameras = false;
   let scene;
   try {
     // All examples only have one scene
     State.scene = scene = (
-      await renderer.loadScene(url, {
-        // includeCameras: !grid,
-        includeCameras: includeCameras,
+      await loaders.gltf(url, {
+        ctx,
+        includeCameras: !grid,
         includeAnimations: true,
         includeLights: !grid,
         dracoOptions: {
@@ -402,7 +297,6 @@ async function loadScene(url, grid) {
     )[0]; //TODO: selecting first scene by default
   } catch (e) {
     console.error(e);
-    // console.timeEnd('building ' + url)
     return e;
   }
 
@@ -423,18 +317,14 @@ async function loadScene(url, grid) {
     return a.transform.depth - b.transform.depth;
   });
 
-  // TODO: add shadows on/off
-  // scene.entities.forEach((entity) => {
-  //   const materialCmp = entity.getComponent("Material");
-  //   if (materialCmp) {
-  //     materialCmp.set({
-  //       castShadows: State.shadows,
-  //       receiveShadows: State.shadows,
-  //     });
-  //   }
-  // });
+  scene.entities.forEach((entity) => {
+    if (entity.material) {
+      entity.material.castShadows = State.shadows;
+      entity.material.receiveShadows = State.shadows;
+    }
+  });
 
-  scene.entities.forEach((e) => renderer.add(e));
+  scene.entities.forEach((e) => world.add(e));
 
   // Add camera for models lacking one
   if (!grid) {
@@ -442,11 +332,10 @@ async function loadScene(url, grid) {
 
     if (!cameraEntity) {
       // Update needed for transform.worldBounds
-      renderer.update(); //TODO: check if that call updates transform.worldBounds
+      world.update(); //TODO: check if that call updates transform.worldBounds
 
       const far = 100;
       const sceneBounds = scene.root.transform.worldBounds;
-      // const sceneSize = aabb.size(scene.root.transform.worldBounds)
       let sceneCenter = aabb.center(scene.root.transform.worldBounds);
       if (isNaN(sceneCenter[0])) {
         sceneCenter[0] = 0;
@@ -454,38 +343,27 @@ async function loadScene(url, grid) {
         sceneCenter[2] = 0;
       }
 
-      const boundingSphereRadius = Math.max(
-        ...sceneBounds.map((bound) => vec3.distance(sceneCenter, bound))
-      );
-
       const fov = Math.PI / 4;
-      const distance = (boundingSphereRadius * 2) / Math.tan(fov / 2);
-      let position = includeCameras
-        ? [distance, distance, distance]
-        : [2, 2, 2];
+      // const boundingSphereRadius = Math.max(
+      //   ...sceneBounds.map((bound) => vec3.distance(sceneCenter, bound))
+      // );
+      // const distance = (boundingSphereRadius * 2) / Math.tan(fov / 2);
 
-      position = [0, 0.5, 1.5];
-      sceneCenter = [0, 0.5, 0];
-
-      cameraEntity = renderer.entity({
-        transform: renderer.transform(),
-        camera: renderer.camera({
+      cameraEntity = createEntity({
+        transform: transform(),
+        camera: camera({
           near: 0.1,
           far,
           fov,
           aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
-          target: sceneCenter,
-          position: position,
         }),
-        orbiter: renderer.orbiter({
+        orbiter: orbiter({
           element: ctx.gl.canvas,
-          // maxDistance: far,
-          target: sceneCenter,
-          position: position,
+          position: [2, 2, 2],
         }),
       });
       scene.entities.push(cameraEntity);
-      renderer.add(cameraEntity);
+      world.add(cameraEntity);
     } else {
       //TODO: do i need to set dirty for camera to update?
       cameraEntity.camera.aspect =
@@ -501,13 +379,15 @@ async function loadScene(url, grid) {
       // Clipped models: 2CylinderEngine, EnvironmentTest
       // MultiUVTest: wrong position
       if (State.selectedModel.name !== "MultiUVTest") {
-        // cameraEntity.orbiter = renderer.orbiter({
-        //   // target: sceneCenter,
-        //   // distance: (boundingSphereRadius * 2) / Math.tan(cameraCmp.fov / 2),
-        //   position: cameraEntity.transform.position,
-        //   minDistance: cameraEntity.camera.near,
-        //   maxDistance: cameraEntity.camera.far,
-        // });
+        cameraEntity.orbiter = orbiter({
+          // target: sceneCenter,
+          // distance: (boundingSphereRadius * 2) / Math.tan(cameraCmp.fov / 2),
+          // position: [2, 2, 2],
+          position: cameraEntity.camera.position,
+          // position: cameraEntity.transform.position,
+          // minDistance: cameraEntity.camera.near,
+          // maxDistance: cameraEntity.camera.far,
+        });
       }
     }
 
@@ -536,9 +416,7 @@ async function renderModel(model, overrideFormat, grid) {
       onSceneLoaded(scene, grid);
     }
   } catch (e) {
-    // eslint-disable-next-line no-console
     console.error(e);
-    // eslint-disable-next-line no-console
     console.warn(
       `No format ${format} supported for model ${model.name}. Defaulting to glTF.`
     );
@@ -588,31 +466,30 @@ async function init() {
     4,
     async (model) => {
       // Clean up
-      if (State.selectedModel) {
-        while (State.scenes.length) {
-          const oldScene = State.scenes.shift();
-          // oldScene.entities.forEach((e) => e.dispose()); //TODO: dispose
-        }
+      const scenes = State.scenes.length ? State.scenes : [State.scene];
 
-        if (State.scene) {
-          //renderer.remove(State.scene.root); //TODO: renderer.remove()
-          State.scene.entities.forEach((e) => {
-            const idx = renderer.entities.indexOf(e);
-            renderer.entities.splice(idx, 1);
-          });
-        }
-        // if (floorEntity) renderer.remove(floorEntity); //renderer.remove()
-      }
+      const entitiesIds = [
+        ...scenes.map((scene) => scene.entities.map((e) => e.id)).flat(),
+        floorEntity.id,
+        cameraEntity.id,
+      ].filter(Boolean);
 
-      // renderer.remove(cameraEntity);
+      //TODO: renderer.remove() and dispose
+      world.entities = world.entities.filter(
+        (entity) => !entitiesIds.includes(entity.id)
+      );
 
-      renderModel(model);
+      State.scenes = [];
+
+      await renderModel(model);
     }
   );
 
   gui.addColumn("Options");
   gui.addFPSMeeter();
 
+  gui.addParam("Floor", State, "floor");
+  gui.addParam("Bounding Box", State, "boundingBoxes");
   gui.addButton("Debug Scene Tree", debugScene);
   gui.addButton("Debug GL", debugGL);
   gui.addButton("Open Model URL", openModelURL);
@@ -654,12 +531,12 @@ async function init() {
       // "Cameras",
       // "CesiumMan",
       // "CesiumMilkTruck",
-      "ClearCoatTest",
+      // "ClearCoatTest",
       // "Corset",
       // "Cube",
       // "DamagedHelmet",
       // "DragonAttenuation",
-      // "Duck",
+      "Duck",
       // "EmissiveStrengthTest",
       // "EnvironmentTest",
       // "FlightHelmet",
@@ -726,31 +603,41 @@ async function init() {
   if (grid) {
     State.gridSize = Math.ceil(Math.sqrt(models.length));
 
-    cameraEntity = renderer.entity({
-      transform: renderer.transform(),
-      camera: renderer.camera({
+    cameraEntity = createEntity({
+      transform: transform(),
+      camera: camera({
         aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
       }),
-      orbiter: renderer.orbiter({
+      orbiter: orbiter({
         position: new Array(3).fill(State.gridSize * 2),
       }),
     });
-    renderer.add(cameraEntity);
+    world.add(cameraEntity);
 
-    floorEntity = renderer.entity({
-      transform: renderer.transform(),
-      geometry: renderer.geometry(
-        createCube({ sx: 2 * State.gridSize, sy: 0.1, sz: 2 * State.gridSize })
-      ),
-      material: renderer.material({
-        baseColor: [0.8, 0.8, 0.8, 1],
-        metallic: 0,
-        roughness: 1,
-        castShadows: State.shadows,
-        receiveShadows: State.shadows,
-      }),
-    });
-    renderer.add(floorEntity);
+    if (State.floor) {
+      floorEntity = createEntity({
+        transform: transform({
+          position: [0, -0.6, 0],
+        }),
+        geometry: geometry(
+          createCube({
+            sx: 2 * State.gridSize,
+            sy: 0.1,
+            sz: 2 * State.gridSize,
+          })
+        ),
+        material: material({
+          baseColor: [0.8, 0.8, 0.8, 1],
+          metallic: 0,
+          roughness: 1,
+          castShadows: State.shadows,
+          receiveShadows: State.shadows,
+        }),
+      });
+      world.add(floorEntity);
+    }
+  } else {
+    State.selectedModel = models[0];
   }
 
   // Render scene(s)
@@ -765,11 +652,6 @@ async function init() {
 
 init();
 
-let debugCommandsOpt = null;
-function optimizeCommands(commands) {
-  return commands;
-}
-
 window.addEventListener("resize", () => {
   const W = window.innerWidth;
   const H = window.innerHeight;
@@ -780,21 +662,23 @@ window.addEventListener("resize", () => {
   if (cameraEntity) {
     cameraEntity.camera.viewport = [0, 0, W, H];
     cameraEntity.camera.aspect = W / H;
+    cameraEntity.camera.projectionMatrix = mat4.perspective(
+      mat4.create(),
+      cameraEntity.camera.fov,
+      cameraEntity.camera.aspect,
+      cameraEntity.camera.near,
+      cameraEntity.camera.far
+    );
   }
 });
 
 window.addEventListener("keypress", ({ key }) => {
   if (key === "d") {
     debugOnce = true;
-  }
-  if (key === "g") {
-    gui.toggleEnabled();
+  } else if (key === "g") {
+    gui.enabled = !gui.enabled;
   }
 });
-
-let debugOnce = false;
-
-let prevTime = Date.now();
 
 ctx.frame(() => {
   ctx.debug(debugOnce);
@@ -829,21 +713,8 @@ ctx.frame(() => {
     const now = Date.now();
     const deltaTime = (now - prevTime) / 1000;
     prevTime = now;
-    renderer.draw(deltaTime);
+    world.update(deltaTime);
   }
 
-  if (State.body) {
-    // var worldMatrix = State.body.transform.worldMatrix
-    const skin = State.body.getComponent("Skin");
-    addPointLine(skin, State.minXi, State.maxXi);
-    lineBuilder.getComponent("Geometry").set({
-      positions,
-      count: positions.length,
-    });
-  }
-
-  // TODO: implement pause on blur
-  // if (!renderer._state.paused) {
   gui.draw();
-  // }
 });
