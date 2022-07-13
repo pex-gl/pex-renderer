@@ -58,6 +58,7 @@ export default function createrendererSystem(opts) {
     cache: {},
     debug: true,
     shadowQuality: 1, //TODO: not implemented  shadowQuality
+    outputEncoding: opts.outputEncoding || ctx.Encoding.Linear,
   };
 
   function buildProgram(vertSrc, fragSrc) {
@@ -325,8 +326,7 @@ ${
     // }
 
     const sharedUniforms = {
-      // uOutputEncoding: ctx.Encoding.Gamma,
-      uOutputEncoding: ctx.Encoding.Linear,
+      uOutputEncoding: rendererSystem.outputEncoding,
     };
 
     // prettier-ignore
