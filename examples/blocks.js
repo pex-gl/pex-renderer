@@ -1,4 +1,9 @@
-import createRenderer from "../index.js";
+import {
+  systems,
+  components,
+  world as createWorld,
+  entity as createEntity,
+} from "../index.js";
 import createContext from "pex-context";
 import createGUI from "pex-gui";
 import { mat4, quat, vec3 } from "pex-math";
@@ -14,6 +19,7 @@ const State = {
   elevationMat: mat4.create(),
   rotationMat: mat4.create(),
 };
+
 random.seed(10);
 
 // Utils
@@ -27,13 +33,13 @@ const scheme = [
 // Standard Normal constiate using Box-Muller transform.
 // http://stackoverflow.com/a/36481059
 function randnBM() {
-  const u = 1 - Math.random(); // Subtraction to flip [0, 1) to (0, 1].
-  const v = 1 - Math.random();
+  const u = 1 - random.float(); // Subtraction to flip [0, 1) to (0, 1].
+  const v = 1 - random.float();
   return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
 }
 
 function rand() {
-  return (Math.random() * 2 - 1) * 3;
+  return (random.float() * 2 - 1) * 3;
 }
 
 const gradient = cosineGradient(scheme[0], scheme[1], scheme[2], scheme[3]);
@@ -43,8 +49,8 @@ const ctx = createContext({
   type: "webgl",
 });
 
-const renderer = createRenderer(ctx);
-window.renderer = renderer;
+const world = createWorld();
+window.world = world;
 
 function aabbToString(aabb) {
   if (!aabb) return "[]";
@@ -55,7 +61,7 @@ function aabbToString(aabb) {
 
 function debugScene() {
   let s = "";
-  renderer.entities.forEach((e, i) => {
+  world.entities.forEach((e, i) => {
     let pad = "";
     let transform = e.transform;
     while (transform) {
@@ -66,7 +72,7 @@ function debugScene() {
     s += `${pad} ${i} ${e.name} ${Object.keys(e).join(" | ")} | ${bbox} \n`;
   });
   console.log(s);
-  console.log("renderer.entities", renderer.entities);
+  console.log("world.entities", world.entities);
 }
 
 const gui = createGUI(ctx);
@@ -77,7 +83,7 @@ let frameNumber = 0;
 let debugOnce = false;
 
 // Camera
-const cameraEntity = renderer.entity({
+const cameraEntity = createEntity({
   // renderer.postProcessing({
   //   ssao: true,
   //   ssaoRadius: 4,
@@ -86,26 +92,26 @@ const cameraEntity = renderer.entity({
   //   dofFocusDistance: 5,
   //   fxaa: true,
   // }),
-  transform: renderer.transform(),
-  camera: renderer.camera({
+  transform: components.transform(),
+  camera: components.camera({
     fov: Math.PI / 3,
     aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
     exposure: 2,
   }),
-  orbiter: renderer.orbiter({
+  orbiter: components.orbiter({
     position: [0, 3, 8],
     element: ctx.gl.canvas,
   }),
 });
-renderer.add(cameraEntity);
+world.add(cameraEntity);
 
 // Meshes
-const floorEntity = renderer.entity({
-  transform: renderer.transform({
+const floorEntity = createEntity({
+  transform: components.transform({
     position: [0, -0.3, 0],
   }),
-  geometry: renderer.geometry(cube({ sx: 14, sy: 0.02, sz: 14 })),
-  material: renderer.material({
+  geometry: components.geometry(cube({ sx: 14, sy: 0.02, sz: 14 })),
+  material: components.material({
     baseColor: [1, 1, 1, 1],
     // castShadows: true,
     // receiveShadows: true,
@@ -116,10 +122,10 @@ const floorEntity = renderer.entity({
     metallic: 1,
   }),
 });
-renderer.add(floorEntity);
+world.add(floorEntity);
 
 let instanced = true;
-const geom = cube({ sx: 0.2, sy: 0.5 + Math.random(), sz: 0.2 });
+const geom = cube({ sx: 0.2, sy: 0.5 + random.float(), sz: 0.2 });
 const offsets = [];
 const scales = [];
 const colors = [];
@@ -137,10 +143,10 @@ if (instanced) {
   geom.offsets = { buffer: ctx.vertexBuffer(offsets), divisor: 1 };
   geom.scales = { buffer: ctx.vertexBuffer(scales), divisor: 1 };
   geom.instances = offsets.length;
-  const ent = renderer.entity({
-    geometry: renderer.geometry(geom),
-    transform: renderer.transform({}),
-    material: renderer.material({
+  const ent = createEntity({
+    geometry: components.geometry(geom),
+    transform: components.transform({}),
+    material: components.material({
       baseColor: colors[0],
       rougness: 0.7,
       metallic: 0.0,
@@ -148,16 +154,16 @@ if (instanced) {
       receiveShadows: true,
     }),
   });
-  renderer.add(ent); //TODO
+  world.add(ent); //TODO
 } else {
   offsets.forEach((offset, i) => {
-    const ent = renderer.entity({
-      geometry: renderer.geometry(geom),
-      transform: renderer.transform({
+    const ent = createEntity({
+      geometry: components.geometry(geom),
+      transform: components.transform({
         position: offset,
         scale: scales[i],
       }),
-      material: renderer.material({
+      material: components.material({
         baseColor: colors[i],
         rougness: 0.7,
         metallic: 0.0,
@@ -165,99 +171,104 @@ if (instanced) {
         receiveShadows: true,
       }),
     });
-    renderer.add(ent); //TODO:
+    world.add(ent); //TODO:
   });
 }
 
-const sphereGeometry = sphere({ radius: 0.2 + Math.random() * 0.25 });
+const sphereGeometry = sphere({ radius: 0.2 + random.float() * 0.25 });
 for (let i = 0; i < 100; i++) {
   const x = (rand() * 8) / 3;
   const z = (rand() * 8) / 3;
   const y = 2 * random.noise2(x / 2, z / 2) + random.noise2(2 * x, 2 * z);
   const s = Math.max(0.0, 3.0 - Math.sqrt(x * x + z * z) / 2);
-  const ent = renderer.entity({
-    geometry: renderer.geometry(sphereGeometry),
-    transform: renderer.transform({
+  const ent = createEntity({
+    geometry: components.geometry(sphereGeometry),
+    transform: components.transform({
       position: [x, y, z],
       scale: [s, s, s],
     }),
-    material: renderer.material({
-      baseColor: gradient(Math.random()).concat(1),
+    material: components.material({
+      baseColor: gradient(random.float()).concat(1),
       rougness: 0.91,
       metallic: 0.0,
       castShadows: true,
       receiveShadows: true,
     }),
   });
-  renderer.add(ent); //TODO:
+  world.add(ent); //TODO:
 }
 
 // Lights
-const sunDir = vec3.normalize([1, -1, 1]);
-const sunPosition = vec3.addScaled([0, 0, 0], sunDir, -2);
-const sunLight = renderer.directionalLight({
+const sunPosition = [1, 2, 3];
+
+const sunLight = components.directionalLight({
   color: [1, 1, 1, 2],
   intensity: 2, //TODO: not working light intensity
   castShadows: true,
   bias: 0.1,
 });
-const sunTransform = renderer.transform({
-  position: [0.1, 2, 0.1],
-  rotation: quat.fromTo([0, 0, 1], [0, 0, 1], vec3.normalize([-1, -1, -1])),
+
+const sunTransform = components.transform({
+  position: sunPosition,
+  rotation: quat.fromTo(
+    quat.create(),
+    [0, 0, 1],
+    vec3.normalize(vec3.sub([0, 0, 0], sunPosition))
+  ),
 });
-const sunEntity = renderer.entity({
+const sunEntity = createEntity({
   transform: sunTransform,
   directionalLight: sunLight,
 });
-renderer.add(sunEntity);
+world.add(sunEntity);
 
-const skyboxCmp = renderer.skybox({
+const skyboxCmp = components.skybox({
   sunPosition,
 });
-const reflectionProbeCmp = renderer.reflectionProbe();
-const skyEntity = renderer.entity({
+const reflectionProbeCmp = components.reflectionProbe();
+const skyEntity = createEntity({
   skybox: skyboxCmp,
   reflectionProbe: reflectionProbeCmp,
 });
-renderer.add(skyEntity);
+world.add(skyEntity);
 
-const pointLightEnt = renderer.entity({
-  transform: renderer.transform({
+const pointLightEnt = createEntity({
+  transform: components.transform({
     position: [2, 2, 2],
   }),
-  // geometry: renderer.geometry(sphere({ radius: 0.2 })),
-  material: renderer.material({
+  // geometry: components.geometry(sphere({ radius: 0.2 })),
+  material: components.material({
     baseColor: [1, 0, 0, 1],
     emissiveColor: [1, 0, 0, 1],
   }),
-  pointLight: renderer.pointLight({
+  pointLight: components.pointLight({
     // castShadows: true,
     color: [1, 0, 0, 1],
     intensity: 5,
   }),
 });
-// renderer.add(pointLightEnt);
+// world.add(pointLightEnt);
 
 const areaLightColor = [0, 1, 0, 1];
-const areaLightEntity = renderer.entity({
-  transform: renderer.transform({
+const areaLightEntity = createEntity({
+  transform: components.transform({
     position: [5, 2, 0],
     scale: [2, 5, 0.1],
     rotation: quat.fromTo(quat.create(), [0, 0, 1], [-1, 0, 0], [0, 1, 0]),
   }),
-  // geometry: renderer.geometry(cube({ sx: 1 })),
-  material: renderer.material({
+  // geometry: components.geometry(cube({ sx: 1 })),
+  material: components.material({
     emissiveColor: areaLightColor,
     baseColor: [0, 0, 0, 1],
     metallic: 1.0,
     roughness: 0.74,
   }),
-  areaLight: renderer.areaLight({
+  areaLight: components.areaLight({
     intensity: 5,
     color: areaLightColor,
   }),
 });
-// renderer.add(areaLightEntity);
+// world.add(areaLightEntity);
 
 // GUI
 gui.addParam(
@@ -310,12 +321,12 @@ window.addEventListener("keydown", ({ key }) => {
   if (key === "d") debugOnce = true;
 });
 
-renderer.addSystem(renderer.geometrySystem());
-renderer.addSystem(renderer.transformSystem());
-renderer.addSystem(renderer.cameraSystem());
-renderer.addSystem(renderer.skyboxSystem());
-renderer.addSystem(renderer.reflectionProbeSystem());
-renderer.addSystem(renderer.renderSystem());
+world.addSystem(systems.geometry({ ctx }));
+world.addSystem(systems.transform());
+world.addSystem(systems.camera());
+world.addSystem(systems.skybox({ ctx }));
+world.addSystem(systems.reflectionProbe({ ctx }));
+world.addSystem(systems.renderer({ ctx, outputEncoding: ctx.Encoding.Gamma }));
 
 let shadowMapPreview;
 
@@ -323,7 +334,7 @@ ctx.frame(() => {
   ctx.debug(frameNumber++ === 1);
   ctx.debug(debugOnce);
   debugOnce = false;
-  renderer.draw();
+  world.update();
 
   if (sunLight._shadowMap && !shadowMapPreview) {
     shadowMapPreview = gui.addTexture2D("Shadow Map", sunLight._shadowMap); //TODO
