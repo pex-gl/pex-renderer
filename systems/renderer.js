@@ -408,6 +408,10 @@ ${
         const up = [0, 1, 0];
         vec4.multMat4(target, lightEntity._transform.modelMatrix);
         vec3.add(target, position);
+
+        vec3.set(dir, target);
+        vec3.sub(dir, position);
+        vec3.normalize(dir);
         // vec4.multMat4(up, lightEntity._transform.modelMatrix);
         if (!light._viewMatrix) {
           light._viewMatrix = mat4.create();
