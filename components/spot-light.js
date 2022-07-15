@@ -107,5 +107,9 @@ class SpotLight {
 }
 
 export default (opts) => {
-  return new SpotLight(opts);
+  return {
+    angle: Math.PI / 4,
+    innerAngle: 0,
+    ...opts,
+  };
 };

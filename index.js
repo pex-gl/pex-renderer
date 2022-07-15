@@ -15,6 +15,7 @@ import createOrbiter from "./components/orbiter.js";
 import createReflectionProbe from "./components/reflection-probe.js";
 import createSkin from "./components/skin.js";
 import createSkybox from "./components/skybox.js";
+import createSpotLight from "./components/spot-light.js";
 import createTransform from "./components/transform.js";
 
 import createAnimationSystem from "./systems/animation.js";
@@ -46,6 +47,7 @@ export let components = {
   reflectionProbe: createReflectionProbe,
   skin: createSkin,
   skybox: createSkybox,
+  spotLight: createSpotLight,
   transform: createTransform,
 };
 
