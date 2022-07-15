@@ -29,9 +29,9 @@ const {
   transform,
 } = components;
 
-const MODELS_PATH = "examples/glTF-Sample-Models/2.0";
-// const MODELS_PATH =
-//   "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0";
+// const MODELS_PATH = "examples/glTF-Sample-Models/2.0";
+const MODELS_PATH =
+  "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0";
 
 const State = {
   sunPosition: [2, 2, 2],
@@ -84,7 +84,7 @@ world.addSystem(systems.animation());
 world.addSystem(systems.camera());
 world.addSystem(systems.skybox({ ctx }));
 world.addSystem(systems.reflectionProbe({ ctx }));
-world.addSystem(systems.render({ ctx }));
+world.addSystem(systems.renderer({ ctx, outputEncoding: ctx.Encoding.Gamma }));
 
 const gui = createGUI(ctx);
 
