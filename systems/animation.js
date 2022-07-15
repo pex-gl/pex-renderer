@@ -207,9 +207,11 @@ export default function createAnimationSystem(opts) {
         const joint = entity.skin.joints[i];
         const m = entity.skin.jointMatrices[i];
         mat4.identity(m);
-        const modelMatrix = joint._transform.modelMatrix;
-        mat4.mult(m, modelMatrix);
-        mat4.mult(m, entity.skin.inverseBindMatrices[i]);
+        if (joint._transform) {
+          const modelMatrix = joint._transform.modelMatrix;
+          mat4.mult(m, modelMatrix);
+          mat4.mult(m, entity.skin.inverseBindMatrices[i]);
+        }
         // console.log(m)
       }
     }
