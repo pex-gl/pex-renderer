@@ -191,7 +191,7 @@ world.addSystem(systems.transform());
 world.addSystem(systems.camera());
 world.addSystem(systems.skybox({ ctx }));
 world.addSystem(systems.reflectionProbe({ ctx }));
-world.addSystem(systems.render({ ctx }));
+world.addSystem(systems.renderer({ ctx }));
 
 function rescaleScene(root) {
   const sceneBounds = root.transform.worldBounds;

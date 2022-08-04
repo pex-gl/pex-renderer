@@ -18,6 +18,10 @@ import createSkybox from "./components/skybox.js";
 import createSpotLight from "./components/spot-light.js";
 import createTransform from "./components/transform.js";
 
+import boundingBoxHelper from "./components/bounding-box-helper.js";
+import lightHelper from "./components/light-helper.js";
+import cameraHelper from "./components/camera-helper.js";
+
 import createAnimationSystem from "./systems/animation.js";
 import createCameraSystem from "./systems/camera.js";
 import createGeometrySystem from "./systems/geometry.js";
@@ -34,7 +38,7 @@ export let world = createWorld;
 export let entity = createEntity;
 
 export let components = {
-  ambient: createAmbientLight,
+  ambientLight: createAmbientLight,
   animation: createAnimation,
   areaLight: createAreaLight,
   camera: createCamera,
@@ -49,6 +53,10 @@ export let components = {
   skybox: createSkybox,
   spotLight: createSpotLight,
   transform: createTransform,
+
+  boundingBoxHelper: boundingBoxHelper,
+  cameraHelper: cameraHelper,
+  lightHelper: lightHelper,
 };
 
 export let systems = {
