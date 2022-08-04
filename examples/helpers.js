@@ -16,6 +16,9 @@ import normals from "angle-normals";
 import { centerAndNormalize, getURL } from "./utils.js";
 
 import * as d from "./assets/models/stanford-dragon/stanford-dragon.js";
+import { aabb } from "pex-geom";
+
+const helpers = components.helpers;
 
 const dragon = { ...d };
 
@@ -290,7 +293,7 @@ const floorEntity = createEntity({
     receiveShadows: true,
     castShadows: false,
   }),
-  boundingBoxHelper: true,
+  boundingBoxHelper: helpers.boundingBox({ color: [1, 1, 0, 1] }),
 });
 world.add(floorEntity);
 
@@ -311,6 +314,7 @@ const dragonEntity = createEntity({
   transform: components.transform({
     position: [-1.5, 0, 0],
   }),
+  boundingBoxHelper: helpers.boundingBox(),
 });
 world.add(dragonEntity);
 
@@ -318,7 +322,6 @@ world.add(dragonEntity);
 loadScene(getURL(`assets/models/CesiumMan/CesiumMan.glb`), {
   scale: [0.8, 0.8, 0.8],
   position: [0.5, -0.35, 0],
-  boundingBoxHelper: [1, 0, 1, 1],
 });
 
 //buster drone
@@ -338,6 +341,16 @@ for (let i = 0; i < gridSize; i++) {
   }
 }
 
+function aabbFromInstances(geom, offsets) {
+  const bounds = aabb.fromPoints(aabb.create(), offsets);
+  const geomBounds = aabb.fromPoints(aabb.create(), geom.positions);
+  // const center = aabb.center(bounds)
+  // const geomSize = aabb.size(geomBounds)
+  vec3.add(bounds[0], geomBounds[0]);
+  vec3.add(bounds[1], geomBounds[1]);
+  return bounds;
+}
+
 let cubeG = cube({ sx: 0.1 });
 let cubeInstancesEntity = createEntity({
   geometry: components.geometry({
@@ -347,6 +360,7 @@ let cubeInstancesEntity = createEntity({
     cells: cubeG.cells,
     offsets: grid,
     instances: grid.length,
+    bounds: aabbFromInstances(cubeG, grid),
   }),
   material: components.material({
     baseColor: [0.5, 1, 0.7, 1],
@@ -354,7 +368,7 @@ let cubeInstancesEntity = createEntity({
     receiveShadows: true,
   }),
   transform: components.transform({ position: [1.7, -0.2, 0] }),
-  boundingBoxHelper: true,
+  boundingBoxHelper: helpers.boundingBox({ color: [1, 0.5, 0, 1] }),
 });
 world.add(cubeInstancesEntity);
 
@@ -446,7 +460,9 @@ async function loadScene(url, transformProps) {
 
   console.log("scene", scene);
   scene.entities.forEach((entity) => {
-    entity.boundingBoxHelper = true; //components.boundingBoxHelper();
+    entity.boundingBoxHelper = helpers.boundingBox({
+      color: [0.85, 0.5, 0.85, 1],
+    });
   });
   Object.assign(scene.root.transform, transformProps);
 
