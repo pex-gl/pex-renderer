@@ -18,8 +18,6 @@ import { centerAndNormalize, getURL } from "./utils.js";
 import * as d from "./assets/models/stanford-dragon/stanford-dragon.js";
 import { aabb } from "pex-geom";
 
-const helpers = components.helpers;
-
 const dragon = { ...d };
 
 const State = {
@@ -293,7 +291,7 @@ const floorEntity = createEntity({
     receiveShadows: true,
     castShadows: false,
   }),
-  boundingBoxHelper: helpers.boundingBox({ color: [1, 1, 0, 1] }),
+  boundingBoxHelper: components.boundingBoxHelper({ color: [1, 1, 0, 1] }),
 });
 world.add(floorEntity);
 
@@ -314,7 +312,7 @@ const dragonEntity = createEntity({
   transform: components.transform({
     position: [-1.5, 0, 0],
   }),
-  boundingBoxHelper: helpers.boundingBox(),
+  boundingBoxHelper: components.boundingBoxHelper(),
 });
 world.add(dragonEntity);
 
@@ -368,7 +366,7 @@ let cubeInstancesEntity = createEntity({
     receiveShadows: true,
   }),
   transform: components.transform({ position: [1.7, -0.2, 0] }),
-  boundingBoxHelper: helpers.boundingBox({ color: [1, 0.5, 0, 1] }),
+  boundingBoxHelper: components.boundingBoxHelper({ color: [1, 0.5, 0, 1] }),
 });
 world.add(cubeInstancesEntity);
 
@@ -460,7 +458,7 @@ async function loadScene(url, transformProps) {
 
   console.log("scene", scene);
   scene.entities.forEach((entity) => {
-    entity.boundingBoxHelper = helpers.boundingBox({
+    entity.boundingBoxHelper = components.boundingBoxHelper({
       color: [0.85, 0.5, 0.85, 1],
     });
   });

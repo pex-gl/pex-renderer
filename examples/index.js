@@ -6,6 +6,7 @@
     // "ao",
     "basic",
     "blocks",
+    "multi-view",
     // "brdf",
     // "camera-cinematic-dof",
     // "camera-view",
