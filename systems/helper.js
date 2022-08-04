@@ -192,14 +192,16 @@ export default function createHelperSystem({ ctx }) {
     const cmd = drawHelperLinesCmd;
     cmd.count = geomBuilder.count;
 
-    ctx.submit(cmd, {
-      uniforms: {
-        uProjectionMatrix: cameraEnt.camera.projectionMatrix,
-        uViewMatrix: cameraEnt.camera.viewMatrix,
-        uOutputEncoding: ctx.Encoding.Gamma,
-      },
-      viewport: cameraEnt.camera.viewport,
-    });
+    if (cmd.count > 0) {
+      ctx.submit(cmd, {
+        uniforms: {
+          uProjectionMatrix: cameraEnt.camera.projectionMatrix,
+          uViewMatrix: cameraEnt.camera.viewMatrix,
+          uOutputEncoding: ctx.Encoding.Gamma,
+        },
+        viewport: cameraEnt.camera.viewport,
+      });
+    }
   };
 
   return helperSystem;
