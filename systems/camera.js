@@ -46,6 +46,17 @@ export default function createCameraSystem() {
           mat4.set(camera.invViewMatrix, camera.viewMatrix);
           mat4.invert(camera.invViewMatrix);
         }
+
+        if (camera.dirty) {
+          camera.dirty = false;
+          mat4.perspective(
+            camera.projectionMatrix,
+            camera.fov,
+            camera.aspect,
+            camera.near,
+            camera.far
+          );
+        }
       }
     }
   };
