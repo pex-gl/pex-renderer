@@ -13,8 +13,8 @@
     />
     <style>
       :root {
-        --font-heading: 'Space Grotesk', sans-serif;
-        --font-mono: 'Space Mono', monospace;
+        --font-heading: "Space Grotesk", sans-serif;
+        --font-mono: "Space Mono", monospace;
 
         --color-white: #fff;
         --color-black: #333;
@@ -85,7 +85,7 @@
         font-family: var(--font-heading);
       }
       .Examples-list::after {
-        content: '';
+        content: "";
       }
       .Examples-list-item a {
         display: block;
@@ -140,6 +140,14 @@
           grid-template-columns: repeat(1, 1fr);
         }
       }
+      #graphviz-container {
+        position: absolute;
+        right: 5px;
+        top: 5px;
+        opacity: 0.5;
+        transform-origin: 100% 0;
+        scale: 0.85;
+      }
     </style>
   </head>
   <body>
@@ -157,7 +165,12 @@
     </main>
     <script async src="web_modules/es-module-shims.js" type="module"></script>
     <script src="web_modules/import-map.json" type="importmap-shim"></script>
-
+    <script src="https://cdn.jsdelivr.net/npm/@hpcc-js/wasm/dist/index.min.js"></script>
     <script src="./examples/index.js" type="module-shim"></script>
+    <script>
+      var hpccWasm = window["@hpcc-js/wasm"];
+    </script>
+    <div id="graphviz-container"></div>
+    </script>
   </body>
 </html>

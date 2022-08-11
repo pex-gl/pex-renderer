@@ -2,10 +2,11 @@ import { pipeline as SHADERS, chunks as SHADERS_CHUNKS } from "pex-shaders";
 import { patchVS, patchFS } from "../utils.js";
 import { vec3, vec4, mat3, mat4 } from "pex-math";
 import { aabb } from "pex-geom";
+import createPassDescriptors from "./renderer/passes.js";
 import directionalLight from "../components/directional-light.js";
 
 export default function createrendererSystem(opts) {
-  const ctx = opts.ctx;
+  const { ctx, resourceCache, renderGraph } = opts;
 
   ctx.gl.getExtension("WEBGL_color_buffer_float");
   ctx.gl.getExtension("WEBGL_color_buffer_half_float");
@@ -19,10 +20,12 @@ export default function createrendererSystem(opts) {
   const dummyTexture2D = ctx.texture2D({ width: 4, height: 4 });
   const dummyTextureCube = ctx.textureCube({ width: 4, height: 4 });
   const tempMat4 = mat4.create(); //FIXME
+  const passes = createPassDescriptors(ctx);
 
   let clearCmd = {
     pass: ctx.pass({
       clearColor: [0, 0, 0, 0],
+      clearDepth: 1,
     }),
   };
 
@@ -444,7 +447,7 @@ ${
       sharedUniforms[`uDirectionalLights[${i}].viewMatrix`] = light._viewMatrix || tempMat4; //FIXME;
       sharedUniforms[`uDirectionalLights[${i}].near`] = light._near || 0.1;
       sharedUniforms[`uDirectionalLights[${i}].far`] = light._far || 100;
-      sharedUniforms[`uDirectionalLights[${i}].bias`] = light.bias || 0;
+      sharedUniforms[`uDirectionalLights[${i}].bias`] = light.bias || 0.1;
       sharedUniforms[`uDirectionalLights[${i}].shadowMapSize`] = light.castShadows ? [light._shadowMap.width, light._shadowMap.height] : [0, 0];
       sharedUniforms[`uDirectionalLightShadowMaps[${i}]`] = light.castShadows ? light._shadowMap : dummyTexture2D;
       }
@@ -614,9 +617,38 @@ ${
 
     light.sceneBboxInLightSpace = sceneBboxInLightSpace;
 
-    ctx.submit(light._shadowMapDrawCommand, () => {
-      drawMeshes(null, true, light, entities, shadowCastingEntities);
+    //TODO: can this be all done at once?
+    let colorMap = resourceCache.texture2D(
+      passes.directionalLightShadows.colorMapDesc
+    );
+    colorMap.name = "TempColorMap\n" + colorMap.id;
+
+    let shadowMap = resourceCache.texture2D(
+      passes.directionalLightShadows.shadowMapDesc
+    );
+    shadowMap.name = "ShadowMap\n" + shadowMap.id;
+
+    //TODO: need to create new descriptor to get uniq
+    let passDesc = {
+      ...passes.directionalLightShadows.pass,
+    };
+    passDesc.color[0] = colorMap;
+    passDesc.depth = shadowMap;
+
+    let shadowMapPass = resourceCache.pass(passDesc);
+
+    renderGraph.renderPass({
+      name: "RenderShadowMap",
+      pass: shadowMapPass,
+      render: () => {
+        drawMeshes(null, true, light, entities, shadowCastingEntities);
+      },
     });
+
+    light._shadowMap = shadowMap; // TODO: we borrow it for a frame
+    // ctx.submit(shadowMapDrawCommand, () => {
+    // drawMeshes(null, true, light, entities, shadowCastingEntities);
+    // });
   };
 
   rendererSystem.patchDirectionalLight = (directionalLight) => {
@@ -624,43 +656,44 @@ ${
     directionalLight._projectionMatrix = mat4.create();
 
     //TODO: who will release those?
-    directionalLight._colorMap = ctx.texture2D({
-      name: "directionalLightColorMap",
-      width: 2048,
-      height: 2048,
-      pixelFormat: ctx.PixelFormat.RGBA8,
-      encoding: ctx.Encoding.Linear,
-      min: ctx.Filter.Linear,
-      mag: ctx.Filter.Linear,
-    });
+    // directionalLight._colorMap = ctx.texture2D({
+    //   name: "directionalLightColorMap",
+    //   width: 2048,
+    //   height: 2048,
+    //   pixelFormat: ctx.PixelFormat.RGBA8,
+    //   encoding: ctx.Encoding.Linear,
+    //   min: ctx.Filter.Linear,
+    //   mag: ctx.Filter.Linear,
+    // });
 
-    directionalLight._shadowMap =
-      directionalLight._shadowMap ||
-      ctx.texture2D({
-        name: "directionalLightShadowMap",
-        width: 2048,
-        height: 2048,
-        pixelFormat: ctx.PixelFormat.Depth,
-        encoding: ctx.Encoding.Linear,
-        min: ctx.Filter.Nearest,
-        mag: ctx.Filter.Nearest,
-      });
+    // directionalLight._shadowMap =
+    //   directionalLight._shadowMap ||
+    //   ctx.texture2D({
+    //     name: "directionalLightShadowMap",
+    //     width: 2048,
+    //     height: 2048,
+    //     pixelFormat: ctx.PixelFormat.Depth,
+    //     encoding: ctx.Encoding.Linear,
+    //     min: ctx.Filter.Nearest,
+    //     mag: ctx.Filter.Nearest,
+    //   });
 
-    directionalLight._shadowMapDrawCommand = {
-      name: "DirectionalLight.shadowMap",
-      pass: ctx.pass({
-        name: "DirectionalLight.shadowMap",
-        color: [directionalLight._colorMap],
-        depth: directionalLight._shadowMap,
-        clearColor: [0, 0, 0, 1],
-        clearDepth: 1,
-      }),
-      viewport: [0, 0, 2048, 2048], // TODO: viewport bug
-      // colorMask: [0, 0, 0, 0] // TODO
-    };
+    // directionalLight._shadowMapDrawCommand = {
+    //   name: "DirectionalLight.shadowMap",
+    //   pass: ctx.pass({
+    //     name: "DirectionalLight.shadowMap",
+    //     color: [directionalLight._colorMap],
+    //     depth: directionalLight._shadowMap,
+    //     clearColor: [0, 0, 0, 1],
+    //     clearDepth: 1,
+    //   }),
+    //   viewport: [0, 0, 2048, 2048], // TODO: viewport bug
+    //   scissor: [0, 0, 2048, 2048], //TODO: disable that and try with new render pass system
+    //   // colorMask: [0, 0, 0, 0] // TODO
+    // };
   };
 
-  rendererSystem.update = (entities) => {
+  rendererSystem.update = (entities, options = {}) => {
     ctx.submit(clearCmd);
 
     const rendererableEntities = entities.filter(
@@ -678,7 +711,10 @@ ${
       if (!lightEntity.directionalLight._viewMatrix) {
         rendererSystem.patchDirectionalLight(lightEntity.directionalLight);
       }
-      if (lightEntity.directionalLight.castShadows) {
+      if (
+        lightEntity.directionalLight.castShadows &&
+        options.shadowPass !== false
+      ) {
         rendererSystem.updateDirectionalLightShadowMap(
           lightEntity,
           entities,
@@ -687,6 +723,9 @@ ${
       }
     });
 
+    const shadowMaps = directionalLightEntities.map((e) => {
+      return e.directionalLight._shadowMap;
+    });
     cameraEntities.forEach((camera) => {
       let entitiesToDraw = rendererableEntities;
       if (camera.layer) {
@@ -694,15 +733,70 @@ ${
           return !e.layer || e.layer == camera.layer;
         });
       }
-      drawMeshes(
-        camera,
-        false,
-        null,
-        entities,
-        entitiesToDraw,
-        skyboxEntities[0]?._skybox,
-        true
+      //TODO: this should be done on the fly by render graph
+      passes.mainPass.outputTextureDesc.width = ctx.gl.drawingBufferWidth;
+      passes.mainPass.outputTextureDesc.height = ctx.gl.drawingBufferHeight;
+      const mainPassOutputTexture = resourceCache.texture2D(
+        passes.mainPass.outputTextureDesc
       );
+      mainPassOutputTexture.name = `mainPassOutput\n${mainPassOutputTexture.id}`;
+
+      passes.mainPass.outputDepthTextureDesc.width = ctx.gl.drawingBufferWidth;
+      passes.mainPass.outputDepthTextureDesc.height =
+        ctx.gl.drawingBufferHeight;
+      const outputDepthTexture = resourceCache.texture2D(
+        passes.mainPass.outputDepthTextureDesc
+      );
+      outputDepthTexture.name = `mainPassDepth\n${outputDepthTexture.id}`;
+
+      const mainPass = resourceCache.pass({
+        color: [mainPassOutputTexture],
+        depth: outputDepthTexture,
+        clearColor: [0, 0, 0, 1],
+        clearDepth: 1,
+      });
+      renderGraph.renderPass({
+        name: "MainPass",
+        uses: [...shadowMaps],
+        pass: mainPass,
+        render: () => {
+          drawMeshes(
+            camera,
+            false,
+            null,
+            entities,
+            entitiesToDraw,
+            skyboxEntities[0]?._skybox,
+            true
+          );
+        },
+      });
+
+      const postProcessingPipeline = resourceCache.pipeline(
+        passes.tonemap.pipelineDesc
+      );
+      const fullscreenTriangle = resourceCache.fullscreenTriangle();
+
+      const postProcessingCmd = {
+        attributes: fullscreenTriangle.attributes,
+        count: fullscreenTriangle.count,
+        pipeline: postProcessingPipeline,
+        uniforms: {
+          uViewportSize: [
+            ctx.gl.drawingBufferWidth,
+            ctx.gl.drawingBufferHeight,
+          ],
+          uTexture: mainPassOutputTexture,
+        },
+      };
+      renderGraph.renderPass({
+        name: "PostProcessingPass",
+        // pass: ctx.pass({ color: [{ id: -1 }] }),
+        uses: [mainPassOutputTexture],
+        render: () => {
+          ctx.submit(postProcessingCmd);
+        },
+      });
     });
   };
 
