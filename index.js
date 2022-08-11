@@ -31,7 +31,10 @@ import createRendererSystem from "./systems/renderer.js";
 import createSkyboxSystem from "./systems/skybox.js";
 import createTransformSystem from "./systems/transform.js";
 
+import createRenderGraph from "./render-graph.js";
+
 import loadGltf from "./loaders/glTF.js";
+import createResourceCache from "./resource-cache.js";
 
 export let world = createWorld;
 
@@ -73,3 +76,6 @@ export let systems = {
 export let loaders = {
   gltf: loadGltf,
 };
+
+export let renderGraph = createRenderGraph;
+export let resourceCache = createResourceCache;
