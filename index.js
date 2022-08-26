@@ -25,11 +25,15 @@ import cameraHelper from "./components/camera-helper.js";
 import createAnimationSystem from "./systems/animation.js";
 import createCameraSystem from "./systems/camera.js";
 import createGeometrySystem from "./systems/geometry.js";
-import createHelperSystem from "./systems/helper.js";
 import createReflectionProbeSystem from "./systems/reflection-probe.js";
-import createRendererSystem from "./systems/renderer.js";
+import createRenderPipelineSystem from "./systems/render-pipeline.js";
 import createSkyboxSystem from "./systems/skybox.js";
 import createTransformSystem from "./systems/transform.js";
+
+import createBasicRenderer from "./systems/renderer/basic.js";
+import createHelperSystem from "./systems/renderer/helper.js";
+import createLineRenderer from "./systems/renderer/line.js";
+// import createStandardRenderer from "./systems/renderer/standard";
 
 import createRenderGraph from "./render-graph.js";
 
@@ -66,11 +70,16 @@ export let systems = {
   animation: createAnimationSystem,
   camera: createCameraSystem,
   geometry: createGeometrySystem,
-  helper: createHelperSystem,
   reflectionProbe: createReflectionProbeSystem,
-  renderer: createRendererSystem,
+  renderPipeline: createRenderPipelineSystem,
   skybox: createSkyboxSystem,
   transform: createTransformSystem,
+  renderer: {
+    basic: createBasicRenderer,
+    line: createLineRenderer,
+    helper: createHelperSystem,
+    // standard: createStandardRenderer,
+  },
 };
 
 export let loaders = {

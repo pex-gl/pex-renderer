@@ -15,7 +15,8 @@ import { aabb } from "pex-geom";
 import createGUI from "pex-gui";
 import parseHdr from "parse-hdr";
 import { getURL } from "./utils.js";
-
+import { fromHSL } from "pex-color";
+import random from "pex-random";
 import { serializeGraph } from "https://cdn.skypack.dev/@thi.ng/dot";
 
 const dotGraph = {
@@ -114,6 +115,14 @@ const {
 const ctx = createContext({
   type: "webgl",
 });
+
+window.addEventListener("resize", () => {
+  ctx.set({
+    width: window.innerWidth,
+    height: window.innerHeight,
+  });
+});
+
 ctx.gl.getExtension("OES_element_index_uint"); //TEMP
 
 const entities = (window.entities = []);
@@ -197,7 +206,7 @@ function updateStats() {
 gui.addButton("Debug", () => {
   debugNextFrame = true;
   console.log(ctx.stats);
-  texture2DLabel.setTitle(ctx.stats);
+  // texture2DLabel.setTitle(ctx.stats);
 });
 
 gui.addButton("Tree", () => {
@@ -240,7 +249,7 @@ const floorEntity = createEntity({
   }),
   geometry: geometry(cube({ sx: 3, sy: 0.1, sz: 3 })),
   material: material({
-    baseColor: [1, 1, 1, 1],
+    baseColor: [1, 0.8, 0.2, 1],
     metallic: 0,
     roughness: 0.2,
   }),
@@ -248,13 +257,34 @@ const floorEntity = createEntity({
 });
 entities.push(floorEntity);
 
+const cubesEntity = createEntity({
+  transform: transform({
+    position: [0, 1, 0],
+  }),
+  geometry: geometry({
+    ...cube({ sx: 1.5, sy: 0.5, sz: 1.5 }),
+    // offsets: new Array(64).fill(0).map(() => random.vec3(3)),
+    instances: 64,
+  }),
+  // geometry: geometry({
+  //   ...cube({ sx: 1, sy: 1, sz: 1 }),
+  //   offsets: new Array(64).fill(0).map(() => random.vec3(3)),
+  // }),
+  material: material({
+    baseColor: [0.2, 0.9, 0.2, 1],
+    blend: true,
+  }),
+  boundingBoxHelper: components.boundingBoxHelper(),
+});
+entities.push(cubesEntity);
+
 const spinningEntity = createEntity({
   transform: transform({
     position: [0, 1, 0],
   }),
   geometry: geometry(cube()),
   material: material({
-    baseColor: [1, 1, 1, 1],
+    baseColor: [0.5, 0.5, 0.5, 1],
     metallic: 0,
     roughness: 0.5,
   }),
@@ -262,13 +292,37 @@ const spinningEntity = createEntity({
 });
 entities.push(spinningEntity);
 
+const linePositions = [];
+const lineVertexColors = [];
+for (let i = 0; i < 10; i++) {
+  linePositions.push(random.vec3(5), random.vec3(5));
+  const c = fromHSL([0, 0, 0, 1], random.float(), 0.5, 0.5);
+  lineVertexColors.push(c, c);
+}
+
+console.log("lineVertexColors", lineVertexColors);
+
+const linesEntity = createEntity({
+  transform: transform(),
+  geometry: geometry({
+    positions: linePositions,
+    vertexColors: lineVertexColors,
+  }),
+  material: material({
+    baseColor: [1, 1, 1, 1],
+  }),
+  boundingBoxHelper: components.boundingBoxHelper(),
+  drawSegments: true,
+});
+entities.push(linesEntity);
+
 const sphereEntity = createEntity({
   transform: transform({
     position: [0, 2, 0],
   }),
   geometry: geometry(sphere()),
   material: material({
-    baseColor: [1, 1, 1, 1],
+    baseColor: [1, 0, 1, 1],
     metallic: 0,
     roughness: 0.5,
   }),
@@ -344,13 +398,23 @@ const transformSys = systems.transform();
 const cameraSys = systems.camera();
 const skyboxSys = systems.skybox({ ctx });
 const reflectionProbeSys = systems.reflectionProbe({ ctx });
-const rendererSys = systems.renderer({
+const renderPipelineSys = systems.renderPipeline({
   ctx,
   resourceCache,
   renderGraph,
   outputEncoding: ctx.Encoding.Linear,
 });
-const helperSys = systems.helper({ ctx });
+const basicRendererSystem = systems.renderer.basic({
+  ctx,
+  resourceCache,
+  renderGraph,
+});
+const lineRendererSystem = systems.renderer.line({
+  ctx,
+  resourceCache,
+  renderGraph,
+});
+const helperSys = systems.renderer.helper({ ctx });
 
 function createView(viewport) {
   const passCmd = {
@@ -375,11 +439,42 @@ function createView(viewport) {
 }
 
 const view1 = createView([0, 0, 1, 1]);
-const view2 = createView([0.5, 0, 0.5, 1]);
+const view2 = createView([0, 0.5, 1, 0.5]);
 
 let shadowMapPreview;
 
 let frame = 0;
+
+const clearCmd = {
+  pass: ctx.pass({
+    clearColor: [0.3, 0.3, 0.3, 1],
+    clearDepth: 1,
+  }),
+};
+
+const basicCmd = {
+  name: "basicCmd",
+  pipeline: ctx.pipeline({
+    vert: /*glsl*/ `
+    attribute vec3 aPosition;
+    uniform mat4 uProjectionMatrix;
+    uniform mat4 uViewMatrix;
+    uniform mat4 uModelMatrix;
+    void main() {
+      gl_Position = uProjectionMatrix * uViewMatrix * uModelMatrix * vec4(aPosition, 1.0);
+    }
+    `,
+    frag: /*glsl*/ `
+    precision highp float;
+    uniform vec4 uBaseColor;
+    void main() {
+      gl_FragData[0] = uBaseColor;
+    }
+    `,
+    depthWrite: true,
+    depthTest: true,
+  }),
+};
 
 ctx.frame(() => {
   frame++;
@@ -435,7 +530,10 @@ ctx.frame(() => {
         e.camera.dirty = true;
       });
     cameraSys.update(entities);
-    rendererSys.update(entities);
+    renderPipelineSys.update(entities, [
+      basicRendererSystem,
+      lineRendererSystem,
+    ]);
     helperSys.update(entities);
   });
 
@@ -462,7 +560,7 @@ ctx.frame(() => {
   //       e.camera.dirty = true;
   //     });
   //   cameraSys.update(entities);
-  //   rendererSys.update(entities);
+  //   // renderPipelineSys.update(entities);
   // });
 
   if (frame == 1) {
@@ -491,13 +589,13 @@ ctx.frame(() => {
   // drawCmd.count = fullscreenTriangle.count;
   // ctx.submit(drawCmd);
 
-  ctx.debug(false);
   renderGraph.endFrame();
   resourceCache.endFrame();
 
   gui.draw();
 
   updateStats();
+  ctx.debug(false);
 
   window.dispatchEvent(new CustomEvent("pex-screenshot"));
 });

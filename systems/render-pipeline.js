@@ -5,7 +5,7 @@ import { aabb } from "pex-geom";
 import createPassDescriptors from "./renderer/passes.js";
 import directionalLight from "../components/directional-light.js";
 
-export default function createrendererSystem(opts) {
+export default function createRenderPipelineSystem(opts) {
   const { ctx, resourceCache, renderGraph } = opts;
 
   ctx.gl.getExtension("WEBGL_color_buffer_float");
@@ -57,11 +57,12 @@ export default function createrendererSystem(opts) {
     },
   };
 
-  const rendererSystem = {
+  const renderPipelineSystem = {
     cache: {},
     debug: true,
     shadowQuality: 1, //TODO: not implemented  shadowQuality
     outputEncoding: opts.outputEncoding || ctx.Encoding.Linear,
+    renderers: [],
   };
 
   function buildProgram(vertSrc, fragSrc) {
@@ -313,7 +314,39 @@ ${
     return { pipeline, materialUniforms };
   }
 
-  function drawMeshes(
+  function drawMeshes({
+    cameraEntity,
+    shadowMapping,
+    shadowMappingLight,
+    entities,
+    renderableEntities,
+    skybox,
+    forward,
+    renderers,
+  }) {
+    const renderView = {};
+    if (cameraEntity) {
+      renderView.camera = cameraEntity.camera;
+    }
+    if (shadowMappingLight) {
+      renderView.camera = {
+        projectionMatrix: shadowMappingLight._projectionMatrix,
+        viewMatrix: shadowMappingLight._viewMatrix,
+      };
+    }
+    renderers.forEach((renderer) => {
+      if (!shadowMapping) {
+        if (renderer.renderStages.opaque) {
+          renderer.renderStages.opaque(renderView, entities);
+        }
+        if (renderer.renderStages.transparent) {
+          renderer.renderStages.transparent(renderView, entities);
+        }
+      }
+    });
+  }
+
+  function drawMeshesOld(
     cameraEntity,
     shadowMapping,
     shadowMappingLight,
@@ -329,7 +362,7 @@ ${
     // }
 
     const sharedUniforms = {
-      uOutputEncoding: rendererSystem.outputEncoding,
+      uOutputEncoding: renderPipelineSystem.outputEncoding,
     };
 
     // prettier-ignore
@@ -570,10 +603,11 @@ ${
     ];
   }
 
-  rendererSystem.updateDirectionalLightShadowMap = function (
+  renderPipelineSystem.updateDirectionalLightShadowMap = function (
     lightEnt,
     entities,
-    shadowCastingEntities
+    shadowCastingEntities,
+    renderers
   ) {
     const light = lightEnt.directionalLight;
     // const position = lightEnt._transform.worldPosition;
@@ -635,13 +669,22 @@ ${
 
     let shadowMapPass = resourceCache.pass(passDesc);
 
-    renderGraph.renderPass({
-      name: "RenderShadowMap",
-      pass: shadowMapPass,
-      render: () => {
-        drawMeshes(null, true, light, entities, shadowCastingEntities);
-      },
-    });
+    if (false)
+      //TEMP
+      renderGraph.renderPass({
+        name: "RenderShadowMap",
+        pass: shadowMapPass,
+        render: () => {
+          drawMeshes({
+            shadowMapping: true,
+            shadowMappingLight: light,
+            entities,
+            renderableEntities: shadowCastingEntities,
+            forward: false,
+            renderers,
+          });
+        },
+      });
 
     light._shadowMap = shadowMap; // TODO: we borrow it for a frame
     // ctx.submit(shadowMapDrawCommand, () => {
@@ -649,7 +692,7 @@ ${
     // });
   };
 
-  rendererSystem.patchDirectionalLight = (directionalLight) => {
+  renderPipelineSystem.patchDirectionalLight = (directionalLight) => {
     directionalLight._viewMatrix = mat4.create();
     directionalLight._projectionMatrix = mat4.create();
 
@@ -691,7 +734,7 @@ ${
     // };
   };
 
-  rendererSystem.update = (entities, options = {}) => {
+  renderPipelineSystem.update = (entities, renderers, options = {}) => {
     ctx.submit(clearCmd);
 
     const rendererableEntities = entities.filter(
@@ -707,16 +750,19 @@ ${
 
     directionalLightEntities.forEach((lightEntity) => {
       if (!lightEntity.directionalLight._viewMatrix) {
-        rendererSystem.patchDirectionalLight(lightEntity.directionalLight);
+        renderPipelineSystem.patchDirectionalLight(
+          lightEntity.directionalLight
+        );
       }
       if (
         lightEntity.directionalLight.castShadows &&
         options.shadowPass !== false
       ) {
-        rendererSystem.updateDirectionalLightShadowMap(
+        renderPipelineSystem.updateDirectionalLightShadowMap(
           lightEntity,
           entities,
-          shadowCastingEntities
+          shadowCastingEntities,
+          renderers
         );
       }
     });
@@ -758,15 +804,15 @@ ${
         uses: [...shadowMaps],
         pass: mainPass,
         render: () => {
-          drawMeshes(
-            camera,
-            false,
-            null,
-            entities,
-            entitiesToDraw,
-            skyboxEntities[0]?._skybox,
-            true
-          );
+          drawMeshes({
+            cameraEntity: camera,
+            shadowMapping: false,
+            entities: entities,
+            renderableEntities: entitiesToDraw,
+            skybox: skyboxEntities[0]?._skybox,
+            forward: true,
+            renderers: renderers,
+          });
         },
       });
 
@@ -798,5 +844,5 @@ ${
     });
   };
 
-  return rendererSystem;
+  return renderPipelineSystem;
 }
