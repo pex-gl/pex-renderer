@@ -20,6 +20,8 @@ class RenderGraph {
     if (colorTextureId) {
       this.dot.resourceNode(colorTextureId, colorTextureName);
       this.dot.edge(passId, colorTextureId);
+    } else {
+      this.dot.edge(passId, "Window");
     }
 
     const depthTextureId = opts?.pass?.opts?.depth?.id;
