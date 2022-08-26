@@ -146,6 +146,7 @@ export default function createHelperSystem({ ctx }) {
         ? patchFS(SHADERS.helper.frag)
         : SHADERS.helper.frag,
       depthTest: true,
+      depthWrite: false,
       primitive: ctx.Primitive.Lines,
     }),
     attributes: {
@@ -159,49 +160,53 @@ export default function createHelperSystem({ ctx }) {
     type: "camera-system",
   };
 
-  helperSystem.update = (entities) => {
-    const cameraEntities = entities.filter((e) => e.camera);
+  helperSystem.renderStages = {
+    opaque: (renderView, entities) => {
+      const { camera } = renderView;
 
-    geomBuilder.reset();
-    for (let entity of entities) {
-      if (entity.transform?.position && entity.boundingBoxHelper) {
-        const positions = getBBoxPositionsList(entity.transform.worldBounds);
-        positions.forEach((pos) => {
-          geomBuilder.addPosition(pos);
-          geomBuilder.addColor(entity.boundingBoxHelper?.color || [1, 0, 0, 1]);
-        });
-        // geomBuilder.addPosition([0, 0, 0]);
-        // geomBuilder.addPosition(entity.transform?.position);
-        // geomBuilder.addColor([1, 0, 0, 1]);
-        // geomBuilder.addColor([0, 1, 0, 1]);
-      }
-      if (entity.lightHelper) {
-        if (entity.directionalLight) {
-          drawDirectionalLight(geomBuilder, entity);
+      geomBuilder.reset();
+      for (let entity of entities) {
+        if (entity.transform?.position && entity.boundingBoxHelper) {
+          const positions = getBBoxPositionsList(entity.transform.worldBounds);
+          positions.forEach((pos) => {
+            geomBuilder.addPosition(pos);
+            geomBuilder.addColor(
+              entity.boundingBoxHelper?.color || [1, 0, 0, 1]
+            );
+          });
+          // geomBuilder.addPosition([0, 0, 0]);
+          // geomBuilder.addPosition(entity.transform?.position);
+          // geomBuilder.addColor([1, 0, 0, 1]);
+          // geomBuilder.addColor([0, 1, 0, 1]);
         }
+        if (entity.lightHelper) {
+          if (entity.directionalLight) {
+            drawDirectionalLight(geomBuilder, entity);
+          }
+        }
+        // if (entity.boundingBoxHelper) {
+        // if (entity.transform)
+        // }
       }
-      // if (entity.boundingBoxHelper) {
-      // if (entity.transform)
-      // }
-    }
 
-    const cameraEnt = cameraEntities[0];
+      ctx.update(helperPositionVBuffer, { data: geomBuilder.positions });
+      ctx.update(helperColorVBuffer, { data: geomBuilder.colors });
+      const cmd = drawHelperLinesCmd;
+      cmd.count = geomBuilder.count;
 
-    ctx.update(helperPositionVBuffer, { data: geomBuilder.positions });
-    ctx.update(helperColorVBuffer, { data: geomBuilder.colors });
-    const cmd = drawHelperLinesCmd;
-    cmd.count = geomBuilder.count;
+      console.log("bboxHelper", cmd.count);
 
-    if (cmd.count > 0) {
-      ctx.submit(cmd, {
-        uniforms: {
-          uProjectionMatrix: cameraEnt.camera.projectionMatrix,
-          uViewMatrix: cameraEnt.camera.viewMatrix,
-          uOutputEncoding: ctx.Encoding.Gamma,
-        },
-        viewport: cameraEnt.camera.viewport,
-      });
-    }
+      if (cmd.count > 0) {
+        ctx.submit(cmd, {
+          uniforms: {
+            uProjectionMatrix: camera.projectionMatrix,
+            uViewMatrix: camera.viewMatrix,
+            uOutputEncoding: ctx.Encoding.Gamma,
+          },
+          viewport: camera.viewport,
+        });
+      }
+    },
   };
 
   helperSystem.update = (entities) => {};

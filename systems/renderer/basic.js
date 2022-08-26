@@ -45,12 +45,12 @@ export default function createBasicRendererSystem(opts) {
       }
       `,
       depthWrite: false,
-      depthTest: false,
+      depthTest: true,
       blend: true,
       blendSrcRGBFactor: ctx.BlendFactor.One,
       blendSrcAlphaFactor: ctx.BlendFactor.One,
-      blendDstRGBFactor: ctx.BlendFactor.One,
-      blendDstAlphaFactor: ctx.BlendFactor.One,
+      blendDstRGBFactor: ctx.BlendFactor.OneMinusSrcAlpha,
+      blendDstAlphaFactor: ctx.BlendFactor.OneMinusSrcAlpha,
     }),
   };
 
