@@ -629,9 +629,7 @@ ${
     shadowMap.name = "ShadowMap\n" + shadowMap.id;
 
     //TODO: need to create new descriptor to get uniq
-    let passDesc = {
-      ...passes.directionalLightShadows.pass,
-    };
+    let passDesc = { ...passes.directionalLightShadows.pass };
     passDesc.color[0] = colorMap;
     passDesc.depth = shadowMap;
 
