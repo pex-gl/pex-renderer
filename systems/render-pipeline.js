@@ -16,6 +16,7 @@ export default function createRenderPipelineSystem(opts) {
   ctx.gl.getExtension("OES_standard_derivatives");
   ctx.gl.getExtension("WEBGL_draw_buffers");
   ctx.gl.getExtension("OES_texture_float");
+  ctx.gl.getExtension("EXT_float_blend");
 
   const dummyTexture2D = ctx.texture2D({ width: 4, height: 4 });
   const dummyTextureCube = ctx.textureCube({ width: 4, height: 4 });
@@ -334,7 +335,6 @@ ${
         viewMatrix: shadowMappingLight._viewMatrix,
       };
     }
-    console.log("RenderPipeline");
     renderers.forEach((renderer) => {
       if (!shadowMapping) {
         if (renderer.renderStages.opaque) {
@@ -740,8 +740,9 @@ ${
     // };
   };
 
-  renderPipelineSystem.update = (entities, renderers, options = {}) => {
-    ctx.submit(clearCmd);
+  renderPipelineSystem.update = (entities, options = {}) => {
+    let { renderView, renderers } = options;
+    // ctx.submit(clearCmd);
 
     const rendererableEntities = entities.filter(
       (e) => e.geometry && e.material
@@ -753,6 +754,13 @@ ${
     const shadowCastingEntities = rendererableEntities.filter(
       (e) => e.material.castShadows
     );
+
+    if (!renderView) {
+      renderView = {
+        camera: cameraEntities[0].camera,
+        viewport: [0, 0, ctx.gl.drawingBufferWidth, ctx.gl.drawingBufferHeight],
+      };
+    }
 
     directionalLightEntities.forEach((lightEntity) => {
       if (!lightEntity.directionalLight._viewMatrix) {
@@ -776,78 +784,80 @@ ${
     const shadowMaps = directionalLightEntities.map((e) => {
       return e.directionalLight._shadowMap;
     });
-    cameraEntities.forEach((camera) => {
-      let entitiesToDraw = rendererableEntities;
-      if (camera.layer) {
-        entitiesToDraw = rendererableEntities.filter((e) => {
-          return !e.layer || e.layer == camera.layer;
-        });
-      }
-      //TODO: this should be done on the fly by render graph
-      passes.mainPass.outputTextureDesc.width = ctx.gl.drawingBufferWidth;
-      passes.mainPass.outputTextureDesc.height = ctx.gl.drawingBufferHeight;
-      const mainPassOutputTexture = resourceCache.texture2D(
-        passes.mainPass.outputTextureDesc
-      );
-      mainPassOutputTexture.name = `mainPassOutput\n${mainPassOutputTexture.id}`;
-
-      passes.mainPass.outputDepthTextureDesc.width = ctx.gl.drawingBufferWidth;
-      passes.mainPass.outputDepthTextureDesc.height =
-        ctx.gl.drawingBufferHeight;
-      const outputDepthTexture = resourceCache.texture2D(
-        passes.mainPass.outputDepthTextureDesc
-      );
-      outputDepthTexture.name = `mainPassDepth\n${outputDepthTexture.id}`;
-
-      const mainPass = resourceCache.pass({
-        color: [mainPassOutputTexture],
-        depth: outputDepthTexture,
-        clearColor: [0, 0, 0, 1],
-        clearDepth: 1,
+    // cameraEntities.forEach((camera) => {
+    let entitiesToDraw = rendererableEntities;
+    if (renderView.camera.layer) {
+      entitiesToDraw = rendererableEntities.filter((e) => {
+        return !e.layer || e.layer == renderView.camera.layer;
       });
-      renderGraph.renderPass({
-        name: "MainPass",
-        uses: [...shadowMaps],
-        pass: mainPass,
-        render: () => {
-          drawMeshes({
-            cameraEntity: camera,
-            shadowMapping: false,
-            entities: entities,
-            renderableEntities: entitiesToDraw,
-            skybox: skyboxEntities[0]?._skybox,
-            forward: true,
-            renderers: renderers,
-          });
-        },
-      });
+    }
 
-      const postProcessingPipeline = resourceCache.pipeline(
-        passes.tonemap.pipelineDesc
-      );
-      const fullscreenTriangle = resourceCache.fullscreenTriangle();
+    //TODO: this should be done on the fly by render graph
+    passes.mainPass.outputTextureDesc.width = renderView.viewport[2];
+    passes.mainPass.outputTextureDesc.height = renderView.viewport[3];
+    const mainPassOutputTexture = resourceCache.texture2D(
+      passes.mainPass.outputTextureDesc
+    );
+    mainPassOutputTexture.name = `mainPassOutput\n${mainPassOutputTexture.id}`;
 
-      const postProcessingCmd = {
-        attributes: fullscreenTriangle.attributes,
-        count: fullscreenTriangle.count,
-        pipeline: postProcessingPipeline,
-        uniforms: {
-          uViewportSize: [
-            ctx.gl.drawingBufferWidth,
-            ctx.gl.drawingBufferHeight,
-          ],
-          uTexture: mainPassOutputTexture,
-        },
-      };
-      renderGraph.renderPass({
-        name: "PostProcessingPass",
-        // pass: ctx.pass({ color: [{ id: -1 }] }),
-        uses: [mainPassOutputTexture],
-        render: () => {
-          ctx.submit(postProcessingCmd);
-        },
-      });
+    passes.mainPass.outputDepthTextureDesc.width = renderView.viewport[2];
+    passes.mainPass.outputDepthTextureDesc.height = renderView.viewport[3];
+    const outputDepthTexture = resourceCache.texture2D(
+      passes.mainPass.outputDepthTextureDesc
+    );
+    outputDepthTexture.name = `mainPassDepth\n${outputDepthTexture.id}`;
+
+    const mainPass = resourceCache.pass({
+      color: [mainPassOutputTexture],
+      depth: outputDepthTexture,
+      clearColor: [0, 1, 0, 1],
+      clearDepth: 1,
     });
+    renderGraph.renderPass({
+      name: `MainPass ${renderView.viewport}`,
+      uses: [...shadowMaps],
+      renderView: {
+        ...renderView,
+        viewport: [0, 0, renderView.viewport[2], renderView.viewport[3]],
+      },
+      pass: mainPass,
+      render: () => {
+        drawMeshes({
+          cameraEntity: renderView.cameraEntity,
+          shadowMapping: false,
+          entities: entities,
+          renderableEntities: entitiesToDraw,
+          skybox: skyboxEntities[0]?._skybox,
+          forward: true,
+          renderers: renderers,
+        });
+      },
+    });
+
+    const postProcessingPipeline = resourceCache.pipeline(
+      passes.tonemap.pipelineDesc
+    );
+    const fullscreenTriangle = resourceCache.fullscreenTriangle();
+
+    const postProcessingCmd = {
+      attributes: fullscreenTriangle.attributes,
+      count: fullscreenTriangle.count,
+      pipeline: postProcessingPipeline,
+      uniforms: {
+        uViewport: renderView.viewport,
+        uTexture: mainPassOutputTexture,
+      },
+    };
+    renderGraph.renderPass({
+      name: "PostProcessingPass",
+      // pass: ctx.pass({ color: [{ id: -1 }] }),
+      uses: [mainPassOutputTexture],
+      renderView,
+      render: () => {
+        ctx.submit(postProcessingCmd);
+      },
+    });
+    // });
   };
 
   return renderPipelineSystem;

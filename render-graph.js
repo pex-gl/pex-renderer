@@ -44,12 +44,15 @@ class RenderGraph {
   }
 
   endFrame() {
+    //this should be render view
     this.renderPasses.forEach((opts) => {
-      const { pass, render } = opts;
+      const { pass, renderView, render } = opts;
 
       this.ctx.submit(
         {
           pass: pass,
+          viewport: renderView.viewport,
+          scissor: renderView.viewport,
         },
         () => {
           if (render) render();
