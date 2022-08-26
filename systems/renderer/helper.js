@@ -194,8 +194,6 @@ export default function createHelperSystem({ ctx }) {
       const cmd = drawHelperLinesCmd;
       cmd.count = geomBuilder.count;
 
-      console.log("bboxHelper", cmd.count);
-
       if (cmd.count > 0) {
         ctx.submit(cmd, {
           uniforms: {

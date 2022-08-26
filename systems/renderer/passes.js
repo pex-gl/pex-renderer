@@ -58,7 +58,7 @@ function createPassDescriptors(ctx) {
           `,
         frag: /*glsl*/ `
           precision highp float;
-          uniform vec2 uViewportSize;
+          uniform vec4 uViewport;
           uniform sampler2D uTexture;
 
           vec3 tonemapAces( vec3 x ) {
@@ -71,7 +71,7 @@ function createPassDescriptors(ctx) {
           }
 
           void main () {
-            vec2 vUV = vec2(gl_FragCoord.x / uViewportSize.x, gl_FragCoord.y / uViewportSize.y);
+            vec2 vUV = vec2((gl_FragCoord.x - uViewport.x) / uViewport.z, (gl_FragCoord.y - uViewport.y) / uViewport.w);
             gl_FragColor = vec4(vUV, 0.0, 1.0);
             vec4 color = texture2D(uTexture, vUV);
             color.rgb *= 0.5;

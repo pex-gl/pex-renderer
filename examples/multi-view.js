@@ -118,9 +118,11 @@ const ctx = createContext({
 
 window.addEventListener("resize", () => {
   ctx.set({
-    width: window.innerWidth,
-    height: window.innerHeight,
+    width: window.innerWidth * 1.5,
+    height: window.innerHeight * 1.5,
   });
+  ctx.gl.canvas.style.width = window.innerWidth + "px";
+  ctx.gl.canvas.style.height = window.innerHeight + "px";
 });
 
 ctx.gl.getExtension("OES_element_index_uint"); //TEMP
@@ -418,30 +420,36 @@ const lineRendererSystem = systems.renderer.line({
 });
 const helperRendererSys = systems.renderer.helper({ ctx });
 
-function createView(viewport) {
-  const passCmd = {
-    viewport: [0, 0, 1, 1],
-  };
-  passCmd.scissor = passCmd.viewport;
+function createView(cameraEntity, viewport) {
   const view = {
-    viewport: passCmd.viewport,
+    viewport: viewport,
+    cameraEntity: cameraEntity,
   };
   view.draw = function (cb) {
     const W = ctx.gl.drawingBufferWidth;
     const H = ctx.gl.drawingBufferHeight;
-    passCmd.viewport[0] = viewport[0] * W;
-    passCmd.viewport[1] = viewport[1] * H;
-    passCmd.viewport[2] = viewport[2] * W;
-    passCmd.viewport[3] = viewport[3] * H;
-    ctx.submit(passCmd, () => {
-      cb(view);
-    });
+    const renderView = {
+      viewport: [
+        viewport[0] * W,
+        viewport[1] * H,
+        viewport[2] * W,
+        viewport[3] * H,
+      ],
+      cameraEntity: cameraEntity,
+      camera: cameraEntity.camera,
+    };
+    const aspect = renderView.viewport[2] / renderView.viewport[3];
+    cameraEntity.camera.aspect = aspect;
+    cameraEntity.camera.dirty = true;
+    cameraSys.update(entities);
+
+    cb(renderView, viewport);
   };
   return view;
 }
 
-const view1 = createView([0, 0, 1, 1]);
-const view2 = createView([0, 0.5, 1, 0.5]);
+const view1 = createView(cameraEntity, [0.0, 0.0, 0.5, 1]);
+const view2 = createView(cameraEntity, [0.5, 0.0, 0.5, 1]);
 
 let shadowMapPreview;
 
@@ -508,62 +516,22 @@ ctx.frame(() => {
   skyboxSys.update(entities);
   reflectionProbeSys.update(entities);
 
-  //draw left side, debug view
-  // dot.node("screen", "Screen");
-  // dot.node("view1", "View 1");
-  // dot.node("rendererSys1", "RendererSys", "octagon");
-  // dot.node("helperSys1", "HelperSys", "octagon");
-
-  // dot.node("shadowMap", "shadowMap");
-
-  // dot.node("shadowPassPhase", ["shadowPassPhase", "lines", "pbr"]);
-
-  // dot.edge("shadowMap", "rendererSys1");
-  // dot.edge("view1", "rendererSys1");
-  // dot.edge("rendererSys1", "helperSys1");
-  // dot.edge("helperSys1", "screen");
-
-  view1.draw((view) => {
-    const aspect = view.viewport[2] / view.viewport[3];
-    entities
-      .filter((e) => e.camera)
-      .forEach((e) => {
-        e.camera.aspect = aspect;
-        e.camera.dirty = true;
-      });
-    cameraSys.update(entities);
-    renderPipelineSys.update(entities, [
-      basicRendererSystem,
-      lineRendererSystem,
-      helperRendererSys,
-    ]);
+  //draw left/bottom side
+  view1.draw((renderView) => {
+    renderPipelineSys.update(entities, {
+      renderers: [basicRendererSystem],
+      renderView: renderView,
+    });
   });
 
-  //draw right side
-
-  // dot.edge("shadowMap", "rendererSys2");
-  // dot.node("rendererSys2", "RendererSys", "octagon");
-  // dot.edge("view2", "rendererSys2");
-  // dot.edge("rendererSys2", "screen");
-  // dot.edge("shadowmapPass", "shadowPassPhase");
-  // dot.edge("shadowPassPhase", "shadowMap");
-  // dot.edge("linesRenderer1", "shadowPassPhase");
-  // dot.edge("pbrRenderer1", "shadowPassPhase");
-
-  // dot.edge("shadowmapPass", "pbrRender");
-  // dot.edge("pbrRender", "shadowMap");
-
-  // view2.draw((view) => {
-  //   const aspect = view.viewport[2] / view.viewport[3];
-  //   entities
-  //     .filter((e) => e.camera)
-  //     .forEach((e) => {
-  //       e.camera.aspect = aspect;
-  //       e.camera.dirty = true;
-  //     });
-  //   cameraSys.update(entities);
-  //   // renderPipelineSys.update(entities);
-  // });
+  //draw right/top side
+  view2.draw((renderView) => {
+    renderPipelineSys.update(entities, {
+      // renderers: [helperRendererSys],
+      renderers: [basicRendererSystem, lineRendererSystem, helperRendererSys],
+      renderView: renderView,
+    });
+  });
 
   if (frame == 1) {
     dot.render();
