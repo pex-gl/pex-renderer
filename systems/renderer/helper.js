@@ -1,6 +1,6 @@
 import createGeomBuilder from "geom-builder";
 import { pipeline as SHADERS } from "pex-shaders";
-import { patchVS, patchFS } from "../utils.js";
+import { patchVS, patchFS } from "../../utils.js";
 import { vec3 } from "pex-math";
 
 const getBBoxPositionsList = function (bbox) {
@@ -203,6 +203,8 @@ export default function createHelperSystem({ ctx }) {
       });
     }
   };
+
+  helperSystem.update = (entities) => {};
 
   return helperSystem;
 }
