@@ -334,11 +334,17 @@ ${
         viewMatrix: shadowMappingLight._viewMatrix,
       };
     }
+    console.log("RenderPipeline");
     renderers.forEach((renderer) => {
       if (!shadowMapping) {
         if (renderer.renderStages.opaque) {
           renderer.renderStages.opaque(renderView, entities);
         }
+      }
+    });
+
+    renderers.forEach((renderer) => {
+      if (!shadowMapping) {
         if (renderer.renderStages.transparent) {
           renderer.renderStages.transparent(renderView, entities);
         }

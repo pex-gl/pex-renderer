@@ -271,7 +271,7 @@ const cubesEntity = createEntity({
   //   offsets: new Array(64).fill(0).map(() => random.vec3(3)),
   // }),
   material: material({
-    baseColor: [0.2, 0.9, 0.2, 1],
+    baseColor: [0.2, 0.9, 0.2, 0.5],
     blend: true,
   }),
   boundingBoxHelper: components.boundingBoxHelper(),
@@ -288,7 +288,9 @@ const spinningEntity = createEntity({
     metallic: 0,
     roughness: 0.5,
   }),
-  boundingBoxHelper: components.boundingBoxHelper(),
+  boundingBoxHelper: components.boundingBoxHelper({
+    color: [0, 0, 1, 1],
+  }),
 });
 entities.push(spinningEntity);
 
@@ -414,7 +416,7 @@ const lineRendererSystem = systems.renderer.line({
   resourceCache,
   renderGraph,
 });
-const helperSys = systems.renderer.helper({ ctx });
+const helperRendererSys = systems.renderer.helper({ ctx });
 
 function createView(viewport) {
   const passCmd = {
@@ -533,8 +535,8 @@ ctx.frame(() => {
     renderPipelineSys.update(entities, [
       basicRendererSystem,
       lineRendererSystem,
+      helperRendererSys,
     ]);
-    helperSys.update(entities);
   });
 
   //draw right side
