@@ -54,6 +54,7 @@ export default function createResourceCache(ctx) {
     res = {
       type: type,
       value: ctx[type](props),
+      // TODO: this is problematic if we re-use descriptors
       props: {
         ...props,
       },
