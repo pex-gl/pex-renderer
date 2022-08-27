@@ -275,6 +275,10 @@ const cubesEntity = createEntity({
   material: material({
     baseColor: [0.2, 0.9, 0.2, 0.5],
     blend: true,
+    blendSrcRGBFactor: ctx.BlendFactor.One,
+    blendSrcAlphaFactor: ctx.BlendFactor.One,
+    blendDstRGBFactor: ctx.BlendFactor.OneMinusSrcAlpha,
+    blendDstAlphaFactor: ctx.BlendFactor.OneMinusSrcAlpha,
   }),
   boundingBoxHelper: components.boundingBoxHelper(),
 });
@@ -408,6 +412,11 @@ const renderPipelineSys = systems.renderPipeline({
   renderGraph,
   outputEncoding: ctx.Encoding.Linear,
 });
+const standardRendererSystem = systems.renderer.standard({
+  ctx,
+  resourceCache,
+  renderGraph,
+});
 const basicRendererSystem = systems.renderer.basic({
   ctx,
   resourceCache,
@@ -519,7 +528,7 @@ ctx.frame(() => {
   //draw left/bottom side
   view1.draw((renderView) => {
     renderPipelineSys.update(entities, {
-      renderers: [basicRendererSystem],
+      renderers: [standardRendererSystem, lineRendererSystem],
       renderView: renderView,
     });
   });
@@ -527,7 +536,6 @@ ctx.frame(() => {
   //draw right/top side
   view2.draw((renderView) => {
     renderPipelineSys.update(entities, {
-      // renderers: [helperRendererSys],
       renderers: [basicRendererSystem, lineRendererSystem, helperRendererSys],
       renderView: renderView,
     });
