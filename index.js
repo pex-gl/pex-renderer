@@ -31,9 +31,9 @@ import createSkyboxSystem from "./systems/skybox.js";
 import createTransformSystem from "./systems/transform.js";
 
 import createBasicRenderer from "./systems/renderer/basic.js";
-import createHelperSystem from "./systems/renderer/helper.js";
+import createHelperRenderer from "./systems/renderer/helper.js";
 import createLineRenderer from "./systems/renderer/line.js";
-// import createStandardRenderer from "./systems/renderer/standard";
+import createStandardRenderer from "./systems/renderer/standard.js";
 
 import createRenderGraph from "./render-graph.js";
 
@@ -77,8 +77,8 @@ export let systems = {
   renderer: {
     basic: createBasicRenderer,
     line: createLineRenderer,
-    helper: createHelperSystem,
-    // standard: createStandardRenderer,
+    helper: createHelperRenderer,
+    standard: createStandardRenderer,
   },
 };
 
