@@ -114,15 +114,17 @@ const {
 
 const ctx = createContext({
   type: "webgl",
+  pixelRatio: 1.5,
 });
 
 window.addEventListener("resize", () => {
   ctx.set({
-    width: window.innerWidth * 1.5,
-    height: window.innerHeight * 1.5,
+    pixelRatio: 1.5,
+    width: window.innerWidth,
+    height: window.innerHeight,
   });
-  ctx.gl.canvas.style.width = window.innerWidth + "px";
-  ctx.gl.canvas.style.height = window.innerHeight + "px";
+  // ctx.gl.canvas.style.width = window.innerWidth + "px";
+  // ctx.gl.canvas.style.height = window.innerHeight + "px";
 });
 
 ctx.gl.getExtension("OES_element_index_uint"); //TEMP
@@ -535,6 +537,7 @@ ctx.frame(() => {
 
   //draw right/top side
   view2.draw((renderView) => {
+    // return; //TEMP
     renderPipelineSys.update(entities, {
       renderers: [basicRendererSystem, lineRendererSystem, helperRendererSys],
       renderView: renderView,
