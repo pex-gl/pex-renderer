@@ -183,6 +183,7 @@ export default function createRenderPipelineSystem(opts) {
         viewport: [0, 0, shadowMap.width, shadowMap.height],
       },
       render: () => {
+        light._shadowMap = shadowMap;
         drawMeshes({
           //TODO: passing camera entity around is a mess
           cameraEntity: {
