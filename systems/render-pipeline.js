@@ -62,6 +62,13 @@ export default function createRenderPipelineSystem(opts) {
         if (renderer.renderStages.opaque) {
           renderer.renderStages.opaque(renderView, entities);
         }
+      } else {
+        if (renderer.renderStages.shadow) {
+          renderer.renderStages.shadow(renderView, entities, {
+            shadowMapping: true,
+            shadowMappingLight,
+          });
+        }
       }
     });
 
@@ -165,22 +172,33 @@ export default function createRenderPipelineSystem(opts) {
 
     let shadowMapPass = resourceCache.pass(passDesc);
 
-    if (false)
-      //TEMP
-      renderGraph.renderPass({
-        name: "RenderShadowMap",
-        pass: shadowMapPass,
-        render: () => {
-          drawMeshes({
-            shadowMapping: true,
-            shadowMappingLight: light,
-            entities,
-            renderableEntities: shadowCastingEntities,
-            forward: false,
-            renderers,
-          });
+    renderGraph.renderPass({
+      name: "RenderShadowMap",
+      pass: shadowMapPass,
+      renderView: {
+        camera: {
+          viewMatrix: light._viewMatrix,
+          projectionMatrix: light._projectionMatrix,
         },
-      });
+        viewport: [0, 0, shadowMap.width, shadowMap.height],
+      },
+      render: () => {
+        drawMeshes({
+          //TODO: passing camera entity around is a mess
+          cameraEntity: {
+            camera: {
+              position: lightEnt._transform.worldPosition,
+            },
+          },
+          shadowMapping: true,
+          shadowMappingLight: light,
+          entities,
+          renderableEntities: shadowCastingEntities,
+          forward: false,
+          renderers,
+        });
+      },
+    });
 
     light._shadowMap = shadowMap; // TODO: we borrow it for a frame
     // ctx.submit(shadowMapDrawCommand, () => {
@@ -191,43 +209,6 @@ export default function createRenderPipelineSystem(opts) {
   renderPipelineSystem.patchDirectionalLight = (directionalLight) => {
     directionalLight._viewMatrix = mat4.create();
     directionalLight._projectionMatrix = mat4.create();
-
-    //TODO: who will release those?
-    // directionalLight._colorMap = ctx.texture2D({
-    //   name: "directionalLightColorMap",
-    //   width: 2048,
-    //   height: 2048,
-    //   pixelFormat: ctx.PixelFormat.RGBA8,
-    //   encoding: ctx.Encoding.Linear,
-    //   min: ctx.Filter.Linear,
-    //   mag: ctx.Filter.Linear,
-    // });
-
-    // directionalLight._shadowMap =
-    //   directionalLight._shadowMap ||
-    //   ctx.texture2D({
-    //     name: "directionalLightShadowMap",
-    //     width: 2048,
-    //     height: 2048,
-    //     pixelFormat: ctx.PixelFormat.Depth,
-    //     encoding: ctx.Encoding.Linear,
-    //     min: ctx.Filter.Nearest,
-    //     mag: ctx.Filter.Nearest,
-    //   });
-
-    // directionalLight._shadowMapDrawCommand = {
-    //   name: "DirectionalLight.shadowMap",
-    //   pass: ctx.pass({
-    //     name: "DirectionalLight.shadowMap",
-    //     color: [directionalLight._colorMap],
-    //     depth: directionalLight._shadowMap,
-    //     clearColor: [0, 0, 0, 1],
-    //     clearDepth: 1,
-    //   }),
-    //   viewport: [0, 0, 2048, 2048], // TODO: viewport bug
-    //   scissor: [0, 0, 2048, 2048], //TODO: disable that and try with new render pass system
-    //   // colorMask: [0, 0, 0, 0] // TODO
-    // };
   };
 
   renderPipelineSystem.update = (entities, options = {}) => {

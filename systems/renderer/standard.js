@@ -33,40 +33,40 @@ const programCacheMap = {
 export default function createStandardRendererSystem(opts) {
   const { ctx } = opts;
 
-  function render() {
-    skybox.draw(camera, {
-      outputEncoding: sharedUniforms.uOutputEncoding,
-      backgroundMode: true,
-    });
+  // function render() {
+  //   skybox.draw(camera, {
+  //     outputEncoding: sharedUniforms.uOutputEncoding,
+  //     backgroundMode: true,
+  //   });
 
-    //TODO: add some basic sorting of transparentEntities
-    // prettier-ignore
-    const transparentEntities = shadowMapping ? [] : renderableEntities.filter((e) => e.material.blend);
+  //   //TODO: add some basic sorting of transparentEntities
+  //   // prettier-ignore
+  //   const transparentEntities = shadowMapping ? [] : renderableEntities.filter((e) => e.material.blend);
 
-    // sharedUniforms.uCameraPosition = camera.entity.transform.worldPosition;
+  //   // sharedUniforms.uCameraPosition = camera.entity.transform.worldPosition;
 
-    const geometryPasses = [opaqueEntities, transparentEntities];
+  //   const geometryPasses = [opaqueEntities, transparentEntities];
 
-    for (let passIndex = 0; passIndex < geometryPasses.length; passIndex++) {
-      const passEntities = geometryPasses[passIndex];
+  //   for (let passIndex = 0; passIndex < geometryPasses.length; passIndex++) {
+  //     const passEntities = geometryPasses[passIndex];
 
-      // Draw skybox before transparent meshes
-      if (
-        passEntities == transparentEntities &&
-        skybox &&
-        !shadowMappingLight
-      ) {
-      }
+  //     // Draw skybox before transparent meshes
+  //     if (
+  //       passEntities == transparentEntities &&
+  //       skybox &&
+  //       !shadowMappingLight
+  //     ) {
+  //     }
 
-      for (let i = 0; i < passEntities.length; i++) {
-        if (camera?.viewport) {
-          // cmd.viewport = camera.viewport;
-          // cmd.scissor = camera.viewport;
-        }
-        ctx.submit(cmd);
-      }
-    }
-  }
+  //     for (let i = 0; i < passEntities.length; i++) {
+  //       if (camera?.viewport) {
+  //         // cmd.viewport = camera.viewport;
+  //         // cmd.scissor = camera.viewport;
+  //       }
+  //       ctx.submit(cmd);
+  //     }
+  //   }
+  // }
 
   function buildProgram(vertSrc, fragSrc) {
     let program = null;
@@ -416,20 +416,20 @@ ${
     }
   }
 
-  function render(renderView, entities, transparent) {
+  function render(renderView, entities, opts) {
     const { camera, cameraEntity } = renderView;
+    const { shadowMapping, shadowMappingLight, transparent } = opts;
 
     const sharedUniforms = {
-      // uOutputEncoding: renderPipelineSystem.outputEncoding,
+      //uOutputEncoding: renderPipelineSystem.outputEncoding,
+      uOutputEncoding: ctx.Encoding.Linear,
     };
-    const shadowMapping = false;
-    const shadowMappingLight = null;
 
-    gatherLightInfo({ entities, sharedUniforms, shadowMapping: false });
+    gatherLightInfo({ entities, sharedUniforms, shadowMapping });
     gatherReflectionProbeInfo({
       entities,
       sharedUniforms,
-      shadowMapping: false,
+      shadowMapping,
     });
 
     if (shadowMappingLight) {
@@ -451,7 +451,7 @@ ${
         e.geometry &&
         e.material &&
         !e.drawSegments &&
-        (transparent || !e.material.blend)
+        (transparent || !e.material.blend) //TODO: what is transparent?
     ); //hardcoded e.drawSegments
 
     const opaqueEntities = renderableEntities.filter((e) => !e.material.blend);
@@ -546,14 +546,14 @@ ${
 
   const standardRendererSystem = {
     renderStages: {
-      shadowCaster: (renderView, entitites) => {
-        render(renderView, entitites, false);
+      shadow: (renderView, entitites, opts = {}) => {
+        render(renderView, entitites, opts);
       },
-      opaque: (renderView, entitites) => {
-        render(renderView, entitites, false);
+      opaque: (renderView, entitites, opts = {}) => {
+        render(renderView, entitites, opts);
       },
-      transparent: (renderView, entitites) => {
-        render(renderView, entitites, true);
+      transparent: (renderView, entitites, opts = {}) => {
+        render(renderView, entitites, { ...opts, transparent: true });
       },
     },
     update: () => {},

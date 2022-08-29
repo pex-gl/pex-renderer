@@ -141,6 +141,14 @@ export default function createLineRendererSystem(opts) {
 
   const lineRendererSystem = {
     renderStages: {
+      shadow: (renderView, entities) => {
+        const { camera } = renderView;
+        entities.forEach((e) => {
+          if (e.drawSegments) {
+            drawSegmentMesh(camera, e);
+          }
+        });
+      },
       opaque: (renderView, entities) => {
         const { camera } = renderView;
         entities.forEach((e) => {
