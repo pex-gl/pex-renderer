@@ -451,7 +451,7 @@ ${
         e.geometry &&
         e.material &&
         !e.drawSegments &&
-        (transparent || !e.material.blend) //TODO: what is transparent?
+        (transparent ? e.material.blend : !e.material.blend) //TODO: what is transparent?
     ); //hardcoded e.drawSegments
 
     const opaqueEntities = renderableEntities.filter((e) => !e.material.blend);
@@ -532,7 +532,7 @@ ${
       cachedUniforms.uNormalMatrix = mat3.fromMat4(mat3.create(), normalMat);
 
       const cmd = {
-        name: "drawGeometry",
+        name: transparent ? "drawTransparentGeometry" : "drawGeometry",
         attributes: geometry.attributes,
         indices: geometry.indices,
         count: geometry.count,
