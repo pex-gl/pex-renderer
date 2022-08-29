@@ -173,7 +173,7 @@ export default function createRenderPipelineSystem(opts) {
     let shadowMapPass = resourceCache.pass(passDesc);
 
     renderGraph.renderPass({
-      name: "RenderShadowMap",
+      name: "RenderShadowMap" + lightEnt.id,
       pass: shadowMapPass,
       renderView: {
         camera: {
@@ -312,6 +312,7 @@ export default function createRenderPipelineSystem(opts) {
     const fullscreenTriangle = resourceCache.fullscreenTriangle();
 
     const postProcessingCmd = {
+      name: "Draw FSTriangle",
       attributes: fullscreenTriangle.attributes,
       count: fullscreenTriangle.count,
       pipeline: postProcessingPipeline,

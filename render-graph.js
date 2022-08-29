@@ -50,6 +50,7 @@ class RenderGraph {
 
       this.ctx.submit(
         {
+          name: opts.name,
           pass: pass,
           viewport: renderView.viewport,
           scissor: renderView.viewport,
