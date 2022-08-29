@@ -117,6 +117,43 @@ const ctx = createContext({
   pixelRatio: 1.5,
 });
 
+const oldApply = ctx.apply;
+ctx.apply = (...args) => {
+  // const rt =
+  // ctx.stack[ctx.stack.length - 1].pass?.framebuffer.color?.[0].texture;
+  const cmd = args[0];
+  const fbo = cmd.pass?.framebuffer;
+  const rt = fbo?.color?.[0].texture; //?.framebuffer?.color?.[0];
+  const dt = fbo?.depth?.texture;
+
+  const parentFBO = ctx.stack[ctx.stack.length - 1].pass?.framebuffer;
+  const rtName =
+    parentFBO != fbo ? (rt?.name || rt?.id || "").replace("\n", " - ") : "";
+  const dtName =
+    parentFBO != fbo ? (dt?.name || dt?.id || "").replace("\n", " - ") : "";
+
+  const inputTextures = [
+    cmd.uniforms?.["uDirectionalLightShadowMaps[0]"],
+    cmd.uniforms?.["uDirectionalLightShadowMaps[1]"],
+  ]
+    .filter((_) => _)
+    .map((tex) => tex.id);
+
+  if (ctx.debugMode)
+    console.log(
+      "capture commands",
+      args,
+      "  ".repeat(ctx.stack.length),
+      cmd.name,
+      rtName ? "-> [" + [rtName, dtName].join(" | ") + "]" : " ",
+      inputTextures ? "<- [" + inputTextures.join(" | ") + "]" : " "
+    );
+  oldApply.call(ctx, ...args);
+};
+setTimeout(() => {
+  debugNextFrame = true;
+}, 500);
+
 window.addEventListener("resize", () => {
   ctx.set({
     pixelRatio: 1.5,
@@ -537,7 +574,6 @@ ctx.frame(() => {
 
   //draw right/top side
   view2.draw((renderView) => {
-    // return; //TEMP
     renderPipelineSys.update(entities, {
       renderers: [basicRendererSystem, lineRendererSystem, helperRendererSys],
       renderView: renderView,
@@ -552,7 +588,7 @@ ctx.frame(() => {
     //TODO: mutated texture to flip in GUI
     directionalLightEntity.directionalLight._shadowMap.flipY = true;
     shadowMapPreview = gui.addTexture2D(
-      "Shadow Map",
+      "Shadow Map " + directionalLightEntity.directionalLight._shadowMap.id,
       directionalLightEntity.directionalLight._shadowMap,
       { flipY: true }
     ); //TODO
