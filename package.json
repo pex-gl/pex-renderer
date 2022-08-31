@@ -34,7 +34,7 @@
     "pex-cam": "^3.0.0-alpha.1",
     "pex-geom": "^3.0.0-alpha.2",
     "pex-io": "github:pex-gl/pex-io#v3",
-    "pex-loaders": "github:pex-gl/pex-loaders#014ee1d716d460591fcf87af5e16ea0d47d468a7",
+    "pex-loaders": "^0.0.1",
     "pex-math": "^4.0.0-alpha.2",
     "pex-random": "^2.0.0-alpha.0",
     "pex-shaders": "^0.1.1",
