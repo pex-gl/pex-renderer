@@ -144,7 +144,7 @@ export default function createLineRendererSystem(opts) {
       shadow: (renderView, entities) => {
         const { camera } = renderView;
         entities.forEach((e) => {
-          if (e.drawSegments) {
+          if (e.drawSegments && e.material.castShadows) {
             drawSegmentMesh(camera, e);
           }
         });

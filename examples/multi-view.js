@@ -293,6 +293,8 @@ const floorEntity = createEntity({
     baseColor: [1, 0.8, 0.2, 1],
     metallic: 0,
     roughness: 0.2,
+    castShadows: true,
+    receiveShadows: true,
   }),
   boundingBoxHelper: components.boundingBoxHelper(),
 });
@@ -332,6 +334,8 @@ const spinningEntity = createEntity({
     baseColor: [0.5, 0.5, 0.5, 1],
     metallic: 0,
     roughness: 0.5,
+    castShadows: true,
+    receiveShadows: true,
   }),
   boundingBoxHelper: components.boundingBoxHelper({
     color: [0, 0, 1, 1],
@@ -372,6 +376,8 @@ const sphereEntity = createEntity({
     baseColor: [1, 0, 1, 1],
     metallic: 0,
     roughness: 0.5,
+    castShadows: true,
+    receiveShadows: true,
   }),
   boundingBoxHelper: components.boundingBoxHelper(),
 });
