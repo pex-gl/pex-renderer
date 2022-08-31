@@ -450,6 +450,7 @@ ${
       (e) =>
         e.geometry &&
         e.material &&
+        (!shadowMapping || e.material.castShadows) &&
         !e.drawSegments &&
         (transparent ? e.material.blend : !e.material.blend) //TODO: what is transparent?
     ); //hardcoded e.drawSegments

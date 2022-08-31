@@ -169,8 +169,8 @@ export default (opts = {}) => {
     blendSrcAlphaFactor: undefined,
     blendDstRGBFactor: undefined,
     blendDstAlphaFactor: undefined,
-    castShadows: true,
-    receiveShadows: true,
+    castShadows: false,
+    receiveShadows: false,
     ...opts,
   };
 };

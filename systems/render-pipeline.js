@@ -57,38 +57,35 @@ export default function createRenderPipelineSystem(opts) {
         viewMatrix: shadowMappingLight._viewMatrix,
       };
     }
-    renderers.forEach((renderer) => {
-      if (!shadowMapping) {
-        if (renderer.renderStages.opaque) {
-          renderer.renderStages.opaque(renderView, entities);
-        }
-      } else {
+
+    if (shadowMapping) {
+      renderers.forEach((renderer) => {
         if (renderer.renderStages.shadow) {
           renderer.renderStages.shadow(renderView, entities, {
             shadowMapping: true,
             shadowMappingLight,
           });
         }
-      }
-    });
-
-    renderers.forEach((renderer) => {
-      if (!shadowMapping) {
+      });
+    } else {
+      renderers.forEach((renderer) => {
+        if (renderer.renderStages.opaque) {
+          renderer.renderStages.opaque(renderView, entities);
+        }
+      });
+      renderers.forEach((renderer) => {
         if (renderer.renderStages.background) {
           renderer.renderStages.background(renderView, entities);
         }
-      }
-    });
+      });
 
-    //TODO: capture color buffer and blur it for refraction
-
-    renderers.forEach((renderer) => {
-      if (!shadowMapping) {
+      //TODO: capture color buffer and blur it for refraction
+      renderers.forEach((renderer) => {
         if (renderer.renderStages.transparent) {
           renderer.renderStages.transparent(renderView, entities);
         }
-      }
-    });
+      });
+    }
   }
 
   // TODO remove, should be in AABB
