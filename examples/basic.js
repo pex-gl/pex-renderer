@@ -231,6 +231,7 @@ const lineRendererSystem = systems.renderer.line({
   renderGraph,
 });
 const helperRendererSys = systems.renderer.helper({ ctx });
+const skyboxRendererSys = systems.renderer.skybox({ ctx });
 
 function rescaleScene(root) {
   const sceneBounds = root.transform.worldBounds;
@@ -368,7 +369,11 @@ ctx.frame(() => {
     reflectionProbeSys.update(world.entities);
     cameraSys.update(world.entities);
     renderPipelineSys.update(world.entities, {
-      renderers: [standardRendererSystem, lineRendererSystem],
+      renderers: [
+        standardRendererSystem,
+        lineRendererSystem,
+        skyboxRendererSys,
+      ],
       renderView: renderView,
     });
   } catch (e) {

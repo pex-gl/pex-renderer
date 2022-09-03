@@ -472,7 +472,13 @@ const lineRendererSystem = systems.renderer.line({
   resourceCache,
   renderGraph,
 });
-const helperRendererSys = systems.renderer.helper({ ctx });
+const skyboxRendererSystem = systems.renderer.skybox({
+  ctx,
+  resourceCache,
+  renderGraph,
+});
+
+const helperRendererSystem = systems.renderer.helper({ ctx });
 
 function createView(cameraEntity, viewport) {
   const view = {
@@ -573,7 +579,11 @@ ctx.frame(() => {
   //draw left/bottom side
   view1.draw((renderView) => {
     renderPipelineSys.update(entities, {
-      renderers: [standardRendererSystem, lineRendererSystem],
+      renderers: [
+        standardRendererSystem,
+        lineRendererSystem,
+        skyboxRendererSystem,
+      ],
       renderView: renderView,
     });
   });
@@ -581,7 +591,11 @@ ctx.frame(() => {
   //draw right/top side
   view2.draw((renderView) => {
     renderPipelineSys.update(entities, {
-      renderers: [basicRendererSystem, lineRendererSystem, helperRendererSys],
+      renderers: [
+        basicRendererSystem,
+        lineRendererSystem,
+        helperRendererSystem,
+      ],
       renderView: renderView,
     });
   });
