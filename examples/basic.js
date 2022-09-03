@@ -1,6 +1,8 @@
 import {
   world as createWorld,
   entity as createEntity,
+  renderGraph as createRenderGraph,
+  resourceCache as createResourceCache,
   systems,
   components,
   loaders,
@@ -30,7 +32,21 @@ const ctx = createContext({
 });
 ctx.gl.getExtension("OES_element_index_uint"); //TEMP
 
+window.addEventListener("resize", () => {
+  ctx.set({
+    pixelRatio: 1.5,
+    width: window.innerWidth,
+    height: window.innerHeight,
+  });
+  cameraEntity.camera.aspect = window.innerWidth / window.innerHeight;
+  cameraEntity.camera.dirty = true;
+  // ctx.gl.canvas.style.width = window.innerWidth + "px";
+  // ctx.gl.canvas.style.height = window.innerHeight + "px";
+});
+
 const world = createWorld();
+const renderGraph = createRenderGraph(ctx);
+const resourceCache = createResourceCache(ctx);
 
 function aabbToString(bbox) {
   return bbox.map((v) => v.map((f) => Math.floor(f * 1000) / 1000));
@@ -186,12 +202,35 @@ const directionalLightEntity = createEntity(
 );
 world.add(directionalLightEntity);
 
-world.addSystem(systems.geometry({ ctx }));
-world.addSystem(systems.transform());
-world.addSystem(systems.camera());
-world.addSystem(systems.skybox({ ctx }));
-world.addSystem(systems.reflectionProbe({ ctx }));
-world.addSystem(systems.renderer({ ctx }));
+const geometrySys = systems.geometry({ ctx });
+const transformSys = systems.transform();
+const cameraSys = systems.camera();
+const skyboxSys = systems.skybox({ ctx });
+const reflectionProbeSys = systems.reflectionProbe({ ctx });
+const renderPipelineSys = systems.renderPipeline({
+  ctx,
+  resourceCache,
+  renderGraph,
+  outputEncoding: ctx.Encoding.Linear,
+});
+world.addSystem(renderPipelineSys);
+
+const standardRendererSystem = systems.renderer.standard({
+  ctx,
+  resourceCache,
+  renderGraph,
+});
+const basicRendererSystem = systems.renderer.basic({
+  ctx,
+  resourceCache,
+  renderGraph,
+});
+const lineRendererSystem = systems.renderer.line({
+  ctx,
+  resourceCache,
+  renderGraph,
+});
+const helperRendererSys = systems.renderer.helper({ ctx });
 
 function rescaleScene(root) {
   const sceneBounds = root.transform.worldBounds;
@@ -248,13 +287,13 @@ async function loadScene() {
     world.update(); //force scene hierarchy update
     rescaleScene(sceneEntities[0]); //TODO: race condition: sometime scene bounding box is not yet updated and null
 
-    console.log("entities", entities);
+    // console.log("entities", entities);
   } catch (e) {
     console.error(e);
   }
 }
 
-loadScene();
+// loadScene();
 
 (async () => {
   // const buffer = await io.loadArrayBuffer(
@@ -297,6 +336,9 @@ loadScene();
 })();
 
 ctx.frame(() => {
+  resourceCache.beginFrame();
+  renderGraph.beginFrame();
+
   const now = Date.now() * 0.0005;
   if (debugNextFrame) {
     debugNextFrame = false;
@@ -312,11 +354,29 @@ ctx.frame(() => {
   );
   torusEntity.transform.dirty = true; //UGH
 
+  const renderView = {
+    camera: cameraEntity.camera,
+    cameraEntity: cameraEntity,
+    viewport: [0, 0, ctx.gl.drawingBufferWidth, ctx.gl.drawingBufferHeight],
+  };
+
   try {
-    world.update();
+    // world.update();
+    geometrySys.update(world.entities);
+    transformSys.update(world.entities);
+    skyboxSys.update(world.entities);
+    reflectionProbeSys.update(world.entities);
+    cameraSys.update(world.entities);
+    renderPipelineSys.update(world.entities, {
+      renderers: [standardRendererSystem, lineRendererSystem],
+      renderView: renderView,
+    });
   } catch (e) {
     console.error(e);
   }
+
+  renderGraph.endFrame();
+  resourceCache.endFrame();
 
   gui.draw();
 
