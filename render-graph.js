@@ -13,22 +13,22 @@ class RenderGraph {
     const passId = opts.pass?.id || "RenderPass " + this.renderPasses.length;
     const passName = opts.name || opts.pass?.name || null;
 
-    this.dot.passNode(passId, passName);
+    if (this.dot) this.dot.passNode(passId, passName);
 
     const colorTextureId = opts?.pass?.opts?.color?.[0].id;
     const colorTextureName = opts?.pass?.opts?.color?.[0].name;
     if (colorTextureId) {
-      this.dot.resourceNode(colorTextureId, colorTextureName);
-      this.dot.edge(passId, colorTextureId);
+      if (this.dot) this.dot.resourceNode(colorTextureId, colorTextureName);
+      if (this.dot) this.dot.edge(passId, colorTextureId);
     } else {
-      this.dot.edge(passId, "Window");
+      if (this.dot) this.dot.edge(passId, "Window");
     }
 
     const depthTextureId = opts?.pass?.opts?.depth?.id;
     const depthTextureName = opts?.pass?.opts?.depth?.name;
     if (depthTextureId) {
-      this.dot.resourceNode(depthTextureId, depthTextureName);
-      this.dot.edge(passId, depthTextureId);
+      if (this.dot) this.dot.resourceNode(depthTextureId, depthTextureName);
+      if (this.dot) this.dot.edge(passId, depthTextureId);
     }
 
     if (opts.uses) {
@@ -36,7 +36,7 @@ class RenderGraph {
         console.log("render-graph uses", opts.uses);
       }
       opts.uses.forEach((tex) => {
-        this.dot.edge(tex.id, passId);
+        if (this.dot) this.dot.edge(tex.id, passId);
       });
     }
 
