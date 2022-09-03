@@ -34,6 +34,7 @@ import createBasicRenderer from "./systems/renderer/basic.js";
 import createHelperRenderer from "./systems/renderer/helper.js";
 import createLineRenderer from "./systems/renderer/line.js";
 import createStandardRenderer from "./systems/renderer/standard.js";
+import createSkyboxRenderer from "./systems/renderer/skybox.js";
 
 import createRenderGraph from "./render-graph.js";
 
@@ -79,6 +80,7 @@ export let systems = {
     line: createLineRenderer,
     helper: createHelperRenderer,
     standard: createStandardRenderer,
+    skybox: createSkyboxRenderer,
   },
 };
 
