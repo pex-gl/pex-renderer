@@ -45,6 +45,7 @@ export default function createRenderPipelineSystem(opts) {
     skybox,
     forward,
     renderers,
+    drawTransparent,
   }) {
     const renderView = {};
     if (cameraEntity) {
@@ -68,23 +69,29 @@ export default function createRenderPipelineSystem(opts) {
         }
       });
     } else {
-      renderers.forEach((renderer) => {
-        if (renderer.renderStages.opaque) {
-          renderer.renderStages.opaque(renderView, entities);
-        }
-      });
-      renderers.forEach((renderer) => {
-        if (renderer.renderStages.background) {
-          renderer.renderStages.background(renderView, entities);
-        }
-      });
+      if (!drawTransparent) {
+        renderers.forEach((renderer) => {
+          if (renderer.renderStages.opaque) {
+            renderer.renderStages.opaque(renderView, entities);
+          }
+        });
+        renderers.forEach((renderer) => {
+          if (renderer.renderStages.background) {
+            renderer.renderStages.background(renderView, entities);
+          }
+        });
+        const needsGrabPass = !!entities.find((e) => e.material?.refraction);
+        // console.log("needsGrabPass", needsGrabPass);
+      }
 
-      //TODO: capture color buffer and blur it for refraction
-      renderers.forEach((renderer) => {
-        if (renderer.renderStages.transparent) {
-          renderer.renderStages.transparent(renderView, entities);
-        }
-      });
+      if (drawTransparent) {
+        //TODO: capture color buffer and blur it for refraction
+        renderers.forEach((renderer) => {
+          if (renderer.renderStages.transparent) {
+            renderer.renderStages.transparent(renderView, entities);
+          }
+        });
+      }
     }
   }
 
@@ -193,6 +200,7 @@ export default function createRenderPipelineSystem(opts) {
           entities,
           renderableEntities: shadowCastingEntities,
           forward: false,
+          drawTransparent: false,
           renderers,
         });
       },
@@ -298,6 +306,33 @@ export default function createRenderPipelineSystem(opts) {
           renderableEntities: entitiesToDraw,
           skybox: skyboxEntities[0]?._skybox,
           forward: true,
+          drawTransparent: false,
+          renderers: renderers,
+        });
+      },
+    });
+
+    const transparentPass = resourceCache.pass({
+      color: [mainPassOutputTexture],
+      depth: outputDepthTexture,
+    });
+    renderGraph.renderPass({
+      name: `TransparentMainPass ${renderView.viewport}`,
+      uses: [...shadowMaps],
+      renderView: {
+        ...renderView,
+        viewport: [0, 0, renderView.viewport[2], renderView.viewport[3]],
+      },
+      pass: transparentPass,
+      render: () => {
+        drawMeshes({
+          cameraEntity: renderView.cameraEntity,
+          shadowMapping: false,
+          entities: entities,
+          renderableEntities: entitiesToDraw,
+          skybox: skyboxEntities[0]?._skybox,
+          forward: true,
+          drawTransparent: true,
           renderers: renderers,
         });
       },
