@@ -1,7 +1,7 @@
 import { skybox } from "pex-shaders";
 import createQuad from "primitive-quad";
 import { patchVS, patchFS } from "../utils.js";
-import { mat4 } from "pex-math";
+import { mat4, vec3 } from "pex-math";
 const identityMatrix = mat4.create();
 
 class Skybox {
@@ -9,7 +9,7 @@ class Skybox {
     this.type = "Skybox";
     this.enabled = true;
     this.rgbm = false;
-    this.backgroundBlur = 0;
+    this.backgroundBlur = 1;
 
     console.log("skybox-system", opts);
 
@@ -21,54 +21,7 @@ class Skybox {
 
     this.set(opts);
 
-    const skyboxPositions = [
-      [-1, -1],
-      [1, -1],
-      [1, 1],
-      [-1, 1],
-    ];
-    const skyboxFaces = [
-      [0, 1, 2],
-      [0, 2, 3],
-    ];
-
-    this._drawCommand = {
-      name: "Skybox.draw",
-      pipeline: ctx.pipeline({
-        vert: ctx.capabilities.isWebGL2
-          ? patchVS(skybox.skybox.vert)
-          : /* glsl */ `
-${ctx.capabilities.maxColorAttachments > 1 ? "#define USE_DRAW_BUFFERS" : ""}
-    ${skybox.skybox.vert}`,
-        frag: ctx.capabilities.isWebGL2
-          ? patchFS(skybox.skybox.frag)
-          : /* glsl */ `
-${ctx.capabilities.maxColorAttachments > 1 ? "#define USE_DRAW_BUFFERS" : ""}
-${skybox.skybox.frag}`,
-        depthTest: true,
-        depthWrite: false,
-      }),
-      attributes: {
-        aPosition: ctx.vertexBuffer(skyboxPositions),
-      },
-      indices: ctx.indexBuffer(skyboxFaces),
-      uniforms: {
-        uUseTonemapping: false,
-        uExposure: 1,
-      },
-    };
-
     const quad = createQuad();
-
-    this._skyTexture = ctx.texture2D({
-      width: 512,
-      height: 256,
-      // pixelFormat: this.rgbm ? ctx.PixelFormat.RGBA8 : ctx.PixelFormat.RGBA16F,
-      pixelFormat: this.rgbm ? ctx.PixelFormat.RGBA8 : ctx.PixelFormat.RGBA,
-      encoding: this.rgbm ? ctx.Encoding.RGBM : ctx.Encoding.Linear,
-      min: ctx.Filter.Linear,
-      mag: ctx.Filter.Linear,
-    });
 
     this._updateSkyTexture = {
       name: "Skybox.updateSkyTexture",
@@ -122,6 +75,7 @@ ${skybox.skybox.frag}`,
     let texture = this.texture || this._skyTexture;
     let backgroundBlur = 0;
     if (backgroundMode) {
+      return;
       if (this.backgroundTexture) {
         texture = this.backgroundTexture;
       }
@@ -168,23 +122,85 @@ ${skybox.skybox.frag}`,
 }
 
 export default function createSkyboxSystem(opts) {
+  const { ctx } = opts;
+
   const skyboxSystem = {
     cache: {},
     debug: false,
   };
 
+  const quad = createQuad();
+
+  const updateSkyTextureCmd = {
+    name: "Skybox.updateSkyTexture",
+    pipeline: ctx.pipeline({
+      vert: skybox.skyEnvMap.vert,
+      frag: skybox.skyEnvMap.frag,
+    }),
+    uniforms: {
+      uSunPosition: [0, 0, 0],
+    },
+    attributes: {
+      aPosition: ctx.vertexBuffer(quad.positions),
+      aTexCoord0: ctx.vertexBuffer(quad.uvs),
+    },
+    indices: ctx.indexBuffer(quad.cells),
+  };
+
+  function initSkybox(ctx, entity, skybox) {
+    skybox._skyTexture = ctx.texture2D({
+      width: 512,
+      height: 256,
+      // pixelFormat: this.rgbm ? ctx.PixelFormat.RGBA8 : ctx.PixelFormat.RGBA16F,
+      pixelFormat: skybox.rgbm ? ctx.PixelFormat.RGBA8 : ctx.PixelFormat.RGBA,
+      encoding: skybox.rgbm ? ctx.Encoding.RGBM : ctx.Encoding.Linear,
+      min: ctx.Filter.Linear,
+      mag: ctx.Filter.Linear,
+    });
+    skybox._updateSkyTexturePass = ctx.pass({
+      name: "Skybox.updateSkyTexture",
+      color: [skybox._skyTexture],
+      clearColor: [0, 0, 0, 0],
+    });
+  }
+
   skyboxSystem.update = (entities) => {
     const skyboxEntities = entities.filter((e) => e.skybox);
     for (let skyboxEntity of skyboxEntities) {
-      if (!skyboxSystem.cache[skyboxEntity.id]) {
-        const skybox = new Skybox({
-          ...skyboxEntity.skybox,
-          ctx: opts.ctx,
-        });
-        skyboxSystem.cache[skyboxEntity.id] = skybox;
-        skyboxEntity._skybox = skybox; //TODO: why do we need it
+      const { skybox } = skyboxEntity;
+      let needsUpdate = false;
+      let cachedProps = skyboxSystem.cache[skyboxEntity.id];
+      if (!cachedProps) {
+        initSkybox(ctx, skyboxEntity, skyboxEntity.skybox);
+        cachedProps = skyboxSystem.cache[skyboxEntity.id] = {};
+        skyboxSystem.cache[skyboxEntity.id].sunPosition = [
+          ...skybox.sunPosition,
+        ];
+        needsUpdate = true;
+        // const skybox = new Skybox({
+        //   ...skyboxEntity.skybox,
+        //   ctx: opts.ctx,
+        // });
+        // skyboxSystem.cache[skyboxEntity.id] = skybox;
+        // skyboxEntity._skybox = skybox; //TODO: why do we need it
 
-        skybox.updateSkyTexture();
+        // skybox.updateSkyTexture();
+      }
+
+      if (vec3.distance(cachedProps.sunPosition, skybox.sunPosition) > 0) {
+        vec3.set(cachedProps.sunPosition, skybox.sunPosition);
+        needsUpdate = true;
+      }
+
+      if (needsUpdate) {
+        //TODO: use render graph for updateSkyTextureCmd
+        ctx.submit(updateSkyTextureCmd, {
+          pass: skybox._updateSkyTexturePass,
+          uniforms: {
+            uSunPosition: skybox.sunPosition || [0, 0, 0],
+            uRGBM: skybox.rgbm || false,
+          },
+        });
       }
     }
   };

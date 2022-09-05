@@ -1,4 +1,4 @@
-import { mat4 } from "pex-math";
+import { vec3, mat4 } from "pex-math";
 import { reflectionProbe as SHADERS } from "pex-shaders";
 import hammersley from "hammersley";
 
@@ -345,41 +345,81 @@ class ReflectionProbe {
 }
 
 export default function createReflectionProbeSystem(opts) {
+  const { ctx } = opts;
   const reflectionProbeSystem = {
     type: "reflection-probe-system",
     cache: {},
     debug: false,
   };
 
-  reflectionProbeSystem.update = (entities) => {
+  reflectionProbeSystem.update = (entities, opts) => {
+    let { renderers } = opts;
+
     const skyboxEntities = entities.filter((e) => e.skybox);
+    const skyboxEntity = skyboxEntities[0];
+
     const reflectionProbeEntities = entities.filter((e) => e.reflectionProbe);
     for (let reflectionProbeEntity of reflectionProbeEntities) {
-      let reflectionProbe =
-        reflectionProbeSystem.cache[reflectionProbeEntity.id];
-      if (!reflectionProbe) {
-        reflectionProbe = new ReflectionProbe({
+      let cachedProps = reflectionProbeSystem.cache[reflectionProbeEntity.id];
+      if (!cachedProps) {
+        cachedProps = reflectionProbeSystem.cache[reflectionProbeEntity.id] = {
+          skyboxSunPosition: [0, 0, 0],
+        };
+        const reflectionProbe = new ReflectionProbe({
           ...reflectionProbeEntity.reflectionProbe,
-          ctx: opts.ctx,
+          ctx: ctx,
         });
-        reflectionProbeSystem.cache[reflectionProbeEntity.id] = reflectionProbe;
         reflectionProbeEntity._reflectionProbe = reflectionProbe;
       }
+
+      if (!skyboxEntity) {
+        continue;
+      }
+
       // TODO: this should be just node.reflectionProbe
       // TODO: data ownership reflectionProbe vs _reflectionProbe
-      if (
+      let needsUpdate =
         reflectionProbeEntity.reflectionProbe.dirty ||
-        reflectionProbeEntity._reflectionProbe.dirty
+        reflectionProbeEntity._reflectionProbe.dirty;
+
+      if (
+        vec3.distance(
+          cachedProps.skyboxSunPosition,
+          skyboxEntity.skybox.sunPosition
+        ) > 0
       ) {
+        vec3.set(
+          cachedProps.skyboxSunPosition,
+          skyboxEntity.skybox.sunPosition
+        );
+        needsUpdate = true;
+      }
+
+      if (cachedProps.skyboxEnvMap != skyboxEntity.skybox.envMap) {
+        cachedProps.skyboxEnvMap = skyboxEntity.skybox.envMap;
+        needsUpdate = true;
+      }
+
+      if (needsUpdate) {
         reflectionProbeEntity.reflectionProbe.dirty = false;
         reflectionProbeEntity._reflectionProbe.dirty = false;
-        console.log("reflection-probe", "update", skyboxEntities);
         reflectionProbeEntity._reflectionProbe.update((camera, encoding) => {
+          const renderView = {
+            camera: camera,
+            outputEncoding: encoding,
+          };
+          // should be only skybox renderers
+          renderers.forEach((renderer) => {
+            if (renderer.renderStages.background) {
+              renderer.renderStages.background(renderView, skyboxEntities);
+            }
+          });
           if (skyboxEntities.length > 0) {
-            skyboxEntities[0]._skybox.draw(camera, {
-              outputEncoding: encoding,
-              backgroundMode: false,
-            });
+            // TODO: drawing skybox inside reflection probe
+            // skyboxEntities[0]._skybox.draw(camera, {
+            //   outputEncoding: encoding,
+            //   backgroundMode: false,
+            // });
           }
         });
       }

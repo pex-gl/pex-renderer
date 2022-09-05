@@ -8,7 +8,7 @@ import {
   loaders,
 } from "../index.js";
 import createContext from "pex-context";
-import { cube, torus } from "primitive-geometry";
+import { cube, torus, sphere } from "primitive-geometry";
 import { vec3, quat, mat4 } from "pex-math";
 import * as io from "pex-io";
 import { aabb } from "pex-geom";
@@ -44,7 +44,7 @@ window.addEventListener("resize", () => {
   // ctx.gl.canvas.style.height = window.innerHeight + "px";
 });
 
-const world = createWorld();
+const world = (window.world = createWorld());
 const renderGraph = createRenderGraph(ctx);
 const resourceCache = createResourceCache(ctx);
 
@@ -165,9 +165,23 @@ const torusEntity = createEntity({
 });
 world.add(torusEntity);
 
+const sphereEntity = createEntity({
+  transform: transform({
+    position: [0, 0, 0],
+  }),
+  geometry: geometry(sphere({ radius: 1 })),
+  material: material({
+    baseColor: [1, 1, 1, 1],
+    metallic: 1,
+    roughness: 0.1,
+  }),
+});
+world.add(sphereEntity);
+
 const skyboxEnt = createEntity({
   skybox: skybox({
     sunPosition: [1, 1, 1],
+    backgroundBlur: false,
   }),
 });
 world.add(skyboxEnt);
@@ -315,19 +329,45 @@ async function loadScene() {
     flipY: true, //TODO: flipY on non dom elements is deprecated
   });
 
-  world.update(); //force update reflection probe
-  skyboxEnt._skybox.texture = panorama; //TODO: remove _skybox
-  skyboxEnt._skybox.dirty = true; //TODO: check if this works
+  //force update reflection probe
+  console.log(
+    "skybox before update",
+    "" + world.entities.find((e) => e.skybox)._skybox
+  );
+  skyboxSys.update(world.entities);
+  reflectionProbeSys.update(world.entities, {
+    renderers: [skyboxRendererSys],
+  });
+  console.log(
+    "skybox after update",
+    "" + world.entities.find((e) => e.skybox)._skybox
+  );
+
+  console.log(skyboxEnt);
+  skyboxEnt.skybox.envMap = panorama; //TODO: remove _skybox
+  // skyboxEnt._skybox.dirty = true; //TODO: check if this works
+  // skyboxEnt._skybox._reflectionProbe = reflectionProbeEnt._reflectionProbe;
 
   console.log("reflectionProbeEnt", reflectionProbeEnt);
-  reflectionProbeEnt._reflectionProbe.dirty = true;
+  // reflectionProbeEnt._reflectionProbe.dirty = true;
 
   gui.addHeader("Settings");
   gui.addParam("BG Blur", skyboxEnt.skybox, "backgroundBlur", {}, () => {});
-  gui.addTexture2D(
-    "Skybox",
-    skyboxEnt.skybox.texture || skyboxEnt._skybox._skyTexture
+  gui.addParam(
+    "Sun Position",
+    skyboxEnt.skybox,
+    "sunPosition",
+    { min: -1, max: 1 },
+    (e) => {
+      console.log("on change", e);
+    }
   );
+  // gui.addTexture2D(
+  //   "Skybox",
+  //   skyboxEnt.skybox.texture || skyboxEnt._skybox._skyTexture
+  // );
+  console.log(world.entities);
+  // debugger;
   gui.addTexture2D(
     "Reflection Probe",
     reflectionProbeEnt._reflectionProbe._reflectionMap
@@ -347,7 +387,12 @@ ctx.frame(() => {
     ctx.debug(true);
   }
 
-  skyboxEnt.skybox.sunPosition = [1 * Math.cos(now), 1, 1 * Math.sin(now)];
+  // skyboxEnt.skybox.sunPosition = [
+  //   Math.cos(now * 2),
+  //   0.5 + 0.5 * Math.cos(now * 2),
+  //   -1,
+  // ];
+
   quat.fromAxisAngle(
     torusEntity.transform.rotation,
     [0, 1, 0],
@@ -366,7 +411,9 @@ ctx.frame(() => {
     geometrySys.update(world.entities);
     transformSys.update(world.entities);
     skyboxSys.update(world.entities);
-    reflectionProbeSys.update(world.entities);
+    reflectionProbeSys.update(world.entities, {
+      renderers: [skyboxRendererSys],
+    });
     cameraSys.update(world.entities);
     renderPipelineSys.update(world.entities, {
       renderers: [
@@ -378,6 +425,7 @@ ctx.frame(() => {
     });
   } catch (e) {
     console.error(e);
+    return false;
   }
 
   renderGraph.endFrame();
