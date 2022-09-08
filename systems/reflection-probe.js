@@ -352,8 +352,8 @@ export default function createReflectionProbeSystem(opts) {
     debug: false,
   };
 
-  reflectionProbeSystem.update = (entities, opts) => {
-    let { renderers } = opts;
+  reflectionProbeSystem.update = (entities, opts = {}) => {
+    let { renderers = [] } = opts;
 
     const skyboxEntities = entities.filter((e) => e.skybox);
     const skyboxEntity = skyboxEntities[0];
