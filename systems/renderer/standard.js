@@ -1,5 +1,8 @@
 import { vec3, vec4, mat3, mat4 } from "pex-math";
-import { pipeline as SHADERS, chunks as SHADERS_CHUNKS } from "pex-shaders";
+import {
+  pipeline as SHADERS,
+  chunks as SHADERS_CHUNKS,
+} from "./pex-shaders/index.js";
 import { patchVS, patchFS } from "../../utils.js";
 
 const pipelineCache = {};
@@ -118,6 +121,7 @@ export default function createStandardRendererSystem(opts) {
     [["material", "clearCoatNormalMap"], "CLEAR_COAT_NORMAL_MAP", { type: "texture", uniform: "uClearCoatNormalMap"}],
     [["material", "sheenColor"], "USE_SHEEN", { uniform: "uSheenColor"}],
     [["material", "sheenRoughness"], "", { uniform: "uSheenRoughness", requires: "USE_SHEEN"}],
+    [["material", "transmission"], "USE_TRANSMISSION", { uniform: "uTransmission", requires: "USE_BLEND"}],
     [["geometry", "attributes", "aNormal"], "USE_NORMALS", { fallback: "USE_UNLIT_WORKFLOW" }],
     [["geometry", "attributes", "aTangent"], "USE_TANGENTS"],
     [["geometry", "attributes", "aTexCoord0"], "USE_TEXCOORD_0"],
@@ -418,11 +422,17 @@ ${
 
   function render(renderView, entities, opts) {
     const { camera, cameraEntity } = renderView;
-    const { shadowMapping, shadowMappingLight, transparent } = opts;
+    const {
+      shadowMapping,
+      shadowMappingLight,
+      transparent,
+      backgroundColorTexture,
+    } = opts;
 
     const sharedUniforms = {
       //uOutputEncoding: renderPipelineSystem.outputEncoding,
       uOutputEncoding: ctx.Encoding.Linear,
+      uScreenSize: [renderView.viewport[2], renderView.viewport[3]],
     };
 
     gatherLightInfo({ entities, sharedUniforms, shadowMapping });
@@ -445,6 +455,9 @@ ${
       sharedUniforms.uCameraPosition =
         cameraEntity.camera.position || cameraEntity.transform.worldPosition; //TODO: ugly
     }
+
+    sharedUniforms.uCaptureTexture = backgroundColorTexture;
+    sharedUniforms.uRefraction = 0.05;
 
     const renderableEntities = entities.filter(
       (e) =>

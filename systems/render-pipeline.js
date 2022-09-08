@@ -1,7 +1,6 @@
 import { vec3, vec4, mat3, mat4 } from "pex-math";
 import { aabb } from "pex-geom";
 import createPassDescriptors from "./renderer/passes.js";
-import directionalLight from "../components/directional-light.js";
 
 export default function createRenderPipelineSystem(opts) {
   const { ctx, resourceCache, renderGraph } = opts;
@@ -28,6 +27,21 @@ export default function createRenderPipelineSystem(opts) {
     }),
   };
 
+  function nextPowerOfTwo(n) {
+    if (n === 0) return 1;
+    n--;
+    n |= n >> 1;
+    n |= n >> 2;
+    n |= n >> 4;
+    n |= n >> 8;
+    n |= n >> 16;
+    return n + 1;
+  }
+
+  function prevPowerOfTwo(n) {
+    return nextPowerOfTwo(n) / 2;
+  }
+
   const renderPipelineSystem = {
     cache: {},
     debug: true,
@@ -37,6 +51,7 @@ export default function createRenderPipelineSystem(opts) {
   };
 
   function drawMeshes({
+    viewport,
     cameraEntity,
     shadowMapping,
     shadowMappingLight,
@@ -46,8 +61,14 @@ export default function createRenderPipelineSystem(opts) {
     forward,
     renderers,
     drawTransparent,
+    backgroundColorTexture,
   }) {
-    const renderView = {};
+    // if (backgroundColorTexture) {
+    //   ctx.update(backgroundColorTexture, { mipmap: true });
+    // }
+    const renderView = {
+      viewport: viewport,
+    };
     if (cameraEntity) {
       renderView.cameraEntity = cameraEntity;
       renderView.camera = cameraEntity.camera;
@@ -80,15 +101,15 @@ export default function createRenderPipelineSystem(opts) {
             renderer.renderStages.background(renderView, entities);
           }
         });
-        const needsGrabPass = !!entities.find((e) => e.material?.refraction);
-        // console.log("needsGrabPass", needsGrabPass);
       }
 
       if (drawTransparent) {
-        //TODO: capture color buffer and blur it for refraction
+        //TODO: capture color buffer and blur it for transmission/refraction
         renderers.forEach((renderer) => {
           if (renderer.renderStages.transparent) {
-            renderer.renderStages.transparent(renderView, entities);
+            renderer.renderStages.transparent(renderView, entities, {
+              backgroundColorTexture,
+            });
           }
         });
       }
@@ -176,19 +197,22 @@ export default function createRenderPipelineSystem(opts) {
 
     let shadowMapPass = resourceCache.pass(passDesc);
 
+    const renderView = {
+      camera: {
+        viewMatrix: light._viewMatrix,
+        projectionMatrix: light._projectionMatrix,
+      },
+      viewport: [0, 0, shadowMap.width, shadowMap.height],
+    };
+
     renderGraph.renderPass({
       name: "RenderShadowMap" + lightEnt.id,
       pass: shadowMapPass,
-      renderView: {
-        camera: {
-          viewMatrix: light._viewMatrix,
-          projectionMatrix: light._projectionMatrix,
-        },
-        viewport: [0, 0, shadowMap.width, shadowMap.height],
-      },
+      renderView: renderView,
       render: () => {
         light._shadowMap = shadowMap;
         drawMeshes({
+          viewport: renderView.viewport,
           //TODO: passing camera entity around is a mess
           cameraEntity: {
             camera: {
@@ -300,6 +324,7 @@ export default function createRenderPipelineSystem(opts) {
       pass: mainPass,
       render: () => {
         drawMeshes({
+          viewport: renderView.viewport,
           cameraEntity: renderView.cameraEntity,
           shadowMapping: false,
           entities: entities,
@@ -312,13 +337,74 @@ export default function createRenderPipelineSystem(opts) {
       },
     });
 
+    const needsGrabPass = !!entities.find((e) => e.material?.transmission);
+    let grabPassColorCopyTexture;
+    if (needsGrabPass) {
+      passes.grabPass.colorCopyTextureDesc.width = prevPowerOfTwo(
+        renderView.viewport[2]
+      );
+      passes.grabPass.colorCopyTextureDesc.height = prevPowerOfTwo(
+        renderView.viewport[3]
+      );
+      grabPassColorCopyTexture = resourceCache.texture2D(
+        passes.grabPass.colorCopyTextureDesc
+      );
+      grabPassColorCopyTexture.name = `grapbPassOutput\n${grabPassColorCopyTexture.id}`;
+
+      const grabPass = resourceCache.pass({
+        color: [grabPassColorCopyTexture],
+      });
+
+      const copyTexturePipeline = resourceCache.pipeline(
+        passes.grabPass.copyTexturePipelineDesc
+      );
+      const fullscreenTriangle = resourceCache.fullscreenTriangle();
+
+      const copyTextureCmd = {
+        name: "Copy Texture",
+        attributes: fullscreenTriangle.attributes,
+        count: fullscreenTriangle.count,
+        pipeline: copyTexturePipeline,
+        uniforms: {
+          //uViewport: renderView.viewport,
+          uViewport: [
+            0,
+            0,
+            grabPassColorCopyTexture.width,
+            grabPassColorCopyTexture.height,
+          ],
+          uTexture: mainPassOutputTexture,
+        },
+      };
+
+      renderGraph.renderPass({
+        name: `GrabPass ${renderView.viewport}`,
+        uses: [mainPassOutputTexture],
+        renderView: {
+          ...renderView,
+          //viewport: [0, 0, renderView.viewport[2], renderView.viewport[3]],
+          viewport: [
+            0,
+            0,
+            grabPassColorCopyTexture.width,
+            grabPassColorCopyTexture.height,
+          ],
+        },
+        pass: grabPass,
+        render: () => {
+          ctx.submit(copyTextureCmd);
+        },
+      });
+    }
+    // console.log("needsGrabPass", needsGrabPass);
+
     const transparentPass = resourceCache.pass({
       color: [mainPassOutputTexture],
       depth: outputDepthTexture,
     });
     renderGraph.renderPass({
       name: `TransparentMainPass ${renderView.viewport}`,
-      uses: [...shadowMaps],
+      uses: [...shadowMaps, grabPassColorCopyTexture].filter((_) => _), //filter out nulls
       renderView: {
         ...renderView,
         viewport: [0, 0, renderView.viewport[2], renderView.viewport[3]],
@@ -326,6 +412,7 @@ export default function createRenderPipelineSystem(opts) {
       pass: transparentPass,
       render: () => {
         drawMeshes({
+          viewport: renderView.viewport,
           cameraEntity: renderView.cameraEntity,
           shadowMapping: false,
           entities: entities,
@@ -333,6 +420,7 @@ export default function createRenderPipelineSystem(opts) {
           skybox: skyboxEntities[0]?._skybox,
           forward: true,
           drawTransparent: true,
+          backgroundColorTexture: grabPassColorCopyTexture,
           renderers: renderers,
         });
       },

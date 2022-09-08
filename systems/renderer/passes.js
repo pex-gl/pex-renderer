@@ -31,7 +31,7 @@ function createPassDescriptors(ctx) {
       outputTextureDesc: {
         width: 1,
         height: 1,
-        pixelFormat: ctx.PixelFormat.RGBA32F,
+        pixelFormat: ctx.PixelFormat.RGBA16F,
         encoding: ctx.Encoding.Linear,
         min: ctx.Filter.Linear,
         mag: ctx.Filter.Linear,
@@ -46,6 +46,42 @@ function createPassDescriptors(ctx) {
       },
       pass: {
         color: [],
+      },
+    },
+    grabPass: {
+      colorCopyTextureDesc: {
+        width: 1,
+        height: 1,
+        pixelFormat: ctx.PixelFormat.RGBA16F,
+        encoding: ctx.Encoding.Linear,
+        min: ctx.Filter.LinearMipmapLinear,
+        // min: ctx.Filter.Linear,
+        mag: ctx.Filter.Linear,
+        mipmap: true,
+      },
+      copyTexturePipelineDesc: {
+        vert: /*glsl*/ `
+        attribute vec2 aPosition;
+        varying vec2 vTexCoord0;
+        void main () {
+          gl_Position = vec4(aPosition, 0.0, 1.0);
+          vTexCoord0 = aPosition.xy * 0.5 + 0.5;
+        }
+        `,
+        frag: /*glsl*/ `
+          precision highp float;
+          uniform vec4 uViewport;
+          uniform sampler2D uTexture;
+          varying vec2 vTexCoord0;
+          void main() {
+            gl_FragColor = texture2D(uTexture, vTexCoord0);
+            // gl_FragColor.rgb = vec3(
+            //   max(
+            //     max(gl_FragColor.r, gl_FragColor.g),
+            //     gl_FragColor.b)
+            // );
+          }
+        `,
       },
     },
     tonemap: {
