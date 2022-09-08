@@ -23,9 +23,10 @@ float getAngleAttenuation(const vec3 lightDir, const vec3 l, const vec2 scaleOff
 }
 
 vec2 compensateStretch(vec2 uv) {
-  float u = uv.x;
-  u = (u - 0.5) * 1.1 + 0.5;
-  return vec2(u, uv.y);
+  return uv;
+  // float u = uv.x;
+  // u = (u - 0.5) * 1.1 + 0.5;
+  // return vec2(u, uv.y);
 }
 
 
@@ -99,36 +100,40 @@ void getSurfaceShading(inout PBRData data, Light light, float illuminated) {
   float f = F_Schlick(0.04, 1.0, abs(dot(data.viewWorld, data.normalWorld)));
 
   vec3 refractColor = vec3(0.0);
-  #ifdef USE_REFLECTION_PROBES
-  refractColor.x = texture2D(uEnvMap, envMapEquirect(refract(incident, normalWorld, IoR_Values.x))).x;
-  refractColor.y = texture2D(uEnvMap, envMapEquirect(refract(incident, normalWorld, IoR_Values.y))).y;
-  refractColor.z = texture2D(uEnvMap, envMapEquirect(refract(incident, normalWorld, IoR_Values.z))).z;
-  #endif
+  // #ifdef USE_REFLECTION_PROBES
+  // refractColor.x = texture2D(uEnvMap, envMapEquirect(refract(incident, normalWorld, IoR_Values.x))).x;
+  // refractColor.y = texture2D(uEnvMap, envMapEquirect(refract(incident, normalWorld, IoR_Values.y))).y;
+  // refractColor.z = texture2D(uEnvMap, envMapEquirect(refract(incident, normalWorld, IoR_Values.z))).z;
+  // #endif
   float refractAmount = uRefraction;
 
   vec3 reflectColor = vec3(0.0);
+
   #ifdef USE_REFLECTION_PROBES
-  reflectColor = texture2D(uReflectionMap, envMapOctahedral(reflect(-data.viewWorld, data.normalWorld), 0.0, 0.0)).rgb;
+  // reflectColor = texture2D(uReflectionMap, envMapOctahedral(reflect(-data.viewWorld, data.normalWorld), 0.0, 0.0)).rgb;
   #endif
 
   // vec3 IoR_Values = mix(vec3(1.0), vec3(1.14, 1.12, 1.10), uIOR);
   float level = clamp(data.roughness + (1.0 - data.opacity), 0.0, 1.0) * 5.0; //Opacity Hack
   vec2 uv = gl_FragCoord.xy / uScreenSize.xy;
-  // refractColor.x = texture2DLodEXT(uCaptureTexture, compensateStretch(uv + refractAmount * refract(incident, data.normalWorld, 1.0 / IoR_Values.x).xy), level).x;
-  // refractColor.y = texture2DLodEXT(uCaptureTexture, compensateStretch(uv + refractAmount * refract(incident, data.normalWorld, 1.0 / IoR_Values.y).xy), level).y;
-  // refractColor.z = texture2DLodEXT(uCaptureTexture, compensateStretch(uv + refractAmount * refract(incident, data.normalWorld, 1.0 / IoR_Values.z).xy), level).z;
+  vec2 refractionAspect = vec2(1.0 * uScreenSize.y/uScreenSize.x, 1.0);
+  refractColor.x = texture2DLodEXT(uCaptureTexture, compensateStretch(uv + refractAmount * refract(incident, data.normalWorld, 1.0 / IoR_Values.x).xy), level).x;
+  refractColor.y = texture2DLodEXT(uCaptureTexture, compensateStretch(uv + refractAmount * refract(incident, data.normalWorld, 1.0 / IoR_Values.y).xy), level).y;
+  refractColor.z = texture2DLodEXT(uCaptureTexture, compensateStretch(uv + refractAmount * refract(incident, data.normalWorld, 1.0 / IoR_Values.z).xy), level).z;
+  // refractColor.x = texture2D(uCaptureTexture, compensateStretch(uv + refractionAspect * refractAmount * refract(incident, data.normalWorld, 1.0 / IoR_Values.x).xy)).x;
+  // refractColor.y = texture2D(uCaptureTexture, compensateStretch(uv + refractionAspect * refractAmount * refract(incident, data.normalWorld, 1.0 / IoR_Values.y).xy)).y;
+  // refractColor.z = texture2D(uCaptureTexture, compensateStretch(uv + refractionAspect * refractAmount * refract(incident, data.normalWorld, 1.0 / IoR_Values.z).xy)).z;
 
-  refractColor.x = texture2D(uCaptureTexture, compensateStretch(uv + refractAmount * refract(incident, data.normalWorld, 1.0 / IoR_Values.x).xy)).x;
-  refractColor.y = texture2D(uCaptureTexture, compensateStretch(uv + refractAmount * refract(incident, data.normalWorld, 1.0 / IoR_Values.y).xy)).y;
-  refractColor.z = texture2D(uCaptureTexture, compensateStretch(uv + refractAmount * refract(incident, data.normalWorld, 1.0 / IoR_Values.z).xy)).z;
-
-  data.directColor = data.diffuseColor * mix(refractColor, reflectColor, f);
-  data.directColor = 0.2 * refractColor;
+  data.directColor *= 0.3;
+  data.directColor += data.diffuseColor * mix(refractColor, reflectColor, f);
+  // data.directColor = vec3(uScreenSize.xy, 0.0);
+  // data.directColor += refractColor;
   // data.directColor = vec3(f);
-  // data.directDiffuse = reflectColor;
-  // data.directDiffuse = 0.2 + texture2D(uCaptureTexture, uv).rgb;
-  // data.directDiffuse = vec3(uv, 1.0);
-  // data.directDiffuse = vec3(1.0, 0.0, 1.0);
+  // data.directColor = reflectColor;
+  // data.directColor = 0.2 + texture2D(uCaptureTexture, uv).rgb;
+  // data.directColor = vec3(uv, 1.0);
+  // data.directColor = vec3(1.0, 0.0, 1.0);
+  // data.directColor = texture2D(uCaptureTexture, uv).xyz;
   #endif
 }
 `;
