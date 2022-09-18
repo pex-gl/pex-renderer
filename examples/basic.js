@@ -229,7 +229,7 @@ const renderPipelineSys = systems.renderPipeline({
 });
 world.addSystem(renderPipelineSys);
 
-const standardRendererSystem = systems.renderer.standard({
+const standardRendererSys = systems.renderer.standard({
   ctx,
   resourceCache,
   renderGraph,
@@ -416,11 +416,7 @@ ctx.frame(() => {
     });
     cameraSys.update(world.entities);
     renderPipelineSys.update(world.entities, {
-      renderers: [
-        standardRendererSystem,
-        lineRendererSystem,
-        skyboxRendererSys,
-      ],
+      renderers: [standardRendererSys, lineRendererSystem, skyboxRendererSys],
       renderView: renderView,
     });
   } catch (e) {
