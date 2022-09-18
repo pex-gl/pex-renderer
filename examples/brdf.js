@@ -16,6 +16,7 @@ import * as io from "pex-io";
 import { sphere } from "primitive-geometry";
 import gridCells from "grid-cells";
 import parseHdr from "parse-hdr";
+import parseObj from "geom-parse-obj";
 import { getTexture, getURL } from "./utils.js";
 
 const State = {
@@ -189,7 +190,7 @@ cells.forEach((cell, cellIndex) => {
   const material = materials[cellIndex];
   if (!material) return;
   const cameraCmp = components.camera({
-    fov: Math.PI / 3,
+    fov: Math.PI / 4,
     aspect: W / nW / (H / nH),
     viewport: cell,
     exposure: State.exposure,
@@ -213,8 +214,8 @@ cells.forEach((cell, cellIndex) => {
       positions: [0, 0, 1.2],
     }),
     orbiter: components.orbiter({
-      position: [0, 0, 1.2],
-      distance: 1.2, //FIXME: this is needed?
+      position: [0, 0, 1.5],
+      // distance: 2, //FIXME: this is needed?
       element: ctx.gl.canvas,
     }),
     layer: layer,
@@ -261,10 +262,19 @@ await Promise.allSettled(
         material.emissiveColorMap,
         ctx.Encoding.SRGB
       );
-    material.castShadows = true;
-    material.receiveShadows = true;
+    material.castShadows = false;
+    material.receiveShadows = false;
   })
 );
+
+let sphereGeom = sphere({ nx: 32, ny: 32 });
+
+const sphereMesh = {
+  positions: { buffer: ctx.vertexBuffer(sphereGeom.positions) },
+  normals: { buffer: ctx.vertexBuffer(sphereGeom.normals) },
+  uvs: { buffer: ctx.vertexBuffer(sphereGeom.uvs) },
+  cells: { buffer: ctx.indexBuffer(sphereGeom.cells) },
+};
 
 cells.forEach((cell, cellIndex) => {
   const layer = `cell${cellIndex}`;
@@ -273,7 +283,7 @@ cells.forEach((cell, cellIndex) => {
 
   const materialEntity = createEntity({
     transform: components.transform(),
-    geometry: components.geometry(sphere({ nx: 32, ny: 32 })),
+    geometry: components.geometry(sphereMesh),
     material: components.material(material),
     layer: layer,
   });
@@ -305,7 +315,7 @@ cells.forEach((cell, cellIndex) => {
   const sun = components.directionalLight({
     color: [1, 1, 0.95, 2],
     intensity: 2,
-    castShadows: true,
+    castShadows: false,
   });
   const sunEntity = createEntity({
     transform: components.transform({
@@ -373,9 +383,6 @@ ctx.frame(() => {
   ctx.debug(debugOnce);
   debugOnce = false;
 
-  resourceCache.beginFrame();
-  renderGraph.beginFrame();
-
   geometrySys.update(world.entities);
   transformSys.update(world.entities);
   skyboxSys.update(world.entities);
@@ -387,6 +394,9 @@ ctx.frame(() => {
   world.entities
     .filter((e) => e.camera)
     .forEach((cameraEntity) => {
+      resourceCache.beginFrame();
+      renderGraph.beginFrame();
+
       const viewEntities = world.entities.filter(
         (e) => e.layer == cameraEntity.layer || !e.layer
       );
@@ -400,17 +410,17 @@ ctx.frame(() => {
         // renderers: [basicRendererSys, skyboxRendererSys],
         renderView: renderView,
       });
+
+      renderGraph.endFrame();
+      resourceCache.endFrame();
     });
 
   // Hide skybox after first frame
   const skyboxEntity = world.entities.find((e) => e.skybox);
   if (skyboxEntity) {
     //TODO: who will dispose removed skybox?
-    // skyboxEntity.skybox = null;
+    skyboxEntity.skybox = null;
   }
-
-  renderGraph.endFrame();
-  resourceCache.endFrame();
 
   gui.draw();
 });
