@@ -115,8 +115,8 @@ export default function createSkyboxRendererSystem(opts) {
     const useTonemapping = false;
 
     ctx.submit(drawCommand, {
-      viewport: camera.viewport,
-      scissor: camera.viewport,
+      // viewport: camera.viewport,
+      // scissor: camera.viewport,
       uniforms: {
         uProjectionMatrix: projectionMatrix,
         uViewMatrix: viewMatrix,
