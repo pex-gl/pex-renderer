@@ -48,38 +48,12 @@ const resourceCache = createResourceCache(ctx);
 
 const gui = createGUI(ctx, {
   responsive: false,
-  // pixelRatio: 1.5,
-  scale: 1 / 1.5,
 });
 const W = ctx.gl.drawingBufferWidth;
 const H = ctx.gl.drawingBufferHeight;
 const nW = 11;
 const nH = 6;
 let debugOnce = false;
-
-window.addEventListener("resize", () => {
-  ctx.set({
-    pixelRatio: 1.5,
-    width: window.innerWidth,
-    height: window.innerHeight,
-  });
-  const W = window.innerWidth * 1.5;
-  const H = window.innerHeight * 1.5;
-
-  let cells = gridCells(W, H, nW, nH, 0).map(
-    (
-      cell // flip upside down as we are using viewport coordinates
-    ) => [cell[0], H - cell[1] - cell[3], cell[2], cell[3]]
-  );
-
-  world.entities
-    .filter((e) => e.camera)
-    .forEach((cameraEntity, i) => {
-      cameraEntity.camera.viewport = cells[i];
-      cameraEntity.camera.aspect = cells[i][2] / cells[i][3];
-      cameraEntity.camera.dirty = true;
-    });
-});
 
 // Materials
 let materials = [];
@@ -166,24 +140,48 @@ gui.addButton("Resources", () => {
   );
 });
 
-gui
-  .addHeader("Metallic")
-  .setPosition(10, 10 + (ctx.gl.drawingBufferHeight * 0) / 6);
-gui
-  .addHeader("Roughness for non-metallic")
-  .setPosition(10, 10 + (ctx.gl.drawingBufferHeight * 1) / 6);
-gui
-  .addHeader("Roughness for metallic")
-  .setPosition(10, 10 + (ctx.gl.drawingBufferHeight * 2) / 6);
-gui
-  .addHeader("Reflectance")
-  .setPosition(10, 10 + (ctx.gl.drawingBufferHeight * 3) / 6);
-gui
-  .addHeader("Clear Coat")
-  .setPosition(10, 10 + (ctx.gl.drawingBufferHeight * 4) / 6);
-gui
-  .addHeader("Clear Coat Roughness")
-  .setPosition(10, 10 + (ctx.gl.drawingBufferHeight * 5) / 6);
+const headers = [
+  "Metallic",
+  "Roughness for non-metallic",
+  "Roughness for metallic",
+  "Reflectance",
+  "Clear Coat",
+  "Clear Coat Roughness",
+].map((headerTitle) => {
+  const header = gui.addHeader(headerTitle);
+  return header;
+});
+
+function resize() {
+  ctx.set({
+    pixelRatio: 1.5,
+    width: window.innerWidth,
+    height: window.innerHeight,
+  });
+  const W = window.innerWidth * 1.5;
+  const H = window.innerHeight * 1.5;
+
+  headers.forEach((header, i) => {
+    header.setPosition(10, 10 + (i * H) / 6 / 1.5);
+  });
+
+  let cells = gridCells(W, H, nW, nH, 0).map(
+    (
+      cell // flip upside down as we are using viewport coordinates
+    ) => [cell[0], H - cell[1] - cell[3], cell[2], cell[3]]
+  );
+
+  world.entities
+    .filter((e) => e.camera)
+    .forEach((cameraEntity, i) => {
+      cameraEntity.camera.viewport = cells[i];
+      cameraEntity.camera.aspect = cells[i][2] / cells[i][3];
+      cameraEntity.camera.dirty = true;
+    });
+}
+
+window.addEventListener("resize", resize);
+resize();
 
 cells.forEach((cell, cellIndex) => {
   const layer = `cell${cellIndex}`;
