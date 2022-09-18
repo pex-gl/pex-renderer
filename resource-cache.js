@@ -68,6 +68,7 @@ export default function createResourceCache(ctx) {
 
   //prettier-ignore
   const resourceCache = {
+    _cache: cache,
     //TODO: make resourceCache a class
     Usage,
     texture2D: (props, usage) => getContextResource("texture2D", props, usage),
