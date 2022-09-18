@@ -17,11 +17,30 @@ export default function createCameraSystem() {
         if (!orbiter._orbiter) {
           const proxyCamera = {
             viewMatrix: mat4.create(),
+            invViewMatrix: camera.invViewMatrix,
             position: entity.orbiter.position || camera.position,
             target: camera.target,
-            set({ position }) {
-              vec3.set(camera.position, position);
-              vec3.set(entity.transform.position, position);
+            getViewRay: (x, y, windowWidth, windowHeight) => {
+              let nx = (2 * x) / windowWidth - 1;
+              let ny = 1 - (2 * y) / windowHeight;
+              const hNear = 2 * Math.tan(camera.fov / 2) * camera.near;
+              const wNear = hNear * camera.aspect;
+              nx *= wNear * 0.5;
+              ny *= hNear * 0.5; // [origin, direction]
+
+              return [[0, 0, 0], vec3.normalize([nx, ny, -camera.near])];
+            },
+            set({ target, position }) {
+              if (position) {
+                vec3.set(camera.position, position);
+                vec3.set(entity.transform.position, position);
+              }
+              if (target) {
+                debugger;
+                console.log(target);
+                vec3.set(camera.target, target);
+              }
+              camera.dirty = true;
               entity.transform = {
                 ...entity.transform,
               };
