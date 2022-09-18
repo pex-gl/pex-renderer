@@ -36,6 +36,8 @@ const programCacheMap = {
 export default function createStandardRendererSystem(opts) {
   const { ctx } = opts;
 
+  const dummyTexture2D = ctx.texture2D({ width: 4, height: 4 });
+
   // function render() {
   //   skybox.draw(camera, {
   //     outputEncoding: sharedUniforms.uOutputEncoding,
