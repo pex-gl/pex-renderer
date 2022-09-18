@@ -8,7 +8,7 @@
     "blocks",
     "refraction",
     "multi-view",
-    // "brdf",
+    "brdf",
     // "camera-cinematic-dof",
     // "camera-view",
     // "cameras",
