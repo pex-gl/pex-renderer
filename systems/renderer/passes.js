@@ -110,7 +110,6 @@ function createPassDescriptors(ctx) {
             vec2 vUV = vec2((gl_FragCoord.x - uViewport.x) / uViewport.z, (gl_FragCoord.y - uViewport.y) / uViewport.w);
             gl_FragColor = vec4(vUV, 0.0, 1.0);
             vec4 color = texture2D(uTexture, vUV);
-            color.rgb *= 0.5;
             color.rgb = tonemapAces(color.rgb);
             color.rgb = pow(color.rgb, vec3(1.0 / 2.2)); //to gamma
             gl_FragColor = color;
