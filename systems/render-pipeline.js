@@ -15,7 +15,6 @@ export default function createRenderPipelineSystem(opts) {
   ctx.gl.getExtension("OES_texture_float");
   ctx.gl.getExtension("EXT_float_blend");
 
-  const dummyTexture2D = ctx.texture2D({ width: 4, height: 4 });
   const dummyTextureCube = ctx.textureCube({ width: 4, height: 4 });
   const tempMat4 = mat4.create(); //FIXME
   const passes = createPassDescriptors(ctx);
@@ -282,9 +281,11 @@ export default function createRenderPipelineSystem(opts) {
       }
     });
 
-    const shadowMaps = directionalLightEntities.map((e) => {
-      return e.directionalLight._shadowMap;
-    });
+    const shadowMaps = directionalLightEntities
+      .map((e) => {
+        return e.directionalLight._shadowMap;
+      })
+      .filter((_) => _);
     // cameraEntities.forEach((camera) => {
     let entitiesToDraw = rendererableEntities;
     if (renderView.camera.layer) {
