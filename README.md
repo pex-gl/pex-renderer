@@ -31,7 +31,6 @@ console.log(pexRenderer);
 
 <!-- api-start -->
 
-Auto-generated API content.
 
 <!-- api-end -->
 
