@@ -20,7 +20,7 @@
     // "highpoly",
     // "instancing",
     // "lights",
-    // "materials",
+    "materials",
     // "orbiter",
     // "overlays",
     // "point-size",
