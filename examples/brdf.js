@@ -296,11 +296,6 @@ cells.forEach((cell, cellIndex) => {
   //const buffer = await io.loadArrayBuffer(getURL(`assets/envmaps/garage.hdr`))
   // const buffer = await io.loadArrayBuffer(getURL(`assets/envmaps/Mono_Lake_B.hdr`))
   const hdrImg = parseHdr(buffer);
-  for (let i = 0; i < hdrImg.data.length; i += 4) {
-    hdrImg.data[i + 0] *= 0.8;
-    hdrImg.data[i + 1] *= 0.8;
-    hdrImg.data[i + 2] *= 0.5;
-  }
   const panorama = ctx.texture2D({
     data: hdrImg.data,
     width: hdrImg.shape[0],
@@ -408,7 +403,6 @@ ctx.frame(() => {
         // renderers: [basicRendererSys, skyboxRendererSys],
         renderView: renderView,
       });
-
       renderGraph.endFrame();
       resourceCache.endFrame();
     });
