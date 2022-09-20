@@ -232,7 +232,7 @@ export default function createCamera(opts = {}) {
   const camera = {
     fov: Math.PI / 4,
     aspect: 1,
-    near: 0.1,
+    near: 0.5,
     far: 1000,
     position: [0, 1, 5],
     target: [0, 0, 0],
