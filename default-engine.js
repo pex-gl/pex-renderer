@@ -1,8 +1,34 @@
-import {
-  renderGraph as createRenderGraph,
-  resourceCache as createResourceCache,
-  systems,
-} from "../index.js"; //FIXME: umm doesn't that create cyclic dependency?
+import createAnimationSystem from "./systems/animation.js";
+import createCameraSystem from "./systems/camera.js";
+import createGeometrySystem from "./systems/geometry.js";
+import createReflectionProbeSystem from "./systems/reflection-probe.js";
+import createRenderPipelineSystem from "./systems/render-pipeline.js";
+import createSkyboxSystem from "./systems/skybox.js";
+import createTransformSystem from "./systems/transform.js";
+
+import createHelperRenderer from "./systems/renderer/helper.js";
+import createLineRenderer from "./systems/renderer/line.js";
+import createStandardRenderer from "./systems/renderer/standard.js";
+import createSkyboxRenderer from "./systems/renderer/skybox.js";
+
+import createRenderGraph from "./render-graph.js";
+import createResourceCache from "./resource-cache.js";
+
+const systems = {
+  renderer: {
+    helper: createHelperRenderer,
+    line: createLineRenderer,
+    standard: createStandardRenderer,
+    skybox: createSkyboxRenderer,
+  },
+  animation: createAnimationSystem,
+  camera: createCameraSystem,
+  geometry: createGeometrySystem,
+  reflectionProbe: createReflectionProbeSystem,
+  renderPipeline: createRenderPipelineSystem,
+  skybox: createSkyboxSystem,
+  transform: createTransformSystem,
+};
 
 export default function defaultEngine(opts) {
   const { ctx } = opts;
