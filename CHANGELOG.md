@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+# [4.0.0-alpha.2](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.1...v4.0.0-alpha.2) (2022-09-21)
+
+
+### Features
+
+* **default-engine:** remove cyclic import ([3ecbb6c](https://github.com/pex-gl/pex-renderer/commit/3ecbb6ceb86ace1495b023d7208c16323d130c6e))
+
+
+
 # [4.0.0-alpha.1](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.0...v4.0.0-alpha.1) (2022-09-21)
 
 
