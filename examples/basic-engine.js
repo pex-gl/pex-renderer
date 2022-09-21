@@ -42,7 +42,7 @@ window.addEventListener("resize", () => {
   cameraEntity.camera.dirty = true;
 });
 
-const world = (window.world = createWorld());
+const world = createWorld();
 const renderGraph = createRenderGraph(ctx);
 const resourceCache = createResourceCache(ctx);
 

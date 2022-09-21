@@ -48,7 +48,6 @@ export default function defaultEngine(opts) {
     renderGraph,
     outputEncoding: ctx.Encoding.Linear,
   });
-  world.addSystem(renderPipelineSys);
 
   const standardRendererSystem = systems.renderer.standard({
     ctx,
