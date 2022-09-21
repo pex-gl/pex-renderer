@@ -1,6 +1,6 @@
 {
   "name": "pex-renderer",
-  "version": "4.0.0-alpha.0",
+  "version": "4.0.0-alpha.1",
   "description": "Physically based renderer (PBR) and scene graph for PEX.",
   "keywords": [
     "pex",
@@ -26,7 +26,8 @@
   "scripts": {
     "build": "snowdev build",
     "dev": "snowdev dev",
-    "release": "snowdev release"
+    "release": "snowdev release",
+    "release-alpha": "snowdev release --release-as minor --prerelease alpha"
   },
   "dependencies": {
     "geom-builder": "^2.1.0",

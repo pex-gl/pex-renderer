@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+# [4.0.0-alpha.1](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.0...v4.0.0-alpha.1) (2022-09-21)
+
+
+### Bug Fixes
+
+* **components/camera:** increase near to 0.5 to avoid depth buffer 16 precision errors ([de8b529](https://github.com/pex-gl/pex-renderer/commit/de8b529f7c1d32511ba526d44e4e491c71b50d19))
+
+
+### Features
+
+* **default-engine:** add default engine with example ([1ea2b03](https://github.com/pex-gl/pex-renderer/commit/1ea2b037f85eccca476d91febb2d1776db56d35c))
+* **renderer/basic:** add full instancing support to basic material ([3eb0c19](https://github.com/pex-gl/pex-renderer/commit/3eb0c196d8b13ea2f5903fcd5e481df1e386703d))
+
+
+
 # [4.0.0-alpha.0](https://github.com/pex-gl/pex-renderer/compare/v3.1.0...v4.0.0-alpha.0) (2022-09-19)
 
 
