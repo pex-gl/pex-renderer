@@ -1,6 +1,6 @@
 import createWorld from "./world.js";
-
 import createEntity from "./entity.js";
+import createDefaultEngine from "./default-engine.js";
 
 import createAmbientLight from "./components/ambient-light.js";
 import createAnimation from "./components/animation.js";
@@ -37,9 +37,9 @@ import createStandardRenderer from "./systems/renderer/standard.js";
 import createSkyboxRenderer from "./systems/renderer/skybox.js";
 
 import createRenderGraph from "./render-graph.js";
+import createResourceCache from "./resource-cache.js";
 
 import loadGltf from "./loaders/glTF.js";
-import createResourceCache from "./resource-cache.js";
 
 export let world = createWorld;
 
@@ -90,3 +90,4 @@ export let loaders = {
 
 export let renderGraph = createRenderGraph;
 export let resourceCache = createResourceCache;
+export let defaultEngine = createDefaultEngine;

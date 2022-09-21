@@ -5,6 +5,7 @@
   const examples = [
     // "ao",
     "basic",
+    "basic-engine",
     "blocks",
     "refraction",
     "multi-view",
