@@ -115,7 +115,7 @@ export default function createStandardRendererSystem(opts) {
     [["material", "roughnessMap"], "ROUGHNESS_MAP", { type: "texture", uniform: "uRoughnessMap"}],
     [["material", "metallicMap"], "METALLIC_MAP", { type: "texture", uniform: "uMetallicMap"}],
     [["material", "metallicRoughnessMap"], "METALLIC_ROUGHNESS_MAP", { type: "texture", uniform: "uMetallicRoughnessMap"}],
-    [["material", "alphaTest"], "USE_ALPHA_TEST"],
+    [["material", "alphaTest"], "USE_ALPHA_TEST", { uniform: "uAlphaTest" }],
     [["material", "alphaMap"], "ALPHA_MAP", { type: "texture", uniform: "uAlphaMap"}],
     [["material", "clearCoat"], "USE_CLEAR_COAT", { uniform: "uClearCoat"}],
     [["material", "clearCoatRoughness"], "USE_CLEAR_COAT_ROUGHNESS", { uniform: "uClearCoatRoughness"}],
@@ -481,8 +481,8 @@ ${
       const cachedUniforms = {};
       cachedUniforms.uModelMatrix = transform.modelMatrix; //FIXME: bypasses need for transformSystem access
       cachedUniforms.uNormalScale = 1;
-      cachedUniforms.uAlphaTest = material.alphaTest || 1;
-      cachedUniforms.uAlphaMap = material.alphaMap;
+      // cachedUniforms.uAlphaTest = material.alphaTest;
+      // cachedUniforms.uAlphaMap = material.alphaMap;
       cachedUniforms.uReflectance =
         material.reflectance !== undefined ? material.reflectance : 0.5;
       cachedUniforms.uExposure = 1.0;
