@@ -92,6 +92,58 @@ export default /* glsl */ `
     return result/25.0;
   }
 
+  float PCF5x5Penumbra(sampler2D depths, vec2 size, vec2 uv, float compare, float near, float far, float radius){
+    float result = 0.0;
+    for(int x=-2; x<=2; x++){
+        for(int y=-2; y<=2; y++){
+            vec2 off = vec2(x,y)/float(size) * radius;
+            off = rotate(off, rand(uv));
+            result += texture2DShadowLerp(depths, size, uv + off, compare, near, far);
+        }
+    }
+    return result/25.0;
+  }
+  vec2 FindBlockers(sampler2D depthMap, vec2 size, vec2 uv, float receiverDepth, float near, float far){
+    float blockers = 0.0;
+    float avgBlockerDistance = 0.0;
+    float result = 0.0;
+    for(int x=-2; x<=2; x++){
+        for(int y=-2; y<=2; y++){
+            vec2 off = vec2(x,y)/float(size) * 10.0;
+            off = rotate(off, rand(uv));
+            off += rand2(uv) * 0.01;
+            float depth = readDepth(depthMap, uv + off, near, far);
+            // if (step(receiverDepth, depth) <= 0.0) {
+            if (depth < receiverDepth) {
+              blockers += 1.0;
+              avgBlockerDistance += depth;
+            }
+        }
+    }
+
+    if (blockers > 0.0) {
+      avgBlockerDistance /= blockers;
+      // return vec2(1.0);
+    }
+    // return vec2(0.0);
+    return vec2(avgBlockerDistance, blockers);
+  }
+  float getSoftShadow(sampler2D depths, vec2 size, vec2 uv, float compare, float near, float far) {
+    float receiverDepth = compare;
+    vec2 averageBlocker = FindBlockers(depths, size, uv, receiverDepth, near, far);
+    float averageBlockerDepth = averageBlocker.x;
+
+    float blockerCount = averageBlocker.y;
+    float penumbraSize = 1.0;
+    float lightSize = 3.0;
+
+    if (averageBlockerDepth > 0.0) {
+      penumbraSize = lightSize * (receiverDepth - averageBlockerDepth);
+    }
+    float illuminated = PCF5x5Penumbra(depths, size, uv, compare, near, far, penumbraSize);
+    return illuminated;
+  }
+
   float getShadow(sampler2D depths, vec2 size, vec2 uv, float compare, float near, float far) {
     if (uv.x < 0.0 || uv.y < 0.0 || uv.x > 1.0 || uv.y > 1.0) {
       return 1.0;
@@ -111,62 +163,11 @@ export default /* glsl */ `
     #if SHADOW_QUALITY == 4
       float illuminated = PCF5x5(depths, size, uv, compare, near, far);
     #endif
+    #if SHADOW_QUALITY == 5
+      float illuminated = getSoftShadow(depths, size, uv, compare, near, far);
+    #endif
     return illuminated;
   }
-  float PCF5x5Penumbra(sampler2D depths, vec2 size, vec2 uv, float compare, float near, float far, float radius){
-    float result = 0.0;
-    for(int x=-2; x<=2; x++){
-        for(int y=-2; y<=2; y++){
-            vec2 off = vec2(x,y)/float(size) * radius;
-            off = rotate(off, rand(uv));
-            result += texture2DShadowLerp(depths, size, uv + off, compare, near, far);
-        }
-    }
-    return result/25.0;
-  }
-    vec2 FindBlockers(sampler2D depthMap, vec2 size, vec2 uv, float receiverDepth, float near, float far){
-      float blockers = 0.0;
-      float avgBlockerDistance = 0.0;
-      float result = 0.0;
-      for(int x=-2; x<=2; x++){
-          for(int y=-2; y<=2; y++){
-              vec2 off = vec2(x,y)/float(size) * 10.0;
-              off = rotate(off, rand(uv));
-              off += rand2(uv) * 0.01;
-              float depth = readDepth(depthMap, uv + off, near, far);
-              // if (step(receiverDepth, depth) <= 0.0) {
-              if (depth < receiverDepth) {
-                blockers += 1.0;
-                avgBlockerDistance += depth;
-              }
-          }
-      }
-
-      if (blockers > 0.0) {
-        avgBlockerDistance /= blockers;
-        // return vec2(1.0);
-      }
-      // return vec2(0.0);
-      return vec2(avgBlockerDistance, blockers);
-    }
-    float getSoftShadow(sampler2D depths, vec2 size, vec2 uv, float compare, float near, float far) {
-      if (uv.x < 0.0 || uv.y < 0.0 || uv.x > 1.0 || uv.y > 1.0) {
-        return 1.0;
-      }
-      float receiverDepth = compare;
-      vec2 averageBlocker = FindBlockers(depths, size, uv, receiverDepth, near, far);
-      float averageBlockerDepth = averageBlocker.x;
-
-      float blockerCount = averageBlocker.y;
-      float penumbraSize = 1.0;
-      float lightSize = 3.0;
-
-      if (averageBlockerDepth > 0.0) {
-        penumbraSize = lightSize * (receiverDepth - averageBlockerDepth);
-      }
-      float illuminated = PCF5x5Penumbra(depths, size, uv, compare, near, far, penumbraSize);
-      return illuminated;
-    }
 #endif
 
 #if NUM_POINT_LIGHTS > 0
