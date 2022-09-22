@@ -62,8 +62,8 @@ export default function defaultEngine(opts) {
   const helperRendererSys = systems.renderer.helper({ ctx });
   const skyboxRendererSys = systems.renderer.skybox({ ctx });
 
-  const engine = {
-    transformSystem: transformSys, //FIXME: code smell
+  const renderEngine = {
+    transformSystem: transformSys,
     update: (entities, deltaTime) => {
       animationSys.update(entities, deltaTime);
       geometrySys.update(entities);
@@ -99,5 +99,5 @@ export default function defaultEngine(opts) {
       resourceCache.endFrame();
     },
   };
-  return engine;
+  return renderEngine;
 }

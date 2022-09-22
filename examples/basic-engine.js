@@ -1,5 +1,5 @@
 import {
-  defaultEngine as createDefaultEngine,
+  renderEngine as createRenderEngine,
   world as createWorld,
   entity as createEntity,
   renderGraph as createRenderGraph,
@@ -222,7 +222,7 @@ async function loadScene() {
 
     console.log("loadScene updating hierarchy");
     //force scene hierarchy update
-    engine.transformSystem.update(world.entities); //FIXME: is it ok to access system just like that?
+    renderEngine.transformSystem.update(world.entities); //FIXME: is it ok to access system just like that?
 
     console.log("loadScene rescaling");
     rescaleScene(sceneEntities[0]); //TODO: race condition: sometime scene bounding box is not yet updated and null
@@ -258,7 +258,7 @@ loadScene();
 })();
 
 let prevTime = Date.now();
-const engine = createDefaultEngine({ ctx });
+const renderEngine = createRenderEngine({ ctx });
 
 ctx.frame(() => {
   const now = Date.now();
@@ -267,8 +267,8 @@ ctx.frame(() => {
 
   const cameraEntity = world.entities.find((e) => e.camera);
 
-  engine.update(world.entities, deltaTime);
-  engine.render(world.entities, cameraEntity);
+  renderEngine.update(world.entities, deltaTime);
+  renderEngine.render(world.entities, cameraEntity);
 
   gui.draw();
 });

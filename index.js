@@ -1,6 +1,6 @@
 import createWorld from "./world.js";
 import createEntity from "./entity.js";
-import createDefaultEngine from "./default-engine.js";
+import createRenderEngine from "./render-engine.js";
 
 import createAmbientLight from "./components/ambient-light.js";
 import createAnimation from "./components/animation.js";
@@ -90,4 +90,4 @@ export let loaders = {
 
 export let renderGraph = createRenderGraph;
 export let resourceCache = createResourceCache;
-export let defaultEngine = createDefaultEngine;
+export let renderEngine = createRenderEngine;
