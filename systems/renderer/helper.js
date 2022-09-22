@@ -201,7 +201,7 @@ export default function createHelperSystem({ ctx }) {
             uViewMatrix: camera.viewMatrix,
             uOutputEncoding: ctx.Encoding.Gamma,
           },
-          viewport: camera.viewport,
+          // viewport: camera.viewport,
         });
       }
     },
