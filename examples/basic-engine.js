@@ -169,23 +169,6 @@ const directionalLightEntity = createEntity({
 });
 world.add(directionalLightEntity);
 
-function rescaleScene(root) {
-  const sceneBounds = root.transform.worldBounds;
-  const sceneSize = aabb.size(sceneBounds);
-  const sceneCenter = aabb.center(sceneBounds);
-  const sceneScale =
-    2 / (Math.max(sceneSize[0], Math.max(sceneSize[1], sceneSize[2])) || 1);
-  if (!aabb.isEmpty(sceneBounds)) {
-    root.transform.position = vec3.scale(
-      [-sceneCenter[0], -sceneBounds[0][1], -sceneCenter[2]],
-      sceneScale
-    );
-    root.transform.scale = [sceneScale, sceneScale, sceneScale];
-    root.transform.dirty = true;
-    console.log("rescaleScene", sceneScale);
-  }
-}
-
 async function loadScene() {
   console.log("loadScene loaders.gltf");
   // debugger;
@@ -210,6 +193,12 @@ async function loadScene() {
     ); //ok
     console.log("loadScene Scene", scene);
     const sceneEntities = scene[0].entities;
+    const root = sceneEntities[0];
+    if (!root.transform.scale) {
+      root.transform.scale = [1, 1, 1];
+    }
+    vec3.scale(root.transform.scale, 0.005);
+    vec3.add(root.transform.position, [0, 0.55, 0]);
 
     world.entities.push(...sceneEntities);
     sceneEntities.forEach((e) => {
@@ -219,13 +208,6 @@ async function loadScene() {
         e.material.needsPipelineUpdate = true;
       }
     });
-
-    console.log("loadScene updating hierarchy");
-    //force scene hierarchy update
-    renderEngine.transformSystem.update(world.entities); //FIXME: is it ok to access system just like that?
-
-    console.log("loadScene rescaling");
-    rescaleScene(sceneEntities[0]); //TODO: race condition: sometime scene bounding box is not yet updated and null
   } catch (e) {
     console.error(e);
   }

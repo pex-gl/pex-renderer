@@ -63,7 +63,6 @@ export default function defaultEngine(opts) {
   const skyboxRendererSys = systems.renderer.skybox({ ctx });
 
   const renderEngine = {
-    transformSystem: transformSys,
     update: (entities, deltaTime) => {
       animationSys.update(entities, deltaTime);
       geometrySys.update(entities);
