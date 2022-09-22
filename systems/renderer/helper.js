@@ -146,7 +146,7 @@ export default function createHelperSystem({ ctx }) {
         ? patchFS(SHADERS.helper.frag)
         : SHADERS.helper.frag,
       depthTest: true,
-      depthWrite: false,
+      depthWrite: true,
       primitive: ctx.Primitive.Lines,
     }),
     attributes: {
