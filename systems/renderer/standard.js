@@ -151,7 +151,8 @@ export default function createStandardRendererSystem(opts) {
       ctx.capabilities.maxColorAttachments > 1 && "USE_DRAW_BUFFERS",
       // (!geometry.attributes.aNormal || material.unlit) && "USE_UNLIT_WORKFLOW",
       // "USE_UNLIT_WORKFLOW",
-      "SHADOW_QUALITY 2",
+      "SHADOW_QUALITY " + (entity.material.receiveShadows ? 3 : 0),
+      // "SHADOW_QUALITY 0",
     ];
     let materialUniforms = {};
 
