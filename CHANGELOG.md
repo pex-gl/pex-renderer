@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+# [4.0.0-alpha.3](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.2...v4.0.0-alpha.3) (2022-09-22)
+
+
+### Bug Fixes
+
+* **renderer/helper:** don't use camera.viewport ([140044a](https://github.com/pex-gl/pex-renderer/commit/140044a808e2278ac91e6bce4ed208d856ea082e))
+
+
+### Features
+
+* **default-engine:** remove world reference ([4a79021](https://github.com/pex-gl/pex-renderer/commit/4a7902180ea26c1e900feb7060239ff0108aac7b))
+* **examples/basic-engine:** remove hacky gltf scene scaling ([f697f54](https://github.com/pex-gl/pex-renderer/commit/f697f54854196b5f262881a8029efff2d4a76875))
+* **render-engine:** rename default-engine to render-engine ([0ac4e76](https://github.com/pex-gl/pex-renderer/commit/0ac4e768545c1585979d22e8d46ebc9f3af02c53)), closes [#316](https://github.com/pex-gl/pex-renderer/issues/316)
+* **renderer/helper:** enable depth writing ([4800708](https://github.com/pex-gl/pex-renderer/commit/4800708f68ed8146e3d6f8bbe02d610118374a54))
+
+
+
 # [4.0.0-alpha.2](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.1...v4.0.0-alpha.2) (2022-09-21)
 
 
