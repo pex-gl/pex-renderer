@@ -44,7 +44,7 @@ export default function createRenderPipelineSystem(opts) {
   const renderPipelineSystem = {
     cache: {},
     debug: true,
-    shadowQuality: 1, //TODO: not implemented  shadowQuality
+    shadowQuality: opts.shadowQuality !== undefined ? opts.shadowQuality : 2,
     outputEncoding: opts.outputEncoding || ctx.Encoding.Linear,
     renderers: [],
   };
@@ -61,6 +61,7 @@ export default function createRenderPipelineSystem(opts) {
     renderers,
     drawTransparent,
     backgroundColorTexture,
+    shadowQuality,
   }) {
     // if (backgroundColorTexture) {
     //   ctx.update(backgroundColorTexture, { mipmap: true });
@@ -92,12 +93,16 @@ export default function createRenderPipelineSystem(opts) {
       if (!drawTransparent) {
         renderers.forEach((renderer) => {
           if (renderer.renderStages.opaque) {
-            renderer.renderStages.opaque(renderView, entities);
+            renderer.renderStages.opaque(renderView, entities, {
+              shadowQuality,
+            });
           }
         });
         renderers.forEach((renderer) => {
           if (renderer.renderStages.background) {
-            renderer.renderStages.background(renderView, entities);
+            renderer.renderStages.background(renderView, entities, {
+              shadowQuality,
+            });
           }
         });
       }
@@ -108,6 +113,7 @@ export default function createRenderPipelineSystem(opts) {
           if (renderer.renderStages.transparent) {
             renderer.renderStages.transparent(renderView, entities, {
               backgroundColorTexture,
+              shadowQuality,
             });
           }
         });
@@ -334,6 +340,7 @@ export default function createRenderPipelineSystem(opts) {
           forward: true,
           drawTransparent: false,
           renderers: renderers,
+          shadowQuality: renderPipelineSystem.shadowQuality,
         });
       },
     });
@@ -423,6 +430,7 @@ export default function createRenderPipelineSystem(opts) {
           drawTransparent: true,
           backgroundColorTexture: grabPassColorCopyTexture,
           renderers: renderers,
+          shadowQuality: renderPipelineSystem.shadowQuality, //FIXME: that's a lot of passing down
         });
       },
     });

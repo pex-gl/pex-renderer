@@ -47,6 +47,7 @@ export default function defaultEngine(opts) {
     resourceCache,
     renderGraph,
     outputEncoding: ctx.Encoding.Linear,
+    shadowQuality: 3,
   });
 
   const standardRendererSystem = systems.renderer.standard({

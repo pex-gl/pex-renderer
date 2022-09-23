@@ -137,13 +137,7 @@ export default function createStandardRendererSystem(opts) {
 
   let frameCount = 0;
 
-  function getMaterialProgramAndFlags(
-    ctx,
-    entity,
-    options = {},
-    // TODO: pass shadowQuality as option
-    State
-  ) {
+  function getMaterialProgramAndFlags(ctx, entity, options = {}, State) {
     const { _geometry: geometry, material } = entity;
 
     let flags = [
@@ -151,7 +145,8 @@ export default function createStandardRendererSystem(opts) {
       ctx.capabilities.maxColorAttachments > 1 && "USE_DRAW_BUFFERS",
       // (!geometry.attributes.aNormal || material.unlit) && "USE_UNLIT_WORKFLOW",
       // "USE_UNLIT_WORKFLOW",
-      "SHADOW_QUALITY " + (entity.material.receiveShadows ? 3 : 0),
+      "SHADOW_QUALITY " +
+        (entity.material.receiveShadows ? options.shadowQuality : 0),
       // "SHADOW_QUALITY 0",
     ];
     let materialUniforms = {};
@@ -528,6 +523,7 @@ ${
           // postProcessingCmp.enabled &&
           // postProcessingCmp.ssao,
           useTonemapping: false, //!(postProcessingCmp && postProcessingCmp.enabled),
+          shadowQuality: opts.shadowQuality,
         }
       );
 
