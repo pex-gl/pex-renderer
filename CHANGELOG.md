@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+# [4.0.0-alpha.4](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.3...v4.0.0-alpha.4) (2022-09-23)
+
+
+### Features
+
+* **components/material:** default alphaTest to undefined / disabled ([a5bded2](https://github.com/pex-gl/pex-renderer/commit/a5bded23b18604e9777011d57487350bcf8066a1))
+* **examples/basic-engine:** enable shadows ([a60d1d4](https://github.com/pex-gl/pex-renderer/commit/a60d1d4c2f67e4340873514c684f570ee28833cf))
+* **pex-shaders:** move soft shadow to level 5 shadow quality ([168c9fc](https://github.com/pex-gl/pex-renderer/commit/168c9fce59074eb56d8f76c099ee8e87be19d3dc))
+* **render-engine:** mark place for systems list ([ec17641](https://github.com/pex-gl/pex-renderer/commit/ec17641858d629183812d635af20577a149cf6fb))
+* **renderer/standard:** add castShadows support ([f422cf5](https://github.com/pex-gl/pex-renderer/commit/f422cf5c8fe13bbdec4c2718dd9fc2ad206f2a47))
+* **systems/render-pipeline:** pass shadowQuality to renderers ([17e6457](https://github.com/pex-gl/pex-renderer/commit/17e64573c645d5acaa4f0b39f64fa792c4fa98fb))
+
+
+
 # [4.0.0-alpha.3](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.2...v4.0.0-alpha.3) (2022-09-22)
 
 
