@@ -2,9 +2,6 @@ import {
   renderEngine as createRenderEngine,
   world as createWorld,
   entity as createEntity,
-  renderGraph as createRenderGraph,
-  resourceCache as createResourceCache,
-  systems,
   components,
   loaders,
 } from "../index.js";
@@ -12,7 +9,6 @@ import createContext from "pex-context";
 import { cube, torus, sphere } from "primitive-geometry";
 import { vec3, quat, mat4 } from "pex-math";
 import * as io from "pex-io";
-import { aabb } from "pex-geom";
 import createGUI from "pex-gui";
 import parseHdr from "parse-hdr";
 
@@ -43,12 +39,6 @@ window.addEventListener("resize", () => {
 });
 
 const world = createWorld();
-const renderGraph = createRenderGraph(ctx);
-const resourceCache = createResourceCache(ctx);
-
-function aabbToString(bbox) {
-  return bbox.map((v) => v.map((f) => Math.floor(f * 1000) / 1000));
-}
 
 function targetTo(out, eye, target, up = [0, 1, 0]) {
   let eyex = eye[0];
@@ -123,6 +113,8 @@ const cubeEntity = createEntity({
     baseColor: [0, 1, 0, 1],
     metallic: 0,
     roughness: 0.2,
+    castShadows: true,
+    receiveShadows: false,
   }),
 });
 world.add(cubeEntity);
@@ -136,6 +128,8 @@ const torusEntity = createEntity({
     baseColor: [0, 0, 1, 1],
     metallic: 1,
     roughness: 0.15,
+    castShadows: true,
+    receiveShadows: true,
   }),
 });
 world.add(torusEntity);
