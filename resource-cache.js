@@ -72,6 +72,7 @@ export default function createResourceCache(ctx) {
     //TODO: make resourceCache a class
     Usage,
     texture2D: (props, usage) => getContextResource("texture2D", props, usage),
+    textureCube: (props, usage) => getContextResource("textureCube", props, usage),
     pass: (props, usage) => getContextResource("pass", props, usage),
     pipeline: (props, usage) => getContextResource("pipeline", props, usage),
     vertexBuffer: (props, usage) => getContextResource("vertexBuffer", props, usage),
