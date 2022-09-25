@@ -123,6 +123,7 @@ class PointLight {
 
 export default (opts) => {
   return {
+    range: 10,
     ...opts,
   };
   //return new PointLight(opts);
