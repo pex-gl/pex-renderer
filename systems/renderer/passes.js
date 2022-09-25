@@ -1,3 +1,40 @@
+import { mat4 } from "pex-math";
+
+//prettier-ignore
+const cubemapSides = [
+  { eye: [0, 0.0, 0], target: [1, 0, 0], up: [0, -1, 0], color: [1, 0, 0, 1] },
+  { eye: [0, 0.0, 0], target: [-1, 0, 0], up: [0, -1, 0], color: [0.5, 0, 0, 1], },
+  { eye: [0, 0.0, 0], target: [0, 1, 0], up: [0, 0, 1], color: [0, 1, 0, 1] },
+  { eye: [0, 0.0, 0], target: [0, -1, 0], up: [0, 0, -1],color: [0, 0.5, 0, 1], },
+  { eye: [0, 0.0, 0], target: [0, 0, 1], up: [0, -1, 0], color: [0, 0, 1, 1] },
+  { eye: [0, 0.0, 0], target: [0, 0, -1], up: [0, -1, 0], color: [0, 0, 0.5, 1], },
+].map((side, i) => {
+  side.projectionMatrix = mat4.perspective(
+    mat4.create(),
+    Math.PI / 2,
+    1,
+    0.1,
+    100
+  ); // TODO: change this to radians
+  // side.viewMatrix = mat4.lookAt(mat4.create(), side.eye, side.target, side.up);
+  // side.drawPassCmd = {
+  //   name: "PointLight.sidePass",
+  //   pass: ctx.pass({
+  //     name: "PointLight.sidePass",
+  //     depth: this._shadowMap,
+  //     color: [
+  //       {
+  //         texture: this._shadowCubemap,
+  //         target: ctx.gl.TEXTURE_CUBE_MAP_POSITIVE_X + i,
+  //       },
+  //     ],
+  //     clearColor: [Math.random(), Math.random(), Math.random(), 1],
+  //     clearDepth: 1,
+  //   }),
+  // };
+  return side;
+});
+
 function createPassDescriptors(ctx) {
   const passes = {
     directionalLightShadows: {
@@ -26,6 +63,38 @@ function createPassDescriptors(ctx) {
         clearColor: [0, 0, 0, 1],
         clearDepth: 1,
       },
+    },
+    pointLightShadows: {
+      shadowCubemapDesc: {
+        name: "pointLightShadowCubemap", //TODO: is it used?
+        width: 512,
+        height: 512,
+        pixelFormat: ctx.PixelFormat.RGBA8,
+        encoding: ctx.Encoding.Linear,
+        min: ctx.Filter.Linear,
+        mag: ctx.Filter.Linear,
+      },
+      shadowMapDesc: {
+        name: "pointLightShadowMap", //TODO: is it used?
+        width: 512,
+        height: 512,
+        pixelFormat: ctx.PixelFormat.Depth,
+        encoding: ctx.Encoding.Linear,
+        min: ctx.Filter.Nearest,
+        mag: ctx.Filter.Nearest,
+      },
+      cubemapSides,
+      passes: cubemapSides.map((side, i) => ({
+        name: `PointLight.shadowMap_side_${i}`,
+        color: [
+          {
+            target: ctx.gl.TEXTURE_CUBE_MAP_POSITIVE_X + i,
+          },
+        ],
+        depth: null,
+        clearColor: side.color,
+        clearDepth: 1,
+      })),
     },
     mainPass: {
       outputTextureDesc: {

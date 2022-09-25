@@ -58,6 +58,7 @@ export default function createRenderPipelineSystem(opts) {
     renderableEntities,
     skybox,
     forward,
+    renderView: renderViewUpstream,
     renderers,
     drawTransparent,
     backgroundColorTexture,
@@ -66,10 +67,14 @@ export default function createRenderPipelineSystem(opts) {
     // if (backgroundColorTexture) {
     //   ctx.update(backgroundColorTexture, { mipmap: true });
     // }
-    const renderView = {
+
+    //FIXME: code smell
+    const renderView = renderViewUpstream || {
       viewport: viewport,
     };
-    if (cameraEntity) {
+
+    //FIXME: code smell
+    if (cameraEntity && !renderView.camera) {
       renderView.cameraEntity = cameraEntity;
       renderView.camera = cameraEntity.camera;
     }
@@ -241,6 +246,83 @@ export default function createRenderPipelineSystem(opts) {
     // });
   };
 
+  renderPipelineSystem.updatePointLightShadowMap = function (
+    lightEnt,
+    entities,
+    shadowCastingEntities,
+    renderers
+  ) {
+    const light = lightEnt.pointLight;
+
+    //TODO: can this be all done at once?
+    let shadowCubemap = resourceCache.textureCube(
+      passes.pointLightShadows.shadowCubemapDesc
+    );
+    shadowCubemap.name = "TempCubemap\n" + shadowCubemap.id;
+
+    let shadowMap = resourceCache.texture2D(
+      passes.pointLightShadows.shadowMapDesc
+    );
+    shadowMap.name = "ShadowMap\n" + shadowMap.id;
+
+    passes.pointLightShadows.passes.forEach((pass, i) => {
+      //TODO: need to create new descriptor to get uniq
+      let passDesc = { ...pass };
+      passDesc.color = [
+        { texture: shadowCubemap, target: passDesc.color[0].target },
+      ];
+      passDesc.depth = shadowMap;
+
+      let shadowMapPass = resourceCache.pass(passDesc);
+
+      const side = passes.pointLightShadows.cubemapSides[i];
+      const renderView = {
+        camera: {
+          projectionMatrix: side.projectionMatrix,
+          viewMatrix: mat4.lookAt(
+            mat4.create(),
+            vec3.add([...side.eye], lightEnt._transform.worldPosition),
+            vec3.add([...side.target], lightEnt._transform.worldPosition),
+            side.up
+          ),
+        },
+        viewport: [0, 0, shadowMap.width, shadowMap.height],
+      };
+
+      renderGraph.renderPass({
+        name: "RenderShadowMap" + lightEnt.id,
+        pass: shadowMapPass,
+        renderView: renderView,
+        render: () => {
+          //why?
+          light._shadowCubemap = shadowCubemap; // TODO: we borrow it for a frame
+          light._projectionMatrix = side.projectionMatrix;
+          light._viewMatrix = renderView.camera.viewMatrix;
+          drawMeshes({
+            viewport: renderView.viewport,
+            renderView,
+            //TODO: passing camera entity around is a mess
+            // cameraEntity: {
+            //   camera: {},
+            // },
+            shadowMapping: true,
+            shadowMappingLight: light,
+            entities,
+            renderableEntities: shadowCastingEntities,
+            forward: false,
+            drawTransparent: false,
+            renderers,
+          });
+        },
+      });
+    });
+
+    light._shadowCubemap = shadowCubemap; // TODO: we borrow it for a frame
+    // ctx.submit(shadowMapDrawCommand, () => {
+    // drawMeshes(null, true, light, entities, shadowCastingEntities);
+    // });
+  };
+
   renderPipelineSystem.patchDirectionalLight = (directionalLight) => {
     directionalLight._viewMatrix = mat4.create();
     directionalLight._projectionMatrix = mat4.create();
@@ -257,6 +339,7 @@ export default function createRenderPipelineSystem(opts) {
     const cameraEntities = entities.filter((e) => e.camera);
     const skyboxEntities = entities.filter((e) => e.skybox);
     const directionalLightEntities = entities.filter((e) => e.directionalLight);
+    const pointLightEntities = entities.filter((e) => e.pointLight);
     const shadowCastingEntities = rendererableEntities.filter(
       (e) => e.material.castShadows
     );
@@ -275,10 +358,22 @@ export default function createRenderPipelineSystem(opts) {
         );
       }
       if (
-        lightEntity.directionalLight.castShadows &&
-        options.shadowPass !== false
+        lightEntity.directionalLight.castShadows
+        // FIXME: why this was here?
+        // options.shadowPass !== false
       ) {
         renderPipelineSystem.updateDirectionalLightShadowMap(
+          lightEntity,
+          entities,
+          shadowCastingEntities,
+          renderers
+        );
+      }
+    });
+
+    pointLightEntities.forEach((lightEntity) => {
+      if (lightEntity.pointLight.castShadows) {
+        renderPipelineSystem.updatePointLightShadowMap(
           lightEntity,
           entities,
           shadowCastingEntities,
