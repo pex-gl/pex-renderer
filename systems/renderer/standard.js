@@ -200,7 +200,9 @@ export default function createStandardRendererSystem(opts) {
     let { vert, frag } = material;
 
     vert ||= SHADERS.material.vert;
-    frag ||= SHADERS.material.frag;
+    frag ||= options.depthPassOnly
+      ? SHADERS.depthPass.frag
+      : SHADERS.material.frag;
     return {
       flags: flags
         .flat()
@@ -359,6 +361,18 @@ ${
       sharedUniforms[`uDirectionalLights[${i}].shadowMapSize`] = light.castShadows ? [light._shadowMap.width, light._shadowMap.height] : [0, 0];
       sharedUniforms[`uDirectionalLightShadowMaps[${i}]`] = light.castShadows ? light._shadowMap : dummyTexture2D;
       }
+    });
+
+    pointLights.forEach((lightEntity, i) => {
+      const light = lightEntity.pointLight;
+      sharedUniforms["uPointLights[" + i + "].position"] =
+        lightEntity._transform.worldPosition;
+      sharedUniforms["uPointLights[" + i + "].color"] = light.color;
+      sharedUniforms["uPointLights[" + i + "].range"] = light.range;
+      sharedUniforms["uPointLights[" + i + "].castShadows"] = light.castShadows;
+      sharedUniforms["uPointLightShadowMaps[" + i + "]"] = light.castShadows
+        ? light._shadowCubemap
+        : this._dummyTextureCube;
     });
 
     ambientLights.forEach((lightEntity, i) => {
@@ -532,7 +546,7 @@ ${
 
       // FIXME: this is expensive and not cached
       let viewMatrix;
-      if (shadowMappingLight) {
+      if (shadowMappingLight && shadowMappingLight._viewMatrix) {
         viewMatrix = shadowMappingLight._viewMatrix;
       } else {
         viewMatrix = camera.viewMatrix;
