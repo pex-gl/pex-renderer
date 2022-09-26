@@ -10,7 +10,7 @@ import {
 
 import createContext from "pex-context";
 import createGUI from "pex-gui";
-import { vec3, quat } from "pex-math";
+import { vec3, quat, mat2x3, mat3 } from "pex-math";
 import random from "pex-random";
 import * as io from "pex-io";
 import { sphere } from "primitive-geometry";
@@ -55,6 +55,10 @@ const nW = 8;
 const nH = 3;
 let debugOnce = false;
 
+const transform23 = mat2x3.create();
+mat2x3.scale(transform23, [1.5, 1.5]);
+const transform = mat3.fromMat2x3(mat3.create(), transform23);
+
 // Materials
 let materials = [
   {
@@ -62,6 +66,7 @@ let materials = [
     metallic: 0,
     roughness: 1,
     baseColorMap: getURL(`assets/textures/uv-wide/uv-wide.png`),
+    baseColorMapTransform: transform,
   },
   { baseColor: [0.8, 0.2, 0.2, 1.0], metallic: 0, roughness: 0 / 6 },
   { baseColor: [0.8, 0.2, 0.2, 1.0], metallic: 0, roughness: 1 / 6 },
@@ -259,12 +264,20 @@ cells.forEach((cell, cellIndex) => {
 // Meshes
 await Promise.allSettled(
   materials.map(async (material) => {
-    if (material.baseColorMap)
+    if (material.baseColorMap) {
       material.baseColorMap = await getTexture(
         ctx,
         material.baseColorMap,
         ctx.Encoding.SRGB
       );
+      if (material.baseColorMapTransform) {
+        material.baseColorMap = {
+          texture: material.baseColorMap,
+          texCoordTransformMatrix: material.baseColorMapTransform,
+        };
+      }
+    }
+
     if (material.roughnessMap)
       material.roughnessMap = await getTexture(
         ctx,
