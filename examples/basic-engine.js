@@ -15,6 +15,7 @@ import parseHdr from "parse-hdr";
 const {
   camera,
   directionalLight,
+  pointLight,
   geometry,
   material,
   orbiter,
@@ -91,6 +92,25 @@ let debugNextFrame = false;
 const gui = createGUI(ctx);
 gui.addFPSMeeter();
 
+const opts = {
+  pointLightPosition: [0, 0.2, 0],
+};
+
+gui.addParam(
+  "Point light pos",
+  opts,
+  "pointLightPosition",
+  {
+    min: -5,
+    max: 5,
+  },
+  (pos) => {
+    pointLightEntity.transform = {
+      position: pos,
+    };
+  }
+);
+
 const cameraEntity = createEntity({
   transform: transform({ position: [0, 0, 1] }),
   camera: camera({
@@ -106,33 +126,81 @@ world.add(cameraEntity);
 
 const cubeEntity = createEntity({
   transform: transform({
-    position: [0, 0, 0],
+    position: [0, -1, 0],
   }),
-  geometry: geometry(cube({ sx: 2, sy: 0.1, sz: 2 })),
+  geometry: geometry(cube({ sx: 5, sy: 0.2, sz: 5, nx: 10, ny: 1, nz: 10 })),
   material: material({
     baseColor: [0, 1, 0, 1],
     metallic: 0,
     roughness: 0.2,
-    castShadows: true,
-    receiveShadows: false,
+    // castShadows: true,
+    receiveShadows: true,
   }),
 });
-world.add(cubeEntity);
+// world.add(cubeEntity);
+
+const walls = [
+  { position: [0, -2.5, 0], size: [5, 0.1, 5] },
+  { position: [0, 2.5, 0], size: [5, 0.1, 5] },
+  { position: [2.5, 0, 0], size: [0.1, 5, 5] },
+  { position: [-2.5, 0, 0], size: [0.1, 5, 5] },
+  { position: [0, 0, 2.5], size: [5, 5, 0.1] },
+  { position: [0, 0, -2.5], size: [5, 5, 0.1] },
+].forEach((wall) => {
+  const cubeEntity = createEntity({
+    transform: transform({
+      position: wall.position,
+    }),
+    geometry: geometry(
+      cube({ sx: wall.size[0], sy: wall.size[1], sz: wall.size[2] })
+    ),
+    material: material({
+      baseColor: [0, 1, 0, 1],
+      metallic: 0,
+      roughness: 0.9,
+      // castShadows: true,
+      receiveShadows: true,
+    }),
+  });
+  world.add(cubeEntity);
+});
 
 const torusEntity = createEntity({
   transform: transform({
     position: [0, 0, 0],
   }),
-  geometry: geometry(torus({ radius: 1 })),
+  geometry: geometry(torus({ radius: 1, minorRadius: 0.2 })),
   material: material({
     baseColor: [0, 0, 1, 1],
-    metallic: 1,
+    metallic: 0,
     roughness: 0.15,
     castShadows: true,
     receiveShadows: true,
   }),
 });
-world.add(torusEntity);
+// world.add(torusEntity);
+
+for (let i = 0; i < 10; i++) {
+  const torusEntity = createEntity({
+    transform: transform({
+      position: [0, 1, 0],
+      rotation: quat.fromAxisAngle(
+        quat.create(),
+        [0, 1, 0],
+        (i / 10) * Math.PI
+      ),
+    }),
+    geometry: geometry(torus({ radius: 1, minorRadius: 0.02 })),
+    material: material({
+      baseColor: [0, 0, 1, 1],
+      metallic: 0,
+      roughness: 0.15,
+      castShadows: true,
+      receiveShadows: true,
+    }),
+  });
+  world.add(torusEntity);
+}
 
 const skyboxEnt = createEntity({
   skybox: skybox({
@@ -145,7 +213,7 @@ world.add(skyboxEnt);
 const reflectionProbeEnt = createEntity({
   reflectionProbe: reflectionProbe(),
 });
-world.add(reflectionProbeEnt);
+// world.add(reflectionProbeEnt);
 
 const directionalLightEntity = createEntity({
   transform: transform({
@@ -156,12 +224,26 @@ const directionalLightEntity = createEntity({
     ),
   }),
   directionalLight: directionalLight({
-    color: [1, 1, 1, 2], //FIXME: instencity is copied to alpha in pex-renderer
+    color: [1, 1, 1, 1], //FIXME: instencity is copied to alpha in pex-renderer
     intensity: 1,
     castShadows: true,
   }),
 });
-world.add(directionalLightEntity);
+// world.add(directionalLightEntity);
+
+const pointLightEntity = createEntity({
+  geometry: sphere({ radius: 0.1 }),
+  material: { emissiveColor: [1, 0, 0, 1], depthTest: true, depthWrite: true },
+  transform: transform({
+    position: [0, 0.5, 0],
+  }),
+  pointLight: pointLight({
+    color: [1, 1, 1, 1], //FIXME: instencity is copied to alpha in pex-renderer
+    intensity: 1,
+    castShadows: true,
+  }),
+});
+world.add(pointLightEntity);
 
 async function loadScene() {
   console.log("loadScene loaders.gltf");
@@ -207,7 +289,7 @@ async function loadScene() {
   }
 }
 
-loadScene();
+// loadScene();
 
 (async () => {
   // const buffer = await io.loadArrayBuffer(
@@ -236,6 +318,8 @@ loadScene();
 let prevTime = Date.now();
 const renderEngine = createRenderEngine({ ctx });
 
+let pointLightShadowmapPreview;
+
 ctx.frame(() => {
   const now = Date.now();
   const deltaTime = (now - prevTime) / 1000;
@@ -245,6 +329,21 @@ ctx.frame(() => {
 
   renderEngine.update(world.entities, deltaTime);
   renderEngine.render(world.entities, cameraEntity);
+
+  // const time = Date.now() / 500;
+  // pointLightEntity.transform.position = [
+  //   Math.sin(time) * Math.cos(time),
+  //   -0.3 * Math.sin(time / 2),
+  //   1.5 * Math.cos(time),
+  // ];
+  // pointLightEntity.transform.dirty = true;
+
+  if (!pointLightShadowmapPreview) {
+    pointLightShadowmapPreview = gui.addTextureCube(
+      "PointLightShadowmap",
+      pointLightEntity.pointLight._shadowCubemap
+    );
+  }
 
   gui.draw();
 });

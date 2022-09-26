@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+# [4.0.0-alpha.5](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.4...v4.0.0-alpha.5) (2022-09-26)
+
+
+### Bug Fixes
+
+* **components/point-light:** add missing range prop ([923dbe3](https://github.com/pex-gl/pex-renderer/commit/923dbe37f21a035f3601cb7f45250db70531e3f5))
+* **system/geometry:** remove console.log ([803ccc7](https://github.com/pex-gl/pex-renderer/commit/803ccc73a5b1e2967a6b2b6d33f2a114999ce91a))
+
+
+### Features
+
+* **renderer/standard:** add point light shadows support ([ccc8857](https://github.com/pex-gl/pex-renderer/commit/ccc88577c273bdcdb8fb3cccd04f155b562e9dd4))
+* **resource-cache:** add support for texture cube ([78dd05b](https://github.com/pex-gl/pex-renderer/commit/78dd05b1dbe17338d72e07459f92b091231eea5a))
+* **systems/render-pipeline:** add point light shadowmaps support ([5c8a915](https://github.com/pex-gl/pex-renderer/commit/5c8a9158add5e87a9f133c2dcc366c24250159da))
+
+
+
 # [4.0.0-alpha.4](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.3...v4.0.0-alpha.4) (2022-09-23)
 
 
