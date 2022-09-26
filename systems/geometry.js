@@ -99,7 +99,6 @@ export default function createGeometrySystem(opts) {
 
         if (attributeValue) {
           const data = attributeValue.data || attributeValue;
-          console.log("data", attributePropName, attributeValue, data);
           // If we have list of vectors we can calculate bounding box otherwise
           if (
             (attributePropName == "positions" ||
