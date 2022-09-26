@@ -74,7 +74,7 @@ export default function defaultEngine(opts) {
       skyboxSys.update(entities);
       cameraSys.update(entities);
     },
-    render: (entities, cameraEntity) => {
+    render: (entities, cameraEntity, options = {}) => {
       resourceCache.beginFrame();
       renderGraph.beginFrame();
 
@@ -88,7 +88,7 @@ export default function defaultEngine(opts) {
         viewport: [0, 0, ctx.gl.drawingBufferWidth, ctx.gl.drawingBufferHeight],
       };
 
-      renderPipelineSys.update(entities, {
+      const framebufferTextures = renderPipelineSys.update(entities, {
         renderers: [
           standardRendererSystem,
           lineRendererSystem,
@@ -96,10 +96,13 @@ export default function defaultEngine(opts) {
           helperRendererSys,
         ],
         renderView: renderView,
+        drawToScreen: options.drawToScreen,
       });
 
       renderGraph.endFrame();
       resourceCache.endFrame();
+
+      return framebufferTextures;
     },
   };
   return renderEngine;

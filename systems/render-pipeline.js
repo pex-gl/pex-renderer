@@ -329,7 +329,7 @@ export default function createRenderPipelineSystem(opts) {
   };
 
   renderPipelineSystem.update = (entities, options = {}) => {
-    let { renderView, renderers } = options;
+    let { renderView, renderers, drawToScreen } = options;
     // ctx.submit(clearCmd);
 
     const rendererableEntities = entities.filter(
@@ -403,6 +403,11 @@ export default function createRenderPipelineSystem(opts) {
     );
     mainPassOutputTexture.name = `mainPassOutput\n${mainPassOutputTexture.id}`;
 
+    const mainPassNormalOutputTexture = resourceCache.texture2D(
+      passes.mainPass.outputTextureDesc
+    );
+    mainPassNormalOutputTexture.name = `mainPassNormalOutput\n${mainPassNormalOutputTexture.id}`;
+
     passes.mainPass.outputDepthTextureDesc.width = renderView.viewport[2];
     passes.mainPass.outputDepthTextureDesc.height = renderView.viewport[3];
     const outputDepthTexture = resourceCache.texture2D(
@@ -411,7 +416,7 @@ export default function createRenderPipelineSystem(opts) {
     outputDepthTexture.name = `mainPassDepth\n${outputDepthTexture.id}`;
 
     const mainPass = resourceCache.pass({
-      color: [mainPassOutputTexture],
+      color: [mainPassOutputTexture, mainPassNormalOutputTexture],
       depth: outputDepthTexture,
       clearColor: [0, 0, 0, 1],
       clearDepth: 1,
@@ -530,31 +535,39 @@ export default function createRenderPipelineSystem(opts) {
       },
     });
 
-    const postProcessingPipeline = resourceCache.pipeline(
-      passes.tonemap.pipelineDesc
-    );
-    const fullscreenTriangle = resourceCache.fullscreenTriangle();
+    console.log(drawToScreen);
+    if (drawToScreen !== false) {
+      const postProcessingPipeline = resourceCache.pipeline(
+        passes.tonemap.pipelineDesc
+      );
+      const fullscreenTriangle = resourceCache.fullscreenTriangle();
 
-    const postProcessingCmd = {
-      name: "Draw FSTriangle",
-      attributes: fullscreenTriangle.attributes,
-      count: fullscreenTriangle.count,
-      pipeline: postProcessingPipeline,
-      uniforms: {
-        uViewport: renderView.viewport,
-        uTexture: mainPassOutputTexture,
-      },
+      const postProcessingCmd = {
+        name: "Draw FSTriangle",
+        attributes: fullscreenTriangle.attributes,
+        count: fullscreenTriangle.count,
+        pipeline: postProcessingPipeline,
+        uniforms: {
+          uViewport: renderView.viewport,
+          uTexture: mainPassOutputTexture,
+        },
+      };
+      renderGraph.renderPass({
+        name: "PostProcessingPass",
+        // pass: ctx.pass({ color: [{ id: -1 }] }),
+        uses: [],
+        renderView,
+        render: () => {
+          ctx.submit(postProcessingCmd);
+        },
+      });
+    }
+
+    return {
+      color: mainPassOutputTexture,
+      normal: mainPassNormalOutputTexture,
+      depth: outputDepthTexture,
     };
-    renderGraph.renderPass({
-      name: "PostProcessingPass",
-      // pass: ctx.pass({ color: [{ id: -1 }] }),
-      uses: [mainPassOutputTexture],
-      renderView,
-      render: () => {
-        ctx.submit(postProcessingCmd);
-      },
-    });
-    // });
   };
 
   return renderPipelineSystem;

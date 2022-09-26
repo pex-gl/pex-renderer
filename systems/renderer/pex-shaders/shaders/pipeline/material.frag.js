@@ -289,8 +289,9 @@ void main() {
 
   gl_FragData[0] = encode(vec4(color, 1.0), uOutputEncoding);
   #ifdef USE_DRAW_BUFFERS
-    gl_FragData[1] = encode(vec4(data.emissiveColor, 1.0), uOutputEncoding);
-    gl_FragData[2] = vec4(data.normalView * 0.5 + 0.5, 1.0);
+    // changed order
+    gl_FragData[1] = vec4(data.normalView * 0.5 + 0.5, 1.0);
+    gl_FragData[2] = encode(vec4(data.emissiveColor, 1.0), uOutputEncoding);
   #endif
   #ifdef USE_BLEND
     gl_FragData[0].a = data.opacity;
