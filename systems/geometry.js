@@ -4,7 +4,7 @@ export default function createGeometrySystem(opts) {
   const ctx = opts.ctx;
   const geometrySystem = {
     cache: {},
-    debug: true,
+    debug: false,
   };
 
   const vertexAttributeMap = {
