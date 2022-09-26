@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+# [4.0.0-alpha.6](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.5...v4.0.0-alpha.6) (2022-09-26)
+
+
+### Features
+
+* **system/geometry:** disable geometry debugging by default ([31f3a92](https://github.com/pex-gl/pex-renderer/commit/31f3a92f6508ac9fce97e51d8594cc85df93d6ea))
+
+
+
 # [4.0.0-alpha.5](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.4...v4.0.0-alpha.5) (2022-09-26)
 
 
