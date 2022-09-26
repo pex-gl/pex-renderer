@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+# [4.0.0-alpha.7](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.6...v4.0.0-alpha.7) (2022-09-26)
+
+
+### Bug Fixes
+
+* **renderer/standard:** enable texture transform flags ([cd58d07](https://github.com/pex-gl/pex-renderer/commit/cd58d073981c9af3e2e25b4bdff349f68b596f6d))
+
+
+### Features
+
+* **examples/materials:** add texture scaling to materials example ([ba7bb0a](https://github.com/pex-gl/pex-renderer/commit/ba7bb0af275c1d62e9a3946bcfe65948951acd0d))
+* **render-engine:** add option to disable drawToScreen ([cae9e29](https://github.com/pex-gl/pex-renderer/commit/cae9e292c47d2a9db090edf868a5830e9d782e90))
+
+
+
 # [4.0.0-alpha.6](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.5...v4.0.0-alpha.6) (2022-09-26)
 
 
