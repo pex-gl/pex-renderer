@@ -177,6 +177,7 @@ export default function createStandardRendererSystem(opts) {
         flags.push(`${defineName}_TEX_COORD_INDEX 0`);
         materialUniforms[opts.uniform] = value.texture || value;
         if (value.texCoordTransformMatrix) {
+          flags.push(`USE_${defineName}_TEX_COORD_TRANSFORM`);
           materialUniforms[opts.uniform + "TexCoordTransform"] =
             value.texCoordTransformMatrix;
         }
