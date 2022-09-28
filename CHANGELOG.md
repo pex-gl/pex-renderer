@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+# [4.0.0-alpha.8](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.7...v4.0.0-alpha.8) (2022-09-28)
+
+
+### Bug Fixes
+
+* **renderer/standard:** move caches to local scope ([390be02](https://github.com/pex-gl/pex-renderer/commit/390be02af76294a3dbe169edbebadf52346f7f24))
+
+
+
 # [4.0.0-alpha.7](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.6...v4.0.0-alpha.7) (2022-09-26)
 
 
