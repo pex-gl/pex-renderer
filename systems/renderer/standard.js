@@ -5,36 +5,36 @@ import {
 } from "./pex-shaders/index.js";
 import { patchVS, patchFS } from "../../utils.js";
 
-const pipelineCache = {};
-const programCacheMap = {
-  values: [],
-  getValue(flags, vert, frag) {
-    for (let i = 0; i < this.values.length; i++) {
-      const v = this.values[i];
-      if (v.frag === frag && v.vert === vert) {
-        if (v.flags.length === flags.length) {
-          let found = true;
-          for (let j = 0; j < flags.length; j++) {
-            if (v.flags[j] !== flags[j]) {
-              found = false;
-              break;
+export default function createStandardRendererSystem(opts) {
+  const { ctx } = opts;
+
+  const pipelineCache = {};
+  const programCacheMap = {
+    values: [],
+    getValue(flags, vert, frag) {
+      for (let i = 0; i < this.values.length; i++) {
+        const v = this.values[i];
+        if (v.frag === frag && v.vert === vert) {
+          if (v.flags.length === flags.length) {
+            let found = true;
+            for (let j = 0; j < flags.length; j++) {
+              if (v.flags[j] !== flags[j]) {
+                found = false;
+                break;
+              }
             }
-          }
-          if (found) {
-            return v.program;
+            if (found) {
+              return v.program;
+            }
           }
         }
       }
-    }
-    return false;
-  },
-  setValue(flags, vert, frag, program) {
-    this.values.push({ flags, vert, frag, program });
-  },
-};
-
-export default function createStandardRendererSystem(opts) {
-  const { ctx } = opts;
+      return false;
+    },
+    setValue(flags, vert, frag, program) {
+      this.values.push({ flags, vert, frag, program });
+    },
+  };
 
   const dummyTexture2D = ctx.texture2D({ width: 4, height: 4 });
 
