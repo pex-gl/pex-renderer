@@ -470,7 +470,6 @@ ${
     }
 
     sharedUniforms.uCaptureTexture = backgroundColorTexture;
-    sharedUniforms.uRefraction = 0.05;
 
     const renderableEntities = entities.filter(
       (e) =>
@@ -501,6 +500,9 @@ ${
       cachedUniforms.uPointSize = 1;
       cachedUniforms.uMetallicRoughnessMap = material.metallicRoughnessMap;
       renderableEntity._uniforms = cachedUniforms;
+
+      sharedUniforms.uRefraction =
+        0.1 * (material.refraction !== undefined ? material.refraction : 0.5);
 
       //duplicated variables
       const ambientLights = shadowMapping

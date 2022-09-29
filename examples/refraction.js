@@ -292,7 +292,7 @@ const cubesEntity = createEntity({
     baseColor: [1, 1, 1, 1],
     // baseColor: [0.2, 0.5, 1, 1],
     metallic: 0,
-    roughness: 0.5,
+    roughness: 0.15,
     // transmission: 0.6,
     refraction: 0.5,
     //opaque mesh = no blending, it will be handled by material
@@ -324,9 +324,9 @@ const cubesEntity2 = createEntity({
     // baseColor: [1, 1.0, 1, 1],
     baseColor: [1, 1, 1, 1],
     metallic: 0,
-    roughness: 0.75,
+    roughness: 0.5,
     transmission: 0.6,
-    refraction: 0.3,
+    refraction: 0.1,
     receiveShadows: false,
     //opaque mesh = no blending, it will be handled by material
     blend: true,
