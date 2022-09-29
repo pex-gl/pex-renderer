@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+# [4.0.0-alpha.9](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.8...v4.0.0-alpha.9) (2022-09-29)
+
+
+### Features
+
+* **render-pipeline:** remove console.log ([5d5a831](https://github.com/pex-gl/pex-renderer/commit/5d5a83166d911c8bf5a6d55f8d4f3b6c920a3311))
+
+
+
 # [4.0.0-alpha.8](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.7...v4.0.0-alpha.8) (2022-09-28)
 
 
