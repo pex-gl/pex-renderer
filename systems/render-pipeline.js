@@ -535,7 +535,6 @@ export default function createRenderPipelineSystem(opts) {
       },
     });
 
-    console.log(drawToScreen);
     if (drawToScreen !== false) {
       const postProcessingPipeline = resourceCache.pipeline(
         passes.tonemap.pipelineDesc
