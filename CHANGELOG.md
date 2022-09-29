@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+# [4.0.0-alpha.10](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.9...v4.0.0-alpha.10) (2022-09-29)
+
+
+### Features
+
+* **renderer/standard:** add support for controlling refraction amount ([490ad54](https://github.com/pex-gl/pex-renderer/commit/490ad540aef86f2f7d222e16fadbfe1cb36087cc))
+
+
+
 # [4.0.0-alpha.9](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.8...v4.0.0-alpha.9) (2022-09-29)
 
 
