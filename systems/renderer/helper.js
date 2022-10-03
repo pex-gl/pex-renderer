@@ -133,8 +133,6 @@ function drawDirectionalLight(geomBuilder, entity) {
 export default function createHelperSystem({ ctx }) {
   let geomBuilder = createGeomBuilder({ colors: 1, positions: 1 });
 
-  console.log("SHADERS.helper.frag", SHADERS.helper.frag);
-
   const helperPositionVBuffer = ctx.vertexBuffer({ data: [0, 0, 0] });
   const helperColorVBuffer = ctx.vertexBuffer({ data: [0, 0, 0, 0] });
   const drawHelperLinesCmd = {
