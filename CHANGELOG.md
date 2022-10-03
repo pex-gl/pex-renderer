@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+# [4.0.0-alpha.11](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.10...v4.0.0-alpha.11) (2022-10-03)
+
+
+### Features
+
+* **systems/reflection-probe:** add  backgroundBlur support ([a12e12c](https://github.com/pex-gl/pex-renderer/commit/a12e12cbe506c9bfc72811ecfef0f7cb9afe7864))
+
+
+
 # [4.0.0-alpha.10](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.9...v4.0.0-alpha.10) (2022-09-29)
 
 

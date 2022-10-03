@@ -162,7 +162,7 @@ const walls = [
       receiveShadows: true,
     }),
   });
-  world.add(cubeEntity);
+  // world.add(cubeEntity);
 });
 
 const torusEntity = createEntity({
@@ -205,7 +205,7 @@ for (let i = 0; i < 10; i++) {
 const skyboxEnt = createEntity({
   skybox: skybox({
     sunPosition: [1, 1, 1],
-    backgroundBlur: false,
+    backgroundBlur: true,
   }),
 });
 world.add(skyboxEnt);
@@ -213,7 +213,7 @@ world.add(skyboxEnt);
 const reflectionProbeEnt = createEntity({
   reflectionProbe: reflectionProbe(),
 });
-// world.add(reflectionProbeEnt);
+world.add(reflectionProbeEnt);
 
 const directionalLightEntity = createEntity({
   transform: transform({
@@ -232,8 +232,14 @@ const directionalLightEntity = createEntity({
 // world.add(directionalLightEntity);
 
 const pointLightEntity = createEntity({
-  geometry: sphere({ radius: 0.1 }),
-  material: { emissiveColor: [1, 0, 0, 1], depthTest: true, depthWrite: true },
+  geometry: sphere({ radius: 1 }),
+  material: {
+    metallic: 0,
+    roughness: 0,
+    baseColor: [1, 1, 1, 1],
+    depthTest: true,
+    depthWrite: true,
+  },
   transform: transform({
     position: [0, 0.5, 0],
   }),
@@ -320,6 +326,8 @@ const renderEngine = createRenderEngine({ ctx });
 
 let pointLightShadowmapPreview;
 
+let reflectionProbeTexturePreview = null;
+
 ctx.frame(() => {
   const now = Date.now();
   const deltaTime = (now - prevTime) / 1000;
@@ -337,6 +345,16 @@ ctx.frame(() => {
   //   1.5 * Math.cos(time),
   // ];
   // pointLightEntity.transform.dirty = true;
+
+  if (
+    !reflectionProbeTexturePreview &&
+    reflectionProbeEnt._reflectionProbe._reflectionMap
+  ) {
+    reflectionProbeTexturePreview = gui.addTexture2D(
+      "ReflectionMap",
+      reflectionProbeEnt._reflectionProbe._reflectionMap
+    );
+  }
 
   if (!pointLightShadowmapPreview) {
     pointLightShadowmapPreview = gui.addTextureCube(
