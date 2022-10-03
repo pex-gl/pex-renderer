@@ -361,7 +361,7 @@ export default function createReflectionProbeSystem(opts) {
     const reflectionProbeEntities = entities.filter((e) => e.reflectionProbe);
     for (let reflectionProbeEntity of reflectionProbeEntities) {
       let cachedProps = reflectionProbeSystem.cache[reflectionProbeEntity.id];
-      if (!cachedProps) {
+      if (!cachedProps || !reflectionProbeEntity._reflectionProbe) {
         cachedProps = reflectionProbeSystem.cache[reflectionProbeEntity.id] = {
           skyboxSunPosition: [0, 0, 0],
         };
