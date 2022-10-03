@@ -113,7 +113,7 @@ class Skybox {
         uEnvMap: texture,
         uEnvMapEncoding: texture.encoding,
         uOutputEncoding: outputEncoding,
-        uBackgroundBlur: backgroundBlur,
+        uBackgroundBlur: backgroundMode ? backgroundBlur : false,
         uUseTonemapping: backgroundMode ? useTonemapping : false,
         uExposure: backgroundMode ? exposure || 1 : 1, //TODO: hardcoded default from camera.exposure
       },

@@ -1,4 +1,4 @@
-import { skybox } from "pex-shaders";
+import { skybox } from "./pex-shaders/index.js";
 import { patchVS, patchFS } from "../../utils.js";
 import { mat4 } from "pex-math";
 
@@ -73,7 +73,12 @@ export default function createSkyboxRendererSystem(opts) {
 
   function draw(ctx, skybox, camera, opts) {
     const { entity, projectionMatrix, viewMatrix, exposure } = camera;
-    const { backgroundMode, outputEncoding, backgroundBlur } = opts;
+    const {
+      backgroundMode,
+      outputEncoding,
+      backgroundBlur,
+      reflectionProbeEntity,
+    } = opts;
     //TODO
     // if (!this.texture && this.dirty) {
     // this.updateSkyTexture();
@@ -87,31 +92,11 @@ export default function createSkyboxRendererSystem(opts) {
 
     let texture = skybox.envMap || skybox._skyTexture;
 
-    // let texture = skybox.texture || skybox._skyTexture;
-    // let backgroundBlur = 0;
-    // if (backgroundMode) {
-    //   if (this.backgroundTexture) {
-    //     texture = this.backgroundTexture;
-    //   }
-
-    //   if (this.backgroundBlur > 0) {
-    //     backgroundBlur = this.backgroundBlur;
-    //     //TODO: skybox-system and reflection-probe-system peer dependency
-    //     // if (!this._reflectionProbe) {
-    //     // this._reflectionProbe =
-    //     // this.entity.renderer.getComponents("ReflectionProbe")[0];
-    //     // }
-    //     if (this._reflectionProbe) {
-    //       texture = this._reflectionProbe._reflectionMap;
-    //     }
-    //   }
-    // }
+    if (backgroundBlur && reflectionProbeEntity) {
+      texture = reflectionProbeEntity._reflectionProbe._reflectionMap;
+    }
 
     //TODO: useTonemapping hardcoded to false
-    // const postProcessingCmp = entity
-    // ? entity.getComponent("PostProcessing")
-    // : null;
-    // const useTonemapping = !(postProcessingCmp && postProcessingCmp.enabled);
     const useTonemapping = false;
 
     ctx.submit(drawCommand, {
@@ -126,23 +111,28 @@ export default function createSkyboxRendererSystem(opts) {
         uEnvMap: texture,
         uEnvMapEncoding: texture.encoding,
         uOutputEncoding: outputEncoding,
-        uBackgroundBlur: backgroundBlur,
+        uBackgroundBlur: backgroundMode ? backgroundBlur : false,
         uUseTonemapping: backgroundMode ? useTonemapping : false,
         uExposure: backgroundMode ? exposure || 1 : 1, //TODO: hardcoded default from camera.exposure
       },
     });
   }
 
-  const basicRendererSystem = {
+  const skyboxRenderSystem = {
     renderStages: {
-      background: (renderView, entities) => {
+      background: (renderView, entities, options) => {
         const { camera } = renderView;
+        const { backgroundMode } = options;
         entities.forEach((e) => {
           if (e.skybox) {
+            const reflectionProbeEntity = entities.find(
+              (e) => e.reflectionProbe
+            );
             draw(ctx, e.skybox, renderView.camera, {
-              backgroundMode: true,
-              backgroundBlur: false,
+              backgroundMode: backgroundMode,
+              backgroundBlur: e.skybox.backgroundBlur,
               outputEncoding: renderView.outputEncoding || ctx.Encoding.Linear,
+              reflectionProbeEntity,
             });
             // e._skybox.draw(renderView.camera, {
             //   backgroundMode: true,
@@ -164,5 +154,5 @@ export default function createSkyboxRendererSystem(opts) {
     },
     update: () => {},
   };
-  return basicRendererSystem;
+  return skyboxRenderSystem;
 }

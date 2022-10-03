@@ -411,7 +411,9 @@ export default function createReflectionProbeSystem(opts) {
           // should be only skybox renderers
           renderers.forEach((renderer) => {
             if (renderer.renderStages.background) {
-              renderer.renderStages.background(renderView, skyboxEntities);
+              renderer.renderStages.background(renderView, skyboxEntities, {
+                backgroundMode: false,
+              });
             }
           });
           if (skyboxEntities.length > 0) {
