@@ -412,7 +412,7 @@ export default function createReflectionProbeSystem(opts) {
           renderers.forEach((renderer) => {
             if (renderer.renderStages.background) {
               renderer.renderStages.background(renderView, skyboxEntities, {
-                backgroundMode: false,
+                renderingToReflectionProbe: true,
               });
             }
           });

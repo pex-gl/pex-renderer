@@ -74,7 +74,7 @@ export default function createSkyboxRendererSystem(opts) {
   function draw(ctx, skybox, camera, opts) {
     const { entity, projectionMatrix, viewMatrix, exposure } = camera;
     const {
-      backgroundMode,
+      renderingToReflectionProbe,
       outputEncoding,
       backgroundBlur,
       reflectionProbeEntity,
@@ -92,13 +92,16 @@ export default function createSkyboxRendererSystem(opts) {
 
     let texture = skybox.envMap || skybox._skyTexture;
 
-    if (backgroundBlur && reflectionProbeEntity) {
+    if (
+      !renderingToReflectionProbe &&
+      backgroundBlur &&
+      reflectionProbeEntity
+    ) {
       texture = reflectionProbeEntity._reflectionProbe._reflectionMap;
     }
 
     //TODO: useTonemapping hardcoded to false
     const useTonemapping = false;
-
     ctx.submit(drawCommand, {
       // viewport: camera.viewport,
       // scissor: camera.viewport,
@@ -111,9 +114,9 @@ export default function createSkyboxRendererSystem(opts) {
         uEnvMap: texture,
         uEnvMapEncoding: texture.encoding,
         uOutputEncoding: outputEncoding,
-        uBackgroundBlur: backgroundMode ? backgroundBlur : false,
-        uUseTonemapping: backgroundMode ? useTonemapping : false,
-        uExposure: backgroundMode ? exposure || 1 : 1, //TODO: hardcoded default from camera.exposure
+        uBackgroundBlur: !renderingToReflectionProbe ? backgroundBlur : false,
+        uUseTonemapping: !renderingToReflectionProbe ? useTonemapping : false,
+        uExposure: !renderingToReflectionProbe ? exposure || 1 : 1, //TODO: hardcoded default from camera.exposure
       },
     });
   }
@@ -122,14 +125,14 @@ export default function createSkyboxRendererSystem(opts) {
     renderStages: {
       background: (renderView, entities, options) => {
         const { camera } = renderView;
-        const { backgroundMode } = options;
+        const { renderingToReflectionProbe } = options;
         entities.forEach((e) => {
           if (e.skybox) {
             const reflectionProbeEntity = entities.find(
               (e) => e.reflectionProbe
             );
             draw(ctx, e.skybox, renderView.camera, {
-              backgroundMode: backgroundMode,
+              renderingToReflectionProbe: renderingToReflectionProbe,
               backgroundBlur: e.skybox.backgroundBlur,
               outputEncoding: renderView.outputEncoding || ctx.Encoding.Linear,
               reflectionProbeEntity,

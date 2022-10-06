@@ -107,7 +107,6 @@ export default function createRenderPipelineSystem(opts) {
           if (renderer.renderStages.background) {
             renderer.renderStages.background(renderView, entities, {
               shadowQuality,
-              backgroundMode: true,
             });
           }
         });
