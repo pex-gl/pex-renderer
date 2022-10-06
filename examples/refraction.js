@@ -40,6 +40,31 @@ const world = (window.world = createWorld());
 const renderGraph = createRenderGraph(ctx);
 const resourceCache = createResourceCache(ctx);
 
+const cameraEntity = createEntity({
+  transform: transform({ position: [0, 0, 2] }),
+  camera: camera({
+    fov: Math.PI * 0.1,
+    aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
+  }),
+  orbiter: orbiter({
+    element: ctx.gl.canvas,
+    position: [15, 1, 15],
+  }),
+});
+world.add(cameraEntity);
+
+function resize() {
+  ctx.set({
+    pixelRatio: 1.5,
+    width: window.innerWidth,
+    height: window.innerHeight,
+  });
+  cameraEntity.camera.aspect = window.innerWidth / window.innerHeight;
+  cameraEntity.camera.dirty = true;
+}
+window.addEventListener("resize", resize);
+resize();
+
 function aabbToString(bbox) {
   return bbox.map((v) => v.map((f) => Math.floor(f * 1000) / 1000));
 }
@@ -92,7 +117,7 @@ function targetTo(out, eye, target, up = [0, 1, 0]) {
 
 let debugNextFrame = false;
 
-const gui = createGUI(ctx, { responsive: false, scale: 1.5 });
+const gui = createGUI(ctx);
 gui.addFPSMeeter();
 
 gui.addButton("Debug", () => {
@@ -118,19 +143,6 @@ gui.addButton("Tree", () => {
     );
   });
 });
-
-const cameraEntity = createEntity({
-  transform: transform({ position: [0, 0, 2] }),
-  camera: camera({
-    fov: Math.PI * 0.1,
-    aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
-  }),
-  orbiter: orbiter({
-    element: ctx.gl.canvas,
-    position: [15, 1, 15],
-  }),
-});
-world.add(cameraEntity);
 
 const floorEntity = createEntity({
   transform: transform({
@@ -341,7 +353,7 @@ world.add(cubesEntity2);
 const skyboxEnt = createEntity({
   skybox: skybox({
     sunPosition: [1, 1, 1],
-    // backgroundBlur: true,
+    backgroundBlur: true,
   }),
 });
 world.add(skyboxEnt);
@@ -563,18 +575,6 @@ async function loadScene() {
   window.dispatchEvent(new CustomEvent("pex-screenshot"));
 })();
 
-function resize() {
-  ctx.set({
-    pixelRatio: 1.5,
-    width: window.innerWidth,
-    height: window.innerHeight,
-  });
-  cameraEntity.camera.aspect = window.innerWidth / window.innerHeight;
-  cameraEntity.camera.dirty = true;
-}
-window.addEventListener("resize", resize);
-resize();
-
 ctx.frame(() => {
   resourceCache.beginFrame();
   renderGraph.beginFrame();
@@ -618,7 +618,7 @@ ctx.frame(() => {
       renderers: [
         standardRendererSystem,
         lineRendererSystem,
-        // skyboxRendererSys,
+        skyboxRendererSys,
       ],
       renderView: renderView,
     });

@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+# [4.0.0-alpha.14](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.13...v4.0.0-alpha.14) (2022-10-06)
+
+
+### Bug Fixes
+
+* **renderer/skybox:** change backgroundMode to renderingToReflectionProbe ([3b5e417](https://github.com/pex-gl/pex-renderer/commit/3b5e4177b49c6076efe16dfd83481c651d692597))
+
+
+
 # [4.0.0-alpha.13](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.12...v4.0.0-alpha.13) (2022-10-03)
 
 

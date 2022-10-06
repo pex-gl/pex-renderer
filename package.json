@@ -1,6 +1,6 @@
 {
   "name": "pex-renderer",
-  "version": "4.0.0-alpha.13",
+  "version": "4.0.0-alpha.14",
   "description": "Physically based renderer (PBR) and scene graph for PEX.",
   "keywords": [
     "pex",
@@ -55,7 +55,7 @@
     "parse-hdr": "^1.0.0",
     "pex-color": "github:pex-gl/pex-color#v2",
     "pex-context": "^3.0.0-alpha.2",
-    "pex-gui": "github:pex-gl/pex-gui#v3",
+    "pex-gui": "^3.0.0-alpha.2",
     "primitive-geometry": "^2.6.0"
   },
   "engines": {
