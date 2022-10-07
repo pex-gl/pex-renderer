@@ -45,19 +45,17 @@ export default function createSkyboxRendererSystem(opts) {
     [0, 2, 3],
   ];
 
+  const skyboxFrag = `
+  ${DRAW_BUFFERS_EXT}
+  ${skybox.skybox.frag}`;
+
   const drawCommand = {
     name: "Skybox.draw",
     pipeline: ctx.pipeline({
       vert: ctx.capabilities.isWebGL2
         ? patchVS(skybox.skybox.vert)
-        : /* glsl */ `
-          ${DRAW_BUFFERS_EXT}
-          ${skybox.skybox.vert}`,
-      frag: ctx.capabilities.isWebGL2
-        ? patchFS(skybox.skybox.frag)
-        : /* glsl */ `
-          ${DRAW_BUFFERS_EXT}
-          ${skybox.skybox.frag}`,
+        : skybox.skybox.vert,
+      frag: ctx.capabilities.isWebGL2 ? patchFS(skyboxFrag) : skyboxFrag,
       depthTest: true,
       depthWrite: false,
     }),
