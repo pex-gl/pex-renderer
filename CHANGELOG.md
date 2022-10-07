@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+# [4.0.0-alpha.15](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.14...v4.0.0-alpha.15) (2022-10-07)
+
+
+### Bug Fixes
+
+* **renderer/skybox:** make skybox work with webgl2 ([a8e06b3](https://github.com/pex-gl/pex-renderer/commit/a8e06b3e75fd90d7e3716cb809eb160f4a05d3fc))
+
+
+
 # [4.0.0-alpha.14](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.13...v4.0.0-alpha.14) (2022-10-06)
 
 

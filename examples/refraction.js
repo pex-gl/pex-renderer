@@ -31,9 +31,7 @@ const {
   transform,
 } = components;
 
-const ctx = createContext({
-  type: "webgl",
-});
+const ctx = createContext();
 ctx.gl.getExtension("OES_element_index_uint"); //TEMP
 
 const world = (window.world = createWorld());
