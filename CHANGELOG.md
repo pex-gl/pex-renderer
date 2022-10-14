@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+# [4.0.0-alpha.16](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.15...v4.0.0-alpha.16) (2022-10-14)
+
+
+### Features
+
+* **systems/camera:** reimplement orbiter to use entity.transform ([5e399f6](https://github.com/pex-gl/pex-renderer/commit/5e399f67a075caedfac2137e6403de7507ea3a26))
+
+
+
 # [4.0.0-alpha.15](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.14...v4.0.0-alpha.15) (2022-10-07)
 
 

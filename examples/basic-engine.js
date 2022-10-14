@@ -4,6 +4,7 @@ import {
   entity as createEntity,
   components,
   loaders,
+  entity,
 } from "../index.js";
 import createContext from "pex-context";
 import { cube, torus, sphere } from "primitive-geometry";
@@ -112,17 +113,92 @@ gui.addParam(
 );
 
 const cameraEntity = createEntity({
-  transform: transform({ position: [0, 0, 1] }),
+  transform: transform({
+    position: [1, 1, 5],
+    rotation: quat.create(),
+  }),
   camera: camera({
     fov: Math.PI / 2,
     aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
   }),
   orbiter: orbiter({
     element: ctx.gl.canvas,
-    position: [0, 1, 2],
   }),
 });
 world.add(cameraEntity);
+
+const quatTargetToOld = (q, position, target) => {
+  return quat.fromTo(
+    q,
+    [0, 0, -1],
+    vec3.normalize(vec3.sub([...target], position))
+  );
+};
+
+const mat4TargetTo = (out, eye, target, up = [0, 1, 0]) => {
+  let eyex = eye[0];
+  let eyey = eye[1];
+  let eyez = eye[2];
+  let upx = up[0];
+  let upy = up[1];
+  let upz = up[2];
+  let z0 = eyex - target[0];
+  let z1 = eyey - target[1];
+  let z2 = eyez - target[2];
+  let len = z0 * z0 + z1 * z1 + z2 * z2;
+  if (len > 0) {
+    len = 1 / Math.sqrt(len);
+    z0 *= len;
+    z1 *= len;
+    z2 *= len;
+  }
+  let x0 = upy * z2 - upz * z1;
+  let x1 = upz * z0 - upx * z2;
+  let x2 = upx * z1 - upy * z0;
+  len = x0 * x0 + x1 * x1 + x2 * x2;
+  if (len > 0) {
+    len = 1 / Math.sqrt(len);
+    x0 *= len;
+    x1 *= len;
+    x2 *= len;
+  }
+  out[0] = x0;
+  out[1] = x1;
+  out[2] = x2;
+  out[3] = 0;
+  out[4] = z1 * x2 - z2 * x1;
+  out[5] = z2 * x0 - z0 * x2;
+  out[6] = z0 * x1 - z1 * x0;
+  out[7] = 0;
+  out[8] = z0;
+  out[9] = z1;
+  out[10] = z2;
+  out[11] = 0;
+  out[12] = eyex;
+  out[13] = eyey;
+  out[14] = eyez;
+  out[15] = 1;
+  return out;
+};
+
+const mat4tmp = mat4.create();
+const upTmp = [0, 1, 0];
+const quatTargetTo = function (q, eye, target) {
+  return quat.fromMat4(q, mat4TargetTo(mat4tmp, eye, target, upTmp));
+};
+
+quatTargetTo(
+  cameraEntity.transform.rotation,
+  cameraEntity.transform.position,
+  [0, 0, 0]
+);
+// quat.fromAxisAngle(cameraEntity.transform.rotation, [1, 0, 0], 0.62);
+// quat.fromTo(cameraEntity.transform.rotation, [0, 1, -1], [0, 0, -1]);
+cameraEntity.transform = {
+  ...cameraEntity.transform,
+};
+
+// console.log("rotation", cameraEntity._transform.modelMatrix);
 
 const cubeEntity = createEntity({
   transform: transform({
@@ -137,48 +213,49 @@ const cubeEntity = createEntity({
     receiveShadows: true,
   }),
 });
-// world.add(cubeEntity);
+world.add(cubeEntity);
 
-const walls = [
-  { position: [0, -2.5, 0], size: [5, 0.1, 5] },
-  { position: [0, 2.5, 0], size: [5, 0.1, 5] },
-  { position: [2.5, 0, 0], size: [0.1, 5, 5] },
-  { position: [-2.5, 0, 0], size: [0.1, 5, 5] },
-  { position: [0, 0, 2.5], size: [5, 5, 0.1] },
-  { position: [0, 0, -2.5], size: [5, 5, 0.1] },
-].forEach((wall) => {
-  const cubeEntity = createEntity({
-    transform: transform({
-      position: wall.position,
-    }),
-    geometry: geometry(
-      cube({ sx: wall.size[0], sy: wall.size[1], sz: wall.size[2] })
-    ),
-    material: material({
-      baseColor: [0, 1, 0, 1],
-      metallic: 0,
-      roughness: 0.9,
-      // castShadows: true,
-      receiveShadows: true,
-    }),
-  });
-  // world.add(cubeEntity);
-});
-
-const torusEntity = createEntity({
+const redCubeEntity = createEntity({
   transform: transform({
-    position: [0, 0, 0],
+    position: [2, 0, 0],
   }),
-  geometry: geometry(torus({ radius: 1, minorRadius: 0.2 })),
+  geometry: geometry(cube()),
   material: material({
-    baseColor: [0, 0, 1, 1],
+    baseColor: [1, 0, 0, 1],
     metallic: 0,
-    roughness: 0.15,
-    castShadows: true,
+    roughness: 0.2,
     receiveShadows: true,
   }),
 });
-// world.add(torusEntity);
+world.add(redCubeEntity);
+
+const greenCubeEntity = createEntity({
+  transform: transform({
+    position: [0, 2, 0],
+  }),
+  geometry: geometry(cube()),
+  material: material({
+    baseColor: [0, 1, 0, 1],
+    metallic: 0,
+    roughness: 0.2,
+    receiveShadows: true,
+  }),
+});
+world.add(greenCubeEntity);
+
+const blueCubeEntity = createEntity({
+  transform: transform({
+    position: [0, 0, 2],
+  }),
+  geometry: geometry(cube()),
+  material: material({
+    baseColor: [0, 0, 1, 1],
+    metallic: 0,
+    roughness: 0.2,
+    receiveShadows: true,
+  }),
+});
+world.add(blueCubeEntity);
 
 for (let i = 0; i < 10; i++) {
   const torusEntity = createEntity({
@@ -235,10 +312,12 @@ const pointLightEntity = createEntity({
   geometry: sphere({ radius: 1 }),
   material: {
     metallic: 0,
-    roughness: 0,
+    roughness: 1,
     baseColor: [1, 1, 1, 1],
     depthTest: true,
     depthWrite: true,
+    clearCoat: undefined,
+    clearCoatRoughness: 0.15,
   },
   transform: transform({
     position: [0, 0.5, 0],
@@ -337,6 +416,20 @@ ctx.frame(() => {
 
   renderEngine.update(world.entities, deltaTime);
   renderEngine.render(world.entities, cameraEntity);
+
+  if (!cameraEntity.camera.logged) {
+    cameraEntity.camera.logged = true;
+    console.log(
+      "rotation",
+      cameraEntity.camera.viewMatrix,
+      mat4.lookAt(
+        mat4.create(),
+        cameraEntity.transform.position,
+        [0, 1, 0],
+        [0, 0, 0]
+      )
+    );
+  }
 
   // const time = Date.now() / 500;
   // pointLightEntity.transform.position = [
