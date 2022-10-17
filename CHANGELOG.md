@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+# [4.0.0-alpha.18](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.17...v4.0.0-alpha.18) (2022-10-17)
+
+
+### Bug Fixes
+
+* **examples/basic-engine:** fix lights rotation quaternion calculation ([762baac](https://github.com/pex-gl/pex-renderer/commit/762baacc876663b83849717953074459881bf9ac))
+* **renderer/helper:** fix line drawing in webgl2 ([24dfd1a](https://github.com/pex-gl/pex-renderer/commit/24dfd1a6048f13da80268144e97f9435eef92a4d))
+
+
+### Features
+
+* **renderer/helper:** add point light helper drawing ([5318bba](https://github.com/pex-gl/pex-renderer/commit/5318bba79a0d1962bb694bd87ab23579b4e1090a))
+
+
+
 # [4.0.0-alpha.17](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.16...v4.0.0-alpha.17) (2022-10-17)
 
 
