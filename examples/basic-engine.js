@@ -8,10 +8,12 @@ import {
 } from "../index.js";
 import createContext from "pex-context";
 import { cube, torus, sphere } from "primitive-geometry";
-import { vec3, quat, mat4 } from "pex-math";
+import { vec3, quat, mat4, utils } from "pex-math";
 import * as io from "pex-io";
 import createGUI from "pex-gui";
 import parseHdr from "parse-hdr";
+
+const { EPSILON } = utils;
 
 const {
   camera,
@@ -25,9 +27,7 @@ const {
   transform,
 } = components;
 
-const ctx = createContext({
-  type: "webgl",
-});
+const ctx = createContext({});
 ctx.gl.getExtension("OES_element_index_uint"); //TEMP
 
 window.addEventListener("resize", () => {
@@ -41,52 +41,6 @@ window.addEventListener("resize", () => {
 });
 
 const world = createWorld();
-
-function targetTo(out, eye, target, up = [0, 1, 0]) {
-  let eyex = eye[0];
-  let eyey = eye[1];
-  let eyez = eye[2];
-  let upx = up[0];
-  let upy = up[1];
-  let upz = up[2];
-  let z0 = eyex - target[0];
-  let z1 = eyey - target[1];
-  let z2 = eyez - target[2];
-  let len = z0 * z0 + z1 * z1 + z2 * z2;
-  if (len > 0) {
-    len = 1 / Math.sqrt(len);
-    z0 *= len;
-    z1 *= len;
-    z2 *= len;
-  }
-  let x0 = upy * z2 - upz * z1;
-  let x1 = upz * z0 - upx * z2;
-  let x2 = upx * z1 - upy * z0;
-  len = x0 * x0 + x1 * x1 + x2 * x2;
-  if (len > 0) {
-    len = 1 / Math.sqrt(len);
-    x0 *= len;
-    x1 *= len;
-    x2 *= len;
-  }
-  out[0] = x0;
-  out[1] = x1;
-  out[2] = x2;
-  out[3] = 0;
-  out[4] = z1 * x2 - z2 * x1;
-  out[5] = z2 * x0 - z0 * x2;
-  out[6] = z0 * x1 - z1 * x0;
-  out[7] = 0;
-  out[8] = z0;
-  out[9] = z1;
-  out[10] = z2;
-  out[11] = 0;
-  out[12] = eyex;
-  out[13] = eyey;
-  out[14] = eyez;
-  out[15] = 1;
-  return out;
-}
 
 let debugNextFrame = false;
 
@@ -110,6 +64,7 @@ gui.addButton("Set camera pos/dir", () => {
 
 const opts = {
   pointLightPosition: [0, 0.2, 0],
+  directionalLightPosition: [2, 2, 2],
 };
 
 gui.addParam(
@@ -124,6 +79,26 @@ gui.addParam(
     pointLightEntity.transform = {
       position: pos,
     };
+  }
+);
+
+gui.addParam(
+  "Directional light pos",
+  opts,
+  "directionalLightPosition",
+  {
+    min: -3,
+    max: 3,
+  },
+  (pos) => {
+    vec3.set(directionalLightEntity.transform.position, pos);
+    quatFromPointToPointFacingZPos(
+      directionalLightEntity.transform.rotation,
+      pos,
+      [0, 0, 0],
+      [0, 1, 0]
+    );
+    directionalLightEntity.transform.dirty = true;
   }
 );
 
@@ -162,78 +137,51 @@ gui.addParam("Prboter Lat", cameraEntity.orbiter, "lat", {
   max: 89.5,
 });
 
-const quatTargetToOld = (q, position, target) => {
-  return quat.fromTo(
-    q,
-    [0, 0, -1],
-    vec3.normalize(vec3.sub([...target], position))
-  );
-};
+const tempVec1 = vec3.create();
+const tempVec2 = vec3.create();
 
-const mat4TargetTo = (out, eye, target, up = [0, 1, 0]) => {
-  let eyex = eye[0];
-  let eyey = eye[1];
-  let eyez = eye[2];
-  let upx = up[0];
-  let upy = up[1];
-  let upz = up[2];
-  let z0 = eyex - target[0];
-  let z1 = eyey - target[1];
-  let z2 = eyez - target[2];
-  let len = z0 * z0 + z1 * z1 + z2 * z2;
+const tempMat41 = mat4.create();
+
+function quatFromPointToPointFacingZPos(q, eye, target, up) {
+  let forwardX = target[0] - eye[0];
+  let forwardY = target[1] - eye[1];
+  let forwardZ = target[2] - eye[2];
+
+  let upX = up[0];
+  let upY = up[1];
+  let upZ = up[2];
+
+  let len = forwardX * forwardX + forwardY * forwardY + forwardZ * forwardZ;
   if (len > 0) {
     len = 1 / Math.sqrt(len);
-    z0 *= len;
-    z1 *= len;
-    z2 *= len;
+    forwardX *= len;
+    forwardY *= len;
+    forwardZ *= len;
   }
-  let x0 = upy * z2 - upz * z1;
-  let x1 = upz * z0 - upx * z2;
-  let x2 = upx * z1 - upy * z0;
-  len = x0 * x0 + x1 * x1 + x2 * x2;
-  if (len > 0) {
-    len = 1 / Math.sqrt(len);
-    x0 *= len;
-    x1 *= len;
-    x2 *= len;
-  }
-  out[0] = x0;
-  out[1] = x1;
-  out[2] = x2;
-  out[3] = 0;
-  out[4] = z1 * x2 - z2 * x1;
-  out[5] = z2 * x0 - z0 * x2;
-  out[6] = z0 * x1 - z1 * x0;
-  out[7] = 0;
-  out[8] = z0;
-  out[9] = z1;
-  out[10] = z2;
-  out[11] = 0;
-  out[12] = eyex;
-  out[13] = eyey;
-  out[14] = eyez;
-  out[15] = 1;
-  return out;
-};
 
-const mat4tmp = mat4.create();
-const upTmp = [0, 1, 0];
-const quatTargetTo = function (q, eye, target) {
-  return quat.fromMat4(q, mat4TargetTo(mat4tmp, eye, target, upTmp));
-};
+  let rightX = upY * forwardZ - upZ * forwardY;
+  let rightY = upZ * forwardX - upX * forwardZ;
+  let rightZ = upX * forwardY - upY * forwardX;
 
-quatTargetTo(
-  cameraEntity.transform.rotation,
-  cameraEntity.transform.position,
-  [0, 0, 0]
-);
-// quat.fromAxisAngle(cameraEntity.transform.rotation, [1, 0, 0], 0.62);
-// quat.fromTo(cameraEntity.transform.rotation, [0, 1, -1], [0, 0, -1]);
-cameraEntity.transform = {
-  ...cameraEntity.transform,
-};
-
-// console.log("rotation", cameraEntity._transform.modelMatrix);
+  const m = tempMat41;
+  m[0] = rightX;
+  m[1] = rightY;
+  m[2] = rightZ;
+  m[3] = 0.0;
+  m[4] = upX;
+  m[5] = upY;
+  m[6] = upZ;
+  m[7] = 0.0;
+  m[8] = forwardX;
+  m[9] = forwardY;
+  m[10] = forwardZ;
+  m[11] = 0.0;
+  m[12] = 0.0;
+  m[13] = 0.0;
+  m[14] = 0.0;
+  m[15] = 1.0;
+  return quat.fromMat4(q, m);
+}
 
 const floorEntity = createEntity({
   transform: transform({
@@ -289,6 +237,7 @@ const redCubeEntity = createEntity({
     baseColor: [1, 0, 0, 1],
     metallic: 0,
     roughness: 0.2,
+    castShadows: true,
     receiveShadows: true,
   }),
 });
@@ -303,6 +252,7 @@ const greenCubeEntity = createEntity({
     baseColor: [0, 1, 0, 1],
     metallic: 0,
     roughness: 0.2,
+    castShadows: true,
     receiveShadows: true,
   }),
 });
@@ -317,6 +267,7 @@ const blueCubeEntity = createEntity({
     baseColor: [0, 0, 1, 1],
     metallic: 0,
     roughness: 0.2,
+    castShadows: true,
     receiveShadows: true,
   }),
 });
@@ -340,6 +291,7 @@ for (let i = 0; i < 10; i++) {
       castShadows: true,
       receiveShadows: true,
     }),
+    boundingBoxHelper: components.boundingBoxHelper(),
   });
   world.add(torusEntity);
 }
@@ -360,9 +312,11 @@ world.add(reflectionProbeEnt);
 const directionalLightEntity = createEntity({
   transform: transform({
     position: [2, 2, 2],
-    rotation: quat.fromMat4(
+    rotation: quatFromPointToPointFacingZPos(
       quat.create(),
-      targetTo(mat4.create(), [0, 0, 0], [1, 1, 1])
+      [2, 2, 2],
+      [0, 0, 0],
+      [0, 1, 0]
     ),
   }),
   directionalLight: directionalLight({
@@ -370,18 +324,45 @@ const directionalLightEntity = createEntity({
     intensity: 1,
     castShadows: true,
   }),
+  lightHelper: components.lightHelper({ color: [1, 0, 0, 1] }),
 });
-// world.add(directionalLightEntity);
+world.add(directionalLightEntity);
+
+const axis = [
+  [
+    [0.2, 0, 0],
+    [1, 0, 0, 1],
+  ],
+  [
+    [0, 0.2, 0],
+    [0, 1, 0, 1],
+  ],
+  [
+    [0, 0, 0.2],
+    [0, 0, 1, 1],
+  ],
+].forEach(([pos, color]) => {
+  const ent = createEntity({
+    transform: transform({
+      position: pos,
+    }),
+    geometry: cube({ sx: pos[0] + 0.1, sy: pos[1] + 0.1, sz: pos[2] + 0.1 }),
+    material: material({ unlit: true, baseColor: color }),
+  });
+  ent.transform.parent = directionalLightEntity.transform;
+  world.add(ent);
+});
 
 const pointLightEntity = createEntity({
   transform: transform({
-    position: [0, 0.5, 0],
+    position: [2.2, 2.2, 2.2],
   }),
   pointLight: pointLight({
     color: [1, 1, 1, 1], //FIXME: instencity is copied to alpha in pex-renderer
-    intensity: 1,
+    intensity: 0.2,
     castShadows: true,
   }),
+  lightHelper: components.lightHelper({ color: [1, 0, 0, 1] }),
 });
 world.add(pointLightEntity);
 
@@ -497,17 +478,9 @@ ctx.frame(() => {
     );
   }
 
-  // const time = Date.now() / 500;
-  // pointLightEntity.transform.position = [
-  //   Math.sin(time) * Math.cos(time),
-  //   -0.3 * Math.sin(time / 2),
-  //   1.5 * Math.cos(time),
-  // ];
-  // pointLightEntity.transform.dirty = true;
-
   if (
     !reflectionProbeTexturePreview &&
-    reflectionProbeEnt._reflectionProbe._reflectionMap
+    reflectionProbeEnt?._reflectionProbe?._reflectionMap
   ) {
     reflectionProbeTexturePreview = gui.addTexture2D(
       "ReflectionMap",
