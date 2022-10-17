@@ -93,6 +93,21 @@ let debugNextFrame = false;
 const gui = createGUI(ctx);
 gui.addFPSMeeter();
 
+gui.addButton("Set camera pos/target", () => {
+  cameraEntity.transform.position = [3, 1, 1];
+  cameraEntity.orbiter.target = [2, 0, 0];
+});
+
+gui.addButton("Set camera pos/dir", () => {
+  cameraEntity.transform.position = [3, 1, 1];
+  quat.targetTo(
+    cameraEntity.transform.rotation,
+    [3, 1, 1],
+    [0, 1, 1],
+    [0, 1, 0]
+  );
+});
+
 const opts = {
   pointLightPosition: [0, 0.2, 0],
 };
@@ -126,6 +141,19 @@ const cameraEntity = createEntity({
   }),
 });
 world.add(cameraEntity);
+
+gui.addParam(
+  "Camera pos",
+  cameraEntity.transform,
+  "position",
+  {
+    min: -5,
+    max: 5,
+  },
+  (pos) => {
+    console.log("set camera pos", pos);
+  }
+);
 
 const quatTargetToOld = (q, position, target) => {
   return quat.fromTo(
@@ -200,7 +228,7 @@ cameraEntity.transform = {
 
 // console.log("rotation", cameraEntity._transform.modelMatrix);
 
-const cubeEntity = createEntity({
+const floorEntity = createEntity({
   transform: transform({
     position: [0, -1, 0],
   }),
@@ -213,13 +241,43 @@ const cubeEntity = createEntity({
     receiveShadows: true,
   }),
 });
-world.add(cubeEntity);
+world.add(floorEntity);
+
+const cameraTargetEntity = createEntity({
+  transform: transform({
+    position: [0, 0, 0],
+  }),
+  geometry: geometry(sphere({ radius: 0.2 })),
+  material: material({
+    baseColor: [1, 0, 0, 1],
+    metallic: 0,
+    roughness: 0.2,
+    // castShadows: true,
+    receiveShadows: true,
+  }),
+});
+world.add(cameraTargetEntity);
+
+const orbiterTargetEntity = createEntity({
+  transform: transform({
+    position: [0, 0, 0],
+  }),
+  geometry: geometry(sphere({ radius: 0.2 })),
+  material: material({
+    baseColor: [1, 0.5, 0, 1],
+    metallic: 0,
+    roughness: 0.2,
+    // castShadows: true,
+    receiveShadows: true,
+  }),
+});
+world.add(orbiterTargetEntity);
 
 const redCubeEntity = createEntity({
   transform: transform({
     position: [2, 0, 0],
   }),
-  geometry: geometry(cube()),
+  geometry: geometry(cube({ sx: 0.4 })),
   material: material({
     baseColor: [1, 0, 0, 1],
     metallic: 0,
@@ -233,7 +291,7 @@ const greenCubeEntity = createEntity({
   transform: transform({
     position: [0, 2, 0],
   }),
-  geometry: geometry(cube()),
+  geometry: geometry(cube({ sx: 0.4 })),
   material: material({
     baseColor: [0, 1, 0, 1],
     metallic: 0,
@@ -247,7 +305,7 @@ const blueCubeEntity = createEntity({
   transform: transform({
     position: [0, 0, 2],
   }),
-  geometry: geometry(cube()),
+  geometry: geometry(cube({ sx: 0.4 })),
   material: material({
     baseColor: [0, 0, 1, 1],
     metallic: 0,
@@ -309,16 +367,6 @@ const directionalLightEntity = createEntity({
 // world.add(directionalLightEntity);
 
 const pointLightEntity = createEntity({
-  geometry: sphere({ radius: 1 }),
-  material: {
-    metallic: 0,
-    roughness: 1,
-    baseColor: [1, 1, 1, 1],
-    depthTest: true,
-    depthWrite: true,
-    clearCoat: undefined,
-    clearCoatRoughness: 0.15,
-  },
   transform: transform({
     position: [0, 0.5, 0],
   }),
@@ -416,6 +464,17 @@ ctx.frame(() => {
 
   renderEngine.update(world.entities, deltaTime);
   renderEngine.render(world.entities, cameraEntity);
+
+  const pos = [0, 0, -cameraEntity.orbiter._orbiter.distance];
+  vec3.multMat4(pos, cameraEntity.camera.invViewMatrix);
+  cameraTargetEntity.transform.position = pos;
+  cameraTargetEntity.transform.dirty = true;
+
+  orbiterTargetEntity.transform.position = vec3.add(
+    [...cameraEntity.orbiter.target],
+    [0, 0.2, 0]
+  );
+  orbiterTargetEntity.transform.dirty = true;
 
   if (!cameraEntity.camera.logged) {
     cameraEntity.camera.logged = true;
