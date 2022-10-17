@@ -67,6 +67,10 @@ export default function createCameraSystem() {
                 entity.transform.rotation
               );
 
+              orbiter.lat = orbiter._orbiter.lat;
+              orbiter.lon = orbiter._orbiter.lon;
+              orbiter.distance = orbiter._orbiter.distance;
+
               entity.transform.dirty = true;
               camera.dirty = true;
             },
@@ -79,6 +83,12 @@ export default function createCameraSystem() {
             maxDistance: camera.far * 0.9,
           });
           orbiter._orbiter.updateCamera();
+          orbiter.distance = orbiter._orbiter.distance;
+          orbiter.lat = orbiter._orbiter.lat;
+          orbiter.lon = orbiter._orbiter.lon;
+          orbiter._orbiter.distanceCache = orbiter._orbiter.distance;
+          orbiter._orbiter.latCache = orbiter._orbiter.lat;
+          orbiter._orbiter.lonCache = orbiter._orbiter.lon;
         } else {
           if (camera.dirty) {
             camera.dirty = false;
@@ -149,6 +159,22 @@ export default function createCameraSystem() {
             orbiter._orbiter.set({
               camera: orbiter._orbiter.camera,
             });
+          } else {
+            // added cached properties to know if distance,lon,lat changed externally
+            // and if they haven't give a chance to _orbiter.updateCamera() to update them
+            // comparing orbiter.distance to orbiter._orbiter.distance would always overwrite orbiter
+            if (orbiter.distance !== orbiter._orbiter.distanceCache) {
+              orbiter._orbiter.distanceCache = orbiter.distance;
+              orbiter._orbiter.set({ distance: orbiter.distance });
+            }
+            if (orbiter.lon !== orbiter._orbiter.lonCache) {
+              orbiter._orbiter.lonCache = orbiter.lon;
+              orbiter._orbiter.set({ lon: orbiter.lon });
+            }
+            if (orbiter.lat !== orbiter._orbiter.latCache) {
+              orbiter._orbiter.latCache = orbiter.lat;
+              orbiter._orbiter.set({ lat: orbiter.lat });
+            }
           }
 
           orbiter._orbiter.updateCamera();

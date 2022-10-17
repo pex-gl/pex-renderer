@@ -142,18 +142,25 @@ const cameraEntity = createEntity({
 });
 world.add(cameraEntity);
 
-gui.addParam(
-  "Camera pos",
-  cameraEntity.transform,
-  "position",
-  {
-    min: -5,
-    max: 5,
-  },
-  (pos) => {
-    console.log("set camera pos", pos);
-  }
-);
+gui.addParam("Camera pos", cameraEntity.transform, "position", {
+  min: -5,
+  max: 5,
+});
+
+gui.addParam("Orbiter Distance", cameraEntity.orbiter, "distance", {
+  min: 0.5,
+  max: 10,
+});
+
+gui.addParam("Orbiter Lon", cameraEntity.orbiter, "lon", {
+  min: -360,
+  max: 360,
+});
+
+gui.addParam("Prboter Lat", cameraEntity.orbiter, "lat", {
+  min: -89.5,
+  max: 89.5,
+});
 
 const quatTargetToOld = (q, position, target) => {
   return quat.fromTo(
