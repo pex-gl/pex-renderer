@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+# [4.0.0-alpha.19](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.18...v4.0.0-alpha.19) (2022-10-17)
+
+
+### Features
+
+* **renderer/line:** fix line drawing in webgl2 ([c095463](https://github.com/pex-gl/pex-renderer/commit/c0954637d67934eea344857b8618be583fdad467))
+
+
+
 # [4.0.0-alpha.18](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.17...v4.0.0-alpha.18) (2022-10-17)
 
 
