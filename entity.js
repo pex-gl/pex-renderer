@@ -1,5 +1,3 @@
-import createTransform from "./components/transform.js";
-
 let entityId = 0;
 
 export default function createEntity(components = {}) {
