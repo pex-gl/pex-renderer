@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+# [4.0.0-alpha.17](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.16...v4.0.0-alpha.17) (2022-10-17)
+
+
+### Bug Fixes
+
+* **resource-cache:** handle special case for rendering to cubemap attachments ([7fa5f17](https://github.com/pex-gl/pex-renderer/commit/7fa5f1754be2de28d978c7eae3758330aee6886f))
+
+
+### Features
+
+* **systems/camera:** add support for orbiter distance, lon and lat ([11c2d82](https://github.com/pex-gl/pex-renderer/commit/11c2d82ff823eb8ff16ea3f0ff92cef4ba6efb91))
+* **systems/camera:** attempt at syncing modified target or rotation back to orbiter ([36b67dc](https://github.com/pex-gl/pex-renderer/commit/36b67dce2cc1eb4051ecb57ae02012dfa0679916))
+* **systems/camera:** sync modified target or rotation back to orbiter ([5b8b47a](https://github.com/pex-gl/pex-renderer/commit/5b8b47af4f27dff36221197b44cd9df155fd7b2c))
+* **systems/camera:** sync transform position back to orbiter ([faf91b0](https://github.com/pex-gl/pex-renderer/commit/faf91b081e18d5f1b28d5a653315b84bc5c159e6))
+
+
+
 # [4.0.0-alpha.16](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.15...v4.0.0-alpha.16) (2022-10-14)
 
 
