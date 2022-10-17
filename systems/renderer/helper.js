@@ -130,6 +130,27 @@ function drawDirectionalLight(geomBuilder, entity) {
   });
 }
 
+function drawPointLight(geomBuilder, entity) {
+  const pointlLightGizmoPositions = getPrismPositions({
+    radius: 0.3,
+  }).concat(
+    /* prettier-ignore */ [
+      [0.3, 0, 0], [1, 0, 0],
+      [-0.3, 0, 0], [-1, 0, 0],
+      [0, 0.3, 0], [0, 1, 0],
+      [0, -0.3, 0], [0, -1, 0],
+      [0, 0, 0.3], [0, 0, 1],
+      [0, 0, -0.3], [0, 0, -1],
+    ]
+  );
+  // console.log("directionalLightGizmoPositions", directionalLightGizmoPositions);
+  pointlLightGizmoPositions.forEach((pos) => {
+    vec3.multMat4(pos, entity._transform.modelMatrix);
+    geomBuilder.addPosition(pos);
+    geomBuilder.addColor([1, 0, 0, 1]);
+  });
+}
+
 export default function createHelperSystem({ ctx }) {
   let geomBuilder = createGeomBuilder({ colors: 1, positions: 1 });
 
@@ -184,6 +205,9 @@ export default function createHelperSystem({ ctx }) {
         if (entity.lightHelper) {
           if (entity.directionalLight) {
             drawDirectionalLight(geomBuilder, entity);
+          }
+          if (entity.pointLight) {
+            drawPointLight(geomBuilder, entity);
           }
         }
         // if (entity.boundingBoxHelper) {
