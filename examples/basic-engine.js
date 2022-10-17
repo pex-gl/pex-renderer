@@ -94,16 +94,16 @@ const gui = createGUI(ctx);
 gui.addFPSMeeter();
 
 gui.addButton("Set camera pos/target", () => {
-  cameraEntity.transform.position = [3, 1, 1];
-  cameraEntity.orbiter.target = [2, 0, 0];
+  vec3.set(cameraEntity.transform.position, [3, 1, 1]);
+  vec3.set(cameraEntity.orbiter.target, [2, 0, 0]);
 });
 
 gui.addButton("Set camera pos/dir", () => {
-  cameraEntity.transform.position = [3, 1, 1];
+  vec3.set(cameraEntity.transform.position, [3, 1, 1]);
   quat.targetTo(
     cameraEntity.transform.rotation,
     [3, 1, 1],
-    [0, 1, 1],
+    [0, 1, 2],
     [0, 1, 0]
   );
 });

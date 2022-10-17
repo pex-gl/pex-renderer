@@ -12,6 +12,13 @@ export default function createCameraSystem() {
 
   let debuggerCountdown = 4;
 
+  var tempMat4multQuatMat4 = mat4.create();
+  function mat4multQuat(m, q) {
+    mat4.fromQuat(tempMat4multQuatMat4, q);
+    mat4.mult(m, tempMat4multQuatMat4);
+    return m;
+  }
+
   cameraSystem.update = (entities) => {
     for (let entity of entities) {
       if (entity.camera && entity.orbiter) {
@@ -60,9 +67,7 @@ export default function createCameraSystem() {
                 entity.transform.rotation
               );
 
-              entity.transform = {
-                ...entity.transform,
-              };
+              entity.transform.dirty = true;
               camera.dirty = true;
             },
           };
@@ -91,6 +96,10 @@ export default function createCameraSystem() {
             mat4.invert(camera.viewMatrix);
           }
 
+          let newPosition = null;
+          let newTarget = null;
+          let newTarget2 = null;
+
           // check if camera moved without _orbiter intervention
           if (
             vec3.distance(
@@ -98,30 +107,25 @@ export default function createCameraSystem() {
               entity.transform.position
             ) > utils.EPSILON
           ) {
-            console.log("sync with camera position");
-            orbiter._orbiter.camera.set({
-              position: [...entity.transform.position],
-            });
-            orbiter._orbiter.set({
-              camera: orbiter._orbiter.camera,
-            });
+            newPosition = [...entity.transform.position];
           }
 
+          //check if camera rotated without orbiter intervention
           if (
             vec3.distance(
               orbiter._orbiter.camera.rotationCache,
               entity.transform.rotation
             ) > utils.EPSILON
           ) {
-            console.log("sync with camera rotation");
-            const newTarget = [0, 0, -orbiter._orbiter.distance];
-            vec3.multMat4(newTarget, camera.invViewMatrix);
-            orbiter._orbiter.camera.set({ target: [...newTarget] });
-            orbiter.target = [...newTarget];
-
-            orbiter._orbiter.set({
-              camera: orbiter._orbiter.camera,
-            });
+            // console.log("sync with camera rotation");
+            newTarget = [0, 0, -orbiter._orbiter.distance];
+            const useInvMatrix = false;
+            if (useInvMatrix) {
+              vec3.multMat4(newTarget, camera.invViewMatrix); //this is out of date?
+            } else {
+              vec3.multQuat(newTarget, entity.transform.rotation);
+              vec3.add(newTarget, entity.transform.position);
+            }
           }
 
           // check if camera orbiter moved without _orbiter intervention
@@ -129,73 +133,30 @@ export default function createCameraSystem() {
             vec3.distance(orbiter.target, orbiter._orbiter.camera.target) >
             utils.EPSILON
           ) {
-            console.log("sync with orbiter target");
-            orbiter._orbiter.camera.set({ target: orbiter.target });
+            newTarget = orbiter.target;
+            // console.log("sync with orbiter target");
+          }
+
+          if (newPosition || newTarget) {
+            const opts = {};
+            if (newPosition) {
+              opts.position = [...newPosition];
+            }
+            if (newTarget) {
+              opts.target = [...newTarget];
+            }
+            orbiter._orbiter.camera.set(opts);
             orbiter._orbiter.set({
               camera: orbiter._orbiter.camera,
             });
-            // orbiter._orbiter.updateCamera();
           }
-
-          /*
-          //check if camera rotated without orbiter intervention
-          const newTarget = [0, 0, -orbiter._orbiter.distance];
-          vec3.multMat4(newTarget, camera.invViewMatrix);
-          if (
-            vec3.distance(orbiter._orbiter.camera.target, newTarget) >
-            utils.EPSILON
-          ) {
-            if (debuggerCountdown-- < 0) debugger;
-            console.log("sync with camera rotation", camera.dirty);
-            console.log(
-              newTarget,
-              orbiter._orbiter.camera.target,
-              // vec3.distance(orbiter._orbiter.camera.target, newTarget),
-              vec3.distance(entity.transform.position, newTarget),
-              vec3.distance(
-                orbiter._orbiter.camera.target,
-                orbiter._orbiter.camera.position
-              ),
-              orbiter._orbiter.distance,
-              camera.invViewMatrix
-            );
-
-            orbiter._orbiter.camera.set({ target: [...newTarget] });
-            orbiter.target = [...newTarget];
-
-            orbiter._orbiter.set({
-              camera: orbiter._orbiter.camera,
-            });
-            console.log(
-              newTarget,
-              orbiter._orbiter.camera.target,
-              // vec3.distance(orbiter._orbiter.camera.target, newTarget),
-              vec3.distance(entity.transform.position, newTarget),
-              vec3.distance(
-                orbiter._orbiter.camera.target,
-                orbiter._orbiter.camera.position
-              ),
-              orbiter._orbiter.distance,
-              camera.invViewMatrix
-            );
-          }
-          */
 
           orbiter._orbiter.updateCamera();
-        }
-        if (camera.dirty) {
-          camera.dirty = false;
-          mat4.perspective(
-            camera.projectionMatrix,
-            camera.fov,
-            camera.aspect,
-            camera.near,
-            camera.far
-          );
 
-          mat4.set(camera.invViewMatrix, entity._transform.modelMatrix);
-          //look at matrix is opposite of camera modelMatrix transform
-          mat4.set(camera.viewMatrix, entity._transform.modelMatrix);
+          mat4.identity(camera.invViewMatrix);
+          mat4.translate(camera.invViewMatrix, entity.transform.position);
+          mat4multQuat(camera.invViewMatrix, entity.transform.rotation);
+          mat4.set(camera.viewMatrix, camera.invViewMatrix);
           mat4.invert(camera.viewMatrix);
         }
       }
