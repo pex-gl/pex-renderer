@@ -366,6 +366,40 @@ const pointLightEntity = createEntity({
 });
 world.add(pointLightEntity);
 
+const segmentsGeom = {
+  positions: [],
+  vertexColors: [],
+  count: 0,
+};
+
+let prevPos = null;
+for (let i = 0; i < 128; i++) {
+  const x =
+    2 *
+    Math.sin((i / 128) * Math.PI * 4) *
+    Math.cos(((0.2 * i) / 128) * Math.PI * 4);
+  const y = 2 * Math.cos((i / 128) * Math.PI * 4);
+  const z =
+    2 *
+    Math.sin((i / 128) * Math.PI * 4 + 2.323) *
+    Math.sin(((0.2 * i) / 128) * Math.PI * 4);
+  if (prevPos) {
+    segmentsGeom.positions.push(prevPos);
+    segmentsGeom.vertexColors.push([1, 0, 1, 0.5]);
+    segmentsGeom.positions.push([x, y, z]);
+    segmentsGeom.vertexColors.push([1, 0, 1, 0.5]);
+  }
+  prevPos = [x, y, z];
+}
+segmentsGeom.count = segmentsGeom.positions.length / 2;
+const segmentsEntity = createEntity({
+  geometry: components.geometry(segmentsGeom),
+  drawSegments: true,
+  material: components.material({ baseColor: [1, 1, 1, 1] }),
+  transform: components.transform(),
+});
+world.add(segmentsEntity);
+
 async function loadScene() {
   console.log("loadScene loaders.gltf");
   // debugger;

@@ -1,3 +1,5 @@
+import { patchVS, patchFS } from "../../utils.js";
+
 export default function createLineRendererSystem(opts) {
   const { ctx } = opts;
 
@@ -46,10 +48,10 @@ export default function createLineRendererSystem(opts) {
 
   const positionBuffer = ctx.vertexBuffer(instanceRoundRound);
 
-  const drawSegmentsCmd = {
-    name: "drawSegmentsCmd",
-    pipeline: ctx.pipeline({
-      vert: /*glsl*/ `
+  const DRAW_BUFFERS_EXT =
+    ctx.capabilities.maxColorAttachments > 1 ? "#define USE_DRAW_BUFFERS" : "";
+
+  const lineVert = /*glsl*/ `
     attribute vec3 aPosition;
     attribute vec3 aPointA;
     attribute vec3 aPointB;
@@ -84,15 +86,31 @@ export default function createLineRendererSystem(opts) {
         gl_Position = vec4(0.0, 0.0, 0.0, 1.0);
       }
     }
-  `,
-      frag: /*glsl*/ `
-  precision highp float;
-  uniform vec4 uBaseColor;
-  varying vec4 vColor;
-  void main() {
-    gl_FragData[0] = uBaseColor * vColor;
-  }
-  `,
+  `;
+
+  const lineFrag = /*glsl*/ `
+    ${DRAW_BUFFERS_EXT}
+    #ifdef USE_DRAW_BUFFERS
+      #extension GL_EXT_draw_buffers : enable
+    #endif
+
+    precision highp float;
+    uniform vec4 uBaseColor;
+    varying vec4 vColor;
+    void main() {
+      gl_FragData[0] = uBaseColor * vColor;
+      #ifdef USE_DRAW_BUFFERS
+      gl_FragData[1] = vec4(0.0);
+      gl_FragData[2] = vec4(0.0);
+      #endif
+    }
+    `;
+
+  const drawSegmentsCmd = {
+    name: "drawSegmentsCmd",
+    pipeline: ctx.pipeline({
+      vert: ctx.capabilities.isWebGL2 ? patchVS(lineVert) : lineVert,
+      frag: ctx.capabilities.isWebGL2 ? patchFS(lineFrag) : lineFrag,
       depthWrite: true,
       depthTest: true,
     }),
