@@ -1,4 +1,4 @@
-import { mat4, vec3, quat } from "pex-math";
+import { mat4, vec3, quat, utils } from "pex-math";
 import { orbiter as createOrbiter } from "pex-cam";
 
 const tmpMatrix = mat4.create();
@@ -66,6 +66,20 @@ export default function createCameraSystem() {
             maxDistance: camera.far * 0.9,
           });
         } else {
+          if (
+            vec3.distance(
+              entity.orbiter._orbiter.camera.position,
+              entity.transform.position
+            ) > utils.EPSILON
+          ) {
+            vec3.set(
+              entity.orbiter._orbiter.camera.position,
+              entity.transform.position
+            );
+            entity.orbiter._orbiter.set({
+              camera: entity.orbiter._orbiter.camera,
+            });
+          }
           entity.orbiter._orbiter.updateCamera();
         }
 
