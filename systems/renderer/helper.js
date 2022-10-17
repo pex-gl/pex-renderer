@@ -133,16 +133,20 @@ function drawDirectionalLight(geomBuilder, entity) {
 export default function createHelperSystem({ ctx }) {
   let geomBuilder = createGeomBuilder({ colors: 1, positions: 1 });
 
+  const DRAW_BUFFERS_EXT =
+    ctx.capabilities.maxColorAttachments > 1 ? "#define USE_DRAW_BUFFERS" : "";
+
+  const helperVert = `${SHADERS.helper.vert}`;
+  const helperFrag = `
+  ${DRAW_BUFFERS_EXT}
+  ${SHADERS.helper.frag}`;
+
   const helperPositionVBuffer = ctx.vertexBuffer({ data: [0, 0, 0] });
   const helperColorVBuffer = ctx.vertexBuffer({ data: [0, 0, 0, 0] });
   const drawHelperLinesCmd = {
     pipeline: ctx.pipeline({
-      vert: ctx.capabilities.isWebGL2
-        ? patchVS(SHADERS.helper.vert)
-        : SHADERS.helper.vert,
-      frag: ctx.capabilities.isWebGL2
-        ? patchFS(SHADERS.helper.frag)
-        : SHADERS.helper.frag,
+      vert: ctx.capabilities.isWebGL2 ? patchVS(helperVert) : helperVert,
+      frag: ctx.capabilities.isWebGL2 ? patchFS(helperFrag) : helperFrag,
       depthTest: true,
       depthWrite: true,
       primitive: ctx.Primitive.Lines,
