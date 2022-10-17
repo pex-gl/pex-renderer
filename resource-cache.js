@@ -18,7 +18,12 @@ export default function createResourceCache(ctx) {
     // you might want to clone your array first.
 
     for (var i = 0; i < a.length; ++i) {
-      if (a[i] !== b[i]) return false;
+      if (a[i] !== b[i]) {
+        //handle special case where array of color attachments is texture+target (rendering to cubemap)
+        if (a[i].texture == b[i].texture && a[i].target == b[i].target)
+          return true;
+        return false;
+      }
     }
     return true;
   }
