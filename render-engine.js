@@ -65,7 +65,18 @@ export default function defaultEngine(opts) {
 
   const renderEngine = {
     systems: [
-      //TODO: add systems and make sure they have types
+      animationSys,
+      geometrySys,
+      transformSys,
+      skyboxSys,
+      cameraSys,
+      renderPipelineSys,
+    ],
+    renderers: [
+      standardRendererSystem,
+      lineRendererSystem,
+      skyboxRendererSys,
+      helperRendererSys,
     ],
     update: (entities, deltaTime) => {
       animationSys.update(entities, deltaTime);
@@ -89,12 +100,7 @@ export default function defaultEngine(opts) {
       };
 
       const framebufferTextures = renderPipelineSys.update(entities, {
-        renderers: [
-          standardRendererSystem,
-          lineRendererSystem,
-          skyboxRendererSys,
-          helperRendererSys,
-        ],
+        renderers: renderEngine.renderers,
         renderView: renderView,
         drawToScreen: options.drawToScreen,
       });
