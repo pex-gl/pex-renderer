@@ -45,6 +45,7 @@ const world = createWorld();
 let debugNextFrame = false;
 
 const gui = createGUI(ctx);
+gui.addColumn("Settings");
 gui.addFPSMeeter();
 
 gui.addButton("Set camera pos/target", () => {
@@ -285,8 +286,8 @@ for (let i = 0; i < 10; i++) {
     }),
     geometry: geometry(torus({ radius: 1, minorRadius: 0.02 })),
     material: material({
-      baseColor: [0, 0, 1, 1],
-      metallic: 0,
+      baseColor: [1, 1, 1, 1],
+      metallic: 1,
       roughness: 0.15,
       castShadows: true,
       receiveShadows: true,
@@ -527,6 +528,34 @@ ctx.frame(() => {
       "PointLightShadowmap",
       pointLightEntity.pointLight._shadowCubemap
     );
+    const standardRenderer = renderEngine.renderers.find(
+      (renderer) => renderer.type == "standard-renderer"
+    );
+    console.log(
+      "standardRenderer",
+      standardRenderer,
+      renderEngine,
+      renderEngine.renderers[0]
+    );
+    gui.addColumn("Renderer");
+    const options = [
+      "",
+      "data.baseColor",
+      "data.emissiveColor",
+      "data.texCoord0",
+      "data.diffuseColor",
+      "data.metallic",
+      "data.roughness",
+      "data.normalView",
+      "data.directColor",
+      "data.indirectDiffuse",
+      "data.indirectSpecular",
+      "vNormalView",
+      "vNormalWorld",
+    ].map((value) => {
+      return { name: value || "No debug", value };
+    });
+    gui.addRadioList("Debug", standardRenderer, "debugRender", options);
   }
 
   gui.draw();

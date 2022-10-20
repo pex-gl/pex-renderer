@@ -204,6 +204,32 @@ export default function createStandardRendererSystem(opts) {
     frag ||= options.depthPassOnly
       ? SHADERS.depthPass.frag
       : SHADERS.material.frag;
+
+    let debugRender = options.debugRender;
+    if (debugRender) {
+      let scale = "";
+      let pow = 1;
+      let mode = debugRender.toLowerCase();
+      if (mode.includes("normal")) {
+        scale = "*0.5 + 0.5";
+      }
+      if (mode.includes("texcoord")) {
+        debugRender = `vec3(${debugRender}, 0.0)`;
+      }
+      if (
+        mode.includes("ao") ||
+        mode.includes("normal") ||
+        mode.includes("metallic") ||
+        mode.includes("roughness")
+      ) {
+        pow = "2.2";
+      }
+      frag = frag.replace(
+        "gl_FragData[0] = encode(vec4(color, 1.0), uOutputEncoding);",
+        `gl_FragData[0] = vec4(pow(vec3(${debugRender}${scale}), vec3(${pow})), 1.0);`
+      );
+    }
+
     return {
       flags: flags
         .flat()
@@ -268,6 +294,9 @@ ${
     entity._flags = flags;
     const vertSrc = flagsStr + vert;
     const fragSrc = extensions + flagsStr + frag;
+    if (options.debugRender) {
+      flags.push(options.debugRender);
+    }
     let program = programCacheMap.getValue(flags, vert, frag);
     try {
       if (!program) {
@@ -541,6 +570,7 @@ ${
           // postProcessingCmp.ssao,
           useTonemapping: false, //!(postProcessingCmp && postProcessingCmp.enabled),
           shadowQuality: opts.shadowQuality,
+          debugRender: opts.debugRender,
         }
       );
 
@@ -576,14 +606,17 @@ ${
 
   const standardRendererSystem = {
     type: "standard-renderer",
+    debugRender: "",
     renderStages: {
       shadow: (renderView, entitites, opts = {}) => {
         render(renderView, entitites, opts);
       },
       opaque: (renderView, entitites, opts = {}) => {
+        opts.debugRender = standardRendererSystem.debugRender;
         render(renderView, entitites, opts);
       },
       transparent: (renderView, entitites, opts = {}) => {
+        // opts.debugRender = standardRendererSystem.debugRender;
         render(renderView, entitites, { ...opts, transparent: true });
       },
     },
