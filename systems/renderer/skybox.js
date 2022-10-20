@@ -120,6 +120,7 @@ export default function createSkyboxRendererSystem(opts) {
   }
 
   const skyboxRenderSystem = {
+    type: "skybox-renderer",
     renderStages: {
       background: (renderView, entities, options) => {
         const { camera } = renderView;

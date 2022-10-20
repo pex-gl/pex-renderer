@@ -89,6 +89,7 @@ export default function createBasicRendererSystem(opts) {
     return ctx.pipeline(pipelineDescriptor);
   }
   const basicRendererSystem = {
+    type: "basic-renderer",
     renderStages: {
       opaque: (renderView, entities) => {
         const { camera } = renderView;

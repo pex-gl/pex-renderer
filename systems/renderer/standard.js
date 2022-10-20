@@ -575,6 +575,7 @@ ${
   }
 
   const standardRendererSystem = {
+    type: "standard-renderer",
     renderStages: {
       shadow: (renderView, entitites, opts = {}) => {
         render(renderView, entitites, opts);

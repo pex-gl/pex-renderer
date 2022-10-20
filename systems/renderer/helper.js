@@ -180,7 +180,7 @@ export default function createHelperSystem({ ctx }) {
   };
 
   const helperSystem = {
-    type: "camera-system",
+    type: "helper-renderer",
   };
 
   helperSystem.renderStages = {

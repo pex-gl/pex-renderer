@@ -158,6 +158,7 @@ export default function createLineRendererSystem(opts) {
   }
 
   const lineRendererSystem = {
+    type: "line-renderer",
     renderStages: {
       shadow: (renderView, entities) => {
         const { camera } = renderView;
