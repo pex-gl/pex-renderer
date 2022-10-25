@@ -771,16 +771,14 @@ const formatLight = ({ type, name, color, ...rest }) => ({
 });
 
 function getLight(light) {
-  if (light._light) return light._light;
+  if (light._light) return light;
 
   switch (light.type) {
     case "directional":
       light._light = components.directionalLight(formatLight(light));
-      light._type = "directionalLight";
       break;
     case "point":
       light._light = components.pointLight(formatLight(light));
-      light._type = "pointLight";
       break;
     case "spot":
       light._light = components.spotLight({
@@ -788,7 +786,6 @@ function getLight(light) {
         innerAngle: light.spot?.innerConeAngle || 0,
         angle: light.spot?.outerConeAngle || Math.PI / 4.0,
       });
-      light._type = "spotLight";
       break;
 
     default:
@@ -878,8 +875,8 @@ async function handleNode(node, gltf, i, ctx, options) {
         node.extensions.KHR_lights_punctual.light
       ];
     if (light) {
-      const { _light, _type } = getLight(light);
-      components[_type] = _light;
+      const { _light } = getLight(light);
+      entityComponents[`${light.type}Light`] = _light;
     }
   }
 
