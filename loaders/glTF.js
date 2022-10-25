@@ -302,6 +302,7 @@ function getPexMaterialTexture(
 // https://github.com/KhronosGroup/glTF/blob/main/specification/2.0/schema/material.schema.json
 function handleMaterial(material, gltf, ctx) {
   let materialProps = {
+    name: material.name,
     baseColor: [1, 1, 1, 1],
     roughness: 1,
     metallic: 1,
