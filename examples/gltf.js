@@ -1,10 +1,9 @@
 import {
+  renderEngine as createRenderEngine,
   world as createWorld,
   entity as createEntity,
-  systems,
   components,
   loaders,
-  entity,
 } from "../index.js";
 import createContext from "pex-context";
 import createGUI from "pex-gui";
@@ -38,8 +37,8 @@ const State = {
   selectedModel: "",
   scenes: [],
   gridSize: 1,
-  boundingBoxes: true,
-  floor: true,
+  boundingBoxes: false,
+  floor: false,
   useEnvMap: true,
   shadows: false,
   formats: [
@@ -68,6 +67,7 @@ const FORMAT_EXTENSION = new Map()
 const ctx = createContext({
   powerPreference: "high-performance",
 });
+ctx.gl.getExtension("OES_element_index_uint"); //TEMP
 
 const world = createWorld({
   //   shadowQuality: 3,
@@ -78,13 +78,8 @@ const world = createWorld({
 window.world = world;
 window.state = State;
 
-world.addSystem(systems.geometry({ ctx }));
-world.addSystem(systems.transform());
-world.addSystem(systems.animation());
-world.addSystem(systems.camera());
-world.addSystem(systems.skybox({ ctx }));
-world.addSystem(systems.reflectionProbe({ ctx }));
-world.addSystem(systems.renderer({ ctx, outputEncoding: ctx.Encoding.Gamma }));
+const renderEngine = createRenderEngine({ ctx });
+world.addSystem(renderEngine);
 
 const gui = createGUI(ctx);
 
@@ -230,8 +225,10 @@ function onSceneLoaded(scene, grid) {
 
   debugScene();
 
-  rescaleScene(scene);
-  if (grid) repositionModel(scene);
+  if (grid) {
+    rescaleScene(scene);
+    repositionModel(scene);
+  }
   world.update();
 
   if (State.floor) {
@@ -267,6 +264,9 @@ function onSceneLoaded(scene, grid) {
         return bbox;
       })
       .filter((e) => e);
+
+    bboxes.forEach((e) => world.add(e));
+
     scene.entities = scene.entities.concat(bboxes);
   }
 }
@@ -334,23 +334,26 @@ async function loadScene(url, grid) {
       // Update needed for transform.worldBounds
       world.update(); //TODO: check if that call updates transform.worldBounds
 
-      const far = 100;
+      const far = 10000;
       const sceneBounds = scene.root.transform.worldBounds;
-      let sceneCenter = aabb.center(scene.root.transform.worldBounds);
+      const sceneCenter = aabb.center(scene.root.transform.worldBounds);
       if (isNaN(sceneCenter[0])) {
         sceneCenter[0] = 0;
         sceneCenter[1] = 0;
         sceneCenter[2] = 0;
       }
 
+      const boundingSphereRadius = Math.max(
+        ...sceneBounds.map((bound) => vec3.distance(sceneCenter, bound))
+      );
       const fov = Math.PI / 4;
-      // const boundingSphereRadius = Math.max(
-      //   ...sceneBounds.map((bound) => vec3.distance(sceneCenter, bound))
-      // );
-      // const distance = (boundingSphereRadius * 2) / Math.tan(fov / 2);
+      const distance = (boundingSphereRadius * 2) / Math.tan(fov / 2);
 
       cameraEntity = createEntity({
-        transform: transform(),
+        transform: transform({
+          // position: [2, 2, 2],
+          position: [sceneCenter[0], sceneCenter[1], distance],
+        }),
         camera: camera({
           near: 0.1,
           far,
@@ -359,13 +362,16 @@ async function loadScene(url, grid) {
         }),
         orbiter: orbiter({
           element: ctx.gl.canvas,
-          position: [2, 2, 2],
+          target: sceneCenter,
+          // distance,
+          maxDistance: far,
         }),
       });
       scene.entities.push(cameraEntity);
       world.add(cameraEntity);
     } else {
       //TODO: do i need to set dirty for camera to update?
+      cameraEntity.camera.near = 0.5;
       cameraEntity.camera.aspect =
         ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight;
       cameraEntity.camera.projectionMatrix = mat4.perspective(
@@ -378,17 +384,17 @@ async function loadScene(url, grid) {
 
       // Clipped models: 2CylinderEngine, EnvironmentTest
       // MultiUVTest: wrong position
-      if (State.selectedModel.name !== "MultiUVTest") {
-        cameraEntity.orbiter = orbiter({
-          // target: sceneCenter,
-          // distance: (boundingSphereRadius * 2) / Math.tan(cameraCmp.fov / 2),
-          // position: [2, 2, 2],
-          position: cameraEntity.camera.position,
-          // position: cameraEntity.transform.position,
-          // minDistance: cameraEntity.camera.near,
-          // maxDistance: cameraEntity.camera.far,
-        });
-      }
+      // if (State.selectedModel.name !== "MultiUVTest") {
+      cameraEntity.orbiter = orbiter({
+        // target: sceneCenter,
+        // distance: (boundingSphereRadius * 2) / Math.tan(cameraCmp.fov / 2),
+        // position: [2, 2, 2],
+        // position: cameraEntity.camera.position,
+        position: cameraEntity.transform.position,
+        minDistance: cameraEntity.camera.near,
+        maxDistance: cameraEntity.camera.far,
+      });
+      // }
     }
 
     // console.timeEnd('building ' + url)
@@ -426,6 +432,11 @@ async function renderModel(model, overrideFormat, grid) {
   }
 }
 
+const nextCamera = () => {
+  const next = world.entities.find((e) => e !== cameraEntity && e.camera);
+  if (next) cameraEntity = next;
+};
+
 async function init() {
   // Get list of models locally or from the glTF repo
   let models = await loadJson(`${MODELS_PATH}/model-index.json`);
@@ -458,6 +469,8 @@ async function init() {
     }));
 
   gui.addColumn("GLTF");
+  gui.addParam("Model name", State, "modelName");
+  gui.addButton("Open Model URL", openModelURL);
   gui.addTexture2DList(
     "Models",
     State,
@@ -470,7 +483,7 @@ async function init() {
 
       const entitiesIds = [
         ...scenes.map((scene) => scene.entities.map((e) => e.id)).flat(),
-        floorEntity.id,
+        floorEntity?.id,
         cameraEntity.id,
       ].filter(Boolean);
 
@@ -486,14 +499,6 @@ async function init() {
   );
 
   gui.addColumn("Options");
-  gui.addFPSMeeter();
-
-  gui.addParam("Floor", State, "floor");
-  gui.addParam("Bounding Box", State, "boundingBoxes");
-  gui.addButton("Debug Scene Tree", debugScene);
-  gui.addButton("Debug GL", debugGL);
-  gui.addButton("Open Model URL", openModelURL);
-  gui.addParam("Model name", State, "modelName");
   gui.addRadioList(
     "Format",
     State,
@@ -503,6 +508,15 @@ async function init() {
       value,
     }))
   );
+  gui.addParam("Floor", State, "floor");
+  gui.addParam("Bounding Box", State, "boundingBoxes");
+  gui.addButton("Next camera", nextCamera);
+
+  gui.addColumn("Debug");
+  gui.addFPSMeeter();
+  gui.addStats();
+  gui.addButton("Debug Scene Tree", debugScene);
+  gui.addButton("Debug GL", debugGL);
 
   // Filter models
   models = models.filter(({ name }) =>
@@ -534,9 +548,9 @@ async function init() {
       // "ClearCoatTest",
       // "Corset",
       // "Cube",
-      // "DamagedHelmet",
+      "DamagedHelmet",
       // "DragonAttenuation",
-      "Duck",
+      // "Duck",
       // "EmissiveStrengthTest",
       // "EnvironmentTest",
       // "FlightHelmet",
@@ -714,6 +728,10 @@ ctx.frame(() => {
     const deltaTime = (now - prevTime) / 1000;
     prevTime = now;
     world.update(deltaTime);
+    if (cameraEntity) {
+      renderEngine.update(world.entities, deltaTime);
+      renderEngine.render(world.entities, cameraEntity);
+    }
   }
 
   gui.draw();
