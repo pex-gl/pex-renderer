@@ -37,6 +37,7 @@ export default function createStandardRendererSystem(opts) {
   };
 
   const dummyTexture2D = ctx.texture2D({ width: 4, height: 4 });
+  const dummyTextureCube = ctx.textureCube({ width: 4, height: 4 });
 
   // function render() {
   //   skybox.draw(camera, {
@@ -399,10 +400,10 @@ ${
         lightEntity._transform.worldPosition;
       sharedUniforms["uPointLights[" + i + "].color"] = light.color;
       sharedUniforms["uPointLights[" + i + "].range"] = light.range;
-      sharedUniforms["uPointLights[" + i + "].castShadows"] = light.castShadows;
+      sharedUniforms["uPointLights[" + i + "].castShadows"] = !!light.castShadows;
       sharedUniforms["uPointLightShadowMaps[" + i + "]"] = light.castShadows
         ? light._shadowCubemap
-        : this._dummyTextureCube;
+        : dummyTextureCube;
     });
 
     ambientLights.forEach((lightEntity, i) => {
