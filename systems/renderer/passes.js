@@ -51,7 +51,7 @@ function createPassDescriptors(ctx) {
         name: "directionalLightShadowMap", //TODO: is it used?
         width: 2048,
         height: 2048,
-        pixelFormat: ctx.PixelFormat.Depth,
+        pixelFormat: ctx.PixelFormat.DEPTH_COMPONENT24,
         encoding: ctx.Encoding.Linear,
         min: ctx.Filter.Nearest,
         mag: ctx.Filter.Nearest,
@@ -78,7 +78,7 @@ function createPassDescriptors(ctx) {
         name: "pointLightShadowMap", //TODO: is it used?
         width: 512,
         height: 512,
-        pixelFormat: ctx.PixelFormat.Depth,
+        pixelFormat: ctx.PixelFormat.DEPTH_COMPONENT24,
         encoding: ctx.Encoding.Linear,
         min: ctx.Filter.Nearest,
         mag: ctx.Filter.Nearest,
@@ -108,7 +108,7 @@ function createPassDescriptors(ctx) {
       outputDepthTextureDesc: {
         width: 1,
         height: 1,
-        pixelFormat: ctx.PixelFormat.Depth,
+        pixelFormat: ctx.PixelFormat.DEPTH_COMPONENT24,
         encoding: ctx.Encoding.Linear,
         min: ctx.Filter.Nearest,
         mag: ctx.Filter.Nearest,
