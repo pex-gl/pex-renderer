@@ -61,12 +61,13 @@ export default /* glsl */ `
       #endif
 
       void getRoughness(inout PBRData data) {
+
         #ifdef USE_ROUGHNESS_MAP_TEX_COORD_TRANSFORM
           vec2 texCoord = getTextureCoordinates(data, ROUGHNESS_MAP_TEX_COORD_INDEX, uRoughnessMapTexCoordTransform);
         #else
           vec2 texCoord = getTextureCoordinates(data, ROUGHNESS_MAP_TEX_COORD_INDEX);
         #endif
-        data.roughness = uRoughness * texture2D(uRoughnessMap, getTextureCoordinates(data, ROUGHNESS_MAP_TEX_COORD_INDEX)).r + 0.01;
+        data.roughness = uRoughness * texture2D(uRoughnessMap, texCoord).r + 0.01;
       }
     #else
       void getRoughness(inout PBRData data) {
