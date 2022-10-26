@@ -116,6 +116,7 @@ export default function createStandardRendererSystem(opts) {
     [["material", "roughnessMap"], "ROUGHNESS_MAP", { type: "texture", uniform: "uRoughnessMap"}],
     [["material", "metallicMap"], "METALLIC_MAP", { type: "texture", uniform: "uMetallicMap"}],
     [["material", "metallicRoughnessMap"], "METALLIC_ROUGHNESS_MAP", { type: "texture", uniform: "uMetallicRoughnessMap"}],
+    [["material", "occlusionMap"], "OCCLUSION_MAP", { type: "texture", uniform: "uOcclusionMap"}],
     [["material", "alphaTest"], "USE_ALPHA_TEST", { uniform: "uAlphaTest" }],
     [["material", "alphaMap"], "ALPHA_MAP", { type: "texture", uniform: "uAlphaMap"}],
     [["material", "clearCoat"], "USE_CLEAR_COAT", { uniform: "uClearCoat"}],
