@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+# [4.0.0-alpha.21](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.20...v4.0.0-alpha.21) (2022-10-26)
+
+
+### Features
+
+* **render-engine:** add option to specify render size ([c6f19ce](https://github.com/pex-gl/pex-renderer/commit/c6f19ceea4bad1ab1a08824b00514c9de99b2cfa))
+
+
+
 # [4.0.0-alpha.20](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.19...v4.0.0-alpha.20) (2022-10-26)
 
 
