@@ -96,7 +96,12 @@ export default function defaultEngine(opts) {
       const renderView = {
         camera: cameraEntity.camera,
         cameraEntity: cameraEntity,
-        viewport: [0, 0, ctx.gl.drawingBufferWidth, ctx.gl.drawingBufferHeight],
+        viewport: [
+          0,
+          0,
+          options.width || ctx.gl.drawingBufferWidth,
+          options.height || ctx.gl.drawingBufferHeight,
+        ],
       };
 
       const framebufferTextures = renderPipelineSys.update(entities, {
