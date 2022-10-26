@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+# [4.0.0-alpha.22](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.21...v4.0.0-alpha.22) (2022-10-26)
+
+
+### Features
+
+* **renderer/standard:** add occlusion map support ([76576b0](https://github.com/pex-gl/pex-renderer/commit/76576b06b220dd8ee73e413841ef1d356931ebc8))
+
+
+
 # [4.0.0-alpha.21](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.20...v4.0.0-alpha.21) (2022-10-26)
 
 
