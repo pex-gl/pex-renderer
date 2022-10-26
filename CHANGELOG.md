@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+# [4.0.0-alpha.23](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.22...v4.0.0-alpha.23) (2022-10-26)
+
+
+### Bug Fixes
+
+* **pex-shaders:** use transformed tex coords for roughness map ([9d1e3c2](https://github.com/pex-gl/pex-renderer/commit/9d1e3c21f49a6a78127fd560ddd214c0949687a8))
+
+
+
 # [4.0.0-alpha.22](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.21...v4.0.0-alpha.22) (2022-10-26)
 
 
