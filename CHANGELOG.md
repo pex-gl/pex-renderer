@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+# [4.0.0-alpha.20](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.19...v4.0.0-alpha.20) (2022-10-26)
+
+
+### Bug Fixes
+
+* **examples:** update gltf example with render engine ([3628546](https://github.com/pex-gl/pex-renderer/commit/3628546a4ec4d027c127f5b7bc23066e3c35399a))
+* **renderer/standard:** add back missing dummyTextureCube for point lights + castShadows as boolean ([2cc21b6](https://github.com/pex-gl/pex-renderer/commit/2cc21b678188c5c1b1b37332c2d91f36d69243fe))
+* **renderer/standard:** switch to DEPTH_COMPONENT24 for better depth buffer precision ([b1fe551](https://github.com/pex-gl/pex-renderer/commit/b1fe5514a7c579f2318e9266f4f33de3bbd2a396))
+
+
+### Features
+
+* **loaders:** fix getting light components ([36a11bd](https://github.com/pex-gl/pex-renderer/commit/36a11bd3826ea00ebfdac2b61d7379322141057b))
+* **loaders:** preserve material.name ([58981fd](https://github.com/pex-gl/pex-renderer/commit/58981fd2d317ae086dcf35af9a6f0a5fd5591ace))
+* **render-engine:** expose all used systems and renderers ([94d43ac](https://github.com/pex-gl/pex-renderer/commit/94d43acaaa17135eaa29dcb1b87b471d5f13c705))
+* **renderer/*:** add type to all renderers ([f0b3fd9](https://github.com/pex-gl/pex-renderer/commit/f0b3fd97d853ba7b6bf36748e1d9c6fdc8c089aa))
+* **renderer/standard:** add debugRender mode support ([41759af](https://github.com/pex-gl/pex-renderer/commit/41759af9e1652e7c050df58a0821acd8022c4b80))
+
+
+
 # [4.0.0-alpha.19](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.18...v4.0.0-alpha.19) (2022-10-17)
 
 
