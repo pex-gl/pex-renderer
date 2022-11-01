@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+# [4.0.0-alpha.24](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.23...v4.0.0-alpha.24) (2022-11-01)
+
+
+### Features
+
+* **components/material:** introduce material.type ([906f068](https://github.com/pex-gl/pex-renderer/commit/906f068347dbe53f0b979e8c4e8b78521d1a7b06))
+* **render-engine:** add support for customizing renderer list ([45e568b](https://github.com/pex-gl/pex-renderer/commit/45e568b1ab8799eb1629c91695ca3fa83388b59c))
+
+
+
 # [4.0.0-alpha.23](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.22...v4.0.0-alpha.23) (2022-10-26)
 
 
