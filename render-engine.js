@@ -105,7 +105,7 @@ export default function defaultEngine(opts) {
       };
 
       const framebufferTextures = renderPipelineSys.update(entities, {
-        renderers: renderEngine.renderers,
+        renderers: options.renderers || renderEngine.renderers,
         renderView: renderView,
         drawToScreen: options.drawToScreen,
       });
