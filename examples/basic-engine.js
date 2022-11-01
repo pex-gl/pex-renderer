@@ -395,8 +395,7 @@ for (let i = 0; i < 128; i++) {
 segmentsGeom.count = segmentsGeom.positions.length / 2;
 const segmentsEntity = createEntity({
   geometry: components.geometry(segmentsGeom),
-  drawSegments: true,
-  material: components.material({ baseColor: [1, 1, 1, 1] }),
+  material: components.material({ type: "segments", baseColor: [1, 1, 1, 1] }),
   transform: components.transform(),
 });
 world.add(segmentsEntity);

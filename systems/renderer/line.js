@@ -163,7 +163,7 @@ export default function createLineRendererSystem(opts) {
       shadow: (renderView, entities) => {
         const { camera } = renderView;
         entities.forEach((e) => {
-          if (e.drawSegments && e.material.castShadows) {
+          if (e.material?.type == "segments" && e.material?.castShadows) {
             drawSegmentMesh(camera, e);
           }
         });
@@ -171,7 +171,7 @@ export default function createLineRendererSystem(opts) {
       opaque: (renderView, entities) => {
         const { camera } = renderView;
         entities.forEach((e) => {
-          if (e.drawSegments) {
+          if (e.material?.type == "segments") {
             drawSegmentMesh(camera, e);
           }
         });

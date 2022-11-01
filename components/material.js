@@ -158,6 +158,7 @@ class Material {
 export default (opts = {}) => {
   //return new Material(opts);
   return {
+    type: undefined,
     alphaTest: undefined, //0..1
     baseColor: [1, 1, 1, 1],
     emissiveColor: undefined,

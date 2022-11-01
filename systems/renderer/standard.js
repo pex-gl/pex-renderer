@@ -401,7 +401,8 @@ ${
         lightEntity._transform.worldPosition;
       sharedUniforms["uPointLights[" + i + "].color"] = light.color;
       sharedUniforms["uPointLights[" + i + "].range"] = light.range;
-      sharedUniforms["uPointLights[" + i + "].castShadows"] = !!light.castShadows;
+      sharedUniforms["uPointLights[" + i + "].castShadows"] =
+        !!light.castShadows;
       sharedUniforms["uPointLightShadowMaps[" + i + "]"] = light.castShadows
         ? light._shadowCubemap
         : dummyTextureCube;
@@ -506,8 +507,8 @@ ${
       (e) =>
         e.geometry &&
         e.material &&
+        e.material.type === undefined &&
         (!shadowMapping || e.material.castShadows) &&
-        !e.drawSegments &&
         (transparent ? e.material.blend : !e.material.blend) //TODO: what is transparent?
     ); //hardcoded e.drawSegments
 
