@@ -26,7 +26,7 @@ export default function createGeometrySystem(opts) {
 
   function splitEvery(n, list) {
     const result = [];
-    for (let i = 0; i < list.length; i++) {
+    for (let i = 0; i < list.length; ) {
       var a = [];
       for (let j = 0; j < n; j++, i++) {
         a.push(list[i]);
