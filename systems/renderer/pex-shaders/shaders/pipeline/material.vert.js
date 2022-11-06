@@ -77,6 +77,8 @@ varying vec3 vPositionView;
 ${SHADERS.math.transposeMat4}
 ${SHADERS.math.quatToMat4}
 
+#define HOOK_VERT_DECLARATIONS_END
+
 void main() {
   vec4 position = vec4(aPosition, 1.0);
   vec3 normal = vec3(0.0, 0.0, 0.0);
@@ -100,12 +102,12 @@ void main() {
   vTexCoord1 = aTexCoord1;
 #endif
 
+#define HOOK_VERT_BEFORE_TRANSFORM
+
 #ifdef USE_DISPLACEMENT_MAP
   float h = texture2D(uDisplacementMap, aTexCoord0).r;
   position.xyz += uDisplacement * h * normal;
 #endif
-
-
 
 #ifndef USE_SKIN
   #ifdef USE_INSTANCED_SCALE
@@ -123,12 +125,12 @@ void main() {
     position.xyz += aOffset;
   #endif
 
-  vec4 positionWorld = uModelMatrix * position;  
-  vNormalView = uNormalMatrix * normal;  
+  vec4 positionWorld = uModelMatrix * position;
+  vNormalView = uNormalMatrix * normal;
 #endif
 
 #ifdef USE_SKIN
-  vec4 positionWorld = uModelMatrix * position;  
+  vec4 positionWorld = uModelMatrix * position;
 
   mat4 skinMat =
     aWeight.x * uJointMat[int(aJoint.x)] +
@@ -137,7 +139,7 @@ void main() {
     aWeight.w * uJointMat[int(aJoint.w)];
 
   normal = vec3(skinMat * vec4(normal, 0.0));
-  
+
   positionWorld = skinMat * position;
 
   #ifdef USE_INSTANCED_SCALE
@@ -157,12 +159,12 @@ void main() {
 
   #ifdef USE_TANGENTS
   tangent = skinMat * vec4(tangent.xyz, 0.0);
-  #endif    
+  #endif
 
   vNormalView = vec3(uViewMatrix * vec4(normal, 0.0));
 #else
-  
-#endif  
+
+#endif
 
 #if defined(USE_VERTEX_COLORS) && defined(USE_INSTANCED_COLOR)
   vColor = aVertexColor * aColor;
@@ -176,7 +178,7 @@ void main() {
   #endif
 #endif
 
-  
+
   vNormalWorld = normalize(vec3(uInverseViewMatrix * vec4(vNormalView, 0.0)));
 
   vec4 positionView = uViewMatrix * positionWorld;
@@ -190,7 +192,7 @@ void main() {
     vTangentView.xyz = vec3(uNormalMatrix * tangent.xyz);
     vTangentView.w = tangent.w;
   #endif
-  
+
   gl_PointSize = uPointSize;
 }
-`
+`;

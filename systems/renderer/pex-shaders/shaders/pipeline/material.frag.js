@@ -121,6 +121,8 @@ ${SHADERS.alpha}
   ${SHADERS.specularGlossiness}
 #endif
 
+#define HOOK_FRAG_DECLARATIONS_END
+
 void main() {
   vec3 color;
 
@@ -167,6 +169,8 @@ void main() {
     data.sheen = vec3(0.0);
     data.opacity = 1.0;
 
+    #define HOOK_FRAG_BEFORE_TEXTURES
+
     getNormal(data);
     getEmissiveColor(data);
 
@@ -177,10 +181,6 @@ void main() {
       // data.roughness = 0.004 + 0.996 * data.roughness;
       data.roughness = clamp(data.roughness, MIN_ROUGHNESS, 1.0);
       getMetallic(data);
-
-      // Compute F0 for both dielectric and metallic materials
-      data.f0 = 0.16 * uReflectance * uReflectance * (1.0 - data.metallic) + data.baseColor.rgb * data.metallic;
-      data.diffuseColor = data.baseColor * (1.0 - data.metallic);
     #endif
     #ifdef USE_SPECULAR_GLOSSINESS_WORKFLOW
       getBaseColorAndMetallicRoughnessFromSpecularGlossiness(data);
@@ -199,7 +199,18 @@ void main() {
       alphaTest(data);
     #endif
 
+    #define HOOK_FRAG_BEFORE_LIGHTING
+
+    #ifdef USE_METALLIC_ROUGHNESS_WORKFLOW
+      // Compute F0 for both dielectric and metallic materials
+      data.f0 = 0.16 * uReflectance * uReflectance * (1.0 - data.metallic) + data.baseColor.rgb * data.metallic;
+      data.diffuseColor = data.baseColor * (1.0 - data.metallic);
+    #endif
+
     data.linearRoughness = data.roughness * data.roughness;
+    // view vector in world space
+    data.viewWorld = normalize(uCameraPosition - vPositionWorld);
+    data.NdotV = clamp(abs(dot(data.normalWorld, data.viewWorld)) + FLT_EPS, 0.0, 1.0);
 
     #ifdef USE_CLEAR_COAT
       getClearCoat(data);
@@ -211,11 +222,6 @@ void main() {
 
       getClearCoatNormal(data);
     #endif
-
-    // view vector in world space
-    data.viewWorld = normalize(uCameraPosition - vPositionWorld);
-
-    data.NdotV = clamp(abs(dot(data.normalWorld, data.viewWorld)) + FLT_EPS, 0.0, 1.0);
 
     #ifdef USE_SHEEN
       getSheenColor(data);
@@ -280,7 +286,10 @@ void main() {
     // data.indirectSpecular *=
     #endif
 
+    #define HOOK_FRAG_AFTER_LIGHTING
+
     color = data.emissiveColor + data.indirectDiffuse + data.indirectSpecular + data.directColor;
+
     #ifdef USE_TONEMAPPING
       color.rgb *= uExposure;
       color.rgb = tonemapUncharted2(color.rgb);
@@ -288,6 +297,7 @@ void main() {
   #endif // USE_UNLIT_WORKFLOW
 
   gl_FragData[0] = encode(vec4(color, 1.0), uOutputEncoding);
+
   #ifdef USE_DRAW_BUFFERS
     // changed order
     gl_FragData[1] = vec4(data.normalView * 0.5 + 0.5, 1.0);
@@ -296,5 +306,7 @@ void main() {
   #ifdef USE_BLEND
     gl_FragData[0].a = data.opacity;
   #endif
+
+  #define HOOK_FRAG_END
 }
 `;

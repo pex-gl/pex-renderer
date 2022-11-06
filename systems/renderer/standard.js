@@ -207,6 +207,25 @@ export default function createStandardRendererSystem(opts) {
       ? SHADERS.depthPass.frag
       : SHADERS.material.frag;
 
+    if (material.hooks) {
+      if (material.hooks.vert) {
+        for (let [hookName, hookCode] of Object.entries(material.hooks.vert)) {
+          const hook = `#define HOOK_VERT_${hookName}`;
+          vert = vert.replace(hook, hookCode);
+        }
+      }
+      if (material.hooks.frag) {
+        for (let [hookName, hookCode] of Object.entries(material.hooks.frag)) {
+          const hook = `#define HOOK_FRAG_${hookName}`;
+          frag = frag.replace(hook, hookCode);
+        }
+      }
+      if (material.hooks.uniforms) {
+        const hookUniforms = material.hooks.uniforms(entity, []);
+        Object.assign(materialUniforms, hookUniforms);
+      }
+    }
+
     let debugRender = options.debugRender;
     if (debugRender) {
       let scale = "";
