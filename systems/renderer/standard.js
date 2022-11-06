@@ -79,7 +79,6 @@ export default function createStandardRendererSystem(opts) {
     try {
       program = ctx.program({ vert: vertSrc, frag: fragSrc });
     } catch (e) {
-      console.error("pex-renderer glsl error", e, fragSrc);
       program = ctx.program({
         vert: SHADERS.error.vert,
         frag: SHADERS.error.frag,
@@ -336,7 +335,24 @@ ${
       }
     } catch (e) {
       console.error(e);
-      console.log(vert);
+      const errorInVertexShader = e.message.match(/Vertex/);
+      const lineNo = parseInt(e.message.match(/ERROR: ([\d]+):([\d]+)/)[2]);
+      const src = errorInVertexShader ? vertSrc : fragSrc;
+      const srcLines = src.split("\n").map((line, i) => {
+        if (i == lineNo - 1) return `--> ${line}`;
+        else return `      ${line}`;
+      });
+      console.warn(
+        "pex-renderer glsl error",
+        e.message,
+        srcLines
+          .slice(
+            Math.max(lineNo - 5, 0),
+            Math.min(lineNo + 5, srcLines.length - 1)
+          )
+          .join("\n")
+      );
+      // console.log(vert);
       // console.log(frag);
     }
     return { program, materialUniforms };
