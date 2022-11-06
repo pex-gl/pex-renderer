@@ -24,18 +24,6 @@ export default function createGeometrySystem(opts) {
     colors: { attribute: "aColor", instanced: true },
   };
 
-  function splitEvery(n, list) {
-    const result = [];
-    for (let i = 0; i < list.length; ) {
-      var a = [];
-      for (let j = 0; j < n; j++, i++) {
-        a.push(list[i]);
-      }
-      result.push(a);
-    }
-    return result;
-  }
-
   const vertexAttributeProps = Object.keys(vertexAttributeMap);
   const indicesProps = ["cells", "indices"];
 
@@ -113,7 +101,7 @@ export default function createGeometrySystem(opts) {
             } else {
               geometry.bounds = aabb.fromPoints(
                 geometry.bounds || aabb.create(),
-                splitEvery(3, data)
+                data
               );
             }
           }
