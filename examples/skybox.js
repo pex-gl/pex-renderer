@@ -13,47 +13,64 @@ const State = {
 
 const ctx = createContext();
 const renderer = createRenderer(ctx);
+
+renderer.addSystem(renderer.geometrySystem());
+renderer.addSystem(renderer.transformSystem());
+renderer.addSystem(renderer.cameraSystem());
+renderer.addSystem(renderer.skyboxSystem());
+renderer.addSystem(renderer.reflectionProbeSystem());
+renderer.addSystem(renderer.renderSystem());
+
+window.renderer = renderer; //FIXME: temp
 const gui = createGUI(ctx);
 
-const camera = renderer.entity([
-  renderer.transform({ position: [0, 0, 3] }),
-  renderer.camera({
+const cameraEnt = renderer.entity({
+  transform: renderer.transform({ position: [0, 0, 3] }),
+  camera: renderer.camera({
     fov: Math.PI / 3,
     aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
     near: 0.1,
     far: 100,
     postprocess: false,
   }),
-  renderer.orbiter({
+  orbiter: renderer.orbiter({
     position: [0, 0, 3],
   }),
-]);
-renderer.add(camera);
+});
+renderer.add(cameraEnt);
 
-const geom = renderer.entity([
-  renderer.transform({ position: [0, 0, 0] }),
-  renderer.geometry(sphere({ radius: 1 })),
-  renderer.material({
+const lightEnt = renderer.entity({
+  ambientLight: renderer.ambientLight({ color: [1, 1, 1, 1] }),
+});
+renderer.add(lightEnt);
+
+const geomEnt = renderer.entity({
+  transform: renderer.transform({ position: [0, 0, 0] }),
+  geometry: renderer.geometry(sphere({ radius: 1 })),
+  material: renderer.material({
     baseColor: [1, 1, 1, 1],
     roughness: 0,
     metallic: 1,
   }),
-]);
-renderer.add(geom);
+});
+renderer.add(geomEnt);
 
-const skybox = renderer.entity([
-  renderer.transform({
+const skyboxEnt = renderer.entity({
+  transform: renderer.transform({
     rotation: quat.fromAxisAngle(quat.create(), [0, 1, 0], State.rotation),
   }),
-  renderer.skybox({
+  skybox: renderer.skybox({
     sunPosition: [1, 1, 1],
     backgroundBlur: 0,
   }),
-]);
-renderer.add(skybox);
+});
+renderer.add(skyboxEnt);
 
-const reflectionProbe = renderer.entity([renderer.reflectionProbe()]);
-renderer.add(reflectionProbe);
+const reflectionProbeEnt = renderer.entity({
+  reflectionProbe: renderer.reflectionProbe(),
+});
+renderer.add(reflectionProbeEnt);
+
 (async () => {
   const buffer = await io.loadArrayBuffer(
     getURL(`assets/envmaps/Mono_Lake_B/Mono_Lake_B.hdr`)
@@ -65,37 +82,51 @@ renderer.add(reflectionProbe);
     height: hdrImg.shape[1],
     pixelFormat: ctx.PixelFormat.RGBA32F,
     encoding: ctx.Encoding.Linear,
-    flipY: true,
+    flipY: true, //TODO: flipY on non dom elements is deprecated
   });
 
-  skybox.getComponent("Skybox").set({ texture: panorama });
-  reflectionProbe.getComponent("ReflectionProbe").set({ dirty: true });
+  skyboxEnt._skybox.texture = panorama;
+  skyboxEnt._skybox.dirty = true; //TODO: check if this works
 
-  const skyboxCmp = skybox.getComponent("Skybox");
-  const materialCmp = geom.getComponent("Material");
-  const cameraCmp = camera.getComponent("Camera");
+  renderer.draw(); //force update reflection probe
+  console.log("reflectionProbeEnt", reflectionProbeEnt);
+  reflectionProbeEnt._reflectionProbe.dirty = true;
+
   gui.addHeader("Settings");
-  gui.addParam("Enabled", skyboxCmp, "enabled", {}, (value) => {
-    skyboxCmp.set({ enabled: value });
-  });
+  //TODO: implement component.enabled
+  // gui.addParam("Enabled", skyboxEnt.skybox, "enabled", {}, (value) => {
+  // skyboxCmp.set({ enabled: value });
+  // });
   gui.addParam(
     "Rotation",
     State,
     "rotation",
     { min: 0, max: 2 * Math.PI },
     () => {
-      skybox.getComponent("Transform").set({
-        rotation: quat.fromAxisAngle(quat.create(), [0, 1, 0], State.rotation),
-      });
-      reflectionProbe.getComponent("ReflectionProbe").set({ dirty: true });
+      quat.fromAxisAngle(
+        skyboxEnt.transform.rotation,
+        [0, 1, 0],
+        State.rotation
+      );
+      reflectionProbeEnt.reflectionProbe.dirty = true;
     }
   );
-  gui.addParam("BG Blur", skyboxCmp, "backgroundBlur", {}, () => {});
-  gui.addParam("Exposure", cameraCmp, "exposure", { min: 0, max: 2 }, () => {});
-  gui.addParam("Roughness", materialCmp, "roughness", {}, () => {});
+  gui.addParam("BG Blur", skyboxEnt.skybox, "backgroundBlur", {}, () => {});
+  gui.addParam(
+    "Exposure",
+    cameraEnt.camera,
+    "exposure",
+    { min: 0, max: 2 },
+    () => {}
+  );
+  gui.addParam("Roughness", geomEnt.material, "roughness", {}, () => {});
+  gui.addTexture2D(
+    "Skybox",
+    skyboxEnt.skybox.texture || skyboxEnt._skybox._skyTexture
+  );
   gui.addTexture2D(
     "Reflection Probe",
-    reflectionProbe.getComponent("ReflectionProbe")._reflectionMap
+    reflectionProbeEnt._reflectionProbe._reflectionMap
   );
 
   window.dispatchEvent(new CustomEvent("pex-screenshot"));

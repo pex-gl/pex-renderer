@@ -1,6 +1,6 @@
 {
   "name": "pex-renderer",
-  "version": "3.1.0",
+  "version": "4.0.0-alpha.25",
   "description": "Physically based renderer (PBR) and scene graph for PEX.",
   "keywords": [
     "pex",
@@ -26,18 +26,19 @@
   "scripts": {
     "build": "snowdev build",
     "dev": "snowdev dev",
-    "release": "snowdev release"
+    "release": "snowdev release",
+    "release-alpha": "snowdev release --release-as minor --prerelease alpha"
   },
   "dependencies": {
     "geom-builder": "^2.1.0",
     "hammersley": "^1.0.0",
-    "pex-cam": "github:pex-gl/pex-cam#v3",
-    "pex-geom": "github:pex-gl/pex-geom#v3",
+    "pex-cam": "^3.0.0-alpha.1",
+    "pex-geom": "^3.0.0-alpha.2",
     "pex-io": "github:pex-gl/pex-io#v3",
-    "pex-loaders": "github:pex-gl/pex-loaders#014ee1d716d460591fcf87af5e16ea0d47d468a7",
-    "pex-math": "github:pex-gl/pex-math#v4",
-    "pex-random": "github:pex-gl/pex-random#v2",
-    "pex-shaderlib": "github:pex-gl/pex-shaderlib#d3967fa20dc00db8fd6b96f20cd214df63ab9757",
+    "pex-loaders": "^0.0.1",
+    "pex-math": "^4.0.0-alpha.3",
+    "pex-random": "^2.0.0-alpha.0",
+    "pex-shaders": "^0.1.1",
     "primitive-quad": "^2.0.0",
     "signals": "^1.0.0"
   },
@@ -53,8 +54,8 @@
     "grid-cells": "^2.0.0",
     "parse-hdr": "^1.0.0",
     "pex-color": "github:pex-gl/pex-color#v2",
-    "pex-context": "github:pex-gl/pex-context#v3",
-    "pex-gui": "github:pex-gl/pex-gui#v3",
+    "pex-context": "^3.0.0-alpha.2",
+    "pex-gui": "^3.0.0-alpha.2",
     "primitive-geometry": "^2.6.0"
   },
   "engines": {

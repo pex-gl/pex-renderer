@@ -1,7 +1,7 @@
 import { loadJson, loadImage, loadArrayBuffer, loadBlob } from "pex-io";
 import { quat, mat4, utils } from "pex-math";
 import { getDirname, getFileExtension } from "../utils.js";
-
+import { components, entity } from "../index.js";
 import { loadDraco, loadKtx2 } from "pex-loaders";
 
 const isSafari =
@@ -302,6 +302,7 @@ function getPexMaterialTexture(
 // https://github.com/KhronosGroup/glTF/blob/main/specification/2.0/schema/material.schema.json
 function handleMaterial(material, gltf, ctx) {
   let materialProps = {
+    name: material.name,
     baseColor: [1, 1, 1, 1],
     roughness: 1,
     metallic: 1,
@@ -522,7 +523,6 @@ async function handlePrimitive(
   primitive,
   { bufferViews, accessors },
   ctx,
-  renderer,
   { dracoOptions }
 ) {
   let geometryProps = {};
@@ -561,7 +561,7 @@ async function handlePrimitive(
 
     // If the loader does support the Draco extension, but will not process KHR_draco_mesh_compression, then the loader must load the glTF asset ignoring KHR_draco_mesh_compression in primitive.
     try {
-      geometryProps = await loadDraco(bufferView._data, renderer, {
+      geometryProps = await loadDraco(bufferView._data, ctx.gl, {
         transcodeConfig: {
           attributeIDs,
           attributeTypes,
@@ -689,26 +689,27 @@ async function handlePrimitive(
 }
 
 // https://github.com/KhronosGroup/glTF/blob/main/specification/2.0/schema/mesh.schema.json
-async function handleMesh(
-  { primitives, weights },
-  gltf,
-  ctx,
-  renderer,
-  options
-) {
+async function handleMesh({ primitives, weights }, gltf, ctx, options) {
   return await Promise.all(
     primitives.map(async (primitive) => {
-      const geometryCmp = renderer.geometry(
-        await handlePrimitive(primitive, gltf, ctx, renderer, options)
+      const decodedPrimitive = await handlePrimitive(
+        primitive,
+        gltf,
+        ctx,
+        options
       );
+      const geometryCmp = components.geometry(decodedPrimitive);
       const materialCmp =
         primitive.material !== undefined
-          ? renderer.material(
+          ? components.material(
               handleMaterial(gltf.materials[primitive.material], gltf, ctx)
             )
-          : renderer.material();
+          : components.material();
 
-      const components = [geometryCmp, materialCmp];
+      const entityComponents = {
+        geometry: geometryCmp,
+        material: materialCmp,
+      };
 
       // Create morph
       if (primitive.targets) {
@@ -753,15 +754,14 @@ async function handleMesh(
           return targets;
         }, {});
 
-        const morphCmp = renderer.morph({
+        entityComponents.morph = components.morph({
           sources,
           targets,
           weights,
         });
-        components.push(morphCmp);
       }
 
-      return components;
+      return entityComponents;
     })
   );
 }
@@ -771,18 +771,18 @@ const formatLight = ({ type, name, color, ...rest }) => ({
   color: [...(color || [1, 1, 1]), 1],
 });
 
-function getLight(light, renderer) {
-  if (light._light) return light._light;
+function getLight(light) {
+  if (light._light) return light;
 
   switch (light.type) {
     case "directional":
-      light._light = renderer.directionalLight(formatLight(light));
+      light._light = components.directionalLight(formatLight(light));
       break;
     case "point":
-      light._light = renderer.pointLight(formatLight(light));
+      light._light = components.pointLight(formatLight(light));
       break;
     case "spot":
-      light._light = renderer.spotLight({
+      light._light = components.spotLight({
         ...formatLight(light),
         innerAngle: light.spot?.innerConeAngle || 0,
         angle: light.spot?.outerConeAngle || Math.PI / 4.0,
@@ -793,12 +793,12 @@ function getLight(light, renderer) {
       throw new Error(`Unexpected light type: ${light.type}`);
   }
 
-  return light._light;
+  return light;
 }
 
 // https://github.com/KhronosGroup/glTF/blob/main/specification/2.0/schema/node.schema.json
-async function handleNode(node, gltf, i, ctx, renderer, options) {
-  const components = [];
+async function handleNode(node, gltf, i, ctx, options) {
+  const entityComponents = {};
   // const entity = {};
 
   let transform;
@@ -829,7 +829,7 @@ async function handleNode(node, gltf, i, ctx, renderer, options) {
     };
   }
 
-  components.push(renderer.transform(transform));
+  entityComponents.transform = components.transform(transform);
   // entity.transform = transform;
   // transform.entity = entity;
 
@@ -840,33 +840,29 @@ async function handleNode(node, gltf, i, ctx, renderer, options) {
     // https://github.com/KhronosGroup/glTF/blob/main/specification/2.0/schema/camera.schema.json
     if (camera.type === "orthographic") {
       // https://github.com/KhronosGroup/glTF/blob/main/specification/2.0/schema/camera.orthographic.schema.json
-      components.push(
-        renderer.camera({
-          enabled,
-          name: camera.name || `camera_${node.camera}`,
-          projection: "orthographic",
-          near: camera.orthographic.znear,
-          far: camera.orthographic.zfar,
-          left: -camera.orthographic.xmag / 2,
-          right: camera.orthographic.xmag / 2,
-          top: camera.orthographic.ymag / 2,
-          bottom: camera.orthographic.ymag / 2,
-        })
-      );
+      entityComponents.camera = components.camera({
+        enabled,
+        name: camera.name || `camera_${node.camera}`,
+        projection: "orthographic",
+        near: camera.orthographic.znear,
+        far: camera.orthographic.zfar,
+        left: -camera.orthographic.xmag / 2,
+        right: camera.orthographic.xmag / 2,
+        top: camera.orthographic.ymag / 2,
+        bottom: camera.orthographic.ymag / 2,
+      });
     } else {
       // https://github.com/KhronosGroup/glTF/blob/main/specification/2.0/schema/camera.perspective.schema.json
-      components.push(
-        renderer.camera({
-          enabled,
-          name: camera.name || `camera_${node.camera}`,
-          near: camera.perspective.znear,
-          far: camera.perspective.zfar || Infinity,
-          fov: camera.perspective.yfov,
-          aspect:
-            camera.perspective.aspectRatio ||
-            ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
-        })
-      );
+      entityComponents.camera = components.camera({
+        enabled,
+        name: camera.name || `camera_${node.camera}`,
+        near: camera.perspective.znear,
+        far: camera.perspective.zfar || Infinity,
+        fov: camera.perspective.yfov,
+        aspect:
+          camera.perspective.aspectRatio ||
+          ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
+      });
     }
   }
 
@@ -880,12 +876,14 @@ async function handleNode(node, gltf, i, ctx, renderer, options) {
         node.extensions.KHR_lights_punctual.light
       ];
     if (light) {
-      components.push(getLight(light, renderer));
+      const { _light } = getLight(light);
+      entityComponents[`${light.type}Light`] = _light;
     }
   }
 
-  node.entity = renderer.entity(components);
+  node.entity = entity(entityComponents);
   node.entity.name = node.name || `node_${i}`;
+
   // node.entity = entity;
   // node.entity.name = node.name || `node_${i}`;
 
@@ -903,7 +901,7 @@ async function handleNode(node, gltf, i, ctx, renderer, options) {
       inverseBindMatrices.push(accessor._data.slice(i, i + 16));
     }
 
-    skinCmp = renderer.skin({
+    skinCmp = components.skin({
       inverseBindMatrices: inverseBindMatrices,
     });
 
@@ -917,7 +915,6 @@ async function handleNode(node, gltf, i, ctx, renderer, options) {
       gltf.meshes[node.mesh],
       gltf,
       ctx,
-      renderer,
       options
     );
     let instances = null;
@@ -955,10 +952,10 @@ async function handleNode(node, gltf, i, ctx, renderer, options) {
     }
 
     if (primitives.length === 1) {
-      primitives[0].forEach((component) => {
-        node.entity.addComponent(component);
-      });
-      if (skinCmp) node.entity.addComponent(skinCmp);
+      Object.assign(node.entity, primitives[0]);
+      if (skinCmp) {
+        node.entity.skin = skinCmp;
+      }
 
       // const components = primitives[0];
       // Object.assign(entity, components);
@@ -973,7 +970,7 @@ async function handleNode(node, gltf, i, ctx, renderer, options) {
     } else {
       // create sub nodes for each primitive
       const primitiveNodes = primitives.map((components, j) => {
-        const subEntity = renderer.entity(components);
+        const subEntity = entity(components);
         // const subEntity = {
         //   ...components,
         //   transform: {},
@@ -981,11 +978,14 @@ async function handleNode(node, gltf, i, ctx, renderer, options) {
         // };
         // subEntity.transform.entity = subEntity;
         subEntity.name = `node_${i}_${j}`;
-        subEntity.transform.set({ parent: node.entity.transform });
+        subEntity.transform = {
+          ...(subEntity.transform || {}),
+          parent: node.entity.transform,
+        };
         // subEntity.transform.parent = node.entity.transform;
 
         // TODO: should skin component be shared?
-        if (skinCmp) subEntity.addComponent(skinCmp);
+        if (skinCmp) subEntity.skin = skinCmp;
         // if (skinCmp) {
         //   subEntity.skin = skinCmp;
         // }
@@ -1000,12 +1000,7 @@ async function handleNode(node, gltf, i, ctx, renderer, options) {
   return node.entity;
 }
 
-function handleAnimation(
-  animation,
-  { accessors, bufferViews, nodes },
-  renderer,
-  index
-) {
+function handleAnimation(animation, { accessors, bufferViews, nodes }, index) {
   // https://github.com/KhronosGroup/glTF/blob/main/specification/2.0/schema/animation.schema.json
   // https://github.com/KhronosGroup/glTF/blob/main/specification/2.0/schema/animation.channel.schema.json
   const channels = animation.channels.map((channel) => {
@@ -1035,7 +1030,7 @@ function handleAnimation(
 
     let offset = GLTF_ACCESSOR_TYPE_COMPONENTS_NUMBER[output.type];
     if (channel.target.path === "weights") {
-      offset = target.getComponent("Morph").weights.length;
+      offset = target.morph.weights.length;
     }
     for (let i = 0; i < od.length; i += offset) {
       if (offset === 1) {
@@ -1061,7 +1056,7 @@ function handleAnimation(
     };
   });
 
-  // return renderer.animation({
+  // return components.animation({
   //   channels: channels,
   //   autoplay: true,
   //   loop: true,
@@ -1072,7 +1067,7 @@ function handleAnimation(
     0
   );
 
-  return renderer.animation({
+  return components.animation({
     name: animation.name || `Animation ${index}`,
     channels,
     duration,
@@ -1234,20 +1229,25 @@ const DEFAULT_OPTIONS = {
   supportImageBitmap: !isSafari,
 };
 
-async function loadGltf(url, renderer, options = {}) {
+async function loadGltf(url, options = {}) {
   const opts = Object.assign({}, DEFAULT_OPTIONS, options);
-  const ctx = renderer._ctx;
+  const { ctx } = options;
+
+  console.log("loaders.gltf", url, options, opts);
 
   // Load and unpack data
   // https://www.khronos.org/registry/glTF/specs/2.0/glTF-2.0.html#glb-file-format-specification
   const extension = getFileExtension(url);
   const basePath = getDirname(url);
-  const isBinary = extension === ".glb";
+  const isBinary = extension === "glb";
 
+  console.log("loaders.gltf", url, extension, isBinary);
   // https://github.com/KhronosGroup/glTF/blob/main/specification/2.0/schema/glTF.schema.json
   const { json, bin } = loadData(
     isBinary ? await loadArrayBuffer(url) : await loadJson(url)
   );
+
+  console.log("loaders.gltf", json, bin);
 
   // Check required extensions
   // https://www.khronos.org/registry/glTF/specs/2.0/glTF-2.0.html#specifying-extensions
@@ -1363,17 +1363,17 @@ async function loadGltf(url, renderer, options = {}) {
   let scenes = await Promise.all(
     (json.scenes || [{}]).map(async (scene, index) => {
       // Create scene root entity
-      scene.root = renderer.entity([
-        renderer.transform({
+      scene.root = entity({
+        transform: components.transform({
           enabled: opts.enabledScene || index === (json.scene || 0),
         }),
-      ]);
+      });
       scene.root.name = scene.name || `scene_${index}`;
 
       // Add scene entities for each node and its children
       // TODO: scene.entities is just convenience. We could use a user-friendly entity traverse.
       // scene.entities = json.nodes.reduce(async (entities, node, i) => {
-      //   const result = await handleNode(node, json, i, ctx, renderer, opts);
+      //   const result = await handleNode(node, json, i, ctx, opts);
       //   if (result.length) {
       //     result.forEach((primitive) => entities.push(primitive));
       //   } else {
@@ -1383,8 +1383,7 @@ async function loadGltf(url, renderer, options = {}) {
       // }, []);
       scene.entities = await Promise.all(
         json.nodes.map(
-          async (node, i) =>
-            await handleNode(node, json, i, ctx, renderer, opts)
+          async (node, i) => await handleNode(node, json, i, ctx, opts)
         )
       );
       scene.entities = scene.entities.flat();
@@ -1397,7 +1396,7 @@ async function loadGltf(url, renderer, options = {}) {
 
         // Default to scene root
         if (!parentNode.entity.transform.parent) {
-          parentNode.entity.transform.set({ parent: scene.root.transform });
+          parentNode.entity.transform.parent = scene.root.transform;
         }
 
         if (children) {
@@ -1405,7 +1404,7 @@ async function loadGltf(url, renderer, options = {}) {
             const child = json.nodes[childIndex];
             const childTransform = child.entity.transform;
 
-            childTransform.set({ parent: parentTransform });
+            childTransform.parent = parentTransform;
           });
         }
       });
@@ -1416,34 +1415,55 @@ async function loadGltf(url, renderer, options = {}) {
           const joints = skin.joints.map((i) => json.nodes[i].entity);
 
           if (json.meshes[node.mesh].primitives.length === 1) {
-            node.entity.getComponent("Skin").set({
-              joints,
-            });
+            node.entity.skin.joints = joints;
           } else {
-            node.entity.transform.children.forEach(({ entity }) => {
-              // FIXME: currently we share the same Skin component
-              // so this code is redundant after first child
-              entity.getComponent("Skin").set({
-                joints,
-              });
-            });
+            // TODO: implement joints
+            // node.entity.transform.children.forEach(({ entity }) => {
+            // FIXME: currently we share the same Skin component
+            // so this code is redundant after first child
+            // entity.skin.joints = joints;
+            // });
           }
         }
       });
 
-      if (json.animations) {
+      if (json.animations && options.includeAnimations !== false) {
+        scene.root.animations = [];
         json.animations.forEach((animation, index) => {
-          const animationComponent = handleAnimation(
-            animation,
-            json,
-            renderer,
-            index
-          );
-          scene.root.addComponent(animationComponent);
+          const animationComponent = handleAnimation(animation, json, index);
+          if (index == 0) {
+            scene.root.animation = animationComponent;
+          }
+          scene.root.animations.push(animationComponent);
         });
       }
 
-      renderer.update();
+      //prep skins
+      json.nodes.forEach((node) => {
+        if (node.skin !== undefined) {
+          const skin = json.skins[node.skin];
+          const joints = skin.joints.map((i) => json.nodes[i].entity);
+
+          if (json.meshes[node.mesh].primitives.length === 1) {
+            // node.entity.getComponent("Skin").set({
+            //   joints: joints,
+            // });
+            node.entity.skin.joints = joints;
+            node.entity.skin.jointMatrices = joints.map(() => mat4.create());
+          } else {
+            scene.entities
+              .filter((e) => {
+                return e.transform.parent == node.entity.transform;
+              })
+              .forEach((childEntity) => {
+                childEntity.skin.joints = joints;
+                childEntity.skin.jointMatrices = joints.map(() =>
+                  mat4.create()
+                );
+              });
+          }
+        }
+      });
 
       return scene;
     })

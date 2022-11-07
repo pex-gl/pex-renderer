@@ -1,4 +1,9 @@
-import createRenderer from "../index.js";
+import {
+  systems,
+  components,
+  world as createWorld,
+  entity as createEntity,
+} from "../index.js";
 import createContext from "pex-context";
 import createGUI from "pex-gui";
 import { mat4, quat, vec3 } from "pex-math";
@@ -14,6 +19,7 @@ const State = {
   elevationMat: mat4.create(),
   rotationMat: mat4.create(),
 };
+
 random.seed(10);
 
 // Utils
@@ -27,68 +33,99 @@ const scheme = [
 // Standard Normal constiate using Box-Muller transform.
 // http://stackoverflow.com/a/36481059
 function randnBM() {
-  const u = 1 - Math.random(); // Subtraction to flip [0, 1) to (0, 1].
-  const v = 1 - Math.random();
+  const u = 1 - random.float(); // Subtraction to flip [0, 1) to (0, 1].
+  const v = 1 - random.float();
   return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
 }
 
 function rand() {
-  return (Math.random() * 2 - 1) * 3;
+  return (random.float() * 2 - 1) * 3;
 }
 
 const gradient = cosineGradient(scheme[0], scheme[1], scheme[2], scheme[3]);
 
 // Start
-const ctx = createContext();
-ctx.gl.getExtension("EXT_shader_texture_lod");
-ctx.gl.getExtension("OES_standard_derivatives");
-ctx.gl.getExtension("WEBGL_draw_buffers");
-ctx.gl.getExtension("WEBGL_depth_texture");
-ctx.gl.getExtension("OES_texture_float");
+const ctx = createContext({
+  type: "webgl",
+});
 
-const renderer = createRenderer(ctx);
+const world = createWorld();
+window.world = world;
+
+function aabbToString(aabb) {
+  if (!aabb) return "[]";
+  return `[${aabb[0].map((f) => f.toFixed(0.1))} .. ${aabb[1].map((f) =>
+    f.toFixed(0.1)
+  )}]`;
+}
+
+function debugScene() {
+  let s = "";
+  world.entities.forEach((e, i) => {
+    let pad = "";
+    let transform = e.transform;
+    while (transform) {
+      pad += "--";
+      transform = transform.parent;
+    }
+    let bbox = aabbToString(e.transform?.worldBounds);
+    s += `${pad} ${i} ${e.name} ${Object.keys(e).join(" | ")} | ${bbox} \n`;
+  });
+  console.log(s);
+  console.log("world.entities", world.entities);
+}
 
 const gui = createGUI(ctx);
 gui.addFPSMeeter();
+gui.addButton("Debug scene", debugScene);
 
 let frameNumber = 0;
 let debugOnce = false;
 
 // Camera
-const cameraEntity = renderer.entity([
-  renderer.postProcessing({
-    ssao: true,
-    ssaoRadius: 4,
-    dof: true,
-    dofAperture: 1,
-    dofFocusDistance: 5,
-    fxaa: true,
-  }),
-  renderer.camera({
+const cameraEntity = createEntity({
+  // renderer.postProcessing({
+  //   ssao: true,
+  //   ssaoRadius: 4,
+  //   dof: true,
+  //   dofAperture: 1,
+  //   dofFocusDistance: 5,
+  //   fxaa: true,
+  // }),
+  transform: components.transform(),
+  camera: components.camera({
     fov: Math.PI / 3,
     aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
     exposure: 2,
   }),
-  renderer.orbiter({ position: [0, 3, 8] }),
-]);
-renderer.add(cameraEntity);
+  orbiter: components.orbiter({
+    position: [0, 3, 8],
+    element: ctx.gl.canvas,
+  }),
+});
+world.add(cameraEntity);
 
 // Meshes
-const floorEntity = renderer.entity([
-  renderer.transform({
+const floorEntity = createEntity({
+  transform: components.transform({
     position: [0, -0.3, 0],
   }),
-  renderer.geometry(cube({ sx: 14, sy: 0.02, sz: 14 })),
-  renderer.material({
+  geometry: components.geometry(cube({ sx: 14, sy: 0.02, sz: 14 })),
+  material: components.material({
     baseColor: [1, 1, 1, 1],
-    castShadows: true,
-    receiveShadows: true,
+    // castShadows: true,
+    // receiveShadows: true,
+    depthTest: true,
+    depthWrite: true,
+    // unlit: true,
+    roughness: 1,
+    metallic: 1,
   }),
-]);
-renderer.add(floorEntity);
+});
+world.add(floorEntity);
 
 let instanced = true;
-const geom = cube({ sx: 0.2, sy: 0.5 + Math.random(), sz: 0.2 });
+const geom = cube({ sx: 0.2, sy: 0.5 + random.float(), sz: 0.2 });
 const offsets = [];
 const scales = [];
 const colors = [];
@@ -106,126 +143,132 @@ if (instanced) {
   geom.offsets = { buffer: ctx.vertexBuffer(offsets), divisor: 1 };
   geom.scales = { buffer: ctx.vertexBuffer(scales), divisor: 1 };
   geom.instances = offsets.length;
-  renderer.add(
-    renderer.entity([
-      renderer.geometry(geom),
-      renderer.transform({}),
-      renderer.material({
-        baseColor: colors[0],
+  const ent = createEntity({
+    geometry: components.geometry(geom),
+    transform: components.transform({}),
+    material: components.material({
+      baseColor: colors[0],
+      rougness: 0.7,
+      metallic: 0.0,
+      castShadows: true,
+      receiveShadows: true,
+    }),
+  });
+  world.add(ent); //TODO
+} else {
+  offsets.forEach((offset, i) => {
+    const ent = createEntity({
+      geometry: components.geometry(geom),
+      transform: components.transform({
+        position: offset,
+        scale: scales[i],
+      }),
+      material: components.material({
+        baseColor: colors[i],
         rougness: 0.7,
         metallic: 0.0,
         castShadows: true,
         receiveShadows: true,
       }),
-    ])
-  );
-} else {
-  offsets.forEach((offset, i) => {
-    renderer.add(
-      renderer.entity([
-        renderer.geometry(geom),
-        renderer.transform({
-          position: offset,
-          scale: scales[i],
-        }),
-        renderer.material({
-          baseColor: colors[i],
-          rougness: 0.7,
-          metallic: 0.0,
-          castShadows: true,
-          receiveShadows: true,
-        }),
-      ])
-    );
+    });
+    world.add(ent); //TODO:
   });
 }
 
-const sphereGeometry = sphere({ radius: 0.2 + Math.random() * 0.25 });
+const sphereGeometry = sphere({ radius: 0.2 + random.float() * 0.25 });
 for (let i = 0; i < 100; i++) {
   const x = (rand() * 8) / 3;
   const z = (rand() * 8) / 3;
   const y = 2 * random.noise2(x / 2, z / 2) + random.noise2(2 * x, 2 * z);
   const s = Math.max(0.0, 3.0 - Math.sqrt(x * x + z * z) / 2);
-  renderer.add(
-    renderer.entity([
-      renderer.geometry(sphereGeometry),
-      renderer.transform({
-        position: [x, y, z],
-        scale: [s, s, s],
-      }),
-      renderer.material({
-        baseColor: gradient(Math.random()).concat(1),
-        rougness: 0.91,
-        metallic: 0.0,
-        castShadows: true,
-        receiveShadows: true,
-      }),
-    ])
-  );
+  const ent = createEntity({
+    geometry: components.geometry(sphereGeometry),
+    transform: components.transform({
+      position: [x, y, z],
+      scale: [s, s, s],
+    }),
+    material: components.material({
+      baseColor: gradient(random.float()).concat(1),
+      rougness: 0.91,
+      metallic: 0.0,
+      castShadows: true,
+      receiveShadows: true,
+    }),
+  });
+  world.add(ent); //TODO:
 }
 
 // Lights
-const sunDir = vec3.normalize([1, -1, 1]);
-const sunPosition = vec3.addScaled([0, 0, 0], sunDir, -2);
-const sunLight = renderer.directionalLight({
-  color: [1, 1, 1, 1],
-  intensity: 2,
+const sunPosition = [1, 2, 3];
+
+const sunLight = components.directionalLight({
+  color: [1, 1, 1, 2],
+  intensity: 2, //TODO: not working light intensity
   castShadows: true,
-  bias: 0.01,
+  bias: 0.1,
 });
-const sunTransform = renderer.transform({
-  position: [2, 2, 2],
-  rotation: quat.fromTo([0, 0, 1], vec3.normalize([-1, -1, -1]), [0, 1, 0]),
+
+const sunTransform = components.transform({
+  position: sunPosition,
+  rotation: quat.fromTo(
+    quat.create(),
+    [0, 0, 1],
+    vec3.normalize(vec3.sub([0, 0, 0], sunPosition))
+  ),
 });
-const sunEntity = renderer.entity([sunTransform, sunLight]);
-renderer.add(sunEntity);
+const sunEntity = createEntity({
+  transform: sunTransform,
+  directionalLight: sunLight,
+});
+world.add(sunEntity);
 
-gui.addTexture2D("Shadow Map", sunLight._shadowMap);
-
-const skyboxCmp = renderer.skybox({
+const skyboxCmp = components.skybox({
   sunPosition,
 });
-const reflectionProbeCmp = renderer.reflectionProbe();
-const skyEntity = renderer.entity([skyboxCmp, reflectionProbeCmp]);
-renderer.add(skyEntity);
+const reflectionProbeCmp = components.reflectionProbe();
+const skyEntity = createEntity({
+  skybox: skyboxCmp,
+  reflectionProbe: reflectionProbeCmp,
+});
+world.add(skyEntity);
 
-const pointLightEnt = renderer.entity([
-  renderer.transform({
+const pointLightEnt = createEntity({
+  transform: components.transform({
     position: [2, 2, 2],
   }),
-  renderer.geometry(sphere({ radius: 0.2 })),
-  renderer.material({
+  // geometry: components.geometry(sphere({ radius: 0.2 })),
+  material: components.material({
     baseColor: [1, 0, 0, 1],
     emissiveColor: [1, 0, 0, 1],
   }),
-  renderer.pointLight({
-    castShadows: true,
+  pointLight: components.pointLight({
+    // castShadows: true,
     color: [1, 0, 0, 1],
     intensity: 5,
   }),
-]);
-renderer.add(pointLightEnt);
+});
+// world.add(pointLightEnt);
 
 const areaLightColor = [0, 1, 0, 1];
-const areaLightEntity = renderer.entity([
-  renderer.transform({
+const areaLightEntity = createEntity({
+  transform: components.transform({
     position: [5, 2, 0],
     scale: [2, 5, 0.1],
     rotation: quat.fromTo(quat.create(), [0, 0, 1], [-1, 0, 0], [0, 1, 0]),
   }),
-  renderer.geometry(cube({ sx: 1 })),
-  renderer.material({
+  // geometry: components.geometry(cube({ sx: 1 })),
+  material: components.material({
     emissiveColor: areaLightColor,
     baseColor: [0, 0, 0, 1],
     metallic: 1.0,
     roughness: 0.74,
   }),
-  renderer.areaLight({
+  areaLight: components.areaLight({
     intensity: 5,
     color: areaLightColor,
   }),
-]);
-renderer.add(areaLightEntity);
+});
+// world.add(areaLightEntity);
 
 // GUI
 gui.addParam(
@@ -237,13 +280,11 @@ gui.addParam(
     areaLightEntity.transform.set({ scale: [value[0], value[1], value[2]] });
   }
 );
-gui.addParam(
-  "AreaLight Intensity",
-  areaLightEntity.getComponent("AreaLight"),
-  "intensity",
-  { min: 0, max: 5 }
-);
-gui.addParam("AreaLight", areaLightEntity.getComponent("AreaLight"), "color", {
+gui.addParam("AreaLight Intensity", areaLightEntity.areaLight, "intensity", {
+  min: 0,
+  max: 5,
+});
+gui.addParam("AreaLight", areaLightEntity.areaLight, "color", {
   type: "color",
 });
 
@@ -258,12 +299,13 @@ function updateSunPosition() {
   vec3.multMat4(sunPosition, State.rotationMat);
 
   const dir = vec3.normalize(vec3.sub([0, 0, 0], sunPosition));
-  sunTransform.set({
-    position: sunPosition,
-    rotation: quat.fromTo(sunTransform.rotation, [0, 0, 1], dir, [0, 1, 0]),
-  });
-  skyboxCmp.set({ sunPosition });
-  reflectionProbeCmp.set({ dirty: true });
+  // TODO:
+  // sunTransform.set({
+  //   position: sunPosition,
+  //   rotation: quat.fromTo(sunTransform.rotation, [0, 0, 1], dir, [0, 1, 0]),
+  // });
+  // skyboxCmp.set({ sunPosition });
+  // reflectionProbeCmp.set({ dirty: true });
 }
 gui.addParam(
   "Sun Elevation",
@@ -279,11 +321,24 @@ window.addEventListener("keydown", ({ key }) => {
   if (key === "d") debugOnce = true;
 });
 
+world.addSystem(systems.geometry({ ctx }));
+world.addSystem(systems.transform());
+world.addSystem(systems.camera());
+world.addSystem(systems.skybox({ ctx }));
+world.addSystem(systems.reflectionProbe({ ctx }));
+world.addSystem(systems.renderer({ ctx, outputEncoding: ctx.Encoding.Gamma }));
+
+let shadowMapPreview;
+
 ctx.frame(() => {
   ctx.debug(frameNumber++ === 1);
   ctx.debug(debugOnce);
   debugOnce = false;
-  renderer.draw();
+  world.update();
+
+  if (sunLight._shadowMap && !shadowMapPreview) {
+    shadowMapPreview = gui.addTexture2D("Shadow Map", sunLight._shadowMap); //TODO
+  }
 
   gui.draw();
 
