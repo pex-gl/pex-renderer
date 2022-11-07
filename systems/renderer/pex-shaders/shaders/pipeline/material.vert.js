@@ -194,5 +194,7 @@ void main() {
   #endif
 
   gl_PointSize = uPointSize;
+
+  #define HOOK_VERT_END
 }
 `;
