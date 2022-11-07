@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+# [4.0.0-alpha.25](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.24...v4.0.0-alpha.25) (2022-11-07)
+
+
+### Bug Fixes
+
+* **systems/geometry:** fix bug in splitEvery ([a2db34a](https://github.com/pex-gl/pex-renderer/commit/a2db34a15b6ba24c8c5b6d83923363359763ccf0))
+
+
+### Features
+
+* **examples/basic-engine:** add hooks example ([f2feab0](https://github.com/pex-gl/pex-renderer/commit/f2feab0a63846880dcfd01d3b6684c8e4461bf65))
+* **renderer/standard:** add hooks ([47904f2](https://github.com/pex-gl/pex-renderer/commit/47904f2b608d383e9e000d7557e53ae7b07b2798))
+* **renderer/standard:** improve error reporting ([8357aa8](https://github.com/pex-gl/pex-renderer/commit/8357aa84a871e609c6233b250660a20cc10a7430))
+
+
+
 # [4.0.0-alpha.24](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.23...v4.0.0-alpha.24) (2022-11-01)
 
 
