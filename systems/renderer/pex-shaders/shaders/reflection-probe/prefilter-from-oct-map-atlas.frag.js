@@ -6,9 +6,9 @@ precision highp float;
 // Variables
 varying vec2 vTexCoord;
 uniform float uTextureSize;
-uniform sampler2D uSource;
-// uniform float uSourceSize; // TODO: rename, for oct map.
-uniform int uSourceEncoding;
+uniform sampler2D uOctMapAtlas;
+uniform float uOctMapAtlasSize;
+uniform int uOctMapAtlasEncoding;
 uniform sampler2D uHammersleyPointSetMap;
 uniform int uNumSamples;
 uniform float uLevel;
@@ -58,27 +58,32 @@ vec3 ImportanceSampleGGX(vec2 Xi, float Roughness, vec3 N) {
 //TODO: optimize this using sign()
 //Source: http://webglinsights.github.io/downloads/WebGL-Insights-Chapter-16.pdf
 
+float rand(vec2 co){
+  return fract(sin(dot(co, vec2(12.9898, 78.233))) * 43758.5453);
+}
+
 vec4 textureOctMapLod(sampler2D tex, vec2 uv, float sourceRoughnessLevel, float sourceMipmapLevel) {
-  // float width = 2048.0;
-  float width = uSourceSize;
-  float maxLevel = 11.0; // this should come from log of size
-  float levelSizeInPixels = pow(2.0, 1.0 + sourceMipmapLevel + sourceRoughnessLevel);
-  float levelSize = max(64.0, width / levelSizeInPixels);
-  float roughnessLevelWidth = width / pow(2.0, 1.0 + sourceRoughnessLevel);
+  float width = uOctMapAtlasSize;
+  float maxLevel = log2(width); // this should come from log of size
+
+  float levelSize = width / pow(2.0, 1.0 + sourceMipmapLevel + sourceRoughnessLevel);
+  float roughnessLevelWidth = width / pow(2.0, 1.0 + sourceMipmapLevel);
+
   float vOffset = (width - pow(2.0, maxLevel - sourceRoughnessLevel));
   float hOffset = 2.0 * roughnessLevelWidth - pow(2.0, log2(2.0 * roughnessLevelWidth) - sourceMipmapLevel);
+
   // trying to fix oveflow from atlas..
   uv = (uv * levelSize + 0.5) / (levelSize + 1.0);
   uv *= levelSize;
   uv = (uv + vec2(hOffset, vOffset)) / width;
-  return texture2D(uSource, uv);
+  return texture2D(uOctMapAtlas, uv);
 }
 
 vec4 textureOctMapLod(sampler2D tex, vec2 uv) {
   return textureOctMapLod(tex, uv, uSourceRoughnessLevel, uSourceMipmapLevel);
 }
 
-vec3 PrefilterEnvMap( float roughness, vec3 R ) {
+vec3 PrefilterEnvMap( float roughness, vec3 R, vec2 uv ) {
   vec3 N = R;
   vec3 V = R;
   vec3 PrefilteredColor = vec3(0.0);
@@ -89,12 +94,13 @@ vec3 PrefilterEnvMap( float roughness, vec3 R ) {
       break;
     }
     vec2 Xi = Hammersley( i, uNumSamples );
-    vec3 H = ImportanceSampleGGX( Xi, roughness, N );
+    //vec3 H = ImportanceSampleGGX( Xi, roughness, normalize(N + 0.02* vec3(rand(uv), rand(uv.yx), rand(uv * 2.0))));
+    vec3 H = ImportanceSampleGGX( Xi, roughness, N);
     vec3 L = normalize(2.0 * dot( V, H ) * H - V);
     float NoL = saturate( dot( N, L ) );
     if( NoL > 0.0 ) {
-      vec4 color = textureOctMapLod(uSource, envMapOctahedral(L));
-      PrefilteredColor += NoL * decode(color, uSourceEncoding).rgb;
+      vec4 color = textureOctMapLod(uOctMapAtlas, envMapOctahedral(L));
+      PrefilteredColor += NoL * decode(color, uOctMapAtlasEncoding).rgb;
       TotalWeight += NoL;
     }
   }
@@ -103,7 +109,7 @@ vec3 PrefilterEnvMap( float roughness, vec3 R ) {
 
 void main() {
   vec3 normal = octMapUVToDir(vTexCoord);
-  vec3 color = PrefilterEnvMap(uRoughnessLevel / 5.0, normal);
+  vec3 color = PrefilterEnvMap(uRoughnessLevel / 5.0, normal, vTexCoord);
   gl_FragColor = encode(vec4(color, 1.0), uOutputEncoding);
 }
 `;

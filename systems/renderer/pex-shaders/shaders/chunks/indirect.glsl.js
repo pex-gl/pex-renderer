@@ -12,8 +12,8 @@ export default /* glsl */ `
     float upLod = floor(lod);
     float downLod = ceil(lod);
 
-    vec3 a = decode(texture2D(uReflectionMap, envMapOctahedral(reflected, 0.0, upLod)), uReflectionMapEncoding).rgb;
-    vec3 b = decode(texture2D(uReflectionMap, envMapOctahedral(reflected, 0.0, downLod)), uReflectionMapEncoding).rgb;
+    vec3 a = decode(texture2D(uReflectionMap, envMapOctahedral(reflected, 0.0, upLod, uReflectionMapSize)), uReflectionMapEncoding).rgb;
+    vec3 b = decode(texture2D(uReflectionMap, envMapOctahedral(reflected, 0.0, downLod, uReflectionMapSize)), uReflectionMapEncoding).rgb;
 
     return mix(a, b, lod - upLod);
   }

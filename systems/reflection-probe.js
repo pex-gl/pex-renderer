@@ -1,5 +1,7 @@
 import { vec3, mat4 } from "pex-math";
-import { reflectionProbe as SHADERS } from "pex-shaders";
+// import { reflectionProbe as SHADERS } from "pex-shaders";
+import { reflectionProbe as SHADERS } from "./renderer/pex-shaders/index.js";
+
 import hammersley from "hammersley";
 
 // TODO: primitive-geometry
@@ -23,14 +25,12 @@ const quadFaces = [
 
 const IRRADIANCE_OCT_MAP_SIZE = 64;
 
-const CUBEMAP_SIZE = 512;
-
 class ReflectionProbe {
   constructor(opts) {
     this.type = "ReflectionProbe";
     this.enabled = true;
     this.rgbm = false;
-    this.mapSize = 1024;
+    this.size = 1024 * 2;
 
     this.set(opts);
 
@@ -39,8 +39,8 @@ class ReflectionProbe {
     this.dirty = true;
 
     const dynamicCubemap = (this._dynamicCubemap = ctx.textureCube({
-      width: CUBEMAP_SIZE,
-      height: CUBEMAP_SIZE,
+      width: this.size,
+      height: this.size,
       pixelFormat: this.rgbm ? ctx.PixelFormat.RGBA8 : ctx.PixelFormat.RGBA16F,
       encoding: this.rgbm ? ctx.Encoding.RGBM : ctx.Encoding.Linear,
     }));
@@ -91,15 +91,15 @@ class ReflectionProbe {
     const indices = ctx.indexBuffer(quadFaces);
 
     const octMap = (this._octMap = ctx.texture2D({
-      width: this.mapSize,
-      height: this.mapSize,
+      width: this.size,
+      height: this.size,
       pixelFormat: this.rgbm ? ctx.PixelFormat.RGBA8 : ctx.PixelFormat.RGBA16F,
       encoding: this.rgbm ? ctx.Encoding.RGBM : ctx.Encoding.Linear,
     }));
 
     const octMapAtlas = (this._reflectionMap = ctx.texture2D({
-      width: 2 * this.mapSize,
-      height: 2 * this.mapSize,
+      width: 2 * this.size,
+      height: 2 * this.size,
       min: ctx.Filter.Linear,
       mag: ctx.Filter.Linear,
       pixelFormat: this.rgbm ? ctx.PixelFormat.RGBA8 : ctx.PixelFormat.RGBA16F,
@@ -119,7 +119,7 @@ class ReflectionProbe {
       attributes,
       indices,
       uniforms: {
-        uTextureSize: this.mapSize,
+        uTextureSize: this.size,
         uCubemap: dynamicCubemap,
       },
     };
@@ -137,10 +137,10 @@ class ReflectionProbe {
       attributes,
       indices,
       uniforms: {
-        uTextureSize: IRRADIANCE_OCT_MAP_SIZE,
-        uSource: octMapAtlas,
-        uSourceSize: octMapAtlas.width,
-        uSourceEncoding: octMapAtlas.encoding,
+        uIrradianceOctMapSize: IRRADIANCE_OCT_MAP_SIZE,
+        uOctMapAtlas: octMapAtlas,
+        uOctMapAtlasSize: octMapAtlas.width,
+        uOctMapAtlasEncoding: octMapAtlas.encoding,
         uOutputEncoding: octMap.encoding,
       },
     };
@@ -165,8 +165,8 @@ class ReflectionProbe {
         frag: SHADERS.blitToOctMapAtlas.frag,
       }),
       uniforms: {
-        uSource: octMap,
-        uSourceSize: this.mapSize,
+        uOctMap: octMap,
+        uOctMapSize: this.size,
       },
       attributes,
       indices,
@@ -177,15 +177,15 @@ class ReflectionProbe {
       pass: ctx.pass({
         name: "ReflectionProbe.downsampleFromOctMapAtlasCmd",
         color: [octMap],
-        clearColor: [0, 1, 0, 1],
+        clearColor: [0, 0, 0, 1],
       }),
       pipeline: ctx.pipeline({
         vert: SHADERS.fullscreenQuad.vert,
         frag: SHADERS.downsampleFromOctMapAtlas.frag,
       }),
       uniforms: {
-        uSource: octMapAtlas,
-        uSourceSize: octMapAtlas.width,
+        uOctMapAtlas: octMapAtlas,
+        uOctMapAtlasSize: octMapAtlas.width,
       },
       attributes,
       indices,
@@ -196,16 +196,16 @@ class ReflectionProbe {
       pass: ctx.pass({
         name: "ReflectionProbe.prefilterFromOctMapAtlasCmd",
         color: [octMap],
-        clearColor: [0, 1, 0, 1],
+        clearColor: [0, 0, 0, 1],
       }),
       pipeline: ctx.pipeline({
         vert: SHADERS.fullscreenQuad.vert,
         frag: SHADERS.prefilterFromOctMapAtlas.frag,
       }),
       uniforms: {
-        uSource: octMapAtlas,
-        uSourceSize: octMapAtlas.width,
-        uSourceEncoding: octMapAtlas.encoding,
+        uOctMapAtlas: octMapAtlas,
+        uOctMapAtlasSize: octMapAtlas.width,
+        uOctMapAtlasEncoding: octMapAtlas.encoding,
         uOutputEncoding: octMap.encoding,
       },
       attributes,
@@ -230,25 +230,41 @@ class ReflectionProbe {
       encoding: ctx.Encoding.Linear,
     });
 
+    //sourceRegionSize - as we downsample the octmap we recycle the fully size octMap
+    //but use only 1/2, 1/4, 1/8 of it, so when we blit it back to atlas we need to know
+    //which part is downsampled data (and the rest is garbage from previous iterations)
     function blitToOctMapAtlasLevel(
       mipmapLevel,
       roughnessLevel,
-      sourceRegionSize
+      sourceRegionSize,
+      debug
     ) {
       const width = octMapAtlas.width;
+      //TODO: consider removing as it should match sourceRegionSize
       const levelSize = Math.max(
         64,
-        width / (2 << (mipmapLevel + roughnessLevel))
+        width / 2 ** (1 + mipmapLevel + roughnessLevel)
       );
-      const roughnessLevelWidth = width / (2 << roughnessLevel);
+      const roughnessLevelWidth = width / 2 ** (1 + roughnessLevel);
       const vOffset = width - 2 ** (Math.log2(width) - roughnessLevel);
       const hOffset =
         2 * roughnessLevelWidth -
         2 ** (Math.log2(2 * roughnessLevelWidth) - mipmapLevel);
+
+      if (debug)
+        console.log(
+          "hdr",
+          "blitToOctMapAtlasLevel",
+          octMap.width,
+          sourceRegionSize,
+          "->",
+          mipmapLevel,
+          roughnessLevel,
+          levelSize
+        );
       ctx.submit(blitToOctMapAtlasCmd, {
         viewport: [hOffset, vOffset, levelSize, levelSize],
         uniforms: {
-          uLevelSize: levelSize,
           uSourceRegionSize: sourceRegionSize,
         },
       });
@@ -259,6 +275,13 @@ class ReflectionProbe {
       roughnessLevel,
       targetRegionSize
     ) {
+      console.log(
+        "hdr",
+        "downsampleFromOctMapAtlasLevel",
+        mipmapLevel,
+        roughnessLevel,
+        targetRegionSize
+      );
       ctx.submit(downsampleFromOctMapAtlasCmd, {
         viewport: [0, 0, targetRegionSize, targetRegionSize],
         uniforms: {
@@ -300,24 +323,31 @@ class ReflectionProbe {
 
       ctx.submit(clearOctMapAtlasCmd);
 
-      // TODO: should level  be relative to mapSize?
-      const maxLevel = 5; // MAX_MIPMAP_LEVEL
-      blitToOctMapAtlasLevel(0, 0, this.mapSize);
+      console.log("hdr", "---");
+
+      // TODO: should level  be relative to size?
+      const maxLevel = Math.log2(this.size) - Math.log2(32); // MAX_MIPMAP_LEVEL
+      blitToOctMapAtlasLevel(0, 0, this.size, true);
 
       // Mipmap (horizontally)
+      // 0: 4096 -> 2048
+      // 1: 2048 -> 1024
+      // 2: 1024 -> 512
       for (let i = 0; i < maxLevel - 1; i++) {
-        const size = this.mapSize / 2 ** (i + 1);
+        const size = this.size / 2 ** (i + 1);
         downsampleFromOctMapAtlasLevel(i, 0, size);
-        blitToOctMapAtlasLevel(i + 1, 0, size);
+        blitToOctMapAtlasLevel(i + 1, 0, size, true);
       }
-      blitToOctMapAtlasLevel(maxLevel, 0, 64); // TODO: why
+      //we copy last level without downsampling it as it
+      //doesn't makes sense to have octahedral maps smaller than 64x64
+      blitToOctMapAtlasLevel(maxLevel, 0, 64);
 
       // Roughness (vertically)
       // TODO: creates lone render at bottom right
       for (let i = 1; i <= maxLevel; i++) {
-        const size = Math.max(64, this.mapSize / 2 ** (i + 1));
+        const size = Math.max(64, this.size / 2 ** i);
         prefilterFromOctMapAtlasLevel(0, Math.max(0, i - 1), i, size);
-        blitToOctMapAtlasLevel(0, i, size);
+        blitToOctMapAtlasLevel(0, i, size, true);
       }
 
       ctx.submit(convolveOctmapAtlasToOctMap, {
