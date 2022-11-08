@@ -1,4 +1,9 @@
-import createRenderer from "../index.js";
+import {
+  renderEngine as createRenderEngine,
+  world as createWorld,
+  entity as createEntity,
+  components,
+} from "../index.js";
 import createContext from "pex-context";
 import * as io from "pex-io";
 import { quat } from "pex-math";
@@ -7,73 +12,82 @@ import { sphere } from "primitive-geometry";
 import parseHdr from "parse-hdr";
 import { getURL } from "./utils.js";
 
+// Set reflectionProbe entity mapSize
+// -> used to create oct map
+// -> oct map atlas is derived from it (size * 2, mip/rough levels)
+
+const {
+  camera,
+  geometry,
+  material,
+  orbiter,
+  skybox,
+  reflectionProbe,
+  transform,
+} = components;
+
 const State = {
   rotation: 1.5 * Math.PI,
+  mapSizeIndex: 2,
+  mapSizes: [256, 512, 1024, 2048, 4096, 8192],
 };
 
 const ctx = createContext();
-const renderer = createRenderer(ctx);
 
-renderer.addSystem(renderer.geometrySystem());
-renderer.addSystem(renderer.transformSystem());
-renderer.addSystem(renderer.cameraSystem());
-renderer.addSystem(renderer.skyboxSystem());
-renderer.addSystem(renderer.reflectionProbeSystem());
-renderer.addSystem(renderer.renderSystem());
+const renderEngine = createRenderEngine({ ctx });
+const world = createWorld();
 
-window.renderer = renderer; //FIXME: temp
-const gui = createGUI(ctx);
+const gui = createGUI(ctx, { scale: 1 });
 
-const cameraEnt = renderer.entity({
-  transform: renderer.transform({ position: [0, 0, 3] }),
-  camera: renderer.camera({
+const cameraEntity = createEntity({
+  transform: transform({ position: [0, 0, 3] }),
+  camera: camera({
     fov: Math.PI / 3,
     aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
     near: 0.1,
     far: 100,
     postprocess: false,
   }),
-  orbiter: renderer.orbiter({
+  orbiter: orbiter({
     position: [0, 0, 3],
   }),
 });
-renderer.add(cameraEnt);
+world.add(cameraEntity);
 
-const lightEnt = renderer.entity({
-  ambientLight: renderer.ambientLight({ color: [1, 1, 1, 1] }),
-});
-renderer.add(lightEnt);
-
-const geomEnt = renderer.entity({
-  transform: renderer.transform({ position: [0, 0, 0] }),
-  geometry: renderer.geometry(sphere({ radius: 1 })),
-  material: renderer.material({
+const geomEntity = createEntity({
+  transform: transform({ position: [0, 0, 0] }),
+  geometry: geometry(sphere({ radius: 1 })),
+  material: material({
     baseColor: [1, 1, 1, 1],
     roughness: 0,
     metallic: 1,
   }),
 });
-renderer.add(geomEnt);
+world.add(geomEntity);
 
-const skyboxEnt = renderer.entity({
-  transform: renderer.transform({
+const skyboxEntity = createEntity({
+  transform: transform({
     rotation: quat.fromAxisAngle(quat.create(), [0, 1, 0], State.rotation),
   }),
-  skybox: renderer.skybox({
+  skybox: skybox({
     sunPosition: [1, 1, 1],
-    backgroundBlur: 0,
+    backgroundBlur: 1,
   }),
 });
-renderer.add(skyboxEnt);
+world.add(skyboxEntity);
 
-const reflectionProbeEnt = renderer.entity({
-  reflectionProbe: renderer.reflectionProbe(),
+const reflectionProbeEntity = createEntity({
+  reflectionProbe: reflectionProbe({
+    // rgbm: false,
+    mapSize: State.mapSizes[State.mapSizeIndex],
+  }),
 });
-renderer.add(reflectionProbeEnt);
+world.add(reflectionProbeEntity);
 
 (async () => {
   const buffer = await io.loadArrayBuffer(
     getURL(`assets/envmaps/Mono_Lake_B/Mono_Lake_B.hdr`)
+    // getURL(`assets/envmaps/garage/garage.hdr`)
   );
   const hdrImg = parseHdr(buffer);
   const panorama = ctx.texture2D({
@@ -85,16 +99,13 @@ renderer.add(reflectionProbeEnt);
     flipY: true, //TODO: flipY on non dom elements is deprecated
   });
 
-  skyboxEnt._skybox.texture = panorama;
-  skyboxEnt._skybox.dirty = true; //TODO: check if this works
+  skyboxEntity.skybox.envMap = panorama;
 
-  renderer.draw(); //force update reflection probe
-  console.log("reflectionProbeEnt", reflectionProbeEnt);
-  reflectionProbeEnt._reflectionProbe.dirty = true;
+  reflectionProbeEntity._reflectionProbe.dirty = true;
 
-  gui.addHeader("Settings");
+  gui.addColumn("Settings");
   //TODO: implement component.enabled
-  // gui.addParam("Enabled", skyboxEnt.skybox, "enabled", {}, (value) => {
+  // gui.addParam("Enabled", skyboxEntity.skybox, "enabled", {}, (value) => {
   // skyboxCmp.set({ enabled: value });
   // });
   gui.addParam(
@@ -104,35 +115,52 @@ renderer.add(reflectionProbeEnt);
     { min: 0, max: 2 * Math.PI },
     () => {
       quat.fromAxisAngle(
-        skyboxEnt.transform.rotation,
+        skyboxEntity.transform.rotation,
         [0, 1, 0],
         State.rotation
       );
-      reflectionProbeEnt.reflectionProbe.dirty = true;
+      reflectionProbeEntity.reflectionProbe.dirty = true;
     }
   );
-  gui.addParam("BG Blur", skyboxEnt.skybox, "backgroundBlur", {}, () => {});
-  gui.addParam(
-    "Exposure",
-    cameraEnt.camera,
-    "exposure",
-    { min: 0, max: 2 },
-    () => {}
+  gui.addParam("BG Blur", skyboxEntity.skybox, "backgroundBlur", {}, () => {});
+  gui.addRadioList(
+    "Map Size",
+    State,
+    "mapSizeIndex",
+    State.mapSizes.map((name, value) => ({
+      name,
+      value,
+    })),
+    () => {
+      reflectionProbeEntity.reflectionProbe.mapSize =
+        State.mapSizes[State.mapSizeIndex];
+      reflectionProbeEntity._reflectionProbe.dirty = true; // TODO: is it needed?
+      // TODO: update skybox too?
+    }
   );
-  gui.addParam("Roughness", geomEnt.material, "roughness", {}, () => {});
+  gui.addParam("Roughness", geomEntity.material, "roughness", {}, () => {});
+  gui.addColumn("Textures");
+  gui.addTextureCube(
+    "Cubemap",
+    reflectionProbeEntity._reflectionProbe._dynamicCubemap,
+    { level: 2 }
+  );
   gui.addTexture2D(
     "Skybox",
-    skyboxEnt.skybox.texture || skyboxEnt._skybox._skyTexture
+    skyboxEntity.skybox.texture || skyboxEntity.skybox.envMap
   );
+  gui.addTexture2D("Octmap", reflectionProbeEntity._reflectionProbe._octMap);
   gui.addTexture2D(
-    "Reflection Probe",
-    reflectionProbeEnt._reflectionProbe._reflectionMap
+    "Reflection Map",
+    reflectionProbeEntity._reflectionProbe._reflectionMap
   );
 
   window.dispatchEvent(new CustomEvent("pex-screenshot"));
 })();
 
 ctx.frame(() => {
-  renderer.draw();
+  renderEngine.update(world.entities);
+  renderEngine.render(world.entities, cameraEntity);
+
   gui.draw();
 });
