@@ -38,12 +38,12 @@ class ReflectionProbe {
     this._ctx = ctx;
     this.dirty = true;
 
-    const dynamicCubemap = (this._dynamicCubemap = ctx.textureCube({
+    this._dynamicCubemap = ctx.textureCube({
       width: this.size,
       height: this.size,
       pixelFormat: this.rgbm ? ctx.PixelFormat.RGBA8 : ctx.PixelFormat.RGBA16F,
       encoding: this.rgbm ? ctx.Encoding.RGBM : ctx.Encoding.Linear,
-    }));
+    });
 
     const sides = [
       { eye: [0, 0, 0], target: [1, 0, 0], up: [0, -1, 0] },
@@ -72,7 +72,7 @@ class ReflectionProbe {
           name: "ReflectionProbe.sidePass",
           color: [
             {
-              texture: dynamicCubemap,
+              texture: this._dynamicCubemap,
               target: ctx.gl.TEXTURE_CUBE_MAP_POSITIVE_X + i,
             },
           ],
@@ -119,8 +119,7 @@ class ReflectionProbe {
       attributes,
       indices,
       uniforms: {
-        uTextureSize: this.size,
-        uCubemap: dynamicCubemap,
+        uCubemap: this._dynamicCubemap,
       },
     };
 
@@ -139,9 +138,6 @@ class ReflectionProbe {
       uniforms: {
         uIrradianceOctMapSize: IRRADIANCE_OCT_MAP_SIZE,
         uOctMapAtlas: octMapAtlas,
-        uOctMapAtlasSize: octMapAtlas.width,
-        uOctMapAtlasEncoding: octMapAtlas.encoding,
-        uOutputEncoding: octMap.encoding,
       },
     };
 
@@ -166,7 +162,6 @@ class ReflectionProbe {
       }),
       uniforms: {
         uOctMap: octMap,
-        uOctMapSize: this.size,
       },
       attributes,
       indices,
@@ -185,7 +180,6 @@ class ReflectionProbe {
       }),
       uniforms: {
         uOctMapAtlas: octMapAtlas,
-        uOctMapAtlasSize: octMapAtlas.width,
       },
       attributes,
       indices,
@@ -204,14 +198,12 @@ class ReflectionProbe {
       }),
       uniforms: {
         uOctMapAtlas: octMapAtlas,
-        uOctMapAtlasSize: octMapAtlas.width,
-        uOctMapAtlasEncoding: octMapAtlas.encoding,
-        uOutputEncoding: octMap.encoding,
       },
       attributes,
       indices,
     };
 
+    // TODO: move outside, generate once
     const numSamples = 128;
     const hammersleyPointSet = new Float32Array(4 * numSamples);
     for (let i = 0; i < numSamples; i++) {
@@ -236,8 +228,7 @@ class ReflectionProbe {
     function blitToOctMapAtlasLevel(
       mipmapLevel,
       roughnessLevel,
-      sourceRegionSize,
-      debug
+      sourceRegionSize
     ) {
       const width = octMapAtlas.width;
       //TODO: consider removing as it should match sourceRegionSize
@@ -251,20 +242,10 @@ class ReflectionProbe {
         2 * roughnessLevelWidth -
         2 ** (Math.log2(2 * roughnessLevelWidth) - mipmapLevel);
 
-      if (debug)
-        console.log(
-          "hdr",
-          "blitToOctMapAtlasLevel",
-          octMap.width,
-          sourceRegionSize,
-          "->",
-          mipmapLevel,
-          roughnessLevel,
-          levelSize
-        );
       ctx.submit(blitToOctMapAtlasCmd, {
         viewport: [hOffset, vOffset, levelSize, levelSize],
         uniforms: {
+          uOctMapSize: octMap.width,
           uSourceRegionSize: sourceRegionSize,
         },
       });
@@ -275,16 +256,10 @@ class ReflectionProbe {
       roughnessLevel,
       targetRegionSize
     ) {
-      console.log(
-        "hdr",
-        "downsampleFromOctMapAtlasLevel",
-        mipmapLevel,
-        roughnessLevel,
-        targetRegionSize
-      );
       ctx.submit(downsampleFromOctMapAtlasCmd, {
         viewport: [0, 0, targetRegionSize, targetRegionSize],
         uniforms: {
+          uOctMapAtlasSize: octMapAtlas.width,
           uMipmapLevel: mipmapLevel,
           uRoughnessLevel: roughnessLevel,
         },
@@ -300,6 +275,9 @@ class ReflectionProbe {
       ctx.submit(prefilterFromOctMapAtlasCmd, {
         viewport: [0, 0, targetRegionSize, targetRegionSize],
         uniforms: {
+          uOctMapAtlasSize: octMapAtlas.width,
+          uOctMapAtlasEncoding: octMapAtlas.encoding,
+          uOutputEncoding: octMap.encoding,
           uSourceMipmapLevel: sourceMipmapLevel,
           uSourceRoughnessLevel: sourceRoughnessLevel,
           uRoughnessLevel: roughnessLevel,
@@ -315,19 +293,18 @@ class ReflectionProbe {
 
       sides.forEach((side) => {
         ctx.submit(side.drawPassCmd, () =>
-          drawScene(side, dynamicCubemap.encoding)
+          drawScene(side, this._dynamicCubemap.encoding)
         );
       });
 
-      ctx.submit(cubemapToOctMap);
+      ctx.submit(cubemapToOctMap, {
+        uniforms: { uTextureSize: this.size },
+      });
 
       ctx.submit(clearOctMapAtlasCmd);
 
-      console.log("hdr", "---");
-
-      // TODO: should level  be relative to size?
       const maxLevel = Math.log2(this.size) - Math.log2(32); // MAX_MIPMAP_LEVEL
-      blitToOctMapAtlasLevel(0, 0, this.size, true);
+      blitToOctMapAtlasLevel(0, 0, this.size);
 
       // Mipmap (horizontally)
       // 0: 4096 -> 2048
@@ -336,21 +313,25 @@ class ReflectionProbe {
       for (let i = 0; i < maxLevel - 1; i++) {
         const size = this.size / 2 ** (i + 1);
         downsampleFromOctMapAtlasLevel(i, 0, size);
-        blitToOctMapAtlasLevel(i + 1, 0, size, true);
+        blitToOctMapAtlasLevel(i + 1, 0, size);
       }
       //we copy last level without downsampling it as it
       //doesn't makes sense to have octahedral maps smaller than 64x64
       blitToOctMapAtlasLevel(maxLevel, 0, 64);
 
       // Roughness (vertically)
-      // TODO: creates lone render at bottom right
       for (let i = 1; i <= maxLevel; i++) {
         const size = Math.max(64, this.size / 2 ** i);
         prefilterFromOctMapAtlasLevel(0, Math.max(0, i - 1), i, size);
-        blitToOctMapAtlasLevel(0, i, size, true);
+        blitToOctMapAtlasLevel(0, i, size);
       }
 
       ctx.submit(convolveOctmapAtlasToOctMap, {
+        uniforms: {
+          uOctMapAtlasSize: octMapAtlas.width,
+          uOctMapAtlasEncoding: octMapAtlas.encoding,
+          uOutputEncoding: octMap.encoding,
+        },
         viewport: [0, 0, IRRADIANCE_OCT_MAP_SIZE, IRRADIANCE_OCT_MAP_SIZE],
       });
 
@@ -362,6 +343,7 @@ class ReflectionProbe {
           IRRADIANCE_OCT_MAP_SIZE,
         ],
         uniforms: {
+          uOctMapSize: octMap.width,
           uSourceRegionSize: IRRADIANCE_OCT_MAP_SIZE,
         },
       });
@@ -374,6 +356,14 @@ class ReflectionProbe {
 
   set(opts) {
     Object.assign(this, opts);
+  }
+
+  resize(size) {
+    const ctx = this._ctx;
+    this.size = size;
+    ctx.update(this._dynamicCubemap, { width: size, height: size });
+    ctx.update(this._octMap, { width: size, height: size });
+    ctx.update(this._reflectionMap, { width: size * 2, height: size * 2 });
   }
 }
 
@@ -400,9 +390,20 @@ export default function createReflectionProbeSystem(opts) {
         };
         const reflectionProbe = new ReflectionProbe({
           ...reflectionProbeEntity.reflectionProbe,
-          ctx: ctx,
+          ctx,
         });
         reflectionProbeEntity._reflectionProbe = reflectionProbe;
+      }
+
+      // TODO: also check for rgbm change?
+      if (
+        reflectionProbeEntity._reflectionProbe.size !==
+        reflectionProbeEntity.reflectionProbe.size
+      ) {
+        reflectionProbeEntity._reflectionProbe.resize(
+          reflectionProbeEntity.reflectionProbe.size
+        );
+        reflectionProbeEntity.reflectionProbe.dirty = true;
       }
 
       if (!skyboxEntity) {

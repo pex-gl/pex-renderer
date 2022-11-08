@@ -38,11 +38,11 @@ const ctx = createContext({ pixelRatio: devicePixelRatio });
 const renderEngine = createRenderEngine({ ctx });
 const world = createWorld();
 
-const gui = createGUI(ctx, { scale: 2 });
+const gui = createGUI(ctx, { scale: 1 });
 let reflectionMapPreview;
 
 const cameraEntity = createEntity({
-  transform: transform({ position: [0, 0, 22] }),
+  transform: transform({ position: [0, 0, 2] }),
   camera: camera({
     fov: Math.PI / 3,
     aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
@@ -94,8 +94,8 @@ window.reflectionProbeEntity = reflectionProbeEntity;
 
 (async () => {
   const buffer = await io.loadArrayBuffer(
-    // getURL(`assets/envmaps/Mono_Lake_B/Mono_Lake_B.hdr`)
-    getURL(`assets/envmaps/brown_photostudio_02_8k.hdr`)
+    getURL(`assets/envmaps/Mono_Lake_B/Mono_Lake_B.hdr`)
+    // getURL(`assets/envmaps/brown_photostudio_02_8k.hdr`)
     // getURL(`assets/envmaps/garage/garage.hdr`)
   );
   const hdrImg = parseHdr(buffer);
@@ -142,11 +142,6 @@ window.reflectionProbeEntity = reflectionProbeEntity;
     })),
     () => {
       reflectionProbeEntity.reflectionProbe.size = State.sizes[State.sizeIndex];
-      // reflectionProbeEntity._reflectionProbe.dirty = true; // TODO: is it needed?
-      reflectionProbeEntity.reflectionProbe = components.reflectionProbe({
-        size: State.sizes[State.sizeIndex],
-      });
-      reflectionProbeEntity._reflectionProbe = null;
       console.log(reflectionMapPreview);
       if (reflectionMapPreview) reflectionMapPreview.texture = null;
       // TODO: update skybox too?
