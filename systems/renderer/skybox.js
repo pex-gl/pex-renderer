@@ -100,7 +100,7 @@ export default function createSkyboxRendererSystem(opts) {
 
     // TODO: rename, for oct map. Why * 2 ? Cause it is oct map atlas?
     const reflectionProbeMapSize =
-      reflectionProbeEntity?.reflectionProbe?.mapSize * 2 || 0;
+      reflectionProbeEntity?.reflectionProbe?.size * 2 || 0;
 
     //TODO: useTonemapping hardcoded to false
     const useTonemapping = false;

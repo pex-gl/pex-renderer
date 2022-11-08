@@ -596,7 +596,7 @@ ${
 
       // TODO: hardcoded oct map
       // const reflectionProbeMapSize =
-      //   reflectionProbes?.[0].reflectionProbe.mapSize * 2 || 0;
+      //   reflectionProbes?.[0].reflectionProbe.size * 2 || 0;
       const reflectionProbeMapSize = 2048;
 
       const { pipeline, materialUniforms } = getGeometryPipeline(
