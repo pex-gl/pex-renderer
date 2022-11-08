@@ -1,6 +1,4 @@
 export default /* glsl */ `
-uniform float uSourceSize; // TODO: rename, for oct map.
-
 vec2 envMapOctahedral(vec3 dir) {
   dir /= dot(vec3(1.0), abs(dir));
   // Add epsylon to avoid bottom face flickering when sampling irradiance
