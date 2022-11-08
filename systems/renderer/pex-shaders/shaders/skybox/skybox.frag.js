@@ -44,7 +44,7 @@ void main() {
   if (uBackgroundBlur <= 0.0) {
     color = decode(texture2D(uEnvMap, envMapEquirect(N)), uEnvMapEncoding);
   } else {
-    color = vec4(getIrradiance(N, uEnvMap, uEnvMapEncoding), 1.0);
+    color = vec4(getIrradiance(N, uEnvMap, uSourceSize, uEnvMapEncoding), 1.0);
   }
   #ifdef USE_TONEMAPPING
     if (uUseTonemapping) {

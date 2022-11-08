@@ -5,7 +5,7 @@ varying vec2 vTexCoord;
 
 uniform float uLevelSize;
 uniform sampler2D uSource;
-uniform float uSourceSize;
+uniform float uSourceSize; // TODO: rename, for oct map.
 uniform float uSourceRegionSize;
 
 void main() {

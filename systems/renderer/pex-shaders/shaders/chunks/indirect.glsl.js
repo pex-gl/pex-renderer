@@ -1,6 +1,7 @@
 export default /* glsl */ `
 #ifdef USE_REFLECTION_PROBES
   uniform sampler2D uReflectionMap;
+  uniform float uReflectionMapSize;
   uniform int uReflectionMapEncoding;
 
   #define MAX_MIPMAP_LEVEL 5.0
@@ -49,7 +50,7 @@ export default /* glsl */ `
     // TODO: energyCompensation
     float energyCompensation = 1.0;
 
-    vec3 diffuseIrradiance = getIrradiance(data.normalWorld, uReflectionMap, uReflectionMapEncoding);
+    vec3 diffuseIrradiance = getIrradiance(data.normalWorld, uReflectionMap, uReflectionMapSize, uReflectionMapEncoding);
     vec3 Fd = data.diffuseColor * diffuseIrradiance * ao;
 
     vec3 specularReflectance = EnvBRDFApprox(data.f0, data.roughness, data.NdotV);

@@ -7,6 +7,7 @@ precision highp float;
 varying vec2 vTexCoord;
 uniform float uTextureSize;
 uniform sampler2D uSource;
+// uniform float uSourceSize; // TODO: rename, for oct map.
 uniform int uSourceEncoding;
 uniform sampler2D uHammersleyPointSetMap;
 uniform int uNumSamples;
@@ -58,7 +59,8 @@ vec3 ImportanceSampleGGX(vec2 Xi, float Roughness, vec3 N) {
 //Source: http://webglinsights.github.io/downloads/WebGL-Insights-Chapter-16.pdf
 
 vec4 textureOctMapLod(sampler2D tex, vec2 uv, float sourceRoughnessLevel, float sourceMipmapLevel) {
-  float width = 2048.0;
+  // float width = 2048.0;
+  float width = uSourceSize;
   float maxLevel = 11.0; // this should come from log of size
   float levelSizeInPixels = pow(2.0, 1.0 + sourceMipmapLevel + sourceRoughnessLevel);
   float levelSize = max(64.0, width / levelSizeInPixels);

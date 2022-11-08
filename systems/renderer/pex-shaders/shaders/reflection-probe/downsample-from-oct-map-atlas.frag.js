@@ -3,9 +3,6 @@ import SHADERS from "../chunks/index.js";
 export default /* glsl */ `
 precision highp float;
 
-${SHADERS.octMapUvToDir}
-${SHADERS.octMap}
-
 varying vec2 vTexCoord;
 
 // uniform float uLevelSize;
@@ -13,12 +10,16 @@ uniform sampler2D uSource;
 uniform float uRoughnessLevel;
 uniform float uMipmapLevel;
 
-// uniform float uSourceSize;
+// uniform float uSourceSize; // TODO: rename, for oct map.
 // uniform float uSourceRegionSize;
+
+${SHADERS.octMapUvToDir}
+${SHADERS.octMap}
 
 void main() {
   vec2 uv = vTexCoord;
-  float width = 2048.0;
+  // float width = 2048.0;
+  float width = uSourceSize;
   float maxLevel = 11.0; // this should come from log of size
   float levelSizeInPixels = pow(2.0, 1.0 + uMipmapLevel + uRoughnessLevel);
   float levelSize = width / levelSizeInPixels;

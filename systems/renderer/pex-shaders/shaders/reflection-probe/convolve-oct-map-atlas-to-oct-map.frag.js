@@ -3,20 +3,21 @@ import SHADERS from "../chunks/index.js";
 export default /* glsl */ `
 precision highp float;
 
-${SHADERS.octMapUvToDir}
-${SHADERS.octMap}
-${SHADERS.rgbm}
-${SHADERS.gamma}
-${SHADERS.encodeDecode}
 ${SHADERS.math.PI}
 
 varying vec2 vTexCoord;
 
 uniform sampler2D uSource;
 uniform int uSourceEncoding;
-uniform float uSourceSize;
+// uniform float uSourceSize; // TODO: rename, for oct map.
 uniform float uTextureSize;
 uniform int uOutputEncoding;
+
+${SHADERS.octMapUvToDir}
+${SHADERS.octMap}
+${SHADERS.rgbm}
+${SHADERS.gamma}
+${SHADERS.encodeDecode}
 
 void main() {
   vec3 N = octMapUVToDir(vTexCoord, uTextureSize);

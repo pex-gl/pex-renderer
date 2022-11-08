@@ -2,11 +2,35 @@ import { vec3, mat4 } from "pex-math";
 import { reflectionProbe as SHADERS } from "pex-shaders";
 import hammersley from "hammersley";
 
+// TODO: primitive-geometry
+const quadPositions = [
+  [-1, -1],
+  [1, -1],
+  [1, 1],
+  [-1, 1],
+];
+const quadTexCoords = [
+  [0, 0],
+  [1, 0],
+  [1, 1],
+  [0, 1],
+];
+// TODO: is that correct CCW?
+const quadFaces = [
+  [0, 1, 2],
+  [0, 2, 3],
+];
+
+const IRRADIANCE_OCT_MAP_SIZE = 64;
+
+const CUBEMAP_SIZE = 512;
+
 class ReflectionProbe {
   constructor(opts) {
     this.type = "ReflectionProbe";
     this.enabled = true;
     this.rgbm = false;
+    this.mapSize = 1024;
 
     this.set(opts);
 
@@ -14,7 +38,6 @@ class ReflectionProbe {
     this._ctx = ctx;
     this.dirty = true;
 
-    const CUBEMAP_SIZE = 512;
     const dynamicCubemap = (this._dynamicCubemap = ctx.textureCube({
       width: CUBEMAP_SIZE,
       height: CUBEMAP_SIZE,
@@ -36,7 +59,7 @@ class ReflectionProbe {
         1,
         0.1,
         100
-      ); // TODO: change this to radians
+      );
       side.viewMatrix = mat4.lookAt(
         mat4.create(),
         side.eye,
@@ -59,22 +82,7 @@ class ReflectionProbe {
       };
       return side;
     });
-    const quadPositions = [
-      [-1, -1],
-      [1, -1],
-      [1, 1],
-      [-1, 1],
-    ];
-    const quadTexCoords = [
-      [0, 0],
-      [1, 0],
-      [1, 1],
-      [0, 1],
-    ];
-    const quadFaces = [
-      [0, 1, 2],
-      [0, 2, 3],
-    ];
+
     const attributes = {
       aPosition: ctx.vertexBuffer(quadPositions),
       aTexCoord: ctx.vertexBuffer(quadTexCoords),
@@ -83,17 +91,15 @@ class ReflectionProbe {
     const indices = ctx.indexBuffer(quadFaces);
 
     const octMap = (this._octMap = ctx.texture2D({
-      width: 1024,
-      height: 1024,
+      width: this.mapSize,
+      height: this.mapSize,
       pixelFormat: this.rgbm ? ctx.PixelFormat.RGBA8 : ctx.PixelFormat.RGBA16F,
       encoding: this.rgbm ? ctx.Encoding.RGBM : ctx.Encoding.Linear,
     }));
 
-    const irradianceOctMapSize = 64;
-
     const octMapAtlas = (this._reflectionMap = ctx.texture2D({
-      width: 2 * 1024,
-      height: 2 * 1024,
+      width: 2 * this.mapSize,
+      height: 2 * this.mapSize,
       min: ctx.Filter.Linear,
       mag: ctx.Filter.Linear,
       pixelFormat: this.rgbm ? ctx.PixelFormat.RGBA8 : ctx.PixelFormat.RGBA16F,
@@ -113,7 +119,7 @@ class ReflectionProbe {
       attributes,
       indices,
       uniforms: {
-        uTextureSize: octMap.width,
+        uTextureSize: this.mapSize,
         uCubemap: dynamicCubemap,
       },
     };
@@ -131,7 +137,7 @@ class ReflectionProbe {
       attributes,
       indices,
       uniforms: {
-        uTextureSize: irradianceOctMapSize,
+        uTextureSize: IRRADIANCE_OCT_MAP_SIZE,
         uSource: octMapAtlas,
         uSourceSize: octMapAtlas.width,
         uSourceEncoding: octMapAtlas.encoding,
@@ -160,7 +166,7 @@ class ReflectionProbe {
       }),
       uniforms: {
         uSource: octMap,
-        uSourceSize: octMap.width,
+        uSourceSize: this.mapSize,
       },
       attributes,
       indices,
@@ -212,8 +218,8 @@ class ReflectionProbe {
       const p = hammersley(i, numSamples);
       hammersleyPointSet[i * 4] = p[0];
       hammersleyPointSet[i * 4 + 1] = p[1];
-      hammersleyPointSet[i * 4 + 2] = 0;
-      hammersleyPointSet[i * 4 + 3] = 0;
+      // hammersleyPointSet[i * 4 + 2] = 0;
+      // hammersleyPointSet[i * 4 + 3] = 0;
     }
 
     const hammersleyPointSetMap = ctx.texture2D({
@@ -294,42 +300,39 @@ class ReflectionProbe {
 
       ctx.submit(clearOctMapAtlasCmd);
 
-      // mipmap levels go horizontally
-      // roughness levels go vertically
+      // TODO: should level  be relative to mapSize?
+      const maxLevel = 5; // MAX_MIPMAP_LEVEL
+      blitToOctMapAtlasLevel(0, 0, this.mapSize);
 
-      const maxLevel = 5;
-      blitToOctMapAtlasLevel(0, 0, octMap.width);
-
+      // Mipmap (horizontally)
       for (let i = 0; i < maxLevel - 1; i++) {
-        downsampleFromOctMapAtlasLevel(i, 0, octMap.width / 2 ** (i + 1));
-        blitToOctMapAtlasLevel(i + 1, 0, octMap.width / 2 ** (1 + i));
+        const size = this.mapSize / 2 ** (i + 1);
+        downsampleFromOctMapAtlasLevel(i, 0, size);
+        blitToOctMapAtlasLevel(i + 1, 0, size);
       }
-      blitToOctMapAtlasLevel(maxLevel, 0, 64);
+      blitToOctMapAtlasLevel(maxLevel, 0, 64); // TODO: why
 
+      // Roughness (vertically)
+      // TODO: creates lone render at bottom right
       for (let i = 1; i <= maxLevel; i++) {
-        // prefilterFromOctMapAtlasLevel(i, 0, i, Math.max(64, octMap.width / Math.pow(2, i + 1)))
-        prefilterFromOctMapAtlasLevel(
-          0,
-          Math.max(0, i - 1),
-          i,
-          Math.max(64, octMap.width / 2 ** (i + 1))
-        );
-        blitToOctMapAtlasLevel(0, i, Math.max(64, octMap.width / 2 ** (1 + i)));
+        const size = Math.max(64, this.mapSize / 2 ** (i + 1));
+        prefilterFromOctMapAtlasLevel(0, Math.max(0, i - 1), i, size);
+        blitToOctMapAtlasLevel(0, i, size);
       }
 
       ctx.submit(convolveOctmapAtlasToOctMap, {
-        viewport: [0, 0, irradianceOctMapSize, irradianceOctMapSize],
+        viewport: [0, 0, IRRADIANCE_OCT_MAP_SIZE, IRRADIANCE_OCT_MAP_SIZE],
       });
 
       ctx.submit(blitToOctMapAtlasCmd, {
         viewport: [
-          octMapAtlas.width - irradianceOctMapSize,
-          octMapAtlas.height - irradianceOctMapSize,
-          irradianceOctMapSize,
-          irradianceOctMapSize,
+          octMapAtlas.width - IRRADIANCE_OCT_MAP_SIZE,
+          octMapAtlas.height - IRRADIANCE_OCT_MAP_SIZE,
+          IRRADIANCE_OCT_MAP_SIZE,
+          IRRADIANCE_OCT_MAP_SIZE,
         ],
         uniforms: {
-          uSourceRegionSize: irradianceOctMapSize,
+          uSourceRegionSize: IRRADIANCE_OCT_MAP_SIZE,
         },
       });
     };

@@ -1,4 +1,6 @@
 export default /* glsl */ `
+uniform float uSourceSize; // TODO: rename, for oct map.
+
 vec2 envMapOctahedral(vec3 dir) {
   dir /= dot(vec3(1.0), abs(dir));
   // Add epsylon to avoid bottom face flickering when sampling irradiance
@@ -34,7 +36,8 @@ vec2 envMapOctahedral(vec3 dir, float textureSize) {
 }
 
 vec2 envMapOctahedral(vec3 dir, float mipmapLevel, float roughnessLevel) {
-  float width = 2048.0;
+  // float width = 2048.0;
+  float width = uSourceSize;
   float maxLevel = 11.0; // this should come from log of size
   float levelSizeInPixels = pow(2.0, 1.0 + mipmapLevel + roughnessLevel);
   float levelSize = max(64.0, width / levelSizeInPixels);
