@@ -28,6 +28,7 @@ const {
 } = components;
 
 const State = {
+  envMap: true,
   rotation: 1.5 * Math.PI,
   sizeIndex: 4,
   sizes: [256, 512, 1024, 2048, 4096],
@@ -39,20 +40,16 @@ const renderEngine = createRenderEngine({ ctx });
 const world = createWorld();
 
 const gui = createGUI(ctx, { scale: 1 });
-let reflectionMapPreview;
 
 const cameraEntity = createEntity({
   transform: transform({ position: [0, 0, 2] }),
   camera: camera({
-    fov: Math.PI / 3,
     aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
     near: 0.1,
     far: 100,
     postprocess: false,
   }),
-  orbiter: orbiter({
-    position: [0, 0, 2],
-  }),
+  orbiter: orbiter(),
 });
 world.add(cameraEntity);
 
@@ -60,9 +57,9 @@ const clothGeom = parseObj(
   await io.loadText(getURL(`assets/models/PbdCloth/PbdCloth.obj`))
 );
 
-const geomEntity = createEntity({
+const geometryEntity = createEntity({
   transform: transform({ position: [0, 0, 0] }),
-  geometry: geometry(sphere({ radius: 1 })),
+  geometry: geometry(sphere()),
   // geometry: geometry(clothGeom),
   material: material({
     baseColor: [1, 1, 1, 1],
@@ -70,7 +67,7 @@ const geomEntity = createEntity({
     metallic: 1,
   }),
 });
-world.add(geomEntity);
+world.add(geometryEntity);
 
 const skyboxEntity = createEntity({
   transform: transform({
@@ -108,15 +105,27 @@ window.reflectionProbeEntity = reflectionProbeEntity;
     flipY: true, //TODO: flipY on non dom elements is deprecated
   });
 
-  skyboxEntity.skybox.envMap = panorama;
+  if (State.envMap) {
+    skyboxEntity.skybox.envMap = panorama;
+  }
 
-  reflectionProbeEntity._reflectionProbe.dirty = true;
+  // Update for GUI
+  renderEngine.update(world.entities);
+  renderEngine.render(world.entities, cameraEntity);
 
   gui.addColumn("Settings");
-  //TODO: implement component.enabled
-  // gui.addParam("Enabled", skyboxEntity.skybox, "enabled", {}, (value) => {
-  // skyboxCmp.set({ enabled: value });
-  // });
+  if (skyboxEntity.skybox.texture || skyboxEntity.skybox.envMap) {
+    gui.addTexture2D(
+      "Skybox",
+      skyboxEntity.skybox.texture || skyboxEntity.skybox.envMap
+    );
+  }
+  gui.addParam("EnvMap", State, "envMap", {}, (enabled) => {
+    skyboxEntity.skybox.envMap = enabled ? panorama : null;
+  });
+  gui.addParam("BG Blur", skyboxEntity.skybox, "backgroundBlur");
+
+  // TODO: not working
   gui.addParam(
     "Rotation",
     State,
@@ -128,10 +137,10 @@ window.reflectionProbeEntity = reflectionProbeEntity;
         [0, 1, 0],
         State.rotation
       );
+      skyboxEntity.transform = { ...skyboxEntity.transform };
       reflectionProbeEntity.reflectionProbe.dirty = true;
     }
   );
-  gui.addParam("BG Blur", skyboxEntity.skybox, "backgroundBlur", {}, () => {});
   gui.addRadioList(
     "Map Size",
     State,
@@ -142,28 +151,25 @@ window.reflectionProbeEntity = reflectionProbeEntity;
     })),
     () => {
       reflectionProbeEntity.reflectionProbe.size = State.sizes[State.sizeIndex];
-      console.log(reflectionMapPreview);
-      if (reflectionMapPreview) reflectionMapPreview.texture = null;
-      // TODO: update skybox too?
     }
   );
-  gui.addParam("Roughness", geomEntity.material, "roughness", {}, () => {});
-  gui.addColumn("Textures");
-  // gui.addTextureCube(
-  //   "Cubemap",
-  //   reflectionProbeEntity._reflectionProbe._dynamicCubemap,
-  //   { level: 2 }
-  // );
-  // gui.addTexture2D(
-  //   "Skybox",
-  //   skyboxEntity.skybox.texture || skyboxEntity.skybox.envMap
-  // );
 
-  reflectionMapPreview = gui.addTexture2D(
+  gui.addSeparator();
+  gui.addLabel("Material");
+  gui.addParam("Roughness", geometryEntity.material, "roughness");
+  gui.addParam("Metallic", geometryEntity.material, "metallic");
+
+  gui.addColumn("Textures");
+  gui.addTextureCube(
+    "Cubemap",
+    reflectionProbeEntity._reflectionProbe._dynamicCubemap
+  );
+
+  gui.addTexture2D(
     "Reflection Map",
     reflectionProbeEntity._reflectionProbe._reflectionMap
   );
-  gui.addTexture2D("Octmap", reflectionProbeEntity._reflectionProbe._octMap);
+  // gui.addTexture2D("Octmap", reflectionProbeEntity._reflectionProbe._octMap);
 
   window.dispatchEvent(new CustomEvent("pex-screenshot"));
 })();
@@ -171,10 +177,6 @@ window.reflectionProbeEntity = reflectionProbeEntity;
 ctx.frame(() => {
   renderEngine.update(world.entities);
   renderEngine.render(world.entities, cameraEntity);
-  if (reflectionMapPreview && !reflectionMapPreview?.texture) {
-    reflectionMapPreview.texture =
-      reflectionProbeEntity._reflectionProbe._reflectionMap;
-  }
 
   gui.draw();
 });
