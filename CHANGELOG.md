@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+# [4.0.0-alpha.26](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.25...v4.0.0-alpha.26) (2022-11-09)
+
+
+### Bug Fixes
+
+* **pbr:** pass reflection probe size to skybox ([f50aa7b](https://github.com/pex-gl/pex-renderer/commit/f50aa7bea07c3b20c530393ee291bc65034c0173))
+* remove unused reflectionProbeMapSize property ([07ed368](https://github.com/pex-gl/pex-renderer/commit/07ed36845bae101efa55dafd19cc22480ee4f4c3))
+* **systems/reflection-probe:** fix octmap sizing bugs ([7bce9c7](https://github.com/pex-gl/pex-renderer/commit/7bce9c70a4328100004464e912446e109933042f))
+
+
+### Features
+
+* **ecs:** add back model matrix for skybox ([40514b8](https://github.com/pex-gl/pex-renderer/commit/40514b818eeb81f9b71657aee272a4d2ab053b98))
+* **pbr:** add mapSize to reflection probe ([33bf95f](https://github.com/pex-gl/pex-renderer/commit/33bf95fe99d929a05c98e9809a76bd2d986ab0d3))
+* **pbr:** handle reflection probe resize ([d202c26](https://github.com/pex-gl/pex-renderer/commit/d202c26173532af3db2f431a1c858fb8b75a8950))
+* **renderer/standard:** add hook at the end of vertex shader ([cd5afdc](https://github.com/pex-gl/pex-renderer/commit/cd5afdc8e9b054572e7f73954024bc24b88b039e))
+
+
+
 # [4.0.0-alpha.25](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.24...v4.0.0-alpha.25) (2022-11-07)
 
 
