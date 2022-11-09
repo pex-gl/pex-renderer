@@ -18,6 +18,9 @@ import { getURL } from "./utils.js";
 import { fromHSL } from "pex-color";
 import random from "pex-random";
 import { serializeGraph } from "https://cdn.skypack.dev/@thi.ng/dot";
+import { Graphviz } from "https://cdn.skypack.dev/@hpcc-js/wasm/graphviz";
+
+const graphviz = await Graphviz.load();
 
 const dotGraph = {
   directed: true,
@@ -85,10 +88,9 @@ const dot = {
     const dotStr = serializeGraph(dotGraph);
     console.log("dotStr", dotStr);
 
-    hpccWasm.graphviz.layout(dotStr, "svg", "dot").then((svg) => {
-      const div = document.getElementById("graphviz-container");
-      div.innerHTML = svg;
-    });
+    const svg = graphviz.layout(dotStr, "svg", "dot");
+    const div = document.getElementById("graphviz-container");
+    div.innerHTML = svg;
   },
   style: {
     texture: {
@@ -170,56 +172,6 @@ const entities = (window.entities = []);
 const renderGraph = createRenderGraph(ctx, dot);
 const resourceCache = createResourceCache(ctx);
 
-function aabbToString(bbox) {
-  return bbox.map((v) => v.map((f) => Math.floor(f * 1000) / 1000));
-}
-
-function targetTo(out, eye, target, up = [0, 1, 0]) {
-  let eyex = eye[0];
-  let eyey = eye[1];
-  let eyez = eye[2];
-  let upx = up[0];
-  let upy = up[1];
-  let upz = up[2];
-  let z0 = eyex - target[0];
-  let z1 = eyey - target[1];
-  let z2 = eyez - target[2];
-  let len = z0 * z0 + z1 * z1 + z2 * z2;
-  if (len > 0) {
-    len = 1 / Math.sqrt(len);
-    z0 *= len;
-    z1 *= len;
-    z2 *= len;
-  }
-  let x0 = upy * z2 - upz * z1;
-  let x1 = upz * z0 - upx * z2;
-  let x2 = upx * z1 - upy * z0;
-  len = x0 * x0 + x1 * x1 + x2 * x2;
-  if (len > 0) {
-    len = 1 / Math.sqrt(len);
-    x0 *= len;
-    x1 *= len;
-    x2 *= len;
-  }
-  out[0] = x0;
-  out[1] = x1;
-  out[2] = x2;
-  out[3] = 0;
-  out[4] = z1 * x2 - z2 * x1;
-  out[5] = z2 * x0 - z0 * x2;
-  out[6] = z0 * x1 - z1 * x0;
-  out[7] = 0;
-  out[8] = z0;
-  out[9] = z1;
-  out[10] = z2;
-  out[11] = 0;
-  out[12] = eyex;
-  out[13] = eyey;
-  out[14] = eyez;
-  out[15] = 1;
-  return out;
-}
-
 let debugNextFrame = false;
 
 const gui = createGUI(ctx);
@@ -264,7 +216,7 @@ gui.addButton("Tree", () => {
     console.log(
       " ".repeat(depth * 5),
       e.id,
-      aabbToString(e.transform.worldBounds || "[No world bounds]"),
+      aabb.toString(e.transform.worldBounds || "[No world bounds]"),
       e
     );
   });
@@ -307,6 +259,8 @@ const cubesEntity = createEntity({
   geometry: geometry({
     ...cube({ sx: 1.5, sy: 0.5, sz: 1.5 }),
     // offsets: new Array(64).fill(0).map(() => random.vec3(3)),
+    offsets: new Float32Array(64 * 3).fill(0).map(() => random.float(-1.5, 1.5)),
+    scales: new Float32Array(64 * 3).fill(0.1),
     instances: 64,
   }),
   // geometry: geometry({
@@ -351,21 +305,20 @@ for (let i = 0; i < 10; i++) {
   lineVertexColors.push(c, c);
 }
 
-console.log("lineVertexColors", lineVertexColors);
-
 const linesEntity = createEntity({
   transform: transform(),
   geometry: geometry({
     positions: linePositions,
     vertexColors: lineVertexColors,
+    count: linePositions.length / 2,
   }),
   material: material({
+    type: "segments",
     baseColor: [1, 1, 1, 1],
   }),
   boundingBoxHelper: components.boundingBoxHelper(),
-  drawSegments: true,
 });
-entities.push(linesEntity);
+// entities.push(linesEntity);
 
 const sphereEntity = createEntity({
   transform: transform({
@@ -404,10 +357,7 @@ const directionalLightEntity = createEntity(
   {
     transform: transform({
       position: [2, 2, 0],
-      rotation: quat.fromMat4(
-        quat.create(),
-        targetTo(mat4.create(), [0, 0, 0], [1, 1, 0])
-      ),
+      rotation: quat.targetTo(quat.create(), [0, 0, 0], [1, 1, 1]),
     }),
     directionalLight: directionalLight({
       color: [1, 0.1, 0.1, 1], //FIXME: intensity is copied to alpha in pex-renderer
@@ -427,10 +377,7 @@ const directionalLightEntity2 = createEntity(
   {
     transform: transform({
       position: [-2, 2, 0],
-      rotation: quat.fromMat4(
-        quat.create(),
-        targetTo(mat4.create(), [0, 0, 0], [-1, 1, 0])
-      ),
+      rotation: quat.targetTo(quat.create(), [0, 0, 0], [-1, -1, 0]),
     }),
     directionalLight: directionalLight({
       color: [0.1, 0.1, 1.0, 1], //FIXME: intensity is copied to alpha in pex-renderer
