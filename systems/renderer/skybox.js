@@ -69,8 +69,9 @@ export default function createSkyboxRendererSystem(opts) {
     },
   };
 
-  function draw(ctx, skybox, camera, opts) {
-    const { entity, projectionMatrix, viewMatrix, exposure } = camera;
+  function draw(ctx, entity, camera, opts) {
+    const { skybox } = entity;
+    const { projectionMatrix, viewMatrix, exposure } = camera;
     const {
       renderingToReflectionProbe,
       outputEncoding,
@@ -99,8 +100,7 @@ export default function createSkyboxRendererSystem(opts) {
     }
 
     // TODO: rename, for oct map. Why * 2 ? Cause it is oct map atlas?
-    const envMapSize =
-      reflectionProbeEntity?.reflectionProbe?.size * 2 || 0;
+    const envMapSize = reflectionProbeEntity?.reflectionProbe?.size * 2 || 0;
 
     //TODO: useTonemapping hardcoded to false
     const useTonemapping = false;
@@ -110,9 +110,7 @@ export default function createSkyboxRendererSystem(opts) {
       uniforms: {
         uProjectionMatrix: projectionMatrix,
         uViewMatrix: viewMatrix,
-        // uModelMatrix: this.entity.transform.modelMatrix,
-        //TODO: iplement entity matrix
-        uModelMatrix: identityMatrix,
+        uModelMatrix: entity._transform?.modelMatrix || identityMatrix,
         uEnvMap: texture,
         uEnvMapEncoding: texture.encoding,
         uEnvMapSize: envMapSize,
@@ -135,7 +133,7 @@ export default function createSkyboxRendererSystem(opts) {
             const reflectionProbeEntity = entities.find(
               (e) => e.reflectionProbe
             );
-            draw(ctx, e.skybox, renderView.camera, {
+            draw(ctx, e, renderView.camera, {
               renderingToReflectionProbe: renderingToReflectionProbe,
               backgroundBlur: e.skybox.backgroundBlur,
               outputEncoding: renderView.outputEncoding || ctx.Encoding.Linear,
