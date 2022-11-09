@@ -419,7 +419,7 @@ ${
             1.0 / 2.2
           );
         else return c;
-      });;
+      });
       sharedUniforms[`uDirectionalLights[${i}].castShadows`] = light.castShadows;
       sharedUniforms[`uDirectionalLights[${i}].projectionMatrix`] = light._projectionMatrix || tempMat4; //FIXME
       sharedUniforms[`uDirectionalLights[${i}].viewMatrix`] = light._viewMatrix || tempMat4; //FIXME;
@@ -431,15 +431,50 @@ ${
       }
     });
 
+    spotLights.forEach((lightEntity, i) => {
+      const light = lightEntity.spotLight;
+
+      const dir4 = [0, 0, 1, 0]; // TODO: GC
+      const dir = [0, 0, 0];
+      vec4.multMat4(dir4, lightEntity._transform.modelMatrix);
+      vec3.set(dir, dir4);
+
+      sharedUniforms[`uSpotLights[${i}].position`] =
+        lightEntity._transform.worldPosition;
+      sharedUniforms[`uSpotLights[${i}].direction`] = dir;
+      sharedUniforms[`uSpotLights[${i}].color`] = light.color.map((c, j) => {
+        if (j < 3) return Math.pow(c * light.intensity, 1.0 / 2.2);
+        else return c;
+      });
+      sharedUniforms[`uSpotLights[${i}].angle`] = light.angle;
+      sharedUniforms[`uSpotLights[${i}].innerAngle`] = light.innerAngle;
+      sharedUniforms[`uSpotLights[${i}].range`] = light.range;
+      sharedUniforms[`uSpotLights[${i}].castShadows`] = !!light.castShadows;
+      sharedUniforms[`uSpotLights[${i}].projectionMatrix`] =
+        light._projectionMatrix;
+      sharedUniforms[`uSpotLights[${i}].viewMatrix`] = light._viewMatrix;
+      sharedUniforms[`uSpotLights[${i}].near`] = light._near || 0.1;
+      sharedUniforms[`uSpotLights[${i}].far`] = light._far || 100;
+      sharedUniforms[`uSpotLights[${i}].bias`] = light.bias || 0.1;
+      sharedUniforms[`uSpotLights[${i}].shadowMapSize`] = light.castShadows
+        ? [light._shadowMap.width, light._shadowMap.height]
+        : [0, 0];
+      sharedUniforms[`uSpotLightShadowMaps[${i}]`] = light.castShadows
+        ? light._shadowMap
+        : dummyTexture2D;
+    });
+
     pointLights.forEach((lightEntity, i) => {
       const light = lightEntity.pointLight;
-      sharedUniforms["uPointLights[" + i + "].position"] =
+      sharedUniforms[`uPointLights[${i}].position`] =
         lightEntity._transform.worldPosition;
-      sharedUniforms["uPointLights[" + i + "].color"] = light.color;
-      sharedUniforms["uPointLights[" + i + "].range"] = light.range;
-      sharedUniforms["uPointLights[" + i + "].castShadows"] =
-        !!light.castShadows;
-      sharedUniforms["uPointLightShadowMaps[" + i + "]"] = light.castShadows
+      sharedUniforms[`uPointLights[${i}].color`] = light.color.map((c, j) => {
+        if (j < 3) return Math.pow(c * light.intensity, 1.0 / 2.2);
+        else return c;
+      });
+      sharedUniforms[`uPointLights[${i}].range`] = light.range;
+      sharedUniforms[`uPointLights[${i}].castShadows`] = !!light.castShadows;
+      sharedUniforms[`uPointLightShadowMaps[${i}]`] = light.castShadows
         ? light._shadowCubemap
         : dummyTextureCube;
     });

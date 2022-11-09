@@ -20,7 +20,7 @@
     "helpers",
     // "highpoly",
     // "instancing",
-    // "lights",
+    "lights",
     "materials",
     // "orbiter",
     // "overlays",

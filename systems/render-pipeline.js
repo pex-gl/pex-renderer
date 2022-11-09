@@ -245,6 +245,103 @@ export default function createRenderPipelineSystem(opts) {
     // });
   };
 
+  renderPipelineSystem.updateSpotLightShadowMap = function (
+    lightEnt,
+    entities,
+    shadowCastingEntities,
+    renderers
+  ) {
+    const light = lightEnt.spotLight;
+    const position = lightEnt._transform.worldPosition;
+    const target = [0, 0, 1, 0];
+    const up = [0, 1, 0, 0];
+    vec4.multMat4(target, lightEnt._transform.modelMatrix);
+    vec4.multMat4(up, lightEnt._transform.modelMatrix);
+    mat4.lookAt(light._viewMatrix, position, target, up);
+
+    const shadowBboxPoints = shadowCastingEntities.reduce(
+      (points, entity) =>
+        points.concat(aabbToPoints(entity.transform.worldBounds)),
+      []
+    );
+
+    // TODO: gc vec3.copy, all the bounding box creation
+    const bboxPointsInLightSpace = shadowBboxPoints.map((p) =>
+      vec3.multMat4(vec3.copy(p), light._viewMatrix)
+    );
+    const sceneBboxInLightSpace = aabb.create();
+    aabb.fromPoints(sceneBboxInLightSpace, bboxPointsInLightSpace);
+
+    const lightNear = -sceneBboxInLightSpace[1][2];
+    const lightFar = -sceneBboxInLightSpace[0][2];
+
+    light._near = lightNear;
+    light._far = lightFar;
+
+    light.sceneBboxInLightSpace = sceneBboxInLightSpace;
+
+    //TODO: can this be all done at once?
+    let colorMap = resourceCache.texture2D(
+      passes.spotLightShadows.colorMapDesc
+    );
+    colorMap.name = "TempColorMap\n" + colorMap.id;
+
+    let shadowMap = resourceCache.texture2D(
+      passes.spotLightShadows.shadowMapDesc
+    );
+    shadowMap.name = "ShadowMap\n" + shadowMap.id;
+
+    //TODO: need to create new descriptor to get uniq
+    let passDesc = { ...passes.spotLightShadows.pass };
+    passDesc.color[0] = colorMap;
+    passDesc.depth = shadowMap;
+
+    let shadowMapPass = resourceCache.pass(passDesc);
+
+    mat4.perspective(
+      light._projectionMatrix,
+      2 * light.angle,
+      shadowMap.width / shadowMap.height,
+      lightNear,
+      lightFar
+    );
+
+    const renderView = {
+      camera: {
+        viewMatrix: light._viewMatrix,
+        projectionMatrix: light._projectionMatrix,
+      },
+      viewport: [0, 0, shadowMap.width, shadowMap.height],
+    };
+
+    renderGraph.renderPass({
+      name: "RenderShadowMap" + lightEnt.id,
+      pass: shadowMapPass,
+      renderView: renderView,
+      render: () => {
+        light._shadowMap = shadowMap;
+        drawMeshes({
+          viewport: renderView.viewport,
+          //TODO: passing camera entity around is a mess
+          cameraEntity: {
+            camera: {
+              position: lightEnt._transform.worldPosition,
+            },
+          },
+          shadowMapping: true,
+          shadowMappingLight: light,
+          entities,
+          renderableEntities: shadowCastingEntities,
+          forward: false,
+          drawTransparent: false,
+          renderers,
+        });
+      },
+    });
+
+    light._shadowMap = shadowMap; // TODO: we borrow it for a frame
+  };
+
   renderPipelineSystem.updatePointLightShadowMap = function (
     lightEnt,
     entities,
@@ -326,6 +423,10 @@ export default function createRenderPipelineSystem(opts) {
     directionalLight._viewMatrix = mat4.create();
     directionalLight._projectionMatrix = mat4.create();
   };
+  renderPipelineSystem.patchSpotLight = (directionalLight) => {
+    directionalLight._viewMatrix = mat4.create();
+    directionalLight._projectionMatrix = mat4.create();
+  };
 
   renderPipelineSystem.update = (entities, options = {}) => {
     let { renderView, renderers, drawToScreen } = options;
@@ -339,6 +440,7 @@ export default function createRenderPipelineSystem(opts) {
     const skyboxEntities = entities.filter((e) => e.skybox);
     const directionalLightEntities = entities.filter((e) => e.directionalLight);
     const pointLightEntities = entities.filter((e) => e.pointLight);
+    const spotLightEntities = entities.filter((e) => e.spotLight);
     const shadowCastingEntities = rendererableEntities.filter(
       (e) => e.material.castShadows
     );
@@ -373,6 +475,20 @@ export default function createRenderPipelineSystem(opts) {
     pointLightEntities.forEach((lightEntity) => {
       if (lightEntity.pointLight.castShadows) {
         renderPipelineSystem.updatePointLightShadowMap(
+          lightEntity,
+          entities,
+          shadowCastingEntities,
+          renderers
+        );
+      }
+    });
+
+    spotLightEntities.forEach((lightEntity) => {
+      if (!lightEntity.spotLight._viewMatrix) {
+        renderPipelineSystem.patchSpotLight(lightEntity.spotLight);
+      }
+      if (lightEntity.spotLight.castShadows) {
+        renderPipelineSystem.updateSpotLightShadowMap(
           lightEntity,
           entities,
           shadowCastingEntities,

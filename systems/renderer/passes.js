@@ -64,6 +64,33 @@ function createPassDescriptors(ctx) {
         clearDepth: 1,
       },
     },
+    spotLightShadows: {
+      colorMapDesc: {
+        name: "spotLightColorMap", //TODO: is it used?
+        width: 2048,
+        height: 2048,
+        pixelFormat: ctx.PixelFormat.RGBA8,
+        encoding: ctx.Encoding.Linear,
+        min: ctx.Filter.Linear,
+        mag: ctx.Filter.Linear,
+      },
+      shadowMapDesc: {
+        name: "spotLightShadowMap", //TODO: is it used?
+        width: 2048,
+        height: 2048,
+        pixelFormat: ctx.PixelFormat.DEPTH_COMPONENT24,
+        encoding: ctx.Encoding.Linear,
+        min: ctx.Filter.Nearest,
+        mag: ctx.Filter.Nearest,
+      },
+      pass: {
+        name: "SpotLight.shadowMap",
+        color: [],
+        depth: null,
+        clearColor: [0, 0, 0, 1],
+        clearDepth: 1,
+      },
+    },
     pointLightShadows: {
       shadowCubemapDesc: {
         name: "pointLightShadowCubemap", //TODO: is it used?

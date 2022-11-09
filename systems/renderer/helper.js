@@ -50,7 +50,7 @@ const getCirclePositions = function (opts) {
 
   const lines = points.reduce((lines, p, i) => {
     lines.push(p);
-    lines.push(points[(i + 1) % points.length]);
+    lines.push([...points[(i + 1) % points.length]]);
     return lines;
   }, []);
 
@@ -59,7 +59,6 @@ const getCirclePositions = function (opts) {
 
 const getPrismPositions = function (opts) {
   const r = opts.radius;
-  const position = opts.position || [0, 0, 0];
   // prettier-ignore
   const points = [
     [0, r, 0], [r, 0, 0],
@@ -79,7 +78,6 @@ const getPrismPositions = function (opts) {
     [r, 0, 0], [0, 0, r],
     [-r, 0, 0], [0, 0, r]
   ]
-  points.forEach((p) => vec3.add(p, position));
   return points;
 };
 
@@ -147,7 +145,50 @@ function drawPointLight(geomBuilder, entity) {
   pointlLightGizmoPositions.forEach((pos) => {
     vec3.multMat4(pos, entity._transform.modelMatrix);
     geomBuilder.addPosition(pos);
-    geomBuilder.addColor([1, 0, 0, 1]);
+    geomBuilder.addColor([0, 1, 0, 1]);
+  });
+}
+
+function drawSpotLight(geomBuilder, entity) {
+  const spotLightDistance = entity.spotLight.range;
+  const spotLightRadius = spotLightDistance * Math.tan(entity.spotLight.angle);
+  const spotLightInnerRadius =
+    spotLightDistance * Math.tan(entity.spotLight.innerAngle);
+
+  const spotLightGizmoPositions = getPrismPositions({
+    radius: 0.2,
+  })
+    .concat([
+      [0, 0, 0],
+      [spotLightRadius, 0, spotLightDistance],
+      [0, 0, 0],
+      [-spotLightRadius, 0, spotLightDistance],
+      [0, 0, 0],
+      [0, spotLightRadius, spotLightDistance],
+      [0, 0, 0],
+      [0, -spotLightRadius, spotLightDistance],
+    ])
+    .concat(
+      getCirclePositions({
+        radius: spotLightRadius,
+        center: [0, 0, spotLightDistance],
+        steps: 32,
+        axis: [0, 1],
+      })
+    )
+    .concat(
+      getCirclePositions({
+        radius: spotLightInnerRadius,
+        center: [0, 0, spotLightDistance],
+        steps: 32,
+        axis: [0, 1],
+      })
+    );
+
+  spotLightGizmoPositions.forEach((pos) => {
+    vec3.multMat4(pos, entity._transform.modelMatrix);
+    geomBuilder.addPosition(pos);
+    geomBuilder.addColor([0, 0, 1, 1]);
   });
 }
 
@@ -202,12 +243,16 @@ export default function createHelperSystem({ ctx }) {
           // geomBuilder.addColor([1, 0, 0, 1]);
           // geomBuilder.addColor([0, 1, 0, 1]);
         }
+        // TODO: cache
         if (entity.lightHelper) {
           if (entity.directionalLight) {
             drawDirectionalLight(geomBuilder, entity);
           }
           if (entity.pointLight) {
             drawPointLight(geomBuilder, entity);
+          }
+          if (entity.spotLight) {
+            drawSpotLight(geomBuilder, entity);
           }
         }
         // if (entity.boundingBoxHelper) {
