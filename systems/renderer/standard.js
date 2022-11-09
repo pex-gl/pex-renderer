@@ -99,7 +99,7 @@ export default function createStandardRendererSystem(opts) {
     [["options", "areaLights", "length"], "NUM_AREA_LIGHTS", { type: "counter" }],
     [["options", "reflectionProbes", "length"], "USE_REFLECTION_PROBES", { type: "boolean" }],
     [["options", "useTonemapping"], "USE_TONEMAPPING", { type: "boolean" }],
-    [["options", "envMapSize"], "", { uniform: "uEnvMapSize" }],
+    [["options", "envMapSize"], "", { uniform: "uEnvMapSize" }], // Blurred env map size
     [["material", "unlit"], "USE_UNLIT_WORKFLOW", { type: "boolean", fallback: "USE_METALLIC_ROUGHNESS_WORKFLOW" }],
     [["material", "blend"], "USE_BLEND", { type: "boolean" }],
     [["skin"], "USE_SKIN"],
@@ -594,11 +594,6 @@ ${
         ? []
         : entities.filter((e) => e.reflectionProbe);
 
-      // TODO: hardcoded oct map
-      // const reflectionProbeMapSize =
-      //   reflectionProbes?.[0].reflectionProbe.size * 2 || 0;
-      const reflectionProbeMapSize = 2048;
-
       const { pipeline, materialUniforms } = getGeometryPipeline(
         ctx,
         renderableEntity,
@@ -615,7 +610,6 @@ ${
           // postProcessingCmp.enabled &&
           // postProcessingCmp.ssao,
           useTonemapping: false, //!(postProcessingCmp && postProcessingCmp.enabled),
-          reflectionProbeMapSize,
           shadowQuality: opts.shadowQuality,
           debugRender: opts.debugRender,
         }
