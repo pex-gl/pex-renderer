@@ -4,6 +4,7 @@ import {
   entity as createEntity,
   components,
 } from "../index.js";
+
 import createContext from "pex-context";
 import * as io from "pex-io";
 import { quat } from "pex-math";
@@ -11,11 +12,8 @@ import createGUI from "pex-gui";
 import { sphere } from "primitive-geometry";
 import parseHdr from "parse-hdr";
 import parseObj from "geom-parse-obj";
-import { getURL } from "./utils.js";
 
-// Set reflectionProbe entity size
-// -> used to create oct map
-// -> oct map atlas is derived from it (size * 2, mip/rough levels)
+import { getURL } from "./utils.js";
 
 const {
   camera,
