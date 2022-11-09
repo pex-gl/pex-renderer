@@ -137,11 +137,7 @@ const addEnvmap = async () => {
     flipY: true,
   });
 
-  skyboxEntity.skybox.texture = panorama;
-  if (skyboxEntity._skybox) {
-    skyboxEntity._skybox.texture = panorama; //TODO: data ownership skybox vs _skybox
-  }
-  reflectionProbeEntity.reflectionProbe.dirty = true; //TODO: check if reflectionProbe.dirty is implemented
+  skyboxEntity.skybox.envMap = panorama; //TODO: remove _skybox
 };
 
 if (State.useEnvMap) addEnvmap();
