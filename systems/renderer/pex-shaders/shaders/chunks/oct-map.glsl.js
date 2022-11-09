@@ -33,9 +33,9 @@ vec2 envMapOctahedral(vec3 dir, float textureSize) {
   return dir.xy;
 }
 
-vec2 envMapOctahedral(vec3 dir, float mipmapLevel, float roughnessLevel) {
-  float width = 2048.0;
-  float maxLevel = 11.0; // this should come from log of size
+vec2 envMapOctahedral(vec3 dir, float mipmapLevel, float roughnessLevel, float octMapAtlasSize) {
+  float width = octMapAtlasSize;
+  float maxLevel = log2(width); // this should come from log of size
   float levelSizeInPixels = pow(2.0, 1.0 + mipmapLevel + roughnessLevel);
   float levelSize = max(64.0, width / levelSizeInPixels);
   float roughnessLevelWidth = width / pow(2.0, 1.0 + roughnessLevel);

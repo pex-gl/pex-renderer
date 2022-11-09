@@ -1,6 +1,7 @@
 export default /* glsl */ `
 #ifdef USE_REFLECTION_PROBES
   uniform sampler2D uReflectionMap;
+  uniform float uReflectionMapSize;
   uniform int uReflectionMapEncoding;
 
   #define MAX_MIPMAP_LEVEL 5.0
@@ -11,8 +12,8 @@ export default /* glsl */ `
     float upLod = floor(lod);
     float downLod = ceil(lod);
 
-    vec3 a = decode(texture2D(uReflectionMap, envMapOctahedral(reflected, 0.0, upLod)), uReflectionMapEncoding).rgb;
-    vec3 b = decode(texture2D(uReflectionMap, envMapOctahedral(reflected, 0.0, downLod)), uReflectionMapEncoding).rgb;
+    vec3 a = decode(texture2D(uReflectionMap, envMapOctahedral(reflected, 0.0, upLod, uReflectionMapSize)), uReflectionMapEncoding).rgb;
+    vec3 b = decode(texture2D(uReflectionMap, envMapOctahedral(reflected, 0.0, downLod, uReflectionMapSize)), uReflectionMapEncoding).rgb;
 
     return mix(a, b, lod - upLod);
   }
@@ -49,7 +50,7 @@ export default /* glsl */ `
     // TODO: energyCompensation
     float energyCompensation = 1.0;
 
-    vec3 diffuseIrradiance = getIrradiance(data.normalWorld, uReflectionMap, uReflectionMapEncoding);
+    vec3 diffuseIrradiance = getIrradiance(data.normalWorld, uReflectionMap, uReflectionMapSize, uReflectionMapEncoding);
     vec3 Fd = data.diffuseColor * diffuseIrradiance * ao;
 
     vec3 specularReflectance = EnvBRDFApprox(data.f0, data.roughness, data.NdotV);

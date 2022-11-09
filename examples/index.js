@@ -26,7 +26,7 @@
     // "overlays",
     // "point-size",
     // "post-processing",
-    // "skybox",
+    "skybox",
     // "vertex-colors",
     // "window-resize",
   ];

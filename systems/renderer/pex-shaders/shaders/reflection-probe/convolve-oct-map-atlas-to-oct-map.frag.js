@@ -3,23 +3,24 @@ import SHADERS from "../chunks/index.js";
 export default /* glsl */ `
 precision highp float;
 
+${SHADERS.math.PI}
+
+varying vec2 vTexCoord;
+
+uniform sampler2D uOctMapAtlas;
+uniform float uOctMapAtlasSize;
+uniform int uOctMapAtlasEncoding;
+uniform float uIrradianceOctMapSize;
+uniform int uOutputEncoding;
+
 ${SHADERS.octMapUvToDir}
 ${SHADERS.octMap}
 ${SHADERS.rgbm}
 ${SHADERS.gamma}
 ${SHADERS.encodeDecode}
-${SHADERS.math.PI}
-
-varying vec2 vTexCoord;
-
-uniform sampler2D uSource;
-uniform int uSourceEncoding;
-uniform float uSourceSize;
-uniform float uTextureSize;
-uniform int uOutputEncoding;
 
 void main() {
-  vec3 N = octMapUVToDir(vTexCoord, uTextureSize);
+  vec3 N = octMapUVToDir(vTexCoord, uIrradianceOctMapSize);
   vec3 normal = N;
 
   vec3 up = vec3(0.0, 1.0, 0.0);
@@ -36,9 +37,9 @@ void main() {
       vec3 sampleVector = cos(theta) * normal + sin(theta) * temp;
       // in theory this should be sample from mipmap level e.g. 2.0, 0.0
       // but sampling from prefiltered roughness gives much smoother results
-      vec2 sampleUV = envMapOctahedral(sampleVector, 0.0, 2.0);
-      vec4 color = texture2D( uSource, sampleUV);
-      sampledColor += decode(color, uSourceEncoding).rgb * cos(theta) * sin(theta);
+      vec2 sampleUV = envMapOctahedral(sampleVector, 0.0, 2.0, uOctMapAtlasSize);
+      vec4 color = texture2D( uOctMapAtlas, sampleUV);
+      sampledColor += decode(color, uOctMapAtlasEncoding).rgb * cos(theta) * sin(theta);
       index += 1.0;
     }
   }

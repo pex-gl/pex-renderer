@@ -99,6 +99,7 @@ export default function createStandardRendererSystem(opts) {
     [["options", "areaLights", "length"], "NUM_AREA_LIGHTS", { type: "counter" }],
     [["options", "reflectionProbes", "length"], "USE_REFLECTION_PROBES", { type: "boolean" }],
     [["options", "useTonemapping"], "USE_TONEMAPPING", { type: "boolean" }],
+    [["options", "envMapSize"], "", { uniform: "uEnvMapSize" }], // Blurred env map size
     [["material", "unlit"], "USE_UNLIT_WORKFLOW", { type: "boolean", fallback: "USE_METALLIC_ROUGHNESS_WORKFLOW" }],
     [["material", "blend"], "USE_BLEND", { type: "boolean" }],
     [["skin"], "USE_SKIN"],
@@ -495,6 +496,8 @@ ${
       // && reflectionProbes[0]._reflectionMap) {
       sharedUniforms.uReflectionMap =
         reflectionProbes[0]._reflectionProbe._reflectionMap;
+      sharedUniforms.uReflectionMapSize =
+        reflectionProbes[0]._reflectionProbe._reflectionMap.width;
       sharedUniforms.uReflectionMapEncoding =
         reflectionProbes[0]._reflectionProbe._reflectionMap.encoding;
     }

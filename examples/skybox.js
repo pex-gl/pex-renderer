@@ -4,17 +4,16 @@ import {
   entity as createEntity,
   components,
 } from "../index.js";
+
 import createContext from "pex-context";
 import * as io from "pex-io";
 import { quat } from "pex-math";
 import createGUI from "pex-gui";
 import { sphere } from "primitive-geometry";
 import parseHdr from "parse-hdr";
-import { getURL } from "./utils.js";
+import parseObj from "geom-parse-obj";
 
-// Set reflectionProbe entity mapSize
-// -> used to create oct map
-// -> oct map atlas is derived from it (size * 2, mip/rough levels)
+import { getURL } from "./utils.js";
 
 const {
   camera,
@@ -27,12 +26,13 @@ const {
 } = components;
 
 const State = {
+  envMap: true,
   rotation: 1.5 * Math.PI,
-  mapSizeIndex: 2,
-  mapSizes: [256, 512, 1024, 2048, 4096, 8192],
+  sizeIndex: 4,
+  sizes: [256, 512, 1024, 2048, 4096],
 };
 
-const ctx = createContext();
+const ctx = createContext({ pixelRatio: devicePixelRatio });
 
 const renderEngine = createRenderEngine({ ctx });
 const world = createWorld();
@@ -40,30 +40,32 @@ const world = createWorld();
 const gui = createGUI(ctx, { scale: 1 });
 
 const cameraEntity = createEntity({
-  transform: transform({ position: [0, 0, 3] }),
+  transform: transform({ position: [0, 0, 2] }),
   camera: camera({
-    fov: Math.PI / 3,
     aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
     near: 0.1,
     far: 100,
     postprocess: false,
   }),
-  orbiter: orbiter({
-    position: [0, 0, 3],
-  }),
+  orbiter: orbiter(),
 });
 world.add(cameraEntity);
 
-const geomEntity = createEntity({
+const clothGeom = parseObj(
+  await io.loadText(getURL(`assets/models/PbdCloth/PbdCloth.obj`))
+);
+
+const geometryEntity = createEntity({
   transform: transform({ position: [0, 0, 0] }),
-  geometry: geometry(sphere({ radius: 1 })),
+  geometry: geometry(sphere()),
+  // geometry: geometry(clothGeom),
   material: material({
     baseColor: [1, 1, 1, 1],
     roughness: 0,
     metallic: 1,
   }),
 });
-world.add(geomEntity);
+world.add(geometryEntity);
 
 const skyboxEntity = createEntity({
   transform: transform({
@@ -79,14 +81,16 @@ world.add(skyboxEntity);
 const reflectionProbeEntity = createEntity({
   reflectionProbe: reflectionProbe({
     // rgbm: false,
-    mapSize: State.mapSizes[State.mapSizeIndex],
+    size: State.sizes[State.sizeIndex],
   }),
 });
 world.add(reflectionProbeEntity);
+window.reflectionProbeEntity = reflectionProbeEntity;
 
 (async () => {
   const buffer = await io.loadArrayBuffer(
     getURL(`assets/envmaps/Mono_Lake_B/Mono_Lake_B.hdr`)
+    // getURL(`assets/envmaps/brown_photostudio_02_8k.hdr`)
     // getURL(`assets/envmaps/garage/garage.hdr`)
   );
   const hdrImg = parseHdr(buffer);
@@ -99,15 +103,27 @@ world.add(reflectionProbeEntity);
     flipY: true, //TODO: flipY on non dom elements is deprecated
   });
 
-  skyboxEntity.skybox.envMap = panorama;
+  if (State.envMap) {
+    skyboxEntity.skybox.envMap = panorama;
+  }
 
-  reflectionProbeEntity._reflectionProbe.dirty = true;
+  // Update for GUI
+  renderEngine.update(world.entities);
+  renderEngine.render(world.entities, cameraEntity);
 
   gui.addColumn("Settings");
-  //TODO: implement component.enabled
-  // gui.addParam("Enabled", skyboxEntity.skybox, "enabled", {}, (value) => {
-  // skyboxCmp.set({ enabled: value });
-  // });
+  if (skyboxEntity.skybox.texture || skyboxEntity.skybox.envMap) {
+    gui.addTexture2D(
+      "Skybox",
+      skyboxEntity.skybox.texture || skyboxEntity.skybox.envMap
+    );
+  }
+  gui.addParam("EnvMap", State, "envMap", {}, (enabled) => {
+    skyboxEntity.skybox.envMap = enabled ? panorama : null;
+  });
+  gui.addParam("BG Blur", skyboxEntity.skybox, "backgroundBlur");
+
+  // TODO: not working
   gui.addParam(
     "Rotation",
     State,
@@ -119,41 +135,39 @@ world.add(reflectionProbeEntity);
         [0, 1, 0],
         State.rotation
       );
+      skyboxEntity.transform = { ...skyboxEntity.transform };
       reflectionProbeEntity.reflectionProbe.dirty = true;
     }
   );
-  gui.addParam("BG Blur", skyboxEntity.skybox, "backgroundBlur", {}, () => {});
   gui.addRadioList(
     "Map Size",
     State,
-    "mapSizeIndex",
-    State.mapSizes.map((name, value) => ({
+    "sizeIndex",
+    State.sizes.map((name, value) => ({
       name,
       value,
     })),
     () => {
-      reflectionProbeEntity.reflectionProbe.mapSize =
-        State.mapSizes[State.mapSizeIndex];
-      reflectionProbeEntity._reflectionProbe.dirty = true; // TODO: is it needed?
-      // TODO: update skybox too?
+      reflectionProbeEntity.reflectionProbe.size = State.sizes[State.sizeIndex];
     }
   );
-  gui.addParam("Roughness", geomEntity.material, "roughness", {}, () => {});
+
+  gui.addSeparator();
+  gui.addLabel("Material");
+  gui.addParam("Roughness", geometryEntity.material, "roughness");
+  gui.addParam("Metallic", geometryEntity.material, "metallic");
+
   gui.addColumn("Textures");
   gui.addTextureCube(
     "Cubemap",
-    reflectionProbeEntity._reflectionProbe._dynamicCubemap,
-    { level: 2 }
+    reflectionProbeEntity._reflectionProbe._dynamicCubemap
   );
-  gui.addTexture2D(
-    "Skybox",
-    skyboxEntity.skybox.texture || skyboxEntity.skybox.envMap
-  );
-  gui.addTexture2D("Octmap", reflectionProbeEntity._reflectionProbe._octMap);
+
   gui.addTexture2D(
     "Reflection Map",
     reflectionProbeEntity._reflectionProbe._reflectionMap
   );
+  // gui.addTexture2D("Octmap", reflectionProbeEntity._reflectionProbe._octMap);
 
   window.dispatchEvent(new CustomEvent("pex-screenshot"));
 })();
