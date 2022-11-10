@@ -5,6 +5,7 @@ import createReflectionProbeSystem from "./systems/reflection-probe.js";
 import createRenderPipelineSystem from "./systems/render-pipeline.js";
 import createSkyboxSystem from "./systems/skybox.js";
 import createTransformSystem from "./systems/transform.js";
+import createLayerSystem from "./systems/layer.js";
 
 import createHelperRenderer from "./systems/renderer/helper.js";
 import createLineRenderer from "./systems/renderer/line.js";
@@ -28,6 +29,7 @@ const systems = {
   renderPipeline: createRenderPipelineSystem,
   skybox: createSkyboxSystem,
   transform: createTransformSystem,
+  layer: createLayerSystem,
 };
 
 export default function defaultEngine(opts) {
@@ -39,6 +41,7 @@ export default function defaultEngine(opts) {
   const animationSys = systems.animation();
   const geometrySys = systems.geometry({ ctx });
   const transformSys = systems.transform();
+  const layerSys = systems.layer();
   const cameraSys = systems.camera();
   const skyboxSys = systems.skybox({ ctx });
   const reflectionProbeSys = systems.reflectionProbe({ ctx });
@@ -82,10 +85,11 @@ export default function defaultEngine(opts) {
       animationSys.update(entities, deltaTime);
       geometrySys.update(entities);
       transformSys.update(entities);
+      layerSys.update(entities);
       skyboxSys.update(entities);
       cameraSys.update(entities);
     },
-    render: (entities, cameraEntity, options = {}) => {
+    render: (entities, cameraEntities, options = {}) => {
       resourceCache.beginFrame();
       renderGraph.beginFrame();
 
@@ -93,27 +97,49 @@ export default function defaultEngine(opts) {
         renderers: [skyboxRendererSys],
       });
 
-      const renderView = {
-        camera: cameraEntity.camera,
-        cameraEntity: cameraEntity,
-        viewport: [
+      if (!Array.isArray(cameraEntities)) {
+        cameraEntities = [cameraEntities];
+      }
+
+      const framebufferTexturesPerCamera = [];
+      cameraEntities.forEach((cameraEntity) => {
+        const viewport = cameraEntity.camera.viewport || [
           0,
           0,
           options.width || ctx.gl.drawingBufferWidth,
           options.height || ctx.gl.drawingBufferHeight,
-        ],
-      };
+        ];
 
-      const framebufferTextures = renderPipelineSys.update(entities, {
-        renderers: options.renderers || renderEngine.renderers,
-        renderView: options.renderView || renderView,
-        drawToScreen: options.drawToScreen,
+        cameraEntity.camera.aspect = viewport[2] / viewport[3];
+        cameraEntity.camera.dirty = true;
+
+        const renderView = {
+          camera: cameraEntity.camera,
+          cameraEntity: cameraEntity,
+          viewport: viewport,
+        };
+
+        const entitiesForCamera = cameraEntity.layer
+          ? entities.filter((e) => !e.layer || e.layer == cameraEntity.layer)
+          : entities;
+
+        const framebufferTextures = renderPipelineSys.update(
+          entitiesForCamera,
+          {
+            renderers: options.renderers || renderEngine.renderers,
+            renderView: renderView,
+            drawToScreen: options.drawToScreen,
+          }
+        );
+        framebufferTexturesPerCamera.push(framebufferTextures);
       });
 
       renderGraph.endFrame();
       resourceCache.endFrame();
 
-      return framebufferTextures;
+      return framebufferTexturesPerCamera.length
+        ? framebufferTexturesPerCamera
+        : framebufferTexturesPerCamera[0];
     },
   };
   return renderEngine;

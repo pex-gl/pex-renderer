@@ -391,11 +391,17 @@ export default function createReflectionProbeSystem(opts) {
   reflectionProbeSystem.update = (entities, opts = {}) => {
     let { renderers = [] } = opts;
 
-    const skyboxEntities = entities.filter((e) => e.skybox);
-    const skyboxEntity = skyboxEntities[0];
-
     const reflectionProbeEntities = entities.filter((e) => e.reflectionProbe);
     for (let reflectionProbeEntity of reflectionProbeEntities) {
+      const skyboxEntities = entities
+        .filter((e) => e.skybox)
+        .filter((skyboxEntity) => {
+          return (
+            !reflectionProbeEntity.layer ||
+            reflectionProbeEntity.layer == skyboxEntity.layer
+          );
+        });
+      const skyboxEntity = skyboxEntities[0];
       let cachedProps = reflectionProbeSystem.cache[reflectionProbeEntity.id];
       if (!cachedProps || !reflectionProbeEntity._reflectionProbe) {
         cachedProps = reflectionProbeSystem.cache[reflectionProbeEntity.id] = {

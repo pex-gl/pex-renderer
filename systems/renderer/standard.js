@@ -570,8 +570,7 @@ ${
       sharedUniforms.uViewMatrix = camera.viewMatrix;
       sharedUniforms.uInverseViewMatrix =
         camera.invViewMatrix || camera.inverseViewMatrix; //TODO: settle on invViewMatrix
-      sharedUniforms.uCameraPosition =
-        cameraEntity.camera.position || cameraEntity.transform.worldPosition; //TODO: ugly
+      sharedUniforms.uCameraPosition = cameraEntity._transform.worldPosition; //TODO: ugly
     }
 
     sharedUniforms.uCaptureTexture = backgroundColorTexture;
