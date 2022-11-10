@@ -41,6 +41,7 @@ export default function createRenderPipelineSystem(opts) {
   }
 
   const renderPipelineSystem = {
+    type: "render-pipeline-system",
     cache: {},
     debug: true,
     shadowQuality: opts.shadowQuality !== undefined ? opts.shadowQuality : 2,
@@ -53,9 +54,7 @@ export default function createRenderPipelineSystem(opts) {
     cameraEntity,
     shadowMapping,
     shadowMappingLight,
-    entities,
-    renderableEntities,
-    skybox,
+    entitiesInView,
     forward,
     renderView: renderViewUpstream,
     renderers,
@@ -87,7 +86,7 @@ export default function createRenderPipelineSystem(opts) {
     if (shadowMapping) {
       renderers.forEach((renderer) => {
         if (renderer.renderStages.shadow) {
-          renderer.renderStages.shadow(renderView, entities, {
+          renderer.renderStages.shadow(renderView, entitiesInView, {
             shadowMapping: true,
             shadowMappingLight,
           });
@@ -97,14 +96,14 @@ export default function createRenderPipelineSystem(opts) {
       if (!drawTransparent) {
         renderers.forEach((renderer) => {
           if (renderer.renderStages.opaque) {
-            renderer.renderStages.opaque(renderView, entities, {
+            renderer.renderStages.opaque(renderView, entitiesInView, {
               shadowQuality,
             });
           }
         });
         renderers.forEach((renderer) => {
           if (renderer.renderStages.background) {
-            renderer.renderStages.background(renderView, entities, {
+            renderer.renderStages.background(renderView, entitiesInView, {
               shadowQuality,
             });
           }
@@ -115,7 +114,7 @@ export default function createRenderPipelineSystem(opts) {
         //TODO: capture color buffer and blur it for transmission/refraction
         renderers.forEach((renderer) => {
           if (renderer.renderStages.transparent) {
-            renderer.renderStages.transparent(renderView, entities, {
+            renderer.renderStages.transparent(renderView, entitiesInView, {
               backgroundColorTexture,
               shadowQuality,
             });
@@ -230,7 +229,7 @@ export default function createRenderPipelineSystem(opts) {
           },
           shadowMapping: true,
           shadowMappingLight: light,
-          entities,
+          entitiesInView: entities,
           renderableEntities: shadowCastingEntities,
           forward: false,
           drawTransparent: false,
@@ -306,7 +305,7 @@ export default function createRenderPipelineSystem(opts) {
             // },
             shadowMapping: true,
             shadowMappingLight: light,
-            entities,
+            entitiesInView: entities,
             renderableEntities: shadowCastingEntities,
             forward: false,
             drawTransparent: false,
@@ -336,7 +335,6 @@ export default function createRenderPipelineSystem(opts) {
     );
 
     const cameraEntities = entities.filter((e) => e.camera);
-    const skyboxEntities = entities.filter((e) => e.skybox);
     const directionalLightEntities = entities.filter((e) => e.directionalLight);
     const pointLightEntities = entities.filter((e) => e.pointLight);
     const shadowCastingEntities = rendererableEntities.filter(
@@ -386,9 +384,14 @@ export default function createRenderPipelineSystem(opts) {
         return e.directionalLight._shadowMap;
       })
       .filter((_) => _);
-    // cameraEntities.forEach((camera) => {
+
+    let entitiesInView = entities;
     let entitiesToDraw = rendererableEntities;
+
     if (renderView.camera.layer) {
+      entitiesInView = entities.filter((e) => {
+        return !e.layer || e.layer == renderView.camera.layer;
+      });
       entitiesToDraw = rendererableEntities.filter((e) => {
         return !e.layer || e.layer == renderView.camera.layer;
       });
@@ -433,9 +436,8 @@ export default function createRenderPipelineSystem(opts) {
           viewport: renderView.viewport,
           cameraEntity: renderView.cameraEntity,
           shadowMapping: false,
-          entities: entities,
+          entitiesInView: entitiesInView,
           renderableEntities: entitiesToDraw,
-          skybox: skyboxEntities[0]?._skybox,
           forward: true,
           drawTransparent: false,
           renderers: renderers,
@@ -444,7 +446,9 @@ export default function createRenderPipelineSystem(opts) {
       },
     });
 
-    const needsGrabPass = !!entities.find((e) => e.material?.transmission);
+    const needsGrabPass = !!entitiesInView.find(
+      (e) => e.material?.transmission
+    );
     let grabPassColorCopyTexture;
     if (needsGrabPass) {
       passes.grabPass.colorCopyTextureDesc.width = prevPowerOfTwo(
@@ -522,9 +526,8 @@ export default function createRenderPipelineSystem(opts) {
           viewport: renderView.viewport,
           cameraEntity: renderView.cameraEntity,
           shadowMapping: false,
-          entities: entities,
+          entitiesInView: entitiesInView,
           renderableEntities: entitiesToDraw,
-          skybox: skyboxEntities[0]?._skybox,
           forward: true,
           drawTransparent: true,
           backgroundColorTexture: grabPassColorCopyTexture,
