@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+# [4.0.0-alpha.27](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.26...v4.0.0-alpha.27) (2022-11-10)
+
+
+### Bug Fixes
+
+* **renderer/standard:** fix camera position uniform ([6c48f83](https://github.com/pex-gl/pex-renderer/commit/6c48f83f95779fe4081df4de904a378ff67024e3))
+
+
+### Features
+
+* **ecs:** add support for spot lights ([457179c](https://github.com/pex-gl/pex-renderer/commit/457179c734a9ed624d701a7827a525e374ee0045))
+* **systems/layer:** add layer system with example ([2cba168](https://github.com/pex-gl/pex-renderer/commit/2cba168adfed0497340ce2cdce5d66f7e375eabd))
+
+
+
 # [4.0.0-alpha.26](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.25...v4.0.0-alpha.26) (2022-11-09)
 
 
