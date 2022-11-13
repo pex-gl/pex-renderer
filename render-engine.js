@@ -93,10 +93,6 @@ export default function defaultEngine(opts) {
       resourceCache.beginFrame();
       renderGraph.beginFrame();
 
-      reflectionProbeSys.update(entities, {
-        renderers: [skyboxRendererSys],
-      });
-
       if (!Array.isArray(cameraEntities)) {
         cameraEntities = [cameraEntities];
       }
@@ -122,6 +118,10 @@ export default function defaultEngine(opts) {
         const entitiesForCamera = cameraEntity.layer
           ? entities.filter((e) => !e.layer || e.layer == cameraEntity.layer)
           : entities;
+
+        reflectionProbeSys.update(entitiesForCamera, {
+          renderers: [skyboxRendererSys],
+        });
 
         const framebufferTextures = renderPipelineSys.update(
           entitiesForCamera,
