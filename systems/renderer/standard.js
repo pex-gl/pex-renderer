@@ -420,7 +420,7 @@ ${
           );
         else return c;
       });
-      sharedUniforms[`uDirectionalLights[${i}].castShadows`] = light.castShadows;
+      sharedUniforms[`uDirectionalLights[${i}].castShadows`] = !!light.castShadows;
       sharedUniforms[`uDirectionalLights[${i}].projectionMatrix`] = light._projectionMatrix || tempMat4; //FIXME
       sharedUniforms[`uDirectionalLights[${i}].viewMatrix`] = light._viewMatrix || tempMat4; //FIXME;
       sharedUniforms[`uDirectionalLights[${i}].near`] = light._near || 0.1;

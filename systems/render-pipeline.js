@@ -329,7 +329,7 @@ export default function createRenderPipelineSystem(opts) {
           },
           shadowMapping: true,
           shadowMappingLight: light,
-          entities,
+          entitiesInView: entities,
           renderableEntities: shadowCastingEntities,
           forward: false,
           drawTransparent: false,

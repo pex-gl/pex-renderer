@@ -7,15 +7,13 @@ import {
 
 import createContext from "pex-context";
 import createGUI from "pex-gui";
-import { mat4, quat } from "pex-math";
-import { cube } from "primitive-geometry";
+import { quat, vec2 } from "pex-math";
 
+import { cube } from "primitive-geometry";
 import normals from "angle-normals";
-// import centerAndNormalize from "geom-center-and-normalize";
 import gridCells from "grid-cells";
 
 import { centerAndNormalize } from "./utils.js";
-
 import * as d from "./assets/models/stanford-dragon/stanford-dragon.js";
 
 const {
@@ -27,18 +25,11 @@ const {
   geometry,
   material,
   orbiter,
-  skybox,
-  reflectionProbe,
   transform,
 } = components;
 
-const dragon = { ...d };
-
-const ctx = createContext();
-ctx.gl.getExtension("EXT_shader_texture_lod");
-ctx.gl.getExtension("OES_standard_derivatives");
-ctx.gl.getExtension("WEBGL_draw_buffers");
-ctx.gl.getExtension("OES_texture_float");
+const pixelRatio = 2;
+const ctx = createContext({ pixelRatio });
 
 const renderEngine = createRenderEngine({ ctx });
 const world = createWorld();
@@ -52,16 +43,16 @@ const nH = 2;
 let debugOnce = false;
 
 // Utils
-const cameraEntities = gridCells(W, H, nW, nH, 0).map((cell) =>
-  createEntity({
+const LAYERS = ["directional", "spot", "point", "area"];
+const cameraEntities = gridCells(W, H, nW, nH, 0).map((cell, i) => {
+  const cameraEntity = createEntity({
+    layer: LAYERS[i],
     transform: transform({
       target: [0, 0, 0],
       position: [2, 2, 3],
     }),
     camera: camera({
       target: [0, 0, 0],
-      // position: [2, 2, 2],
-      // fov: Math.PI / 3,
       aspect: W / nW / (H / nH),
       viewport: [
         cell[0],
@@ -72,11 +63,13 @@ const cameraEntities = gridCells(W, H, nW, nH, 0).map((cell) =>
       ],
     }),
     orbiter: orbiter(),
-    entities: [],
-  })
-);
+  });
+  world.add(cameraEntity);
+  return cameraEntity;
+});
 
 // Geometry
+const dragon = { ...d };
 dragon.positions = centerAndNormalize(dragon.positions);
 dragon.normals = normals(dragon.cells, dragon.positions);
 dragon.uvs = dragon.positions.map(() => [0, 0]);
@@ -120,13 +113,8 @@ world.add(floorEntity);
 // world.add(ambientLightEntity);
 
 // Directional
-const directionalLightCmp = directionalLight({
-  color: [1, 1, 1, 1],
-  intensity: 1,
-  castShadows: true,
-});
-
 const directionalLightEntity = createEntity({
+  layer: LAYERS[0],
   transform: transform({
     position: [1, 1, 1],
     rotation: quat.targetTo(quat.create(), [0, 0, 0], [1, 1, 1]),
@@ -135,20 +123,17 @@ const directionalLightEntity = createEntity({
   material: material({
     baseColor: [1, 1, 0, 1],
   }),
-  directionalLight: directionalLightCmp,
+  directionalLight: directionalLight({
+    color: [1, 1, 1, 1],
+    intensity: 1,
+    castShadows: true,
+  }),
   lightHelper: true,
 });
-cameraEntities[0].entities.push(directionalLightEntity);
-
-gui.addHeader("Directional").setPosition(10, 10);
-gui.addParam("Intensity", directionalLightCmp, "intensity", {
-  min: 0,
-  max: 20,
-});
-// gui.addTexture2D("Shadowmap", directionalLightCmp._shadowMap);
-gui.addParam("Shadows", directionalLightCmp, "castShadows");
+world.add(directionalLightEntity);
 
 const fixDirectionalLightEntity = createEntity({
+  layer: LAYERS[0],
   transform: transform({
     position: [1, 1, 1],
     rotation: quat.targetTo(quat.create(), [0, 0, 0], [1, 1, 1]),
@@ -163,19 +148,11 @@ const fixDirectionalLightEntity = createEntity({
   }),
   lightHelper: true,
 });
-cameraEntities[0].entities.push(fixDirectionalLightEntity);
+world.add(fixDirectionalLightEntity);
 
 // Spot
-const spotLightCmp = spotLight({
-  color: [1, 1, 1, 1],
-  intensity: 2,
-  range: 5,
-  angle: Math.PI / 6,
-  innerAngle: Math.PI / 12,
-  castShadows: true,
-});
-
 const spotLightEntity = createEntity({
+  layer: LAYERS[1],
   transform: transform({
     position: [1, 0.5, 1],
     rotation: quat.targetTo(quat.create(), [0, 0, 0], [1, 1, 1]),
@@ -183,29 +160,20 @@ const spotLightEntity = createEntity({
   material: material({
     baseColor: [1, 0, 1, 1],
   }),
-  spotLight: spotLightCmp,
+  spotLight: spotLight({
+    color: [1, 1, 1, 1],
+    intensity: 2,
+    range: 5,
+    angle: Math.PI / 6,
+    innerAngle: Math.PI / 12,
+    castShadows: true,
+  }),
   lightHelper: true,
 });
-cameraEntities[1].entities.push(spotLightEntity);
-
-gui.addHeader("Spot").setPosition(W / 2 + 10, 10);
-gui.addParam("Range", spotLightCmp, "range", {
-  min: 0,
-  max: 20,
-});
-gui.addParam("Intensity", spotLightCmp, "intensity", { min: 0, max: 20 });
-gui.addParam("Angle", spotLightCmp, "angle", {
-  min: 0,
-  max: Math.PI / 2 - Number.EPSILON,
-});
-gui.addParam("Inner angle", spotLightCmp, "innerAngle", {
-  min: 0,
-  max: Math.PI / 2 - Number.EPSILON,
-});
-// gui.addTexture2D("Shadowmap", spotLightCmp._shadowMap);
-gui.addParam("Shadows", spotLightCmp, "castShadows");
+world.add(spotLightEntity);
 
 const fixSpotLightEntity = createEntity({
+  layer: LAYERS[1],
   transform: transform({
     position: [1, 0.5, 1],
     rotation: quat.targetTo(quat.create(), [0, 0, 0], [1, 1, 1]),
@@ -223,38 +191,29 @@ const fixSpotLightEntity = createEntity({
   }),
   lightHelper: true,
 });
-cameraEntities[1].entities.push(fixSpotLightEntity);
+world.add(fixSpotLightEntity);
 
 // Point
-const pointLightCmp = pointLight({
-  color: [1, 1, 1, 1],
-  intensity: 2,
-  range: 5,
-  castShadows: true,
-});
-
 const pointLightEntity = createEntity({
+  layer: LAYERS[2],
   transform: transform({
     position: [1, 1, 1],
   }),
   material: material({
     baseColor: [1, 1, 1, 1],
   }),
-  pointLight: pointLightCmp,
+  pointLight: pointLight({
+    color: [1, 1, 1, 1],
+    intensity: 2,
+    range: 5,
+    castShadows: true,
+  }),
   lightHelper: true,
 });
-cameraEntities[2].entities.push(pointLightEntity);
-
-gui.addHeader("Point").setPosition(10, H / 2 + 10);
-gui.addParam("Range", pointLightCmp, "range", {
-  min: 0,
-  max: 20,
-});
-gui.addParam("Intensity", pointLightCmp, "intensity", { min: 0, max: 20 });
-// gui.addTextureCube("Shadowmap", pointLightCmp._shadowCubemap);
-gui.addParam("Shadows", pointLightCmp, "castShadows");
+world.add(pointLightEntity);
 
 const fixPointLightEntity = createEntity({
+  layer: LAYERS[2],
   transform: transform({
     position: [1, 1, 1],
   }),
@@ -269,7 +228,7 @@ const fixPointLightEntity = createEntity({
   }),
   lightHelper: true,
 });
-cameraEntities[2].entities.push(fixPointLightEntity);
+world.add(fixPointLightEntity);
 
 // Area
 const areaLightCmp = areaLight({
@@ -279,6 +238,7 @@ const areaLightCmp = areaLight({
 });
 
 const areaLightEntity = createEntity({
+  layer: LAYERS[3],
   transform: transform({
     scale: [2, 0.5, 1],
     position: [1, 1, 1],
@@ -290,14 +250,10 @@ const areaLightEntity = createEntity({
   areaLight: areaLightCmp,
   lightHelper: true,
 });
-cameraEntities[3].entities.push(areaLightEntity);
-
-gui.addHeader("Area").setPosition(W / 2 + 10, H / 2 + 10);
-// gui.addParam("Enabled", areaLightCmp, "enabled", {}, (value) => {
-//   areaLightCmp.set({ enabled: value });
-// });
+world.add(areaLightEntity);
 
 const fixAreaLightEntity = createEntity({
+  layer: LAYERS[3],
   transform: transform({
     scale: [2, 0.5, 1],
     position: [1, 1, 1],
@@ -313,10 +269,77 @@ const fixAreaLightEntity = createEntity({
   }),
   lightHelper: true,
 });
-cameraEntities[3].entities.push(fixAreaLightEntity);
+world.add(fixAreaLightEntity);
+
+// GUI
+renderEngine.update(world.entities);
+renderEngine.render(world.entities, cameraEntities);
+
+const viewportToCanvasPosition = (viewport) => [
+  viewport[0] / pixelRatio,
+  (H * (1 - viewport[1] / H - viewport[3] / H)) / pixelRatio,
+];
+
+const getViewportPosition = (layer, offset = [10, 10]) =>
+  vec2.add(
+    viewportToCanvasPosition(
+      cameraEntities.find((e) => e.layer === layer).camera.viewport
+    ),
+    offset
+  );
+
+gui.addHeader("Directional").setPosition(...getViewportPosition(LAYERS[0]));
+gui.addParam(
+  "Intensity",
+  directionalLightEntity.directionalLight,
+  "intensity",
+  {
+    min: 0,
+    max: 20,
+  }
+);
+gui.addTexture2D(
+  "Shadowmap",
+  directionalLightEntity.directionalLight._shadowMap
+);
+gui.addParam("Shadows", directionalLightEntity.directionalLight, "castShadows");
+
+gui.addHeader("Spot").setPosition(...getViewportPosition(LAYERS[1]));
+gui.addParam("Range", spotLightEntity.spotLight, "range", {
+  min: 0,
+  max: 20,
+});
+gui.addParam("Intensity", spotLightEntity.spotLight, "intensity", {
+  min: 0,
+  max: 20,
+});
+gui.addParam("Angle", spotLightEntity.spotLight, "angle", {
+  min: 0,
+  max: Math.PI / 2 - Number.EPSILON,
+});
+gui.addParam("Inner angle", spotLightEntity.spotLight, "innerAngle", {
+  min: 0,
+  max: Math.PI / 2 - Number.EPSILON,
+});
+gui.addTexture2D("Shadowmap", spotLightEntity.spotLight._shadowMap);
+gui.addParam("Shadows", spotLightEntity.spotLight, "castShadows");
+
+gui.addHeader("Point").setPosition(...getViewportPosition(LAYERS[2]));
+gui.addParam("Range", pointLightEntity.pointLight, "range", {
+  min: 0,
+  max: 20,
+});
+gui.addParam("Intensity", pointLightEntity.pointLight, "intensity", {
+  min: 0,
+  max: 20,
+});
+gui.addTextureCube("Shadowmap", pointLightEntity.pointLight._shadowCubemap);
+gui.addParam("Shadows", pointLightEntity.pointLight, "castShadows");
+
+gui.addHeader("Area").setPosition(...getViewportPosition(LAYERS[3]));
 
 window.addEventListener("keydown", ({ key }) => {
-  if (key === "g") gui.toggleEnabled();
+  if (key === "g") gui.enabled = !gui.enabled;
   if (key === "d") debugOnce = true;
 });
 
@@ -325,7 +348,7 @@ let delta = 0;
 ctx.frame(() => {
   delta += 0.005;
 
-  const position = [2 * Math.cos(delta), 1, 2 * Math.sin(delta)];
+  const position = [Math.cos(delta), 1, Math.sin(delta)];
   const rotation = quat.targetTo(
     quat.create(),
     position.map((n) => -n),
@@ -349,29 +372,13 @@ ctx.frame(() => {
     rotation,
   };
 
-  renderEngine.update([
-    ...world.entities,
-    ...cameraEntities,
-    ...cameraEntities.map(({ entities }) => entities).flat(),
-  ]);
-
-  cameraEntities.forEach((cameraEntity) => {
-    renderEngine.render(
-      world.entities.concat(cameraEntity.entities),
-      cameraEntity,
-      {
-        renderView: {
-          camera: cameraEntity.camera,
-          cameraEntity: cameraEntity,
-          viewport: cameraEntity.camera.viewport,
-        },
-      }
-    );
-  });
+  renderEngine.update(world.entities);
+  renderEngine.render(world.entities, cameraEntities);
 
   ctx.debug(debugOnce);
   debugOnce = false;
 
   gui.draw();
+
   window.dispatchEvent(new CustomEvent("pex-screenshot"));
 });
