@@ -29,8 +29,8 @@ void main() {
 
   vec3 sampledColor = vec3(0.0, 0.0, 0.0);
   float index = 0.0;
-  const float dphi = 2.0 * PI / 180.0 * 2.0;
-  const float dtheta = 0.5 * PI / 64.0 * 2.0;
+  const float dphi = 2.0 * PI / 180.0 * 2.0; //TODO: should it be (180.0 * 2.0) ?
+  const float dtheta = 0.5 * PI / 64.0 * 2.0;  //TODO: should it be (64.0 * 2.0) ?
   for(float phi = 0.0; phi < 2.0 * PI; phi += dphi) {
     for(float theta = 0.0; theta < 0.5 * PI; theta += dtheta) {
       vec3 temp = cos(phi) * right + sin(phi) * up;

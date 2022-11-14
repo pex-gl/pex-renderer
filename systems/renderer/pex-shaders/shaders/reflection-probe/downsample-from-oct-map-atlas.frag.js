@@ -29,6 +29,7 @@ void main() {
   uv *= levelSize;
   uv = (uv + vec2(hOffset, vOffset)) / width;
   vec4 color = vec4(0.0);
+  //TODO: this is not correct way to downsample octmap
   color += texture2D(uOctMapAtlas, uv);
   color += texture2D(uOctMapAtlas, uv + vec2(-1.0, 0.0)/levelSize);
   color += texture2D(uOctMapAtlas, uv + vec2( 1.0, 0.0)/levelSize);

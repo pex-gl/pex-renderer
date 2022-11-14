@@ -5,7 +5,7 @@ uniform float uReflectance;
 // https://google.github.io/filament/Filament.md.html#materialsystem/specularbrdf
 // Distribution
 // Walter et al. 2007, "Microfacet Models for Refraction through Rough Surfaces"
-float D_GGX(float linearRoughness, float NoH, const vec3 h, const vec3 normalWorld) {
+float D_GGX(float linearRoughness, float NoH, const vec3 h, const vec3 normalWorld) { //TODO: h and normalWorld are not used
   float oneMinusNoHSquared = 1.0 - NoH * NoH;
 
   float a = NoH * linearRoughness;
