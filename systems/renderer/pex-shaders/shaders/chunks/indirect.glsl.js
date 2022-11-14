@@ -7,15 +7,16 @@ export default /* glsl */ `
   #define MAX_MIPMAP_LEVEL 5.0
 
   vec3 getPrefilteredReflection(vec3 reflected, float roughness) {
-    float lod = pow(roughness, 2.0) * MAX_MIPMAP_LEVEL; // TODO: verify reflection probe blurring code
-    // float lod = pow(roughness, 1.5) * MAX_MIPMAP_LEVEL;
+    float MIN_ROUGHNESS = 0.089; //TODO: this is defined elsewhere as well but lower down in frag src
+    float lod = (roughness - MIN_ROUGHNESS)/(1.0 - MIN_ROUGHNESS) * MAX_MIPMAP_LEVEL;
     float upLod = floor(lod);
     float downLod = ceil(lod);
 
     vec3 a = decode(texture2D(uReflectionMap, envMapOctahedral(reflected, 0.0, upLod, uReflectionMapSize)), uReflectionMapEncoding).rgb;
     vec3 b = decode(texture2D(uReflectionMap, envMapOctahedral(reflected, 0.0, downLod, uReflectionMapSize)), uReflectionMapEncoding).rgb;
 
-    return mix(a, b, lod - upLod);
+    float sampleLod = lod - upLod;
+    return mix(a, b, sampleLod);
   }
 
   vec3 EnvBRDFApprox( vec3 specularColor, float roughness, float NoV ) {
