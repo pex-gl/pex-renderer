@@ -67,13 +67,12 @@ vec4 textureOctMapLod(sampler2D tex, vec2 uv, float sourceRoughnessLevel, float 
   float maxLevel = log2(width); // this should come from log of size
 
   float levelSize = width / pow(2.0, 1.0 + sourceMipmapLevel + sourceRoughnessLevel);
-  float roughnessLevelWidth = width / pow(2.0, 1.0 + sourceMipmapLevel);
 
   float vOffset = (width - pow(2.0, maxLevel - sourceRoughnessLevel));
-  float hOffset = 2.0 * roughnessLevelWidth - pow(2.0, log2(2.0 * roughnessLevelWidth) - sourceMipmapLevel);
+  float hOffset = (width - pow(2.0, maxLevel - sourceMipmapLevel));
 
   // trying to fix oveflow from atlas..
-  uv = (uv * levelSize + 0.5) / (levelSize + 1.0);
+  // uv = (uv * levelSize + 0.5) / (levelSize + 1.0);
   uv *= levelSize;
   uv = (uv + vec2(hOffset, vOffset)) / width;
   return texture2D(uOctMapAtlas, uv);
