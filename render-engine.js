@@ -97,49 +97,48 @@ export default function defaultEngine(opts) {
         cameraEntities = [cameraEntities];
       }
 
-      const framebufferTexturesPerCamera = [];
-      cameraEntities.forEach((cameraEntity) => {
-        const viewport = cameraEntity.camera.viewport || [
-          0,
-          0,
-          options.width || ctx.gl.drawingBufferWidth,
-          options.height || ctx.gl.drawingBufferHeight,
-        ];
+      const framebufferTexturesPerCamera = cameraEntities.map(
+        (cameraEntity) => {
+          const viewport = cameraEntity.camera.viewport || [
+            0,
+            0,
+            options.width || ctx.gl.drawingBufferWidth,
+            options.height || ctx.gl.drawingBufferHeight,
+          ];
 
-        cameraEntity.camera.aspect = viewport[2] / viewport[3];
-        cameraEntity.camera.dirty = true;
+          cameraEntity.camera.aspect = viewport[2] / viewport[3];
+          cameraEntity.camera.dirty = true;
 
-        const renderView = {
-          camera: cameraEntity.camera,
-          cameraEntity: cameraEntity,
-          viewport: viewport,
-        };
+          const renderView = {
+            camera: cameraEntity.camera,
+            cameraEntity: cameraEntity,
+            viewport: viewport,
+          };
 
-        const entitiesForCamera = cameraEntity.layer
-          ? entities.filter((e) => !e.layer || e.layer == cameraEntity.layer)
-          : entities;
+          const entitiesForCamera = cameraEntity.layer
+            ? entities.filter((e) => !e.layer || e.layer == cameraEntity.layer)
+            : entities;
 
-        reflectionProbeSys.update(entitiesForCamera, {
-          renderers: [skyboxRendererSys],
-        });
+          reflectionProbeSys.update(entitiesForCamera, {
+            renderers: [skyboxRendererSys],
+          });
 
-        const framebufferTextures = renderPipelineSys.update(
-          entitiesForCamera,
-          {
-            renderers: options.renderers || renderEngine.renderers,
-            renderView: renderView,
-            drawToScreen: options.drawToScreen,
-          }
-        );
-        framebufferTexturesPerCamera.push(framebufferTextures);
-      });
+          const framebufferTextures = renderPipelineSys.update(
+            entitiesForCamera,
+            {
+              renderers: options.renderers || renderEngine.renderers,
+              renderView: renderView,
+              drawToScreen: options.drawToScreen,
+            }
+          );
+          return framebufferTextures;
+        }
+      );
 
       renderGraph.endFrame();
       resourceCache.endFrame();
 
-      return framebufferTexturesPerCamera.length
-        ? framebufferTexturesPerCamera
-        : framebufferTexturesPerCamera[0];
+      return framebufferTexturesPerCamera;
     },
   };
   return renderEngine;
