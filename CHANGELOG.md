@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+# [4.0.0-alpha.28](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.27...v4.0.0-alpha.28) (2022-11-16)
+
+
+### Bug Fixes
+
+* **components/reflection-probe:** add default size ([f4d7e46](https://github.com/pex-gl/pex-renderer/commit/f4d7e46a82c9efc00bb6c35a1d805f73557ea20b))
+* **ecs:** cast light.castShadows to boolean ([584f89e](https://github.com/pex-gl/pex-renderer/commit/584f89e06e191df9f7c16c9d2cfcda7172d4962f))
+* **ecs:** pass entitiesInView in updateSpotLightShadowMap ([17f324d](https://github.com/pex-gl/pex-renderer/commit/17f324d0549564059d39eb568969b649927a540f))
+
+
+### Features
+
+* **render-engine:** always return array of textures per camera ([b257461](https://github.com/pex-gl/pex-renderer/commit/b257461789adb8d8b7825d5fb6a6e4b3562cc0d2))
+* **render-engine:** update reflection probe per camera ([ccb33e4](https://github.com/pex-gl/pex-renderer/commit/ccb33e4bae9c8b2ece578199171c4c97b3964c8f))
+
+
+
 # [4.0.0-alpha.27](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.26...v4.0.0-alpha.27) (2022-11-10)
 
 
