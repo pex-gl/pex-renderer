@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+# [4.0.0-alpha.29](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.28...v4.0.0-alpha.29) (2022-11-17)
+
+
+### Bug Fixes
+
+* **reflection-probe:** fix reflection probes not updating ([e1971cd](https://github.com/pex-gl/pex-renderer/commit/e1971cde10bd467be0ec4b617a7bc35e5fc861d7))
+
+
+
 # [4.0.0-alpha.28](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.27...v4.0.0-alpha.28) (2022-11-16)
 
 
