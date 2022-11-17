@@ -88,6 +88,7 @@ class ReflectionProbe {
     });
 
     this._dynamicCubemapSides = [...cubemapSides].map((side, i) => {
+      side = { ...side };
       side.projectionMatrix = [...cubemapProjectionMatrix];
       side.viewMatrix = mat4.lookAt(
         mat4.create(),
