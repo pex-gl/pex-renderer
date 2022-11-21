@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+# [4.0.0-alpha.30](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.29...v4.0.0-alpha.30) (2022-11-21)
+
+
+### Bug Fixes
+
+* **render-graph:** catch errors in render graph ([1b5ca34](https://github.com/pex-gl/pex-renderer/commit/1b5ca34e85718804acd1323efc8b82f6bd54175a))
+
+
+
 # [4.0.0-alpha.29](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.28...v4.0.0-alpha.29) (2022-11-17)
 
 
