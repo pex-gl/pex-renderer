@@ -56,13 +56,17 @@ class RenderGraph {
           scissor: renderView.viewport,
         },
         () => {
-          uses.forEach((texture) => {
-            //FIXME: mipmap generation should happen only once
-            if (texture.min == this.ctx.Filter.LinearMipmapLinear) {
-              this.ctx.update(texture, { mipmap: true });
-            }
-          });
-          if (render) render();
+          try {
+            uses.forEach((texture) => {
+              //FIXME: mipmap generation should happen only once
+              if (texture.min == this.ctx.Filter.LinearMipmapLinear) {
+                this.ctx.update(texture, { mipmap: true });
+              }
+            });
+            if (render) render();
+          } catch (e) {
+            console.error("pex-renderer", `Pass "${opts.name}" crashed`, e);
+          }
         }
       );
     });
