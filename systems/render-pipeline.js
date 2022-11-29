@@ -536,7 +536,7 @@ export default function createRenderPipelineSystem(opts) {
     const mainPass = resourceCache.pass({
       color: [mainPassOutputTexture, mainPassNormalOutputTexture],
       depth: outputDepthTexture,
-      clearColor: [0, 0, 0, 1],
+      clearColor: renderView.camera.clearColor,
       clearDepth: 1,
     });
     renderGraph.renderPass({

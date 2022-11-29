@@ -9,6 +9,7 @@ export default function createCamera(opts = {}) {
     near: 0.5,
     far: 1000,
     exposure: 1,
+    clearColor: [1, 0, 0, 1],
     ...opts,
   };
   //should this be in systems?
