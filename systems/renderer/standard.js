@@ -1,9 +1,11 @@
-import { vec3, vec4, mat3, mat4 } from "pex-math";
+import { vec3, vec4, mat3, mat4, mat2x3 } from "pex-math";
 import {
   pipeline as SHADERS,
   chunks as SHADERS_CHUNKS,
 } from "./pex-shaders/index.js";
 import { patchVS, patchFS } from "../../utils.js";
+
+const tempMat2x3 = mat2x3.create();
 
 export default function createStandardRendererSystem(opts) {
   const { ctx } = opts;
@@ -178,6 +180,20 @@ export default function createStandardRendererSystem(opts) {
         flags.push(`USE_${defineName}`);
         flags.push(`${defineName}_TEX_COORD_INDEX 0`);
         materialUniforms[opts.uniform] = value.texture || value;
+
+        if (value.texture && (value.offset || value.rotation || value.scale)) {
+          mat2x3.identity(tempMat2x3);
+          mat2x3.translate(tempMat2x3, value.offset || [0, 0]);
+          mat2x3.rotate(tempMat2x3, -value.rotation || 0);
+          mat2x3.scale(tempMat2x3, value.scale || [1, 1]);
+
+          value.texCoordTransformMatrix = mat3.fromMat2x3(
+            value.texCoordTransformMatrix
+              ? mat3.identity(value.texCoordTransformMatrix)
+              : mat3.create(),
+            tempMat2x3
+          );
+        }
         if (value.texCoordTransformMatrix) {
           flags.push(`USE_${defineName}_TEX_COORD_TRANSFORM`);
           materialUniforms[opts.uniform + "TexCoordTransform"] =
