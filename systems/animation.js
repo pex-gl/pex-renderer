@@ -197,7 +197,13 @@ export default function createAnimationSystem(opts) {
 
   animationSystem.updateAnimations = (animationEntities, deltaTime) => {
     for (let entity of animationEntities) {
-      updateAnimation(entity.animation, deltaTime);
+      if (entity.animations) {
+        for (let animation of entity.animations) {
+          updateAnimation(animation, deltaTime);
+        }
+      } else {
+        updateAnimation(entity.animation, deltaTime);
+      }
     }
   };
 
@@ -219,7 +225,9 @@ export default function createAnimationSystem(opts) {
   };
 
   animationSystem.update = (entities, deltaTime) => {
-    const animationEntities = entities.filter((e) => e.animation);
+    const animationEntities = entities.filter(
+      (e) => e.animation || e.animations
+    );
     animationSystem.updateAnimations(animationEntities, deltaTime);
 
     const skinEntities = entities.filter((e) => e.skin);

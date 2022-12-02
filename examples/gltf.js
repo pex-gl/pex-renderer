@@ -723,7 +723,6 @@ ctx.frame(() => {
     const now = Date.now();
     const deltaTime = (now - prevTime) / 1000;
     prevTime = now;
-    world.update(deltaTime);
     if (cameraEntity) {
       renderEngine.update(world.entities, deltaTime);
       renderEngine.render(world.entities, cameraEntity);
