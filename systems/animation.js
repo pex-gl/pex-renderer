@@ -183,6 +183,7 @@ function updateAnimation(animation, deltaTime) {
         //   scale: vec3.copy(currentOutputVec3),
         // });
       } else if (channel.path === "weights") {
+        channel.target.morph.weights = outputData[nextIndex].slice();
         // channel.target.getComponent("Morph").set({
         //   weights: outputData[nextIndex].slice(),
         // });

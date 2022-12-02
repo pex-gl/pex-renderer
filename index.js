@@ -25,6 +25,7 @@ import cameraHelper from "./components/camera-helper.js";
 import createAnimationSystem from "./systems/animation.js";
 import createCameraSystem from "./systems/camera.js";
 import createGeometrySystem from "./systems/geometry.js";
+import createMorphSystem from "./systems/morph.js";
 import createReflectionProbeSystem from "./systems/reflection-probe.js";
 import createRenderPipelineSystem from "./systems/render-pipeline.js";
 import createSkyboxSystem from "./systems/skybox.js";
@@ -71,6 +72,7 @@ export let systems = {
   animation: createAnimationSystem,
   camera: createCameraSystem,
   geometry: createGeometrySystem,
+  morph: createMorphSystem,
   reflectionProbe: createReflectionProbeSystem,
   renderPipeline: createRenderPipelineSystem,
   skybox: createSkyboxSystem,

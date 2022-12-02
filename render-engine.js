@@ -1,6 +1,7 @@
 import createAnimationSystem from "./systems/animation.js";
 import createCameraSystem from "./systems/camera.js";
 import createGeometrySystem from "./systems/geometry.js";
+import createMorphSystem from "./systems/morph.js";
 import createReflectionProbeSystem from "./systems/reflection-probe.js";
 import createRenderPipelineSystem from "./systems/render-pipeline.js";
 import createSkyboxSystem from "./systems/skybox.js";
@@ -25,6 +26,7 @@ const systems = {
   animation: createAnimationSystem,
   camera: createCameraSystem,
   geometry: createGeometrySystem,
+  morph: createMorphSystem,
   reflectionProbe: createReflectionProbeSystem,
   renderPipeline: createRenderPipelineSystem,
   skybox: createSkyboxSystem,
@@ -40,6 +42,7 @@ export default function defaultEngine(opts) {
 
   const animationSys = systems.animation();
   const geometrySys = systems.geometry({ ctx });
+  const morphSys = systems.morph();
   const transformSys = systems.transform();
   const layerSys = systems.layer();
   const cameraSys = systems.camera();
@@ -70,6 +73,7 @@ export default function defaultEngine(opts) {
     systems: [
       animationSys,
       geometrySys,
+      morphSys,
       transformSys,
       skyboxSys,
       cameraSys,
@@ -84,6 +88,7 @@ export default function defaultEngine(opts) {
     update: (entities, deltaTime) => {
       animationSys.update(entities, deltaTime);
       geometrySys.update(entities);
+      morphSys.update(entities);
       transformSys.update(entities);
       layerSys.update(entities);
       skyboxSys.update(entities);
