@@ -178,7 +178,7 @@ export default function createStandardRendererSystem(opts) {
         flags.push(`${defineName} ${value}`);
       } else if (opts.type == "texture" && value) {
         flags.push(`USE_${defineName}`);
-        flags.push(`${defineName}_TEX_COORD_INDEX 0`);
+        flags.push(`${defineName}_TEX_COORD_INDEX ${value.texCoord || 0}`);
         materialUniforms[opts.uniform] = value.texture || value;
 
         if (value.texture && (value.offset || value.rotation || value.scale)) {
