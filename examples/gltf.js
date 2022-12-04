@@ -50,7 +50,7 @@ const State = {
     "glTF-KTX-BasisU",
     "glTF-JPG-PNG",
   ],
-  currentFormat: 0,
+  currentFormat: 2,
   modelName: "-",
 };
 
@@ -65,6 +65,7 @@ const FORMAT_EXTENSION = new Map()
 
 // Start
 const ctx = createContext({
+  pixelRatio: devicePixelRatio,
   powerPreference: "high-performance",
 });
 ctx.gl.getExtension("OES_element_index_uint"); //TEMP
@@ -104,7 +105,10 @@ world.add(sunEntity);
 const skyboxEntity = createEntity({
   skybox: skybox({
     sunPosition: [1, 1, 1],
-    backgroundBlur: 0,
+    backgroundBlur: 1,
+  }),
+  transform: transform({
+    rotation: quat.fromEuler(quat.create(), [0, -Math.PI, 0]),
   }),
 });
 world.add(skyboxEntity);
@@ -123,7 +127,9 @@ unitBox.primitive = ctx.Primitive.Lines;
 
 const addEnvmap = async () => {
   const buffer = await loadArrayBuffer(
-    getURL(`assets/envmaps/garage/garage.hdr`)
+    // getURL(`assets/envmaps/Mono_Lake_B/Mono_Lake_B.hdr`),
+    // getURL(`assets/envmaps/garage/garage.hdr`)
+    getURL(`assets/envmaps/artist_workshop_4k.hdr`)
   );
   const hdrImg = parseHdr(buffer);
   const panorama = ctx.texture2D({
@@ -351,7 +357,7 @@ async function loadScene(url, grid) {
           position: [sceneCenter[0], sceneCenter[1], distance],
         }),
         camera: camera({
-          near: 0.1,
+          near: 0.01,
           far,
           fov,
           aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
@@ -386,7 +392,7 @@ async function loadScene(url, grid) {
         // distance: (boundingSphereRadius * 2) / Math.tan(cameraCmp.fov / 2),
         // position: [2, 2, 2],
         // position: cameraEntity.camera.position,
-        position: cameraEntity.transform.position,
+        // position: cameraEntity.transform.position,
         minDistance: cameraEntity.camera.near,
         maxDistance: cameraEntity.camera.far,
       });
@@ -429,7 +435,8 @@ async function renderModel(model, overrideFormat, grid) {
 }
 
 const nextCamera = () => {
-  const next = world.entities.find((e) => e !== cameraEntity && e.camera);
+  const cameras = world.entities.filter((e) => e.camera);
+  const next = cameras[(cameras.indexOf(cameraEntity) + 1) % cameras.length];
   if (next) cameraEntity = next;
 };
 
@@ -524,7 +531,7 @@ async function init() {
       // "AnimatedMorphSphere",
       // "AnimatedTriangle",
       // "AntiqueCamera",
-      // "AttenuationTest",
+      // "AttenuationTest", // FAIL: need KHR_materials_volume
       // "Avocado",
       // "BarramundiFish",
       // "BoomBox",
@@ -544,30 +551,30 @@ async function init() {
       // "ClearCoatTest",
       // "Corset",
       // "Cube",
-      "DamagedHelmet",
-      // "DragonAttenuation",
-      // "Duck",
-      // "EmissiveStrengthTest",
+      // "DamagedHelmet",
+      // "DragonAttenuation",// FAIL: attenuation
+      // "Duck", // FAIL: wrong camera distance
+      // "EmissiveStrengthTest", // HALF: missing postpro bloom
       // "EnvironmentTest",
       // "FlightHelmet",
-      // "Fox",
-      // "GearboxAssy",
-      // "GlamVelvetSofa",
+      // "Fox", // FAIL: wrong near/far
+      // "GearboxAssy",// FAIL: wrong position
+      // "GlamVelvetSofa", // FAIL: KHR_materials_variants, KHR_materials_specular
       // "InterpolationTest",
-      // "IridescenceDielectricSpheres",
-      // "IridescenceLamp",
-      // "IridescenceMetallicSpheres",
-      // "IridescenceSuzanne",
-      // "IridescentDishWithOlives",
+      // "IridescenceDielectricSpheres",  // FAIL
+      // "IridescenceLamp",  // FAIL
+      // "IridescenceMetallicSpheres",  // FAIL
+      // "IridescenceSuzanne",  // FAIL
+      // "IridescentDishWithOlives",  // FAIL
       // "Lantern",
       // "LightsPunctualLamp",
-      // "MaterialsVariantsShoe",
+      // "MaterialsVariantsShoe", // FAIL: KHR_materials_variants
       // "MetalRoughSpheres",
       // "MetalRoughSpheresNoTextures",
       // "MorphPrimitivesTest",
-      // "MorphStressTest",
-      // "MosquitoInAmber",
-      // "MultiUVTest",
+      // "MorphStressTest",// FAIL: needs animation texture
+      // "MosquitoInAmber", // FAIL: KHR_materials_transmission, TEXCOORD_2
+      // "MultiUVTest", // FAIL: wrong orbiter or missing bounds? not working anymore
       // "NormalTangentMirrorTest",
       // "NormalTangentTest",
       // "OrientationTest",
@@ -582,26 +589,26 @@ async function init() {
       // "SimpleMorph",
       // "SimpleSkin",
       // "SimpleSparseAccessor",
-      // "SpecGlossVsMetalRough",
-      // "SpecularTest",
+      // "SpecGlossVsMetalRough", // HALF: not in spec anymore
+      "SpecularTest", // FAIL: KHR_materials_specular
       // "Sponza",
-      // "StainedGlassLamp",
+      // "StainedGlassLamp", // FAIL: KHR_materials_ior, KHR_materials_volume, KHR_materials_transmission
       // "Suzanne",
       // "TextureCoordinateTest",
       // "TextureEncodingTest",
-      // "TextureLinearInterpolationTest",
-      // "TextureSettingsTest",
-      // "TextureTransformMultiTest",
+      // "TextureLinearInterpolationTest", // HALF: EX_srgb in webgl1
+      // "TextureSettingsTest", // FAIL: single-sided (cache issue #320)
+      // "TextureTransformMultiTest", // FAIL: clearcoat roughness
       // "TextureTransformTest",
-      // "ToyCar",
-      // "TransmissionRoughnessTest",
-      // "TransmissionTest",
+      // "ToyCar", // FAIL: (too small, wrong camera)
+      // "TransmissionRoughnessTest", // FAIL: KHR_materials_transmission, KHR_materials_ior, and KHR_materials_volume
+      // "TransmissionTest", // FAIL: KHR_materials_transmission
       // "Triangle",
       // "TriangleWithoutIndices",
-      // "TwoSidedPlane",
+      // "TwoSidedPlane",// FAIL: double side
       // "Unicode\u2764\u267bTest",
       // "UnlitTest",
-      // "VC",
+      // "VC", // FAIL: (camera?)
       // "VertexColorTest",
       // "WaterBottle",
     ].includes(name)
@@ -670,8 +677,14 @@ window.addEventListener("resize", () => {
     height: H,
   });
   if (cameraEntity) {
-    cameraEntity.camera.viewport = [0, 0, W, H];
-    cameraEntity.camera.aspect = W / H;
+    cameraEntity.camera.viewport = [
+      0,
+      0,
+      W * devicePixelRatio,
+      H * devicePixelRatio,
+    ];
+    cameraEntity.camera.aspect =
+      ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight;
     cameraEntity.camera.projectionMatrix = mat4.perspective(
       mat4.create(),
       cameraEntity.camera.fov,

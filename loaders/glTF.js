@@ -928,7 +928,7 @@ async function handleNode(node, gltf, i, ctx, options) {
         });
         // entity.instanced = true;
         instances.instances = instances.offsets.count;
-        maxInstances = Math.max(maxInstances, instances.instances);
+        const maxInstances = Math.max(maxInstances, instances.instances);
 
         if (instances.instances != 561) {
           instances = null;
