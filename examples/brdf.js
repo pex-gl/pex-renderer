@@ -1,11 +1,8 @@
 import {
+  renderEngine as createRenderEngine,
   world as createWorld,
   entity as createEntity,
-  renderGraph as createRenderGraph,
-  resourceCache as createResourceCache,
-  systems,
   components,
-  loaders,
 } from "../index.js";
 
 import createContext from "pex-context";
@@ -16,7 +13,6 @@ import * as io from "pex-io";
 import { sphere } from "primitive-geometry";
 import gridCells from "grid-cells";
 import parseHdr from "parse-hdr";
-import parseObj from "geom-parse-obj";
 import { getTexture, getURL } from "./utils.js";
 
 const State = {
@@ -33,8 +29,7 @@ random.seed(10);
 
 const ctx = createContext({
   powerPreference: "high-performance",
-  type: "webgl",
-  pixelRatio: 1.5,
+  pixelRatio: devicePixelRatio,
 });
 ctx.gl.getExtension("EXT_shader_texture_lod");
 ctx.gl.getExtension("OES_standard_derivatives");
@@ -43,8 +38,8 @@ ctx.gl.getExtension("OES_texture_float");
 ctx.gl.getExtension("EXT_texture_filter_anisotropic");
 
 const world = (window.world = createWorld());
-const renderGraph = createRenderGraph(ctx);
-const resourceCache = createResourceCache(ctx);
+const renderEngine = createRenderEngine({ ctx });
+world.addSystem(renderEngine);
 
 const gui = createGUI(ctx, {
   responsive: false,
@@ -154,15 +149,15 @@ const headers = [
 
 function resize() {
   ctx.set({
-    pixelRatio: 1.5,
+    pixelRatio: devicePixelRatio,
     width: window.innerWidth,
     height: window.innerHeight,
   });
-  const W = window.innerWidth * 1.5;
-  const H = window.innerHeight * 1.5;
+  const W = window.innerWidth * devicePixelRatio;
+  const H = window.innerHeight * devicePixelRatio;
 
   headers.forEach((header, i) => {
-    header.setPosition(10, 10 + (i * H) / 6 / 1.5);
+    header.setPosition(10, 10 + (i * H) / nH / devicePixelRatio);
   });
 
   let cells = gridCells(W, H, nW, nH, 0).map(
@@ -209,11 +204,9 @@ cells.forEach((cell, cellIndex) => {
   const cameraEntity = createEntity({
     camera: cameraCmp,
     transform: components.transform({
-      positions: [0, 0, 1.2],
+      position: [0, 0, 2],
     }),
     orbiter: components.orbiter({
-      position: [0, 0, 1.5],
-      // distance: 2, //FIXME: this is needed?
       element: ctx.gl.canvas,
     }),
     layer: layer,
@@ -336,9 +329,14 @@ cells.forEach((cell, cellIndex) => {
 
   const skyEntity = createEntity({
     skybox: skybox,
-    reflectionProbe: reflectionProbe,
+    // reflectionProbe: reflectionProbe,
   });
   world.add(skyEntity);
+
+  const reflectionProbeEntity = createEntity({
+    reflectionProbe: components.reflectionProbe(),
+  });
+  world.add(reflectionProbeEntity);
   window.dispatchEvent(new CustomEvent("pex-screenshot"));
 })();
 
@@ -347,72 +345,15 @@ window.addEventListener("keydown", ({ key }) => {
   if (key === "d") debugOnce = true;
 });
 
-const geometrySys = systems.geometry({ ctx });
-const transformSys = systems.transform();
-const cameraSys = systems.camera();
-const skyboxSys = systems.skybox({ ctx });
-const reflectionProbeSys = systems.reflectionProbe({ ctx });
-const renderPipelineSys = systems.renderPipeline({
-  ctx,
-  resourceCache,
-  renderGraph,
-  outputEncoding: ctx.Encoding.Linear,
-});
-
-//const standardRendererSys = systems.renderer.standard({
-const standardRendererSys = systems.renderer.standard({
-  ctx,
-  resourceCache,
-  renderGraph,
-});
-const basicRendererSys = systems.renderer.basic({
-  ctx,
-  resourceCache,
-  renderGraph,
-});
-const skyboxRendererSys = systems.renderer.skybox({ ctx });
-
 ctx.frame(() => {
   ctx.debug(debugOnce);
   debugOnce = false;
 
-  geometrySys.update(world.entities);
-  transformSys.update(world.entities);
-  skyboxSys.update(world.entities);
-  reflectionProbeSys.update(world.entities, {
-    renderers: [skyboxRendererSys],
-  });
-  cameraSys.update(world.entities);
-
-  world.entities
-    .filter((e) => e.camera)
-    .forEach((cameraEntity) => {
-      resourceCache.beginFrame();
-      renderGraph.beginFrame();
-
-      const viewEntities = world.entities.filter(
-        (e) => e.layer == cameraEntity.layer || !e.layer
-      );
-      const renderView = {
-        camera: cameraEntity.camera,
-        cameraEntity: cameraEntity,
-        viewport: cameraEntity.camera.viewport,
-      };
-      renderPipelineSys.update(viewEntities, {
-        renderers: [standardRendererSys, skyboxRendererSys],
-        // renderers: [basicRendererSys, skyboxRendererSys],
-        renderView: renderView,
-      });
-      renderGraph.endFrame();
-      resourceCache.endFrame();
-    });
-
-  // Hide skybox after first frame
-  const skyboxEntity = world.entities.find((e) => e.skybox);
-  if (skyboxEntity) {
-    //TODO: who will dispose removed skybox?
-    skyboxEntity.skybox = null;
-  }
+  renderEngine.update(world.entities);
+  renderEngine.render(
+    world.entities,
+    world.entities.filter((e) => e.camera)
+  );
 
   gui.draw();
 });
