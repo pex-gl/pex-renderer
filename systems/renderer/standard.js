@@ -3,9 +3,13 @@ import {
   pipeline as SHADERS,
   chunks as SHADERS_CHUNKS,
 } from "./pex-shaders/index.js";
+import * as AreaLightsData from "./area-light-data.js";
 import { patchVS, patchFS } from "../../utils.js";
 
 const tempMat2x3 = mat2x3.create();
+
+let ltc_mat;
+let ltc_mag;
 
 export default function createStandardRendererSystem(opts) {
   const { ctx } = opts;
@@ -493,6 +497,45 @@ ${
       sharedUniforms[`uPointLightShadowMaps[${i}]`] = light.castShadows
         ? light._shadowCubemap
         : dummyTextureCube;
+    });
+
+    // TODO: dispose if no areaLights
+    if (areaLights.length) {
+      ltc_mat ||= ctx.texture2D({
+        data: AreaLightsData.mat,
+        width: 64,
+        height: 64,
+        pixelFormat: ctx.PixelFormat.RGBA32F,
+        encoding: ctx.Encoding.Linear,
+        min: ctx.Filter.Linear,
+        mag: ctx.Filter.Linear,
+      });
+      ltc_mag ||= ctx.texture2D({
+        data: AreaLightsData.mag,
+        width: 64,
+        height: 64,
+        pixelFormat: ctx.PixelFormat.R32F,
+        encoding: ctx.Encoding.Linear,
+        min: ctx.Filter.Linear,
+        mag: ctx.Filter.Linear,
+      });
+    }
+
+    areaLights.forEach((lightEntity, i) => {
+      const light = lightEntity.areaLight;
+      sharedUniforms.ltc_mat = ltc_mat;
+      sharedUniforms.ltc_mag = ltc_mag;
+      sharedUniforms[`uAreaLights[${i}].position`] =
+        lightEntity.transform.position;
+      // TODO: mix color and intensity
+      sharedUniforms[`uAreaLights[${i}].color`] = light.color;
+      sharedUniforms[`uAreaLights[${i}].intensity`] = light.intensity;
+      sharedUniforms[`uAreaLights[${i}].rotation`] =
+        lightEntity.transform.rotation;
+      sharedUniforms[`uAreaLights[${i}].size`] = [
+        lightEntity.transform.scale[0] / 2,
+        lightEntity.transform.scale[1] / 2,
+      ];
     });
 
     ambientLights.forEach((lightEntity, i) => {

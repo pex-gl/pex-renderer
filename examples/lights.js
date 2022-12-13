@@ -337,6 +337,11 @@ gui.addTextureCube("Shadowmap", pointLightEntity.pointLight._shadowCubemap);
 gui.addParam("Shadows", pointLightEntity.pointLight, "castShadows");
 
 gui.addHeader("Area").setPosition(...getViewportPosition(LAYERS[3]));
+gui.addParam("Intensity", areaLightEntity.areaLight, "intensity", {
+  min: 0,
+  max: 20,
+});
+gui.addStats();
 
 window.addEventListener("keydown", ({ key }) => {
   if (key === "g") gui.enabled = !gui.enabled;

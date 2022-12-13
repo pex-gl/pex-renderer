@@ -128,6 +128,15 @@ function drawDirectionalLight(geomBuilder, entity) {
   });
 }
 
+function drawAreaLight(geomBuilder, entity) {
+  const areaLightHelperPositions = getQuadPositions({ width: 1, height: 1 });
+  areaLightHelperPositions.forEach((pos) => {
+    vec3.multMat4(pos, entity._transform.modelMatrix);
+    geomBuilder.addPosition(pos);
+    geomBuilder.addColor([1, 1, 0, 1]);
+  });
+}
+
 function drawPointLight(geomBuilder, entity) {
   const pointlLightGizmoPositions = getPrismPositions({
     radius: 0.3,
@@ -253,6 +262,9 @@ export default function createHelperSystem({ ctx }) {
           }
           if (entity.spotLight) {
             drawSpotLight(geomBuilder, entity);
+          }
+          if (entity.areaLight) {
+            drawAreaLight(geomBuilder, entity);
           }
         }
         // if (entity.boundingBoxHelper) {
