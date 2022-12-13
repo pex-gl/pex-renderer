@@ -128,6 +128,7 @@ export default function createStandardRendererSystem(opts) {
     [["material", "clearCoat"], "USE_CLEAR_COAT", { uniform: "uClearCoat"}],
     [["material", "clearCoatRoughness"], "USE_CLEAR_COAT_ROUGHNESS", { uniform: "uClearCoatRoughness"}],
     [["material", "clearCoatMap"], "CLEAR_COAT_MAP", { type: "texture", uniform: "uClearCoatMap"}],
+    [["material", "clearCoatRoughnessMap"], "CLEAR_COAT_ROUGHNESS_MAP", { type: "texture", uniform: "uClearCoatRoughnessMap"}],
     [["material", "clearCoatNormalMap"], "CLEAR_COAT_NORMAL_MAP", { type: "texture", uniform: "uClearCoatNormalMap"}],
     [["material", "sheenColor"], "USE_SHEEN", { uniform: "uSheenColor"}],
     [["material", "sheenRoughness"], "", { uniform: "uSheenRoughness", requires: "USE_SHEEN"}],
