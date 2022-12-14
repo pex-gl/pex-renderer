@@ -1,39 +1,36 @@
-import createGeomBuilder from "geom-builder";
-import { pipeline as SHADERS } from "pex-shaders";
-import { patchVS, patchFS } from "../../utils.js";
 import { vec3 } from "pex-math";
+import { pipeline as SHADERS } from "pex-shaders";
+import createGeomBuilder from "geom-builder";
+import { patchVS, patchFS } from "../../utils.js";
 
-const getBBoxPositionsList = function (bbox) {
-  return [
-    [bbox[0][0], bbox[0][1], bbox[0][2]],
-    [bbox[1][0], bbox[0][1], bbox[0][2]],
-    [bbox[0][0], bbox[0][1], bbox[0][2]],
-    [bbox[0][0], bbox[1][1], bbox[0][2]],
-    [bbox[0][0], bbox[0][1], bbox[0][2]],
-    [bbox[0][0], bbox[0][1], bbox[1][2]],
-    [bbox[1][0], bbox[1][1], bbox[1][2]],
-    [bbox[0][0], bbox[1][1], bbox[1][2]],
-    [bbox[1][0], bbox[1][1], bbox[1][2]],
-    [bbox[1][0], bbox[0][1], bbox[1][2]],
-    [bbox[1][0], bbox[1][1], bbox[1][2]],
-    [bbox[1][0], bbox[1][1], bbox[0][2]],
-    [bbox[1][0], bbox[0][1], bbox[0][2]],
-    [bbox[1][0], bbox[0][1], bbox[1][2]],
-    [bbox[1][0], bbox[0][1], bbox[0][2]],
-    [bbox[1][0], bbox[1][1], bbox[0][2]],
-    [bbox[0][0], bbox[1][1], bbox[0][2]],
-    [bbox[1][0], bbox[1][1], bbox[0][2]],
-    [bbox[0][0], bbox[1][1], bbox[0][2]],
-    [bbox[0][0], bbox[1][1], bbox[1][2]],
-    [bbox[0][0], bbox[0][1], bbox[1][2]],
-    [bbox[0][0], bbox[1][1], bbox[1][2]],
-    [bbox[0][0], bbox[0][1], bbox[1][2]],
-    [bbox[1][0], bbox[0][1], bbox[1][2]],
-  ];
-};
+const getBBoxPositionsList = (bbox) => [
+  [bbox[0][0], bbox[0][1], bbox[0][2]],
+  [bbox[1][0], bbox[0][1], bbox[0][2]],
+  [bbox[0][0], bbox[0][1], bbox[0][2]],
+  [bbox[0][0], bbox[1][1], bbox[0][2]],
+  [bbox[0][0], bbox[0][1], bbox[0][2]],
+  [bbox[0][0], bbox[0][1], bbox[1][2]],
+  [bbox[1][0], bbox[1][1], bbox[1][2]],
+  [bbox[0][0], bbox[1][1], bbox[1][2]],
+  [bbox[1][0], bbox[1][1], bbox[1][2]],
+  [bbox[1][0], bbox[0][1], bbox[1][2]],
+  [bbox[1][0], bbox[1][1], bbox[1][2]],
+  [bbox[1][0], bbox[1][1], bbox[0][2]],
+  [bbox[1][0], bbox[0][1], bbox[0][2]],
+  [bbox[1][0], bbox[0][1], bbox[1][2]],
+  [bbox[1][0], bbox[0][1], bbox[0][2]],
+  [bbox[1][0], bbox[1][1], bbox[0][2]],
+  [bbox[0][0], bbox[1][1], bbox[0][2]],
+  [bbox[1][0], bbox[1][1], bbox[0][2]],
+  [bbox[0][0], bbox[1][1], bbox[0][2]],
+  [bbox[0][0], bbox[1][1], bbox[1][2]],
+  [bbox[0][0], bbox[0][1], bbox[1][2]],
+  [bbox[0][0], bbox[1][1], bbox[1][2]],
+  [bbox[0][0], bbox[0][1], bbox[1][2]],
+  [bbox[1][0], bbox[0][1], bbox[1][2]],
+];
 
-const getCirclePositions = function (opts) {
-  const { steps, axis, radius, center } = opts;
+const getCirclePositions = ({ steps, axis, radius, center }) => {
   const points = [];
 
   for (let i = 0; i < steps; i++) {
@@ -57,36 +54,34 @@ const getCirclePositions = function (opts) {
   return lines;
 };
 
-const getPrismPositions = function (opts) {
-  const r = opts.radius;
+// prettier-ignore
+const getPrismPositions = ({ radius }) => ([
+  [0, radius, 0], [radius, 0, 0],
+  [0, -radius, 0], [radius, 0, 0],
+
+  [0, radius, 0], [-radius, 0, 0],
+  [0, -radius, 0], [-radius, 0, 0],
+
+  [0, radius, 0], [0, 0, radius],
+  [0, -radius, 0], [0, 0, radius],
+
+  [0, radius, 0], [0, 0, -radius],
+  [0, -radius, 0], [0, 0, -radius],
+
+  [-radius, 0, 0], [0, 0, -radius],
+  [radius, 0, 0], [0, 0, -radius],
+  [radius, 0, 0], [0, 0, radius],
+  [-radius, 0, 0], [0, 0, radius]
+])
+
+const getQuadPositions = ({
+  width = 1,
+  height = 1,
+  size = 2,
+  position = [0, 0, 0],
+} = {}) =>
   // prettier-ignore
-  const points = [
-    [0, r, 0], [r, 0, 0],
-    [0, -r, 0], [r, 0, 0],
-
-    [0, r, 0], [-r, 0, 0],
-    [0, -r, 0], [-r, 0, 0],
-
-    [0, r, 0], [0, 0, r],
-    [0, -r, 0], [0, 0, r],
-
-    [0, r, 0], [0, 0, -r],
-    [0, -r, 0], [0, 0, -r],
-
-    [-r, 0, 0], [0, 0, -r],
-    [r, 0, 0], [0, 0, -r],
-    [r, 0, 0], [0, 0, r],
-    [-r, 0, 0], [0, 0, r]
-  ]
-  return points;
-};
-
-const getQuadPositions = function (opts) {
-  const w = opts.width;
-  const h = opts.height;
-  const position = opts.position || [0, 0, 0];
-  // prettier-ignore
-  const points = [
+  [
     [-1, -1, 0], [1, -1, 0],
     [1, -1, 0], [1, 1, 0],
     [1, 1, 0], [-1, 1, 0],
@@ -94,112 +89,86 @@ const getQuadPositions = function (opts) {
     [-1, -1, 0], [1, 1, 0],
     [-1, 1, 0], [1, -1, 0],
 
-    [-1, -1, 0], [-1, -1, 1 / 2],
-    [1, -1, 0], [1, -1, 1 / 2],
-    [1, 1, 0], [1, 1, 1 / 2],
-    [-1, 1, 0], [-1, 1, 1 / 2],
-    [0, 0, 0], [0, 0, 1 / 2]
-  ]
-  points.forEach((p) => {
-    p[0] *= w / 2;
-    p[1] *= h / 2;
-    vec3.add(p, position);
-  });
-  return points;
+    [-1, -1, 0], [-1, -1, size],
+    [1, -1, 0], [1, -1, size],
+    [1, 1, 0], [1, 1, size],
+    [-1, 1, 0], [-1, 1, size],
+    [0, 0, 0], [0, 0, size]
+  ].map((p) =>
+    vec3.add([(p[0] * width) / 2, (p[1] * height) / 2, p[2]], position)
+  );
+
+const getDirectionalLight = (directionalLight) => {
+  const intensity = directionalLight.intensity;
+  const prismRadius = intensity * 0.1;
+
+  return getPrismPositions({ radius: prismRadius }).concat(
+    // prettier-ignore
+    [
+      [0, 0, prismRadius], [0, 0, intensity],
+      [prismRadius, 0, 0], [prismRadius, 0, intensity],
+      [-prismRadius, 0, 0], [-prismRadius, 0, intensity],
+      [0, prismRadius, 0], [0, prismRadius, intensity],
+      [0, -prismRadius, 0], [0, -prismRadius, intensity]
+    ]
+  );
 };
 
-function drawDirectionalLight(geomBuilder, entity) {
-  const directionalLightGizmoPositions = getPrismPositions({
-    radius: 0.3,
-  }).concat(
-    /* prettier-ignore */ [
-      [0, 0, 0.3], [0, 0, 1],
-      [0.3, 0, 0], [0.3, 0, 1],
-      [-0.3, 0, 0], [-0.3, 0, 1],
-      [0, 0.3, 0], [0, 0.3, 1],
-      [0, -0.3, 0], [0, -0.3, 1]
+const getPointLight = (pointLight) => {
+  const radius = pointLight.range / 2;
+  const prismRadius = radius * 0.1;
+
+  return getPrismPositions({ radius: prismRadius }).concat(
+    // prettier-ignore
+    [
+      [prismRadius, 0, 0], [radius, 0, 0],
+      [-prismRadius, 0, 0], [-radius, 0, 0],
+      [0, prismRadius, 0], [0, radius, 0],
+      [0, -prismRadius, 0], [0, -radius, 0],
+      [0, 0, prismRadius], [0, 0, radius],
+      [0, 0, -prismRadius], [0, 0, -radius],
     ]
   );
-  // console.log("directionalLightGizmoPositions", directionalLightGizmoPositions);
-  directionalLightGizmoPositions.forEach((pos) => {
-    vec3.multMat4(pos, entity._transform.modelMatrix);
-    geomBuilder.addPosition(pos);
-    geomBuilder.addColor([1, 0, 0, 1]);
-  });
-}
+};
 
-function drawAreaLight(geomBuilder, entity) {
-  const areaLightHelperPositions = getQuadPositions({ width: 1, height: 1 });
-  areaLightHelperPositions.forEach((pos) => {
-    vec3.multMat4(pos, entity._transform.modelMatrix);
-    geomBuilder.addPosition(pos);
-    geomBuilder.addColor([1, 1, 0, 1]);
-  });
-}
+const spotLightCircleOptions = { steps: 32, axis: [0, 1] };
+const getSpotLight = (spotLight) => {
+  const intensity = spotLight.intensity;
+  const distance = spotLight.range;
+  const radius = distance * Math.tan(spotLight.angle);
+  const innerRadius = distance * Math.tan(spotLight.innerAngle);
 
-function drawPointLight(geomBuilder, entity) {
-  const pointlLightGizmoPositions = getPrismPositions({
-    radius: 0.3,
-  }).concat(
-    /* prettier-ignore */ [
-      [0.3, 0, 0], [1, 0, 0],
-      [-0.3, 0, 0], [-1, 0, 0],
-      [0, 0.3, 0], [0, 1, 0],
-      [0, -0.3, 0], [0, -1, 0],
-      [0, 0, 0.3], [0, 0, 1],
-      [0, 0, -0.3], [0, 0, -1],
-    ]
-  );
-  // console.log("directionalLightGizmoPositions", directionalLightGizmoPositions);
-  pointlLightGizmoPositions.forEach((pos) => {
-    vec3.multMat4(pos, entity._transform.modelMatrix);
-    geomBuilder.addPosition(pos);
-    geomBuilder.addColor([0, 1, 0, 1]);
-  });
-}
-
-function drawSpotLight(geomBuilder, entity) {
-  const spotLightDistance = entity.spotLight.range;
-  const spotLightRadius = spotLightDistance * Math.tan(entity.spotLight.angle);
-  const spotLightInnerRadius =
-    spotLightDistance * Math.tan(entity.spotLight.innerAngle);
-
-  const spotLightGizmoPositions = getPrismPositions({
-    radius: 0.2,
+  return getCirclePositions({
+    radius: intensity * 0.1,
+    ...spotLightCircleOptions,
   })
-    .concat([
-      [0, 0, 0],
-      [spotLightRadius, 0, spotLightDistance],
-      [0, 0, 0],
-      [-spotLightRadius, 0, spotLightDistance],
-      [0, 0, 0],
-      [0, spotLightRadius, spotLightDistance],
-      [0, 0, 0],
-      [0, -spotLightRadius, spotLightDistance],
-    ])
+    .concat(
+      // prettier-ignore
+      [
+        [0, 0, 0], [radius, 0, distance],
+        [0, 0, 0], [-radius, 0, distance],
+        [0, 0, 0], [0, radius, distance],
+        [0, 0, 0], [0, -radius, distance],
+      ]
+    )
     .concat(
       getCirclePositions({
-        radius: spotLightRadius,
-        center: [0, 0, spotLightDistance],
-        steps: 32,
-        axis: [0, 1],
+        radius: radius,
+        center: [0, 0, distance],
+        ...spotLightCircleOptions,
       })
     )
     .concat(
       getCirclePositions({
-        radius: spotLightInnerRadius,
-        center: [0, 0, spotLightDistance],
-        steps: 32,
-        axis: [0, 1],
+        radius: innerRadius,
+        center: [0, 0, distance],
+        ...spotLightCircleOptions,
       })
     );
+};
 
-  spotLightGizmoPositions.forEach((pos) => {
-    vec3.multMat4(pos, entity._transform.modelMatrix);
-    geomBuilder.addPosition(pos);
-    geomBuilder.addColor([0, 0, 1, 1]);
-  });
-}
+const getAreaLight = (areaLight) =>
+  getQuadPositions({ size: areaLight.intensity });
 
 export default function createHelperSystem({ ctx }) {
   let geomBuilder = createGeomBuilder({ colors: 1, positions: 1 });
@@ -254,17 +223,38 @@ export default function createHelperSystem({ ctx }) {
         }
         // TODO: cache
         if (entity.lightHelper) {
+          const addToBuilder = (positions, color = [1, 1, 1, 1]) => {
+            for (let i = 0; i < positions.length; i++) {
+              const position = positions[i];
+              vec3.multMat4(position, entity._transform.modelMatrix);
+              geomBuilder.addPosition(position);
+              geomBuilder.addColor(color);
+            }
+          };
+
           if (entity.directionalLight) {
-            drawDirectionalLight(geomBuilder, entity);
+            addToBuilder(
+              getDirectionalLight(entity.directionalLight),
+              entity.directionalLight.color
+            );
           }
           if (entity.pointLight) {
-            drawPointLight(geomBuilder, entity);
+            addToBuilder(
+              getPointLight(entity.pointLight),
+              entity.pointLight.color
+            );
           }
           if (entity.spotLight) {
-            drawSpotLight(geomBuilder, entity);
+            addToBuilder(
+              getSpotLight(entity.spotLight),
+              entity.spotLight.color
+            );
           }
           if (entity.areaLight) {
-            drawAreaLight(geomBuilder, entity);
+            addToBuilder(
+              getAreaLight(entity.areaLight),
+              entity.areaLight.color
+            );
           }
         }
         // if (entity.boundingBoxHelper) {
