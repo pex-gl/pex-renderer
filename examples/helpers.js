@@ -1,13 +1,14 @@
 import {
-  systems,
-  components,
+  renderEngine as createRenderEngine,
   world as createWorld,
   entity as createEntity,
+  components,
   loaders,
 } from "../index.js";
 import createContext from "pex-context";
 import { quat, vec3 } from "pex-math";
 import createGUI from "pex-gui";
+import { aabb } from "pex-geom";
 
 import { cube } from "primitive-geometry";
 import normals from "angle-normals";
@@ -16,92 +17,116 @@ import normals from "angle-normals";
 import { centerAndNormalize, getURL } from "./utils.js";
 
 import * as d from "./assets/models/stanford-dragon/stanford-dragon.js";
-import { aabb } from "pex-geom";
 
 const dragon = { ...d };
 
-const State = {
-  rotation: 1.5 * Math.PI,
-};
-const ctx = createContext({
-  type: "webgl",
-});
+// Utils
+async function loadScene(url, transformProps) {
+  let scene;
+  scene = (
+    await loaders.gltf(url, {
+      ctx: ctx,
+      includeCameras: false,
+      dracoOptions: {
+        transcoderPath: new URL(
+          "assets/decoders/draco/",
+          import.meta.url
+        ).toString(),
+      },
+      basisOptions: {
+        transcoderPath: new URL(
+          "assets/decoders/basis/",
+          import.meta.url
+        ).toString(),
+      },
+    })
+  )[0];
+
+  scene.entities.forEach((entity) => {
+    entity.boundingBoxHelper = components.boundingBoxHelper({
+      color: [0.85, 0.5, 0.85, 1],
+    });
+  });
+  Object.assign(scene.root.transform, transformProps);
+
+  scene.entities.forEach((entity) => {
+    world.add(entity);
+  });
+}
+
+const ctx = createContext({ pixelRatio: devicePixelRatio });
+
+const renderEngine = createRenderEngine({ ctx });
 const world = createWorld();
-window.world = world;
+
 const gui = createGUI(ctx);
 
-const orbitCameraEntity = createEntity({
+const helperEntity = createEntity({
+  axisHelper: { scale: 3 },
+  gridHelper: { size: 30, step: 0.5 },
+});
+world.add(helperEntity);
+
+const W = window.innerWidth * devicePixelRatio;
+const H = window.innerHeight * devicePixelRatio;
+const splitRatio = 0.66;
+const aspect = ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight;
+
+const cameraEntity = createEntity({
+  transform: components.transform({ position: [2, 2, 2] }),
   camera: components.camera({
     fov: Math.PI / 3,
-    aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
+    aspect,
     near: 0.1,
     far: 100,
     exposure: 0.6,
-    // viewport: [0, 0, Math.floor(0.75 * window.innerWidth), window.innerHeight],
+    viewport: [0, 0, Math.floor(splitRatio * W), H],
   }),
-  // components.postProcessing({}),
-  transform: components.transform({ position: [0, 0, 0] }),
-  orbiter: components.orbiter({ position: [2, 2, 2] }),
+  orbiter: components.orbiter(),
 });
-world.add(orbitCameraEntity);
+world.add(cameraEntity);
 
-/*
-const persCameraCmp = components.camera({
-  fov: Math.PI / 4,
-  aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
-  near: 1,
-  far: 18, //TODO:
-  // postprocess: false,
-  viewport: [
-    Math.floor(0.75 * window.innerWidth),
-    window.innerHeight - Math.floor((1 / 2) * window.innerHeight),
-    Math.floor(0.25 * window.innerWidth),
-    Math.floor((1 / 2) * window.innerHeight),
-  ],
-});
 const persCameraEntity = createEntity({
-  camera: persCameraCmp,
   transform: components.transform({
-    position: [0, 2, 3],
-    rotation: quat.fromEuler(quat.create(), [-Math.PI / 5, 0, 0]),
+    position: [0, 5, 0],
+    rotation: quat.fromEuler(quat.create(), [-Math.PI / 2, 0, 0]),
   }),
+  camera: components.camera({
+    fov: Math.PI / 6,
+    aspect,
+    near: 1,
+    far: 12,
+    viewport: [splitRatio * W, 0.5 * H, (1 - splitRatio) * W, 0.5 * H],
+  }),
+  orbiter: components.orbiter(),
   cameraHelper: true,
 });
 world.add(persCameraEntity);
 
-const orthoCameraCmp = components.camera({
-  fov: Math.PI / 3,
-  projection: "orthographic",
-  aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
-  near: 0.1,
-  far: 10,
-  zoom: 3,
-  postprocess: false,
-  viewport: [
-    Math.floor(0.75 * window.innerWidth),
-    0,
-    Math.floor(0.25 * window.innerWidth),
-    Math.floor((1 / 2) * window.innerHeight),
-  ],
-});
 const orthoCameraEntity = createEntity({
-  camera: orthoCameraCmp,
   transform: components.transform({
     position: [0, 2, 3],
     rotation: quat.fromEuler(quat.create(), [-Math.PI / 5, 0, 0]),
   }),
-  cameraHelper: true,
+  camera: components.camera({
+    fov: Math.PI / 3,
+    projection: "orthographic",
+    aspect,
+    near: 0.1,
+    far: 10,
+    zoom: 3,
+    viewport: [splitRatio * W, 0, (1 - splitRatio) * W, 0.5 * H],
+  }),
+  // cameraHelper: true,
 });
 world.add(orthoCameraEntity);
-*/
+
 // skybox and  reflection probe
 const skybox = createEntity({
-  transform: components.transform({
-    rotation: quat.fromAxisAngle(quat.create(), [0, 1, 0], State.rotation),
-  }),
+  transform: components.transform(),
   skybox: components.skybox({
     sunPosition: [1, 1, 1],
-    backgroundBlur: false, //TODO:
+    backgroundBlur: false,
   }),
 });
 world.add(skybox);
@@ -111,39 +136,24 @@ const reflectionProbe = createEntity({
 });
 world.add(reflectionProbe);
 
-//lights
-const directionalLightCmp = components.directionalLight({
-  castShadows: true,
-  color: [1, 1, 1, 1],
-  intensity: 5,
-});
-const directionalLight = createEntity({
-  transform: components.transform({
-    rotation: quat.fromTo(
-      quat.create(),
-      [0, 0, 1],
-      vec3.normalize([1, -3, -1])
-    ),
-    position: [-1, 2, -1],
-  }),
-  directionalLight: directionalLightCmp,
-  lightHelper: true,
-});
-world.add(directionalLight);
-gui.addColumn("Lights");
-gui.addHeader("Directional Light");
-// gui.addParam("Enabled", directionalLightCmp, "enabled", {}, (value) => {
-//   directionalLightCmp.set({ enabled: value });
+// Lights
+// const directionalLightEntity = createEntity({
+//   transform: components.transform({
+//     rotation: quat.fromTo(
+//       quat.create(),
+//       [0, 0, 1],
+//       vec3.normalize([1, -3, -1])
+//     ),
+//     position: [-1, 2, -1],
+//   }),
+//   directionalLight: components.directionalLight({
+//     castShadows: true,
+//     color: [1, 1, 1, 1],
+//     intensity: 5,
+//   }),
+//   lightHelper: true,
 // });
-gui.addParam(
-  "Intensity",
-  directionalLightCmp,
-  "intensity",
-  { min: 0, max: 20 },
-  () => {
-    directionalLightCmp.set({ intensity: directionalLightCmp.intensity });
-  }
-);
+// world.add(directionalLightEntity);
 
 //floor
 const floorEntity = createEntity({
@@ -152,10 +162,10 @@ const floorEntity = createEntity({
   }),
   geometry: {
     ...components.geometry(cube({ sx: 7, sy: 0.1, sz: 5 })),
-    bounds: [
-      [-3.5, -0.5, -2.5],
-      [3.5, 0.5, 2.5],
-    ],
+    // bounds: [
+    //   [-3.5, -0.5, -2.5],
+    //   [3.5, 0.5, 2.5],
+    // ],
   },
   material: components.material({
     baseColor: [1, 1, 1, 1],
@@ -190,16 +200,19 @@ const dragonEntity = createEntity({
 world.add(dragonEntity);
 
 //animated skinned mesh
-loadScene(getURL(`assets/models/CesiumMan/CesiumMan.glb`), {
+await loadScene(getURL(`assets/models/CesiumMan/CesiumMan.glb`), {
   scale: [0.8, 0.8, 0.8],
   position: [0.5, -0.35, 0],
 });
 
 //buster drone
-loadScene(getURL(`assets/models/buster-drone/buster-drone-etc1s-draco.glb`), {
-  scale: [0.006, 0.006, 0.006],
-  position: [-0.3, 0.25, 0],
-});
+await loadScene(
+  getURL(`assets/models/buster-drone/buster-drone-etc1s-draco.glb`),
+  {
+    scale: [0.006, 0.006, 0.006],
+    position: [-0.3, 0.25, 0],
+  }
+);
 
 //instanced mesh
 const gridSize = 3;
@@ -243,103 +256,42 @@ let cubeInstancesEntity = createEntity({
 });
 world.add(cubeInstancesEntity);
 
-console.log(
-  "aabb cubeInstancesEntity",
-  "" + cubeInstancesEntity.geometry.bounds?.[0],
-  " " + cubeInstancesEntity._transform?.worldBounds?.[0]
-);
+// GUI
+// gui.addFPSMeeter();
+// gui.addColumn("Lights");
+// gui.addHeader("Directional Light");
+// gui.addParam(
+//   "Intensity",
+//   directionalLightEntity.directionalLight,
+//   "intensity",
+//   {
+//     min: 0,
+//     max: 20,
+//   }
+// );
 
-setTimeout(() => {
-  console.log(
-    "aabb cubeInstancesEntity",
-    "" + cubeInstancesEntity.geometry.bounds?.[0],
-    " " + cubeInstancesEntity._transform?.worldBounds?.[0]
-  );
-}, 1000);
+// gui.addColumn("Cameras");
+// gui.addHeader("Perspective Cam");
+// gui.addParam("fov", persCameraCmp, "fov", {
+//   min: 0,
+//   max: (120 / 180) * Math.PI,
+// });
+// gui.addParam("Near", persCameraCmp, "near", { min: 0, max: 5 });
+// gui.addParam("Far", persCameraCmp, "far", { min: 5, max: 50 });
 
-/*
-gui.addColumn("Cameras");
-gui.addHeader("Perspective Cam");
-gui.addParam(
-  "fieldOfView (rad)",
-  persCameraCmp,
-  "fov",
-  { min: 0, max: (120 / 180) * Math.PI },
-  (fov) => {
-    persCameraCmp.set({ fov });
-  }
-);
-gui.addParam("Near", persCameraCmp, "near", { min: 0, max: 5 }, (near) => {
-  persCameraCmp.set({ near });
-});
-gui.addParam("Far", persCameraCmp, "far", { min: 5, max: 50 }, (far) => {
-  persCameraCmp.set({ far });
-});
+// gui.addHeader("Orthographic Cam");
+// gui.addParam("Near", orthoCameraCmp, "near", { min: 0, max: 5 });
+// gui.addParam("Far", orthoCameraCmp, "far", { min: 5, max: 20 });
+// gui.addParam("Zoom", orthoCameraCmp, "zoom", { min: 1, max: 5 });
 
-gui.addHeader("Orthographic Cam");
-gui.addParam("Near", orthoCameraCmp, "near", { min: 0, max: 5 }, (near) => {
-  orthoCameraCmp.set({ near });
-});
-gui.addParam("Far", orthoCameraCmp, "far", { min: 5, max: 20 }, (far) => {
-  orthoCameraCmp.set({ far });
-});
-gui.addParam("Zoom", orthoCameraCmp, "zoom", { min: 1, max: 5 }, (zoom) => {
-  orthoCameraCmp.set({ zoom });
-});
-
-const helperEntity = createEntity({
-  axisHelper: { scale: 3 },
-  gridHelper: { size: 30, step: 0.5 },
-});
-world.add(helperEntity);
-*/
-world.addSystem(systems.geometry({ ctx }));
-world.addSystem(systems.animation());
-world.addSystem(systems.transform());
-world.addSystem(systems.camera());
-world.addSystem(systems.skybox({ ctx }));
-world.addSystem(systems.reflectionProbe({ ctx }));
-world.addSystem(systems.renderer({ ctx, outputEncoding: ctx.Encoding.Gamma }));
-world.addSystem(systems.helper({ ctx }));
-
-gui.addFPSMeeter();
 ctx.frame(() => {
-  world.update();
+  renderEngine.update(world.entities);
+  renderEngine.render(
+    world.entities,
+    world.entities.filter((e) => e.camera)
+  );
+
   gui.draw();
+
+  window.dispatchEvent(new CustomEvent("pex-screenshot"));
 });
-
-async function loadScene(url, transformProps) {
-  let scene;
-  scene = (
-    await loaders.gltf(url, {
-      ctx: ctx,
-      includeCameras: false,
-      dracoOptions: {
-        transcoderPath: new URL(
-          "assets/decoders/draco/",
-          import.meta.url
-        ).toString(),
-      },
-      basisOptions: {
-        transcoderPath: new URL(
-          "assets/decoders/basis/",
-          import.meta.url
-        ).toString(),
-      },
-    })
-  )[0];
-
-  console.log("scene", scene);
-  scene.entities.forEach((entity) => {
-    entity.boundingBoxHelper = components.boundingBoxHelper({
-      color: [0.85, 0.5, 0.85, 1],
-    });
-  });
-  Object.assign(scene.root.transform, transformProps);
-
-  scene.entities.forEach((entity) => {
-    world.add(entity);
-  });
-
-  //window.dispatchEvent(new CustomEvent('pex-screenshot'))
-}

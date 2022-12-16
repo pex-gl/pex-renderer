@@ -3,6 +3,13 @@ import { pipeline as SHADERS } from "pex-shaders";
 import createGeomBuilder from "geom-builder";
 import { patchVS, patchFS } from "../../utils.js";
 
+const pointsToLine = (points) =>
+  points.reduce((line, p, i) => {
+    line.push(p);
+    line.push([...points[(i + 1) % points.length]]);
+    return line;
+  }, []);
+
 const getBBoxPositionsList = (bbox) => [
   [bbox[0][0], bbox[0][1], bbox[0][2]],
   [bbox[1][0], bbox[0][1], bbox[0][2]],
@@ -45,13 +52,7 @@ const getCirclePositions = ({ steps, axis, radius, center }) => {
     points.push(pos);
   }
 
-  const lines = points.reduce((lines, p, i) => {
-    lines.push(p);
-    lines.push([...points[(i + 1) % points.length]]);
-    return lines;
-  }, []);
-
-  return lines;
+  return pointsToLine(points);
 };
 
 // prettier-ignore
@@ -98,6 +99,18 @@ const getQuadPositions = ({
     vec3.add([(p[0] * width) / 2, (p[1] * height) / 2, p[2]], position)
   );
 
+const getPyramidEdgePositions = ({ sx, sy = sx, sz = sx }) => [
+  [0, 0, 0],
+  [-sx, sy, sz],
+  [0, 0, 0],
+  [sx, sy, sz],
+  [0, 0, 0],
+  [sx, -sy, sz],
+  [0, 0, 0],
+  [-sx, -sy, sz],
+];
+
+// Lights
 const getDirectionalLight = (directionalLight) => {
   const intensity = directionalLight.intensity;
   const prismRadius = intensity * 0.1;
@@ -132,6 +145,7 @@ const getPointLight = (pointLight) => {
 };
 
 const spotLightCircleOptions = { steps: 32, axis: [0, 1] };
+
 const getSpotLight = (spotLight) => {
   const intensity = spotLight.intensity;
   const distance = spotLight.range;
@@ -143,17 +157,14 @@ const getSpotLight = (spotLight) => {
     ...spotLightCircleOptions,
   })
     .concat(
-      // prettier-ignore
-      [
-        [0, 0, 0], [radius, 0, distance],
-        [0, 0, 0], [-radius, 0, distance],
-        [0, 0, 0], [0, radius, distance],
-        [0, 0, 0], [0, -radius, distance],
-      ]
+      getPyramidEdgePositions({
+        sx: radius * Math.sin(Math.PI / 4),
+        sz: distance,
+      })
     )
     .concat(
       getCirclePositions({
-        radius: radius,
+        radius,
         center: [0, 0, distance],
         ...spotLightCircleOptions,
       })
@@ -169,6 +180,69 @@ const getSpotLight = (spotLight) => {
 
 const getAreaLight = (areaLight) =>
   getQuadPositions({ size: areaLight.intensity });
+
+// Cameras
+const getPerspectiveCamera = (camera) => {
+  const nearHalfHeight = Math.tan(camera.fov / 2) * camera.near;
+  const farHalfHeight = Math.tan(camera.fov / 2) * camera.far;
+  const nearHalfWidth = nearHalfHeight * camera.aspect;
+  const farHalfWidth = farHalfHeight * camera.aspect;
+
+  return [
+    ...getPyramidEdgePositions({
+      sx: farHalfWidth,
+      sy: farHalfHeight,
+      sz: -camera.far,
+    }),
+
+    ...pointsToLine([
+      [-farHalfWidth, farHalfHeight, -camera.far],
+      [farHalfWidth, farHalfHeight, -camera.far],
+      [farHalfWidth, -farHalfHeight, -camera.far],
+      [-farHalfWidth, -farHalfHeight, -camera.far],
+    ]),
+
+    ...pointsToLine([
+      [-nearHalfWidth, nearHalfHeight, -camera.near],
+      [nearHalfWidth, nearHalfHeight, -camera.near],
+      [nearHalfWidth, -nearHalfHeight, -camera.near],
+      [-nearHalfWidth, -nearHalfHeight, -camera.near],
+    ]),
+  ];
+};
+
+const getOrthographicCamera = (camera) => {
+  let left =
+    (camera.right + camera.left) / 2 -
+    (camera.right - camera.left) / (2 / camera.zoom);
+  let right =
+    (camera.right + camera.left) / 2 +
+    (camera.right - camera.left) / (2 / camera.zoom);
+  let top =
+    (camera.top + camera.bottom) / 2 +
+    (camera.top - camera.bottom) / (2 / camera.zoom);
+  let bottom =
+    (camera.top + camera.bottom) / 2 -
+    (camera.top - camera.bottom) / (2 / camera.zoom);
+
+  if (camera.view) {
+    const zoomW =
+      1 / camera.zoom / (camera.view.size[0] / camera.view.totalSize[0]);
+    const zoomH =
+      1 / camera.zoom / (camera.view.size[1] / camera.view.totalSize[1]);
+    const scaleW = (camera.right - camera.left) / camera.view.size[0];
+    const scaleH = (camera.top - camera.bottom) / camera.view.size[1];
+
+    left += scaleW * (camera.view.offset[0] / zoomW);
+    right = left + scaleW * (camera.view.size[0] / zoomW);
+    top -= scaleH * (camera.view.offset[1] / zoomH);
+    bottom = top - scaleH * (camera.view.size[1] / zoomH);
+  }
+  return getBBoxPositionsList([
+    [left, top, -camera.near],
+    [right, bottom, -camera.far],
+  ]);
+};
 
 export default function createHelperSystem({ ctx }) {
   let geomBuilder = createGeomBuilder({ colors: 1, positions: 1 });
@@ -221,17 +295,17 @@ export default function createHelperSystem({ ctx }) {
           // geomBuilder.addColor([1, 0, 0, 1]);
           // geomBuilder.addColor([0, 1, 0, 1]);
         }
+        const addToBuilder = (positions, color = [1, 1, 1, 1]) => {
+          for (let i = 0; i < positions.length; i++) {
+            const position = positions[i];
+            vec3.multMat4(position, entity._transform.modelMatrix);
+            geomBuilder.addPosition(position);
+            geomBuilder.addColor(color);
+          }
+        };
+
         // TODO: cache
         if (entity.lightHelper) {
-          const addToBuilder = (positions, color = [1, 1, 1, 1]) => {
-            for (let i = 0; i < positions.length; i++) {
-              const position = positions[i];
-              vec3.multMat4(position, entity._transform.modelMatrix);
-              geomBuilder.addPosition(position);
-              geomBuilder.addColor(color);
-            }
-          };
-
           if (entity.directionalLight) {
             addToBuilder(
               getDirectionalLight(entity.directionalLight),
@@ -256,6 +330,14 @@ export default function createHelperSystem({ ctx }) {
               entity.areaLight.color
             );
           }
+        }
+        if (entity.cameraHelper && entity.camera) {
+          addToBuilder(
+            entity.camera.projection === "orthographic"
+              ? getOrthographicCamera(entity.camera)
+              : getPerspectiveCamera(entity.camera),
+            entity.cameraHelper.color
+          );
         }
         // if (entity.boundingBoxHelper) {
         // if (entity.transform)
