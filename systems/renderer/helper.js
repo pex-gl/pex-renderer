@@ -244,6 +244,39 @@ const getOrthographicCamera = (camera) => {
   ]);
 };
 
+// Extras
+const AXES_COLORS = [
+  [1, 0, 0, 1],
+  [1, 0, 0, 1],
+  [0, 1, 0, 1],
+  [0, 1, 0, 1],
+  [0, 0, 1, 1],
+  [0, 0, 1, 1],
+];
+const AXES_POSITIONS = [
+  [0, 0, 0],
+  [1, 0, 0],
+  [0, 0, 0],
+  [0, 1, 0],
+  [0, 0, 0],
+  [0, 0, 1],
+];
+const getGridLines = ({ size = 1, step = 10 } = {}) =>
+  Array.from({ length: step + 1 }, (_, k) => {
+    const halfSize = size * 0.5;
+    const offset = size * (k / step) - halfSize;
+    return [
+      [-halfSize, 0, offset],
+      [halfSize, 0, offset],
+    ];
+  });
+const getGrid = (grid) => [
+  ...getGridLines(grid).flat(),
+  ...getGridLines(grid)
+    .flat()
+    .map((p) => p.reverse()),
+];
+
 export default function createHelperSystem({ ctx }) {
   let geomBuilder = createGeomBuilder({ colors: 1, positions: 1 });
 
@@ -281,53 +314,52 @@ export default function createHelperSystem({ ctx }) {
       const { camera } = renderView;
 
       geomBuilder.reset();
-      for (let entity of entities) {
-        if (entity.transform?.position && entity.boundingBoxHelper) {
-          const positions = getBBoxPositionsList(entity.transform.worldBounds);
-          positions.forEach((pos) => {
-            geomBuilder.addPosition(pos);
-            geomBuilder.addColor(
-              entity.boundingBoxHelper?.color || [1, 0, 0, 1]
-            );
-          });
-          // geomBuilder.addPosition([0, 0, 0]);
-          // geomBuilder.addPosition(entity.transform?.position);
-          // geomBuilder.addColor([1, 0, 0, 1]);
-          // geomBuilder.addColor([0, 1, 0, 1]);
+      const addToBuilder = (positions, color = [0.23, 0.23, 0.23, 1], modelMatrix) => {
+        for (let i = 0; i < positions.length; i++) {
+          const position = positions[i];
+          if (modelMatrix) vec3.multMat4(position, modelMatrix);
+          geomBuilder.addPosition(position);
+          geomBuilder.addColor(Array.isArray(color[0]) ? color[i] : color);
         }
-        const addToBuilder = (positions, color = [1, 1, 1, 1]) => {
-          for (let i = 0; i < positions.length; i++) {
-            const position = positions[i];
-            vec3.multMat4(position, entity._transform.modelMatrix);
-            geomBuilder.addPosition(position);
-            geomBuilder.addColor(color);
-          }
-        };
+      };
+
+      for (let entity of entities) {
+        const modelMatrix = entity._transform?.modelMatrix;
+        if (entity.transform?.position && entity.boundingBoxHelper) {
+          addToBuilder(
+            getBBoxPositionsList(entity.transform.worldBounds),
+            entity.boundingBoxHelper?.color || [1, 0, 0, 1]
+          );
+        }
 
         // TODO: cache
         if (entity.lightHelper) {
           if (entity.directionalLight) {
             addToBuilder(
               getDirectionalLight(entity.directionalLight),
-              entity.directionalLight.color
+              entity.directionalLight.color,
+              modelMatrix
             );
           }
           if (entity.pointLight) {
             addToBuilder(
               getPointLight(entity.pointLight),
-              entity.pointLight.color
+              entity.pointLight.color,
+              modelMatrix
             );
           }
           if (entity.spotLight) {
             addToBuilder(
               getSpotLight(entity.spotLight),
-              entity.spotLight.color
+              entity.spotLight.color,
+              modelMatrix
             );
           }
           if (entity.areaLight) {
             addToBuilder(
               getAreaLight(entity.areaLight),
-              entity.areaLight.color
+              entity.areaLight.color,
+              modelMatrix
             );
           }
         }
@@ -336,12 +368,24 @@ export default function createHelperSystem({ ctx }) {
             entity.camera.projection === "orthographic"
               ? getOrthographicCamera(entity.camera)
               : getPerspectiveCamera(entity.camera),
-            entity.cameraHelper.color
+            entity.cameraHelper.color,
+            modelMatrix
           );
         }
-        // if (entity.boundingBoxHelper) {
-        // if (entity.transform)
-        // }
+        if (entity.axesHelper) {
+          addToBuilder(
+            AXES_POSITIONS.map((p) => [...p]),
+            AXES_COLORS.map((p) => [...p]),
+            modelMatrix
+          );
+        }
+        if (entity.gridHelper) {
+          addToBuilder(
+            getGrid(entity.gridHelper),
+            entity.gridHelper.color,
+            modelMatrix
+          );
+        }
       }
 
       ctx.update(helperPositionVBuffer, { data: geomBuilder.positions });

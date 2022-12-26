@@ -2,6 +2,9 @@ import { vec3 } from "pex-math";
 import { aabb } from "pex-geom";
 import { loadImage } from "pex-io";
 import * as Primitives from "primitive-geometry";
+import normals from "angle-normals";
+
+import * as d from "./assets/models/stanford-dragon/stanford-dragon.js";
 
 export function getURL(url) {
   return new URL(url, import.meta.url).toString();
@@ -110,3 +113,10 @@ export function computeNormals(positions, cells) {
 
   return Float32Array.from(normals.flat());
 }
+
+const dragon = { ...d };
+dragon.positions = centerAndNormalize(dragon.positions);
+dragon.normals = normals(dragon.cells, dragon.positions);
+dragon.uvs = dragon.positions.map(() => [0, 0]);
+
+export { dragon };

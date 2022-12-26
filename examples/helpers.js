@@ -11,14 +11,7 @@ import createGUI from "pex-gui";
 import { aabb } from "pex-geom";
 
 import { cube } from "primitive-geometry";
-import normals from "angle-normals";
-// import centerAndNormalize from "geom-center-and-normalize";
-
-import { centerAndNormalize, getURL } from "./utils.js";
-
-import * as d from "./assets/models/stanford-dragon/stanford-dragon.js";
-
-const dragon = { ...d };
+import { dragon, getURL } from "./utils.js";
 
 // Utils
 async function loadScene(url, transformProps) {
@@ -43,9 +36,7 @@ async function loadScene(url, transformProps) {
   )[0];
 
   scene.entities.forEach((entity) => {
-    entity.boundingBoxHelper = components.boundingBoxHelper({
-      color: [0.85, 0.5, 0.85, 1],
-    });
+    entity.boundingBoxHelper = components.boundingBoxHelper();
   });
   Object.assign(scene.root.transform, transformProps);
 
@@ -62,10 +53,16 @@ const world = createWorld();
 const gui = createGUI(ctx);
 
 const helperEntity = createEntity({
-  axisHelper: { scale: 3 },
-  gridHelper: { size: 30, step: 0.5 },
+  transform: components.transform({ scale: [2, 2, 2] }),
+  axesHelper: {},
+  gridHelper: {},
 });
 world.add(helperEntity);
+const gridTenEntity = createEntity({
+  transform: components.transform({ scale: [2, 2, 2] }),
+  gridHelper: { size: 10 },
+});
+world.add(gridTenEntity);
 
 const W = window.innerWidth * devicePixelRatio;
 const H = window.innerHeight * devicePixelRatio;
@@ -98,7 +95,7 @@ const persCameraEntity = createEntity({
     far: 12,
     viewport: [splitRatio * W, 0.5 * H, (1 - splitRatio) * W, 0.5 * H],
   }),
-  orbiter: components.orbiter(),
+  // orbiter: components.orbiter(),
   cameraHelper: true,
 });
 world.add(persCameraEntity);
@@ -136,52 +133,21 @@ const reflectionProbe = createEntity({
 });
 world.add(reflectionProbe);
 
-// Lights
-// const directionalLightEntity = createEntity({
-//   transform: components.transform({
-//     rotation: quat.fromTo(
-//       quat.create(),
-//       [0, 0, 1],
-//       vec3.normalize([1, -3, -1])
-//     ),
-//     position: [-1, 2, -1],
-//   }),
-//   directionalLight: components.directionalLight({
-//     castShadows: true,
-//     color: [1, 1, 1, 1],
-//     intensity: 5,
-//   }),
-//   lightHelper: true,
-// });
-// world.add(directionalLightEntity);
-
-//floor
+// Floor
 const floorEntity = createEntity({
   transform: components.transform({
     position: [0, -0.4, 0],
   }),
-  geometry: {
-    ...components.geometry(cube({ sx: 7, sy: 0.1, sz: 5 })),
-    // bounds: [
-    //   [-3.5, -0.5, -2.5],
-    //   [3.5, 0.5, 2.5],
-    // ],
-  },
+  geometry: components.geometry(cube({ sx: 7, sy: 0.1, sz: 5 })),
   material: components.material({
     baseColor: [1, 1, 1, 1],
-    roughness: 2 / 5,
-    metallic: 0,
     receiveShadows: true,
-    castShadows: false,
   }),
-  boundingBoxHelper: components.boundingBoxHelper({ color: [1, 1, 0, 1] }),
+  boundingBoxHelper: components.boundingBoxHelper(),
 });
 world.add(floorEntity);
 
 //static mesh
-dragon.positions = centerAndNormalize(dragon.positions);
-dragon.normals = normals(dragon.cells, dragon.positions);
-dragon.uvs = dragon.positions.map(() => [0, 0]);
 const dragonEntity = createEntity({
   name: "dragon",
   geometry: components.geometry(dragon),
@@ -205,7 +171,6 @@ await loadScene(getURL(`assets/models/CesiumMan/CesiumMan.glb`), {
   position: [0.5, -0.35, 0],
 });
 
-//buster drone
 await loadScene(
   getURL(`assets/models/buster-drone/buster-drone-etc1s-draco.glb`),
   {
@@ -228,8 +193,6 @@ for (let i = 0; i < gridSize; i++) {
 function aabbFromInstances(geom, offsets) {
   const bounds = aabb.fromPoints(aabb.create(), offsets);
   const geomBounds = aabb.fromPoints(aabb.create(), geom.positions);
-  // const center = aabb.center(bounds)
-  // const geomSize = aabb.size(geomBounds)
   vec3.add(bounds[0], geomBounds[0]);
   vec3.add(bounds[1], geomBounds[1]);
   return bounds;
@@ -252,7 +215,7 @@ let cubeInstancesEntity = createEntity({
     receiveShadows: true,
   }),
   transform: components.transform({ position: [1.7, -0.2, 0] }),
-  boundingBoxHelper: components.boundingBoxHelper({ color: [1, 0.5, 0, 1] }),
+  boundingBoxHelper: components.boundingBoxHelper(),
 });
 world.add(cubeInstancesEntity);
 
