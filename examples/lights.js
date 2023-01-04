@@ -10,11 +10,9 @@ import createGUI from "pex-gui";
 import { quat, vec2 } from "pex-math";
 
 import { cube } from "primitive-geometry";
-import normals from "angle-normals";
 import gridCells from "grid-cells";
 
-import { centerAndNormalize } from "./utils.js";
-import * as d from "./assets/models/stanford-dragon/stanford-dragon.js";
+import { dragon } from "./utils.js";
 
 const {
   camera,
@@ -28,7 +26,7 @@ const {
   transform,
 } = components;
 
-const pixelRatio = 2;
+const pixelRatio = devicePixelRatio;
 const ctx = createContext({ pixelRatio });
 
 const renderEngine = createRenderEngine({ ctx });
@@ -67,12 +65,6 @@ const cameraEntities = gridCells(W, H, nW, nH, 0).map((cell, i) => {
   world.add(cameraEntity);
   return cameraEntity;
 });
-
-// Geometry
-const dragon = { ...d };
-dragon.positions = centerAndNormalize(dragon.positions);
-dragon.normals = normals(dragon.cells, dragon.positions);
-dragon.uvs = dragon.positions.map(() => [0, 0]);
 
 // Meshes
 const dragonEntity = createEntity({

@@ -314,7 +314,11 @@ export default function createHelperSystem({ ctx }) {
       const { camera } = renderView;
 
       geomBuilder.reset();
-      const addToBuilder = (positions, color = [0.23, 0.23, 0.23, 1], modelMatrix) => {
+      const addToBuilder = (
+        positions,
+        color = [0.23, 0.23, 0.23, 1],
+        modelMatrix
+      ) => {
         for (let i = 0; i < positions.length; i++) {
           const position = positions[i];
           if (modelMatrix) vec3.multMat4(position, modelMatrix);

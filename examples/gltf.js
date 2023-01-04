@@ -128,8 +128,8 @@ unitBox.primitive = ctx.Primitive.Lines;
 const addEnvmap = async () => {
   const buffer = await loadArrayBuffer(
     // getURL(`assets/envmaps/Mono_Lake_B/Mono_Lake_B.hdr`),
-    // getURL(`assets/envmaps/garage/garage.hdr`)
-    getURL(`assets/envmaps/artist_workshop_4k.hdr`)
+    getURL(`assets/envmaps/garage/garage.hdr`)
+    // getURL(`assets/envmaps/artist_workshop_4k.hdr`)
   );
   const hdrImg = parseHdr(buffer);
   const panorama = ctx.texture2D({
@@ -553,7 +553,7 @@ async function init() {
       // "Cube",
       // "DamagedHelmet",
       // "DragonAttenuation",// FAIL: attenuation
-      // "Duck", // FAIL: wrong camera distance
+      "Duck", // FAIL: wrong camera distance
       // "EmissiveStrengthTest", // HALF: missing postpro bloom
       // "EnvironmentTest",
       // "FlightHelmet",
@@ -590,7 +590,7 @@ async function init() {
       // "SimpleSkin",
       // "SimpleSparseAccessor",
       // "SpecGlossVsMetalRough", // HALF: not in spec anymore
-      "SpecularTest", // FAIL: KHR_materials_specular
+      // "SpecularTest", // FAIL: KHR_materials_specular
       // "Sponza",
       // "StainedGlassLamp", // FAIL: KHR_materials_ior, KHR_materials_volume, KHR_materials_transmission
       // "Suzanne",
@@ -598,7 +598,7 @@ async function init() {
       // "TextureEncodingTest",
       // "TextureLinearInterpolationTest", // HALF: EX_srgb in webgl1
       // "TextureSettingsTest", // FAIL: single-sided (cache issue #320)
-      // "TextureTransformMultiTest", // FAIL: clearcoat roughness
+      // "TextureTransformMultiTest",
       // "TextureTransformTest",
       // "ToyCar", // FAIL: (too small, wrong camera)
       // "TransmissionRoughnessTest", // FAIL: KHR_materials_transmission, KHR_materials_ior, and KHR_materials_volume

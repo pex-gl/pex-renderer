@@ -13,7 +13,7 @@
     // "camera-cinematic-dof",
     // "camera-view",
     // "cameras",
-    // "clear-coat",
+    "clear-coat",
     // "custom-shader",
     // "emissive-bloom",
     "gltf",

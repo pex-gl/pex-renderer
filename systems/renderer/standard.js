@@ -342,7 +342,7 @@ ${
     let program = programCacheMap.getValue(flags, vert, frag);
     try {
       if (!program) {
-        console.log("render-system", "New program", flags, entity);
+        console.debug("render-system", "New program", flags, entity);
         program = buildProgram(
           parseShader(
             ctx.capabilities.isWebGL2 ? patchVS(vertSrc) : vertSrc,

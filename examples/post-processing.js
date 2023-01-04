@@ -11,11 +11,7 @@ import normals from "angle-normals";
 // import centerAndNormalize from "geom-center-and-normalize";
 import parseHdr from "parse-hdr";
 
-import { centerAndNormalize, getTexture, getURL } from "./utils.js";
-
-import * as d from "./assets/models/stanford-dragon/stanford-dragon.js";
-
-const dragon = { ...d };
+import { dragon, getTexture, getURL } from "./utils.js";
 
 const State = {
   sunPosition: [0, 1, -5],
@@ -59,11 +55,6 @@ const scene = renderer.entity([renderer.transform({ scale: [s, s, s] })]);
 renderer.add(scene);
 
 // Geometry
-dragon.positions = centerAndNormalize(dragon.positions).map((v) =>
-  vec3.scale(v, 2)
-);
-dragon.normals = normals(dragon.cells, dragon.positions);
-dragon.uvs = dragon.positions.map(() => [0, 0]);
 const dragonBounds = aabb.create();
 aabb.fromPoints(dragonBounds, dragon.positions);
 
