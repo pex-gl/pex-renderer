@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+# [4.0.0-alpha.32](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.31...v4.0.0-alpha.32) (2023-01-04)
+
+
+### Bug Fixes
+
+* **ecs:** add support for texture transform offset/rotation/scale ([7133270](https://github.com/pex-gl/pex-renderer/commit/7133270c00d24548438150e409f0cbaf40f2cdc0))
+* **ecs:** handle multiple animations on entity ([c8797fd](https://github.com/pex-gl/pex-renderer/commit/c8797fdcd049601049296646ff0760aa6bfef986))
+
+
+### Features
+
+* **ecs:** add back area lights ([0368bf3](https://github.com/pex-gl/pex-renderer/commit/0368bf3e6201207adc58edb09ca7d0acc144ad14))
+* **ecs:** add back grid + axes helper ([a806142](https://github.com/pex-gl/pex-renderer/commit/a8061420eeee23cb60a581d6f00b6e7c55f0889a))
+* **ecs:** add missing clearCoatRoughnessMap ([df9526e](https://github.com/pex-gl/pex-renderer/commit/df9526ea932c95ed23caee04eaa632870a9c9e13))
+* **ecs:** add morph system and component ([0e13c02](https://github.com/pex-gl/pex-renderer/commit/0e13c02925991254e102fff86ee0ad00b8c2dde9))
+* **ecs:** add perspective camera helper ([180bc6e](https://github.com/pex-gl/pex-renderer/commit/180bc6ec3a99b66db3eb8c9ee8dae89259b1e28a))
+* **ecs:** add support for texture texCoord ([ae90055](https://github.com/pex-gl/pex-renderer/commit/ae900550ac5a3038ea68186dcf49a17fb2d8649d))
+
+
+
 # [4.0.0-alpha.31](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.30...v4.0.0-alpha.31) (2022-11-29)
 
 
