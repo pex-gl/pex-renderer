@@ -130,6 +130,7 @@ export default function createStandardRendererSystem(opts) {
     [["material", "clearCoatMap"], "CLEAR_COAT_MAP", { type: "texture", uniform: "uClearCoatMap"}],
     [["material", "clearCoatRoughnessMap"], "CLEAR_COAT_ROUGHNESS_MAP", { type: "texture", uniform: "uClearCoatRoughnessMap"}],
     [["material", "clearCoatNormalMap"], "CLEAR_COAT_NORMAL_MAP", { type: "texture", uniform: "uClearCoatNormalMap"}],
+    [["material", "clearCoatNormalMapScale"], "", { uniform: "uClearCoatNormalMapScale"}],
     [["material", "sheenColor"], "USE_SHEEN", { uniform: "uSheenColor"}],
     [["material", "sheenRoughness"], "", { uniform: "uSheenRoughness", requires: "USE_SHEEN"}],
     [["material", "transmission"], "USE_TRANSMISSION", { uniform: "uTransmission", requires: "USE_BLEND"}],
@@ -651,7 +652,7 @@ ${
       } = renderableEntity;
       const cachedUniforms = {};
       cachedUniforms.uModelMatrix = transform.modelMatrix; //FIXME: bypasses need for transformSystem access
-      cachedUniforms.uNormalScale = 1;
+      cachedUniforms.uNormalScale = 1; // TODO: uniform
       // cachedUniforms.uAlphaTest = material.alphaTest;
       // cachedUniforms.uAlphaMap = material.alphaMap;
       cachedUniforms.uReflectance =
