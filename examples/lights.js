@@ -16,6 +16,7 @@ import { dragon } from "./utils.js";
 
 const {
   camera,
+  ambientLight,
   directionalLight,
   pointLight,
   spotLight,
@@ -96,13 +97,12 @@ const floorEntity = createEntity({
 world.add(floorEntity);
 
 // Lights
-// Ambient
-// const ambientLightEntity = createEntity({
-//   ambientLight: ambientLight({
-//     color: [0.1, 0.1, 0.1, 1],
-//   }),
-// });
-// world.add(ambientLightEntity);
+const ambientLightEntity = createEntity({
+  ambientLight: ambientLight({
+    intensity: 0.01,
+  }),
+});
+world.add(ambientLightEntity);
 
 // Directional
 const directionalLightEntity = createEntity({
@@ -111,12 +111,8 @@ const directionalLightEntity = createEntity({
     position: [1, 1, 1],
     rotation: quat.targetTo(quat.create(), [0, 0, 0], [1, 1, 1]),
   }),
-
-  material: material({
-    baseColor: [1, 1, 0, 1],
-  }),
   directionalLight: directionalLight({
-    color: [1, 1, 1, 1],
+    color: [1, 1, 0, 1],
     intensity: 1,
     castShadows: true,
   }),
@@ -130,14 +126,7 @@ const fixDirectionalLightEntity = createEntity({
     position: [1, 1, 1],
     rotation: quat.targetTo(quat.create(), [0, 0, 0], [1, 1, 1]),
   }),
-  material: material({
-    baseColor: [1, 1, 0, 1],
-  }),
-  directionalLight: directionalLight({
-    color: [1, 1, 0, 1],
-    intensity: 1,
-    castShadows: true,
-  }),
+  directionalLight: directionalLight(),
   lightHelper: true,
 });
 world.add(fixDirectionalLightEntity);
@@ -149,11 +138,8 @@ const spotLightEntity = createEntity({
     position: [1, 0.5, 1],
     rotation: quat.targetTo(quat.create(), [0, 0, 0], [1, 1, 1]),
   }),
-  material: material({
-    baseColor: [1, 0, 1, 1],
-  }),
   spotLight: spotLight({
-    color: [1, 1, 1, 1],
+    color: [1, 1, 0, 1],
     intensity: 2,
     range: 5,
     angle: Math.PI / 6,
@@ -170,17 +156,7 @@ const fixSpotLightEntity = createEntity({
     position: [1, 0.5, 1],
     rotation: quat.targetTo(quat.create(), [0, 0, 0], [1, 1, 1]),
   }),
-  material: material({
-    baseColor: [1, 0, 1, 1],
-  }),
-  spotLight: spotLight({
-    color: [1, 1, 0, 1],
-    intensity: 2,
-    range: 5,
-    angle: Math.PI / 6,
-    innerAngle: Math.PI / 12,
-    castShadows: true,
-  }),
+  spotLight: spotLight(),
   lightHelper: true,
 });
 world.add(fixSpotLightEntity);
@@ -191,11 +167,8 @@ const pointLightEntity = createEntity({
   transform: transform({
     position: [1, 1, 1],
   }),
-  material: material({
-    baseColor: [1, 1, 1, 1],
-  }),
   pointLight: pointLight({
-    color: [1, 1, 1, 1],
+    color: [1, 1, 0, 1],
     intensity: 2,
     range: 5,
     castShadows: true,
@@ -209,26 +182,12 @@ const fixPointLightEntity = createEntity({
   transform: transform({
     position: [1, 1, 1],
   }),
-  material: material({
-    baseColor: [1, 1, 1, 1],
-  }),
-  pointLight: pointLight({
-    color: [1, 1, 0, 1],
-    intensity: 2,
-    range: 5,
-    castShadows: true,
-  }),
+  pointLight: pointLight(),
   lightHelper: true,
 });
 world.add(fixPointLightEntity);
 
 // Area
-const areaLightCmp = areaLight({
-  color: [1, 1, 1, 1],
-  intensity: 4,
-  castShadows: true,
-});
-
 const areaLightEntity = createEntity({
   layer: LAYERS[3],
   transform: transform({
@@ -236,10 +195,11 @@ const areaLightEntity = createEntity({
     position: [1, 1, 1],
     rotation: quat.targetTo(quat.create(), [0, 0, 0], [1, 1, 1]),
   }),
-  material: material({
-    baseColor: [0, 1, 1, 1],
+  areaLight: areaLight({
+    color: [1, 1, 0, 1],
+    intensity: 4,
+    castShadows: true,
   }),
-  areaLight: areaLightCmp,
   lightHelper: true,
 });
 world.add(areaLightEntity);
@@ -251,14 +211,7 @@ const fixAreaLightEntity = createEntity({
     position: [1, 1, 1],
     rotation: quat.targetTo(quat.create(), [0, 0, 0], [1, 1, 1]),
   }),
-  material: material({
-    baseColor: [0, 1, 1, 1],
-  }),
-  areaLight: areaLight({
-    color: [1, 1, 0, 1],
-    intensity: 4,
-    castShadows: true,
-  }),
+  areaLight: areaLight(),
   lightHelper: true,
 });
 world.add(fixAreaLightEntity);

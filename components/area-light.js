@@ -1,3 +1,6 @@
-export default (opts) => {
-  return { ...opts };
-};
+export default (opts) => ({
+  color: [1, 1, 1, 1],
+  intensity: 1,
+  // castShadows: true,
+  ...opts,
+});
