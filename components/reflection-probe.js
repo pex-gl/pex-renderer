@@ -1,7 +1,4 @@
-export default (opts = {}) => {
-  return {
-    size: 1024,
-    ...opts,
-  };
-  // return new ReflectionProbe(opts);
-};
+export default (opts) => ({
+  size: 1024,
+  ...opts,
+});

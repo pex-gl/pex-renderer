@@ -165,7 +165,7 @@ class Geometry {
   }
 }
 
-export default (opts = {}) => {
+export default (opts) => {
   return {
     ...opts,
   };

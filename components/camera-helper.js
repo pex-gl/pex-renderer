@@ -1,5 +1,1 @@
-export default (opts = {}) => {
-  return {
-    ...opts,
-  };
-};
+export default (opts) => ({ ...opts });

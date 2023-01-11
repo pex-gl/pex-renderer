@@ -155,24 +155,22 @@ class Material {
   }
 }
 
-export default (opts = {}) => {
-  //return new Material(opts);
-  return {
-    type: undefined,
-    alphaTest: undefined, //0..1
-    baseColor: [1, 1, 1, 1],
-    emissiveColor: undefined,
-    metallic: 1,
-    roughness: 1,
-    depthTest: true,
-    depthWrite: true,
-    blend: false,
-    blendSrcRGBFactor: undefined,
-    blendSrcAlphaFactor: undefined,
-    blendDstRGBFactor: undefined,
-    blendDstAlphaFactor: undefined,
-    castShadows: false,
-    receiveShadows: false,
-    ...opts,
-  };
-};
+export default (opts) => ({
+  // id: `Material_${MaterialID++}`,
+  type: undefined,
+  alphaTest: undefined, //0..1
+  baseColor: [1, 1, 1, 1],
+  emissiveColor: undefined,
+  metallic: 1,
+  roughness: 1,
+  depthTest: true,
+  depthWrite: true,
+  blend: false,
+  blendSrcRGBFactor: undefined,
+  blendSrcAlphaFactor: undefined,
+  blendDstRGBFactor: undefined,
+  blendDstAlphaFactor: undefined,
+  castShadows: false,
+  receiveShadows: false,
+  ...opts,
+});

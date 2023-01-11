@@ -1,6 +1,6 @@
 import { mat4 } from "pex-math";
 
-export default (opts = {}) => {
+export default (opts) => {
   const camera = {
     fov: Math.PI / 4,
     near: 0.5,
