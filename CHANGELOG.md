@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+# [4.0.0-alpha.33](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.32...v4.0.0-alpha.33) (2023-01-12)
+
+
+### Features
+
+* **ecs:** add light components defaults ([21c7ce3](https://github.com/pex-gl/pex-renderer/commit/21c7ce325af7ec88899b4d4d3235ff88e38e0616)), closes [#333](https://github.com/pex-gl/pex-renderer/issues/333)
+* **pbr:** add missing clearCoatNormalMapScale uniform ([5f7e6cf](https://github.com/pex-gl/pex-renderer/commit/5f7e6cf6f0805d8d50c44cd04b925ec6c12b329b))
+
+
+
 # [4.0.0-alpha.32](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.31...v4.0.0-alpha.32) (2023-01-04)
 
 
