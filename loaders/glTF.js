@@ -5,7 +5,8 @@ import { components, entity } from "../index.js";
 import { loadDraco, loadKtx2 } from "pex-loaders";
 
 const isSafari =
-  /^((?!chrome|android).)*safari/i.test(navigator.userAgent) === true;
+  /^((?!chrome|android).)*safari/i.test(globalThis.navigator?.userAgent) ===
+  true;
 
 // Constants
 // https://www.khronos.org/registry/glTF/specs/2.0/glTF-2.0.html#specifying-extensions
