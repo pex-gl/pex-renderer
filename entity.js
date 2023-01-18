@@ -1,4 +1,4 @@
-let entityId = 0;
+export let entityCount = 0;
 
 export default function createEntity(components = {}) {
   if (Array.isArray(components)) {
@@ -8,7 +8,7 @@ export default function createEntity(components = {}) {
   }
 
   const entity = {
-    id: entityId++,
+    id: entityCount++,
     ...components,
   };
   return entity;
