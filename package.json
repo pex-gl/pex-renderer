@@ -34,18 +34,18 @@
     "hammersley": "^1.0.0",
     "pex-cam": "^3.0.0-alpha.1",
     "pex-geom": "^3.0.0-alpha.2",
-    "pex-io": "github:pex-gl/pex-io#v3",
+    "pex-io": "^3.0.0-alpha.0",
     "pex-loaders": "^0.0.1",
     "pex-math": "^4.0.0-alpha.3",
     "pex-random": "^2.0.0-alpha.0",
-    "pex-shaders": "^0.1.1",
+    "pex-shaders": "^0.1.3",
     "primitive-quad": "^2.0.0",
     "signals": "^1.0.0"
   },
   "devDependencies": {
     "angle-normals": "^1.0.0",
     "cosine-gradient": "^0.3.0",
-    "es-module-shims": "^1.5.4",
+    "es-module-shims": "^1.6.3",
     "fit-rect": "^1.0.3",
     "geom-center-and-normalize": "^1.0.3",
     "geom-edges": "^1.2.0",
@@ -53,10 +53,10 @@
     "geom-parse-obj": "^1.0.0",
     "grid-cells": "^2.0.0",
     "parse-hdr": "^1.0.0",
-    "pex-color": "github:pex-gl/pex-color#v2",
-    "pex-context": "^3.0.0-alpha.2",
+    "pex-color": "^2.0.0-alpha.2",
+    "pex-context": "^3.0.0-alpha.4",
     "pex-gui": "^3.0.0-alpha.2",
-    "primitive-geometry": "^2.6.0"
+    "primitive-geometry": "^2.9.1"
   },
   "engines": {
     "node": ">=16.0.0",
