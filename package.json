@@ -27,7 +27,7 @@
     "build": "snowdev build",
     "dev": "snowdev dev",
     "release": "snowdev release",
-    "release-alpha": "snowdev release --release-as minor --prerelease alpha"
+    "release:alpha": "snowdev release --release-as minor --prerelease alpha"
   },
   "dependencies": {
     "geom-builder": "^2.1.0",
