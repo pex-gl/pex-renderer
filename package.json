@@ -1,6 +1,6 @@
 {
   "name": "pex-renderer",
-  "version": "4.0.0-alpha.35",
+  "version": "4.0.0-alpha.36",
   "description": "Physically based renderer (PBR) and scene graph for PEX.",
   "keywords": [
     "pex",

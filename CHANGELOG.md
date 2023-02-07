@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+# [4.0.0-alpha.36](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.35...v4.0.0-alpha.36) (2023-02-07)
+
+
+### Bug Fixes
+
+* **ecs:** fix pass caching bug ([35484e5](https://github.com/pex-gl/pex-renderer/commit/35484e5e2e6471c53d5f8fae685a041c392de8b6))
+* **ecs:** move camera position to transform ([a30b178](https://github.com/pex-gl/pex-renderer/commit/a30b178360d0da1772593e5018aee05e6e020440))
+
+
+### Features
+
+* **ecs:** add names to passes ([99c5f74](https://github.com/pex-gl/pex-renderer/commit/99c5f74b4a2cd3e3038ca5a931df13d7c5bb5285))
+
+
+
 # [4.0.0-alpha.35](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.34...v4.0.0-alpha.35) (2023-02-07)
 
 
