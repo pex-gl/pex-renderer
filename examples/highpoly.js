@@ -6,7 +6,7 @@ import createGUI from "pex-gui";
 import random from "pex-random";
 
 import { sphere } from "primitive-geometry";
-import { computeNormals } from "./utils.js";
+import computeNormals from "geom-normals";
 
 const ctx = createContext();
 const renderer = createRenderer(ctx);
