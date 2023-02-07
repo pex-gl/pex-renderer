@@ -39,14 +39,13 @@ const renderGraph = createRenderGraph(ctx);
 const resourceCache = createResourceCache(ctx);
 
 const cameraEntity = createEntity({
-  transform: transform({ position: [0, 0, 2] }),
+  transform: transform({ position: [15, 1, 15] }),
   camera: camera({
     fov: Math.PI * 0.1,
     aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
   }),
   orbiter: orbiter({
     element: ctx.gl.canvas,
-    position: [15, 1, 15],
   }),
 });
 world.add(cameraEntity);
