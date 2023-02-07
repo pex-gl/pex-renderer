@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+# [4.0.0-alpha.35](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.34...v4.0.0-alpha.35) (2023-02-07)
+
+
+
 # [4.0.0-alpha.34](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.33...v4.0.0-alpha.34) (2023-02-02)
 
 
