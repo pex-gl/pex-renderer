@@ -125,6 +125,7 @@ function createPassDescriptors(ctx) {
     },
     mainPass: {
       outputTextureDesc: {
+        name: "mainPassColorTexture",
         width: 1,
         height: 1,
         pixelFormat: ctx.PixelFormat.RGBA16F,
@@ -133,6 +134,7 @@ function createPassDescriptors(ctx) {
         mag: ctx.Filter.Linear,
       },
       outputDepthTextureDesc: {
+        name: "mainPassDepthTexture",
         width: 1,
         height: 1,
         pixelFormat: ctx.PixelFormat.DEPTH_COMPONENT24,
@@ -146,6 +148,7 @@ function createPassDescriptors(ctx) {
     },
     grabPass: {
       colorCopyTextureDesc: {
+        name: "colorCopyTexture",
         width: 1,
         height: 1,
         pixelFormat: ctx.PixelFormat.RGBA16F,
