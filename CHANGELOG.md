@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+# [4.0.0-alpha.37](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.36...v4.0.0-alpha.37) (2023-02-08)
+
+
+### Features
+
+* **ecs:** change default line width to 1 ([bb910a7](https://github.com/pex-gl/pex-renderer/commit/bb910a70941056e4a56c22dc8ecd2ec330f50f35))
+
+
+
 # [4.0.0-alpha.36](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.35...v4.0.0-alpha.36) (2023-02-07)
 
 
