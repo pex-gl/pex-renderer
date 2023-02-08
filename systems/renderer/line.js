@@ -150,7 +150,7 @@ export default function createLineRendererSystem(opts) {
         uProjectionMatrix: camera.projectionMatrix,
         uViewMatrix: camera.viewMatrix,
         uModelMatrix: e._transform.modelMatrix,
-        uLineWidth: 10,
+        uLineWidth: 1,
         uResolution: [ctx.gl.drawingBufferWidth, ctx.gl.drawingBufferHeight],
         uLineZOffset: 0,
       },
