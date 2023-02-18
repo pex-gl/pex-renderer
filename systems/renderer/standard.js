@@ -547,13 +547,28 @@ ${
     });
   }
 
+  const pipelineMaterialDefaults = {
+    depthWrite: undefined,
+    depthTest: undefined,
+    depthFunc: ctx.DepthFunc.Less,
+    blend: undefined,
+    blendSrcRGBFactor: undefined,
+    blendSrcAlphaFactor: undefined,
+    blendDstRGBFactor: undefined,
+    blendDstAlphaFactor: undefined,
+    cullFace: true,
+    cullFaceMode: ctx.Face.Back,
+  };
+
   function getGeometryPipeline(ctx, entity, opts) {
     const { material, _geometry: geometry } = entity;
     const { program, materialUniforms } = getMaterialProgram(ctx, entity, opts);
-    if (!pipelineCache) {
-      pipelineCache = {};
-    }
-    const hash = `${material.id}_${program.id}_${geometry.primitive}`;
+
+    const materialHash = Object.entries(pipelineMaterialDefaults)
+      .map(([key, value]) => material[key] ?? value)
+      .join("_");
+    const hash = `${material.id}_${program.id}_${geometry.primitive}_${materialHash}`;
+
     let pipeline = pipelineCache[hash];
     if (!pipeline || material.needsPipelineUpdate) {
       material.needsPipelineUpdate = false;
