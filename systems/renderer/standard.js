@@ -564,10 +564,11 @@ ${
     const { material, _geometry: geometry } = entity;
     const { program, materialUniforms } = getMaterialProgram(ctx, entity, opts);
 
-    const materialHash = Object.entries(pipelineMaterialDefaults)
+    const hash = `${material.id}_${program.id}_${
+      geometry.primitive
+    }_${Object.entries(pipelineMaterialDefaults)
       .map(([key, value]) => material[key] ?? value)
-      .join("_");
-    const hash = `${material.id}_${program.id}_${geometry.primitive}_${materialHash}`;
+      .join("_")}`;
 
     let pipeline = pipelineCache[hash];
     if (!pipeline || material.needsPipelineUpdate) {
