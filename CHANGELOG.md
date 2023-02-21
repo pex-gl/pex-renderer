@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+# [4.0.0-alpha.38](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.37...v4.0.0-alpha.38) (2023-02-21)
+
+
+### Bug Fixes
+
+* add all material defaults to pipeline cache hash ([5e75925](https://github.com/pex-gl/pex-renderer/commit/5e75925e6764623802c4845290aa7bc29d4dabab)), closes [#320](https://github.com/pex-gl/pex-renderer/issues/320)
+
+
+### Features
+
+* **pbr:** add multiDraw support ([8173d3c](https://github.com/pex-gl/pex-renderer/commit/8173d3c4ef9dcb0c35fdc3b29bf658d3a15d0483))
+
+
+
 # [4.0.0-alpha.37](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.36...v4.0.0-alpha.37) (2023-02-08)
 
 
