@@ -749,6 +749,9 @@ ${
         uniforms: cachedUniforms,
         instances: geometry.instances,
       };
+      if (renderableEntity.geometry.multiDraw) {
+        cmd.multiDraw = renderableEntity.geometry.multiDraw;
+      }
       ctx.submit(cmd);
     });
   }
