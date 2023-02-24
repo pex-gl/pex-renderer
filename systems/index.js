@@ -6,4 +6,5 @@ export { default as reflectionProbe } from "./reflection-probe.js";
 export { default as renderPipeline } from "./render-pipeline.js";
 export { default as skybox } from "./skybox.js";
 export { default as transform } from "./transform.js";
+export { default as layer } from "./layer.js";
 export * as renderer from "./renderer/index.js";
