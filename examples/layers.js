@@ -26,8 +26,6 @@ const {
 } = components;
 
 const ctx = createContext({ pixelRatio: 1.5 });
-ctx.gl.getExtension("OES_element_index_uint"); //TEMP
-ctx.gl.getExtension("EXT_color_buffer_float");
 
 const gui = createGUI(ctx);
 gui.addColumn("Settings");
@@ -226,7 +224,7 @@ world.add(reflectionProbeEnt2);
     encoding: ctx.Encoding.Linear,
     min: ctx.Filter.Linear,
     mag: ctx.Filter.Linear,
-    flipY: true, //TODO: flipY on non dom elements is deprecated
+    flipY: true,
   });
 
   skyboxEnt.skybox.envMap = panorama; //TODO: remove _skybox

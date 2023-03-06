@@ -19,7 +19,6 @@ const ctx = createContext({ pixelRatio });
 
 const world = (window.world = createWorld());
 const renderEngine = createRenderEngine({ ctx });
-world.addSystem(renderEngine);
 
 const gui = createGUI(ctx);
 gui.addFPSMeeter().setPosition(10, 40);
@@ -29,7 +28,6 @@ const W = ctx.gl.drawingBufferWidth;
 const H = ctx.gl.drawingBufferHeight;
 const nW = 5;
 const nH = 2;
-let debugOnce = false;
 
 // Materials
 const transform23 = mat2x3.create();
@@ -302,6 +300,9 @@ const skyEntity = createEntity({
   reflectionProbe: components.reflectionProbe(),
 });
 world.add(skyEntity);
+
+// Events
+let debugOnce = false;
 
 window.addEventListener("keydown", ({ key }) => {
   if (key === "g") gui.enabled = !gui.enabled;

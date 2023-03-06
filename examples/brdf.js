@@ -19,7 +19,6 @@ const ctx = createContext({ pixelRatio });
 
 const world = (window.world = createWorld());
 const renderEngine = createRenderEngine({ ctx });
-world.addSystem(renderEngine);
 
 const gui = createGUI(ctx);
 const W = ctx.gl.drawingBufferWidth;
@@ -148,11 +147,6 @@ const envMap = ctx.texture2D({
   flipY: true,
 });
 
-const sun = components.directionalLight({
-  color: [1, 1, 0.95, 2],
-  intensity: 2,
-  castShadows: false,
-});
 const sunEntity = createEntity({
   transform: components.transform({
     position: [-2, 2, 2],
@@ -162,7 +156,11 @@ const sunEntity = createEntity({
       vec3.normalize([2, -2, -1])
     ),
   }),
-  directionalLight: sun,
+  directionalLight: components.directionalLight({
+    color: [1, 1, 0.95, 2],
+    intensity: 2,
+    castShadows: false,
+  }),
 });
 world.add(sunEntity);
 
@@ -184,18 +182,23 @@ function countByProp(list, prop) {
   }, {});
 }
 
+gui.addColumn("");
 gui.addFPSMeeter().setPosition(10, 40);
+gui.addColumn("Resources");
+gui.addStats();
+gui.addStats("Pixel Formats:", {
+  update(item) {
+    Object.assign(
+      item.stats,
+      countByProp(
+        ctx.resources.filter((o) => o.class == "texture"),
+        "pixelFormat"
+      )
+    );
+  },
+});
 gui.addButton("Resources", () => {
-  const countByClass = countByProp(ctx.resources, "class");
-  const textures = ctx.resources.filter((o) => o.class == "texture");
-  const countByPixelFormat = countByProp(textures, "pixelFormat");
-  console.log(
-    "Resources",
-    countByClass,
-    countByPixelFormat,
-    ctx.resources,
-    resourceCache
-  );
+  console.log("Resources", ctx.resources, renderEngine);
 });
 
 const headers = [

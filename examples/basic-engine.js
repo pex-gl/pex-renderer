@@ -6,7 +6,11 @@ import {
   loaders,
   entity,
 } from "../index.js";
+
 import createContext from "pex-context";
+import { vec3, quat, mat4 } from "pex-math";
+import * as io from "pex-io";
+import createGUI from "pex-gui";
 import {
   cube,
   torus,
@@ -15,12 +19,8 @@ import {
   plane,
   cone,
 } from "primitive-geometry";
-import { vec3, quat, mat4, utils } from "pex-math";
-import * as io from "pex-io";
-import createGUI from "pex-gui";
 import parseHdr from "parse-hdr";
-
-const { EPSILON } = utils;
+import { getURL } from "./utils.js";
 
 const {
   camera,
@@ -34,9 +34,7 @@ const {
   transform,
 } = components;
 
-const ctx = createContext({});
-ctx.gl.getExtension("OES_element_index_uint"); //TEMP
-ctx.gl.getExtension("EXT_color_buffer_float");
+const ctx = createContext();
 
 window.addEventListener("resize", () => {
   ctx.set({
@@ -49,8 +47,6 @@ window.addEventListener("resize", () => {
 });
 
 const world = createWorld();
-
-let debugNextFrame = false;
 
 const gui = createGUI(ctx);
 gui.addColumn("Settings");
@@ -525,13 +521,29 @@ for (let i = 0; i < 10; i++) {
   // world.add(torusEntity);
 }
 
-const skyboxEnt = createEntity({
+const hdrImg = parseHdr(
+  await io.loadArrayBuffer(
+    getURL(`assets/envmaps/Mono_Lake_B/Mono_Lake_B.hdr`)
+    // getURL(`assets/envmaps/garage/garage.hdr`)
+  )
+);
+const envMap = ctx.texture2D({
+  data: hdrImg.data,
+  width: hdrImg.shape[0],
+  height: hdrImg.shape[1],
+  pixelFormat: ctx.PixelFormat.RGBA32F,
+  encoding: ctx.Encoding.Linear,
+  flipY: true,
+});
+
+const skyboxEntity = createEntity({
   skybox: skybox({
     sunPosition: [1, 1, 1],
     backgroundBlur: true,
+    envMap,
   }),
 });
-world.add(skyboxEnt);
+world.add(skyboxEntity);
 
 const reflectionProbeEnt = createEntity({
   reflectionProbe: reflectionProbe(),
@@ -674,30 +686,6 @@ async function loadScene() {
 
 // loadScene();
 
-(async () => {
-  // const buffer = await io.loadArrayBuffer(
-  //   getURL(`assets/envmaps/Mono_Lake_B/Mono_Lake_B.hdr`)
-  // );
-  const buffer = await io.loadArrayBuffer(
-    `examples/assets/envmaps/Mono_Lake_B/Mono_Lake_B.hdr`
-  );
-  const hdrImg = parseHdr(buffer);
-  const panorama = ctx.texture2D({
-    data: hdrImg.data,
-    width: hdrImg.shape[0],
-    height: hdrImg.shape[1],
-    pixelFormat: ctx.PixelFormat.RGBA32F,
-    encoding: ctx.Encoding.Linear,
-    min: ctx.Filter.Linear,
-    mag: ctx.Filter.Linear,
-    flipY: true, //TODO: flipY on non dom elements is deprecated
-  });
-
-  skyboxEnt.skybox.envMap = panorama; //TODO: remove _skybox
-
-  window.dispatchEvent(new CustomEvent("pex-screenshot"));
-})();
-
 let prevTime = Date.now();
 const renderEngine = createRenderEngine({ ctx });
 
@@ -797,4 +785,6 @@ ctx.frame(() => {
   }
 
   gui.draw();
+
+  window.dispatchEvent(new CustomEvent("pex-screenshot"));
 });

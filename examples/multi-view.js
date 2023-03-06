@@ -1,110 +1,26 @@
 import {
-  world as createWorld,
   entity as createEntity,
   renderGraph as createRenderGraph,
   resourceCache as createResourceCache,
   systems,
   components,
-  loaders,
 } from "../index.js";
+
 import createContext from "pex-context";
-import { cube, sphere } from "primitive-geometry";
-import { vec3, quat, mat4 } from "pex-math";
-import * as io from "pex-io";
+import { quat } from "pex-math";
 import { aabb } from "pex-geom";
 import createGUI from "pex-gui";
-import parseHdr from "parse-hdr";
-import { getURL } from "./utils.js";
 import { fromHSL } from "pex-color";
 import random from "pex-random";
-import { serializeGraph } from "https://cdn.skypack.dev/@thi.ng/dot";
-import { Graphviz } from "https://cdn.skypack.dev/@hpcc-js/wasm/graphviz";
+import { cube, sphere } from "primitive-geometry";
 
-const graphviz = await Graphviz.load();
+import { debugSceneTree } from "./utils.js";
 
-const dotGraph = {
-  directed: true,
-  attribs: {
-    rankdir: "TB",
-    fontname: "Inconsolata",
-    fontsize: 9,
-    fontcolor: "gray",
-    labeljust: "l",
-    labelloc: "b",
-    node: {
-      shape: "rect",
-      style: "filled",
-      fontname: "Arial",
-      fontsize: 11,
-    },
-    // edge defaults
-    edge: {
-      arrowsize: 0.75,
-      fontname: "Inconsolata",
-      fontsize: 9,
-    },
-  },
-  // graph nodes (the keys are used as node IDs)
-  // use spread operator to inject style presets
-  nodes: {
-    // A: { shape: "rect", label: "A" },
-    // B: { shape: "rect", label: "B" },
-  },
-  // graph edges (w/ optional ports & extra attribs)
-  edges: [
-    // { src: "A", dest: "B" }
-  ],
-};
-
-const dot = {
-  reset: () => {
-    (dotGraph.nodes = {}), (dotGraph.edges = []);
-  },
-  node: (id, label, props) => {
-    if (Array.isArray(label)) {
-      label = label
-        .map((label, i) => {
-          return `<f${i}> ${label}`;
-        })
-        .join("|");
-      props = {
-        ...props,
-        shape: "record",
-      };
-    }
-
-    dotGraph.nodes[id] = { label: label || id, ...props };
-  },
-  passNode: (id, name) => {
-    dot.node(id, name, { fillcolor: "red", fontcolor: "white" });
-  },
-  resourceNode: (id, name) => {
-    dot.node(id, name, { fillcolor: "blue", fontcolor: "white" });
-  },
-  edge: (id1, id2) => {
-    dotGraph.edges.push({ src: id1, dest: id2 });
-  },
-  render: () => {
-    const dotStr = serializeGraph(dotGraph);
-    console.log("dotStr", dotStr);
-
-    const svg = graphviz.layout(dotStr, "svg", "dot");
-    const div = document.getElementById("graphviz-container");
-    div.innerHTML = svg;
-  },
-  style: {
-    texture: {
-      fillcolor: "skyblue",
-    },
-  },
-};
-
-window.dot = dot;
+import "./graph-viz.js";
 
 const {
   camera,
   directionalLight,
-  ambientLight,
   geometry,
   material,
   orbiter,
@@ -152,75 +68,10 @@ ctx.apply = (...args) => {
     );
   oldApply.call(ctx, ...args);
 };
-setTimeout(() => {
-  debugNextFrame = true;
-}, 500);
-
-window.addEventListener("resize", () => {
-  ctx.set({
-    pixelRatio: 1.5,
-    width: window.innerWidth,
-    height: window.innerHeight,
-  });
-  // ctx.gl.canvas.style.width = window.innerWidth + "px";
-  // ctx.gl.canvas.style.height = window.innerHeight + "px";
-});
-
-ctx.gl.getExtension("OES_element_index_uint"); //TEMP
 
 const entities = (window.entities = []);
-const renderGraph = createRenderGraph(ctx, dot);
+const renderGraph = createRenderGraph(ctx, window.dot);
 const resourceCache = createResourceCache(ctx);
-
-let debugNextFrame = false;
-
-const gui = createGUI(ctx);
-gui.addFPSMeeter();
-
-const stats = [
-  "texture",
-  "program",
-  "pipeline",
-  "pass",
-  "indexBuffer",
-  "vertexBuffer",
-];
-const statsControls = stats.map((statName) => {
-  return { name: statName, control: gui.addLabel("-") };
-});
-
-function updateStats() {
-  statsControls.forEach(({ name, control }) => {
-    const stat = ctx.stats[name] || { alive: 0, total: 0 };
-    control.setTitle(`${name} : ${stat.alive} / ${stat.total}`);
-  });
-}
-
-gui.addButton("Debug", () => {
-  debugNextFrame = true;
-  console.log(ctx.stats);
-  // texture2DLabel.setTitle(ctx.stats);
-});
-
-gui.addButton("Tree", () => {
-  entities.forEach((e) => {
-    if (!e.transform) {
-      return;
-    }
-    let depth = 0;
-    let parent = e.transform.parent;
-    while (parent) {
-      depth++;
-      parent = parent.parent;
-    }
-    console.log(
-      " ".repeat(depth * 5),
-      e.id,
-      aabb.toString(e.transform.worldBounds || "[No world bounds]"),
-      e
-    );
-  });
-});
 
 const cameraEntity = createEntity({
   transform: transform({ position: [0, 3, 3] }),
@@ -230,16 +81,12 @@ const cameraEntity = createEntity({
     target: [0, 1, 0],
     position: [0, 2, 4],
   }),
-  orbiter: orbiter({
-    element: ctx.gl.canvas,
-  }),
+  orbiter: orbiter({ element: ctx.gl.canvas }),
 });
 entities.push(cameraEntity);
 
 const floorEntity = createEntity({
-  transform: transform({
-    position: [0, 0, 0],
-  }),
+  transform: transform(),
   geometry: geometry(cube({ sx: 3, sy: 0.1, sz: 3 })),
   material: material({
     baseColor: [1, 0.8, 0.2, 1],
@@ -259,14 +106,12 @@ const cubesEntity = createEntity({
   geometry: geometry({
     ...cube({ sx: 1.5, sy: 0.5, sz: 1.5 }),
     // offsets: new Array(64).fill(0).map(() => random.vec3(3)),
-    offsets: new Float32Array(64 * 3).fill(0).map(() => random.float(-1.5, 1.5)),
+    offsets: new Float32Array(64 * 3)
+      .fill(0)
+      .map(() => random.float(-1.5, 1.5)),
     scales: new Float32Array(64 * 3).fill(0.1),
     instances: 64,
   }),
-  // geometry: geometry({
-  //   ...cube({ sx: 1, sy: 1, sz: 1 }),
-  //   offsets: new Array(64).fill(0).map(() => random.vec3(3)),
-  // }),
   material: material({
     baseColor: [0.2, 0.9, 0.2, 0.5],
     blend: true,
@@ -353,44 +198,32 @@ const skyboxEnt = createEntity({
 });
 entities.push(skyboxEnt);
 
-const directionalLightEntity = createEntity(
-  {
-    transform: transform({
-      position: [2, 2, 0],
-      rotation: quat.targetTo(quat.create(), [0, 0, 0], [1, 1, 1]),
-    }),
-    directionalLight: directionalLight({
-      color: [1, 0.1, 0.1, 1], //FIXME: intensity is copied to alpha in pex-renderer
-      intensity: 3,
-      castShadows: true,
-    }),
-    // ambientLight: ambientLight({
-    // color: [0.15, 0.15, 0.15, 1],
-    // }),
-    lightHelper: lightHelper(),
-  }
-  // ["cell0"]
-);
+const directionalLightEntity = createEntity({
+  transform: transform({
+    position: [2, 2, 0],
+    rotation: quat.targetTo(quat.create(), [0, 0, 0], [1, 1, 1]),
+  }),
+  directionalLight: directionalLight({
+    color: [1, 0.1, 0.1, 1], //FIXME: intensity is copied to alpha in pex-renderer
+    intensity: 3,
+    castShadows: true,
+  }),
+  lightHelper: lightHelper(),
+});
 entities.push(directionalLightEntity);
 
-const directionalLightEntity2 = createEntity(
-  {
-    transform: transform({
-      position: [-2, 2, 0],
-      rotation: quat.targetTo(quat.create(), [0, 0, 0], [-1, -1, 0]),
-    }),
-    directionalLight: directionalLight({
-      color: [0.1, 0.1, 1.0, 1], //FIXME: intensity is copied to alpha in pex-renderer
-      intensity: 3,
-      castShadows: true,
-    }),
-    // ambientLight: ambientLight({
-    // color: [0.5, 0.5, 0.5, 1],
-    // }),
-    lightHelper: lightHelper(),
-  }
-  // ["cell0"]
-);
+const directionalLightEntity2 = createEntity({
+  transform: transform({
+    position: [-2, 2, 0],
+    rotation: quat.targetTo(quat.create(), [0, 0, 0], [-1, -1, 0]),
+  }),
+  directionalLight: directionalLight({
+    color: [0.1, 0.1, 1.0, 1], //FIXME: intensity is copied to alpha in pex-renderer
+    intensity: 3,
+    castShadows: true,
+  }),
+  lightHelper: lightHelper(),
+});
 entities.push(directionalLightEntity2);
 
 const geometrySys = systems.geometry({ ctx });
@@ -424,7 +257,6 @@ const skyboxRendererSystem = systems.renderer.skybox({
   resourceCache,
   renderGraph,
 });
-
 const helperRendererSystem = systems.renderer.helper({ ctx });
 
 function createView(cameraEntity, viewport) {
@@ -462,50 +294,36 @@ let shadowMapPreview;
 
 let frame = 0;
 
-const clearCmd = {
-  pass: ctx.pass({
-    clearColor: [0.3, 0.3, 0.3, 1],
-    clearDepth: 1,
-  }),
-};
+// GUI
+const gui = createGUI(ctx);
+gui.addFPSMeeter();
+gui.addStats();
+gui.addButton("Tree", () => {
+  debugSceneTree(entities);
+});
 
-const basicCmd = {
-  name: "basicCmd",
-  pipeline: ctx.pipeline({
-    vert: /*glsl*/ `
-    attribute vec3 aPosition;
-    uniform mat4 uProjectionMatrix;
-    uniform mat4 uViewMatrix;
-    uniform mat4 uModelMatrix;
-    void main() {
-      gl_Position = uProjectionMatrix * uViewMatrix * uModelMatrix * vec4(aPosition, 1.0);
-    }
-    `,
-    frag: /*glsl*/ `
-    precision highp float;
-    uniform vec4 uBaseColor;
-    void main() {
-      gl_FragData[0] = uBaseColor;
-    }
-    `,
-    depthWrite: true,
-    depthTest: true,
-  }),
-};
+// Events
+let debugOnce = false;
+
+window.addEventListener("resize", () => {
+  ctx.set({
+    pixelRatio: 1.5,
+    width: window.innerWidth,
+    height: window.innerHeight,
+  });
+});
+
+window.addEventListener("keydown", ({ key }) => {
+  if (key === "g") gui.enabled = !gui.enabled;
+  if (key === "d") debugOnce = true;
+});
 
 ctx.frame(() => {
   frame++;
 
-  dot.reset();
+  window.dot.reset();
   resourceCache.beginFrame();
   renderGraph.beginFrame();
-
-  const now = Date.now() * 0.0005;
-  if (debugNextFrame) {
-    debugNextFrame = false;
-    ctx.gl.getError();
-    ctx.debug(true);
-  }
 
   // skyboxEnt.skybox.sunPosition = [1 * Math.cos(now), 1, 1 * Math.sin(now)];
   quat.fromAxisAngle(
@@ -548,7 +366,7 @@ ctx.frame(() => {
   });
 
   if (frame == 1) {
-    dot.render();
+    window.dot.render();
   }
 
   if (directionalLightEntity.directionalLight._shadowMap && !shadowMapPreview) {
@@ -576,10 +394,10 @@ ctx.frame(() => {
   renderGraph.endFrame();
   resourceCache.endFrame();
 
-  gui.draw();
+  ctx.debug(debugOnce);
+  debugOnce = false;
 
-  updateStats();
-  ctx.debug(false);
+  gui.draw();
 
   window.dispatchEvent(new CustomEvent("pex-screenshot"));
 });

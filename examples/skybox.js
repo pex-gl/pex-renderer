@@ -11,7 +11,6 @@ import { quat } from "pex-math";
 import createGUI from "pex-gui";
 import { sphere } from "primitive-geometry";
 import parseHdr from "parse-hdr";
-import parseObj from "geom-parse-obj";
 
 import { getURL } from "./utils.js";
 
@@ -51,14 +50,9 @@ const cameraEntity = createEntity({
 });
 world.add(cameraEntity);
 
-const clothGeom = parseObj(
-  await io.loadText(getURL(`assets/models/PbdCloth/PbdCloth.obj`))
-);
-
 const geometryEntity = createEntity({
   transform: transform({ position: [0, 0, 0] }),
   geometry: geometry(sphere()),
-  // geometry: geometry(clothGeom),
   material: material({
     baseColor: [1, 1, 1, 1],
     roughness: 0,
@@ -67,6 +61,22 @@ const geometryEntity = createEntity({
 });
 world.add(geometryEntity);
 
+const hdrImg = parseHdr(
+  await io.loadArrayBuffer(
+    getURL(`assets/envmaps/Mono_Lake_B/Mono_Lake_B.hdr`)
+    // getURL(`assets/envmaps/brown_photostudio_02_8k.hdr`)
+    // getURL(`assets/envmaps/garage/garage.hdr`)
+  )
+);
+const envMap = ctx.texture2D({
+  data: hdrImg.data,
+  width: hdrImg.shape[0],
+  height: hdrImg.shape[1],
+  pixelFormat: ctx.PixelFormat.RGBA32F,
+  encoding: ctx.Encoding.Linear,
+  flipY: true,
+});
+
 const skyboxEntity = createEntity({
   transform: transform({
     rotation: quat.fromAxisAngle(quat.create(), [0, 1, 0], State.rotation),
@@ -74,9 +84,14 @@ const skyboxEntity = createEntity({
   skybox: skybox({
     sunPosition: [1, 1, 1],
     backgroundBlur: 1,
+    envMap,
   }),
 });
 world.add(skyboxEntity);
+
+if (State.envMap) {
+  skyboxEntity.skybox.envMap = envMap;
+}
 
 const reflectionProbeEntity = createEntity({
   reflectionProbe: reflectionProbe({
@@ -87,94 +102,72 @@ const reflectionProbeEntity = createEntity({
 world.add(reflectionProbeEntity);
 window.reflectionProbeEntity = reflectionProbeEntity;
 
-(async () => {
-  const buffer = await io.loadArrayBuffer(
-    getURL(`assets/envmaps/Mono_Lake_B/Mono_Lake_B.hdr`)
-    // getURL(`assets/envmaps/brown_photostudio_02_8k.hdr`)
-    // getURL(`assets/envmaps/garage/garage.hdr`)
-  );
-  const hdrImg = parseHdr(buffer);
-  const panorama = ctx.texture2D({
-    data: hdrImg.data,
-    width: hdrImg.shape[0],
-    height: hdrImg.shape[1],
-    pixelFormat: ctx.PixelFormat.RGBA32F,
-    encoding: ctx.Encoding.Linear,
-    flipY: true, //TODO: flipY on non dom elements is deprecated
-  });
+// Update for GUI
+renderEngine.update(world.entities);
+renderEngine.render(world.entities, cameraEntity);
 
-  if (State.envMap) {
-    skyboxEntity.skybox.envMap = panorama;
-  }
-
-  // Update for GUI
-  renderEngine.update(world.entities);
-  renderEngine.render(world.entities, cameraEntity);
-
-  gui.addColumn("Settings");
-  if (skyboxEntity.skybox.texture || skyboxEntity.skybox.envMap) {
-    gui.addTexture2D(
-      "Skybox",
-      skyboxEntity.skybox.texture || skyboxEntity.skybox.envMap
-    );
-  }
-  gui.addParam("EnvMap", State, "envMap", {}, (enabled) => {
-    skyboxEntity.skybox.envMap = enabled ? panorama : null;
-  });
-  gui.addParam("BG Blur", skyboxEntity.skybox, "backgroundBlur");
-
-  // TODO: not working
-  gui.addParam(
-    "Rotation",
-    State,
-    "rotation",
-    { min: 0, max: 2 * Math.PI },
-    () => {
-      quat.fromAxisAngle(
-        skyboxEntity.transform.rotation,
-        [0, 1, 0],
-        State.rotation
-      );
-      skyboxEntity.transform = { ...skyboxEntity.transform };
-      reflectionProbeEntity.reflectionProbe.dirty = true;
-    }
-  );
-  gui.addRadioList(
-    "Map Size",
-    State,
-    "sizeIndex",
-    State.sizes.map((name, value) => ({
-      name,
-      value,
-    })),
-    () => {
-      reflectionProbeEntity.reflectionProbe.size = State.sizes[State.sizeIndex];
-    }
-  );
-
-  gui.addSeparator();
-  gui.addLabel("Material");
-  gui.addParam("Roughness", geometryEntity.material, "roughness");
-  gui.addParam("Metallic", geometryEntity.material, "metallic");
-
-  gui.addColumn("Textures");
-  gui.addTextureCube(
-    "Cubemap",
-    reflectionProbeEntity._reflectionProbe._dynamicCubemap
-  );
-
+// GUI
+gui.addColumn("Settings");
+if (skyboxEntity.skybox.texture || skyboxEntity.skybox.envMap) {
   gui.addTexture2D(
-    "Reflection Map",
-    reflectionProbeEntity._reflectionProbe._reflectionMap
+    "Skybox",
+    skyboxEntity.skybox.texture || skyboxEntity.skybox.envMap
   );
-  // gui.addTexture2D("Octmap", reflectionProbeEntity._reflectionProbe._octMap);
+}
+gui.addParam("EnvMap", State, "envMap", {}, (enabled) => {
+  skyboxEntity.skybox.envMap = enabled ? envMap : null;
+});
+gui.addParam("BG Blur", skyboxEntity.skybox, "backgroundBlur");
+gui.addParam(
+  "Rotation",
+  State,
+  "rotation",
+  { min: 0, max: 2 * Math.PI },
+  () => {
+    quat.fromAxisAngle(
+      skyboxEntity.transform.rotation,
+      [0, 1, 0],
+      State.rotation
+    );
+    skyboxEntity.transform = { ...skyboxEntity.transform };
+    reflectionProbeEntity.reflectionProbe.dirty = true;
+  }
+);
+gui.addRadioList(
+  "Map Size",
+  State,
+  "sizeIndex",
+  State.sizes.map((name, value) => ({
+    name,
+    value,
+  })),
+  () => {
+    reflectionProbeEntity.reflectionProbe.size = State.sizes[State.sizeIndex];
+  }
+);
 
-  window.dispatchEvent(new CustomEvent("pex-screenshot"));
-})();
+gui.addSeparator();
+gui.addLabel("Material");
+gui.addParam("Roughness", geometryEntity.material, "roughness");
+gui.addParam("Metallic", geometryEntity.material, "metallic");
+
+gui.addColumn("Textures");
+gui.addTextureCube(
+  "Cubemap",
+  reflectionProbeEntity._reflectionProbe._dynamicCubemap
+);
+
+gui.addTexture2D(
+  "Reflection Map",
+  reflectionProbeEntity._reflectionProbe._reflectionMap
+);
+// gui.addTexture2D("Octmap", reflectionProbeEntity._reflectionProbe._octMap);
 
 ctx.frame(() => {
   renderEngine.update(world.entities);
   renderEngine.render(world.entities, cameraEntity);
 
   gui.draw();
+
+  window.dispatchEvent(new CustomEvent("pex-screenshot"));
 });

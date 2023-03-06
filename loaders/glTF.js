@@ -1234,7 +1234,7 @@ async function loadGltf(url, options = {}) {
   const opts = Object.assign({}, DEFAULT_OPTIONS, options);
   const { ctx } = options;
 
-  console.log("loaders.gltf", url, options, opts);
+  console.debug("loaders.gltf", url, options, opts);
 
   // Load and unpack data
   // https://www.khronos.org/registry/glTF/specs/2.0/glTF-2.0.html#glb-file-format-specification
@@ -1242,13 +1242,13 @@ async function loadGltf(url, options = {}) {
   const basePath = getDirname(url);
   const isBinary = extension === "glb";
 
-  console.log("loaders.gltf", url, extension, isBinary);
+  console.debug("loaders.gltf", url, extension, isBinary);
   // https://github.com/KhronosGroup/glTF/blob/main/specification/2.0/schema/glTF.schema.json
   const { json, bin } = loadData(
     isBinary ? await loadArrayBuffer(url) : await loadJson(url)
   );
 
-  console.log("loaders.gltf", json, bin);
+  console.debug("loaders.gltf", json, bin);
 
   // Check required extensions
   // https://www.khronos.org/registry/glTF/specs/2.0/glTF-2.0.html#specifying-extensions
@@ -1432,6 +1432,7 @@ async function loadGltf(url, options = {}) {
         scene.root.animations = [];
         json.animations.forEach((animation, index) => {
           const animationComponent = handleAnimation(animation, json, index);
+          // TODO: is it really needed? Animation systems checks for animations
           if (index == 0) {
             scene.root.animation = animationComponent;
           }

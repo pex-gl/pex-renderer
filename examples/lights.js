@@ -39,7 +39,6 @@ const W = ctx.gl.drawingBufferWidth;
 const H = ctx.gl.drawingBufferHeight;
 const nW = 2;
 const nH = 2;
-let debugOnce = false;
 
 // Utils
 const LAYERS = ["directional", "spot", "point", "area"];
@@ -287,6 +286,9 @@ gui.addParam("Intensity", areaLightEntity.areaLight, "intensity", {
   max: 20,
 });
 gui.addStats();
+
+// Events
+let debugOnce = false;
 
 window.addEventListener("keydown", ({ key }) => {
   if (key === "g") gui.enabled = !gui.enabled;

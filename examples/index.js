@@ -28,7 +28,6 @@
     // "post-processing",
     "skybox",
     // "vertex-colors",
-    // "window-resize",
   ];
   window.pexExamples = examples;
 

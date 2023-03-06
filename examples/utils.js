@@ -1,4 +1,5 @@
 import { loadImage } from "pex-io";
+import { aabb } from "pex-geom";
 import * as Primitives from "primitive-geometry";
 import normals from "angle-normals";
 import centerAndNormalize from "geom-center-and-normalize";
@@ -55,6 +56,40 @@ export function computeEdges({ length }, cells, stride = 3) {
     }
   }
   return edges;
+}
+
+export function debugSceneTree(entities) {
+  // entities.forEach((e) => {
+  //   if (!e.transform) return;
+
+  //   let depth = 0;
+  //   let parent = e.transform.parent;
+  //   while (parent) {
+  //     depth++;
+  //     parent = parent.parent;
+  //   }
+  //   console.log(
+  //     " ".repeat(depth * 5),
+  //     e.id,
+  //     e.transform?.worldBounds ? aabb.toString(e.transform.worldBounds) : "[]",
+  //     e
+  //   );
+  // });
+
+  entities.forEach((e, i) => {
+    let pad = "";
+    let transform = e.transform;
+    while (transform) {
+      pad += "--";
+      transform = transform.parent;
+    }
+    const bbox = e.transform?.worldBounds
+      ? aabb.toString(e.transform.worldBounds)
+      : "[]";
+    console.log(`${pad} ${i} ${e.name} | BBOX: ${bbox}`, e);
+  });
+  // console.log(s);
+  // console.log("world.entities", world.entities);
 }
 
 const dragon = { ...d };

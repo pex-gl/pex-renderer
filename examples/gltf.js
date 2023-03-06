@@ -5,6 +5,7 @@ import {
   components,
   loaders,
 } from "../index.js";
+
 import createContext from "pex-context";
 import createGUI from "pex-gui";
 import { loadJson, loadImage, loadArrayBuffer } from "pex-io";
@@ -14,8 +15,7 @@ import { aabb } from "pex-geom";
 import { box as createBox, cube as createCube } from "primitive-geometry";
 import parseHdr from "parse-hdr";
 
-import axisHelper from "../helpers/axis-helper.js";
-import { computeEdges, getURL } from "./utils.js";
+import { computeEdges, debugSceneTree, getURL } from "./utils.js";
 
 const {
   camera,
@@ -28,31 +28,13 @@ const {
   transform,
 } = components;
 
-// const MODELS_PATH = "examples/glTF-Sample-Models/2.0";
 const MODELS_PATH =
-  "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0";
+  location.hostname === "localhost"
+    ? "examples/glTF-Sample-Models/2.0"
+    : "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0";
 
-const State = {
-  sunPosition: [2, 2, 2],
-  selectedModel: "",
-  scenes: [],
-  gridSize: 1,
-  boundingBoxes: false,
-  floor: false,
-  useEnvMap: true,
-  shadows: false,
-  formats: [
-    "glTF",
-    "glTF-Binary",
-    "glTF-Draco",
-    "glTF-Embedded",
-    "glTF-Quantized",
-    "glTF-KTX-BasisU",
-    "glTF-JPG-PNG",
-  ],
-  currentFormat: 2,
-  modelName: "-",
-};
+// const MODELS_PATH =
+//   "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0";
 
 const FORMAT_EXTENSION = new Map()
   .set("glTF", "gltf")
@@ -63,24 +45,25 @@ const FORMAT_EXTENSION = new Map()
   .set("glTF-KTX-BasisU", "gltf")
   .set("glTF-JPG-PNG", "gltf");
 
-// Start
-const ctx = createContext({
-  pixelRatio: devicePixelRatio,
-  powerPreference: "high-performance",
-});
-ctx.gl.getExtension("OES_element_index_uint"); //TEMP
+const State = {
+  sunPosition: [2, 2, 2],
+  selectedModel: "",
+  scenes: [],
+  gridSize: 1,
+  boundingBoxes: true,
+  floor: false,
+  useEnvMap: true,
+  shadows: false,
+  formats: Array.from(FORMAT_EXTENSION.keys()),
+  currentFormat: 2,
+  modelName: "-",
+};
 
-const world = createWorld({
-  //   shadowQuality: 3,
-  //   pauseOnBlur: false,
-  //   profile: true,
-  //   profileFlush: false,
-});
-window.world = world;
-window.state = State;
+const pixelRatio = devicePixelRatio;
+const ctx = createContext({ pixelRatio });
 
 const renderEngine = createRenderEngine({ ctx });
-world.addSystem(renderEngine);
+const world = (window.world = createWorld());
 
 const gui = createGUI(ctx);
 
@@ -102,86 +85,53 @@ const sunEntity = createEntity({
 });
 world.add(sunEntity);
 
-const skyboxEntity = createEntity({
+const skyEntity = createEntity({
+  transform: transform({
+    rotation: quat.fromEuler(quat.create(), [0, -Math.PI, 0]),
+  }),
   skybox: skybox({
     sunPosition: [1, 1, 1],
     backgroundBlur: 1,
   }),
-  transform: transform({
-    rotation: quat.fromEuler(quat.create(), [0, -Math.PI, 0]),
-  }),
-});
-world.add(skyboxEntity);
-
-const reflectionProbeEntity = createEntity({
   reflectionProbe: reflectionProbe(),
 });
-world.add(reflectionProbeEntity);
+world.add(skyEntity);
 
 let floorEntity;
 let cameraEntity;
+let animationEntity;
 
 const unitBox = createBox();
 unitBox.cells = computeEdges(unitBox.positions, unitBox.cells, 4);
 unitBox.primitive = ctx.Primitive.Lines;
 
 const addEnvmap = async () => {
-  const buffer = await loadArrayBuffer(
-    // getURL(`assets/envmaps/Mono_Lake_B/Mono_Lake_B.hdr`),
-    getURL(`assets/envmaps/garage/garage.hdr`)
-    // getURL(`assets/envmaps/artist_workshop_4k.hdr`)
+  const hdrImg = parseHdr(
+    await loadArrayBuffer(
+      // getURL(`assets/envmaps/Mono_Lake_B/Mono_Lake_B.hdr`),
+      getURL(`assets/envmaps/garage/garage.hdr`)
+      // getURL(`assets/envmaps/artist_workshop_4k.hdr`)
+    )
   );
-  const hdrImg = parseHdr(buffer);
   const panorama = ctx.texture2D({
     data: hdrImg.data,
     width: hdrImg.shape[0],
     height: hdrImg.shape[1],
     pixelFormat: ctx.PixelFormat.RGBA32F,
     encoding: ctx.Encoding.Linear,
-    min: ctx.Filter.Linear,
-    mag: ctx.Filter.Linear,
     flipY: true,
   });
 
-  skyboxEntity.skybox.envMap = panorama; //TODO: remove _skybox
+  skyEntity.skybox.envMap = panorama;
 };
 
 if (State.useEnvMap) addEnvmap();
 
-// TODO: implement axis helper
-// const axesEntity = createEntity(axisHelper());
-// world.add(axesEntity);
+const axesEntity = createEntity({ axesHelper: {} });
+world.add(axesEntity);
 
 // Utils
 let debugOnce = false;
-let prevTime = Date.now();
-
-let debugCommandsOpt = null;
-function optimizeCommands(commands) {
-  return commands;
-}
-
-function debugScene() {
-  let s = "";
-  world.entities.forEach((e, i) => {
-    let pad = "";
-    let transform = e.transform;
-    while (transform) {
-      pad += "--";
-      transform = transform.parent;
-    }
-    let bbox = e.transform?.worldBounds
-      ? aabb.toString(e.transform.worldBounds)
-      : "[]";
-    s += `${pad} ${i} ${e.name} ${Object.keys(e).join(" | ")} | ${bbox} \n`;
-  });
-  console.log(s);
-  console.log("world.entities", world.entities);
-}
-
-function debugGL() {
-  debugOnce = true;
-}
 
 function openModelURL() {
   window.open(
@@ -223,53 +173,30 @@ function rescaleScene({ root }) {
 
 function onSceneLoaded(scene, grid) {
   State.scenes.push(scene);
-  world.update(); // refresh scene hierarchy
+  renderEngine.update(scene.entities);
 
-  debugScene();
+  // debugSceneTree(scene.entities);
 
   if (grid) {
     rescaleScene(scene);
     repositionModel(scene);
   }
-  world.update();
+
+  // world.update();
 
   if (State.floor) {
-    const cube = createCube({ sx: 1, sy: 0.05, sz: 1 });
     floorEntity = createEntity({
       transform: transform({ position: [0, -0.525, 0] }),
-      geometry: geometry(cube),
+      geometry: geometry(createCube({ sx: 1, sy: 0.05, sz: 1 })),
       material: material({ baseColor: [0.5, 0.5, 0.5, 1] }),
     });
     world.add(floorEntity);
   }
 
   if (State.boundingBoxes) {
-    const bboxes = scene.entities
-      .map((entity) => {
-        const size = aabb.size(entity.transform.worldBounds);
-        const center = aabb.center(entity.transform.worldBounds);
-
-        const bbox = world.add(
-          createEntity({
-            transform: transform({
-              scale: size,
-              position: center,
-            }),
-            geometry: geometry(unitBox),
-            material: material({
-              unlit: true,
-              baseColor: [1, 0, 0, 1],
-            }),
-          })
-        );
-        bbox.name = `${entity.name}_bbox`;
-        return bbox;
-      })
-      .filter((e) => e);
-
-    bboxes.forEach((e) => world.add(e));
-
-    scene.entities = scene.entities.concat(bboxes);
+    scene.entities.forEach((entity) => {
+      if (entity.geometry) entity.boundingBoxHelper = {};
+    });
   }
 }
 
@@ -283,18 +210,8 @@ async function loadScene(url, grid) {
         includeCameras: !grid,
         includeAnimations: true,
         includeLights: !grid,
-        dracoOptions: {
-          transcoderPath: new URL(
-            "assets/decoders/draco/",
-            import.meta.url
-          ).toString(),
-        },
-        basisOptions: {
-          transcoderPath: new URL(
-            "assets/decoders/basis/",
-            import.meta.url
-          ).toString(),
-        },
+        dracoOptions: { transcoderPath: getURL("assets/decoders/draco/") },
+        basisOptions: { transcoderPath: getURL("assets/decoders/basis/") },
       })
     )[0]; //TODO: selecting first scene by default
   } catch (e) {
@@ -303,47 +220,46 @@ async function loadScene(url, grid) {
   }
 
   // sort entities by depth
-  scene.entities.forEach((e) => {
-    var parent = e.transform;
-    var depth = 0;
-    var watchdog = 0;
+  scene.entities.forEach((entity) => {
+    let parent = entity.transform;
+    let depth = 0;
+    let watchdog = 0;
     while (parent && watchdog++ < 100) {
       parent = parent.parent;
       depth++;
     }
-    e.transform.depth = depth;
-    e.transform.worldBounds = aabb.create();
-  });
+    entity.transform.depth = depth;
+    entity.transform.worldBounds = aabb.create();
 
-  scene.entities.sort((a, b) => {
-    return a.transform.depth - b.transform.depth;
-  });
-
-  scene.entities.forEach((entity) => {
     if (entity.material) {
       entity.material.castShadows = State.shadows;
       entity.material.receiveShadows = State.shadows;
     }
+
+    world.add(entity);
   });
 
-  scene.entities.forEach((e) => world.add(e));
+  scene.entities.sort((a, b) => a.transform.depth - b.transform.depth);
 
   // Add camera for models lacking one
   if (!grid) {
     cameraEntity = scene.entities.find((e) => e.camera);
+    animationEntity = scene.entities.find((e) => e.animation || e.animations);
 
     if (!cameraEntity) {
       // Update needed for transform.worldBounds
-      world.update(); //TODO: check if that call updates transform.worldBounds
-
+      renderEngine.update(scene.entities);
       const far = 10000;
       const sceneBounds = scene.root.transform.worldBounds;
       const sceneCenter = aabb.center(scene.root.transform.worldBounds);
+
       if (isNaN(sceneCenter[0])) {
         sceneCenter[0] = 0;
         sceneCenter[1] = 0;
         sceneCenter[2] = 0;
       }
+
+      console.log("sceneBounds", sceneBounds);
 
       const boundingSphereRadius = Math.max(
         ...sceneBounds.map((bound) => vec3.distance(sceneCenter, bound))
@@ -354,7 +270,7 @@ async function loadScene(url, grid) {
       cameraEntity = createEntity({
         transform: transform({
           // position: [2, 2, 2],
-          position: [sceneCenter[0], sceneCenter[1], distance],
+          position: [sceneCenter[0], sceneCenter[1], Math.abs(distance)],
         }),
         camera: camera({
           near: 0.01,
@@ -371,32 +287,35 @@ async function loadScene(url, grid) {
       });
       scene.entities.push(cameraEntity);
       world.add(cameraEntity);
+
+      if (State.selectedModel.name == "Fox") {
+        cameraEntity.transform.position = [100, 100, 100];
+        cameraEntity.transform.dirty = true;
+      }
     } else {
       //TODO: do i need to set dirty for camera to update?
       cameraEntity.camera.near = 0.5;
       cameraEntity.camera.aspect =
         ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight;
-      cameraEntity.camera.projectionMatrix = mat4.perspective(
-        mat4.create(),
-        cameraEntity.camera.fov,
-        cameraEntity.camera.aspect,
-        cameraEntity.camera.near,
-        cameraEntity.camera.far
-      );
+      // cameraEntity.camera.projectionMatrix = mat4.perspective(
+      //   mat4.create(),
+      //   cameraEntity.camera.fov,
+      //   cameraEntity.camera.aspect,
+      //   cameraEntity.camera.near,
+      //   cameraEntity.camera.far
+      // );
+      cameraEntity.camera.dirty = true;
 
-      // Clipped models: 2CylinderEngine, EnvironmentTest
-      // MultiUVTest: wrong position
-      // if (State.selectedModel.name !== "MultiUVTest") {
-      cameraEntity.orbiter = orbiter({
-        // target: sceneCenter,
-        // distance: (boundingSphereRadius * 2) / Math.tan(cameraCmp.fov / 2),
-        // position: [2, 2, 2],
-        // position: cameraEntity.camera.position,
-        // position: cameraEntity.transform.position,
-        minDistance: cameraEntity.camera.near,
-        maxDistance: cameraEntity.camera.far,
-      });
-      // }
+      // TODO: hardcoded
+      if (!["MultiUVTest", "GearboxAssy"].includes(State.selectedModel.name)) {
+        cameraEntity.orbiter = orbiter({
+          element: ctx.gl.canvas,
+          // target: sceneCenter,
+          // distance: (boundingSphereRadius * 2) / Math.tan(cameraCmp.fov / 2),
+          minDistance: cameraEntity.camera.near,
+          maxDistance: cameraEntity.camera.far,
+        });
+      }
     }
 
     // console.timeEnd('building ' + url)
@@ -437,310 +356,303 @@ async function renderModel(model, overrideFormat, grid) {
 const nextCamera = () => {
   const cameras = world.entities.filter((e) => e.camera);
   const next = cameras[(cameras.indexOf(cameraEntity) + 1) % cameras.length];
-  if (next) cameraEntity = next;
+
+  if (next) {
+    cameraEntity = next;
+    cameraEntity.camera.dirty = true;
+  }
+};
+const nextAnimation = () => {
+  const animationsEntity = world.entities.find((e) => e.animations);
+  if (animationsEntity) {
+    const index = animationsEntity.animations.findIndex(
+      (animation) => animation.playing
+    );
+    animationsEntity.animations.forEach(
+      (animation, i) =>
+        (animation.playing =
+          i === (index + 1) % animationsEntity.animations.length)
+    );
+  }
+};
+const nextMaterial = () => {};
+
+const dispose = (entity) => {
+  if (entity._geometry) {
+    if (entity._geometry.indices) {
+      const resource =
+        entity._geometry.indices.buffer || entity._geometry.indices;
+      if (ctx.resources.indexOf(resource) !== -1) ctx.dispose(resource);
+    }
+
+    for (let attribute of Object.values(entity._geometry.attributes)) {
+      const resource = attribute.buffer || attribute;
+      if (ctx.resources.indexOf(resource) !== -1) ctx.dispose(resource);
+    }
+  }
+  if (entity.material) {
+    for (let property of Object.values(entity.material)) {
+      if (
+        property?.class === "texture" &&
+        ctx.resources.indexOf(property) !== -1
+      ) {
+        ctx.dispose(property);
+      }
+    }
+  }
 };
 
-async function init() {
-  // Get list of models locally or from the glTF repo
-  let models = await loadJson(`${MODELS_PATH}/model-index.json`);
+// Init
+// Get list of models locally or from the glTF repo
+let models = await loadJson(`${MODELS_PATH}/model-index.json`);
 
-  // Add screenshots to the GUI
-  const screenshots = await Promise.all(
-    models.map(
-      ({ name, screenshot }) =>
-        loadImage({
-          url: `${MODELS_PATH}/${name}/${screenshot}`,
-          crossOrigin: "anonymous",
-        }),
-      null
-    )
-  );
-  const thumbnails = screenshots
-    .map((img) =>
-      ctx.texture2D({
-        data: img,
-        width: img.width,
-        height: img.height,
-        encoding: ctx.Encoding.SRGB,
-        pixelFormat: ctx.PixelFormat.RGBA8,
-        flipY: true,
-      })
-    )
-    .map((tex, i) => ({
-      value: models[i],
-      texture: tex,
-    }));
-
-  gui.addColumn("GLTF");
-  gui.addParam("Model name", State, "modelName");
-  gui.addButton("Open Model URL", openModelURL);
-  gui.addTexture2DList(
-    "Models",
-    State,
-    "selectedModel",
-    thumbnails,
-    4,
-    async (model) => {
-      // Clean up
-      const scenes = State.scenes.length ? State.scenes : [State.scene];
-
-      const entitiesIds = [
-        ...scenes.map((scene) => scene.entities.map((e) => e.id)).flat(),
-        floorEntity?.id,
-        cameraEntity.id,
-      ].filter(Boolean);
-
-      //TODO: renderer.remove() and dispose
-      world.entities = world.entities.filter(
-        (entity) => !entitiesIds.includes(entity.id)
-      );
-
-      State.scenes = [];
-
-      await renderModel(model);
-    }
-  );
-
-  gui.addColumn("Options");
-  gui.addRadioList(
-    "Format",
-    State,
-    "currentFormat",
-    State.formats.map((name, value) => ({
-      name,
-      value,
-    }))
-  );
-  gui.addParam("Floor", State, "floor");
-  gui.addParam("Bounding Box", State, "boundingBoxes");
-  gui.addButton("Next camera", nextCamera);
-
-  gui.addColumn("Debug");
-  gui.addFPSMeeter();
-  gui.addStats();
-  gui.addButton("Debug Scene Tree", debugScene);
-  gui.addButton("Debug GL", debugGL);
-
-  // Filter models
-  models = models.filter(({ name }) =>
-    [
-      // "2CylinderEngine",
-      // "AlphaBlendModeTest",
-      // "AnimatedCube",
-      // "AnimatedMorphCube",
-      // "AnimatedMorphSphere",
-      // "AnimatedTriangle",
-      // "AntiqueCamera",
-      // "AttenuationTest", // FAIL: need KHR_materials_volume
-      // "Avocado",
-      // "BarramundiFish",
-      // "BoomBox",
-      // "BoomBoxWithAxes",
-      // "Box",
-      // "Box With Spaces",
-      // "BoxAnimated",
-      // "BoxInterleaved",
-      // "BoxTextured",
-      // "BoxTexturedNonPowerOfTwo",
-      // "BoxVertexColors",
-      // "BrainStem",
-      // "Buggy",
-      // "Cameras",
-      // "CesiumMan",
-      // "CesiumMilkTruck",
-      // "ClearCoatTest",
-      // "Corset",
-      // "Cube",
-      // "DamagedHelmet",
-      // "DragonAttenuation",// FAIL: attenuation
-      "Duck", // FAIL: wrong camera distance
-      // "EmissiveStrengthTest", // HALF: missing postpro bloom
-      // "EnvironmentTest",
-      // "FlightHelmet",
-      // "Fox", // FAIL: wrong near/far
-      // "GearboxAssy",// FAIL: wrong position
-      // "GlamVelvetSofa", // FAIL: KHR_materials_variants, KHR_materials_specular
-      // "InterpolationTest",
-      // "IridescenceDielectricSpheres",  // FAIL
-      // "IridescenceLamp",  // FAIL
-      // "IridescenceMetallicSpheres",  // FAIL
-      // "IridescenceSuzanne",  // FAIL
-      // "IridescentDishWithOlives",  // FAIL
-      // "Lantern",
-      // "LightsPunctualLamp",
-      // "MaterialsVariantsShoe", // FAIL: KHR_materials_variants
-      // "MetalRoughSpheres",
-      // "MetalRoughSpheresNoTextures",
-      // "MorphPrimitivesTest",
-      // "MorphStressTest",// FAIL: needs animation texture
-      // "MosquitoInAmber", // FAIL: KHR_materials_transmission, TEXCOORD_2
-      // "MultiUVTest", // FAIL: wrong orbiter or missing bounds? not working anymore
-      // "NormalTangentMirrorTest",
-      // "NormalTangentTest",
-      // "OrientationTest",
-      // "ReciprocatingSaw",
-      // "RecursiveSkeletons",
-      // "RiggedFigure",
-      // "RiggedSimple",
-      // "SciFiHelmet",
-      // "SheenChair",
-      // "SheenCloth",
-      // "SimpleMeshes",
-      // "SimpleMorph",
-      // "SimpleSkin",
-      // "SimpleSparseAccessor",
-      // "SpecGlossVsMetalRough", // HALF: not in spec anymore
-      // "SpecularTest", // FAIL: KHR_materials_specular
-      // "Sponza",
-      // "StainedGlassLamp", // FAIL: KHR_materials_ior, KHR_materials_volume, KHR_materials_transmission
-      // "Suzanne",
-      // "TextureCoordinateTest",
-      // "TextureEncodingTest",
-      // "TextureLinearInterpolationTest", // HALF: EX_srgb in webgl1
-      // "TextureSettingsTest", // FAIL: single-sided (cache issue #320)
-      // "TextureTransformMultiTest",
-      // "TextureTransformTest",
-      // "ToyCar", // FAIL: (too small, wrong camera)
-      // "TransmissionRoughnessTest", // FAIL: KHR_materials_transmission, KHR_materials_ior, and KHR_materials_volume
-      // "TransmissionTest", // FAIL: KHR_materials_transmission
-      // "Triangle",
-      // "TriangleWithoutIndices",
-      // "TwoSidedPlane",// FAIL: double side
-      // "Unicode\u2764\u267bTest",
-      // "UnlitTest",
-      // "VC", // FAIL: (camera?)
-      // "VertexColorTest",
-      // "WaterBottle",
-    ].includes(name)
-  );
-
-  const grid = models.length > 1;
-
-  // Setup for grid view
-  if (grid) {
-    State.gridSize = Math.ceil(Math.sqrt(models.length));
-
-    cameraEntity = createEntity({
-      transform: transform(),
-      camera: camera({
-        aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
+// Add screenshots to the GUI
+const screenshots = await Promise.all(
+  models.map(
+    ({ name, screenshot }) =>
+      loadImage({
+        url: `${MODELS_PATH}/${name}/${screenshot}`,
+        crossOrigin: "anonymous",
       }),
-      orbiter: orbiter({
-        position: new Array(3).fill(State.gridSize * 2),
+    null
+  )
+);
+const thumbnails = screenshots
+  .map((img) =>
+    ctx.texture2D({
+      data: img,
+      width: img.width,
+      height: img.height,
+      encoding: ctx.Encoding.SRGB,
+      pixelFormat: ctx.PixelFormat.RGBA8,
+      flipY: true,
+    })
+  )
+  .map((tex, i) => ({
+    value: models[i],
+    texture: tex,
+  }));
+
+gui.addColumn("GLTF");
+gui.addParam("Model name", State, "modelName");
+gui.addButton("Open Model URL", openModelURL);
+gui.addTexture2DList(
+  "Models",
+  State,
+  "selectedModel",
+  thumbnails,
+  4,
+  async (model) => {
+    // Clean up
+    const scenes = State.scenes.length ? State.scenes : [State.scene];
+
+    const entitiesIds = [
+      ...scenes.map((scene) => scene.entities.map((e) => e.id)).flat(),
+      floorEntity?.id,
+      cameraEntity.id,
+    ].filter(Boolean);
+
+    //TODO: renderer.remove() and dispose
+    world.entities = world.entities.filter((entity) => {
+      const isDisposable = entitiesIds.includes(entity.id);
+      if (isDisposable) dispose(entity);
+      return !isDisposable;
+    });
+
+    State.scenes = [];
+
+    await renderModel(model);
+  }
+);
+
+gui.addColumn("Options");
+gui.addRadioList(
+  "Format",
+  State,
+  "currentFormat",
+  State.formats.map((name, value) => ({
+    name,
+    value,
+  }))
+);
+gui.addParam("Floor", State, "floor");
+gui.addParam("Bounding Box", State, "boundingBoxes");
+gui.addButton("Next camera", nextCamera);
+gui.addButton("Next animation", nextAnimation);
+gui.addButton("Next material", nextMaterial);
+
+gui.addColumn("Debug");
+gui.addFPSMeeter();
+gui.addStats();
+gui.addButton("Tree", () => {
+  debugSceneTree(world.entities);
+});
+
+// Filter models
+models = models.filter(({ name }) =>
+  [
+    // "2CylinderEngine",
+    // "AlphaBlendModeTest",
+    // "AnimatedCube",
+    // "AnimatedMorphCube",
+    // "AnimatedMorphSphere",
+    // "AnimatedTriangle",
+    // "AntiqueCamera",
+    // "AttenuationTest", // FAIL: need KHR_materials_volume
+    // "Avocado",
+    // "BarramundiFish",
+    // "BoomBox",
+    // "BoomBoxWithAxes",
+    // "Box",
+    // "Box With Spaces",
+    // "BoxAnimated",
+    // "BoxInterleaved",
+    // "BoxTextured",
+    // "BoxTexturedNonPowerOfTwo",
+    // "BoxVertexColors",
+    // "BrainStem",
+    // "Buggy",
+    // "Cameras",
+    // "CesiumMan",
+    // "CesiumMilkTruck",
+    // "ClearCoatTest",
+    // "Corset",
+    // "Cube",
+    // "DamagedHelmet",
+    // "DragonAttenuation", // FAIL: attenuation
+    // "Duck",
+    // "EmissiveStrengthTest", // HALF: missing postpro bloom
+    // "EnvironmentTest",
+    // "FlightHelmet",
+    // "Fox", // HALF: hardcoded near/far
+    // "GearboxAssy", // FAIL: wrong position
+    // "GlamVelvetSofa", // FAIL: KHR_materials_variants, KHR_materials_specular
+    // "InterpolationTest",
+    // "IridescenceDielectricSpheres", // FAIL
+    // "IridescenceLamp", // FAIL
+    // "IridescenceMetallicSpheres", // FAIL
+    // "IridescenceSuzanne", // FAIL
+    // "IridescentDishWithOlives", // FAIL
+    // "Lantern",
+    // "LightsPunctualLamp",
+    // "MaterialsVariantsShoe", // FAIL: KHR_materials_variants
+    // "MetalRoughSpheres",
+    // "MetalRoughSpheresNoTextures",
+    // "MorphPrimitivesTest",
+    // "MorphStressTest", // FAIL: needs animation texture
+    // "MosquitoInAmber", // FAIL: KHR_materials_transmission, TEXCOORD_2
+    // "MultipleScenes", // FAIL: missing implementation
+    // "MultiUVTest", // FAIL: wrong position
+    // "NormalTangentMirrorTest",
+    // "NormalTangentTest",
+    // "OrientationTest",
+    // "ReciprocatingSaw",
+    // "RecursiveSkeletons",
+    // "RiggedFigure",
+    // "RiggedSimple",
+    // "SciFiHelmet",
+    // "SheenChair",
+    // "SheenCloth",
+    // "SimpleMeshes",
+    // "SimpleMorph",
+    // "SimpleSkin",
+    // "SimpleSparseAccessor",
+    // "SpecGlossVsMetalRough", // HALF: not in spec anymore
+    // "SpecularTest", // FAIL: KHR_materials_specular
+    // "Sponza",
+    // "StainedGlassLamp", // FAIL: KHR_materials_ior, KHR_materials_volume, KHR_materials_transmission
+    // "Suzanne",
+    // "TextureCoordinateTest",
+    // "TextureEncodingTest",
+    // "TextureLinearInterpolationTest", // HALF: EX_srgb in webgl1
+    // "TextureSettingsTest", // FAIL: single-sided (cache issue #320)
+    // "TextureTransformMultiTest",
+    // "TextureTransformTest",
+    // "ToyCar", // FAIL: (too small, wrong camera)
+    // "TransmissionRoughnessTest", // FAIL: KHR_materials_transmission, KHR_materials_ior, and KHR_materials_volume
+    // "TransmissionTest", // FAIL: KHR_materials_transmission
+    // "Triangle",
+    // "TriangleWithoutIndices",
+    // "TwoSidedPlane", // FAIL: double side
+    // "Unicode\u2764\u267bTest",
+    // "UnlitTest",
+    "VC", // FAIL: // "node_69" and "node_183" and "node_209" and "node_211" worldBounds infinity
+    // "VertexColorTest",
+    // "WaterBottle",
+  ].includes(name)
+);
+
+const grid = models.length > 1;
+
+// Setup for grid view
+if (grid) {
+  State.gridSize = Math.ceil(Math.sqrt(models.length));
+
+  cameraEntity = createEntity({
+    transform: transform({ position: new Array(3).fill(State.gridSize * 2) }),
+    camera: camera({
+      aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
+    }),
+    orbiter: orbiter({ element: ctx.gl.canvas }),
+  });
+  world.add(cameraEntity);
+
+  if (State.floor) {
+    floorEntity = createEntity({
+      transform: transform({ position: [0, -0.6, 0] }),
+      geometry: geometry(
+        createCube({
+          sx: 2 * State.gridSize,
+          sy: 0.1,
+          sz: 2 * State.gridSize,
+        })
+      ),
+      material: material({
+        baseColor: [0.8, 0.8, 0.8, 1],
+        metallic: 0,
+        roughness: 1,
+        castShadows: State.shadows,
+        receiveShadows: State.shadows,
       }),
     });
-    world.add(cameraEntity);
-
-    if (State.floor) {
-      floorEntity = createEntity({
-        transform: transform({
-          position: [0, -0.6, 0],
-        }),
-        geometry: geometry(
-          createCube({
-            sx: 2 * State.gridSize,
-            sy: 0.1,
-            sz: 2 * State.gridSize,
-          })
-        ),
-        material: material({
-          baseColor: [0.8, 0.8, 0.8, 1],
-          metallic: 0,
-          roughness: 1,
-          castShadows: State.shadows,
-          receiveShadows: State.shadows,
-        }),
-      });
-      world.add(floorEntity);
-    }
-  } else {
-    State.selectedModel = models[0];
+    world.add(floorEntity);
   }
-
-  // Render scene(s)
-  await Promise.all(
-    models.map(async (model) => {
-      await renderModel(model, null, grid);
-    })
-  );
-
-  window.dispatchEvent(new CustomEvent("pex-screenshot"));
+} else {
+  State.selectedModel = models[0];
 }
 
-init();
+// Render scene(s)
+for (const model of models) {
+  await renderModel(model, null, grid);
+}
 
 window.addEventListener("resize", () => {
-  const W = window.innerWidth;
-  const H = window.innerHeight;
   ctx.set({
-    width: W,
-    height: H,
+    pixelRatio,
+    width: window.innerWidth,
+    height: window.innerHeight,
   });
   if (cameraEntity) {
-    cameraEntity.camera.viewport = [
-      0,
-      0,
-      W * devicePixelRatio,
-      H * devicePixelRatio,
-    ];
-    cameraEntity.camera.aspect =
-      ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight;
-    cameraEntity.camera.projectionMatrix = mat4.perspective(
-      mat4.create(),
-      cameraEntity.camera.fov,
-      cameraEntity.camera.aspect,
-      cameraEntity.camera.near,
-      cameraEntity.camera.far
-    );
+    cameraEntity.camera.aspect = window.innerWidth / window.innerHeight;
+    cameraEntity.camera.dirty = true;
   }
 });
 
-window.addEventListener("keypress", ({ key }) => {
-  if (key === "d") {
-    debugOnce = true;
-  } else if (key === "g") {
-    gui.enabled = !gui.enabled;
-  }
+window.addEventListener("keydown", ({ key }) => {
+  if (key === "g") gui.enabled = !gui.enabled;
+  if (key === "d") debugOnce = true;
 });
 
 ctx.frame(() => {
   ctx.debug(debugOnce);
   debugOnce = false;
 
-  if (ctx.debugCommands && ctx.debugCommands.length) {
-    if (!debugCommandsOpt) {
-      debugCommandsOpt = optimizeCommands(ctx.debugCommands);
-    }
-    // TODO: implement profiler
-    // if (renderer._state.profiler) {
-    // renderer._state.profiler.startFrame();
-    // }
-
-    // var camera = renderer.getComponents('Camera')[0]
-    // var orbiter = renderer.getComponents('Orbiter')[0]
-    // orbiter.update()
-    // camera.entity.transform.update()
-    // camera.update()
-    // for (let cmd of debugCommandsOpt) {
-    //   if (cmd.uniforms) {
-    //     cmd.uniforms.viewMatrix = camera.viewMatrix
-    //   }
-    //   ctx.apply(cmd)
-    // }
-
-    // TODO: implement profiler
-    // if (renderer._state.profiler) {
-    // renderer._state.profiler.endFrame();
-    // }
-  } else {
-    const now = Date.now();
-    const deltaTime = (now - prevTime) / 1000;
-    prevTime = now;
-    if (cameraEntity) {
-      renderEngine.update(world.entities, deltaTime);
-      renderEngine.render(world.entities, cameraEntity);
-    }
+  if (cameraEntity) {
+    renderEngine.update(world.entities);
+    renderEngine.render(world.entities, cameraEntity);
   }
 
   gui.draw();
+
+  window.dispatchEvent(new CustomEvent("pex-screenshot"));
 });
