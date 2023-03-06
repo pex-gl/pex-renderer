@@ -18,7 +18,7 @@ function updateAnimation(animation, deltaTime) {
       animation.duration ||
       animation.channels[0].input[animation.channels[0].input.length - 1];
     const now = Date.now();
-    // const deltaTime = (now - animation.prevTime) / 1000;
+    deltaTime ||= (now - animation.prevTime) / 1000;
 
     animation.prevTime = now;
     animation.time += deltaTime;
