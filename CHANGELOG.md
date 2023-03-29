@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+# [4.0.0-alpha.40](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.39...v4.0.0-alpha.40) (2023-03-29)
+
+
+### Bug Fixes
+
+* **ecs:** check geometry.positions.length for typed arrays in line renderer ([ddda11f](https://github.com/pex-gl/pex-renderer/commit/ddda11f9a4dacf6d8dcdf1ada233ecb320262a41))
+
+
+
 # [4.0.0-alpha.39](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.38...v4.0.0-alpha.39) (2023-03-29)
 
 
