@@ -118,6 +118,10 @@ export default function createLineRendererSystem(opts) {
   };
 
   function drawSegmentMesh(camera, e) {
+    const instances = e.geometry.positions[0].length
+      ? e.geometry.positions.length / 2
+      : e.geometry.positions / 6;
+
     ctx.submit(drawSegmentsCmd, {
       attributes: {
         aPosition: positionBuffer,
@@ -144,7 +148,7 @@ export default function createLineRendererSystem(opts) {
           offset: Float32Array.BYTES_PER_ELEMENT * 4,
         },
       },
-      instances: e.geometry.positions.length / 2,
+      instances: instances,
       uniforms: {
         uBaseColor: e.material.baseColor,
         uProjectionMatrix: camera.projectionMatrix,
