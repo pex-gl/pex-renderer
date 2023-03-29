@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+# [4.0.0-alpha.39](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.38...v4.0.0-alpha.39) (2023-03-29)
+
+
+### Bug Fixes
+
+* add missing prefix for alpha map texture coordinates transform ([a3baa01](https://github.com/pex-gl/pex-renderer/commit/a3baa0190b40103d9835d6144062c08c1e780ddb))
+* allow typed arrays in line geometry ([b1f43da](https://github.com/pex-gl/pex-renderer/commit/b1f43dae1e4c15cfbf078c0dddaab818c0d7f7f0))
+* **ecs:** add back default animation deltaTime ([2d3e4c7](https://github.com/pex-gl/pex-renderer/commit/2d3e4c7081c4fdaf12d068edb80320b104c6b902))
+
+
+
 # [4.0.0-alpha.38](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.37...v4.0.0-alpha.38) (2023-02-21)
 
 
