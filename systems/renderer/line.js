@@ -120,7 +120,7 @@ export default function createLineRendererSystem(opts) {
   function drawSegmentMesh(camera, e) {
     const instances = e.geometry.positions[0].length
       ? e.geometry.positions.length / 2
-      : e.geometry.positions / 6;
+      : e.geometry.positions.length / 6;
 
     ctx.submit(drawSegmentsCmd, {
       attributes: {
