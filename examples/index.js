@@ -19,7 +19,7 @@
     "gltf",
     "helpers",
     // "highpoly",
-    // "instancing",
+    "instancing",
     "lights",
     "materials",
     // "orbiter",

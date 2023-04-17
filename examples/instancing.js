@@ -1,24 +1,40 @@
-import createRenderer from "../index.js";
+import {
+  renderEngine as createRenderEngine,
+  world as createWorld,
+  entity as createEntity,
+  components,
+} from "../index.js";
+
 import createContext from "pex-context";
 import createGUI from "pex-gui";
-import { quat, vec3, utils } from "pex-math";
-import random from "pex-random";
+import { quat, vec3, utils, avec3, avec4 } from "pex-math";
 import { cube } from "primitive-geometry";
 import cosineGradient from "cosine-gradient";
 
-const { map: remap } = utils;
-
-const State = {
-  sunPosition: [0, 5, -5],
-  roughness: 0.5,
-  metallic: 0.1,
-  baseColor: [0.8, 0.1, 0.1, 1.0],
-  materials: [],
-};
-
-random.seed(10);
+const {
+  camera,
+  geometry,
+  material,
+  orbiter,
+  skybox,
+  directionalLight,
+  transform,
+} = components;
 
 // Utils
+const ctx = createContext({ pixelRatio: devicePixelRatio });
+
+const renderEngine = createRenderEngine({ ctx });
+const world = createWorld();
+
+const gui = createGUI(ctx, { scale: 1 });
+
+let debugOnce = false;
+const N = 15;
+const instances = N * N * N;
+let time = 0;
+let prevTime = 0;
+
 const scheme = [
   [0.65, 0.5, 0.31],
   [-0.65, 0.5, 0.6],
@@ -34,49 +50,70 @@ const scheme2 = [
 const gradient = cosineGradient(scheme);
 const gradient2 = cosineGradient(scheme2);
 
-// Start
-const ctx = createContext();
-ctx.gl.getExtension("EXT_shader_texture_lod");
-ctx.gl.getExtension("OES_standard_derivatives");
-ctx.gl.getExtension("WEBGL_draw_buffers");
-ctx.gl.getExtension("OES_texture_float");
-
-const renderer = createRenderer(ctx);
-
-const gui = createGUI(ctx);
-gui.addFPSMeeter();
-
-let frameNumber = 0;
-let debugOnce = false;
-
-// Camera
-const cameraEntity = renderer.entity([
-  renderer.camera({
-    fov: Math.PI / 3,
+const cameraEntity = createEntity({
+  transform: transform({ position: [3, 3, 3] }),
+  camera: camera({
     aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
   }),
-  renderer.orbiter({ position: [3, 3, 3] }),
-]);
-renderer.add(cameraEntity);
-
-// Meshes
-const n = 15;
-const geom = cube({ sx: (0.75 * 2) / n });
-const offsets = [];
-const colors = [];
-const scales = [];
-const rotations = [];
-
-let time = 0;
-const geometry = renderer.geometry({
-  ...geom,
-  offsets: { data: offsets, divisor: 1 },
-  scales: { data: scales, divisor: 1 },
-  rotations: { data: rotations, divisor: 1 },
-  colors: { data: colors, divisor: 1 },
+  orbiter: orbiter(),
 });
+world.add(cameraEntity);
+
+let instancedGeometry = {
+  ...cube({ sx: (0.75 * 2) / N }),
+  offsets: { data: new Float32Array(instances * 3), divisor: 1 },
+  scales: {
+    data: Float32Array.from({ length: instances * 3 }, (_, i) =>
+      i % 3 === 2 ? 1 : 1
+    ),
+    divisor: 1,
+  },
+  rotations: { data: new Float32Array(instances * 4), divisor: 1 },
+  colors: { data: new Float32Array(instances * 4), divisor: 1 },
+  instances,
+};
+
+const geometryEntity = createEntity({
+  transform: transform(),
+  geometry: geometry(instancedGeometry),
+  material: material({
+    baseColor: [0.9, 0.9, 0.9, 1],
+    roughness: 0.01,
+    metallic: 1.0,
+    castShadows: true,
+    receiveShadows: true,
+  }),
+});
+world.add(geometryEntity);
+
+const sunEntity = createEntity({
+  transform: transform({
+    position: [-2, 2, 2],
+    rotation: quat.fromTo(
+      quat.create(),
+      [0, 0, 1],
+      vec3.normalize([2, -2, -1])
+    ),
+  }),
+  directionalLight: directionalLight({
+    color: [1, 1, 0.95, 2],
+    intensity: 2,
+    castShadows: false,
+  }),
+});
+world.add(sunEntity);
+
+const skyboxEntity = createEntity({
+  transform: transform(),
+  skybox: skybox({
+    sunPosition: [1, 1, 1],
+    backgroundBlur: 1,
+  }),
+  reflectionProbe: components.reflectionProbe(),
+});
+world.add(skyboxEntity);
+
 function update() {
-  time += 1 / 60;
   const center = [0.75, 0.75, 0.75];
   const radius = 1.25;
 
@@ -91,13 +128,13 @@ function update() {
   center2[2] = 0.5 * Math.cos(time * 2) * Math.sin(time / 2);
 
   let i = 0;
-  for (let x = 0; x < n; x++) {
-    for (let y = 0; y < n; y++) {
-      for (let z = 0; z < n; z++) {
+  for (let x = 0; x < N; x++) {
+    for (let y = 0; y < N; y++) {
+      for (let z = 0; z < N; z++) {
         const pos = [
-          remap(x, 0, n, -1, 1),
-          remap(y, 0, n, -1, 1),
-          remap(z, 0, n, -1, 1),
+          utils.map(x, 0, N, -1, 1),
+          utils.map(y, 0, N, -1, 1),
+          utils.map(z, 0, N, -1, 1),
         ];
         const dist = vec3.distance(pos, center);
         if (dist < radius) {
@@ -113,7 +150,8 @@ function update() {
           vec3.scale(force, 1 - Math.sqrt(dist2 / radius2));
           vec3.add(pos, force);
         }
-        offsets[i] = pos;
+        avec3.set(instancedGeometry.offsets.data, i, pos, 0);
+
         const value = Math.min(1, dist / radius);
         const value2 = Math.min(1, dist2 / radius2);
         const colorBase = [0.8, 0.1, 0.1, 1.0];
@@ -128,102 +166,51 @@ function update() {
         vec3.lerp(color2, [0, 0, 0, 0], value2);
         vec3.add(colorBase, color);
         vec3.add(colorBase, color2);
-        colors[i] = colorBase;
-        scales[i] = [1, 1, 4];
+
+        avec4.set(instancedGeometry.colors.data, i, colorBase, 0);
+
         const dir = vec3.normalize(vec3.sub(vec3.copy(pos), center));
-        rotations[i] = quat.fromTo(quat.create(), [0, 0, 1], dir);
+        avec4.set(
+          instancedGeometry.rotations.data,
+          i,
+          quat.fromTo(quat.create(), [0, 0, 1], dir),
+          0
+        );
         i++;
       }
     }
   }
 
-  geometry.set({
-    offsets,
-    scales,
-    rotations,
-    colors,
-    instances: offsets.length,
-  });
+  // Update the geometry
+  // Unoptimised: geometryEntity.geometry = { ...instancedGeometry };
+  instancedGeometry.offsets.dirty = true;
+  instancedGeometry.colors.dirty = true;
+  instancedGeometry.rotations.dirty = true;
 }
-// update()
-// setInterval(update, 1000 / 60)
 
-const entity = renderer.entity([
-  renderer.transform({
-    position: [0, 0, 0],
-  }),
-  geometry,
-  renderer.material({
-    baseColor: [0.9, 0.9, 0.9, 1],
-    roughness: 0.01,
-    metallic: 1.0,
-    castShadows: true,
-    receiveShadows: true,
-  }),
-]);
-renderer.add(entity);
-
-gui.addHeader("Material");
-gui.addParam("Roughness", State, "roughness", {}, () => {
-  entity.getComponent("Material").set({ roughness: State.roughness });
-});
-gui.addParam("Metallic", State, "metallic", {}, () => {
-  entity.getComponent("Material").set({ metallic: State.metallic });
-});
-gui.addParam("Base Color", State, "baseColor", { type: "color" }, () => {
-  entity.getComponent("Material").set({ baseColor: State.baseColor });
-});
-
-// Sky
-const sun = renderer.directionalLight({
-  color: [5, 5, 4, 1],
-  bias: 0.01,
-  castShadows: true,
-});
-const textureControl = gui.addTexture2D("Shadow map", sun._shadowMap);
-textureControl.x = 10 + 170;
-textureControl.y = 10;
-
-const skybox = renderer.skybox({
-  sunPosition: State.sunPosition,
-});
-gui.addTexture2D("Sky", skybox._skyTexture);
-
-const reflectionProbe = renderer.reflectionProbe({
-  origin: [0, 0, 0],
-  size: [10, 10, 10],
-  boxProjection: false,
-});
-gui.addTexture2D("ReflectionMap", reflectionProbe._reflectionMap);
-
-renderer.add(
-  renderer.entity([
-    renderer.transform({
-      position: State.sunPosition,
-      rotation: quat.fromTo(
-        quat.create(),
-        [0, 0, 1],
-        vec3.normalize(vec3.sub([0, 0, 0], State.sunPosition))
-      ),
-    }),
-    sun,
-    skybox,
-    reflectionProbe,
-  ])
-);
+// GUI
+gui.addFPSMeeter();
 
 window.addEventListener("keydown", ({ key }) => {
+  if (key === "g") gui.enabled = !gui.enabled;
   if (key === "d") debugOnce = true;
 });
 
 ctx.frame(() => {
-  ctx.debug(frameNumber++ < 2 || debugOnce);
+  const now = Date.now();
+  const deltaTime = (now - prevTime) / 1000;
+  prevTime = now;
+  time += deltaTime;
+
+  ctx.debug(debugOnce);
   debugOnce = false;
 
   update();
 
-  renderer.draw();
+  renderEngine.update(world.entities, deltaTime);
+  renderEngine.render(world.entities, cameraEntity);
 
   gui.draw();
+
   window.dispatchEvent(new CustomEvent("pex-screenshot"));
 });
