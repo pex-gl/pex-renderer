@@ -187,20 +187,33 @@ export default function createRenderPipelineSystem(opts) {
 
     light.sceneBboxInLightSpace = sceneBboxInLightSpace;
 
+    let colorMapDesc = passes.directionalLightShadows.colorMapDesc;
+    let shadowMapDesc = passes.directionalLightShadows.shadowMapDesc;
+
+    // Only update descriptors for custom map size
+    // TODO: could texture be cached if they have the same descriptor
+    if (light.shadowMapSize) {
+      colorMapDesc = {
+        ...colorMapDesc,
+        width: light.shadowMapSize,
+        height: light.shadowMapSize,
+      };
+      shadowMapDesc = {
+        ...shadowMapDesc,
+        width: light.shadowMapSize,
+        height: light.shadowMapSize,
+      };
+    }
     //TODO: can this be all done at once?
-    let colorMap = resourceCache.texture2D(
-      passes.directionalLightShadows.colorMapDesc
-    );
+    let colorMap = resourceCache.texture2D(colorMapDesc);
     colorMap.name = "TempColorMap\n" + colorMap.id;
 
-    let shadowMap = resourceCache.texture2D(
-      passes.directionalLightShadows.shadowMapDesc
-    );
+    let shadowMap = resourceCache.texture2D(shadowMapDesc);
     shadowMap.name = "ShadowMap\n" + shadowMap.id;
 
     //TODO: need to create new descriptor to get uniq
     let passDesc = { ...passes.directionalLightShadows.pass };
-    passDesc.color[0] = colorMap;
+    passDesc.color = [colorMap];
     passDesc.depth = shadowMap;
 
     let shadowMapPass = resourceCache.pass(passDesc);
@@ -218,7 +231,9 @@ export default function createRenderPipelineSystem(opts) {
       pass: shadowMapPass,
       renderView: renderView,
       render: () => {
+        // Needs to be here for multi-view with different renderer to not overwrite it
         light._shadowMap = shadowMap;
+
         drawMeshes({
           viewport: renderView.viewport,
           //TODO: passing camera entity around is a mess
@@ -279,20 +294,34 @@ export default function createRenderPipelineSystem(opts) {
 
     light.sceneBboxInLightSpace = sceneBboxInLightSpace;
 
+    let colorMapDesc = passes.spotLightShadows.colorMapDesc;
+    let shadowMapDesc = passes.spotLightShadows.shadowMapDesc;
+
+    // Only update descriptors for custom map size
+    // TODO: could texture be cached if they have the same descriptor
+    if (light.shadowMapSize) {
+      colorMapDesc = {
+        ...colorMapDesc,
+        width: light.shadowMapSize,
+        height: light.shadowMapSize,
+      };
+      shadowMapDesc = {
+        ...shadowMapDesc,
+        width: light.shadowMapSize,
+        height: light.shadowMapSize,
+      };
+    }
+
     //TODO: can this be all done at once?
-    let colorMap = resourceCache.texture2D(
-      passes.spotLightShadows.colorMapDesc
-    );
+    let colorMap = resourceCache.texture2D(colorMapDesc);
     colorMap.name = "TempColorMap\n" + colorMap.id;
 
-    let shadowMap = resourceCache.texture2D(
-      passes.spotLightShadows.shadowMapDesc
-    );
+    let shadowMap = resourceCache.texture2D(shadowMapDesc);
     shadowMap.name = "ShadowMap\n" + shadowMap.id;
 
     //TODO: need to create new descriptor to get uniq
     let passDesc = { ...passes.spotLightShadows.pass };
-    passDesc.color[0] = colorMap;
+    passDesc.color = [colorMap];
     passDesc.depth = shadowMap;
 
     let shadowMapPass = resourceCache.pass(passDesc);
@@ -349,15 +378,29 @@ export default function createRenderPipelineSystem(opts) {
   ) {
     const light = lightEnt.pointLight;
 
+    let shadowCubemapDesc = passes.pointLightShadows.shadowCubemapDesc;
+    let shadowMapDesc = passes.pointLightShadows.shadowMapDesc;
+
+    // Only update descriptors for custom map size
+    // TODO: could texture be cached if they have the same descriptor
+    if (light.shadowMapSize) {
+      shadowCubemapDesc = {
+        ...shadowCubemapDesc,
+        width: light.shadowMapSize,
+        height: light.shadowMapSize,
+      };
+      shadowMapDesc = {
+        ...shadowMapDesc,
+        width: light.shadowMapSize,
+        height: light.shadowMapSize,
+      };
+    }
+
     //TODO: can this be all done at once?
-    let shadowCubemap = resourceCache.textureCube(
-      passes.pointLightShadows.shadowCubemapDesc
-    );
+    let shadowCubemap = resourceCache.textureCube(shadowCubemapDesc);
     shadowCubemap.name = "TempCubemap\n" + shadowCubemap.id;
 
-    let shadowMap = resourceCache.texture2D(
-      passes.pointLightShadows.shadowMapDesc
-    );
+    let shadowMap = resourceCache.texture2D(shadowMapDesc);
     shadowMap.name = "ShadowMap\n" + shadowMap.id;
 
     passes.pointLightShadows.passes.forEach((pass, i) => {
@@ -461,6 +504,7 @@ export default function createRenderPipelineSystem(opts) {
         // FIXME: why this was here?
         // options.shadowPass !== false
       ) {
+        // TODO: filtering lights which don't cast shadows
         renderPipelineSystem.updateDirectionalLightShadowMap(
           lightEntity,
           entities,

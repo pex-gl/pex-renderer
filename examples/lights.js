@@ -114,6 +114,7 @@ const directionalLightEntity = createEntity({
     color: [1, 1, 0, 1],
     intensity: 1,
     castShadows: true,
+    // shadowMapSize: 2048,
   }),
   lightHelper: true,
 });
@@ -144,6 +145,7 @@ const spotLightEntity = createEntity({
     angle: Math.PI / 6,
     innerAngle: Math.PI / 12,
     castShadows: true,
+    // shadowMapSize: 2048,
   }),
   lightHelper: true,
 });
@@ -171,6 +173,7 @@ const pointLightEntity = createEntity({
     intensity: 2,
     range: 5,
     castShadows: true,
+    // shadowMapSize: 512,
   }),
   lightHelper: true,
 });
