@@ -247,7 +247,8 @@ gui.addParam(
 );
 gui.addTexture2D(
   "Shadowmap",
-  directionalLightEntity.directionalLight._shadowMap
+  directionalLightEntity.directionalLight._shadowMap,
+  { flipY: true }
 );
 gui.addParam("Shadows", directionalLightEntity.directionalLight, "castShadows");
 
@@ -268,7 +269,9 @@ gui.addParam("Inner angle", spotLightEntity.spotLight, "innerAngle", {
   min: 0,
   max: Math.PI / 2 - Number.EPSILON,
 });
-gui.addTexture2D("Shadowmap", spotLightEntity.spotLight._shadowMap);
+gui.addTexture2D("Shadowmap", spotLightEntity.spotLight._shadowMap, {
+  flipY: true,
+});
 gui.addParam("Shadows", spotLightEntity.spotLight, "castShadows");
 
 gui.addHeader("Point").setPosition(...getViewportPosition(LAYERS[2]));
