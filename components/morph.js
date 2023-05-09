@@ -1,10 +1,17 @@
-export default (opts) => ({
+/**
+ * Morph component
+ * @param {import("../types.js").MorphComponentOptions} options
+ * @returns {object}
+ * @module MorphComponent
+ * @exports module:MorphComponent
+ */
+export default (options) => ({
   weights: [],
   current:
-    opts.current ||
-    Object.keys(opts.sources).reduce((current, attribute) => {
-      current[attribute] = [...opts.sources[attribute]];
+    options.current ||
+    Object.keys(options.sources).reduce((current, attribute) => {
+      current[attribute] = [...options.sources[attribute]];
       return current;
     }, {}),
-  ...opts,
+  ...options,
 });

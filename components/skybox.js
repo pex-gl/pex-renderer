@@ -1,9 +1,12 @@
-export default (opts) => {
-  if (!opts.sunPosition && !opts.texture) {
-    throw new Error("Skybox requires either a sunPosition or a texture");
-  }
-  return {
-    backgroundBlur: false,
-    ...opts,
-  };
-};
+/**
+ * Skybox component
+ * @param {import("../types.js").SkyboxComponentOptions} [options]
+ * @returns {object}
+ * @module SkyboxComponent
+ * @exports module:SkyboxComponent
+ */
+export default (options) => ({
+  backgroundBlur: false,
+  // envMap,
+  ...options,
+});

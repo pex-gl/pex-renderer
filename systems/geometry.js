@@ -8,6 +8,7 @@ const vertexAttributeMap = {
   uvs: { attribute: "aTexCoord0" },
   texCoords: { attribute: "aTexCoord0" },
   texCoords0: { attribute: "aTexCoord0" },
+  uvs1: { attribute: "aTexCoord1" },
   texCoords1: { attribute: "aTexCoord1" },
   weights: { attribute: "aWeight" },
   joints: { attribute: "aJoint" },

@@ -1,7 +1,15 @@
-export default (opts) => ({
+/**
+ * Directional light component
+ * @param {import("../types.js").DirectionalLightComponentOptions} [options]
+ * @returns {object}
+ * @module DirectionalLightComponent
+ * @exports module:DirectionalLightComponent
+ */
+export default (options) => ({
   color: [1, 1, 1, 1],
   intensity: 1,
   bias: 0.1,
   castShadows: true,
-  ...opts,
+  // shadowMapSize: 2048,
+  ...options,
 });

@@ -1,34 +1,8 @@
-import Signal from "signals";
-
-// Overlay position and size if relative to screen size if < 1 or in pixels if > 1
-class Overlay {
-  constructor(opts) {
-    this.type = "Overlay";
-    this.enabled = true;
-    this.changed = new Signal();
-    this.entity = null;
-    this.dirty = false;
-    this.x = 0;
-    this.y = 0;
-    this.width = 1;
-    this.height = 1;
-    this.texture = null;
-    this.alpha = 1;
-    this.set(opts);
-  }
-
-  init(entity) {
-    this.entity = entity;
-  }
-
-  set(opts) {
-    Object.assign(this, opts);
-    Object.keys(opts).forEach((prop) => this.changed.dispatch(prop));
-  }
-
-  update() {}
-}
-
-export default function createOverlay(opts) {
-  return new Overlay(opts);
-}
+/**
+ * Overlay component
+ * @param {import("../types.js").OverlayComponentOptions} [options]
+ * @returns {object}
+ * @module OverlayComponent
+ * @exports module:OverlayComponent
+ */
+export default (options) => ({ ...options });

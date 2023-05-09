@@ -675,7 +675,7 @@ ${
         material.reflectance !== undefined ? material.reflectance : 0.5;
       cachedUniforms.uExposure = 1.0;
 
-      cachedUniforms.uPointSize = 1;
+      cachedUniforms.uPointSize = material.pointSize || 1;
       cachedUniforms.uMetallicRoughnessMap = material.metallicRoughnessMap;
       renderableEntity._uniforms = cachedUniforms;
 
