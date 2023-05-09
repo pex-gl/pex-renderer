@@ -1,4 +1,4 @@
-import { mat4, vec3, vec4 } from "pex-math";
+import { mat4, vec3 } from "pex-math";
 import { aabb } from "pex-geom";
 
 var tempMat4multQuatMat4 = mat4.create();
@@ -16,53 +16,7 @@ function updateModelMatrix(matrix, transform) {
   if (transform.matrix) mat4.mult(matrix, transform.matrix);
 }
 
-function vec4set4(v, x, y, z, w) {
-  v[0] = x;
-  v[1] = y;
-  v[2] = z;
-  v[3] = w;
-  return v;
-}
-
-// TODO remove, should in AABB
-function emptyAABB(a) {
-  a[0][0] = Infinity;
-  a[0][1] = Infinity;
-  a[0][2] = Infinity;
-  a[1][0] = -Infinity;
-  a[1][1] = -Infinity;
-  a[1][2] = -Infinity;
-}
-
-// TODO remove, should in AABB
-function aabbToPoints(points, box) {
-  vec4set4(points[0], box[0][0], box[0][1], box[0][2], 1);
-  vec4set4(points[1], box[1][0], box[0][1], box[0][2], 1);
-  vec4set4(points[2], box[1][0], box[0][1], box[1][2], 1);
-  vec4set4(points[3], box[0][0], box[0][1], box[1][2], 1);
-  vec4set4(points[4], box[0][0], box[1][1], box[0][2], 1);
-  vec4set4(points[5], box[1][0], box[1][1], box[0][2], 1);
-  vec4set4(points[6], box[1][0], box[1][1], box[1][2], 1);
-  vec4set4(points[7], box[0][0], box[1][1], box[1][2], 1);
-  return points;
-}
-
-function aabbFromPoints(aabb, points) {
-  var min = aabb[0];
-  var max = aabb[1];
-
-  for (var i = 0, len = points.length; i < len; i++) {
-    var p = points[i];
-    min[0] = Math.min(min[0], p[0]);
-    min[1] = Math.min(min[1], p[1]);
-    min[2] = Math.min(min[2], p[2]);
-    max[0] = Math.max(max[0], p[0]);
-    max[1] = Math.max(max[1], p[1]);
-    max[2] = Math.max(max[2], p[2]);
-  }
-
-  return aabb;
-}
+const boundsPoints = Array.from({ length: 8 }, () => vec3.create());
 
 export default function createTransformSystem(opts) {
   const transformSystem = {
@@ -133,7 +87,6 @@ export default function createTransformSystem(opts) {
   };
 
   const localBounds = aabb.create();
-  const boundsPoints = new Array(8).fill(0).map(() => vec4.create());
   // going backwards from leaves to root
   // 1. update local bounds if i have geo
   // 2. transform them to world space
@@ -149,15 +102,15 @@ export default function createTransformSystem(opts) {
           transform.entity.geometry.bounds &&
           !aabb.isEmpty(transform.entity.geometry.bounds)
         ) {
-          aabbToPoints(boundsPoints, transform.entity.geometry.bounds);
+          aabb.getCorners(transform.entity.geometry.bounds, boundsPoints);
           for (var i = 0; i < boundsPoints.length; i++) {
             vec3.multMat4(
               boundsPoints[i],
               transformSystem.cache[transform.entity.id].modelMatrix
             );
           }
-          emptyAABB(localBounds);
-          aabbFromPoints(localBounds, boundsPoints);
+          aabb.empty(localBounds);
+          aabb.fromPoints(localBounds, boundsPoints);
           aabb.includeAABB(transform.worldBounds, localBounds);
         }
       } catch (e) {
@@ -216,7 +169,7 @@ export default function createTransformSystem(opts) {
 
     for (let i = transformEntities.length - 1; i >= 0; i--) {
       const entity = transformEntities[i];
-      emptyAABB(entity.transform.worldBounds);
+      aabb.empty(entity.transform.worldBounds);
     }
 
     //TODO: can we not do updateBoundingBox every frame?

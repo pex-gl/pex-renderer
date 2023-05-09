@@ -124,21 +124,6 @@ export default function createRenderPipelineSystem(opts) {
     }
   }
 
-  // TODO remove, should be in AABB
-  function aabbToPoints(bbox) {
-    if (aabb.isEmpty(bbox)) return [];
-    return [
-      [bbox[0][0], bbox[0][1], bbox[0][2], 1],
-      [bbox[1][0], bbox[0][1], bbox[0][2], 1],
-      [bbox[1][0], bbox[0][1], bbox[1][2], 1],
-      [bbox[0][0], bbox[0][1], bbox[1][2], 1],
-      [bbox[0][0], bbox[1][1], bbox[0][2], 1],
-      [bbox[1][0], bbox[1][1], bbox[0][2], 1],
-      [bbox[1][0], bbox[1][1], bbox[1][2], 1],
-      [bbox[0][0], bbox[1][1], bbox[1][2], 1],
-    ];
-  }
-
   renderPipelineSystem.updateDirectionalLightShadowMap = function (
     lightEnt,
     entities,
@@ -156,7 +141,7 @@ export default function createRenderPipelineSystem(opts) {
 
     const shadowBboxPoints = shadowCastingEntities.reduce(
       (points, entity) =>
-        points.concat(aabbToPoints(entity.transform.worldBounds)),
+        points.concat(aabb.getCorners(entity.transform.worldBounds)),
       []
     );
 
@@ -275,7 +260,7 @@ export default function createRenderPipelineSystem(opts) {
 
     const shadowBboxPoints = shadowCastingEntities.reduce(
       (points, entity) =>
-        points.concat(aabbToPoints(entity.transform.worldBounds)),
+        points.concat(aabb.getCorners(entity.transform.worldBounds)),
       []
     );
 
