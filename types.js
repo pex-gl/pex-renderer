@@ -16,6 +16,9 @@
  * @property {number} [intensity=1]
  */
 /**
+ * @typedef {object} AxesHelperComponentOptions
+ */
+/**
  * @typedef {object} BoundingBoxHelperComponentOptions
  * @property {number[]} [color=[1, 0, 0, 1]]
  */
@@ -70,6 +73,11 @@
  * @property {number} [count]
  * @property {object} [multiDraw]
  * @property {ctx.Primitive} [primitive=ctx.Primitive.Triangles]
+ */
+/**
+ * @typedef {object} GridHelperComponentOptions
+ * @property {number[]} [color=[1, 1, 1, 1]]
+ * @property {number[]} [size=10]
  */
 /**
  * @typedef {object} LightHelperComponentOptions

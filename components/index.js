@@ -21,3 +21,5 @@ export { default as reflectionProbe } from "./reflection-probe.js";
 export { default as boundingBoxHelper } from "./bounding-box-helper.js";
 export { default as lightHelper } from "./light-helper.js";
 export { default as cameraHelper } from "./camera-helper.js";
+export { default as axesHelper } from "./axes-helper.js";
+export { default as gridHelper } from "./grid-helper.js";

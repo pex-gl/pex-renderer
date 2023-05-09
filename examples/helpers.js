@@ -54,13 +54,13 @@ const gui = createGUI(ctx);
 
 const helperEntity = createEntity({
   transform: components.transform({ scale: [2, 2, 2] }),
-  axesHelper: {},
-  gridHelper: {},
+  axesHelper: components.axesHelper(),
+  gridHelper: components.gridHelper(),
 });
 world.add(helperEntity);
 const gridTenEntity = createEntity({
   transform: components.transform({ scale: [2, 2, 2] }),
-  gridHelper: { size: 10 },
+  gridHelper: components.gridHelper({ size: 10 }),
 });
 world.add(gridTenEntity);
 
