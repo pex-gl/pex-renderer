@@ -5,14 +5,6 @@ import createPassDescriptors from "./renderer/passes.js";
 export default function createRenderPipelineSystem(opts) {
   const { ctx, resourceCache, renderGraph } = opts;
 
-  ctx.gl.getExtension("WEBGL_color_buffer_float");
-  ctx.gl.getExtension("WEBGL_color_buffer_half_float");
-  ctx.gl.getExtension("EXT_color_buffer_half_float");
-  ctx.gl.getExtension("EXT_color_buffer_half_float");
-  ctx.gl.getExtension("EXT_shader_texture_lod");
-  ctx.gl.getExtension("OES_standard_derivatives");
-  ctx.gl.getExtension("WEBGL_draw_buffers");
-  ctx.gl.getExtension("OES_texture_float");
   ctx.gl.getExtension("EXT_float_blend");
 
   const tempMat4 = mat4.create(); //FIXME
