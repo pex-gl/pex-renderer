@@ -48,6 +48,7 @@
     "fit-rect": "^1.0.3",
     "geom-center-and-normalize": "^2.0.0",
     "geom-edges": "^1.2.0",
+    "geom-merge": "^2.0.0",
     "geom-normals": "^2.0.0",
     "geom-parse-obj": "^2.0.0",
     "grid-cells": "^2.0.0",
