@@ -10,7 +10,6 @@ import { mat4 } from "pex-math";
 export default (options) => {
   const camera = {
     projection: "perspective",
-    fov: Math.PI / 4,
     near: 0.5,
     far: 1000,
     aspect: 1,
@@ -18,12 +17,6 @@ export default (options) => {
     viewMatrix: mat4.lookAt(mat4.create(), [0, 0, 1], [0, 0, 0], [0, 1, 0]),
     invViewMatrix: mat4.create(),
     // exposure: 1,
-    // left: -1,
-    // right: 1,
-    // bottom: -1,
-    // top: 1,
-    // zoom: 1,
-
     // focalLength: 50, // mm
     // fStop: 2.8,
 
@@ -32,6 +25,16 @@ export default (options) => {
     // sensorFit: "vertical",
     ...options,
   };
+  if (camera.projection === "orthographic") {
+    camera.left ||= -1;
+    camera.right ||= 1;
+    camera.bottom ||= -1;
+    camera.top ||= 1;
+    camera.zoom ||= 1;
+  } else {
+    camera.fov ||= Math.PI / 4;
+  }
+
   // TODO: should this be in systems
   camera.projectionMatrix = mat4.perspective(
     mat4.create(),

@@ -1,7 +1,43 @@
 import { mat4, vec3, quat, utils } from "pex-math";
 import { orbiter as createOrbiter } from "pex-cam";
 
-const tmpMatrix = mat4.create();
+function updateCamera(camera, transform) {
+  // TODO: projectionMatrix should only be recomputed if parameters changed
+  if (camera.projection === "orthographic") {
+    const dx = (camera.right - camera.left) / (2 / camera.zoom);
+    const dy = (camera.top - camera.bottom) / (2 / camera.zoom);
+    const cx = (camera.right + camera.left) / 2;
+    const cy = (camera.top + camera.bottom) / 2;
+
+    let left = cx - dx;
+    let right = cx + dx;
+    let top = cy + dy;
+    let bottom = cy - dy;
+
+    mat4.ortho(
+      camera.projectionMatrix,
+      left,
+      right,
+      bottom,
+      top,
+      camera.near,
+      camera.far
+    );
+  } else {
+    mat4.perspective(
+      camera.projectionMatrix,
+      camera.fov,
+      camera.aspect,
+      camera.near,
+      camera.far
+    );
+  }
+
+  mat4.set(camera.invViewMatrix, transform.modelMatrix);
+  //look at matrix is opposite of camera modelMatrix transform
+  mat4.set(camera.viewMatrix, transform.modelMatrix);
+  mat4.invert(camera.viewMatrix);
+}
 
 export default function createCameraSystem() {
   const cameraSystem = {
@@ -33,6 +69,7 @@ export default function createCameraSystem() {
             rotationCache: [...entity.transform.rotation],
             target: [...orbiter.target],
             up: [0, 1, 0],
+            zoom: camera.zoom,
             getViewRay: (x, y, windowWidth, windowHeight) => {
               let nx = (2 * x) / windowWidth - 1;
               let ny = 1 - (2 * y) / windowHeight;
@@ -43,7 +80,12 @@ export default function createCameraSystem() {
 
               return [[0, 0, 0], vec3.normalize([nx, ny, -camera.near])];
             },
-            set({ target, position }) {
+            set({ target, position, zoom }) {
+              if (zoom) {
+                camera.zoom = zoom;
+                return;
+              }
+
               if (target) {
                 vec3.set(orbiter._orbiter.camera.target, target);
                 vec3.set(orbiter.target, target);
@@ -92,18 +134,8 @@ export default function createCameraSystem() {
         } else {
           if (camera.dirty) {
             camera.dirty = false;
-            mat4.perspective(
-              camera.projectionMatrix,
-              camera.fov,
-              camera.aspect,
-              camera.near,
-              camera.far
-            );
 
-            mat4.set(camera.invViewMatrix, entity._transform.modelMatrix);
-            //look at matrix is opposite of camera modelMatrix transform
-            mat4.set(camera.viewMatrix, entity._transform.modelMatrix);
-            mat4.invert(camera.viewMatrix);
+            updateCamera(camera, entity._transform);
           }
 
           let newPosition = null;
@@ -184,6 +216,12 @@ export default function createCameraSystem() {
           mat4multQuat(camera.invViewMatrix, entity.transform.rotation);
           mat4.set(camera.viewMatrix, camera.invViewMatrix);
           mat4.invert(camera.viewMatrix);
+        }
+      } else if (entity.camera) {
+        // Camera manually updated or animation
+        if (entity.camera.dirty) {
+          entity.camera.dirty = false;
+          updateCamera(entity.camera, entity._transform);
         }
       }
     }

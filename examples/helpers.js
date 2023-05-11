@@ -114,7 +114,7 @@ const orthoCameraEntity = createEntity({
     zoom: 3,
     viewport: [splitRatio * W, 0, (1 - splitRatio) * W, 0.5 * H],
   }),
-  // cameraHelper: true,
+  cameraHelper: true,
 });
 world.add(orthoCameraEntity);
 
