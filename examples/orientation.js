@@ -3,14 +3,17 @@ import {
   world as createWorld,
   entity as createEntity,
   components,
-  loaders,
 } from "../index.js";
 import createContext from "pex-context";
-import { quat, utils, mat4, vec3 } from "pex-math";
+import { quat, mat4 } from "pex-math";
 import createGUI from "pex-gui";
+import * as io from "pex-io";
 import merge from "geom-merge";
+import parseObj from "geom-parse-obj";
+import centerAndNormalize from "geom-center-and-normalize";
 
 import { cube, sphere } from "primitive-geometry";
+import { getURL } from "./utils.js";
 
 const TEMP_MAT4 = mat4.create();
 const Y_UP = Object.freeze([0, 1, 0]);
@@ -95,7 +98,6 @@ const gui = createGUI(ctx);
 
 const W = window.innerWidth * devicePixelRatio;
 const H = window.innerHeight * devicePixelRatio;
-const splitRatio = 0.5;
 
 const helperEntity = createEntity({
   transform: components.transform({ scale: [2, 2, 2] }),
@@ -156,6 +158,7 @@ const floorEntity = createEntity({
 });
 world.add(floorEntity);
 
+// Geometries
 const offset = 0.2;
 const axisSize = offset * 0.45;
 const z = offset * 0.8;
@@ -183,9 +186,22 @@ cubeZ.vertexColors = Float32Array.from(
   { length: (cubeZ.positions.length / 3) * 4 },
   (_, i) => ([2, 3].includes(i % 4) ? 1 : 0)
 );
+const suzanne = parseObj(
+  await io.loadText(getURL(`assets/models/suzanne/suzanne.obj`))
+)[0];
+suzanne.positions = centerAndNormalize(suzanne.positions);
+suzanne.positions = suzanne.positions.map((p) => p * 0.1);
+suzanne.uvs = new Float32Array((suzanne.positions.length / 3) * 2);
+suzanne.vertexColors = Float32Array.from(
+  { length: suzanne.positions.length * 4 },
+  (_, i) => ([1, 2, 3].includes(i % 4) ? 1 : 0)
+);
+
+delete suzanne.name;
+
 const baseEntity = {
-  geometry: components.geometry(merge([cubeX, cubeY, cubeZ])),
-  material: components.material({ unlit: true }),
+  geometry: components.geometry(merge([cubeX, cubeY, cubeZ, suzanne])),
+  material: components.material(),
   // boundingBoxHelper: components.boundingBoxHelper(),
 };
 
@@ -197,7 +213,7 @@ const base = createEntity({
 // world.add(base);
 const baseTargetEntity = {
   geometry: components.geometry(sphere({ radius: 0.025 })),
-  boundingBoxHelper: components.boundingBoxHelper(),
+  // boundingBoxHelper: components.boundingBoxHelper(),
 };
 
 const UPS = [[1, 0, 0], Y_UP, [0, 0, 1], [1, 1, 1]];
