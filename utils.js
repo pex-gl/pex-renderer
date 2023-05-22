@@ -1,3 +1,8 @@
+import { quat, vec3 } from "pex-math";
+
+export const TMP_VEC3 = vec3.create();
+export const TEMP_QUAT = quat.create();
+
 export const getFileExtension = (path) => {
   return (path?.match(/[^\\/]\.([^.\\/]+)$/) || [null]).pop();
 };

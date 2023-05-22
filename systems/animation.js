@@ -1,12 +1,7 @@
-import { vec3, vec4, mat4, quat, utils } from "pex-math";
-
-let currentOutputVec3 = vec3.create();
-let currentOutputQuat = quat.create();
+import { vec3, vec4, mat4, quat } from "pex-math";
+import { TEMP_QUAT, TMP_VEC3 } from "../utils.js";
 
 function updateAnimation(animation, deltaTime) {
-  // console.log('updateAnimation', animation)
-  // if (!animation.enabled) return;
-
   if (!animation.prevTime) {
     animation.time = 0;
     animation.prevTime = Date.now();
@@ -28,16 +23,13 @@ function updateAnimation(animation, deltaTime) {
       } else {
         animation.time = 0;
         animation.playing = false;
-        // animation.set({ playing: false });
       }
     }
 
     animation.needsUpdate = true;
   }
 
-  // console.log(animation)
   if (!animation.needsUpdate) return;
-
   animation.needsUpdate = false;
 
   for (let i = 0; i < animation.channels.length; i++) {
@@ -49,9 +41,7 @@ function updateAnimation(animation, deltaTime) {
 
     for (let j = 0; j < inputData.length; j++) {
       nextIndex = j;
-      if (inputData[j] >= animation.time) {
-        break;
-      }
+      if (inputData[j] >= animation.time) break;
       prevIndex = nextIndex;
     }
 
@@ -63,15 +53,13 @@ function updateAnimation(animation, deltaTime) {
 
     const t = (animation.time - prevInput) / scale;
 
-    // console.log('t', t)
-
     if (prevIndex !== undefined) {
       switch (channel.interpolation) {
         case "STEP":
           if (isRotation) {
-            quat.set(currentOutputQuat, outputData[prevIndex]);
+            quat.set(TEMP_QUAT, outputData[prevIndex]);
           } else {
-            vec3.set(currentOutputVec3, outputData[prevIndex]);
+            vec3.set(TMP_VEC3, outputData[prevIndex]);
           }
           break;
         case "CUBICSPLINE": {
@@ -105,7 +93,7 @@ function updateAnimation(animation, deltaTime) {
 
           if (isRotation) {
             quat.set(
-              currentOutputQuat,
+              TEMP_QUAT,
               quat.normalize([
                 p0[0] + m0[0] + p1[0] + m1[0],
                 p0[1] + m0[1] + p1[1] + m1[1],
@@ -114,10 +102,7 @@ function updateAnimation(animation, deltaTime) {
               ])
             );
           } else {
-            vec3.set(
-              currentOutputVec3,
-              vec3.add(vec3.add(vec3.add(p0, m0), p1), m1)
-            );
+            vec3.set(TMP_VEC3, vec3.add(vec3.add(vec3.add(p0, m0), p1), m1));
           }
 
           break;
@@ -126,113 +111,65 @@ function updateAnimation(animation, deltaTime) {
           // LINEAR
           if (isRotation) {
             quat.slerp(
-              quat.set(currentOutputQuat, outputData[prevIndex]),
+              quat.set(TEMP_QUAT, outputData[prevIndex]),
               outputData[nextIndex],
               t
             );
-            // console.log(
-            //   "currentOutputQuat",
-            //   // prevIndex,
-            //   // outputData[prevIndex],
-            //   // nextIndex,
-            //   // outputData[nextIndex],
-            //   t,
-            //   currentOutputQuat
-            // );
           } else {
-            vec3.set(
-              currentOutputVec3,
-              outputData[nextIndex].map((output, index) =>
-                utils.lerp(outputData[prevIndex][index], output, t)
-              )
+            vec3.lerp(
+              vec3.set(TMP_VEC3, outputData[prevIndex]),
+              outputData[nextIndex],
+              t
             );
           }
       }
 
       if (isRotation) {
-        quat.set(channel.target.transform.rotation, currentOutputQuat);
+        quat.set(channel.target.transform.rotation, TEMP_QUAT);
         channel.target.transform.dirty = true;
-        // console.log(
-        //   "channel.target.transform.rotation",
-        //   channel.target.transform.rotation
-        // );
-        window.transform = channel.target.transform;
-        // channel.target.transform = {
-        //   ...channel.target.transform,
-        // };
-        // channel.target.transform.set({
-        //   rotation: quat.copy(currentOutputQuat),
-        // });
       } else if (channel.path === "translation") {
-        vec3.set(channel.target.transform.position, currentOutputVec3);
+        vec3.set(channel.target.transform.position, TMP_VEC3);
         channel.target.transform.dirty = true;
-        // channel.target.transform = {
-        //   ...channel.target.transform,
-        // };
-
-        // channel.target.transform.set({
-        //   position: vec3.copy(currentOutputVec3),
-        // });
       } else if (channel.path === "scale") {
-        vec3.set(channel.target.transform.scale, currentOutputVec3);
+        vec3.set(channel.target.transform.scale, TMP_VEC3);
         channel.target.transform.dirty = true;
-        // channel.target.transform = {
-        //   ...channel.target.transform,
-        // };
-        // channel.target.transform.set({
-        //   scale: vec3.copy(currentOutputVec3),
-        // });
       } else if (channel.path === "weights") {
         channel.target.morph.weights = outputData[nextIndex].slice();
-        // channel.target.getComponent("Morph").set({
-        //   weights: outputData[nextIndex].slice(),
-        // });
       }
     }
   }
 }
 
-export default function createAnimationSystem(opts) {
-  const animationSystem = {};
+function updateSkin(skin) {
+  for (let i = 0; i < skin.joints.length; i++) {
+    const joint = skin.joints[i];
+    const m = skin.jointMatrices[i];
+    mat4.identity(m);
+    if (joint._transform) {
+      const modelMatrix = joint._transform.modelMatrix;
+      mat4.mult(m, modelMatrix);
+      mat4.mult(m, skin.inverseBindMatrices[i]);
+    }
+  }
+}
 
-  animationSystem.updateAnimations = (animationEntities, deltaTime) => {
-    for (let entity of animationEntities) {
+export default () => ({
+  type: "animation-system",
+  updateAnimation,
+  updateSkin,
+  update(entities, deltaTime) {
+    for (let i = 0; i < entities.length; i++) {
+      const entity = entities[i];
+
       if (entity.animations) {
-        for (let animation of entity.animations) {
-          updateAnimation(animation, deltaTime);
+        for (let j = 0; j < entity.animations.length; j++) {
+          updateAnimation(entity.animations[j], deltaTime);
         }
-      } else {
+      } else if (entity.animation) {
         updateAnimation(entity.animation, deltaTime);
       }
+
+      if (entity.skin) updateSkin(entity.skin);
     }
-  };
-
-  animationSystem.updateSkins = (skinEntities, transformSystem) => {
-    for (let entity of skinEntities) {
-      //entity.skin
-      for (let i = 0; i < entity.skin.joints.length; i++) {
-        const joint = entity.skin.joints[i];
-        const m = entity.skin.jointMatrices[i];
-        mat4.identity(m);
-        if (joint._transform) {
-          const modelMatrix = joint._transform.modelMatrix;
-          mat4.mult(m, modelMatrix);
-          mat4.mult(m, entity.skin.inverseBindMatrices[i]);
-        }
-        // console.log(m)
-      }
-    }
-  };
-
-  animationSystem.update = (entities, deltaTime) => {
-    const animationEntities = entities.filter(
-      (e) => e.animation || e.animations
-    );
-    animationSystem.updateAnimations(animationEntities, deltaTime);
-
-    const skinEntities = entities.filter((e) => e.skin);
-    animationSystem.updateSkins(skinEntities, deltaTime);
-  };
-
-  return animationSystem;
-}
+  },
+});
