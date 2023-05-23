@@ -1,6 +1,6 @@
 import { mat4, vec3 } from "pex-math";
 import { aabb } from "pex-geom";
-import { TEMP_MAT4 } from "../utils.js";
+import { TEMP_AABB, TEMP_MAT4 } from "../utils.js";
 
 function updateModelMatrix(matrix, transform) {
   mat4.identity(matrix);
@@ -83,7 +83,6 @@ export default () => {
     }
   };
 
-  const localBounds = aabb.create();
   // going backwards from leaves to root
   // 1. update local bounds if i have geo
   // 2. transform them to world space
@@ -106,9 +105,9 @@ export default () => {
               transformSystem.cache[transform.entity.id].modelMatrix
             );
           }
-          aabb.empty(localBounds);
-          aabb.fromPoints(localBounds, boundsPoints);
-          aabb.includeAABB(transform.worldBounds, localBounds);
+          aabb.empty(TEMP_AABB);
+          aabb.fromPoints(TEMP_AABB, boundsPoints);
+          aabb.includeAABB(transform.worldBounds, TEMP_AABB);
         }
       } catch (e) {
         debugger;
