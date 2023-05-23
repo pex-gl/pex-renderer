@@ -5,7 +5,7 @@ precision highp float;
 
 ${SHADERS.math.PI}
 
-varying vec2 vTexCoord;
+varying vec2 vTexCoord0;
 
 uniform sampler2D uOctMapAtlas;
 uniform float uOctMapAtlasSize;
@@ -20,7 +20,7 @@ ${SHADERS.gamma}
 ${SHADERS.encodeDecode}
 
 void main() {
-  vec3 N = octMapUVToDir(vTexCoord, uIrradianceOctMapSize);
+  vec3 N = octMapUVToDir(vTexCoord0, uIrradianceOctMapSize);
   vec3 normal = N;
 
   vec3 up = vec3(0.0, 1.0, 0.0);

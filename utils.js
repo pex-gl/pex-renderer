@@ -3,6 +3,28 @@ import { quat, vec3 } from "pex-math";
 export const TMP_VEC3 = vec3.create();
 export const TEMP_QUAT = quat.create();
 
+export const quad = {
+  // prettier-ignore
+  positions:  Float32Array.of(
+    -1, -1,
+    1, -1,
+    1, 1,
+    -1, 1,
+  ),
+  // prettier-ignore
+  uvs: Uint16Array.of(
+    0, 0,
+    1, 0,
+    1, 1,
+    0, 1
+  ),
+  // prettier-ignore
+  cells: Uint16Array.of(
+    0, 1, 2,
+    2, 3, 0
+  ),
+};
+
 export const getFileExtension = (path) => {
   return (path?.match(/[^\\/]\.([^.\\/]+)$/) || [null]).pop();
 };

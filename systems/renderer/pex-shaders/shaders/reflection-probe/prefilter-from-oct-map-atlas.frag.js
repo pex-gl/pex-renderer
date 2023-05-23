@@ -4,7 +4,7 @@ export default /* glsl */ `
 precision highp float;
 
 // Variables
-varying vec2 vTexCoord;
+varying vec2 vTexCoord0;
 uniform float uTextureSize;
 uniform sampler2D uOctMapAtlas;
 uniform float uOctMapAtlasSize;
@@ -108,8 +108,8 @@ vec3 PrefilterEnvMap( float roughness, vec3 R, vec2 uv ) {
 }
 
 void main() {
-  vec3 normal = octMapUVToDir(vTexCoord);
-  vec3 color = PrefilterEnvMap(uRoughnessLevel / 5.0, normal, vTexCoord);
+  vec3 normal = octMapUVToDir(vTexCoord0);
+  vec3 color = PrefilterEnvMap(uRoughnessLevel / 5.0, normal, vTexCoord0);
   gl_FragColor = encode(vec4(color, 1.0), uOutputEncoding);
 }
 `;

@@ -1,29 +1,12 @@
 import { vec3, mat4 } from "pex-math";
 // import { reflectionProbe as SHADERS } from "pex-shaders";
-import { reflectionProbe as SHADERS } from "./renderer/pex-shaders/index.js";
+import {
+  pipeline,
+  reflectionProbe as SHADERS,
+} from "./renderer/pex-shaders/index.js";
 
 import hammersley from "hammersley";
-
-// TODO: share with skybox.js
-// prettier-ignore
-const quadPositions =  Float32Array.of(
-  -1, -1,
-  1, -1,
-  1, 1,
-  -1, 1,
-)
-// prettier-ignore
-const quadUvs = Uint16Array.of(
-  0, 0,
-  1, 0,
-  1, 1,
-  0, 1
-)
-// prettier-ignore
-const quadCells = Uint16Array.of(
-  0, 1, 2,
-  2, 3, 0
-)
+import { quad } from "../utils.js";
 
 const cubemapProjectionMatrix = mat4.perspective(
   mat4.create(),
@@ -146,11 +129,11 @@ class ReflectionProbe {
     const ctx = this._ctx;
 
     const attributes = {
-      aPosition: ctx.vertexBuffer(quadPositions),
-      aTexCoord: ctx.vertexBuffer(quadUvs),
+      aPosition: ctx.vertexBuffer(quad.positions),
+      aTexCoord0: ctx.vertexBuffer(quad.uvs),
     };
 
-    const indices = ctx.indexBuffer(quadCells);
+    const indices = ctx.indexBuffer(quad.cells);
 
     this.clearOctMapAtlasCmd = {
       name: "ReflectionProbe.clearOctMapAtlas",
@@ -168,7 +151,7 @@ class ReflectionProbe {
         color: [this._octMap],
       }),
       pipeline: ctx.pipeline({
-        vert: SHADERS.fullscreenQuad.vert,
+        vert: pipeline.fullscreen.vert,
         frag: SHADERS.cubemapToOctMap.frag,
       }),
       attributes,
@@ -185,7 +168,7 @@ class ReflectionProbe {
         color: [this._octMap],
       }),
       pipeline: ctx.pipeline({
-        vert: SHADERS.fullscreenQuad.vert,
+        vert: pipeline.fullscreen.vert,
         frag: SHADERS.convolveOctMapAtlasToOctMap.frag,
       }),
       attributes,
@@ -203,7 +186,7 @@ class ReflectionProbe {
         color: [this._reflectionMap],
       }),
       pipeline: ctx.pipeline({
-        vert: SHADERS.fullscreenQuad.vert,
+        vert: pipeline.fullscreen.vert,
         frag: SHADERS.blitToOctMapAtlas.frag,
       }),
       uniforms: {
@@ -221,7 +204,7 @@ class ReflectionProbe {
         clearColor: [0, 0, 0, 1],
       }),
       pipeline: ctx.pipeline({
-        vert: SHADERS.fullscreenQuad.vert,
+        vert: pipeline.fullscreen.vert,
         frag: SHADERS.downsampleFromOctMapAtlas.frag,
       }),
       uniforms: {
@@ -239,7 +222,7 @@ class ReflectionProbe {
         clearColor: [0, 0, 0, 1],
       }),
       pipeline: ctx.pipeline({
-        vert: SHADERS.fullscreenQuad.vert,
+        vert: pipeline.fullscreen.vert,
         frag: SHADERS.prefilterFromOctMapAtlas.frag,
       }),
       uniforms: {

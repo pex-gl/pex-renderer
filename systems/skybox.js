@@ -1,6 +1,6 @@
-import { skybox } from "pex-shaders";
-import createQuad from "primitive-quad";
+import { pipeline, skybox } from "./renderer/pex-shaders/index.js";
 import { vec3 } from "pex-math";
+import { quad } from "../utils.js";
 
 export default function createSkyboxSystem(opts) {
   const { ctx } = opts;
@@ -10,12 +10,11 @@ export default function createSkyboxSystem(opts) {
     debug: false,
   };
 
-  const quad = createQuad();
 
   const updateSkyTextureCmd = {
     name: "Skybox.updateSkyTexture",
     pipeline: ctx.pipeline({
-      vert: skybox.skyEnvMap.vert,
+      vert: pipeline.fullscreen.vert,
       frag: skybox.skyEnvMap.frag,
     }),
     uniforms: {

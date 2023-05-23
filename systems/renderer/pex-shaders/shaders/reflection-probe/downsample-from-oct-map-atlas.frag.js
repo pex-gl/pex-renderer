@@ -3,7 +3,7 @@ import SHADERS from "../chunks/index.js";
 export default /* glsl */ `
 precision highp float;
 
-varying vec2 vTexCoord;
+varying vec2 vTexCoord0;
 
 // uniform float uLevelSize;
 uniform sampler2D uOctMapAtlas;
@@ -15,7 +15,7 @@ ${SHADERS.octMapUvToDir}
 ${SHADERS.octMap}
 
 void main() {
-  vec2 uv = vTexCoord;
+  vec2 uv = vTexCoord0;
   float width = uOctMapAtlasSize;
   float maxLevel = log2(width); // this should come from log of size
 

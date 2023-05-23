@@ -261,10 +261,10 @@ const drawTexturesMixedCmd = {
       attribute vec2 aPosition;
       attribute vec2 aTexCoord;
 
-      varying vec2 vTexCoord;
+      varying vec2 vTexCoord0;
 
       void main() {
-        vTexCoord = aTexCoord;
+        vTexCoord0 = aTexCoord;
 
         gl_Position = vec4(aPosition, 0.0, 1.0);
       }
@@ -272,7 +272,7 @@ const drawTexturesMixedCmd = {
     frag: /* glsl */ `
       precision highp float;
 
-      varying vec2 vTexCoord;
+      varying vec2 vTexCoord0;
 
       uniform sampler2D uTexture;
       uniform sampler2D uTexture2;
@@ -280,13 +280,13 @@ const drawTexturesMixedCmd = {
 
       void main() {
         gl_FragColor = mix(
-          texture2D(uTexture, vTexCoord),
-          texture2D(uTexture2, vTexCoord),
+          texture2D(uTexture, vTexCoord0),
+          texture2D(uTexture2, vTexCoord0),
           uBlend
         );
-        gl_FragColor = texture2D(uTexture, vTexCoord);
-        if (vTexCoord.x + (1.0 - vTexCoord.y) > uBlend * 2.0) {
-          gl_FragColor = texture2D(uTexture2, vTexCoord);
+        gl_FragColor = texture2D(uTexture, vTexCoord0);
+        if (vTexCoord0.x + (1.0 - vTexCoord0.y) > uBlend * 2.0) {
+          gl_FragColor = texture2D(uTexture2, vTexCoord0);
         }
         gl_FragColor.rgb = gl_FragColor.rgb / (1.0 + gl_FragColor.rgb);
         gl_FragColor.rgb = pow(gl_FragColor.rgb, vec3(1.0/2.2));
