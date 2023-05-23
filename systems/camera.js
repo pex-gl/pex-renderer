@@ -1,5 +1,6 @@
 import { mat4, vec3, quat, utils } from "pex-math";
 import { orbiter as createOrbiter } from "pex-cam";
+import { TEMP_MAT4 } from "../utils.js";
 
 function updateCamera(camera, transform) {
   // TODO: projectionMatrix should only be recomputed if parameters changed
@@ -47,13 +48,6 @@ export default function createCameraSystem() {
   const tempMat = mat4.create();
 
   let debuggerCountdown = 4;
-
-  var tempMat4multQuatMat4 = mat4.create();
-  function mat4multQuat(m, q) {
-    mat4.fromQuat(tempMat4multQuatMat4, q);
-    mat4.mult(m, tempMat4multQuatMat4);
-    return m;
-  }
 
   cameraSystem.update = (entities) => {
     for (let entity of entities) {
@@ -213,7 +207,10 @@ export default function createCameraSystem() {
 
           mat4.identity(camera.invViewMatrix);
           mat4.translate(camera.invViewMatrix, entity.transform.position);
-          mat4multQuat(camera.invViewMatrix, entity.transform.rotation);
+          mat4.mult(
+            camera.invViewMatrix,
+            mat4.fromQuat(TEMP_MAT4, entity.transform.rotation)
+          );
           mat4.set(camera.viewMatrix, camera.invViewMatrix);
           mat4.invert(camera.viewMatrix);
         }
