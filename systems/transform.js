@@ -18,8 +18,9 @@ function updateModelMatrix(matrix, transform) {
 
 const boundsPoints = Array.from({ length: 8 }, () => vec3.create());
 
-export default function createTransformSystem(opts) {
+export default () => {
   const transformSystem = {
+    type: "transform-system",
     cache: {},
     debug: false,
   };
@@ -193,4 +194,4 @@ export default function createTransformSystem(opts) {
   };
 
   return transformSystem;
-}
+};
