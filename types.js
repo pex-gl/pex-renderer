@@ -141,9 +141,10 @@
 // * @property {number} [normalMapScale=1]
 /**
  * @typedef {object} MorphComponentOptions
- * @property {Array} sources
+ * @property {object} sources
+ * @property {object} targets
+ * @property {object} [current]
  * @property {Array} [weights=[]]
- * @property {Array} [current=[]]
  */
 /**
  * @typedef {object} OrbiterComponentOptions
