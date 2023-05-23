@@ -6,24 +6,7 @@ import {
 } from "./renderer/pex-shaders/index.js";
 
 import hammersley from "hammersley";
-import { quad } from "../utils.js";
-
-const cubemapProjectionMatrix = mat4.perspective(
-  mat4.create(),
-  Math.PI / 2,
-  1,
-  0.1,
-  100
-);
-// TODO: share with passes.js
-const cubemapSides = [
-  { eye: [0, 0, 0], target: [1, 0, 0], up: [0, -1, 0] },
-  { eye: [0, 0, 0], target: [-1, 0, 0], up: [0, -1, 0] },
-  { eye: [0, 0, 0], target: [0, 1, 0], up: [0, 0, 1] },
-  { eye: [0, 0, 0], target: [0, -1, 0], up: [0, 0, -1] },
-  { eye: [0, 0, 0], target: [0, 0, 1], up: [0, -1, 0] },
-  { eye: [0, 0, 0], target: [0, 0, -1], up: [0, -1, 0] },
-];
+import { CUBEMAP_SIDES, quad } from "../utils.js";
 
 const IRRADIANCE_OCT_MAP_SIZE = 64;
 
@@ -70,31 +53,31 @@ class ReflectionProbe {
       encoding: this.rgbm ? ctx.Encoding.RGBM : ctx.Encoding.Linear,
     });
 
-    this._dynamicCubemapSides = [...cubemapSides].map((side, i) => {
-      side = { ...side };
-      side.projectionMatrix = [...cubemapProjectionMatrix];
-      side.viewMatrix = mat4.lookAt(
-        mat4.create(),
-        side.eye,
-        side.target,
-        side.up
-      );
-      side.drawPassCmd = {
-        name: `ReflectionProbe.cubemapSide_${i}`,
-        pass: ctx.pass({
+    this._dynamicCubemapSides = structuredClone(CUBEMAP_SIDES).map(
+      (side, i) => {
+        side.viewMatrix = mat4.lookAt(
+          mat4.create(),
+          side.eye,
+          side.target,
+          side.up
+        );
+        side.drawPassCmd = {
           name: `ReflectionProbe.cubemapSide_${i}`,
-          color: [
-            {
-              texture: this._dynamicCubemap,
-              target: ctx.gl.TEXTURE_CUBE_MAP_POSITIVE_X + i,
-            },
-          ],
-          clearColor: [0, 0, 0, 1],
-          clearDepth: 1,
-        }),
-      };
-      return side;
-    });
+          pass: ctx.pass({
+            name: `ReflectionProbe.cubemapSide_${i}`,
+            color: [
+              {
+                texture: this._dynamicCubemap,
+                target: ctx.gl.TEXTURE_CUBE_MAP_POSITIVE_X + i,
+              },
+            ],
+            clearColor: [0, 0, 0, 1],
+            clearDepth: 1,
+          }),
+        };
+        return side;
+      }
+    );
   }
 
   initOctMap() {

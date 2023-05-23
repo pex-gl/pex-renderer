@@ -6,27 +6,39 @@ export const TEMP_QUAT = quat.create();
 export const TEMP_MAT4 = mat4.create();
 export const TEMP_AABB = aabb.create();
 
+// prettier-ignore
 export const quad = {
-  // prettier-ignore
   positions:  Float32Array.of(
     -1, -1,
     1, -1,
     1, 1,
     -1, 1,
   ),
-  // prettier-ignore
   uvs: Uint16Array.of(
     0, 0,
     1, 0,
     1, 1,
     0, 1
   ),
-  // prettier-ignore
   cells: Uint16Array.of(
     0, 1, 2,
     2, 3, 0
   ),
 };
+
+export const CUBEMAP_PROJECTION_MATRIX = Object.freeze(
+  mat4.perspective(mat4.create(), Math.PI / 2, 1, 0.1, 100)
+);
+
+// prettier-ignore
+export const CUBEMAP_SIDES = [
+  { eye: [0, 0, 0], target: [1, 0, 0], up: [0, -1, 0], color: [1, 0, 0, 1], projectionMatrix: CUBEMAP_PROJECTION_MATRIX },
+  { eye: [0, 0, 0], target: [-1, 0, 0], up: [0, -1, 0], color: [0.5, 0, 0, 1], projectionMatrix: CUBEMAP_PROJECTION_MATRIX },
+  { eye: [0, 0, 0], target: [0, 1, 0], up: [0, 0, 1], color: [0, 1, 0, 1], projectionMatrix: CUBEMAP_PROJECTION_MATRIX },
+  { eye: [0, 0, 0], target: [0, -1, 0], up: [0, 0, -1], color: [0, 0.5, 0, 1], projectionMatrix: CUBEMAP_PROJECTION_MATRIX },
+  { eye: [0, 0, 0], target: [0, 0, 1], up: [0, -1, 0], color: [0, 0, 1, 1], projectionMatrix: CUBEMAP_PROJECTION_MATRIX },
+  { eye: [0, 0, 0], target: [0, 0, -1], up: [0, -1, 0], color: [0, 0, 0.5, 1], projectionMatrix: CUBEMAP_PROJECTION_MATRIX },
+];
 
 export const getFileExtension = (path) => {
   return (path?.match(/[^\\/]\.([^.\\/]+)$/) || [null]).pop();

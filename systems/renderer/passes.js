@@ -1,39 +1,4 @@
-import { mat4 } from "pex-math";
-
-//prettier-ignore
-const cubemapSides = [
-  { eye: [0, 0.0, 0], target: [1, 0, 0], up: [0, -1, 0], color: [1, 0, 0, 1] },
-  { eye: [0, 0.0, 0], target: [-1, 0, 0], up: [0, -1, 0], color: [0.5, 0, 0, 1], },
-  { eye: [0, 0.0, 0], target: [0, 1, 0], up: [0, 0, 1], color: [0, 1, 0, 1] },
-  { eye: [0, 0.0, 0], target: [0, -1, 0], up: [0, 0, -1],color: [0, 0.5, 0, 1], },
-  { eye: [0, 0.0, 0], target: [0, 0, 1], up: [0, -1, 0], color: [0, 0, 1, 1] },
-  { eye: [0, 0.0, 0], target: [0, 0, -1], up: [0, -1, 0], color: [0, 0, 0.5, 1], },
-].map((side, i) => {
-  side.projectionMatrix = mat4.perspective(
-    mat4.create(),
-    Math.PI / 2,
-    1,
-    0.1,
-    100
-  ); // TODO: change this to radians
-  // side.viewMatrix = mat4.lookAt(mat4.create(), side.eye, side.target, side.up);
-  // side.drawPassCmd = {
-  //   name: "PointLight.sidePass",
-  //   pass: ctx.pass({
-  //     name: "PointLight.sidePass",
-  //     depth: this._shadowMap,
-  //     color: [
-  //       {
-  //         texture: this._shadowCubemap,
-  //         target: ctx.gl.TEXTURE_CUBE_MAP_POSITIVE_X + i,
-  //       },
-  //     ],
-  //     clearColor: [Math.random(), Math.random(), Math.random(), 1],
-  //     clearDepth: 1,
-  //   }),
-  // };
-  return side;
-});
+import { CUBEMAP_SIDES } from "../../utils.js";
 
 function createPassDescriptors(ctx) {
   const passes = {
@@ -110,8 +75,8 @@ function createPassDescriptors(ctx) {
         min: ctx.Filter.Nearest,
         mag: ctx.Filter.Nearest,
       },
-      cubemapSides,
-      passes: cubemapSides.map((side, i) => ({
+      cubemapSides: structuredClone(CUBEMAP_SIDES),
+      passes: CUBEMAP_SIDES.map((side, i) => ({
         name: `PointLight.shadowMap_side_${i}`,
         color: [
           {
