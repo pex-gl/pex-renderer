@@ -32,28 +32,26 @@ function updateMorph(morph) {
   });
 }
 
-const createMorphSystem = () => ({
+export default () => ({
   type: "morph-system",
   updateMorph,
   update(entities) {
     for (let i = 0; i < entities.length; i++) {
       const entity = entities[i];
-      if (entity.morph) {
-        updateMorph(entity.morph);
+      if (!entity.morph) continue;
 
-        Object.keys(entity.morph.current).forEach((key) => {
-          entity.geometry[key] = entity.morph.current[key];
-          entity.geometry[key].dirty = true;
-        });
+      updateMorph(entity.morph);
 
-        // TODO: should that be in geometry system as geometry.bounds.dirty?
-        entity.geometry.bounds = aabb.fromPoints(
-          entity.geometry.bounds || aabb.create(),
-          entity.morph.current.positions || entity.morph.current.offsets
-        );
-      }
+      Object.keys(entity.morph.current).forEach((key) => {
+        entity.geometry[key] = entity.morph.current[key];
+        entity.geometry[key].dirty = true;
+      });
+
+      // TODO: should that be in geometry system as geometry.bounds.dirty or aabbDirty?
+      entity.geometry.bounds = aabb.fromPoints(
+        entity.geometry.bounds || aabb.create(),
+        entity.morph.current.positions || entity.morph.current.offsets
+      );
     }
   },
 });
-
-export default createMorphSystem;

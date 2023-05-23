@@ -19,7 +19,7 @@ function initSkybox(ctx, skybox) {
   });
 }
 
-export default function createSkyboxSystem(opts) {
+export default (opts) => {
   const { ctx } = opts;
 
   const skyboxSystem = {
@@ -84,4 +84,4 @@ export default function createSkyboxSystem(opts) {
   };
 
   return skyboxSystem;
-}
+};
