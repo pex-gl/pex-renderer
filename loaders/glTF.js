@@ -850,7 +850,7 @@ async function handleNode(node, gltf, i, ctx, options) {
         left: -camera.orthographic.xmag / 2,
         right: camera.orthographic.xmag / 2,
         top: camera.orthographic.ymag / 2,
-        bottom: camera.orthographic.ymag / 2,
+        bottom: -camera.orthographic.ymag / 2,
       });
     } else {
       // https://github.com/KhronosGroup/glTF/blob/main/specification/2.0/schema/camera.perspective.schema.json

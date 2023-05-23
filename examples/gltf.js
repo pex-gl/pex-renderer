@@ -360,6 +360,7 @@ const nextCamera = () => {
   if (next) {
     cameraEntity = next;
     cameraEntity.camera.dirty = true;
+    cameraEntity.orbiter ||= orbiter({ element: ctx.gl.canvas });
   }
 };
 const nextAnimation = () => {
