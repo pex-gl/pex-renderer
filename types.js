@@ -175,6 +175,7 @@
  * @typedef {object} SkyboxComponentOptions
  * @property {number[]} [sunPosition]
  * @property {ctx.texture2D} [envMap]
+ * @property {boolean} [rgbm=false]
  * @property {boolean} [backgroundBlur=false]
  */
 /**

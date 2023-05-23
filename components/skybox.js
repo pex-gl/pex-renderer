@@ -8,5 +8,6 @@
 export default (options) => ({
   backgroundBlur: false,
   // envMap,
+  // rgbm: false,
   ...options,
 });
