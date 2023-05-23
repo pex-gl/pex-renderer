@@ -1,7 +1,8 @@
-import { quat, vec3 } from "pex-math";
+import { mat4, quat, vec3 } from "pex-math";
 
 export const TMP_VEC3 = vec3.create();
 export const TEMP_QUAT = quat.create();
+export const TEMP_MAT4 = mat4.create();
 
 export const quad = {
   // prettier-ignore

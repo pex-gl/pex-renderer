@@ -1,17 +1,13 @@
 import { mat4, vec3 } from "pex-math";
 import { aabb } from "pex-geom";
-
-var tempMat4multQuatMat4 = mat4.create();
-function mat4multQuat(m, q) {
-  mat4.fromQuat(tempMat4multQuatMat4, q);
-  mat4.mult(m, tempMat4multQuatMat4);
-  return m;
-}
+import { TEMP_MAT4 } from "../utils.js";
 
 function updateModelMatrix(matrix, transform) {
   mat4.identity(matrix);
   if (transform.position) mat4.translate(matrix, transform.position);
-  if (transform.rotation) mat4multQuat(matrix, transform.rotation);
+  if (transform.rotation) {
+    mat4.mult(matrix, mat4.fromQuat(TEMP_MAT4, transform.rotation));
+  }
   if (transform.scale) mat4.scale(matrix, transform.scale);
   if (transform.matrix) mat4.mult(matrix, transform.matrix);
 }
