@@ -45,36 +45,40 @@ export default function createSkyboxSystem(opts) {
   };
 
   skyboxSystem.update = (entities) => {
-    const skyboxEntities = entities.filter((e) => e.skybox);
-    for (let skyboxEntity of skyboxEntities) {
-      const { skybox } = skyboxEntity;
-      let needsUpdate = false;
-      let cachedProps = skyboxSystem.cache[skyboxEntity.id];
-      if (!cachedProps) {
-        initSkybox(ctx, skyboxEntity.skybox);
-        cachedProps = skyboxSystem.cache[skyboxEntity.id] = {};
-        skyboxSystem.cache[skyboxEntity.id].sunPosition = [
-          ...skybox.sunPosition,
-        ];
-        needsUpdate = true;
-        // skyboxSystem.cache[skyboxEntity.id] = skybox;
-        // skyboxEntity._skybox = skybox; //TODO: why do we need it
-      }
+    for (let i = 0; i < entities.length; i++) {
+      const entity = entities[i];
 
-      if (vec3.distance(cachedProps.sunPosition, skybox.sunPosition) > 0) {
-        vec3.set(cachedProps.sunPosition, skybox.sunPosition);
-        needsUpdate = true;
-      }
+      if (entity.skybox) {
+        let needsUpdate = false;
+        let cachedProps = skyboxSystem.cache[entity.id];
+        if (!cachedProps) {
+          initSkybox(ctx, entity.skybox);
+          cachedProps = skyboxSystem.cache[entity.id] = {};
+          skyboxSystem.cache[entity.id].sunPosition = [
+            ...entity.skybox.sunPosition,
+          ];
+          needsUpdate = true;
+          // skyboxSystem.cache[entity.id] = entity.skybox;
+          // entity._skybox = entity.skybox; //TODO: why do we need it
+        }
 
-      if (needsUpdate) {
-        //TODO: use render graph for updateSkyTextureCmd
-        ctx.submit(updateSkyTextureCmd, {
-          pass: skybox._updateSkyTexturePass,
-          uniforms: {
-            uSunPosition: skybox.sunPosition || [0, 0, 0],
-            uRGBM: skybox.rgbm || false,
-          },
-        });
+        if (
+          vec3.distance(cachedProps.sunPosition, entity.skybox.sunPosition) > 0
+        ) {
+          vec3.set(cachedProps.sunPosition, entity.skybox.sunPosition);
+          needsUpdate = true;
+        }
+
+        if (needsUpdate) {
+          //TODO: use render graph for updateSkyTextureCmd
+          ctx.submit(updateSkyTextureCmd, {
+            pass: entity.skybox._updateSkyTexturePass,
+            uniforms: {
+              uSunPosition: entity.skybox.sunPosition || [0, 0, 0],
+              uRGBM: entity.skybox.rgbm || false,
+            },
+          });
+        }
       }
     }
   };
