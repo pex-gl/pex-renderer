@@ -40,17 +40,11 @@ function updateCamera(camera, transform) {
   mat4.invert(camera.viewMatrix);
 }
 
-export default function createCameraSystem() {
-  const cameraSystem = {
-    type: "camera-system",
-  };
-
-  const tempMat = mat4.create();
-
-  let debuggerCountdown = 4;
-
-  cameraSystem.update = (entities) => {
-    for (let entity of entities) {
+export default () => ({
+  type: "camera-system",
+  update(entities) {
+    for (let i = 0; i < entities.length; i++) {
+      const entity = entities[i];
       if (entity.camera && entity.orbiter) {
         const orbiter = entity.orbiter;
         const camera = entity.camera;
@@ -91,13 +85,13 @@ export default function createCameraSystem() {
               }
 
               mat4.lookAt(
-                tempMat,
+                TEMP_MAT4,
                 orbiter._orbiter.camera.position,
                 orbiter._orbiter.camera.target,
                 orbiter._orbiter.camera.up
               );
-              mat4.invert(tempMat);
-              quat.fromMat4(entity.transform.rotation, tempMat);
+              mat4.invert(TEMP_MAT4);
+              quat.fromMat4(entity.transform.rotation, TEMP_MAT4);
               quat.set(
                 orbiter._orbiter.camera.rotationCache,
                 entity.transform.rotation
@@ -222,6 +216,5 @@ export default function createCameraSystem() {
         }
       }
     }
-  };
-  return cameraSystem;
-}
+  },
+});
