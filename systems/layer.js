@@ -1,19 +1,17 @@
-export default function createLayerSystem(opts) {
-  const layerSystem = {
-    type: "layer-system",
-  };
-
-  layerSystem.update = (entities, deltaTime) => {
-    for (let entity of entities) {
+export default () => ({
+  type: "layer-system",
+  update(entities) {
+    for (let i = 0; i < entities.length; i++) {
+      const entity = entities[i];
       if (!entity.transform) continue;
-      // if entity itself is not a layer entity
-      // we will try to find parent layer
+
+      // Try to find a parent layer if entity is not a layer entity
       if (!entity.layer) {
         let parentTransform = entity.transform.parent;
 
         entity.layer = null;
 
-        // traverse up in hierachy until parent layer is found or root node with no parent reached
+        // Traverse the hierachy until parent layer is found or root node with no parent reached
         while (parentTransform) {
           if (parentTransform.entity.layer) {
             entity.layer = parentTransform.entity.layer;
@@ -23,7 +21,5 @@ export default function createLayerSystem(opts) {
         }
       }
     }
-  };
-
-  return layerSystem;
-}
+  },
+});
