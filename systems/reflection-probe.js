@@ -364,60 +364,48 @@ class ReflectionProbe {
   }
 }
 
-export default function createReflectionProbeSystem(opts) {
-  const { ctx } = opts;
-  const reflectionProbeSystem = {
-    type: "reflection-probe-system",
-    cache: {},
-    debug: false,
-  };
-
-  reflectionProbeSystem.update = (entities, opts = {}) => {
+export default ({ ctx }) => ({
+  type: "reflection-probe-system",
+  cache: {},
+  debug: false,
+  update(entities, opts = {}) {
     let { renderers = [] } = opts;
 
-    const reflectionProbeEntities = entities.filter((e) => e.reflectionProbe);
-    for (let reflectionProbeEntity of reflectionProbeEntities) {
+    for (let i = 0; i < entities.length; i++) {
+      const entity = entities[i];
+      if (!entity.reflectionProbe) continue;
+
       const skyboxEntities = entities
         .filter((e) => e.skybox)
-        .filter((skyboxEntity) => {
-          return (
-            !reflectionProbeEntity.layer ||
-            reflectionProbeEntity.layer == skyboxEntity.layer
-          );
-        });
+        .filter(
+          (skyboxEntity) => !entity.layer || entity.layer == skyboxEntity.layer
+        );
       const skyboxEntity = skyboxEntities[0];
-      let cachedProps = reflectionProbeSystem.cache[reflectionProbeEntity.id];
-      if (!cachedProps || !reflectionProbeEntity._reflectionProbe) {
-        cachedProps = reflectionProbeSystem.cache[reflectionProbeEntity.id] = {
+
+      let cachedProps = this.cache[entity.id];
+      if (!cachedProps || !entity._reflectionProbe) {
+        cachedProps = this.cache[entity.id] = {
           skyboxSunPosition: [0, 0, 0],
         };
         const reflectionProbe = new ReflectionProbe({
-          ...reflectionProbeEntity.reflectionProbe,
+          ...entity.reflectionProbe,
           ctx,
         });
-        reflectionProbeEntity._reflectionProbe = reflectionProbe;
+        entity._reflectionProbe = reflectionProbe;
       }
 
       // TODO: also check for rgbm change?
-      if (
-        reflectionProbeEntity._reflectionProbe.size !==
-        reflectionProbeEntity.reflectionProbe.size
-      ) {
-        reflectionProbeEntity._reflectionProbe.resize(
-          reflectionProbeEntity.reflectionProbe.size
-        );
-        reflectionProbeEntity.reflectionProbe.dirty = true;
+      if (entity._reflectionProbe.size !== entity.reflectionProbe.size) {
+        entity._reflectionProbe.resize(entity.reflectionProbe.size);
+        entity.reflectionProbe.dirty = true;
       }
 
-      if (!skyboxEntity) {
-        continue;
-      }
+      if (!skyboxEntity) continue;
 
       // TODO: this should be just node.reflectionProbe
       // TODO: data ownership reflectionProbe vs _reflectionProbe
       let needsUpdate =
-        reflectionProbeEntity.reflectionProbe.dirty ||
-        reflectionProbeEntity._reflectionProbe.dirty;
+        entity.reflectionProbe.dirty || entity._reflectionProbe.dirty;
 
       if (
         vec3.distance(
@@ -438,9 +426,9 @@ export default function createReflectionProbeSystem(opts) {
       }
 
       if (needsUpdate) {
-        reflectionProbeEntity.reflectionProbe.dirty = false;
-        reflectionProbeEntity._reflectionProbe.dirty = false;
-        reflectionProbeEntity._reflectionProbe.update((camera, encoding) => {
+        entity.reflectionProbe.dirty = false;
+        entity._reflectionProbe.dirty = false;
+        entity._reflectionProbe.update((camera, encoding) => {
           const renderView = {
             camera: camera,
             outputEncoding: encoding,
@@ -463,7 +451,5 @@ export default function createReflectionProbeSystem(opts) {
         });
       }
     }
-  };
-
-  return reflectionProbeSystem;
-}
+  },
+});
