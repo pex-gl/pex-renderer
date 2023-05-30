@@ -26,6 +26,15 @@ export const quad = {
   ),
 };
 
+// prettier-ignore
+export const fullscreenTriangle = {
+  positions: Float32Array.of(
+    -1, -1,
+    3, -1,
+    -1, 3,
+  ),
+}
+
 export const CUBEMAP_PROJECTION_MATRIX = Object.freeze(
   mat4.perspective(mat4.create(), Math.PI / 2, 1, 0.1, 100)
 );
