@@ -71,6 +71,39 @@ ctx.apply = (...args) => {
 
 const entities = (window.entities = []);
 const renderGraph = createRenderGraph(ctx, window.dot);
+renderGraph.renderPass = (opts) => {
+  if (dot) {
+    const passId = opts.pass?.id || "RenderPass " + renderGraph.renderPasses.length;
+    const passName = opts.name || opts.pass?.name || null;
+
+    dot.passNode(passId, passName);
+
+    const colorTextureId = opts?.pass?.opts?.color?.[0].id;
+    const colorTextureName = opts?.pass?.opts?.color?.[0].name;
+    if (colorTextureId) {
+      dot.resourceNode(colorTextureId, colorTextureName);
+      dot.edge(passId, colorTextureId);
+    } else {
+      dot.edge(passId, "Window");
+    }
+
+    const depthTextureId = opts?.pass?.opts?.depth?.id;
+    const depthTextureName = opts?.pass?.opts?.depth?.name;
+    if (depthTextureId) {
+      dot.resourceNode(depthTextureId, depthTextureName);
+      dot.edge(passId, depthTextureId);
+    }
+    if (opts.uses) {
+      opts.uses.forEach((tex) => {
+        if (dot) dot.edge(tex.id, passId);
+      });
+    }
+  }
+
+  if (opts.uses && ctx.debugMode) console.log("render-graph uses", opts.uses);
+
+  renderGraph.renderPasses.push(opts);
+};
 const resourceCache = createResourceCache(ctx);
 
 const cameraEntity = createEntity({
