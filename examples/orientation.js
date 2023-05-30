@@ -5,7 +5,7 @@ import {
   components,
 } from "../index.js";
 import createContext from "pex-context";
-import { quat, mat4 } from "pex-math";
+import { quat, mat4, vec3, vec4 } from "pex-math";
 import createGUI from "pex-gui";
 import * as io from "pex-io";
 import merge from "geom-merge";
@@ -224,8 +224,11 @@ const MATERIALS = [
   components.material({ baseColor: [1, 1, 0.5, 1], receiveShadows: false }),
 ];
 
+const labels = [];
+const labelsPositions = [];
+
 UPS.forEach((up, index) => {
-  const y = index * offset;
+  const y = UPS.length * offset - index * offset;
   let colum = 0;
 
   // LOOK AT
@@ -248,6 +251,8 @@ UPS.forEach((up, index) => {
     material: MATERIALS[index],
   });
   world.add(sphereLookAt);
+  labels[index * 3 + colum] = `Look at ${vec3.toString(lookAtPosition)}\n${vec3.toString(up)}`; // prettier-ignore
+  labelsPositions.push(lookAtPosition);
   colum++;
 
   // TARGET TO
@@ -272,6 +277,8 @@ UPS.forEach((up, index) => {
     material: MATERIALS[index],
   });
   world.add(sphereTargetTo);
+  labels[index * 3 + colum] = `Target to ${vec3.toString(targetToPosition)}\n${vec3.toString(up)}`; // prettier-ignore
+  labelsPositions.push(targetToPosition);
   colum++;
 
   // FROM POINT TO POINT
@@ -291,7 +298,11 @@ UPS.forEach((up, index) => {
     material: MATERIALS[index],
   });
   world.add(spherePtp);
+  labels[index * 3 + colum] = `From PTP ${vec3.toString(ptpPosition)}\n${vec3.toString(up)}`; // prettier-ignore
+  labelsPositions.push(ptpPosition);
   colum++;
+
+  return;
 
   // BACK
   const lookAtPositionBack = [offset * colum, y, z];
@@ -362,12 +373,63 @@ UPS.forEach((up, index) => {
   colum++;
 });
 
+const labelsDiv = labels.map((label) => {
+  const div = document.createElement("div");
+  div.innerText = label;
+  document.body.appendChild(div);
+  Object.assign(div.style, {
+    position: "absolute",
+    color: "black",
+    backgroundColor: `rgba(255, 255, 255, 0.2)`,
+    transform: `translate3d(-50%, 0, 0)`,
+    fontSize: "10px",
+    top: 0,
+    left: 0,
+    zIndex: 1,
+    userSelect: "none",
+  });
+  return div;
+});
+
+const TEMP_VEC4 = [0, 0, 0, 0];
+
+function cameraProject(a, camera) {
+  const [x, y, width, height] = camera.viewport;
+
+  vec4.set(TEMP_VEC4, a);
+  TEMP_VEC4[3] = 1;
+
+  vec4.multMat4(
+    TEMP_VEC4,
+    mat4.mult([...camera.projectionMatrix], camera.viewMatrix)
+  );
+
+  const w = TEMP_VEC4[3];
+  if (w !== 0) {
+    TEMP_VEC4[0] = TEMP_VEC4[0] / w;
+    TEMP_VEC4[1] = TEMP_VEC4[1] / w;
+    TEMP_VEC4[2] = TEMP_VEC4[2] / w;
+  }
+
+  return [
+    x + (TEMP_VEC4[0] + 1) * 0.5 * width,
+    y + -(TEMP_VEC4[1] - 1) * 0.5 * height,
+  ];
+}
+
 ctx.frame(() => {
   renderEngine.update(world.entities);
   renderEngine.render(
     world.entities,
     world.entities.filter((e) => e.camera)
   );
+
+  const camera = world.entities.find((e) => e.camera).camera;
+  labelsPositions.forEach((position, i) => {
+    const [x, y] = cameraProject(position, camera);
+    labelsDiv[i].style.left = `${x / devicePixelRatio}px`;
+    labelsDiv[i].style.top = `${y / devicePixelRatio}px`;
+  });
 
   gui.draw();
 
