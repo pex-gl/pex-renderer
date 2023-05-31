@@ -28,39 +28,51 @@ function mat4fromPointToPoint(
   let z1 = targety - eyey;
   let z2 = targetz - eyez;
 
-  let len = z0 * z0 + z1 * z1 + z2 * z2;
+  let len = Math.sqrt(z0 * z0 + z1 * z1 + z2 * z2);
 
-  if (len > 0) {
-    len = 1 / Math.sqrt(len);
+  if (len) {
+    len = 1 / len;
     z0 *= len;
     z1 *= len;
     z2 *= len;
+  } else {
+    z0 = 0;
+    z1 = 0;
+    z2 = 1;
   }
 
   let x0 = upy * z2 - upz * z1;
   let x1 = upz * z0 - upx * z2;
   let x2 = upx * z1 - upy * z0;
 
-  len = x0 * x0 + x1 * x1 + x2 * x2;
+  len = Math.sqrt(x0 * x0 + x1 * x1 + x2 * x2);
 
-  if (len > 0) {
-    len = 1 / Math.sqrt(len);
+  if (len) {
+    len = 1 / len;
     x0 *= len;
     x1 *= len;
     x2 *= len;
+  } else {
+    x0 = 1;
+    x1 = 0;
+    x2 = 0;
   }
 
   upx = z1 * x2 - z2 * x1;
   upy = z2 * x0 - z0 * x2;
   upz = z0 * x1 - z1 * x0;
 
-  len = upx * upx + upy * upy + upz * upz;
+  len = Math.sqrt(upx * upx + upy * upy + upz * upz);
 
-  if (len > 0) {
-    len = 1 / Math.sqrt(len);
+  if (len) {
+    len = 1 / len;
     upx *= len;
     upy *= len;
     upz *= len;
+  } else {
+    upx = 0;
+    upy = 1;
+    upz = 0;
   }
 
   a[0] = x0;
@@ -229,7 +241,7 @@ const labelsPositions = [];
 
 UPS.forEach((up, index) => {
   const y = (UPS.length - 1) * offset - index * offset;
-  let colum = 0;
+  let column = 0;
 
   // LOOK AT
   const lookAtPosition = [0, y, z];
@@ -251,13 +263,13 @@ UPS.forEach((up, index) => {
     material: MATERIALS[index],
   });
   world.add(sphereLookAt);
-  labels[index * 8 + colum] = `Look at\n${vec3.toString(up)}`; // prettier-ignore
+  labels[index * 8 + column] = `Look at\n${vec3.toString(up)}`;
   labelsPositions.push(lookAtPosition);
-  colum++;
+  column++;
 
   // TARGET TO
-  const targetToPosition = [offset * colum, y, z];
-  const targetToTarget = [offset * colum, y - offset / 2, 0];
+  const targetToPosition = [offset * column, y, z];
+  const targetToTarget = [offset * column, y - offset / 2, 0];
   const axesTargetTo = createEntity({
     transform: components.transform({
       position: targetToPosition,
@@ -277,13 +289,14 @@ UPS.forEach((up, index) => {
     material: MATERIALS[index],
   });
   world.add(sphereTargetTo);
-  labels[index * 8 + colum] = `Target to\n${vec3.toString(up)}`; // prettier-ignore
+  labels[index * 8 + column] = `Target to\n${vec3.toString(up)}`;
   labelsPositions.push(targetToPosition);
-  colum++;
+  column++;
 
   // FROM POINT TO POINT
-  const ptpPosition = [offset * colum, y, z];
-  const ptpTarget = [offset * colum, y - offset / 2, 0];
+  const ptpPosition = [offset * column, y, z];
+  const ptpTarget = [offset * column, y - offset / 2, 0];
+
   const axesFromPtp = createEntity({
     transform: components.transform({
       position: ptpPosition,
@@ -298,13 +311,13 @@ UPS.forEach((up, index) => {
     material: MATERIALS[index],
   });
   world.add(spherePtp);
-  labels[index * 8 + colum] = `From PTP\n${vec3.toString(up)}`; // prettier-ignore
+  labels[index * 8 + column] = `From PTP\n${vec3.toString(up)}`;
   labelsPositions.push(ptpPosition);
-  colum++;
+  column++;
 
   // FROM TO
-  const fromToPosition = [offset * colum, y, z];
-  const fromToTarget = [offset * colum, y - offset / 2, 0];
+  const fromToPosition = [offset * column, y, z];
+  const fromToTarget = [offset * column, y - offset / 2, 0];
   const axesFromTo = createEntity({
     transform: components.transform({
       position: fromToPosition,
@@ -323,15 +336,15 @@ UPS.forEach((up, index) => {
     material: MATERIALS[index],
   });
   world.add(sphereTo);
-  labels[index * 8 + colum] = `From to\n${vec3.toString(up)}`; // prettier-ignore
+  labels[index * 8 + column] = `From to\n${vec3.toString(up)}`;
   labelsPositions.push(fromToPosition);
-  colum++;
+  column++;
 
   // return;
 
   // BACK
-  const lookAtPositionBack = [offset * colum, y, z];
-  const lookAtTargetBack = [offset * colum, y + offset / 2, z * 2];
+  const lookAtPositionBack = [offset * column, y, z];
+  const lookAtTargetBack = [offset * column, y + offset / 2, z * 2];
   const axesLookAtBack = createEntity({
     transform: components.transform({
       position: lookAtPositionBack,
@@ -349,12 +362,12 @@ UPS.forEach((up, index) => {
     material: MATERIALS[index],
   });
   world.add(sphereLookAtBack);
-  labels[index * 8 + colum] = `Look at\n${vec3.toString(up)}`; // prettier-ignore
+  labels[index * 8 + column] = `Look at\n${vec3.toString(up)}`;
   labelsPositions.push(lookAtPositionBack);
-  colum++;
+  column++;
 
-  const targetToPositionBack = [offset * colum, y, z];
-  const targetToTargetBack = [offset * colum, y + offset / 2, z * 2];
+  const targetToPositionBack = [offset * column, y, z];
+  const targetToTargetBack = [offset * column, y + offset / 2, z * 2];
   const axesTargetToBack = createEntity({
     transform: components.transform({
       position: targetToPositionBack,
@@ -374,12 +387,12 @@ UPS.forEach((up, index) => {
     material: MATERIALS[index],
   });
   world.add(sphereTargetToBack);
-  labels[index * 8 + colum] = `Target to\n${vec3.toString(up)}`; // prettier-ignore
+  labels[index * 8 + column] = `Target to\n${vec3.toString(up)}`;
   labelsPositions.push(targetToPositionBack);
-  colum++;
+  column++;
 
-  const ptpPositionBack = [offset * colum, y, z];
-  const ptpTargetBack = [offset * colum, y + offset / 2, z * 2];
+  const ptpPositionBack = [offset * column, y, z];
+  const ptpTargetBack = [offset * column, y + offset / 2, z * 2];
   const axesFromPtpBack = createEntity({
     transform: components.transform({
       position: ptpPositionBack,
@@ -399,12 +412,12 @@ UPS.forEach((up, index) => {
     material: MATERIALS[index],
   });
   world.add(spherePtpBack);
-  labels[index * 8 + colum] = `From PTP\n${vec3.toString(up)}`; // prettier-ignore
+  labels[index * 8 + column] = `From PTP\n${vec3.toString(up)}`;
   labelsPositions.push(ptpPositionBack);
-  colum++;
+  column++;
 
-  const fromToPositionBack = [offset * colum, y, z];
-  const fromToTargetBack = [offset * colum, y + offset / 2, z * 2];
+  const fromToPositionBack = [offset * column, y, z];
+  const fromToTargetBack = [offset * column, y + offset / 2, z * 2];
   const axesFromToBack = createEntity({
     transform: components.transform({
       position: fromToPositionBack,
@@ -423,9 +436,9 @@ UPS.forEach((up, index) => {
     material: MATERIALS[index],
   });
   world.add(sphereToBack);
-  labels[index * 8 + colum] = `From to\n${vec3.toString(up)}`; // prettier-ignore
+  labels[index * 8 + column] = `From to\n${vec3.toString(up)}`;
   labelsPositions.push(fromToPositionBack);
-  colum++;
+  column++;
 });
 
 const labelsDiv = labels.map((label) => {
