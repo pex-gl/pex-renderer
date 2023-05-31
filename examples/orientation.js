@@ -251,7 +251,7 @@ UPS.forEach((up, index) => {
     material: MATERIALS[index],
   });
   world.add(sphereLookAt);
-  labels[index * 4 + colum] = `Look at\n${vec3.toString(up)}`; // prettier-ignore
+  labels[index * 8 + colum] = `Look at\n${vec3.toString(up)}`; // prettier-ignore
   labelsPositions.push(lookAtPosition);
   colum++;
 
@@ -277,7 +277,7 @@ UPS.forEach((up, index) => {
     material: MATERIALS[index],
   });
   world.add(sphereTargetTo);
-  labels[index * 4 + colum] = `Target to\n${vec3.toString(up)}`; // prettier-ignore
+  labels[index * 8 + colum] = `Target to\n${vec3.toString(up)}`; // prettier-ignore
   labelsPositions.push(targetToPosition);
   colum++;
 
@@ -298,7 +298,7 @@ UPS.forEach((up, index) => {
     material: MATERIALS[index],
   });
   world.add(spherePtp);
-  labels[index * 4 + colum] = `From PTP\n${vec3.toString(up)}`; // prettier-ignore
+  labels[index * 8 + colum] = `From PTP\n${vec3.toString(up)}`; // prettier-ignore
   labelsPositions.push(ptpPosition);
   colum++;
 
@@ -310,7 +310,7 @@ UPS.forEach((up, index) => {
       position: fromToPosition,
       rotation: quat.fromTo(
         quat.create(),
-        up,
+        [0, 0, 1],
         vec3.normalize(vec3.sub([...fromToTarget], fromToPosition))
       ),
     }),
@@ -323,15 +323,15 @@ UPS.forEach((up, index) => {
     material: MATERIALS[index],
   });
   world.add(sphereTo);
-  labels[index * 4 + colum] = `From to\n${vec3.toString(up)}`; // prettier-ignore
+  labels[index * 8 + colum] = `From to\n${vec3.toString(up)}`; // prettier-ignore
   labelsPositions.push(fromToPosition);
   colum++;
 
-  return;
+  // return;
 
   // BACK
   const lookAtPositionBack = [offset * colum, y, z];
-  const lookAtTargetBack = [offset * colum, y + offset, z * 2];
+  const lookAtTargetBack = [offset * colum, y + offset / 2, z * 2];
   const axesLookAtBack = createEntity({
     transform: components.transform({
       position: lookAtPositionBack,
@@ -349,10 +349,12 @@ UPS.forEach((up, index) => {
     material: MATERIALS[index],
   });
   world.add(sphereLookAtBack);
+  labels[index * 8 + colum] = `Look at\n${vec3.toString(up)}`; // prettier-ignore
+  labelsPositions.push(lookAtPositionBack);
   colum++;
 
   const targetToPositionBack = [offset * colum, y, z];
-  const targetToTargetBack = [offset * colum, y + offset, z * 2];
+  const targetToTargetBack = [offset * colum, y + offset / 2, z * 2];
   const axesTargetToBack = createEntity({
     transform: components.transform({
       position: targetToPositionBack,
@@ -372,10 +374,12 @@ UPS.forEach((up, index) => {
     material: MATERIALS[index],
   });
   world.add(sphereTargetToBack);
+  labels[index * 8 + colum] = `Target to\n${vec3.toString(up)}`; // prettier-ignore
+  labelsPositions.push(targetToPositionBack);
   colum++;
 
   const ptpPositionBack = [offset * colum, y, z];
-  const ptpTargetBack = [offset * colum, y + offset, z * 2];
+  const ptpTargetBack = [offset * colum, y + offset / 2, z * 2];
   const axesFromPtpBack = createEntity({
     transform: components.transform({
       position: ptpPositionBack,
@@ -395,6 +399,32 @@ UPS.forEach((up, index) => {
     material: MATERIALS[index],
   });
   world.add(spherePtpBack);
+  labels[index * 8 + colum] = `From PTP\n${vec3.toString(up)}`; // prettier-ignore
+  labelsPositions.push(ptpPositionBack);
+  colum++;
+
+  const fromToPositionBack = [offset * colum, y, z];
+  const fromToTargetBack = [offset * colum, y + offset / 2, z * 2];
+  const axesFromToBack = createEntity({
+    transform: components.transform({
+      position: fromToPositionBack,
+      rotation: quat.fromTo(
+        quat.create(),
+        [0, 0, 1],
+        vec3.normalize(vec3.sub([...fromToTargetBack], fromToPositionBack))
+      ),
+    }),
+    ...baseEntity,
+  });
+  world.add(axesFromToBack);
+  const sphereToBack = createEntity({
+    transform: components.transform({ position: fromToTargetBack }),
+    ...baseTargetEntity,
+    material: MATERIALS[index],
+  });
+  world.add(sphereToBack);
+  labels[index * 8 + colum] = `From to\n${vec3.toString(up)}`; // prettier-ignore
+  labelsPositions.push(fromToPositionBack);
   colum++;
 });
 
