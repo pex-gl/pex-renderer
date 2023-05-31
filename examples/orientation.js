@@ -228,7 +228,7 @@ const labels = [];
 const labelsPositions = [];
 
 UPS.forEach((up, index) => {
-  const y = UPS.length * offset - index * offset;
+  const y = (UPS.length - 1) * offset - index * offset;
   let colum = 0;
 
   // LOOK AT
@@ -251,7 +251,7 @@ UPS.forEach((up, index) => {
     material: MATERIALS[index],
   });
   world.add(sphereLookAt);
-  labels[index * 3 + colum] = `Look at ${vec3.toString(lookAtPosition)}\n${vec3.toString(up)}`; // prettier-ignore
+  labels[index * 4 + colum] = `Look at ${vec3.toString(lookAtPosition)}\n${vec3.toString(up)}`; // prettier-ignore
   labelsPositions.push(lookAtPosition);
   colum++;
 
@@ -277,7 +277,7 @@ UPS.forEach((up, index) => {
     material: MATERIALS[index],
   });
   world.add(sphereTargetTo);
-  labels[index * 3 + colum] = `Target to ${vec3.toString(targetToPosition)}\n${vec3.toString(up)}`; // prettier-ignore
+  labels[index * 4 + colum] = `Target to ${vec3.toString(targetToPosition)}\n${vec3.toString(up)}`; // prettier-ignore
   labelsPositions.push(targetToPosition);
   colum++;
 
@@ -298,8 +298,33 @@ UPS.forEach((up, index) => {
     material: MATERIALS[index],
   });
   world.add(spherePtp);
-  labels[index * 3 + colum] = `From PTP ${vec3.toString(ptpPosition)}\n${vec3.toString(up)}`; // prettier-ignore
+  labels[index * 4 + colum] = `From PTP ${vec3.toString(ptpPosition)}\n${vec3.toString(up)}`; // prettier-ignore
   labelsPositions.push(ptpPosition);
+  colum++;
+
+  // FROM TO
+  const fromToPosition = [offset * colum, y, z];
+  const fromToTarget = [offset * colum, y - offset, 0];
+  const axesFromTo = createEntity({
+    transform: components.transform({
+      position: fromToPosition,
+      rotation: quat.fromTo(
+        quat.create(),
+        up,
+        vec3.normalize(vec3.sub([...fromToTarget], fromToPosition))
+      ),
+    }),
+    ...baseEntity,
+  });
+  world.add(axesFromTo);
+  const sphereTo = createEntity({
+    transform: components.transform({ position: fromToTarget }),
+    ...baseTargetEntity,
+    material: MATERIALS[index],
+  });
+  world.add(sphereTo);
+  labels[index * 4 + colum] = `From To ${vec3.toString(fromToPosition)}\n${vec3.toString(up)}`; // prettier-ignore
+  labelsPositions.push(fromToPosition);
   colum++;
 
   return;
