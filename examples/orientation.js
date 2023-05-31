@@ -233,7 +233,7 @@ UPS.forEach((up, index) => {
 
   // LOOK AT
   const lookAtPosition = [0, y, z];
-  const lookAtTarget = [0, y - offset, 0];
+  const lookAtTarget = [0, y - offset / 2, 0];
   const axesLookAt = createEntity({
     transform: components.transform({
       position: lookAtPosition,
@@ -251,13 +251,13 @@ UPS.forEach((up, index) => {
     material: MATERIALS[index],
   });
   world.add(sphereLookAt);
-  labels[index * 4 + colum] = `Look at ${vec3.toString(lookAtPosition)}\n${vec3.toString(up)}`; // prettier-ignore
+  labels[index * 4 + colum] = `Look at\n${vec3.toString(up)}`; // prettier-ignore
   labelsPositions.push(lookAtPosition);
   colum++;
 
   // TARGET TO
   const targetToPosition = [offset * colum, y, z];
-  const targetToTarget = [offset * colum, y - offset, 0];
+  const targetToTarget = [offset * colum, y - offset / 2, 0];
   const axesTargetTo = createEntity({
     transform: components.transform({
       position: targetToPosition,
@@ -277,13 +277,13 @@ UPS.forEach((up, index) => {
     material: MATERIALS[index],
   });
   world.add(sphereTargetTo);
-  labels[index * 4 + colum] = `Target to ${vec3.toString(targetToPosition)}\n${vec3.toString(up)}`; // prettier-ignore
+  labels[index * 4 + colum] = `Target to\n${vec3.toString(up)}`; // prettier-ignore
   labelsPositions.push(targetToPosition);
   colum++;
 
   // FROM POINT TO POINT
   const ptpPosition = [offset * colum, y, z];
-  const ptpTarget = [offset * colum, y - offset, 0];
+  const ptpTarget = [offset * colum, y - offset / 2, 0];
   const axesFromPtp = createEntity({
     transform: components.transform({
       position: ptpPosition,
@@ -298,13 +298,13 @@ UPS.forEach((up, index) => {
     material: MATERIALS[index],
   });
   world.add(spherePtp);
-  labels[index * 4 + colum] = `From PTP ${vec3.toString(ptpPosition)}\n${vec3.toString(up)}`; // prettier-ignore
+  labels[index * 4 + colum] = `From PTP\n${vec3.toString(up)}`; // prettier-ignore
   labelsPositions.push(ptpPosition);
   colum++;
 
   // FROM TO
   const fromToPosition = [offset * colum, y, z];
-  const fromToTarget = [offset * colum, y - offset, 0];
+  const fromToTarget = [offset * colum, y - offset / 2, 0];
   const axesFromTo = createEntity({
     transform: components.transform({
       position: fromToPosition,
@@ -323,7 +323,7 @@ UPS.forEach((up, index) => {
     material: MATERIALS[index],
   });
   world.add(sphereTo);
-  labels[index * 4 + colum] = `From To ${vec3.toString(fromToPosition)}\n${vec3.toString(up)}`; // prettier-ignore
+  labels[index * 4 + colum] = `From to\n${vec3.toString(up)}`; // prettier-ignore
   labelsPositions.push(fromToPosition);
   colum++;
 
