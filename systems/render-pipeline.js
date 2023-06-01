@@ -101,6 +101,7 @@ export default ({
     const light = lightEntity.directionalLight;
     light._viewMatrix ??= mat4.create();
     light._projectionMatrix ??= mat4.create();
+    light._sceneBboxInLightSpace ??= aabb.create();
 
     // const position = lightEntity._transform.worldPosition;
     // const target = [0, 0, 1, 0];
@@ -110,38 +111,28 @@ export default ({
     // vec4.multMat4(up, lightEntity._transform.modelMatrix);
     // mat4.lookAt(light._viewMatrix, position, target, up);
 
-    const shadowBboxPoints = shadowCastingEntities.reduce(
-      (points, entity) =>
-        points.concat(aabb.getCorners(entity.transform.worldBounds)),
-      []
+    aabb.empty(light._sceneBboxInLightSpace);
+    aabb.fromPoints(
+      light._sceneBboxInLightSpace,
+      shadowCastingEntities.flatMap((entity) =>
+        aabb
+          .getCorners(entity.transform.worldBounds) // TODO: gc corners points
+          .map((p) => vec3.multMat4(p, light._viewMatrix))
+      )
     );
 
-    // TODO: gc vec3.copy, all the bounding box creation
-    const bboxPointsInLightSpace = shadowBboxPoints.map((p) =>
-      vec3.multMat4(vec3.copy(p), light._viewMatrix)
-    );
-    const sceneBboxInLightSpace = aabb.create();
-    aabb.fromPoints(sceneBboxInLightSpace, bboxPointsInLightSpace);
-
-    // console.log("sceneBboxInLightSpace", ...sceneBboxInLightSpace);
-
-    const lightNear = -sceneBboxInLightSpace[1][2];
-    const lightFar = -sceneBboxInLightSpace[0][2];
-
-    light._near = lightNear;
-    light._far = lightFar;
+    light._near = -light._sceneBboxInLightSpace[1][2];
+    light._far = -light._sceneBboxInLightSpace[0][2];
 
     mat4.ortho(
       light._projectionMatrix,
-      sceneBboxInLightSpace[0][0],
-      sceneBboxInLightSpace[1][0],
-      sceneBboxInLightSpace[0][1],
-      sceneBboxInLightSpace[1][1],
-      lightNear,
-      lightFar
+      light._sceneBboxInLightSpace[0][0],
+      light._sceneBboxInLightSpace[1][0],
+      light._sceneBboxInLightSpace[0][1],
+      light._sceneBboxInLightSpace[1][1],
+      light._near,
+      light._far
     );
-
-    light._sceneBboxInLightSpace = sceneBboxInLightSpace;
 
     let colorMapDesc = this.descriptors.directionalLightShadows.colorMapDesc;
     let shadowMapDesc = this.descriptors.directionalLightShadows.shadowMapDesc;
@@ -161,18 +152,11 @@ export default ({
       };
     }
     //TODO: can this be all done at once?
-    let colorMap = resourceCache.texture2D(colorMapDesc);
+    const colorMap = resourceCache.texture2D(colorMapDesc);
     colorMap.name = "TempColorMap\n" + colorMap.id;
 
-    let shadowMap = resourceCache.texture2D(shadowMapDesc);
+    const shadowMap = resourceCache.texture2D(shadowMapDesc);
     shadowMap.name = "ShadowMap\n" + shadowMap.id;
-
-    //TODO: need to create new descriptor to get uniq
-    let passDesc = { ...this.descriptors.directionalLightShadows.pass };
-    passDesc.color = [colorMap];
-    passDesc.depth = shadowMap;
-
-    let shadowMapPass = resourceCache.pass(passDesc);
 
     const renderView = {
       camera: {
@@ -184,7 +168,12 @@ export default ({
 
     renderGraph.renderPass({
       name: "RenderShadowMap" + lightEntity.id,
-      pass: shadowMapPass,
+      pass: resourceCache.pass({
+        // TODO: creating new descriptor to force new pass from cache
+        ...this.descriptors.directionalLightShadows.pass,
+        color: [colorMap],
+        depth: shadowMap,
+      }),
       renderView: renderView,
       render: () => {
         // Needs to be here for multi-view with different renderer to not overwrite it
@@ -224,6 +213,7 @@ export default ({
     const light = lightEntity.spotLight;
     light._viewMatrix ??= mat4.create();
     light._projectionMatrix ??= mat4.create();
+    light._sceneBboxInLightSpace ??= aabb.create();
 
     const position = lightEntity._transform.worldPosition;
     const target = [0, 0, 1, 0];
@@ -232,26 +222,18 @@ export default ({
     vec4.multMat4(up, lightEntity._transform.modelMatrix);
     mat4.lookAt(light._viewMatrix, position, target, up);
 
-    const shadowBboxPoints = shadowCastingEntities.reduce(
-      (points, entity) =>
-        points.concat(aabb.getCorners(entity.transform.worldBounds)),
-      []
+    aabb.empty(light._sceneBboxInLightSpace);
+    aabb.fromPoints(
+      light._sceneBboxInLightSpace,
+      shadowCastingEntities.flatMap((entity) =>
+        aabb
+          .getCorners(entity.transform.worldBounds) // TODO: gc corners points
+          .map((p) => vec3.multMat4(p, light._viewMatrix))
+      )
     );
 
-    // TODO: gc vec3.copy, all the bounding box creation
-    const bboxPointsInLightSpace = shadowBboxPoints.map((p) =>
-      vec3.multMat4(vec3.copy(p), light._viewMatrix)
-    );
-    const sceneBboxInLightSpace = aabb.create();
-    aabb.fromPoints(sceneBboxInLightSpace, bboxPointsInLightSpace);
-
-    const lightNear = -sceneBboxInLightSpace[1][2];
-    const lightFar = -sceneBboxInLightSpace[0][2];
-
-    light._near = lightNear;
-    light._far = lightFar;
-
-    light._sceneBboxInLightSpace = sceneBboxInLightSpace;
+    light._near = -light._sceneBboxInLightSpace[1][2];
+    light._far = -light._sceneBboxInLightSpace[0][2];
 
     let colorMapDesc = this.descriptors.spotLightShadows.colorMapDesc;
     let shadowMapDesc = this.descriptors.spotLightShadows.shadowMapDesc;
@@ -272,25 +254,18 @@ export default ({
     }
 
     //TODO: can this be all done at once?
-    let colorMap = resourceCache.texture2D(colorMapDesc);
+    const colorMap = resourceCache.texture2D(colorMapDesc);
     colorMap.name = "TempColorMap\n" + colorMap.id;
 
-    let shadowMap = resourceCache.texture2D(shadowMapDesc);
+    const shadowMap = resourceCache.texture2D(shadowMapDesc);
     shadowMap.name = "ShadowMap\n" + shadowMap.id;
-
-    //TODO: need to create new descriptor to get uniq
-    let passDesc = { ...this.descriptors.spotLightShadows.pass };
-    passDesc.color = [colorMap];
-    passDesc.depth = shadowMap;
-
-    let shadowMapPass = resourceCache.pass(passDesc);
 
     mat4.perspective(
       light._projectionMatrix,
       2 * light.angle,
       shadowMap.width / shadowMap.height,
-      lightNear,
-      lightFar
+      light._near,
+      light._far
     );
 
     const renderView = {
@@ -303,7 +278,12 @@ export default ({
 
     renderGraph.renderPass({
       name: "RenderShadowMap" + lightEntity.id,
-      pass: shadowMapPass,
+      pass: resourceCache.pass({
+        // TODO: creating new descriptor to force new pass from cache
+        ...this.descriptors.spotLightShadows.pass,
+        color: [colorMap],
+        depth: shadowMap,
+      }),
       renderView: renderView,
       render: () => {
         light._shadowMap = shadowMap;
@@ -357,29 +337,27 @@ export default ({
     }
 
     //TODO: can this be all done at once?
-    let shadowCubemap = resourceCache.textureCube(shadowCubemapDesc);
+    const shadowCubemap = resourceCache.textureCube(shadowCubemapDesc);
     shadowCubemap.name = "TempCubemap\n" + shadowCubemap.id;
 
-    let shadowMap = resourceCache.texture2D(shadowMapDesc);
+    const shadowMap = resourceCache.texture2D(shadowMapDesc);
     shadowMap.name = "ShadowMap\n" + shadowMap.id;
 
     for (let i = 0; i < this.descriptors.pointLightShadows.passes.length; i++) {
       const pass = this.descriptors.pointLightShadows.passes[i];
       //TODO: need to create new descriptor to get uniq
-      let passDesc = { ...pass };
+      const passDesc = { ...pass };
       passDesc.color = [
         { texture: shadowCubemap, target: passDesc.color[0].target },
       ];
       passDesc.depth = shadowMap;
-
-      let shadowMapPass = resourceCache.pass(passDesc);
 
       const side = this.descriptors.pointLightShadows.cubemapSides[i];
       const renderView = {
         camera: {
           projectionMatrix: side.projectionMatrix,
           viewMatrix: mat4.lookAt(
-            mat4.create(),
+            mat4.create(), // This can't be GC as assigned in light._viewMatrix for multi-view
             vec3.add([...side.eye], lightEntity._transform.worldPosition),
             vec3.add([...side.target], lightEntity._transform.worldPosition),
             side.up
@@ -390,7 +368,7 @@ export default ({
 
       renderGraph.renderPass({
         name: "RenderShadowMap" + lightEntity.id,
-        pass: shadowMapPass,
+        pass: resourceCache.pass(passDesc),
         renderView: renderView,
         render: () => {
           //why?
