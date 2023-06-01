@@ -492,18 +492,16 @@ export default ({
       )
       .filter((_) => _);
 
-    let entitiesInView = entities;
-    let entitiesToDraw = rendererableEntities;
+    // Filter entities by layer
+    const layer = renderView.camera.layer;
+    const entitiesInView = layer
+      ? entities.filter((e) => !e.layer || e.layer === layer)
+      : entities;
+    const entitiesToDraw = layer
+      ? rendererableEntities.filter((e) => !e.layer || e.layer === layer)
+      : rendererableEntities;
 
-    if (renderView.camera.layer) {
-      entitiesInView = entities.filter((e) => {
-        return !e.layer || e.layer == renderView.camera.layer;
-      });
-      entitiesToDraw = rendererableEntities.filter((e) => {
-        return !e.layer || e.layer == renderView.camera.layer;
-      });
-    }
-
+    // Main pass
     //TODO: this should be done on the fly by render graph
     this.descriptors.mainPass.outputTextureDesc.width = renderView.viewport[2];
     this.descriptors.mainPass.outputTextureDesc.height = renderView.viewport[3];
@@ -526,12 +524,6 @@ export default ({
     );
     outputDepthTexture.name = `mainPassDepth\n${outputDepthTexture.id}`;
 
-    const mainPass = resourceCache.pass({
-      color: [mainPassOutputTexture, mainPassNormalOutputTexture],
-      depth: outputDepthTexture,
-      clearColor: renderView.camera.clearColor,
-      clearDepth: 1,
-    });
     renderGraph.renderPass({
       name: `MainPass ${renderView.viewport}`,
       uses: [...shadowMaps],
@@ -539,7 +531,12 @@ export default ({
         ...renderView,
         viewport: [0, 0, renderView.viewport[2], renderView.viewport[3]],
       },
-      pass: mainPass,
+      pass: resourceCache.pass({
+        color: [mainPassOutputTexture, mainPassNormalOutputTexture],
+        depth: outputDepthTexture,
+        clearColor: renderView.camera.clearColor,
+        clearDepth: 1,
+      }),
       render: () => {
         drawMeshes({
           viewport: renderView.viewport,
@@ -555,71 +552,50 @@ export default ({
       },
     });
 
-    const needsGrabPass = !!entitiesInView.find(
-      (e) => e.material?.transmission
-    );
+    // Grab pass
     let grabPassColorCopyTexture;
-    if (needsGrabPass) {
-      this.descriptors.grabPass.colorCopyTextureDesc.width =
-        utils.prevPowerOfTwo(renderView.viewport[2]);
-      this.descriptors.grabPass.colorCopyTextureDesc.height =
-        utils.prevPowerOfTwo(renderView.viewport[3]);
+    if (entitiesInView.some((e) => e.material?.transmission)) {
+      const viewport = [
+        0,
+        0,
+        utils.prevPowerOfTwo(renderView.viewport[2]),
+        utils.prevPowerOfTwo(renderView.viewport[3]),
+      ];
+      // const viewport = [0, 0, renderView.viewport[2], renderView.viewport[3]];
+      this.descriptors.grabPass.colorCopyTextureDesc.width = viewport[2];
+      this.descriptors.grabPass.colorCopyTextureDesc.height = viewport[3];
       grabPassColorCopyTexture = resourceCache.texture2D(
         this.descriptors.grabPass.colorCopyTextureDesc
       );
-      grabPassColorCopyTexture.name = `grapbPassOutput\n${grabPassColorCopyTexture.id}`;
+      grabPassColorCopyTexture.name = `grabPassOutput\n${grabPassColorCopyTexture.id}`;
 
-      const grabPass = resourceCache.pass({
-        color: [grabPassColorCopyTexture],
-      });
-
-      const copyTexturePipeline = resourceCache.pipeline(
-        this.descriptors.grabPass.copyTexturePipelineDesc
-      );
       const fullscreenTriangle = resourceCache.fullscreenTriangle();
 
       const copyTextureCmd = {
         name: "Copy Texture",
         attributes: fullscreenTriangle.attributes,
         count: fullscreenTriangle.count,
-        pipeline: copyTexturePipeline,
+        pipeline: resourceCache.pipeline(
+          this.descriptors.grabPass.copyTexturePipelineDesc
+        ),
         uniforms: {
-          //uViewport: renderView.viewport,
-          uViewport: [
-            0,
-            0,
-            grabPassColorCopyTexture.width,
-            grabPassColorCopyTexture.height,
-          ],
+          uViewport: viewport,
           uTexture: mainPassOutputTexture,
         },
       };
 
       renderGraph.renderPass({
-        name: `GrabPass ${renderView.viewport}`,
+        name: `GrabPass ${viewport}`,
         uses: [mainPassOutputTexture],
-        renderView: {
-          ...renderView,
-          //viewport: [0, 0, renderView.viewport[2], renderView.viewport[3]],
-          viewport: [
-            0,
-            0,
-            grabPassColorCopyTexture.width,
-            grabPassColorCopyTexture.height,
-          ],
-        },
-        pass: grabPass,
+        renderView: { ...renderView, viewport },
+        pass: resourceCache.pass({ color: [grabPassColorCopyTexture] }),
         render: () => {
           ctx.submit(copyTextureCmd);
         },
       });
     }
-    // console.log("needsGrabPass", needsGrabPass);
 
-    const transparentPass = resourceCache.pass({
-      color: [mainPassOutputTexture],
-      depth: outputDepthTexture,
-    });
+    // Transparent pass
     renderGraph.renderPass({
       name: `TransparentMainPass ${renderView.viewport}`,
       uses: [...shadowMaps, grabPassColorCopyTexture].filter((_) => _), //filter out nulls
@@ -627,7 +603,10 @@ export default ({
         ...renderView,
         viewport: [0, 0, renderView.viewport[2], renderView.viewport[3]],
       },
-      pass: transparentPass,
+      pass: resourceCache.pass({
+        color: [mainPassOutputTexture],
+        depth: outputDepthTexture,
+      }),
       render: () => {
         drawMeshes({
           viewport: renderView.viewport,
@@ -644,22 +623,21 @@ export default ({
       },
     });
 
+    // Post-processing pass
     if (drawToScreen !== false) {
-      const postProcessingPipeline = resourceCache.pipeline(
-        this.descriptors.tonemap.pipelineDesc
-      );
       const fullscreenTriangle = resourceCache.fullscreenTriangle();
 
       const postProcessingCmd = {
         name: "Draw FSTriangle",
         attributes: fullscreenTriangle.attributes,
         count: fullscreenTriangle.count,
-        pipeline: postProcessingPipeline,
+        pipeline: resourceCache.pipeline(this.descriptors.tonemap.pipelineDesc),
         uniforms: {
           uViewport: renderView.viewport,
           uTexture: mainPassOutputTexture,
         },
       };
+
       renderGraph.renderPass({
         name: "PostProcessingPass",
         // pass: ctx.pass({ color: [{ id: -1 }] }),
