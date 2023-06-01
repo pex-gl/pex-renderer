@@ -93,18 +93,21 @@ export default ({
   descriptors: createDescriptors(ctx),
   drawMeshes,
   updateDirectionalLightShadowMap(
-    lightEnt,
+    lightEntity,
     entities,
     shadowCastingEntities,
     renderers
   ) {
-    const light = lightEnt.directionalLight;
-    // const position = lightEnt._transform.worldPosition;
+    const light = lightEntity.directionalLight;
+    light._viewMatrix ??= mat4.create();
+    light._projectionMatrix ??= mat4.create();
+
+    // const position = lightEntity._transform.worldPosition;
     // const target = [0, 0, 1, 0];
     // const up = [0, 1, 0, 0];
-    // vec4.multMat4(target, lightEnt._transform.modelMatrix);
+    // vec4.multMat4(target, lightEntity._transform.modelMatrix);
     // vec3.add(target, position);
-    // vec4.multMat4(up, lightEnt._transform.modelMatrix);
+    // vec4.multMat4(up, lightEntity._transform.modelMatrix);
     // mat4.lookAt(light._viewMatrix, position, target, up);
 
     const shadowBboxPoints = shadowCastingEntities.reduce(
@@ -138,7 +141,7 @@ export default ({
       lightFar
     );
 
-    light.sceneBboxInLightSpace = sceneBboxInLightSpace;
+    light._sceneBboxInLightSpace = sceneBboxInLightSpace;
 
     let colorMapDesc = this.descriptors.directionalLightShadows.colorMapDesc;
     let shadowMapDesc = this.descriptors.directionalLightShadows.shadowMapDesc;
@@ -180,7 +183,7 @@ export default ({
     };
 
     renderGraph.renderPass({
-      name: "RenderShadowMap" + lightEnt.id,
+      name: "RenderShadowMap" + lightEntity.id,
       pass: shadowMapPass,
       renderView: renderView,
       render: () => {
@@ -192,7 +195,7 @@ export default ({
           //TODO: passing camera entity around is a mess
           cameraEntity: {
             camera: {
-              position: lightEnt._transform.worldPosition,
+              position: lightEntity._transform.worldPosition,
             },
           },
           shadowMapping: true,
@@ -213,17 +216,20 @@ export default ({
   },
 
   updateSpotLightShadowMap(
-    lightEnt,
+    lightEntity,
     entities,
     shadowCastingEntities,
     renderers
   ) {
-    const light = lightEnt.spotLight;
-    const position = lightEnt._transform.worldPosition;
+    const light = lightEntity.spotLight;
+    light._viewMatrix ??= mat4.create();
+    light._projectionMatrix ??= mat4.create();
+
+    const position = lightEntity._transform.worldPosition;
     const target = [0, 0, 1, 0];
     const up = [0, 1, 0, 0];
-    vec4.multMat4(target, lightEnt._transform.modelMatrix);
-    vec4.multMat4(up, lightEnt._transform.modelMatrix);
+    vec4.multMat4(target, lightEntity._transform.modelMatrix);
+    vec4.multMat4(up, lightEntity._transform.modelMatrix);
     mat4.lookAt(light._viewMatrix, position, target, up);
 
     const shadowBboxPoints = shadowCastingEntities.reduce(
@@ -245,7 +251,7 @@ export default ({
     light._near = lightNear;
     light._far = lightFar;
 
-    light.sceneBboxInLightSpace = sceneBboxInLightSpace;
+    light._sceneBboxInLightSpace = sceneBboxInLightSpace;
 
     let colorMapDesc = this.descriptors.spotLightShadows.colorMapDesc;
     let shadowMapDesc = this.descriptors.spotLightShadows.shadowMapDesc;
@@ -296,7 +302,7 @@ export default ({
     };
 
     renderGraph.renderPass({
-      name: "RenderShadowMap" + lightEnt.id,
+      name: "RenderShadowMap" + lightEntity.id,
       pass: shadowMapPass,
       renderView: renderView,
       render: () => {
@@ -306,7 +312,7 @@ export default ({
           //TODO: passing camera entity around is a mess
           cameraEntity: {
             camera: {
-              position: lightEnt._transform.worldPosition,
+              position: lightEntity._transform.worldPosition,
             },
           },
           shadowMapping: true,
@@ -324,12 +330,12 @@ export default ({
   },
 
   updatePointLightShadowMap(
-    lightEnt,
+    lightEntity,
     entities,
     shadowCastingEntities,
     renderers
   ) {
-    const light = lightEnt.pointLight;
+    const light = lightEntity.pointLight;
 
     let shadowCubemapDesc =
       this.descriptors.pointLightShadows.shadowCubemapDesc;
@@ -357,7 +363,8 @@ export default ({
     let shadowMap = resourceCache.texture2D(shadowMapDesc);
     shadowMap.name = "ShadowMap\n" + shadowMap.id;
 
-    this.descriptors.pointLightShadows.passes.forEach((pass, i) => {
+    for (let i = 0; i < this.descriptors.pointLightShadows.passes.length; i++) {
+      const pass = this.descriptors.pointLightShadows.passes[i];
       //TODO: need to create new descriptor to get uniq
       let passDesc = { ...pass };
       passDesc.color = [
@@ -373,8 +380,8 @@ export default ({
           projectionMatrix: side.projectionMatrix,
           viewMatrix: mat4.lookAt(
             mat4.create(),
-            vec3.add([...side.eye], lightEnt._transform.worldPosition),
-            vec3.add([...side.target], lightEnt._transform.worldPosition),
+            vec3.add([...side.eye], lightEntity._transform.worldPosition),
+            vec3.add([...side.target], lightEntity._transform.worldPosition),
             side.up
           ),
         },
@@ -382,7 +389,7 @@ export default ({
       };
 
       renderGraph.renderPass({
-        name: "RenderShadowMap" + lightEnt.id,
+        name: "RenderShadowMap" + lightEntity.id,
         pass: shadowMapPass,
         renderView: renderView,
         render: () => {
@@ -407,7 +414,7 @@ export default ({
           });
         },
       });
-    });
+    }
 
     light._shadowCubemap = shadowCubemap; // TODO: we borrow it for a frame
     // ctx.submit(shadowMapDrawCommand, () => {
@@ -415,81 +422,65 @@ export default ({
     // });
   },
 
-  patchDirectionalLight(directionalLight) {
-    directionalLight._viewMatrix = mat4.create();
-    directionalLight._projectionMatrix = mat4.create();
-  },
-  patchSpotLight(directionalLight) {
-    directionalLight._viewMatrix = mat4.create();
-    directionalLight._projectionMatrix = mat4.create();
-  },
-
   update(entities, options = {}) {
     let { renderView, renderers, drawToScreen } = options;
-    // ctx.submit(clearCmd);
 
     const rendererableEntities = entities.filter(
       (e) => e.geometry && e.material
     );
-
+    const shadowCastingEntities = rendererableEntities.filter(
+      (e) => e.material.castShadows
+    );
     const cameraEntities = entities.filter((e) => e.camera);
     const directionalLightEntities = entities.filter((e) => e.directionalLight);
     const pointLightEntities = entities.filter((e) => e.pointLight);
     const spotLightEntities = entities.filter((e) => e.spotLight);
-    const shadowCastingEntities = rendererableEntities.filter(
-      (e) => e.material.castShadows
-    );
 
-    if (!renderView) {
-      renderView = {
-        camera: cameraEntities[0].camera,
-        viewport: [0, 0, ctx.gl.drawingBufferWidth, ctx.gl.drawingBufferHeight],
-      };
+    renderView ||= {
+      camera: cameraEntities[0].camera,
+      viewport: [0, 0, ctx.gl.drawingBufferWidth, ctx.gl.drawingBufferHeight],
+    };
+
+    // Update shadow maps
+    for (let i = 0; i < directionalLightEntities.length; i++) {
+      const entity = directionalLightEntities[i];
+
+      // options.shadowPass !== false // FIXME: why this was here?
+      if (entity.directionalLight.castShadows) {
+        this.updateDirectionalLightShadowMap(
+          entity,
+          entities,
+          shadowCastingEntities,
+          renderers
+        );
+      }
     }
 
-    directionalLightEntities.forEach((lightEntity) => {
-      if (!lightEntity.directionalLight._viewMatrix) {
-        this.patchDirectionalLight(lightEntity.directionalLight);
-      }
-      if (
-        lightEntity.directionalLight.castShadows
-        // FIXME: why this was here?
-        // options.shadowPass !== false
-      ) {
-        // TODO: filtering lights which don't cast shadows
-        this.updateDirectionalLightShadowMap(
-          lightEntity,
-          entities,
-          shadowCastingEntities,
-          renderers
-        );
-      }
-    });
+    for (let i = 0; i < pointLightEntities.length; i++) {
+      const entity = pointLightEntities[i];
 
-    pointLightEntities.forEach((lightEntity) => {
-      if (lightEntity.pointLight.castShadows) {
+      if (entity.pointLight.castShadows) {
         this.updatePointLightShadowMap(
-          lightEntity,
+          entity,
           entities,
           shadowCastingEntities,
           renderers
         );
       }
-    });
+    }
 
-    spotLightEntities.forEach((lightEntity) => {
-      if (!lightEntity.spotLight._viewMatrix) {
-        this.patchSpotLight(lightEntity.spotLight);
-      }
-      if (lightEntity.spotLight.castShadows) {
+    for (let i = 0; i < spotLightEntities.length; i++) {
+      const entity = spotLightEntities[i];
+
+      if (entity.spotLight.castShadows) {
         this.updateSpotLightShadowMap(
-          lightEntity,
+          entity,
           entities,
           shadowCastingEntities,
           renderers
         );
       }
-    });
+    }
 
     // TODO: this also get entities with shadowmap regardless of castShadows changes
     const shadowMaps = entities
