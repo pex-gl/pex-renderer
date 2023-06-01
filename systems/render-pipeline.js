@@ -491,10 +491,14 @@ export default ({
       }
     });
 
-    const shadowMaps = directionalLightEntities
-      .map((e) => {
-        return e.directionalLight._shadowMap;
-      })
+    // TODO: this also get entities with shadowmap regardless of castShadows changes
+    const shadowMaps = entities
+      .map(
+        (e) =>
+          e.directionalLight?._shadowMap ||
+          e.spotLight?._shadowMap ||
+          e.pointLight?._shadowCubemap
+      )
       .filter((_) => _);
 
     let entitiesInView = entities;
