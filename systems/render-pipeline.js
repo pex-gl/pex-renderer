@@ -1,122 +1,98 @@
-import { vec3, vec4, mat3, mat4 } from "pex-math";
+import { vec3, vec4, mat4, utils } from "pex-math";
 import { aabb } from "pex-geom";
-import createPassDescriptors from "./renderer/passes.js";
+import createDescriptors from "./renderer/descriptors.js";
 
-export default function createRenderPipelineSystem(opts) {
-  const { ctx, resourceCache, renderGraph } = opts;
+function drawMeshes({
+  viewport,
+  cameraEntity,
+  shadowMapping,
+  shadowMappingLight,
+  entitiesInView,
+  // forward, // TODO: is not used. remove?
+  renderView: renderViewUpstream,
+  renderers,
+  drawTransparent,
+  backgroundColorTexture,
+  shadowQuality,
+}) {
+  // if (backgroundColorTexture) {
+  //   ctx.update(backgroundColorTexture, { mipmap: true });
+  // }
 
-  ctx.gl.getExtension("EXT_float_blend");
+  //FIXME: code smell
+  const renderView = renderViewUpstream || { viewport };
 
-  const tempMat4 = mat4.create(); //FIXME
-  const passes = createPassDescriptors(ctx);
-
-  let clearCmd = {
-    pass: ctx.pass({
-      clearColor: [0, 0, 0, 0],
-      clearDepth: 1,
-    }),
-  };
-
-  function nextPowerOfTwo(n) {
-    if (n === 0) return 1;
-    n--;
-    n |= n >> 1;
-    n |= n >> 2;
-    n |= n >> 4;
-    n |= n >> 8;
-    n |= n >> 16;
-    return n + 1;
+  //FIXME: code smell
+  if (cameraEntity && !renderView.camera) {
+    renderView.cameraEntity = cameraEntity;
+    renderView.camera = cameraEntity.camera;
   }
-
-  function prevPowerOfTwo(n) {
-    return nextPowerOfTwo(n) / 2;
-  }
-
-  const renderPipelineSystem = {
-    type: "render-pipeline-system",
-    cache: {},
-    debug: true,
-    shadowQuality: opts.shadowQuality !== undefined ? opts.shadowQuality : 2,
-    outputEncoding: opts.outputEncoding || ctx.Encoding.Linear,
-    renderers: [],
-  };
-
-  function drawMeshes({
-    viewport,
-    cameraEntity,
-    shadowMapping,
-    shadowMappingLight,
-    entitiesInView,
-    forward,
-    renderView: renderViewUpstream,
-    renderers,
-    drawTransparent,
-    backgroundColorTexture,
-    shadowQuality,
-  }) {
-    // if (backgroundColorTexture) {
-    //   ctx.update(backgroundColorTexture, { mipmap: true });
-    // }
-
-    //FIXME: code smell
-    const renderView = renderViewUpstream || {
-      viewport: viewport,
+  if (shadowMappingLight) {
+    renderView.camera = {
+      projectionMatrix: shadowMappingLight._projectionMatrix,
+      viewMatrix: shadowMappingLight._viewMatrix,
     };
+  }
 
-    //FIXME: code smell
-    if (cameraEntity && !renderView.camera) {
-      renderView.cameraEntity = cameraEntity;
-      renderView.camera = cameraEntity.camera;
+  if (shadowMapping) {
+    for (let i = 0; i < renderers.length; i++) {
+      const renderer = renderers[i];
+      if (renderer.renderStages.shadow) {
+        renderer.renderStages.shadow(renderView, entitiesInView, {
+          shadowMapping: true,
+          shadowMappingLight,
+        });
+      }
     }
-    if (shadowMappingLight) {
-      renderView.camera = {
-        projectionMatrix: shadowMappingLight._projectionMatrix,
-        viewMatrix: shadowMappingLight._viewMatrix,
-      };
-    }
-
-    if (shadowMapping) {
-      renderers.forEach((renderer) => {
-        if (renderer.renderStages.shadow) {
-          renderer.renderStages.shadow(renderView, entitiesInView, {
-            shadowMapping: true,
-            shadowMappingLight,
+  } else {
+    if (!drawTransparent) {
+      for (let i = 0; i < renderers.length; i++) {
+        const renderer = renderers[i];
+        if (renderer.renderStages.opaque) {
+          renderer.renderStages.opaque(renderView, entitiesInView, {
+            shadowQuality,
           });
         }
-      });
-    } else {
-      if (!drawTransparent) {
-        renderers.forEach((renderer) => {
-          if (renderer.renderStages.opaque) {
-            renderer.renderStages.opaque(renderView, entitiesInView, {
-              shadowQuality,
-            });
-          }
-        });
-        renderers.forEach((renderer) => {
-          if (renderer.renderStages.background) {
-            renderer.renderStages.background(renderView, entitiesInView, {
-              shadowQuality,
-            });
-          }
-        });
       }
-
-      if (drawTransparent) {
-        //TODO: capture color buffer and blur it for transmission/refraction
-        renderers.forEach((renderer) => {
-          if (renderer.renderStages.transparent) {
-            renderer.renderStages.transparent(renderView, entitiesInView, {
-              backgroundColorTexture,
-              shadowQuality,
-            });
-          }
-        });
+      for (let i = 0; i < renderers.length; i++) {
+        const renderer = renderers[i];
+        if (renderer.renderStages.background) {
+          renderer.renderStages.background(renderView, entitiesInView, {
+            shadowQuality,
+          });
+        }
+      }
+    } else {
+      //TODO: capture color buffer and blur it for transmission/refraction
+      for (let i = 0; i < renderers.length; i++) {
+        const renderer = renderers[i];
+        if (renderer.renderStages.transparent) {
+          renderer.renderStages.transparent(renderView, entitiesInView, {
+            backgroundColorTexture,
+            shadowQuality,
+          });
+        }
       }
     }
   }
+}
 
-  renderPipelineSystem.updateDirectionalLightShadowMap = function (
+export default ({
+  ctx,
+  resourceCache,
+  renderGraph,
+  shadowQuality = 2,
+  outputEncoding,
+}) => ({
+  type: "render-pipeline-system",
+  cache: {},
+  debug: true,
+  shadowQuality,
+  outputEncoding: outputEncoding || ctx.Encoding.Linear,
+  renderers: [],
+  descriptors: createDescriptors(ctx),
+  drawMeshes,
+  updateDirectionalLightShadowMap(
     lightEnt,
     entities,
     shadowCastingEntities,
@@ -164,8 +140,8 @@ export default function createRenderPipelineSystem(opts) {
 
     light.sceneBboxInLightSpace = sceneBboxInLightSpace;
 
-    let colorMapDesc = passes.directionalLightShadows.colorMapDesc;
-    let shadowMapDesc = passes.directionalLightShadows.shadowMapDesc;
+    let colorMapDesc = this.descriptors.directionalLightShadows.colorMapDesc;
+    let shadowMapDesc = this.descriptors.directionalLightShadows.shadowMapDesc;
 
     // Only update descriptors for custom map size
     // TODO: could texture be cached if they have the same descriptor
@@ -189,7 +165,7 @@ export default function createRenderPipelineSystem(opts) {
     shadowMap.name = "ShadowMap\n" + shadowMap.id;
 
     //TODO: need to create new descriptor to get uniq
-    let passDesc = { ...passes.directionalLightShadows.pass };
+    let passDesc = { ...this.descriptors.directionalLightShadows.pass };
     passDesc.color = [colorMap];
     passDesc.depth = shadowMap;
 
@@ -234,9 +210,9 @@ export default function createRenderPipelineSystem(opts) {
     // ctx.submit(shadowMapDrawCommand, () => {
     // drawMeshes(null, true, light, entities, shadowCastingEntities);
     // });
-  };
+  },
 
-  renderPipelineSystem.updateSpotLightShadowMap = function (
+  updateSpotLightShadowMap(
     lightEnt,
     entities,
     shadowCastingEntities,
@@ -271,8 +247,8 @@ export default function createRenderPipelineSystem(opts) {
 
     light.sceneBboxInLightSpace = sceneBboxInLightSpace;
 
-    let colorMapDesc = passes.spotLightShadows.colorMapDesc;
-    let shadowMapDesc = passes.spotLightShadows.shadowMapDesc;
+    let colorMapDesc = this.descriptors.spotLightShadows.colorMapDesc;
+    let shadowMapDesc = this.descriptors.spotLightShadows.shadowMapDesc;
 
     // Only update descriptors for custom map size
     // TODO: could texture be cached if they have the same descriptor
@@ -297,7 +273,7 @@ export default function createRenderPipelineSystem(opts) {
     shadowMap.name = "ShadowMap\n" + shadowMap.id;
 
     //TODO: need to create new descriptor to get uniq
-    let passDesc = { ...passes.spotLightShadows.pass };
+    let passDesc = { ...this.descriptors.spotLightShadows.pass };
     passDesc.color = [colorMap];
     passDesc.depth = shadowMap;
 
@@ -345,9 +321,9 @@ export default function createRenderPipelineSystem(opts) {
     });
 
     light._shadowMap = shadowMap; // TODO: we borrow it for a frame
-  };
+  },
 
-  renderPipelineSystem.updatePointLightShadowMap = function (
+  updatePointLightShadowMap(
     lightEnt,
     entities,
     shadowCastingEntities,
@@ -355,8 +331,9 @@ export default function createRenderPipelineSystem(opts) {
   ) {
     const light = lightEnt.pointLight;
 
-    let shadowCubemapDesc = passes.pointLightShadows.shadowCubemapDesc;
-    let shadowMapDesc = passes.pointLightShadows.shadowMapDesc;
+    let shadowCubemapDesc =
+      this.descriptors.pointLightShadows.shadowCubemapDesc;
+    let shadowMapDesc = this.descriptors.pointLightShadows.shadowMapDesc;
 
     // Only update descriptors for custom map size
     // TODO: could texture be cached if they have the same descriptor
@@ -380,7 +357,7 @@ export default function createRenderPipelineSystem(opts) {
     let shadowMap = resourceCache.texture2D(shadowMapDesc);
     shadowMap.name = "ShadowMap\n" + shadowMap.id;
 
-    passes.pointLightShadows.passes.forEach((pass, i) => {
+    this.descriptors.pointLightShadows.passes.forEach((pass, i) => {
       //TODO: need to create new descriptor to get uniq
       let passDesc = { ...pass };
       passDesc.color = [
@@ -390,7 +367,7 @@ export default function createRenderPipelineSystem(opts) {
 
       let shadowMapPass = resourceCache.pass(passDesc);
 
-      const side = passes.pointLightShadows.cubemapSides[i];
+      const side = this.descriptors.pointLightShadows.cubemapSides[i];
       const renderView = {
         camera: {
           projectionMatrix: side.projectionMatrix,
@@ -436,18 +413,18 @@ export default function createRenderPipelineSystem(opts) {
     // ctx.submit(shadowMapDrawCommand, () => {
     // drawMeshes(null, true, light, entities, shadowCastingEntities);
     // });
-  };
+  },
 
-  renderPipelineSystem.patchDirectionalLight = (directionalLight) => {
+  patchDirectionalLight(directionalLight) {
     directionalLight._viewMatrix = mat4.create();
     directionalLight._projectionMatrix = mat4.create();
-  };
-  renderPipelineSystem.patchSpotLight = (directionalLight) => {
+  },
+  patchSpotLight(directionalLight) {
     directionalLight._viewMatrix = mat4.create();
     directionalLight._projectionMatrix = mat4.create();
-  };
+  },
 
-  renderPipelineSystem.update = (entities, options = {}) => {
+  update(entities, options = {}) {
     let { renderView, renderers, drawToScreen } = options;
     // ctx.submit(clearCmd);
 
@@ -472,9 +449,7 @@ export default function createRenderPipelineSystem(opts) {
 
     directionalLightEntities.forEach((lightEntity) => {
       if (!lightEntity.directionalLight._viewMatrix) {
-        renderPipelineSystem.patchDirectionalLight(
-          lightEntity.directionalLight
-        );
+        this.patchDirectionalLight(lightEntity.directionalLight);
       }
       if (
         lightEntity.directionalLight.castShadows
@@ -482,7 +457,7 @@ export default function createRenderPipelineSystem(opts) {
         // options.shadowPass !== false
       ) {
         // TODO: filtering lights which don't cast shadows
-        renderPipelineSystem.updateDirectionalLightShadowMap(
+        this.updateDirectionalLightShadowMap(
           lightEntity,
           entities,
           shadowCastingEntities,
@@ -493,7 +468,7 @@ export default function createRenderPipelineSystem(opts) {
 
     pointLightEntities.forEach((lightEntity) => {
       if (lightEntity.pointLight.castShadows) {
-        renderPipelineSystem.updatePointLightShadowMap(
+        this.updatePointLightShadowMap(
           lightEntity,
           entities,
           shadowCastingEntities,
@@ -504,10 +479,10 @@ export default function createRenderPipelineSystem(opts) {
 
     spotLightEntities.forEach((lightEntity) => {
       if (!lightEntity.spotLight._viewMatrix) {
-        renderPipelineSystem.patchSpotLight(lightEntity.spotLight);
+        this.patchSpotLight(lightEntity.spotLight);
       }
       if (lightEntity.spotLight.castShadows) {
-        renderPipelineSystem.updateSpotLightShadowMap(
+        this.updateSpotLightShadowMap(
           lightEntity,
           entities,
           shadowCastingEntities,
@@ -535,22 +510,24 @@ export default function createRenderPipelineSystem(opts) {
     }
 
     //TODO: this should be done on the fly by render graph
-    passes.mainPass.outputTextureDesc.width = renderView.viewport[2];
-    passes.mainPass.outputTextureDesc.height = renderView.viewport[3];
+    this.descriptors.mainPass.outputTextureDesc.width = renderView.viewport[2];
+    this.descriptors.mainPass.outputTextureDesc.height = renderView.viewport[3];
     const mainPassOutputTexture = resourceCache.texture2D(
-      passes.mainPass.outputTextureDesc
+      this.descriptors.mainPass.outputTextureDesc
     );
     mainPassOutputTexture.name = `mainPassOutput\n${mainPassOutputTexture.id}`;
 
     const mainPassNormalOutputTexture = resourceCache.texture2D(
-      passes.mainPass.outputTextureDesc
+      this.descriptors.mainPass.outputTextureDesc
     );
     mainPassNormalOutputTexture.name = `mainPassNormalOutput\n${mainPassNormalOutputTexture.id}`;
 
-    passes.mainPass.outputDepthTextureDesc.width = renderView.viewport[2];
-    passes.mainPass.outputDepthTextureDesc.height = renderView.viewport[3];
+    this.descriptors.mainPass.outputDepthTextureDesc.width =
+      renderView.viewport[2];
+    this.descriptors.mainPass.outputDepthTextureDesc.height =
+      renderView.viewport[3];
     const outputDepthTexture = resourceCache.texture2D(
-      passes.mainPass.outputDepthTextureDesc
+      this.descriptors.mainPass.outputDepthTextureDesc
     );
     outputDepthTexture.name = `mainPassDepth\n${outputDepthTexture.id}`;
 
@@ -578,7 +555,7 @@ export default function createRenderPipelineSystem(opts) {
           forward: true,
           drawTransparent: false,
           renderers: renderers,
-          shadowQuality: renderPipelineSystem.shadowQuality,
+          shadowQuality: this.shadowQuality,
         });
       },
     });
@@ -588,14 +565,12 @@ export default function createRenderPipelineSystem(opts) {
     );
     let grabPassColorCopyTexture;
     if (needsGrabPass) {
-      passes.grabPass.colorCopyTextureDesc.width = prevPowerOfTwo(
-        renderView.viewport[2]
-      );
-      passes.grabPass.colorCopyTextureDesc.height = prevPowerOfTwo(
-        renderView.viewport[3]
-      );
+      this.descriptors.grabPass.colorCopyTextureDesc.width =
+        utils.prevPowerOfTwo(renderView.viewport[2]);
+      this.descriptors.grabPass.colorCopyTextureDesc.height =
+        utils.prevPowerOfTwo(renderView.viewport[3]);
       grabPassColorCopyTexture = resourceCache.texture2D(
-        passes.grabPass.colorCopyTextureDesc
+        this.descriptors.grabPass.colorCopyTextureDesc
       );
       grabPassColorCopyTexture.name = `grapbPassOutput\n${grabPassColorCopyTexture.id}`;
 
@@ -604,7 +579,7 @@ export default function createRenderPipelineSystem(opts) {
       });
 
       const copyTexturePipeline = resourceCache.pipeline(
-        passes.grabPass.copyTexturePipelineDesc
+        this.descriptors.grabPass.copyTexturePipelineDesc
       );
       const fullscreenTriangle = resourceCache.fullscreenTriangle();
 
@@ -669,14 +644,14 @@ export default function createRenderPipelineSystem(opts) {
           drawTransparent: true,
           backgroundColorTexture: grabPassColorCopyTexture,
           renderers: renderers,
-          shadowQuality: renderPipelineSystem.shadowQuality, //FIXME: that's a lot of passing down
+          shadowQuality: this.shadowQuality, //FIXME: that's a lot of passing down
         });
       },
     });
 
     if (drawToScreen !== false) {
       const postProcessingPipeline = resourceCache.pipeline(
-        passes.tonemap.pipelineDesc
+        this.descriptors.tonemap.pipelineDesc
       );
       const fullscreenTriangle = resourceCache.fullscreenTriangle();
 
@@ -706,7 +681,5 @@ export default function createRenderPipelineSystem(opts) {
       normal: mainPassNormalOutputTexture,
       depth: outputDepthTexture,
     };
-  };
-
-  return renderPipelineSystem;
-}
+  },
+});

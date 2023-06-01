@@ -53,7 +53,7 @@
     "grid-cells": "^2.0.0",
     "parse-hdr": "^1.0.0",
     "pex-color": "^2.0.0-alpha.2",
-    "pex-context": "^3.0.0-alpha.6",
+    "pex-context": "^3.0.0-alpha.8",
     "pex-gui": "^3.0.0-alpha.3",
     "primitive-geometry": "^2.9.1"
   },
