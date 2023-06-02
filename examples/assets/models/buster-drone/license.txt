@@ -1,0 +1,11 @@
+Model Information:
+* title:	Buster Drone
+* source:	https://sketchfab.com/3d-models/buster-drone-294e79652f494130ad2ab00a13fdbafd
+* author:	LaVADraGoN (https://sketchfab.com/lavadragon)
+
+Model License:
+* license type:	CC-BY-NC-4.0 (http://creativecommons.org/licenses/by-nc/4.0/)
+* requirements:	Author must be credited. No commercial use.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Buster Drone" (https://sketchfab.com/3d-models/buster-drone-294e79652f494130ad2ab00a13fdbafd) by LaVADraGoN (https://sketchfab.com/lavadragon) licensed under CC-BY-NC-4.0 (http://creativecommons.org/licenses/by-nc/4.0/)

@@ -1,77 +1,57 @@
-const path = require('path')
-const createRenderer = require('../')
-const createContext = require('pex-context')
-const createGUI = require('pex-gui')
-const vec3 = require('pex-math/vec3')
-const quat = require('pex-math/quat')
-const random = require('pex-random')
-const io = require('pex-io')
-const createSphere = require('primitive-sphere')
-const isBrowser = require('is-browser')
-const gridCells = require('grid-cells')
-const parseHdr = require('parse-hdr')
+import {
+  renderEngine as createRenderEngine,
+  world as createWorld,
+  entity as createEntity,
+  components,
+} from "../index.js";
 
-const State = {
-  sunPosition: [0, 5, -5],
-  roughness: 0.5,
-  metallic: 0.1,
-  baseColor: [0.8, 0.1, 0.1, 1.0],
-  materials: [],
-  rgbm: false,
-  exposure: 0.8
-}
+import createContext from "pex-context";
+import createGUI from "pex-gui";
+import { vec3, quat } from "pex-math";
+import * as io from "pex-io";
+import { sphere } from "primitive-geometry";
+import gridCells from "grid-cells";
+import parseHdr from "parse-hdr";
+import { getURL } from "./utils.js";
 
-random.seed(10)
+const pixelRatio = devicePixelRatio;
+const ctx = createContext({ pixelRatio });
 
-const ctx = createContext({
-  powerPreference: 'high-performance'
-})
-ctx.gl.getExtension('EXT_shader_texture_lod')
-ctx.gl.getExtension('OES_standard_derivatives')
-ctx.gl.getExtension('WEBGL_draw_buffers')
-ctx.gl.getExtension('OES_texture_float')
-ctx.gl.getExtension('EXT_texture_filter_anisotropic')
+const world = (window.world = createWorld());
+const renderEngine = createRenderEngine({ ctx });
 
-const renderer = createRenderer({
-  ctx,
-  pauseOnBlur: false,
-  rgbm: State.rgbm,
-  shadowQuality: 2
-})
-
-const gui = createGUI(ctx)
-const ASSETS_DIR = isBrowser ? 'assets' : path.join(__dirname, 'assets')
-const W = ctx.gl.drawingBufferWidth
-const H = ctx.gl.drawingBufferHeight
-const nW = 11
-const nH = 6
-let debugOnce = false
+const gui = createGUI(ctx);
+const W = ctx.gl.drawingBufferWidth;
+const H = ctx.gl.drawingBufferHeight;
+const nW = 11;
+const nH = 6;
+let debugOnce = false;
 
 // Materials
-let materials = []
+const materials = [];
 
 for (let i = 0; i <= 10; i++) {
   materials.push({
     baseColor: [0.9, 0.9, 1.0, 1.0],
     metallic: i / 10,
-    roughness: 0
-  })
+    roughness: 0,
+  });
 }
 
 for (let i = 0; i <= 10; i++) {
   materials.push({
     baseColor: [0.0, 0.0, 1.0, 1.0],
     metallic: 0,
-    roughness: i / 10
-  })
+    roughness: i / 10,
+  });
 }
 
 for (let i = 0; i <= 10; i++) {
   materials.push({
     baseColor: [1.0, 0.8, 0.0, 1.0],
     metallic: 1,
-    roughness: i / 10
-  })
+    roughness: i / 10,
+  });
 }
 
 for (let i = 0; i <= 10; i++) {
@@ -79,8 +59,8 @@ for (let i = 0; i <= 10; i++) {
     baseColor: [0.8, 0.0, 0.1, 1.0],
     metallic: 0,
     roughness: 0,
-    reflectance: i / 10
-  })
+    reflectance: i / 10,
+  });
 }
 
 for (let i = 0; i <= 10; i++) {
@@ -89,8 +69,8 @@ for (let i = 0; i <= 10; i++) {
     metallic: 1,
     roughness: 0.5,
     clearCoat: i / 10,
-    clearCoatRoughness: 0
-  })
+    clearCoatRoughness: 0.04,
+  });
 }
 
 for (let i = 0; i <= 10; i++) {
@@ -99,211 +79,185 @@ for (let i = 0; i <= 10; i++) {
     metallic: 1,
     roughness: 0.5,
     clearCoat: 1,
-    clearCoatRoughness: i / 10
-  })
-}
-
-// Utils
-let cells = gridCells(W, H, nW, nH, 0).map((cell) => {
-  // flip upside down as we are using viewport coordinates
-  return [cell[0], H - cell[1] - cell[3], cell[2], cell[3]]
-})
-
-gui
-  .addHeader('Metallic')
-  .setPosition(10, 10 + (ctx.gl.drawingBufferHeight * 0) / 6)
-gui
-  .addHeader('Roughness for non-metallic')
-  .setPosition(10, 10 + (ctx.gl.drawingBufferHeight * 1) / 6)
-gui
-  .addHeader('Roughness for metallic')
-  .setPosition(10, 10 + (ctx.gl.drawingBufferHeight * 2) / 6)
-gui
-  .addHeader('Reflectance')
-  .setPosition(10, 10 + (ctx.gl.drawingBufferHeight * 3) / 6)
-gui
-  .addHeader('Clear Coat')
-  .setPosition(10, 10 + (ctx.gl.drawingBufferHeight * 4) / 6)
-gui
-  .addHeader('Clear Coat Roughness')
-  .setPosition(10, 10 + (ctx.gl.drawingBufferHeight * 5) / 6)
-
-cells.forEach((cell, cellIndex) => {
-  const tags = ['cell' + cellIndex]
-  const material = materials[cellIndex]
-  if (!material) return
-  const cameraCmp = renderer.camera({
-    fov: Math.PI / 3,
-    aspect: W / nW / (H / nH),
-    viewport: cell,
-    exposure: State.exposure
-  })
-  const postProcessingCmp = renderer.postProcessing({
-    fxaa: true
-  })
-
-  if (material.emissiveColor) {
-    postProcessingCmp.set({
-      bloom: true,
-      bloomIntensity: 0.5,
-      bloomThreshold: 3,
-      bloomRadius: 1.25
-    })
-  }
-
-  const cameraEntity = renderer.entity(
-    [
-      postProcessingCmp,
-      cameraCmp,
-      renderer.orbiter({
-        position: [0, 0, 1.2]
-      })
-    ],
-    tags
-  )
-  renderer.add(cameraEntity)
-})
-
-function imageFromFile(file) {
-  const tex = ctx.texture2D({
-    width: 1,
-    height: 1,
-    pixelFormat: ctx.PixelFormat.RGBA8,
-    encoding: ctx.Encoding.SRGB
-  })
-  io.loadImage(
-    file,
-    function(err, image, encoding) {
-      if (err) throw err
-      ctx.update(tex, {
-        data: image,
-        width: image.width,
-        height: image.height,
-        wrap: ctx.Wrap.Repeat,
-        flipY: true,
-        mag: ctx.Filter.Linear,
-        min: ctx.Filter.LinearMipmapLinear,
-        aniso: 16,
-        pixelFormat: ctx.PixelFormat.RGBA8,
-        encoding: encoding
-      })
-      ctx.update(tex, { mipmap: true })
-    },
-    true
-  )
-  return tex
+    clearCoatRoughness: i / 10,
+  });
 }
 
 // Meshes
-materials.forEach((material) => {
-  if (material.baseColorMap)
-    material.baseColorMap = imageFromFile(
-      material.baseColorMap,
-      ctx.Encoding.SRGB
-    )
-  if (material.roughnessMap)
-    material.roughnessMap = imageFromFile(
-      material.roughnessMap,
-      ctx.Encoding.Linear
-    )
-  if (material.metallicMap)
-    material.metallicMap = imageFromFile(
-      material.metallicMap,
-      ctx.Encoding.Linear
-    )
-  if (material.normalMap)
-    material.normalMap = imageFromFile(material.normalMap, ctx.Encoding.Linear)
-  if (material.alphaMap)
-    material.alphaMap = imageFromFile(material.alphaMap, ctx.Encoding.Linear)
-  if (material.emissiveColorMap)
-    material.emissiveColorMap = imageFromFile(
-      material.emissiveColorMap,
-      ctx.Encoding.SRGB
-    )
-  material.castShadows = true
-  material.receiveShadows = true
-})
+const geometry = sphere({ nx: 32, ny: 32 });
+
+const mesh = {
+  positions: { buffer: ctx.vertexBuffer(geometry.positions) },
+  normals: { buffer: ctx.vertexBuffer(geometry.normals) },
+  uvs: { buffer: ctx.vertexBuffer(geometry.uvs) },
+  cells: { buffer: ctx.indexBuffer(geometry.cells) },
+};
+
+const cells = gridCells(W, H, nW, nH, 0).map((cell) => [
+  cell[0],
+  H - cell[1] - cell[3], // flip upside down as we are using viewport coordinates
+  cell[2],
+  cell[3],
+]);
 
 cells.forEach((cell, cellIndex) => {
-  const tags = ['cell' + cellIndex]
-  const material = materials[cellIndex]
-  if (!material) return
+  const layer = `cell${cellIndex}`;
+  const material = materials[cellIndex];
+  if (!material) return;
 
-  const materialEntity = renderer.entity(
-    [renderer.geometry(createSphere(0.5)), renderer.material(material)],
-    tags
-  )
-  renderer.add(materialEntity)
-})
+  const cameraEntity = createEntity({
+    camera: components.camera({
+      fov: Math.PI / 4,
+      aspect: W / nW / (H / nH),
+      viewport: cell,
+    }),
+    transform: components.transform({
+      position: [0, 0, 2],
+    }),
+    orbiter: components.orbiter({
+      element: ctx.gl.canvas,
+    }),
+    layer: layer,
+  });
+  world.add(cameraEntity);
+
+  const materialEntity = createEntity({
+    transform: components.transform(),
+    geometry: components.geometry(mesh),
+    material: components.material(material),
+    layer: layer,
+  });
+  world.add(materialEntity);
+});
 
 // Sky
-;(async () => {
-  const buffer = await io.loadBinary(`${ASSETS_DIR}/envmaps/Ditch-River_2k/Ditch-River_2k.hdr`)
-  //const buffer = await io.loadBinary(`${ASSETS_DIR}/envmaps/garage.hdr`)
-  // const buffer = await io.loadBinary(`${ASSETS_DIR}/envmaps/Mono_Lake_B.hdr`)
-  const hdrImg = parseHdr(buffer)
-  for (var i = 0; i < hdrImg.data.length; i += 4) {
-    hdrImg.data[i + 0] *= 0.8
-    hdrImg.data[i + 1] *= 0.8
-    hdrImg.data[i + 2] *= 0.5
-  }
-  const panorama = ctx.texture2D({
-    data: hdrImg.data,
-    width: hdrImg.shape[0],
-    height: hdrImg.shape[1],
-    pixelFormat: ctx.PixelFormat.RGBA32F,
-    encoding: ctx.Encoding.Linear,
-    flipY: true
-  })
+const hdrImg = parseHdr(
+  await io.loadArrayBuffer(
+    getURL("assets/envmaps/Ditch-River_2k/Ditch-River_2k.hdr")
+    // getURL("assets/envmaps/garage/garage.hdr")
+    // getURL(`assets/envmaps/Mono_Lake_B/Mono_Lake_B.hdr`)
+  )
+);
+const envMap = ctx.texture2D({
+  data: hdrImg.data,
+  width: hdrImg.shape[0],
+  height: hdrImg.shape[1],
+  pixelFormat: ctx.PixelFormat.RGBA32F,
+  encoding: ctx.Encoding.Linear,
+  flipY: true,
+});
 
-  const sun = renderer.directionalLight({
-    color: [1, 1, 0.95, 1],
+const sunEntity = createEntity({
+  transform: components.transform({
+    position: [-2, 2, 2],
+    rotation: quat.fromTo(
+      quat.create(),
+      [0, 0, 1],
+      vec3.normalize([2, -2, -1])
+    ),
+  }),
+  directionalLight: components.directionalLight({
+    color: [1, 1, 0.95, 2],
     intensity: 2,
-    castShadows: true
-  })
-  const sunEntity = renderer.entity([
-    renderer.transform({
-      position: [-2, 2, 2],
-      rotation: quat.fromTo(
-        quat.create(),
-        [0, 0, 1],
-        vec3.normalize([2, -2, -1])
+    castShadows: false,
+  }),
+});
+world.add(sunEntity);
+
+const skyEntity = createEntity({
+  skybox: components.skybox({
+    sunPosition: [0, 5, -5],
+    envMap,
+  }),
+  reflectionProbe: components.reflectionProbe(),
+});
+world.add(skyEntity);
+
+// GUI
+function countByProp(list, prop) {
+  return list.reduce((countBy, o) => {
+    if (!countBy[o[prop]]) countBy[o[prop]] = 0;
+    countBy[o[prop]]++;
+    return countBy;
+  }, {});
+}
+
+gui.addColumn("");
+gui.addFPSMeeter().setPosition(10, 40);
+gui.addColumn("Resources");
+gui.addStats();
+gui.addStats("Pixel Formats:", {
+  update(item) {
+    Object.assign(
+      item.stats,
+      countByProp(
+        ctx.resources.filter((o) => o.class == "texture"),
+        "pixelFormat"
       )
-    }),
-    sun
-  ])
-  renderer.add(sunEntity)
+    );
+  },
+});
+gui.addButton("Resources", () => {
+  console.log("Resources", ctx.resources, renderEngine);
+});
 
-  const skybox = renderer.skybox({
-    sunPosition: State.sunPosition,
-    texture: panorama
-  })
+const headers = [
+  "Metallic",
+  "Roughness for non-metallic",
+  "Roughness for metallic",
+  "Reflectance",
+  "Clear Coat",
+  "Clear Coat Roughness",
+].map((headerTitle) => gui.addHeader(headerTitle));
 
-  const reflectionProbe = renderer.reflectionProbe({
-    origin: [0, 0, 0],
-    size: [10, 10, 10],
-    boxProjection: false
-  })
+const onResize = () => {
+  ctx.set({
+    pixelRatio,
+    width: window.innerWidth,
+    height: window.innerHeight,
+  });
+  const W = window.innerWidth * pixelRatio;
+  const H = window.innerHeight * pixelRatio;
 
-  const skyEntity = renderer.entity([skybox, reflectionProbe])
-  renderer.add(skyEntity)
-  window.dispatchEvent(new CustomEvent('pex-screenshot'))
-})()
+  headers.forEach((header, i) => {
+    header.setPosition(10, 10 + (i * H) / nH / pixelRatio);
+  });
 
-window.addEventListener('keydown', (e) => {
-  if (e.key === 'g') gui.toggleEnabled()
-  if (e.key === 'd') debugOnce = true
-})
+  const cells = gridCells(W, H, nW, nH, 0).map((cell) => [
+    cell[0],
+    H - cell[1] - cell[3],
+    cell[2],
+    cell[3],
+  ]);
+
+  world.entities
+    .filter((e) => e.camera)
+    .forEach((cameraEntity, i) => {
+      cameraEntity.camera.viewport = cells[i];
+      cameraEntity.camera.aspect = cells[i][2] / cells[i][3];
+      cameraEntity.camera.dirty = true;
+    });
+};
+
+window.addEventListener("resize", onResize);
+onResize();
+
+window.addEventListener("keydown", ({ key }) => {
+  if (key === "g") gui.enabled = !gui.enabled;
+  if (key === "d") debugOnce = true;
+});
 
 ctx.frame(() => {
-  ctx.debug(debugOnce)
-  debugOnce = false
-  renderer.draw()
+  ctx.debug(debugOnce);
+  debugOnce = false;
 
-  var skybox = renderer.getComponents('Skybox')[0]
-  if (skybox) {
-    skybox.entity.removeComponent(skybox)
-  }
+  renderEngine.update(world.entities);
+  renderEngine.render(
+    world.entities,
+    world.entities.filter((e) => e.camera)
+  );
 
-  gui.draw()
-})
+  gui.draw();
+
+  window.dispatchEvent(new CustomEvent("pex-screenshot"));
+});

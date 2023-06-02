@@ -1,17 +1,14 @@
-const path = require('path')
-const createRenderer = require('../')
-const createContext = require('pex-context')
-const io = require('pex-io')
-const isBrowser = require('is-browser')
+import createRenderer from "../index.js";
+import createContext from "pex-context";
+import * as io from "pex-io";
+import { getURL } from "./utils.js";
 
-const ASSETS_DIR = isBrowser ? 'assets' : path.join(__dirname, 'assets')
+const ctx = createContext();
+const renderer = createRenderer(ctx);
 
-const ctx = createContext()
-const renderer = createRenderer(ctx)
-
-;(async () => {
-  const rainbow = await io.loadImage(`${ASSETS_DIR}/textures/rainbow/rainbow.jpg`)
-  const logo = await io.loadImage(`${ASSETS_DIR}/textures/PEX/PEX.png`)
+(async () => {
+  const rainbow = await io.loadImage(getURL(`assets/textures/rainbow/rainbow.jpg`));
+  const logo = await io.loadImage(getURL(`assets/textures/PEX/PEX.png`));
 
   const rainbowEntity = renderer.entity([
     renderer.overlay({
@@ -21,11 +18,11 @@ const renderer = createRenderer(ctx)
         height: rainbow.height,
         pixelFormat: ctx.PixelFormat.RGBA8,
         encoding: ctx.Encoding.SRGB,
-        flipY: true
-      })
-    })
-  ])
-  renderer.add(rainbowEntity)
+        flipY: true,
+      }),
+    }),
+  ]);
+  renderer.add(rainbowEntity);
 
   const logoEntity = renderer.entity([
     renderer.overlay({
@@ -40,14 +37,14 @@ const renderer = createRenderer(ctx)
         pixelFormat: ctx.PixelFormat.RGBA8,
         encoding: ctx.Encoding.SRGB,
         flipY: true,
-        premultiplayAlpha: true
-      })
-    })
-  ])
-  renderer.add(logoEntity)
-})()
+        premultiplyAlpha: true,
+      }),
+    }),
+  ]);
+  renderer.add(logoEntity);
+})();
 
 ctx.frame(() => {
-  renderer.draw()
-  window.dispatchEvent(new CustomEvent('pex-screenshot'))
-})
+  renderer.draw();
+  window.dispatchEvent(new CustomEvent("pex-screenshot"));
+});
