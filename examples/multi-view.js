@@ -73,7 +73,8 @@ const entities = (window.entities = []);
 const renderGraph = createRenderGraph(ctx, window.dot);
 renderGraph.renderPass = (opts) => {
   if (dot) {
-    const passId = opts.pass?.id || "RenderPass " + renderGraph.renderPasses.length;
+    const passId =
+      opts.pass?.id || "RenderPass " + renderGraph.renderPasses.length;
     const passName = opts.name || opts.pass?.name || null;
 
     dot.passNode(passId, passName);
@@ -143,6 +144,9 @@ const cubesEntity = createEntity({
       .fill(0)
       .map(() => random.float(-1.5, 1.5)),
     scales: new Float32Array(64 * 3).fill(0.1),
+    // colors: new Float32Array(64 * 4).map((_, i) =>
+    //   i % 4 === 0 ? 1 : random.float()
+    // ),
     instances: 64,
   }),
   material: material({
@@ -209,6 +213,12 @@ const sphereEntity = createEntity({
     roughness: 0.5,
     castShadows: true,
     receiveShadows: true,
+    // transmission: 0.5,
+    // blend: true,
+    // blendSrcRGBFactor: ctx.BlendFactor.One,
+    // blendSrcAlphaFactor: ctx.BlendFactor.One,
+    // blendDstRGBFactor: ctx.BlendFactor.Zero,
+    // blendDstAlphaFactor: ctx.BlendFactor.Zero,
   }),
   boundingBoxHelper: components.boundingBoxHelper(),
 });
