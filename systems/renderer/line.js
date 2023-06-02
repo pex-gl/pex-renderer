@@ -1,187 +1,160 @@
+import { avec3 } from "pex-math";
+import { pipeline as SHADERS } from "./pex-shaders/index.js";
 import { patchVS, patchFS } from "../../utils.js";
 
-export default function createLineRendererSystem(opts) {
-  const { ctx } = opts;
+// prettier-ignore
+const instanceRoundRound = Float32Array.of(
+  0, -0.5, 0,
+  0, -0.5, 1,
+  0, 0.5, 1,
+  0, -0.5, 0,
+  0, 0.5, 1,
+  0, 0.5, 0,
+);
 
-  const resolution = 16;
-  const instanceRoundRound = [
-    [0, -0.5, 0],
-    [0, -0.5, 1],
-    [0, 0.5, 1],
-    [0, -0.5, 0],
-    [0, 0.5, 1],
-    [0, 0.5, 0],
+export default ({ ctx, resolution = 16 } = {}) => {
+  const positions = new Float32Array(
+    instanceRoundRound.length + resolution * 18
+  );
+  positions.set(instanceRoundRound);
+
+  for (let step = 0; step < resolution; step++) {
+    // Left cap
+    let index = instanceRoundRound.length / 3 + step * 3;
+    let theta0 = Math.PI / 2 + ((step + 0) * Math.PI) / resolution;
+    let theta1 = Math.PI / 2 + ((step + 1) * Math.PI) / resolution;
+
+    avec3.set3(
+      positions,
+      index + 1,
+      0.5 * Math.cos(theta0),
+      0.5 * Math.sin(theta0),
+      0
+    );
+    avec3.set3(
+      positions,
+      index + 2,
+      0.5 * Math.cos(theta1),
+      0.5 * Math.sin(theta1),
+      0
+    );
+
+    // Right cap
+    index += resolution * 3;
+    theta0 = (3 * Math.PI) / 2 + ((step + 0) * Math.PI) / resolution;
+    theta1 = (3 * Math.PI) / 2 + ((step + 1) * Math.PI) / resolution;
+
+    avec3.set3(positions, index, 0, 0, 1);
+    avec3.set3(
+      positions,
+      index + 1,
+      0.5 * Math.cos(theta0),
+      0.5 * Math.sin(theta0),
+      1
+    );
+    avec3.set3(
+      positions,
+      index + 2,
+      0.5 * Math.cos(theta1),
+      0.5 * Math.sin(theta1),
+      1
+    );
+  }
+
+  const positionBuffer = ctx.vertexBuffer(positions);
+
+  const flags = [
+    ctx.capabilities.maxColorAttachments > 1 && "USE_DRAW_BUFFERS",
   ];
-  // Add the left cap.
-  for (let step = 0; step < resolution; step++) {
-    const theta0 = Math.PI / 2 + ((step + 0) * Math.PI) / resolution;
-    const theta1 = Math.PI / 2 + ((step + 1) * Math.PI) / resolution;
-    instanceRoundRound.push([0, 0, 0]);
-    instanceRoundRound.push([
-      0.5 * Math.cos(theta0),
-      0.5 * Math.sin(theta0),
-      0,
-    ]);
-    instanceRoundRound.push([
-      0.5 * Math.cos(theta1),
-      0.5 * Math.sin(theta1),
-      0,
-    ]);
-  }
-
-  // Add the right cap.
-  for (let step = 0; step < resolution; step++) {
-    const theta0 = (3 * Math.PI) / 2 + ((step + 0) * Math.PI) / resolution;
-    const theta1 = (3 * Math.PI) / 2 + ((step + 1) * Math.PI) / resolution;
-    instanceRoundRound.push([0, 0, 1]);
-    instanceRoundRound.push([
-      0.5 * Math.cos(theta0),
-      0.5 * Math.sin(theta0),
-      1,
-    ]);
-    instanceRoundRound.push([
-      0.5 * Math.cos(theta1),
-      0.5 * Math.sin(theta1),
-      1,
-    ]);
-  }
-
-  const positionBuffer = ctx.vertexBuffer(instanceRoundRound);
-
-  const DRAW_BUFFERS_EXT =
-    ctx.capabilities.maxColorAttachments > 1 ? "#define USE_DRAW_BUFFERS" : "";
-
-  const lineVert = /*glsl*/ `
-    attribute vec3 aPosition;
-    attribute vec3 aPointA;
-    attribute vec3 aPointB;
-    attribute vec4 aColorA;
-
-    uniform mat4 uProjectionMatrix;
-    uniform mat4 uViewMatrix;
-    uniform mat4 uModelMatrix;
-    uniform float uLineWidth;
-    uniform vec2 uResolution;
-    uniform float uLineZOffset;
-
-    varying vec4 vColor;
-
-    void main () {
-      vColor = aColorA;
-      vec4 clip0 = uProjectionMatrix * uViewMatrix * uModelMatrix * vec4(aPointA, 1.0);
-      vec4 clip1 = uProjectionMatrix * uViewMatrix * uModelMatrix * vec4(aPointB, 1.0);
-      vec2 screen0 = uResolution * (0.5 * clip0.xy/clip0.w + 0.5);
-      vec2 screen1 = uResolution * (0.5 * clip1.xy/clip1.w + 0.5);
-
-      vec2 xBasis = normalize(screen1 - screen0);
-      vec2 yBasis = vec2(-xBasis.y, xBasis.x);
-      vec2 pt0 = screen0 + aColorA.a * uLineWidth * (aPosition.x * xBasis + aPosition.y * yBasis);
-      vec2 pt1 = screen1 + aColorA.a * uLineWidth * (aPosition.x * xBasis + aPosition.y * yBasis);
-      vec2 pt = mix(pt0, pt1, aPosition.z);
-      vec4 clip = mix(clip0, clip1, aPosition.z);
-
-      gl_Position = vec4(clip.w * ((2.0 * pt) / uResolution - 1.0), clip.z + uLineZOffset, clip.w);
-
-      if (length(aPointA) == 0.0 || length(aPointB) == 0.0) {
-        gl_Position = vec4(0.0, 0.0, 0.0, 1.0);
-      }
-    }
-  `;
-
-  const lineFrag = /*glsl*/ `
-    ${DRAW_BUFFERS_EXT}
-    #ifdef USE_DRAW_BUFFERS
-      #extension GL_EXT_draw_buffers : enable
-    #endif
-
-    precision highp float;
-    uniform vec4 uBaseColor;
-    varying vec4 vColor;
-    void main() {
-      gl_FragData[0] = uBaseColor * vColor;
-      #ifdef USE_DRAW_BUFFERS
-      gl_FragData[1] = vec4(0.0);
-      gl_FragData[2] = vec4(0.0);
-      #endif
-    }
-    `;
 
   const drawSegmentsCmd = {
     name: "drawSegmentsCmd",
     pipeline: ctx.pipeline({
-      vert: ctx.capabilities.isWebGL2 ? patchVS(lineVert) : lineVert,
-      frag: ctx.capabilities.isWebGL2 ? patchFS(lineFrag) : lineFrag,
+      vert: ctx.capabilities.isWebGL2
+        ? patchVS(SHADERS.segment.vert)
+        : SHADERS.segment.vert,
+      // TODO: share flag/patch/cache with other renderers
+      frag: `${flags
+        .filter(Boolean)
+        .map((flag) => `#define ${flag}`)
+        .join("\n")}${
+        ctx.capabilities.isWebGL2
+          ? patchFS(SHADERS.segment.frag)
+          : SHADERS.segment.frag
+      }`,
       depthWrite: true,
       depthTest: true,
     }),
-    count: instanceRoundRound.length,
+    count: positions.length / 3,
   };
-
-  function drawSegmentMesh(camera, e) {
-    const instances = e.geometry.positions[0].length
-      ? e.geometry.positions.length / 2
-      : e.geometry.positions.length / 6;
-
-    ctx.submit(drawSegmentsCmd, {
-      attributes: {
-        aPosition: positionBuffer,
-        aPointA: {
-          buffer: e._geometry.attributes.aPosition.buffer,
-          divisor: 1,
-          stride: Float32Array.BYTES_PER_ELEMENT * 6,
-        },
-        aPointB: {
-          buffer: e._geometry.attributes.aPosition.buffer,
-          divisor: 1,
-          stride: Float32Array.BYTES_PER_ELEMENT * 6,
-          offset: Float32Array.BYTES_PER_ELEMENT * 3,
-        },
-        aColorA: {
-          buffer: e._geometry.attributes.aVertexColor.buffer,
-          divisor: 1,
-          stride: Float32Array.BYTES_PER_ELEMENT * 8,
-        },
-        aColorB: {
-          buffer: e._geometry.attributes.aVertexColor.buffer,
-          divisor: 1,
-          stride: Float32Array.BYTES_PER_ELEMENT * 8,
-          offset: Float32Array.BYTES_PER_ELEMENT * 4,
-        },
-      },
-      instances: instances,
-      uniforms: {
-        uBaseColor: e.material.baseColor,
-        uProjectionMatrix: camera.projectionMatrix,
-        uViewMatrix: camera.viewMatrix,
-        uModelMatrix: e._transform.modelMatrix,
-        uLineWidth: 1,
-        uResolution: [ctx.gl.drawingBufferWidth, ctx.gl.drawingBufferHeight],
-        uLineZOffset: 0,
-      },
-    });
-  }
 
   const lineRendererSystem = {
     type: "line-renderer",
+    render(renderView, entity) {
+      ctx.submit(drawSegmentsCmd, {
+        attributes: {
+          aPosition: positionBuffer,
+          aPointA: {
+            buffer: entity._geometry.attributes.aPosition.buffer,
+            divisor: 1,
+            stride: Float32Array.BYTES_PER_ELEMENT * 6,
+          },
+          aPointB: {
+            buffer: entity._geometry.attributes.aPosition.buffer,
+            divisor: 1,
+            stride: Float32Array.BYTES_PER_ELEMENT * 6,
+            offset: Float32Array.BYTES_PER_ELEMENT * 3,
+          },
+          aColorA: {
+            buffer: entity._geometry.attributes.aVertexColor.buffer,
+            divisor: 1,
+            stride: Float32Array.BYTES_PER_ELEMENT * 8,
+          },
+          aColorB: {
+            buffer: entity._geometry.attributes.aVertexColor.buffer,
+            divisor: 1,
+            stride: Float32Array.BYTES_PER_ELEMENT * 8,
+            offset: Float32Array.BYTES_PER_ELEMENT * 4,
+          },
+        },
+        instances: entity.geometry.positions[0].length
+          ? entity.geometry.positions.length / 2
+          : entity.geometry.positions.length / 6,
+        uniforms: {
+          uBaseColor: entity.material.baseColor,
+          uProjectionMatrix: renderView.camera.projectionMatrix,
+          uViewMatrix: renderView.camera.viewMatrix,
+          uModelMatrix: entity._transform.modelMatrix,
+          uLineWidth: 1,
+          uResolution: [ctx.gl.drawingBufferWidth, ctx.gl.drawingBufferHeight],
+          uLineZOffset: 0,
+        },
+      });
+    },
     renderStages: {
       shadow: (renderView, entities) => {
-        const { camera } = renderView;
-        entities.forEach((e) => {
-          if (e.material?.type == "segments" && e.material?.castShadows) {
-            drawSegmentMesh(camera, e);
+        for (let i = 0; i < entities.length; i++) {
+          const entity = entities[i];
+          if (
+            entity.material &&
+            entity.material.type == "segments" &&
+            entity.material.castShadows
+          ) {
+            lineRendererSystem.render(renderView, entity);
           }
-        });
+        }
       },
       opaque: (renderView, entities) => {
-        const { camera } = renderView;
-        entities.forEach((e) => {
-          if (e.material?.type == "segments") {
-            drawSegmentMesh(camera, e);
+        for (let i = 0; i < entities.length; i++) {
+          const entity = entities[i];
+          if (entity.material && entity.material.type == "segments") {
+            lineRendererSystem.render(renderView, entity);
           }
-        });
+        }
       },
     },
     update: () => {},
   };
+
   return lineRendererSystem;
-}
+};
