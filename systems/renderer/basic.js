@@ -78,8 +78,8 @@ export default ({ ctx }) => {
           if (
             entity.geometry &&
             entity.material &&
-            !entity.material?.blend &&
-            !entity.drawSegments
+            !entity.material.blend &&
+            entity.material.type !== "segments"
           ) {
             ctx.submit(
               getCommand(ctx, basicRendererSystem.cache, {
@@ -105,8 +105,12 @@ export default ({ ctx }) => {
       transparent: (renderView, entities) => {
         for (let i = 0; i < entities.length; i++) {
           const entity = entities[i];
-          // TODO: why not !entity.drawSegments?
-          if (entity.geometry && entity.material && entity.material?.blend) {
+          if (
+            entity.geometry &&
+            entity.material &&
+            entity.material.blend &&
+            entity.material.type !== "segments"
+          ) {
             ctx.submit(
               getCommand(ctx, basicRendererSystem.cache, {
                 instanced: entity.geometry.instances,
