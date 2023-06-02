@@ -71,6 +71,26 @@ export default ({ ctx }) => {
   const basicRendererSystem = {
     type: "basic-renderer",
     cache: [],
+    render(renderView, entity, { blending }) {
+      ctx.submit(
+        getCommand(ctx, this.cache, {
+          instanced: entity.geometry.instances,
+          hasInstancedColor: entity.geometry.colors,
+          blending,
+        }),
+        {
+          attributes: entity._geometry.attributes,
+          indices: entity._geometry.indices,
+          instances: entity._geometry.instances,
+          uniforms: {
+            uBaseColor: entity.material.baseColor,
+            uProjectionMatrix: renderView.camera.projectionMatrix,
+            uViewMatrix: renderView.camera.viewMatrix,
+            uModelMatrix: entity._transform.modelMatrix,
+          },
+        }
+      );
+    },
     renderStages: {
       opaque: (renderView, entities) => {
         for (let i = 0; i < entities.length; i++) {
@@ -81,24 +101,7 @@ export default ({ ctx }) => {
             !entity.material.blend &&
             entity.material.type !== "segments"
           ) {
-            ctx.submit(
-              getCommand(ctx, basicRendererSystem.cache, {
-                instanced: entity.geometry.instances,
-                hasInstancedColor: entity.geometry.colors,
-                blending: false,
-              }),
-              {
-                attributes: entity._geometry.attributes,
-                indices: entity._geometry.indices,
-                instances: entity._geometry.instances,
-                uniforms: {
-                  uBaseColor: entity.material.baseColor,
-                  uProjectionMatrix: renderView.camera.projectionMatrix,
-                  uViewMatrix: renderView.camera.viewMatrix,
-                  uModelMatrix: entity._transform.modelMatrix,
-                },
-              }
-            );
+            basicRendererSystem.render(renderView, entity, { blending: false });
           }
         }
       },
@@ -111,24 +114,7 @@ export default ({ ctx }) => {
             entity.material.blend &&
             entity.material.type !== "segments"
           ) {
-            ctx.submit(
-              getCommand(ctx, basicRendererSystem.cache, {
-                instanced: entity.geometry.instances,
-                hasInstancedColor: entity.geometry.colors,
-                blending: true,
-              }),
-              {
-                attributes: entity._geometry.attributes,
-                indices: entity._geometry.indices,
-                instances: entity._geometry.instances,
-                uniforms: {
-                  uBaseColor: entity.material.baseColor,
-                  uProjectionMatrix: renderView.camera.projectionMatrix,
-                  uViewMatrix: renderView.camera.viewMatrix,
-                  uModelMatrix: entity._transform.modelMatrix,
-                },
-              }
-            );
+            basicRendererSystem.render(renderView, entity, { blending: true });
           }
         }
       },
