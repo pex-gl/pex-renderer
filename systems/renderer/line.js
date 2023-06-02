@@ -66,6 +66,10 @@ export default ({ ctx, resolution = 16 } = {}) => {
   const flags = [
     ctx.capabilities.maxColorAttachments > 1 && "USE_DRAW_BUFFERS",
   ];
+  const frag = `${flags
+    .filter(Boolean)
+    .map((flag) => `#define ${flag}`)
+    .join("\n")}${SHADERS.segment.frag}`;
 
   const drawSegmentsCmd = {
     name: "drawSegmentsCmd",
@@ -74,14 +78,7 @@ export default ({ ctx, resolution = 16 } = {}) => {
         ? patchVS(SHADERS.segment.vert)
         : SHADERS.segment.vert,
       // TODO: share flag/patch/cache with other renderers
-      frag: `${flags
-        .filter(Boolean)
-        .map((flag) => `#define ${flag}`)
-        .join("\n")}${
-        ctx.capabilities.isWebGL2
-          ? patchFS(SHADERS.segment.frag)
-          : SHADERS.segment.frag
-      }`,
+      frag: ctx.capabilities.isWebGL2 ? patchFS(frag) : frag,
       depthWrite: true,
       depthTest: true,
     }),

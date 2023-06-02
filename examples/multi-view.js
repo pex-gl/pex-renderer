@@ -10,13 +10,15 @@ import createContext from "pex-context";
 import { quat } from "pex-math";
 import { aabb } from "pex-geom";
 import createGUI from "pex-gui";
-import { fromHSL } from "pex-color";
+import { create, fromHSL } from "pex-color";
 import random from "pex-random";
 import { cube, sphere } from "primitive-geometry";
 
 import { debugSceneTree } from "./utils.js";
 
 import "./graph-viz.js";
+
+random.seed(0);
 
 const {
   camera,
@@ -181,9 +183,10 @@ entities.push(spinningEntity);
 
 const linePositions = [];
 const lineVertexColors = [];
+const lineThickness = 20;
 for (let i = 0; i < 10; i++) {
-  linePositions.push(random.vec3(5), random.vec3(5));
-  const c = fromHSL([0, 0, 0, 1], random.float(), 0.5, 0.5);
+  linePositions.push(random.vec3(3), random.vec3(3));
+  const c = fromHSL(create(), random.float(), 0.5, 0.5, lineThickness);
   lineVertexColors.push(c, c);
 }
 
@@ -197,10 +200,11 @@ const linesEntity = createEntity({
   material: material({
     type: "segments",
     baseColor: [1, 1, 1, 1],
+    castShadows: true,
   }),
   boundingBoxHelper: components.boundingBoxHelper(),
 });
-// entities.push(linesEntity);
+entities.push(linesEntity);
 
 const sphereEntity = createEntity({
   transform: transform({
