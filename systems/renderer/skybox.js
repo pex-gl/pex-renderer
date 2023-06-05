@@ -1,10 +1,8 @@
-import { skybox } from "./pex-shaders/index.js";
-import { patchVS, patchFS } from "../../utils.js";
 import { mat4 } from "pex-math";
+import { skybox } from "./pex-shaders/index.js";
+import { quad, patchVS, patchFS } from "../../utils.js";
 
-export default function createSkyboxRendererSystem(opts) {
-  const { ctx } = opts;
-
+export default ({ ctx }) => {
   // const skyboxCmd = {
   //   name: "skyboxCmd",
   //   pipeline: ctx.pipeline({
@@ -34,23 +32,12 @@ export default function createSkyboxRendererSystem(opts) {
   const DRAW_BUFFERS_EXT =
     ctx.capabilities.maxColorAttachments > 1 ? "#define USE_DRAW_BUFFERS" : "";
 
-  const skyboxPositions = [
-    [-1, -1],
-    [1, -1],
-    [1, 1],
-    [-1, 1],
-  ];
-  const skyboxFaces = [
-    [0, 1, 2],
-    [0, 2, 3],
-  ];
-
   const skyboxFrag = `
   ${DRAW_BUFFERS_EXT}
   ${skybox.skybox.frag}`;
 
-  const drawCommand = {
-    name: "Skybox.draw",
+  const drawSkyboxCommand = {
+    name: "drawSkyboxCmd",
     pipeline: ctx.pipeline({
       vert: ctx.capabilities.isWebGL2
         ? patchVS(skybox.skybox.vert)
@@ -60,104 +47,106 @@ export default function createSkyboxRendererSystem(opts) {
       depthWrite: false,
     }),
     attributes: {
-      aPosition: ctx.vertexBuffer(skyboxPositions),
+      aPosition: ctx.vertexBuffer(quad.positions),
     },
-    indices: ctx.indexBuffer(skyboxFaces),
+    indices: ctx.indexBuffer(quad.cells),
     uniforms: {
       uUseTonemapping: false,
       uExposure: 1,
     },
   };
 
-  function draw(ctx, entity, camera, opts) {
-    const { skybox } = entity;
-    const { projectionMatrix, viewMatrix, exposure } = camera;
-    const {
-      renderingToReflectionProbe,
-      outputEncoding,
-      backgroundBlur,
-      reflectionProbeEntity,
-    } = opts;
-    //TODO
-    // if (!this.texture && this.dirty) {
-    // this.updateSkyTexture();
-    // }
-
-    // texture can bed
-    // - skybox.texture
-    // - skybox._skyTexture
-    // - this.backgroundTexture
-    // - this._reflectionProbe._reflectionMap
-
-    let texture = skybox.envMap || skybox._skyTexture;
-
-    if (
-      !renderingToReflectionProbe &&
-      backgroundBlur &&
-      reflectionProbeEntity
-    ) {
-      texture = reflectionProbeEntity._reflectionProbe._reflectionMap;
-    }
-
-    // TODO: rename, for oct map. Why * 2 ? Cause it is oct map atlas?
-    const envMapSize = reflectionProbeEntity?.reflectionProbe?.size * 2 || 0;
-
-    //TODO: useTonemapping hardcoded to false
-    const useTonemapping = false;
-    ctx.submit(drawCommand, {
-      // viewport: camera.viewport,
-      // scissor: camera.viewport,
-      uniforms: {
-        uProjectionMatrix: projectionMatrix,
-        uViewMatrix: viewMatrix,
-        uModelMatrix: entity._transform?.modelMatrix || identityMatrix,
-        uEnvMap: texture,
-        uEnvMapEncoding: texture.encoding,
-        uEnvMapSize: envMapSize,
-        uOutputEncoding: outputEncoding,
-        uBackgroundBlur: !renderingToReflectionProbe ? backgroundBlur : false,
-        uUseTonemapping: !renderingToReflectionProbe ? useTonemapping : false,
-        uExposure: !renderingToReflectionProbe ? exposure || 1 : 1, //TODO: hardcoded default from camera.exposure
-      },
-    });
-  }
-
-  const skyboxRenderSystem = {
+  const skyboxRendererSystem = {
     type: "skybox-renderer",
+    render(
+      renderView,
+      entity,
+      {
+        renderingToReflectionProbe,
+        outputEncoding,
+        backgroundBlur,
+        reflectionProbeEntity,
+      }
+    ) {
+      //TODO
+      // if (!this.texture && this.dirty) {
+      // this.updateSkyTexture();
+      // }
+
+      // texture can bed
+      // - skybox.texture
+      // - skybox._skyTexture
+      // - this.backgroundTexture
+      // - this._reflectionProbe._reflectionMap
+
+      let texture = entity.skybox.envMap || entity.skybox._skyTexture;
+
+      if (
+        !renderingToReflectionProbe &&
+        backgroundBlur &&
+        reflectionProbeEntity
+      ) {
+        texture = reflectionProbeEntity._reflectionProbe._reflectionMap;
+      }
+
+      // TODO: rename, for oct map. Why * 2 ? Cause it is oct map atlas?
+      const envMapSize = reflectionProbeEntity?.reflectionProbe?.size * 2 || 0;
+
+      //TODO: useTonemapping hardcoded to false
+      const useTonemapping = false;
+      ctx.submit(drawSkyboxCommand, {
+        // viewport: camera.viewport,
+        // scissor: camera.viewport,
+        uniforms: {
+          uProjectionMatrix: renderView.camera.projectionMatrix,
+          uViewMatrix: renderView.camera.viewMatrix,
+          uModelMatrix: entity._transform?.modelMatrix || identityMatrix,
+          uEnvMap: texture,
+          uEnvMapEncoding: texture.encoding,
+          uEnvMapSize: envMapSize,
+          uOutputEncoding: outputEncoding,
+          uBackgroundBlur: !renderingToReflectionProbe ? backgroundBlur : false,
+          uUseTonemapping: !renderingToReflectionProbe ? useTonemapping : false,
+          uExposure: !renderingToReflectionProbe
+            ? renderView.camera.exposure || 1
+            : 1, //TODO: hardcoded default from camera.exposure
+        },
+      });
+    },
     renderStages: {
       background: (renderView, entities, options) => {
-        const { camera } = renderView;
         const { renderingToReflectionProbe } = options;
-        entities.forEach((e) => {
-          if (e.skybox) {
-            const reflectionProbeEntity = entities.find(
-              (e) => e.reflectionProbe
-            );
-            draw(ctx, e, renderView.camera, {
+        for (let i = 0; i < entities.length; i++) {
+          const entity = entities[i];
+          if (entity.skybox) {
+            skyboxRendererSystem.render(renderView, entity, {
               renderingToReflectionProbe: renderingToReflectionProbe,
-              backgroundBlur: e.skybox.backgroundBlur,
+              backgroundBlur: entity.skybox.backgroundBlur,
               outputEncoding: renderView.outputEncoding || ctx.Encoding.Linear,
-              reflectionProbeEntity,
+              reflectionProbeEntity: entities.find(
+                (entity) => entity.reflectionProbe
+              ),
             });
-            // e._skybox.draw(renderView.camera, {
+            // entity._skybox.draw(renderView.camera, {
             //   backgroundMode: true,
             //   outputEncoding: ctx.Encoding.Linear,
             // });
             // ctx.submit(skyboxCmd, {
-            //   attributes: e._geometry.attributes,
-            //   indices: e._geometry.indices,
+            //   attributes: entity._geometry.attributes,
+            //   indices: entity._geometry.indices,
             //   uniforms: {
-            //     uBaseColor: e.material.baseColor,
-            //     uProjectionMatrix: camera.projectionMatrix,
-            //     uViewMatrix: camera.viewMatrix,
-            //     uModelMatrix: e._transform.modelMatrix,
+            //     uBaseColor: entity.material.baseColor,
+            //     uProjectionMatrix: renderView.camera.projectionMatrix,
+            //     uViewMatrix: renderView.camera.viewMatrix,
+            //     uModelMatrix: entity._transform.modelMatrix,
             //   },
             // });
           }
-        });
+        }
       },
     },
-    update: () => {},
+    update() {},
   };
-  return skyboxRenderSystem;
-}
+
+  return skyboxRendererSystem;
+};
