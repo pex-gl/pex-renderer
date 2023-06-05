@@ -1,6 +1,9 @@
 import { mat4 } from "pex-math";
-import { skybox } from "./pex-shaders/index.js";
-import { quad, patchVS, patchFS } from "../../utils.js";
+import {
+  skybox as SHADERS,
+  parser as ShaderParser,
+} from "./pex-shaders/index.js";
+import { quad } from "../../utils.js";
 
 export default ({ ctx }) => {
   // const skyboxCmd = {
@@ -29,20 +32,16 @@ export default ({ ctx }) => {
 
   const identityMatrix = mat4.create();
 
-  const DRAW_BUFFERS_EXT =
-    ctx.capabilities.maxColorAttachments > 1 ? "#define USE_DRAW_BUFFERS" : "";
-
-  const skyboxFrag = `
-  ${DRAW_BUFFERS_EXT}
-  ${skybox.skybox.frag}`;
-
   const drawSkyboxCommand = {
     name: "drawSkyboxCmd",
     pipeline: ctx.pipeline({
-      vert: ctx.capabilities.isWebGL2
-        ? patchVS(skybox.skybox.vert)
-        : skybox.skybox.vert,
-      frag: ctx.capabilities.isWebGL2 ? patchFS(skyboxFrag) : skyboxFrag,
+      vert: ShaderParser.parse(ctx, SHADERS.skybox.vert),
+      frag: ShaderParser.parse(ctx, SHADERS.skybox.frag, {
+        stage: "fragment",
+        defines: [
+          ctx.capabilities.maxColorAttachments > 1 && "USE_DRAW_BUFFERS",
+        ],
+      }),
       depthTest: true,
       depthWrite: false,
     }),

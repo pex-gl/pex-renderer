@@ -1,6 +1,8 @@
 import { avec3 } from "pex-math";
-import { pipeline as SHADERS } from "./pex-shaders/index.js";
-import { patchVS, patchFS } from "../../utils.js";
+import {
+  pipeline as SHADERS,
+  parser as ShaderParser,
+} from "./pex-shaders/index.js";
 
 // prettier-ignore
 const instanceRoundRound = Float32Array.of(
@@ -63,22 +65,16 @@ export default ({ ctx, resolution = 16 } = {}) => {
 
   const positionBuffer = ctx.vertexBuffer(positions);
 
-  const flags = [
-    ctx.capabilities.maxColorAttachments > 1 && "USE_DRAW_BUFFERS",
-  ];
-  const frag = `${flags
-    .filter(Boolean)
-    .map((flag) => `#define ${flag}`)
-    .join("\n")}${SHADERS.segment.frag}`;
-
   const drawSegmentsCmd = {
     name: "drawSegmentsCmd",
     pipeline: ctx.pipeline({
-      vert: ctx.capabilities.isWebGL2
-        ? patchVS(SHADERS.segment.vert)
-        : SHADERS.segment.vert,
-      // TODO: share flag/patch/cache with other renderers
-      frag: ctx.capabilities.isWebGL2 ? patchFS(frag) : frag,
+      vert: ShaderParser.parse(ctx, SHADERS.segment.vert),
+      frag: ShaderParser.parse(ctx, SHADERS.segment.frag, {
+        stage: "fragment",
+        defines: [
+          ctx.capabilities.maxColorAttachments > 1 && "USE_DRAW_BUFFERS",
+        ],
+      }),
       depthWrite: true,
       depthTest: true,
     }),

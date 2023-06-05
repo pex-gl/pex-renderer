@@ -1,7 +1,9 @@
 import { vec3 } from "pex-math";
-import { pipeline as SHADERS } from "pex-shaders";
+import {
+  pipeline as SHADERS,
+  parser as ShaderParser,
+} from "./pex-shaders/index.js";
 import createGeomBuilder from "geom-builder";
-import { patchVS, patchFS } from "../../utils.js";
 
 const pointsToLine = (points) =>
   points.reduce((line, p, i) => {
@@ -280,21 +282,18 @@ const getGrid = (grid) => [
 export default function createHelperSystem({ ctx }) {
   const geomBuilder = createGeomBuilder({ positions: 1, colors: 1 });
 
-  const DRAW_BUFFERS_EXT =
-    ctx.capabilities.maxColorAttachments > 1 ? "#define USE_DRAW_BUFFERS" : "";
-
-  const helperVert = `${SHADERS.helper.vert}`;
-  const helperFrag = `
-  ${DRAW_BUFFERS_EXT}
-  ${SHADERS.helper.frag}`;
-
   const helperPositionVBuffer = ctx.vertexBuffer({ data: [0, 0, 0] });
   const helperColorVBuffer = ctx.vertexBuffer({ data: [0, 0, 0, 0] });
   const drawHelperLinesCmd = {
     name: "drawHelperLinesCmd",
     pipeline: ctx.pipeline({
-      vert: ctx.capabilities.isWebGL2 ? patchVS(helperVert) : helperVert,
-      frag: ctx.capabilities.isWebGL2 ? patchFS(helperFrag) : helperFrag,
+      vert: ShaderParser.parse(ctx, SHADERS.helper.vert),
+      frag: ShaderParser.parse(ctx, SHADERS.helper.frag, {
+        stage: "fragment",
+        defines: [
+          ctx.capabilities.maxColorAttachments > 1 && "USE_DRAW_BUFFERS",
+        ],
+      }),
       depthTest: true,
       depthWrite: true,
       primitive: ctx.Primitive.Lines,
