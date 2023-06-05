@@ -2,7 +2,9 @@ import SHADERS from "../chunks/index.js";
 
 export default /* glsl */ `
 #extension GL_OES_standard_derivatives : require
-#extension GL_EXT_shader_texture_lod : require
+#ifdef USE_TRANSMISSION
+  #extension GL_EXT_shader_texture_lod : require
+#endif
 #ifdef USE_DRAW_BUFFERS
   #extension GL_EXT_draw_buffers : enable
 #endif
