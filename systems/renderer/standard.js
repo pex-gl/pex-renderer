@@ -283,24 +283,34 @@ export default ({ ctx }) => {
         extensions.GL_EXT_draw_buffers = "enable";
       }
     }
-    const vertSrc = ShaderParser.parse(ctx, vert, {
-      stage: "vertex",
-      defines: flags,
-      ...options,
-    });
-    const fragSrc = ShaderParser.parse(ctx, frag, {
-      stage: "fragment",
-      extensions,
-      defines: flags,
-      ...options,
-    });
+
     if (options.debugRender) flags.push(options.debugRender);
 
     let program = programCacheMap.getValue(flags, vert, frag);
+
     if (!program) {
+      const defines = options.debugRender
+        ? flags.filter((flag) => flag !== options.debugRender)
+        : flags;
+      const vertSrc = ShaderParser.parse(ctx, vert, {
+        stage: "vertex",
+        defines,
+        ...options,
+      });
+      const fragSrc = ShaderParser.parse(ctx, frag, {
+        stage: "fragment",
+        extensions,
+        defines,
+        ...options,
+      });
+
       try {
         console.debug("render-system", "New program", flags, entity);
-        program = buildProgram(ctx, vertSrc, fragSrc);
+        program = buildProgram(
+          ctx,
+          ShaderParser.replaceStrings(vertSrc, options),
+          ShaderParser.replaceStrings(fragSrc, options)
+        );
         programCacheMap.setValue(flags, vert, frag, program);
       } catch (error) {
         console.error(error);

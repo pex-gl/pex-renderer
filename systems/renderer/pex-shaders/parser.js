@@ -1,15 +1,12 @@
 export default {
-  parse(ctx, src, { stage = "vertex", extensions, defines, ...options } = {}) {
+  parse(ctx, src, { stage = "vertex", extensions, defines } = {}) {
     const patch = stage === "vertex" ? this.patchVS : this.patchFS;
 
-    return this.replaceStrings(
-      patch(
-        ctx,
-        `${this.formatExtensions(extensions)}
+    return patch(
+      ctx,
+      `${this.formatExtensions(extensions)}
 ${this.formatDefines(defines)}
 ${src}`
-      ),
-      options
     );
   },
 
