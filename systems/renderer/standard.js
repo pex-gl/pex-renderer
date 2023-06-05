@@ -1,16 +1,207 @@
 import { vec3, vec4, mat3, mat4, mat2x3 } from "pex-math";
-import { pipeline as SHADERS } from "./pex-shaders/index.js";
+import {
+  pipeline as SHADERS,
+  parser as ShaderParser,
+} from "./pex-shaders/index.js";
 import * as AreaLightsData from "./area-light-data.js";
-import { patchVS, patchFS } from "../../utils.js";
-
-const tempMat2x3 = mat2x3.create();
+import { TEMP_MAT2X3 } from "../../utils.js";
 
 let ltc_mat;
 let ltc_mag;
 
-export default function createStandardRendererSystem(opts) {
-  const { ctx } = opts;
+// prettier-ignore
+const flagDefs = [
+  [["options", "depthPassOnly"], "DEPTH_PASS_ONLY", { type: "boolean" }],
+  [["options", "depthPassOnly"], "USE_UNLIT_WORKFLOW", { type: "boolean" }], //force unlit in depth pass mode
+  [["options", "ambientLights", "length"], "NUM_AMBIENT_LIGHTS", { type: "counter" }],
+  [["options", "directionalLights", "length"], "NUM_DIRECTIONAL_LIGHTS", { type: "counter" }],
+  [["options", "pointLights", "length"], "NUM_POINT_LIGHTS", { type: "counter" }],
+  [["options", "spotLights", "length"], "NUM_SPOT_LIGHTS", { type: "counter" }],
+  [["options", "areaLights", "length"], "NUM_AREA_LIGHTS", { type: "counter" }],
+  [["options", "reflectionProbes", "length"], "USE_REFLECTION_PROBES", { type: "boolean" }],
+  [["options", "useTonemapping"], "USE_TONEMAPPING", { type: "boolean" }],
+  [["options", "envMapSize"], "", { uniform: "uEnvMapSize" }], // Blurred env map size
+  [["material", "unlit"], "USE_UNLIT_WORKFLOW", { type: "boolean", fallback: "USE_METALLIC_ROUGHNESS_WORKFLOW" }],
+  [["material", "blend"], "USE_BLEND", { type: "boolean" }],
+  [["skin"], "USE_SKIN"],
+  [["skin", "joints", "length"], "NUM_JOINTS", { type: "counter", requires: "USE_SKIN" }],
+  [["skin", "jointMatrices"], "", { uniform: "uJointMat", requires: "USE_SKIN" }],
+  [["material", "baseColor"], "", { uniform: "uBaseColor" }],
+  [["material", "metallic"], "", { uniform: "uMetallic" }],
+  [["material", "roughness"], "", { uniform: "uRoughness" }],
+  [["material", "emissiveColor"], "USE_EMISSIVE_COLOR", { uniform: "uEmissiveColor" }],
+  [["material", "emissiveIntensity"], "", { uniform: "uEmissiveIntensity", default: 1}],
+  [["material", "baseColorMap"], "BASE_COLOR_MAP", { type: "texture", uniform: "uBaseColorMap" }],
+  [["material", "emissiveColorMap"], "EMISSIVE_COLOR_MAP", { type: "texture", uniform: "uEmissiveColorMap" }],
+  [["material", "normalMap"], "NORMAL_MAP", { type: "texture", uniform: "uNormalMap" }],
+  [["material", "roughnessMap"], "ROUGHNESS_MAP", { type: "texture", uniform: "uRoughnessMap" }],
+  [["material", "metallicMap"], "METALLIC_MAP", { type: "texture", uniform: "uMetallicMap" }],
+  [["material", "metallicRoughnessMap"], "METALLIC_ROUGHNESS_MAP", { type: "texture", uniform: "uMetallicRoughnessMap" }],
+  [["material", "occlusionMap"], "OCCLUSION_MAP", { type: "texture", uniform: "uOcclusionMap" }],
+  [["material", "alphaTest"], "USE_ALPHA_TEST", { uniform: "uAlphaTest" }],
+  [["material", "alphaMap"], "ALPHA_MAP", { type: "texture", uniform: "uAlphaMap" }],
+  [["material", "clearCoat"], "USE_CLEAR_COAT", { uniform: "uClearCoat" }],
+  [["material", "clearCoatRoughness"], "USE_CLEAR_COAT_ROUGHNESS", { uniform: "uClearCoatRoughness" }],
+  [["material", "clearCoatMap"], "CLEAR_COAT_MAP", { type: "texture", uniform: "uClearCoatMap" }],
+  [["material", "clearCoatRoughnessMap"], "CLEAR_COAT_ROUGHNESS_MAP", { type: "texture", uniform: "uClearCoatRoughnessMap" }],
+  [["material", "clearCoatNormalMap"], "CLEAR_COAT_NORMAL_MAP", { type: "texture", uniform: "uClearCoatNormalMap" }],
+  [["material", "clearCoatNormalMapScale"], "", { uniform: "uClearCoatNormalMapScale" }],
+  [["material", "sheenColor"], "USE_SHEEN", { uniform: "uSheenColor" }],
+  [["material", "sheenRoughness"], "", { uniform: "uSheenRoughness", requires: "USE_SHEEN" }],
+  [["material", "transmission"], "USE_TRANSMISSION", { uniform: "uTransmission", requires: "USE_BLEND" }],
+  [["geometry", "attributes", "aNormal"], "USE_NORMALS", { fallback: "USE_UNLIT_WORKFLOW" }],
+  [["geometry", "attributes", "aTangent"], "USE_TANGENTS"],
+  [["geometry", "attributes", "aTexCoord0"], "USE_TEXCOORD_0"],
+  [["geometry", "attributes", "aTexCoord1"], "USE_TEXCOORD_1"],
+  [["geometry", "attributes", "aOffset"], "USE_INSTANCED_OFFSET"],
+  [["geometry", "attributes", "aScale"], "USE_INSTANCED_SCALE"],
+  [["geometry", "attributes", "aRotation"], "USE_INSTANCED_ROTATION"],
+  [["geometry", "attributes", "aColor"], "USE_INSTANCED_COLOR"],
+  [["geometry", "attributes", "aVertexColor"], "USE_VERTEX_COLORS"],
+];
 
+function buildProgram(ctx, vert, frag) {
+  let program = null;
+  try {
+    program = ctx.program({ vert, frag });
+  } catch (e) {
+    program = ctx.program({
+      vert: SHADERS.error.vert,
+      frag: SHADERS.error.frag,
+    });
+    throw e;
+  }
+  return program;
+}
+
+function getMaterialProgramAndFlags(ctx, entity, options = {}) {
+  const { _geometry: geometry, material } = entity;
+
+  const flags = [
+    //[["ctx", "capabilities", "maxColorAttachments"], "USE_DRAW_BUFFERS"
+    ctx.capabilities.maxColorAttachments > 1 && "USE_DRAW_BUFFERS",
+    // (!geometry.attributes.aNormal || material.unlit) && "USE_UNLIT_WORKFLOW",
+    // "USE_UNLIT_WORKFLOW",
+    "SHADOW_QUALITY " +
+      (entity.material.receiveShadows ? options.shadowQuality : 0),
+  ];
+  let materialUniforms = {};
+
+  for (let i = 0; i < flagDefs.length; i++) {
+    const [path, defineName, opts = {}] = flagDefs[i];
+
+    if (opts.requires && !flags.includes(opts.requires)) continue;
+
+    //TODO: GC
+    const obj = { ...entity, geometry, options };
+    let value = obj;
+
+    for (let j = 0; j < path.length; j++) {
+      value = value[path[j]];
+    }
+
+    if (opts.type == "counter") {
+      flags.push(`${defineName} ${value}`);
+    } else if (opts.type == "texture" && value) {
+      flags.push(`USE_${defineName}`);
+      flags.push(`${defineName}_TEX_COORD_INDEX ${value.texCoord || 0}`);
+      materialUniforms[opts.uniform] = value.texture || value;
+
+      if (value.texture && (value.offset || value.rotation || value.scale)) {
+        mat2x3.identity(TEMP_MAT2X3);
+        mat2x3.translate(TEMP_MAT2X3, value.offset || [0, 0]);
+        mat2x3.rotate(TEMP_MAT2X3, -value.rotation || 0);
+        mat2x3.scale(TEMP_MAT2X3, value.scale || [1, 1]);
+
+        value.texCoordTransformMatrix = mat3.fromMat2x3(
+          value.texCoordTransformMatrix
+            ? mat3.identity(value.texCoordTransformMatrix)
+            : mat3.create(),
+          TEMP_MAT2X3
+        );
+      }
+      if (value.texCoordTransformMatrix) {
+        flags.push(`USE_${defineName}_TEX_COORD_TRANSFORM`);
+        materialUniforms[opts.uniform + "TexCoordTransform"] =
+          value.texCoordTransformMatrix;
+      }
+    } else if (value !== undefined || opts.default !== undefined) {
+      if (opts.type !== "boolean" || value) {
+        flags.push(defineName);
+      } else {
+        if (opts.fallback) {
+          flags.push(opts.fallback);
+        }
+      }
+      if (opts.uniform) {
+        materialUniforms[opts.uniform] =
+          value !== undefined ? value : opts.default;
+      }
+    } else if (opts.fallback) {
+      flags.push(opts.fallback);
+    }
+  }
+
+  let { vert, frag } = material;
+
+  vert ||= SHADERS.material.vert;
+  frag ||= options.depthPassOnly
+    ? SHADERS.depthPass.frag
+    : SHADERS.material.frag;
+
+  if (material.hooks) {
+    if (material.hooks.vert) {
+      for (let [hookName, hookCode] of Object.entries(material.hooks.vert)) {
+        const hook = `#define HOOK_VERT_${hookName}`;
+        vert = vert.replace(hook, hookCode);
+      }
+    }
+    if (material.hooks.frag) {
+      for (let [hookName, hookCode] of Object.entries(material.hooks.frag)) {
+        const hook = `#define HOOK_FRAG_${hookName}`;
+        frag = frag.replace(hook, hookCode);
+      }
+    }
+    if (material.hooks.uniforms) {
+      const hookUniforms = material.hooks.uniforms(entity, []);
+      Object.assign(materialUniforms, hookUniforms);
+    }
+  }
+
+  let debugRender = options.debugRender;
+  if (debugRender) {
+    let scale = "";
+    let pow = 1;
+    let mode = debugRender.toLowerCase();
+    if (mode.includes("normal")) {
+      scale = "*0.5 + 0.5";
+    }
+    if (mode.includes("texcoord")) {
+      debugRender = `vec3(${debugRender}, 0.0)`;
+    }
+    if (
+      mode.includes("ao") ||
+      mode.includes("normal") ||
+      mode.includes("metallic") ||
+      mode.includes("roughness")
+    ) {
+      pow = "2.2";
+    }
+    frag = frag.replace(
+      "gl_FragData[0] = encode(vec4(color, 1.0), uOutputEncoding);",
+      `gl_FragData[0] = vec4(pow(vec3(${debugRender}${scale}), vec3(${pow})), 1.0);`
+    );
+  }
+
+  return {
+    flags: flags.flat().filter(Boolean),
+    vert,
+    frag,
+    materialUniforms,
+  };
+}
+
+export default ({ ctx }) => {
   const pipelineCache = {};
   const programCacheMap = {
     values: [],
@@ -77,301 +268,50 @@ export default function createStandardRendererSystem(opts) {
   //   }
   // }
 
-  function buildProgram(vertSrc, fragSrc) {
-    let program = null;
-    try {
-      program = ctx.program({ vert: vertSrc, frag: fragSrc });
-    } catch (e) {
-      program = ctx.program({
-        vert: SHADERS.error.vert,
-        frag: SHADERS.error.frag,
-      });
-      throw e;
-    }
-    return program;
-  }
-
-  // prettier-ignore
-  const flagDefs = [
-    [["options", "depthPassOnly"], "DEPTH_PASS_ONLY", { type: "boolean" }],
-    [["options", "depthPassOnly"], "USE_UNLIT_WORKFLOW", { type: "boolean" }], //force unlit in depth pass mode
-    [["options", "ambientLights", "length"], "NUM_AMBIENT_LIGHTS", { type: "counter" }],
-    [["options", "directionalLights", "length"], "NUM_DIRECTIONAL_LIGHTS", { type: "counter" }],
-    [["options", "pointLights", "length"], "NUM_POINT_LIGHTS", { type: "counter" }],
-    [["options", "spotLights", "length"], "NUM_SPOT_LIGHTS", { type: "counter" }],
-    [["options", "areaLights", "length"], "NUM_AREA_LIGHTS", { type: "counter" }],
-    [["options", "reflectionProbes", "length"], "USE_REFLECTION_PROBES", { type: "boolean" }],
-    [["options", "useTonemapping"], "USE_TONEMAPPING", { type: "boolean" }],
-    [["options", "envMapSize"], "", { uniform: "uEnvMapSize" }], // Blurred env map size
-    [["material", "unlit"], "USE_UNLIT_WORKFLOW", { type: "boolean", fallback: "USE_METALLIC_ROUGHNESS_WORKFLOW" }],
-    [["material", "blend"], "USE_BLEND", { type: "boolean" }],
-    [["skin"], "USE_SKIN"],
-    [["skin", "joints", "length"], "NUM_JOINTS", { type: "counter", requires: "USE_SKIN" }],
-    [["skin", "jointMatrices"], "", { uniform: "uJointMat", requires: "USE_SKIN" }],
-    [["material", "baseColor"], "", { uniform: "uBaseColor"}],
-    [["material", "metallic"], "", { uniform: "uMetallic"}],
-    [["material", "roughness"], "", { uniform: "uRoughness"}],
-    [["material", "emissiveColor"], "USE_EMISSIVE_COLOR", { uniform: "uEmissiveColor"}],
-    [["material", "emissiveIntensity"], "", { uniform: "uEmissiveIntensity", default: 1}],
-    [["material", "baseColorMap"], "BASE_COLOR_MAP", { type: "texture", uniform: "uBaseColorMap"}],
-    [["material", "emissiveColorMap"], "EMISSIVE_COLOR_MAP", { type: "texture", uniform: "uEmissiveColorMap"}],
-    [["material", "normalMap"], "NORMAL_MAP", { type: "texture", uniform: "uNormalMap"}],
-    [["material", "roughnessMap"], "ROUGHNESS_MAP", { type: "texture", uniform: "uRoughnessMap"}],
-    [["material", "metallicMap"], "METALLIC_MAP", { type: "texture", uniform: "uMetallicMap"}],
-    [["material", "metallicRoughnessMap"], "METALLIC_ROUGHNESS_MAP", { type: "texture", uniform: "uMetallicRoughnessMap"}],
-    [["material", "occlusionMap"], "OCCLUSION_MAP", { type: "texture", uniform: "uOcclusionMap"}],
-    [["material", "alphaTest"], "USE_ALPHA_TEST", { uniform: "uAlphaTest" }],
-    [["material", "alphaMap"], "ALPHA_MAP", { type: "texture", uniform: "uAlphaMap"}],
-    [["material", "clearCoat"], "USE_CLEAR_COAT", { uniform: "uClearCoat"}],
-    [["material", "clearCoatRoughness"], "USE_CLEAR_COAT_ROUGHNESS", { uniform: "uClearCoatRoughness"}],
-    [["material", "clearCoatMap"], "CLEAR_COAT_MAP", { type: "texture", uniform: "uClearCoatMap"}],
-    [["material", "clearCoatRoughnessMap"], "CLEAR_COAT_ROUGHNESS_MAP", { type: "texture", uniform: "uClearCoatRoughnessMap"}],
-    [["material", "clearCoatNormalMap"], "CLEAR_COAT_NORMAL_MAP", { type: "texture", uniform: "uClearCoatNormalMap"}],
-    [["material", "clearCoatNormalMapScale"], "", { uniform: "uClearCoatNormalMapScale"}],
-    [["material", "sheenColor"], "USE_SHEEN", { uniform: "uSheenColor"}],
-    [["material", "sheenRoughness"], "", { uniform: "uSheenRoughness", requires: "USE_SHEEN"}],
-    [["material", "transmission"], "USE_TRANSMISSION", { uniform: "uTransmission", requires: "USE_BLEND"}],
-    [["geometry", "attributes", "aNormal"], "USE_NORMALS", { fallback: "USE_UNLIT_WORKFLOW" }],
-    [["geometry", "attributes", "aTangent"], "USE_TANGENTS"],
-    [["geometry", "attributes", "aTexCoord0"], "USE_TEXCOORD_0"],
-    [["geometry", "attributes", "aTexCoord1"], "USE_TEXCOORD_1"],
-    [["geometry", "attributes", "aOffset"], "USE_INSTANCED_OFFSET"],
-    [["geometry", "attributes", "aScale"], "USE_INSTANCED_SCALE"],
-    [["geometry", "attributes", "aRotation"], "USE_INSTANCED_ROTATION"],
-    [["geometry", "attributes", "aColor"], "USE_INSTANCED_COLOR"],
-    [["geometry", "attributes", "aVertexColor"], "USE_VERTEX_COLORS"],
-  ];
-
-  function getMaterialProgramAndFlags(ctx, entity, options = {}) {
-    const { _geometry: geometry, material } = entity;
-
-    let flags = [
-      //[["ctx", "capabilities", "maxColorAttachments"], "USE_DRAW_BUFFERS"
-      ctx.capabilities.maxColorAttachments > 1 && "USE_DRAW_BUFFERS",
-      // (!geometry.attributes.aNormal || material.unlit) && "USE_UNLIT_WORKFLOW",
-      // "USE_UNLIT_WORKFLOW",
-      "SHADOW_QUALITY " +
-        (entity.material.receiveShadows ? options.shadowQuality : 0),
-      // "SHADOW_QUALITY 0",
-    ];
-    let materialUniforms = {};
-
-    for (let i = 0; i < flagDefs.length; i++) {
-      const [path, defineName, opts = {}] = flagDefs[i];
-
-      if (opts.requires && !flags.includes(opts.requires)) {
-        continue;
-      }
-
-      //TODO: GC
-      const obj = {
-        ...entity,
-        geometry,
-        options,
-      };
-      let value = obj;
-
-      for (let j = 0; j < path.length; j++) {
-        value = value[path[j]];
-      }
-
-      if (opts.type == "counter") {
-        flags.push(`${defineName} ${value}`);
-      } else if (opts.type == "texture" && value) {
-        flags.push(`USE_${defineName}`);
-        flags.push(`${defineName}_TEX_COORD_INDEX ${value.texCoord || 0}`);
-        materialUniforms[opts.uniform] = value.texture || value;
-
-        if (value.texture && (value.offset || value.rotation || value.scale)) {
-          mat2x3.identity(tempMat2x3);
-          mat2x3.translate(tempMat2x3, value.offset || [0, 0]);
-          mat2x3.rotate(tempMat2x3, -value.rotation || 0);
-          mat2x3.scale(tempMat2x3, value.scale || [1, 1]);
-
-          value.texCoordTransformMatrix = mat3.fromMat2x3(
-            value.texCoordTransformMatrix
-              ? mat3.identity(value.texCoordTransformMatrix)
-              : mat3.create(),
-            tempMat2x3
-          );
-        }
-        if (value.texCoordTransformMatrix) {
-          flags.push(`USE_${defineName}_TEX_COORD_TRANSFORM`);
-          materialUniforms[opts.uniform + "TexCoordTransform"] =
-            value.texCoordTransformMatrix;
-        }
-      } else if (value !== undefined || opts.default !== undefined) {
-        if (opts.type !== "boolean" || value) {
-          flags.push(defineName);
-        } else {
-          if (opts.fallback) {
-            flags.push(opts.fallback);
-          }
-        }
-        if (opts.uniform) {
-          materialUniforms[opts.uniform] =
-            value !== undefined ? value : opts.default;
-        }
-      } else if (opts.fallback) {
-        flags.push(opts.fallback);
-      }
-    }
-
-    let { vert, frag } = material;
-
-    vert ||= SHADERS.material.vert;
-    frag ||= options.depthPassOnly
-      ? SHADERS.depthPass.frag
-      : SHADERS.material.frag;
-
-    if (material.hooks) {
-      if (material.hooks.vert) {
-        for (let [hookName, hookCode] of Object.entries(material.hooks.vert)) {
-          const hook = `#define HOOK_VERT_${hookName}`;
-          vert = vert.replace(hook, hookCode);
-        }
-      }
-      if (material.hooks.frag) {
-        for (let [hookName, hookCode] of Object.entries(material.hooks.frag)) {
-          const hook = `#define HOOK_FRAG_${hookName}`;
-          frag = frag.replace(hook, hookCode);
-        }
-      }
-      if (material.hooks.uniforms) {
-        const hookUniforms = material.hooks.uniforms(entity, []);
-        Object.assign(materialUniforms, hookUniforms);
-      }
-    }
-
-    let debugRender = options.debugRender;
-    if (debugRender) {
-      let scale = "";
-      let pow = 1;
-      let mode = debugRender.toLowerCase();
-      if (mode.includes("normal")) {
-        scale = "*0.5 + 0.5";
-      }
-      if (mode.includes("texcoord")) {
-        debugRender = `vec3(${debugRender}, 0.0)`;
-      }
-      if (
-        mode.includes("ao") ||
-        mode.includes("normal") ||
-        mode.includes("metallic") ||
-        mode.includes("roughness")
-      ) {
-        pow = "2.2";
-      }
-      frag = frag.replace(
-        "gl_FragData[0] = encode(vec4(color, 1.0), uOutputEncoding);",
-        `gl_FragData[0] = vec4(pow(vec3(${debugRender}${scale}), vec3(${pow})), 1.0);`
-      );
-    }
-
-    return {
-      flags: flags
-        .flat()
-        .filter(Boolean)
-        .map((flag) => `#define ${flag}`),
-      vert,
-      frag,
-      materialUniforms,
-    };
-  }
-
-  function getExtensions() {
-    return ctx.capabilities.isWebGL2
-      ? ""
-      : /* glsl */ `
-#extension GL_OES_standard_derivatives : require
-${
-  ctx.capabilities.maxColorAttachments > 1
-    ? `#extension GL_EXT_draw_buffers : enable`
-    : ""
-}
-`;
-  }
-
-  function parseShader(string, options) {
-    // Unroll loop
-    const unrollLoopPattern =
-      /#pragma unroll_loop[\s]+?for \(int i = (\d+); i < (\d+|\D+); i\+\+\) \{([\s\S]+?)(?=\})\}/g;
-
-    string = string.replace(unrollLoopPattern, (match, start, end, snippet) => {
-      let unroll = "";
-
-      // Replace lights number
-      end = end
-        .replace(/NUM_AMBIENT_LIGHTS/g, options.ambientLights.length || 0)
-        .replace(
-          /NUM_DIRECTIONAL_LIGHTS/g,
-          options.directionalLights.length || 0
-        )
-        .replace(/NUM_POINT_LIGHTS/g, options.pointLights.length || 0)
-        .replace(/NUM_SPOT_LIGHTS/g, options.spotLights.length || 0)
-        .replace(/NUM_AREA_LIGHTS/g, options.areaLights.length || 0);
-
-      for (let i = Number.parseInt(start); i < Number.parseInt(end); i++) {
-        unroll += snippet.replace(/\[i\]/g, `[${i}]`);
-      }
-
-      return unroll;
-    });
-
-    return string;
-  }
-
   function getMaterialProgram(ctx, entity, options) {
     const { flags, vert, frag, materialUniforms } = getMaterialProgramAndFlags(
       ctx,
       entity,
       options
     );
-    const extensions = getExtensions();
-    const flagsStr = `${flags.join("\n")}\n`;
     entity._flags = flags;
-    const vertSrc = flagsStr + vert;
-    const fragSrc = extensions + flagsStr + frag;
-    if (options.debugRender) {
-      flags.push(options.debugRender);
-    }
-    let program = programCacheMap.getValue(flags, vert, frag);
-    try {
-      if (!program) {
-        console.debug("render-system", "New program", flags, entity);
-        program = buildProgram(
-          parseShader(
-            ctx.capabilities.isWebGL2 ? patchVS(vertSrc) : vertSrc,
-            options
-          ),
-          parseShader(
-            ctx.capabilities.isWebGL2 ? patchFS(fragSrc, 3) : fragSrc,
-            options
-          )
-        );
-        programCacheMap.setValue(flags, vert, frag, program);
+
+    const extensions = {};
+    if (!ctx.capabilities.isWebGL2) {
+      extensions.GL_OES_standard_derivatives = "require";
+      if (ctx.capabilities.maxColorAttachments > 1) {
+        extensions.GL_EXT_draw_buffers = "enable";
       }
-    } catch (e) {
-      console.error(e);
-      const errorInVertexShader = e.message.match(/Vertex/);
-      const lineNo = parseInt(e.message.match(/ERROR: ([\d]+):([\d]+)/)[2]);
-      const src = errorInVertexShader ? vertSrc : fragSrc;
-      const srcLines = src.split("\n").map((line, i) => {
-        if (i == lineNo - 1) return `--> ${line}`;
-        else return `      ${line}`;
-      });
-      console.warn(
-        "pex-renderer glsl error",
-        e.message,
-        srcLines
-          .slice(
-            Math.max(lineNo - 5, 0),
-            Math.min(lineNo + 5, srcLines.length - 1)
-          )
-          .join("\n")
-      );
-      // console.log(vert);
-      // console.log(frag);
+    }
+    const vertSrc = ShaderParser.parse(ctx, vert, {
+      stage: "vertex",
+      defines: flags,
+      ...options,
+    });
+    const fragSrc = ShaderParser.parse(ctx, frag, {
+      stage: "fragment",
+      extensions,
+      defines: flags,
+      ...options,
+    });
+    if (options.debugRender) flags.push(options.debugRender);
+
+    let program = programCacheMap.getValue(flags, vert, frag);
+    if (!program) {
+      try {
+        console.debug("render-system", "New program", flags, entity);
+        program = buildProgram(ctx, vertSrc, fragSrc);
+        programCacheMap.setValue(flags, vert, frag, program);
+      } catch (error) {
+        console.error(error);
+        console.warn(
+          "glsl error",
+          ShaderParser.getFormattedError(error, {
+            vert: vertSrc,
+            frag: fragSrc,
+          })
+        );
+      }
     }
     return { program, materialUniforms };
   }
@@ -770,4 +710,4 @@ ${
     update: () => {},
   };
   return standardRendererSystem;
-}
+};
