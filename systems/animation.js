@@ -1,5 +1,5 @@
 import { vec3, vec4, mat4, quat } from "pex-math";
-import { TEMP_QUAT, TMP_VEC3 } from "../utils.js";
+import { TEMP_QUAT, TEMP_VEC3 } from "../utils.js";
 
 function updateAnimation(animation, deltaTime) {
   if (!animation.prevTime) {
@@ -59,7 +59,7 @@ function updateAnimation(animation, deltaTime) {
           if (isRotation) {
             quat.set(TEMP_QUAT, outputData[prevIndex]);
           } else {
-            vec3.set(TMP_VEC3, outputData[prevIndex]);
+            vec3.set(TEMP_VEC3, outputData[prevIndex]);
           }
           break;
         case "CUBICSPLINE": {
@@ -102,7 +102,7 @@ function updateAnimation(animation, deltaTime) {
               ])
             );
           } else {
-            vec3.set(TMP_VEC3, vec3.add(vec3.add(vec3.add(p0, m0), p1), m1));
+            vec3.set(TEMP_VEC3, vec3.add(vec3.add(vec3.add(p0, m0), p1), m1));
           }
 
           break;
@@ -117,7 +117,7 @@ function updateAnimation(animation, deltaTime) {
             );
           } else {
             vec3.lerp(
-              vec3.set(TMP_VEC3, outputData[prevIndex]),
+              vec3.set(TEMP_VEC3, outputData[prevIndex]),
               outputData[nextIndex],
               t
             );
@@ -128,10 +128,10 @@ function updateAnimation(animation, deltaTime) {
         quat.set(channel.target.transform.rotation, TEMP_QUAT);
         channel.target.transform.dirty = true;
       } else if (channel.path === "translation") {
-        vec3.set(channel.target.transform.position, TMP_VEC3);
+        vec3.set(channel.target.transform.position, TEMP_VEC3);
         channel.target.transform.dirty = true;
       } else if (channel.path === "scale") {
-        vec3.set(channel.target.transform.scale, TMP_VEC3);
+        vec3.set(channel.target.transform.scale, TEMP_VEC3);
         channel.target.transform.dirty = true;
       } else if (channel.path === "weights") {
         channel.target.morph.weights = outputData[nextIndex].slice();
