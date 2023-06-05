@@ -1,8 +1,5 @@
 import { vec3, vec4, mat3, mat4, mat2x3 } from "pex-math";
-import {
-  pipeline as SHADERS,
-  chunks as SHADERS_CHUNKS,
-} from "./pex-shaders/index.js";
+import { pipeline as SHADERS } from "./pex-shaders/index.js";
 import * as AreaLightsData from "./area-light-data.js";
 import { patchVS, patchFS } from "../../utils.js";
 
@@ -145,9 +142,7 @@ export default function createStandardRendererSystem(opts) {
     [["geometry", "attributes", "aVertexColor"], "USE_VERTEX_COLORS"],
   ];
 
-  let frameCount = 0;
-
-  function getMaterialProgramAndFlags(ctx, entity, options = {}, State) {
+  function getMaterialProgramAndFlags(ctx, entity, options = {}) {
     const { _geometry: geometry, material } = entity;
 
     let flags = [
@@ -443,8 +438,8 @@ ${
         else return c;
       });
       sharedUniforms[`uDirectionalLights[${i}].castShadows`] = light.castShadows;
-      sharedUniforms[`uDirectionalLights[${i}].projectionMatrix`] = light._projectionMatrix || tempMat4; //FIXME
-      sharedUniforms[`uDirectionalLights[${i}].viewMatrix`] = light._viewMatrix || tempMat4; //FIXME;
+      sharedUniforms[`uDirectionalLights[${i}].projectionMatrix`] = light._projectionMatrix;
+      sharedUniforms[`uDirectionalLights[${i}].viewMatrix`] = light._viewMatrix;
       sharedUniforms[`uDirectionalLights[${i}].near`] = light._near || 0.1;
       sharedUniforms[`uDirectionalLights[${i}].far`] = light._far || 100;
       sharedUniforms[`uDirectionalLights[${i}].bias`] = light.bias || 0.1;
@@ -658,7 +653,7 @@ ${
         (transparent ? e.material.blend : !e.material.blend) //TODO: what is transparent?
     ); //hardcoded e.drawSegments
 
-    const opaqueEntities = renderableEntities.filter((e) => !e.material.blend);
+    // const opaqueEntities = renderableEntities.filter((e) => !e.material.blend);
     renderableEntities.forEach((renderableEntity) => {
       const {
         _geometry: geometry,

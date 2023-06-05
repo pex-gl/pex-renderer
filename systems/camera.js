@@ -128,7 +128,6 @@ export default () => ({
 
           let newPosition = null;
           let newTarget = null;
-          let newTarget2 = null;
 
           // check if camera moved without _orbiter intervention
           if (

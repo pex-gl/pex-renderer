@@ -1,3 +1,9 @@
+// Entity
+/**
+ * @typedef {object} Entity
+ * @property {number} id
+ */
+
 // Components
 /**
  * @typedef {object} AmbientLightComponentOptions
@@ -195,6 +201,19 @@
  * @property {number[]} [position=[0, 0, 0]]
  * @property {number[]} [rotation=[0, 0, 0, 1]]
  * @property {number[]} [scale=[1, 1, 1]]
+ */
+
+// System
+/**
+ * @callback SystemUpdate
+ * @param {Entity[]} entities
+ * @param {number} [deltaTime]
+ */
+/**
+ * @typedef {object} System
+ * @property {string} type
+ * @property {boolean} debug
+ * @property {SystemUpdate} update
  */
 
 export {};

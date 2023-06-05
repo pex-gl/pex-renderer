@@ -767,6 +767,7 @@ async function handleMesh({ primitives, weights }, gltf, ctx, options) {
   );
 }
 
+// eslint-disable-next-line no-unused-vars
 const formatLight = ({ type, name, color, ...rest }) => ({
   ...rest,
   color: [...(color || [1, 1, 1]), 1],
