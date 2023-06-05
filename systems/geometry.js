@@ -21,18 +21,14 @@ const vertexAttributeMap = {
 const vertexAttributeProps = Object.keys(vertexAttributeMap);
 const indicesProps = ["cells", "indices"];
 
-export default function createGeometrySystem(opts) {
-  const ctx = opts.ctx;
-  const geometrySystem = {
-    cache: {},
-    debug: false,
-  };
-
-  //TODO: should geometry components have their own id?
-  const updateGeometry = (id, geometry) => {
-    let cachedGeom = geometrySystem.cache[id];
+export default ({ ctx }) => ({
+  type: "geometry-system",
+  cache: {},
+  debug: false,
+  updateGeometry(id, geometry) {
+    let cachedGeom = this.cache[id];
     if (!cachedGeom) {
-      cachedGeom = geometrySystem.cache[id] = {
+      cachedGeom = this.cache[id] = {
         geometry: null,
         attributes: {
           // aPosition: ctx.vertexBuffer([[1, 1, 1]]),
@@ -41,7 +37,7 @@ export default function createGeometrySystem(opts) {
           // aVertexColor: ctx.vertexBuffer([[1, 1, 1, 1]]),
         },
       };
-      if (geometrySystem.debug)
+      if (this.debug)
         console.debug(
           "geometry-system",
           "update geometry cache",
@@ -55,7 +51,7 @@ export default function createGeometrySystem(opts) {
 
     // Cache properties
     if (geometryDirty) {
-      if (geometrySystem.debug) {
+      if (this.debug) {
         console.debug("geometry-system", "update geometry", id, geometry);
       }
       cachedGeom.geometry = geometry;
@@ -137,29 +133,25 @@ export default function createGeometrySystem(opts) {
         }
       }
     }
-  };
+  },
+  //TODO: should geometry components have their own id?
 
   //TODO: Use transducers
   //https://gist.github.com/craigdallimore/8b5b9d9e445bfa1e383c569e458c3e26
-
-  const update = (geometryEntities) => {
-    for (let geometryEntity of geometryEntities) {
-      try {
-        updateGeometry(geometryEntity.id, geometryEntity.geometry);
-        geometryEntity._geometry = geometrySystem.cache[geometryEntity.id];
-      } catch (e) {
-        geometryEntity.error = `Geometry system update failed due to "${e.message}"`;
-        console.error("Geometry update failed", e);
-        console.error("Geometry update failed", geometryEntity);
-        // renderIn.onTrigger = function () {};
+  update(entities) {
+    for (let i = 0; i < entities.length; i++) {
+      const entity = entities[i];
+      if (entity.geometry) {
+        try {
+          this.updateGeometry(entity.id, entity.geometry);
+          entity._geometry = this.cache[entity.id];
+        } catch (e) {
+          entity.error = `Geometry system update failed due to "${e.message}"`;
+          console.error("Geometry update failed", e);
+          console.error("Geometry update failed", entity);
+          // renderIn.onTrigger = function () {};
+        }
       }
     }
-  };
-
-  geometrySystem.update = (entities) => {
-    const geometryEntities = entities.filter((e) => e.geometry);
-    update(geometryEntities);
-  };
-
-  return geometrySystem;
-}
+  },
+});
