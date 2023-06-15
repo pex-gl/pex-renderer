@@ -2,6 +2,43 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+# [4.0.0-alpha.41](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.40...v4.0.0-alpha.41) (2023-06-15)
+
+
+### Bug Fixes
+
+* **ecs:** add all shadow maps for renderPass uses ([10aa2cb](https://github.com/pex-gl/pex-renderer/commit/10aa2cbafdf112c4b63b5394c8ce21959e4d862f))
+* **ecs:** add flags before patching for webgl2 in line renderer ([108c17c](https://github.com/pex-gl/pex-renderer/commit/108c17c4de064eb3807f2446f8f6d9ecd8881ae8))
+* **ecs:** add missing grid and helper components ([5281789](https://github.com/pex-gl/pex-renderer/commit/5281789fd139fafc7ed197f5a9d609d84c69ac28))
+* **ecs:** check for material type instead of drawSegments in basic renderer ([7b39949](https://github.com/pex-gl/pex-renderer/commit/7b399492bcbc3e0f45112ae742cd6b3f53a0b434))
+* **ecs:** handle camera update with no orbiter + handle ortho projection ([6dd016f](https://github.com/pex-gl/pex-renderer/commit/6dd016f90e36c70bfdf8d093cceb4667c82ec3e2))
+* **ecs:** only parse shader for new programs ([b0acc62](https://github.com/pex-gl/pex-renderer/commit/b0acc62fd81b50fee374105e0fc4aae368e22366))
+* **gltf:** orthographic camera bottom property ([d8c85d7](https://github.com/pex-gl/pex-renderer/commit/d8c85d7f81a3f9beb5e769acb0550c914330a8e1))
+
+
+### Features
+
+* add pex-shaders parser ([d861c4c](https://github.com/pex-gl/pex-renderer/commit/d861c4c120fbe159f4887d0b650099a772799247))
+* **ecs:** add custom shadow map size ([90a39cb](https://github.com/pex-gl/pex-renderer/commit/90a39cb5b751e67eb8390aacff0ccb2bbcaa81c8))
+* **ecs:** add shader parser to all renderers ([eca15fa](https://github.com/pex-gl/pex-renderer/commit/eca15fa6b683f93704bc060c959873f11e998627))
+* **ecs:** add support for dirty flag on geometry attributes ([13ed415](https://github.com/pex-gl/pex-renderer/commit/13ed4154a4c7bf97fb00f7161f466415ae643022)), closes [#334](https://github.com/pex-gl/pex-renderer/issues/334)
+* **ecs:** clean up helper renderer ([36d3860](https://github.com/pex-gl/pex-renderer/commit/36d3860bbdcd07658425f57b9b3e67581c0b54a1))
+* **ecs:** clean up skybox renderer system ([36284bd](https://github.com/pex-gl/pex-renderer/commit/36284bd3997ec9e13241c20f873e60386f3fe55b))
+* **ecs:** clean up standard renderer system ([3cc779d](https://github.com/pex-gl/pex-renderer/commit/3cc779dcff281a5c60e073d20c3088597c8e2702))
+* **ecs:** cleanup render-pipeline pass calls ([836c4a6](https://github.com/pex-gl/pex-renderer/commit/836c4a62117c93c531789abd513f982b297123af))
+* **ecs:** optimise basic renderer ([194f52a](https://github.com/pex-gl/pex-renderer/commit/194f52a7222398bfd87ef4b0ba411f7a784786f5))
+* **ecs:** optimise line renderer ([fd244a1](https://github.com/pex-gl/pex-renderer/commit/fd244a1fbb7e456d0faae6ca4e619eb3ee7cc4e5))
+* **ecs:** optimise update shadow map light ([024ccd9](https://github.com/pex-gl/pex-renderer/commit/024ccd9668ea8ae5393ff6c37d6ba9e912ad6155))
+* **ecs:** use geometry attribtue dirty in morph ([406616b](https://github.com/pex-gl/pex-renderer/commit/406616bb1b0e69ad8f5984edc8de662654fdb933))
+* **pbr:** only require texture lod when needed ([66e141a](https://github.com/pex-gl/pex-renderer/commit/66e141a8c8b40f467898228d6d510010f5a0f604))
+
+
+### Performance Improvements
+
+* **ecs:** optimise scene bbox for light ([b14e5db](https://github.com/pex-gl/pex-renderer/commit/b14e5db586f08084cc167a6d633c40303820e1f9))
+
+
+
 # [4.0.0-alpha.40](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.39...v4.0.0-alpha.40) (2023-03-29)
 
 
