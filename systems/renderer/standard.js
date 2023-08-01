@@ -349,53 +349,43 @@ export default ({ ctx }) => {
       // vec4.multMat4(dir4, lightEntity._transform.modelMatrix);
       // vec3.set(dir, dir4);
 
-      let useNodeNodeOrientationLikeOldPexRenderer = true;
-      if (useNodeNodeOrientationLikeOldPexRenderer) {
-        const position = lightEntity._transform.worldPosition;
-        const target = [0, 0, 1, 0];
-        const up = [0, 1, 0];
-        vec4.multMat4(target, lightEntity._transform.modelMatrix);
-        vec3.add(target, position);
+      const position = lightEntity._transform.worldPosition;
+      const target = [0, 0, 1, 0];
+      const up = [0, 1, 0];
+      vec4.multMat4(target, lightEntity._transform.modelMatrix);
+      vec3.add(target, position);
 
-        vec3.set(dir, target);
-        vec3.sub(dir, position);
-        vec3.normalize(dir);
-        // vec4.multMat4(up, lightEntity._transform.modelMatrix);
-        if (!light._viewMatrix) {
-          light._viewMatrix = mat4.create();
-        }
-        mat4.lookAt(light._viewMatrix, position, target, up);
-      } else {
-        const position = lightEntity._transform.worldPosition;
-        const target = [0, 0, 0];
-        const up = [0, 1, 0, 0];
-        vec4.multMat4(up, lightEntity._transform.modelMatrix);
-        if (!light._viewMatrix) {
-          light._viewMatrix = mat4.create();
-        }
-        mat4.lookAt(light._viewMatrix, position, target, up);
+      vec3.set(dir, target);
+      vec3.sub(dir, position);
+      vec3.normalize(dir);
+      // vec4.multMat4(up, lightEntity._transform.modelMatrix);
+      if (!light._viewMatrix) {
+        light._viewMatrix = mat4.create();
       }
+      mat4.lookAt(light._viewMatrix, position, target, up);
 
-      // prettier-ignore
-      {
       sharedUniforms[`uDirectionalLights[${i}].direction`] = dir;
-      sharedUniforms[`uDirectionalLights[${i}].color`] = light.color.map((c, j) => {
-        if (j < 3)
-          return Math.pow(
-            c * light.intensity,
-            1.0 / 2.2
-          );
-        else return c;
-      });
-      sharedUniforms[`uDirectionalLights[${i}].castShadows`] = light.castShadows;
-      sharedUniforms[`uDirectionalLights[${i}].projectionMatrix`] = light._projectionMatrix;
+      sharedUniforms[`uDirectionalLights[${i}].color`] = light.color.map(
+        (c, j) => {
+          if (j < 3) return Math.pow(c * light.intensity, 1.0 / 2.2);
+          else return c;
+        }
+      );
+      sharedUniforms[`uDirectionalLights[${i}].castShadows`] =
+        light.castShadows;
+      sharedUniforms[`uDirectionalLights[${i}].projectionMatrix`] =
+        light._projectionMatrix;
       sharedUniforms[`uDirectionalLights[${i}].viewMatrix`] = light._viewMatrix;
       sharedUniforms[`uDirectionalLights[${i}].near`] = light._near || 0.1;
       sharedUniforms[`uDirectionalLights[${i}].far`] = light._far || 100;
       sharedUniforms[`uDirectionalLights[${i}].bias`] = light.bias || 0.1;
-      sharedUniforms[`uDirectionalLights[${i}].shadowMapSize`] = light.castShadows ? [light._shadowMap.width, light._shadowMap.height] : [0, 0];
-      sharedUniforms[`uDirectionalLightShadowMaps[${i}]`] = light.castShadows ? light._shadowMap : dummyTexture2D;
-      }
+      sharedUniforms[`uDirectionalLights[${i}].shadowMapSize`] =
+        light.castShadows
+          ? [light._shadowMap.width, light._shadowMap.height]
+          : [0, 0];
+      sharedUniforms[`uDirectionalLightShadowMaps[${i}]`] = light.castShadows
+        ? light._shadowMap
+        : dummyTexture2D;
     });
 
     spotLights.forEach((lightEntity, i) => {
