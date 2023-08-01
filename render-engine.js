@@ -10,6 +10,7 @@ export default function defaultEngine(opts) {
   const resourceCache = createResourceCache(ctx);
 
   const animationSys = systems.animation();
+  const skinSys = systems.skin();
   const geometrySys = systems.geometry({ ctx });
   const morphSys = systems.morph();
   const transformSys = systems.transform();
@@ -41,6 +42,7 @@ export default function defaultEngine(opts) {
   const renderEngine = {
     systems: [
       animationSys,
+      skinSys,
       geometrySys,
       morphSys,
       transformSys,
@@ -56,6 +58,7 @@ export default function defaultEngine(opts) {
     ],
     update: (entities, deltaTime) => {
       animationSys.update(entities, deltaTime);
+      skinSys.update(entities);
       geometrySys.update(entities);
       morphSys.update(entities);
       transformSys.update(entities);

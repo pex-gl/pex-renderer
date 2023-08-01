@@ -1,4 +1,4 @@
-import { vec3, vec4, mat4, quat } from "pex-math";
+import { vec3, vec4, quat } from "pex-math";
 import { TEMP_QUAT, TEMP_VEC3 } from "../utils.js";
 
 function updateAnimation(animation, deltaTime) {
@@ -140,23 +140,9 @@ function updateAnimation(animation, deltaTime) {
   }
 }
 
-function updateSkin(skin) {
-  for (let i = 0; i < skin.joints.length; i++) {
-    const joint = skin.joints[i];
-    const m = skin.jointMatrices[i];
-    mat4.identity(m);
-    if (joint._transform) {
-      const modelMatrix = joint._transform.modelMatrix;
-      mat4.mult(m, modelMatrix);
-      mat4.mult(m, skin.inverseBindMatrices[i]);
-    }
-  }
-}
-
 export default () => ({
   type: "animation-system",
   updateAnimation,
-  updateSkin,
   update(entities, deltaTime) {
     for (let i = 0; i < entities.length; i++) {
       const entity = entities[i];
@@ -168,8 +154,6 @@ export default () => ({
       } else if (entity.animation) {
         updateAnimation(entity.animation, deltaTime);
       }
-
-      if (entity.skin) updateSkin(entity.skin);
     }
   },
 });
