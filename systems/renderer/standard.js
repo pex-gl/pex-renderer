@@ -356,9 +356,9 @@ export default ({ ctx }) => {
       vec3.sub(dir, position);
       vec3.normalize(dir);
       // vec4.multMat4(up, lightEntity._transform.modelMatrix);
-      if (!light._viewMatrix) {
-        light._viewMatrix = mat4.create();
-      }
+      // TODO: light-system
+      light._projectionMatrix ??= mat4.create();
+      light._viewMatrix ??= mat4.create();
       mat4.lookAt(light._viewMatrix, position, target, up);
 
       sharedUniforms[`uDirectionalLights[${i}].direction`] = dir;
@@ -393,6 +393,10 @@ export default ({ ctx }) => {
       const dir = [0, 0, 0];
       vec4.multMat4(dir4, lightEntity._transform.modelMatrix);
       vec3.set(dir, dir4);
+
+      // TODO: light-system
+      light._projectionMatrix ??= mat4.create();
+      light._viewMatrix ??= mat4.create();
 
       sharedUniforms[`uSpotLights[${i}].position`] =
         lightEntity._transform.worldPosition;
