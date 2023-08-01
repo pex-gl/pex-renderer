@@ -326,20 +326,17 @@ export default ({ ctx }) => {
     return { program, materialUniforms };
   }
 
-  function gatherLightInfo({ entities, sharedUniforms, shadowMapping }) {
-    const ambientLights = shadowMapping
-      ? []
-      : entities.filter((e) => e.ambientLight);
-    const directionalLights = shadowMapping
-      ? []
-      : entities.filter((e) => e.directionalLight);
-    const pointLights = shadowMapping
-      ? []
-      : entities.filter((e) => e.pointLight);
-    const spotLights = shadowMapping ? [] : entities.filter((e) => e.spotLight);
-    const areaLights = shadowMapping ? [] : entities.filter((e) => e.areaLight);
+  function gatherLightInfo({ entities, sharedUniforms }) {
+    // TODO: reduce
+    const ambientLights = entities.filter((e) => e.ambientLight);
+    const directionalLights = entities.filter((e) => e.directionalLight);
+    const pointLights = entities.filter((e) => e.pointLight);
+    const spotLights = entities.filter((e) => e.spotLight);
+    const areaLights = entities.filter((e) => e.areaLight);
 
-    directionalLights.forEach((lightEntity, i) => {
+    for (let i = 0; i < directionalLights.length; i++) {
+      const lightEntity = directionalLights[i];
+
       const light = lightEntity.directionalLight;
       // const dir4 = [0, 0, 0]; // TODO: GC
       // const dir = [0, 0, 0];
@@ -386,9 +383,10 @@ export default ({ ctx }) => {
       sharedUniforms[`uDirectionalLightShadowMaps[${i}]`] = light.castShadows
         ? light._shadowMap
         : dummyTexture2D;
-    });
+    }
 
-    spotLights.forEach((lightEntity, i) => {
+    for (let i = 0; i < spotLights.length; i++) {
+      const lightEntity = spotLights[i];
       const light = lightEntity.spotLight;
 
       const dir4 = [0, 0, 1, 0]; // TODO: GC
@@ -419,9 +417,10 @@ export default ({ ctx }) => {
       sharedUniforms[`uSpotLightShadowMaps[${i}]`] = light.castShadows
         ? light._shadowMap
         : dummyTexture2D;
-    });
+    }
 
-    pointLights.forEach((lightEntity, i) => {
+    for (let i = 0; i < pointLights.length; i++) {
+      const lightEntity = pointLights[i];
       const light = lightEntity.pointLight;
       sharedUniforms[`uPointLights[${i}].position`] =
         lightEntity._transform.worldPosition;
@@ -434,7 +433,7 @@ export default ({ ctx }) => {
       sharedUniforms[`uPointLightShadowMaps[${i}]`] = light.castShadows
         ? light._shadowCubemap
         : dummyTextureCube;
-    });
+    }
 
     // TODO: dispose if no areaLights
     if (areaLights.length) {
@@ -458,7 +457,8 @@ export default ({ ctx }) => {
       });
     }
 
-    areaLights.forEach((lightEntity, i) => {
+    for (let i = 0; i < areaLights.length; i++) {
+      const lightEntity = areaLights[i];
       const light = lightEntity.areaLight;
       sharedUniforms.ltc_mat = ltc_mat;
       sharedUniforms.ltc_mag = ltc_mag;
@@ -473,13 +473,14 @@ export default ({ ctx }) => {
         lightEntity.transform.scale[0] / 2,
         lightEntity.transform.scale[1] / 2,
       ];
-    });
+    }
 
-    ambientLights.forEach((lightEntity, i) => {
+    for (let i = 0; i < ambientLights.length; i++) {
+      const lightEntity = ambientLights[i];
       const color = [...lightEntity.ambientLight.color];
       color[3] = lightEntity.ambientLight.intensity;
       sharedUniforms[`uAmbientLights[${i}].color`] = color;
-    });
+    }
   }
 
   const pipelineMaterialDefaults = {
@@ -528,14 +529,8 @@ export default ({ ctx }) => {
     return { pipeline, materialUniforms };
   }
 
-  function gatherReflectionProbeInfo({
-    entities,
-    sharedUniforms,
-    shadowMapping,
-  }) {
-    const reflectionProbes = shadowMapping
-      ? []
-      : entities.filter((e) => e.reflectionProbe);
+  function gatherReflectionProbeInfo({ entities, sharedUniforms }) {
+    const reflectionProbes = entities.filter((e) => e.reflectionProbe);
     if (reflectionProbes.length > 0) {
       // && reflectionProbes[0]._reflectionMap) {
       sharedUniforms.uReflectionMap =
@@ -562,12 +557,14 @@ export default ({ ctx }) => {
       uScreenSize: [renderView.viewport[2], renderView.viewport[3]],
     };
 
-    gatherLightInfo({ entities, sharedUniforms, shadowMapping });
-    gatherReflectionProbeInfo({
-      entities,
-      sharedUniforms,
-      shadowMapping,
-    });
+    if (!shadowMapping) {
+      gatherLightInfo({ entities, sharedUniforms });
+      gatherReflectionProbeInfo({
+        entities,
+        sharedUniforms,
+        shadowMapping,
+      });
+    }
 
     if (shadowMappingLight) {
       sharedUniforms.uProjectionMatrix = shadowMappingLight._projectionMatrix;
@@ -594,7 +591,8 @@ export default ({ ctx }) => {
     ); //hardcoded e.drawSegments
 
     // const opaqueEntities = renderableEntities.filter((e) => !e.material.blend);
-    renderableEntities.forEach((renderableEntity) => {
+    for (let i = 0; i < renderableEntities.length; i++) {
+      const renderableEntity = renderableEntities[i];
       const {
         _geometry: geometry,
         _transform: transform,
@@ -688,7 +686,7 @@ export default ({ ctx }) => {
         cmd.multiDraw = renderableEntity.geometry.multiDraw;
       }
       ctx.submit(cmd);
-    });
+    }
   }
 
   const standardRendererSystem = {

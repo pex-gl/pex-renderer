@@ -17,9 +17,9 @@ export default function createWorld() {
         deltaTime = (now - prevTime) / 1000;
         prevTime = now;
       }
-      this.systems.forEach((system) => {
-        system.update(this.entities, deltaTime);
-      });
+      for (let i = 0; i < this.systems.length; i++) {
+        this.systems[i].update(this.entities, deltaTime);
+      }
     },
   };
   return world;

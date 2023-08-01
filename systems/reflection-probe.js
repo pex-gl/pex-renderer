@@ -282,11 +282,12 @@ class ReflectionProbe {
 
     const ctx = this._ctx;
 
-    this._dynamicCubemapSides.forEach((side) => {
+    for (let i = 0; i < this._dynamicCubemapSides.length; i++) {
+      const side = this._dynamicCubemapSides[i];
       ctx.submit(side.drawPassCmd, () =>
         drawScene(side, this._dynamicCubemap.encoding)
       );
-    });
+    }
 
     ctx.submit(this.cubemapToOctMapCmd, {
       uniforms: { uTextureSize: this.size },
@@ -417,13 +418,14 @@ export default ({ ctx }) => ({
             outputEncoding: encoding,
           };
           // should be only skybox renderers
-          renderers.forEach((renderer) => {
+          for (let i = 0; i < renderers.length; i++) {
+            const renderer = renderers[i];
             if (renderer.renderStages.background) {
               renderer.renderStages.background(renderView, skyboxEntities, {
                 renderingToReflectionProbe: true,
               });
             }
-          });
+          }
           if (skyboxEntities.length > 0) {
             // TODO: drawing skybox inside reflection probe
             // skyboxEntities[0]._skybox.draw(camera, {
