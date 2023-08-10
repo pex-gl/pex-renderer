@@ -10,7 +10,7 @@ import { CUBEMAP_SIDES, quad } from "../utils.js";
 
 const IRRADIANCE_OCT_MAP_SIZE = 64;
 
-const NUM_SAMPLES = 128;
+const NUM_SAMPLES = 1024; //TODO: it was 128, check on mobile if it doesn't hang at 1024
 const hammersleyPointSet = new Float32Array(4 * NUM_SAMPLES);
 for (let i = 0; i < NUM_SAMPLES; i++) {
   const p = hammersley(i, NUM_SAMPLES);

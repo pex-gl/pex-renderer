@@ -7,24 +7,33 @@ export default /* glsl */ `
   #define MAX_MIPMAP_LEVEL 5.0
 
   vec3 getPrefilteredReflection(vec3 reflected, float roughness) {
-    float lod = pow(roughness, 2.0) * MAX_MIPMAP_LEVEL; // TODO: verify reflection probe blurring code
-    // float lod = pow(roughness, 1.5) * MAX_MIPMAP_LEVEL;
+    float MIN_ROUGHNESS = 0.089; //TODO: this is defined elsewhere as well but lower down in frag src
+    float lod = (roughness - MIN_ROUGHNESS)/(1.0 - MIN_ROUGHNESS) * MAX_MIPMAP_LEVEL;
     float upLod = floor(lod);
     float downLod = ceil(lod);
 
     vec3 a = decode(texture2D(uReflectionMap, envMapOctahedral(reflected, 0.0, upLod, uReflectionMapSize)), uReflectionMapEncoding).rgb;
     vec3 b = decode(texture2D(uReflectionMap, envMapOctahedral(reflected, 0.0, downLod, uReflectionMapSize)), uReflectionMapEncoding).rgb;
 
-    return mix(a, b, lod - upLod);
+    float sampleLod = lod - upLod;
+    return mix(a, b, sampleLod);
   }
 
-  vec3 EnvBRDFApprox( vec3 specularColor, float roughness, float NoV ) {
+  vec3 EnvBRDFApprox( vec3 specularColor, float roughness, float NoV, out float fabx, out float faby ) {
     const vec4 c0 = vec4(-1.0, -0.0275, -0.572, 0.022 );
     const vec4 c1 = vec4( 1.0, 0.0425, 1.04, -0.04 );
     vec4 r = roughness * c0 + c1;
     float a004 = min( r.x * r.x, exp2( -9.28 * NoV ) ) * r.x + r.y;
     vec2 AB = vec2( -1.04, 1.04 ) * a004 + r.zw;
+    fabx = AB.x;
+    faby = AB.y;
     return specularColor * AB.x + AB.y;
+  }
+
+  vec3 EnvBRDFApprox( vec3 specularColor, float roughness, float NoV) {
+    float x;
+    float y;
+    return EnvBRDFApprox(specularColor, roughness, NoV, x, y);
   }
 
   #if defined(USE_CLEAR_COAT)
@@ -53,7 +62,9 @@ export default /* glsl */ `
     vec3 diffuseIrradiance = getIrradiance(data.normalWorld, uReflectionMap, uReflectionMapSize, uReflectionMapEncoding);
     vec3 Fd = data.diffuseColor * diffuseIrradiance * ao;
 
-    vec3 specularReflectance = EnvBRDFApprox(data.f0, data.roughness, data.NdotV);
+    float f_abx = 0.0;
+    float f_aby = 0.0;
+    vec3 specularReflectance = EnvBRDFApprox(data.f0, data.roughness, data.NdotV, f_abx, f_aby);
     vec3 prefilteredRadiance = getPrefilteredReflection(data.reflectionWorld, data.roughness);
 
     vec3 Fr = specularReflectance * prefilteredRadiance * ao;
@@ -66,13 +77,33 @@ export default /* glsl */ `
     vec3 Fs = vec3(0.0);
     data.sheen += Fs;
 
+
+
+    // Roughness dependent fresnel, from Fdez-Aguera
+    vec3 Fr2 = max(vec3(1.0 - data.roughness), data.f0) - data.f0;
+
+    // k_S = F0 + Fr * pow(1.0 - NoV, 5.0);
+    vec3 k_S = data.f0 + Fr2 * pow(1.0 - data.NdotV, 5.0);
+
+
+    vec3 FssEss = k_S * f_abx + f_aby;
+
+    // https://bruop.github.io/ibl/
+    // Multiple scattering, from Fdez-Aguera
+    float Ems = (1.0 - (f_abx + f_aby));
+    vec3 F_avg = data.f0 + (1.0 - data.f0) / 21.0;
+    vec3 FmsEms = Ems * FssEss * F_avg / (1.0 - F_avg * Ems);
+    vec3 k_D = data.diffuseColor * (1.0 - FssEss - FmsEms);
+    vec3 color = FssEss * prefilteredRadiance + (FmsEms + k_D) * diffuseIrradiance;
+
     #ifdef USE_CLEAR_COAT
       evaluateClearCoatIBL(data, ao, Fd, Fr);
     #endif
 
-    data.indirectDiffuse += Fd;
-    data.indirectSpecular += Fr;
-    data.indirectSpecular += Fs;
+    data.indirectSpecular += color;
+    // data.indirectDiffuse += Fd;
+    // data.indirectDiffuse += Fr;
+    data.indirectSpecular += Fs; //multiscattering here?
   }
 #endif
 `;
