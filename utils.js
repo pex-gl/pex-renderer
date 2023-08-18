@@ -1,11 +1,13 @@
 import { aabb } from "pex-geom";
-import { mat2x3, mat4, quat, vec3 } from "pex-math";
+import { mat2x3, mat4, quat, vec3, vec4 } from "pex-math";
 
 export const TEMP_VEC3 = vec3.create();
+export const TEMP_VEC4 = vec4.create();
 export const TEMP_QUAT = quat.create();
 export const TEMP_MAT4 = mat4.create();
 export const TEMP_AABB = aabb.create();
 export const TEMP_MAT2X3 = mat2x3.create();
+export const Y_UP = Object.freeze([0, 1, 0]);
 
 // prettier-ignore
 export const quad = {

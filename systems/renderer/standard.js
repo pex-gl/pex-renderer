@@ -338,30 +338,8 @@ export default ({ ctx }) => {
       const lightEntity = directionalLights[i];
 
       const light = lightEntity.directionalLight;
-      // const dir4 = [0, 0, 0]; // TODO: GC
-      // const dir = [0, 0, 0];
-      const dir = [...lightEntity._transform.worldPosition];
-      vec3.scale(dir, -1);
-      vec3.normalize(dir);
-      // vec4.multMat4(dir4, lightEntity._transform.modelMatrix);
-      // vec3.set(dir, dir4);
 
-      const position = lightEntity._transform.worldPosition;
-      const target = [0, 0, 1, 0];
-      const up = [0, 1, 0];
-      vec4.multMat4(target, lightEntity._transform.modelMatrix);
-      vec3.add(target, position);
-
-      vec3.set(dir, target);
-      vec3.sub(dir, position);
-      vec3.normalize(dir);
-      // vec4.multMat4(up, lightEntity._transform.modelMatrix);
-      // TODO: light-system
-      light._projectionMatrix ??= mat4.create();
-      light._viewMatrix ??= mat4.create();
-      mat4.lookAt(light._viewMatrix, position, target, up);
-
-      sharedUniforms[`uDirectionalLights[${i}].direction`] = dir;
+      sharedUniforms[`uDirectionalLights[${i}].direction`] = light._direction;
       sharedUniforms[`uDirectionalLights[${i}].color`] = light.color.map(
         (c, j) => {
           if (j < 3) return Math.pow(c * light.intensity, 1.0 / 2.2);
@@ -389,18 +367,9 @@ export default ({ ctx }) => {
       const lightEntity = spotLights[i];
       const light = lightEntity.spotLight;
 
-      const dir4 = [0, 0, 1, 0]; // TODO: GC
-      const dir = [0, 0, 0];
-      vec4.multMat4(dir4, lightEntity._transform.modelMatrix);
-      vec3.set(dir, dir4);
-
-      // TODO: light-system
-      light._projectionMatrix ??= mat4.create();
-      light._viewMatrix ??= mat4.create();
-
       sharedUniforms[`uSpotLights[${i}].position`] =
         lightEntity._transform.worldPosition;
-      sharedUniforms[`uSpotLights[${i}].direction`] = dir;
+      sharedUniforms[`uSpotLights[${i}].direction`] = light._direction;
       sharedUniforms[`uSpotLights[${i}].color`] = light.color.map((c, j) => {
         if (j < 3) return Math.pow(c * light.intensity, 1.0 / 2.2);
         else return c;

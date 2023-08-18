@@ -99,17 +99,7 @@ export default ({
     renderers
   ) {
     const light = lightEntity.directionalLight;
-    light._viewMatrix ??= mat4.create();
-    light._projectionMatrix ??= mat4.create();
     light._sceneBboxInLightSpace ??= aabb.create();
-
-    // const position = lightEntity._transform.worldPosition;
-    // const target = [0, 0, 1, 0];
-    // const up = [0, 1, 0, 0];
-    // vec4.multMat4(target, lightEntity._transform.modelMatrix);
-    // vec3.add(target, position);
-    // vec4.multMat4(up, lightEntity._transform.modelMatrix);
-    // mat4.lookAt(light._viewMatrix, position, target, up);
 
     aabb.empty(light._sceneBboxInLightSpace);
     aabb.fromPoints(
@@ -211,16 +201,7 @@ export default ({
     renderers
   ) {
     const light = lightEntity.spotLight;
-    light._viewMatrix ??= mat4.create();
-    light._projectionMatrix ??= mat4.create();
     light._sceneBboxInLightSpace ??= aabb.create();
-
-    const position = lightEntity._transform.worldPosition;
-    const target = [0, 0, 1, 0];
-    const up = [0, 1, 0, 0];
-    vec4.multMat4(target, lightEntity._transform.modelMatrix);
-    vec4.multMat4(up, lightEntity._transform.modelMatrix);
-    mat4.lookAt(light._viewMatrix, position, target, up);
 
     aabb.empty(light._sceneBboxInLightSpace);
     aabb.fromPoints(

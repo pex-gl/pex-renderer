@@ -18,6 +18,7 @@ export default function defaultEngine(opts) {
   const cameraSys = systems.camera();
   const skyboxSys = systems.skybox({ ctx });
   const reflectionProbeSys = systems.reflectionProbe({ ctx });
+  const lightSystem = systems.light();
   const renderPipelineSys = systems.renderPipeline({
     ctx,
     resourceCache,
@@ -99,6 +100,8 @@ export default function defaultEngine(opts) {
           reflectionProbeSys.update(entitiesForCamera, {
             renderers: [skyboxRendererSys],
           });
+
+          lightSystem.update(entitiesForCamera);
 
           const framebufferTextures = renderPipelineSys.update(
             entitiesForCamera,

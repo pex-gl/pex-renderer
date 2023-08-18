@@ -277,6 +277,7 @@ const geometrySys = systems.geometry({ ctx });
 const transformSys = systems.transform();
 const cameraSys = systems.camera();
 const skyboxSys = systems.skybox({ ctx });
+const lightSys = systems.light();
 const reflectionProbeSys = systems.reflectionProbe({ ctx });
 const renderPipelineSys = systems.renderPipeline({
   ctx,
@@ -386,6 +387,7 @@ ctx.frame(() => {
   geometrySys.update(entities);
   transformSys.update(entities);
   skyboxSys.update(entities);
+  lightSys.update(entities);
   reflectionProbeSys.update(entities);
 
   //draw left/bottom side

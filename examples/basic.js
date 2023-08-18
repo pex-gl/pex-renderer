@@ -102,6 +102,7 @@ const transformSystem = systems.transform();
 const cameraSystem = systems.camera();
 const skyboxSystem = systems.skybox({ ctx });
 const reflectionProbeSystem = systems.reflectionProbe({ ctx });
+const lightSystem = systems.light();
 const renderPipelineSystem = systems.renderPipeline({
   ctx,
   resourceCache,
@@ -164,6 +165,7 @@ ctx.frame(() => {
     reflectionProbeSystem.update(world.entities, {
       renderers: [skyboxRendererSystem],
     });
+    lightSystem.update(world.entities);
     cameraSystem.update(world.entities);
     renderPipelineSystem.update(world.entities, {
       renderers: [standardRendererSystem, skyboxRendererSystem],
