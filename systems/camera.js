@@ -42,10 +42,23 @@ function updateCamera(camera, transform) {
 
 export default () => ({
   type: "camera-system",
+  updateCamera,
+  checkCamera(_, cameraEntity) {
+    if (!cameraEntity.transform) {
+      console.warn(
+        `"${this.type}" camera entity missing transform. Add a transformSystem.update(entities).`
+      );
+    } else {
+      return true;
+    }
+  },
   update(entities) {
     for (let i = 0; i < entities.length; i++) {
       const entity = entities[i];
+
       if (entity.camera && entity.orbiter) {
+        if (!this.checkCamera(null, entity)) continue;
+
         const orbiter = entity.orbiter;
         const camera = entity.camera;
 
@@ -208,6 +221,8 @@ export default () => ({
           mat4.invert(camera.viewMatrix);
         }
       } else if (entity.camera) {
+        if (!this.checkCamera(null, entity)) continue;
+
         // Camera manually updated or animation
         if (entity.camera.dirty) {
           entity.camera.dirty = false;

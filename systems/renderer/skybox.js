@@ -57,6 +57,24 @@ export default ({ ctx }) => {
 
   const skyboxRendererSystem = {
     type: "skybox-renderer",
+    checkReflectionProbe(reflectionProbe) {
+      if (!reflectionProbe._reflectionProbe?._reflectionMap) {
+        console.warn(
+          `"${this.type}": reflectionProbe component missing _reflectionProbe. Add a reflectionProbeSystem.update(entities, { renderers: [skyboxRendererSystem] }).`
+        );
+      } else {
+        return true;
+      }
+    },
+    checkSkybox(skybox) {
+      if (!(skybox.envMap || skybox._skyTexture)) {
+        console.warn(
+          `"${this.type}": skybox component missing texture. Provide a "envMap" or add a skyboxSystem.update(world.entities).`
+        );
+      } else {
+        return true;
+      }
+    },
     render(
       renderView,
       entity,
@@ -78,14 +96,22 @@ export default ({ ctx }) => {
       // - this.backgroundTexture
       // - this._reflectionProbe._reflectionMap
 
-      let texture = entity.skybox.envMap || entity.skybox._skyTexture;
+      let texture;
 
       if (
         !renderingToReflectionProbe &&
         backgroundBlur &&
         reflectionProbeEntity
       ) {
-        texture = reflectionProbeEntity._reflectionProbe._reflectionMap;
+        if (this.checkReflectionProbe(reflectionProbeEntity)) {
+          texture = reflectionProbeEntity._reflectionProbe._reflectionMap;
+        } else {
+          return;
+        }
+      } else if (this.checkSkybox(entity.skybox)) {
+        texture = entity.skybox.envMap || entity.skybox._skyTexture;
+      } else {
+        return;
       }
 
       // TODO: rename, for oct map. Why * 2 ? Cause it is oct map atlas?

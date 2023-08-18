@@ -338,6 +338,7 @@ export default ({ ctx }) => {
       const lightEntity = directionalLights[i];
 
       const light = lightEntity.directionalLight;
+      standardRendererSystem.checkLight(light);
 
       sharedUniforms[`uDirectionalLights[${i}].direction`] = light._direction;
       sharedUniforms[`uDirectionalLights[${i}].color`] = light.color.map(
@@ -355,7 +356,7 @@ export default ({ ctx }) => {
       sharedUniforms[`uDirectionalLights[${i}].far`] = light._far || 100;
       sharedUniforms[`uDirectionalLights[${i}].bias`] = light.bias || 0.1;
       sharedUniforms[`uDirectionalLights[${i}].shadowMapSize`] =
-        light.castShadows
+        light.castShadows && light._shadowMap
           ? [light._shadowMap.width, light._shadowMap.height]
           : [0, 0];
       sharedUniforms[`uDirectionalLightShadowMaps[${i}]`] = light.castShadows
@@ -366,6 +367,7 @@ export default ({ ctx }) => {
     for (let i = 0; i < spotLights.length; i++) {
       const lightEntity = spotLights[i];
       const light = lightEntity.spotLight;
+      standardRendererSystem.checkLight(light);
 
       sharedUniforms[`uSpotLights[${i}].position`] =
         lightEntity._transform.worldPosition;
@@ -387,14 +389,17 @@ export default ({ ctx }) => {
       sharedUniforms[`uSpotLights[${i}].shadowMapSize`] = light.castShadows
         ? [light._shadowMap.width, light._shadowMap.height]
         : [0, 0];
-      sharedUniforms[`uSpotLightShadowMaps[${i}]`] = light.castShadows
-        ? light._shadowMap
-        : dummyTexture2D;
+      sharedUniforms[`uSpotLightShadowMaps[${i}]`] =
+        light.castShadows && light._shadowMap
+          ? light._shadowMap
+          : dummyTexture2D;
     }
 
     for (let i = 0; i < pointLights.length; i++) {
       const lightEntity = pointLights[i];
       const light = lightEntity.pointLight;
+      standardRendererSystem.checkLight(light);
+
       sharedUniforms[`uPointLights[${i}].position`] =
         lightEntity._transform.worldPosition;
       sharedUniforms[`uPointLights[${i}].color`] = light.color.map((c, j) => {
@@ -403,9 +408,10 @@ export default ({ ctx }) => {
       });
       sharedUniforms[`uPointLights[${i}].range`] = light.range;
       sharedUniforms[`uPointLights[${i}].castShadows`] = light.castShadows;
-      sharedUniforms[`uPointLightShadowMaps[${i}]`] = light.castShadows
-        ? light._shadowCubemap
-        : dummyTextureCube;
+      sharedUniforms[`uPointLightShadowMaps[${i}]`] =
+        light.castShadows && light._shadowCubemap
+          ? light._shadowCubemap
+          : dummyTextureCube;
     }
 
     // TODO: dispose if no areaLights
@@ -504,7 +510,10 @@ export default ({ ctx }) => {
 
   function gatherReflectionProbeInfo({ entities, sharedUniforms }) {
     const reflectionProbes = entities.filter((e) => e.reflectionProbe);
-    if (reflectionProbes.length > 0) {
+    if (
+      reflectionProbes.length > 0 &&
+      standardRendererSystem.checkReflectionProbe(reflectionProbes[0])
+    ) {
       // && reflectionProbes[0]._reflectionMap) {
       sharedUniforms.uReflectionMap =
         reflectionProbes[0]._reflectionProbe._reflectionMap;
@@ -572,6 +581,10 @@ export default ({ ctx }) => {
         material,
         skin,
       } = renderableEntity;
+
+      if (!standardRendererSystem.checkRenderableEntity(renderableEntity))
+        continue;
+
       const cachedUniforms = {};
       cachedUniforms.uModelMatrix = transform.modelMatrix; //FIXME: bypasses need for transformSystem access
       cachedUniforms.uNormalScale = 1; // TODO: uniform
@@ -665,6 +678,37 @@ export default ({ ctx }) => {
   const standardRendererSystem = {
     type: "standard-renderer",
     debugRender: "",
+    checkLight(light) {
+      if (light.castShadows && !(light._shadowMap || light._shadowCubemap)) {
+        console.warn(
+          `"${this.type}": light component missing shadowMap. Add a renderPipeplineSystem.update(entities).`
+        );
+      } else {
+        return true;
+      }
+    },
+    checkReflectionProbe(reflectionProbe) {
+      if (!reflectionProbe._reflectionProbe?._reflectionMap) {
+        console.warn(
+          `"${this.type}": reflectionProbe component missing _reflectionProbe. Add a reflectionProbeSystem.update(entities, { renderers: [skyboxRendererSystem] }).`
+        );
+      } else {
+        return true;
+      }
+    },
+    checkRenderableEntity(entity) {
+      if (!entity._geometry) {
+        console.warn(
+          `"${this.type}": entity missing _geometry. Add a geometrySystem.update(entities).`
+        );
+      } else if (!entity._transform) {
+        console.warn(
+          `"${this.type}": entity missing _transform. Add a transformSystem.update(entities).`
+        );
+      } else {
+        return true;
+      }
+    },
     renderStages: {
       shadow: (renderView, entitites, opts = {}) => {
         render(renderView, entitites, opts);

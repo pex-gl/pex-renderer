@@ -381,6 +381,20 @@ export default ({
     // });
   },
 
+  checkLight(light, lightEntity) {
+    if (!lightEntity._transform) {
+      console.warn(
+        `"${this.type}" light entity missing transform. Add a transformSystem.update(entities).`
+      );
+    } else if (!light._projectionMatrix) {
+      console.warn(
+        `"${this.type}" light component missing matrices. Add a lightSystem.update(entities).`
+      );
+    } else {
+      return true;
+    }
+  },
+
   update(entities, options = {}) {
     let { renderView, renderers, drawToScreen } = options;
 
@@ -405,7 +419,10 @@ export default ({
       const entity = directionalLightEntities[i];
 
       // options.shadowPass !== false // FIXME: why this was here?
-      if (entity.directionalLight.castShadows) {
+      if (
+        entity.directionalLight.castShadows &&
+        this.checkLight(entity.directionalLight, entity)
+      ) {
         this.updateDirectionalLightShadowMap(
           entity,
           entities,
@@ -418,7 +435,10 @@ export default ({
     for (let i = 0; i < pointLightEntities.length; i++) {
       const entity = pointLightEntities[i];
 
-      if (entity.pointLight.castShadows) {
+      if (
+        entity.pointLight.castShadows &&
+        this.checkLight(entity.pointLight, entity)
+      ) {
         this.updatePointLightShadowMap(
           entity,
           entities,
@@ -431,7 +451,10 @@ export default ({
     for (let i = 0; i < spotLightEntities.length; i++) {
       const entity = spotLightEntities[i];
 
-      if (entity.spotLight.castShadows) {
+      if (
+        entity.spotLight.castShadows &&
+        this.checkLight(entity.spotLight, entity)
+      ) {
         this.updateSpotLightShadowMap(
           entity,
           entities,
