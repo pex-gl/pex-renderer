@@ -44,7 +44,7 @@ export default ({ ctx }) => {
       for (let i = 0; i < entities.length; i++) {
         const entity = entities[i];
 
-        if (entity.skybox) {
+        if (entity.skybox && !entity.skybox.envMap) {
           let needsUpdate = false;
           let cachedProps = this.cache[entity.id];
           if (!cachedProps) {
