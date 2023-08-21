@@ -1,7 +1,7 @@
 {
   "name": "pex-renderer",
   "version": "4.0.0-alpha.41",
-  "description": "Physically based renderer (PBR) and scene graph for PEX.",
+  "description": "Physically Based Renderer (PBR) and scene graph designed as ECS for PEX: define entities to be rendered as collections of components with their update orchestrated by systems.",
   "keywords": [
     "pex",
     "renderer",

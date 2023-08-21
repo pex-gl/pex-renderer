@@ -7,6 +7,7 @@
  */
 export default (options) => ({
   backgroundBlur: false,
+  // sunPosition,
   // envMap,
   // rgbm: false,
   ...options,

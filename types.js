@@ -215,5 +215,63 @@
  * @property {boolean} debug
  * @property {SystemUpdate} update
  */
+/**
+ * @typedef RenderEngineOptions
+ * @property {number} width
+ * @property {number} height
+ * @property {System[]} renderers
+ * @property {boolean} drawToScreen
+ */
+/**
+ * @callback RenderEngineRender
+ * @param {Entity[]} entities
+ * @param {Entity[]} cameraEntities
+ * @param {RenderEngineOptions} [options={}]
+ */
+/**
+ * @typedef {System} RenderEngine
+ * @property {RenderEngineRender} render
+ */
+
+// World
+/**
+ * @callback WorldAdd
+ * @param {Entity} entity
+ */
+/**
+ * @callback WorldAddSystem
+ * @param {System} system
+ */
+/**
+ * @callback WorldUpdate
+ * @param {number} [deltaTime]
+ */
+/**
+ * @typedef {object} World
+ * @property {object[]} entities
+ * @property {object[]} systems
+ * @property {WorldAdd} add
+ * @property {WorldAddSystem} addSystem
+ * @property {WorldUpdate} update
+ */
+
+// Others
+/**
+ * @typedef {object} RenderGraph
+ * @property {object[]} renderPasses
+ * @property {Function} beginFrame
+ * @property {Function} renderPass
+ * @property {Function} endFrame
+ */
+/**
+ * @typedef {"Transient" | "Retained"} ResourceCacheUsage
+ */
+/**
+ * @typedef {object} ResourceCache
+ * @property {Function} beginFrame
+ * @property {Function} endFrame
+ * @property {Function} dispose
+ * @property {ResourceCacheUsage} Usage
+ */
 
 export {};

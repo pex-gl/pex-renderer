@@ -10,7 +10,7 @@
 [![linted with eslint](https://img.shields.io/badge/linted_with-ES_Lint-4B32C3.svg?logo=eslint)](https://github.com/eslint/eslint)
 [![license](https://img.shields.io/github/license/pex-gl/pex-renderer)](https://github.com/pex-gl/pex-renderer/blob/main/LICENSE.md)
 
-Physically based renderer (PBR) and scene graph for [PEX](https://pex.gl).
+Physically Based Renderer (PBR) and scene graph designed as ECS for [PEX](https://pex.gl): define entities to be rendered as collections of components with their update orchestrated by systems.
 
 ![](https://raw.githubusercontent.com/pex-gl/pex-renderer/main/screenshot.jpg)
 
@@ -23,9 +23,58 @@ npm install pex-renderer
 ## Usage
 
 ```js
-import pexRenderer from "pex-renderer";
-console.log(pexRenderer);
+import {
+  renderEngine as createRenderEngine,
+  world as createWorld,
+  entity as createEntity,
+  components,
+} from "pex-renderer";
+
+import createContext from "pex-context";
+import { sphere } from "primitive-geometry";
+
+const ctx = createContext({ pixelRatio: devicePixelRatio });
+const renderEngine = createRenderEngine({ ctx });
+
+const world = createWorld();
+
+const cameraEntity = createEntity({
+  transform: components.transform({ position: [0, 0, 3] }),
+  camera: components.camera(),
+  orbiter: components.orbiter(),
+});
+world.add(cameraEntity);
+
+const skyEntity = createEntity({
+  skybox: components.skybox({ sunPosition: [1, 0.5, 1] }),
+  reflectionProbe: components.reflectionProbe(),
+});
+world.add(skyEntity);
+
+const geometryEntity = createEntity({
+  transform: components.transform({ position: [0, 0, 0] }),
+  geometry: components.geometry(sphere()),
+  material: components.material({
+    baseColor: [1, 0, 0, 1],
+    metallic: 0,
+    roughness: 0.5,
+  }),
+});
+world.add(geometryEntity);
+
+ctx.frame(() => {
+  renderEngine.update(world.entities);
+  renderEngine.render(world.entities, cameraEntity);
+});
 ```
+
+## Architecture
+
+- components are **plain old data** objects
+- data lives in components or system caches
+- systems are functions
+- systems communicate through components
+- system order is maintained by the user
 
 ## API
 
@@ -100,6 +149,8 @@ console.log(pexRenderer);
 <dt><a href="#module_Entity">Entity</a> ⇒ <code><a href="#Entity">Entity</a></code></dt>
 <dd><p>Entity</p>
 </dd>
+<dt><a href="#module_pex-renderer">pex-renderer</a></dt>
+<dd></dd>
 </dl>
 
 ## Typedefs
@@ -154,6 +205,26 @@ console.log(pexRenderer);
 <dt><a href="#SystemUpdate">SystemUpdate</a> : <code>function</code></dt>
 <dd></dd>
 <dt><a href="#System">System</a> : <code>object</code></dt>
+<dd></dd>
+<dt><a href="#RenderEngineOptions">RenderEngineOptions</a></dt>
+<dd></dd>
+<dt><a href="#RenderEngineRender">RenderEngineRender</a> : <code>function</code></dt>
+<dd></dd>
+<dt><a href="#RenderEngine">RenderEngine</a> : <code><a href="#System">System</a></code></dt>
+<dd></dd>
+<dt><a href="#WorldAdd">WorldAdd</a> : <code>function</code></dt>
+<dd></dd>
+<dt><a href="#WorldAddSystem">WorldAddSystem</a> : <code>function</code></dt>
+<dd></dd>
+<dt><a href="#WorldUpdate">WorldUpdate</a> : <code>function</code></dt>
+<dd></dd>
+<dt><a href="#World">World</a> : <code>object</code></dt>
+<dd></dd>
+<dt><a href="#RenderGraph">RenderGraph</a> : <code>object</code></dt>
+<dd></dd>
+<dt><a href="#ResourceCacheUsage">ResourceCacheUsage</a> : <code>&quot;Transient&quot;</code> | <code>&quot;Retained&quot;</code></dt>
+<dd></dd>
+<dt><a href="#ResourceCache">ResourceCache</a> : <code>object</code></dt>
 <dd></dd>
 </dl>
 
@@ -376,6 +447,78 @@ Entity
 | Param        | Type                | Default         |
 | ------------ | ------------------- | --------------- |
 | [components] | <code>object</code> | <code>{}</code> |
+
+<a name="module_pex-renderer"></a>
+
+## pex-renderer
+
+- [pex-renderer](#module_pex-renderer)
+  - [.components](#module_pex-renderer.components) : <code>object</code>
+  - [.systems](#module_pex-renderer.systems) : <code>object</code>
+  - [.world()](#module_pex-renderer.world) ⇒ [<code>World</code>](#World)
+  - [.entity()](#module_pex-renderer.entity) ⇒ [<code>Entity</code>](#Entity)
+  - [.renderEngine()](#module_pex-renderer.renderEngine) ⇒ [<code>RenderEngine</code>](#RenderEngine)
+  - [.renderGraph(ctx)](#module_pex-renderer.renderGraph) ⇒ [<code>RenderGraph</code>](#RenderGraph)
+  - [.resourceCache(ctx)](#module_pex-renderer.resourceCache) ⇒ [<code>ResourceCache</code>](#ResourceCache)
+
+<a name="module_pex-renderer.components"></a>
+
+### pex-renderer.components : <code>object</code>
+
+All components as a function returning a component with default values.
+
+**Kind**: static property of [<code>pex-renderer</code>](#module_pex-renderer)
+<a name="module_pex-renderer.systems"></a>
+
+### pex-renderer.systems : <code>object</code>
+
+All systems as a function returning a system with a type property and an update function.
+
+**Kind**: static property of [<code>pex-renderer</code>](#module_pex-renderer)
+<a name="module_pex-renderer.world"></a>
+
+### pex-renderer.world() ⇒ [<code>World</code>](#World)
+
+Create a world object to store entities and systems
+
+**Kind**: static method of [<code>pex-renderer</code>](#module_pex-renderer)
+<a name="module_pex-renderer.entity"></a>
+
+### pex-renderer.entity() ⇒ [<code>Entity</code>](#Entity)
+
+Create an entity from an object of plain data components
+
+**Kind**: static method of [<code>pex-renderer</code>](#module_pex-renderer)
+<a name="module_pex-renderer.renderEngine"></a>
+
+### pex-renderer.renderEngine() ⇒ [<code>RenderEngine</code>](#RenderEngine)
+
+Create a render engine eg. a collection of systems for default rendering
+
+**Kind**: static method of [<code>pex-renderer</code>](#module_pex-renderer)
+<a name="module_pex-renderer.renderGraph"></a>
+
+### pex-renderer.renderGraph(ctx) ⇒ [<code>RenderGraph</code>](#RenderGraph)
+
+Create a render graph for rendering passes
+
+**Kind**: static method of [<code>pex-renderer</code>](#module_pex-renderer)
+
+| Param | Type                                           |
+| ----- | ---------------------------------------------- |
+| ctx   | <code>module:pex-context/types/index.js</code> |
+
+<a name="module_pex-renderer.resourceCache"></a>
+
+### pex-renderer.resourceCache(ctx) ⇒ [<code>ResourceCache</code>](#ResourceCache)
+
+Create a resource cache for pex-context caching.
+
+**Kind**: static method of [<code>pex-renderer</code>](#module_pex-renderer)
+
+| Param | Type                                           |
+| ----- | ---------------------------------------------- |
+| ctx   | <code>module:pex-context/types/index.js</code> |
 
 <a name="Entity"></a>
 
@@ -722,6 +865,121 @@ Entity
 | type   | <code>string</code>                        |
 | debug  | <code>boolean</code>                       |
 | update | [<code>SystemUpdate</code>](#SystemUpdate) |
+
+<a name="RenderEngineOptions"></a>
+
+## RenderEngineOptions
+
+**Kind**: global typedef
+**Properties**
+
+| Name         | Type                                         |
+| ------------ | -------------------------------------------- |
+| width        | <code>number</code>                          |
+| height       | <code>number</code>                          |
+| renderers    | [<code>Array.&lt;System&gt;</code>](#System) |
+| drawToScreen | <code>boolean</code>                         |
+
+<a name="RenderEngineRender"></a>
+
+## RenderEngineRender : <code>function</code>
+
+**Kind**: global typedef
+
+| Param          | Type                                                     | Default         |
+| -------------- | -------------------------------------------------------- | --------------- |
+| entities       | [<code>Array.&lt;Entity&gt;</code>](#Entity)             |                 |
+| cameraEntities | [<code>Array.&lt;Entity&gt;</code>](#Entity)             |                 |
+| [options]      | [<code>RenderEngineOptions</code>](#RenderEngineOptions) | <code>{}</code> |
+
+<a name="RenderEngine"></a>
+
+## RenderEngine : [<code>System</code>](#System)
+
+**Kind**: global typedef
+**Properties**
+
+| Name   | Type                                                   |
+| ------ | ------------------------------------------------------ |
+| render | [<code>RenderEngineRender</code>](#RenderEngineRender) |
+
+<a name="WorldAdd"></a>
+
+## WorldAdd : <code>function</code>
+
+**Kind**: global typedef
+
+| Param  | Type                           |
+| ------ | ------------------------------ |
+| entity | [<code>Entity</code>](#Entity) |
+
+<a name="WorldAddSystem"></a>
+
+## WorldAddSystem : <code>function</code>
+
+**Kind**: global typedef
+
+| Param  | Type                           |
+| ------ | ------------------------------ |
+| system | [<code>System</code>](#System) |
+
+<a name="WorldUpdate"></a>
+
+## WorldUpdate : <code>function</code>
+
+**Kind**: global typedef
+
+| Param       | Type                |
+| ----------- | ------------------- |
+| [deltaTime] | <code>number</code> |
+
+<a name="World"></a>
+
+## World : <code>object</code>
+
+**Kind**: global typedef
+**Properties**
+
+| Name      | Type                                           |
+| --------- | ---------------------------------------------- |
+| entities  | <code>Array.&lt;object&gt;</code>              |
+| systems   | <code>Array.&lt;object&gt;</code>              |
+| add       | [<code>WorldAdd</code>](#WorldAdd)             |
+| addSystem | [<code>WorldAddSystem</code>](#WorldAddSystem) |
+| update    | [<code>WorldUpdate</code>](#WorldUpdate)       |
+
+<a name="RenderGraph"></a>
+
+## RenderGraph : <code>object</code>
+
+**Kind**: global typedef
+**Properties**
+
+| Name         | Type                              |
+| ------------ | --------------------------------- |
+| renderPasses | <code>Array.&lt;object&gt;</code> |
+| beginFrame   | <code>function</code>             |
+| renderPass   | <code>function</code>             |
+| endFrame     | <code>function</code>             |
+
+<a name="ResourceCacheUsage"></a>
+
+## ResourceCacheUsage : <code>&quot;Transient&quot;</code> \| <code>&quot;Retained&quot;</code>
+
+**Kind**: global typedef
+<a name="ResourceCache"></a>
+
+## ResourceCache : <code>object</code>
+
+**Kind**: global typedef
+**Properties**
+
+| Name       | Type                                                   |
+| ---------- | ------------------------------------------------------ |
+| beginFrame | <code>function</code>                                  |
+| endFrame   | <code>function</code>                                  |
+| dispose    | <code>function</code>                                  |
+| Usage      | [<code>ResourceCacheUsage</code>](#ResourceCacheUsage) |
 
 <!-- api-end -->
 
