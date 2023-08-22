@@ -1,10 +1,14 @@
+import { NAMESPACE } from "./utils.js";
+
 export default (ctx) => ({
   renderPasses: [],
   beginFrame() {
     this.renderPasses.length = 0;
   },
   renderPass(opts) {
-    if (opts.uses && ctx.debugMode) console.log("render-graph uses", opts.uses);
+    if (opts.uses && ctx.debugMode) {
+      console.debug(NAMESPACE, "render-graph uses", opts.uses);
+    }
     this.renderPasses.push(opts);
   },
   endFrame() {
@@ -35,8 +39,14 @@ export default (ctx) => ({
               }
             }
             if (render) render();
-          } catch (e) {
-            console.error("pex-renderer", `Pass "${name}" crashed`, e);
+          } catch (error) {
+            console.error(
+              NAMESPACE,
+              "render-graph",
+              `Pass "${name}" crashed.`,
+              error,
+              pass
+            );
           }
         }
       );

@@ -1,6 +1,6 @@
 import { mat4, vec3, quat, utils } from "pex-math";
 import { orbiter as createOrbiter } from "pex-cam";
-import { TEMP_MAT4 } from "../utils.js";
+import { NAMESPACE, TEMP_MAT4 } from "../utils.js";
 
 function updateCamera(camera, transform) {
   // TODO: projectionMatrix should only be recomputed if parameters changed
@@ -46,7 +46,9 @@ export default () => ({
   checkCamera(_, cameraEntity) {
     if (!cameraEntity.transform) {
       console.warn(
-        `"${this.type}" camera entity missing transform. Add a transformSystem.update(entities).`
+        NAMESPACE,
+        this.type,
+        `camera entity missing transform. Add a transformSystem.update(entities).`
       );
     } else {
       return true;

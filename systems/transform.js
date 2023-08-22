@@ -1,6 +1,6 @@
 import { mat4, vec3 } from "pex-math";
 import { aabb } from "pex-geom";
-import { TEMP_AABB, TEMP_MAT4 } from "../utils.js";
+import { NAMESPACE, TEMP_AABB, TEMP_MAT4 } from "../utils.js";
 
 function updateModelMatrix(matrix, transform) {
   mat4.identity(matrix);
@@ -74,9 +74,10 @@ export default () => {
       transform.dirty
     ) {
       transform.dirty = false;
-      if (transformSystem.debug) console.debug("update transform", transform);
       cachedTransform.transform = transform;
-      if (transformSystem.debug) console.debug("update", transform);
+      if (transformSystem.debug) {
+        console.debug(NAMESPACE, transformSystem.type, "update", transform);
+      }
 
       // console.log("localModelMatrix", cachedTransform.localModelMatrix);
       updateModelMatrix(cachedTransform.localModelMatrix, transform);

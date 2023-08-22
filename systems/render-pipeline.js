@@ -1,6 +1,7 @@
-import { vec3, vec4, mat4, utils } from "pex-math";
+import { vec3, mat4, utils } from "pex-math";
 import { aabb } from "pex-geom";
 import createDescriptors from "./renderer/descriptors.js";
+import { NAMESPACE } from "../utils.js";
 
 function drawMeshes({
   viewport,
@@ -384,10 +385,12 @@ export default ({
   checkLight(light, lightEntity) {
     if (!lightEntity._transform) {
       console.warn(
+        NAMESPACE,
         `"${this.type}" light entity missing transform. Add a transformSystem.update(entities).`
       );
     } else if (!light._projectionMatrix) {
       console.warn(
+        NAMESPACE,
         `"${this.type}" light component missing matrices. Add a lightSystem.update(entities).`
       );
     } else {

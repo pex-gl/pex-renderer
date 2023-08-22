@@ -3,6 +3,7 @@ import {
   skybox as SHADERS,
   parser as ShaderParser,
 } from "./pex-shaders/index.js";
+import { NAMESPACE } from "../../utils.js";
 
 export default ({ ctx, resourceCache }) => {
   // const skyboxCmd = {
@@ -49,7 +50,6 @@ export default ({ ctx, resourceCache }) => {
     attributes: {
       aPosition: fullscreenQuad.attributes.aPosition,
     },
-    attributes: fullscreenQuad.attributes,
     indices: fullscreenQuad.indices,
     uniforms: {
       uUseTonemapping: false,
@@ -62,7 +62,9 @@ export default ({ ctx, resourceCache }) => {
     checkReflectionProbe(reflectionProbe) {
       if (!reflectionProbe._reflectionProbe?._reflectionMap) {
         console.warn(
-          `"${this.type}": reflectionProbe component missing _reflectionProbe. Add a reflectionProbeSystem.update(entities, { renderers: [skyboxRendererSystem] }).`
+          NAMESPACE,
+          this.type,
+          `reflectionProbe component missing _reflectionProbe. Add a reflectionProbeSystem.update(entities, { renderers: [skyboxRendererSystem] }).`
         );
       } else {
         return true;
@@ -71,7 +73,9 @@ export default ({ ctx, resourceCache }) => {
     checkSkybox(skybox) {
       if (!(skybox.envMap || skybox._skyTexture)) {
         console.warn(
-          `"${this.type}": skybox component missing texture. Provide a "envMap" or add a skyboxSystem.update(world.entities).`
+          NAMESPACE,
+          this.type,
+          `skybox component missing texture. Provide a "envMap" or add a skyboxSystem.update(world.entities).`
         );
       } else {
         return true;

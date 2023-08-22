@@ -1,4 +1,5 @@
 import { aabb } from "pex-geom";
+import { NAMESPACE } from "../utils.js";
 
 const vertexAttributeMap = {
   positions: { attribute: "aPosition" },
@@ -37,14 +38,16 @@ export default ({ ctx }) => ({
           // aVertexColor: ctx.vertexBuffer([[1, 1, 1, 1]]),
         },
       };
-      if (this.debug)
+      if (this.debug) {
         console.debug(
-          "geometry-system",
+          NAMESPACE,
+          this.type,
           "update geometry cache",
           id,
           cachedGeom,
           geometry
         );
+      }
     }
 
     const geometryDirty = cachedGeom.geometry !== geometry;
@@ -52,7 +55,7 @@ export default ({ ctx }) => ({
     // Cache properties
     if (geometryDirty) {
       if (this.debug) {
-        console.debug("geometry-system", "update geometry", id, geometry);
+        console.debug(NAMESPACE, this.type, "update geometry", id, geometry);
       }
       cachedGeom.geometry = geometry;
 
@@ -145,11 +148,8 @@ export default ({ ctx }) => ({
         try {
           this.updateGeometry(entity.id, entity.geometry);
           entity._geometry = this.cache[entity.id];
-        } catch (e) {
-          entity.error = `Geometry system update failed due to "${e.message}"`;
-          console.error("Geometry update failed", e);
-          console.error("Geometry update failed", entity);
-          // renderIn.onTrigger = function () {};
+        } catch (error) {
+          console.error(NAMESPACE, this.type, "update failed", error, entity);
         }
       }
     }

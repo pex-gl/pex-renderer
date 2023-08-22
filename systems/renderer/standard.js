@@ -1,10 +1,10 @@
-import { vec3, vec4, mat3, mat4, mat2x3 } from "pex-math";
+import { mat3, mat4, mat2x3 } from "pex-math";
 import {
   pipeline as SHADERS,
   parser as ShaderParser,
 } from "./pex-shaders/index.js";
 import * as AreaLightsData from "./area-light-data.js";
-import { TEMP_MAT2X3 } from "../../utils.js";
+import { NAMESPACE, TEMP_MAT2X3 } from "../../utils.js";
 
 let ltc_mat;
 let ltc_mag;
@@ -305,7 +305,15 @@ export default ({ ctx }) => {
       });
 
       try {
-        console.debug("render-system", "New program", flags, entity);
+        if (standardRendererSystem.debug) {
+          console.debug(
+            NAMESPACE,
+            standardRendererSystem.type,
+            "new program",
+            flags,
+            entity
+          );
+        }
         program = buildProgram(
           ctx,
           ShaderParser.replaceStrings(vertSrc, options),
@@ -313,8 +321,9 @@ export default ({ ctx }) => {
         );
         programCacheMap.setValue(flags, vert, frag, program);
       } catch (error) {
-        console.error(error);
+        console.error(NAMESPACE, error);
         console.warn(
+          NAMESPACE,
           "glsl error",
           ShaderParser.getFormattedError(error, {
             vert: vertSrc,
@@ -677,11 +686,14 @@ export default ({ ctx }) => {
 
   const standardRendererSystem = {
     type: "standard-renderer",
+    debug: false,
     debugRender: "",
     checkLight(light) {
       if (light.castShadows && !(light._shadowMap || light._shadowCubemap)) {
         console.warn(
-          `"${this.type}": light component missing shadowMap. Add a renderPipeplineSystem.update(entities).`
+          NAMESPACE,
+          this.type,
+          `light component missing shadowMap. Add a renderPipeplineSystem.update(entities).`
         );
       } else {
         return true;
@@ -690,7 +702,9 @@ export default ({ ctx }) => {
     checkReflectionProbe(reflectionProbe) {
       if (!reflectionProbe._reflectionProbe?._reflectionMap) {
         console.warn(
-          `"${this.type}": reflectionProbe component missing _reflectionProbe. Add a reflectionProbeSystem.update(entities, { renderers: [skyboxRendererSystem] }).`
+          NAMESPACE,
+          this.type,
+          `reflectionProbe component missing _reflectionProbe. Add a reflectionProbeSystem.update(entities, { renderers: [skyboxRendererSystem] }).`
         );
       } else {
         return true;
@@ -699,11 +713,15 @@ export default ({ ctx }) => {
     checkRenderableEntity(entity) {
       if (!entity._geometry) {
         console.warn(
-          `"${this.type}": entity missing _geometry. Add a geometrySystem.update(entities).`
+          NAMESPACE,
+          this.type,
+          `entity missing _geometry. Add a geometrySystem.update(entities).`
         );
       } else if (!entity._transform) {
         console.warn(
-          `"${this.type}": entity missing _transform. Add a transformSystem.update(entities).`
+          NAMESPACE,
+          this.type,
+          `entity missing _transform. Add a transformSystem.update(entities).`
         );
       } else {
         return true;

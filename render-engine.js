@@ -3,9 +3,7 @@ import * as systems from "./systems/index.js";
 import createRenderGraph from "./render-graph.js";
 import createResourceCache from "./resource-cache.js";
 
-export default function defaultEngine(opts) {
-  const { ctx } = opts;
-
+export default ({ ctx, debugMode }) => {
   const renderGraph = createRenderGraph(ctx);
   const resourceCache = createResourceCache(ctx);
 
@@ -41,6 +39,16 @@ export default function defaultEngine(opts) {
   const skyboxRendererSys = systems.renderer.skybox({ ctx, resourceCache });
 
   const renderEngine = {
+    // debugMode,
+    debug(enabled) {
+      for (let i = 0; i < this.systems.length; i++) {
+        this.systems[i].debug = enabled;
+      }
+      for (let i = 0; i < this.renderers.length; i++) {
+        this.renderers[i].debug = enabled;
+      }
+      this.debugMode = enabled;
+    },
     systems: [
       animationSys,
       skinSys,
@@ -121,5 +129,6 @@ export default function defaultEngine(opts) {
       return framebufferTexturesPerCamera;
     },
   };
+  renderEngine.debug(debugMode);
   return renderEngine;
-}
+};
