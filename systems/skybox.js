@@ -20,21 +20,7 @@ function initSkybox(ctx, skybox) {
 }
 
 export default ({ ctx }) => {
-  const updateSkyTextureCmd = {
-    name: "Skybox.updateSkyTextureCmd",
-    pipeline: ctx.pipeline({
-      vert: pipeline.fullscreen.vert,
-      frag: skybox.skyEnvMap.frag,
-    }),
-    uniforms: {
-      uSunPosition: [0, 0, 0],
-    },
-    attributes: {
-      aPosition: ctx.vertexBuffer(quad.positions),
-      aTexCoord0: ctx.vertexBuffer(quad.uvs),
-    },
-    indices: ctx.indexBuffer(quad.cells),
-  };
+  let updateSkyTextureCmd;
 
   return {
     type: "skybox-system",
@@ -66,6 +52,22 @@ export default ({ ctx }) => {
 
           if (needsUpdate) {
             //TODO: use render graph for updateSkyTextureCmd
+            updateSkyTextureCmd ||= {
+              name: "Skybox.updateSkyTextureCmd",
+              pipeline: ctx.pipeline({
+                vert: pipeline.fullscreen.vert,
+                frag: skybox.skyEnvMap.frag,
+              }),
+              uniforms: {
+                uSunPosition: [0, 0, 0],
+              },
+              attributes: {
+                aPosition: ctx.vertexBuffer(quad.positions),
+                aTexCoord0: ctx.vertexBuffer(quad.uvs),
+              },
+              indices: ctx.indexBuffer(quad.cells),
+            };
+
             ctx.submit(updateSkyTextureCmd, {
               pass: entity.skybox._updateSkyTexturePass,
               uniforms: {
