@@ -1,4 +1,4 @@
-import { fullscreenTriangle } from "./utils.js";
+import { fullscreenTriangle, quad } from "./utils.js";
 
 // TODO: should this be an option
 const keepAliveCoundown = 30;
@@ -95,6 +95,22 @@ export default (ctx) => {
     usage: Usage.Retained,
   });
 
+  // prettier-ignore
+  const fullscreenQuadProps = {
+    attributes: {
+      aPosition: getContextResource(ctx, cache, "vertexBuffer", quad.positions, Usage.Retained),
+      aTexCoord0: getContextResource(ctx, cache, "vertexBuffer", quad.uvs, Usage.Retained),
+    },
+    indices: getContextResource(ctx, cache, "indexBuffer", quad.cells, Usage.Retained),
+  };
+
+  cache.push({
+    type: "fullscreenQuad",
+    props: fullscreenQuadProps,
+    value: fullscreenQuadProps,
+    usage: Usage.Retained,
+  });
+
   return {
     _cache: cache,
     Usage,
@@ -112,6 +128,8 @@ export default (ctx) => {
       getContextResource(ctx, cache, "indexBuffer", props, usage),
     fullscreenTriangle: () =>
       getResourceFromCache(cache, fullscreenTriangleProps).value,
+    fullscreenQuad: () =>
+      getResourceFromCache(cache, fullscreenQuadProps).value,
     //TODO: add release for Retained resources
     // release() {}
     beginFrame() {

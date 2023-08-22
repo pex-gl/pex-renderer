@@ -16,8 +16,8 @@ export default function defaultEngine(opts) {
   const transformSys = systems.transform();
   const layerSys = systems.layer();
   const cameraSys = systems.camera();
-  const skyboxSys = systems.skybox({ ctx });
-  const reflectionProbeSys = systems.reflectionProbe({ ctx });
+  const skyboxSys = systems.skybox({ ctx, resourceCache });
+  const reflectionProbeSys = systems.reflectionProbe({ ctx, resourceCache });
   const lightSystem = systems.light();
   const renderPipelineSys = systems.renderPipeline({
     ctx,
@@ -38,7 +38,7 @@ export default function defaultEngine(opts) {
     renderGraph,
   });
   const helperRendererSys = systems.renderer.helper({ ctx });
-  const skyboxRendererSys = systems.renderer.skybox({ ctx });
+  const skyboxRendererSys = systems.renderer.skybox({ ctx, resourceCache });
 
   const renderEngine = {
     systems: [

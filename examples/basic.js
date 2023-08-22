@@ -100,8 +100,8 @@ world.add(directionalLightEntity);
 const geometrySystem = systems.geometry({ ctx });
 const transformSystem = systems.transform();
 const cameraSystem = systems.camera();
-const skyboxSystem = systems.skybox({ ctx });
-const reflectionProbeSystem = systems.reflectionProbe({ ctx });
+const skyboxSystem = systems.skybox({ ctx, resourceCache });
+const reflectionProbeSystem = systems.reflectionProbe({ ctx, resourceCache });
 const lightSystem = systems.light();
 const renderPipelineSystem = systems.renderPipeline({
   ctx,
@@ -114,7 +114,7 @@ const standardRendererSystem = systems.renderer.standard({
   resourceCache,
   renderGraph,
 });
-const skyboxRendererSystem = systems.renderer.skybox({ ctx });
+const skyboxRendererSystem = systems.renderer.skybox({ ctx, resourceCache });
 
 // GUI
 const gui = createGUI(ctx);

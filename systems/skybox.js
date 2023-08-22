@@ -1,6 +1,5 @@
 import { pipeline, skybox } from "./renderer/pex-shaders/index.js";
 import { vec3 } from "pex-math";
-import { quad } from "../utils.js";
 
 function initSkybox(ctx, skybox) {
   skybox._skyTexture = ctx.texture2D({
@@ -19,7 +18,7 @@ function initSkybox(ctx, skybox) {
   });
 }
 
-export default ({ ctx }) => {
+export default ({ ctx, resourceCache }) => {
   let updateSkyTextureCmd;
 
   return {
@@ -51,6 +50,8 @@ export default ({ ctx }) => {
           }
 
           if (needsUpdate) {
+            const fullscreenQuad = resourceCache.fullscreenQuad();
+
             //TODO: use render graph for updateSkyTextureCmd
             updateSkyTextureCmd ||= {
               name: "Skybox.updateSkyTextureCmd",
@@ -61,11 +62,8 @@ export default ({ ctx }) => {
               uniforms: {
                 uSunPosition: [0, 0, 0],
               },
-              attributes: {
-                aPosition: ctx.vertexBuffer(quad.positions),
-                aTexCoord0: ctx.vertexBuffer(quad.uvs),
-              },
-              indices: ctx.indexBuffer(quad.cells),
+              attributes: fullscreenQuad.attributes,
+              indices: fullscreenQuad.indices,
             };
 
             ctx.submit(updateSkyTextureCmd, {

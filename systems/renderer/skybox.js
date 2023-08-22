@@ -3,9 +3,8 @@ import {
   skybox as SHADERS,
   parser as ShaderParser,
 } from "./pex-shaders/index.js";
-import { quad } from "../../utils.js";
 
-export default ({ ctx }) => {
+export default ({ ctx, resourceCache }) => {
   // const skyboxCmd = {
   //   name: "skyboxCmd",
   //   pipeline: ctx.pipeline({
@@ -32,6 +31,8 @@ export default ({ ctx }) => {
 
   const identityMatrix = mat4.create();
 
+  const fullscreenQuad = resourceCache.fullscreenQuad();
+
   const drawSkyboxCommand = {
     name: "drawSkyboxCmd",
     pipeline: ctx.pipeline({
@@ -46,9 +47,10 @@ export default ({ ctx }) => {
       depthWrite: false,
     }),
     attributes: {
-      aPosition: ctx.vertexBuffer(quad.positions),
+      aPosition: fullscreenQuad.attributes.aPosition,
     },
-    indices: ctx.indexBuffer(quad.cells),
+    attributes: fullscreenQuad.attributes,
+    indices: fullscreenQuad.indices,
     uniforms: {
       uUseTonemapping: false,
       uExposure: 1,

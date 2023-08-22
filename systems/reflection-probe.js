@@ -6,7 +6,7 @@ import {
 } from "./renderer/pex-shaders/index.js";
 
 import hammersley from "hammersley";
-import { CUBEMAP_SIDES, quad } from "../utils.js";
+import { CUBEMAP_SIDES } from "../utils.js";
 
 const IRRADIANCE_OCT_MAP_SIZE = 64;
 
@@ -111,12 +111,9 @@ class ReflectionProbe {
   initCommands() {
     const ctx = this._ctx;
 
-    const attributes = {
-      aPosition: ctx.vertexBuffer(quad.positions),
-      aTexCoord0: ctx.vertexBuffer(quad.uvs),
-    };
-
-    const indices = ctx.indexBuffer(quad.cells);
+    const fullscreenQuad = this.resourceCache.fullscreenQuad();
+    const attributes = fullscreenQuad.attributes;
+    const indices = fullscreenQuad.indices;
 
     this.clearOctMapAtlasCmd = {
       name: "ReflectionProbe.clearOctMapAtlas",
@@ -348,7 +345,7 @@ class ReflectionProbe {
   }
 }
 
-export default ({ ctx }) => ({
+export default ({ ctx, resourceCache }) => ({
   type: "reflection-probe-system",
   cache: {},
   debug: false,
@@ -374,6 +371,7 @@ export default ({ ctx }) => ({
         const reflectionProbe = new ReflectionProbe({
           ...entity.reflectionProbe,
           ctx,
+          resourceCache,
         });
         entity._reflectionProbe = reflectionProbe;
       }

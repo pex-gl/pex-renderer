@@ -276,9 +276,9 @@ entities.push(directionalLightEntity2);
 const geometrySys = systems.geometry({ ctx });
 const transformSys = systems.transform();
 const cameraSys = systems.camera();
-const skyboxSys = systems.skybox({ ctx });
+const skyboxSys = systems.skybox({ ctx, resourceCache });
 const lightSys = systems.light();
-const reflectionProbeSys = systems.reflectionProbe({ ctx });
+const reflectionProbeSys = systems.reflectionProbe({ ctx, resourceCache });
 const renderPipelineSys = systems.renderPipeline({
   ctx,
   resourceCache,
