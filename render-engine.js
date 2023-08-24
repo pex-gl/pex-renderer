@@ -3,7 +3,7 @@ import * as systems from "./systems/index.js";
 import createRenderGraph from "./render-graph.js";
 import createResourceCache from "./resource-cache.js";
 
-export default ({ ctx, debugMode }) => {
+export default ({ ctx, debug }) => {
   const renderGraph = createRenderGraph(ctx);
   const resourceCache = createResourceCache(ctx);
 
@@ -129,6 +129,6 @@ export default ({ ctx, debugMode }) => {
       return framebufferTexturesPerCamera;
     },
   };
-  renderEngine.debug(debugMode);
+  renderEngine.debug(debug);
   return renderEngine;
 };
