@@ -645,4 +645,20 @@ export default ({
       depth: outputDepthTexture,
     };
   },
+
+  dispose(entities) {
+    for (let i = 0; i < entities.length; i++) {
+      const entity = entities[i];
+      if (entity.material) {
+        for (let property of Object.values(entity.material)) {
+          if (
+            property?.class === "texture" &&
+            ctx.resources.indexOf(property) !== -1
+          ) {
+            ctx.dispose(property);
+          }
+        }
+      }
+    }
+  },
 });

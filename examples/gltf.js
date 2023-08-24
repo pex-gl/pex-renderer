@@ -63,7 +63,7 @@ const pixelRatio = devicePixelRatio;
 const ctx = createContext({ pixelRatio });
 
 const renderEngine = createRenderEngine({ ctx });
-const world = (window.world = createWorld());
+const world = createWorld({ systems: renderEngine.systems });
 
 const gui = createGUI(ctx);
 
@@ -101,31 +101,37 @@ let floorEntity;
 let cameraEntity;
 let animationEntity;
 
-const unitBox = createBox();
-unitBox.cells = computeEdges(unitBox.positions, unitBox.cells, 4);
-unitBox.primitive = ctx.Primitive.Lines;
+// const unitBox = createBox();
+// unitBox.cells = computeEdges(unitBox.positions, unitBox.cells, 4);
+// unitBox.primitive = ctx.Primitive.Lines;
+
+let envMap;
 
 const addEnvmap = async () => {
-  const hdrImg = parseHdr(
-    await loadArrayBuffer(
-      // getURL(`assets/envmaps/Mono_Lake_B/Mono_Lake_B.hdr`),
-      getURL(`assets/envmaps/garage/garage.hdr`)
-      // getURL(`assets/envmaps/artist_workshop_4k.hdr`)
-    )
-  );
-  const panorama = ctx.texture2D({
-    data: hdrImg.data,
-    width: hdrImg.shape[0],
-    height: hdrImg.shape[1],
-    pixelFormat: ctx.PixelFormat.RGBA32F,
-    encoding: ctx.Encoding.Linear,
-    flipY: true,
-  });
-
-  skyEntity.skybox.envMap = panorama;
+  if (State.useEnvMap) {
+    if (!envMap) {
+      const hdrImg = parseHdr(
+        await loadArrayBuffer(
+          // getURL(`assets/envmaps/Mono_Lake_B/Mono_Lake_B.hdr`),
+          getURL(`assets/envmaps/garage/garage.hdr`)
+          // getURL(`assets/envmaps/artist_workshop_4k.hdr`)
+        )
+      );
+      envMap = ctx.texture2D({
+        data: hdrImg.data,
+        width: hdrImg.shape[0],
+        height: hdrImg.shape[1],
+        pixelFormat: ctx.PixelFormat.RGBA32F,
+        encoding: ctx.Encoding.Linear,
+        flipY: true,
+      });
+    }
+    skyEntity.skybox.envMap = envMap;
+  } else {
+    skyEntity.skybox.envMap = null;
+  }
 };
-
-if (State.useEnvMap) addEnvmap();
+addEnvmap();
 
 const axesEntity = createEntity({ axesHelper: {} });
 world.add(axesEntity);
@@ -317,10 +323,9 @@ async function loadScene(url, grid) {
         });
       }
     }
-
-    // console.timeEnd('building ' + url)
-    scene.url = url;
   }
+
+  scene.url = url;
 
   return scene;
 }
@@ -378,31 +383,6 @@ const nextAnimation = () => {
 };
 const nextMaterial = () => {};
 
-const dispose = (entity) => {
-  if (entity._geometry) {
-    if (entity._geometry.indices) {
-      const resource =
-        entity._geometry.indices.buffer || entity._geometry.indices;
-      if (ctx.resources.indexOf(resource) !== -1) ctx.dispose(resource);
-    }
-
-    for (let attribute of Object.values(entity._geometry.attributes)) {
-      const resource = attribute.buffer || attribute;
-      if (ctx.resources.indexOf(resource) !== -1) ctx.dispose(resource);
-    }
-  }
-  if (entity.material) {
-    for (let property of Object.values(entity.material)) {
-      if (
-        property?.class === "texture" &&
-        ctx.resources.indexOf(property) !== -1
-      ) {
-        ctx.dispose(property);
-      }
-    }
-  }
-};
-
 // Init
 // Get list of models locally or from the glTF repo
 let models = await loadJson(`${MODELS_PATH}/model-index.json`);
@@ -450,15 +430,14 @@ gui.addTexture2DList(
     const entitiesIds = [
       ...scenes.map((scene) => scene.entities.map((e) => e.id)).flat(),
       floorEntity?.id,
-      cameraEntity.id,
+      cameraEntity?.id,
     ].filter(Boolean);
 
-    //TODO: renderer.remove() and dispose
-    world.entities = world.entities.filter((entity) => {
-      const isDisposable = entitiesIds.includes(entity.id);
-      if (isDisposable) dispose(entity);
-      return !isDisposable;
-    });
+    world.dispose(
+      world.entities.filter((entity) => entitiesIds.includes(entity.id))
+    );
+
+    // TODO renderEngine resourceCache dispose cache
 
     State.scenes = [];
 
@@ -478,6 +457,9 @@ gui.addRadioList(
 );
 gui.addParam("Floor", State, "floor");
 gui.addParam("Bounding Box", State, "boundingBoxes");
+gui.addParam("Env map", State, "useEnvMap", null, () => {
+  addEnvmap();
+});
 gui.addButton("Next camera", nextCamera);
 gui.addButton("Next animation", nextAnimation);
 gui.addButton("Next material", nextMaterial);

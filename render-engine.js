@@ -3,7 +3,7 @@ import * as systems from "./systems/index.js";
 import createRenderGraph from "./render-graph.js";
 import createResourceCache from "./resource-cache.js";
 
-export default ({ ctx, debug }) => {
+export default ({ ctx, debug = false }) => {
   const renderGraph = createRenderGraph(ctx);
   const resourceCache = createResourceCache(ctx);
 

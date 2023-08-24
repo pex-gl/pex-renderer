@@ -1,8 +1,9 @@
-export default function createWorld() {
+export default ({ entities = [], systems = [] } = {}) => {
   let prevTime = Date.now();
-  const world = {
-    entities: [],
-    systems: [],
+
+  return {
+    entities,
+    systems,
     add(entity) {
       this.entities.push(entity);
       return entity;
@@ -21,6 +22,23 @@ export default function createWorld() {
         this.systems[i].update(this.entities, deltaTime);
       }
     },
+    dispose(entities) {
+      const entitiesToDispose = entities
+        ? Array.isArray(entities)
+          ? entities
+          : [entities]
+        : this.entities;
+      console.log(entitiesToDispose);
+
+      for (let i = 0; i < this.systems.length; i++) {
+        this.systems[i].dispose?.(entitiesToDispose);
+      }
+
+      this.entities = this.entities.filter(
+        (entity) => !entitiesToDispose.includes(entity)
+      );
+
+      entitiesToDispose.length = 0;
+    },
   };
-  return world;
-}
+};
