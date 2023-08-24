@@ -47,6 +47,7 @@ class ReflectionProbe {
     const ctx = this._ctx;
 
     this._dynamicCubemap = ctx.textureCube({
+      name: "reflectionProbeDynamicCubeMap",
       width: this.size,
       height: this.size,
       pixelFormat: this.rgbm ? ctx.PixelFormat.RGBA8 : ctx.PixelFormat.RGBA16F,
@@ -62,9 +63,9 @@ class ReflectionProbe {
           side.up
         );
         side.drawPassCmd = {
-          name: `ReflectionProbe.cubemapSide_${i}`,
+          name: `reflectionProbeCubemapSideCmd${i}`,
           pass: ctx.pass({
-            name: `ReflectionProbe.cubemapSide_${i}`,
+            name: `reflectionProbeCubemapSidePass${i}`,
             color: [
               {
                 texture: this._dynamicCubemap,
@@ -84,6 +85,7 @@ class ReflectionProbe {
     const ctx = this._ctx;
 
     this._octMap = ctx.texture2D({
+      name: "reflectionProbeOctMap",
       width: this.size,
       height: this.size,
       pixelFormat: this.rgbm ? ctx.PixelFormat.RGBA8 : ctx.PixelFormat.RGBA16F,
@@ -91,6 +93,7 @@ class ReflectionProbe {
     });
 
     this._reflectionMap = ctx.texture2D({
+      name: "reflectionProbeReflectionMap",
       width: 2 * this.size,
       height: 2 * this.size,
       min: ctx.Filter.Linear,
@@ -100,6 +103,7 @@ class ReflectionProbe {
     });
 
     this._hammersleyPointSetMap = ctx.texture2D({
+      name: "reflectionProbeHammersleyPointSetMap",
       data: hammersleyPointSet,
       width: 1,
       height: NUM_SAMPLES,
@@ -118,18 +122,18 @@ class ReflectionProbe {
     const vert = ShaderParser.build(ctx, pipeline.fullscreen.vert);
 
     this.clearOctMapAtlasCmd = {
-      name: "ReflectionProbe.clearOctMapAtlas",
+      name: "reflectionProbeClearOctMapAtlasCmd",
       pass: ctx.pass({
-        name: "ReflectionProbe.clearOctMapAtlas",
+        name: "reflectionProbeClearOctMapAtlasPass",
         color: [this._reflectionMap],
         clearColor: [0, 0, 0, 0],
       }),
     };
 
     this.cubemapToOctMapCmd = {
-      name: "ReflectionProbe.cubemapToOctMap",
+      name: "reflectionProbeCubemapToOctMapCmd",
       pass: ctx.pass({
-        name: "ReflectionProbe.cubemapToOctMap",
+        name: "reflectionProbeCubemapToOctMapPass",
         color: [this._octMap],
       }),
       pipeline: ctx.pipeline({
@@ -144,9 +148,9 @@ class ReflectionProbe {
     };
 
     this.convolveOctmapAtlasToOctMapCmd = {
-      name: "ReflectionProbe.convolveOctmapAtlasToOctMap",
+      name: "reflectionProbeConvolveOctmapAtlasToOctMapCmd",
       pass: ctx.pass({
-        name: "ReflectionProbe.convolveOctmapAtlasToOctMap",
+        name: "reflectionProbeConvolveOctmapAtlasToOctMapPass",
         color: [this._octMap],
       }),
       pipeline: ctx.pipeline({
@@ -162,9 +166,9 @@ class ReflectionProbe {
     };
 
     this.blitToOctMapAtlasCmd = {
-      name: "ReflectionProbe.blitToOctMapAtlasCmd",
+      name: "reflectionProbeBlitToOctMapAtlasCmd",
       pass: ctx.pass({
-        name: "ReflectionProbe.blitToOctMapAtlasCmd",
+        name: "reflectionProbeBlitToOctMapAtlasPass",
         color: [this._reflectionMap],
       }),
       pipeline: ctx.pipeline({
@@ -179,9 +183,9 @@ class ReflectionProbe {
     };
 
     this.downsampleFromOctMapAtlasCmd = {
-      name: "ReflectionProbe.downsampleFromOctMapAtlasCmd",
+      name: "reflectionProbeDownsampleFromOctMapAtlasCmd",
       pass: ctx.pass({
-        name: "ReflectionProbe.downsampleFromOctMapAtlasCmd",
+        name: "reflectionProbeDownsampleFromOctMapAtlasPass",
         color: [this._octMap],
         clearColor: [0, 0, 0, 1],
       }),
@@ -197,9 +201,9 @@ class ReflectionProbe {
     };
 
     this.prefilterFromOctMapAtlasCmd = {
-      name: "ReflectionProbe.prefilterFromOctMapAtlasCmd",
+      name: "reflectionProbePrefilterFromOctMapAtlasCmd",
       pass: ctx.pass({
-        name: "ReflectionProbe.prefilterFromOctMapAtlasCmd",
+        name: "reflectionProbePrefilterFromOctMapAtlasPass",
         color: [this._octMap],
         clearColor: [0, 0, 0, 1],
       }),

@@ -4,7 +4,7 @@ import { CUBEMAP_SIDES } from "../../utils.js";
 export default (ctx) => ({
   directionalLightShadows: {
     colorMapDesc: {
-      name: "directionalLightColorMap", //TODO: is it used?
+      name: "directionalLightColorMap",
       width: 2048,
       height: 2048,
       pixelFormat: ctx.PixelFormat.RGBA8,
@@ -13,7 +13,7 @@ export default (ctx) => ({
       mag: ctx.Filter.Linear,
     },
     shadowMapDesc: {
-      name: "directionalLightShadowMap", //TODO: is it used?
+      name: "directionalLightShadowMap",
       width: 2048,
       height: 2048,
       pixelFormat: ctx.PixelFormat.DEPTH_COMPONENT24,
@@ -22,7 +22,7 @@ export default (ctx) => ({
       mag: ctx.Filter.Nearest,
     },
     pass: {
-      name: "DirectionalLight.shadowMap",
+      name: "directionalLightShadowMappingPass",
       color: [],
       depth: null,
       clearColor: [0, 0, 0, 1],
@@ -31,7 +31,7 @@ export default (ctx) => ({
   },
   spotLightShadows: {
     colorMapDesc: {
-      name: "spotLightColorMap", //TODO: is it used?
+      name: "spotLightColorMap",
       width: 2048,
       height: 2048,
       pixelFormat: ctx.PixelFormat.RGBA8,
@@ -40,7 +40,7 @@ export default (ctx) => ({
       mag: ctx.Filter.Linear,
     },
     shadowMapDesc: {
-      name: "spotLightShadowMap", //TODO: is it used?
+      name: "spotLightShadowMap",
       width: 2048,
       height: 2048,
       pixelFormat: ctx.PixelFormat.DEPTH_COMPONENT24,
@@ -49,7 +49,7 @@ export default (ctx) => ({
       mag: ctx.Filter.Nearest,
     },
     pass: {
-      name: "SpotLight.shadowMap",
+      name: "spotLightShadowMappingPass",
       color: [],
       depth: null,
       clearColor: [0, 0, 0, 1],
@@ -58,7 +58,7 @@ export default (ctx) => ({
   },
   pointLightShadows: {
     shadowCubemapDesc: {
-      name: "pointLightShadowCubemap", //TODO: is it used?
+      name: "pointLightShadowCubemap",
       width: 512,
       height: 512,
       pixelFormat: ctx.PixelFormat.RGBA8,
@@ -67,7 +67,7 @@ export default (ctx) => ({
       mag: ctx.Filter.Linear,
     },
     shadowMapDesc: {
-      name: "pointLightShadowMap", //TODO: is it used?
+      name: "pointLightShadowMap",
       width: 512,
       height: 512,
       pixelFormat: ctx.PixelFormat.DEPTH_COMPONENT24,
@@ -77,7 +77,7 @@ export default (ctx) => ({
     },
     cubemapSides: structuredClone(CUBEMAP_SIDES),
     passes: CUBEMAP_SIDES.map((side, i) => ({
-      name: `PointLight.shadowMap_side_${i}`,
+      name: `pointLightShadowMappingSide${i}`,
       color: [
         {
           target: ctx.gl.TEXTURE_CUBE_MAP_POSITIVE_X + i,
@@ -113,7 +113,7 @@ export default (ctx) => ({
   },
   grabPass: {
     colorCopyTextureDesc: {
-      name: "colorCopyTexture",
+      name: "grabPassColorCopyTexture",
       width: 1,
       height: 1,
       pixelFormat: ctx.PixelFormat.RGBA16F,

@@ -3,6 +3,7 @@ import { vec3 } from "pex-math";
 
 function initSkybox(ctx, skybox) {
   skybox._skyTexture = ctx.texture2D({
+    name: "skyTexture",
     width: 512,
     height: 256,
     // pixelFormat: this.rgbm ? ctx.PixelFormat.RGBA8 : ctx.PixelFormat.RGBA16F,
@@ -12,7 +13,7 @@ function initSkybox(ctx, skybox) {
     mag: ctx.Filter.Linear,
   });
   skybox._updateSkyTexturePass = ctx.pass({
-    name: "Skybox.updateSkyTexturePass",
+    name: "skyboxUpdateSkyTexturePass",
     color: [skybox._skyTexture],
     clearColor: [0, 0, 0, 0],
   });
@@ -54,7 +55,7 @@ export default ({ ctx, resourceCache }) => {
 
             //TODO: use render graph for updateSkyTextureCmd
             updateSkyTextureCmd ||= {
-              name: "Skybox.updateSkyTextureCmd",
+              name: "skyboxUpdateSkyTextureCmd",
               pipeline: ctx.pipeline({
                 vert: ShaderParser.build(ctx, pipeline.fullscreen.vert),
                 frag: ShaderParser.build(ctx, skybox.skyEnvMap.frag),

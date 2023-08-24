@@ -79,12 +79,12 @@ renderGraph.renderPass = (opts) => {
       opts.pass?.id || "RenderPass " + renderGraph.renderPasses.length;
     const passName = opts.name || opts.pass?.name || null;
 
-    dot.passNode(passId, passName);
+    dot.passNode(passId, passName.replace(" ", "\n"));
 
     const colorTextureId = opts?.pass?.opts?.color?.[0].id;
     const colorTextureName = opts?.pass?.opts?.color?.[0].name;
     if (colorTextureId) {
-      dot.resourceNode(colorTextureId, colorTextureName);
+      dot.resourceNode(colorTextureId, colorTextureName.replace(" ", "\n"));
       dot.edge(passId, colorTextureId);
     } else {
       dot.edge(passId, "Window");
@@ -93,7 +93,7 @@ renderGraph.renderPass = (opts) => {
     const depthTextureId = opts?.pass?.opts?.depth?.id;
     const depthTextureName = opts?.pass?.opts?.depth?.name;
     if (depthTextureId) {
-      dot.resourceNode(depthTextureId, depthTextureName);
+      dot.resourceNode(depthTextureId, depthTextureName.replace(" ", "\n"));
       dot.edge(passId, depthTextureId);
     }
     if (opts.uses) {
@@ -254,6 +254,7 @@ const directionalLightEntity = createEntity({
     color: [1, 0.1, 0.1, 1], //FIXME: intensity is copied to alpha in pex-renderer
     intensity: 3,
     castShadows: true,
+    shadowMapSize: 1024,
   }),
   lightHelper: lightHelper(),
 });

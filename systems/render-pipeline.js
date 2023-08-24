@@ -144,10 +144,10 @@ export default ({
     }
     //TODO: can this be all done at once?
     const colorMap = resourceCache.texture2D(colorMapDesc);
-    colorMap.name = "TempColorMap\n" + colorMap.id;
+    colorMap.name = `tempColorMap (id: ${colorMap.id})`;
 
     const shadowMap = resourceCache.texture2D(shadowMapDesc);
-    shadowMap.name = "ShadowMap\n" + shadowMap.id;
+    shadowMap.name = `shadowMap (id: ${shadowMap.id})`;
 
     const renderView = {
       camera: {
@@ -158,7 +158,7 @@ export default ({
     };
 
     renderGraph.renderPass({
-      name: "RenderShadowMap" + lightEntity.id,
+      name: `RenderShadowMap [${renderView.viewport}] (id: ${lightEntity.id})`,
       pass: resourceCache.pass({
         // TODO: creating new descriptor to force new pass from cache
         ...this.descriptors.directionalLightShadows.pass,
@@ -237,10 +237,10 @@ export default ({
 
     //TODO: can this be all done at once?
     const colorMap = resourceCache.texture2D(colorMapDesc);
-    colorMap.name = "TempColorMap\n" + colorMap.id;
+    colorMap.name = `tempColorMap (id: ${colorMap.id})`;
 
     const shadowMap = resourceCache.texture2D(shadowMapDesc);
-    shadowMap.name = "ShadowMap\n" + shadowMap.id;
+    shadowMap.name = `shadowMap (id: ${shadowMap.id})`;
 
     mat4.perspective(
       light._projectionMatrix,
@@ -259,7 +259,7 @@ export default ({
     };
 
     renderGraph.renderPass({
-      name: "RenderShadowMap" + lightEntity.id,
+      name: `RenderShadowMap [${renderView.viewport}] (id: ${lightEntity.id})`,
       pass: resourceCache.pass({
         // TODO: creating new descriptor to force new pass from cache
         ...this.descriptors.spotLightShadows.pass,
@@ -320,10 +320,10 @@ export default ({
 
     //TODO: can this be all done at once?
     const shadowCubemap = resourceCache.textureCube(shadowCubemapDesc);
-    shadowCubemap.name = "TempCubemap\n" + shadowCubemap.id;
+    shadowCubemap.name = `tempCubemap (id: ${shadowCubemap.id})`;
 
     const shadowMap = resourceCache.texture2D(shadowMapDesc);
-    shadowMap.name = "ShadowMap\n" + shadowMap.id;
+    shadowMap.name = `shadowMap (id: ${shadowMap.id})`;
 
     for (let i = 0; i < this.descriptors.pointLightShadows.passes.length; i++) {
       const pass = this.descriptors.pointLightShadows.passes[i];
@@ -349,7 +349,7 @@ export default ({
       };
 
       renderGraph.renderPass({
-        name: "RenderShadowMap" + lightEntity.id,
+        name: `RenderShadowMap [${renderView.viewport}] (id: ${lightEntity.id})`,
         pass: resourceCache.pass(passDesc),
         renderView: renderView,
         render: () => {
@@ -493,12 +493,12 @@ export default ({
     const mainPassOutputTexture = resourceCache.texture2D(
       this.descriptors.mainPass.outputTextureDesc
     );
-    mainPassOutputTexture.name = `mainPassOutput\n${mainPassOutputTexture.id}`;
+    mainPassOutputTexture.name = `mainPassOutput (id: ${mainPassOutputTexture.id})`;
 
     const mainPassNormalOutputTexture = resourceCache.texture2D(
       this.descriptors.mainPass.outputTextureDesc
     );
-    mainPassNormalOutputTexture.name = `mainPassNormalOutput\n${mainPassNormalOutputTexture.id}`;
+    mainPassNormalOutputTexture.name = `mainPassNormalOutput (id: ${mainPassNormalOutputTexture.id})`;
 
     this.descriptors.mainPass.outputDepthTextureDesc.width =
       renderView.viewport[2];
@@ -507,16 +507,17 @@ export default ({
     const outputDepthTexture = resourceCache.texture2D(
       this.descriptors.mainPass.outputDepthTextureDesc
     );
-    outputDepthTexture.name = `mainPassDepth\n${outputDepthTexture.id}`;
+    outputDepthTexture.name = `mainPassDepth (id: ${outputDepthTexture.id})`;
 
     renderGraph.renderPass({
-      name: `MainPass ${renderView.viewport}`,
+      name: `MainPass [${renderView.viewport}]`,
       uses: [...shadowMaps],
       renderView: {
         ...renderView,
         viewport: [0, 0, renderView.viewport[2], renderView.viewport[3]],
       },
       pass: resourceCache.pass({
+        name: "mainPass",
         color: [mainPassOutputTexture, mainPassNormalOutputTexture],
         depth: outputDepthTexture,
         clearColor: renderView.camera.clearColor,
@@ -552,12 +553,12 @@ export default ({
       grabPassColorCopyTexture = resourceCache.texture2D(
         this.descriptors.grabPass.colorCopyTextureDesc
       );
-      grabPassColorCopyTexture.name = `grabPassOutput\n${grabPassColorCopyTexture.id}`;
+      grabPassColorCopyTexture.name = `grabPassOutput (id: ${grabPassColorCopyTexture.id})`;
 
       const fullscreenTriangle = resourceCache.fullscreenTriangle();
 
       const copyTextureCmd = {
-        name: "Copy Texture",
+        name: "grabPassCopyTextureCmd",
         attributes: fullscreenTriangle.attributes,
         count: fullscreenTriangle.count,
         pipeline: resourceCache.pipeline(
@@ -570,10 +571,13 @@ export default ({
       };
 
       renderGraph.renderPass({
-        name: `GrabPass ${viewport}`,
+        name: `GrabPass [${viewport}]`,
         uses: [mainPassOutputTexture],
         renderView: { ...renderView, viewport },
-        pass: resourceCache.pass({ color: [grabPassColorCopyTexture] }),
+        pass: resourceCache.pass({
+          name: "grapbPass",
+          color: [grabPassColorCopyTexture],
+        }),
         render: () => {
           ctx.submit(copyTextureCmd);
         },
@@ -582,13 +586,14 @@ export default ({
 
     // Transparent pass
     renderGraph.renderPass({
-      name: `TransparentMainPass ${renderView.viewport}`,
+      name: `TransparentPass [${renderView.viewport}]`,
       uses: [...shadowMaps, grabPassColorCopyTexture].filter((_) => _), //filter out nulls
       renderView: {
         ...renderView,
         viewport: [0, 0, renderView.viewport[2], renderView.viewport[3]],
       },
       pass: resourceCache.pass({
+        name: "transparentPass",
         color: [mainPassOutputTexture],
         depth: outputDepthTexture,
       }),
@@ -613,7 +618,7 @@ export default ({
       const fullscreenTriangle = resourceCache.fullscreenTriangle();
 
       const postProcessingCmd = {
-        name: "Draw FSTriangle",
+        name: "drawPostProcessingFullScreenTriangleCmd",
         attributes: fullscreenTriangle.attributes,
         count: fullscreenTriangle.count,
         pipeline: resourceCache.pipeline(this.descriptors.tonemap.pipelineDesc),
@@ -624,7 +629,7 @@ export default ({
       };
 
       renderGraph.renderPass({
-        name: "PostProcessingPass",
+        name: `PostProcessingPass [${renderView.viewport}]`,
         // pass: ctx.pass({ color: [{ id: -1 }] }),
         uses: [],
         renderView,

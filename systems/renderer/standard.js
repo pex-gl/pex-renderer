@@ -227,8 +227,16 @@ export default ({ ctx }) => {
     },
   };
 
-  const dummyTexture2D = ctx.texture2D({ width: 4, height: 4 });
-  const dummyTextureCube = ctx.textureCube({ width: 4, height: 4 });
+  const dummyTexture2D = ctx.texture2D({
+    name: "dummyTexture2D",
+    width: 4,
+    height: 4,
+  });
+  const dummyTextureCube = ctx.textureCube({
+    name: "dummyTextureCube",
+    width: 4,
+    height: 4,
+  });
 
   // function render() {
   //   skybox.draw(camera, {
@@ -406,6 +414,7 @@ export default ({ ctx }) => {
     // TODO: dispose if no areaLights
     if (areaLights.length) {
       ltc_mat ||= ctx.texture2D({
+        name: "areaLightMatMap",
         data: AreaLightsData.mat,
         width: 64,
         height: 64,
@@ -415,6 +424,7 @@ export default ({ ctx }) => {
         mag: ctx.Filter.Linear,
       });
       ltc_mag ||= ctx.texture2D({
+        name: "areaLightMagMap",
         data: AreaLightsData.mag,
         width: 64,
         height: 64,
@@ -649,7 +659,7 @@ export default ({ ctx }) => {
       cachedUniforms.uNormalMatrix = mat3.fromMat4(mat3.create(), normalMat);
 
       const cmd = {
-        name: transparent ? "drawTransparentGeometry" : "drawGeometry",
+        name: transparent ? "drawTransparentGeometryCmd" : "drawGeometryCmd",
         attributes: geometry.attributes,
         indices: geometry.indices,
         count: geometry.count,
