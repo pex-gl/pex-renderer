@@ -1,8 +1,5 @@
 import { vec3 } from "pex-math";
-import {
-  pipeline as SHADERS,
-  parser as ShaderParser,
-} from "./pex-shaders/index.js";
+import { pipeline as SHADERS, parser as ShaderParser } from "pex-shaders";
 import createGeomBuilder from "geom-builder";
 
 const pointsToLine = (points) =>
@@ -287,13 +284,10 @@ export default function createHelperSystem({ ctx }) {
   const drawHelperLinesCmd = {
     name: "drawHelperLinesCmd",
     pipeline: ctx.pipeline({
-      vert: ShaderParser.parse(ctx, SHADERS.helper.vert),
-      frag: ShaderParser.parse(ctx, SHADERS.helper.frag, {
-        stage: "fragment",
-        defines: [
-          ctx.capabilities.maxColorAttachments > 1 && "USE_DRAW_BUFFERS",
-        ],
-      }),
+      vert: ShaderParser.build(ctx, SHADERS.helper.vert),
+      frag: ShaderParser.build(ctx, SHADERS.helper.frag, [
+        ctx.capabilities.maxColorAttachments > 1 && "USE_DRAW_BUFFERS",
+      ]),
       depthTest: true,
       depthWrite: true,
       primitive: ctx.Primitive.Lines,

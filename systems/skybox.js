@@ -1,4 +1,4 @@
-import { pipeline, skybox } from "./renderer/pex-shaders/index.js";
+import { pipeline, skybox, parser as ShaderParser } from "pex-shaders";
 import { vec3 } from "pex-math";
 
 function initSkybox(ctx, skybox) {
@@ -56,8 +56,8 @@ export default ({ ctx, resourceCache }) => {
             updateSkyTextureCmd ||= {
               name: "Skybox.updateSkyTextureCmd",
               pipeline: ctx.pipeline({
-                vert: pipeline.fullscreen.vert,
-                frag: skybox.skyEnvMap.frag,
+                vert: ShaderParser.build(ctx, pipeline.fullscreen.vert),
+                frag: ShaderParser.build(ctx, skybox.skyEnvMap.frag),
               }),
               uniforms: {
                 uSunPosition: [0, 0, 0],

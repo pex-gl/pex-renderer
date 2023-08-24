@@ -1,4 +1,4 @@
-import { postProcessing as SHADERS } from "./pex-shaders/index.js";
+import { postProcessing as SHADERS } from "pex-shaders";
 import { CUBEMAP_SIDES } from "../../utils.js";
 
 export default (ctx) => ({

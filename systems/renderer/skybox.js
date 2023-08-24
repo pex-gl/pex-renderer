@@ -1,8 +1,5 @@
 import { mat4 } from "pex-math";
-import {
-  skybox as SHADERS,
-  parser as ShaderParser,
-} from "./pex-shaders/index.js";
+import { skybox as SHADERS, parser as ShaderParser } from "pex-shaders";
 import { NAMESPACE } from "../../utils.js";
 
 export default ({ ctx, resourceCache }) => {
@@ -37,13 +34,10 @@ export default ({ ctx, resourceCache }) => {
   const drawSkyboxCommand = {
     name: "drawSkyboxCmd",
     pipeline: ctx.pipeline({
-      vert: ShaderParser.parse(ctx, SHADERS.skybox.vert),
-      frag: ShaderParser.parse(ctx, SHADERS.skybox.frag, {
-        stage: "fragment",
-        defines: [
-          ctx.capabilities.maxColorAttachments > 1 && "USE_DRAW_BUFFERS",
-        ],
-      }),
+      vert: ShaderParser.build(ctx, SHADERS.skybox.vert),
+      frag: ShaderParser.build(ctx, SHADERS.skybox.frag, [
+        ctx.capabilities.maxColorAttachments > 1 && "USE_DRAW_BUFFERS",
+      ]),
       depthTest: true,
       depthWrite: false,
     }),

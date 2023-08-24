@@ -1,8 +1,5 @@
 import { mat3, mat4, mat2x3 } from "pex-math";
-import {
-  pipeline as SHADERS,
-  parser as ShaderParser,
-} from "./pex-shaders/index.js";
+import { pipeline as SHADERS, parser as ShaderParser } from "pex-shaders";
 import * as AreaLightsData from "./area-light-data.js";
 import { NAMESPACE, TEMP_MAT2X3 } from "../../utils.js";
 
@@ -276,14 +273,6 @@ export default ({ ctx }) => {
     );
     entity._flags = flags;
 
-    const extensions = {};
-    if (!ctx.capabilities.isWebGL2) {
-      extensions.GL_OES_standard_derivatives = "require";
-      if (ctx.capabilities.maxColorAttachments > 1) {
-        extensions.GL_EXT_draw_buffers = "enable";
-      }
-    }
-
     if (options.debugRender) flags.push(options.debugRender);
 
     let program = programCacheMap.getValue(flags, vert, frag);
@@ -292,17 +281,8 @@ export default ({ ctx }) => {
       const defines = options.debugRender
         ? flags.filter((flag) => flag !== options.debugRender)
         : flags;
-      const vertSrc = ShaderParser.parse(ctx, vert, {
-        stage: "vertex",
-        defines,
-        ...options,
-      });
-      const fragSrc = ShaderParser.parse(ctx, frag, {
-        stage: "fragment",
-        extensions,
-        defines,
-        ...options,
-      });
+      const vertSrc = ShaderParser.build(ctx, vert, defines);
+      const fragSrc = ShaderParser.build(ctx, frag, defines);
 
       try {
         if (standardRendererSystem.debug) {

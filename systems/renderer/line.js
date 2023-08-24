@@ -1,8 +1,5 @@
 import { avec3 } from "pex-math";
-import {
-  pipeline as SHADERS,
-  parser as ShaderParser,
-} from "./pex-shaders/index.js";
+import { pipeline as SHADERS, parser as ShaderParser } from "pex-shaders";
 
 // prettier-ignore
 const instanceRoundRound = Float32Array.of(
@@ -68,13 +65,10 @@ export default ({ ctx, resolution = 16 } = {}) => {
   const drawSegmentsCmd = {
     name: "drawSegmentsCmd",
     pipeline: ctx.pipeline({
-      vert: ShaderParser.parse(ctx, SHADERS.segment.vert),
-      frag: ShaderParser.parse(ctx, SHADERS.segment.frag, {
-        stage: "fragment",
-        defines: [
-          ctx.capabilities.maxColorAttachments > 1 && "USE_DRAW_BUFFERS",
-        ],
-      }),
+      vert: ShaderParser.build(ctx, SHADERS.segment.vert),
+      frag: ShaderParser.build(ctx, SHADERS.segment.frag, [
+        ctx.capabilities.maxColorAttachments > 1 && "USE_DRAW_BUFFERS",
+      ]),
       depthWrite: true,
       depthTest: true,
     }),
