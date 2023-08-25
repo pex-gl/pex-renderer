@@ -7,17 +7,18 @@ export default ({ ctx, debug = false }) => {
   const renderGraph = createRenderGraph(ctx);
   const resourceCache = createResourceCache(ctx);
 
-  const animationSys = systems.animation();
-  const skinSys = systems.skin();
-  const geometrySys = systems.geometry({ ctx });
-  const morphSys = systems.morph();
-  const transformSys = systems.transform();
-  const layerSys = systems.layer();
-  const cameraSys = systems.camera();
-  const skyboxSys = systems.skybox({ ctx, resourceCache });
-  const reflectionProbeSys = systems.reflectionProbe({ ctx, resourceCache });
+  const animationSystem = systems.animation();
+  const skinSystem = systems.skin();
+  const geometrySystem = systems.geometry({ ctx });
+  const morphSystem = systems.morph();
+  const transformSystem = systems.transform();
+  const layerSystem = systems.layer();
+  const skyboxSystem = systems.skybox({ ctx, resourceCache });
+  const cameraSystem = systems.camera();
+
+  const reflectionProbeSystem = systems.reflectionProbe({ ctx, resourceCache });
   const lightSystem = systems.light();
-  const renderPipelineSys = systems.renderPipeline({
+  const renderPipelineSystem = systems.renderPipeline({
     ctx,
     resourceCache,
     renderGraph,
@@ -35,8 +36,8 @@ export default ({ ctx, debug = false }) => {
     resourceCache,
     renderGraph,
   });
-  const helperRendererSys = systems.renderer.helper({ ctx });
-  const skyboxRendererSys = systems.renderer.skybox({ ctx, resourceCache });
+  const skyboxRendererSystem = systems.renderer.skybox({ ctx, resourceCache });
+  const helperRendererSystem = systems.renderer.helper({ ctx });
 
   const renderEngine = {
     // debugMode,
@@ -49,42 +50,47 @@ export default ({ ctx, debug = false }) => {
       }
       this.debugMode = enabled;
     },
+    renderGraph,
+    resourceCache,
     systems: [
-      animationSys,
-      skinSys,
-      geometrySys,
-      morphSys,
-      transformSys,
-      skyboxSys,
-      cameraSys,
-      renderPipelineSys,
+      animationSystem,
+      skinSystem,
+      geometrySystem,
+      morphSystem,
+      transformSystem,
+      layerSystem,
+      skyboxSystem,
+      cameraSystem,
+
+      reflectionProbeSystem,
+      lightSystem,
+      renderPipelineSystem,
     ],
     renderers: [
       standardRendererSystem,
       lineRendererSystem,
-      skyboxRendererSys,
-      helperRendererSys,
+      skyboxRendererSystem,
+      helperRendererSystem,
     ],
     update: (entities, deltaTime) => {
-      animationSys.update(entities, deltaTime);
-      skinSys.update(entities);
-      geometrySys.update(entities);
-      morphSys.update(entities);
-      transformSys.update(entities);
-      layerSys.update(entities);
-      skyboxSys.update(entities);
-      cameraSys.update(entities);
+      animationSystem.update(entities, deltaTime);
+      skinSystem.update(entities);
+      geometrySystem.update(entities);
+      morphSystem.update(entities);
+      transformSystem.update(entities);
+      layerSystem.update(entities);
+      skyboxSystem.update(entities);
+      cameraSystem.update(entities);
     },
     render: (entities, cameraEntities, options = {}) => {
       resourceCache.beginFrame();
       renderGraph.beginFrame();
 
-      if (!Array.isArray(cameraEntities)) {
-        cameraEntities = [cameraEntities];
-      }
+      if (!Array.isArray(cameraEntities)) cameraEntities = [cameraEntities];
 
       const framebufferTexturesPerCamera = cameraEntities.map(
         (cameraEntity) => {
+          // Set render view
           const viewport = cameraEntity.camera.viewport || [
             0,
             0,
@@ -97,25 +103,27 @@ export default ({ ctx, debug = false }) => {
 
           const renderView = {
             camera: cameraEntity.camera,
-            cameraEntity: cameraEntity,
-            viewport: viewport,
+            cameraEntity,
+            viewport,
           };
 
           const entitiesForCamera = cameraEntity.layer
-            ? entities.filter((e) => !e.layer || e.layer == cameraEntity.layer)
+            ? entities.filter(
+                (entity) => !entity.layer || entity.layer == cameraEntity.layer
+              )
             : entities;
 
-          reflectionProbeSys.update(entitiesForCamera, {
-            renderers: [skyboxRendererSys],
+          // Update camera dependent systems
+          reflectionProbeSystem.update(entitiesForCamera, {
+            renderers: [skyboxRendererSystem],
           });
-
           lightSystem.update(entitiesForCamera);
 
-          const framebufferTextures = renderPipelineSys.update(
+          const framebufferTextures = renderPipelineSystem.update(
             entitiesForCamera,
             {
               renderers: options.renderers || renderEngine.renderers,
-              renderView: renderView,
+              renderView,
               drawToScreen: options.drawToScreen,
             }
           );
