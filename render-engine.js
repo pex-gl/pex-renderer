@@ -136,6 +136,16 @@ export default ({ ctx, debug = false }) => {
 
       return framebufferTexturesPerCamera;
     },
+    dispose() {
+      for (let i = 0; i < this.systems.length; i++) {
+        this.systems[i].dispose?.();
+      }
+      for (let i = 0; i < this.renderers.length; i++) {
+        this.renderers[i].dispose?.();
+      }
+
+      resourceCache.dispose();
+    },
   };
   renderEngine.debug(debug);
   return renderEngine;

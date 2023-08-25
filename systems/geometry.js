@@ -155,23 +155,27 @@ export default ({ ctx }) => ({
     }
   },
   dispose(entities) {
-    for (let i = 0; i < entities.length; i++) {
-      const entity = entities[i];
+    if (entities) {
+      for (let i = 0; i < entities.length; i++) {
+        const entity = entities[i];
 
-      if (entity._geometry) {
-        if (entity._geometry.indices) {
-          const resource =
-            entity._geometry.indices.buffer || entity._geometry.indices;
-          if (resource.handle) ctx.dispose(resource);
+        if (entity._geometry) {
+          if (entity._geometry.indices) {
+            const resource =
+              entity._geometry.indices.buffer || entity._geometry.indices;
+            if (resource.handle) ctx.dispose(resource);
+          }
+
+          for (let attribute of Object.values(entity._geometry.attributes)) {
+            const resource = attribute.buffer || attribute;
+            if (resource.handle) ctx.dispose(resource);
+          }
+
+          delete this.cache[entity.id];
         }
-
-        for (let attribute of Object.values(entity._geometry.attributes)) {
-          const resource = attribute.buffer || attribute;
-          if (resource.handle) ctx.dispose(resource);
-        }
-
-        delete this.cache[entity.id];
       }
+    } else {
+      this.cache = {};
     }
   },
 });

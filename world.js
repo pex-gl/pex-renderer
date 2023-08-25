@@ -28,7 +28,6 @@ export default ({ entities = [], systems = [] } = {}) => {
           ? entities
           : [entities]
         : this.entities;
-      console.log(entitiesToDispose);
 
       for (let i = 0; i < this.systems.length; i++) {
         this.systems[i].dispose?.(entitiesToDispose);

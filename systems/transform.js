@@ -185,7 +185,7 @@ export default () => {
   }
 
   transformSystem.update = (entities) => {
-    const transformEntities = entities.filter((e) => e.transform);
+    const transformEntities = entities.filter((entity) => entity.transform);
     update(transformEntities);
   };
 
