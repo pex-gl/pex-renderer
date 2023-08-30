@@ -489,8 +489,8 @@ export default ({ ctx }) => {
           e.material &&
           e.material.type === undefined &&
           (!shadowMapping || e.material.castShadows) &&
-          (transparent ? e.material.blend : !e.material.blend) //TODO: what is transparent?
-      ); //hardcoded e.drawSegments
+          (transparent ? e.material.blend : !e.material.blend)
+      );
 
       for (let i = 0; i < renderableEntities.length; i++) {
         const renderableEntity = renderableEntities[i];

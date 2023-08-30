@@ -10,7 +10,6 @@ export default () => ({
     light._viewMatrix ??= mat4.create();
 
     if (transform) {
-      light._viewMatrix ??= mat4.create();
       light._direction ??= vec3.create();
 
       vec4.set(TEMP_VEC4, Z_UP_4);

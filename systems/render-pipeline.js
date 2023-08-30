@@ -87,7 +87,7 @@ export default ({
 }) => ({
   type: "render-pipeline-system",
   cache: {},
-  debug: true,
+  debug: false,
   shadowQuality,
   outputEncoding: outputEncoding || ctx.Encoding.Linear,
   renderers: [],
