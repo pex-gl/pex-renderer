@@ -136,12 +136,12 @@ export default ({ ctx, debug = false }) => {
 
       return framebufferTexturesPerCamera;
     },
-    dispose() {
+    dispose(entities) {
       for (let i = 0; i < this.systems.length; i++) {
-        this.systems[i].dispose?.();
+        this.systems[i].dispose?.(entities);
       }
       for (let i = 0; i < this.renderers.length; i++) {
-        this.renderers[i].dispose?.();
+        this.renderers[i].dispose?.(entities);
       }
 
       resourceCache.dispose();
