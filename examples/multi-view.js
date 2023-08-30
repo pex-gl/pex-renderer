@@ -116,6 +116,7 @@ const cameraEntity = createEntity({
     aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
     target: [0, 1, 0],
     position: [0, 2, 4],
+    clearColor: [0.03, 0.03, 0.03, 1],
   }),
   orbiter: orbiter({ element: ctx.gl.canvas }),
 });
@@ -135,24 +136,31 @@ const floorEntity = createEntity({
 });
 entities.push(floorEntity);
 
+const CUBE_INSTANCES = 64;
+
 const cubesEntity = createEntity({
   transform: transform({
     position: [0, 1, 0],
   }),
   geometry: geometry({
     ...cube({ sx: 1.5, sy: 0.5, sz: 1.5 }),
-    // offsets: new Array(64).fill(0).map(() => random.vec3(3)),
-    offsets: new Float32Array(64 * 3)
-      .fill(0)
-      .map(() => random.float(-1.5, 1.5)),
-    scales: new Float32Array(64 * 3).fill(0.1),
-    // colors: new Float32Array(64 * 4).map((_, i) =>
-    //   i % 4 === 0 ? 1 : random.float()
-    // ),
-    instances: 64,
+    offsets: new Float32Array(CUBE_INSTANCES * 3).map(() =>
+      random.float(-1.5, 1.5)
+    ),
+    scales: new Float32Array(CUBE_INSTANCES * 3).fill(0.1),
+    rotations: new Float32Array(
+      Array.from({ length: CUBE_INSTANCES }, () => random.quat()).flat()
+    ),
+    colors: new Float32Array(CUBE_INSTANCES * 4).map((_, i) =>
+      i % 4 === 3 ? 1 : random.float()
+    ),
+    instances: CUBE_INSTANCES,
   }),
   material: material({
-    baseColor: [0.2, 0.9, 0.2, 0.5],
+    // baseColor: [0.2, 0.5, 0.2, 0.5],
+    baseColor: [1, 1, 1, 0.5],
+    castShadows: true,
+    receiveShadows: true,
     blend: true,
     blendSrcRGBFactor: ctx.BlendFactor.One,
     blendSrcAlphaFactor: ctx.BlendFactor.One,
@@ -252,7 +260,7 @@ const directionalLightEntity = createEntity({
   }),
   directionalLight: directionalLight({
     color: [1, 0.1, 0.1, 1], //FIXME: intensity is copied to alpha in pex-renderer
-    intensity: 3,
+    intensity: 1,
     castShadows: true,
     shadowMapSize: 1024,
   }),
@@ -267,7 +275,7 @@ const directionalLightEntity2 = createEntity({
   }),
   directionalLight: directionalLight({
     color: [0.1, 0.1, 1.0, 1], //FIXME: intensity is copied to alpha in pex-renderer
-    intensity: 3,
+    intensity: 1,
     castShadows: true,
   }),
   lightHelper: lightHelper(),
@@ -388,8 +396,10 @@ ctx.frame(() => {
   geometrySys.update(entities);
   transformSys.update(entities);
   skyboxSys.update(entities);
+  reflectionProbeSys.update(entities, {
+    renderers: [skyboxRendererSystem],
+  });
   lightSys.update(entities);
-  reflectionProbeSys.update(entities);
 
   //draw left/bottom side
   view1.draw((renderView) => {

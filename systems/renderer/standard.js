@@ -1,7 +1,14 @@
-import { mat3, mat4, mat2x3 } from "pex-math";
+import { mat3, mat4 } from "pex-math";
 import { pipeline as SHADERS, parser as ShaderParser } from "pex-shaders";
 import * as AreaLightsData from "./area-light-data.js";
-import { NAMESPACE, TEMP_MAT2X3 } from "../../utils.js";
+import {
+  ProgramCache,
+  applyDebugRender,
+  applyMaterialHooks,
+  buildProgram,
+  getMaterialFlagsAndUniforms,
+} from "./utils.js";
+import { NAMESPACE } from "../../utils.js";
 
 let ltc_mat;
 let ltc_mag;
@@ -57,176 +64,7 @@ const flagDefs = [
   [["geometry", "attributes", "aVertexColor"], "USE_VERTEX_COLORS"],
 ];
 
-function buildProgram(ctx, vert, frag) {
-  let program = null;
-  try {
-    program = ctx.program({ vert, frag });
-  } catch (e) {
-    program = ctx.program({
-      vert: SHADERS.error.vert,
-      frag: SHADERS.error.frag,
-    });
-    throw e;
-  }
-  return program;
-}
-
-function getMaterialProgramAndFlags(ctx, entity, options = {}) {
-  const { _geometry: geometry, material } = entity;
-
-  const flags = [
-    //[["ctx", "capabilities", "maxColorAttachments"], "USE_DRAW_BUFFERS"
-    ctx.capabilities.maxColorAttachments > 1 && "USE_DRAW_BUFFERS",
-    // (!geometry.attributes.aNormal || material.unlit) && "USE_UNLIT_WORKFLOW",
-    // "USE_UNLIT_WORKFLOW",
-    "SHADOW_QUALITY " +
-      (entity.material.receiveShadows ? options.shadowQuality : 0),
-  ];
-  let materialUniforms = {};
-
-  for (let i = 0; i < flagDefs.length; i++) {
-    const [path, defineName, opts = {}] = flagDefs[i];
-
-    if (opts.requires && !flags.includes(opts.requires)) continue;
-
-    //TODO: GC
-    const obj = { ...entity, geometry, options };
-    let value = obj;
-
-    for (let j = 0; j < path.length; j++) {
-      value = value[path[j]];
-    }
-
-    if (opts.type == "counter") {
-      flags.push(`${defineName} ${value}`);
-    } else if (opts.type == "texture" && value) {
-      flags.push(`USE_${defineName}`);
-      flags.push(`${defineName}_TEX_COORD_INDEX ${value.texCoord || 0}`);
-      materialUniforms[opts.uniform] = value.texture || value;
-
-      if (value.texture && (value.offset || value.rotation || value.scale)) {
-        mat2x3.identity(TEMP_MAT2X3);
-        mat2x3.translate(TEMP_MAT2X3, value.offset || [0, 0]);
-        mat2x3.rotate(TEMP_MAT2X3, -value.rotation || 0);
-        mat2x3.scale(TEMP_MAT2X3, value.scale || [1, 1]);
-
-        value.texCoordTransformMatrix = mat3.fromMat2x3(
-          value.texCoordTransformMatrix
-            ? mat3.identity(value.texCoordTransformMatrix)
-            : mat3.create(),
-          TEMP_MAT2X3
-        );
-      }
-      if (value.texCoordTransformMatrix) {
-        flags.push(`USE_${defineName}_TEX_COORD_TRANSFORM`);
-        materialUniforms[opts.uniform + "TexCoordTransform"] =
-          value.texCoordTransformMatrix;
-      }
-    } else if (value !== undefined || opts.default !== undefined) {
-      if (opts.type !== "boolean" || value) {
-        flags.push(defineName);
-      } else {
-        if (opts.fallback) {
-          flags.push(opts.fallback);
-        }
-      }
-      if (opts.uniform) {
-        materialUniforms[opts.uniform] =
-          value !== undefined ? value : opts.default;
-      }
-    } else if (opts.fallback) {
-      flags.push(opts.fallback);
-    }
-  }
-
-  let { vert, frag } = material;
-
-  vert ||= SHADERS.material.vert;
-  frag ||= options.depthPassOnly
-    ? SHADERS.depthPass.frag
-    : SHADERS.material.frag;
-
-  if (material.hooks) {
-    if (material.hooks.vert) {
-      for (let [hookName, hookCode] of Object.entries(material.hooks.vert)) {
-        const hook = `#define HOOK_VERT_${hookName}`;
-        vert = vert.replace(hook, hookCode);
-      }
-    }
-    if (material.hooks.frag) {
-      for (let [hookName, hookCode] of Object.entries(material.hooks.frag)) {
-        const hook = `#define HOOK_FRAG_${hookName}`;
-        frag = frag.replace(hook, hookCode);
-      }
-    }
-    if (material.hooks.uniforms) {
-      const hookUniforms = material.hooks.uniforms(entity, []);
-      Object.assign(materialUniforms, hookUniforms);
-    }
-  }
-
-  let debugRender = options.debugRender;
-  if (debugRender) {
-    let scale = "";
-    let pow = 1;
-    let mode = debugRender.toLowerCase();
-    if (mode.includes("normal")) {
-      scale = "*0.5 + 0.5";
-    }
-    if (mode.includes("texcoord")) {
-      debugRender = `vec3(${debugRender}, 0.0)`;
-    }
-    if (
-      mode.includes("ao") ||
-      mode.includes("normal") ||
-      mode.includes("metallic") ||
-      mode.includes("roughness")
-    ) {
-      pow = "2.2";
-    }
-    frag = frag.replace(
-      "gl_FragData[0] = encode(vec4(color, 1.0), uOutputEncoding);",
-      `gl_FragData[0] = vec4(pow(vec3(${debugRender}${scale}), vec3(${pow})), 1.0);`
-    );
-  }
-
-  return {
-    flags: flags.flat().filter(Boolean),
-    vert,
-    frag,
-    materialUniforms,
-  };
-}
-
 export default ({ ctx }) => {
-  const pipelineCache = {};
-  const programCacheMap = {
-    values: [],
-    getValue(flags, vert, frag) {
-      for (let i = 0; i < this.values.length; i++) {
-        const v = this.values[i];
-        if (v.frag === frag && v.vert === vert) {
-          if (v.flags.length === flags.length) {
-            let found = true;
-            for (let j = 0; j < flags.length; j++) {
-              if (v.flags[j] !== flags[j]) {
-                found = false;
-                break;
-              }
-            }
-            if (found) {
-              return v.program;
-            }
-          }
-        }
-      }
-      return false;
-    },
-    setValue(flags, vert, frag, program) {
-      this.values.push({ flags, vert, frag, program });
-    },
-  };
-
   const dummyTexture2D = ctx.texture2D({
     name: "dummyTexture2D",
     width: 4,
@@ -274,16 +112,33 @@ export default ({ ctx }) => {
   // }
 
   function getMaterialProgram(ctx, entity, options) {
-    const { flags, vert, frag, materialUniforms } = getMaterialProgramAndFlags(
+    const { material } = entity;
+    const { flags, materialUniforms } = getMaterialFlagsAndUniforms(
       ctx,
       entity,
+      flagDefs,
       options
     );
+
+    const descriptor = {
+      vert: material.vert || SHADERS.material.vert,
+      frag:
+        material.frag ||
+        (options.depthPassOnly
+          ? SHADERS.depthPass.frag
+          : SHADERS.material.frag),
+    };
+    if (material.hooks) {
+      applyMaterialHooks(descriptor, entity, materialUniforms);
+    }
+    if (options.debugRender) applyDebugRender(descriptor, options.debugRender);
+
+    const { vert, frag } = descriptor;
     entity._flags = flags;
 
     if (options.debugRender) flags.push(options.debugRender);
 
-    let program = programCacheMap.getValue(flags, vert, frag);
+    let program = standardRendererSystem.cache.programs.get(flags, vert, frag);
 
     if (!program) {
       const defines = options.debugRender
@@ -307,7 +162,7 @@ export default ({ ctx }) => {
           ShaderParser.replaceStrings(vertSrc, options),
           ShaderParser.replaceStrings(fragSrc, options)
         );
-        programCacheMap.setValue(flags, vert, frag, program);
+        standardRendererSystem.cache.programs.set(flags, vert, frag, program);
       } catch (error) {
         console.error(NAMESPACE, error);
         console.warn(
@@ -484,7 +339,7 @@ export default ({ ctx }) => {
       .map(([key, value]) => material[key] ?? value)
       .join("_")}`;
 
-    let pipeline = pipelineCache[hash];
+    let pipeline = standardRendererSystem.cache.pipelines[hash];
     if (!pipeline || material.needsPipelineUpdate) {
       material.needsPipelineUpdate = false;
       pipeline = ctx.pipeline({
@@ -501,7 +356,7 @@ export default ({ ctx }) => {
         cullFaceMode: material.cullFaceMode || ctx.Face.Back,
         primitive: geometry.primitive || ctx.Primitive.Triangles,
       });
-      pipelineCache[hash] = pipeline;
+      standardRendererSystem.cache.pipelines[hash] = pipeline;
     }
 
     return { pipeline, materialUniforms };
@@ -676,6 +531,10 @@ export default ({ ctx }) => {
 
   const standardRendererSystem = {
     type: "standard-renderer",
+    cache: {
+      programs: new ProgramCache(),
+      pipelines: {},
+    },
     debug: false,
     debugRender: "",
     checkLight(light) {
