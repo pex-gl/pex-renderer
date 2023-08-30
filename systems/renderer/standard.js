@@ -111,211 +111,6 @@ export default ({ ctx }) => {
   //   }
   // }
 
-  function getMaterialProgram(ctx, entity, options) {
-    const { material } = entity;
-    const { flags, materialUniforms } = getMaterialFlagsAndUniforms(
-      ctx,
-      entity,
-      flagDefs,
-      options
-    );
-
-    const descriptor = {
-      vert: material.vert || SHADERS.material.vert,
-      frag:
-        material.frag ||
-        (options.depthPassOnly
-          ? SHADERS.depthPass.frag
-          : SHADERS.material.frag),
-    };
-    if (material.hooks) {
-      applyMaterialHooks(descriptor, entity, materialUniforms);
-    }
-    if (options.debugRender) applyDebugRender(descriptor, options.debugRender);
-
-    const { vert, frag } = descriptor;
-    entity._flags = flags;
-
-    if (options.debugRender) flags.push(options.debugRender);
-
-    let program = standardRendererSystem.cache.programs.get(flags, vert, frag);
-
-    if (!program) {
-      const defines = options.debugRender
-        ? flags.filter((flag) => flag !== options.debugRender)
-        : flags;
-      const vertSrc = ShaderParser.build(ctx, vert, defines);
-      const fragSrc = ShaderParser.build(ctx, frag, defines);
-
-      try {
-        if (standardRendererSystem.debug) {
-          console.debug(
-            NAMESPACE,
-            standardRendererSystem.type,
-            "new program",
-            flags,
-            entity
-          );
-        }
-        program = buildProgram(
-          ctx,
-          ShaderParser.replaceStrings(vertSrc, options),
-          ShaderParser.replaceStrings(fragSrc, options)
-        );
-        standardRendererSystem.cache.programs.set(flags, vert, frag, program);
-      } catch (error) {
-        console.error(NAMESPACE, error);
-        console.warn(
-          NAMESPACE,
-          "glsl error",
-          ShaderParser.getFormattedError(error, {
-            vert: vertSrc,
-            frag: fragSrc,
-          })
-        );
-      }
-    }
-    return { program, materialUniforms };
-  }
-
-  function gatherLightInfo({ entities, sharedUniforms }) {
-    // TODO: reduce
-    const ambientLights = entities.filter((e) => e.ambientLight);
-    const directionalLights = entities.filter((e) => e.directionalLight);
-    const pointLights = entities.filter((e) => e.pointLight);
-    const spotLights = entities.filter((e) => e.spotLight);
-    const areaLights = entities.filter((e) => e.areaLight);
-
-    for (let i = 0; i < directionalLights.length; i++) {
-      const lightEntity = directionalLights[i];
-
-      const light = lightEntity.directionalLight;
-      standardRendererSystem.checkLight(light);
-
-      sharedUniforms[`uDirectionalLights[${i}].direction`] = light._direction;
-      sharedUniforms[`uDirectionalLights[${i}].color`] = light.color.map(
-        (c, j) => {
-          if (j < 3) return Math.pow(c * light.intensity, 1.0 / 2.2);
-          else return c;
-        }
-      );
-      sharedUniforms[`uDirectionalLights[${i}].castShadows`] =
-        light.castShadows;
-      sharedUniforms[`uDirectionalLights[${i}].projectionMatrix`] =
-        light._projectionMatrix;
-      sharedUniforms[`uDirectionalLights[${i}].viewMatrix`] = light._viewMatrix;
-      sharedUniforms[`uDirectionalLights[${i}].near`] = light._near || 0.1;
-      sharedUniforms[`uDirectionalLights[${i}].far`] = light._far || 100;
-      sharedUniforms[`uDirectionalLights[${i}].bias`] = light.bias || 0.1;
-      sharedUniforms[`uDirectionalLights[${i}].shadowMapSize`] =
-        light.castShadows && light._shadowMap
-          ? [light._shadowMap.width, light._shadowMap.height]
-          : [0, 0];
-      sharedUniforms[`uDirectionalLightShadowMaps[${i}]`] = light.castShadows
-        ? light._shadowMap
-        : dummyTexture2D;
-    }
-
-    for (let i = 0; i < spotLights.length; i++) {
-      const lightEntity = spotLights[i];
-      const light = lightEntity.spotLight;
-      standardRendererSystem.checkLight(light);
-
-      sharedUniforms[`uSpotLights[${i}].position`] =
-        lightEntity._transform.worldPosition;
-      sharedUniforms[`uSpotLights[${i}].direction`] = light._direction;
-      sharedUniforms[`uSpotLights[${i}].color`] = light.color.map((c, j) => {
-        if (j < 3) return Math.pow(c * light.intensity, 1.0 / 2.2);
-        else return c;
-      });
-      sharedUniforms[`uSpotLights[${i}].angle`] = light.angle;
-      sharedUniforms[`uSpotLights[${i}].innerAngle`] = light.innerAngle;
-      sharedUniforms[`uSpotLights[${i}].range`] = light.range;
-      sharedUniforms[`uSpotLights[${i}].castShadows`] = light.castShadows;
-      sharedUniforms[`uSpotLights[${i}].projectionMatrix`] =
-        light._projectionMatrix;
-      sharedUniforms[`uSpotLights[${i}].viewMatrix`] = light._viewMatrix;
-      sharedUniforms[`uSpotLights[${i}].near`] = light._near || 0.1;
-      sharedUniforms[`uSpotLights[${i}].far`] = light._far || 100;
-      sharedUniforms[`uSpotLights[${i}].bias`] = light.bias || 0.1;
-      sharedUniforms[`uSpotLights[${i}].shadowMapSize`] = light.castShadows
-        ? [light._shadowMap.width, light._shadowMap.height]
-        : [0, 0];
-      sharedUniforms[`uSpotLightShadowMaps[${i}]`] =
-        light.castShadows && light._shadowMap
-          ? light._shadowMap
-          : dummyTexture2D;
-    }
-
-    for (let i = 0; i < pointLights.length; i++) {
-      const lightEntity = pointLights[i];
-      const light = lightEntity.pointLight;
-      standardRendererSystem.checkLight(light);
-
-      sharedUniforms[`uPointLights[${i}].position`] =
-        lightEntity._transform.worldPosition;
-      sharedUniforms[`uPointLights[${i}].color`] = light.color.map((c, j) => {
-        if (j < 3) return Math.pow(c * light.intensity, 1.0 / 2.2);
-        else return c;
-      });
-      sharedUniforms[`uPointLights[${i}].range`] = light.range;
-      sharedUniforms[`uPointLights[${i}].castShadows`] = light.castShadows;
-      sharedUniforms[`uPointLightShadowMaps[${i}]`] =
-        light.castShadows && light._shadowCubemap
-          ? light._shadowCubemap
-          : dummyTextureCube;
-    }
-
-    // TODO: dispose if no areaLights
-    if (areaLights.length) {
-      ltc_mat ||= ctx.texture2D({
-        name: "areaLightMatMap",
-        data: AreaLightsData.mat,
-        width: 64,
-        height: 64,
-        pixelFormat: ctx.PixelFormat.RGBA32F,
-        encoding: ctx.Encoding.Linear,
-        min: ctx.Filter.Linear,
-        mag: ctx.Filter.Linear,
-      });
-      ltc_mag ||= ctx.texture2D({
-        name: "areaLightMagMap",
-        data: AreaLightsData.mag,
-        width: 64,
-        height: 64,
-        pixelFormat: ctx.PixelFormat.R32F,
-        encoding: ctx.Encoding.Linear,
-        min: ctx.Filter.Linear,
-        mag: ctx.Filter.Linear,
-      });
-    }
-
-    for (let i = 0; i < areaLights.length; i++) {
-      const lightEntity = areaLights[i];
-      const light = lightEntity.areaLight;
-      sharedUniforms.ltc_mat = ltc_mat;
-      sharedUniforms.ltc_mag = ltc_mag;
-      sharedUniforms[`uAreaLights[${i}].position`] =
-        lightEntity.transform.position;
-      // TODO: mix color and intensity
-      sharedUniforms[`uAreaLights[${i}].color`] = light.color;
-      sharedUniforms[`uAreaLights[${i}].intensity`] = light.intensity;
-      sharedUniforms[`uAreaLights[${i}].rotation`] =
-        lightEntity.transform.rotation;
-      sharedUniforms[`uAreaLights[${i}].size`] = [
-        lightEntity.transform.scale[0] / 2,
-        lightEntity.transform.scale[1] / 2,
-      ];
-    }
-
-    for (let i = 0; i < ambientLights.length; i++) {
-      const lightEntity = ambientLights[i];
-      const color = [...lightEntity.ambientLight.color];
-      color[3] = lightEntity.ambientLight.intensity;
-      sharedUniforms[`uAmbientLights[${i}].color`] = color;
-    }
-  }
-
   const pipelineMaterialDefaults = {
     depthWrite: undefined,
     depthTest: undefined,
@@ -328,206 +123,6 @@ export default ({ ctx }) => {
     cullFace: true,
     cullFaceMode: ctx.Face.Back,
   };
-
-  function getGeometryPipeline(ctx, entity, opts) {
-    const { material, _geometry: geometry } = entity;
-    const { program, materialUniforms } = getMaterialProgram(ctx, entity, opts);
-
-    const hash = `${material.id}_${program.id}_${
-      geometry.primitive
-    }_${Object.entries(pipelineMaterialDefaults)
-      .map(([key, value]) => material[key] ?? value)
-      .join("_")}`;
-
-    let pipeline = standardRendererSystem.cache.pipelines[hash];
-    if (!pipeline || material.needsPipelineUpdate) {
-      material.needsPipelineUpdate = false;
-      pipeline = ctx.pipeline({
-        program,
-        depthTest: material.depthTest,
-        depthWrite: material.depthWrite,
-        depthFunc: material.depthFunc || ctx.DepthFunc.Less,
-        blend: material.blend,
-        blendSrcRGBFactor: material.blendSrcRGBFactor,
-        blendSrcAlphaFactor: material.blendSrcAlphaFactor,
-        blendDstRGBFactor: material.blendDstRGBFactor,
-        blendDstAlphaFactor: material.blendDstAlphaFactor,
-        cullFace: material.cullFace !== undefined ? material.cullFace : true,
-        cullFaceMode: material.cullFaceMode || ctx.Face.Back,
-        primitive: geometry.primitive || ctx.Primitive.Triangles,
-      });
-      standardRendererSystem.cache.pipelines[hash] = pipeline;
-    }
-
-    return { pipeline, materialUniforms };
-  }
-
-  function gatherReflectionProbeInfo({ entities, sharedUniforms }) {
-    const reflectionProbes = entities.filter((e) => e.reflectionProbe);
-    if (
-      reflectionProbes.length > 0 &&
-      standardRendererSystem.checkReflectionProbe(reflectionProbes[0])
-    ) {
-      // && reflectionProbes[0]._reflectionMap) {
-      sharedUniforms.uReflectionMap =
-        reflectionProbes[0]._reflectionProbe._reflectionMap;
-      sharedUniforms.uReflectionMapSize =
-        reflectionProbes[0]._reflectionProbe._reflectionMap.width;
-      sharedUniforms.uReflectionMapEncoding =
-        reflectionProbes[0]._reflectionProbe._reflectionMap.encoding;
-    }
-  }
-
-  function render(renderView, entities, opts) {
-    const { camera, cameraEntity } = renderView;
-    const {
-      shadowMapping,
-      shadowMappingLight,
-      transparent,
-      backgroundColorTexture,
-    } = opts;
-
-    const sharedUniforms = {
-      //uOutputEncoding: renderPipelineSystem.outputEncoding,
-      uOutputEncoding: ctx.Encoding.Linear,
-      uScreenSize: [renderView.viewport[2], renderView.viewport[3]],
-    };
-
-    if (!shadowMapping) {
-      gatherLightInfo({ entities, sharedUniforms });
-      gatherReflectionProbeInfo({
-        entities,
-        sharedUniforms,
-        shadowMapping,
-      });
-    }
-
-    if (shadowMappingLight) {
-      sharedUniforms.uProjectionMatrix = shadowMappingLight._projectionMatrix;
-      sharedUniforms.uViewMatrix = shadowMappingLight._viewMatrix;
-      sharedUniforms.uInverseViewMatrix = mat4.create();
-      sharedUniforms.uCameraPosition = [0, 0, 5];
-    } else {
-      sharedUniforms.uProjectionMatrix = camera.projectionMatrix;
-      sharedUniforms.uViewMatrix = camera.viewMatrix;
-      sharedUniforms.uInverseViewMatrix =
-        camera.invViewMatrix || camera.inverseViewMatrix; //TODO: settle on invViewMatrix
-      sharedUniforms.uCameraPosition = cameraEntity._transform.worldPosition; //TODO: ugly
-    }
-
-    sharedUniforms.uCaptureTexture = backgroundColorTexture;
-
-    const renderableEntities = entities.filter(
-      (e) =>
-        e.geometry &&
-        e.material &&
-        e.material.type === undefined &&
-        (!shadowMapping || e.material.castShadows) &&
-        (transparent ? e.material.blend : !e.material.blend) //TODO: what is transparent?
-    ); //hardcoded e.drawSegments
-
-    // const opaqueEntities = renderableEntities.filter((e) => !e.material.blend);
-    for (let i = 0; i < renderableEntities.length; i++) {
-      const renderableEntity = renderableEntities[i];
-      const {
-        _geometry: geometry,
-        _transform: transform,
-        material,
-        skin,
-      } = renderableEntity;
-
-      if (!standardRendererSystem.checkRenderableEntity(renderableEntity))
-        continue;
-
-      const cachedUniforms = {};
-      cachedUniforms.uModelMatrix = transform.modelMatrix; //FIXME: bypasses need for transformSystem access
-      cachedUniforms.uNormalScale = 1; // TODO: uniform
-      // cachedUniforms.uAlphaTest = material.alphaTest;
-      // cachedUniforms.uAlphaMap = material.alphaMap;
-      cachedUniforms.uReflectance =
-        material.reflectance !== undefined ? material.reflectance : 0.5;
-      cachedUniforms.uExposure = 1.0;
-
-      cachedUniforms.uPointSize = material.pointSize || 1;
-      cachedUniforms.uMetallicRoughnessMap = material.metallicRoughnessMap;
-      renderableEntity._uniforms = cachedUniforms;
-
-      sharedUniforms.uRefraction =
-        0.1 * (material.refraction !== undefined ? material.refraction : 0.5);
-
-      //duplicated variables
-      const ambientLights = shadowMapping
-        ? []
-        : entities.filter((e) => e.ambientLight);
-      const directionalLights = shadowMapping
-        ? []
-        : entities.filter((e) => e.directionalLight);
-      const pointLights = shadowMapping
-        ? []
-        : entities.filter((e) => e.pointLight);
-      const spotLights = shadowMapping
-        ? []
-        : entities.filter((e) => e.spotLight);
-      const areaLights = shadowMapping
-        ? []
-        : entities.filter((e) => e.areaLight);
-      const reflectionProbes = shadowMapping
-        ? []
-        : entities.filter((e) => e.reflectionProbe);
-
-      const { pipeline, materialUniforms } = getGeometryPipeline(
-        ctx,
-        renderableEntity,
-        {
-          ambientLights,
-          directionalLights,
-          pointLights,
-          spotLights,
-          areaLights,
-          reflectionProbes,
-          depthPassOnly: shadowMapping,
-          useSSAO: false,
-          // postProcessingCmp &&
-          // postProcessingCmp.enabled &&
-          // postProcessingCmp.ssao,
-          useTonemapping: false, //!(postProcessingCmp && postProcessingCmp.enabled),
-          shadowQuality: opts.shadowQuality,
-          debugRender: opts.debugRender,
-        }
-      );
-
-      Object.assign(cachedUniforms, sharedUniforms);
-      Object.assign(cachedUniforms, materialUniforms);
-
-      // FIXME: this is expensive and not cached
-      let viewMatrix;
-      if (shadowMappingLight && shadowMappingLight._viewMatrix) {
-        viewMatrix = shadowMappingLight._viewMatrix;
-      } else {
-        viewMatrix = camera.viewMatrix;
-      }
-
-      const normalMat = mat4.copy(viewMatrix);
-      mat4.mult(normalMat, transform.modelMatrix);
-      mat4.invert(normalMat);
-      mat4.transpose(normalMat);
-      cachedUniforms.uNormalMatrix = mat3.fromMat4(mat3.create(), normalMat);
-
-      const cmd = {
-        name: transparent ? "drawTransparentGeometryCmd" : "drawGeometryCmd",
-        attributes: geometry.attributes,
-        indices: geometry.indices,
-        count: geometry.count,
-        pipeline,
-        uniforms: cachedUniforms,
-        instances: geometry.instances,
-      };
-      if (renderableEntity.geometry.multiDraw) {
-        cmd.multiDraw = renderableEntity.geometry.multiDraw;
-      }
-      ctx.submit(cmd);
-    }
-  }
 
   const standardRendererSystem = {
     type: "standard-renderer",
@@ -576,17 +171,406 @@ export default ({ ctx }) => {
         return true;
       }
     },
+    getProgram(ctx, entity, options) {
+      const { material } = entity;
+      const { flags, materialUniforms } = getMaterialFlagsAndUniforms(
+        ctx,
+        entity,
+        flagDefs,
+        options
+      );
+      this.materialUniforms = materialUniforms;
+      entity._flags = flags;
+
+      const descriptor = {
+        vert: material.vert || SHADERS.material.vert,
+        frag:
+          material.frag ||
+          (options.depthPassOnly
+            ? SHADERS.depthPass.frag
+            : SHADERS.material.frag),
+      };
+      if (material.hooks) {
+        applyMaterialHooks(descriptor, entity, this.materialUniforms);
+      }
+      if (options.debugRender) {
+        applyDebugRender(descriptor, options.debugRender);
+        flags.push(options.debugRender);
+      }
+
+      const { vert, frag } = descriptor;
+
+      let program = this.cache.programs.get(flags, vert, frag);
+
+      if (!program) {
+        const defines = options.debugRender
+          ? flags.filter((flag) => flag !== options.debugRender)
+          : flags;
+        const vertSrc = ShaderParser.build(ctx, vert, defines);
+        const fragSrc = ShaderParser.build(ctx, frag, defines);
+
+        try {
+          if (this.debug) {
+            console.debug(NAMESPACE, this.type, "new program", flags, entity);
+          }
+          program = buildProgram(
+            ctx,
+            ShaderParser.replaceStrings(vertSrc, options),
+            ShaderParser.replaceStrings(fragSrc, options)
+          );
+          this.cache.programs.set(flags, vert, frag, program);
+        } catch (error) {
+          console.error(NAMESPACE, error);
+          console.warn(
+            NAMESPACE,
+            "glsl error",
+            ShaderParser.getFormattedError(error, {
+              vert: vertSrc,
+              frag: fragSrc,
+            })
+          );
+        }
+      }
+      return program;
+    },
+    getPipeline(ctx, entity, options) {
+      const { material, _geometry: geometry } = entity;
+      const program = this.getProgram(ctx, entity, options);
+
+      const hash = `${material.id}_${program.id}_${
+        geometry.primitive
+      }_${Object.entries(pipelineMaterialDefaults)
+        .map(([key, value]) => material[key] ?? value)
+        .join("_")}`;
+
+      if (!this.cache.pipelines[hash] || material.needsPipelineUpdate) {
+        material.needsPipelineUpdate = false;
+        if (this.debug) {
+          console.debug(NAMESPACE, this.type, "new pipeline", hash, entity);
+        }
+        this.cache.pipelines[hash] = ctx.pipeline({
+          program,
+          depthTest: material.depthTest,
+          depthWrite: material.depthWrite,
+          depthFunc: material.depthFunc || ctx.DepthFunc.Less,
+          blend: material.blend,
+          blendSrcRGBFactor: material.blendSrcRGBFactor,
+          blendSrcAlphaFactor: material.blendSrcAlphaFactor,
+          blendDstRGBFactor: material.blendDstRGBFactor,
+          blendDstAlphaFactor: material.blendDstAlphaFactor,
+          cullFace: material.cullFace !== undefined ? material.cullFace : true,
+          cullFaceMode: material.cullFaceMode || ctx.Face.Back,
+          primitive: geometry.primitive || ctx.Primitive.Triangles,
+        });
+      }
+
+      return this.cache.pipelines[hash];
+    },
+    gatherLightsInfo(lights, sharedUniforms) {
+      const {
+        ambientLights,
+        directionalLights,
+        pointLights,
+        spotLights,
+        areaLights,
+      } = lights;
+
+      for (let i = 0; i < directionalLights.length; i++) {
+        const lightEntity = directionalLights[i];
+
+        const light = lightEntity.directionalLight;
+        standardRendererSystem.checkLight(light);
+
+        sharedUniforms[`uDirectionalLights[${i}].direction`] = light._direction;
+        sharedUniforms[`uDirectionalLights[${i}].color`] = light.color.map(
+          (c, j) => {
+            if (j < 3) return Math.pow(c * light.intensity, 1.0 / 2.2);
+            else return c;
+          }
+        );
+        sharedUniforms[`uDirectionalLights[${i}].castShadows`] =
+          light.castShadows;
+        sharedUniforms[`uDirectionalLights[${i}].projectionMatrix`] =
+          light._projectionMatrix;
+        sharedUniforms[`uDirectionalLights[${i}].viewMatrix`] =
+          light._viewMatrix;
+        sharedUniforms[`uDirectionalLights[${i}].near`] = light._near || 0.1;
+        sharedUniforms[`uDirectionalLights[${i}].far`] = light._far || 100;
+        sharedUniforms[`uDirectionalLights[${i}].bias`] = light.bias || 0.1;
+        sharedUniforms[`uDirectionalLights[${i}].shadowMapSize`] =
+          light.castShadows && light._shadowMap
+            ? [light._shadowMap.width, light._shadowMap.height]
+            : [0, 0];
+        sharedUniforms[`uDirectionalLightShadowMaps[${i}]`] = light.castShadows
+          ? light._shadowMap
+          : dummyTexture2D;
+      }
+
+      for (let i = 0; i < spotLights.length; i++) {
+        const lightEntity = spotLights[i];
+        const light = lightEntity.spotLight;
+        standardRendererSystem.checkLight(light);
+
+        sharedUniforms[`uSpotLights[${i}].position`] =
+          lightEntity._transform.worldPosition;
+        sharedUniforms[`uSpotLights[${i}].direction`] = light._direction;
+        sharedUniforms[`uSpotLights[${i}].color`] = light.color.map((c, j) => {
+          if (j < 3) return Math.pow(c * light.intensity, 1.0 / 2.2);
+          else return c;
+        });
+        sharedUniforms[`uSpotLights[${i}].angle`] = light.angle;
+        sharedUniforms[`uSpotLights[${i}].innerAngle`] = light.innerAngle;
+        sharedUniforms[`uSpotLights[${i}].range`] = light.range;
+        sharedUniforms[`uSpotLights[${i}].castShadows`] = light.castShadows;
+        sharedUniforms[`uSpotLights[${i}].projectionMatrix`] =
+          light._projectionMatrix;
+        sharedUniforms[`uSpotLights[${i}].viewMatrix`] = light._viewMatrix;
+        sharedUniforms[`uSpotLights[${i}].near`] = light._near || 0.1;
+        sharedUniforms[`uSpotLights[${i}].far`] = light._far || 100;
+        sharedUniforms[`uSpotLights[${i}].bias`] = light.bias || 0.1;
+        sharedUniforms[`uSpotLights[${i}].shadowMapSize`] = light.castShadows
+          ? [light._shadowMap.width, light._shadowMap.height]
+          : [0, 0];
+        sharedUniforms[`uSpotLightShadowMaps[${i}]`] =
+          light.castShadows && light._shadowMap
+            ? light._shadowMap
+            : dummyTexture2D;
+      }
+
+      for (let i = 0; i < pointLights.length; i++) {
+        const lightEntity = pointLights[i];
+        const light = lightEntity.pointLight;
+        standardRendererSystem.checkLight(light);
+
+        sharedUniforms[`uPointLights[${i}].position`] =
+          lightEntity._transform.worldPosition;
+        sharedUniforms[`uPointLights[${i}].color`] = light.color.map((c, j) => {
+          if (j < 3) return Math.pow(c * light.intensity, 1.0 / 2.2);
+          else return c;
+        });
+        sharedUniforms[`uPointLights[${i}].range`] = light.range;
+        sharedUniforms[`uPointLights[${i}].castShadows`] = light.castShadows;
+        sharedUniforms[`uPointLightShadowMaps[${i}]`] =
+          light.castShadows && light._shadowCubemap
+            ? light._shadowCubemap
+            : dummyTextureCube;
+      }
+
+      // TODO: dispose if no areaLights
+      if (areaLights.length) {
+        ltc_mat ||= ctx.texture2D({
+          name: "areaLightMatMap",
+          data: AreaLightsData.mat,
+          width: 64,
+          height: 64,
+          pixelFormat: ctx.PixelFormat.RGBA32F,
+          encoding: ctx.Encoding.Linear,
+          min: ctx.Filter.Linear,
+          mag: ctx.Filter.Linear,
+        });
+        ltc_mag ||= ctx.texture2D({
+          name: "areaLightMagMap",
+          data: AreaLightsData.mag,
+          width: 64,
+          height: 64,
+          pixelFormat: ctx.PixelFormat.R32F,
+          encoding: ctx.Encoding.Linear,
+          min: ctx.Filter.Linear,
+          mag: ctx.Filter.Linear,
+        });
+      }
+
+      for (let i = 0; i < areaLights.length; i++) {
+        const lightEntity = areaLights[i];
+        const light = lightEntity.areaLight;
+        sharedUniforms.ltc_mat = ltc_mat;
+        sharedUniforms.ltc_mag = ltc_mag;
+        sharedUniforms[`uAreaLights[${i}].position`] =
+          lightEntity.transform.position;
+        // TODO: mix color and intensity
+        sharedUniforms[`uAreaLights[${i}].color`] = light.color;
+        sharedUniforms[`uAreaLights[${i}].intensity`] = light.intensity;
+        sharedUniforms[`uAreaLights[${i}].rotation`] =
+          lightEntity.transform.rotation;
+        sharedUniforms[`uAreaLights[${i}].size`] = [
+          lightEntity.transform.scale[0] / 2,
+          lightEntity.transform.scale[1] / 2,
+        ];
+      }
+
+      for (let i = 0; i < ambientLights.length; i++) {
+        const lightEntity = ambientLights[i];
+        const color = [...lightEntity.ambientLight.color];
+        color[3] = lightEntity.ambientLight.intensity;
+        sharedUniforms[`uAmbientLights[${i}].color`] = color;
+      }
+    },
+    gatherReflectionProbeInfo(reflectionProbes, sharedUniforms) {
+      if (
+        reflectionProbes.length > 0 &&
+        this.checkReflectionProbe(reflectionProbes[0])
+      ) {
+        sharedUniforms.uReflectionMap =
+          reflectionProbes[0]._reflectionProbe._reflectionMap;
+        sharedUniforms.uReflectionMapSize =
+          reflectionProbes[0]._reflectionProbe._reflectionMap.width;
+        sharedUniforms.uReflectionMapEncoding =
+          reflectionProbes[0]._reflectionProbe._reflectionMap.encoding;
+      }
+    },
+    render(renderView, entities, opts) {
+      const { camera, cameraEntity } = renderView;
+      const {
+        shadowMapping,
+        shadowMappingLight,
+        transparent,
+        backgroundColorTexture,
+        shadowQuality,
+        debugRender,
+      } = opts;
+
+      const pipelineOptions = {
+        ambientLights: [],
+        directionalLights: [],
+        pointLights: [],
+        spotLights: [],
+        areaLights: [],
+        reflectionProbes: entities.filter((e) => e.reflectionProbe),
+        depthPassOnly: shadowMapping,
+        // useSSAO: false,
+        // postProcessingCmp &&
+        // postProcessingCmp.enabled &&
+        // postProcessingCmp.ssao,
+        useTonemapping: false, //!(postProcessingCmp && postProcessingCmp.enabled),
+        shadowQuality,
+        debugRender,
+      };
+
+      const sharedUniforms = {
+        //uOutputEncoding: renderPipelineSystem.outputEncoding,
+        uOutputEncoding: ctx.Encoding.Linear,
+        uScreenSize: [renderView.viewport[2], renderView.viewport[3]],
+      };
+
+      if (!shadowMapping) {
+        pipelineOptions.ambientLights = entities.filter((e) => e.ambientLight);
+        pipelineOptions.directionalLights = entities.filter(
+          (e) => e.directionalLight
+        );
+        pipelineOptions.pointLights = entities.filter((e) => e.pointLight);
+        pipelineOptions.spotLights = entities.filter((e) => e.spotLight);
+        pipelineOptions.areaLights = entities.filter((e) => e.areaLight);
+
+        this.gatherLightsInfo(pipelineOptions, sharedUniforms);
+        this.gatherReflectionProbeInfo(
+          pipelineOptions.reflectionProbes,
+          sharedUniforms
+        );
+      }
+
+      if (shadowMappingLight) {
+        sharedUniforms.uProjectionMatrix = shadowMappingLight._projectionMatrix;
+        sharedUniforms.uViewMatrix = shadowMappingLight._viewMatrix;
+        sharedUniforms.uInverseViewMatrix = mat4.create();
+        sharedUniforms.uCameraPosition = [0, 0, 5];
+      } else {
+        sharedUniforms.uProjectionMatrix = camera.projectionMatrix;
+        sharedUniforms.uViewMatrix = camera.viewMatrix;
+        sharedUniforms.uInverseViewMatrix =
+          camera.invViewMatrix || camera.inverseViewMatrix; //TODO: settle on invViewMatrix
+        sharedUniforms.uCameraPosition = cameraEntity._transform.worldPosition; //TODO: ugly
+      }
+
+      sharedUniforms.uCaptureTexture = backgroundColorTexture;
+
+      const renderableEntities = entities.filter(
+        (e) =>
+          e.geometry &&
+          e.material &&
+          e.material.type === undefined &&
+          (!shadowMapping || e.material.castShadows) &&
+          (transparent ? e.material.blend : !e.material.blend) //TODO: what is transparent?
+      ); //hardcoded e.drawSegments
+
+      for (let i = 0; i < renderableEntities.length; i++) {
+        const renderableEntity = renderableEntities[i];
+        const {
+          _geometry: geometry,
+          _transform: transform,
+          material,
+        } = renderableEntity;
+
+        if (!this.checkRenderableEntity(renderableEntity)) continue;
+
+        // Get pipeline and program from cache. Also computes this.materialUniforms
+        const pipeline = this.getPipeline(
+          ctx,
+          renderableEntity,
+          pipelineOptions
+        );
+
+        // Get all uniforms
+        const cachedUniforms = {};
+        cachedUniforms.uModelMatrix = transform.modelMatrix; //FIXME: bypasses need for transformSystem access
+        cachedUniforms.uNormalScale = 1; // TODO: uniform
+        // cachedUniforms.uAlphaTest = material.alphaTest;
+        // cachedUniforms.uAlphaMap = material.alphaMap;
+        cachedUniforms.uReflectance =
+          material.reflectance !== undefined ? material.reflectance : 0.5;
+        cachedUniforms.uExposure = 1.0;
+
+        cachedUniforms.uPointSize = material.pointSize || 1;
+        cachedUniforms.uMetallicRoughnessMap = material.metallicRoughnessMap;
+        renderableEntity._uniforms = cachedUniforms;
+
+        sharedUniforms.uRefraction =
+          0.1 * (material.refraction !== undefined ? material.refraction : 0.5);
+
+        Object.assign(cachedUniforms, sharedUniforms, this.materialUniforms);
+
+        // FIXME: this is expensive and not cached
+        let viewMatrix;
+        if (shadowMappingLight && shadowMappingLight._viewMatrix) {
+          viewMatrix = shadowMappingLight._viewMatrix;
+        } else {
+          viewMatrix = camera.viewMatrix;
+        }
+
+        const normalMat = mat4.copy(viewMatrix);
+        mat4.mult(normalMat, transform.modelMatrix);
+        mat4.invert(normalMat);
+        mat4.transpose(normalMat);
+        cachedUniforms.uNormalMatrix = mat3.fromMat4(mat3.create(), normalMat);
+
+        const cmd = {
+          name: transparent ? "drawTransparentGeometryCmd" : "drawGeometryCmd",
+          attributes: geometry.attributes,
+          indices: geometry.indices,
+          count: geometry.count,
+          pipeline,
+          uniforms: cachedUniforms,
+          instances: geometry.instances,
+        };
+        if (renderableEntity.geometry.multiDraw) {
+          cmd.multiDraw = renderableEntity.geometry.multiDraw;
+        }
+        ctx.submit(cmd);
+      }
+    },
     renderStages: {
       shadow: (renderView, entitites, opts = {}) => {
-        render(renderView, entitites, opts);
+        standardRendererSystem.render(renderView, entitites, opts);
       },
       opaque: (renderView, entitites, opts = {}) => {
         opts.debugRender = standardRendererSystem.debugRender;
-        render(renderView, entitites, opts);
+        standardRendererSystem.render(renderView, entitites, opts);
       },
       transparent: (renderView, entitites, opts = {}) => {
         // opts.debugRender = standardRendererSystem.debugRender;
-        render(renderView, entitites, { ...opts, transparent: true });
+        standardRendererSystem.render(renderView, entitites, {
+          ...opts,
+          transparent: true,
+        });
       },
     },
     update: () => {},

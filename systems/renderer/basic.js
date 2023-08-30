@@ -48,7 +48,7 @@ export default ({ ctx }) => {
         frag: material.frag || SHADERS.basic.frag,
       };
       if (material.hooks) {
-        applyMaterialHooks(descriptor, entity, materialUniforms);
+        applyMaterialHooks(descriptor, entity, this.materialUniforms);
       }
       const { vert, frag } = descriptor;
 
@@ -85,6 +85,7 @@ export default ({ ctx }) => {
       )}`;
 
       if (!this.cache.pipelines[hash] || entity.material.needsPipelineUpdate) {
+        entity.material.needsPipelineUpdate = false;
         if (this.debug) {
           console.debug(
             NAMESPACE,
