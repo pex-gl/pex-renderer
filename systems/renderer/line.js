@@ -123,6 +123,7 @@ export default ({ ctx, resolution = 16 } = {}) => {
         for (let i = 0; i < entities.length; i++) {
           const entity = entities[i];
           if (
+            entity.geometry &&
             entity.material &&
             entity.material.type == "segments" &&
             entity.material.castShadows
@@ -134,7 +135,11 @@ export default ({ ctx, resolution = 16 } = {}) => {
       opaque: (renderView, entities) => {
         for (let i = 0; i < entities.length; i++) {
           const entity = entities[i];
-          if (entity.material && entity.material.type == "segments") {
+          if (
+            entity.geometry &&
+            entity.material &&
+            entity.material.type == "segments"
+          ) {
             lineRendererSystem.render(renderView, entity);
           }
         }
