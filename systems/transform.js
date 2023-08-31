@@ -9,7 +9,6 @@ function updateModelMatrix(matrix, transform) {
     mat4.mult(matrix, mat4.fromQuat(TEMP_MAT4, transform.rotation));
   }
   if (transform.scale) mat4.scale(matrix, transform.scale);
-  if (transform.matrix) mat4.mult(matrix, transform.matrix);
 }
 
 const boundsPoints = Array.from({ length: 8 }, () => vec3.create());
