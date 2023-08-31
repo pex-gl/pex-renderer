@@ -1,6 +1,11 @@
 import { mat4, vec3 } from "pex-math";
 import { aabb } from "pex-geom";
-import { NAMESPACE, TEMP_AABB, TEMP_MAT4 } from "../utils.js";
+import {
+  NAMESPACE,
+  TEMP_AABB,
+  TEMP_MAT4,
+  TEMP_BOUNDS_POINTS,
+} from "../utils.js";
 
 function updateModelMatrix(matrix, transform) {
   mat4.identity(matrix);
@@ -11,83 +16,82 @@ function updateModelMatrix(matrix, transform) {
   if (transform.scale) mat4.scale(matrix, transform.scale);
 }
 
-const boundsPoints = Array.from({ length: 8 }, () => vec3.create());
-
-export default () => {
-  const transformSystem = {
-    type: "transform-system",
-    cache: {},
-    debug: false,
-  };
-
-  function updateModelMatrixHierarchy(matrix, transform) {
-    // console.log("updateModelMatrixHierarchy", matrix, transform);
-
+/**
+ * Transform system
+ *
+ * Adds:
+ * - "worldBounds", "dirty" and "aabbDirty" to transform components
+ * - "_transform" to entities as reference to internal cache
+ * @function
+ * @returns {import("../types.js").System}
+ */
+export default () => ({
+  type: "transform-system",
+  cache: {},
+  debug: false,
+  updateModelMatrix,
+  updateModelMatrixHierarchy(matrix, transform) {
     mat4.identity(matrix);
-    var parents = [];
-    var parent = transform;
-    let iter = 0;
-    // log("updateModelMatrixHierarchy", iter, parent);
+
+    const parents = [];
+    let parent = transform;
+
     while (parent) {
-      // && transformSystem.cache[parent.entity.id].localModelMatrix) {
-      iter++;
-      // log("updateModelMatrixHierarchy", iter, parent);
+      // && this.cache[parent.entity.id].localModelMatrix) {
       parents.unshift(parent); // TODO: GC
       parent = parent.parent;
     }
-    parents.forEach((p) => {
+
+    for (let i = 0; i < parents.length; i++) {
+      const parent = parents[i];
       //TODO: there are transforms without entities ?
-      if (p.entity) {
-        const cachedTransform = transformSystem.cache[p.entity.id];
+      if (parent.entity) {
+        const cachedTransform = this.cache[parent.entity.id];
         //TODO: how this can be null
         if (cachedTransform) {
           mat4.mult(matrix, cachedTransform.localModelMatrix);
+        } else {
+          console.error(this.type, "missing cachedTransform", parent);
         }
+      } else {
+        console.error(this.type, "missing entity", parent);
       }
-    });
-  }
+    }
+  },
+  updateTransform(id, transform) {
+    let isNotCached = false;
 
-  //TODO: should geometry components have their own id?
-  const updateTransform = (id, transform) => {
-    let cachedTransform = transformSystem.cache[id];
-
-    let needsFirstUpdate = false;
-    if (!cachedTransform) {
-      cachedTransform = transformSystem.cache[id] = {
-        transform: transform,
+    if (!this.cache[id]) {
+      this.cache[id] = {
+        transform,
         modelMatrix: mat4.create(),
         localModelMatrix: mat4.create(),
-        worldPosition: [0, 0, 0],
+        worldPosition: vec3.create(),
       };
-      needsFirstUpdate = true;
+      isNotCached = true;
     }
 
-    if (!transform.worldBounds) transform.worldBounds = aabb.create();
-    if (!transform.worldPosition) transform.worldPosition = [0, 0, 0];
+    // TODO: why is it not in this.cache[id]?
+    transform.worldBounds ||= aabb.create();
+    // TODO: is this ever used?
+    // transform.worldPosition ||= vec3.create();
 
-    // This assumes whole object has changed
-    // i could do more detailed checks prop by prop
     if (
-      cachedTransform.transform !== transform ||
-      needsFirstUpdate ||
+      // TODO: do we need to check object props in detail or that would be too expensive?
+      this.cache[id].transform !== transform ||
+      isNotCached ||
       transform.dirty
     ) {
       transform.dirty = false;
-      cachedTransform.transform = transform;
-      if (transformSystem.debug) {
-        console.debug(NAMESPACE, transformSystem.type, "update", transform);
-      }
+      this.cache[id].transform = transform;
 
-      // console.log("localModelMatrix", cachedTransform.localModelMatrix);
-      updateModelMatrix(cachedTransform.localModelMatrix, transform);
+      if (this.debug) console.debug(NAMESPACE, this.type, "update", transform);
+
+      updateModelMatrix(this.cache[id].localModelMatrix, transform);
     }
-  };
-
-  // going backwards from leaves to root
-  // 1. update local bounds if i have geo
-  // 2. transform them to world space
-  // 3. add them to my parent worldBounds
-  function updateBoundingBox(transform) {
+  },
+  updateBoundingBox(transform) {
+    // Get worldBounds from geometry bound and transforming them to world space
     if (
       transform.entity &&
       transform.entity.geometry &&
@@ -98,15 +102,15 @@ export default () => {
           transform.entity.geometry.bounds &&
           !aabb.isEmpty(transform.entity.geometry.bounds)
         ) {
-          aabb.getCorners(transform.entity.geometry.bounds, boundsPoints);
-          for (var i = 0; i < boundsPoints.length; i++) {
+          aabb.getCorners(transform.entity.geometry.bounds, TEMP_BOUNDS_POINTS);
+          for (var i = 0; i < TEMP_BOUNDS_POINTS.length; i++) {
             vec3.multMat4(
-              boundsPoints[i],
-              transformSystem.cache[transform.entity.id].modelMatrix
+              TEMP_BOUNDS_POINTS[i],
+              this.cache[transform.entity.id].modelMatrix
             );
           }
           aabb.empty(TEMP_AABB);
-          aabb.fromPoints(TEMP_AABB, boundsPoints);
+          aabb.fromPoints(TEMP_AABB, TEMP_BOUNDS_POINTS);
           aabb.includeAABB(transform.worldBounds, TEMP_AABB);
         }
       } catch (e) {
@@ -114,79 +118,91 @@ export default () => {
       }
     }
     // TODO: what if transform is immutable?
-    if (transform.parent && transform.parent.worldBounds) {
+    // Add local worldBounds to parent worldBounds
+    if (transform.parent?.worldBounds) {
       aabb.includeAABB(transform.parent.worldBounds, transform.worldBounds);
     }
 
-    // TODO: what if transform is immutable?
-    vec3.scale(transformSystem.cache[transform.entity.id].worldPosition, 0);
-    vec3.multMat4(
-      transformSystem.cache[transform.entity.id].worldPosition,
-      transformSystem.cache[transform.entity.id].modelMatrix
-    );
-  }
+    // TODO: remove? Already done after updateModelMatrixHierarchy
+    // vec3.scale(this.cache[transform.entity.id].worldPosition, 0);
+    // vec3.multMat4(
+    //   this.cache[transform.entity.id].worldPosition,
+    //   this.cache[transform.entity.id].modelMatrix
+    // );
+  },
+  update(entities) {
+    const transformEntities = entities.filter((entity) => entity.transform);
 
-  function update(transformEntities) {
-    for (let transformEntity of transformEntities) {
-      if (!transformEntity.transform.entity) {
-        transformEntity.transform.entity = transformEntity;
-      }
-      //TODO: can we use component id, not entity id?
-      updateTransform(transformEntity.id, transformEntity.transform);
-      transformEntity._transform = transformSystem.cache[transformEntity.id];
+    // Update local matrix
+    for (let i = 0; i < transformEntities.length; i++) {
+      const entity = transformEntities[i];
+      //TODO: can we use geometry component id, not entity id?
+      // Self reference to give access to parent.entity.id
+      entity.transform.entity ||= entity;
+
+      this.updateTransform(entity.id, entity.transform);
+      entity._transform = this.cache[entity.id];
     }
 
     //Note: this is fine as long our components are sorted by depth
-    for (let transformEntity of transformEntities) {
-      if (transformEntity.transform.parent) {
+    for (let i = 0; i < transformEntities.length; i++) {
+      const entity = transformEntities[i];
+
+      // Update world matrix
+      if (entity.transform.parent) {
         mat4.set(
-          transformSystem.cache[transformEntity.id].modelMatrix,
-          transformSystem.cache[transformEntity.transform.parent.entity.id]
-            .modelMatrix
+          this.cache[entity.id].modelMatrix,
+          // TODO: can we only store entity id instead of full reference?
+          this.cache[entity.transform.parent.entity.id].modelMatrix
         );
       } else {
-        mat4.identity(transformSystem.cache[transformEntity.id].modelMatrix);
+        mat4.identity(this.cache[entity.id].modelMatrix);
       }
 
       mat4.mult(
-        transformSystem.cache[transformEntity.id].modelMatrix,
-        transformSystem.cache[transformEntity.id].localModelMatrix
+        this.cache[entity.id].modelMatrix,
+        this.cache[entity.id].localModelMatrix
       );
-      updateModelMatrixHierarchy(
-        transformSystem.cache[transformEntity.id].modelMatrix,
-        transformEntity.transform
-      );
-      vec3.scale(transformSystem.cache[transformEntity.id].worldPosition, 0);
-      vec3.multMat4(
-        transformSystem.cache[transformEntity.id].worldPosition,
-        transformSystem.cache[transformEntity.id].modelMatrix
-      );
-    }
 
-    for (let i = transformEntities.length - 1; i >= 0; i--) {
-      const entity = transformEntities[i];
+      this.updateModelMatrixHierarchy(
+        this.cache[entity.id].modelMatrix,
+        entity.transform
+      );
+
+      // Update world position
+      vec3.scale(this.cache[entity.id].worldPosition, 0);
+      vec3.multMat4(
+        this.cache[entity.id].worldPosition,
+        this.cache[entity.id].modelMatrix
+      );
+
+      // Reset worldBounds
       aabb.empty(entity.transform.worldBounds);
     }
 
-    //TODO: can we not do updateBoundingBox every frame?
+    // Update worldBounds, going backwards from leaves to root
     for (let i = transformEntities.length - 1; i >= 0; i--) {
       const entity = transformEntities[i];
+      //TODO: can we not do updateBoundingBox every frame?
       //TODO: check for dirty
       if (
         entity.transform.worldBounds
-        //&& (entity.transform.aabbDirty || entity.transform.aabbDirty == undefined)
+        // && (entity.transform.aabbDirty || entity.transform.aabbDirty == undefined)
+        // && aabb.isEmpty(entity.transform.worldBounds)) {
       ) {
-        //} && aabb.isEmpty(entity.transform.worldBounds)) {
         entity.transform.aabbDirty = false;
-        updateBoundingBox(entity.transform);
+        this.updateBoundingBox(entity.transform);
       }
     }
-  }
-
-  transformSystem.update = (entities) => {
-    const transformEntities = entities.filter((entity) => entity.transform);
-    update(transformEntities);
-  };
-
-  return transformSystem;
-};
+  },
+  dispose(entities) {
+    if (entities) {
+      for (let i = 0; i < entities.length; i++) {
+        const entity = entities[i];
+        if (entity.transform) delete this.cache[entity.id];
+      }
+    } else {
+      this.cache = {};
+    }
+  },
+});

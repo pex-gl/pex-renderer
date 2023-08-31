@@ -10,9 +10,8 @@ export default (options) => ({
   rotation: [0, 0, 0, 1],
   scale: [1, 1, 1],
   // parent,
-  // aabbDirty,
-  // worldPosition,
   // worldBounds,
+  // aabbDirty,
   // dirty,
   ...options,
 });

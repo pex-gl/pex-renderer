@@ -10,6 +10,7 @@ const TEMP_MAT4 = mat4.create();
 const TEMP_AABB = aabb.create();
 const TEMP_MAT2X3 = mat2x3.create();
 const Y_UP = Object.freeze([0, 1, 0]);
+const TEMP_BOUNDS_POINTS = Array.from({ length: 8 }, () => vec3.create());
 
 // prettier-ignore
 const quad = {
@@ -90,6 +91,7 @@ export {
   TEMP_AABB,
   TEMP_MAT2X3,
   Y_UP,
+  TEMP_BOUNDS_POINTS,
   quad,
   fullscreenTriangle,
   CUBEMAP_PROJECTION_MATRIX,
