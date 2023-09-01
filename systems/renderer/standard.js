@@ -351,6 +351,10 @@ export default ({ ctx }) => {
         });
         sharedUniforms[`uPointLights[${i}].range`] = light.range;
         sharedUniforms[`uPointLights[${i}].castShadows`] = light.castShadows;
+        sharedUniforms[`uPointLights[${i}].bias`] = light.bias || 0.1;
+        sharedUniforms[`uPointLights[${i}].shadowMapSize`] = light.castShadows
+          ? [light._shadowCubemap.width, light._shadowCubemap.height]
+          : [0, 0];
         sharedUniforms[`uPointLightShadowMaps[${i}]`] =
           light.castShadows && light._shadowCubemap
             ? light._shadowCubemap
@@ -522,7 +526,8 @@ export default ({ ctx }) => {
 
         cachedUniforms.uPointSize = material.pointSize || 1;
         // TODO: why is this here
-        cachedUniforms.uMetallicRoughnessTexture = material.metallicRoughnessTexture;
+        cachedUniforms.uMetallicRoughnessTexture =
+          material.metallicRoughnessTexture;
         renderableEntity._uniforms = cachedUniforms;
 
         sharedUniforms.uRefraction =

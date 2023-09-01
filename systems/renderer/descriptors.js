@@ -59,8 +59,8 @@ export default (ctx) => ({
   pointLightShadows: {
     shadowCubemapDesc: {
       name: "pointLightShadowCubemap",
-      width: 512,
-      height: 512,
+      width: 2048,
+      height: 2048,
       pixelFormat: ctx.PixelFormat.RGBA8,
       encoding: ctx.Encoding.Linear,
       min: ctx.Filter.Linear,
@@ -68,8 +68,8 @@ export default (ctx) => ({
     },
     shadowMapDesc: {
       name: "pointLightShadowMap",
-      width: 512,
-      height: 512,
+      width: 2048,
+      height: 2048,
       pixelFormat: ctx.PixelFormat.DEPTH_COMPONENT24,
       encoding: ctx.Encoding.Linear,
       min: ctx.Filter.Nearest,
