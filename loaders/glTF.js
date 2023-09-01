@@ -1,7 +1,7 @@
 import { loadJson, loadImage, loadArrayBuffer, loadBlob } from "pex-io";
 import { quat, mat4, utils } from "pex-math";
 import { getDirname, getFileExtension } from "../utils.js";
-import { components, entity } from "../index.js";
+import { components, entity, systems } from "../index.js";
 import { loadDraco, loadKtx2 } from "pex-loaders";
 
 const isSafari =
@@ -1360,6 +1360,8 @@ async function loadGltf(url, options = {}) {
     );
   }
 
+  const transformSystem = systems.transform();
+
   // Load scene
   // https://github.com/KhronosGroup/glTF/blob/main/specification/2.0/schema/scene.schema.json
   let scenes = await Promise.all(
@@ -1468,9 +1470,16 @@ async function loadGltf(url, options = {}) {
         }
       });
 
+      // Assuming all entities have transform and loaded geometry have bounds
+      // https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#accessors-bounds
+      // Animation input and vertex position attribute accessors MUST have accessor.min and accessor.max defined
+      transformSystem.sort(scene.entities);
+      transformSystem.update(scene.entities);
+
       return scene;
     })
   );
+  transformSystem.dispose();
 
   return scenes;
 }

@@ -37,9 +37,13 @@ const dotGraph = {
   ],
 };
 
+const containerElement = document.createElement("div");
+document.body.appendChild(containerElement);
+
 const dot = {
   reset: () => {
-    (dotGraph.nodes = {}), (dotGraph.edges = []);
+    dotGraph.nodes = {};
+    dotGraph.edges = [];
   },
   node: (id, label, props) => {
     if (Array.isArray(label)) {
@@ -67,11 +71,20 @@ const dot = {
   },
   render: () => {
     const dotStr = serializeGraph(dotGraph);
-    console.log("dotStr", dotStr);
+    console.debug("dotStr", dotStr);
 
-    const svg = graphviz.layout(dotStr, "svg", "dot");
-    const div = document.getElementById("graphviz-container");
-    div.innerHTML = svg;
+    containerElement.innerHTML = graphviz.layout(dotStr, "svg", "dot");
+    const svgElement = containerElement.querySelector("svg");
+    Object.assign(svgElement.style, {
+      position: "absolute",
+      right: "10px",
+      top: "10px",
+      maxWidth: "80vw",
+      maxHeight: "400px",
+      opacity: 0.7,
+    });
+    svgElement.removeAttribute("width");
+    svgElement.removeAttribute("height");
   },
   style: {
     texture: {
@@ -80,4 +93,4 @@ const dot = {
   },
 };
 
-window.dot = dot;
+export default dot;

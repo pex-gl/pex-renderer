@@ -30,6 +30,19 @@ export default () => ({
   cache: {},
   debug: false,
   updateModelMatrix,
+  sort(entities) {
+    for (let i = 0; i < entities.length; i++) {
+      const entity = entities[i];
+      let parent = entity.transform;
+      let depth = 0;
+      while (parent) {
+        parent = parent.parent;
+        if (parent) depth++;
+      }
+      entity.transform.depth = depth;
+    }
+    entities.sort((a, b) => a.transform.depth - b.transform.depth);
+  },
   updateModelMatrixHierarchy(matrix, transform) {
     mat4.identity(matrix);
 

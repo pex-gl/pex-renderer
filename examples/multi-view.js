@@ -16,7 +16,7 @@ import { cube, sphere } from "primitive-geometry";
 
 import { debugSceneTree } from "./utils.js";
 
-import "./graph-viz.js";
+import dot from "./graph-viz.js";
 
 random.seed(0);
 
@@ -32,10 +32,7 @@ const {
   lightHelper,
 } = components;
 
-const ctx = createContext({
-  type: "webgl",
-  pixelRatio: 1.5,
-});
+const ctx = createContext();
 
 const oldApply = ctx.apply;
 ctx.apply = (...args) => {
@@ -72,7 +69,7 @@ ctx.apply = (...args) => {
 };
 
 const entities = (window.entities = []);
-const renderGraph = createRenderGraph(ctx, window.dot);
+const renderGraph = createRenderGraph(ctx);
 renderGraph.renderPass = (opts) => {
   if (dot) {
     const passId =
@@ -378,7 +375,7 @@ window.addEventListener("keydown", ({ key }) => {
 ctx.frame(() => {
   frame++;
 
-  window.dot.reset();
+  dot.reset();
   resourceCache.beginFrame();
   renderGraph.beginFrame();
 
@@ -425,9 +422,7 @@ ctx.frame(() => {
     });
   });
 
-  if (frame == 1) {
-    window.dot.render();
-  }
+  if (frame == 1) dot.render();
 
   if (directionalLightEntity.directionalLight._shadowMap && !shadowMapPreview) {
     //TODO: mutated texture to flip in GUI

@@ -12,10 +12,10 @@ import { loadJson, loadImage, loadArrayBuffer } from "pex-io";
 import { quat, vec3, mat4 } from "pex-math";
 import { aabb } from "pex-geom";
 
-import { box as createBox, cube as createCube } from "primitive-geometry";
+import { cube as createCube } from "primitive-geometry";
 import parseHdr from "parse-hdr";
 
-import { computeEdges, debugSceneTree, getURL } from "./utils.js";
+import { debugSceneTree, getURL } from "./utils.js";
 
 const {
   camera,
@@ -36,14 +36,7 @@ const MODELS_PATH =
 // const MODELS_PATH =
 //   "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0";
 
-const FORMAT_EXTENSION = new Map()
-  .set("glTF", "gltf")
-  .set("glTF-Binary", "glb")
-  .set("glTF-Draco", "gltf")
-  .set("glTF-Embedded", "gltf")
-  .set("glTF-Quantized", "gltf")
-  .set("glTF-KTX-BasisU", "gltf")
-  .set("glTF-JPG-PNG", "gltf");
+let models = await loadJson(`${MODELS_PATH}/model-index.json`);
 
 const State = {
   sunPosition: [2, 2, 2],
@@ -54,7 +47,13 @@ const State = {
   floor: false,
   useEnvMap: true,
   shadows: false,
-  formats: Array.from(FORMAT_EXTENSION.keys()),
+  graphViz: false,
+  formats: Array.from(
+    models.reduce(
+      (formats, model) => new Set([...formats, ...Object.keys(model.variants)]),
+      new Set()
+    )
+  ).filter((format) => !["glTF-IBL", "glTF-Meshopt"].includes(format)),
   currentFormat: 2,
   modelName: "-",
 };
@@ -101,10 +100,6 @@ let floorEntity;
 let cameraEntity;
 let animationEntity;
 
-// const unitBox = createBox();
-// unitBox.cells = computeEdges(unitBox.positions, unitBox.cells, 4);
-// unitBox.primitive = ctx.Primitive.Lines;
-
 let envMap;
 
 const addEnvmap = async () => {
@@ -148,6 +143,24 @@ function openModelURL() {
   );
 }
 
+async function renderGraphViz() {
+  const { default: dot } = await import("./graph-viz.js");
+  dot.reset();
+
+  State.scenes[0].entities.forEach((entity) => {
+    dot.node(
+      entity.id,
+      `${entity.transform.depth ?? "?"}: ${entity.name || "Entity"} (${
+        entity.id
+      })`
+    );
+    const parent = entity.transform.parent;
+    if (parent) dot.edge(parent.entity.id, entity.id);
+  });
+
+  dot.render();
+}
+
 // glTF
 function repositionModel({ root }) {
   const n = State.gridSize;
@@ -178,17 +191,10 @@ function rescaleScene({ root }) {
 }
 
 function onSceneLoaded(scene, grid) {
-  State.scenes.push(scene);
-  renderEngine.update(scene.entities);
-
-  // debugSceneTree(scene.entities);
-
   if (grid) {
     rescaleScene(scene);
     repositionModel(scene);
   }
-
-  // world.update();
 
   if (State.floor) {
     floorEntity = createEntity({
@@ -201,42 +207,36 @@ function onSceneLoaded(scene, grid) {
 
   if (State.boundingBoxes) {
     scene.entities.forEach((entity) => {
-      if (entity.geometry) entity.boundingBoxHelper = {};
+      if (entity.geometry) {
+        entity.boundingBoxHelper = components.boundingBoxHelper();
+      }
     });
   }
+
+  if (State.graphViz) renderGraphViz();
+
+  console.log(scene);
 }
 
 async function loadScene(url, grid) {
   let scene;
   try {
-    // All examples only have one scene
-    State.scene = scene = (
-      await loaders.gltf(url, {
-        ctx,
-        includeCameras: !grid,
-        includeAnimations: true,
-        includeLights: !grid,
-        dracoOptions: { transcoderPath: getURL("assets/decoders/draco/") },
-        basisOptions: { transcoderPath: getURL("assets/decoders/basis/") },
-      })
-    )[0]; //TODO: selecting first scene by default
+    State.scenes = await loaders.gltf(url, {
+      ctx,
+      includeCameras: !grid,
+      includeAnimations: true,
+      includeLights: !grid,
+      dracoOptions: { transcoderPath: getURL("assets/decoders/draco/") },
+      basisOptions: { transcoderPath: getURL("assets/decoders/basis/") },
+    });
+    State.scene = scene = State.scenes[0];
+    State.scenes.forEach((scene) => (scene.url = url));
   } catch (e) {
     console.error(e);
     return e;
   }
 
-  // sort entities by depth
   scene.entities.forEach((entity) => {
-    let parent = entity.transform;
-    let depth = 0;
-    let watchdog = 0;
-    while (parent && watchdog++ < 100) {
-      parent = parent.parent;
-      depth++;
-    }
-    entity.transform.depth = depth;
-    entity.transform.worldBounds = aabb.create();
-
     if (entity.material) {
       entity.material.castShadows = State.shadows;
       entity.material.receiveShadows = State.shadows;
@@ -245,8 +245,6 @@ async function loadScene(url, grid) {
     world.add(entity);
   });
 
-  scene.entities.sort((a, b) => a.transform.depth - b.transform.depth);
-
   // Add camera for models lacking one
   if (!grid) {
     cameraEntity = scene.entities.find((e) => e.camera);
@@ -254,7 +252,10 @@ async function loadScene(url, grid) {
 
     if (!cameraEntity) {
       // Update needed for transform.worldBounds
-      renderEngine.update(scene.entities);
+      // renderEngine.systems
+      //   .find((system) => system.type === "transform-system")
+      //   .update(scene.entities);
+      // renderEngine.update(scene.entities);
       const far = 10000;
       const sceneBounds = scene.root.transform.worldBounds;
       const sceneCenter = aabb.center(scene.root.transform.worldBounds);
@@ -264,8 +265,6 @@ async function loadScene(url, grid) {
         sceneCenter[1] = 0;
         sceneCenter[2] = 0;
       }
-
-      console.log("sceneBounds", sceneBounds);
 
       const boundingSphereRadius = Math.max(
         ...sceneBounds.map((bound) => vec3.distance(sceneCenter, bound))
@@ -325,36 +324,31 @@ async function loadScene(url, grid) {
     }
   }
 
-  scene.url = url;
-
   return scene;
 }
 
-async function renderModel(model, overrideFormat, grid) {
-  const format = overrideFormat || State.formats[State.currentFormat];
+async function renderModel(model, grid) {
+  let format = State.formats[State.currentFormat];
+  let modelFileName = model.variants[format];
 
-  const url = `${MODELS_PATH}/${model.name}/${format}/${
-    model.name
-  }.${FORMAT_EXTENSION.get(format)}`;
+  if (!modelFileName) {
+    console.warn(
+      `No format "${format}" supported for model ${model.name}. Defaulting to "glTF".`
+    );
+    format = "glTF";
+    modelFileName = model.variants["glTF"];
+  }
+
+  const url = `${MODELS_PATH}/${model.name}/${format}/${modelFileName}`;
+
   State.url = url;
   State.modelName = model.name;
 
   try {
     const scene = await loadScene(url, grid);
-
-    if (scene instanceof Error) {
-      throw scene;
-    } else {
-      onSceneLoaded(scene, grid);
-    }
-  } catch (e) {
-    console.error(e);
-    console.warn(
-      `No format ${format} supported for model ${model.name}. Defaulting to glTF.`
-    );
-    if (!overrideFormat) {
-      renderModel(model, "glTF", grid);
-    }
+    onSceneLoaded(scene, grid);
+  } catch (error) {
+    console.error(error);
   }
 }
 
@@ -381,21 +375,24 @@ const nextAnimation = () => {
     );
   }
 };
+const nextScene = () => {
+  const scenes = State.scenes;
+  const next = scenes[(scenes.indexOf(State.scene) + 1) % scenes.length];
+
+  if (next) {
+    console.log(next);
+  }
+};
 const nextMaterial = () => {};
 
-// Init
-// Get list of models locally or from the glTF repo
-let models = await loadJson(`${MODELS_PATH}/model-index.json`);
-
+// GUI
 // Add screenshots to the GUI
 const screenshots = await Promise.all(
-  models.map(
-    ({ name, screenshot }) =>
-      loadImage({
-        url: `${MODELS_PATH}/${name}/${screenshot}`,
-        crossOrigin: "anonymous",
-      }),
-    null
+  models.map(({ name, screenshot }) =>
+    loadImage({
+      url: `${MODELS_PATH}/${name}/${screenshot}`,
+      crossOrigin: "anonymous",
+    })
   )
 );
 const thumbnails = screenshots
@@ -463,12 +460,15 @@ gui.addParam("Env map", State, "useEnvMap", null, () => {
 gui.addButton("Next camera", nextCamera);
 gui.addButton("Next animation", nextAnimation);
 gui.addButton("Next material", nextMaterial);
+gui.addButton("Next scene", nextScene);
 
 gui.addColumn("Debug");
 gui.addFPSMeeter();
 gui.addStats();
+gui.addParam("Graph viz", State, "graphViz");
 gui.addButton("Tree", () => {
   debugSceneTree(world.entities);
+  if (State.graphViz) renderGraphViz();
 });
 
 // Filter models
@@ -497,7 +497,7 @@ models = models.filter(({ name }) =>
     // "Buggy",
     // "Cameras",
     // "CesiumMan",
-    // "CesiumMilkTruck",
+    "CesiumMilkTruck",
     // "ClearCoatTest",
     // "Corset",
     // "Cube",
@@ -513,7 +513,7 @@ models = models.filter(({ name }) =>
     // "InterpolationTest",
     // "IridescenceDielectricSpheres", // FAIL
     // "IridescenceLamp", // FAIL
-    // "IridescenceMetallicSpheres", // FAIL
+    // // "IridescenceMetallicSpheres", // FAIL
     // "IridescenceSuzanne", // FAIL
     // "IridescentDishWithOlives", // FAIL
     // "Lantern",
@@ -522,7 +522,7 @@ models = models.filter(({ name }) =>
     // "MetalRoughSpheres",
     // "MetalRoughSpheresNoTextures",
     // "MorphPrimitivesTest",
-    // "MorphStressTest", // FAIL: needs animation texture
+    // // "MorphStressTest", // FAIL: needs animation texture
     // "MosquitoInAmber", // FAIL: KHR_materials_transmission, TEXCOORD_2
     // "MultipleScenes", // FAIL: missing implementation
     // "MultiUVTest", // FAIL: wrong position
@@ -559,7 +559,7 @@ models = models.filter(({ name }) =>
     // "TwoSidedPlane", // FAIL: double side
     // "Unicode\u2764\u267bTest",
     // "UnlitTest",
-    "VC", // FAIL: // "node_69" and "node_183" and "node_209" and "node_211" worldBounds infinity
+    // "VC", // FAIL: // "node_69" and "node_183" and "node_209" and "node_211" worldBounds infinity
     // "VertexColorTest",
     // "WaterBottle",
   ].includes(name)
@@ -606,7 +606,7 @@ if (grid) {
 
 // Render scene(s)
 for (const model of models) {
-  await renderModel(model, null, grid);
+  await renderModel(model, grid);
 }
 
 window.addEventListener("resize", () => {

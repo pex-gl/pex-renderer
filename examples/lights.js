@@ -46,7 +46,6 @@ const cameraEntities = gridCells(W, H, nW, nH, 0).map((cell, i) => {
   const cameraEntity = createEntity({
     layer: LAYERS[i],
     transform: transform({
-      target: [0, 0, 0],
       position: [2, 2, 3],
     }),
     camera: camera({
