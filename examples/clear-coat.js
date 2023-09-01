@@ -65,7 +65,7 @@ const reflectionProbeEntity = createEntity({
 });
 world.add(reflectionProbeEntity);
 
-function getMaterialMaps(maps) {
+function getMaterialTextures(maps) {
   return Object.entries(maps).reduce(
     (currentValue, [key, image]) => ({
       ...currentValue,
@@ -79,7 +79,7 @@ function getMaterialMaps(maps) {
         flipY: true,
         mipmap: true,
         encoding:
-          key === "emissiveColorMap" || key === "baseColorMap"
+          key === "emissiveColorTexture" || key === "baseColorTexture"
             ? ctx.Encoding.SRGB
             : ctx.Encoding.Linear,
       }),
@@ -114,17 +114,17 @@ skyboxEntity.skybox.envMap = ctx.texture2D({
   flipY: true,
 });
 
-const materialMaps = getMaterialMaps({
-  baseColorMap: await io.loadImage(
+const materialTextures = getMaterialTextures({
+  baseColorTexture: await io.loadImage(
     getURL(`assets/materials/Fabric04/Fabric04_col.jpg`)
   ),
-  normalMap: await io.loadImage(
+  normalTexture: await io.loadImage(
     getURL(`assets/materials/Fabric04/Fabric04_nrm.jpg`)
   ),
-  clearCoatNormalMap: await io.loadImage(
+  clearCoatNormalTexture: await io.loadImage(
     getURL(`assets/materials/Metal05/Metal05_nrm.jpg`)
   ),
-  occlusionMap: await io.loadImage(
+  occlusionTexture: await io.loadImage(
     getURL(`assets/models/substance-sample-scene/substance-sample-scene_ao.jpg`)
   ),
 });
@@ -145,7 +145,7 @@ const clearCoatMaterial = {
   clearCoatRoughness: 0.1,
   castShadows: true,
   receiveShadows: true,
-  occlusionMap: materialMaps.occlusionMap,
+  occlusionTexture: materialTextures.occlusionTexture,
 };
 
 const geom1 = createEntity({
@@ -162,8 +162,8 @@ const geom2 = createEntity({
   geometry: ballGeometry,
   material: material({
     ...clearCoatMaterial,
-    normalMap: {
-      texture: materialMaps.normalMap,
+    normalTexture: {
+      texture: materialTextures.normalTexture,
       scale: [4, 4],
     },
   }),
@@ -176,12 +176,12 @@ const geom3 = createEntity({
   geometry: ballGeometry,
   material: material({
     ...clearCoatMaterial,
-    normalMap: {
-      texture: materialMaps.normalMap,
+    normalTexture: {
+      texture: materialTextures.normalTexture,
       scale: [4, 4],
     },
-    clearCoatNormalMap: {
-      texture: materialMaps.clearCoatNormalMap,
+    clearCoatNormalTexture: {
+      texture: materialTextures.clearCoatNormalTexture,
       scale: [8, 8],
     },
   }),

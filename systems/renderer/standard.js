@@ -35,22 +35,23 @@ const flagDefs = [
   [["material", "roughness"], "", { uniform: "uRoughness" }],
   [["material", "emissiveColor"], "USE_EMISSIVE_COLOR", { uniform: "uEmissiveColor" }],
   [["material", "emissiveIntensity"], "", { uniform: "uEmissiveIntensity", default: 1}],
-  [["material", "baseColorMap"], "BASE_COLOR_MAP", { type: "texture", uniform: "uBaseColorMap" }],
-  [["material", "emissiveColorMap"], "EMISSIVE_COLOR_MAP", { type: "texture", uniform: "uEmissiveColorMap" }],
-  [["material", "normalMap"], "NORMAL_MAP", { type: "texture", uniform: "uNormalMap" }],
-  [["material", "roughnessMap"], "ROUGHNESS_MAP", { type: "texture", uniform: "uRoughnessMap" }],
-  [["material", "metallicMap"], "METALLIC_MAP", { type: "texture", uniform: "uMetallicMap" }],
-  [["material", "metallicRoughnessMap"], "METALLIC_ROUGHNESS_MAP", { type: "texture", uniform: "uMetallicRoughnessMap" }],
-  [["material", "occlusionMap"], "OCCLUSION_MAP", { type: "texture", uniform: "uOcclusionMap" }],
+  [["material", "baseColorTexture"], "BASE_COLOR_TEXTURE", { type: "texture", uniform: "uBaseColorTexture" }],
+  [["material", "emissiveColorTexture"], "EMISSIVE_COLOR_TEXTURE", { type: "texture", uniform: "uEmissiveColorTexture" }],
+  [["material", "normalTexture"], "NORMAL_TEXTURE", { type: "texture", uniform: "uNormalTexture" }],
+  [["material", "roughnessTexture"], "ROUGHNESS_TEXTURE", { type: "texture", uniform: "uRoughnessTexture" }],
+  [["material", "metallicTexture"], "METALLIC_TEXTURE", { type: "texture", uniform: "uMetallicTexture" }],
+  [["material", "metallicRoughnessTexture"], "METALLIC_ROUGHNESS_TEXTURE", { type: "texture", uniform: "uMetallicRoughnessTexture" }],
+  [["material", "occlusionTexture"], "OCCLUSION_TEXTURE", { type: "texture", uniform: "uOcclusionTexture" }],
   [["material", "alphaTest"], "USE_ALPHA_TEST", { uniform: "uAlphaTest" }],
-  [["material", "alphaMap"], "ALPHA_MAP", { type: "texture", uniform: "uAlphaMap" }],
+  [["material", "alphaTexture"], "ALPHA_TEXTURE", { type: "texture", uniform: "uAlphaTexture" }],
   [["material", "clearCoat"], "USE_CLEAR_COAT", { uniform: "uClearCoat" }],
   [["material", "clearCoatRoughness"], "USE_CLEAR_COAT_ROUGHNESS", { uniform: "uClearCoatRoughness" }],
-  [["material", "clearCoatMap"], "CLEAR_COAT_MAP", { type: "texture", uniform: "uClearCoatMap" }],
-  [["material", "clearCoatRoughnessMap"], "CLEAR_COAT_ROUGHNESS_MAP", { type: "texture", uniform: "uClearCoatRoughnessMap" }],
-  [["material", "clearCoatNormalMap"], "CLEAR_COAT_NORMAL_MAP", { type: "texture", uniform: "uClearCoatNormalMap" }],
-  [["material", "clearCoatNormalMapScale"], "", { uniform: "uClearCoatNormalMapScale" }],
+  [["material", "clearCoatTexture"], "CLEAR_COAT_TEXTURE", { type: "texture", uniform: "uClearCoatTexture" }],
+  [["material", "clearCoatRoughnessTexture"], "CLEAR_COAT_ROUGHNESS_TEXTURE", { type: "texture", uniform: "uClearCoatRoughnessTexture" }],
+  [["material", "clearCoatNormalTexture"], "CLEAR_COAT_NORMAL_TEXTURE", { type: "texture", uniform: "uClearCoatNormalTexture" }],
+  [["material", "clearCoatNormalTextureScale"], "", { uniform: "uClearCoatNormalTextureScale" }],
   [["material", "sheenColor"], "USE_SHEEN", { uniform: "uSheenColor" }],
+  [["material", "sheenColorTexture"], "USE_SHEEN_COLOR_TEXTURE", { uniform: "uSheenColorMap" }],
   [["material", "sheenRoughness"], "", { uniform: "uSheenRoughness", requires: "USE_SHEEN" }],
   [["material", "transmission"], "USE_TRANSMISSION", { uniform: "uTransmission", requires: "USE_BLEND" }],
   [["geometry", "attributes", "aNormal"], "USE_NORMALS", { fallback: "USE_UNLIT_WORKFLOW" }],
@@ -359,7 +360,7 @@ export default ({ ctx }) => {
       // TODO: dispose if no areaLights
       if (areaLights.length) {
         ltc_mat ||= ctx.texture2D({
-          name: "areaLightMatMap",
+          name: "areaLightMatTexture",
           data: AreaLightsData.mat,
           width: 64,
           height: 64,
@@ -369,7 +370,7 @@ export default ({ ctx }) => {
           mag: ctx.Filter.Linear,
         });
         ltc_mag ||= ctx.texture2D({
-          name: "areaLightMagMap",
+          name: "areaLightMagTexture",
           data: AreaLightsData.mag,
           width: 64,
           height: 64,
@@ -520,7 +521,8 @@ export default ({ ctx }) => {
         cachedUniforms.uExposure = 1.0;
 
         cachedUniforms.uPointSize = material.pointSize || 1;
-        cachedUniforms.uMetallicRoughnessMap = material.metallicRoughnessMap;
+        // TODO: why is this here
+        cachedUniforms.uMetallicRoughnessTexture = material.metallicRoughnessTexture;
         renderableEntity._uniforms = cachedUniforms;
 
         sharedUniforms.uRefraction =

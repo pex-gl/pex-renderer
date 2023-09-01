@@ -40,7 +40,7 @@ export function getMaterialFlagsAndUniforms(
       flags.push(`${defineName} ${value}`);
     } else if (opts.type == "texture" && value) {
       flags.push(`USE_${defineName}`);
-      flags.push(`${defineName}_TEX_COORD_INDEX ${value.texCoord || "0"}`);
+      flags.push(`${defineName}_TEX_COORD ${value.texCoord || "0"}`);
       materialUniforms[opts.uniform] = value.texture || value;
 
       // Compute texture transform
@@ -50,17 +50,14 @@ export function getMaterialFlagsAndUniforms(
         mat2x3.rotate(TEMP_MAT2X3, -value.rotation || 0);
         mat2x3.scale(TEMP_MAT2X3, value.scale || [1, 1]);
 
-        value.texCoordTransformMatrix = mat3.fromMat2x3(
-          value.texCoordTransformMatrix
-            ? mat3.identity(value.texCoordTransformMatrix)
-            : mat3.create(),
+        value.matrix = mat3.fromMat2x3(
+          value.matrix ? mat3.identity(value.matrix) : mat3.create(),
           TEMP_MAT2X3
         );
       }
-      if (value.texCoordTransformMatrix) {
-        flags.push(`USE_${defineName}_TEX_COORD_TRANSFORM`);
-        materialUniforms[opts.uniform + "TexCoordTransform"] =
-          value.texCoordTransformMatrix;
+      if (value.matrix) {
+        flags.push(`USE_${defineName}_MATRIX`);
+        materialUniforms[opts.uniform + "Matrix"] = value.matrix;
       }
     } else if (value !== undefined || opts.default !== undefined) {
       if (opts.type !== "boolean" || value) {

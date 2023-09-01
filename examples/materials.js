@@ -43,10 +43,10 @@ const materials = [
     baseColor: [1, 0, 0, 0.5],
   },
   {
-    header: gui.addHeader("Unlit Base Color Map"),
+    header: gui.addHeader("Unlit Base Color Texture"),
     unlit: true,
     baseColor: [1, 1, 1, 0.5],
-    baseColorMap: getURL(
+    baseColorTexture: getURL(
       `assets/materials/plastic-green.material/plastic-green_basecolor.png`
     ),
   },
@@ -70,120 +70,124 @@ const materials = [
   },
   // Base color map
   {
-    header: gui.addHeader("Base Color Map"),
+    header: gui.addHeader("Base Color Texture"),
     baseColor: [1.0, 1.0, 1.0, 1.0],
     metallic: 0,
     roughness: 1,
-    baseColorMap: getURL(`assets/textures/uv-wide/uv-wide.png`),
-    baseColorMapTransform: transform,
+    baseColorTexture: getURL(`assets/textures/uv-wide/uv-wide.png`),
+    transformMatrix: transform,
   },
   // Roughness map
   {
-    header: gui.addHeader("Roughness Map"),
+    header: gui.addHeader("Roughness Texture"),
     baseColor: [1.0, 1.0, 0.9, 1.0],
     metallic: 1,
     roughness: 1,
-    roughnessMap: getURL(`assets/textures/roughness-test/roughness-test.png`),
+    roughnessTexture: getURL(
+      `assets/textures/roughness-test/roughness-test.png`
+    ),
   },
   // Basic PBR maps
   {
-    header: gui.addHeader("Basic PBR Maps"),
-    baseColorMap: getURL(
+    header: gui.addHeader("Basic PBR Textures"),
+    baseColorTexture: getURL(
       `assets/materials/plastic-red.material/plastic-red_basecolor.png`
     ),
-    roughnessMap: getURL(
+    roughnessTexture: getURL(
       `assets/materials/plastic-red.material/plastic-red_roughness.png`
     ),
-    metallicMap: getURL(
+    metallicTexture: getURL(
       `assets/materials/plastic-red.material/plastic-red_metallic.png`
     ),
-    normalMap: getURL(
+    normalTexture: getURL(
       `assets/materials/plastic-red.material/plastic-red_n.png`
     ),
   },
   // Emissive
   {
-    header: gui.addHeader("Emissive Map"),
+    header: gui.addHeader("Emissive Texture"),
     baseColor: [1, 1, 1, 1],
-    baseColorMap: getURL(
+    baseColorTexture: getURL(
       `assets/materials/plastic-glow.material/plastic-glow_basecolor.png`
     ),
-    roughnessMap: getURL(
+    roughnessTexture: getURL(
       `assets/materials/plastic-glow.material/plastic-glow_roughness.png`
     ),
-    metallicMap: getURL(
+    metallicTexture: getURL(
       `assets/materials/plastic-glow.material/plastic-glow_metallic.png`
     ),
-    normalMap: getURL(
+    normalTexture: getURL(
       `assets/materials/plastic-glow.material/plastic-glow_n.png`
     ),
     emissiveColor: [1, 1, 1, 1],
-    emissiveColorMap: getURL(
+    emissiveColorTexture: getURL(
       `assets/materials/plastic-glow.material/plastic-glow_emissive.png`
     ),
     emissiveIntensity: 4,
   },
   // Alpha map
   {
-    header: gui.addHeader("Alpha Map"),
+    header: gui.addHeader("Alpha Texture"),
     roughness: 0.5,
     metallic: 0,
     baseColor: [1, 1, 1, 1],
     alphaTest: 0.5,
     cullFace: false,
-    baseColorMap: getURL(`assets/textures/alpha-test-mask/alpha-test-mask.png`),
-    alphaMap: getURL(`assets/textures/checkerboard/checkerboard.png`),
+    baseColorTexture: getURL(
+      `assets/textures/alpha-test-mask/alpha-test-mask.png`
+    ),
+    alphaTexture: getURL(`assets/textures/checkerboard/checkerboard.png`),
   },
 ];
 
 await Promise.allSettled(
   materials.map(async (material) => {
-    if (material.baseColorMap) {
-      material.baseColorMap = await getTexture(
+    if (material.baseColorTexture) {
+      material.baseColorTexture = await getTexture(
         ctx,
-        material.baseColorMap,
+        material.baseColorTexture,
         ctx.Encoding.SRGB
       );
-      if (material.baseColorMapTransform) {
-        material.baseColorMap = {
-          texture: material.baseColorMap,
-          texCoordTransformMatrix: material.baseColorMapTransform,
+      if (material.transformMatrix) {
+        material.baseColorTexture = {
+          texture: material.baseColorTexture,
+          matrix: material.transformMatrix,
         };
       }
     }
 
-    if (material.roughnessMap) {
-      material.roughnessMap = await getTexture(
+    if (material.roughnessTexture) {
+      material.roughnessTexture = await getTexture(
         ctx,
-        material.roughnessMap,
+        material.roughnessTexture,
         ctx.Encoding.Linear
       );
     }
-    if (material.metallicMap) {
-      material.metallicMap = await getTexture(
+    if (material.metallicTexture) {
+      material.metallicTexture = await getTexture(
         ctx,
-        material.metallicMap,
+        material.metallicTexture,
         ctx.Encoding.Linear
       );
     }
-    if (material.normalMap) {
-      material.normalMap = await getTexture(
+    if (material.normalTexture) {
+      material.normalTexture = await getTexture(
         ctx,
-        material.normalMap,
+        material.normalTexture,
         ctx.Encoding.Linear
       );
     }
-    if (material.alphaMap) {
-      material.alphaMap = await getTexture(
+    if (material.alphaTexture) {
+      material.alphaTexture = await getTexture(
         ctx,
-        material.alphaMap,
+        material.alphaTexture,
         ctx.Encoding.Linear
       );
     }
-    if (material.emissiveColorMap) {
-      material.emissiveColorMap = await getTexture(
+    if (material.emissiveColorTexture) {
+      material.emissiveColorTexture = await getTexture(
         ctx,
-        material.emissiveColorMap,
+        material.emissiveColorTexture,
         ctx.Encoding.SRGB
       );
     }

@@ -328,7 +328,7 @@ function handleMaterial(material, gltf, ctx) {
       );
     }
     if (pbrMetallicRoughness.baseColorTexture) {
-      materialProps.baseColorMap = getPexMaterialTexture(
+      materialProps.baseColorTexture = getPexMaterialTexture(
         pbrMetallicRoughness.baseColorTexture,
         gltf,
         ctx,
@@ -342,7 +342,7 @@ function handleMaterial(material, gltf, ctx) {
       materialProps.roughness = pbrMetallicRoughness.roughnessFactor;
     }
     if (pbrMetallicRoughness.metallicRoughnessTexture) {
-      materialProps.metallicRoughnessMap = getPexMaterialTexture(
+      materialProps.metallicRoughnessTexture = getPexMaterialTexture(
         pbrMetallicRoughness.metallicRoughnessTexture,
         gltf,
         ctx
@@ -357,7 +357,7 @@ function handleMaterial(material, gltf, ctx) {
         materialProps.sheenRoughness = sheenExt.sheenRoughnessFactor;
         materialProps.normalScale = 1;
         if (sheenExt.sheenColorTexture) {
-          materialProps.sheenColorMap = getPexMaterialTexture(
+          materialProps.sheenColorTexture = getPexMaterialTexture(
             sheenExt.sheenColorTexture,
             gltf,
             ctx,
@@ -382,9 +382,9 @@ function handleMaterial(material, gltf, ctx) {
         materialProps.clearCoat = clearcoatExt.clearcoatFactor;
         materialProps.clearCoatRoughness =
           clearcoatExt.clearcoatRoughnessFactor;
-        // TODO: could clearcoatTexture and clearCoatRoughnessMap be same texture as we read r and g components in shader
+        // TODO: could clearcoatTexture and clearcoatRoughnessTexture be same texture as we read r and g components in shader
         if (clearcoatExt.clearcoatTexture) {
-          materialProps.clearCoatMap = getPexMaterialTexture(
+          materialProps.clearCoatTexture = getPexMaterialTexture(
             clearcoatExt.clearcoatTexture,
             gltf,
             ctx,
@@ -392,7 +392,7 @@ function handleMaterial(material, gltf, ctx) {
           );
         }
         if (clearcoatExt.clearcoatRoughnessTexture) {
-          materialProps.clearCoatRoughnessMap = getPexMaterialTexture(
+          materialProps.clearCoatRoughnessTexture = getPexMaterialTexture(
             clearcoatExt.clearcoatRoughnessTexture,
             gltf,
             ctx,
@@ -400,7 +400,7 @@ function handleMaterial(material, gltf, ctx) {
           );
         }
         if (clearcoatExt.clearcoatNormalTexture) {
-          materialProps.clearCoatNormalMap = getPexMaterialTexture(
+          materialProps.clearCoatNormalTexture = getPexMaterialTexture(
             clearcoatExt.clearcoatNormalTexture,
             gltf,
             ctx,
@@ -436,7 +436,7 @@ function handleMaterial(material, gltf, ctx) {
       materialProps.glossiness = pbrSpecularGlossiness.glossinessFactor;
     }
     if (pbrSpecularGlossiness.diffuseTexture) {
-      materialProps.diffuseMap = getPexMaterialTexture(
+      materialProps.diffuseTexture = getPexMaterialTexture(
         pbrSpecularGlossiness.diffuseTexture,
         gltf,
         ctx,
@@ -444,7 +444,7 @@ function handleMaterial(material, gltf, ctx) {
       );
     }
     if (pbrSpecularGlossiness.specularGlossinessTexture) {
-      materialProps.specularGlossinessMap = getPexMaterialTexture(
+      materialProps.specularGlossinessTexture = getPexMaterialTexture(
         pbrSpecularGlossiness.specularGlossinessTexture,
         gltf,
         ctx,
@@ -456,7 +456,7 @@ function handleMaterial(material, gltf, ctx) {
   // Additional Maps
   // https://github.com/KhronosGroup/glTF/blob/main/specification/2.0/schema/material.normalTextureInfo.schema.json
   if (material.normalTexture) {
-    materialProps.normalMap = getPexMaterialTexture(
+    materialProps.normalTexture = getPexMaterialTexture(
       material.normalTexture,
       gltf,
       ctx
@@ -465,7 +465,7 @@ function handleMaterial(material, gltf, ctx) {
 
   // https://github.com/KhronosGroup/glTF/blob/main/specification/2.0/schema/material.occlusionTextureInfo.schema.json
   if (material.occlusionTexture) {
-    materialProps.occlusionMap = getPexMaterialTexture(
+    materialProps.occlusionTexture = getPexMaterialTexture(
       material.occlusionTexture,
       gltf,
       ctx
@@ -473,7 +473,7 @@ function handleMaterial(material, gltf, ctx) {
   }
 
   if (material.emissiveTexture) {
-    materialProps.emissiveColorMap = getPexMaterialTexture(
+    materialProps.emissiveColorTexture = getPexMaterialTexture(
       material.emissiveTexture,
       gltf,
       ctx,
