@@ -31,7 +31,7 @@ const pixelRatio = devicePixelRatio;
 const ctx = createContext({ pixelRatio });
 
 const renderEngine = createRenderEngine({ ctx });
-const world = createWorld();
+const world = (window.world = createWorld());
 
 const gui = createGUI(ctx);
 
@@ -312,22 +312,22 @@ ctx.frame(() => {
     [0, 0, 0]
   );
 
-  directionalLightEntity.transform = {
-    ...directionalLightEntity.transform,
-    position,
-    rotation,
-  };
-  spotLightEntity.transform = {
-    ...spotLightEntity.transform,
-    position,
-    rotation,
-  };
-  pointLightEntity.transform = { ...pointLightEntity.transform, position };
-  areaLightEntity.transform = {
-    ...areaLightEntity.transform,
-    position,
-    rotation,
-  };
+  directionalLightEntity.transform.position = position;
+  directionalLightEntity.transform.rotation = rotation;
+
+  spotLightEntity.transform.position = position;
+  spotLightEntity.transform.rotation = rotation;
+
+  pointLightEntity.transform.position = position;
+
+  areaLightEntity.transform.position = position;
+  areaLightEntity.transform.rotation = rotation;
+
+  directionalLightEntity.transform.dirty =
+    spotLightEntity.transform.dirty =
+    pointLightEntity.transform.dirty =
+    areaLightEntity.transform.dirty =
+      true;
 
   renderEngine.update(world.entities);
   renderEngine.render(world.entities, cameraEntities);

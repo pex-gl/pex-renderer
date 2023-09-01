@@ -186,7 +186,7 @@ function rescaleScene({ root }) {
     );
     root.root = true;
     root.transform.scale = [sceneScale, sceneScale, sceneScale];
-    root.transform = { ...root.transform };
+    root.transform.dirty = true;
   }
 }
 

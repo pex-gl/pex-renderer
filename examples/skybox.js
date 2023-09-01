@@ -129,7 +129,7 @@ gui.addParam(
       [0, 1, 0],
       State.rotation
     );
-    skyboxEntity.transform = { ...skyboxEntity.transform };
+    skyboxEntity.transform.dirty = true
     reflectionProbeEntity.reflectionProbe.dirty = true;
   }
 );
