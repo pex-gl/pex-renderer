@@ -210,10 +210,15 @@
  * @param {number} [deltaTime]
  */
 /**
+ * @callback SystemDispose
+ * @param {Entity[]} entities
+ */
+/**
  * @typedef {object} System
  * @property {string} type
  * @property {boolean} debug
  * @property {SystemUpdate} update
+ * @property {SystemDispose} dispose
  */
 /**
  * @typedef RenderEngineOptions
@@ -229,8 +234,15 @@
  * @param {RenderEngineOptions} [options={}]
  */
 /**
+ * @callback RenderEngineDebug
+ * @param {boolean} enable
+ */
+/**
  * @typedef {System} RenderEngine
  * @property {RenderEngineRender} render
+ * @property {RenderEngineDebug} debug
+ * @property {System[]} systems
+ * @property {System[]} renderers
  */
 
 // World
