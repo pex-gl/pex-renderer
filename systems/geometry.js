@@ -1,25 +1,24 @@
 import { aabb } from "pex-geom";
 import { NAMESPACE } from "../utils.js";
 
-const vertexAttributeMap = {
-  positions: { attribute: "aPosition" },
-  normals: { attribute: "aNormal" },
-  tangents: { attribute: "aTangent" },
-  vertexColors: { attribute: "aVertexColor" },
-  uvs: { attribute: "aTexCoord0" },
-  texCoords: { attribute: "aTexCoord0" },
-  texCoords0: { attribute: "aTexCoord0" },
-  uvs1: { attribute: "aTexCoord1" },
-  texCoords1: { attribute: "aTexCoord1" },
-  weights: { attribute: "aWeight" },
-  joints: { attribute: "aJoint" },
-  offsets: { attribute: "aOffset", instanced: true },
-  scales: { attribute: "aScale", instanced: true },
-  rotations: { attribute: "aRotation", instanced: true },
-  colors: { attribute: "aColor", instanced: true },
-};
+const attributeMap = {
+  aPosition: "positions",
+  aNormal: "normals",
+  aTangent: "tangents",
+  aVertexColor: "vertexColors",
+  aTexCoord0: ["uvs", "texCoords", "uvs0", "texCoords0"],
+  aTexCoord1: ["uvs1", "texCoords1"],
+  aWeight: "weights",
+  aJoint: "joints",
 
-const vertexAttributeProps = Object.keys(vertexAttributeMap);
+  aOffset: "offsets",
+  aScale: "scales",
+  aRotation: "rotations",
+  aColor: "colors",
+};
+const attributeMapKeys = Object.keys(attributeMap);
+const instancedAttributes = ["aOffset", "aScale", "aRotation", "aColor"];
+
 const indicesProps = ["cells", "indices"];
 
 export default ({ ctx }) => ({
@@ -27,113 +26,119 @@ export default ({ ctx }) => ({
   cache: {},
   debug: false,
   updateGeometry(id, geometry) {
-    let cachedGeom = this.cache[id];
-    if (!cachedGeom) {
-      cachedGeom = this.cache[id] = {
-        geometry: null,
-        attributes: {
-          // aPosition: ctx.vertexBuffer([[1, 1, 1]]),
-          // aNormal: ctx.vertexBuffer([[1, 1, 1]]),
-          // aUV: ctx.vertexBuffer([[1, 1]]),
-          // aVertexColor: ctx.vertexBuffer([[1, 1, 1, 1]]),
-        },
-      };
-      if (this.debug) {
-        console.debug(
-          NAMESPACE,
-          this.type,
-          "update geometry cache",
-          id,
-          cachedGeom,
-          geometry
-        );
-      }
+    this.cache[id] ||= { geometry: null, attributes: {} };
+
+    if (this.debug && !this.cache[id].geometry) {
+      console.debug(NAMESPACE, this.type, "add to cache", id, this.cache[id]);
     }
+
+    const cachedGeom = this.cache[id];
 
     const geometryDirty = cachedGeom.geometry !== geometry;
 
-    // Cache properties
+    // Cache geometry properties
     if (geometryDirty) {
       if (this.debug) {
-        console.debug(NAMESPACE, this.type, "update geometry", id, geometry);
+        console.debug(NAMESPACE, this.type, "update", id, geometry);
       }
       cachedGeom.geometry = geometry;
 
       cachedGeom.instances = geometry.instances;
       cachedGeom.count = geometry.count;
       cachedGeom.primitive = geometry.primitive;
+
+      // Add custom attributes
+      if (cachedGeom.customAttributes) {
+        for (let i = 0; i < cachedGeom.customAttributes.length; i++) {
+          const attributeName = cachedGeom.customAttributes[i];
+          if (!geometry.attributes || !geometry.attributes[attributeName]) {
+            ctx.dispose(
+              cachedGeom.attributes[attributeName].buffer ||
+                cachedGeom.attributes[attributeName]
+            );
+            delete cachedGeom.attributes[attributeName];
+          }
+        }
+      }
+
+      if (geometry.attributes) {
+        Object.assign(cachedGeom.attributes, geometry.attributes);
+        cachedGeom.customAttributes = Object.keys(geometry.attributes);
+      } else {
+        cachedGeom.customAttributes = [];
+      }
     }
 
-    for (let indicesPropName of indicesProps) {
-      const indicesValue = geometry[indicesPropName];
+    // Add index buffer
+    for (let i = 0; i < indicesProps.length; i++) {
+      const indicesValue = geometry[indicesProps[i]];
 
       if (indicesValue) {
         if (!(geometryDirty || indicesValue.dirty)) continue;
 
-        if (indicesValue.buffer && indicesValue.buffer.class == "indexBuffer") {
+        if (indicesValue.buffer?.class === "indexBuffer") {
           cachedGeom.indices = indicesValue;
         } else {
-          if (!cachedGeom.indices) {
-            cachedGeom.indices = ctx.indexBuffer([[1, 1, 1]]);
-          }
+          cachedGeom.indices ||= ctx.indexBuffer([[1, 1, 1]]);
           ctx.update(cachedGeom.indices, {
             data: indicesValue.data || indicesValue,
           });
+          // TODO: why not passing this to ctx.update?
           //TODO: check if mutating indexBuffer here is ok
           cachedGeom.indices.offset = indicesValue.offset;
         }
       }
     }
 
-    for (let attributePropName of vertexAttributeProps) {
-      const attributeValue = geometry[attributePropName];
+    // Add vertex buffers
+    for (let i = 0; i < attributeMapKeys.length; i++) {
+      const attributeName = attributeMapKeys[i];
+      const attributeValue =
+        geometry[
+          Array.isArray(attributeMap[attributeName])
+            ? attributeMap[attributeName].find((prop) => geometry[prop])
+            : attributeMap[attributeName]
+        ];
 
       if (attributeValue) {
         if (!(geometryDirty || attributeValue.dirty)) continue;
 
-        const data = attributeValue.data || attributeValue;
-        // If we have list of vectors we can calculate bounding box otherwise
+        // Compute the bounds
+        const data = attributeValue.data || attributeValue; //.data should be deprecated
         if (
-          (attributePropName == "positions" ||
-            attributePropName == "offsets") &&
+          (attributeName === "aPosition" || attributeName === "aOffset") &&
           !geometry.bounds
+          // TODO: should bounds be recomputed when geometryDirty?
+          // And leave to user to set geometry.bounds = null when making attribute dirty, only if wanted?
         ) {
-          if (Array.isArray(data) && Array.isArray(data[0])) {
-            geometry.bounds = aabb.fromPoints(
-              geometry.bounds || aabb.create(),
-              data
-            );
-          } else {
-            geometry.bounds = aabb.fromPoints(
-              geometry.bounds || aabb.create(),
-              data
-            );
-          }
+          geometry.bounds ||= aabb.create();
+          aabb.fromPoints(geometry.bounds, data);
         }
 
-        const { attribute: attributeName, instanced } =
-          vertexAttributeMap[attributePropName];
-
-        if (
-          attributeValue.buffer &&
-          attributeValue.buffer.class == "vertexBuffer"
-        ) {
+        // Set the attribute
+        if (attributeValue.buffer?.class === "vertexBuffer") {
           cachedGeom.attributes[attributeName] = attributeValue;
         } else {
-          let attribute = cachedGeom.attributes[attributeName];
-          if (!attribute) {
-            attribute = cachedGeom.attributes[attributeName] = {
-              buffer: ctx.vertexBuffer([[1, 1, 1]]),
-            };
-          }
-          ctx.update(attribute.buffer, {
-            data: attributeValue.data || attributeValue, //.data should be deprecated
-          });
+          cachedGeom.attributes[attributeName] ||= {
+            buffer: ctx.vertexBuffer([[1, 1, 1]]),
+          };
+
+          const attribute = cachedGeom.attributes[attributeName];
+          ctx.update(attribute.buffer, { data });
+
+          // TODO: why not passing this to ctx.update?
           attribute.offset = attributeValue.offset;
           attribute.stride = attributeValue.stride;
           attribute.divisor =
-            attributeValue.divisor || (instanced ? 1 : undefined);
+            attributeValue.divisor ||
+            (instancedAttributes.includes(attributeName) ? 1 : undefined);
         }
+      } else if (cachedGeom.attributes[attributeName]) {
+        ctx.dispose(
+          cachedGeom.attributes[attributeName].buffer ||
+            cachedGeom.attributes[attributeName]
+        );
+        delete cachedGeom.attributes[attributeName];
       }
     }
   },

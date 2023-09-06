@@ -11,6 +11,7 @@ import createContext from "pex-context";
 import { vec3, quat, mat4 } from "pex-math";
 import * as io from "pex-io";
 import createGUI from "pex-gui";
+import random from "pex-random";
 import {
   cube,
   torus,
@@ -33,6 +34,8 @@ const {
   reflectionProbe,
   transform,
 } = components;
+
+random.seed(0);
 
 const ctx = createContext();
 
@@ -315,6 +318,16 @@ const grassEntity = createEntity({
     ...coneGeometry,
     offsets: grassPlaneGeometry.positions,
     instances: grassPlaneGeometry.positions.length / 3,
+    attributes: {
+      aInstanceTintColor: {
+        buffer: ctx.vertexBuffer(
+          new Float32Array(grassPlaneGeometry.positions.length * 3).map(() =>
+            random.float(0.5)
+          )
+        ),
+        divisor: 1,
+      },
+    },
   }),
   material: material({
     baseColor: [0.2, 0.8, 0, 1],
@@ -329,6 +342,8 @@ const grassEntity = createEntity({
           uniform float uTime;
           varying float vNoiseAmount;
           varying float vColorNoise;
+          varying vec3 vInstanceTintColor;
+          attribute vec3 aInstanceTintColor;
         `,
         BEFORE_TRANSFORM: /*glsl*/ `
           float noiseAmountX = cnoise(aOffset.xyz * 0.3 + vec3(uTime, 0.0, 0.0));
@@ -342,12 +357,14 @@ const grassEntity = createEntity({
           position.y *= pow(clamp(length(aOffset.xz/2.0), 0.0, 1.0), 3.0);
           position.y *= noiseAmountY;
           vColorNoise = position.y / ${grassHeight};
+          vInstanceTintColor = aInstanceTintColor;
         `,
       },
       frag: {
         DECLARATIONS_END: /*glsl*/ `
         varying float vNoiseAmount;
         varying float vColorNoise;
+        varying vec3 vInstanceTintColor;
         `,
         BEFORE_TEXTURES: /*glsl*/ `
           vec3 dX = dFdx(data.positionView);
@@ -358,6 +375,7 @@ const grassEntity = createEntity({
         BEFORE_LIGHTING: /*glsl*/ `
           data.baseColor.rgb = mix(vec3(0.3, 1.0, 0.0), vec3(0.0, 0.5, 0.2), vColorNoise);
           data.baseColor *= 0.4 + vNoiseAmount;
+          data.baseColor *= vInstanceTintColor;
           //data.baseColor.g = 0.0;
         `,
       },
