@@ -3,8 +3,7 @@ import { pipeline as SHADERS, parser as ShaderParser } from "pex-shaders";
 import * as AreaLightsData from "./area-light-data.js";
 import {
   ProgramCache,
-  applyDebugRender,
-  applyMaterialHooks,
+  shadersPostReplace,
   buildProgram,
   getMaterialFlagsAndUniforms,
 } from "./utils.js";
@@ -191,13 +190,13 @@ export default ({ ctx }) => {
             ? SHADERS.depthPass.frag
             : SHADERS.material.frag),
       };
-      if (material.hooks) {
-        applyMaterialHooks(descriptor, entity, this.materialUniforms);
-      }
-      if (options.debugRender) {
-        applyDebugRender(descriptor, options.debugRender);
-        flags.push(options.debugRender);
-      }
+      shadersPostReplace(
+        descriptor,
+        entity,
+        this.materialUniforms,
+        options.debugRender
+      );
+      if (options.debugRender) flags.push(options.debugRender);
 
       const { vert, frag } = descriptor;
 

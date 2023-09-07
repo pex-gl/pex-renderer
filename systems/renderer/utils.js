@@ -138,50 +138,62 @@ export function buildProgram(ctx, vert, frag) {
   return program;
 }
 
-export function applyMaterialHooks(descriptor, entity, materialUniforms) {
+export function shadersPostReplace(
+  descriptor,
+  entity,
+  materialUniforms,
+  debugRender
+) {
   const {
     material: { hooks },
   } = entity;
 
-  if (hooks.vert) {
-    for (let [hookName, hookCode] of Object.entries(hooks.vert)) {
-      descriptor.vert = descriptor.vert.replace(
-        `#define HOOK_VERT_${hookName}`,
-        hookCode
-      );
+  if (debugRender) {
+    const mode = debugRender.toLowerCase();
+
+    const scale = mode.includes("normal") ? " * 0.5 + 0.5" : "";
+    const pow = ["ao", "normal", "metallic", "roughness"].some((type) =>
+      mode.includes(type)
+    )
+      ? "2.2"
+      : "1";
+
+    if (mode.includes("texcoord")) debugRender = `vec3(${debugRender}, 0.0)`;
+
+    descriptor.frag = descriptor.frag.replace(
+      "#define HOOK_FRAG_END",
+      /* glsl */ `#define HOOK_FRAG_END
+
+vec4 debugColor = vec4(pow(vec3(${debugRender}${scale}), vec3(${pow})), 1.0);
+#if (__VERSION__ >= 300)
+  outColor = debugColor;
+#else
+  gl_FragData[0] = debugColor;
+#endif
+`
+    );
+  }
+
+  if (hooks) {
+    if (hooks.vert) {
+      for (let [hookName, hookCode] of Object.entries(hooks.vert)) {
+        descriptor.vert = descriptor.vert.replace(
+          `#define HOOK_VERT_${hookName}`,
+          hookCode
+        );
+      }
+    }
+    if (hooks.frag) {
+      for (let [hookName, hookCode] of Object.entries(hooks.frag)) {
+        descriptor.frag = descriptor.frag.replace(
+          `#define HOOK_FRAG_${hookName}`,
+          hookCode
+        );
+      }
+    }
+    if (hooks.uniforms) {
+      const hookUniforms = hooks.uniforms(entity, []);
+      Object.assign(materialUniforms, hookUniforms);
     }
   }
-  if (hooks.frag) {
-    for (let [hookName, hookCode] of Object.entries(hooks.frag)) {
-      descriptor.frag = descriptor.frag.replace(
-        `#define HOOK_FRAG_${hookName}`,
-        hookCode
-      );
-    }
-  }
-  if (hooks.uniforms) {
-    const hookUniforms = hooks.uniforms(entity, []);
-    Object.assign(materialUniforms, hookUniforms);
-  }
-}
-
-export function applyDebugRender(descriptor, debugRender) {
-  let scale = "";
-  let pow = 1;
-  let mode = debugRender.toLowerCase();
-
-  if (mode.includes("normal")) scale = "* 0.5 + 0.5";
-  if (mode.includes("texcoord")) debugRender = `vec3(${debugRender}, 0.0)`;
-  if (
-    mode.includes("ao") ||
-    mode.includes("normal") ||
-    mode.includes("metallic") ||
-    mode.includes("roughness")
-  ) {
-    pow = "2.2";
-  }
-  descriptor.frag = descriptor.frag.replace(
-    "gl_FragData[0] = encode(vec4(color, 1.0), uOutputEncoding);",
-    `gl_FragData[0] = vec4(pow(vec3(${debugRender}${scale}), vec3(${pow})), 1.0);`
-  );
 }

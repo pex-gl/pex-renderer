@@ -21,6 +21,15 @@ const instancedAttributes = ["aOffset", "aScale", "aRotation", "aColor"];
 
 const indicesProps = ["cells", "indices"];
 
+/**
+ * Geometry system
+ *
+ * Adds:
+ * - "bounds" to geometry components
+ * - "_geometry" to entities as reference to internal cache
+ * @param {import("../types.js").SystemOptions} options
+ * @returns {import("../types.js").System}
+ */
 export default ({ ctx }) => ({
   type: "geometry-system",
   cache: {},

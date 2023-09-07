@@ -40,8 +40,9 @@
  * @property {number} [far=1000]
  * @property {number} [aspect=1]
  * @property {number} [fov=Math.PI / 4]
- * @property {number} viewMatrix
- * @property {number} invViewMatrix
+ * @property {import("pex-color").color} [clearColor]
+ * @property {mat4} [viewMatrix]
+ * @property {mat4} [invViewMatrix]
  */
 // * @property {number} [exposure=1]
 // * @property {number} [left=-1]
@@ -204,6 +205,10 @@
  */
 
 // System
+/**
+ * @typedef {object} SystemOptions
+ * @property {import("pex-context/types/index.js")} ctx
+ */
 /**
  * @callback SystemUpdate
  * @param {Entity[]} entities

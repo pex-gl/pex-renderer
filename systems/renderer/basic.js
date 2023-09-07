@@ -3,7 +3,7 @@ import { pipeline as SHADERS, parser as ShaderParser } from "pex-shaders";
 import {
   buildProgram,
   getMaterialFlagsAndUniforms,
-  applyMaterialHooks,
+  shadersPostReplace,
   ProgramCache,
   getHashFromProps,
 } from "./utils.js";
@@ -47,9 +47,8 @@ export default ({ ctx }) => {
         vert: material.vert || SHADERS.basic.vert,
         frag: material.frag || SHADERS.basic.frag,
       };
-      if (material.hooks) {
-        applyMaterialHooks(descriptor, entity, this.materialUniforms);
-      }
+      shadersPostReplace(descriptor, entity, this.materialUniforms);
+
       const { vert, frag } = descriptor;
 
       let program = this.cache.programs.get(flags, vert, frag);

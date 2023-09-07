@@ -22,7 +22,6 @@ function updateModelMatrix(matrix, transform) {
  * Adds:
  * - "worldBounds", "dirty" and "aabbDirty" to transform components
  * - "_transform" to entities as reference to internal cache
- * @function
  * @returns {import("../types.js").System}
  */
 export default () => ({
