@@ -78,6 +78,14 @@ function drawMeshes({
   }
 }
 
+/**
+ * Render pipeline system
+ *
+ * Adds:
+ * - "_near", "_far" and "_sceneBboxInLightSpace" to light components that cast shadows
+ * - "_shadowCubemap" to pointLight components and "_shadowMap" to other light components
+ * @returns {import("../types.js").System}
+ */
 export default ({
   ctx,
   resourceCache,

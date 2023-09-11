@@ -64,6 +64,11 @@ const flagDefs = [
   [["geometry", "attributes", "aVertexColor"], "USE_VERTEX_COLORS"],
 ];
 
+const lightColorToSrgb = (light) =>
+  light.color.map((c, j) =>
+    j < 3 ? Math.pow(c * light.intensity, 1.0 / 2.2) : c
+  );
+
 export default ({ ctx }) => {
   const dummyTexture2D = ctx.texture2D({
     name: "dummyTexture2D",
@@ -277,33 +282,29 @@ export default ({ ctx }) => {
 
       for (let i = 0; i < directionalLights.length; i++) {
         const lightEntity = directionalLights[i];
-
         const light = lightEntity.directionalLight;
         standardRendererSystem.checkLight(light);
 
-        sharedUniforms[`uDirectionalLights[${i}].direction`] = light._direction;
-        sharedUniforms[`uDirectionalLights[${i}].color`] = light.color.map(
-          (c, j) => {
-            if (j < 3) return Math.pow(c * light.intensity, 1.0 / 2.2);
-            else return c;
-          }
-        );
-        sharedUniforms[`uDirectionalLights[${i}].castShadows`] =
-          light.castShadows;
-        sharedUniforms[`uDirectionalLights[${i}].projectionMatrix`] =
-          light._projectionMatrix;
-        sharedUniforms[`uDirectionalLights[${i}].viewMatrix`] =
-          light._viewMatrix;
-        sharedUniforms[`uDirectionalLights[${i}].near`] = light._near || 0.1;
-        sharedUniforms[`uDirectionalLights[${i}].far`] = light._far || 100;
-        sharedUniforms[`uDirectionalLights[${i}].bias`] = light.bias || 0.1;
-        sharedUniforms[`uDirectionalLights[${i}].shadowMapSize`] =
-          light.castShadows && light._shadowMap
-            ? [light._shadowMap.width, light._shadowMap.height]
-            : [0, 0];
-        sharedUniforms[`uDirectionalLightShadowMaps[${i}]`] = light.castShadows
-          ? light._shadowMap
-          : dummyTexture2D;
+        const uniform = `uDirectionalLights[${i}].`;
+
+        sharedUniforms[`${uniform}direction`] = light._direction;
+        sharedUniforms[`${uniform}color`] = lightColorToSrgb(light);
+        sharedUniforms[`${uniform}castShadows`] = light.castShadows;
+
+        if (light.castShadows) {
+          sharedUniforms[`${uniform}projectionMatrix`] =
+            light._projectionMatrix;
+          sharedUniforms[`${uniform}viewMatrix`] = light._viewMatrix;
+          sharedUniforms[`${uniform}near`] = light._near;
+          sharedUniforms[`${uniform}far`] = light._far;
+          sharedUniforms[`${uniform}bias`] = light.bias;
+          sharedUniforms[`${uniform}shadowMapSize`] =
+            light.castShadows && light._shadowMap
+              ? [light._shadowMap.width, light._shadowMap.height]
+              : [0, 0];
+          sharedUniforms[`uDirectionalLightShadowMaps[${i}]`] =
+            light.castShadows ? light._shadowMap : dummyTexture2D;
+        }
       }
 
       for (let i = 0; i < spotLights.length; i++) {
@@ -311,30 +312,32 @@ export default ({ ctx }) => {
         const light = lightEntity.spotLight;
         standardRendererSystem.checkLight(light);
 
-        sharedUniforms[`uSpotLights[${i}].position`] =
+        const uniform = `uSpotLights[${i}].`;
+
+        sharedUniforms[`${uniform}position`] =
           lightEntity._transform.worldPosition;
-        sharedUniforms[`uSpotLights[${i}].direction`] = light._direction;
-        sharedUniforms[`uSpotLights[${i}].color`] = light.color.map((c, j) => {
-          if (j < 3) return Math.pow(c * light.intensity, 1.0 / 2.2);
-          else return c;
-        });
-        sharedUniforms[`uSpotLights[${i}].angle`] = light.angle;
-        sharedUniforms[`uSpotLights[${i}].innerAngle`] = light.innerAngle;
-        sharedUniforms[`uSpotLights[${i}].range`] = light.range;
-        sharedUniforms[`uSpotLights[${i}].castShadows`] = light.castShadows;
-        sharedUniforms[`uSpotLights[${i}].projectionMatrix`] =
-          light._projectionMatrix;
-        sharedUniforms[`uSpotLights[${i}].viewMatrix`] = light._viewMatrix;
-        sharedUniforms[`uSpotLights[${i}].near`] = light._near || 0.1;
-        sharedUniforms[`uSpotLights[${i}].far`] = light._far || 100;
-        sharedUniforms[`uSpotLights[${i}].bias`] = light.bias || 0.1;
-        sharedUniforms[`uSpotLights[${i}].shadowMapSize`] = light.castShadows
-          ? [light._shadowMap.width, light._shadowMap.height]
-          : [0, 0];
-        sharedUniforms[`uSpotLightShadowMaps[${i}]`] =
-          light.castShadows && light._shadowMap
-            ? light._shadowMap
-            : dummyTexture2D;
+        sharedUniforms[`${uniform}direction`] = light._direction;
+        sharedUniforms[`${uniform}color`] = lightColorToSrgb(light);
+        sharedUniforms[`${uniform}angle`] = light.angle;
+        sharedUniforms[`${uniform}innerAngle`] = light.innerAngle;
+        sharedUniforms[`${uniform}range`] = light.range;
+        sharedUniforms[`${uniform}castShadows`] = light.castShadows;
+
+        if (light.castShadows) {
+          sharedUniforms[`${uniform}projectionMatrix`] =
+            light._projectionMatrix;
+          sharedUniforms[`${uniform}viewMatrix`] = light._viewMatrix;
+          sharedUniforms[`${uniform}near`] = light._near;
+          sharedUniforms[`${uniform}far`] = light._far;
+          sharedUniforms[`${uniform}bias`] = light.bias;
+          sharedUniforms[`${uniform}shadowMapSize`] = light.castShadows
+            ? [light._shadowMap.width, light._shadowMap.height]
+            : [0, 0];
+          sharedUniforms[`uSpotLightShadowMaps[${i}]`] =
+            light.castShadows && light._shadowMap
+              ? light._shadowMap
+              : dummyTexture2D;
+        }
       }
 
       for (let i = 0; i < pointLights.length; i++) {
@@ -342,22 +345,24 @@ export default ({ ctx }) => {
         const light = lightEntity.pointLight;
         standardRendererSystem.checkLight(light);
 
-        sharedUniforms[`uPointLights[${i}].position`] =
+        const uniform = `uPointLights[${i}].`;
+
+        sharedUniforms[`${uniform}position`] =
           lightEntity._transform.worldPosition;
-        sharedUniforms[`uPointLights[${i}].color`] = light.color.map((c, j) => {
-          if (j < 3) return Math.pow(c * light.intensity, 1.0 / 2.2);
-          else return c;
-        });
-        sharedUniforms[`uPointLights[${i}].range`] = light.range;
-        sharedUniforms[`uPointLights[${i}].castShadows`] = light.castShadows;
-        sharedUniforms[`uPointLights[${i}].bias`] = light.bias || 0.1;
-        sharedUniforms[`uPointLights[${i}].shadowMapSize`] = light.castShadows
-          ? [light._shadowCubemap.width, light._shadowCubemap.height]
-          : [0, 0];
-        sharedUniforms[`uPointLightShadowMaps[${i}]`] =
-          light.castShadows && light._shadowCubemap
-            ? light._shadowCubemap
-            : dummyTextureCube;
+        sharedUniforms[`${uniform}color`] = lightColorToSrgb(light);
+        sharedUniforms[`${uniform}range`] = light.range;
+        sharedUniforms[`${uniform}castShadows`] = light.castShadows;
+
+        if (light.castShadows) {
+          sharedUniforms[`${uniform}bias`] = light.bias;
+          sharedUniforms[`${uniform}shadowMapSize`] = light.castShadows
+            ? [light._shadowCubemap.width, light._shadowCubemap.height]
+            : [0, 0];
+          sharedUniforms[`uPointLightShadowMaps[${i}]`] =
+            light.castShadows && light._shadowCubemap
+              ? light._shadowCubemap
+              : dummyTextureCube;
+        }
       }
 
       // TODO: dispose if no areaLights
@@ -387,16 +392,16 @@ export default ({ ctx }) => {
       for (let i = 0; i < areaLights.length; i++) {
         const lightEntity = areaLights[i];
         const light = lightEntity.areaLight;
+
+        const uniform = `uAreaLights[${i}].`;
         sharedUniforms.ltc_mat = ltc_mat;
         sharedUniforms.ltc_mag = ltc_mag;
-        sharedUniforms[`uAreaLights[${i}].position`] =
-          lightEntity.transform.position;
+        sharedUniforms[`${uniform}position`] = lightEntity.transform.position;
         // TODO: mix color and intensity
-        sharedUniforms[`uAreaLights[${i}].color`] = light.color;
-        sharedUniforms[`uAreaLights[${i}].intensity`] = light.intensity;
-        sharedUniforms[`uAreaLights[${i}].rotation`] =
-          lightEntity.transform.rotation;
-        sharedUniforms[`uAreaLights[${i}].size`] = [
+        sharedUniforms[`${uniform}color`] = light.color;
+        sharedUniforms[`${uniform}intensity`] = light.intensity;
+        sharedUniforms[`${uniform}rotation`] = lightEntity.transform.rotation;
+        sharedUniforms[`${uniform}size`] = [
           lightEntity.transform.scale[0] / 2,
           lightEntity.transform.scale[1] / 2,
         ];
