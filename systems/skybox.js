@@ -71,7 +71,9 @@ export default ({ ctx, resourceCache }) => {
               pass: entity.skybox._updateSkyTexturePass,
               uniforms: {
                 uSunPosition: entity.skybox.sunPosition || [0, 0, 0],
-                uRGBM: entity.skybox.rgbm || false,
+                uOutputEncoding: entity.skybox.rgbm
+                  ? ctx.Encoding.RGBM
+                  : ctx.Encoding.Linear,
               },
             });
           }
