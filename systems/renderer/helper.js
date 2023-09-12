@@ -375,7 +375,11 @@ export default function createHelperSystem({ ctx }) {
               );
             }
           }
-          if (entity.cameraHelper && entity.camera) {
+          if (
+            entity.cameraHelper &&
+            entity.camera &&
+            renderView.camera !== entity.camera
+          ) {
             addToBuilder(
               entity.camera.projection === "orthographic"
                 ? getOrthographicCamera(entity.camera)
