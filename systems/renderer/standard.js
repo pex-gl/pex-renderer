@@ -185,7 +185,6 @@ export default ({ ctx }) => {
         options
       );
       this.materialUniforms = materialUniforms;
-      entity._flags = flags;
 
       const descriptor = {
         vert: material.vert || SHADERS.material.vert,
@@ -214,28 +213,18 @@ export default ({ ctx }) => {
         const vertSrc = ShaderParser.build(ctx, vert, defines);
         const fragSrc = ShaderParser.build(ctx, frag, defines);
 
-        try {
-          if (this.debug) {
-            console.debug(NAMESPACE, this.type, "new program", flags, entity);
-          }
-          program = buildProgram(
-            ctx,
-            ShaderParser.replaceStrings(vertSrc, options),
-            ShaderParser.replaceStrings(fragSrc, options)
-          );
-          this.cache.programs.set(flags, vert, frag, program);
-        } catch (error) {
-          console.error(NAMESPACE, error);
-          console.warn(
-            NAMESPACE,
-            "glsl error",
-            ShaderParser.getFormattedError(error, {
-              vert: vertSrc,
-              frag: fragSrc,
-            })
-          );
+        if (this.debug) {
+          console.debug(NAMESPACE, this.type, "new program", flags, entity);
         }
+        program = buildProgram(
+          ctx,
+          ShaderParser.replaceStrings(vertSrc, options),
+          ShaderParser.replaceStrings(fragSrc, options),
+          defines
+        );
+        this.cache.programs.set(flags, vert, frag, program);
       }
+
       return program;
     },
     getPipeline(ctx, entity, options) {

@@ -53,24 +53,15 @@ export default ({ ctx }) => {
 
       let program = this.cache.programs.get(flags, vert, frag);
       if (!program) {
-        try {
-          if (this.debug) {
-            console.debug(NAMESPACE, this.type, "new program", flags, entity);
-          }
-          program = buildProgram(
-            ctx,
-            ShaderParser.build(ctx, vert, flags),
-            ShaderParser.build(ctx, frag, flags)
-          );
-          this.cache.programs.set(flags, vert, frag, program);
-        } catch (error) {
-          console.error(NAMESPACE, error);
-          console.warn(
-            NAMESPACE,
-            "glsl error",
-            ShaderParser.getFormattedError(error, { vert, frag })
-          );
+        if (this.debug) {
+          console.debug(NAMESPACE, this.type, "new program", flags, entity);
         }
+        program = buildProgram(
+          ctx,
+          ShaderParser.build(ctx, vert, flags),
+          ShaderParser.build(ctx, frag, flags)
+        );
+        this.cache.programs.set(flags, vert, frag, program);
       }
 
       return program;

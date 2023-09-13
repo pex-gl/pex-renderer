@@ -1,7 +1,7 @@
 import { mat3, mat2x3 } from "pex-math";
-import { pipeline as SHADERS } from "pex-shaders";
+import { pipeline as SHADERS, parser as ShaderParser } from "pex-shaders";
 
-import { TEMP_MAT2X3 } from "../../utils.js";
+import { NAMESPACE, TEMP_MAT2X3 } from "../../utils.js";
 
 export function getMaterialFlagsAndUniforms(
   ctx,
@@ -130,10 +130,17 @@ export function buildProgram(ctx, vert, frag) {
     program = ctx.program({ vert, frag });
   } catch (error) {
     program = ctx.program({
-      vert: SHADERS.error.vert,
-      frag: SHADERS.error.frag,
+      vert: ShaderParser.build(ctx, SHADERS.error.vert),
+      frag: ShaderParser.build(ctx, SHADERS.error.frag, [
+        ctx.capabilities.maxColorAttachments > 1 && "USE_DRAW_BUFFERS",
+      ]),
     });
-    throw error;
+    console.error(error);
+    console.warn(
+      NAMESPACE,
+      `glsl error\n`,
+      ShaderParser.getFormattedError(error, { vert, frag })
+    );
   }
   return program;
 }
