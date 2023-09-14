@@ -252,7 +252,7 @@ export default ({
 
     mat4.perspective(
       light._projectionMatrix,
-      light.angle ? 2 * light.angle : Math.PI / 12,
+      light.angle ? 2 * light.angle : Math.PI / 2,
       shadowMap.width / shadowMap.height,
       light._near,
       light._far
