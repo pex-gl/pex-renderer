@@ -21,7 +21,7 @@ import {
   cone,
 } from "primitive-geometry";
 import parseHdr from "parse-hdr";
-import { getURL } from "./utils.js";
+import { getURL, quatFromPointToPoint } from "./utils.js";
 
 const {
   camera,
@@ -100,7 +100,7 @@ gui.addParam(
   },
   (pos) => {
     vec3.set(directionalLightEntity.transform.position, pos);
-    quatFromPointToPointFacingZPos(
+    quatFromPointToPoint(
       directionalLightEntity.transform.rotation,
       pos,
       [0, 0, 0],
@@ -144,52 +144,6 @@ gui.addParam("Prboter Lat", cameraEntity.orbiter, "lat", {
   min: -89.5,
   max: 89.5,
 });
-
-const tempVec1 = vec3.create();
-const tempVec2 = vec3.create();
-
-const tempMat41 = mat4.create();
-
-function quatFromPointToPointFacingZPos(q, eye, target, up) {
-  let forwardX = target[0] - eye[0];
-  let forwardY = target[1] - eye[1];
-  let forwardZ = target[2] - eye[2];
-
-  let upX = up[0];
-  let upY = up[1];
-  let upZ = up[2];
-
-  let len = forwardX * forwardX + forwardY * forwardY + forwardZ * forwardZ;
-  if (len > 0) {
-    len = 1 / Math.sqrt(len);
-    forwardX *= len;
-    forwardY *= len;
-    forwardZ *= len;
-  }
-
-  let rightX = upY * forwardZ - upZ * forwardY;
-  let rightY = upZ * forwardX - upX * forwardZ;
-  let rightZ = upX * forwardY - upY * forwardX;
-
-  const m = tempMat41;
-  m[0] = rightX;
-  m[1] = rightY;
-  m[2] = rightZ;
-  m[3] = 0.0;
-  m[4] = upX;
-  m[5] = upY;
-  m[6] = upZ;
-  m[7] = 0.0;
-  m[8] = forwardX;
-  m[9] = forwardY;
-  m[10] = forwardZ;
-  m[11] = 0.0;
-  m[12] = 0.0;
-  m[13] = 0.0;
-  m[14] = 0.0;
-  m[15] = 1.0;
-  return quat.fromMat4(q, m);
-}
 
 const floorEntity = createEntity({
   name: "floor",
@@ -571,7 +525,7 @@ world.add(reflectionProbeEnt);
 const directionalLightEntity = createEntity({
   transform: transform({
     position: [2, 2, 2],
-    rotation: quatFromPointToPointFacingZPos(
+    rotation: quatFromPointToPoint(
       quat.create(),
       [2, 2, 2],
       [0, 0, 0],

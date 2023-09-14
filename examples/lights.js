@@ -86,8 +86,8 @@ const floorEntity = createEntity({
   geometry: geometry(cube({ sx: 5, sy: 0.1, sz: 5 })),
   material: material({
     baseColor: [1, 1, 1, 1],
-    roughness: 2 / 5,
-    metallic: 0,
+    roughness: 0.15,
+    metallic: 0.75,
     receiveShadows: true,
     castShadows: false,
   }),
@@ -106,8 +106,8 @@ world.add(ambientLightEntity);
 const directionalLightEntity = createEntity({
   layer: LAYERS[0],
   transform: transform({
-    position: [1, 1, 1],
-    rotation: quat.targetTo(quat.create(), [0, 0, 0], [1, 1, 1]),
+    position: [-1, 1, -1],
+    rotation: quat.targetTo(quat.create(), [0, 0, 0], [-1, 1, -1]),
   }),
   directionalLight: directionalLight({
     color: [1, 1, 0, 1],
@@ -134,8 +134,8 @@ world.add(fixDirectionalLightEntity);
 const spotLightEntity = createEntity({
   layer: LAYERS[1],
   transform: transform({
-    position: [1, 0.5, 1],
-    rotation: quat.targetTo(quat.create(), [0, 0, 0], [1, 1, 1]),
+    position: [-1, 1, -1],
+    rotation: quat.targetTo(quat.create(), [0, 0, 0], [-1, 1, -1]),
   }),
   spotLight: spotLight({
     color: [1, 1, 0, 1],
@@ -153,7 +153,7 @@ world.add(spotLightEntity);
 const fixSpotLightEntity = createEntity({
   layer: LAYERS[1],
   transform: transform({
-    position: [1, 0.5, 1],
+    position: [1, 1, 1],
     rotation: quat.targetTo(quat.create(), [0, 0, 0], [1, 1, 1]),
   }),
   spotLight: spotLight(),
@@ -165,11 +165,12 @@ world.add(fixSpotLightEntity);
 const pointLightEntity = createEntity({
   layer: LAYERS[2],
   transform: transform({
-    position: [1, 1, 1],
+    position: [-1, 1, -1],
+    rotation: quat.targetTo(quat.create(), [0, 0, 0], [-1, 1, -1]),
   }),
   pointLight: pointLight({
     color: [1, 1, 0, 1],
-    intensity: 2,
+    intensity: 1,
     range: 5,
     castShadows: true,
     // shadowMapSize: 512,
@@ -193,12 +194,13 @@ const areaLightEntity = createEntity({
   layer: LAYERS[3],
   transform: transform({
     scale: [2, 0.5, 1],
-    position: [1, 1, 1],
-    rotation: quat.targetTo(quat.create(), [0, 0, 0], [1, 1, 1]),
+    position: [-1, 1, -1],
+    rotation: quat.targetTo(quat.create(), [0, 0, 0], [-1, 1, -1]),
   }),
   areaLight: areaLight({
     color: [1, 1, 0, 1],
-    intensity: 4,
+    intensity: 1,
+    disk: true,
     castShadows: true,
   }),
   lightHelper: true,
@@ -290,6 +292,21 @@ gui.addParam("Intensity", areaLightEntity.areaLight, "intensity", {
   min: 0,
   max: 20,
 });
+gui.addParam("Width", areaLightEntity.transform.scale, "0", {
+  min: 0,
+  max: 20,
+});
+gui.addParam("Height", areaLightEntity.transform.scale, "1", {
+  min: 0,
+  max: 20,
+});
+gui.addParam("Disk", areaLightEntity.areaLight, "disk");
+gui.addParam("Double Sided", areaLightEntity.areaLight, "doubleSided");
+gui.addTexture2D("Shadowmap", areaLightEntity.areaLight._shadowMap, {
+  flipY: true,
+});
+gui.addParam("Shadows", areaLightEntity.areaLight, "castShadows");
+
 gui.addStats();
 
 // Events

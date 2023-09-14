@@ -209,7 +209,7 @@ export default ({
     shadowCastingEntities,
     renderers
   ) {
-    const light = lightEntity.spotLight;
+    const light = lightEntity.spotLight || lightEntity.areaLight;
     light._sceneBboxInLightSpace ??= aabb.create();
 
     aabb.empty(light._sceneBboxInLightSpace);
@@ -252,7 +252,7 @@ export default ({
 
     mat4.perspective(
       light._projectionMatrix,
-      2 * light.angle,
+      light.angle ? 2 * light.angle : Math.PI / 12,
       shadowMap.width / shadowMap.height,
       light._near,
       light._far
@@ -419,6 +419,7 @@ export default ({
     const directionalLightEntities = entities.filter((e) => e.directionalLight);
     const pointLightEntities = entities.filter((e) => e.pointLight);
     const spotLightEntities = entities.filter((e) => e.spotLight);
+    const areaLightEntities = entities.filter((e) => e.areaLight);
 
     renderView ||= {
       camera: cameraEntities[0].camera,
@@ -475,12 +476,29 @@ export default ({
       }
     }
 
+    for (let i = 0; i < areaLightEntities.length; i++) {
+      const entity = areaLightEntities[i];
+
+      if (
+        entity.areaLight.castShadows &&
+        this.checkLight(entity.areaLight, entity)
+      ) {
+        this.updateSpotLightShadowMap(
+          entity,
+          entities,
+          shadowCastingEntities,
+          renderers
+        );
+      }
+    }
+
     // TODO: this also get entities with shadowmap regardless of castShadows changes
     const shadowMaps = entities
       .map(
         (e) =>
           e.directionalLight?._shadowMap ||
           e.spotLight?._shadowMap ||
+          e.areaLight?._shadowMap ||
           e.pointLight?._shadowCubemap
       )
       .filter((_) => _);

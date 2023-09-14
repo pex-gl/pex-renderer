@@ -20,6 +20,11 @@
  * @typedef {object} AreaLightComponentOptions
  * @property {number[]} [color=[1, 1, 1, 1]]
  * @property {number} [intensity=1]
+ * @property {boolean} [disk=false]
+ * @property {boolean} [doubleSided=false]
+ * @property {number} [bias=0.1]
+ * @property {boolean} [castShadows=true]
+ * @property {number} [shadowMapSize=2048]
  */
 /**
  * @typedef {object} AxesHelperComponentOptions

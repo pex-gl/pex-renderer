@@ -8,6 +8,10 @@
 export default (options) => ({
   color: [1, 1, 1, 1],
   intensity: 1,
-  // castShadows: true,
+  disk: false,
+  doubleSided: false,
+  bias: 0.1,
+  castShadows: true,
+  // shadowMapSize: 2048,
   ...options,
 });

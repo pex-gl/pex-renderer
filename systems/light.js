@@ -35,11 +35,12 @@ export default () => ({
   },
   update(entities) {
     for (let i = 0; i < entities.length; i++) {
-      const { directionalLight, spotLight, pointLight, _transform } =
+      const { directionalLight, spotLight, pointLight, areaLight, _transform } =
         entities[i];
 
       if (directionalLight) this.updateLight(directionalLight, _transform);
       if (spotLight) this.updateLight(spotLight, _transform);
+      if (areaLight) this.updateLight(areaLight, _transform);
       if (pointLight) this.updateLight(pointLight);
     }
   },

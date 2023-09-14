@@ -9,8 +9,8 @@ import {
 } from "./utils.js";
 import { NAMESPACE } from "../../utils.js";
 
-let ltc_mat;
-let ltc_mag;
+let ltc_1;
+let ltc_2;
 
 // prettier-ignore
 const flagDefs = [
@@ -356,24 +356,24 @@ export default ({ ctx }) => {
 
       // TODO: dispose if no areaLights
       if (areaLights.length) {
-        ltc_mat ||= ctx.texture2D({
+        ltc_1 ||= ctx.texture2D({
           name: "areaLightMatTexture",
-          data: AreaLightsData.mat,
+          data: AreaLightsData.g_ltc_1,
           width: 64,
           height: 64,
           pixelFormat: ctx.PixelFormat.RGBA32F,
           encoding: ctx.Encoding.Linear,
-          min: ctx.Filter.Linear,
+          min: ctx.Filter.Nearest,
           mag: ctx.Filter.Linear,
         });
-        ltc_mag ||= ctx.texture2D({
+        ltc_2 ||= ctx.texture2D({
           name: "areaLightMagTexture",
-          data: AreaLightsData.mag,
+          data: AreaLightsData.g_ltc_2,
           width: 64,
           height: 64,
-          pixelFormat: ctx.PixelFormat.R32F,
+          pixelFormat: ctx.PixelFormat.RGBA32F,
           encoding: ctx.Encoding.Linear,
-          min: ctx.Filter.Linear,
+          min: ctx.Filter.Nearest,
           mag: ctx.Filter.Linear,
         });
       }
@@ -383,17 +383,34 @@ export default ({ ctx }) => {
         const light = lightEntity.areaLight;
 
         const uniform = `uAreaLights[${i}].`;
-        sharedUniforms.ltc_mat = ltc_mat;
-        sharedUniforms.ltc_mag = ltc_mag;
+        sharedUniforms.ltc_1 = ltc_1;
+        sharedUniforms.ltc_2 = ltc_2;
         sharedUniforms[`${uniform}position`] = lightEntity.transform.position;
-        // TODO: mix color and intensity
-        sharedUniforms[`${uniform}color`] = light.color;
-        sharedUniforms[`${uniform}intensity`] = light.intensity;
+        sharedUniforms[`${uniform}color`] = lightColorToSrgb(light);
         sharedUniforms[`${uniform}rotation`] = lightEntity.transform.rotation;
         sharedUniforms[`${uniform}size`] = [
           lightEntity.transform.scale[0] / 2,
           lightEntity.transform.scale[1] / 2,
         ];
+        sharedUniforms[`${uniform}disk`] = light.disk;
+        sharedUniforms[`${uniform}doubleSided`] = light.doubleSided;
+        sharedUniforms[`${uniform}castShadows`] = light.castShadows;
+
+        if (light.castShadows) {
+          sharedUniforms[`${uniform}projectionMatrix`] =
+            light._projectionMatrix;
+          sharedUniforms[`${uniform}viewMatrix`] = light._viewMatrix;
+          sharedUniforms[`${uniform}near`] = light._near;
+          sharedUniforms[`${uniform}far`] = light._far;
+          sharedUniforms[`${uniform}bias`] = light.bias;
+          sharedUniforms[`${uniform}shadowMapSize`] = light.castShadows
+            ? [light._shadowMap.width, light._shadowMap.height]
+            : [0, 0];
+          sharedUniforms[`uAreaLightShadowMaps[${i}]`] =
+            light.castShadows && light._shadowMap
+              ? light._shadowMap
+              : dummyTexture2D;
+        }
       }
 
       for (let i = 0; i < ambientLights.length; i++) {

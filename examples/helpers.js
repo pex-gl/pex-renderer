@@ -80,6 +80,7 @@ const cameraEntity = createEntity({
     viewport: [0, 0, Math.floor(splitRatio * W), H],
   }),
   orbiter: components.orbiter(),
+  cameraHelper: true,
 });
 world.add(cameraEntity);
 
