@@ -14,6 +14,7 @@
     // "camera-view",
     // "cameras",
     "clear-coat",
+    "frustum-culling",
     // "custom-shader",
     // "emissive-bloom",
     "gltf",

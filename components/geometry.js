@@ -21,5 +21,6 @@ export default (options) => ({
   // count
   // multiDraw
   // primitive
+  // culled
   ...options,
 });

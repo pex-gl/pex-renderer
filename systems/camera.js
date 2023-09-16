@@ -1,6 +1,30 @@
-import { mat4, vec3, quat, utils } from "pex-math";
+import { mat4, vec3, quat, utils, avec3, avec4 } from "pex-math";
 import { orbiter as createOrbiter } from "pex-cam";
-import { NAMESPACE, TEMP_MAT4 } from "../utils.js";
+import { NAMESPACE, TEMP_MAT4, TEMP_VEC3 } from "../utils.js";
+
+function computeFrustum(camera) {
+  mat4.set(TEMP_MAT4, camera.projectionMatrix);
+  mat4.mult(TEMP_MAT4, camera.viewMatrix);
+
+  // prettier-ignore
+  {
+    avec4.set4(camera.frustum, 0, TEMP_MAT4[3] - TEMP_MAT4[0], TEMP_MAT4[7] - TEMP_MAT4[4], TEMP_MAT4[11] - TEMP_MAT4[8], TEMP_MAT4[15] - TEMP_MAT4[12]) // -x
+    avec4.set4(camera.frustum, 1, TEMP_MAT4[3] + TEMP_MAT4[0], TEMP_MAT4[7] + TEMP_MAT4[4], TEMP_MAT4[11] + TEMP_MAT4[8], TEMP_MAT4[15] + TEMP_MAT4[12]) // +x
+    avec4.set4(camera.frustum, 2, TEMP_MAT4[3] + TEMP_MAT4[1], TEMP_MAT4[7] + TEMP_MAT4[5], TEMP_MAT4[11] + TEMP_MAT4[9], TEMP_MAT4[15] + TEMP_MAT4[13]) // +y
+    avec4.set4(camera.frustum, 3, TEMP_MAT4[3] - TEMP_MAT4[1], TEMP_MAT4[7] - TEMP_MAT4[5], TEMP_MAT4[11] - TEMP_MAT4[9], TEMP_MAT4[15] - TEMP_MAT4[13]) // -y
+    avec4.set4(camera.frustum, 4, TEMP_MAT4[3] - TEMP_MAT4[2], TEMP_MAT4[7] - TEMP_MAT4[6], TEMP_MAT4[11] - TEMP_MAT4[10], TEMP_MAT4[15] - TEMP_MAT4[14]) // +z (far)
+    avec4.set4(camera.frustum, 5, TEMP_MAT4[3] + TEMP_MAT4[2], TEMP_MAT4[7] + TEMP_MAT4[6], TEMP_MAT4[11] + TEMP_MAT4[10], TEMP_MAT4[15] + TEMP_MAT4[14]) // -z (near)
+  }
+
+  // Normalize planes
+  for (let i = 0; i < 6; i++) {
+    TEMP_VEC3[0] = camera.frustum[i * 4];
+    TEMP_VEC3[1] = camera.frustum[i * 4 + 1];
+    TEMP_VEC3[2] = camera.frustum[i * 4 + 2];
+
+    avec4.scale(camera.frustum, i, vec3.length(TEMP_VEC3));
+  }
+}
 
 function updateCamera(camera, transform) {
   // TODO: projectionMatrix should only be recomputed if parameters changed
@@ -38,6 +62,8 @@ function updateCamera(camera, transform) {
   //look at matrix is opposite of camera modelMatrix transform
   mat4.set(camera.viewMatrix, transform.modelMatrix);
   mat4.invert(camera.viewMatrix);
+
+  if (camera.culling) computeFrustum(camera);
 }
 
 export default () => ({

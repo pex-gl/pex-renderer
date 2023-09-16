@@ -1,7 +1,31 @@
-import { vec3, mat4, utils } from "pex-math";
+import { vec3, mat4, utils, avec4 } from "pex-math";
 import { aabb } from "pex-geom";
 import createDescriptors from "./renderer/descriptors.js";
-import { NAMESPACE } from "../utils.js";
+import { NAMESPACE, TEMP_VEC3, TEMP_VEC4 } from "../utils.js";
+
+function isEntityInFrustum(entity, frustum) {
+  if (entity.geometry.culled !== false) {
+    const worldBounds = entity.transform.worldBounds;
+    for (let i = 0; i < 6; i++) {
+      avec4.set(TEMP_VEC4, 0, frustum, i);
+      TEMP_VEC3[0] = TEMP_VEC4[0] >= 0 ? worldBounds[1][0] : worldBounds[0][0];
+      TEMP_VEC3[1] = TEMP_VEC4[1] >= 0 ? worldBounds[1][1] : worldBounds[0][1];
+      TEMP_VEC3[2] = TEMP_VEC4[2] >= 0 ? worldBounds[1][2] : worldBounds[0][2];
+
+      // Distance from plane to point
+      if (vec3.dot(TEMP_VEC4, TEMP_VEC3) + TEMP_VEC4[3] < 0) return false;
+    }
+  }
+
+  return true;
+}
+
+const cullEntities = (entities, camera) =>
+  entities.filter(
+    (entity) =>
+      !entity.geometry ||
+      (entity.transform && isEntityInFrustum(entity, camera.frustum))
+  );
 
 function drawMeshes({
   viewport,
@@ -50,7 +74,10 @@ function drawMeshes({
       for (let i = 0; i < renderers.length; i++) {
         const renderer = renderers[i];
         if (renderer.renderStages.opaque) {
-          renderer.renderStages.opaque(renderView, entitiesInView, {
+          const entities = renderView.camera.culling
+            ? cullEntities(entitiesInView, renderView.camera)
+            : entitiesInView;
+          renderer.renderStages.opaque(renderView, entities, {
             shadowQuality,
           });
         }
@@ -68,7 +95,10 @@ function drawMeshes({
       for (let i = 0; i < renderers.length; i++) {
         const renderer = renderers[i];
         if (renderer.renderStages.transparent) {
-          renderer.renderStages.transparent(renderView, entitiesInView, {
+          const entities = renderView.camera.culling
+            ? cullEntities(entitiesInView, renderView.camera)
+            : entitiesInView;
+          renderer.renderStages.transparent(renderView, entities, {
             backgroundColorTexture,
             shadowQuality,
           });
@@ -101,6 +131,7 @@ export default ({
   renderers: [],
   descriptors: createDescriptors(ctx),
   drawMeshes,
+  cullEntities,
   updateDirectionalLightShadowMap(
     lightEntity,
     entities,
@@ -189,7 +220,6 @@ export default ({
           shadowMapping: true,
           shadowMappingLight: light,
           entitiesInView: entities,
-          renderableEntities: shadowCastingEntities,
           forward: false,
           drawTransparent: false,
           renderers,
@@ -288,7 +318,6 @@ export default ({
           shadowMapping: true,
           shadowMappingLight: light,
           entitiesInView: entities,
-          renderableEntities: shadowCastingEntities,
           forward: false,
           drawTransparent: false,
           renderers,
@@ -375,7 +404,6 @@ export default ({
             shadowMapping: true,
             shadowMappingLight: light,
             entitiesInView: entities,
-            renderableEntities: shadowCastingEntities,
             forward: false,
             drawTransparent: false,
             renderers,
@@ -409,11 +437,8 @@ export default ({
   update(entities, options = {}) {
     let { renderView, renderers, drawToScreen } = options;
 
-    const rendererableEntities = entities.filter(
-      (e) => e.geometry && e.material
-    );
-    const shadowCastingEntities = rendererableEntities.filter(
-      (e) => e.material.castShadows
+    const shadowCastingEntities = entities.filter(
+      (e) => e.geometry && e.material?.castShadows
     );
     const cameraEntities = entities.filter((e) => e.camera);
     const directionalLightEntities = entities.filter((e) => e.directionalLight);
@@ -508,9 +533,6 @@ export default ({
     const entitiesInView = layer
       ? entities.filter((e) => !e.layer || e.layer === layer)
       : entities;
-    const entitiesToDraw = layer
-      ? rendererableEntities.filter((e) => !e.layer || e.layer === layer)
-      : rendererableEntities;
 
     // Main pass
     //TODO: this should be done on the fly by render graph
@@ -555,7 +577,6 @@ export default ({
           cameraEntity: renderView.cameraEntity,
           shadowMapping: false,
           entitiesInView: entitiesInView,
-          renderableEntities: entitiesToDraw,
           forward: true,
           drawTransparent: false,
           renderers: renderers,
@@ -629,7 +650,6 @@ export default ({
           cameraEntity: renderView.cameraEntity,
           shadowMapping: false,
           entitiesInView: entitiesInView,
-          renderableEntities: entitiesToDraw,
           forward: true,
           drawTransparent: true,
           backgroundColorTexture: grabPassColorCopyTexture,

@@ -48,6 +48,7 @@
  * @property {import("pex-color").color} [clearColor]
  * @property {mat4} [viewMatrix]
  * @property {mat4} [invViewMatrix]
+ * @property {boolean} [culling=false]
  */
 // * @property {number} [exposure=1]
 // * @property {number} [left=-1]
@@ -84,6 +85,7 @@
  * @property {Float32Array} [colors] Instanced
  * @property {number} [count]
  * @property {object} [multiDraw]
+ * @property {boolean} [culled]
  * @property {ctx.Primitive} [primitive=ctx.Primitive.Triangles]
  */
 /**
