@@ -254,7 +254,7 @@ export default ({ ctx }) => {
           blendDstAlphaFactor: material.blendDstAlphaFactor,
           cullFace: material.cullFace !== undefined ? material.cullFace : true,
           cullFaceMode: material.cullFaceMode || ctx.Face.Back,
-          primitive: geometry.primitive || ctx.Primitive.Triangles,
+          primitive: geometry.primitive ?? ctx.Primitive.Triangles,
         });
       }
 
