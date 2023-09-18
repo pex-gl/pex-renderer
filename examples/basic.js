@@ -13,39 +13,27 @@ import createGUI from "pex-gui";
 
 import { cube, torus, sphere } from "primitive-geometry";
 
-const {
-  camera,
-  directionalLight,
-  geometry,
-  material,
-  orbiter,
-  skybox,
-  reflectionProbe,
-  transform,
-} = components;
-
 const pixelRatio = devicePixelRatio;
 const ctx = createContext({ pixelRatio });
-
-const world = (window.world = createWorld());
+const world = createWorld();
 const renderGraph = createRenderGraph(ctx);
 const resourceCache = createResourceCache(ctx);
 
 // Entities
 const cameraEntity = createEntity({
-  transform: transform({ position: [0, 0, 3] }),
-  camera: camera({
+  transform: components.transform({ position: [0, 0, 3] }),
+  camera: components.camera({
     fov: Math.PI / 2,
     aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
   }),
-  orbiter: orbiter({ element: ctx.gl.canvas }),
+  orbiter: components.orbiter({ element: ctx.gl.canvas }),
 });
 world.add(cameraEntity);
 
 const cubeEntity = createEntity({
-  transform: transform({ position: [0, -1, 0] }),
-  geometry: geometry(cube({ sx: 10, sy: 0.1, sz: 10 })),
-  material: material({
+  transform: components.transform({ position: [0, -1, 0] }),
+  geometry: components.geometry(cube({ sx: 10, sy: 0.1, sz: 10 })),
+  material: components.material({
     baseColor: [0, 1, 0, 1],
     metallic: 0,
     roughness: 0.2,
@@ -56,9 +44,9 @@ const cubeEntity = createEntity({
 world.add(cubeEntity);
 
 const torusEntity = createEntity({
-  transform: transform(),
-  geometry: geometry(torus({ radius: 1 })),
-  material: material({
+  transform: components.transform(),
+  geometry: components.geometry(torus({ radius: 1 })),
+  material: components.material({
     baseColor: [0, 0, 1, 1],
     metallic: 0,
     roughness: 0.5,
@@ -69,9 +57,9 @@ const torusEntity = createEntity({
 world.add(torusEntity);
 
 const sphereEntity = createEntity({
-  transform: transform({ position: [0, 0, 0] }),
-  geometry: geometry(sphere({ radius: 1 })),
-  material: material({
+  transform: components.transform({ position: [0, 0, 0] }),
+  geometry: components.geometry(sphere({ radius: 1 })),
+  material: components.material({
     baseColor: [1, 1, 1, 1],
     metallic: 1,
     roughness: 0.1,
@@ -82,25 +70,28 @@ const sphereEntity = createEntity({
 world.add(sphereEntity);
 
 const skyEntity = createEntity({
-  skybox: skybox({ sunPosition: [0, 5, -5] }),
-  reflectionProbe: reflectionProbe(),
+  skybox: components.skybox({ sunPosition: [0, 5, -5] }),
+  reflectionProbe: components.reflectionProbe(),
 });
 world.add(skyEntity);
 
 const directionalLightEntity = createEntity({
-  transform: transform({
+  transform: components.transform({
     position: [0, 2, 0],
     rotation: quat.targetTo(quat.create(), [0, 0, 0], [0, 1, 0]),
   }),
-  directionalLight: directionalLight({ color: [1, 0, 0, 1], intensity: 10 }),
+  directionalLight: components.directionalLight({
+    color: [1, 0, 0, 1],
+    intensity: 10,
+  }),
 });
 world.add(directionalLightEntity);
 
 // Systems
 const geometrySystem = systems.geometry({ ctx });
 const transformSystem = systems.transform();
-const cameraSystem = systems.camera();
 const skyboxSystem = systems.skybox({ ctx, resourceCache });
+const cameraSystem = systems.camera();
 const reflectionProbeSystem = systems.reflectionProbe({ ctx, resourceCache });
 const lightSystem = systems.light();
 const renderPipelineSystem = systems.renderPipeline({
@@ -124,12 +115,10 @@ gui.addFPSMeeter();
 let debugOnce = false;
 
 window.addEventListener("resize", () => {
-  ctx.set({
-    pixelRatio,
-    width: window.innerWidth,
-    height: window.innerHeight,
-  });
-  cameraEntity.camera.aspect = window.innerWidth / window.innerHeight;
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+  ctx.set({ pixelRatio, width, height });
+  cameraEntity.camera.aspect = width / height;
   cameraEntity.camera.dirty = true;
 });
 
@@ -162,17 +151,17 @@ ctx.frame(() => {
     geometrySystem.update(world.entities);
     transformSystem.update(world.entities);
     skyboxSystem.update(world.entities);
+    cameraSystem.update(world.entities);
     reflectionProbeSystem.update(world.entities, {
       renderers: [skyboxRendererSystem],
     });
     lightSystem.update(world.entities);
-    cameraSystem.update(world.entities);
     renderPipelineSystem.update(world.entities, {
       renderers: [standardRendererSystem, skyboxRendererSystem],
-      renderView: renderView,
+      renderView,
     });
-  } catch (e) {
-    console.error(e);
+  } catch (error) {
+    console.error(error);
     return false;
   }
 

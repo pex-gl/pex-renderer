@@ -6,60 +6,44 @@ import {
 } from "../index.js";
 
 import createContext from "pex-context";
-import createGUI from "pex-gui";
 import { quat, vec3, utils, avec3, avec4 } from "pex-math";
+import createGUI from "pex-gui";
+
 import { cube } from "primitive-geometry";
 import cosineGradient from "cosine-gradient";
 
-const {
-  camera,
-  geometry,
-  material,
-  orbiter,
-  skybox,
-  directionalLight,
-  transform,
-} = components;
-
-// Utils
-const ctx = createContext({ pixelRatio: devicePixelRatio });
-
+const pixelRatio = devicePixelRatio;
+const ctx = createContext({ pixelRatio });
 const renderEngine = createRenderEngine({ ctx });
 const world = createWorld();
 
-const gui = createGUI(ctx, { scale: 1 });
-
-let debugOnce = false;
 const N = 15;
 const instances = N * N * N;
-let time = 0;
-let prevTime = 0;
 
-const scheme = [
+const gradient = cosineGradient([
   [0.65, 0.5, 0.31],
   [-0.65, 0.5, 0.6],
   [0.333, 0.278, 0.278],
   [0.66, 0.0, 0.667],
-];
-const scheme2 = [
+]);
+const gradient2 = cosineGradient([
   [0.5, 0.5, 0.0],
   [0.5, 0.5, 0.0],
   [0.1, 0.5, 0.0],
   [0.0, 0.0, 0.0],
-];
-const gradient = cosineGradient(scheme);
-const gradient2 = cosineGradient(scheme2);
+]);
 
+// Entities
 const cameraEntity = createEntity({
-  transform: transform({ position: [3, 3, 3] }),
-  camera: camera({
+  transform: components.transform({ position: [3, 3, 3] }),
+  camera: components.camera({
     aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
   }),
-  orbiter: orbiter(),
+  orbiter: components.orbiter({ element: ctx.gl.canvas }),
 });
 world.add(cameraEntity);
 
-let instancedGeometry = {
+const instancedGeometry = {
   ...cube({ sx: (0.75 * 2) / N }),
   offsets: { data: new Float32Array(instances * 3), divisor: 1 },
   scales: {
@@ -74,9 +58,9 @@ let instancedGeometry = {
 };
 
 const geometryEntity = createEntity({
-  transform: transform(),
-  geometry: geometry(instancedGeometry),
-  material: material({
+  transform: components.transform(),
+  geometry: components.geometry(instancedGeometry),
+  material: components.material({
     baseColor: [0.9, 0.9, 0.9, 1],
     roughness: 0.01,
     metallic: 1.0,
@@ -87,7 +71,7 @@ const geometryEntity = createEntity({
 world.add(geometryEntity);
 
 const sunEntity = createEntity({
-  transform: transform({
+  transform: components.transform({
     position: [-2, 2, 2],
     rotation: quat.fromTo(
       quat.create(),
@@ -95,7 +79,7 @@ const sunEntity = createEntity({
       vec3.normalize([2, -2, -1])
     ),
   }),
-  directionalLight: directionalLight({
+  directionalLight: components.directionalLight({
     color: [1, 1, 0.95, 2],
     intensity: 2,
     castShadows: false,
@@ -104,8 +88,8 @@ const sunEntity = createEntity({
 world.add(sunEntity);
 
 const skyboxEntity = createEntity({
-  transform: transform(),
-  skybox: skybox({
+  transform: components.transform(),
+  skybox: components.skybox({
     sunPosition: [1, 1, 1],
     backgroundBlur: 1,
   }),
@@ -113,7 +97,7 @@ const skyboxEntity = createEntity({
 });
 world.add(skyboxEntity);
 
-function update() {
+function update(time) {
   const center = [0.75, 0.75, 0.75];
   const radius = 1.25;
 
@@ -189,7 +173,19 @@ function update() {
 }
 
 // GUI
+const gui = createGUI(ctx);
 gui.addFPSMeeter();
+
+// Events
+let debugOnce = false;
+
+window.addEventListener("resize", () => {
+  const width = window.innerWidth;
+  const height = window.innerWidth;
+  ctx.set({ pixelRatio, width, height });
+  cameraEntity.camera.aspect = width / height;
+  cameraEntity.camera.dirty = true;
+});
 
 window.addEventListener("keydown", ({ key }) => {
   if (key === "g") gui.enabled = !gui.enabled;
@@ -197,17 +193,12 @@ window.addEventListener("keydown", ({ key }) => {
 });
 
 ctx.frame(() => {
-  const now = Date.now();
-  const deltaTime = (now - prevTime) / 1000;
-  prevTime = now;
-  time += deltaTime;
-
   ctx.debug(debugOnce);
   debugOnce = false;
 
-  update();
+  update(performance.now() * 0.001);
 
-  renderEngine.update(world.entities, deltaTime);
+  renderEngine.update(world.entities);
   renderEngine.render(world.entities, cameraEntity);
 
   gui.draw();

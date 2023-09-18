@@ -9,103 +9,43 @@ import createContext from "pex-context";
 import * as io from "pex-io";
 import { quat } from "pex-math";
 import createGUI from "pex-gui";
+
 import parseHdr from "parse-hdr";
 import parseObj from "geom-parse-obj";
 
-import { getURL } from "./utils.js";
+import { getTexture, getURL } from "./utils.js";
 
-const {
-  camera,
-  directionalLight,
-  skybox,
-  geometry,
-  material,
-  orbiter,
-  transform,
-  reflectionProbe,
-} = components;
-
-const ctx = createContext();
-
+const pixelRatio = devicePixelRatio;
+const ctx = createContext({ pixelRatio });
 const renderEngine = createRenderEngine({ ctx });
 const world = createWorld();
 
-const gui = createGUI(ctx);
-
+// Entities
 for (let i = 0; i < 3; i++) {
   const cameraEntity = createEntity({
     layer: `camera-${i + 1}`,
-    transform: transform({ position: [0.5, 0.5, 2] }),
-    camera: camera({
+    transform: components.transform({ position: [0.5, 0.5, 2] }),
+    camera: components.camera({
       fov: Math.PI / 3,
       aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
       viewport: [
-        i * Math.floor((1 / 3) * window.innerWidth),
+        i * Math.floor((1 / 3) * window.innerWidth) * pixelRatio,
         0,
-        Math.floor((1 / 3) * window.innerWidth),
-        window.innerHeight,
+        Math.floor((1 / 3) * window.innerWidth) * pixelRatio,
+        window.innerHeight * pixelRatio,
       ],
     }),
-    orbiter: orbiter(),
+    orbiter: components.orbiter({ element: ctx.gl.canvas }),
   });
   world.add(cameraEntity);
 }
-
-const skyboxEntity = createEntity({
-  transform: transform(),
-  skybox: skybox({
-    sunPosition: [1, 1, 1],
-    backgroundBlur: 1,
-  }),
-});
-world.add(skyboxEntity);
-
-const reflectionProbeEntity = createEntity({
-  reflectionProbe: reflectionProbe(),
-});
-world.add(reflectionProbeEntity);
-
-function getMaterialTextures(maps) {
-  return Object.entries(maps).reduce(
-    (currentValue, [key, image]) => ({
-      ...currentValue,
-      [key]: ctx.texture2D({
-        data: image,
-        width: 256,
-        height: 256,
-        min: ctx.Filter.LinearMipmapLinear,
-        mag: ctx.Filter.Linear,
-        wrap: ctx.Wrap.Repeat,
-        flipY: true,
-        mipmap: true,
-        encoding:
-          key === "emissiveColorTexture" || key === "baseColorTexture"
-            ? ctx.Encoding.SRGB
-            : ctx.Encoding.Linear,
-      }),
-    }),
-    {}
-  );
-}
-
-const directionalLightEntity = createEntity({
-  transform: transform({
-    rotation: quat.targetTo(quat.create(), [0, 0, 0], [1, -3, -1]),
-  }),
-  directionalLight: directionalLight({
-    castShadows: true,
-    color: [1, 1, 1, 1],
-  }),
-});
-world.add(directionalLightEntity);
 
 const hdrImg = parseHdr(
   await io.loadArrayBuffer(
     getURL(`assets/envmaps/Road_to_MonumentValley/Road_to_MonumentValley.hdr`)
   )
 );
-
-skyboxEntity.skybox.envMap = ctx.texture2D({
+const envMap = ctx.texture2D({
   data: hdrImg.data,
   width: hdrImg.shape[0],
   height: hdrImg.shape[1],
@@ -113,23 +53,47 @@ skyboxEntity.skybox.envMap = ctx.texture2D({
   encoding: ctx.Encoding.Linear,
   flipY: true,
 });
+const skyEntity = createEntity({
+  skybox: components.skybox({
+    sunPosition: [1, 1, 1],
+    backgroundBlur: 1,
+    envMap,
+  }),
+  reflectionProbe: components.reflectionProbe(),
+});
+world.add(skyEntity);
 
-const materialTextures = getMaterialTextures({
-  baseColorTexture: await io.loadImage(
+const directionalLightEntity = createEntity({
+  transform: components.transform({
+    rotation: quat.targetTo(quat.create(), [0, 0, 0], [1, -3, -1]),
+  }),
+  directionalLight: components.directionalLight({
+    castShadows: true,
+    color: [1, 1, 1, 1],
+  }),
+});
+world.add(directionalLightEntity);
+
+const materialTextures = {
+  baseColorTexture: await getTexture(
+    ctx,
     getURL(`assets/materials/Fabric04/Fabric04_col.jpg`)
   ),
-  normalTexture: await io.loadImage(
+  normalTexture: await getTexture(
+    ctx,
     getURL(`assets/materials/Fabric04/Fabric04_nrm.jpg`)
   ),
-  clearCoatNormalTexture: await io.loadImage(
+  clearCoatNormalTexture: await getTexture(
+    ctx,
     getURL(`assets/materials/Metal05/Metal05_nrm.jpg`)
   ),
-  occlusionTexture: await io.loadImage(
+  occlusionTexture: await getTexture(
+    ctx,
     getURL(`assets/models/substance-sample-scene/substance-sample-scene_ao.jpg`)
   ),
-});
+};
 
-const ballGeometry = geometry(
+const ballGeometry = components.geometry(
   parseObj(
     await io.loadText(
       getURL(`assets/models/substance-sample-scene/substance-sample-scene.obj`)
@@ -148,19 +112,19 @@ const clearCoatMaterial = {
   occlusionTexture: materialTextures.occlusionTexture,
 };
 
-const geom1 = createEntity({
+const clearCoatEntity = createEntity({
   layer: "camera-1",
-  transform: transform(),
+  transform: components.transform(),
   geometry: ballGeometry,
-  material: material(clearCoatMaterial),
+  material: components.material(clearCoatMaterial),
 });
-world.add(geom1);
+world.add(clearCoatEntity);
 
-const geom2 = createEntity({
+const normalTextureEntity = createEntity({
   layer: "camera-2",
-  transform: transform(),
+  transform: components.transform(),
   geometry: ballGeometry,
-  material: material({
+  material: components.material({
     ...clearCoatMaterial,
     normalTexture: {
       texture: materialTextures.normalTexture,
@@ -168,13 +132,13 @@ const geom2 = createEntity({
     },
   }),
 });
-world.add(geom2);
+world.add(normalTextureEntity);
 
-const geom3 = createEntity({
+const clearCoatNormalTextureEntity = createEntity({
   layer: "camera-3",
-  transform: transform(),
+  transform: components.transform(),
   geometry: ballGeometry,
-  material: material({
+  material: components.material({
     ...clearCoatMaterial,
     normalTexture: {
       texture: materialTextures.normalTexture,
@@ -184,24 +148,35 @@ const geom3 = createEntity({
       texture: materialTextures.clearCoatNormalTexture,
       scale: [8, 8],
     },
+    clearCoatNormalTextureScale: 1,
   }),
 });
-world.add(geom3);
+world.add(clearCoatNormalTextureEntity);
 
 // GUI
-gui.addParam("ClearCoat", geom1.material, "clearCoat", {}, () => {
-  geom2.material.clearCoat = geom1.material.clearCoat;
-  geom3.material.clearCoat = geom1.material.clearCoat;
+const gui = createGUI(ctx, { theme: { columnWidth: 250 } });
+gui.addParam("ClearCoat", clearCoatEntity.material, "clearCoat", {}, () => {
+  normalTextureEntity.material.clearCoat = clearCoatEntity.material.clearCoat;
+  clearCoatNormalTextureEntity.material.clearCoat =
+    clearCoatEntity.material.clearCoat;
 });
 gui.addParam(
   "ClearCoat Roughness",
-  geom1.material,
+  clearCoatEntity.material,
   "clearCoatRoughness",
   {},
   () => {
-    geom2.material.clearCoatRoughness = geom1.material.clearCoatRoughness;
-    geom3.material.clearCoatRoughness = geom1.material.clearCoatRoughness;
+    normalTextureEntity.material.clearCoatRoughness =
+      clearCoatEntity.material.clearCoatRoughness;
+    clearCoatNormalTextureEntity.material.clearCoatRoughness =
+      clearCoatEntity.material.clearCoatRoughness;
   }
+);
+gui.addParam(
+  "ClearCoat Normal Texture Scale",
+  clearCoatNormalTextureEntity.material,
+  "clearCoatNormalTextureScale",
+  {}
 );
 
 ctx.frame(() => {

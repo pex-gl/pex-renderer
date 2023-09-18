@@ -9,55 +9,54 @@ import createContext from "pex-context";
 import createGUI from "pex-gui";
 import { vec3, quat, mat2x3, mat3, vec2 } from "pex-math";
 import * as io from "pex-io";
+
 import { sphere } from "primitive-geometry";
 import gridCells from "grid-cells";
 import parseHdr from "parse-hdr";
+
 import { getTexture, getURL } from "./utils.js";
 
 const pixelRatio = devicePixelRatio;
 const ctx = createContext({ pixelRatio });
-
-const world = (window.world = createWorld());
 const renderEngine = createRenderEngine({ ctx });
+const world = createWorld();
 
 const gui = createGUI(ctx);
 gui.addFPSMeeter().setPosition(10, 40);
 gui.addStats();
 
-const W = ctx.gl.drawingBufferWidth;
 const H = ctx.gl.drawingBufferHeight;
-const nW = 5;
-const nH = 2;
+const nW = 4;
+const nH = 3;
 
 // Materials
 const transform23 = mat2x3.create();
 mat2x3.scale(transform23, [1.5, 1.5]);
 const transform = mat3.fromMat2x3(mat3.create(), transform23);
-const materials = [
-  {
-    header: gui.addHeader("Default"),
-  },
-  {
-    header: gui.addHeader("Unlit"),
+
+const materials = {
+  Default: {},
+  Unlit: {
     unlit: true,
     baseColor: [1, 0, 0, 0.5],
   },
-  {
-    header: gui.addHeader("Unlit Base Color Texture"),
+  "Unlit Base Color Texture": {
     unlit: true,
     baseColor: [1, 1, 1, 0.5],
-    baseColorTexture: getURL(
-      `assets/materials/plastic-green.material/plastic-green_basecolor.png`
+    baseColorTexture: await getTexture(
+      ctx,
+      getURL(
+        `assets/materials/plastic-green.material/plastic-green_basecolor.png`
+      ),
+      ctx.Encoding.SRGB
     ),
   },
-  {
-    header: gui.addHeader("Base Color"),
+  "Base Color": {
     roughness: 0.5,
     metallic: 0,
     baseColor: [0.1, 0.5, 0.8, 1.0],
   },
-  {
-    header: gui.addHeader("Transparent"),
+  Transparent: {
     roughness: 0.5,
     metallic: 0,
     baseColor: [1, 1, 1, 0.5],
@@ -68,208 +67,182 @@ const materials = [
     blendDstRGBFactor: ctx.BlendFactor.OneMinusSrcAlpha,
     blendDstAlphaFactor: ctx.BlendFactor.One,
   },
+  Refraction: {
+    roughness: 0.5,
+    metallic: 0,
+    baseColor: [1, 1, 1, 0.5],
+    transmission: 0.1,
+    refraction: 0.5,
+    blend: true,
+    blendSrcRGBFactor: ctx.BlendFactor.One,
+    blendSrcAlphaFactor: ctx.BlendFactor.One,
+    blendDstRGBFactor: ctx.BlendFactor.Zero,
+    blendDstAlphaFactor: ctx.BlendFactor.Zero,
+  },
   // Base color map
-  {
-    header: gui.addHeader("Base Color Texture"),
+  "Base Color Texture": {
     baseColor: [1.0, 1.0, 1.0, 1.0],
     metallic: 0,
     roughness: 1,
-    baseColorTexture: getURL(`assets/textures/uv-wide/uv-wide.png`),
-    transformMatrix: transform,
+    baseColorTexture: {
+      texture: await getTexture(
+        ctx,
+        getURL(`assets/textures/uv-wide/uv-wide.png`),
+        ctx.Encoding.SRGB
+      ),
+      matrix: transform,
+    },
   },
   // Roughness map
-  {
-    header: gui.addHeader("Roughness Texture"),
+  "Roughness Texture": {
     baseColor: [1.0, 1.0, 0.9, 1.0],
     metallic: 1,
     roughness: 1,
-    roughnessTexture: getURL(
-      `assets/textures/roughness-test/roughness-test.png`
+    roughnessTexture: await getTexture(
+      ctx,
+      getURL(`assets/textures/roughness-test/roughness-test.png`)
     ),
   },
   // Basic PBR maps
-  {
-    header: gui.addHeader("Basic PBR Textures"),
-    baseColorTexture: getURL(
-      `assets/materials/plastic-red.material/plastic-red_basecolor.png`
+  "Basic PBR Textures": {
+    baseColorTexture: await getTexture(
+      ctx,
+      getURL(`assets/materials/plastic-red.material/plastic-red_basecolor.png`),
+      ctx.Encoding.SRGB
     ),
-    roughnessTexture: getURL(
-      `assets/materials/plastic-red.material/plastic-red_roughness.png`
+    roughnessTexture: await getTexture(
+      ctx,
+      getURL(`assets/materials/plastic-red.material/plastic-red_roughness.png`)
     ),
-    metallicTexture: getURL(
-      `assets/materials/plastic-red.material/plastic-red_metallic.png`
+    metallicTexture: await getTexture(
+      ctx,
+      getURL(`assets/materials/plastic-red.material/plastic-red_metallic.png`)
     ),
-    normalTexture: getURL(
-      `assets/materials/plastic-red.material/plastic-red_n.png`
+    normalTexture: await getTexture(
+      ctx,
+      getURL(`assets/materials/plastic-red.material/plastic-red_n.png`)
     ),
   },
   // Emissive
-  {
-    header: gui.addHeader("Emissive Texture"),
+  "Emissive Texture": {
     baseColor: [1, 1, 1, 1],
-    baseColorTexture: getURL(
-      `assets/materials/plastic-glow.material/plastic-glow_basecolor.png`
+    baseColorTexture: await getTexture(
+      ctx,
+      getURL(
+        `assets/materials/plastic-glow.material/plastic-glow_basecolor.png`
+      )
     ),
-    roughnessTexture: getURL(
-      `assets/materials/plastic-glow.material/plastic-glow_roughness.png`
+    roughnessTexture: await getTexture(
+      ctx,
+      getURL(
+        `assets/materials/plastic-glow.material/plastic-glow_roughness.png`
+      )
     ),
-    metallicTexture: getURL(
-      `assets/materials/plastic-glow.material/plastic-glow_metallic.png`
+    metallicTexture: await getTexture(
+      ctx,
+      getURL(`assets/materials/plastic-glow.material/plastic-glow_metallic.png`)
     ),
-    normalTexture: getURL(
-      `assets/materials/plastic-glow.material/plastic-glow_n.png`
+    normalTexture: await getTexture(
+      ctx,
+      getURL(`assets/materials/plastic-glow.material/plastic-glow_n.png`)
     ),
     emissiveColor: [1, 1, 1, 1],
-    emissiveColorTexture: getURL(
-      `assets/materials/plastic-glow.material/plastic-glow_emissive.png`
+    emissiveColorTexture: await getTexture(
+      ctx,
+      getURL(
+        `assets/materials/plastic-glow.material/plastic-glow_emissive.png`
+      ),
+      ctx.Encoding.SRGB
     ),
     emissiveIntensity: 4,
   },
   // Alpha map
-  {
-    header: gui.addHeader("Alpha Texture"),
+  "Alpha Texture": {
     roughness: 0.5,
     metallic: 0,
     baseColor: [1, 1, 1, 1],
     alphaTest: 0.5,
     cullFace: false,
-    baseColorTexture: getURL(
-      `assets/textures/alpha-test-mask/alpha-test-mask.png`
+    baseColorTexture: await getTexture(
+      ctx,
+      getURL(`assets/textures/alpha-test-mask/alpha-test-mask.png`),
+      ctx.Encoding.SRGB
     ),
-    alphaTexture: getURL(`assets/textures/checkerboard/checkerboard.png`),
+    alphaTexture: await getTexture(
+      ctx,
+      getURL(`assets/textures/checkerboard/checkerboard.png`)
+    ),
   },
-];
-
-await Promise.allSettled(
-  materials.map(async (material) => {
-    if (material.baseColorTexture) {
-      material.baseColorTexture = await getTexture(
-        ctx,
-        material.baseColorTexture,
-        ctx.Encoding.SRGB
-      );
-      if (material.transformMatrix) {
-        material.baseColorTexture = {
-          texture: material.baseColorTexture,
-          matrix: material.transformMatrix,
-        };
-      }
-    }
-
-    if (material.roughnessTexture) {
-      material.roughnessTexture = await getTexture(
-        ctx,
-        material.roughnessTexture,
-        ctx.Encoding.Linear
-      );
-    }
-    if (material.metallicTexture) {
-      material.metallicTexture = await getTexture(
-        ctx,
-        material.metallicTexture,
-        ctx.Encoding.Linear
-      );
-    }
-    if (material.normalTexture) {
-      material.normalTexture = await getTexture(
-        ctx,
-        material.normalTexture,
-        ctx.Encoding.Linear
-      );
-    }
-    if (material.alphaTexture) {
-      material.alphaTexture = await getTexture(
-        ctx,
-        material.alphaTexture,
-        ctx.Encoding.Linear
-      );
-    }
-    if (material.emissiveColorTexture) {
-      material.emissiveColorTexture = await getTexture(
-        ctx,
-        material.emissiveColorTexture,
-        ctx.Encoding.SRGB
-      );
-    }
-    material.castShadows = false;
-    material.receiveShadows = false;
-  })
-);
-
-// Meshes
-const geometry = sphere({ nx: 32, ny: 32 });
-
-const mesh = {
-  positions: { buffer: ctx.vertexBuffer(geometry.positions) },
-  normals: { buffer: ctx.vertexBuffer(geometry.normals) },
-  uvs: { buffer: ctx.vertexBuffer(geometry.uvs) },
-  cells: { buffer: ctx.indexBuffer(geometry.cells) },
+  // Sheen
+  Sheen: {
+    // baseColor: [0.9, 0.9, 0.9, 1.0],
+    sheenColor: [1, 1, 0, 1.0],
+    sheenRoughness: 1,
+    // sheenColorTexture: {
+    //   texture: await getTexture(
+    //     ctx,
+    //     getURL(
+    //       `glTF-Sample-Models/2.0/SheenCloth/glTF/technicalFabricSmall_sheen_256.png`
+    //     ),
+    //     ctx.Encoding.SRGB
+    //   ),
+    //   scale: [30, -30],
+    // },
+    // sheenRoughnessTexture: {
+    //   texture: await getTexture(
+    //     ctx,
+    //     getURL(
+    //       `glTF-Sample-Models/2.0/SheenCloth/glTF/technicalFabricSmall_sheen_256.png`
+    //     ),
+    //     ctx.Encoding.SRGB
+    //   ),
+    //   scale: [30, -30],
+    // },
+  },
 };
 
-const viewportToCanvasPosition = (viewport) => [
-  viewport[0] / pixelRatio,
-  (H * (1 - viewport[1] / H - viewport[3] / H)) / pixelRatio,
-];
+const materialNames = Object.keys(materials);
+const materialValues = Object.values(materials);
 
-const cells = gridCells(W, H, nW, nH, 0).map((cell) => [
-  cell[0],
-  H - cell[1] - cell[3], // flip upside down as we are using viewport coordinates
-  cell[2],
-  cell[3],
-]);
+// Meshes
+const sphereGeometry = sphere({ nx: 32, ny: 32 });
 
-cells.forEach((cell, cellIndex) => {
-  const layer = `cell${cellIndex}`;
-  const material = materials[cellIndex];
-  if (!material) return;
+const geometry = {
+  positions: { buffer: ctx.vertexBuffer(sphereGeometry.positions) },
+  normals: { buffer: ctx.vertexBuffer(sphereGeometry.normals) },
+  uvs: { buffer: ctx.vertexBuffer(sphereGeometry.uvs) },
+  cells: { buffer: ctx.indexBuffer(sphereGeometry.cells) },
+};
 
-  const labelPosition = [10, 10];
-  vec2.add(labelPosition, viewportToCanvasPosition(cell));
-  material.header.setPosition(...labelPosition);
-
-  // const postProcessingCmp = renderer.postProcessing({
-  //   fxaa: true,
-  // });
-  // if (material.emissiveColor) {
-  //   postProcessingCmp.set({
-  //     bloom: true,
-  //     bloomIntensity: 0.5,
-  //     bloomThreshold: 3,
-  //     bloomRadius: 1.25,
-  //   });
-  // }
-
+for (let i = 0; i < nW * nH; i++) {
+  const layer = `cell${i}`;
   const cameraEntity = createEntity({
-    camera: components.camera({
-      fov: Math.PI / 3,
-      aspect: W / nW / (H / nH),
-      viewport: cell,
-    }),
+    layer,
     transform: components.transform({
       position: [0, 0, 2],
     }),
-    orbiter: components.orbiter({
-      element: ctx.gl.canvas,
+    camera: components.camera({
+      fov: Math.PI / 4,
     }),
-    layer,
+    orbiter: components.orbiter({ element: ctx.gl.canvas }),
   });
   world.add(cameraEntity);
 
+  const material = materialValues[i];
+  if (!material) continue;
+
   const materialEntity = createEntity({
-    transform: components.transform(),
-    geometry: components.geometry(mesh),
-    material: components.material(material),
     layer,
+    transform: components.transform(),
+    geometry: components.geometry(geometry),
+    material: components.material(material),
   });
   world.add(materialEntity);
-});
+}
 
 // Sky
 const hdrImg = parseHdr(
-  await io.loadArrayBuffer(
-    getURL("assets/envmaps/garage/garage.hdr")
-    // getURL(`assets/envmaps/Mono_Lake_B/Mono_Lake_B.hdr`)
-  )
+  await io.loadArrayBuffer(getURL("assets/envmaps/garage/garage.hdr"))
 );
 const envMap = ctx.texture2D({
   data: hdrImg.data,
@@ -280,7 +253,7 @@ const envMap = ctx.texture2D({
   flipY: true,
 });
 
-const sunEntity = createEntity({
+const directionalLightEntity = createEntity({
   transform: components.transform({
     position: [-2, 2, 2],
     rotation: quat.fromTo(
@@ -294,7 +267,7 @@ const sunEntity = createEntity({
     intensity: 1,
   }),
 });
-world.add(sunEntity);
+world.add(directionalLightEntity);
 
 const skyEntity = createEntity({
   skybox: components.skybox({
@@ -308,20 +281,60 @@ world.add(skyEntity);
 // Events
 let debugOnce = false;
 
+const headers = materialNames.map((headerTitle) => gui.addHeader(headerTitle));
+
+const viewportToCanvasPosition = (viewport, height) => [
+  viewport[0] / pixelRatio,
+  (height * (1 - viewport[1] / height - viewport[3] / height)) / pixelRatio,
+];
+
+const onResize = () => {
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+  ctx.set({ pixelRatio, width, height });
+
+  const W = width * pixelRatio;
+  const H = height * pixelRatio;
+
+  const cells = gridCells(W, H, nW, nH, 0).map((cell) => [
+    cell[0],
+    H - cell[1] - cell[3],
+    cell[2],
+    cell[3],
+  ]);
+
+  cells.forEach((cell, i) => {
+    const labelPosition = [10, 10];
+    vec2.add(labelPosition, viewportToCanvasPosition(cell, H));
+    headers[i]?.setPosition(...labelPosition);
+  });
+
+  world.entities
+    .filter((entity) => entity.camera)
+    .forEach((cameraEntity, i) => {
+      cameraEntity.camera.viewport = cells[i];
+      cameraEntity.camera.aspect = cells[i][2] / cells[i][3];
+      cameraEntity.camera.dirty = true;
+    });
+};
+
+window.addEventListener("resize", onResize);
+onResize();
+
 window.addEventListener("keydown", ({ key }) => {
   if (key === "g") gui.enabled = !gui.enabled;
   if (key === "d") debugOnce = true;
 });
 
 ctx.frame(() => {
-  ctx.debug(debugOnce);
-  debugOnce = false;
-
   renderEngine.update(world.entities);
   renderEngine.render(
     world.entities,
-    world.entities.filter((e) => e.camera)
+    world.entities.filter((entity) => entity.camera)
   );
+
+  ctx.debug(debugOnce);
+  debugOnce = false;
 
   gui.draw();
 

@@ -15,8 +15,6 @@ export async function getTexture(ctx, file, encoding) {
   const tex = ctx.texture2D({
     width: 1,
     height: 1,
-    pixelFormat: ctx.PixelFormat.RGBA8,
-    encoding: ctx.Encoding.SRGB,
   });
   try {
     const image = await loadImage(file);
@@ -30,7 +28,7 @@ export async function getTexture(ctx, file, encoding) {
       min: ctx.Filter.LinearMipmapLinear,
       aniso: 16,
       pixelFormat: ctx.PixelFormat.RGBA8,
-      encoding,
+      encoding: encoding || ctx.Encoding.Linear,
     });
     ctx.update(tex, { mipmap: true });
     return tex;

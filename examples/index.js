@@ -3,32 +3,35 @@
   const id = params.get("id");
 
   const examples = [
-    // "ao",
+    // Engine features
     "basic",
-    "basic-engine",
-    "blocks",
-    "refraction",
-    "multi-view",
-    "brdf",
-    // "camera-cinematic-dof",
-    // "camera-view",
-    // "cameras",
-    "clear-coat",
-    "frustum-culling",
-    // "custom-shader",
-    // "emissive-bloom",
+    "engine",
     "gltf",
     "helpers",
-    // "highpoly",
     "instancing",
+
+    // View
+    // "layers",
+    "cameras",
+    "frustum-culling",
+    "multi-view",
+    // "camera-cinematic-dof",
+
+    // Lighting
     "lights",
-    "materials",
-    // "orbiter",
-    // "overlays",
-    // "point-size",
-    // "post-processing",
     "skybox",
-    // "vertex-colors",
+
+    // Materials
+    "materials",
+    "brdf",
+    "refraction",
+    "clear-coat",
+    "point-size",
+
+    // Post-Processing
+    // "post-processing",
+    // "ao",
+    // "blocks",
   ];
   window.pexExamples = examples;
 

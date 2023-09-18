@@ -9,20 +9,11 @@ import createContext from "pex-context";
 import * as io from "pex-io";
 import { quat } from "pex-math";
 import createGUI from "pex-gui";
+
 import { sphere } from "primitive-geometry";
 import parseHdr from "parse-hdr";
 
 import { getURL } from "./utils.js";
-
-const {
-  camera,
-  geometry,
-  material,
-  orbiter,
-  skybox,
-  reflectionProbe,
-  transform,
-} = components;
 
 const State = {
   envMap: true,
@@ -31,29 +22,28 @@ const State = {
   sizes: [256, 512, 1024, 2048, 4096],
 };
 
-const ctx = createContext({ pixelRatio: devicePixelRatio });
-
+const pixelRatio = devicePixelRatio;
+const ctx = createContext({ pixelRatio });
 const renderEngine = createRenderEngine({ ctx });
 const world = createWorld();
 
-const gui = createGUI(ctx, { scale: 1 });
-
+// Entities
 const cameraEntity = createEntity({
-  transform: transform({ position: [0, 0, 2] }),
-  camera: camera({
+  transform: components.transform({ position: [0, 0, 2] }),
+  camera: components.camera({
     aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
     near: 0.1,
     far: 100,
     postprocess: false,
   }),
-  orbiter: orbiter(),
+  orbiter: components.orbiter({ element: ctx.gl.canvas }),
 });
 world.add(cameraEntity);
 
 const geometryEntity = createEntity({
-  transform: transform({ position: [0, 0, 0] }),
-  geometry: geometry(sphere()),
-  material: material({
+  transform: components.transform({ position: [0, 0, 0] }),
+  geometry: components.geometry(sphere()),
+  material: components.material({
     baseColor: [1, 1, 1, 1],
     roughness: 0,
     metallic: 1,
@@ -62,11 +52,7 @@ const geometryEntity = createEntity({
 world.add(geometryEntity);
 
 const hdrImg = parseHdr(
-  await io.loadArrayBuffer(
-    getURL(`assets/envmaps/Mono_Lake_B/Mono_Lake_B.hdr`)
-    // getURL(`assets/envmaps/brown_photostudio_02_8k.hdr`)
-    // getURL(`assets/envmaps/garage/garage.hdr`)
-  )
+  await io.loadArrayBuffer(getURL(`assets/envmaps/Mono_Lake_B/Mono_Lake_B.hdr`))
 );
 const envMap = ctx.texture2D({
   data: hdrImg.data,
@@ -78,10 +64,10 @@ const envMap = ctx.texture2D({
 });
 
 const skyboxEntity = createEntity({
-  transform: transform({
+  transform: components.transform({
     rotation: quat.fromAxisAngle(quat.create(), [0, 1, 0], State.rotation),
   }),
-  skybox: skybox({
+  skybox: components.skybox({
     sunPosition: [1, 1, 1],
     backgroundBlur: 1,
     envMap,
@@ -94,19 +80,19 @@ if (State.envMap) {
 }
 
 const reflectionProbeEntity = createEntity({
-  reflectionProbe: reflectionProbe({
+  reflectionProbe: components.reflectionProbe({
     // rgbm: false,
     size: State.sizes[State.sizeIndex],
   }),
 });
 world.add(reflectionProbeEntity);
-window.reflectionProbeEntity = reflectionProbeEntity;
 
 // Update for GUI
 renderEngine.update(world.entities);
 renderEngine.render(world.entities, cameraEntity);
 
 // GUI
+const gui = createGUI(ctx);
 gui.addColumn("Settings");
 if (skyboxEntity.skybox.texture || skyboxEntity.skybox.envMap) {
   gui.addTexture2D(
@@ -129,7 +115,7 @@ gui.addParam(
       [0, 1, 0],
       State.rotation
     );
-    skyboxEntity.transform.dirty = true
+    skyboxEntity.transform.dirty = true;
     reflectionProbeEntity.reflectionProbe.dirty = true;
   }
 );
@@ -156,16 +142,33 @@ gui.addTextureCube(
   "Cubemap",
   reflectionProbeEntity._reflectionProbe._dynamicCubemap
 );
-
 gui.addTexture2D(
   "Reflection Map",
   reflectionProbeEntity._reflectionProbe._reflectionMap
 );
-// gui.addTexture2D("Octmap", reflectionProbeEntity._reflectionProbe._octMap);
+
+// Events
+let debugOnce = false;
+
+window.addEventListener("resize", () => {
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+  ctx.set({ pixelRatio, width, height });
+  cameraEntity.camera.aspect = width / height;
+  cameraEntity.camera.dirty = true;
+});
+
+window.addEventListener("keydown", ({ key }) => {
+  if (key === "g") gui.enabled = !gui.enabled;
+  if (key === "d") debugOnce = true;
+});
 
 ctx.frame(() => {
   renderEngine.update(world.entities);
   renderEngine.render(world.entities, cameraEntity);
+
+  ctx.debug(debugOnce);
+  debugOnce = false;
 
   gui.draw();
 

@@ -14,128 +14,115 @@ import gridCells from "grid-cells";
 import parseHdr from "parse-hdr";
 import { getURL } from "./utils.js";
 
+const State = {
+  furnace: false,
+};
+
 const pixelRatio = devicePixelRatio;
 const ctx = createContext({ pixelRatio });
-
-const world = (window.world = createWorld());
 const renderEngine = createRenderEngine({ ctx });
+const world = createWorld();
 
 const gui = createGUI(ctx);
-const W = ctx.gl.drawingBufferWidth;
-const H = ctx.gl.drawingBufferHeight;
 const nW = 11;
-const nH = 6;
-let debugOnce = false;
+
+const colors = {
+  black: [0.0, 0.0, 0.0, 1.0],
+  white: [0.9, 0.9, 1.0, 1.0],
+  blue: [0.0, 0.0, 1.0, 1.0],
+  yellow: [1.0, 0.8, 0.0, 1.0],
+  red: [0.8, 0.0, 0.1, 1.0],
+};
 
 // Materials
-const materials = [];
+const materials = {};
 
-for (let i = 0; i <= 10; i++) {
-  materials.push({
-    baseColor: [0.9, 0.9, 1.0, 1.0],
+for (let i = 0; i < nW; i++) {
+  materials[`Metallic`] ||= [];
+  materials[`Metallic`].push({
+    baseColor: colors.yellow,
     metallic: i / 10,
     roughness: 0,
   });
-}
-
-for (let i = 0; i <= 10; i++) {
-  materials.push({
-    baseColor: [0.0, 0.0, 1.0, 1.0],
+  materials["Roughness (non-metallic)"] ||= [];
+  materials["Roughness (non-metallic)"].push({
+    baseColor: colors.yellow,
     metallic: 0,
     roughness: i / 10,
   });
-}
-
-for (let i = 0; i <= 10; i++) {
-  materials.push({
-    baseColor: [1.0, 0.8, 0.0, 1.0],
+  materials["Roughness (metallic)"] ||= [];
+  materials["Roughness (metallic)"].push({
+    baseColor: colors.yellow,
     metallic: 1,
     roughness: i / 10,
   });
-}
-
-for (let i = 0; i <= 10; i++) {
-  materials.push({
-    baseColor: [0.8, 0.0, 0.1, 1.0],
+  materials[`Reflectance`] ||= [];
+  materials[`Reflectance`].push({
+    baseColor: colors.blue,
     metallic: 0,
     roughness: 0,
     reflectance: i / 10,
   });
-}
-
-for (let i = 0; i <= 10; i++) {
-  materials.push({
-    baseColor: [0.8, 0.0, 0.1, 1.0],
+  materials["Clear Coat"] ||= [];
+  materials["Clear Coat"].push({
+    baseColor: colors.red,
     metallic: 1,
     roughness: 0.5,
     clearCoat: i / 10,
     clearCoatRoughness: 0.04,
   });
-}
-
-for (let i = 0; i <= 10; i++) {
-  materials.push({
-    baseColor: [0.8, 0.0, 0.1, 1.0],
+  materials["Clear Coat Roughness"] ||= [];
+  materials["Clear Coat Roughness"].push({
+    baseColor: colors.red,
     metallic: 1,
     roughness: 0.5,
     clearCoat: 1,
     clearCoatRoughness: i / 10,
   });
 }
+const brdfNames = Object.keys(materials);
+const brdfMaterials = Object.values(materials).flat();
+const nH = brdfNames.length;
 
-// Meshes
-const geometry = sphere({ nx: 32, ny: 32 });
+// Entities
+const sphereGeometry = sphere({ nx: 32, ny: 32 });
 
-const mesh = {
-  positions: { buffer: ctx.vertexBuffer(geometry.positions) },
-  normals: { buffer: ctx.vertexBuffer(geometry.normals) },
-  uvs: { buffer: ctx.vertexBuffer(geometry.uvs) },
-  cells: { buffer: ctx.indexBuffer(geometry.cells) },
+const geometry = {
+  positions: { buffer: ctx.vertexBuffer(sphereGeometry.positions) },
+  normals: { buffer: ctx.vertexBuffer(sphereGeometry.normals) },
+  uvs: { buffer: ctx.vertexBuffer(sphereGeometry.uvs) },
+  cells: { buffer: ctx.indexBuffer(sphereGeometry.cells) },
 };
 
-const cells = gridCells(W, H, nW, nH, 0).map((cell) => [
-  cell[0],
-  H - cell[1] - cell[3], // flip upside down as we are using viewport coordinates
-  cell[2],
-  cell[3],
-]);
-
-cells.forEach((cell, cellIndex) => {
-  const layer = `cell${cellIndex}`;
-  const material = materials[cellIndex];
-  if (!material) return;
-
+for (let i = 0; i < nW * nH; i++) {
+  const layer = `cell${i}`;
   const cameraEntity = createEntity({
-    camera: components.camera({
-      fov: Math.PI / 4,
-      aspect: W / nW / (H / nH),
-      viewport: cell,
-    }),
+    layer,
     transform: components.transform({
       position: [0, 0, 2],
     }),
-    orbiter: components.orbiter({
-      element: ctx.gl.canvas,
+    camera: components.camera({
+      fov: Math.PI / 4,
     }),
-    layer: layer,
+    orbiter: components.orbiter({ element: ctx.gl.canvas }),
   });
   world.add(cameraEntity);
 
+  const material = brdfMaterials[i];
+  if (!material) continue;
+
   const materialEntity = createEntity({
+    layer,
     transform: components.transform(),
-    geometry: components.geometry(mesh),
+    geometry: components.geometry(geometry),
     material: components.material(material),
-    layer: layer,
   });
   world.add(materialEntity);
-});
+}
 
-// Sky
 const hdrImg = parseHdr(
   await io.loadArrayBuffer(
     getURL("assets/envmaps/Ditch-River_2k/Ditch-River_2k.hdr")
-    // getURL("assets/envmaps/garage/garage.hdr")
-    // getURL(`assets/envmaps/Mono_Lake_B/Mono_Lake_B.hdr`)
   )
 );
 const envMap = ctx.texture2D({
@@ -146,6 +133,26 @@ const envMap = ctx.texture2D({
   encoding: ctx.Encoding.Linear,
   flipY: true,
 });
+const furnaceHdr = parseHdr(
+  await io.loadArrayBuffer(getURL("assets/envmaps/furnace/furnace-4k.hdr"))
+);
+const furnaceEnvMap = ctx.texture2D({
+  data: furnaceHdr.data,
+  width: furnaceHdr.shape[0],
+  height: furnaceHdr.shape[1],
+  pixelFormat: ctx.PixelFormat.RGBA32F,
+  encoding: ctx.Encoding.Linear,
+  flipY: true,
+});
+
+const skyEntity = createEntity({
+  skybox: components.skybox({
+    sunPosition: [0, 5, -5],
+    envMap: State.furnace ? furnaceEnvMap : envMap,
+  }),
+  reflectionProbe: components.reflectionProbe(),
+});
+world.add(skyEntity);
 
 const sunEntity = createEntity({
   transform: components.transform({
@@ -164,60 +171,27 @@ const sunEntity = createEntity({
 });
 world.add(sunEntity);
 
-const skyEntity = createEntity({
-  skybox: components.skybox({
-    sunPosition: [0, 5, -5],
-    envMap,
-  }),
-  reflectionProbe: components.reflectionProbe(),
-});
-world.add(skyEntity);
-
 // GUI
-function countByProp(list, prop) {
-  return list.reduce((countBy, o) => {
-    if (!countBy[o[prop]]) countBy[o[prop]] = 0;
-    countBy[o[prop]]++;
-    return countBy;
-  }, {});
-}
-
 gui.addColumn("");
 gui.addFPSMeeter().setPosition(10, 40);
 gui.addColumn("Resources");
-gui.addStats();
-gui.addStats("Pixel Formats:", {
-  update(item) {
-    Object.assign(
-      item.stats,
-      countByProp(
-        ctx.resources.filter((o) => o.class == "texture"),
-        "pixelFormat"
-      )
-    );
-  },
-});
-gui.addButton("Resources", () => {
-  console.log("Resources", ctx.resources, renderEngine);
+gui.addParam("Furnace", State, "furnace", {}, () => {
+  skyEntity.skybox.envMap = State.furnace ? furnaceEnvMap : envMap;
+  skyEntity.reflectionProbe.dirty = true;
 });
 
-const headers = [
-  "Metallic",
-  "Roughness for non-metallic",
-  "Roughness for metallic",
-  "Reflectance",
-  "Clear Coat",
-  "Clear Coat Roughness",
-].map((headerTitle) => gui.addHeader(headerTitle));
+// Events
+let debugOnce = false;
+
+const headers = brdfNames.map((headerTitle) => gui.addHeader(headerTitle));
 
 const onResize = () => {
-  ctx.set({
-    pixelRatio,
-    width: window.innerWidth,
-    height: window.innerHeight,
-  });
-  const W = window.innerWidth * pixelRatio;
-  const H = window.innerHeight * pixelRatio;
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+  ctx.set({ pixelRatio, width, height });
+
+  const W = width * pixelRatio;
+  const H = height * pixelRatio;
 
   headers.forEach((header, i) => {
     header.setPosition(10, 10 + (i * H) / nH / pixelRatio);
@@ -231,7 +205,7 @@ const onResize = () => {
   ]);
 
   world.entities
-    .filter((e) => e.camera)
+    .filter((entity) => entity.camera)
     .forEach((cameraEntity, i) => {
       cameraEntity.camera.viewport = cells[i];
       cameraEntity.camera.aspect = cells[i][2] / cells[i][3];
@@ -248,14 +222,14 @@ window.addEventListener("keydown", ({ key }) => {
 });
 
 ctx.frame(() => {
-  ctx.debug(debugOnce);
-  debugOnce = false;
-
   renderEngine.update(world.entities);
   renderEngine.render(
     world.entities,
-    world.entities.filter((e) => e.camera)
+    world.entities.filter((entity) => entity.camera)
   );
+
+  ctx.debug(debugOnce);
+  debugOnce = false;
 
   gui.draw();
 

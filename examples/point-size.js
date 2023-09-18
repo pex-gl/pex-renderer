@@ -1,28 +1,57 @@
-import createRenderer from "../index.js";
+import {
+  renderEngine as createRenderEngine,
+  world as createWorld,
+  entity as createEntity,
+  components,
+} from "../index.js";
+
 import createContext from "pex-context";
+import { quat, vec3 } from "pex-math";
 import createGUI from "pex-gui";
-import { vec3 } from "pex-math";
 import random from "pex-random";
 
 random.seed(0);
 
-const ctx = createContext();
-const renderer = createRenderer(ctx);
-const gui = createGUI(ctx);
+const pixelRatio = devicePixelRatio;
+const ctx = createContext({ pixelRatio });
+const renderEngine = createRenderEngine({ ctx, debug: true });
+const world = createWorld();
+window.world = world;
 
-const cameraEntity = renderer.entity([
-  renderer.transform({ position: [0, 0, 3] }),
-  renderer.camera({
+const cameraEntity = createEntity({
+  transform: components.transform({ position: [0, 0, 35] }),
+  camera: components.camera({
     fov: Math.PI / 3,
     aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
     near: 0.1,
-    far: 100,
+    far: 10000,
   }),
-  renderer.orbiter({
-    position: [0, 0, 35],
+  orbiter: components.orbiter({ element: ctx.gl.canvas }),
+});
+world.add(cameraEntity);
+
+const axesHelperEntity = createEntity({
+  axesHelper: true,
+});
+world.add(axesHelperEntity);
+
+const skyEntity = createEntity({
+  skybox: components.skybox({ sunPosition: [0, 5, -5] }),
+  reflectionProbe: components.reflectionProbe(),
+});
+world.add(skyEntity);
+
+const directionalLightEntity = createEntity({
+  transform: components.transform({
+    position: [0, 2, 0],
+    rotation: quat.targetTo(quat.create(), [0, 0, 0], [0, 1, 0]),
   }),
-]);
-renderer.add(cameraEntity);
+  directionalLight: components.directionalLight({
+    color: [1, 0, 0, 1],
+    intensity: 10,
+  }),
+});
+world.add(directionalLightEntity);
 
 // Curl noise
 const snoiseVec3 = (x, y, z) => [
@@ -49,126 +78,138 @@ const curlNoise = (p) => {
   return vec3.scale(vec3.normalize([x, y, z]), divisor);
 };
 
-class Curl {
-  constructor(opts) {
-    this.type = "Curl";
-    this.size = 10;
-    this.particleCount = 1000;
-    this.modding = 0.11;
-    this.scale = 0.25;
-    this.steer = 0.01;
+const createParticleSystem = () => ({
+  type: "particle-system",
+  cache: {},
 
-    this.set(opts);
-
-    this.particles = Array.from({ length: this.particleCount }, () => {
-      const position = random.vec3();
-
-      return {
-        initialPosition: position,
-        currentPosition: vec3.copy(position),
-        velocity: vec3.create(),
-      };
-    });
-  }
-
-  set(opts) {
-    Object.assign(this, opts);
-  }
-
-  init(entity) {
-    this.entity = entity;
-
-    this.field = Array.from({ length: this.size }, (a, x) =>
-      Array.from({ length: this.size }, (b, y) =>
-        Array.from({ length: this.size }, (c, z) =>
-          curlNoise(
-            [x - this.size / 2, y - this.size / 2, z - this.size / 2].map(
-              (p) => p * this.modding
-            )
-          )
-        )
-      )
-    );
-  }
-
-  update() {
-    this.particles.forEach((particle) => {
-      let value = this.getValue(particle.currentPosition);
-
-      if (value) {
-        value = vec3.copy(value);
-        vec3.normalize(value);
-        vec3.scale(value, this.scale);
-
-        const steering = vec3.sub(value, particle.velocity);
-        vec3.normalize(steering);
-        vec3.scale(steering, this.steer);
-
-        vec3.add(particle.velocity, steering);
-        vec3.add(particle.currentPosition, particle.velocity);
-      } else {
-        particle.currentPosition = vec3.copy(particle.initialPosition);
-        particle.velocity = vec3.create();
-      }
-    });
-
-    this.entity.getComponent("Geometry").set({
-      positions: this.particles.map(({ currentPosition }) => currentPosition),
-      colors: this.particles.map(({ velocity }) => {
-        const [r, g, b] = velocity;
-        return [r * 6, g, b, 1];
-      }),
-    });
-  }
-
-  getValue([x, y, z]) {
-    x += this.size / 2;
-    y += this.size / 2;
-    z += this.size / 2;
+  getValue(field, size, [x, y, z]) {
+    x += size / 2;
+    y += size / 2;
+    z += size / 2;
 
     x = Math.round(x);
     y = Math.round(y);
     z = Math.round(z);
 
-    return this.field[x] && this.field[x][y] && this.field[x][y][z]
-      ? this.field[x][y][z]
-      : undefined;
-  }
-}
+    return field[x]?.[y]?.[z];
+  },
 
-const fieldSize = 30;
-const particleCount = 30000;
+  updateParticles(entity) {
+    const {
+      fieldSize,
+      scale = 0.25,
+      steer = 0.01,
+      modding = 0.11,
+      particleCount = 100,
+    } = entity.particles;
 
-const particleEntity = renderer.entity([
-  renderer.transform({ position: [0, 0, 0] }),
-  renderer.geometry({
+    if (!this.cache[entity.id]) {
+      this.cache[entity.id] = {
+        field: Array.from({ length: fieldSize }, (a, x) =>
+          Array.from({ length: fieldSize }, (b, y) =>
+            Array.from({ length: fieldSize }, (c, z) =>
+              curlNoise(
+                [x - fieldSize / 2, y - fieldSize / 2, z - fieldSize / 2].map(
+                  (p) => p * modding
+                )
+              )
+            )
+          )
+        ),
+        particles: Array.from({ length: particleCount }, () => {
+          const position = random.vec3();
+
+          return {
+            initialPosition: position,
+            currentPosition: vec3.copy(position),
+            velocity: vec3.create(),
+          };
+        }),
+      };
+    }
+
+    const particles = this.cache[entity.id].particles;
+    const field = this.cache[entity.id].field;
+
+    particles.forEach((particle) => {
+      let value = this.getValue(field, fieldSize, particle.currentPosition);
+
+      if (value) {
+        value = vec3.copy(value);
+        vec3.normalize(value);
+        vec3.scale(value, scale);
+
+        const steering = vec3.sub(value, particle.velocity);
+        vec3.normalize(steering);
+        vec3.scale(steering, steer);
+
+        vec3.add(particle.velocity, steering);
+        vec3.add(particle.currentPosition, particle.velocity);
+      } else {
+        // particle.currentPosition = vec3.copy(particle.initialPosition);
+        particle.currentPosition = random.vec3();
+        particle.velocity = vec3.create();
+      }
+    });
+
+    Object.assign(entity.geometry, {
+      positions: particles.map(({ currentPosition }) => currentPosition),
+      vertexColors: particles.map(({ velocity }) => {
+        const [r, g, b] = velocity;
+        return [r * 6, 0.2 + 0.8 * g, 0.2 + 0.8 * b, 1];
+      }),
+    });
+    entity.geometry.positions.dirty = true;
+    entity.geometry.vertexColors.dirty = true;
+  },
+
+  update(entities) {
+    for (let i = 0; i < entities.length; i++) {
+      const entity = entities[i];
+
+      if (entity.particles) {
+        this.updateParticles(entity);
+      }
+    }
+  },
+});
+
+const particleCount = 50000;
+const particleEntity = createEntity({
+  transform: components.transform(),
+  geometry: components.geometry({
     count: particleCount,
     primitive: ctx.Primitive.Points,
   }),
-  renderer.material({
-    pointSize: 0.8,
-    unlit: true,
+  material: components.material({
+    pointSize: 5,
     baseColor: [1, 1, 1, 1],
   }),
-  new Curl({
-    size: fieldSize,
+  particles: {
+    fieldSize: 30,
     particleCount,
-  }),
-]);
-renderer.add(particleEntity);
+  },
+});
+world.add(particleEntity);
 
-gui.addParam(
-  "Point size",
-  particleEntity.getComponent("Material"),
-  "pointSize",
-  { min: 0.5, max: 40 }
-);
+const particleSystem = createParticleSystem();
 
-ctx.frame(() => {
-  renderer.draw();
-  gui.draw();
+particleSystem.update(world.entities);
+
+// GUI
+const gui = createGUI(ctx);
+gui.addParam("Point size", particleEntity.material, "pointSize", {
+  min: 0.5,
+  max: 40,
 });
 
-setTimeout(() => {
+ctx.frame(() => {
+  particleSystem.update(world.entities);
+
+  renderEngine.update(world.entities);
+  renderEngine.render(world.entities, cameraEntity);
+
+  gui.draw();
+
   window.dispatchEvent(new CustomEvent("pex-screenshot"));
-}, 10000);
+});

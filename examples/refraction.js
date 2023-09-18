@@ -10,46 +10,34 @@ import { quat } from "pex-math";
 import * as io from "pex-io";
 import createGUI from "pex-gui";
 import random from "pex-random";
+
 import { cube, torus, sphere, roundedCube } from "primitive-geometry";
 import parseHdr from "parse-hdr";
 
-import { debugSceneTree, getURL } from "./utils.js";
-import { aabb } from "pex-geom";
+import { getURL } from "./utils.js";
 
 random.seed(0);
 
-const {
-  camera,
-  directionalLight,
-  geometry,
-  material,
-  orbiter,
-  skybox,
-  reflectionProbe,
-  transform,
-} = components;
-
 const pixelRatio = devicePixelRatio;
 const ctx = createContext({ pixelRatio });
-
-const world = (window.world = createWorld());
 const renderEngine = createRenderEngine({ ctx });
+const world = createWorld();
 
 // Entities
 const cameraEntity = createEntity({
-  transform: transform({ position: [15, 1, 15] }),
-  camera: camera({
-    fov: Math.PI * 0.1,
+  transform: components.transform({ position: [15, 1, 15] }),
+  camera: components.camera({
+    fov: Math.PI / 10,
     aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
   }),
-  orbiter: orbiter({ element: ctx.gl.canvas }),
+  orbiter: components.orbiter({ element: ctx.gl.canvas }),
 });
 world.add(cameraEntity);
 
 const floorEntity = createEntity({
-  transform: transform({ position: [0, -1.6, 0] }),
-  geometry: geometry(cube({ sx: 20, sy: 0.01, sz: 20 })),
-  material: material({
+  transform: components.transform({ position: [0, -1.6, 0] }),
+  geometry: components.geometry(cube({ sx: 20, sy: 0.01, sz: 20 })),
+  material: components.material({
     // unlit: true,
     baseColor: [0.5, 0.5, 0.551, 1],
     metallic: 0,
@@ -66,11 +54,6 @@ const floorEntity = createEntity({
   }),
 });
 world.add(floorEntity);
-// TODO: is it needed
-floorEntity.geometry.bounds = aabb.fromPoints(
-  aabb.create(),
-  floorEntity.geometry.positions
-);
 
 const transmissionBlendOptions = {
   blend: true,
@@ -81,9 +64,9 @@ const transmissionBlendOptions = {
 };
 
 const torusEntity = createEntity({
-  transform: transform({ position: [0, 0.2, 0] }),
-  geometry: geometry(torus({ radius: 1.5, minorRadius: 0.2 })),
-  material: material({
+  transform: components.transform({ position: [0, 0.2, 0] }),
+  geometry: components.geometry(torus({ radius: 1.5, minorRadius: 0.2 })),
+  material: components.material({
     baseColor: [1.9, 0.5, 0.29, 0.75],
     metallic: 0,
     roughness: 0.05,
@@ -101,9 +84,9 @@ const torusEntity = createEntity({
 world.add(torusEntity);
 
 const sphereEntity = createEntity({
-  transform: transform(),
-  geometry: geometry(sphere({ radius: 1 })),
-  material: material({
+  transform: components.transform(),
+  geometry: components.geometry(sphere({ radius: 1 })),
+  material: components.material({
     baseColor: [1, 1, 1, 1],
     metallic: 0,
     roughness: 0.1,
@@ -180,11 +163,8 @@ g.positions.forEach((p, i) => {
 });
 
 const cubesEntity = createEntity({
-  transform: transform({
-    position: [0, 0, 0],
-  }),
-  geometry: geometry({
-    //...roundedCube({ sx: 0.5, sy: 0.5, sz: 0.5, radius: 0.05 }),
+  transform: components.transform(),
+  geometry: components.geometry({
     ...roundedCube({ sx: 1, sy: 1, sz: 1, radius: 0.005 }),
     //offsets: new Array(32).fill(0).map(() => random.vec3(2)),
     offsets: g1.positions,
@@ -197,7 +177,7 @@ const cubesEntity = createEntity({
       [2, 2, 2],
     ],
   }),
-  material: material({
+  material: components.material({
     baseColor: [1, 1, 1, 1],
     // baseColor: [0.2, 0.5, 1, 1],
     metallic: 0,
@@ -217,16 +197,14 @@ const cubesEntity = createEntity({
 world.add(cubesEntity);
 
 const cubesEntity2 = createEntity({
-  transform: transform({
-    position: [0, 0, 0],
-  }),
-  geometry: geometry({
+  transform: components.transform(),
+  geometry: components.geometry({
     ...roundedCube({ sx: 1, sy: 1, sz: 1, radius: 0.05 }),
     offsets: g2.positions,
     scales: g2.scales,
     instances: g2.positions.length,
   }),
-  material: material({
+  material: components.material({
     baseColor: [1, 1, 1, 1],
     metallic: 0,
     roughness: 0.5,
@@ -239,10 +217,7 @@ const cubesEntity2 = createEntity({
 world.add(cubesEntity2);
 
 const hdrImg = parseHdr(
-  await io.loadArrayBuffer(
-    // getURL(`assets/envmaps/Mono_Lake_B/Mono_Lake_B.hdr`)
-    getURL(`assets/envmaps/garage/garage.hdr`)
-  )
+  await io.loadArrayBuffer(getURL(`assets/envmaps/garage/garage.hdr`))
 );
 const envMap = ctx.texture2D({
   data: hdrImg.data,
@@ -250,28 +225,26 @@ const envMap = ctx.texture2D({
   height: hdrImg.shape[1],
   pixelFormat: ctx.PixelFormat.RGBA32F,
   encoding: ctx.Encoding.Linear,
-  min: ctx.Filter.Linear,
-  mag: ctx.Filter.Linear,
   flipY: true,
 });
 
 const skyEntity = createEntity({
-  skybox: skybox({
+  skybox: components.skybox({
     sunPosition: [1, 1, 1],
     backgroundBlur: true,
     envMap,
   }),
-  reflectionProbe: reflectionProbe(),
+  reflectionProbe: components.reflectionProbe(),
 });
 world.add(skyEntity);
 
 const directionalLightEntity = createEntity({
-  transform: transform({
+  transform: components.transform({
     position: [1, 1, 1],
     rotation: quat.targetTo(quat.create(), [0, 0, 0], [-2, 2, 0]),
   }),
-  directionalLight: directionalLight({
-    color: [1, 1, 1, 2], //FIXME: instencity is copied to alpha in pex-renderer
+  directionalLight: components.directionalLight({
+    color: [1, 1, 1, 2],
     intensity: 1,
     castShadows: true,
     bias: 0.03,
@@ -280,12 +253,12 @@ const directionalLightEntity = createEntity({
 world.add(directionalLightEntity);
 
 const directionalLightEntity2 = createEntity({
-  transform: transform({
+  transform: components.transform({
     position: [1, 1, 1],
     rotation: quat.targetTo(quat.create(), [0, 0, 0], [2, 2, -2]),
   }),
-  directionalLight: directionalLight({
-    color: [1, 1, 1, 2], //FIXME: instencity is copied to alpha in pex-renderer
+  directionalLight: components.directionalLight({
+    color: [1, 1, 1, 2],
     intensity: 1,
     castShadows: true,
     bias: 0.03,
@@ -296,21 +269,19 @@ world.add(directionalLightEntity2);
 // GUI
 const gui = createGUI(ctx);
 gui.addFPSMeeter();
-
-gui.addButton("Tree", () => {
-  debugSceneTree(world.entities);
+gui.addParam("Refraction", cubesEntity2.material, "refraction", {
+  min: 0,
+  max: 1,
 });
 
 // Events
 let debugOnce = false;
 
 window.addEventListener("resize", () => {
-  ctx.set({
-    pixelRatio,
-    width: window.innerWidth,
-    height: window.innerHeight,
-  });
-  cameraEntity.camera.aspect = window.innerWidth / window.innerHeight;
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+  ctx.set({ pixelRatio, width, height });
+  cameraEntity.camera.aspect = width / height;
   cameraEntity.camera.dirty = true;
 });
 
@@ -325,7 +296,7 @@ ctx.frame(() => {
     [0, 1, 0],
     Date.now() / 1000
   );
-  torusEntity.transform.dirty = true; //UGH
+  torusEntity.transform.dirty = true;
 
   renderEngine.update(world.entities);
   renderEngine.render(world.entities, cameraEntity);

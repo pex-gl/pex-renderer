@@ -8,7 +8,7 @@ import {
 } from "../index.js";
 
 import createContext from "pex-context";
-import { quat, vec3 } from "pex-math";
+import { quat } from "pex-math";
 import createGUI from "pex-gui";
 import random from "pex-random";
 import { cube } from "primitive-geometry";
@@ -41,8 +41,7 @@ const cameraEntity = createEntity({
     culling: true,
     clearColor: [0.01, 0.01, 0.01, 1],
   }),
-  // orbiter: orbiter({ element: ctx.gl.canvas }),
-  cameraHelper: true,
+  cameraHelper: components.cameraHelper(),
 });
 world.add(cameraEntity);
 const fixCameraEntity = createEntity({
