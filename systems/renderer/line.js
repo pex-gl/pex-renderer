@@ -112,7 +112,7 @@ export default ({ ctx, resolution = 16 } = {}) => {
           uProjectionMatrix: renderView.camera.projectionMatrix,
           uViewMatrix: renderView.camera.viewMatrix,
           uModelMatrix: entity._transform.modelMatrix,
-          uLineWidth: 1,
+          uLineWidth: entity.material.lineWidth || 1,
           uResolution: [ctx.gl.drawingBufferWidth, ctx.gl.drawingBufferHeight],
           uLineZOffset: 0,
         },
