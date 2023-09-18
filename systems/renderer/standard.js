@@ -280,20 +280,17 @@ export default ({ ctx }) => {
         sharedUniforms[`${uniform}color`] = lightColorToSrgb(light);
         sharedUniforms[`${uniform}castShadows`] = light.castShadows;
 
-        if (light.castShadows) {
-          sharedUniforms[`${uniform}projectionMatrix`] =
-            light._projectionMatrix;
-          sharedUniforms[`${uniform}viewMatrix`] = light._viewMatrix;
-          sharedUniforms[`${uniform}near`] = light._near;
-          sharedUniforms[`${uniform}far`] = light._far;
-          sharedUniforms[`${uniform}bias`] = light.bias;
-          sharedUniforms[`${uniform}shadowMapSize`] =
-            light.castShadows && light._shadowMap
-              ? [light._shadowMap.width, light._shadowMap.height]
-              : [0, 0];
-          sharedUniforms[`uDirectionalLightShadowMaps[${i}]`] =
-            light.castShadows ? light._shadowMap : dummyTexture2D;
-        }
+        sharedUniforms[`${uniform}projectionMatrix`] = light._projectionMatrix;
+        sharedUniforms[`${uniform}viewMatrix`] = light._viewMatrix;
+        sharedUniforms[`${uniform}near`] = light.castShadows ? light._near : 0;
+        sharedUniforms[`${uniform}far`] = light.castShadows ? light._far : 0;
+        sharedUniforms[`${uniform}bias`] = light.bias;
+        sharedUniforms[`${uniform}shadowMapSize`] = light.castShadows
+          ? [light._shadowMap.width, light._shadowMap.height]
+          : [0, 0];
+        sharedUniforms[`uDirectionalLightShadowMaps[${i}]`] = light.castShadows
+          ? light._shadowMap
+          : dummyTexture2D;
       }
 
       for (let i = 0; i < spotLights.length; i++) {
@@ -312,21 +309,17 @@ export default ({ ctx }) => {
         sharedUniforms[`${uniform}range`] = light.range;
         sharedUniforms[`${uniform}castShadows`] = light.castShadows;
 
-        if (light.castShadows) {
-          sharedUniforms[`${uniform}projectionMatrix`] =
-            light._projectionMatrix;
-          sharedUniforms[`${uniform}viewMatrix`] = light._viewMatrix;
-          sharedUniforms[`${uniform}near`] = light._near;
-          sharedUniforms[`${uniform}far`] = light._far;
-          sharedUniforms[`${uniform}bias`] = light.bias;
-          sharedUniforms[`${uniform}shadowMapSize`] = light.castShadows
-            ? [light._shadowMap.width, light._shadowMap.height]
-            : [0, 0];
-          sharedUniforms[`uSpotLightShadowMaps[${i}]`] =
-            light.castShadows && light._shadowMap
-              ? light._shadowMap
-              : dummyTexture2D;
-        }
+        sharedUniforms[`${uniform}projectionMatrix`] = light._projectionMatrix;
+        sharedUniforms[`${uniform}viewMatrix`] = light._viewMatrix;
+        sharedUniforms[`${uniform}near`] = light.castShadows ? light._near : 0;
+        sharedUniforms[`${uniform}far`] = light.castShadows ? light._far : 0;
+        sharedUniforms[`${uniform}bias`] = light.bias;
+        sharedUniforms[`${uniform}shadowMapSize`] = light.castShadows
+          ? [light._shadowMap.width, light._shadowMap.height]
+          : [0, 0];
+        sharedUniforms[`uSpotLightShadowMaps[${i}]`] = light.castShadows
+          ? light._shadowMap
+          : dummyTexture2D;
       }
 
       for (let i = 0; i < pointLights.length; i++) {
@@ -342,16 +335,13 @@ export default ({ ctx }) => {
         sharedUniforms[`${uniform}range`] = light.range;
         sharedUniforms[`${uniform}castShadows`] = light.castShadows;
 
-        if (light.castShadows) {
-          sharedUniforms[`${uniform}bias`] = light.bias;
-          sharedUniforms[`${uniform}shadowMapSize`] = light.castShadows
-            ? [light._shadowCubemap.width, light._shadowCubemap.height]
-            : [0, 0];
-          sharedUniforms[`uPointLightShadowMaps[${i}]`] =
-            light.castShadows && light._shadowCubemap
-              ? light._shadowCubemap
-              : dummyTextureCube;
-        }
+        sharedUniforms[`${uniform}bias`] = light.bias;
+        sharedUniforms[`${uniform}shadowMapSize`] = light.castShadows
+          ? [light._shadowCubemap.width, light._shadowCubemap.height]
+          : [0, 0];
+        sharedUniforms[`uPointLightShadowMaps[${i}]`] = light.castShadows
+          ? light._shadowCubemap
+          : dummyTextureCube;
       }
 
       // TODO: dispose if no areaLights
@@ -396,21 +386,17 @@ export default ({ ctx }) => {
         sharedUniforms[`${uniform}doubleSided`] = light.doubleSided;
         sharedUniforms[`${uniform}castShadows`] = light.castShadows;
 
-        if (light.castShadows) {
-          sharedUniforms[`${uniform}projectionMatrix`] =
-            light._projectionMatrix;
-          sharedUniforms[`${uniform}viewMatrix`] = light._viewMatrix;
-          sharedUniforms[`${uniform}near`] = light._near;
-          sharedUniforms[`${uniform}far`] = light._far;
-          sharedUniforms[`${uniform}bias`] = light.bias;
-          sharedUniforms[`${uniform}shadowMapSize`] = light.castShadows
-            ? [light._shadowMap.width, light._shadowMap.height]
-            : [0, 0];
-          sharedUniforms[`uAreaLightShadowMaps[${i}]`] =
-            light.castShadows && light._shadowMap
-              ? light._shadowMap
-              : dummyTexture2D;
-        }
+        sharedUniforms[`${uniform}projectionMatrix`] = light._projectionMatrix;
+        sharedUniforms[`${uniform}viewMatrix`] = light._viewMatrix;
+        sharedUniforms[`${uniform}near`] = light.castShadows ? light._near : 0;
+        sharedUniforms[`${uniform}far`] = light.castShadows ? light._far : 0;
+        sharedUniforms[`${uniform}bias`] = light.bias;
+        sharedUniforms[`${uniform}shadowMapSize`] = light.castShadows
+          ? [light._shadowMap.width, light._shadowMap.height]
+          : [0, 0];
+        sharedUniforms[`uAreaLightShadowMaps[${i}]`] = light.castShadows
+          ? light._shadowMap
+          : dummyTexture2D;
       }
 
       for (let i = 0; i < ambientLights.length; i++) {
