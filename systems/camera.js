@@ -1,4 +1,4 @@
-import { mat4, vec3, quat, utils, avec3, avec4 } from "pex-math";
+import { mat4, vec3, quat, utils, avec4 } from "pex-math";
 import { orbiter as createOrbiter } from "pex-cam";
 import { NAMESPACE, TEMP_MAT4, TEMP_VEC3 } from "../utils.js";
 
@@ -39,6 +39,20 @@ function updateCamera(camera, transform) {
     let top = cy + dy;
     let bottom = cy - dy;
 
+    if (camera.view) {
+      const zoomW =
+        1 / camera.zoom / (camera.view.size[0] / camera.view.totalSize[0]);
+      const zoomH =
+        1 / camera.zoom / (camera.view.size[1] / camera.view.totalSize[1]);
+      const scaleW = (camera.right - camera.left) / camera.view.size[0];
+      const scaleH = (camera.top - camera.bottom) / camera.view.size[1];
+
+      left += scaleW * (camera.view.offset[0] / zoomW);
+      right = left + scaleW * (camera.view.size[0] / zoomW);
+      top -= scaleH * (camera.view.offset[1] / zoomH);
+      bottom = top - scaleH * (camera.view.size[1] / zoomH);
+    }
+
     mat4.ortho(
       camera.projectionMatrix,
       left,
@@ -49,13 +63,43 @@ function updateCamera(camera, transform) {
       camera.far
     );
   } else {
-    mat4.perspective(
-      camera.projectionMatrix,
-      camera.fov,
-      camera.aspect,
-      camera.near,
-      camera.far
-    );
+    if (camera.view) {
+      const aspectRatio = camera.view.totalSize[0] / camera.view.totalSize[1];
+
+      const top = Math.tan(camera.fov * 0.5) * camera.near;
+      const bottom = -top;
+      const left = aspectRatio * bottom;
+      const right = aspectRatio * top;
+      const width = Math.abs(right - left);
+      const height = Math.abs(top - bottom);
+      const widthNormalized = width / camera.view.totalSize[0];
+      const heightNormalized = height / camera.view.totalSize[1];
+
+      const l = left + camera.view.offset[0] * widthNormalized;
+      const r =
+        left + (camera.view.offset[0] + camera.view.size[0]) * widthNormalized;
+      const b =
+        top - (camera.view.offset[1] + camera.view.size[1]) * heightNormalized;
+      const t = top - camera.view.offset[1] * heightNormalized;
+
+      mat4.frustum(
+        camera.projectionMatrix,
+        l,
+        r,
+        b,
+        t,
+        camera.near,
+        camera.far
+      );
+    } else {
+      mat4.perspective(
+        camera.projectionMatrix,
+        camera.fov,
+        camera.aspect,
+        camera.near,
+        camera.far
+      );
+    }
   }
 
   mat4.set(camera.invViewMatrix, transform.modelMatrix);
@@ -66,8 +110,17 @@ function updateCamera(camera, transform) {
   if (camera.culling) computeFrustum(camera);
 }
 
+/**
+ * Camera system
+ *
+ * Adds:
+ * - "_orbiter" to orbiter components
+ * @returns {import("../types.js").System}
+ */
 export default () => ({
   type: "camera-system",
+  cache: {},
+  debug: false,
   updateCamera,
   checkCamera(_, cameraEntity) {
     if (!cameraEntity.transform) {

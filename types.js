@@ -38,6 +38,12 @@
  * @property {number[]} [color=[1, 1, 1, 1]]
  */
 /**
+ * @typedef {object} CameraView
+ * @property {number[]} [totalSize]
+ * @property {number[]} [size]
+ * @property {number[]} [offset]
+ */
+/**
  * @typedef {object} CameraComponentOptions
  * @property {"perspective" | "orthographic"} [projection="perspective"]
  * @property {number[]} [viewport=[0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight]]
@@ -49,6 +55,7 @@
  * @property {mat4} [viewMatrix]
  * @property {mat4} [invViewMatrix]
  * @property {boolean} [culling=false]
+ * @property {CameraView} [view]
  */
 // * @property {number} [exposure=1]
 // * @property {number} [left=-1]
