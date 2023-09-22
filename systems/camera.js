@@ -27,6 +27,28 @@ function computeFrustum(camera) {
 }
 
 function updateCamera(camera, transform) {
+  // calculate new fov based on sensor size and focal length
+  // let sensorWidth = camera.sensorSize[0];
+  // let sensorHeight = camera.sensorSize[1];
+  // const sensorAspectRatio = sensorWidth / sensorHeight;
+  // if (camera.aspect > sensorAspectRatio) {
+  //   if (camera.sensorFit === "horizontal" || camera.sensorFit === "fill") {
+  //     sensorHeight = sensorWidth / camera.aspect;
+  //   }
+  // } else {
+  //   //camera.aspect <= sensorAspectRatio
+  //   if (camera.sensorFit === "horizontal" || camera.sensorFit === "overscan") {
+  //     sensorHeight = sensorWidth / camera.aspect;
+  //   }
+  // }
+  // const hardcodedFoV = false;
+  // if (hardcodedFoV) {
+  //   camera.focalLength = sensorHeight / 2 / Math.tan(camera.fov / 2);
+  // } else {
+  //   camera.fov = 2 * Math.atan(sensorHeight / 2 / camera.focalLength);
+  // }
+  // camera.actualSensorHeight = sensorHeight;
+
   // TODO: projectionMatrix should only be recomputed if parameters changed
   if (camera.projection === "orthographic") {
     const dx = (camera.right - camera.left) / (2 / camera.zoom);
@@ -194,7 +216,7 @@ export default () => ({
               orbiter.lat = orbiter._orbiter.lat;
               orbiter.lon = orbiter._orbiter.lon;
               orbiter.distance = orbiter._orbiter.distance;
-
+              // TODO: need to check lat/lon/dist change?
               entity.transform.dirty = true;
               camera.dirty = true;
             },

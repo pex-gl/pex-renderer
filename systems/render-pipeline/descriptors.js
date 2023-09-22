@@ -143,41 +143,65 @@ void main() {
 }`,
     },
   },
-  tonemap: {
+  postProcessing: {
+    outputTextureDesc: {
+      width: 1,
+      height: 1,
+      pixelFormat: ctx.capabilities.textureHalfFloat
+        ? ctx.PixelFormat.RGBA16F
+        : ctx.PixelFormat.RGBA8,
+      encoding: ctx.Encoding.Linear,
+      min: ctx.capabilities.textureHalfFloatLinear
+        ? ctx.Filter.Linear
+        : ctx.Filter.Nearest,
+      mag: ctx.capabilities.textureHalfFloatLinear
+        ? ctx.Filter.Linear
+        : ctx.Filter.Nearest,
+    },
     pipelineDesc: {
-      vert: /* glsl */ `
-          attribute vec2 aPosition;
-          void main () {
-            gl_Position = vec4(aPosition, 0.0, 1.0);
-          }
-          `,
+      // vert: /* glsl */ `
+      //     attribute vec2 aPosition;
+      //     void main () {
+      //       gl_Position = vec4(aPosition, 0.0, 1.0);
+      //     }
+      //     `,
+      vert: SHADERS.postProcessing.vert,
       frag: /* glsl */ `
-          precision highp float;
-          uniform vec4 uViewport;
-          uniform sampler2D uTexture;
+precision highp float;
+uniform vec4 uViewport;
+uniform sampler2D uTexture;
+uniform bool uUseTonemapping;
 
-          vec3 tonemapAces( vec3 x ) {
-              float tA = 2.5;
-              float tB = 0.03;
-              float tC = 2.43;
-              float tD = 0.59;
-              float tE = 0.14;
-              return clamp((x*(tA*x+tB))/(x*(tC*x+tD)+tE),0.0,1.0);
-          }
+varying vec2 vTexCoord0;
 
-          void main () {
-            vec2 vUV = vec2((gl_FragCoord.x - uViewport.x) / uViewport.z, (gl_FragCoord.y - uViewport.y) / uViewport.w);
-            gl_FragColor = vec4(vUV, 0.0, 1.0);
-            vec4 color = texture2D(uTexture, vUV);
-            color.rgb = tonemapAces(color.rgb);
-            color.rgb = pow(color.rgb, vec3(1.0 / 2.2)); //to gamma
-            gl_FragColor = color;
-          }
+vec3 tonemapAces( vec3 x ) {
+  float tA = 2.5;
+  float tB = 0.03;
+  float tC = 2.43;
+  float tD = 0.59;
+  float tE = 0.14;
+  return clamp((x*(tA*x+tB))/(x*(tC*x+tD)+tE),0.0,1.0);
+}
+
+void main () {
+  vec2 vUV = vTexCoord0;
+  // vec2 vUV = vec2((gl_FragCoord.x - uViewport.x) / uViewport.z, (gl_FragCoord.y - uViewport.y) / uViewport.w);
+  gl_FragColor = vec4(vUV, 0.0, 1.0);
+  vec4 color = texture2D(uTexture, vUV);
+  if (uUseTonemapping) {
+    color.rgb = tonemapAces(color.rgb);
+    color.rgb = pow(color.rgb, vec3(1.0 / 2.2)); //to gamma
+  }
+  gl_FragColor = color;
+}
           `,
     },
-    pass: {
+    passDesc: {
       color: [],
       clearColor: [0, 0, 0, 1],
+    },
+    postProcessingCmd: {
+      uniforms: { uViewportSize: [0, 0] },
     },
   },
 });

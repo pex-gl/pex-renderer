@@ -187,6 +187,16 @@
  * @property {number} [shadowMapSize=2048]
  */
 /**
+ * @typedef {object} PostProcessingComponentOptions
+ * @property {object} [dof]
+ * @property {object} [aa]
+ * @property {object} [fog]
+ * @property {object} [bloom]
+ * @property {object} [lut]
+ * @property {object} [colorCorrection]
+ * @property {object} [vignette]
+ */
+/**
  * @typedef {object} ReflectionProbeComponentOptions
  * @property {number} [size=1024]
  */

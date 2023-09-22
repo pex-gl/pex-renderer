@@ -11,7 +11,7 @@ export function getURL(url) {
   return new URL(url, import.meta.url).toString();
 }
 
-export async function getTexture(ctx, file, encoding) {
+export async function getTexture(ctx, file, encoding, options = {}) {
   const tex = ctx.texture2D({
     width: 1,
     height: 1,
@@ -26,11 +26,12 @@ export async function getTexture(ctx, file, encoding) {
       flipY: true,
       mag: ctx.Filter.Linear,
       min: ctx.Filter.LinearMipmapLinear,
+      mipmap: true,
       aniso: 16,
       pixelFormat: ctx.PixelFormat.RGBA8,
       encoding: encoding || ctx.Encoding.Linear,
+      ...options,
     });
-    ctx.update(tex, { mipmap: true });
     return tex;
   } catch (error) {
     console.error(error);

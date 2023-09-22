@@ -70,14 +70,10 @@ const skyboxEntity = createEntity({
   skybox: components.skybox({
     sunPosition: [1, 1, 1],
     backgroundBlur: 1,
-    envMap,
+    envMap: State.envMap ? envMap : false,
   }),
 });
 world.add(skyboxEntity);
-
-if (State.envMap) {
-  skyboxEntity.skybox.envMap = envMap;
-}
 
 const reflectionProbeEntity = createEntity({
   reflectionProbe: components.reflectionProbe({

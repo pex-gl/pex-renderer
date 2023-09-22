@@ -29,7 +29,7 @@
     "point-size",
 
     // Post-Processing
-    // "post-processing",
+    "post-processing",
     // "ao",
     // "blocks",
   ];

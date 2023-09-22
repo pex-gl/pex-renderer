@@ -99,6 +99,14 @@ renderGraph.renderPass = (opts) => {
 };
 
 // Entities
+const postProcessing = components.postProcessing({
+  aa: {
+    type: "fxaa",
+  },
+  dof: {
+    focusDistance: 3,
+  },
+});
 const cameraEntity = createEntity({
   transform: components.transform({ position: [0, 3, 3] }),
   camera: components.camera({
@@ -107,9 +115,23 @@ const cameraEntity = createEntity({
     target: [0, 1, 0],
     clearColor: [0.03, 0.03, 0.03, 1],
   }),
+  postProcessing,
   orbiter: components.orbiter({ element: ctx.gl.canvas }),
 });
 world.add(cameraEntity);
+
+// const cameraBasicEntity = createEntity({
+//   transform: components.transform({ position: [0, 3, 3] }),
+//   camera: components.camera({
+//     fov: Math.PI / 2,
+//     aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
+//     target: [0, 1, 0],
+//     clearColor: [0.1, 0.1, 0.1, 1],
+//   }),
+//   postProcessing,
+//   orbiter: components.orbiter({ element: ctx.gl.canvas }),
+// });
+// world.add(cameraBasicEntity);
 
 const floorEntity = createEntity({
   transform: components.transform(),
@@ -343,6 +365,9 @@ gui.addStats();
 gui.addButton("Tree", () => {
   debugSceneTree(entities);
 });
+const guiColorControl = gui.addTexture2D("Color", null, { flipY: true });
+// const guiNormalControl = gui.addTexture2D("Normal", null, { flipY: true });
+const guiDepthControl = gui.addTexture2D("Depth", null, { flipY: true });
 
 // Events
 let debugOnce = false;
@@ -386,25 +411,34 @@ ctx.frame(() => {
   lightSystem.update(world.entities);
 
   view1.draw((renderView) => {
-    renderPipelineSystem.update(world.entities, {
-      renderers: [
-        standardRendererSystem,
-        lineRendererSystem,
-        skyboxRendererSystem,
-      ],
-      renderView: renderView,
-    });
+    renderPipelineSystem.update(
+      world.entities,
+      {
+        renderers: [
+          standardRendererSystem,
+          lineRendererSystem,
+          skyboxRendererSystem,
+        ],
+        renderView: renderView,
+      }
+    );
   });
 
   view2.draw((renderView) => {
-    renderPipelineSystem.update(world.entities, {
-      renderers: [
-        basicRendererSystem,
-        lineRendererSystem,
-        helperRendererSystem,
-      ],
-      renderView: renderView,
-    });
+    const { color, normal, depth } = renderPipelineSystem.update(
+      world.entities,
+      {
+        renderers: [
+          basicRendererSystem,
+          lineRendererSystem,
+          helperRendererSystem,
+        ],
+        renderView: renderView,
+      }
+    );
+    guiColorControl.texture = color;
+    // guiNormalControl.texture = normal;
+    guiDepthControl.texture = depth;
   });
 
   renderGraph.endFrame();

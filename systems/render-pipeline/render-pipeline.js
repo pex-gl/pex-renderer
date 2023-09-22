@@ -1,7 +1,12 @@
-import { vec3, mat4, utils, avec4 } from "pex-math";
-import { aabb } from "pex-geom";
-import createDescriptors from "./renderer/descriptors.js";
-import { NAMESPACE, TEMP_VEC3, TEMP_VEC4 } from "../utils.js";
+import { vec3, utils, avec4 } from "pex-math";
+import { postProcessing as SHADERS, parser as ShaderParser } from "pex-shaders";
+
+import addDescriptors from "./descriptors.js";
+import addPostProcessingPasses from "./post-processing.js";
+import addShadowMapping from "./shadow-mapping.js";
+import { ProgramCache } from "../renderer/utils.js";
+
+import { NAMESPACE, TEMP_VEC3, TEMP_VEC4 } from "../../utils.js";
 
 function isEntityInFrustum(entity, frustum) {
   if (entity.geometry.culled !== false) {
@@ -114,7 +119,7 @@ function drawMeshes({
  * Adds:
  * - "_near", "_far" and "_sceneBboxInLightSpace" to light components that cast shadows
  * - "_shadowCubemap" to pointLight components and "_shadowMap" to other light components
- * @returns {import("../types.js").System}
+ * @returns {import("../../types.js").System}
  */
 export default ({
   ctx,
@@ -124,299 +129,18 @@ export default ({
   outputEncoding,
 }) => ({
   type: "render-pipeline-system",
-  cache: {},
+  cache: {
+    programs: new ProgramCache(),
+  },
   debug: false,
   shadowQuality,
   outputEncoding: outputEncoding || ctx.Encoding.Linear,
   renderers: [],
-  descriptors: createDescriptors(ctx),
+  descriptors: addDescriptors(ctx),
+  postProcessingPasses: null,
+  shadowMapping: null,
   drawMeshes,
   cullEntities,
-  updateDirectionalLightShadowMap(
-    lightEntity,
-    entities,
-    shadowCastingEntities,
-    renderers
-  ) {
-    const light = lightEntity.directionalLight;
-    light._sceneBboxInLightSpace ??= aabb.create();
-
-    aabb.empty(light._sceneBboxInLightSpace);
-    aabb.fromPoints(
-      light._sceneBboxInLightSpace,
-      shadowCastingEntities.flatMap((entity) =>
-        aabb
-          .getCorners(entity.transform.worldBounds) // TODO: gc corners points
-          .map((p) => vec3.multMat4(p, light._viewMatrix))
-      )
-    );
-
-    light._near = -light._sceneBboxInLightSpace[1][2];
-    light._far = -light._sceneBboxInLightSpace[0][2];
-
-    mat4.ortho(
-      light._projectionMatrix,
-      light._sceneBboxInLightSpace[0][0],
-      light._sceneBboxInLightSpace[1][0],
-      light._sceneBboxInLightSpace[0][1],
-      light._sceneBboxInLightSpace[1][1],
-      light._near,
-      light._far
-    );
-
-    let colorMapDesc = this.descriptors.directionalLightShadows.colorMapDesc;
-    let shadowMapDesc = this.descriptors.directionalLightShadows.shadowMapDesc;
-
-    // Only update descriptors for custom map size
-    // TODO: could texture be cached if they have the same descriptor
-    if (light.shadowMapSize) {
-      colorMapDesc = {
-        ...colorMapDesc,
-        width: light.shadowMapSize,
-        height: light.shadowMapSize,
-      };
-      shadowMapDesc = {
-        ...shadowMapDesc,
-        width: light.shadowMapSize,
-        height: light.shadowMapSize,
-      };
-    }
-    //TODO: can this be all done at once?
-    const colorMap = resourceCache.texture2D(colorMapDesc);
-    colorMap.name = `tempColorMap (id: ${colorMap.id})`;
-
-    const shadowMap = resourceCache.texture2D(shadowMapDesc);
-    shadowMap.name = `shadowMap (id: ${shadowMap.id})`;
-
-    const renderView = {
-      camera: {
-        viewMatrix: light._viewMatrix,
-        projectionMatrix: light._projectionMatrix,
-      },
-      viewport: [0, 0, shadowMap.width, shadowMap.height],
-    };
-
-    renderGraph.renderPass({
-      name: `RenderShadowMap [${renderView.viewport}] (id: ${lightEntity.id})`,
-      pass: resourceCache.pass({
-        // TODO: creating new descriptor to force new pass from cache
-        ...this.descriptors.directionalLightShadows.pass,
-        color: [colorMap],
-        depth: shadowMap,
-      }),
-      renderView: renderView,
-      render: () => {
-        // Needs to be here for multi-view with different renderer to not overwrite it
-        light._shadowMap = shadowMap;
-
-        drawMeshes({
-          viewport: renderView.viewport,
-          //TODO: passing camera entity around is a mess
-          cameraEntity: {
-            camera: {
-              position: lightEntity._transform.worldPosition,
-            },
-          },
-          shadowMapping: true,
-          shadowMappingLight: light,
-          entitiesInView: entities,
-          forward: false,
-          drawTransparent: false,
-          renderers,
-        });
-      },
-    });
-
-    light._shadowMap = shadowMap; // TODO: we borrow it for a frame
-    // ctx.submit(shadowMapDrawCommand, () => {
-    // drawMeshes(null, true, light, entities, shadowCastingEntities);
-    // });
-  },
-
-  updateSpotLightShadowMap(
-    lightEntity,
-    entities,
-    shadowCastingEntities,
-    renderers
-  ) {
-    const light = lightEntity.spotLight || lightEntity.areaLight;
-    light._sceneBboxInLightSpace ??= aabb.create();
-
-    aabb.empty(light._sceneBboxInLightSpace);
-    aabb.fromPoints(
-      light._sceneBboxInLightSpace,
-      shadowCastingEntities.flatMap((entity) =>
-        aabb
-          .getCorners(entity.transform.worldBounds) // TODO: gc corners points
-          .map((p) => vec3.multMat4(p, light._viewMatrix))
-      )
-    );
-
-    light._near = -light._sceneBboxInLightSpace[1][2];
-    light._far = -light._sceneBboxInLightSpace[0][2];
-
-    let colorMapDesc = this.descriptors.spotLightShadows.colorMapDesc;
-    let shadowMapDesc = this.descriptors.spotLightShadows.shadowMapDesc;
-
-    // Only update descriptors for custom map size
-    // TODO: could texture be cached if they have the same descriptor
-    if (light.shadowMapSize) {
-      colorMapDesc = {
-        ...colorMapDesc,
-        width: light.shadowMapSize,
-        height: light.shadowMapSize,
-      };
-      shadowMapDesc = {
-        ...shadowMapDesc,
-        width: light.shadowMapSize,
-        height: light.shadowMapSize,
-      };
-    }
-
-    //TODO: can this be all done at once?
-    const colorMap = resourceCache.texture2D(colorMapDesc);
-    colorMap.name = `tempColorMap (id: ${colorMap.id})`;
-
-    const shadowMap = resourceCache.texture2D(shadowMapDesc);
-    shadowMap.name = `shadowMap (id: ${shadowMap.id})`;
-
-    mat4.perspective(
-      light._projectionMatrix,
-      light.angle ? 2 * light.angle : Math.PI / 2,
-      shadowMap.width / shadowMap.height,
-      light._near,
-      light._far
-    );
-
-    const renderView = {
-      camera: {
-        viewMatrix: light._viewMatrix,
-        projectionMatrix: light._projectionMatrix,
-      },
-      viewport: [0, 0, shadowMap.width, shadowMap.height],
-    };
-
-    renderGraph.renderPass({
-      name: `RenderShadowMap [${renderView.viewport}] (id: ${lightEntity.id})`,
-      pass: resourceCache.pass({
-        // TODO: creating new descriptor to force new pass from cache
-        ...this.descriptors.spotLightShadows.pass,
-        color: [colorMap],
-        depth: shadowMap,
-      }),
-      renderView: renderView,
-      render: () => {
-        light._shadowMap = shadowMap;
-        drawMeshes({
-          viewport: renderView.viewport,
-          //TODO: passing camera entity around is a mess
-          cameraEntity: {
-            camera: {
-              position: lightEntity._transform.worldPosition,
-            },
-          },
-          shadowMapping: true,
-          shadowMappingLight: light,
-          entitiesInView: entities,
-          forward: false,
-          drawTransparent: false,
-          renderers,
-        });
-      },
-    });
-
-    light._shadowMap = shadowMap; // TODO: we borrow it for a frame
-  },
-
-  updatePointLightShadowMap(
-    lightEntity,
-    entities,
-    shadowCastingEntities,
-    renderers
-  ) {
-    const light = lightEntity.pointLight;
-
-    let shadowCubemapDesc =
-      this.descriptors.pointLightShadows.shadowCubemapDesc;
-    let shadowMapDesc = this.descriptors.pointLightShadows.shadowMapDesc;
-
-    // Only update descriptors for custom map size
-    // TODO: could texture be cached if they have the same descriptor
-    if (light.shadowMapSize) {
-      shadowCubemapDesc = {
-        ...shadowCubemapDesc,
-        width: light.shadowMapSize,
-        height: light.shadowMapSize,
-      };
-      shadowMapDesc = {
-        ...shadowMapDesc,
-        width: light.shadowMapSize,
-        height: light.shadowMapSize,
-      };
-    }
-
-    //TODO: can this be all done at once?
-    const shadowCubemap = resourceCache.textureCube(shadowCubemapDesc);
-    shadowCubemap.name = `tempCubemap (id: ${shadowCubemap.id})`;
-
-    const shadowMap = resourceCache.texture2D(shadowMapDesc);
-    shadowMap.name = `shadowMap (id: ${shadowMap.id})`;
-
-    for (let i = 0; i < this.descriptors.pointLightShadows.passes.length; i++) {
-      const pass = this.descriptors.pointLightShadows.passes[i];
-      //TODO: need to create new descriptor to get uniq
-      const passDesc = { ...pass };
-      passDesc.color = [
-        { texture: shadowCubemap, target: passDesc.color[0].target },
-      ];
-      passDesc.depth = shadowMap;
-
-      const side = this.descriptors.pointLightShadows.cubemapSides[i];
-      const renderView = {
-        camera: {
-          projectionMatrix: side.projectionMatrix,
-          viewMatrix: mat4.lookAt(
-            mat4.create(), // This can't be GC as assigned in light._viewMatrix for multi-view
-            vec3.add([...side.eye], lightEntity._transform.worldPosition),
-            vec3.add([...side.target], lightEntity._transform.worldPosition),
-            side.up
-          ),
-        },
-        viewport: [0, 0, shadowMap.width, shadowMap.height],
-      };
-
-      renderGraph.renderPass({
-        name: `RenderShadowMap [${renderView.viewport}] (id: ${lightEntity.id})`,
-        pass: resourceCache.pass(passDesc),
-        renderView: renderView,
-        render: () => {
-          //why?
-          light._shadowCubemap = shadowCubemap; // TODO: we borrow it for a frame
-          light._projectionMatrix = side.projectionMatrix;
-          light._viewMatrix = renderView.camera.viewMatrix;
-          drawMeshes({
-            viewport: renderView.viewport,
-            renderView,
-            //TODO: passing camera entity around is a mess
-            // cameraEntity: {
-            //   camera: {},
-            // },
-            shadowMapping: true,
-            shadowMappingLight: light,
-            entitiesInView: entities,
-            forward: false,
-            drawTransparent: false,
-            renderers,
-          });
-        },
-      });
-    }
-
-    light._shadowCubemap = shadowCubemap; // TODO: we borrow it for a frame
-    // ctx.submit(shadowMapDrawCommand, () => {
-    // drawMeshes(null, true, light, entities, shadowCastingEntities);
-    // });
-  },
 
   checkLight(light, lightEntity) {
     if (!lightEntity._transform) {
@@ -452,6 +176,13 @@ export default ({
     };
 
     // Update shadow maps
+    this.shadowMapping ||= addShadowMapping({
+      drawMeshes,
+      renderGraph,
+      resourceCache,
+      descriptors: this.descriptors,
+    });
+
     for (let i = 0; i < directionalLightEntities.length; i++) {
       const entity = directionalLightEntities[i];
 
@@ -460,7 +191,7 @@ export default ({
         entity.directionalLight.castShadows &&
         this.checkLight(entity.directionalLight, entity)
       ) {
-        this.updateDirectionalLightShadowMap(
+        this.shadowMapping.directionalLight(
           entity,
           entities,
           shadowCastingEntities,
@@ -476,7 +207,7 @@ export default ({
         entity.pointLight.castShadows &&
         this.checkLight(entity.pointLight, entity)
       ) {
-        this.updatePointLightShadowMap(
+        this.shadowMapping.pointLight(
           entity,
           entities,
           shadowCastingEntities,
@@ -492,7 +223,7 @@ export default ({
         entity.spotLight.castShadows &&
         this.checkLight(entity.spotLight, entity)
       ) {
-        this.updateSpotLightShadowMap(
+        this.shadowMapping.spotLight(
           entity,
           entities,
           shadowCastingEntities,
@@ -508,7 +239,7 @@ export default ({
         entity.areaLight.castShadows &&
         this.checkLight(entity.areaLight, entity)
       ) {
-        this.updateSpotLightShadowMap(
+        this.shadowMapping.spotLight(
           entity,
           entities,
           shadowCastingEntities,
@@ -526,7 +257,7 @@ export default ({
           e.areaLight?._shadowMap ||
           e.pointLight?._shadowCubemap
       )
-      .filter((_) => _);
+      .filter(Boolean);
 
     // Filter entities by layer
     const layer = renderView.camera.layer;
@@ -534,11 +265,13 @@ export default ({
       ? entities.filter((e) => !e.layer || e.layer === layer)
       : entities;
 
+    const postProcessing = renderView.cameraEntity.postProcessing;
+
     // Main pass
     //TODO: this should be done on the fly by render graph
     this.descriptors.mainPass.outputTextureDesc.width = renderView.viewport[2];
     this.descriptors.mainPass.outputTextureDesc.height = renderView.viewport[3];
-    const mainPassOutputTexture = resourceCache.texture2D(
+    let mainPassOutputTexture = resourceCache.texture2D(
       this.descriptors.mainPass.outputTextureDesc
     );
     mainPassOutputTexture.name = `mainPassOutput (id: ${mainPassOutputTexture.id})`;
@@ -547,6 +280,14 @@ export default ({
       this.descriptors.mainPass.outputTextureDesc
     );
     mainPassNormalOutputTexture.name = `mainPassNormalOutput (id: ${mainPassNormalOutputTexture.id})`;
+
+    let mainPassEmissiveOutputTexture;
+    if (postProcessing) {
+      mainPassEmissiveOutputTexture = resourceCache.texture2D(
+        this.descriptors.mainPass.outputTextureDesc
+      );
+      mainPassEmissiveOutputTexture.name = `mainPassEmissiveOutput (id: ${mainPassEmissiveOutputTexture.id})`;
+    }
 
     this.descriptors.mainPass.outputDepthTextureDesc.width =
       renderView.viewport[2];
@@ -566,7 +307,11 @@ export default ({
       },
       pass: resourceCache.pass({
         name: "mainPass",
-        color: [mainPassOutputTexture, mainPassNormalOutputTexture],
+        color: [
+          mainPassOutputTexture,
+          mainPassNormalOutputTexture,
+          postProcessing && mainPassEmissiveOutputTexture,
+        ].filter(Boolean),
         depth: outputDepthTexture,
         clearColor: renderView.camera.clearColor,
         clearDepth: 1,
@@ -622,7 +367,7 @@ export default ({
         uses: [mainPassOutputTexture],
         renderView: { ...renderView, viewport },
         pass: resourceCache.pass({
-          name: "grapbPass",
+          name: "grabPass",
           color: [grabPassColorCopyTexture],
         }),
         render: () => {
@@ -634,7 +379,7 @@ export default ({
     // Transparent pass
     renderGraph.renderPass({
       name: `TransparentPass [${renderView.viewport}]`,
-      uses: [...shadowMaps, grabPassColorCopyTexture].filter((_) => _), //filter out nulls
+      uses: [...shadowMaps, grabPassColorCopyTexture].filter(Boolean),
       renderView: {
         ...renderView,
         viewport: [0, 0, renderView.viewport[2], renderView.viewport[3]],
@@ -660,27 +405,154 @@ export default ({
     });
 
     // Post-processing pass
+    if (postProcessing) {
+      window.rg = this
+      const renderViewId = renderView.cameraEntity.id;
+      this.cache[`${renderViewId}-colorTexture`] = mainPassOutputTexture;
+      this.postProcessingPasses ||= addPostProcessingPasses({
+        ctx,
+        resourceCache,
+        descriptors: this.descriptors,
+        cache: this.cache,
+      });
+
+      for (let i = 0; i < this.postProcessingPasses.length; i++) {
+        const pass = this.postProcessingPasses[i];
+
+        if (pass.name !== "blit" && !postProcessing[pass.name]) continue;
+
+        this.cache[pass.name] ||= {};
+        this.cache[pass.name].descriptors ||= pass.commands.map(() => ({
+          ...this.descriptors.postProcessing,
+        }));
+        this.cache[pass.name].pipelines ||= pass.commands.map((command) => ({
+          vert:
+            command.vert ||
+            ShaderParser.build(ctx, SHADERS.postProcessing.vert),
+          frag: command.frag,
+          blend: command.blend,
+        }));
+        for (let j = 0; j < pass.commands.length; j++) {
+          const passCommand = pass.commands[j];
+          // Get descriptors
+          const { outputTextureDesc, passDesc, postProcessingCmd } =
+            this.cache[pass.name].descriptors[j];
+
+          postProcessingCmd.uniforms.uViewport = renderView.viewport;
+
+          const width = renderView.viewport[2];
+          const height = renderView.viewport[3];
+          // TODO: should that be target width/height?
+          postProcessingCmd.uniforms.uViewportSize[0] = width;
+          postProcessingCmd.uniforms.uViewportSize[1] = height;
+          const source = passCommand.source?.(renderView);
+          const target = passCommand.target?.(renderView);
+
+          renderGraph.renderPass({
+            name: `PostProcessingPass-${pass.name}.${passCommand.name} [${renderView.viewport}]`,
+            uses: [
+              source || mainPassOutputTexture,
+              mainPassNormalOutputTexture,
+              mainPassEmissiveOutputTexture,
+              outputDepthTexture,
+            ].filter(Boolean),
+            renderView: {
+              ...renderView,
+              viewport: [0, 0, renderView.viewport[2], renderView.viewport[3]],
+            },
+            render: () => {
+              // Resolve attachments
+              let inputColor;
+              if (source) {
+                inputColor =
+                  typeof source === "string"
+                    ? this.cache[`${renderViewId}-${source}`]
+                    : source;
+
+                if (!inputColor) console.warn(`Missing source ${source}.`);
+              } else {
+                inputColor = mainPassOutputTexture;
+              }
+
+              let outputColor;
+              if (target) {
+                outputColor =
+                  typeof target === "string"
+                    ? this.cache[`${renderViewId}-${target}`]
+                    : target;
+
+                if (!outputColor) console.warn(`Missing target ${target}.`);
+              } else {
+                outputTextureDesc.width = width;
+                outputTextureDesc.height = height;
+                outputColor = resourceCache.texture2D(outputTextureDesc);
+              }
+
+              // Set command
+              passDesc.color[0] = outputColor;
+              postProcessingCmd.pipeline = resourceCache.pipeline(
+                this.cache[pass.name].pipelines[j]
+              );
+              postProcessingCmd.pass = resourceCache.pass(passDesc);
+
+              const fullscreenTriangle = resourceCache.fullscreenTriangle();
+              postProcessingCmd.attributes = fullscreenTriangle.attributes;
+              postProcessingCmd.count = fullscreenTriangle.count;
+
+              ctx.submit(postProcessingCmd, {
+                uniforms: {
+                  uTexture: inputColor,
+                  uDepthTexture: outputDepthTexture,
+                  uEmissiveTexture: mainPassEmissiveOutputTexture,
+                  ...(passCommand.uniforms?.(
+                    renderView.cameraEntity,
+                    renderView
+                  ) || {}),
+                },
+              });
+
+              // TODO: delete from cache somehow on pass. Loop through this.postProcessingPasses?
+              // eg. Object.keys(this.cache).filter(key => key.startsWidth(`${pass.name}.`))
+              this.cache[`${renderViewId}-${pass.name}.${passCommand.name}`] =
+                outputColor;
+
+              // Draw to screen
+              if (!target) mainPassOutputTexture = outputColor;
+            },
+          });
+        }
+      }
+
+      // TODO: debug mode outputing different textures
+      // if (this.cache[`bloom.downSample[4]`])
+      // mainPassOutputTexture = this.cache[`${renderViewId}-colorTexture`];
+    }
+
     if (drawToScreen !== false) {
       const fullscreenTriangle = resourceCache.fullscreenTriangle();
 
-      const postProcessingCmd = {
-        name: "drawPostProcessingFullScreenTriangleCmd",
+      const blitCmd = {
+        name: "drawBlitFullScreenTriangleCmd",
         attributes: fullscreenTriangle.attributes,
         count: fullscreenTriangle.count,
-        pipeline: resourceCache.pipeline(this.descriptors.tonemap.pipelineDesc),
-        uniforms: {
-          uViewport: renderView.viewport,
-          uTexture: mainPassOutputTexture,
-        },
+        pipeline: resourceCache.pipeline(
+          this.descriptors.postProcessing.pipelineDesc
+        ),
       };
 
       renderGraph.renderPass({
-        name: `PostProcessingPass [${renderView.viewport}]`,
-        // pass: ctx.pass({ color: [{ id: -1 }] }),
-        uses: [],
+        name: `BlitPass [${renderView.viewport}]`,
+        uses: [mainPassOutputTexture],
         renderView,
         render: () => {
-          ctx.submit(postProcessingCmd);
+          ctx.submit(blitCmd, {
+            uniforms: {
+              uUseTonemapping: !postProcessing,
+              uViewport: renderView.viewport,
+              // uViewport: [0, 0, renderView.viewport[2], renderView.viewport[3]],
+              uTexture: mainPassOutputTexture,
+            },
+          });
         },
       });
     }
@@ -688,6 +560,7 @@ export default ({
     return {
       color: mainPassOutputTexture,
       normal: mainPassNormalOutputTexture,
+      emissive: mainPassEmissiveOutputTexture,
       depth: outputDepthTexture,
     };
   },

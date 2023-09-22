@@ -18,13 +18,13 @@ export default (options) => {
     invViewMatrix: mat4.create(),
     culling: false,
     frustum: new Float32Array(24),
-    // exposure: 1,
-    // focalLength: 50, // mm
-    // fStop: 2.8,
+    exposure: 1,
+    focalLength: 50, // mm
+    fStop: 2.8,
 
-    // sensorSize: [36, 24], // mm
-    // actualSensorHeight: 24, // mm
-    // sensorFit: "vertical",
+    sensorSize: [36, 24], // mm
+    actualSensorHeight: 24, // mm
+    sensorFit: "vertical",
     ...options,
   };
   if (camera.projection === "orthographic") {
