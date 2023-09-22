@@ -4,7 +4,7 @@ import { postProcessing as SHADERS, parser as ShaderParser } from "pex-shaders";
 import addDescriptors from "./descriptors.js";
 import addPostProcessingPasses from "./post-processing.js";
 import addShadowMapping from "./shadow-mapping.js";
-import { ProgramCache } from "../renderer/utils.js";
+import { getMaterialFlagsAndUniforms } from "../renderer/utils.js";
 
 import { NAMESPACE, TEMP_VEC3, TEMP_VEC4 } from "../../utils.js";
 
@@ -129,9 +129,7 @@ export default ({
   outputEncoding,
 }) => ({
   type: "render-pipeline-system",
-  cache: {
-    programs: new ProgramCache(),
-  },
+  cache: {},
   debug: false,
   shadowQuality,
   outputEncoding: outputEncoding || ctx.Encoding.Linear,
@@ -404,11 +402,16 @@ export default ({
       },
     });
 
+    // Store attachments. Can be overwritten by PostProcessingPass
+    const attachments = {
+      color: mainPassOutputTexture,
+      normal: mainPassNormalOutputTexture,
+      emissive: mainPassEmissiveOutputTexture,
+      depth: outputDepthTexture,
+    };
+
     // Post-processing pass
     if (postProcessing) {
-      window.rg = this
-      const renderViewId = renderView.cameraEntity.id;
-      this.cache[`${renderViewId}-colorTexture`] = mainPassOutputTexture;
       this.postProcessingPasses ||= addPostProcessingPasses({
         ctx,
         resourceCache,
@@ -416,116 +419,24 @@ export default ({
         cache: this.cache,
       });
 
-      for (let i = 0; i < this.postProcessingPasses.length; i++) {
-        const pass = this.postProcessingPasses[i];
-
-        if (pass.name !== "blit" && !postProcessing[pass.name]) continue;
-
-        this.cache[pass.name] ||= {};
-        this.cache[pass.name].descriptors ||= pass.commands.map(() => ({
-          ...this.descriptors.postProcessing,
-        }));
-        this.cache[pass.name].pipelines ||= pass.commands.map((command) => ({
-          vert:
-            command.vert ||
-            ShaderParser.build(ctx, SHADERS.postProcessing.vert),
-          frag: command.frag,
-          blend: command.blend,
-        }));
-        for (let j = 0; j < pass.commands.length; j++) {
-          const passCommand = pass.commands[j];
-          // Get descriptors
-          const { outputTextureDesc, passDesc, postProcessingCmd } =
-            this.cache[pass.name].descriptors[j];
-
-          postProcessingCmd.uniforms.uViewport = renderView.viewport;
-
-          const width = renderView.viewport[2];
-          const height = renderView.viewport[3];
-          // TODO: should that be target width/height?
-          postProcessingCmd.uniforms.uViewportSize[0] = width;
-          postProcessingCmd.uniforms.uViewportSize[1] = height;
-          const source = passCommand.source?.(renderView);
-          const target = passCommand.target?.(renderView);
-
-          renderGraph.renderPass({
-            name: `PostProcessingPass-${pass.name}.${passCommand.name} [${renderView.viewport}]`,
-            uses: [
-              source || mainPassOutputTexture,
-              mainPassNormalOutputTexture,
-              mainPassEmissiveOutputTexture,
-              outputDepthTexture,
-            ].filter(Boolean),
-            renderView: {
-              ...renderView,
-              viewport: [0, 0, renderView.viewport[2], renderView.viewport[3]],
-            },
-            render: () => {
-              // Resolve attachments
-              let inputColor;
-              if (source) {
-                inputColor =
-                  typeof source === "string"
-                    ? this.cache[`${renderViewId}-${source}`]
-                    : source;
-
-                if (!inputColor) console.warn(`Missing source ${source}.`);
-              } else {
-                inputColor = mainPassOutputTexture;
-              }
-
-              let outputColor;
-              if (target) {
-                outputColor =
-                  typeof target === "string"
-                    ? this.cache[`${renderViewId}-${target}`]
-                    : target;
-
-                if (!outputColor) console.warn(`Missing target ${target}.`);
-              } else {
-                outputTextureDesc.width = width;
-                outputTextureDesc.height = height;
-                outputColor = resourceCache.texture2D(outputTextureDesc);
-              }
-
-              // Set command
-              passDesc.color[0] = outputColor;
-              postProcessingCmd.pipeline = resourceCache.pipeline(
-                this.cache[pass.name].pipelines[j]
-              );
-              postProcessingCmd.pass = resourceCache.pass(passDesc);
-
-              const fullscreenTriangle = resourceCache.fullscreenTriangle();
-              postProcessingCmd.attributes = fullscreenTriangle.attributes;
-              postProcessingCmd.count = fullscreenTriangle.count;
-
-              ctx.submit(postProcessingCmd, {
-                uniforms: {
-                  uTexture: inputColor,
-                  uDepthTexture: outputDepthTexture,
-                  uEmissiveTexture: mainPassEmissiveOutputTexture,
-                  ...(passCommand.uniforms?.(
-                    renderView.cameraEntity,
-                    renderView
-                  ) || {}),
-                },
-              });
-
-              // TODO: delete from cache somehow on pass. Loop through this.postProcessingPasses?
-              // eg. Object.keys(this.cache).filter(key => key.startsWidth(`${pass.name}.`))
-              this.cache[`${renderViewId}-${pass.name}.${passCommand.name}`] =
-                outputColor;
-
-              // Draw to screen
-              if (!target) mainPassOutputTexture = outputColor;
-            },
-          });
-        }
-      }
-
-      // TODO: debug mode outputing different textures
-      // if (this.cache[`bloom.downSample[4]`])
-      // mainPassOutputTexture = this.cache[`${renderViewId}-colorTexture`];
+      renderGraph.renderPass({
+        name: `PostProcessingPass [${renderView.viewport}]`,
+        uses: Object.values(attachments).filter(Boolean),
+        renderView: {
+          ...renderView,
+          viewport: [0, 0, renderView.viewport[2], renderView.viewport[3]],
+        },
+        render: () => {
+          for (let i = 0; i < renderers.length; i++) {
+            const renderer = renderers[i];
+            renderer.renderStages.post?.(renderView, entitiesInView, {
+              attachments,
+              descriptors: this.descriptors,
+              passes: this.postProcessingPasses,
+            });
+          }
+        },
+      });
     }
 
     if (drawToScreen !== false) {
@@ -542,7 +453,7 @@ export default ({
 
       renderGraph.renderPass({
         name: `BlitPass [${renderView.viewport}]`,
-        uses: [mainPassOutputTexture],
+        uses: [attachments.color],
         renderView,
         render: () => {
           ctx.submit(blitCmd, {
@@ -550,19 +461,14 @@ export default ({
               uUseTonemapping: !postProcessing,
               uViewport: renderView.viewport,
               // uViewport: [0, 0, renderView.viewport[2], renderView.viewport[3]],
-              uTexture: mainPassOutputTexture,
+              uTexture: attachments.color,
             },
           });
         },
       });
     }
 
-    return {
-      color: mainPassOutputTexture,
-      normal: mainPassNormalOutputTexture,
-      emissive: mainPassEmissiveOutputTexture,
-      depth: outputDepthTexture,
-    };
+    return attachments;
   },
 
   dispose(entities) {

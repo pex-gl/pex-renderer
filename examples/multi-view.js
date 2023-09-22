@@ -327,6 +327,10 @@ const skyboxRendererSystem = systems.renderer.skybox({
   renderGraph,
 });
 const helperRendererSystem = systems.renderer.helper({ ctx });
+const postProcessingRendererSystem = systems.renderer.postProcessing({
+  ctx,
+  resourceCache,
+});
 
 const createView = (cameraEntity, viewport) => ({
   viewport,
@@ -411,17 +415,15 @@ ctx.frame(() => {
   lightSystem.update(world.entities);
 
   view1.draw((renderView) => {
-    renderPipelineSystem.update(
-      world.entities,
-      {
-        renderers: [
-          standardRendererSystem,
-          lineRendererSystem,
-          skyboxRendererSystem,
-        ],
-        renderView: renderView,
-      }
-    );
+    renderPipelineSystem.update(world.entities, {
+      renderers: [
+        standardRendererSystem,
+        lineRendererSystem,
+        skyboxRendererSystem,
+        postProcessingRendererSystem,
+      ],
+      renderView: renderView,
+    });
   });
 
   view2.draw((renderView) => {
@@ -432,6 +434,7 @@ ctx.frame(() => {
           basicRendererSystem,
           lineRendererSystem,
           helperRendererSystem,
+          postProcessingRendererSystem,
         ],
         renderView: renderView,
       }

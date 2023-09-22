@@ -38,6 +38,10 @@ export default ({ ctx, debug = false }) => {
   });
   const skyboxRendererSystem = systems.renderer.skybox({ ctx, resourceCache });
   const helperRendererSystem = systems.renderer.helper({ ctx });
+  const postProcessingRendererSystem = systems.renderer.postProcessing({
+    ctx,
+    resourceCache,
+  });
 
   const renderEngine = {
     // debugMode,
@@ -71,6 +75,7 @@ export default ({ ctx, debug = false }) => {
       lineRendererSystem,
       skyboxRendererSystem,
       helperRendererSystem,
+      postProcessingRendererSystem,
     ],
     update: (entities, deltaTime) => {
       animationSystem.update(entities, deltaTime);

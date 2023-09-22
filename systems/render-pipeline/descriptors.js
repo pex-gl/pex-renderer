@@ -200,8 +200,5 @@ void main () {
       color: [],
       clearColor: [0, 0, 0, 1],
     },
-    postProcessingCmd: {
-      uniforms: { uViewportSize: [0, 0] },
-    },
   },
 });

@@ -16,7 +16,7 @@ export function getMaterialFlagsAndUniforms(
     ctx.capabilities.maxColorAttachments > 1 && "USE_DRAW_BUFFERS",
     // (!geometry.attributes.aNormal || material.unlit) && "USE_UNLIT_WORKFLOW",
     // "USE_UNLIT_WORKFLOW",
-    `SHADOW_QUALITY ${material.receiveShadows ? options.shadowQuality : 0}`,
+    `SHADOW_QUALITY ${material?.receiveShadows ? options.shadowQuality : 0}`,
   ];
   const materialUniforms = {};
 
