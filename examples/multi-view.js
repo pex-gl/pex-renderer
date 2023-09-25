@@ -101,7 +101,7 @@ renderGraph.renderPass = (opts) => {
 // Entities
 const postProcessing = components.postProcessing({
   aa: {
-    type: "fxaa",
+    type: "fxaa2",
   },
   dof: {
     focusDistance: 3,

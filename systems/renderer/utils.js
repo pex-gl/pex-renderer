@@ -61,7 +61,11 @@ export function getMaterialFlagsAndUniforms(
       }
     } else if (value !== undefined || opts.default !== undefined) {
       if (opts.type !== "boolean" || value) {
-        flags.push(defineName);
+        if (opts.compare) {
+          if (opts.compare === value) flags.push(defineName);
+        } else {
+          flags.push(defineName);
+        }
       } else {
         if (opts.fallback) {
           flags.push(opts.fallback);

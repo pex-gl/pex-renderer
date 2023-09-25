@@ -151,12 +151,6 @@ void main() {
         ? ctx.PixelFormat.RGBA16F
         : ctx.PixelFormat.RGBA8,
       encoding: ctx.Encoding.Linear,
-      min: ctx.capabilities.textureHalfFloatLinear
-        ? ctx.Filter.Linear
-        : ctx.Filter.Nearest,
-      mag: ctx.capabilities.textureHalfFloatLinear
-        ? ctx.Filter.Linear
-        : ctx.Filter.Nearest,
     },
     pipelineDesc: {
       // vert: /* glsl */ `
@@ -198,7 +192,6 @@ void main () {
     },
     passDesc: {
       color: [],
-      clearColor: [0, 0, 0, 1],
     },
   },
 });

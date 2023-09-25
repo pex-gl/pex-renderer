@@ -1,10 +1,8 @@
 import { vec3, utils, avec4 } from "pex-math";
-import { postProcessing as SHADERS, parser as ShaderParser } from "pex-shaders";
 
 import addDescriptors from "./descriptors.js";
 import addPostProcessingPasses from "./post-processing.js";
 import addShadowMapping from "./shadow-mapping.js";
-import { getMaterialFlagsAndUniforms } from "../renderer/utils.js";
 
 import { NAMESPACE, TEMP_VEC3, TEMP_VEC4 } from "../../utils.js";
 

@@ -10,7 +10,7 @@ import { NAMESPACE } from "../../utils.js";
 // Impacts pipeline caching
 const pipelineProps = ["blend"];
 
-export default ({ ctx, resourceCache, descriptors }) => {
+export default ({ ctx, resourceCache }) => {
   const postProcessingSystem = {
     type: "post-processing-renderer",
     cache: {
@@ -22,12 +22,13 @@ export default ({ ctx, resourceCache, descriptors }) => {
       targets: {},
     },
     debug: false,
+    debugRender: "",
     getProgram(ctx, entity, command) {
       const { flags, materialUniforms } = getMaterialFlagsAndUniforms(
         ctx,
         entity,
         command.flagDefs || {},
-        { targets: this.cache.targets }
+        { targets: this.cache.targets[entity.id] }
       );
       // TODO: materialUniforms are never cached?
       this.materialUniforms = materialUniforms;
@@ -84,7 +85,9 @@ export default ({ ctx, resourceCache, descriptors }) => {
       const postProcessing = renderView.cameraEntity.postProcessing;
 
       const renderViewId = renderView.cameraEntity.id;
-      this.cache.targets[`${renderViewId}-color`] = attachments.color;
+
+      this.cache.targets[renderViewId] ||= {};
+      this.cache.targets[renderViewId][`color`] = attachments.color;
 
       for (let i = 0; i < passes.length; i++) {
         const pass = passes[i];
@@ -101,15 +104,12 @@ export default ({ ctx, resourceCache, descriptors }) => {
             passCommand
           );
 
-          // Get descriptors
-          const { outputTextureDesc, passDesc } = {
-            ...descriptors.postProcessing,
-          };
-
           const sharedUniforms = {
             uViewport: renderView.viewport,
-            // TODO: should that be target width/height?
-            uViewportSize: [renderView.viewport[2], renderView.viewport[3]],
+            uViewportSize: passCommand.size?.(renderView) || [
+              renderView.viewport[2],
+              renderView.viewport[3],
+            ],
           };
 
           const source = passCommand.source?.(renderView);
@@ -120,14 +120,8 @@ export default ({ ctx, resourceCache, descriptors }) => {
           if (source) {
             inputColor =
               typeof source === "string"
-                ? this.cache.targets[`${renderViewId}-${source}`]
+                ? this.cache.targets[renderViewId][source]
                 : source;
-            // if (pass.name === "bloom") {
-            //   console.log("source",source);
-            // }
-
-            // sharedUniforms.uViewportSize[0] = inputColor.width;
-            // sharedUniforms.uViewportSize[1] = inputColor.height;
 
             if (!inputColor) console.warn(`Missing source ${source}.`);
           } else {
@@ -138,11 +132,12 @@ export default ({ ctx, resourceCache, descriptors }) => {
           if (target) {
             outputColor =
               typeof target === "string"
-                ? this.cache.targets[`${renderViewId}-${target}`]
+                ? this.cache.targets[renderViewId][target]
                 : target;
             if (!outputColor) console.warn(`Missing target ${target}.`);
           } else {
             // TODO: allow size overwrite for down/upscale
+            const { outputTextureDesc } = { ...descriptors.postProcessing };
             outputTextureDesc.width = renderView.viewport[2];
             outputTextureDesc.height = renderView.viewport[3];
             outputColor = resourceCache.texture2D(outputTextureDesc);
@@ -161,13 +156,15 @@ export default ({ ctx, resourceCache, descriptors }) => {
           Object.assign(uniforms, sharedUniforms, this.materialUniforms);
 
           // Set command
-          const name = `${renderViewId}-${pass.name}.${passCommand.name}`;
+          // TODO: allow pass options like clearColor
+          // Get descriptors
+          const { passDesc } = { ...descriptors.postProcessing };
           passDesc.color[0] = outputColor;
 
           const fullscreenTriangle = resourceCache.fullscreenTriangle();
 
           const postProcessingCmd = {
-            name,
+            name: `${pass.name}.${passCommand.name}`,
             pass: resourceCache.pass(passDesc),
             pipeline,
             uniforms,
@@ -178,16 +175,21 @@ export default ({ ctx, resourceCache, descriptors }) => {
           ctx.submit(postProcessingCmd);
 
           // TODO: delete from cache somehow on pass. Loop through this.postProcessingPasses?
-          // eg. Object.keys(this.cache).filter(key => key.startsWidth(`${pass.name}.`))
-          this.cache.targets[name] = outputColor;
+          // eg. Object.keys(this.cache.targets[renderViewId]).filter(key => key.startsWidth(`${pass.name}.`))
+          this.cache.targets[renderViewId][postProcessingCmd.name] =
+            outputColor;
 
           // Draw to screen
           if (!target) attachments.color = outputColor;
         }
       }
-      // attachments.color =
-      //   this.cache.targets[`${renderViewId}-bloom.downSample[4]`];
-      // attachments.color = this.cache.targets[`${renderViewId}-bloom.threshold`];
+
+      if (
+        this.debugRender &&
+        this.cache.targets[renderViewId][this.debugRender]
+      ) {
+        attachments.color = this.cache.targets[renderViewId][this.debugRender];
+      }
     },
     renderStages: {
       post: (renderView, entities, options) => {

@@ -19,7 +19,6 @@ import parseHdr from "parse-hdr";
 
 import { dragon, getTexture, getURL } from "./utils.js";
 
-
 random.seed(14);
 
 const State = {
@@ -36,18 +35,18 @@ const State = {
   autofocus: true,
 
   aa: true,
-  fog: false,
-  bloom: false,
-  dof: false,
-  lut: false,
-  colorCorrection: false,
-  vignette: false,
+  fog: true,
+  bloom: true,
+  dof: true,
+  lut: true,
+  colorCorrection: true,
+  vignette: true,
 };
 
 // const pixelRatio = devicePixelRatio;
 const pixelRatio = 1;
 const ctx = createContext({ pixelRatio });
-const renderEngine = createRenderEngine({ ctx, debug: false });
+const renderEngine = createRenderEngine({ ctx, debug: true });
 const world = createWorld();
 
 window.renderEngine = renderEngine;
@@ -87,7 +86,7 @@ const postProcessing = components.postProcessing({
     focusDistance: 7,
   },
   aa: {
-    type: "fxaa",
+    type: "fxaa2",
     spanMax: 8,
   },
   fog: {
@@ -103,8 +102,8 @@ const postProcessing = components.postProcessing({
   },
   bloom: {
     threshold: 1,
-    radius: 0.71,
-    intensity: 10,
+    radius: 1,
+    intensity: 0.1,
   },
   lut: {
     texture: await getTexture(
@@ -131,6 +130,7 @@ const postProcessing = components.postProcessing({
     radius: 0.8,
     intensity: 0.2,
   },
+  opacity: 1,
 });
 const cameraEntity = createEntity({
   transform: components.transform({ position: [-3, s * 4, s * 8] }),
@@ -414,12 +414,23 @@ gui.addRadioList(
   )
 );
 gui.addRadioList(
-  "Debug",
+  "Debug Render",
   renderEngine.renderers.find(
     (renderer) => renderer.type == "standard-renderer"
   ),
   "debugRender",
   ["", "data.normalView", "data.emissiveColor", "ao"].map((value) => ({
+    name: value || "No debug",
+    value,
+  }))
+);
+gui.addRadioList(
+  "Debug Post-Processing",
+  renderEngine.renderers.find(
+    (renderer) => renderer.type == "post-processing-renderer"
+  ),
+  "debugRender",
+  ["", "dof.main", "bloom.threshold", "bloom.downSample[3]"].map((value) => ({
     name: value || "No debug",
     value,
   }))
@@ -579,6 +590,12 @@ gui.addParam("Camera f-stop", camera, "fStop", {
 gui.addParam("AA", State, "aa", null, () => {
   enablePostProPass("aa");
 });
+gui.addRadioList(
+  "AA Type",
+  postProcessing.aa,
+  "type",
+  ["fxaa2", "fxaa3"].map((value) => ({ name: value, value }))
+);
 gui.addParam("Fog", State, "fog", null, () => {
   enablePostProPass("fog");
 });
@@ -652,6 +669,8 @@ gui.addParam("Vignette intensity", postProcessing.vignette, "intensity", {
   min: 0,
   max: 1,
 });
+
+gui.addParam("Opacity", postProcessing, "opacity", { min: 0, max: 1 });
 
 enablePostProPass("dof");
 enablePostProPass("aa");
