@@ -16,7 +16,7 @@ export function getMaterialFlagsAndUniforms(
     ctx.capabilities.maxColorAttachments > 1 && "USE_DRAW_BUFFERS",
     // (!geometry.attributes.aNormal || material.unlit) && "USE_UNLIT_WORKFLOW",
     // "USE_UNLIT_WORKFLOW",
-    `SHADOW_QUALITY ${material.receiveShadows ? options.shadowQuality : 0}`,
+    `SHADOW_QUALITY ${material?.receiveShadows ? options.shadowQuality : 0}`,
   ];
   const materialUniforms = {};
 
@@ -61,7 +61,11 @@ export function getMaterialFlagsAndUniforms(
       }
     } else if (value !== undefined || opts.default !== undefined) {
       if (opts.type !== "boolean" || value) {
-        flags.push(defineName);
+        if (opts.compare) {
+          if (opts.compare === value) flags.push(defineName);
+        } else {
+          flags.push(defineName);
+        }
       } else {
         if (opts.fallback) {
           flags.push(opts.fallback);
