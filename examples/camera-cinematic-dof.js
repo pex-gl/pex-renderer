@@ -1,58 +1,22 @@
-import createRenderer from "../index.js";
+import {
+  renderEngine as createRenderEngine,
+  world as createWorld,
+  entity as createEntity,
+  components,
+  loaders,
+} from "../index.js";
+
 import createContext from "pex-context";
 import createGUI from "pex-gui";
 import { utils, vec3, quat } from "pex-math";
-const { toDegrees } = utils;
+import { pipeline as SHADERS } from "pex-shaders";
+import * as io from "pex-io";
 
+import parseHdr from "parse-hdr";
 import fitRect from "fit-rect";
 import { getURL } from "./utils.js";
 
-const ctx = createContext();
-const renderer = createRenderer({
-  ctx,
-  shadowQuality: 3,
-});
-const gui = createGUI(ctx);
-const skyboxEntity = renderer.entity([
-  renderer.skybox({
-    sunPosition: [0.2, 1, 0.2],
-  }),
-]);
-renderer.add(skyboxEntity);
-
-const reflectionProbeEntity = renderer.entity([renderer.reflectionProbe()]);
-renderer.add(reflectionProbeEntity);
-
-const sunEntity = renderer.entity([
-  renderer.transform({
-    position: skyboxEntity.getComponent("Skybox").sunPosition,
-    rotation: quat.fromTo(
-      quat.create(),
-      [0, 0, 1],
-      vec3.normalize([-1, -1, -1])
-    ),
-  }),
-  renderer.directionalLight({
-    color: [1, 1, 1, 1],
-    intensity: 5,
-    castShadows: true,
-  }),
-]);
-renderer.add(sunEntity);
-
-const pointLightEntity = renderer.entity([
-  renderer.transform({
-    position: [-1, 2, -8],
-  }),
-  renderer.pointLight({
-    color: [2, 1, 1, 1],
-    intensity: 2,
-    castShadows: true,
-  }),
-]);
-renderer.add(pointLightEntity);
-
-const rendererState = {
+const State = {
   resolutionPreset: 1,
   resolutions: [0.5, 1, 2],
   aspectRatioPreset: 0,
@@ -64,41 +28,260 @@ const rendererState = {
   showSensorFrame: true,
 };
 
-gui.addHeader("Render Viewport");
+const pixelRatio = devicePixelRatio;
+const ctx = createContext({ pixelRatio });
+const renderEngine = createRenderEngine({ ctx });
+const world = createWorld();
+
+const hdrImg = parseHdr(
+  await io.loadArrayBuffer(getURL(`assets/envmaps/Mono_Lake_B/Mono_Lake_B.hdr`))
+);
+const envMap = ctx.texture2D({
+  data: hdrImg.data,
+  width: hdrImg.shape[0],
+  height: hdrImg.shape[1],
+  pixelFormat: ctx.PixelFormat.RGBA32F,
+  encoding: ctx.Encoding.Linear,
+  flipY: true,
+});
+const skyboxEntity = createEntity({
+  skybox: components.skybox({
+    sunPosition: [0.2, 1, 0.2],
+    envMap,
+  }),
+});
+world.add(skyboxEntity);
+
+const reflectionProbeEntity = createEntity({
+  reflectionProbe: components.reflectionProbe(),
+});
+world.add(reflectionProbeEntity);
+
+const sunEntity = createEntity({
+  transform: components.transform({
+    position: skyboxEntity.skybox.sunPosition,
+    rotation: quat.fromTo(
+      quat.create(),
+      [0, 0, 1],
+      vec3.normalize([-1, -1, -1])
+    ),
+  }),
+  directionalLight: components.directionalLight({
+    color: [1, 1, 1, 1],
+    intensity: 5,
+    castShadows: true,
+  }),
+});
+world.add(sunEntity);
+
+const pointLightEntity = createEntity({
+  transform: components.transform({
+    position: [-1, 2, -8],
+  }),
+  pointLight: components.pointLight({
+    color: [2, 1, 1, 1],
+    intensity: 2,
+    castShadows: true,
+  }),
+});
+world.add(pointLightEntity);
+
+const [scene] = await loaders.gltf(
+  getURL("assets/models/dof-reference-poe/dof-reference-poe.gltf"),
+  { ctx, includeCameras: true }
+);
+scene.entities[1].transform.position[0] -= 0.3;
+world.entities.push(...scene.entities);
+
+const cameraEntity = scene.entities.filter((e) => e.camera)[0];
+cameraEntity.camera.fStop = 1.3;
+const postProcessing = components.postProcessing({
+  dof: components.dof({
+    focusDistance: 7.8,
+  }),
+});
+cameraEntity.postProcessing = postProcessing;
+
+const rectCanvas = document.createElement("canvas");
+document.body.appendChild(rectCanvas);
+rectCanvas.width = cameraEntity.camera.sensorSize[0] * 10;
+rectCanvas.height = cameraEntity.camera.sensorSize[1] * 10;
+const rectCtx = rectCanvas.getContext("2d");
+rectCtx.strokeStyle = "#00DD00";
+rectCtx.lineWidth = 3;
+rectCtx.strokeRect(0, 0, rectCanvas.width, rectCanvas.height);
+
+const overlayEntity = createEntity({
+  overlay: {
+    bounds: [0, 0, 1, 1],
+    texture: ctx.texture2D({ data: rectCanvas, width: 1, height: 1 }),
+  },
+});
+world.add(overlayEntity);
+
+const createOverlayRenderer = ({ ctx }) => {
+  const overlayRendererSystem = {
+    type: "overlay-renderer",
+    cache: {},
+    drawOverlayCmd: {
+      attributes: {
+        aPosition: ctx.vertexBuffer([-1, -1, 1, -1, 1, 1, -1, 1]),
+        aTexCoord0: ctx.vertexBuffer([0, 0, 1, 0, 1, 1, 0, 1]),
+      },
+      indices: ctx.indexBuffer([0, 1, 2, 0, 2, 3]),
+      pipeline: ctx.pipeline({
+        program: ctx.program({
+          vert: SHADERS.overlay.vert,
+          frag: SHADERS.overlay.frag,
+        }),
+        depthWrite: false,
+        blend: true,
+        blendSrcRGBFactor: ctx.BlendFactor.One,
+        blendDstRGBFactor: ctx.BlendFactor.OneMinusSrcAlpha,
+        blendSrcAlphaFactor: ctx.BlendFactor.One,
+        blendDstAlphaFactor: ctx.BlendFactor.OneMinusSrcAlpha,
+      }),
+    },
+    render(entity) {
+      ctx.submit(overlayRendererSystem.drawOverlayCmd, {
+        uniforms: {
+          uBounds: entity.overlay.bounds,
+          uTexture: entity.overlay.texture,
+        },
+      });
+    },
+    update: () => {},
+  };
+  return overlayRendererSystem;
+};
+
+const overlayRenderer = createOverlayRenderer({ ctx });
+
+// GUI
+const gui = createGUI(ctx);
+gui.addColumn("Render Viewport");
 gui.addRadioList(
   "Resolution",
-  rendererState,
+  State,
   "resolutionPreset",
   [
     { name: "0.5x", value: 0 },
     { name: "1x", value: 1 },
     { name: "2x", value: 2 },
   ],
-  resize
+  onResize
 );
 gui.addRadioList(
   "Camera aspect ratio",
-  rendererState,
+  State,
   "aspectRatioPreset",
   [
     { name: "16:9", value: 0 },
     { name: "9:16", value: 1 },
     { name: "W:H", value: 2 },
   ],
-  resize
+  onResize
 );
-
-let sensorRectOverlay = null;
-let camera = null;
-let postProcessing = null;
-
-gui.addHeader("Camera Lens");
+gui.addColumn("Camera");
+gui.addHeader("Lens");
 let cameraInfoLabel = gui.addLabel("Info");
 
-function resize() {
-  if (!camera) return;
+gui.addParam("Field Of View (rad)", cameraEntity.camera, "fov", {
+  min: 0,
+  max: (120 / 180) * Math.PI,
+});
+gui.addParam("Focal Length (mm)", cameraEntity.camera, "focalLength", {
+  min: 0,
+  max: 200,
+});
+gui.addParam("F-Stop", cameraEntity.camera, "fStop", {
+  min: 1.2,
+  max: 32,
+});
 
-  const pixelRatio = rendererState.resolutions[rendererState.resolutionPreset];
+gui.addHeader("Sensor");
+gui.addParam("Show sensor frame", State, "showSensorFrame");
+gui.addParam("Sensor width (mm)", cameraEntity.camera.sensorSize, "0", {
+  min: 0,
+  max: 100,
+});
+
+gui.addParam("Sensor height (mm)", cameraEntity.camera.sensorSize, "1", {
+  min: 0,
+  max: 100,
+});
+
+gui.addRadioList(
+  "Sensor fit",
+  cameraEntity.camera,
+  "sensorFit",
+  [
+    { name: "Vertical", value: "vertical" },
+    { name: "Horizontal", value: "horizontal" },
+    { name: "Fill", value: "fill" },
+    { name: "Overscan", value: "overscan" },
+  ],
+  () => {
+    // set value again to trigger fieldOfView change
+    onResize();
+  }
+);
+
+gui.addColumn("Depth of Field");
+gui.addParam("Enabled", postProcessing, "dof");
+gui.addRadioList(
+  "Type",
+  postProcessing.dof,
+  "type",
+  ["gustafsson", "upitis"].map((value) => ({ name: value, value }))
+);
+gui.addParam("Focus distance", postProcessing.dof, "focusDistance", {
+  min: 0,
+  max: 100,
+});
+gui.addParam("Samples", postProcessing.dof, "samples", {
+  min: 1,
+  max: 6,
+  step: 1,
+});
+gui.addParam(
+  "Chromatic Aberration",
+  postProcessing.dof,
+  "chromaticAberration",
+  {
+    min: 0,
+    max: 4,
+  }
+);
+gui.addParam("Luminance Threshold", postProcessing.dof, "luminanceThreshold", {
+  min: 0,
+  max: 2,
+});
+gui.addParam("Luminance Gain", postProcessing.dof, "luminanceGain", {
+  min: 0,
+  max: 2,
+});
+gui.addRadioList(
+  "Shape",
+  postProcessing.dof,
+  "shape",
+  ["disc", "pentagon"].map((value) => ({ name: value, value }))
+);
+gui.addParam("On Screen Point", postProcessing.dof, "focusOnScreenPoint");
+gui.addParam("Screen Point", postProcessing.dof, "screenPoint", {
+  min: 0,
+  max: 1,
+});
+gui.addParam("Debug", postProcessing.dof, "debug");
+
+// Events
+let debugOnce = false;
+
+function onResize() {
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+
+  const pixelRatio = State.resolutions[State.resolutionPreset];
   const windowBounds = [
     0,
     0,
@@ -106,15 +289,14 @@ function resize() {
     window.innerHeight * pixelRatio,
   ];
 
-  ctx.set({
-    width: window.innerWidth,
-    height: window.innerHeight,
-    pixelRatio,
-  });
-  rendererState.aspectRatios[2] = [windowBounds[2], windowBounds[3]];
+  ctx.set({ pixelRatio, width, height });
+
+  State.aspectRatios[2] = [windowBounds[2], windowBounds[3]];
+
+  const camera = cameraEntity.camera;
 
   const [cameraWidth, cameraHeight] =
-    rendererState.aspectRatios[rendererState.aspectRatioPreset];
+    State.aspectRatios[State.aspectRatioPreset];
   const cameraBounds = [0, 0, cameraWidth, cameraHeight];
   const cameraViewport = fitRect(cameraBounds, windowBounds);
   const sensorBounds = [0, 0, camera.sensorSize[0], camera.sensorSize[1]];
@@ -126,172 +308,59 @@ function resize() {
     if (camera.sensorFit === "vertical" || camera.sensorFit === "overscan") {
       sensorFitBounds = fitRect(sensorBounds, cameraViewport);
     } else {
-      //horizontal || fill
+      // horizontal || fill
       sensorFitBounds = fitRect(sensorBounds, cameraViewport, "cover");
     }
   } else {
     if (camera.sensorFit === "horizontal" || camera.sensorFit === "overscan") {
       sensorFitBounds = fitRect(sensorBounds, cameraViewport);
     } else {
-      //vertical || fill
+      // vertical || fill
       sensorFitBounds = fitRect(sensorBounds, cameraViewport, "cover");
     }
   }
 
-  sensorRectOverlay.set({
-    x: sensorFitBounds[0],
-    y: sensorFitBounds[1],
-    width: sensorFitBounds[2],
-    height: sensorFitBounds[3],
-  });
+  let bounds = [...sensorFitBounds];
+  if (sensorFitBounds.some((d) => d > 1)) {
+    bounds[0] /= width;
+    bounds[1] /= height;
+    bounds[2] /= width;
+    bounds[3] /= height;
+  }
+  // overlay coordinates are from top left corner so we need to flip y
+  bounds[1] = 1.0 - bounds[1] - bounds[3];
 
-  camera.set({ viewport: cameraViewport });
+  // State.sensorFitBounds = bounds;
 
-  gui.pixelRatio = pixelRatio;
+  overlayEntity.overlay.bounds = bounds;
+
+  camera.viewport = cameraViewport;
 }
 
-window.addEventListener("resize", resize);
+window.addEventListener("resize", onResize);
+onResize();
 
-async function initScene() {
-  const scene = await renderer.loadScene(
-    getURL("assets/models/dof-reference-poe/dof-reference-poe.gltf"),
-    { includeCameras: true }
-  );
-  renderer.add(scene.root);
-
-  const cameraEnt = scene.entities.filter((e) => e.getComponent("Camera"))[0];
-  camera = cameraEnt.getComponent("Camera");
-  camera.set({ exposure: 0.6 });
-
-  postProcessing = renderer.postProcessing({
-    dof: true,
-    dofFocusDistance: 8,
-  });
-  cameraEnt.addComponent(postProcessing);
-
-  gui.addParam(
-    "fieldOfView (rad)",
-    camera,
-    "fov",
-    { min: 0, max: (120 / 180) * Math.PI },
-    (fov) => {
-      camera.set({ fov });
-    }
-  );
-  gui.addParam(
-    "focalLength (mm)",
-    camera,
-    "focalLength",
-    { min: 0, max: 200 },
-    (focalLength) => {
-      camera.set({ focalLength });
-    }
-  );
-  gui.addParam("F-Stop", camera, "fStop", {
-    min: 1.2,
-    max: 32,
-  });
-
-  gui.addHeader("Camera Sensor");
-  gui.addParam("Show sensor frame", rendererState, "showSensorFrame");
-  gui.addParam(
-    "Sensor width (mm)",
-    camera.sensorSize,
-    "0",
-    { min: 0, max: 100 },
-    () => {
-      camera.set({ sensorSize: camera.sensorSize });
-    }
-  );
-
-  gui.addParam(
-    "Sensor height (mm)",
-    camera.sensorSize,
-    "1",
-    {
-      min: 0,
-      max: 100,
-    },
-    () => {
-      camera.set({ sensorSize: camera.sensorSize });
-    }
-  );
-
-  gui.addRadioList(
-    "Sensor fit",
-    camera,
-    "sensorFit",
-    [
-      { name: "Vertical", value: "vertical" },
-      { name: "Horizontal", value: "horizontal" },
-      { name: "Fill", value: "fill" },
-      { name: "Overscan", value: "overscan" },
-    ],
-    () => {
-      // set value again to trigger fieldOfView change
-      camera.set({ sensorFit: camera.sensorFit });
-      resize();
-    }
-  );
-
-  postProcessing.set({ dofDebug: true });
-  gui.addHeader("Depth of Field");
-  gui.addParam("Enabled", postProcessing, "dof");
-  gui.addParam("Debug", postProcessing, "dofDebug");
-  gui.addParam("Focus distance", postProcessing, "dofFocusDistance", {
-    min: 0,
-    max: 100,
-  });
-
-  let rectCanvas = document.createElement("canvas");
-  rectCanvas.width = camera.sensorSize[0] * 10;
-  rectCanvas.height = camera.sensorSize[1] * 10;
-  let rectCtx = rectCanvas.getContext("2d");
-  rectCtx.strokeStyle = "#00DD00";
-  rectCtx.lineWidth = 3;
-  rectCtx.strokeRect(0, 0, rectCanvas.width, rectCanvas.height);
-
-  const rectTexture = ctx.texture2D({
-    data: rectCanvas,
-    width: 360,
-    height: 240,
-  });
-
-  sensorRectOverlay = renderer.overlay({
-    texture: rectTexture,
-    x: 2,
-    y: 2,
-    width: 500,
-    height: 100,
-  });
-  const sensorRectOverlayEnt = renderer.entity([sensorRectOverlay]);
-
-  renderer.add(sensorRectOverlayEnt);
-
-  resize();
-}
-
-initScene();
+window.addEventListener("keydown", ({ key }) => {
+  if (key === "g") gui.enabled = !gui.enabled;
+  if (key === "d") debugOnce = true;
+});
 
 ctx.frame(() => {
-  renderer.draw();
+  renderEngine.update(world.entities);
+  renderEngine.render(world.entities, cameraEntity);
+  overlayRenderer.render(overlayEntity);
 
-  if (camera) {
-    let aspectRatio = camera.aspect;
-    let yfov = camera.fov;
-    let xfov = 2 * Math.atan(aspectRatio * Math.tan(camera.fov / 2));
-    let str = [
-      `X FOV : ${toDegrees(xfov).toFixed(0)}°`,
-      `Y FOV : ${toDegrees(yfov).toFixed(0)}°`,
-      `ASPECT : ${aspectRatio.toFixed(2)}`,
-    ];
-    cameraInfoLabel.setTitle(str.join("\n"));
-    window.dispatchEvent(new CustomEvent("pex-screenshot"));
-  }
+  ctx.debug(debugOnce);
+  debugOnce = false;
 
-  if (sensorRectOverlay) {
-    sensorRectOverlay.enabled = rendererState.showSensorFrame;
-  }
-
+  const aspectRatio = cameraEntity.camera.aspect;
+  const yfov = cameraEntity.camera.fov;
+  const xfov =
+    2 * Math.atan(aspectRatio * Math.tan(cameraEntity.camera.fov / 2));
+  cameraInfoLabel.setTitle(`X FOV : ${utils.toDegrees(xfov).toFixed(0)}°
+Y FOV : ${utils.toDegrees(yfov).toFixed(0)}°
+ASPECT : ${aspectRatio.toFixed(2)}`);
   gui.draw();
+
+  window.dispatchEvent(new CustomEvent("pex-screenshot"));
 });

@@ -16,8 +16,18 @@ export default ({ ctx, resourceCache, descriptors, bloomLevels = 9 }) => [
           [["camera", "exposure"], "", { uniform: "uExposure" }],
 
           [["postProcessing", "dof"], "USE_DOF", { type: "boolean" }],
-          [["postProcessing", "dof", "focusDistance"], "", { uniform: "uFocusDistance" }],
-          [["postProcessing", "dof", "debug"], "", { uniform: "uDOFDebug" }],
+          [["postProcessing", "dof", "type"], "USE_DOF_GUSTAFSSON", { compare: "gustafsson", requires: "USE_DOF" }],
+          [["postProcessing", "dof", "type"], "USE_DOF_UPITIS", { compare: "upitis", requires: "USE_DOF" }],
+          [["postProcessing", "dof", "focusDistance"], "", { uniform: "uFocusDistance", requires: "USE_DOF" }],
+          [["postProcessing", "dof", "samples"], "NUM_SAMPLES", { type: "counter", requires: "USE_DOF" }],
+          [["postProcessing", "dof", "chromaticAberration"], "", { uniform: "uChromaticAberration", requires: "USE_DOF" }],
+          [["postProcessing", "dof", "luminanceThreshold"], "", { uniform: "uLuminanceThreshold", requires: "USE_DOF" }],
+          [["postProcessing", "dof", "luminanceGain"], "", { uniform: "uLuminanceGain", requires: "USE_DOF" }],
+          [["postProcessing", "dof", "shape"], "USE_DOF_SHAPE_PENTAGON", { compare: "pentagon", requires: "USE_DOF_UPITIS" }],
+
+          [["postProcessing", "dof", "focusOnScreenPoint"], "USE_DOF_FOCUS_ON_SCREEN_POINT", { type: "boolean" }],
+          [["postProcessing", "dof", "screenPoint"], "", { uniform: "uScreenPoint", requires: "USE_DOF_FOCUS_ON_SCREEN_POINT" }],
+          [["postProcessing", "dof", "debug"], "USE_DOF_DEBUG", { type: "boolean", requires: "USE_DOF" }],
         ],
         frag: SHADERS.dof.frag,
         target: ({ viewport }) =>

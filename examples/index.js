@@ -15,7 +15,7 @@
     "cameras",
     "frustum-culling",
     "multi-view",
-    // "camera-cinematic-dof",
+    "camera-cinematic-dof",
 
     // Lighting
     "lights",

@@ -34,13 +34,13 @@ const State = {
 
   autofocus: true,
 
-  aa: true,
-  fog: true,
-  bloom: true,
+  aa: false,
+  fog: false,
+  bloom: false,
   dof: true,
-  lut: true,
-  colorCorrection: true,
-  vignette: true,
+  lut: false,
+  colorCorrection: false,
+  vignette: false,
 };
 
 // const pixelRatio = devicePixelRatio;
@@ -82,12 +82,23 @@ const camera = components.camera({
 const postProcessing = components.postProcessing({
   // ssao: true,
   dof: {
+    type: "gustafsson", // upitis
     debug: false,
     focusDistance: 7,
+    samples: 4,
+    focusOnScreenPoint: false,
+    screenPoint: [0.5, 0.5],
+    chromaticAberration: 0.7,
+    luminanceThreshold: 0.7,
+    luminanceGain: 1,
+    shape: "disc",
   },
   aa: {
     type: "fxaa2",
     spanMax: 8,
+  },
+  ao: {
+    type: "ssao",
   },
   fog: {
     color: [0.5, 0.5, 0.5],
@@ -401,18 +412,8 @@ renderEngine.systems
 // GUI
 const gui = createGUI(ctx);
 gui.addColumn("Attachments");
+gui.addFPSMeeter();
 State.msg = "";
-gui.addRadioList(
-  "Testing",
-  State,
-  "msg",
-  ["No AA", "FXAA 1", "FXAA 3", "FXAA 3 lod", "FXAA 3 LOW", "FXAA 3 HIGH"].map(
-    (name, value) => ({
-      name,
-      value,
-    })
-  )
-);
 gui.addRadioList(
   "Debug Render",
   renderEngine.renderers.find(
@@ -565,28 +566,6 @@ const enablePostProPass = (name) => {
     delete postProcessing[name];
   }
 };
-gui.addParam("Dof", State, "dof", null, () => {
-  enablePostProPass("dof");
-});
-// gui.addParam("DOF Debug", postProcessing, "dofDebug");
-gui.addParam("DOF Focus Distance", postProcessing.dof, "focusDistance", {
-  min: 0,
-  max: 100,
-});
-// gui.addParam("DOF Autofocus", State, "autofocus");
-gui.addParam("Camera FoV", camera, "fov", {
-  min: 0,
-  max: (Math.PI / 3) * 2,
-});
-gui.addParam("Camera FocalLength", camera, "focalLength", {
-  min: 10,
-  max: 200,
-});
-gui.addParam("Camera f-stop", camera, "fStop", {
-  min: 0,
-  max: 5.6,
-});
-
 gui.addParam("AA", State, "aa", null, () => {
   enablePostProPass("aa");
 });
@@ -672,6 +651,58 @@ gui.addParam("Vignette intensity", postProcessing.vignette, "intensity", {
 
 gui.addParam("Opacity", postProcessing, "opacity", { min: 0, max: 1 });
 
+gui.addColumn("Depth of Field");
+gui.addParam("Enabled", State, "dof", null, () => {
+  enablePostProPass("dof");
+});
+gui.addRadioList(
+  "Type",
+  cameraEntity.postProcessing.dof,
+  "type",
+  ["gustafsson", "upitis"].map((value) => ({ name: value, value }))
+);
+gui.addParam("Focus Distance", postProcessing.dof, "focusDistance", {
+  min: 0,
+  max: 100,
+});
+gui.addParam("Samples", postProcessing.dof, "samples", {
+  min: 1,
+  max: 6,
+  step: 1,
+});
+gui.addParam(
+  "Chromatic Aberration",
+  postProcessing.dof,
+  "chromaticAberration",
+  {
+    min: 0,
+    max: 4,
+  }
+);
+gui.addParam("Luminance Threshold", postProcessing.dof, "luminanceThreshold", {
+  min: 0,
+  max: 2,
+});
+gui.addParam("Luminance Gain", postProcessing.dof, "luminanceGain", {
+  min: 0,
+  max: 2,
+});
+gui.addRadioList(
+  "Shape",
+  postProcessing.dof,
+  "shape",
+  ["disc", "pentagon"].map((value) => ({ name: value, value }))
+);
+gui.addParam("Focus On Screen Point", postProcessing.dof, "focusOnScreenPoint");
+gui.addParam("Screen Point", postProcessing.dof.screenPoint, "0", {
+  min: 0,
+  max: 1,
+});
+gui.addParam("Screen Point", postProcessing.dof.screenPoint, "1", {
+  min: 0,
+  max: 1,
+});
+
 enablePostProPass("dof");
 enablePostProPass("aa");
 enablePostProPass("fog");
@@ -679,6 +710,20 @@ enablePostProPass("bloom");
 enablePostProPass("lut");
 enablePostProPass("colorCorrection");
 enablePostProPass("vignette");
+
+gui.addColumn("Camera");
+gui.addParam("FoV", camera, "fov", {
+  min: 0,
+  max: (Math.PI / 3) * 2,
+});
+gui.addParam("FocalLength", camera, "focalLength", {
+  min: 10,
+  max: 200,
+});
+gui.addParam("F-Stop", cameraEntity.camera, "fStop", {
+  min: 1.2,
+  max: 32,
+});
 
 // Events
 let debugOnce = false;

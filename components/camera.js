@@ -19,12 +19,13 @@ export default (options) => {
     culling: false,
     frustum: new Float32Array(24),
     exposure: 1,
+
     focalLength: 50, // mm
     fStop: 2.8,
-
     sensorSize: [36, 24], // mm
     actualSensorHeight: 24, // mm
     sensorFit: "vertical",
+    // view
     ...options,
   };
   if (camera.projection === "orthographic") {
