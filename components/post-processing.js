@@ -22,7 +22,7 @@ export const ao = (options) => ({
   type: "sao",
   samples: 11,
   intensity: 1,
-  radius: 12,
+  radius: 100,
   bias: 0.001,
   blurRadius: 0.5,
   blurSharpness: 10,
