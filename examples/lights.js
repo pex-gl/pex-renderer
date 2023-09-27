@@ -215,7 +215,7 @@ const viewportToCanvasPosition = (viewport) => [
 const getViewportPosition = (layer, offset = [10, 10]) =>
   vec2.add(
     viewportToCanvasPosition(
-      cameraEntities.find((e) => e.layer === layer).camera.viewport
+      cameraEntities.find((entity) => entity.layer === layer).camera.viewport
     ),
     offset
   );

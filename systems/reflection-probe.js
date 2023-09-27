@@ -363,7 +363,7 @@ export default ({ ctx, resourceCache }) => ({
       if (!entity.reflectionProbe) continue;
 
       const skyboxEntities = entities
-        .filter((e) => e.skybox)
+        .filter((entity) => entity.skybox)
         .filter(
           (skyboxEntity) => !entity.layer || entity.layer == skyboxEntity.layer
         );

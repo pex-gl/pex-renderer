@@ -289,8 +289,8 @@ const pointLightEntity = createEntity({
   }),
   pointLight: components.pointLight({
     color: [1, 0, 0, 1],
-    intensity: 0.05,
-    radius: 3,
+    intensity: 10,
+    range: 10,
     castShadows: true,
   }),
 });

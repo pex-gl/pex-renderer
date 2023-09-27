@@ -1,8 +1,8 @@
 import { vec3, mat4 } from "pex-math";
 import { aabb } from "pex-geom";
 
-export default ({ drawMeshes, renderGraph, resourceCache, descriptors }) => ({
-  directionalLight(lightEntity, entities, shadowCastingEntities, renderers) {
+export default ({ renderGraph, resourceCache, descriptors, drawMeshes }) => ({
+  directionalLight(lightEntity, entities, renderers, shadowCastingEntities) {
     const light = lightEntity.directionalLight;
     light._sceneBboxInLightSpace ??= aabb.create();
 
@@ -93,12 +93,9 @@ export default ({ drawMeshes, renderGraph, resourceCache, descriptors }) => ({
     });
 
     light._shadowMap = shadowMap; // TODO: we borrow it for a frame
-    // ctx.submit(shadowMapDrawCommand, () => {
-    // drawMeshes(null, true, light, entities, shadowCastingEntities);
-    // });
   },
 
-  spotLight(lightEntity, entities, shadowCastingEntities, renderers) {
+  spotLight(lightEntity, entities, renderers, shadowCastingEntities) {
     const light = lightEntity.spotLight || lightEntity.areaLight;
     light._sceneBboxInLightSpace ??= aabb.create();
 
@@ -188,7 +185,7 @@ export default ({ drawMeshes, renderGraph, resourceCache, descriptors }) => ({
     light._shadowMap = shadowMap; // TODO: we borrow it for a frame
   },
 
-  pointLight(lightEntity, entities, shadowCastingEntities, renderers) {
+  pointLight(lightEntity, entities, renderers) {
     const light = lightEntity.pointLight;
 
     let shadowCubemapDesc = descriptors.pointLightShadows.shadowCubemapDesc;
@@ -267,8 +264,5 @@ export default ({ drawMeshes, renderGraph, resourceCache, descriptors }) => ({
     }
 
     light._shadowCubemap = shadowCubemap; // TODO: we borrow it for a frame
-    // ctx.submit(shadowMapDrawCommand, () => {
-    // drawMeshes(null, true, light, entities, shadowCastingEntities);
-    // });
   },
 });

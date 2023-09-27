@@ -172,7 +172,7 @@ ctx.frame(() => {
   renderEngine.update(world.entities);
   renderEngine.render(
     world.entities,
-    world.entities.filter((e) => e.camera)
+    world.entities.filter((entity) => entity.camera)
   );
 
   gui.draw();

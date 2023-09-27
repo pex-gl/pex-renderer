@@ -226,7 +226,7 @@ export default ({
     ],
   },
   {
-    name: "blit",
+    name: "final",
     commands: [
       {
         name: "main",

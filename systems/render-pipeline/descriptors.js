@@ -152,6 +152,8 @@ void main() {
         : ctx.PixelFormat.RGBA8,
       encoding: ctx.Encoding.Linear,
     },
+  },
+  blit: {
     pipelineDesc: {
       // vert: /* glsl */ `
       //     attribute vec2 aPosition;
@@ -189,9 +191,6 @@ void main () {
   gl_FragColor = color;
 }
           `,
-    },
-    passDesc: {
-      color: [],
     },
   },
 });

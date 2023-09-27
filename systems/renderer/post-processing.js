@@ -95,7 +95,7 @@ export default ({ ctx, resourceCache }) => {
       for (let i = 0; i < passes.length; i++) {
         const pass = passes[i];
 
-        if (pass.name !== "blit" && !postProcessing[pass.name]) continue;
+        if (pass.name !== "final" && !postProcessing[pass.name]) continue;
 
         for (let j = 0; j < pass.commands.length; j++) {
           const passCommand = pass.commands[j];
@@ -155,7 +155,7 @@ export default ({ ctx, resourceCache }) => {
           };
 
           // TODO: move to descriptors
-          if (pass.name === "blit") {
+          if (pass.name === "final") {
             uniforms.uTextureEncoding = uniforms.uTexture.encoding;
           }
 

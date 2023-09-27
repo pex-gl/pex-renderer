@@ -1,8 +1,8 @@
-import { vec3, utils, avec4 } from "pex-math";
+import { vec3, avec4, utils } from "pex-math";
 
 import addDescriptors from "./descriptors.js";
-import addPostProcessingPasses from "./post-processing.js";
 import addShadowMapping from "./shadow-mapping.js";
+import addPostProcessingPasses from "./post-processing-passes.js";
 
 import { NAMESPACE, TEMP_VEC3, TEMP_VEC4 } from "../../utils.js";
 
@@ -30,93 +30,13 @@ const cullEntities = (entities, camera) =>
       (entity.transform && isEntityInFrustum(entity, camera.frustum))
   );
 
-function drawMeshes({
-  viewport,
-  cameraEntity,
-  shadowMapping,
-  shadowMappingLight,
-  entitiesInView,
-  // forward, // TODO: is not used. remove?
-  renderView: renderViewUpstream,
-  renderers,
-  drawTransparent,
-  backgroundColorTexture,
-  shadowQuality,
-}) {
-  // if (backgroundColorTexture) {
-  //   ctx.update(backgroundColorTexture, { mipmap: true });
-  // }
-
-  //FIXME: code smell
-  const renderView = renderViewUpstream || { viewport };
-
-  //FIXME: code smell
-  if (cameraEntity && !renderView.camera) {
-    renderView.cameraEntity = cameraEntity;
-    renderView.camera = cameraEntity.camera;
-  }
-  if (shadowMappingLight) {
-    renderView.camera = {
-      projectionMatrix: shadowMappingLight._projectionMatrix,
-      viewMatrix: shadowMappingLight._viewMatrix,
-    };
-  }
-
-  if (shadowMapping) {
-    for (let i = 0; i < renderers.length; i++) {
-      const renderer = renderers[i];
-      if (renderer.renderStages.shadow) {
-        renderer.renderStages.shadow(renderView, entitiesInView, {
-          shadowMapping: true,
-          shadowMappingLight,
-        });
-      }
-    }
-  } else {
-    if (!drawTransparent) {
-      for (let i = 0; i < renderers.length; i++) {
-        const renderer = renderers[i];
-        if (renderer.renderStages.opaque) {
-          const entities = renderView.camera.culling
-            ? cullEntities(entitiesInView, renderView.camera)
-            : entitiesInView;
-          renderer.renderStages.opaque(renderView, entities, {
-            shadowQuality,
-          });
-        }
-      }
-      for (let i = 0; i < renderers.length; i++) {
-        const renderer = renderers[i];
-        if (renderer.renderStages.background) {
-          renderer.renderStages.background(renderView, entitiesInView, {
-            shadowQuality,
-          });
-        }
-      }
-    } else {
-      //TODO: capture color buffer and blur it for transmission/refraction
-      for (let i = 0; i < renderers.length; i++) {
-        const renderer = renderers[i];
-        if (renderer.renderStages.transparent) {
-          const entities = renderView.camera.culling
-            ? cullEntities(entitiesInView, renderView.camera)
-            : entitiesInView;
-          renderer.renderStages.transparent(renderView, entities, {
-            backgroundColorTexture,
-            shadowQuality,
-          });
-        }
-      }
-    }
-  }
-}
-
 /**
  * Render pipeline system
  *
  * Adds:
  * - "_near", "_far" and "_sceneBboxInLightSpace" to light components that cast shadows
  * - "_shadowCubemap" to pointLight components and "_shadowMap" to other light components
+ * - "_targets" to postProcessing components
  * @returns {import("../../types.js").System}
  */
 export default ({
@@ -132,11 +52,10 @@ export default ({
   shadowQuality,
   outputEncoding: outputEncoding || ctx.Encoding.Linear,
   renderers: [],
+
   descriptors: addDescriptors(ctx),
   postProcessingPasses: null,
   shadowMapping: null,
-  drawMeshes,
-  cullEntities,
 
   checkLight(light, lightEntity) {
     if (!lightEntity._transform) {
@@ -154,17 +73,95 @@ export default ({
     }
   },
 
+  cullEntities,
+
+  drawMeshes({
+    viewport,
+    cameraEntity,
+    shadowMapping,
+    shadowMappingLight,
+    entitiesInView,
+    renderView: renderViewUpstream,
+    renderers,
+    drawTransparent,
+    backgroundColorTexture,
+    shadowQuality,
+  }) {
+    // if (backgroundColorTexture) {
+    //   ctx.update(backgroundColorTexture, { mipmap: true });
+    // }
+
+    //FIXME: code smell
+    const renderView = renderViewUpstream || { viewport };
+
+    //FIXME: code smell
+    if (cameraEntity && !renderView.camera) {
+      renderView.cameraEntity = cameraEntity;
+      renderView.camera = cameraEntity.camera;
+    }
+    if (shadowMappingLight) {
+      renderView.camera = {
+        projectionMatrix: shadowMappingLight._projectionMatrix,
+        viewMatrix: shadowMappingLight._viewMatrix,
+      };
+    }
+
+    if (shadowMapping) {
+      for (let i = 0; i < renderers.length; i++) {
+        const renderer = renderers[i];
+        if (renderer.renderStages.shadow) {
+          renderer.renderStages.shadow(renderView, entitiesInView, {
+            shadowMapping: true,
+            shadowMappingLight,
+          });
+        }
+      }
+    } else {
+      if (!drawTransparent) {
+        for (let i = 0; i < renderers.length; i++) {
+          const renderer = renderers[i];
+          if (renderer.renderStages.opaque) {
+            const entities = renderView.camera.culling
+              ? this.cullEntities(entitiesInView, renderView.camera)
+              : entitiesInView;
+            renderer.renderStages.opaque(renderView, entities, {
+              shadowQuality,
+            });
+          }
+        }
+        for (let i = 0; i < renderers.length; i++) {
+          const renderer = renderers[i];
+          if (renderer.renderStages.background) {
+            renderer.renderStages.background(renderView, entitiesInView, {
+              shadowQuality,
+            });
+          }
+        }
+      } else {
+        //TODO: capture color buffer and blur it for transmission/refraction
+        for (let i = 0; i < renderers.length; i++) {
+          const renderer = renderers[i];
+          if (renderer.renderStages.transparent) {
+            const entities = renderView.camera.culling
+              ? this.cullEntities(entitiesInView, renderView.camera)
+              : entitiesInView;
+            renderer.renderStages.transparent(renderView, entities, {
+              backgroundColorTexture,
+              shadowQuality,
+            });
+          }
+        }
+      }
+    }
+  },
+
   update(entities, options = {}) {
     let { renderView, renderers, drawToScreen } = options;
 
     const shadowCastingEntities = entities.filter(
-      (e) => e.geometry && e.material?.castShadows
+      (entity) => entity.geometry && entity.material?.castShadows
     );
-    const cameraEntities = entities.filter((e) => e.camera);
-    const directionalLightEntities = entities.filter((e) => e.directionalLight);
-    const pointLightEntities = entities.filter((e) => e.pointLight);
-    const spotLightEntities = entities.filter((e) => e.spotLight);
-    const areaLightEntities = entities.filter((e) => e.areaLight);
+    const cameraEntities = entities.filter((entity) => entity.camera);
 
     renderView ||= {
       camera: cameraEntities[0].camera,
@@ -172,93 +169,74 @@ export default ({
     };
 
     // Update shadow maps
-    this.shadowMapping ||= addShadowMapping({
-      drawMeshes,
-      renderGraph,
-      resourceCache,
-      descriptors: this.descriptors,
-    });
+    if (shadowCastingEntities.length) {
+      this.shadowMapping ||= addShadowMapping({
+        renderGraph,
+        resourceCache,
+        descriptors: this.descriptors,
+        drawMeshes: this.drawMeshes,
+      });
 
-    for (let i = 0; i < directionalLightEntities.length; i++) {
-      const entity = directionalLightEntities[i];
+      for (let i = 0; i < entities.length; i++) {
+        const entity = entities[i];
 
-      // options.shadowPass !== false // FIXME: why this was here?
-      if (
-        entity.directionalLight.castShadows &&
-        this.checkLight(entity.directionalLight, entity)
-      ) {
-        this.shadowMapping.directionalLight(
-          entity,
-          entities,
-          shadowCastingEntities,
-          renderers
-        );
-      }
-    }
-
-    for (let i = 0; i < pointLightEntities.length; i++) {
-      const entity = pointLightEntities[i];
-
-      if (
-        entity.pointLight.castShadows &&
-        this.checkLight(entity.pointLight, entity)
-      ) {
-        this.shadowMapping.pointLight(
-          entity,
-          entities,
-          shadowCastingEntities,
-          renderers
-        );
-      }
-    }
-
-    for (let i = 0; i < spotLightEntities.length; i++) {
-      const entity = spotLightEntities[i];
-
-      if (
-        entity.spotLight.castShadows &&
-        this.checkLight(entity.spotLight, entity)
-      ) {
-        this.shadowMapping.spotLight(
-          entity,
-          entities,
-          shadowCastingEntities,
-          renderers
-        );
-      }
-    }
-
-    for (let i = 0; i < areaLightEntities.length; i++) {
-      const entity = areaLightEntities[i];
-
-      if (
-        entity.areaLight.castShadows &&
-        this.checkLight(entity.areaLight, entity)
-      ) {
-        this.shadowMapping.spotLight(
-          entity,
-          entities,
-          shadowCastingEntities,
-          renderers
-        );
+        if (
+          entity.directionalLight?.castShadows &&
+          this.checkLight(entity.directionalLight, entity)
+        ) {
+          this.shadowMapping.directionalLight(
+            entity,
+            entities,
+            renderers,
+            shadowCastingEntities
+          );
+        }
+        if (
+          entity.pointLight?.castShadows &&
+          this.checkLight(entity.pointLight, entity)
+        ) {
+          this.shadowMapping.pointLight(entity, entities, renderers);
+        }
+        if (
+          entity.spotLight?.castShadows &&
+          this.checkLight(entity.spotLight, entity)
+        ) {
+          this.shadowMapping.spotLight(
+            entity,
+            entities,
+            renderers,
+            shadowCastingEntities
+          );
+        }
+        if (
+          entity.areaLight?.castShadows &&
+          this.checkLight(entity.areaLight, entity)
+        ) {
+          this.shadowMapping.spotLight(
+            entity,
+            entities,
+            renderers,
+            shadowCastingEntities
+          );
+        }
       }
     }
 
     // TODO: this also get entities with shadowmap regardless of castShadows changes
     const shadowMaps = entities
       .map(
-        (e) =>
-          e.directionalLight?._shadowMap ||
-          e.spotLight?._shadowMap ||
-          e.areaLight?._shadowMap ||
-          e.pointLight?._shadowCubemap
+        (entity) =>
+          entity.directionalLight?._shadowMap ||
+          entity.spotLight?._shadowMap ||
+          entity.areaLight?._shadowMap ||
+          entity.pointLight?._shadowCubemap
       )
       .filter(Boolean);
 
     // Filter entities by layer
     const layer = renderView.camera.layer;
     const entitiesInView = layer
-      ? entities.filter((e) => !e.layer || e.layer === layer)
+      ? entities.filter((entity) => !entity.layer || entity.layer === layer)
       : entities;
 
     const postProcessing = renderView.cameraEntity.postProcessing;
@@ -313,7 +291,7 @@ export default ({
         clearDepth: 1,
       }),
       render: () => {
-        drawMeshes({
+        this.drawMeshes({
           viewport: renderView.viewport,
           cameraEntity: renderView.cameraEntity,
           shadowMapping: false,
@@ -328,7 +306,7 @@ export default ({
 
     // Grab pass
     let grabPassColorCopyTexture;
-    if (entitiesInView.some((e) => e.material?.transmission)) {
+    if (entitiesInView.some((entity) => entity.material?.transmission)) {
       const viewport = [
         0,
         0,
@@ -386,7 +364,7 @@ export default ({
         depth: outputDepthTexture,
       }),
       render: () => {
-        drawMeshes({
+        this.drawMeshes({
           viewport: renderView.viewport,
           cameraEntity: renderView.cameraEntity,
           shadowMapping: false,
@@ -414,7 +392,6 @@ export default ({
         ctx,
         resourceCache,
         descriptors: this.descriptors,
-        cache: this.cache,
       });
 
       renderGraph.renderPass({
@@ -444,9 +421,7 @@ export default ({
         name: "drawBlitFullScreenTriangleCmd",
         attributes: fullscreenTriangle.attributes,
         count: fullscreenTriangle.count,
-        pipeline: resourceCache.pipeline(
-          this.descriptors.postProcessing.pipelineDesc
-        ),
+        pipeline: resourceCache.pipeline(this.descriptors.blit.pipelineDesc),
       };
 
       renderGraph.renderPass({

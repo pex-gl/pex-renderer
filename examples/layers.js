@@ -194,12 +194,12 @@ const drawTexturesMixedCmd = {
   pipeline: ctx.pipeline({
     vert: /* glsl */ `
       attribute vec2 aPosition;
-      attribute vec2 aTexCoord;
+      attribute vec2 aTexCoord0;
 
       varying vec2 vTexCoord0;
 
       void main() {
-        vTexCoord0 = aTexCoord;
+        vTexCoord0 = aTexCoord0;
 
         gl_Position = vec4(aPosition, 0.0, 1.0);
       }
@@ -284,8 +284,8 @@ let delta = 0;
 ctx.frame(() => {
   delta += 0.01;
 
-  const cameraEntity = world.entities.find((e) => e.camera);
-  const cameraEntities = world.entities.filter((e) => e.camera);
+  const cameraEntity = world.entities.find((entity) => entity.camera);
+  const cameraEntities = world.entities.filter((entity) => entity.camera);
 
   renderEngine.systems.find(
     (renderer) => renderer.type == "render-pipeline-system"

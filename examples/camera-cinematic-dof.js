@@ -80,7 +80,7 @@ const [scene] = await loaders.gltf(
 scene.entities[1].transform.position[0] -= 0.3;
 world.entities.push(...scene.entities);
 
-const cameraEntity = scene.entities.filter((e) => e.camera)[0];
+const cameraEntity = scene.entities.filter((entity) => entity.camera)[0];
 cameraEntity.camera.fStop = 1.3;
 const postProcessing = components.postProcessing({
   dof: components.dof({

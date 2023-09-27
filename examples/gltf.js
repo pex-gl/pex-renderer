@@ -237,8 +237,10 @@ async function loadScene(url, grid) {
 
   // Add camera for models lacking one
   if (!grid) {
-    cameraEntity = scene.entities.find((e) => e.camera);
-    animationEntity = scene.entities.find((e) => e.animation || e.animations);
+    cameraEntity = scene.entities.find((entity) => entity.camera);
+    animationEntity = scene.entities.find(
+      (entity) => entity.animation || entity.animations
+    );
 
     if (!cameraEntity) {
       // Update needed for transform.worldBounds
@@ -343,7 +345,7 @@ async function renderModel(model, grid) {
 }
 
 const nextCamera = () => {
-  const cameras = world.entities.filter((e) => e.camera);
+  const cameras = world.entities.filter((entity) => entity.camera);
   const next = cameras[(cameras.indexOf(cameraEntity) + 1) % cameras.length];
 
   if (next) {
@@ -353,7 +355,7 @@ const nextCamera = () => {
   }
 };
 const nextAnimation = () => {
-  const animationsEntity = world.entities.find((e) => e.animations);
+  const animationsEntity = world.entities.find((entity) => entity.animations);
   if (animationsEntity) {
     const index = animationsEntity.animations.findIndex(
       (animation) => animation.playing
@@ -415,7 +417,9 @@ gui.addTexture2DList(
     const scenes = State.scenes.length ? State.scenes : [State.scene];
 
     const entitiesIds = [
-      ...scenes.map((scene) => scene.entities.map((e) => e.id)).flat(),
+      ...scenes
+        .map((scene) => scene.entities.map((entity) => entity.id))
+        .flat(),
       floorEntity?.id,
       cameraEntity?.id,
     ].filter(Boolean);
