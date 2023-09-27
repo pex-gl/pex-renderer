@@ -1,6 +1,135 @@
 import { postProcessing as SHADERS } from "pex-shaders";
+import random from "pex-random";
 
-export default ({ ctx, resourceCache, descriptors, bloomLevels = 9 }) => [
+export default ({
+  ctx,
+  resourceCache,
+  descriptors,
+  bloomLevels = 9,
+  aoScale = 1,
+  aoNoiseTexture,
+  aoMainTarget,
+}) => [
+  {
+    name: "ao",
+    commands: [
+      {
+        name: "main",
+        frag: SHADERS.sao.frag,
+        // prettier-ignore
+        flagDefs: [
+          [["camera", "near"], "", { uniform: "uNear" }],
+          [["camera", "far"], "", { uniform: "uFar" }],
+          [["camera", "fov"], "", { uniform: "uFov" }],
+
+          [["postProcessing", "ao"], "USE_AO", { type: "boolean" }],
+
+          [["postProcessing", "ao", "type"], "USE_AO_SAO", { compare: "sao", requires: "USE_AO" }],
+          [["postProcessing", "ao", "samples"], "NUM_SAMPLES", { type: "counter", requires: "USE_AO_SAO" }],
+          [["postProcessing", "ao", "intensity"], "", { uniform: "uIntensity", requires: "USE_AO_SAO" }],
+          [["postProcessing", "ao", "bias"], "", { uniform: "uBias", requires: "USE_AO_SAO" }],
+          [["postProcessing", "ao", "radius"], "", { uniform: "uRadius", requires: "USE_AO_SAO" }],
+          [["postProcessing", "ao", "brightness"], "", { uniform: "uBrightness", requires: "USE_AO_SAO" }],
+          [["postProcessing", "ao", "contrast"], "", { uniform: "uContrast", requires: "USE_AO_SAO" }],
+        ],
+        uniforms: () => {
+          if (!aoNoiseTexture) {
+            const localPRNG = random.create("0");
+
+            const size = 128;
+            const sizeSquared = 128 ** 2;
+            const channelSize = ctx.gl.RG ? 2 : 4;
+            const ssaoNoiseData = new Float32Array(sizeSquared * channelSize);
+            for (let i = 0; i < sizeSquared; i++) {
+              ssaoNoiseData[i * channelSize + 0] = localPRNG.float(-1, 1);
+              ssaoNoiseData[i * channelSize + 1] = localPRNG.float(-1, 1);
+              if (!ctx.gl.RG) {
+                ssaoNoiseData[i * channelSize + 2] = 0;
+                ssaoNoiseData[i * channelSize + 3] = 1;
+              }
+            }
+            aoNoiseTexture = ctx.texture2D({
+              width: size,
+              height: size,
+              data: ssaoNoiseData,
+              pixelFormat: ctx.gl.RG
+                ? ctx.PixelFormat.RG32F
+                : ctx.PixelFormat.RGBA32F,
+              encoding: ctx.Encoding.Linear,
+              wrap: ctx.Wrap.Repeat,
+              mag: ctx.Filter.Linear,
+              min: ctx.Filter.Linear,
+            });
+          }
+          return { uNoiseTexture: aoNoiseTexture };
+        },
+        passDesc: () => ({
+          clearColor: [0, 0, 0, 1],
+        }),
+        target: ({ viewport }) => {
+          if (!aoMainTarget) {
+            aoMainTarget = ctx.texture2D({
+              ...descriptors.postProcessing.outputTextureDesc,
+              pixelFormat: ctx.PixelFormat.RGBA8,
+              width: viewport[2] * aoScale,
+              height: viewport[3] * aoScale,
+            });
+          } else {
+            ctx.update(aoMainTarget, {
+              width: viewport[2] * aoScale,
+              height: viewport[3] * aoScale,
+            });
+          }
+          return aoMainTarget;
+        },
+        size: ({ viewport }) => [viewport[2] * aoScale, viewport[3] * aoScale],
+      },
+      {
+        name: "blurHorizontal",
+        frag: SHADERS.bilateralBlur.frag,
+        // prettier-ignore
+        flagDefs: [
+          [["camera", "near"], "", { uniform: "uNear" }],
+          [["camera", "far"], "", { uniform: "uFar" }],
+          [["postProcessing", "ao", "blurSharpness"], "", { uniform: "uSharpness" }],
+        ],
+        uniforms: ({ cameraEntity: entity }) => ({
+          uDirection: [entity.postProcessing.ao.blurRadius, 0],
+        }),
+        passDesc: () => ({
+          clearColor: [1, 1, 0, 1],
+        }),
+        source: () => "ao.main",
+        target: ({ viewport }) =>
+          resourceCache.texture2D({
+            ...descriptors.postProcessing.outputTextureDesc,
+            pixelFormat: ctx.PixelFormat.RGBA8,
+            width: viewport[2] * aoScale,
+            height: viewport[3] * aoScale,
+          }),
+        size: ({ viewport }) => [viewport[2] * aoScale, viewport[3] * aoScale],
+      },
+      {
+        name: "blurVertical",
+        frag: SHADERS.bilateralBlur.frag,
+        // prettier-ignore
+        flagDefs: [
+          [["camera", "near"], "", { uniform: "uNear" }],
+          [["camera", "far"], "", { uniform: "uFar" }],
+          [["postProcessing", "ao", "blurSharpness"], "", { uniform: "uSharpness" }],
+        ],
+        passDesc: () => ({
+          clearColor: [1, 1, 0, 1],
+        }),
+        uniforms: ({ cameraEntity: entity }) => ({
+          uDirection: [0, entity.postProcessing.ao.blurRadius],
+        }),
+        source: () => "ao.blurHorizontal",
+        target: () => "ao.main",
+        size: ({ viewport }) => [viewport[2] * aoScale, viewport[3] * aoScale],
+      },
+    ],
+  },
   {
     name: "dof",
     commands: [
@@ -109,6 +238,7 @@ export default ({ ctx, resourceCache, descriptors, bloomLevels = 9 }) => [
           [["camera", "viewMatrix"], "", { uniform: "uViewMatrix" }],
           [["camera", "near"], "", { uniform: "uNear" }],
           [["camera", "far"], "", { uniform: "uFar" }],
+          [["camera", "fov"], "", { uniform: "uFov" }],
           [["camera", "exposure"], "", { uniform: "uExposure" }],
 
           // AA
@@ -160,6 +290,7 @@ export default ({ ctx, resourceCache, descriptors, bloomLevels = 9 }) => [
           // Output
           [["postProcessing", "opacity"], "", { uniform: "uOpacity" }],
         ],
+        // uniform: () => ({ uTextureEncoding: uniforms.uTexture.encoding }),
         source: ({ cameraEntity }) =>
           cameraEntity.postProcessing.dof ? "dof.main" : "color",
       },

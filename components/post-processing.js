@@ -19,7 +19,15 @@ export default (options) => ({
 });
 
 export const ao = (options) => ({
-  type: "ssao",
+  type: "sao",
+  samples: 11,
+  intensity: 1,
+  radius: 12,
+  bias: 0.001,
+  blurRadius: 0.5,
+  blurSharpness: 10,
+  brightness: 0,
+  contrast: 1,
   ...options,
 });
 export const dof = (options) => ({

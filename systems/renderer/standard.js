@@ -24,6 +24,7 @@ const flagDefs = [
   [["options", "reflectionProbes", "length"], "USE_REFLECTION_PROBES", { type: "boolean" }],
   [["options", "useTonemapping"], "USE_TONEMAPPING", { type: "boolean" }],
   [["options", "envMapSize"], "", { uniform: "uEnvMapSize" }], // Blurred env map size
+  [["options", "useAO"], "USE_AO", { type: "boolean" }],
   [["material", "unlit"], "USE_UNLIT_WORKFLOW", { type: "boolean", fallback: "USE_METALLIC_ROUGHNESS_WORKFLOW" }],
   [["material", "blend"], "USE_BLEND", { type: "boolean" }],
   [["skin"], "USE_SKIN"],
@@ -438,11 +439,8 @@ export default ({ ctx }) => {
         areaLights: [],
         reflectionProbes: entities.filter((e) => e.reflectionProbe),
         depthPassOnly: shadowMapping,
-        // useSSAO: false,
-        // postProcessingCmp &&
-        // postProcessingCmp.enabled &&
-        // postProcessingCmp.ssao,
-        useTonemapping: false, //!(postProcessingCmp && postProcessingCmp.enabled),
+        useAO: !!(cameraEntity?.postProcessing?.ao?.type === "sao"),
+        useTonemapping: false,
         shadowQuality,
         debugRender,
       };
@@ -450,7 +448,7 @@ export default ({ ctx }) => {
       const sharedUniforms = {
         //uOutputEncoding: renderPipelineSystem.outputEncoding,
         uOutputEncoding: ctx.Encoding.Linear,
-        uScreenSize: [renderView.viewport[2], renderView.viewport[3]],
+        uViewportSize: [renderView.viewport[2], renderView.viewport[3]],
       };
 
       if (!shadowMapping) {
@@ -519,6 +517,12 @@ export default ({ ctx }) => {
         cachedUniforms.uReflectance =
           material.reflectance !== undefined ? material.reflectance : 0.5;
         cachedUniforms.uExposure = 1.0;
+        if (pipelineOptions.useAO) {
+          cachedUniforms.uAO =
+            cameraEntity.postProcessing?._targets?.[
+              renderView.cameraEntity.id
+            ]?.["ao.main"] || dummyTexture2D;
+        }
 
         cachedUniforms.uPointSize = material.pointSize || 1;
         // TODO: why is this here

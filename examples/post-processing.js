@@ -34,13 +34,14 @@ const State = {
 
   autofocus: true,
 
-  aa: false,
-  fog: false,
-  bloom: false,
+  aa: true,
+  ao: true,
+  fog: true,
+  bloom: true,
   dof: true,
-  lut: false,
-  colorCorrection: false,
-  vignette: false,
+  lut: true,
+  colorCorrection: true,
+  vignette: true,
 };
 
 // const pixelRatio = devicePixelRatio;
@@ -80,7 +81,6 @@ const camera = components.camera({
   fStop: 0.7,
 });
 const postProcessing = components.postProcessing({
-  // ssao: true,
   dof: {
     type: "gustafsson", // upitis
     debug: false,
@@ -98,7 +98,15 @@ const postProcessing = components.postProcessing({
     spanMax: 8,
   },
   ao: {
-    type: "ssao",
+    type: "sao",
+    samples: 11,
+    intensity: 1,
+    radius: 12,
+    bias: 0.001,
+    blurRadius: 0.5,
+    blurSharpness: 10,
+    brightness: 0,
+    contrast: 1,
   },
   fog: {
     color: [0.5, 0.5, 0.5],
@@ -420,7 +428,7 @@ gui.addRadioList(
     (renderer) => renderer.type == "standard-renderer"
   ),
   "debugRender",
-  ["", "data.normalView", "data.emissiveColor", "ao"].map((value) => ({
+  ["", "data.normalView", "data.emissiveColor", "data.ao"].map((value) => ({
     name: value || "No debug",
     value,
   }))
@@ -431,10 +439,12 @@ gui.addRadioList(
     (renderer) => renderer.type == "post-processing-renderer"
   ),
   "debugRender",
-  ["", "dof.main", "bloom.threshold", "bloom.downSample[3]"].map((value) => ({
-    name: value || "No debug",
-    value,
-  }))
+  ["", "ao.main", "dof.main", "bloom.threshold", "bloom.downSample[3]"].map(
+    (value) => ({
+      name: value || "No debug",
+      value,
+    })
+  )
 );
 const guiNormalControl = gui.addTexture2D("Normal", null, { flipY: true });
 const guiDepthControl = gui.addTexture2D("Depth", null, { flipY: true });
@@ -540,24 +550,6 @@ gui.addParam("Enabled", State, "enabled", null, () => {
   }
 });
 gui.addParam("Exposure", camera, "exposure", { min: 0, max: 5 });
-// gui.addParam("SSAO", postProcessing, "ssao");
-// gui.addParam("SSAO radius", postProcessing, "ssaoRadius", {
-//   min: 0,
-//   max: 30,
-// });
-// gui.addParam("SSAO intensity", postProcessing, "ssaoIntensity", {
-//   min: 0,
-//   max: 10,
-// });
-// gui.addParam("SSAO bias", postProcessing, "ssaoBias", { min: 0, max: 1 });
-// gui.addParam("SSAO blur radius", postProcessing, "ssaoBlurRadius", {
-//   min: 0,
-//   max: 5,
-// });
-// gui.addParam("SSAO blur sharpness", postProcessing, "ssaoBlurSharpness", {
-//   min: 0,
-//   max: 20,
-// });
 const enablePostProPass = (name) => {
   if (State[name]) {
     if (State[`_${name}`]) postProcessing[name] = State[`_${name}`];
@@ -582,18 +574,19 @@ gui.addParam("Fog color", postProcessing.fog, "color");
 gui.addParam("Fog start", postProcessing.fog, "start", { min: 0, max: 10 });
 gui.addParam("Fog density", postProcessing.fog, "density");
 
-gui.addParam("Bloom", State, "bloom", null, () => {
+gui.addColumn("Bloom");
+gui.addParam("Enabled", State, "bloom", null, () => {
   enablePostProPass("bloom");
 });
-gui.addParam("Bloom threshold", postProcessing.bloom, "threshold", {
+gui.addParam("Threshold", postProcessing.bloom, "threshold", {
   min: 0,
   max: 2,
 });
-gui.addParam("Bloom intensity", postProcessing.bloom, "intensity", {
+gui.addParam("Intensity", postProcessing.bloom, "intensity", {
   min: 0,
   max: 10,
 });
-gui.addParam("Bloom radius", postProcessing.bloom, "radius", {
+gui.addParam("Radius", postProcessing.bloom, "radius", {
   min: 0,
   max: 10,
 });
@@ -651,6 +644,40 @@ gui.addParam("Vignette intensity", postProcessing.vignette, "intensity", {
 
 gui.addParam("Opacity", postProcessing, "opacity", { min: 0, max: 1 });
 
+gui.addColumn("AO");
+gui.addParam("Enabled", State, "ao", null, () => {
+  enablePostProPass("ao");
+});
+gui.addParam("Samples", postProcessing.ao, "samples", {
+  min: 2,
+  max: 20,
+  step: 1,
+});
+gui.addParam("Radius", postProcessing.ao, "radius", {
+  min: 0,
+  max: 30,
+});
+gui.addParam("Intensity", postProcessing.ao, "intensity", {
+  min: 0,
+  max: 10,
+});
+gui.addParam("Bias", postProcessing.ao, "bias", { min: 0, max: 0.1 });
+gui.addParam("Brightness", postProcessing.ao, "brightness", {
+  min: -0.5,
+  max: 0.5,
+});
+gui.addParam("Contrast", postProcessing.ao, "contrast", {
+  min: 0.1,
+  max: 3,
+});
+gui.addParam("Blur radius", postProcessing.ao, "blurRadius", {
+  min: 0,
+  max: 5,
+});
+gui.addParam("Blur sharpness", postProcessing.ao, "blurSharpness", {
+  min: 0,
+  max: 20,
+});
 gui.addColumn("Depth of Field");
 gui.addParam("Enabled", State, "dof", null, () => {
   enablePostProPass("dof");
@@ -703,6 +730,7 @@ gui.addParam("Screen Point", postProcessing.dof.screenPoint, "1", {
   max: 1,
 });
 
+enablePostProPass("ao");
 enablePostProPass("dof");
 enablePostProPass("aa");
 enablePostProPass("fog");

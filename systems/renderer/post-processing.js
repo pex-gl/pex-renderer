@@ -89,6 +89,9 @@ export default ({ ctx, resourceCache }) => {
       this.cache.targets[renderViewId] ||= {};
       this.cache.targets[renderViewId][`color`] = attachments.color;
 
+      // Expose targets for other renderers (eg. standard to use AO)
+      postProcessing._targets = this.cache.targets;
+
       for (let i = 0; i < passes.length; i++) {
         const pass = passes[i];
 
@@ -146,9 +149,12 @@ export default ({ ctx, resourceCache }) => {
           const uniforms = {
             uTexture: inputColor,
             uDepthTexture: attachments.depth,
+            uNormalTexture: attachments.normal,
             uEmissiveTexture: attachments.emissive,
+            ...passCommand.uniforms?.(renderView),
           };
 
+          // TODO: move to descriptors
           if (pass.name === "blit") {
             uniforms.uTextureEncoding = uniforms.uTexture.encoding;
           }
@@ -158,8 +164,10 @@ export default ({ ctx, resourceCache }) => {
           // Set command
           // TODO: allow pass options like clearColor
           // Get descriptors
-          const { passDesc } = { ...descriptors.postProcessing };
-          passDesc.color[0] = outputColor;
+          const passDesc = {
+            color: [outputColor],
+            ...passCommand.passDesc?.(renderView),
+          };
 
           const fullscreenTriangle = resourceCache.fullscreenTriangle();
 

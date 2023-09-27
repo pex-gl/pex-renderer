@@ -15,7 +15,6 @@
     "cameras",
     "frustum-culling",
     "multi-view",
-    "camera-cinematic-dof",
 
     // Lighting
     "lights",
@@ -30,7 +29,8 @@
 
     // Post-Processing
     "post-processing",
-    // "ao",
+    "camera-cinematic-dof",
+    "ao",
     // "blocks",
   ];
   window.pexExamples = examples;

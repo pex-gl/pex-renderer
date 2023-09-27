@@ -1,9 +1,24 @@
-import createRenderer from "../index.js";
+import {
+  renderEngine as createRenderEngine,
+  world as createWorld,
+  entity as createEntity,
+  components,
+} from "../index.js";
+
 import createContext from "pex-context";
 import random from "pex-random";
 import { create, fromHex } from "pex-color";
 import { quat, vec3 } from "pex-math";
+import createGUI from "pex-gui";
+
 import { cube } from "primitive-geometry";
+
+random.seed(0);
+
+const pixelRatio = devicePixelRatio;
+const ctx = createContext({ type: "webgl", pixelRatio });
+const renderEngine = createRenderEngine({ ctx, debug: true });
+const world = createWorld();
 
 const dutchPalette = [
   "#FFC312",
@@ -82,50 +97,39 @@ function divide(parent, rects) {
   return rects;
 }
 
-random.seed(0);
 const s = 1;
 const rects = divide([-2 * s, -1 * s, 4 * s, 2 * s, 0], []);
 
-const ctx = createContext({
-  pixelRatio: 1,
-  // width: 1280,
-  // height: 800
+const postProcessing = components.postProcessing({
+  fxaa: components.aa(),
+  ao: components.ao({
+    type: "sao",
+    intensity: 2,
+  }),
 });
-const renderer = createRenderer({
-  ctx,
-  shadowQuality: 2,
-});
-
-const cameraEntity = renderer.entity([
-  renderer.transform({ position: [0, 0, 5] }),
-  renderer.camera({
+window.postProcessing = postProcessing;
+const cameraEntity = createEntity({
+  transform: components.transform({ position: [-3, 4.5, 3.01] }),
+  camera: components.camera({
     aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
     exposure: 1.5,
   }),
-  renderer.orbiter({
-    position: [-3, 4.5, 3.01],
-  }),
-  // renderer.postProcessing({
-  //   fxaa: true,
-  //   ssao: true,
-  //   ssaoRadius: 2,
-  //   ssaoBlurRadius: 0.5,
-  //   ssaoSharpness: 5,
-  //   ssaoIntensity: 0.5,
-  // }),
-]);
-renderer.add(cameraEntity);
+  orbiter: components.orbiter({ element: ctx.gl.canvas }),
+  postProcessing,
+});
+world.add(cameraEntity);
 
-renderer.add(
-  renderer.entity([
-    renderer.geometry(cube({ sx: 4, sy: 0.1, sz: 2 })),
-    renderer.material({
-      baseColor: [1, 1, 1, 1],
-      receiveShadows: true,
-      castShadows: true,
-    }),
-  ])
-);
+// world.add(
+//   createEntity({
+//     transform: components.transform(),
+//     geometry: components.geometry(cube({ sx: 4, sy: 0.1, sz: 2 })),
+//     material: components.material({
+//       baseColor: [1, 1, 1, 1],
+//       receiveShadows: true,
+//       castShadows: true,
+//     }),
+//   })
+// );
 
 const levelHeight = 0.04;
 const geom = {
@@ -160,25 +164,25 @@ const geom = {
   },
   instances: rects.length,
 };
-const geomEnt = renderer.entity([
-  renderer.transform(),
-  renderer.geometry(geom),
-  renderer.material({
+const geomEnt = createEntity({
+  transform: components.transform(),
+  geometry: components.geometry(geom),
+  material: components.material({
     receiveShadows: true,
     castShadows: true,
     baseColor: [1, 1, 1, 1],
     metallic: 0,
     roughness: 0.2,
-    // frag: renderer.shaders.pipeline.material.frag.replace('gl_FragData[0] = encode(vec4(color, 1.0), uOutputEncoding);',
+    // frag: shaders: components.shaders.pipeline.material.frag.replace('gl_FragData[0] = encode(vec4(color, 1.0), uOutputEncoding);',
     // `
     // color = vec3(ao);
     // gl_FragData[0] = encode(vec4(color, 1.0), uOutputEncoding);
     // `)
   }),
-]);
-renderer.add(geomEnt);
-const lightEnt = renderer.entity([
-  renderer.transform({
+});
+world.add(geomEnt);
+const lightEnt = createEntity({
+  transform: components.transform({
     position: [1, 2, 3],
     rotation: quat.fromTo(
       quat.create(),
@@ -186,14 +190,14 @@ const lightEnt = renderer.entity([
       vec3.normalize([-5, -2, -3])
     ),
   }),
-  renderer.directionalLight({
+  directionalLight: components.directionalLight({
     color: [1, 1, 1, 1],
     intensity: 5,
     castShadows: true,
     bias: 0.01,
   }),
-]);
-renderer.add(lightEnt);
+});
+world.add(lightEnt);
 
 const numLights = 1;
 for (let i = 0; i < numLights; i++) {
@@ -202,8 +206,8 @@ for (let i = 0; i < numLights; i++) {
   const y = 2;
   const z = Math.sin(a);
 
-  const lightEnt = renderer.entity([
-    renderer.transform({
+  const lightEnt = createEntity({
+    transform: components.transform({
       position: [x, y, z],
       rotation: quat.fromTo(
         quat.create(),
@@ -211,28 +215,123 @@ for (let i = 0; i < numLights; i++) {
         vec3.normalize([-x, -y, -z])
       ),
     }),
-    renderer.directionalLight({
+    directionalLight: components.directionalLight({
       color: [1, 1, 1, 1],
       intensity: 1,
       castShadows: true,
       bias: 0.01,
     }),
-  ]);
-  renderer.add(lightEnt);
+  });
+  world.add(lightEnt);
 }
 
-const skyboxEntity = renderer.entity([
-  renderer.skybox({
+const skyboxEntity = createEntity({
+  transform: components.transform(),
+  skybox: components.skybox({
     sunPosition: [1, 1, 1],
   }),
-]);
-renderer.add(skyboxEntity);
+});
+world.add(skyboxEntity);
 
-const reflectionProbeEntity = renderer.entity([renderer.reflectionProbe()]);
-renderer.add(reflectionProbeEntity);
+const reflectionProbeEntity = createEntity({
+  transform: components.transform(),
+  reflectionProbe: components.reflectionProbe(),
+});
+world.add(reflectionProbeEntity);
+
+// GUI
+const gui = createGUI(ctx);
+gui.addColumn("Attachments");
+gui.addFPSMeeter();
+gui.addRadioList(
+  "Debug Render",
+  renderEngine.renderers.find(
+    (renderer) => renderer.type == "standard-renderer"
+  ),
+  "debugRender",
+  ["", "data.normalView", "data.ao"].map((value) => ({
+    name: value || "No debug",
+    value,
+  }))
+);
+gui.addRadioList(
+  "Debug Post-Processing",
+  renderEngine.renderers.find(
+    (renderer) => renderer.type == "post-processing-renderer"
+  ),
+  "debugRender",
+  ["", "ao.blurHorizontal", "ao.blurVertical"].map((value) => ({
+    name: value || "No debug",
+    value,
+  }))
+);
+
+const guiNormalControl = gui.addTexture2D("Normal", null, { flipY: true });
+const guiDepthControl = gui.addTexture2D("Depth", null, { flipY: true });
+const guiAOControl = gui.addTexture2D("AO", null, { flipY: true });
+gui.addColumn("AO");
+gui.addParam("Samples", postProcessing.ao, "samples", {
+  min: 2,
+  max: 20,
+  step: 1,
+});
+gui.addParam("Radius", postProcessing.ao, "radius", {
+  min: 0,
+  max: 30,
+});
+gui.addParam("Intensity", postProcessing.ao, "intensity", {
+  min: 0,
+  max: 10,
+});
+gui.addParam("Bias", postProcessing.ao, "bias", { min: 0, max: 0.1 });
+gui.addParam("Brightness", postProcessing.ao, "brightness", {
+  min: -0.5,
+  max: 0.5,
+});
+gui.addParam("Contrast", postProcessing.ao, "contrast", {
+  min: 0.1,
+  max: 3,
+});
+gui.addParam("Blur radius", postProcessing.ao, "blurRadius", {
+  min: 0,
+  max: 5,
+});
+gui.addParam("Blur sharpness", postProcessing.ao, "blurSharpness", {
+  min: 0,
+  max: 20,
+});
+
+// Events
+let debugOnce = false;
+
+window.addEventListener("resize", () => {
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+  ctx.set({ pixelRatio, width, height });
+  cameraEntity.camera.aspect = width / height;
+  cameraEntity.camera.dirty = true;
+});
+
+window.addEventListener("keydown", ({ key }) => {
+  if (key === "g") gui.enabled = !gui.enabled;
+  if (key === "d") debugOnce = true;
+});
 
 ctx.frame(() => {
-  renderer.draw();
+  renderEngine.update(world.entities);
+  const [{ color, normal, depth }] = renderEngine.render(
+    world.entities,
+    cameraEntity
+  );
+  guiNormalControl.texture = normal;
+  guiDepthControl.texture = depth;
+  // guiAOControl.texture = color;
+  guiAOControl.texture = postProcessing._targets[cameraEntity.id]["ao.main"];
+
+  ctx.debug(debugOnce);
+  debugOnce = false;
+
+  gui.draw();
 
   window.dispatchEvent(new CustomEvent("pex-screenshot"));
 });
