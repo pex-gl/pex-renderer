@@ -12,9 +12,8 @@ import createGUI from "pex-gui";
 import random from "pex-random";
 
 import { cube, torus, sphere, roundedCube } from "primitive-geometry";
-import parseHdr from "parse-hdr";
 
-import { getURL } from "./utils.js";
+import { getEnvMap, getURL } from "./utils.js";
 
 random.seed(0);
 
@@ -216,23 +215,11 @@ const cubesEntity2 = createEntity({
 });
 world.add(cubesEntity2);
 
-const hdrImg = parseHdr(
-  await io.loadArrayBuffer(getURL(`assets/envmaps/garage/garage.hdr`))
-);
-const envMap = ctx.texture2D({
-  data: hdrImg.data,
-  width: hdrImg.shape[0],
-  height: hdrImg.shape[1],
-  pixelFormat: ctx.PixelFormat.RGBA32F,
-  encoding: ctx.Encoding.Linear,
-  flipY: true,
-});
-
 const skyEntity = createEntity({
   skybox: components.skybox({
     sunPosition: [1, 1, 1],
     backgroundBlur: true,
-    envMap,
+    envMap: await getEnvMap(ctx, "assets/envmaps/garage/garage.hdr"),
   }),
   reflectionProbe: components.reflectionProbe(),
 });

@@ -8,14 +8,12 @@ import {
 
 import createContext from "pex-context";
 import { vec3, quat } from "pex-math";
-import * as io from "pex-io";
 import createGUI from "pex-gui";
 import random from "pex-random";
 
 import { cube, icosphere, plane, cone } from "primitive-geometry";
-import parseHdr from "parse-hdr";
 
-import { getURL, quatFromPointToPoint } from "./utils.js";
+import { getEnvMap, getURL, quatFromPointToPoint } from "./utils.js";
 
 random.seed(0);
 
@@ -301,25 +299,11 @@ world.add(sphereEntity);
 // }
 
 // Add skybox with helper for skybox renderer system
-const hdrImg = parseHdr(
-  await io.loadArrayBuffer(
-    getURL(`assets/envmaps/Mono_Lake_B/Mono_Lake_B.hdr`)
-    // getURL(`assets/envmaps/garage/garage.hdr`)
-  )
-);
-
 const skyboxEntity = createEntity({
   skybox: components.skybox({
     sunPosition: [1, 1, 1],
     backgroundBlur: true,
-    envMap: ctx.texture2D({
-      data: hdrImg.data,
-      width: hdrImg.shape[0],
-      height: hdrImg.shape[1],
-      pixelFormat: ctx.PixelFormat.RGBA32F,
-      encoding: ctx.Encoding.Linear,
-      flipY: true,
-    }),
+    envMap: await getEnvMap(ctx, "assets/envmaps/Mono_Lake_B/Mono_Lake_B.hdr"),
   }),
 });
 world.add(skyboxEntity);

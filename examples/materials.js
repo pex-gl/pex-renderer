@@ -12,9 +12,8 @@ import * as io from "pex-io";
 
 import { sphere } from "primitive-geometry";
 import gridCells from "grid-cells";
-import parseHdr from "parse-hdr";
 
-import { getTexture, getURL } from "./utils.js";
+import { getEnvMap, getTexture, getURL } from "./utils.js";
 
 const pixelRatio = devicePixelRatio;
 const ctx = createContext({ pixelRatio });
@@ -241,18 +240,6 @@ for (let i = 0; i < nW * nH; i++) {
 }
 
 // Sky
-const hdrImg = parseHdr(
-  await io.loadArrayBuffer(getURL("assets/envmaps/garage/garage.hdr"))
-);
-const envMap = ctx.texture2D({
-  data: hdrImg.data,
-  width: hdrImg.shape[0],
-  height: hdrImg.shape[1],
-  pixelFormat: ctx.PixelFormat.RGBA32F,
-  encoding: ctx.Encoding.Linear,
-  flipY: true,
-});
-
 const directionalLightEntity = createEntity({
   transform: components.transform({
     position: [-2, 2, 2],
@@ -272,7 +259,7 @@ world.add(directionalLightEntity);
 const skyEntity = createEntity({
   skybox: components.skybox({
     sunPosition: [0, 5, -5],
-    envMap,
+    envMap: await getEnvMap(ctx, "assets/envmaps/garage/garage.hdr"),
   }),
   reflectionProbe: components.reflectionProbe(),
 });

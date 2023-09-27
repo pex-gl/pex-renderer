@@ -100,12 +100,10 @@ renderGraph.renderPass = (opts) => {
 
 // Entities
 const postProcessing = components.postProcessing({
-  aa: {
-    type: "fxaa2",
-  },
-  dof: {
+  aa: components.aa(),
+  dof: components.dof({
     focusDistance: 3,
-  },
+  }),
 });
 const cameraEntity = createEntity({
   transform: components.transform({ position: [0, 3, 3] }),
@@ -114,6 +112,7 @@ const cameraEntity = createEntity({
     aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
     target: [0, 1, 0],
     clearColor: [0.03, 0.03, 0.03, 1],
+    fStop: 0.1,
   }),
   postProcessing,
   orbiter: components.orbiter({ element: ctx.gl.canvas }),

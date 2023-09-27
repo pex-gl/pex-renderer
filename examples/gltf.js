@@ -13,9 +13,8 @@ import { quat, vec3, mat4 } from "pex-math";
 import { aabb } from "pex-geom";
 
 import { cube as createCube } from "primitive-geometry";
-import parseHdr from "parse-hdr";
 
-import { debugSceneTree, getURL } from "./utils.js";
+import { debugSceneTree, getEnvMap, getURL } from "./utils.js";
 
 const {
   camera,
@@ -105,21 +104,12 @@ let envMap;
 const addEnvmap = async () => {
   if (State.useEnvMap) {
     if (!envMap) {
-      const hdrImg = parseHdr(
-        await loadArrayBuffer(
-          // getURL(`assets/envmaps/Mono_Lake_B/Mono_Lake_B.hdr`),
-          getURL(`assets/envmaps/garage/garage.hdr`)
-          // getURL(`assets/envmaps/artist_workshop_4k.hdr`)
-        )
+      envMap = await getEnvMap(
+        ctx,
+        // `assets/envmaps/Mono_Lake_B/Mono_Lake_B.hdr`
+        `assets/envmaps/garage/garage.hdr`
+        // `assets/envmaps/artist_workshop_4k.hdr`
       );
-      envMap = ctx.texture2D({
-        data: hdrImg.data,
-        width: hdrImg.shape[0],
-        height: hdrImg.shape[1],
-        pixelFormat: ctx.PixelFormat.RGBA32F,
-        encoding: ctx.Encoding.Linear,
-        flipY: true,
-      });
     }
     skyEntity.skybox.envMap = envMap;
   } else {

@@ -8,11 +8,9 @@ import {
 import createContext from "pex-context";
 import createGUI from "pex-gui";
 import { vec3, quat } from "pex-math";
-import * as io from "pex-io";
 import { sphere } from "primitive-geometry";
 import gridCells from "grid-cells";
-import parseHdr from "parse-hdr";
-import { getURL } from "./utils.js";
+import { getEnvMap } from "./utils.js";
 
 const State = {
   furnace: false,
@@ -120,30 +118,14 @@ for (let i = 0; i < nW * nH; i++) {
   world.add(materialEntity);
 }
 
-const hdrImg = parseHdr(
-  await io.loadArrayBuffer(
-    getURL("assets/envmaps/Ditch-River_2k/Ditch-River_2k.hdr")
-  )
+const envMap = await getEnvMap(
+  ctx,
+  "assets/envmaps/Ditch-River_2k/Ditch-River_2k.hdr"
 );
-const envMap = ctx.texture2D({
-  data: hdrImg.data,
-  width: hdrImg.shape[0],
-  height: hdrImg.shape[1],
-  pixelFormat: ctx.PixelFormat.RGBA32F,
-  encoding: ctx.Encoding.Linear,
-  flipY: true,
-});
-const furnaceHdr = parseHdr(
-  await io.loadArrayBuffer(getURL("assets/envmaps/furnace/furnace-4k.hdr"))
+const furnaceEnvMap = await getEnvMap(
+  ctx,
+  "assets/envmaps/furnace/furnace-4k.hdr"
 );
-const furnaceEnvMap = ctx.texture2D({
-  data: furnaceHdr.data,
-  width: furnaceHdr.shape[0],
-  height: furnaceHdr.shape[1],
-  pixelFormat: ctx.PixelFormat.RGBA32F,
-  encoding: ctx.Encoding.Linear,
-  flipY: true,
-});
 
 const skyEntity = createEntity({
   skybox: components.skybox({

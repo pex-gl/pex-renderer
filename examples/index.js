@@ -10,6 +10,12 @@
     "helpers",
     "instancing",
 
+    // Post-Processing
+    "post-processing",
+    "camera-cinematic-dof",
+    "ao",
+    // "blocks",
+
     // View
     // "layers",
     "cameras",
@@ -26,12 +32,6 @@
     "refraction",
     "clear-coat",
     "point-size",
-
-    // Post-Processing
-    "post-processing",
-    "camera-cinematic-dof",
-    "ao",
-    // "blocks",
   ];
   window.pexExamples = examples;
 

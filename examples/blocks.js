@@ -50,7 +50,6 @@ const ctx = createContext({
 });
 
 const world = createWorld();
-window.world = world;
 
 function aabbToString(aabb) {
   if (!aabb) return "[]";
@@ -232,7 +231,7 @@ const skyEntity = createEntity({
 });
 world.add(skyEntity);
 
-const pointLightEnt = createEntity({
+const pointLightEntity = createEntity({
   transform: components.transform({
     position: [2, 2, 2],
   }),
@@ -247,7 +246,7 @@ const pointLightEnt = createEntity({
     intensity: 5,
   }),
 });
-// world.add(pointLightEnt);
+// world.add(pointLightEntity);
 
 const areaLightColor = [0, 1, 0, 1];
 const areaLightEntity = createEntity({

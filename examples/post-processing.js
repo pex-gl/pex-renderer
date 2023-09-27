@@ -7,7 +7,6 @@ import {
 
 import createContext from "pex-context";
 import { mat4, quat, vec3 } from "pex-math";
-import * as io from "pex-io";
 import { aabb } from "pex-geom";
 import random from "pex-random";
 import createGUI from "pex-gui";
@@ -15,9 +14,8 @@ import createGUI from "pex-gui";
 import { cube, roundedCube, capsule, sphere } from "primitive-geometry";
 // import normals from "angle-normals";
 // import centerAndNormalize from "geom-center-and-normalize";
-import parseHdr from "parse-hdr";
 
-import { dragon, getTexture, getURL } from "./utils.js";
+import { dragon, getEnvMap, getTexture, getURL } from "./utils.js";
 
 random.seed(14);
 
@@ -49,9 +47,6 @@ const pixelRatio = 1;
 const ctx = createContext({ pixelRatio });
 const renderEngine = createRenderEngine({ ctx, debug: true });
 const world = createWorld();
-
-window.renderEngine = renderEngine;
-window.world = world;
 
 // Entities
 const helperEntity = createEntity({
@@ -101,7 +96,7 @@ const postProcessing = components.postProcessing({
     type: "sao",
     samples: 11,
     intensity: 1,
-    radius: 12,
+    radius: 100,
     bias: 0.001,
     blurRadius: 0.5,
     blurSharpness: 10,
@@ -326,18 +321,6 @@ const areaLightEntity = createEntity({
 world.add(areaLightEntity);
 
 // Sky
-const hdrImg = parseHdr(
-  await io.loadArrayBuffer(getURL(`assets/envmaps/Mono_Lake_B/Mono_Lake_B.hdr`))
-);
-const envMap = ctx.texture2D({
-  data: hdrImg.data,
-  width: hdrImg.shape[0],
-  height: hdrImg.shape[1],
-  pixelFormat: ctx.PixelFormat.RGBA32F,
-  encoding: ctx.Encoding.Linear,
-  flipY: true,
-});
-
 const sunEntity = createEntity({
   transform: components.transform({
     position: State.sunPosition,
@@ -376,7 +359,7 @@ const skyboxEntity = createEntity({
   skybox: components.skybox({
     sunPosition: [1, 1, 1],
     backgroundBlur: false,
-    envMap,
+    envMap: await getEnvMap(ctx, "assets/envmaps/Mono_Lake_B/Mono_Lake_B.hdr"),
   }),
   reflectionProbe: components.reflectionProbe({}),
 });
@@ -655,7 +638,7 @@ gui.addParam("Samples", postProcessing.ao, "samples", {
 });
 gui.addParam("Radius", postProcessing.ao, "radius", {
   min: 0,
-  max: 30,
+  max: 1000,
 });
 gui.addParam("Intensity", postProcessing.ao, "intensity", {
   min: 0,

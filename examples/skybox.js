@@ -6,14 +6,12 @@ import {
 } from "../index.js";
 
 import createContext from "pex-context";
-import * as io from "pex-io";
 import { quat } from "pex-math";
 import createGUI from "pex-gui";
 
 import { sphere } from "primitive-geometry";
-import parseHdr from "parse-hdr";
 
-import { getURL } from "./utils.js";
+import { getEnvMap, getURL } from "./utils.js";
 
 const State = {
   envMap: true,
@@ -51,17 +49,10 @@ const geometryEntity = createEntity({
 });
 world.add(geometryEntity);
 
-const hdrImg = parseHdr(
-  await io.loadArrayBuffer(getURL(`assets/envmaps/Mono_Lake_B/Mono_Lake_B.hdr`))
+const envMap = await getEnvMap(
+  ctx,
+  "assets/envmaps/Mono_Lake_B/Mono_Lake_B.hdr"
 );
-const envMap = ctx.texture2D({
-  data: hdrImg.data,
-  width: hdrImg.shape[0],
-  height: hdrImg.shape[1],
-  pixelFormat: ctx.PixelFormat.RGBA32F,
-  encoding: ctx.Encoding.Linear,
-  flipY: true,
-});
 
 const skyboxEntity = createEntity({
   transform: components.transform({

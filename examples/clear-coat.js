@@ -10,10 +10,9 @@ import * as io from "pex-io";
 import { quat } from "pex-math";
 import createGUI from "pex-gui";
 
-import parseHdr from "parse-hdr";
 import parseObj from "geom-parse-obj";
 
-import { getTexture, getURL } from "./utils.js";
+import { getEnvMap, getTexture, getURL } from "./utils.js";
 
 const pixelRatio = devicePixelRatio;
 const ctx = createContext({ pixelRatio });
@@ -40,24 +39,14 @@ for (let i = 0; i < 3; i++) {
   world.add(cameraEntity);
 }
 
-const hdrImg = parseHdr(
-  await io.loadArrayBuffer(
-    getURL(`assets/envmaps/Road_to_MonumentValley/Road_to_MonumentValley.hdr`)
-  )
-);
-const envMap = ctx.texture2D({
-  data: hdrImg.data,
-  width: hdrImg.shape[0],
-  height: hdrImg.shape[1],
-  pixelFormat: ctx.PixelFormat.RGBA32F,
-  encoding: ctx.Encoding.Linear,
-  flipY: true,
-});
 const skyEntity = createEntity({
   skybox: components.skybox({
     sunPosition: [1, 1, 1],
     backgroundBlur: 1,
-    envMap,
+    envMap: await getEnvMap(
+      ctx,
+      "assets/envmaps/Road_to_MonumentValley/Road_to_MonumentValley.hdr"
+    ),
   }),
   reflectionProbe: components.reflectionProbe(),
 });

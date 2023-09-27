@@ -10,11 +10,9 @@ import createContext from "pex-context";
 import createGUI from "pex-gui";
 import { utils, vec3, quat } from "pex-math";
 import { pipeline as SHADERS } from "pex-shaders";
-import * as io from "pex-io";
 
-import parseHdr from "parse-hdr";
 import fitRect from "fit-rect";
-import { getURL } from "./utils.js";
+import { getEnvMap, getURL } from "./utils.js";
 
 const State = {
   resolutionPreset: 1,
@@ -33,21 +31,10 @@ const ctx = createContext({ pixelRatio });
 const renderEngine = createRenderEngine({ ctx });
 const world = createWorld();
 
-const hdrImg = parseHdr(
-  await io.loadArrayBuffer(getURL(`assets/envmaps/Mono_Lake_B/Mono_Lake_B.hdr`))
-);
-const envMap = ctx.texture2D({
-  data: hdrImg.data,
-  width: hdrImg.shape[0],
-  height: hdrImg.shape[1],
-  pixelFormat: ctx.PixelFormat.RGBA32F,
-  encoding: ctx.Encoding.Linear,
-  flipY: true,
-});
 const skyboxEntity = createEntity({
   skybox: components.skybox({
     sunPosition: [0.2, 1, 0.2],
-    envMap,
+    envMap: await getEnvMap(ctx, "assets/envmaps/Mono_Lake_B/Mono_Lake_B.hdr"),
   }),
 });
 world.add(skyboxEntity);

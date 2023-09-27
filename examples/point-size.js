@@ -16,7 +16,6 @@ const pixelRatio = devicePixelRatio;
 const ctx = createContext({ pixelRatio });
 const renderEngine = createRenderEngine({ ctx, debug: true });
 const world = createWorld();
-window.world = world;
 
 const cameraEntity = createEntity({
   transform: components.transform({ position: [0, 0, 35] }),

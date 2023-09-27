@@ -107,7 +107,6 @@ const postProcessing = components.postProcessing({
     intensity: 2,
   }),
 });
-window.postProcessing = postProcessing;
 const cameraEntity = createEntity({
   transform: components.transform({ position: [-3, 4.5, 3.01] }),
   camera: components.camera({
@@ -119,17 +118,17 @@ const cameraEntity = createEntity({
 });
 world.add(cameraEntity);
 
-// world.add(
-//   createEntity({
-//     transform: components.transform(),
-//     geometry: components.geometry(cube({ sx: 4, sy: 0.1, sz: 2 })),
-//     material: components.material({
-//       baseColor: [1, 1, 1, 1],
-//       receiveShadows: true,
-//       castShadows: true,
-//     }),
-//   })
-// );
+world.add(
+  createEntity({
+    transform: components.transform({ position: [0, -0.05, 0] }),
+    geometry: components.geometry(cube({ sx: 4, sy: 0.1, sz: 2 })),
+    material: components.material({
+      baseColor: [1, 1, 1, 1],
+      receiveShadows: true,
+      castShadows: true,
+    }),
+  })
+);
 
 const levelHeight = 0.04;
 const geom = {
@@ -164,7 +163,7 @@ const geom = {
   },
   instances: rects.length,
 };
-const geomEnt = createEntity({
+const geomEntity = createEntity({
   transform: components.transform(),
   geometry: components.geometry(geom),
   material: components.material({
@@ -173,15 +172,11 @@ const geomEnt = createEntity({
     baseColor: [1, 1, 1, 1],
     metallic: 0,
     roughness: 0.2,
-    // frag: shaders: components.shaders.pipeline.material.frag.replace('gl_FragData[0] = encode(vec4(color, 1.0), uOutputEncoding);',
-    // `
-    // color = vec3(ao);
-    // gl_FragData[0] = encode(vec4(color, 1.0), uOutputEncoding);
-    // `)
   }),
 });
-world.add(geomEnt);
-const lightEnt = createEntity({
+world.add(geomEntity);
+
+const lightEntity = createEntity({
   transform: components.transform({
     position: [1, 2, 3],
     rotation: quat.fromTo(
@@ -197,7 +192,7 @@ const lightEnt = createEntity({
     bias: 0.01,
   }),
 });
-world.add(lightEnt);
+world.add(lightEntity);
 
 const numLights = 1;
 for (let i = 0; i < numLights; i++) {
@@ -206,7 +201,7 @@ for (let i = 0; i < numLights; i++) {
   const y = 2;
   const z = Math.sin(a);
 
-  const lightEnt = createEntity({
+  const lightEntity = createEntity({
     transform: components.transform({
       position: [x, y, z],
       rotation: quat.fromTo(
@@ -222,7 +217,7 @@ for (let i = 0; i < numLights; i++) {
       bias: 0.01,
     }),
   });
-  world.add(lightEnt);
+  world.add(lightEntity);
 }
 
 const skyboxEntity = createEntity({
@@ -277,7 +272,7 @@ gui.addParam("Samples", postProcessing.ao, "samples", {
 });
 gui.addParam("Radius", postProcessing.ao, "radius", {
   min: 0,
-  max: 30,
+  max: 1000,
 });
 gui.addParam("Intensity", postProcessing.ao, "intensity", {
   min: 0,

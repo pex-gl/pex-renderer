@@ -1,15 +1,31 @@
-import { loadImage } from "pex-io";
+import { loadImage, loadArrayBuffer } from "pex-io";
 import { aabb } from "pex-geom";
 import { mat4, quat } from "pex-math";
 import * as Primitives from "primitive-geometry";
 import normals from "angle-normals";
 import centerAndNormalize from "geom-center-and-normalize";
+import parseHdr from "parse-hdr";
 
 import * as d from "./assets/models/stanford-dragon/stanford-dragon.js";
 
 export function getURL(url) {
   return new URL(url, import.meta.url).toString();
 }
+
+export const getEnvMap = async (ctx, url) => {
+  const hdrImg = parseHdr(await loadArrayBuffer(getURL(url)));
+
+  return ctx.texture2D({
+    data: hdrImg.data,
+    width: hdrImg.shape[0],
+    height: hdrImg.shape[1],
+    pixelFormat: ctx.PixelFormat.RGBA32F,
+    encoding: ctx.Encoding.Linear,
+    min: ctx.Filter.Linear,
+    mag: ctx.Filter.Linear,
+    flipY: true,
+  });
+};
 
 export async function getTexture(ctx, file, encoding, options = {}) {
   const tex = ctx.texture2D({
