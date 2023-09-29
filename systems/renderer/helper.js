@@ -122,7 +122,7 @@ const getDirectionalLight = (directionalLight) => {
       [-prismRadius, 0, 0], [-prismRadius, 0, intensity],
       [0, prismRadius, 0], [0, prismRadius, intensity],
       [0, -prismRadius, 0], [0, -prismRadius, intensity]
-    ]
+    ],
   );
 };
 
@@ -139,7 +139,7 @@ const getPointLight = (pointLight) => {
       [0, -prismRadius, 0], [0, -radius, 0],
       [0, 0, prismRadius], [0, 0, radius],
       [0, 0, -prismRadius], [0, 0, -radius],
-    ]
+    ],
   );
 };
 
@@ -159,21 +159,21 @@ const getSpotLight = (spotLight) => {
       getPyramidEdgePositions({
         sx: radius * Math.sin(Math.PI / 4),
         sz: distance,
-      })
+      }),
     )
     .concat(
       getCirclePositions({
         radius,
         center: [0, 0, distance],
         ...spotLightCircleOptions,
-      })
+      }),
     )
     .concat(
       getCirclePositions({
         radius: innerRadius,
         center: [0, 0, distance],
         ...spotLightCircleOptions,
-      })
+      }),
     );
 };
 
@@ -324,7 +324,7 @@ export default function createHelperSystem({ ctx }) {
         const addToBuilder = (
           positions,
           color = [0.23, 0.23, 0.23, 1],
-          modelMatrix
+          modelMatrix,
         ) => {
           for (let i = 0; i < positions.length; i++) {
             const position = positions[i];
@@ -340,7 +340,7 @@ export default function createHelperSystem({ ctx }) {
           if (entity.transform?.position && entity.boundingBoxHelper) {
             addToBuilder(
               getBBoxPositionsList(entity.transform.worldBounds),
-              entity.boundingBoxHelper?.color || [1, 0, 0, 1]
+              entity.boundingBoxHelper?.color || [1, 0, 0, 1],
             );
           }
 
@@ -350,28 +350,28 @@ export default function createHelperSystem({ ctx }) {
               addToBuilder(
                 getDirectionalLight(entity.directionalLight),
                 entity.directionalLight.color,
-                modelMatrix
+                modelMatrix,
               );
             }
             if (entity.pointLight) {
               addToBuilder(
                 getPointLight(entity.pointLight),
                 entity.pointLight.color,
-                modelMatrix
+                modelMatrix,
               );
             }
             if (entity.spotLight) {
               addToBuilder(
                 getSpotLight(entity.spotLight),
                 entity.spotLight.color,
-                modelMatrix
+                modelMatrix,
               );
             }
             if (entity.areaLight) {
               addToBuilder(
                 getAreaLight(entity.areaLight),
                 entity.areaLight.color,
-                modelMatrix
+                modelMatrix,
               );
             }
           }
@@ -385,21 +385,21 @@ export default function createHelperSystem({ ctx }) {
                 ? getOrthographicCamera(entity.camera)
                 : getPerspectiveCamera(entity.camera),
               entity.cameraHelper.color,
-              modelMatrix
+              modelMatrix,
             );
           }
           if (entity.axesHelper) {
             addToBuilder(
               AXES_POSITIONS.map((p) => [...p]),
               AXES_COLORS.map((p) => [...p]),
-              modelMatrix
+              modelMatrix,
             );
           }
           if (entity.gridHelper) {
             addToBuilder(
               getGrid(entity.gridHelper),
               entity.gridHelper.color,
-              modelMatrix
+              modelMatrix,
             );
           }
         }

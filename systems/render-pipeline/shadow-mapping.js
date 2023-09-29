@@ -12,8 +12,8 @@ export default ({ renderGraph, resourceCache, descriptors, drawMeshes }) => ({
       shadowCastingEntities.flatMap((entity) =>
         aabb
           .getCorners(entity.transform.worldBounds) // TODO: gc corners points
-          .map((p) => vec3.multMat4(p, light._viewMatrix))
-      )
+          .map((p) => vec3.multMat4(p, light._viewMatrix)),
+      ),
     );
 
     light._near = -light._sceneBboxInLightSpace[1][2];
@@ -26,7 +26,7 @@ export default ({ renderGraph, resourceCache, descriptors, drawMeshes }) => ({
       light._sceneBboxInLightSpace[0][1],
       light._sceneBboxInLightSpace[1][1],
       light._near,
-      light._far
+      light._far,
     );
 
     let colorMapDesc = descriptors.directionalLightShadows.colorMapDesc;
@@ -105,8 +105,8 @@ export default ({ renderGraph, resourceCache, descriptors, drawMeshes }) => ({
       shadowCastingEntities.flatMap((entity) =>
         aabb
           .getCorners(entity.transform.worldBounds) // TODO: gc corners points
-          .map((p) => vec3.multMat4(p, light._viewMatrix))
-      )
+          .map((p) => vec3.multMat4(p, light._viewMatrix)),
+      ),
     );
 
     light._near = -light._sceneBboxInLightSpace[1][2];
@@ -142,7 +142,7 @@ export default ({ renderGraph, resourceCache, descriptors, drawMeshes }) => ({
       light.angle ? 2 * light.angle : Math.PI / 2,
       shadowMap.width / shadowMap.height,
       light._near,
-      light._far
+      light._far,
     );
 
     const renderView = {
@@ -230,7 +230,7 @@ export default ({ renderGraph, resourceCache, descriptors, drawMeshes }) => ({
             mat4.create(), // This can't be GC as assigned in light._viewMatrix for multi-view
             vec3.add([...side.eye], lightEntity._transform.worldPosition),
             vec3.add([...side.target], lightEntity._transform.worldPosition),
-            side.up
+            side.up,
           ),
         },
         viewport: [0, 0, shadowMap.width, shadowMap.height],

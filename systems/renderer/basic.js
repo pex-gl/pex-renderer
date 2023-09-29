@@ -38,7 +38,7 @@ export default ({ ctx }) => {
       const { flags, materialUniforms } = getMaterialFlagsAndUniforms(
         ctx,
         entity,
-        flagDefs
+        flagDefs,
       );
       // TODO: materialUniforms are never cached?
       this.materialUniforms = materialUniforms;
@@ -59,7 +59,7 @@ export default ({ ctx }) => {
         program = buildProgram(
           ctx,
           ShaderParser.build(ctx, vert, flags),
-          ShaderParser.build(ctx, frag, flags)
+          ShaderParser.build(ctx, frag, flags),
         );
         this.cache.programs.set(flags, vert, frag, program);
       }
@@ -71,7 +71,7 @@ export default ({ ctx }) => {
 
       const hash = `${program.id}${getHashFromProps(
         entity.material,
-        pipelineMaterialProps
+        pipelineMaterialProps,
       )}`;
 
       if (!this.cache.pipelines[hash] || entity.material.needsPipelineUpdate) {
@@ -83,7 +83,7 @@ export default ({ ctx }) => {
             "new pipeline",
             program.id,
             getHashFromProps(entity.material, pipelineMaterialProps, true),
-            entity
+            entity,
           );
         }
         this.cache.pipelines[hash] = ctx.pipeline({
@@ -115,7 +115,7 @@ export default ({ ctx }) => {
           entity.geometry &&
           entity.material &&
           entity.material.type === undefined &&
-          (transparent ? entity.material.blend : !entity.material.blend)
+          (transparent ? entity.material.blend : !entity.material.blend),
       );
 
       for (let i = 0; i < renderableEntities.length; i++) {

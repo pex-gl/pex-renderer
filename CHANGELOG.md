@@ -1,6 +1,62 @@
 # Changelog
 
-All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
+All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
+
+# [4.0.0-alpha.42](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.41...v4.0.0-alpha.42) (2023-09-29)
+
+
+### Bug Fixes
+
+* add back support for error program fallback ([8b0f77b](https://github.com/pex-gl/pex-renderer/commit/8b0f77bf4b7787fda73c358267f18ca565f33339)), closes [#119](https://github.com/pex-gl/pex-renderer/issues/119) [#120](https://github.com/pex-gl/pex-renderer/issues/120)
+* add missing light matrices init (wip) ([10bb224](https://github.com/pex-gl/pex-renderer/commit/10bb224a2b2a75bfbd3b30e91865ba2c1f1d6866))
+* delete unused geometry attributes + support custom attributes ([bc0f182](https://github.com/pex-gl/pex-renderer/commit/bc0f1822335ebd7e04301d02c0735e6063167d7c)), closes [#95](https://github.com/pex-gl/pex-renderer/issues/95)
+* **ecs:** add line system renderable entities check for geometry ([e60abdf](https://github.com/pex-gl/pex-renderer/commit/e60abdfafa015c52d23b4f2bf56cf6ca71eba114))
+* **ecs:** check for nullish in geometry.primitive ([e3dba45](https://github.com/pex-gl/pex-renderer/commit/e3dba45365b3e63cee8c7e58112e17710a06d261))
+* **ecs:** cleanup post processing passes ([2105c7c](https://github.com/pex-gl/pex-renderer/commit/2105c7ce8d3089e493200a5381b52da1e60fcdb6))
+* **ecs:** default uniforms for castShadows false ([d08444c](https://github.com/pex-gl/pex-renderer/commit/d08444c604bc219a4013c783f6761a83e9977b77))
+* **ecs:** ensure clearcoat and sheen uniforms are not set if disabled ([239658c](https://github.com/pex-gl/pex-renderer/commit/239658c9befcdad022d91aacc09e1c747adb6b67))
+* **ecs:** only create update sky texture command when used ([6a6dbff](https://github.com/pex-gl/pex-renderer/commit/6a6dbff45e4431a706c8ee992bf9af3047e95e8a))
+* **ecs:** only update/create sky texture if no envMap is provided ([43dc4a2](https://github.com/pex-gl/pex-renderer/commit/43dc4a2371d7d768bae1d007e3d492318c330dfb))
+* **ecs:** prevent camera helper rendering in the same view as the rendered camera component ([acb1c61](https://github.com/pex-gl/pex-renderer/commit/acb1c61422f3a0b69760d4ccae9038375eeb8681)), closes [#341](https://github.com/pex-gl/pex-renderer/issues/341)
+* **ecs:** rename debugMode option to debug to match pex-context ([b9abad3](https://github.com/pex-gl/pex-renderer/commit/b9abad32bfc0fbffbb1567c5686ff4cf0d82959f))
+
+
+### Features
+
+* add camera frustum culling ([9ef678a](https://github.com/pex-gl/pex-renderer/commit/9ef678a9e181d6ffbfd70424e0af85f29830d17d)), closes [#1](https://github.com/pex-gl/pex-renderer/issues/1) [#157](https://github.com/pex-gl/pex-renderer/issues/157)
+* add gtao (wip) ([5fc36f8](https://github.com/pex-gl/pex-renderer/commit/5fc36f8aa46566e65f141c57d228155e79e1e82d))
+* **ecs:** add back ao ([d381e81](https://github.com/pex-gl/pex-renderer/commit/d381e81301506b8238aa83ea54cde191f98401b4))
+* **ecs:** add back camera view support ([04b68c6](https://github.com/pex-gl/pex-renderer/commit/04b68c6e9bc803301d688dc69baf84e85b8cd212))
+* **ecs:** add back post-processing ([326e17c](https://github.com/pex-gl/pex-renderer/commit/326e17cd83058b49fef040d785acb3f39983459a))
+* **ecs:** add dispose and clean up transform system ([d2ddf85](https://github.com/pex-gl/pex-renderer/commit/d2ddf85d26dc7765f773797c5af38a5d63af5800))
+* **ecs:** add light system ([bd591f2](https://github.com/pex-gl/pex-renderer/commit/bd591f29bf8dfd596db02c82a384de8a12439cbf))
+* **ecs:** add material.lineWidth for segments ([5cb44f2](https://github.com/pex-gl/pex-renderer/commit/5cb44f20accd9e4118620a6479d7ac16f1539376))
+* **ecs:** add post-processing components + add back camera cinematic parameters ([1dbbf11](https://github.com/pex-gl/pex-renderer/commit/1dbbf11e1d7d5259fd10279e78d49cc6f93e76ea))
+* **ecs:** add render-engine dispose ([5621a24](https://github.com/pex-gl/pex-renderer/commit/5621a24b0d8638eca924dfb492181605c0bd8141))
+* **ecs:** add resource cache fullscreen quad ([affb8f8](https://github.com/pex-gl/pex-renderer/commit/affb8f8519ffd75683e5873b8f950aa40d1cb81b))
+* **ecs:** add world dispose ([6f65c5b](https://github.com/pex-gl/pex-renderer/commit/6f65c5b683e7d8c9e9b19085617d37cbb1fa0c4d)), closes [#202](https://github.com/pex-gl/pex-renderer/issues/202) [#75](https://github.com/pex-gl/pex-renderer/issues/75)
+* **ecs:** align point light bias with other light biases ([9a69046](https://github.com/pex-gl/pex-renderer/commit/9a69046d20444ef324f1a43b07fe15c7614649d1))
+* **ecs:** clean up and uniformise standard renderer ([33a68f2](https://github.com/pex-gl/pex-renderer/commit/33a68f2582c43d9220b8bc57a2a4f4f2ba30767e))
+* **ecs:** default projection angle to half pi for area light ([40070a8](https://github.com/pex-gl/pex-renderer/commit/40070a880c032cec3a6ce006ed6552be4cc75969))
+* **ecs:** make ao radius default to 100 ([32eacfc](https://github.com/pex-gl/pex-renderer/commit/32eacfce2f464f903743560d9b6616692b5cb15d))
+* **ecs:** move post processing passes handling to a renderer with renderStage post ([f6fc501](https://github.com/pex-gl/pex-renderer/commit/f6fc501989df275d837131ada84fe57a9dd8a0d0))
+* **ecs:** pass entitites to render engine dispose ([12adc6c](https://github.com/pex-gl/pex-renderer/commit/12adc6cff47034d54229a27f8ef1b930b0b0513f))
+* **ecs:** upgrade area lights ([c8a5503](https://github.com/pex-gl/pex-renderer/commit/c8a550349372d7a59d07cdfa45488bcd4e413bdf)), closes [#26](https://github.com/pex-gl/pex-renderer/issues/26)
+* **gltf:** add transform system to gltf loader ([91d5266](https://github.com/pex-gl/pex-renderer/commit/91d52662f0ea338338e5cba78a6271337cb8161d)), closes [#317](https://github.com/pex-gl/pex-renderer/issues/317)
+* **main:** cleanup directional unused condition ([f7ebdc8](https://github.com/pex-gl/pex-renderer/commit/f7ebdc8b3b02184a96f6a2d8036b57981564f117))
+* **pbr:** consolidate material flags parsing and cache for basic/standard renderers ([01b12db](https://github.com/pex-gl/pex-renderer/commit/01b12db787cd34de3782bc5cf14fb6748c982010))
+* **pbr:** improve point lights ([c50acf9](https://github.com/pex-gl/pex-renderer/commit/c50acf9f0c3a279cac415b1c44907fbf464cae3b)), closes [#109](https://github.com/pex-gl/pex-renderer/issues/109) [#206](https://github.com/pex-gl/pex-renderer/issues/206)
+* **pbr:** rename map to texture and update flags/uniforms/texture transform definitions ([2b6c22c](https://github.com/pex-gl/pex-renderer/commit/2b6c22c464023ec7ce2ae988c1b2afb77bb01499)), closes [#318](https://github.com/pex-gl/pex-renderer/issues/318) [#310](https://github.com/pex-gl/pex-renderer/issues/310)
+* **pbr:** use pex-shaders and parser.build ([d4ef7f0](https://github.com/pex-gl/pex-renderer/commit/d4ef7f019ddbf83931eecbacb5f046fb2a02be55)), closes [#326](https://github.com/pex-gl/pex-renderer/issues/326)
+* remove transform.matrix from transport systems/components ([d5e2d72](https://github.com/pex-gl/pex-renderer/commit/d5e2d7253fff688094c6c808a244144660ba96ce)), closes [#195](https://github.com/pex-gl/pex-renderer/issues/195)
+* split animation and skin systems ([400167a](https://github.com/pex-gl/pex-renderer/commit/400167a59b1b2b779e4e632e70702c3c241fbd14))
+
+
+### Performance Improvements
+
+* refactor remaining forEach loops ([2e0a9af](https://github.com/pex-gl/pex-renderer/commit/2e0a9afb326eb89fb1e10056c2f40d4e108351ab))
+
+
 
 # [4.0.0-alpha.41](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.40...v4.0.0-alpha.41) (2023-06-15)
 

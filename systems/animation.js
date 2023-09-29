@@ -99,7 +99,7 @@ function updateAnimation(animation, deltaTime) {
                 p0[1] + m0[1] + p1[1] + m1[1],
                 p0[2] + m0[2] + p1[2] + m1[2],
                 p0[3] + m0[3] + p1[3] + m1[3],
-              ])
+              ]),
             );
           } else {
             vec3.set(TEMP_VEC3, vec3.add(vec3.add(vec3.add(p0, m0), p1), m1));
@@ -113,13 +113,13 @@ function updateAnimation(animation, deltaTime) {
             quat.slerp(
               quat.set(TEMP_QUAT, outputData[prevIndex]),
               outputData[nextIndex],
-              t
+              t,
             );
           } else {
             vec3.lerp(
               vec3.set(TEMP_VEC3, outputData[prevIndex]),
               outputData[nextIndex],
-              t
+              t,
             );
           }
       }

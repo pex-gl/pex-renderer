@@ -131,6 +131,9 @@ ctx.frame(() => {
 <dt><a href="#module_PointLightComponent">PointLightComponent</a> ⇒ <code>object</code></dt>
 <dd><p>Point light component</p>
 </dd>
+<dt><a href="#module_PostProcessingComponent">PostProcessingComponent</a> ⇒ <code>object</code></dt>
+<dd><p>Post Processing component</p>
+</dd>
 <dt><a href="#module_ReflectionProbeComponent">ReflectionProbeComponent</a> ⇒ <code>object</code></dt>
 <dd><p>Reflection probe component</p>
 </dd>
@@ -153,6 +156,51 @@ ctx.frame(() => {
 <dd></dd>
 </dl>
 
+## Functions
+
+<dl>
+<dt><a href="#default">default()</a> ⇒ <code><a href="#System">System</a></code></dt>
+<dd><p>Camera system</p>
+<p>Adds:</p>
+<ul>
+<li>&quot;_orbiter&quot; to orbiter components</li>
+</ul>
+</dd>
+<dt><a href="#default">default(options)</a> ⇒ <code><a href="#System">System</a></code></dt>
+<dd><p>Geometry system</p>
+<p>Adds:</p>
+<ul>
+<li>&quot;bounds&quot; to geometry components</li>
+<li>&quot;_geometry&quot; to entities as reference to internal cache</li>
+</ul>
+</dd>
+<dt><a href="#default">default()</a> ⇒ <code><a href="#System">System</a></code></dt>
+<dd><p>Light system</p>
+<p>Adds:</p>
+<ul>
+<li>&quot;_projectionMatrix&quot; and &quot;_viewMatrix&quot; to light components</li>
+<li>&quot;_direction&quot; to directional and spot light components</li>
+</ul>
+</dd>
+<dt><a href="#default">default()</a> ⇒ <code><a href="#System">System</a></code></dt>
+<dd><p>Render pipeline system</p>
+<p>Adds:</p>
+<ul>
+<li>&quot;_near&quot;, &quot;_far&quot; and &quot;_sceneBboxInLightSpace&quot; to light components that cast shadows</li>
+<li>&quot;_shadowCubemap&quot; to pointLight components and &quot;_shadowMap&quot; to other light components</li>
+<li>&quot;_targets&quot; to postProcessing components</li>
+</ul>
+</dd>
+<dt><a href="#default">default()</a> ⇒ <code><a href="#System">System</a></code></dt>
+<dd><p>Transform system</p>
+<p>Adds:</p>
+<ul>
+<li>&quot;worldBounds&quot;, &quot;dirty&quot; and &quot;aabbDirty&quot; to transform components</li>
+<li>&quot;_transform&quot; to entities as reference to internal cache</li>
+</ul>
+</dd>
+</dl>
+
 ## Typedefs
 
 <dl>
@@ -169,6 +217,8 @@ ctx.frame(() => {
 <dt><a href="#BoundingBoxHelperComponentOptions">BoundingBoxHelperComponentOptions</a> : <code>object</code></dt>
 <dd></dd>
 <dt><a href="#CameraHelperComponentOptions">CameraHelperComponentOptions</a> : <code>object</code></dt>
+<dd></dd>
+<dt><a href="#CameraView">CameraView</a> : <code>object</code></dt>
 <dd></dd>
 <dt><a href="#CameraComponentOptions">CameraComponentOptions</a> : <code>object</code></dt>
 <dd></dd>
@@ -192,6 +242,8 @@ ctx.frame(() => {
 <dd></dd>
 <dt><a href="#PointLightComponentOptions">PointLightComponentOptions</a> : <code>object</code></dt>
 <dd></dd>
+<dt><a href="#PostProcessingComponentOptions">PostProcessingComponentOptions</a> : <code>object</code></dt>
+<dd></dd>
 <dt><a href="#ReflectionProbeComponentOptions">ReflectionProbeComponentOptions</a> : <code>object</code></dt>
 <dd></dd>
 <dt><a href="#SkinComponentOptions">SkinComponentOptions</a> : <code>object</code></dt>
@@ -202,13 +254,19 @@ ctx.frame(() => {
 <dd></dd>
 <dt><a href="#TransformComponentOptions">TransformComponentOptions</a> : <code>object</code></dt>
 <dd></dd>
+<dt><a href="#SystemOptions">SystemOptions</a> : <code>object</code></dt>
+<dd></dd>
 <dt><a href="#SystemUpdate">SystemUpdate</a> : <code>function</code></dt>
+<dd></dd>
+<dt><a href="#SystemDispose">SystemDispose</a> : <code>function</code></dt>
 <dd></dd>
 <dt><a href="#System">System</a> : <code>object</code></dt>
 <dd></dd>
 <dt><a href="#RenderEngineOptions">RenderEngineOptions</a></dt>
 <dd></dd>
 <dt><a href="#RenderEngineRender">RenderEngineRender</a> : <code>function</code></dt>
+<dd></dd>
+<dt><a href="#RenderEngineDebug">RenderEngineDebug</a> : <code>function</code></dt>
 <dd></dd>
 <dt><a href="#RenderEngine">RenderEngine</a> : <code><a href="#System">System</a></code></dt>
 <dd></dd>
@@ -388,6 +446,16 @@ Point light component
 | --------- | ---------------------------------------------------------------------- |
 | [options] | [<code>PointLightComponentOptions</code>](#PointLightComponentOptions) |
 
+<a name="module_PostProcessingComponent"></a>
+
+## PostProcessingComponent ⇒ <code>object</code>
+
+Post Processing component
+
+| Param     | Type                                                                           |
+| --------- | ------------------------------------------------------------------------------ |
+| [options] | [<code>PostProcessingComponentOptions</code>](#PostProcessingComponentOptions) |
+
 <a name="module_ReflectionProbeComponent"></a>
 
 ## ReflectionProbeComponent ⇒ <code>object</code>
@@ -520,6 +588,71 @@ Create a resource cache for pex-context caching.
 | ----- | ---------------------------------------------- |
 | ctx   | <code>module:pex-context/types/index.js</code> |
 
+<a name="default"></a>
+
+## default() ⇒ [<code>System</code>](#System)
+
+Camera system
+
+Adds:
+
+- "\_orbiter" to orbiter components
+
+**Kind**: global function
+<a name="default"></a>
+
+## default(options) ⇒ [<code>System</code>](#System)
+
+Geometry system
+
+Adds:
+
+- "bounds" to geometry components
+- "\_geometry" to entities as reference to internal cache
+
+**Kind**: global function
+
+| Param   | Type                                         |
+| ------- | -------------------------------------------- |
+| options | [<code>SystemOptions</code>](#SystemOptions) |
+
+<a name="default"></a>
+
+## default() ⇒ [<code>System</code>](#System)
+
+Light system
+
+Adds:
+
+- "\_projectionMatrix" and "\_viewMatrix" to light components
+- "\_direction" to directional and spot light components
+
+**Kind**: global function
+<a name="default"></a>
+
+## default() ⇒ [<code>System</code>](#System)
+
+Render pipeline system
+
+Adds:
+
+- "\_near", "\_far" and "\_sceneBboxInLightSpace" to light components that cast shadows
+- "\_shadowCubemap" to pointLight components and "\_shadowMap" to other light components
+- "\_targets" to postProcessing components
+
+**Kind**: global function
+<a name="default"></a>
+
+## default() ⇒ [<code>System</code>](#System)
+
+Transform system
+
+Adds:
+
+- "worldBounds", "dirty" and "aabbDirty" to transform components
+- "\_transform" to entities as reference to internal cache
+
+**Kind**: global function
 <a name="Entity"></a>
 
 ## Entity : <code>object</code>
@@ -563,10 +696,15 @@ Create a resource cache for pex-context caching.
 **Kind**: global typedef
 **Properties**
 
-| Name        | Type                              | Default                   |
-| ----------- | --------------------------------- | ------------------------- |
-| [color]     | <code>Array.&lt;number&gt;</code> | <code>[1, 1, 1, 1]</code> |
-| [intensity] | <code>number</code>               | <code>1</code>            |
+| Name            | Type                              | Default                   |
+| --------------- | --------------------------------- | ------------------------- |
+| [color]         | <code>Array.&lt;number&gt;</code> | <code>[1, 1, 1, 1]</code> |
+| [intensity]     | <code>number</code>               | <code>1</code>            |
+| [disk]          | <code>boolean</code>              | <code>false</code>        |
+| [doubleSided]   | <code>boolean</code>              | <code>false</code>        |
+| [bias]          | <code>number</code>               | <code>0.1</code>          |
+| [castShadows]   | <code>boolean</code>              | <code>true</code>         |
+| [shadowMapSize] | <code>number</code>               | <code>2048</code>         |
 
 <a name="AxesHelperComponentOptions"></a>
 
@@ -595,6 +733,19 @@ Create a resource cache for pex-context caching.
 | ------- | --------------------------------- | ------------------------- |
 | [color] | <code>Array.&lt;number&gt;</code> | <code>[1, 1, 1, 1]</code> |
 
+<a name="CameraView"></a>
+
+## CameraView : <code>object</code>
+
+**Kind**: global typedef
+**Properties**
+
+| Name        | Type                              |
+| ----------- | --------------------------------- |
+| [totalSize] | <code>Array.&lt;number&gt;</code> |
+| [size]      | <code>Array.&lt;number&gt;</code> |
+| [offset]    | <code>Array.&lt;number&gt;</code> |
+
 <a name="CameraComponentOptions"></a>
 
 ## CameraComponentOptions : <code>object</code>
@@ -602,16 +753,19 @@ Create a resource cache for pex-context caching.
 **Kind**: global typedef
 **Properties**
 
-| Name          | Type                                                                          | Default                                                            |
-| ------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| [projection]  | <code>&quot;perspective&quot;</code> \| <code>&quot;orthographic&quot;</code> | <code>&quot;perspective&quot;</code>                               |
-| [viewport]    | <code>Array.&lt;number&gt;</code>                                             | <code>[0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight]</code> |
-| [near]        | <code>number</code>                                                           | <code>0.5</code>                                                   |
-| [far]         | <code>number</code>                                                           | <code>1000</code>                                                  |
-| [aspect]      | <code>number</code>                                                           | <code>1</code>                                                     |
-| [fov]         | <code>number</code>                                                           | <code>Math.PI / 4</code>                                           |
-| viewMatrix    | <code>number</code>                                                           |                                                                    |
-| invViewMatrix | <code>number</code>                                                           |                                                                    |
+| Name            | Type                                                                          | Default                                                            |
+| --------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| [projection]    | <code>&quot;perspective&quot;</code> \| <code>&quot;orthographic&quot;</code> | <code>&quot;perspective&quot;</code>                               |
+| [viewport]      | <code>Array.&lt;number&gt;</code>                                             | <code>[0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight]</code> |
+| [near]          | <code>number</code>                                                           | <code>0.5</code>                                                   |
+| [far]           | <code>number</code>                                                           | <code>1000</code>                                                  |
+| [aspect]        | <code>number</code>                                                           | <code>1</code>                                                     |
+| [fov]           | <code>number</code>                                                           | <code>Math.PI / 4</code>                                           |
+| [clearColor]    | <code>module:pex-color~color</code>                                           |                                                                    |
+| [viewMatrix]    | <code>mat4</code>                                                             |                                                                    |
+| [invViewMatrix] | <code>mat4</code>                                                             |                                                                    |
+| [culling]       | <code>boolean</code>                                                          | <code>false</code>                                                 |
+| [view]          | [<code>CameraView</code>](#CameraView)                                        |                                                                    |
 
 <a name="DirectionalLightComponentOptions"></a>
 
@@ -651,6 +805,7 @@ Create a resource cache for pex-context caching.
 | [colors]       | <code>Float32Array</code>                            |                                      | Instanced                   |
 | [count]        | <code>number</code>                                  |                                      |                             |
 | [multiDraw]    | <code>object</code>                                  |                                      |                             |
+| [culled]       | <code>boolean</code>                                 |                                      |                             |
 | [primitive]    | <code>ctx.Primitive</code>                           | <code>ctx.Primitive.Triangles</code> |                             |
 
 <a name="GridHelperComponentOptions"></a>
@@ -781,6 +936,23 @@ Create a resource cache for pex-context caching.
 | [castShadows]   | <code>boolean</code>              | <code>true</code>         |
 | [shadowMapSize] | <code>number</code>               | <code>2048</code>         |
 
+<a name="PostProcessingComponentOptions"></a>
+
+## PostProcessingComponentOptions : <code>object</code>
+
+**Kind**: global typedef
+**Properties**
+
+| Name              | Type                |
+| ----------------- | ------------------- |
+| [dof]             | <code>object</code> |
+| [aa]              | <code>object</code> |
+| [fog]             | <code>object</code> |
+| [bloom]           | <code>object</code> |
+| [lut]             | <code>object</code> |
+| [colorCorrection] | <code>object</code> |
+| [vignette]        | <code>object</code> |
+
 <a name="ReflectionProbeComponentOptions"></a>
 
 ## ReflectionProbeComponentOptions : <code>object</code>
@@ -842,6 +1014,17 @@ Create a resource cache for pex-context caching.
 | [rotation] | <code>Array.&lt;number&gt;</code> | <code>[0, 0, 0, 1]</code> |
 | [scale]    | <code>Array.&lt;number&gt;</code> | <code>[1, 1, 1]</code>    |
 
+<a name="SystemOptions"></a>
+
+## SystemOptions : <code>object</code>
+
+**Kind**: global typedef
+**Properties**
+
+| Name | Type                                           |
+| ---- | ---------------------------------------------- |
+| ctx  | <code>module:pex-context/types/index.js</code> |
+
 <a name="SystemUpdate"></a>
 
 ## SystemUpdate : <code>function</code>
@@ -853,6 +1036,16 @@ Create a resource cache for pex-context caching.
 | entities    | [<code>Array.&lt;Entity&gt;</code>](#Entity) |
 | [deltaTime] | <code>number</code>                          |
 
+<a name="SystemDispose"></a>
+
+## SystemDispose : <code>function</code>
+
+**Kind**: global typedef
+
+| Param    | Type                                         |
+| -------- | -------------------------------------------- |
+| entities | [<code>Array.&lt;Entity&gt;</code>](#Entity) |
+
 <a name="System"></a>
 
 ## System : <code>object</code>
@@ -860,11 +1053,12 @@ Create a resource cache for pex-context caching.
 **Kind**: global typedef
 **Properties**
 
-| Name   | Type                                       |
-| ------ | ------------------------------------------ |
-| type   | <code>string</code>                        |
-| debug  | <code>boolean</code>                       |
-| update | [<code>SystemUpdate</code>](#SystemUpdate) |
+| Name    | Type                                         |
+| ------- | -------------------------------------------- |
+| type    | <code>string</code>                          |
+| debug   | <code>boolean</code>                         |
+| update  | [<code>SystemUpdate</code>](#SystemUpdate)   |
+| dispose | [<code>SystemDispose</code>](#SystemDispose) |
 
 <a name="RenderEngineOptions"></a>
 
@@ -892,6 +1086,16 @@ Create a resource cache for pex-context caching.
 | cameraEntities | [<code>Array.&lt;Entity&gt;</code>](#Entity)             |                 |
 | [options]      | [<code>RenderEngineOptions</code>](#RenderEngineOptions) | <code>{}</code> |
 
+<a name="RenderEngineDebug"></a>
+
+## RenderEngineDebug : <code>function</code>
+
+**Kind**: global typedef
+
+| Param  | Type                 |
+| ------ | -------------------- |
+| enable | <code>boolean</code> |
+
 <a name="RenderEngine"></a>
 
 ## RenderEngine : [<code>System</code>](#System)
@@ -899,9 +1103,12 @@ Create a resource cache for pex-context caching.
 **Kind**: global typedef
 **Properties**
 
-| Name   | Type                                                   |
-| ------ | ------------------------------------------------------ |
-| render | [<code>RenderEngineRender</code>](#RenderEngineRender) |
+| Name      | Type                                                   |
+| --------- | ------------------------------------------------------ |
+| render    | [<code>RenderEngineRender</code>](#RenderEngineRender) |
+| debug     | [<code>RenderEngineDebug</code>](#RenderEngineDebug)   |
+| systems   | [<code>Array.&lt;System&gt;</code>](#System)           |
+| renderers | [<code>Array.&lt;System&gt;</code>](#System)           |
 
 <a name="WorldAdd"></a>
 

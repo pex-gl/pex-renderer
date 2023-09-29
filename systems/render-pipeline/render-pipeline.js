@@ -27,7 +27,7 @@ const cullEntities = (entities, camera) =>
   entities.filter(
     (entity) =>
       !entity.geometry ||
-      (entity.transform && isEntityInFrustum(entity, camera.frustum))
+      (entity.transform && isEntityInFrustum(entity, camera.frustum)),
   );
 
 /**
@@ -61,12 +61,12 @@ export default ({
     if (!lightEntity._transform) {
       console.warn(
         NAMESPACE,
-        `"${this.type}" light entity missing transform. Add a transformSystem.update(entities).`
+        `"${this.type}" light entity missing transform. Add a transformSystem.update(entities).`,
       );
     } else if (!light._projectionMatrix) {
       console.warn(
         NAMESPACE,
-        `"${this.type}" light component missing matrices. Add a lightSystem.update(entities).`
+        `"${this.type}" light component missing matrices. Add a lightSystem.update(entities).`,
       );
     } else {
       return true;
@@ -159,7 +159,7 @@ export default ({
     let { renderView, renderers, drawToScreen } = options;
 
     const shadowCastingEntities = entities.filter(
-      (entity) => entity.geometry && entity.material?.castShadows
+      (entity) => entity.geometry && entity.material?.castShadows,
     );
     const cameraEntities = entities.filter((entity) => entity.camera);
 
@@ -188,7 +188,7 @@ export default ({
             entity,
             entities,
             renderers,
-            shadowCastingEntities
+            shadowCastingEntities,
           );
         }
         if (
@@ -205,7 +205,7 @@ export default ({
             entity,
             entities,
             renderers,
-            shadowCastingEntities
+            shadowCastingEntities,
           );
         }
         if (
@@ -216,7 +216,7 @@ export default ({
             entity,
             entities,
             renderers,
-            shadowCastingEntities
+            shadowCastingEntities,
           );
         }
       }
@@ -229,7 +229,7 @@ export default ({
           entity.directionalLight?._shadowMap ||
           entity.spotLight?._shadowMap ||
           entity.areaLight?._shadowMap ||
-          entity.pointLight?._shadowCubemap
+          entity.pointLight?._shadowCubemap,
       )
       .filter(Boolean);
 
@@ -246,14 +246,14 @@ export default ({
     this.descriptors.mainPass.outputTextureDesc.width = renderView.viewport[2];
     this.descriptors.mainPass.outputTextureDesc.height = renderView.viewport[3];
     let mainPassOutputTexture = resourceCache.texture2D(
-      this.descriptors.mainPass.outputTextureDesc
+      this.descriptors.mainPass.outputTextureDesc,
     );
     mainPassOutputTexture.name = `mainPassOutput (id: ${mainPassOutputTexture.id})`;
 
     let mainPassNormalOutputTexture;
     if (postProcessing?.ssao) {
       mainPassNormalOutputTexture = resourceCache.texture2D(
-        this.descriptors.mainPass.outputTextureDesc
+        this.descriptors.mainPass.outputTextureDesc,
       );
       mainPassNormalOutputTexture.name = `mainPassNormalOutput (id: ${mainPassNormalOutputTexture.id})`;
     }
@@ -261,7 +261,7 @@ export default ({
     let mainPassEmissiveOutputTexture;
     if (postProcessing?.bloom) {
       mainPassEmissiveOutputTexture = resourceCache.texture2D(
-        this.descriptors.mainPass.outputTextureDesc
+        this.descriptors.mainPass.outputTextureDesc,
       );
       mainPassEmissiveOutputTexture.name = `mainPassEmissiveOutput (id: ${mainPassEmissiveOutputTexture.id})`;
     }
@@ -271,7 +271,7 @@ export default ({
     this.descriptors.mainPass.outputDepthTextureDesc.height =
       renderView.viewport[3];
     const outputDepthTexture = resourceCache.texture2D(
-      this.descriptors.mainPass.outputDepthTextureDesc
+      this.descriptors.mainPass.outputDepthTextureDesc,
     );
     outputDepthTexture.name = `mainPassDepth (id: ${outputDepthTexture.id})`;
 
@@ -320,7 +320,7 @@ export default ({
       this.descriptors.grabPass.colorCopyTextureDesc.width = viewport[2];
       this.descriptors.grabPass.colorCopyTextureDesc.height = viewport[3];
       grabPassColorCopyTexture = resourceCache.texture2D(
-        this.descriptors.grabPass.colorCopyTextureDesc
+        this.descriptors.grabPass.colorCopyTextureDesc,
       );
       grabPassColorCopyTexture.name = `grabPassOutput (id: ${grabPassColorCopyTexture.id})`;
 
@@ -331,7 +331,7 @@ export default ({
         attributes: fullscreenTriangle.attributes,
         count: fullscreenTriangle.count,
         pipeline: resourceCache.pipeline(
-          this.descriptors.grabPass.copyTexturePipelineDesc
+          this.descriptors.grabPass.copyTexturePipelineDesc,
         ),
         uniforms: {
           uViewport: viewport,
