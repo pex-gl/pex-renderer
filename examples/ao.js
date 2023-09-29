@@ -15,8 +15,9 @@ import { cube } from "primitive-geometry";
 
 random.seed(0);
 
-const pixelRatio = devicePixelRatio;
-const ctx = createContext({ type: "webgl", pixelRatio });
+// const pixelRatio = devicePixelRatio;
+const pixelRatio = 1;
+const ctx = createContext({ type: "webgl2", pixelRatio });
 const renderEngine = createRenderEngine({ ctx, debug: true });
 const world = createWorld();
 
@@ -101,8 +102,8 @@ const s = 1;
 const rects = divide([-2 * s, -1 * s, 4 * s, 2 * s, 0], []);
 
 const postProcessing = components.postProcessing({
-  fxaa: components.aa(),
-  ao: components.ao({
+  aa: components.aa(),
+  ssao: components.ssao({
     type: "sao",
     intensity: 2,
   }),
@@ -187,7 +188,7 @@ const lightEntity = createEntity({
   }),
   directionalLight: components.directionalLight({
     color: [1, 1, 1, 1],
-    intensity: 5,
+    intensity: 1,
     castShadows: true,
     bias: 0.01,
   }),
@@ -249,13 +250,16 @@ gui.addRadioList(
     value,
   }))
 );
+// renderEngine.renderers.find(
+//   (renderer) => renderer.type == "standard-renderer"
+// ).debugRender = "data.ao";
 gui.addRadioList(
   "Debug Post-Processing",
   renderEngine.renderers.find(
     (renderer) => renderer.type == "post-processing-renderer"
   ),
   "debugRender",
-  ["", "ao.blurHorizontal", "ao.blurVertical"].map((value) => ({
+  ["", "ssao.blurHorizontal", "ssao.blurVertical"].map((value) => ({
     name: value || "No debug",
     value,
   }))
@@ -264,37 +268,44 @@ gui.addRadioList(
 const guiNormalControl = gui.addTexture2D("Normal", null, { flipY: true });
 const guiDepthControl = gui.addTexture2D("Depth", null, { flipY: true });
 const guiAOControl = gui.addTexture2D("AO", null, { flipY: true });
-gui.addColumn("AO");
-gui.addParam("Samples", postProcessing.ao, "samples", {
+gui.addColumn("SSAO");
+gui.addRadioList(
+  "Type",
+  postProcessing.ssao,
+  "type",
+  ["sao", "gtao"].map((value) => ({ name: value, value }))
+);
+gui.addParam("Samples", postProcessing.ssao, "samples", {
   min: 2,
   max: 20,
   step: 1,
 });
-gui.addParam("Radius", postProcessing.ao, "radius", {
-  min: 0,
-  max: 1000,
-});
-gui.addParam("Intensity", postProcessing.ao, "intensity", {
+gui.addParam("Radius", postProcessing.ssao, "radius", { min: 0, max: 1000 });
+gui.addParam("Intensity", postProcessing.ssao, "intensity", {
   min: 0,
   max: 10,
 });
-gui.addParam("Bias", postProcessing.ao, "bias", { min: 0, max: 0.1 });
-gui.addParam("Brightness", postProcessing.ao, "brightness", {
+gui.addParam("Bias", postProcessing.ssao, "bias", { min: 0, max: 0.1 });
+gui.addParam("Brightness", postProcessing.ssao, "brightness", {
   min: -0.5,
   max: 0.5,
 });
-gui.addParam("Contrast", postProcessing.ao, "contrast", {
-  min: 0.1,
-  max: 3,
-});
-gui.addParam("Blur radius", postProcessing.ao, "blurRadius", {
+gui.addParam("Contrast", postProcessing.ssao, "contrast", { min: 0.1, max: 3 });
+gui.addParam("Blur radius", postProcessing.ssao, "blurRadius", {
   min: 0,
   max: 5,
 });
-gui.addParam("Blur sharpness", postProcessing.ao, "blurSharpness", {
+gui.addParam("Blur sharpness", postProcessing.ssao, "blurSharpness", {
   min: 0,
   max: 20,
 });
+gui.addParam("Color bounce", postProcessing.ssao, "colorBounce");
+gui.addParam("Bounce intensity", postProcessing.ssao, "colorBounceIntensity", {
+  min: 0,
+  max: 10,
+});
+gui.addParam("Post", postProcessing.ssao, "post");
+gui.addParam("Mix", postProcessing.ssao, "mix", { min: 0, max: 1 });
 
 // Events
 let debugOnce = false;
@@ -321,7 +332,7 @@ ctx.frame(() => {
   guiNormalControl.texture = normal;
   guiDepthControl.texture = depth;
   // guiAOControl.texture = color;
-  guiAOControl.texture = postProcessing._targets[cameraEntity.id]["ao.main"];
+  guiAOControl.texture = postProcessing._targets[cameraEntity.id]["ssao.main"];
 
   ctx.debug(debugOnce);
   debugOnce = false;

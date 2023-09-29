@@ -6,7 +6,7 @@
  * @exports module:PostProcessingComponent
  */
 export default (options) => ({
-  // ao
+  // ssao
   // dof
   // aa
   // fog
@@ -18,16 +18,21 @@ export default (options) => ({
   ...options,
 });
 
-export const ao = (options) => ({
-  type: "sao",
+export const ssao = (options) => ({
+  type: "sao", // "gtao",
+  post: false,
+  mix: 0.5,
   samples: 11,
   intensity: 1,
-  radius: 100,
-  bias: 0.001,
+  radius: 100, // cm
+  bias: 0.001, // cm
   blurRadius: 0.5,
   blurSharpness: 10,
   brightness: 0,
   contrast: 1,
+  // GTAO
+  colorBounce: true,
+  colorBounceIntensity: 1.0,
   ...options,
 });
 export const dof = (options) => ({

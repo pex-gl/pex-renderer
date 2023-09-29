@@ -33,7 +33,7 @@ const State = {
   autofocus: true,
 
   aa: true,
-  ao: true,
+  ssao: true,
   fog: true,
   bloom: true,
   dof: true,
@@ -92,8 +92,10 @@ const postProcessing = components.postProcessing({
     type: "fxaa2",
     spanMax: 8,
   },
-  ao: {
+  ssao: {
     type: "sao",
+    // type: "gtao",
+    post: false,
     samples: 11,
     intensity: 1,
     radius: 100,
@@ -102,6 +104,9 @@ const postProcessing = components.postProcessing({
     blurSharpness: 10,
     brightness: 0,
     contrast: 1,
+    colorBounce: true,
+    colorBounceIntensity: 1,
+    mix: 1,
   },
   fog: {
     color: [0.5, 0.5, 0.5],
@@ -422,15 +427,21 @@ gui.addRadioList(
     (renderer) => renderer.type == "post-processing-renderer"
   ),
   "debugRender",
-  ["", "ao.main", "dof.main", "bloom.threshold", "bloom.downSample[3]"].map(
+  ["", "ssao.main", "dof.main", "bloom.threshold", "bloom.downSample[3]"].map(
     (value) => ({
       name: value || "No debug",
       value,
     })
   )
 );
+const dummyTexture2D = ctx.texture2D({
+  name: "dummyTexture2D",
+  width: 4,
+  height: 4,
+});
 const guiNormalControl = gui.addTexture2D("Normal", null, { flipY: true });
 const guiDepthControl = gui.addTexture2D("Depth", null, { flipY: true });
+const guiAOControl = gui.addTexture2D("Ao", null, { flipY: true });
 
 // gui.addTab("Scene");
 // gui.addColumn("Environment");
@@ -627,40 +638,48 @@ gui.addParam("Vignette intensity", postProcessing.vignette, "intensity", {
 
 gui.addParam("Opacity", postProcessing, "opacity", { min: 0, max: 1 });
 
-gui.addColumn("AO");
-gui.addParam("Enabled", State, "ao", null, () => {
-  enablePostProPass("ao");
+gui.addColumn("SSAO");
+gui.addParam("Enabled", State, "ssao", null, () => {
+  enablePostProPass("ssao");
 });
-gui.addParam("Samples", postProcessing.ao, "samples", {
+gui.addRadioList(
+  "Type",
+  postProcessing.ssao,
+  "type",
+  ["sao", "gtao"].map((value) => ({ name: value, value }))
+);
+gui.addParam("Samples", postProcessing.ssao, "samples", {
   min: 2,
   max: 20,
   step: 1,
 });
-gui.addParam("Radius", postProcessing.ao, "radius", {
-  min: 0,
-  max: 1000,
-});
-gui.addParam("Intensity", postProcessing.ao, "intensity", {
+gui.addParam("Radius", postProcessing.ssao, "radius", { min: 0, max: 1000 });
+gui.addParam("Intensity", postProcessing.ssao, "intensity", {
   min: 0,
   max: 10,
 });
-gui.addParam("Bias", postProcessing.ao, "bias", { min: 0, max: 0.1 });
-gui.addParam("Brightness", postProcessing.ao, "brightness", {
+gui.addParam("Bias", postProcessing.ssao, "bias", { min: 0, max: 0.1 });
+gui.addParam("Brightness", postProcessing.ssao, "brightness", {
   min: -0.5,
   max: 0.5,
 });
-gui.addParam("Contrast", postProcessing.ao, "contrast", {
-  min: 0.1,
-  max: 3,
-});
-gui.addParam("Blur radius", postProcessing.ao, "blurRadius", {
+gui.addParam("Contrast", postProcessing.ssao, "contrast", { min: 0.1, max: 3 });
+gui.addParam("Blur radius", postProcessing.ssao, "blurRadius", {
   min: 0,
   max: 5,
 });
-gui.addParam("Blur sharpness", postProcessing.ao, "blurSharpness", {
+gui.addParam("Blur sharpness", postProcessing.ssao, "blurSharpness", {
   min: 0,
   max: 20,
 });
+gui.addParam("Color bounce", postProcessing.ssao, "colorBounce");
+gui.addParam("Bounce intensity", postProcessing.ssao, "colorBounceIntensity", {
+  min: 0,
+  max: 10,
+});
+gui.addParam("Post", postProcessing.ssao, "post");
+gui.addParam("Mix", postProcessing.ssao, "mix", { min: 0, max: 1 });
+
 gui.addColumn("Depth of Field");
 gui.addParam("Enabled", State, "dof", null, () => {
   enablePostProPass("dof");
@@ -713,7 +732,7 @@ gui.addParam("Screen Point", postProcessing.dof.screenPoint, "1", {
   max: 1,
 });
 
-enablePostProPass("ao");
+enablePostProPass("ssao");
 enablePostProPass("dof");
 enablePostProPass("aa");
 enablePostProPass("fog");
@@ -771,8 +790,11 @@ ctx.frame(() => {
     cameraEntity
   );
 
-  guiNormalControl.texture = normal;
+  guiNormalControl.texture = normal || dummyTexture2D;
   guiDepthControl.texture = depth;
+  guiAOControl.texture =
+    postProcessing?._targets?.[cameraEntity.id]?.["ssao.main"] ||
+    dummyTexture2D;
 
   ctx.debug(debugOnce);
   debugOnce = false;

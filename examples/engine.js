@@ -427,7 +427,7 @@ gui.addRadioList(
     "data.sheenRoughness",
     "data.sheen",
 
-    "ao",
+    "data.ao",
     "vNormalView",
     "vNormalWorld",
   ].map((value) => ({ name: value || "No debug", value }))

@@ -250,13 +250,16 @@ export default ({
     );
     mainPassOutputTexture.name = `mainPassOutput (id: ${mainPassOutputTexture.id})`;
 
-    const mainPassNormalOutputTexture = resourceCache.texture2D(
-      this.descriptors.mainPass.outputTextureDesc
-    );
-    mainPassNormalOutputTexture.name = `mainPassNormalOutput (id: ${mainPassNormalOutputTexture.id})`;
+    let mainPassNormalOutputTexture;
+    if (postProcessing?.ssao) {
+      mainPassNormalOutputTexture = resourceCache.texture2D(
+        this.descriptors.mainPass.outputTextureDesc
+      );
+      mainPassNormalOutputTexture.name = `mainPassNormalOutput (id: ${mainPassNormalOutputTexture.id})`;
+    }
 
     let mainPassEmissiveOutputTexture;
-    if (postProcessing) {
+    if (postProcessing?.bloom) {
       mainPassEmissiveOutputTexture = resourceCache.texture2D(
         this.descriptors.mainPass.outputTextureDesc
       );
@@ -283,8 +286,8 @@ export default ({
         name: "mainPass",
         color: [
           mainPassOutputTexture,
-          mainPassNormalOutputTexture,
-          postProcessing && mainPassEmissiveOutputTexture,
+          postProcessing?.ssao && mainPassNormalOutputTexture,
+          postProcessing?.bloom && mainPassEmissiveOutputTexture,
         ].filter(Boolean),
         depth: outputDepthTexture,
         clearColor: renderView.camera.clearColor,

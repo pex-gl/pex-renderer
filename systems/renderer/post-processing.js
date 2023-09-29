@@ -100,6 +100,8 @@ export default ({ ctx, resourceCache }) => {
         for (let j = 0; j < pass.commands.length; j++) {
           const passCommand = pass.commands[j];
 
+          if (passCommand.disabled?.(renderView)) continue;
+
           // Also computes this.materialUniforms
           const pipeline = this.getPipeline(
             ctx,
@@ -147,6 +149,7 @@ export default ({ ctx, resourceCache }) => {
           }
 
           const uniforms = {
+            // TODO: only add required attachments
             uTexture: inputColor,
             uDepthTexture: attachments.depth,
             uNormalTexture: attachments.normal,
@@ -162,18 +165,14 @@ export default ({ ctx, resourceCache }) => {
           Object.assign(uniforms, sharedUniforms, this.materialUniforms);
 
           // Set command
-          // TODO: allow pass options like clearColor
-          // Get descriptors
-          const passDesc = {
-            color: [outputColor],
-            ...passCommand.passDesc?.(renderView),
-          };
-
           const fullscreenTriangle = resourceCache.fullscreenTriangle();
 
           const postProcessingCmd = {
             name: `${pass.name}.${passCommand.name}`,
-            pass: resourceCache.pass(passDesc),
+            pass: resourceCache.pass({
+              color: [outputColor],
+              ...passCommand.passDesc?.(renderView),
+            }),
             pipeline,
             uniforms,
             attributes: fullscreenTriangle.attributes,

@@ -24,9 +24,10 @@ const flagDefs = [
   [["options", "reflectionProbes", "length"], "USE_REFLECTION_PROBES"],
   [["options", "useTonemapping"], "USE_TONEMAPPING"],
   [["options", "envMapSize"], "", { uniform: "uEnvMapSize" }], // Blurred env map size
-  [["options", "useAO"], "USE_AO", { type: "boolean" }],
-  [["material", "unlit"], "USE_UNLIT_WORKFLOW", { type: "boolean", fallback: "USE_METALLIC_ROUGHNESS_WORKFLOW" }],
-  [["material", "blend"], "USE_BLEND", { type: "boolean" }],
+  [["options", "outputNormals"], "OUTPUT_NORMALS"],
+  [["options", "outputEmissive"], "OUTPUT_EMISSIVE"],
+  [["options", "useSSAO"], "USE_SSAO"],
+  [["options", "useSSAOColors"], "USE_SSAO_COLORS"],
   [["options", "targets", "ssao.main"], "SSAO_TEXTURE", { type: "texture", uniform: "uSSAOTexture", requires: "USE_SSAO" }],
   [["material", "unlit"], "USE_UNLIT_WORKFLOW", { fallback: "USE_METALLIC_ROUGHNESS_WORKFLOW" }],
   [["material", "blend"], "USE_BLEND"],
@@ -452,7 +453,9 @@ export default ({ ctx }) => {
         shadowCastingEntities: [],
         reflectionProbes: entities.filter((e) => e.reflectionProbe),
         depthPassOnly: shadowMapping,
-        useAO: !!(cameraEntity?.postProcessing?.ao?.type === "sao"),
+        useSSAO: false,
+        useSSAOColors: false,
+        targets: {},
         useTonemapping: false,
         shadowQuality,
         debugRender,
@@ -465,6 +468,25 @@ export default ({ ctx }) => {
       };
 
       if (!shadowMapping) {
+        // Post processing
+        pipelineOptions.outputNormals = !!cameraEntity?.postProcessing?.ssao;
+        pipelineOptions.outputEmissive = !!cameraEntity?.postProcessing?.bloom;
+        pipelineOptions.targets =
+          cameraEntity.postProcessing?._targets?.[renderView.cameraEntity.id] ||
+          {};
+
+        if (
+          cameraEntity?.postProcessing?.ssao &&
+          !cameraEntity.postProcessing.ssao.post
+        ) {
+          pipelineOptions.useSSAO = true;
+          pipelineOptions.useSSAOColors =
+            cameraEntity.postProcessing.ssao.type === "gtao" &&
+            cameraEntity.postProcessing.ssao.colorBounce;
+          pipelineOptions.targets["ssao.main"] ||= dummyTexture2D;
+        }
+
+        // Lighting
         pipelineOptions.ambientLights = entities.filter((e) => e.ambientLight);
         pipelineOptions.directionalLights = entities.filter(
           (e) => e.directionalLight
@@ -533,12 +555,6 @@ export default ({ ctx }) => {
         cachedUniforms.uReflectance =
           material.reflectance !== undefined ? material.reflectance : 0.5;
         cachedUniforms.uExposure = 1.0;
-        if (pipelineOptions.useAO) {
-          cachedUniforms.uAO =
-            cameraEntity.postProcessing?._targets?.[
-              renderView.cameraEntity.id
-            ]?.["ao.main"] || dummyTexture2D;
-        }
 
         cachedUniforms.uPointSize = material.pointSize || 1;
         // TODO: why is this here
