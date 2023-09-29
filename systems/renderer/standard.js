@@ -14,19 +14,22 @@ let ltc_2;
 
 // prettier-ignore
 const flagDefs = [
-  [["options", "depthPassOnly"], "DEPTH_PASS_ONLY", { type: "boolean" }],
-  [["options", "depthPassOnly"], "USE_UNLIT_WORKFLOW", { type: "boolean" }], //force unlit in depth pass mode
+  [["options", "depthPassOnly"], "DEPTH_PASS_ONLY"],
+  [["options", "depthPassOnly"], "USE_UNLIT_WORKFLOW"], //force unlit in depth pass mode
   [["options", "ambientLights", "length"], "NUM_AMBIENT_LIGHTS", { type: "counter" }],
   [["options", "directionalLights", "length"], "NUM_DIRECTIONAL_LIGHTS", { type: "counter" }],
   [["options", "pointLights", "length"], "NUM_POINT_LIGHTS", { type: "counter" }],
   [["options", "spotLights", "length"], "NUM_SPOT_LIGHTS", { type: "counter" }],
   [["options", "areaLights", "length"], "NUM_AREA_LIGHTS", { type: "counter" }],
-  [["options", "reflectionProbes", "length"], "USE_REFLECTION_PROBES", { type: "boolean" }],
-  [["options", "useTonemapping"], "USE_TONEMAPPING", { type: "boolean" }],
+  [["options", "reflectionProbes", "length"], "USE_REFLECTION_PROBES"],
+  [["options", "useTonemapping"], "USE_TONEMAPPING"],
   [["options", "envMapSize"], "", { uniform: "uEnvMapSize" }], // Blurred env map size
   [["options", "useAO"], "USE_AO", { type: "boolean" }],
   [["material", "unlit"], "USE_UNLIT_WORKFLOW", { type: "boolean", fallback: "USE_METALLIC_ROUGHNESS_WORKFLOW" }],
   [["material", "blend"], "USE_BLEND", { type: "boolean" }],
+  [["options", "targets", "ssao.main"], "SSAO_TEXTURE", { type: "texture", uniform: "uSSAOTexture", requires: "USE_SSAO" }],
+  [["material", "unlit"], "USE_UNLIT_WORKFLOW", { fallback: "USE_METALLIC_ROUGHNESS_WORKFLOW" }],
+  [["material", "blend"], "USE_BLEND"],
   [["skin"], "USE_SKIN"],
   [["skin", "joints", "length"], "NUM_JOINTS", { type: "counter", requires: "USE_SKIN" }],
   [["skin", "jointMatrices"], "", { uniform: "uJointMat", requires: "USE_SKIN" }],

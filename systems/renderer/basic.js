@@ -11,7 +11,7 @@ import { NAMESPACE } from "../../utils.js";
 
 // Impacts program caching
 const flagDefs = [
-  [["material", "blend"], "USE_BLEND", { type: "boolean" }],
+  [["material", "blend"], "USE_BLEND"],
   [["material", "baseColor"], "", { uniform: "uBaseColor" }],
   [["geometry", "attributes", "aOffset"], "USE_INSTANCED_OFFSET"],
   [["geometry", "attributes", "aScale"], "USE_INSTANCED_SCALE"],

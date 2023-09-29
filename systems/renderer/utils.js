@@ -36,9 +36,11 @@ export function getMaterialFlagsAndUniforms(
     }
 
     // Compute flags and uniforms
-    if (opts.type == "counter") {
+    if (opts.type === "counter") {
       flags.push(`${defineName} ${value}`);
-    } else if (opts.type == "texture" && value) {
+    } else if (opts.type === "texture") {
+      if (!value) continue;
+
       flags.push(`USE_${defineName}`);
       flags.push(`${defineName}_TEX_COORD ${value.texCoord || "0"}`);
       materialUniforms[opts.uniform] = value.texture || value;
@@ -59,23 +61,19 @@ export function getMaterialFlagsAndUniforms(
         flags.push(`USE_${defineName}_MATRIX`);
         materialUniforms[opts.uniform + "Matrix"] = value.matrix;
       }
-    } else if (value !== undefined || opts.default !== undefined) {
-      if (opts.type !== "boolean" || value) {
-        if (opts.compare) {
-          if (opts.compare === value) flags.push(defineName);
-        } else {
-          flags.push(defineName);
-        }
-      } else {
-        if (opts.fallback) {
-          flags.push(opts.fallback);
-        }
+      // If not nullish or has default
+    } else if ((value ?? false) || opts.default !== undefined) {
+      // Pass the compare test or truthy
+      if (opts.compare !== undefined ? opts.compare === value : value) {
+        flags.push(defineName);
+      } else if (opts.fallback) {
+        flags.push(opts.fallback);
       }
-      if (opts.uniform) {
-        materialUniforms[opts.uniform] =
-          value !== undefined ? value : opts.default;
-      }
+
+      // Set uniform with default if value is nullish
+      if (opts.uniform) materialUniforms[opts.uniform] = value ?? opts.default;
     } else if (opts.fallback) {
+      // No value and no default
       flags.push(opts.fallback);
     }
   }
