@@ -350,9 +350,9 @@ for (let i = 0; i < 128; i++) {
 
   if (prevPos) {
     segmentsGeometry.positions.push(prevPos);
-    segmentsGeometry.vertexColors.push([1, 0, 1, 0.5]);
+    segmentsGeometry.vertexColors.push([1, 1, 0, 0.5]);
     segmentsGeometry.positions.push([x, y, z]);
-    segmentsGeometry.vertexColors.push([1, 0, 1, 0.5]);
+    segmentsGeometry.vertexColors.push([1, 0, 0, 0.5]);
   }
   prevPos = [x, y, z];
 }
