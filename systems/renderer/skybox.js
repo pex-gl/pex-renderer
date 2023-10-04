@@ -58,7 +58,7 @@ export default ({ ctx, resourceCache }) => {
         console.warn(
           NAMESPACE,
           this.type,
-          `reflectionProbe component missing _reflectionProbe. Add a reflectionProbeSystem.update(entities, { renderers: [skyboxRendererSystem] }).`,
+          `reflectionProbe component missing _reflectionProbe. Add a reflectionProbeSystem.update(entities, { renderers: [skyboxRendererSystem] }).`
         );
       } else {
         return true;
@@ -69,7 +69,7 @@ export default ({ ctx, resourceCache }) => {
         console.warn(
           NAMESPACE,
           this.type,
-          `skybox component missing texture. Provide a "envMap" or add a skyboxSystem.update(world.entities).`,
+          `skybox component missing texture. Provide a "envMap" or add a skyboxSystem.update(world.entities).`
         );
       } else {
         return true;
@@ -83,7 +83,7 @@ export default ({ ctx, resourceCache }) => {
         outputEncoding,
         backgroundBlur,
         reflectionProbeEntity,
-      },
+      }
     ) {
       //TODO
       // if (!this.texture && this.dirty) {
@@ -149,7 +149,7 @@ export default ({ ctx, resourceCache }) => {
               backgroundBlur: entity.skybox.backgroundBlur,
               outputEncoding: renderView.outputEncoding || ctx.Encoding.Linear,
               reflectionProbeEntity: entities.find(
-                (entity) => entity.reflectionProbe,
+                (entity) => entity.reflectionProbe
               ),
             });
             // entity._skybox.draw(renderView.camera, {

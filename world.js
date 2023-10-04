@@ -34,7 +34,7 @@ export default ({ entities = [], systems = [] } = {}) => {
       }
 
       this.entities = this.entities.filter(
-        (entity) => !entitiesToDispose.includes(entity),
+        (entity) => !entitiesToDispose.includes(entity)
       );
 
       entitiesToDispose.length = 0;

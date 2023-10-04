@@ -60,7 +60,7 @@ function updateCameraProjection(camera, transform) {
       bottom,
       top,
       camera.near,
-      camera.far,
+      camera.far
     );
   } else {
     if (camera.view) {
@@ -89,7 +89,7 @@ function updateCameraProjection(camera, transform) {
         b,
         t,
         camera.near,
-        camera.far,
+        camera.far
       );
     } else {
       mat4.perspective(
@@ -97,7 +97,7 @@ function updateCameraProjection(camera, transform) {
         camera.fov,
         camera.aspect,
         camera.near,
-        camera.far,
+        camera.far
       );
     }
   }
@@ -127,7 +127,7 @@ export default () => ({
       console.warn(
         NAMESPACE,
         this.type,
-        `camera entity missing transform. Add a transformSystem.update(entities).`,
+        `camera entity missing transform. Add a transformSystem.update(entities).`
       );
     } else {
       return true;
@@ -208,13 +208,13 @@ export default () => ({
               TEMP_MAT4,
               orbiter._orbiter.camera.position,
               orbiter._orbiter.camera.target,
-              orbiter._orbiter.camera.up,
+              orbiter._orbiter.camera.up
             );
             mat4.invert(TEMP_MAT4);
             quat.fromMat4(entity.transform.rotation, TEMP_MAT4);
             quat.set(
               orbiter._orbiter.camera.rotationCache,
-              entity.transform.rotation,
+              entity.transform.rotation
             );
 
             orbiter.lat = orbiter._orbiter.lat;
@@ -253,7 +253,7 @@ export default () => ({
         if (
           vec3.distance(
             orbiter._orbiter.camera.position,
-            entity.transform.position,
+            entity.transform.position
           ) > utils.EPSILON
         ) {
           newPosition = [...entity.transform.position];
@@ -263,7 +263,7 @@ export default () => ({
         if (
           vec3.distance(
             orbiter._orbiter.camera.rotationCache,
-            entity.transform.rotation,
+            entity.transform.rotation
           ) > utils.EPSILON
         ) {
           // console.log("sync with camera rotation");
@@ -322,7 +322,7 @@ export default () => ({
         mat4.translate(camera.invViewMatrix, entity.transform.position);
         mat4.mult(
           camera.invViewMatrix,
-          mat4.fromQuat(TEMP_MAT4, entity.transform.rotation),
+          mat4.fromQuat(TEMP_MAT4, entity.transform.rotation)
         );
         mat4.set(camera.viewMatrix, camera.invViewMatrix);
         mat4.invert(camera.viewMatrix);

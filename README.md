@@ -156,51 +156,6 @@ ctx.frame(() => {
 <dd></dd>
 </dl>
 
-## Functions
-
-<dl>
-<dt><a href="#default">default()</a> ⇒ <code><a href="#System">System</a></code></dt>
-<dd><p>Camera system</p>
-<p>Adds:</p>
-<ul>
-<li>&quot;_orbiter&quot; to orbiter components</li>
-</ul>
-</dd>
-<dt><a href="#default">default(options)</a> ⇒ <code><a href="#System">System</a></code></dt>
-<dd><p>Geometry system</p>
-<p>Adds:</p>
-<ul>
-<li>&quot;bounds&quot; to geometry components</li>
-<li>&quot;_geometry&quot; to entities as reference to internal cache</li>
-</ul>
-</dd>
-<dt><a href="#default">default()</a> ⇒ <code><a href="#System">System</a></code></dt>
-<dd><p>Light system</p>
-<p>Adds:</p>
-<ul>
-<li>&quot;_projectionMatrix&quot; and &quot;_viewMatrix&quot; to light components</li>
-<li>&quot;_direction&quot; to directional and spot light components</li>
-</ul>
-</dd>
-<dt><a href="#default">default()</a> ⇒ <code><a href="#System">System</a></code></dt>
-<dd><p>Render pipeline system</p>
-<p>Adds:</p>
-<ul>
-<li>&quot;_near&quot;, &quot;_far&quot; and &quot;_sceneBboxInLightSpace&quot; to light components that cast shadows</li>
-<li>&quot;_shadowCubemap&quot; to pointLight components and &quot;_shadowMap&quot; to other light components</li>
-<li>&quot;_targets&quot; to postProcessing components</li>
-</ul>
-</dd>
-<dt><a href="#default">default()</a> ⇒ <code><a href="#System">System</a></code></dt>
-<dd><p>Transform system</p>
-<p>Adds:</p>
-<ul>
-<li>&quot;worldBounds&quot;, &quot;dirty&quot; and &quot;aabbDirty&quot; to transform components</li>
-<li>&quot;_transform&quot; to entities as reference to internal cache</li>
-</ul>
-</dd>
-</dl>
-
 ## Typedefs
 
 <dl>
@@ -588,71 +543,6 @@ Create a resource cache for pex-context caching.
 | ----- | ---------------------------------------------- |
 | ctx   | <code>module:pex-context/types/index.js</code> |
 
-<a name="default"></a>
-
-## default() ⇒ [<code>System</code>](#System)
-
-Camera system
-
-Adds:
-
-- "\_orbiter" to orbiter components
-
-**Kind**: global function
-<a name="default"></a>
-
-## default(options) ⇒ [<code>System</code>](#System)
-
-Geometry system
-
-Adds:
-
-- "bounds" to geometry components
-- "\_geometry" to entities as reference to internal cache
-
-**Kind**: global function
-
-| Param   | Type                                         |
-| ------- | -------------------------------------------- |
-| options | [<code>SystemOptions</code>](#SystemOptions) |
-
-<a name="default"></a>
-
-## default() ⇒ [<code>System</code>](#System)
-
-Light system
-
-Adds:
-
-- "\_projectionMatrix" and "\_viewMatrix" to light components
-- "\_direction" to directional and spot light components
-
-**Kind**: global function
-<a name="default"></a>
-
-## default() ⇒ [<code>System</code>](#System)
-
-Render pipeline system
-
-Adds:
-
-- "\_near", "\_far" and "\_sceneBboxInLightSpace" to light components that cast shadows
-- "\_shadowCubemap" to pointLight components and "\_shadowMap" to other light components
-- "\_targets" to postProcessing components
-
-**Kind**: global function
-<a name="default"></a>
-
-## default() ⇒ [<code>System</code>](#System)
-
-Transform system
-
-Adds:
-
-- "worldBounds", "dirty" and "aabbDirty" to transform components
-- "\_transform" to entities as reference to internal cache
-
-**Kind**: global function
 <a name="Entity"></a>
 
 ## Entity : <code>object</code>

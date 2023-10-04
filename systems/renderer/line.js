@@ -13,7 +13,7 @@ const instanceRoundRound = Float32Array.of(
 
 export default ({ ctx, resolution = 16 } = {}) => {
   const positions = new Float32Array(
-    instanceRoundRound.length + resolution * 18,
+    instanceRoundRound.length + resolution * 18
   );
   positions.set(instanceRoundRound);
 
@@ -28,14 +28,14 @@ export default ({ ctx, resolution = 16 } = {}) => {
       index + 1,
       0.5 * Math.cos(theta0),
       0.5 * Math.sin(theta0),
-      0,
+      0
     );
     avec3.set3(
       positions,
       index + 2,
       0.5 * Math.cos(theta1),
       0.5 * Math.sin(theta1),
-      0,
+      0
     );
 
     // Right cap
@@ -49,14 +49,14 @@ export default ({ ctx, resolution = 16 } = {}) => {
       index + 1,
       0.5 * Math.cos(theta0),
       0.5 * Math.sin(theta0),
-      1,
+      1
     );
     avec3.set3(
       positions,
       index + 2,
       0.5 * Math.cos(theta1),
       0.5 * Math.sin(theta1),
-      1,
+      1
     );
   }
 

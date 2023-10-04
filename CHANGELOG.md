@@ -1,6 +1,10 @@
 # Changelog
 
-All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
+All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
+
+# [4.0.0-alpha.43](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.42...v4.0.0-alpha.43) (2023-10-04)
+
+
 
 # [4.0.0-alpha.42](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.41...v4.0.0-alpha.42) (2023-09-29)
 

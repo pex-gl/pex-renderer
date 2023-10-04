@@ -60,7 +60,7 @@ class ReflectionProbe {
           mat4.create(),
           side.eye,
           side.target,
-          side.up,
+          side.up
         );
         side.drawPassCmd = {
           name: `reflectionProbeCubemapSideCmd${i}`,
@@ -77,7 +77,7 @@ class ReflectionProbe {
           }),
         };
         return side;
-      },
+      }
     );
   }
 
@@ -227,7 +227,7 @@ class ReflectionProbe {
     // TODO: consider removing as it should match sourceRegionSize
     const levelSize = Math.max(
       64,
-      width / 2 ** (1 + mipmapLevel + roughnessLevel),
+      width / 2 ** (1 + mipmapLevel + roughnessLevel)
     );
     const roughnessLevelWidth = width / 2 ** (1 + roughnessLevel);
     const vOffset = width - 2 ** (Math.log2(width) - roughnessLevel);
@@ -247,7 +247,7 @@ class ReflectionProbe {
   downsampleFromOctMapAtlasLevel(
     mipmapLevel,
     roughnessLevel,
-    targetRegionSize,
+    targetRegionSize
   ) {
     this._ctx.submit(this.downsampleFromOctMapAtlasCmd, {
       viewport: [0, 0, targetRegionSize, targetRegionSize],
@@ -263,7 +263,7 @@ class ReflectionProbe {
     sourceMipmapLevel,
     sourceRoughnessLevel,
     roughnessLevel,
-    targetRegionSize,
+    targetRegionSize
   ) {
     this._ctx.submit(this.prefilterFromOctMapAtlasCmd, {
       viewport: [0, 0, targetRegionSize, targetRegionSize],
@@ -288,7 +288,7 @@ class ReflectionProbe {
     for (let i = 0; i < this._dynamicCubemapSides.length; i++) {
       const side = this._dynamicCubemapSides[i];
       ctx.submit(side.drawPassCmd, () =>
-        drawScene(side, this._dynamicCubemap.encoding),
+        drawScene(side, this._dynamicCubemap.encoding)
       );
     }
 
@@ -365,7 +365,7 @@ export default ({ ctx, resourceCache }) => ({
       const skyboxEntities = entities
         .filter((entity) => entity.skybox)
         .filter(
-          (skyboxEntity) => !entity.layer || entity.layer == skyboxEntity.layer,
+          (skyboxEntity) => !entity.layer || entity.layer == skyboxEntity.layer
         );
       const skyboxEntity = skyboxEntities[0];
 
@@ -398,12 +398,12 @@ export default ({ ctx, resourceCache }) => ({
       if (
         vec3.distance(
           cachedProps.skyboxSunPosition,
-          skyboxEntity.skybox.sunPosition,
+          skyboxEntity.skybox.sunPosition
         ) > 0
       ) {
         vec3.set(
           cachedProps.skyboxSunPosition,
-          skyboxEntity.skybox.sunPosition,
+          skyboxEntity.skybox.sunPosition
         );
         needsUpdate = true;
       }

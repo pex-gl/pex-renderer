@@ -42,7 +42,7 @@ const fullscreenTriangle = {
 }
 
 const CUBEMAP_PROJECTION_MATRIX = Object.freeze(
-  mat4.perspective(mat4.create(), Math.PI / 2, 1, 0.1, 100),
+  mat4.perspective(mat4.create(), Math.PI / 2, 1, 0.1, 100)
 );
 
 // prettier-ignore

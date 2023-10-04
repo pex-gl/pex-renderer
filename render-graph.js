@@ -45,10 +45,10 @@ export default (ctx) => ({
               "render-graph",
               `Pass "${name}" crashed.`,
               error,
-              pass,
+              pass
             );
           }
-        },
+        }
       );
     }
   },

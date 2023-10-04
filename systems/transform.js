@@ -118,7 +118,7 @@ export default () => ({
           for (var i = 0; i < TEMP_BOUNDS_POINTS.length; i++) {
             vec3.multMat4(
               TEMP_BOUNDS_POINTS[i],
-              this.cache[transform.entity.id].modelMatrix,
+              this.cache[transform.entity.id].modelMatrix
             );
           }
           aabb.empty(TEMP_AABB);
@@ -165,7 +165,7 @@ export default () => ({
         mat4.set(
           this.cache[entity.id].modelMatrix,
           // TODO: can we only store entity id instead of full reference?
-          this.cache[entity.transform.parent.entity.id].modelMatrix,
+          this.cache[entity.transform.parent.entity.id].modelMatrix
         );
       } else {
         mat4.identity(this.cache[entity.id].modelMatrix);
@@ -173,19 +173,19 @@ export default () => ({
 
       mat4.mult(
         this.cache[entity.id].modelMatrix,
-        this.cache[entity.id].localModelMatrix,
+        this.cache[entity.id].localModelMatrix
       );
 
       this.updateModelMatrixHierarchy(
         this.cache[entity.id].modelMatrix,
-        entity.transform,
+        entity.transform
       );
 
       // Update world position
       vec3.scale(this.cache[entity.id].worldPosition, 0);
       vec3.multMat4(
         this.cache[entity.id].worldPosition,
-        this.cache[entity.id].modelMatrix,
+        this.cache[entity.id].modelMatrix
       );
 
       // Reset worldBounds

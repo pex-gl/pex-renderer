@@ -50,7 +50,7 @@ export default () => ({
       // TODO: should that be in geometry system as geometry.bounds.dirty or aabbDirty?
       entity.geometry.bounds = aabb.fromPoints(
         entity.geometry.bounds || aabb.create(),
-        entity.morph.current.positions || entity.morph.current.offsets,
+        entity.morph.current.positions || entity.morph.current.offsets
       );
     }
   },

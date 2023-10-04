@@ -28,7 +28,7 @@ export default ({ ctx, resourceCache }) => {
         ctx,
         entity,
         command.flagDefs || {},
-        { targets: this.cache.targets[entity.id] },
+        { targets: this.cache.targets[entity.id] }
       );
       // TODO: materialUniforms are never cached?
       this.materialUniforms = materialUniforms;
@@ -49,7 +49,7 @@ export default ({ ctx, resourceCache }) => {
         program = buildProgram(
           ctx,
           ShaderParser.build(ctx, vert, flags),
-          ShaderParser.build(ctx, frag, flags),
+          ShaderParser.build(ctx, frag, flags)
         );
         this.cache.programs.set(flags, vert, frag, program);
       }
@@ -70,7 +70,7 @@ export default ({ ctx, resourceCache }) => {
             "new pipeline",
             program.id,
             getHashFromProps(command, pipelineProps, true),
-            entity,
+            entity
           );
         }
         this.cache.pipelines[hash] = ctx.pipeline({
@@ -106,7 +106,7 @@ export default ({ ctx, resourceCache }) => {
           const pipeline = this.getPipeline(
             ctx,
             renderView.cameraEntity,
-            passCommand,
+            passCommand
           );
 
           const sharedUniforms = {
