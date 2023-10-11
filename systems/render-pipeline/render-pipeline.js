@@ -39,18 +39,10 @@ const cullEntities = (entities, camera) =>
  * - "_targets" to postProcessing components
  * @returns {import("../../types.js").System}
  */
-export default ({
-  ctx,
-  resourceCache,
-  renderGraph,
-  shadowQuality = 2,
-  outputEncoding,
-}) => ({
+export default ({ ctx, resourceCache, renderGraph }) => ({
   type: "render-pipeline-system",
   cache: {},
   debug: false,
-  shadowQuality,
-  outputEncoding: outputEncoding || ctx.Encoding.Linear,
   renderers: [],
 
   descriptors: addDescriptors(ctx),
@@ -85,7 +77,6 @@ export default ({
     renderers,
     drawTransparent,
     backgroundColorTexture,
-    shadowQuality,
   }) {
     // if (backgroundColorTexture) {
     //   ctx.update(backgroundColorTexture, { mipmap: true });
@@ -124,17 +115,13 @@ export default ({
             const entities = renderView.camera.culling
               ? this.cullEntities(entitiesInView, renderView.camera)
               : entitiesInView;
-            renderer.renderStages.opaque(renderView, entities, {
-              shadowQuality,
-            });
+            renderer.renderStages.opaque(renderView, entities);
           }
         }
         for (let i = 0; i < renderers.length; i++) {
           const renderer = renderers[i];
           if (renderer.renderStages.background) {
-            renderer.renderStages.background(renderView, entitiesInView, {
-              shadowQuality,
-            });
+            renderer.renderStages.background(renderView, entitiesInView);
           }
         }
       } else {
@@ -147,7 +134,6 @@ export default ({
               : entitiesInView;
             renderer.renderStages.transparent(renderView, entities, {
               backgroundColorTexture,
-              shadowQuality,
             });
           }
         }
@@ -251,6 +237,7 @@ export default ({
     mainPassOutputTexture.name = `mainPassOutput (id: ${mainPassOutputTexture.id})`;
 
     let mainPassNormalOutputTexture;
+    // TODO: output options
     if (postProcessing?.ssao) {
       mainPassNormalOutputTexture = resourceCache.texture2D(
         this.descriptors.mainPass.outputTextureDesc
@@ -302,7 +289,6 @@ export default ({
           forward: true,
           drawTransparent: false,
           renderers: renderers,
-          shadowQuality: this.shadowQuality,
         });
       },
     });
@@ -376,7 +362,6 @@ export default ({
           drawTransparent: true,
           backgroundColorTexture: grabPassColorCopyTexture,
           renderers: renderers,
-          shadowQuality: this.shadowQuality, //FIXME: that's a lot of passing down
         });
       },
     });

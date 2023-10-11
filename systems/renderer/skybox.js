@@ -139,13 +139,12 @@ export default ({ ctx, resourceCache }) => {
       });
     },
     renderStages: {
-      background: (renderView, entities, options) => {
-        const { renderingToReflectionProbe } = options;
+      background: (renderView, entities, options = {}) => {
         for (let i = 0; i < entities.length; i++) {
           const entity = entities[i];
           if (entity.skybox) {
             skyboxRendererSystem.render(renderView, entity, {
-              renderingToReflectionProbe: renderingToReflectionProbe,
+              renderingToReflectionProbe: options.renderingToReflectionProbe,
               backgroundBlur: entity.skybox.backgroundBlur,
               outputEncoding: renderView.outputEncoding || ctx.Encoding.Linear,
               reflectionProbeEntity: entities.find(

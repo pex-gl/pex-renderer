@@ -7,41 +7,26 @@ export default ({ ctx, debug = false }) => {
   const renderGraph = createRenderGraph(ctx);
   const resourceCache = createResourceCache(ctx);
 
+  const options = { ctx, resourceCache, renderGraph };
+
   const animationSystem = systems.animation();
   const skinSystem = systems.skin();
-  const geometrySystem = systems.geometry({ ctx });
+  const geometrySystem = systems.geometry(options);
   const morphSystem = systems.morph();
   const transformSystem = systems.transform();
   const layerSystem = systems.layer();
-  const skyboxSystem = systems.skybox({ ctx, resourceCache });
+  const skyboxSystem = systems.skybox(options);
   const cameraSystem = systems.camera();
 
-  const reflectionProbeSystem = systems.reflectionProbe({ ctx, resourceCache });
+  const reflectionProbeSystem = systems.reflectionProbe(options);
   const lightSystem = systems.light();
-  const renderPipelineSystem = systems.renderPipeline({
-    ctx,
-    resourceCache,
-    renderGraph,
-    outputEncoding: ctx.Encoding.Linear,
-    shadowQuality: 3,
-  });
+  const renderPipelineSystem = systems.renderPipeline(options);
 
-  const standardRendererSystem = systems.renderer.standard({
-    ctx,
-    resourceCache,
-    renderGraph,
-  });
-  const lineRendererSystem = systems.renderer.line({
-    ctx,
-    resourceCache,
-    renderGraph,
-  });
-  const skyboxRendererSystem = systems.renderer.skybox({ ctx, resourceCache });
-  const helperRendererSystem = systems.renderer.helper({ ctx });
-  const postProcessingRendererSystem = systems.renderer.postProcessing({
-    ctx,
-    resourceCache,
-  });
+  const standardRendererSystem = systems.renderer.standard(options);
+  const lineRendererSystem = systems.renderer.line(options);
+  const skyboxRendererSystem = systems.renderer.skybox(options);
+  const helperRendererSystem = systems.renderer.helper(options);
+  const postProcessingRendererSystem = systems.renderer.postProcessing(options);
 
   const renderEngine = {
     // debugMode,

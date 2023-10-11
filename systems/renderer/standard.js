@@ -16,6 +16,7 @@ let ltc_2;
 const flagDefs = [
   [["options", "depthPassOnly"], "DEPTH_PASS_ONLY"],
   [["options", "depthPassOnly"], "USE_UNLIT_WORKFLOW"], //force unlit in depth pass mode
+  [["options", "shadowQuality"], "SHADOW_QUALITY", { type: "counter" }],
   [["options", "ambientLights", "length"], "NUM_AMBIENT_LIGHTS", { type: "counter" }],
   [["options", "directionalLights", "length"], "NUM_DIRECTIONAL_LIGHTS", { type: "counter" }],
   [["options", "pointLights", "length"], "NUM_POINT_LIGHTS", { type: "counter" }],
@@ -74,7 +75,7 @@ const lightColorToSrgb = (light) =>
     j < 3 ? Math.pow(c * light.intensity, 1.0 / 2.2) : c
   );
 
-export default ({ ctx }) => {
+export default ({ ctx, shadowQuality = 3 }) => {
   const dummyTexture2D = ctx.texture2D({
     name: "dummyTexture2D",
     width: 4,
@@ -140,6 +141,7 @@ export default ({ ctx }) => {
       programs: new ProgramCache(),
       pipelines: {},
     },
+    shadowQuality,
     debug: false,
     debugRender: "",
     checkLight(light) {
@@ -440,7 +442,6 @@ export default ({ ctx }) => {
         shadowMappingLight,
         transparent,
         backgroundColorTexture,
-        shadowQuality,
         debugRender,
       } = opts;
 
@@ -457,7 +458,7 @@ export default ({ ctx }) => {
         useSSAOColors: false,
         targets: {},
         useTonemapping: false,
-        shadowQuality,
+        shadowQuality: this.shadowQuality,
         debugRender,
       };
 

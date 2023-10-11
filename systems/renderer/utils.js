@@ -9,14 +9,11 @@ export function getMaterialFlagsAndUniforms(
   flagDefs,
   options = {}
 ) {
-  const { _geometry: geometry, material } = entity;
+  const { _geometry: geometry } = entity;
 
   const flags = [
     //[["ctx", "capabilities", "maxColorAttachments"], "USE_DRAW_BUFFERS"
     ctx.capabilities.maxColorAttachments > 1 && "USE_DRAW_BUFFERS",
-    // (!geometry.attributes.aNormal || material.unlit) && "USE_UNLIT_WORKFLOW",
-    // "USE_UNLIT_WORKFLOW",
-    `SHADOW_QUALITY ${material?.receiveShadows ? options.shadowQuality : 0}`,
   ];
   const materialUniforms = {};
 
