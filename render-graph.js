@@ -5,11 +5,11 @@ export default (ctx) => ({
   beginFrame() {
     this.renderPasses.length = 0;
   },
-  renderPass(opts) {
-    if (opts.uses && ctx.debugMode) {
-      console.debug(NAMESPACE, "render-graph uses", opts.uses);
+  renderPass(options) {
+    if (options.uses && ctx.debugMode) {
+      console.debug(NAMESPACE, "render-graph uses", options.uses);
     }
-    this.renderPasses.push(opts);
+    this.renderPasses.push(options);
   },
   endFrame() {
     //TODO: this should be render view

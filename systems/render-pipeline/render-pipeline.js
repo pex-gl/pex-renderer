@@ -49,6 +49,8 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
   postProcessingPasses: null,
   shadowMapping: null,
 
+  outputs: new Set(["color", "depth"]), // "normal", "emissive"
+
   checkLight(light, lightEntity) {
     if (!lightEntity._transform) {
       console.warn(
@@ -77,6 +79,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
     renderers,
     drawTransparent,
     backgroundColorTexture,
+    outputs,
   }) {
     // if (backgroundColorTexture) {
     //   ctx.update(backgroundColorTexture, { mipmap: true });
@@ -104,6 +107,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
           renderer.renderStages.shadow(renderView, entitiesInView, {
             shadowMapping: true,
             shadowMappingLight,
+            outputs,
           });
         }
       }
@@ -115,13 +119,15 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
             const entities = renderView.camera.culling
               ? this.cullEntities(entitiesInView, renderView.camera)
               : entitiesInView;
-            renderer.renderStages.opaque(renderView, entities);
+            renderer.renderStages.opaque(renderView, entities, { outputs });
           }
         }
         for (let i = 0; i < renderers.length; i++) {
           const renderer = renderers[i];
           if (renderer.renderStages.background) {
-            renderer.renderStages.background(renderView, entitiesInView);
+            renderer.renderStages.background(renderView, entitiesInView, {
+              outputs,
+            });
           }
         }
       } else {
@@ -134,6 +140,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
               : entitiesInView;
             renderer.renderStages.transparent(renderView, entities, {
               backgroundColorTexture,
+              outputs,
             });
           }
         }
@@ -225,58 +232,69 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
       ? entities.filter((entity) => !entity.layer || entity.layer === layer)
       : entities;
 
+    // Setup attachments. Can be overwritten by PostProcessingPass
+    const outputs = new Set(this.outputs);
     const postProcessing = renderView.cameraEntity.postProcessing;
 
-    // Main pass
-    //TODO: this should be done on the fly by render graph
+    if (postProcessing?.ssao) outputs.add("normal");
+    if (postProcessing?.bloom) outputs.add("emissive");
+
+    const attachments = {};
+
+    // TODO: this should be done on the fly by render graph
     this.descriptors.mainPass.outputTextureDesc.width = renderView.viewport[2];
     this.descriptors.mainPass.outputTextureDesc.height = renderView.viewport[3];
-    let mainPassOutputTexture = resourceCache.texture2D(
+
+    attachments.color = resourceCache.texture2D(
       this.descriptors.mainPass.outputTextureDesc
     );
-    mainPassOutputTexture.name = `mainPassOutput (id: ${mainPassOutputTexture.id})`;
+    attachments.color.name = `mainPassOutput (id: ${attachments.color.id})`;
 
-    let mainPassNormalOutputTexture;
-    // TODO: output options
-    if (postProcessing?.ssao) {
-      mainPassNormalOutputTexture = resourceCache.texture2D(
-        this.descriptors.mainPass.outputTextureDesc
+    if (outputs.has("depth")) {
+      this.descriptors.mainPass.outputDepthTextureDesc.width =
+        renderView.viewport[2];
+      this.descriptors.mainPass.outputDepthTextureDesc.height =
+        renderView.viewport[3];
+      attachments.depth = resourceCache.texture2D(
+        this.descriptors.mainPass.outputDepthTextureDesc
       );
-      mainPassNormalOutputTexture.name = `mainPassNormalOutput (id: ${mainPassNormalOutputTexture.id})`;
     }
 
-    let mainPassEmissiveOutputTexture;
-    if (postProcessing?.bloom) {
-      mainPassEmissiveOutputTexture = resourceCache.texture2D(
+    if (outputs.has("normal")) {
+      attachments.normal = resourceCache.texture2D(
         this.descriptors.mainPass.outputTextureDesc
       );
-      mainPassEmissiveOutputTexture.name = `mainPassEmissiveOutput (id: ${mainPassEmissiveOutputTexture.id})`;
     }
 
-    this.descriptors.mainPass.outputDepthTextureDesc.width =
-      renderView.viewport[2];
-    this.descriptors.mainPass.outputDepthTextureDesc.height =
-      renderView.viewport[3];
-    const outputDepthTexture = resourceCache.texture2D(
-      this.descriptors.mainPass.outputDepthTextureDesc
-    );
-    outputDepthTexture.name = `mainPassDepth (id: ${outputDepthTexture.id})`;
+    if (outputs.has("emissive")) {
+      attachments.emissive = resourceCache.texture2D(
+        this.descriptors.mainPass.outputTextureDesc
+      );
+    }
 
+    for (let name of Object.keys(attachments)) {
+      const texture = attachments[name];
+      texture.name = `mainPass${name} (id: ${texture.id})`;
+    }
+
+    const renderPassView = {
+      ...renderView,
+      viewport: [0, 0, renderView.viewport[2], renderView.viewport[3]],
+    };
+
+    // Main pass
     renderGraph.renderPass({
       name: `MainPass [${renderView.viewport}]`,
       uses: [...shadowMaps],
-      renderView: {
-        ...renderView,
-        viewport: [0, 0, renderView.viewport[2], renderView.viewport[3]],
-      },
+      renderView: renderPassView,
       pass: resourceCache.pass({
         name: "mainPass",
         color: [
-          mainPassOutputTexture,
-          postProcessing?.ssao && mainPassNormalOutputTexture,
-          postProcessing?.bloom && mainPassEmissiveOutputTexture,
+          attachments.color,
+          attachments.normal,
+          attachments.emissive,
         ].filter(Boolean),
-        depth: outputDepthTexture,
+        depth: attachments.depth,
         clearColor: renderView.camera.clearColor,
         clearDepth: 1,
       }),
@@ -285,10 +303,11 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
           viewport: renderView.viewport,
           cameraEntity: renderView.cameraEntity,
           shadowMapping: false,
-          entitiesInView: entitiesInView,
+          entitiesInView,
           forward: true,
           drawTransparent: false,
-          renderers: renderers,
+          renderers,
+          outputs,
         });
       },
     });
@@ -321,13 +340,13 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
         ),
         uniforms: {
           uViewport: viewport,
-          uTexture: mainPassOutputTexture,
+          uTexture: attachments.color,
         },
       };
 
       renderGraph.renderPass({
         name: `GrabPass [${viewport}]`,
-        uses: [mainPassOutputTexture],
+        uses: [attachments.color],
         renderView: { ...renderView, viewport },
         pass: resourceCache.pass({
           name: "grabPass",
@@ -343,36 +362,26 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
     renderGraph.renderPass({
       name: `TransparentPass [${renderView.viewport}]`,
       uses: [...shadowMaps, grabPassColorCopyTexture].filter(Boolean),
-      renderView: {
-        ...renderView,
-        viewport: [0, 0, renderView.viewport[2], renderView.viewport[3]],
-      },
+      renderView: renderPassView,
       pass: resourceCache.pass({
         name: "transparentPass",
-        color: [mainPassOutputTexture],
-        depth: outputDepthTexture,
+        color: [attachments.color],
+        depth: attachments.depth,
       }),
       render: () => {
         this.drawMeshes({
           viewport: renderView.viewport,
           cameraEntity: renderView.cameraEntity,
           shadowMapping: false,
-          entitiesInView: entitiesInView,
+          entitiesInView,
           forward: true,
           drawTransparent: true,
           backgroundColorTexture: grabPassColorCopyTexture,
-          renderers: renderers,
+          renderers,
+          outputs,
         });
       },
     });
-
-    // Store attachments. Can be overwritten by PostProcessingPass
-    const attachments = {
-      color: mainPassOutputTexture,
-      normal: mainPassNormalOutputTexture,
-      emissive: mainPassEmissiveOutputTexture,
-      depth: outputDepthTexture,
-    };
 
     // Post-processing pass
     if (postProcessing) {
@@ -385,10 +394,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
       renderGraph.renderPass({
         name: `PostProcessingPass [${renderView.viewport}]`,
         uses: Object.values(attachments).filter(Boolean),
-        renderView: {
-          ...renderView,
-          viewport: [0, 0, renderView.viewport[2], renderView.viewport[3]],
-        },
+        renderView: renderPassView,
         render: () => {
           for (let i = 0; i < renderers.length; i++) {
             const renderer = renderers[i];

@@ -435,7 +435,7 @@ export default ({ ctx, shadowQuality = 3 }) => {
           reflectionProbes[0]._reflectionProbe._reflectionMap.encoding;
       }
     },
-    render(renderView, entities, opts) {
+    render(renderView, entities, options) {
       const { camera, cameraEntity } = renderView;
       const {
         shadowMapping,
@@ -443,7 +443,8 @@ export default ({ ctx, shadowQuality = 3 }) => {
         transparent,
         backgroundColorTexture,
         debugRender,
-      } = opts;
+        outputs,
+      } = options;
 
       const pipelineOptions = {
         ambientLights: [],
@@ -470,8 +471,8 @@ export default ({ ctx, shadowQuality = 3 }) => {
 
       if (!shadowMapping) {
         // Post processing
-        pipelineOptions.outputNormals = !!cameraEntity?.postProcessing?.ssao;
-        pipelineOptions.outputEmissive = !!cameraEntity?.postProcessing?.bloom;
+        pipelineOptions.outputNormals = outputs.has("normal");
+        pipelineOptions.outputEmissive = outputs.has("emissive");
         pipelineOptions.targets =
           cameraEntity.postProcessing?._targets?.[renderView.cameraEntity.id] ||
           {};
@@ -598,17 +599,17 @@ export default ({ ctx, shadowQuality = 3 }) => {
       }
     },
     renderStages: {
-      shadow: (renderView, entitites, opts = {}) => {
-        standardRendererSystem.render(renderView, entitites, opts);
+      shadow: (renderView, entitites, options = {}) => {
+        standardRendererSystem.render(renderView, entitites, options);
       },
-      opaque: (renderView, entitites, opts = {}) => {
-        opts.debugRender = standardRendererSystem.debugRender;
-        standardRendererSystem.render(renderView, entitites, opts);
+      opaque: (renderView, entitites, options = {}) => {
+        options.debugRender = standardRendererSystem.debugRender;
+        standardRendererSystem.render(renderView, entitites, options);
       },
-      transparent: (renderView, entitites, opts = {}) => {
-        // opts.debugRender = standardRendererSystem.debugRender;
+      transparent: (renderView, entitites, options = {}) => {
+        // options.debugRender = standardRendererSystem.debugRender;
         standardRendererSystem.render(renderView, entitites, {
-          ...opts,
+          ...options,
           transparent: true,
         });
       },
