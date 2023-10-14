@@ -10,6 +10,7 @@ import { mat4, quat, vec3 } from "pex-math";
 import { aabb } from "pex-geom";
 import random from "pex-random";
 import createGUI from "pex-gui";
+import * as SHADERS from "pex-shaders";
 
 import { cube, roundedCube, capsule, sphere } from "primitive-geometry";
 // import normals from "angle-normals";
@@ -32,14 +33,14 @@ const State = {
 
   autofocus: true,
 
-  aa: true,
-  ssao: true,
-  fog: true,
-  bloom: true,
-  dof: true,
-  lut: true,
-  colorCorrection: true,
-  vignette: true,
+  aa: false,
+  ssao: false,
+  fog: false,
+  bloom: false,
+  dof: false,
+  lut: false,
+  colorCorrection: false,
+  vignette: false,
 };
 
 // const pixelRatio = devicePixelRatio;
@@ -93,20 +94,25 @@ const postProcessing = components.postProcessing({
     spanMax: 8,
   },
   ssao: {
-    type: "sao",
-    // type: "gtao",
+    type: "sao", // "gtao",
     post: false,
+    noiseTexture: true,
+    mix: 1,
+    // samples: options?.type === "gtao" ? 6 : 11,
     samples: 11,
-    intensity: 1,
-    radius: 100,
-    bias: 0.001,
+    intensity: 2.2,
+    radius: 0.5,
+    bias: 0.001, // cm
     blurRadius: 0.5,
     blurSharpness: 10,
     brightness: 0,
     contrast: 1,
+    // SAO
+    spiralTurns: 7,
+    // GTAO
+    slices: 3,
     colorBounce: true,
-    colorBounceIntensity: 1,
-    mix: 1,
+    colorBounceIntensity: 1.0,
   },
   fog: {
     color: [0.5, 0.5, 0.5],
@@ -120,6 +126,7 @@ const postProcessing = components.postProcessing({
     inscatteringCoeffs: [0.3, 0.3, 0.3],
   },
   bloom: {
+    quality: 1,
     threshold: 1,
     radius: 1,
     intensity: 0.1,
@@ -543,7 +550,6 @@ gui.addParam("Enabled", State, "enabled", null, () => {
     delete cameraEntity.postProcessing;
   }
 });
-gui.addParam("Exposure", camera, "exposure", { min: 0, max: 5 });
 const enablePostProPass = (name) => {
   if (State[name]) {
     if (State[`_${name}`]) postProcessing[name] = State[`_${name}`];
@@ -567,23 +573,6 @@ gui.addParam("Fog", State, "fog", null, () => {
 gui.addParam("Fog color", postProcessing.fog, "color");
 gui.addParam("Fog start", postProcessing.fog, "start", { min: 0, max: 10 });
 gui.addParam("Fog density", postProcessing.fog, "density");
-
-gui.addColumn("Bloom");
-gui.addParam("Enabled", State, "bloom", null, () => {
-  enablePostProPass("bloom");
-});
-gui.addParam("Threshold", postProcessing.bloom, "threshold", {
-  min: 0,
-  max: 2,
-});
-gui.addParam("Intensity", postProcessing.bloom, "intensity", {
-  min: 0,
-  max: 10,
-});
-gui.addParam("Radius", postProcessing.bloom, "radius", {
-  min: 0,
-  max: 10,
-});
 
 gui.addParam("LUT", State, "lut", null, () => {
   enablePostProPass("lut");
@@ -653,32 +642,48 @@ gui.addParam("Samples", postProcessing.ssao, "samples", {
   max: 20,
   step: 1,
 });
-gui.addParam("Radius", postProcessing.ssao, "radius", { min: 0, max: 1000 });
+gui.addParam("Radius", postProcessing.ssao, "radius", { min: 0, max: 10 });
 gui.addParam("Intensity", postProcessing.ssao, "intensity", {
   min: 0,
   max: 10,
 });
-gui.addParam("Bias", postProcessing.ssao, "bias", { min: 0, max: 0.1 });
+gui.addParam("Bias", postProcessing.ssao, "bias", { min: 0, max: 0.7 });
 gui.addParam("Brightness", postProcessing.ssao, "brightness", {
   min: -0.5,
   max: 0.5,
 });
 gui.addParam("Contrast", postProcessing.ssao, "contrast", { min: 0.1, max: 3 });
-gui.addParam("Blur radius", postProcessing.ssao, "blurRadius", {
-  min: 0,
-  max: 5,
-});
-gui.addParam("Blur sharpness", postProcessing.ssao, "blurSharpness", {
-  min: 0,
+
+gui.addParam("Noise texture", postProcessing.ssao, "noiseTexture");
+gui.addParam("Post", postProcessing.ssao, "post");
+gui.addParam("Mix", postProcessing.ssao, "mix", { min: 0, max: 1 });
+
+gui.addLabel("SSAO (SAO)");
+gui.addParam("Spiral Turns", postProcessing.ssao, "spiralTurns", {
+  min: 2,
   max: 20,
+  step: 1,
+});
+gui.addLabel("SSAO (GTAO)");
+gui.addParam("Slices", postProcessing.ssao, "slices", {
+  min: 2,
+  max: 20,
+  step: 1,
 });
 gui.addParam("Color bounce", postProcessing.ssao, "colorBounce");
 gui.addParam("Bounce intensity", postProcessing.ssao, "colorBounceIntensity", {
   min: 0,
-  max: 10,
+  max: 100,
 });
-gui.addParam("Post", postProcessing.ssao, "post");
-gui.addParam("Mix", postProcessing.ssao, "mix", { min: 0, max: 1 });
+gui.addLabel("Blur");
+gui.addParam("Radius", postProcessing.ssao, "blurRadius", {
+  min: 0,
+  max: 2,
+});
+gui.addParam("Sharpness", postProcessing.ssao, "blurSharpness", {
+  min: 0,
+  max: 20,
+});
 
 gui.addColumn("Depth of Field");
 gui.addParam("Enabled", State, "dof", null, () => {
@@ -732,15 +737,6 @@ gui.addParam("Screen Point", postProcessing.dof.screenPoint, "1", {
   max: 1,
 });
 
-enablePostProPass("ssao");
-enablePostProPass("dof");
-enablePostProPass("aa");
-enablePostProPass("fog");
-enablePostProPass("bloom");
-enablePostProPass("lut");
-enablePostProPass("colorCorrection");
-enablePostProPass("vignette");
-
 gui.addColumn("Camera");
 gui.addParam("FoV", camera, "fov", {
   min: 0,
@@ -754,6 +750,47 @@ gui.addParam("F-Stop", cameraEntity.camera, "fStop", {
   min: 1.2,
   max: 32,
 });
+gui.addParam("Exposure", camera, "exposure", { min: 0, max: 5 });
+gui.addRadioList(
+  "Tone Map",
+  camera,
+  "toneMap",
+  ["none", ...Object.keys(SHADERS.toneMap)].map((value) => ({
+    name: value,
+    value: value === "none" ? null : value.toLowerCase(),
+  }))
+);
+
+gui.addColumn("Bloom");
+gui.addParam("Enabled", State, "bloom", null, () => {
+  enablePostProPass("bloom");
+});
+gui.addParam("Quality", postProcessing.bloom, "quality", {
+  min: 0,
+  max: 1,
+  step: 1,
+});
+gui.addParam("Threshold", postProcessing.bloom, "threshold", {
+  min: 0,
+  max: 2,
+});
+gui.addParam("Intensity", postProcessing.bloom, "intensity", {
+  min: 0,
+  max: 10,
+});
+gui.addParam("Radius", postProcessing.bloom, "radius", {
+  min: 0,
+  max: 10,
+});
+
+enablePostProPass("ssao");
+enablePostProPass("dof");
+enablePostProPass("aa");
+enablePostProPass("fog");
+enablePostProPass("bloom");
+enablePostProPass("lut");
+enablePostProPass("colorCorrection");
+enablePostProPass("vignette");
 
 // Events
 let debugOnce = false;

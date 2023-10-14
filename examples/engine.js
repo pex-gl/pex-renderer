@@ -10,6 +10,7 @@ import createContext from "pex-context";
 import { vec3, quat } from "pex-math";
 import createGUI from "pex-gui";
 import random from "pex-random";
+import * as SHADERS from "pex-shaders";
 
 import { cube, icosphere, plane, cone } from "primitive-geometry";
 
@@ -334,7 +335,7 @@ const directionalLightEntity = createEntity({
 world.add(directionalLightEntity);
 
 // Add segment geometry for line renderer system
-const segmentsGeometry = { positions: [], vertexColors: [], count: 0 };
+const lineGeometry = { positions: [], vertexColors: [], count: 0 };
 
 let prevPos = null;
 for (let i = 0; i < 128; i++) {
@@ -349,24 +350,24 @@ for (let i = 0; i < 128; i++) {
     Math.sin(((0.2 * i) / 128) * Math.PI * 4);
 
   if (prevPos) {
-    segmentsGeometry.positions.push(prevPos);
-    segmentsGeometry.vertexColors.push([1, 1, 0, 0.5]);
-    segmentsGeometry.positions.push([x, y, z]);
-    segmentsGeometry.vertexColors.push([1, 0, 0, 0.5]);
+    lineGeometry.positions.push(prevPos);
+    lineGeometry.vertexColors.push([1, 1, 0, 1]);
+    lineGeometry.positions.push([x, y, z]);
+    lineGeometry.vertexColors.push([1, 0, 0, 1]);
   }
   prevPos = [x, y, z];
 }
-segmentsGeometry.count = segmentsGeometry.positions.length / 2;
-const segmentsEntity = createEntity({
-  geometry: components.geometry(segmentsGeometry),
+lineGeometry.count = lineGeometry.positions.length / 2;
+const linesEntity = createEntity({
+  geometry: components.geometry(lineGeometry),
   material: components.material({
-    type: "segments",
+    type: "line",
     baseColor: [1, 1, 1, 1],
     lineWidth: 20,
   }),
   transform: components.transform(),
 });
-world.add(segmentsEntity);
+world.add(linesEntity);
 
 // Load glTF
 const scene = await loaders.gltf(
@@ -390,6 +391,7 @@ renderEngine.render(world.entities, cameraEntity);
 
 // GUI
 const gui = createGUI(ctx);
+gui.addColumn("Renderer");
 gui.addFPSMeeter();
 gui.addRadioList(
   "Debug",
@@ -431,6 +433,16 @@ gui.addRadioList(
     "vNormalView",
     "vNormalWorld",
   ].map((value) => ({ name: value || "No debug", value }))
+);
+gui.addColumn("Camera");
+gui.addRadioList(
+  "Tone Map",
+  cameraEntity.camera,
+  "toneMap",
+  ["none", ...Object.keys(SHADERS.toneMap)].map((value) => ({
+    name: value,
+    value: value === "none" ? null : value.toLowerCase(),
+  }))
 );
 
 // Events

@@ -215,7 +215,7 @@ const linesEntity = createEntity({
     count: linePositions.length / 2,
   }),
   material: components.material({
-    type: "segments",
+    type: "line",
     baseColor: [1, 1, 1, 1],
     castShadows: true,
   }),

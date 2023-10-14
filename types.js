@@ -46,27 +46,28 @@
 /**
  * @typedef {object} CameraComponentOptions
  * @property {"perspective" | "orthographic"} [projection="perspective"]
- * @property {number[]} [viewport=[0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight]]
  * @property {number} [near=0.5]
  * @property {number} [far=1000]
  * @property {number} [aspect=1]
- * @property {number} [fov=Math.PI / 4]
  * @property {import("pex-color").color} [clearColor]
  * @property {mat4} [viewMatrix]
  * @property {mat4} [invViewMatrix]
  * @property {boolean} [culling=false]
+ * @property {number} [exposure=1]
+ * @property {"aces" | "filmic" | "lottes" | "reinhard" | "reinhard2" | "uchimura" | "uncharted2" | "unreal"} [toneMap="aces"]
+ * @property {number} [outputEncoding=ctx.Encoding.Gamma]
+ * @property {number} [focalLength=50] Focal length of the camera lens [10mm - 200mm] in mm
+ * @property {number} [fStop=2.8] Ratio of camera lens opening, f-number, f/N, aperture [1.2 - 32] in mm
+ * @property {number} [sensorSize=[36, 24]] Physical camera sensor or film size [sensorWidth, sensorHeight] in mm
+ * @property {"vertical" | "horizontal" | "fit" | "overscan" | "vertical"} sensorFit Matching of camera frame to sensor frame
  * @property {CameraView} [view]
+ * @property {number} [fov=Math.PI / 4]
+ * @property {number} [left=-1]
+ * @property {number} [right=1]
+ * @property {number} [bottom=-1]
+ * @property {number} [top=1]
+ * @property {number} [zoom=1]
  */
-// * @property {number} [exposure=1]
-// * @property {number} [left=-1]
-// * @property {number} [right=1]
-// * @property {number} [top=1]
-// * @property {number} [bottom=-1]
-// * @property {number} [zoom=1]
-// * @property {number} [focalLength=50] Focal length of the camera lens [10mm - 200mm] in mm
-// * @property {number} [fStop=2.8] Ratio of camera lens opening, f-number, f/N, aperture [1.2 - 32] in mm
-// * @property {number} [sensorSize=[36, 24]] Physical camera sensor or film size [sensorWidth, sensorHeight] in mm
-// * @property {"vertical" | "horizontal" | "fit" | "overscan" | "vertical"} sensorFit How the camera frame matches sensor frame
 
 /**
  * @typedef {object} DirectionalLightComponentOptions
@@ -112,7 +113,7 @@
 /**
  * @typedef {object} MaterialComponentOptions
  * @property {boolean} [unlit]
- * @property {undefined | "segments"} [type="undefined"]
+ * @property {undefined | "line"} [type="undefined"]
  * @property {number[]} [baseColor=[1, 1, 1, 1]]
  * @property {number[]} [emissiveColor="undefined"]
  * @property {number} [emissiveIntensity=1]
@@ -313,6 +314,14 @@
  * @property {Function} endFrame
  * @property {Function} dispose
  * @property {ResourceCacheUsage} Usage
+ */
+/**
+ * @typedef {object} RenderView
+ * @property {object} camera
+ * @property {Entity} cameraEntity
+ * @property {import("pex-context/types/types").Viewport} viewport
+ * @property {object} [exposure]
+ * @property {object} [outputEncoding]
  */
 
 export {};

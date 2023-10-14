@@ -89,6 +89,11 @@ for (let i = 0; i < CUBE_INSTANCES; i++) {
       baseColor: [1, 0, 1, 0.5],
       castShadows: true,
       receiveShadows: true,
+      extensions: ctx.capabilities.isWebGL2
+        ? {}
+        : {
+            GL_OES_standard_derivatives: "require",
+          },
       hooks: {
         vert: {
           DECLARATIONS_END: /* glsl */ `varying vec3 vPositionWorld;`,
@@ -101,7 +106,11 @@ vec3 fdx = vec3(dFdx(vPositionWorld.x), dFdx(vPositionWorld.y), dFdx(vPositionWo
 vec3 fdy = vec3(dFdy(vPositionWorld.x), dFdy(vPositionWorld.y), dFdy(vPositionWorld.z));
 vec3 normalView = normalize(cross(fdx, fdy));
 
-outColor *= vec4(normalView * 0.5 + 0.5, 1.0);
+  #if (__VERSION__ < 300)
+    gl_FragData[0] *= vec4(normalView * 0.5 + 0.5, 1.0);
+  #else
+    outColor *= vec4(normalView * 0.5 + 0.5, 1.0);
+  #endif
           `,
         },
       },

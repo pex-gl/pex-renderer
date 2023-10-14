@@ -14,6 +14,10 @@ import gridCells from "grid-cells";
 
 import { dragon } from "./utils.js";
 
+const State = {
+  animate: true,
+};
+
 const pixelRatio = devicePixelRatio;
 const ctx = createContext({ pixelRatio });
 const renderEngine = createRenderEngine({ ctx });
@@ -96,6 +100,7 @@ const directionalLightEntity = createEntity({
     color: [1, 1, 0, 1],
     intensity: 1,
     castShadows: true,
+    radius: 10,
     // shadowMapSize: 2048,
   }),
   lightHelper: components.lightHelper(),
@@ -127,6 +132,7 @@ const spotLightEntity = createEntity({
     angle: Math.PI / 6,
     innerAngle: Math.PI / 12,
     castShadows: true,
+    radius: 10,
     // shadowMapSize: 2048,
   }),
   lightHelper: components.lightHelper(),
@@ -156,6 +162,7 @@ const pointLightEntity = createEntity({
     intensity: 1,
     range: 5,
     castShadows: true,
+    radius: 10,
     // shadowMapSize: 512,
   }),
   lightHelper: components.lightHelper(),
@@ -185,6 +192,7 @@ const areaLightEntity = createEntity({
     intensity: 1,
     disk: true,
     castShadows: true,
+    radius: 10,
   }),
   lightHelper: components.lightHelper(),
 });
@@ -220,16 +228,27 @@ const getViewportPosition = (layer, offset = [10, 10]) =>
     offset
   );
 
-gui.addHeader("Directional").setPosition(...getViewportPosition(LAYERS[0]));
+gui.addHeader("Global").setPosition(...getViewportPosition(LAYERS[0]));
+gui.addParam("Animate", State, "animate");
+const standardRendererSystem = renderEngine.renderers.find(
+  (renderer) => renderer.type == "standard-renderer"
+);
+gui.addParam("Shadow Quality", standardRendererSystem, "shadowQuality", {
+  min: 0,
+  max: 5,
+  step: 1,
+});
+gui.addHeader("Directional");
 gui.addParam(
   "Intensity",
   directionalLightEntity.directionalLight,
   "intensity",
-  {
-    min: 0,
-    max: 20,
-  }
+  { min: 0, max: 20 }
 );
+gui.addParam("Radius", directionalLightEntity.directionalLight, "radius", {
+  min: 0,
+  max: 100,
+});
 gui.addTexture2D(
   "Shadowmap",
   directionalLightEntity.directionalLight._shadowMap,
@@ -238,10 +257,7 @@ gui.addTexture2D(
 gui.addParam("Shadows", directionalLightEntity.directionalLight, "castShadows");
 
 gui.addHeader("Spot").setPosition(...getViewportPosition(LAYERS[1]));
-gui.addParam("Range", spotLightEntity.spotLight, "range", {
-  min: 0,
-  max: 20,
-});
+gui.addParam("Range", spotLightEntity.spotLight, "range", { min: 0, max: 20 });
 gui.addParam("Intensity", spotLightEntity.spotLight, "intensity", {
   min: 0,
   max: 20,
@@ -253,6 +269,10 @@ gui.addParam("Angle", spotLightEntity.spotLight, "angle", {
 gui.addParam("Inner angle", spotLightEntity.spotLight, "innerAngle", {
   min: 0,
   max: Math.PI / 2 - Number.EPSILON,
+});
+gui.addParam("Radius", spotLightEntity.spotLight, "radius", {
+  min: 0,
+  max: 100,
 });
 gui.addTexture2D("Shadowmap", spotLightEntity.spotLight._shadowMap, {
   flipY: true,
@@ -267,6 +287,10 @@ gui.addParam("Range", pointLightEntity.pointLight, "range", {
 gui.addParam("Intensity", pointLightEntity.pointLight, "intensity", {
   min: 0,
   max: 20,
+});
+gui.addParam("Radius", pointLightEntity.pointLight, "radius", {
+  min: 0,
+  max: 100,
 });
 gui.addTextureCube("Shadowmap", pointLightEntity.pointLight._shadowCubemap);
 gui.addParam("Shadows", pointLightEntity.pointLight, "castShadows");
@@ -284,6 +308,10 @@ gui.addParam("Height", areaLightEntity.transform.scale, "1", {
   min: 0,
   max: 20,
 });
+gui.addParam("Radius", areaLightEntity.areaLight, "radius", {
+  min: 0,
+  max: 100,
+});
 gui.addParam("Disk", areaLightEntity.areaLight, "disk");
 gui.addParam("Double Sided", areaLightEntity.areaLight, "doubleSided");
 gui.addTexture2D("Shadowmap", areaLightEntity.areaLight._shadowMap, {
@@ -300,31 +328,35 @@ window.addEventListener("keydown", ({ key }) => {
 });
 
 ctx.frame(() => {
-  const now = (performance.now() * 0.001) / 3;
+  if (State.animate) {
+    const now = (performance.now() * 0.001) / 3;
+    // const now = Math.PI * 1.5;
+    // State.animate = false;
 
-  const position = [Math.cos(now), 1, Math.sin(now)];
-  const rotation = quat.targetTo(
-    quat.create(),
-    position.map((n) => -n),
-    [0, 0, 0]
-  );
+    const position = [Math.cos(now), 1, Math.sin(now)];
+    const rotation = quat.targetTo(
+      quat.create(),
+      position.map((n) => -n),
+      [0, 0, 0]
+    );
 
-  directionalLightEntity.transform.position = position;
-  directionalLightEntity.transform.rotation = rotation;
+    directionalLightEntity.transform.position = position;
+    directionalLightEntity.transform.rotation = rotation;
 
-  spotLightEntity.transform.position = position;
-  spotLightEntity.transform.rotation = rotation;
+    spotLightEntity.transform.position = position;
+    spotLightEntity.transform.rotation = rotation;
 
-  pointLightEntity.transform.position = position;
+    pointLightEntity.transform.position = position;
 
-  areaLightEntity.transform.position = position;
-  areaLightEntity.transform.rotation = rotation;
+    areaLightEntity.transform.position = position;
+    areaLightEntity.transform.rotation = rotation;
 
-  directionalLightEntity.transform.dirty =
-    spotLightEntity.transform.dirty =
-    pointLightEntity.transform.dirty =
-    areaLightEntity.transform.dirty =
-      true;
+    directionalLightEntity.transform.dirty =
+      spotLightEntity.transform.dirty =
+      pointLightEntity.transform.dirty =
+      areaLightEntity.transform.dirty =
+        true;
+  }
 
   renderEngine.update(world.entities);
   renderEngine.render(world.entities, cameraEntities);

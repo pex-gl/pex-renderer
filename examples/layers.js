@@ -9,6 +9,7 @@ import createContext from "pex-context";
 import { cube, icosphere } from "primitive-geometry";
 import { vec3, quat } from "pex-math";
 import createGUI from "pex-gui";
+import { toneMap } from "pex-shaders";
 
 import { getEnvMap } from "./utils.js";
 
@@ -213,18 +214,32 @@ const drawTexturesMixedCmd = {
       uniform sampler2D uTexture2;
       uniform float uBlend;
 
+      ${toneMap.ACES}
+
+      const float gamma = 2.2;
+      vec3 toGamma(vec3 v) {
+        return pow(v, vec3(1.0 / gamma));
+      }
+
       void main() {
-        gl_FragColor = mix(
-          texture2D(uTexture, vTexCoord0),
-          texture2D(uTexture2, vTexCoord0),
-          uBlend
-        );
-        gl_FragColor = texture2D(uTexture, vTexCoord0);
+        vec4 color;
+
+        // color = mix(
+        //   texture2D(uTexture, vTexCoord0),
+        //   texture2D(uTexture2, vTexCoord0),
+        //   uBlend
+        // );
+        color = texture2D(uTexture, vTexCoord0);
         if (vTexCoord0.x + (1.0 - vTexCoord0.y) > uBlend * 2.0) {
-          gl_FragColor = texture2D(uTexture2, vTexCoord0);
+          color = texture2D(uTexture2, vTexCoord0);
         }
-        gl_FragColor.rgb = gl_FragColor.rgb / (1.0 + gl_FragColor.rgb);
-        gl_FragColor.rgb = pow(gl_FragColor.rgb, vec3(1.0/2.2));
+        // color.rgb = color.rgb / (1.0 + color.rgb);
+
+        color.rgb = aces(color.rgb);
+        color.rgb = toGamma(color.rgb);
+
+        color.a = 1.0;
+        gl_FragColor = color;
       }`,
   }),
   attributes: {
@@ -242,7 +257,14 @@ const gui = createGUI(ctx);
 gui.addColumn("Settings");
 gui.addFPSMeeter();
 
-gui.addParam("DrawToScreen", State, "drawToScreen");
+gui.addParam("DrawToScreen", State, "drawToScreen", {}, () => {
+  cameraEntity.camera.outputEncoding = State.drawToScreen
+    ? ctx.Encoding.Gamma
+    : ctx.Encoding.Linear;
+  cameraEntity2.camera.outputEncoding = State.drawToScreen
+    ? ctx.Encoding.Gamma
+    : ctx.Encoding.Linear;
+});
 gui.addParam("Blend", State, "blend", { min: 0, max: 1 });
 
 // Events
