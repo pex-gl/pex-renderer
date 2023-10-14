@@ -53,6 +53,8 @@ export default ({ ctx, resourceCache }) => {
 
   const skyboxRendererSystem = {
     type: "skybox-renderer",
+    cache: {},
+    debug: false,
     checkReflectionProbe(reflectionProbe) {
       if (!reflectionProbe._reflectionProbe?._reflectionMap) {
         console.warn(
@@ -117,24 +119,23 @@ export default ({ ctx, resourceCache }) => {
       // TODO: rename, for oct map. Why * 2 ? Cause it is oct map atlas?
       const envMapSize = reflectionProbeEntity?.reflectionProbe?.size * 2 || 0;
 
-      //TODO: useTonemapping hardcoded to false
-      const useTonemapping = false;
       ctx.submit(drawSkyboxCommand, {
         // viewport: camera.viewport,
         // scissor: camera.viewport,
         uniforms: {
-          uProjectionMatrix: renderView.camera.projectionMatrix,
-          uViewMatrix: renderView.camera.viewMatrix,
-          uModelMatrix: entity._transform?.modelMatrix || identityMatrix,
-          uEnvMap: texture,
-          uEnvMapEncoding: texture.encoding,
-          uEnvMapSize: envMapSize,
-          uOutputEncoding: outputEncoding,
-          uBackgroundBlur: !renderingToReflectionProbe ? backgroundBlur : false,
-          uUseTonemapping: !renderingToReflectionProbe ? useTonemapping : false,
           uExposure: !renderingToReflectionProbe
             ? renderView.camera.exposure || 1
             : 1, //TODO: hardcoded default from camera.exposure
+          uOutputEncoding: outputEncoding,
+
+          uProjectionMatrix: renderView.camera.projectionMatrix,
+          uViewMatrix: renderView.camera.viewMatrix,
+          uModelMatrix: entity._transform?.modelMatrix || identityMatrix,
+
+          uEnvMap: texture,
+          uEnvMapEncoding: texture.encoding,
+          uEnvMapSize: envMapSize,
+          uBackgroundBlur: !renderingToReflectionProbe ? backgroundBlur : false,
         },
       });
     },

@@ -1,9 +1,10 @@
 import { vec3, mat4 } from "pex-math";
 import { aabb } from "pex-geom";
 
+import { TEMP_VEC3 } from "../../utils.js";
+
 export default ({ renderGraph, resourceCache, descriptors, drawMeshes }) => ({
-  directionalLight(lightEntity, entities, renderers, shadowCastingEntities) {
-    const light = lightEntity.directionalLight;
+  computeLightProperties(lightEntity, light, shadowCastingEntities) {
     light._sceneBboxInLightSpace ??= aabb.create();
 
     aabb.empty(light._sceneBboxInLightSpace);
@@ -18,6 +19,57 @@ export default ({ renderGraph, resourceCache, descriptors, drawMeshes }) => ({
 
     light._near = -light._sceneBboxInLightSpace[1][2];
     light._far = -light._sceneBboxInLightSpace[0][2];
+
+    // Get frustum size
+    aabb.size(light._sceneBboxInLightSpace, TEMP_VEC3);
+
+    light._radiusUV = [
+      (1 / TEMP_VEC3[0]) *
+        (light.radius *
+          (lightEntity.areaLight ? lightEntity.transform.scale[0] : 1)),
+      (1 / TEMP_VEC3[1]) *
+        (light.radius *
+          (lightEntity.areaLight ? lightEntity.transform.scale[1] : 1)),
+    ];
+  },
+  getAttachments(light, descriptor, cubemap) {
+    let { colorMapDesc, shadowMapDesc } = descriptor;
+
+    // Only update descriptors for custom map size
+    // TODO: could texture be cached if they have the same descriptor
+    if (light.shadowMapSize) {
+      colorMapDesc = {
+        ...colorMapDesc,
+        width: light.shadowMapSize,
+        height: light.shadowMapSize,
+      };
+      shadowMapDesc = {
+        ...shadowMapDesc,
+        width: light.shadowMapSize,
+        height: light.shadowMapSize,
+      };
+    }
+
+    //TODO: can this be all done at once?
+    const colorMap =
+      resourceCache[cubemap ? "textureCube" : "texture2D"](colorMapDesc);
+    colorMap.name = `tempColorMap (id: ${colorMap.id})`;
+
+    const shadowMap = resourceCache.texture2D(shadowMapDesc);
+    shadowMap.name = `shadowMap (id: ${shadowMap.id})`;
+
+    return { color: colorMap, depth: shadowMap };
+  },
+
+  directionalLight(lightEntity, entities, renderers, shadowCastingEntities) {
+    const light = lightEntity.directionalLight;
+
+    this.computeLightProperties(lightEntity, light, shadowCastingEntities);
+
+    const { color, depth } = this.getAttachments(
+      light,
+      descriptors.directionalLightShadows
+    );
 
     mat4.ortho(
       light._projectionMatrix,
@@ -29,36 +81,12 @@ export default ({ renderGraph, resourceCache, descriptors, drawMeshes }) => ({
       light._far
     );
 
-    let colorMapDesc = descriptors.directionalLightShadows.colorMapDesc;
-    let shadowMapDesc = descriptors.directionalLightShadows.shadowMapDesc;
-
-    // Only update descriptors for custom map size
-    // TODO: could texture be cached if they have the same descriptor
-    if (light.shadowMapSize) {
-      colorMapDesc = {
-        ...colorMapDesc,
-        width: light.shadowMapSize,
-        height: light.shadowMapSize,
-      };
-      shadowMapDesc = {
-        ...shadowMapDesc,
-        width: light.shadowMapSize,
-        height: light.shadowMapSize,
-      };
-    }
-    //TODO: can this be all done at once?
-    const colorMap = resourceCache.texture2D(colorMapDesc);
-    colorMap.name = `tempColorMap (id: ${colorMap.id})`;
-
-    const shadowMap = resourceCache.texture2D(shadowMapDesc);
-    shadowMap.name = `shadowMap (id: ${shadowMap.id})`;
-
     const renderView = {
       camera: {
         viewMatrix: light._viewMatrix,
         projectionMatrix: light._projectionMatrix,
       },
-      viewport: [0, 0, shadowMap.width, shadowMap.height],
+      viewport: [0, 0, depth.width, depth.height],
     };
 
     renderGraph.renderPass({
@@ -66,81 +94,50 @@ export default ({ renderGraph, resourceCache, descriptors, drawMeshes }) => ({
       pass: resourceCache.pass({
         // TODO: creating new descriptor to force new pass from cache
         ...descriptors.directionalLightShadows.pass,
-        color: [colorMap],
-        depth: shadowMap,
+        color: [color],
+        depth,
       }),
       renderView: renderView,
       render: () => {
         // Needs to be here for multi-view with different renderer to not overwrite it
-        light._shadowMap = shadowMap;
+        light._shadowMap = depth;
+        // renderView.camera.position = lightEntity._transform.worldPosition;
 
         drawMeshes({
-          viewport: renderView.viewport,
-          //TODO: passing camera entity around is a mess
-          cameraEntity: {
-            camera: {
-              position: lightEntity._transform.worldPosition,
-            },
-          },
+          renderView,
+          // viewport: renderView.viewport,
+          // //TODO: passing camera entity around is a mess
+          // cameraEntity: {
+          //   camera: {
+          //     position: lightEntity._transform.worldPosition,
+          //   },
+          // },
           shadowMapping: true,
           shadowMappingLight: light,
           entitiesInView: entities,
-          forward: false,
           drawTransparent: false,
           renderers,
         });
       },
     });
 
-    light._shadowMap = shadowMap; // TODO: we borrow it for a frame
+    light._shadowMap = depth; // TODO: we borrow it for a frame
   },
 
   spotLight(lightEntity, entities, renderers, shadowCastingEntities) {
     const light = lightEntity.spotLight || lightEntity.areaLight;
-    light._sceneBboxInLightSpace ??= aabb.create();
 
-    aabb.empty(light._sceneBboxInLightSpace);
-    aabb.fromPoints(
-      light._sceneBboxInLightSpace,
-      shadowCastingEntities.flatMap((entity) =>
-        aabb
-          .getCorners(entity.transform.worldBounds) // TODO: gc corners points
-          .map((p) => vec3.multMat4(p, light._viewMatrix))
-      )
+    this.computeLightProperties(lightEntity, light, shadowCastingEntities);
+
+    const { color, depth } = this.getAttachments(
+      light,
+      descriptors.spotLightShadows
     );
-
-    light._near = -light._sceneBboxInLightSpace[1][2];
-    light._far = -light._sceneBboxInLightSpace[0][2];
-
-    let colorMapDesc = descriptors.spotLightShadows.colorMapDesc;
-    let shadowMapDesc = descriptors.spotLightShadows.shadowMapDesc;
-
-    // Only update descriptors for custom map size
-    // TODO: could texture be cached if they have the same descriptor
-    if (light.shadowMapSize) {
-      colorMapDesc = {
-        ...colorMapDesc,
-        width: light.shadowMapSize,
-        height: light.shadowMapSize,
-      };
-      shadowMapDesc = {
-        ...shadowMapDesc,
-        width: light.shadowMapSize,
-        height: light.shadowMapSize,
-      };
-    }
-
-    //TODO: can this be all done at once?
-    const colorMap = resourceCache.texture2D(colorMapDesc);
-    colorMap.name = `tempColorMap (id: ${colorMap.id})`;
-
-    const shadowMap = resourceCache.texture2D(shadowMapDesc);
-    shadowMap.name = `shadowMap (id: ${shadowMap.id})`;
 
     mat4.perspective(
       light._projectionMatrix,
       light.angle ? 2 * light.angle : Math.PI / 2,
-      shadowMap.width / shadowMap.height,
+      depth.width / depth.height,
       light._near,
       light._far
     );
@@ -150,7 +147,7 @@ export default ({ renderGraph, resourceCache, descriptors, drawMeshes }) => ({
         viewMatrix: light._viewMatrix,
         projectionMatrix: light._projectionMatrix,
       },
-      viewport: [0, 0, shadowMap.width, shadowMap.height],
+      viewport: [0, 0, depth.width, depth.height],
     };
 
     renderGraph.renderPass({
@@ -158,69 +155,51 @@ export default ({ renderGraph, resourceCache, descriptors, drawMeshes }) => ({
       pass: resourceCache.pass({
         // TODO: creating new descriptor to force new pass from cache
         ...descriptors.spotLightShadows.pass,
-        color: [colorMap],
-        depth: shadowMap,
+        color: [color],
+        depth: depth,
       }),
       renderView: renderView,
       render: () => {
-        light._shadowMap = shadowMap;
+        light._shadowMap = depth;
+
+        // renderView.camera.position = lightEntity._transform.worldPosition;
+
         drawMeshes({
-          viewport: renderView.viewport,
+          renderView,
+          // viewport: renderView.viewport,
           //TODO: passing camera entity around is a mess
-          cameraEntity: {
-            camera: {
-              position: lightEntity._transform.worldPosition,
-            },
-          },
+          // cameraEntity: {
+          //   camera: {
+          //     position: lightEntity._transform.worldPosition,
+          //   },
+          // },
           shadowMapping: true,
           shadowMappingLight: light,
           entitiesInView: entities,
-          forward: false,
           drawTransparent: false,
           renderers,
         });
       },
     });
 
-    light._shadowMap = shadowMap; // TODO: we borrow it for a frame
+    light._shadowMap = depth; // TODO: we borrow it for a frame
   },
 
   pointLight(lightEntity, entities, renderers) {
     const light = lightEntity.pointLight;
 
-    let shadowCubemapDesc = descriptors.pointLightShadows.shadowCubemapDesc;
-    let shadowMapDesc = descriptors.pointLightShadows.shadowMapDesc;
-
-    // Only update descriptors for custom map size
-    // TODO: could texture be cached if they have the same descriptor
-    if (light.shadowMapSize) {
-      shadowCubemapDesc = {
-        ...shadowCubemapDesc,
-        width: light.shadowMapSize,
-        height: light.shadowMapSize,
-      };
-      shadowMapDesc = {
-        ...shadowMapDesc,
-        width: light.shadowMapSize,
-        height: light.shadowMapSize,
-      };
-    }
-
-    //TODO: can this be all done at once?
-    const shadowCubemap = resourceCache.textureCube(shadowCubemapDesc);
-    shadowCubemap.name = `tempCubemap (id: ${shadowCubemap.id})`;
-
-    const shadowMap = resourceCache.texture2D(shadowMapDesc);
-    shadowMap.name = `shadowMap (id: ${shadowMap.id})`;
+    const { color, depth } = this.getAttachments(
+      light,
+      descriptors.pointLightShadows,
+      true
+    );
 
     for (let i = 0; i < descriptors.pointLightShadows.passes.length; i++) {
       const pass = descriptors.pointLightShadows.passes[i];
       //TODO: need to create new descriptor to get uniq
       const passDesc = { ...pass };
-      passDesc.color = [
-        { texture: shadowCubemap, target: passDesc.color[0].target },
-      ];
-      passDesc.depth = shadowMap;
+      passDesc.color = [{ texture: color, target: passDesc.color[0].target }];
+      passDesc.depth = depth;
 
       const side = descriptors.pointLightShadows.cubemapSides[i];
       const renderView = {
@@ -233,7 +212,7 @@ export default ({ renderGraph, resourceCache, descriptors, drawMeshes }) => ({
             side.up
           ),
         },
-        viewport: [0, 0, shadowMap.width, shadowMap.height],
+        viewport: [0, 0, depth.width, depth.height],
       };
 
       renderGraph.renderPass({
@@ -242,11 +221,14 @@ export default ({ renderGraph, resourceCache, descriptors, drawMeshes }) => ({
         renderView: renderView,
         render: () => {
           //why?
-          light._shadowCubemap = shadowCubemap; // TODO: we borrow it for a frame
+          light._shadowCubemap = color; // TODO: we borrow it for a frame
           light._projectionMatrix = side.projectionMatrix;
           light._viewMatrix = renderView.camera.viewMatrix;
+
+          // renderView.camera.projectionMatrix = light._projectionMatrix;
+          // renderView.camera.viewMatrix = light._viewMatrix;
           drawMeshes({
-            viewport: renderView.viewport,
+            // viewport: renderView.viewport,
             renderView,
             //TODO: passing camera entity around is a mess
             // cameraEntity: {
@@ -255,7 +237,6 @@ export default ({ renderGraph, resourceCache, descriptors, drawMeshes }) => ({
             shadowMapping: true,
             shadowMappingLight: light,
             entitiesInView: entities,
-            forward: false,
             drawTransparent: false,
             renderers,
           });
@@ -263,6 +244,6 @@ export default ({ renderGraph, resourceCache, descriptors, drawMeshes }) => ({
       });
     }
 
-    light._shadowCubemap = shadowCubemap; // TODO: we borrow it for a frame
+    light._shadowCubemap = color; // TODO: we borrow it for a frame
   },
 });

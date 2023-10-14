@@ -109,12 +109,15 @@ export default ({ ctx, resourceCache }) => {
             passCommand
           );
 
+          const viewportSize = passCommand.size?.(renderView) || [
+            renderView.viewport[2],
+            renderView.viewport[3],
+          ];
+
           const sharedUniforms = {
             uViewport: renderView.viewport,
-            uViewportSize: passCommand.size?.(renderView) || [
-              renderView.viewport[2],
-              renderView.viewport[3],
-            ],
+            uViewportSize: viewportSize,
+            uTexelSize: [1 / viewportSize[0], 1 / viewportSize[1]],
           };
 
           const source = passCommand.source?.(renderView);

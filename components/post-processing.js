@@ -21,16 +21,20 @@ export default (options) => ({
 export const ssao = (options) => ({
   type: "sao", // "gtao",
   post: false,
-  mix: 0.5,
-  samples: 11,
-  intensity: 1,
-  radius: 100, // cm
-  bias: 0.001, // cm
+  noiseTexture: true,
+  mix: 1,
+  samples: options?.type === "gtao" ? 6 : 11,
+  intensity: 2.2,
+  radius: 0.5, // m
   blurRadius: 0.5,
   blurSharpness: 10,
   brightness: 0,
   contrast: 1,
+  // SAO
+  bias: 0.001, // cm
+  spiralTurns: 7,
   // GTAO
+  slices: 3,
   colorBounce: true,
   colorBounceIntensity: 1.0,
   ...options,
@@ -66,6 +70,7 @@ export const fog = (options) => ({
   ...options,
 });
 export const bloom = (options) => ({
+  quality: 1,
   threshold: 1,
   radius: 1,
   intensity: 0.1,

@@ -77,6 +77,8 @@ export default ({ ctx, resolution = 16 } = {}) => {
 
   const lineRendererSystem = {
     type: "line-renderer",
+    cache: {},
+    debug: false,
     render(renderView, entity) {
       ctx.submit(drawSegmentsCmd, {
         attributes: {
@@ -108,10 +110,14 @@ export default ({ ctx, resolution = 16 } = {}) => {
           ? entity.geometry.positions.length / 2
           : entity.geometry.positions.length / 6,
         uniforms: {
-          uBaseColor: entity.material.baseColor,
+          uExposure: renderView.exposure,
+          uOutputEncoding: renderView.outputEncoding,
+
           uProjectionMatrix: renderView.camera.projectionMatrix,
           uViewMatrix: renderView.camera.viewMatrix,
           uModelMatrix: entity._transform.modelMatrix,
+
+          uBaseColor: entity.material.baseColor,
           uLineWidth: entity.material.lineWidth || 1,
           uResolution: [ctx.gl.drawingBufferWidth, ctx.gl.drawingBufferHeight],
           uLineZOffset: 0,
@@ -125,7 +131,7 @@ export default ({ ctx, resolution = 16 } = {}) => {
           if (
             entity.geometry &&
             entity.material &&
-            entity.material.type == "segments" &&
+            entity.material.type === "line" &&
             entity.material.castShadows
           ) {
             lineRendererSystem.render(renderView, entity);
@@ -138,7 +144,7 @@ export default ({ ctx, resolution = 16 } = {}) => {
           if (
             entity.geometry &&
             entity.material &&
-            entity.material.type == "segments"
+            entity.material.type === "line"
           ) {
             lineRendererSystem.render(renderView, entity);
           }

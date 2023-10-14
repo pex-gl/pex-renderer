@@ -14,26 +14,26 @@ let ltc_2;
 
 // prettier-ignore
 const flagDefs = [
-  [["options", "depthPassOnly"], "DEPTH_PASS_ONLY"],
-  [["options", "depthPassOnly"], "USE_UNLIT_WORKFLOW"], //force unlit in depth pass mode
-  [["options", "shadowQuality"], "SHADOW_QUALITY", { type: "counter" }],
-  [["options", "ambientLights", "length"], "NUM_AMBIENT_LIGHTS", { type: "counter" }],
-  [["options", "directionalLights", "length"], "NUM_DIRECTIONAL_LIGHTS", { type: "counter" }],
-  [["options", "pointLights", "length"], "NUM_POINT_LIGHTS", { type: "counter" }],
-  [["options", "spotLights", "length"], "NUM_SPOT_LIGHTS", { type: "counter" }],
-  [["options", "areaLights", "length"], "NUM_AREA_LIGHTS", { type: "counter" }],
-  [["options", "reflectionProbes", "length"], "USE_REFLECTION_PROBES"],
-  [["options", "useTonemapping"], "USE_TONEMAPPING"],
-  [["options", "envMapSize"], "", { uniform: "uEnvMapSize" }], // Blurred env map size
   [["options", "outputNormals"], "OUTPUT_NORMALS"],
   [["options", "outputEmissive"], "OUTPUT_EMISSIVE"],
+
+  [["options", "depthPassOnly"], "DEPTH_PASS_ONLY"],
+  [["options", "depthPassOnly"], "USE_UNLIT_WORKFLOW"], //force unlit in depth pass mode
+  [["options", "shadowQuality"], "SHADOW_QUALITY", { type: "value" }],
+  [["options", "ambientLights", "length"], "NUM_AMBIENT_LIGHTS", { type: "value" }],
+  [["options", "directionalLights", "length"], "NUM_DIRECTIONAL_LIGHTS", { type: "value" }],
+  [["options", "pointLights", "length"], "NUM_POINT_LIGHTS", { type: "value" }],
+  [["options", "spotLights", "length"], "NUM_SPOT_LIGHTS", { type: "value" }],
+  [["options", "areaLights", "length"], "NUM_AREA_LIGHTS", { type: "value" }],
+  [["options", "reflectionProbes", "length"], "USE_REFLECTION_PROBES"],
+  [["options", "envMapSize"], "", { uniform: "uEnvMapSize" }], // Blurred env map size
   [["options", "useSSAO"], "USE_SSAO"],
   [["options", "useSSAOColors"], "USE_SSAO_COLORS"],
   [["options", "targets", "ssao.main"], "SSAO_TEXTURE", { type: "texture", uniform: "uSSAOTexture", requires: "USE_SSAO" }],
   [["material", "unlit"], "USE_UNLIT_WORKFLOW", { fallback: "USE_METALLIC_ROUGHNESS_WORKFLOW" }],
   [["material", "blend"], "USE_BLEND"],
   [["skin"], "USE_SKIN"],
-  [["skin", "joints", "length"], "NUM_JOINTS", { type: "counter", requires: "USE_SKIN" }],
+  [["skin", "joints", "length"], "NUM_JOINTS", { type: "value", requires: "USE_SKIN" }],
   [["skin", "jointMatrices"], "", { uniform: "uJointMat", requires: "USE_SKIN" }],
   [["material", "baseColor"], "", { uniform: "uBaseColor" }],
   [["material", "metallic"], "", { uniform: "uMetallic" }],
@@ -75,7 +75,7 @@ const lightColorToSrgb = (light) =>
     j < 3 ? Math.pow(c * light.intensity, 1.0 / 2.2) : c
   );
 
-export default ({ ctx, shadowQuality = 3 }) => {
+export default ({ ctx, shadowQuality = 5 }) => {
   const dummyTexture2D = ctx.texture2D({
     name: "dummyTexture2D",
     width: 4,
@@ -86,41 +86,6 @@ export default ({ ctx, shadowQuality = 3 }) => {
     width: 4,
     height: 4,
   });
-
-  // function render() {
-  //   skybox.draw(camera, {
-  //     outputEncoding: sharedUniforms.uOutputEncoding,
-  //     backgroundMode: true,
-  //   });
-
-  //   //TODO: add some basic sorting of transparentEntities
-  //   // prettier-ignore
-  //   const transparentEntities = shadowMapping ? [] : renderableEntities.filter((e) => e.material.blend);
-
-  //   // sharedUniforms.uCameraPosition = camera.entity.transform.worldPosition;
-
-  //   const geometryPasses = [opaqueEntities, transparentEntities];
-
-  //   for (let passIndex = 0; passIndex < geometryPasses.length; passIndex++) {
-  //     const passEntities = geometryPasses[passIndex];
-
-  //     // Draw skybox before transparent meshes
-  //     if (
-  //       passEntities == transparentEntities &&
-  //       skybox &&
-  //       !shadowMappingLight
-  //     ) {
-  //     }
-
-  //     for (let i = 0; i < passEntities.length; i++) {
-  //       if (camera?.viewport) {
-  //         // cmd.viewport = camera.viewport;
-  //         // cmd.scissor = camera.viewport;
-  //       }
-  //       ctx.submit(cmd);
-  //     }
-  //   }
-  // }
 
   const pipelineMaterialDefaults = {
     depthWrite: undefined,
@@ -141,8 +106,8 @@ export default ({ ctx, shadowQuality = 3 }) => {
       programs: new ProgramCache(),
       pipelines: {},
     },
-    shadowQuality,
     debug: false,
+    shadowQuality,
     debugRender: "",
     checkLight(light) {
       if (light.castShadows && !(light._shadowMap || light._shadowCubemap)) {
@@ -217,8 +182,18 @@ export default ({ ctx, shadowQuality = 3 }) => {
         const defines = options.debugRender
           ? flags.filter((flag) => flag !== options.debugRender)
           : flags;
-        const vertSrc = ShaderParser.build(ctx, vert, defines);
-        const fragSrc = ShaderParser.build(ctx, frag, defines);
+        const vertSrc = ShaderParser.build(
+          ctx,
+          vert,
+          defines,
+          material.extensions
+        );
+        const fragSrc = ShaderParser.build(
+          ctx,
+          frag,
+          defines,
+          material.extensions
+        );
 
         if (this.debug) {
           console.debug(NAMESPACE, this.type, "new program", flags, entity);
@@ -296,6 +271,9 @@ export default ({ ctx, shadowQuality = 3 }) => {
         sharedUniforms[`${uniform}near`] = shadows ? light._near : 0;
         sharedUniforms[`${uniform}far`] = shadows ? light._far : 0;
         sharedUniforms[`${uniform}bias`] = light.bias;
+        sharedUniforms[`${uniform}radiusUV`] = shadows
+          ? light._radiusUV
+          : [0, 0];
         sharedUniforms[`${uniform}shadowMapSize`] = shadows
           ? [light._shadowMap.width, light._shadowMap.height]
           : [0, 0];
@@ -326,6 +304,9 @@ export default ({ ctx, shadowQuality = 3 }) => {
         sharedUniforms[`${uniform}near`] = shadows ? light._near : 0;
         sharedUniforms[`${uniform}far`] = shadows ? light._far : 0;
         sharedUniforms[`${uniform}bias`] = light.bias;
+        sharedUniforms[`${uniform}radiusUV`] = shadows
+          ? light._radiusUV
+          : [0, 0];
         sharedUniforms[`${uniform}shadowMapSize`] = shadows
           ? [light._shadowMap.width, light._shadowMap.height]
           : [0, 0];
@@ -349,6 +330,7 @@ export default ({ ctx, shadowQuality = 3 }) => {
         sharedUniforms[`${uniform}castShadows`] = shadows;
 
         sharedUniforms[`${uniform}bias`] = light.bias;
+        sharedUniforms[`${uniform}radius`] = light.radius;
         sharedUniforms[`${uniform}shadowMapSize`] = shadows
           ? [light._shadowCubemap.width, light._shadowCubemap.height]
           : [0, 0];
@@ -407,6 +389,9 @@ export default ({ ctx, shadowQuality = 3 }) => {
         sharedUniforms[`${uniform}near`] = shadows ? light._near : 0;
         sharedUniforms[`${uniform}far`] = shadows ? light._far : 0;
         sharedUniforms[`${uniform}bias`] = light.bias;
+        sharedUniforms[`${uniform}radiusUV`] = shadows
+          ? light._radiusUV
+          : [0, 0];
         sharedUniforms[`${uniform}shadowMapSize`] = shadows
           ? [light._shadowMap.width, light._shadowMap.height]
           : [0, 0];
@@ -458,15 +443,15 @@ export default ({ ctx, shadowQuality = 3 }) => {
         useSSAO: false,
         useSSAOColors: false,
         targets: {},
-        useTonemapping: false,
         shadowQuality: this.shadowQuality,
         debugRender,
       };
 
       const sharedUniforms = {
-        //uOutputEncoding: renderPipelineSystem.outputEncoding,
-        uOutputEncoding: ctx.Encoding.Linear,
         uViewportSize: [renderView.viewport[2], renderView.viewport[3]],
+
+        uExposure: renderView.exposure,
+        uOutputEncoding: renderView.outputEncoding,
       };
 
       if (!shadowMapping) {
@@ -556,7 +541,6 @@ export default ({ ctx, shadowQuality = 3 }) => {
         // cachedUniforms.uAlphaMap = material.alphaMap;
         cachedUniforms.uReflectance =
           material.reflectance !== undefined ? material.reflectance : 0.5;
-        cachedUniforms.uExposure = 1.0;
 
         cachedUniforms.uPointSize = material.pointSize || 1;
         // TODO: why is this here

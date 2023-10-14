@@ -10,6 +10,7 @@ export default (options) => ({
   intensity: 1,
   bias: 0.1,
   castShadows: true,
+  radius: 1,
   // shadowMapSize: 2048,
   ...options,
 });

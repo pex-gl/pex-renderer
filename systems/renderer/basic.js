@@ -58,8 +58,8 @@ export default ({ ctx }) => {
         }
         program = buildProgram(
           ctx,
-          ShaderParser.build(ctx, vert, flags),
-          ShaderParser.build(ctx, frag, flags)
+          ShaderParser.build(ctx, vert, flags, material.extensions),
+          ShaderParser.build(ctx, frag, flags, material.extensions)
         );
         this.cache.programs.set(flags, vert, frag, program);
       }
@@ -106,6 +106,9 @@ export default ({ ctx }) => {
     },
     render(renderView, entities, { transparent }) {
       const sharedUniforms = {
+        uExposure: renderView.exposure,
+        uOutputEncoding: renderView.outputEncoding,
+
         uProjectionMatrix: renderView.camera.projectionMatrix,
         uViewMatrix: renderView.camera.viewMatrix,
       };

@@ -12,7 +12,6 @@ export function getMaterialFlagsAndUniforms(
   const { _geometry: geometry } = entity;
 
   const flags = [
-    //[["ctx", "capabilities", "maxColorAttachments"], "USE_DRAW_BUFFERS"
     ctx.capabilities.maxColorAttachments > 1 && "USE_DRAW_BUFFERS",
   ];
   const materialUniforms = {};
@@ -33,9 +32,7 @@ export function getMaterialFlagsAndUniforms(
     }
 
     // Compute flags and uniforms
-    if (opts.type === "counter") {
-      flags.push(`${defineName} ${value}`);
-    } else if (opts.type === "texture") {
+    if (opts.type === "texture") {
       if (!value) continue;
 
       flags.push(`USE_${defineName}`);
@@ -59,12 +56,24 @@ export function getMaterialFlagsAndUniforms(
         materialUniforms[opts.uniform + "Matrix"] = value.matrix;
       }
       // If not nullish or has default
-    } else if ((value ?? false) || opts.default !== undefined) {
-      // Pass the compare test or truthy
-      if (opts.compare !== undefined ? opts.compare === value : value) {
-        flags.push(defineName);
-      } else if (opts.fallback) {
-        flags.push(opts.fallback);
+    } else if (
+      !(value === undefined || value === null) ||
+      opts.default !== undefined
+    ) {
+      // Pass the compare test
+      if (opts.compare !== undefined) {
+        if (opts.compare === value) flags.push(defineName);
+      } else {
+        // Set flag as name + value
+        if (opts.type === "value") {
+          flags.push(`${defineName} ${value ?? opts.default}`);
+          // Set flag only if truthy
+        } else if (value) {
+          flags.push(defineName);
+          // Set fallback flag if falsy (false, 0, "", NaN)
+        } else if (opts.fallback) {
+          flags.push(opts.fallback);
+        }
       }
 
       // Set uniform with default if value is nullish

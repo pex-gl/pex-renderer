@@ -8,8 +8,6 @@ export default ({
   descriptors,
   bloomLevels = 9,
   aoScale = 1,
-  saoNoiseTexture,
-  gtaoNoiseTexture,
   saoMainTarget,
   gtaoMainTarget,
 }) => [
@@ -31,24 +29,30 @@ export default ({
           [["postProcessing", "ssao"], "USE_SSAO"],
 
           [["postProcessing", "ssao", "type"], "USE_SSAO_GTAO", { compare: "gtao", requires: "USE_SSAO" }],
-          // [["postProcessing", "ssao", "samples"], "NUM_SAMPLES", { type: "counter", requires: "USE_SSAO_GTAO" }],
+          [["postProcessing", "ssao", "slices"], "NUM_SLICES", { type: "value", requires: "USE_SSAO_GTAO" }],
+          [["postProcessing", "ssao", "samples"], "NUM_SAMPLES", { type: "value", requires: "USE_SSAO_GTAO" }],
           [["postProcessing", "ssao", "intensity"], "", { uniform: "uIntensity", requires: "USE_SSAO_GTAO" }],
-          // [["postProcessing", "ssao", "bias"], "", { uniform: "uBias", requires: "USE_SSAO_GTAO" }],
           [["postProcessing", "ssao", "radius"], "", { uniform: "uRadius", requires: "USE_SSAO_GTAO" }],
           [["postProcessing", "ssao", "brightness"], "", { uniform: "uBrightness", requires: "USE_SSAO_GTAO" }],
           [["postProcessing", "ssao", "contrast"], "", { uniform: "uContrast", requires: "USE_SSAO_GTAO" }],
           [["postProcessing", "ssao", "colorBounce"], "USE_COLOR_BOUNCE", { requires: "USE_SSAO_GTAO" }],
           [["postProcessing", "ssao", "colorBounceIntensity"], "", { uniform: "uColorBounceIntensity", requires: "USE_SSAO_GTAO" }],
+          [["postProcessing", "ssao", "noiseTexture"], "USE_GTAO_NOISE_TEXTURE", { requires: "USE_SSAO_GTAO" }],
+          [["postProcessing", "ssao", "_gtaoNoiseTexture"], "NOISE_TEXTURE", { type: "texture", uniform: "uNoiseTexture", requires: "USE_GTAO_NOISE_TEXTURE" }],
+          [["postProcessing", "ssao", "_gtaoNoiseTexture", "width"], "", { uniform: "uNoiseTextureSize", requires: "USE_GTAO_NOISE_TEXTURE" }],
         ],
-        disabled: ({ cameraEntity }) =>
-          cameraEntity.postProcessing.ssao.type !== "gtao",
-        uniforms: () => {
-          if (!gtaoNoiseTexture) {
-            // Generate Blue Noise Textures
+        disabled: ({ cameraEntity }) => {
+          const isEnabled = cameraEntity.postProcessing.ssao.type === "gtao";
+
+          if (
+            isEnabled &&
+            cameraEntity.postProcessing.ssao.noiseTexture &&
+            !cameraEntity.postProcessing.ssao._gtaoNoiseTexture
+          ) {
             const generator = new BlueNoiseGenerator();
             generator.size = 32;
 
-            const data = new Uint8Array(32 ** 2 * 4);
+            const data = new Uint8Array(generator.size ** 2 * 4);
             for (let i = 0, l = 4; i < l; i++) {
               const result = generator.generate();
               const bin = result.data;
@@ -59,7 +63,7 @@ export default ({
                 data[j * 4 + i] = value;
               }
             }
-            gtaoNoiseTexture = ctx.texture2D({
+            cameraEntity.postProcessing.ssao._gtaoNoiseTexture = ctx.texture2D({
               width: generator.size,
               height: generator.size,
               data: data,
@@ -70,7 +74,8 @@ export default ({
               min: ctx.Filter.Linear,
             });
           }
-          return { uNoiseTexture: gtaoNoiseTexture };
+
+          return !isEnabled;
         },
         passDesc: () => ({
           clearColor: [0, 0, 0, 1],
@@ -105,21 +110,29 @@ export default ({
           [["postProcessing", "ssao"], "USE_SSAO"],
 
           [["postProcessing", "ssao", "type"], "USE_SSAO_SAO", { compare: "sao", requires: "USE_SSAO" }],
-          [["postProcessing", "ssao", "samples"], "NUM_SAMPLES", { type: "counter", requires: "USE_SSAO_SAO" }],
+          [["postProcessing", "ssao", "samples"], "NUM_SAMPLES", { type: "value", requires: "USE_SSAO_SAO" }],
+          [["postProcessing", "ssao", "spiralTurns"], "NUM_SPIRAL_TURNS", { type: "value", requires: "USE_SSAO_SAO" }],
           [["postProcessing", "ssao", "intensity"], "", { uniform: "uIntensity", requires: "USE_SSAO_SAO" }],
           [["postProcessing", "ssao", "bias"], "", { uniform: "uBias", requires: "USE_SSAO_SAO" }],
           [["postProcessing", "ssao", "radius"], "", { uniform: "uRadius", requires: "USE_SSAO_SAO" }],
           [["postProcessing", "ssao", "brightness"], "", { uniform: "uBrightness", requires: "USE_SSAO_SAO" }],
           [["postProcessing", "ssao", "contrast"], "", { uniform: "uContrast", requires: "USE_SSAO_SAO" }],
+          [["postProcessing", "ssao", "noiseTexture"], "USE_SAO_NOISE_TEXTURE", { requires: "USE_SSAO_SAO" }],
+          [["postProcessing", "ssao", "_saoNoiseTexture"], "NOISE_TEXTURE", { type: "texture", uniform: "uNoiseTexture", requires: "USE_SAO_NOISE_TEXTURE" }],
+          [["postProcessing", "ssao", "_saoNoiseTexture", "width"], "", { uniform: "uNoiseTextureSize", requires: "USE_SAO_NOISE_TEXTURE" }],
         ],
-        disabled: ({ cameraEntity }) =>
-          cameraEntity.postProcessing.ssao.type !== "sao",
-        uniforms: () => {
-          if (!saoNoiseTexture) {
+        disabled: ({ cameraEntity }) => {
+          const isEnabled = cameraEntity.postProcessing.ssao.type === "sao";
+
+          if (
+            isEnabled &&
+            cameraEntity.postProcessing.ssao.noiseTexture &&
+            !cameraEntity.postProcessing.ssao._saoNoiseTexture
+          ) {
             const localPRNG = random.create("0");
 
-            const size = 128;
-            const sizeSquared = 128 ** 2;
+            const size = 64;
+            const sizeSquared = size ** 2;
             const channelSize = ctx.gl.RG ? 2 : 4;
             const ssaoNoiseData = new Float32Array(sizeSquared * channelSize);
             for (let i = 0; i < sizeSquared; i++) {
@@ -130,7 +143,7 @@ export default ({
                 ssaoNoiseData[i * channelSize + 3] = 1;
               }
             }
-            saoNoiseTexture = ctx.texture2D({
+            cameraEntity.postProcessing.ssao._saoNoiseTexture = ctx.texture2D({
               width: size,
               height: size,
               data: ssaoNoiseData,
@@ -143,7 +156,8 @@ export default ({
               min: ctx.Filter.Linear,
             });
           }
-          return { uNoiseTexture: saoNoiseTexture };
+
+          return !isEnabled;
         },
         passDesc: () => ({
           clearColor: [0, 0, 0, 1],
@@ -179,7 +193,7 @@ export default ({
           [["postProcessing", "ssao", "blurSharpness"], "", { uniform: "uSharpness" }],
         ],
         disabled: ({ cameraEntity }) =>
-          cameraEntity.postProcessing.ssao.type !== "sao",
+          cameraEntity.postProcessing.ssao.blurRadius === 0,
         uniforms: ({ cameraEntity: entity }) => ({
           uDirection: [entity.postProcessing.ssao.blurRadius, 0],
         }),
@@ -206,7 +220,7 @@ export default ({
           [["postProcessing", "ssao", "blurSharpness"], "", { uniform: "uSharpness" }],
         ],
         disabled: ({ cameraEntity }) =>
-          cameraEntity.postProcessing.ssao.type !== "sao",
+          cameraEntity.postProcessing.ssao.blurRadius === 0,
         uniforms: ({ cameraEntity: entity }) => ({
           uDirection: [0, entity.postProcessing.ssao.blurRadius],
         }),
@@ -237,7 +251,7 @@ export default ({
           [["postProcessing", "dof", "type"], "USE_DOF_GUSTAFSSON", { compare: "gustafsson", requires: "USE_DOF" }],
           [["postProcessing", "dof", "type"], "USE_DOF_UPITIS", { compare: "upitis", requires: "USE_DOF" }],
           [["postProcessing", "dof", "focusDistance"], "", { uniform: "uFocusDistance", requires: "USE_DOF" }],
-          [["postProcessing", "dof", "samples"], "NUM_SAMPLES", { type: "counter", requires: "USE_DOF" }],
+          [["postProcessing", "dof", "samples"], "NUM_SAMPLES", { type: "value", requires: "USE_DOF" }],
           [["postProcessing", "dof", "chromaticAberration"], "", { uniform: "uChromaticAberration", requires: "USE_DOF" }],
           [["postProcessing", "dof", "luminanceThreshold"], "", { uniform: "uLuminanceThreshold", requires: "USE_DOF" }],
           [["postProcessing", "dof", "luminanceGain"], "", { uniform: "uLuminanceGain", requires: "USE_DOF" }],
@@ -284,6 +298,8 @@ export default ({
         frag: SHADERS.downSample.frag,
         // prettier-ignore
         flagDefs: [
+          [["postProcessing", "bloom"], "USE_DOWN_SAMPLE"],
+          [["postProcessing", "bloom", "quality"], "QUALITY", { type: "value" }],
           [["postProcessing", "bloom", "radius"], "", { uniform: "uIntensity" }],
         ],
         source: () =>
@@ -307,7 +323,12 @@ export default ({
       })),
       ...Array.from({ length: bloomLevels - 1 }, (_, k) => k).map((i) => ({
         name: `main[${i}]`,
-        frag: SHADERS.bloom.frag,
+        frag: SHADERS.upSample.frag,
+        // prettier-ignore
+        flagDefs: [
+          [["postProcessing", "bloom"], "USE_UP_SAMPLE"],
+          [["postProcessing", "bloom", "quality"], "QUALITY", { type: "value" }],
+        ],
         blend: true,
         source: () => `bloom.downSample[${i + 1}]`,
         target: () => "bloom.threshold",
@@ -329,6 +350,8 @@ export default ({
           [["camera", "far"], "", { uniform: "uFar" }],
           [["camera", "fov"], "", { uniform: "uFov" }],
           [["camera", "exposure"], "", { uniform: "uExposure" }],
+          [["camera", "toneMap"], "TONEMAP", { type: "value" }],
+          [["camera", "outputEncoding"], "", { uniform: "uOutputEncoding" }],
 
           // AA
           [["postProcessing", "aa"], "USE_AA"],

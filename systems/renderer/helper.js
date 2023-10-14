@@ -301,6 +301,8 @@ export default function createHelperSystem({ ctx }) {
 
   const helperSystem = {
     type: "helper-renderer",
+    cache: {},
+    debug: false,
     render(renderView, geometry) {
       ctx.update(helperPositionVBuffer, { data: geometry.positions });
       ctx.update(helperColorVBuffer, { data: geometry.colors });
@@ -310,9 +312,11 @@ export default function createHelperSystem({ ctx }) {
       if (cmd.count > 0) {
         ctx.submit(cmd, {
           uniforms: {
+            uExposure: renderView.exposure,
+            uOutputEncoding: renderView.outputEncoding,
+
             uProjectionMatrix: renderView.camera.projectionMatrix,
             uViewMatrix: renderView.camera.viewMatrix,
-            uOutputEncoding: ctx.Encoding.Gamma,
           },
           // viewport: camera.viewport,
         });

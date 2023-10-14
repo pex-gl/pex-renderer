@@ -1,4 +1,5 @@
 import { vec3, avec4, utils } from "pex-math";
+import { parser as ShaderParser } from "pex-shaders";
 
 import addDescriptors from "./descriptors.js";
 import addShadowMapping from "./shadow-mapping.js";
@@ -34,7 +35,7 @@ const cullEntities = (entities, camera) =>
  * Render pipeline system
  *
  * Adds:
- * - "_near", "_far" and "_sceneBboxInLightSpace" to light components that cast shadows
+ * - "_near", "_far", "_radiusUV" and "_sceneBboxInLightSpace" to light components that cast shadows
  * - "_shadowCubemap" to pointLight components and "_shadowMap" to other light components
  * - "_targets" to postProcessing components
  * @returns {import("../../types.js").System}
@@ -70,36 +71,15 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
   cullEntities,
 
   drawMeshes({
-    viewport,
-    cameraEntity,
+    renderView,
     shadowMapping,
     shadowMappingLight,
     entitiesInView,
-    renderView: renderViewUpstream,
     renderers,
     drawTransparent,
     backgroundColorTexture,
     outputs,
   }) {
-    // if (backgroundColorTexture) {
-    //   ctx.update(backgroundColorTexture, { mipmap: true });
-    // }
-
-    //FIXME: code smell
-    const renderView = renderViewUpstream || { viewport };
-
-    //FIXME: code smell
-    if (cameraEntity && !renderView.camera) {
-      renderView.cameraEntity = cameraEntity;
-      renderView.camera = cameraEntity.camera;
-    }
-    if (shadowMappingLight) {
-      renderView.camera = {
-        projectionMatrix: shadowMappingLight._projectionMatrix,
-        viewMatrix: shadowMappingLight._viewMatrix,
-      };
-    }
-
     if (shadowMapping) {
       for (let i = 0; i < renderers.length; i++) {
         const renderer = renderers[i];
@@ -160,6 +140,13 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
       camera: cameraEntities[0].camera,
       viewport: [0, 0, ctx.gl.drawingBufferWidth, ctx.gl.drawingBufferHeight],
     };
+
+    renderView.exposure ||=
+      drawToScreen === false ? cameraEntities[0].camera.exposure : 1;
+    renderView.outputEncoding ||=
+      drawToScreen === false
+        ? cameraEntities[0].camera.outputEncoding
+        : ctx.Encoding.Linear;
 
     // Update shadow maps
     if (shadowCastingEntities.length) {
@@ -300,11 +287,9 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
       }),
       render: () => {
         this.drawMeshes({
-          viewport: renderView.viewport,
-          cameraEntity: renderView.cameraEntity,
+          renderView,
           shadowMapping: false,
           entitiesInView,
-          forward: true,
           drawTransparent: false,
           renderers,
           outputs,
@@ -370,11 +355,9 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
       }),
       render: () => {
         this.drawMeshes({
-          viewport: renderView.viewport,
-          cameraEntity: renderView.cameraEntity,
+          renderView,
           shadowMapping: false,
           entitiesInView,
-          forward: true,
           drawTransparent: true,
           backgroundColorTexture: grabPassColorCopyTexture,
           renderers,
@@ -411,11 +394,24 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
     if (drawToScreen !== false) {
       const fullscreenTriangle = resourceCache.fullscreenTriangle();
 
+      // TODO: cache
+      const pipelineDesc = { ...this.descriptors.blit.pipelineDesc };
+      pipelineDesc.vert = ShaderParser.build(ctx, pipelineDesc.vert);
+      pipelineDesc.frag = ShaderParser.build(
+        ctx,
+        pipelineDesc.frag,
+        [
+          !postProcessing &&
+            renderView.camera.toneMap &&
+            `TONEMAP ${renderView.camera.toneMap}`,
+        ].filter(Boolean)
+      );
+
       const blitCmd = {
         name: "drawBlitFullScreenTriangleCmd",
         attributes: fullscreenTriangle.attributes,
         count: fullscreenTriangle.count,
-        pipeline: resourceCache.pipeline(this.descriptors.blit.pipelineDesc),
+        pipeline: resourceCache.pipeline(pipelineDesc),
       };
 
       renderGraph.renderPass({
@@ -425,9 +421,11 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
         render: () => {
           ctx.submit(blitCmd, {
             uniforms: {
-              uUseTonemapping: !postProcessing,
-              uViewport: renderView.viewport,
-              // uViewport: [0, 0, renderView.viewport[2], renderView.viewport[3]],
+              // Post Processing already uses renderView.camera settings
+              uExposure: postProcessing ? 1 : renderView.camera.exposure,
+              uOutputEncoding: postProcessing
+                ? ctx.Encoding.Linear
+                : renderView.camera.outputEncoding,
               uTexture: attachments.color,
             },
           });
