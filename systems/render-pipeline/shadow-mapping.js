@@ -1,7 +1,7 @@
 import { vec3, mat4 } from "pex-math";
 import { aabb } from "pex-geom";
 
-import { TEMP_VEC3 } from "../../utils.js";
+import { TEMP_BOUNDS_POINTS, TEMP_VEC3 } from "../../utils.js";
 
 export default ({ renderGraph, resourceCache, descriptors, drawMeshes }) => ({
   computeLightProperties(lightEntity, light, shadowCastingEntities) {
@@ -12,7 +12,7 @@ export default ({ renderGraph, resourceCache, descriptors, drawMeshes }) => ({
       light._sceneBboxInLightSpace,
       shadowCastingEntities.flatMap((entity) =>
         aabb
-          .getCorners(entity.transform.worldBounds) // TODO: gc corners points
+          .getCorners(entity.transform.worldBounds, TEMP_BOUNDS_POINTS)
           .map((p) => vec3.multMat4(p, light._viewMatrix))
       )
     );
@@ -97,26 +97,19 @@ export default ({ renderGraph, resourceCache, descriptors, drawMeshes }) => ({
         color: [color],
         depth,
       }),
-      renderView: renderView,
+      renderView,
       render: () => {
         // Needs to be here for multi-view with different renderer to not overwrite it
         light._shadowMap = depth;
-        // renderView.camera.position = lightEntity._transform.worldPosition;
 
         drawMeshes({
           renderView,
-          // viewport: renderView.viewport,
-          // //TODO: passing camera entity around is a mess
-          // cameraEntity: {
-          //   camera: {
-          //     position: lightEntity._transform.worldPosition,
-          //   },
-          // },
           shadowMapping: true,
           shadowMappingLight: light,
           entitiesInView: entities,
           drawTransparent: false,
           renderers,
+          colorAttachments: this.colorAttachments,
         });
       },
     });
@@ -158,26 +151,18 @@ export default ({ renderGraph, resourceCache, descriptors, drawMeshes }) => ({
         color: [color],
         depth: depth,
       }),
-      renderView: renderView,
+      renderView,
       render: () => {
         light._shadowMap = depth;
 
-        // renderView.camera.position = lightEntity._transform.worldPosition;
-
         drawMeshes({
           renderView,
-          // viewport: renderView.viewport,
-          //TODO: passing camera entity around is a mess
-          // cameraEntity: {
-          //   camera: {
-          //     position: lightEntity._transform.worldPosition,
-          //   },
-          // },
           shadowMapping: true,
           shadowMappingLight: light,
           entitiesInView: entities,
           drawTransparent: false,
           renderers,
+          colorAttachments: this.colorAttachments,
         });
       },
     });
@@ -218,27 +203,21 @@ export default ({ renderGraph, resourceCache, descriptors, drawMeshes }) => ({
       renderGraph.renderPass({
         name: `PointLightShadowMap [${renderView.viewport}] (id: ${lightEntity.id})`,
         pass: resourceCache.pass(passDesc),
-        renderView: renderView,
+        renderView,
         render: () => {
           //why?
           light._shadowCubemap = color; // TODO: we borrow it for a frame
           light._projectionMatrix = side.projectionMatrix;
           light._viewMatrix = renderView.camera.viewMatrix;
 
-          // renderView.camera.projectionMatrix = light._projectionMatrix;
-          // renderView.camera.viewMatrix = light._viewMatrix;
           drawMeshes({
-            // viewport: renderView.viewport,
             renderView,
-            //TODO: passing camera entity around is a mess
-            // cameraEntity: {
-            //   camera: {},
-            // },
             shadowMapping: true,
             shadowMappingLight: light,
             entitiesInView: entities,
             drawTransparent: false,
             renderers,
+            colorAttachments: this.colorAttachments,
           });
         },
       });

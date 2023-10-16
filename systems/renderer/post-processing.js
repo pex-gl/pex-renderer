@@ -1,17 +1,13 @@
-import { postProcessing as SHADERS, parser as ShaderParser } from "pex-shaders";
-import {
-  ProgramCache,
-  buildProgram,
-  getHashFromProps,
-  getMaterialFlagsAndUniforms,
-} from "./utils.js";
-import { NAMESPACE } from "../../utils.js";
+import { postProcessing as SHADERS } from "pex-shaders";
+
+import createBaseSystem from "./base.js";
+import { ProgramCache } from "../../utils.js";
 
 // Impacts pipeline caching
 const pipelineProps = ["blend"];
 
 export default ({ ctx, resourceCache }) => {
-  const postProcessingSystem = {
+  const postProcessingSystem = Object.assign(createBaseSystem({ ctx }), {
     type: "post-processing-renderer",
     cache: {
       // Cache based on: vertex source (material.vert or default), fragment source (material.frag or default), list of flags and material hooks
@@ -23,71 +19,26 @@ export default ({ ctx, resourceCache }) => {
     },
     debug: false,
     debugRender: "",
-    getProgram(ctx, entity, command) {
-      const { flags, materialUniforms } = getMaterialFlagsAndUniforms(
-        ctx,
-        entity,
-        command.flagDefs || {},
-        { targets: this.cache.targets[entity.id] }
-      );
-      // TODO: materialUniforms are never cached?
-      this.materialUniforms = materialUniforms;
-
-      const descriptor = {
-        vert: command.vert || SHADERS.postProcessing.vert,
-        frag: command.frag, // TODO: should there be default?
-      };
-      // shadersPostReplace(descriptor, entity, this.materialUniforms);
-
-      const { vert, frag } = descriptor;
-
-      let program = this.cache.programs.get(flags, vert, frag);
-      if (!program) {
-        if (this.debug) {
-          console.debug(NAMESPACE, this.type, "new program", flags, entity);
-        }
-        program = buildProgram(
-          ctx,
-          ShaderParser.build(ctx, vert, flags),
-          ShaderParser.build(ctx, frag, flags)
-        );
-        this.cache.programs.set(flags, vert, frag, program);
-      }
-
-      return program;
+    getVertexShader: ({ command }) =>
+      command.vert || SHADERS.postProcessing.vert,
+    getFragmentShader: ({ command }) => command.frag,
+    getPipelineHash(_, { command }) {
+      return this.getHashFromProps(command, pipelineProps, this.debug);
     },
-    getPipeline(ctx, entity, command) {
-      const program = this.getProgram(ctx, entity, command);
-
-      const hash = `${program.id}${getHashFromProps(command, pipelineProps)}`;
-
-      if (!this.cache.pipelines[hash] || command.needsPipelineUpdate) {
-        command.needsPipelineUpdate = false;
-        if (this.debug) {
-          console.debug(
-            NAMESPACE,
-            this.type,
-            "new pipeline",
-            program.id,
-            getHashFromProps(command, pipelineProps, true),
-            entity
-          );
-        }
-        this.cache.pipelines[hash] = ctx.pipeline({
-          program,
-          blend: command.blend,
-        });
-      }
-
-      return this.cache.pipelines[hash];
+    getPipelineOptions(_, { command }) {
+      return { blend: command.blend };
     },
-    render(renderView, _, { attachments, descriptors, passes }) {
+    render(
+      renderView,
+      _,
+      { colorAttachments, depthAttachment, descriptors, passes }
+    ) {
       const postProcessing = renderView.cameraEntity.postProcessing;
 
       const renderViewId = renderView.cameraEntity.id;
 
       this.cache.targets[renderViewId] ||= {};
-      this.cache.targets[renderViewId][`color`] = attachments.color;
+      this.cache.targets[renderViewId][`color`] = colorAttachments.color;
 
       // Expose targets for other renderers (eg. standard to use AO)
       postProcessing._targets = this.cache.targets;
@@ -102,12 +53,13 @@ export default ({ ctx, resourceCache }) => {
 
           if (passCommand.disabled?.(renderView)) continue;
 
-          // Also computes this.materialUniforms
-          const pipeline = this.getPipeline(
-            ctx,
-            renderView.cameraEntity,
-            passCommand
-          );
+          this.flagDefinitions = passCommand.flagDefinitions;
+
+          // Also computes this.uniforms
+          const pipeline = this.getPipeline(ctx, renderView.cameraEntity, {
+            command: passCommand,
+            targets: this.cache.targets[renderView.cameraEntity.id],
+          });
 
           const viewportSize = passCommand.size?.(renderView) || [
             renderView.viewport[2],
@@ -133,7 +85,7 @@ export default ({ ctx, resourceCache }) => {
 
             if (!inputColor) console.warn(`Missing source ${source}.`);
           } else {
-            inputColor = attachments.color;
+            inputColor = colorAttachments.color;
           }
 
           let outputColor;
@@ -154,9 +106,9 @@ export default ({ ctx, resourceCache }) => {
           const uniforms = {
             // TODO: only add required attachments
             uTexture: inputColor,
-            uDepthTexture: attachments.depth,
-            uNormalTexture: attachments.normal,
-            uEmissiveTexture: attachments.emissive,
+            uDepthTexture: depthAttachment,
+            uNormalTexture: colorAttachments.normal,
+            uEmissiveTexture: colorAttachments.emissive,
             ...passCommand.uniforms?.(renderView),
           };
 
@@ -165,7 +117,7 @@ export default ({ ctx, resourceCache }) => {
             uniforms.uTextureEncoding = uniforms.uTexture.encoding;
           }
 
-          Object.assign(uniforms, sharedUniforms, this.materialUniforms);
+          Object.assign(uniforms, sharedUniforms, this.uniforms);
 
           // Set command
           const fullscreenTriangle = resourceCache.fullscreenTriangle();
@@ -190,7 +142,7 @@ export default ({ ctx, resourceCache }) => {
             outputColor;
 
           // Draw to screen
-          if (!target) attachments.color = outputColor;
+          if (!target) colorAttachments.color = outputColor;
         }
       }
 
@@ -198,7 +150,8 @@ export default ({ ctx, resourceCache }) => {
         this.debugRender &&
         this.cache.targets[renderViewId][this.debugRender]
       ) {
-        attachments.color = this.cache.targets[renderViewId][this.debugRender];
+        colorAttachments.color =
+          this.cache.targets[renderViewId][this.debugRender];
       }
     },
     renderStages: {
@@ -206,8 +159,7 @@ export default ({ ctx, resourceCache }) => {
         postProcessingSystem.render(renderView, entities, options);
       },
     },
-    update: () => {},
-  };
+  });
 
   return postProcessingSystem;
 };

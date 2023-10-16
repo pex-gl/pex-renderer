@@ -70,6 +70,12 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
 
   cullEntities,
 
+  getAttachmentsLocations(colorAttachments) {
+    return Object.fromEntries(
+      Object.keys(colorAttachments).map((key, index) => [key, index])
+    );
+  },
+
   drawMeshes({
     renderView,
     shadowMapping,
@@ -78,8 +84,12 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
     renderers,
     drawTransparent,
     backgroundColorTexture,
-    outputs,
+    colorAttachments,
   }) {
+    renderView.exposure ||= 1;
+    renderView.outputEncoding ||= ctx.Encoding.Linear;
+
+    const attachmentsLocations = this.getAttachmentsLocations(colorAttachments);
     if (shadowMapping) {
       for (let i = 0; i < renderers.length; i++) {
         const renderer = renderers[i];
@@ -87,7 +97,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
           renderer.renderStages.shadow(renderView, entitiesInView, {
             shadowMapping: true,
             shadowMappingLight,
-            outputs,
+            attachmentsLocations,
           });
         }
       }
@@ -99,14 +109,16 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
             const entities = renderView.camera.culling
               ? this.cullEntities(entitiesInView, renderView.camera)
               : entitiesInView;
-            renderer.renderStages.opaque(renderView, entities, { outputs });
+            renderer.renderStages.opaque(renderView, entities, {
+              attachmentsLocations,
+            });
           }
         }
         for (let i = 0; i < renderers.length; i++) {
           const renderer = renderers[i];
           if (renderer.renderStages.background) {
             renderer.renderStages.background(renderView, entitiesInView, {
-              outputs,
+              attachmentsLocations,
             });
           }
         }
@@ -120,7 +132,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
               : entitiesInView;
             renderer.renderStages.transparent(renderView, entities, {
               backgroundColorTexture,
-              outputs,
+              attachmentsLocations,
             });
           }
         }
@@ -148,14 +160,73 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
         ? cameraEntities[0].camera.outputEncoding
         : ctx.Encoding.Linear;
 
+    // Setup attachments. Can be overwritten by PostProcessingPass
+    const outputs = new Set(this.outputs);
+    const postProcessing = renderView.cameraEntity.postProcessing;
+
+    if (postProcessing?.ssao) outputs.add("normal");
+    if (postProcessing?.bloom) outputs.add("emissive");
+
+    const colorAttachments = {};
+    let depthAttachment;
+
+    // TODO: this should be done on the fly by render graph
+    this.descriptors.mainPass.outputTextureDesc.width = renderView.viewport[2];
+    this.descriptors.mainPass.outputTextureDesc.height = renderView.viewport[3];
+
+    colorAttachments.color = resourceCache.texture2D(
+      this.descriptors.mainPass.outputTextureDesc
+    );
+
+    if (outputs.has("depth")) {
+      this.descriptors.mainPass.outputDepthTextureDesc.width =
+        renderView.viewport[2];
+      this.descriptors.mainPass.outputDepthTextureDesc.height =
+        renderView.viewport[3];
+      depthAttachment = resourceCache.texture2D(
+        this.descriptors.mainPass.outputDepthTextureDesc
+      );
+      depthAttachment.name = `mainPassDepth (id: ${depthAttachment.id})`;
+    }
+
+    if (outputs.has("normal")) {
+      colorAttachments.normal = resourceCache.texture2D(
+        this.descriptors.mainPass.outputTextureDesc
+      );
+    }
+
+    if (outputs.has("emissive")) {
+      colorAttachments.emissive = resourceCache.texture2D(
+        this.descriptors.mainPass.outputTextureDesc
+      );
+    }
+
+    if (outputs.has("velocity")) {
+      this.descriptors.mainPass.velocityTextureDesc.width =
+        renderView.viewport[2];
+      this.descriptors.mainPass.velocityTextureDesc.height =
+        renderView.viewport[3];
+      colorAttachments.velocity = resourceCache.texture2D(
+        this.descriptors.mainPass.velocityTextureDesc
+      );
+    }
+
+    for (let name of Object.keys(colorAttachments)) {
+      const texture = colorAttachments[name];
+      texture.name = `mainPass${name} (id: ${texture.id})`;
+    }
+
     // Update shadow maps
     if (shadowCastingEntities.length) {
+      this.drawMeshes = this.drawMeshes.bind(this);
       this.shadowMapping ||= addShadowMapping({
         renderGraph,
         resourceCache,
         descriptors: this.descriptors,
         drawMeshes: this.drawMeshes,
       });
+      // TODO: ugly
+      this.shadowMapping.colorAttachments = colorAttachments;
 
       for (let i = 0; i < entities.length; i++) {
         const entity = entities[i];
@@ -219,51 +290,6 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
       ? entities.filter((entity) => !entity.layer || entity.layer === layer)
       : entities;
 
-    // Setup attachments. Can be overwritten by PostProcessingPass
-    const outputs = new Set(this.outputs);
-    const postProcessing = renderView.cameraEntity.postProcessing;
-
-    if (postProcessing?.ssao) outputs.add("normal");
-    if (postProcessing?.bloom) outputs.add("emissive");
-
-    const attachments = {};
-
-    // TODO: this should be done on the fly by render graph
-    this.descriptors.mainPass.outputTextureDesc.width = renderView.viewport[2];
-    this.descriptors.mainPass.outputTextureDesc.height = renderView.viewport[3];
-
-    attachments.color = resourceCache.texture2D(
-      this.descriptors.mainPass.outputTextureDesc
-    );
-    attachments.color.name = `mainPassOutput (id: ${attachments.color.id})`;
-
-    if (outputs.has("depth")) {
-      this.descriptors.mainPass.outputDepthTextureDesc.width =
-        renderView.viewport[2];
-      this.descriptors.mainPass.outputDepthTextureDesc.height =
-        renderView.viewport[3];
-      attachments.depth = resourceCache.texture2D(
-        this.descriptors.mainPass.outputDepthTextureDesc
-      );
-    }
-
-    if (outputs.has("normal")) {
-      attachments.normal = resourceCache.texture2D(
-        this.descriptors.mainPass.outputTextureDesc
-      );
-    }
-
-    if (outputs.has("emissive")) {
-      attachments.emissive = resourceCache.texture2D(
-        this.descriptors.mainPass.outputTextureDesc
-      );
-    }
-
-    for (let name of Object.keys(attachments)) {
-      const texture = attachments[name];
-      texture.name = `mainPass${name} (id: ${texture.id})`;
-    }
-
     const renderPassView = {
       ...renderView,
       viewport: [0, 0, renderView.viewport[2], renderView.viewport[3]],
@@ -276,12 +302,8 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
       renderView: renderPassView,
       pass: resourceCache.pass({
         name: "mainPass",
-        color: [
-          attachments.color,
-          attachments.normal,
-          attachments.emissive,
-        ].filter(Boolean),
-        depth: attachments.depth,
+        color: Object.values(colorAttachments),
+        depth: depthAttachment,
         clearColor: renderView.camera.clearColor,
         clearDepth: 1,
       }),
@@ -292,7 +314,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
           entitiesInView,
           drawTransparent: false,
           renderers,
-          outputs,
+          colorAttachments,
         });
       },
     });
@@ -325,13 +347,13 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
         ),
         uniforms: {
           uViewport: viewport,
-          uTexture: attachments.color,
+          uTexture: colorAttachments.color,
         },
       };
 
       renderGraph.renderPass({
         name: `GrabPass [${viewport}]`,
-        uses: [attachments.color],
+        uses: [colorAttachments.color],
         renderView: { ...renderView, viewport },
         pass: resourceCache.pass({
           name: "grabPass",
@@ -350,8 +372,8 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
       renderView: renderPassView,
       pass: resourceCache.pass({
         name: "transparentPass",
-        color: [attachments.color],
-        depth: attachments.depth,
+        color: [colorAttachments.color],
+        depth: depthAttachment,
       }),
       render: () => {
         this.drawMeshes({
@@ -361,7 +383,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
           drawTransparent: true,
           backgroundColorTexture: grabPassColorCopyTexture,
           renderers,
-          outputs,
+          colorAttachments: { color: colorAttachments.color },
         });
       },
     });
@@ -376,13 +398,14 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
 
       renderGraph.renderPass({
         name: `PostProcessingPass [${renderView.viewport}]`,
-        uses: Object.values(attachments).filter(Boolean),
+        uses: Object.values(colorAttachments).filter(Boolean),
         renderView: renderPassView,
         render: () => {
           for (let i = 0; i < renderers.length; i++) {
             const renderer = renderers[i];
             renderer.renderStages.post?.(renderView, entitiesInView, {
-              attachments,
+              colorAttachments,
+              depthAttachment,
               descriptors: this.descriptors,
               passes: this.postProcessingPasses,
             });
@@ -416,7 +439,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
 
       renderGraph.renderPass({
         name: `BlitPass [${renderView.viewport}]`,
-        uses: [attachments.color],
+        uses: [colorAttachments.color],
         renderView,
         render: () => {
           ctx.submit(blitCmd, {
@@ -426,14 +449,14 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
               uOutputEncoding: postProcessing
                 ? ctx.Encoding.Linear
                 : renderView.camera.outputEncoding,
-              uTexture: attachments.color,
+              uTexture: colorAttachments.color,
             },
           });
         },
       });
     }
 
-    return attachments;
+    return { ...colorAttachments, depth: depthAttachment };
   },
 
   dispose(entities) {

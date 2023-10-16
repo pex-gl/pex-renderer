@@ -1,16 +1,15 @@
-import { pipeline as SHADERS, parser as ShaderParser } from "pex-shaders";
+import { pipeline as SHADERS } from "pex-shaders";
 
-import {
-  buildProgram,
-  getMaterialFlagsAndUniforms,
-  shadersPostReplace,
-  ProgramCache,
-  getHashFromProps,
-} from "./utils.js";
-import { NAMESPACE } from "../../utils.js";
+import createBaseSystem from "./base.js";
+import { ProgramCache } from "../../utils.js";
 
 // Impacts program caching
-const flagDefs = [
+// prettier-ignore
+const flagDefinitions = [
+  [["options", "attachmentsLocations", "color"], "LOCATION_COLOR", { type: "value" }],
+  [["options", "attachmentsLocations", "normal"], "LOCATION_NORMAL", { type: "value" }],
+  [["options", "attachmentsLocations", "emissive"], "LOCATION_EMISSIVE", { type: "value" }],
+
   [["material", "blend"], "USE_BLEND"],
   [["material", "baseColor"], "", { uniform: "uBaseColor" }],
   [["geometry", "attributes", "aOffset"], "USE_INSTANCED_OFFSET"],
@@ -24,7 +23,7 @@ const flagDefs = [
 const pipelineMaterialProps = ["id", "blend"];
 
 export default ({ ctx }) => {
-  const basicRendererSystem = {
+  const basicRendererSystem = Object.assign(createBaseSystem({ ctx }), {
     type: "basic-renderer",
     cache: {
       // Cache based on: vertex source (material.vert or default), fragment source (material.frag or default), list of flags and material hooks
@@ -33,78 +32,32 @@ export default ({ ctx }) => {
       pipelines: {},
     },
     debug: false,
-    getProgram(ctx, entity) {
-      const { material } = entity;
-      const { flags, materialUniforms } = getMaterialFlagsAndUniforms(
-        ctx,
-        entity,
-        flagDefs
-      );
-      // TODO: materialUniforms are never cached?
-      this.materialUniforms = materialUniforms;
-
-      const descriptor = {
-        vert: material.vert || SHADERS.basic.vert,
-        frag: material.frag || SHADERS.basic.frag,
-      };
-      shadersPostReplace(descriptor, entity, this.materialUniforms);
-
-      const { vert, frag } = descriptor;
-
-      let program = this.cache.programs.get(flags, vert, frag);
-      if (!program) {
-        if (this.debug) {
-          console.debug(NAMESPACE, this.type, "new program", flags, entity);
-        }
-        program = buildProgram(
-          ctx,
-          ShaderParser.build(ctx, vert, flags, material.extensions),
-          ShaderParser.build(ctx, frag, flags, material.extensions)
-        );
-        this.cache.programs.set(flags, vert, frag, program);
-      }
-
-      return program;
-    },
-    getPipeline(ctx, entity) {
-      const program = this.getProgram(ctx, entity);
-
-      const hash = `${program.id}${getHashFromProps(
+    flagDefinitions,
+    getVertexShader: () => SHADERS.basic.vert,
+    getFragmentShader: () => SHADERS.basic.frag,
+    getPipelineHash(entity) {
+      return this.getHashFromProps(
         entity.material,
-        pipelineMaterialProps
-      )}`;
-
-      if (!this.cache.pipelines[hash] || entity.material.needsPipelineUpdate) {
-        entity.material.needsPipelineUpdate = false;
-        if (this.debug) {
-          console.debug(
-            NAMESPACE,
-            this.type,
-            "new pipeline",
-            program.id,
-            getHashFromProps(entity.material, pipelineMaterialProps, true),
-            entity
-          );
-        }
-        this.cache.pipelines[hash] = ctx.pipeline({
-          program,
-          depthWrite: !entity.material.blend,
-          depthTest: true,
-          ...(entity.material.blend
-            ? {
-                blend: true,
-                blendSrcRGBFactor: ctx.BlendFactor.One,
-                blendSrcAlphaFactor: ctx.BlendFactor.One,
-                blendDstRGBFactor: ctx.BlendFactor.OneMinusSrcAlpha,
-                blendDstAlphaFactor: ctx.BlendFactor.OneMinusSrcAlpha,
-              }
-            : {}),
-        });
-      }
-
-      return this.cache.pipelines[hash];
+        pipelineMaterialProps,
+        this.debug
+      );
     },
-    render(renderView, entities, { transparent }) {
+    getPipelineOptions(entity) {
+      return {
+        depthWrite: !entity.material.blend,
+        depthTest: true,
+        ...(entity.material.blend
+          ? {
+              blend: true,
+              blendSrcRGBFactor: ctx.BlendFactor.One,
+              blendSrcAlphaFactor: ctx.BlendFactor.One,
+              blendDstRGBFactor: ctx.BlendFactor.OneMinusSrcAlpha,
+              blendDstAlphaFactor: ctx.BlendFactor.OneMinusSrcAlpha,
+            }
+          : {}),
+      };
+    },
+    render(renderView, entities, options) {
       const sharedUniforms = {
         uExposure: renderView.exposure,
         uOutputEncoding: renderView.outputEncoding,
@@ -118,20 +71,20 @@ export default ({ ctx }) => {
           entity.geometry &&
           entity.material &&
           entity.material.type === undefined &&
-          (transparent ? entity.material.blend : !entity.material.blend)
+          (options.transparent ? entity.material.blend : !entity.material.blend)
       );
 
       for (let i = 0; i < renderableEntities.length; i++) {
         const entity = renderableEntities[i];
 
-        // Also computes this.materialUniforms
-        const pipeline = this.getPipeline(ctx, entity);
+        // Also computes this.uniforms
+        const pipeline = this.getPipeline(ctx, entity, options);
 
         const uniforms = { uModelMatrix: entity._transform.modelMatrix };
-        Object.assign(uniforms, sharedUniforms, this.materialUniforms);
+        Object.assign(uniforms, sharedUniforms, this.uniforms);
 
         ctx.submit({
-          name: transparent
+          name: options.transparent
             ? "drawTransparentBasicGeometryCmd"
             : "drawBasicGeometryCmd",
           pipeline,
@@ -143,17 +96,21 @@ export default ({ ctx }) => {
       }
     },
     renderStages: {
-      opaque: (renderView, entities) => {
+      opaque: (renderView, entities, options) => {
         basicRendererSystem.render(renderView, entities, {
+          ...options,
           transparent: false,
         });
       },
-      transparent: (renderView, entities) => {
-        basicRendererSystem.render(renderView, entities, { transparent: true });
+      transparent: (renderView, entities, options) => {
+        basicRendererSystem.render(renderView, entities, {
+          ...options,
+          transparent: true,
+        });
       },
     },
     update: () => {},
-  };
+  });
 
   return basicRendererSystem;
 };

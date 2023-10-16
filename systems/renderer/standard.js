@@ -1,21 +1,18 @@
 import { mat3, mat4 } from "pex-math";
-import { pipeline as SHADERS, parser as ShaderParser } from "pex-shaders";
+import { pipeline as SHADERS } from "pex-shaders";
+
+import createBaseSystem from "./base.js";
+import { NAMESPACE, ProgramCache } from "../../utils.js";
 import * as AreaLightsData from "./area-light-data.js";
-import {
-  ProgramCache,
-  shadersPostReplace,
-  buildProgram,
-  getMaterialFlagsAndUniforms,
-} from "./utils.js";
-import { NAMESPACE } from "../../utils.js";
 
 let ltc_1;
 let ltc_2;
 
 // prettier-ignore
-const flagDefs = [
-  [["options", "outputNormals"], "OUTPUT_NORMALS"],
-  [["options", "outputEmissive"], "OUTPUT_EMISSIVE"],
+const flagDefinitions = [
+  [["options", "attachmentsLocations", "color"], "LOCATION_COLOR", { type: "value" }],
+  [["options", "attachmentsLocations", "normal"], "LOCATION_NORMAL", { type: "value" }],
+  [["options", "attachmentsLocations", "emissive"], "LOCATION_EMISSIVE", { type: "value" }],
 
   [["options", "depthPassOnly"], "DEPTH_PASS_ONLY"],
   [["options", "depthPassOnly"], "USE_UNLIT_WORKFLOW"], //force unlit in depth pass mode
@@ -75,7 +72,7 @@ const lightColorToSrgb = (light) =>
     j < 3 ? Math.pow(c * light.intensity, 1.0 / 2.2) : c
   );
 
-export default ({ ctx, shadowQuality = 5 }) => {
+export default ({ ctx, shadowQuality = 3 }) => {
   const dummyTexture2D = ctx.texture2D({
     name: "dummyTexture2D",
     width: 4,
@@ -100,13 +97,14 @@ export default ({ ctx, shadowQuality = 5 }) => {
     cullFaceMode: ctx.Face.Back,
   };
 
-  const standardRendererSystem = {
+  const standardRendererSystem = Object.assign(createBaseSystem({ ctx }), {
     type: "standard-renderer",
     cache: {
       programs: new ProgramCache(),
       pipelines: {},
     },
     debug: false,
+    flagDefinitions,
     shadowQuality,
     debugRender: "",
     checkLight(light) {
@@ -148,99 +146,34 @@ export default ({ ctx, shadowQuality = 5 }) => {
         return true;
       }
     },
-    getProgram(ctx, entity, options) {
-      const { material } = entity;
-      const { flags, materialUniforms } = getMaterialFlagsAndUniforms(
-        ctx,
-        entity,
-        flagDefs,
-        options
-      );
-      this.materialUniforms = materialUniforms;
-
-      const descriptor = {
-        vert: material.vert || SHADERS.material.vert,
-        frag:
-          material.frag ||
-          (options.depthPassOnly
-            ? SHADERS.depthPass.frag
-            : SHADERS.material.frag),
-      };
-      shadersPostReplace(
-        descriptor,
-        entity,
-        this.materialUniforms,
-        options.debugRender
-      );
-      if (options.debugRender) flags.push(options.debugRender);
-
-      const { vert, frag } = descriptor;
-
-      let program = this.cache.programs.get(flags, vert, frag);
-
-      if (!program) {
-        const defines = options.debugRender
-          ? flags.filter((flag) => flag !== options.debugRender)
-          : flags;
-        const vertSrc = ShaderParser.build(
-          ctx,
-          vert,
-          defines,
-          material.extensions
-        );
-        const fragSrc = ShaderParser.build(
-          ctx,
-          frag,
-          defines,
-          material.extensions
-        );
-
-        if (this.debug) {
-          console.debug(NAMESPACE, this.type, "new program", flags, entity);
-        }
-        program = buildProgram(
-          ctx,
-          ShaderParser.replaceStrings(vertSrc, options),
-          ShaderParser.replaceStrings(fragSrc, options),
-          defines
-        );
-        this.cache.programs.set(flags, vert, frag, program);
-      }
-
-      return program;
-    },
-    getPipeline(ctx, entity, options) {
+    getVertexShader: () => SHADERS.standard.vert,
+    getFragmentShader: (options) =>
+      options.depthPassOnly ? SHADERS.depthPass.frag : SHADERS.standard.frag,
+    getPipelineHash(entity) {
       const { material, _geometry: geometry } = entity;
-      const program = this.getProgram(ctx, entity, options);
 
-      const hash = `${material.id}_${program.id}_${
-        geometry.primitive
-      }_${Object.entries(pipelineMaterialDefaults)
+      return `${material.id}_${geometry.primitive}_${Object.entries(
+        pipelineMaterialDefaults
+      )
         .map(([key, value]) => material[key] ?? value)
         .join("_")}`;
+    },
+    getPipelineOptions(entity) {
+      const { material, _geometry: geometry } = entity;
 
-      if (!this.cache.pipelines[hash] || material.needsPipelineUpdate) {
-        material.needsPipelineUpdate = false;
-        if (this.debug) {
-          console.debug(NAMESPACE, this.type, "new pipeline", hash, entity);
-        }
-        this.cache.pipelines[hash] = ctx.pipeline({
-          program,
-          depthTest: material.depthTest,
-          depthWrite: material.depthWrite,
-          depthFunc: material.depthFunc || ctx.DepthFunc.Less,
-          blend: material.blend,
-          blendSrcRGBFactor: material.blendSrcRGBFactor,
-          blendSrcAlphaFactor: material.blendSrcAlphaFactor,
-          blendDstRGBFactor: material.blendDstRGBFactor,
-          blendDstAlphaFactor: material.blendDstAlphaFactor,
-          cullFace: material.cullFace !== undefined ? material.cullFace : true,
-          cullFaceMode: material.cullFaceMode || ctx.Face.Back,
-          primitive: geometry.primitive ?? ctx.Primitive.Triangles,
-        });
-      }
-
-      return this.cache.pipelines[hash];
+      return {
+        depthTest: material.depthTest,
+        depthWrite: material.depthWrite,
+        depthFunc: material.depthFunc || ctx.DepthFunc.Less,
+        blend: material.blend,
+        blendSrcRGBFactor: material.blendSrcRGBFactor,
+        blendSrcAlphaFactor: material.blendSrcAlphaFactor,
+        blendDstRGBFactor: material.blendDstRGBFactor,
+        blendDstAlphaFactor: material.blendDstAlphaFactor,
+        cullFace: material.cullFace !== undefined ? material.cullFace : true,
+        cullFaceMode: material.cullFaceMode || ctx.Face.Back,
+        primitive: geometry.primitive ?? ctx.Primitive.Triangles,
+      };
     },
     gatherLightsInfo(lights, sharedUniforms) {
       const {
@@ -428,7 +361,7 @@ export default ({ ctx, shadowQuality = 5 }) => {
         transparent,
         backgroundColorTexture,
         debugRender,
-        outputs,
+        attachmentsLocations = {},
       } = options;
 
       const pipelineOptions = {
@@ -445,6 +378,7 @@ export default ({ ctx, shadowQuality = 5 }) => {
         targets: {},
         shadowQuality: this.shadowQuality,
         debugRender,
+        attachmentsLocations,
       };
 
       const sharedUniforms = {
@@ -456,8 +390,6 @@ export default ({ ctx, shadowQuality = 5 }) => {
 
       if (!shadowMapping) {
         // Post processing
-        pipelineOptions.outputNormals = outputs.has("normal");
-        pipelineOptions.outputEmissive = outputs.has("emissive");
         pipelineOptions.targets =
           cameraEntity.postProcessing?._targets?.[renderView.cameraEntity.id] ||
           {};
@@ -526,7 +458,7 @@ export default ({ ctx, shadowQuality = 5 }) => {
 
         if (!this.checkRenderableEntity(renderableEntity)) continue;
 
-        // Get pipeline and program from cache. Also computes this.materialUniforms
+        // Get pipeline and program from cache. Also computes this.uniforms
         const pipeline = this.getPipeline(
           ctx,
           renderableEntity,
@@ -551,7 +483,7 @@ export default ({ ctx, shadowQuality = 5 }) => {
         sharedUniforms.uRefraction =
           0.1 * (material.refraction !== undefined ? material.refraction : 0.5);
 
-        Object.assign(cachedUniforms, sharedUniforms, this.materialUniforms);
+        Object.assign(cachedUniforms, sharedUniforms, this.uniforms);
 
         // FIXME: this is expensive and not cached
         let viewMatrix;
@@ -599,6 +531,6 @@ export default ({ ctx, shadowQuality = 5 }) => {
       },
     },
     update: () => {},
-  };
+  });
   return standardRendererSystem;
 };

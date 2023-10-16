@@ -1,59 +1,38 @@
 import { mat4 } from "pex-math";
-import { skybox as SHADERS, parser as ShaderParser } from "pex-shaders";
-import { NAMESPACE } from "../../utils.js";
+import { skybox as SHADERS } from "pex-shaders";
+
+import createBaseSystem from "./base.js";
+import { NAMESPACE, ProgramCache } from "../../utils.js";
+
+// Impacts program caching
+// prettier-ignore
+const flagDefinitions = [
+  [["options", "attachmentsLocations", "color"], "LOCATION_COLOR", { type: "value" }],
+  [["options", "attachmentsLocations", "normal"], "LOCATION_NORMAL", { type: "value" }],
+  [["options", "attachmentsLocations", "emissive"], "LOCATION_EMISSIVE", { type: "value" }],
+];
 
 export default ({ ctx, resourceCache }) => {
-  // const skyboxCmd = {
-  //   name: "skyboxCmd",
-  //   pipeline: ctx.pipeline({
-  //     vert: /*glsl*/ `
-  //     attribute vec3 aPosition;
-  //     uniform mat4 uProjectionMatrix;
-  //     uniform mat4 uViewMatrix;
-  //     uniform mat4 uModelMatrix;
-  //     void main() {
-  //       gl_Position = uProjectionMatrix * uViewMatrix * uModelMatrix * vec4(aPosition, 1.0);
-  //     }
-  //     `,
-  //     frag: /*glsl*/ `
-  //     precision highp float;
-  //     uniform vec4 uBaseColor;
-  //     void main() {
-  //       gl_FragData[0] = uBaseColor;
-  //     }
-  //     `,
-  //     depthWrite: true,
-  //     depthTest: true,
-  //   }),
-  // };
-
   const identityMatrix = mat4.create();
 
   const fullscreenQuad = resourceCache.fullscreenQuad();
 
   const drawSkyboxCommand = {
     name: "drawSkyboxCmd",
-    pipeline: ctx.pipeline({
-      vert: ShaderParser.build(ctx, SHADERS.skybox.vert),
-      frag: ShaderParser.build(ctx, SHADERS.skybox.frag, [
-        ctx.capabilities.maxColorAttachments > 1 && "USE_DRAW_BUFFERS",
-      ]),
-      depthTest: true,
-      depthWrite: false,
-    }),
     attributes: {
       aPosition: fullscreenQuad.attributes.aPosition,
     },
     indices: fullscreenQuad.indices,
-    uniforms: {
-      uUseTonemapping: false,
-      uExposure: 1,
-    },
   };
 
-  const skyboxRendererSystem = {
+  const skyboxRendererSystem = Object.assign(createBaseSystem({ ctx }), {
     type: "skybox-renderer",
-    cache: {},
+    cache: {
+      // Cache based on: vertex source (material.vert or default), fragment source (material.frag or default) and list of flags
+      programs: new ProgramCache(),
+      // Cache based on: program.id, material.blend and material.id (if present)
+      pipelines: {},
+    },
     debug: false,
     checkReflectionProbe(reflectionProbe) {
       if (!reflectionProbe._reflectionProbe?._reflectionMap) {
@@ -77,16 +56,20 @@ export default ({ ctx, resourceCache }) => {
         return true;
       }
     },
-    render(
-      renderView,
-      entity,
-      {
+    flagDefinitions,
+    getVertexShader: () => SHADERS.skybox.vert,
+    getFragmentShader: () => SHADERS.skybox.frag,
+    getPipelineOptions: () => ({ depthTest: true, depthWrite: false }),
+    render(renderView, entity, options) {
+      const pipeline = this.getPipeline(ctx, entity, options);
+
+      const {
         renderingToReflectionProbe,
         outputEncoding,
         backgroundBlur,
         reflectionProbeEntity,
-      }
-    ) {
+      } = options;
+
       //TODO
       // if (!this.texture && this.dirty) {
       // this.updateSkyTexture();
@@ -119,25 +102,27 @@ export default ({ ctx, resourceCache }) => {
       // TODO: rename, for oct map. Why * 2 ? Cause it is oct map atlas?
       const envMapSize = reflectionProbeEntity?.reflectionProbe?.size * 2 || 0;
 
-      ctx.submit(drawSkyboxCommand, {
+      const cmd = drawSkyboxCommand;
+      cmd.pipeline = pipeline;
+      cmd.uniforms = {
         // viewport: camera.viewport,
         // scissor: camera.viewport,
-        uniforms: {
-          uExposure: !renderingToReflectionProbe
-            ? renderView.camera.exposure || 1
-            : 1, //TODO: hardcoded default from camera.exposure
-          uOutputEncoding: outputEncoding,
+        uExposure: !renderingToReflectionProbe
+          ? renderView.camera.exposure || 1
+          : 1, //TODO: hardcoded default from camera.exposure
+        uOutputEncoding: outputEncoding,
 
-          uProjectionMatrix: renderView.camera.projectionMatrix,
-          uViewMatrix: renderView.camera.viewMatrix,
-          uModelMatrix: entity._transform?.modelMatrix || identityMatrix,
+        uProjectionMatrix: renderView.camera.projectionMatrix,
+        uViewMatrix: renderView.camera.viewMatrix,
+        uModelMatrix: entity._transform?.modelMatrix || identityMatrix,
 
-          uEnvMap: texture,
-          uEnvMapEncoding: texture.encoding,
-          uEnvMapSize: envMapSize,
-          uBackgroundBlur: !renderingToReflectionProbe ? backgroundBlur : false,
-        },
-      });
+        uEnvMap: texture,
+        uEnvMapEncoding: texture.encoding,
+        uEnvMapSize: envMapSize,
+        uBackgroundBlur: !renderingToReflectionProbe ? backgroundBlur : false,
+      };
+
+      ctx.submit(drawSkyboxCommand);
     },
     renderStages: {
       background: (renderView, entities, options = {}) => {
@@ -145,6 +130,7 @@ export default ({ ctx, resourceCache }) => {
           const entity = entities[i];
           if (entity.skybox) {
             skyboxRendererSystem.render(renderView, entity, {
+              ...options,
               renderingToReflectionProbe: options.renderingToReflectionProbe,
               backgroundBlur: entity.skybox.backgroundBlur,
               outputEncoding: renderView.outputEncoding || ctx.Encoding.Linear,
@@ -170,8 +156,7 @@ export default ({ ctx, resourceCache }) => {
         }
       },
     },
-    update() {},
-  };
+  });
 
   return skyboxRendererSystem;
 };

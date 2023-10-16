@@ -427,6 +427,7 @@ export default ({ ctx, resourceCache }) => ({
             if (renderer.renderStages.background) {
               renderer.renderStages.background(renderView, skyboxEntities, {
                 renderingToReflectionProbe: true,
+                attachmentsLocations: { color: 0 },
               });
             }
           }

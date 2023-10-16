@@ -21,7 +21,7 @@ export default ({
         // blend: true,
         // frag: SHADERS.sao.frag,
         // prettier-ignore
-        flagDefs: [
+        flagDefinitions: [
           [["camera", "near"], "", { uniform: "uNear" }],
           [["camera", "far"], "", { uniform: "uFar" }],
           [["camera", "fov"], "", { uniform: "uFov" }],
@@ -102,7 +102,7 @@ export default ({
         name: "main",
         frag: SHADERS.sao.frag,
         // prettier-ignore
-        flagDefs: [
+        flagDefinitions: [
           [["camera", "near"], "", { uniform: "uNear" }],
           [["camera", "far"], "", { uniform: "uFar" }],
           [["camera", "fov"], "", { uniform: "uFov" }],
@@ -187,7 +187,7 @@ export default ({
         name: "blurHorizontal",
         frag: SHADERS.bilateralBlur.frag,
         // prettier-ignore
-        flagDefs: [
+        flagDefinitions: [
           [["camera", "near"], "", { uniform: "uNear" }],
           [["camera", "far"], "", { uniform: "uFar" }],
           [["postProcessing", "ssao", "blurSharpness"], "", { uniform: "uSharpness" }],
@@ -214,7 +214,7 @@ export default ({
         name: "blurVertical",
         frag: SHADERS.bilateralBlur.frag,
         // prettier-ignore
-        flagDefs: [
+        flagDefinitions: [
           [["camera", "near"], "", { uniform: "uNear" }],
           [["camera", "far"], "", { uniform: "uFar" }],
           [["postProcessing", "ssao", "blurSharpness"], "", { uniform: "uSharpness" }],
@@ -239,7 +239,7 @@ export default ({
       {
         name: "main",
         // prettier-ignore
-        flagDefs: [
+        flagDefinitions: [
           [["camera", "near"], "", { uniform: "uNear" }],
           [["camera", "far"], "", { uniform: "uFar" }],
           [["camera", "actualSensorHeight"], "", { uniform: "uSensorHeight" }],
@@ -280,7 +280,7 @@ export default ({
         name: "threshold",
         frag: SHADERS.threshold.frag,
         // prettier-ignore
-        flagDefs: [
+        flagDefinitions: [
           [["camera", "exposure"], "", { uniform: "uExposure" }],
           [["postProcessing", "bloom", "threshold"], "", { uniform: "uThreshold" }],
         ],
@@ -297,7 +297,7 @@ export default ({
         name: `downSample[${i}]`,
         frag: SHADERS.downSample.frag,
         // prettier-ignore
-        flagDefs: [
+        flagDefinitions: [
           [["postProcessing", "bloom"], "USE_DOWN_SAMPLE"],
           [["postProcessing", "bloom", "quality"], "QUALITY", { type: "value" }],
           [["postProcessing", "bloom", "radius"], "", { uniform: "uIntensity" }],
@@ -325,7 +325,7 @@ export default ({
         name: `main[${i}]`,
         frag: SHADERS.upSample.frag,
         // prettier-ignore
-        flagDefs: [
+        flagDefinitions: [
           [["postProcessing", "bloom"], "USE_UP_SAMPLE"],
           [["postProcessing", "bloom", "quality"], "QUALITY", { type: "value" }],
         ],
@@ -343,7 +343,7 @@ export default ({
         frag: SHADERS.postProcessing.frag,
         // blend: true,
         // prettier-ignore
-        flagDefs: [
+        flagDefinitions: [
           // Camera
           [["camera", "viewMatrix"], "", { uniform: "uViewMatrix" }],
           [["camera", "near"], "", { uniform: "uNear" }],

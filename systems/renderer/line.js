@@ -11,6 +11,7 @@ const instanceRoundRound = Float32Array.of(
   0, 0.5, 0,
 );
 
+// TODO: resolution should be per geometry component
 export default ({ ctx, resolution = 16 } = {}) => {
   const positions = new Float32Array(
     instanceRoundRound.length + resolution * 18
@@ -65,8 +66,8 @@ export default ({ ctx, resolution = 16 } = {}) => {
   const drawSegmentsCmd = {
     name: "drawSegmentsCmd",
     pipeline: ctx.pipeline({
-      vert: ShaderParser.build(ctx, SHADERS.segment.vert),
-      frag: ShaderParser.build(ctx, SHADERS.segment.frag, [
+      vert: ShaderParser.build(ctx, SHADERS.line.vert),
+      frag: ShaderParser.build(ctx, SHADERS.line.frag, [
         ctx.capabilities.maxColorAttachments > 1 && "USE_DRAW_BUFFERS",
       ]),
       depthWrite: true,
