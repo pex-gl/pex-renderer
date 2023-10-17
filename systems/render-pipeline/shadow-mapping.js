@@ -103,13 +103,13 @@ export default ({ renderGraph, resourceCache, descriptors, drawMeshes }) => ({
         light._shadowMap = depth;
 
         drawMeshes({
+          renderers,
           renderView,
+          colorAttachments: this.colorAttachments,
+          entitiesInView: entities,
           shadowMapping: true,
           shadowMappingLight: light,
-          entitiesInView: entities,
           drawTransparent: false,
-          renderers,
-          colorAttachments: this.colorAttachments,
         });
       },
     });
@@ -156,13 +156,13 @@ export default ({ renderGraph, resourceCache, descriptors, drawMeshes }) => ({
         light._shadowMap = depth;
 
         drawMeshes({
+          renderers,
           renderView,
+          colorAttachments: this.colorAttachments,
+          entitiesInView: entities,
           shadowMapping: true,
           shadowMappingLight: light,
-          entitiesInView: entities,
           drawTransparent: false,
-          renderers,
-          colorAttachments: this.colorAttachments,
         });
       },
     });
@@ -211,13 +211,13 @@ export default ({ renderGraph, resourceCache, descriptors, drawMeshes }) => ({
           light._viewMatrix = renderView.camera.viewMatrix;
 
           drawMeshes({
+            renderers,
             renderView,
+            colorAttachments: this.colorAttachments,
+            entitiesInView: entities,
             shadowMapping: true,
             shadowMappingLight: light,
-            entitiesInView: entities,
             drawTransparent: false,
-            renderers,
-            colorAttachments: this.colorAttachments,
           });
         },
       });

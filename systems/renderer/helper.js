@@ -11,6 +11,7 @@ const flagDefinitions = [
   [["options", "attachmentsLocations", "color"], "LOCATION_COLOR", { type: "value" }],
   [["options", "attachmentsLocations", "normal"], "LOCATION_NORMAL", { type: "value" }],
   [["options", "attachmentsLocations", "emissive"], "LOCATION_EMISSIVE", { type: "value" }],
+  [["options", "toneMap"], "TONEMAP", { type: "value" }],
 ];
 
 const pointsToLine = (points) =>
@@ -299,7 +300,7 @@ export default ({ ctx }) => {
     count: 1,
   };
 
-  const helperSystem = Object.assign(createBaseSystem({ ctx }), {
+  const helperSystem = Object.assign(createBaseSystem(), {
     type: "helper-renderer",
     cache: {
       // Cache based on: vertex source (material.vert or default), fragment source (material.frag or default) and list of flags
@@ -427,7 +428,10 @@ export default ({ ctx }) => {
     },
     renderStages: {
       opaque: (renderView, entities, options) => {
-        helperSystem.render(renderView, entities, options);
+        helperSystem.render(renderView, entities, {
+          ...options,
+          toneMap: renderView.toneMap,
+        });
       },
     },
   });

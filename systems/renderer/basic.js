@@ -9,6 +9,7 @@ const flagDefinitions = [
   [["options", "attachmentsLocations", "color"], "LOCATION_COLOR", { type: "value" }],
   [["options", "attachmentsLocations", "normal"], "LOCATION_NORMAL", { type: "value" }],
   [["options", "attachmentsLocations", "emissive"], "LOCATION_EMISSIVE", { type: "value" }],
+  [["options", "toneMap"], "TONEMAP", { type: "value" }],
 
   [["material", "blend"], "USE_BLEND"],
   [["material", "baseColor"], "", { uniform: "uBaseColor" }],
@@ -23,7 +24,7 @@ const flagDefinitions = [
 const pipelineMaterialProps = ["id", "blend"];
 
 export default ({ ctx }) => {
-  const basicRendererSystem = Object.assign(createBaseSystem({ ctx }), {
+  const basicRendererSystem = Object.assign(createBaseSystem(), {
     type: "basic-renderer",
     cache: {
       // Cache based on: vertex source (material.vert or default), fragment source (material.frag or default), list of flags and material hooks
@@ -99,12 +100,14 @@ export default ({ ctx }) => {
       opaque: (renderView, entities, options) => {
         basicRendererSystem.render(renderView, entities, {
           ...options,
+          toneMap: renderView.toneMap,
           transparent: false,
         });
       },
       transparent: (renderView, entities, options) => {
         basicRendererSystem.render(renderView, entities, {
           ...options,
+          toneMap: renderView.toneMap,
           transparent: true,
         });
       },

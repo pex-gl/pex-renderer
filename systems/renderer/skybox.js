@@ -10,6 +10,7 @@ const flagDefinitions = [
   [["options", "attachmentsLocations", "color"], "LOCATION_COLOR", { type: "value" }],
   [["options", "attachmentsLocations", "normal"], "LOCATION_NORMAL", { type: "value" }],
   [["options", "attachmentsLocations", "emissive"], "LOCATION_EMISSIVE", { type: "value" }],
+  [["options", "toneMap"], "TONEMAP", { type: "value" }],
 ];
 
 export default ({ ctx, resourceCache }) => {
@@ -25,7 +26,7 @@ export default ({ ctx, resourceCache }) => {
     indices: fullscreenQuad.indices,
   };
 
-  const skyboxRendererSystem = Object.assign(createBaseSystem({ ctx }), {
+  const skyboxRendererSystem = Object.assign(createBaseSystem(), {
     type: "skybox-renderer",
     cache: {
       // Cache based on: vertex source (material.vert or default), fragment source (material.frag or default) and list of flags
@@ -131,6 +132,7 @@ export default ({ ctx, resourceCache }) => {
           if (entity.skybox) {
             skyboxRendererSystem.render(renderView, entity, {
               ...options,
+              toneMap: renderView.toneMap,
               renderingToReflectionProbe: options.renderingToReflectionProbe,
               backgroundBlur: entity.skybox.backgroundBlur,
               outputEncoding: renderView.outputEncoding || ctx.Encoding.Linear,

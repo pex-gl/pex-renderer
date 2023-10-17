@@ -13,6 +13,7 @@ const flagDefinitions = [
   [["options", "attachmentsLocations", "color"], "LOCATION_COLOR", { type: "value" }],
   [["options", "attachmentsLocations", "normal"], "LOCATION_NORMAL", { type: "value" }],
   [["options", "attachmentsLocations", "emissive"], "LOCATION_EMISSIVE", { type: "value" }],
+  [["options", "toneMap"], "TONEMAP", { type: "value" }],
 
   [["options", "depthPassOnly"], "DEPTH_PASS_ONLY"],
   [["options", "depthPassOnly"], "USE_UNLIT_WORKFLOW"], //force unlit in depth pass mode
@@ -97,7 +98,7 @@ export default ({ ctx, shadowQuality = 3 }) => {
     cullFaceMode: ctx.Face.Back,
   };
 
-  const standardRendererSystem = Object.assign(createBaseSystem({ ctx }), {
+  const standardRendererSystem = Object.assign(createBaseSystem(), {
     type: "standard-renderer",
     cache: {
       programs: new ProgramCache(),
@@ -379,6 +380,7 @@ export default ({ ctx, shadowQuality = 3 }) => {
         shadowQuality: this.shadowQuality,
         debugRender,
         attachmentsLocations,
+        toneMap: renderView.toneMap,
       };
 
       const sharedUniforms = {
@@ -466,22 +468,20 @@ export default ({ ctx, shadowQuality = 3 }) => {
         );
 
         // Get all uniforms
-        const cachedUniforms = {};
-        cachedUniforms.uModelMatrix = transform.modelMatrix; //FIXME: bypasses need for transformSystem access
-        cachedUniforms.uNormalScale = 1; // TODO: uniform
-        // cachedUniforms.uAlphaTest = material.alphaTest;
-        // cachedUniforms.uAlphaMap = material.alphaMap;
-        cachedUniforms.uReflectance =
-          material.reflectance !== undefined ? material.reflectance : 0.5;
+        const cachedUniforms = {
+          uModelMatrix: transform.modelMatrix, //FIXME: bypasses need for transformSystem access
+          uNormalScale: 1, // TODO: uniform
+          uReflectance:
+            material.reflectance !== undefined ? material.reflectance : 0.5,
 
-        cachedUniforms.uPointSize = material.pointSize || 1;
-        // TODO: why is this here
-        cachedUniforms.uMetallicRoughnessTexture =
-          material.metallicRoughnessTexture;
+          uPointSize: material.pointSize || 1,
+          // TODO: why is this here
+          uMetallicRoughnessTexture: material.metallicRoughnessTexture,
+          uRefraction:
+            0.1 *
+            (material.refraction !== undefined ? material.refraction : 0.5),
+        };
         renderableEntity._uniforms = cachedUniforms;
-
-        sharedUniforms.uRefraction =
-          0.1 * (material.refraction !== undefined ? material.refraction : 0.5);
 
         Object.assign(cachedUniforms, sharedUniforms, this.uniforms);
 

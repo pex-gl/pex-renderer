@@ -7,7 +7,7 @@ import { ProgramCache } from "../../utils.js";
 const pipelineProps = ["blend"];
 
 export default ({ ctx, resourceCache }) => {
-  const postProcessingSystem = Object.assign(createBaseSystem({ ctx }), {
+  const postProcessingSystem = Object.assign(createBaseSystem(), {
     type: "post-processing-renderer",
     cache: {
       // Cache based on: vertex source (material.vert or default), fragment source (material.frag or default), list of flags and material hooks

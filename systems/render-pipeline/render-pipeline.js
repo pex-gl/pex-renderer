@@ -77,19 +77,21 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
   },
 
   drawMeshes({
+    renderers,
     renderView,
+    colorAttachments,
+    entitiesInView,
     shadowMapping,
     shadowMappingLight,
-    entitiesInView,
-    renderers,
     drawTransparent,
     backgroundColorTexture,
-    colorAttachments,
   }) {
     renderView.exposure ||= 1;
+    renderView.toneMap ||= null;
     renderView.outputEncoding ||= ctx.Encoding.Linear;
 
     const attachmentsLocations = this.getAttachmentsLocations(colorAttachments);
+
     if (shadowMapping) {
       for (let i = 0; i < renderers.length; i++) {
         const renderer = renderers[i];
@@ -153,12 +155,18 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
       viewport: [0, 0, ctx.gl.drawingBufferWidth, ctx.gl.drawingBufferHeight],
     };
 
-    renderView.exposure ||=
-      drawToScreen === false ? cameraEntities[0].camera.exposure : 1;
-    renderView.outputEncoding ||=
-      drawToScreen === false
-        ? cameraEntities[0].camera.outputEncoding
-        : ctx.Encoding.Linear;
+    if (drawToScreen === false) {
+      renderView.outputEncoding ||= renderView.camera.outputEncoding;
+      renderView.exposure ||= renderView.camera.exposure;
+      if (renderView.outputEncoding === ctx.Encoding.Gamma) {
+        renderView.toneMap ||= renderView.camera.toneMap;
+      }
+    } else {
+      // Pipeline is linear. Tone mapping happens in "blit" or in post-processing "final"
+      renderView.outputEncoding ||= ctx.Encoding.Linear;
+      renderView.exposure ||= 1;
+      renderView.toneMap ||= null;
+    }
 
     // Setup attachments. Can be overwritten by PostProcessingPass
     const outputs = new Set(this.outputs);
@@ -309,12 +317,12 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
       }),
       render: () => {
         this.drawMeshes({
-          renderView,
-          shadowMapping: false,
-          entitiesInView,
-          drawTransparent: false,
           renderers,
+          renderView,
           colorAttachments,
+          entitiesInView,
+          shadowMapping: false,
+          drawTransparent: false,
         });
       },
     });
@@ -377,13 +385,13 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
       }),
       render: () => {
         this.drawMeshes({
+          renderers,
           renderView,
-          shadowMapping: false,
+          colorAttachments: { color: colorAttachments.color },
           entitiesInView,
+          shadowMapping: false,
           drawTransparent: true,
           backgroundColorTexture: grabPassColorCopyTexture,
-          renderers,
-          colorAttachments: { color: colorAttachments.color },
         });
       },
     });
