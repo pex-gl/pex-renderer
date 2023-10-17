@@ -162,6 +162,13 @@
  */
 // * @property {number} [normalMapScale=1]
 /**
+ * @typedef {object} LineMaterialComponentOptions
+ * @property {"line"} [type="line"]
+ * @property {number[]} [baseColor=[1, 1, 1, 1]]
+ * @property {number} [lineWidth=1]
+ * @property {number} [lineResolution=16]
+ */
+/**
  * @typedef {object} MorphComponentOptions
  * @property {object} sources
  * @property {object} targets

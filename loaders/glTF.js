@@ -488,6 +488,7 @@ function handleMaterial(material, gltf, ctx) {
     };
   }
 
+  // https://github.com/KhronosGroup/glTF/tree/main/extensions/2.0/Khronos/KHR_materials_emissive_strength
   if (material.extensions?.KHR_materials_emissive_strength) {
     materialProps.emissiveIntensity =
       material.extensions.KHR_materials_emissive_strength.emissiveStrength ?? 1;

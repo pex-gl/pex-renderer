@@ -218,6 +218,8 @@ const linesEntity = createEntity({
     type: "line",
     baseColor: [1, 1, 1, 1],
     castShadows: true,
+    lineWidth: 10,
+    lineResolution: 16,
   }),
   boundingBoxHelper: components.boundingBoxHelper(),
 });
