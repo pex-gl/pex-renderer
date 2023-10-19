@@ -226,15 +226,10 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
 
     // Update shadow maps
     if (shadowCastingEntities.length) {
-      this.drawMeshes = this.drawMeshes.bind(this);
-      this.shadowMapping ||= addShadowMapping({
-        renderGraph,
-        resourceCache,
-        descriptors: this.descriptors,
-        drawMeshes: this.drawMeshes,
-      });
-      // TODO: ugly
-      this.shadowMapping.colorAttachments = colorAttachments;
+      // Compose shadow mapping
+      if (!this.directionalLight) {
+        Object.assign(this, addShadowMapping({ renderGraph, resourceCache }));
+      }
 
       for (let i = 0; i < entities.length; i++) {
         const entity = entities[i];
@@ -243,10 +238,11 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
           entity.directionalLight?.castShadows &&
           this.checkLight(entity.directionalLight, entity)
         ) {
-          this.shadowMapping.directionalLight(
+          this.directionalLight(
             entity,
             entities,
             renderers,
+            colorAttachments,
             shadowCastingEntities
           );
         }
@@ -254,16 +250,17 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
           entity.pointLight?.castShadows &&
           this.checkLight(entity.pointLight, entity)
         ) {
-          this.shadowMapping.pointLight(entity, entities, renderers);
+          this.pointLight(entity, entities, renderers, colorAttachments);
         }
         if (
           entity.spotLight?.castShadows &&
           this.checkLight(entity.spotLight, entity)
         ) {
-          this.shadowMapping.spotLight(
+          this.spotLight(
             entity,
             entities,
             renderers,
+            colorAttachments,
             shadowCastingEntities
           );
         }
@@ -271,10 +268,11 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
           entity.areaLight?.castShadows &&
           this.checkLight(entity.areaLight, entity)
         ) {
-          this.shadowMapping.spotLight(
+          this.spotLight(
             entity,
             entities,
             renderers,
+            colorAttachments,
             shadowCastingEntities
           );
         }

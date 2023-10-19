@@ -3,7 +3,17 @@ import { aabb } from "pex-geom";
 
 import { TEMP_BOUNDS_POINTS, TEMP_VEC3 } from "../../utils.js";
 
-export default ({ renderGraph, resourceCache, descriptors, drawMeshes }) => ({
+/**
+ * Create a shadow mapping object to compose with a render-pipeline-system
+ *
+ * Adds:
+ * - "directionalLight", "spotLight" and "pointLight" method to create shadow map render passes
+ * Requires:
+ * - this.drawMeshes()
+ * - this.descriptors
+ * @returns {import("../../types.js").System}
+ */
+export default ({ renderGraph, resourceCache }) => ({
   computeLightProperties(lightEntity, light, shadowCastingEntities) {
     light._sceneBboxInLightSpace ??= aabb.create();
 
@@ -32,7 +42,7 @@ export default ({ renderGraph, resourceCache, descriptors, drawMeshes }) => ({
           (lightEntity.areaLight ? lightEntity.transform.scale[1] : 1)),
     ];
   },
-  getAttachments(light, descriptor, cubemap) {
+  getLightAttachments(light, descriptor, cubemap) {
     let { colorMapDesc, shadowMapDesc } = descriptor;
 
     // Only update descriptors for custom map size
@@ -61,14 +71,20 @@ export default ({ renderGraph, resourceCache, descriptors, drawMeshes }) => ({
     return { color: colorMap, depth: shadowMap };
   },
 
-  directionalLight(lightEntity, entities, renderers, shadowCastingEntities) {
+  directionalLight(
+    lightEntity,
+    entities,
+    renderers,
+    colorAttachments,
+    shadowCastingEntities
+  ) {
     const light = lightEntity.directionalLight;
 
     this.computeLightProperties(lightEntity, light, shadowCastingEntities);
 
-    const { color, depth } = this.getAttachments(
+    const { color, depth } = this.getLightAttachments(
       light,
-      descriptors.directionalLightShadows
+      this.descriptors.directionalLightShadows
     );
 
     mat4.ortho(
@@ -93,7 +109,7 @@ export default ({ renderGraph, resourceCache, descriptors, drawMeshes }) => ({
       name: `DirectionalLightShadowMap [${renderView.viewport}] (id: ${lightEntity.id})`,
       pass: resourceCache.pass({
         // TODO: creating new descriptor to force new pass from cache
-        ...descriptors.directionalLightShadows.pass,
+        ...this.descriptors.directionalLightShadows.pass,
         color: [color],
         depth,
       }),
@@ -102,10 +118,10 @@ export default ({ renderGraph, resourceCache, descriptors, drawMeshes }) => ({
         // Needs to be here for multi-view with different renderer to not overwrite it
         light._shadowMap = depth;
 
-        drawMeshes({
+        this.drawMeshes({
           renderers,
           renderView,
-          colorAttachments: this.colorAttachments,
+          colorAttachments,
           entitiesInView: entities,
           shadowMapping: true,
           shadowMappingLight: light,
@@ -117,14 +133,20 @@ export default ({ renderGraph, resourceCache, descriptors, drawMeshes }) => ({
     light._shadowMap = depth; // TODO: we borrow it for a frame
   },
 
-  spotLight(lightEntity, entities, renderers, shadowCastingEntities) {
+  spotLight(
+    lightEntity,
+    entities,
+    renderers,
+    colorAttachments,
+    shadowCastingEntities
+  ) {
     const light = lightEntity.spotLight || lightEntity.areaLight;
 
     this.computeLightProperties(lightEntity, light, shadowCastingEntities);
 
-    const { color, depth } = this.getAttachments(
+    const { color, depth } = this.getLightAttachments(
       light,
-      descriptors.spotLightShadows
+      this.descriptors.spotLightShadows
     );
 
     mat4.perspective(
@@ -147,7 +169,7 @@ export default ({ renderGraph, resourceCache, descriptors, drawMeshes }) => ({
       name: `SpotLightShadowMap [${renderView.viewport}] (id: ${lightEntity.id})`,
       pass: resourceCache.pass({
         // TODO: creating new descriptor to force new pass from cache
-        ...descriptors.spotLightShadows.pass,
+        ...this.descriptors.spotLightShadows.pass,
         color: [color],
         depth: depth,
       }),
@@ -155,10 +177,10 @@ export default ({ renderGraph, resourceCache, descriptors, drawMeshes }) => ({
       render: () => {
         light._shadowMap = depth;
 
-        drawMeshes({
+        this.drawMeshes({
           renderers,
           renderView,
-          colorAttachments: this.colorAttachments,
+          colorAttachments,
           entitiesInView: entities,
           shadowMapping: true,
           shadowMappingLight: light,
@@ -170,23 +192,23 @@ export default ({ renderGraph, resourceCache, descriptors, drawMeshes }) => ({
     light._shadowMap = depth; // TODO: we borrow it for a frame
   },
 
-  pointLight(lightEntity, entities, renderers) {
+  pointLight(lightEntity, entities, renderers, colorAttachments) {
     const light = lightEntity.pointLight;
 
-    const { color, depth } = this.getAttachments(
+    const { color, depth } = this.getLightAttachments(
       light,
-      descriptors.pointLightShadows,
+      this.descriptors.pointLightShadows,
       true
     );
 
-    for (let i = 0; i < descriptors.pointLightShadows.passes.length; i++) {
-      const pass = descriptors.pointLightShadows.passes[i];
+    for (let i = 0; i < this.descriptors.pointLightShadows.passes.length; i++) {
+      const pass = this.descriptors.pointLightShadows.passes[i];
       //TODO: need to create new descriptor to get uniq
       const passDesc = { ...pass };
       passDesc.color = [{ texture: color, target: passDesc.color[0].target }];
       passDesc.depth = depth;
 
-      const side = descriptors.pointLightShadows.cubemapSides[i];
+      const side = this.descriptors.pointLightShadows.cubemapSides[i];
       const renderView = {
         camera: {
           projectionMatrix: side.projectionMatrix,
@@ -210,10 +232,10 @@ export default ({ renderGraph, resourceCache, descriptors, drawMeshes }) => ({
           light._projectionMatrix = side.projectionMatrix;
           light._viewMatrix = renderView.camera.viewMatrix;
 
-          drawMeshes({
+          this.drawMeshes({
             renderers,
             renderView,
-            colorAttachments: this.colorAttachments,
+            colorAttachments,
             entitiesInView: entities,
             shadowMapping: true,
             shadowMappingLight: light,

@@ -361,7 +361,6 @@ export default ({ ctx, shadowQuality = 3 }) => {
         shadowMappingLight,
         transparent,
         backgroundColorTexture,
-        debugRender,
         attachmentsLocations = {},
       } = options;
 
@@ -378,7 +377,8 @@ export default ({ ctx, shadowQuality = 3 }) => {
         useSSAOColors: false,
         targets: {},
         shadowQuality: this.shadowQuality,
-        debugRender,
+        debugRender:
+          !(shadowMapping || transparent) && standardRendererSystem.debugRender,
         attachmentsLocations,
         toneMap: renderView.toneMap,
       };
@@ -515,16 +515,14 @@ export default ({ ctx, shadowQuality = 3 }) => {
       }
     },
     renderStages: {
-      shadow: (renderView, entitites, options = {}) => {
-        standardRendererSystem.render(renderView, entitites, options);
+      shadow: (renderView, entities, options = {}) => {
+        standardRendererSystem.render(renderView, entities, options);
       },
-      opaque: (renderView, entitites, options = {}) => {
-        options.debugRender = standardRendererSystem.debugRender;
-        standardRendererSystem.render(renderView, entitites, options);
+      opaque: (renderView, entities, options = {}) => {
+        standardRendererSystem.render(renderView, entities, options);
       },
-      transparent: (renderView, entitites, options = {}) => {
-        // options.debugRender = standardRendererSystem.debugRender;
-        standardRendererSystem.render(renderView, entitites, {
+      transparent: (renderView, entities, options = {}) => {
+        standardRendererSystem.render(renderView, entities, {
           ...options,
           transparent: true,
         });
