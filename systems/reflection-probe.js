@@ -396,6 +396,7 @@ export default ({ ctx, resourceCache }) => ({
         entity.reflectionProbe.dirty || entity._reflectionProbe.dirty;
 
       if (
+        skyboxEntity.skybox.sunPosition &&
         vec3.distance(
           cachedProps.skyboxSunPosition,
           skyboxEntity.skybox.sunPosition
@@ -408,7 +409,10 @@ export default ({ ctx, resourceCache }) => ({
         needsUpdate = true;
       }
 
-      if (cachedProps.skyboxEnvMap != skyboxEntity.skybox.envMap) {
+      if (
+        skyboxEntity.skybox.envMap &&
+        cachedProps.skyboxEnvMap !== skyboxEntity.skybox.envMap
+      ) {
         cachedProps.skyboxEnvMap = skyboxEntity.skybox.envMap;
         needsUpdate = true;
       }

@@ -29,9 +29,7 @@ export default ({ ctx, resourceCache }) => {
   const skyboxRendererSystem = Object.assign(createBaseSystem(), {
     type: "skybox-renderer",
     cache: {
-      // Cache based on: vertex source (material.vert or default), fragment source (material.frag or default) and list of flags
       programs: new ProgramCache(),
-      // Cache based on: program.id, material.blend and material.id (if present)
       pipelines: {},
     },
     debug: false,
@@ -129,7 +127,10 @@ export default ({ ctx, resourceCache }) => {
       background: (renderView, entities, options = {}) => {
         for (let i = 0; i < entities.length; i++) {
           const entity = entities[i];
-          if (entity.skybox) {
+          if (
+            entity.skybox &&
+            (entity.skybox.sunPosition || entity.skybox.envMap)
+          ) {
             skyboxRendererSystem.render(renderView, entity, {
               ...options,
               toneMap: renderView.toneMap,

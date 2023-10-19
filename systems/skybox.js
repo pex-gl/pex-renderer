@@ -30,7 +30,11 @@ export default ({ ctx, resourceCache }) => {
       for (let i = 0; i < entities.length; i++) {
         const entity = entities[i];
 
-        if (entity.skybox && !entity.skybox.envMap) {
+        if (
+          entity.skybox &&
+          !entity.skybox.envMap &&
+          entity.skybox.sunPosition
+        ) {
           let needsUpdate = false;
           let cachedProps = this.cache[entity.id];
           if (!cachedProps) {
