@@ -63,6 +63,32 @@
     "npm": ">=8.6.0"
   },
   "snowdev": {
+    "dependencies": [
+      "geom-builder",
+      "hammersley",
+      "pex-cam",
+      "pex-geom",
+      "pex-io",
+      "pex-loaders",
+      "pex-math",
+      "pex-random",
+      "pex-shaders",
+      "angle-normals",
+      "cosine-gradient",
+      "es-module-shims",
+      "fit-rect",
+      "geom-center-and-normalize",
+      "geom-edges",
+      "geom-merge",
+      "geom-normals",
+      "geom-parse-obj",
+      "grid-cells",
+      "parse-hdr",
+      "pex-color",
+      "pex-context",
+      "pex-gui",
+      "primitive-geometry"
+    ],
     "files": "{*.js,*(systems|components|helpers|loaders)/**/*.js}"
   }
 }
