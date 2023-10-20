@@ -155,22 +155,38 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
       viewport: [0, 0, ctx.gl.drawingBufferWidth, ctx.gl.drawingBufferHeight],
     };
 
-    if (drawToScreen === false) {
-      renderView.outputEncoding ||= renderView.camera.outputEncoding;
-      renderView.exposure ||= renderView.camera.exposure;
-      if (renderView.outputEncoding === ctx.Encoding.Gamma) {
-        renderView.toneMap ||= renderView.camera.toneMap;
-      }
-    } else {
-      // Pipeline is linear. Tone mapping happens in "blit" or in post-processing "final"
+    const postProcessing = renderView.cameraEntity.postProcessing;
+
+    // Set the render pipeline encoding and tone mapping settings before blit
+    // Output will depend on camera settings
+    if (drawToScreen !== false) {
+      // Render pipeline is linear.
+      // Output is tone mapped in "BlitPass" or in post-processing "final"
       renderView.outputEncoding ||= ctx.Encoding.Linear;
       renderView.exposure ||= 1;
       renderView.toneMap ||= null;
+    } else {
+      // Output depends on camera settings
+      // Render pipeline is gamma so we assume tone map should be applied
+      // but only if no post-processing "final"
+      if (
+        renderView.camera.outputEncoding === ctx.Encoding.Gamma &&
+        !postProcessing
+      ) {
+        renderView.outputEncoding ||= renderView.camera.outputEncoding;
+        renderView.exposure ||= renderView.camera.exposure;
+        renderView.toneMap ||= renderView.camera.toneMap;
+      } else {
+        // Render pipeline is linear.
+        // Tone mapping needs to happen manually on the returned color attachment
+        renderView.outputEncoding ||= ctx.Encoding.Linear;
+        renderView.exposure ||= 1;
+        renderView.toneMap ||= null;
+      }
     }
 
     // Setup attachments. Can be overwritten by PostProcessingPass
     const outputs = new Set(this.outputs);
-    const postProcessing = renderView.cameraEntity.postProcessing;
 
     if (postProcessing?.ssao) outputs.add("normal");
     if (postProcessing?.bloom) outputs.add("emissive");
@@ -423,17 +439,24 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
     if (drawToScreen !== false) {
       const fullscreenTriangle = resourceCache.fullscreenTriangle();
 
+      let exposure = renderView.camera.exposure;
+      let toneMap = renderView.camera.toneMap;
+      let outputEncoding = renderView.camera.outputEncoding;
+
+      // Post Processing already uses renderView.camera settings
+      if (postProcessing) {
+        exposure = 1;
+        toneMap = null;
+        outputEncoding = ctx.Encoding.Linear;
+      }
+
       // TODO: cache
       const pipelineDesc = { ...this.descriptors.blit.pipelineDesc };
       pipelineDesc.vert = ShaderParser.build(ctx, pipelineDesc.vert);
       pipelineDesc.frag = ShaderParser.build(
         ctx,
         pipelineDesc.frag,
-        [
-          !postProcessing &&
-            renderView.camera.toneMap &&
-            `TONEMAP ${renderView.camera.toneMap}`,
-        ].filter(Boolean)
+        [toneMap && `TONEMAP ${toneMap}`].filter(Boolean)
       );
 
       const blitCmd = {
@@ -450,11 +473,8 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
         render: () => {
           ctx.submit(blitCmd, {
             uniforms: {
-              // Post Processing already uses renderView.camera settings
-              uExposure: postProcessing ? 1 : renderView.camera.exposure,
-              uOutputEncoding: postProcessing
-                ? ctx.Encoding.Linear
-                : renderView.camera.outputEncoding,
+              uExposure: exposure,
+              uOutputEncoding: outputEncoding,
               uTexture: colorAttachments.color,
             },
           });
@@ -462,7 +482,10 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
       });
     }
 
-    return { ...colorAttachments, depth: depthAttachment };
+    // Return the original object: the color attachment value can be modified
+    // after post processing renderGraph.renderPass so values are final after
+    // renderGraph.endFrame()
+    return Object.assign(colorAttachments, { depth: depthAttachment });
   },
 
   dispose(entities) {

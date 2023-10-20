@@ -13,14 +13,18 @@ import { toneMap } from "pex-shaders";
 
 import { getEnvMap } from "./utils.js";
 
+// TODO: there is a state issue when going from
+// postProcessing: true, drawToScreen: false, drawToTextureBlitReady: false, to drawToTextureBlitReady: true,
 const State = {
-  blend: 0,
-  drawToScreen: true,
+  blend: 0.4,
+  drawToScreen: false,
+  drawToTextureBlitReady: true,
+  postProcessing: true,
 };
 
 const pixelRatio = devicePixelRatio;
 const ctx = createContext({ pixelRatio });
-const renderEngine = createRenderEngine({ ctx });
+const renderEngine = (window.re = createRenderEngine({ ctx }));
 const world = createWorld();
 
 const groupAEntity = createEntity({
@@ -35,6 +39,11 @@ const groupBEntity = createEntity({
 });
 world.add(groupBEntity);
 
+const postProcessing = components.postProcessing({
+  dof: components.postProcessing.dof({}),
+  vignette: components.postProcessing.vignette({ radius: 0.5 }),
+});
+
 const cameraEntity = createEntity({
   transform: components.transform({
     position: [1, 1, 5],
@@ -43,6 +52,7 @@ const cameraEntity = createEntity({
   }),
   camera: components.camera({
     fov: Math.PI / 3,
+    fStop: 0.05,
     aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
     viewport: [0, 0, ctx.gl.drawingBufferWidth / 2, ctx.gl.drawingBufferHeight],
   }),
@@ -60,6 +70,7 @@ const cameraEntity2 = createEntity({
   }),
   camera: components.camera({
     fov: Math.PI / 3,
+    fStop: 0.05,
     aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
     viewport: [
       ctx.gl.drawingBufferWidth / 2,
@@ -213,6 +224,7 @@ const drawTexturesMixedCmd = {
       uniform sampler2D uTexture;
       uniform sampler2D uTexture2;
       uniform float uBlend;
+      uniform bool uBlitReady;
 
       ${toneMap.ACES}
 
@@ -235,8 +247,10 @@ const drawTexturesMixedCmd = {
         }
         // color.rgb = color.rgb / (1.0 + color.rgb);
 
-        color.rgb = aces(color.rgb);
-        color.rgb = toGamma(color.rgb);
+        if (!uBlitReady) {
+          color.rgb = aces(color.rgb);
+          color.rgb = toGamma(color.rgb);
+        }
 
         color.a = 1.0;
         gl_FragColor = color;
@@ -256,16 +270,46 @@ const drawTexturesMixedCmd = {
 const gui = createGUI(ctx);
 gui.addColumn("Settings");
 gui.addFPSMeeter();
-
-gui.addParam("DrawToScreen", State, "drawToScreen", {}, () => {
-  cameraEntity.camera.outputEncoding = State.drawToScreen
-    ? ctx.Encoding.Gamma
-    : ctx.Encoding.Linear;
-  cameraEntity2.camera.outputEncoding = State.drawToScreen
-    ? ctx.Encoding.Gamma
-    : ctx.Encoding.Linear;
-});
 gui.addParam("Blend", State, "blend", { min: 0, max: 1 });
+
+const updateCameraBlitState = () => {
+  if (State.drawToScreen || State.drawToTextureBlitReady) {
+    cameraEntity.camera.outputEncoding = cameraEntity2.camera.outputEncoding =
+      ctx.Encoding.Gamma;
+    cameraEntity.camera.toneMap = cameraEntity2.camera.toneMap = "aces";
+  } else {
+    cameraEntity.camera.outputEncoding = cameraEntity2.camera.outputEncoding =
+      ctx.Encoding.Linear;
+    cameraEntity.camera.toneMap = cameraEntity2.camera.toneMap = null;
+  }
+};
+
+gui.addParam(
+  "Blit Ready",
+  State,
+  "drawToTextureBlitReady",
+  updateCameraBlitState
+);
+gui.addParam("DrawToScreen", State, "drawToScreen", {}, updateCameraBlitState);
+
+const updatePostProcessingState = () => {
+  if (State.postProcessing) {
+    cameraEntity.postProcessing = cameraEntity2.postProcessing = postProcessing;
+  } else {
+    delete cameraEntity.postProcessing;
+    delete cameraEntity2.postProcessing;
+  }
+};
+gui.addParam(
+  "Post Processing Enabled",
+  State,
+  "postProcessing",
+  null,
+  updatePostProcessingState
+);
+
+updateCameraBlitState();
+updatePostProcessingState();
 
 // Events
 let debugOnce = false;
@@ -306,18 +350,12 @@ let delta = 0;
 ctx.frame(() => {
   delta += 0.01;
 
-  const cameraEntity = world.entities.find((entity) => entity.camera);
   const cameraEntities = world.entities.filter((entity) => entity.camera);
-
-  renderEngine.systems.find(
-    (renderer) => renderer.type == "render-pipeline-system"
-  ).shadowQuality = 5;
 
   renderEngine.update(world.entities);
   const framebufferTexturesPerCamera = renderEngine.render(
     world.entities,
     cameraEntities,
-    // cameraEntity,
     { drawToScreen: State.drawToScreen, shadowQuality: 1 }
   );
 
@@ -331,6 +369,7 @@ ctx.frame(() => {
         uTexture: framebufferTexturesPerCamera[0].color,
         uTexture2: framebufferTexturesPerCamera[1].color,
         uBlend: blend,
+        uBlitReady: State.drawToTextureBlitReady,
       },
     });
   }
