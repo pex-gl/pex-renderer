@@ -103,7 +103,7 @@ const ctx = createContext({
   pixelRatio: devicePixelRatio,
 });
 
-const renderEngine = createRenderEngine({ ctx });
+const renderEngine = createRenderEngine({ ctx, debug: true });
 const world = createWorld();
 
 const gui = createGUI(ctx);

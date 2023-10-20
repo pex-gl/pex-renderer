@@ -16,7 +16,7 @@ import { getEnvMap, getTexture, getURL } from "./utils.js";
 
 const pixelRatio = devicePixelRatio;
 const ctx = createContext({ pixelRatio });
-const renderEngine = createRenderEngine({ ctx });
+const renderEngine = createRenderEngine({ ctx, debug: true });
 const world = createWorld();
 
 // Entities

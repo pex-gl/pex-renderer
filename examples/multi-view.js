@@ -100,8 +100,8 @@ renderGraph.renderPass = (opts) => {
 
 // Entities
 const postProcessing = components.postProcessing({
-  aa: components.aa(),
-  dof: components.dof({
+  aa: components.postProcessing.aa(),
+  dof: components.postProcessing.dof({
     focusDistance: 3,
   }),
 });

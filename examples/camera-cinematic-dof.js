@@ -28,7 +28,7 @@ const State = {
 
 const pixelRatio = devicePixelRatio;
 const ctx = createContext({ pixelRatio });
-const renderEngine = createRenderEngine({ ctx });
+const renderEngine = createRenderEngine({ ctx, debug: true });
 const world = createWorld();
 
 const skyboxEntity = createEntity({
