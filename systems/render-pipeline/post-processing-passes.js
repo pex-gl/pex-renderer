@@ -350,7 +350,7 @@ export default ({
           [["camera", "far"], "", { uniform: "uFar" }],
           [["camera", "fov"], "", { uniform: "uFov" }],
           [["camera", "exposure"], "", { uniform: "uExposure" }],
-          [["camera", "toneMap"], "TONEMAP", { type: "value" }],
+          [["camera", "toneMap"], "TONE_MAP", { type: "value" }],
           [["camera", "outputEncoding"], "", { uniform: "uOutputEncoding" }],
 
           // AA

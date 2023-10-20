@@ -9,7 +9,7 @@ const flagDefinitions = [
   [["options", "attachmentsLocations", "color"], "LOCATION_COLOR", { type: "value" }],
   [["options", "attachmentsLocations", "normal"], "LOCATION_NORMAL", { type: "value" }],
   [["options", "attachmentsLocations", "emissive"], "LOCATION_EMISSIVE", { type: "value" }],
-  [["options", "toneMap"], "TONEMAP", { type: "value" }],
+  [["options", "toneMap"], "TONE_MAP", { type: "value" }],
 
   [["material", "blend"], "USE_BLEND"],
   [["material", "baseColor"], "", { uniform: "uBaseColor" }],

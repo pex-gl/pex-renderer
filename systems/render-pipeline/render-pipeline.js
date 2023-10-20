@@ -456,7 +456,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
       pipelineDesc.frag = ShaderParser.build(
         ctx,
         pipelineDesc.frag,
-        [toneMap && `TONEMAP ${toneMap}`].filter(Boolean)
+        [toneMap && `TONE_MAP ${toneMap}`].filter(Boolean)
       );
 
       const blitCmd = {

@@ -13,7 +13,7 @@ const flagDefinitions = [
   [["options", "attachmentsLocations", "color"], "LOCATION_COLOR", { type: "value" }],
   [["options", "attachmentsLocations", "normal"], "LOCATION_NORMAL", { type: "value" }],
   [["options", "attachmentsLocations", "emissive"], "LOCATION_EMISSIVE", { type: "value" }],
-  [["options", "toneMap"], "TONEMAP", { type: "value" }],
+  [["options", "toneMap"], "TONE_MAP", { type: "value" }],
 
   [["options", "depthPassOnly"], "DEPTH_PASS_ONLY"],
   [["options", "depthPassOnly"], "USE_UNLIT_WORKFLOW"], //force unlit in depth pass mode
