@@ -143,7 +143,7 @@ function updateAnimation(animation, deltaTime) {
 export default () => ({
   type: "animation-system",
   updateAnimation,
-  update(entities, deltaTime) {
+  update(entities, { deltaTime }) {
     for (let i = 0; i < entities.length; i++) {
       const entity = entities[i];
 

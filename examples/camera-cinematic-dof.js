@@ -83,7 +83,7 @@ world.entities.push(...scene.entities);
 const cameraEntity = scene.entities.filter((entity) => entity.camera)[0];
 cameraEntity.camera.fStop = 1.3;
 const postProcessing = components.postProcessing({
-  dof: components.dof({
+  dof: components.postProcessing.dof({
     focusDistance: 7.8,
   }),
 });
@@ -252,7 +252,7 @@ gui.addRadioList(
   "Shape",
   postProcessing.dof,
   "shape",
-  ["disc", "pentagon"].map((value) => ({ name: value, value }))
+  ["disk", "pentagon"].map((value) => ({ name: value, value }))
 );
 gui.addParam("On Screen Point", postProcessing.dof, "focusOnScreenPoint");
 gui.addParam("Screen Point", postProcessing.dof, "screenPoint", {

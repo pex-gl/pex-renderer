@@ -5,7 +5,7 @@
  * @module PostProcessingComponent
  * @exports module:PostProcessingComponent
  */
-export default (options) => ({
+const postProcessing = (options) => ({
   // ssao
   // dof
   // aa
@@ -14,11 +14,12 @@ export default (options) => ({
   // lut
   // colorCorrection
   // vignette
+  // filmGrain
   opacity: 1,
   ...options,
 });
 
-export const ssao = (options) => ({
+postProcessing.ssao = (options) => ({
   type: "sao", // "gtao",
   post: false,
   noiseTexture: true,
@@ -39,7 +40,7 @@ export const ssao = (options) => ({
   colorBounceIntensity: 1.0,
   ...options,
 });
-export const dof = (options) => ({
+postProcessing.dof = (options) => ({
   type: "gustafsson", // "upitis"
   debug: false,
   focusDistance: 7,
@@ -49,15 +50,15 @@ export const dof = (options) => ({
   luminanceThreshold: 0.7,
   luminanceGain: 1,
   samples: 4,
-  shape: "disc", // "pentagon"
+  shape: "disk", // "pentagon"
   ...options,
 });
-export const aa = (options) => ({
+postProcessing.aa = (options) => ({
   type: "fxaa2",
   spanMax: 8,
   ...options,
 });
-export const fog = (options) => ({
+postProcessing.fog = (options) => ({
   color: [0.5, 0.5, 0.5],
   start: 5,
   density: 0.15,
@@ -69,26 +70,37 @@ export const fog = (options) => ({
   inscatteringCoeffs: [0.3, 0.3, 0.3],
   ...options,
 });
-export const bloom = (options) => ({
+postProcessing.bloom = (options) => ({
   quality: 1,
   threshold: 1,
   radius: 1,
   intensity: 0.1,
   ...options,
 });
-export const lut = (options) => ({
+postProcessing.lut = (options) => ({
   // texture,
   ...options,
 });
-export const colorCorrection = (options) => ({
+postProcessing.colorCorrection = (options) => ({
   brightness: 0,
   contrast: 1,
   saturation: 1,
   hue: 0,
   ...options,
 });
-export const vignette = (options) => ({
+postProcessing.vignette = (options) => ({
   radius: 0.8,
   intensity: 0.2,
   ...options,
 });
+postProcessing.filmGrain = (options) => ({
+  quality: 2,
+  size: 1.6,
+  intensity: 0.05,
+  colorIntensity: 0.6,
+  luminanceIntensity: 1,
+  speed: 0.5,
+  ...options,
+});
+
+export default postProcessing;

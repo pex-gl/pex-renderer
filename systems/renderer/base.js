@@ -10,6 +10,7 @@ export default () => ({
     pipelines: {},
   },
   debug: false,
+  time: 0,
 
   getProgramFlagsAndUniforms(ctx, entity, definitions, options = {}) {
     const { _geometry: geometry } = entity;
@@ -264,7 +265,9 @@ vec4 debugColor = vec4(pow(vec3(${debugRender}${scale}), vec3(${pow})), 1.0);
   },
   // render(renderView, entitites, options) {},
   // renderStages: {},
-  update() {},
+  update(_, { time }) {
+    this.time = time;
+  },
   // TODO:
   dispose() {},
 });

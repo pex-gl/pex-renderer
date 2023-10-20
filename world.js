@@ -19,7 +19,7 @@ export default ({ entities = [], systems = [] } = {}) => {
         prevTime = now;
       }
       for (let i = 0; i < this.systems.length; i++) {
-        this.systems[i].update(this.entities, deltaTime);
+        this.systems[i].update(this.entities, { deltaTime });
       }
     },
     dispose(entities) {

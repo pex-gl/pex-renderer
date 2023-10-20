@@ -39,6 +39,9 @@ export default ({ ctx, debug = false }) => {
       }
       this.debugMode = enabled;
     },
+    time: 0,
+    deltaTime: 0,
+    _prevTime: Date.now(),
     renderGraph,
     resourceCache,
     systems: [
@@ -62,8 +65,13 @@ export default ({ ctx, debug = false }) => {
       helperRendererSystem,
       postProcessingRendererSystem,
     ],
-    update: (entities, deltaTime) => {
-      animationSystem.update(entities, deltaTime);
+    update(entities, deltaTime) {
+      const now = Date.now();
+      this.deltaTime = deltaTime || (now - this._prevTime) / 1000;
+      this._prevTime = now;
+      this.time += this.deltaTime;
+
+      animationSystem.update(entities, this);
       skinSystem.update(entities);
       geometrySystem.update(entities);
       morphSystem.update(entities);
@@ -71,6 +79,10 @@ export default ({ ctx, debug = false }) => {
       layerSystem.update(entities);
       skyboxSystem.update(entities);
       cameraSystem.update(entities);
+
+      for (let i = 0; i < this.renderers.length; i++) {
+        this.renderers[i].update(entities, this);
+      }
     },
     render: (entities, cameraEntities, options = {}) => {
       resourceCache.beginFrame();

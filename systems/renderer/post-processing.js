@@ -38,7 +38,7 @@ export default ({ ctx, resourceCache }) => {
       const renderViewId = renderView.cameraEntity.id;
 
       this.cache.targets[renderViewId] ||= {};
-      this.cache.targets[renderViewId][`color`] = colorAttachments.color;
+      this.cache.targets[renderViewId]["color"] = colorAttachments.color;
 
       // Expose targets for other renderers (eg. standard to use AO)
       postProcessing._targets = this.cache.targets;
@@ -53,12 +53,13 @@ export default ({ ctx, resourceCache }) => {
 
           if (passCommand.disabled?.(renderView)) continue;
 
+          // Set flag definitions for pipeline retrieval
           this.flagDefinitions = passCommand.flagDefinitions;
 
           // Also computes this.uniforms
           const pipeline = this.getPipeline(ctx, renderView.cameraEntity, {
             command: passCommand,
-            targets: this.cache.targets[renderView.cameraEntity.id],
+            targets: this.cache.targets[renderViewId],
           });
 
           const viewportSize = passCommand.size?.(renderView) || [
@@ -70,6 +71,7 @@ export default ({ ctx, resourceCache }) => {
             uViewport: renderView.viewport,
             uViewportSize: viewportSize,
             uTexelSize: [1 / viewportSize[0], 1 / viewportSize[1]],
+            uTime: this.time,
           };
 
           const source = passCommand.source?.(renderView);

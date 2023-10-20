@@ -181,7 +181,7 @@ let debugOnce = false;
 
 window.addEventListener("resize", () => {
   const width = window.innerWidth;
-  const height = window.innerWidth;
+  const height = window.innerHeight;
   ctx.set({ pixelRatio, width, height });
   cameraEntity.camera.aspect = width / height;
   cameraEntity.camera.dirty = true;

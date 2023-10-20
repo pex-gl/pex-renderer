@@ -14,6 +14,7 @@ const flagDefinitions = [
 
   [["material", "baseColor"], "", { uniform: "uBaseColor" }],
   [["material", "lineWidth"], "", { uniform: "uLineWidth" }],
+  [["geometry", "attributes", "aVertexColor"], "USE_VERTEX_COLORS"],
   [["geometry", "attributes", "aLineWidth"], "USE_INSTANCED_LINE_WIDTH"],
 ];
 
@@ -120,8 +121,7 @@ export default ({ ctx } = {}) => {
         (entity) =>
           entity.geometry &&
           entity.material &&
-          entity.material.type === "line" &&
-          (!options.shadowMapping || entity.material.castShadows)
+          entity.material.type === "line"
       );
 
       for (let i = 0; i < renderableEntities.length; i++) {
@@ -139,34 +139,39 @@ export default ({ ctx } = {}) => {
         const resolution = entity.material.lineResolution;
         const positionBuffer = this.getLinePositionsBuffer(resolution);
 
+        const attributes = {
+          aPosition: positionBuffer,
+          aPointA: {
+            buffer: entity._geometry.attributes.aPosition.buffer,
+            divisor: 1,
+            stride: Float32Array.BYTES_PER_ELEMENT * 6,
+          },
+          aPointB: {
+            buffer: entity._geometry.attributes.aPosition.buffer,
+            divisor: 1,
+            stride: Float32Array.BYTES_PER_ELEMENT * 6,
+            offset: Float32Array.BYTES_PER_ELEMENT * 3,
+          },
+        };
+
+        if (entity._geometry.attributes.aVertexColor) {
+          attributes.aColorA = {
+            buffer: entity._geometry.attributes.aVertexColor.buffer,
+            divisor: 1,
+            stride: Float32Array.BYTES_PER_ELEMENT * 8,
+          };
+          attributes.aColorB = {
+            buffer: entity._geometry.attributes.aVertexColor.buffer,
+            divisor: 1,
+            stride: Float32Array.BYTES_PER_ELEMENT * 8,
+            offset: Float32Array.BYTES_PER_ELEMENT * 4,
+          };
+        }
+
         ctx.submit({
           name: "drawLineGeometryCmd",
           pipeline,
-          attributes: {
-            aPosition: positionBuffer,
-            aPointA: {
-              buffer: entity._geometry.attributes.aPosition.buffer,
-              divisor: 1,
-              stride: Float32Array.BYTES_PER_ELEMENT * 6,
-            },
-            aPointB: {
-              buffer: entity._geometry.attributes.aPosition.buffer,
-              divisor: 1,
-              stride: Float32Array.BYTES_PER_ELEMENT * 6,
-              offset: Float32Array.BYTES_PER_ELEMENT * 3,
-            },
-            aColorA: {
-              buffer: entity._geometry.attributes.aVertexColor.buffer,
-              divisor: 1,
-              stride: Float32Array.BYTES_PER_ELEMENT * 8,
-            },
-            aColorB: {
-              buffer: entity._geometry.attributes.aVertexColor.buffer,
-              divisor: 1,
-              stride: Float32Array.BYTES_PER_ELEMENT * 8,
-              offset: Float32Array.BYTES_PER_ELEMENT * 4,
-            },
-          },
+          attributes,
           count: (instanceRoundRound.length + resolution * 18) / 3,
           instances: entity.geometry.positions[0].length
             ? entity.geometry.positions.length / 2

@@ -18,7 +18,6 @@ export { default as spotLight } from "./spot-light.js";
 export { default as skybox } from "./skybox.js";
 export { default as reflectionProbe } from "./reflection-probe.js";
 export { default as postProcessing } from "./post-processing.js";
-export * from "./post-processing.js";
 
 export { default as boundingBoxHelper } from "./bounding-box-helper.js";
 export { default as lightHelper } from "./light-helper.js";

@@ -102,8 +102,8 @@ const s = 1;
 const rects = divide([-2 * s, -1 * s, 4 * s, 2 * s, 0], []);
 
 const postProcessing = components.postProcessing({
-  aa: components.aa(),
-  ssao: components.ssao({
+  aa: components.postProcessing.aa(),
+  ssao: components.postProcessing.ssao({
     type: "sao",
     intensity: 2,
   }),

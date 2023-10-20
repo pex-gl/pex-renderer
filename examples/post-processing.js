@@ -41,6 +41,7 @@ const State = {
   lut: false,
   colorCorrection: false,
   vignette: false,
+  filmGrain: false,
 };
 
 // const pixelRatio = devicePixelRatio;
@@ -87,7 +88,7 @@ const postProcessing = components.postProcessing({
     chromaticAberration: 0.7,
     luminanceThreshold: 0.7,
     luminanceGain: 1,
-    shape: "disc",
+    shape: "disk",
   },
   aa: {
     type: "fxaa2",
@@ -155,6 +156,14 @@ const postProcessing = components.postProcessing({
   vignette: {
     radius: 0.8,
     intensity: 0.2,
+  },
+  filmGrain: {
+    quality: 2,
+    size: 1.6,
+    intensity: 0.05,
+    colorIntensity: 0.6,
+    luminanceIntensity: 1,
+    speed: 0.5,
   },
   opacity: 1,
 });
@@ -725,7 +734,7 @@ gui.addRadioList(
   "Shape",
   postProcessing.dof,
   "shape",
-  ["disc", "pentagon"].map((value) => ({ name: value, value }))
+  ["disk", "pentagon"].map((value) => ({ name: value, value }))
 );
 gui.addParam("Focus On Screen Point", postProcessing.dof, "focusOnScreenPoint");
 gui.addParam("Screen Point", postProcessing.dof.screenPoint, "0", {
@@ -782,6 +791,37 @@ gui.addParam("Radius", postProcessing.bloom, "radius", {
   min: 0,
   max: 10,
 });
+gui.addColumn("Film Grain");
+gui.addParam("Enabled", State, "filmGrain", null, () => {
+  enablePostProPass("filmGrain");
+});
+gui.addParam("Quality", postProcessing.filmGrain, "quality", {
+  min: 0,
+  max: 2,
+  step: 1,
+});
+gui.addParam("Size", postProcessing.filmGrain, "size", {
+  min: 1.5,
+  max: 2.5,
+});
+gui.addParam("Intensity", postProcessing.filmGrain, "intensity", {
+  min: 0,
+  max: 1,
+});
+gui.addParam("Color Intensity", postProcessing.filmGrain, "colorIntensity", {
+  min: 0,
+  max: 1,
+});
+gui.addParam(
+  "Luminance Intensity",
+  postProcessing.filmGrain,
+  "luminanceIntensity",
+  {
+    min: 0,
+    max: 1,
+  }
+);
+gui.addParam("Speed", postProcessing.filmGrain, "speed", { min: 0, max: 1 });
 
 enablePostProPass("ssao");
 enablePostProPass("dof");
@@ -791,6 +831,7 @@ enablePostProPass("bloom");
 enablePostProPass("lut");
 enablePostProPass("colorCorrection");
 enablePostProPass("vignette");
+enablePostProPass("filmGrain");
 
 // Events
 let debugOnce = false;
