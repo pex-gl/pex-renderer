@@ -40,7 +40,7 @@ export default ({ ctx }) => {
       return this.getHashFromProps(
         entity.material,
         pipelineMaterialProps,
-        this.debug
+        this.debug,
       );
     },
     getPipelineOptions(entity) {
@@ -72,7 +72,9 @@ export default ({ ctx }) => {
           entity.geometry &&
           entity.material &&
           entity.material.type === undefined &&
-          (options.transparent ? entity.material.blend : !entity.material.blend)
+          (options.transparent
+            ? entity.material.blend
+            : !entity.material.blend),
       );
 
       for (let i = 0; i < renderableEntities.length; i++) {

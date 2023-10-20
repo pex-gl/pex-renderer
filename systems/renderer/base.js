@@ -52,7 +52,7 @@ export default () => ({
 
           value.matrix = mat3.fromMat2x3(
             value.matrix ? mat3.identity(value.matrix) : mat3.create(),
-            TEMP_MAT2X3
+            TEMP_MAT2X3,
           );
         }
         if (value.matrix) {
@@ -100,7 +100,7 @@ export default () => ({
 
       const scale = mode.includes("normal") ? " * 0.5 + 0.5" : "";
       const pow = ["ao", "normal", "metallic", "roughness"].some((type) =>
-        mode.includes(type)
+        mode.includes(type),
       )
         ? "2.2"
         : "1";
@@ -117,7 +117,7 @@ vec4 debugColor = vec4(pow(vec3(${debugRender}${scale}), vec3(${pow})), 1.0);
 #else
   gl_FragData[0] = debugColor;
 #endif
-`
+`,
       );
     }
 
@@ -127,7 +127,7 @@ vec4 debugColor = vec4(pow(vec3(${debugRender}${scale}), vec3(${pow})), 1.0);
         for (let [hookName, hookCode] of Object.entries(hooks.vert)) {
           descriptor.vert = descriptor.vert.replace(
             `#define HOOK_VERT_${hookName}`,
-            hookCode
+            hookCode,
           );
         }
       }
@@ -135,7 +135,7 @@ vec4 debugColor = vec4(pow(vec3(${debugRender}${scale}), vec3(${pow})), 1.0);
         for (let [hookName, hookCode] of Object.entries(hooks.frag)) {
           descriptor.frag = descriptor.frag.replace(
             `#define HOOK_FRAG_${hookName}`,
-            hookCode
+            hookCode,
           );
         }
       }
@@ -159,7 +159,7 @@ vec4 debugColor = vec4(pow(vec3(${debugRender}${scale}), vec3(${pow})), 1.0);
       console.warn(
         NAMESPACE,
         `glsl error\n`,
-        ShaderParser.getFormattedError(error, { vert, frag })
+        ShaderParser.getFormattedError(error, { vert, frag }),
       );
     }
     return program;
@@ -170,7 +170,7 @@ vec4 debugColor = vec4(pow(vec3(${debugRender}${scale}), vec3(${pow})), 1.0);
       ctx,
       entity,
       this.flagDefinitions,
-      options
+      options,
     );
     this.uniforms = uniforms;
 
@@ -182,7 +182,7 @@ vec4 debugColor = vec4(pow(vec3(${debugRender}${scale}), vec3(${pow})), 1.0);
       descriptor,
       entity,
       this.uniforms,
-      options.debugRender
+      options.debugRender,
     );
     if (options.debugRender) flags.push(options.debugRender);
 
@@ -198,13 +198,13 @@ vec4 debugColor = vec4(pow(vec3(${debugRender}${scale}), vec3(${pow})), 1.0);
         ctx,
         vert,
         defines,
-        entity.material?.extensions
+        entity.material?.extensions,
       );
       const fragSrc = ShaderParser.build(
         ctx,
         frag,
         defines,
-        entity.material?.extensions
+        entity.material?.extensions,
       );
 
       if (this.debug) {
@@ -214,7 +214,7 @@ vec4 debugColor = vec4(pow(vec3(${debugRender}${scale}), vec3(${pow})), 1.0);
         ctx,
         ShaderParser.replaceStrings(vertSrc, options),
         ShaderParser.replaceStrings(fragSrc, options),
-        defines
+        defines,
       );
       this.cache.programs.set(flags, vert, frag, program);
     }

@@ -24,8 +24,8 @@ export default ({ renderGraph, resourceCache }) => ({
         aabb
           // .getCorners(entity.transform.worldBounds, TEMP_BOUNDS_POINTS) // TODO: doesn't work
           .getCorners(entity.transform.worldBounds)
-          .map((p) => vec3.multMat4(p, light._viewMatrix))
-      )
+          .map((p) => vec3.multMat4(p, light._viewMatrix)),
+      ),
     );
 
     light._near = -light._sceneBboxInLightSpace[1][2];
@@ -77,7 +77,7 @@ export default ({ renderGraph, resourceCache }) => ({
     entities,
     renderers,
     colorAttachments,
-    shadowCastingEntities
+    shadowCastingEntities,
   ) {
     const light = lightEntity.directionalLight;
 
@@ -85,7 +85,7 @@ export default ({ renderGraph, resourceCache }) => ({
 
     const { color, depth } = this.getLightAttachments(
       light,
-      this.descriptors.directionalLightShadows
+      this.descriptors.directionalLightShadows,
     );
 
     mat4.ortho(
@@ -95,7 +95,7 @@ export default ({ renderGraph, resourceCache }) => ({
       light._sceneBboxInLightSpace[0][1],
       light._sceneBboxInLightSpace[1][1],
       light._near,
-      light._far
+      light._far,
     );
 
     const renderView = {
@@ -139,7 +139,7 @@ export default ({ renderGraph, resourceCache }) => ({
     entities,
     renderers,
     colorAttachments,
-    shadowCastingEntities
+    shadowCastingEntities,
   ) {
     const light = lightEntity.spotLight || lightEntity.areaLight;
 
@@ -147,7 +147,7 @@ export default ({ renderGraph, resourceCache }) => ({
 
     const { color, depth } = this.getLightAttachments(
       light,
-      this.descriptors.spotLightShadows
+      this.descriptors.spotLightShadows,
     );
 
     mat4.perspective(
@@ -155,7 +155,7 @@ export default ({ renderGraph, resourceCache }) => ({
       light.angle ? 2 * light.angle : Math.PI / 2,
       depth.width / depth.height,
       light._near,
-      light._far
+      light._far,
     );
 
     const renderView = {
@@ -199,7 +199,7 @@ export default ({ renderGraph, resourceCache }) => ({
     const { color, depth } = this.getLightAttachments(
       light,
       this.descriptors.pointLightShadows,
-      true
+      true,
     );
 
     for (let i = 0; i < this.descriptors.pointLightShadows.passes.length; i++) {
@@ -217,7 +217,7 @@ export default ({ renderGraph, resourceCache }) => ({
             mat4.create(), // This can't be GC as assigned in light._viewMatrix for multi-view
             vec3.add([...side.eye], lightEntity._transform.worldPosition),
             vec3.add([...side.target], lightEntity._transform.worldPosition),
-            side.up
+            side.up,
           ),
         },
         viewport: [0, 0, depth.width, depth.height],

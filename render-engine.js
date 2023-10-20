@@ -111,7 +111,7 @@ export default ({ ctx, debug = false }) => {
 
           const entitiesForCamera = cameraEntity.layer
             ? entities.filter(
-                (entity) => !entity.layer || entity.layer == cameraEntity.layer
+                (entity) => !entity.layer || entity.layer == cameraEntity.layer,
               )
             : entities;
 
@@ -127,10 +127,10 @@ export default ({ ctx, debug = false }) => {
               renderers: options.renderers || renderEngine.renderers,
               renderView,
               drawToScreen: options.drawToScreen,
-            }
+            },
           );
           return framebufferTextures;
-        }
+        },
       );
 
       renderGraph.endFrame();

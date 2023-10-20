@@ -28,7 +28,7 @@ const cullEntities = (entities, camera) =>
   entities.filter(
     (entity) =>
       !entity.geometry ||
-      (entity.transform && isEntityInFrustum(entity, camera.frustum))
+      (entity.transform && isEntityInFrustum(entity, camera.frustum)),
   );
 
 /**
@@ -56,12 +56,12 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
     if (!lightEntity._transform) {
       console.warn(
         NAMESPACE,
-        `"${this.type}" light entity missing transform. Add a transformSystem.update(entities).`
+        `"${this.type}" light entity missing transform. Add a transformSystem.update(entities).`,
       );
     } else if (!light._projectionMatrix) {
       console.warn(
         NAMESPACE,
-        `"${this.type}" light component missing matrices. Add a lightSystem.update(entities).`
+        `"${this.type}" light component missing matrices. Add a lightSystem.update(entities).`,
       );
     } else {
       return true;
@@ -72,7 +72,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
 
   getAttachmentsLocations(colorAttachments) {
     return Object.fromEntries(
-      Object.keys(colorAttachments).map((key, index) => [key, index])
+      Object.keys(colorAttachments).map((key, index) => [key, index]),
     );
   },
 
@@ -146,7 +146,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
     let { renderView, renderers, drawToScreen } = options;
 
     const shadowCastingEntities = entities.filter(
-      (entity) => entity.geometry && entity.material?.castShadows
+      (entity) => entity.geometry && entity.material?.castShadows,
     );
     const cameraEntities = entities.filter((entity) => entity.camera);
 
@@ -199,7 +199,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
     this.descriptors.mainPass.outputTextureDesc.height = renderView.viewport[3];
 
     colorAttachments.color = resourceCache.texture2D(
-      this.descriptors.mainPass.outputTextureDesc
+      this.descriptors.mainPass.outputTextureDesc,
     );
 
     if (outputs.has("depth")) {
@@ -208,20 +208,20 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
       this.descriptors.mainPass.outputDepthTextureDesc.height =
         renderView.viewport[3];
       depthAttachment = resourceCache.texture2D(
-        this.descriptors.mainPass.outputDepthTextureDesc
+        this.descriptors.mainPass.outputDepthTextureDesc,
       );
       depthAttachment.name = `mainPassDepth (id: ${depthAttachment.id})`;
     }
 
     if (outputs.has("normal")) {
       colorAttachments.normal = resourceCache.texture2D(
-        this.descriptors.mainPass.outputTextureDesc
+        this.descriptors.mainPass.outputTextureDesc,
       );
     }
 
     if (outputs.has("emissive")) {
       colorAttachments.emissive = resourceCache.texture2D(
-        this.descriptors.mainPass.outputTextureDesc
+        this.descriptors.mainPass.outputTextureDesc,
       );
     }
 
@@ -231,7 +231,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
       this.descriptors.mainPass.velocityTextureDesc.height =
         renderView.viewport[3];
       colorAttachments.velocity = resourceCache.texture2D(
-        this.descriptors.mainPass.velocityTextureDesc
+        this.descriptors.mainPass.velocityTextureDesc,
       );
     }
 
@@ -259,7 +259,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
             entities,
             renderers,
             colorAttachments,
-            shadowCastingEntities
+            shadowCastingEntities,
           );
         }
         if (
@@ -277,7 +277,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
             entities,
             renderers,
             colorAttachments,
-            shadowCastingEntities
+            shadowCastingEntities,
           );
         }
         if (
@@ -289,7 +289,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
             entities,
             renderers,
             colorAttachments,
-            shadowCastingEntities
+            shadowCastingEntities,
           );
         }
       }
@@ -302,7 +302,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
           entity.directionalLight?._shadowMap ||
           entity.spotLight?._shadowMap ||
           entity.areaLight?._shadowMap ||
-          entity.pointLight?._shadowCubemap
+          entity.pointLight?._shadowCubemap,
       )
       .filter(Boolean);
 
@@ -354,7 +354,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
       this.descriptors.grabPass.colorCopyTextureDesc.width = viewport[2];
       this.descriptors.grabPass.colorCopyTextureDesc.height = viewport[3];
       grabPassColorCopyTexture = resourceCache.texture2D(
-        this.descriptors.grabPass.colorCopyTextureDesc
+        this.descriptors.grabPass.colorCopyTextureDesc,
       );
       grabPassColorCopyTexture.name = `grabPassOutput (id: ${grabPassColorCopyTexture.id})`;
 
@@ -365,7 +365,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
         attributes: fullscreenTriangle.attributes,
         count: fullscreenTriangle.count,
         pipeline: resourceCache.pipeline(
-          this.descriptors.grabPass.copyTexturePipelineDesc
+          this.descriptors.grabPass.copyTexturePipelineDesc,
         ),
         uniforms: {
           uViewport: viewport,
@@ -456,7 +456,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
       pipelineDesc.frag = ShaderParser.build(
         ctx,
         pipelineDesc.frag,
-        [toneMap && `TONE_MAP ${toneMap}`].filter(Boolean)
+        [toneMap && `TONE_MAP ${toneMap}`].filter(Boolean),
       );
 
       const blitCmd = {

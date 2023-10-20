@@ -63,7 +63,7 @@ export default ({ ctx }) => ({
           if (!geometry.attributes || !geometry.attributes[attributeName]) {
             ctx.dispose(
               cachedGeom.attributes[attributeName].buffer ||
-                cachedGeom.attributes[attributeName]
+                cachedGeom.attributes[attributeName],
             );
             delete cachedGeom.attributes[attributeName];
           }
@@ -145,7 +145,7 @@ export default ({ ctx }) => ({
       } else if (cachedGeom.attributes[attributeName]) {
         ctx.dispose(
           cachedGeom.attributes[attributeName].buffer ||
-            cachedGeom.attributes[attributeName]
+            cachedGeom.attributes[attributeName],
         );
         delete cachedGeom.attributes[attributeName];
       }

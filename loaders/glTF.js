@@ -118,7 +118,7 @@ const MESH_QUANTIZATION_SCALE = {
 
 const normalizeData = (data) =>
   new Float32Array(data).map(
-    (v) => v * MESH_QUANTIZATION_SCALE[data.constructor]
+    (v) => v * MESH_QUANTIZATION_SCALE[data.constructor],
   );
 
 const loadImageBitmap = async (blob) =>
@@ -150,7 +150,7 @@ function getAccessor(accessor, bufferViews) {
     accessor._data = new TypedArrayConstructor(
       accessor._bufferView._data,
       ibSlice * byteStride,
-      (accessor.count * byteStride) / byteSize
+      (accessor.count * byteStride) / byteSize,
     );
     // TODO: AnimatedMorphCube normals needs byteStride * 4
     accessor._byteStride = byteStride;
@@ -159,7 +159,7 @@ function getAccessor(accessor, bufferViews) {
     accessor._data = new TypedArrayConstructor(
       accessor._bufferView._data,
       accessor.byteOffset,
-      accessor.count * numberOfComponents
+      accessor.count * numberOfComponents,
     );
   }
 
@@ -175,14 +175,14 @@ function getAccessor(accessor, bufferViews) {
     const sparseIndices = new TypedArrayIndicesConstructor(
       bufferViews[accessor.sparse.indices.bufferView]._data,
       accessor.sparse.indices.byteOffset || 0,
-      accessor.sparse.count
+      accessor.sparse.count,
     );
 
     // https://github.com/KhronosGroup/glTF/blob/main/specification/2.0/schema/accessor.sparse.values.schema.json
     const sparseValues = new TypedArrayConstructor(
       bufferViews[accessor.sparse.values.bufferView]._data,
       accessor.sparse.values.byteOffset || 0,
-      accessor.sparse.count * numberOfComponents
+      accessor.sparse.count * numberOfComponents,
     );
 
     if (accessor._data !== null) {
@@ -213,7 +213,7 @@ function getPexMaterialTexture(
   materialTexture,
   { textures, images, samplers },
   ctx,
-  encoding
+  encoding,
 ) {
   // Retrieve glTF root object properties
   // https://github.com/KhronosGroup/glTF/blob/main/specification/2.0/schema/texture.schema.json
@@ -255,7 +255,7 @@ function getPexMaterialTexture(
         canvas2d.height = utils.nextPowerOfTwo(img.height);
 
         console.warn(
-          `Resizing NPOT texture ${img.width}x${img.height} to ${canvas2d.width}x${canvas2d.height}. Src: ${img.src}`
+          `Resizing NPOT texture ${img.width}x${img.height} to ${canvas2d.width}x${canvas2d.height}. Src: ${img.src}`,
         );
 
         const ctx2d = canvas2d.getContext("2d");
@@ -324,7 +324,7 @@ function handleMaterial(material, gltf, ctx) {
     };
     if (pbrMetallicRoughness.baseColorFactor) {
       materialProps.baseColor = linearToSrgb(
-        pbrMetallicRoughness.baseColorFactor
+        pbrMetallicRoughness.baseColorFactor,
       );
     }
     if (pbrMetallicRoughness.baseColorTexture) {
@@ -332,7 +332,7 @@ function handleMaterial(material, gltf, ctx) {
         pbrMetallicRoughness.baseColorTexture,
         gltf,
         ctx,
-        ctx.Encoding.SRGB
+        ctx.Encoding.SRGB,
       );
     }
     if (pbrMetallicRoughness.metallicFactor !== undefined) {
@@ -345,7 +345,7 @@ function handleMaterial(material, gltf, ctx) {
       materialProps.metallicRoughnessTexture = getPexMaterialTexture(
         pbrMetallicRoughness.metallicRoughnessTexture,
         gltf,
-        ctx
+        ctx,
       );
     }
 
@@ -361,7 +361,7 @@ function handleMaterial(material, gltf, ctx) {
             sheenExt.sheenColorTexture,
             gltf,
             ctx,
-            ctx.Encoding.SRGB
+            ctx.Encoding.SRGB,
           );
         }
         if (sheenExt.sheenRoughnessTexture) {
@@ -370,7 +370,7 @@ function handleMaterial(material, gltf, ctx) {
             sheenExt.sheenRoughnessTexture.index
           ) {
             throw new Error(
-              "Sheen roughnes texture is different from sheen color texture. Not supported."
+              "Sheen roughnes texture is different from sheen color texture. Not supported.",
             );
           }
         }
@@ -388,7 +388,7 @@ function handleMaterial(material, gltf, ctx) {
             clearcoatExt.clearcoatTexture,
             gltf,
             ctx,
-            ctx.Encoding.Linear
+            ctx.Encoding.Linear,
           );
         }
         if (clearcoatExt.clearcoatRoughnessTexture) {
@@ -396,7 +396,7 @@ function handleMaterial(material, gltf, ctx) {
             clearcoatExt.clearcoatRoughnessTexture,
             gltf,
             ctx,
-            ctx.Encoding.Linear
+            ctx.Encoding.Linear,
           );
         }
         if (clearcoatExt.clearcoatNormalTexture) {
@@ -404,7 +404,7 @@ function handleMaterial(material, gltf, ctx) {
             clearcoatExt.clearcoatNormalTexture,
             gltf,
             ctx,
-            ctx.Encoding.SRGB
+            ctx.Encoding.SRGB,
           );
         }
       }
@@ -429,7 +429,7 @@ function handleMaterial(material, gltf, ctx) {
     }
     if (pbrSpecularGlossiness.specularFactor) {
       materialProps.specular = linearToSrgb(
-        pbrSpecularGlossiness.specularFactor
+        pbrSpecularGlossiness.specularFactor,
       );
     }
     if (pbrSpecularGlossiness.glossinessFactor !== undefined) {
@@ -440,7 +440,7 @@ function handleMaterial(material, gltf, ctx) {
         pbrSpecularGlossiness.diffuseTexture,
         gltf,
         ctx,
-        ctx.Encoding.SRGB
+        ctx.Encoding.SRGB,
       );
     }
     if (pbrSpecularGlossiness.specularGlossinessTexture) {
@@ -448,7 +448,7 @@ function handleMaterial(material, gltf, ctx) {
         pbrSpecularGlossiness.specularGlossinessTexture,
         gltf,
         ctx,
-        ctx.Encoding.SRGB
+        ctx.Encoding.SRGB,
       );
     }
   }
@@ -459,7 +459,7 @@ function handleMaterial(material, gltf, ctx) {
     materialProps.normalTexture = getPexMaterialTexture(
       material.normalTexture,
       gltf,
-      ctx
+      ctx,
     );
   }
 
@@ -468,7 +468,7 @@ function handleMaterial(material, gltf, ctx) {
     materialProps.occlusionTexture = getPexMaterialTexture(
       material.occlusionTexture,
       gltf,
-      ctx
+      ctx,
     );
   }
 
@@ -477,7 +477,7 @@ function handleMaterial(material, gltf, ctx) {
       material.emissiveTexture,
       gltf,
       ctx,
-      ctx.Encoding.SRGB
+      ctx.Encoding.SRGB,
     );
   }
 
@@ -525,7 +525,7 @@ async function handlePrimitive(
   primitive,
   { bufferViews, accessors },
   ctx,
-  { dracoOptions }
+  { dracoOptions },
 ) {
   let geometryProps = {};
 
@@ -580,7 +580,7 @@ async function handlePrimitive(
     } catch (error) {
       console.warn(
         `glTF Loader: Error decoding Draco geometry '${primitive.name}'. Trying to load uncompressed geometry.`,
-        error
+        error,
       );
     }
 
@@ -604,7 +604,7 @@ async function handlePrimitive(
 
       const accessor = getAccessor(
         accessors[primitive.attributes[name]],
-        bufferViews
+        bufferViews,
       );
 
       if (accessor.sparse) {
@@ -612,7 +612,7 @@ async function handlePrimitive(
       } else {
         if (!accessor._bufferView._vertexBuffer) {
           accessor._bufferView._vertexBuffer = ctx.vertexBuffer(
-            accessor._bufferView._data
+            accessor._bufferView._data,
           );
         }
         attributes[attributeName] = {
@@ -628,7 +628,7 @@ async function handlePrimitive(
 
       return attributes;
     },
-    {}
+    {},
   );
 
   const positionAccessor = accessors[primitive.attributes.POSITION];
@@ -659,7 +659,7 @@ async function handlePrimitive(
   if (indicesAccessor) {
     if (!indicesAccessor._bufferView._indexBuffer) {
       indicesAccessor._bufferView._indexBuffer = ctx.indexBuffer(
-        indicesAccessor._bufferView._data
+        indicesAccessor._bufferView._data,
       );
     }
     geometryProps = {
@@ -698,13 +698,13 @@ async function handleMesh({ primitives, weights }, gltf, ctx, options) {
         primitive,
         gltf,
         ctx,
-        options
+        options,
       );
       const geometryCmp = components.geometry(decodedPrimitive);
       const materialCmp =
         primitive.material !== undefined
           ? components.material(
-              handleMaterial(gltf.materials[primitive.material], gltf, ctx)
+              handleMaterial(gltf.materials[primitive.material], gltf, ctx),
             )
           : components.material();
 
@@ -725,13 +725,13 @@ async function handleMesh({ primitives, weights }, gltf, ctx, options) {
 
             const accessor = getAccessor(
               gltf.accessors[target[targetKey]],
-              gltf.bufferViews
+              gltf.bufferViews,
             );
 
             targets[targetName].push(
               accessor.normalized
                 ? normalizeData(accessor._data)
-                : accessor._data
+                : accessor._data,
             );
 
             if (!sources[targetName]) {
@@ -741,7 +741,7 @@ async function handleMesh({ primitives, weights }, gltf, ctx, options) {
               ) {
                 const sourceAccessor = getAccessor(
                   gltf.accessors[primitive.attributes[targetKey]],
-                  gltf.bufferViews
+                  gltf.bufferViews,
                 );
 
                 sources[targetName] = sourceAccessor.normalized
@@ -764,7 +764,7 @@ async function handleMesh({ primitives, weights }, gltf, ctx, options) {
       }
 
       return entityComponents;
-    })
+    }),
   );
 }
 
@@ -896,7 +896,7 @@ async function handleNode(node, gltf, i, ctx, options) {
     const skin = gltf.skins[node.skin];
     const accessor = getAccessor(
       gltf.accessors[skin.inverseBindMatrices],
-      gltf.bufferViews
+      gltf.bufferViews,
     );
 
     let inverseBindMatrices = [];
@@ -918,7 +918,7 @@ async function handleNode(node, gltf, i, ctx, options) {
       gltf.meshes[node.mesh],
       gltf,
       ctx,
-      options
+      options,
     );
     let instances = null;
 
@@ -942,12 +942,12 @@ async function handleNode(node, gltf, i, ctx, options) {
             "EXT_mesh_gpu_instancing",
             instancingPrimitive,
             instances,
-            maxInstances
+            maxInstances,
           );
           instances.offsets.buffer = ctx.vertexBuffer(instances.offsets.data);
           instances.scales.buffer = ctx.vertexBuffer(instances.scales.data);
           instances.rotations.buffer = ctx.vertexBuffer(
-            instances.rotations.data
+            instances.rotations.data,
           );
         }
         instances.rotations = null;
@@ -1067,7 +1067,7 @@ function handleAnimation(animation, { accessors, bufferViews, nodes }, index) {
 
   const duration = channels.reduce(
     (duration, { input }) => Math.max(duration, input[input.length - 1]),
-    0
+    0,
   );
 
   return components.animation({
@@ -1134,7 +1134,7 @@ function unpackBinary(data) {
   const length = binaryReader.readUint32();
   if (length !== binaryReader.getLength()) {
     throw new Error(
-      `Length in header does not match actual data length: ${length} != ${binaryReader.getLength()}`
+      `Length in header does not match actual data length: ${length} != ${binaryReader.getLength()}`,
     );
   }
 
@@ -1247,7 +1247,7 @@ async function loadGltf(url, options = {}) {
   console.debug("loaders.gltf", url, extension, isBinary);
   // https://github.com/KhronosGroup/glTF/blob/main/specification/2.0/schema/glTF.schema.json
   const { json, bin } = loadData(
-    isBinary ? await loadArrayBuffer(url) : await loadJson(url)
+    isBinary ? await loadArrayBuffer(url) : await loadJson(url),
   );
 
   console.debug("loaders.gltf", json, bin);
@@ -1256,12 +1256,12 @@ async function loadGltf(url, options = {}) {
   // https://www.khronos.org/registry/glTF/specs/2.0/glTF-2.0.html#specifying-extensions
   if (json.extensionsRequired) {
     const unsupportedExtensions = json.extensionsRequired.filter(
-      (extension) => !SUPPORTED_EXTENSIONS.includes(extension)
+      (extension) => !SUPPORTED_EXTENSIONS.includes(extension),
     );
     if (unsupportedExtensions.length) {
       console.warn(
         "glTF loader: unsupported extensions",
-        unsupportedExtensions
+        unsupportedExtensions,
       );
     }
   }
@@ -1271,7 +1271,7 @@ async function loadGltf(url, options = {}) {
   const version = parseInt(json.asset.version);
   if (!version || version < 2) {
     console.warn(
-      `glTF Loader: Invalid or unsupported version: ${json.asset.version}`
+      `glTF Loader: Invalid or unsupported version: ${json.asset.version}`,
     );
   }
 
@@ -1288,11 +1288,11 @@ async function loadGltf(url, options = {}) {
           buffer._data = decodeBase64(buffer.uri);
         } else {
           buffer._data = await loadArrayBuffer(
-            [basePath, buffer.uri].join("/")
+            [basePath, buffer.uri].join("/"),
           );
         }
       }
-    })
+    }),
   );
 
   // https://github.com/KhronosGroup/glTF/blob/main/specification/2.0/schema/bufferView.schema.json
@@ -1302,7 +1302,7 @@ async function loadGltf(url, options = {}) {
 
     bufferView._data = bufferData.slice(
       bufferView.byteOffset,
-      bufferView.byteOffset + bufferView.byteLength
+      bufferView.byteOffset + bufferView.byteLength,
     );
 
     // Set buffer if target is present
@@ -1327,7 +1327,7 @@ async function loadGltf(url, options = {}) {
           const buffer = json.buffers[bufferView.buffer];
           const data = buffer._data.slice(
             bufferView.byteOffset,
-            bufferView.byteOffset + bufferView.byteLength
+            bufferView.byteOffset + bufferView.byteLength,
           );
           if (image.mimeType === "image/ktx2") {
             image._img = await loadKtx2(data, ctx.gl, {
@@ -1357,7 +1357,7 @@ async function loadGltf(url, options = {}) {
               : await loadImage({ url, crossOrigin: "anonymous" });
           }
         }
-      })
+      }),
     );
   }
 
@@ -1388,8 +1388,8 @@ async function loadGltf(url, options = {}) {
       // }, []);
       scene.entities = await Promise.all(
         json.nodes.map(
-          async (node, i) => await handleNode(node, json, i, ctx, opts)
-        )
+          async (node, i) => await handleNode(node, json, i, ctx, opts),
+        ),
       );
       scene.entities = scene.entities.flat();
       scene.entities.unshift(scene.root);
@@ -1464,7 +1464,7 @@ async function loadGltf(url, options = {}) {
               .forEach((childEntity) => {
                 childEntity.skin.joints = joints;
                 childEntity.skin.jointMatrices = joints.map(() =>
-                  mat4.create()
+                  mat4.create(),
                 );
               });
           }
@@ -1478,7 +1478,7 @@ async function loadGltf(url, options = {}) {
       transformSystem.update(scene.entities);
 
       return scene;
-    })
+    }),
   );
   transformSystem.dispose();
 

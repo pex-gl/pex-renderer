@@ -46,7 +46,7 @@ export default (options) => {
     camera.fov,
     camera.aspect,
     camera.near,
-    camera.far
+    camera.far,
   );
   return camera;
 };

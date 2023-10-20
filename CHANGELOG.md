@@ -1,6 +1,32 @@
 # Changelog
 
-All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
+All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
+
+# [4.0.0-alpha.45](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.44...v4.0.0-alpha.45) (2023-10-20)
+
+
+### Bug Fixes
+
+* **ecs:** compose shadow mapping with render-pipeline-system ([47012f7](https://github.com/pex-gl/pex-renderer/commit/47012f7b04aca1dadf7f16165a84de04ba65a274)), closes [#350](https://github.com/pex-gl/pex-renderer/issues/350)
+* **ecs:** handle skybox with no sunPosition nor envMap ([cd8a8bc](https://github.com/pex-gl/pex-renderer/commit/cd8a8bc7c83a3d5fddf619f006e401ae4f1547a3)), closes [#352](https://github.com/pex-gl/pex-renderer/issues/352)
+
+
+### Features
+
+* **ecs:** add base renderer to share logic between renderers ([6da7db3](https://github.com/pex-gl/pex-renderer/commit/6da7db3ade882709ae6f606f893d1231eaed842e))
+* **ecs:** add material component type check for line + upgrade line renderer ([c8f99c6](https://github.com/pex-gl/pex-renderer/commit/c8f99c617403c16959e4307362c4e0ddf8b8b965))
+* **ecs:** add outputs Set to render-pipeline ([e9efd95](https://github.com/pex-gl/pex-renderer/commit/e9efd95c04056caf9e921ebc4dbc63e1c527a46f))
+* **ecs:** handle post processing, drawToScreen with Linear/Gamma cameras (wip) ([3d9af59](https://github.com/pex-gl/pex-renderer/commit/3d9af59ee5d1dc2c78a2e34116c4f035447997e5))
+* **ecs:** make vertex color optional for line renderer + namespace post-processing subcomponents ([dd8d2d3](https://github.com/pex-gl/pex-renderer/commit/dd8d2d348464a39ce6deb5c1c74cc4611c7d0eef))
+* **pbr:** add support for tone map in render-view ([10af3c4](https://github.com/pex-gl/pex-renderer/commit/10af3c4bc06c5cb5b4909fc7c4e2da8e566ceb2c))
+* update lights for PCSS + add output encoding, tonemap and exposure to camera + rename line material type from segments to line ([77b83b0](https://github.com/pex-gl/pex-renderer/commit/77b83b0a02dc59d67e653c374e5223645e873ed5))
+
+
+### Reverts
+
+* light getCorners gc ([b5b9ac3](https://github.com/pex-gl/pex-renderer/commit/b5b9ac387a10d783bb716b7066f5deb92d0e31e9))
+
+
 
 # [4.0.0-alpha.44](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.43...v4.0.0-alpha.44) (2023-10-04)
 

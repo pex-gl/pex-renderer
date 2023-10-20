@@ -31,7 +31,7 @@ export default ({ ctx, resourceCache }) => {
     render(
       renderView,
       _,
-      { colorAttachments, depthAttachment, descriptors, passes }
+      { colorAttachments, depthAttachment, descriptors, passes },
     ) {
       const postProcessing = renderView.cameraEntity.postProcessing;
 

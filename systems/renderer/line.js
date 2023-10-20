@@ -47,7 +47,7 @@ export default ({ ctx } = {}) => {
       return this.getHashFromProps(
         entity.material,
         pipelineMaterialProps,
-        this.debug
+        this.debug,
       );
     },
     getPipelineOptions() {
@@ -56,7 +56,7 @@ export default ({ ctx } = {}) => {
     getLinePositionsBuffer(resolution) {
       if (!this.cache.positionBuffers[resolution]) {
         const positions = new Float32Array(
-          instanceRoundRound.length + resolution * 18
+          instanceRoundRound.length + resolution * 18,
         );
         positions.set(instanceRoundRound);
 
@@ -71,14 +71,14 @@ export default ({ ctx } = {}) => {
             index + 1,
             0.5 * Math.cos(theta0),
             0.5 * Math.sin(theta0),
-            0
+            0,
           );
           avec3.set3(
             positions,
             index + 2,
             0.5 * Math.cos(theta1),
             0.5 * Math.sin(theta1),
-            0
+            0,
           );
 
           // Right cap
@@ -92,14 +92,14 @@ export default ({ ctx } = {}) => {
             index + 1,
             0.5 * Math.cos(theta0),
             0.5 * Math.sin(theta0),
-            1
+            1,
           );
           avec3.set3(
             positions,
             index + 2,
             0.5 * Math.cos(theta1),
             0.5 * Math.sin(theta1),
-            1
+            1,
           );
         }
 
@@ -119,9 +119,7 @@ export default ({ ctx } = {}) => {
 
       const renderableEntities = entities.filter(
         (entity) =>
-          entity.geometry &&
-          entity.material &&
-          entity.material.type === "line"
+          entity.geometry && entity.material && entity.material.type === "line",
       );
 
       for (let i = 0; i < renderableEntities.length; i++) {

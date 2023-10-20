@@ -70,7 +70,7 @@ const flagDefinitions = [
 
 const lightColorToSrgb = (light) =>
   light.color.map((c, j) =>
-    j < 3 ? Math.pow(c * light.intensity, 1.0 / 2.2) : c
+    j < 3 ? Math.pow(c * light.intensity, 1.0 / 2.2) : c,
   );
 
 export default ({ ctx, shadowQuality = 3 }) => {
@@ -113,7 +113,7 @@ export default ({ ctx, shadowQuality = 3 }) => {
         console.warn(
           NAMESPACE,
           this.type,
-          `light component missing shadowMap. Add a renderPipeplineSystem.update(entities).`
+          `light component missing shadowMap. Add a renderPipeplineSystem.update(entities).`,
         );
       } else {
         return true;
@@ -124,7 +124,7 @@ export default ({ ctx, shadowQuality = 3 }) => {
         console.warn(
           NAMESPACE,
           this.type,
-          `reflectionProbe component missing _reflectionProbe. Add a reflectionProbeSystem.update(entities, { renderers: [skyboxRendererSystem] }).`
+          `reflectionProbe component missing _reflectionProbe. Add a reflectionProbeSystem.update(entities, { renderers: [skyboxRendererSystem] }).`,
         );
       } else {
         return true;
@@ -135,13 +135,13 @@ export default ({ ctx, shadowQuality = 3 }) => {
         console.warn(
           NAMESPACE,
           this.type,
-          `entity missing _geometry. Add a geometrySystem.update(entities).`
+          `entity missing _geometry. Add a geometrySystem.update(entities).`,
         );
       } else if (!entity._transform) {
         console.warn(
           NAMESPACE,
           this.type,
-          `entity missing _transform. Add a transformSystem.update(entities).`
+          `entity missing _transform. Add a transformSystem.update(entities).`,
         );
       } else {
         return true;
@@ -154,7 +154,7 @@ export default ({ ctx, shadowQuality = 3 }) => {
       const { material, _geometry: geometry } = entity;
 
       return `${material.id}_${geometry.primitive}_${Object.entries(
-        pipelineMaterialDefaults
+        pipelineMaterialDefaults,
       )
         .map(([key, value]) => material[key] ?? value)
         .join("_")}`;
@@ -410,19 +410,19 @@ export default ({ ctx, shadowQuality = 3 }) => {
         // Lighting
         pipelineOptions.ambientLights = entities.filter((e) => e.ambientLight);
         pipelineOptions.directionalLights = entities.filter(
-          (e) => e.directionalLight
+          (e) => e.directionalLight,
         );
         pipelineOptions.pointLights = entities.filter((e) => e.pointLight);
         pipelineOptions.spotLights = entities.filter((e) => e.spotLight);
         pipelineOptions.areaLights = entities.filter((e) => e.areaLight);
         pipelineOptions.shadowCastingEntities = entities.filter(
-          (entity) => entity.geometry && entity.material?.castShadows
+          (entity) => entity.geometry && entity.material?.castShadows,
         );
 
         this.gatherLightsInfo(pipelineOptions, sharedUniforms);
         this.gatherReflectionProbeInfo(
           pipelineOptions.reflectionProbes,
-          sharedUniforms
+          sharedUniforms,
         );
       }
 
@@ -447,7 +447,7 @@ export default ({ ctx, shadowQuality = 3 }) => {
           e.material &&
           e.material.type === undefined &&
           (!shadowMapping || e.material.castShadows) &&
-          (transparent ? e.material.blend : !e.material.blend)
+          (transparent ? e.material.blend : !e.material.blend),
       );
 
       for (let i = 0; i < renderableEntities.length; i++) {
@@ -464,7 +464,7 @@ export default ({ ctx, shadowQuality = 3 }) => {
         const pipeline = this.getPipeline(
           ctx,
           renderableEntity,
-          pipelineOptions
+          pipelineOptions,
         );
 
         // Get all uniforms

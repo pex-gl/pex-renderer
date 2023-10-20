@@ -156,6 +156,61 @@ ctx.frame(() => {
 <dd></dd>
 </dl>
 
+## Functions
+
+<dl>
+<dt><a href="#default">default()</a> ⇒ <code><a href="#System">System</a></code></dt>
+<dd><p>Camera system</p>
+<p>Adds:</p>
+<ul>
+<li>&quot;_orbiter&quot; to orbiter components</li>
+</ul>
+</dd>
+<dt><a href="#default">default(options)</a> ⇒ <code><a href="#System">System</a></code></dt>
+<dd><p>Geometry system</p>
+<p>Adds:</p>
+<ul>
+<li>&quot;bounds&quot; to geometry components</li>
+<li>&quot;_geometry&quot; to entities as reference to internal cache</li>
+</ul>
+</dd>
+<dt><a href="#default">default()</a> ⇒ <code><a href="#System">System</a></code></dt>
+<dd><p>Light system</p>
+<p>Adds:</p>
+<ul>
+<li>&quot;_projectionMatrix&quot; and &quot;_viewMatrix&quot; to light components</li>
+<li>&quot;_direction&quot; to directional and spot light components</li>
+</ul>
+</dd>
+<dt><a href="#default">default()</a> ⇒ <code><a href="#System">System</a></code></dt>
+<dd><p>Render pipeline system</p>
+<p>Adds:</p>
+<ul>
+<li>&quot;_near&quot;, &quot;_far&quot;, &quot;_radiusUV&quot; and &quot;_sceneBboxInLightSpace&quot; to light components that cast shadows</li>
+<li>&quot;_shadowCubemap&quot; to pointLight components and &quot;_shadowMap&quot; to other light components</li>
+<li>&quot;_targets&quot; to postProcessing components</li>
+</ul>
+</dd>
+<dt><a href="#default">default()</a> ⇒ <code><a href="#System">System</a></code></dt>
+<dd><p>Create a shadow mapping object to compose with a render-pipeline-system</p>
+<p>Adds:</p>
+<ul>
+<li>&quot;directionalLight&quot;, &quot;spotLight&quot; and &quot;pointLight&quot; method to create shadow map render passes
+Requires:</li>
+<li>this.drawMeshes()</li>
+<li>this.descriptors</li>
+</ul>
+</dd>
+<dt><a href="#default">default()</a> ⇒ <code><a href="#System">System</a></code></dt>
+<dd><p>Transform system</p>
+<p>Adds:</p>
+<ul>
+<li>&quot;worldBounds&quot;, &quot;dirty&quot; and &quot;aabbDirty&quot; to transform components</li>
+<li>&quot;_transform&quot; to entities as reference to internal cache</li>
+</ul>
+</dd>
+</dl>
+
 ## Typedefs
 
 <dl>
@@ -188,6 +243,8 @@ ctx.frame(() => {
 <dt><a href="#TextureTransform">TextureTransform</a> : <code>object</code></dt>
 <dd></dd>
 <dt><a href="#MaterialComponentOptions">MaterialComponentOptions</a> : <code>object</code></dt>
+<dd></dd>
+<dt><a href="#LineMaterialComponentOptions">LineMaterialComponentOptions</a> : <code>object</code></dt>
 <dd></dd>
 <dt><a href="#MorphComponentOptions">MorphComponentOptions</a> : <code>object</code></dt>
 <dd></dd>
@@ -238,6 +295,8 @@ ctx.frame(() => {
 <dt><a href="#ResourceCacheUsage">ResourceCacheUsage</a> : <code>&quot;Transient&quot;</code> | <code>&quot;Retained&quot;</code></dt>
 <dd></dd>
 <dt><a href="#ResourceCache">ResourceCache</a> : <code>object</code></dt>
+<dd></dd>
+<dt><a href="#RenderView">RenderView</a> : <code>object</code></dt>
 <dd></dd>
 </dl>
 
@@ -357,9 +416,9 @@ Light helper component
 
 Material component
 
-| Param     | Type                                                               |
-| --------- | ------------------------------------------------------------------ |
-| [options] | [<code>MaterialComponentOptions</code>](#MaterialComponentOptions) |
+| Param     | Type                                                                                                                                             |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [options] | [<code>MaterialComponentOptions</code>](#MaterialComponentOptions) \| [<code>LineMaterialComponentOptions</code>](#LineMaterialComponentOptions) |
 
 <a name="module_MorphComponent"></a>
 
@@ -543,6 +602,85 @@ Create a resource cache for pex-context caching.
 | ----- | ---------------------------------------------- |
 | ctx   | <code>module:pex-context/types/index.js</code> |
 
+<a name="default"></a>
+
+## default() ⇒ [<code>System</code>](#System)
+
+Camera system
+
+Adds:
+
+- "\_orbiter" to orbiter components
+
+**Kind**: global function
+<a name="default"></a>
+
+## default(options) ⇒ [<code>System</code>](#System)
+
+Geometry system
+
+Adds:
+
+- "bounds" to geometry components
+- "\_geometry" to entities as reference to internal cache
+
+**Kind**: global function
+
+| Param   | Type                                         |
+| ------- | -------------------------------------------- |
+| options | [<code>SystemOptions</code>](#SystemOptions) |
+
+<a name="default"></a>
+
+## default() ⇒ [<code>System</code>](#System)
+
+Light system
+
+Adds:
+
+- "\_projectionMatrix" and "\_viewMatrix" to light components
+- "\_direction" to directional and spot light components
+
+**Kind**: global function
+<a name="default"></a>
+
+## default() ⇒ [<code>System</code>](#System)
+
+Render pipeline system
+
+Adds:
+
+- "\_near", "\_far", "\_radiusUV" and "\_sceneBboxInLightSpace" to light components that cast shadows
+- "\_shadowCubemap" to pointLight components and "\_shadowMap" to other light components
+- "\_targets" to postProcessing components
+
+**Kind**: global function
+<a name="default"></a>
+
+## default() ⇒ [<code>System</code>](#System)
+
+Create a shadow mapping object to compose with a render-pipeline-system
+
+Adds:
+
+- "directionalLight", "spotLight" and "pointLight" method to create shadow map render passes
+  Requires:
+- this.drawMeshes()
+- this.descriptors
+
+**Kind**: global function
+<a name="default"></a>
+
+## default() ⇒ [<code>System</code>](#System)
+
+Transform system
+
+Adds:
+
+- "worldBounds", "dirty" and "aabbDirty" to transform components
+- "\_transform" to entities as reference to internal cache
+
+**Kind**: global function
 <a name="Entity"></a>
 
 ## Entity : <code>object</code>
@@ -643,19 +781,30 @@ Create a resource cache for pex-context caching.
 **Kind**: global typedef
 **Properties**
 
-| Name            | Type                                                                          | Default                                                            |
-| --------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| [projection]    | <code>&quot;perspective&quot;</code> \| <code>&quot;orthographic&quot;</code> | <code>&quot;perspective&quot;</code>                               |
-| [viewport]      | <code>Array.&lt;number&gt;</code>                                             | <code>[0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight]</code> |
-| [near]          | <code>number</code>                                                           | <code>0.5</code>                                                   |
-| [far]           | <code>number</code>                                                           | <code>1000</code>                                                  |
-| [aspect]        | <code>number</code>                                                           | <code>1</code>                                                     |
-| [fov]           | <code>number</code>                                                           | <code>Math.PI / 4</code>                                           |
-| [clearColor]    | <code>module:pex-color~color</code>                                           |                                                                    |
-| [viewMatrix]    | <code>mat4</code>                                                             |                                                                    |
-| [invViewMatrix] | <code>mat4</code>                                                             |                                                                    |
-| [culling]       | <code>boolean</code>                                                          | <code>false</code>                                                 |
-| [view]          | [<code>CameraView</code>](#CameraView)                                        |                                                                    |
+| Name             | Type                                                                                                                                                                                                                                                                                          | Default                              | Description                                                            |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ | ---------------------------------------------------------------------- |
+| [projection]     | <code>&quot;perspective&quot;</code> \| <code>&quot;orthographic&quot;</code>                                                                                                                                                                                                                 | <code>&quot;perspective&quot;</code> |                                                                        |
+| [near]           | <code>number</code>                                                                                                                                                                                                                                                                           | <code>0.5</code>                     |                                                                        |
+| [far]            | <code>number</code>                                                                                                                                                                                                                                                                           | <code>1000</code>                    |                                                                        |
+| [aspect]         | <code>number</code>                                                                                                                                                                                                                                                                           | <code>1</code>                       |                                                                        |
+| [clearColor]     | <code>module:pex-color~color</code>                                                                                                                                                                                                                                                           |                                      |                                                                        |
+| [viewMatrix]     | <code>mat4</code>                                                                                                                                                                                                                                                                             |                                      |                                                                        |
+| [invViewMatrix]  | <code>mat4</code>                                                                                                                                                                                                                                                                             |                                      |                                                                        |
+| [culling]        | <code>boolean</code>                                                                                                                                                                                                                                                                          | <code>false</code>                   |                                                                        |
+| [exposure]       | <code>number</code>                                                                                                                                                                                                                                                                           | <code>1</code>                       |                                                                        |
+| [toneMap]        | <code>&quot;aces&quot;</code> \| <code>&quot;filmic&quot;</code> \| <code>&quot;lottes&quot;</code> \| <code>&quot;reinhard&quot;</code> \| <code>&quot;reinhard2&quot;</code> \| <code>&quot;uchimura&quot;</code> \| <code>&quot;uncharted2&quot;</code> \| <code>&quot;unreal&quot;</code> | <code>&quot;aces&quot;</code>        |                                                                        |
+| [outputEncoding] | <code>number</code>                                                                                                                                                                                                                                                                           | <code>ctx.Encoding.Gamma</code>      |                                                                        |
+| [focalLength]    | <code>number</code>                                                                                                                                                                                                                                                                           | <code>50</code>                      | Focal length of the camera lens [10mm - 200mm] in mm                   |
+| [fStop]          | <code>number</code>                                                                                                                                                                                                                                                                           | <code>2.8</code>                     | Ratio of camera lens opening, f-number, f/N, aperture [1.2 - 32] in mm |
+| [sensorSize]     | <code>number</code>                                                                                                                                                                                                                                                                           | <code>[36, 24]</code>                | Physical camera sensor or film size [sensorWidth, sensorHeight] in mm  |
+| sensorFit        | <code>&quot;vertical&quot;</code> \| <code>&quot;horizontal&quot;</code> \| <code>&quot;fit&quot;</code> \| <code>&quot;overscan&quot;</code> \| <code>&quot;vertical&quot;</code>                                                                                                            |                                      | Matching of camera frame to sensor frame                               |
+| [view]           | [<code>CameraView</code>](#CameraView)                                                                                                                                                                                                                                                        |                                      |                                                                        |
+| [fov]            | <code>number</code>                                                                                                                                                                                                                                                                           | <code>Math.PI / 4</code>             |                                                                        |
+| [left]           | <code>number</code>                                                                                                                                                                                                                                                                           | <code>-1</code>                      |                                                                        |
+| [right]          | <code>number</code>                                                                                                                                                                                                                                                                           | <code>1</code>                       |                                                                        |
+| [bottom]         | <code>number</code>                                                                                                                                                                                                                                                                           | <code>-1</code>                      |                                                                        |
+| [top]            | <code>number</code>                                                                                                                                                                                                                                                                           | <code>1</code>                       |                                                                        |
+| [zoom]           | <code>number</code>                                                                                                                                                                                                                                                                           | <code>1</code>                       |                                                                        |
 
 <a name="DirectionalLightComponentOptions"></a>
 
@@ -738,7 +887,7 @@ Create a resource cache for pex-context caching.
 | Name                      | Type                                                                             | Default                            | Description                                                                                                                                                 |
 | ------------------------- | -------------------------------------------------------------------------------- | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [unlit]                   | <code>boolean</code>                                                             |                                    |                                                                                                                                                             |
-| [type]                    | <code>undefined</code> \| <code>&quot;segments&quot;</code>                      | <code>&quot;undefined&quot;</code> |                                                                                                                                                             |
+| [type]                    | <code>undefined</code> \| <code>&quot;line&quot;</code>                          | <code>&quot;undefined&quot;</code> |                                                                                                                                                             |
 | [baseColor]               | <code>Array.&lt;number&gt;</code>                                                | <code>[1, 1, 1, 1]</code>          |                                                                                                                                                             |
 | [emissiveColor]           | <code>Array.&lt;number&gt;</code>                                                | <code>&quot;undefined&quot;</code> |                                                                                                                                                             |
 | [emissiveIntensity]       | <code>number</code>                                                              | <code>1</code>                     |                                                                                                                                                             |
@@ -776,6 +925,20 @@ Create a resource cache for pex-context caching.
 | [pointSize]               | <code>number</code>                                                              | <code>1</code>                     |                                                                                                                                                             |
 | [castShadows]             | <code>boolean</code>                                                             | <code>false</code>                 |                                                                                                                                                             |
 | [receiveShadows]          | <code>boolean</code>                                                             | <code>false</code>                 |                                                                                                                                                             |
+
+<a name="LineMaterialComponentOptions"></a>
+
+## LineMaterialComponentOptions : <code>object</code>
+
+**Kind**: global typedef
+**Properties**
+
+| Name             | Type                              | Default                       |
+| ---------------- | --------------------------------- | ----------------------------- |
+| [type]           | <code>&quot;line&quot;</code>     | <code>&quot;line&quot;</code> |
+| [baseColor]      | <code>Array.&lt;number&gt;</code> | <code>[1, 1, 1, 1]</code>     |
+| [lineWidth]      | <code>number</code>               | <code>1</code>                |
+| [lineResolution] | <code>number</code>               | <code>16</code>               |
 
 <a name="MorphComponentOptions"></a>
 
@@ -1077,6 +1240,21 @@ Create a resource cache for pex-context caching.
 | endFrame   | <code>function</code>                                  |
 | dispose    | <code>function</code>                                  |
 | Usage      | [<code>ResourceCacheUsage</code>](#ResourceCacheUsage) |
+
+<a name="RenderView"></a>
+
+## RenderView : <code>object</code>
+
+**Kind**: global typedef
+**Properties**
+
+| Name             | Type                                                 |
+| ---------------- | ---------------------------------------------------- |
+| camera           | <code>object</code>                                  |
+| cameraEntity     | [<code>Entity</code>](#Entity)                       |
+| viewport         | <code>module:pex-context/types/types~Viewport</code> |
+| [exposure]       | <code>object</code>                                  |
+| [outputEncoding] | <code>object</code>                                  |
 
 <!-- api-end -->
 
