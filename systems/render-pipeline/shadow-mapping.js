@@ -22,7 +22,8 @@ export default ({ renderGraph, resourceCache }) => ({
       light._sceneBboxInLightSpace,
       shadowCastingEntities.flatMap((entity) =>
         aabb
-          .getCorners(entity.transform.worldBounds, TEMP_BOUNDS_POINTS)
+          // .getCorners(entity.transform.worldBounds, TEMP_BOUNDS_POINTS) // TODO: doesn't work
+          .getCorners(entity.transform.worldBounds)
           .map((p) => vec3.multMat4(p, light._viewMatrix))
       )
     );
