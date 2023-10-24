@@ -48,7 +48,12 @@ const getBBoxPositionsList = (bbox) => [
   [bbox[1][0], bbox[0][1], bbox[1][2]],
 ];
 
-const getCirclePositions = ({ steps, axis, radius, center }) => {
+const getCirclePositions = ({
+  steps,
+  axis,
+  radius = 1,
+  center = [0, 0, 0],
+}) => {
   const points = [];
 
   for (let i = 0; i < steps; i++) {
@@ -58,8 +63,8 @@ const getCirclePositions = ({ steps, axis, radius, center }) => {
     const pos = [0, 0, 0];
     pos[axis ? axis[0] : 0] = x;
     pos[axis ? axis[1] : 1] = y;
-    vec3.scale(pos, radius || 1);
-    vec3.add(pos, center || [0, 0, 0]);
+    vec3.scale(pos, radius);
+    vec3.add(pos, center);
     points.push(pos);
   }
 
