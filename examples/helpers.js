@@ -172,7 +172,7 @@ const glTFOptions = {
 };
 const [cesiumManScene] = await loaders.gltf(
   getURL("assets/models/CesiumMan/CesiumMan.glb"),
-  glTFOptions
+  glTFOptions,
 );
 cesiumManScene.entities[0].transform.position = [0.5, 0, 0.5];
 cesiumManScene.entities[0].transform.scale = new Array(3).fill(0.5);
@@ -185,7 +185,7 @@ world.entities.push(...cesiumManScene.entities);
 
 const [droneScene] = await loaders.gltf(
   getURL("assets/models/buster-drone/buster-drone-etc1s-draco.glb"),
-  glTFOptions
+  glTFOptions,
 );
 droneScene.entities[0].transform.position = [-0.5, 0.25, 0.5];
 droneScene.entities[0].transform.scale = new Array(3).fill(0.0025);
@@ -254,7 +254,7 @@ gui.addParam(
   {
     min: 0,
     max: 20,
-  }
+  },
 );
 gui.addColumn("Geometry");
 gui.addParam("Bounding box", State, "bbox", {}, () => {
@@ -273,7 +273,7 @@ ctx.frame(() => {
   renderEngine.update(world.entities);
   renderEngine.render(
     world.entities,
-    world.entities.filter((entity) => entity.camera)
+    world.entities.filter((entity) => entity.camera),
   );
 
   gui.draw();

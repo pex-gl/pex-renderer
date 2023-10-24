@@ -57,7 +57,7 @@ export async function getTexture(ctx, file, encoding, options = {}) {
 
 export function computeEdges({ length }, cells, stride = 3) {
   const edges = new (Primitives.utils.getCellsTypedArray(length / 3))(
-    cells.length * 2
+    cells.length * 2,
   );
 
   let cellIndex = 0;
@@ -114,7 +114,7 @@ export function mat4FromPointToPoint(
   a,
   [eyex, eyey, eyez],
   [targetx, targety, targetz],
-  [upx, upy, upz] = Y_UP
+  [upx, upy, upz] = Y_UP,
 ) {
   let z0 = targetx - eyex;
   let z1 = targety - eyey;

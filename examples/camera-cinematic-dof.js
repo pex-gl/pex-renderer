@@ -50,7 +50,7 @@ const sunEntity = createEntity({
     rotation: quat.fromTo(
       quat.create(),
       [0, 0, 1],
-      vec3.normalize([-1, -1, -1])
+      vec3.normalize([-1, -1, -1]),
     ),
   }),
   directionalLight: components.directionalLight({
@@ -75,7 +75,7 @@ world.add(pointLightEntity);
 
 const [scene] = await loaders.gltf(
   getURL("assets/models/dof-reference-poe/dof-reference-poe.gltf"),
-  { ctx, includeCameras: true }
+  { ctx, includeCameras: true },
 );
 scene.entities[1].transform.position[0] -= 0.3;
 world.entities.push(...scene.entities);
@@ -156,7 +156,7 @@ gui.addRadioList(
     { name: "1x", value: 1 },
     { name: "2x", value: 2 },
   ],
-  onResize
+  onResize,
 );
 gui.addRadioList(
   "Camera aspect ratio",
@@ -167,7 +167,7 @@ gui.addRadioList(
     { name: "9:16", value: 1 },
     { name: "W:H", value: 2 },
   ],
-  onResize
+  onResize,
 );
 gui.addColumn("Camera");
 gui.addHeader("Lens");
@@ -211,7 +211,7 @@ gui.addRadioList(
   () => {
     // set value again to trigger fieldOfView change
     onResize();
-  }
+  },
 );
 
 gui.addColumn("Depth of Field");
@@ -220,7 +220,7 @@ gui.addRadioList(
   "Type",
   postProcessing.dof,
   "type",
-  ["gustafsson", "upitis"].map((value) => ({ name: value, value }))
+  ["gustafsson", "upitis"].map((value) => ({ name: value, value })),
 );
 gui.addParam("Focus distance", postProcessing.dof, "focusDistance", {
   min: 0,
@@ -238,7 +238,7 @@ gui.addParam(
   {
     min: 0,
     max: 4,
-  }
+  },
 );
 gui.addParam("Luminance Threshold", postProcessing.dof, "luminanceThreshold", {
   min: 0,
@@ -252,7 +252,7 @@ gui.addRadioList(
   "Shape",
   postProcessing.dof,
   "shape",
-  ["disk", "pentagon"].map((value) => ({ name: value, value }))
+  ["disk", "pentagon"].map((value) => ({ name: value, value })),
 );
 gui.addParam("On Screen Point", postProcessing.dof, "focusOnScreenPoint");
 gui.addParam("Screen Point", postProcessing.dof, "screenPoint", {

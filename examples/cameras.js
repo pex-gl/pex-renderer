@@ -60,7 +60,7 @@ for (let i = 0; i < rows; i++) {
 
     const subHeader = gui.addLabel(
       `viewport: [${viewport.map((n) => n.toFixed(0))}]
-view offset: [${offset.map((n) => n.toFixed(0))}]`
+view offset: [${offset.map((n) => n.toFixed(0))}]`,
     );
     subHeader.x = 10 + (dx * viewportWidth) / pixelRatio;
     subHeader.y = (dy * viewportHeight + viewHeight) / pixelRatio - 50;
@@ -110,7 +110,7 @@ ctx.frame(() => {
   renderEngine.update(world.entities);
   renderEngine.render(
     world.entities,
-    world.entities.filter((entity) => entity.camera)
+    world.entities.filter((entity) => entity.camera),
   );
 
   gui.draw();

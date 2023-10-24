@@ -13,8 +13,6 @@ import createGUI from "pex-gui";
 import random from "pex-random";
 import { cube } from "primitive-geometry";
 
-const { camera, geometry, material, orbiter, transform } = components;
-
 random.seed(0);
 
 const State = {
@@ -32,8 +30,8 @@ const resourceCache = createResourceCache(ctx);
 // Entities
 const cameraPosition = [0, 0.35, 0];
 const cameraEntity = createEntity({
-  transform: transform({ position: cameraPosition }),
-  camera: camera({
+  transform: components.transform({ position: cameraPosition }),
+  camera: components.camera({
     fov: Math.PI / 6,
     near: 0.5,
     far: 5,
@@ -50,16 +48,16 @@ const fixCameraEntity = createEntity({
     rotation: quat.fromEuler(quat.create(), [-Math.PI / 2, 0, 0]),
   }),
   camera: components.camera(),
-  orbiter: orbiter({ element: ctx.gl.canvas }),
+  orbiter: components.orbiter({ element: ctx.gl.canvas }),
 });
 world.add(fixCameraEntity);
 
 const floorEntity = createEntity({
-  transform: transform({
+  transform: components.transform({
     position: [0, -0.1, 0],
   }),
-  geometry: geometry(cube({ sx: 2, sy: 0.05, sz: 2 })),
-  material: material({
+  geometry: components.geometry(cube({ sx: 2, sy: 0.05, sz: 2 })),
+  material: components.material({
     baseColor: [1, 0.8, 0.2, 1],
     metallic: 0,
     roughness: 0.2,
@@ -75,7 +73,7 @@ const CUBE_INSTANCES = 128;
 const cubeGeometry = cube({ sx: 1, sy: 0.25, sz: 1 });
 for (let i = 0; i < CUBE_INSTANCES; i++) {
   const cubesEntity = createEntity({
-    transform: transform({
+    transform: components.transform({
       // position: random.vec3(1.2).map((n, i) => n + Math.sign(n) * 0.25),
       position: [
         random.float(-1, 1),
@@ -84,8 +82,8 @@ for (let i = 0; i < CUBE_INSTANCES; i++) {
       ],
       scale: new Array(3).fill(random.float(0.1, 0.2)),
     }),
-    geometry: geometry(cubeGeometry),
-    material: material({
+    geometry: components.geometry(cubeGeometry),
+    material: components.material({
       baseColor: [1, 0, 1, 0.5],
       castShadows: true,
       receiveShadows: true,
@@ -172,7 +170,7 @@ const rotateCamera = (angle) => {
   quat.targetTo(
     cameraEntity.transform.rotation,
     [Math.cos(angle), cameraPosition[1], Math.sin(angle)],
-    [0, 0, 0]
+    [0, 0, 0],
   );
   cameraEntity.transform.dirty = true;
 };
@@ -188,7 +186,7 @@ gui.addParam(
   { min: 0, max: 2 * Math.PI },
   () => {
     rotateCamera(State.rotation);
-  }
+  },
 );
 rotateCamera(State.rotation);
 
@@ -235,7 +233,7 @@ ctx.frame(() => {
 
   const entitiesInView = renderPipelineSystem.cullEntities(
     world.entities,
-    cameraEntity.camera
+    cameraEntity.camera,
   );
   world.entities.forEach((entity) => {
     if (!(entity.material && entity.geometry)) return;

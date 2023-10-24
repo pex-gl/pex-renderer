@@ -48,7 +48,7 @@ const instancedGeometry = {
   offsets: { data: new Float32Array(instances * 3), divisor: 1 },
   scales: {
     data: Float32Array.from({ length: instances * 3 }, (_, i) =>
-      i % 3 === 2 ? 1 : 1
+      i % 3 === 2 ? 1 : 1,
     ),
     divisor: 1,
   },
@@ -76,7 +76,7 @@ const sunEntity = createEntity({
     rotation: quat.fromTo(
       quat.create(),
       [0, 0, 1],
-      vec3.normalize([2, -2, -1])
+      vec3.normalize([2, -2, -1]),
     ),
   }),
   directionalLight: components.directionalLight({
@@ -144,7 +144,7 @@ function update(time) {
         vec3.lerp(
           colorBase,
           [0, 0, 0, 0],
-          Math.sqrt(Math.max(0.01, 1 - value - value2))
+          Math.sqrt(Math.max(0.01, 1 - value - value2)),
         );
         vec3.lerp(color, [0, 0, 0, 0], value);
         vec3.lerp(color2, [0, 0, 0, 0], value2);
@@ -158,7 +158,7 @@ function update(time) {
           instancedGeometry.rotations.data,
           i,
           quat.fromTo(quat.create(), [0, 0, 1], dir),
-          0
+          0,
         );
         i++;
       }

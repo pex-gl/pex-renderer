@@ -22,7 +22,7 @@ function mat4fromPointToPoint(
   a,
   [eyex, eyey, eyez],
   [targetx, targety, targetz],
-  [upx, upy, upz] = Y_UP
+  [upx, upy, upz] = Y_UP,
 ) {
   let z0 = targetx - eyex;
   let z1 = targety - eyey;
@@ -176,37 +176,37 @@ const axisSize = offset * 0.45;
 const z = offset * 0.8;
 const cubeX = cube({ sx: axisSize, sy: axisSize * 0.05, sz: axisSize * 0.05 });
 cubeX.positions = cubeX.positions.map((p, i) =>
-  i % 3 === 0 ? p + axisSize / 2 : p
+  i % 3 === 0 ? p + axisSize / 2 : p,
 );
 cubeX.vertexColors = Float32Array.from(
   { length: (cubeX.positions.length / 3) * 4 },
-  (_, i) => ([0, 3].includes(i % 4) ? 1 : 0)
+  (_, i) => ([0, 3].includes(i % 4) ? 1 : 0),
 );
 const cubeY = cube({ sx: axisSize * 0.05, sy: axisSize, sz: axisSize * 0.05 });
 cubeY.positions = cubeY.positions.map((p, i) =>
-  i % 3 === 1 ? p + axisSize / 2 : p
+  i % 3 === 1 ? p + axisSize / 2 : p,
 );
 cubeY.vertexColors = Float32Array.from(
   { length: (cubeY.positions.length / 3) * 4 },
-  (_, i) => ([1, 3].includes(i % 4) ? 1 : 0)
+  (_, i) => ([1, 3].includes(i % 4) ? 1 : 0),
 );
 const cubeZ = cube({ sx: axisSize * 0.05, sy: axisSize * 0.05, sz: axisSize });
 cubeZ.positions = cubeZ.positions.map((p, i) =>
-  i % 3 === 2 ? p + axisSize / 2 : p
+  i % 3 === 2 ? p + axisSize / 2 : p,
 );
 cubeZ.vertexColors = Float32Array.from(
   { length: (cubeZ.positions.length / 3) * 4 },
-  (_, i) => ([2, 3].includes(i % 4) ? 1 : 0)
+  (_, i) => ([2, 3].includes(i % 4) ? 1 : 0),
 );
 const suzanne = parseObj(
-  await io.loadText(getURL(`assets/models/suzanne/suzanne.obj`))
+  await io.loadText(getURL(`assets/models/suzanne/suzanne.obj`)),
 )[0];
 suzanne.positions = centerAndNormalize(suzanne.positions);
 suzanne.positions = suzanne.positions.map((p) => p * 0.1);
 suzanne.uvs = new Float32Array((suzanne.positions.length / 3) * 2);
 suzanne.vertexColors = Float32Array.from(
   { length: suzanne.positions.length * 4 },
-  (_, i) => ([1, 2, 3].includes(i % 4) ? 1 : 0)
+  (_, i) => ([1, 2, 3].includes(i % 4) ? 1 : 0),
 );
 
 delete suzanne.name;
@@ -251,7 +251,7 @@ UPS.forEach((up, index) => {
       position: lookAtPosition,
       rotation: quat.fromMat4(
         quat.create(),
-        mat4.lookAt(mat4.create(), lookAtPosition, lookAtTarget, up)
+        mat4.lookAt(mat4.create(), lookAtPosition, lookAtTarget, up),
       ),
     }),
     ...baseEntity,
@@ -277,7 +277,7 @@ UPS.forEach((up, index) => {
         quat.create(),
         targetToPosition,
         targetToTarget,
-        up
+        up,
       ),
     }),
     ...baseEntity,
@@ -324,7 +324,7 @@ UPS.forEach((up, index) => {
       rotation: quat.fromTo(
         quat.create(),
         [0, 0, 1],
-        vec3.normalize(vec3.sub([...fromToTarget], fromToPosition))
+        vec3.normalize(vec3.sub([...fromToTarget], fromToPosition)),
       ),
     }),
     ...baseEntity,
@@ -350,7 +350,7 @@ UPS.forEach((up, index) => {
       position: lookAtPositionBack,
       rotation: quat.fromMat4(
         quat.create(),
-        mat4.lookAt(mat4.create(), lookAtPositionBack, lookAtTargetBack, up)
+        mat4.lookAt(mat4.create(), lookAtPositionBack, lookAtTargetBack, up),
       ),
     }),
     ...baseEntity,
@@ -375,7 +375,7 @@ UPS.forEach((up, index) => {
         quat.create(),
         targetToPositionBack,
         targetToTargetBack,
-        up
+        up,
       ),
     }),
     ...baseEntity,
@@ -400,7 +400,7 @@ UPS.forEach((up, index) => {
         quat.create(),
         ptpPositionBack,
         ptpTargetBack,
-        up
+        up,
       ),
     }),
     ...baseEntity,
@@ -424,7 +424,7 @@ UPS.forEach((up, index) => {
       rotation: quat.fromTo(
         quat.create(),
         [0, 0, 1],
-        vec3.normalize(vec3.sub([...fromToTargetBack], fromToPositionBack))
+        vec3.normalize(vec3.sub([...fromToTargetBack], fromToPositionBack)),
       ),
     }),
     ...baseEntity,
@@ -469,7 +469,7 @@ function cameraProject(a, camera) {
 
   vec4.multMat4(
     TEMP_VEC4,
-    mat4.mult([...camera.projectionMatrix], camera.viewMatrix)
+    mat4.mult([...camera.projectionMatrix], camera.viewMatrix),
   );
 
   const w = TEMP_VEC4[3];
@@ -489,7 +489,7 @@ ctx.frame(() => {
   renderEngine.update(world.entities);
   renderEngine.render(
     world.entities,
-    world.entities.filter((e) => e.camera)
+    world.entities.filter((e) => e.camera),
   );
 
   const camera = world.entities.find((e) => e.camera).camera;

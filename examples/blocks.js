@@ -54,7 +54,7 @@ const world = createWorld();
 function aabbToString(aabb) {
   if (!aabb) return "[]";
   return `[${aabb[0].map((f) => f.toFixed(0.1))} .. ${aabb[1].map((f) =>
-    f.toFixed(0.1)
+    f.toFixed(0.1),
   )}]`;
 }
 
@@ -212,7 +212,7 @@ const sunTransform = components.transform({
   rotation: quat.fromTo(
     quat.create(),
     [0, 0, 1],
-    vec3.normalize(vec3.sub([0, 0, 0], sunPosition))
+    vec3.normalize(vec3.sub([0, 0, 0], sunPosition)),
   ),
 });
 const sunEntity = createEntity({
@@ -277,7 +277,7 @@ gui.addParam(
   { min: 0, max: 5 },
   (value) => {
     areaLightEntity.transform.set({ scale: [value[0], value[1], value[2]] });
-  }
+  },
 );
 gui.addParam("AreaLight Intensity", areaLightEntity.areaLight, "intensity", {
   min: 0,
@@ -311,7 +311,7 @@ gui.addParam(
   State,
   "elevation",
   { min: -90, max: 180 },
-  updateSunPosition
+  updateSunPosition,
 );
 
 updateSunPosition();

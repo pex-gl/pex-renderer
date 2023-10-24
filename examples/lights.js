@@ -223,15 +223,15 @@ const viewportToCanvasPosition = (viewport) => [
 const getViewportPosition = (layer, offset = [10, 10]) =>
   vec2.add(
     viewportToCanvasPosition(
-      cameraEntities.find((entity) => entity.layer === layer).camera.viewport
+      cameraEntities.find((entity) => entity.layer === layer).camera.viewport,
     ),
-    offset
+    offset,
   );
 
 gui.addHeader("Global").setPosition(...getViewportPosition(LAYERS[0]));
 gui.addParam("Animate", State, "animate");
 const standardRendererSystem = renderEngine.renderers.find(
-  (renderer) => renderer.type == "standard-renderer"
+  (renderer) => renderer.type == "standard-renderer",
 );
 gui.addParam("Shadow Quality", standardRendererSystem, "shadowQuality", {
   min: 0,
@@ -243,7 +243,7 @@ gui.addParam(
   "Intensity",
   directionalLightEntity.directionalLight,
   "intensity",
-  { min: 0, max: 20 }
+  { min: 0, max: 20 },
 );
 gui.addParam("Radius", directionalLightEntity.directionalLight, "radius", {
   min: 0,
@@ -252,7 +252,7 @@ gui.addParam("Radius", directionalLightEntity.directionalLight, "radius", {
 gui.addTexture2D(
   "Shadowmap",
   directionalLightEntity.directionalLight._shadowMap,
-  { flipY: true }
+  { flipY: true },
 );
 gui.addParam("Shadows", directionalLightEntity.directionalLight, "castShadows");
 
@@ -337,7 +337,7 @@ ctx.frame(() => {
     const rotation = quat.targetTo(
       quat.create(),
       position.map((n) => -n),
-      [0, 0, 0]
+      [0, 0, 0],
     );
 
     directionalLightEntity.transform.position = position;

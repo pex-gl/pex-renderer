@@ -128,7 +128,7 @@ world.add(
       receiveShadows: true,
       castShadows: true,
     }),
-  })
+  }),
 );
 
 const levelHeight = 0.04;
@@ -145,8 +145,8 @@ const geom = {
   scales: {
     data: rects.map(
       (
-        rect // return [rect[2] * Math.pow(0.9, rect[4]), levelHeight, rect[3] * Math.pow(0.9, rect[4])]
-      ) => [rect[2], levelHeight, rect[3]]
+        rect, // return [rect[2] * Math.pow(0.9, rect[4]), levelHeight, rect[3] * Math.pow(0.9, rect[4])]
+      ) => [rect[2], levelHeight, rect[3]],
     ),
     divisor: 1,
   },
@@ -183,7 +183,7 @@ const lightEntity = createEntity({
     rotation: quat.fromTo(
       quat.create(),
       [0, 0, 1],
-      vec3.normalize([-5, -2, -3])
+      vec3.normalize([-5, -2, -3]),
     ),
   }),
   directionalLight: components.directionalLight({
@@ -208,7 +208,7 @@ for (let i = 0; i < numLights; i++) {
       rotation: quat.fromTo(
         quat.create(),
         [0, 0, 1],
-        vec3.normalize([-x, -y, -z])
+        vec3.normalize([-x, -y, -z]),
       ),
     }),
     directionalLight: components.directionalLight({
@@ -242,13 +242,13 @@ gui.addFPSMeeter();
 gui.addRadioList(
   "Debug Render",
   renderEngine.renderers.find(
-    (renderer) => renderer.type == "standard-renderer"
+    (renderer) => renderer.type == "standard-renderer",
   ),
   "debugRender",
   ["", "data.normalView", "data.ao"].map((value) => ({
     name: value || "No debug",
     value,
-  }))
+  })),
 );
 // renderEngine.renderers.find(
 //   (renderer) => renderer.type == "standard-renderer"
@@ -256,13 +256,13 @@ gui.addRadioList(
 gui.addRadioList(
   "Debug Post-Processing",
   renderEngine.renderers.find(
-    (renderer) => renderer.type == "post-processing-renderer"
+    (renderer) => renderer.type == "post-processing-renderer",
   ),
   "debugRender",
   ["", "ssao.blurHorizontal", "ssao.blurVertical"].map((value) => ({
     name: value || "No debug",
     value,
-  }))
+  })),
 );
 
 const guiNormalControl = gui.addTexture2D("Normal", null, { flipY: true });
@@ -273,7 +273,7 @@ gui.addRadioList(
   "Type",
   postProcessing.ssao,
   "type",
-  ["sao", "gtao"].map((value) => ({ name: value, value }))
+  ["sao", "gtao"].map((value) => ({ name: value, value })),
 );
 gui.addParam("Samples", postProcessing.ssao, "samples", {
   min: 2,
@@ -327,7 +327,7 @@ ctx.frame(() => {
   renderEngine.update(world.entities);
   const [{ color, normal, depth }] = renderEngine.render(
     world.entities,
-    cameraEntity
+    cameraEntity,
   );
   guiNormalControl.texture = normal;
   guiDepthControl.texture = depth;

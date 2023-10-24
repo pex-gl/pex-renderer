@@ -281,7 +281,7 @@ ctx.frame(() => {
   quat.fromAxisAngle(
     torusEntity.transform.rotation,
     [0, 1, 0],
-    Date.now() / 1000
+    Date.now() / 1000,
   );
   torusEntity.transform.dirty = true;
 

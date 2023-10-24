@@ -91,7 +91,7 @@ const floorEntity = createEntity({
     position: [0, -0.5, 0],
   }),
   geometry: components.geometry(
-    cube({ sx: 5, sy: 0.2, sz: 5, nx: 10, ny: 1, nz: 10 })
+    cube({ sx: 5, sy: 0.2, sz: 5, nx: 10, ny: 1, nz: 10 }),
   ),
   material: components.material({
     baseColor: [0.8, 0.8, 0.8, 1],
@@ -189,7 +189,7 @@ const directionalLightEntity = createEntity({
     rotation: quat.fromTo(
       quat.create(),
       [0, 0, 1],
-      vec3.normalize(vec3.sub([0, 0, 0], [2, 3, 1]))
+      vec3.normalize(vec3.sub([0, 0, 0], [2, 3, 1])),
     ),
   }),
   directionalLight: components.directionalLight({
@@ -288,7 +288,7 @@ gui.addParam(
   "Blit Ready",
   State,
   "drawToTextureBlitReady",
-  updateCameraBlitState
+  updateCameraBlitState,
 );
 gui.addParam("DrawToScreen", State, "drawToScreen", {}, updateCameraBlitState);
 
@@ -305,7 +305,7 @@ gui.addParam(
   State,
   "postProcessing",
   null,
-  updatePostProcessingState
+  updatePostProcessingState,
 );
 
 updateCameraBlitState();
@@ -356,7 +356,7 @@ ctx.frame(() => {
   const framebufferTexturesPerCamera = renderEngine.render(
     world.entities,
     cameraEntities,
-    { drawToScreen: State.drawToScreen, shadowQuality: 1 }
+    { drawToScreen: State.drawToScreen, shadowQuality: 1 },
   );
 
   if (!State.drawToScreen) {

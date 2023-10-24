@@ -144,7 +144,7 @@ const postProcessing = components.postProcessing({
         flipY: false,
         aniso: 0,
         pixelFormat: ctx.PixelFormat.RGBA32F,
-      }
+      },
     ),
   },
   colorCorrection: {
@@ -179,24 +179,24 @@ world.add(cameraEntity);
 const baseColorTexture = await getTexture(
   ctx,
   getURL(`assets/materials/plastic-green.material/plastic-green_basecolor.png`),
-  ctx.Encoding.SRGB
+  ctx.Encoding.SRGB,
 );
 const normalTexture = await getTexture(
   ctx,
-  getURL(`assets/materials/plastic-green.material/plastic-green_n.png`)
+  getURL(`assets/materials/plastic-green.material/plastic-green_n.png`),
 );
 const metallicTexture = await getTexture(
   ctx,
-  getURL(`assets/materials/plastic-green.material/plastic-green_metallic.png`)
+  getURL(`assets/materials/plastic-green.material/plastic-green_metallic.png`),
 );
 const roughnessTexture = await getTexture(
   ctx,
-  getURL(`assets/materials/plastic-green.material/plastic-green_roughness.png`)
+  getURL(`assets/materials/plastic-green.material/plastic-green_roughness.png`),
 );
 const emissiveColorTexture = await getTexture(
   ctx,
   getURL(`assets/materials/plastic-glow.material/plastic-glow_emissive.png`),
-  ctx.Encoding.SRGB
+  ctx.Encoding.SRGB,
 );
 const geometries = [
   capsule({ radius: 0.25 }),
@@ -325,7 +325,7 @@ const areaLightEntity = createEntity({
     rotation: quat.fromTo(
       quat.create(),
       [0, 0, 1],
-      vec3.normalize([0, -1, 0.001])
+      vec3.normalize([0, -1, 0.001]),
     ),
   }),
   geometry: components.geometry(cube()),
@@ -348,7 +348,7 @@ const sunEntity = createEntity({
     rotation: quat.fromTo(
       quat.create(),
       [0, 0, 1],
-      vec3.normalize(vec3.scale(vec3.copy(State.sunPosition), -1))
+      vec3.normalize(vec3.scale(vec3.copy(State.sunPosition), -1)),
     ),
   }),
   directionalLight: components.directionalLight({
@@ -429,26 +429,26 @@ State.msg = "";
 gui.addRadioList(
   "Debug Render",
   renderEngine.renderers.find(
-    (renderer) => renderer.type == "standard-renderer"
+    (renderer) => renderer.type == "standard-renderer",
   ),
   "debugRender",
   ["", "data.normalView", "data.emissiveColor", "data.ao"].map((value) => ({
     name: value || "No debug",
     value,
-  }))
+  })),
 );
 gui.addRadioList(
   "Debug Post-Processing",
   renderEngine.renderers.find(
-    (renderer) => renderer.type == "post-processing-renderer"
+    (renderer) => renderer.type == "post-processing-renderer",
   ),
   "debugRender",
   ["", "ssao.main", "dof.main", "bloom.threshold", "bloom.downSample[3]"].map(
     (value) => ({
       name: value || "No debug",
       value,
-    })
-  )
+    }),
+  ),
 );
 const dummyTexture2D = ctx.texture2D({
   name: "dummyTexture2D",
@@ -574,7 +574,7 @@ gui.addRadioList(
   "AA Type",
   postProcessing.aa,
   "type",
-  ["fxaa2", "fxaa3"].map((value) => ({ name: value, value }))
+  ["fxaa2", "fxaa3"].map((value) => ({ name: value, value })),
 );
 gui.addParam("Fog", State, "fog", null, () => {
   enablePostProPass("fog");
@@ -597,7 +597,7 @@ gui.addParam(
   {
     min: -0.5,
     max: 0.5,
-  }
+  },
 );
 gui.addParam(
   "ColorCorrection contrast",
@@ -606,7 +606,7 @@ gui.addParam(
   {
     min: 0.1,
     max: 3,
-  }
+  },
 );
 gui.addParam(
   "ColorCorrection saturation",
@@ -615,7 +615,7 @@ gui.addParam(
   {
     min: 0.1,
     max: 2,
-  }
+  },
 );
 gui.addParam("ColorCorrection hue", postProcessing.colorCorrection, "hue", {
   min: -180,
@@ -644,7 +644,7 @@ gui.addRadioList(
   "Type",
   postProcessing.ssao,
   "type",
-  ["sao", "gtao"].map((value) => ({ name: value, value }))
+  ["sao", "gtao"].map((value) => ({ name: value, value })),
 );
 gui.addParam("Samples", postProcessing.ssao, "samples", {
   min: 2,
@@ -702,7 +702,7 @@ gui.addRadioList(
   "Type",
   cameraEntity.postProcessing.dof,
   "type",
-  ["gustafsson", "upitis"].map((value) => ({ name: value, value }))
+  ["gustafsson", "upitis"].map((value) => ({ name: value, value })),
 );
 gui.addParam("Focus Distance", postProcessing.dof, "focusDistance", {
   min: 0,
@@ -720,7 +720,7 @@ gui.addParam(
   {
     min: 0,
     max: 4,
-  }
+  },
 );
 gui.addParam("Luminance Threshold", postProcessing.dof, "luminanceThreshold", {
   min: 0,
@@ -734,7 +734,7 @@ gui.addRadioList(
   "Shape",
   postProcessing.dof,
   "shape",
-  ["disk", "pentagon"].map((value) => ({ name: value, value }))
+  ["disk", "pentagon"].map((value) => ({ name: value, value })),
 );
 gui.addParam("Focus On Screen Point", postProcessing.dof, "focusOnScreenPoint");
 gui.addParam("Screen Point", postProcessing.dof.screenPoint, "0", {
@@ -767,7 +767,7 @@ gui.addRadioList(
   ["none", ...Object.keys(SHADERS.toneMap)].map((value) => ({
     name: value,
     value: value === "none" ? null : value.toLowerCase(),
-  }))
+  })),
 );
 
 gui.addColumn("Bloom");
@@ -819,7 +819,7 @@ gui.addParam(
   {
     min: 0,
     max: 1,
-  }
+  },
 );
 gui.addParam("Speed", postProcessing.filmGrain, "speed", { min: 0, max: 1 });
 
@@ -865,7 +865,7 @@ ctx.frame(() => {
   renderEngine.update(world.entities);
   const [{ color, normal, depth }] = renderEngine.render(
     world.entities,
-    cameraEntity
+    cameraEntity,
   );
 
   guiNormalControl.texture = normal || dummyTexture2D;

@@ -109,11 +109,11 @@ const createParticleSystem = () => ({
             Array.from({ length: fieldSize }, (c, z) =>
               curlNoise(
                 [x - fieldSize / 2, y - fieldSize / 2, z - fieldSize / 2].map(
-                  (p) => p * modding
-                )
-              )
-            )
-          )
+                  (p) => p * modding,
+                ),
+              ),
+            ),
+          ),
         ),
         particles: Array.from({ length: particleCount }, () => {
           const position = random.vec3();

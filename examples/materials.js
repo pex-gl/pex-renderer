@@ -45,9 +45,9 @@ const materials = {
     baseColorTexture: await getTexture(
       ctx,
       getURL(
-        `assets/materials/plastic-green.material/plastic-green_basecolor.png`
+        `assets/materials/plastic-green.material/plastic-green_basecolor.png`,
       ),
-      ctx.Encoding.SRGB
+      ctx.Encoding.SRGB,
     ),
   },
   "Base Color": {
@@ -87,7 +87,7 @@ const materials = {
       texture: await getTexture(
         ctx,
         getURL(`assets/textures/uv-wide/uv-wide.png`),
-        ctx.Encoding.SRGB
+        ctx.Encoding.SRGB,
       ),
       matrix: transform,
     },
@@ -99,7 +99,7 @@ const materials = {
     roughness: 1,
     roughnessTexture: await getTexture(
       ctx,
-      getURL(`assets/textures/roughness-test/roughness-test.png`)
+      getURL(`assets/textures/roughness-test/roughness-test.png`),
     ),
   },
   // Basic PBR maps
@@ -107,19 +107,19 @@ const materials = {
     baseColorTexture: await getTexture(
       ctx,
       getURL(`assets/materials/plastic-red.material/plastic-red_basecolor.png`),
-      ctx.Encoding.SRGB
+      ctx.Encoding.SRGB,
     ),
     roughnessTexture: await getTexture(
       ctx,
-      getURL(`assets/materials/plastic-red.material/plastic-red_roughness.png`)
+      getURL(`assets/materials/plastic-red.material/plastic-red_roughness.png`),
     ),
     metallicTexture: await getTexture(
       ctx,
-      getURL(`assets/materials/plastic-red.material/plastic-red_metallic.png`)
+      getURL(`assets/materials/plastic-red.material/plastic-red_metallic.png`),
     ),
     normalTexture: await getTexture(
       ctx,
-      getURL(`assets/materials/plastic-red.material/plastic-red_n.png`)
+      getURL(`assets/materials/plastic-red.material/plastic-red_n.png`),
     ),
   },
   // Emissive
@@ -128,30 +128,32 @@ const materials = {
     baseColorTexture: await getTexture(
       ctx,
       getURL(
-        `assets/materials/plastic-glow.material/plastic-glow_basecolor.png`
-      )
+        `assets/materials/plastic-glow.material/plastic-glow_basecolor.png`,
+      ),
     ),
     roughnessTexture: await getTexture(
       ctx,
       getURL(
-        `assets/materials/plastic-glow.material/plastic-glow_roughness.png`
-      )
+        `assets/materials/plastic-glow.material/plastic-glow_roughness.png`,
+      ),
     ),
     metallicTexture: await getTexture(
       ctx,
-      getURL(`assets/materials/plastic-glow.material/plastic-glow_metallic.png`)
+      getURL(
+        `assets/materials/plastic-glow.material/plastic-glow_metallic.png`,
+      ),
     ),
     normalTexture: await getTexture(
       ctx,
-      getURL(`assets/materials/plastic-glow.material/plastic-glow_n.png`)
+      getURL(`assets/materials/plastic-glow.material/plastic-glow_n.png`),
     ),
     emissiveColor: [1, 1, 1, 1],
     emissiveColorTexture: await getTexture(
       ctx,
       getURL(
-        `assets/materials/plastic-glow.material/plastic-glow_emissive.png`
+        `assets/materials/plastic-glow.material/plastic-glow_emissive.png`,
       ),
-      ctx.Encoding.SRGB
+      ctx.Encoding.SRGB,
     ),
     emissiveIntensity: 4,
   },
@@ -165,11 +167,11 @@ const materials = {
     baseColorTexture: await getTexture(
       ctx,
       getURL(`assets/textures/alpha-test-mask/alpha-test-mask.png`),
-      ctx.Encoding.SRGB
+      ctx.Encoding.SRGB,
     ),
     alphaTexture: await getTexture(
       ctx,
-      getURL(`assets/textures/checkerboard/checkerboard.png`)
+      getURL(`assets/textures/checkerboard/checkerboard.png`),
     ),
   },
   // Sheen
@@ -246,7 +248,7 @@ const directionalLightEntity = createEntity({
     rotation: quat.fromTo(
       quat.create(),
       [0, 0, 1],
-      vec3.normalize([-2, -2, -1])
+      vec3.normalize([-2, -2, -1]),
     ),
   }),
   directionalLight: components.directionalLight({
@@ -317,7 +319,7 @@ ctx.frame(() => {
   renderEngine.update(world.entities);
   renderEngine.render(
     world.entities,
-    world.entities.filter((entity) => entity.camera)
+    world.entities.filter((entity) => entity.camera),
   );
 
   ctx.debug(debugOnce);

@@ -45,7 +45,7 @@ const skyEntity = createEntity({
     backgroundBlur: 1,
     envMap: await getEnvMap(
       ctx,
-      "assets/envmaps/Road_to_MonumentValley/Road_to_MonumentValley.hdr"
+      "assets/envmaps/Road_to_MonumentValley/Road_to_MonumentValley.hdr",
     ),
   }),
   reflectionProbe: components.reflectionProbe(),
@@ -66,28 +66,30 @@ world.add(directionalLightEntity);
 const materialTextures = {
   baseColorTexture: await getTexture(
     ctx,
-    getURL(`assets/materials/Fabric04/Fabric04_col.jpg`)
+    getURL(`assets/materials/Fabric04/Fabric04_col.jpg`),
   ),
   normalTexture: await getTexture(
     ctx,
-    getURL(`assets/materials/Fabric04/Fabric04_nrm.jpg`)
+    getURL(`assets/materials/Fabric04/Fabric04_nrm.jpg`),
   ),
   clearCoatNormalTexture: await getTexture(
     ctx,
-    getURL(`assets/materials/Metal05/Metal05_nrm.jpg`)
+    getURL(`assets/materials/Metal05/Metal05_nrm.jpg`),
   ),
   occlusionTexture: await getTexture(
     ctx,
-    getURL(`assets/models/substance-sample-scene/substance-sample-scene_ao.jpg`)
+    getURL(
+      `assets/models/substance-sample-scene/substance-sample-scene_ao.jpg`,
+    ),
   ),
 };
 
 const ballGeometry = components.geometry(
   parseObj(
     await io.loadText(
-      getURL(`assets/models/substance-sample-scene/substance-sample-scene.obj`)
-    )
-  )[0]
+      getURL(`assets/models/substance-sample-scene/substance-sample-scene.obj`),
+    ),
+  )[0],
 );
 
 const clearCoatMaterial = {
@@ -159,20 +161,20 @@ gui.addParam(
       clearCoatEntity.material.clearCoatRoughness;
     clearCoatNormalTextureEntity.material.clearCoatRoughness =
       clearCoatEntity.material.clearCoatRoughness;
-  }
+  },
 );
 gui.addParam(
   "ClearCoat Normal Texture Scale",
   clearCoatNormalTextureEntity.material,
   "clearCoatNormalTextureScale",
-  {}
+  {},
 );
 
 ctx.frame(() => {
   renderEngine.update(world.entities);
   renderEngine.render(
     world.entities,
-    world.entities.filter((entity) => entity.camera)
+    world.entities.filter((entity) => entity.camera),
   );
 
   gui.draw();

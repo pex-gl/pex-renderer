@@ -51,7 +51,7 @@ world.add(geometryEntity);
 
 const envMap = await getEnvMap(
   ctx,
-  "assets/envmaps/Mono_Lake_B/Mono_Lake_B.hdr"
+  "assets/envmaps/Mono_Lake_B/Mono_Lake_B.hdr",
 );
 
 const skyboxEntity = createEntity({
@@ -84,7 +84,7 @@ gui.addColumn("Settings");
 if (skyboxEntity.skybox.texture || skyboxEntity.skybox.envMap) {
   gui.addTexture2D(
     "Skybox",
-    skyboxEntity.skybox.texture || skyboxEntity.skybox.envMap
+    skyboxEntity.skybox.texture || skyboxEntity.skybox.envMap,
   );
 }
 gui.addParam("EnvMap", State, "envMap", {}, (enabled) => {
@@ -100,11 +100,11 @@ gui.addParam(
     quat.fromAxisAngle(
       skyboxEntity.transform.rotation,
       [0, 1, 0],
-      State.rotation
+      State.rotation,
     );
     skyboxEntity.transform.dirty = true;
     reflectionProbeEntity.reflectionProbe.dirty = true;
-  }
+  },
 );
 gui.addRadioList(
   "Map Size",
@@ -116,7 +116,7 @@ gui.addRadioList(
   })),
   () => {
     reflectionProbeEntity.reflectionProbe.size = State.sizes[State.sizeIndex];
-  }
+  },
 );
 
 gui.addSeparator();
@@ -127,11 +127,11 @@ gui.addParam("Metallic", geometryEntity.material, "metallic");
 gui.addColumn("Textures");
 gui.addTextureCube(
   "Cubemap",
-  reflectionProbeEntity._reflectionProbe._dynamicCubemap
+  reflectionProbeEntity._reflectionProbe._dynamicCubemap,
 );
 gui.addTexture2D(
   "Reflection Map",
-  reflectionProbeEntity._reflectionProbe._reflectionMap
+  reflectionProbeEntity._reflectionProbe._reflectionMap,
 );
 
 // Events

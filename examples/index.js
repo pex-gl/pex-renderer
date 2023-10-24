@@ -48,13 +48,13 @@
       <img src="examples/screenshots/${example}.png" /><h3>${example}</h3></a></div>`),
     !id
       ? ""
-      : '<div class="Examples-list-item"><a href="/"><h3>home</h3></a></div>'
+      : '<div class="Examples-list-item"><a href="/"><h3>home</h3></a></div>',
   );
 
   if (id) {
     document.querySelector(".MainHeader").remove();
     document.querySelector("body").style.backgroundColor = getComputedStyle(
-      document.body
+      document.body,
     ).getPropertyValue("--color-grey");
 
     try {

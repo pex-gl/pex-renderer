@@ -42,7 +42,7 @@ const floorEntity = createEntity({
     position: [0, -1.1, 0],
   }),
   geometry: components.geometry(
-    cube({ sx: 15, sy: 0.2, sz: 15, nx: 10, ny: 1, nz: 10 })
+    cube({ sx: 15, sy: 0.2, sz: 15, nx: 10, ny: 1, nz: 10 }),
   ),
   material: components.material({
     baseColor: [0, 1, 0, 1],
@@ -80,8 +80,8 @@ const grassEntity = createEntity({
       aInstanceTintColor: {
         buffer: ctx.vertexBuffer(
           new Float32Array(grassPlaneGeometry.positions.length * 3).map(() =>
-            random.float(0.5)
-          )
+            random.float(0.5),
+          ),
         ),
         divisor: 1,
       },
@@ -244,7 +244,7 @@ const directionalLightEntity = createEntity({
       quat.create(),
       [2, 2, 2],
       [0, 0, 0],
-      [0, 1, 0]
+      [0, 1, 0],
     ),
   }),
   directionalLight: components.directionalLight({
@@ -298,7 +298,7 @@ const scene = await loaders.gltf(
     ctx,
     dracoOptions: { transcoderPath: getURL("assets/decoders/draco/") },
     basisOptions: { transcoderPath: getURL("assets/decoders/basis/") },
-  }
+  },
 );
 const sceneEntities = scene[0].entities;
 const root = sceneEntities[0];
@@ -318,7 +318,7 @@ gui.addFPSMeeter();
 gui.addRadioList(
   "Debug",
   renderEngine.renderers.find(
-    (renderer) => renderer.type == "standard-renderer"
+    (renderer) => renderer.type == "standard-renderer",
   ),
   "debugRender",
   [
@@ -354,7 +354,7 @@ gui.addRadioList(
     "data.ao",
     "vNormalView",
     "vNormalWorld",
-  ].map((value) => ({ name: value || "No debug", value }))
+  ].map((value) => ({ name: value || "No debug", value })),
 );
 gui.addColumn("Camera");
 gui.addRadioList(
@@ -364,7 +364,7 @@ gui.addRadioList(
   ["none", ...Object.keys(SHADERS.toneMap)].map((value) => ({
     name: value,
     value: value === "none" ? null : value.toLowerCase(),
-  }))
+  })),
 );
 
 // Events

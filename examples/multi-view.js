@@ -57,7 +57,7 @@ ctx.apply = (...args) => {
       "  ".repeat(ctx.stack.length),
       cmd.name,
       rtName ? "-> [" + [rtName, dtName].join(" | ") + "]" : " ",
-      inputTextures ? "<- [" + inputTextures.join(" | ") + "]" : " "
+      inputTextures ? "<- [" + inputTextures.join(" | ") + "]" : " ",
     );
   oldApply.call(ctx, ...args);
 };
@@ -155,14 +155,14 @@ const cubesEntity = createEntity({
   geometry: components.geometry({
     ...cube({ sx: 1.5, sy: 0.5, sz: 1.5 }),
     offsets: new Float32Array(CUBE_INSTANCES * 3).map(() =>
-      random.float(-1.5, 1.5)
+      random.float(-1.5, 1.5),
     ),
     scales: new Float32Array(CUBE_INSTANCES * 3).fill(0.1),
     rotations: new Float32Array(
-      Array.from({ length: CUBE_INSTANCES }, () => random.quat()).flat()
+      Array.from({ length: CUBE_INSTANCES }, () => random.quat()).flat(),
     ),
     colors: new Float32Array(CUBE_INSTANCES * 4).map((_, i) =>
-      i % 4 === 3 ? 1 : random.float()
+      i % 4 === 3 ? 1 : random.float(),
     ),
     instances: CUBE_INSTANCES,
   }),
@@ -250,11 +250,11 @@ world.add(sphereEntity);
 // TODO: is it needed?
 floorEntity.geometry.bounds = aabb.fromPoints(
   aabb.create(),
-  floorEntity.geometry.positions
+  floorEntity.geometry.positions,
 );
 spinningEntity.geometry.bounds = aabb.fromPoints(
   aabb.create(),
-  spinningEntity.geometry.positions
+  spinningEntity.geometry.positions,
 );
 
 const skyboxEntity = createEntity({
@@ -398,7 +398,7 @@ ctx.frame(() => {
   quat.fromAxisAngle(
     spinningEntity.transform.rotation,
     [0, 1, 0],
-    Date.now() / 1000
+    Date.now() / 1000,
   );
   spinningEntity.transform.dirty = true;
 
@@ -439,7 +439,7 @@ ctx.frame(() => {
           postProcessingRendererSystem,
         ],
         renderView: renderView,
-      }
+      },
     );
     guiColorControl.texture = color;
     // guiNormalControl.texture = normal;

@@ -120,11 +120,11 @@ for (let i = 0; i < nW * nH; i++) {
 
 const envMap = await getEnvMap(
   ctx,
-  "assets/envmaps/Ditch-River_2k/Ditch-River_2k.hdr"
+  "assets/envmaps/Ditch-River_2k/Ditch-River_2k.hdr",
 );
 const furnaceEnvMap = await getEnvMap(
   ctx,
-  "assets/envmaps/furnace/furnace-4k.hdr"
+  "assets/envmaps/furnace/furnace-4k.hdr",
 );
 
 const skyEntity = createEntity({
@@ -142,7 +142,7 @@ const sunEntity = createEntity({
     rotation: quat.fromTo(
       quat.create(),
       [0, 0, 1],
-      vec3.normalize([2, -2, -1])
+      vec3.normalize([2, -2, -1]),
     ),
   }),
   directionalLight: components.directionalLight({
@@ -207,7 +207,7 @@ ctx.frame(() => {
   renderEngine.update(world.entities);
   renderEngine.render(
     world.entities,
-    world.entities.filter((entity) => entity.camera)
+    world.entities.filter((entity) => entity.camera),
   );
 
   ctx.debug(debugOnce);
