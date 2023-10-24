@@ -1,4 +1,4 @@
-import { vec3 } from "pex-math";
+import { avec3, vec3 } from "pex-math";
 import { pipeline as SHADERS } from "pex-shaders";
 import createGeomBuilder from "geom-builder";
 
@@ -86,12 +86,7 @@ const getPrismPositions = ({ radius }) => ([
   [-radius, 0, 0], [0, 0, radius]
 ])
 
-const getQuadPositions = ({
-  width = 1,
-  height = 1,
-  size = 2,
-  position = [0, 0, 0],
-} = {}) =>
+const getQuadPositions = ({ width = 1, height = 1, size = 2 } = {}) =>
   // prettier-ignore
   [
     [-1, -1, 0], [1, -1, 0],
@@ -106,9 +101,7 @@ const getQuadPositions = ({
     [1, 1, 0], [1, 1, size],
     [-1, 1, 0], [-1, 1, size],
     [0, 0, 0], [0, 0, size]
-  ].map((p) =>
-    vec3.add([(p[0] * width) / 2, (p[1] * height) / 2, p[2]], position)
-  );
+  ].map((p) => [(p[0] * width) / 2, (p[1] * height) / 2, p[2]]);
 
 const getPyramidEdgePositions = ({ sx, sy = sx, sz = sx }) => [
   [0, 0, 0],
@@ -122,18 +115,18 @@ const getPyramidEdgePositions = ({ sx, sy = sx, sz = sx }) => [
 ];
 
 // Lights
-const getDirectionalLight = (directionalLight) => {
-  const intensity = directionalLight.intensity;
-  const prismRadius = intensity * 0.1;
+const getDirectionalLight = (transform) => {
+  const size = vec3.length(transform.scale);
+  const prismRadius = size * 0.1;
 
   return getPrismPositions({ radius: prismRadius }).concat(
     // prettier-ignore
     [
-      [0, 0, prismRadius], [0, 0, intensity],
-      [prismRadius, 0, 0], [prismRadius, 0, intensity],
-      [-prismRadius, 0, 0], [-prismRadius, 0, intensity],
-      [0, prismRadius, 0], [0, prismRadius, intensity],
-      [0, -prismRadius, 0], [0, -prismRadius, intensity]
+      [0, 0, prismRadius], [0, 0, size],
+      [prismRadius, 0, 0], [prismRadius, 0, size],
+      [-prismRadius, 0, 0], [-prismRadius, 0, size],
+      [0, prismRadius, 0], [0, prismRadius, size],
+      [0, -prismRadius, 0], [0, -prismRadius, size]
     ],
   );
 };
@@ -158,21 +151,14 @@ const getPointLight = (pointLight) => {
 const spotLightCircleOptions = { steps: 32, axis: [0, 1] };
 
 const getSpotLight = (spotLight) => {
-  const intensity = spotLight.intensity;
   const distance = spotLight.range;
   const radius = distance * Math.tan(spotLight.angle);
   const innerRadius = distance * Math.tan(spotLight.innerAngle);
 
-  return getCirclePositions({
-    radius: intensity * 0.1,
-    ...spotLightCircleOptions,
+  return getPyramidEdgePositions({
+    sx: radius * Math.sin(Math.PI / 4),
+    sz: distance,
   })
-    .concat(
-      getPyramidEdgePositions({
-        sx: radius * Math.sin(Math.PI / 4),
-        sz: distance,
-      }),
-    )
     .concat(
       getCirclePositions({
         radius,
@@ -189,8 +175,8 @@ const getSpotLight = (spotLight) => {
     );
 };
 
-const getAreaLight = (areaLight) =>
-  getQuadPositions({ size: areaLight.intensity });
+const getAreaLight = (transform) =>
+  getQuadPositions({ size: vec3.length(transform.scale) });
 
 // Cameras
 const getPerspectiveCamera = (camera) => {
@@ -287,6 +273,30 @@ const getGrid = (grid) => [
     .flat()
     .map((p) => p.reverse()),
 ];
+// TODO: instanced
+const getVertexVector = (geometry, attribute, scale = 0.1, modelMatrix) => {
+  const positions = geometry.positions;
+  if (!Array.isArray(positions) || ArrayBuffer.isView(positions)) return [];
+  const isTypedArray = !Array.isArray(positions);
+  const positionCount = positions.length / (isTypedArray ? 3 : 1);
+  const lines = new Array(positionCount * 2);
+  for (let i = 0; i < positionCount; i++) {
+    const worldPosition = vec3.create();
+    const vector = vec3.create();
+    if (isTypedArray) {
+      avec3.set(worldPosition, 0, positions, i);
+      avec3.set(vector, 0, geometry[attribute], i);
+    } else {
+      vec3.set(worldPosition, positions[i]);
+      vec3.set(vector, geometry[attribute][i]);
+    }
+    vec3.multMat4(worldPosition, modelMatrix);
+    lines[i * 2] = worldPosition;
+    lines[i * 2 + 1] = vec3.addScaled([...worldPosition], vector, scale);
+  }
+
+  return lines;
+};
 
 export default ({ ctx }) => {
   const geomBuilder = createGeomBuilder({ positions: 1, colors: 1 });
@@ -345,11 +355,31 @@ export default ({ ctx }) => {
           );
         }
 
+        if (entity.vertexHelper) {
+          const helpers = Array.isArray(entity.vertexHelper)
+            ? entity.vertexHelper
+            : [entity.vertexHelper];
+          for (let j = 0; j < helpers.length; j++) {
+            const helper = helpers[j];
+            if (entity.geometry[helper.attribute]) {
+              addToBuilder(
+                getVertexVector(
+                  entity.geometry,
+                  helper.attribute,
+                  helper.size,
+                  modelMatrix,
+                ),
+                helper.color || [0, 1, 0, 1],
+              );
+            }
+          }
+        }
+
         // TODO: cache
         if (entity.lightHelper) {
           if (entity.directionalLight) {
             addToBuilder(
-              getDirectionalLight(entity.directionalLight),
+              getDirectionalLight(entity.transform),
               entity.directionalLight.color,
               modelMatrix,
             );
@@ -370,7 +400,7 @@ export default ({ ctx }) => {
           }
           if (entity.areaLight) {
             addToBuilder(
-              getAreaLight(entity.areaLight),
+              getAreaLight(entity.transform),
               entity.areaLight.color,
               modelMatrix,
             );

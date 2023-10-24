@@ -94,6 +94,7 @@ const floorEntity = createEntity({
     receiveShadows: true,
     castShadows: false,
   }),
+  vertexHelper: components.vertexHelper({ size: 0.1 }),
   boundingBoxHelper: components.boundingBoxHelper(),
 });
 world.add(floorEntity);
@@ -112,6 +113,7 @@ const dragonEntity = createEntity({
     castShadows: true,
     receiveShadows: true,
   }),
+  vertexHelper: components.vertexHelper({ size: 0.01 }),
   boundingBoxHelper: components.boundingBoxHelper(),
 });
 world.add(dragonEntity);
@@ -159,6 +161,7 @@ const instancedEntity = createEntity({
     castShadows: true,
     receiveShadows: true,
   }),
+  vertexHelper: components.vertexHelper({ size: 0.1 }),
   boundingBoxHelper: components.boundingBoxHelper(),
 });
 world.add(instancedEntity);

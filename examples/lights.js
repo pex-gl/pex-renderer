@@ -155,7 +155,6 @@ const pointLightEntity = createEntity({
   layer: LAYERS[2],
   transform: components.transform({
     position: [-1, 1, -1],
-    rotation: quat.targetTo(quat.create(), [0, 0, 0], [-1, 1, -1]),
   }),
   pointLight: components.pointLight({
     color: [1, 1, 0, 1],

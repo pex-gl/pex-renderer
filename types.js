@@ -235,6 +235,12 @@
  * @property {number[]} [rotation=[0, 0, 0, 1]]
  * @property {number[]} [scale=[1, 1, 1]]
  */
+/**
+ * @typedef {object} VertexHelperComponentOptions
+ * @property {number[]} [color=[0, 1, 0, 1]]
+ * @property {number[]} [size=1]
+ * @property {string} [attribute="normals"]
+ */
 
 // System
 /**
