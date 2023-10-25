@@ -120,21 +120,22 @@
  *
  * @property {number} [metallic=1]
  * @property {number} [roughness=1]
- *
- * @property {ctx.texture2D | TextureTransform} [baseColorMap]
- * @property {ctx.texture2D | TextureTransform} [emissiveColorMap]
- * @property {ctx.texture2D | TextureTransform} [normalMap]
- * @property {ctx.texture2D | TextureTransform} [roughnessMap]
- * @property {ctx.texture2D | TextureTransform} [metallicMap]
- * @property {ctx.texture2D | TextureTransform} [metallicRoughnessMap]
- * @property {ctx.texture2D | TextureTransform} [occlusionMap]
+*
+* @property {ctx.texture2D | TextureTransform} [baseColorTexture]
+* @property {ctx.texture2D | TextureTransform} [emissiveColorTexture]
+* @property {ctx.texture2D | TextureTransform} [normalTexture]
+ * @property {number} [normalTextureScale=1]
+ * @property {ctx.texture2D | TextureTransform} [roughnessTexture]
+ * @property {ctx.texture2D | TextureTransform} [metallicTexture]
+ * @property {ctx.texture2D | TextureTransform} [metallicRoughnessTexture]
+ * @property {ctx.texture2D | TextureTransform} [occlusionTexture]
  *
  * @property {number} [clearCoat]
  * @property {number} [clearCoatRoughness]
- * @property {ctx.texture2D | TextureTransform} [clearCoatMap]
- * @property {ctx.texture2D | TextureTransform} [clearCoatRoughnessMap]
- * @property {ctx.texture2D | TextureTransform} [clearCoatNormalMap]
- * @property {number} [clearCoatNormalMapScale]
+ * @property {ctx.texture2D | TextureTransform} [clearCoatTexture]
+ * @property {ctx.texture2D | TextureTransform} [clearCoatRoughnessTexture]
+ * @property {ctx.texture2D | TextureTransform} [clearCoatNormalTexture]
+ * @property {number} [clearCoatNormalTextureScale]
  *
  * @property {number[]} [sheenColor]
  * @property {number} [sheenRoughness]
@@ -143,7 +144,7 @@
  * @property {number} [reflectance] Represents a remapping of a percentage of reflectance (with a default of 4%: 0.16 * pow(0.5, 2) = 0.04) and replaces an explicit index of refraction (IOR)
  *
  * @property {number} [alphaTest="undefined"]
- * @property {ctx.texture2D | TextureTransform} [alphaMap]
+ * @property {ctx.texture2D | TextureTransform} [alphaTexture]
  * @property {boolean} [depthTest=true]
  * @property {boolean} [depthWrite=true]
  * @property {ctx.DepthFunc} [depthFunc=ctx.DepthFunc.Less]
@@ -160,7 +161,6 @@
  * @property {boolean} [castShadows=false]
  * @property {boolean} [receiveShadows=false]
  */
-// * @property {number} [normalMapScale=1]
 /**
  * @typedef {object} LineMaterialComponentOptions
  * @property {"line"} [type="line"]

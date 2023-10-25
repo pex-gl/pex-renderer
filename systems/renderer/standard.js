@@ -24,39 +24,48 @@ const flagDefinitions = [
   [["options", "spotLights", "length"], "NUM_SPOT_LIGHTS", { type: "value" }],
   [["options", "areaLights", "length"], "NUM_AREA_LIGHTS", { type: "value" }],
   [["options", "reflectionProbes", "length"], "USE_REFLECTION_PROBES"],
-  [["options", "envMapSize"], "", { uniform: "uEnvMapSize" }], // Blurred env map size
   [["options", "useSSAO"], "USE_SSAO"],
   [["options", "useSSAOColors"], "USE_SSAO_COLORS"],
   [["options", "targets", "ssao.main"], "SSAO_TEXTURE", { type: "texture", uniform: "uSSAOTexture", requires: "USE_SSAO" }],
+
   [["material", "unlit"], "USE_UNLIT_WORKFLOW", { fallback: "USE_METALLIC_ROUGHNESS_WORKFLOW" }],
   [["material", "blend"], "USE_BLEND"],
+
   [["skin"], "USE_SKIN"],
   [["skin", "joints", "length"], "NUM_JOINTS", { type: "value", requires: "USE_SKIN" }],
   [["skin", "jointMatrices"], "", { uniform: "uJointMat", requires: "USE_SKIN" }],
+
   [["material", "baseColor"], "", { uniform: "uBaseColor" }],
   [["material", "metallic"], "", { uniform: "uMetallic" }],
   [["material", "roughness"], "", { uniform: "uRoughness" }],
+  [["material", "reflectance"], "", { uniform: "uReflectance" }],
+
   [["material", "emissiveColor"], "USE_EMISSIVE_COLOR", { uniform: "uEmissiveColor" }],
   [["material", "emissiveIntensity"], "", { uniform: "uEmissiveIntensity", default: 1}],
   [["material", "baseColorTexture"], "BASE_COLOR_TEXTURE", { type: "texture", uniform: "uBaseColorTexture" }],
   [["material", "emissiveColorTexture"], "EMISSIVE_COLOR_TEXTURE", { type: "texture", uniform: "uEmissiveColorTexture" }],
   [["material", "normalTexture"], "NORMAL_TEXTURE", { type: "texture", uniform: "uNormalTexture" }],
+  [["material", "normalTextureScale"], "", { uniform: "uNormalTextureScale", requires: "USE_NORMAL_TEXTURE" }],
   [["material", "roughnessTexture"], "ROUGHNESS_TEXTURE", { type: "texture", uniform: "uRoughnessTexture" }],
   [["material", "metallicTexture"], "METALLIC_TEXTURE", { type: "texture", uniform: "uMetallicTexture" }],
   [["material", "metallicRoughnessTexture"], "METALLIC_ROUGHNESS_TEXTURE", { type: "texture", uniform: "uMetallicRoughnessTexture" }],
   [["material", "occlusionTexture"], "OCCLUSION_TEXTURE", { type: "texture", uniform: "uOcclusionTexture" }],
   [["material", "alphaTest"], "USE_ALPHA_TEST", { uniform: "uAlphaTest" }],
   [["material", "alphaTexture"], "ALPHA_TEXTURE", { type: "texture", uniform: "uAlphaTexture" }],
+
   [["material", "clearCoat"], "USE_CLEAR_COAT", { uniform: "uClearCoat" }],
   [["material", "clearCoatRoughness"], "USE_CLEAR_COAT_ROUGHNESS", { uniform: "uClearCoatRoughness", requires: "USE_CLEAR_COAT" }],
   [["material", "clearCoatTexture"], "CLEAR_COAT_TEXTURE", { type: "texture", uniform: "uClearCoatTexture", requires: "USE_CLEAR_COAT" }],
   [["material", "clearCoatRoughnessTexture"], "CLEAR_COAT_ROUGHNESS_TEXTURE", { type: "texture", uniform: "uClearCoatRoughnessTexture", requires: "USE_CLEAR_COAT" }],
   [["material", "clearCoatNormalTexture"], "CLEAR_COAT_NORMAL_TEXTURE", { type: "texture", uniform: "uClearCoatNormalTexture", requires: "USE_CLEAR_COAT" }],
   [["material", "clearCoatNormalTextureScale"], "", { uniform: "uClearCoatNormalTextureScale", requires: "USE_CLEAR_COAT" }],
+
   [["material", "sheenColor"], "USE_SHEEN", { uniform: "uSheenColor" }],
   [["material", "sheenColorTexture"], "SHEEN_COLOR_TEXTURE", { uniform: "uSheenColorMap", requires: "USE_SHEEN" }],
   [["material", "sheenRoughness"], "", { uniform: "uSheenRoughness", requires: "USE_SHEEN" }],
+
   [["material", "transmission"], "USE_TRANSMISSION", { uniform: "uTransmission", requires: "USE_BLEND" }],
+
   [["geometry", "attributes", "aNormal"], "USE_NORMALS", { fallback: "USE_UNLIT_WORKFLOW" }],
   [["geometry", "attributes", "aTangent"], "USE_TANGENTS"],
   [["geometry", "attributes", "aTexCoord0"], "USE_TEXCOORD_0"],
@@ -470,13 +479,7 @@ export default ({ ctx, shadowQuality = 3 }) => {
         // Get all uniforms
         const cachedUniforms = {
           uModelMatrix: transform.modelMatrix, //FIXME: bypasses need for transformSystem access
-          uNormalScale: 1, // TODO: uniform
-          uReflectance:
-            material.reflectance !== undefined ? material.reflectance : 0.5,
-
-          uPointSize: material.pointSize || 1,
-          // TODO: why is this here
-          uMetallicRoughnessTexture: material.metallicRoughnessTexture,
+          uPointSize: material.pointSize ?? 1,
           uRefraction:
             0.1 *
             (material.refraction !== undefined ? material.refraction : 0.5),

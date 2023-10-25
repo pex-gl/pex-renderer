@@ -101,6 +101,7 @@ const clearCoatMaterial = {
   castShadows: true,
   receiveShadows: true,
   occlusionTexture: materialTextures.occlusionTexture,
+  normalTextureScale: 1,
 };
 
 const clearCoatEntity = createEntity({
@@ -146,6 +147,18 @@ world.add(clearCoatNormalTextureEntity);
 
 // GUI
 const gui = createGUI(ctx, { theme: { columnWidth: 250 } });
+gui.addParam(
+  "Normal Texture Scale",
+  clearCoatEntity.material,
+  "normalTextureScale",
+  {},
+  () => {
+    normalTextureEntity.material.normalTextureScale =
+      clearCoatEntity.material.normalTextureScale;
+    clearCoatNormalTextureEntity.material.normalTextureScale =
+      clearCoatEntity.material.normalTextureScale;
+  },
+);
 gui.addParam("ClearCoat", clearCoatEntity.material, "clearCoat", {}, () => {
   normalTextureEntity.material.clearCoat = clearCoatEntity.material.clearCoat;
   clearCoatNormalTextureEntity.material.clearCoat =

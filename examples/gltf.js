@@ -52,6 +52,19 @@ const ctx = createContext({ pixelRatio });
 const renderEngine = createRenderEngine({ ctx, debug: true });
 const world = createWorld({ systems: renderEngine.systems });
 
+// prettier-ignore
+const legacySpecularGlossinessFlagDefinitions = [
+  [["material", "diffuse"], "USE_SPECULAR_GLOSSINESS_WORKFLOW", { uniform: "uDiffuse" }],
+  [["material", "specular"], "", { uniform: "uSpecular", requires: "USE_SPECULAR_GLOSSINESS_WORKFLOW" }],
+  [["material", "glossiness"], "", { uniform: "uGlossiness", requires: "USE_SPECULAR_GLOSSINESS_WORKFLOW" }],
+  [["material", "diffuseTexture"], "DIFFUSE_TEXTURE", { type: "texture", uniform: "uDiffuseTexture", requires: "USE_SPECULAR_GLOSSINESS_WORKFLOW" }],
+  [["material", "specularGlossinessTexture"], "SPECULAR_GLOSSINESS_TEXTURE", { type: "texture", uniform: "uSpecularGlossinessTexture", requires: "USE_SPECULAR_GLOSSINESS_WORKFLOW" }],
+];
+
+renderEngine.renderers
+  .find((renderer) => renderer.type == "standard-renderer")
+  .flagDefinitions.push(...legacySpecularGlossinessFlagDefinitions);
+
 const gui = createGUI(ctx);
 
 const sunEntity = createEntity({

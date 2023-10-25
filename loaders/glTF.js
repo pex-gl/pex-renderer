@@ -355,7 +355,7 @@ function handleMaterial(material, gltf, ctx) {
         const sheenExt = material.extensions.KHR_materials_sheen;
         materialProps.sheenColor = [...sheenExt.sheenColorFactor, 1.0];
         materialProps.sheenRoughness = sheenExt.sheenRoughnessFactor;
-        materialProps.normalScale = 1;
+        materialProps.normalTextureScale = 1; // TODO: why?
         if (sheenExt.sheenColorTexture) {
           materialProps.sheenColorTexture = getPexMaterialTexture(
             sheenExt.sheenColorTexture,
@@ -430,7 +430,7 @@ function handleMaterial(material, gltf, ctx) {
     if (pbrSpecularGlossiness.specularFactor) {
       materialProps.specular = linearToSrgb(
         pbrSpecularGlossiness.specularFactor,
-      );
+      ).slice(0, 3);
     }
     if (pbrSpecularGlossiness.glossinessFactor !== undefined) {
       materialProps.glossiness = pbrSpecularGlossiness.glossinessFactor;
@@ -461,6 +461,7 @@ function handleMaterial(material, gltf, ctx) {
       gltf,
       ctx,
     );
+    materialProps.normalTextureScale = material.normalTexture.scale ?? 1;
   }
 
   // https://github.com/KhronosGroup/glTF/blob/main/specification/2.0/schema/material.occlusionTextureInfo.schema.json
