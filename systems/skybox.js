@@ -1,88 +1,109 @@
-import { pipeline, skybox, parser as ShaderParser } from "pex-shaders";
 import { vec3 } from "pex-math";
+import { skybox, parser as ShaderParser } from "pex-shaders";
 
-function initSkybox(ctx, skybox) {
-  skybox._skyTexture = ctx.texture2D({
-    name: "skyTexture",
-    width: 512,
-    height: 256,
-    // pixelFormat: this.rgbm ? ctx.PixelFormat.RGBA8 : ctx.PixelFormat.RGBA16F,
-    pixelFormat: skybox.rgbm ? ctx.PixelFormat.RGBA8 : ctx.PixelFormat.RGBA, // TODO: these are the same values
-    encoding: skybox.rgbm ? ctx.Encoding.RGBM : ctx.Encoding.Linear,
-    min: ctx.Filter.Linear,
-    mag: ctx.Filter.Linear,
-  });
-  skybox._updateSkyTexturePass = ctx.pass({
-    name: "skyboxUpdateSkyTexturePass",
-    color: [skybox._skyTexture],
-    clearColor: [0, 0, 0, 0],
-  });
-}
+const parameters = [
+  "turbidity",
+  "rayleigh",
+  "mieCoefficient",
+  "mieDirectionalG",
+];
 
-export default ({ ctx, resourceCache }) => {
-  let updateSkyTextureCmd;
+/**
+ * Skybox system
+ *
+ * Adds:
+ * - "_skyTexture" to skybox components with no envMap for skybox-renderer to render
+ * @param {import("../types.js").SystemOptions} options
+ * @returns {import("../types.js").System}
+ */
+export default ({ ctx, resourceCache }) => ({
+  type: "skybox-system",
+  cache: {},
+  debug: false,
+  updateSkyTextureCmd: null,
+  updateSkybox(entity) {
+    // Initialise
+    if (!this.cache[entity.id]) {
+      entity.skybox._skyTexture = ctx.texture2D({
+        name: "skyTexture",
+        width: 512,
+        height: 256,
+        pixelFormat: ctx.PixelFormat.RGBA8,
+        encoding: ctx.Encoding.Linear,
+        min: ctx.Filter.Linear,
+        mag: ctx.Filter.Linear,
+      });
 
-  return {
-    type: "skybox-system",
-    cache: {},
-    debug: false,
-    update(entities) {
-      for (let i = 0; i < entities.length; i++) {
-        const entity = entities[i];
+      this.cache[entity.id] = {
+        sunPosition: [...entity.skybox.sunPosition],
+        parameters: new Array(parameters.length),
+        _updateSkyTexturePass: ctx.pass({
+          name: "skyboxUpdateSkyTexturePass",
+          color: [entity.skybox._skyTexture],
+          clearColor: [0, 0, 0, 0],
+        }),
+      };
+      entity.skybox.dirty = true;
+    }
 
-        if (
-          entity.skybox &&
-          !entity.skybox.envMap &&
-          entity.skybox.sunPosition
-        ) {
-          let needsUpdate = false;
-          let cachedProps = this.cache[entity.id];
-          if (!cachedProps) {
-            initSkybox(ctx, entity.skybox);
-            cachedProps = this.cache[entity.id] = {};
-            this.cache[entity.id].sunPosition = [...entity.skybox.sunPosition];
-            needsUpdate = true;
-            // this.cache[entity.id] = entity.skybox;
-            // entity._skybox = entity.skybox; //TODO: why do we need it
-          }
+    // Compare
+    if (
+      vec3.distance(
+        this.cache[entity.id].sunPosition,
+        entity.skybox.sunPosition,
+      ) > 0
+    ) {
+      vec3.set(this.cache[entity.id].sunPosition, entity.skybox.sunPosition);
+      entity.skybox.dirty = true;
+    }
 
-          if (
-            vec3.distance(cachedProps.sunPosition, entity.skybox.sunPosition) >
-            0
-          ) {
-            vec3.set(cachedProps.sunPosition, entity.skybox.sunPosition);
-            needsUpdate = true;
-          }
+    for (let i = 0; i < parameters.length; i++) {
+      const name = parameters[i];
+      if (this.cache[entity.id].parameters[i] !== entity.skybox[name]) {
+        this.cache[entity.id].parameters[i] = entity.skybox[name];
+        entity.skybox.dirty = true;
+      }
+    }
 
-          if (needsUpdate) {
-            const fullscreenQuad = resourceCache.fullscreenQuad();
+    // Update and render
+    if (entity.skybox.dirty) {
+      entity.skybox.dirty = false;
 
-            //TODO: use render graph for updateSkyTextureCmd
-            updateSkyTextureCmd ||= {
-              name: "skyboxUpdateSkyTextureCmd",
-              pipeline: ctx.pipeline({
-                vert: ShaderParser.build(ctx, pipeline.fullscreen.vert),
-                frag: ShaderParser.build(ctx, skybox.skyEnvMap.frag),
-              }),
-              uniforms: {
-                uSunPosition: [0, 0, 0],
-              },
-              attributes: fullscreenQuad.attributes,
-              indices: fullscreenQuad.indices,
-            };
+      //TODO: use render graph for updateSkyTextureCmd
+      this.updateSkyTextureCmd ||= {
+        name: "skyboxUpdateSkyTextureCmd",
+        pipeline: ctx.pipeline({
+          vert: ShaderParser.build(ctx, skybox.skyEnvMap.vert),
+          frag: ShaderParser.build(ctx, skybox.skyEnvMap.frag),
+        }),
+        uniforms: {
+          uOutputEncoding: ctx.Encoding.Linear,
+        },
+        ...resourceCache.fullscreenTriangle(),
+      };
 
-            ctx.submit(updateSkyTextureCmd, {
-              pass: entity.skybox._updateSkyTexturePass,
-              uniforms: {
-                uSunPosition: entity.skybox.sunPosition || [0, 0, 0],
-                uOutputEncoding: entity.skybox.rgbm
-                  ? ctx.Encoding.RGBM
-                  : ctx.Encoding.Linear,
-              },
-            });
-          }
+      ctx.submit(this.updateSkyTextureCmd, {
+        pass: this.cache[entity.id]._updateSkyTexturePass,
+        uniforms: {
+          uSunPosition: this.cache[entity.id].sunPosition,
+          uParameters: this.cache[entity.id].parameters,
+        },
+      });
+
+      entity.skybox._skyTextureChanged = true;
+    }
+  },
+  update(entities) {
+    for (let i = 0; i < entities.length; i++) {
+      const entity = entities[i];
+
+      if (entity.skybox) {
+        entity.skybox._skyTextureChanged = false;
+
+        if (!entity.skybox.envMap && entity.skybox.sunPosition) {
+          this.updateSkybox(entity);
         }
       }
-    },
-  };
-};
+    }
+  },
+});

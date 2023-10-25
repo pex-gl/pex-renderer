@@ -58,9 +58,6 @@ const floorEntity = createEntity({
   }),
   geometry: components.geometry(cube({ sx: 2, sy: 0.05, sz: 2 })),
   material: components.material({
-    baseColor: [1, 0.8, 0.2, 1],
-    metallic: 0,
-    roughness: 0.2,
     castShadows: true,
     receiveShadows: true,
   }),
@@ -84,7 +81,6 @@ for (let i = 0; i < CUBE_INSTANCES; i++) {
     }),
     geometry: components.geometry(cubeGeometry),
     material: components.material({
-      baseColor: [1, 0, 1, 0.5],
       castShadows: true,
       receiveShadows: true,
       extensions: ctx.capabilities.isWebGL2
@@ -127,8 +123,6 @@ const renderPipelineSystem = systems.renderPipeline({
   ctx,
   resourceCache,
   renderGraph,
-  outputEncoding: ctx.Encoding.Linear,
-  shadowQuality: 3,
 });
 
 const basicRendererSystem = systems.renderer.basic({
@@ -239,7 +233,7 @@ ctx.frame(() => {
     if (!(entity.material && entity.geometry)) return;
     if (entitiesInView.includes(entity)) {
       entity.material.baseColor =
-        entity === floorEntity ? [0.5, 0.5, 0, 1] : [0.5, 0, 0, 1];
+        entity === floorEntity ? [0.7, 0.7, 0, 1] : [0.7, 0, 0, 1];
     } else {
       entity.material.baseColor = [1, 1, 1, 1];
     }

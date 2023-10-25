@@ -1,6 +1,6 @@
 import { loadImage, loadArrayBuffer } from "pex-io";
 import { aabb } from "pex-geom";
-import { mat4, quat } from "pex-math";
+import { mat4, quat, utils } from "pex-math";
 import * as Primitives from "primitive-geometry";
 import normals from "angle-normals";
 import centerAndNormalize from "geom-center-and-normalize";
@@ -53,6 +53,16 @@ export async function getTexture(ctx, file, encoding, options = {}) {
     console.error(error);
   }
   return tex;
+}
+
+export function updateSunPosition(skybox, elevation, azimuth) {
+  const phi = utils.toRadians(90 - elevation);
+  const theta = utils.toRadians(azimuth);
+  skybox.sunPosition = [
+    Math.sin(phi) * Math.sin(theta),
+    Math.cos(phi),
+    -Math.sin(phi) * Math.cos(theta),
+  ];
 }
 
 export function computeEdges({ length }, cells, stride = 3) {

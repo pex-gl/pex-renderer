@@ -12,6 +12,7 @@ import { quat } from "pex-math";
 import createGUI from "pex-gui";
 
 import { cube, torus, sphere } from "primitive-geometry";
+import { updateSunPosition } from "./utils.js";
 
 const pixelRatio = devicePixelRatio;
 const ctx = createContext({ pixelRatio });
@@ -128,15 +129,16 @@ window.addEventListener("keydown", ({ key }) => {
 });
 
 ctx.frame(() => {
-  const now = Date.now() * 0.0005;
-  quat.fromAxisAngle(torusEntity.transform.rotation, [1, 0, 0], now * 2);
+  const now = Date.now() * 0.001;
+  quat.fromAxisAngle(torusEntity.transform.rotation, [1, 0, 0], now);
   torusEntity.transform.dirty = true; //UGH
 
-  skyEntity.skybox.sunPosition = [
-    Math.cos(now),
-    (Math.sin(now) + 1) * 0.5,
-    Math.sin(now),
-  ];
+  const progress = (now / 10) % 1;
+  updateSunPosition(
+    skyEntity.skybox,
+    30 * Math.sin(Math.PI * progress),
+    360 * progress - 180,
+  );
 
   resourceCache.beginFrame();
   renderGraph.beginFrame();

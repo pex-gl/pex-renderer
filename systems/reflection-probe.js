@@ -1,4 +1,4 @@
-import { vec3, mat4 } from "pex-math";
+import { mat4 } from "pex-math";
 import {
   pipeline,
   reflectionProbe as SHADERS,
@@ -115,11 +115,10 @@ class ReflectionProbe {
   initCommands() {
     const ctx = this._ctx;
 
-    const fullscreenQuad = this.resourceCache.fullscreenQuad();
-    const attributes = fullscreenQuad.attributes;
-    const indices = fullscreenQuad.indices;
-
-    const vert = ShaderParser.build(ctx, pipeline.fullscreen.vert);
+    const fullscreenTriangle = this.resourceCache.fullscreenTriangle();
+    const attributes = fullscreenTriangle.attributes;
+    const count = fullscreenTriangle.count;
+    const vert = ShaderParser.build(ctx, pipeline.blit.vert);
 
     this.clearOctMapAtlasCmd = {
       name: "reflectionProbeClearOctMapAtlasCmd",
@@ -141,7 +140,7 @@ class ReflectionProbe {
         frag: ShaderParser.build(ctx, SHADERS.cubemapToOctMap.frag),
       }),
       attributes,
-      indices,
+      count,
       uniforms: {
         uCubemap: this._dynamicCubemap,
       },
@@ -158,7 +157,7 @@ class ReflectionProbe {
         frag: ShaderParser.build(ctx, SHADERS.convolveOctMapAtlasToOctMap.frag),
       }),
       attributes,
-      indices,
+      count,
       uniforms: {
         uIrradianceOctMapSize: IRRADIANCE_OCT_MAP_SIZE,
         uOctMapAtlas: this._reflectionMap,
@@ -179,7 +178,7 @@ class ReflectionProbe {
         uOctMap: this._octMap,
       },
       attributes,
-      indices,
+      count,
     };
 
     this.downsampleFromOctMapAtlasCmd = {
@@ -197,7 +196,7 @@ class ReflectionProbe {
         uOctMapAtlas: this._reflectionMap,
       },
       attributes,
-      indices,
+      count,
     };
 
     this.prefilterFromOctMapAtlasCmd = {
@@ -215,7 +214,7 @@ class ReflectionProbe {
         uOctMapAtlas: this._reflectionMap,
       },
       attributes,
-      indices,
+      count,
     };
   }
 
@@ -351,98 +350,98 @@ class ReflectionProbe {
   }
 }
 
+/**
+ * Reflection Probe system
+ *
+ * Adds:
+ * - "_reflectionProbe" to reflectionProbe components
+ * @param {import("../types.js").SystemOptions} options
+ * @returns {import("../types.js").System}
+ */
 export default ({ ctx, resourceCache }) => ({
   type: "reflection-probe-system",
   cache: {},
   debug: false,
-  update(entities, opts = {}) {
-    let { renderers = [] } = opts;
+  updateReflectionProbe(entity, skyboxEntities, options) {
+    // Initialise
+    if (!this.cache[entity.id] || !entity._reflectionProbe) {
+      this.cache[entity.id] = {};
+      entity._reflectionProbe = new ReflectionProbe({
+        ...entity.reflectionProbe,
+        ctx,
+        resourceCache,
+      });
+    }
 
+    // Compare
+    // TODO: also check for rgbm change?
+    if (entity._reflectionProbe.size !== entity.reflectionProbe.size) {
+      entity._reflectionProbe.resize(entity.reflectionProbe.size);
+      entity.reflectionProbe.dirty = true;
+    }
+
+    const skyboxEntity = skyboxEntities[0];
+
+    if (!skyboxEntity) return;
+
+    if (this.cache[entity.id].skyboxEnvMap !== skyboxEntity.skybox.envMap) {
+      this.cache[entity.id].skyboxEnvMap = skyboxEntity.skybox.envMap;
+      entity.reflectionProbe.dirty = true;
+    }
+
+    if (this.cache[entity.id].skyboxExposure !== skyboxEntity.skybox.exposure) {
+      this.cache[entity.id].skyboxExposure = skyboxEntity.skybox.exposure;
+      entity.reflectionProbe.dirty = true;
+    }
+
+    // Update and render
+    if (
+      // TODO: data ownership reflectionProbe vs _reflectionProbe
+      entity._reflectionProbe.dirty || // From ReflectionProbe instance
+      entity.reflectionProbe.dirty || // From user
+      skyboxEntity.skybox.dirty || // From user
+      skyboxEntity.skybox._skyTextureChanged // From skybox system
+    ) {
+      entity.reflectionProbe.dirty = false;
+      entity._reflectionProbe.dirty = false;
+
+      let { renderers = [] } = options;
+      entity._reflectionProbe.update((camera, encoding) => {
+        const renderView = {
+          camera: camera,
+          outputEncoding: encoding,
+        };
+        // should be only skybox renderers
+        for (let i = 0; i < renderers.length; i++) {
+          const renderer = renderers[i];
+          if (renderer.renderStages.background) {
+            renderer.renderStages.background(renderView, skyboxEntities, {
+              renderingToReflectionProbe: true,
+              attachmentsLocations: { color: 0 },
+            });
+          }
+        }
+        if (skyboxEntities.length > 0) {
+          // TODO: drawing skybox inside reflection probe
+          // skyboxEntities[0]._skybox.draw(camera, {
+          //   outputEncoding: encoding,
+          //   backgroundMode: false,
+          // });
+        }
+      });
+    }
+  },
+  update(entities, options = {}) {
     for (let i = 0; i < entities.length; i++) {
       const entity = entities[i];
-      if (!entity.reflectionProbe) continue;
-
-      const skyboxEntities = entities
-        .filter((entity) => entity.skybox)
-        .filter(
-          (skyboxEntity) => !entity.layer || entity.layer == skyboxEntity.layer,
+      if (entity.reflectionProbe) {
+        const skyboxEntities = entities.filter(
+          (skyboxEntity) =>
+            skyboxEntity.skybox &&
+            (!entity.layer || entity.layer == skyboxEntity.layer),
         );
-      const skyboxEntity = skyboxEntities[0];
 
-      let cachedProps = this.cache[entity.id];
-      if (!cachedProps || !entity._reflectionProbe) {
-        cachedProps = this.cache[entity.id] = {
-          skyboxSunPosition: [0, 0, 0],
-        };
-        const reflectionProbe = new ReflectionProbe({
-          ...entity.reflectionProbe,
-          ctx,
-          resourceCache,
-        });
-        entity._reflectionProbe = reflectionProbe;
-      }
-
-      // TODO: also check for rgbm change?
-      if (entity._reflectionProbe.size !== entity.reflectionProbe.size) {
-        entity._reflectionProbe.resize(entity.reflectionProbe.size);
-        entity.reflectionProbe.dirty = true;
-      }
-
-      if (!skyboxEntity) continue;
-
-      // TODO: this should be just node.reflectionProbe
-      // TODO: data ownership reflectionProbe vs _reflectionProbe
-      let needsUpdate =
-        entity.reflectionProbe.dirty || entity._reflectionProbe.dirty;
-
-      if (
-        skyboxEntity.skybox.sunPosition &&
-        vec3.distance(
-          cachedProps.skyboxSunPosition,
-          skyboxEntity.skybox.sunPosition,
-        ) > 0
-      ) {
-        vec3.set(
-          cachedProps.skyboxSunPosition,
-          skyboxEntity.skybox.sunPosition,
-        );
-        needsUpdate = true;
-      }
-
-      if (
-        skyboxEntity.skybox.envMap &&
-        cachedProps.skyboxEnvMap !== skyboxEntity.skybox.envMap
-      ) {
-        cachedProps.skyboxEnvMap = skyboxEntity.skybox.envMap;
-        needsUpdate = true;
-      }
-
-      if (needsUpdate) {
-        entity.reflectionProbe.dirty = false;
-        entity._reflectionProbe.dirty = false;
-        entity._reflectionProbe.update((camera, encoding) => {
-          const renderView = {
-            camera: camera,
-            outputEncoding: encoding,
-          };
-          // should be only skybox renderers
-          for (let i = 0; i < renderers.length; i++) {
-            const renderer = renderers[i];
-            if (renderer.renderStages.background) {
-              renderer.renderStages.background(renderView, skyboxEntities, {
-                renderingToReflectionProbe: true,
-                attachmentsLocations: { color: 0 },
-              });
-            }
-          }
-          if (skyboxEntities.length > 0) {
-            // TODO: drawing skybox inside reflection probe
-            // skyboxEntities[0]._skybox.draw(camera, {
-            //   outputEncoding: encoding,
-            //   backgroundMode: false,
-            // });
-          }
-        });
+        this.updateReflectionProbe(entity, skyboxEntities, options);
       }
     }
   },

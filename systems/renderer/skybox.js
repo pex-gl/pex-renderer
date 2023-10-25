@@ -13,6 +13,13 @@ const flagDefinitions = [
   [["options", "toneMap"], "TONE_MAP", { type: "value" }],
 ];
 
+/**
+ * Skybox renderer
+ *
+ * Renders a skybox (envMap or _skyTexture) to screen or to reflection probes.
+ * @param {import("../../types.js").SystemOptions} options
+ * @returns {import("../../types.js").RendererSystem}
+ */
 export default ({ ctx, resourceCache }) => {
   const identityMatrix = mat4.create();
 
@@ -104,10 +111,8 @@ export default ({ ctx, resourceCache }) => {
       const cmd = drawSkyboxCommand;
       cmd.pipeline = pipeline;
       cmd.uniforms = {
-        // viewport: camera.viewport,
-        // scissor: camera.viewport,
         uExposure: !renderingToReflectionProbe
-          ? renderView.camera.exposure || 1
+          ? renderView.camera.exposure ?? 1
           : 1, //TODO: hardcoded default from camera.exposure
         uOutputEncoding: outputEncoding,
 
@@ -116,7 +121,9 @@ export default ({ ctx, resourceCache }) => {
         uModelMatrix: entity._transform?.modelMatrix || identityMatrix,
 
         uEnvMap: texture,
+        // Encoding comes from either envMap or skyTexture (ideally linear)
         uEnvMapEncoding: texture.encoding,
+        uEnvMapExposure: entity.skybox.exposure ?? 1,
         uEnvMapSize: envMapSize,
         uBackgroundBlur: !renderingToReflectionProbe ? backgroundBlur : false,
       };

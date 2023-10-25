@@ -215,8 +215,12 @@
  * @typedef {object} SkyboxComponentOptions
  * @property {number[]} [sunPosition]
  * @property {ctx.texture2D} [envMap]
- * @property {boolean} [rgbm=false]
  * @property {boolean} [backgroundBlur=false]
+ * @property {number} [exposure=1]
+ * @property {number} [turbidity=10]
+ * @property {number} [rayleigh=2]
+ * @property {number} [mieCoefficient=0.005]
+ * @property {number} [mieDirectionalG=0.8]
  */
 /**
  * @typedef {object} SpotLightComponentOptions
@@ -259,6 +263,7 @@
 /**
  * @typedef {object} System
  * @property {string} type
+ * @property {object} cache
  * @property {boolean} debug
  * @property {SystemUpdate} update
  * @property {SystemDispose} dispose
@@ -286,6 +291,31 @@
  * @property {RenderEngineDebug} debug
  * @property {System[]} systems
  * @property {System[]} renderers
+ */
+/**
+ * @callback RendererSystemRender
+ * @param {RenderView[]} renderView
+ * @param {Entity | Entity[]} entities
+ * @param {object} [options={}]
+ */
+/**
+ * @typedef {object} RendererSystemStages
+ * @property {Function} [background]
+ * @property {Function} [shadow]
+ * @property {Function} [opaque]
+ * @property {Function} [transparent]
+ * @property {Function} [post]
+ */
+/**
+ * @typedef {object} RendererSystem
+ * @property {string} type
+ * @property {object} cache
+ * @property {boolean} debug
+ * @property {SystemUpdate} update
+ * @property {SystemDispose} dispose
+ * @property {RendererSystemRender} render
+ * @property {Array[]} flagDefinitions
+ * @property {RendererSystemStages} renderStages
  */
 
 // World

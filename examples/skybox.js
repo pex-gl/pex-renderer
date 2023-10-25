@@ -6,18 +6,24 @@ import {
 } from "../index.js";
 
 import createContext from "pex-context";
-import { quat } from "pex-math";
+import { quat, vec3 } from "pex-math";
 import createGUI from "pex-gui";
 
 import { sphere } from "primitive-geometry";
 
-import { getEnvMap, getURL } from "./utils.js";
+import { getEnvMap, updateSunPosition } from "./utils.js";
 
 const State = {
-  envMap: true,
-  rotation: 1.5 * Math.PI,
+  envMap: false,
+  backgroundBlur: 0,
+  rotation: 0,
+  // rotation: 1.5 * Math.PI,
   sizeIndex: 4,
   sizes: [256, 512, 1024, 2048, 4096],
+  maxElevation: 30,
+  elevation: 0,
+  azimuth: -180,
+  progress: 0,
 };
 
 const pixelRatio = devicePixelRatio;
@@ -33,6 +39,7 @@ const cameraEntity = createEntity({
     near: 0.1,
     far: 100,
     postprocess: false,
+    exposure: 1,
   }),
   orbiter: components.orbiter({ element: ctx.gl.canvas }),
 });
@@ -59,9 +66,10 @@ const skyboxEntity = createEntity({
     rotation: quat.fromAxisAngle(quat.create(), [0, 1, 0], State.rotation),
   }),
   skybox: components.skybox({
-    sunPosition: [1, 1, 1],
-    backgroundBlur: 1,
+    sunPosition: vec3.normalize([1, 1, 1]),
+    backgroundBlur: State.backgroundBlur,
     envMap: State.envMap ? envMap : false,
+    exposure: 1,
   }),
 });
 world.add(skyboxEntity);
@@ -80,17 +88,28 @@ renderEngine.render(world.entities, cameraEntity);
 
 // GUI
 const gui = createGUI(ctx);
-gui.addColumn("Settings");
-if (skyboxEntity.skybox.texture || skyboxEntity.skybox.envMap) {
-  gui.addTexture2D(
-    "Skybox",
-    skyboxEntity.skybox.texture || skyboxEntity.skybox.envMap,
-  );
-}
+gui.addColumn("Scene");
+gui.addLabel("Camera");
+gui.addParam("Camera Exposure", cameraEntity.camera, "exposure", {
+  min: 0,
+  max: 5,
+});
+gui.addSeparator();
+gui.addLabel("Material");
+gui.addParam("Roughness", geometryEntity.material, "roughness");
+gui.addParam("Metallic", geometryEntity.material, "metallic");
+
+gui.addColumn("Skybox");
+
 gui.addParam("EnvMap", State, "envMap", {}, (enabled) => {
   skyboxEntity.skybox.envMap = enabled ? envMap : null;
 });
 gui.addParam("BG Blur", skyboxEntity.skybox, "backgroundBlur");
+gui.addParam("Exposure", skyboxEntity.skybox, "exposure", {
+  min: 0,
+  max: 5,
+});
+
 gui.addParam(
   "Rotation",
   State,
@@ -106,6 +125,51 @@ gui.addParam(
     reflectionProbeEntity.reflectionProbe.dirty = true;
   },
 );
+gui.addSeparator();
+gui.addLabel("Sky Texture");
+
+gui.addParam(
+  "Sun Progress",
+  State,
+  "progress",
+  {
+    min: 0,
+    max: 1,
+  },
+  () => {
+    State.elevation = State.maxElevation * Math.sin(Math.PI * State.progress);
+    State.azimuth = 360 * State.progress - 180;
+    updateSunPosition(skyboxEntity.skybox, State.elevation, State.azimuth);
+  },
+);
+
+gui.addParam(
+  "Sun Elevation",
+  State,
+  "elevation",
+  { min: 0, max: State.maxElevation },
+  () => updateSunPosition(skyboxEntity.skybox, State.elevation, State.azimuth),
+);
+gui.addParam("Sun Azimuth", State, "azimuth", { min: -180, max: 180 }, () =>
+  updateSunPosition(skyboxEntity.skybox, State.elevation, State.azimuth),
+);
+updateSunPosition(skyboxEntity.skybox, State.elevation, State.azimuth);
+gui.addParam("Turbidity", skyboxEntity.skybox, "turbidity", {
+  min: 0,
+  max: 20,
+});
+gui.addParam("Rayleigh", skyboxEntity.skybox, "rayleigh", { min: 0, max: 4 });
+gui.addParam("MieCoefficient", skyboxEntity.skybox, "mieCoefficient", {
+  min: 0,
+  max: 0.1,
+});
+gui.addParam("MieDirectionalG", skyboxEntity.skybox, "mieDirectionalG", {
+  min: 0,
+  max: 1,
+});
+
+gui.addSeparator();
+gui.addLabel("Environment Map");
 gui.addRadioList(
   "Map Size",
   State,
@@ -119,16 +183,22 @@ gui.addRadioList(
   },
 );
 
-gui.addSeparator();
-gui.addLabel("Material");
-gui.addParam("Roughness", geometryEntity.material, "roughness");
-gui.addParam("Metallic", geometryEntity.material, "metallic");
-
 gui.addColumn("Textures");
+const dummyTexture2D = ctx.texture2D({
+  name: "dummyTexture2D",
+  width: 256,
+  height: 1,
+});
+const guiSkyTextureControl = gui.addTexture2D("Sky", null, { flipY: true });
+const guiEnvMapTextureControl = gui.addTexture2D("Env Map", null);
 gui.addTextureCube(
-  "Cubemap",
+  "Reflection Cubemap",
   reflectionProbeEntity._reflectionProbe._dynamicCubemap,
 );
+// gui.addTexture2D(
+//   "Oct Map",
+//   reflectionProbeEntity._reflectionProbe._octMap,
+// );
 gui.addTexture2D(
   "Reflection Map",
   reflectionProbeEntity._reflectionProbe._reflectionMap,
@@ -153,6 +223,11 @@ window.addEventListener("keydown", ({ key }) => {
 ctx.frame(() => {
   renderEngine.update(world.entities);
   renderEngine.render(world.entities, cameraEntity);
+
+  guiSkyTextureControl.texture =
+    skyboxEntity.skybox._skyTexture || dummyTexture2D;
+  guiEnvMapTextureControl.texture =
+    skyboxEntity.skybox.envMap || dummyTexture2D;
 
   ctx.debug(debugOnce);
   debugOnce = false;
