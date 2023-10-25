@@ -95,6 +95,7 @@ export default ({ ctx }) => {
           indices: entity._geometry.indices,
           instances: entity._geometry.instances,
           uniforms,
+          multiDraw: entity.geometry.multiDraw,
         });
       }
     },

@@ -2,7 +2,7 @@ import { mat3, mat4 } from "pex-math";
 import { pipeline as SHADERS } from "pex-shaders";
 
 import createBaseSystem from "./base.js";
-import { NAMESPACE, ProgramCache } from "../../utils.js";
+import { NAMESPACE, ProgramCache, TEMP_MAT4 } from "../../utils.js";
 import * as AreaLightsData from "./area-light-data.js";
 
 let ltc_1;
@@ -447,8 +447,11 @@ export default ({ ctx, shadowQuality = 3 }) => {
           camera.invViewMatrix || camera.inverseViewMatrix; //TODO: settle on invViewMatrix
         sharedUniforms.uCameraPosition = cameraEntity._transform.worldPosition; //TODO: ugly
       }
+      sharedUniforms.uNormalMatrix = mat3.create();
 
-      sharedUniforms.uCaptureTexture = backgroundColorTexture;
+      if (backgroundColorTexture) {
+        sharedUniforms.uCaptureTexture = backgroundColorTexture;
+      }
 
       const renderableEntities = entities.filter(
         (e) =>
@@ -460,61 +463,44 @@ export default ({ ctx, shadowQuality = 3 }) => {
       );
 
       for (let i = 0; i < renderableEntities.length; i++) {
-        const renderableEntity = renderableEntities[i];
-        const {
-          _geometry: geometry,
-          _transform: transform,
-          material,
-        } = renderableEntity;
+        const entity = renderableEntities[i];
 
-        if (!this.checkRenderableEntity(renderableEntity)) continue;
+        if (!this.checkRenderableEntity(entity)) continue;
 
         // Get pipeline and program from cache. Also computes this.uniforms
-        const pipeline = this.getPipeline(
-          ctx,
-          renderableEntity,
-          pipelineOptions,
-        );
+        const pipeline = this.getPipeline(ctx, entity, pipelineOptions);
 
-        // Get all uniforms
-        const cachedUniforms = {
-          uModelMatrix: transform.modelMatrix, //FIXME: bypasses need for transformSystem access
-          uPointSize: material.pointSize ?? 1,
+        const uniforms = {
+          uModelMatrix: entity._transform.modelMatrix, //FIXME: bypasses need for transformSystem access
+          uPointSize: entity.material.pointSize ?? 1,
           uRefraction:
+            // TODO: why 0.1 and move to flag definitions
             0.1 *
-            (material.refraction !== undefined ? material.refraction : 0.5),
+            (entity.material.refraction !== undefined
+              ? entity.material.refraction
+              : 0.5),
         };
-        renderableEntity._uniforms = cachedUniforms;
 
-        Object.assign(cachedUniforms, sharedUniforms, this.uniforms);
+        Object.assign(uniforms, sharedUniforms, this.uniforms);
+        entity._uniforms = uniforms;
 
-        // FIXME: this is expensive and not cached
-        let viewMatrix;
-        if (shadowMappingLight && shadowMappingLight._viewMatrix) {
-          viewMatrix = shadowMappingLight._viewMatrix;
-        } else {
-          viewMatrix = camera.viewMatrix;
-        }
+        // Set the normal matrix
+        mat4.set(TEMP_MAT4, sharedUniforms.uViewMatrix);
+        mat4.mult(TEMP_MAT4, entity._transform.modelMatrix);
+        mat4.invert(TEMP_MAT4);
+        mat4.transpose(TEMP_MAT4);
+        mat3.fromMat4(sharedUniforms.uNormalMatrix, TEMP_MAT4);
 
-        const normalMat = mat4.copy(viewMatrix);
-        mat4.mult(normalMat, transform.modelMatrix);
-        mat4.invert(normalMat);
-        mat4.transpose(normalMat);
-        cachedUniforms.uNormalMatrix = mat3.fromMat4(mat3.create(), normalMat);
-
-        const cmd = {
+        ctx.submit({
           name: transparent ? "drawTransparentGeometryCmd" : "drawGeometryCmd",
-          attributes: geometry.attributes,
-          indices: geometry.indices,
-          count: geometry.count,
           pipeline,
-          uniforms: cachedUniforms,
-          instances: geometry.instances,
-        };
-        if (renderableEntity.geometry.multiDraw) {
-          cmd.multiDraw = renderableEntity.geometry.multiDraw;
-        }
-        ctx.submit(cmd);
+          attributes: entity._geometry.attributes,
+          indices: entity._geometry.indices,
+          count: entity._geometry.count,
+          instances: entity._geometry.instances,
+          uniforms,
+          multiDraw: entity.geometry.multiDraw,
+        });
       }
     },
     renderStages: {
