@@ -16,6 +16,7 @@ export default (options) => {
     clearColor: [0, 0, 0, 1],
     viewMatrix: mat4.lookAt(mat4.create(), [0, 0, 1], [0, 0, 0], [0, 1, 0]),
     invViewMatrix: mat4.create(),
+    projectionMatrix: mat4.create(),
     culling: false,
     frustum: new Float32Array(24),
     exposure: 1,
@@ -40,13 +41,5 @@ export default (options) => {
     camera.fov ||= Math.PI / 4;
   }
 
-  // TODO: should this be in systems
-  camera.projectionMatrix = mat4.perspective(
-    mat4.create(),
-    camera.fov,
-    camera.aspect,
-    camera.near,
-    camera.far,
-  );
   return camera;
 };
