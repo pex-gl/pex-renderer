@@ -48,12 +48,7 @@ const getBBoxPositionsList = (bbox) => [
   [bbox[1][0], bbox[0][1], bbox[1][2]],
 ];
 
-const getCirclePositions = ({
-  steps,
-  axis,
-  radius = 1,
-  center = [0, 0, 0],
-}) => {
+const getCirclePoints = ({ steps, axis, radius = 1, center = [0, 0, 0] }) => {
   const points = [];
 
   for (let i = 0; i < steps; i++) {
@@ -68,7 +63,7 @@ const getCirclePositions = ({
     points.push(pos);
   }
 
-  return pointsToLine(points);
+  return points;
 };
 
 // prettier-ignore
@@ -120,7 +115,7 @@ const getPyramidEdgePositions = ({ sx, sy = sx, sz = sx }) => [
 ];
 
 // Lights
-const getDirectionalLight = (transform) => {
+const getDirectionalLight = ({ transform }) => {
   const size = vec3.length(transform.scale);
   const prismRadius = size * 0.1;
 
@@ -165,23 +160,46 @@ const getSpotLight = (spotLight) => {
     sz: distance,
   })
     .concat(
-      getCirclePositions({
-        radius,
-        center: [0, 0, distance],
-        ...spotLightCircleOptions,
-      }),
+      pointsToLine(
+        getCirclePoints({
+          radius,
+          center: [0, 0, distance],
+          ...spotLightCircleOptions,
+        }),
+      ),
     )
     .concat(
-      getCirclePositions({
-        radius: innerRadius,
-        center: [0, 0, distance],
-        ...spotLightCircleOptions,
-      }),
+      pointsToLine(
+        getCirclePoints({
+          radius: innerRadius,
+          center: [0, 0, distance],
+          ...spotLightCircleOptions,
+        }),
+      ),
     );
 };
 
-const getAreaLight = (transform) =>
-  getQuadPositions({ size: vec3.length(transform.scale) });
+const areaLightCircleOptions = { axis: [0, 1], radius: 0.5 };
+
+const getAreaLight = ({ areaLight, transform }) => {
+  const size = vec3.length(transform.scale);
+  if (areaLight.disk) {
+    const steps = 16;
+    const circlePoints = getCirclePoints({ ...areaLightCircleOptions, steps });
+    const z = [0, 0, size];
+
+    return pointsToLine(circlePoints)
+      .concat(circlePoints.flatMap((p) => [[...p], vec3.add([...p], z)]))
+      .concat(
+        // prettier-ignore
+        [
+          [...circlePoints[steps / 8]], [...circlePoints[steps * (5 / 8)]],
+          [...circlePoints[steps * (3 / 8)]], [...circlePoints[steps * (7 / 8)]],
+        ],
+      );
+  }
+  return getQuadPositions({ size });
+};
 
 // Cameras
 const getPerspectiveCamera = (camera) => {
@@ -384,7 +402,7 @@ export default ({ ctx }) => {
         if (entity.lightHelper) {
           if (entity.directionalLight) {
             addToBuilder(
-              getDirectionalLight(entity.transform),
+              getDirectionalLight(entity),
               entity.directionalLight.color,
               modelMatrix,
             );
@@ -405,7 +423,7 @@ export default ({ ctx }) => {
           }
           if (entity.areaLight) {
             addToBuilder(
-              getAreaLight(entity.transform),
+              getAreaLight(entity),
               entity.areaLight.color,
               modelMatrix,
             );
