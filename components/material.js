@@ -13,7 +13,8 @@ export default (options) =>
         baseColor: [1, 1, 1, 1],
         castShadows: false,
         lineWidth: 1,
-        lineResolution: 16,
+        lineResolution: 6,
+        perspectiveScaling: true,
         ...options,
       }
     : {
@@ -37,7 +38,6 @@ export default (options) =>
         receiveShadows: false,
         // unlit: true,
         // emissiveIntensity: 1,
-        // reflectance: 0.5,
         // baseColorTexture,
         // emissiveColorTexture,
         // normalTexture,

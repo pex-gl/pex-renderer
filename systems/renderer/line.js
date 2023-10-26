@@ -14,6 +14,7 @@ const flagDefinitions = [
 
   [["material", "baseColor"], "", { uniform: "uBaseColor" }],
   [["material", "lineWidth"], "", { uniform: "uLineWidth" }],
+  [["material", "perspectiveScaling"], "USE_PERSPECTIVE_SCALING"],
   [["geometry", "attributes", "aVertexColor"], "USE_VERTEX_COLORS"],
   [["geometry", "attributes", "aLineWidth"], "USE_INSTANCED_LINE_WIDTH"],
 ];
