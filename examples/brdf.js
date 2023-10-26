@@ -77,6 +77,14 @@ for (let i = 0; i < nW; i++) {
     clearCoat: 1,
     clearCoatRoughness: i / 10,
   });
+  materials["Sheen Roughness"] ||= [];
+  materials["Sheen Roughness"].push({
+    baseColor: colors.black,
+    metallic: 0,
+    roughness: 1,
+    sheenColor: colors.white,
+    sheenRoughness: i / 10,
+  });
 }
 const brdfNames = Object.keys(materials);
 const brdfMaterials = Object.values(materials).flat();
