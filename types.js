@@ -120,10 +120,10 @@
  *
  * @property {number} [metallic=1]
  * @property {number} [roughness=1]
-*
-* @property {ctx.texture2D | TextureTransform} [baseColorTexture]
-* @property {ctx.texture2D | TextureTransform} [emissiveColorTexture]
-* @property {ctx.texture2D | TextureTransform} [normalTexture]
+ *
+ * @property {ctx.texture2D | TextureTransform} [baseColorTexture]
+ * @property {ctx.texture2D | TextureTransform} [emissiveColorTexture]
+ * @property {ctx.texture2D | TextureTransform} [normalTexture]
  * @property {number} [normalTextureScale=1]
  * @property {ctx.texture2D | TextureTransform} [roughnessTexture]
  * @property {ctx.texture2D | TextureTransform} [metallicTexture]

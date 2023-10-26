@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+# [4.0.0-alpha.46](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.45...v4.0.0-alpha.46) (2023-10-26)
+
+
+### Bug Fixes
+
+* **ecs:** only compute projectionMatrix in camera system ([b6aac0d](https://github.com/pex-gl/pex-renderer/commit/b6aac0d71b19fefa705c9a911e5d16a1479abe60))
+* **ecs:** spot light helper default radius for inner angle 0 ([618cf7c](https://github.com/pex-gl/pex-renderer/commit/618cf7cae23c5bfd36d44109a2cce42bbb15f307))
+
+
+### Features
+
+* **ecs:** add line material perspectiveScaling + change default line resolution ([f0933ac](https://github.com/pex-gl/pex-renderer/commit/f0933ac3b10bf8aed7886b0dc93dc3272ed80d3e))
+* **ecs:** area light disk helper ([47ba734](https://github.com/pex-gl/pex-renderer/commit/47ba734e5c9366f1b3291dd9e419da67f6cf5707))
+* **pbr) feat(ecs:** add skybox exposure ([fda28f3](https://github.com/pex-gl/pex-renderer/commit/fda28f30cb29cab917e49e335c576881d2b011e1))
+
+
+### Performance Improvements
+
+* **ecs) feat(ecs:** avoid GC when computing normal matrix ([e105939](https://github.com/pex-gl/pex-renderer/commit/e1059392fee0f16b4326806974ee923108298329))
+
+
+
 # [4.0.0-alpha.45](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.44...v4.0.0-alpha.45) (2023-10-20)
 
 
