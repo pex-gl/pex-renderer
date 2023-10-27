@@ -111,6 +111,9 @@ export default ({ ctx } = {}) => {
     },
     render(renderView, entities, options) {
       const sharedUniforms = {
+        // uViewportSize: [renderView.viewport[2], renderView.viewport[3]],
+        uResolution: [renderView.viewport[2], renderView.viewport[3]],
+
         uExposure: renderView.exposure,
         uOutputEncoding: renderView.outputEncoding,
 
@@ -131,7 +134,6 @@ export default ({ ctx } = {}) => {
 
         const uniforms = {
           uModelMatrix: entity._transform.modelMatrix,
-          uResolution: [ctx.gl.drawingBufferWidth, ctx.gl.drawingBufferHeight],
         };
         Object.assign(uniforms, sharedUniforms, this.uniforms);
 
