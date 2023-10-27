@@ -362,7 +362,7 @@ export default ({ ctx, resourceCache }) => ({
   type: "reflection-probe-system",
   cache: {},
   debug: false,
-  updateReflectionProbe(entity, skyboxEntities, options) {
+  updateReflectionProbeEntity(entity, skyboxEntities, options) {
     // Initialise
     if (!this.cache[entity.id] || !entity._reflectionProbe) {
       this.cache[entity.id] = {};
@@ -413,13 +413,10 @@ export default ({ ctx, resourceCache }) => ({
         };
         // should be only skybox renderers
         for (let i = 0; i < renderers.length; i++) {
-          const renderer = renderers[i];
-          if (renderer.renderStages.background) {
-            renderer.renderStages.background(renderView, skyboxEntities, {
-              renderingToReflectionProbe: true,
-              attachmentsLocations: { color: 0 },
-            });
-          }
+          renderers[i].renderBackground?.(renderView, skyboxEntities, {
+            attachmentsLocations: { color: 0 },
+            renderingToReflectionProbe: true,
+          });
         }
         if (skyboxEntities.length > 0) {
           // TODO: drawing skybox inside reflection probe
@@ -441,7 +438,7 @@ export default ({ ctx, resourceCache }) => ({
             (!entity.layer || entity.layer == skyboxEntity.layer),
         );
 
-        this.updateReflectionProbe(entity, skyboxEntities, options);
+        this.updateReflectionProbeEntity(entity, skyboxEntities, options);
       }
     }
   },

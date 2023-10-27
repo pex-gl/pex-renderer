@@ -91,8 +91,12 @@ export default () => ({
     return { flags: flags.filter(Boolean), uniforms };
   },
 
-  getVertexShader: (options) => "",
-  getFragmentShader: (options) => "",
+  getVertexShader(options) {
+    return "";
+  },
+  getFragmentShader(options) {
+    return "";
+  },
 
   shadersPostReplace(descriptor, entity, uniforms, debugRender) {
     if (debugRender) {
@@ -263,8 +267,12 @@ vec4 debugColor = vec4(pow(vec3(${debugRender}${scale}), vec3(${pow})), 1.0);
 
     return this.cache.pipelines[hash];
   },
-  // render(renderView, entitites, options) {},
-  // renderStages: {},
+  // render(renderView, entities, options) {},
+  // renderBackground(renderView, entities, options) {},
+  // renderShadow(renderView, entities, options) {},
+  // renderOpaque(renderView, entities, options) {},
+  // renderTransparent(renderView, entities, options) {},
+  // renderPost(renderView, entities, options) {},
   update(_, { time }) {
     this.time = time;
   },

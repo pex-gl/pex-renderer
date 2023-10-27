@@ -124,9 +124,8 @@ export default ({ renderGraph, resourceCache }) => ({
           renderView,
           colorAttachments,
           entitiesInView: entities,
-          shadowMapping: true,
           shadowMappingLight: light,
-          drawTransparent: false,
+          transparent: false,
         });
       },
     });
@@ -183,9 +182,8 @@ export default ({ renderGraph, resourceCache }) => ({
           renderView,
           colorAttachments,
           entitiesInView: entities,
-          shadowMapping: true,
           shadowMappingLight: light,
-          drawTransparent: false,
+          transparent: false,
         });
       },
     });
@@ -238,9 +236,8 @@ export default ({ renderGraph, resourceCache }) => ({
             renderView,
             colorAttachments,
             entitiesInView: entities,
-            shadowMapping: true,
             shadowMappingLight: light,
-            drawTransparent: false,
+            transparent: false,
           });
         },
       });

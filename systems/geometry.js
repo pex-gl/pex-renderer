@@ -34,21 +34,28 @@ export default ({ ctx }) => ({
   type: "geometry-system",
   cache: {},
   debug: false,
-  updateGeometry(id, geometry) {
-    this.cache[id] ||= { geometry: null, attributes: {} };
+  updateGeometryEntity(entity) {
+    const geometry = entity.geometry;
+    this.cache[entity.id] ||= { geometry: null, attributes: {} };
 
-    if (this.debug && !this.cache[id].geometry) {
-      console.debug(NAMESPACE, this.type, "add to cache", id, this.cache[id]);
+    if (this.debug && !this.cache[entity.id].geometry) {
+      console.debug(
+        NAMESPACE,
+        this.type,
+        "add to cache",
+        entity.id,
+        this.cache[entity.id],
+      );
     }
 
-    const cachedGeom = this.cache[id];
+    const cachedGeom = this.cache[entity.id];
 
     const geometryDirty = cachedGeom.geometry !== geometry;
 
     // Cache geometry properties
     if (geometryDirty) {
       if (this.debug) {
-        console.debug(NAMESPACE, this.type, "update", id, geometry);
+        console.debug(NAMESPACE, this.type, "update", entity.id, geometry);
       }
       cachedGeom.geometry = geometry;
 
@@ -160,7 +167,7 @@ export default ({ ctx }) => ({
       const entity = entities[i];
       if (entity.geometry) {
         try {
-          this.updateGeometry(entity.id, entity.geometry);
+          this.updateGeometryEntity(entity);
           entity._geometry = this.cache[entity.id];
         } catch (error) {
           console.error(NAMESPACE, this.type, "update failed", error, entity);

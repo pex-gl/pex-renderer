@@ -13,6 +13,7 @@ const parameters = [
  *
  * Adds:
  * - "_skyTexture" to skybox components with no envMap for skybox-renderer to render
+ * - "_skyTextureChanged" to skybox components for reflection-probe system
  * @param {import("../types.js").SystemOptions} options
  * @returns {import("../types.js").System}
  */
@@ -20,8 +21,8 @@ export default ({ ctx, resourceCache }) => ({
   type: "skybox-system",
   cache: {},
   debug: false,
-  updateSkyTextureCmd: null,
-  updateSkybox(entity) {
+  cmd: null,
+  updateSkyboxEntity(entity) {
     // Initialise
     if (!this.cache[entity.id]) {
       entity.skybox._skyTexture = ctx.texture2D({
@@ -69,8 +70,8 @@ export default ({ ctx, resourceCache }) => ({
     if (entity.skybox.dirty) {
       entity.skybox.dirty = false;
 
-      //TODO: use render graph for updateSkyTextureCmd
-      this.updateSkyTextureCmd ||= {
+      //TODO: use render graph
+      this.cmd ||= {
         name: "skyboxUpdateSkyTextureCmd",
         pipeline: ctx.pipeline({
           vert: ShaderParser.build(ctx, skybox.skyEnvMap.vert),
@@ -82,7 +83,7 @@ export default ({ ctx, resourceCache }) => ({
         ...resourceCache.fullscreenTriangle(),
       };
 
-      ctx.submit(this.updateSkyTextureCmd, {
+      ctx.submit(this.cmd, {
         pass: this.cache[entity.id]._updateSkyTexturePass,
         uniforms: {
           uSunPosition: this.cache[entity.id].sunPosition,
@@ -101,7 +102,7 @@ export default ({ ctx, resourceCache }) => ({
         entity.skybox._skyTextureChanged = false;
 
         if (!entity.skybox.envMap && entity.skybox.sunPosition) {
-          this.updateSkybox(entity);
+          this.updateSkyboxEntity(entity);
         }
       }
     }

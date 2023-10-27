@@ -25,11 +25,13 @@ function isEntityInFrustum(entity, frustum) {
 }
 
 const cullEntities = (entities, camera) =>
-  entities.filter(
-    (entity) =>
-      !entity.geometry ||
-      (entity.transform && isEntityInFrustum(entity, camera.frustum)),
-  );
+  camera.culling
+    ? entities.filter(
+        (entity) =>
+          !entity.geometry ||
+          (entity.transform && isEntityInFrustum(entity, camera.frustum)),
+      )
+    : entities;
 
 /**
  * Render pipeline system
@@ -81,62 +83,48 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
     renderView,
     colorAttachments,
     entitiesInView,
-    shadowMapping,
     shadowMappingLight,
-    drawTransparent,
+    transparent,
     backgroundColorTexture,
   }) {
     renderView.exposure ||= 1;
     renderView.toneMap ||= null;
     renderView.outputEncoding ||= ctx.Encoding.Linear;
 
-    const attachmentsLocations = this.getAttachmentsLocations(colorAttachments);
+    const options = {
+      attachmentsLocations: this.getAttachmentsLocations(colorAttachments),
+    };
 
-    if (shadowMapping) {
+    if (shadowMappingLight) {
       for (let i = 0; i < renderers.length; i++) {
-        const renderer = renderers[i];
-        if (renderer.renderStages.shadow) {
-          renderer.renderStages.shadow(renderView, entitiesInView, {
-            shadowMapping: true,
-            shadowMappingLight,
-            attachmentsLocations,
-          });
-        }
+        renderers[i].renderShadow?.(renderView, entitiesInView, {
+          ...options,
+          shadowMappingLight,
+        });
       }
     } else {
-      if (!drawTransparent) {
+      if (!transparent) {
         for (let i = 0; i < renderers.length; i++) {
-          const renderer = renderers[i];
-          if (renderer.renderStages.opaque) {
-            const entities = renderView.camera.culling
-              ? this.cullEntities(entitiesInView, renderView.camera)
-              : entitiesInView;
-            renderer.renderStages.opaque(renderView, entities, {
-              attachmentsLocations,
-            });
-          }
+          renderers[i].renderOpaque?.(
+            renderView,
+            this.cullEntities(entitiesInView, renderView.camera),
+            options,
+          );
         }
         for (let i = 0; i < renderers.length; i++) {
-          const renderer = renderers[i];
-          if (renderer.renderStages.background) {
-            renderer.renderStages.background(renderView, entitiesInView, {
-              attachmentsLocations,
-            });
-          }
+          renderers[i].renderBackground?.(renderView, entitiesInView, options);
         }
       } else {
         //TODO: capture color buffer and blur it for transmission/refraction
         for (let i = 0; i < renderers.length; i++) {
-          const renderer = renderers[i];
-          if (renderer.renderStages.transparent) {
-            const entities = renderView.camera.culling
-              ? this.cullEntities(entitiesInView, renderView.camera)
-              : entitiesInView;
-            renderer.renderStages.transparent(renderView, entities, {
+          renderers[i].renderTransparent?.(
+            renderView,
+            this.cullEntities(entitiesInView, renderView.camera),
+            {
+              ...options,
               backgroundColorTexture,
-              attachmentsLocations,
-            });
-          }
+            },
+          );
         }
       }
     }
@@ -335,8 +323,8 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
           renderView,
           colorAttachments,
           entitiesInView,
-          shadowMapping: false,
-          drawTransparent: false,
+          shadowMappingLight: false,
+          transparent: false,
         });
       },
     });
@@ -403,8 +391,8 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
           renderView,
           colorAttachments: { color: colorAttachments.color },
           entitiesInView,
-          shadowMapping: false,
-          drawTransparent: true,
+          shadowMappingLight: false,
+          transparent: true,
           backgroundColorTexture: grabPassColorCopyTexture,
         });
       },
@@ -425,7 +413,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
         render: () => {
           for (let i = 0; i < renderers.length; i++) {
             const renderer = renderers[i];
-            renderer.renderStages.post?.(renderView, entitiesInView, {
+            renderer.renderPost?.(renderView, entitiesInView, {
               colorAttachments,
               depthAttachment,
               descriptors: this.descriptors,

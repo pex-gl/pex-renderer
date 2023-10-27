@@ -70,12 +70,12 @@ export default () => ({
       }
     }
   },
-  updateTransform(id, transform) {
+  updateTransformEntity(entity) {
     let isNotCached = false;
 
-    if (!this.cache[id]) {
-      this.cache[id] = {
-        transform,
+    if (!this.cache[entity.id]) {
+      this.cache[entity.id] = {
+        transform: entity.transform,
         modelMatrix: mat4.create(),
         localModelMatrix: mat4.create(),
         worldPosition: vec3.create(),
@@ -83,23 +83,28 @@ export default () => ({
       isNotCached = true;
     }
 
-    // TODO: why is it not in this.cache[id]?
-    transform.worldBounds ||= aabb.create();
+    // TODO: why is it not in this.cache[entity.id]?
+    entity.transform.worldBounds ||= aabb.create();
     // TODO: is this ever used?
     // transform.worldPosition ||= vec3.create();
 
     if (
       // TODO: do we need to check object props in detail or that would be too expensive?
-      this.cache[id].transform !== transform ||
+      this.cache[entity.id].transform !== entity.transform ||
       isNotCached ||
-      transform.dirty
+      entity.transform.dirty
     ) {
-      transform.dirty = false;
-      this.cache[id].transform = transform;
+      entity.transform.dirty = false;
+      this.cache[entity.id].transform = entity.transform;
 
-      if (this.debug) console.debug(NAMESPACE, this.type, "update", transform);
+      if (this.debug) {
+        // console.debug(NAMESPACE, this.type, "update", entity.transform);
+      }
 
-      updateModelMatrix(this.cache[id].localModelMatrix, transform);
+      updateModelMatrix(
+        this.cache[entity.id].localModelMatrix,
+        entity.transform,
+      );
     }
   },
   updateBoundingBox(transform) {
@@ -152,7 +157,7 @@ export default () => ({
       // Self reference to give access to parent.entity.id
       entity.transform.entity ||= entity;
 
-      this.updateTransform(entity.id, entity.transform);
+      this.updateTransformEntity(entity);
       entity._transform = this.cache[entity.id];
     }
 

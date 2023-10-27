@@ -294,28 +294,37 @@
  */
 /**
  * @callback RendererSystemRender
- * @param {RenderView[]} renderView
+ * @param {RenderView} renderView
  * @param {Entity | Entity[]} entities
  * @param {object} [options={}]
  */
 /**
- * @typedef {object} RendererSystemStages
- * @property {Function} [background]
- * @property {Function} [shadow]
- * @property {Function} [opaque]
- * @property {Function} [transparent]
- * @property {Function} [post]
+ * @typedef {object} RendererSystemStageOptions
+ * @property {object} [attachmentsLocations]
+ * @property {object} [shadowMappingLight]
+ * @property {ctx.texture2D} [backgroundColorTexture]
+ * @property {boolean} [renderingToReflectionProbe]
+ */
+/**
+ * @callback RendererSystemStage
+ * @param {RenderView[]} renderView
+ * @param {Entity[]} entities
+ * @param {RendererSystemStageOptions} options
  */
 /**
  * @typedef {object} RendererSystem
  * @property {string} type
  * @property {object} cache
  * @property {boolean} debug
+ * @property {Array[]} flagDefinitions
  * @property {SystemUpdate} update
  * @property {SystemDispose} dispose
  * @property {RendererSystemRender} render
- * @property {Array[]} flagDefinitions
- * @property {RendererSystemStages} renderStages
+ * @property {RendererSystemStage} [renderBackground]
+ * @property {RendererSystemStage} [renderShadow]
+ * @property {RendererSystemStage} [renderOpaque]
+ * @property {RendererSystemStage} [renderTransparent]
+ * @property {RendererSystemStage} [renderPost]
  */
 
 // World

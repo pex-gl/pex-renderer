@@ -321,173 +321,164 @@ const getVertexVector = (geometry, attribute, scale = 0.1, modelMatrix) => {
   return lines;
 };
 
-export default ({ ctx }) => {
-  const geomBuilder = createGeomBuilder({ positions: 1, colors: 1 });
+const geomBuilder = createGeomBuilder({ positions: 1, colors: 1 });
+export default ({ ctx }) => ({
+  ...createBaseSystem(),
+  type: "helper-renderer",
+  cache: {
+    // Cache based on: vertex source (material.vert or default), fragment source (material.frag or default) and list of flags
+    programs: new ProgramCache(),
+    // Cache based on: program.id
+    pipelines: {},
+  },
+  debug: false,
+  flagDefinitions,
+  cmd: null,
+  getVertexShader: () => SHADERS.helper.vert,
+  getFragmentShader: () => SHADERS.helper.frag,
+  getPipelineOptions() {
+    return {
+      depthTest: true,
+      depthWrite: true,
+      primitive: ctx.Primitive.Lines,
+    };
+  },
+  render(renderView, entities, options) {
+    geomBuilder.reset();
 
-  const drawHelperLinesCmd = {
-    name: "drawHelperLinesCmd",
-    attributes: {
-      aPosition: ctx.vertexBuffer({ data: [0, 0, 0] }),
-      aVertexColor: ctx.vertexBuffer({ data: [0, 0, 0, 0] }),
-    },
-    count: 1,
-  };
+    const addToBuilder = (
+      positions,
+      color = [0.23, 0.23, 0.23, 1],
+      modelMatrix,
+    ) => {
+      for (let i = 0; i < positions.length; i++) {
+        const position = positions[i];
+        if (modelMatrix) vec3.multMat4(position, modelMatrix);
+        geomBuilder.addPosition(position);
+        geomBuilder.addColor(Array.isArray(color[0]) ? color[i] : color);
+      }
+    };
 
-  const helperSystem = Object.assign(createBaseSystem(), {
-    type: "helper-renderer",
-    cache: {
-      // Cache based on: vertex source (material.vert or default), fragment source (material.frag or default) and list of flags
-      programs: new ProgramCache(),
-      // Cache based on: program.id
-      pipelines: {},
-    },
-    debug: false,
-    flagDefinitions,
-    getVertexShader: () => SHADERS.helper.vert,
-    getFragmentShader: () => SHADERS.helper.frag,
-    getPipelineOptions() {
-      return {
-        depthTest: true,
-        depthWrite: true,
-        primitive: ctx.Primitive.Lines,
-      };
-    },
-    render(renderView, entities, options) {
-      geomBuilder.reset();
+    for (let i = 0; i < entities.length; i++) {
+      const entity = entities[i];
+      const modelMatrix = entity._transform?.modelMatrix;
+      if (entity.transform?.position && entity.boundingBoxHelper) {
+        addToBuilder(
+          getBBoxPositionsList(entity.transform.worldBounds),
+          entity.boundingBoxHelper?.color || [1, 0, 0, 1],
+        );
+      }
 
-      const addToBuilder = (
-        positions,
-        color = [0.23, 0.23, 0.23, 1],
-        modelMatrix,
-      ) => {
-        for (let i = 0; i < positions.length; i++) {
-          const position = positions[i];
-          if (modelMatrix) vec3.multMat4(position, modelMatrix);
-          geomBuilder.addPosition(position);
-          geomBuilder.addColor(Array.isArray(color[0]) ? color[i] : color);
+      if (entity.vertexHelper) {
+        const helpers = Array.isArray(entity.vertexHelper)
+          ? entity.vertexHelper
+          : [entity.vertexHelper];
+        for (let j = 0; j < helpers.length; j++) {
+          const helper = helpers[j];
+          if (entity.geometry[helper.attribute]) {
+            addToBuilder(
+              getVertexVector(
+                entity.geometry,
+                helper.attribute,
+                helper.size,
+                modelMatrix,
+              ),
+              helper.color || [0, 1, 0, 1],
+            );
+          }
         }
-      };
+      }
 
-      for (let i = 0; i < entities.length; i++) {
-        const entity = entities[i];
-        const modelMatrix = entity._transform?.modelMatrix;
-        if (entity.transform?.position && entity.boundingBoxHelper) {
+      // TODO: cache
+      if (entity.lightHelper) {
+        if (entity.directionalLight) {
           addToBuilder(
-            getBBoxPositionsList(entity.transform.worldBounds),
-            entity.boundingBoxHelper?.color || [1, 0, 0, 1],
-          );
-        }
-
-        if (entity.vertexHelper) {
-          const helpers = Array.isArray(entity.vertexHelper)
-            ? entity.vertexHelper
-            : [entity.vertexHelper];
-          for (let j = 0; j < helpers.length; j++) {
-            const helper = helpers[j];
-            if (entity.geometry[helper.attribute]) {
-              addToBuilder(
-                getVertexVector(
-                  entity.geometry,
-                  helper.attribute,
-                  helper.size,
-                  modelMatrix,
-                ),
-                helper.color || [0, 1, 0, 1],
-              );
-            }
-          }
-        }
-
-        // TODO: cache
-        if (entity.lightHelper) {
-          if (entity.directionalLight) {
-            addToBuilder(
-              getDirectionalLight(entity),
-              entity.directionalLight.color,
-              modelMatrix,
-            );
-          }
-          if (entity.pointLight) {
-            addToBuilder(
-              getPointLight(entity.pointLight),
-              entity.pointLight.color,
-              modelMatrix,
-            );
-          }
-          if (entity.spotLight) {
-            addToBuilder(
-              getSpotLight(entity.spotLight),
-              entity.spotLight.color,
-              modelMatrix,
-            );
-          }
-          if (entity.areaLight) {
-            addToBuilder(
-              getAreaLight(entity),
-              entity.areaLight.color,
-              modelMatrix,
-            );
-          }
-        }
-        if (
-          entity.cameraHelper &&
-          entity.camera &&
-          renderView.camera !== entity.camera
-        ) {
-          addToBuilder(
-            entity.camera.projection === "orthographic"
-              ? getOrthographicCamera(entity.camera)
-              : getPerspectiveCamera(entity.camera),
-            entity.cameraHelper.color,
+            getDirectionalLight(entity),
+            entity.directionalLight.color,
             modelMatrix,
           );
         }
-        if (entity.axesHelper) {
+        if (entity.pointLight) {
           addToBuilder(
-            AXES_POSITIONS.map((p) => [...p]),
-            AXES_COLORS.map((p) => [...p]),
+            getPointLight(entity.pointLight),
+            entity.pointLight.color,
             modelMatrix,
           );
         }
-        if (entity.gridHelper) {
+        if (entity.spotLight) {
           addToBuilder(
-            getGrid(entity.gridHelper),
-            entity.gridHelper.color,
+            getSpotLight(entity.spotLight),
+            entity.spotLight.color,
+            modelMatrix,
+          );
+        }
+        if (entity.areaLight) {
+          addToBuilder(
+            getAreaLight(entity),
+            entity.areaLight.color,
             modelMatrix,
           );
         }
       }
-      if (!geomBuilder.count) return;
+      if (
+        entity.cameraHelper &&
+        entity.camera &&
+        renderView.camera !== entity.camera
+      ) {
+        addToBuilder(
+          entity.camera.projection === "orthographic"
+            ? getOrthographicCamera(entity.camera)
+            : getPerspectiveCamera(entity.camera),
+          entity.cameraHelper.color,
+          modelMatrix,
+        );
+      }
+      if (entity.axesHelper) {
+        addToBuilder(
+          AXES_POSITIONS.map((p) => [...p]),
+          AXES_COLORS.map((p) => [...p]),
+          modelMatrix,
+        );
+      }
+      if (entity.gridHelper) {
+        addToBuilder(
+          getGrid(entity.gridHelper),
+          entity.gridHelper.color,
+          modelMatrix,
+        );
+      }
+    }
+    if (!geomBuilder.count) return;
 
-      const geometry = geomBuilder;
+    const geometry = geomBuilder;
 
-      const pipeline = this.getPipeline(ctx, { geometry }, options);
+    this.cmd ||= {
+      name: "drawHelperLinesCmd",
+      attributes: {
+        aPosition: ctx.vertexBuffer({ data: [0, 0, 0] }),
+        aVertexColor: ctx.vertexBuffer({ data: [0, 0, 0, 0] }),
+      },
+    };
 
-      const cmd = drawHelperLinesCmd;
-      ctx.update(cmd.attributes.aPosition, { data: geometry.positions });
-      ctx.update(cmd.attributes.aVertexColor, { data: geometry.colors });
+    ctx.update(this.cmd.attributes.aPosition, { data: geometry.positions });
+    ctx.update(this.cmd.attributes.aVertexColor, { data: geometry.colors });
 
-      cmd.pipeline = pipeline;
-      cmd.count = geometry.count;
-      cmd.uniforms = {
+    ctx.submit(this.cmd, {
+      pipeline: this.getPipeline(ctx, { geometry }, options),
+      count: geometry.count,
+      uniforms: {
         uExposure: renderView.exposure,
         uOutputEncoding: renderView.outputEncoding,
 
         uProjectionMatrix: renderView.camera.projectionMatrix,
         uViewMatrix: renderView.camera.viewMatrix,
-      };
-
-      ctx.submit(cmd);
-    },
-    renderStages: {
-      opaque: (renderView, entities, options) => {
-        helperSystem.render(renderView, entities, {
-          ...options,
-          toneMap: renderView.toneMap,
-        });
       },
-    },
-  });
-
-  return helperSystem;
-};
+    });
+  },
+  renderOpaque(renderView, entities, options) {
+    this.render(renderView, entities, {
+      ...options,
+      toneMap: renderView.toneMap,
+    });
+  },
+});

@@ -122,6 +122,7 @@ export default () => ({
   cache: {},
   debug: false,
   updateCameraProjection,
+  computeFrustum,
   checkCamera(_, cameraEntity) {
     if (!cameraEntity.transform) {
       console.warn(
@@ -161,7 +162,7 @@ export default () => ({
       this.cache[entity.id].focalLength = camera.focalLength;
     }
   },
-  updateCamera(entity) {
+  updateCameraEntity(entity) {
     const orbiter = entity.orbiter;
     const camera = entity.camera;
 
@@ -170,6 +171,8 @@ export default () => ({
 
     if (orbiter) {
       if (!orbiter._orbiter) {
+        updateCameraProjection(entity.camera, entity._transform);
+
         const proxyCamera = {
           viewMatrix: camera.viewMatrix,
           invViewMatrix: camera.invViewMatrix,
@@ -342,7 +345,7 @@ export default () => ({
 
       if (entity.camera) {
         if (!this.checkCamera(null, entity)) continue;
-        this.updateCamera(entity);
+        this.updateCameraEntity(entity);
       }
     }
   },
