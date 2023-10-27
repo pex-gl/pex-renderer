@@ -3,7 +3,7 @@ import { parser as ShaderParser } from "pex-shaders";
 
 import addDescriptors from "./descriptors.js";
 import addShadowMapping from "./shadow-mapping.js";
-import addPostProcessingPasses from "./post-processing-passes.js";
+import { getPostProcessingPasses } from "./post-processing-passes.js";
 
 import { NAMESPACE, TEMP_VEC3, TEMP_VEC4 } from "../../utils.js";
 
@@ -400,7 +400,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
 
     // Post-processing pass
     if (postProcessing) {
-      this.postProcessingPasses ||= addPostProcessingPasses({
+      this.postProcessingPasses ||= getPostProcessingPasses({
         ctx,
         resourceCache,
         descriptors: this.descriptors,

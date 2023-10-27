@@ -14,18 +14,18 @@ export default ({ ctx, resourceCache }) => ({
     programs: new ProgramCache(),
     // Cache based on: program.id, material.blend and material.id (if present)
     pipelines: {},
-    // Cache based on: renderViewId, pass.name and passCommand.name
+    // Cache based on: renderViewId, pass.name and subPass.name
     targets: {},
   },
   debug: false,
   debugRender: "",
-  getVertexShader: ({ command }) => command.vert || SHADERS.postProcessing.vert,
-  getFragmentShader: ({ command }) => command.frag,
-  getPipelineHash(_, { command }) {
-    return this.getHashFromProps(command, pipelineProps, this.debug);
+  getVertexShader: ({ subPass }) => subPass.vert || SHADERS.postProcessing.vert,
+  getFragmentShader: ({ subPass }) => subPass.frag,
+  getPipelineHash(_, { subPass }) {
+    return this.getHashFromProps(subPass, pipelineProps, this.debug);
   },
-  getPipelineOptions(_, { command }) {
-    return { blend: command.blend };
+  getPipelineOptions(_, { subPass }) {
+    return { blend: subPass.blend };
   },
   render(
     renderView,
@@ -44,24 +44,25 @@ export default ({ ctx, resourceCache }) => ({
 
     for (let i = 0; i < passes.length; i++) {
       const pass = passes[i];
+      const isFinal = pass.name === "final";
 
-      if (pass.name !== "final" && !postProcessing[pass.name]) continue;
+      if (!isFinal && !postProcessing[pass.name]) continue;
 
-      for (let j = 0; j < pass.commands.length; j++) {
-        const passCommand = pass.commands[j];
+      for (let j = 0; j < pass.passes.length; j++) {
+        const subPass = pass.passes[j];
 
-        if (passCommand.disabled?.(renderView)) continue;
+        if (subPass.disabled?.(renderView)) continue;
 
         // Set flag definitions for pipeline retrieval
-        this.flagDefinitions = passCommand.flagDefinitions;
+        this.flagDefinitions = subPass.flagDefinitions;
 
         // Also computes this.uniforms
         const pipeline = this.getPipeline(ctx, renderView.cameraEntity, {
-          command: passCommand,
+          subPass,
           targets: this.cache.targets[renderViewId],
         });
 
-        const viewportSize = passCommand.size?.(renderView) || [
+        const viewportSize = subPass.size?.(renderView) || [
           renderView.viewport[2],
           renderView.viewport[3],
         ];
@@ -73,8 +74,8 @@ export default ({ ctx, resourceCache }) => ({
           uTime: this.time,
         };
 
-        const source = passCommand.source?.(renderView);
-        const target = passCommand.target?.(renderView);
+        const source = subPass.source?.(renderView);
+        const target = subPass.target?.(renderView);
 
         // Resolve attachments
         let inputColor;
@@ -110,11 +111,11 @@ export default ({ ctx, resourceCache }) => ({
           uDepthTexture: depthAttachment,
           uNormalTexture: colorAttachments.normal,
           uEmissiveTexture: colorAttachments.emissive,
-          ...passCommand.uniforms?.(renderView),
+          ...subPass.uniforms?.(renderView),
         };
 
         // TODO: move to descriptors
-        if (pass.name === "final") {
+        if (isFinal) {
           uniforms.uTextureEncoding = uniforms.uTexture.encoding;
         }
 
@@ -124,10 +125,10 @@ export default ({ ctx, resourceCache }) => ({
         const fullscreenTriangle = resourceCache.fullscreenTriangle();
 
         const postProcessingCmd = {
-          name: `${pass.name}.${passCommand.name}`,
+          name: `${pass.name}.${subPass.name}`,
           pass: resourceCache.pass({
             color: [outputColor],
-            ...passCommand.passDesc?.(renderView),
+            ...subPass.passDesc?.(renderView),
           }),
           pipeline,
           uniforms,
