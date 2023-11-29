@@ -526,7 +526,7 @@ async function handlePrimitive(
   primitive,
   { bufferViews, accessors },
   ctx,
-  { dracoOptions },
+  options,
 ) {
   let geometryProps = {};
 
@@ -570,7 +570,7 @@ async function handlePrimitive(
           attributeTypes,
           useUniqueIDs: true,
         },
-        ...dracoOptions,
+        ...options.dracoOptions,
       });
 
       normalizedAttributes.forEach((attributeName) => {
@@ -692,7 +692,13 @@ async function handlePrimitive(
 }
 
 // https://github.com/KhronosGroup/glTF/blob/main/specification/2.0/schema/mesh.schema.json
-async function handleMesh({ primitives, weights }, gltf, ctx, options) {
+async function handleMesh(
+  { primitives, weights },
+  instancedAttributes,
+  gltf,
+  ctx,
+  options,
+) {
   return await Promise.all(
     primitives.map(async (primitive) => {
       const decodedPrimitive = await handlePrimitive(
@@ -701,7 +707,9 @@ async function handleMesh({ primitives, weights }, gltf, ctx, options) {
         ctx,
         options,
       );
+      Object.assign(decodedPrimitive, instancedAttributes);
       const geometryCmp = components.geometry(decodedPrimitive);
+
       const materialCmp =
         primitive.material !== undefined
           ? components.material(
@@ -915,45 +923,26 @@ async function handleNode(node, gltf, i, ctx, options) {
   }
 
   if (Number.isInteger(node.mesh)) {
+    let instancedAttributes = {};
+    if (node.extensions && node.extensions.EXT_mesh_gpu_instancing) {
+      instancedAttributes = await handlePrimitive(
+        node.extensions.EXT_mesh_gpu_instancing,
+        gltf,
+        ctx,
+      );
+      Object.keys(instancedAttributes).forEach((attribName) => {
+        instancedAttributes[attribName].divisor = 1;
+      });
+      instancedAttributes.instances = instancedAttributes.offsets.count;
+      // TODO: if not known attribute, put it in geometry.attributes
+    }
     const primitives = await handleMesh(
       gltf.meshes[node.mesh],
+      instancedAttributes,
       gltf,
       ctx,
       options,
     );
-    let instances = null;
-
-    if (node.extensions) {
-      if (node.extensions.EXT_mesh_gpu_instancing) {
-        const instancingPrimitive = node.extensions.EXT_mesh_gpu_instancing;
-        instances = await handlePrimitive(instancingPrimitive, gltf, ctx);
-        Object.keys(instances).forEach((attribName) => {
-          instances[attribName].divisor = 1;
-        });
-        // entity.instanced = true;
-        instances.instances = instances.offsets.count;
-        const maxInstances = Math.max(maxInstances, instances.instances);
-
-        if (instances.instances != 561) {
-          instances = null;
-          return null;
-        } else {
-          console.log(
-            node.name,
-            "EXT_mesh_gpu_instancing",
-            instancingPrimitive,
-            instances,
-            maxInstances,
-          );
-          instances.offsets.buffer = ctx.vertexBuffer(instances.offsets.data);
-          instances.scales.buffer = ctx.vertexBuffer(instances.scales.data);
-          instances.rotations.buffer = ctx.vertexBuffer(
-            instances.rotations.data,
-          );
-        }
-        instances.rotations = null;
-      }
-    }
 
     if (primitives.length === 1) {
       Object.assign(node.entity, primitives[0]);
@@ -966,9 +955,6 @@ async function handleNode(node, gltf, i, ctx, options) {
       // if (skinCmp) {
       //   // node.entity.skin = skinCmp;
       //   node.entity.addComponent(skinCmp);
-      // }
-      // if (instances) {
-      //   Object.assign(entity.geometry, instances);
       // }
       return node.entity;
     } else {

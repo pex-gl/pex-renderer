@@ -482,6 +482,11 @@ export default ({ ctx, shadowQuality = 3 }) => ({
       mat4.transpose(TEMP_MAT4);
       mat3.fromMat4(sharedUniforms.uNormalMatrix, TEMP_MAT4);
 
+      // TODO: fix CW
+      // ctx.gl.frontFace(
+      //   determinant(entity._transform.modelMatrix) < 0 ? ctx.gl.CW : ctx.gl.CCW,
+      // );
+
       ctx.submit({
         name: transparent ? "drawTransparentGeometryCmd" : "drawGeometryCmd",
         pipeline,

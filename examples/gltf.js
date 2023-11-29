@@ -97,6 +97,10 @@ const skyEntity = createEntity({
 });
 world.add(skyEntity);
 
+const postProcessingComponent = components.postProcessing({
+  bloom: components.postProcessing.bloom(),
+});
+
 let floorEntity;
 let cameraEntity;
 let animationEntity;
@@ -161,6 +165,14 @@ function repositionModel({ root }) {
   const z = 2 * Math.floor(i / n) - n + 1;
 
   vec3.add(root.transform.position, [x, 0, z]);
+}
+
+function aabbFromInstances(geom, offsets) {
+  const bounds = aabb.fromPoints(aabb.create(), offsets);
+  const geomBounds = aabb.fromPoints(aabb.create(), geom.positions);
+  vec3.add(bounds[0], geomBounds[0]);
+  vec3.add(bounds[1], geomBounds[1]);
+  return bounds;
 }
 
 function rescaleScene({ root }) {
@@ -251,6 +263,7 @@ async function loadScene(url, grid) {
       //   .update(scene.entities);
       // renderEngine.update(scene.entities);
       const far = 10000;
+      // TODO: "SimpleInstancing" needs aabbFromInstances
       const sceneBounds = scene.root.transform.worldBounds;
       const sceneCenter = aabb.center(scene.root.transform.worldBounds);
 
@@ -317,6 +330,13 @@ async function loadScene(url, grid) {
       }
     }
   }
+
+  // if (["EmissiveStrengthTest"].includes(State.selectedModel.name)) {
+  //   cameraEntity.postProcessing = postProcessingComponent;
+  // } else {
+  //   delete cameraEntity.postProcessing;
+  // }
+  cameraEntity.postProcessing = postProcessingComponent;
 
   return scene;
 }
@@ -420,7 +440,7 @@ gui.addTexture2DList(
 
     const entitiesIds = [
       ...scenes
-        .map((scene) => scene.entities.map((entity) => entity.id))
+        .map((scene) => scene?.entities.map((entity) => entity.id))
         .flat(),
       floorEntity?.id,
       cameraEntity?.id,
@@ -488,43 +508,48 @@ models = models.filter(({ name }) =>
     // "BoxInterleaved",
     // "BoxTextured",
     // "BoxTexturedNonPowerOfTwo",
-    // "BoxVertexColors",
+    // "BoxVertexColors", // FAIL: COLOR_0 can be vec3
     // "BrainStem",
     // "Buggy",
     // "Cameras",
     // "CesiumMan",
-    "CesiumMilkTruck",
+    // "CesiumMilkTruck",
+    // "ClearCoatCarPaint",
     // "ClearCoatTest",
+    // "ClearCoatWicker",
     // "Corset",
     // "Cube",
-    // "DamagedHelmet",
+    "DamagedHelmet",
     // "DragonAttenuation", // FAIL: attenuation
     // "Duck",
-    // "EmissiveStrengthTest", // HALF: missing postpro bloom
-    // "EnvironmentTest",
+    // "EmissiveStrengthTest",
+    // "EnvironmentTest", // HALF: missing glTF-IBL
     // "FlightHelmet",
     // "Fox", // HALF: hardcoded near/far
     // "GearboxAssy", // FAIL: wrong position
     // "GlamVelvetSofa", // FAIL: KHR_materials_variants, KHR_materials_specular
     // "InterpolationTest",
-    // "IridescenceDielectricSpheres", // FAIL
-    // "IridescenceLamp", // FAIL
-    // // "IridescenceMetallicSpheres", // FAIL
-    // "IridescenceSuzanne", // FAIL
-    // "IridescentDishWithOlives", // FAIL
+    // "IridescenceDielectricSpheres", // FAIL: KHR_materials_iridescence
+    // "IridescenceLamp", // FAIL: KHR_materials_iridescence
+    // // "IridescenceMetallicSpheres", // FAIL: KHR_materials_iridescence
+    // "IridescenceSuzanne", // FAIL: KHR_materials_iridescence
+    // "IridescentDishWithOlives", // FAIL: KHR_materials_iridescence
     // "Lantern",
     // "LightsPunctualLamp",
     // "MaterialsVariantsShoe", // FAIL: KHR_materials_variants
+    // "MeshPrimitiveModes",
     // "MetalRoughSpheres",
     // "MetalRoughSpheresNoTextures",
     // "MorphPrimitivesTest",
     // // "MorphStressTest", // FAIL: needs animation texture
     // "MosquitoInAmber", // FAIL: KHR_materials_transmission, TEXCOORD_2
-    // "MultipleScenes", // FAIL: missing implementation
     // "MultiUVTest", // FAIL: wrong position
+    // "MultipleScenes", // FAIL: missing implementation
+    // "NegativeScaleTest", // FAIL: need determinant test
     // "NormalTangentMirrorTest",
     // "NormalTangentTest",
     // "OrientationTest",
+    // "PrimitiveModeNormalsTest", // FAIL: 3rd column should render as flat shading
     // "ReciprocatingSaw",
     // "RecursiveSkeletons",
     // "RiggedFigure",
@@ -532,6 +557,7 @@ models = models.filter(({ name }) =>
     // "SciFiHelmet",
     // "SheenChair",
     // "SheenCloth",
+    // "SimpleInstancing",
     // "SimpleMeshes",
     // "SimpleMorph",
     // "SimpleSkin",
@@ -544,7 +570,7 @@ models = models.filter(({ name }) =>
     // "TextureCoordinateTest",
     // "TextureEncodingTest",
     // "TextureLinearInterpolationTest", // HALF: EX_srgb in webgl1
-    // "TextureSettingsTest", // FAIL: single-sided (cache issue #320)
+    // "TextureSettingsTest",
     // "TextureTransformMultiTest",
     // "TextureTransformTest",
     // "ToyCar", // FAIL: (too small, wrong camera)
@@ -552,7 +578,7 @@ models = models.filter(({ name }) =>
     // "TransmissionTest", // FAIL: KHR_materials_transmission
     // "Triangle",
     // "TriangleWithoutIndices",
-    // "TwoSidedPlane", // FAIL: double side
+    // "TwoSidedPlane",
     // "Unicode\u2764\u267bTest",
     // "UnlitTest",
     // "VC", // FAIL: // "node_69" and "node_183" and "node_209" and "node_211" worldBounds infinity
