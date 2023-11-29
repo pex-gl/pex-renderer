@@ -681,7 +681,7 @@ async function handlePrimitive(
   }
 
   // https://www.khronos.org/registry/glTF/specs/2.0/glTF-2.0.html#primitivemode
-  if (primitive.mode) {
+  if (Number.isInteger(primitive.mode)) {
     geometryProps = {
       ...geometryProps,
       primitive: primitive.mode,
