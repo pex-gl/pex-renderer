@@ -443,7 +443,7 @@ gui.addRadioList(
     (renderer) => renderer.type == "post-processing-renderer",
   ),
   "debugRender",
-  ["", "ssao.main", "dof.main", "bloom.threshold", "bloom.downSample[3]"].map(
+  ["", "ssao.main", "dof.main", "bloom.threshold", "bloom.downsample[3]"].map(
     (value) => ({
       name: value || "No debug",
       value,

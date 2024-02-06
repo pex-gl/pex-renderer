@@ -283,15 +283,15 @@ const bloom = ({ ctx, resourceCache, descriptors, bloomLevels = 9 }) => [
   },
   // TODO: custom downsample levels based on viewport size
   ...Array.from({ length: bloomLevels }, (_, k) => k).map((i) => ({
-    name: `downSample[${i}]`,
-    frag: SHADERS.downSample.frag,
+    name: `downsample[${i}]`,
+    frag: SHADERS.downsample.frag,
     // prettier-ignore
     flagDefinitions: [
       [["postProcessing", "bloom"], "USE_DOWN_SAMPLE"],
       [["postProcessing", "bloom", "quality"], "QUALITY", { type: "value" }],
       [["postProcessing", "bloom", "radius"], "", { uniform: "uIntensity" }],
     ],
-    source: () => (i === 0 ? "bloom.threshold" : `bloom.downSample[${i - 1}]`),
+    source: () => (i === 0 ? "bloom.threshold" : `bloom.downsample[${i - 1}]`),
     target: ({ viewport }) =>
       resourceCache.texture2D({
         ...descriptors.postProcessing.outputTextureDesc,
@@ -311,14 +311,14 @@ const bloom = ({ ctx, resourceCache, descriptors, bloomLevels = 9 }) => [
   })),
   ...Array.from({ length: bloomLevels - 1 }, (_, k) => k).map((i) => ({
     name: `main[${i}]`,
-    frag: SHADERS.upSample.frag,
+    frag: SHADERS.upsample.frag,
     // prettier-ignore
     flagDefinitions: [
-      [["postProcessing", "bloom"], "USE_UP_SAMPLE"],
+      [["postProcessing", "bloom"], "USE_UPSAMPLE"],
       [["postProcessing", "bloom", "quality"], "QUALITY", { type: "value" }],
     ],
     blend: true,
-    source: () => `bloom.downSample[${i + 1}]`,
+    source: () => `bloom.downsample[${i + 1}]`,
     target: () => "bloom.threshold",
   })),
 ];
