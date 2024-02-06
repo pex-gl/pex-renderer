@@ -131,7 +131,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
   },
 
   update(entities, options = {}) {
-    let { renderView, renderers, drawToScreen } = options;
+    let { renderView, renderers, drawToScreen = true } = options;
 
     const shadowCastingEntities = entities.filter(
       (entity) => entity.geometry && entity.material?.castShadows,
@@ -147,7 +147,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
 
     // Set the render pipeline encoding and tone mapping settings before blit
     // Output will depend on camera settings
-    if (drawToScreen !== false) {
+    if (drawToScreen) {
       // Render pipeline is linear.
       // Output is tone mapped in "BlitPass" or in post-processing "final"
       renderView.outputEncoding ||= ctx.Encoding.Linear;
