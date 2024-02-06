@@ -82,6 +82,12 @@ const lightColorToSrgb = (light) =>
     j < 3 ? Math.pow(c * light.intensity, 1.0 / 2.2) : c,
   );
 
+/**
+ * Standard renderer
+ * @param {import("../../types.js").SystemOptions} options
+ * @returns {import("../../types.js").RendererSystem}
+ * @alias module:renderer.standard
+ */
 export default ({ ctx, shadowQuality = 3 }) => ({
   ...createBaseSystem(),
   type: "standard-renderer",

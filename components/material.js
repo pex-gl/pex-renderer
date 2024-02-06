@@ -4,8 +4,7 @@
  * Material component
  * @param {import("../types.js").MaterialComponentOptions | import("../types.js").LineMaterialComponentOptions} [options]
  * @returns {object}
- * @module MaterialComponent
- * @exports module:MaterialComponent
+ * @alias module:components.material
  */
 export default (options) =>
   options?.type === "line"

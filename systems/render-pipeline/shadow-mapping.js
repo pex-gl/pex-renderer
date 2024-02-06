@@ -11,6 +11,8 @@ import { TEMP_BOUNDS_POINTS, TEMP_VEC3 } from "../../utils.js";
  * Requires:
  * - this.drawMeshes()
  * - this.descriptors
+ * @private
+ * @param {import("../../types.js").SystemOptions} options
  * @returns {import("../../types.js").System}
  */
 export default ({ renderGraph, resourceCache }) => ({

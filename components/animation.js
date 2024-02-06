@@ -2,8 +2,7 @@
  * Animation component
  * @param {import("../types.js").AnimationComponentOptions} [options]
  * @returns {object}
- * @module AnimationComponent
- * @exports module:AnimationComponent
+ * @alias module:components.animation
  */
 export default (options) => ({
   playing: false,

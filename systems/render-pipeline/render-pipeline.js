@@ -40,7 +40,9 @@ const cullEntities = (entities, camera) =>
  * - "_near", "_far", "_radiusUV" and "_sceneBboxInLightSpace" to light components that cast shadows
  * - "_shadowCubemap" to pointLight components and "_shadowMap" to other light components
  * - "_targets" to postProcessing components
+ * @param {import("../../types.js").SystemOptions} options
  * @returns {import("../../types.js").System}
+ * @alias module:systems.renderPipeline
  */
 export default ({ ctx, resourceCache, renderGraph }) => ({
   type: "render-pipeline-system",

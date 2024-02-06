@@ -2,7 +2,6 @@
  * Skin component
  * @param {import("../types.js").SkinComponentOptions} [options]
  * @returns {object}
- * @module SkinComponent
- * @exports module:SkinComponent
+ * @alias module:components.skin
  */
 export default (options) => ({ ...options });

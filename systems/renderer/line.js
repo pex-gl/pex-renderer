@@ -32,6 +32,12 @@ const instanceRoundRound = Float32Array.of(
   0, 0.5, 0,
 );
 
+/**
+ * Line renderer
+ * @param {import("../../types.js").SystemOptions} options
+ * @returns {import("../../types.js").RendererSystem}
+ * @alias module:renderer.line
+ */
 export default ({ ctx } = {}) => ({
   ...createBaseSystem(),
   type: "line-renderer",

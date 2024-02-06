@@ -6,6 +6,12 @@ import { ProgramCache } from "../../utils.js";
 // Impacts pipeline caching
 const pipelineProps = ["blend"];
 
+/**
+ * Post-Processing renderer
+ * @param {import("../../types.js").SystemOptions} options
+ * @returns {import("../../types.js").RendererSystem}
+ * @alias module:renderer.postProcessing
+ */
 export default ({ ctx, resourceCache }) => ({
   ...createBaseSystem(),
   type: "post-processing-renderer",

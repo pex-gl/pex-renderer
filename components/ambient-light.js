@@ -2,8 +2,7 @@
  * Ambient light component
  * @param {import("../types.js").AmbientLightComponentOptions} [options]
  * @returns {object}
- * @module AmbientLightComponent
- * @exports module:AmbientLightComponent
+ * @alias module:components.ambientLight
  */
 export default (options) => ({
   color: [1, 1, 1, 1],

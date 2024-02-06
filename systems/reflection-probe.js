@@ -357,6 +357,7 @@ class ReflectionProbe {
  * - "_reflectionProbe" to reflectionProbe components
  * @param {import("../types.js").SystemOptions} options
  * @returns {import("../types.js").System}
+ * @alias module:systems.reflectionProbe
  */
 export default ({ ctx, resourceCache }) => ({
   type: "reflection-probe-system",

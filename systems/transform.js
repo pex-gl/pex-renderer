@@ -23,6 +23,7 @@ function updateModelMatrix(matrix, transform) {
  * - "worldBounds", "dirty" and "aabbDirty" to transform components
  * - "_transform" to entities as reference to internal cache
  * @returns {import("../types.js").System}
+ * @alias module:systems.transform
  */
 export default () => ({
   type: "transform-system",

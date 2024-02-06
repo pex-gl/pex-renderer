@@ -16,6 +16,7 @@ const parameters = [
  * - "_skyTextureChanged" to skybox components for reflection-probe system
  * @param {import("../types.js").SystemOptions} options
  * @returns {import("../types.js").System}
+ * @alias module:systems.skybox
  */
 export default ({ ctx, resourceCache }) => ({
   type: "skybox-system",

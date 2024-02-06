@@ -83,153 +83,14 @@ ctx.frame(() => {
 ## Modules
 
 <dl>
-<dt><a href="#module_AmbientLightComponent">AmbientLightComponent</a> ⇒ <code>object</code></dt>
-<dd><p>Ambient light component</p>
-</dd>
-<dt><a href="#module_AnimationComponent">AnimationComponent</a> ⇒ <code>object</code></dt>
-<dd><p>Animation component</p>
-</dd>
-<dt><a href="#module_AreaLightComponent">AreaLightComponent</a> ⇒ <code>object</code></dt>
-<dd><p>Area light component</p>
-</dd>
-<dt><a href="#module_AxesHelperComponent">AxesHelperComponent</a> ⇒ <code>object</code></dt>
-<dd><p>Axes helper component</p>
-</dd>
-<dt><a href="#module_BoundingBoxHelperComponent">BoundingBoxHelperComponent</a> ⇒ <code>object</code></dt>
-<dd><p>Bounding box helper component</p>
-</dd>
-<dt><a href="#module_CameraHelperComponent">CameraHelperComponent</a> ⇒ <code>object</code></dt>
-<dd><p>Camera helper component</p>
-</dd>
-<dt><a href="#module_CameraComponent">CameraComponent</a> ⇒ <code>object</code></dt>
-<dd><p>Camera component</p>
-</dd>
-<dt><a href="#module_DirectionalLightComponent">DirectionalLightComponent</a> ⇒ <code>object</code></dt>
-<dd><p>Directional light component</p>
-</dd>
-<dt><a href="#module_GeometryComponent">GeometryComponent</a> ⇒ <code>object</code></dt>
-<dd><p>Geometry component</p>
-</dd>
-<dt><a href="#module_GridHelperComponent">GridHelperComponent</a> ⇒ <code>object</code></dt>
-<dd><p>Grid helper component</p>
-</dd>
-<dt><a href="#module_LightHelperComponent">LightHelperComponent</a> ⇒ <code>object</code></dt>
-<dd><p>Light helper component</p>
-</dd>
-<dt><a href="#module_MaterialComponent">MaterialComponent</a> ⇒ <code>object</code></dt>
-<dd><p>Material component</p>
-</dd>
-<dt><a href="#module_MorphComponent">MorphComponent</a> ⇒ <code>object</code></dt>
-<dd><p>Morph component</p>
-</dd>
-<dt><a href="#module_OrbiterComponent">OrbiterComponent</a> ⇒ <code>object</code></dt>
-<dd><p>Orbiter component</p>
-</dd>
-<dt><a href="#module_OverlayComponent">OverlayComponent</a> ⇒ <code>object</code></dt>
-<dd><p>Overlay component</p>
-</dd>
-<dt><a href="#module_PointLightComponent">PointLightComponent</a> ⇒ <code>object</code></dt>
-<dd><p>Point light component</p>
-</dd>
-<dt><a href="#module_PostProcessingComponent">PostProcessingComponent</a> ⇒ <code>object</code></dt>
-<dd><p>Post Processing component</p>
-</dd>
-<dt><a href="#module_ReflectionProbeComponent">ReflectionProbeComponent</a> ⇒ <code>object</code></dt>
-<dd><p>Reflection probe component</p>
-</dd>
-<dt><a href="#module_SkinComponent">SkinComponent</a> ⇒ <code>object</code></dt>
-<dd><p>Skin component</p>
-</dd>
-<dt><a href="#module_SkyboxComponent">SkyboxComponent</a> ⇒ <code>object</code></dt>
-<dd><p>Skybox component</p>
-</dd>
-<dt><a href="#module_SpotLightComponent">SpotLightComponent</a> ⇒ <code>object</code></dt>
-<dd><p>Spot light component</p>
-</dd>
-<dt><a href="#module_TransformComponent">TransformComponent</a> ⇒ <code>object</code></dt>
-<dd><p>Transform component</p>
-</dd>
-<dt><a href="#module_VertexHelperComponent">VertexHelperComponent</a> ⇒ <code>object</code></dt>
-<dd><p>Vertex helper component</p>
-</dd>
-<dt><a href="#module_Entity">Entity</a> ⇒ <code><a href="#Entity">Entity</a></code></dt>
-<dd><p>Entity</p>
-</dd>
+<dt><a href="#module_components">components</a></dt>
+<dd></dd>
 <dt><a href="#module_pex-renderer">pex-renderer</a></dt>
 <dd></dd>
-</dl>
-
-## Functions
-
-<dl>
-<dt><a href="#default">default()</a> ⇒ <code><a href="#System">System</a></code></dt>
-<dd><p>Camera system</p>
-<p>Adds:</p>
-<ul>
-<li>&quot;_orbiter&quot; to orbiter components</li>
-</ul>
-</dd>
-<dt><a href="#default">default(options)</a> ⇒ <code><a href="#System">System</a></code></dt>
-<dd><p>Geometry system</p>
-<p>Adds:</p>
-<ul>
-<li>&quot;bounds&quot; to geometry components</li>
-<li>&quot;_geometry&quot; to entities as reference to internal cache</li>
-</ul>
-</dd>
-<dt><a href="#default">default()</a> ⇒ <code><a href="#System">System</a></code></dt>
-<dd><p>Light system</p>
-<p>Adds:</p>
-<ul>
-<li>&quot;_projectionMatrix&quot; and &quot;_viewMatrix&quot; to light components</li>
-<li>&quot;_direction&quot; to directional and spot light components</li>
-</ul>
-</dd>
-<dt><a href="#default">default(options)</a> ⇒ <code><a href="#System">System</a></code></dt>
-<dd><p>Reflection Probe system</p>
-<p>Adds:</p>
-<ul>
-<li>&quot;_reflectionProbe&quot; to reflectionProbe components</li>
-</ul>
-</dd>
-<dt><a href="#default">default()</a> ⇒ <code><a href="#System">System</a></code></dt>
-<dd><p>Render pipeline system</p>
-<p>Adds:</p>
-<ul>
-<li>&quot;_near&quot;, &quot;_far&quot;, &quot;_radiusUV&quot; and &quot;_sceneBboxInLightSpace&quot; to light components that cast shadows</li>
-<li>&quot;_shadowCubemap&quot; to pointLight components and &quot;_shadowMap&quot; to other light components</li>
-<li>&quot;_targets&quot; to postProcessing components</li>
-</ul>
-</dd>
-<dt><a href="#default">default()</a> ⇒ <code><a href="#System">System</a></code></dt>
-<dd><p>Create a shadow mapping object to compose with a render-pipeline-system</p>
-<p>Adds:</p>
-<ul>
-<li>&quot;directionalLight&quot;, &quot;spotLight&quot; and &quot;pointLight&quot; method to create shadow map render passes
-Requires:</li>
-<li>this.drawMeshes()</li>
-<li>this.descriptors</li>
-</ul>
-</dd>
-<dt><a href="#default">default(options)</a> ⇒ <code><a href="#RendererSystem">RendererSystem</a></code></dt>
-<dd><p>Skybox renderer</p>
-<p>Renders a skybox (envMap or _skyTexture) to screen or to reflection probes.</p>
-</dd>
-<dt><a href="#default">default(options)</a> ⇒ <code><a href="#System">System</a></code></dt>
-<dd><p>Skybox system</p>
-<p>Adds:</p>
-<ul>
-<li>&quot;_skyTexture&quot; to skybox components with no envMap for skybox-renderer to render</li>
-</ul>
-</dd>
-<dt><a href="#default">default()</a> ⇒ <code><a href="#System">System</a></code></dt>
-<dd><p>Transform system</p>
-<p>Adds:</p>
-<ul>
-<li>&quot;worldBounds&quot;, &quot;dirty&quot; and &quot;aabbDirty&quot; to transform components</li>
-<li>&quot;_transform&quot; to entities as reference to internal cache</li>
-</ul>
-</dd>
+<dt><a href="#module_systems">systems</a></dt>
+<dd></dd>
+<dt><a href="#module_renderer">renderer</a></dt>
+<dd></dd>
 </dl>
 
 ## Typedefs
@@ -307,7 +168,9 @@ Requires:</li>
 <dd></dd>
 <dt><a href="#RendererSystemRender">RendererSystemRender</a> : <code>function</code></dt>
 <dd></dd>
-<dt><a href="#RendererSystemStages">RendererSystemStages</a> : <code>object</code></dt>
+<dt><a href="#RendererSystemStageOptions">RendererSystemStageOptions</a> : <code>object</code></dt>
+<dd></dd>
+<dt><a href="#RendererSystemStage">RendererSystemStage</a> : <code>function</code></dt>
 <dd></dd>
 <dt><a href="#RendererSystem">RendererSystem</a> : <code>object</code></dt>
 <dd></dd>
@@ -329,269 +192,334 @@ Requires:</li>
 <dd></dd>
 </dl>
 
-<a name="module_AmbientLightComponent"></a>
+<a name="module_components"></a>
 
-## AmbientLightComponent ⇒ <code>object</code>
+## components
+
+- [components](#module_components)
+  - [.ambientLight([options])](#module_components.ambientLight) ⇒ <code>object</code>
+  - [.animation([options])](#module_components.animation) ⇒ <code>object</code>
+  - [.areaLight([options])](#module_components.areaLight) ⇒ <code>object</code>
+  - [.axesHelper([options])](#module_components.axesHelper) ⇒ <code>object</code>
+  - [.boundingBoxHelper([options])](#module_components.boundingBoxHelper) ⇒ <code>object</code>
+  - [.cameraHelper([options])](#module_components.cameraHelper) ⇒ <code>object</code>
+  - [.camera([options])](#module_components.camera) ⇒ <code>object</code>
+  - [.directionalLight([options])](#module_components.directionalLight) ⇒ <code>object</code>
+  - [.geometry([options])](#module_components.geometry) ⇒ <code>object</code>
+  - [.gridHelper([options])](#module_components.gridHelper) ⇒ <code>object</code>
+  - [.lightHelper([options])](#module_components.lightHelper) ⇒ <code>object</code>
+  - [.material([options])](#module_components.material) ⇒ <code>object</code>
+  - [.morph(options)](#module_components.morph) ⇒ <code>object</code>
+  - [.orbiter(options)](#module_components.orbiter) ⇒ <code>object</code>
+  - [.overlay([options])](#module_components.overlay) ⇒ <code>object</code>
+  - [.pointLight([options])](#module_components.pointLight) ⇒ <code>object</code>
+  - [.postProcessing([options])](#module_components.postProcessing) ⇒ <code>object</code>
+  - [.reflectionProbe([options])](#module_components.reflectionProbe) ⇒ <code>object</code>
+  - [.skin([options])](#module_components.skin) ⇒ <code>object</code>
+  - [.skybox([options])](#module_components.skybox) ⇒ <code>object</code>
+  - [.spotLight([options])](#module_components.spotLight) ⇒ <code>object</code>
+  - [.transform([options])](#module_components.transform) ⇒ <code>object</code>
+  - [.vertexHelper([options])](#module_components.vertexHelper) ⇒ <code>object</code>
+
+<a name="module_components.ambientLight"></a>
+
+### components.ambientLight([options]) ⇒ <code>object</code>
 
 Ambient light component
+
+**Kind**: static method of [<code>components</code>](#module_components)
 
 | Param     | Type                                                                       |
 | --------- | -------------------------------------------------------------------------- |
 | [options] | [<code>AmbientLightComponentOptions</code>](#AmbientLightComponentOptions) |
 
-<a name="module_AnimationComponent"></a>
+<a name="module_components.animation"></a>
 
-## AnimationComponent ⇒ <code>object</code>
+### components.animation([options]) ⇒ <code>object</code>
 
 Animation component
+
+**Kind**: static method of [<code>components</code>](#module_components)
 
 | Param     | Type                                                                 |
 | --------- | -------------------------------------------------------------------- |
 | [options] | [<code>AnimationComponentOptions</code>](#AnimationComponentOptions) |
 
-<a name="module_AreaLightComponent"></a>
+<a name="module_components.areaLight"></a>
 
-## AreaLightComponent ⇒ <code>object</code>
+### components.areaLight([options]) ⇒ <code>object</code>
 
 Area light component
+
+**Kind**: static method of [<code>components</code>](#module_components)
 
 | Param     | Type                                                                 |
 | --------- | -------------------------------------------------------------------- |
 | [options] | [<code>AreaLightComponentOptions</code>](#AreaLightComponentOptions) |
 
-<a name="module_AxesHelperComponent"></a>
+<a name="module_components.axesHelper"></a>
 
-## AxesHelperComponent ⇒ <code>object</code>
+### components.axesHelper([options]) ⇒ <code>object</code>
 
 Axes helper component
+
+**Kind**: static method of [<code>components</code>](#module_components)
 
 | Param     | Type                                                                   |
 | --------- | ---------------------------------------------------------------------- |
 | [options] | [<code>AxesHelperComponentOptions</code>](#AxesHelperComponentOptions) |
 
-<a name="module_BoundingBoxHelperComponent"></a>
+<a name="module_components.boundingBoxHelper"></a>
 
-## BoundingBoxHelperComponent ⇒ <code>object</code>
+### components.boundingBoxHelper([options]) ⇒ <code>object</code>
 
 Bounding box helper component
+
+**Kind**: static method of [<code>components</code>](#module_components)
 
 | Param     | Type                                                                                 |
 | --------- | ------------------------------------------------------------------------------------ |
 | [options] | [<code>BoundingBoxHelperComponentOptions</code>](#BoundingBoxHelperComponentOptions) |
 
-<a name="module_CameraHelperComponent"></a>
+<a name="module_components.cameraHelper"></a>
 
-## CameraHelperComponent ⇒ <code>object</code>
+### components.cameraHelper([options]) ⇒ <code>object</code>
 
 Camera helper component
+
+**Kind**: static method of [<code>components</code>](#module_components)
 
 | Param     | Type                                                                       |
 | --------- | -------------------------------------------------------------------------- |
 | [options] | [<code>CameraHelperComponentOptions</code>](#CameraHelperComponentOptions) |
 
-<a name="module_CameraComponent"></a>
+<a name="module_components.camera"></a>
 
-## CameraComponent ⇒ <code>object</code>
+### components.camera([options]) ⇒ <code>object</code>
 
 Camera component
+
+**Kind**: static method of [<code>components</code>](#module_components)
 
 | Param     | Type                                                           |
 | --------- | -------------------------------------------------------------- |
 | [options] | [<code>CameraComponentOptions</code>](#CameraComponentOptions) |
 
-<a name="module_DirectionalLightComponent"></a>
+<a name="module_components.directionalLight"></a>
 
-## DirectionalLightComponent ⇒ <code>object</code>
+### components.directionalLight([options]) ⇒ <code>object</code>
 
 Directional light component
+
+**Kind**: static method of [<code>components</code>](#module_components)
 
 | Param     | Type                                                                               |
 | --------- | ---------------------------------------------------------------------------------- |
 | [options] | [<code>DirectionalLightComponentOptions</code>](#DirectionalLightComponentOptions) |
 
-<a name="module_GeometryComponent"></a>
+<a name="module_components.geometry"></a>
 
-## GeometryComponent ⇒ <code>object</code>
+### components.geometry([options]) ⇒ <code>object</code>
 
 Geometry component
+
+**Kind**: static method of [<code>components</code>](#module_components)
 
 | Param     | Type                                                               |
 | --------- | ------------------------------------------------------------------ |
 | [options] | [<code>GeometryComponentOptions</code>](#GeometryComponentOptions) |
 
-<a name="module_GridHelperComponent"></a>
+<a name="module_components.gridHelper"></a>
 
-## GridHelperComponent ⇒ <code>object</code>
+### components.gridHelper([options]) ⇒ <code>object</code>
 
 Grid helper component
+
+**Kind**: static method of [<code>components</code>](#module_components)
 
 | Param     | Type                                                                   |
 | --------- | ---------------------------------------------------------------------- |
 | [options] | [<code>GridHelperComponentOptions</code>](#GridHelperComponentOptions) |
 
-<a name="module_LightHelperComponent"></a>
+<a name="module_components.lightHelper"></a>
 
-## LightHelperComponent ⇒ <code>object</code>
+### components.lightHelper([options]) ⇒ <code>object</code>
 
 Light helper component
+
+**Kind**: static method of [<code>components</code>](#module_components)
 
 | Param     | Type                                                                     |
 | --------- | ------------------------------------------------------------------------ |
 | [options] | [<code>LightHelperComponentOptions</code>](#LightHelperComponentOptions) |
 
-<a name="module_MaterialComponent"></a>
+<a name="module_components.material"></a>
 
-## MaterialComponent ⇒ <code>object</code>
+### components.material([options]) ⇒ <code>object</code>
 
 Material component
+
+**Kind**: static method of [<code>components</code>](#module_components)
 
 | Param     | Type                                                                                                                                             |
 | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
 | [options] | [<code>MaterialComponentOptions</code>](#MaterialComponentOptions) \| [<code>LineMaterialComponentOptions</code>](#LineMaterialComponentOptions) |
 
-<a name="module_MorphComponent"></a>
+<a name="module_components.morph"></a>
 
-## MorphComponent ⇒ <code>object</code>
+### components.morph(options) ⇒ <code>object</code>
 
 Morph component
+
+**Kind**: static method of [<code>components</code>](#module_components)
 
 | Param   | Type                                                         |
 | ------- | ------------------------------------------------------------ |
 | options | [<code>MorphComponentOptions</code>](#MorphComponentOptions) |
 
-<a name="module_OrbiterComponent"></a>
+<a name="module_components.orbiter"></a>
 
-## OrbiterComponent ⇒ <code>object</code>
+### components.orbiter(options) ⇒ <code>object</code>
 
 Orbiter component
+
+**Kind**: static method of [<code>components</code>](#module_components)
 
 | Param   | Type                                                             |
 | ------- | ---------------------------------------------------------------- |
 | options | [<code>OrbiterComponentOptions</code>](#OrbiterComponentOptions) |
 
-<a name="module_OverlayComponent"></a>
+<a name="module_components.overlay"></a>
 
-## OverlayComponent ⇒ <code>object</code>
+### components.overlay([options]) ⇒ <code>object</code>
 
 Overlay component
+
+**Kind**: static method of [<code>components</code>](#module_components)
 
 | Param     | Type                                                             |
 | --------- | ---------------------------------------------------------------- |
 | [options] | [<code>OverlayComponentOptions</code>](#OverlayComponentOptions) |
 
-<a name="module_PointLightComponent"></a>
+<a name="module_components.pointLight"></a>
 
-## PointLightComponent ⇒ <code>object</code>
+### components.pointLight([options]) ⇒ <code>object</code>
 
 Point light component
+
+**Kind**: static method of [<code>components</code>](#module_components)
 
 | Param     | Type                                                                   |
 | --------- | ---------------------------------------------------------------------- |
 | [options] | [<code>PointLightComponentOptions</code>](#PointLightComponentOptions) |
 
-<a name="module_PostProcessingComponent"></a>
+<a name="module_components.postProcessing"></a>
 
-## PostProcessingComponent ⇒ <code>object</code>
+### components.postProcessing([options]) ⇒ <code>object</code>
 
 Post Processing component
+
+**Kind**: static method of [<code>components</code>](#module_components)
 
 | Param     | Type                                                                           |
 | --------- | ------------------------------------------------------------------------------ |
 | [options] | [<code>PostProcessingComponentOptions</code>](#PostProcessingComponentOptions) |
 
-<a name="module_ReflectionProbeComponent"></a>
+<a name="module_components.reflectionProbe"></a>
 
-## ReflectionProbeComponent ⇒ <code>object</code>
+### components.reflectionProbe([options]) ⇒ <code>object</code>
 
 Reflection probe component
+
+**Kind**: static method of [<code>components</code>](#module_components)
 
 | Param     | Type                                                                             |
 | --------- | -------------------------------------------------------------------------------- |
 | [options] | [<code>ReflectionProbeComponentOptions</code>](#ReflectionProbeComponentOptions) |
 
-<a name="module_SkinComponent"></a>
+<a name="module_components.skin"></a>
 
-## SkinComponent ⇒ <code>object</code>
+### components.skin([options]) ⇒ <code>object</code>
 
 Skin component
+
+**Kind**: static method of [<code>components</code>](#module_components)
 
 | Param     | Type                                                       |
 | --------- | ---------------------------------------------------------- |
 | [options] | [<code>SkinComponentOptions</code>](#SkinComponentOptions) |
 
-<a name="module_SkyboxComponent"></a>
+<a name="module_components.skybox"></a>
 
-## SkyboxComponent ⇒ <code>object</code>
+### components.skybox([options]) ⇒ <code>object</code>
 
 Skybox component
+
+**Kind**: static method of [<code>components</code>](#module_components)
 
 | Param     | Type                                                           |
 | --------- | -------------------------------------------------------------- |
 | [options] | [<code>SkyboxComponentOptions</code>](#SkyboxComponentOptions) |
 
-<a name="module_SpotLightComponent"></a>
+<a name="module_components.spotLight"></a>
 
-## SpotLightComponent ⇒ <code>object</code>
+### components.spotLight([options]) ⇒ <code>object</code>
 
 Spot light component
+
+**Kind**: static method of [<code>components</code>](#module_components)
 
 | Param     | Type                                                                 |
 | --------- | -------------------------------------------------------------------- |
 | [options] | [<code>SpotLightComponentOptions</code>](#SpotLightComponentOptions) |
 
-<a name="module_TransformComponent"></a>
+<a name="module_components.transform"></a>
 
-## TransformComponent ⇒ <code>object</code>
+### components.transform([options]) ⇒ <code>object</code>
 
 Transform component
+
+**Kind**: static method of [<code>components</code>](#module_components)
 
 | Param     | Type                                                                 |
 | --------- | -------------------------------------------------------------------- |
 | [options] | [<code>TransformComponentOptions</code>](#TransformComponentOptions) |
 
-<a name="module_VertexHelperComponent"></a>
+<a name="module_components.vertexHelper"></a>
 
-## VertexHelperComponent ⇒ <code>object</code>
+### components.vertexHelper([options]) ⇒ <code>object</code>
 
 Vertex helper component
+
+**Kind**: static method of [<code>components</code>](#module_components)
 
 | Param     | Type                                                                       |
 | --------- | -------------------------------------------------------------------------- |
 | [options] | [<code>VertexHelperComponentOptions</code>](#VertexHelperComponentOptions) |
-
-<a name="module_Entity"></a>
-
-## Entity ⇒ [<code>Entity</code>](#Entity)
-
-Entity
-
-| Param        | Type                | Default         |
-| ------------ | ------------------- | --------------- |
-| [components] | <code>object</code> | <code>{}</code> |
 
 <a name="module_pex-renderer"></a>
 
 ## pex-renderer
 
 - [pex-renderer](#module_pex-renderer)
-  - [.components](#module_pex-renderer.components) : <code>object</code>
-  - [.systems](#module_pex-renderer.systems) : <code>object</code>
+  - [.components](#module_pex-renderer.components) : [<code>components</code>](#module_components)
+  - [.systems](#module_pex-renderer.systems) : [<code>systems</code>](#module_systems)
   - [.world()](#module_pex-renderer.world) ⇒ [<code>World</code>](#World)
-  - [.entity()](#module_pex-renderer.entity) ⇒ [<code>Entity</code>](#Entity)
+  - [.entity([components])](#module_pex-renderer.entity) ⇒ [<code>Entity</code>](#Entity)
   - [.renderEngine()](#module_pex-renderer.renderEngine) ⇒ [<code>RenderEngine</code>](#RenderEngine)
   - [.renderGraph(ctx)](#module_pex-renderer.renderGraph) ⇒ [<code>RenderGraph</code>](#RenderGraph)
   - [.resourceCache(ctx)](#module_pex-renderer.resourceCache) ⇒ [<code>ResourceCache</code>](#ResourceCache)
 
 <a name="module_pex-renderer.components"></a>
 
-### pex-renderer.components : <code>object</code>
+### pex-renderer.components : [<code>components</code>](#module_components)
 
 All components as a function returning a component with default values.
 
 **Kind**: static property of [<code>pex-renderer</code>](#module_pex-renderer)
 <a name="module_pex-renderer.systems"></a>
 
-### pex-renderer.systems : <code>object</code>
+### pex-renderer.systems : [<code>systems</code>](#module_systems)
 
 All systems as a function returning a system with a type property and an update function.
 
@@ -605,11 +533,16 @@ Create a world object to store entities and systems
 **Kind**: static method of [<code>pex-renderer</code>](#module_pex-renderer)
 <a name="module_pex-renderer.entity"></a>
 
-### pex-renderer.entity() ⇒ [<code>Entity</code>](#Entity)
+### pex-renderer.entity([components]) ⇒ [<code>Entity</code>](#Entity)
 
 Create an entity from an object of plain data components
 
 **Kind**: static method of [<code>pex-renderer</code>](#module_pex-renderer)
+
+| Param        | Type                | Default         |
+| ------------ | ------------------- | --------------- |
+| [components] | <code>object</code> | <code>{}</code> |
+
 <a name="module_pex-renderer.renderEngine"></a>
 
 ### pex-renderer.renderEngine() ⇒ [<code>RenderEngine</code>](#RenderEngine)
@@ -641,9 +574,41 @@ Create a resource cache for pex-context caching.
 | ----- | ---------------------------------------------- |
 | ctx   | <code>module:pex-context/types/index.js</code> |
 
-<a name="default"></a>
+<a name="module_systems"></a>
 
-## default() ⇒ [<code>System</code>](#System)
+## systems
+
+- [systems](#module_systems)
+  - [.renderer](#module_systems.renderer) : [<code>renderer</code>](#module_renderer)
+  - [.animation()](#module_systems.animation) ⇒ [<code>System</code>](#System)
+  - [.camera()](#module_systems.camera) ⇒ [<code>System</code>](#System)
+  - [.geometry(options)](#module_systems.geometry) ⇒ [<code>System</code>](#System)
+  - [.layer()](#module_systems.layer) ⇒ [<code>System</code>](#System)
+  - [.light()](#module_systems.light) ⇒ [<code>System</code>](#System)
+  - [.morph()](#module_systems.morph) ⇒ [<code>System</code>](#System)
+  - [.reflectionProbe(options)](#module_systems.reflectionProbe) ⇒ [<code>System</code>](#System)
+  - [.renderPipeline(options)](#module_systems.renderPipeline) ⇒ [<code>System</code>](#System)
+  - [.skin()](#module_systems.skin) ⇒ [<code>System</code>](#System)
+  - [.skybox(options)](#module_systems.skybox) ⇒ [<code>System</code>](#System)
+  - [.transform()](#module_systems.transform) ⇒ [<code>System</code>](#System)
+
+<a name="module_systems.renderer"></a>
+
+### systems.renderer : [<code>renderer</code>](#module_renderer)
+
+All renderer systems
+
+**Kind**: static property of [<code>systems</code>](#module_systems)
+<a name="module_systems.animation"></a>
+
+### systems.animation() ⇒ [<code>System</code>](#System)
+
+Animation system
+
+**Kind**: static method of [<code>systems</code>](#module_systems)
+<a name="module_systems.camera"></a>
+
+### systems.camera() ⇒ [<code>System</code>](#System)
 
 Camera system
 
@@ -651,10 +616,10 @@ Adds:
 
 - "\_orbiter" to orbiter components
 
-**Kind**: global function
-<a name="default"></a>
+**Kind**: static method of [<code>systems</code>](#module_systems)
+<a name="module_systems.geometry"></a>
 
-## default(options) ⇒ [<code>System</code>](#System)
+### systems.geometry(options) ⇒ [<code>System</code>](#System)
 
 Geometry system
 
@@ -663,15 +628,22 @@ Adds:
 - "bounds" to geometry components
 - "\_geometry" to entities as reference to internal cache
 
-**Kind**: global function
+**Kind**: static method of [<code>systems</code>](#module_systems)
 
 | Param   | Type                                         |
 | ------- | -------------------------------------------- |
 | options | [<code>SystemOptions</code>](#SystemOptions) |
 
-<a name="default"></a>
+<a name="module_systems.layer"></a>
 
-## default() ⇒ [<code>System</code>](#System)
+### systems.layer() ⇒ [<code>System</code>](#System)
+
+Layer system
+
+**Kind**: static method of [<code>systems</code>](#module_systems)
+<a name="module_systems.light"></a>
+
+### systems.light() ⇒ [<code>System</code>](#System)
 
 Light system
 
@@ -680,10 +652,17 @@ Adds:
 - "\_projectionMatrix" and "\_viewMatrix" to light components
 - "\_direction" to directional and spot light components
 
-**Kind**: global function
-<a name="default"></a>
+**Kind**: static method of [<code>systems</code>](#module_systems)
+<a name="module_systems.morph"></a>
 
-## default(options) ⇒ [<code>System</code>](#System)
+### systems.morph() ⇒ [<code>System</code>](#System)
+
+Morph system
+
+**Kind**: static method of [<code>systems</code>](#module_systems)
+<a name="module_systems.reflectionProbe"></a>
+
+### systems.reflectionProbe(options) ⇒ [<code>System</code>](#System)
 
 Reflection Probe system
 
@@ -691,15 +670,15 @@ Adds:
 
 - "\_reflectionProbe" to reflectionProbe components
 
-**Kind**: global function
+**Kind**: static method of [<code>systems</code>](#module_systems)
 
 | Param   | Type                                         |
 | ------- | -------------------------------------------- |
 | options | [<code>SystemOptions</code>](#SystemOptions) |
 
-<a name="default"></a>
+<a name="module_systems.renderPipeline"></a>
 
-## default() ⇒ [<code>System</code>](#System)
+### systems.renderPipeline(options) ⇒ [<code>System</code>](#System)
 
 Render pipeline system
 
@@ -709,54 +688,39 @@ Adds:
 - "\_shadowCubemap" to pointLight components and "\_shadowMap" to other light components
 - "\_targets" to postProcessing components
 
-**Kind**: global function
-<a name="default"></a>
-
-## default() ⇒ [<code>System</code>](#System)
-
-Create a shadow mapping object to compose with a render-pipeline-system
-
-Adds:
-
-- "directionalLight", "spotLight" and "pointLight" method to create shadow map render passes
-  Requires:
-- this.drawMeshes()
-- this.descriptors
-
-**Kind**: global function
-<a name="default"></a>
-
-## default(options) ⇒ [<code>RendererSystem</code>](#RendererSystem)
-
-Skybox renderer
-
-Renders a skybox (envMap or \_skyTexture) to screen or to reflection probes.
-
-**Kind**: global function
+**Kind**: static method of [<code>systems</code>](#module_systems)
 
 | Param   | Type                                         |
 | ------- | -------------------------------------------- |
 | options | [<code>SystemOptions</code>](#SystemOptions) |
 
-<a name="default"></a>
+<a name="module_systems.skin"></a>
 
-## default(options) ⇒ [<code>System</code>](#System)
+### systems.skin() ⇒ [<code>System</code>](#System)
+
+Skin system
+
+**Kind**: static method of [<code>systems</code>](#module_systems)
+<a name="module_systems.skybox"></a>
+
+### systems.skybox(options) ⇒ [<code>System</code>](#System)
 
 Skybox system
 
 Adds:
 
 - "\_skyTexture" to skybox components with no envMap for skybox-renderer to render
+- "\_skyTextureChanged" to skybox components for reflection-probe system
 
-**Kind**: global function
+**Kind**: static method of [<code>systems</code>](#module_systems)
 
 | Param   | Type                                         |
 | ------- | -------------------------------------------- |
 | options | [<code>SystemOptions</code>](#SystemOptions) |
 
-<a name="default"></a>
+<a name="module_systems.transform"></a>
 
-## default() ⇒ [<code>System</code>](#System)
+### systems.transform() ⇒ [<code>System</code>](#System)
 
 Transform system
 
@@ -765,7 +729,103 @@ Adds:
 - "worldBounds", "dirty" and "aabbDirty" to transform components
 - "\_transform" to entities as reference to internal cache
 
-**Kind**: global function
+**Kind**: static method of [<code>systems</code>](#module_systems)
+<a name="module_renderer"></a>
+
+## renderer
+
+- [renderer](#module_renderer)
+  - [.base()](#module_renderer.base) ⇒ [<code>RendererSystem</code>](#RendererSystem)
+  - [.basic(options)](#module_renderer.basic) ⇒ [<code>RendererSystem</code>](#RendererSystem)
+  - [.helper(options)](#module_renderer.helper) ⇒ [<code>RendererSystem</code>](#RendererSystem)
+  - [.line(options)](#module_renderer.line) ⇒ [<code>RendererSystem</code>](#RendererSystem)
+  - [.postProcessing(options)](#module_renderer.postProcessing) ⇒ [<code>RendererSystem</code>](#RendererSystem)
+  - [.skybox(options)](#module_renderer.skybox) ⇒ [<code>RendererSystem</code>](#RendererSystem)
+  - [.standard(options)](#module_renderer.standard) ⇒ [<code>RendererSystem</code>](#RendererSystem)
+
+<a name="module_renderer.base"></a>
+
+### renderer.base() ⇒ [<code>RendererSystem</code>](#RendererSystem)
+
+Base renderer
+
+Other renderer are composed with it.
+
+**Kind**: static method of [<code>renderer</code>](#module_renderer)
+<a name="module_renderer.basic"></a>
+
+### renderer.basic(options) ⇒ [<code>RendererSystem</code>](#RendererSystem)
+
+Basic renderer
+
+**Kind**: static method of [<code>renderer</code>](#module_renderer)
+
+| Param   | Type                                         |
+| ------- | -------------------------------------------- |
+| options | [<code>SystemOptions</code>](#SystemOptions) |
+
+<a name="module_renderer.helper"></a>
+
+### renderer.helper(options) ⇒ [<code>RendererSystem</code>](#RendererSystem)
+
+Helper renderer
+
+**Kind**: static method of [<code>renderer</code>](#module_renderer)
+
+| Param   | Type                                         |
+| ------- | -------------------------------------------- |
+| options | [<code>SystemOptions</code>](#SystemOptions) |
+
+<a name="module_renderer.line"></a>
+
+### renderer.line(options) ⇒ [<code>RendererSystem</code>](#RendererSystem)
+
+Line renderer
+
+**Kind**: static method of [<code>renderer</code>](#module_renderer)
+
+| Param   | Type                                         |
+| ------- | -------------------------------------------- |
+| options | [<code>SystemOptions</code>](#SystemOptions) |
+
+<a name="module_renderer.postProcessing"></a>
+
+### renderer.postProcessing(options) ⇒ [<code>RendererSystem</code>](#RendererSystem)
+
+Post-Processing renderer
+
+**Kind**: static method of [<code>renderer</code>](#module_renderer)
+
+| Param   | Type                                         |
+| ------- | -------------------------------------------- |
+| options | [<code>SystemOptions</code>](#SystemOptions) |
+
+<a name="module_renderer.skybox"></a>
+
+### renderer.skybox(options) ⇒ [<code>RendererSystem</code>](#RendererSystem)
+
+Skybox renderer
+
+Renders a skybox (envMap or \_skyTexture) to screen or to reflection probes.
+
+**Kind**: static method of [<code>renderer</code>](#module_renderer)
+
+| Param   | Type                                         |
+| ------- | -------------------------------------------- |
+| options | [<code>SystemOptions</code>](#SystemOptions) |
+
+<a name="module_renderer.standard"></a>
+
+### renderer.standard(options) ⇒ [<code>RendererSystem</code>](#RendererSystem)
+
+Standard renderer
+
+**Kind**: static method of [<code>renderer</code>](#module_renderer)
+
+| Param   | Type                                         |
+| ------- | -------------------------------------------- |
+| options | [<code>SystemOptions</code>](#SystemOptions) |
+
 <a name="Entity"></a>
 
 ## Entity : <code>object</code>
@@ -1177,9 +1237,11 @@ Adds:
 **Kind**: global typedef
 **Properties**
 
-| Name | Type                                           |
-| ---- | ---------------------------------------------- |
-| ctx  | <code>module:pex-context/types/index.js</code> |
+| Name            | Type                                           |
+| --------------- | ---------------------------------------------- |
+| ctx             | <code>module:pex-context/types/index.js</code> |
+| [resourceCache] | [<code>ResourceCache</code>](#ResourceCache)   |
+| [renderGraph]   | [<code>RenderGraph</code>](#RenderGraph)       |
 
 <a name="SystemUpdate"></a>
 
@@ -1275,24 +1337,35 @@ Adds:
 
 | Param      | Type                                                                           | Default         |
 | ---------- | ------------------------------------------------------------------------------ | --------------- |
-| renderView | [<code>Array.&lt;RenderView&gt;</code>](#RenderView)                           |                 |
+| renderView | [<code>RenderView</code>](#RenderView)                                         |                 |
 | entities   | [<code>Entity</code>](#Entity) \| [<code>Array.&lt;Entity&gt;</code>](#Entity) |                 |
 | [options]  | <code>object</code>                                                            | <code>{}</code> |
 
-<a name="RendererSystemStages"></a>
+<a name="RendererSystemStageOptions"></a>
 
-## RendererSystemStages : <code>object</code>
+## RendererSystemStageOptions : <code>object</code>
 
 **Kind**: global typedef
 **Properties**
 
-| Name          | Type                  |
-| ------------- | --------------------- |
-| [background]  | <code>function</code> |
-| [shadow]      | <code>function</code> |
-| [opaque]      | <code>function</code> |
-| [transparent] | <code>function</code> |
-| [post]        | <code>function</code> |
+| Name                         | Type                       |
+| ---------------------------- | -------------------------- |
+| [attachmentsLocations]       | <code>object</code>        |
+| [shadowMappingLight]         | <code>object</code>        |
+| [backgroundColorTexture]     | <code>ctx.texture2D</code> |
+| [renderingToReflectionProbe] | <code>boolean</code>       |
+
+<a name="RendererSystemStage"></a>
+
+## RendererSystemStage : <code>function</code>
+
+**Kind**: global typedef
+
+| Param      | Type                                                                   |
+| ---------- | ---------------------------------------------------------------------- |
+| renderView | [<code>Array.&lt;RenderView&gt;</code>](#RenderView)                   |
+| entities   | [<code>Array.&lt;Entity&gt;</code>](#Entity)                           |
+| options    | [<code>RendererSystemStageOptions</code>](#RendererSystemStageOptions) |
 
 <a name="RendererSystem"></a>
 
@@ -1301,16 +1374,20 @@ Adds:
 **Kind**: global typedef
 **Properties**
 
-| Name            | Type                                                       |
-| --------------- | ---------------------------------------------------------- |
-| type            | <code>string</code>                                        |
-| cache           | <code>object</code>                                        |
-| debug           | <code>boolean</code>                                       |
-| update          | [<code>SystemUpdate</code>](#SystemUpdate)                 |
-| dispose         | [<code>SystemDispose</code>](#SystemDispose)               |
-| render          | [<code>RendererSystemRender</code>](#RendererSystemRender) |
-| flagDefinitions | <code>Array.&lt;Array&gt;</code>                           |
-| renderStages    | [<code>RendererSystemStages</code>](#RendererSystemStages) |
+| Name                | Type                                                       |
+| ------------------- | ---------------------------------------------------------- |
+| type                | <code>string</code>                                        |
+| cache               | <code>object</code>                                        |
+| debug               | <code>boolean</code>                                       |
+| flagDefinitions     | <code>Array.&lt;Array&gt;</code>                           |
+| update              | [<code>SystemUpdate</code>](#SystemUpdate)                 |
+| dispose             | [<code>SystemDispose</code>](#SystemDispose)               |
+| render              | [<code>RendererSystemRender</code>](#RendererSystemRender) |
+| [renderBackground]  | [<code>RendererSystemStage</code>](#RendererSystemStage)   |
+| [renderShadow]      | [<code>RendererSystemStage</code>](#RendererSystemStage)   |
+| [renderOpaque]      | [<code>RendererSystemStage</code>](#RendererSystemStage)   |
+| [renderTransparent] | [<code>RendererSystemStage</code>](#RendererSystemStage)   |
+| [renderPost]        | [<code>RendererSystemStage</code>](#RendererSystemStage)   |
 
 <a name="WorldAdd"></a>
 

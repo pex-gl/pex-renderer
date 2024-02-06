@@ -2,8 +2,7 @@
  * Vertex helper component
  * @param {import("../types.js").VertexHelperComponentOptions} [options]
  * @returns {object}
- * @module VertexHelperComponent
- * @exports module:VertexHelperComponent
+ * @alias module:components.vertexHelper
  */
 export default (options) => ({
   color: [0, 1, 0, 1],

@@ -1,8 +1,8 @@
 import { loadJson, loadImage, loadArrayBuffer, loadBlob } from "pex-io";
 import { quat, mat4, utils } from "pex-math";
+import { loadDraco, loadKtx2 } from "pex-loaders";
 import { getDirname, getFileExtension } from "../utils.js";
 import { components, entity, systems } from "../index.js";
-import { loadDraco, loadKtx2 } from "pex-loaders";
 
 const isSafari =
   /^((?!chrome|android).)*safari/i.test(globalThis.navigator?.userAgent) ===

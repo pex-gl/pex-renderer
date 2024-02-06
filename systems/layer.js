@@ -1,3 +1,8 @@
+/**
+ * Layer system
+ * @returns {import("../types.js").System}
+ * @alias module:systems.layer
+ */
 export default () => ({
   type: "layer-system",
   update(entities) {

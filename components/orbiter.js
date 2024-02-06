@@ -2,8 +2,7 @@
  * Orbiter component
  * @param {import("../types.js").OrbiterComponentOptions} options
  * @returns {object}
- * @module OrbiterComponent
- * @exports module:OrbiterComponent
+ * @alias module:components.orbiter
  */
 export default (options) => ({
   target: [0, 0, 0],

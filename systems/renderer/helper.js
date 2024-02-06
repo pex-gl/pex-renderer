@@ -322,6 +322,13 @@ const getVertexVector = (geometry, attribute, scale = 0.1, modelMatrix) => {
 };
 
 const geomBuilder = createGeomBuilder({ positions: 1, colors: 1 });
+
+/**
+ * Helper renderer
+ * @param {import("../../types.js").SystemOptions} options
+ * @returns {import("../../types.js").RendererSystem}
+ * @alias module:renderer.helper
+ */
 export default ({ ctx }) => ({
   ...createBaseSystem(),
   type: "helper-renderer",

@@ -2,8 +2,7 @@
  * Area light component
  * @param {import("../types.js").AreaLightComponentOptions} [options]
  * @returns {object}
- * @module AreaLightComponent
- * @exports module:AreaLightComponent
+ * @alias module:components.areaLight
  */
 export default (options) => ({
   color: [1, 1, 1, 1],

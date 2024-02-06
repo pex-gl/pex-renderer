@@ -2,8 +2,7 @@
  * Directional light component
  * @param {import("../types.js").DirectionalLightComponentOptions} [options]
  * @returns {object}
- * @module DirectionalLightComponent
- * @exports module:DirectionalLightComponent
+ * @alias module:components.directionalLight
  */
 export default (options) => ({
   color: [1, 1, 1, 1],

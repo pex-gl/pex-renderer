@@ -1,3 +1,5 @@
+/** @module renderer */
+
 export { default as base } from "./base.js";
 export { default as basic } from "./basic.js";
 export { default as helper } from "./helper.js";

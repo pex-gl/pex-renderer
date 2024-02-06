@@ -2,8 +2,7 @@
  * Reflection probe component
  * @param {import("../types.js").ReflectionProbeComponentOptions} [options]
  * @returns {object}
- * @module ReflectionProbeComponent
- * @exports module:ReflectionProbeComponent
+ * @alias module:components.reflectionProbe
  */
 export default (options) => ({
   size: 1024,

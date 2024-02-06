@@ -12,6 +12,7 @@ export {
   /**
    * Create an entity from an object of plain data components
    * @function
+   * @param {object} [components={}]
    * @returns {import("./types.js").Entity}
    */
   default as entity,
@@ -26,14 +27,14 @@ export {
 
 /**
  * All components as a function returning a component with default values.
- * @type {object}
+ * @type {module:components}
  * @name components
  * @static
  */
 export * as components from "./components/index.js";
 /**
  * All systems as a function returning a system with a type property and an update function.
- * @type {object}
+ * @type {module:systems}
  * @name systems
  * @static
  */

@@ -2,7 +2,6 @@
  * Light helper component
  * @param {import("../types.js").LightHelperComponentOptions} [options]
  * @returns {object}
- * @module LightHelperComponent
- * @exports module:LightHelperComponent
+ * @alias module:components.lightHelper
  */
 export default (options) => ({ ...options });

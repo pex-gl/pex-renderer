@@ -2,8 +2,7 @@
  * Geometry component
  * @param {import("../types.js").GeometryComponentOptions} [options]
  * @returns {object}
- * @module GeometryComponent
- * @exports module:GeometryComponent
+ * @alias module:components.geometry
  */
 export default (options) => ({
   // positions

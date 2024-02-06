@@ -23,6 +23,12 @@ const flagDefinitions = [
 // Impacts pipeline caching
 const pipelineMaterialProps = ["id", "blend"];
 
+/**
+ * Basic renderer
+ * @param {import("../../types.js").SystemOptions} options
+ * @returns {import("../../types.js").RendererSystem}
+ * @alias module:renderer.basic
+ */
 export default ({ ctx }) => ({
   ...createBaseSystem(),
   type: "basic-renderer",

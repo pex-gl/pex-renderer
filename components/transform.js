@@ -2,8 +2,7 @@
  * Transform component
  * @param {import("../types.js").TransformComponentOptions} [options]
  * @returns {object}
- * @module TransformComponent
- * @exports module:TransformComponent
+ * @alias module:components.transform
  */
 export default (options) => ({
   position: [0, 0, 0],

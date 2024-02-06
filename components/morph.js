@@ -2,8 +2,7 @@
  * Morph component
  * @param {import("../types.js").MorphComponentOptions} options
  * @returns {object}
- * @module MorphComponent
- * @exports module:MorphComponent
+ * @alias module:components.morph
  */
 export default (options) => ({
   weights: [],

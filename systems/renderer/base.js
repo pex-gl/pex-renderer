@@ -3,6 +3,13 @@ import { pipeline as SHADERS, parser as ShaderParser } from "pex-shaders";
 
 import { NAMESPACE, ProgramCache, TEMP_MAT2X3 } from "../../utils.js";
 
+/**
+ * Base renderer
+ *
+ * All renderers are composed with it.
+ * @returns {import("../../types.js").RendererSystem}
+ * @alias module:renderer.base
+ */
 export default () => ({
   type: "base-renderer",
   cache: {

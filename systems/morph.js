@@ -32,6 +32,11 @@ function updateMorph(morph) {
   });
 }
 
+/**
+ * Morph system
+ * @returns {import("../types.js").System}
+ * @alias module:systems.morph
+ */
 export default () => ({
   type: "morph-system",
   updateMorph,

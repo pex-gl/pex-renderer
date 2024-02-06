@@ -19,6 +19,7 @@ const flagDefinitions = [
  * Renders a skybox (envMap or _skyTexture) to screen or to reflection probes.
  * @param {import("../../types.js").SystemOptions} options
  * @returns {import("../../types.js").RendererSystem}
+ * @alias module:renderer.skybox
  */
 export default ({ ctx, resourceCache }) => ({
   ...createBaseSystem(),

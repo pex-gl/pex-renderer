@@ -2,8 +2,7 @@
  * Post Processing component
  * @param {import("../types.js").PostProcessingComponentOptions} [options]
  * @returns {object}
- * @module PostProcessingComponent
- * @exports module:PostProcessingComponent
+ * @alias module:components.postProcessing
  */
 const postProcessing = (options) => ({
   // ssao

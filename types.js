@@ -250,6 +250,8 @@
 /**
  * @typedef {object} SystemOptions
  * @property {import("pex-context/types/index.js")} ctx
+ * @property {ResourceCache} [resourceCache]
+ * @property {RenderGraph} [renderGraph]
  */
 /**
  * @callback SystemUpdate

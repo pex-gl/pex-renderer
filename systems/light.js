@@ -10,6 +10,7 @@ const Z_UP_4 = Object.freeze([0, 0, 1, 0]);
  * - "_projectionMatrix" and "_viewMatrix" to light components
  * - "_direction" to directional and spot light components
  * @returns {import("../types.js").System}
+ * @alias module:systems.light
  */
 export default () => ({
   type: "light-system",

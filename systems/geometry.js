@@ -29,6 +29,7 @@ const indicesProps = ["cells", "indices"];
  * - "_geometry" to entities as reference to internal cache
  * @param {import("../types.js").SystemOptions} options
  * @returns {import("../types.js").System}
+ * @alias module:systems.geometry
  */
 export default ({ ctx }) => ({
   type: "geometry-system",
