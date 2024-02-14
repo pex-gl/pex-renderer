@@ -75,20 +75,22 @@ const camera = components.camera({
   fov: Math.PI / 6,
   aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
   exposure: 1,
-  fStop: 0.7,
+  fStop: 4,
 });
 const postProcessing = components.postProcessing({
   dof: {
     type: "gustafsson", // upitis
-    debug: false,
+    physical: true,
     focusDistance: 7,
-    samples: 4,
+    focusScale: 1,
+    samples: 6,
     focusOnScreenPoint: false,
     screenPoint: [0.5, 0.5],
     chromaticAberration: 0.7,
     luminanceThreshold: 0.7,
     luminanceGain: 1,
     shape: "disk",
+    debug: false,
   },
   aa: {
     type: "fxaa2",
@@ -96,7 +98,6 @@ const postProcessing = components.postProcessing({
   },
   ssao: {
     type: "sao", // "gtao",
-    post: false,
     noiseTexture: true,
     mix: 1,
     // samples: options?.type === "gtao" ? 6 : 11,
@@ -128,7 +129,9 @@ const postProcessing = components.postProcessing({
   },
   bloom: {
     quality: 1,
+    colorFunction: "luma",
     threshold: 1,
+    source: false,
     radius: 1,
     intensity: 0.1,
   },
@@ -664,7 +667,6 @@ gui.addParam("Brightness", postProcessing.ssao, "brightness", {
 gui.addParam("Contrast", postProcessing.ssao, "contrast", { min: 0.1, max: 3 });
 
 gui.addParam("Noise texture", postProcessing.ssao, "noiseTexture");
-gui.addParam("Post", postProcessing.ssao, "post");
 gui.addParam("Mix", postProcessing.ssao, "mix", { min: 0, max: 1 });
 
 gui.addLabel("SSAO (SAO)");
@@ -698,15 +700,20 @@ gui.addColumn("Depth of Field");
 gui.addParam("Enabled", State, "dof", null, () => {
   enablePostProPass("dof");
 });
+gui.addParam("Physical", postProcessing.dof, "physical");
 gui.addRadioList(
   "Type",
-  cameraEntity.postProcessing.dof,
+  postProcessing.dof,
   "type",
   ["gustafsson", "upitis"].map((value) => ({ name: value, value })),
 );
 gui.addParam("Focus Distance", postProcessing.dof, "focusDistance", {
   min: 0,
-  max: 100,
+  max: 10,
+});
+gui.addParam("Focus Scale", postProcessing.dof, "focusScale", {
+  min: 0,
+  max: 20,
 });
 gui.addParam("Samples", postProcessing.dof, "samples", {
   min: 1,
@@ -779,10 +786,22 @@ gui.addParam("Quality", postProcessing.bloom, "quality", {
   max: 1,
   step: 1,
 });
+gui.addRadioList(
+  "Color Function",
+  postProcessing.bloom,
+  "colorFunction",
+  ["luma", "luminance", "average"].map((value) => ({ name: value, value })),
+);
 gui.addParam("Threshold", postProcessing.bloom, "threshold", {
   min: 0,
   max: 2,
 });
+gui.addRadioList(
+  "Source",
+  postProcessing.bloom,
+  "source",
+  ["color+emissive", "color", "emissive"].map((value) => ({ name: value, value })),
+);
 gui.addParam("Intensity", postProcessing.bloom, "intensity", {
   min: 0,
   max: 10,

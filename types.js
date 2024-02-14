@@ -195,14 +195,102 @@
  * @property {number} [shadowMapSize=2048]
  */
 /**
+ * @typedef {object} SSAOComponentOptions
+ * @property {"sao" | "gtao"} [type="sao"]
+ * @property {boolean} [noiseTexture=true]
+ * @property {number} [mix=1]
+ * @property {number} [samples="gtao" ? 6 : 11]
+ * @property {number} [intensity=2.2]
+ * @property {number} [radius=0.5] meters
+ * @property {number} [blurRadius=0.5]
+ * @property {number} [blurSharpness=10]
+ * @property {number} [brightness=0]
+ * @property {number} [contrast=1]
+ * // SSAO
+ * @property {number} [bias=0.001] centimeters
+ * @property {number} [spiralTurns=7]
+ * // GTAO
+ * @property {number} [slices=3]
+ * @property {number} [colorBounce=true]
+ * @property {number} [colorBounceIntensity=1.0]
+ */
+/**
+ * @typedef {object} DoFComponentOptions
+ * @property {"gustafsson" | "upitis"} [type="gustafsson"] Gustafsson uses a spiral pattern while Upitis uses a circular one.
+ * @property {boolean} [physical=true] Use camera f-stop and focal length
+ * @property {number} [focusDistance=7] The point to focus on in meters.
+ * @property {number} [focusScale=1] Non physically based value for artistic control when physical is false, otherwise act as an fStop divider. Larger aperture (ie, smaller f-stop) or larger focal length (smaller fov) = smaller depth of field = more blur.
+ * @property {boolean} [focusOnScreenPoint=false] Read the depth buffer to find the first intersecting object to focus on instead of a fixed focus distance.
+ * @property {number[]} [screenPoint=[0.5, 0.5]] The normalized screen point to focus on when "focusOnScreenPoint" is true.
+ * @property {number} [chromaticAberration=0.7] Amount of RGB separation
+ * @property {number} [luminanceThreshold=0.7] Threshold for out of focus hightlights
+ * @property {number} [luminanceGain=1] Gain for out of focus hightlights
+ * @property {number} [samples=6] Iteration steps. More steps means better blur but also degraded performances.
+ * @property {"disk" | "pentagon"} [shape="disk"] The bokeh shape for type "upitis".
+ * @property {boolean} [debug=false]
+ */
+/**
+ * @typedef {object} AAComponentOptions
+ * @property {"fxaa2" | "fxaa3"} [type="fxaa2"]
+ * @property {number} [spanMax=8] For "fxaa2" only.
+ */
+/**
+ * @typedef {object} FogComponentOptions
+ * @property {number[]} [color=[0.5, 0.5, 0.5]]
+ * @property {number} [start=5]
+ * @property {number} [density=0.15]
+ * @property {number[]} [sunPosition=[1, 1, 1]]
+ * @property {number} [sunDispertion=0.2]
+ * @property {number} [sunIntensity=0.1]
+ * @property {number[]} [sunColor=[0.98, 0.98, 0.7]]
+ * @property {number[]} [inscatteringCoeffs=[0.3, 0.3, 0.3]]
+ */
+/**
+ * @typedef {object} BloomComponentOptions
+ * @property {number} [quality=1] The bloom quality: 0 or 1 (0 is faster but flickers)
+ * @property {"luma" | "luminance" | "average"} [colorFunction="luma"] The function used to determine the brightness of a pixel for the threshold.
+ * @property {number} [threshold=1] The brightness value at which pixels are filtered out for the threshold.
+ * @property {"color" | "emissive"} [source="color"] The source texture for the threshold.
+ * @property {number} [intensity=0.1] The strength of the bloom effect.
+ * @property {number} [radius=1] The downsampling radius which controls how much glare gets blended in.
+ */
+/**
+ * @typedef {object} LutComponentOptions
+ * @property {ctx.texture2D} texture
+ */
+/**
+ * @typedef {object} ColorCorrectionComponentOptions
+ * @property {number} [brightness=0]
+ * @property {number} [contrast=1]
+ * @property {number} [saturation=1]
+ * @property {number} [hue=0]
+ */
+/**
+ * @typedef {object} VignetteComponentOptions
+ * @property {number} [radius=0.8]
+ * @property {number} [intensity=0.2]
+ */
+/**
+ * @typedef {object} FilmGrainComponentOptions
+ * @property {number} [quality=2]
+ * @property {number} [size=1.6]
+ * @property {number} [intensity=0.05]
+ * @property {number} [colorIntensity=0.6]
+ * @property {number} [luminanceIntensity=1]
+ * @property {number} [speed=0.5]
+ */
+/**
  * @typedef {object} PostProcessingComponentOptions
- * @property {object} [dof]
- * @property {object} [aa]
- * @property {object} [fog]
- * @property {object} [bloom]
- * @property {object} [lut]
- * @property {object} [colorCorrection]
- * @property {object} [vignette]
+ * @property {SSAOComponentOptions} [ssao]
+ * @property {DoFComponentOptions} [dof]
+ * @property {AAComponentOptions} [aa]
+ * @property {FogComponentOptions} [fog]
+ * @property {BloomComponentOptions} [bloom]
+ * @property {LutComponentOptions} [lut]
+ * @property {ColorCorrectionComponentOptions} [colorCorrection]
+ * @property {VignetteComponentOptions} [vignette]
+ * @property {FilmGrainComponentOptions} [filmGrain]
+ * @property {number} opacity
  */
 /**
  * @typedef {object} ReflectionProbeComponentOptions

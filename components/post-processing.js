@@ -20,7 +20,6 @@ const postProcessing = (options) => ({
 
 postProcessing.ssao = (options) => ({
   type: "sao", // "gtao",
-  post: false,
   noiseTexture: true,
   mix: 1,
   samples: options?.type === "gtao" ? 6 : 11,
@@ -41,15 +40,17 @@ postProcessing.ssao = (options) => ({
 });
 postProcessing.dof = (options) => ({
   type: "gustafsson", // "upitis"
-  debug: false,
+  physical: true,
   focusDistance: 7,
+  focusScale: 1,
   focusOnScreenPoint: false,
   screenPoint: [0.5, 0.5],
   chromaticAberration: 0.7,
   luminanceThreshold: 0.7,
   luminanceGain: 1,
-  samples: 4,
+  samples: 6,
   shape: "disk", // "pentagon"
+  debug: false,
   ...options,
 });
 postProcessing.aa = (options) => ({
@@ -71,7 +72,9 @@ postProcessing.fog = (options) => ({
 });
 postProcessing.bloom = (options) => ({
   quality: 1,
+  colorFunction: "luma", // "average" | "luminance"
   threshold: 1,
+  source: false, // "color" | "emissive"
   radius: 1,
   intensity: 0.1,
   ...options,

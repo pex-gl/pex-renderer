@@ -81,13 +81,13 @@ scene.entities[1].transform.position[0] -= 0.3;
 world.entities.push(...scene.entities);
 
 const cameraEntity = scene.entities.filter((entity) => entity.camera)[0];
-cameraEntity.camera.fStop = 1.3;
 const postProcessing = components.postProcessing({
   dof: components.postProcessing.dof({
-    focusDistance: 7.8,
+    focusDistance: 7.95,
   }),
 });
 cameraEntity.postProcessing = postProcessing;
+cameraEntity.camera.far = 100;
 
 const rectCanvas = document.createElement("canvas");
 document.body.appendChild(rectCanvas);
@@ -170,6 +170,9 @@ gui.addRadioList(
   onResize,
 );
 gui.addColumn("Camera");
+gui.addHeader("Planes");
+gui.addParam("Near", cameraEntity.camera, "near", { min: 0.001, max: 10 });
+gui.addParam("Far", cameraEntity.camera, "far", { min: 10, max: 1000 });
 gui.addHeader("Lens");
 let cameraInfoLabel = gui.addLabel("Info");
 
@@ -216,6 +219,7 @@ gui.addRadioList(
 
 gui.addColumn("Depth of Field");
 gui.addParam("Enabled", postProcessing, "dof");
+gui.addParam("Physical", postProcessing.dof, "physical");
 gui.addRadioList(
   "Type",
   postProcessing.dof,
@@ -225,6 +229,10 @@ gui.addRadioList(
 gui.addParam("Focus distance", postProcessing.dof, "focusDistance", {
   min: 0,
   max: 100,
+});
+gui.addParam("Focus scale", postProcessing.dof, "focusScale", {
+  min: 0,
+  max: 20,
 });
 gui.addParam("Samples", postProcessing.dof, "samples", {
   min: 1,

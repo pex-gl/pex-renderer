@@ -24,9 +24,6 @@ const flagDefinitions = [
   [["options", "spotLights", "length"], "NUM_SPOT_LIGHTS", { type: "value" }],
   [["options", "areaLights", "length"], "NUM_AREA_LIGHTS", { type: "value" }],
   [["options", "reflectionProbes", "length"], "USE_REFLECTION_PROBES"],
-  [["options", "useSSAO"], "USE_SSAO"],
-  [["options", "useSSAOColors"], "USE_SSAO_COLORS"],
-  [["options", "targets", "ssao.main"], "SSAO_TEXTURE", { type: "texture", uniform: "uSSAOTexture", requires: "USE_SSAO" }],
 
   [["material", "unlit"], "USE_UNLIT_WORKFLOW", { fallback: "USE_METALLIC_ROUGHNESS_WORKFLOW" }],
   [["material", "blend"], "USE_BLEND"],
@@ -380,8 +377,6 @@ export default ({ ctx, shadowQuality = 3 }) => ({
       shadowCastingEntities: [],
       reflectionProbes: entities.filter((e) => e.reflectionProbe),
       depthPassOnly: shadowMapping,
-      useSSAO: false,
-      useSSAOColors: false,
       targets: {},
       shadowQuality: this.shadowQuality,
       debugRender: !(shadowMapping || transparent) && this.debugRender,
@@ -401,17 +396,6 @@ export default ({ ctx, shadowQuality = 3 }) => ({
       pipelineOptions.targets =
         cameraEntity.postProcessing?._targets?.[renderView.cameraEntity.id] ||
         {};
-
-      if (
-        cameraEntity?.postProcessing?.ssao &&
-        !cameraEntity.postProcessing.ssao.post
-      ) {
-        pipelineOptions.useSSAO = true;
-        pipelineOptions.useSSAOColors =
-          cameraEntity.postProcessing.ssao.type === "gtao" &&
-          cameraEntity.postProcessing.ssao.colorBounce;
-        pipelineOptions.targets["ssao.main"] ||= this.dummyTexture2D;
-      }
 
       // Lighting
       pipelineOptions.ambientLights = entities.filter((e) => e.ambientLight);

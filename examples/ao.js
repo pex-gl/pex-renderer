@@ -304,7 +304,6 @@ gui.addParam("Bounce intensity", postProcessing.ssao, "colorBounceIntensity", {
   min: 0,
   max: 10,
 });
-gui.addParam("Post", postProcessing.ssao, "post");
 gui.addParam("Mix", postProcessing.ssao, "mix", { min: 0, max: 1 });
 
 // Events

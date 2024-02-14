@@ -233,24 +233,26 @@ const dof = ({ resourceCache, descriptors }) => [
     flagDefinitions: [
       [["camera", "near"], "", { uniform: "uNear" }],
       [["camera", "far"], "", { uniform: "uFar" }],
-      [["camera", "actualSensorHeight"], "", { uniform: "uSensorHeight" }],
-      [["camera", "focalLength"], "", { uniform: "uFocalLength" }],
-      [["camera", "fStop"], "", { uniform: "uFStop" }],
       [["camera", "exposure"], "", { uniform: "uExposure" }],
 
       [["postProcessing", "dof"], "USE_DOF"],
       [["postProcessing", "dof", "type"], "USE_DOF_GUSTAFSSON", { compare: "gustafsson", requires: "USE_DOF" }],
       [["postProcessing", "dof", "type"], "USE_DOF_UPITIS", { compare: "upitis", requires: "USE_DOF" }],
       [["postProcessing", "dof", "focusDistance"], "", { uniform: "uFocusDistance", requires: "USE_DOF" }],
+      [["postProcessing", "dof", "focusScale"], "", { uniform: "uFocusScale", requires: "USE_DOF" }],
       [["postProcessing", "dof", "samples"], "NUM_SAMPLES", { type: "value", requires: "USE_DOF" }],
       [["postProcessing", "dof", "chromaticAberration"], "", { uniform: "uChromaticAberration", requires: "USE_DOF" }],
       [["postProcessing", "dof", "luminanceThreshold"], "", { uniform: "uLuminanceThreshold", requires: "USE_DOF" }],
       [["postProcessing", "dof", "luminanceGain"], "", { uniform: "uLuminanceGain", requires: "USE_DOF" }],
-      [["postProcessing", "dof", "shape"], "USE_DOF_SHAPE_PENTAGON", { compare: "pentagon", requires: "USE_DOF_UPITIS" }],
+      [["postProcessing", "dof", "shape"], "USE_SHAPE_PENTAGON", { compare: "pentagon", requires: "USE_DOF_UPITIS" }],
 
-      [["postProcessing", "dof", "focusOnScreenPoint"], "USE_DOF_FOCUS_ON_SCREEN_POINT"],
-      [["postProcessing", "dof", "screenPoint"], "", { uniform: "uScreenPoint", requires: "USE_DOF_FOCUS_ON_SCREEN_POINT" }],
-      [["postProcessing", "dof", "debug"], "USE_DOF_DEBUG", { requires: "USE_DOF" }],
+      [["postProcessing", "dof", "physical"], "USE_PHYSICAL", { requires: "USE_DOF" }],
+      [["camera", "focalLength"], "", { uniform: "uFocalLength", requires: "USE_PHYSICAL" }],
+      [["camera", "fStop"], "", { uniform: "uFStop", requires: "USE_PHYSICAL" }],
+
+      [["postProcessing", "dof", "focusOnScreenPoint"], "USE_FOCUS_ON_SCREEN_POINT"],
+      [["postProcessing", "dof", "screenPoint"], "", { uniform: "uScreenPoint", requires: "USE_FOCUS_ON_SCREEN_POINT" }],
+      [["postProcessing", "dof", "debug"], "USE_DEBUG", { requires: "USE_DOF" }],
     ],
     frag: SHADERS.dof.frag,
     target: ({ viewport }) =>
@@ -272,6 +274,9 @@ const bloom = ({ ctx, resourceCache, descriptors, bloomLevels = 9 }) => [
     flagDefinitions: [
       [["camera", "exposure"], "", { uniform: "uExposure" }],
       [["postProcessing", "bloom", "threshold"], "", { uniform: "uThreshold" }],
+      [["postProcessing", "bloom", "colorFunction"], "COLOR_FUNCTION", { type: "value" }],
+      [["postProcessing", "bloom", "source"], "USE_SOURCE_COLOR", { compare: "color" }],
+      [["postProcessing", "bloom", "source"], "USE_SOURCE_EMISSIVE", { compare: "emissive" }],
     ],
     // source = inputColor
     target: ({ viewport }) =>
@@ -365,11 +370,10 @@ const final = () => [
 
       // SSAO
       [["postProcessing", "ssao"], "USE_SSAO"],
-      [["postProcessing", "ssao", "post"], "USE_SSAO_POST", { requires: "USE_SSAO" }],
-      [["options", "targets", "ssao.main"], "AO_TEXTURE", { type: "texture", uniform: "uSSAOTexture", requires: "USE_SSAO_POST" }],
-      [["postProcessing", "ssao", "mix"], "", { uniform: "uSSAOMix", requires: "USE_SSAO_POST" }],
-      [["postProcessing", "ssao", "type"], "USE_SSAO_GTAO", { compare: "gtao", requires: "USE_SSAO_POST" }],
-      // [["postProcessing", "ssao", "type"], "USE_SSAO_SAO", { compare: "sao", requires: "USE_SSAO_POST" }],
+      [["options", "targets", "ssao.main"], "AO_TEXTURE", { type: "texture", uniform: "uSSAOTexture", requires: "USE_SSAO" }],
+      [["postProcessing", "ssao", "mix"], "", { uniform: "uSSAOMix", requires: "USE_SSAO" }],
+      [["postProcessing", "ssao", "type"], "USE_SSAO_GTAO", { compare: "gtao", requires: "USE_SSAO" }],
+      // [["postProcessing", "ssao", "type"], "USE_SSAO_SAO", { compare: "sao", requires: "USE_SSAO" }],
       [["postProcessing", "ssao", "colorBounce"], "USE_SSAO_COLORS", { requires: "USE_SSAO_GTAO" }],
 
       // Bloom
