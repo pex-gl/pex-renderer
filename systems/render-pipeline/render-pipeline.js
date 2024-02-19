@@ -297,7 +297,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
       .filter(Boolean);
 
     // Filter entities by layer
-    const layer = renderView.camera.layer;
+    const layer = renderView.cameraEntity.layer;
     const entitiesInView = layer
       ? entities.filter((entity) => !entity.layer || entity.layer === layer)
       : entities.filter((entity) => !entity.layer);
