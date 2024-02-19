@@ -38,7 +38,7 @@ const flagDefinitions = [
   [["material", "reflectance"], "", { uniform: "uReflectance" }],
 
   [["material", "emissiveColor"], "USE_EMISSIVE_COLOR", { uniform: "uEmissiveColor" }],
-  [["material", "emissiveIntensity"], "", { uniform: "uEmissiveIntensity", default: 1}],
+  [["material", "emissiveIntensity"], "", { uniform: "uEmissiveIntensity", requires: "USE_EMISSIVE_COLOR", default: 1 }],
   [["material", "baseColorTexture"], "BASE_COLOR_TEXTURE", { type: "texture", uniform: "uBaseColorTexture" }],
   [["material", "emissiveColorTexture"], "EMISSIVE_COLOR_TEXTURE", { type: "texture", uniform: "uEmissiveColorTexture" }],
   [["material", "normalTexture"], "NORMAL_TEXTURE", { type: "texture", uniform: "uNormalTexture" }],
