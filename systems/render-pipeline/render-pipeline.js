@@ -300,7 +300,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
     const layer = renderView.camera.layer;
     const entitiesInView = layer
       ? entities.filter((entity) => !entity.layer || entity.layer === layer)
-      : entities;
+      : entities.filter((entity) => !entity.layer);
 
     const renderPassView = {
       ...renderView,
