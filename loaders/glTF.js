@@ -858,10 +858,10 @@ async function handleNode(node, gltf, i, ctx, options) {
         projection: "orthographic",
         near: camera.orthographic.znear,
         far: camera.orthographic.zfar,
-        left: -camera.orthographic.xmag / 2,
-        right: camera.orthographic.xmag / 2,
-        top: camera.orthographic.ymag / 2,
-        bottom: -camera.orthographic.ymag / 2,
+        left: -camera.orthographic.xmag,
+        right: camera.orthographic.xmag,
+        top: camera.orthographic.ymag,
+        bottom: -camera.orthographic.ymag,
       });
     } else {
       // https://github.com/KhronosGroup/glTF/blob/main/specification/2.0/schema/camera.perspective.schema.json
