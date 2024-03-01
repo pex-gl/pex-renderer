@@ -3,5 +3,5 @@ node_modules
 types
 lib
 web_modules
-examples/glTF-Sample-Models
+examples/glTF-Sample-Assets
 examples/screenshots/*-diff.png

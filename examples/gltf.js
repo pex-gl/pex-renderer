@@ -18,11 +18,11 @@ import { debugSceneTree, getEnvMap, getURL } from "./utils.js";
 
 const MODELS_PATH =
   location.hostname === "localhost"
-    ? "examples/glTF-Sample-Models/2.0"
-    : "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0";
+    ? "examples/glTF-Sample-Assets/Models"
+    : "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models";
 
 // const MODELS_PATH =
-//   "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0";
+//   "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models";
 
 let models = await loadJson(`${MODELS_PATH}/model-index.json`);
 
@@ -133,8 +133,8 @@ let debugOnce = false;
 function openModelURL() {
   window.open(
     State.url.replace(
-      "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/",
-      "https://github.com/KhronosGroup/glTF-Sample-Models/blob/master/2.0/",
+      "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/master/2.0/",
+      "https://github.com/KhronosGroup/glTF-Sample-Assets/blob/master/2.0/",
     ),
   );
 }
