@@ -42,7 +42,7 @@ const State = {
       new Set(),
     ),
   ).filter((format) => !["glTF-IBL", "glTF-Meshopt"].includes(format)),
-  currentFormat: 2,
+  currentFormat: 5,
   modelName: "-",
 };
 
@@ -490,12 +490,15 @@ gui.addButton("Tree", () => {
 // Filter models
 models = models.filter(({ name }) =>
   [
-    // "2CylinderEngine",
+    // "ABeautifulGame",
     // "AlphaBlendModeTest",
     // "AnimatedCube",
     // "AnimatedMorphCube",
-    // "AnimatedMorphSphere",
     // "AnimatedTriangle",
+    // "AnisotropyBarnLamp", // FAIL: KHR_materials_anisotropy
+    // "AnisotropyDiscTest", // FAIL: KHR_materials_anisotropy
+    // "AnisotropyRotationTest", // FAIL: KHR_materials_anisotropy
+    // "AnisotropyStrengthTest", // FAIL: KHR_materials_anisotropy
     // "AntiqueCamera",
     // "AttenuationTest", // FAIL: need KHR_materials_volume
     // "Avocado",
@@ -510,38 +513,48 @@ models = models.filter(({ name }) =>
     // "BoxTexturedNonPowerOfTwo",
     // "BoxVertexColors", // FAIL: COLOR_0 can be vec3
     // "BrainStem",
-    // "Buggy",
     // "Cameras",
+    // "CarbonFibre",
     // "CesiumMan",
     // "CesiumMilkTruck",
+    // "ChairDamaskPurplegold", // FAIL: KHR_materials_specular
     // "ClearCoatCarPaint",
     // "ClearCoatTest",
-    // "ClearCoatWicker",
+    // "ClearcoatWicker",
     // "Corset",
     // "Cube",
     "DamagedHelmet",
+    // "DiffuseTransmissionPlant", // FAIL: KHR_materials_diffuse_transmission
+    // "DiffuseTransmissionTeacup", // FAIL: KHR_materials_diffuse_transmission
+    // "DirectionalLight",
+    // "DispersionTest", // FAIL: KHR_materials_transmission, KHR_materials_volume, KHR_materials_ior, KHR_materials_dispersion
     // "DragonAttenuation", // FAIL: attenuation
     // "Duck",
     // "EmissiveStrengthTest",
     // "EnvironmentTest", // HALF: missing glTF-IBL
     // "FlightHelmet",
     // "Fox", // HALF: hardcoded near/far
-    // "GearboxAssy", // FAIL: wrong position
     // "GlamVelvetSofa", // FAIL: KHR_materials_variants, KHR_materials_specular
+    // "GlassBrokenWindow", // FAIL: KHR_materials_transmission
+    // "GlassHurricaneCandleHolder", // FAIL: KHR_materials_transmission, KHR_materials_volume
+    // "GlassVaseFlowers", // FAIL: KHR_materials_transmission, KHR_materials_volume
+    // "IORTestGrid", // FAIL: KHR_materials_ior
     // "InterpolationTest",
+    // "IridescenceAbalone", // FAIL: KHR_materials_iridescence
     // "IridescenceDielectricSpheres", // FAIL: KHR_materials_iridescence
     // "IridescenceLamp", // FAIL: KHR_materials_iridescence
-    // // "IridescenceMetallicSpheres", // FAIL: KHR_materials_iridescence
+    // "IridescenceMetallicSpheres", // FAIL: KHR_materials_iridescence
     // "IridescenceSuzanne", // FAIL: KHR_materials_iridescence
     // "IridescentDishWithOlives", // FAIL: KHR_materials_iridescence
     // "Lantern",
     // "LightsPunctualLamp",
+    // "MandarinOrange", // FAIL: KHR_materials_diffuse_transmission
     // "MaterialsVariantsShoe", // FAIL: KHR_materials_variants
     // "MeshPrimitiveModes",
     // "MetalRoughSpheres",
     // "MetalRoughSpheresNoTextures",
     // "MorphPrimitivesTest",
-    // // "MorphStressTest", // FAIL: needs animation texture
+    // "MorphStressTest", // FAIL: needs animation texture
     // "MosquitoInAmber", // FAIL: KHR_materials_transmission, TEXCOORD_2
     // "MultiUVTest", // FAIL: wrong position
     // "MultipleScenes", // FAIL: missing implementation
@@ -549,20 +562,24 @@ models = models.filter(({ name }) =>
     // "NormalTangentMirrorTest",
     // "NormalTangentTest",
     // "OrientationTest",
+    // "PotOfCoals",
     // "PrimitiveModeNormalsTest", // FAIL: 3rd column should render as flat shading
-    // "ReciprocatingSaw",
     // "RecursiveSkeletons",
     // "RiggedFigure",
     // "RiggedSimple",
     // "SciFiHelmet",
     // "SheenChair",
     // "SheenCloth",
-    // "SimpleInstancing",
+    // "SheenTestGrid",
+    // "SimpleInstancing", // HALF: need instanced bbox
+    // "SimpleMaterial",
     // "SimpleMeshes",
     // "SimpleMorph",
     // "SimpleSkin",
     // "SimpleSparseAccessor",
+    // "SimpleTexture",
     // "SpecGlossVsMetalRough", // HALF: not in spec anymore
+    // "SpecularSilkPouf", // FAIL: KHR_materials_specular
     // "SpecularTest", // FAIL: KHR_materials_specular
     // "Sponza",
     // "StainedGlassLamp", // FAIL: KHR_materials_ior, KHR_materials_volume, KHR_materials_transmission
@@ -576,14 +593,16 @@ models = models.filter(({ name }) =>
     // "ToyCar", // FAIL: (too small, wrong camera)
     // "TransmissionRoughnessTest", // FAIL: KHR_materials_transmission, KHR_materials_ior, and KHR_materials_volume
     // "TransmissionTest", // FAIL: KHR_materials_transmission
+    // "TransmissionThinwallTestGrid", // FAIL: KHR_materials_transmission, KHR_materials_volume, KHR_materials_ior
     // "Triangle",
     // "TriangleWithoutIndices",
     // "TwoSidedPlane",
-    // "Unicode\u2764\u267bTest",
+    // "Unicode❤♻Test",
     // "UnlitTest",
-    // "VC", // FAIL: // "node_69" and "node_183" and "node_209" and "node_211" worldBounds infinity
     // "VertexColorTest",
+    // "VirtualCity", // FAIL: // "node_69" and "node_183" and "node_209" and "node_211" worldBounds infinity
     // "WaterBottle",
+    // "XmpMetadataRoundedCube",
   ].includes(name),
 );
 

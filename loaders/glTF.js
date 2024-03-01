@@ -15,11 +15,15 @@ const SUPPORTED_EXTENSIONS = [
   "KHR_materials_pbrSpecularGlossiness",
   // 2.0
   "EXT_mesh_gpu_instancing",
+  // "KHR_animation_pointer",
   "KHR_draco_mesh_compression",
   "KHR_lights_punctual",
+  // "KHR_materials_anisotropy",
   "KHR_materials_clearcoat",
+  // "KHR_materials_dispersion",
   "KHR_materials_emissive_strength",
   // "KHR_materials_ior",
+  // "KHR_materials_iridescence",
   "KHR_materials_sheen",
   // "KHR_materials_specular",
   // "KHR_materials_transmission",
@@ -29,6 +33,13 @@ const SUPPORTED_EXTENSIONS = [
   "KHR_mesh_quantization",
   "KHR_texture_basisu",
   "KHR_texture_transform",
+
+  // WIP:
+  // "KHR_animation_pointer"
+  // "KHR_audio"
+  // "KHR_materials_diffuse_transmission"
+  // "KHR_materials_dispersion"
+  // "KHR_materials_sss"
 ];
 
 const WEBGL_CONSTANTS = {
