@@ -268,7 +268,7 @@ world.add(skyboxEntity);
 const directionalLightEntity = createEntity({
   transform: components.transform({
     position: [2, 2, 0],
-    rotation: quat.targetTo(quat.create(), [0, 0, 0], [1, 1, 1]),
+    rotation: quat.fromDirection(quat.create(), [-1, -1, -1]),
   }),
   directionalLight: components.directionalLight({
     color: [1, 0.1, 0.1, 1], //FIXME: intensity is copied to alpha in pex-renderer
@@ -283,7 +283,7 @@ world.add(directionalLightEntity);
 const directionalLightEntity2 = createEntity({
   transform: components.transform({
     position: [-2, 2, 0],
-    rotation: quat.targetTo(quat.create(), [0, 0, 0], [-1, -1, 0]),
+    rotation: quat.fromPointToPoint(quat.create(), [-1, -1, 0], [0, 0, 0]),
   }),
   directionalLight: components.directionalLight({
     color: [0.1, 0.1, 1.0, 1], //FIXME: intensity is copied to alpha in pex-renderer

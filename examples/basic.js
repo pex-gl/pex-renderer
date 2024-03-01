@@ -79,7 +79,7 @@ world.add(skyEntity);
 const directionalLightEntity = createEntity({
   transform: components.transform({
     position: [0, 2, 0],
-    rotation: quat.targetTo(quat.create(), [0, 0, 0], [0, 1, 0]),
+    rotation: quat.fromDirection(quat.create(), [0, -1, 0]),
   }),
   directionalLight: components.directionalLight({
     color: [1, 0, 0, 1],

@@ -180,11 +180,7 @@ world.add(geomEntity);
 const lightEntity = createEntity({
   transform: components.transform({
     position: [1, 2, 3],
-    rotation: quat.fromTo(
-      quat.create(),
-      [0, 0, 1],
-      vec3.normalize([-5, -2, -3]),
-    ),
+    rotation: quat.fromDirection(quat.create(), vec3.normalize([-5, -2, -3])),
   }),
   directionalLight: components.directionalLight({
     color: [1, 1, 1, 1],
@@ -205,11 +201,7 @@ for (let i = 0; i < numLights; i++) {
   const lightEntity = createEntity({
     transform: components.transform({
       position: [x, y, z],
-      rotation: quat.fromTo(
-        quat.create(),
-        [0, 0, 1],
-        vec3.normalize([-x, -y, -z]),
-      ),
+      rotation: quat.fromDirection(quat.create(), [-x, -y, -z]),
     }),
     directionalLight: components.directionalLight({
       color: [1, 1, 1, 1],

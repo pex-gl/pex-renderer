@@ -186,9 +186,8 @@ world.add(reflectionProbeEntity2);
 const directionalLightEntity = createEntity({
   transform: components.transform({
     position: [2, 3, 1],
-    rotation: quat.fromTo(
+    rotation: quat.fromDirection(
       quat.create(),
-      [0, 0, 1],
       vec3.normalize(vec3.sub([0, 0, 0], [2, 3, 1])),
     ),
   }),

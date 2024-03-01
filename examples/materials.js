@@ -245,11 +245,7 @@ for (let i = 0; i < nW * nH; i++) {
 const directionalLightEntity = createEntity({
   transform: components.transform({
     position: [-2, 2, 2],
-    rotation: quat.fromTo(
-      quat.create(),
-      [0, 0, 1],
-      vec3.normalize([-2, -2, -1]),
-    ),
+    rotation: quat.fromDirection(quat.create(), vec3.normalize([-2, -2, -1])),
   }),
   directionalLight: components.directionalLight({
     color: [1, 1, 1, 2],

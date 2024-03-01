@@ -70,11 +70,7 @@ const gui = createGUI(ctx);
 const sunEntity = createEntity({
   transform: components.transform({
     position: State.sunPosition,
-    rotation: quat.fromTo(
-      quat.create(),
-      [0, 0, 1],
-      vec3.normalize([-2, -2, -2]),
-    ),
+    rotation: quat.fromDirection(quat.create(), [-1, -1, -1]),
   }),
   directionalLight: components.directionalLight({
     color: [1, 1, 0.95, 1],

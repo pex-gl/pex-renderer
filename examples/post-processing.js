@@ -325,11 +325,7 @@ const areaLightEntity = createEntity({
     parent: backgroundStuffParent.transform,
     position: [0, 3.5, 0],
     scale: [5, 1, 0.1],
-    rotation: quat.fromTo(
-      quat.create(),
-      [0, 0, 1],
-      vec3.normalize([0, -1, 0.001]),
-    ),
+    rotation: quat.fromDirection(quat.create(), vec3.normalize([0, -1, 0.001])),
   }),
   geometry: components.geometry(cube()),
   material: components.material({
@@ -348,9 +344,8 @@ world.add(areaLightEntity);
 const sunEntity = createEntity({
   transform: components.transform({
     position: State.sunPosition,
-    rotation: quat.fromTo(
+    rotation: quat.fromDirection(
       quat.create(),
-      [0, 0, 1],
       vec3.normalize(vec3.scale(vec3.copy(State.sunPosition), -1)),
     ),
   }),
@@ -404,11 +399,9 @@ world.add(skyboxEntity);
 //   const dir = vec3.normalize(vec3.sub([0, 0, 0], sunPosition));
 //   sunEntity.transform = {
 //     position: sunPosition,
-//     rotation: quat.fromTo(
+//     rotation: quat.fromDirection(
 //       sunEntity.transform.rotation,
-//       [0, 0, 1],
 //       dir,
-//       [0, 1, 0]
 //     ),
 //   };
 //   skyboxEntity.skybox = { sunPosition };
@@ -800,7 +793,10 @@ gui.addRadioList(
   "Source",
   postProcessing.bloom,
   "source",
-  ["color+emissive", "color", "emissive"].map((value) => ({ name: value, value })),
+  ["color+emissive", "color", "emissive"].map((value) => ({
+    name: value,
+    value,
+  })),
 );
 gui.addParam("Intensity", postProcessing.bloom, "intensity", {
   min: 0,

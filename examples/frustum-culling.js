@@ -161,11 +161,11 @@ const view1 = createView(cameraEntity, [0.0, 0.0, 0.5, 1]);
 const view2 = createView(fixCameraEntity, [0.5, 0.0, 0.5, 1]);
 
 const rotateCamera = (angle) => {
-  quat.targetTo(
-    cameraEntity.transform.rotation,
-    [Math.cos(angle), cameraPosition[1], Math.sin(angle)],
-    [0, 0, 0],
-  );
+  quat.fromDirection(cameraEntity.transform.rotation, [
+    Math.cos(angle),
+    cameraPosition[1],
+    Math.sin(angle),
+  ]);
   cameraEntity.transform.dirty = true;
 };
 

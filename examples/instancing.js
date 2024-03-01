@@ -73,11 +73,7 @@ world.add(geometryEntity);
 const sunEntity = createEntity({
   transform: components.transform({
     position: [-2, 2, 2],
-    rotation: quat.fromTo(
-      quat.create(),
-      [0, 0, 1],
-      vec3.normalize([2, -2, -1]),
-    ),
+    rotation: quat.fromDirection(quat.create(), vec3.normalize([2, -2, -1])),
   }),
   directionalLight: components.directionalLight({
     color: [1, 1, 0.95, 2],
@@ -157,7 +153,7 @@ function update(time) {
         avec4.set(
           instancedGeometry.rotations.data,
           i,
-          quat.fromTo(quat.create(), [0, 0, 1], dir),
+          quat.fromDirection(quat.create(), dir),
           0,
         );
         i++;

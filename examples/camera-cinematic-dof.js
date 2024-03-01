@@ -47,11 +47,7 @@ world.add(reflectionProbeEntity);
 const sunEntity = createEntity({
   transform: components.transform({
     position: skyboxEntity.skybox.sunPosition,
-    rotation: quat.fromTo(
-      quat.create(),
-      [0, 0, 1],
-      vec3.normalize([-1, -1, -1]),
-    ),
+    rotation: quat.fromDirection(quat.create(), [-1, -1, -1]),
   }),
   directionalLight: components.directionalLight({
     color: [1, 1, 1, 1],

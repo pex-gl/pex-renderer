@@ -209,9 +209,8 @@ const sunLight = components.directionalLight({
 
 const sunTransform = components.transform({
   position: sunPosition,
-  rotation: quat.fromTo(
+  rotation: quat.fromDirection(
     quat.create(),
-    [0, 0, 1],
     vec3.normalize(vec3.sub([0, 0, 0], sunPosition)),
   ),
 });
@@ -253,7 +252,7 @@ const areaLightEntity = createEntity({
   transform: components.transform({
     position: [5, 2, 0],
     scale: [2, 5, 0.1],
-    rotation: quat.fromTo(quat.create(), [0, 0, 1], [-1, 0, 0], [0, 1, 0]),
+    rotation: quat.fromDirection(quat.create(), [-1, 1, 0]),
   }),
   // geometry: components.geometry(cube({ sx: 1 })),
   material: components.material({

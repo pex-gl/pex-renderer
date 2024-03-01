@@ -94,7 +94,7 @@ const directionalLightEntity = createEntity({
   layer: LAYERS[0],
   transform: components.transform({
     position: [-1, 1, -1],
-    rotation: quat.targetTo(quat.create(), [0, 0, 0], [-1, 1, -1]),
+    rotation: quat.fromPointToPoint(quat.create(), [-1, 1, -1], [0, 0, 0]),
   }),
   directionalLight: components.directionalLight({
     color: [1, 1, 0, 1],
@@ -111,7 +111,7 @@ const fixDirectionalLightEntity = createEntity({
   layer: LAYERS[0],
   transform: components.transform({
     position: [1, 1, 1],
-    rotation: quat.targetTo(quat.create(), [0, 0, 0], [1, 1, 1]),
+    rotation: quat.fromPointToPoint(quat.create(), [1, 1, 1], [0, 0, 0]),
   }),
   directionalLight: components.directionalLight(),
   lightHelper: components.lightHelper(),
@@ -123,7 +123,7 @@ const spotLightEntity = createEntity({
   layer: LAYERS[1],
   transform: components.transform({
     position: [-1, 1, -1],
-    rotation: quat.targetTo(quat.create(), [0, 0, 0], [-1, 1, -1]),
+    rotation: quat.fromPointToPoint(quat.create(), [-1, 1, -1], [0, 0, 0]),
   }),
   spotLight: components.spotLight({
     color: [1, 1, 0, 1],
@@ -143,7 +143,7 @@ const fixSpotLightEntity = createEntity({
   layer: LAYERS[1],
   transform: components.transform({
     position: [1, 1, 1],
-    rotation: quat.targetTo(quat.create(), [0, 0, 0], [1, 1, 1]),
+    rotation: quat.fromPointToPoint(quat.create(), [1, 1, 1], [0, 0, 0]),
   }),
   spotLight: components.spotLight(),
   lightHelper: components.lightHelper(),
@@ -184,7 +184,7 @@ const areaLightEntity = createEntity({
   transform: components.transform({
     scale: [2, 0.5, 1],
     position: [-1, 1, -1],
-    rotation: quat.targetTo(quat.create(), [0, 0, 0], [-1, 1, -1]),
+    rotation: quat.fromPointToPoint(quat.create(), [-1, 1, -1], [0, 0, 0]),
   }),
   areaLight: components.areaLight({
     color: [1, 1, 0, 1],
@@ -202,7 +202,7 @@ const fixAreaLightEntity = createEntity({
   transform: components.transform({
     scale: [2, 0.5, 1],
     position: [1, 1, 1],
-    rotation: quat.targetTo(quat.create(), [0, 0, 0], [1, 1, 1]),
+    rotation: quat.fromPointToPoint(quat.create(), [1, 1, 1], [0, 0, 0]),
   }),
   areaLight: components.areaLight(),
   lightHelper: components.lightHelper(),
@@ -333,10 +333,9 @@ ctx.frame(() => {
     // State.animate = false;
 
     const position = [Math.cos(now), 1, Math.sin(now)];
-    const rotation = quat.targetTo(
+    const rotation = quat.fromDirection(
       quat.create(),
       position.map((n) => -n),
-      [0, 0, 0],
     );
 
     directionalLightEntity.transform.position = position;

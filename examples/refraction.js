@@ -228,7 +228,7 @@ world.add(skyEntity);
 const directionalLightEntity = createEntity({
   transform: components.transform({
     position: [1, 1, 1],
-    rotation: quat.targetTo(quat.create(), [0, 0, 0], [-2, 2, 0]),
+    rotation: quat.fromPointToPoint(quat.create(), [-2, 2, 0], [0, 0, 0]),
   }),
   directionalLight: components.directionalLight({
     color: [1, 1, 1, 2],
@@ -242,7 +242,7 @@ world.add(directionalLightEntity);
 const directionalLightEntity2 = createEntity({
   transform: components.transform({
     position: [1, 1, 1],
-    rotation: quat.targetTo(quat.create(), [0, 0, 0], [2, 2, -2]),
+    rotation: quat.fromPointToPoint(quat.create(), [2, 2, -2], [0, 0, 0]),
   }),
   directionalLight: components.directionalLight({
     color: [1, 1, 1, 2],
