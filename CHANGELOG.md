@@ -2,6 +2,31 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+# [4.0.0-alpha.47](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.46...v4.0.0-alpha.47) (2024-03-01)
+
+
+### Bug Fixes
+
+* **ecs:** filter entities with no layer if rendering with a camera with no layer ([de64bb4](https://github.com/pex-gl/pex-renderer/commit/de64bb41ad83af4ddcbba2174fe238d642c8e67c)), closes [#329](https://github.com/pex-gl/pex-renderer/issues/329)
+* **ecs:** get layer from cameraEntity in render-pipeline ([afa10cb](https://github.com/pex-gl/pex-renderer/commit/afa10cbeadaf62406844fb6153f39265d64a373b))
+* **gltf:** add back support for EXT_mesh_gpu_instancing ([3b69bf0](https://github.com/pex-gl/pex-renderer/commit/3b69bf03d68af9b78f3cddcc622e36f915bc6106))
+* **gltf:** check for primitive mode as integer ([6713aa9](https://github.com/pex-gl/pex-renderer/commit/6713aa93276bda3ef6ea03a99818ceed04200f39))
+* **glTF:** remove xmag and ymag halving in glTF loader ([b7ca97c](https://github.com/pex-gl/pex-renderer/commit/b7ca97c4f4fe105382eba67e7a81ae1edd8fffc3)), closes [#364](https://github.com/pex-gl/pex-renderer/issues/364)
+
+
+### Features
+
+* **ecs:** split post processing passes + rename command to passes ([9c02c54](https://github.com/pex-gl/pex-renderer/commit/9c02c54c7f23517a88d92ea5bf749876e060efca))
+* **ecs:** use renderView viewport in line renderer ([89f0388](https://github.com/pex-gl/pex-renderer/commit/89f0388a1ff25585b56229f1be001f2df5407dd5))
+* **pbr:** update pex-shaders (dof physical/focus scale, ssao post and bloom source/color function) ([e49a5bb](https://github.com/pex-gl/pex-renderer/commit/e49a5bbc4f26630388fe0afb18686be181c329bf))
+
+
+### Performance Improvements
+
+* **ecs:** require USE_EMISSIVE_COLOR for emissiveIntensity flag in standard renderer ([16f4dc6](https://github.com/pex-gl/pex-renderer/commit/16f4dc6b324045988e5484e69aecc49508ba87cf))
+
+
+
 # [4.0.0-alpha.46](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.45...v4.0.0-alpha.46) (2023-10-26)
 
 

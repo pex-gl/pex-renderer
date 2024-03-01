@@ -83,9 +83,9 @@ ctx.frame(() => {
 ## Modules
 
 <dl>
-<dt><a href="#module_components">components</a></dt>
-<dd></dd>
 <dt><a href="#module_pex-renderer">pex-renderer</a></dt>
+<dd></dd>
+<dt><a href="#module_components">components</a></dt>
 <dd></dd>
 <dt><a href="#module_systems">systems</a></dt>
 <dd></dd>
@@ -135,6 +135,24 @@ ctx.frame(() => {
 <dt><a href="#OverlayComponentOptions">OverlayComponentOptions</a> : <code>object</code></dt>
 <dd></dd>
 <dt><a href="#PointLightComponentOptions">PointLightComponentOptions</a> : <code>object</code></dt>
+<dd></dd>
+<dt><a href="#SSAOComponentOptions">SSAOComponentOptions</a> : <code>object</code></dt>
+<dd></dd>
+<dt><a href="#DoFComponentOptions">DoFComponentOptions</a> : <code>object</code></dt>
+<dd></dd>
+<dt><a href="#AAComponentOptions">AAComponentOptions</a> : <code>object</code></dt>
+<dd></dd>
+<dt><a href="#FogComponentOptions">FogComponentOptions</a> : <code>object</code></dt>
+<dd></dd>
+<dt><a href="#BloomComponentOptions">BloomComponentOptions</a> : <code>object</code></dt>
+<dd></dd>
+<dt><a href="#LutComponentOptions">LutComponentOptions</a> : <code>object</code></dt>
+<dd></dd>
+<dt><a href="#ColorCorrectionComponentOptions">ColorCorrectionComponentOptions</a> : <code>object</code></dt>
+<dd></dd>
+<dt><a href="#VignetteComponentOptions">VignetteComponentOptions</a> : <code>object</code></dt>
+<dd></dd>
+<dt><a href="#FilmGrainComponentOptions">FilmGrainComponentOptions</a> : <code>object</code></dt>
 <dd></dd>
 <dt><a href="#PostProcessingComponentOptions">PostProcessingComponentOptions</a> : <code>object</code></dt>
 <dd></dd>
@@ -191,6 +209,83 @@ ctx.frame(() => {
 <dt><a href="#RenderView">RenderView</a> : <code>object</code></dt>
 <dd></dd>
 </dl>
+
+<a name="module_pex-renderer"></a>
+
+## pex-renderer
+
+- [pex-renderer](#module_pex-renderer)
+  - [.components](#module_pex-renderer.components) : [<code>components</code>](#module_components)
+  - [.systems](#module_pex-renderer.systems) : [<code>systems</code>](#module_systems)
+  - [.world()](#module_pex-renderer.world) ⇒ [<code>World</code>](#World)
+  - [.entity([components])](#module_pex-renderer.entity) ⇒ [<code>Entity</code>](#Entity)
+  - [.renderEngine()](#module_pex-renderer.renderEngine) ⇒ [<code>RenderEngine</code>](#RenderEngine)
+  - [.renderGraph(ctx)](#module_pex-renderer.renderGraph) ⇒ [<code>RenderGraph</code>](#RenderGraph)
+  - [.resourceCache(ctx)](#module_pex-renderer.resourceCache) ⇒ [<code>ResourceCache</code>](#ResourceCache)
+
+<a name="module_pex-renderer.components"></a>
+
+### pex-renderer.components : [<code>components</code>](#module_components)
+
+All components as a function returning a component with default values.
+
+**Kind**: static property of [<code>pex-renderer</code>](#module_pex-renderer)
+<a name="module_pex-renderer.systems"></a>
+
+### pex-renderer.systems : [<code>systems</code>](#module_systems)
+
+All systems as a function returning a system with a type property and an update function.
+
+**Kind**: static property of [<code>pex-renderer</code>](#module_pex-renderer)
+<a name="module_pex-renderer.world"></a>
+
+### pex-renderer.world() ⇒ [<code>World</code>](#World)
+
+Create a world object to store entities and systems
+
+**Kind**: static method of [<code>pex-renderer</code>](#module_pex-renderer)
+<a name="module_pex-renderer.entity"></a>
+
+### pex-renderer.entity([components]) ⇒ [<code>Entity</code>](#Entity)
+
+Create an entity from an object of plain data components
+
+**Kind**: static method of [<code>pex-renderer</code>](#module_pex-renderer)
+
+| Param        | Type                | Default         |
+| ------------ | ------------------- | --------------- |
+| [components] | <code>object</code> | <code>{}</code> |
+
+<a name="module_pex-renderer.renderEngine"></a>
+
+### pex-renderer.renderEngine() ⇒ [<code>RenderEngine</code>](#RenderEngine)
+
+Create a render engine eg. a collection of systems for default rendering
+
+**Kind**: static method of [<code>pex-renderer</code>](#module_pex-renderer)
+<a name="module_pex-renderer.renderGraph"></a>
+
+### pex-renderer.renderGraph(ctx) ⇒ [<code>RenderGraph</code>](#RenderGraph)
+
+Create a render graph for rendering passes
+
+**Kind**: static method of [<code>pex-renderer</code>](#module_pex-renderer)
+
+| Param | Type                                           |
+| ----- | ---------------------------------------------- |
+| ctx   | <code>module:pex-context/types/index.js</code> |
+
+<a name="module_pex-renderer.resourceCache"></a>
+
+### pex-renderer.resourceCache(ctx) ⇒ [<code>ResourceCache</code>](#ResourceCache)
+
+Create a resource cache for pex-context caching.
+
+**Kind**: static method of [<code>pex-renderer</code>](#module_pex-renderer)
+
+| Param | Type                                           |
+| ----- | ---------------------------------------------- |
+| ctx   | <code>module:pex-context/types/index.js</code> |
 
 <a name="module_components"></a>
 
@@ -497,83 +592,6 @@ Vertex helper component
 | --------- | -------------------------------------------------------------------------- |
 | [options] | [<code>VertexHelperComponentOptions</code>](#VertexHelperComponentOptions) |
 
-<a name="module_pex-renderer"></a>
-
-## pex-renderer
-
-- [pex-renderer](#module_pex-renderer)
-  - [.components](#module_pex-renderer.components) : [<code>components</code>](#module_components)
-  - [.systems](#module_pex-renderer.systems) : [<code>systems</code>](#module_systems)
-  - [.world()](#module_pex-renderer.world) ⇒ [<code>World</code>](#World)
-  - [.entity([components])](#module_pex-renderer.entity) ⇒ [<code>Entity</code>](#Entity)
-  - [.renderEngine()](#module_pex-renderer.renderEngine) ⇒ [<code>RenderEngine</code>](#RenderEngine)
-  - [.renderGraph(ctx)](#module_pex-renderer.renderGraph) ⇒ [<code>RenderGraph</code>](#RenderGraph)
-  - [.resourceCache(ctx)](#module_pex-renderer.resourceCache) ⇒ [<code>ResourceCache</code>](#ResourceCache)
-
-<a name="module_pex-renderer.components"></a>
-
-### pex-renderer.components : [<code>components</code>](#module_components)
-
-All components as a function returning a component with default values.
-
-**Kind**: static property of [<code>pex-renderer</code>](#module_pex-renderer)
-<a name="module_pex-renderer.systems"></a>
-
-### pex-renderer.systems : [<code>systems</code>](#module_systems)
-
-All systems as a function returning a system with a type property and an update function.
-
-**Kind**: static property of [<code>pex-renderer</code>](#module_pex-renderer)
-<a name="module_pex-renderer.world"></a>
-
-### pex-renderer.world() ⇒ [<code>World</code>](#World)
-
-Create a world object to store entities and systems
-
-**Kind**: static method of [<code>pex-renderer</code>](#module_pex-renderer)
-<a name="module_pex-renderer.entity"></a>
-
-### pex-renderer.entity([components]) ⇒ [<code>Entity</code>](#Entity)
-
-Create an entity from an object of plain data components
-
-**Kind**: static method of [<code>pex-renderer</code>](#module_pex-renderer)
-
-| Param        | Type                | Default         |
-| ------------ | ------------------- | --------------- |
-| [components] | <code>object</code> | <code>{}</code> |
-
-<a name="module_pex-renderer.renderEngine"></a>
-
-### pex-renderer.renderEngine() ⇒ [<code>RenderEngine</code>](#RenderEngine)
-
-Create a render engine eg. a collection of systems for default rendering
-
-**Kind**: static method of [<code>pex-renderer</code>](#module_pex-renderer)
-<a name="module_pex-renderer.renderGraph"></a>
-
-### pex-renderer.renderGraph(ctx) ⇒ [<code>RenderGraph</code>](#RenderGraph)
-
-Create a render graph for rendering passes
-
-**Kind**: static method of [<code>pex-renderer</code>](#module_pex-renderer)
-
-| Param | Type                                           |
-| ----- | ---------------------------------------------- |
-| ctx   | <code>module:pex-context/types/index.js</code> |
-
-<a name="module_pex-renderer.resourceCache"></a>
-
-### pex-renderer.resourceCache(ctx) ⇒ [<code>ResourceCache</code>](#ResourceCache)
-
-Create a resource cache for pex-context caching.
-
-**Kind**: static method of [<code>pex-renderer</code>](#module_pex-renderer)
-
-| Param | Type                                           |
-| ----- | ---------------------------------------------- |
-| ctx   | <code>module:pex-context/types/index.js</code> |
-
 <a name="module_systems"></a>
 
 ## systems
@@ -587,10 +605,10 @@ Create a resource cache for pex-context caching.
   - [.light()](#module_systems.light) ⇒ [<code>System</code>](#System)
   - [.morph()](#module_systems.morph) ⇒ [<code>System</code>](#System)
   - [.reflectionProbe(options)](#module_systems.reflectionProbe) ⇒ [<code>System</code>](#System)
-  - [.renderPipeline(options)](#module_systems.renderPipeline) ⇒ [<code>System</code>](#System)
   - [.skin()](#module_systems.skin) ⇒ [<code>System</code>](#System)
   - [.skybox(options)](#module_systems.skybox) ⇒ [<code>System</code>](#System)
   - [.transform()](#module_systems.transform) ⇒ [<code>System</code>](#System)
+  - [.renderPipeline(options)](#module_systems.renderPipeline) ⇒ [<code>System</code>](#System)
 
 <a name="module_systems.renderer"></a>
 
@@ -676,24 +694,6 @@ Adds:
 | ------- | -------------------------------------------- |
 | options | [<code>SystemOptions</code>](#SystemOptions) |
 
-<a name="module_systems.renderPipeline"></a>
-
-### systems.renderPipeline(options) ⇒ [<code>System</code>](#System)
-
-Render pipeline system
-
-Adds:
-
-- "\_near", "\_far", "\_radiusUV" and "\_sceneBboxInLightSpace" to light components that cast shadows
-- "\_shadowCubemap" to pointLight components and "\_shadowMap" to other light components
-- "\_targets" to postProcessing components
-
-**Kind**: static method of [<code>systems</code>](#module_systems)
-
-| Param   | Type                                         |
-| ------- | -------------------------------------------- |
-| options | [<code>SystemOptions</code>](#SystemOptions) |
-
 <a name="module_systems.skin"></a>
 
 ### systems.skin() ⇒ [<code>System</code>](#System)
@@ -730,6 +730,24 @@ Adds:
 - "\_transform" to entities as reference to internal cache
 
 **Kind**: static method of [<code>systems</code>](#module_systems)
+<a name="module_systems.renderPipeline"></a>
+
+### systems.renderPipeline(options) ⇒ [<code>System</code>](#System)
+
+Render pipeline system
+
+Adds:
+
+- "\_near", "\_far", "\_radiusUV" and "\_sceneBboxInLightSpace" to light components that cast shadows
+- "\_shadowCubemap" to pointLight components and "\_shadowMap" to other light components
+- "\_targets" to postProcessing components
+
+**Kind**: static method of [<code>systems</code>](#module_systems)
+
+| Param   | Type                                         |
+| ------- | -------------------------------------------- |
+| options | [<code>SystemOptions</code>](#SystemOptions) |
+
 <a name="module_renderer"></a>
 
 ## renderer
@@ -749,7 +767,7 @@ Adds:
 
 Base renderer
 
-Other renderer are composed with it.
+All renderers are composed with it.
 
 **Kind**: static method of [<code>renderer</code>](#module_renderer)
 <a name="module_renderer.basic"></a>
@@ -1135,6 +1153,152 @@ Standard renderer
 | [castShadows]   | <code>boolean</code>              | <code>true</code>         |
 | [shadowMapSize] | <code>number</code>               | <code>2048</code>         |
 
+<a name="SSAOComponentOptions"></a>
+
+## SSAOComponentOptions : <code>object</code>
+
+**Kind**: global typedef
+**Properties**
+
+| Name                   | Type                                                          | Default                                | Description |
+| ---------------------- | ------------------------------------------------------------- | -------------------------------------- | ----------- |
+| [type]                 | <code>&quot;sao&quot;</code> \| <code>&quot;gtao&quot;</code> | <code>&quot;sao&quot;</code>           |             |
+| [noiseTexture]         | <code>boolean</code>                                          | <code>true</code>                      |             |
+| [mix]                  | <code>number</code>                                           | <code>1</code>                         |             |
+| [samples]              | <code>number</code>                                           | <code>&quot;gtao&quot; ? 6 : 11</code> |             |
+| [intensity]            | <code>number</code>                                           | <code>2.2</code>                       |             |
+| [radius]               | <code>number</code>                                           | <code>0.5</code>                       | meters      |
+| [blurRadius]           | <code>number</code>                                           | <code>0.5</code>                       |             |
+| [blurSharpness]        | <code>number</code>                                           | <code>10</code>                        |             |
+| [brightness]           | <code>number</code>                                           | <code>0</code>                         |             |
+| [contrast]             | <code>number</code>                                           | <code>1</code>                         | // SSAO     |
+| [bias]                 | <code>number</code>                                           | <code>0.001</code>                     | centimeters |
+| [spiralTurns]          | <code>number</code>                                           | <code>7</code>                         | // GTAO     |
+| [slices]               | <code>number</code>                                           | <code>3</code>                         |             |
+| [colorBounce]          | <code>number</code>                                           | <code>true</code>                      |             |
+| [colorBounceIntensity] | <code>number</code>                                           | <code>1.0</code>                       |             |
+
+<a name="DoFComponentOptions"></a>
+
+## DoFComponentOptions : <code>object</code>
+
+**Kind**: global typedef
+**Properties**
+
+| Name                  | Type                                                                   | Default                             | Description                                                                                                                                                                                                                |
+| --------------------- | ---------------------------------------------------------------------- | ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [type]                | <code>&quot;gustafsson&quot;</code> \| <code>&quot;upitis&quot;</code> | <code>&quot;gustafsson&quot;</code> | Gustafsson uses a spiral pattern while Upitis uses a circular one.                                                                                                                                                         |
+| [physical]            | <code>boolean</code>                                                   | <code>true</code>                   | Use camera f-stop and focal length                                                                                                                                                                                         |
+| [focusDistance]       | <code>number</code>                                                    | <code>7</code>                      | The point to focus on in meters.                                                                                                                                                                                           |
+| [focusScale]          | <code>number</code>                                                    | <code>1</code>                      | Non physically based value for artistic control when physical is false, otherwise act as an fStop divider. Larger aperture (ie, smaller f-stop) or larger focal length (smaller fov) = smaller depth of field = more blur. |
+| [focusOnScreenPoint]  | <code>boolean</code>                                                   | <code>false</code>                  | Read the depth buffer to find the first intersecting object to focus on instead of a fixed focus distance.                                                                                                                 |
+| [screenPoint]         | <code>Array.&lt;number&gt;</code>                                      | <code>[0.5, 0.5]</code>             | The normalized screen point to focus on when "focusOnScreenPoint" is true.                                                                                                                                                 |
+| [chromaticAberration] | <code>number</code>                                                    | <code>0.7</code>                    | Amount of RGB separation                                                                                                                                                                                                   |
+| [luminanceThreshold]  | <code>number</code>                                                    | <code>0.7</code>                    | Threshold for out of focus hightlights                                                                                                                                                                                     |
+| [luminanceGain]       | <code>number</code>                                                    | <code>1</code>                      | Gain for out of focus hightlights                                                                                                                                                                                          |
+| [samples]             | <code>number</code>                                                    | <code>6</code>                      | Iteration steps. More steps means better blur but also degraded performances.                                                                                                                                              |
+| [shape]               | <code>&quot;disk&quot;</code> \| <code>&quot;pentagon&quot;</code>     | <code>&quot;disk&quot;</code>       | The bokeh shape for type "upitis".                                                                                                                                                                                         |
+| [debug]               | <code>boolean</code>                                                   | <code>false</code>                  |                                                                                                                                                                                                                            |
+
+<a name="AAComponentOptions"></a>
+
+## AAComponentOptions : <code>object</code>
+
+**Kind**: global typedef
+**Properties**
+
+| Name      | Type                                                             | Default                        | Description       |
+| --------- | ---------------------------------------------------------------- | ------------------------------ | ----------------- |
+| [type]    | <code>&quot;fxaa2&quot;</code> \| <code>&quot;fxaa3&quot;</code> | <code>&quot;fxaa2&quot;</code> |                   |
+| [spanMax] | <code>number</code>                                              | <code>8</code>                 | For "fxaa2" only. |
+
+<a name="FogComponentOptions"></a>
+
+## FogComponentOptions : <code>object</code>
+
+**Kind**: global typedef
+**Properties**
+
+| Name                 | Type                              | Default                        |
+| -------------------- | --------------------------------- | ------------------------------ |
+| [color]              | <code>Array.&lt;number&gt;</code> | <code>[0.5, 0.5, 0.5]</code>   |
+| [start]              | <code>number</code>               | <code>5</code>                 |
+| [density]            | <code>number</code>               | <code>0.15</code>              |
+| [sunPosition]        | <code>Array.&lt;number&gt;</code> | <code>[1, 1, 1]</code>         |
+| [sunDispertion]      | <code>number</code>               | <code>0.2</code>               |
+| [sunIntensity]       | <code>number</code>               | <code>0.1</code>               |
+| [sunColor]           | <code>Array.&lt;number&gt;</code> | <code>[0.98, 0.98, 0.7]</code> |
+| [inscatteringCoeffs] | <code>Array.&lt;number&gt;</code> | <code>[0.3, 0.3, 0.3]</code>   |
+
+<a name="BloomComponentOptions"></a>
+
+## BloomComponentOptions : <code>object</code>
+
+**Kind**: global typedef
+**Properties**
+
+| Name            | Type                                                                                                    | Default                        | Description                                                                 |
+| --------------- | ------------------------------------------------------------------------------------------------------- | ------------------------------ | --------------------------------------------------------------------------- |
+| [quality]       | <code>number</code>                                                                                     | <code>1</code>                 | The bloom quality: 0 or 1 (0 is faster but flickers)                        |
+| [colorFunction] | <code>&quot;luma&quot;</code> \| <code>&quot;luminance&quot;</code> \| <code>&quot;average&quot;</code> | <code>&quot;luma&quot;</code>  | The function used to determine the brightness of a pixel for the threshold. |
+| [threshold]     | <code>number</code>                                                                                     | <code>1</code>                 | The brightness value at which pixels are filtered out for the threshold.    |
+| [source]        | <code>&quot;color&quot;</code> \| <code>&quot;emissive&quot;</code>                                     | <code>&quot;color&quot;</code> | The source texture for the threshold.                                       |
+| [intensity]     | <code>number</code>                                                                                     | <code>0.1</code>               | The strength of the bloom effect.                                           |
+| [radius]        | <code>number</code>                                                                                     | <code>1</code>                 | The downsampling radius which controls how much glare gets blended in.      |
+
+<a name="LutComponentOptions"></a>
+
+## LutComponentOptions : <code>object</code>
+
+**Kind**: global typedef
+**Properties**
+
+| Name    | Type                       |
+| ------- | -------------------------- |
+| texture | <code>ctx.texture2D</code> |
+
+<a name="ColorCorrectionComponentOptions"></a>
+
+## ColorCorrectionComponentOptions : <code>object</code>
+
+**Kind**: global typedef
+**Properties**
+
+| Name         | Type                | Default        |
+| ------------ | ------------------- | -------------- |
+| [brightness] | <code>number</code> | <code>0</code> |
+| [contrast]   | <code>number</code> | <code>1</code> |
+| [saturation] | <code>number</code> | <code>1</code> |
+| [hue]        | <code>number</code> | <code>0</code> |
+
+<a name="VignetteComponentOptions"></a>
+
+## VignetteComponentOptions : <code>object</code>
+
+**Kind**: global typedef
+**Properties**
+
+| Name        | Type                | Default          |
+| ----------- | ------------------- | ---------------- |
+| [radius]    | <code>number</code> | <code>0.8</code> |
+| [intensity] | <code>number</code> | <code>0.2</code> |
+
+<a name="FilmGrainComponentOptions"></a>
+
+## FilmGrainComponentOptions : <code>object</code>
+
+**Kind**: global typedef
+**Properties**
+
+| Name                 | Type                | Default           |
+| -------------------- | ------------------- | ----------------- |
+| [quality]            | <code>number</code> | <code>2</code>    |
+| [size]               | <code>number</code> | <code>1.6</code>  |
+| [intensity]          | <code>number</code> | <code>0.05</code> |
+| [colorIntensity]     | <code>number</code> | <code>0.6</code>  |
+| [luminanceIntensity] | <code>number</code> | <code>1</code>    |
+| [speed]              | <code>number</code> | <code>0.5</code>  |
+
 <a name="PostProcessingComponentOptions"></a>
 
 ## PostProcessingComponentOptions : <code>object</code>
@@ -1142,15 +1306,18 @@ Standard renderer
 **Kind**: global typedef
 **Properties**
 
-| Name              | Type                |
-| ----------------- | ------------------- |
-| [dof]             | <code>object</code> |
-| [aa]              | <code>object</code> |
-| [fog]             | <code>object</code> |
-| [bloom]           | <code>object</code> |
-| [lut]             | <code>object</code> |
-| [colorCorrection] | <code>object</code> |
-| [vignette]        | <code>object</code> |
+| Name              | Type                                                                             |
+| ----------------- | -------------------------------------------------------------------------------- |
+| [ssao]            | [<code>SSAOComponentOptions</code>](#SSAOComponentOptions)                       |
+| [dof]             | [<code>DoFComponentOptions</code>](#DoFComponentOptions)                         |
+| [aa]              | [<code>AAComponentOptions</code>](#AAComponentOptions)                           |
+| [fog]             | [<code>FogComponentOptions</code>](#FogComponentOptions)                         |
+| [bloom]           | [<code>BloomComponentOptions</code>](#BloomComponentOptions)                     |
+| [lut]             | [<code>LutComponentOptions</code>](#LutComponentOptions)                         |
+| [colorCorrection] | [<code>ColorCorrectionComponentOptions</code>](#ColorCorrectionComponentOptions) |
+| [vignette]        | [<code>VignetteComponentOptions</code>](#VignetteComponentOptions)               |
+| [filmGrain]       | [<code>FilmGrainComponentOptions</code>](#FilmGrainComponentOptions)             |
+| opacity           | <code>number</code>                                                              |
 
 <a name="ReflectionProbeComponentOptions"></a>
 
