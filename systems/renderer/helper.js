@@ -299,14 +299,14 @@ const getGrid = (grid) => [
 // TODO: instanced
 const getVertexVector = (geometry, attribute, scale = 0.1, modelMatrix) => {
   const positions = geometry.positions;
-  if (!Array.isArray(positions) || ArrayBuffer.isView(positions)) return [];
-  const isTypedArray = !Array.isArray(positions);
-  const positionCount = positions.length / (isTypedArray ? 3 : 1);
+  if (!(Array.isArray(positions) || ArrayBuffer.isView(positions))) return [];
+  const isFlatArray = !positions[0]?.length;
+  const positionCount = positions.length / (isFlatArray ? 3 : 1);
   const lines = new Array(positionCount * 2);
   for (let i = 0; i < positionCount; i++) {
     const worldPosition = vec3.create();
     const vector = vec3.create();
-    if (isTypedArray) {
+    if (isFlatArray) {
       avec3.set(worldPosition, 0, positions, i);
       avec3.set(vector, 0, geometry[attribute], i);
     } else {
