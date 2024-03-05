@@ -1,5 +1,6 @@
 import { aabb } from "pex-geom";
-import { NAMESPACE } from "../utils.js";
+import { vec3 } from "pex-math";
+import { NAMESPACE, TEMP_AABB } from "../utils.js";
 
 const attributeMap = {
   aPosition: "positions",
@@ -35,6 +36,40 @@ export default ({ ctx }) => ({
   type: "geometry-system",
   cache: {},
   debug: false,
+  updateBoundingBox(geometry, positions, offsets) {
+    if (
+      positions instanceof ArrayBuffer ||
+      (offsets && offsets instanceof ArrayBuffer)
+    ) {
+      // If bounds not manually provided or coming from glTF loader
+      if (!geometry.bounds) {
+        console.warn(
+          NAMESPACE,
+          this.type,
+          `geometry.bounds can't be computed on ArrayBuffer.`,
+          geometry,
+        );
+      }
+      return;
+    }
+
+    if (geometry.bounds) {
+      aabb.empty(geometry.bounds);
+    } else {
+      geometry.bounds = aabb.create();
+    }
+
+    if (!offsets) {
+      aabb.fromPoints(geometry.bounds, positions);
+    } else {
+      aabb.fromPoints(geometry.bounds, offsets);
+
+      aabb.empty(TEMP_AABB);
+      aabb.fromPoints(TEMP_AABB, positions);
+      vec3.add(geometry.bounds[0], TEMP_AABB[0]);
+      vec3.add(geometry.bounds[1], TEMP_AABB[1]);
+    }
+  },
   updateGeometryEntity(entity) {
     const geometry = entity.geometry;
     this.cache[entity.id] ||= { geometry: null, attributes: {} };
@@ -120,16 +155,18 @@ export default ({ ctx }) => ({
       if (attributeValue) {
         if (!(geometryDirty || attributeValue.dirty)) continue;
 
-        // Compute the bounds
         const data = attributeValue.data || attributeValue; //.data should be deprecated
-        if (
-          (attributeName === "aPosition" || attributeName === "aOffset") &&
-          !geometry.bounds
-          // TODO: should bounds be recomputed when geometryDirty?
-          // And leave to user to set geometry.bounds = null when making attribute dirty, only if wanted?
-        ) {
-          geometry.bounds ||= aabb.create();
-          aabb.fromPoints(geometry.bounds, data);
+
+        // Compute the bounds for geometryDirty and/or updated "positions"/"offsets" (manually setting dirty or from animation/morph system updates)
+        // TODO: handle skin system?
+        if (attributeName === "aPosition" && !geometry.offsets) {
+          this.updateBoundingBox(geometry, data);
+        } else if (attributeName === "aOffset" && geometry.positions) {
+          this.updateBoundingBox(
+            geometry,
+            geometry.positions.data || geometry.positions,
+            data,
+          );
         }
 
         // Set the attribute
