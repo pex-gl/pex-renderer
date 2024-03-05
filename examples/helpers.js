@@ -7,15 +7,17 @@ import {
 } from "../index.js";
 
 import createContext from "pex-context";
-import { quat, vec3 } from "pex-math";
+import { quat } from "pex-math";
 import createGUI from "pex-gui";
-import { aabb } from "pex-geom";
+import random from "pex-random";
 
 import { cube } from "primitive-geometry";
 
 import { dragon, getURL } from "./utils.js";
 
-const State = { bbox: true };
+random.seed(0);
+
+const State = { bbox: true, vertexHelper: true, scale: 1 };
 const pixelRatio = devicePixelRatio;
 const ctx = createContext({ pixelRatio });
 const renderEngine = createRenderEngine({ ctx, debug: true });
@@ -88,22 +90,25 @@ const orthographicCameraEntity = createEntity({
 world.add(orthographicCameraEntity);
 
 const floorEntity = createEntity({
-  transform: components.transform(),
+  transform: components.transform({ position: [0, -0.025, 0] }),
   geometry: components.geometry(cube({ sx: 2, sy: 0.05, sz: 2 })),
   material: components.material({
     receiveShadows: true,
     castShadows: false,
   }),
-  vertexHelper: components.vertexHelper({ size: 0.1 }),
-  boundingBoxHelper: components.boundingBoxHelper(),
+  vertexHelper: State.vertexHelper && components.vertexHelper({ size: 0.01 }),
+  boundingBoxHelper: State.bbox && components.boundingBoxHelper(),
 });
 world.add(floorEntity);
 
+const scalableEntities = new Map();
+
 // Static mesh
+const dragonEntityScale = 0.5;
 const dragonEntity = createEntity({
   transform: components.transform({
     position: [-0.5, 0.25, -0.5],
-    scale: new Array(3).fill(0.5),
+    scale: new Array(3).fill(dragonEntityScale),
   }),
   geometry: components.geometry(dragon),
   material: components.material({
@@ -113,13 +118,16 @@ const dragonEntity = createEntity({
     castShadows: true,
     receiveShadows: true,
   }),
-  vertexHelper: components.vertexHelper({ size: 0.01 }),
-  boundingBoxHelper: components.boundingBoxHelper(),
+  vertexHelper: State.vertexHelper && components.vertexHelper({ size: 0.01 }),
+  boundingBoxHelper: State.bbox && components.boundingBoxHelper(),
 });
 world.add(dragonEntity);
+scalableEntities.set(dragonEntity, dragonEntityScale);
 
 // Instanced mesh
 const gridSize = 3;
+const scales = [];
+const rotations = [];
 let grid = [];
 for (let i = 0; i < gridSize; i++) {
   for (let j = 0; j < gridSize; j++) {
@@ -129,23 +137,18 @@ for (let i = 0; i < gridSize; i++) {
         j / (gridSize - 1) - 0.5,
         k / (gridSize - 1) - 0.5,
       ]);
+      scales.push(new Array(3).fill(random.float(0.2, 1)));
+      rotations.push(random.quat());
     }
   }
 }
 
-function aabbFromInstances(geom, offsets) {
-  const bounds = aabb.fromPoints(aabb.create(), offsets);
-  const geomBounds = aabb.fromPoints(aabb.create(), geom.positions);
-  vec3.add(bounds[0], geomBounds[0]);
-  vec3.add(bounds[1], geomBounds[1]);
-  return bounds;
-}
-
 const cubeGeometry = cube({ sx: 1 / gridSize });
+const instancedEntityScale = 0.25;
 const instancedEntity = createEntity({
   transform: components.transform({
     position: [0.5, 0.2, -0.5],
-    scale: new Array(3).fill(0.25),
+    scale: new Array(3).fill(instancedEntityScale),
   }),
   geometry: components.geometry({
     positions: cubeGeometry.positions,
@@ -153,18 +156,20 @@ const instancedEntity = createEntity({
     uvs: cubeGeometry.uvs,
     cells: cubeGeometry.cells,
     offsets: grid,
+    scales,
+    rotations,
     instances: grid.length,
-    bounds: aabbFromInstances(cubeGeometry, grid),
   }),
   material: components.material({
     baseColor: [0.5, 1, 0.7, 1],
     castShadows: true,
     receiveShadows: true,
   }),
-  vertexHelper: components.vertexHelper({ size: 0.1 }),
-  boundingBoxHelper: components.boundingBoxHelper(),
+  vertexHelper: State.vertexHelper && components.vertexHelper({ size: 0.1 }),
+  boundingBoxHelper: State.bbox && components.boundingBoxHelper(),
 });
 world.add(instancedEntity);
+scalableEntities.set(instancedEntity, instancedEntityScale);
 
 // Animated skinned mesh
 const glTFOptions = {
@@ -177,27 +182,52 @@ const [cesiumManScene] = await loaders.gltf(
   getURL("assets/models/CesiumMan/CesiumMan.glb"),
   glTFOptions,
 );
+const cesiumManSceneScale = 0.5;
 cesiumManScene.entities[0].transform.position = [0.5, 0, 0.5];
-cesiumManScene.entities[0].transform.scale = new Array(3).fill(0.5);
+cesiumManScene.entities[0].transform.scale = new Array(3).fill(
+  cesiumManSceneScale,
+);
 cesiumManScene.entities.forEach((entity) => {
   if (entity.geometry) {
-    entity.boundingBoxHelper = components.boundingBoxHelper();
+    entity.boundingBoxHelper = State.bbox && components.boundingBoxHelper();
   }
 });
 world.entities.push(...cesiumManScene.entities);
+scalableEntities.set(cesiumManScene.entities[0], cesiumManSceneScale);
 
+// Animated mesh
 const [droneScene] = await loaders.gltf(
   getURL("assets/models/buster-drone/buster-drone-etc1s-draco.glb"),
   glTFOptions,
 );
+const droneSceneScale = 0.0025;
 droneScene.entities[0].transform.position = [-0.5, 0.25, 0.5];
-droneScene.entities[0].transform.scale = new Array(3).fill(0.0025);
+droneScene.entities[0].transform.scale = new Array(3).fill(droneSceneScale);
 droneScene.entities.forEach((entity) => {
   if (entity.geometry) {
-    entity.boundingBoxHelper = components.boundingBoxHelper();
+    entity.boundingBoxHelper = State.bbox && components.boundingBoxHelper();
   }
 });
 world.entities.push(...droneScene.entities);
+scalableEntities.set(droneScene.entities[0], droneSceneScale);
+
+// Morphed mesh
+const [morphCubeScene] = await loaders.gltf(
+  getURL("assets/models/AnimatedMorphCube/AnimatedMorphCube.gltf"),
+  glTFOptions,
+);
+const morphCubeSceneScale = 0.1;
+morphCubeScene.entities[0].transform.position = [0, 0.1, 0];
+morphCubeScene.entities[0].transform.scale = new Array(3).fill(
+  morphCubeSceneScale,
+);
+morphCubeScene.entities.forEach((entity) => {
+  if (entity.geometry) {
+    entity.boundingBoxHelper = State.bbox && components.boundingBoxHelper();
+  }
+});
+world.entities.push(...morphCubeScene.entities);
+scalableEntities.set(morphCubeScene.entities[0], morphCubeSceneScale);
 
 const skyEntity = createEntity({
   transform: components.transform(),
@@ -225,6 +255,7 @@ world.add(directionalLightEntity);
 // GUI
 const gui = createGUI(ctx);
 gui.addColumn("Camera");
+gui.addFPSMeeter();
 gui.addHeader("Perspective");
 gui.addParam("fov", perspectiveCameraEntity.camera, "fov", {
   min: 0,
@@ -264,12 +295,32 @@ gui.addParam("Bounding box", State, "bbox", {}, () => {
   world.entities.forEach((entity) => {
     if (entity.geometry) {
       if (State.bbox) {
-        entity.boundingBoxHelper ||= components.boundingBoxHelper();
+        entity.boundingBoxHelper = components.boundingBoxHelper();
       } else {
         delete entity.boundingBoxHelper;
       }
     }
   });
+});
+gui.addParam("Vertex normals", State, "vertexHelper", {}, () => {
+  world.entities.forEach((entity) => {
+    if (entity.geometry) {
+      if (State.vertexHelper) {
+        entity.vertexHelper = components.vertexHelper({ size: 0.01 });
+      } else {
+        delete entity.vertexHelper;
+      }
+    }
+  });
+});
+gui.addParam("Scale", State, "scale", { min: 0, max: 2 }, () => {
+  for (let [entity, initialScale] of scalableEntities.entries()) {
+    entity.transform.scale[0] =
+      entity.transform.scale[1] =
+      entity.transform.scale[2] =
+        initialScale * State.scale;
+    entity.transform.dirty = true;
+  }
 });
 
 ctx.frame(() => {

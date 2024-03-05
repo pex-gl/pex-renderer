@@ -1,9 +1,9 @@
-import { avec3, vec3 } from "pex-math";
+import { avec3, avec4, mat4, quat, vec3 } from "pex-math";
 import { pipeline as SHADERS } from "pex-shaders";
 import createGeomBuilder from "geom-builder";
 
 import createBaseSystem from "./base.js";
-import { ProgramCache } from "../../utils.js";
+import { ProgramCache, TEMP_MAT4, TEMP_VEC3 } from "../../utils.js";
 
 // Impacts program caching
 // prettier-ignore
@@ -296,26 +296,107 @@ const getGrid = (grid) => [
     .flat()
     .map((p) => p.reverse()),
 ];
-// TODO: instanced
-const getVertexVector = (geometry, attribute, scale = 0.1, modelMatrix) => {
+const getVertexVector = (geometry, attributeName, size = 0.1, modelMatrix) => {
   const positions = geometry.positions;
-  if (!(Array.isArray(positions) || ArrayBuffer.isView(positions))) return [];
-  const isFlatArray = !positions[0]?.length;
-  const positionCount = positions.length / (isFlatArray ? 3 : 1);
-  const lines = new Array(positionCount * 2);
-  for (let i = 0; i < positionCount; i++) {
-    const worldPosition = vec3.create();
-    const vector = vec3.create();
-    if (isFlatArray) {
-      avec3.set(worldPosition, 0, positions, i);
-      avec3.set(vector, 0, geometry[attribute], i);
-    } else {
-      vec3.set(worldPosition, positions[i]);
-      vec3.set(vector, geometry[attribute][i]);
+  const attribute = geometry[attributeName];
+
+  if (!attribute || !positions) return [];
+
+  const instances = geometry.instances || 1;
+
+  const isAttributeFlatArray = !attribute[0]?.length;
+  const isPositionsFlatArray = !positions[0]?.length;
+  const positionCount = positions.length / (isPositionsFlatArray ? 3 : 1);
+
+  const offsets = geometry.offsets;
+  const isOffsetsFlatArray = offsets && !offsets[0]?.length;
+
+  const scales = geometry.scales;
+  const isScalesFlatArray = scales && !scales[0]?.length;
+
+  const rotations = geometry.rotations;
+  const isRotationsFlatArray = rotations && !rotations[0]?.length;
+
+  const lines = new Array(instances * positionCount * 2);
+
+  let cellIndex = 0;
+  // TODO: gc
+  const offset = vec3.create();
+  const scale = [1, 1, 1];
+  const rotation = quat.create();
+  mat4.identity(TEMP_MAT4);
+
+  const worldPosition = vec3.create();
+  const vector = vec3.create();
+
+  for (let i = 0; i < instances; i++) {
+    if (offsets) {
+      if (isOffsetsFlatArray) {
+        avec3.set(offset, 0, offsets, i);
+      } else {
+        vec3.set(offset, offsets[i]);
+      }
     }
-    vec3.multMat4(worldPosition, modelMatrix);
-    lines[i * 2] = worldPosition;
-    lines[i * 2 + 1] = vec3.addScaled([...worldPosition], vector, scale);
+    if (scales) {
+      if (isScalesFlatArray) {
+        avec3.set(scale, 0, scales, i);
+      } else {
+        vec3.set(scale, scales[i]);
+      }
+    }
+    if (rotations) {
+      if (isRotationsFlatArray) {
+        avec4.set(rotation, 0, rotations, i);
+      } else {
+        quat.set(rotation, rotations[i]);
+      }
+      mat4.fromQuat(TEMP_MAT4, rotation);
+    }
+
+    for (let j = 0; j < positionCount; j++) {
+      if (isPositionsFlatArray) {
+        avec3.set(worldPosition, 0, positions, j);
+      } else {
+        vec3.set(worldPosition, positions[j]);
+      }
+      if (isAttributeFlatArray) {
+        avec3.set(vector, 0, attribute, j);
+      } else {
+        vec3.set(vector, attribute[j]);
+      }
+
+      vec3.set(TEMP_VEC3, worldPosition);
+      vec3.addScaled(TEMP_VEC3, vector, size);
+      vec3.set(vector, TEMP_VEC3);
+
+      if (scales) {
+        worldPosition[0] *= scale[0];
+        worldPosition[1] *= scale[1];
+        worldPosition[2] *= scale[2];
+
+        vector[0] *= scale[0];
+        vector[1] *= scale[1];
+        vector[2] *= scale[2];
+      }
+
+      if (rotations) {
+        vec3.multMat4(worldPosition, TEMP_MAT4);
+        vec3.multMat4(vector, TEMP_MAT4);
+      }
+
+      if (offsets) {
+        vec3.add(worldPosition, offset);
+        vec3.add(vector, offset);
+      }
+
+      vec3.multMat4(worldPosition, modelMatrix);
+      vec3.multMat4(vector, modelMatrix);
+
+      lines[cellIndex] = [...worldPosition];
+      lines[cellIndex + 1] = [...vector];
+
+      cellIndex += 2;
+    }
   }
 
   return lines;
