@@ -36,22 +36,9 @@ export default ({ ctx }) => ({
   type: "geometry-system",
   cache: {},
   debug: false,
-  updateBoundingBox(geometry, positions, offsets) {
-    if (
-      positions instanceof ArrayBuffer ||
-      (offsets && offsets instanceof ArrayBuffer)
-    ) {
-      // If bounds not manually provided or coming from glTF loader
-      if (!geometry.bounds) {
-        console.warn(
-          NAMESPACE,
-          this.type,
-          `geometry.bounds can't be computed on ArrayBuffer.`,
-          geometry,
-        );
-      }
-      return;
-    }
+  updateBounds(geometry) {
+    const positions = geometry.positions.data || geometry.positions;
+    const offsets = geometry.offsets?.data || geometry.offsets;
 
     if (geometry.bounds) {
       aabb.empty(geometry.bounds);
@@ -59,6 +46,7 @@ export default ({ ctx }) => ({
       geometry.bounds = aabb.create();
     }
 
+    // TODO: handle skin system?
     if (!offsets) {
       aabb.fromPoints(geometry.bounds, positions);
     } else {
@@ -142,6 +130,8 @@ export default ({ ctx }) => ({
       }
     }
 
+    let boundsDirty = !geometry.bounds || geometry.bounds.dirty;
+
     // Add vertex buffers
     for (let i = 0; i < attributeMapKeys.length; i++) {
       const attributeName = attributeMapKeys[i];
@@ -156,18 +146,6 @@ export default ({ ctx }) => ({
         if (!(geometryDirty || attributeValue.dirty)) continue;
 
         const data = attributeValue.data || attributeValue; //.data should be deprecated
-
-        // Compute the bounds for geometryDirty and/or updated "positions"/"offsets" (manually setting dirty or from animation/morph system updates)
-        // TODO: handle skin system?
-        if (attributeName === "aPosition" && !geometry.offsets) {
-          this.updateBoundingBox(geometry, data);
-        } else if (attributeName === "aOffset" && geometry.positions) {
-          this.updateBoundingBox(
-            geometry,
-            geometry.positions.data || geometry.positions,
-            data,
-          );
-        }
 
         // Set the attribute
         if (attributeValue.buffer?.class === "vertexBuffer") {
@@ -186,6 +164,10 @@ export default ({ ctx }) => ({
           attribute.divisor =
             attributeValue.divisor ||
             (instancedAttributes.includes(attributeName) ? 1 : undefined);
+
+          // Set bounds dirty for updated "positions"/"offsets" (manually setting dirty or from animation/morph system updates)
+          boundsDirty ||=
+            attributeName === "aPosition" || attributeName === "aOffset";
         }
       } else if (cachedGeom.attributes[attributeName]) {
         ctx.dispose(
@@ -195,6 +177,9 @@ export default ({ ctx }) => ({
         delete cachedGeom.attributes[attributeName];
       }
     }
+
+    // Compute the bounds
+    if (boundsDirty) this.updateBounds(geometry);
   },
   //TODO: should geometry components have their own id?
 
