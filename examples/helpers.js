@@ -7,13 +7,15 @@ import {
 } from "../index.js";
 
 import createContext from "pex-context";
-import { quat, vec3 } from "pex-math";
+import { quat } from "pex-math";
 import createGUI from "pex-gui";
-import { aabb } from "pex-geom";
+import random from "pex-random";
 
 import { cube } from "primitive-geometry";
 
 import { dragon, getURL } from "./utils.js";
+
+random.seed(0);
 
 const State = { bbox: true, vertexHelper: true, scale: 1 };
 const pixelRatio = devicePixelRatio;
@@ -94,8 +96,8 @@ const floorEntity = createEntity({
     receiveShadows: true,
     castShadows: false,
   }),
-  vertexHelper: components.vertexHelper({ size: 0.01 }),
-  boundingBoxHelper: components.boundingBoxHelper(),
+  vertexHelper: State.vertexHelper && components.vertexHelper({ size: 0.01 }),
+  boundingBoxHelper: State.bbox && components.boundingBoxHelper(),
 });
 world.add(floorEntity);
 
@@ -116,14 +118,16 @@ const dragonEntity = createEntity({
     castShadows: true,
     receiveShadows: true,
   }),
-  vertexHelper: components.vertexHelper({ size: 0.01 }),
-  boundingBoxHelper: components.boundingBoxHelper(),
+  vertexHelper: State.vertexHelper && components.vertexHelper({ size: 0.01 }),
+  boundingBoxHelper: State.bbox && components.boundingBoxHelper(),
 });
 world.add(dragonEntity);
 scalableEntities.set(dragonEntity, dragonEntityScale);
 
 // Instanced mesh
 const gridSize = 3;
+const scales = [];
+const rotations = [];
 let grid = [];
 for (let i = 0; i < gridSize; i++) {
   for (let j = 0; j < gridSize; j++) {
@@ -133,6 +137,8 @@ for (let i = 0; i < gridSize; i++) {
         j / (gridSize - 1) - 0.5,
         k / (gridSize - 1) - 0.5,
       ]);
+      scales.push(new Array(3).fill(random.float(0.2, 1)));
+      rotations.push(random.quat());
     }
   }
 }
@@ -150,6 +156,8 @@ const instancedEntity = createEntity({
     uvs: cubeGeometry.uvs,
     cells: cubeGeometry.cells,
     offsets: grid,
+    scales,
+    rotations,
     instances: grid.length,
   }),
   material: components.material({
@@ -157,8 +165,8 @@ const instancedEntity = createEntity({
     castShadows: true,
     receiveShadows: true,
   }),
-  vertexHelper: components.vertexHelper({ size: 0.1 }),
-  boundingBoxHelper: components.boundingBoxHelper(),
+  vertexHelper: State.vertexHelper && components.vertexHelper({ size: 0.1 }),
+  boundingBoxHelper: State.bbox && components.boundingBoxHelper(),
 });
 world.add(instancedEntity);
 scalableEntities.set(instancedEntity, instancedEntityScale);
@@ -181,7 +189,7 @@ cesiumManScene.entities[0].transform.scale = new Array(3).fill(
 );
 cesiumManScene.entities.forEach((entity) => {
   if (entity.geometry) {
-    entity.boundingBoxHelper = components.boundingBoxHelper();
+    entity.boundingBoxHelper = State.bbox && components.boundingBoxHelper();
   }
 });
 world.entities.push(...cesiumManScene.entities);
@@ -197,11 +205,11 @@ droneScene.entities[0].transform.position = [-0.5, 0.25, 0.5];
 droneScene.entities[0].transform.scale = new Array(3).fill(droneSceneScale);
 droneScene.entities.forEach((entity) => {
   if (entity.geometry) {
-    entity.boundingBoxHelper = components.boundingBoxHelper();
+    entity.boundingBoxHelper = State.bbox && components.boundingBoxHelper();
   }
 });
-// world.entities.push(...droneScene.entities);
-// scalableEntities.set(droneScene.entities[0], droneSceneScale);
+world.entities.push(...droneScene.entities);
+scalableEntities.set(droneScene.entities[0], droneSceneScale);
 
 // Morphed mesh
 const [morphCubeScene] = await loaders.gltf(
@@ -215,14 +223,11 @@ morphCubeScene.entities[0].transform.scale = new Array(3).fill(
 );
 morphCubeScene.entities.forEach((entity) => {
   if (entity.geometry) {
-    entity.boundingBoxHelper = components.boundingBoxHelper();
+    entity.boundingBoxHelper = State.bbox && components.boundingBoxHelper();
   }
 });
-// world.entities.push(...morphCubeScene.entities);
-// scalableEntities.set(morphCubeScene.entities[0], morphCubeSceneScale);
-
-console.log(cesiumManScene);
-// console.log(Array.from(scalableEntities.keys()));
+world.entities.push(...morphCubeScene.entities);
+scalableEntities.set(morphCubeScene.entities[0], morphCubeSceneScale);
 
 const skyEntity = createEntity({
   transform: components.transform(),
