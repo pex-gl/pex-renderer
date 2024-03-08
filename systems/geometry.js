@@ -27,6 +27,7 @@ const indicesProps = ["cells", "indices"];
  *
  * Adds:
  * - "bounds" to geometry components
+ * - "dirty" to geometry components properties
  * - "_geometry" to entities as reference to internal cache
  * @param {import("../types.js").SystemOptions} options
  * @returns {import("../types.js").System}
@@ -115,6 +116,7 @@ export default ({ ctx }) => ({
 
       if (indicesValue) {
         if (!(geometryDirty || indicesValue.dirty)) continue;
+        indicesValue.dirty = false;
 
         if (indicesValue.buffer?.class === "indexBuffer") {
           cachedGeom.indices = indicesValue;
@@ -144,6 +146,7 @@ export default ({ ctx }) => ({
 
       if (attributeValue) {
         if (!(geometryDirty || attributeValue.dirty)) continue;
+        attributeValue.dirty = false;
 
         const data = attributeValue.data || attributeValue; //.data should be deprecated
 
