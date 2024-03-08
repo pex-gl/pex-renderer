@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+# [4.0.0-alpha.48](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.47...v4.0.0-alpha.48) (2024-03-08)
+
+
+### Bug Fixes
+
+* **ecs:** reset geometry components properties dirty to false on geometry update ([788e1f1](https://github.com/pex-gl/pex-renderer/commit/788e1f18a6a02421691d1a708aca4347008d59c2))
+* **ecs:** vertex helper early return check for typed arrays + check for isFlatArray instead of isTypedArray ([b047be3](https://github.com/pex-gl/pex-renderer/commit/b047be321011cb15dd75640cf2c114fcaa5c582c))
+
+
+### Features
+
+* **ecs:** add support for instanced geometry in vertex helpers ([ef2f5b3](https://github.com/pex-gl/pex-renderer/commit/ef2f5b3802cff537d1f0852392281f9c2d994751))
+* **ecs:** update bounds computation in geometry system ([7803878](https://github.com/pex-gl/pex-renderer/commit/7803878fc99832d354aa3d823140f09fc76e5a4a))
+
+
+
 # [4.0.0-alpha.47](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.46...v4.0.0-alpha.47) (2024-03-01)
 
 

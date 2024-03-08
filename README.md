@@ -644,6 +644,7 @@ Geometry system
 Adds:
 
 - "bounds" to geometry components
+- "dirty" to geometry components properties
 - "\_geometry" to entities as reference to internal cache
 
 **Kind**: static method of [<code>systems</code>](#module_systems)
