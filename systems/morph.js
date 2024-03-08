@@ -1,5 +1,3 @@
-import { aabb } from "pex-geom";
-
 function updateMorph(morph) {
   Object.keys(morph.sources).forEach((key) => {
     const sourceAttributes = morph.sources[key];
@@ -49,14 +47,9 @@ export default () => ({
 
       Object.keys(entity.morph.current).forEach((key) => {
         entity.geometry[key] = entity.morph.current[key];
+        // Bounds will be recomputed in geometry system update if "positions"/"offsets" are dirty
         entity.geometry[key].dirty = true;
       });
-
-      // TODO: should that be in geometry system as geometry.bounds.dirty or aabbDirty?
-      entity.geometry.bounds = aabb.fromPoints(
-        entity.geometry.bounds || aabb.create(),
-        entity.morph.current.positions || entity.morph.current.offsets,
-      );
     }
   },
 });

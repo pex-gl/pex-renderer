@@ -1,5 +1,6 @@
 import { aabb } from "pex-geom";
-import { NAMESPACE } from "../utils.js";
+import { vec3 } from "pex-math";
+import { NAMESPACE, TEMP_AABB } from "../utils.js";
 
 const attributeMap = {
   aPosition: "positions",
@@ -26,6 +27,7 @@ const indicesProps = ["cells", "indices"];
  *
  * Adds:
  * - "bounds" to geometry components
+ * - "dirty" to geometry components properties
  * - "_geometry" to entities as reference to internal cache
  * @param {import("../types.js").SystemOptions} options
  * @returns {import("../types.js").System}
@@ -35,6 +37,28 @@ export default ({ ctx }) => ({
   type: "geometry-system",
   cache: {},
   debug: false,
+  updateBounds(geometry) {
+    const positions = geometry.positions.data || geometry.positions;
+    const offsets = geometry.offsets?.data || geometry.offsets;
+
+    if (geometry.bounds) {
+      aabb.empty(geometry.bounds);
+    } else {
+      geometry.bounds = aabb.create();
+    }
+
+    // TODO: handle skin system?
+    if (!offsets) {
+      aabb.fromPoints(geometry.bounds, positions);
+    } else {
+      aabb.fromPoints(geometry.bounds, offsets);
+
+      aabb.empty(TEMP_AABB);
+      aabb.fromPoints(TEMP_AABB, positions);
+      vec3.add(geometry.bounds[0], TEMP_AABB[0]);
+      vec3.add(geometry.bounds[1], TEMP_AABB[1]);
+    }
+  },
   updateGeometryEntity(entity) {
     const geometry = entity.geometry;
     this.cache[entity.id] ||= { geometry: null, attributes: {} };
@@ -92,6 +116,7 @@ export default ({ ctx }) => ({
 
       if (indicesValue) {
         if (!(geometryDirty || indicesValue.dirty)) continue;
+        indicesValue.dirty = false;
 
         if (indicesValue.buffer?.class === "indexBuffer") {
           cachedGeom.indices = indicesValue;
@@ -107,6 +132,8 @@ export default ({ ctx }) => ({
       }
     }
 
+    let boundsDirty = !geometry.bounds || geometry.bounds.dirty;
+
     // Add vertex buffers
     for (let i = 0; i < attributeMapKeys.length; i++) {
       const attributeName = attributeMapKeys[i];
@@ -119,18 +146,9 @@ export default ({ ctx }) => ({
 
       if (attributeValue) {
         if (!(geometryDirty || attributeValue.dirty)) continue;
+        attributeValue.dirty = false;
 
-        // Compute the bounds
         const data = attributeValue.data || attributeValue; //.data should be deprecated
-        if (
-          (attributeName === "aPosition" || attributeName === "aOffset") &&
-          !geometry.bounds
-          // TODO: should bounds be recomputed when geometryDirty?
-          // And leave to user to set geometry.bounds = null when making attribute dirty, only if wanted?
-        ) {
-          geometry.bounds ||= aabb.create();
-          aabb.fromPoints(geometry.bounds, data);
-        }
 
         // Set the attribute
         if (attributeValue.buffer?.class === "vertexBuffer") {
@@ -149,6 +167,10 @@ export default ({ ctx }) => ({
           attribute.divisor =
             attributeValue.divisor ||
             (instancedAttributes.includes(attributeName) ? 1 : undefined);
+
+          // Set bounds dirty for updated "positions"/"offsets" (manually setting dirty or from animation/morph system updates)
+          boundsDirty ||=
+            attributeName === "aPosition" || attributeName === "aOffset";
         }
       } else if (cachedGeom.attributes[attributeName]) {
         ctx.dispose(
@@ -158,6 +180,9 @@ export default ({ ctx }) => ({
         delete cachedGeom.attributes[attributeName];
       }
     }
+
+    // Compute the bounds
+    if (boundsDirty) this.updateBounds(geometry);
   },
   //TODO: should geometry components have their own id?
 
