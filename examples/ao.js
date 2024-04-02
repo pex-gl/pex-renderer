@@ -107,6 +107,7 @@ const postProcessing = components.postProcessing({
     type: "sao",
     intensity: 2,
   }),
+  // dof: components.postProcessing.dof(),
 });
 const cameraEntity = createEntity({
   transform: components.transform({ position: [-3, 4.5, 3.01] }),

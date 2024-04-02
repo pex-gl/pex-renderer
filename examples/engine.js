@@ -14,7 +14,7 @@ import * as SHADERS from "pex-shaders";
 
 import { cube, icosphere, plane, cone } from "primitive-geometry";
 
-import { getEnvMap, getURL, quatFromPointToPoint } from "./utils.js";
+import { getEnvMap, getURL } from "./utils.js";
 
 random.seed(0);
 
@@ -240,12 +240,7 @@ world.add(reflectionProbeEntity);
 const directionalLightEntity = createEntity({
   transform: components.transform({
     position: [2, 2, 2],
-    rotation: quatFromPointToPoint(
-      quat.create(),
-      [2, 2, 2],
-      [0, 0, 0],
-      [0, 1, 0],
-    ),
+    rotation: quat.fromPointToPoint(quat.create(), [2, 2, 2], [0, 0, 0]),
   }),
   directionalLight: components.directionalLight({
     color: [1, 1, 1, 1],
