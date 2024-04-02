@@ -38,7 +38,7 @@
     "pex-loaders": "^0.0.1",
     "pex-math": "^4.1.0",
     "pex-random": "^2.0.0",
-    "pex-shaders": "^1.0.0-alpha.23"
+    "pex-shaders": "^1.0.0-alpha.24"
   },
   "devDependencies": {
     "angle-normals": "^1.0.0",

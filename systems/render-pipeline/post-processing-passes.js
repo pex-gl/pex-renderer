@@ -2,6 +2,15 @@ import { postProcessing as SHADERS } from "pex-shaders";
 import random from "pex-random";
 import { BlueNoiseGenerator } from "./blue-noise.js";
 
+// prettier-ignore
+const ssaoMixFlagDefinitions = [
+  [["options", "targets", "ssao.main"], "AO_TEXTURE", { type: "texture", uniform: "uSSAOTexture", requires: "USE_SSAO" }],
+  [["postProcessing", "ssao", "mix"], "", { uniform: "uSSAOMix", requires: "USE_SSAO" }],
+  [["postProcessing", "ssao", "type"], "USE_SSAO_GTAO", { compare: "gtao", requires: "USE_SSAO" }],
+  // [["postProcessing", "ssao", "type"], "USE_SSAO_SAO", { compare: "sao", requires: "USE_SSAO" }],
+  [["postProcessing", "ssao", "colorBounce"], "USE_SSAO_COLORS", { requires: "USE_SSAO_GTAO" }],
+]
+
 const ssao = ({
   ctx,
   resourceCache,
@@ -224,6 +233,21 @@ const ssao = ({
     target: () => "ssao.main",
     size: ({ viewport }) => [viewport[2] * scale, viewport[3] * scale],
   },
+  {
+    name: "mix",
+    frag: SHADERS.ssaoMix.frag,
+    // prettier-ignore
+    flagDefinitions: [
+      [["postProcessing", "ssao"], "USE_SSAO"],
+      ...ssaoMixFlagDefinitions,
+    ],
+    // If no dof, disable and do it in final
+    disabled: ({ cameraEntity }) => !cameraEntity.postProcessing.dof,
+    passDesc: () => ({
+      clearColor: [0, 0, 0, 1],
+    }),
+    size: ({ viewport }) => [viewport[2] * scale, viewport[3] * scale],
+  },
 ];
 
 const dof = ({ resourceCache, descriptors }) => [
@@ -369,12 +393,9 @@ const final = () => [
       [["postProcessing", "fog", "inscatteringCoeffs"], "", { uniform: "uInscatteringCoeffs", requires: "USE_FOG" }],
 
       // SSAO
-      [["postProcessing", "ssao"], "USE_SSAO"],
-      [["options", "targets", "ssao.main"], "AO_TEXTURE", { type: "texture", uniform: "uSSAOTexture", requires: "USE_SSAO" }],
-      [["postProcessing", "ssao", "mix"], "", { uniform: "uSSAOMix", requires: "USE_SSAO" }],
-      [["postProcessing", "ssao", "type"], "USE_SSAO_GTAO", { compare: "gtao", requires: "USE_SSAO" }],
-      // [["postProcessing", "ssao", "type"], "USE_SSAO_SAO", { compare: "sao", requires: "USE_SSAO" }],
-      [["postProcessing", "ssao", "colorBounce"], "USE_SSAO_COLORS", { requires: "USE_SSAO_GTAO" }],
+      [["postProcessing", "dof"], "USE_DOF"],
+      [["postProcessing", "ssao"], "USE_SSAO", { excludes: "USE_DOF" }],
+      ...ssaoMixFlagDefinitions,
 
       // Bloom
       [["postProcessing", "bloom"], "USE_BLOOM"],

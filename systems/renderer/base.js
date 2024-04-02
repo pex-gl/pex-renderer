@@ -30,8 +30,13 @@ export default () => ({
     for (let i = 0; i < definitions.length; i++) {
       const [path, defineName, opts = {}] = definitions[i];
 
-      // Assumes defs are ordered and "requires" item was before
-      if (opts.requires && !flags.includes(opts.requires)) continue;
+      // Assumes defs are ordered and "requires/excludes" item was before
+      if (
+        (opts.requires && !flags.includes(opts.requires)) ||
+        (opts.excludes && flags.includes(opts.excludes))
+      ) {
+        continue;
+      }
 
       //TODO: GC
       const obj = { ...entity, geometry, options };
