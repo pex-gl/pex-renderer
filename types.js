@@ -2,6 +2,29 @@
 /**
  * @typedef {object} Entity
  * @property {number} id
+ * @property {AmbientLightComponentOptions} [ambientLight]
+ * @property {(AnimationComponentOptions | AnimationComponentOptions[])} [animation]
+ * @property {AreaLightComponentOptions} [areaLight]
+ * @property {AxesHelperComponentOptions} [axesHelper]
+ * @property {BoundingBoxHelperComponentOptions} [boundingBoxHelper]
+ * @property {CameraHelperComponentOptions} [cameraHelper]
+ * @property {CameraComponentOptions} [camera]
+ * @property {DirectionalLightComponentOptions} [directionalLight]
+ * @property {GeometryComponentOptions} [geometry]
+ * @property {GridHelperComponentOptions} [gridHelper]
+ * @property {LightHelperComponentOptions} [lightHelper]
+ * @property {MaterialComponentOptions} [material]
+ * @property {MorphComponentOptions} [morph]
+ * @property {OrbiterComponentOptions} [orbiter]
+ * @property {OverlayComponentOptions} [overlay]
+ * @property {PointLightComponentOptions} [pointLight]
+ * @property {PostProcessingComponentOptions} [postProcessing]
+ * @property {ReflectionProbeComponentOptions} [reflectionProbe]
+ * @property {SkinComponentOptions} [skin]
+ * @property {SkyboxComponentOptions} [skybox]
+ * @property {SpotLightComponentOptions} [spotLight]
+ * @property {TransformComponentOptions} [transform]
+ * @property {VertexHelperComponentOptions} [vertexHelper]
  */
 
 // Components
