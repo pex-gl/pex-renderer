@@ -110,7 +110,7 @@ const postProcessing = components.postProcessing({
   // dof: components.postProcessing.dof(),
 });
 const cameraEntity = createEntity({
-  transform: components.transform({ position: [-3, 4.5, 3.01] }),
+  transform: components.transform({ position: [-3, 3, 3] }),
   camera: components.camera({
     aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
     exposure: 1.5,
@@ -216,9 +216,7 @@ for (let i = 0; i < numLights; i++) {
 
 const skyboxEntity = createEntity({
   transform: components.transform(),
-  skybox: components.skybox({
-    sunPosition: [1, 1, 1],
-  }),
+  skybox: components.skybox({ sunPosition: [0, 0.05, -1] }),
 });
 world.add(skyboxEntity);
 
@@ -331,5 +329,5 @@ ctx.frame(() => {
 
   gui.draw();
 
-  window.dispatchEvent(new CustomEvent("pex-screenshot"));
+  window.dispatchEvent(new CustomEvent("screenshot"));
 });

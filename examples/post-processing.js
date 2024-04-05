@@ -13,8 +13,6 @@ import createGUI from "pex-gui";
 import * as SHADERS from "pex-shaders";
 
 import { cube, roundedCube, capsule, sphere } from "primitive-geometry";
-// import normals from "angle-normals";
-// import centerAndNormalize from "geom-center-and-normalize";
 
 import { dragon, getEnvMap, getTexture, getURL } from "./utils.js";
 
@@ -23,25 +21,19 @@ random.seed(14);
 const State = {
   enabled: true,
 
-  sunPosition: [0, 1, -5],
-  elevation: 25,
-  azimuth: -45,
-
   roughness: 0.5,
   metallic: 0.1,
   baseColor: [0.8, 0.1, 0.1, 1.0],
 
-  autofocus: true,
-
-  aa: false,
-  ssao: false,
+  aa: true,
+  ssao: true,
   fog: false,
-  bloom: false,
-  dof: false,
-  lut: false,
-  colorCorrection: false,
-  vignette: false,
-  filmGrain: false,
+  bloom: true,
+  dof: true,
+  lut: true,
+  colorCorrection: true,
+  vignette: true,
+  filmGrain: true,
 };
 
 // const pixelRatio = devicePixelRatio;
@@ -72,7 +64,7 @@ aabb.fromPoints(dragonBounds, dragon.positions);
 
 // Camera
 const camera = components.camera({
-  fov: Math.PI / 6,
+  // fov: Math.PI / 6,
   aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
   exposure: 1,
   fStop: 4,
@@ -170,10 +162,14 @@ const postProcessing = components.postProcessing({
   },
   opacity: 1,
 });
+const cameraY = s * 1;
 const cameraEntity = createEntity({
-  transform: components.transform({ position: [-3, s * 4, s * 8] }),
+  transform: components.transform({ position: [0, cameraY, s * 10] }),
   camera,
-  orbiter: components.orbiter({ element: ctx.gl.canvas, target: [0, 1, 0] }),
+  orbiter: components.orbiter({
+    element: ctx.gl.canvas,
+    target: [0, cameraY, 0],
+  }),
   postProcessing,
 });
 world.add(cameraEntity);
@@ -343,10 +339,10 @@ world.add(areaLightEntity);
 // Sky
 const sunEntity = createEntity({
   transform: components.transform({
-    position: State.sunPosition,
+    position: [0, 1, -5],
     rotation: quat.fromDirection(
       quat.create(),
-      vec3.normalize(vec3.scale(vec3.copy(State.sunPosition), -1)),
+      vec3.normalize(vec3.scale(vec3.copy([0, 1, -5]), -1)),
     ),
   }),
   directionalLight: components.directionalLight({
@@ -358,25 +354,9 @@ const sunEntity = createEntity({
 });
 world.add(sunEntity);
 
-// const skyboxEntity = createEntity({
-//   transform: components.transform({}),
-//   skybox: components.skybox({
-//     backgroundBlur: 1,
-//     sunPosition: State.sunPosition,
-//     envMap: panorama,
-//   }),
-//   reflectionProbe: components.reflectionProbe({
-//     origin: [0, 0, 0],
-//     size: [10, 10, 10],
-//   }),
-// });
-// world.add(skyboxEntity);
 const skyboxEntity = createEntity({
-  transform: components.transform({
-    // rotation: quat.fromAxisAngle(quat.create(), [0, 1, 0], State.rotation),
-  }),
+  transform: components.transform(),
   skybox: components.skybox({
-    sunPosition: [1, 1, 1],
     backgroundBlur: false,
     envMap: await getEnvMap(ctx, "assets/envmaps/Mono_Lake_B/Mono_Lake_B.hdr"),
   }),
@@ -384,38 +364,9 @@ const skyboxEntity = createEntity({
 });
 world.add(skyboxEntity);
 
-// const elevationMat = mat4.create();
-// const rotationMat = mat4.create();
-// function updateSunPosition() {
-//   mat4.identity(elevationMat);
-//   mat4.identity(rotationMat);
-//   mat4.rotate(elevationMat, (State.elevation / 180) * Math.PI, [0, 0, 1]);
-//   mat4.rotate(rotationMat, (State.azimuth / 180) * Math.PI, [0, 1, 0]);
-
-//   const sunPosition = [2, 0, 0];
-//   vec3.multMat4(sunPosition, elevationMat);
-//   vec3.multMat4(sunPosition, rotationMat);
-
-//   const dir = vec3.normalize(vec3.sub([0, 0, 0], sunPosition));
-//   sunEntity.transform = {
-//     position: sunPosition,
-//     rotation: quat.fromDirection(
-//       sunEntity.transform.rotation,
-//       dir,
-//     ),
-//   };
-//   skyboxEntity.skybox = { sunPosition };
-//   skyboxEntity.reflectionProbe = { dirty: true };
-// }
-
-// updateSunPosition();
-
 renderEngine.systems
   .find(({ type }) => type === "transform-system")
   .sort(world.entities);
-
-// const skyboxCmp = skyboxEntity.skybox;
-// const reflectionProbeCmp = skyboxEntity.reflectionProbe;
 
 // GUI
 const gui = createGUI(ctx);
@@ -455,36 +406,7 @@ const guiNormalControl = gui.addTexture2D("Normal", null, { flipY: true });
 const guiDepthControl = gui.addTexture2D("Depth", null, { flipY: true });
 const guiAOControl = gui.addTexture2D("Ao", null, { flipY: true });
 
-// gui.addTab("Scene");
-// gui.addColumn("Environment");
-// gui.addHeader("Sun");
-// gui.addParam("Enabled", sunEntity.directionalLight, "enabled", {}, (value) => {
-//   sunEntity.directionalLight = { enabled: value };
-// });
-// gui.addParam(
-//   "Sun Elevation",
-//   State,
-//   "elevation",
-//   { min: -90, max: 180 },
-//   updateSunPosition
-// );
-// gui.addParam(
-//   "Sun Azimuth",
-//   State,
-//   "azimuth",
-//   { min: -180, max: 180 },
-//   updateSunPosition
-// );
-// gui.addHeader("Skybox");
-// gui.addParam("Enabled", skyboxCmp, "enabled", {}, (value) => {
-//   skyboxCmp = { enabled: value };
-// });
 gui.addParam("Background Blur", skyboxEntity.skybox, "backgroundBlur");
-// gui.addTexture2D("Env map", skyboxCmp.texture);
-// gui.addHeader("Reflection probes");
-// gui.addParam("Enabled", reflectionProbeCmp, "enabled", {}, (value) => {
-//   reflectionProbeCmp = { enabled: value };
-// });
 
 // gui.addColumn("Material");
 // gui.addParam("Base Color", State, "baseColor", { type: "color" }, () => {
@@ -502,47 +424,6 @@ gui.addParam("Background Blur", skyboxEntity.skybox, "backgroundBlur");
 //     entity.material = { metallic: State.metallic };
 //   });
 // });
-
-// gui.addColumn("Lights");
-// gui.addParam(
-//   "Point Light Enabled",
-//   pointLightEntity.pointLight,
-//   "enabled",
-//   {},
-//   (value) => {
-//     pointLightEntity.pointLight = { enabled: value };
-//     pointLightEntity.transform = { enabled: value };
-//   }
-// );
-// gui.addParam(
-//   "Point Light Pos",
-//   pointLightEntity.transform,
-//   "position",
-//   { min: -5, max: 5 },
-//   (value) => {
-//     pointLightEntity.transform = { position: value };
-//   }
-// );
-// gui.addParam(
-//   "Area Light Enabled",
-//   areaLightEntity.areaLight,
-//   "enabled",
-//   {},
-//   (value) => {
-//     areaLightEntity.areaLight = { enabled: value };
-//     areaLightEntity.transform = { enabled: value };
-//   }
-// );
-// gui.addParam(
-//   "Area Light Col",
-//   areaLightEntity.areaLight,
-//   "color",
-//   { type: "color" },
-//   (value) => {
-//     areaLightEntity.areaLight = { color: value };
-//     areaLightEntity.material = { emissiveColor: value };
-//   }
-// );
 
 // // PostProcess
 // const postProcessTab = gui.addTab("PostProcess");
@@ -865,18 +746,6 @@ window.addEventListener("keydown", ({ key }) => {
 });
 
 ctx.frame(() => {
-  // if (State.autofocus && camera) {
-  //   const distance = vec3.distance(
-  //     dragonEntity.transform.worldPosition,
-  //     camera.entity.transform.worldPosition
-  //   );
-  //   if (postProcessing.dofFocusDistance !== distance) {
-  //     postProcessing = { dofFocusDistance: distance };
-  //     // force redraw
-  //     gui.items[0].dirty = true;
-  //   }
-  // }
-
   renderEngine.update(world.entities);
   const [{ color, normal, depth }] = renderEngine.render(
     world.entities,
@@ -894,5 +763,5 @@ ctx.frame(() => {
 
   gui.draw();
 
-  window.dispatchEvent(new CustomEvent("pex-screenshot"));
+  window.dispatchEvent(new CustomEvent("screenshot"));
 });

@@ -35,7 +35,7 @@ const axesHelperEntity = createEntity({
 world.add(axesHelperEntity);
 
 const skyEntity = createEntity({
-  skybox: components.skybox({ sunPosition: [0, 5, -5] }),
+  skybox: components.skybox({ sunPosition: [0, 0.05, -1] }),
   reflectionProbe: components.reflectionProbe(),
 });
 world.add(skyEntity);
@@ -43,7 +43,7 @@ world.add(skyEntity);
 const directionalLightEntity = createEntity({
   transform: components.transform({
     position: [0, 2, 0],
-    rotation: quat.fromDirection(quat.create(),[0, -1, 0]),
+    rotation: quat.fromDirection(quat.create(), [0, -1, 0]),
   }),
   directionalLight: components.directionalLight({
     color: [1, 0, 0, 1],
@@ -209,6 +209,8 @@ ctx.frame(() => {
   renderEngine.render(world.entities, cameraEntity);
 
   gui.draw();
-
-  window.dispatchEvent(new CustomEvent("pex-screenshot"));
 });
+
+setTimeout(() => {
+  window.dispatchEvent(new CustomEvent("screenshot"));
+}, 5000);

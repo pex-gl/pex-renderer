@@ -101,9 +101,6 @@ renderGraph.renderPass = (opts) => {
 // Entities
 const postProcessing = components.postProcessing({
   aa: components.postProcessing.aa(),
-  dof: components.postProcessing.dof({
-    focusDistance: 3,
-  }),
 });
 const cameraEntity = createEntity({
   transform: components.transform({ position: [0, 3, 3] }),
@@ -258,9 +255,7 @@ spinningEntity.geometry.bounds = aabb.fromPoints(
 );
 
 const skyboxEntity = createEntity({
-  skybox: components.skybox({
-    sunPosition: [0.1, 0.04, -1],
-  }),
+  skybox: components.skybox({ sunPosition: [0, 0.05, -1] }),
   reflectionProbe: components.reflectionProbe(),
 });
 world.add(skyboxEntity);
@@ -456,5 +451,5 @@ ctx.frame(() => {
 
   if (frame == 1) dot.render();
 
-  window.dispatchEvent(new CustomEvent("pex-screenshot"));
+  window.dispatchEvent(new CustomEvent("screenshot"));
 });

@@ -256,7 +256,6 @@ world.add(directionalLightEntity);
 
 const skyEntity = createEntity({
   skybox: components.skybox({
-    sunPosition: [0, 5, -5],
     envMap: await getEnvMap(ctx, "assets/envmaps/garage/garage.hdr"),
   }),
   reflectionProbe: components.reflectionProbe(),
@@ -323,5 +322,5 @@ ctx.frame(() => {
 
   gui.draw();
 
-  window.dispatchEvent(new CustomEvent("pex-screenshot"));
+  window.dispatchEvent(new CustomEvent("screenshot"));
 });

@@ -41,7 +41,6 @@ for (let i = 0; i < 3; i++) {
 
 const skyEntity = createEntity({
   skybox: components.skybox({
-    sunPosition: [1, 1, 1],
     backgroundBlur: 1,
     envMap: await getEnvMap(
       ctx,
@@ -191,5 +190,5 @@ ctx.frame(() => {
   );
 
   gui.draw();
-  window.dispatchEvent(new CustomEvent("pex-screenshot"));
+  window.dispatchEvent(new CustomEvent("screenshot"));
 });

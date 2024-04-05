@@ -66,7 +66,7 @@ const skyboxEntity = createEntity({
     rotation: quat.fromAxisAngle(quat.create(), [0, 1, 0], State.rotation),
   }),
   skybox: components.skybox({
-    sunPosition: vec3.normalize([1, 1, 1]),
+    sunPosition: [0, 0.05, -1],
     backgroundBlur: State.backgroundBlur,
     envMap: State.envMap ? envMap : false,
     exposure: 1,
@@ -234,5 +234,5 @@ ctx.frame(() => {
 
   gui.draw();
 
-  window.dispatchEvent(new CustomEvent("pex-screenshot"));
+  window.dispatchEvent(new CustomEvent("screenshot"));
 });

@@ -137,7 +137,6 @@ const furnaceEnvMap = await getEnvMap(
 
 const skyEntity = createEntity({
   skybox: components.skybox({
-    sunPosition: [0, 5, -5],
     envMap: State.furnace ? furnaceEnvMap : envMap,
   }),
   reflectionProbe: components.reflectionProbe(),
@@ -219,5 +218,5 @@ ctx.frame(() => {
 
   gui.draw();
 
-  window.dispatchEvent(new CustomEvent("pex-screenshot"));
+  window.dispatchEvent(new CustomEvent("screenshot"));
 });

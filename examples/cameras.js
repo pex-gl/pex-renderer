@@ -67,7 +67,7 @@ view offset: [${offset.map((n) => n.toFixed(0))}]`,
 
     const cameraEntity = createEntity({
       transform: components.transform({
-        position: [1, 1, 1],
+        position: [3, 3, 3],
       }),
       camera: components.camera({
         projection,
@@ -101,7 +101,7 @@ const cubeEntity = createEntity({
 world.add(cubeEntity);
 
 const skyEntity = createEntity({
-  skybox: components.skybox({ sunPosition: [0, 5, -5] }),
+  skybox: components.skybox({ sunPosition: [0, 0.05, -1] }),
   reflectionProbe: components.reflectionProbe(),
 });
 world.add(skyEntity);
@@ -115,5 +115,5 @@ ctx.frame(() => {
 
   gui.draw();
 
-  window.dispatchEvent(new CustomEvent("pex-screenshot"));
+  window.dispatchEvent(new CustomEvent("screenshot"));
 });

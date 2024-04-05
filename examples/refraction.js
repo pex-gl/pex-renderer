@@ -7,13 +7,12 @@ import {
 
 import createContext from "pex-context";
 import { quat } from "pex-math";
-import * as io from "pex-io";
 import createGUI from "pex-gui";
 import random from "pex-random";
 
 import { cube, torus, sphere, roundedCube } from "primitive-geometry";
 
-import { getEnvMap, getURL } from "./utils.js";
+import { getEnvMap } from "./utils.js";
 
 random.seed(0);
 
@@ -24,9 +23,8 @@ const world = createWorld();
 
 // Entities
 const cameraEntity = createEntity({
-  transform: components.transform({ position: [15, 1, 15] }),
+  transform: components.transform({ position: [3, 1.5, 3] }),
   camera: components.camera({
-    fov: Math.PI / 10,
     aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
   }),
   orbiter: components.orbiter({ element: ctx.gl.canvas }),
@@ -34,11 +32,11 @@ const cameraEntity = createEntity({
 world.add(cameraEntity);
 
 const floorEntity = createEntity({
-  transform: components.transform({ position: [0, -1.6, 0] }),
-  geometry: components.geometry(cube({ sx: 20, sy: 0.01, sz: 20 })),
+  transform: components.transform({ position: [0, -0.8, 0] }),
+  geometry: components.geometry(cube({ sx: 10, sy: 0.01, sz: 10 })),
   material: components.material({
     // unlit: true,
-    baseColor: [0.5, 0.5, 0.551, 1],
+    baseColor: [1, 1, 0, 1],
     metallic: 0,
     roughness: 1,
     receiveShadows: true,
@@ -63,8 +61,8 @@ const transmissionBlendOptions = {
 };
 
 const torusEntity = createEntity({
-  transform: components.transform({ position: [0, 0.2, 0] }),
-  geometry: components.geometry(torus({ radius: 1.5, minorRadius: 0.2 })),
+  transform: components.transform(),
+  geometry: components.geometry(torus({ radius: 0.8, minorRadius: 0.1 })),
   material: components.material({
     baseColor: [1.9, 0.5, 0.29, 0.75],
     metallic: 0,
@@ -84,7 +82,7 @@ world.add(torusEntity);
 
 const sphereEntity = createEntity({
   transform: components.transform(),
-  geometry: components.geometry(sphere({ radius: 1 })),
+  geometry: components.geometry(sphere()),
   material: components.material({
     baseColor: [1, 1, 1, 1],
     metallic: 0,
@@ -162,7 +160,7 @@ g.positions.forEach((p, i) => {
 });
 
 const cubesEntity = createEntity({
-  transform: components.transform(),
+  transform: components.transform({ scale: new Array(3).fill(0.5) }),
   geometry: components.geometry({
     ...roundedCube({ sx: 1, sy: 1, sz: 1, radius: 0.005 }),
     //offsets: new Array(32).fill(0).map(() => random.vec3(2)),
@@ -171,10 +169,6 @@ const cubesEntity = createEntity({
     colors: g1.colors,
     // instances: 32,
     instances: g1.positions.length,
-    bounds: [
-      [-2, -2, -2],
-      [2, 2, 2],
-    ],
   }),
   material: components.material({
     baseColor: [1, 1, 1, 1],
@@ -196,7 +190,7 @@ const cubesEntity = createEntity({
 world.add(cubesEntity);
 
 const cubesEntity2 = createEntity({
-  transform: components.transform(),
+  transform: components.transform({ scale: new Array(3).fill(0.5) }),
   geometry: components.geometry({
     ...roundedCube({ sx: 1, sy: 1, sz: 1, radius: 0.05 }),
     offsets: g2.positions,
@@ -217,7 +211,6 @@ world.add(cubesEntity2);
 
 const skyEntity = createEntity({
   skybox: components.skybox({
-    sunPosition: [1, 1, 1],
     backgroundBlur: true,
     envMap: await getEnvMap(ctx, "assets/envmaps/garage/garage.hdr"),
   }),
@@ -281,7 +274,7 @@ ctx.frame(() => {
   quat.fromAxisAngle(
     torusEntity.transform.rotation,
     [0, 1, 0],
-    Date.now() / 1000,
+    performance.now() * 0.001,
   );
   torusEntity.transform.dirty = true;
 
@@ -293,5 +286,5 @@ ctx.frame(() => {
 
   gui.draw();
 
-  window.dispatchEvent(new CustomEvent("pex-screenshot"));
+  window.dispatchEvent(new CustomEvent("screenshot"));
 });

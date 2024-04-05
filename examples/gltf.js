@@ -86,7 +86,7 @@ const skyEntity = createEntity({
     rotation: quat.fromEuler(quat.create(), [0, -Math.PI, 0]),
   }),
   skybox: components.skybox({
-    sunPosition: [1, 1, 1],
+    sunPosition: [0.1, 0.04, -1],
     backgroundBlur: 1,
   }),
   reflectionProbe: components.reflectionProbe(),
@@ -676,5 +676,5 @@ ctx.frame(() => {
 
   gui.draw();
 
-  window.dispatchEvent(new CustomEvent("pex-screenshot"));
+  window.dispatchEvent(new CustomEvent("screenshot"));
 });

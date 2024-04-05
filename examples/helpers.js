@@ -44,7 +44,6 @@ const aspect = ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight;
 const cameraEntity = createEntity({
   transform: components.transform({ position: [2, 2, 2] }),
   camera: components.camera({
-    fov: Math.PI / 3,
     aspect,
     near: 0.1,
     far: 100,
@@ -232,8 +231,7 @@ scalableEntities.set(morphCubeScene.entities[0], morphCubeSceneScale);
 const skyEntity = createEntity({
   transform: components.transform(),
   skybox: components.skybox({
-    sunPosition: [1, 1, 1],
-    backgroundBlur: false,
+    sunPosition: [0, 0.05, -1],
   }),
   reflectionProbe: components.reflectionProbe(),
 });
@@ -332,5 +330,5 @@ ctx.frame(() => {
 
   gui.draw();
 
-  window.dispatchEvent(new CustomEvent("pex-screenshot"));
+  window.dispatchEvent(new CustomEvent("screenshot"));
 });

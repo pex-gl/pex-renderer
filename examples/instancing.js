@@ -85,10 +85,7 @@ world.add(sunEntity);
 
 const skyboxEntity = createEntity({
   transform: components.transform(),
-  skybox: components.skybox({
-    sunPosition: [1, 1, 1],
-    backgroundBlur: 1,
-  }),
+  skybox: components.skybox({ sunPosition: [0, 0.05, -1] }),
   reflectionProbe: components.reflectionProbe(),
 });
 world.add(skyboxEntity);
@@ -199,5 +196,5 @@ ctx.frame(() => {
 
   gui.draw();
 
-  window.dispatchEvent(new CustomEvent("pex-screenshot"));
+  window.dispatchEvent(new CustomEvent("screenshot"));
 });

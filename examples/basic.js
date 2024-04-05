@@ -12,6 +12,7 @@ import { quat } from "pex-math";
 import createGUI from "pex-gui";
 
 import { cube, torus, sphere } from "primitive-geometry";
+
 import { updateSunPosition } from "./utils.js";
 
 const pixelRatio = devicePixelRatio;
@@ -22,9 +23,8 @@ const resourceCache = createResourceCache(ctx);
 
 // Entities
 const cameraEntity = createEntity({
-  transform: components.transform({ position: [0, 0, 3] }),
+  transform: components.transform({ position: [3, 3, 3] }),
   camera: components.camera({
-    fov: Math.PI / 2,
     aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
   }),
   orbiter: components.orbiter({ element: ctx.gl.canvas }),
@@ -35,7 +35,7 @@ const cubeEntity = createEntity({
   transform: components.transform({ position: [0, -1, 0] }),
   geometry: components.geometry(cube({ sx: 10, sy: 0.1, sz: 10 })),
   material: components.material({
-    baseColor: [0, 1, 0, 1],
+    baseColor: [0.7, 0.7, 0, 1],
     metallic: 0,
     roughness: 0.2,
     castShadows: true,
@@ -58,7 +58,7 @@ const torusEntity = createEntity({
 world.add(torusEntity);
 
 const sphereEntity = createEntity({
-  transform: components.transform({ position: [0, 0, 0] }),
+  transform: components.transform(),
   geometry: components.geometry(sphere({ radius: 1 })),
   material: components.material({
     baseColor: [1, 1, 1, 1],
@@ -71,7 +71,7 @@ const sphereEntity = createEntity({
 world.add(sphereEntity);
 
 const skyEntity = createEntity({
-  skybox: components.skybox({ sunPosition: [0, 5, -5] }),
+  skybox: components.skybox({ sunPosition: [0, 0.05, -1] }),
   reflectionProbe: components.reflectionProbe(),
 });
 world.add(skyEntity);
@@ -129,11 +129,11 @@ window.addEventListener("keydown", ({ key }) => {
 });
 
 ctx.frame(() => {
-  const now = Date.now() * 0.001;
+  const now = performance.now() * 0.001;
   quat.fromAxisAngle(torusEntity.transform.rotation, [1, 0, 0], now);
-  torusEntity.transform.dirty = true; //UGH
+  torusEntity.transform.dirty = true;
 
-  const progress = (now / 10) % 1;
+  const progress = (now / 3) % 1;
   updateSunPosition(
     skyEntity.skybox,
     30 * Math.sin(Math.PI * progress),
@@ -175,5 +175,5 @@ ctx.frame(() => {
 
   gui.draw();
 
-  window.dispatchEvent(new CustomEvent("pex-screenshot"));
+  window.dispatchEvent(new CustomEvent("screenshot"));
 });

@@ -8,7 +8,7 @@ import {
 
 import createContext from "pex-context";
 import createGUI from "pex-gui";
-import { utils, vec3, quat } from "pex-math";
+import { utils, quat } from "pex-math";
 import { pipeline as SHADERS } from "pex-shaders";
 
 import fitRect from "fit-rect";
@@ -33,7 +33,6 @@ const world = createWorld();
 
 const skyboxEntity = createEntity({
   skybox: components.skybox({
-    sunPosition: [0.2, 1, 0.2],
     envMap: await getEnvMap(ctx, "assets/envmaps/Mono_Lake_B/Mono_Lake_B.hdr"),
   }),
 });
@@ -353,5 +352,5 @@ Y FOV : ${utils.toDegrees(yfov).toFixed(0)}°
 ASPECT : ${aspectRatio.toFixed(2)}`);
   gui.draw();
 
-  window.dispatchEvent(new CustomEvent("pex-screenshot"));
+  window.dispatchEvent(new CustomEvent("screenshot"));
 });
