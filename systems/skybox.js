@@ -74,6 +74,8 @@ export default ({ ctx, resourceCache }) => ({
       //TODO: use render graph
       this.cmd ||= {
         name: "skyboxUpdateSkyTextureCmd",
+        //TODO: MARCIN: let's just move to WebGL2 already.
+        //TODO: MARCIN: skybox.skyEnvMap looks like texture prop of skybox component not a shaderlib
         pipeline: ctx.pipeline({
           vert: ShaderParser.build(ctx, skybox.skyEnvMap.vert),
           frag: ShaderParser.build(ctx, skybox.skyEnvMap.frag),

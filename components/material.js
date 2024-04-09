@@ -7,7 +7,7 @@
  * @alias module:components.material
  */
 export default (options) =>
-  options?.type === "line"
+  options?.type === "line" //TODO: MARCIN: Can we just have regular if () {} else {} for readability
     ? {
         baseColor: [1, 1, 1, 1],
         castShadows: false,
@@ -40,7 +40,7 @@ export default (options) =>
         // baseColorTexture,
         // emissiveColorTexture,
         // normalTexture,
-        normalTextureScale: 1,
+        normalTextureScale: 1, //TODO: MARCIN: why we have default for this while not for e.g. emissiveIntensity?
         // roughnessTexture,
         // metallicTexture,
         // metallicRoughnessTexture,

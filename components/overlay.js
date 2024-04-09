@@ -4,4 +4,4 @@
  * @returns {object}
  * @alias module:components.overlay
  */
-export default (options) => ({ ...options });
+export default (options) => ({ ...options }); //TODO: MARCIN: Shoudln't this have at least texure? Are defaults/docs missing?

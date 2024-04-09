@@ -1,3 +1,4 @@
+//TODO: MARCIN: why is this not in each respective file?
 // Entity
 /**
  * @typedef {object} Entity

@@ -1,3 +1,5 @@
+//TODO: MARCIN: I would break this down into separate files utils/program-cache.js, utils/temp-data.js etc
+
 import { aabb } from "pex-geom";
 import { mat2x3, mat4, quat, vec3, vec4 } from "pex-math";
 
@@ -82,6 +84,7 @@ const getDirname = (path) => {
   return path.slice(0, end);
 };
 
+//TODO: MARCIN: why this is not in ResourceCache? The usecase is slightly different and would require requesting and releasing immediately, or never blocking. Could it be solved with different Usage type?
 class ProgramCache {
   values = [];
 
