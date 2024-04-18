@@ -244,7 +244,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
           entity.directionalLight?.castShadows &&
           this.checkLight(entity.directionalLight, entity)
         ) {
-          this.directionalLight(
+          this.renderDirectionalLightShadowMap(
             entity,
             entities,
             renderers,
@@ -256,13 +256,18 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
           entity.pointLight?.castShadows &&
           this.checkLight(entity.pointLight, entity)
         ) {
-          this.pointLight(entity, entities, renderers, colorAttachments);
+          this.renderPointLightShadowMap(
+            entity,
+            entities,
+            renderers,
+            colorAttachments,
+          );
         }
         if (
           entity.spotLight?.castShadows &&
           this.checkLight(entity.spotLight, entity)
         ) {
-          this.spotLight(
+          this.renderSpotLightShadowMap(
             entity,
             entities,
             renderers,
@@ -274,7 +279,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
           entity.areaLight?.castShadows &&
           this.checkLight(entity.areaLight, entity)
         ) {
-          this.spotLight(
+          this.renderSpotLightShadowMap(
             entity,
             entities,
             renderers,
@@ -407,7 +412,6 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
         resourceCache,
         descriptors: this.descriptors,
       });
-
       renderGraph.renderPass({
         name: `PostProcessingPass [${renderView.viewport}]`,
         uses: Object.values(colorAttachments).filter(Boolean),

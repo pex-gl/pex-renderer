@@ -74,7 +74,7 @@ export default ({ renderGraph, resourceCache }) => ({
     return { color: colorMap, depth: shadowMap };
   },
 
-  directionalLight(
+  renderDirectionalLightShadowMap(
     lightEntity,
     entities,
     renderers,
@@ -135,7 +135,7 @@ export default ({ renderGraph, resourceCache }) => ({
     light._shadowMap = depth; // TODO: we borrow it for a frame
   },
 
-  spotLight(
+  renderSpotLightShadowMap(
     lightEntity,
     entities,
     renderers,
@@ -193,7 +193,12 @@ export default ({ renderGraph, resourceCache }) => ({
     light._shadowMap = depth; // TODO: we borrow it for a frame
   },
 
-  pointLight(lightEntity, entities, renderers, colorAttachments) {
+  renderPointLightShadowMap(
+    lightEntity,
+    entities,
+    renderers,
+    colorAttachments,
+  ) {
     const light = lightEntity.pointLight;
 
     const { color, depth } = this.getLightAttachments(
