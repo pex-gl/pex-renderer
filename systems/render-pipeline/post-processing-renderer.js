@@ -1,7 +1,7 @@
 import { postProcessing as SHADERS } from "pex-shaders";
 
-import createBaseSystem from "./base.js";
-import { ProgramCache } from "../../utils.js";
+import createBaseSystem from "../renderer/base.js";
+import { ProgramCache } from "../../../utils.js";
 
 // Impacts pipeline caching
 const pipelineProps = ["blend"];

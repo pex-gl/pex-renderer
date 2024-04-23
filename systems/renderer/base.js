@@ -262,7 +262,7 @@ vec4 debugColor = vec4(pow(vec3(${debugRender}${scale}), vec3(${pow})), 1.0);
   getPipelineOptions(entity, options) {
     return {};
   },
-  getPipeline(ctx, entity, options) {
+  getPipeline(ctx, entity, options = {}) {
     const program = this.getProgram(ctx, entity, options);
     const hash = `${program.id}_${this.getPipelineHash(entity, options)}`;
 

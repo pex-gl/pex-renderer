@@ -16,6 +16,21 @@ import { TEMP_BOUNDS_POINTS, TEMP_VEC3 } from "../../utils.js";
  * @returns {import("../../types.js").System}
  */
 export default ({ renderGraph, resourceCache }) => ({
+  checkLight(light, lightEntity) {
+    if (!lightEntity._transform) {
+      console.warn(
+        NAMESPACE,
+        `"${this.type}" light entity missing transform. Add a transformSystem.update(entities).`,
+      );
+    } else if (!light._projectionMatrix) {
+      console.warn(
+        NAMESPACE,
+        `"${this.type}" light component missing matrices. Add a lightSystem.update(entities).`,
+      );
+    } else {
+      return true;
+    }
+  },
   computeLightProperties(lightEntity, light, shadowCastingEntities) {
     light._sceneBboxInLightSpace ??= aabb.create();
 
@@ -64,6 +79,7 @@ export default ({ renderGraph, resourceCache }) => ({
     }
 
     //TODO: can this be all done at once?
+    //TODO: const colorMap = cubemap ? resourceCache.textureCube(colorMapDesc) : resourceCache.texture2D(colorMapDesc);
     const colorMap =
       resourceCache[cubemap ? "textureCube" : "texture2D"](colorMapDesc);
     colorMap.name = `tempColorMap (id: ${colorMap.id})`;
