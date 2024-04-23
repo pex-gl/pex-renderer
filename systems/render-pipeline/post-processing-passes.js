@@ -200,7 +200,7 @@ const ssao = ({
       uDirection: [entity.postProcessing.ssao.blurRadius, 0],
     }),
     passDesc: () => ({
-      clearColor: [1, 1, 0, 1],
+      clearColor: [0, 0, 0, 1],
     }),
     source: () => "ssao.main",
     target: ({ viewport }) =>
@@ -227,7 +227,7 @@ const ssao = ({
       uDirection: [0, entity.postProcessing.ssao.blurRadius],
     }),
     passDesc: () => ({
-      clearColor: [1, 1, 0, 1],
+      clearColor: [0, 0, 0, 1],
     }),
     source: () => "ssao.blurHorizontal",
     target: () => "ssao.main",

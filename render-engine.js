@@ -26,7 +26,6 @@ export default ({ ctx, debug = false }) => {
   const lineRendererSystem = systems.renderer.line(options);
   const skyboxRendererSystem = systems.renderer.skybox(options);
   const helperRendererSystem = systems.renderer.helper(options);
-  const postProcessingRendererSystem = systems.renderer.postProcessing(options);
 
   const renderEngine = {
     // debugMode,
@@ -63,7 +62,6 @@ export default ({ ctx, debug = false }) => {
       lineRendererSystem,
       skyboxRendererSystem,
       helperRendererSystem,
-      postProcessingRendererSystem,
     ],
     update(entities, deltaTime) {
       const now = Date.now();

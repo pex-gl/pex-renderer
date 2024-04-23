@@ -378,6 +378,7 @@ export default ({ ctx, resourceCache, renderGraph }) => {
           renderPassView,
           colorAttachments,
           depthAttachment,
+          this.descriptors,
         );
         // this.postProcessingPasses ||= getPostProcessingPasses({
         //   ctx,
