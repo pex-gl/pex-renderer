@@ -1,5 +1,5 @@
-import { serializeGraph } from "https://esm.run/@thi.ng/dot";
-import { Graphviz } from "https://esm.run/@hpcc-js/wasm/graphviz";
+import { serializeGraph } from "@thi.ng/dot";
+import { Graphviz } from "@hpcc-js/wasm";
 
 const graphviz = await Graphviz.load();
 
