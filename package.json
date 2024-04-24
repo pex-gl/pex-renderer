@@ -41,6 +41,8 @@
     "pex-shaders": "^1.0.0-alpha.25"
   },
   "devDependencies": {
+    "@hpcc-js/wasm": "^2.16.1",
+    "@thi.ng/dot": "^2.1.75",
     "angle-normals": "^1.0.0",
     "cosine-gradient": "^0.3.0",
     "es-module-shims": "^1.9.0",
@@ -61,6 +63,8 @@
   },
   "snowdev": {
     "dependencies": [
+      "@hpcc-js/wasm",
+      "@thi.ng/dot",
       "geom-builder",
       "hammersley",
       "pex-cam",
