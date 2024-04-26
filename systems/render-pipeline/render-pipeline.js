@@ -353,7 +353,6 @@ export default ({ ctx, resourceCache, renderGraph }) => {
         name: `TransparentPass [${renderView.viewport}]`,
         uses: [...shadowMaps, grabPassColorCopyTexture].filter(Boolean),
         renderView: renderPassView,
-        renderView,
         pass: resourceCache.pass({
           name: "transparentPass",
           color: [colorAttachments.color],

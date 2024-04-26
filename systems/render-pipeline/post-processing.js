@@ -137,11 +137,6 @@ export default ({ ctx, renderGraph, resourceCache }) => ({
       descriptors: this.descriptors,
     });
 
-    console.logOnce = function (...args) {
-      if (ctx.frameNumber != 10) return;
-      console.log(...args);
-    };
-
     postProcessingEffects.forEach((effect) => {
       const isFinal = effect.name == "final";
       const isEffectUsed = !!postProcessingComponent[effect.name];
@@ -158,7 +153,7 @@ export default ({ ctx, renderGraph, resourceCache }) => ({
         const isEnabled = !subPass.disabled?.(renderView);
 
         if (!isEnabled && !isFinal) return;
-        console.logOnce(`  ${subPass.name} ${isEnabled}`);
+        // console.logOnce(`  ${subPass.name} ${isEnabled}`);
 
         // Set flag definitions for pipeline retrieval
         // this.flagDefinitions = subPass.flagDefinitions;
@@ -247,23 +242,68 @@ export default ({ ctx, renderGraph, resourceCache }) => ({
 
         // Set command
         const fullscreenTriangle = resourceCache.fullscreenTriangle();
-
-        const postProcessingCmd = {
+        //neded for name
+        let postProcessingCmd = {
           name: `${effect.name}.${subPass.name}`,
-          pass: resourceCache.pass({
-            color: [outputColor],
-            // ...subPass.passDesc?.(renderView),
-            // clearColor: [0, 0, 0, 1],
-          }),
+          // pass: resourceCache.pass({
+          //   color: [outputColor],
+          //   // ...subPass.passDesc?.(renderView),
+          //   // clearColor: [0, 0, 0, 1],
+          // }),
           pipeline,
           uniforms,
           attributes: fullscreenTriangle.attributes,
           count: fullscreenTriangle.count,
         };
 
-        // ctx.debug(true);
-        ctx.submit(postProcessingCmd); //TEMP
-        // ctx.debug(false);
+        const usedUniformNames = Object.keys(
+          postProcessingCmd.pipeline.program.uniforms,
+        );
+        const textureUniformNames = usedUniformNames.filter(
+          (name) =>
+            postProcessingCmd.pipeline.program.uniforms[name].type == 35678,
+        );
+        const uses = textureUniformNames.map(
+          (name) => postProcessingCmd.uniforms[name],
+        );
+
+        console.logOnce(
+          `PostProcessing.${effect.name}.${subPass.name}`,
+          textureUniformNames,
+          uses,
+        );
+
+        renderGraph.renderPass({
+          name: `PostProcessing.${effect.name}.${subPass.name}`,
+          uses: uses.filter(Boolean),
+          renderView: {
+            //FIXME: this seems to be wrong
+            viewport: [0, 0, outputColor.width, outputColor.height],
+          },
+          pass: resourceCache.pass({
+            name: `PostProcessing.${effect.name}.${subPass.name}`,
+            color: [outputColor],
+            ...subPass.passDesc?.(renderView),
+          }),
+          render: () => {
+            ctx.submit(postProcessingCmd); //TEMP
+            // const postProcessingFinalPassCmd = {
+            //   name: "postProcessingFinalPassCmd",
+            //   attributes: fullscreenTriangle.attributes,
+            //   count: fullscreenTriangle.count,
+            //   pipeline,
+            //   uniforms: {
+            //     uViewport: viewport,
+            //     uTexture: saoNoiseTexture,
+            //     uDepthTexture: depthAttachment,
+            //     uNormalTexture: colorAttachments.normal,
+            //     ...uniforms,
+            //     ...sharedUniforms,
+            //   },
+            // };
+            // ctx.submit(postProcessingFinalPassCmd);
+          },
+        });
 
         // TODO: delete from cache somehow on pass. Loop through this.postProcessingPasses?
         // eg. Object.keys(this.cache.targets[renderViewId]).filter(key => key.startsWidth(`${pass.name}.`))
