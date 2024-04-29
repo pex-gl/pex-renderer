@@ -112,9 +112,6 @@ export default ({ ctx, renderGraph, resourceCache }) => ({
 
     const postProcessingComponent = renderView.cameraEntity.postProcessing;
 
-    // Expose targets for other renderers (eg. standard to use AO)
-    postProcessingComponent._targets = this.cache.targets; //TODO: hack
-
     if (!this.tempBaseRenderer) {
       this.tempBaseRenderer = ceateBaseRenderer();
       this.tempBaseRenderer.cache = {
@@ -126,6 +123,9 @@ export default ({ ctx, renderGraph, resourceCache }) => ({
         targets: {},
       };
     }
+
+    // Expose targets for other renderers (eg. standard to use AO)
+    postProcessingComponent._targets = this.tempBaseRenderer.cache.targets; //TODO: hack
 
     this.tempBaseRenderer.cache.targets[renderViewId] ||= {};
     this.tempBaseRenderer.cache.targets[renderViewId]["color"] =
@@ -141,10 +141,6 @@ export default ({ ctx, renderGraph, resourceCache }) => ({
       const isFinal = effect.name == "final";
       const isEffectUsed = !!postProcessingComponent[effect.name];
 
-      console.logOnce(
-        `post-pro: ${effect.name} ${effect.passes.length} ${isEffectUsed || isFinal}`,
-      );
-
       if (!isEffectUsed && !isFinal) {
         return;
       }
@@ -153,7 +149,6 @@ export default ({ ctx, renderGraph, resourceCache }) => ({
         const isEnabled = !subPass.disabled?.(renderView);
 
         if (!isEnabled && !isFinal) return;
-        // console.logOnce(`  ${subPass.name} ${isEnabled}`);
 
         // Set flag definitions for pipeline retrieval
         // this.flagDefinitions = subPass.flagDefinitions;
@@ -265,12 +260,6 @@ export default ({ ctx, renderGraph, resourceCache }) => ({
         );
         const uses = textureUniformNames.map(
           (name) => postProcessingCmd.uniforms[name],
-        );
-
-        console.logOnce(
-          `PostProcessing.${effect.name}.${subPass.name}`,
-          textureUniformNames,
-          uses,
         );
 
         renderGraph.renderPass({

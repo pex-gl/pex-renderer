@@ -1,4 +1,4 @@
-import { vec3, avec4, utils } from "pex-math";
+import { utils } from "pex-math";
 import { parser as ShaderParser } from "pex-shaders";
 import { pipeline as SHADERS } from "pex-shaders";
 
@@ -6,8 +6,6 @@ import addDescriptors from "./descriptors.js";
 import shadowMappingPipelineMethods from "./shadow-mapping.js";
 import postProcessingPipelineMethods from "./post-processing.js";
 import cullingPipelineMethods from "./culling.js";
-
-import { NAMESPACE, TEMP_VEC3, TEMP_VEC4 } from "../../utils.js";
 
 /**
  * Render pipeline system
@@ -25,6 +23,7 @@ export default ({ ctx, resourceCache, renderGraph }) => {
     type: "render-pipeline-system",
     cache: {},
     debug: false,
+    debugRender: "",
     renderers: [],
 
     descriptors: addDescriptors(ctx),
@@ -111,7 +110,6 @@ export default ({ ctx, resourceCache, renderGraph }) => {
         camera: cameraEntities[0].camera,
         viewport: [0, 0, ctx.gl.drawingBufferWidth, ctx.gl.drawingBufferHeight],
       };
-
       const postProcessing = renderView.cameraEntity.postProcessing;
 
       // Set the render pipeline encoding and tone mapping settings before blit
@@ -282,7 +280,6 @@ export default ({ ctx, resourceCache, renderGraph }) => {
         name: `MainPass [${renderView.viewport}]`,
         uses: [...shadowMaps],
         renderView: renderPassView,
-        renderView,
         pass: resourceCache.pass({
           name: "mainPass",
           color: Object.values(colorAttachments),
@@ -446,6 +443,15 @@ export default ({ ctx, resourceCache, renderGraph }) => {
             });
           },
         });
+      }
+
+      if (this.debugRender) {
+        let debugTexture = colorAttachments[this.debugRender];
+        debugTexture ||= this.tempBaseRenderer?.cache.targets[this.debugRender];
+
+        if (debugTexture) {
+          colorAttachments.color = debugTexture;
+        }
       }
 
       // Return the original object: the color attachment value can be modified
