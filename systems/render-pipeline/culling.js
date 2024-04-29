@@ -1,3 +1,6 @@
+import { avec4, vec3 } from "pex-math";
+import { NAMESPACE, TEMP_VEC3, TEMP_VEC4 } from "../../utils.js";
+
 function isEntityInFrustum(entity, frustum) {
   if (entity.geometry.culled !== false) {
     const worldBounds = entity.transform.worldBounds;

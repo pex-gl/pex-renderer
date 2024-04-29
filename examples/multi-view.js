@@ -71,14 +71,16 @@ renderGraph.renderPass = (opts) => {
 
     dot.passNode(passId, passName.replace(" ", "\n"));
 
-    const colorTextureId = opts?.pass?.opts?.color?.[0].id;
-    const colorTextureName = opts?.pass?.opts?.color?.[0].name;
-    if (colorTextureId) {
-      dot.resourceNode(colorTextureId, colorTextureName.replace(" ", "\n"));
-      dot.edge(passId, colorTextureId);
-    } else {
-      dot.edge(passId, "Window");
-    }
+    opts?.pass?.opts?.color?.forEach((colorAttachment) => {
+      const colorTextureId = colorAttachment.id;
+      const colorTextureName = colorAttachment.name || colorTextureId;
+      if (colorTextureId) {
+        dot.resourceNode(colorTextureId, colorTextureName.replace(" ", "\n"));
+        dot.edge(passId, colorTextureId);
+      } else {
+        dot.edge(passId, "Window");
+      }
+    });
 
     const depthTextureId = opts?.pass?.opts?.depth?.id;
     const depthTextureName = opts?.pass?.opts?.depth?.name;
@@ -323,10 +325,6 @@ const skyboxRendererSystem = systems.renderer.skybox({
   renderGraph,
 });
 const helperRendererSystem = systems.renderer.helper({ ctx });
-const postProcessingRendererSystem = systems.renderer.postProcessing({
-  ctx,
-  resourceCache,
-});
 
 const createView = (cameraEntity, viewport) => ({
   viewport,
@@ -417,7 +415,6 @@ ctx.frame(() => {
         standardRendererSystem,
         lineRendererSystem,
         skyboxRendererSystem,
-        postProcessingRendererSystem,
       ],
       renderView: renderView,
     });
@@ -431,7 +428,6 @@ ctx.frame(() => {
           basicRendererSystem,
           lineRendererSystem,
           helperRendererSystem,
-          postProcessingRendererSystem,
         ],
         renderView: renderView,
       },

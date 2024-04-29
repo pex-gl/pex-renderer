@@ -384,10 +384,11 @@ gui.addRadioList(
     value,
   })),
 );
+
 gui.addRadioList(
   "Debug Post-Processing",
-  renderEngine.renderers.find(
-    (renderer) => renderer.type == "post-processing-renderer",
+  renderEngine.systems.find(
+    (system) => system.type == "render-pipeline-system",
   ),
   "debugRender",
   ["", "ssao.main", "dof.main", "bloom.threshold", "bloom.downsample[3]"].map(
