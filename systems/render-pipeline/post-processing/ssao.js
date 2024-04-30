@@ -100,7 +100,7 @@ const ssao = ({
         [["postProcessing", "ssao", "_gtaoNoiseTexture"], "NOISE_TEXTURE", { type: "texture", uniform: "uNoiseTexture", requires: "USE_GTAO_NOISE_TEXTURE" }],
         [["postProcessing", "ssao", "_gtaoNoiseTexture", "width"], "", { uniform: "uNoiseTextureSize", requires: "USE_GTAO_NOISE_TEXTURE" }],
       ],
-    disabled: ({ cameraEntity }) => {
+    enabled: ({ cameraEntity }) => {
       const isEnabled = cameraEntity.postProcessing.ssao.type === "gtao";
 
       if (
@@ -112,7 +112,7 @@ const ssao = ({
           generateBlueNoiseTexture(ctx);
       }
 
-      return !isEnabled;
+      return isEnabled;
     },
     passDesc: () => ({
       clearColor: [0, 0, 0, 1],
@@ -159,7 +159,7 @@ const ssao = ({
         [["postProcessing", "ssao", "_saoNoiseTexture"], "NOISE_TEXTURE", { type: "texture", uniform: "uNoiseTexture", requires: "USE_SAO_NOISE_TEXTURE" }],
         [["postProcessing", "ssao", "_saoNoiseTexture", "width"], "", { uniform: "uNoiseTextureSize", requires: "USE_SAO_NOISE_TEXTURE" }],
       ],
-    disabled: ({ cameraEntity }) => {
+    enabled: ({ cameraEntity }) => {
       const isEnabled = cameraEntity.postProcessing.ssao.type === "sao";
 
       if (
@@ -171,7 +171,7 @@ const ssao = ({
           generateNoiseTexture(ctx);
       }
 
-      return !isEnabled;
+      return isEnabled;
     },
     passDesc: () => ({
       clearColor: [0, 0, 0, 1],
@@ -205,8 +205,8 @@ const ssao = ({
         [["camera", "far"], "", { uniform: "uFar" }],
         [["postProcessing", "ssao", "blurSharpness"], "", { uniform: "uSharpness" }],
       ],
-    disabled: ({ cameraEntity }) =>
-      cameraEntity.postProcessing.ssao.blurRadius === 0,
+    enabled: ({ cameraEntity }) =>
+      cameraEntity.postProcessing.ssao.blurRadius >= 0,
     uniforms: ({ cameraEntity: entity }) => ({
       uDirection: [entity.postProcessing.ssao.blurRadius, 0],
     }),
@@ -233,8 +233,8 @@ const ssao = ({
         [["camera", "far"], "", { uniform: "uFar" }],
         [["postProcessing", "ssao", "blurSharpness"], "", { uniform: "uSharpness" }],
       ],
-    disabled: ({ cameraEntity }) =>
-      cameraEntity.postProcessing.ssao.blurRadius === 0,
+    enabled: ({ cameraEntity }) =>
+      cameraEntity.postProcessing.ssao.blurRadius >= 0,
     uniforms: ({ cameraEntity: entity }) => ({
       uDirection: [0, entity.postProcessing.ssao.blurRadius],
     }),
@@ -255,7 +255,7 @@ const ssao = ({
       ...ssaoMixFlagDefinitions,
     ],
     // If no dof, disable and do it in final
-    disabled: ({ cameraEntity }) => !cameraEntity.postProcessing.dof,
+    enabled: ({ cameraEntity }) => cameraEntity.postProcessing.dof,
     passDesc: () => ({
       clearColor: [0, 0, 0, 1],
     }),

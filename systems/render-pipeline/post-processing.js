@@ -56,7 +56,7 @@ export default ({ ctx, renderGraph, resourceCache }) => ({
       }
 
       effect.passes.forEach((subPass) => {
-        const isEnabled = !subPass.disabled?.(renderView);
+        const isEnabled = !subPass.enabled || subPass.enabled(renderView);
 
         if (!isEnabled && !isFinal) return;
 
