@@ -1,6 +1,5 @@
 import { getPostProcessingPasses } from "./post-processing-passes.js";
 import { postProcessing as postProcessingShaders } from "pex-shaders";
-import createSAODescriptors from "./post-processing/sao.js";
 import createPippelineCache from "../../pipeline-cache.js";
 
 // Impacts pipeline caching
@@ -8,9 +7,6 @@ const pipelineProps = ["blend"];
 let postProcessingEffects = null;
 
 export default ({ ctx, renderGraph, resourceCache }) => ({
-  // postProcessingDescriptors: {
-  //   sao: createSAODescriptors({ ctx, resourceCache }),
-  // },
   renderPostProcessing(
     renderView,
     colorAttachments,
