@@ -2,7 +2,7 @@ import { avec3 } from "pex-math";
 import { pipeline as SHADERS } from "pex-shaders";
 
 import createBaseSystem from "./base.js";
-import { ProgramCache } from "../../utils.js";
+import ProgramCache from "../../program-cache.js";
 
 // Impacts program caching
 // prettier-ignore

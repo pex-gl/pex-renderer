@@ -1,7 +1,8 @@
 import { mat3, mat2x3 } from "pex-math";
 import { pipeline as SHADERS, parser as ShaderParser } from "pex-shaders";
 
-import { NAMESPACE, ProgramCache, TEMP_MAT2X3 } from "../../utils.js";
+import { NAMESPACE, TEMP_MAT2X3 } from "../../utils.js";
+import ProgramCache from "../../program-cache.js";
 
 /**
  * Base renderer

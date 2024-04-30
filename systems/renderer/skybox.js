@@ -2,7 +2,8 @@ import { mat4 } from "pex-math";
 import { skybox as SHADERS } from "pex-shaders";
 
 import createBaseSystem from "./base.js";
-import { NAMESPACE, ProgramCache, TEMP_MAT4 } from "../../utils.js";
+import { NAMESPACE, TEMP_MAT4 } from "../../utils.js";
+import ProgramCache from "../../program-cache.js";
 
 // Impacts program caching
 // prettier-ignore
