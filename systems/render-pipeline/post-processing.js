@@ -1,8 +1,7 @@
 import { getPostProcessingPasses } from "./post-processing-passes.js";
-import ceateBaseRenderer from "../renderer/base.js";
 import { postProcessing as postProcessingShaders } from "pex-shaders";
 import createSAODescriptors from "./post-processing/sao.js";
-import { ProgramCache } from "../../../utils.js";
+import createPippelineCache from "../../pipeline-cache.js";
 
 // Impacts pipeline caching
 const pipelineProps = ["blend"];
@@ -22,23 +21,18 @@ export default ({ ctx, renderGraph, resourceCache }) => ({
 
     const postProcessingComponent = renderView.cameraEntity.postProcessing;
 
-    if (!this.tempBaseRenderer) {
-      this.tempBaseRenderer = ceateBaseRenderer();
-      this.tempBaseRenderer.cache = {
-        // Cache based on: vertex source (material.vert or default), fragment source (material.frag or default), list of flags and material hooks
-        programs: new ProgramCache(),
-        // Cache based on: program.id, material.blend and material.id (if present)
-        pipelines: {},
-        // Cache based on: renderViewId, pass.name and subPass.name
-        targets: {},
-      };
+    if (!this.pipelineCache) {
+      this.pipelineCache = createPippelineCache(ctx);
+
+      // Cache based on: renderViewId, pass.name and subPass.name
+      this.pipelineCache.cache.targets = {};
     }
 
     // Expose targets for other renderers (eg. standard to use AO)
-    postProcessingComponent._targets = this.tempBaseRenderer.cache.targets; //TODO: hack
+    postProcessingComponent._targets = this.pipelineCache.cache.targets; //TODO: hack
 
-    this.tempBaseRenderer.cache.targets[renderViewId] ||= {};
-    this.tempBaseRenderer.cache.targets[renderViewId]["color"] =
+    this.pipelineCache.cache.targets[renderViewId] ||= {};
+    this.pipelineCache.cache.targets[renderViewId]["color"] =
       colorAttachments.color;
 
     postProcessingEffects ||= getPostProcessingPasses({
@@ -60,31 +54,24 @@ export default ({ ctx, renderGraph, resourceCache }) => ({
 
         if (!isEnabled && !isFinal) return;
 
-        // Set flag definitions for pipeline retrieval
-        // this.flagDefinitions = subPass.flagDefinitions;
-        this.tempBaseRenderer.flagDefinitions = subPass.flagDefinitions;
-
-        this.tempBaseRenderer.getVertexShader = ({ subPass }) =>
-          subPass.vert || postProcessingShaders.postProcessing.vert;
-
-        this.tempBaseRenderer.getFragmentShader = ({ subPass }) => subPass.frag;
-
-        this.tempBaseRenderer.getPipelineHash = function (_, { subPass }) {
-          return this.getHashFromProps(subPass, pipelineProps, this.debug);
-        };
-        this.tempBaseRenderer.getPipelineOptions = function (_, { subPass }) {
-          return { blend: subPass.blend };
-        };
-
         // Also computes this.uniforms
-        const pipeline = this.tempBaseRenderer.getPipeline(
-          ctx,
-          renderView.cameraEntity,
-          {
-            subPass,
-            targets: this.tempBaseRenderer.cache.targets[renderViewId],
-          },
-        );
+        const { pipeline, uniforms: pipelineUniforms } =
+          this.pipelineCache.getPipeline(
+            ctx,
+            renderView.cameraEntity,
+            {
+              hash: this.pipelineCache.getHashFromProps(
+                subPass,
+                pipelineProps,
+                this.debug,
+              ),
+              flagDefinitions: subPass.flagDefinitions,
+              targets: this.pipelineCache.cache.targets[renderViewId],
+              vert: subPass.vert || postProcessingShaders.postProcessing.vert,
+              frag: subPass.frag,
+            },
+            { blend: subPass.blend },
+          );
 
         const viewportSize = subPass.size?.(renderView) || [
           renderView.viewport[2],
@@ -106,7 +93,7 @@ export default ({ ctx, renderGraph, resourceCache }) => ({
         if (source) {
           inputColor =
             typeof source === "string"
-              ? this.tempBaseRenderer.cache.targets[renderViewId][source]
+              ? this.pipelineCache.cache.targets[renderViewId][source]
               : source;
 
           if (!inputColor) console.warn(`Missing source ${source}.`);
@@ -118,7 +105,7 @@ export default ({ ctx, renderGraph, resourceCache }) => ({
         if (target) {
           outputColor =
             typeof target === "string"
-              ? this.tempBaseRenderer.cache.targets[renderViewId][target]
+              ? this.pipelineCache.cache.targets[renderViewId][target]
               : target;
           if (!outputColor) console.warn(`Missing target ${target}.`);
         } else {
@@ -143,7 +130,7 @@ export default ({ ctx, renderGraph, resourceCache }) => ({
           uniforms.uTextureEncoding = uniforms.uTexture.encoding;
         }
 
-        Object.assign(uniforms, sharedUniforms, this.tempBaseRenderer.uniforms);
+        Object.assign(uniforms, sharedUniforms, pipelineUniforms);
 
         // Set command
         const fullscreenTriangle = resourceCache.fullscreenTriangle();
@@ -186,9 +173,8 @@ export default ({ ctx, renderGraph, resourceCache }) => ({
 
         // TODO: delete from cache somehow on pass. Loop through this.postProcessingPasses?
         // eg. Object.keys(this.cache.targets[renderViewId]).filter(key => key.startsWidth(`${pass.name}.`))
-        this.tempBaseRenderer.cache.targets[renderViewId][
-          postProcessingCmd.name
-        ] = outputColor;
+        this.pipelineCache.cache.targets[renderViewId][postProcessingCmd.name] =
+          outputColor;
 
         // Draw to screen
         if (!target) colorAttachments.color = outputColor;
