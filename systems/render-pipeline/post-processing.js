@@ -1,10 +1,20 @@
-import { getPostProcessingPasses } from "./post-processing-passes.js";
 import { postProcessing as postProcessingShaders } from "pex-shaders";
 import createPippelineCache from "../../pipeline-cache.js";
+import ssao from "./post-processing/ssao.js";
+import dof from "./post-processing/dof.js";
+import bloom from "./post-processing/bloom.js";
+import final from "./post-processing/final.js";
 
 // Impacts pipeline caching
 const pipelineProps = ["blend"];
 let postProcessingEffects = null;
+
+const getPostProcessingPasses = (options) => [
+  { name: "ssao", passes: ssao(options) },
+  { name: "dof", passes: dof(options) },
+  { name: "bloom", passes: bloom(options) },
+  { name: "final", passes: final(options) },
+];
 
 export default ({ ctx, renderGraph, resourceCache }) => ({
   renderPostProcessing(
@@ -172,8 +182,15 @@ export default ({ ctx, renderGraph, resourceCache }) => ({
         this.pipelineCache.cache.targets[renderViewId][postProcessingCmd.name] =
           outputColor;
 
+        // outputColor.name = postProcessingCmd.name;
+
         // Draw to screen
-        if (!target) colorAttachments.color = outputColor;
+        if (!target) {
+          colorAttachments.color = outputColor;
+        }
+
+        outputColor.name = postProcessingCmd.name;
+
         colorAttachments[postProcessingCmd.name] = outputColor;
         window.colorAttachments = colorAttachments;
       });

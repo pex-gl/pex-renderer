@@ -1,5 +1,5 @@
 import random from "pex-random";
-import { BlueNoiseGenerator } from "./blue-noise.js";
+import { BlueNoiseGenerator } from "../../../utils/blue-noise.js";
 import { postProcessing as postprocessingShaders } from "pex-shaders";
 
 // prettier-ignore
@@ -10,16 +10,16 @@ export const ssaoMixFlagDefinitions = [
   [["postProcessing", "ssao", "colorBounce"], "USE_SSAO_COLORS", { requires: "USE_SSAO_GTAO" }],
 ]
 
-export const ssao = ({
+const ssao = ({
   ctx,
   resourceCache,
   descriptors,
   scale = 1,
-  saoMainTarget,
-  gtaoMainTarget,
-}) => [
+  saoMainTarget, //TODO MARCIN: this should move to resource cache
+  gtaoMainTarget, //TODO MARCIN: this should move to resource cache
+}) => {
   // GTAO
-  {
+  const gtaoPass = {
     name: "main",
     frag: postprocessingShaders.gtao.frag,
     // blend: true,
@@ -99,9 +99,10 @@ export const ssao = ({
       return gtaoMainTarget;
     },
     size: ({ viewport }) => [viewport[2] * scale, viewport[3] * scale],
-  },
+  };
+
   // SAO
-  {
+  const saoPass = {
     name: "main",
     frag: postprocessingShaders.sao.frag,
     // prettier-ignore
@@ -183,8 +184,9 @@ export const ssao = ({
       return saoMainTarget;
     },
     size: ({ viewport }) => [viewport[2] * scale, viewport[3] * scale],
-  },
-  {
+  };
+
+  const blurHorizontalPass = {
     name: "blurHorizontal",
     frag: postprocessingShaders.bilateralBlur.frag,
     // prettier-ignore
@@ -210,8 +212,9 @@ export const ssao = ({
         height: viewport[3] * scale,
       }),
     size: ({ viewport }) => [viewport[2] * scale, viewport[3] * scale],
-  },
-  {
+  };
+
+  const blurVerticalPass = {
     name: "blurVertical",
     frag: postprocessingShaders.bilateralBlur.frag,
     // prettier-ignore
@@ -231,8 +234,9 @@ export const ssao = ({
     source: () => "ssao.blurHorizontal",
     target: () => "ssao.main",
     size: ({ viewport }) => [viewport[2] * scale, viewport[3] * scale],
-  },
-  {
+  };
+
+  const mixPass = {
     name: "mix",
     frag: postprocessingShaders.ssaoMix.frag,
     // prettier-ignore
@@ -246,5 +250,9 @@ export const ssao = ({
       clearColor: [0, 0, 0, 1],
     }),
     size: ({ viewport }) => [viewport[2] * scale, viewport[3] * scale],
-  },
-];
+  };
+
+  return [gtaoPass, saoPass, blurHorizontalPass, blurVerticalPass, mixPass];
+};
+
+export default ssao;
