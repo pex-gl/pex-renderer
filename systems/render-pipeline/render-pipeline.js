@@ -381,7 +381,7 @@ export default ({ ctx, resourceCache, renderGraph }) => {
       if (drawToScreen !== false) {
         const fullscreenTriangle = resourceCache.fullscreenTriangle();
 
-        let exposure = renderView.camera.exposure;
+        let exposure = renderView.camera.exposure; //FIXME MARCIN: what's the point of setting renderView.exposure then?
         let toneMap = renderView.camera.toneMap;
         let outputEncoding = renderView.camera.outputEncoding;
 
