@@ -10,6 +10,62 @@ export const ssaoMixFlagDefinitions = [
   [["postProcessing", "ssao", "colorBounce"], "USE_SSAO_COLORS", { requires: "USE_SSAO_GTAO" }],
 ]
 
+function generateBlueNoiseTexture(ctx) {
+  const generator = new BlueNoiseGenerator();
+  generator.size = 32;
+
+  const data = new Uint8Array(generator.size ** 2 * 4);
+  for (let i = 0, l = 4; i < l; i++) {
+    const result = generator.generate();
+    const bin = result.data;
+    const maxValue = result.maxValue;
+
+    for (let j = 0, l2 = bin.length; j < l2; j++) {
+      const value = 255 * (bin[j] / maxValue);
+      data[j * 4 + i] = value;
+    }
+  }
+  const blueNoiseTexture = ctx.texture2D({
+    width: generator.size,
+    height: generator.size,
+    data: data,
+    pixelFormat: ctx.PixelFormat.RGBA8,
+    encoding: ctx.Encoding.Linear,
+    wrap: ctx.Wrap.Repeat,
+    mag: ctx.Filter.Linear,
+    min: ctx.Filter.Linear,
+  });
+  return blueNoiseTexture;
+}
+
+function generateNoiseTexture(ctx) {
+  const localPRNG = random.create("0");
+
+  const size = 64;
+  const sizeSquared = size ** 2;
+  const channelSize = ctx.gl.RG ? 2 : 4;
+  const ssaoNoiseData = new Float32Array(sizeSquared * channelSize);
+  for (let i = 0; i < sizeSquared; i++) {
+    ssaoNoiseData[i * channelSize + 0] = localPRNG.float(-1, 1);
+    ssaoNoiseData[i * channelSize + 1] = localPRNG.float(-1, 1);
+    if (!ctx.gl.RG) {
+      ssaoNoiseData[i * channelSize + 2] = 0;
+      ssaoNoiseData[i * channelSize + 3] = 1;
+    }
+  }
+  const noiseTexture = ctx.texture2D({
+    width: size,
+    height: size,
+    data: ssaoNoiseData,
+    pixelFormat: ctx.gl.RG ? ctx.PixelFormat.RG32F : ctx.PixelFormat.RGBA32F,
+    encoding: ctx.Encoding.Linear,
+    wrap: ctx.Wrap.Repeat,
+    mag: ctx.Filter.Linear,
+    min: ctx.Filter.Linear,
+  });
+  return noiseTexture;
+}
+
 const ssao = ({
   ctx,
   resourceCache,
@@ -52,30 +108,8 @@ const ssao = ({
         cameraEntity.postProcessing.ssao.noiseTexture &&
         !cameraEntity.postProcessing.ssao._gtaoNoiseTexture
       ) {
-        const generator = new BlueNoiseGenerator();
-        generator.size = 32;
-
-        const data = new Uint8Array(generator.size ** 2 * 4);
-        for (let i = 0, l = 4; i < l; i++) {
-          const result = generator.generate();
-          const bin = result.data;
-          const maxValue = result.maxValue;
-
-          for (let j = 0, l2 = bin.length; j < l2; j++) {
-            const value = 255 * (bin[j] / maxValue);
-            data[j * 4 + i] = value;
-          }
-        }
-        cameraEntity.postProcessing.ssao._gtaoNoiseTexture = ctx.texture2D({
-          width: generator.size,
-          height: generator.size,
-          data: data,
-          pixelFormat: ctx.PixelFormat.RGBA8,
-          encoding: ctx.Encoding.Linear,
-          wrap: ctx.Wrap.Repeat,
-          mag: ctx.Filter.Linear,
-          min: ctx.Filter.Linear,
-        });
+        cameraEntity.postProcessing.ssao._gtaoNoiseTexture =
+          generateBlueNoiseTexture(ctx);
       }
 
       return !isEnabled;
@@ -133,32 +167,8 @@ const ssao = ({
         cameraEntity.postProcessing.ssao.noiseTexture &&
         !cameraEntity.postProcessing.ssao._saoNoiseTexture
       ) {
-        const localPRNG = random.create("0");
-
-        const size = 64;
-        const sizeSquared = size ** 2;
-        const channelSize = ctx.gl.RG ? 2 : 4;
-        const ssaoNoiseData = new Float32Array(sizeSquared * channelSize);
-        for (let i = 0; i < sizeSquared; i++) {
-          ssaoNoiseData[i * channelSize + 0] = localPRNG.float(-1, 1);
-          ssaoNoiseData[i * channelSize + 1] = localPRNG.float(-1, 1);
-          if (!ctx.gl.RG) {
-            ssaoNoiseData[i * channelSize + 2] = 0;
-            ssaoNoiseData[i * channelSize + 3] = 1;
-          }
-        }
-        cameraEntity.postProcessing.ssao._saoNoiseTexture = ctx.texture2D({
-          width: size,
-          height: size,
-          data: ssaoNoiseData,
-          pixelFormat: ctx.gl.RG
-            ? ctx.PixelFormat.RG32F
-            : ctx.PixelFormat.RGBA32F,
-          encoding: ctx.Encoding.Linear,
-          wrap: ctx.Wrap.Repeat,
-          mag: ctx.Filter.Linear,
-          min: ctx.Filter.Linear,
-        });
+        cameraEntity.postProcessing.ssao._saoNoiseTexture =
+          generateNoiseTexture(ctx);
       }
 
       return !isEnabled;
