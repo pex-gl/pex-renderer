@@ -414,12 +414,6 @@ const geomBuilder = createGeomBuilder({ positions: 1, colors: 1 });
 export default ({ ctx }) => ({
   ...createBaseSystem(),
   type: "helper-renderer",
-  cache: {
-    // Cache based on: vertex source (material.vert or default), fragment source (material.frag or default) and list of flags
-    programs: new ProgramCache(),
-    // Cache based on: program.id
-    pipelines: {},
-  },
   debug: false,
   flagDefinitions,
   cmd: null,

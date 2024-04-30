@@ -42,8 +42,6 @@ export default ({ ctx } = {}) => ({
   ...createBaseSystem(),
   type: "line-renderer",
   cache: {
-    programs: new ProgramCache(),
-    pipelines: {},
     positionBuffers: {},
   },
   debug: false,

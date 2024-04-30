@@ -90,10 +90,6 @@ const lightColorToSrgb = (light) =>
 export default ({ ctx, shadowQuality = 3 }) => ({
   ...createBaseSystem(),
   type: "standard-renderer",
-  cache: {
-    programs: new ProgramCache(),
-    pipelines: {},
-  },
   debug: false,
   flagDefinitions,
   shadowQuality,

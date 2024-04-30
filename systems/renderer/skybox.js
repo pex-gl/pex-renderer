@@ -25,10 +25,6 @@ const flagDefinitions = [
 export default ({ ctx, resourceCache }) => ({
   ...createBaseSystem(),
   type: "skybox-renderer",
-  cache: {
-    programs: new ProgramCache(),
-    pipelines: {},
-  },
   debug: false,
   checkReflectionProbe(reflectionProbe) {
     if (!reflectionProbe._reflectionProbe?._reflectionMap) {

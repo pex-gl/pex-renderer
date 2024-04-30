@@ -32,12 +32,6 @@ const pipelineMaterialProps = ["id", "blend"];
 export default ({ ctx }) => ({
   ...createBaseSystem(),
   type: "basic-renderer",
-  cache: {
-    // Cache based on: vertex source (material.vert or default), fragment source (material.frag or default), list of flags and material hooks
-    programs: new ProgramCache(),
-    // Cache based on: program.id, material.blend and material.id (if present)
-    pipelines: {},
-  },
   debug: false,
   flagDefinitions,
   getVertexShader: () => SHADERS.basic.vert,

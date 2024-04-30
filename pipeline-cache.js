@@ -12,7 +12,7 @@ import ProgramCache from "../../program-cache.js";
  * @returns {import("../../types.js").RendererSystem}
  * @alias module:renderer.base
  */
-export default (ctx) => ({
+export default () => ({
   cache: {
     // Cache based on: vertex source (material.vert or default), fragment source (material.frag or default), list of flags and material hooks
     programs: new ProgramCache(),
@@ -20,7 +20,7 @@ export default (ctx) => ({
     pipelines: {},
   },
   getProgramFlagsAndUniforms(ctx, entity, options = {}) {
-    const { _geometry: geometry } = entity;
+    const { _geometry: geometry } = entity; //TODO MARCIN: this should be provided somehow
     const { flagDefinitions: definitions } = options; //FIXME MARCIN: incoherent name
 
     const flags = [
