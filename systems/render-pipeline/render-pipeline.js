@@ -376,27 +376,6 @@ export default ({ ctx, resourceCache, renderGraph }) => {
           depthAttachment,
           this.descriptors,
         );
-        // this.postProcessingPasses ||= getPostProcessingPasses({
-        //   ctx,
-        //   resourceCache,
-        //   descriptors: this.descriptors,
-        // });
-        // renderGraph.renderPass({
-        //   name: `PostProcessingPass [${renderView.viewport}]`,
-        //   uses: Object.values(colorAttachments).filter(Boolean),
-        //   renderView: renderPassView,
-        //   render: () => {
-        //     for (let i = 0; i < renderers.length; i++) {
-        //       const renderer = renderers[i];
-        //       renderer.renderPost?.(renderView, entitiesInView, {
-        //         colorAttachments,
-        //         depthAttachment,
-        //         descriptors: this.descriptors,
-        //         passes: this.postProcessingPasses,
-        //       });
-        //     }
-        //   },
-        // });
       }
 
       if (drawToScreen !== false) {
