@@ -20,7 +20,6 @@ export default () => ({
     pipelines: {},
   },
   getProgramFlagsAndUniforms(ctx, entity, options = {}) {
-    const { _geometry: geometry } = entity; //TODO MARCIN: this should be provided somehow
     const { flagDefinitions } = options; //FIXME MARCIN: incoherent name
 
     const flags = [
@@ -40,7 +39,7 @@ export default () => ({
       }
 
       //TODO: GC
-      const obj = { ...entity, geometry, options };
+      const obj = { ...entity, options };
       let value = obj;
 
       // Parse the object path

@@ -13,11 +13,11 @@ const flagDefinitions = [
 
   [["material", "blend"], "USE_BLEND"],
   [["material", "baseColor"], "", { uniform: "uBaseColor" }],
-  [["geometry", "attributes", "aOffset"], "USE_INSTANCED_OFFSET"],
-  [["geometry", "attributes", "aScale"], "USE_INSTANCED_SCALE"],
-  [["geometry", "attributes", "aRotation"], "USE_INSTANCED_ROTATION"],
-  [["geometry", "attributes", "aColor"], "USE_INSTANCED_COLOR"],
-  [["geometry", "attributes", "aVertexColor"], "USE_VERTEX_COLORS"],
+  [["_geometry", "attributes", "aOffset"], "USE_INSTANCED_OFFSET"],
+  [["_geometry", "attributes", "aScale"], "USE_INSTANCED_SCALE"],
+  [["_geometry", "attributes", "aRotation"], "USE_INSTANCED_ROTATION"],
+  [["_geometry", "attributes", "aColor"], "USE_INSTANCED_COLOR"],
+  [["_geometry", "attributes", "aVertexColor"], "USE_VERTEX_COLORS"],
 ];
 
 // Impacts pipeline caching
