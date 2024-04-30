@@ -35,10 +35,10 @@ const bloom = ({
       frag: postprocessingShaders.downsample.frag,
       // prettier-ignore
       flagDefinitions: [
-      [["postProcessing", "bloom"], "USE_DOWN_SAMPLE"],
-      [["postProcessing", "bloom", "quality"], "QUALITY", { type: "value" }],
-      [["postProcessing", "bloom", "radius"], "", { uniform: "uIntensity" }],
-    ],
+        [["postProcessing", "bloom"], "USE_DOWN_SAMPLE"],
+        [["postProcessing", "bloom", "quality"], "QUALITY", { type: "value" }],
+        [["postProcessing", "bloom", "radius"], "", { uniform: "uIntensity" }],
+      ],
       source: () =>
         i === 0 ? "bloom.threshold" : `bloom.downsample[${i - 1}]`,
       target: ({ viewport }) => {
