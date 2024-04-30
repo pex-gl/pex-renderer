@@ -21,15 +21,15 @@ export default () => ({
   },
   getProgramFlagsAndUniforms(ctx, entity, options = {}) {
     const { _geometry: geometry } = entity; //TODO MARCIN: this should be provided somehow
-    const { flagDefinitions: definitions } = options; //FIXME MARCIN: incoherent name
+    const { flagDefinitions } = options; //FIXME MARCIN: incoherent name
 
     const flags = [
       ctx.capabilities.maxColorAttachments > 1 && "USE_DRAW_BUFFERS",
     ];
     const uniforms = {};
 
-    for (let i = 0; i < definitions.length; i++) {
-      const [path, defineName, opts = {}] = definitions[i];
+    for (let i = 0; i < flagDefinitions.length; i++) {
+      const [path, defineName, opts = {}] = flagDefinitions[i];
 
       // Assumes defs are ordered and "requires/excludes" item was before
       if (
