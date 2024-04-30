@@ -182,7 +182,7 @@ export default ({ ctx, renderGraph, resourceCache }) => ({
         this.pipelineCache.cache.targets[renderViewId][postProcessingCmd.name] =
           outputColor;
 
-        // outputColor.name = postProcessingCmd.name;
+        outputColor.name = postProcessingCmd.name;
 
         // Draw to screen
         if (!target) {
