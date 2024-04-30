@@ -66,14 +66,7 @@ function generateNoiseTexture(ctx) {
   return noiseTexture;
 }
 
-const ssao = ({
-  ctx,
-  resourceCache,
-  descriptors,
-  scale = 1,
-  saoMainTarget, //TODO MARCIN: this should move to resource cache
-  gtaoMainTarget, //TODO MARCIN: this should move to resource cache
-}) => {
+const ssao = ({ ctx, resourceCache, descriptors, scale = 2 }) => {
   // GTAO
   const gtaoPass = {
     name: "main",
@@ -118,19 +111,12 @@ const ssao = ({
       clearColor: [0, 0, 0, 1],
     }),
     target: ({ viewport }) => {
-      if (!gtaoMainTarget) {
-        gtaoMainTarget = ctx.texture2D({
-          ...descriptors.postProcessing.outputTextureDesc,
-          width: viewport[2] * scale,
-          height: viewport[3] * scale,
-        });
-      } else {
-        ctx.update(gtaoMainTarget, {
-          width: viewport[2] * scale,
-          height: viewport[3] * scale,
-        });
-      }
-      return gtaoMainTarget;
+      const tex = resourceCache.texture2D({
+        ...descriptors.postProcessing.outputTextureDesc,
+        width: viewport[2] * scale,
+        height: viewport[3] * scale,
+      });
+      return tex;
     },
     size: ({ viewport }) => [viewport[2] * scale, viewport[3] * scale],
   };
@@ -177,21 +163,13 @@ const ssao = ({
       clearColor: [0, 0, 0, 1],
     }),
     target: ({ viewport }) => {
-      if (!saoMainTarget) {
-        saoMainTarget = ctx.texture2D({
-          ...descriptors.postProcessing.outputTextureDesc,
-          // pixelFormat: ctx.PixelFormat.RGBA8,
-          pixelFormat: ctx.gl.RG ? ctx.PixelFormat.R8 : ctx.PixelFormat.RGBA8,
-          width: viewport[2] * scale,
-          height: viewport[3] * scale,
-        });
-      } else {
-        ctx.update(saoMainTarget, {
-          width: viewport[2] * scale,
-          height: viewport[3] * scale,
-        });
-      }
-      return saoMainTarget;
+      const tex = resourceCache.texture2D({
+        ...descriptors.postProcessing.outputTextureDesc,
+        pixelFormat: ctx.gl.RG ? ctx.PixelFormat.R8 : ctx.PixelFormat.RGBA8,
+        width: viewport[2] * scale,
+        height: viewport[3] * scale,
+      });
+      return tex;
     },
     size: ({ viewport }) => [viewport[2] * scale, viewport[3] * scale],
   };
