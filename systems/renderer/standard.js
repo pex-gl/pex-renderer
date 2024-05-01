@@ -2,7 +2,8 @@ import { mat3, mat4 } from "pex-math";
 import { pipeline as SHADERS } from "pex-shaders";
 
 import createBaseSystem from "./base.js";
-import { NAMESPACE, ProgramCache, TEMP_MAT4 } from "../../utils.js";
+import { NAMESPACE, TEMP_MAT4 } from "../../utils.js";
+
 import * as AreaLightsData from "./area-light-data.js";
 
 let ltc_1;
@@ -63,15 +64,15 @@ const flagDefinitions = [
 
   [["material", "transmission"], "USE_TRANSMISSION", { uniform: "uTransmission", requires: "USE_BLEND" }],
 
-  [["geometry", "attributes", "aNormal"], "USE_NORMALS", { fallback: "USE_UNLIT_WORKFLOW" }],
-  [["geometry", "attributes", "aTangent"], "USE_TANGENTS"],
-  [["geometry", "attributes", "aTexCoord0"], "USE_TEXCOORD_0"],
-  [["geometry", "attributes", "aTexCoord1"], "USE_TEXCOORD_1"],
-  [["geometry", "attributes", "aOffset"], "USE_INSTANCED_OFFSET"],
-  [["geometry", "attributes", "aScale"], "USE_INSTANCED_SCALE"],
-  [["geometry", "attributes", "aRotation"], "USE_INSTANCED_ROTATION"],
-  [["geometry", "attributes", "aColor"], "USE_INSTANCED_COLOR"],
-  [["geometry", "attributes", "aVertexColor"], "USE_VERTEX_COLORS"],
+  [["_geometry", "attributes", "aNormal"], "USE_NORMALS", { fallback: "USE_UNLIT_WORKFLOW" }],
+  [["_geometry", "attributes", "aTangent"], "USE_TANGENTS"],
+  [["_geometry", "attributes", "aTexCoord0"], "USE_TEXCOORD_0"],
+  [["_geometry", "attributes", "aTexCoord1"], "USE_TEXCOORD_1"],
+  [["_geometry", "attributes", "aOffset"], "USE_INSTANCED_OFFSET"],
+  [["_geometry", "attributes", "aScale"], "USE_INSTANCED_SCALE"],
+  [["_geometry", "attributes", "aRotation"], "USE_INSTANCED_ROTATION"],
+  [["_geometry", "attributes", "aColor"], "USE_INSTANCED_COLOR"],
+  [["_geometry", "attributes", "aVertexColor"], "USE_VERTEX_COLORS"],
 ];
 
 const lightColorToSrgb = (light) =>
@@ -88,10 +89,6 @@ const lightColorToSrgb = (light) =>
 export default ({ ctx, shadowQuality = 3 }) => ({
   ...createBaseSystem(),
   type: "standard-renderer",
-  cache: {
-    programs: new ProgramCache(),
-    pipelines: {},
-  },
   debug: false,
   flagDefinitions,
   shadowQuality,

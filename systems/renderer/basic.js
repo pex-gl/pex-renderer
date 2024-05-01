@@ -1,7 +1,6 @@
 import { pipeline as SHADERS } from "pex-shaders";
 
 import createBaseSystem from "./base.js";
-import { ProgramCache } from "../../utils.js";
 
 // Impacts program caching
 // prettier-ignore
@@ -13,11 +12,11 @@ const flagDefinitions = [
 
   [["material", "blend"], "USE_BLEND"],
   [["material", "baseColor"], "", { uniform: "uBaseColor" }],
-  [["geometry", "attributes", "aOffset"], "USE_INSTANCED_OFFSET"],
-  [["geometry", "attributes", "aScale"], "USE_INSTANCED_SCALE"],
-  [["geometry", "attributes", "aRotation"], "USE_INSTANCED_ROTATION"],
-  [["geometry", "attributes", "aColor"], "USE_INSTANCED_COLOR"],
-  [["geometry", "attributes", "aVertexColor"], "USE_VERTEX_COLORS"],
+  [["_geometry", "attributes", "aOffset"], "USE_INSTANCED_OFFSET"],
+  [["_geometry", "attributes", "aScale"], "USE_INSTANCED_SCALE"],
+  [["_geometry", "attributes", "aRotation"], "USE_INSTANCED_ROTATION"],
+  [["_geometry", "attributes", "aColor"], "USE_INSTANCED_COLOR"],
+  [["_geometry", "attributes", "aVertexColor"], "USE_VERTEX_COLORS"],
 ];
 
 // Impacts pipeline caching
@@ -32,12 +31,6 @@ const pipelineMaterialProps = ["id", "blend"];
 export default ({ ctx }) => ({
   ...createBaseSystem(),
   type: "basic-renderer",
-  cache: {
-    // Cache based on: vertex source (material.vert or default), fragment source (material.frag or default), list of flags and material hooks
-    programs: new ProgramCache(),
-    // Cache based on: program.id, material.blend and material.id (if present)
-    pipelines: {},
-  },
   debug: false,
   flagDefinitions,
   getVertexShader: () => SHADERS.basic.vert,

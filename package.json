@@ -59,7 +59,8 @@
   },
   "engines": {
     "node": ">=20.0.0",
-    "npm": ">=9.6.4"
+    "npm": ">=9.6.4",
+    "snowdev": "2.0.0-alpha.26"
   },
   "snowdev": {
     "dependencies": [

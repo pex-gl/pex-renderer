@@ -1,37 +1,10 @@
-import { vec3, avec4, utils } from "pex-math";
+import { utils } from "pex-math";
 import { parser as ShaderParser } from "pex-shaders";
 
 import addDescriptors from "./descriptors.js";
-import addShadowMapping from "./shadow-mapping.js";
-import { getPostProcessingPasses } from "./post-processing-passes.js";
-
-import { NAMESPACE, TEMP_VEC3, TEMP_VEC4 } from "../../utils.js";
-
-function isEntityInFrustum(entity, frustum) {
-  if (entity.geometry.culled !== false) {
-    const worldBounds = entity.transform.worldBounds;
-    for (let i = 0; i < 6; i++) {
-      avec4.set(TEMP_VEC4, 0, frustum, i);
-      TEMP_VEC3[0] = TEMP_VEC4[0] >= 0 ? worldBounds[1][0] : worldBounds[0][0];
-      TEMP_VEC3[1] = TEMP_VEC4[1] >= 0 ? worldBounds[1][1] : worldBounds[0][1];
-      TEMP_VEC3[2] = TEMP_VEC4[2] >= 0 ? worldBounds[1][2] : worldBounds[0][2];
-
-      // Distance from plane to point
-      if (vec3.dot(TEMP_VEC4, TEMP_VEC3) + TEMP_VEC4[3] < 0) return false;
-    }
-  }
-
-  return true;
-}
-
-const cullEntities = (entities, camera) =>
-  camera.culling
-    ? entities.filter(
-        (entity) =>
-          !entity.geometry ||
-          (entity.transform && isEntityInFrustum(entity, camera.frustum)),
-      )
-    : entities;
+import shadowMappingPipelineMethods from "./shadow-mapping.js";
+import postProcessingPipelineMethods from "./post-processing.js";
+import cullingPipelineMethods from "./culling.js";
 
 /**
  * Render pipeline system
@@ -48,6 +21,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
   type: "render-pipeline-system",
   cache: {},
   debug: false,
+  debugRender: "",
   renderers: [],
 
   descriptors: addDescriptors(ctx),
@@ -56,23 +30,9 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
 
   outputs: new Set(["color", "depth"]), // "normal", "emissive"
 
-  checkLight(light, lightEntity) {
-    if (!lightEntity._transform) {
-      console.warn(
-        NAMESPACE,
-        `"${this.type}" light entity missing transform. Add a transformSystem.update(entities).`,
-      );
-    } else if (!light._projectionMatrix) {
-      console.warn(
-        NAMESPACE,
-        `"${this.type}" light component missing matrices. Add a lightSystem.update(entities).`,
-      );
-    } else {
-      return true;
-    }
-  },
-
-  cullEntities,
+  ...shadowMappingPipelineMethods({ renderGraph, resourceCache }),
+  ...postProcessingPipelineMethods({ ctx, renderGraph, resourceCache }),
+  ...cullingPipelineMethods({ renderGraph, resourceCache }),
 
   getAttachmentsLocations(colorAttachments) {
     return Object.fromEntries(
@@ -144,7 +104,6 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
       camera: cameraEntities[0].camera,
       viewport: [0, 0, ctx.gl.drawingBufferWidth, ctx.gl.drawingBufferHeight],
     };
-
     const postProcessing = renderView.cameraEntity.postProcessing;
 
     // Set the render pipeline encoding and tone mapping settings before blit
@@ -232,11 +191,6 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
 
     // Update shadow maps
     if (shadowCastingEntities.length) {
-      // Compose shadow mapping
-      if (!this.directionalLight) {
-        Object.assign(this, addShadowMapping({ renderGraph, resourceCache }));
-      }
-
       for (let i = 0; i < entities.length; i++) {
         const entity = entities[i];
 
@@ -244,7 +198,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
           entity.directionalLight?.castShadows &&
           this.checkLight(entity.directionalLight, entity)
         ) {
-          this.directionalLight(
+          this.renderDirectionalLightShadowMap(
             entity,
             entities,
             renderers,
@@ -256,13 +210,18 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
           entity.pointLight?.castShadows &&
           this.checkLight(entity.pointLight, entity)
         ) {
-          this.pointLight(entity, entities, renderers, colorAttachments);
+          this.renderPointLightShadowMap(
+            entity,
+            entities,
+            renderers,
+            colorAttachments,
+          );
         }
         if (
           entity.spotLight?.castShadows &&
           this.checkLight(entity.spotLight, entity)
         ) {
-          this.spotLight(
+          this.renderSpotLightShadowMap(
             entity,
             entities,
             renderers,
@@ -274,7 +233,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
           entity.areaLight?.castShadows &&
           this.checkLight(entity.areaLight, entity)
         ) {
-          this.spotLight(
+          this.renderSpotLightShadowMap(
             entity,
             entities,
             renderers,
@@ -302,6 +261,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
       ? entities.filter((entity) => !entity.layer || entity.layer === layer)
       : entities.filter((entity) => !entity.layer);
 
+    //we might be drawing to part of the screen
     const renderPassView = {
       ...renderView,
       viewport: [0, 0, renderView.viewport[2], renderView.viewport[3]],
@@ -402,34 +362,18 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
 
     // Post-processing pass
     if (postProcessing) {
-      this.postProcessingPasses ||= getPostProcessingPasses({
-        ctx,
-        resourceCache,
-        descriptors: this.descriptors,
-      });
-
-      renderGraph.renderPass({
-        name: `PostProcessingPass [${renderView.viewport}]`,
-        uses: Object.values(colorAttachments).filter(Boolean),
-        renderView: renderPassView,
-        render: () => {
-          for (let i = 0; i < renderers.length; i++) {
-            const renderer = renderers[i];
-            renderer.renderPost?.(renderView, entitiesInView, {
-              colorAttachments,
-              depthAttachment,
-              descriptors: this.descriptors,
-              passes: this.postProcessingPasses,
-            });
-          }
-        },
-      });
+      this.renderPostProcessing(
+        renderPassView,
+        colorAttachments,
+        depthAttachment,
+        this.descriptors,
+      );
     }
 
     if (drawToScreen !== false) {
       const fullscreenTriangle = resourceCache.fullscreenTriangle();
 
-      let exposure = renderView.camera.exposure;
+      let exposure = renderView.camera.exposure; //FIXME MARCIN: what's the point of setting renderView.exposure then?
       let toneMap = renderView.camera.toneMap;
       let outputEncoding = renderView.camera.outputEncoding;
 
@@ -470,6 +414,15 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
           });
         },
       });
+    }
+
+    if (this.debugRender) {
+      let debugTexture = colorAttachments[this.debugRender];
+      debugTexture ||= this.tempBaseRenderer?.cache.targets[this.debugRender];
+
+      if (debugTexture) {
+        colorAttachments.color = debugTexture;
+      }
     }
 
     // Return the original object: the color attachment value can be modified

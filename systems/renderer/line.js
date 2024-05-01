@@ -2,7 +2,6 @@ import { avec3 } from "pex-math";
 import { pipeline as SHADERS } from "pex-shaders";
 
 import createBaseSystem from "./base.js";
-import { ProgramCache } from "../../utils.js";
 
 // Impacts program caching
 // prettier-ignore
@@ -15,8 +14,8 @@ const flagDefinitions = [
   [["material", "baseColor"], "", { uniform: "uBaseColor" }],
   [["material", "lineWidth"], "", { uniform: "uLineWidth" }],
   [["material", "perspectiveScaling"], "USE_PERSPECTIVE_SCALING"],
-  [["geometry", "attributes", "aVertexColor"], "USE_VERTEX_COLORS"],
-  [["geometry", "attributes", "aLineWidth"], "USE_INSTANCED_LINE_WIDTH"],
+  [["_geometry", "attributes", "aVertexColor"], "USE_VERTEX_COLORS"],
+  [["_geometry", "attributes", "aLineWidth"], "USE_INSTANCED_LINE_WIDTH"],
 ];
 
 // Impacts pipeline caching
@@ -42,8 +41,6 @@ export default ({ ctx } = {}) => ({
   ...createBaseSystem(),
   type: "line-renderer",
   cache: {
-    programs: new ProgramCache(),
-    pipelines: {},
     positionBuffers: {},
   },
   debug: false,

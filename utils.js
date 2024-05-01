@@ -1,3 +1,5 @@
+//TODO: MARCIN: I would break this down into separate files utils/program-cache.js, utils/temp-data.js etc
+
 import { aabb } from "pex-geom";
 import { mat2x3, mat4, quat, vec3, vec4 } from "pex-math";
 
@@ -82,32 +84,6 @@ const getDirname = (path) => {
   return path.slice(0, end);
 };
 
-class ProgramCache {
-  values = [];
-
-  get(flags, vert, frag) {
-    for (let i = 0; i < this.values.length; i++) {
-      const value = this.values[i];
-      if (value.frag === frag && value.vert === vert) {
-        if (value.flags.length === flags.length) {
-          let sameFlags = true;
-          for (let j = 0; j < flags.length; j++) {
-            if (value.flags[j] !== flags[j]) {
-              sameFlags = false;
-              break;
-            }
-          }
-          if (sameFlags) return value.program;
-        }
-      }
-    }
-  }
-
-  set(flags, vert, frag, program) {
-    this.values.push({ flags, vert, frag, program });
-  }
-}
-
 export {
   NAMESPACE,
   TEMP_VEC3,
@@ -122,7 +98,6 @@ export {
   fullscreenTriangle,
   CUBEMAP_PROJECTION_MATRIX,
   CUBEMAP_SIDES,
-  ProgramCache,
   getFileExtension,
   getDirname,
 };

@@ -244,13 +244,20 @@ gui.addRadioList(
 // renderEngine.renderers.find(
 //   (renderer) => renderer.type == "standard-renderer"
 // ).debugRender = "data.ao";
+
 gui.addRadioList(
   "Debug Post-Processing",
-  renderEngine.renderers.find(
-    (renderer) => renderer.type == "post-processing-renderer",
+  renderEngine.systems.find(
+    (system) => system.type == "render-pipeline-system",
   ),
   "debugRender",
-  ["", "ssao.blurHorizontal", "ssao.blurVertical"].map((value) => ({
+  [
+    "",
+    "ssao.main",
+    "ssao.blurHorizontal",
+    "ssao.blurVertical",
+    "gtao.main",
+  ].map((value) => ({
     name: value || "No debug",
     value,
   })),

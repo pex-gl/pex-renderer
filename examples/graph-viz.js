@@ -75,13 +75,14 @@ const dot = {
 
     containerElement.innerHTML = graphviz.layout(dotStr, "svg", "dot");
     const svgElement = containerElement.querySelector("svg");
+
     Object.assign(svgElement.style, {
       position: "absolute",
-      right: "10px",
+      left: "10px",
       top: "10px",
-      maxWidth: "80vw",
-      maxHeight: "400px",
       opacity: 0.7,
+      transformOrigin: "0 0",
+      transform: "scale(0.25)",
     });
     svgElement.removeAttribute("width");
     svgElement.removeAttribute("height");

@@ -2,7 +2,7 @@ import { mat4 } from "pex-math";
 import { skybox as SHADERS } from "pex-shaders";
 
 import createBaseSystem from "./base.js";
-import { NAMESPACE, ProgramCache, TEMP_MAT4 } from "../../utils.js";
+import { NAMESPACE, TEMP_MAT4 } from "../../utils.js";
 
 // Impacts program caching
 // prettier-ignore
@@ -24,10 +24,6 @@ const flagDefinitions = [
 export default ({ ctx, resourceCache }) => ({
   ...createBaseSystem(),
   type: "skybox-renderer",
-  cache: {
-    programs: new ProgramCache(),
-    pipelines: {},
-  },
   debug: false,
   checkReflectionProbe(reflectionProbe) {
     if (!reflectionProbe._reflectionProbe?._reflectionMap) {

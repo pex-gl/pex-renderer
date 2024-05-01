@@ -1,7 +1,7 @@
 import { vec3, mat4 } from "pex-math";
 import { aabb } from "pex-geom";
 
-import { TEMP_BOUNDS_POINTS, TEMP_VEC3 } from "../../utils.js";
+import { NAMESPACE, TEMP_BOUNDS_POINTS, TEMP_VEC3 } from "../../utils.js";
 
 /**
  * Create a shadow mapping object to compose with a render-pipeline-system
@@ -16,6 +16,21 @@ import { TEMP_BOUNDS_POINTS, TEMP_VEC3 } from "../../utils.js";
  * @returns {import("../../types.js").System}
  */
 export default ({ renderGraph, resourceCache }) => ({
+  checkLight(light, lightEntity) {
+    if (!lightEntity._transform) {
+      console.warn(
+        NAMESPACE,
+        `"${this.type}" light entity missing transform. Add a transformSystem.update(entities).`,
+      );
+    } else if (!light._projectionMatrix) {
+      console.warn(
+        NAMESPACE,
+        `"${this.type}" light component missing matrices. Add a lightSystem.update(entities).`,
+      );
+    } else {
+      return true;
+    }
+  },
   computeLightProperties(lightEntity, light, shadowCastingEntities) {
     light._sceneBboxInLightSpace ??= aabb.create();
 
@@ -64,6 +79,7 @@ export default ({ renderGraph, resourceCache }) => ({
     }
 
     //TODO: can this be all done at once?
+    //TODO: const colorMap = cubemap ? resourceCache.textureCube(colorMapDesc) : resourceCache.texture2D(colorMapDesc);
     const colorMap =
       resourceCache[cubemap ? "textureCube" : "texture2D"](colorMapDesc);
     colorMap.name = `tempColorMap (id: ${colorMap.id})`;
@@ -74,7 +90,7 @@ export default ({ renderGraph, resourceCache }) => ({
     return { color: colorMap, depth: shadowMap };
   },
 
-  directionalLight(
+  renderDirectionalLightShadowMap(
     lightEntity,
     entities,
     renderers,
@@ -135,7 +151,7 @@ export default ({ renderGraph, resourceCache }) => ({
     light._shadowMap = depth; // TODO: we borrow it for a frame
   },
 
-  spotLight(
+  renderSpotLightShadowMap(
     lightEntity,
     entities,
     renderers,
@@ -193,7 +209,12 @@ export default ({ renderGraph, resourceCache }) => ({
     light._shadowMap = depth; // TODO: we borrow it for a frame
   },
 
-  pointLight(lightEntity, entities, renderers, colorAttachments) {
+  renderPointLightShadowMap(
+    lightEntity,
+    entities,
+    renderers,
+    colorAttachments,
+  ) {
     const light = lightEntity.pointLight;
 
     const { color, depth } = this.getLightAttachments(
