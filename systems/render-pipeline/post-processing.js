@@ -1,5 +1,5 @@
 import { postProcessing as postProcessingShaders } from "pex-shaders";
-import createPippelineCache from "../../pipeline-cache.js";
+import createPipelineCache from "../../pipeline-cache.js";
 import ssao from "./post-processing/ssao.js";
 import dof from "./post-processing/dof.js";
 import bloom from "./post-processing/bloom.js";
@@ -28,7 +28,7 @@ export default ({ ctx, renderGraph, resourceCache }) => ({
     const postProcessingComponent = renderView.cameraEntity.postProcessing;
 
     if (!this.pipelineCache) {
-      this.pipelineCache = createPippelineCache(ctx);
+      this.pipelineCache = createPipelineCache(ctx);
 
       // Cache based on: renderViewId, pass.name and subPass.name
       this.pipelineCache.cache.targets = {};

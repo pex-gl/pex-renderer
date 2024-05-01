@@ -1,4 +1,4 @@
-import createPippelineCache from "../../pipeline-cache.js";
+import createPipelineCache from "../../pipeline-cache.js";
 
 /**
  * Base renderer
@@ -9,7 +9,7 @@ import createPippelineCache from "../../pipeline-cache.js";
  */
 export default () => ({
   type: "base-renderer",
-  pipelineCache: createPippelineCache(),
+  pipelineCache: createPipelineCache(),
   debug: false,
   time: 0, //TODO MARCIN: why renderers have time?
   getVertexShader(options) {
