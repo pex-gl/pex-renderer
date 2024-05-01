@@ -1,17 +1,10 @@
 import { mat3, mat2x3 } from "pex-math";
 import { pipeline as SHADERS, parser as ShaderParser } from "pex-shaders";
 
-import { NAMESPACE, TEMP_MAT2X3 } from "../../utils.js";
+import { NAMESPACE, TEMP_MAT2X3 } from "./utils.js";
 
-import ProgramCache from "../../program-cache.js";
+import ProgramCache from "./program-cache.js";
 
-/**
- * Base renderer
- *
- * All renderers are composed with it.
- * @returns {import("../../types.js").RendererSystem}
- * @alias module:renderer.base
- */
 export default () => ({
   cache: {
     // Cache based on: vertex source (material.vert or default), fragment source (material.frag or default), list of flags and material hooks
