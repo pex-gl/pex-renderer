@@ -1,45 +1,10 @@
 import { postProcessing as postprocessingShaders } from "pex-shaders";
 import { ssaoMixFlagDefinitions } from "./ssao.js";
 
-const finalFrag = postprocessingShaders.postProcessing.frag.replace(
-  /*glsl*/ `vec4 ssao(vec4 color, vec4 aoData, float intensity) {
-  #ifdef USE_SSAO_COLORS
-  vec3 rgb = mix(color.rgb, color.rgb * gtaoMultiBounce(aoData.a, color.rgb), intensity);
-  color.rgb = vec3(rgb + aoData.rgb * color.rgb * 2.0);
-  // color.rgb = vec3(color.rgb * (0.25 + 0.75 * aoData.a) + aoData.rgb * color.rgb * 2.0);
-  #else
-  color.rgb *= mix(vec3(1.0), vec3(aoData.r), intensity);
-  #endif
-
-  return color;
-}`,
-  /*glsl*/ `vec4 ssao(vec4 color, vec4 aoData, float ssaoMix) {
-  #ifdef USE_SSAO_COLORS
-  vec3 albedoColor = color.rgb; //unlit color of the surface that we don't have ATM
-  vec3 colorWithAO = color.rgb * gtaoMultiBounce(aoData.a, albedoColor);
-  vec3 colorBounce = albedoColor * aoData.rgb;
-  color.rgb = mix(color.rgb, colorWithAO + colorBounce, ssaoMix);
-  // color.rgb = vec3(aoData.aaa);
-  // color.rgb = vec3(aoData.rgb);
-  #else
-  color.rgb *= mix(vec3(1.0), vec3(aoData.r), ssaoMix);
-  #endif
-
-  return color;
-}`,
-);
-
-const final = ({
-  ctx,
-  resourceCache,
-  descriptors,
-  scale = 1,
-  saoMainTarget, //TODO MARCIN: this should move to resource cache
-  gtaoMainTarget, //TODO MARCIN: this should move to resource cache
-}) => {
+const final = () => {
   const finalPass = {
     name: "main",
-    frag: finalFrag,
+    frag: postprocessingShaders.postProcessing.frag,
     // blend: true,
     // prettier-ignore
     flagDefinitions: [

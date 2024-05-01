@@ -1,13 +1,6 @@
 import { postProcessing as postprocessingShaders } from "pex-shaders";
 
-const dof = ({
-  ctx,
-  resourceCache,
-  descriptors,
-  scale = 1,
-  saoMainTarget, //TODO MARCIN: this should move to resource cache
-  gtaoMainTarget, //TODO MARCIN: this should move to resource cache
-}) => {
+const dof = ({ resourceCache, descriptors }) => {
   const dofPass = {
     name: "main",
     // prettier-ignore

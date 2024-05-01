@@ -4,10 +4,7 @@ const bloom = ({
   ctx,
   resourceCache,
   descriptors,
-  scale = 1,
   bloomLevels = 9, //TODO MARCIN: hardcoded
-  saoMainTarget, //TODO MARCIN: this should move to resource cache
-  gtaoMainTarget, //TODO MARCIN: this should move to resource cache
 }) => {
   const thresholdPass = {
     name: "threshold",
