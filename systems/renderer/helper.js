@@ -4,7 +4,6 @@ import createGeomBuilder from "geom-builder";
 
 import createBaseSystem from "./base.js";
 import { TEMP_MAT4, TEMP_VEC3 } from "../../utils.js";
-import ProgramCache from "../../program-cache.js";
 
 // Impacts program caching
 // prettier-ignore

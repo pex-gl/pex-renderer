@@ -1,7 +1,6 @@
 import { pipeline as SHADERS } from "pex-shaders";
 
 import createBaseSystem from "./base.js";
-import ProgramCache from "../../program-cache.js";
 
 // Impacts program caching
 // prettier-ignore

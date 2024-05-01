@@ -1,7 +1,7 @@
 import { vec3, mat4 } from "pex-math";
 import { aabb } from "pex-geom";
 
-import { TEMP_BOUNDS_POINTS, TEMP_VEC3 } from "../../utils.js";
+import { NAMESPACE, TEMP_BOUNDS_POINTS, TEMP_VEC3 } from "../../utils.js";
 
 /**
  * Create a shadow mapping object to compose with a render-pipeline-system

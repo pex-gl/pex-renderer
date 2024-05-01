@@ -1,5 +1,6 @@
 import { avec4, vec3 } from "pex-math";
-import { NAMESPACE, TEMP_VEC3, TEMP_VEC4 } from "../../utils.js";
+
+import { TEMP_VEC3, TEMP_VEC4 } from "../../utils.js";
 
 function isEntityInFrustum(entity, frustum) {
   if (entity.geometry.culled !== false) {
@@ -18,14 +19,14 @@ function isEntityInFrustum(entity, frustum) {
   return true;
 }
 
-export default ({ renderGraph, resourceCache }) => ({
+export default () => ({
   cullEntities: (entities, camera) => {
     if (!camera.culling) return entities;
-    else
-      return entities.filter(
-        (entity) =>
-          !entity.geometry ||
-          (entity.transform && isEntityInFrustum(entity, camera.frustum)),
-      );
+
+    return entities.filter(
+      (entity) =>
+        !entity.geometry ||
+        (entity.transform && isEntityInFrustum(entity, camera.frustum)),
+    );
   },
 });

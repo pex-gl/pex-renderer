@@ -3,7 +3,6 @@ import { pipeline as SHADERS } from "pex-shaders";
 
 import createBaseSystem from "./base.js";
 import { NAMESPACE, TEMP_MAT4 } from "../../utils.js";
-import ProgramCache from "../../program-cache.js";
 
 import * as AreaLightsData from "./area-light-data.js";
 

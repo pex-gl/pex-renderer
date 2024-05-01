@@ -1,6 +1,7 @@
 import random from "pex-random";
-import { BlueNoiseGenerator } from "../../../utils/blue-noise.js";
 import { postProcessing as postprocessingShaders } from "pex-shaders";
+
+import { BlueNoiseGenerator } from "../../../utils/blue-noise.js";
 
 // prettier-ignore
 export const ssaoMixFlagDefinitions = [

@@ -3,7 +3,6 @@ import { skybox as SHADERS } from "pex-shaders";
 
 import createBaseSystem from "./base.js";
 import { NAMESPACE, TEMP_MAT4 } from "../../utils.js";
-import ProgramCache from "../../program-cache.js";
 
 // Impacts program caching
 // prettier-ignore

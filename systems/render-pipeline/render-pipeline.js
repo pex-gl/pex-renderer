@@ -1,6 +1,5 @@
 import { utils } from "pex-math";
 import { parser as ShaderParser } from "pex-shaders";
-import { pipeline as SHADERS } from "pex-shaders";
 
 import addDescriptors from "./descriptors.js";
 import shadowMappingPipelineMethods from "./shadow-mapping.js";
