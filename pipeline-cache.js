@@ -190,7 +190,7 @@ vec4 debugColor = vec4(pow(vec3(${debugRender}${scale}), vec3(${pow})), 1.0);
       //TODO MARCIN: Code smell, inline mutation of descriptors
       descriptor,
       entity,
-      this.uniforms,
+      uniforms,
       options.debugRender,
     );
 
