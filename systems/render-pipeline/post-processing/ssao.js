@@ -66,7 +66,7 @@ function generateNoiseTexture(ctx) {
   return noiseTexture;
 }
 
-const ssao = ({ ctx, resourceCache, descriptors, scale = 2 }) => {
+const ssao = ({ ctx, resourceCache, descriptors, scale = 1 }) => {
   // GTAO
   const gtaoPass = {
     name: "main",
