@@ -144,6 +144,11 @@
  *
  * @property {number} [metallic=1]
  * @property {number} [roughness=1]
+ * @property {number} [ior]
+ * @property {number} [specular]
+ * @property {ctx.texture2D | TextureTransform} [specularTexture]
+ * @property {number[]} [specularColor=[1, 1, 1]]
+ * @property {ctx.texture2D | TextureTransform} [specularColorTexture]
  *
  * @property {ctx.texture2D | TextureTransform} [baseColorTexture]
  * @property {ctx.texture2D | TextureTransform} [emissiveColorTexture]
@@ -164,8 +169,15 @@
  * @property {number[]} [sheenColor]
  * @property {number} [sheenRoughness]
  *
- * @property {number} [transmission]
  * @property {number} [reflectance] Represents a remapping of a percentage of reflectance (with a default of 4%: 0.16 * pow(0.5, 2) = 0.04) and replaces an explicit index of refraction (IOR)
+
+ * @property {number} [transmission]
+ * @property {ctx.texture2D | TextureTransform} [transmissionTexture]
+ * @property {number} [thickness]
+ * @property {ctx.texture2D | TextureTransform} [thicknessTexture]
+ * @property {number} [attenuationDistance]
+ * @property {number[]} [attenuationColor]
+ * @property {number} [dispersion]
  *
  * @property {number} [alphaTest="undefined"]
  * @property {ctx.texture2D | TextureTransform} [alphaTexture]

@@ -20,16 +20,16 @@ const SUPPORTED_EXTENSIONS = [
   "KHR_lights_punctual",
   // "KHR_materials_anisotropy",
   "KHR_materials_clearcoat",
-  // "KHR_materials_dispersion",
+  "KHR_materials_dispersion",
   "KHR_materials_emissive_strength",
-  // "KHR_materials_ior",
+  "KHR_materials_ior",
   // "KHR_materials_iridescence",
   "KHR_materials_sheen",
-  // "KHR_materials_specular",
-  // "KHR_materials_transmission",
+  "KHR_materials_specular",
+  "KHR_materials_transmission",
   "KHR_materials_unlit",
   // "KHR_materials_variants",
-  // "KHR_materials_volume",
+  "KHR_materials_volume",
   "KHR_mesh_quantization",
   "KHR_texture_basisu",
   "KHR_texture_transform",
@@ -38,7 +38,6 @@ const SUPPORTED_EXTENSIONS = [
   // "KHR_animation_pointer"
   // "KHR_audio"
   // "KHR_materials_diffuse_transmission"
-  // "KHR_materials_dispersion"
   // "KHR_materials_sss"
 ];
 
@@ -413,6 +412,76 @@ function handleMaterial(material, gltf, ctx) {
         if (clearcoatExt.clearcoatNormalTexture) {
           materialProps.clearCoatNormalTexture = getPexMaterialTexture(
             clearcoatExt.clearcoatNormalTexture,
+            gltf,
+            ctx,
+            ctx.Encoding.SRGB,
+          );
+        }
+      }
+
+      // https://github.com/KhronosGroup/glTF/tree/main/extensions/2.0/Khronos/KHR_materials_transmission
+      if (material.extensions.KHR_materials_transmission) {
+        const transmissionExt = material.extensions.KHR_materials_transmission;
+        materialProps.transmission = transmissionExt.transmissionFactor ?? 0;
+        if (transmissionExt.transmissionTexture) {
+          materialProps.transmissionTexture = getPexMaterialTexture(
+            transmissionExt.transmissionTexture,
+            gltf,
+            ctx,
+            ctx.Encoding.Linear,
+          );
+        }
+      }
+
+      // https://github.com/KhronosGroup/glTF/tree/main/extensions/2.0/Khronos/KHR_materials_volume
+      if (material.extensions.KHR_materials_volume) {
+        const volumeExt = material.extensions.KHR_materials_volume;
+        materialProps.thickness = volumeExt.thicknessFactor ?? 0;
+        materialProps.attenuationDistance =
+          volumeExt.attenuationDistance || Infinity;
+        materialProps.attenuationColor = volumeExt.attenuationColor || [
+          1, 1, 1,
+        ];
+        if (volumeExt.thicknessTexture) {
+          materialProps.thicknessTexture = getPexMaterialTexture(
+            volumeExt.thicknessTexture,
+            gltf,
+            ctx,
+            ctx.Encoding.Linear,
+          );
+        }
+      }
+
+      // https://github.com/KhronosGroup/glTF/tree/main/extensions/2.0/Khronos/KHR_materials_dispersion
+      if (material.extensions.KHR_materials_dispersion) {
+        const dispersionExt = material.extensions.KHR_materials_dispersion;
+        materialProps.dispersion = dispersionExt.dispersion ?? 0;
+      }
+
+      // https://github.com/KhronosGroup/glTF/tree/main/extensions/2.0/Khronos/KHR_materials_ior
+      if (material.extensions.KHR_materials_ior) {
+        const iorExt = material.extensions.KHR_materials_ior;
+        materialProps.ior = iorExt.ior || 1.5;
+      }
+
+      // https://github.com/KhronosGroup/glTF/tree/main/extensions/2.0/Khronos/KHR_materials_specular
+      if (material.extensions.KHR_materials_specular) {
+        const specularExt = material.extensions.KHR_materials_specular;
+        materialProps.specular = specularExt.specularFactor ?? 1.0;
+        if (specularExt.specularTexture) {
+          materialProps.specularTexture = getPexMaterialTexture(
+            specularExt.specularTexture,
+            gltf,
+            ctx,
+            ctx.Encoding.Linear,
+          );
+        }
+        materialProps.specularColor = specularExt.specularColorFactor || [
+          1, 1, 1,
+        ];
+        if (specularExt.specularColorTexture) {
+          materialProps.specularColorTexture = getPexMaterialTexture(
+            specularExt.specularColorTexture,
             gltf,
             ctx,
             ctx.Encoding.SRGB,

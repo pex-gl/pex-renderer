@@ -6,7 +6,7 @@ import {
 } from "../index.js";
 
 import createContext from "pex-context";
-import { quat } from "pex-math";
+import { quat, vec3 } from "pex-math";
 import createGUI from "pex-gui";
 import random from "pex-random";
 
@@ -14,12 +14,50 @@ import { cube, torus, sphere, roundedCube } from "primitive-geometry";
 
 import { getEnvMap } from "./utils.js";
 
-random.seed(0);
+import dot from "./graph-viz.js";
+
+random.seed(2);
 
 const pixelRatio = devicePixelRatio;
 const ctx = createContext({ pixelRatio });
 const renderEngine = createRenderEngine({ ctx, debug: true });
 const world = createWorld();
+
+renderEngine.renderGraph.renderPass = (opts) => {
+  if (dot) {
+    const passId =
+      opts.pass?.id ||
+      "RenderPass " + renderEngine.renderGraph.renderPasses.length;
+    const passName = opts.name || opts.pass?.name || null;
+
+    dot.passNode(passId, passName.replace(" ", "\n"));
+
+    const colorTextureId = opts?.pass?.opts?.color?.[0].id;
+    const colorTextureName = opts?.pass?.opts?.color?.[0].name;
+    if (colorTextureId) {
+      dot.resourceNode(colorTextureId, colorTextureName.replace(" ", "\n"));
+      dot.edge(passId, colorTextureId);
+    } else {
+      dot.edge(passId, "Window");
+    }
+
+    const depthTextureId = opts?.pass?.opts?.depth?.id;
+    const depthTextureName = opts?.pass?.opts?.depth?.name;
+    if (depthTextureId) {
+      dot.resourceNode(depthTextureId, depthTextureName.replace(" ", "\n"));
+      dot.edge(passId, depthTextureId);
+    }
+    if (opts.uses) {
+      opts.uses.forEach((tex) => {
+        if (dot) dot.edge(tex.id, passId);
+      });
+    }
+  }
+
+  if (opts.uses && ctx.debugMode) console.log("render-graph uses", opts.uses);
+
+  renderEngine.renderGraph.renderPasses.push(opts);
+};
 
 // Entities
 const cameraEntity = createEntity({
@@ -31,6 +69,7 @@ const cameraEntity = createEntity({
 });
 world.add(cameraEntity);
 
+// - unlit
 const floorEntity = createEntity({
   transform: components.transform({ position: [0, -0.8, 0] }),
   geometry: components.geometry(cube({ sx: 10, sy: 0.01, sz: 10 })),
@@ -41,41 +80,37 @@ const floorEntity = createEntity({
     roughness: 1,
     receiveShadows: true,
     castShadows: true,
-
-    // depthWrite: true,
-    // blend: true,
-    // blendSrcRGBFactor: ctx.BlendFactor.Zero,
-    // blendSrcAlphaFactor: ctx.BlendFactor.Zero,
-    // blendDstRGBFactor: ctx.BlendFactor.SrcColor,
-    // blendDstAlphaFactor: ctx.BlendFactor.SrcAlpha,
   }),
 });
 world.add(floorEntity);
 
-const transmissionBlendOptions = {
-  blend: true,
-  blendSrcRGBFactor: ctx.BlendFactor.One,
-  blendSrcAlphaFactor: ctx.BlendFactor.One,
-  blendDstRGBFactor: ctx.BlendFactor.Zero,
-  blendDstAlphaFactor: ctx.BlendFactor.Zero,
+const BlendModes = {
+  refraction: {
+    blend: true,
+    blendSrcRGBFactor: ctx.BlendFactor.One,
+    blendSrcAlphaFactor: ctx.BlendFactor.One,
+    blendDstRGBFactor: ctx.BlendFactor.Zero,
+    blendDstAlphaFactor: ctx.BlendFactor.Zero,
+  },
+  "alpha-blend": {
+    blend: true,
+    blendSrcRGBFactor: ctx.BlendFactor.SrcAlpha,
+    blendSrcAlphaFactor: ctx.BlendFactor.One,
+    blendDstRGBFactor: ctx.BlendFactor.OneMinusSrcAlpha,
+    blendDstAlphaFactor: ctx.BlendFactor.One,
+  },
 };
 
+// - opaque
 const torusEntity = createEntity({
   transform: components.transform(),
   geometry: components.geometry(torus({ radius: 0.8, minorRadius: 0.1 })),
   material: components.material({
-    baseColor: [1.9, 0.5, 0.29, 0.75],
+    baseColor: [1.9, 0.5, 0.29, 1],
     metallic: 0,
     roughness: 0.05,
     receiveShadows: true,
     castShadows: true,
-    transmission: 0.6,
-    // refraction: 0.5,
-    // ...transmissionBlendOptions,
-    // blendSrcRGBFactor: ctx.BlendFactor.SrcAlpha,
-    // blendSrcAlphaFactor: ctx.BlendFactor.SrcAlpha,
-    // blendDstRGBFactor: ctx.BlendFactor.OneMinusSrcAlpha,
-    // blendDstAlphaFactor: ctx.BlendFactor.OneMinusSrcAlpha,
   }),
 });
 world.add(torusEntity);
@@ -87,6 +122,8 @@ const sphereEntity = createEntity({
     baseColor: [1, 1, 1, 1],
     metallic: 0,
     roughness: 0.1,
+    receiveShadows: true,
+    castShadows: true,
   }),
 });
 world.add(sphereEntity);
@@ -146,50 +183,51 @@ const g2 = {
   scales: [],
   colors: [],
 };
+const g3 = {
+  positions: [],
+  scales: [],
+  colors: [],
+};
 
 g.positions.forEach((p, i) => {
-  if (random.chance(0.3)) {
+  if (random.chance(0.2)) {
     g1.positions.push(p);
     g1.scales.push(g.scales[i]);
     g1.colors.push(g.colors[i]);
-  } else {
+  } else if (random.chance(0.5)) {
     g2.positions.push(p);
     g2.scales.push(g.scales[i]);
     g2.colors.push(g.colors[i]);
+  } else {
+    g3.positions.push(p);
+    g3.scales.push(g.scales[i]);
+    g3.colors.push(g.colors[i]);
   }
 });
 
-const cubesEntity = createEntity({
+// - transparent
+const transparentCubesEntity = createEntity({
   transform: components.transform({ scale: new Array(3).fill(0.5) }),
   geometry: components.geometry({
     ...roundedCube({ sx: 1, sy: 1, sz: 1, radius: 0.005 }),
-    //offsets: new Array(32).fill(0).map(() => random.vec3(2)),
     offsets: g1.positions,
     scales: g1.scales,
     colors: g1.colors,
-    // instances: 32,
     instances: g1.positions.length,
   }),
   material: components.material({
-    baseColor: [1, 1, 1, 1],
-    // baseColor: [0.2, 0.5, 1, 1],
+    baseColor: [1, 1, 1, 0.5],
     metallic: 0,
     roughness: 0.15,
-    // transmission: 0.6,
-    refraction: 0.5,
-    //opaque mesh = no blending, it will be handled by material
-    // blend: true,
-    blendSrcRGBFactor: ctx.BlendFactor.One,
-    blendSrcAlphaFactor: ctx.BlendFactor.One,
-    blendDstRGBFactor: ctx.BlendFactor.Zero,
-    blendDstAlphaFactor: ctx.BlendFactor.Zero,
     receiveShadows: true,
     castShadows: true,
+    ...BlendModes["alpha-blend"],
   }),
 });
-world.add(cubesEntity);
+world.add(transparentCubesEntity);
 
-const cubesEntity2 = createEntity({
+// - refraction
+const refractedCubesEntity = createEntity({
   transform: components.transform({ scale: new Array(3).fill(0.5) }),
   geometry: components.geometry({
     ...roundedCube({ sx: 1, sy: 1, sz: 1, radius: 0.05 }),
@@ -198,16 +236,41 @@ const cubesEntity2 = createEntity({
     instances: g2.positions.length,
   }),
   material: components.material({
+    baseColor: [1, 1, 1, 0.5],
+    metallic: 0,
+    roughness: 0.5,
+    receiveShadows: false,
+    refraction: 0.4,
+    ...BlendModes.refraction,
+  }),
+});
+world.add(refractedCubesEntity);
+
+// - transmission
+const transmittedCubesEntity = createEntity({
+  transform: components.transform({ scale: new Array(3).fill(0.5) }),
+  geometry: components.geometry({
+    ...roundedCube({ sx: 1, sy: 1, sz: 1, radius: 0.05 }),
+    offsets: g3.positions,
+    scales: g3.scales,
+    instances: g3.positions.length,
+  }),
+  material: components.material({
     baseColor: [1, 1, 1, 1],
     metallic: 0,
     roughness: 0.5,
-    transmission: 0.6,
-    refraction: 0.1,
+    transmission: 1,
     receiveShadows: false,
-    ...transmissionBlendOptions,
+    thickness: 0.9,
+    attenuationDistance: 0.15,
+    attenuationColor: [0.96, 0.82, 0.28],
+    dispersion: 10,
+    ior: 1.5,
+    specular: 0.1,
+    specularColor: [0, 0, 1],
   }),
 });
-world.add(cubesEntity2);
+world.add(transmittedCubesEntity);
 
 const skyEntity = createEntity({
   skybox: components.skybox({
@@ -248,11 +311,146 @@ world.add(directionalLightEntity2);
 
 // GUI
 const gui = createGUI(ctx);
+const unitOptions = { min: 0, max: 1 };
+gui.addColumn("Capture");
 gui.addFPSMeeter();
-gui.addParam("Refraction", cubesEntity2.material, "refraction", {
-  min: 0,
-  max: 1,
+const dummyTexture2D = ctx.texture2D({
+  name: "dummyTexture2D",
+  width: 4,
+  height: 4,
 });
+const guiCaptureControl = gui.addTexture2D("Capture", null, { flipY: true });
+gui.addRadioList(
+  "Debug",
+  renderEngine.renderers.find(
+    (renderer) => renderer.type == "standard-renderer",
+  ),
+  "debugRender",
+  [
+    "",
+
+    "data.texCoord0",
+    "data.texCoord1",
+    "data.normalView",
+    "data.tangentView",
+    "data.normalWorld",
+    "data.NdotV",
+
+    "data.transmission",
+    "data.opacity",
+    "data.roughness",
+    "data.metallic",
+    "data.linearRoughness",
+    "data.f0",
+    "data.reflectionWorld",
+    "data.directColor",
+    "data.diffuseColor",
+    "data.indirectDiffuse",
+    "data.indirectSpecular",
+
+    "data.transmitted",
+    "data.thickness",
+    "data.attenuationColor",
+    "data.attenuationDistance",
+    "data.dispersion",
+    "data.f90",
+    "data.ior",
+
+    "vNormalView",
+    "vNormalWorld",
+  ].map((value) => ({ name: value || "No debug", value })),
+);
+// renderEngine.renderers.find(
+//   (renderer) => renderer.type == "standard-renderer",
+// ).debugRender = "data.transmitted";
+
+gui.addColumn("Transparent");
+gui.addParam(
+  "Base color",
+  transparentCubesEntity.material,
+  "baseColor",
+  unitOptions,
+);
+gui.addColumn("Refraction");
+gui.addParam(
+  "Base color",
+  refractedCubesEntity.material,
+  "baseColor",
+  unitOptions,
+);
+gui.addParam(
+  "Roughness",
+  refractedCubesEntity.material,
+  "roughness",
+  unitOptions,
+);
+gui.addParam(
+  "Refraction",
+  refractedCubesEntity.material,
+  "refraction",
+  unitOptions,
+);
+
+gui.addColumn("Transmission");
+gui.addParam(
+  "Base color",
+  transmittedCubesEntity.material,
+  "baseColor",
+  unitOptions,
+);
+gui.addParam(
+  "Roughness",
+  transmittedCubesEntity.material,
+  "roughness",
+  unitOptions,
+);
+gui.addParam("IOR", transmittedCubesEntity.material, "ior", {
+  min: 1,
+  max: 2.42,
+});
+gui.addParam(
+  "Transmission",
+  transmittedCubesEntity.material,
+  "transmission",
+  unitOptions,
+);
+gui.addLabel("Volume");
+gui.addParam(
+  "Thickness",
+  transmittedCubesEntity.material,
+  "thickness",
+  unitOptions,
+);
+gui.addParam(
+  "Attenuation Distance",
+  transmittedCubesEntity.material,
+  "attenuationDistance",
+  { min: 0, max: 10 },
+);
+gui.addParam(
+  "Attenuation Color",
+  transmittedCubesEntity.material,
+  "attenuationColor",
+);
+gui.addLabel("Dispersion");
+gui.addParam(
+  "Dispersion Strength",
+  transmittedCubesEntity.material,
+  "dispersion",
+  { min: 0, max: 10 },
+);
+gui.addLabel("Specular");
+gui.addParam(
+  "Specular Strength",
+  transmittedCubesEntity.material,
+  "specular",
+  unitOptions,
+);
+gui.addParam(
+  "Specular Color",
+  transmittedCubesEntity.material,
+  "specularColor",
+);
 
 // Events
 let debugOnce = false;
@@ -270,7 +468,12 @@ window.addEventListener("keydown", ({ key }) => {
   if (key === "d") debugOnce = true;
 });
 
+let frame = 0;
+
 ctx.frame(() => {
+  frame++;
+
+  dot.reset();
   quat.fromAxisAngle(
     torusEntity.transform.rotation,
     [0, 1, 0],
@@ -281,10 +484,24 @@ ctx.frame(() => {
   renderEngine.update(world.entities);
   renderEngine.render(world.entities, cameraEntity);
 
+  const transparentBackgroundTexture = renderEngine.renderGraph.renderPasses
+    .find(({ name }) => name.startsWith("TransparentPass"))
+    ?.uses.find(({ name }) => name.startsWith("grabPassOutput"));
+  const transmissionBackgroundTexture = renderEngine.renderGraph.renderPasses
+    .find(({ name }) => name.startsWith("TransmissionPass"))
+    ?.uses.find(({ name }) => name.startsWith("grabPassOutput"));
+
+  guiCaptureControl.texture =
+    transmissionBackgroundTexture ||
+    transparentBackgroundTexture ||
+    dummyTexture2D;
+
   ctx.debug(debugOnce);
   debugOnce = false;
 
   gui.draw();
+
+  // if (frame == 1) dot.render();
 
   window.dispatchEvent(new CustomEvent("screenshot"));
 });
