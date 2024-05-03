@@ -24,7 +24,7 @@ export default (options) =>
         emissiveColor: undefined,
         metallic: 1,
         roughness: 1,
-        ior: 1.5, // ior = (1 + 0.4 * reflectance) / (1 - 0.4 * reflectance);
+        ior: 1.5,
         // specular: 1,
         // specularTexture,
         // specularColor: [1, 1, 1],

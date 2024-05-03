@@ -61,7 +61,6 @@ for (let i = 0; i < nW; i++) {
     roughness: 0,
     ior: 1.5,
     specular: i / 10,
-    // reflectance: i / 10,
   });
   materials["Clear Coat"] ||= [];
   materials["Clear Coat"].push({
