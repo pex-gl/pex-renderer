@@ -38,7 +38,7 @@
     "pex-loaders": "^0.0.1",
     "pex-math": "^4.1.0",
     "pex-random": "^2.0.0",
-    "pex-shaders": "^1.0.0-alpha.25"
+    "pex-shaders": "^1.0.0-alpha.26"
   },
   "devDependencies": {
     "@hpcc-js/wasm": "^2.16.1",
@@ -58,9 +58,9 @@
     "primitive-geometry": "^2.10.0"
   },
   "engines": {
-    "node": ">=20.0.0",
-    "npm": ">=9.6.4",
-    "snowdev": "2.0.0-alpha.26"
+    "node": ">=22.0.0",
+    "npm": ">=10.5.1",
+    "snowdev": "2.0.0-alpha.27"
   },
   "snowdev": {
     "dependencies": [
