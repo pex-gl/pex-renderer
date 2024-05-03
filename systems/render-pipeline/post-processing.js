@@ -192,7 +192,6 @@ export default ({ ctx, renderGraph, resourceCache }) => ({
         outputColor.name = postProcessingCmd.name;
 
         colorAttachments[postProcessingCmd.name] = outputColor;
-        window.colorAttachments = colorAttachments;
       });
     });
   },
