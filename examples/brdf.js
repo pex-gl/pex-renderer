@@ -54,12 +54,14 @@ for (let i = 0; i < nW; i++) {
     metallic: 1,
     roughness: i / 10,
   });
-  materials[`Reflectance`] ||= [];
-  materials[`Reflectance`].push({
+  materials[`Specular`] ||= [];
+  materials[`Specular`].push({
     baseColor: colors.blue,
     metallic: 0,
     roughness: 0,
-    reflectance: i / 10,
+    ior: 1.5,
+    specular: i / 10,
+    // reflectance: i / 10,
   });
   materials["Clear Coat"] ||= [];
   materials["Clear Coat"].push({
