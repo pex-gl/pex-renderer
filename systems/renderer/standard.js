@@ -38,7 +38,6 @@ const flagDefinitions = [
   [["material", "metallic"], "", { uniform: "uMetallic" }],
   [["material", "roughness"], "", { uniform: "uRoughness" }],
 
-  [["material", "reflectance"], "", { uniform: "uReflectance" }],
   [["material", "ior"], "USE_IOR", { uniform: "uIor" }],
   [["material", "specular"], "USE_SPECULAR", { uniform: "uSpecular" }],
   [["material", "specularTexture"], "SPECULAR_TEXTURE", { type: "texture", uniform: "uSpecularTexture", requires: "USE_SPECULAR" }],
@@ -68,8 +67,6 @@ const flagDefinitions = [
   [["material", "sheenColor"], "USE_SHEEN", { uniform: "uSheenColor" }],
   [["material", "sheenColorTexture"], "SHEEN_COLOR_TEXTURE", { uniform: "uSheenColorMap", requires: "USE_SHEEN" }],
   [["material", "sheenRoughness"], "", { uniform: "uSheenRoughness", requires: "USE_SHEEN" }],
-
-  [["material", "refraction"], "USE_REFRACTION", { uniform: "uRefraction", requires: "USE_BLEND" }],
 
   [["material", "transmission"], "", { uniform: "uTransmission", requires: "USE_TRANSMISSION" }],
   [["material", "transmissionTexture"], "TRANSMISSION_TEXTURE", { type: "texture", uniform: "uTransmissionTexture", requires: "USE_TRANSMISSION" }],

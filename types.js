@@ -168,8 +168,6 @@
  *
  * @property {number[]} [sheenColor]
  * @property {number} [sheenRoughness]
- *
- * @property {number} [reflectance] Represents a remapping of a percentage of reflectance (with a default of 4%: 0.16 * pow(0.5, 2) = 0.04) and replaces an explicit index of refraction (IOR)
 
  * @property {number} [transmission]
  * @property {ctx.texture2D | TextureTransform} [transmissionTexture]
