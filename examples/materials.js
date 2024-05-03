@@ -66,17 +66,15 @@ const materials = {
     blendDstRGBFactor: ctx.BlendFactor.OneMinusSrcAlpha,
     blendDstAlphaFactor: ctx.BlendFactor.One,
   },
-  Refraction: {
+  Transmission: {
     roughness: 0.5,
     metallic: 0,
-    baseColor: [1, 1, 1, 0.5],
-    transmission: 0.1,
-    refraction: 0.5,
-    blend: true,
-    blendSrcRGBFactor: ctx.BlendFactor.One,
-    blendSrcAlphaFactor: ctx.BlendFactor.One,
-    blendDstRGBFactor: ctx.BlendFactor.Zero,
-    blendDstAlphaFactor: ctx.BlendFactor.Zero,
+    baseColor: [1, 1, 1, 1],
+    transmission: 0.9,
+    thickness: 0.9,
+    attenuationDistance: 0.15,
+    attenuationColor: [0.96, 0.82, 0.82],
+    dispersion: 10,
   },
   // Base color map
   "Base Color Texture": {

@@ -25,6 +25,7 @@ const flagDefinitions = [
   [["options", "spotLights", "length"], "NUM_SPOT_LIGHTS", { type: "value" }],
   [["options", "areaLights", "length"], "NUM_AREA_LIGHTS", { type: "value" }],
   [["options", "reflectionProbes", "length"], "USE_REFLECTION_PROBES"],
+  [["options", "transmitted"], "USE_TRANSMISSION"],
 
   [["material", "unlit"], "USE_UNLIT_WORKFLOW", { fallback: "USE_METALLIC_ROUGHNESS_WORKFLOW" }],
   [["material", "blend"], "USE_BLEND"],
@@ -36,7 +37,12 @@ const flagDefinitions = [
   [["material", "baseColor"], "", { uniform: "uBaseColor" }],
   [["material", "metallic"], "", { uniform: "uMetallic" }],
   [["material", "roughness"], "", { uniform: "uRoughness" }],
-  [["material", "reflectance"], "", { uniform: "uReflectance" }],
+
+  [["material", "ior"], "USE_IOR", { uniform: "uIor" }],
+  [["material", "specular"], "USE_SPECULAR", { uniform: "uSpecular" }],
+  [["material", "specularTexture"], "SPECULAR_TEXTURE", { type: "texture", uniform: "uSpecularTexture", requires: "USE_SPECULAR" }],
+  [["material", "specularColor"], "", { uniform: "uSpecularColor", requires: "USE_SPECULAR", default: [1, 1, 1] }],
+  [["material", "specularColorTexture"], "SPECULAR_COLOR_TEXTURE", { type: "texture", uniform: "uSpecularColorTexture", requires: "USE_SPECULAR" }],
 
   [["material", "emissiveColor"], "USE_EMISSIVE_COLOR", { uniform: "uEmissiveColor" }],
   [["material", "emissiveIntensity"], "", { uniform: "uEmissiveIntensity", requires: "USE_EMISSIVE_COLOR", default: 1 }],
@@ -62,7 +68,13 @@ const flagDefinitions = [
   [["material", "sheenColorTexture"], "SHEEN_COLOR_TEXTURE", { uniform: "uSheenColorMap", requires: "USE_SHEEN" }],
   [["material", "sheenRoughness"], "", { uniform: "uSheenRoughness", requires: "USE_SHEEN" }],
 
-  [["material", "transmission"], "USE_TRANSMISSION", { uniform: "uTransmission", requires: "USE_BLEND" }],
+  [["material", "transmission"], "", { uniform: "uTransmission", requires: "USE_TRANSMISSION" }],
+  [["material", "transmissionTexture"], "TRANSMISSION_TEXTURE", { type: "texture", uniform: "uTransmissionTexture", requires: "USE_TRANSMISSION" }],
+  [["material", "thickness"], "", { uniform: "uThickness", requires: "USE_TRANSMISSION" }],
+  [["material", "thicknessTexture"], "THICKNESS_TEXTURE", { type: "texture", uniform: "uThicknessTexture", requires: "USE_TRANSMISSION" }],
+  [["material", "attenuationDistance"], "", { uniform: "uAttenuationDistance", requires: "USE_TRANSMISSION", default: Infinity }],
+  [["material", "attenuationColor"], "", { uniform: "uAttenuationColor", requires: "USE_TRANSMISSION", default: [1, 1, 1] }],
+  [["material", "dispersion"], "USE_DISPERSION", { uniform: "uDispersion", requires: "USE_TRANSMISSION" }],
 
   [["_geometry", "attributes", "aNormal"], "USE_NORMALS", { fallback: "USE_UNLIT_WORKFLOW" }],
   [["_geometry", "attributes", "aTangent"], "USE_TANGENTS"],
@@ -360,6 +372,7 @@ export default ({ ctx, shadowQuality = 3 }) => ({
     const {
       shadowMappingLight,
       transparent,
+      transmitted,
       backgroundColorTexture,
       attachmentsLocations = {},
     } = options;
@@ -376,9 +389,10 @@ export default ({ ctx, shadowQuality = 3 }) => ({
       depthPassOnly: shadowMapping,
       targets: {},
       shadowQuality: this.shadowQuality,
-      debugRender: !(shadowMapping || transparent) && this.debugRender,
+      debugRender: !shadowMapping && this.debugRender,
       attachmentsLocations,
       toneMap: renderView.toneMap,
+      transmitted,
     };
 
     const sharedUniforms = {
@@ -437,7 +451,8 @@ export default ({ ctx, shadowQuality = 3 }) => ({
         e.material &&
         e.material.type === undefined &&
         (!shadowMapping || e.material.castShadows) &&
-        (transparent ? e.material.blend : !e.material.blend),
+        (transparent ? e.material.blend : !e.material.blend) &&
+        (transmitted ? e.material.transmission : !e.material.transmission),
     );
 
     for (let i = 0; i < renderableEntities.length; i++) {
@@ -451,12 +466,6 @@ export default ({ ctx, shadowQuality = 3 }) => ({
       const uniforms = {
         uModelMatrix: entity._transform.modelMatrix, //FIXME: bypasses need for transformSystem access
         uPointSize: entity.material.pointSize ?? 1,
-        uRefraction:
-          // TODO: why 0.1 and move to flag definitions
-          0.1 *
-          (entity.material.refraction !== undefined
-            ? entity.material.refraction
-            : 0.5),
       };
 
       Object.assign(uniforms, sharedUniforms, this.uniforms);
@@ -475,7 +484,9 @@ export default ({ ctx, shadowQuality = 3 }) => ({
       // );
 
       ctx.submit({
-        name: transparent ? "drawTransparentGeometryCmd" : "drawGeometryCmd",
+        name: transparent
+          ? "drawTransparentGeometryCmd"
+          : `drawOpaque${transmitted ? "Transmitted" : ""}GeometryCmd`,
         pipeline,
         attributes: entity._geometry.attributes,
         indices: entity._geometry.indices,

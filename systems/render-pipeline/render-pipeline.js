@@ -47,6 +47,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
     entitiesInView,
     shadowMappingLight,
     transparent,
+    transmitted,
     backgroundColorTexture,
   }) {
     renderView.exposure ||= 1;
@@ -70,21 +71,34 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
           renderers[i].renderOpaque?.(
             renderView,
             this.cullEntities(entitiesInView, renderView.camera),
-            options,
+            {
+              ...options,
+              transmitted,
+              backgroundColorTexture: transmitted
+                ? backgroundColorTexture
+                : null,
+            },
           );
         }
-        for (let i = 0; i < renderers.length; i++) {
-          renderers[i].renderBackground?.(renderView, entitiesInView, options);
+        if (!transmitted) {
+          for (let i = 0; i < renderers.length; i++) {
+            renderers[i].renderBackground?.(
+              renderView,
+              entitiesInView,
+              options,
+            );
+          }
         }
       } else {
-        //TODO: capture color buffer and blur it for transmission/refraction
         for (let i = 0; i < renderers.length; i++) {
           renderers[i].renderTransparent?.(
             renderView,
             this.cullEntities(entitiesInView, renderView.camera),
             {
               ...options,
-              backgroundColorTexture,
+              backgroundColorTexture: transmitted
+                ? null
+                : backgroundColorTexture,
             },
           );
         }
@@ -287,13 +301,22 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
           entitiesInView,
           shadowMappingLight: false,
           transparent: false,
+          transmitted: false,
         });
       },
     });
 
+    const hasTransparent = entitiesInView.some(
+      (entity) => entity.material?.blend,
+    );
+    const hasTransmitted = entitiesInView.some(
+      (entity) => entity.material?.transmission,
+    );
+
     // Grab pass
     let grabPassColorCopyTexture;
-    if (entitiesInView.some((entity) => entity.material?.transmission)) {
+    let grabPassCopyCmd;
+    if (hasTransparent || hasTransmitted) {
       const viewport = [
         0,
         0,
@@ -310,7 +333,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
 
       const fullscreenTriangle = resourceCache.fullscreenTriangle();
 
-      const copyTextureCmd = {
+      grabPassCopyCmd = {
         name: "grabPassCopyTextureCmd",
         attributes: fullscreenTriangle.attributes,
         count: fullscreenTriangle.count,
@@ -324,41 +347,93 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
       };
 
       renderGraph.renderPass({
-        name: `GrabPass [${viewport}]`,
+        name: `GrabOpaquePass [${viewport}]`,
         uses: [colorAttachments.color],
         renderView: { ...renderView, viewport },
         pass: resourceCache.pass({
-          name: "grabPass",
+          name: "grabOpaquePass",
           color: [grabPassColorCopyTexture],
         }),
         render: () => {
-          ctx.submit(copyTextureCmd);
+          ctx.submit(grabPassCopyCmd);
         },
       });
     }
 
     // Transparent pass
-    renderGraph.renderPass({
-      name: `TransparentPass [${renderView.viewport}]`,
-      uses: [...shadowMaps, grabPassColorCopyTexture].filter(Boolean),
-      renderView: renderPassView,
-      pass: resourceCache.pass({
-        name: "transparentPass",
-        color: [colorAttachments.color],
-        depth: depthAttachment,
-      }),
-      render: () => {
-        this.drawMeshes({
-          renderers,
-          renderView,
-          colorAttachments: { color: colorAttachments.color },
-          entitiesInView,
-          shadowMappingLight: false,
-          transparent: true,
-          backgroundColorTexture: grabPassColorCopyTexture,
+    if (hasTransparent) {
+      renderGraph.renderPass({
+        name: `TransparentPass [${renderView.viewport}]`,
+        uses: [...shadowMaps, grabPassColorCopyTexture].filter(Boolean),
+        renderView: renderPassView,
+        pass: resourceCache.pass({
+          name: "transparentPass",
+          color: [colorAttachments.color],
+          depth: depthAttachment,
+        }),
+        render: () => {
+          this.drawMeshes({
+            renderers,
+            renderView,
+            colorAttachments: { color: colorAttachments.color },
+            entitiesInView,
+            shadowMappingLight: false,
+            transparent: true,
+            transmitted: false,
+            backgroundColorTexture: grabPassColorCopyTexture,
+          });
+        },
+      });
+    }
+
+    // Transmission pass
+    if (hasTransmitted) {
+      // Re-grab color with transparent
+      if (hasTransparent) {
+        const viewport = grabPassCopyCmd.uniforms.uViewport;
+        const copyUniforms = {
+          uniforms: {
+            uTexture: colorAttachments.color,
+          },
+        };
+
+        renderGraph.renderPass({
+          name: `GrabOpaqueAndTransparentPass [${viewport}]`,
+          uses: [colorAttachments.color],
+          renderView: { ...renderView, viewport },
+          pass: resourceCache.pass({
+            name: "grabOpaqueAndTransparentPass",
+            color: [grabPassColorCopyTexture],
+          }),
+          render: () => {
+            ctx.submit(grabPassCopyCmd, copyUniforms);
+          },
         });
-      },
-    });
+      }
+
+      renderGraph.renderPass({
+        name: `TransmissionPass [${renderView.viewport}]`,
+        uses: [...shadowMaps, grabPassColorCopyTexture],
+        renderView: renderPassView,
+        pass: resourceCache.pass({
+          name: "transmissionPass",
+          color: [colorAttachments.color],
+          depth: depthAttachment,
+        }),
+        render: () => {
+          this.drawMeshes({
+            renderers,
+            renderView,
+            colorAttachments: { color: colorAttachments.color },
+            entitiesInView,
+            shadowMappingLight: false,
+            transparent: false,
+            transmitted: true,
+            backgroundColorTexture: grabPassColorCopyTexture,
+          });
+        },
+      });
+    }
 
     // Post-processing pass
     if (postProcessing) {
