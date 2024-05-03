@@ -93,6 +93,14 @@ ctx.frame(() => {
 <dd></dd>
 </dl>
 
+## Functions
+
+<dl>
+<dt><a href="#default">default([components])</a> ⇒ <code><a href="#Entity">Entity</a></code></dt>
+<dd><p>Create an entity</p>
+</dd>
+</dl>
+
 ## Typedefs
 
 <dl>
@@ -758,7 +766,6 @@ Adds:
   - [.basic(options)](#module_renderer.basic) ⇒ [<code>RendererSystem</code>](#RendererSystem)
   - [.helper(options)](#module_renderer.helper) ⇒ [<code>RendererSystem</code>](#RendererSystem)
   - [.line(options)](#module_renderer.line) ⇒ [<code>RendererSystem</code>](#RendererSystem)
-  - [.postProcessing(options)](#module_renderer.postProcessing) ⇒ [<code>RendererSystem</code>](#RendererSystem)
   - [.skybox(options)](#module_renderer.skybox) ⇒ [<code>RendererSystem</code>](#RendererSystem)
   - [.standard(options)](#module_renderer.standard) ⇒ [<code>RendererSystem</code>](#RendererSystem)
 
@@ -807,18 +814,6 @@ Line renderer
 | ------- | -------------------------------------------- |
 | options | [<code>SystemOptions</code>](#SystemOptions) |
 
-<a name="module_renderer.postProcessing"></a>
-
-### renderer.postProcessing(options) ⇒ [<code>RendererSystem</code>](#RendererSystem)
-
-Post-Processing renderer
-
-**Kind**: static method of [<code>renderer</code>](#module_renderer)
-
-| Param   | Type                                         |
-| ------- | -------------------------------------------- |
-| options | [<code>SystemOptions</code>](#SystemOptions) |
-
 <a name="module_renderer.skybox"></a>
 
 ### renderer.skybox(options) ⇒ [<code>RendererSystem</code>](#RendererSystem)
@@ -845,6 +840,18 @@ Standard renderer
 | ------- | -------------------------------------------- |
 | options | [<code>SystemOptions</code>](#SystemOptions) |
 
+<a name="default"></a>
+
+## default([components]) ⇒ [<code>Entity</code>](#Entity)
+
+Create an entity
+
+**Kind**: global function
+
+| Param        | Type                           |
+| ------------ | ------------------------------ |
+| [components] | [<code>Entity</code>](#Entity) |
+
 <a name="Entity"></a>
 
 ## Entity : <code>object</code>
@@ -852,9 +859,32 @@ Standard renderer
 **Kind**: global typedef
 **Properties**
 
-| Name | Type                |
-| ---- | ------------------- |
-| id   | <code>number</code> |
+| Name                | Type                                                                                                                                                       |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| id                  | <code>number</code>                                                                                                                                        |
+| [ambientLight]      | [<code>AmbientLightComponentOptions</code>](#AmbientLightComponentOptions)                                                                                 |
+| [animation]         | [<code>AnimationComponentOptions</code>](#AnimationComponentOptions) \| [<code>Array.&lt;AnimationComponentOptions&gt;</code>](#AnimationComponentOptions) |
+| [areaLight]         | [<code>AreaLightComponentOptions</code>](#AreaLightComponentOptions)                                                                                       |
+| [axesHelper]        | [<code>AxesHelperComponentOptions</code>](#AxesHelperComponentOptions)                                                                                     |
+| [boundingBoxHelper] | [<code>BoundingBoxHelperComponentOptions</code>](#BoundingBoxHelperComponentOptions)                                                                       |
+| [cameraHelper]      | [<code>CameraHelperComponentOptions</code>](#CameraHelperComponentOptions)                                                                                 |
+| [camera]            | [<code>CameraComponentOptions</code>](#CameraComponentOptions)                                                                                             |
+| [directionalLight]  | [<code>DirectionalLightComponentOptions</code>](#DirectionalLightComponentOptions)                                                                         |
+| [geometry]          | [<code>GeometryComponentOptions</code>](#GeometryComponentOptions)                                                                                         |
+| [gridHelper]        | [<code>GridHelperComponentOptions</code>](#GridHelperComponentOptions)                                                                                     |
+| [lightHelper]       | [<code>LightHelperComponentOptions</code>](#LightHelperComponentOptions)                                                                                   |
+| [material]          | [<code>MaterialComponentOptions</code>](#MaterialComponentOptions)                                                                                         |
+| [morph]             | [<code>MorphComponentOptions</code>](#MorphComponentOptions)                                                                                               |
+| [orbiter]           | [<code>OrbiterComponentOptions</code>](#OrbiterComponentOptions)                                                                                           |
+| [overlay]           | [<code>OverlayComponentOptions</code>](#OverlayComponentOptions)                                                                                           |
+| [pointLight]        | [<code>PointLightComponentOptions</code>](#PointLightComponentOptions)                                                                                     |
+| [postProcessing]    | [<code>PostProcessingComponentOptions</code>](#PostProcessingComponentOptions)                                                                             |
+| [reflectionProbe]   | [<code>ReflectionProbeComponentOptions</code>](#ReflectionProbeComponentOptions)                                                                           |
+| [skin]              | [<code>SkinComponentOptions</code>](#SkinComponentOptions)                                                                                                 |
+| [skybox]            | [<code>SkyboxComponentOptions</code>](#SkyboxComponentOptions)                                                                                             |
+| [spotLight]         | [<code>SpotLightComponentOptions</code>](#SpotLightComponentOptions)                                                                                       |
+| [transform]         | [<code>TransformComponentOptions</code>](#TransformComponentOptions)                                                                                       |
+| [vertexHelper]      | [<code>VertexHelperComponentOptions</code>](#VertexHelperComponentOptions)                                                                                 |
 
 <a name="AmbientLightComponentOptions"></a>
 
@@ -1048,48 +1078,58 @@ Standard renderer
 **Kind**: global typedef
 **Properties**
 
-| Name                          | Type                                                                             | Default                            | Description                                                                                                                                                 |
-| ----------------------------- | -------------------------------------------------------------------------------- | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [unlit]                       | <code>boolean</code>                                                             |                                    |                                                                                                                                                             |
-| [type]                        | <code>undefined</code> \| <code>&quot;line&quot;</code>                          | <code>&quot;undefined&quot;</code> |                                                                                                                                                             |
-| [baseColor]                   | <code>Array.&lt;number&gt;</code>                                                | <code>[1, 1, 1, 1]</code>          |                                                                                                                                                             |
-| [emissiveColor]               | <code>Array.&lt;number&gt;</code>                                                | <code>&quot;undefined&quot;</code> |                                                                                                                                                             |
-| [emissiveIntensity]           | <code>number</code>                                                              | <code>1</code>                     |                                                                                                                                                             |
-| [metallic]                    | <code>number</code>                                                              | <code>1</code>                     |                                                                                                                                                             |
-| [roughness]                   | <code>number</code>                                                              | <code>1</code>                     |                                                                                                                                                             |
-| [baseColorTexture]            | <code>ctx.texture2D</code> \| [<code>TextureTransform</code>](#TextureTransform) |                                    |                                                                                                                                                             |
-| [emissiveColorTexture]        | <code>ctx.texture2D</code> \| [<code>TextureTransform</code>](#TextureTransform) |                                    |                                                                                                                                                             |
-| [normalTexture]               | <code>ctx.texture2D</code> \| [<code>TextureTransform</code>](#TextureTransform) |                                    |                                                                                                                                                             |
-| [normalTextureScale]          | <code>number</code>                                                              | <code>1</code>                     |                                                                                                                                                             |
-| [roughnessTexture]            | <code>ctx.texture2D</code> \| [<code>TextureTransform</code>](#TextureTransform) |                                    |                                                                                                                                                             |
-| [metallicTexture]             | <code>ctx.texture2D</code> \| [<code>TextureTransform</code>](#TextureTransform) |                                    |                                                                                                                                                             |
-| [metallicRoughnessTexture]    | <code>ctx.texture2D</code> \| [<code>TextureTransform</code>](#TextureTransform) |                                    |                                                                                                                                                             |
-| [occlusionTexture]            | <code>ctx.texture2D</code> \| [<code>TextureTransform</code>](#TextureTransform) |                                    |                                                                                                                                                             |
-| [clearCoat]                   | <code>number</code>                                                              |                                    |                                                                                                                                                             |
-| [clearCoatRoughness]          | <code>number</code>                                                              |                                    |                                                                                                                                                             |
-| [clearCoatTexture]            | <code>ctx.texture2D</code> \| [<code>TextureTransform</code>](#TextureTransform) |                                    |                                                                                                                                                             |
-| [clearCoatRoughnessTexture]   | <code>ctx.texture2D</code> \| [<code>TextureTransform</code>](#TextureTransform) |                                    |                                                                                                                                                             |
-| [clearCoatNormalTexture]      | <code>ctx.texture2D</code> \| [<code>TextureTransform</code>](#TextureTransform) |                                    |                                                                                                                                                             |
-| [clearCoatNormalTextureScale] | <code>number</code>                                                              |                                    |                                                                                                                                                             |
-| [sheenColor]                  | <code>Array.&lt;number&gt;</code>                                                |                                    |                                                                                                                                                             |
-| [sheenRoughness]              | <code>number</code>                                                              |                                    |                                                                                                                                                             |
-| [transmission]                | <code>number</code>                                                              |                                    |                                                                                                                                                             |
-| [reflectance]                 | <code>number</code>                                                              |                                    | Represents a remapping of a percentage of reflectance (with a default of 4%: 0.16 \* pow(0.5, 2) = 0.04) and replaces an explicit index of refraction (IOR) |
-| [alphaTest]                   | <code>number</code>                                                              | <code>&quot;undefined&quot;</code> |                                                                                                                                                             |
-| [alphaTexture]                | <code>ctx.texture2D</code> \| [<code>TextureTransform</code>](#TextureTransform) |                                    |                                                                                                                                                             |
-| [depthTest]                   | <code>boolean</code>                                                             | <code>true</code>                  |                                                                                                                                                             |
-| [depthWrite]                  | <code>boolean</code>                                                             | <code>true</code>                  |                                                                                                                                                             |
-| [depthFunc]                   | <code>ctx.DepthFunc</code>                                                       | <code>ctx.DepthFunc.Less</code>    |                                                                                                                                                             |
-| [blend]                       | <code>boolean</code>                                                             | <code>false</code>                 |                                                                                                                                                             |
-| [blendSrcRGBFactor]           | <code>ctx.BlendFactor</code>                                                     | <code>&quot;undefined&quot;</code> |                                                                                                                                                             |
-| [blendSrcAlphaFactor]         | <code>ctx.BlendFactor</code>                                                     | <code>&quot;undefined&quot;</code> |                                                                                                                                                             |
-| [blendDstRGBFactor]           | <code>ctx.BlendFactor</code>                                                     | <code>&quot;undefined&quot;</code> |                                                                                                                                                             |
-| [blendDstAlphaFactor]         | <code>ctx.BlendFactor</code>                                                     | <code>&quot;undefined&quot;</code> |                                                                                                                                                             |
-| [cullFace]                    | <code>boolean</code>                                                             | <code>true</code>                  |                                                                                                                                                             |
-| [cullFaceMode]                | <code>ctx.Face</code>                                                            | <code>ctx.Face.Back</code>         |                                                                                                                                                             |
-| [pointSize]                   | <code>number</code>                                                              | <code>1</code>                     |                                                                                                                                                             |
-| [castShadows]                 | <code>boolean</code>                                                             | <code>false</code>                 |                                                                                                                                                             |
-| [receiveShadows]              | <code>boolean</code>                                                             | <code>false</code>                 |                                                                                                                                                             |
+| Name                          | Type                                                                             | Default                            |
+| ----------------------------- | -------------------------------------------------------------------------------- | ---------------------------------- |
+| [unlit]                       | <code>boolean</code>                                                             |                                    |
+| [type]                        | <code>undefined</code> \| <code>&quot;line&quot;</code>                          | <code>&quot;undefined&quot;</code> |
+| [baseColor]                   | <code>Array.&lt;number&gt;</code>                                                | <code>[1, 1, 1, 1]</code>          |
+| [emissiveColor]               | <code>Array.&lt;number&gt;</code>                                                | <code>&quot;undefined&quot;</code> |
+| [emissiveIntensity]           | <code>number</code>                                                              | <code>1</code>                     |
+| [metallic]                    | <code>number</code>                                                              | <code>1</code>                     |
+| [roughness]                   | <code>number</code>                                                              | <code>1</code>                     |
+| [ior]                         | <code>number</code>                                                              |                                    |
+| [specular]                    | <code>number</code>                                                              |                                    |
+| [specularTexture]             | <code>ctx.texture2D</code> \| [<code>TextureTransform</code>](#TextureTransform) |                                    |
+| [specularColor]               | <code>Array.&lt;number&gt;</code>                                                | <code>[1, 1, 1]</code>             |
+| [specularColorTexture]        | <code>ctx.texture2D</code> \| [<code>TextureTransform</code>](#TextureTransform) |                                    |
+| [baseColorTexture]            | <code>ctx.texture2D</code> \| [<code>TextureTransform</code>](#TextureTransform) |                                    |
+| [emissiveColorTexture]        | <code>ctx.texture2D</code> \| [<code>TextureTransform</code>](#TextureTransform) |                                    |
+| [normalTexture]               | <code>ctx.texture2D</code> \| [<code>TextureTransform</code>](#TextureTransform) |                                    |
+| [normalTextureScale]          | <code>number</code>                                                              | <code>1</code>                     |
+| [roughnessTexture]            | <code>ctx.texture2D</code> \| [<code>TextureTransform</code>](#TextureTransform) |                                    |
+| [metallicTexture]             | <code>ctx.texture2D</code> \| [<code>TextureTransform</code>](#TextureTransform) |                                    |
+| [metallicRoughnessTexture]    | <code>ctx.texture2D</code> \| [<code>TextureTransform</code>](#TextureTransform) |                                    |
+| [occlusionTexture]            | <code>ctx.texture2D</code> \| [<code>TextureTransform</code>](#TextureTransform) |                                    |
+| [clearCoat]                   | <code>number</code>                                                              |                                    |
+| [clearCoatRoughness]          | <code>number</code>                                                              |                                    |
+| [clearCoatTexture]            | <code>ctx.texture2D</code> \| [<code>TextureTransform</code>](#TextureTransform) |                                    |
+| [clearCoatRoughnessTexture]   | <code>ctx.texture2D</code> \| [<code>TextureTransform</code>](#TextureTransform) |                                    |
+| [clearCoatNormalTexture]      | <code>ctx.texture2D</code> \| [<code>TextureTransform</code>](#TextureTransform) |                                    |
+| [clearCoatNormalTextureScale] | <code>number</code>                                                              |                                    |
+| [sheenColor]                  | <code>Array.&lt;number&gt;</code>                                                |                                    |
+| [sheenRoughness]              | <code>number</code>                                                              |                                    |
+| [transmission]                | <code>number</code>                                                              |                                    |
+| [transmissionTexture]         | <code>ctx.texture2D</code> \| [<code>TextureTransform</code>](#TextureTransform) |                                    |
+| [thickness]                   | <code>number</code>                                                              |                                    |
+| [thicknessTexture]            | <code>ctx.texture2D</code> \| [<code>TextureTransform</code>](#TextureTransform) |                                    |
+| [attenuationDistance]         | <code>number</code>                                                              |                                    |
+| [attenuationColor]            | <code>Array.&lt;number&gt;</code>                                                |                                    |
+| [dispersion]                  | <code>number</code>                                                              |                                    |
+| [alphaTest]                   | <code>number</code>                                                              | <code>&quot;undefined&quot;</code> |
+| [alphaTexture]                | <code>ctx.texture2D</code> \| [<code>TextureTransform</code>](#TextureTransform) |                                    |
+| [depthTest]                   | <code>boolean</code>                                                             | <code>true</code>                  |
+| [depthWrite]                  | <code>boolean</code>                                                             | <code>true</code>                  |
+| [depthFunc]                   | <code>ctx.DepthFunc</code>                                                       | <code>ctx.DepthFunc.Less</code>    |
+| [blend]                       | <code>boolean</code>                                                             | <code>false</code>                 |
+| [blendSrcRGBFactor]           | <code>ctx.BlendFactor</code>                                                     | <code>&quot;undefined&quot;</code> |
+| [blendSrcAlphaFactor]         | <code>ctx.BlendFactor</code>                                                     | <code>&quot;undefined&quot;</code> |
+| [blendDstRGBFactor]           | <code>ctx.BlendFactor</code>                                                     | <code>&quot;undefined&quot;</code> |
+| [blendDstAlphaFactor]         | <code>ctx.BlendFactor</code>                                                     | <code>&quot;undefined&quot;</code> |
+| [cullFace]                    | <code>boolean</code>                                                             | <code>true</code>                  |
+| [cullFaceMode]                | <code>ctx.Face</code>                                                            | <code>ctx.Face.Back</code>         |
+| [pointSize]                   | <code>number</code>                                                              | <code>1</code>                     |
+| [castShadows]                 | <code>boolean</code>                                                             | <code>false</code>                 |
+| [receiveShadows]              | <code>boolean</code>                                                             | <code>false</code>                 |
 
 <a name="LineMaterialComponentOptions"></a>
 

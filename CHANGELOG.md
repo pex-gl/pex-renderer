@@ -2,6 +2,30 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+# [4.0.0-alpha.49](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.48...v4.0.0-alpha.49) (2024-05-03)
+
+
+### Bug Fixes
+
+* change default ssao scale back to 1 ([82c54dc](https://github.com/pex-gl/pex-renderer/commit/82c54dcf5edda566aec425064f586ad9d024846a))
+* createPipelineCache() typo ([f32dda5](https://github.com/pex-gl/pex-renderer/commit/f32dda58b9282620e944c578805ed6512d5a39ee))
+* ensure ssao mix happens before dof ([408c853](https://github.com/pex-gl/pex-renderer/commit/408c853fa3f211ffcd42e80fabe7eea436976a2e))
+* make all examples run again with new render-pipeline ([a4149c6](https://github.com/pex-gl/pex-renderer/commit/a4149c6e59f98afce8ebc6adeb083f762ff201d1))
+* only use color attachment for transmission pass ([27ce9f6](https://github.com/pex-gl/pex-renderer/commit/27ce9f6149fb3eb9a2e79b6fced795ee09df24a5))
+* remove ssao replace in post processing final effect ([41aec01](https://github.com/pex-gl/pex-renderer/commit/41aec01e7f0857b615ea913bebbe01474caa7434))
+* use uniforms instead of this.uniforms for shadersPostReplace ([041ea8b](https://github.com/pex-gl/pex-renderer/commit/041ea8b9679d53620aa2ab9392db0a6117edbf7e))
+* wrong import paths in pipeline-cache ([d11858d](https://github.com/pex-gl/pex-renderer/commit/d11858da160e1de9fb546c8cf81a83e25549daf9))
+
+
+### Features
+
+* add transmission ([878490c](https://github.com/pex-gl/pex-renderer/commit/878490c3107dba697eb7ce51d0148515914181d9))
+* **gltf:** warn of unsupported extensions + error required extensions ([22d972b](https://github.com/pex-gl/pex-renderer/commit/22d972b707ff871106ccd16e1d2ade0903305112))
+* improve graphviz scaling ([76b26d8](https://github.com/pex-gl/pex-renderer/commit/76b26d81a5e221d493e300fedd031c6fbce07387))
+* remove reflectance and old transmission aka refraction ([280bf43](https://github.com/pex-gl/pex-renderer/commit/280bf43107fbf990fed88bb46508c67799411db5))
+
+
+
 # [4.0.0-alpha.48](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.47...v4.0.0-alpha.48) (2024-03-08)
 
 
