@@ -281,8 +281,6 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
       viewport: [0, 0, renderView.viewport[2], renderView.viewport[3]],
     };
 
-    const opaqueAttachments = Object.values(colorAttachments);
-
     // Main pass
     renderGraph.renderPass({
       name: `MainPass [${renderView.viewport}]`,
@@ -290,7 +288,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
       renderView: renderPassView,
       pass: resourceCache.pass({
         name: "mainPass",
-        color: opaqueAttachments,
+        color: Object.values(colorAttachments),
         depth: depthAttachment,
         clearColor: renderView.camera.clearColor,
         clearDepth: 1,
@@ -419,7 +417,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
         renderView: renderPassView,
         pass: resourceCache.pass({
           name: "transmissionPass",
-          color: opaqueAttachments,
+          color: [colorAttachments.color],
           depth: depthAttachment,
         }),
         render: () => {
