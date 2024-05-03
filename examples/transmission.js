@@ -183,25 +183,16 @@ const g2 = {
   scales: [],
   colors: [],
 };
-const g3 = {
-  positions: [],
-  scales: [],
-  colors: [],
-};
 
 g.positions.forEach((p, i) => {
   if (random.chance(0.2)) {
     g1.positions.push(p);
     g1.scales.push(g.scales[i]);
     g1.colors.push(g.colors[i]);
-  } else if (random.chance(0.5)) {
+  } else {
     g2.positions.push(p);
     g2.scales.push(g.scales[i]);
     g2.colors.push(g.colors[i]);
-  } else {
-    g3.positions.push(p);
-    g3.scales.push(g.scales[i]);
-    g3.colors.push(g.colors[i]);
   }
 });
 
@@ -226,34 +217,14 @@ const transparentCubesEntity = createEntity({
 });
 world.add(transparentCubesEntity);
 
-// - refraction
-const refractedCubesEntity = createEntity({
+// - transmission
+const transmittedCubesEntity = createEntity({
   transform: components.transform({ scale: new Array(3).fill(0.5) }),
   geometry: components.geometry({
     ...roundedCube({ sx: 1, sy: 1, sz: 1, radius: 0.05 }),
     offsets: g2.positions,
     scales: g2.scales,
     instances: g2.positions.length,
-  }),
-  material: components.material({
-    baseColor: [1, 1, 1, 0.5],
-    metallic: 0,
-    roughness: 0.5,
-    receiveShadows: false,
-    refraction: 0.4,
-    ...BlendModes.refraction,
-  }),
-});
-world.add(refractedCubesEntity);
-
-// - transmission
-const transmittedCubesEntity = createEntity({
-  transform: components.transform({ scale: new Array(3).fill(0.5) }),
-  geometry: components.geometry({
-    ...roundedCube({ sx: 1, sy: 1, sz: 1, radius: 0.05 }),
-    offsets: g3.positions,
-    scales: g3.scales,
-    instances: g3.positions.length,
   }),
   material: components.material({
     baseColor: [1, 1, 1, 1],
@@ -274,7 +245,7 @@ world.add(transmittedCubesEntity);
 
 const skyEntity = createEntity({
   skybox: components.skybox({
-    backgroundBlur: true,
+    backgroundBlur: false,
     envMap: await getEnvMap(ctx, "assets/envmaps/garage/garage.hdr"),
   }),
   reflectionProbe: components.reflectionProbe(),
@@ -369,25 +340,6 @@ gui.addParam(
   "Base color",
   transparentCubesEntity.material,
   "baseColor",
-  unitOptions,
-);
-gui.addColumn("Refraction");
-gui.addParam(
-  "Base color",
-  refractedCubesEntity.material,
-  "baseColor",
-  unitOptions,
-);
-gui.addParam(
-  "Roughness",
-  refractedCubesEntity.material,
-  "roughness",
-  unitOptions,
-);
-gui.addParam(
-  "Refraction",
-  refractedCubesEntity.material,
-  "refraction",
   unitOptions,
 );
 

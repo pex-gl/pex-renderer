@@ -29,7 +29,7 @@
     // Materials
     "materials",
     "brdf",
-    "refraction",
+    "transmission",
     "clear-coat",
     "point-size",
   ];
