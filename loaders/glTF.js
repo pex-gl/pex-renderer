@@ -1322,7 +1322,18 @@ async function loadGltf(url, options = {}) {
   // Check required extensions
   // https://www.khronos.org/registry/glTF/specs/2.0/glTF-2.0.html#specifying-extensions
   if (json.extensionsRequired) {
-    const unsupportedExtensions = json.extensionsRequired.filter(
+    const requiredExtensions = json.extensionsRequired.filter(
+      (extension) => !SUPPORTED_EXTENSIONS.includes(extension),
+    );
+    if (requiredExtensions.length) {
+      console.error(
+        "glTF loader: missing required extensions",
+        requiredExtensions,
+      );
+    }
+  }
+  if (json.extensionsUsed) {
+    const unsupportedExtensions = json.extensionsUsed.filter(
       (extension) => !SUPPORTED_EXTENSIONS.includes(extension),
     );
     if (unsupportedExtensions.length) {
