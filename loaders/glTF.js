@@ -644,7 +644,7 @@ async function handlePrimitive(
 
     // If the loader does support the Draco extension, but will not process KHR_draco_mesh_compression, then the loader must load the glTF asset ignoring KHR_draco_mesh_compression in primitive.
     try {
-      geometryProps = await loadDraco(bufferView._data, ctx.gl, {
+      geometryProps = await loadDraco(bufferView._data, {
         transcodeConfig: {
           attributeIDs,
           attributeTypes,
@@ -1408,8 +1408,8 @@ async function loadGltf(url, options = {}) {
             bufferView.byteOffset + bufferView.byteLength,
           );
           if (image.mimeType === "image/ktx2") {
-            image._img = await loadKtx2(data, ctx.gl, {
-              basisOptions: opts.basisOptions,
+            image._img = await loadKtx2(data, {
+              basisOptions: { gl: ctx.gl, ...opts.basisOptions },
             });
           } else {
             const blob = new Blob([data], { type: image.mimeType });
@@ -1426,8 +1426,9 @@ async function loadGltf(url, options = {}) {
         } else {
           const url = decodeURIComponent([basePath, image.uri].join("/"));
           if (image.uri.endsWith(".ktx2")) {
-            image._img = await loadKtx2(url, ctx.gl, {
-              basisOptions: opts.basisOptions,
+            image._img = await loadKtx2(url, {
+              gl: ctx.gl,
+              basisOptions: { gl: ctx.gl, ...opts.basisOptions },
             });
           } else {
             image._img = opts.supportImageBitmap

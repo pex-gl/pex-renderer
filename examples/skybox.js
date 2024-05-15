@@ -6,7 +6,7 @@ import {
 } from "../index.js";
 
 import createContext from "pex-context";
-import { quat, vec3 } from "pex-math";
+import { quat } from "pex-math";
 import createGUI from "pex-gui";
 
 import { sphere } from "primitive-geometry";
@@ -15,6 +15,7 @@ import { getEnvMap, updateSunPosition } from "./utils.js";
 
 const State = {
   envMap: false,
+  ultraHdr: false,
   backgroundBlur: 0,
   rotation: 0,
   // rotation: 1.5 * Math.PI,
@@ -56,9 +57,13 @@ const geometryEntity = createEntity({
 });
 world.add(geometryEntity);
 
-const envMap = await getEnvMap(
+const ultraHdr = await getEnvMap(
   ctx,
-  "assets/envmaps/Mono_Lake_B/Mono_Lake_B.hdr",
+  "assets/envmaps/Ditch-River_2k/Ditch-River_2k_0.9.jpg",
+);
+const hdrMap = await getEnvMap(
+  ctx,
+  "assets/envmaps/Ditch-River_2k/Ditch-River_2k.hdr",
 );
 
 const skyboxEntity = createEntity({
@@ -68,7 +73,6 @@ const skyboxEntity = createEntity({
   skybox: components.skybox({
     sunPosition: [0, 0.05, -1],
     backgroundBlur: State.backgroundBlur,
-    envMap: State.envMap ? envMap : false,
     exposure: 1,
   }),
 });
@@ -82,11 +86,23 @@ const reflectionProbeEntity = createEntity({
 });
 world.add(reflectionProbeEntity);
 
+const updateEnvMap = () => {
+  skyboxEntity.skybox.envMap = State.envMap
+    ? State.ultraHdr
+      ? ultraHdr
+      : hdrMap
+    : null;
+  reflectionProbeEntity.reflectionProbe.dirty = true;
+};
+
+updateEnvMap();
+
 // Update for GUI
 renderEngine.update(world.entities);
 renderEngine.render(world.entities, cameraEntity);
 
 // GUI
+let guiEnvMapTextureControl;
 const gui = createGUI(ctx);
 gui.addColumn("Scene");
 gui.addLabel("Camera");
@@ -102,7 +118,12 @@ gui.addParam("Metallic", geometryEntity.material, "metallic");
 gui.addColumn("Skybox");
 
 gui.addParam("EnvMap", State, "envMap", {}, (enabled) => {
-  skyboxEntity.skybox.envMap = enabled ? envMap : null;
+  updateEnvMap();
+});
+gui.addParam("Ultra HDR", State, "ultraHdr", {}, (enabled) => {
+  updateEnvMap();
+
+  guiEnvMapTextureControl.options.flipY = enabled;
 });
 gui.addParam("BG Blur", skyboxEntity.skybox, "backgroundBlur");
 gui.addParam("Exposure", skyboxEntity.skybox, "exposure", {
@@ -190,7 +211,7 @@ const dummyTexture2D = ctx.texture2D({
   height: 1,
 });
 const guiSkyTextureControl = gui.addTexture2D("Sky", null, { flipY: true });
-const guiEnvMapTextureControl = gui.addTexture2D("Env Map", null);
+guiEnvMapTextureControl = gui.addTexture2D("Env Map", null, { flipY: false });
 gui.addTextureCube(
   "Reflection Cubemap",
   reflectionProbeEntity._reflectionProbe._dynamicCubemap,
