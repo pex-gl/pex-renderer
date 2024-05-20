@@ -67,6 +67,7 @@ const flagDefinitions = [
   [["material", "sheenColor"], "USE_SHEEN", { uniform: "uSheenColor" }],
   [["material", "sheenColorTexture"], "SHEEN_COLOR_TEXTURE", { uniform: "uSheenColorMap", requires: "USE_SHEEN" }],
   [["material", "sheenRoughness"], "", { uniform: "uSheenRoughness", requires: "USE_SHEEN" }],
+  [["material", "sheenRoughnessTexture"], "", { uniform: "uSheenRoughnessTexture", requires: "USE_SHEEN" }],
 
   [["material", "transmission"], "", { uniform: "uTransmission", requires: "USE_TRANSMISSION" }],
   [["material", "transmissionTexture"], "TRANSMISSION_TEXTURE", { type: "texture", uniform: "uTransmissionTexture", requires: "USE_TRANSMISSION" }],

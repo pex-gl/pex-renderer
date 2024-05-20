@@ -363,8 +363,11 @@ function handleMaterial(material, gltf, ctx) {
       // https://github.com/KhronosGroup/glTF/tree/main/extensions/2.0/Khronos/KHR_materials_sheen#sheen
       if (material.extensions.KHR_materials_sheen) {
         const sheenExt = material.extensions.KHR_materials_sheen;
-        materialProps.sheenColor = [...sheenExt.sheenColorFactor, 1.0];
-        materialProps.sheenRoughness = sheenExt.sheenRoughnessFactor;
+        materialProps.sheenColor = [
+          ...(sheenExt.sheenColorFactor || [0, 0, 0]),
+          1,
+        ];
+        materialProps.sheenRoughness = sheenExt.sheenRoughnessFactor ?? 0;
         materialProps.normalTextureScale = 1; // TODO: why?
         if (sheenExt.sheenColorTexture) {
           materialProps.sheenColorTexture = getPexMaterialTexture(
@@ -379,8 +382,11 @@ function handleMaterial(material, gltf, ctx) {
             sheenExt.sheenColorTexture.index !==
             sheenExt.sheenRoughnessTexture.index
           ) {
-            throw new Error(
-              "Sheen roughnes texture is different from sheen color texture. Not supported.",
+            materialProps.sheenRoughnessTexture = getPexMaterialTexture(
+              sheenExt.sheenRoughnessTexture,
+              gltf,
+              ctx,
+              ctx.Encoding.Linear,
             );
           }
         }
