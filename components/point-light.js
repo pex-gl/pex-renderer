@@ -9,8 +9,8 @@ export default (options) => ({
   intensity: 1,
   range: 10,
   bias: 0.1,
+  bulbRadius: 1,
   castShadows: true,
-  radius: 1,
   // shadowMapSize: 2048, //TODO: MARCIN: why is this commented out?
   ...options,
 });

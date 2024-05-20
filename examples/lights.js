@@ -99,8 +99,8 @@ const directionalLightEntity = createEntity({
   directionalLight: components.directionalLight({
     color: [1, 1, 0, 1],
     intensity: 1,
+    bulbRadius: 10,
     castShadows: true,
-    radius: 10,
     // shadowMapSize: 2048,
   }),
   lightHelper: components.lightHelper(),
@@ -131,8 +131,8 @@ const spotLightEntity = createEntity({
     range: 5,
     angle: Math.PI / 6,
     innerAngle: Math.PI / 12,
+    bulbRadius: 10,
     castShadows: true,
-    radius: 10,
     // shadowMapSize: 2048,
   }),
   lightHelper: components.lightHelper(),
@@ -160,8 +160,8 @@ const pointLightEntity = createEntity({
     color: [1, 1, 0, 1],
     intensity: 1,
     range: 5,
+    bulbRadius: 10,
     castShadows: true,
-    radius: 10,
     // shadowMapSize: 512,
   }),
   lightHelper: components.lightHelper(),
@@ -190,8 +190,8 @@ const areaLightEntity = createEntity({
     color: [1, 1, 0, 1],
     intensity: 1,
     disk: true,
+    bulbRadius: 10,
     castShadows: true,
-    radius: 10,
   }),
   lightHelper: components.lightHelper(),
 });
@@ -244,7 +244,7 @@ gui.addParam(
   "intensity",
   { min: 0, max: 20 },
 );
-gui.addParam("Radius", directionalLightEntity.directionalLight, "radius", {
+gui.addParam("Bulb Radius", directionalLightEntity.directionalLight, "bulbRadius", {
   min: 0,
   max: 100,
 });
@@ -269,7 +269,7 @@ gui.addParam("Inner angle", spotLightEntity.spotLight, "innerAngle", {
   min: 0,
   max: Math.PI / 2 - Number.EPSILON,
 });
-gui.addParam("Radius", spotLightEntity.spotLight, "radius", {
+gui.addParam("Bulb Radius", spotLightEntity.spotLight, "bulbRadius", {
   min: 0,
   max: 100,
 });
@@ -287,7 +287,7 @@ gui.addParam("Intensity", pointLightEntity.pointLight, "intensity", {
   min: 0,
   max: 20,
 });
-gui.addParam("Radius", pointLightEntity.pointLight, "radius", {
+gui.addParam("Bulb Radius", pointLightEntity.pointLight, "bulbRadius", {
   min: 0,
   max: 100,
 });
@@ -307,7 +307,7 @@ gui.addParam("Height", areaLightEntity.transform.scale, "1", {
   min: 0,
   max: 20,
 });
-gui.addParam("Radius", areaLightEntity.areaLight, "radius", {
+gui.addParam("Bulb Radius", areaLightEntity.areaLight, "bulbRadius", {
   min: 0,
   max: 100,
 });

@@ -53,10 +53,10 @@ export default ({ renderGraph, resourceCache }) => ({
 
     light._radiusUV = [
       (1 / TEMP_VEC3[0]) *
-        (light.radius *
+        (light.bulbRadius *
           (lightEntity.areaLight ? lightEntity.transform.scale[0] : 1)),
       (1 / TEMP_VEC3[1]) *
-        (light.radius *
+        (light.bulbRadius *
           (lightEntity.areaLight ? lightEntity.transform.scale[1] : 1)),
     ];
   },

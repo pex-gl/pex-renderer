@@ -279,7 +279,7 @@ export default ({ ctx, shadowQuality = 3 }) => ({
       sharedUniforms[`${uniform}castShadows`] = shadows;
 
       sharedUniforms[`${uniform}bias`] = light.bias;
-      sharedUniforms[`${uniform}radius`] = light.radius;
+      sharedUniforms[`${uniform}radius`] = light.bulbRadius;
       sharedUniforms[`${uniform}shadowMapSize`] = shadows
         ? [light._shadowCubemap.width, light._shadowCubemap.height]
         : [0, 0];

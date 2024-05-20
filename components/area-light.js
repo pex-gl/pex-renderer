@@ -10,8 +10,8 @@ export default (options) => ({
   disk: false,
   doubleSided: false,
   bias: 0.1,
+  bulbRadius: 1,
   castShadows: true,
-  radius: 1,
   // shadowMapSize: 2048,
   ...options,
 });
