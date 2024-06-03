@@ -16,6 +16,8 @@ import { dragon } from "./utils.js";
 
 const State = {
   animate: true,
+  shadowMapSizeIndex: 2,
+  shadowMapSizes: ["512", "1024", "2048", "4096"],
 };
 
 const pixelRatio = devicePixelRatio;
@@ -208,6 +210,31 @@ const fixAreaLightEntity = createEntity({
   lightHelper: components.lightHelper(),
 });
 world.add(fixAreaLightEntity);
+const rotate = (t) => {
+  const phi = Math.PI * 2 * t;
+  const position = [Math.cos(phi), 1, Math.sin(phi)];
+  const rotation = quat.fromDirection(
+    quat.create(),
+    position.map((n) => -n),
+  );
+
+  directionalLightEntity.transform.position = position;
+  directionalLightEntity.transform.rotation = rotation;
+
+  spotLightEntity.transform.position = position;
+  spotLightEntity.transform.rotation = rotation;
+
+  pointLightEntity.transform.position = position;
+
+  areaLightEntity.transform.position = position;
+  areaLightEntity.transform.rotation = rotation;
+
+  directionalLightEntity.transform.dirty =
+    spotLightEntity.transform.dirty =
+    pointLightEntity.transform.dirty =
+    areaLightEntity.transform.dirty =
+      true;
+};
 
 // GUI
 const gui = createGUI(ctx);
@@ -229,6 +256,25 @@ const getViewportPosition = (layer, offset = [10, 10]) =>
 
 gui.addHeader("Global").setPosition(...getViewportPosition(LAYERS[0]));
 gui.addParam("Animate", State, "animate");
+gui.addRadioList(
+  "Map Size",
+  State,
+  "shadowMapSizeIndex",
+  State.shadowMapSizes.map((name, value) => ({ name, value })),
+  () => {
+    const shadowMapSize = State.shadowMapSizes[State.shadowMapSizeIndex];
+    directionalLightEntity.directionalLight.shadowMapSize =
+      fixDirectionalLightEntity.directionalLight.shadowMapSize =
+      spotLightEntity.spotLight.shadowMapSize =
+      fixSpotLightEntity.spotLight.shadowMapSize =
+      pointLightEntity.pointLight.shadowMapSize =
+      fixPointLightEntity.pointLight.shadowMapSize =
+      areaLightEntity.areaLight.shadowMapSize =
+      fixAreaLightEntity.areaLight.shadowMapSize =
+        shadowMapSize;
+  },
+);
+
 const standardRendererSystem = renderEngine.renderers.find(
   (renderer) => renderer.type == "standard-renderer",
 );
@@ -331,29 +377,7 @@ ctx.frame(() => {
     const now = (performance.now() * 0.001) / 3;
     // const now = Math.PI * 1.5;
     // State.animate = false;
-
-    const position = [Math.cos(now), 1, Math.sin(now)];
-    const rotation = quat.fromDirection(
-      quat.create(),
-      position.map((n) => -n),
-    );
-
-    directionalLightEntity.transform.position = position;
-    directionalLightEntity.transform.rotation = rotation;
-
-    spotLightEntity.transform.position = position;
-    spotLightEntity.transform.rotation = rotation;
-
-    pointLightEntity.transform.position = position;
-
-    areaLightEntity.transform.position = position;
-    areaLightEntity.transform.rotation = rotation;
-
-    directionalLightEntity.transform.dirty =
-      spotLightEntity.transform.dirty =
-      pointLightEntity.transform.dirty =
-      areaLightEntity.transform.dirty =
-        true;
+    rotate(now);
   }
 
   renderEngine.update(world.entities);
