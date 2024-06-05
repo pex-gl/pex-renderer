@@ -169,16 +169,16 @@ export default ({ ctx, shadowQuality = 3 }) => ({
   getVertexShader: () => SHADERS.standard.vert,
   getFragmentShader: (options) =>
     options.depthPassOnly ? SHADERS.depthPass.frag : SHADERS.standard.frag,
-  getPipelineHash(entity) {
+  getPipelineHash(entity, options) {
     const { material, _geometry: geometry } = entity;
 
-    return `${material.id}_${geometry.primitive}_${Object.entries(
+    return `${material.id}_${geometry.primitive}_${options.cullFaceMode ?? ""}_${Object.entries(
       this.pipelineMaterialDefaults,
     )
       .map(([key, value]) => material[key] ?? value)
       .join("_")}`;
   },
-  getPipelineOptions(entity) {
+  getPipelineOptions(entity, options) {
     const { material, _geometry: geometry } = entity;
 
     return {
@@ -190,8 +190,12 @@ export default ({ ctx, shadowQuality = 3 }) => ({
       blendSrcAlphaFactor: material.blendSrcAlphaFactor,
       blendDstRGBFactor: material.blendDstRGBFactor,
       blendDstAlphaFactor: material.blendDstAlphaFactor,
-      cullFace: material.cullFace !== undefined ? material.cullFace : true,
-      cullFaceMode: material.cullFaceMode || ctx.Face.Back,
+      cullFace:
+        options.cullFaceMode && material.cullFace === false
+          ? true
+          : material.cullFace ?? true,
+      cullFaceMode:
+        options.cullFaceMode || material.cullFaceMode || ctx.Face.Back,
       primitive: geometry.primitive ?? ctx.Primitive.Triangles,
     };
   },
@@ -374,6 +378,7 @@ export default ({ ctx, shadowQuality = 3 }) => ({
       transparent,
       transmitted,
       backgroundColorTexture,
+      cullFaceMode,
       attachmentsLocations = {},
     } = options;
     const shadowMapping = !!shadowMappingLight;
@@ -393,6 +398,7 @@ export default ({ ctx, shadowQuality = 3 }) => ({
       attachmentsLocations,
       toneMap: renderView.toneMap,
       transmitted,
+      cullFaceMode,
     };
 
     const sharedUniforms = {
@@ -452,7 +458,11 @@ export default ({ ctx, shadowQuality = 3 }) => ({
         e.material.type === undefined &&
         (!shadowMapping || e.material.castShadows) &&
         (transparent ? e.material.blend : !e.material.blend) &&
-        (transmitted ? e.material.transmission : !e.material.transmission),
+        (transmitted
+          ? cullFaceMode
+            ? e.material.cullFace === false && e.material.transmission
+            : e.material.transmission
+          : !e.material.transmission),
     );
 
     for (let i = 0; i < renderableEntities.length; i++) {
