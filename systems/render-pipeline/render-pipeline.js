@@ -50,6 +50,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
     transmitted,
     cullTransmittedFaces,
     backgroundColorTexture,
+    overlay,
   }) {
     renderView.exposure ||= 1;
     renderView.toneMap ||= null;
@@ -64,6 +65,12 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
         renderers[i].renderShadow?.(renderView, entitiesInView, {
           ...options,
           shadowMappingLight,
+        });
+      }
+    } else if (overlay) {
+      for (let i = 0; i < renderers.length; i++) {
+        renderers[i].renderOverlay?.(renderView, entitiesInView, {
+          ...options,
         });
       }
     } else {
@@ -502,6 +509,27 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
         this.descriptors,
       );
     }
+
+    // Overlay
+    renderGraph.renderPass({
+      name: `OverlayPass [${renderView.viewport}]`,
+      uses: [colorAttachments.color],
+      pass: resourceCache.pass({
+        name: "mainPass",
+        color: Object.values(colorAttachments),
+        depth: depthAttachment,
+      }),
+      renderView,
+      render: () => {
+        this.drawMeshes({
+          renderers,
+          renderView,
+          colorAttachments: { color: colorAttachments.color },
+          entitiesInView: entities,
+          overlay: true,
+        });
+      },
+    });
 
     if (drawToScreen !== false) {
       const fullscreenTriangle = resourceCache.fullscreenTriangle();

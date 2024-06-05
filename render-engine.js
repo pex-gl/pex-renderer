@@ -26,6 +26,7 @@ export default ({ ctx, debug = false }) => {
   const lineRendererSystem = systems.renderer.line(options);
   const skyboxRendererSystem = systems.renderer.skybox(options);
   const helperRendererSystem = systems.renderer.helper(options);
+  const overlayRendererSystem = systems.renderer.overlay(options);
 
   const renderEngine = {
     // debugMode,
@@ -62,6 +63,7 @@ export default ({ ctx, debug = false }) => {
       lineRendererSystem,
       skyboxRendererSystem,
       helperRendererSystem,
+      overlayRendererSystem,
     ],
     update(entities, deltaTime) {
       const now = Date.now();
