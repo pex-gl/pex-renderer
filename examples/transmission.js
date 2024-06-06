@@ -221,7 +221,7 @@ world.add(transparentCubesEntity);
 const transmittedCubesEntity = createEntity({
   transform: components.transform({ scale: new Array(3).fill(0.5) }),
   geometry: components.geometry({
-    ...roundedCube({ sx: 1, sy: 1, sz: 1, radius: 0.05 }),
+    ...roundedCube({ sx: 0.99, radius: 0.05 }),
     offsets: g2.positions,
     scales: g2.scales,
     instances: g2.positions.length,
