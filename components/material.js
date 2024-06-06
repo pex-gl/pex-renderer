@@ -37,6 +37,8 @@ export default (options) =>
         blendSrcAlphaFactor: undefined,
         blendDstRGBFactor: undefined,
         blendDstAlphaFactor: undefined,
+        // cullFace: true,
+        // cullFaceMode: ctx.Face.Back,
         castShadows: false,
         receiveShadows: false,
         // unlit: true,

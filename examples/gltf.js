@@ -111,7 +111,7 @@ const addEnvmap = async () => {
         // `assets/envmaps/Mono_Lake_B/Mono_Lake_B.hdr`
         // `assets/envmaps/garage/garage.hdr`,
         // `assets/envmaps/Footprint Court/footprint_court.hdr`,
-        `assets/envmaps/Artist Workshop/artist_workshop_2k.hdr`
+        `assets/envmaps/Artist Workshop/artist_workshop_2k.hdr`,
         // `assets/envmaps/Colorful_Studio.hdr`
       );
     }
@@ -242,6 +242,7 @@ async function loadScene(url, grid) {
     if (entity.material) {
       entity.material.castShadows = State.shadows;
       entity.material.receiveShadows = State.shadows;
+      if (entity.material.transmission) entity.material.cullFace = false;
     }
 
     world.add(entity);

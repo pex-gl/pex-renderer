@@ -459,7 +459,6 @@ export default ({ ctx, shadowQuality = 3 }) => ({
         e.material.type === undefined &&
         (!shadowMapping || e.material.castShadows) &&
         (transparent ? e.material.blend : !e.material.blend) &&
-        // (transmitted ? e.material.transmission : !e.material.transmission),
         (transmitted
           ? cullFaceMode === ctx.Face.Front
             ? !e.material.cullFace && e.material.transmission
