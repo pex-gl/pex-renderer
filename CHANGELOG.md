@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+# [4.0.0-alpha.51](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.50...v4.0.0-alpha.51) (2024-06-06)
+
+
+### Bug Fixes
+
+* filter renderableEntities in standard render when options.cullFaceMode is set to Front ([cc782c1](https://github.com/pex-gl/pex-renderer/commit/cc782c109d299c8b8864ce79f12764944f152156))
+* support separate sheen roughness texture ([643bb25](https://github.com/pex-gl/pex-renderer/commit/643bb255a7ab827e41f7265f22fefeacb6ba2b8a))
+
+
+### Features
+
+* rename all lights radius to bulbRadius ([41042b2](https://github.com/pex-gl/pex-renderer/commit/41042b2762c9e7324a34101cd218b5191b339820))
+* render transmissive objects in two passes ([978ea80](https://github.com/pex-gl/pex-renderer/commit/978ea80763f353930d33d8e7c05ce8aa37d9cc92))
+
+
+
 # [4.0.0-alpha.50](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.49...v4.0.0-alpha.50) (2024-05-03)
 
 

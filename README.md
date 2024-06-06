@@ -925,6 +925,7 @@ Create an entity
 | [disk]          | <code>boolean</code>              | <code>false</code>        |
 | [doubleSided]   | <code>boolean</code>              | <code>false</code>        |
 | [bias]          | <code>number</code>               | <code>0.1</code>          |
+| [bulbRadius]    | <code>number</code>               | <code>1</code>            |
 | [castShadows]   | <code>boolean</code>              | <code>true</code>         |
 | [shadowMapSize] | <code>number</code>               | <code>2048</code>         |
 
@@ -1012,6 +1013,7 @@ Create an entity
 | [color]         | <code>Array.&lt;number&gt;</code> | <code>[1, 1, 1, 1]</code> |
 | [intensity]     | <code>number</code>               | <code>1</code>            |
 | [bias]          | <code>number</code>               | <code>0.1</code>          |
+| [bulbRadius]    | <code>number</code>               | <code>1</code>            |
 | [castShadows]   | <code>boolean</code>              | <code>true</code>         |
 | [shadowMapSize] | <code>number</code>               | <code>2048</code>         |
 
@@ -1191,6 +1193,7 @@ Create an entity
 | [color]         | <code>Array.&lt;number&gt;</code> | <code>[1, 1, 1, 1]</code> |
 | [intensity]     | <code>number</code>               | <code>1</code>            |
 | [range]         | <code>number</code>               | <code>10</code>           |
+| [bulbRadius]    | <code>number</code>               | <code>1</code>            |
 | [castShadows]   | <code>boolean</code>              | <code>true</code>         |
 | [shadowMapSize] | <code>number</code>               | <code>2048</code>         |
 
@@ -1409,6 +1412,7 @@ Create an entity
 | [innerAngle]    | <code>number</code>               | <code>0</code>            |
 | [range]         | <code>number</code>               | <code>10</code>           |
 | [bias]          | <code>number</code>               | <code>0.1</code>          |
+| [bulbRadius]    | <code>number</code>               | <code>1</code>            |
 | [castShadows]   | <code>boolean</code>              | <code>true</code>         |
 | [shadowMapSize] | <code>number</code>               | <code>2048</code>         |
 
