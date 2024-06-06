@@ -239,6 +239,7 @@ const transmittedCubesEntity = createEntity({
     ior: 1.5,
     specular: 0.1,
     specularColor: [0, 0, 1],
+    cullFace: false,
   }),
 });
 world.add(transmittedCubesEntity);

@@ -48,6 +48,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
     shadowMappingLight,
     transparent,
     transmitted,
+    cullFaceMode,
     backgroundColorTexture,
   }) {
     renderView.exposure ||= 1;
@@ -74,6 +75,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
             {
               ...options,
               transmitted,
+              cullFaceMode,
               backgroundColorTexture: transmitted
                 ? backgroundColorTexture
                 : null,
@@ -411,12 +413,62 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
         });
       }
 
+      const hasBackTransmitted = entitiesInView.some(
+        (entity) => entity.material?.transmission && !entity.material.cullFace,
+      );
+
+      if (hasBackTransmitted) {
+        renderGraph.renderPass({
+          name: `TransmissionBackPass [${renderView.viewport}]`,
+          uses: [...shadowMaps, grabPassColorCopyTexture],
+          renderView: renderPassView,
+          pass: resourceCache.pass({
+            name: "transmissionBackPass",
+            color: [colorAttachments.color],
+            depth: depthAttachment,
+          }),
+          render: () => {
+            this.drawMeshes({
+              renderers,
+              renderView,
+              //why this is passed?, we are rendering here colorAttachments.color
+              colorAttachments: { color: colorAttachments.color },
+              entitiesInView,
+              shadowMappingLight: false,
+              transparent: false,
+              transmitted: true,
+              cullFaceMode: ctx.Face.Front,
+              backgroundColorTexture: grabPassColorCopyTexture,
+            });
+          },
+        });
+        const viewport = grabPassCopyCmd.uniforms.uViewport;
+        const copyUniforms = {
+          uniforms: {
+            uTexture: colorAttachments.color,
+          },
+        };
+
+        renderGraph.renderPass({
+          name: `GrabTransmissionBackPass [${viewport}]`,
+          uses: [colorAttachments.color],
+          renderView: { ...renderView, viewport },
+          pass: resourceCache.pass({
+            name: "grabTransmissionBackPass",
+            color: [grabPassColorCopyTexture],
+          }),
+          render: () => {
+            ctx.submit(grabPassCopyCmd, copyUniforms);
+          },
+        });
+      }
+
       renderGraph.renderPass({
-        name: `TransmissionPass [${renderView.viewport}]`,
+        name: `TransmissionFrontPass [${renderView.viewport}]`,
         uses: [...shadowMaps, grabPassColorCopyTexture],
         renderView: renderPassView,
         pass: resourceCache.pass({
-          name: "transmissionPass",
+          name: "transmissionFrontPass",
           color: [colorAttachments.color],
           depth: depthAttachment,
         }),
@@ -429,6 +481,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
             shadowMappingLight: false,
             transparent: false,
             transmitted: true,
+            cullFaceMode: hasBackTransmitted && ctx.Face.Back,
             backgroundColorTexture: grabPassColorCopyTexture,
           });
         },
