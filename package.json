@@ -35,10 +35,10 @@
     "pex-cam": "^3.0.0-alpha.1",
     "pex-geom": "^3.0.1",
     "pex-io": "^3.0.1",
-    "pex-loaders": "^1.0.0-alpha.3",
+    "pex-loaders": "^1.0.0-alpha.4",
     "pex-math": "^4.1.0",
     "pex-random": "^2.1.0",
-    "pex-shaders": "^1.0.0-alpha.30"
+    "pex-shaders": "^1.0.0-alpha.31"
   },
   "devDependencies": {
     "@hpcc-js/wasm": "^2.16.2",
