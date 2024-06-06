@@ -6,7 +6,7 @@ import {
 } from "../index.js";
 
 import createContext from "pex-context";
-import createGUI from "pex-gui";
+import createGUI, { DEFAULT_THEME } from "pex-gui";
 import { quat, vec2 } from "pex-math";
 
 import { cube } from "primitive-geometry";
@@ -16,6 +16,7 @@ import { dragon } from "./utils.js";
 
 const State = {
   animate: true,
+  rotation: 0,
   shadowMapSizeIndex: 2,
   shadowMapSizes: ["512", "1024", "2048", "4096"],
 };
@@ -76,7 +77,7 @@ const floorEntity = createEntity({
   material: components.material({
     baseColor: [1, 1, 1, 1],
     roughness: 0.15,
-    metallic: 0.75,
+    metallic: 0.25,
     receiveShadows: true,
     castShadows: false,
   }),
@@ -254,8 +255,13 @@ const getViewportPosition = (layer, offset = [10, 10]) =>
     offset,
   );
 
-gui.addHeader("Global").setPosition(...getViewportPosition(LAYERS[0]));
+gui.addHeader("Global");
 gui.addParam("Animate", State, "animate");
+gui.addParam("Rotation", State, "rotation", { min: 0, max: 1 }, () => {
+  State.animate = false;
+  rotate(State.rotation);
+});
+
 gui.addRadioList(
   "Map Size",
   State,
@@ -283,17 +289,26 @@ gui.addParam("Shadow Quality", standardRendererSystem, "shadowQuality", {
   max: 5,
   step: 1,
 });
-gui.addHeader("Directional");
+gui
+  .addHeader("Directional")
+  .setPosition(
+    ...getViewportPosition(LAYERS[0], [DEFAULT_THEME.columnWidth + 10, 10]),
+  );
 gui.addParam(
   "Intensity",
   directionalLightEntity.directionalLight,
   "intensity",
   { min: 0, max: 20 },
 );
-gui.addParam("Bulb Radius", directionalLightEntity.directionalLight, "bulbRadius", {
-  min: 0,
-  max: 100,
-});
+gui.addParam(
+  "Bulb Radius",
+  directionalLightEntity.directionalLight,
+  "bulbRadius",
+  {
+    min: 0,
+    max: 100,
+  },
+);
 gui.addTexture2D(
   "Shadowmap",
   directionalLightEntity.directionalLight._shadowMap,
@@ -374,9 +389,7 @@ window.addEventListener("keydown", ({ key }) => {
 
 ctx.frame(() => {
   if (State.animate) {
-    const now = (performance.now() * 0.001) / 3;
-    // const now = Math.PI * 1.5;
-    // State.animate = false;
+    const now = performance.now() * 0.001 * 0.1;
     rotate(now);
   }
 
