@@ -43,7 +43,7 @@
     "node-polyfill-webpack-plugin": "^1.1.4",
     "pixelmatch": "^5.2.1",
     "pngjs": "^6.0.0",
-    "puppeteer": "^13.1.2",
+    "puppeteer": "^22.11.2",
     "request": "^2.88.0",
     "webpack": "^5.76.0",
     "webpack-cli": "^4.9.2",
