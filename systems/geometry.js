@@ -48,16 +48,18 @@ export default ({ ctx }) => ({
     }
 
     // TODO: handle skin system?
-    if (!offsets) {
-      aabb.fromPoints(geometry.bounds, positions);
-    } else {
+    if (offsets?.length) {
       aabb.fromPoints(geometry.bounds, offsets);
 
       aabb.empty(TEMP_AABB);
       aabb.fromPoints(TEMP_AABB, positions);
       vec3.add(geometry.bounds[0], TEMP_AABB[0]);
       vec3.add(geometry.bounds[1], TEMP_AABB[1]);
+    } else {
+      aabb.fromPoints(geometry.bounds, positions);
     }
+
+    geometry.bounds.dirty = false;
   },
   updateGeometryEntity(entity) {
     const geometry = entity.geometry;
