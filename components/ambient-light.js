@@ -6,5 +6,6 @@
  */
 export default (options) => ({
   color: [1, 1, 1, 1],
+  intensity: 1,
   ...options,
 });

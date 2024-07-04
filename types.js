@@ -32,6 +32,7 @@
 /**
  * @typedef {object} AmbientLightComponentOptions
  * @property {number[]} [color=[1, 1, 1, 1]]
+ * @property {number} [intensity=1]
  */
 /**
  * @typedef {object} AnimationComponentOptions
