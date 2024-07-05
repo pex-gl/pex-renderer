@@ -7,7 +7,6 @@ import final from "./post-processing/final.js";
 
 // Impacts pipeline caching
 const pipelineProps = ["blend"];
-let postProcessingEffects = null;
 
 const getPostProcessingPasses = (options) => [
   { name: "ssao", passes: ssao(options) },
@@ -17,6 +16,7 @@ const getPostProcessingPasses = (options) => [
 ];
 
 export default ({ ctx, renderGraph, resourceCache }) => ({
+  postProcessingEffects: null,
   renderPostProcessing(
     renderView,
     colorAttachments,
@@ -41,26 +41,25 @@ export default ({ ctx, renderGraph, resourceCache }) => ({
     this.pipelineCache.cache.targets[renderViewId]["color"] =
       colorAttachments.color;
 
-    postProcessingEffects ||= getPostProcessingPasses({
+    this.postProcessingEffects ||= getPostProcessingPasses({
       ctx,
       resourceCache,
       descriptors: this.descriptors,
     });
 
-    postProcessingEffects.forEach((effect) => {
+    for (let i = 0; i < this.postProcessingEffects.length; i++) {
+      const effect = this.postProcessingEffects[i];
       const isFinal = effect.name == "final";
       const isEffectUsed = !!postProcessingComponent[effect.name];
 
-      if (!isEffectUsed && !isFinal) {
-        return;
-      }
+      if (!isEffectUsed && !isFinal) continue;
 
-      effect.passes.forEach((subPass) => {
+      for (let j = 0; j < effect.passes.length; j++) {
+        const subPass = effect.passes[j];
         const isEnabled = !subPass.enabled || subPass.enabled(renderView);
 
-        if (!isEnabled && !isFinal) return;
+        if (!isEnabled && !isFinal) continue;
 
-        // Also computes this.uniforms
         const { pipeline, uniforms: pipelineUniforms } =
           this.pipelineCache.getPipeline(
             ctx,
@@ -192,7 +191,7 @@ export default ({ ctx, renderGraph, resourceCache }) => ({
         outputColor.name = postProcessingCmd.name;
 
         colorAttachments[postProcessingCmd.name] = outputColor;
-      });
-    });
+      }
+    }
   },
 });

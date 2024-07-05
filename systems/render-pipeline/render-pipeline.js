@@ -25,7 +25,6 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
   renderers: [],
 
   descriptors: addDescriptors(ctx),
-  postProcessingPasses: null,
   shadowMapping: null,
 
   outputs: new Set(["color", "depth"]), // "normal", "emissive"
