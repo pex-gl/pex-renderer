@@ -20,7 +20,12 @@
     "Nick Nikolov (https://github.com/nicknikolov)"
   ],
   "type": "module",
-  "exports": "./index.js",
+  "exports": {
+    ".": {
+      "types": "./types/index.d.ts",
+      "default": "./index.js"
+    }
+  },
   "main": "index.js",
   "types": "types/index.d.ts",
   "scripts": {
@@ -59,7 +64,7 @@
   "engines": {
     "node": ">=22.0.0",
     "npm": ">=10.5.1",
-    "snowdev": "2.0.0-alpha.30"
+    "snowdev": ">=2.2.x"
   },
   "snowdev": {
     "dependencies": [
