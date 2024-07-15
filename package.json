@@ -91,6 +91,6 @@
       "pex-gui",
       "primitive-geometry"
     ],
-    "files": "{*.js,*(systems|components|helpers|loaders)/**/*.js}"
+    "files": "{*.js,*(systems|components|helpers|loaders|utils)/**/*.js}"
   }
 }
