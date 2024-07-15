@@ -893,9 +893,10 @@ Create an entity
 **Kind**: global typedef
 **Properties**
 
-| Name    | Type                              | Default                   |
-| ------- | --------------------------------- | ------------------------- |
-| [color] | <code>Array.&lt;number&gt;</code> | <code>[1, 1, 1, 1]</code> |
+| Name        | Type                              | Default                   |
+| ----------- | --------------------------------- | ------------------------- |
+| [color]     | <code>Array.&lt;number&gt;</code> | <code>[1, 1, 1, 1]</code> |
+| [intensity] | <code>number</code>               | <code>1</code>            |
 
 <a name="AnimationComponentOptions"></a>
 

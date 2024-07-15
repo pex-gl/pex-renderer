@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+# [4.0.0-alpha.52](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.51...v4.0.0-alpha.52) (2024-07-15)
+
+
+### Bug Fixes
+
+* **ecs:** add intensity to ambient light component ([b10fe44](https://github.com/pex-gl/pex-renderer/commit/b10fe44137eb0fccd0f8395dccb7b699a587189c))
+* **ecs:** check for offsets length before computing geometry.bounds for instanced geometry ([6276a18](https://github.com/pex-gl/pex-renderer/commit/6276a18b7334b17ae6ea49710eab6ddd76b20373)), closes [#386](https://github.com/pex-gl/pex-renderer/issues/386)
+
+
+### Features
+
+* expose back postProcessingEffects ([d7cc3ec](https://github.com/pex-gl/pex-renderer/commit/d7cc3ec16c432503b2f193de68045e2241eeefd8))
+
+
+
 # [4.0.0-alpha.51](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.50...v4.0.0-alpha.51) (2024-06-06)
 
 

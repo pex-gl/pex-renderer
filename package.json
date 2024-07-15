@@ -1,6 +1,6 @@
 {
   "name": "pex-renderer",
-  "version": "4.0.0-alpha.51",
+  "version": "4.0.0-alpha.52",
   "description": "Physically Based Renderer (PBR) and scene graph designed as ECS for PEX: define entities to be rendered as collections of components with their update orchestrated by systems.",
   "keywords": [
     "pex",
@@ -12,7 +12,10 @@
   ],
   "homepage": "https://github.com/pex-gl/pex-renderer",
   "bugs": "https://github.com/pex-gl/pex-renderer/issues",
-  "repository": "pex-gl/pex-renderer",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pex-gl/pex-renderer.git"
+  },
   "license": "MIT",
   "author": "Marcin Ignac <marcin.ignac@gmail.com> (http://marcinignac.com)",
   "contributors": [
