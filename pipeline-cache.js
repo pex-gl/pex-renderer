@@ -211,9 +211,16 @@ vec4 debugColor = vec4(pow(vec3(${debugRender}${scale}), vec3(${pow})), 1.0);
         entity.material?.extensions,
       );
 
-      if (this.debug) {
-        console.debug(NAMESPACE, this.type, "new program", flags, entity);
+      if (options.debug) {
+        console.debug(
+          NAMESPACE,
+          "pipeline-cache",
+          "new program",
+          flags,
+          entity,
+        );
       }
+
       program = this.buildProgram(
         ctx,
         ShaderParser.replaceStrings(vertSrc, options),
@@ -245,19 +252,18 @@ vec4 debugColor = vec4(pow(vec3(${debugRender}${scale}), vec3(${pow})), 1.0);
       .join(debug ? "_" : "");
   },
   getPipeline(ctx, entity, options = {}, pipelineOptions = {}) {
-    const { hash } = options;
     const { program, uniforms } = this.getProgram(ctx, entity, options);
-    const pipelineHash = `${program.id}_${hash}`;
+    const pipelineHash = `${program.id}_${options.hash}`;
 
     if (
       !this.cache.pipelines[pipelineHash] ||
       entity?.material?.needsPipelineUpdate
     ) {
       if (entity.material) entity.material.needsPipelineUpdate = false;
-      if (this.debug) {
+      if (options.debug) {
         console.debug(
           NAMESPACE,
-          this.type,
+          "pipeline-cache",
           "new pipeline",
           pipelineHash,
           entity,

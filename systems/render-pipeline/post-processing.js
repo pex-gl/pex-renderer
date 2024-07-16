@@ -74,6 +74,7 @@ export default ({ ctx, renderGraph, resourceCache }) => ({
               targets: this.pipelineCache.cache.targets[renderViewId],
               vert: subPass.vert || postProcessingShaders.postProcessing.vert,
               frag: subPass.frag,
+              debug: this.debug,
             },
             { blend: subPass.blend },
           );

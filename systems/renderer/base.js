@@ -11,7 +11,6 @@ export default () => ({
   type: "base-renderer",
   pipelineCache: createPipelineCache(),
   debug: false,
-  time: 0, //TODO MARCIN: why renderers have time?
   getVertexShader(options) {
     return "";
   },
@@ -38,6 +37,7 @@ export default () => ({
           flagDefinitions: this.flagDefinitions,
           vert: this.getVertexShader(options),
           frag: this.getFragmentShader(options),
+          debug: this.debug,
         },
         this.getPipelineOptions(entity, options),
       );
@@ -52,9 +52,7 @@ export default () => ({
   // renderOpaque(renderView, entities, options) {},
   // renderTransparent(renderView, entities, options) {},
   // renderPost(renderView, entities, options) {},
-  update(_, { time }) {
-    this.time = time;
-  },
+  update() {},
   // TODO: dispose pipelineCache
   dispose() {},
 });
