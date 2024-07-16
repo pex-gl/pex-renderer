@@ -19,7 +19,7 @@ export default () => ({
     return "";
   },
   getHashFromProps(obj, props, debug) {
-    this.pipelineCache.getHashFromProps(obj, props, debug);
+    return this.pipelineCache.getHashFromProps(obj, props, debug);
   },
   getPipelineHash(entity, options) {
     return "";
