@@ -75,7 +75,10 @@ export default () => ({
         } else {
           // Set flag as name + value
           if (opts.type === "value") {
-            flags.push(`${defineName} ${value ?? opts.default}`);
+            // Set value flag if not empty string and use default if nullish
+            if (value !== "") {
+              flags.push(`${defineName} ${value ?? opts.default}`);
+            }
             // Set flag only if truthy
           } else if (value) {
             flags.push(defineName);
