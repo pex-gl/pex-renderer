@@ -87,7 +87,7 @@ export default ({ ctx, renderGraph, resourceCache }) => ({
           uViewport: renderView.viewport,
           uViewportSize: viewportSize,
           uTexelSize: [1 / viewportSize[0], 1 / viewportSize[1]],
-          uTime: this.time || 0,
+          uTime: this.time,
         };
 
         const source = subPass.source?.(renderView);

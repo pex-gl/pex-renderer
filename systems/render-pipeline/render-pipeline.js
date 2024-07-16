@@ -20,6 +20,7 @@ import cullingPipelineMethods from "./culling.js";
 export default ({ ctx, resourceCache, renderGraph }) => ({
   type: "render-pipeline-system",
   cache: {},
+  time: 0,
   debug: false,
   debugRender: "",
   renderers: [],
@@ -108,7 +109,9 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
   },
 
   update(entities, options = {}) {
-    let { renderView, renderers, drawToScreen = true } = options;
+    let { time, renderView, renderers, drawToScreen = true } = options;
+
+    this.time = time;
 
     const shadowCastingEntities = entities.filter(
       (entity) => entity.geometry && entity.material?.castShadows,

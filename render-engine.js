@@ -82,7 +82,7 @@ export default ({ ctx, debug = false }) => {
         this.renderers[i].update(entities, this);
       }
     },
-    render: (entities, cameraEntities, options = {}) => {
+    render(entities, cameraEntities, options = {}) {
       resourceCache.beginFrame();
       renderGraph.beginFrame();
 
@@ -122,7 +122,8 @@ export default ({ ctx, debug = false }) => {
           const framebufferTextures = renderPipelineSystem.update(
             entitiesForCamera,
             {
-              renderers: options.renderers || renderEngine.renderers,
+              time: options.time ?? this.time,
+              renderers: options.renderers || this.renderers,
               renderView,
               drawToScreen: options.drawToScreen,
             },

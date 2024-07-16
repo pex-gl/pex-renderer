@@ -269,15 +269,6 @@ vec4 debugColor = vec4(pow(vec3(${debugRender}${scale}), vec3(${pow})), 1.0);
     const pipeline = this.cache.pipelines[pipelineHash];
     return { pipeline, uniforms };
   },
-  // render(renderView, entities, options) {},
-  // renderBackground(renderView, entities, options) {},
-  // renderShadow(renderView, entities, options) {},
-  // renderOpaque(renderView, entities, options) {},
-  // renderTransparent(renderView, entities, options) {},
-  // renderPost(renderView, entities, options) {},
-  update(_, { time }) {
-    this.time = time;
-  },
   // TODO:
   dispose() {},
 });
