@@ -19,7 +19,7 @@ const flagDefinitions = [
 ];
 
 // Impacts pipeline caching
-const pipelineMaterialProps = ["id"];
+const pipelineMaterialProps = ["id", "depthWrite", "depthTest"];
 
 // prettier-ignore
 const instanceRoundRound = Float32Array.of(
@@ -54,8 +54,11 @@ export default ({ ctx } = {}) => ({
       this.debug,
     );
   },
-  getPipelineOptions() {
-    return { depthWrite: true, depthTest: true };
+  getPipelineOptions(entity) {
+    return {
+      depthWrite: !!entity.material.depthWrite,
+      depthTest: !!entity.material.depthTest,
+    };
   },
   getLinePositionsBuffer(resolution) {
     if (!this.cache.positionBuffers[resolution]) {

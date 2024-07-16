@@ -10,6 +10,8 @@ export default (options) =>
   options?.type === "line" //TODO: MARCIN: Can we just have regular if () {} else {} for readability
     ? {
         baseColor: [1, 1, 1, 1],
+        depthTest: true,
+        depthWrite: true,
         castShadows: false,
         lineWidth: 1,
         lineResolution: 6,
