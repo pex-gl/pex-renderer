@@ -160,15 +160,17 @@ export default ({ ctx, renderGraph, resourceCache }) => ({
           (name) => postProcessingCmd.uniforms[name],
         );
 
+        const renderPassView = {
+          //FIXME: this seems to be wrong
+          viewport: [0, 0, outputColor.width, outputColor.height],
+        };
+
         renderGraph.renderPass({
-          name: `PostProcessing.${effect.name}.${subPass.name}`,
+          name: `PostProcessingPass.${effect.name}.${subPass.name} [${renderPassView.viewport}]`,
           uses: uses.filter(Boolean),
-          renderView: {
-            //FIXME: this seems to be wrong
-            viewport: [0, 0, outputColor.width, outputColor.height],
-          },
+          renderView: renderPassView,
           pass: resourceCache.pass({
-            name: `PostProcessing.${effect.name}.${subPass.name}`,
+            name: `postProcessingPass.${effect.name}.${subPass.name}`,
             color: [outputColor],
             ...subPass.passDesc?.(renderView),
           }),
