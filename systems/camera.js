@@ -169,7 +169,10 @@ export default () => ({
     const orbiter = entity.orbiter;
     const camera = entity.camera;
 
-    this.cache[entity.id] ||= {};
+    // Add to cache and reset cache if camera component is different
+    if (this.cache[entity.id]?.camera !== camera) {
+      this.cache[entity.id] = { camera };
+    }
     this.updateCameraFoV(entity);
 
     if (orbiter) {
