@@ -158,8 +158,10 @@ export default () => ({
     if (this.cache[entity.id].fov !== camera.fov) {
       camera.focalLength = sensorHeight / 2 / Math.tan(camera.fov / 2);
       this.cache[entity.id].fov = camera.fov;
+      this.cache[entity.id].focalLength = camera.focalLength;
     } else if (this.cache[entity.id].focalLength !== camera.focalLength) {
       camera.fov = 2 * Math.atan(sensorHeight / 2 / camera.focalLength);
+      this.cache[entity.id].fov = camera.fov;
       this.cache[entity.id].focalLength = camera.focalLength;
     }
   },
