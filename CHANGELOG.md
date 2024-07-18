@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+# [4.0.0-alpha.53](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.52...v4.0.0-alpha.53) (2024-07-18)
+
+
+### Bug Fixes
+
+* **ecs:** add back time ([9a118b7](https://github.com/pex-gl/pex-renderer/commit/9a118b79cbd8951f984690e23eeceb0d17159888))
+* **ecs:** bring back debug support for pipeline cache (new program/pipeline) ([c87914a](https://github.com/pex-gl/pex-renderer/commit/c87914a29d4ffa30ac09fff051decf53d7956e76))
+* **ecs:** cache fov and focalLength when updating one or the other ([d1998ce](https://github.com/pex-gl/pex-renderer/commit/d1998cefca9b7be4c10457b27c5378c44e462d36))
+* **ecs:** check camera component for caching camera by entity id ([c21735d](https://github.com/pex-gl/pex-renderer/commit/c21735d9338b7e42e34869260149eb61eda08e2d))
+* **ecs:** return hash from props for pipeline caching ([f028a26](https://github.com/pex-gl/pex-renderer/commit/f028a2676fc475b45a258e8d69cbe3569c21bf9e))
+
+
+### Features
+
+* add depthTest and depthWrite to line material ([6fa07b9](https://github.com/pex-gl/pex-renderer/commit/6fa07b98ca9daad5ce7b037a36a802c7a4fbdab4)), closes [#385](https://github.com/pex-gl/pex-renderer/issues/385)
+* **ecs:** assimilate empty strings "" as falsy when checking flags of type "value" ([d72e808](https://github.com/pex-gl/pex-renderer/commit/d72e808ca346315e1636dd5f3dcf1454bed5559a)), closes [#387](https://github.com/pex-gl/pex-renderer/issues/387)
+* **ecs:** remove normalTextureScale from material component and set default in standard redererer flagDefinitions ([476971f](https://github.com/pex-gl/pex-renderer/commit/476971fb9177f30e7c42e299272efe793e62e6ba))
+
+
+
 # [4.0.0-alpha.52](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.51...v4.0.0-alpha.52) (2024-07-15)
 
 
