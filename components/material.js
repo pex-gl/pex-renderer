@@ -50,7 +50,7 @@ export default (options) => {
     // baseColorTexture,
     // emissiveColorTexture,
     // normalTexture,
-    normalTextureScale: 1, //TODO: MARCIN: why we have default for this while not for e.g. emissiveIntensity?
+    // normalTextureScale: 1,
     // roughnessTexture,
     // metallicTexture,
     // metallicRoughnessTexture,

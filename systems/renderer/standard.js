@@ -49,7 +49,7 @@ const flagDefinitions = [
   [["material", "baseColorTexture"], "BASE_COLOR_TEXTURE", { type: "texture", uniform: "uBaseColorTexture" }],
   [["material", "emissiveColorTexture"], "EMISSIVE_COLOR_TEXTURE", { type: "texture", uniform: "uEmissiveColorTexture" }],
   [["material", "normalTexture"], "NORMAL_TEXTURE", { type: "texture", uniform: "uNormalTexture" }],
-  [["material", "normalTextureScale"], "", { uniform: "uNormalTextureScale", requires: "USE_NORMAL_TEXTURE" }],
+  [["material", "normalTextureScale"], "", { uniform: "uNormalTextureScale", requires: "USE_NORMAL_TEXTURE", default: 1 }],
   [["material", "roughnessTexture"], "ROUGHNESS_TEXTURE", { type: "texture", uniform: "uRoughnessTexture" }],
   [["material", "metallicTexture"], "METALLIC_TEXTURE", { type: "texture", uniform: "uMetallicTexture" }],
   [["material", "metallicRoughnessTexture"], "METALLIC_ROUGHNESS_TEXTURE", { type: "texture", uniform: "uMetallicRoughnessTexture" }],
