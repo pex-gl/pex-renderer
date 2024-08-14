@@ -45,12 +45,12 @@
     "pex-io": "^3.0.2",
     "pex-loaders": "^1.0.0-alpha.4",
     "pex-math": "^4.1.1",
-    "pex-random": "^2.1.1",
+    "pex-random": "^2.1.2",
     "pex-shaders": "^1.0.0-alpha.31"
   },
   "devDependencies": {
-    "@hpcc-js/wasm": "^2.18.0",
-    "@thi.ng/dot": "^2.1.79",
+    "@hpcc-js/wasm-graphviz": "^1.1.0",
+    "@thi.ng/dot": "^2.1.82",
     "angle-normals": "^1.0.0",
     "cosine-gradient": "^0.3.0",
     "es-module-shims": "^1.10.0",
@@ -71,7 +71,7 @@
   },
   "snowdev": {
     "dependencies": [
-      "@hpcc-js/wasm",
+      "@hpcc-js/wasm-graphviz",
       "@thi.ng/dot",
       "geom-builder",
       "hammersley",

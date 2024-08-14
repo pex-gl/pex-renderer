@@ -1,5 +1,5 @@
 import { serializeGraph } from "@thi.ng/dot";
-import { Graphviz } from "@hpcc-js/wasm";
+import { Graphviz } from "@hpcc-js/wasm-graphviz";
 
 const graphviz = await Graphviz.load();
 
