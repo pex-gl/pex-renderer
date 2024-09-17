@@ -24,11 +24,8 @@ const final = () => {
       [["postProcessing", "aa", "spanMax"], "", { uniform: "uFXAASpanMax", requires: "USE_FXAA_2" }],
 
       [["postProcessing", "aa", "type"], "USE_FXAA_3", { compare: "fxaa3", requires: "USE_AA" }],
-      [["postProcessing", "aa", "preset"], "USE_FXAA_3_LOW", { compare: "low", requires: "USE_FXAA_3" }],
-      [["postProcessing", "aa", "preset"], "USE_FXAA_3_MEDIUM", { compare: "medium", requires: "USE_FXAA_3" }],
-      [["postProcessing", "aa", "preset"], "USE_FXAA_3_HIGH", { compare: "high", requires: "USE_FXAA_3" }],
-      [["postProcessing", "aa", "preset"], "USE_FXAA_3_ULTRA", { compare: "ultra", requires: "USE_FXAA_3" }],
-      [["postProcessing", "aa", "preset"], "USE_FXAA_3_EXTREME", { compare: "extreme", requires: "USE_FXAA_3" }],
+      [["postProcessing", "aa", "lumaThreshold"], "", { uniform: "uLumaThreshold", requires: "USE_FXAA_3" }],
+      [["postProcessing", "aa", "subPixelQuality"], "", { uniform: "uSubPixelQuality", requires: "USE_FXAA_3" }],
 
       // Fog
       [["postProcessing", "fog"], "USE_FOG"],
