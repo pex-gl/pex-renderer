@@ -19,13 +19,8 @@ const final = () => {
 
       // AA
       [["postProcessing", "aa"], "USE_AA"],
-
-      [["postProcessing", "aa", "type"], "USE_FXAA_2", { compare: "fxaa2", requires: "USE_AA" }],
-      [["postProcessing", "aa", "spanMax"], "", { uniform: "uFXAASpanMax", requires: "USE_FXAA_2" }],
-
-      [["postProcessing", "aa", "type"], "USE_FXAA_3", { compare: "fxaa3", requires: "USE_AA" }],
-      [["postProcessing", "aa", "lumaThreshold"], "", { uniform: "uLumaThreshold", requires: "USE_FXAA_3" }],
-      [["postProcessing", "aa", "subPixelQuality"], "", { uniform: "uSubPixelQuality", requires: "USE_FXAA_3" }],
+      [["postProcessing", "aa", "subPixelQuality"], "", { uniform: "uSubPixelQuality", requires: "USE_AA" }],
+      [["postProcessing", "aa", "quality"], "AA_QUALITY", { type: "value", requires: "USE_AA" }],
 
       // Fog
       [["postProcessing", "fog"], "USE_FOG"],

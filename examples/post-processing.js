@@ -85,8 +85,7 @@ const postProcessing = components.postProcessing({
     debug: false,
   },
   aa: {
-    type: "fxaa2",
-    spanMax: 8,
+    quality: 2,
     subPixelQuality: 0.75,
   },
   ssao: {
@@ -449,21 +448,15 @@ const enablePostProPass = (name) => {
 gui.addParam("AA", State, "aa", null, () => {
   enablePostProPass("aa");
 });
-gui.addRadioList(
-  "AA Type",
-  postProcessing.aa,
-  "type",
-  ["fxaa2", "fxaa3"].map((value) => ({ name: value, value })),
-);
-gui.addParam("SubPixelQuality (fxaa3)", postProcessing.aa, "subPixelQuality", {
+gui.addParam("Quality", postProcessing.aa, "quality", {
+  min: 0,
+  max: 4,
+  step: 1,
+});
+gui.addParam("SubPixelQuality", postProcessing.aa, "subPixelQuality", {
   min: 0,
   max: 1,
   step: 0.25,
-});
-gui.addParam("Span Max (fxaa2)", postProcessing.aa, "spanMax", {
-  min: 2,
-  max: 16,
-  step: 1,
 });
 gui.addParam("Fog", State, "fog", null, () => {
   enablePostProPass("fog");

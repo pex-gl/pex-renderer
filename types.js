@@ -269,8 +269,8 @@
  */
 /**
  * @typedef {object} AAComponentOptions
- * @property {"fxaa2" | "fxaa3"} [type="fxaa2"]
- * @property {number} [spanMax=8] For "fxaa2" only.
+ * @property {number} [subPixelQuality=0.75] Higher = softer. Helps mitigate fireflies but will blur small details.
+ * @property {number} [quality=2] For edge luma threshold: 0 to 4.
  */
 /**
  * @typedef {object} FogComponentOptions

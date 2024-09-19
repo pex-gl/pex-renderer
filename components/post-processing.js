@@ -54,12 +54,8 @@ postProcessing.dof = (options) => ({
   ...options,
 });
 postProcessing.aa = (options) => ({
-  type: "fxaa2",
-  // fxaa2
-  spanMax: 8,
-  // fxaa3
-  lumaThreshold: [0.0312, 0.125], // High: 1 / 32, 1 / 8
   subPixelQuality: 0.75, // (0, 1]
+  quality: 2,
   ...options,
 });
 postProcessing.fog = (options) => ({
