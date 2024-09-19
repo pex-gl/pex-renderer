@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+# [4.0.0-alpha.54](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.53...v4.0.0-alpha.54) (2024-09-19)
+
+
+### Features
+
+* **post-processing:** add lumaThreshold and subPixelQuality to postprocessing aa component ([0e27ced](https://github.com/pex-gl/pex-renderer/commit/0e27ced972b5c6ad7657a7430ab0398797ba8430))
+
+
+
 # [4.0.0-alpha.53](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.52...v4.0.0-alpha.53) (2024-07-18)
 
 

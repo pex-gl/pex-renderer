@@ -83,9 +83,9 @@ ctx.frame(() => {
 ## Modules
 
 <dl>
-<dt><a href="#module_pex-renderer">pex-renderer</a></dt>
-<dd></dd>
 <dt><a href="#module_components">components</a></dt>
+<dd></dd>
+<dt><a href="#module_pex-renderer">pex-renderer</a></dt>
 <dd></dd>
 <dt><a href="#module_systems">systems</a></dt>
 <dd></dd>
@@ -217,83 +217,6 @@ ctx.frame(() => {
 <dt><a href="#RenderView">RenderView</a> : <code>object</code></dt>
 <dd></dd>
 </dl>
-
-<a name="module_pex-renderer"></a>
-
-## pex-renderer
-
-- [pex-renderer](#module_pex-renderer)
-  - [.components](#module_pex-renderer.components) : [<code>components</code>](#module_components)
-  - [.systems](#module_pex-renderer.systems) : [<code>systems</code>](#module_systems)
-  - [.world()](#module_pex-renderer.world) ⇒ [<code>World</code>](#World)
-  - [.entity([components])](#module_pex-renderer.entity) ⇒ [<code>Entity</code>](#Entity)
-  - [.renderEngine()](#module_pex-renderer.renderEngine) ⇒ [<code>RenderEngine</code>](#RenderEngine)
-  - [.renderGraph(ctx)](#module_pex-renderer.renderGraph) ⇒ [<code>RenderGraph</code>](#RenderGraph)
-  - [.resourceCache(ctx)](#module_pex-renderer.resourceCache) ⇒ [<code>ResourceCache</code>](#ResourceCache)
-
-<a name="module_pex-renderer.components"></a>
-
-### pex-renderer.components : [<code>components</code>](#module_components)
-
-All components as a function returning a component with default values.
-
-**Kind**: static property of [<code>pex-renderer</code>](#module_pex-renderer)
-<a name="module_pex-renderer.systems"></a>
-
-### pex-renderer.systems : [<code>systems</code>](#module_systems)
-
-All systems as a function returning a system with a type property and an update function.
-
-**Kind**: static property of [<code>pex-renderer</code>](#module_pex-renderer)
-<a name="module_pex-renderer.world"></a>
-
-### pex-renderer.world() ⇒ [<code>World</code>](#World)
-
-Create a world object to store entities and systems
-
-**Kind**: static method of [<code>pex-renderer</code>](#module_pex-renderer)
-<a name="module_pex-renderer.entity"></a>
-
-### pex-renderer.entity([components]) ⇒ [<code>Entity</code>](#Entity)
-
-Create an entity from an object of plain data components
-
-**Kind**: static method of [<code>pex-renderer</code>](#module_pex-renderer)
-
-| Param        | Type                | Default         |
-| ------------ | ------------------- | --------------- |
-| [components] | <code>object</code> | <code>{}</code> |
-
-<a name="module_pex-renderer.renderEngine"></a>
-
-### pex-renderer.renderEngine() ⇒ [<code>RenderEngine</code>](#RenderEngine)
-
-Create a render engine eg. a collection of systems for default rendering
-
-**Kind**: static method of [<code>pex-renderer</code>](#module_pex-renderer)
-<a name="module_pex-renderer.renderGraph"></a>
-
-### pex-renderer.renderGraph(ctx) ⇒ [<code>RenderGraph</code>](#RenderGraph)
-
-Create a render graph for rendering passes
-
-**Kind**: static method of [<code>pex-renderer</code>](#module_pex-renderer)
-
-| Param | Type                                           |
-| ----- | ---------------------------------------------- |
-| ctx   | <code>module:pex-context/types/index.js</code> |
-
-<a name="module_pex-renderer.resourceCache"></a>
-
-### pex-renderer.resourceCache(ctx) ⇒ [<code>ResourceCache</code>](#ResourceCache)
-
-Create a resource cache for pex-context caching.
-
-**Kind**: static method of [<code>pex-renderer</code>](#module_pex-renderer)
-
-| Param | Type                                           |
-| ----- | ---------------------------------------------- |
-| ctx   | <code>module:pex-context/types/index.js</code> |
 
 <a name="module_components"></a>
 
@@ -600,6 +523,83 @@ Vertex helper component
 | --------- | -------------------------------------------------------------------------- |
 | [options] | [<code>VertexHelperComponentOptions</code>](#VertexHelperComponentOptions) |
 
+<a name="module_pex-renderer"></a>
+
+## pex-renderer
+
+- [pex-renderer](#module_pex-renderer)
+  - [.components](#module_pex-renderer.components) : [<code>components</code>](#module_components)
+  - [.systems](#module_pex-renderer.systems) : [<code>systems</code>](#module_systems)
+  - [.world()](#module_pex-renderer.world) ⇒ [<code>World</code>](#World)
+  - [.entity([components])](#module_pex-renderer.entity) ⇒ [<code>Entity</code>](#Entity)
+  - [.renderEngine()](#module_pex-renderer.renderEngine) ⇒ [<code>RenderEngine</code>](#RenderEngine)
+  - [.renderGraph(ctx)](#module_pex-renderer.renderGraph) ⇒ [<code>RenderGraph</code>](#RenderGraph)
+  - [.resourceCache(ctx)](#module_pex-renderer.resourceCache) ⇒ [<code>ResourceCache</code>](#ResourceCache)
+
+<a name="module_pex-renderer.components"></a>
+
+### pex-renderer.components : [<code>components</code>](#module_components)
+
+All components as a function returning a component with default values.
+
+**Kind**: static property of [<code>pex-renderer</code>](#module_pex-renderer)
+<a name="module_pex-renderer.systems"></a>
+
+### pex-renderer.systems : [<code>systems</code>](#module_systems)
+
+All systems as a function returning a system with a type property and an update function.
+
+**Kind**: static property of [<code>pex-renderer</code>](#module_pex-renderer)
+<a name="module_pex-renderer.world"></a>
+
+### pex-renderer.world() ⇒ [<code>World</code>](#World)
+
+Create a world object to store entities and systems
+
+**Kind**: static method of [<code>pex-renderer</code>](#module_pex-renderer)
+<a name="module_pex-renderer.entity"></a>
+
+### pex-renderer.entity([components]) ⇒ [<code>Entity</code>](#Entity)
+
+Create an entity from an object of plain data components
+
+**Kind**: static method of [<code>pex-renderer</code>](#module_pex-renderer)
+
+| Param        | Type                | Default         |
+| ------------ | ------------------- | --------------- |
+| [components] | <code>object</code> | <code>{}</code> |
+
+<a name="module_pex-renderer.renderEngine"></a>
+
+### pex-renderer.renderEngine() ⇒ [<code>RenderEngine</code>](#RenderEngine)
+
+Create a render engine eg. a collection of systems for default rendering
+
+**Kind**: static method of [<code>pex-renderer</code>](#module_pex-renderer)
+<a name="module_pex-renderer.renderGraph"></a>
+
+### pex-renderer.renderGraph(ctx) ⇒ [<code>RenderGraph</code>](#RenderGraph)
+
+Create a render graph for rendering passes
+
+**Kind**: static method of [<code>pex-renderer</code>](#module_pex-renderer)
+
+| Param | Type                                           |
+| ----- | ---------------------------------------------- |
+| ctx   | <code>module:pex-context/types/index.js</code> |
+
+<a name="module_pex-renderer.resourceCache"></a>
+
+### pex-renderer.resourceCache(ctx) ⇒ [<code>ResourceCache</code>](#ResourceCache)
+
+Create a resource cache for pex-context caching.
+
+**Kind**: static method of [<code>pex-renderer</code>](#module_pex-renderer)
+
+| Param | Type                                           |
+| ----- | ---------------------------------------------- |
+| ctx   | <code>module:pex-context/types/index.js</code> |
+
 <a name="module_systems"></a>
 
 ## systems
@@ -613,10 +613,10 @@ Vertex helper component
   - [.light()](#module_systems.light) ⇒ [<code>System</code>](#System)
   - [.morph()](#module_systems.morph) ⇒ [<code>System</code>](#System)
   - [.reflectionProbe(options)](#module_systems.reflectionProbe) ⇒ [<code>System</code>](#System)
+  - [.renderPipeline(options)](#module_systems.renderPipeline) ⇒ [<code>System</code>](#System)
   - [.skin()](#module_systems.skin) ⇒ [<code>System</code>](#System)
   - [.skybox(options)](#module_systems.skybox) ⇒ [<code>System</code>](#System)
   - [.transform()](#module_systems.transform) ⇒ [<code>System</code>](#System)
-  - [.renderPipeline(options)](#module_systems.renderPipeline) ⇒ [<code>System</code>](#System)
 
 <a name="module_systems.renderer"></a>
 
@@ -703,6 +703,24 @@ Adds:
 | ------- | -------------------------------------------- |
 | options | [<code>SystemOptions</code>](#SystemOptions) |
 
+<a name="module_systems.renderPipeline"></a>
+
+### systems.renderPipeline(options) ⇒ [<code>System</code>](#System)
+
+Render pipeline system
+
+Adds:
+
+- "\_near", "\_far", "\_radiusUV" and "\_sceneBboxInLightSpace" to light components that cast shadows
+- "\_shadowCubemap" to pointLight components and "\_shadowMap" to other light components
+- "\_targets" to postProcessing components
+
+**Kind**: static method of [<code>systems</code>](#module_systems)
+
+| Param   | Type                                         |
+| ------- | -------------------------------------------- |
+| options | [<code>SystemOptions</code>](#SystemOptions) |
+
 <a name="module_systems.skin"></a>
 
 ### systems.skin() ⇒ [<code>System</code>](#System)
@@ -739,24 +757,6 @@ Adds:
 - "\_transform" to entities as reference to internal cache
 
 **Kind**: static method of [<code>systems</code>](#module_systems)
-<a name="module_systems.renderPipeline"></a>
-
-### systems.renderPipeline(options) ⇒ [<code>System</code>](#System)
-
-Render pipeline system
-
-Adds:
-
-- "\_near", "\_far", "\_radiusUV" and "\_sceneBboxInLightSpace" to light components that cast shadows
-- "\_shadowCubemap" to pointLight components and "\_shadowMap" to other light components
-- "\_targets" to postProcessing components
-
-**Kind**: static method of [<code>systems</code>](#module_systems)
-
-| Param   | Type                                         |
-| ------- | -------------------------------------------- |
-| options | [<code>SystemOptions</code>](#SystemOptions) |
-
 <a name="module_renderer"></a>
 
 ## renderer

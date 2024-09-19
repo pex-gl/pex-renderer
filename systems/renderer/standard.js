@@ -194,7 +194,7 @@ export default ({ ctx, shadowQuality = 3 }) => ({
       cullFace:
         options.cullFaceMode && material.cullFace === false
           ? true
-          : material.cullFace ?? true,
+          : (material.cullFace ?? true),
       cullFaceMode:
         options.cullFaceMode || material.cullFaceMode || ctx.Face.Back,
       primitive: geometry.primitive ?? ctx.Primitive.Triangles,
