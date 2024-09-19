@@ -18,6 +18,12 @@ const postProcessing = (options) => ({
   ...options,
 });
 
+/**
+ * Post Processing SSAO subcomponent
+ * @param {import("../types.js").SSAOComponentOptions} [options]
+ * @returns {object}
+ * @alias module:components.postProcessing.ssao
+ */
 postProcessing.ssao = (options) => ({
   type: "sao", // "gtao",
   noiseTexture: true,
@@ -38,6 +44,12 @@ postProcessing.ssao = (options) => ({
   colorBounceIntensity: 1.0,
   ...options,
 });
+
+/**
+ * Post Processing DoF subcomponent
+ * @param {import("../types.js").DoFComponentOptions} [options]
+ * @returns {object}
+ */
 postProcessing.dof = (options) => ({
   type: "gustafsson", // "upitis"
   physical: true,
@@ -53,11 +65,23 @@ postProcessing.dof = (options) => ({
   debug: false,
   ...options,
 });
+
+/**
+ * Post Processing AA subcomponent
+ * @param {import("../types.js").AAComponentOptions} [options]
+ * @returns {object}
+ */
 postProcessing.aa = (options) => ({
   subPixelQuality: 0.75, // (0, 1]
   quality: 2,
   ...options,
 });
+
+/**
+ * Post Processing Fog subcomponent
+ * @param {import("../types.js").FogComponentOptions} [options]
+ * @returns {object}
+ */
 postProcessing.fog = (options) => ({
   color: [0.5, 0.5, 0.5],
   start: 5,
@@ -70,6 +94,12 @@ postProcessing.fog = (options) => ({
   inscatteringCoeffs: [0.3, 0.3, 0.3],
   ...options,
 });
+
+/**
+ * Post Processing Bloom subcomponent
+ * @param {import("../types.js").BloomComponentOptions} [options]
+ * @returns {object}
+ */
 postProcessing.bloom = (options) => ({
   quality: 1,
   colorFunction: "luma", // "average" | "luminance"
@@ -79,10 +109,22 @@ postProcessing.bloom = (options) => ({
   intensity: 0.1,
   ...options,
 });
+
+/**
+ * Post Processing LUT subcomponent
+ * @param {import("../types.js").LutComponentOptions} [options]
+ * @returns {object}
+ */
 postProcessing.lut = (options) => ({
   // texture,
   ...options,
 });
+
+/**
+ * Post Processing Color Correction subcomponent
+ * @param {import("../types.js").ColorCorrectionComponentOptions} [options]
+ * @returns {object}
+ */
 postProcessing.colorCorrection = (options) => ({
   brightness: 0,
   contrast: 1,
@@ -90,11 +132,23 @@ postProcessing.colorCorrection = (options) => ({
   hue: 0,
   ...options,
 });
+
+/**
+ * Post Processing Vignette subcomponent
+ * @param {import("../types.js").VignetteComponentOptions} [options]
+ * @returns {object}
+ */
 postProcessing.vignette = (options) => ({
   radius: 0.8,
   intensity: 0.2,
   ...options,
 });
+
+/**
+ * Post Processing Film Grain subcomponent
+ * @param {import("../types.js").FilmGrainComponentOptions} [options]
+ * @returns {object}
+ */
 postProcessing.filmGrain = (options) => ({
   quality: 2,
   size: 1.6,
