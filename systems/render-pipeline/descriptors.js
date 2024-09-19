@@ -151,6 +151,8 @@ void main() {
         ? ctx.PixelFormat.RGBA16F
         : ctx.PixelFormat.RGBA8,
       encoding: ctx.Encoding.Linear,
+      min: ctx.Filter.Linear,
+      mag: ctx.Filter.Linear,
     },
   },
   blit: {
