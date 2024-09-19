@@ -240,6 +240,15 @@ ctx.frame(() => {
   - [.overlay([options])](#module_components.overlay) ⇒ <code>object</code>
   - [.pointLight([options])](#module_components.pointLight) ⇒ <code>object</code>
   - [.postProcessing([options])](#module_components.postProcessing) ⇒ <code>object</code>
+    - [.ssao([options])](#module_components.postProcessing.ssao) ⇒ <code>object</code>
+    - [.dof([options])](#module_components.postProcessing.dof) ⇒ <code>object</code>
+    - [.aa([options])](#module_components.postProcessing.aa) ⇒ <code>object</code>
+    - [.fog([options])](#module_components.postProcessing.fog) ⇒ <code>object</code>
+    - [.bloom([options])](#module_components.postProcessing.bloom) ⇒ <code>object</code>
+    - [.lut([options])](#module_components.postProcessing.lut) ⇒ <code>object</code>
+    - [.colorCorrection([options])](#module_components.postProcessing.colorCorrection) ⇒ <code>object</code>
+    - [.vignette([options])](#module_components.postProcessing.vignette) ⇒ <code>object</code>
+    - [.filmGrain([options])](#module_components.postProcessing.filmGrain) ⇒ <code>object</code>
   - [.reflectionProbe([options])](#module_components.reflectionProbe) ⇒ <code>object</code>
   - [.skin([options])](#module_components.skin) ⇒ <code>object</code>
   - [.skybox([options])](#module_components.skybox) ⇒ <code>object</code>
@@ -450,6 +459,125 @@ Post Processing component
 | Param     | Type                                                                           |
 | --------- | ------------------------------------------------------------------------------ |
 | [options] | [<code>PostProcessingComponentOptions</code>](#PostProcessingComponentOptions) |
+
+- [.postProcessing([options])](#module_components.postProcessing) ⇒ <code>object</code>
+  - [.ssao([options])](#module_components.postProcessing.ssao) ⇒ <code>object</code>
+  - [.dof([options])](#module_components.postProcessing.dof) ⇒ <code>object</code>
+  - [.aa([options])](#module_components.postProcessing.aa) ⇒ <code>object</code>
+  - [.fog([options])](#module_components.postProcessing.fog) ⇒ <code>object</code>
+  - [.bloom([options])](#module_components.postProcessing.bloom) ⇒ <code>object</code>
+  - [.lut([options])](#module_components.postProcessing.lut) ⇒ <code>object</code>
+  - [.colorCorrection([options])](#module_components.postProcessing.colorCorrection) ⇒ <code>object</code>
+  - [.vignette([options])](#module_components.postProcessing.vignette) ⇒ <code>object</code>
+  - [.filmGrain([options])](#module_components.postProcessing.filmGrain) ⇒ <code>object</code>
+
+<a name="module_components.postProcessing.ssao"></a>
+
+#### postProcessing.ssao([options]) ⇒ <code>object</code>
+
+Post Processing SSAO subcomponent
+
+**Kind**: static method of [<code>postProcessing</code>](#module_components.postProcessing)
+
+| Param     | Type                                                       |
+| --------- | ---------------------------------------------------------- |
+| [options] | [<code>SSAOComponentOptions</code>](#SSAOComponentOptions) |
+
+<a name="module_components.postProcessing.dof"></a>
+
+#### postProcessing.dof([options]) ⇒ <code>object</code>
+
+Post Processing DoF subcomponent
+
+**Kind**: static method of [<code>postProcessing</code>](#module_components.postProcessing)
+
+| Param     | Type                                                     |
+| --------- | -------------------------------------------------------- |
+| [options] | [<code>DoFComponentOptions</code>](#DoFComponentOptions) |
+
+<a name="module_components.postProcessing.aa"></a>
+
+#### postProcessing.aa([options]) ⇒ <code>object</code>
+
+Post Processing AA subcomponent
+
+**Kind**: static method of [<code>postProcessing</code>](#module_components.postProcessing)
+
+| Param     | Type                                                   |
+| --------- | ------------------------------------------------------ |
+| [options] | [<code>AAComponentOptions</code>](#AAComponentOptions) |
+
+<a name="module_components.postProcessing.fog"></a>
+
+#### postProcessing.fog([options]) ⇒ <code>object</code>
+
+Post Processing Fog subcomponent
+
+**Kind**: static method of [<code>postProcessing</code>](#module_components.postProcessing)
+
+| Param     | Type                                                     |
+| --------- | -------------------------------------------------------- |
+| [options] | [<code>FogComponentOptions</code>](#FogComponentOptions) |
+
+<a name="module_components.postProcessing.bloom"></a>
+
+#### postProcessing.bloom([options]) ⇒ <code>object</code>
+
+Post Processing Bloom subcomponent
+
+**Kind**: static method of [<code>postProcessing</code>](#module_components.postProcessing)
+
+| Param     | Type                                                         |
+| --------- | ------------------------------------------------------------ |
+| [options] | [<code>BloomComponentOptions</code>](#BloomComponentOptions) |
+
+<a name="module_components.postProcessing.lut"></a>
+
+#### postProcessing.lut([options]) ⇒ <code>object</code>
+
+Post Processing LUT subcomponent
+
+**Kind**: static method of [<code>postProcessing</code>](#module_components.postProcessing)
+
+| Param     | Type                                                     |
+| --------- | -------------------------------------------------------- |
+| [options] | [<code>LutComponentOptions</code>](#LutComponentOptions) |
+
+<a name="module_components.postProcessing.colorCorrection"></a>
+
+#### postProcessing.colorCorrection([options]) ⇒ <code>object</code>
+
+Post Processing Color Correction subcomponent
+
+**Kind**: static method of [<code>postProcessing</code>](#module_components.postProcessing)
+
+| Param     | Type                                                                             |
+| --------- | -------------------------------------------------------------------------------- |
+| [options] | [<code>ColorCorrectionComponentOptions</code>](#ColorCorrectionComponentOptions) |
+
+<a name="module_components.postProcessing.vignette"></a>
+
+#### postProcessing.vignette([options]) ⇒ <code>object</code>
+
+Post Processing Vignette subcomponent
+
+**Kind**: static method of [<code>postProcessing</code>](#module_components.postProcessing)
+
+| Param     | Type                                                               |
+| --------- | ------------------------------------------------------------------ |
+| [options] | [<code>VignetteComponentOptions</code>](#VignetteComponentOptions) |
+
+<a name="module_components.postProcessing.filmGrain"></a>
+
+#### postProcessing.filmGrain([options]) ⇒ <code>object</code>
+
+Post Processing Film Grain subcomponent
+
+**Kind**: static method of [<code>postProcessing</code>](#module_components.postProcessing)
+
+| Param     | Type                                                                 |
+| --------- | -------------------------------------------------------------------- |
+| [options] | [<code>FilmGrainComponentOptions</code>](#FilmGrainComponentOptions) |
 
 <a name="module_components.reflectionProbe"></a>
 
@@ -1252,10 +1380,10 @@ Create an entity
 **Kind**: global typedef
 **Properties**
 
-| Name      | Type                                                             | Default                        | Description       |
-| --------- | ---------------------------------------------------------------- | ------------------------------ | ----------------- |
-| [type]    | <code>&quot;fxaa2&quot;</code> \| <code>&quot;fxaa3&quot;</code> | <code>&quot;fxaa2&quot;</code> |                   |
-| [spanMax] | <code>number</code>                                              | <code>8</code>                 | For "fxaa2" only. |
+| Name              | Type                | Default           | Description                                                            |
+| ----------------- | ------------------- | ----------------- | ---------------------------------------------------------------------- |
+| [subPixelQuality] | <code>number</code> | <code>0.75</code> | Higher = softer. Helps mitigate fireflies but will blur small details. |
+| [quality]         | <code>number</code> | <code>2</code>    | For edge luma threshold: 0 to 4.                                       |
 
 <a name="FogComponentOptions"></a>
 

@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+# [4.0.0-alpha.55](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.54...v4.0.0-alpha.55) (2024-09-19)
+
+
+### Bug Fixes
+
+* **post-processing:** use Linear min/mag for post-processing output ([669c840](https://github.com/pex-gl/pex-renderer/commit/669c84023be9f237da7ad8ffab132db38bf9416c))
+
+
+### Features
+
+* **post-processing:** update aa for fxaa3 ([868b7c6](https://github.com/pex-gl/pex-renderer/commit/868b7c661edd5cb6ba889c99c5420abdac1bdc8a))
+
+
+
 # [4.0.0-alpha.54](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.53...v4.0.0-alpha.54) (2024-09-19)
 
 
