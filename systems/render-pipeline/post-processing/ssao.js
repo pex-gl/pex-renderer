@@ -208,10 +208,10 @@ const ssao = ({ ctx, resourceCache, descriptors, scale = 1 }) => {
     frag: postprocessingShaders.bilateralBlur.frag,
     // prettier-ignore
     flagDefinitions: [
-        [["camera", "near"], "", { uniform: "uNear" }],
-        [["camera", "far"], "", { uniform: "uFar" }],
-        [["postProcessing", "ssao", "blurSharpness"], "", { uniform: "uSharpness" }],
-      ],
+      [["camera", "near"], "", { uniform: "uNear" }],
+      [["camera", "far"], "", { uniform: "uFar" }],
+      [["postProcessing", "ssao", "blurSharpness"], "", { uniform: "uSharpness" }],
+    ],
     enabled: ({ cameraEntity }) =>
       cameraEntity.postProcessing.ssao.blurRadius >= 0,
     uniforms: ({ cameraEntity: entity }) => ({
