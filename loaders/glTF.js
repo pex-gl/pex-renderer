@@ -33,6 +33,7 @@ const SUPPORTED_EXTENSIONS = [
   "KHR_mesh_quantization",
   "KHR_texture_basisu",
   "KHR_texture_transform",
+  // "EXT_texture_webp",
 
   // WIP:
   // "KHR_animation_pointer"

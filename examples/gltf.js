@@ -432,7 +432,7 @@ gui.addTexture2DList(
   State,
   "selectedModel",
   thumbnails,
-  4,
+  5,
   async (model) => {
     // Clean up
     const scenes = State.scenes.length ? State.scenes : [State.scene];
@@ -491,9 +491,11 @@ models = models.filter(({ name }) =>
   [
     // "ABeautifulGame",
     // "AlphaBlendModeTest",
+    // "AnimatedColorsCube", // FAIL: multiple scenes or animation?
     // "AnimatedCube",
     // "AnimatedMorphCube",
     // "AnimatedTriangle",
+    // "AnimationPointerUVs", // FAIL: KHR_animation_pointer KHR_materials_anisotropy KHR_materials_iridescence
     // "AnisotropyBarnLamp", // FAIL: KHR_materials_anisotropy
     // "AnisotropyDiscTest", // FAIL: KHR_materials_anisotropy
     // "AnisotropyRotationTest", // FAIL: KHR_materials_anisotropy
@@ -513,6 +515,7 @@ models = models.filter(({ name }) =>
     // "BoxVertexColors", // FAIL: COLOR_0 can be vec3
     // "BrainStem",
     // "Cameras",
+    // "CarConcept", // HALF: transmission refraction too intense
     // "CarbonFibre", // FAIL: KHR_materials_anisotropy
     // "CesiumMan",
     // "CesiumMilkTruck",
@@ -520,9 +523,25 @@ models = models.filter(({ name }) =>
     // "ClearCoatCarPaint",
     // "ClearCoatTest",
     // "ClearcoatWicker",
+    // "CompareAlphaCoverage",
+    // "CompareAmbientOcclusion",
+    // "CompareAnisotropy", // FAIL: KHR_materials_anisotropy
+    // "CompareBaseColor", // FAIL: COLOR_ can be vec3
+    // "CompareClearcoat",
+    // "CompareDispersion",
+    // "CompareEmissiveStrength",
+    // "CompareIor",
+    // "CompareIridescence", // FAIL: KHR_materials_iridescence
+    // "CompareMetallic",
+    // "CompareNormal",
+    // "CompareRoughness",
+    // "CompareSheen",
+    // "CompareSpecular",
+    // "CompareTransmission", // HALF: transmission refraction too intense
+    // "CompareVolume",
     // "Corset",
     // "Cube",
-    "DamagedHelmet",
+    // "DamagedHelmet",
     // "DiffuseTransmissionPlant", // FAIL: KHR_materials_diffuse_transmission
     // "DiffuseTransmissionTeacup", // FAIL: KHR_materials_diffuse_transmission
     // "DirectionalLight", // FAIL: physical light energy preservation
@@ -559,10 +578,14 @@ models = models.filter(({ name }) =>
     // "MultiUVTest", // FAIL: wrong position
     // "MultipleScenes", // FAIL: missing implementation
     // "NegativeScaleTest", // FAIL: need determinant test
+    // "NodePerformanceTest",
     // "NormalTangentMirrorTest",
     // "NormalTangentTest",
     // "OrientationTest",
+    // "PlaysetLightTest",
+    // "PointLightIntensityTest",
     // "PotOfCoals",
+    // "PotOfCoalsAnimationPointer", // FAIL: KHR_animation_pointer
     // "PrimitiveModeNormalsTest", // FAIL: 3rd column should render as flat shading
     // "RecursiveSkeletons",
     // "RiggedFigure",
@@ -571,6 +594,7 @@ models = models.filter(({ name }) =>
     // "SheenChair",
     // "SheenCloth",
     // "SheenTestGrid",
+    // "SheenWoodLeatherSofa", // FAIL: EXT_texture_webp
     // "SimpleInstancing", // HALF: need instanced bbox
     // "SimpleMaterial",
     // "SimpleMeshes",
@@ -583,6 +607,7 @@ models = models.filter(({ name }) =>
     // "SpecularTest", // HALF: left column should have no specular
     // "Sponza",
     // "StainedGlassLamp", // FAIL: KHR_materials_variants
+    // "SunglassesKhronos",  // FAIL: EXT_texture_webp KHR_materials_iridescence
     // "Suzanne",
     // "TextureCoordinateTest",
     // "TextureEncodingTest",
@@ -591,7 +616,7 @@ models = models.filter(({ name }) =>
     // "TextureTransformMultiTest",
     // "TextureTransformTest",
     // "ToyCar", // FAIL: (too small, wrong camera)
-    // "TransmissionRoughnessTest",
+    "TransmissionRoughnessTest",
     // "TransmissionTest",
     // "TransmissionThinwallTestGrid",
     // "Triangle",
