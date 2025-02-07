@@ -178,8 +178,8 @@ vec4 debugColor = vec4(pow(vec3(${debugRender}${scale}), vec3(${pow})), 1.0);
     );
 
     const descriptor = {
-      vert: options.vert,
-      frag: options.frag,
+      vert: entity.material?.vert || options.vert,
+      frag: entity.material?.frag || options.frag,
     };
 
     this.shadersPostReplace(
