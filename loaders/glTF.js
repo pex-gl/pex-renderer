@@ -775,7 +775,9 @@ async function handlePrimitive(
       indices: {
         buffer: indicesAccessor._bufferView._indexBuffer,
         offset: indicesAccessor.byteOffset,
+        data: indicesAccessor._bufferView._data,
         type: indicesAccessor.componentType,
+        stride: indicesAccessor._bufferView.byteStride,
         normalized: indicesAccessor.normalized,
       },
       count: indicesAccessor.count,
