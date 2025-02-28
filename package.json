@@ -46,7 +46,8 @@
     "pex-loaders": "^1.0.0-alpha.4",
     "pex-math": "^4.1.1",
     "pex-random": "^2.1.2",
-    "pex-shaders": "^1.0.0-alpha.33"
+    "pex-shaders": "^1.0.0-alpha.33",
+    "typed-array-interleave": "^2.0.1"
   },
   "devDependencies": {
     "@hpcc-js/wasm-graphviz": "^1.5.0",
@@ -92,7 +93,8 @@
       "pex-color",
       "pex-context",
       "pex-gui",
-      "primitive-geometry"
+      "primitive-geometry",
+      "typed-array-interleave"
     ],
     "files": "{*.js,*(systems|components|helpers|loaders|utils)/**/*.js}"
   }
