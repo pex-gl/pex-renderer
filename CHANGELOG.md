@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+# [4.0.0-alpha.56](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.55...v4.0.0-alpha.56) (2025-03-18)
+
+
+### Bug Fixes
+
+* **ecs:** bring back material.vert/frag overrides ([2ae3ce2](https://github.com/pex-gl/pex-renderer/commit/2ae3ce21ab98752aec95ed0bbdc4f392cdee2398)), closes [/github.com/pex-gl/pex-renderer/commit/260c28166fda456768d964c4ff12bc5e6fef2b29#diff-c63fc099d20daf6f1f90e276bee667ddddb672294d1860e1249d8acb75a6a2e5L194](https://github.com//github.com/pex-gl/pex-renderer/commit/260c28166fda456768d964c4ff12bc5e6fef2b29/issues/diff-c63fc099d20daf6f1f90e276bee667ddddb672294d1860e1249d8acb75a6a2e5L194)
+* **gltf:** handle vec3 vertexColors ([99d1e4e](https://github.com/pex-gl/pex-renderer/commit/99d1e4e3c335a4fedc8c30558869bd0025dcf1bf))
+
+
+### Features
+
+* **ecs:** handle shadow mapping in line renderer ([3ca5195](https://github.com/pex-gl/pex-renderer/commit/3ca5195824997e607673bdbd2d4a58e6c0ad0dbd))
+* **ecs:** remove automatic bounds recomputing on positions/change offset ([a996e10](https://github.com/pex-gl/pex-renderer/commit/a996e10848018d1de68d88733a0b5b5b6e0f883c))
+* **gltf:** add diffuse transmission support ([b27ac88](https://github.com/pex-gl/pex-renderer/commit/b27ac88a547284695a88b45003ae95caf573bd3f))
+* **gltf:** expose data and stride to indices ([8878fa5](https://github.com/pex-gl/pex-renderer/commit/8878fa5d4f41caa806ec990fdd1d890c2abf6257)), closes [#398](https://github.com/pex-gl/pex-renderer/issues/398)
+
+
+
 # [4.0.0-alpha.55](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.54...v4.0.0-alpha.55) (2024-09-19)
 
 
