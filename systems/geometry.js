@@ -169,10 +169,6 @@ export default ({ ctx }) => ({
           attribute.divisor =
             attributeValue.divisor ||
             (instancedAttributes.includes(attributeName) ? 1 : undefined);
-
-          // Set bounds dirty for updated "positions"/"offsets" (manually setting dirty or from animation/morph system updates)
-          boundsDirty ||=
-            attributeName === "aPosition" || attributeName === "aOffset";
         }
       } else if (cachedGeom.attributes[attributeName]) {
         ctx.dispose(
