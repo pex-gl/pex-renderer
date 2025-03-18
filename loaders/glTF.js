@@ -422,7 +422,7 @@ function handleMaterial(material, gltf, ctx) {
             clearcoatExt.clearcoatNormalTexture,
             gltf,
             ctx,
-            ctx.Encoding.SRGB,
+            ctx.Encoding.SRGB, // TODO: shoudln't it be linear?
           );
         }
       }

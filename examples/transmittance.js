@@ -9,6 +9,7 @@ import createContext from "pex-context";
 import createGUI from "pex-gui";
 import { vec3, quat } from "pex-math";
 import { aabb } from "pex-geom";
+import { loadHdr } from "pex-loaders";
 import { plane, sphere } from "primitive-geometry";
 import gridCells from "grid-cells";
 import { getEnvMap, getTexture, getURL, dragon } from "./utils.js";
@@ -221,10 +222,12 @@ for (let i = 0; i < nW * nH; i++) {
   world.add(materialEntity);
 }
 
-const envMap = await getEnvMap(
-  ctx,
-  "assets/envmaps/glTF-Sample-Environments/neutral.hdr",
-);
+const ENV_MAP_PATH =
+  location.hostname === "localhost"
+    ? "examples/glTF-Sample-Environments"
+    : "https://github.com/KhronosGroup/glTF-Sample-Environments/raw/main";
+
+const envMap = await loadHdr(ctx, `${ENV_MAP_PATH}/neutral.hdr`);
 const furnaceEnvMap = await getEnvMap(
   ctx,
   "assets/envmaps/furnace/furnace-4k.hdr",
