@@ -512,10 +512,10 @@ models = models.filter(({ name }) =>
     // "BoxInterleaved",
     // "BoxTextured",
     // "BoxTexturedNonPowerOfTwo",
-    // "BoxVertexColors", // FAIL: COLOR_0 can be vec3
+    // "BoxVertexColors",
     // "BrainStem",
     // "Cameras",
-    // "CarConcept", // HALF: transmission refraction too intense
+    // "CarConcept",
     // "CarbonFibre", // FAIL: KHR_materials_anisotropy
     // "CesiumMan",
     // "CesiumMilkTruck",
@@ -526,7 +526,7 @@ models = models.filter(({ name }) =>
     // "CompareAlphaCoverage",
     // "CompareAmbientOcclusion",
     // "CompareAnisotropy", // FAIL: KHR_materials_anisotropy
-    // "CompareBaseColor", // FAIL: COLOR_ can be vec3
+    // "CompareBaseColor",
     // "CompareClearcoat",
     // "CompareDispersion",
     // "CompareEmissiveStrength",
@@ -537,13 +537,14 @@ models = models.filter(({ name }) =>
     // "CompareRoughness",
     // "CompareSheen",
     // "CompareSpecular",
-    // "CompareTransmission", // HALF: transmission refraction too intense
+    // "CompareTransmission",
     // "CompareVolume",
     // "Corset",
     // "Cube",
-    // "DamagedHelmet",
-    // "DiffuseTransmissionPlant", // FAIL: KHR_materials_diffuse_transmission
-    // "DiffuseTransmissionTeacup", // FAIL: KHR_materials_diffuse_transmission
+    "DamagedHelmet",
+    // "DiffuseTransmissionPlant", // HALF: depth check only works with DEPTH_COMPONENT16
+    // "DiffuseTransmissionTeacup",
+    // "DiffuseTransmissionTest",
     // "DirectionalLight", // FAIL: physical light energy preservation
     // "DispersionTest",
     // "DragonAttenuation", // FAIL: KHR_materials_variants
@@ -567,7 +568,7 @@ models = models.filter(({ name }) =>
     // "IridescentDishWithOlives", // FAIL: KHR_materials_iridescence
     // "Lantern",
     // "LightsPunctualLamp",
-    // "MandarinOrange", // FAIL: KHR_materials_diffuse_transmission
+    // "MandarinOrange",
     // "MaterialsVariantsShoe", // FAIL: KHR_materials_variants
     // "MeshPrimitiveModes",
     // "MetalRoughSpheres",
@@ -586,7 +587,7 @@ models = models.filter(({ name }) =>
     // "PointLightIntensityTest",
     // "PotOfCoals",
     // "PotOfCoalsAnimationPointer", // FAIL: KHR_animation_pointer
-    // "PrimitiveModeNormalsTest", // FAIL: 3rd column should render as flat shading
+    // "PrimitiveModeNormalsTest", // FAIL: 3rd column should render as flat shading (need Generate tangents with Mikktspace?)
     // "RecursiveSkeletons",
     // "RiggedFigure",
     // "RiggedSimple",
@@ -604,7 +605,7 @@ models = models.filter(({ name }) =>
     // "SimpleTexture",
     // "SpecGlossVsMetalRough", // HALF: not in spec anymore
     // "SpecularSilkPouf",
-    // "SpecularTest", // HALF: left column should have no specular
+    // "SpecularTest", // HALF: left column should have no specular but we disable extension if specular=0 in getProgramFlagsAndUniforms
     // "Sponza",
     // "StainedGlassLamp", // FAIL: KHR_materials_variants
     // "SunglassesKhronos",  // FAIL: EXT_texture_webp KHR_materials_iridescence
@@ -616,7 +617,7 @@ models = models.filter(({ name }) =>
     // "TextureTransformMultiTest",
     // "TextureTransformTest",
     // "ToyCar", // FAIL: (too small, wrong camera)
-    "TransmissionRoughnessTest",
+    // "TransmissionRoughnessTest",
     // "TransmissionTest",
     // "TransmissionThinwallTestGrid",
     // "Triangle",

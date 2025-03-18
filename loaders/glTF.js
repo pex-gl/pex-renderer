@@ -28,6 +28,7 @@ const SUPPORTED_EXTENSIONS = [
   "KHR_materials_sheen",
   "KHR_materials_specular",
   "KHR_materials_transmission",
+  "KHR_materials_diffuse_transmission",
   "KHR_materials_unlit",
   // "KHR_materials_variants",
   "KHR_materials_volume",
@@ -37,10 +38,9 @@ const SUPPORTED_EXTENSIONS = [
   // "EXT_texture_webp",
 
   // WIP:
+  // "EXT_lights_image_based"
   // "KHR_animation_pointer"
   // "KHR_audio"
-  // "KHR_materials_diffuse_transmission"
-  // "KHR_materials_sss"
 ];
 
 const WEBGL_CONSTANTS = {
@@ -437,6 +437,32 @@ function handleMaterial(material, gltf, ctx) {
             gltf,
             ctx,
             ctx.Encoding.Linear,
+          );
+        }
+      }
+
+      // https://github.com/KhronosGroup/glTF/tree/main/extensions/2.0/Khronos/KHR_materials_diffuse_transmission
+      if (material.extensions.KHR_materials_diffuse_transmission) {
+        const diffuseTransmissionExt =
+          material.extensions.KHR_materials_diffuse_transmission;
+        materialProps.diffuseTransmission =
+          diffuseTransmissionExt.diffuseTransmissionFactor ?? 0;
+        if (diffuseTransmissionExt.diffuseTransmissionTexture) {
+          materialProps.diffuseTransmissionTexture = getPexMaterialTexture(
+            diffuseTransmissionExt.diffuseTransmissionTexture,
+            gltf,
+            ctx,
+            ctx.Encoding.Linear,
+          );
+        }
+        materialProps.diffuseTransmissionColor =
+          diffuseTransmissionExt.diffuseTransmissionColorFactor || [1, 1, 1];
+        if (diffuseTransmissionExt.diffuseTransmissionColorTexture) {
+          materialProps.diffuseTransmissionColorTexture = getPexMaterialTexture(
+            diffuseTransmissionExt.diffuseTransmissionColorTexture,
+            gltf,
+            ctx,
+            ctx.Encoding.SRGB,
           );
         }
       }

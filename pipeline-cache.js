@@ -80,6 +80,7 @@ export default () => ({
               flags.push(`${defineName} ${value ?? opts.default}`);
             }
             // Set flag only if truthy
+            // TODO: specular 0 is allowed so this check will not pass
           } else if (value) {
             flags.push(defineName);
             // Set fallback flag if falsy (false, 0, "", NaN)
