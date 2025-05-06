@@ -98,8 +98,12 @@ export default ({ ctx, debug = false }) => {
             options.height || ctx.gl.drawingBufferHeight,
           ];
 
-          cameraEntity.camera.aspect = viewport[2] / viewport[3];
-          cameraEntity.camera.dirty = true;
+          let aspect = viewport[2] / viewport[3];
+
+          if (aspect !== cameraEntity.camera.aspect) {
+            cameraEntity.camera.aspect = aspect;
+            cameraEntity.camera.dirty = true;
+          }
 
           const renderView = {
             camera: cameraEntity.camera,
