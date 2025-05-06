@@ -4,4 +4,5 @@ node_modules
 /lib
 /web_modules
 /examples/glTF-Sample-Assets
+/examples/glTF-Sample-Environments
 /examples/screenshots/*-diff.png

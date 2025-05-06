@@ -116,6 +116,8 @@ export default ({ ctx } = {}) => ({
     return this.cache.positionBuffers[resolution];
   },
   render(renderView, entities, options) {
+    const shadowMapping = !!options.shadowMappingLight;
+
     const sharedUniforms = {
       // uViewportSize: [renderView.viewport[2], renderView.viewport[3]],
       uResolution: [renderView.viewport[2], renderView.viewport[3]],
@@ -129,7 +131,10 @@ export default ({ ctx } = {}) => ({
 
     const renderableEntities = entities.filter(
       (entity) =>
-        entity.geometry && entity.material && entity.material.type === "line",
+        entity.geometry &&
+        entity.material &&
+        entity.material.type === "line" &&
+        (!shadowMapping || entity.material.castShadows),
     );
 
     for (let i = 0; i < renderableEntities.length; i++) {

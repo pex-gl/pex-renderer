@@ -1,6 +1,7 @@
 import { loadJson, loadImage, loadArrayBuffer, loadBlob } from "pex-io";
 import { quat, mat4, utils } from "pex-math";
 import { loadDraco, loadKtx2 } from "pex-loaders";
+import typedArrayInterleave from "typed-array-interleave";
 import { getDirname, getFileExtension } from "../utils.js";
 import { components, entity, systems } from "../index.js";
 
@@ -27,18 +28,19 @@ const SUPPORTED_EXTENSIONS = [
   "KHR_materials_sheen",
   "KHR_materials_specular",
   "KHR_materials_transmission",
+  "KHR_materials_diffuse_transmission",
   "KHR_materials_unlit",
   // "KHR_materials_variants",
   "KHR_materials_volume",
   "KHR_mesh_quantization",
   "KHR_texture_basisu",
   "KHR_texture_transform",
+  // "EXT_texture_webp",
 
   // WIP:
+  // "EXT_lights_image_based"
   // "KHR_animation_pointer"
   // "KHR_audio"
-  // "KHR_materials_diffuse_transmission"
-  // "KHR_materials_sss"
 ];
 
 const WEBGL_CONSTANTS = {
@@ -420,7 +422,7 @@ function handleMaterial(material, gltf, ctx) {
             clearcoatExt.clearcoatNormalTexture,
             gltf,
             ctx,
-            ctx.Encoding.SRGB,
+            ctx.Encoding.SRGB, // TODO: shoudln't it be linear?
           );
         }
       }
@@ -435,6 +437,32 @@ function handleMaterial(material, gltf, ctx) {
             gltf,
             ctx,
             ctx.Encoding.Linear,
+          );
+        }
+      }
+
+      // https://github.com/KhronosGroup/glTF/tree/main/extensions/2.0/Khronos/KHR_materials_diffuse_transmission
+      if (material.extensions.KHR_materials_diffuse_transmission) {
+        const diffuseTransmissionExt =
+          material.extensions.KHR_materials_diffuse_transmission;
+        materialProps.diffuseTransmission =
+          diffuseTransmissionExt.diffuseTransmissionFactor ?? 0;
+        if (diffuseTransmissionExt.diffuseTransmissionTexture) {
+          materialProps.diffuseTransmissionTexture = getPexMaterialTexture(
+            diffuseTransmissionExt.diffuseTransmissionTexture,
+            gltf,
+            ctx,
+            ctx.Encoding.Linear,
+          );
+        }
+        materialProps.diffuseTransmissionColor =
+          diffuseTransmissionExt.diffuseTransmissionColorFactor || [1, 1, 1];
+        if (diffuseTransmissionExt.diffuseTransmissionColorTexture) {
+          materialProps.diffuseTransmissionColorTexture = getPexMaterialTexture(
+            diffuseTransmissionExt.diffuseTransmissionColorTexture,
+            gltf,
+            ctx,
+            ctx.Encoding.SRGB,
           );
         }
       }
@@ -697,18 +725,37 @@ async function handlePrimitive(
       if (accessor.sparse) {
         attributes[attributeName] = accessor._data;
       } else {
-        if (!accessor._bufferView._vertexBuffer) {
-          accessor._bufferView._vertexBuffer = ctx.vertexBuffer(
-            accessor._bufferView._data,
+        let count = accessor.count;
+        let data = accessor._bufferView._data;
+        let offset = accessor.byteOffset;
+        let stride = accessor._bufferView.byteStride;
+        let buffer = accessor._bufferView._vertexBuffer;
+
+        if (attributeName === "vertexColors" && accessor.type === "VEC3") {
+          data = typedArrayInterleave(
+            Float32Array,
+            [3, 1],
+            new Float32Array(data, offset, count * 3),
+            new Float32Array(count).fill(1),
           );
+          buffer = ctx.vertexBuffer(data);
+          stride += 4;
+          count += count / 3;
+          offset = 0;
+        } else {
+          if (!buffer) {
+            buffer = accessor._bufferView._vertexBuffer =
+              ctx.vertexBuffer(data);
+          }
         }
+
         attributes[attributeName] = {
-          count: accessor.count,
-          buffer: accessor._bufferView._vertexBuffer,
-          offset: accessor.byteOffset,
-          data: accessor._bufferView._data,
+          count,
+          buffer,
+          offset,
+          data,
           type: accessor.componentType,
-          stride: accessor._bufferView.byteStride,
+          stride,
           normalized: accessor.normalized,
         };
       }
@@ -754,7 +801,9 @@ async function handlePrimitive(
       indices: {
         buffer: indicesAccessor._bufferView._indexBuffer,
         offset: indicesAccessor.byteOffset,
+        data: indicesAccessor._bufferView._data,
         type: indicesAccessor.componentType,
+        stride: indicesAccessor._bufferView.byteStride,
         normalized: indicesAccessor.normalized,
       },
       count: indicesAccessor.count,

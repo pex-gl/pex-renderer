@@ -39,7 +39,7 @@ const flagDefinitions = [
   [["material", "roughness"], "", { uniform: "uRoughness" }],
 
   [["material", "ior"], "USE_IOR", { uniform: "uIor" }],
-  [["material", "specular"], "USE_SPECULAR", { uniform: "uSpecular" }],
+  [["material", "specular"], "USE_SPECULAR", { uniform: "uSpecular" }], // TODO: specular 0 is allowed
   [["material", "specularTexture"], "SPECULAR_TEXTURE", { type: "texture", uniform: "uSpecularTexture", requires: "USE_SPECULAR" }],
   [["material", "specularColor"], "", { uniform: "uSpecularColor", requires: "USE_SPECULAR", default: [1, 1, 1] }],
   [["material", "specularColorTexture"], "SPECULAR_COLOR_TEXTURE", { type: "texture", uniform: "uSpecularColorTexture", requires: "USE_SPECULAR" }],
@@ -71,11 +71,18 @@ const flagDefinitions = [
 
   [["material", "transmission"], "", { uniform: "uTransmission", requires: "USE_TRANSMISSION" }],
   [["material", "transmissionTexture"], "TRANSMISSION_TEXTURE", { type: "texture", uniform: "uTransmissionTexture", requires: "USE_TRANSMISSION" }],
-  [["material", "thickness"], "", { uniform: "uThickness", requires: "USE_TRANSMISSION" }],
-  [["material", "thicknessTexture"], "THICKNESS_TEXTURE", { type: "texture", uniform: "uThicknessTexture", requires: "USE_TRANSMISSION" }],
-  [["material", "attenuationDistance"], "", { uniform: "uAttenuationDistance", requires: "USE_TRANSMISSION", default: Infinity }],
-  [["material", "attenuationColor"], "", { uniform: "uAttenuationColor", requires: "USE_TRANSMISSION", default: [1, 1, 1] }],
   [["material", "dispersion"], "USE_DISPERSION", { uniform: "uDispersion", requires: "USE_TRANSMISSION" }],
+
+  [["material", "diffuseTransmission"], "USE_DIFFUSE_TRANSMISSION", { uniform: "uDiffuseTransmission" }],
+  [["material", "diffuseTransmissionTexture"], "DIFFUSE_TRANSMISSION_TEXTURE", { type: "texture", uniform: "uDiffuseTransmissionTexture", requires: "USE_DIFFUSE_TRANSMISSION" }],
+  [["material", "diffuseTransmissionColor"], "", { uniform: "uDiffuseTransmissionColor", requires: "USE_DIFFUSE_TRANSMISSION", default: [1, 1, 1] }],
+  [["material", "diffuseTransmissionColorTexture"], "DIFFUSE_TRANSMISSION_COLOR_TEXTURE", { type: "texture", uniform: "uDiffuseTransmissionColorTexture", requires: "USE_DIFFUSE_TRANSMISSION" }],
+
+  [["material", "thickness"], "USE_VOLUME", { uniform: "uThickness", requires: "USE_TRANSMISSION" }],
+  [["material", "thickness"], "USE_VOLUME", { uniform: "uThickness", requires: "USE_DIFFUSE_TRANSMISSION", excludes: "USE_TRANSMISSION" }], // excludes to avoid overwritting
+  [["material", "thicknessTexture"], "THICKNESS_TEXTURE", { type: "texture", uniform: "uThicknessTexture", requires: "USE_VOLUME" }],
+  [["material", "attenuationDistance"], "", { uniform: "uAttenuationDistance", requires: "USE_VOLUME", default: Infinity }],
+  [["material", "attenuationColor"], "", { uniform: "uAttenuationColor", requires: "USE_VOLUME", default: [1, 1, 1] }],
 
   [["_geometry", "attributes", "aNormal"], "USE_NORMALS", { fallback: "USE_UNLIT_WORKFLOW" }],
   [["_geometry", "attributes", "aTangent"], "USE_TANGENTS"],

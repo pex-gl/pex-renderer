@@ -80,6 +80,7 @@ export default () => ({
               flags.push(`${defineName} ${value ?? opts.default}`);
             }
             // Set flag only if truthy
+            // TODO: specular 0 is allowed so this check will not pass
           } else if (value) {
             flags.push(defineName);
             // Set fallback flag if falsy (false, 0, "", NaN)
@@ -178,8 +179,8 @@ vec4 debugColor = vec4(pow(vec3(${debugRender}${scale}), vec3(${pow})), 1.0);
     );
 
     const descriptor = {
-      vert: options.vert,
-      frag: options.frag,
+      vert: entity.material?.vert || options.vert,
+      frag: entity.material?.frag || options.frag,
     };
 
     this.shadersPostReplace(

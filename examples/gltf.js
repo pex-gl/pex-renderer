@@ -432,7 +432,7 @@ gui.addTexture2DList(
   State,
   "selectedModel",
   thumbnails,
-  4,
+  5,
   async (model) => {
     // Clean up
     const scenes = State.scenes.length ? State.scenes : [State.scene];
@@ -491,9 +491,11 @@ models = models.filter(({ name }) =>
   [
     // "ABeautifulGame",
     // "AlphaBlendModeTest",
+    // "AnimatedColorsCube", // FAIL: multiple scenes or animation?
     // "AnimatedCube",
     // "AnimatedMorphCube",
     // "AnimatedTriangle",
+    // "AnimationPointerUVs", // FAIL: KHR_animation_pointer KHR_materials_anisotropy KHR_materials_iridescence
     // "AnisotropyBarnLamp", // FAIL: KHR_materials_anisotropy
     // "AnisotropyDiscTest", // FAIL: KHR_materials_anisotropy
     // "AnisotropyRotationTest", // FAIL: KHR_materials_anisotropy
@@ -510,9 +512,10 @@ models = models.filter(({ name }) =>
     // "BoxInterleaved",
     // "BoxTextured",
     // "BoxTexturedNonPowerOfTwo",
-    // "BoxVertexColors", // FAIL: COLOR_0 can be vec3
+    // "BoxVertexColors",
     // "BrainStem",
     // "Cameras",
+    // "CarConcept",
     // "CarbonFibre", // FAIL: KHR_materials_anisotropy
     // "CesiumMan",
     // "CesiumMilkTruck",
@@ -520,11 +523,28 @@ models = models.filter(({ name }) =>
     // "ClearCoatCarPaint",
     // "ClearCoatTest",
     // "ClearcoatWicker",
+    // "CompareAlphaCoverage",
+    // "CompareAmbientOcclusion",
+    // "CompareAnisotropy", // FAIL: KHR_materials_anisotropy
+    // "CompareBaseColor",
+    // "CompareClearcoat",
+    // "CompareDispersion",
+    // "CompareEmissiveStrength",
+    // "CompareIor",
+    // "CompareIridescence", // FAIL: KHR_materials_iridescence
+    // "CompareMetallic",
+    // "CompareNormal",
+    // "CompareRoughness",
+    // "CompareSheen",
+    // "CompareSpecular",
+    // "CompareTransmission",
+    // "CompareVolume",
     // "Corset",
     // "Cube",
     "DamagedHelmet",
-    // "DiffuseTransmissionPlant", // FAIL: KHR_materials_diffuse_transmission
-    // "DiffuseTransmissionTeacup", // FAIL: KHR_materials_diffuse_transmission
+    // "DiffuseTransmissionPlant", // HALF: depth check only works with DEPTH_COMPONENT16
+    // "DiffuseTransmissionTeacup",
+    // "DiffuseTransmissionTest",
     // "DirectionalLight", // FAIL: physical light energy preservation
     // "DispersionTest",
     // "DragonAttenuation", // FAIL: KHR_materials_variants
@@ -548,7 +568,7 @@ models = models.filter(({ name }) =>
     // "IridescentDishWithOlives", // FAIL: KHR_materials_iridescence
     // "Lantern",
     // "LightsPunctualLamp",
-    // "MandarinOrange", // FAIL: KHR_materials_diffuse_transmission
+    // "MandarinOrange",
     // "MaterialsVariantsShoe", // FAIL: KHR_materials_variants
     // "MeshPrimitiveModes",
     // "MetalRoughSpheres",
@@ -559,11 +579,15 @@ models = models.filter(({ name }) =>
     // "MultiUVTest", // FAIL: wrong position
     // "MultipleScenes", // FAIL: missing implementation
     // "NegativeScaleTest", // FAIL: need determinant test
+    // "NodePerformanceTest",
     // "NormalTangentMirrorTest",
     // "NormalTangentTest",
     // "OrientationTest",
+    // "PlaysetLightTest",
+    // "PointLightIntensityTest",
     // "PotOfCoals",
-    // "PrimitiveModeNormalsTest", // FAIL: 3rd column should render as flat shading
+    // "PotOfCoalsAnimationPointer", // FAIL: KHR_animation_pointer
+    // "PrimitiveModeNormalsTest", // FAIL: 3rd column should render as flat shading (need Generate tangents with Mikktspace?)
     // "RecursiveSkeletons",
     // "RiggedFigure",
     // "RiggedSimple",
@@ -571,6 +595,7 @@ models = models.filter(({ name }) =>
     // "SheenChair",
     // "SheenCloth",
     // "SheenTestGrid",
+    // "SheenWoodLeatherSofa", // FAIL: EXT_texture_webp
     // "SimpleInstancing", // HALF: need instanced bbox
     // "SimpleMaterial",
     // "SimpleMeshes",
@@ -580,9 +605,10 @@ models = models.filter(({ name }) =>
     // "SimpleTexture",
     // "SpecGlossVsMetalRough", // HALF: not in spec anymore
     // "SpecularSilkPouf",
-    // "SpecularTest", // HALF: left column should have no specular
+    // "SpecularTest", // HALF: left column should have no specular but we disable extension if specular=0 in getProgramFlagsAndUniforms
     // "Sponza",
     // "StainedGlassLamp", // FAIL: KHR_materials_variants
+    // "SunglassesKhronos",  // FAIL: EXT_texture_webp KHR_materials_iridescence
     // "Suzanne",
     // "TextureCoordinateTest",
     // "TextureEncodingTest",
