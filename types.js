@@ -171,14 +171,20 @@
  *
  * @property {number[]} [sheenColor]
  * @property {number} [sheenRoughness]
-
+ *
  * @property {number} [transmission]
  * @property {ctx.texture2D | TextureTransform} [transmissionTexture]
+ * @property {number} [dispersion]
+ *
+ * @property {number} [diffuseTransmission]
+ * @property {ctx.texture2D | TextureTransform} [diffuseTransmissionTexture]
+ * @property {number} [diffuseTransmissionColor=[1, 1, 1]]
+ * @property {ctx.texture2D | TextureTransform} [diffuseTransmissionColorTexture]
+ *
  * @property {number} [thickness]
  * @property {ctx.texture2D | TextureTransform} [thicknessTexture]
  * @property {number} [attenuationDistance]
  * @property {number[]} [attenuationColor]
- * @property {number} [dispersion]
  *
  * @property {number} [alphaTest="undefined"]
  * @property {ctx.texture2D | TextureTransform} [alphaTexture]
