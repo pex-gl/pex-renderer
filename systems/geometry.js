@@ -41,17 +41,12 @@ export default ({ ctx }) => ({
     const positions = geometry.positions.data || geometry.positions;
     const offsets = geometry.offsets?.data || geometry.offsets;
 
-    if (geometry.bounds) {
-      aabb.empty(geometry.bounds);
-    } else {
-      geometry.bounds = aabb.create();
-    }
+    geometry.bounds ||= aabb.create();
 
     // TODO: handle skin system?
     if (offsets?.length) {
       aabb.fromPoints(geometry.bounds, offsets);
 
-      aabb.empty(TEMP_AABB);
       aabb.fromPoints(TEMP_AABB, positions);
       vec3.add(geometry.bounds[0], TEMP_AABB[0]);
       vec3.add(geometry.bounds[1], TEMP_AABB[1]);

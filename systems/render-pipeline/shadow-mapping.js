@@ -34,7 +34,6 @@ export default ({ renderGraph, resourceCache }) => ({
   computeLightProperties(lightEntity, light, shadowCastingEntities) {
     light._sceneBboxInLightSpace ??= aabb.create();
 
-    aabb.empty(light._sceneBboxInLightSpace);
     aabb.fromPoints(
       light._sceneBboxInLightSpace,
       shadowCastingEntities.flatMap((entity) =>
