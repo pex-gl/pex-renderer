@@ -28,6 +28,7 @@
 
     // Materials
     "materials",
+    "custom-material",
     "brdf",
     "transmission",
     "clear-coat",
