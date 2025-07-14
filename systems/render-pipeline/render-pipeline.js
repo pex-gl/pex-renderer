@@ -5,6 +5,7 @@ import addDescriptors from "./descriptors.js";
 import shadowMappingPipelineMethods from "./shadow-mapping.js";
 import postProcessingPipelineMethods from "./post-processing.js";
 import cullingPipelineMethods from "./culling.js";
+import { getDefaultViewport } from "../../utils.js";
 
 /**
  * Render pipeline system
@@ -119,7 +120,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
 
     renderView ||= {
       camera: cameraEntities[0].camera,
-      viewport: [0, 0, ctx.gl.drawingBufferWidth, ctx.gl.drawingBufferHeight],
+      viewport: getDefaultViewport(ctx),
     };
     const postProcessing = renderView.cameraEntity.postProcessing;
 
