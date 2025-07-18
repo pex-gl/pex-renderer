@@ -16,6 +16,10 @@ import { dragon } from "./utils.js";
 
 const State = {
   animate: true,
+  floorReceiveShadows: true,
+  floorCastShadows: false,
+  meshReceiveShadows: true,
+  meshCastShadows: true,
   rotation: 0,
   shadowMapSizeIndex: 2,
   shadowMapSizes: ["512", "1024", "2048", "4096"],
@@ -56,18 +60,18 @@ const cameraEntities = gridCells(W, H, nW, nH, 0).map((cell, i) => {
 });
 
 // Meshes
-const dragonEntity = createEntity({
+const meshEntity = createEntity({
   transform: components.transform(),
   geometry: components.geometry(dragon),
   material: components.material({
     baseColor: [0.5, 1, 0.7, 1],
     roughness: 0.27,
     metallic: 0.0,
-    receiveShadows: true,
-    castShadows: true,
+    receiveShadows: State.meshReceiveShadows,
+    castShadows: State.meshCastShadows,
   }),
 });
-world.add(dragonEntity);
+world.add(meshEntity);
 
 const floorEntity = createEntity({
   transform: components.transform({
@@ -78,8 +82,8 @@ const floorEntity = createEntity({
     baseColor: [1, 1, 1, 1],
     roughness: 0.15,
     metallic: 0.25,
-    receiveShadows: true,
-    castShadows: false,
+    receiveShadows: State.floorReceiveShadows,
+    castShadows: State.floorCastShadows,
   }),
 });
 world.add(floorEntity);
@@ -255,7 +259,36 @@ const getViewportPosition = (layer, offset = [10, 10]) =>
     offset,
   );
 
-gui.addHeader("Global");
+gui.addHeader("Directional");
+
+gui.addParam(
+  "Intensity",
+  directionalLightEntity.directionalLight,
+  "intensity",
+  { min: 0, max: 20 },
+);
+gui.addParam(
+  "Bulb Radius",
+  directionalLightEntity.directionalLight,
+  "bulbRadius",
+  { min: 0, max: 100 },
+);
+gui.addTexture2D(
+  "Shadowmap",
+  directionalLightEntity.directionalLight._shadowMap,
+  { flipY: true },
+);
+gui.addParam(
+  "Cast Shadows",
+  directionalLightEntity.directionalLight,
+  "castShadows",
+);
+
+gui
+  .addHeader("Global")
+  .setPosition(
+    ...getViewportPosition(LAYERS[1], [-DEFAULT_THEME.columnWidth - 10, 10]),
+  );
 gui.addParam("Animate", State, "animate");
 gui.addParam("Rotation", State, "rotation", { min: 0, max: 1 }, () => {
   State.animate = false;
@@ -289,32 +322,21 @@ gui.addParam("Shadow Quality", standardRendererSystem, "shadowQuality", {
   max: 5,
   step: 1,
 });
-gui
-  .addHeader("Directional")
-  .setPosition(
-    ...getViewportPosition(LAYERS[0], [DEFAULT_THEME.columnWidth + 10, 10]),
-  );
-gui.addParam(
-  "Intensity",
-  directionalLightEntity.directionalLight,
-  "intensity",
-  { min: 0, max: 20 },
-);
-gui.addParam(
-  "Bulb Radius",
-  directionalLightEntity.directionalLight,
-  "bulbRadius",
-  {
-    min: 0,
-    max: 100,
-  },
-);
-gui.addTexture2D(
-  "Shadowmap",
-  directionalLightEntity.directionalLight._shadowMap,
-  { flipY: true },
-);
-gui.addParam("Shadows", directionalLightEntity.directionalLight, "castShadows");
+
+gui.addHeader("Floor");
+gui.addParam("Cast Shadows", State, "floorCastShadows", {}, () => {
+  floorEntity.material.castShadows = State.floorCastShadows;
+});
+gui.addParam("Receive Shadows", State, "floorReceiveShadows", {}, () => {
+  floorEntity.material.receiveShadows = State.floorReceiveShadows;
+});
+gui.addHeader("Mesh");
+gui.addParam("Cast Shadows", State, "meshCastShadows", {}, () => {
+  meshEntity.material.castShadows = State.meshCastShadows;
+});
+gui.addParam("Receive Shadows", State, "meshReceiveShadows", {}, () => {
+  meshEntity.material.receiveShadows = State.meshReceiveShadows;
+});
 
 gui.addHeader("Spot").setPosition(...getViewportPosition(LAYERS[1]));
 gui.addParam("Range", spotLightEntity.spotLight, "range", { min: 0, max: 20 });
@@ -337,7 +359,7 @@ gui.addParam("Bulb Radius", spotLightEntity.spotLight, "bulbRadius", {
 gui.addTexture2D("Shadowmap", spotLightEntity.spotLight._shadowMap, {
   flipY: true,
 });
-gui.addParam("Shadows", spotLightEntity.spotLight, "castShadows");
+gui.addParam("Cast Shadows", spotLightEntity.spotLight, "castShadows");
 
 gui.addHeader("Point").setPosition(...getViewportPosition(LAYERS[2]));
 gui.addParam("Range", pointLightEntity.pointLight, "range", {
@@ -353,7 +375,7 @@ gui.addParam("Bulb Radius", pointLightEntity.pointLight, "bulbRadius", {
   max: 100,
 });
 gui.addTextureCube("Shadowmap", pointLightEntity.pointLight._shadowCubemap);
-gui.addParam("Shadows", pointLightEntity.pointLight, "castShadows");
+gui.addParam("Cast Shadows", pointLightEntity.pointLight, "castShadows");
 
 gui.addHeader("Area").setPosition(...getViewportPosition(LAYERS[3]));
 gui.addParam("Intensity", areaLightEntity.areaLight, "intensity", {
@@ -377,7 +399,7 @@ gui.addParam("Double Sided", areaLightEntity.areaLight, "doubleSided");
 gui.addTexture2D("Shadowmap", areaLightEntity.areaLight._shadowMap, {
   flipY: true,
 });
-gui.addParam("Shadows", areaLightEntity.areaLight, "castShadows");
+gui.addParam("Cast Shadows", areaLightEntity.areaLight, "castShadows");
 
 // Events
 let debugOnce = false;
