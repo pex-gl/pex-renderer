@@ -404,7 +404,6 @@ export default ({ ctx, shadowQuality = 3 }) => ({
       reflectionProbes: entities.filter((e) => e.reflectionProbe),
       depthPassOnly: shadowMapping,
       targets: {},
-      shadowQuality: this.shadowQuality,
       debugRender: !shadowMapping && this.debugRender,
       attachmentsLocations,
       toneMap: renderView.toneMap,
@@ -480,6 +479,11 @@ export default ({ ctx, shadowQuality = 3 }) => ({
       const entity = renderableEntities[i];
 
       if (!this.checkRenderableEntity(entity)) continue;
+
+      // Set shadow quality per entity
+      pipelineOptions.shadowQuality = entity.material.receiveShadows
+        ? this.shadowQuality
+        : 0;
 
       // Get pipeline and program from cache. Also computes this.uniforms
       const pipeline = this.getPipeline(ctx, entity, pipelineOptions);
