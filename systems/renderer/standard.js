@@ -4,9 +4,6 @@ import { pipeline as SHADERS } from "pex-shaders";
 import createBaseSystem from "./base.js";
 import { NAMESPACE, TEMP_MAT4 } from "../../utils.js";
 
-let ltc_1;
-let ltc_2;
-
 // prettier-ignore
 const flagDefinitions = [
   [["options", "attachmentsLocations", "color"], "LOCATION_COLOR", { type: "value" }],
@@ -123,16 +120,21 @@ export default ({ ctx, shadowQuality = 3 }) => ({
     cullFace: true,
     cullFaceMode: ctx.Face.Back,
   },
-  dummyTexture2D: ctx.texture2D({
-    name: "dummyTexture2D",
-    width: 4,
-    height: 4,
-  }),
-  dummyTextureCube: ctx.textureCube({
-    name: "dummyTextureCube",
-    width: 4,
-    height: 4,
-  }),
+  textures: {
+    dummyTexture2D: ctx.texture2D({
+      name: "dummyTexture2D",
+      width: 4,
+      height: 4,
+    }),
+    dummyTextureCube: ctx.textureCube({
+      name: "dummyTextureCube",
+      width: 4,
+      height: 4,
+    }),
+    ltc_1: null,
+    ltc_2: null,
+  },
+  isLoadingAreaLightData: null,
   checkLight(light) {
     if (light.castShadows && !(light._shadowMap || light._shadowCubemap)) {
       console.warn(
@@ -205,6 +207,32 @@ export default ({ ctx, shadowQuality = 3 }) => ({
       primitive: geometry.primitive ?? ctx.Primitive.Triangles,
     };
   },
+  async loadAreaLightData() {
+    try {
+      const { g_ltc_1, g_ltc_2 } = await import("./area-light-data.js");
+      if (ctx.isDisposed) return;
+      const areaLightTextureOptions = {
+        width: 64,
+        height: 64,
+        pixelFormat: ctx.PixelFormat.RGBA32F,
+        encoding: ctx.Encoding.Linear,
+        min: ctx.Filter.Nearest,
+        mag: ctx.Filter.Linear,
+      };
+      this.textures.ltc_1 = ctx.texture2D({
+        name: "areaLightMatTexture",
+        data: g_ltc_1,
+        ...areaLightTextureOptions,
+      });
+      this.textures.ltc_2 = ctx.texture2D({
+        name: "areaLightMagTexture",
+        data: g_ltc_2,
+        ...areaLightTextureOptions,
+      });
+    } catch (error) {
+      console.error(NAMESPACE, error);
+    }
+  },
   gatherLightsInfo(lights, sharedUniforms) {
     const {
       ambientLights,
@@ -240,7 +268,7 @@ export default ({ ctx, shadowQuality = 3 }) => ({
         : [0, 0];
       sharedUniforms[`uDirectionalLightShadowMaps[${i}]`] = shadows
         ? light._shadowMap
-        : this.dummyTexture2D;
+        : this.textures.dummyTexture2D;
     }
 
     for (let i = 0; i < spotLights.length; i++) {
@@ -271,7 +299,7 @@ export default ({ ctx, shadowQuality = 3 }) => ({
         : [0, 0];
       sharedUniforms[`uSpotLightShadowMaps[${i}]`] = shadows
         ? light._shadowMap
-        : this.dummyTexture2D;
+        : this.textures.dummyTexture2D;
     }
 
     for (let i = 0; i < pointLights.length; i++) {
@@ -295,35 +323,17 @@ export default ({ ctx, shadowQuality = 3 }) => ({
         : [0, 0];
       sharedUniforms[`uPointLightShadowMaps[${i}]`] = shadows
         ? light._shadowCubemap
-        : this.dummyTextureCube;
+        : this.textures.dummyTextureCube;
     }
 
-    // TODO: dispose if no areaLights
     if (areaLights.length) {
-      (async () => {
-        const { g_ltc_1, g_ltc_2 } = await import("./area-light-data.js");
-        const areaLightTextureOptions = {
-          width: 64,
-          height: 64,
-          pixelFormat: ctx.PixelFormat.RGBA32F,
-          encoding: ctx.Encoding.Linear,
-          min: ctx.Filter.Nearest,
-          mag: ctx.Filter.Linear,
-        };
-        ltc_1 ||= ctx.texture2D({
-          name: "areaLightMatTexture",
-          data: g_ltc_1,
-          ...areaLightTextureOptions,
-        });
-        ltc_2 ||= ctx.texture2D({
-          name: "areaLightMagTexture",
-          data: g_ltc_2,
-          ...areaLightTextureOptions,
-        });
-      })();
+      if (!this.isLoadingAreaLightData) {
+        this.isLoadingAreaLightData = true;
+        this.loadAreaLightData();
+      }
     }
 
-    if (ltc_1 && ltc_2) {
+    if (this.textures.ltc_1 && this.textures.ltc_2) {
       for (let i = 0; i < areaLights.length; i++) {
         const lightEntity = areaLights[i];
         const light = lightEntity.areaLight;
@@ -332,8 +342,8 @@ export default ({ ctx, shadowQuality = 3 }) => ({
         const shadows = castShadows && light.castShadows;
         if (shadows) this.checkLight(light);
 
-        sharedUniforms.ltc_1 = ltc_1;
-        sharedUniforms.ltc_2 = ltc_2;
+        sharedUniforms.ltc_1 = this.textures.ltc_1;
+        sharedUniforms.ltc_2 = this.textures.ltc_2;
         sharedUniforms[`${uniform}position`] = lightEntity.transform.position;
         sharedUniforms[`${uniform}color`] = lightColorToSrgb(light);
         sharedUniforms[`${uniform}rotation`] = lightEntity.transform.rotation;
@@ -358,7 +368,7 @@ export default ({ ctx, shadowQuality = 3 }) => ({
           : [0, 0];
         sharedUniforms[`uAreaLightShadowMaps[${i}]`] = shadows
           ? light._shadowMap
-          : this.dummyTexture2D;
+          : this.textures.dummyTexture2D;
       }
     }
 
@@ -530,5 +540,16 @@ export default ({ ctx, shadowQuality = 3 }) => ({
   },
   renderTransparent(renderView, entities, options) {
     this.render(renderView, entities, { ...options, transparent: true });
+  },
+  dispose() {
+    for (let [key, value] of Object.entries(this.textures)) {
+      if (value) {
+        ctx.dispose(value);
+        this.textures[key] = null;
+      }
+    }
+    this.isLoadingAreaLightData = null;
+
+    this.pipelineCache.dispose();
   },
 });
