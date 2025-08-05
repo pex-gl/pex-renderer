@@ -96,12 +96,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
           renderers[i].renderTransparent?.(
             renderView,
             this.cullEntities(entitiesInView, renderView.camera),
-            {
-              ...options,
-              backgroundColorTexture: transmitted
-                ? null
-                : backgroundColorTexture,
-            },
+            options,
           );
         }
       }
@@ -317,58 +312,11 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
       (entity) => entity.material?.transmission,
     );
 
-    // Grab pass
-    let grabPassColorCopyTexture;
-    let grabPassCopyCmd;
-    if (hasTransparent || hasTransmitted) {
-      const viewport = [
-        0,
-        0,
-        utils.prevPowerOfTwo(renderView.viewport[2]),
-        utils.prevPowerOfTwo(renderView.viewport[3]),
-      ];
-      // const viewport = [0, 0, renderView.viewport[2], renderView.viewport[3]];
-      this.descriptors.grabPass.colorCopyTextureDesc.width = viewport[2];
-      this.descriptors.grabPass.colorCopyTextureDesc.height = viewport[3];
-      grabPassColorCopyTexture = resourceCache.texture2D(
-        this.descriptors.grabPass.colorCopyTextureDesc,
-      );
-      grabPassColorCopyTexture.name = `grabPassOutput (id: ${grabPassColorCopyTexture.id})`;
-
-      const fullscreenTriangle = resourceCache.fullscreenTriangle();
-
-      grabPassCopyCmd = {
-        name: "grabPassCopyTextureCmd",
-        attributes: fullscreenTriangle.attributes,
-        count: fullscreenTriangle.count,
-        pipeline: resourceCache.pipeline(
-          this.descriptors.grabPass.copyTexturePipelineDesc,
-        ),
-        uniforms: {
-          uViewport: viewport,
-          uTexture: colorAttachments.color,
-        },
-      };
-
-      renderGraph.renderPass({
-        name: `GrabOpaquePass [${viewport}]`,
-        uses: [colorAttachments.color],
-        renderView: { ...renderView, viewport },
-        pass: resourceCache.pass({
-          name: "grabOpaquePass",
-          color: [grabPassColorCopyTexture],
-        }),
-        render: () => {
-          ctx.submit(grabPassCopyCmd);
-        },
-      });
-    }
-
     // Transparent pass
     if (hasTransparent) {
       renderGraph.renderPass({
         name: `TransparentPass [${renderView.viewport}]`,
-        uses: [...shadowMaps, grabPassColorCopyTexture].filter(Boolean),
+        uses: shadowMaps,
         renderView: renderPassView,
         pass: resourceCache.pass({
           name: "transparentPass",
@@ -384,36 +332,56 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
             shadowMappingLight: false,
             transparent: true,
             transmitted: false,
-            backgroundColorTexture: grabPassColorCopyTexture,
           });
         },
       });
     }
 
+    // Grab pass
+
     // Transmission pass
     if (hasTransmitted) {
-      // Re-grab color with transparent
-      if (hasTransparent) {
-        const viewport = grabPassCopyCmd.uniforms.uViewport;
-        const copyUniforms = {
-          uniforms: {
-            uTexture: colorAttachments.color,
-          },
-        };
+      const viewport = [
+        0,
+        0,
+        utils.prevPowerOfTwo(renderView.viewport[2]),
+        utils.prevPowerOfTwo(renderView.viewport[3]),
+      ];
+      // const viewport = [0, 0, renderView.viewport[2], renderView.viewport[3]];
+      this.descriptors.grabPass.colorCopyTextureDesc.width = viewport[2];
+      this.descriptors.grabPass.colorCopyTextureDesc.height = viewport[3];
+      const grabPassColorCopyTexture = resourceCache.texture2D(
+        this.descriptors.grabPass.colorCopyTextureDesc,
+      );
+      grabPassColorCopyTexture.name = `grabPassOutput (id: ${grabPassColorCopyTexture.id})`;
 
-        renderGraph.renderPass({
-          name: `GrabOpaqueAndTransparentPass [${viewport}]`,
-          uses: [colorAttachments.color],
-          renderView: { ...renderView, viewport },
-          pass: resourceCache.pass({
-            name: "grabOpaqueAndTransparentPass",
-            color: [grabPassColorCopyTexture],
-          }),
-          render: () => {
-            ctx.submit(grabPassCopyCmd, copyUniforms);
-          },
-        });
-      }
+      const fullscreenTriangle = resourceCache.fullscreenTriangle();
+
+      const grabPassCopyCmd = {
+        name: "grabPassCopyTextureCmd",
+        attributes: fullscreenTriangle.attributes,
+        count: fullscreenTriangle.count,
+        pipeline: resourceCache.pipeline(
+          this.descriptors.grabPass.copyTexturePipelineDesc,
+        ),
+        uniforms: {
+          uViewport: viewport,
+          uTexture: colorAttachments.color,
+        },
+      };
+
+      renderGraph.renderPass({
+        name: `GrabPass [${viewport}]`,
+        uses: [colorAttachments.color],
+        renderView: { ...renderView, viewport },
+        pass: resourceCache.pass({
+          name: "grabPass",
+          color: [grabPassColorCopyTexture],
+        }),
+        render: () => {
+          ctx.submit(grabPassCopyCmd);
+        },
+      });
 
       const hasBackTransmitted = entitiesInView.some(
         (entity) => entity.material?.transmission && !entity.material.cullFace,

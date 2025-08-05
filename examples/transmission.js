@@ -437,17 +437,11 @@ ctx.frame(() => {
   renderEngine.update(world.entities);
   renderEngine.render(world.entities, cameraEntity);
 
-  const transparentBackgroundTexture = renderEngine.renderGraph.renderPasses
-    .find(({ name }) => name.startsWith("TransparentPass"))
-    ?.uses.find(({ name }) => name.startsWith("grabPassOutput"));
   const transmissionBackgroundTexture = renderEngine.renderGraph.renderPasses
-    .find(({ name }) => name.startsWith("TransmissionPass"))
+    .find(({ name }) => name.startsWith("TransmissionFrontPass"))
     ?.uses.find(({ name }) => name.startsWith("grabPassOutput"));
 
-  guiCaptureControl.texture =
-    transmissionBackgroundTexture ||
-    transparentBackgroundTexture ||
-    dummyTexture2D;
+  guiCaptureControl.texture = transmissionBackgroundTexture || dummyTexture2D;
 
   ctx.debug(debugOnce);
   debugOnce = false;
