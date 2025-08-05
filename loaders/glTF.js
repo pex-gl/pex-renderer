@@ -38,6 +38,7 @@ const SUPPORTED_EXTENSIONS = [
   // "EXT_texture_webp",
 
   // WIP:
+  // "KHR_materials_volume_scatter"
   // "EXT_lights_image_based"
   // "KHR_animation_pointer"
   // "KHR_audio"
