@@ -8,7 +8,7 @@ import {
 
 import createContext from "pex-context";
 import createGUI from "pex-gui";
-import { loadJson, loadImage, loadArrayBuffer } from "pex-io";
+import { loadJson, loadImage } from "pex-io";
 import { quat, vec3, mat4 } from "pex-math";
 import { aabb } from "pex-geom";
 
@@ -20,9 +20,6 @@ const MODELS_PATH =
   location.hostname === "localhost"
     ? "examples/glTF-Sample-Assets/Models"
     : "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models";
-
-// const MODELS_PATH =
-//   "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models";
 
 let models = await loadJson(`${MODELS_PATH}/model-index.json`);
 
@@ -42,7 +39,7 @@ const State = {
       new Set(),
     ),
   ).filter((format) => !["glTF-IBL", "glTF-Meshopt"].includes(format)),
-  currentFormat: 5,
+  currentFormat: 2,
   modelName: "-",
 };
 
@@ -520,6 +517,7 @@ models = models.filter(({ name }) =>
     // "CesiumMan",
     // "CesiumMilkTruck",
     // "ChairDamaskPurplegold",
+    // "ChronographWatch", // FAIL: KHR_materials_variants
     // "ClearCoatCarPaint",
     // "ClearCoatTest",
     // "ClearcoatWicker",
@@ -584,13 +582,14 @@ models = models.filter(({ name }) =>
     // "NormalTangentTest",
     // "OrientationTest",
     // "PlaysetLightTest",
-    // "PointLightIntensityTest",
+    // "PointLightIntensityTest", // FAIL: limit pixel
     // "PotOfCoals",
     // "PotOfCoalsAnimationPointer", // FAIL: KHR_animation_pointer
     // "PrimitiveModeNormalsTest", // FAIL: 3rd column should render as flat shading (need Generate tangents with Mikktspace?)
     // "RecursiveSkeletons",
     // "RiggedFigure",
     // "RiggedSimple",
+    // "ScatteringSkull", // FAIL: KHR_materials_volume_scatter, KHR_xmp_json_ld
     // "SciFiHelmet",
     // "SheenChair",
     // "SheenCloth",
@@ -611,12 +610,13 @@ models = models.filter(({ name }) =>
     // "SunglassesKhronos",  // FAIL: EXT_texture_webp KHR_materials_iridescence
     // "Suzanne",
     // "TextureCoordinateTest",
-    // "TextureEncodingTest",
+    // "TextureEncodingTest", // HALF: custom gamma and ICC profile
     // "TextureLinearInterpolationTest", // HALF: EX_srgb in webgl1
     // "TextureSettingsTest",
     // "TextureTransformMultiTest",
     // "TextureTransformTest",
     // "ToyCar", // FAIL: (too small, wrong camera)
+    // "TransmissionOrderTest",
     // "TransmissionRoughnessTest",
     // "TransmissionTest",
     // "TransmissionThinwallTestGrid",
