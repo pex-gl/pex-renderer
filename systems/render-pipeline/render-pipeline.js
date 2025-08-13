@@ -158,7 +158,9 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
     if (postProcessing?.bloom) outputs.add("emissive");
 
     const colorAttachments = {};
+    const colorAttachmentsMSAA = {};
     let depthAttachment;
+    let depthAttachmentMSAA;
 
     // TODO: this should be done on the fly by render graph
     this.descriptors.mainPass.outputTextureDesc.width = renderView.viewport[2];
@@ -167,6 +169,13 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
     colorAttachments.color = resourceCache.texture2D(
       this.descriptors.mainPass.outputTextureDesc,
     );
+
+    colorAttachmentsMSAA.color = resourceCache.renderbuffer({
+      width: this.descriptors.mainPass.outputTextureDesc.width,
+      height: this.descriptors.mainPass.outputTextureDesc.height,
+      pixelFormat: this.descriptors.mainPass.outputTextureDesc.pixelFormat,
+      sampleCount: 4
+    });
 
     if (outputs.has("depth")) {
       this.descriptors.mainPass.outputDepthTextureDesc.width =
@@ -177,6 +186,13 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
         this.descriptors.mainPass.outputDepthTextureDesc,
       );
       depthAttachment.name = `mainPassDepth (id: ${depthAttachment.id})`;
+
+      depthAttachmentMSAA = resourceCache.renderbuffer({
+        width: this.descriptors.mainPass.outputDepthTextureDesc.width,
+        height: this.descriptors.mainPass.outputDepthTextureDesc.height,
+        pixelFormat: this.descriptors.mainPass.outputDepthTextureDesc.pixelFormat,
+        sampleCount: 4
+      });
     }
 
     if (outputs.has("normal")) {
@@ -291,8 +307,17 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
       renderView: renderPassView,
       pass: resourceCache.pass({
         name: "mainPass",
-        color: Object.values(colorAttachments),
-        depth: depthAttachment,
+        color: Object.values(colorAttachments).map((texture, i) => {
+          const att = {
+            texture: Object.values(colorAttachmentsMSAA)[i],
+            resolveTarget: texture
+          }
+          return att
+        }),
+        depth: {
+          texture: depthAttachmentMSAA,
+          resolveTarget: depthAttachment
+        },
         clearColor: renderView.camera.clearColor,
         clearDepth: 1,
       }),

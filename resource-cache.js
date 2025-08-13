@@ -118,6 +118,8 @@ export default (ctx) => {
       getContextResource(ctx, cache, "texture2D", props, usage),
     textureCube: (props, usage) =>
       getContextResource(ctx, cache, "textureCube", props, usage),
+    renderbuffer: (props, usage) =>
+      getContextResource(ctx, cache, "renderbuffer", props, usage),
     pass: (props, usage) =>
       getContextResource(ctx, cache, "pass", props, usage),
     pipeline: (props, usage) =>
