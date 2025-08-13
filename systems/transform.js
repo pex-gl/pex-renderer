@@ -127,7 +127,6 @@ export default () => ({
               this.cache[transform.entity.id].modelMatrix,
             );
           }
-          aabb.empty(TEMP_AABB);
           aabb.fromPoints(TEMP_AABB, TEMP_BOUNDS_POINTS);
           aabb.includeAABB(transform.worldBounds, TEMP_AABB);
         }

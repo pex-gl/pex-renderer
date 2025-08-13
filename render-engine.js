@@ -2,6 +2,7 @@ import * as systems from "./systems/index.js";
 
 import createRenderGraph from "./render-graph.js";
 import createResourceCache from "./resource-cache.js";
+import { getDefaultViewport } from "./utils.js";
 
 export default ({ ctx, debug = false }) => {
   const renderGraph = createRenderGraph(ctx);
@@ -91,14 +92,10 @@ export default ({ ctx, debug = false }) => {
       const framebufferTexturesPerCamera = cameraEntities.map(
         (cameraEntity) => {
           // Set render view
-          const viewport = cameraEntity.camera.viewport || [
-            0,
-            0,
-            options.width || ctx.gl.drawingBufferWidth,
-            options.height || ctx.gl.drawingBufferHeight,
-          ];
+          const viewport =
+            cameraEntity.camera.viewport || getDefaultViewport(ctx);
 
-          let aspect = viewport[2] / viewport[3];
+          const aspect = viewport[2] / viewport[3];
 
           if (aspect !== cameraEntity.camera.aspect) {
             cameraEntity.camera.aspect = aspect;
