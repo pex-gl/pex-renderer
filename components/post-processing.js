@@ -72,7 +72,7 @@ postProcessing.dof = (options) => ({
  * @returns {object}
  */
 postProcessing.aa = (options) => ({
-  msaa: true,
+  msaa: false,
   // FXAA
   type: "fxaa",
   subPixelQuality: 0.75, // (0, 1]
