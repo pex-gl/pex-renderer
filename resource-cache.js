@@ -1,80 +1,90 @@
 import { fullscreenTriangle, quad } from "./utils.js";
 
 // TODO: should this be an option
-const keepAliveCoundown = 30;
+const keepAliveCountdown = 30;
 
 const Usage = {
   Transient: "Transient",
   Retained: "Retained",
 };
 
+function compareAttachments(a, b) {
+  if (a?.texture && a?.texture === b?.texture) {
+    // Check attachments with resolve targets (MSAA renderbuffer) or targets (cubemaps)
+    if (a.resolveTarget) {
+      return a.resolveTarget === b.resolveTarget;
+    } else if (a.target === b.target) {
+      return true;
+    }
+  }
+  return false;
+}
+
 function arraysEqual(a, b) {
+  // Check array equality or loose equality to null
   if (a === b) return true;
   if (a == null || b == null) return false;
-  if (a.length !== b.length) return false;
 
-  // If you don't care about the order of the elements inside
-  // the array, you should sort both arrays here.
-  // Please note that calling sort on an array will modify that array.
-  // you might want to clone your array first.
+  // Compare array length
+  const { length } = a;
+  if (length !== b.length) return false;
 
-  for (let i = 0; i < a.length; ++i) {
-    if (a[i] !== b[i]) {
-      //handle special case where array of color attachments is texture+target (rendering to cubemap)
-      if (
-        a[i].texture &&
-        a[i].texture == b[i].texture &&
-        a[i].target == b[i].target
-      ) {
-        return true;
-      }
-      return false;
-    }
+  // Note: sort arrays if order independent
+  for (let i = 0; i < length; ++i) {
+    // Check array item equality
+    if (a[i] !== b[i] && !compareAttachments(a[i], b[i])) return false;
   }
   return true;
 }
 
 function getResourceFromCache(cache, props) {
   for (let i = 0; i < cache.length; i++) {
-    const res = cache[i];
-    if (res.used && res.usage !== Usage.Retained) continue;
-    let areTheSame = true;
+    const resource = cache[i];
+
+    // Exclude used resources
+    if (resource.used && resource.usage !== Usage.Retained) continue; // TODO: shouldn't this skip Retained resources?
+
+    // Compare resource props
+    let arePropsTheSame = true;
     for (const propName in props) {
-      if (
-        Array.isArray(props[propName]) &&
-        Array.isArray(res.props[propName])
-      ) {
-        areTheSame &= arraysEqual(props[propName], res.props[propName]);
-      } else if (props[propName] != res.props[propName]) {
-        areTheSame = false;
+      const a = props[propName];
+      const b = resource.props[propName];
+
+      if (Array.isArray(a) && Array.isArray(b)) {
+        arePropsTheSame &&= arraysEqual(a, b);
+      } else if (a != b) {
+        arePropsTheSame = compareAttachments(a, b);
       }
+      if (!arePropsTheSame) break;
     }
 
-    if (areTheSame) {
-      res.used = true;
-      res.delteCountDown = keepAliveCoundown;
-      return res;
+    if (arePropsTheSame) {
+      resource.used = true;
+      resource.delteCountDown = keepAliveCountdown;
+      return resource;
     }
   }
+
   return null;
 }
 
 function getContextResource(ctx, cache, type, props, usage) {
-  let res = getResourceFromCache(cache, props);
-  if (res) return res.value;
-  res = {
-    type: type,
-    value: ctx[type](props),
-    // TODO: this is problematic if we re-use descriptors
-    props: {
-      ...props,
-    },
-    used: true,
-    usage: usage,
-  };
+  let resource = getResourceFromCache(cache, props);
+  if (!resource) {
+    resource = {
+      type,
+      value: ctx[type](props),
+      // TODO: this is problematic if we re-use descriptors
+      props: {
+        ...props,
+      },
+      used: true,
+      usage,
+    };
 
-  cache.push(res);
-  return res.value;
+    cache.push(resource);
+  }
+  return resource.value;
 }
 
 export default (ctx) => {
@@ -141,9 +151,9 @@ export default (ctx) => {
     },
     endFrame() {
       for (let i = 0; i < cache.length; i++) {
-        const res = cache[i];
-        if (res.used || res.usage === Usage.Retained) {
-          cache[i].keepAlive = keepAliveCoundown;
+        const resource = cache[i];
+        if (resource.used || resource.usage === Usage.Retained) {
+          cache[i].keepAlive = keepAliveCountdown;
         } else {
           if (--cache[i].keepAlive < 0) {
             if (cache[i].value._dispose) {
