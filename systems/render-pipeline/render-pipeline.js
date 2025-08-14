@@ -153,6 +153,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
     if (postProcessing?.ssao) outputs.add("normal");
     if (postProcessing?.bloom) outputs.add("emissive");
 
+    const hasMSAA = postProcessing?.aa?.msaa;
     const colorAttachments = {};
     const colorAttachmentsMSAA = {};
     let depthAttachment;
@@ -166,13 +167,6 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
       this.descriptors.mainPass.outputTextureDesc,
     );
 
-    colorAttachmentsMSAA.color = resourceCache.renderbuffer({
-      width: this.descriptors.mainPass.outputTextureDesc.width,
-      height: this.descriptors.mainPass.outputTextureDesc.height,
-      pixelFormat: this.descriptors.mainPass.outputTextureDesc.pixelFormat,
-      sampleCount: 4
-    });
-
     if (outputs.has("depth")) {
       this.descriptors.mainPass.outputDepthTextureDesc.width =
         renderView.viewport[2];
@@ -183,12 +177,17 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
       );
       depthAttachment.name = `mainPassDepth (id: ${depthAttachment.id})`;
 
-      depthAttachmentMSAA = resourceCache.renderbuffer({
-        width: this.descriptors.mainPass.outputDepthTextureDesc.width,
-        height: this.descriptors.mainPass.outputDepthTextureDesc.height,
-        pixelFormat: this.descriptors.mainPass.outputDepthTextureDesc.pixelFormat,
-        sampleCount: 4
-      });
+      if (hasMSAA) {
+        depthAttachmentMSAA = resourceCache.renderbuffer({
+          width: this.descriptors.mainPass.outputDepthTextureDesc.width,
+          height: this.descriptors.mainPass.outputDepthTextureDesc.height,
+          pixelFormat:
+            this.descriptors.mainPass.outputDepthTextureDesc.pixelFormat,
+          sampleCount: 4,
+        });
+
+        depthAttachmentMSAA.name = `mainPassDepthMSAA (id: ${depthAttachmentMSAA.id})`;
+      }
     }
 
     if (outputs.has("normal")) {
@@ -203,19 +202,21 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
       );
     }
 
-    if (outputs.has("velocity")) {
-      this.descriptors.mainPass.velocityTextureDesc.width =
-        renderView.viewport[2];
-      this.descriptors.mainPass.velocityTextureDesc.height =
-        renderView.viewport[3];
-      colorAttachments.velocity = resourceCache.texture2D(
-        this.descriptors.mainPass.velocityTextureDesc,
-      );
-    }
-
     for (let name of Object.keys(colorAttachments)) {
       const texture = colorAttachments[name];
       texture.name = `mainPass${name} (id: ${texture.id})`;
+
+      if (hasMSAA) {
+        colorAttachmentsMSAA[name] = resourceCache.renderbuffer({
+          width: this.descriptors.mainPass.outputTextureDesc.width,
+          height: this.descriptors.mainPass.outputTextureDesc.height,
+          pixelFormat: this.descriptors.mainPass.outputTextureDesc.pixelFormat,
+          sampleCount: 4,
+        });
+
+        colorAttachmentsMSAA[name].name =
+          `mainPass${name}MSAA (id: ${colorAttachmentsMSAA[name].id})`;
+      }
     }
 
     // Update shadow maps
@@ -303,17 +304,15 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
       renderView: renderPassView,
       pass: resourceCache.pass({
         name: "mainPass",
-        color: Object.values(colorAttachments).map((texture, i) => {
-          const att = {
-            texture: Object.values(colorAttachmentsMSAA)[i],
-            resolveTarget: texture
-          }
-          return att
-        }),
-        depth: {
-          texture: depthAttachmentMSAA,
-          resolveTarget: depthAttachment
-        },
+        color: hasMSAA
+          ? Object.keys(colorAttachments).map((key) => ({
+              texture: colorAttachmentsMSAA[key],
+              resolveTarget: colorAttachments[key],
+            }))
+          : Object.values(colorAttachments),
+        depth: hasMSAA
+          ? { texture: depthAttachmentMSAA, resolveTarget: depthAttachment }
+          : depthAttachment,
         clearColor: renderView.camera.clearColor,
         clearDepth: 1,
       }),

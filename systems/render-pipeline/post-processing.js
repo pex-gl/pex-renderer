@@ -60,6 +60,8 @@ export default ({ ctx, renderGraph, resourceCache }) => ({
 
         if (!isEnabled && !isFinal) continue;
 
+        const passName = `${effect.name}.${subPass.name}`;
+
         const { pipeline, uniforms: pipelineUniforms } =
           this.pipelineCache.getPipeline(
             ctx,
@@ -121,6 +123,7 @@ export default ({ ctx, renderGraph, resourceCache }) => ({
           outputTextureDesc.height = renderView.viewport[3];
           outputColor = resourceCache.texture2D(outputTextureDesc);
         }
+        outputColor.name = `postProcessingPassColorOutput ${passName} (id: ${outputColor.id})`;
 
         const uniforms = {
           // TODO: only add required attachments
@@ -142,7 +145,7 @@ export default ({ ctx, renderGraph, resourceCache }) => ({
         const fullscreenTriangle = resourceCache.fullscreenTriangle();
         //neded for name
         let postProcessingCmd = {
-          name: `${effect.name}.${subPass.name}`,
+          name: passName,
           pipeline,
           uniforms,
           attributes: fullscreenTriangle.attributes,
@@ -166,11 +169,11 @@ export default ({ ctx, renderGraph, resourceCache }) => ({
         };
 
         renderGraph.renderPass({
-          name: `PostProcessingPass.${effect.name}.${subPass.name} [${renderPassView.viewport}]`,
+          name: `PostProcessingPass.${passName} [${renderPassView.viewport}]`,
           uses: uses.filter(Boolean),
           renderView: renderPassView,
           pass: resourceCache.pass({
-            name: `postProcessingPass.${effect.name}.${subPass.name}`,
+            name: `postProcessingPass.${passName}`,
             color: [outputColor],
             ...subPass.passDesc?.(renderView),
           }),
@@ -181,19 +184,14 @@ export default ({ ctx, renderGraph, resourceCache }) => ({
 
         // TODO: delete from cache somehow on pass. Loop through this.postProcessingPasses?
         // eg. Object.keys(this.cache.targets[renderViewId]).filter(key => key.startsWidth(`${pass.name}.`))
-        this.pipelineCache.cache.targets[renderViewId][postProcessingCmd.name] =
-          outputColor;
-
-        outputColor.name = postProcessingCmd.name;
+        this.pipelineCache.cache.targets[renderViewId][passName] = outputColor;
 
         // Draw to screen
         if (!target) {
           colorAttachments.color = outputColor;
         }
 
-        outputColor.name = postProcessingCmd.name;
-
-        colorAttachments[postProcessingCmd.name] = outputColor;
+        colorAttachments[passName] = outputColor;
       }
     }
   },
