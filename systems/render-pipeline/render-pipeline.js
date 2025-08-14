@@ -305,7 +305,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
 
     // Main pass
     renderGraph.renderPass({
-      name: `MainPass [${renderView.viewport}]`,
+      name: `MainPass${hasMSAA ? "MSAA" : ""} [${renderView.viewport}]`,
       uses: [...shadowMaps],
       renderView: renderPassView,
       pass: resourceCache.pass({
@@ -338,7 +338,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
     // Transparent pass
     if (hasTransparent) {
       renderGraph.renderPass({
-        name: `TransparentPass [${renderView.viewport}]`,
+        name: `TransparentPass${hasMSAA ? "MSAA" : ""} [${renderView.viewport}]`,
         uses: shadowMaps,
         renderView: renderPassView,
         pass: resourceCache.pass({
@@ -411,7 +411,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
 
       if (hasBackTransmitted) {
         renderGraph.renderPass({
-          name: `TransmissionBackPass [${renderView.viewport}]`,
+          name: `TransmissionBackPass${hasMSAA ? "MSAA" : ""} [${renderView.viewport}]`,
           uses: [...shadowMaps, grabPassColorCopyTexture],
           renderView: renderPassView,
           pass: resourceCache.pass({
@@ -456,7 +456,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
       }
 
       renderGraph.renderPass({
-        name: `TransmissionFrontPass [${renderView.viewport}]`,
+        name: `TransmissionFrontPass${hasMSAA ? "MSAA" : ""} [${renderView.viewport}]`,
         uses: [...shadowMaps, grabPassColorCopyTexture],
         renderView: renderPassView,
         pass: resourceCache.pass({
