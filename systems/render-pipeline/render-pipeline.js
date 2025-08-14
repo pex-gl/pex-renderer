@@ -178,15 +178,18 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
       depthAttachment.name = `mainPassDepth (id: ${depthAttachment.id})`;
 
       if (hasMSAA) {
-        depthAttachmentMSAA = resourceCache.renderbuffer({
-          width: this.descriptors.mainPass.outputDepthTextureDesc.width,
-          height: this.descriptors.mainPass.outputDepthTextureDesc.height,
-          pixelFormat:
-            this.descriptors.mainPass.outputDepthTextureDesc.pixelFormat,
-          sampleCount: 4,
-        });
+        depthAttachmentMSAA = {
+          texture: resourceCache.renderbuffer({
+            width: this.descriptors.mainPass.outputDepthTextureDesc.width,
+            height: this.descriptors.mainPass.outputDepthTextureDesc.height,
+            pixelFormat:
+              this.descriptors.mainPass.outputDepthTextureDesc.pixelFormat,
+            sampleCount: 4,
+          }),
+          resolveTarget: depthAttachment,
+        };
 
-        depthAttachmentMSAA.name = `mainPassDepthMSAA (id: ${depthAttachmentMSAA.id})`;
+        depthAttachmentMSAA.name = `mainPassDepthMSAA (id: ${depthAttachmentMSAA.texture.id})`;
       }
     }
 
@@ -207,15 +210,18 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
       texture.name = `mainPass${name} (id: ${texture.id})`;
 
       if (hasMSAA) {
-        colorAttachmentsMSAA[name] = resourceCache.renderbuffer({
-          width: this.descriptors.mainPass.outputTextureDesc.width,
-          height: this.descriptors.mainPass.outputTextureDesc.height,
-          pixelFormat: this.descriptors.mainPass.outputTextureDesc.pixelFormat,
-          sampleCount: 4,
-        });
-
+        colorAttachmentsMSAA[name] = {
+          texture: resourceCache.renderbuffer({
+            width: this.descriptors.mainPass.outputTextureDesc.width,
+            height: this.descriptors.mainPass.outputTextureDesc.height,
+            pixelFormat:
+              this.descriptors.mainPass.outputTextureDesc.pixelFormat,
+            sampleCount: 4,
+          }),
+          resolveTarget: texture,
+        };
         colorAttachmentsMSAA[name].name =
-          `mainPass${name}MSAA (id: ${colorAttachmentsMSAA[name].id})`;
+          `mainPass${name}MSAA (id: ${colorAttachmentsMSAA[name].texture.id})`;
       }
     }
 
@@ -304,15 +310,8 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
       renderView: renderPassView,
       pass: resourceCache.pass({
         name: "mainPass",
-        color: hasMSAA
-          ? Object.keys(colorAttachments).map((key) => ({
-              texture: colorAttachmentsMSAA[key],
-              resolveTarget: colorAttachments[key],
-            }))
-          : Object.values(colorAttachments),
-        depth: hasMSAA
-          ? { texture: depthAttachmentMSAA, resolveTarget: depthAttachment }
-          : depthAttachment,
+        color: Object.values(hasMSAA ? colorAttachmentsMSAA : colorAttachments),
+        depth: hasMSAA ? depthAttachmentMSAA : depthAttachment,
         clearColor: renderView.camera.clearColor,
         clearDepth: 1,
       }),
