@@ -343,8 +343,8 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
         renderView: renderPassView,
         pass: resourceCache.pass({
           name: "transparentPass",
-          color: [colorAttachments.color],
-          depth: depthAttachment,
+          color: [(hasMSAA ? colorAttachmentsMSAA : colorAttachments).color],
+          depth: hasMSAA ? depthAttachmentMSAA : depthAttachment,
         }),
         render: () => {
           this.drawMeshes({
@@ -360,10 +360,9 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
       });
     }
 
-    // Grab pass
-
     // Transmission pass
     if (hasTransmitted) {
+      // Grab pass
       const viewport = [
         0,
         0,
@@ -417,8 +416,8 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
           renderView: renderPassView,
           pass: resourceCache.pass({
             name: "transmissionBackPass",
-            color: [colorAttachments.color],
-            depth: depthAttachment,
+            color: [(hasMSAA ? colorAttachmentsMSAA : colorAttachments).color],
+            depth: hasMSAA ? depthAttachmentMSAA : depthAttachment,
           }),
           render: () => {
             this.drawMeshes({
@@ -462,8 +461,8 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
         renderView: renderPassView,
         pass: resourceCache.pass({
           name: "transmissionFrontPass",
-          color: [colorAttachments.color],
-          depth: depthAttachment,
+          color: [(hasMSAA ? colorAttachmentsMSAA : colorAttachments).color],
+          depth: hasMSAA ? depthAttachmentMSAA : depthAttachment,
         }),
         render: () => {
           this.drawMeshes({

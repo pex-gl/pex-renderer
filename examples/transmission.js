@@ -66,6 +66,9 @@ const cameraEntity = createEntity({
     aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
   }),
   orbiter: components.orbiter({ element: ctx.gl.canvas }),
+  postProcessing: components.postProcessing({
+    aa: components.postProcessing.aa({ msaa: false }),
+  }),
 });
 world.add(cameraEntity);
 
@@ -286,6 +289,7 @@ const gui = createGUI(ctx);
 const unitOptions = { min: 0, max: 1 };
 gui.addColumn("Capture");
 gui.addFPSMeeter();
+gui.addParam("MSAA", cameraEntity.postProcessing.aa, "msaa");
 const dummyTexture2D = ctx.texture2D({
   name: "dummyTexture2D",
   width: 4,
