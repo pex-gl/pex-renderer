@@ -18,7 +18,7 @@ const final = () => {
       [["camera", "outputEncoding"], "", { uniform: "uOutputEncoding" }],
 
       // AA
-      [["postProcessing", "aa"], "USE_AA"],
+      [["postProcessing", "aa", "type"], "USE_AA", { compare: "fxaa" }],
       [["postProcessing", "aa", "subPixelQuality"], "", { uniform: "uSubPixelQuality", requires: "USE_AA" }],
       [["postProcessing", "aa", "quality"], "AA_QUALITY", { type: "value", requires: "USE_AA" }],
 

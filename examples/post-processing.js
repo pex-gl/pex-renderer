@@ -85,6 +85,8 @@ const postProcessing = components.postProcessing({
     debug: false,
   },
   aa: {
+    msaa: false,
+    type: "fxaa",
     quality: 2,
     subPixelQuality: 0.75,
   },
@@ -448,6 +450,13 @@ const enablePostProPass = (name) => {
 gui.addParam("AA", State, "aa", null, () => {
   enablePostProPass("aa");
 });
+gui.addParam("MSAA", postProcessing.aa, "msaa");
+gui.addRadioList(
+  "Type",
+  postProcessing.aa,
+  "type",
+  ["none", "fxaa"].map((value) => ({ name: value, value })),
+);
 gui.addParam("Quality", postProcessing.aa, "quality", {
   min: 0,
   max: 4,
@@ -476,28 +485,19 @@ gui.addParam(
   "ColorCorrection brightness",
   postProcessing.colorCorrection,
   "brightness",
-  {
-    min: -0.5,
-    max: 0.5,
-  },
+  { min: -0.5, max: 0.5 },
 );
 gui.addParam(
   "ColorCorrection contrast",
   postProcessing.colorCorrection,
   "contrast",
-  {
-    min: 0.1,
-    max: 3,
-  },
+  { min: 0.1, max: 3 },
 );
 gui.addParam(
   "ColorCorrection saturation",
   postProcessing.colorCorrection,
   "saturation",
-  {
-    min: 0.1,
-    max: 2,
-  },
+  { min: 0.1, max: 2 },
 );
 gui.addParam("ColorCorrection hue", postProcessing.colorCorrection, "hue", {
   min: -180,
@@ -566,10 +566,7 @@ gui.addParam("Bounce intensity", postProcessing.ssao, "colorBounceIntensity", {
   max: 100,
 });
 gui.addLabel("Blur");
-gui.addParam("Radius", postProcessing.ssao, "blurRadius", {
-  min: 0,
-  max: 2,
-});
+gui.addParam("Radius", postProcessing.ssao, "blurRadius", { min: 0, max: 2 });
 gui.addParam("Sharpness", postProcessing.ssao, "blurSharpness", {
   min: 0,
   max: 20,
@@ -603,10 +600,7 @@ gui.addParam(
   "Chromatic Aberration",
   postProcessing.dof,
   "chromaticAberration",
-  {
-    min: 0,
-    max: 4,
-  },
+  { min: 0, max: 4 },
 );
 gui.addParam("Luminance Threshold", postProcessing.dof, "luminanceThreshold", {
   min: 0,
@@ -633,18 +627,9 @@ gui.addParam("Screen Point", postProcessing.dof.screenPoint, "1", {
 });
 
 gui.addColumn("Camera");
-gui.addParam("FoV", camera, "fov", {
-  min: 0,
-  max: (Math.PI / 3) * 2,
-});
-gui.addParam("FocalLength", camera, "focalLength", {
-  min: 10,
-  max: 200,
-});
-gui.addParam("F-Stop", cameraEntity.camera, "fStop", {
-  min: 1.2,
-  max: 32,
-});
+gui.addParam("FoV", camera, "fov", { min: 0, max: (Math.PI / 3) * 2 });
+gui.addParam("FocalLength", camera, "focalLength", { min: 10, max: 200 });
+gui.addParam("F-Stop", cameraEntity.camera, "fStop", { min: 1.2, max: 32 });
 gui.addParam("Exposure", camera, "exposure", { min: 0, max: 5 });
 gui.addRadioList(
   "Tone Map",
@@ -688,10 +673,7 @@ gui.addParam("Intensity", postProcessing.bloom, "intensity", {
   min: 0,
   max: 10,
 });
-gui.addParam("Radius", postProcessing.bloom, "radius", {
-  min: 0,
-  max: 10,
-});
+gui.addParam("Radius", postProcessing.bloom, "radius", { min: 0, max: 10 });
 gui.addColumn("Film Grain");
 gui.addParam("Enabled", State, "filmGrain", null, () => {
   enablePostProPass("filmGrain");
@@ -701,10 +683,7 @@ gui.addParam("Quality", postProcessing.filmGrain, "quality", {
   max: 2,
   step: 1,
 });
-gui.addParam("Size", postProcessing.filmGrain, "size", {
-  min: 1.5,
-  max: 2.5,
-});
+gui.addParam("Size", postProcessing.filmGrain, "size", { min: 1.5, max: 2.5 });
 gui.addParam("Intensity", postProcessing.filmGrain, "intensity", {
   min: 0,
   max: 1,
@@ -717,10 +696,7 @@ gui.addParam(
   "Luminance Intensity",
   postProcessing.filmGrain,
   "luminanceIntensity",
-  {
-    min: 0,
-    max: 1,
-  },
+  { min: 0, max: 1 },
 );
 gui.addParam("Speed", postProcessing.filmGrain, "speed", { min: 0, max: 1 });
 
