@@ -19,9 +19,8 @@ const final = () => {
 
       // AA
       [["postProcessing", "aa"], "USE_AA"],
-      [["postProcessing", "aa", "type"], "USE_FXAA", { compare: "fxaa", requires: "USE_AA" }],
-      [["postProcessing", "aa", "subPixelQuality"], "", { uniform: "uSubPixelQuality", requires: "USE_FXAA" }],
-      [["postProcessing", "aa", "quality"], "AA_QUALITY", { type: "value", requires: "USE_FXAA" }],
+      [["postProcessing", "aa", "subPixelQuality"], "", { uniform: "uSubPixelQuality", requires: "USE_AA" }],
+      [["postProcessing", "aa", "quality"], "AA_QUALITY", { type: "value", requires: "USE_AA" }],
 
       // Fog
       [["postProcessing", "fog"], "USE_FOG"],
