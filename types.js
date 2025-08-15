@@ -274,9 +274,11 @@
  * @property {boolean} [debug=false]
  */
 /**
+ * @typedef {object} MSAAComponentOptions
+ * @property {number} [sampleCount=4] Multisample anti-aliasing samples: 1 or 4.
+ */
+/**
  * @typedef {object} AAComponentOptions
- * @property {number} [msaa=false] Enable Multisample anti-aliasing
- * @property {"" | "fxaa"} [type="fxaa"]
  * @property {number} [subPixelQuality=0.75] Higher = softer. Helps mitigate fireflies but will blur small details.
  * @property {number} [quality=2] For edge luma threshold: 0 to 4.
  */

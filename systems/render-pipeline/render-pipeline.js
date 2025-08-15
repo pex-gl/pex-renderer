@@ -153,7 +153,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
     if (postProcessing?.ssao) outputs.add("normal");
     if (postProcessing?.bloom) outputs.add("emissive");
 
-    const hasMSAA = postProcessing?.aa?.msaa;
+    const msaaSampleCount = postProcessing?.msaa?.sampleCount;
     const colorAttachments = {};
     const colorAttachmentsMSAA = {};
     let depthAttachment;
@@ -177,14 +177,14 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
       );
       depthAttachment.name = `mainPassDepth (id: ${depthAttachment.id})`;
 
-      if (hasMSAA) {
+      if (msaaSampleCount) {
         depthAttachmentMSAA = {
           texture: resourceCache.renderbuffer({
             width: this.descriptors.mainPass.outputDepthTextureDesc.width,
             height: this.descriptors.mainPass.outputDepthTextureDesc.height,
             pixelFormat:
               this.descriptors.mainPass.outputDepthTextureDesc.pixelFormat,
-            sampleCount: 4,
+            sampleCount: msaaSampleCount,
           }),
           resolveTarget: depthAttachment,
         };
@@ -209,14 +209,14 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
       const texture = colorAttachments[name];
       texture.name = `mainPass${name} (id: ${texture.id})`;
 
-      if (hasMSAA) {
+      if (msaaSampleCount) {
         colorAttachmentsMSAA[name] = {
           texture: resourceCache.renderbuffer({
             width: this.descriptors.mainPass.outputTextureDesc.width,
             height: this.descriptors.mainPass.outputTextureDesc.height,
             pixelFormat:
               this.descriptors.mainPass.outputTextureDesc.pixelFormat,
-            sampleCount: 4,
+            sampleCount: msaaSampleCount,
           }),
           resolveTarget: texture,
         };
@@ -305,13 +305,15 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
 
     // Main pass
     renderGraph.renderPass({
-      name: `MainPass${hasMSAA ? "MSAA" : ""} [${renderView.viewport}]`,
+      name: `MainPass${msaaSampleCount ? "MSAA" : ""} [${renderView.viewport}]`,
       uses: [...shadowMaps],
       renderView: renderPassView,
       pass: resourceCache.pass({
         name: "mainPass",
-        color: Object.values(hasMSAA ? colorAttachmentsMSAA : colorAttachments),
-        depth: hasMSAA ? depthAttachmentMSAA : depthAttachment,
+        color: Object.values(
+          msaaSampleCount ? colorAttachmentsMSAA : colorAttachments,
+        ),
+        depth: msaaSampleCount ? depthAttachmentMSAA : depthAttachment,
         clearColor: renderView.camera.clearColor,
         clearDepth: 1,
       }),
@@ -338,13 +340,15 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
     // Transparent pass
     if (hasTransparent) {
       renderGraph.renderPass({
-        name: `TransparentPass${hasMSAA ? "MSAA" : ""} [${renderView.viewport}]`,
+        name: `TransparentPass${msaaSampleCount ? "MSAA" : ""} [${renderView.viewport}]`,
         uses: shadowMaps,
         renderView: renderPassView,
         pass: resourceCache.pass({
           name: "transparentPass",
-          color: [(hasMSAA ? colorAttachmentsMSAA : colorAttachments).color],
-          depth: hasMSAA ? depthAttachmentMSAA : depthAttachment,
+          color: [
+            (msaaSampleCount ? colorAttachmentsMSAA : colorAttachments).color,
+          ],
+          depth: msaaSampleCount ? depthAttachmentMSAA : depthAttachment,
         }),
         render: () => {
           this.drawMeshes({
@@ -411,13 +415,15 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
 
       if (hasBackTransmitted) {
         renderGraph.renderPass({
-          name: `TransmissionBackPass${hasMSAA ? "MSAA" : ""} [${renderView.viewport}]`,
+          name: `TransmissionBackPass${msaaSampleCount ? "MSAA" : ""} [${renderView.viewport}]`,
           uses: [...shadowMaps, grabPassColorCopyTexture],
           renderView: renderPassView,
           pass: resourceCache.pass({
             name: "transmissionBackPass",
-            color: [(hasMSAA ? colorAttachmentsMSAA : colorAttachments).color],
-            depth: hasMSAA ? depthAttachmentMSAA : depthAttachment,
+            color: [
+              (msaaSampleCount ? colorAttachmentsMSAA : colorAttachments).color,
+            ],
+            depth: msaaSampleCount ? depthAttachmentMSAA : depthAttachment,
           }),
           render: () => {
             this.drawMeshes({
@@ -456,13 +462,15 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
       }
 
       renderGraph.renderPass({
-        name: `TransmissionFrontPass${hasMSAA ? "MSAA" : ""} [${renderView.viewport}]`,
+        name: `TransmissionFrontPass${msaaSampleCount ? "MSAA" : ""} [${renderView.viewport}]`,
         uses: [...shadowMaps, grabPassColorCopyTexture],
         renderView: renderPassView,
         pass: resourceCache.pass({
           name: "transmissionFrontPass",
-          color: [(hasMSAA ? colorAttachmentsMSAA : colorAttachments).color],
-          depth: hasMSAA ? depthAttachmentMSAA : depthAttachment,
+          color: [
+            (msaaSampleCount ? colorAttachmentsMSAA : colorAttachments).color,
+          ],
+          depth: msaaSampleCount ? depthAttachmentMSAA : depthAttachment,
         }),
         render: () => {
           this.drawMeshes({

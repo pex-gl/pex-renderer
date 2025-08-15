@@ -67,14 +67,21 @@ postProcessing.dof = (options) => ({
 });
 
 /**
+ * Post Processing MSAA subcomponent
+ * @param {import("../types.js").MSAAComponentOptions} [options]
+ * @returns {object}
+ */
+postProcessing.msaa = (options) => ({
+  sampleCount: 4,
+  ...options,
+});
+
+/**
  * Post Processing AA subcomponent
  * @param {import("../types.js").AAComponentOptions} [options]
  * @returns {object}
  */
 postProcessing.aa = (options) => ({
-  msaa: false,
-  // FXAA
-  type: "fxaa",
   subPixelQuality: 0.75, // (0, 1]
   quality: 2,
   ...options,

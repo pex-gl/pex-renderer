@@ -25,6 +25,7 @@ const State = {
   metallic: 0.1,
   baseColor: [0.8, 0.1, 0.1, 1.0],
 
+  msaa: true,
   aa: true,
   ssao: true,
   fog: false,
@@ -84,9 +85,10 @@ const postProcessing = components.postProcessing({
     shape: "disk",
     debug: false,
   },
+  msaa: {
+    sampleCount: 4
+  },
   aa: {
-    msaa: false,
-    type: "fxaa",
     quality: 2,
     subPixelQuality: 0.75,
   },
@@ -447,16 +449,12 @@ const enablePostProPass = (name) => {
     delete postProcessing[name];
   }
 };
+gui.addParam("MSAA", State, "msaa", null, () => {
+  enablePostProPass("msaa");
+});
 gui.addParam("AA", State, "aa", null, () => {
   enablePostProPass("aa");
 });
-gui.addParam("MSAA", postProcessing.aa, "msaa");
-gui.addRadioList(
-  "Type",
-  postProcessing.aa,
-  "type",
-  ["none", "fxaa"].map((value) => ({ name: value, value })),
-);
 gui.addParam("Quality", postProcessing.aa, "quality", {
   min: 0,
   max: 4,
