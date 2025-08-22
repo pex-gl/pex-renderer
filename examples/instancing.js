@@ -1,230 +1,200 @@
-const createRenderer = require('../')
-const createContext = require('pex-context')
-const createGUI = require('pex-gui')
-const quat = require('pex-math/quat')
-const vec3 = require('pex-math/vec3')
-const remap = require('pex-math/utils').map
-const random = require('pex-random')
-const createCube = require('primitive-cube')
-const cosineGradient = require('cosine-gradient')
+import {
+  renderEngine as createRenderEngine,
+  world as createWorld,
+  entity as createEntity,
+  components,
+} from "../index.js";
 
-const State = {
-  sunPosition: [0, 5, -5],
-  roughness: 0.5,
-  metallic: 0.1,
-  baseColor: [0.8, 0.1, 0.1, 1.0],
-  materials: []
-}
+import createContext from "pex-context";
+import { quat, vec3, utils, avec3, avec4 } from "pex-math";
+import createGUI from "pex-gui";
 
-random.seed(10)
+import { cube } from "primitive-geometry";
+import cosineGradient from "cosine-gradient";
 
-// Utils
-const scheme = [
+const pixelRatio = devicePixelRatio;
+const ctx = createContext({ pixelRatio });
+const renderEngine = createRenderEngine({ ctx, debug: true });
+const world = createWorld();
+
+const N = 15;
+const instances = N * N * N;
+
+const gradient = cosineGradient([
   [0.65, 0.5, 0.31],
   [-0.65, 0.5, 0.6],
   [0.333, 0.278, 0.278],
-  [0.66, 0.0, 0.667]
-]
-const scheme2 = [
+  [0.66, 0.0, 0.667],
+]);
+const gradient2 = cosineGradient([
   [0.5, 0.5, 0.0],
   [0.5, 0.5, 0.0],
   [0.1, 0.5, 0.0],
-  [0.0, 0.0, 0.0]
-]
-const gradient = cosineGradient(scheme)
-const gradient2 = cosineGradient(scheme2)
+  [0.0, 0.0, 0.0],
+]);
 
-// Start
-const ctx = createContext()
-ctx.gl.getExtension('EXT_shader_texture_lod')
-ctx.gl.getExtension('OES_standard_derivatives')
-ctx.gl.getExtension('WEBGL_draw_buffers')
-ctx.gl.getExtension('OES_texture_float')
-
-const renderer = createRenderer(ctx)
-
-const gui = createGUI(ctx)
-gui.addFPSMeeter()
-
-let frameNumber = 0
-let debugOnce = false
-
-// Camera
-const cameraEntity = renderer.entity([
-  renderer.camera({
-    fov: Math.PI / 3,
-    aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight
+// Entities
+const cameraEntity = createEntity({
+  transform: components.transform({ position: [3, 3, 3] }),
+  camera: components.camera({
+    aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
   }),
-  renderer.orbiter({ position: [3, 3, 3] })
-])
-renderer.add(cameraEntity)
+  orbiter: components.orbiter({ element: ctx.gl.canvas }),
+});
+world.add(cameraEntity);
 
-// Meshes
-const n = 15
-const cube = createCube((0.75 * 2) / n)
-const offsets = []
-const colors = []
-const scales = []
-const rotations = []
+const instancedGeometry = {
+  ...cube({ sx: (0.75 * 2) / N }),
+  offsets: { data: new Float32Array(instances * 3), divisor: 1 },
+  scales: {
+    data: Float32Array.from({ length: instances * 3 }, (_, i) =>
+      i % 3 === 2 ? 1 : 1,
+    ),
+    divisor: 1,
+  },
+  rotations: { data: new Float32Array(instances * 4), divisor: 1 },
+  colors: { data: new Float32Array(instances * 4), divisor: 1 },
+  instances,
+};
 
-let time = 0
-const geometry = renderer.geometry({
-  positions: cube.positions,
-  normals: cube.normals,
-  cells: cube.cells,
-  uvs: cube.uvs,
-  offsets: { data: offsets, divisor: 1 },
-  scales: { data: scales, divisor: 1 },
-  rotations: { data: rotations, divisor: 1 },
-  colors: { data: colors, divisor: 1 }
-})
-function update() {
-  time += 1 / 60
-  const center = [0.75, 0.75, 0.75]
-  const radius = 1.25
-
-  const center2 = [-0.75, -0.75, 0.75]
-  const radius2 = 1.25
-
-  center[0] = 1.15 * Math.sin(time)
-  center[1] = 0.75 * Math.cos(time)
-
-  center2[0] = -1.15 * Math.sin(time)
-  center2[1] = 0.75 * Math.sin(time)
-  center2[2] = 0.5 * Math.cos(time * 2) * Math.sin(time / 2)
-
-  let i = 0
-  for (let x = 0; x < n; x++) {
-    for (let y = 0; y < n; y++) {
-      for (let z = 0; z < n; z++) {
-        const pos = [
-          remap(x, 0, n, -1, 1),
-          remap(y, 0, n, -1, 1),
-          remap(z, 0, n, -1, 1)
-        ]
-        const dist = vec3.distance(pos, center)
-        if (dist < radius) {
-          const force = vec3.sub(vec3.copy(pos), center)
-          vec3.normalize(force)
-          vec3.scale(force, 1 - Math.sqrt(dist / radius))
-          vec3.add(pos, force)
-        }
-        const dist2 = vec3.distance(pos, center2)
-        if (dist2 < radius2) {
-          const force = vec3.sub(vec3.copy(pos), center2)
-          vec3.normalize(force)
-          vec3.scale(force, 1 - Math.sqrt(dist2 / radius2))
-          vec3.add(pos, force)
-        }
-        offsets[i] = pos
-        const value = Math.min(1, dist / radius)
-        const value2 = Math.min(1, dist2 / radius2)
-        const colorBase = [0.8, 0.1, 0.1, 1.0]
-        const color = gradient(value)
-        const color2 = gradient2(value2)
-        vec3.lerp(
-          colorBase,
-          [0, 0, 0, 0],
-          Math.sqrt(Math.max(0.01, 1 - value - value2))
-        )
-        vec3.lerp(color, [0, 0, 0, 0], value)
-        vec3.lerp(color2, [0, 0, 0, 0], value2)
-        vec3.add(colorBase, color)
-        vec3.add(colorBase, color2)
-        colors[i] = colorBase
-        scales[i] = [1, 1, 4]
-        const dir = vec3.normalize(vec3.sub(vec3.copy(pos), center))
-        rotations[i] = quat.fromTo(quat.create(), [0, 0, 1], dir)
-        i++
-      }
-    }
-  }
-
-  geometry.set({
-    offsets: offsets,
-    scales: scales,
-    rotations: rotations,
-    colors: colors,
-    instances: offsets.length
-  })
-}
-// update()
-// setInterval(update, 1000 / 60)
-
-const entity = renderer.entity([
-  renderer.transform({
-    position: [0, 0, 0]
-  }),
-  geometry,
-  renderer.material({
+const geometryEntity = createEntity({
+  transform: components.transform(),
+  geometry: components.geometry(instancedGeometry),
+  material: components.material({
     baseColor: [0.9, 0.9, 0.9, 1],
     roughness: 0.01,
     metallic: 1.0,
     castShadows: true,
-    receiveShadows: true
-  })
-])
-renderer.add(entity)
+    receiveShadows: true,
+  }),
+});
+world.add(geometryEntity);
 
-gui.addHeader('Material')
-gui.addParam('Roughness', State, 'roughness', {}, () => {
-  entity.getComponent('Material').set({ roughness: State.roughness })
-})
-gui.addParam('Metallic', State, 'metallic', {}, () => {
-  entity.getComponent('Material').set({ metallic: State.metallic })
-})
-gui.addParam('Base Color', State, 'baseColor', { type: 'color' }, () => {
-  entity.getComponent('Material').set({ baseColor: State.baseColor })
-})
+const sunEntity = createEntity({
+  transform: components.transform({
+    position: [-2, 2, 2],
+    rotation: quat.fromDirection(quat.create(), vec3.normalize([2, -2, -1])),
+  }),
+  directionalLight: components.directionalLight({
+    color: [1, 1, 0.95, 2],
+    intensity: 2,
+    castShadows: false,
+  }),
+});
+world.add(sunEntity);
 
-// Sky
-const sun = renderer.directionalLight({
-  color: [5, 5, 4, 1],
-  bias: 0.01,
-  castShadows: true
-})
-gui.addTexture2D('Shadow map', sun._shadowMap).setPosition(10 + 170, 10)
+const skyboxEntity = createEntity({
+  transform: components.transform(),
+  skybox: components.skybox({ sunPosition: [0, 0.05, -1] }),
+  reflectionProbe: components.reflectionProbe(),
+});
+world.add(skyboxEntity);
 
-const skybox = renderer.skybox({
-  sunPosition: State.sunPosition
-})
-gui.addTexture2D('Sky', skybox._skyTexture)
+function update(time) {
+  const center = [0.75, 0.75, 0.75];
+  const radius = 1.25;
 
-const reflectionProbe = renderer.reflectionProbe({
-  origin: [0, 0, 0],
-  size: [10, 10, 10],
-  boxProjection: false
-})
-gui.addTexture2D('ReflectionMap', reflectionProbe._reflectionMap)
+  const center2 = [-0.75, -0.75, 0.75];
+  const radius2 = 1.25;
 
-renderer.add(
-  renderer.entity([
-    renderer.transform({
-      position: State.sunPosition,
-      rotation: quat.fromTo(
-        quat.create(),
-        [0, 0, 1],
-        vec3.normalize(vec3.sub([0, 0, 0], State.sunPosition))
-      )
-    }),
-    sun,
-    skybox,
-    reflectionProbe
-  ])
-)
+  center[0] = 1.15 * Math.sin(time);
+  center[1] = 0.75 * Math.cos(time);
 
-window.addEventListener('keydown', (e) => {
-  if (e.key === 'd') debugOnce = true
-})
+  center2[0] = -1.15 * Math.sin(time);
+  center2[1] = 0.75 * Math.sin(time);
+  center2[2] = 0.5 * Math.cos(time * 2) * Math.sin(time / 2);
+
+  let i = 0;
+  for (let x = 0; x < N; x++) {
+    for (let y = 0; y < N; y++) {
+      for (let z = 0; z < N; z++) {
+        const pos = [
+          utils.map(x, 0, N, -1, 1),
+          utils.map(y, 0, N, -1, 1),
+          utils.map(z, 0, N, -1, 1),
+        ];
+        const dist = vec3.distance(pos, center);
+        if (dist < radius) {
+          const force = vec3.sub(vec3.copy(pos), center);
+          vec3.normalize(force);
+          vec3.scale(force, 1 - Math.sqrt(dist / radius));
+          vec3.add(pos, force);
+        }
+        const dist2 = vec3.distance(pos, center2);
+        if (dist2 < radius2) {
+          const force = vec3.sub(vec3.copy(pos), center2);
+          vec3.normalize(force);
+          vec3.scale(force, 1 - Math.sqrt(dist2 / radius2));
+          vec3.add(pos, force);
+        }
+        avec3.set(instancedGeometry.offsets.data, i, pos, 0);
+
+        const value = Math.min(1, dist / radius);
+        const value2 = Math.min(1, dist2 / radius2);
+        const colorBase = [0.8, 0.1, 0.1, 1.0];
+        const color = gradient(value);
+        const color2 = gradient2(value2);
+        vec3.lerp(
+          colorBase,
+          [0, 0, 0, 0],
+          Math.sqrt(Math.max(0.01, 1 - value - value2)),
+        );
+        vec3.lerp(color, [0, 0, 0, 0], value);
+        vec3.lerp(color2, [0, 0, 0, 0], value2);
+        vec3.add(colorBase, color);
+        vec3.add(colorBase, color2);
+
+        avec4.set(instancedGeometry.colors.data, i, colorBase, 0);
+
+        const dir = vec3.normalize(vec3.sub(vec3.copy(pos), center));
+        avec4.set(
+          instancedGeometry.rotations.data,
+          i,
+          quat.fromDirection(quat.create(), dir),
+          0,
+        );
+        i++;
+      }
+    }
+  }
+
+  // Update the geometry
+  // Unoptimised: geometryEntity.geometry = { ...instancedGeometry };
+  instancedGeometry.offsets.dirty = true;
+  instancedGeometry.colors.dirty = true;
+  instancedGeometry.rotations.dirty = true;
+}
+
+// GUI
+const gui = createGUI(ctx);
+gui.addFPSMeeter();
+
+// Events
+let debugOnce = false;
+
+window.addEventListener("resize", () => {
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+  ctx.set({ pixelRatio, width, height });
+  cameraEntity.camera.aspect = width / height;
+  cameraEntity.camera.dirty = true;
+});
+
+window.addEventListener("keydown", ({ key }) => {
+  if (key === "g") gui.enabled = !gui.enabled;
+  if (key === "d") debugOnce = true;
+});
 
 ctx.frame(() => {
-  ctx.debug(frameNumber++ < 2 || debugOnce)
-  debugOnce = false
+  ctx.debug(debugOnce);
+  debugOnce = false;
 
-  update()
+  update(performance.now() * 0.001);
 
-  renderer.draw()
+  renderEngine.update(world.entities);
+  renderEngine.render(world.entities, cameraEntity);
 
-  gui.draw()
-  window.dispatchEvent(new CustomEvent('pex-screenshot'))
-})
+  gui.draw();
+
+  window.dispatchEvent(new CustomEvent("screenshot"));
+});

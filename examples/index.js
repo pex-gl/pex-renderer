@@ -1,46 +1,70 @@
-const path = require('path')
+(async () => {
+  const params = new URLSearchParams(window.location.search);
+  const id = params.get("id");
 
-const examplesNames = require
-  .context('./', false, /^(?!.*\/(index|webpack.config|scripts|build|assets)).*js$/) // Match only .js files at the root
-  .keys()
-  .map((example) => path.basename(example, path.extname(example)))
+  const examples = [
+    // Engine features
+    "basic",
+    "engine",
+    "gltf",
+    "helpers",
+    "instancing",
 
-const ExamplesModules = Object.fromEntries(
-  new Map(
-    examplesNames.map((example) => [
-      example,
-      () =>
-        import(/* webpackChunkName: "[request]" */
-        /* webpackInclude: /^(?!.*\/(index|webpack.config|scripts|build|assets)).*js$/ */
-        `./${example}.js`)
-    ])
-  )
-)
+    // Post-Processing
+    "post-processing",
+    "camera-cinematic-dof",
+    "ao",
+    // "blocks",
 
-const searchParams = new URLSearchParams(window.location.search)
-const currentExample = searchParams.get('name')
+    // View
+    // "layers",
+    "cameras",
+    "frustum-culling",
+    "multi-view",
 
-if (currentExample && ExamplesModules[currentExample]) {
-  document.querySelector('.MainHeader').remove()
-  document.querySelector('body').style.backgroundColor = getComputedStyle(
-    document.body
-  ).getPropertyValue('--color-black')
-  ExamplesModules[currentExample]()
-}
+    // Lighting
+    "lights",
+    "skybox",
 
-const list = document.querySelector('.Examples-list')
-if (searchParams.has('screenshot')) {
-  list.classList.add('u-hide')
-} else if (currentExample) {
-  list.classList.add('Examples-list--side')
-}
+    // Materials
+    "materials",
+    "custom-material",
+    "brdf",
+    "transmission",
+    "clear-coat",
+    "point-size",
+  ];
 
-const listItems = !currentExample
-  ? ''
-  : '<div class="Examples-list-item"><a href="/"><h3>home</h3></a></div>'
-list.innerHTML = examplesNames.reduce(
-  (html, example) =>
-    (html += `<div class="Examples-list-item"><a href="?name=${example}">
-    <img src="screenshots/${example}.png" /><h3>${example}</h3></a></div>`),
-  listItems
-)
+  const list = document.querySelector(".Examples-list");
+  if (params.has("screenshot")) {
+    window.screenshotItems = examples;
+
+    list.classList.add("u-hide");
+  } else if (id) {
+    list.classList.add("Examples-list--side");
+  }
+
+  list.innerHTML = examples.reduce(
+    (html, example) =>
+      (html += `<div class="Examples-list-item"><a href="?id=${example}">
+      <img src="examples/screenshots/${example}.png" /><h3>${example}</h3></a></div>`),
+    !id
+      ? ""
+      : '<div class="Examples-list-item"><a href="/"><h3>home</h3></a></div>',
+  );
+
+  if (id) {
+    document.querySelector(".MainHeader").remove();
+    document.querySelector("body").style.backgroundColor = getComputedStyle(
+      document.body,
+    ).getPropertyValue("--color-grey");
+
+    try {
+      await importShim(`./examples/${id}.js`);
+    } catch (error) {
+      console.error(error);
+    }
+
+    list.querySelector(`a[href="?id=${id}"]`)?.scrollIntoView(true);
+  }
+})();

@@ -1,252 +1,194 @@
-const path = require('path')
-const createRenderer = require('../')
-const createContext = require('pex-context')
-const io = require('pex-io')
-const { quat, vec3 } = require('pex-math')
-const GUI = require('pex-gui')
-const parseHdr = require('parse-hdr')
-const parseObj = require('geom-parse-obj')
-const isBrowser = require('is-browser')
-const { loadText } = require('pex-io')
+import {
+  renderEngine as createRenderEngine,
+  world as createWorld,
+  entity as createEntity,
+  components,
+} from "../index.js";
 
-const State = {
-  rotation: 1.5 * Math.PI
-}
+import createContext from "pex-context";
+import * as io from "pex-io";
+import { quat } from "pex-math";
+import createGUI from "pex-gui";
 
-const ctx = createContext()
-const renderer = createRenderer(ctx)
-const gui = new GUI(ctx)
+import parseObj from "geom-parse-obj";
 
-const ASSETS_DIR = isBrowser ? 'assets' : path.join(__dirname, 'assets')
+import { getEnvMap, getTexture, getURL } from "./utils.js";
 
-for (var i = 0; i < 3; i++) {
-  const camera = renderer.entity(
-    [
-      renderer.transform({ position: [0, 0, 3] }),
-      renderer.camera({
-        fov: Math.PI / 3,
-        aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
-        near: 0.1,
-        far: 100,
-        postprocess: false,
-        viewport: [
-          i * Math.floor((1 / 3) * window.innerWidth),
-          0,
-          Math.floor((1 / 3) * window.innerWidth),
-          window.innerHeight
-        ]
-      }),
-      renderer.orbiter({
-        position: [0.5, 0.5, 2]
-      }),
-      renderer.postProcessing({
-        fxaa: true,
-        ssao: true,
-        ssaoStrength: 5
-      })
-    ],
-    ['camera-' + (i + 1)]
-  )
-  renderer.add(camera)
-}
+const pixelRatio = devicePixelRatio;
+const ctx = createContext({ pixelRatio });
+const renderEngine = createRenderEngine({ ctx, debug: true });
+const world = createWorld();
 
-const skybox = renderer.entity([
-  renderer.transform({
-    rotation: quat.fromAxisAngle(quat.create(), [0, 1, 0], State.rotation)
-  }),
-  renderer.skybox({
-    sunPosition: [1, 1, 1],
-    backgroundBlur: true
-  })
-])
-renderer.add(skybox)
-
-function getMaterialMaps(maps) {
-  return Object.entries(maps).reduce(
-    (currentValue, [key, image]) => ({
-      ...currentValue,
-      [key]: ctx.texture2D({
-        data: image,
-        width: 256,
-        height: 256,
-        min: ctx.Filter.LinearMipmapLinear,
-        mag: ctx.Filter.Linear,
-        wrap: ctx.Wrap.Repeat,
-        flipY: true,
-        mipmap: true,
-        encoding:
-          key === 'emissiveColorMap' || key === 'baseColorMap'
-            ? ctx.Encoding.SRGB
-            : ctx.Encoding.Linear
-      })
+// Entities
+for (let i = 0; i < 3; i++) {
+  const cameraEntity = createEntity({
+    layer: `camera-${i + 1}`,
+    transform: components.transform({ position: [0.5, 0.5, 2] }),
+    camera: components.camera({
+      fov: Math.PI / 3,
+      aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
+      viewport: [
+        i * Math.floor((1 / 3) * window.innerWidth) * pixelRatio,
+        0,
+        Math.floor((1 / 3) * window.innerWidth) * pixelRatio,
+        window.innerHeight * pixelRatio,
+      ],
     }),
-    {}
-  )
+    orbiter: components.orbiter({ element: ctx.gl.canvas }),
+  });
+  world.add(cameraEntity);
 }
 
-const directionalLight = renderer.entity([
-  renderer.transform({
-    rotation: quat.fromTo(quat.create(), [0, 0, 1], vec3.normalize([1, -3, -1]))
+const skyEntity = createEntity({
+  skybox: components.skybox({
+    backgroundBlur: 1,
+    envMap: await getEnvMap(
+      ctx,
+      "assets/envmaps/Road_to_MonumentValley/Road_to_MonumentValley.hdr",
+    ),
   }),
-  renderer.directionalLight({
+  reflectionProbe: components.reflectionProbe(),
+});
+world.add(skyEntity);
+
+const directionalLightEntity = createEntity({
+  transform: components.transform({
+    rotation: quat.fromPointToPoint(quat.create(), [0, 0, 0], [1, -3, -1]),
+  }),
+  directionalLight: components.directionalLight({
     castShadows: true,
-    color: [1, 1, 1, 1]
-  })
-])
-renderer.add(directionalLight)
+    color: [1, 1, 1, 1],
+  }),
+});
+world.add(directionalLightEntity);
 
-const reflectionProbe = renderer.entity([renderer.reflectionProbe()])
-renderer.add(reflectionProbe)
-;(async () => {
-  const buffer = await io.loadBinary(
-    `${ASSETS_DIR}/envmaps/Road_to_MonumentValley/Road_to_MonumentValley.hdr`
-  )
-  const hdrImg = parseHdr(buffer)
-  const panorama = ctx.texture2D({
-    data: hdrImg.data,
-    width: hdrImg.shape[0],
-    height: hdrImg.shape[1],
-    pixelFormat: ctx.PixelFormat.RGBA32F,
-    encoding: ctx.Encoding.Linear,
-    flipY: true
-  })
-
-  skybox.getComponent('Skybox').set({ texture: panorama })
-  reflectionProbe.getComponent('ReflectionProbe').set({ dirty: true })
-
-  const materialMaps = getMaterialMaps({
-    baseColorMap: await io.loadImage(
-      `${ASSETS_DIR}/materials/Fabric04/Fabric04_col.jpg`
+const materialTextures = {
+  baseColorTexture: await getTexture(
+    ctx,
+    getURL(`assets/materials/Fabric04/Fabric04_col.jpg`),
+  ),
+  normalTexture: await getTexture(
+    ctx,
+    getURL(`assets/materials/Fabric04/Fabric04_nrm.jpg`),
+  ),
+  clearCoatNormalTexture: await getTexture(
+    ctx,
+    getURL(`assets/materials/Metal05/Metal05_nrm.jpg`),
+  ),
+  occlusionTexture: await getTexture(
+    ctx,
+    getURL(
+      `assets/models/substance-sample-scene/substance-sample-scene_ao.jpg`,
     ),
-    normalMap: await io.loadImage(
-      `${ASSETS_DIR}/materials/Fabric04/Fabric04_nrm.jpg`
+  ),
+};
+
+const ballGeometry = components.geometry(
+  parseObj(
+    await io.loadText(
+      getURL(`assets/models/substance-sample-scene/substance-sample-scene.obj`),
     ),
-    clearCoatNormalMap: await io.loadImage(
-      `${ASSETS_DIR}/materials/Metal05/Metal05_nrm.jpg`
-    ),
-    aoMap: await io.loadImage(
-      `${ASSETS_DIR}/models/substance-sample-scene/substance-sample-scene_ao.jpg`
-    )
-  })
+  )[0],
+);
 
-  const materialGeom = parseObj(
-    await loadText(
-      `${ASSETS_DIR}/models/substance-sample-scene/substance-sample-scene.obj`
-    )
-  )
+const clearCoatMaterial = {
+  baseColor: [1, 0, 0, 1],
+  roughness: 0.25,
+  metallic: 0,
+  clearCoat: 1,
+  clearCoatRoughness: 0.1,
+  castShadows: true,
+  receiveShadows: true,
+  occlusionTexture: materialTextures.occlusionTexture,
+  normalTextureScale: 1,
+};
 
-  const geom1 = renderer.entity(
-    [
-      renderer.transform({ position: [0, 0, 0] }),
-      renderer.geometry(materialGeom),
-      renderer.material({
-        baseColor: [1, 0, 0, 1],
-        roughness: 0.25,
-        metallic: 0,
-        clearCoat: 1,
-        clearCoatRoughness: 0.1,
-        castShadows: true,
-        receiveShadows: true,
-        occlusionMap: {
-          texture: materialMaps.aoMap,
-          scale: [1, 1]
-        }
-      })
-    ],
-    ['camera-1']
-  )
-  renderer.add(geom1)
+const clearCoatEntity = createEntity({
+  layer: "camera-1",
+  transform: components.transform(),
+  geometry: ballGeometry,
+  material: components.material(clearCoatMaterial),
+});
+world.add(clearCoatEntity);
 
-  const geom2 = renderer.entity(
-    [
-      renderer.transform({ position: [0, 0, 0] }),
-      renderer.geometry(materialGeom),
-      renderer.material({
-        baseColor: [1, 0, 0, 1],
-        roughness: 0.25,
-        metallic: 0,
-        clearCoat: 1,
-        clearCoatRoughness: 0.1,
-        castShadows: true,
-        receiveShadows: true,
-        normalMap: {
-          texture: materialMaps.normalMap,
-          scale: [4, 4]
-        },
-        occlusionMap: {
-          texture: materialMaps.aoMap,
-          scale: [1, 1]
-        }
-      })
-    ],
-    ['camera-2']
-  )
-  renderer.add(geom2)
+const normalTextureEntity = createEntity({
+  layer: "camera-2",
+  transform: components.transform(),
+  geometry: ballGeometry,
+  material: components.material({
+    ...clearCoatMaterial,
+    normalTexture: {
+      texture: materialTextures.normalTexture,
+      scale: [4, 4],
+    },
+  }),
+});
+world.add(normalTextureEntity);
 
-  const geom3 = renderer.entity(
-    [
-      renderer.transform({ position: [0, 0, 0] }),
-      renderer.geometry(materialGeom),
-      renderer.material({
-        baseColor: [1, 0, 0, 1],
-        roughness: 0.25,
-        metallic: 0,
-        clearCoat: 1,
-        clearCoatRoughness: 0.1,
-        castShadows: true,
-        receiveShadows: true,
-        normalMap: {
-          texture: materialMaps.normalMap,
-          scale: [4, 4]
-        },
-        clearCoatNormalMap: {
-          texture: materialMaps.clearCoatNormalMap,
-          scale: [8, 8]
-        },
-        occlusionMap: {
-          texture: materialMaps.aoMap,
-          scale: [1, 1]
-        }
-      })
-    ],
-    ['camera-3']
-  )
-  renderer.add(geom3)
+const clearCoatNormalTextureEntity = createEntity({
+  layer: "camera-3",
+  transform: components.transform(),
+  geometry: ballGeometry,
+  material: components.material({
+    ...clearCoatMaterial,
+    normalTexture: {
+      texture: materialTextures.normalTexture,
+      scale: [4, 4],
+    },
+    clearCoatNormalTexture: {
+      texture: materialTextures.clearCoatNormalTexture,
+      scale: [8, 8],
+    },
+    clearCoatNormalTextureScale: 1,
+  }),
+});
+world.add(clearCoatNormalTextureEntity);
 
-  const skyboxCmp = skybox.getComponent('Skybox')
-  const materialCmp = geom1.getComponent('Material')
-  const reflectionProbeCmp = reflectionProbe.getComponent('ReflectionProbe')
-  gui.addHeader('Settings')
-  gui.addParam('Environment', reflectionProbeCmp, 'enabled', {}, (value) => {
-    skyboxCmp.set({ enabled: value })
-  })
-  gui.addParam('BG Blur', skyboxCmp, 'backgroundBlur', {}, () => {})
-  gui.addParam('ClearCoat', materialCmp, 'clearCoat', {}, () => {
-    geom1.getComponent('Material').set({ clearCoat: materialCmp.clearCoat })
-    geom2.getComponent('Material').set({ clearCoat: materialCmp.clearCoat })
-    geom3.getComponent('Material').set({ clearCoat: materialCmp.clearCoat })
-  })
-  gui.addParam(
-    'ClearCoat Roughness',
-    materialCmp,
-    'clearCoatRoughness',
-    {},
-    () => {
-      geom1
-        .getComponent('Material')
-        .set({ clearCoatRoughness: materialCmp.clearCoatRoughness })
-      geom2
-        .getComponent('Material')
-        .set({ clearCoatRoughness: materialCmp.clearCoatRoughness })
-      geom3
-        .getComponent('Material')
-        .set({ clearCoatRoughness: materialCmp.clearCoatRoughness })
-    }
-  )
+// GUI
+const gui = createGUI(ctx, { theme: { columnWidth: 250 } });
+gui.addParam(
+  "Normal Texture Scale",
+  clearCoatEntity.material,
+  "normalTextureScale",
+  {},
+  () => {
+    normalTextureEntity.material.normalTextureScale =
+      clearCoatEntity.material.normalTextureScale;
+    clearCoatNormalTextureEntity.material.normalTextureScale =
+      clearCoatEntity.material.normalTextureScale;
+  },
+);
+gui.addParam("ClearCoat", clearCoatEntity.material, "clearCoat", {}, () => {
+  normalTextureEntity.material.clearCoat = clearCoatEntity.material.clearCoat;
+  clearCoatNormalTextureEntity.material.clearCoat =
+    clearCoatEntity.material.clearCoat;
+});
+gui.addParam(
+  "ClearCoat Roughness",
+  clearCoatEntity.material,
+  "clearCoatRoughness",
+  {},
+  () => {
+    normalTextureEntity.material.clearCoatRoughness =
+      clearCoatEntity.material.clearCoatRoughness;
+    clearCoatNormalTextureEntity.material.clearCoatRoughness =
+      clearCoatEntity.material.clearCoatRoughness;
+  },
+);
+gui.addParam(
+  "ClearCoat Normal Texture Scale",
+  clearCoatNormalTextureEntity.material,
+  "clearCoatNormalTextureScale",
+  {},
+);
 
-  ctx.frame(() => {
-    renderer.draw()
-    gui.draw()
-    window.dispatchEvent(new CustomEvent('pex-screenshot'))
-  })
-})()
+ctx.frame(() => {
+  renderEngine.update(world.entities);
+  renderEngine.render(
+    world.entities,
+    world.entities.filter((entity) => entity.camera),
+  );
+
+  gui.draw();
+  window.dispatchEvent(new CustomEvent("screenshot"));
+});

@@ -1,83 +1,75 @@
 {
   "name": "pex-renderer",
-  "version": "3.1.0",
-  "description": "Physically Based Renderer for Pex",
-  "main": "index.js",
-  "scripts": {
-    "lint": "npx eslint {examples/*,loaders/*,shaders/**/*,*}.js",
-    "format": "npx prettier {examples/*,loaders/*,shaders/**/*,*}.js --write",
-    "format:check": "npx prettier {examples/*,loaders/*,shaders/**/*,*}.js --check"
+  "version": "4.0.0-alpha.57",
+  "description": "Physically Based Renderer (PBR) and scene graph designed as ECS for PEX: define entities to be rendered as collections of components with their update orchestrated by systems.",
+  "keywords": [
+    "pex",
+    "renderer",
+    "webgl",
+    "3d",
+    "gltf",
+    "ecs"
+  ],
+  "homepage": "https://github.com/pex-gl/pex-renderer",
+  "bugs": "https://github.com/pex-gl/pex-renderer/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pex-gl/pex-renderer.git"
   },
   "license": "MIT",
-  "author": {
-    "name": "Marcin Ignac",
-    "email": "marcin.ignac@gmail.com",
-    "url": "https://github.com/vorg"
-  },
+  "author": "Marcin Ignac <marcin.ignac@gmail.com> (http://marcinignac.com)",
   "contributors": [
     "Damien Seguin (https://github.com/dmnsgn)",
     "Nick Nikolov (https://github.com/nicknikolov)"
   ],
-  "keywords": [
-    "webgl",
-    "pbr",
-    "pex"
-  ],
-  "repository": {
-    "type": "git",
-    "url": "git://github.com/pex-gl/pex-renderer.git"
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./types/index.d.ts",
+      "default": "./index.js"
+    }
   },
-  "homepage": "https://github.com/pex-gl/pex-renderer",
-  "bugs": {
-    "url": "https://github.com/pex-gl/pex-renderer/issues"
+  "main": "index.js",
+  "types": "types/index.d.ts",
+  "scripts": {
+    "build": "snowdev build",
+    "dev": "snowdev dev",
+    "release": "snowdev release",
+    "release:alpha": "snowdev release --release-as minor --prerelease alpha"
   },
   "dependencies": {
-    "debug": "^4.1.1",
-    "geom-builder": "^2.1.0",
-    "hammersley": "^1.0.0",
-    "interpolate-angle": "^1.0.2",
-    "is-browser": "^2.1.0",
-    "latlon-to-xyz": "^1.0.1",
-    "mouse-event-offset": "^3.0.2",
-    "pex-geom": "^2.0.2",
-    "pex-io": "^2.1.0",
-    "pex-math": "^3.0.0-2",
-    "pex-random": "^1.0.1",
-    "primitive-quad": "^2.0.0",
-    "signals": "^1.0.0",
-    "xyz-to-latlon": "^1.0.2"
+    "geom-builder": "^3.0.1",
+    "hammersley": "^2.0.0",
+    "pex-cam": "^3.0.1",
+    "pex-geom": "^3.1.0",
+    "pex-io": "^3.0.2",
+    "pex-loaders": "^1.0.0",
+    "pex-math": "^4.1.2",
+    "pex-random": "^2.1.2",
+    "pex-shaders": "^1.0.0",
+    "typed-array-interleave": "^2.0.1"
   },
   "devDependencies": {
-    "eslint": "^9.33.0",
-    "eslint-config-prettier": "^4.1.0",
-    "eslint-plugin-markdown": "^1.0.0",
-    "eslint-plugin-prettier": "^3.0.1",
-    "prettier": "1.16.4"
+    "@hpcc-js/wasm-graphviz": "^1.11.0",
+    "@thi.ng/dot": "^2.1.114",
+    "angle-normals": "^1.0.0",
+    "cosine-gradient": "^0.3.0",
+    "es-module-shims": "^2.6.2",
+    "fit-rect": "^1.0.3",
+    "geom-center-and-normalize": "^2.2.0",
+    "geom-parse-obj": "^2.0.0",
+    "grid-cells": "^2.0.0",
+    "pex-color": "^2.2.0",
+    "pex-context": "^3.3.1",
+    "pex-gui": "^3.2.0",
+    "primitive-geometry": "^2.11.0"
   },
-  "prettier": {
-    "semi": false,
-    "singleQuote": true,
-    "arrowParens": "always"
+  "engines": {
+    "node": ">=22.0.0",
+    "npm": ">=10.5.1",
+    "snowdev": ">=2.5.x"
   },
-  "eslintConfig": {
-    "extends": [
-      "eslint:recommended",
-      "plugin:prettier/recommended"
-    ],
-    "plugins": [
-      "prettier",
-      "markdown"
-    ],
-    "rules": {
-      "prettier/prettier": "error"
-    },
-    "parserOptions": {
-      "ecmaVersion": 2019
-    },
-    "env": {
-      "es6": true,
-      "browser": true,
-      "node": true
-    }
+  "snowdev": {
+    "files": "{*.js,*(systems|components|helpers|loaders|utils)/**/*.js}"
   }
 }

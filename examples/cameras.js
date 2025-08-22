@@ -1,77 +1,119 @@
-const createContext = require('pex-context')
-const createRenderer = require('../')
-const createCube = require('primitive-cube')
+import {
+  renderEngine as createRenderEngine,
+  world as createWorld,
+  entity as createEntity,
+  components,
+} from "../index.js";
 
-const ctx = createContext()
+import createContext from "pex-context";
+import createGUI from "pex-gui";
 
-const renderer = createRenderer(ctx)
+import { cube } from "primitive-geometry";
 
-const viewportWidth = window.innerWidth * 0.5
-const viewportHeight = window.innerHeight
-const aspect = (ctx.gl.drawingBufferWidth * 0.5) / ctx.gl.drawingBufferHeight
+const pixelRatio = devicePixelRatio;
+const ctx = createContext({ pixelRatio });
+const renderEngine = createRenderEngine({ ctx, debug: true });
+const world = createWorld();
+const gui = createGUI(ctx, { theme: { columnWidth: 200 } });
 
-const cubeCount = 100
-const offset = 2
-const gridSize = 10
-const viewSize = gridSize / 2
+const viewportWidth = window.innerWidth * pixelRatio;
+const viewportHeight = window.innerHeight * pixelRatio;
+const aspect = ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight;
+const columns = 4;
+const rows = 3;
+const viewWidth = viewportWidth / columns;
+const viewHeight = viewportHeight / rows;
+const viewSize = 5;
 
-const perspectiveCamera = renderer.entity([
-  renderer.camera({
-    fov: Math.PI / 2,
-    far: 100,
-    aspect,
-    viewport: [0, 0, viewportWidth, viewportHeight]
-  }),
-  renderer.orbiter({ position: [10, 10, 10], maxDistance: 100 })
-])
-renderer.add(perspectiveCamera)
+for (let i = 0; i < rows; i++) {
+  const dy = i / rows;
 
-const orthographicCamera = renderer.entity([
-  renderer.camera({
-    projection: 'orthographic',
-    aspect,
-    left: (-0.5 * viewSize * aspect) / 2,
-    right: (0.5 * viewSize * aspect) / 2,
-    top: (0.5 * viewSize) / 2,
-    bottom: (-0.5 * viewSize) / 2,
-    viewport: [window.innerWidth * 0.5, 0, viewportWidth, viewportHeight]
-  }),
-  renderer.orbiter({ position: [10, 10, 10] })
-])
-renderer.add(orthographicCamera)
+  const projection = i % 2 === 0 ? "perspective" : "orthographic";
 
-const geometry = createCube()
+  const header = gui.addHeader(`${projection} ${Math.floor(i / 2)}`);
+  header.x = 10;
+  header.y = 10 + ((i / rows) * viewportHeight) / pixelRatio;
 
-for (let i = 0; i < cubeCount; i++) {
-  const cubeEntity = renderer.entity([
-    renderer.transform({
-      position: [
-        (i % gridSize) * offset - cubeCount / gridSize,
-        0,
-        ~~(i / gridSize) * offset - cubeCount / gridSize
-      ]
-    }),
-    renderer.geometry(geometry),
-    renderer.material({
-      baseColor: [0, 0.5, 1, 1],
-      metallic: 0
-    })
-  ])
-  renderer.add(cubeEntity)
+  const options =
+    projection === "orthographic"
+      ? {
+          left: (-0.5 * viewSize * aspect) / 2,
+          right: (0.5 * viewSize * aspect) / 2,
+          top: (0.5 * viewSize) / 2,
+          bottom: (-0.5 * viewSize) / 2,
+        }
+      : {
+          fov: Math.PI / 2,
+        };
+
+  for (let j = 0; j < columns; j++) {
+    const dx = j / columns;
+
+    const viewport = [
+      dx * viewportWidth,
+      dy * viewportHeight,
+      // Fake borders
+      viewWidth - 1,
+      viewHeight - 1,
+    ];
+    const offset = [dx * viewportWidth, viewHeight * (rows - 1) * 0.5];
+
+    const subHeader = gui.addLabel(
+      `viewport: [${viewport.map((n) => n.toFixed(0))}]
+view offset: [${offset.map((n) => n.toFixed(0))}]`,
+    );
+    subHeader.x = 10 + (dx * viewportWidth) / pixelRatio;
+    subHeader.y = (dy * viewportHeight + viewHeight) / pixelRatio - 50;
+
+    const cameraEntity = createEntity({
+      transform: components.transform({
+        position: [3, 3, 3],
+      }),
+      camera: components.camera({
+        projection,
+        aspect,
+        viewport,
+        view: {
+          offset,
+          size: [viewWidth, viewHeight],
+          totalSize: [viewportWidth, viewportHeight],
+        },
+        ...options,
+      }),
+      orbiter: components.orbiter({ element: ctx.gl.canvas }),
+    });
+    world.add(cameraEntity);
+  }
 }
 
-const skybox = renderer.entity([
-  renderer.skybox({
-    sunPosition: [1, 1, 1]
-  })
-])
-renderer.add(skybox)
+const axesEntity = createEntity({ axesHelper: components.axesHelper() });
+world.add(axesEntity);
 
-const reflectionProbe = renderer.entity([renderer.reflectionProbe()])
-renderer.add(reflectionProbe)
+const cubeEntity = createEntity({
+  transform: components.transform(),
+  geometry: components.geometry(cube()),
+  material: components.material({
+    baseColor: [1, 1, 0, 1],
+    metallic: 1,
+    roughness: 0.1,
+  }),
+});
+world.add(cubeEntity);
+
+const skyEntity = createEntity({
+  skybox: components.skybox({ sunPosition: [0, 0.05, -1] }),
+  reflectionProbe: components.reflectionProbe(),
+});
+world.add(skyEntity);
 
 ctx.frame(() => {
-  renderer.draw()
+  renderEngine.update(world.entities);
+  renderEngine.render(
+    world.entities,
+    world.entities.filter((entity) => entity.camera),
+  );
 
-  window.dispatchEvent(new CustomEvent('pex-screenshot'))
-})
+  gui.draw();
+
+  window.dispatchEvent(new CustomEvent("screenshot"));
+});

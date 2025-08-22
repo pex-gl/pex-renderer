@@ -1,309 +1,223 @@
-const path = require('path')
-const createRenderer = require('../')
-const createContext = require('pex-context')
-const createGUI = require('pex-gui')
-const vec3 = require('pex-math/vec3')
-const quat = require('pex-math/quat')
-const random = require('pex-random')
-const io = require('pex-io')
-const createSphere = require('primitive-sphere')
-const isBrowser = require('is-browser')
-const gridCells = require('grid-cells')
-const parseHdr = require('parse-hdr')
+import {
+  renderEngine as createRenderEngine,
+  world as createWorld,
+  entity as createEntity,
+  components,
+} from "../index.js";
+
+import createContext from "pex-context";
+import createGUI from "pex-gui";
+import { vec3, quat } from "pex-math";
+import { sphere } from "primitive-geometry";
+import gridCells from "grid-cells";
+import { getEnvMap } from "./utils.js";
 
 const State = {
-  sunPosition: [0, 5, -5],
-  roughness: 0.5,
-  metallic: 0.1,
-  baseColor: [0.8, 0.1, 0.1, 1.0],
-  materials: [],
-  rgbm: false,
-  exposure: 0.8
-}
+  furnace: false,
+};
 
-random.seed(10)
+const pixelRatio = devicePixelRatio;
+const ctx = createContext({ pixelRatio });
+const renderEngine = createRenderEngine({ ctx, debug: true });
+const world = createWorld();
 
-const ctx = createContext({
-  powerPreference: 'high-performance'
-})
-ctx.gl.getExtension('EXT_shader_texture_lod')
-ctx.gl.getExtension('OES_standard_derivatives')
-ctx.gl.getExtension('WEBGL_draw_buffers')
-ctx.gl.getExtension('OES_texture_float')
-ctx.gl.getExtension('EXT_texture_filter_anisotropic')
+const gui = createGUI(ctx);
+const nW = 11;
 
-const renderer = createRenderer({
-  ctx,
-  pauseOnBlur: false,
-  rgbm: State.rgbm,
-  shadowQuality: 2
-})
-
-const gui = createGUI(ctx)
-const ASSETS_DIR = isBrowser ? 'assets' : path.join(__dirname, 'assets')
-const W = ctx.gl.drawingBufferWidth
-const H = ctx.gl.drawingBufferHeight
-const nW = 11
-const nH = 6
-let debugOnce = false
+const colors = {
+  black: [0.0, 0.0, 0.0, 1.0],
+  white: [0.9, 0.9, 1.0, 1.0],
+  blue: [0.0, 0.0, 1.0, 1.0],
+  yellow: [1.0, 0.8, 0.0, 1.0],
+  red: [0.8, 0.0, 0.1, 1.0],
+};
 
 // Materials
-let materials = []
+const materials = {};
 
-for (let i = 0; i <= 10; i++) {
-  materials.push({
-    baseColor: [0.9, 0.9, 1.0, 1.0],
+for (let i = 0; i < nW; i++) {
+  materials[`Metallic`] ||= [];
+  materials[`Metallic`].push({
+    baseColor: colors.yellow,
     metallic: i / 10,
-    roughness: 0
-  })
-}
-
-for (let i = 0; i <= 10; i++) {
-  materials.push({
-    baseColor: [0.0, 0.0, 1.0, 1.0],
+    roughness: 0,
+  });
+  materials["Roughness (non-metallic)"] ||= [];
+  materials["Roughness (non-metallic)"].push({
+    baseColor: colors.yellow,
     metallic: 0,
-    roughness: i / 10
-  })
-}
-
-for (let i = 0; i <= 10; i++) {
-  materials.push({
-    baseColor: [1.0, 0.8, 0.0, 1.0],
+    roughness: i / 10,
+  });
+  materials["Roughness (metallic)"] ||= [];
+  materials["Roughness (metallic)"].push({
+    baseColor: colors.yellow,
     metallic: 1,
-    roughness: i / 10
-  })
-}
-
-for (let i = 0; i <= 10; i++) {
-  materials.push({
-    baseColor: [0.8, 0.0, 0.1, 1.0],
+    roughness: i / 10,
+  });
+  materials[`Specular`] ||= [];
+  materials[`Specular`].push({
+    baseColor: colors.blue,
     metallic: 0,
     roughness: 0,
-    reflectance: i / 10
-  })
-}
-
-for (let i = 0; i <= 10; i++) {
-  materials.push({
-    baseColor: [0.8, 0.0, 0.1, 1.0],
+    ior: 1.5,
+    specular: i / 10,
+  });
+  materials["Clear Coat"] ||= [];
+  materials["Clear Coat"].push({
+    baseColor: colors.red,
     metallic: 1,
     roughness: 0.5,
     clearCoat: i / 10,
-    clearCoatRoughness: 0
-  })
-}
-
-for (let i = 0; i <= 10; i++) {
-  materials.push({
-    baseColor: [0.8, 0.0, 0.1, 1.0],
+    clearCoatRoughness: 0.04,
+  });
+  materials["Clear Coat Roughness"] ||= [];
+  materials["Clear Coat Roughness"].push({
+    baseColor: colors.red,
     metallic: 1,
     roughness: 0.5,
     clearCoat: 1,
-    clearCoatRoughness: i / 10
-  })
+    clearCoatRoughness: i / 10,
+  });
+  materials["Sheen Roughness"] ||= [];
+  materials["Sheen Roughness"].push({
+    baseColor: colors.black,
+    metallic: 0,
+    roughness: 1,
+    sheenColor: colors.white,
+    sheenRoughness: i / 10,
+  });
 }
+const brdfNames = Object.keys(materials);
+const brdfMaterials = Object.values(materials).flat();
+const nH = brdfNames.length;
 
-// Utils
-let cells = gridCells(W, H, nW, nH, 0).map((cell) => {
-  // flip upside down as we are using viewport coordinates
-  return [cell[0], H - cell[1] - cell[3], cell[2], cell[3]]
-})
+// Entities
+const sphereGeometry = sphere({ nx: 32, ny: 32 });
 
-gui
-  .addHeader('Metallic')
-  .setPosition(10, 10 + (ctx.gl.drawingBufferHeight * 0) / 6)
-gui
-  .addHeader('Roughness for non-metallic')
-  .setPosition(10, 10 + (ctx.gl.drawingBufferHeight * 1) / 6)
-gui
-  .addHeader('Roughness for metallic')
-  .setPosition(10, 10 + (ctx.gl.drawingBufferHeight * 2) / 6)
-gui
-  .addHeader('Reflectance')
-  .setPosition(10, 10 + (ctx.gl.drawingBufferHeight * 3) / 6)
-gui
-  .addHeader('Clear Coat')
-  .setPosition(10, 10 + (ctx.gl.drawingBufferHeight * 4) / 6)
-gui
-  .addHeader('Clear Coat Roughness')
-  .setPosition(10, 10 + (ctx.gl.drawingBufferHeight * 5) / 6)
+const geometry = {
+  positions: { buffer: ctx.vertexBuffer(sphereGeometry.positions) },
+  normals: { buffer: ctx.vertexBuffer(sphereGeometry.normals) },
+  uvs: { buffer: ctx.vertexBuffer(sphereGeometry.uvs) },
+  cells: { buffer: ctx.indexBuffer(sphereGeometry.cells) },
+};
 
-cells.forEach((cell, cellIndex) => {
-  const tags = ['cell' + cellIndex]
-  const material = materials[cellIndex]
-  if (!material) return
-  const cameraCmp = renderer.camera({
-    fov: Math.PI / 3,
-    aspect: W / nW / (H / nH),
-    viewport: cell,
-    exposure: State.exposure
-  })
-  const postProcessingCmp = renderer.postProcessing({
-    fxaa: true
-  })
-
-  if (material.emissiveColor) {
-    postProcessingCmp.set({
-      bloom: true,
-      bloomIntensity: 0.5,
-      bloomThreshold: 3,
-      bloomRadius: 1.25
-    })
-  }
-
-  const cameraEntity = renderer.entity(
-    [
-      postProcessingCmp,
-      cameraCmp,
-      renderer.orbiter({
-        position: [0, 0, 1.2]
-      })
-    ],
-    tags
-  )
-  renderer.add(cameraEntity)
-})
-
-function imageFromFile(file) {
-  const tex = ctx.texture2D({
-    width: 1,
-    height: 1,
-    pixelFormat: ctx.PixelFormat.RGBA8,
-    encoding: ctx.Encoding.SRGB
-  })
-  io.loadImage(
-    file,
-    function(err, image, encoding) {
-      if (err) throw err
-      ctx.update(tex, {
-        data: image,
-        width: image.width,
-        height: image.height,
-        wrap: ctx.Wrap.Repeat,
-        flipY: true,
-        mag: ctx.Filter.Linear,
-        min: ctx.Filter.LinearMipmapLinear,
-        aniso: 16,
-        pixelFormat: ctx.PixelFormat.RGBA8,
-        encoding: encoding
-      })
-      ctx.update(tex, { mipmap: true })
-    },
-    true
-  )
-  return tex
-}
-
-// Meshes
-materials.forEach((material) => {
-  if (material.baseColorMap)
-    material.baseColorMap = imageFromFile(
-      material.baseColorMap,
-      ctx.Encoding.SRGB
-    )
-  if (material.roughnessMap)
-    material.roughnessMap = imageFromFile(
-      material.roughnessMap,
-      ctx.Encoding.Linear
-    )
-  if (material.metallicMap)
-    material.metallicMap = imageFromFile(
-      material.metallicMap,
-      ctx.Encoding.Linear
-    )
-  if (material.normalMap)
-    material.normalMap = imageFromFile(material.normalMap, ctx.Encoding.Linear)
-  if (material.alphaMap)
-    material.alphaMap = imageFromFile(material.alphaMap, ctx.Encoding.Linear)
-  if (material.emissiveColorMap)
-    material.emissiveColorMap = imageFromFile(
-      material.emissiveColorMap,
-      ctx.Encoding.SRGB
-    )
-  material.castShadows = true
-  material.receiveShadows = true
-})
-
-cells.forEach((cell, cellIndex) => {
-  const tags = ['cell' + cellIndex]
-  const material = materials[cellIndex]
-  if (!material) return
-
-  const materialEntity = renderer.entity(
-    [renderer.geometry(createSphere(0.5)), renderer.material(material)],
-    tags
-  )
-  renderer.add(materialEntity)
-})
-
-// Sky
-;(async () => {
-  const buffer = await io.loadBinary(`${ASSETS_DIR}/envmaps/Ditch-River_2k/Ditch-River_2k.hdr`)
-  //const buffer = await io.loadBinary(`${ASSETS_DIR}/envmaps/garage.hdr`)
-  // const buffer = await io.loadBinary(`${ASSETS_DIR}/envmaps/Mono_Lake_B.hdr`)
-  const hdrImg = parseHdr(buffer)
-  for (var i = 0; i < hdrImg.data.length; i += 4) {
-    hdrImg.data[i + 0] *= 0.8
-    hdrImg.data[i + 1] *= 0.8
-    hdrImg.data[i + 2] *= 0.5
-  }
-  const panorama = ctx.texture2D({
-    data: hdrImg.data,
-    width: hdrImg.shape[0],
-    height: hdrImg.shape[1],
-    pixelFormat: ctx.PixelFormat.RGBA32F,
-    encoding: ctx.Encoding.Linear,
-    flipY: true
-  })
-
-  const sun = renderer.directionalLight({
-    color: [1, 1, 0.95, 1],
-    intensity: 2,
-    castShadows: true
-  })
-  const sunEntity = renderer.entity([
-    renderer.transform({
-      position: [-2, 2, 2],
-      rotation: quat.fromTo(
-        quat.create(),
-        [0, 0, 1],
-        vec3.normalize([2, -2, -1])
-      )
+for (let i = 0; i < nW * nH; i++) {
+  const layer = `cell${i}`;
+  const cameraEntity = createEntity({
+    layer,
+    transform: components.transform({
+      position: [0, 0, 2],
     }),
-    sun
-  ])
-  renderer.add(sunEntity)
+    camera: components.camera({
+      fov: Math.PI / 4,
+    }),
+    orbiter: components.orbiter({ element: ctx.gl.canvas }),
+  });
+  world.add(cameraEntity);
 
-  const skybox = renderer.skybox({
-    sunPosition: State.sunPosition,
-    texture: panorama
-  })
+  const material = brdfMaterials[i];
+  if (!material) continue;
 
-  const reflectionProbe = renderer.reflectionProbe({
-    origin: [0, 0, 0],
-    size: [10, 10, 10],
-    boxProjection: false
-  })
+  const materialEntity = createEntity({
+    layer,
+    transform: components.transform(),
+    geometry: components.geometry(geometry),
+    material: components.material(material),
+  });
+  world.add(materialEntity);
+}
 
-  const skyEntity = renderer.entity([skybox, reflectionProbe])
-  renderer.add(skyEntity)
-  window.dispatchEvent(new CustomEvent('pex-screenshot'))
-})()
+const envMap = await getEnvMap(
+  ctx,
+  "assets/envmaps/Ditch-River_2k/Ditch-River_2k.hdr",
+);
+const furnaceEnvMap = await getEnvMap(
+  ctx,
+  "assets/envmaps/furnace/furnace-4k.hdr",
+);
 
-window.addEventListener('keydown', (e) => {
-  if (e.key === 'g') gui.toggleEnabled()
-  if (e.key === 'd') debugOnce = true
-})
+const skyEntity = createEntity({
+  skybox: components.skybox({
+    envMap: State.furnace ? furnaceEnvMap : envMap,
+  }),
+  reflectionProbe: components.reflectionProbe(),
+});
+world.add(skyEntity);
+
+const sunEntity = createEntity({
+  transform: components.transform({
+    position: [-2, 2, 2],
+    rotation: quat.fromDirection(quat.create(), vec3.normalize([2, -2, -1])),
+  }),
+  directionalLight: components.directionalLight({
+    color: [1, 1, 0.95, 2],
+    intensity: 2,
+    castShadows: false,
+  }),
+});
+world.add(sunEntity);
+
+// GUI
+gui.addColumn("");
+gui.addFPSMeeter().setPosition(10, 40);
+gui.addColumn("Resources");
+gui.addParam("Furnace", State, "furnace", {}, () => {
+  skyEntity.skybox.envMap = State.furnace ? furnaceEnvMap : envMap;
+  skyEntity.reflectionProbe.dirty = true;
+});
+
+// Events
+let debugOnce = false;
+
+const headers = brdfNames.map((headerTitle) => gui.addHeader(headerTitle));
+
+const onResize = () => {
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+  ctx.set({ pixelRatio, width, height });
+
+  const W = width * pixelRatio;
+  const H = height * pixelRatio;
+
+  headers.forEach((header, i) => {
+    header.setPosition(10, 10 + (i * H) / nH / pixelRatio);
+  });
+
+  const cells = gridCells(W, H, nW, nH, 0).map((cell) => [
+    cell[0],
+    H - cell[1] - cell[3],
+    cell[2],
+    cell[3],
+  ]);
+
+  world.entities
+    .filter((entity) => entity.camera)
+    .forEach((cameraEntity, i) => {
+      cameraEntity.camera.viewport = cells[i];
+      cameraEntity.camera.aspect = cells[i][2] / cells[i][3];
+      cameraEntity.camera.dirty = true;
+    });
+};
+
+window.addEventListener("resize", onResize);
+onResize();
+
+window.addEventListener("keydown", ({ key }) => {
+  if (key === "g") gui.enabled = !gui.enabled;
+  if (key === "d") debugOnce = true;
+});
 
 ctx.frame(() => {
-  ctx.debug(debugOnce)
-  debugOnce = false
-  renderer.draw()
+  renderEngine.update(world.entities);
+  renderEngine.render(
+    world.entities,
+    world.entities.filter((entity) => entity.camera),
+  );
 
-  var skybox = renderer.getComponents('Skybox')[0]
-  if (skybox) {
-    skybox.entity.removeComponent(skybox)
-  }
+  ctx.debug(debugOnce);
+  debugOnce = false;
 
-  gui.draw()
-})
+  gui.draw();
+
+  window.dispatchEvent(new CustomEvent("screenshot"));
+});

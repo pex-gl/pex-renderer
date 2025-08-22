@@ -1,574 +1,745 @@
-const path = require('path')
-const createRenderer = require('../')
-const createContext = require('pex-context')
-const createGUI = require('pex-gui')
-const mat4 = require('pex-math/mat4')
-const quat = require('pex-math/quat')
-const vec3 = require('pex-math/vec3')
-const aabb = require('pex-geom/aabb')
-const random = require('pex-random')
-const io = require('pex-io')
-const createRoundedCube = require('primitive-rounded-cube')
-const createSphere = require('primitive-sphere')
-const createCapsule = require('primitive-capsule')
-const createCube = require('primitive-cube')
-const normals = require('angle-normals')
-const centerAndNormalize = require('geom-center-and-normalize')
-const parseHdr = require('parse-hdr')
-const isBrowser = require('is-browser')
-const dragon = require('./assets/models/stanford-dragon/stanford-dragon')
+import {
+  renderEngine as createRenderEngine,
+  world as createWorld,
+  entity as createEntity,
+  components,
+} from "../index.js";
 
-const ASSETS_DIR = isBrowser ? 'assets' : path.join(__dirname, 'assets')
+import createContext from "pex-context";
+import { quat, vec3 } from "pex-math";
+import { aabb } from "pex-geom";
+import random from "pex-random";
+import createGUI from "pex-gui";
+import * as SHADERS from "pex-shaders";
+
+import { cube, roundedCube, capsule, sphere } from "primitive-geometry";
+
+import { dragon, getEnvMap, getTexture, getURL } from "./utils.js";
+
+random.seed(14);
 
 const State = {
-  sunPosition: [0, 1, -5],
-  elevation: 25,
-  azimuth: -45,
-  mie: 0.000021,
-  elevationMat: mat4.create(),
-  rotationMat: mat4.create(),
+  enabled: true,
+
   roughness: 0.5,
   metallic: 0.1,
   baseColor: [0.8, 0.1, 0.1, 1.0],
-  materials: [],
-  rgbm: false,
-  autofocus: true
-}
 
-random.seed(14)
+  msaa: true,
+  aa: true,
+  ssao: true,
+  fog: false,
+  bloom: true,
+  dof: true,
+  lut: true,
+  colorCorrection: true,
+  vignette: true,
+  filmGrain: true,
+};
 
-const ctx = createContext()
-ctx.gl.getExtension('EXT_shader_texture_lod')
-ctx.gl.getExtension('OES_standard_derivatives')
-ctx.gl.getExtension('WEBGL_draw_buffers')
-ctx.gl.getExtension('OES_texture_float')
+// const pixelRatio = devicePixelRatio;
+const pixelRatio = 1;
+const ctx = createContext({ pixelRatio });
+const renderEngine = createRenderEngine({ ctx, debug: true });
+const world = createWorld();
 
-const renderer = createRenderer({
-  ctx: ctx,
-  profile: true,
-  shadowQuality: 3,
-  rgbm: State.rgbm
-})
-
-const gui = createGUI(ctx)
-
-let debugOnce = false
-let entities = []
-
-// Utils
-function imageFromFile(file, options) {
-  const tex = ctx.texture2D({
-    data: [0, 0, 0, 0],
-    width: 1,
-    height: 1,
-    pixelFormat: ctx.PixelFormat.RGBA8,
-    encoding: options.encoding,
-    wrap: ctx.Wrap.Repeat,
-    flipY: true,
-    min: ctx.Filter.LinearMipmapLinear,
-    mipmap: true,
-    aniso: 16
-  })
-  io.loadImage(
-    file,
-    function(err, image) {
-      if (err) throw err
-      ctx.update(tex, {
-        data: image,
-        width: image.width,
-        height: image.height,
-        mipmap: true,
-        min: ctx.Filter.LinearMipmapLinear
-      })
-    },
-    true
-  )
-  return tex
-}
-
+// Entities
+const helperEntity = createEntity({
+  transform: components.transform({ position: [0, 0.01, 0] }),
+  axesHelper: components.axesHelper(),
+  gridHelper: components.gridHelper(),
+});
+world.add(helperEntity);
 // Scale scene to macro, 1m -> 5cm
-const s = 0.05
-const scene = renderer.entity([
-  renderer.transform({ scale: [s, s, s] })
-])
+const s = 1;
+// const s = 0.05;
+const scene = createEntity({
+  transform: components.transform({ scale: [s, s, s] }),
+});
 
-renderer.add(scene)
+world.add(scene);
 
 // Geometry
-dragon.positions = centerAndNormalize(dragon.positions).map((v) => vec3.scale(v, 2))
-dragon.normals = normals(dragon.cells, dragon.positions)
-dragon.uvs = dragon.positions.map(() => [0, 0])
-const dragonBounds = aabb.fromPoints(dragon.positions)
+const dragonBounds = aabb.create();
+aabb.fromPoints(dragonBounds, dragon.positions);
 
 // Camera
-const cameraEntity = renderer.add(
-  renderer.entity([
-    renderer.postProcessing({
-      // enabled: false,
-      ssao: true,
-      fxaa: false,
-      dof: true,
-      dofFocusDistance: 18
-    }),
-    renderer.camera({
-      fov: Math.PI / 4,
-      aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
-      exposure: 2,
-      fStop: 1.4
-    }),
-    renderer.orbiter({
-      position: [0, 0.2, 1]
-    })
-  ])
-)
+const camera = components.camera({
+  // fov: Math.PI / 6,
+  aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
+  exposure: 1,
+  fStop: 4,
+});
+const postProcessing = components.postProcessing({
+  dof: {
+    type: "gustafsson", // upitis
+    physical: true,
+    focusDistance: 7,
+    focusScale: 1,
+    samples: 6,
+    focusOnScreenPoint: false,
+    screenPoint: [0.5, 0.5],
+    chromaticAberration: 0.7,
+    luminanceThreshold: 0.7,
+    luminanceGain: 1,
+    shape: "disk",
+    debug: false,
+  },
+  msaa: {
+    sampleCount: 4,
+  },
+  aa: {
+    quality: 2,
+    subPixelQuality: 0.75,
+  },
+  ssao: {
+    type: "sao", // "gtao",
+    noiseTexture: true,
+    mix: 1,
+    // samples: options?.type === "gtao" ? 6 : 11,
+    samples: 11,
+    intensity: 2.2,
+    radius: 0.5,
+    bias: 0.001, // cm
+    blurRadius: 0.5,
+    blurSharpness: 10,
+    brightness: 0,
+    contrast: 1,
+    // SAO
+    spiralTurns: 7,
+    // GTAO
+    slices: 3,
+    colorBounce: true,
+    colorBounceIntensity: 1.0,
+  },
+  fog: {
+    color: [0.5, 0.5, 0.5],
+    start: 5,
+    density: 0.15,
+
+    sunPosition: [1, 1, 1],
+    sunDispertion: 0.2,
+    sunIntensity: 0.1,
+    sunColor: [0.98, 0.98, 0.7],
+    inscatteringCoeffs: [0.3, 0.3, 0.3],
+  },
+  bloom: {
+    quality: 1,
+    colorFunction: "luma",
+    threshold: 1,
+    source: false,
+    radius: 1,
+    intensity: 0.1,
+  },
+  lut: {
+    texture: await getTexture(
+      ctx,
+      getURL(`assets/textures/lut/lookup-autumn.png`),
+      ctx.Encoding.Linear,
+      {
+        min: ctx.Filter.Nearest,
+        mag: ctx.Filter.Nearest,
+        mipmap: false,
+        flipY: false,
+        aniso: 0,
+      },
+    ),
+  },
+  colorCorrection: {
+    brightness: 0,
+    contrast: 1,
+    saturation: 1,
+    hue: 0,
+  },
+  vignette: {
+    radius: 0.8,
+    intensity: 0.2,
+  },
+  filmGrain: {
+    quality: 2,
+    size: 1.6,
+    intensity: 0.05,
+    colorIntensity: 0.6,
+    luminanceIntensity: 1,
+    speed: 0.5,
+  },
+  opacity: 1,
+});
+const cameraY = s * 1;
+const cameraEntity = createEntity({
+  transform: components.transform({ position: [0, cameraY, s * 10] }),
+  camera,
+  orbiter: components.orbiter({
+    element: ctx.gl.canvas,
+    target: [0, cameraY, 0],
+  }),
+  postProcessing,
+});
+world.add(cameraEntity);
 
 // Meshes
-const baseColorMap = imageFromFile(
-  ASSETS_DIR + '/materials/plastic-green.material/plastic-green_basecolor.png',
-  { encoding: ctx.Encoding.SRGB }
-)
-const normalMap = imageFromFile(
-  ASSETS_DIR + '/materials/plastic-green.material/plastic-green_n.png',
-  { encoding: ctx.Encoding.Linear }
-)
-const metallicMap = imageFromFile(
-  ASSETS_DIR + '/materials/plastic-green.material/plastic-green_metallic.png',
-  { encoding: ctx.Encoding.Linear }
-)
-const roughnessMap = imageFromFile(
-  ASSETS_DIR + '/materials/plastic-green.material/plastic-green_roughness.png',
-  { encoding: ctx.Encoding.Linear }
-)
-const groundCube = createCube(10, 0.02, 5)
-const roundedCube = createRoundedCube(0.75, 0.75, 0.75, 20, 20, 20, 0.2)
-const capsule = createCapsule(0.25)
-const sphere = createSphere(0.3)
-const geometries = [capsule, roundedCube, sphere]
+const baseColorTexture = await getTexture(
+  ctx,
+  getURL(`assets/materials/plastic-green.material/plastic-green_basecolor.png`),
+  ctx.Encoding.SRGB,
+);
+const normalTexture = await getTexture(
+  ctx,
+  getURL(`assets/materials/plastic-green.material/plastic-green_n.png`),
+);
+const metallicTexture = await getTexture(
+  ctx,
+  getURL(`assets/materials/plastic-green.material/plastic-green_metallic.png`),
+);
+const roughnessTexture = await getTexture(
+  ctx,
+  getURL(`assets/materials/plastic-green.material/plastic-green_roughness.png`),
+);
+const emissiveColorTexture = await getTexture(
+  ctx,
+  getURL(`assets/materials/plastic-glow.material/plastic-glow_emissive.png`),
+  ctx.Encoding.SRGB,
+);
+const geometries = [
+  capsule({ radius: 0.25 }),
+  roundedCube({ sx: 0.75, nx: 20, radius: 0.2 }),
+  sphere({ radius: 0.3 }),
+];
 
 // Ground
-const groundEntity = renderer.entity([
-  renderer.transform({
-    position: [0, -0.02 / 2, 1]
+const floorEntity = createEntity({
+  transform: components.transform({
+    parent: scene.transform,
+    position: [0, -0.02 / 2, 0],
   }),
-  renderer.geometry(groundCube),
-  renderer.material({
+  geometry: components.geometry(cube({ sx: 10, sy: 0.02, sz: 10 })),
+  material: components.material({
     baseColor: [0.15, 0.15, 0.2, 1.0],
     roughness: 1,
     metallic: 0,
     castShadows: true,
-    receiveShadows: true
-  })
-])
-renderer.add(groundEntity, scene)
+    receiveShadows: true,
+  }),
+});
+world.add(floorEntity);
 
-const backgroundStuffParent = renderer.entity([
-  renderer.transform({
+const backgroundStuffParent = createEntity({
+  transform: components.transform({
+    parent: scene.transform,
     position: [0, 0, 0],
-    scale: [1, 1, 1]
-  })
-])
-renderer.add(backgroundStuffParent, scene)
+    scale: [1, 1, 1],
+  }),
+});
+world.add(backgroundStuffParent);
 
 // Black Spheres
 for (let i = 0; i < 20; i++) {
-  const sphereEntity = renderer.entity([
-    renderer.transform({
-      position: vec3.add(random.vec3(), [0, 1, 0])
+  const sphereEntity = createEntity({
+    transform: components.transform({
+      parent: backgroundStuffParent.transform,
+      position: vec3.add(random.vec3(), [0, 1, 0]),
     }),
-    renderer.geometry(sphere),
-    renderer.material({
+    geometry: components.geometry(geometries[2]),
+    material: components.material({
       baseColor: [0.07, 0.06, 0.0, 1.0],
       roughness: 0.2,
       metallic: 0,
       castShadows: true,
-      receiveShadows: true
-    })
-  ])
-  renderer.add(sphereEntity, backgroundStuffParent)
+      receiveShadows: true,
+    }),
+  });
+  world.add(sphereEntity);
 }
 
-const dragonEntity = renderer.entity([
-  renderer.transform({
-    position: [0, -dragonBounds[0][1], 2.5]
+const dragonScale = 3;
+const dragonEntity = createEntity({
+  transform: components.transform({
+    parent: scene.transform,
+    position: [0, -dragonBounds[0][1] * dragonScale, 2.5],
+    scale: new Array(3).fill(dragonScale),
   }),
-  renderer.geometry(dragon),
-  renderer.material({
+  geometry: components.geometry(dragon),
+  material: components.material({
     baseColor: [0.8, 0.8, 0.8, 1.0],
     roughness: 1,
     metallic: 0,
     castShadows: true,
-    receiveShadows: true
-  })
-])
-renderer.add(dragonEntity, scene)
-entities.push(dragonEntity)
+    receiveShadows: true,
+  }),
+});
+world.add(dragonEntity);
 
-const heights = [2.5, 1.4, 0.5]
+const heights = [2.5, 1.4, 0.5];
 // Capsules, rounded cubes, spheres
 for (let j = -5; j <= 5; j += 2) {
-  for (let i = 0; i < geometries.length; i++) {
-    const geometry = geometries[i]
-    const x = j * 0.6
-    let y = heights[i]
-    const z = 0
-    const entity = renderer.entity([
-      renderer.transform({
-        position: [x, y, z]
+  geometries.forEach((geometry, i) => {
+    const x = j * 0.6;
+    let y = heights[i];
+    const z = 0;
+    const entity = createEntity({
+      transform: components.transform({
+        parent: backgroundStuffParent.transform,
+        position: [x, y, z],
       }),
-      renderer.geometry(geometry),
-      renderer.material({
+      geometry: components.geometry(geometry),
+      material: components.material({
         baseColor: [0.9, 0.9, 0.9, 1],
         roughness: (j + 5) / 10,
         metallic: 0.0, // 0.01, // (j + 5) / 10,
-        baseColorMap: baseColorMap,
-        roughnessMap: roughnessMap,
-        metallicMap: metallicMap,
-        normalMap: normalMap,
+        baseColorTexture,
+        roughnessTexture,
+        emissiveColorTexture,
+        metallicTexture,
+        normalTexture,
         castShadows: true,
-        receiveShadows: true
-      })
-    ])
-    renderer.add(entity, backgroundStuffParent)
-    entities.push(entity)
-  }
+        receiveShadows: true,
+      }),
+    });
+    world.add(entity);
+  });
 }
 
 // Lights
-const pointLightEntity = renderer.entity([
-  renderer.geometry(createSphere(0.1)),
-  renderer.material({
+const pointLightEntity = createEntity({
+  transform: components.transform({
+    parent: scene.transform,
+    position: [2, 2, 2],
+  }),
+  geometry: components.geometry(sphere({ radius: 0.1 })),
+  material: components.material({
     baseColor: [0, 0, 0, 1],
-    emissiveColor: [1, 0, 0, 1]
+    emissiveColor: [1, 0, 0, 1],
   }),
-  renderer.transform({
-    position: [2, 2, 2]
-  }),
-  renderer.pointLight({
+  pointLight: components.pointLight({
     color: [1, 0, 0, 1],
-    intensity: 0.05,
-    radius: 3
-  })
-])
-renderer.add(pointLightEntity, scene)
-
-const areaLightEntity = renderer.entity([
-  renderer.geometry(createCube()),
-  renderer.material({
-    baseColor: [0, 0, 0, 1],
-    emissiveColor: [2.0, 1.2, 0.1, 1]
+    intensity: 10,
+    range: 10,
+    castShadows: true,
   }),
-  renderer.transform({
+});
+world.add(pointLightEntity);
+
+const areaLightEntity = createEntity({
+  transform: components.transform({
+    parent: backgroundStuffParent.transform,
     position: [0, 3.5, 0],
     scale: [5, 1, 0.1],
-    rotation: quat.fromTo(
-      quat.create(),
-      [0, 0, 1],
-      vec3.normalize([0, -1, 0.001])
-    )
+    rotation: quat.fromDirection(quat.create(), vec3.normalize([0, -1, 0.001])),
   }),
-  renderer.areaLight({
+  geometry: components.geometry(cube()),
+  material: components.material({
+    baseColor: [0, 0, 0, 1],
+    emissiveColor: [2.0, 1.2, 0.1, 1],
+  }),
+  areaLight: components.areaLight({
     color: [2.0, 1.2, 0.1, 1],
     intensity: 2,
-    castShadows: true
-  })
-])
-renderer.add(areaLightEntity, backgroundStuffParent)
+    castShadows: true,
+  }),
+});
+world.add(areaLightEntity);
 
-let cameraCmp
-let postProcessingCmp
-;(async () => {
-  // Sky
-  const buffer = await io.loadBinary(
-    `${ASSETS_DIR}/envmaps/Mono_Lake_B/Mono_Lake_B.hdr`
-  )
-  const hdrImg = parseHdr(buffer)
-  const panorama = ctx.texture2D({
-    data: hdrImg.data,
-    width: hdrImg.shape[0],
-    height: hdrImg.shape[1],
-    pixelFormat: ctx.PixelFormat.RGBA32F,
-    encoding: ctx.Encoding.Linear,
-    mag: ctx.Filter.Linear,
-    min: ctx.Filter.Linear,
-    flipY: true
-  })
+// Sky
+const sunEntity = createEntity({
+  transform: components.transform({
+    position: [0, 1, -5],
+    rotation: quat.fromDirection(
+      quat.create(),
+      vec3.normalize(vec3.scale(vec3.copy([0, 1, -5]), -1)),
+    ),
+  }),
+  directionalLight: components.directionalLight({
+    color: [1, 1, 0.95, 1],
+    intensity: 2,
+    castShadows: true,
+    bias: 0.01,
+  }),
+});
+world.add(sunEntity);
 
-  const sunEntity = renderer.entity([
-    renderer.transform({
-      position: State.sunPosition,
-      rotation: quat.fromTo(
-        quat.create(),
-        [0, 0, 1],
-        vec3.normalize(vec3.scale(vec3.copy(State.sunPosition), -1))
-      )
+const skyboxEntity = createEntity({
+  transform: components.transform(),
+  skybox: components.skybox({
+    backgroundBlur: false,
+    envMap: await getEnvMap(ctx, "assets/envmaps/Mono_Lake_B/Mono_Lake_B.hdr"),
+  }),
+  reflectionProbe: components.reflectionProbe({}),
+});
+world.add(skyboxEntity);
+
+renderEngine.systems
+  .find(({ type }) => type === "transform-system")
+  .sort(world.entities);
+
+// GUI
+const gui = createGUI(ctx);
+gui.addColumn("Attachments");
+gui.addFPSMeeter();
+State.msg = "";
+gui.addRadioList(
+  "Debug Render",
+  renderEngine.renderers.find(
+    (renderer) => renderer.type == "standard-renderer",
+  ),
+  "debugRender",
+  ["", "data.normalView", "data.emissiveColor", "data.ao"].map((value) => ({
+    name: value || "No debug",
+    value,
+  })),
+);
+
+gui.addRadioList(
+  "Debug Post-Processing",
+  renderEngine.systems.find(
+    (system) => system.type == "render-pipeline-system",
+  ),
+  "debugRender",
+  ["", "ssao.main", "dof.main", "bloom.threshold", "bloom.downsample[3]"].map(
+    (value) => ({
+      name: value || "No debug",
+      value,
     }),
-    renderer.directionalLight({
-      color: [1, 1, 0.95, 1],
-      intensity: 2,
-      castShadows: true,
-      bias: 0.01
-    })
-  ])
-  renderer.add(sunEntity)
+  ),
+);
+const dummyTexture2D = ctx.texture2D({
+  name: "dummyTexture2D",
+  width: 4,
+  height: 4,
+});
+const guiNormalControl = gui.addTexture2D("Normal", null, { flipY: true });
+const guiDepthControl = gui.addTexture2D("Depth", null, { flipY: true });
+const guiAOControl = gui.addTexture2D("Ao", null, { flipY: true });
 
-  const skybox = renderer.skybox({
-    sunPosition: State.sunPosition,
-    texture: panorama
-  })
+gui.addParam("Background Blur", skyboxEntity.skybox, "backgroundBlur");
 
-  const reflectionProbe = renderer.reflectionProbe({
-    origin: [0, 0, 0],
-    size: [10, 10, 10],
-    boxProjection: false
-  })
+// gui.addColumn("Material");
+// gui.addParam("Base Color", State, "baseColor", { type: "color" }, () => {
+//   entities.forEach((entity) => {
+//     entity.material = { baseColor: State.baseColor };
+//   });
+// });
+// gui.addParam("Roughness", State, "roughness", {}, () => {
+//   entities.forEach((entity) => {
+//     entity.material = { roughness: State.roughness };
+//   });
+// });
+// gui.addParam("Metallic", State, "metallic", {}, () => {
+//   entities.forEach((entity) => {
+//     entity.material = { metallic: State.metallic };
+//   });
+// });
 
-  const skyEntity = renderer.entity([skybox, reflectionProbe])
-  renderer.add(skyEntity)
-
-  function updateSunPosition() {
-    mat4.identity(State.elevationMat)
-    mat4.identity(State.rotationMat)
-    mat4.rotate(State.elevationMat, (State.elevation / 180) * Math.PI, [
-      0,
-      0,
-      1
-    ])
-    mat4.rotate(State.rotationMat, (State.azimuth / 180) * Math.PI, [0, 1, 0])
-
-    const sunPosition = [2, 0, 0]
-    vec3.multMat4(sunPosition, State.elevationMat)
-    vec3.multMat4(sunPosition, State.rotationMat)
-
-    const dir = vec3.normalize(vec3.sub([0, 0, 0], sunPosition))
-    sunEntity.transform.set({
-      position: sunPosition,
-      rotation: quat.fromTo(sunEntity.transform.rotation, [0, 0, 1], dir, [
-        0,
-        1,
-        0
-      ])
-    })
-    skyEntity.getComponent('Skybox').set({ sunPosition })
-    skyEntity.getComponent('ReflectionProbe').set({ dirty: true })
+// // PostProcess
+// const postProcessTab = gui.addTab("PostProcess");
+// postProcessTab.setActive();
+gui.addColumn("Post-Processing");
+gui.addParam("Enabled", State, "enabled", null, () => {
+  if (State.enabled) {
+    cameraEntity.postProcessing = postProcessing;
+  } else {
+    delete cameraEntity.postProcessing;
   }
-
-  updateSunPosition()
-
-  // GUI
-  cameraCmp = cameraEntity.getComponent('Camera')
-  postProcessingCmp = cameraEntity.getComponent('PostProcessing')
-  const skyboxCmp = skyEntity.getComponent('Skybox')
-  const reflectionProbeCmp = skyEntity.getComponent('ReflectionProbe')
-
-  // Scene
-  gui.addTab('Scene')
-  gui.addColumn('Environment')
-  gui.addHeader('Sun')
-  gui.addParam(
-    'Enabled',
-    sunEntity.getComponent('DirectionalLight'),
-    'enabled',
-    {},
-    (value) => {
-      sunEntity.getComponent('DirectionalLight').set({ enabled: value })
-    }
-  )
-  gui.addParam(
-    'Sun Elevation',
-    State,
-    'elevation',
-    { min: -90, max: 180 },
-    updateSunPosition
-  )
-  gui.addParam(
-    'Sun Azimuth',
-    State,
-    'azimuth',
-    { min: -180, max: 180 },
-    updateSunPosition
-  )
-  gui.addHeader('Skybox')
-  gui.addParam('Enabled', skyboxCmp, 'enabled', {}, (value) => {
-    skyboxCmp.set({ enabled: value })
-  })
-  gui.addParam('Background Blur', skyboxCmp, 'backgroundBlur')
-  gui.addTexture2D('Env map', skyboxCmp.texture)
-  gui.addHeader('Reflection probes')
-  gui.addParam('Enabled', reflectionProbeCmp, 'enabled', {}, (value) => {
-    reflectionProbeCmp.set({ enabled: value })
-  })
-
-  gui.addColumn('Material')
-  gui.addParam('Base Color', State, 'baseColor', { type: 'color' }, () => {
-    entities.forEach((entity) => {
-      entity.getComponent('Material').set({ baseColor: State.baseColor })
-    })
-  })
-  gui.addParam('Roughness', State, 'roughness', {}, () => {
-    entities.forEach((entity) => {
-      entity.getComponent('Material').set({ roughness: State.roughness })
-    })
-  })
-  gui.addParam('Metallic', State, 'metallic', {}, () => {
-    entities.forEach((entity) => {
-      entity.getComponent('Material').set({ metallic: State.metallic })
-    })
-  })
-
-  gui.addColumn('Lights')
-  gui.addParam(
-    'Point Light Enabled',
-    pointLightEntity.getComponent('PointLight'),
-    'enabled',
-    {},
-    (value) => {
-      pointLightEntity.getComponent('PointLight').set({ enabled: value })
-      pointLightEntity.getComponent('Transform').set({ enabled: value })
-    }
-  )
-  gui.addParam(
-    'Point Light Pos',
-    pointLightEntity.transform,
-    'position',
-    { min: -5, max: 5 },
-    (value) => {
-      pointLightEntity.transform.set({ position: value })
-    }
-  )
-  gui.addParam(
-    'Area Light Enabled',
-    areaLightEntity.getComponent('AreaLight'),
-    'enabled',
-    {},
-    (value) => {
-      areaLightEntity.getComponent('AreaLight').set({ enabled: value })
-      areaLightEntity.getComponent('Transform').set({ enabled: value })
-    }
-  )
-  gui.addParam(
-    'Area Light Col',
-    areaLightEntity.getComponent('AreaLight'),
-    'color',
-    { type: 'color' },
-    (value) => {
-      areaLightEntity.getComponent('AreaLight').set({ color: value })
-      areaLightEntity.getComponent('Material').set({ emissiveColor: value })
-    }
-  )
-
-  // PostProcess
-  const postProcessTab = gui.addTab('PostProcess')
-  postProcessTab.setActive()
-  gui.addColumn('Parameters')
-  gui.addParam('Enabled', postProcessingCmp, 'enabled')
-  gui.addParam('Exposure', cameraCmp, 'exposure', { min: 0, max: 5 })
-  gui.addParam('SSAO', postProcessingCmp, 'ssao')
-  gui.addParam('SSAO radius', postProcessingCmp, 'ssaoRadius', {
-    min: 0,
-    max: 30
-  })
-  gui.addParam('SSAO intensity', postProcessingCmp, 'ssaoIntensity', {
-    min: 0,
-    max: 10
-  })
-  gui.addParam('SSAO bias', postProcessingCmp, 'ssaoBias', { min: 0, max: 1 })
-  gui.addParam('SSAO blur radius', postProcessingCmp, 'ssaoBlurRadius', {
-    min: 0,
-    max: 5
-  })
-  gui.addParam('SSAO blur sharpness', postProcessingCmp, 'ssaoBlurSharpness', {
-    min: 0,
-    max: 20
-  })
-  gui.addParam('DOF', postProcessingCmp, 'dof')
-  gui.addParam('DOF Debug', postProcessingCmp, 'dofDebug')
-  gui.addParam('DOF Focus Distance', postProcessingCmp, 'dofFocusDistance', {
-    min: 0,
-    max: 100
-  })
-  gui.addParam('DOF Autofocus', State, 'autofocus')
-  gui.addParam(
-    'Camera FoV',
-    cameraCmp,
-    'fov',
-    {
-      min: 0,
-      max: (Math.PI / 3) * 2
-    },
-    () => {
-      cameraCmp.set({ fov: cameraCmp.fov })
-    }
-  )
-  gui.addParam(
-    'Camera FocalLength',
-    cameraCmp,
-    'focalLength',
-    {
-      min: 10,
-      max: 200
-    },
-    () => {
-      cameraCmp.set({ focalLength: cameraCmp.focalLength })
-    }
-  )
-  gui.addParam('Camera f-stop', cameraCmp, 'fStop', {
-    min: 0,
-    max: 5.6
-  })
-
-  gui.addParam('FXAA', postProcessingCmp, 'fxaa')
-
-  gui.addParam('Bloom', postProcessingCmp, 'bloom')
-  gui.addParam('Bloom threshold', postProcessingCmp, 'bloomThreshold', { min: 0, max: 2 })
-  gui.addParam('Bloom intensity', postProcessingCmp, 'bloomIntensity', { min: 0, max: 5 })
-  gui.addParam('Bloom radius', postProcessingCmp, 'bloomRadius', { min: 0, max: 10 })
-
-
-  gui.addColumn('Render targets')
-  if (postProcessingCmp.enabled) {
-    gui.addTexture2D('Depth', postProcessingCmp._frameDepthTex)
-    gui.addTexture2D('Normal', postProcessingCmp._frameNormalTex)
+});
+const enablePostProPass = (name) => {
+  if (State[name]) {
+    if (State[`_${name}`]) postProcessing[name] = State[`_${name}`];
+  } else {
+    State[`_${name}`] = postProcessing[name];
+    delete postProcessing[name];
   }
+};
+gui.addParam("MSAA", State, "msaa", null, () => {
+  enablePostProPass("msaa");
+});
+gui.addParam("AA", State, "aa", null, () => {
+  enablePostProPass("aa");
+});
+gui.addParam("Quality", postProcessing.aa, "quality", {
+  min: 0,
+  max: 4,
+  step: 1,
+});
+gui.addParam("SubPixelQuality", postProcessing.aa, "subPixelQuality", {
+  min: 0,
+  max: 1,
+  step: 0.25,
+});
+gui.addParam("Fog", State, "fog", null, () => {
+  enablePostProPass("fog");
+});
+gui.addParam("Fog color", postProcessing.fog, "color");
+gui.addParam("Fog start", postProcessing.fog, "start", { min: 0, max: 10 });
+gui.addParam("Fog density", postProcessing.fog, "density");
 
-  window.dispatchEvent(new CustomEvent('pex-screenshot'))
-})()
+gui.addParam("LUT", State, "lut", null, () => {
+  enablePostProPass("lut");
+});
+
+gui.addParam("ColorCorrection", State, "colorCorrection", null, () => {
+  enablePostProPass("colorCorrection");
+});
+gui.addParam(
+  "ColorCorrection brightness",
+  postProcessing.colorCorrection,
+  "brightness",
+  { min: -0.5, max: 0.5 },
+);
+gui.addParam(
+  "ColorCorrection contrast",
+  postProcessing.colorCorrection,
+  "contrast",
+  { min: 0.1, max: 3 },
+);
+gui.addParam(
+  "ColorCorrection saturation",
+  postProcessing.colorCorrection,
+  "saturation",
+  { min: 0.1, max: 2 },
+);
+gui.addParam("ColorCorrection hue", postProcessing.colorCorrection, "hue", {
+  min: -180,
+  max: 180,
+});
+
+gui.addParam("Vignette", State, "vignette", null, () => {
+  enablePostProPass("vignette");
+});
+gui.addParam("Vignette radius", postProcessing.vignette, "radius", {
+  min: 0,
+  max: 1,
+});
+gui.addParam("Vignette intensity", postProcessing.vignette, "intensity", {
+  min: 0,
+  max: 1,
+});
+
+gui.addParam("Opacity", postProcessing, "opacity", { min: 0, max: 1 });
+
+gui.addColumn("SSAO");
+gui.addParam("Enabled", State, "ssao", null, () => {
+  enablePostProPass("ssao");
+});
+gui.addRadioList(
+  "Type",
+  postProcessing.ssao,
+  "type",
+  ["sao", "gtao"].map((value) => ({ name: value, value })),
+);
+gui.addParam("Samples", postProcessing.ssao, "samples", {
+  min: 2,
+  max: 20,
+  step: 1,
+});
+gui.addParam("Radius", postProcessing.ssao, "radius", { min: 0, max: 10 });
+gui.addParam("Intensity", postProcessing.ssao, "intensity", {
+  min: 0,
+  max: 10,
+});
+gui.addParam("Bias", postProcessing.ssao, "bias", { min: 0, max: 0.7 });
+gui.addParam("Brightness", postProcessing.ssao, "brightness", {
+  min: -0.5,
+  max: 0.5,
+});
+gui.addParam("Contrast", postProcessing.ssao, "contrast", { min: 0.1, max: 3 });
+
+gui.addParam("Noise texture", postProcessing.ssao, "noiseTexture");
+gui.addParam("Mix", postProcessing.ssao, "mix", { min: 0, max: 1 });
+
+gui.addLabel("SSAO (SAO)");
+gui.addParam("Spiral Turns", postProcessing.ssao, "spiralTurns", {
+  min: 2,
+  max: 20,
+  step: 1,
+});
+gui.addLabel("SSAO (GTAO)");
+gui.addParam("Slices", postProcessing.ssao, "slices", {
+  min: 2,
+  max: 20,
+  step: 1,
+});
+gui.addParam("Color bounce", postProcessing.ssao, "colorBounce");
+gui.addParam("Bounce intensity", postProcessing.ssao, "colorBounceIntensity", {
+  min: 0,
+  max: 100,
+});
+gui.addLabel("Blur");
+gui.addParam("Radius", postProcessing.ssao, "blurRadius", { min: 0, max: 2 });
+gui.addParam("Sharpness", postProcessing.ssao, "blurSharpness", {
+  min: 0,
+  max: 20,
+});
+
+gui.addColumn("Depth of Field");
+gui.addParam("Enabled", State, "dof", null, () => {
+  enablePostProPass("dof");
+});
+gui.addParam("Physical", postProcessing.dof, "physical");
+gui.addRadioList(
+  "Type",
+  postProcessing.dof,
+  "type",
+  ["gustafsson", "upitis"].map((value) => ({ name: value, value })),
+);
+gui.addParam("Focus Distance", postProcessing.dof, "focusDistance", {
+  min: 0,
+  max: 10,
+});
+gui.addParam("Focus Scale", postProcessing.dof, "focusScale", {
+  min: 0,
+  max: 20,
+});
+gui.addParam("Samples", postProcessing.dof, "samples", {
+  min: 1,
+  max: 6,
+  step: 1,
+});
+gui.addParam(
+  "Chromatic Aberration",
+  postProcessing.dof,
+  "chromaticAberration",
+  { min: 0, max: 4 },
+);
+gui.addParam("Luminance Threshold", postProcessing.dof, "luminanceThreshold", {
+  min: 0,
+  max: 2,
+});
+gui.addParam("Luminance Gain", postProcessing.dof, "luminanceGain", {
+  min: 0,
+  max: 2,
+});
+gui.addRadioList(
+  "Shape",
+  postProcessing.dof,
+  "shape",
+  ["disk", "pentagon"].map((value) => ({ name: value, value })),
+);
+gui.addParam("Focus On Screen Point", postProcessing.dof, "focusOnScreenPoint");
+gui.addParam("Screen Point", postProcessing.dof.screenPoint, "0", {
+  min: 0,
+  max: 1,
+});
+gui.addParam("Screen Point", postProcessing.dof.screenPoint, "1", {
+  min: 0,
+  max: 1,
+});
+
+gui.addColumn("Camera");
+gui.addParam("FoV", camera, "fov", { min: 0, max: (Math.PI / 3) * 2 });
+gui.addParam("FocalLength", camera, "focalLength", { min: 10, max: 200 });
+gui.addParam("F-Stop", cameraEntity.camera, "fStop", { min: 1.2, max: 32 });
+gui.addParam("Exposure", camera, "exposure", { min: 0, max: 5 });
+gui.addRadioList(
+  "Tone Map",
+  camera,
+  "toneMap",
+  ["none", ...Object.keys(SHADERS.toneMap)].map((value) => ({
+    name: value,
+    value: value === "none" ? null : value.toLowerCase(),
+  })),
+);
+
+gui.addColumn("Bloom");
+gui.addParam("Enabled", State, "bloom", null, () => {
+  enablePostProPass("bloom");
+});
+gui.addParam("Quality", postProcessing.bloom, "quality", {
+  min: 0,
+  max: 1,
+  step: 1,
+});
+gui.addRadioList(
+  "Color Function",
+  postProcessing.bloom,
+  "colorFunction",
+  ["luma", "luminance", "average"].map((value) => ({ name: value, value })),
+);
+gui.addParam("Threshold", postProcessing.bloom, "threshold", {
+  min: 0,
+  max: 2,
+});
+gui.addRadioList(
+  "Source",
+  postProcessing.bloom,
+  "source",
+  ["color+emissive", "color", "emissive"].map((value) => ({
+    name: value,
+    value,
+  })),
+);
+gui.addParam("Intensity", postProcessing.bloom, "intensity", {
+  min: 0,
+  max: 10,
+});
+gui.addParam("Radius", postProcessing.bloom, "radius", { min: 0, max: 10 });
+gui.addColumn("Film Grain");
+gui.addParam("Enabled", State, "filmGrain", null, () => {
+  enablePostProPass("filmGrain");
+});
+gui.addParam("Quality", postProcessing.filmGrain, "quality", {
+  min: 0,
+  max: 2,
+  step: 1,
+});
+gui.addParam("Size", postProcessing.filmGrain, "size", { min: 1.5, max: 2.5 });
+gui.addParam("Intensity", postProcessing.filmGrain, "intensity", {
+  min: 0,
+  max: 1,
+});
+gui.addParam("Color Intensity", postProcessing.filmGrain, "colorIntensity", {
+  min: 0,
+  max: 1,
+});
+gui.addParam(
+  "Luminance Intensity",
+  postProcessing.filmGrain,
+  "luminanceIntensity",
+  { min: 0, max: 1 },
+);
+gui.addParam("Speed", postProcessing.filmGrain, "speed", { min: 0, max: 1 });
+
+enablePostProPass("ssao");
+enablePostProPass("dof");
+enablePostProPass("aa");
+enablePostProPass("fog");
+enablePostProPass("bloom");
+enablePostProPass("lut");
+enablePostProPass("colorCorrection");
+enablePostProPass("vignette");
+enablePostProPass("filmGrain");
 
 // Events
-window.addEventListener('keydown', (e) => {
-  if (e.key === 'd') debugOnce = true
-  if (e.key === 'g') gui.toggleEnabled()
-})
+let debugOnce = false;
 
-window.addEventListener('resize', () => {
-  const W = window.innerWidth
-  const H = window.innerHeight
-  ctx.set({
-    width: W,
-    height: H
-  })
-  cameraEntity.getComponent('Camera').set({
-    viewport: [0, 0, W, H],
-    aspect: W / H
-  })
-})
+window.addEventListener("resize", () => {
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+  ctx.set({ pixelRatio, width, height });
+  cameraEntity.camera.aspect = width / height;
+  cameraEntity.camera.dirty = true;
+});
 
-// Frame
+window.addEventListener("keydown", ({ key }) => {
+  if (key === "g") gui.enabled = !gui.enabled;
+  if (key === "d") debugOnce = true;
+});
+
 ctx.frame(() => {
-  ctx.debug(debugOnce)
-  debugOnce = false
+  renderEngine.update(world.entities);
+  const [{ color, normal, depth }] = renderEngine.render(
+    world.entities,
+    cameraEntity,
+  );
 
-  if (State.autofocus && cameraCmp) {
-    const distance = vec3.distance(
-      dragonEntity.transform.worldPosition,
-      cameraCmp.entity.transform.worldPosition
-    )
-    if (postProcessingCmp.dofFocusDistance !== distance) {
-      postProcessingCmp.set({ dofFocusDistance: distance })
-      // force redraw
-      gui.items[0].dirty = true
-    }
-  }
+  guiNormalControl.texture = normal || dummyTexture2D;
+  guiDepthControl.texture = depth;
+  guiAOControl.texture =
+    postProcessing?._targets?.[cameraEntity.id]?.["ssao.main"] ||
+    dummyTexture2D;
 
-  renderer.draw()
-  gui.draw()
-})
+  ctx.debug(debugOnce);
+  debugOnce = false;
+
+  gui.draw();
+
+  window.dispatchEvent(new CustomEvent("screenshot"));
+});
