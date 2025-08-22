@@ -41,7 +41,7 @@ export default ({ ctx, debug = false }) => {
     },
     time: 0,
     deltaTime: 0,
-    _prevTime: Date.now(),
+    _prevTime: performance.now(),
     renderGraph,
     resourceCache,
     systems: [
@@ -65,7 +65,7 @@ export default ({ ctx, debug = false }) => {
       helperRendererSystem,
     ],
     update(entities, deltaTime) {
-      const now = Date.now();
+      const now = performance.now();
       this.deltaTime = deltaTime || (now - this._prevTime) / 1000;
       this._prevTime = now;
       this.time += this.deltaTime;

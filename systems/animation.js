@@ -4,7 +4,7 @@ import { TEMP_QUAT, TEMP_VEC3 } from "../utils.js";
 function updateAnimation(animation, deltaTime) {
   if (!animation.prevTime) {
     animation.time = 0;
-    animation.prevTime = Date.now();
+    animation.prevTime = performance.now();
     animation.playing = true;
   }
 
@@ -12,7 +12,7 @@ function updateAnimation(animation, deltaTime) {
     const animationLength =
       animation.duration ||
       animation.channels[0].input[animation.channels[0].input.length - 1];
-    const now = Date.now();
+    const now = performance.now();
     deltaTime ||= (now - animation.prevTime) / 1000;
 
     animation.prevTime = now;

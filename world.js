@@ -1,5 +1,5 @@
 export default ({ entities = [], systems = [] } = {}) => {
-  let prevTime = Date.now();
+  let prevTime = performance.now();
 
   return {
     entities,
@@ -14,7 +14,7 @@ export default ({ entities = [], systems = [] } = {}) => {
     },
     update(deltaTime) {
       if (deltaTime == undefined) {
-        const now = Date.now();
+        const now = performance.now();
         deltaTime = (now - prevTime) / 1000;
         prevTime = now;
       }
