@@ -44,4 +44,6 @@ world.add(helpersEntity);
 ctx.frame(() => {
   renderEngine.update(world.entities);
   renderEngine.render(world.entities, cameraEntity);
+
+  window.dispatchEvent(new CustomEvent("screenshot"));
 });
