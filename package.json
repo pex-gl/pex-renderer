@@ -62,7 +62,6 @@
     "pex-color": "^2.2.0",
     "pex-context": "^3.3.1",
     "pex-gui": "^3.2.0",
-    "prettier": "^3.6.2",
     "primitive-geometry": "^2.11.0"
   },
   "engines": {
@@ -71,31 +70,6 @@
     "snowdev": ">=2.5.x"
   },
   "snowdev": {
-    "dependencies": [
-      "@hpcc-js/wasm-graphviz",
-      "@thi.ng/dot",
-      "geom-builder",
-      "hammersley",
-      "pex-cam",
-      "pex-geom",
-      "pex-io",
-      "pex-loaders",
-      "pex-math",
-      "pex-random",
-      "pex-shaders",
-      "angle-normals",
-      "cosine-gradient",
-      "es-module-shims",
-      "fit-rect",
-      "geom-center-and-normalize",
-      "geom-parse-obj",
-      "grid-cells",
-      "pex-color",
-      "pex-context",
-      "pex-gui",
-      "primitive-geometry",
-      "typed-array-interleave"
-    ],
     "files": "{*.js,*(systems|components|helpers|loaders|utils)/**/*.js}"
   }
 }
