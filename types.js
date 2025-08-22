@@ -17,7 +17,6 @@
  * @property {MaterialComponentOptions} [material]
  * @property {MorphComponentOptions} [morph]
  * @property {OrbiterComponentOptions} [orbiter]
- * @property {OverlayComponentOptions} [overlay]
  * @property {PointLightComponentOptions} [pointLight]
  * @property {PostProcessingComponentOptions} [postProcessing]
  * @property {ReflectionProbeComponentOptions} [reflectionProbe]
@@ -225,9 +224,6 @@
  * @property {number} [lat=0]
  * @property {number} [lon=0]
  * @property {number} [distance=0]
- */
-/**
- * @typedef {object} OverlayComponentOptions
  */
 /**
  * @typedef {object} PointLightComponentOptions
