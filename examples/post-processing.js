@@ -6,7 +6,7 @@ import {
 } from "../index.js";
 
 import createContext from "pex-context";
-import { mat4, quat, vec3 } from "pex-math";
+import { quat, vec3 } from "pex-math";
 import { aabb } from "pex-geom";
 import random from "pex-random";
 import createGUI from "pex-gui";
@@ -86,7 +86,7 @@ const postProcessing = components.postProcessing({
     debug: false,
   },
   msaa: {
-    sampleCount: 4
+    sampleCount: 4,
   },
   aa: {
     quality: 2,
@@ -142,7 +142,6 @@ const postProcessing = components.postProcessing({
         mipmap: false,
         flipY: false,
         aniso: 0,
-        pixelFormat: ctx.PixelFormat.RGBA32F,
       },
     ),
   },
