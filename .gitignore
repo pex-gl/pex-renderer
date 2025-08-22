@@ -2,7 +2,6 @@ node_modules
 .DS_Store
 /types
 /lib
-/web_modules
 /examples/glTF-Sample-Assets
 /examples/glTF-Sample-Environments
 /examples/screenshots/*-diff.png

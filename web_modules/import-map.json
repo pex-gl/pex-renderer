@@ -1,0 +1,32 @@
+{
+  "imports": {
+    "@hpcc-js/wasm-graphviz": "./@hpcc-js/wasm-graphviz.js",
+    "@thi.ng/dot": "./@thi.ng/dot.js",
+    "@thi.ng/dot/api": "./@thi.ng/dot/api.js",
+    "@thi.ng/dot/serialize": "./@thi.ng/dot/serialize.js",
+    "angle-normals": "./angle-normals.js",
+    "cosine-gradient": "./cosine-gradient.js",
+    "es-module-shims": "./es-module-shims.js",
+    "es-module-shims/debug": "./es-module-shims/debug.js",
+    "es-module-shims/wasm": "./es-module-shims/wasm.js",
+    "es-module-shims/typescript-transform": "./es-module-shims/typescript-transform.js",
+    "fit-rect": "./fit-rect.js",
+    "geom-builder": "./geom-builder.js",
+    "geom-center-and-normalize": "./geom-center-and-normalize.js",
+    "geom-parse-obj": "./geom-parse-obj.js",
+    "grid-cells": "./grid-cells.js",
+    "hammersley": "./hammersley.js",
+    "pex-cam": "./pex-cam.js",
+    "pex-color": "./pex-color.js",
+    "pex-context": "./pex-context.js",
+    "pex-geom": "./pex-geom.js",
+    "pex-gui": "./pex-gui.js",
+    "pex-io": "./pex-io.js",
+    "pex-loaders": "./pex-loaders.js",
+    "pex-math": "./pex-math.js",
+    "pex-random": "./pex-random.js",
+    "pex-shaders": "./pex-shaders.js",
+    "primitive-geometry": "./primitive-geometry.js",
+    "typed-array-interleave": "./typed-array-interleave.js"
+  }
+}
