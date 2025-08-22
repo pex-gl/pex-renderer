@@ -61,25 +61,16 @@ export default ({ renderGraph, resourceCache }) => ({
   getLightAttachments(light, descriptor, cubemap) {
     let { colorMapDesc, shadowMapDesc } = descriptor;
 
-    // Only update descriptors for custom map size
-    // TODO: could texture be cached if they have the same descriptor
-    if (light.shadowMapSize) {
-      colorMapDesc = {
-        ...colorMapDesc,
-        width: light.shadowMapSize,
-        height: light.shadowMapSize,
-      };
-      shadowMapDesc = {
-        ...shadowMapDesc,
-        width: light.shadowMapSize,
-        height: light.shadowMapSize,
-      };
-    }
+    colorMapDesc.width =
+      colorMapDesc.height =
+      shadowMapDesc.width =
+      shadowMapDesc.height =
+        light.shadowMapSize;
 
     //TODO: can this be all done at once?
-    //TODO: const colorMap = cubemap ? resourceCache.textureCube(colorMapDesc) : resourceCache.texture2D(colorMapDesc);
-    const colorMap =
-      resourceCache[cubemap ? "textureCube" : "texture2D"](colorMapDesc);
+    const colorMap = cubemap
+      ? resourceCache.textureCube(colorMapDesc)
+      : resourceCache.texture2D(colorMapDesc);
     colorMap.name = `tempColorMap (id: ${colorMap.id})`;
 
     const shadowMap = resourceCache.texture2D(shadowMapDesc);

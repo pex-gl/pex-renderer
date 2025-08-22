@@ -11,6 +11,6 @@ export default (options) => ({
   bias: 0.1,
   bulbRadius: 1,
   castShadows: true,
-  // shadowMapSize: 2048, //TODO: MARCIN: why is this commented out?
+  shadowMapSize: 2048,
   ...options,
 });

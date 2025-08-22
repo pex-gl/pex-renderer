@@ -12,6 +12,6 @@ export default (options) => ({
   bias: 0.1,
   bulbRadius: 1,
   castShadows: true,
-  // shadowMapSize: 2048,
+  shadowMapSize: 2048,
   ...options,
 });
