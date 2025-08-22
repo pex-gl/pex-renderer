@@ -83,22 +83,14 @@ ctx.frame(() => {
 ## Modules
 
 <dl>
-<dt><a href="#module_components">components</a></dt>
-<dd></dd>
 <dt><a href="#module_pex-renderer">pex-renderer</a></dt>
+<dd></dd>
+<dt><a href="#module_components">components</a></dt>
 <dd></dd>
 <dt><a href="#module_systems">systems</a></dt>
 <dd></dd>
 <dt><a href="#module_renderer">renderer</a></dt>
 <dd></dd>
-</dl>
-
-## Functions
-
-<dl>
-<dt><a href="#default">default([components])</a> ⇒ <code><a href="#Entity">Entity</a></code></dt>
-<dd><p>Create an entity</p>
-</dd>
 </dl>
 
 ## Typedefs
@@ -140,13 +132,13 @@ ctx.frame(() => {
 <dd></dd>
 <dt><a href="#OrbiterComponentOptions">OrbiterComponentOptions</a> : <code>object</code></dt>
 <dd></dd>
-<dt><a href="#OverlayComponentOptions">OverlayComponentOptions</a> : <code>object</code></dt>
-<dd></dd>
 <dt><a href="#PointLightComponentOptions">PointLightComponentOptions</a> : <code>object</code></dt>
 <dd></dd>
 <dt><a href="#SSAOComponentOptions">SSAOComponentOptions</a> : <code>object</code></dt>
 <dd></dd>
 <dt><a href="#DoFComponentOptions">DoFComponentOptions</a> : <code>object</code></dt>
+<dd></dd>
+<dt><a href="#MSAAComponentOptions">MSAAComponentOptions</a> : <code>object</code></dt>
 <dd></dd>
 <dt><a href="#AAComponentOptions">AAComponentOptions</a> : <code>object</code></dt>
 <dd></dd>
@@ -218,6 +210,83 @@ ctx.frame(() => {
 <dd></dd>
 </dl>
 
+<a name="module_pex-renderer"></a>
+
+## pex-renderer
+
+- [pex-renderer](#module_pex-renderer)
+  - [.components](#module_pex-renderer.components) : [<code>components</code>](#module_components)
+  - [.systems](#module_pex-renderer.systems) : [<code>systems</code>](#module_systems)
+  - [.world()](#module_pex-renderer.world) ⇒ [<code>World</code>](#World)
+  - [.entity([components])](#module_pex-renderer.entity) ⇒ [<code>Entity</code>](#Entity)
+  - [.renderEngine()](#module_pex-renderer.renderEngine) ⇒ [<code>RenderEngine</code>](#RenderEngine)
+  - [.renderGraph(ctx)](#module_pex-renderer.renderGraph) ⇒ [<code>RenderGraph</code>](#RenderGraph)
+  - [.resourceCache(ctx)](#module_pex-renderer.resourceCache) ⇒ [<code>ResourceCache</code>](#ResourceCache)
+
+<a name="module_pex-renderer.components"></a>
+
+### pex-renderer.components : [<code>components</code>](#module_components)
+
+All components as a function returning a component with default values.
+
+**Kind**: static property of [<code>pex-renderer</code>](#module_pex-renderer)
+<a name="module_pex-renderer.systems"></a>
+
+### pex-renderer.systems : [<code>systems</code>](#module_systems)
+
+All systems as a function returning a system with a type property and an update function.
+
+**Kind**: static property of [<code>pex-renderer</code>](#module_pex-renderer)
+<a name="module_pex-renderer.world"></a>
+
+### pex-renderer.world() ⇒ [<code>World</code>](#World)
+
+Create a world object to store entities and systems
+
+**Kind**: static method of [<code>pex-renderer</code>](#module_pex-renderer)
+<a name="module_pex-renderer.entity"></a>
+
+### pex-renderer.entity([components]) ⇒ [<code>Entity</code>](#Entity)
+
+Create an entity from an object of plain data components
+
+**Kind**: static method of [<code>pex-renderer</code>](#module_pex-renderer)
+
+| Param        | Type                | Default         |
+| ------------ | ------------------- | --------------- |
+| [components] | <code>object</code> | <code>{}</code> |
+
+<a name="module_pex-renderer.renderEngine"></a>
+
+### pex-renderer.renderEngine() ⇒ [<code>RenderEngine</code>](#RenderEngine)
+
+Create a render engine eg. a collection of systems for default rendering
+
+**Kind**: static method of [<code>pex-renderer</code>](#module_pex-renderer)
+<a name="module_pex-renderer.renderGraph"></a>
+
+### pex-renderer.renderGraph(ctx) ⇒ [<code>RenderGraph</code>](#RenderGraph)
+
+Create a render graph for rendering passes
+
+**Kind**: static method of [<code>pex-renderer</code>](#module_pex-renderer)
+
+| Param | Type                                           |
+| ----- | ---------------------------------------------- |
+| ctx   | <code>module:pex-context/types/index.js</code> |
+
+<a name="module_pex-renderer.resourceCache"></a>
+
+### pex-renderer.resourceCache(ctx) ⇒ [<code>ResourceCache</code>](#ResourceCache)
+
+Create a resource cache for pex-context caching.
+
+**Kind**: static method of [<code>pex-renderer</code>](#module_pex-renderer)
+
+| Param | Type                                           |
+| ----- | ---------------------------------------------- |
+| ctx   | <code>module:pex-context/types/index.js</code> |
+
 <a name="module_components"></a>
 
 ## components
@@ -237,11 +306,11 @@ ctx.frame(() => {
   - [.material([options])](#module_components.material) ⇒ <code>object</code>
   - [.morph(options)](#module_components.morph) ⇒ <code>object</code>
   - [.orbiter(options)](#module_components.orbiter) ⇒ <code>object</code>
-  - [.overlay([options])](#module_components.overlay) ⇒ <code>object</code>
   - [.pointLight([options])](#module_components.pointLight) ⇒ <code>object</code>
   - [.postProcessing([options])](#module_components.postProcessing) ⇒ <code>object</code>
     - [.ssao([options])](#module_components.postProcessing.ssao) ⇒ <code>object</code>
     - [.dof([options])](#module_components.postProcessing.dof) ⇒ <code>object</code>
+    - [.msaa([options])](#module_components.postProcessing.msaa) ⇒ <code>object</code>
     - [.aa([options])](#module_components.postProcessing.aa) ⇒ <code>object</code>
     - [.fog([options])](#module_components.postProcessing.fog) ⇒ <code>object</code>
     - [.bloom([options])](#module_components.postProcessing.bloom) ⇒ <code>object</code>
@@ -424,18 +493,6 @@ Orbiter component
 | ------- | ---------------------------------------------------------------- |
 | options | [<code>OrbiterComponentOptions</code>](#OrbiterComponentOptions) |
 
-<a name="module_components.overlay"></a>
-
-### components.overlay([options]) ⇒ <code>object</code>
-
-Overlay component
-
-**Kind**: static method of [<code>components</code>](#module_components)
-
-| Param     | Type                                                             |
-| --------- | ---------------------------------------------------------------- |
-| [options] | [<code>OverlayComponentOptions</code>](#OverlayComponentOptions) |
-
 <a name="module_components.pointLight"></a>
 
 ### components.pointLight([options]) ⇒ <code>object</code>
@@ -463,6 +520,7 @@ Post Processing component
 - [.postProcessing([options])](#module_components.postProcessing) ⇒ <code>object</code>
   - [.ssao([options])](#module_components.postProcessing.ssao) ⇒ <code>object</code>
   - [.dof([options])](#module_components.postProcessing.dof) ⇒ <code>object</code>
+  - [.msaa([options])](#module_components.postProcessing.msaa) ⇒ <code>object</code>
   - [.aa([options])](#module_components.postProcessing.aa) ⇒ <code>object</code>
   - [.fog([options])](#module_components.postProcessing.fog) ⇒ <code>object</code>
   - [.bloom([options])](#module_components.postProcessing.bloom) ⇒ <code>object</code>
@@ -494,6 +552,18 @@ Post Processing DoF subcomponent
 | Param     | Type                                                     |
 | --------- | -------------------------------------------------------- |
 | [options] | [<code>DoFComponentOptions</code>](#DoFComponentOptions) |
+
+<a name="module_components.postProcessing.msaa"></a>
+
+#### postProcessing.msaa([options]) ⇒ <code>object</code>
+
+Post Processing MSAA subcomponent
+
+**Kind**: static method of [<code>postProcessing</code>](#module_components.postProcessing)
+
+| Param     | Type                                                       |
+| --------- | ---------------------------------------------------------- |
+| [options] | [<code>MSAAComponentOptions</code>](#MSAAComponentOptions) |
 
 <a name="module_components.postProcessing.aa"></a>
 
@@ -651,83 +721,6 @@ Vertex helper component
 | --------- | -------------------------------------------------------------------------- |
 | [options] | [<code>VertexHelperComponentOptions</code>](#VertexHelperComponentOptions) |
 
-<a name="module_pex-renderer"></a>
-
-## pex-renderer
-
-- [pex-renderer](#module_pex-renderer)
-  - [.components](#module_pex-renderer.components) : [<code>components</code>](#module_components)
-  - [.systems](#module_pex-renderer.systems) : [<code>systems</code>](#module_systems)
-  - [.world()](#module_pex-renderer.world) ⇒ [<code>World</code>](#World)
-  - [.entity([components])](#module_pex-renderer.entity) ⇒ [<code>Entity</code>](#Entity)
-  - [.renderEngine()](#module_pex-renderer.renderEngine) ⇒ [<code>RenderEngine</code>](#RenderEngine)
-  - [.renderGraph(ctx)](#module_pex-renderer.renderGraph) ⇒ [<code>RenderGraph</code>](#RenderGraph)
-  - [.resourceCache(ctx)](#module_pex-renderer.resourceCache) ⇒ [<code>ResourceCache</code>](#ResourceCache)
-
-<a name="module_pex-renderer.components"></a>
-
-### pex-renderer.components : [<code>components</code>](#module_components)
-
-All components as a function returning a component with default values.
-
-**Kind**: static property of [<code>pex-renderer</code>](#module_pex-renderer)
-<a name="module_pex-renderer.systems"></a>
-
-### pex-renderer.systems : [<code>systems</code>](#module_systems)
-
-All systems as a function returning a system with a type property and an update function.
-
-**Kind**: static property of [<code>pex-renderer</code>](#module_pex-renderer)
-<a name="module_pex-renderer.world"></a>
-
-### pex-renderer.world() ⇒ [<code>World</code>](#World)
-
-Create a world object to store entities and systems
-
-**Kind**: static method of [<code>pex-renderer</code>](#module_pex-renderer)
-<a name="module_pex-renderer.entity"></a>
-
-### pex-renderer.entity([components]) ⇒ [<code>Entity</code>](#Entity)
-
-Create an entity from an object of plain data components
-
-**Kind**: static method of [<code>pex-renderer</code>](#module_pex-renderer)
-
-| Param        | Type                | Default         |
-| ------------ | ------------------- | --------------- |
-| [components] | <code>object</code> | <code>{}</code> |
-
-<a name="module_pex-renderer.renderEngine"></a>
-
-### pex-renderer.renderEngine() ⇒ [<code>RenderEngine</code>](#RenderEngine)
-
-Create a render engine eg. a collection of systems for default rendering
-
-**Kind**: static method of [<code>pex-renderer</code>](#module_pex-renderer)
-<a name="module_pex-renderer.renderGraph"></a>
-
-### pex-renderer.renderGraph(ctx) ⇒ [<code>RenderGraph</code>](#RenderGraph)
-
-Create a render graph for rendering passes
-
-**Kind**: static method of [<code>pex-renderer</code>](#module_pex-renderer)
-
-| Param | Type                                           |
-| ----- | ---------------------------------------------- |
-| ctx   | <code>module:pex-context/types/index.js</code> |
-
-<a name="module_pex-renderer.resourceCache"></a>
-
-### pex-renderer.resourceCache(ctx) ⇒ [<code>ResourceCache</code>](#ResourceCache)
-
-Create a resource cache for pex-context caching.
-
-**Kind**: static method of [<code>pex-renderer</code>](#module_pex-renderer)
-
-| Param | Type                                           |
-| ----- | ---------------------------------------------- |
-| ctx   | <code>module:pex-context/types/index.js</code> |
-
 <a name="module_systems"></a>
 
 ## systems
@@ -741,10 +734,10 @@ Create a resource cache for pex-context caching.
   - [.light()](#module_systems.light) ⇒ [<code>System</code>](#System)
   - [.morph()](#module_systems.morph) ⇒ [<code>System</code>](#System)
   - [.reflectionProbe(options)](#module_systems.reflectionProbe) ⇒ [<code>System</code>](#System)
-  - [.renderPipeline(options)](#module_systems.renderPipeline) ⇒ [<code>System</code>](#System)
   - [.skin()](#module_systems.skin) ⇒ [<code>System</code>](#System)
   - [.skybox(options)](#module_systems.skybox) ⇒ [<code>System</code>](#System)
   - [.transform()](#module_systems.transform) ⇒ [<code>System</code>](#System)
+  - [.renderPipeline(options)](#module_systems.renderPipeline) ⇒ [<code>System</code>](#System)
 
 <a name="module_systems.renderer"></a>
 
@@ -831,24 +824,6 @@ Adds:
 | ------- | -------------------------------------------- |
 | options | [<code>SystemOptions</code>](#SystemOptions) |
 
-<a name="module_systems.renderPipeline"></a>
-
-### systems.renderPipeline(options) ⇒ [<code>System</code>](#System)
-
-Render pipeline system
-
-Adds:
-
-- "\_near", "\_far", "\_radiusUV" and "\_sceneBboxInLightSpace" to light components that cast shadows
-- "\_shadowCubemap" to pointLight components and "\_shadowMap" to other light components
-- "\_targets" to postProcessing components
-
-**Kind**: static method of [<code>systems</code>](#module_systems)
-
-| Param   | Type                                         |
-| ------- | -------------------------------------------- |
-| options | [<code>SystemOptions</code>](#SystemOptions) |
-
 <a name="module_systems.skin"></a>
 
 ### systems.skin() ⇒ [<code>System</code>](#System)
@@ -885,6 +860,24 @@ Adds:
 - "\_transform" to entities as reference to internal cache
 
 **Kind**: static method of [<code>systems</code>](#module_systems)
+<a name="module_systems.renderPipeline"></a>
+
+### systems.renderPipeline(options) ⇒ [<code>System</code>](#System)
+
+Render pipeline system
+
+Adds:
+
+- "\_near", "\_far", "\_radiusUV" and "\_sceneBboxInLightSpace" to light components that cast shadows
+- "\_shadowCubemap" to pointLight components and "\_shadowMap" to other light components
+- "\_targets" to postProcessing components
+
+**Kind**: static method of [<code>systems</code>](#module_systems)
+
+| Param   | Type                                         |
+| ------- | -------------------------------------------- |
+| options | [<code>SystemOptions</code>](#SystemOptions) |
+
 <a name="module_renderer"></a>
 
 ## renderer
@@ -968,18 +961,6 @@ Standard renderer
 | ------- | -------------------------------------------- |
 | options | [<code>SystemOptions</code>](#SystemOptions) |
 
-<a name="default"></a>
-
-## default([components]) ⇒ [<code>Entity</code>](#Entity)
-
-Create an entity
-
-**Kind**: global function
-
-| Param        | Type                           |
-| ------------ | ------------------------------ |
-| [components] | [<code>Entity</code>](#Entity) |
-
 <a name="Entity"></a>
 
 ## Entity : <code>object</code>
@@ -1004,7 +985,6 @@ Create an entity
 | [material]          | [<code>MaterialComponentOptions</code>](#MaterialComponentOptions)                                                                                         |
 | [morph]             | [<code>MorphComponentOptions</code>](#MorphComponentOptions)                                                                                               |
 | [orbiter]           | [<code>OrbiterComponentOptions</code>](#OrbiterComponentOptions)                                                                                           |
-| [overlay]           | [<code>OverlayComponentOptions</code>](#OverlayComponentOptions)                                                                                           |
 | [pointLight]        | [<code>PointLightComponentOptions</code>](#PointLightComponentOptions)                                                                                     |
 | [postProcessing]    | [<code>PostProcessingComponentOptions</code>](#PostProcessingComponentOptions)                                                                             |
 | [reflectionProbe]   | [<code>ReflectionProbeComponentOptions</code>](#ReflectionProbeComponentOptions)                                                                           |
@@ -1209,58 +1189,62 @@ Create an entity
 **Kind**: global typedef
 **Properties**
 
-| Name                          | Type                                                                             | Default                            |
-| ----------------------------- | -------------------------------------------------------------------------------- | ---------------------------------- |
-| [unlit]                       | <code>boolean</code>                                                             |                                    |
-| [type]                        | <code>undefined</code> \| <code>&quot;line&quot;</code>                          | <code>&quot;undefined&quot;</code> |
-| [baseColor]                   | <code>Array.&lt;number&gt;</code>                                                | <code>[1, 1, 1, 1]</code>          |
-| [emissiveColor]               | <code>Array.&lt;number&gt;</code>                                                | <code>&quot;undefined&quot;</code> |
-| [emissiveIntensity]           | <code>number</code>                                                              | <code>1</code>                     |
-| [metallic]                    | <code>number</code>                                                              | <code>1</code>                     |
-| [roughness]                   | <code>number</code>                                                              | <code>1</code>                     |
-| [ior]                         | <code>number</code>                                                              |                                    |
-| [specular]                    | <code>number</code>                                                              |                                    |
-| [specularTexture]             | <code>ctx.texture2D</code> \| [<code>TextureTransform</code>](#TextureTransform) |                                    |
-| [specularColor]               | <code>Array.&lt;number&gt;</code>                                                | <code>[1, 1, 1]</code>             |
-| [specularColorTexture]        | <code>ctx.texture2D</code> \| [<code>TextureTransform</code>](#TextureTransform) |                                    |
-| [baseColorTexture]            | <code>ctx.texture2D</code> \| [<code>TextureTransform</code>](#TextureTransform) |                                    |
-| [emissiveColorTexture]        | <code>ctx.texture2D</code> \| [<code>TextureTransform</code>](#TextureTransform) |                                    |
-| [normalTexture]               | <code>ctx.texture2D</code> \| [<code>TextureTransform</code>](#TextureTransform) |                                    |
-| [normalTextureScale]          | <code>number</code>                                                              | <code>1</code>                     |
-| [roughnessTexture]            | <code>ctx.texture2D</code> \| [<code>TextureTransform</code>](#TextureTransform) |                                    |
-| [metallicTexture]             | <code>ctx.texture2D</code> \| [<code>TextureTransform</code>](#TextureTransform) |                                    |
-| [metallicRoughnessTexture]    | <code>ctx.texture2D</code> \| [<code>TextureTransform</code>](#TextureTransform) |                                    |
-| [occlusionTexture]            | <code>ctx.texture2D</code> \| [<code>TextureTransform</code>](#TextureTransform) |                                    |
-| [clearCoat]                   | <code>number</code>                                                              |                                    |
-| [clearCoatRoughness]          | <code>number</code>                                                              |                                    |
-| [clearCoatTexture]            | <code>ctx.texture2D</code> \| [<code>TextureTransform</code>](#TextureTransform) |                                    |
-| [clearCoatRoughnessTexture]   | <code>ctx.texture2D</code> \| [<code>TextureTransform</code>](#TextureTransform) |                                    |
-| [clearCoatNormalTexture]      | <code>ctx.texture2D</code> \| [<code>TextureTransform</code>](#TextureTransform) |                                    |
-| [clearCoatNormalTextureScale] | <code>number</code>                                                              |                                    |
-| [sheenColor]                  | <code>Array.&lt;number&gt;</code>                                                |                                    |
-| [sheenRoughness]              | <code>number</code>                                                              |                                    |
-| [transmission]                | <code>number</code>                                                              |                                    |
-| [transmissionTexture]         | <code>ctx.texture2D</code> \| [<code>TextureTransform</code>](#TextureTransform) |                                    |
-| [thickness]                   | <code>number</code>                                                              |                                    |
-| [thicknessTexture]            | <code>ctx.texture2D</code> \| [<code>TextureTransform</code>](#TextureTransform) |                                    |
-| [attenuationDistance]         | <code>number</code>                                                              |                                    |
-| [attenuationColor]            | <code>Array.&lt;number&gt;</code>                                                |                                    |
-| [dispersion]                  | <code>number</code>                                                              |                                    |
-| [alphaTest]                   | <code>number</code>                                                              | <code>&quot;undefined&quot;</code> |
-| [alphaTexture]                | <code>ctx.texture2D</code> \| [<code>TextureTransform</code>](#TextureTransform) |                                    |
-| [depthTest]                   | <code>boolean</code>                                                             | <code>true</code>                  |
-| [depthWrite]                  | <code>boolean</code>                                                             | <code>true</code>                  |
-| [depthFunc]                   | <code>ctx.DepthFunc</code>                                                       | <code>ctx.DepthFunc.Less</code>    |
-| [blend]                       | <code>boolean</code>                                                             | <code>false</code>                 |
-| [blendSrcRGBFactor]           | <code>ctx.BlendFactor</code>                                                     | <code>&quot;undefined&quot;</code> |
-| [blendSrcAlphaFactor]         | <code>ctx.BlendFactor</code>                                                     | <code>&quot;undefined&quot;</code> |
-| [blendDstRGBFactor]           | <code>ctx.BlendFactor</code>                                                     | <code>&quot;undefined&quot;</code> |
-| [blendDstAlphaFactor]         | <code>ctx.BlendFactor</code>                                                     | <code>&quot;undefined&quot;</code> |
-| [cullFace]                    | <code>boolean</code>                                                             | <code>true</code>                  |
-| [cullFaceMode]                | <code>ctx.Face</code>                                                            | <code>ctx.Face.Back</code>         |
-| [pointSize]                   | <code>number</code>                                                              | <code>1</code>                     |
-| [castShadows]                 | <code>boolean</code>                                                             | <code>false</code>                 |
-| [receiveShadows]              | <code>boolean</code>                                                             | <code>false</code>                 |
+| Name                              | Type                                                                             | Default                            |
+| --------------------------------- | -------------------------------------------------------------------------------- | ---------------------------------- |
+| [unlit]                           | <code>boolean</code>                                                             |                                    |
+| [type]                            | <code>undefined</code> \| <code>&quot;line&quot;</code>                          | <code>&quot;undefined&quot;</code> |
+| [baseColor]                       | <code>Array.&lt;number&gt;</code>                                                | <code>[1, 1, 1, 1]</code>          |
+| [emissiveColor]                   | <code>Array.&lt;number&gt;</code>                                                | <code>&quot;undefined&quot;</code> |
+| [emissiveIntensity]               | <code>number</code>                                                              | <code>1</code>                     |
+| [metallic]                        | <code>number</code>                                                              | <code>1</code>                     |
+| [roughness]                       | <code>number</code>                                                              | <code>1</code>                     |
+| [ior]                             | <code>number</code>                                                              |                                    |
+| [specular]                        | <code>number</code>                                                              |                                    |
+| [specularTexture]                 | <code>ctx.texture2D</code> \| [<code>TextureTransform</code>](#TextureTransform) |                                    |
+| [specularColor]                   | <code>Array.&lt;number&gt;</code>                                                | <code>[1, 1, 1]</code>             |
+| [specularColorTexture]            | <code>ctx.texture2D</code> \| [<code>TextureTransform</code>](#TextureTransform) |                                    |
+| [baseColorTexture]                | <code>ctx.texture2D</code> \| [<code>TextureTransform</code>](#TextureTransform) |                                    |
+| [emissiveColorTexture]            | <code>ctx.texture2D</code> \| [<code>TextureTransform</code>](#TextureTransform) |                                    |
+| [normalTexture]                   | <code>ctx.texture2D</code> \| [<code>TextureTransform</code>](#TextureTransform) |                                    |
+| [normalTextureScale]              | <code>number</code>                                                              | <code>1</code>                     |
+| [roughnessTexture]                | <code>ctx.texture2D</code> \| [<code>TextureTransform</code>](#TextureTransform) |                                    |
+| [metallicTexture]                 | <code>ctx.texture2D</code> \| [<code>TextureTransform</code>](#TextureTransform) |                                    |
+| [metallicRoughnessTexture]        | <code>ctx.texture2D</code> \| [<code>TextureTransform</code>](#TextureTransform) |                                    |
+| [occlusionTexture]                | <code>ctx.texture2D</code> \| [<code>TextureTransform</code>](#TextureTransform) |                                    |
+| [clearCoat]                       | <code>number</code>                                                              |                                    |
+| [clearCoatRoughness]              | <code>number</code>                                                              |                                    |
+| [clearCoatTexture]                | <code>ctx.texture2D</code> \| [<code>TextureTransform</code>](#TextureTransform) |                                    |
+| [clearCoatRoughnessTexture]       | <code>ctx.texture2D</code> \| [<code>TextureTransform</code>](#TextureTransform) |                                    |
+| [clearCoatNormalTexture]          | <code>ctx.texture2D</code> \| [<code>TextureTransform</code>](#TextureTransform) |                                    |
+| [clearCoatNormalTextureScale]     | <code>number</code>                                                              |                                    |
+| [sheenColor]                      | <code>Array.&lt;number&gt;</code>                                                |                                    |
+| [sheenRoughness]                  | <code>number</code>                                                              |                                    |
+| [transmission]                    | <code>number</code>                                                              |                                    |
+| [transmissionTexture]             | <code>ctx.texture2D</code> \| [<code>TextureTransform</code>](#TextureTransform) |                                    |
+| [dispersion]                      | <code>number</code>                                                              |                                    |
+| [diffuseTransmission]             | <code>number</code>                                                              |                                    |
+| [diffuseTransmissionTexture]      | <code>ctx.texture2D</code> \| [<code>TextureTransform</code>](#TextureTransform) |                                    |
+| [diffuseTransmissionColor]        | <code>number</code>                                                              | <code>[1, 1, 1]</code>             |
+| [diffuseTransmissionColorTexture] | <code>ctx.texture2D</code> \| [<code>TextureTransform</code>](#TextureTransform) |                                    |
+| [thickness]                       | <code>number</code>                                                              |                                    |
+| [thicknessTexture]                | <code>ctx.texture2D</code> \| [<code>TextureTransform</code>](#TextureTransform) |                                    |
+| [attenuationDistance]             | <code>number</code>                                                              |                                    |
+| [attenuationColor]                | <code>Array.&lt;number&gt;</code>                                                |                                    |
+| [alphaTest]                       | <code>number</code>                                                              | <code>&quot;undefined&quot;</code> |
+| [alphaTexture]                    | <code>ctx.texture2D</code> \| [<code>TextureTransform</code>](#TextureTransform) |                                    |
+| [depthTest]                       | <code>boolean</code>                                                             | <code>true</code>                  |
+| [depthWrite]                      | <code>boolean</code>                                                             | <code>true</code>                  |
+| [depthFunc]                       | <code>ctx.DepthFunc</code>                                                       | <code>ctx.DepthFunc.Less</code>    |
+| [blend]                           | <code>boolean</code>                                                             | <code>false</code>                 |
+| [blendSrcRGBFactor]               | <code>ctx.BlendFactor</code>                                                     | <code>&quot;undefined&quot;</code> |
+| [blendSrcAlphaFactor]             | <code>ctx.BlendFactor</code>                                                     | <code>&quot;undefined&quot;</code> |
+| [blendDstRGBFactor]               | <code>ctx.BlendFactor</code>                                                     | <code>&quot;undefined&quot;</code> |
+| [blendDstAlphaFactor]             | <code>ctx.BlendFactor</code>                                                     | <code>&quot;undefined&quot;</code> |
+| [cullFace]                        | <code>boolean</code>                                                             | <code>true</code>                  |
+| [cullFaceMode]                    | <code>ctx.Face</code>                                                            | <code>ctx.Face.Back</code>         |
+| [pointSize]                       | <code>number</code>                                                              | <code>1</code>                     |
+| [castShadows]                     | <code>boolean</code>                                                             | <code>false</code>                 |
+| [receiveShadows]                  | <code>boolean</code>                                                             | <code>false</code>                 |
 
 <a name="LineMaterialComponentOptions"></a>
 
@@ -1305,11 +1289,6 @@ Create an entity
 | [lon]      | <code>number</code>               | <code>0</code>             |
 | [distance] | <code>number</code>               | <code>0</code>             |
 
-<a name="OverlayComponentOptions"></a>
-
-## OverlayComponentOptions : <code>object</code>
-
-**Kind**: global typedef
 <a name="PointLightComponentOptions"></a>
 
 ## PointLightComponentOptions : <code>object</code>
@@ -1372,6 +1351,17 @@ Create an entity
 | [samples]             | <code>number</code>                                                    | <code>6</code>                      | Iteration steps. More steps means better blur but also degraded performances.                                                                                                                                              |
 | [shape]               | <code>&quot;disk&quot;</code> \| <code>&quot;pentagon&quot;</code>     | <code>&quot;disk&quot;</code>       | The bokeh shape for type "upitis".                                                                                                                                                                                         |
 | [debug]               | <code>boolean</code>                                                   | <code>false</code>                  |                                                                                                                                                                                                                            |
+
+<a name="MSAAComponentOptions"></a>
+
+## MSAAComponentOptions : <code>object</code>
+
+**Kind**: global typedef
+**Properties**
+
+| Name          | Type                | Default        | Description                                |
+| ------------- | ------------------- | -------------- | ------------------------------------------ |
+| [sampleCount] | <code>number</code> | <code>4</code> | Multisample anti-aliasing samples: 1 or 4. |
 
 <a name="AAComponentOptions"></a>
 

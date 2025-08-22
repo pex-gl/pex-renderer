@@ -2,6 +2,36 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+# [4.0.0-alpha.57](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.56...v4.0.0-alpha.57) (2025-08-22)
+
+
+### Bug Fixes
+
+* **ecs:** add shadowQuality in pipeline options to handle receiveShadows ([e0d56c7](https://github.com/pex-gl/pex-renderer/commit/e0d56c7ca5378376e56580ce81eb36b79668a65b)), closes [#359](https://github.com/pex-gl/pex-renderer/issues/359)
+* **ecs:** handle attachments comparison in resource cache ([68b9b11](https://github.com/pex-gl/pex-renderer/commit/68b9b1180ee21d897dc9aac685642e9eed9260ce))
+* **ecs:** remove unnecessary grab pass for transparent ([527fbb8](https://github.com/pex-gl/pex-renderer/commit/527fbb8273b2f0e3b8002c36d84ee4ef7d911c2b))
+* **ecs:** update camera aspect ratio only on change ([80756fb](https://github.com/pex-gl/pex-renderer/commit/80756fb9cd4c42036cf43379bcb55604184644a2))
+* **post-processing:** check for postProcessing.aa in flag definitions ([a216e9a](https://github.com/pex-gl/pex-renderer/commit/a216e9ae171507bdb8047d3b1bd5d487d0a56276))
+* **post-processing:** set default MSAA to false ([f4f7069](https://github.com/pex-gl/pex-renderer/commit/f4f7069cb429d9c0924332c485ff56846c2f4df9))
+* use performance.now ([363238e](https://github.com/pex-gl/pex-renderer/commit/363238edfb852364b71f646414332c06a6df152e))
+
+
+### Features
+
+* **ecs:** add dispose to standard renderer and keep ltc textures in the renderer object instead of the module scope ([7bd06bf](https://github.com/pex-gl/pex-renderer/commit/7bd06bf48777fced226125a013fc01388b71b77a)), closes [#401](https://github.com/pex-gl/pex-renderer/issues/401)
+* **ecs:** add MSAA suffix to render pass name ([90f6d29](https://github.com/pex-gl/pex-renderer/commit/90f6d290c062fe0979091c1a816c53fbd8e5f701))
+* **ecs:** add msaa to post processing subcomponent aa ([cd9d3be](https://github.com/pex-gl/pex-renderer/commit/cd9d3be7afdef0a79f31536945e6ed5f37b3e2ce))
+* **ecs:** remove options width/height ([aa47fd2](https://github.com/pex-gl/pex-renderer/commit/aa47fd2555e8e9340bd03b7e6f69b8d28f28454a)), closes [#399](https://github.com/pex-gl/pex-renderer/issues/399)
+* **ecs:** use dynamic imports for area light data ([e7dba3e](https://github.com/pex-gl/pex-renderer/commit/e7dba3ec6788ecfe73aba6ffd53247852bc13273)), closes [#118](https://github.com/pex-gl/pex-renderer/issues/118)
+* initial implementation of msaa ([f18ae38](https://github.com/pex-gl/pex-renderer/commit/f18ae388e653b91e3a647667638a60bc88fe96c7))
+* **pbr:** enforce shadowMapSize on lights components ([341599d](https://github.com/pex-gl/pex-renderer/commit/341599ddd694de8e1b96e7c4a74aeed3c8fffd7e))
+* **post-processing:** add MSAA to transparent and transmission passes ([6f3e688](https://github.com/pex-gl/pex-renderer/commit/6f3e688d8699a57cff854827409277801256c28f))
+* **post-processing:** check for msaa in render-pipeline ([013faf3](https://github.com/pex-gl/pex-renderer/commit/013faf3f5e5a986fd03b84864d99feffd41ad3e5))
+* **post-processing:** revert flag descriptors for aa ([52bbcfa](https://github.com/pex-gl/pex-renderer/commit/52bbcfacaf22aae4ae27ece01226a9a86726b412))
+* **post-processing:** split msaa into post-processing subcomponent ([cbd5972](https://github.com/pex-gl/pex-renderer/commit/cbd59720a3c22ecc7f7c05b95efd5b140f2a9c0e))
+
+
+
 # [4.0.0-alpha.56](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.55...v4.0.0-alpha.56) (2025-03-18)
 
 
