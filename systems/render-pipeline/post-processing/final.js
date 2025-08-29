@@ -1,9 +1,9 @@
 import { postProcessing as postprocessingShaders } from "pex-shaders";
 import { ssaoMixFlagDefinitions } from "./ssao.js";
 
-const final = () => {
-  const finalPass = {
-    name: "main",
+const final = ({ resourceCache, descriptors }) => {
+  const combinePass = {
+    name: "combine",
     frag: postprocessingShaders.postProcessing.frag,
     // blend: true,
     // prettier-ignore
@@ -16,11 +16,6 @@ const final = () => {
       [["camera", "exposure"], "", { uniform: "uExposure" }],
       [["camera", "toneMap"], "TONE_MAP", { type: "value" }],
       [["camera", "outputEncoding"], "", { uniform: "uOutputEncoding" }],
-
-      // AA
-      [["postProcessing", "aa"], "USE_AA"],
-      [["postProcessing", "aa", "subPixelQuality"], "", { uniform: "uSubPixelQuality", requires: "USE_AA" }],
-      [["postProcessing", "aa", "quality"], "AA_QUALITY", { type: "value", requires: "USE_AA" }],
 
       // Fog
       [["postProcessing", "fog"], "USE_FOG"],
@@ -43,14 +38,10 @@ const final = () => {
       [["postProcessing", "bloom", "intensity"], "", { uniform: "uBloomIntensity", requires: "USE_BLOOM" }],
       [["options", "targets", "bloom.threshold"], "BLOOM_TEXTURE", { type: "texture", uniform: "uBloomTexture", requires: "USE_BLOOM" }],
 
-      // Film Grain
-      [["postProcessing", "filmGrain"], "USE_FILM_GRAIN"],
-      [["postProcessing", "filmGrain", "quality"], "FILM_GRAIN_QUALITY", { type: "value", requires: "USE_FILM_GRAIN" }],
-      [["postProcessing", "filmGrain", "size"], "", { uniform: "uFilmGrainSize", requires: "USE_FILM_GRAIN" }],
-      [["postProcessing", "filmGrain", "intensity"], "", { uniform: "uFilmGrainIntensity", requires: "USE_FILM_GRAIN" }],
-      [["postProcessing", "filmGrain", "colorIntensity"], "", { uniform: "uFilmGrainColorIntensity", requires: "USE_FILM_GRAIN" }],
-      [["postProcessing", "filmGrain", "luminanceIntensity"], "", { uniform: "uFilmGrainLuminanceIntensity", requires: "USE_FILM_GRAIN" }],
-      [["postProcessing", "filmGrain", "speed"], "", { uniform: "uFilmGrainSpeed", requires: "USE_FILM_GRAIN" }],
+      // Vignette
+      [["postProcessing", "vignette"], "USE_VIGNETTE"],
+      [["postProcessing", "vignette", "radius"], "", { uniform: "uVignetteRadius", requires: "USE_VIGNETTE" }],
+      [["postProcessing", "vignette", "intensity"], "", { uniform: "uVignetteIntensity", requires: "USE_VIGNETTE" }],
 
       // LUT
       [["postProcessing", "lut"], "USE_LUT"],
@@ -64,10 +55,59 @@ const final = () => {
       [["postProcessing", "colorCorrection", "saturation"], "", { uniform: "uSaturation", requires: "USE_COLOR_CORRECTION" }],
       [["postProcessing", "colorCorrection", "hue"], "", { uniform: "uHue", requires: "USE_COLOR_CORRECTION" }],
 
-      // Vignette
-      [["postProcessing", "vignette"], "USE_VIGNETTE"],
-      [["postProcessing", "vignette", "radius"], "", { uniform: "uVignetteRadius", requires: "USE_VIGNETTE" }],
-      [["postProcessing", "vignette", "intensity"], "", { uniform: "uVignetteIntensity", requires: "USE_VIGNETTE" }],
+      // Output
+      [["postProcessing", "opacity"], "", { uniform: "uOpacity" }],
+    ],
+    source: ({ cameraEntity }) =>
+      cameraEntity.postProcessing.dof ? "dof.main" : "color",
+    target: ({ viewport }) =>
+      resourceCache.texture2D({
+        ...descriptors.postProcessing.outputTextureDesc,
+        width: viewport[2],
+        height: viewport[3],
+      }),
+  };
+
+  const finalPass = {
+    name: "main",
+    frag: postprocessingShaders.postProcessing.frag.replace(
+      `
+  // Tonemapping and gamma conversion
+  color.rgb *= uExposure;
+
+  #if defined(TONE_MAP)
+    color.rgb = TONE_MAP(color.rgb);
+    color.rgb = saturate(color.rgb);
+  #endif
+
+  color = encode(color, uOutputEncoding);`,
+      "",
+    ),
+    // blend: true,
+    // prettier-ignore
+    flagDefinitions: [
+      // Camera
+      [["camera", "viewMatrix"], "", { uniform: "uViewMatrix" }],
+      [["camera", "near"], "", { uniform: "uNear" }],
+      [["camera", "far"], "", { uniform: "uFar" }],
+      [["camera", "fov"], "", { uniform: "uFov" }],
+      [["camera", "exposure"], "", { uniform: "uExposure" }],
+      [["camera", "toneMap"], "TONE_MAP", { type: "value" }],
+      [["camera", "outputEncoding"], "", { uniform: "uOutputEncoding" }],
+
+      // AA
+      [["postProcessing", "aa"], "USE_AA"],
+      [["postProcessing", "aa", "subPixelQuality"], "", { uniform: "uSubPixelQuality", requires: "USE_AA" }],
+      [["postProcessing", "aa", "quality"], "AA_QUALITY", { type: "value", requires: "USE_AA" }],
+
+      // Film Grain
+      [["postProcessing", "filmGrain"], "USE_FILM_GRAIN"],
+      [["postProcessing", "filmGrain", "quality"], "FILM_GRAIN_QUALITY", { type: "value", requires: "USE_FILM_GRAIN" }],
+      [["postProcessing", "filmGrain", "size"], "", { uniform: "uFilmGrainSize", requires: "USE_FILM_GRAIN" }],
+      [["postProcessing", "filmGrain", "intensity"], "", { uniform: "uFilmGrainIntensity", requires: "USE_FILM_GRAIN" }],
+      [["postProcessing", "filmGrain", "colorIntensity"], "", { uniform: "uFilmGrainColorIntensity", requires: "USE_FILM_GRAIN" }],
+      [["postProcessing", "filmGrain", "luminanceIntensity"], "", { uniform: "uFilmGrainLuminanceIntensity", requires: "USE_FILM_GRAIN" }],
+      [["postProcessing", "filmGrain", "speed"], "", { uniform: "uFilmGrainSpeed", requires: "USE_FILM_GRAIN" }],
 
       // Output
       [["postProcessing", "opacity"], "", { uniform: "uOpacity" }],
@@ -76,11 +116,10 @@ const final = () => {
     passDesc: () => ({
       clearColor: [0, 0, 0, 1],
     }),
-    source: ({ cameraEntity }) =>
-      cameraEntity.postProcessing.dof ? "dof.main" : "color",
+    source: () => "final.combine",
   };
 
-  return [finalPass];
+  return [combinePass, finalPass];
 };
 
 export default final;
