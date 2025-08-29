@@ -154,6 +154,13 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
     if (postProcessing?.bloom) outputs.add("emissive");
 
     const msaaSampleCount = postProcessing?.msaa?.sampleCount;
+
+    if (msaaSampleCount) {
+      renderView.toneMap = "reversibleToneMap";
+      renderView.exposure = 1;
+      renderView.outputEncoding = ctx.Encoding.Linear;
+    }
+
     const colorAttachments = {};
     const colorAttachmentsMSAA = {};
     let depthAttachment;
@@ -486,6 +493,51 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
           });
         },
       });
+    }
+
+    // Inverse Tone Mapping
+    if (msaaSampleCount) {
+      const inverseToneMapColorTexture = resourceCache.texture2D({
+        ...this.descriptors.mainPass.outputTextureDesc,
+        width: renderView.viewport[2],
+        height: renderView.viewport[3],
+      });
+      inverseToneMapColorTexture.name = `inverseToneMapColor (id: ${inverseToneMapColorTexture.id})`;
+
+      const fullscreenTriangle = resourceCache.fullscreenTriangle();
+
+      // TODO: cache
+      const pipelineDesc = { ...this.descriptors.blit.pipelineDesc };
+      pipelineDesc.vert = ShaderParser.build(ctx, pipelineDesc.vert);
+      pipelineDesc.frag = ShaderParser.build(ctx, pipelineDesc.frag, [
+        `TONE_MAP ${renderView.toneMap}Inverse`,
+      ]);
+
+      const inverseToneMapCmd = {
+        name: "drawInverseToneMapFullScreenTriangleCmd",
+        attributes: fullscreenTriangle.attributes,
+        count: fullscreenTriangle.count,
+        pipeline: resourceCache.pipeline(pipelineDesc),
+        uniforms: {
+          uTexture: colorAttachments.color,
+          uExposure: 1,
+          uOutputEncoding: ctx.Encoding.Linear,
+        },
+      };
+
+      renderGraph.renderPass({
+        name: `InverseToneMapPass [${renderView.viewport}]`,
+        uses: [colorAttachments.color],
+        renderView,
+        pass: resourceCache.pass({
+          name: "inverseToneMapPass",
+          color: [inverseToneMapColorTexture],
+        }),
+        render: () => {
+          ctx.submit(inverseToneMapCmd);
+        },
+      });
+      colorAttachments.color = inverseToneMapColorTexture;
     }
 
     // Post-processing pass
