@@ -4,7 +4,7 @@ import { ssaoMixFlagDefinitions } from "./ssao.js";
 const final = ({ resourceCache, descriptors }) => {
   const combinePass = {
     name: "combine",
-    frag: postprocessingShaders.postProcessing.frag,
+    frag: postprocessingShaders.combine.frag,
     // blend: true,
     // prettier-ignore
     flagDefinitions: [
@@ -54,9 +54,6 @@ const final = ({ resourceCache, descriptors }) => {
       [["postProcessing", "colorCorrection", "contrast"], "", { uniform: "uContrast", requires: "USE_COLOR_CORRECTION" }],
       [["postProcessing", "colorCorrection", "saturation"], "", { uniform: "uSaturation", requires: "USE_COLOR_CORRECTION" }],
       [["postProcessing", "colorCorrection", "hue"], "", { uniform: "uHue", requires: "USE_COLOR_CORRECTION" }],
-
-      // Output
-      [["postProcessing", "opacity"], "", { uniform: "uOpacity" }],
     ],
     source: ({ cameraEntity }) =>
       cameraEntity.postProcessing.dof ? "dof.main" : "color",
@@ -70,31 +67,10 @@ const final = ({ resourceCache, descriptors }) => {
 
   const finalPass = {
     name: "main",
-    frag: postprocessingShaders.postProcessing.frag.replace(
-      `
-  // Tonemapping and gamma conversion
-  color.rgb *= uExposure;
-
-  #if defined(TONE_MAP)
-    color.rgb = TONE_MAP(color.rgb);
-    color.rgb = saturate(color.rgb);
-  #endif
-
-  color = encode(color, uOutputEncoding);`,
-      "",
-    ),
+    frag: postprocessingShaders.final.frag,
     // blend: true,
     // prettier-ignore
     flagDefinitions: [
-      // Camera
-      [["camera", "viewMatrix"], "", { uniform: "uViewMatrix" }],
-      [["camera", "near"], "", { uniform: "uNear" }],
-      [["camera", "far"], "", { uniform: "uFar" }],
-      [["camera", "fov"], "", { uniform: "uFov" }],
-      [["camera", "exposure"], "", { uniform: "uExposure" }],
-      [["camera", "toneMap"], "TONE_MAP", { type: "value" }],
-      [["camera", "outputEncoding"], "", { uniform: "uOutputEncoding" }],
-
       // AA
       [["postProcessing", "aa"], "USE_AA"],
       [["postProcessing", "aa", "subPixelQuality"], "", { uniform: "uSubPixelQuality", requires: "USE_AA" }],
@@ -112,7 +88,11 @@ const final = ({ resourceCache, descriptors }) => {
       // Output
       [["postProcessing", "opacity"], "", { uniform: "uOpacity" }],
     ],
-    // uniform: () => ({ uTextureEncoding: uniforms.uTexture.encoding }),
+    enabled: ({ cameraEntity }) =>
+      cameraEntity.postProcessing.aa ||
+      cameraEntity.postProcessing.filmGrain ||
+      (Number.isFinite(cameraEntity.postProcessing.opacity) &&
+        cameraEntity.postProcessing.opacity !== 0),
     passDesc: () => ({
       clearColor: [0, 0, 0, 1],
     }),

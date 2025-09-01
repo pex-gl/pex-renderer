@@ -46,7 +46,7 @@
     "pex-loaders": "^1.0.0",
     "pex-math": "^4.1.2",
     "pex-random": "^2.1.2",
-    "pex-shaders": "github:pex-gl/pex-shaders#91e854d",
+    "pex-shaders": "github:pex-gl/pex-shaders#3c31dd9",
     "typed-array-interleave": "^2.0.1"
   },
   "devDependencies": {

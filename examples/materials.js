@@ -128,6 +128,7 @@ const materials = {
       getURL(
         `assets/materials/plastic-glow.material/plastic-glow_basecolor.png`,
       ),
+      ctx.Encoding.SRGB,
     ),
     roughnessTexture: await getTexture(
       ctx,
