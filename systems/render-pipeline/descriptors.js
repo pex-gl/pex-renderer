@@ -145,12 +145,17 @@ void main() {
   },
   postProcessing: {
     outputTextureDesc: {
-      width: 1,
-      height: 1,
       pixelFormat: ctx.capabilities.textureHalfFloat
         ? ctx.PixelFormat.RGBA16F
         : ctx.PixelFormat.RGBA8,
       encoding: ctx.Encoding.Linear,
+      min: ctx.Filter.Linear,
+      mag: ctx.Filter.Linear,
+    },
+    finalTextureDesc: {
+      pixelFormat: ctx.capabilities.sRGB
+        ? ctx.PixelFormat.SRGB8_ALPHA8
+        : ctx.PixelFormat.RGBA8,
       min: ctx.Filter.Linear,
       mag: ctx.Filter.Linear,
     },

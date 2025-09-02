@@ -118,10 +118,13 @@ export default ({ ctx, renderGraph, resourceCache }) => ({
           if (!outputColor) console.warn(`Missing target ${target}.`);
         } else {
           // TODO: allow size overwrite for down/upscale
-          const { outputTextureDesc } = { ...descriptors.postProcessing };
-          outputTextureDesc.width = renderView.viewport[2];
-          outputTextureDesc.height = renderView.viewport[3];
-          outputColor = resourceCache.texture2D(outputTextureDesc);
+          const textureDesc = isFinal
+            ? descriptors.postProcessing.finalTextureDesc
+            : descriptors.postProcessing.outputTextureDesc;
+          textureDesc.width = renderView.viewport[2];
+          textureDesc.height = renderView.viewport[3];
+
+          outputColor = resourceCache.texture2D(textureDesc);
         }
         outputColor.name = `postProcessingPassColorOutput ${passName} (id: ${outputColor.id})`;
 
