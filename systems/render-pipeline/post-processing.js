@@ -155,17 +155,14 @@ export default ({ ctx, renderGraph, resourceCache }) => ({
           count: fullscreenTriangle.count,
         };
 
-        const usedUniformNames = Object.keys(
-          postProcessingCmd.pipeline.program.uniforms,
-        );
-        const textureUniformNames = usedUniformNames.filter(
-          (name) =>
-            postProcessingCmd.pipeline.program.uniforms[name].type == 35678,
-        );
-
-        const uses = textureUniformNames.map(
-          (name) => postProcessingCmd.uniforms[name],
-        );
+        // Get used textures from uniforms
+        const uses = Object.entries(postProcessingCmd.pipeline.program.uniforms)
+          .map(([name, value]) => {
+            if (value.type == ctx.gl.SAMPLER_2D) {
+              return postProcessingCmd.uniforms[name];
+            }
+          })
+          .filter(Boolean);
 
         const renderPassView = {
           //FIXME: this seems to be wrong
@@ -174,7 +171,7 @@ export default ({ ctx, renderGraph, resourceCache }) => ({
 
         renderGraph.renderPass({
           name: `PostProcessingPass.${passName} [${renderPassView.viewport}]`,
-          uses: uses.filter(Boolean),
+          uses,
           renderView: renderPassView,
           pass: resourceCache.pass({
             name: `postProcessingPass.${passName}`,

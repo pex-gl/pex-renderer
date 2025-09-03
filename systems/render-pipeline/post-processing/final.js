@@ -1,7 +1,14 @@
 import { postProcessing as postprocessingShaders } from "pex-shaders";
 import { ssaoMixFlagDefinitions } from "./ssao.js";
 
-const final = ({ resourceCache, descriptors }) => {
+const isFinalMainEnabled = ({ cameraEntity }) =>
+  cameraEntity.postProcessing.aa ||
+  cameraEntity.postProcessing.filmGrain ||
+  (Number.isFinite(cameraEntity.postProcessing.opacity) &&
+    cameraEntity.postProcessing.opacity !== 0 &&
+    cameraEntity.postProcessing.opacity !== 1);
+
+const final = ({ ctx, resourceCache, descriptors }) => {
   const combinePass = {
     name: "combine",
     frag: postprocessingShaders.combine.frag,
@@ -57,9 +64,28 @@ const final = ({ resourceCache, descriptors }) => {
     ],
     source: ({ cameraEntity }) =>
       cameraEntity.postProcessing.dof ? "dof.main" : "color",
+    target: ({ cameraEntity, viewport }) =>
+      isFinalMainEnabled({ cameraEntity }) &&
+      resourceCache.texture2D({
+        ...descriptors.postProcessing.finalTextureDesc,
+        width: viewport[2],
+        height: viewport[3],
+      }),
+  };
+
+  const lumaPass = {
+    name: "luma",
+    frag: postprocessingShaders.luma.frag,
+    flagDefinitions: [],
+    enabled: isFinalMainEnabled,
+    passDesc: () => ({
+      clearColor: [0, 0, 0, 1],
+    }),
+    source: () => "final.combine",
     target: ({ viewport }) =>
       resourceCache.texture2D({
         ...descriptors.postProcessing.outputTextureDesc,
+        pixelFormat: ctx.gl.RG ? ctx.PixelFormat.R8 : ctx.PixelFormat.RGBA8,
         width: viewport[2],
         height: viewport[3],
       }),
@@ -75,6 +101,8 @@ const final = ({ resourceCache, descriptors }) => {
       [["postProcessing", "aa"], "USE_AA"],
       [["postProcessing", "aa", "subPixelQuality"], "", { uniform: "uSubPixelQuality", requires: "USE_AA" }],
       [["postProcessing", "aa", "quality"], "AA_QUALITY", { type: "value", requires: "USE_AA" }],
+      [["postProcessing", "aa", "quality"], "AA_QUALITY", { type: "value", requires: "USE_AA" }],
+      [["options", "targets", "final.luma"], "LUMA_TEXTURE", { type: "texture", uniform: "uLumaTexture", requires: "USE_AA" }],
 
       // Film Grain
       [["postProcessing", "filmGrain"], "USE_FILM_GRAIN"],
@@ -88,18 +116,14 @@ const final = ({ resourceCache, descriptors }) => {
       // Output
       [["postProcessing", "opacity"], "", { uniform: "uOpacity" }],
     ],
-    enabled: ({ cameraEntity }) =>
-      cameraEntity.postProcessing.aa ||
-      cameraEntity.postProcessing.filmGrain ||
-      (Number.isFinite(cameraEntity.postProcessing.opacity) &&
-        cameraEntity.postProcessing.opacity !== 0),
+    enabled: isFinalMainEnabled,
     passDesc: () => ({
       clearColor: [0, 0, 0, 1],
     }),
     source: () => "final.combine",
   };
 
-  return [combinePass, finalPass];
+  return [combinePass, lumaPass, finalPass];
 };
 
 export default final;

@@ -412,12 +412,13 @@ gui.addRadioList(
 );
 const dummyTexture2D = ctx.texture2D({
   name: "dummyTexture2D",
-  width: 4,
-  height: 4,
+  width: 160,
+  height: 1,
 });
 const guiNormalControl = gui.addTexture2D("Normal", null, { flipY: true });
 const guiDepthControl = gui.addTexture2D("Depth", null, { flipY: true });
-const guiAOControl = gui.addTexture2D("Ao", null, { flipY: true });
+const guiAOControl = gui.addTexture2D("AO", null, { flipY: true });
+const guiLumaControl = gui.addTexture2D("Luma", null, { flipY: true });
 
 gui.addParam("Background Blur", skyboxEntity.skybox, "backgroundBlur");
 
@@ -708,6 +709,7 @@ gui.addParam(
 );
 gui.addParam("Speed", postProcessing.filmGrain, "speed", { min: 0, max: 1 });
 
+enablePostProPass("msaa");
 enablePostProPass("ssao");
 enablePostProPass("dof");
 enablePostProPass("aa");
@@ -745,6 +747,9 @@ ctx.frame(() => {
   guiDepthControl.texture = depth;
   guiAOControl.texture =
     postProcessing?._targets?.[cameraEntity.id]?.["ssao.main"] ||
+    dummyTexture2D;
+  guiLumaControl.texture =
+    postProcessing?._targets?.[cameraEntity.id]?.["final.luma"] ||
     dummyTexture2D;
 
   ctx.debug(debugOnce);
