@@ -6,7 +6,7 @@ import {
 } from "../index.js";
 
 import createContext from "pex-context";
-import { quat, vec3 } from "pex-math";
+import { quat } from "pex-math";
 import createGUI from "pex-gui";
 import random from "pex-random";
 
@@ -14,7 +14,7 @@ import { cube, torus, sphere, roundedCube } from "primitive-geometry";
 
 import { getEnvMap } from "./utils.js";
 
-import dot from "./graph-viz.js";
+import { getRenderPassGraphViz } from "./graph-viz.js";
 
 random.seed(2);
 
@@ -23,41 +23,8 @@ const ctx = createContext({ pixelRatio });
 const renderEngine = createRenderEngine({ ctx, debug: true });
 const world = createWorld();
 
-renderEngine.renderGraph.renderPass = (opts) => {
-  if (dot) {
-    const passId =
-      opts.pass?.id ||
-      "RenderPass " + renderEngine.renderGraph.renderPasses.length;
-    const passName = opts.name || opts.pass?.name || null;
-
-    dot.passNode(passId, passName.replace(" ", "\n"));
-
-    const colorTextureId = opts?.pass?.opts?.color?.[0].id;
-    const colorTextureName = opts?.pass?.opts?.color?.[0].name;
-    if (colorTextureId) {
-      dot.resourceNode(colorTextureId, colorTextureName.replace(" ", "\n"));
-      dot.edge(passId, colorTextureId);
-    } else {
-      dot.edge(passId, "Window");
-    }
-
-    const depthTextureId = opts?.pass?.opts?.depth?.id;
-    const depthTextureName = opts?.pass?.opts?.depth?.name;
-    if (depthTextureId) {
-      dot.resourceNode(depthTextureId, depthTextureName.replace(" ", "\n"));
-      dot.edge(passId, depthTextureId);
-    }
-    if (opts.uses) {
-      opts.uses.forEach((tex) => {
-        if (dot) dot.edge(tex.id, passId);
-      });
-    }
-  }
-
-  if (opts.uses && ctx.debugMode) console.log("render-graph uses", opts.uses);
-
-  renderEngine.renderGraph.renderPasses.push(opts);
-};
+const renderPassGraphViz = getRenderPassGraphViz();
+renderPassGraphViz.init(ctx, renderEngine.renderGraph);
 
 // Entities
 const cameraEntity = createEntity({
@@ -296,6 +263,9 @@ const dummyTexture2D = ctx.texture2D({
   height: 4,
 });
 const guiCaptureControl = gui.addTexture2D("Capture", null, { flipY: true });
+gui.addButton("Toggle Render Graph", () => {
+  renderPassGraphViz.toggle();
+});
 gui.addRadioList(
   "Debug",
   renderEngine.renderers.find(
@@ -425,12 +395,7 @@ window.addEventListener("keydown", ({ key }) => {
   if (key === "d") debugOnce = true;
 });
 
-let frame = 0;
-
 ctx.frame(() => {
-  frame++;
-
-  dot.reset();
   quat.fromAxisAngle(
     torusEntity.transform.rotation,
     [0, 1, 0],
@@ -451,8 +416,6 @@ ctx.frame(() => {
   debugOnce = false;
 
   gui.draw();
-
-  // if (frame == 1) dot.render();
 
   window.dispatchEvent(new CustomEvent("screenshot"));
 });

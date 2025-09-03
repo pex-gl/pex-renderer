@@ -41,6 +41,7 @@ const containerElement = document.createElement("div");
 document.body.appendChild(containerElement);
 
 const dot = {
+  containerElement,
   reset: () => {
     dotGraph.nodes = {};
     dotGraph.edges = [];
@@ -77,15 +78,24 @@ const dot = {
     const svgElement = containerElement.querySelector("svg");
 
     Object.assign(svgElement.style, {
+      pointerEvents: "none",
       position: "absolute",
-      left: "10px",
+      right: "10px",
       top: "10px",
       opacity: 0.7,
-      transformOrigin: "0 0",
-      transform: "scale(0.25)",
+      maxWidth: `calc(75vw - 20px)`,
+      maxHeight: `calc(100vh - 20px)`,
+      // transformOrigin: "0 0",
+      // transform: "scale(0.75)",
     });
+    for (let node of svgElement.querySelectorAll(".node text")) {
+      Object.assign(node.style, { pointerEvents: "all" });
+    }
     svgElement.removeAttribute("width");
     svgElement.removeAttribute("height");
+  },
+  destroy() {
+    containerElement.innerHTML = "";
   },
   style: {
     texture: {
@@ -93,5 +103,86 @@ const dot = {
     },
   },
 };
+
+const formatTextureName = ({ id, name, pixelFormat }) =>
+  (name || id).replace(" ", "\n").replace(")", ` ${pixelFormat})`);
+
+const getRenderPassGraphViz = () => ({
+  needsRender: false,
+  init(ctx, renderGraph) {
+    const originalBeginFrame = renderGraph.beginFrame;
+    renderGraph.beginFrame = (...args) => {
+      if (this.needsRender) dot.reset();
+      originalBeginFrame.call(renderGraph, ...args);
+    };
+
+    renderGraph.renderPass = (opts) => {
+      const passId =
+        opts.pass?.id || `RenderPass ${renderGraph.renderPasses.length}`;
+      const passName = opts.name || opts.pass?.name;
+
+      dot.passNode(passId, passName.replace(" ", "\n"));
+
+      const colorAttachments = opts?.pass?.opts?.color;
+
+      for (let i = 0; i < colorAttachments?.length; i++) {
+        const colorAttachment = colorAttachments[i];
+        const colorTexture = colorAttachment?.texture || colorAttachment || {};
+        const colorTextureId = colorTexture.id;
+
+        if (colorTextureId) {
+          dot.resourceNode(colorTextureId, formatTextureName(colorTexture));
+          dot.edge(passId, colorTextureId);
+        } else {
+          dot.edge(passId, "Window");
+        }
+      }
+
+      const depthTexture = opts?.pass?.opts?.depth || {};
+      const depthTextureId = depthTexture.id;
+
+      if (depthTextureId) {
+        dot.resourceNode(depthTextureId, formatTextureName(depthTexture));
+        dot.edge(passId, depthTextureId);
+      }
+
+      if (opts.uses) {
+        opts.uses.forEach((tex) => {
+          if (dot) dot.edge(tex.id, passId);
+        });
+        if (ctx.debugMode) console.log("render-graph uses", opts.uses);
+      }
+
+      renderGraph.renderPasses.push(opts);
+    };
+
+    const originalEndFrame = renderGraph.endFrame;
+    renderGraph.endFrame = (...args) => {
+      originalEndFrame.call(renderGraph, ...args);
+      if (this.needsRender) {
+        dot.render();
+        this.needsRender = false;
+      }
+    };
+  },
+  render() {
+    this.needsRender = true;
+  },
+  destroy() {
+    containerElement.innerHTML = "";
+  },
+  isRendered() {
+    return containerElement.hasChildNodes();
+  },
+  toggle() {
+    if (this.isRendered()) {
+      dot.destroy();
+    } else {
+      this.render();
+    }
+  },
+});
+
+export { getRenderPassGraphViz };
 
 export default dot;

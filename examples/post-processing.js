@@ -16,6 +16,8 @@ import { cube, roundedCube, capsule, sphere } from "primitive-geometry";
 
 import { dragon, getEnvMap, getTexture, getURL } from "./utils.js";
 
+import { getRenderPassGraphViz } from "./graph-viz.js";
+
 random.seed(14);
 
 const State = {
@@ -42,6 +44,9 @@ const pixelRatio = 1;
 const ctx = createContext({ pixelRatio });
 const renderEngine = createRenderEngine({ ctx, debug: true });
 const world = createWorld();
+
+const renderPassGraphViz = getRenderPassGraphViz();
+renderPassGraphViz.init(ctx, renderEngine.renderGraph);
 
 // Entities
 const helperEntity = createEntity({
@@ -376,6 +381,10 @@ const gui = createGUI(ctx);
 gui.addColumn("Attachments");
 gui.addFPSMeeter();
 State.msg = "";
+
+gui.addButton("Toggle Render Graph", () => {
+  renderPassGraphViz.toggle();
+});
 gui.addRadioList(
   "Debug Render",
   renderEngine.renderers.find(
@@ -439,6 +448,7 @@ gui.addParam("Enabled", State, "enabled", null, () => {
   } else {
     delete cameraEntity.postProcessing;
   }
+  if (renderPassGraphViz.isRendered()) renderPassGraphViz.render();
 });
 const enablePostProPass = (name) => {
   if (State[name]) {
@@ -447,6 +457,7 @@ const enablePostProPass = (name) => {
     State[`_${name}`] = postProcessing[name];
     delete postProcessing[name];
   }
+  if (renderPassGraphViz.isRendered()) renderPassGraphViz.render();
 };
 gui.addParam("MSAA", State, "msaa", null, () => {
   enablePostProPass("msaa");
