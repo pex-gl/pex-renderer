@@ -173,7 +173,7 @@ export default ({ renderGraph, resourceCache }) => ({
     };
 
     renderGraph.renderPass({
-      name: `SpotLightShadowMap [${renderView.viewport}] (id: ${lightEntity.id})`,
+      name: `${lightEntity.areaLight ? "Area" : "Spot"}LightShadowMap [${renderView.viewport}] (id: ${lightEntity.id})`,
       pass: resourceCache.pass({
         // TODO: creating new descriptor to force new pass from cache
         ...this.descriptors.spotLightShadows.pass,
