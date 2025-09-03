@@ -158,9 +158,7 @@ export default ({ ctx, renderGraph, resourceCache }) => ({
         // Get used textures from uniforms
         const uses = Object.entries(postProcessingCmd.pipeline.program.uniforms)
           .map(([name, value]) => {
-            if (value.type == ctx.gl.SAMPLER_2D) {
-              return postProcessingCmd.uniforms[name];
-            }
+            if (value.type === ctx.gl.SAMPLER_2D) return uniforms[name];
           })
           .filter(Boolean);
 

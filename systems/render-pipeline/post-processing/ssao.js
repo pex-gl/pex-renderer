@@ -36,6 +36,7 @@ function generateBlueNoiseTexture(ctx) {
     mag: ctx.Filter.Linear,
     min: ctx.Filter.Linear,
   });
+  blueNoiseTexture.name = `ssaoBlueNoiseTexture`;
   return blueNoiseTexture;
 }
 
@@ -64,6 +65,7 @@ function generateNoiseTexture(ctx) {
     mag: ctx.Filter.Linear,
     min: ctx.Filter.Linear,
   });
+  noiseTexture.name = `ssaoNoiseTexture`;
   return noiseTexture;
 }
 

@@ -94,9 +94,6 @@ const dot = {
     svgElement.removeAttribute("width");
     svgElement.removeAttribute("height");
   },
-  destroy() {
-    containerElement.innerHTML = "";
-  },
   style: {
     texture: {
       fillcolor: "skyblue",
@@ -116,44 +113,54 @@ const getRenderPassGraphViz = () => ({
       originalBeginFrame.call(renderGraph, ...args);
     };
 
-    renderGraph.renderPass = (opts) => {
-      const passId =
-        opts.pass?.id || `RenderPass ${renderGraph.renderPasses.length}`;
-      const passName = opts.name || opts.pass?.name;
+    const originalRenderPass = renderGraph.renderPass;
+    renderGraph.renderPass = (...args) => {
+      if (this.needsRender) {
+        const [opts] = args;
+        const passId =
+          opts.pass?.id || `RenderPass ${renderGraph.renderPasses.length}`;
+        const passName = opts.name || opts.pass?.name;
 
-      dot.passNode(passId, passName.replace(" ", "\n"));
+        dot.passNode(passId, passName.replace(" ", "\n"));
 
-      const colorAttachments = opts?.pass?.opts?.color;
+        const colorAttachments = opts?.pass?.opts?.color;
 
-      for (let i = 0; i < colorAttachments?.length; i++) {
-        const colorAttachment = colorAttachments[i];
-        const colorTexture = colorAttachment?.texture || colorAttachment || {};
-        const colorTextureId = colorTexture.id;
+        for (let i = 0; i < colorAttachments?.length; i++) {
+          const colorAttachment = colorAttachments[i];
+          const colorTexture =
+            colorAttachment?.texture || colorAttachment || {};
+          const colorTextureId = colorTexture.id;
 
-        if (colorTextureId) {
-          dot.resourceNode(colorTextureId, formatTextureName(colorTexture));
-          dot.edge(passId, colorTextureId);
-        } else {
-          dot.edge(passId, "Window");
+          if (colorTextureId) {
+            dot.resourceNode(colorTextureId, formatTextureName(colorTexture));
+            dot.edge(passId, colorTextureId);
+          } else {
+            dot.edge(passId, "Window");
+          }
+        }
+
+        const depthTexture = opts?.pass?.opts?.depth || {};
+        const depthTextureId = depthTexture.id;
+
+        if (depthTextureId) {
+          dot.resourceNode(depthTextureId, formatTextureName(depthTexture));
+          dot.edge(passId, depthTextureId);
+        }
+
+        if (opts.uses) {
+          const nodes = Object.keys(dotGraph.nodes);
+          opts.uses.forEach((tex) => {
+            if (!nodes.includes(tex.id)) {
+              dot.edge(formatTextureName(tex), passId);
+            } else {
+              dot.edge(tex.id, passId);
+            }
+          });
+          if (ctx.debugMode) console.log("render-graph uses", opts.uses);
         }
       }
 
-      const depthTexture = opts?.pass?.opts?.depth || {};
-      const depthTextureId = depthTexture.id;
-
-      if (depthTextureId) {
-        dot.resourceNode(depthTextureId, formatTextureName(depthTexture));
-        dot.edge(passId, depthTextureId);
-      }
-
-      if (opts.uses) {
-        opts.uses.forEach((tex) => {
-          if (dot) dot.edge(tex.id, passId);
-        });
-        if (ctx.debugMode) console.log("render-graph uses", opts.uses);
-      }
-
-      renderGraph.renderPasses.push(opts);
+      originalRenderPass.call(renderGraph, ...args);
     };
 
     const originalEndFrame = renderGraph.endFrame;
@@ -176,7 +183,7 @@ const getRenderPassGraphViz = () => ({
   },
   toggle() {
     if (this.isRendered()) {
-      dot.destroy();
+      this.destroy();
     } else {
       this.render();
     }

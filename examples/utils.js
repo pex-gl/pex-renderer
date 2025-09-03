@@ -41,6 +41,8 @@ export async function getTexture(ctx, file, encoding, options = {}) {
       encoding: encoding || ctx.Encoding.Linear,
       ...options,
     });
+    tex.name = file.split("/").at(-1);
+
     return tex;
   } catch (error) {
     console.error(error);
