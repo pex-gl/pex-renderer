@@ -58,7 +58,7 @@ export default ({ ctx, renderGraph, resourceCache }) => ({
         const subPass = effect.passes[j];
         const isEnabled = !subPass.enabled || subPass.enabled(renderView);
 
-        if (!isEnabled && !isFinal) continue;
+        if (!isEnabled) continue;
 
         const passName = `${effect.name}.${subPass.name}`;
 
@@ -162,6 +162,7 @@ export default ({ ctx, renderGraph, resourceCache }) => ({
           (name) =>
             postProcessingCmd.pipeline.program.uniforms[name].type == 35678,
         );
+
         const uses = textureUniformNames.map(
           (name) => postProcessingCmd.uniforms[name],
         );
