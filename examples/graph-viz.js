@@ -16,6 +16,7 @@ const dotGraph = {
       shape: "rect",
       style: "filled",
       fontname: "Arial",
+      fontcolor: "white",
       fontsize: 11,
     },
     // edge defaults
@@ -62,10 +63,10 @@ const dot = {
     dotGraph.nodes[id] = { label: label || id, ...props };
   },
   passNode: (id, name) => {
-    dot.node(id, name, { fillcolor: "red", fontcolor: "white" });
+    dot.node(id, name, { fillcolor: "red", color: "darkred" });
   },
   resourceNode: (id, name) => {
-    dot.node(id, name, { fillcolor: "blue", fontcolor: "white" });
+    dot.node(id, name, { fillcolor: "blue", color: "darkblue" });
   },
   edge: (id1, id2) => {
     dotGraph.edges.push({ src: id1, dest: id2 });
@@ -94,15 +95,12 @@ const dot = {
     svgElement.removeAttribute("width");
     svgElement.removeAttribute("height");
   },
-  style: {
-    texture: {
-      fillcolor: "skyblue",
-    },
-  },
 };
 
-const formatTextureName = ({ id, name, pixelFormat }) =>
-  (name || id).replace(" ", "\n").replace(")", ` ${pixelFormat})`);
+const formatTextureName = ({ id, name, pixelFormat }, { id: resolveId } = {}) =>
+  (name || id)
+    .replace(" ", "\n")
+    .replace(")", ` ${pixelFormat}${resolveId ? ` from ${resolveId}` : ``})`);
 
 const getRenderPassGraphViz = () => ({
   needsRender: false,
@@ -128,22 +126,42 @@ const getRenderPassGraphViz = () => ({
         for (let i = 0; i < colorAttachments?.length; i++) {
           const colorAttachment = colorAttachments[i];
           const colorTexture =
-            colorAttachment?.texture || colorAttachment || {};
+            colorAttachment?.resolveTarget ||
+            colorAttachment?.texture ||
+            colorAttachment ||
+            {};
           const colorTextureId = colorTexture.id;
 
           if (colorTextureId) {
-            dot.resourceNode(colorTextureId, formatTextureName(colorTexture));
+            dot.resourceNode(
+              colorTextureId,
+              formatTextureName(
+                colorTexture,
+                colorAttachment?.resolveTarget && colorAttachment?.texture,
+              ),
+            );
             dot.edge(passId, colorTextureId);
           } else {
             dot.edge(passId, "Window");
           }
         }
 
-        const depthTexture = opts?.pass?.opts?.depth || {};
+        const depthAttachment = opts?.pass?.opts?.depth;
+        const depthTexture =
+          depthAttachment?.resolveTarget ||
+          depthAttachment?.texture ||
+          depthAttachment ||
+          {};
         const depthTextureId = depthTexture.id;
 
         if (depthTextureId) {
-          dot.resourceNode(depthTextureId, formatTextureName(depthTexture));
+          dot.resourceNode(
+            depthTextureId,
+            formatTextureName(
+              depthTexture,
+              depthAttachment?.resolveTarget && depthAttachment?.texture,
+            ),
+          );
           dot.edge(passId, depthTextureId);
         }
 
