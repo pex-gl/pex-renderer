@@ -643,10 +643,11 @@ gui.addRadioList(
   "Tone Map",
   camera,
   "toneMap",
-  ["none", ...Object.keys(SHADERS.toneMap)].map((value) => ({
-    name: value,
-    value: value === "none" ? null : value.toLowerCase(),
-  })),
+  [
+    "none",
+    ...Object.keys(SHADERS.toneMap).map((value) => value.toLowerCase()),
+    "agxPunchy",
+  ].map((value) => ({ name: value, value: value === "none" ? null : value })),
 );
 
 gui.addColumn("Bloom");
