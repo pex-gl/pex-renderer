@@ -27,16 +27,16 @@ const State = {
   metallic: 0.1,
   baseColor: [0.8, 0.1, 0.1, 1.0],
 
-  msaa: true,
-  ssao: true,
-  dof: true,
-  bloom: true,
+  msaa: false,
+  ssao: false,
+  dof: false,
+  bloom: false,
   fog: false,
-  vignette: true,
-  lut: true,
-  colorCorrection: true,
-  aa: true,
-  filmGrain: true,
+  vignette: false,
+  lut: false,
+  colorCorrection: false,
+  aa: false,
+  filmGrain: false,
 };
 
 const pixelRatio = 1; // devicePixelRatio;

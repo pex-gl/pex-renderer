@@ -84,9 +84,7 @@ export default ({ ctx, resourceCache }) => ({
 
     this.cmd.pipeline = pipeline;
     this.cmd.uniforms = {
-      uExposure: !renderingToReflectionProbe
-        ? (renderView.camera.exposure ?? 1)
-        : 1, //TODO: hardcoded default from camera.exposure
+      uExposure: 1,
       uOutputEncoding: 1, // Linear
 
       uProjectionMatrix: renderView.camera.projectionMatrix,

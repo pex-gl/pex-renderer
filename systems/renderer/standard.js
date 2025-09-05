@@ -422,7 +422,7 @@ export default ({ ctx, shadowQuality = 3 }) => ({
     const sharedUniforms = {
       uViewportSize: [renderView.viewport[2], renderView.viewport[3]],
 
-      uExposure: renderView.exposure,
+      uExposure: 1,
       uOutputEncoding: 1, // Linear
     };
 

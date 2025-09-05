@@ -51,9 +51,6 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
     cullFaceMode,
     backgroundColorTexture,
   }) {
-    renderView.exposure ||= 1;
-    renderView.toneMap ||= null;
-
     const options = {
       attachmentsLocations: this.getAttachmentsLocations(colorAttachments),
     };
@@ -115,30 +112,10 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
     renderView ||= {
       camera: cameraEntities[0].camera,
       viewport: getDefaultViewport(ctx),
+      exposure: 1,
+      toneMap: null,
     };
     const postProcessing = renderView.cameraEntity.postProcessing;
-
-    // Set the render pipeline encoding and tone mapping settings before blit
-    // Output will depend on camera settings
-    if (drawToScreen) {
-      // Render pipeline is linear.
-      // Output is tone mapped in "BlitPass" or in post-processing "final"
-      renderView.exposure ||= 1;
-      renderView.toneMap ||= null;
-    } else {
-      // Output depends on camera settings
-      // Render pipeline is gamma so we assume tone map should be applied
-      // but only if no post-processing "final"
-      if (!postProcessing) {
-        renderView.exposure ||= renderView.camera.exposure;
-        renderView.toneMap ||= renderView.camera.toneMap;
-      } else {
-        // Render pipeline is linear.
-        // Tone mapping needs to happen manually on the returned color attachment
-        renderView.exposure ||= 1;
-        renderView.toneMap ||= null;
-      }
-    }
 
     // Setup attachments. Can be overwritten by PostProcessingPass
     const outputs = new Set(this.outputs);
@@ -150,7 +127,6 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
 
     if (msaaSampleCount) {
       renderView.toneMap = "reversibleToneMap";
-      renderView.exposure = 1;
     }
 
     const colorAttachments = {};
@@ -545,23 +521,10 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
     if (drawToScreen !== false) {
       const fullscreenTriangle = resourceCache.fullscreenTriangle();
 
-      let exposure = renderView.camera.exposure; //FIXME MARCIN: what's the point of setting renderView.exposure then?
-      let toneMap = renderView.camera.toneMap;
-
-      // Post Processing already uses renderView.camera settings
-      if (postProcessing) {
-        exposure = 1;
-        toneMap = null;
-      }
-
       // TODO: cache
       const pipelineDesc = { ...this.descriptors.blit.pipelineDesc };
       pipelineDesc.vert = ShaderParser.build(ctx, pipelineDesc.vert);
-      pipelineDesc.frag = ShaderParser.build(
-        ctx,
-        pipelineDesc.frag,
-        [toneMap && `TONE_MAP ${toneMap}`].filter(Boolean),
-      );
+      pipelineDesc.frag = ShaderParser.build(ctx, pipelineDesc.frag);
 
       const blitCmd = {
         name: "drawBlitFullScreenTriangleCmd",
@@ -577,7 +540,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
         render: () => {
           ctx.submit(blitCmd, {
             uniforms: {
-              uExposure: exposure,
+              uExposure: 1,
               uOutputEncoding: 1,
               uTexture: colorAttachments.color,
             },
