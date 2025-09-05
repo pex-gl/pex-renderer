@@ -215,7 +215,6 @@ export default ({ ctx, shadowQuality = 3 }) => ({
         width: 64,
         height: 64,
         pixelFormat: ctx.PixelFormat.RGBA32F,
-        encoding: ctx.Encoding.Linear,
         min: ctx.Filter.Nearest,
         mag: ctx.Filter.Linear,
       };
@@ -388,8 +387,7 @@ export default ({ ctx, shadowQuality = 3 }) => ({
         reflectionProbes[0]._reflectionProbe._reflectionMap;
       sharedUniforms.uReflectionMapSize =
         reflectionProbes[0]._reflectionProbe._reflectionMap.width;
-      sharedUniforms.uReflectionMapEncoding =
-        reflectionProbes[0]._reflectionProbe._reflectionMap.encoding;
+      sharedUniforms.uReflectionMapEncoding = 1; // Linear
     }
   },
   render(renderView, entities, options) {
@@ -425,7 +423,7 @@ export default ({ ctx, shadowQuality = 3 }) => ({
       uViewportSize: [renderView.viewport[2], renderView.viewport[3]],
 
       uExposure: renderView.exposure,
-      uOutputEncoding: renderView.outputEncoding,
+      uOutputEncoding: 1, // Linear
     };
 
     if (!shadowMapping) {

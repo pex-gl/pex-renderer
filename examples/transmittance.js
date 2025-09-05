@@ -181,7 +181,7 @@ const checkerEntity = createEntity({
     baseColorTexture: await getTexture(
       ctx,
       getURL(`assets/textures/checkerboard/checkerboard.png`),
-      ctx.Encoding.SRGB,
+      true,
     ),
   }),
 });

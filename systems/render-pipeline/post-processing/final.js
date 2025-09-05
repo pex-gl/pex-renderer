@@ -22,7 +22,7 @@ const final = ({ ctx, resourceCache, descriptors }) => {
       [["camera", "fov"], "", { uniform: "uFov" }],
       [["camera", "exposure"], "", { uniform: "uExposure" }],
       [["camera", "toneMap"], "TONE_MAP", { type: "value" }],
-      [["camera", "outputEncoding"], "", { uniform: "uOutputEncoding" }],
+      [["camera", "outputEncoding"], "", { uniform: "uOutputEncoding", default: 2 }], // Gamma
 
       // Fog
       [["postProcessing", "fog"], "USE_FOG"],

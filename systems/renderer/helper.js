@@ -550,7 +550,6 @@ export default ({ ctx }) => ({
       count: geometry.count,
       uniforms: {
         uExposure: renderView.exposure,
-        uOutputEncoding: renderView.outputEncoding,
 
         uProjectionMatrix: renderView.camera.projectionMatrix,
         uViewMatrix: renderView.camera.viewMatrix,

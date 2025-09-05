@@ -123,7 +123,7 @@ export default ({ ctx } = {}) => ({
       uResolution: [renderView.viewport[2], renderView.viewport[3]],
 
       uExposure: renderView.exposure,
-      uOutputEncoding: renderView.outputEncoding,
+      uOutputEncoding: 1, // Linear
 
       uProjectionMatrix: renderView.camera.projectionMatrix,
       uViewMatrix: renderView.camera.viewMatrix,

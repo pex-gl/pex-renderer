@@ -137,11 +137,6 @@ export default ({ ctx, renderGraph, resourceCache }) => ({
           ...subPass.uniforms?.(renderView),
         };
 
-        // TODO: move to descriptors
-        if (isFinal) {
-          uniforms.uTextureEncoding = uniforms.uTexture.encoding;
-        }
-
         Object.assign(uniforms, sharedUniforms, pipelineUniforms);
 
         // Set command

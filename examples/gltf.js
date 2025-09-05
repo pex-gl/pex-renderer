@@ -411,7 +411,6 @@ const thumbnails = screenshots
       data: img,
       width: img.width,
       height: img.height,
-      encoding: ctx.Encoding.SRGB,
       pixelFormat: ctx.PixelFormat.RGBA8,
       flipY: true,
     }),
@@ -610,7 +609,7 @@ models = models.filter(({ name }) =>
     // "SunglassesKhronos",  // FAIL: EXT_texture_webp KHR_materials_iridescence
     // "Suzanne",
     // "TextureCoordinateTest",
-    // "TextureEncodingTest", // HALF: custom gamma and ICC profile
+    // "TextureEncodingTest",
     // "TextureLinearInterpolationTest", // HALF: EX_srgb in webgl1
     // "TextureSettingsTest",
     // "TextureTransformMultiTest",

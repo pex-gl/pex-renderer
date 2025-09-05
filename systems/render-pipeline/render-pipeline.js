@@ -53,7 +53,6 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
   }) {
     renderView.exposure ||= 1;
     renderView.toneMap ||= null;
-    renderView.outputEncoding ||= ctx.Encoding.Linear;
 
     const options = {
       attachmentsLocations: this.getAttachmentsLocations(colorAttachments),
@@ -124,24 +123,18 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
     if (drawToScreen) {
       // Render pipeline is linear.
       // Output is tone mapped in "BlitPass" or in post-processing "final"
-      renderView.outputEncoding ||= ctx.Encoding.Linear;
       renderView.exposure ||= 1;
       renderView.toneMap ||= null;
     } else {
       // Output depends on camera settings
       // Render pipeline is gamma so we assume tone map should be applied
       // but only if no post-processing "final"
-      if (
-        renderView.camera.outputEncoding === ctx.Encoding.Gamma &&
-        !postProcessing
-      ) {
-        renderView.outputEncoding ||= renderView.camera.outputEncoding;
+      if (!postProcessing) {
         renderView.exposure ||= renderView.camera.exposure;
         renderView.toneMap ||= renderView.camera.toneMap;
       } else {
         // Render pipeline is linear.
         // Tone mapping needs to happen manually on the returned color attachment
-        renderView.outputEncoding ||= ctx.Encoding.Linear;
         renderView.exposure ||= 1;
         renderView.toneMap ||= null;
       }
@@ -158,7 +151,6 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
     if (msaaSampleCount) {
       renderView.toneMap = "reversibleToneMap";
       renderView.exposure = 1;
-      renderView.outputEncoding = ctx.Encoding.Linear;
     }
 
     const colorAttachments = {};
@@ -521,7 +513,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
         uniforms: {
           uTexture: colorAttachments.color,
           uExposure: 1,
-          uOutputEncoding: ctx.Encoding.Linear,
+          uOutputEncoding: 1, // Linear,
         },
       };
 
@@ -555,13 +547,11 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
 
       let exposure = renderView.camera.exposure; //FIXME MARCIN: what's the point of setting renderView.exposure then?
       let toneMap = renderView.camera.toneMap;
-      let outputEncoding = renderView.camera.outputEncoding;
 
       // Post Processing already uses renderView.camera settings
       if (postProcessing) {
         exposure = 1;
         toneMap = null;
-        outputEncoding = ctx.Encoding.Linear;
       }
 
       // TODO: cache
@@ -588,7 +578,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
           ctx.submit(blitCmd, {
             uniforms: {
               uExposure: exposure,
-              uOutputEncoding: outputEncoding,
+              uOutputEncoding: 1,
               uTexture: colorAttachments.color,
             },
           });

@@ -284,7 +284,6 @@ function getPexMaterialTexture(
       pexTextureOptions.aniso = 16;
     }
     texture._tex = ctx.texture2D({
-      // encoding: encoding || ctx.Encoding.Linear,
       pixelFormat: pixelFormat ?? ctx.PixelFormat.RGBA8,
       wrapS: sampler.wrapS,
       wrapT: sampler.wrapT,

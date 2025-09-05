@@ -99,7 +99,6 @@ const renderPipelineSystem = systems.renderPipeline({
   ctx,
   resourceCache,
   renderGraph,
-  outputEncoding: ctx.Encoding.Linear,
 });
 const standardRendererSystem = systems.renderer.standard({
   ctx,

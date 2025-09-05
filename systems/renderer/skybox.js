@@ -87,7 +87,7 @@ export default ({ ctx, resourceCache }) => ({
       uExposure: !renderingToReflectionProbe
         ? (renderView.camera.exposure ?? 1)
         : 1, //TODO: hardcoded default from camera.exposure
-      uOutputEncoding: renderView.outputEncoding || ctx.Encoding.Linear,
+      uOutputEncoding: 1, // Linear
 
       uProjectionMatrix: renderView.camera.projectionMatrix,
       uViewMatrix: renderView.camera.viewMatrix,
@@ -95,7 +95,7 @@ export default ({ ctx, resourceCache }) => ({
 
       uEnvMap: texture,
       // Encoding comes from either envMap or skyTexture (ideally linear)
-      uEnvMapEncoding: texture.encoding,
+      uEnvMapEncoding: 1, // Linear
       uEnvMapExposure: entity.skybox.exposure ?? 1,
       // TODO: rename, for oct map. Why * 2 ? Cause it is oct map atlas?
       uEnvMapSize: reflectionProbeEntity?.reflectionProbe?.size * 2 || 0,
@@ -114,14 +114,13 @@ export default ({ ctx, resourceCache }) => ({
         this.render(renderView, entity, {
           ...options,
           toneMap: renderView.toneMap,
-          outputEncoding: renderView.outputEncoding,
+          outputEncoding: 1, // Linear
           reflectionProbeEntity: entities.find(
             (entity) => entity.reflectionProbe,
           ),
         });
         // entity._skybox.draw(renderView.camera, {
         //   backgroundMode: true,
-        //   outputEncoding: ctx.Encoding.Linear,
         // });
         // ctx.submit(skyboxCmd, {
         //   attributes: entity._geometry.attributes,

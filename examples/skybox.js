@@ -80,7 +80,6 @@ world.add(skyboxEntity);
 
 const reflectionProbeEntity = createEntity({
   reflectionProbe: components.reflectionProbe({
-    // rgbm: false,
     size: State.sizes[State.sizeIndex],
   }),
 });

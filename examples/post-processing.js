@@ -140,7 +140,7 @@ const postProcessing = components.postProcessing({
     texture: await getTexture(
       ctx,
       getURL(`assets/textures/lut/lookup-autumn.png`),
-      ctx.Encoding.Linear,
+      false,
       {
         min: ctx.Filter.Nearest,
         mag: ctx.Filter.Nearest,
@@ -186,7 +186,7 @@ world.add(cameraEntity);
 const baseColorTexture = await getTexture(
   ctx,
   getURL(`assets/materials/plastic-green.material/plastic-green_basecolor.png`),
-  ctx.Encoding.SRGB,
+  true,
 );
 const normalTexture = await getTexture(
   ctx,
@@ -203,7 +203,7 @@ const roughnessTexture = await getTexture(
 const emissiveColorTexture = await getTexture(
   ctx,
   getURL(`assets/materials/plastic-glow.material/plastic-glow_emissive.png`),
-  ctx.Encoding.SRGB,
+  true,
 );
 const geometries = [
   capsule({ radius: 0.25 }),

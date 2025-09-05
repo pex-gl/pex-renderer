@@ -324,7 +324,7 @@ world.addSystem(systems.transform());
 world.addSystem(systems.camera());
 world.addSystem(systems.skybox({ ctx }));
 world.addSystem(systems.reflectionProbe({ ctx }));
-world.addSystem(systems.renderer({ ctx, outputEncoding: ctx.Encoding.Gamma }));
+world.addSystem(systems.renderer({ ctx }));
 
 let shadowMapPreview;
 

@@ -31,7 +31,6 @@ export default ({ ctx, resourceCache }) => ({
         width: 512,
         height: 256,
         pixelFormat: ctx.PixelFormat.RGBA8,
-        encoding: ctx.Encoding.Linear,
         min: ctx.Filter.Linear,
         mag: ctx.Filter.Linear,
       });
@@ -81,7 +80,7 @@ export default ({ ctx, resourceCache }) => ({
           frag: ShaderParser.build(ctx, skybox.skyEnvMap.frag),
         }),
         uniforms: {
-          uOutputEncoding: ctx.Encoding.Linear,
+          uOutputEncoding: 1, // Linear,
         },
         ...resourceCache.fullscreenTriangle(),
       };
