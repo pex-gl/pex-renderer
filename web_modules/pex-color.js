@@ -1,5 +1,5 @@
-import { l as linearToRgb, s as setAlpha, r as rgbToLinear, x as xyzD50ToLinear, b as linearToXyzD50, c as xyzD65ToLinear, d as linearToXyzD65, e as linearP3ToXyzD65, g as xyzD65ToLinearP3, f as fromHSL, a as toHSL, h as labToXyz, D as D50, i as xyzToLab, j as D65, k as lchToLab, m as labToLch, o as oklabToLinear, n as linearToOklab, p as getStMax, q as toeInv, u as toe, T as TAU, v as getCs, w as lchToLuv, y as luvToXyz, z as xyzToLuv, A as luvToLch, B as hsluvToLch, C as lchToHsluv, E as hpluvToLch, F as lchToHpluv, G as set, H as TMP, I as floorArray } from './_chunks/hsl-Cxyv9U6e.js';
-export { L as copy, K as create, P as fromHex, N as fromRGB, M as fromValues, t as toHex, O as toRGB, J as utils } from './_chunks/hsl-Cxyv9U6e.js';
+import { l as linearToRgb, s as setAlpha, r as rgbToLinear, x as xyzD50ToLinear, b as linearToXyzD50, c as xyzD65ToLinear, d as linearToXyzD65, e as linearP3ToXyzD65, g as xyzD65ToLinearP3, f as fromHSL, a as toHSL, h as labToXyz, D as D50, i as xyzToLab, j as D65, k as lchToLab, m as labToLch, o as oklabToLinear, n as linearToOklab, p as getStMax, q as toeInv, u as toe, T as TAU, v as getCs, w as lchToLuv, y as luvToXyz, z as xyzToLuv, A as luvToLch, B as hsluvToLch, C as lchToHsluv, E as hpluvToLch, F as lchToHpluv, G as set, H as TMP, I as floorArray } from './_chunks/hsl-C5DVXbCx.js';
+export { L as copy, K as create, P as fromHex, N as fromRGB, M as fromValues, t as toHex, O as toRGB, J as utils } from './_chunks/hsl-C5DVXbCx.js';
 
 /**
  * @typedef {number[]} bytes An array of 3 (RGB) or 4 (A) values in bytes.
@@ -830,11 +830,11 @@ const toCSSColorSpace = (colorSpace, color, a)=>`color(${colorSpace} ${color.joi
 }
 /**
  * Returns a lab CSS string representation of a given color.
- * @alias module:pex-color.toCSSOkLab
+ * @alias module:pex-color.toCSSOklab
  * @param {import("./color.js").color} color
  * @param {number} [precision=5]
  * @returns {css}
- */ function toCSSOkLab(color, precision = 5) {
+ */ function toCSSOklab(color, precision = 5) {
     toOklab(getCoords(color), TMP);
     TMP[0] *= 100;
     if (precision !== undefined) floorArray(TMP, precision);
@@ -877,4 +877,4 @@ const toCSSColorSpace = (colorSpace, color, a)=>`color(${colorSpace} ${color.joi
     return toCSSColorSpace("xyz", TMP, color[3]);
 }
 
-export { fromBytes, fromHPLuv, fromHSL, fromHSLuv, fromHSV, fromHWB, fromLCH, fromLCHuv, fromLab, fromLabD50, fromLabD65, fromLinear, fromOkhsl, fromOkhsv, fromOklab, fromOklch, fromP3, fromRGBBytes, fromXYZD50, fromXYZD65, set, toBytes, toCSSHSL, toCSSHWB, toCSSLCH, toCSSLab, toCSSLabD65, toCSSOkLab, toCSSOklch, toCSSP3, toCSSRGB, toCSSRGBLinear, toCSSXYZ, toCSSXYZD50, toHPLuv, toHSL, toHSLuv, toHSV, toHWB, toLCH, toLCHuv, toLab, toLabD50, toLabD65, toLinear, toOkhsl, toOkhsv, toOklab, toOklch, toP3, toRGBBytes, toXYZD50, toXYZD65 };
+export { fromBytes, fromHPLuv, fromHSL, fromHSLuv, fromHSV, fromHWB, fromLCH, fromLCHuv, fromLab, fromLabD50, fromLabD65, fromLinear, fromOkhsl, fromOkhsv, fromOklab, fromOklch, fromP3, fromRGBBytes, fromXYZD50, fromXYZD65, set, toBytes, toCSSHSL, toCSSHWB, toCSSLCH, toCSSLab, toCSSLabD65, toCSSOklab, toCSSOklch, toCSSP3, toCSSRGB, toCSSRGBLinear, toCSSXYZ, toCSSXYZD50, toHPLuv, toHSL, toHSLuv, toHSV, toHWB, toLCH, toLCHuv, toLab, toLabD50, toLabD65, toLinear, toOkhsl, toOkhsv, toOklab, toOklch, toP3, toRGBBytes, toXYZD50, toXYZD65 };

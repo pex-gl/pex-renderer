@@ -1,5 +1,5 @@
 import { r as remap, c as clamp } from './_chunks/utils-B1Ghr_dy.js';
-import { t as toHex, a as toHSL, f as fromHSL } from './_chunks/hsl-Cxyv9U6e.js';
+import { t as toHex, a as toHSL, f as fromHSL } from './_chunks/hsl-C5DVXbCx.js';
 import { w as width, h as height, c as containsPoint } from './_chunks/rect-Dy6qG5eq.js';
 import './_chunks/vec2-CAYY_f5d.js';
 
@@ -394,8 +394,7 @@ class PexContextRenderer extends CanvasRenderer {
         this.rendererTexture = ctx.texture2D({
             width: opts[0],
             height: opts[1],
-            pixelFormat: ctx.PixelFormat.RGBA8,
-            encoding: ctx.Encoding.SRGB
+            pixelFormat: ctx.PixelFormat.RGBA8
         });
     }
     draw(items) {
@@ -602,32 +601,6 @@ void main() {
 var GAMMA = /* glsl */ `
 const float gamma = 2.2;
 
-// Linear
-float toLinear(float v) {
-  return pow(v, gamma);
-}
-
-vec2 toLinear(vec2 v) {
-  return pow(v, vec2(gamma));
-}
-
-vec3 toLinear(vec3 v) {
-  return pow(v, vec3(gamma));
-}
-
-vec4 toLinear(vec4 v) {
-  return vec4(toLinear(v.rgb), v.a);
-}
-
-// Gamma
-float toGamma(float v) {
-  return pow(v, 1.0 / gamma);
-}
-
-vec2 toGamma(vec2 v) {
-  return pow(v, vec2(1.0 / gamma));
-}
-
 vec3 toGamma(vec3 v) {
   return pow(v, vec3(1.0 / gamma));
 }
@@ -637,61 +610,19 @@ vec4 toGamma(vec4 v) {
 }
 `;
 
-var RGBM = /* glsl */ `
-vec3 decodeRGBM (vec4 rgbm) {
-  vec3 r = rgbm.rgb * (7.0 * rgbm.a);
-  return r * r;
-}
-
-vec4 encodeRGBM (vec3 rgb_0) {
-  vec4 r;
-  r.xyz = (1.0 / 7.0) * sqrt(rgb_0);
-  r.a = max(max(r.x, r.y), r.z);
-  r.a = clamp(r.a, 1.0 / 255.0, 1.0);
-  r.a = ceil(r.a * 255.0) / 255.0;
-  r.xyz /= r.a;
-  return r;
-}
-`;
-
-var DECODE_ENCODE = /* glsl */ `
-#define LINEAR 1
-#define GAMMA 2
-#define SRGB 3
-#define RGBM 4
-
-vec4 decode(vec4 pixel, int encoding) {
-  if (encoding == LINEAR) return pixel;
-  if (encoding == GAMMA) return toLinear(pixel);
-  if (encoding == SRGB) return toLinear(pixel);
-  if (encoding == RGBM) return vec4(decodeRGBM(pixel), 1.0);
-  return pixel;
-}
-
-vec4 encode(vec4 pixel, int encoding) {
-  if (encoding == LINEAR) return pixel;
-  if (encoding == GAMMA) return toGamma(pixel);
-  if (encoding == SRGB) return toGamma(pixel);
-  if (encoding == RGBM) return encodeRGBM(pixel.rgb);
-  return pixel;
-}
-`;
-
 var TEXTURE_CUBE_FRAG = /* glsl */ `#version 100
 precision highp float;
 
-${GAMMA}
-${RGBM}
-${DECODE_ENCODE}
-
 const float PI = 3.1415926;
+
+uniform samplerCube uTexture;
+uniform bool uCorrectGamma;
+uniform float uLevel;
+uniform float uFlipEnvMap;
 
 varying vec2 vTexCoord0;
 
-uniform samplerCube uTexture;
-uniform int uTextureEncoding;
-uniform float uLevel;
-uniform float uFlipEnvMap;
+${GAMMA}
 
 void main() {
   float theta = PI * (vTexCoord0.x * 2.0);
@@ -703,33 +634,24 @@ void main() {
 
   vec3 N = normalize(vec3(uFlipEnvMap * x, y, z));
   vec4 color = textureCube(uTexture, N, uLevel);
-  color = decode(color, uTextureEncoding);
-  // if LINEAR || RGBM then tonemap
-  if (uTextureEncoding == LINEAR || uTextureEncoding == RGBM) {
-    color.rgb = color.rgb / (color.rgb + 1.0);
-  }
-  gl_FragColor = encode(color, 2); // to gamma
+  if (uCorrectGamma) color = toGamma(color);
+  gl_FragColor = color;
 }`;
 
 var TEXTURE_2D_FRAG = /* glsl */ `#version 100
 precision highp float;
 
-${GAMMA}
-${RGBM}
-${DECODE_ENCODE}
-
 uniform sampler2D uTexture;
-uniform int uTextureEncoding;
+uniform bool uCorrectGamma;
+
 varying vec2 vTexCoord0;
+
+${GAMMA}
 
 void main() {
   vec4 color = texture2D(uTexture, vTexCoord0);
-  color = decode(color, uTextureEncoding);
-  // if LINEAR || RGBM then tonemap
-  if (uTextureEncoding == LINEAR || uTextureEncoding == RGBM) {
-    color.rgb = color.rgb / (color.rgb + 1.0);
-  }
-  gl_FragColor = encode(color, 2); // to gamma
+  if (uCorrectGamma) color = toGamma(color);
+  gl_FragColor = color;
 }`;
 
 const isArrayLike = (value)=>Array.isArray(value) || ArrayBuffer.isView(value);
@@ -895,7 +817,10 @@ const isArrayLike = (value)=>Array.isArray(value) || ArrayBuffer.isView(value);
                     viewport: this.viewport,
                     uniforms: {
                         uTexture: texture,
-                        uTextureEncoding: texture.encoding,
+                        uCorrectGamma: [
+                            ctx.PixelFormat.SRGB8,
+                            ctx.PixelFormat.SRGB8_ALPHA8
+                        ].includes(texture.pixelFormat),
                         uViewport: this.viewport,
                         uRect: rect
                     }
@@ -906,7 +831,10 @@ const isArrayLike = (value)=>Array.isArray(value) || ArrayBuffer.isView(value);
                     viewport: this.viewport,
                     uniforms: {
                         uTexture: texture,
-                        uTextureEncoding: texture.encoding,
+                        uCorrectGamma: [
+                            ctx.PixelFormat.SRGB8,
+                            ctx.PixelFormat.SRGB8_ALPHA8
+                        ].includes(texture.pixelFormat),
                         uViewport: this.viewport,
                         uRect: rect,
                         uLevel: level,

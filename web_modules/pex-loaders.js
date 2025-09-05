@@ -1,7 +1,6 @@
 import { loadArrayBuffer } from './pex-io.js';
 import { B as Buffer, g as getDefaultExportFromCjs } from './_chunks/polyfills-Ci6ALveU.js';
 import { c as clamp } from './_chunks/utils-B1Ghr_dy.js';
-import { b as blit } from './_chunks/index-IVey3wE5.js';
 
 class WorkerPool {
     constructor(workerLimit = 4, workerConfig = {}){
@@ -803,10 +802,93 @@ const getAlpha = ({ colorModel, samples })=>{
     .then((texture)=>({
             ...texture,
             // srgb or linear
-            encoding: dfd.transferFunction === KHR_DF_TRANSFER_SRGB ? 3 : 1,
+            // encoding: dfd.transferFunction === KHR_DF_TRANSFER_SRGB ? 3 : 1,
             premultiplyAlpha: !!(dfd.flags & KHR_DF_FLAG_ALPHA_PREMULTIPLIED)
         })));
 }
+
+const texture = /* glsl */ `
+  #define texture2D texture
+  #define textureCube texture
+  #define texture2DProj textureProj
+`;
+const vert = /* glsl */ `
+#if (__VERSION__ >= 300)
+  #define attribute in
+  #define varying out
+  ${texture}
+#endif
+`;
+const frag = /* glsl */ `
+#ifndef LOCATION_NORMAL
+  #define LOCATION_NORMAL -1
+#endif
+#ifndef LOCATION_EMISSIVE
+  #define LOCATION_EMISSIVE -1
+#endif
+
+#if (__VERSION__ >= 300)
+  #define varying in
+  ${texture}
+
+  // EXT_frag_depth
+  #define gl_FragDepthEXT gl_FragDepth
+
+  // EXT_shader_texture_lod
+  #define texture2DLodEXT textureLod
+  #define texture2DProjLodEXT textureProjLod
+  #define textureCubeLodEXT textureLod
+  #define texture2DGradEXT textureGrad
+  #define texture2DProjGradEXT textureProjGrad
+  #define textureCubeGradEXT textureGrad
+
+  vec4 FragData[3];
+  #define gl_FragData FragData
+  #define gl_FragColor gl_FragData[0]
+
+  layout (location = 0) out vec4 outColor;
+  #if LOCATION_NORMAL >= 0
+    layout (location = LOCATION_NORMAL) out vec4 outNormal;
+  #endif
+  #if LOCATION_EMISSIVE >= 0
+    layout (location = LOCATION_EMISSIVE) out vec4 outEmissive;
+  #endif
+#endif
+`;
+const assignment = /* glsl */ `
+#if (__VERSION__ >= 300)
+  outColor = FragData[0];
+
+  #if LOCATION_NORMAL >= 0
+    outNormal = FragData[LOCATION_NORMAL];
+  #endif
+  #if LOCATION_EMISSIVE >= 0
+    outEmissive = FragData[LOCATION_EMISSIVE];
+  #endif
+#endif
+`;
+
+/**
+ * @alias module:pipeline.blit.vert
+ * @type {string}
+ */ var blitVert = /* glsl */ `
+${vert}
+
+attribute vec2 aPosition;
+
+varying vec2 vTexCoord0;
+
+void main() {
+  gl_Position = vec4(aPosition, 0.0, 1.0);
+  vTexCoord0 = aPosition * 0.5 + 0.5;
+}
+`;
+
+/**
+ * @member {object}
+ * @static
+ */ const blit = {
+    vert: blitVert};
 
 // https://github.com/hsnilsson/MPFExtractor
 const extractMPF = async (imageArrayBuffer, { extractNonFII = true, extractFII = true } = {})=>{
@@ -1041,7 +1123,6 @@ const extractXMP = (input)=>{
     const sdr = ctx.texture2D({
         data: sdrImage,
         pixelFormat: ctx.PixelFormat.SRGB8,
-        encoding: ctx.Encoding.Linear,
         mag: ctx.Filter.Linear,
         min: ctx.Filter.Linear
     });
@@ -1050,7 +1131,6 @@ const extractXMP = (input)=>{
         width: gainMapImage.width,
         height: gainMapImage.height,
         pixelFormat: ctx.PixelFormat.RGBA8,
-        encoding: ctx.Encoding.Linear,
         mag: ctx.Filter.Linear,
         min: ctx.Filter.LinearMipmapLinear,
         mipmap: true
@@ -1058,7 +1138,6 @@ const extractXMP = (input)=>{
     // Render
     texture ||= ctx.texture2D({
         pixelFormat: ctx.PixelFormat.RGBA16F,
-        encoding: ctx.Encoding.Linear,
         min: ctx.Filter.Linear,
         mag: ctx.Filter.Linear
     });
@@ -1322,7 +1401,6 @@ var parseHdr$1 = /*@__PURE__*/ getDefaultExportFromCjs(parseHdr_1);
     const parsed = parseHdr$1(data instanceof ArrayBuffer ? data : await loadArrayBuffer(data));
     texture ||= ctx.texture2D({
         pixelFormat: ctx.PixelFormat.RGBA32F,
-        encoding: ctx.Encoding.Linear,
         min: ctx.Filter.Linear,
         mag: ctx.Filter.Linear,
         flipY: true
@@ -3499,7 +3577,6 @@ const DataUtils = {
     texture ||= ctx.texture2D({
         width: 1,
         height: 1,
-        encoding: ctx.Encoding.Linear,
         pixelFormat: ctx.PixelFormat[isHalfFloat ? "RGBA16F" : "RGBA32F"],
         min: ctx.Filter.Linear,
         mag: ctx.Filter.Linear
