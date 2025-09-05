@@ -122,8 +122,8 @@ export default ({ ctx } = {}) => ({
       // uViewportSize: [renderView.viewport[2], renderView.viewport[3]],
       uResolution: [renderView.viewport[2], renderView.viewport[3]],
 
-      uExposure: renderView.exposure,
-      uOutputEncoding: renderView.outputEncoding,
+      uExposure: 1,
+      uOutputEncoding: 1, // Linear
 
       uProjectionMatrix: renderView.camera.projectionMatrix,
       uViewMatrix: renderView.camera.viewMatrix,

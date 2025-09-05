@@ -15,6 +15,7 @@ import { aabb } from "pex-geom";
 import { cube as createCube } from "primitive-geometry";
 
 import { debugSceneTree, getEnvMap, getURL } from "./utils.js";
+import { getSceneGraphViz } from "./graph-viz.js";
 
 const MODELS_PATH =
   location.hostname === "localhost"
@@ -125,6 +126,8 @@ world.add(axesEntity);
 // Utils
 let debugOnce = false;
 
+const sceneGraphViz = getSceneGraphViz();
+
 function openModelURL() {
   window.open(
     State.url.replace(
@@ -132,24 +135,6 @@ function openModelURL() {
       "https://github.com/KhronosGroup/glTF-Sample-Assets/blob/master/2.0/",
     ),
   );
-}
-
-async function renderGraphViz() {
-  const { default: dot } = await import("./graph-viz.js");
-  dot.reset();
-
-  State.scenes[0].entities.forEach((entity) => {
-    dot.node(
-      entity.id,
-      `${entity.transform.depth ?? "?"}: ${entity.name || "Entity"} (${
-        entity.id
-      })`,
-    );
-    const parent = entity.transform.parent;
-    if (parent) dot.edge(parent.entity.id, entity.id);
-  });
-
-  dot.render();
 }
 
 // glTF
@@ -212,7 +197,8 @@ function onSceneLoaded(scene, grid) {
     });
   }
 
-  if (State.graphViz) renderGraphViz();
+  sceneGraphViz.init(State.scenes[0].entities);
+  if (sceneGraphViz.isRendered()) sceneGraphViz.draw();
 
   console.log(scene);
 }
@@ -411,7 +397,6 @@ const thumbnails = screenshots
       data: img,
       width: img.width,
       height: img.height,
-      encoding: ctx.Encoding.SRGB,
       pixelFormat: ctx.PixelFormat.RGBA8,
       flipY: true,
     }),
@@ -477,10 +462,11 @@ gui.addButton("Next scene", nextScene);
 gui.addColumn("Debug");
 gui.addFPSMeeter();
 gui.addStats();
-gui.addParam("Graph viz", State, "graphViz");
+gui.addButton("Toggle Scene Graph", () => {
+  sceneGraphViz.toggle();
+});
 gui.addButton("Tree", () => {
   debugSceneTree(world.entities);
-  if (State.graphViz) renderGraphViz();
 });
 
 // Filter models
@@ -610,7 +596,7 @@ models = models.filter(({ name }) =>
     // "SunglassesKhronos",  // FAIL: EXT_texture_webp KHR_materials_iridescence
     // "Suzanne",
     // "TextureCoordinateTest",
-    // "TextureEncodingTest", // HALF: custom gamma and ICC profile
+    // "TextureEncodingTest",
     // "TextureLinearInterpolationTest", // HALF: EX_srgb in webgl1
     // "TextureSettingsTest",
     // "TextureTransformMultiTest",

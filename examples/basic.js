@@ -27,6 +27,7 @@ const cameraEntity = createEntity({
   camera: components.camera({
     aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
   }),
+  postProcessing: components.postProcessing(),
   orbiter: components.orbiter({ element: ctx.gl.canvas }),
 });
 world.add(cameraEntity);
@@ -99,7 +100,6 @@ const renderPipelineSystem = systems.renderPipeline({
   ctx,
   resourceCache,
   renderGraph,
-  outputEncoding: ctx.Encoding.Linear,
 });
 const standardRendererSystem = systems.renderer.standard({
   ctx,

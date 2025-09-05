@@ -309,7 +309,6 @@ function draw(ctx, cmd) {
  * @property {ctx.PixelFormat} [pixelFormat=ctx.PixelFormat.RGBA8]
  * @property {ctx.TextureFormat} [internalFormat=ctx.TextureFormat.RGBA]
  * @property {ctx.DataType} [type=ctx.TextureFormat[opts.pixelFormat]]
- * @property {ctx.Encoding} [encoding=ctx.Encoding.Linear]
  * @property {ctx.Wrap} [wrapS=ctx.Wrap.ClampToEdge]
  * @property {ctx.Wrap} [wrapT=ctx.Wrap.ClampToEdge]
  * @property {ctx.Wrap} [wrap=ctx.Wrap.ClampToEdge]
@@ -319,6 +318,7 @@ function draw(ctx, cmd) {
  * @property {boolean} [mipmap=true] requires `min` to be set to `ctx.Filter.LinearMipmapLinear` or similar
  * @property {boolean} [premultiplyAlpha=false]
  * @property {boolean} [flipY=false]
+ * @property {boolean} [colorspaceConversion=gl.NONE]
  * @property {boolean} [compressed=false]
  * @property {TextureTarget} [target]
  * @property {number} [offset]
@@ -338,8 +338,8 @@ function draw(ctx, cmd) {
     "pixelFormat",
     "internalFormat",
     "type",
-    "encoding",
     "flipY",
+    "colorspaceConversion",
     "mipmap",
     "target",
     "min",
@@ -370,9 +370,6 @@ function createTexture(ctx, opts) {
     updateTexture(ctx, texture, opts);
     return texture;
 }
-function orValue(a, b) {
-    return a !== undefined ? a : b;
-}
 const isElement = (element)=>element && element instanceof Element;
 const isBuffer = (object)=>[
         "vertexBuffer",
@@ -389,18 +386,28 @@ function updateTexture(ctx, texture, opts) {
     let data = null;
     let width = opts.width;
     let height = opts.height;
-    let flipY = orValue(opts.flipY, orValue(texture.flipY, false));
-    let target = opts.target || texture.target;
+    const flipY = opts.flipY ?? texture.flipY ?? false;
+    const target = opts.target || texture.target;
     let pixelFormat = opts.pixelFormat || texture.pixelFormat || ctx.PixelFormat.RGBA8;
-    const encoding = opts.encoding || texture.encoding || ctx.Encoding.Linear;
     const min = opts.min || texture.min || gl.NEAREST;
     const mag = opts.mag || texture.mag || gl.NEAREST;
     const wrapS = opts.wrapS || opts.wrap || texture.wrapS || texture.wrap || gl.CLAMP_TO_EDGE;
     const wrapT = opts.wrapT || opts.wrap || texture.wrapT || texture.wrap || gl.CLAMP_TO_EDGE;
     const aniso = opts.aniso || texture.aniso || 0;
-    const premultiplyAlpha = orValue(opts.premultiplyAlpha, orValue(texture.premultiplyAlpha, false));
+    const premultiplyAlpha = opts.premultiplyAlpha ?? texture.premultiplyAlpha ?? false;
+    const colorspaceConversion = opts.colorspaceConversion ?? opts.colorspaceConversion ?? gl.NONE;
     const compressed = opts.compressed || texture.compressed;
-    let internalFormat = opts.internalFormat || texture.internalFormat;
+    let internalFormat;
+    // Get internalFormat (format the GPU use internally) from opts.internalFormat (mainly for compressed texture) or pixelFormat
+    if (opts.internalFormat) {
+        internalFormat = opts.internalFormat;
+    } else {
+        if (opts.pixelFormat) {
+            internalFormat = gl[pixelFormat];
+        } else {
+            internalFormat = texture.internalFormat ?? gl[pixelFormat];
+        }
+    }
     let type;
     let format;
     // Bind
@@ -411,6 +418,7 @@ function updateTexture(ctx, texture, opts) {
     // Pixel storage mode
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, flipY);
     gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, premultiplyAlpha);
+    gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, colorspaceConversion);
     // Parameters
     gl.texParameteri(target, gl.TEXTURE_MAG_FILTER, mag);
     gl.texParameteri(target, gl.TEXTURE_MIN_FILTER, min);
@@ -420,7 +428,6 @@ function updateTexture(ctx, texture, opts) {
         const anisoExt = gl.getExtension("EXT_texture_filter_anisotropic");
         gl.texParameterf(target, anisoExt.TEXTURE_MAX_ANISOTROPY_EXT, aniso);
     }
-    // Get internalFormat (format the GPU use internally) from opts.internalFormat (mainly for compressed texture) or pixelFormat
     if (!internalFormat || opts.internalFormat) {
         internalFormat = opts.internalFormat || gl[pixelFormat];
         // WebGL1
@@ -519,9 +526,8 @@ function updateTexture(ctx, texture, opts) {
     texture.wrapS = wrapS;
     texture.wrapT = wrapT;
     texture.flipY = flipY;
-    texture.encoding = encoding;
+    texture.colorspaceConversion = colorspaceConversion;
     texture.mipmap = opts.mipmap;
-    texture.info = `${Object.keys(ctx.PixelFormat).find((key)=>ctx.PixelFormat[key] === pixelFormat)}_${Object.keys(ctx.Encoding).find((key)=>ctx.Encoding[key] === encoding)}`;
     return texture;
 }
 function updateTexture2D(ctx, texture, data, { offset } = {}) {
@@ -1166,7 +1172,6 @@ function updateBuffer(ctx, buffer, opts) {
     } else {
         gl.bufferData(buffer.target, data, buffer.usage);
     }
-    buffer.info = ctx.DataTypeConstructor[type].name;
 }
 
 /**
@@ -1712,12 +1717,6 @@ function polyfill(ctx) {
         RG32F: extColorBufferFloat && gl.RG32F,
         R11F_G11F_B10F: extColorBufferFloat && gl.R11F_G11F_B10F
     };
-    /** @enum */ ctx.Encoding = {
-        Linear: 1,
-        Gamma: 2,
-        SRGB: 3,
-        RGBM: 4
-    };
     /** @enum */ ctx.Primitive = {
         Points: gl.POINTS,
         Lines: gl.LINES,
@@ -2135,9 +2134,7 @@ const allowedCommandProps = [
      * })
      * ```
      */ pass (opts) {
-            if (this.debugMode) {
-                console.debug(NAMESPACE, "pass", opts, opts.color?.map(({ texture, info })=>texture?.info || info) || "");
-            }
+            if (this.debugMode) console.debug(NAMESPACE, "pass", opts);
             return this.resource(createPass(this, opts));
         },
         /**
@@ -2232,8 +2229,7 @@ const allowedCommandProps = [
      *   data: [255, 255, 255, 255, 0, 0, 0, 255],
      *   width: 2,
      *   height: 1,
-     *   pixelFormat: ctx.PixelFormat.RGB8,
-     *   encoding: ctx.Encoding.Linear,
+     *   pixelFormat: ctx.PixelFormat.RGBA8,
      *   wrap: ctx.Wrap.Repeat
      * })
      * ```

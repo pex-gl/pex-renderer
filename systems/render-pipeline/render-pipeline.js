@@ -51,10 +51,6 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
     cullFaceMode,
     backgroundColorTexture,
   }) {
-    renderView.exposure ||= 1;
-    renderView.toneMap ||= null;
-    renderView.outputEncoding ||= ctx.Encoding.Linear;
-
     const options = {
       attachmentsLocations: this.getAttachmentsLocations(colorAttachments),
     };
@@ -116,36 +112,10 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
     renderView ||= {
       camera: cameraEntities[0].camera,
       viewport: getDefaultViewport(ctx),
+      exposure: 1,
+      toneMap: null,
     };
     const postProcessing = renderView.cameraEntity.postProcessing;
-
-    // Set the render pipeline encoding and tone mapping settings before blit
-    // Output will depend on camera settings
-    if (drawToScreen) {
-      // Render pipeline is linear.
-      // Output is tone mapped in "BlitPass" or in post-processing "final"
-      renderView.outputEncoding ||= ctx.Encoding.Linear;
-      renderView.exposure ||= 1;
-      renderView.toneMap ||= null;
-    } else {
-      // Output depends on camera settings
-      // Render pipeline is gamma so we assume tone map should be applied
-      // but only if no post-processing "final"
-      if (
-        renderView.camera.outputEncoding === ctx.Encoding.Gamma &&
-        !postProcessing
-      ) {
-        renderView.outputEncoding ||= renderView.camera.outputEncoding;
-        renderView.exposure ||= renderView.camera.exposure;
-        renderView.toneMap ||= renderView.camera.toneMap;
-      } else {
-        // Render pipeline is linear.
-        // Tone mapping needs to happen manually on the returned color attachment
-        renderView.outputEncoding ||= ctx.Encoding.Linear;
-        renderView.exposure ||= 1;
-        renderView.toneMap ||= null;
-      }
-    }
 
     // Setup attachments. Can be overwritten by PostProcessingPass
     const outputs = new Set(this.outputs);
@@ -154,6 +124,11 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
     if (postProcessing?.bloom) outputs.add("emissive");
 
     const msaaSampleCount = postProcessing?.msaa?.sampleCount;
+
+    if (msaaSampleCount) {
+      renderView.toneMap = "reversibleToneMap";
+    }
+
     const colorAttachments = {};
     const colorAttachmentsMSAA = {};
     let depthAttachment;
@@ -488,6 +463,51 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
       });
     }
 
+    // Inverse Tone Mapping
+    if (msaaSampleCount) {
+      const inverseToneMapColorTexture = resourceCache.texture2D({
+        ...this.descriptors.mainPass.outputTextureDesc,
+        width: renderView.viewport[2],
+        height: renderView.viewport[3],
+      });
+      inverseToneMapColorTexture.name = `inverseToneMapColor (id: ${inverseToneMapColorTexture.id})`;
+
+      const fullscreenTriangle = resourceCache.fullscreenTriangle();
+
+      // TODO: cache
+      const pipelineDesc = { ...this.descriptors.blit.pipelineDesc };
+      pipelineDesc.vert = ShaderParser.build(ctx, pipelineDesc.vert);
+      pipelineDesc.frag = ShaderParser.build(ctx, pipelineDesc.frag, [
+        `TONE_MAP ${renderView.toneMap}Inverse`,
+      ]);
+
+      const inverseToneMapCmd = {
+        name: "drawInverseToneMapFullScreenTriangleCmd",
+        attributes: fullscreenTriangle.attributes,
+        count: fullscreenTriangle.count,
+        pipeline: resourceCache.pipeline(pipelineDesc),
+        uniforms: {
+          uTexture: colorAttachments.color,
+          uExposure: 1,
+          uOutputEncoding: 1, // Linear,
+        },
+      };
+
+      renderGraph.renderPass({
+        name: `InverseToneMapPass [${renderView.viewport}]`,
+        uses: [colorAttachments.color],
+        renderView,
+        pass: resourceCache.pass({
+          name: "inverseToneMapPass",
+          color: [inverseToneMapColorTexture],
+        }),
+        render: () => {
+          ctx.submit(inverseToneMapCmd);
+        },
+      });
+      colorAttachments.color = inverseToneMapColorTexture;
+    }
+
     // Post-processing pass
     if (postProcessing) {
       this.renderPostProcessing(
@@ -501,25 +521,10 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
     if (drawToScreen !== false) {
       const fullscreenTriangle = resourceCache.fullscreenTriangle();
 
-      let exposure = renderView.camera.exposure; //FIXME MARCIN: what's the point of setting renderView.exposure then?
-      let toneMap = renderView.camera.toneMap;
-      let outputEncoding = renderView.camera.outputEncoding;
-
-      // Post Processing already uses renderView.camera settings
-      if (postProcessing) {
-        exposure = 1;
-        toneMap = null;
-        outputEncoding = ctx.Encoding.Linear;
-      }
-
       // TODO: cache
       const pipelineDesc = { ...this.descriptors.blit.pipelineDesc };
       pipelineDesc.vert = ShaderParser.build(ctx, pipelineDesc.vert);
-      pipelineDesc.frag = ShaderParser.build(
-        ctx,
-        pipelineDesc.frag,
-        [toneMap && `TONE_MAP ${toneMap}`].filter(Boolean),
-      );
+      pipelineDesc.frag = ShaderParser.build(ctx, pipelineDesc.frag);
 
       const blitCmd = {
         name: "drawBlitFullScreenTriangleCmd",
@@ -535,8 +540,8 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
         render: () => {
           ctx.submit(blitCmd, {
             uniforms: {
-              uExposure: exposure,
-              uOutputEncoding: outputEncoding,
+              uExposure: 1,
+              uOutputEncoding: 1,
               uTexture: colorAttachments.color,
             },
           });

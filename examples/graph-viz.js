@@ -16,6 +16,7 @@ const dotGraph = {
       shape: "rect",
       style: "filled",
       fontname: "Arial",
+      fontcolor: "white",
       fontsize: 11,
     },
     // edge defaults
@@ -41,6 +42,7 @@ const containerElement = document.createElement("div");
 document.body.appendChild(containerElement);
 
 const dot = {
+  containerElement,
   reset: () => {
     dotGraph.nodes = {};
     dotGraph.edges = [];
@@ -61,10 +63,10 @@ const dot = {
     dotGraph.nodes[id] = { label: label || id, ...props };
   },
   passNode: (id, name) => {
-    dot.node(id, name, { fillcolor: "red", fontcolor: "white" });
+    dot.node(id, name, { fillcolor: "red", color: "darkred" });
   },
   resourceNode: (id, name) => {
-    dot.node(id, name, { fillcolor: "blue", fontcolor: "white" });
+    dot.node(id, name, { fillcolor: "blue", color: "darkblue" });
   },
   edge: (id1, id2) => {
     dotGraph.edges.push({ src: id1, dest: id2 });
@@ -77,21 +79,163 @@ const dot = {
     const svgElement = containerElement.querySelector("svg");
 
     Object.assign(svgElement.style, {
+      pointerEvents: "none",
       position: "absolute",
-      left: "10px",
+      right: "10px",
       top: "10px",
       opacity: 0.7,
-      transformOrigin: "0 0",
-      transform: "scale(0.25)",
+      maxWidth: `calc(75vw - 20px)`,
+      maxHeight: `calc(100vh - 20px)`,
+      // transformOrigin: "0 0",
+      // transform: "scale(0.75)",
     });
+    for (let node of svgElement.querySelectorAll(".node text")) {
+      Object.assign(node.style, { pointerEvents: "all" });
+    }
     svgElement.removeAttribute("width");
     svgElement.removeAttribute("height");
   },
-  style: {
-    texture: {
-      fillcolor: "skyblue",
-    },
+  destroy() {
+    containerElement.innerHTML = "";
+  },
+  isRendered() {
+    return containerElement.hasChildNodes();
+  },
+  toggle() {
+    if (this.isRendered()) {
+      this.destroy();
+    } else {
+      this.draw?.();
+    }
   },
 };
+
+const formatTextureName = ({ id, name, pixelFormat }, { id: resolveId } = {}) =>
+  (name || id)
+    .replace(" ", "\n")
+    .replace(")", ` ${pixelFormat}${resolveId ? ` from ${resolveId}` : ``})`);
+
+const getRenderPassGraphViz = () => ({
+  ...dot,
+  needsRender: false,
+  init(ctx, renderGraph) {
+    const originalBeginFrame = renderGraph.beginFrame;
+    renderGraph.beginFrame = (...args) => {
+      if (this.needsRender) dot.reset();
+      originalBeginFrame.call(renderGraph, ...args);
+    };
+
+    const originalRenderPass = renderGraph.renderPass;
+    renderGraph.renderPass = (...args) => {
+      if (this.needsRender) {
+        const [opts] = args;
+        const passId =
+          opts.pass?.id || `RenderPass ${renderGraph.renderPasses.length}`;
+        const passName = opts.name || opts.pass?.name;
+
+        dot.passNode(passId, passName.replace(" ", "\n"));
+
+        const colorAttachments = opts?.pass?.opts?.color;
+
+        for (let i = 0; i < colorAttachments?.length; i++) {
+          const colorAttachment = colorAttachments[i];
+          const colorTexture =
+            colorAttachment?.resolveTarget ||
+            colorAttachment?.texture ||
+            colorAttachment ||
+            {};
+          const colorTextureId = colorTexture.id;
+
+          if (colorTextureId) {
+            dot.resourceNode(
+              colorTextureId,
+              formatTextureName(
+                colorTexture,
+                colorAttachment?.resolveTarget && colorAttachment?.texture,
+              ),
+            );
+            dot.edge(passId, colorTextureId);
+          } else {
+            dot.edge(passId, "Window");
+          }
+        }
+
+        const depthAttachment = opts?.pass?.opts?.depth;
+        const depthTexture =
+          depthAttachment?.resolveTarget ||
+          depthAttachment?.texture ||
+          depthAttachment ||
+          {};
+        const depthTextureId = depthTexture.id;
+
+        if (depthTextureId) {
+          dot.resourceNode(
+            depthTextureId,
+            formatTextureName(
+              depthTexture,
+              depthAttachment?.resolveTarget && depthAttachment?.texture,
+            ),
+          );
+          dot.edge(passId, depthTextureId);
+        }
+
+        if (opts.uses) {
+          const nodes = Object.keys(dotGraph.nodes);
+          opts.uses.forEach((tex) => {
+            if (!nodes.includes(tex.id)) {
+              dot.edge(formatTextureName(tex), passId);
+            } else {
+              dot.edge(tex.id, passId);
+            }
+          });
+          if (ctx.debugMode) console.log("render-graph uses", opts.uses);
+        }
+      }
+
+      originalRenderPass.call(renderGraph, ...args);
+    };
+
+    const originalEndFrame = renderGraph.endFrame;
+    renderGraph.endFrame = (...args) => {
+      originalEndFrame.call(renderGraph, ...args);
+      if (this.needsRender) {
+        dot.render();
+        this.needsRender = false;
+      }
+    };
+  },
+  draw() {
+    this.needsRender = true;
+  },
+});
+
+const getSceneGraphViz = () => ({
+  ...dot,
+  needsRender: false,
+  init(entities) {
+    this.entities = entities;
+  },
+  draw() {
+    const dot = this;
+    dot.reset();
+
+    this.entities?.forEach((entity) => {
+      dot.node(
+        entity.id,
+        `${entity.transform.depth ?? "?"}: ${entity.name || "Entity"} (${
+          entity.id
+        })`,
+      );
+      const parent = entity.transform.parent;
+      if (parent) dot.edge(parent.entity.id, entity.id);
+    });
+
+    dot.render();
+
+    this.needsRender = true;
+  },
+});
+
+export { getRenderPassGraphViz, getSceneGraphViz };
 
 export default dot;

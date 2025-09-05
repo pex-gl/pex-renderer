@@ -15,9 +15,8 @@ import { cube } from "primitive-geometry";
 
 random.seed(0);
 
-// const pixelRatio = devicePixelRatio;
-const pixelRatio = 1;
-const ctx = createContext({ type: "webgl2", pixelRatio });
+const pixelRatio = 1; // devicePixelRatio;
+const ctx = createContext({ pixelRatio });
 const renderEngine = createRenderEngine({ ctx, debug: true });
 const world = createWorld();
 
@@ -101,10 +100,10 @@ function divide(parent, rects) {
 const s = 1;
 const rects = divide([-2 * s, -1 * s, 4 * s, 2 * s, 0], []);
 
+// Entities
 const postProcessing = components.postProcessing({
   aa: components.postProcessing.aa(),
   ssao: components.postProcessing.ssao({
-    type: "sao",
     intensity: 2,
   }),
   // dof: components.postProcessing.dof(),
@@ -120,17 +119,16 @@ const cameraEntity = createEntity({
 });
 world.add(cameraEntity);
 
-world.add(
-  createEntity({
-    transform: components.transform({ position: [0, -0.05, 0] }),
-    geometry: components.geometry(cube({ sx: 4, sy: 0.1, sz: 2 })),
-    material: components.material({
-      baseColor: [1, 1, 1, 1],
-      receiveShadows: true,
-      castShadows: true,
-    }),
+const floorEntity = createEntity({
+  transform: components.transform({ position: [0, -0.05, 0] }),
+  geometry: components.geometry(cube({ sx: 4, sy: 0.1, sz: 2 })),
+  material: components.material({
+    baseColor: [1, 1, 1, 1],
+    receiveShadows: true,
+    castShadows: true,
   }),
-);
+});
+world.add(floorEntity);
 
 const levelHeight = 0.04;
 const geom = {
@@ -322,13 +320,12 @@ window.addEventListener("keydown", ({ key }) => {
 
 ctx.frame(() => {
   renderEngine.update(world.entities);
-  const [{ color, normal, depth }] = renderEngine.render(
+  const [{ normal, depth }] = renderEngine.render(
     world.entities,
     cameraEntity,
   );
   guiNormalControl.texture = normal;
   guiDepthControl.texture = depth;
-  // guiAOControl.texture = color;
   guiAOControl.texture = postProcessing._targets[cameraEntity.id]["ssao.main"];
 
   ctx.debug(debugOnce);

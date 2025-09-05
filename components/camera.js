@@ -20,7 +20,6 @@ export default (options) => {
     frustum: new Float32Array(24),
     exposure: 1,
     toneMap: "aces",
-    outputEncoding: 2, // ctx.Encoding.Gamma
 
     focalLength: 50, // mm
     fStop: 2.8,

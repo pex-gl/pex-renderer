@@ -42,6 +42,7 @@ const cameraEntity = createEntity({
     postprocess: false,
     exposure: 1,
   }),
+  postProcessing: components.postProcessing(),
   orbiter: components.orbiter({ element: ctx.gl.canvas }),
 });
 world.add(cameraEntity);
@@ -80,7 +81,6 @@ world.add(skyboxEntity);
 
 const reflectionProbeEntity = createEntity({
   reflectionProbe: components.reflectionProbe({
-    // rgbm: false,
     size: State.sizes[State.sizeIndex],
   }),
 });

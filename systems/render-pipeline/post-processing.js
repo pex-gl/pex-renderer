@@ -58,7 +58,7 @@ export default ({ ctx, renderGraph, resourceCache }) => ({
         const subPass = effect.passes[j];
         const isEnabled = !subPass.enabled || subPass.enabled(renderView);
 
-        if (!isEnabled && !isFinal) continue;
+        if (!isEnabled) continue;
 
         const passName = `${effect.name}.${subPass.name}`;
 
@@ -118,10 +118,13 @@ export default ({ ctx, renderGraph, resourceCache }) => ({
           if (!outputColor) console.warn(`Missing target ${target}.`);
         } else {
           // TODO: allow size overwrite for down/upscale
-          const { outputTextureDesc } = { ...descriptors.postProcessing };
-          outputTextureDesc.width = renderView.viewport[2];
-          outputTextureDesc.height = renderView.viewport[3];
-          outputColor = resourceCache.texture2D(outputTextureDesc);
+          const textureDesc = isFinal
+            ? descriptors.postProcessing.finalTextureDesc
+            : descriptors.postProcessing.outputTextureDesc;
+          textureDesc.width = renderView.viewport[2];
+          textureDesc.height = renderView.viewport[3];
+
+          outputColor = resourceCache.texture2D(textureDesc);
         }
         outputColor.name = `postProcessingPassColorOutput ${passName} (id: ${outputColor.id})`;
 
@@ -133,11 +136,6 @@ export default ({ ctx, renderGraph, resourceCache }) => ({
           uEmissiveTexture: colorAttachments.emissive,
           ...subPass.uniforms?.(renderView),
         };
-
-        // TODO: move to descriptors
-        if (isFinal) {
-          uniforms.uTextureEncoding = uniforms.uTexture.encoding;
-        }
 
         Object.assign(uniforms, sharedUniforms, pipelineUniforms);
 
@@ -152,16 +150,12 @@ export default ({ ctx, renderGraph, resourceCache }) => ({
           count: fullscreenTriangle.count,
         };
 
-        const usedUniformNames = Object.keys(
-          postProcessingCmd.pipeline.program.uniforms,
-        );
-        const textureUniformNames = usedUniformNames.filter(
-          (name) =>
-            postProcessingCmd.pipeline.program.uniforms[name].type == 35678,
-        );
-        const uses = textureUniformNames.map(
-          (name) => postProcessingCmd.uniforms[name],
-        );
+        // Get used textures from uniforms
+        const uses = Object.entries(postProcessingCmd.pipeline.program.uniforms)
+          .map(([name, value]) => {
+            if (value.type === ctx.gl.SAMPLER_2D) return uniforms[name];
+          })
+          .filter(Boolean);
 
         const renderPassView = {
           //FIXME: this seems to be wrong
@@ -170,7 +164,7 @@ export default ({ ctx, renderGraph, resourceCache }) => ({
 
         renderGraph.renderPass({
           name: `PostProcessingPass.${passName} [${renderPassView.viewport}]`,
-          uses: uses.filter(Boolean),
+          uses,
           renderView: renderPassView,
           pass: resourceCache.pass({
             name: `postProcessingPass.${passName}`,

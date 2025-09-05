@@ -226,7 +226,7 @@ function getPexMaterialTexture(
   materialTexture,
   { textures, images, samplers },
   ctx,
-  encoding,
+  pixelFormat,
 ) {
   // Retrieve glTF root object properties
   // https://github.com/KhronosGroup/glTF/blob/main/specification/2.0/schema/texture.schema.json
@@ -284,8 +284,7 @@ function getPexMaterialTexture(
       pexTextureOptions.aniso = 16;
     }
     texture._tex = ctx.texture2D({
-      encoding: encoding || ctx.Encoding.Linear,
-      pixelFormat: ctx.PixelFormat.RGBA8,
+      pixelFormat: pixelFormat ?? ctx.PixelFormat.RGBA8,
       wrapS: sampler.wrapS,
       wrapT: sampler.wrapT,
       min: sampler.minFilter,
@@ -345,7 +344,7 @@ function handleMaterial(material, gltf, ctx) {
         pbrMetallicRoughness.baseColorTexture,
         gltf,
         ctx,
-        ctx.Encoding.SRGB,
+        ctx.PixelFormat.SRGB8_ALPHA8,
       );
     }
     if (pbrMetallicRoughness.metallicFactor !== undefined) {
@@ -359,6 +358,7 @@ function handleMaterial(material, gltf, ctx) {
         pbrMetallicRoughness.metallicRoughnessTexture,
         gltf,
         ctx,
+        ctx.PixelFormat.RGB8,
       );
     }
 
@@ -377,7 +377,7 @@ function handleMaterial(material, gltf, ctx) {
             sheenExt.sheenColorTexture,
             gltf,
             ctx,
-            ctx.Encoding.SRGB,
+            ctx.PixelFormat.SRGB8_ALPHA8,
           );
         }
         if (sheenExt.sheenRoughnessTexture) {
@@ -389,7 +389,6 @@ function handleMaterial(material, gltf, ctx) {
               sheenExt.sheenRoughnessTexture,
               gltf,
               ctx,
-              ctx.Encoding.Linear,
             );
           }
         }
@@ -407,7 +406,6 @@ function handleMaterial(material, gltf, ctx) {
             clearcoatExt.clearcoatTexture,
             gltf,
             ctx,
-            ctx.Encoding.Linear,
           );
         }
         if (clearcoatExt.clearcoatRoughnessTexture) {
@@ -415,7 +413,6 @@ function handleMaterial(material, gltf, ctx) {
             clearcoatExt.clearcoatRoughnessTexture,
             gltf,
             ctx,
-            ctx.Encoding.Linear,
           );
         }
         if (clearcoatExt.clearcoatNormalTexture) {
@@ -423,7 +420,7 @@ function handleMaterial(material, gltf, ctx) {
             clearcoatExt.clearcoatNormalTexture,
             gltf,
             ctx,
-            ctx.Encoding.SRGB, // TODO: shoudln't it be linear?
+            ctx.PixelFormat.RGB8,
           );
         }
       }
@@ -437,7 +434,7 @@ function handleMaterial(material, gltf, ctx) {
             transmissionExt.transmissionTexture,
             gltf,
             ctx,
-            ctx.Encoding.Linear,
+            ctx.PixelFormat.R8,
           );
         }
       }
@@ -453,7 +450,6 @@ function handleMaterial(material, gltf, ctx) {
             diffuseTransmissionExt.diffuseTransmissionTexture,
             gltf,
             ctx,
-            ctx.Encoding.Linear,
           );
         }
         materialProps.diffuseTransmissionColor =
@@ -463,7 +459,7 @@ function handleMaterial(material, gltf, ctx) {
             diffuseTransmissionExt.diffuseTransmissionColorTexture,
             gltf,
             ctx,
-            ctx.Encoding.SRGB,
+            ctx.PixelFormat.SRGB8_ALPHA8, // SRGB8 with ALPHA8 added for mipmap
           );
         }
       }
@@ -482,7 +478,7 @@ function handleMaterial(material, gltf, ctx) {
             volumeExt.thicknessTexture,
             gltf,
             ctx,
-            ctx.Encoding.Linear,
+            ctx.PixelFormat.RG8,
           );
         }
       }
@@ -508,7 +504,6 @@ function handleMaterial(material, gltf, ctx) {
             specularExt.specularTexture,
             gltf,
             ctx,
-            ctx.Encoding.Linear,
           );
         }
         materialProps.specularColor = specularExt.specularColorFactor || [
@@ -519,7 +514,7 @@ function handleMaterial(material, gltf, ctx) {
             specularExt.specularColorTexture,
             gltf,
             ctx,
-            ctx.Encoding.SRGB,
+            ctx.PixelFormat.SRGB8_ALPHA8, // SRGB8 with ALPHA8 added for mipmap
           );
         }
       }
@@ -527,7 +522,7 @@ function handleMaterial(material, gltf, ctx) {
   }
 
   // Specular/Glossiness workflow
-  // https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_materials_pbrSpecularGlossiness/schema/glTF.KHR_materials_pbrSpecularGlossiness.schema.json
+  // https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Archived/KHR_materials_pbrSpecularGlossiness/schema/glTF.KHR_materials_pbrSpecularGlossiness.schema.json
   const pbrSpecularGlossiness = material.extensions
     ? material.extensions.KHR_materials_pbrSpecularGlossiness
     : null;
@@ -555,7 +550,7 @@ function handleMaterial(material, gltf, ctx) {
         pbrSpecularGlossiness.diffuseTexture,
         gltf,
         ctx,
-        ctx.Encoding.SRGB,
+        ctx.PixelFormat.SRGB8_ALPHA8,
       );
     }
     if (pbrSpecularGlossiness.specularGlossinessTexture) {
@@ -563,7 +558,7 @@ function handleMaterial(material, gltf, ctx) {
         pbrSpecularGlossiness.specularGlossinessTexture,
         gltf,
         ctx,
-        ctx.Encoding.SRGB,
+        ctx.PixelFormat.SRGB8_ALPHA8,
       );
     }
   }
@@ -585,6 +580,7 @@ function handleMaterial(material, gltf, ctx) {
       material.occlusionTexture,
       gltf,
       ctx,
+      ctx.PixelFormat.R8,
     );
   }
 
@@ -593,7 +589,7 @@ function handleMaterial(material, gltf, ctx) {
       material.emissiveTexture,
       gltf,
       ctx,
-      ctx.Encoding.SRGB,
+      ctx.PixelFormat.SRGB8_ALPHA8, // SRGB8 with ALPHA8 added for mipmap
     );
   }
 

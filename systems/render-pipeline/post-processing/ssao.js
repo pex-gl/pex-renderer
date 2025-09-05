@@ -31,11 +31,11 @@ function generateBlueNoiseTexture(ctx) {
     height: generator.size,
     data: data,
     pixelFormat: ctx.PixelFormat.RGBA8,
-    encoding: ctx.Encoding.Linear,
     wrap: ctx.Wrap.Repeat,
     mag: ctx.Filter.Linear,
     min: ctx.Filter.Linear,
   });
+  blueNoiseTexture.name = `ssaoBlueNoiseTexture`;
   return blueNoiseTexture;
 }
 
@@ -59,11 +59,11 @@ function generateNoiseTexture(ctx) {
     height: size,
     data: ssaoNoiseData,
     pixelFormat: ctx.gl.RG ? ctx.PixelFormat.RG32F : ctx.PixelFormat.RGBA32F,
-    encoding: ctx.Encoding.Linear,
     wrap: ctx.Wrap.Repeat,
     mag: ctx.Filter.Linear,
     min: ctx.Filter.Linear,
   });
+  noiseTexture.name = `ssaoNoiseTexture`;
   return noiseTexture;
 }
 

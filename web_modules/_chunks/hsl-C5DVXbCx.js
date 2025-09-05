@@ -833,7 +833,7 @@ var utils = /*#__PURE__*/Object.freeze({
  * @param {boolean} alpha Handle alpha
  * @returns {hex}
  */ function toHex(color, alpha = true) {
-    const c = color.map((val)=>Math.round(val * 255));
+    const c = color.map((val)=>Math.max(0, Math.min(255, Math.round(val * 255))));
     return `#${(c[2] | c[1] << 8 | c[0] << 16 | 1 << 24).toString(16).slice(1).toUpperCase()}${alpha && color[3] !== undefined && color[3] !== 1 ? (c[3] | 1 << 8).toString(16).slice(1) : ""}`;
 }
 

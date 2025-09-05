@@ -549,8 +549,7 @@ export default ({ ctx }) => ({
       pipeline: this.getPipeline(ctx, { geometry }, options),
       count: geometry.count,
       uniforms: {
-        uExposure: renderView.exposure,
-        uOutputEncoding: renderView.outputEncoding,
+        uExposure: 1,
 
         uProjectionMatrix: renderView.camera.projectionMatrix,
         uViewMatrix: renderView.camera.viewMatrix,
