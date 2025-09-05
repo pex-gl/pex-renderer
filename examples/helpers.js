@@ -49,6 +49,7 @@ const cameraEntity = createEntity({
     far: 100,
     viewport: [0, 0, Math.floor(splitRatio * W), H],
   }),
+  postProcessing: components.postProcessing(),
   orbiter: components.orbiter({ element: ctx.gl.canvas, maxDistance: 1 }),
   cameraHelper: components.cameraHelper({ color: [0, 1, 0, 1] }),
 });

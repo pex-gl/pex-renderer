@@ -28,19 +28,18 @@ const State = {
   baseColor: [0.8, 0.1, 0.1, 1.0],
 
   msaa: true,
-  aa: true,
   ssao: true,
-  fog: false,
-  bloom: true,
   dof: true,
+  bloom: true,
+  fog: false,
+  vignette: true,
   lut: true,
   colorCorrection: true,
-  vignette: true,
+  aa: true,
   filmGrain: true,
 };
 
-// const pixelRatio = devicePixelRatio;
-const pixelRatio = 1;
+const pixelRatio = 1; // devicePixelRatio;
 const ctx = createContext({ pixelRatio });
 const renderEngine = createRenderEngine({ ctx, debug: true });
 const world = createWorld();
@@ -76,26 +75,8 @@ const camera = components.camera({
   fStop: 4,
 });
 const postProcessing = components.postProcessing({
-  dof: {
-    type: "gustafsson", // upitis
-    physical: true,
-    focusDistance: 7,
-    focusScale: 1,
-    samples: 6,
-    focusOnScreenPoint: false,
-    screenPoint: [0.5, 0.5],
-    chromaticAberration: 0.7,
-    luminanceThreshold: 0.7,
-    luminanceGain: 1,
-    shape: "disk",
-    debug: false,
-  },
   msaa: {
     sampleCount: 4,
-  },
-  aa: {
-    quality: 2,
-    subPixelQuality: 0.75,
   },
   ssao: {
     type: "sao", // "gtao",
@@ -117,6 +98,28 @@ const postProcessing = components.postProcessing({
     colorBounce: true,
     colorBounceIntensity: 1.0,
   },
+  dof: {
+    type: "gustafsson", // upitis
+    physical: true,
+    focusDistance: 7,
+    focusScale: 1,
+    samples: 6,
+    focusOnScreenPoint: false,
+    screenPoint: [0.5, 0.5],
+    chromaticAberration: 0.7,
+    luminanceThreshold: 0.7,
+    luminanceGain: 1,
+    shape: "disk",
+    debug: false,
+  },
+  bloom: {
+    quality: 1,
+    colorFunction: "luma",
+    threshold: 1,
+    source: false,
+    radius: 1,
+    intensity: 0.1,
+  },
   fog: {
     color: [0.5, 0.5, 0.5],
     start: 5,
@@ -128,13 +131,9 @@ const postProcessing = components.postProcessing({
     sunColor: [0.98, 0.98, 0.7],
     inscatteringCoeffs: [0.3, 0.3, 0.3],
   },
-  bloom: {
-    quality: 1,
-    colorFunction: "luma",
-    threshold: 1,
-    source: false,
-    radius: 1,
-    intensity: 0.1,
+  vignette: {
+    radius: 0.8,
+    intensity: 0.2,
   },
   lut: {
     texture: await getTexture(
@@ -156,9 +155,9 @@ const postProcessing = components.postProcessing({
     saturation: 1,
     hue: 0,
   },
-  vignette: {
-    radius: 0.8,
-    intensity: 0.2,
+  aa: {
+    quality: 2,
+    subPixelQuality: 0.75,
   },
   filmGrain: {
     quality: 2,
@@ -382,7 +381,7 @@ gui.addColumn("Attachments");
 gui.addFPSMeeter();
 State.msg = "";
 
-gui.addButton("Toggle Render Graph", () => {
+gui.addButton("Toggle Render Pass Graph", () => {
   renderPassGraphViz.toggle();
 });
 gui.addRadioList(
@@ -449,7 +448,7 @@ gui.addParam("Enabled", State, "enabled", null, () => {
   } else {
     delete cameraEntity.postProcessing;
   }
-  if (renderPassGraphViz.isRendered()) renderPassGraphViz.render();
+  if (renderPassGraphViz.isRendered()) renderPassGraphViz.draw();
 });
 const enablePostProPass = (name) => {
   if (State[name]) {
@@ -458,7 +457,7 @@ const enablePostProPass = (name) => {
     State[`_${name}`] = postProcessing[name];
     delete postProcessing[name];
   }
-  if (renderPassGraphViz.isRendered()) renderPassGraphViz.render();
+  if (renderPassGraphViz.isRendered()) renderPassGraphViz.draw();
 };
 gui.addParam("MSAA", State, "msaa", null, () => {
   enablePostProPass("msaa");
@@ -712,12 +711,12 @@ gui.addParam("Speed", postProcessing.filmGrain, "speed", { min: 0, max: 1 });
 enablePostProPass("msaa");
 enablePostProPass("ssao");
 enablePostProPass("dof");
-enablePostProPass("aa");
-enablePostProPass("fog");
 enablePostProPass("bloom");
+enablePostProPass("fog");
+enablePostProPass("vignette");
 enablePostProPass("lut");
 enablePostProPass("colorCorrection");
-enablePostProPass("vignette");
+enablePostProPass("aa");
 enablePostProPass("filmGrain");
 
 // Events

@@ -1,8 +1,10 @@
 import {
-  systems,
-  components,
   world as createWorld,
   entity as createEntity,
+  renderGraph as createRenderGraph,
+  resourceCache as createResourceCache,
+  systems,
+  components,
 } from "../index.js";
 import createContext from "pex-context";
 import createGUI from "pex-gui";
@@ -45,11 +47,10 @@ function rand() {
 const gradient = cosineGradient(scheme[0], scheme[1], scheme[2], scheme[3]);
 
 // Start
-const ctx = createContext({
-  type: "webgl",
-});
-
+const ctx = createContext();
 const world = createWorld();
+const renderGraph = createRenderGraph(ctx);
+const resourceCache = createResourceCache(ctx);
 
 function aabbToString(aabb) {
   if (!aabb) return "[]";
@@ -83,19 +84,16 @@ let debugOnce = false;
 
 // Camera
 const cameraEntity = createEntity({
-  // renderer.postProcessing({
-  //   ssao: true,
-  //   ssaoRadius: 4,
-  //   dof: true,
-  //   dofAperture: 1,
-  //   dofFocusDistance: 5,
-  //   fxaa: true,
-  // }),
   transform: components.transform(),
   camera: components.camera({
     fov: Math.PI / 3,
     aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
     exposure: 2,
+  }),
+  postProcessing: components.postProcessing({
+    ssao: components.postProcessing.ssao({ radius: 4 }),
+    dof: components.postProcessing.dof({ focusDistance: 5 }),
+    fxaa: components.postProcessing.aa(),
   }),
   orbiter: components.orbiter({
     position: [0, 3, 8],
@@ -319,20 +317,56 @@ window.addEventListener("keydown", ({ key }) => {
   if (key === "d") debugOnce = true;
 });
 
-world.addSystem(systems.geometry({ ctx }));
-world.addSystem(systems.transform());
-world.addSystem(systems.camera());
-world.addSystem(systems.skybox({ ctx }));
-world.addSystem(systems.reflectionProbe({ ctx }));
-world.addSystem(systems.renderer({ ctx }));
+const geometrySystem = systems.geometry({ ctx });
+const transformSystem = systems.transform();
+const cameraSystem = systems.camera();
+const skyboxSystem = systems.skybox({ ctx, resourceCache });
+const reflectionProbeSystem = systems.reflectionProbe({ ctx, resourceCache });
+const lightSystem = systems.light();
+const renderPipelineSystem = systems.renderPipeline({
+  ctx,
+  resourceCache,
+  renderGraph,
+});
+const standardRendererSystem = systems.renderer.standard({
+  ctx,
+  resourceCache,
+  renderGraph,
+});
+const skyboxRendererSystem = systems.renderer.skybox({ ctx, resourceCache });
 
 let shadowMapPreview;
 
 ctx.frame(() => {
-  ctx.debug(frameNumber++ === 1);
-  ctx.debug(debugOnce);
-  debugOnce = false;
-  world.update();
+  resourceCache.beginFrame();
+  renderGraph.beginFrame();
+
+  const renderView = {
+    camera: cameraEntity.camera,
+    cameraEntity: cameraEntity,
+    viewport: [0, 0, ctx.gl.drawingBufferWidth, ctx.gl.drawingBufferHeight],
+  };
+
+  try {
+    geometrySystem.update(world.entities);
+    transformSystem.update(world.entities);
+    skyboxSystem.update(world.entities);
+    cameraSystem.update(world.entities);
+    reflectionProbeSystem.update(world.entities, {
+      renderers: [skyboxRendererSystem],
+    });
+    lightSystem.update(world.entities);
+    renderPipelineSystem.update(world.entities, {
+      renderers: [standardRendererSystem, skyboxRendererSystem],
+      renderView,
+    });
+  } catch (error) {
+    console.error(error);
+    return false;
+  }
+
+  renderGraph.endFrame();
+  resourceCache.endFrame();
 
   if (sunLight._shadowMap && !shadowMapPreview) {
     shadowMapPreview = gui.addTexture2D("Shadow Map", sunLight._shadowMap); //TODO

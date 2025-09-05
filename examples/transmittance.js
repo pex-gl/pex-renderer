@@ -202,10 +202,10 @@ for (let i = 0; i < nW * nH; i++) {
       position: [0, 0, 1],
     }),
     camera: components.camera({
-      fov: Math.PI / 4,
       near: 0.001,
       toneMap: "neutral",
     }),
+    postProcessing: components.postProcessing(),
     orbiter: components.orbiter({ element: ctx.gl.canvas }),
   });
   world.add(cameraEntity);

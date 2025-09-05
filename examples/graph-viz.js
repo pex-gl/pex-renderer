@@ -95,6 +95,19 @@ const dot = {
     svgElement.removeAttribute("width");
     svgElement.removeAttribute("height");
   },
+  destroy() {
+    containerElement.innerHTML = "";
+  },
+  isRendered() {
+    return containerElement.hasChildNodes();
+  },
+  toggle() {
+    if (this.isRendered()) {
+      this.destroy();
+    } else {
+      this.draw?.();
+    }
+  },
 };
 
 const formatTextureName = ({ id, name, pixelFormat }, { id: resolveId } = {}) =>
@@ -103,6 +116,7 @@ const formatTextureName = ({ id, name, pixelFormat }, { id: resolveId } = {}) =>
     .replace(")", ` ${pixelFormat}${resolveId ? ` from ${resolveId}` : ``})`);
 
 const getRenderPassGraphViz = () => ({
+  ...dot,
   needsRender: false,
   init(ctx, renderGraph) {
     const originalBeginFrame = renderGraph.beginFrame;
@@ -190,24 +204,38 @@ const getRenderPassGraphViz = () => ({
       }
     };
   },
-  render() {
+  draw() {
     this.needsRender = true;
-  },
-  destroy() {
-    containerElement.innerHTML = "";
-  },
-  isRendered() {
-    return containerElement.hasChildNodes();
-  },
-  toggle() {
-    if (this.isRendered()) {
-      this.destroy();
-    } else {
-      this.render();
-    }
   },
 });
 
-export { getRenderPassGraphViz };
+const getSceneGraphViz = () => ({
+  ...dot,
+  needsRender: false,
+  init(entities) {
+    this.entities = entities;
+  },
+  draw() {
+    const dot = this;
+    dot.reset();
+
+    this.entities?.forEach((entity) => {
+      dot.node(
+        entity.id,
+        `${entity.transform.depth ?? "?"}: ${entity.name || "Entity"} (${
+          entity.id
+        })`,
+      );
+      const parent = entity.transform.parent;
+      if (parent) dot.edge(parent.entity.id, entity.id);
+    });
+
+    dot.render();
+
+    this.needsRender = true;
+  },
+});
+
+export { getRenderPassGraphViz, getSceneGraphViz };
 
 export default dot;

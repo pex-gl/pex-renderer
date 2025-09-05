@@ -42,6 +42,7 @@ const cameraEntity = createEntity({
     postprocess: false,
     exposure: 1,
   }),
+  postProcessing: components.postProcessing(),
   orbiter: components.orbiter({ element: ctx.gl.canvas }),
 });
 world.add(cameraEntity);

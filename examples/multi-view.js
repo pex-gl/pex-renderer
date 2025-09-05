@@ -328,7 +328,7 @@ gui.addStats();
 gui.addButton("Tree", () => {
   debugSceneTree(entities);
 });
-gui.addButton("Toggle Render Graph", () => {
+gui.addButton("Toggle Render Pass Graph", () => {
   renderPassGraphViz.toggle();
 });
 const guiColorControl = gui.addTexture2D("Color", null, { flipY: true });

@@ -34,6 +34,7 @@ for (let i = 0; i < 3; i++) {
         window.innerHeight * pixelRatio,
       ],
     }),
+    postProcessing: components.postProcessing(),
     orbiter: components.orbiter({ element: ctx.gl.canvas }),
   });
   world.add(cameraEntity);

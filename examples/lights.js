@@ -53,6 +53,7 @@ const cameraEntities = gridCells(W, H, nW, nH, 0).map((cell, i) => {
         cell[3],
       ],
     }),
+    postProcessing: components.postProcessing(),
     orbiter: components.orbiter({ element: ctx.gl.canvas }),
   });
   world.add(cameraEntity);

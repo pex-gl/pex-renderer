@@ -10,6 +10,7 @@ import createGUI from "pex-gui";
 import { vec3, quat } from "pex-math";
 import { sphere } from "primitive-geometry";
 import gridCells from "grid-cells";
+
 import { getEnvMap } from "./utils.js";
 
 const State = {
@@ -21,7 +22,6 @@ const ctx = createContext({ pixelRatio });
 const renderEngine = createRenderEngine({ ctx, debug: true });
 const world = createWorld();
 
-const gui = createGUI(ctx);
 const nW = 11;
 
 const colors = {
@@ -108,9 +108,8 @@ for (let i = 0; i < nW * nH; i++) {
     transform: components.transform({
       position: [0, 0, 2],
     }),
-    camera: components.camera({
-      fov: Math.PI / 4,
-    }),
+    camera: components.camera(),
+    postProcessing: components.postProcessing(),
     orbiter: components.orbiter({ element: ctx.gl.canvas }),
   });
   world.add(cameraEntity);
@@ -158,6 +157,7 @@ const sunEntity = createEntity({
 world.add(sunEntity);
 
 // GUI
+const gui = createGUI(ctx);
 gui.addColumn("");
 gui.addFPSMeeter().setPosition(10, 40);
 gui.addColumn("Resources");

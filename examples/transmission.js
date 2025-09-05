@@ -263,7 +263,7 @@ const dummyTexture2D = ctx.texture2D({
   height: 4,
 });
 const guiCaptureControl = gui.addTexture2D("Capture", null, { flipY: true });
-gui.addButton("Toggle Render Graph", () => {
+gui.addButton("Toggle Render Pass Graph", () => {
   renderPassGraphViz.toggle();
 });
 gui.addRadioList(

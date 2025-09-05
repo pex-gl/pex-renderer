@@ -221,9 +221,8 @@ for (let i = 0; i < nW * nH; i++) {
     transform: components.transform({
       position: [0, 0, 2],
     }),
-    camera: components.camera({
-      fov: Math.PI / 4,
-    }),
+    camera: components.camera(),
+    postProcessing: components.postProcessing(),
     orbiter: components.orbiter({ element: ctx.gl.canvas }),
   });
   world.add(cameraEntity);

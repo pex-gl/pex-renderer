@@ -39,6 +39,7 @@ const cameraEntity = createEntity({
     culling: true,
     clearColor: [0.01, 0.01, 0.01, 1],
   }),
+  postProcessing: components.postProcessing(),
   cameraHelper: components.cameraHelper(),
 });
 world.add(cameraEntity);
@@ -48,6 +49,7 @@ const fixCameraEntity = createEntity({
     rotation: quat.fromEuler(quat.create(), [-Math.PI / 2, 0, 0]),
   }),
   camera: components.camera(),
+  postProcessing: components.postProcessing(),
   orbiter: components.orbiter({ element: ctx.gl.canvas }),
 });
 world.add(fixCameraEntity);
