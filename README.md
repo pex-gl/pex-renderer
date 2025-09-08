@@ -315,9 +315,9 @@ Create a resource cache for pex-context caching.
     - [.aa([options])](#module_components.postProcessing.aa) ⇒ <code>object</code>
     - [.fog([options])](#module_components.postProcessing.fog) ⇒ <code>object</code>
     - [.bloom([options])](#module_components.postProcessing.bloom) ⇒ <code>object</code>
+    - [.vignette([options])](#module_components.postProcessing.vignette) ⇒ <code>object</code>
     - [.lut([options])](#module_components.postProcessing.lut) ⇒ <code>object</code>
     - [.colorCorrection([options])](#module_components.postProcessing.colorCorrection) ⇒ <code>object</code>
-    - [.vignette([options])](#module_components.postProcessing.vignette) ⇒ <code>object</code>
     - [.filmGrain([options])](#module_components.postProcessing.filmGrain) ⇒ <code>object</code>
   - [.reflectionProbe([options])](#module_components.reflectionProbe) ⇒ <code>object</code>
   - [.skin([options])](#module_components.skin) ⇒ <code>object</code>
@@ -525,9 +525,9 @@ Post Processing component
   - [.aa([options])](#module_components.postProcessing.aa) ⇒ <code>object</code>
   - [.fog([options])](#module_components.postProcessing.fog) ⇒ <code>object</code>
   - [.bloom([options])](#module_components.postProcessing.bloom) ⇒ <code>object</code>
+  - [.vignette([options])](#module_components.postProcessing.vignette) ⇒ <code>object</code>
   - [.lut([options])](#module_components.postProcessing.lut) ⇒ <code>object</code>
   - [.colorCorrection([options])](#module_components.postProcessing.colorCorrection) ⇒ <code>object</code>
-  - [.vignette([options])](#module_components.postProcessing.vignette) ⇒ <code>object</code>
   - [.filmGrain([options])](#module_components.postProcessing.filmGrain) ⇒ <code>object</code>
 
 <a name="module_components.postProcessing.ssao"></a>
@@ -602,6 +602,18 @@ Post Processing Bloom subcomponent
 | --------- | ------------------------------------------------------------ |
 | [options] | [<code>BloomComponentOptions</code>](#BloomComponentOptions) |
 
+<a name="module_components.postProcessing.vignette"></a>
+
+#### postProcessing.vignette([options]) ⇒ <code>object</code>
+
+Post Processing Vignette subcomponent
+
+**Kind**: static method of [<code>postProcessing</code>](#module_components.postProcessing)
+
+| Param     | Type                                                               |
+| --------- | ------------------------------------------------------------------ |
+| [options] | [<code>VignetteComponentOptions</code>](#VignetteComponentOptions) |
+
 <a name="module_components.postProcessing.lut"></a>
 
 #### postProcessing.lut([options]) ⇒ <code>object</code>
@@ -625,18 +637,6 @@ Post Processing Color Correction subcomponent
 | Param     | Type                                                                             |
 | --------- | -------------------------------------------------------------------------------- |
 | [options] | [<code>ColorCorrectionComponentOptions</code>](#ColorCorrectionComponentOptions) |
-
-<a name="module_components.postProcessing.vignette"></a>
-
-#### postProcessing.vignette([options]) ⇒ <code>object</code>
-
-Post Processing Vignette subcomponent
-
-**Kind**: static method of [<code>postProcessing</code>](#module_components.postProcessing)
-
-| Param     | Type                                                               |
-| --------- | ------------------------------------------------------------------ |
-| [options] | [<code>VignetteComponentOptions</code>](#VignetteComponentOptions) |
 
 <a name="module_components.postProcessing.filmGrain"></a>
 
@@ -1086,30 +1086,27 @@ Standard renderer
 **Kind**: global typedef
 **Properties**
 
-| Name             | Type                                                                                                                                                                                                                                                                                                                                                              | Default                              | Description                                                            |
-| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ | ---------------------------------------------------------------------- |
-| [projection]     | <code>&quot;perspective&quot;</code> \| <code>&quot;orthographic&quot;</code>                                                                                                                                                                                                                                                                                     | <code>&quot;perspective&quot;</code> |                                                                        |
-| [near]           | <code>number</code>                                                                                                                                                                                                                                                                                                                                               | <code>0.5</code>                     |                                                                        |
-| [far]            | <code>number</code>                                                                                                                                                                                                                                                                                                                                               | <code>1000</code>                    |                                                                        |
-| [aspect]         | <code>number</code>                                                                                                                                                                                                                                                                                                                                               | <code>1</code>                       |                                                                        |
-| [clearColor]     | <code>module:pex-color~color</code>                                                                                                                                                                                                                                                                                                                               |                                      |                                                                        |
-| [viewMatrix]     | <code>mat4</code>                                                                                                                                                                                                                                                                                                                                                 |                                      |                                                                        |
-| [invViewMatrix]  | <code>mat4</code>                                                                                                                                                                                                                                                                                                                                                 |                                      |                                                                        |
-| [culling]        | <code>boolean</code>                                                                                                                                                                                                                                                                                                                                              | <code>false</code>                   |                                                                        |
-| [exposure]       | <code>number</code>                                                                                                                                                                                                                                                                                                                                               | <code>1</code>                       |                                                                        |
-| [toneMap]        | <code>&quot;aces&quot;</code> \| <code>&quot;agx&quot;</code> \| <code>&quot;filmic&quot;</code> \| <code>&quot;lottes&quot;</code> \| <code>&quot;neutral&quot;</code> \| <code>&quot;reinhard&quot;</code> \| <code>&quot;reinhard2&quot;</code> \| <code>&quot;uchimura&quot;</code> \| <code>&quot;uncharted2&quot;</code> \| <code>&quot;unreal&quot;</code> | <code>&quot;aces&quot;</code>        |                                                                        |
-| [outputEncoding] | <code>number</code>                                                                                                                                                                                                                                                                                                                                               | <code>ctx.Encoding.Gamma</code>      |                                                                        |
-| [focalLength]    | <code>number</code>                                                                                                                                                                                                                                                                                                                                               | <code>50</code>                      | Focal length of the camera lens [10mm - 200mm] in mm                   |
-| [fStop]          | <code>number</code>                                                                                                                                                                                                                                                                                                                                               | <code>2.8</code>                     | Ratio of camera lens opening, f-number, f/N, aperture [1.2 - 32] in mm |
-| [sensorSize]     | <code>number</code>                                                                                                                                                                                                                                                                                                                                               | <code>[36, 24]</code>                | Physical camera sensor or film size [sensorWidth, sensorHeight] in mm  |
-| sensorFit        | <code>&quot;vertical&quot;</code> \| <code>&quot;horizontal&quot;</code> \| <code>&quot;fit&quot;</code> \| <code>&quot;overscan&quot;</code> \| <code>&quot;vertical&quot;</code>                                                                                                                                                                                |                                      | Matching of camera frame to sensor frame                               |
-| [view]           | [<code>CameraView</code>](#CameraView)                                                                                                                                                                                                                                                                                                                            |                                      |                                                                        |
-| [fov]            | <code>number</code>                                                                                                                                                                                                                                                                                                                                               | <code>Math.PI / 4</code>             |                                                                        |
-| [left]           | <code>number</code>                                                                                                                                                                                                                                                                                                                                               | <code>-1</code>                      |                                                                        |
-| [right]          | <code>number</code>                                                                                                                                                                                                                                                                                                                                               | <code>1</code>                       |                                                                        |
-| [bottom]         | <code>number</code>                                                                                                                                                                                                                                                                                                                                               | <code>-1</code>                      |                                                                        |
-| [top]            | <code>number</code>                                                                                                                                                                                                                                                                                                                                               | <code>1</code>                       |                                                                        |
-| [zoom]           | <code>number</code>                                                                                                                                                                                                                                                                                                                                               | <code>1</code>                       |                                                                        |
+| Name            | Type                                                                                                                                                                               | Default                              | Description                                                            |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ | ---------------------------------------------------------------------- |
+| [projection]    | <code>&quot;perspective&quot;</code> \| <code>&quot;orthographic&quot;</code>                                                                                                      | <code>&quot;perspective&quot;</code> |                                                                        |
+| [near]          | <code>number</code>                                                                                                                                                                | <code>0.5</code>                     |                                                                        |
+| [far]           | <code>number</code>                                                                                                                                                                | <code>1000</code>                    |                                                                        |
+| [aspect]        | <code>number</code>                                                                                                                                                                | <code>1</code>                       |                                                                        |
+| [clearColor]    | <code>module:pex-color~color</code>                                                                                                                                                |                                      |                                                                        |
+| [viewMatrix]    | <code>mat4</code>                                                                                                                                                                  |                                      |                                                                        |
+| [invViewMatrix] | <code>mat4</code>                                                                                                                                                                  |                                      |                                                                        |
+| [culling]       | <code>boolean</code>                                                                                                                                                               | <code>false</code>                   |                                                                        |
+| [focalLength]   | <code>number</code>                                                                                                                                                                | <code>50</code>                      | Focal length of the camera lens [10mm - 200mm] in mm                   |
+| [fStop]         | <code>number</code>                                                                                                                                                                | <code>2.8</code>                     | Ratio of camera lens opening, f-number, f/N, aperture [1.2 - 32] in mm |
+| [sensorSize]    | <code>number</code>                                                                                                                                                                | <code>[36, 24]</code>                | Physical camera sensor or film size [sensorWidth, sensorHeight] in mm  |
+| sensorFit       | <code>&quot;vertical&quot;</code> \| <code>&quot;horizontal&quot;</code> \| <code>&quot;fit&quot;</code> \| <code>&quot;overscan&quot;</code> \| <code>&quot;vertical&quot;</code> |                                      | Matching of camera frame to sensor frame                               |
+| [view]          | [<code>CameraView</code>](#CameraView)                                                                                                                                             |                                      |                                                                        |
+| [fov]           | <code>number</code>                                                                                                                                                                | <code>Math.PI / 4</code>             |                                                                        |
+| [left]          | <code>number</code>                                                                                                                                                                | <code>-1</code>                      |                                                                        |
+| [right]         | <code>number</code>                                                                                                                                                                | <code>1</code>                       |                                                                        |
+| [bottom]        | <code>number</code>                                                                                                                                                                | <code>-1</code>                      |                                                                        |
+| [top]           | <code>number</code>                                                                                                                                                                | <code>1</code>                       |                                                                        |
+| [zoom]          | <code>number</code>                                                                                                                                                                | <code>1</code>                       |                                                                        |
 
 <a name="DirectionalLightComponentOptions"></a>
 
@@ -1470,18 +1467,20 @@ Standard renderer
 **Kind**: global typedef
 **Properties**
 
-| Name              | Type                                                                             |
-| ----------------- | -------------------------------------------------------------------------------- |
-| [ssao]            | [<code>SSAOComponentOptions</code>](#SSAOComponentOptions)                       |
-| [dof]             | [<code>DoFComponentOptions</code>](#DoFComponentOptions)                         |
-| [aa]              | [<code>AAComponentOptions</code>](#AAComponentOptions)                           |
-| [fog]             | [<code>FogComponentOptions</code>](#FogComponentOptions)                         |
-| [bloom]           | [<code>BloomComponentOptions</code>](#BloomComponentOptions)                     |
-| [lut]             | [<code>LutComponentOptions</code>](#LutComponentOptions)                         |
-| [colorCorrection] | [<code>ColorCorrectionComponentOptions</code>](#ColorCorrectionComponentOptions) |
-| [vignette]        | [<code>VignetteComponentOptions</code>](#VignetteComponentOptions)               |
-| [filmGrain]       | [<code>FilmGrainComponentOptions</code>](#FilmGrainComponentOptions)             |
-| opacity           | <code>number</code>                                                              |
+| Name              | Type                                                                                                                                                                                                                                                                                                                                                                                                    | Default                       |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- |
+| [ssao]            | [<code>SSAOComponentOptions</code>](#SSAOComponentOptions)                                                                                                                                                                                                                                                                                                                                              |                               |
+| [dof]             | [<code>DoFComponentOptions</code>](#DoFComponentOptions)                                                                                                                                                                                                                                                                                                                                                |                               |
+| [aa]              | [<code>AAComponentOptions</code>](#AAComponentOptions)                                                                                                                                                                                                                                                                                                                                                  |                               |
+| [fog]             | [<code>FogComponentOptions</code>](#FogComponentOptions)                                                                                                                                                                                                                                                                                                                                                |                               |
+| [bloom]           | [<code>BloomComponentOptions</code>](#BloomComponentOptions)                                                                                                                                                                                                                                                                                                                                            |                               |
+| [lut]             | [<code>LutComponentOptions</code>](#LutComponentOptions)                                                                                                                                                                                                                                                                                                                                                |                               |
+| [colorCorrection] | [<code>ColorCorrectionComponentOptions</code>](#ColorCorrectionComponentOptions)                                                                                                                                                                                                                                                                                                                        |                               |
+| [vignette]        | [<code>VignetteComponentOptions</code>](#VignetteComponentOptions)                                                                                                                                                                                                                                                                                                                                      |                               |
+| [filmGrain]       | [<code>FilmGrainComponentOptions</code>](#FilmGrainComponentOptions)                                                                                                                                                                                                                                                                                                                                    |                               |
+| [exposure]        | <code>number</code>                                                                                                                                                                                                                                                                                                                                                                                     | <code>1</code>                |
+| [toneMap]         | <code>&quot;aces&quot;</code> \| <code>&quot;agx&quot;</code> \| <code>&quot;agxPunchy&quot;</code> \| <code>&quot;filmic&quot;</code> \| <code>&quot;lottes&quot;</code> \| <code>&quot;neutral&quot;</code> \| <code>&quot;reinhard&quot;</code> \| <code>&quot;reinhard2&quot;</code> \| <code>&quot;uchimura&quot;</code> \| <code>&quot;uncharted2&quot;</code> \| <code>&quot;unreal&quot;</code> | <code>&quot;aces&quot;</code> |
+| opacity           | <code>number</code>                                                                                                                                                                                                                                                                                                                                                                                     |                               |
 
 <a name="ReflectionProbeComponentOptions"></a>
 
@@ -1806,13 +1805,11 @@ Standard renderer
 **Kind**: global typedef
 **Properties**
 
-| Name             | Type                                                 |
-| ---------------- | ---------------------------------------------------- |
-| camera           | <code>object</code>                                  |
-| cameraEntity     | [<code>Entity</code>](#Entity)                       |
-| viewport         | <code>module:pex-context/types/types~Viewport</code> |
-| [exposure]       | <code>object</code>                                  |
-| [outputEncoding] | <code>object</code>                                  |
+| Name         | Type                                                 |
+| ------------ | ---------------------------------------------------- |
+| camera       | <code>object</code>                                  |
+| cameraEntity | [<code>Entity</code>](#Entity)                       |
+| viewport     | <code>module:pex-context/types/types~Viewport</code> |
 
 <!-- api-end -->
 

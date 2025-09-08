@@ -2,6 +2,30 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+# [5.0.0-alpha.0](https://github.com/pex-gl/pex-renderer/compare/v4.0.0...v5.0.0-alpha.0) (2025-09-08)
+
+
+### Bug Fixes
+
+* **post-processing:** allow disabling final.main ([dfd2d0f](https://github.com/pex-gl/pex-renderer/commit/dfd2d0f375fa3f3108667952a7beed232cfb5a75))
+
+
+### Features
+
+* **ecs:** add reversible tone mapping for MSAA resolve ([b12bdb9](https://github.com/pex-gl/pex-renderer/commit/b12bdb9dbb558b33b19ff8bb608b60b95e9f6075))
+* **ecs:** get exposure from post-processing components in post-processing passes ([15cd277](https://github.com/pex-gl/pex-renderer/commit/15cd2777305c1c1800e1f093cfb28b06efa0b459))
+* **ecs:** remove ctx.Encoding references + remove camera outputEncoding + remove RGBM from reflection probe ([1e70867](https://github.com/pex-gl/pex-renderer/commit/1e70867c43d3f31b879f1f676b3587065cd601da)), closes [#415](https://github.com/pex-gl/pex-renderer/issues/415)
+* **ecs:** remove output encoding references ([46e2673](https://github.com/pex-gl/pex-renderer/commit/46e26731316e7c1513eb839018fea5042fcde9cf))
+* **ecs:** use SRGB8_ALPHA8 for sky texture ([d2a1faa](https://github.com/pex-gl/pex-renderer/commit/d2a1faa745c5df5d04c18ddcc93479671bb7de53))
+* **gltf:** update textures types in gltf loaders for srgb + use combine/final shaders ([33e2170](https://github.com/pex-gl/pex-renderer/commit/33e2170d31c8ab467bf9297ca825cc1b98abbd75))
+* **post-processing:** add final luma pass for FXAA ([648e631](https://github.com/pex-gl/pex-renderer/commit/648e6319f0ffc979437892c3bbfff0edf9858466))
+* **post-processing:** move tonemap and exposure to post-processing ([eef9472](https://github.com/pex-gl/pex-renderer/commit/eef94728f7f59b84099c31c5100457afa5c0ad80))
+* **post-processing:** set post-processing color output pixel format to SRGB8_ALPHA8 ([1f2005b](https://github.com/pex-gl/pex-renderer/commit/1f2005bcb5b7b5dd9e54780cd39fe7a0f74148ea))
+* **post-processing:** split final pass into combine and main ([0a20392](https://github.com/pex-gl/pex-renderer/commit/0a20392d121fedd29ecc7469032e62f9cfe7999c))
+* remove exposure and tonemap from render pipeline ([dbfd673](https://github.com/pex-gl/pex-renderer/commit/dbfd67333ebf23dcf72093797fc0c0b32f331f3f))
+
+
+
 # [4.0.0](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.57...v4.0.0) (2025-08-22)
 
 
