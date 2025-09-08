@@ -1,8 +1,10 @@
 import { postProcessing as postprocessingShaders } from "pex-shaders";
 import { ssaoMixFlagDefinitions } from "./ssao.js";
 
+const isAAEnabled = ({ cameraEntity }) => cameraEntity.postProcessing.aa;
+
 const isFinalMainEnabled = ({ cameraEntity }) =>
-  cameraEntity.postProcessing.aa ||
+  isAAEnabled({ cameraEntity }) ||
   cameraEntity.postProcessing.filmGrain ||
   (Number.isFinite(cameraEntity.postProcessing.opacity) &&
     cameraEntity.postProcessing.opacity !== 0 &&
@@ -20,9 +22,9 @@ const final = ({ ctx, resourceCache, descriptors }) => {
       [["camera", "near"], "", { uniform: "uNear" }],
       [["camera", "far"], "", { uniform: "uFar" }],
       [["camera", "fov"], "", { uniform: "uFov" }],
-      [["camera", "exposure"], "", { uniform: "uExposure" }],
-      [["camera", "toneMap"], "TONE_MAP", { type: "value" }],
-      [["camera", "outputEncoding"], "", { uniform: "uOutputEncoding", default: 2 }], // Gamma
+
+      [["postProcessing", "exposure"], "", { uniform: "uExposure" }],
+      [["postProcessing", "toneMap"], "TONE_MAP", { type: "value" }],
 
       // Fog
       [["postProcessing", "fog"], "USE_FOG"],
@@ -77,7 +79,7 @@ const final = ({ ctx, resourceCache, descriptors }) => {
     name: "luma",
     frag: postprocessingShaders.luma.frag,
     flagDefinitions: [],
-    enabled: isFinalMainEnabled,
+    enabled: isAAEnabled,
     passDesc: () => ({
       clearColor: [0, 0, 0, 1],
     }),

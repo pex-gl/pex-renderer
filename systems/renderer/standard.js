@@ -9,7 +9,7 @@ const flagDefinitions = [
   [["options", "attachmentsLocations", "color"], "LOCATION_COLOR", { type: "value" }],
   [["options", "attachmentsLocations", "normal"], "LOCATION_NORMAL", { type: "value" }],
   [["options", "attachmentsLocations", "emissive"], "LOCATION_EMISSIVE", { type: "value" }],
-  [["options", "toneMap"], "TONE_MAP", { type: "value" }],
+  [["options", "msaa"], "USE_MSAA"],
 
   [["options", "depthPassOnly"], "DEPTH_PASS_ONLY"],
   [["options", "depthPassOnly"], "USE_UNLIT_WORKFLOW"], //force unlit in depth pass mode
@@ -399,6 +399,7 @@ export default ({ ctx, shadowQuality = 3 }) => ({
       backgroundColorTexture,
       cullFaceMode,
       attachmentsLocations = {},
+      msaa,
     } = options;
     const shadowMapping = !!shadowMappingLight;
 
@@ -414,7 +415,7 @@ export default ({ ctx, shadowQuality = 3 }) => ({
       targets: {},
       debugRender: !shadowMapping && this.debugRender,
       attachmentsLocations,
-      toneMap: renderView.toneMap,
+      msaa,
       transmitted,
       cullFaceMode,
     };

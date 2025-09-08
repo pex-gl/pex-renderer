@@ -18,8 +18,6 @@ export default (options) => {
     projectionMatrix: mat4.create(),
     culling: false,
     frustum: new Float32Array(24),
-    exposure: 1,
-    toneMap: "aces",
 
     focalLength: 50, // mm
     fStop: 2.8,

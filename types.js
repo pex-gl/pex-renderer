@@ -78,8 +78,6 @@
  * @property {mat4} [viewMatrix]
  * @property {mat4} [invViewMatrix]
  * @property {boolean} [culling=false]
- * @property {number} [exposure=1]
- * @property {"aces" | "agx" | "filmic" | "lottes" | "neutral" | "reinhard" | "reinhard2" | "uchimura" | "uncharted2" | "unreal"} [toneMap="aces"]
  * @property {number} [focalLength=50] Focal length of the camera lens [10mm - 200mm] in mm
  * @property {number} [fStop=2.8] Ratio of camera lens opening, f-number, f/N, aperture [1.2 - 32] in mm
  * @property {number} [sensorSize=[36, 24]] Physical camera sensor or film size [sensorWidth, sensorHeight] in mm
@@ -333,6 +331,8 @@
  * @property {ColorCorrectionComponentOptions} [colorCorrection]
  * @property {VignetteComponentOptions} [vignette]
  * @property {FilmGrainComponentOptions} [filmGrain]
+ * @property {number} [exposure=1]
+ * @property {"aces" | "agx" | "agxPunchy" | "filmic" | "lottes" | "neutral" | "reinhard" | "reinhard2" | "uchimura" | "uncharted2" | "unreal"} [toneMap="aces"]
  * @property {number} opacity
  */
 /**

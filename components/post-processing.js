@@ -5,15 +5,18 @@
  * @alias module:components.postProcessing
  */
 const postProcessing = (options) => ({
+  // msaa
   // ssao
   // dof
   // aa
   // fog
   // bloom
+  // vignette
   // lut
   // colorCorrection
-  // vignette
   // filmGrain
+  exposure: 1,
+  toneMap: "aces",
   opacity: 1,
   ...options,
 });
@@ -121,6 +124,17 @@ postProcessing.bloom = (options) => ({
 });
 
 /**
+ * Post Processing Vignette subcomponent
+ * @param {import("../types.js").VignetteComponentOptions} [options]
+ * @returns {object}
+ */
+postProcessing.vignette = (options) => ({
+  radius: 0.8,
+  intensity: 0.2,
+  ...options,
+});
+
+/**
  * Post Processing LUT subcomponent
  * @param {import("../types.js").LutComponentOptions} [options]
  * @returns {object}
@@ -140,17 +154,6 @@ postProcessing.colorCorrection = (options) => ({
   contrast: 1,
   saturation: 1,
   hue: 0,
-  ...options,
-});
-
-/**
- * Post Processing Vignette subcomponent
- * @param {import("../types.js").VignetteComponentOptions} [options]
- * @returns {object}
- */
-postProcessing.vignette = (options) => ({
-  radius: 0.8,
-  intensity: 0.2,
   ...options,
 });
 

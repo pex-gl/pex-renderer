@@ -307,7 +307,7 @@ const createView = (cameraEntity, viewport) => ({
       ],
       cameraEntity,
       camera: cameraEntity.camera,
-      toneMap: cameraEntity.camera.toneMap,
+      toneMap: cameraEntity.postProcessing.toneMap,
     };
     cameraEntity.camera.aspect =
       renderView.viewport[2] / renderView.viewport[3];

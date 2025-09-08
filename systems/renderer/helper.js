@@ -11,7 +11,7 @@ const flagDefinitions = [
   [["options", "attachmentsLocations", "color"], "LOCATION_COLOR", { type: "value" }],
   [["options", "attachmentsLocations", "normal"], "LOCATION_NORMAL", { type: "value" }],
   [["options", "attachmentsLocations", "emissive"], "LOCATION_EMISSIVE", { type: "value" }],
-  [["options", "toneMap"], "TONE_MAP", { type: "value" }],
+  [["options", "msaa"], "USE_MSAA"],
 ];
 
 const pointsToLine = (points) =>
@@ -557,9 +557,6 @@ export default ({ ctx }) => ({
     });
   },
   renderOpaque(renderView, entities, options) {
-    this.render(renderView, entities, {
-      ...options,
-      toneMap: renderView.toneMap,
-    });
+    this.render(renderView, entities, options);
   },
 });
