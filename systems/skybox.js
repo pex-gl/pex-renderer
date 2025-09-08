@@ -30,7 +30,7 @@ export default ({ ctx, resourceCache }) => ({
         name: "skyTexture",
         width: 512,
         height: 256,
-        pixelFormat: ctx.PixelFormat.RGBA8,
+        pixelFormat: ctx.PixelFormat.SRGB8_ALPHA8,
         min: ctx.Filter.Linear,
         mag: ctx.Filter.Linear,
       });
