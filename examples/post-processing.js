@@ -71,7 +71,6 @@ aabb.fromPoints(dragonBounds, dragon.positions);
 const camera = components.camera({
   // fov: Math.PI / 6,
   aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
-  exposure: 1,
   fStop: 4,
 });
 const postProcessing = components.postProcessing({
@@ -167,6 +166,8 @@ const postProcessing = components.postProcessing({
     luminanceIntensity: 1,
     speed: 0.5,
   },
+  exposure: 1,
+  toneMap: "aces",
   opacity: 1,
 });
 const cameraY = s * 1;

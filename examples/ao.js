@@ -106,13 +106,13 @@ const postProcessing = components.postProcessing({
   ssao: components.postProcessing.ssao({
     intensity: 2,
   }),
+  exposure: 1.5,
   // dof: components.postProcessing.dof(),
 });
 const cameraEntity = createEntity({
   transform: components.transform({ position: [-3, 3, 3] }),
   camera: components.camera({
     aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
-    exposure: 1.5,
   }),
   orbiter: components.orbiter({ element: ctx.gl.canvas }),
   postProcessing,
@@ -320,10 +320,7 @@ window.addEventListener("keydown", ({ key }) => {
 
 ctx.frame(() => {
   renderEngine.update(world.entities);
-  const [{ normal, depth }] = renderEngine.render(
-    world.entities,
-    cameraEntity,
-  );
+  const [{ normal, depth }] = renderEngine.render(world.entities, cameraEntity);
   guiNormalControl.texture = normal;
   guiDepthControl.texture = depth;
   guiAOControl.texture = postProcessing._targets[cameraEntity.id]["ssao.main"];

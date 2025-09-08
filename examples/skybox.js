@@ -39,8 +39,6 @@ const cameraEntity = createEntity({
     aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
     near: 0.1,
     far: 100,
-    postprocess: false,
-    exposure: 1,
   }),
   postProcessing: components.postProcessing(),
   orbiter: components.orbiter({ element: ctx.gl.canvas }),
@@ -106,7 +104,7 @@ let guiEnvMapTextureControl;
 const gui = createGUI(ctx);
 gui.addColumn("Scene");
 gui.addLabel("Camera");
-gui.addParam("Camera Exposure", cameraEntity.camera, "exposure", {
+gui.addParam("Post Exposure", cameraEntity.postProcessing, "exposure", {
   min: 0,
   max: 5,
 });

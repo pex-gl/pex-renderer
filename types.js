@@ -506,7 +506,6 @@
  * @property {object} camera
  * @property {Entity} cameraEntity
  * @property {import("pex-context/types/types").Viewport} viewport
- * @property {object} [exposure]
  */
 
 export {};

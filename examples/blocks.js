@@ -88,9 +88,9 @@ const cameraEntity = createEntity({
   camera: components.camera({
     fov: Math.PI / 3,
     aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
-    exposure: 2,
   }),
   postProcessing: components.postProcessing({
+    exposure: 2,
     ssao: components.postProcessing.ssao({ radius: 4 }),
     dof: components.postProcessing.dof({ focusDistance: 5 }),
     fxaa: components.postProcessing.aa(),
