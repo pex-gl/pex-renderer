@@ -84,16 +84,11 @@ export default ({ ctx, resourceCache }) => ({
 
     this.cmd.pipeline = pipeline;
     this.cmd.uniforms = {
-      uExposure: 1,
-      uOutputEncoding: 1, // Linear
-
       uProjectionMatrix: renderView.camera.projectionMatrix,
       uViewMatrix: renderView.camera.viewMatrix,
       uModelMatrix: entity._transform?.modelMatrix || mat4.identity(TEMP_MAT4),
 
       uEnvMap: texture,
-      // Encoding comes from either envMap or skyTexture (ideally linear)
-      uEnvMapEncoding: 1, // Linear
       uEnvMapExposure: entity.skybox.exposure ?? 1,
       // TODO: rename, for oct map. Why * 2 ? Cause it is oct map atlas?
       uEnvMapSize: reflectionProbeEntity?.reflectionProbe?.size * 2 || 0,
@@ -111,7 +106,6 @@ export default ({ ctx, resourceCache }) => ({
       ) {
         this.render(renderView, entity, {
           ...options,
-          outputEncoding: 1, // Linear
           reflectionProbeEntity: entities.find(
             (entity) => entity.reflectionProbe,
           ),

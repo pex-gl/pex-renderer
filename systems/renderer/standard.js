@@ -387,7 +387,6 @@ export default ({ ctx, shadowQuality = 3 }) => ({
         reflectionProbes[0]._reflectionProbe._reflectionMap;
       sharedUniforms.uReflectionMapSize =
         reflectionProbes[0]._reflectionProbe._reflectionMap.width;
-      sharedUniforms.uReflectionMapEncoding = 1; // Linear
     }
   },
   render(renderView, entities, options) {
@@ -422,9 +421,6 @@ export default ({ ctx, shadowQuality = 3 }) => ({
 
     const sharedUniforms = {
       uViewportSize: [renderView.viewport[2], renderView.viewport[3]],
-
-      uExposure: 1,
-      uOutputEncoding: 1, // Linear
     };
 
     if (!shadowMapping) {

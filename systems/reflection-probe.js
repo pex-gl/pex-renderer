@@ -263,8 +263,6 @@ class ReflectionProbe {
       viewport: [0, 0, targetRegionSize, targetRegionSize],
       uniforms: {
         uOctMapAtlasSize: this._reflectionMap.width,
-        uOctMapAtlasEncoding: 1, // Linear
-        uOutputEncoding: 1, // Linear
         uNumSamples: NUM_SAMPLES, // TODO: either make constant in shader or make it configurable
         uHammersleyPointSetMap: this._hammersleyPointSetMap,
         uSourceMipmapLevel: sourceMipmapLevel,
@@ -281,12 +279,7 @@ class ReflectionProbe {
 
     for (let i = 0; i < this._dynamicCubemapSides.length; i++) {
       const side = this._dynamicCubemapSides[i];
-      ctx.submit(side.drawPassCmd, () =>
-        drawScene(
-          side,
-          1, // Linear
-        ),
-      );
+      ctx.submit(side.drawPassCmd, () => drawScene(side));
     }
 
     ctx.submit(this.cubemapToOctMapCmd, {
@@ -318,8 +311,6 @@ class ReflectionProbe {
     ctx.submit(this.convolveOctmapAtlasToOctMapCmd, {
       uniforms: {
         uOctMapAtlasSize: this._reflectionMap.width,
-        uOctMapAtlasEncoding: 1, // Linear
-        uOutputEncoding: 1, // Linear
       },
       viewport: [0, 0, IRRADIANCE_OCT_MAP_SIZE, IRRADIANCE_OCT_MAP_SIZE],
     });

@@ -59,9 +59,6 @@ export default ({ ctx }) => ({
   },
   render(renderView, entities, options) {
     const sharedUniforms = {
-      uExposure: 1,
-      uOutputEncoding: 1, // Linear
-
       uProjectionMatrix: renderView.camera.projectionMatrix,
       uViewMatrix: renderView.camera.viewMatrix,
     };

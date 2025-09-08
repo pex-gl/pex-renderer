@@ -121,10 +121,6 @@ export default ({ ctx } = {}) => ({
     const sharedUniforms = {
       // uViewportSize: [renderView.viewport[2], renderView.viewport[3]],
       uResolution: [renderView.viewport[2], renderView.viewport[3]],
-
-      uExposure: 1,
-      uOutputEncoding: 1, // Linear
-
       uProjectionMatrix: renderView.camera.projectionMatrix,
       uViewMatrix: renderView.camera.viewMatrix,
     };

@@ -481,8 +481,6 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
         pipeline: resourceCache.pipeline(pipelineDesc),
         uniforms: {
           uTexture: colorAttachments.color,
-          uExposure: 1,
-          uOutputEncoding: 1, // Linear,
         },
       };
 
@@ -533,8 +531,6 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
         render: () => {
           ctx.submit(blitCmd, {
             uniforms: {
-              uExposure: 1,
-              uOutputEncoding: 1,
               uTexture: colorAttachments.color,
             },
           });

@@ -79,9 +79,6 @@ export default ({ ctx, resourceCache }) => ({
           vert: ShaderParser.build(ctx, skybox.skyEnvMap.vert),
           frag: ShaderParser.build(ctx, skybox.skyEnvMap.frag),
         }),
-        uniforms: {
-          uOutputEncoding: 1, // Linear,
-        },
         ...resourceCache.fullscreenTriangle(),
       };
 
