@@ -86,7 +86,7 @@ postProcessing.msaa = (options) => ({
  */
 postProcessing.aa = (options) => ({
   subPixelQuality: 0.75, // (0, 1]
-  quality: 2,
+  quality: 3,
   ...options,
 });
 
