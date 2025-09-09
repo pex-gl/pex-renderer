@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+# [5.0.0-alpha.1](https://github.com/pex-gl/pex-renderer/compare/v5.0.0-alpha.0...v5.0.0-alpha.1) (2025-09-09)
+
+
+### Features
+
+* split blit and reversible tone map passes ([2e671ea](https://github.com/pex-gl/pex-renderer/commit/2e671eac3329ad9f36f884e77923348acc74a0af))
+
+
+
 # [5.0.0-alpha.0](https://github.com/pex-gl/pex-renderer/compare/v4.0.0...v5.0.0-alpha.0) (2025-09-08)
 
 
