@@ -468,11 +468,9 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
       const fullscreenTriangle = resourceCache.fullscreenTriangle();
 
       // TODO: cache
-      const pipelineDesc = { ...this.descriptors.blit.pipelineDesc };
+      const pipelineDesc = { ...this.descriptors.reversibleToneMap.pipelineDesc };
       pipelineDesc.vert = ShaderParser.build(ctx, pipelineDesc.vert);
-      pipelineDesc.frag = ShaderParser.build(ctx, pipelineDesc.frag, [
-        `USE_MSAA`,
-      ]);
+      pipelineDesc.frag = ShaderParser.build(ctx, pipelineDesc.frag);
 
       const inverseToneMapCmd = {
         name: "drawInverseToneMapFullScreenTriangleCmd",

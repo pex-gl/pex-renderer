@@ -150,6 +150,12 @@ void main() {
       mag: ctx.Filter.Linear,
     },
   },
+  reversibleToneMap: {
+    pipelineDesc: {
+      vert: SHADERS.blit.vert,
+      frag: SHADERS.reversibleToneMap.frag,
+    },
+  },
   blit: {
     pipelineDesc: {
       vert: SHADERS.blit.vert,
