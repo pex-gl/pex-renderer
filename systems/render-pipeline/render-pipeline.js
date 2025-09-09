@@ -487,7 +487,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
       renderGraph.renderPass({
         name: `InverseToneMapPass [${renderView.viewport}]`,
         uses: [colorAttachments.color],
-        renderView,
+        renderView: renderPassView,
         pass: resourceCache.pass({
           name: "inverseToneMapPass",
           color: [inverseToneMapColorTexture],
