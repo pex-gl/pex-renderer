@@ -1410,7 +1410,6 @@ var encodeDecode_glsl = /* glsl */ `
 #define LINEAR 1
 #define GAMMA 2
 #define SRGB 3
-#define RGBM 4
 
 const float gamma = 2.2;
 
@@ -1448,27 +1447,10 @@ vec4 toGamma(vec4 v) {
   return vec4(toGamma(v.rgb), v.a);
 }
 
-// RGBM
-// http://webglinsights.github.io/downloads/WebGL-Insights-Chapter-16.pdf
-vec3 decodeRGBM (vec4 rgbm) {
-  vec3 r = rgbm.rgb * (7.0 * rgbm.a);
-  return r * r;
-}
-vec4 encodeRGBM (vec3 rgb_0) {
-  vec4 r;
-  r.xyz = (1.0 / 7.0) * sqrt(rgb_0);
-  r.a = max(max(r.x, r.y), r.z);
-  r.a = clamp(r.a, 1.0 / 255.0, 1.0);
-  r.a = ceil(r.a * 255.0) / 255.0;
-  r.xyz /= r.a;
-  return r;
-}
-
 vec4 decode(vec4 pixel, int encoding) {
   if (encoding == LINEAR) return pixel;
   if (encoding == GAMMA) return toLinear(pixel);
   if (encoding == SRGB) return toLinear(pixel);
-  if (encoding == RGBM) return vec4(decodeRGBM(pixel), 1.0);
   return pixel;
 }
 
@@ -1476,7 +1458,6 @@ vec4 encode(vec4 pixel, int encoding) {
   if (encoding == LINEAR) return pixel;
   if (encoding == GAMMA) return toGamma(pixel);
   if (encoding == SRGB) return toGamma(pixel);
-  if (encoding == RGBM) return encodeRGBM(pixel.rgb);
   return pixel;
 }
 `;
@@ -3052,7 +3033,6 @@ var indirect_glsl = /* glsl */ `
 #ifdef USE_REFLECTION_PROBES
   uniform sampler2D uReflectionMap;
   uniform float uReflectionMapSize;
-  uniform int uReflectionMapEncoding;
 
   #define MAX_MIPMAP_LEVEL 5.0
 
@@ -3062,8 +3042,8 @@ var indirect_glsl = /* glsl */ `
     float upLod = floor(lod);
     float downLod = ceil(lod);
 
-    vec3 a = decode(texture2D(uReflectionMap, envMapOctahedral(reflected, 0.0, upLod, uReflectionMapSize)), uReflectionMapEncoding).rgb;
-    vec3 b = decode(texture2D(uReflectionMap, envMapOctahedral(reflected, 0.0, downLod, uReflectionMapSize)), uReflectionMapEncoding).rgb;
+    vec3 a = texture2D(uReflectionMap, envMapOctahedral(reflected, 0.0, upLod, uReflectionMapSize)).rgb;
+    vec3 b = texture2D(uReflectionMap, envMapOctahedral(reflected, 0.0, downLod, uReflectionMapSize)).rgb;
 
     return mix(a, b, lod - upLod);
   }
@@ -3181,11 +3161,11 @@ var indirect_glsl = /* glsl */ `
     float energyCompensation = 1.0;
 
     // diffuse layer
-    vec3 diffuseIrradiance = getIrradiance(data.normalWorld, uReflectionMap, uReflectionMapSize, uReflectionMapEncoding);
+    vec3 diffuseIrradiance = getIrradiance(data.normalWorld, uReflectionMap, uReflectionMapSize, LINEAR);
     vec3 Fd = data.diffuseColor * diffuseIrradiance * ao;
 
     #ifdef USE_DIFFUSE_TRANSMISSION
-      vec3 diffuseTransmissionIBL = getIrradiance(-data.normalWorld, uReflectionMap, uReflectionMapSize, uReflectionMapEncoding) * data.diffuseTransmissionColor;
+      vec3 diffuseTransmissionIBL = getIrradiance(-data.normalWorld, uReflectionMap, uReflectionMapSize, LINEAR) * data.diffuseTransmissionColor;
       #ifdef USE_VOLUME
         diffuseTransmissionIBL = applyVolumeAttenuation(diffuseTransmissionIBL, data.diffuseTransmissionThickness, data.attenuationColor, data.attenuationDistance);
       #endif
@@ -4833,7 +4813,7 @@ vec3 filmGrain(
     vec3 noise = filmGrainUpitis(uv, time, size, colorIntensity, viewportSize);
   #endif
 
-  float luminance = mix(0.0, luma(color), luminanceIntensity);
+  float luminance = mix(0.0, luma(color), luminanceIntensity); // TODO: use lumaTexture
   return saturate(color + mix(noise, vec3(0.0), pow(luminance + smoothstep(0.2, 0.0, luminance), 4.0)) * intensity);
 }
 `;
@@ -5016,15 +4996,38 @@ ${frag}
 
 uniform sampler2D uTexture;
 
-uniform float uExposure;
-uniform int uOutputEncoding;
+varying vec2 vTexCoord0;
+
+// Includes
+${max3}
+${reversibleToneMap_glsl}
+${encodeDecode_glsl}
+
+#define HOOK_FRAG_DECLARATIONS_END
+
+void main() {
+  vec4 color = texture2D(uTexture, vTexCoord0);
+  color = encode(color, SRGB);
+
+  gl_FragColor = color;
+
+  ${assignment}
+
+  #define HOOK_FRAG_END
+}`;
+
+/**
+ * @alias module:pipeline.reversibleToneMap.frag
+ * @type {string}
+ */ var reversibleToneMapFrag = /* glsl */ `precision highp float;
+
+${frag}
+
+uniform sampler2D uTexture;
 
 varying vec2 vTexCoord0;
 
 // Includes
-${PI}
-${encodeDecode_glsl}
-${Object.values(glslToneMap).join("\n")}
 ${max3}
 ${reversibleToneMap_glsl}
 
@@ -5032,14 +5035,9 @@ ${reversibleToneMap_glsl}
 
 void main() {
   vec4 color = texture2D(uTexture, vTexCoord0);
+  color.rgb = reversibleToneMapInverse(color.rgb);
 
-  color.rgb *= uExposure;
-
-  #if defined(TONE_MAP)
-    color.rgb = TONE_MAP(color.rgb);
-  #endif
-
-  gl_FragColor = encode(color, uOutputEncoding);
+  gl_FragColor = color;
 
   ${assignment}
 
@@ -5378,9 +5376,6 @@ uniform highp mat4 uModelMatrix;
 
 uniform vec3 uCameraPosition;
 
-uniform float uExposure;
-uniform int uOutputEncoding;
-
 varying vec3 vNormalWorld;
 varying vec3 vNormalView;
 
@@ -5461,7 +5456,6 @@ ${textureCoordinates_glsl}
 ${baseColor_glsl}
 ${alpha_glsl}
 ${ambientOcclusion_glsl}
-${Object.values(glslToneMap).join("\n")}
 ${max3}
 ${reversibleToneMap_glsl}
 
@@ -5668,20 +5662,18 @@ void main() {
     color = data.emissiveColor + data.indirectDiffuse + data.indirectSpecular + data.directColor + data.transmitted;
   #endif // USE_UNLIT_WORKFLOW
 
-  color.rgb *= uExposure;
-
-  #if defined(TONE_MAP)
-    color.rgb = TONE_MAP(color.rgb);
+  #ifdef USE_MSAA
+    color.rgb = reversibleToneMap(color.rgb);
   #endif
 
-  gl_FragData[0] = encode(vec4(color, 1.0), uOutputEncoding);
+  gl_FragData[0] = vec4(color, 1.0);
 
   #ifdef USE_DRAW_BUFFERS
     #if LOCATION_NORMAL >= 0
       gl_FragData[LOCATION_NORMAL] = vec4(data.normalView * 0.5 + 0.5, 1.0);
     #endif
     #if LOCATION_EMISSIVE >= 0
-      gl_FragData[LOCATION_EMISSIVE] = encode(vec4(data.emissiveColor, 1.0), uOutputEncoding);
+      gl_FragData[LOCATION_EMISSIVE] = vec4(data.emissiveColor, 1.0);
     #endif
   #endif
   #if defined(USE_BLEND) || defined(USE_TRANSMISSION)
@@ -5927,9 +5919,6 @@ precision highp float;
 
 ${frag}
 
-uniform float uExposure;
-uniform int uOutputEncoding;
-
 uniform vec4 uBaseColor;
 
 #if defined(USE_VERTEX_COLORS) || defined(USE_INSTANCED_COLOR)
@@ -5938,7 +5927,6 @@ varying vec4 vColor;
 
 // Includes
 ${encodeDecode_glsl}
-${Object.values(glslToneMap).join("\n")}
 ${max3}
 ${reversibleToneMap_glsl}
 
@@ -5951,13 +5939,11 @@ void main() {
     color *= decode(vColor, SRGB);
   #endif
 
-  color.rgb *= uExposure;
-
-  #if defined(TONE_MAP)
-    color.rgb = TONE_MAP(color.rgb);
+  #ifdef USE_MSAA
+    color.rgb = reversibleToneMap(color.rgb);
   #endif
 
-  gl_FragData[0] = encode(color, uOutputEncoding);
+  gl_FragData[0] = color;
 
   #ifdef USE_DRAW_BUFFERS
     #if LOCATION_NORMAL >=0
@@ -6090,9 +6076,6 @@ precision highp float;
 
 ${frag}
 
-uniform float uExposure;
-uniform int uOutputEncoding;
-
 uniform vec4 uBaseColor;
 
 #ifdef USE_VERTEX_COLORS
@@ -6101,7 +6084,6 @@ varying vec4 vColor;
 
 // Includes
 ${encodeDecode_glsl}
-${Object.values(glslToneMap).join("\n")}
 ${max3}
 ${reversibleToneMap_glsl}
 
@@ -6114,13 +6096,11 @@ void main() {
     color *= decode(vColor, SRGB);
   #endif
 
-  color.rgb *= uExposure;
-
-  #if defined(TONE_MAP)
-    color.rgb = TONE_MAP(color.rgb);
+  #ifdef USE_MSAA
+    color.rgb = reversibleToneMap(color.rgb);
   #endif
 
-  gl_FragData[0] = encode(color, uOutputEncoding);
+  gl_FragData[0] = color;
 
   #ifdef USE_DRAW_BUFFERS
     #if LOCATION_NORMAL >= 0
@@ -6287,14 +6267,10 @@ precision highp float;
 
 ${frag}
 
-uniform float uExposure;
-uniform int uOutputEncoding;
-
 varying vec4 vColor;
 
 // Includes
 ${encodeDecode_glsl}
-${Object.values(glslToneMap).join("\n")}
 ${max3}
 ${reversibleToneMap_glsl}
 
@@ -6303,13 +6279,11 @@ ${reversibleToneMap_glsl}
 void main () {
   vec4 color = decode(vColor, SRGB);
 
-  color.rgb *= uExposure;
-
-  #if defined(TONE_MAP)
-    color.rgb = TONE_MAP(color.rgb);
+  #ifdef USE_MSAA
+    color.rgb = reversibleToneMap(color.rgb);
   #endif
 
-  gl_FragData[0] = encode(color, uOutputEncoding);
+  gl_FragData[0] = color;
 
   #ifdef USE_DRAW_BUFFERS
     #if LOCATION_NORMAL >= 0
@@ -6415,6 +6389,12 @@ void main () {
 /**
  * @member {object}
  * @static
+ */ const reversibleToneMap = {
+    frag: reversibleToneMapFrag
+};
+/**
+ * @member {object}
+ * @static
  */ const depthPass = {
     vert: depthPassVert,
     frag: depthPassFrag
@@ -6478,6 +6458,7 @@ var index$3 = /*#__PURE__*/Object.freeze({
   helper: helper,
   line: line,
   overlay: overlay,
+  reversibleToneMap: reversibleToneMap,
   standard: standard
 });
 
@@ -7518,8 +7499,6 @@ uniform vec2 uViewportSize;
 uniform vec2 uTexelSize;
 uniform float uTime;
 
-// uniform int uTextureEncoding;
-
 // Camera
 uniform mat4 uViewMatrix;
 // TODO: group in vec4
@@ -7527,7 +7506,6 @@ uniform float uNear;
 uniform float uFar;
 uniform float uFov;
 uniform float uExposure;
-uniform int uOutputEncoding;
 
 // Includes
 ${PI}
@@ -7616,24 +7594,24 @@ void main() {
     color.rgb = saturate(color.rgb);
   #endif
 
-  color = encode(color, uOutputEncoding);
+  vec4 colorSRGB = encode(color, SRGB);
 
   // LDR effects
   #ifdef USE_VIGNETTE
-    color.rgb = vignette(color.rgb, uv, uVignetteRadius, uVignetteIntensity);
+    colorSRGB.rgb = vignette(colorSRGB.rgb, uv, uVignetteRadius, uVignetteIntensity);
   #endif
 
   #ifdef USE_LUT
-    color.rgb = lut(vec4(color.rgb, 1.0), uLUTTexture, uLUTTextureSize).rgb;
+    colorSRGB.rgb = lut(vec4(colorSRGB.rgb, 1.0), uLUTTexture, uLUTTextureSize).rgb;
   #endif
 
   #ifdef USE_COLOR_CORRECTION
-    color.rgb = brightnessContrast(color.rgb, uBrightness, uContrast);
-    color.rgb = saturation(color.rgb, uSaturation);
-    color.rgb = hue(color.rgb, uHue / 180.0 * PI);
+    colorSRGB.rgb = brightnessContrast(colorSRGB.rgb, uBrightness, uContrast);
+    colorSRGB.rgb = saturation(colorSRGB.rgb, uSaturation);
+    colorSRGB.rgb = hue(colorSRGB.rgb, uHue / 180.0 * PI);
   #endif
 
-  gl_FragColor = color;
+  gl_FragColor = decode(colorSRGB, SRGB);
 
   ${assignment}
 }
@@ -7658,7 +7636,7 @@ varying vec2 vTexCoord0;
 void main() {
   vec4 color = texture2D(uTexture, vTexCoord0);
 
-  gl_FragData[0].r = luma(toGamma(color.rgb));
+  gl_FragData[0].r = luma(encode(color, SRGB).rgb);
 
   ${assignment}
 }
@@ -7679,10 +7657,7 @@ uniform float uTime;
 
 // Includes
 ${saturate}
-
-#if defined(USE_AA) || defined(USE_FILM_GRAIN)
-  ${luma_glsl}
-#endif
+${encodeDecode_glsl}
 
 #ifdef USE_AA
   uniform sampler2D uLumaTexture;
@@ -7693,7 +7668,6 @@ ${saturate}
   // - 0.25: almost off
   // - 0.00: completely off
   uniform float uSubPixelQuality;
-  ${encodeDecode_glsl}
   ${fxaa_glsl}
 #endif
 
@@ -7708,6 +7682,7 @@ ${saturate}
   ${simplex}
   ${perlin}
   ${random}
+  ${luma_glsl}
   ${filmGrain_glsl}
 #endif
 
@@ -7727,8 +7702,6 @@ varying vec2 vTexCoord0;
 #endif
 
 void main() {
-  vec4 color = vec4(0.0);
-
   vec2 uv;
 
   #ifdef USE_AA
@@ -7750,11 +7723,13 @@ void main() {
     uv = vTexCoord0;
   #endif
 
-  color = texture2D(uTexture, uv);
+  vec4 color = texture2D(uTexture, uv);
+
+  vec4 colorSRGB = encode(color, SRGB);
 
   #ifdef USE_FILM_GRAIN
-    color.rgb = filmGrain(
-      color.rgb,
+    colorSRGB.rgb = filmGrain(
+      colorSRGB.rgb,
       uv,
       uViewportSize,
       uFilmGrainSize,
@@ -7765,7 +7740,7 @@ void main() {
     );
   #endif
 
-  gl_FragColor = color;
+  gl_FragColor = decode(colorSRGB, SRGB);
   gl_FragColor.a *= uOpacity;
 
   ${assignment}
@@ -7895,9 +7870,7 @@ ${frag}
 
 uniform sampler2D uOctMapAtlas;
 uniform float uOctMapAtlasSize;
-uniform int uOctMapAtlasEncoding;
 uniform float uIrradianceOctMapSize;
-uniform int uOutputEncoding;
 
 varying vec2 vTexCoord0;
 
@@ -7925,14 +7898,14 @@ void main() {
       // in theory this should be sample from mipmap level e.g. 2.0, 0.0
       // but sampling from prefiltered roughness gives much smoother results
       vec2 sampleUV = envMapOctahedral(sampleVector, 0.0, 2.0, uOctMapAtlasSize);
-      vec4 color = texture2D( uOctMapAtlas, sampleUV);
-      sampledColor += decode(color, uOctMapAtlasEncoding).rgb * cos(theta) * sin(theta);
+      vec4 color = texture2D(uOctMapAtlas, sampleUV);
+      sampledColor += color.rgb * cos(theta) * sin(theta);
       index += 1.0;
     }
   }
 
   sampledColor = PI * sampledColor / index;
-  gl_FragColor = encode(vec4(sampledColor, 1.0), uOutputEncoding);
+  gl_FragColor = vec4(sampledColor, 1.0);
 
   ${assignment}
 }
@@ -8019,14 +7992,12 @@ ${frag}
 uniform float uTextureSize;
 uniform sampler2D uOctMapAtlas;
 uniform float uOctMapAtlasSize;
-uniform int uOctMapAtlasEncoding;
 uniform sampler2D uHammersleyPointSetMap;
 uniform int uNumSamples;
 uniform float uLevel;
 uniform float uSourceMipmapLevel;
 uniform float uSourceRoughnessLevel;
 uniform float uRoughnessLevel;
-uniform int uOutputEncoding;
 
 varying vec2 vTexCoord0;
 
@@ -8111,7 +8082,7 @@ vec3 PrefilterEnvMap( float roughness, vec3 R, vec2 uv ) {
     float NoL = saturate( dot( N, L ) );
     if( NoL > 0.0 ) {
       vec4 color = textureOctMapLod(uOctMapAtlas, envMapOctahedral(L));
-      PrefilteredColor += NoL * decode(color, uOctMapAtlasEncoding).rgb;
+      PrefilteredColor += NoL * color.rgb;
       TotalWeight += NoL;
     }
   }
@@ -8121,7 +8092,7 @@ vec3 PrefilterEnvMap( float roughness, vec3 R, vec2 uv ) {
 void main() {
   vec3 normal = octMapUVToDir(vTexCoord0);
   vec3 color = PrefilterEnvMap(uRoughnessLevel / 5.0, normal, vTexCoord0);
-  gl_FragColor = encode(vec4(color, 1.0), uOutputEncoding);
+  gl_FragColor = vec4(color, 1.0);
 
   ${assignment}
 }
@@ -8212,19 +8183,12 @@ precision highp float;
 ${frag}
 
 // Variables
-uniform int uOutputEncoding;
-
-// assuming texture in Linear Space
-// most likely HDR or Texture2D with sRGB Ext
-uniform sampler2D uEnvMap;
-uniform int uEnvMapEncoding;
+uniform sampler2D uEnvMap; // Linear (eg. HDR in RGBA32F or sky in SRGB8_ALPHA8)
 uniform float uEnvMapSize;
 uniform float uEnvMapExposure;
 uniform float uBackgroundBlur;
 
 varying vec3 wcNormal;
-
-uniform float uExposure;
 
 // Includes
 ${PI}
@@ -8234,7 +8198,6 @@ ${encodeDecode_glsl}
 ${envMapEquirect_glsl}
 ${octMap_glsl}
 ${irradiance_glsl}
-${Object.values(glslToneMap).join("\n")}
 ${max3}
 ${reversibleToneMap_glsl}
 
@@ -8244,20 +8207,18 @@ void main() {
   vec4 color = vec4(0.0);
 
   if (uBackgroundBlur <= 0.0) {
-    color = decode(texture2D(uEnvMap, envMapEquirect(N)), uEnvMapEncoding);
+    color = texture2D(uEnvMap, envMapEquirect(N));
   } else {
-    color = vec4(getIrradiance(N, uEnvMap, uEnvMapSize, uEnvMapEncoding), 1.0);
+    color = vec4(getIrradiance(N, uEnvMap, uEnvMapSize, LINEAR), 1.0);
   }
 
   color.rgb *= uEnvMapExposure;
 
-  color.rgb *= uExposure;
-
-  #if defined(TONE_MAP)
-    color.rgb = TONE_MAP(color.rgb);
+  #ifdef USE_MSAA
+    color.rgb = reversibleToneMap(color.rgb);
   #endif
 
-  gl_FragData[0] = encode(color, uOutputEncoding);
+  gl_FragData[0] = color;
 
   #ifdef USE_DRAW_BUFFERS
     #if LOCATION_NORMAL >= 0
@@ -8388,7 +8349,6 @@ precision highp float;
 
 ${frag}
 
-uniform int uOutputEncoding;
 uniform vec4 uParameters; // turbidity, rayleigh, mieCoefficient, mieDirectionalG
 
 varying vec3 vSunDirection;
@@ -8404,8 +8364,6 @@ ${TWO_PI}
 ${saturate}
 ${encodeDecode_glsl}
 ${Object.values(glslToneMap).join("\n")}
-${max3}
-${reversibleToneMap_glsl}
 #ifndef TONE_MAP
   #define TONE_MAP aces
 #endif
@@ -8504,7 +8462,7 @@ void main() {
 
   color.a = 1.0;
 
-  gl_FragData[0] = encode(color, uOutputEncoding);
+  gl_FragData[0] = color;
 
   #ifdef USE_DRAW_BUFFERS
     #if LOCATION_NORMAL >= 0
