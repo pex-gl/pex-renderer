@@ -25,6 +25,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
   debug: false,
   debugRender: "",
   renderers: [],
+  reversibleToneMap: false,
 
   descriptors: addDescriptors(ctx),
 
@@ -54,7 +55,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
   }) {
     const options = {
       attachmentsLocations: this.getAttachmentsLocations(colorAttachments),
-      msaa,
+      msaa: this.reversibleToneMap && msaa,
     };
 
     if (shadowMappingLight) {
@@ -457,7 +458,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
     }
 
     // Inverse Tone Mapping
-    if (msaa) {
+    if (this.reversibleToneMap && msaa) {
       const inverseToneMapColorTexture = resourceCache.texture2D({
         ...this.descriptors.mainPass.outputTextureDesc,
         width: renderView.viewport[2],
