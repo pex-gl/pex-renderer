@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+# [5.0.0-alpha.2](https://github.com/pex-gl/pex-renderer/compare/v5.0.0-alpha.1...v5.0.0-alpha.2) (2025-09-09)
+
+
+### Bug Fixes
+
+* **ecs:** use renderPassView for inverse tone map pass ([161defa](https://github.com/pex-gl/pex-renderer/commit/161defaa649778984a37753553abd2814ab44c86))
+
+
+### Features
+
+* **ecs:** disable reversibleTonemap ([96b5275](https://github.com/pex-gl/pex-renderer/commit/96b5275cdd240c4a50887b02aca7b595981a0242))
+* **post-processing:** default aa quality to 3 ([f33fee9](https://github.com/pex-gl/pex-renderer/commit/f33fee9b2e25068edb8276efa1b728a3fad18628))
+
+
+
 # [5.0.0-alpha.1](https://github.com/pex-gl/pex-renderer/compare/v5.0.0-alpha.0...v5.0.0-alpha.1) (2025-09-09)
 
 
