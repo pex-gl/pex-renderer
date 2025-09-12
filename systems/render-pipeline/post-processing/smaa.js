@@ -65,7 +65,7 @@ const smaa = ({ ctx, resourceCache, descriptors }) => {
     }),
     target: ({ viewport }) =>
       resourceCache.texture2D({
-        ...descriptors.postProcessing.srgbTextureDesc,
+        ...descriptors.postProcessing.srgbOutputTextureDesc,
         pixelFormat: ctx.gl.RG ? ctx.PixelFormat.RG8 : ctx.PixelFormat.RGBA8,
         width: viewport[2],
         height: viewport[3],
@@ -130,7 +130,7 @@ const smaa = ({ ctx, resourceCache, descriptors }) => {
     // source: () => "smaa.edges",
     target: ({ viewport }) =>
       resourceCache.texture2D({
-        ...descriptors.postProcessing.srgbTextureDesc,
+        ...descriptors.postProcessing.srgbOutputTextureDesc,
         width: viewport[2],
         height: viewport[3],
       }),
@@ -151,7 +151,7 @@ const smaa = ({ ctx, resourceCache, descriptors }) => {
     target: ({ cameraEntity, viewport }) =>
       isFinalMainEnabled({ cameraEntity }) &&
       resourceCache.texture2D({
-        ...descriptors.postProcessing.srgbTextureDesc,
+        ...descriptors.postProcessing.srgbOutputTextureDesc,
         width: viewport[2],
         height: viewport[3],
       }),
