@@ -141,7 +141,9 @@ ctx.frame(() => {
 <dd></dd>
 <dt><a href="#MSAAComponentOptions">MSAAComponentOptions</a> : <code>object</code></dt>
 <dd></dd>
-<dt><a href="#AAComponentOptions">AAComponentOptions</a> : <code>object</code></dt>
+<dt><a href="#FXAAComponentOptions">FXAAComponentOptions</a> : <code>object</code></dt>
+<dd></dd>
+<dt><a href="#SMAAComponentOptions">SMAAComponentOptions</a> : <code>object</code></dt>
 <dd></dd>
 <dt><a href="#FogComponentOptions">FogComponentOptions</a> : <code>object</code></dt>
 <dd></dd>
@@ -312,7 +314,8 @@ Create a resource cache for pex-context caching.
     - [.ssao([options])](#module_components.postProcessing.ssao) ⇒ <code>object</code>
     - [.dof([options])](#module_components.postProcessing.dof) ⇒ <code>object</code>
     - [.msaa([options])](#module_components.postProcessing.msaa) ⇒ <code>object</code>
-    - [.aa([options])](#module_components.postProcessing.aa) ⇒ <code>object</code>
+    - [.fxaa([options])](#module_components.postProcessing.fxaa) ⇒ <code>object</code>
+    - [.smaa([options])](#module_components.postProcessing.smaa) ⇒ <code>object</code>
     - [.fog([options])](#module_components.postProcessing.fog) ⇒ <code>object</code>
     - [.bloom([options])](#module_components.postProcessing.bloom) ⇒ <code>object</code>
     - [.vignette([options])](#module_components.postProcessing.vignette) ⇒ <code>object</code>
@@ -522,7 +525,8 @@ Post Processing component
   - [.ssao([options])](#module_components.postProcessing.ssao) ⇒ <code>object</code>
   - [.dof([options])](#module_components.postProcessing.dof) ⇒ <code>object</code>
   - [.msaa([options])](#module_components.postProcessing.msaa) ⇒ <code>object</code>
-  - [.aa([options])](#module_components.postProcessing.aa) ⇒ <code>object</code>
+  - [.fxaa([options])](#module_components.postProcessing.fxaa) ⇒ <code>object</code>
+  - [.smaa([options])](#module_components.postProcessing.smaa) ⇒ <code>object</code>
   - [.fog([options])](#module_components.postProcessing.fog) ⇒ <code>object</code>
   - [.bloom([options])](#module_components.postProcessing.bloom) ⇒ <code>object</code>
   - [.vignette([options])](#module_components.postProcessing.vignette) ⇒ <code>object</code>
@@ -566,17 +570,29 @@ Post Processing MSAA subcomponent
 | --------- | ---------------------------------------------------------- |
 | [options] | [<code>MSAAComponentOptions</code>](#MSAAComponentOptions) |
 
-<a name="module_components.postProcessing.aa"></a>
+<a name="module_components.postProcessing.fxaa"></a>
 
-#### postProcessing.aa([options]) ⇒ <code>object</code>
+#### postProcessing.fxaa([options]) ⇒ <code>object</code>
 
-Post Processing AA subcomponent
+Post Processing FXAA subcomponent
 
 **Kind**: static method of [<code>postProcessing</code>](#module_components.postProcessing)
 
-| Param     | Type                                                   |
-| --------- | ------------------------------------------------------ |
-| [options] | [<code>AAComponentOptions</code>](#AAComponentOptions) |
+| Param     | Type                                                       |
+| --------- | ---------------------------------------------------------- |
+| [options] | [<code>FXAAComponentOptions</code>](#FXAAComponentOptions) |
+
+<a name="module_components.postProcessing.smaa"></a>
+
+#### postProcessing.smaa([options]) ⇒ <code>object</code>
+
+Post Processing SMAA subcomponent
+
+**Kind**: static method of [<code>postProcessing</code>](#module_components.postProcessing)
+
+| Param     | Type                                                       |
+| --------- | ---------------------------------------------------------- |
+| [options] | [<code>SMAAComponentOptions</code>](#SMAAComponentOptions) |
 
 <a name="module_components.postProcessing.fog"></a>
 
@@ -1361,17 +1377,29 @@ Standard renderer
 | ------------- | ------------------- | -------------- | ------------------------------------------ |
 | [sampleCount] | <code>number</code> | <code>4</code> | Multisample anti-aliasing samples: 1 or 4. |
 
-<a name="AAComponentOptions"></a>
+<a name="FXAAComponentOptions"></a>
 
-## AAComponentOptions : <code>object</code>
+## FXAAComponentOptions : <code>object</code>
 
 **Kind**: global typedef
 **Properties**
 
 | Name              | Type                | Default           | Description                                                            |
 | ----------------- | ------------------- | ----------------- | ---------------------------------------------------------------------- |
+| [quality]         | <code>number</code> | <code>3</code>    | For edge luma threshold: 0 to 4.                                       |
 | [subPixelQuality] | <code>number</code> | <code>0.75</code> | Higher = softer. Helps mitigate fireflies but will blur small details. |
-| [quality]         | <code>number</code> | <code>2</code>    | For edge luma threshold: 0 to 4.                                       |
+
+<a name="SMAAComponentOptions"></a>
+
+## SMAAComponentOptions : <code>object</code>
+
+**Kind**: global typedef
+**Properties**
+
+| Name      | Type                                                                                              | Default           | Description                          |
+| --------- | ------------------------------------------------------------------------------------------------- | ----------------- | ------------------------------------ |
+| [quality] | <code>number</code>                                                                               | <code>2</code>    | 0 to 3 (60/80/95/99% of the quality) |
+| [edges]   | <code>&quot;luma&quot;</code> \| <code>&quot;color&quot;</code> \| <code>&quot;depth&quot;</code> | <code>luma</code> |                                      |
 
 <a name="FogComponentOptions"></a>
 
@@ -1471,12 +1499,13 @@ Standard renderer
 | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- |
 | [ssao]            | [<code>SSAOComponentOptions</code>](#SSAOComponentOptions)                                                                                                                                                                                                                                                                                                                                              |                               |
 | [dof]             | [<code>DoFComponentOptions</code>](#DoFComponentOptions)                                                                                                                                                                                                                                                                                                                                                |                               |
-| [aa]              | [<code>AAComponentOptions</code>](#AAComponentOptions)                                                                                                                                                                                                                                                                                                                                                  |                               |
-| [fog]             | [<code>FogComponentOptions</code>](#FogComponentOptions)                                                                                                                                                                                                                                                                                                                                                |                               |
 | [bloom]           | [<code>BloomComponentOptions</code>](#BloomComponentOptions)                                                                                                                                                                                                                                                                                                                                            |                               |
+| [fog]             | [<code>FogComponentOptions</code>](#FogComponentOptions)                                                                                                                                                                                                                                                                                                                                                |                               |
+| [vignette]        | [<code>VignetteComponentOptions</code>](#VignetteComponentOptions)                                                                                                                                                                                                                                                                                                                                      |                               |
 | [lut]             | [<code>LutComponentOptions</code>](#LutComponentOptions)                                                                                                                                                                                                                                                                                                                                                |                               |
 | [colorCorrection] | [<code>ColorCorrectionComponentOptions</code>](#ColorCorrectionComponentOptions)                                                                                                                                                                                                                                                                                                                        |                               |
-| [vignette]        | [<code>VignetteComponentOptions</code>](#VignetteComponentOptions)                                                                                                                                                                                                                                                                                                                                      |                               |
+| [fxaa]            | [<code>FXAAComponentOptions</code>](#FXAAComponentOptions)                                                                                                                                                                                                                                                                                                                                              |                               |
+| [smaa]            | [<code>SMAAComponentOptions</code>](#SMAAComponentOptions)                                                                                                                                                                                                                                                                                                                                              |                               |
 | [filmGrain]       | [<code>FilmGrainComponentOptions</code>](#FilmGrainComponentOptions)                                                                                                                                                                                                                                                                                                                                    |                               |
 | [exposure]        | <code>number</code>                                                                                                                                                                                                                                                                                                                                                                                     | <code>1</code>                |
 | [toneMap]         | <code>&quot;aces&quot;</code> \| <code>&quot;agx&quot;</code> \| <code>&quot;agxPunchy&quot;</code> \| <code>&quot;filmic&quot;</code> \| <code>&quot;lottes&quot;</code> \| <code>&quot;neutral&quot;</code> \| <code>&quot;reinhard&quot;</code> \| <code>&quot;reinhard2&quot;</code> \| <code>&quot;uchimura&quot;</code> \| <code>&quot;uncharted2&quot;</code> \| <code>&quot;unreal&quot;</code> | <code>&quot;aces&quot;</code> |

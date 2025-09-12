@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+# [5.0.0-alpha.3](https://github.com/pex-gl/pex-renderer/compare/v5.0.0-alpha.2...v5.0.0-alpha.3) (2025-09-12)
+
+
+### Bug Fixes
+
+* **ecs:** handle texture flag defs without defineName ([9a9f47f](https://github.com/pex-gl/pex-renderer/commit/9a9f47ff7f223574f0bffcc11b9ec6d118b55221))
+* **post-processing:** smaa target texture descriptor ([66f4e1a](https://github.com/pex-gl/pex-renderer/commit/66f4e1ad4d67127841d94cd4fad2d98615461bcf))
+
+
+### Features
+
+* **post-processing:** implement SMAA ([67b2812](https://github.com/pex-gl/pex-renderer/commit/67b2812a41f28327423248b369f085418055acf0))
+
+
+
 # [5.0.0-alpha.2](https://github.com/pex-gl/pex-renderer/compare/v5.0.0-alpha.1...v5.0.0-alpha.2) (2025-09-09)
 
 
