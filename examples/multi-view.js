@@ -69,7 +69,7 @@ const entities = (window.entities = []);
 
 // Entities
 const postProcessing = components.postProcessing({
-  aa: components.postProcessing.aa(),
+  fxaa: components.postProcessing.fxaa(),
 });
 const cameraEntity = createEntity({
   transform: components.transform({ position: [0, 3, 3] }),

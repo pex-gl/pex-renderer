@@ -35,7 +35,8 @@ const State = {
   vignette: true,
   lut: true,
   colorCorrection: true,
-  aa: true,
+  smaa: true,
+  fxaa: true,
   filmGrain: true,
 };
 
@@ -154,8 +155,12 @@ const postProcessing = components.postProcessing({
     saturation: 1,
     hue: 0,
   },
-  aa: {
+  smaa: {
     quality: 2,
+    edges: "luma",
+  },
+  fxaa: {
+    quality: 3,
     subPixelQuality: 0.75,
   },
   filmGrain: {
@@ -403,12 +408,18 @@ gui.addRadioList(
     (system) => system.type == "render-pipeline-system",
   ),
   "debugRender",
-  ["", "ssao.main", "dof.main", "bloom.threshold", "bloom.downsample[3]"].map(
-    (value) => ({
-      name: value || "No debug",
-      value,
-    }),
-  ),
+  [
+    "",
+    "ssao.main",
+    "dof.main",
+    "bloom.threshold",
+    "bloom.downsample[3]",
+    "smaa.edges",
+    "smaa.weights",
+  ].map((value) => ({
+    name: value || "No debug",
+    value,
+  })),
 );
 const dummyTexture2D = ctx.texture2D({
   name: "dummyTexture2D",
@@ -674,19 +685,35 @@ gui.addParam("Vignette intensity", postProcessing.vignette, "intensity", {
 });
 
 gui.addColumn("Final");
-gui.addParam("AA", State, "aa", null, () => {
-  enablePostProPass("aa");
+gui.addParam("SMAA", State, "smaa", null, () => {
+  enablePostProPass("smaa");
 });
-gui.addParam("Quality", postProcessing.aa, "quality", {
+gui.addParam("Quality", postProcessing.smaa, "quality", {
+  min: 0,
+  max: 3,
+  step: 1,
+});
+gui.addRadioList(
+  "Edges",
+  postProcessing.smaa,
+  "edges",
+  ["depth", "luma", "color"].map((value) => ({ name: value, value })),
+);
+
+gui.addParam("FXAA", State, "fxaa", null, () => {
+  enablePostProPass("fxaa");
+});
+gui.addParam("Quality", postProcessing.fxaa, "quality", {
   min: 0,
   max: 4,
   step: 1,
 });
-gui.addParam("SubPixelQuality", postProcessing.aa, "subPixelQuality", {
+gui.addParam("SubPixelQuality", postProcessing.fxaa, "subPixelQuality", {
   min: 0,
   max: 1,
   step: 0.25,
 });
+
 gui.addParam("Film Grain", State, "filmGrain", null, () => {
   enablePostProPass("filmGrain");
 });
@@ -720,7 +747,8 @@ enablePostProPass("fog");
 enablePostProPass("vignette");
 enablePostProPass("lut");
 enablePostProPass("colorCorrection");
-enablePostProPass("aa");
+enablePostProPass("smaa");
+enablePostProPass("fxaa");
 enablePostProPass("filmGrain");
 
 // Events

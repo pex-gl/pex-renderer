@@ -102,7 +102,7 @@ const rects = divide([-2 * s, -1 * s, 4 * s, 2 * s, 0], []);
 
 // Entities
 const postProcessing = components.postProcessing({
-  aa: components.postProcessing.aa(),
+  fxaa: components.postProcessing.fxaa(),
   ssao: components.postProcessing.ssao({
     intensity: 2,
   }),

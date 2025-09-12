@@ -18,6 +18,11 @@ import { getRenderPassGraphViz } from "./graph-viz.js";
 
 random.seed(2);
 
+const State = {
+  autoRotate: true,
+  msaa: true,
+};
+
 const pixelRatio = devicePixelRatio;
 const ctx = createContext({ pixelRatio });
 const renderEngine = createRenderEngine({ ctx, debug: true });
@@ -33,9 +38,11 @@ const cameraEntity = createEntity({
     aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
   }),
   orbiter: components.orbiter({ element: ctx.gl.canvas }),
-  postProcessing: components.postProcessing({
-    aa: components.postProcessing.aa({ msaa: false }),
-  }),
+  postProcessing: State.msaa
+    ? components.postProcessing({
+        msaa: components.postProcessing.msaa(),
+      })
+    : null,
 });
 world.add(cameraEntity);
 
@@ -256,7 +263,16 @@ const gui = createGUI(ctx);
 const unitOptions = { min: 0, max: 1 };
 gui.addColumn("Capture");
 gui.addFPSMeeter();
-gui.addParam("MSAA", cameraEntity.postProcessing.aa, "msaa");
+gui.addParam("Auto Rotate", State, "autoRotate");
+gui.addParam("MSAA", State, "msaa", null, () => {
+  if (State.msaa) {
+    cameraEntity.postProcessing ||= components.postProcessing();
+    cameraEntity.postProcessing.msaa = components.postProcessing.msaa();
+  } else {
+    delete cameraEntity.postProcessing?.msaa;
+  }
+  if (renderPassGraphViz.isRendered()) renderPassGraphViz.draw();
+});
 const dummyTexture2D = ctx.texture2D({
   name: "dummyTexture2D",
   width: 4,
@@ -396,12 +412,14 @@ window.addEventListener("keydown", ({ key }) => {
 });
 
 ctx.frame(() => {
-  quat.fromAxisAngle(
-    torusEntity.transform.rotation,
-    [0, 1, 0],
-    performance.now() * 0.001,
-  );
-  torusEntity.transform.dirty = true;
+  if (State.autoRotate) {
+    quat.fromAxisAngle(
+      torusEntity.transform.rotation,
+      [0, 1, 0],
+      performance.now() * 0.001,
+    );
+    torusEntity.transform.dirty = true;
+  }
 
   renderEngine.update(world.entities);
   renderEngine.render(world.entities, cameraEntity);

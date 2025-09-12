@@ -93,7 +93,7 @@ const cameraEntity = createEntity({
     exposure: 2,
     ssao: components.postProcessing.ssao({ radius: 4 }),
     dof: components.postProcessing.dof({ focusDistance: 5 }),
-    fxaa: components.postProcessing.aa(),
+    fxaa: components.postProcessing.fxaa(),
   }),
   orbiter: components.orbiter({
     position: [0, 3, 8],
