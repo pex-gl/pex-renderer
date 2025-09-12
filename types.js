@@ -272,7 +272,7 @@
  */
 /**
  * @typedef {object} FXAAComponentOptions
- * @property {number} [quality=2] For edge luma threshold: 0 to 4.
+ * @property {number} [quality=3] For edge luma threshold: 0 to 4.
  * @property {number} [subPixelQuality=0.75] Higher = softer. Helps mitigate fireflies but will blur small details.
  */
 /**
@@ -329,12 +329,13 @@
  * @typedef {object} PostProcessingComponentOptions
  * @property {SSAOComponentOptions} [ssao]
  * @property {DoFComponentOptions} [dof]
- * @property {AAComponentOptions} [aa]
- * @property {FogComponentOptions} [fog]
  * @property {BloomComponentOptions} [bloom]
+ * @property {FogComponentOptions} [fog]
+ * @property {VignetteComponentOptions} [vignette]
  * @property {LutComponentOptions} [lut]
  * @property {ColorCorrectionComponentOptions} [colorCorrection]
- * @property {VignetteComponentOptions} [vignette]
+ * @property {FXAAComponentOptions} [fxaa]
+ * @property {SMAAComponentOptions} [smaa]
  * @property {FilmGrainComponentOptions} [filmGrain]
  * @property {number} [exposure=1]
  * @property {"aces" | "agx" | "agxPunchy" | "filmic" | "lottes" | "neutral" | "reinhard" | "reinhard2" | "uchimura" | "uncharted2" | "unreal"} [toneMap="aces"]
