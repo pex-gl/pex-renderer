@@ -271,9 +271,15 @@
  * @property {number} [sampleCount=4] Multisample anti-aliasing samples: 1 or 4.
  */
 /**
- * @typedef {object} AAComponentOptions
- * @property {number} [subPixelQuality=0.75] Higher = softer. Helps mitigate fireflies but will blur small details.
+ * @typedef {object} FXAAComponentOptions
  * @property {number} [quality=2] For edge luma threshold: 0 to 4.
+ * @property {number} [subPixelQuality=0.75] Higher = softer. Helps mitigate fireflies but will blur small details.
+ */
+/**
+ * @typedef {object} SMAAComponentOptions
+ * @property {number} [quality=2] 0 to 3 (60/80/95/99% of the quality)
+ * @property {"luma" | "color" | "depth"} [edges=luma]
+ * @property {boolean} [predication=true] add depth edge detection for luma and color edge detection
  */
 /**
  * @typedef {object} FogComponentOptions

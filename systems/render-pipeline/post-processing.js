@@ -3,7 +3,9 @@ import createPipelineCache from "../../pipeline-cache.js";
 import ssao from "./post-processing/ssao.js";
 import dof from "./post-processing/dof.js";
 import bloom from "./post-processing/bloom.js";
-import final from "./post-processing/final.js";
+import combine from "./post-processing/combine.js";
+import smaa from "./post-processing/smaa.js";
+import final, { isFinalMainEnabled } from "./post-processing/final.js";
 
 // Impacts pipeline caching
 const pipelineProps = ["blend"];
@@ -12,7 +14,19 @@ const getPostProcessingPasses = (options) => [
   { name: "ssao", passes: ssao(options) },
   { name: "dof", passes: dof(options) },
   { name: "bloom", passes: bloom(options) },
-  { name: "final", passes: final(options) },
+  {
+    name: "combine",
+    passes: combine(options),
+    enabled: () => true,
+    srgb: true,
+  },
+  { name: "smaa", passes: smaa(options), srgb: true },
+  {
+    name: "final",
+    passes: final(options),
+    enabled: isFinalMainEnabled,
+    srgb: true,
+  },
 ];
 
 export default ({ ctx, renderGraph, resourceCache }) => ({
@@ -49,10 +63,10 @@ export default ({ ctx, renderGraph, resourceCache }) => ({
 
     for (let i = 0; i < this.postProcessingEffects.length; i++) {
       const effect = this.postProcessingEffects[i];
-      const isFinal = effect.name == "final";
-      const isEffectUsed = !!postProcessingComponent[effect.name];
+      const isEffectUsed =
+        !!postProcessingComponent[effect.name] || effect.enabled?.(renderView);
 
-      if (!isEffectUsed && !isFinal) continue;
+      if (!isEffectUsed) continue;
 
       for (let j = 0; j < effect.passes.length; j++) {
         const subPass = effect.passes[j];
@@ -118,8 +132,8 @@ export default ({ ctx, renderGraph, resourceCache }) => ({
           if (!outputColor) console.warn(`Missing target ${target}.`);
         } else {
           // TODO: allow size overwrite for down/upscale
-          const textureDesc = isFinal
-            ? descriptors.postProcessing.finalTextureDesc
+          const textureDesc = effect.srgb
+            ? descriptors.postProcessing.srgbOutputTextureDesc
             : descriptors.postProcessing.outputTextureDesc;
           textureDesc.width = renderView.viewport[2];
           textureDesc.height = renderView.viewport[3];

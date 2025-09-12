@@ -142,7 +142,7 @@ void main() {
       min: ctx.Filter.Linear,
       mag: ctx.Filter.Linear,
     },
-    finalTextureDesc: {
+    srgbOutputTextureDesc: {
       pixelFormat: ctx.capabilities.sRGB
         ? ctx.PixelFormat.SRGB8_ALPHA8
         : ctx.PixelFormat.RGBA8,

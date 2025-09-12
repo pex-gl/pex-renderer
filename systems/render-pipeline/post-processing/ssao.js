@@ -111,14 +111,12 @@ const ssao = ({ ctx, resourceCache, descriptors, scale = 1 }) => {
     passDesc: () => ({
       clearColor: [0, 0, 0, 1],
     }),
-    target: ({ viewport }) => {
-      const tex = resourceCache.texture2D({
+    target: ({ viewport }) =>
+      resourceCache.texture2D({
         ...descriptors.postProcessing.outputTextureDesc,
         width: viewport[2] * scale,
         height: viewport[3] * scale,
-      });
-      return tex;
-    },
+      }),
     size: ({ viewport }) => [viewport[2] * scale, viewport[3] * scale],
   };
 
@@ -163,15 +161,13 @@ const ssao = ({ ctx, resourceCache, descriptors, scale = 1 }) => {
     passDesc: () => ({
       clearColor: [0, 0, 0, 1],
     }),
-    target: ({ viewport }) => {
-      const tex = resourceCache.texture2D({
+    target: ({ viewport }) =>
+      resourceCache.texture2D({
         ...descriptors.postProcessing.outputTextureDesc,
         pixelFormat: ctx.gl.RG ? ctx.PixelFormat.R8 : ctx.PixelFormat.RGBA8,
         width: viewport[2] * scale,
         height: viewport[3] * scale,
-      });
-      return tex;
-    },
+      }),
     size: ({ viewport }) => [viewport[2] * scale, viewport[3] * scale],
   };
 

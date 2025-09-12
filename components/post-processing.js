@@ -80,13 +80,24 @@ postProcessing.msaa = (options) => ({
 });
 
 /**
- * Post Processing AA subcomponent
- * @param {import("../types.js").AAComponentOptions} [options]
+ * Post Processing FXAA subcomponent
+ * @param {import("../types.js").FXAAComponentOptions} [options]
  * @returns {object}
  */
-postProcessing.aa = (options) => ({
-  subPixelQuality: 0.75, // (0, 1]
+postProcessing.fxaa = (options) => ({
   quality: 3,
+  subPixelQuality: 0.75, // (0, 1]
+  ...options,
+});
+
+/**
+ * Post Processing SMAA subcomponent
+ * @param {import("../types.js").SMAAComponentOptions} [options]
+ * @returns {object}
+ */
+postProcessing.smaa = (options) => ({
+  quality: 2, // [0, 3]
+  edges: "luma", // "depth" | "color"
   ...options,
 });
 
