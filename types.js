@@ -279,7 +279,6 @@
  * @typedef {object} SMAAComponentOptions
  * @property {number} [quality=2] 0 to 3 (60/80/95/99% of the quality)
  * @property {"luma" | "color" | "depth"} [edges=luma]
- * @property {boolean} [predication=true] add depth edge detection for luma and color edge detection
  */
 /**
  * @typedef {object} FogComponentOptions
