@@ -402,7 +402,47 @@ const getVertexVector = (geometry, attributeName, size = 0.1, modelMatrix) => {
   return lines;
 };
 
+const SKIN_MAT4 = mat4.create();
+const SKIN_PARENT_MAT4 = mat4.create();
+const getPositionFromMat4 = (m) => [m[12], m[13], m[14]];
+
+const getSkeleton = (skin, modelMatrix) => {
+  const positions = [];
+  // const distances = [];
+
+  mat4.set(TEMP_MAT4, modelMatrix);
+  mat4.invert(TEMP_MAT4);
+
+  // let maxDistance = Number.NEGATIVE_INFINITY;
+
+  for (let i = 0; i < skin.joints.length; i++) {
+    const joint = skin.joints[i];
+
+    const jointMatrix = joint._transform.modelMatrix;
+    const parentMatrix = joint.transform.parent.entity._transform.modelMatrix;
+
+    if (jointMatrix && parentMatrix) {
+      mat4.set(SKIN_PARENT_MAT4, TEMP_MAT4);
+      mat4.mult(SKIN_PARENT_MAT4, parentMatrix);
+      positions.push(getPositionFromMat4(SKIN_PARENT_MAT4));
+
+      mat4.set(SKIN_MAT4, TEMP_MAT4);
+      mat4.mult(SKIN_MAT4, jointMatrix);
+      positions.push(getPositionFromMat4(SKIN_MAT4));
+
+      // const d = vec3.distance(a, b);
+      // distances.push(d);
+      // maxDistance = Math.max(maxDistance, d);
+    }
+  }
+
+  return positions;
+};
+
 const geomBuilder = createGeomBuilder({ positions: 1, colors: 1 });
+const geomNoDepthBuilder = createGeomBuilder({ positions: 1, colors: 1 });
+
+const pipelineMaterialProps = ["depthWrite", "depthTest"];
 
 /**
  * Helper renderer
@@ -415,29 +455,46 @@ export default ({ ctx }) => ({
   type: "helper-renderer",
   debug: false,
   flagDefinitions,
-  cmd: null,
+  helperEntities: [
+    { geometry: geomBuilder, material: { depthTest: true, depthWrite: true } },
+    {
+      geometry: geomNoDepthBuilder,
+      material: { depthTest: false, depthWrite: false },
+    },
+  ],
   getVertexShader: () => SHADERS.helper.vert,
   getFragmentShader: () => SHADERS.helper.frag,
-  getPipelineOptions() {
+  getPipelineHash(entity) {
+    return this.getHashFromProps(
+      entity.material,
+      pipelineMaterialProps,
+      this.debug,
+    );
+  },
+  getPipelineOptions(entity) {
     return {
-      depthTest: true,
-      depthWrite: true,
+      depthWrite: !!entity.material.depthWrite,
+      depthTest: !!entity.material.depthTest,
       primitive: ctx.Primitive.Lines,
     };
   },
   render(renderView, entities, options) {
     geomBuilder.reset();
+    geomNoDepthBuilder.reset();
 
     const addToBuilder = (
       positions,
       color = [0.23, 0.23, 0.23, 1],
       modelMatrix,
+      builder = geomBuilder,
     ) => {
       for (let i = 0; i < positions.length; i++) {
         const position = positions[i];
         if (modelMatrix) vec3.multMat4(position, modelMatrix);
-        geomBuilder.addPosition(position);
-        geomBuilder.addColor(Array.isArray(color[0]) ? color[i] : color);
+        builder.addPosition(position);
+        builder.addColor(
+          Array.isArray(color[0]) ? color[i % color.length] : color,
+        );
       }
     };
 
@@ -447,7 +504,7 @@ export default ({ ctx }) => ({
       if (entity.transform?.position && entity.boundingBoxHelper) {
         addToBuilder(
           getBBoxPositionsList(entity.transform.worldBounds),
-          entity.boundingBoxHelper?.color || [1, 0, 0, 1],
+          entity.boundingBoxHelper.color,
         );
       }
 
@@ -465,10 +522,19 @@ export default ({ ctx }) => ({
                 helper.size,
                 modelMatrix,
               ),
-              helper.color || [0, 1, 0, 1],
+              helper.color,
             );
           }
         }
+      }
+
+      if (entity.skin && entity.skeletonHelper) {
+        addToBuilder(
+          getSkeleton(entity.skin, modelMatrix),
+          entity.skeletonHelper.color,
+          modelMatrix,
+          geomNoDepthBuilder,
+        );
       }
 
       // TODO: cache
@@ -530,29 +596,44 @@ export default ({ ctx }) => ({
         );
       }
     }
-    if (!geomBuilder.count) return;
 
-    const geometry = geomBuilder;
-
-    this.cmd ||= {
-      name: "drawHelperLinesCmd",
-      attributes: {
-        aPosition: ctx.vertexBuffer({ data: [0, 0, 0] }),
-        aVertexColor: ctx.vertexBuffer({ data: [0, 0, 0, 0] }),
-      },
+    const sharedUniforms = {
+      uProjectionMatrix: renderView.camera.projectionMatrix,
+      uViewMatrix: renderView.camera.viewMatrix,
     };
 
-    ctx.update(this.cmd.attributes.aPosition, { data: geometry.positions });
-    ctx.update(this.cmd.attributes.aVertexColor, { data: geometry.colors });
+    const renderableEntities = this.helperEntities.filter(
+      ({ geometry }) => geometry.count,
+    );
 
-    ctx.submit(this.cmd, {
-      pipeline: this.getPipeline(ctx, { geometry }, options),
-      count: geometry.count,
-      uniforms: {
-        uProjectionMatrix: renderView.camera.projectionMatrix,
-        uViewMatrix: renderView.camera.viewMatrix,
-      },
-    });
+    for (let i = 0; i < renderableEntities.length; i++) {
+      const entity = renderableEntities[i];
+
+      const pipeline = this.getPipeline(ctx, entity, options);
+
+      // Update geometry
+      const geometry = entity.geometry;
+      entity._geometry ||= {
+        attributes: {
+          aPosition: ctx.vertexBuffer({ data: [0, 0, 0] }),
+          aVertexColor: ctx.vertexBuffer({ data: [0, 0, 0, 0] }),
+        },
+      };
+      ctx.update(entity._geometry.attributes.aPosition, {
+        data: entity.geometry.positions,
+      });
+      ctx.update(entity._geometry.attributes.aVertexColor, {
+        data: entity.geometry.colors,
+      });
+
+      ctx.submit({
+        name: "drawHelperLinesCmd",
+        pipeline,
+        attributes: entity._geometry.attributes,
+        count: geometry.count,
+        uniforms: sharedUniforms,
+      });
+    }
   },
   renderOpaque(renderView, entities, options) {
     this.render(renderView, entities, options);

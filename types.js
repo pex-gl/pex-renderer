@@ -59,6 +59,10 @@
  * @property {number[]} [color=[1, 0, 0, 1]]
  */
 /**
+ * @typedef {object} SkeletonHelperComponentOptions
+ * @property {number[]|number[][]} [color=[[0, 0, 1, 1], [1, 1, 1, 1]]]
+ */
+/**
  * @typedef {object} CameraHelperComponentOptions
  * @property {number[]} [color=[1, 1, 1, 1]]
  */

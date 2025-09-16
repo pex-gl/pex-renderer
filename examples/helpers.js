@@ -17,7 +17,12 @@ import { dragon, getURL } from "./utils.js";
 
 random.seed(0);
 
-const State = { bbox: true, vertexHelper: true, scale: 1 };
+const State = {
+  bbox: true,
+  vertexHelper: true,
+  skeletonHelper: true,
+  scale: 1,
+};
 const pixelRatio = devicePixelRatio;
 const ctx = createContext({ pixelRatio });
 const renderEngine = createRenderEngine({ ctx, debug: true });
@@ -191,6 +196,10 @@ cesiumManScene.entities.forEach((entity) => {
   if (entity.geometry) {
     entity.boundingBoxHelper = State.bbox && components.boundingBoxHelper();
   }
+  if (entity.skin) {
+    entity.skeletonHelper = State.skeletonHelper && components.skeletonHelper();
+    console.log(entity);
+  }
 });
 world.entities.push(...cesiumManScene.entities);
 scalableEntities.set(cesiumManScene.entities[0], cesiumManSceneScale);
@@ -308,6 +317,17 @@ gui.addParam("Vertex normals", State, "vertexHelper", {}, () => {
         entity.vertexHelper = components.vertexHelper({ size: 0.01 });
       } else {
         delete entity.vertexHelper;
+      }
+    }
+  });
+});
+gui.addParam("Skeleton", State, "skeletonHelper", {}, () => {
+  world.entities.forEach((entity) => {
+    if (entity.skin) {
+      if (State.skeletonHelper) {
+        entity.skeletonHelper = components.skeletonHelper();
+      } else {
+        delete entity.skeletonHelper;
       }
     }
   });
