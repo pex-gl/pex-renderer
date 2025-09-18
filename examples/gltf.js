@@ -29,7 +29,7 @@ const State = {
   selectedModel: "",
   scenes: [],
   gridSize: 1,
-  boundingBoxes: true,
+  helpers: true,
   floor: false,
   useEnvMap: true,
   shadows: false,
@@ -189,8 +189,17 @@ function onSceneLoaded(scene, grid) {
     world.add(floorEntity);
   }
 
-  if (State.boundingBoxes) {
+  if (State.helpers) {
     scene.entities.forEach((entity) => {
+      if (entity.geometry) {
+        entity.boundingBoxHelper = components.boundingBoxHelper();
+      }
+      if (entity.skin) {
+        entity.skeletonHelper = components.skeletonHelper();
+      }
+      if (entity.camera) {
+        entity.cameraHelper = components.cameraHelper();
+      }
       if (entity.geometry) {
         entity.boundingBoxHelper = components.boundingBoxHelper();
       }
@@ -381,6 +390,25 @@ const nextScene = () => {
 };
 const nextMaterial = () => {};
 
+const dispose = () => {
+  // Clean up
+  const scenes = State.scenes.length ? State.scenes : [State.scene];
+
+  const entitiesIds = [
+    ...scenes.map((scene) => scene?.entities.map((entity) => entity.id)).flat(),
+    floorEntity?.id,
+    cameraEntity?.id,
+  ].filter(Boolean);
+
+  world.dispose(
+    world.entities.filter((entity) => entitiesIds.includes(entity.id)),
+  );
+
+  // TODO renderEngine resourceCache dispose cache
+
+  State.scenes = [];
+};
+
 // GUI
 // Add screenshots to the GUI
 const screenshots = await Promise.all(
@@ -416,24 +444,7 @@ gui.addTexture2DList(
   thumbnails,
   5,
   async (model) => {
-    // Clean up
-    const scenes = State.scenes.length ? State.scenes : [State.scene];
-
-    const entitiesIds = [
-      ...scenes
-        .map((scene) => scene?.entities.map((entity) => entity.id))
-        .flat(),
-      floorEntity?.id,
-      cameraEntity?.id,
-    ].filter(Boolean);
-
-    world.dispose(
-      world.entities.filter((entity) => entitiesIds.includes(entity.id)),
-    );
-
-    // TODO renderEngine resourceCache dispose cache
-
-    State.scenes = [];
+    dispose();
 
     await renderModel(model);
   },
@@ -450,7 +461,6 @@ gui.addRadioList(
   })),
 );
 gui.addParam("Floor", State, "floor");
-gui.addParam("Bounding Box", State, "boundingBoxes");
 gui.addParam("Env map", State, "useEnvMap", null, () => {
   addEnvmap();
 });
@@ -462,6 +472,12 @@ gui.addButton("Next scene", nextScene);
 gui.addColumn("Debug");
 gui.addFPSMeeter();
 gui.addStats();
+gui.addParam("Helpers", State, "helpers", null, () => {
+  if (State.selectedModel) {
+    dispose();
+    renderModel(State.selectedModel);
+  }
+});
 gui.addButton("Toggle Scene Graph", () => {
   sceneGraphViz.toggle();
 });

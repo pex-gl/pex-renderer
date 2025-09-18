@@ -19,7 +19,7 @@ random.seed(0);
 
 const State = {
   bbox: true,
-  vertexHelper: true,
+  vertexHelper: false,
   skeletonHelper: true,
   scale: 1,
 };

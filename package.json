@@ -38,7 +38,7 @@
     "release:alpha": "snowdev release --release-as minor --prerelease alpha"
   },
   "dependencies": {
-    "geom-builder": "^3.0.1",
+    "geom-builder": "github:dmnsgn/geom-builder",
     "hammersley": "^2.0.0",
     "pex-cam": "^3.0.1",
     "pex-geom": "^3.1.0",
