@@ -462,7 +462,7 @@ export default () => ({
   type: "helper-system",
   cache: {},
   debug: false,
-  lineWidth: 1,
+  lineWidth: 2,
   getEntities: () => [
     entity({
       transform: components.transform(),
