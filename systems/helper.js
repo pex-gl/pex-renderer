@@ -1,8 +1,8 @@
 import { avec3, avec4, mat4, quat, vec3 } from "pex-math";
 import createGeomBuilder from "geom-builder";
 
-import { TEMP_MAT4, TEMP_VEC3 } from "../../utils.js";
 import { entity, components } from "../index.js";
+import { TEMP_MAT4, TEMP_VEC3 } from "../utils.js";
 
 const pointsToLine = (points) =>
   points.reduce((line, p, i) => {
