@@ -629,20 +629,20 @@ export default () => ({
           modelMatrix,
         );
       }
-      if (entity.axesHelper) {
-        this.addToBuilder(
-          geomBuilder,
-          AXES_POSITIONS.map((p) => [...p]),
-          AXES_COLORS.map((p) => [...p]),
-          lineWidth,
-          modelMatrix,
-        );
-      }
       if (entity.gridHelper) {
         this.addToBuilder(
           geomBuilder,
           getGrid(entity.gridHelper),
           entity.gridHelper.color,
+          lineWidth,
+          modelMatrix,
+        );
+      }
+      if (entity.axesHelper) {
+        this.addToBuilder(
+          geomBuilder,
+          AXES_POSITIONS.map((p) => [...p]),
+          AXES_COLORS.map((p) => [...p]),
           lineWidth,
           modelMatrix,
         );
