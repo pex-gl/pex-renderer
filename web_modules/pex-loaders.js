@@ -36,7 +36,6 @@ class WorkerPool {
                         worker._callbacks[message.id].reject(message);
                         break;
                     default:
-                        // eslint-disable-next-line no-console
                         console.error(message);
                 }
             };
@@ -87,7 +86,7 @@ DracoWorker()
 };
 // TODO: draco_decoder.js only
 const getTranscoder$1 = async (transcoderPath)=>transcoderPending$1 || Promise.all([
-        getWorkerStringUrl$1(await (await fetch(`${transcoderPath}draco_wasm_wrapper.js`)).text(), await (await (await fetch(`${transcoderPath}draco-worker.js`)).text()).replace("module.exports = DracoWorker", "")),
+        getWorkerStringUrl$1(await (await fetch(`${transcoderPath}draco_wasm_wrapper.js`)).text(), await (await (await fetch(`${transcoderPath}draco-worker.js`)).text()).replace("module.exports = DracoWorker", "").replace("export default DracoWorker;", "")),
         await (await fetch(`${transcoderPath}draco_decoder.wasm`)).arrayBuffer()
     ]);
 function loadGeometry(buffer, taskConfig) {
@@ -181,35 +180,26 @@ const KHR_DF_SAMPLE_DATATYPE_SIGNED = 0x40;
 ///////////////////////////////////////////////////
 const VK_FORMAT_UNDEFINED = 0;
 /**
- * Represents an unpacked KTX 2.0 texture container. Data for individual mip levels are stored in
- * the `.levels` array, typically compressed in Basis Universal formats. Additional properties
- * provide metadata required to process, transcode, and upload these textures.
- */ class KTX2Container {
-    constructor(){
-        /**
-     * Specifies the image format using Vulkan VkFormat enum values. When using Basis Universal
-     * texture formats, `vkFormat` must be VK_FORMAT_UNDEFINED.
-     */ this.vkFormat = VK_FORMAT_UNDEFINED;
-        /**
-     * Size of the data type in bytes used to upload the data to a graphics API. When `vkFormat` is
-     * VK_FORMAT_UNDEFINED, `typeSize` must be 1.
-     */ this.typeSize = 1;
-        /** Width of the texture image for level 0, in pixels. */ this.pixelWidth = 0;
-        /** Height of the texture image for level 0, in pixels. */ this.pixelHeight = 0;
-        /** Depth of the texture image for level 0, in pixels (3D textures only). */ this.pixelDepth = 0;
-        /** Number of array elements (array textures only). */ this.layerCount = 0;
-        /**
-     * Number of cubemap faces. For cubemaps and cubemap arrays, `faceCount` must be 6. For all
-     * other textures, `faceCount` must be 1. Cubemap faces are stored in +X, -X, +Y, -Y, +Z, -Z
-     * order.
-     */ this.faceCount = 1;
-        /** Indicates which supercompression scheme has been applied to mip level images, if any. */ this.supercompressionScheme = KHR_SUPERCOMPRESSION_NONE;
-        /** Mip levels, ordered largest (original) to smallest (~1px). */ this.levels = [];
-        /** Data Format Descriptor. */ this.dataFormatDescriptor = [
+ * Creates a 'default' {@link KTX2Container} object, initialized with common
+ * configuration wfor BT709 primaries and sRGB transfer, without pixel data.
+ * There's nothing particularly special about the 'default' container; creating
+ * the KTX2Container object explicitly is also fine.
+ */ function createDefaultContainer() {
+    return {
+        vkFormat: VK_FORMAT_UNDEFINED,
+        typeSize: 1,
+        pixelWidth: 0,
+        pixelHeight: 0,
+        pixelDepth: 0,
+        layerCount: 0,
+        faceCount: 1,
+        levelCount: 0,
+        supercompressionScheme: KHR_SUPERCOMPRESSION_NONE,
+        levels: [],
+        dataFormatDescriptor: [
             {
                 vendorId: KHR_DF_VENDORID_KHRONOS,
                 descriptorType: KHR_DF_KHR_DESCRIPTORTYPE_BASICFORMAT,
-                descriptorBlockSize: 0,
                 versionNumber: KHR_DF_VERSION,
                 colorModel: KHR_DF_MODEL_UNSPECIFIED,
                 colorPrimaries: KHR_DF_PRIMARIES_BT709,
@@ -233,10 +223,10 @@ const VK_FORMAT_UNDEFINED = 0;
                 ],
                 samples: []
             }
-        ];
-        /** Key/Value Data. */ this.keyValue = {};
-        /** Supercompression Global Data. */ this.globalData = null;
-    }
+        ],
+        keyValue: {},
+        globalData: null
+    };
 }
 class BufferReader {
     constructor(data, byteOffset, byteLength, littleEndian){
@@ -315,10 +305,7 @@ const KTX2_ID = [
     0x0a
 ];
 /** Decodes an ArrayBuffer to text. */ function decodeText(buffer) {
-    if (typeof TextDecoder !== 'undefined') {
-        return new TextDecoder().decode(buffer);
-    }
-    return Buffer.from(buffer).toString('utf8');
+    return new TextDecoder().decode(buffer);
 }
 /**
  * Parses a KTX 2.0 file, returning an unpacked {@link KTX2Container} instance with all associated
@@ -346,7 +333,7 @@ const KTX2_ID = [
     ) {
         throw new Error('Missing KTX 2.0 identifier.');
     }
-    const container = new KTX2Container();
+    const container = createDefaultContainer();
     ///////////////////////////////////////////////////
     // Header.
     ///////////////////////////////////////////////////
@@ -359,7 +346,7 @@ const KTX2_ID = [
     container.pixelDepth = headerReader._nextUint32();
     container.layerCount = headerReader._nextUint32();
     container.faceCount = headerReader._nextUint32();
-    const levelCount = headerReader._nextUint32();
+    container.levelCount = headerReader._nextUint32();
     container.supercompressionScheme = headerReader._nextUint32();
     const dfdByteOffset = headerReader._nextUint32();
     const dfdByteLength = headerReader._nextUint32();
@@ -370,9 +357,9 @@ const KTX2_ID = [
     ///////////////////////////////////////////////////
     // Level Index.
     ///////////////////////////////////////////////////
-    const levelByteLength = levelCount * 3 * 8;
+    const levelByteLength = Math.max(container.levelCount, 1) * 3 * 8;
     const levelReader = new BufferReader(data, KTX2_ID.length + headerByteLength, levelByteLength, true);
-    for(let i = 0; i < levelCount; i++){
+    for(let i = 0, il = Math.max(container.levelCount, 1); i < il; i++){
         container.levels.push({
             levelData: new Uint8Array(data.buffer, data.byteOffset + levelReader._nextUint64(), levelReader._nextUint64()),
             uncompressedByteLength: levelReader._nextUint64()
@@ -382,36 +369,47 @@ const KTX2_ID = [
     // Data Format Descriptor (DFD).
     ///////////////////////////////////////////////////
     const dfdReader = new BufferReader(data, dfdByteOffset, dfdByteLength, true);
+    dfdReader._skip(4); // totalSize
+    const vendorId = dfdReader._nextUint16();
+    const descriptorType = dfdReader._nextUint16();
+    const versionNumber = dfdReader._nextUint16();
+    const descriptorBlockSize = dfdReader._nextUint16();
+    const colorModel = dfdReader._nextUint8();
+    const colorPrimaries = dfdReader._nextUint8();
+    const transferFunction = dfdReader._nextUint8();
+    const flags = dfdReader._nextUint8();
+    const texelBlockDimension = [
+        dfdReader._nextUint8(),
+        dfdReader._nextUint8(),
+        dfdReader._nextUint8(),
+        dfdReader._nextUint8()
+    ];
+    const bytesPlane = [
+        dfdReader._nextUint8(),
+        dfdReader._nextUint8(),
+        dfdReader._nextUint8(),
+        dfdReader._nextUint8(),
+        dfdReader._nextUint8(),
+        dfdReader._nextUint8(),
+        dfdReader._nextUint8(),
+        dfdReader._nextUint8()
+    ];
+    const samples = [];
     const dfd = {
-        vendorId: dfdReader._skip(4 /* totalSize */ )._nextUint16(),
-        descriptorType: dfdReader._nextUint16(),
-        versionNumber: dfdReader._nextUint16(),
-        descriptorBlockSize: dfdReader._nextUint16(),
-        colorModel: dfdReader._nextUint8(),
-        colorPrimaries: dfdReader._nextUint8(),
-        transferFunction: dfdReader._nextUint8(),
-        flags: dfdReader._nextUint8(),
-        texelBlockDimension: [
-            dfdReader._nextUint8(),
-            dfdReader._nextUint8(),
-            dfdReader._nextUint8(),
-            dfdReader._nextUint8()
-        ],
-        bytesPlane: [
-            dfdReader._nextUint8(),
-            dfdReader._nextUint8(),
-            dfdReader._nextUint8(),
-            dfdReader._nextUint8(),
-            dfdReader._nextUint8(),
-            dfdReader._nextUint8(),
-            dfdReader._nextUint8(),
-            dfdReader._nextUint8()
-        ],
-        samples: []
+        vendorId,
+        descriptorType,
+        versionNumber,
+        colorModel,
+        colorPrimaries,
+        transferFunction,
+        flags,
+        texelBlockDimension,
+        bytesPlane,
+        samples
     };
     const sampleStart = 6;
     const sampleWords = 4;
-    const numSamples = (dfd.descriptorBlockSize / 4 - sampleStart) / sampleWords;
+    const numSamples = (descriptorBlockSize / 4 - sampleStart) / sampleWords;
     for(let i = 0; i < numSamples; i++){
         const sample = {
             bitOffset: dfdReader._nextUint16(),
@@ -423,8 +421,8 @@ const KTX2_ID = [
                 dfdReader._nextUint8(),
                 dfdReader._nextUint8()
             ],
-            sampleLower: -Infinity,
-            sampleUpper: Infinity
+            sampleLower: Number.NEGATIVE_INFINITY,
+            sampleUpper: Number.POSITIVE_INFINITY
         };
         if (sample.channelType & KHR_DF_SAMPLE_DATATYPE_SIGNED) {
             sample.sampleLower = dfdReader._nextInt32();
@@ -466,7 +464,7 @@ const KTX2_ID = [
     const tablesByteLength = sgdReader._nextUint32();
     const extendedByteLength = sgdReader._nextUint32();
     const imageDescs = [];
-    for(let i = 0; i < levelCount; i++){
+    for(let i = 0, il = Math.max(container.levelCount, 1); i < il; i++){
         imageDescs.push({
             imageFlags: sgdReader._nextUint32(),
             rgbSliceByteOffset: sgdReader._nextUint32(),
@@ -612,6 +610,61 @@ const InternalFormat = {
     RGB_PVRTC_4BPPV1_Format: 35840,
     RGB_S3TC_DXT1_Format: 33776
 };
+const InternalFormatSRGB = {
+    // https://registry.khronos.org/webgl/extensions/WEBGL_compressed_texture_s3tc_srgb/
+    COMPRESSED_SRGB_S3TC_DXT1_EXT: 0x8c4c,
+    COMPRESSED_SRGB_ALPHA_S3TC_DXT1_EXT: 0x8c4d,
+    COMPRESSED_SRGB_ALPHA_S3TC_DXT3_EXT: 0x8c4e,
+    COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT: 0x8c4f,
+    COMPRESSED_SRGB8_ETC2: 0x9275,
+    COMPRESSED_SRGB8_ALPHA8_ETC2_EAC: 0x9279,
+    // https://registry.khronos.org/webgl/extensions/WEBGL_compressed_texture_astc/
+    COMPRESSED_SRGB8_ALPHA8_ASTC_4x4_KHR: 0x93d0,
+    // COMPRESSED_SRGB8_ALPHA8_ASTC_5x4_KHR: 0x93d1,
+    // COMPRESSED_SRGB8_ALPHA8_ASTC_5x5_KHR: 0x93d2,
+    // COMPRESSED_SRGB8_ALPHA8_ASTC_6x5_KHR: 0x93d3,
+    // COMPRESSED_SRGB8_ALPHA8_ASTC_6x6_KHR: 0x93d4,
+    // COMPRESSED_SRGB8_ALPHA8_ASTC_8x5_KHR: 0x93d5,
+    // COMPRESSED_SRGB8_ALPHA8_ASTC_8x6_KHR: 0x93d6,
+    // COMPRESSED_SRGB8_ALPHA8_ASTC_8x8_KHR: 0x93d7,
+    // COMPRESSED_SRGB8_ALPHA8_ASTC_10x5_KHR: 0x93d8,
+    // COMPRESSED_SRGB8_ALPHA8_ASTC_10x6_KHR: 0x93d9,
+    // COMPRESSED_SRGB8_ALPHA8_ASTC_10x8_KHR: 0x93da,
+    // COMPRESSED_SRGB8_ALPHA8_ASTC_10x10_KHR: 0x93db,
+    // COMPRESSED_SRGB8_ALPHA8_ASTC_12x10_KHR: 0x93dc,
+    // COMPRESSED_SRGB8_ALPHA8_ASTC_12x12_KHR: 0x93dd,
+    // https://registry.khronos.org/webgl/extensions/EXT_texture_compression_bptc/
+    COMPRESSED_SRGB_ALPHA_BPTC_UNORM_EXT: 0x8e8d
+};
+// prettier-ignore
+const InternalFormatToSRGB = {
+    // DXT
+    [InternalFormat.RGB_S3TC_DXT1_Format]: InternalFormatSRGB.COMPRESSED_SRGB_S3TC_DXT1_EXT,
+    [InternalFormat.RGBA_S3TC_DXT1_Format]: InternalFormatSRGB.COMPRESSED_SRGB_ALPHA_S3TC_DXT1_EXT,
+    [InternalFormat.RGBA_S3TC_DXT3_Format]: InternalFormatSRGB.COMPRESSED_SRGB_ALPHA_S3TC_DXT3_EXT,
+    [InternalFormat.RGBA_S3TC_DXT5_Format]: InternalFormatSRGB.COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT,
+    // ETC
+    [InternalFormat.RGB_ETC1_Format]: InternalFormatSRGB.COMPRESSED_SRGB8_ETC2,
+    [InternalFormat.RGB_ETC2_Format]: InternalFormatSRGB.COMPRESSED_SRGB8_ETC2,
+    [InternalFormat.RGBA_ETC2_EAC_Format]: InternalFormatSRGB.COMPRESSED_SRGB8_ALPHA8_ETC2_EAC,
+    // ASTC
+    [InternalFormat.RGBA_ASTC_4x4_Format]: InternalFormatSRGB.COMPRESSED_SRGB8_ALPHA8_ASTC_4x4_KHR,
+    // [InternalFormat.RGBA_ASTC_5x4_Format]: InternalFormatSRGB.COMPRESSED_SRGB8_ALPHA8_ASTC_5x4_KHR,
+    // [InternalFormat.RGBA_ASTC_5x5_Format]: InternalFormatSRGB.COMPRESSED_SRGB8_ALPHA8_ASTC_5x5_KHR,
+    // [InternalFormat.RGBA_ASTC_6x5_Format]: InternalFormatSRGB.COMPRESSED_SRGB8_ALPHA8_ASTC_6x5_KHR,
+    // [InternalFormat.RGBA_ASTC_6x6_Format]: InternalFormatSRGB.COMPRESSED_SRGB8_ALPHA8_ASTC_6x6_KHR,
+    // [InternalFormat.RGBA_ASTC_8x5_Format]: InternalFormatSRGB.COMPRESSED_SRGB8_ALPHA8_ASTC_8x5_KHR,
+    // [InternalFormat.RGBA_ASTC_8x6_Format]: InternalFormatSRGB.COMPRESSED_SRGB8_ALPHA8_ASTC_8x6_KHR,
+    // [InternalFormat.RGBA_ASTC_8x8_Format]: InternalFormatSRGB.COMPRESSED_SRGB8_ALPHA8_ASTC_8x8_KHR,
+    // [InternalFormat.RGBA_ASTC_10x5_Format]: InternalFormatSRGB.COMPRESSED_SRGB8_ALPHA8_ASTC_10x5_KHR,
+    // [InternalFormat.RGBA_ASTC_10x6_Format]: InternalFormatSRGB.COMPRESSED_SRGB8_ALPHA8_ASTC_10x6_KHR,
+    // [InternalFormat.RGBA_ASTC_10x8_Format]: InternalFormatSRGB.COMPRESSED_SRGB8_ALPHA8_ASTC_10x8_KHR,
+    // [InternalFormat.RGBA_ASTC_10x10_Format]: InternalFormatSRGB.COMPRESSED_SRGB8_ALPHA8_ASTC_10x10_KHR,
+    // [InternalFormat.RGBA_ASTC_12x10_Format]: InternalFormatSRGB.COMPRESSED_SRGB8_ALPHA8_ASTC_12x10_KHR,
+    // [InternalFormat.RGBA_ASTC_12x12_Format]: InternalFormatSRGB.COMPRESSED_SRGB8_ALPHA8_ASTC_12x12_KHR,
+    // BPTC
+    [InternalFormat.RGBA_BPTC_Format]: InternalFormatSRGB.COMPRESSED_SRGB_ALPHA_BPTC_UNORM_EXT
+};
 // Decoder API
 let transcoderPending;
 const getWorkerStringUrl = (transcoder, worker)=>{
@@ -627,7 +680,7 @@ BasisWorker(_InternalFormat, _TranscoderFormat, _BasisFormat)
     ]));
 };
 const getTranscoder = async (transcoderPath)=>transcoderPending || Promise.all([
-        getWorkerStringUrl(await (await fetch(`${transcoderPath}basis_transcoder.js`)).text(), await (await (await fetch(`${transcoderPath}basis-worker.js`)).text()).replace("module.exports = BasisWorker", "")),
+        getWorkerStringUrl(await (await fetch(`${transcoderPath}basis_transcoder.js`)).text(), await (await (await fetch(`${transcoderPath}basis-worker.js`)).text()).replace("module.exports = BasisWorker", "").replace("export default BasisWorker;", "")),
         await (await fetch(`${transcoderPath}basis_transcoder.wasm`)).arrayBuffer()
     ]);
 // Texture creation
@@ -660,6 +713,14 @@ const loadCompressedTexture = async (buffers, taskConfig = {})=>{
     }).then((message)=>{
         // eslint-disable-next-line no-unused-vars
         const { type, id, hasAlpha, ...texture } = message;
+        if (taskConfig.colorSpace === "srgb") {
+            const srgbInternalFormat = InternalFormatToSRGB[texture.internalFormat];
+            if (srgbInternalFormat) {
+                texture.internalFormat = srgbInternalFormat;
+            } else {
+                console.warn(`Missing SRGB conversion format for internalFormat "${texture.internalFormat}"`);
+            }
+        }
         return {
             compressed: texture.internalFormat !== InternalFormat.RGBAFormat,
             ...texture
@@ -785,6 +846,7 @@ const getAlpha = ({ colorModel, samples })=>{
         width: ktx.pixelWidth,
         height: ktx.pixelHeight,
         basisFormat,
+        colorSpace: dfd.transferFunction === KHR_DF_TRANSFER_SRGB ? "srgb" : "linear",
         hasAlpha: getAlpha(dfd),
         lowLevel: true
     };
@@ -801,8 +863,6 @@ const getAlpha = ({ colorModel, samples })=>{
     })// Add extra ktx props
     .then((texture)=>({
             ...texture,
-            // srgb or linear
-            // encoding: dfd.transferFunction === KHR_DF_TRANSFER_SRGB ? 3 : 1,
             premultiplyAlpha: !!(dfd.flags & KHR_DF_FLAG_ALPHA_PREMULTIPLIED)
         })));
 }
@@ -3589,4 +3649,461 @@ const DataUtils = {
     return texture;
 }
 
-export { BasisFormat, loadBasis, loadDraco, loadExr, loadHdr, loadKtx2, loadUltraHdr };
+function BasisWorker(InternalFormat, TranscoderFormat, BasisFormat) {
+    let config;
+    let transcoderPending;
+    let BasisModule;
+    onmessage = (e)=>{
+        const message = e.data;
+        switch(message.type){
+            case "init":
+                config = message.config;
+                transcoderPending = new Promise((resolve)=>{
+                    BasisModule = {
+                        wasmBinary: config.wasmBinary,
+                        onRuntimeInitialized: resolve
+                    };
+                    BASIS(BasisModule);
+                }).then(()=>{
+                    BasisModule.initializeBasis();
+                });
+                break;
+            case "decode":
+                transcoderPending.then(()=>{
+                    try {
+                        const { width, height, hasAlpha, data, internalFormat } = message.taskConfig.lowLevel ? transcodeLowLevel(message.taskConfig) : transcode(message.buffers[0]);
+                        const buffers = [];
+                        for(let i = 0; i < data.length; ++i){
+                            buffers.push(data[i].data.buffer);
+                        }
+                        self.postMessage({
+                            type: "decode",
+                            id: message.id,
+                            width,
+                            height,
+                            hasAlpha,
+                            data,
+                            internalFormat
+                        }, buffers);
+                    } catch (error) {
+                        // eslint-disable-next-line no-console
+                        console.error(error);
+                        self.postMessage({
+                            type: "error",
+                            id: message.id,
+                            error: error.message
+                        });
+                    }
+                });
+                break;
+        }
+    };
+    function transcodeLowLevel(taskConfig) {
+        const { basisFormat, width, height, hasAlpha } = taskConfig;
+        const { transcoderFormat, internalFormat } = getTranscoderFormat(basisFormat, width, height, hasAlpha);
+        const blockByteLength = BasisModule.getBytesPerBlockOrPixel(transcoderFormat);
+        if (!BasisModule.isFormatSupported(transcoderFormat)) {
+            throw new Error(`BasisWorker: Unsupported format ${transcoderFormat}.`);
+        }
+        const data = [];
+        if (basisFormat === BasisFormat.ETC1S) {
+            const transcoder = new BasisModule.LowLevelETC1SImageTranscoder();
+            const { endpointCount, endpointsData, selectorCount, selectorsData, tablesData } = taskConfig.globalData;
+            try {
+                let status = false;
+                status = transcoder.decodePalettes(endpointCount, endpointsData, selectorCount, selectorsData);
+                if (!status) throw new Error("BasisWorker: decodePalettes() failed.");
+                status = transcoder.decodeTables(tablesData);
+                if (!status) throw new Error("BasisWorker: decodeTables() failed.");
+                for(let i = 0; i < taskConfig.levels.length; i++){
+                    const level = taskConfig.levels[i];
+                    const imageDesc = taskConfig.globalData.imageDescs[i];
+                    const dstByteLength = getTranscodedImageByteLength(transcoderFormat, level.width, level.height);
+                    const dst = new Uint8Array(dstByteLength);
+                    const status = transcoder.transcodeImage(transcoderFormat, dst, dstByteLength / blockByteLength, level.data, getWidthInBlocks(transcoderFormat, level.width), getHeightInBlocks(transcoderFormat, level.height), level.width, level.height, level.index, imageDesc.rgbSliceByteOffset, imageDesc.rgbSliceByteLength, imageDesc.alphaSliceByteOffset, imageDesc.alphaSliceByteLength, imageDesc.imageFlags, hasAlpha, false, 0, 0);
+                    if (!status) {
+                        throw new Error(`BasisWorker: transcodeImage() failed for level ${level.index}.`);
+                    }
+                    data.push({
+                        data: dst,
+                        width: level.width,
+                        height: level.height
+                    });
+                }
+            } finally{
+                transcoder.delete();
+            }
+        } else {
+            for(let i = 0; i < taskConfig.levels.length; i++){
+                const level = taskConfig.levels[i];
+                const dstByteLength = getTranscodedImageByteLength(transcoderFormat, level.width, level.height);
+                const dst = new Uint8Array(dstByteLength);
+                const status = BasisModule.transcodeUASTCImage(basisFormat, transcoderFormat, dst, dstByteLength / blockByteLength, level.data, getWidthInBlocks(transcoderFormat, level.width), getHeightInBlocks(transcoderFormat, level.height), level.width, level.height, level.index, 0, level.data.byteLength, 0, hasAlpha, false, 0, 0, -1, -1);
+                if (!status) {
+                    throw new Error(`BasisWorker: transcodeUASTCImage() failed for level ${level.index}.`);
+                }
+                data.push({
+                    data: dst,
+                    width: level.width,
+                    height: level.height
+                });
+            }
+        }
+        return {
+            width,
+            height,
+            hasAlpha,
+            data,
+            internalFormat
+        };
+    }
+    function transcode(buffer) {
+        const basisFile = new BasisModule.BasisFile(new Uint8Array(buffer));
+        const basisFormat = basisFile.isUASTC() ? BasisFormat.UASTC_4x4 : BasisFormat.ETC1S;
+        const width = basisFile.getImageWidth(0, 0);
+        const height = basisFile.getImageHeight(0, 0);
+        const levels = basisFile.getNumLevels(0);
+        const hasAlpha = basisFile.getHasAlpha();
+        function cleanup() {
+            basisFile.close();
+            basisFile.delete();
+        }
+        const { transcoderFormat, internalFormat } = getTranscoderFormat(basisFormat, width, height, hasAlpha);
+        if (!width || !height || !levels) {
+            cleanup();
+            throw new Error("BasisWorker:	Invalid texture.");
+        }
+        if (!basisFile.startTranscoding()) {
+            cleanup();
+            throw new Error("BasisWorker: .startTranscoding failed.");
+        }
+        const data = [];
+        for(let mip = 0; mip < levels; mip++){
+            const mipWidth = basisFile.getImageWidth(0, mip);
+            const mipHeight = basisFile.getImageHeight(0, mip);
+            const dst = new Uint8Array(basisFile.getImageTranscodedSizeInBytes(0, mip, transcoderFormat));
+            const status = basisFile.transcodeImage(dst, 0, mip, transcoderFormat, 0, hasAlpha);
+            if (!status) {
+                cleanup();
+                throw new Error("BasisWorker: .transcodeImage failed.");
+            }
+            data.push({
+                data: dst,
+                width: mipWidth,
+                height: mipHeight
+            });
+        }
+        cleanup();
+        return {
+            width,
+            height,
+            hasAlpha,
+            data,
+            internalFormat
+        };
+    }
+    const FORMAT_OPTIONS = [
+        {
+            if: "astcSupported",
+            basisFormat: [
+                BasisFormat.UASTC_4x4
+            ],
+            transcoderFormat: [
+                TranscoderFormat.ASTC_4x4,
+                TranscoderFormat.ASTC_4x4
+            ],
+            internalFormat: [
+                InternalFormat.RGBA_ASTC_4x4_Format,
+                InternalFormat.RGBA_ASTC_4x4_Format
+            ],
+            priorityETC1S: Infinity,
+            priorityUASTC: 1,
+            needsPowerOfTwo: false
+        },
+        {
+            if: "bptcSupported",
+            basisFormat: [
+                BasisFormat.ETC1S,
+                BasisFormat.UASTC_4x4
+            ],
+            transcoderFormat: [
+                TranscoderFormat.BC7_M5,
+                TranscoderFormat.BC7_M5
+            ],
+            internalFormat: [
+                InternalFormat.RGBA_BPTC_Format,
+                InternalFormat.RGBA_BPTC_Format
+            ],
+            priorityETC1S: 3,
+            priorityUASTC: 2,
+            needsPowerOfTwo: false
+        },
+        {
+            if: "dxtSupported",
+            basisFormat: [
+                BasisFormat.ETC1S,
+                BasisFormat.UASTC_4x4
+            ],
+            transcoderFormat: [
+                TranscoderFormat.BC1,
+                TranscoderFormat.BC3
+            ],
+            internalFormat: [
+                InternalFormat.RGB_S3TC_DXT1_Format,
+                InternalFormat.RGBA_S3TC_DXT5_Format
+            ],
+            priorityETC1S: 4,
+            priorityUASTC: 5,
+            needsPowerOfTwo: false
+        },
+        {
+            if: "etc2Supported",
+            basisFormat: [
+                BasisFormat.ETC1S,
+                BasisFormat.UASTC_4x4
+            ],
+            transcoderFormat: [
+                TranscoderFormat.ETC1,
+                TranscoderFormat.ETC2
+            ],
+            internalFormat: [
+                InternalFormat.RGB_ETC2_Format,
+                InternalFormat.RGBA_ETC2_EAC_Format
+            ],
+            priorityETC1S: 1,
+            priorityUASTC: 3,
+            needsPowerOfTwo: false
+        },
+        {
+            if: "etc1Supported",
+            basisFormat: [
+                BasisFormat.ETC1S,
+                BasisFormat.UASTC_4x4
+            ],
+            transcoderFormat: [
+                TranscoderFormat.ETC1,
+                TranscoderFormat.ETC1
+            ],
+            internalFormat: [
+                InternalFormat.RGB_ETC1_Format,
+                InternalFormat.RGB_ETC1_Format
+            ],
+            priorityETC1S: 2,
+            priorityUASTC: 4,
+            needsPowerOfTwo: false
+        },
+        {
+            if: "pvrtcSupported",
+            basisFormat: [
+                BasisFormat.ETC1S,
+                BasisFormat.UASTC_4x4
+            ],
+            transcoderFormat: [
+                TranscoderFormat.PVRTC1_4_RGB,
+                TranscoderFormat.PVRTC1_4_RGBA
+            ],
+            internalFormat: [
+                InternalFormat.RGB_PVRTC_4BPPV1_Format,
+                InternalFormat.RGBA_PVRTC_4BPPV1_Format
+            ],
+            priorityETC1S: 5,
+            priorityUASTC: 6,
+            needsPowerOfTwo: true
+        }
+    ];
+    const ETC1S_OPTIONS = FORMAT_OPTIONS.sort((a, b)=>a.priorityETC1S - b.priorityETC1S);
+    const UASTC_OPTIONS = FORMAT_OPTIONS.sort((a, b)=>a.priorityUASTC - b.priorityUASTC);
+    function getTranscoderFormat(basisFormat, width, height, hasAlpha) {
+        let transcoderFormat;
+        let internalFormat;
+        const options = basisFormat === BasisFormat.ETC1S ? ETC1S_OPTIONS : UASTC_OPTIONS;
+        for(let i = 0; i < options.length; i++){
+            const opt = options[i];
+            if (!config[opt.if]) continue;
+            if (!opt.basisFormat.includes(basisFormat)) continue;
+            if (opt.needsPowerOfTwo && !(isPowerOfTwo(width) && isPowerOfTwo(height))) continue;
+            transcoderFormat = opt.transcoderFormat[hasAlpha ? 1 : 0];
+            internalFormat = opt.internalFormat[hasAlpha ? 1 : 0];
+            return {
+                transcoderFormat,
+                internalFormat
+            };
+        }
+        // eslint-disable-next-line no-console
+        console.warn("BasisWorker: No suitable compressed texture format found. Decoding to RGBA32.");
+        transcoderFormat = TranscoderFormat.RGBA32;
+        internalFormat = InternalFormat.RGBAFormat;
+        return {
+            transcoderFormat,
+            internalFormat
+        };
+    }
+    function getWidthInBlocks(transcoderFormat, width) {
+        return Math.ceil(width / BasisModule.getFormatBlockWidth(transcoderFormat));
+    }
+    function getHeightInBlocks(transcoderFormat, height) {
+        return Math.ceil(height / BasisModule.getFormatBlockHeight(transcoderFormat));
+    }
+    function getTranscodedImageByteLength(transcoderFormat, width, height) {
+        const blockByteLength = BasisModule.getBytesPerBlockOrPixel(transcoderFormat);
+        if (BasisModule.formatIsUncompressed(transcoderFormat)) {
+            return width * height * blockByteLength;
+        }
+        if (transcoderFormat === TranscoderFormat.PVRTC1_4_RGB || transcoderFormat === TranscoderFormat.PVRTC1_4_RGBA) {
+            // GL requires extra padding for very small textures:
+            // https://www.khronos.org/registry/OpenGL/extensions/IMG/IMG_texture_compression_pvrtc.txt
+            const paddedWidth = width + 3 & -4;
+            const paddedHeight = height + 3 & -4;
+            return (Math.max(8, paddedWidth) * Math.max(8, paddedHeight) * 4 + 7) / 8;
+        }
+        return getWidthInBlocks(transcoderFormat, width) * getHeightInBlocks(transcoderFormat, height) * blockByteLength;
+    }
+    function isPowerOfTwo(value) {
+        if (value <= 2) return true;
+        return (value & value - 1) === 0 && value !== 0;
+    }
+}
+var basisWorker = BasisWorker;
+var basisWorker$1 = /*@__PURE__*/ getDefaultExportFromCjs(basisWorker);
+
+/* global DracoDecoderModule */ /* eslint-disable no-case-declarations */ function DracoWorker() {
+    let config;
+    let decoderPending;
+    onmessage = async ({ data })=>{
+        const message = data;
+        switch(message.type){
+            case "init":
+                config = message.config;
+                decoderPending = new Promise((resolve)=>{
+                    config.onModuleLoaded = (draco)=>resolve({
+                            draco
+                        });
+                    // Passing config with wasmBinary
+                    DracoDecoderModule(config);
+                });
+                break;
+            case "decode":
+                const buffer = message.buffer;
+                const taskConfig = message.taskConfig;
+                const { draco } = await decoderPending;
+                const decoder = new draco.Decoder();
+                const decoderBuffer = new draco.DecoderBuffer();
+                try {
+                    decoderBuffer.Init(new Int8Array(buffer), buffer.byteLength);
+                    const geometry = decodeGeometry(draco, decoder, decoderBuffer, taskConfig);
+                    self.postMessage({
+                        type: "decode",
+                        id: message.id,
+                        geometry
+                    }, // List buffers to make them transferable
+                    Object.values(geometry).map(({ data })=>data.buffer));
+                } catch (error) {
+                    // eslint-disable-next-line no-console
+                    console.error(error);
+                    self.postMessage({
+                        type: "error",
+                        id: message.id,
+                        error: error.message
+                    });
+                } finally{
+                    draco.destroy(decoderBuffer);
+                    draco.destroy(decoder);
+                }
+                break;
+        }
+    };
+    function decodeGeometry(draco, decoder, decoderBuffer, { attributeIDs, attributeTypes, useUniqueIDs }) {
+        let dracoGeometry;
+        let decodingStatus;
+        const geometryType = decoder.GetEncodedGeometryType(decoderBuffer);
+        if (geometryType === draco.TRIANGULAR_MESH) {
+            dracoGeometry = new draco.Mesh();
+            decodingStatus = decoder.DecodeBufferToMesh(decoderBuffer, dracoGeometry);
+        } else if (geometryType === draco.POINT_CLOUD) {
+            dracoGeometry = new draco.PointCloud();
+            decodingStatus = decoder.DecodeBufferToPointCloud(decoderBuffer, dracoGeometry);
+        } else {
+            throw new Error("DracoWorker: Unexpected geometry type.");
+        }
+        if (!decodingStatus.ok() || dracoGeometry.ptr === 0) {
+            throw new Error(`DracoWorker: Decoding failed: ${decodingStatus.error_msg()}`);
+        }
+        const geometry = {};
+        for(const attributeName in attributeIDs){
+            const attributeType = self[attributeTypes[attributeName]];
+            let attribute;
+            let attributeID;
+            // A Draco file may be created with default vertex attributes, whose attribute IDs
+            // are mapped 1:1 from their semantic name (POSITION, NORMAL, ...). Alternatively,
+            // a Draco file may contain a custom set of attributes, identified by known unique
+            // IDs. glTF files always do the latter, and `.drc` files typically do the former.
+            if (useUniqueIDs) {
+                attributeID = attributeIDs[attributeName];
+                attribute = decoder.GetAttributeByUniqueId(dracoGeometry, attributeID);
+            } else {
+                attributeID = decoder.GetAttributeId(dracoGeometry, draco[attributeIDs[attributeName]]);
+                if (attributeID === -1) continue;
+                attribute = decoder.GetAttribute(dracoGeometry, attributeID);
+            }
+            const { name, array, itemSize } = decodeAttribute(draco, decoder, dracoGeometry, attributeName, attributeType, attribute);
+            geometry[name] = {
+                data: array,
+                itemSize
+            };
+        }
+        if (geometryType === draco.TRIANGULAR_MESH) {
+            geometry.indices = decodeIndex(draco, decoder, dracoGeometry);
+        }
+        draco.destroy(dracoGeometry);
+        return geometry;
+    }
+    function decodeIndex(draco, decoder, dracoGeometry) {
+        const numFaces = dracoGeometry.num_faces();
+        const numIndices = numFaces * 3;
+        const byteLength = numIndices * 4;
+        const ptr = draco._malloc(byteLength);
+        decoder.GetTrianglesUInt32Array(dracoGeometry, byteLength, ptr);
+        const index = new Uint32Array(draco.HEAPF32.buffer, ptr, numIndices).slice();
+        draco._free(ptr);
+        return {
+            data: index,
+            itemSize: 1
+        };
+    }
+    function decodeAttribute(draco, decoder, dracoGeometry, attributeName, attributeType, attribute) {
+        const numComponents = attribute.num_components();
+        const numPoints = dracoGeometry.num_points();
+        const numValues = numPoints * numComponents;
+        const byteLength = numValues * attributeType.BYTES_PER_ELEMENT;
+        const dataType = getDracoDataType(draco, attributeType);
+        const ptr = draco._malloc(byteLength);
+        decoder.GetAttributeDataArrayForAllPoints(dracoGeometry, attribute, dataType, byteLength, ptr);
+        const array = new attributeType(draco.HEAPF32.buffer, ptr, numValues).slice();
+        draco._free(ptr);
+        return {
+            name: attributeName,
+            array,
+            itemSize: numComponents
+        };
+    }
+    function getDracoDataType(draco, attributeType) {
+        switch(attributeType){
+            case Float32Array:
+                return draco.DT_FLOAT32;
+            case Int8Array:
+                return draco.DT_INT8;
+            case Int16Array:
+                return draco.DT_INT16;
+            case Int32Array:
+                return draco.DT_INT32;
+            case Uint8Array:
+                return draco.DT_UINT8;
+            case Uint16Array:
+                return draco.DT_UINT16;
+            case Uint32Array:
+                return draco.DT_UINT32;
+        }
+    }
+}
+
+export { BasisFormat, basisWorker$1 as BasisWorker, DracoWorker, WorkerPool, loadBasis, loadDraco, loadExr, loadHdr, loadKtx2, loadUltraHdr };

@@ -40,9 +40,9 @@ const final = ({ ctx, resourceCache, descriptors }) => {
     // prettier-ignore
     flagDefinitions: [
       // AA
-      [["postProcessing", "fxaa"], "USE_AA"],
-      [["postProcessing", "fxaa", "subPixelQuality"], "", { uniform: "uSubPixelQuality", requires: "USE_AA" }],
-      [["postProcessing", "fxaa", "quality"], "AA_QUALITY", { type: "value", requires: "USE_AA" }],
+      [["postProcessing", "fxaa"], "USE_FXAA"],
+      [["postProcessing", "fxaa", "subPixelQuality"], "", { uniform: "uSubPixelQuality", requires: "USE_FXAA" }],
+      [["postProcessing", "fxaa", "quality"], "AA_QUALITY", { type: "value", requires: "USE_FXAA" }],
 
       // Film Grain
       [["postProcessing", "filmGrain"], "USE_FILM_GRAIN"],
@@ -53,8 +53,8 @@ const final = ({ ctx, resourceCache, descriptors }) => {
       [["postProcessing", "filmGrain", "luminanceIntensity"], "", { uniform: "uFilmGrainLuminanceIntensity", requires: "USE_FILM_GRAIN" }],
       [["postProcessing", "filmGrain", "speed"], "", { uniform: "uFilmGrainSpeed", requires: "USE_FILM_GRAIN" }],
 
-      [["options", "targets", "final.luma"], "LUMA_TEXTURE", { type: "texture", uniform: "uLumaTexture", requires: "USE_AA" }],
-      [["options", "targets", "final.luma"], "LUMA_TEXTURE", { type: "texture", uniform: "uLumaTexture", requires: "USE_FILM_GRAIN", excludes: "USE_AA" }],
+      [["options", "targets", "final.luma"], "LUMA_TEXTURE", { type: "texture", uniform: "uLumaTexture", requires: "USE_FXAA" }],
+      [["options", "targets", "final.luma"], "LUMA_TEXTURE", { type: "texture", uniform: "uLumaTexture", requires: "USE_FILM_GRAIN", excludes: "USE_FXAA" }],
 
       // Output
       [["postProcessing", "opacity"], "", { uniform: "uOpacity" }],

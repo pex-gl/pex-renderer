@@ -6471,7 +6471,7 @@ uniform vec2 uViewportSize;
 
 varying vec2 vTexCoord0;
 
-#if defined(USE_AA) || defined(USE_UPSAMPLE) || defined(USE_DOWN_SAMPLE)
+#if defined(USE_FXAA) || defined(USE_UPSAMPLE) || defined(USE_DOWN_SAMPLE)
   uniform vec2 uTexelSize;
 
   varying vec2 vTexCoord0LeftUp;
@@ -6479,7 +6479,7 @@ varying vec2 vTexCoord0;
   varying vec2 vTexCoord0LeftDown;
   varying vec2 vTexCoord0RightDown;
 
-  #if defined(USE_AA) || defined(USE_UPSAMPLE)
+  #if defined(USE_FXAA) || defined(USE_UPSAMPLE)
     varying vec2 vTexCoord0Down;
     varying vec2 vTexCoord0Up;
     varying vec2 vTexCoord0Left;
@@ -6491,7 +6491,7 @@ void main() {
   gl_Position = vec4(aPosition, 0.0, 1.0);
   vTexCoord0 = aPosition * 0.5 + 0.5;
 
-  #if defined(USE_AA) || defined(USE_UPSAMPLE) || defined(USE_DOWN_SAMPLE)
+  #if defined(USE_FXAA) || defined(USE_UPSAMPLE) || defined(USE_DOWN_SAMPLE)
     #if defined(USE_UPSAMPLE) && defined(QUALITY) && QUALITY == 0
       float offset = 0.5;
     #else
@@ -6503,7 +6503,7 @@ void main() {
     vTexCoord0LeftDown = vTexCoord0 + uTexelSize * offset * vec2(-1.0, -1.0);
     vTexCoord0RightDown = vTexCoord0 + uTexelSize * offset * vec2(1.0, -1.0);
 
-    #if defined(USE_AA) || defined(USE_UPSAMPLE)
+    #if defined(USE_FXAA) || defined(USE_UPSAMPLE)
       vTexCoord0Down = vTexCoord0 + uTexelSize * vec2(0.0, -1.0);
       vTexCoord0Up = vTexCoord0 + uTexelSize * vec2(0.0, 1.0);
       vTexCoord0Left = vTexCoord0 + uTexelSize * vec2(-1.0, 0.0);
@@ -7510,8 +7510,6 @@ ${saturate}
 ${encodeDecode_glsl}
 ${depthRead_glsl}
 ${Object.values(glslToneMap).join("\n")}
-${max3}
-${reversibleToneMap_glsl}
 
 #ifdef USE_FOG
   uniform float uFogStart;
@@ -7656,7 +7654,7 @@ uniform float uTime;
 ${saturate}
 ${encodeDecode_glsl}
 
-#if defined(USE_AA) || defined(USE_FILM_GRAIN)
+#if defined(USE_FXAA) || defined(USE_FILM_GRAIN)
   uniform sampler2D uLumaTexture;
 
   float readLumaTexture(sampler2D tex, vec2 uv) {
@@ -7664,7 +7662,7 @@ ${encodeDecode_glsl}
   }
 #endif
 
-#ifdef USE_AA
+#ifdef USE_FXAA
   // FXAA blends anything that has high enough contrast. It helps mitigate fireflies but will blur small details.
   // - 1.00: upper limit (softer)
   // - 0.75: default amount of filtering
@@ -7693,7 +7691,7 @@ uniform float uOpacity;
 
 varying vec2 vTexCoord0;
 
-#ifdef USE_AA
+#ifdef USE_FXAA
   varying vec2 vTexCoord0LeftUp;
   varying vec2 vTexCoord0RightUp;
   varying vec2 vTexCoord0LeftDown;
@@ -7707,7 +7705,7 @@ varying vec2 vTexCoord0;
 void main() {
   vec2 uv;
 
-  #ifdef USE_AA
+  #ifdef USE_FXAA
     uv = fxaa(
       uLumaTexture,
       vTexCoord0,
