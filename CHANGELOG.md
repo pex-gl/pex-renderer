@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+# [5.0.0-alpha.4](https://github.com/pex-gl/pex-renderer/compare/v5.0.0-alpha.3...v5.0.0-alpha.4) (2025-09-19)
+
+
+### Features
+
+* **ecs:** add skeleton helper ([9cbd17b](https://github.com/pex-gl/pex-renderer/commit/9cbd17bb2ce4076d8ebf72f5ff9b6fdd47de6a26))
+* **ecs:** draw axesHelper after gridHelper ([b44ddff](https://github.com/pex-gl/pex-renderer/commit/b44ddffe441b9297fb2f587e9834a9d530e2d99d))
+* **ecs:** increase helper lineWidth to 2 for readability ([051136e](https://github.com/pex-gl/pex-renderer/commit/051136ed5c80ac11c7c96273ab69306b8368f91e))
+* **ecs:** refactor helper renderer to helper system using line-renderer ([d5257bf](https://github.com/pex-gl/pex-renderer/commit/d5257bff5770a6efcbf276b4bbd790ed112d9ba2))
+* **gltf:** handle webp images ([23c14a4](https://github.com/pex-gl/pex-renderer/commit/23c14a427fa52e09f02f75e763f5e67a11af9772))
+
+
+
 # [5.0.0-alpha.3](https://github.com/pex-gl/pex-renderer/compare/v5.0.0-alpha.2...v5.0.0-alpha.3) (2025-09-12)
 
 

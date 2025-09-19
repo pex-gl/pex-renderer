@@ -109,6 +109,8 @@ ctx.frame(() => {
 <dd></dd>
 <dt><a href="#BoundingBoxHelperComponentOptions">BoundingBoxHelperComponentOptions</a> : <code>object</code></dt>
 <dd></dd>
+<dt><a href="#SkeletonHelperComponentOptions">SkeletonHelperComponentOptions</a> : <code>object</code></dt>
+<dd></dd>
 <dt><a href="#CameraHelperComponentOptions">CameraHelperComponentOptions</a> : <code>object</code></dt>
 <dd></dd>
 <dt><a href="#CameraView">CameraView</a> : <code>object</code></dt>
@@ -323,6 +325,7 @@ Create a resource cache for pex-context caching.
     - [.colorCorrection([options])](#module_components.postProcessing.colorCorrection) ⇒ <code>object</code>
     - [.filmGrain([options])](#module_components.postProcessing.filmGrain) ⇒ <code>object</code>
   - [.reflectionProbe([options])](#module_components.reflectionProbe) ⇒ <code>object</code>
+  - [.skeletonHelper([options])](#module_components.skeletonHelper) ⇒ <code>object</code>
   - [.skin([options])](#module_components.skin) ⇒ <code>object</code>
   - [.skybox([options])](#module_components.skybox) ⇒ <code>object</code>
   - [.spotLight([options])](#module_components.spotLight) ⇒ <code>object</code>
@@ -678,6 +681,18 @@ Reflection probe component
 | --------- | -------------------------------------------------------------------------------- |
 | [options] | [<code>ReflectionProbeComponentOptions</code>](#ReflectionProbeComponentOptions) |
 
+<a name="module_components.skeletonHelper"></a>
+
+### components.skeletonHelper([options]) ⇒ <code>object</code>
+
+Skeleton helper component
+
+**Kind**: static method of [<code>components</code>](#module_components)
+
+| Param     | Type                                                                           |
+| --------- | ------------------------------------------------------------------------------ |
+| [options] | [<code>SkeletonHelperComponentOptions</code>](#SkeletonHelperComponentOptions) |
+
 <a name="module_components.skin"></a>
 
 ### components.skin([options]) ⇒ <code>object</code>
@@ -747,6 +762,7 @@ Vertex helper component
   - [.animation()](#module_systems.animation) ⇒ [<code>System</code>](#System)
   - [.camera()](#module_systems.camera) ⇒ [<code>System</code>](#System)
   - [.geometry(options)](#module_systems.geometry) ⇒ [<code>System</code>](#System)
+  - [.helper()](#module_systems.helper) ⇒ [<code>System</code>](#System)
   - [.layer()](#module_systems.layer) ⇒ [<code>System</code>](#System)
   - [.light()](#module_systems.light) ⇒ [<code>System</code>](#System)
   - [.morph()](#module_systems.morph) ⇒ [<code>System</code>](#System)
@@ -799,6 +815,13 @@ Adds:
 | ------- | -------------------------------------------- |
 | options | [<code>SystemOptions</code>](#SystemOptions) |
 
+<a name="module_systems.helper"></a>
+
+### systems.helper() ⇒ [<code>System</code>](#System)
+
+Helper system
+
+**Kind**: static method of [<code>systems</code>](#module_systems)
 <a name="module_systems.layer"></a>
 
 ### systems.layer() ⇒ [<code>System</code>](#System)
@@ -1070,6 +1093,17 @@ Standard renderer
 | Name    | Type                              | Default                   |
 | ------- | --------------------------------- | ------------------------- |
 | [color] | <code>Array.&lt;number&gt;</code> | <code>[1, 0, 0, 1]</code> |
+
+<a name="SkeletonHelperComponentOptions"></a>
+
+## SkeletonHelperComponentOptions : <code>object</code>
+
+**Kind**: global typedef
+**Properties**
+
+| Name    | Type                                                                                 | Default                                   |
+| ------- | ------------------------------------------------------------------------------------ | ----------------------------------------- |
+| [color] | <code>Array.&lt;number&gt;</code> \| <code>Array.&lt;Array.&lt;number&gt;&gt;</code> | <code>[[0, 0, 1, 1], [1, 1, 1, 1]]</code> |
 
 <a name="CameraHelperComponentOptions"></a>
 
