@@ -35,7 +35,7 @@ const SUPPORTED_EXTENSIONS = [
   "KHR_mesh_quantization",
   "KHR_texture_basisu",
   "KHR_texture_transform",
-  // "EXT_texture_webp",
+  "EXT_texture_webp",
 
   // WIP:
   // "KHR_materials_volume_scatter"
@@ -233,12 +233,19 @@ function getPexMaterialTexture(
   const texture = textures[materialTexture.index];
 
   // https://github.com/KhronosGroup/glTF/blob/main/specification/2.0/schema/image.schema.json
-  const image =
-    texture.extensions &&
-    texture.extensions.KHR_texture_basisu &&
-    Number.isInteger(texture.extensions.KHR_texture_basisu.source)
-      ? images[texture.extensions.KHR_texture_basisu.source]
-      : images[texture.source];
+  let textureSource = texture.source;
+  if (texture.extensions) {
+    // https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_texture_basisu/schema/texture.KHR_texture_basisu.schema.json
+    // https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Vendor/EXT_texture_webp/schema/glTF.EXT_texture_webp.schema.json
+    const imageExtension =
+      texture.extensions.KHR_texture_basisu ||
+      texture.extensions.EXT_texture_webp;
+
+    if (imageExtension && Number.isInteger(imageExtension.source)) {
+      textureSource = imageExtension.source;
+    }
+  }
+  const image = images[textureSource];
 
   // https://github.com/KhronosGroup/glTF/blob/main/specification/2.0/schema/sampler.schema.json
   const sampler =

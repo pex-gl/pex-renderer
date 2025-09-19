@@ -596,7 +596,7 @@ models = models.filter(({ name }) =>
     // "SheenChair",
     // "SheenCloth",
     // "SheenTestGrid",
-    // "SheenWoodLeatherSofa", // FAIL: EXT_texture_webp
+    // "SheenWoodLeatherSofa",
     // "SimpleInstancing", // HALF: need instanced bbox
     // "SimpleMaterial",
     // "SimpleMeshes",
@@ -609,7 +609,7 @@ models = models.filter(({ name }) =>
     // "SpecularTest", // HALF: left column should have no specular but we disable extension if specular=0 in getProgramFlagsAndUniforms
     // "Sponza",
     // "StainedGlassLamp", // FAIL: KHR_materials_variants
-    // "SunglassesKhronos",  // FAIL: EXT_texture_webp KHR_materials_iridescence
+    // "SunglassesKhronos", // FAIL: KHR_materials_iridescence
     // "Suzanne",
     // "TextureCoordinateTest",
     // "TextureEncodingTest",
