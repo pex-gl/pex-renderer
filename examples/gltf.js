@@ -200,9 +200,6 @@ function onSceneLoaded(scene, grid) {
       if (entity.camera) {
         entity.cameraHelper = components.cameraHelper();
       }
-      if (entity.geometry) {
-        entity.boundingBoxHelper = components.boundingBoxHelper();
-      }
     });
   }
 
