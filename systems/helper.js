@@ -463,10 +463,14 @@ export default () => ({
   cache: {},
   debug: false,
   lineWidth: 2,
-  getEntities: () => [
+  getEntities: (cacheId) => [
     entity({
+      name: `helper-${cacheId}`,
       transform: components.transform(),
-      geometry: createGeomBuilder({ positions: 3, vertexColors: 4 }),
+      geometry: Object.assign(
+        createGeomBuilder({ positions: 3, vertexColors: 4 }),
+        components.geometry(),
+      ),
       material: components.material({
         type: "line",
         lineWidth: 1,
@@ -476,8 +480,12 @@ export default () => ({
       }),
     }),
     entity({
+      name: `helper-no-depth-${cacheId}`,
       transform: components.transform(),
-      geometry: createGeomBuilder({ positions: 3, vertexColors: 4 }),
+      geometry: Object.assign(
+        createGeomBuilder({ positions: 3, vertexColors: 4 }),
+        components.geometry(),
+      ),
       material: components.material({
         type: "line",
         lineWidth: 1,
@@ -659,6 +667,8 @@ export default () => ({
       // Set as dirty
       entity.geometry.positions.dirty = true;
       entity.geometry.vertexColors.dirty = true;
+
+      if (entity.geometry.bounds) entity.geometry.bounds.dirty = true;
     }
 
     // Update entities
