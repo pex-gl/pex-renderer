@@ -265,6 +265,7 @@ const skyboxSystem = systems.skybox({ ctx, resourceCache });
 const cameraSystem = systems.camera();
 const reflectionProbeSystem = systems.reflectionProbe({ ctx, resourceCache });
 const lightSystem = systems.light();
+const helperSystem = systems.helper();
 const renderPipelineSystem = systems.renderPipeline({
   ctx,
   resourceCache,
@@ -290,7 +291,6 @@ const skyboxRendererSystem = systems.renderer.skybox({
   resourceCache,
   renderGraph,
 });
-const helperRendererSystem = systems.renderer.helper({ ctx });
 
 const createView = (cameraEntity, viewport) => ({
   viewport,
@@ -379,20 +379,20 @@ ctx.frame(() => {
         lineRendererSystem,
         skyboxRendererSystem,
       ],
-      renderView: renderView,
+      renderView,
     });
   });
 
   view2.draw((renderView) => {
+    const { entities: helperEntities } = helperSystem.update(world.entities, {
+      renderView,
+      renderEngine: { systems: [transformSystem, geometrySystem] },
+    });
     const { color, normal, depth } = renderPipelineSystem.update(
-      world.entities,
+      [...world.entities, ...helperEntities],
       {
-        renderers: [
-          basicRendererSystem,
-          lineRendererSystem,
-          helperRendererSystem,
-        ],
-        renderView: renderView,
+        renderers: [basicRendererSystem, lineRendererSystem],
+        renderView,
       },
     );
     guiColorControl.texture = color;

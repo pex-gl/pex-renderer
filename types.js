@@ -8,6 +8,7 @@
  * @property {AreaLightComponentOptions} [areaLight]
  * @property {AxesHelperComponentOptions} [axesHelper]
  * @property {BoundingBoxHelperComponentOptions} [boundingBoxHelper]
+ * @property {SkeletonHelperComponentOptions} [skeletonHelper]
  * @property {CameraHelperComponentOptions} [cameraHelper]
  * @property {CameraComponentOptions} [camera]
  * @property {DirectionalLightComponentOptions} [directionalLight]
