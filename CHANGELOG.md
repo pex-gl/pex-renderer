@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+# [5.0.0-alpha.6](https://github.com/pex-gl/pex-renderer/compare/v5.0.0-alpha.5...v5.0.0-alpha.6) (2025-09-26)
+
+
+### Bug Fixes
+
+* **ecs:** make helper system entities bounds dirty ([3390097](https://github.com/pex-gl/pex-renderer/commit/33900973f454df002d3552c186ef0f1d38fc05dc)), closes [#421](https://github.com/pex-gl/pex-renderer/issues/421)
+
+
+### Features
+
+* **ecs:** handle ior debugRender ([4c3cb0b](https://github.com/pex-gl/pex-renderer/commit/4c3cb0b0de3a871a46401eef5ebc7034b48cd2cf))
+
+
+
 # [5.0.0-alpha.5](https://github.com/pex-gl/pex-renderer/compare/v5.0.0-alpha.4...v5.0.0-alpha.5) (2025-09-19)
 
 

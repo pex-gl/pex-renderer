@@ -925,7 +925,6 @@ Adds:
 - [renderer](#module_renderer)
   - [.base()](#module_renderer.base) ⇒ [<code>RendererSystem</code>](#RendererSystem)
   - [.basic(options)](#module_renderer.basic) ⇒ [<code>RendererSystem</code>](#RendererSystem)
-  - [.helper(options)](#module_renderer.helper) ⇒ [<code>RendererSystem</code>](#RendererSystem)
   - [.line(options)](#module_renderer.line) ⇒ [<code>RendererSystem</code>](#RendererSystem)
   - [.skybox(options)](#module_renderer.skybox) ⇒ [<code>RendererSystem</code>](#RendererSystem)
   - [.standard(options)](#module_renderer.standard) ⇒ [<code>RendererSystem</code>](#RendererSystem)
@@ -944,18 +943,6 @@ All renderers are composed with it.
 ### renderer.basic(options) ⇒ [<code>RendererSystem</code>](#RendererSystem)
 
 Basic renderer
-
-**Kind**: static method of [<code>renderer</code>](#module_renderer)
-
-| Param   | Type                                         |
-| ------- | -------------------------------------------- |
-| options | [<code>SystemOptions</code>](#SystemOptions) |
-
-<a name="module_renderer.helper"></a>
-
-### renderer.helper(options) ⇒ [<code>RendererSystem</code>](#RendererSystem)
-
-Helper renderer
 
 **Kind**: static method of [<code>renderer</code>](#module_renderer)
 
@@ -1016,6 +1003,7 @@ Standard renderer
 | [areaLight]         | [<code>AreaLightComponentOptions</code>](#AreaLightComponentOptions)                                                                                       |
 | [axesHelper]        | [<code>AxesHelperComponentOptions</code>](#AxesHelperComponentOptions)                                                                                     |
 | [boundingBoxHelper] | [<code>BoundingBoxHelperComponentOptions</code>](#BoundingBoxHelperComponentOptions)                                                                       |
+| [skeletonHelper]    | [<code>SkeletonHelperComponentOptions</code>](#SkeletonHelperComponentOptions)                                                                             |
 | [cameraHelper]      | [<code>CameraHelperComponentOptions</code>](#CameraHelperComponentOptions)                                                                                 |
 | [camera]            | [<code>CameraComponentOptions</code>](#CameraComponentOptions)                                                                                             |
 | [directionalLight]  | [<code>DirectionalLightComponentOptions</code>](#DirectionalLightComponentOptions)                                                                         |
