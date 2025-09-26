@@ -114,6 +114,9 @@ export default () => ({
         : "1";
 
       if (mode.includes("texcoord")) debugRender = `vec3(${debugRender}, 0.0)`;
+      if (mode.includes("ior")) {
+        debugRender = `vec3((${debugRender} - 1.0) / 4.0)`;
+      }
 
       descriptor.frag = descriptor.frag.replace(
         "#define HOOK_FRAG_END",
