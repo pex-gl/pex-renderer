@@ -4,10 +4,15 @@ import createGeomBuilder from "geom-builder";
 import { entity, components } from "../index.js";
 import { TEMP_MAT4, TEMP_VEC3 } from "../utils.js";
 
-const pointsToLine = (points) =>
+const pointsToLine = (points, closed = false) =>
   points.reduce((line, p, i) => {
-    line.push(p);
-    line.push([...points[(i + 1) % points.length]]);
+    if (!closed && i > 0) {
+      line.push([...points[i - 1]]);
+      line.push(p);
+    } else {
+      line.push(p);
+      line.push([...points[(i + 1) % points.length]]);
+    }
     return line;
   }, []);
 
@@ -156,6 +161,7 @@ const getSpotLight = (spotLight) => {
           center: [0, 0, distance],
           ...spotLightCircleOptions,
         }),
+        true,
       ),
     )
     .concat(
@@ -165,6 +171,7 @@ const getSpotLight = (spotLight) => {
           center: [0, 0, distance],
           ...spotLightCircleOptions,
         }),
+        true,
       ),
     );
 };
@@ -178,7 +185,7 @@ const getAreaLight = ({ areaLight, transform }) => {
     const circlePoints = getCirclePoints({ ...areaLightCircleOptions, steps });
     const z = [0, 0, size];
 
-    return pointsToLine(circlePoints)
+    return pointsToLine(circlePoints, true)
       .concat(circlePoints.flatMap((p) => [[...p], vec3.add([...p], z)]))
       .concat(
         // prettier-ignore
@@ -271,15 +278,23 @@ const AXES_POSITIONS = [
   [0, 0, 0],
   [0, 0, 1],
 ];
-const getGridLines = ({ size = 1, step = 10 } = {}) =>
-  Array.from({ length: step + 1 }, (_, k) => {
-    const halfSize = size * 0.5;
+const getGridLines = ({ size = 1, step = 10 } = {}) => {
+  // TODO: acount for transform scale?
+  const subdivisions = Math.ceil(size);
+  const halfSize = size * 0.5;
+
+  return Array.from({ length: step + 1 }, (_, k) => {
     const offset = size * (k / step) - halfSize;
-    return [
-      [-halfSize, 0, offset],
-      [halfSize, 0, offset],
-    ];
+    const a = [-halfSize, 0, offset];
+    const b = [halfSize, 0, offset];
+
+    return pointsToLine(
+      Array.from({ length: subdivisions }, (_, l) =>
+        vec3.lerp([...a], b, l / (subdivisions - 1)),
+      ),
+    );
   });
+};
 const getGrid = (grid) => [
   ...getGridLines(grid).flat(),
   ...getGridLines(grid)
