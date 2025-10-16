@@ -47,6 +47,7 @@ export default (ctx) => ({
               error,
               pass,
             );
+            throw error
           }
         },
       );
