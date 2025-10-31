@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+# [5.0.0-alpha.7](https://github.com/pex-gl/pex-renderer/compare/v5.0.0-alpha.6...v5.0.0-alpha.7) (2025-10-31)
+
+
+### Bug Fixes
+
+* **ecs:** throw render-graph errors ([d539e8a](https://github.com/pex-gl/pex-renderer/commit/d539e8a7d4b3d2bf0cbf42097368abd40f38c4a8))
+
+
+### Features
+
+* **ecs:** compare previous errors in render-graph endFrame instead of rethrowing ([da07d1e](https://github.com/pex-gl/pex-renderer/commit/da07d1e3a2a954be079a05f3fcf891d94b3972b2))
+* **ecs:** subdivide helper grid lines ([147b754](https://github.com/pex-gl/pex-renderer/commit/147b75462844372011226b853ea7ce6fcf748e4f)), closes [#420](https://github.com/pex-gl/pex-renderer/issues/420)
+
+
+
 # [5.0.0-alpha.6](https://github.com/pex-gl/pex-renderer/compare/v5.0.0-alpha.5...v5.0.0-alpha.6) (2025-09-26)
 
 
