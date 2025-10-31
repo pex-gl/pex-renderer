@@ -67,7 +67,7 @@
   "engines": {
     "node": ">=22.0.0",
     "npm": ">=10.5.1",
-    "snowdev": ">=2.5.x"
+    "snowdev": ">=2.6.x"
   },
   "snowdev": {
     "files": "{*.js,*(systems|components|helpers|loaders|utils)/**/*.js}"
