@@ -3,41 +3,48 @@
  * Load an item and parse the Response as text.
  * @function
  * @param {RequestInfo} url
- * @param {RequestInit} options
+ * @param {RequestInit} [fetchOptions]
  * @returns {Promise<string>}
- */ const loadText = async (url, options = {})=>await (await ok(await fetch(url, options))).text();
+ */ const loadText = async (url, fetchOptions)=>await (await ok(await fetch(url, fetchOptions))).text();
 /**
  * Load an item and parse the Response as json.
  * @function
  * @param {RequestInfo} url
- * @param {RequestInit} options
+ * @param {RequestInit} [fetchOptions]
  * @returns {Promise<JSON>}
- */ const loadJson = async (url, options = {})=>await (await ok(await fetch(url, options))).json();
+ */ const loadJson = async (url, fetchOptions)=>await (await ok(await fetch(url, fetchOptions))).json();
 /**
  * Load an item and parse the Response as arrayBuffer.
  * @function
  * @param {RequestInfo} url
- * @param {RequestInit} options
+ * @param {RequestInit} [fetchOptions]
  * @returns {Promise<ArrayBuffer>}
- */ const loadArrayBuffer = async (url, options = {})=>await (await ok(await fetch(url, options))).arrayBuffer();
+ */ const loadArrayBuffer = async (url, fetchOptions)=>await (await ok(await fetch(url, fetchOptions))).arrayBuffer();
+/**
+ * Load an item and parse the Response as bytes.
+ * @function
+ * @param {RequestInfo} url
+ * @param {RequestInit} [fetchOptions]
+ * @returns {Promise<Uint8Array>}
+ */ const loadBytes = async (url, fetchOptions)=>await (await ok(await fetch(url, fetchOptions))).bytes();
 /**
  * Load an item and parse the Response as blob.
  * @function
  * @param {RequestInfo} url
- * @param {RequestInit} options
+ * @param {RequestInit} [fetchOptions]
  * @returns {Promise<Blob>}
- */ const loadBlob = async (url, options = {})=>await (await ok(await fetch(url, options))).blob();
+ */ const loadBlob = async (url, fetchOptions)=>await (await ok(await fetch(url, fetchOptions))).blob();
 /**
- * Load an item, parse the Response as blob and create a HTML Image.
+ * Create and load a HTML Image. If fetchOptions are specified, load and parse the Response as blob to set the "src" property.
  * @function
- * @param {string | import("./types.js").ImageOptions} urlOrOpts
- * @param {RequestInit} options
+ * @param {string | import("./types.js").ImageOptions} urlOrImageProperties
+ * @param {RequestInit} [fetchOptions]
  * @returns {Promise<HTMLImageElement>}
- */ const loadImage = async (urlOrOpts, options = {})=>{
+ */ const loadImage = async (urlOrImageProperties, fetchOptions)=>{
     const img = new Image();
-    let src = urlOrOpts;
-    if (urlOrOpts.url) {
-        const { url, ...rest } = urlOrOpts;
+    let src = urlOrImageProperties;
+    if (urlOrImageProperties.url) {
+        const { url, ...rest } = urlOrImageProperties;
         src = url;
         try {
             Object.assign(img, rest);
@@ -45,17 +52,21 @@
             return Promise.reject(new Error(error));
         }
     }
-    const data = await loadBlob(src, options);
+    if (fetchOptions) {
+        src = URL.createObjectURL(await loadBlob(src, fetchOptions));
+    }
     return await new Promise((resolve, reject)=>{
         img.addEventListener("load", function load() {
             img.removeEventListener("load", load);
+            if (fetchOptions) URL.revokeObjectURL(src);
             resolve(img);
         });
         img.addEventListener("error", function error() {
             img.removeEventListener("error", error);
+            if (fetchOptions) URL.revokeObjectURL(src);
             reject(img);
         });
-        img.src = URL.createObjectURL(data);
+        img.src = src;
     });
 };
 /**
@@ -65,7 +76,8 @@
     json: loadJson,
     image: loadImage,
     blob: loadBlob,
-    arrayBuffer: loadArrayBuffer
+    arrayBuffer: loadArrayBuffer,
+    bytes: loadBytes
 };
 const LOADERS_MAP_KEYS = Object.keys(LOADERS_MAP);
 /**
@@ -80,6 +92,7 @@ const LOADERS_MAP_KEYS = Object.keys(LOADERS_MAP);
  *   img: { image: "assets/tex.jpg" },
  *   blob: { blob: "assets/blob" },
  *   hdrImg: { arrayBuffer: "assets/tex.hdr", options: { mode: "no-cors" } },
+ *   bytes: { bytes: "assets/tex.hdr" },
  * };
  *
  * const res = await io.load(resources);
@@ -88,6 +101,7 @@ const LOADERS_MAP_KEYS = Object.keys(LOADERS_MAP);
  * res.img; // => HTMLImageElement
  * res.blob; // => Blob
  * res.hdrImg; // => ArrayBuffer
+ * res.bytes; // => Uint8Array
  */ const load = (resources)=>{
     const names = Object.keys(resources);
     return Promise.allSettled(names.map(async (name)=>{
@@ -102,4 +116,4 @@ Resource needs one of ${LOADERS_MAP_KEYS.join("|")} set to an url.`));
             ])));
 };
 
-export { load, loadArrayBuffer, loadBlob, loadImage, loadJson, loadText };
+export { load, loadArrayBuffer, loadBlob, loadBytes, loadImage, loadJson, loadText };
