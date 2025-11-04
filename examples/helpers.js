@@ -30,16 +30,17 @@ const world = createWorld();
 
 // Entities
 const helperEntity = createEntity({
-  transform: components.transform({ scale: [2, 2, 2] }),
+  transform: components.transform(),
   axesHelper: components.axesHelper(),
-  gridHelper: components.gridHelper(),
+  gridHelper: components.gridHelper({ size: 2 }),
 });
 world.add(helperEntity);
-const gridTenEntity = createEntity({
+
+const gridTenScaledEntity = createEntity({
   transform: components.transform({ scale: [2, 2, 2] }),
-  gridHelper: components.gridHelper({ size: 10 }),
+  gridHelper: components.gridHelper(),
 });
-world.add(gridTenEntity);
+world.add(gridTenScaledEntity);
 
 const W = window.innerWidth * devicePixelRatio;
 const H = window.innerHeight * devicePixelRatio;

@@ -280,7 +280,7 @@ const AXES_POSITIONS = [
 ];
 const getGridLines = ({ size = 1, step = 10 } = {}) => {
   // TODO: acount for transform scale?
-  const subdivisions = Math.ceil(size);
+  const subdivisions = Math.max(Math.ceil(size), 2);
   const halfSize = size * 0.5;
 
   return Array.from({ length: step + 1 }, (_, k) => {
