@@ -2,7 +2,7 @@ import { loadJson, loadImage, loadArrayBuffer, loadBlob } from "pex-io";
 import { quat, mat4, utils } from "pex-math";
 import { loadDraco, loadKtx2 } from "pex-loaders";
 import typedArrayInterleave from "typed-array-interleave";
-import { getDirname, getFileExtension } from "../utils.js";
+import { getDirname, getFileExtension, isObject } from "../utils.js";
 import { components, entity, systems } from "../index.js";
 
 const isSafari =
@@ -1358,23 +1358,36 @@ const DEFAULT_OPTIONS = {
   supportImageBitmap: !isSafari,
 };
 
-async function loadGltf(url, options = {}) {
+async function loadGltf(urlOrData, options = {}) {
   const opts = Object.assign({}, DEFAULT_OPTIONS, options);
   const { ctx } = options;
 
-  console.debug("loaders.gltf", url, options, opts);
+  console.debug("loaders.gltf", urlOrData, options, opts);
 
-  // Load and unpack data
-  // https://www.khronos.org/registry/glTF/specs/2.0/glTF-2.0.html#glb-file-format-specification
-  const extension = getFileExtension(url);
-  const basePath = getDirname(url);
-  const isBinary = extension === "glb";
+  let data;
+  let basePath = opts.basePath;
+  let isBinary;
 
-  console.debug("loaders.gltf", url, extension, isBinary);
+  if (urlOrData instanceof ArrayBuffer) {
+    data = urlOrData;
+    isBinary = true;
+  } else if (isObject(urlOrData)) {
+    data = urlOrData;
+  } else {
+    // Load and unpack data
+    // https://www.khronos.org/registry/glTF/specs/2.0/glTF-2.0.html#glb-file-format-specification
+    const extension = getFileExtension(urlOrData);
+    basePath ??= getDirname(urlOrData);
+    isBinary = extension === "glb";
+
+    data = isBinary
+      ? await loadArrayBuffer(urlOrData)
+      : await loadJson(urlOrData);
+    console.debug("loaders.gltf", extension, isBinary);
+  }
+
   // https://github.com/KhronosGroup/glTF/blob/main/specification/2.0/schema/glTF.schema.json
-  const { json, bin } = loadData(
-    isBinary ? await loadArrayBuffer(url) : await loadJson(url),
-  );
+  const { json, bin } = loadData(data);
 
   console.debug("loaders.gltf", json, bin);
 

@@ -91,6 +91,9 @@ const getDirname = (path) => {
   return path.slice(0, end);
 };
 
+const isObject = (obj) =>
+  Object.prototype.toString.call(obj) === "[object Object]";
+
 export {
   NAMESPACE,
   TEMP_VEC3,
@@ -108,4 +111,5 @@ export {
   getDefaultViewport,
   getFileExtension,
   getDirname,
+  isObject,
 };
