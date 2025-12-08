@@ -50,11 +50,11 @@
     "typed-array-interleave": "^2.0.1"
   },
   "devDependencies": {
-    "@hpcc-js/wasm-graphviz": "^1.15.0",
-    "@thi.ng/dot": "^2.1.120",
+    "@hpcc-js/wasm-graphviz": "^1.16.0",
+    "@thi.ng/dot": "^2.1.123",
     "angle-normals": "^1.0.0",
     "cosine-gradient": "^0.3.0",
-    "es-module-shims": "^2.6.2",
+    "es-module-shims": "^2.7.0",
     "fit-rect": "^1.0.3",
     "geom-center-and-normalize": "^2.2.1",
     "geom-parse-obj": "^2.0.0",
@@ -67,7 +67,7 @@
   "engines": {
     "node": ">=22.0.0",
     "npm": ">=10.5.1",
-    "snowdev": ">=2.6.x"
+    "snowdev": ">=2.7.x"
   },
   "snowdev": {
     "files": "{*.js,*(systems|components|helpers|loaders|utils)/**/*.js}"

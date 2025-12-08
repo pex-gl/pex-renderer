@@ -1,5 +1,5 @@
 import { loadArrayBuffer } from './pex-io.js';
-import { B as Buffer, g as getDefaultExportFromCjs } from './_chunks/polyfills-Ci6ALveU.js';
+import { B as Buffer, g as getDefaultExportFromCjs } from './_chunks/polyfills-BrKAEAju.js';
 import { c as clamp } from './_chunks/utils-B1Ghr_dy.js';
 
 class WorkerPool {

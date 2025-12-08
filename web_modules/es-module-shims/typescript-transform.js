@@ -1,4 +1,4 @@
-import { a as global } from '../_chunks/polyfills-Ci6ALveU.js';
+import { a as global } from '../_chunks/polyfills-BrKAEAju.js';
 
 const module = {};
 function require(mod) {
