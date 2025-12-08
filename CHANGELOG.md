@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+# [5.0.0-alpha.8](https://github.com/pex-gl/pex-renderer/compare/v5.0.0-alpha.7...v5.0.0-alpha.8) (2025-12-08)
+
+
+### Bug Fixes
+
+* **ecs:** set grid minimum subdivision to 2 ([8c6d23e](https://github.com/pex-gl/pex-renderer/commit/8c6d23e7f812eaf1cac7fc3416fbdd17969a0a6b))
+
+
+### Features
+
+* **gltf:** handle binary or object data directly in gltf loader ([9d402d7](https://github.com/pex-gl/pex-renderer/commit/9d402d747932ee7c1e51391357ce896f26a8e14a))
+
+
+
 # [5.0.0-alpha.7](https://github.com/pex-gl/pex-renderer/compare/v5.0.0-alpha.6...v5.0.0-alpha.7) (2025-10-31)
 
 
