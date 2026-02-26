@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+# [5.0.0-alpha.9](https://github.com/pex-gl/pex-renderer/compare/v5.0.0-alpha.8...v5.0.0-alpha.9) (2026-02-26)
+
+
+### Bug Fixes
+
+* **ecs:** prevent negative near clipping plane ([ae3cfbd](https://github.com/pex-gl/pex-renderer/commit/ae3cfbdbd4deb69b37f8390d17eb36d51f9e4335)), closes [#26](https://github.com/pex-gl/pex-renderer/issues/26)
+* **ecs:** throw render-graph errors ([78fc921](https://github.com/pex-gl/pex-renderer/commit/78fc921fa7b804e7f643dd76751e770ef4039090))
+
+
+
 # [5.0.0-alpha.8](https://github.com/pex-gl/pex-renderer/compare/v5.0.0-alpha.7...v5.0.0-alpha.8) (2025-12-08)
 
 
