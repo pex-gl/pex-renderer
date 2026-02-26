@@ -3,6 +3,8 @@ import { aabb } from "pex-geom";
 
 import { NAMESPACE, TEMP_VEC3 } from "../../utils.js";
 
+const MIN_NEAR = 0.01;
+
 /**
  * Create a shadow mapping object to compose with a render-pipeline-system
  *
@@ -43,7 +45,7 @@ export default ({ renderGraph, resourceCache }) => ({
       ),
     );
 
-    light._near = -light._sceneBboxInLightSpace[1][2];
+    light._near = Math.max(MIN_NEAR, -light._sceneBboxInLightSpace[1][2]);
     light._far = -light._sceneBboxInLightSpace[0][2];
 
     // Get frustum size
