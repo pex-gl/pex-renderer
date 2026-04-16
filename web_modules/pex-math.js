@@ -1,11 +1,11 @@
-import { f as fromDirection$1, c as create$6, a as fromPointToPoint$1 } from './_chunks/mat4-uqxYDY4z.js';
-export { m as mat4 } from './_chunks/mat4-uqxYDY4z.js';
+import { f as fromDirection$1, a as fromPointToPoint$1, c as create$6 } from './_chunks/mat4-Cwoj2p03.js';
+export { m as mat4 } from './_chunks/mat4-Cwoj2p03.js';
 import { c as create$5 } from './_chunks/vec2-CAYY_f5d.js';
 export { v as vec2 } from './_chunks/vec2-CAYY_f5d.js';
 export { v as vec3 } from './_chunks/vec3-iMfOIZBS.js';
 export { d as avec3 } from './_chunks/avec3-D3IP9wAY.js';
-import { E as EPSILON, c as clamp } from './_chunks/utils-B1Ghr_dy.js';
-export { u as utils } from './_chunks/utils-B1Ghr_dy.js';
+import { E as EPSILON, c as clamp, H as HALF_PI } from './_chunks/utils-DvHcWAlR.js';
+export { u as utils } from './_chunks/utils-DvHcWAlR.js';
 
 /** @module mat2x3 */ /**
  * Returns a 2x3 identity matrix, a short form for a 3x3 matrix with the last row ignored.
@@ -1308,4 +1308,122 @@ var euler = /*#__PURE__*/Object.freeze({
   fromQuat: fromQuat
 });
 
-export { avec2, avec4, euler, mat2x3, mat3, quat, vec4 };
+const out = (easeIn)=>(t, ...rest)=>1 - easeIn(1 - t, ...rest);
+const inOut = (easeIn)=>(t, ...rest)=>t < 0.5 ? easeIn(t * 2, ...rest) * 0.5 : 1 - easeIn((1 - t) * 2, ...rest) * 0.5;
+// Linear
+const linear = (t)=>t;
+// Sine
+const sineIn = (t)=>1 - Math.cos(t * HALF_PI);
+const sineOut = (t)=>Math.sin(t * HALF_PI);
+const sineInOut = (t)=>-0.5 * (Math.cos(Math.PI * t) - 1);
+// Quad
+const quadIn = (t)=>t ** 2;
+const quadOut = out(quadIn);
+const quadInOut = inOut(quadIn);
+// Cubic
+const cubicIn = (t)=>t ** 3;
+const cubicOut = out(cubicIn);
+const cubicInOut = inOut(cubicIn);
+// Quart
+const quartIn = (t)=>t ** 4;
+const quartOut = out(quartIn);
+const quartInOut = inOut(quartIn);
+// Quint
+const quintIn = (t)=>t ** 5;
+const quintOut = out(quintIn);
+const quintInOut = inOut(quintIn);
+// Expo
+const boundZero = (t)=>{
+    if (t === 0) return 0;
+};
+const expoIn = (t)=>boundZero(t) ?? 2 ** (10 * t - 10);
+const expoOut = out(expoIn);
+const expoInOut = inOut(expoIn);
+// Circ
+const circIn = (t)=>1 - Math.sqrt(1 - t ** 2);
+const circOut = out(circIn);
+const circInOut = inOut(circIn);
+// Back
+const c1 = 1.70158;
+const c2 = c1 * 1.525;
+const c3 = c1 + 1;
+const c4 = c2 + 1;
+const backIn = (t)=>t ** 2 * (c3 * t - c1);
+const backOut = out(backIn);
+const backInOut = (t)=>{
+    const t2 = t * 2;
+    if (t2 < 1) return 0.5 * (t2 ** 2 * (c4 * t2 - c2));
+    return 0.5 * ((t2 - 2) ** 2 * (c4 * (t2 - 2) + c2) + 2);
+};
+// Elastic
+const elasticIn = (t)=>Math.sin(13 * t * HALF_PI) * expoIn(t);
+const elasticOut = out(elasticIn);
+const elasticInOut = inOut(elasticIn);
+// Bounce
+const n1 = 7.5625;
+const d1 = 2.75;
+const d1_1 = 1 / d1;
+const d1_2 = 2 / d1;
+const d1_1_5 = 1.5 / d1;
+const d1_2_5 = 2.5 / d1;
+const d1_2_25 = 2.25 / d1;
+const d1_2_625 = 2.625 / d1;
+const bounceOut = (t)=>{
+    if (t < d1_1) return n1 * t ** 2;
+    if (t < d1_2) return n1 * (t - d1_1_5) ** 2 + 0.75;
+    if (t < d1_2_5) return n1 * (t - d1_2_25) ** 2 + 0.9375;
+    return n1 * (t - d1_2_625) ** 2 + 0.984375;
+};
+const bounceIn = (t)=>1 - bounceOut(1 - t);
+const bounceInOut = (t)=>t < 0.5 ? 0.5 * (1 - bounceOut(1 - 2 * t)) : 0.5 + 0.5 * bounceOut(2 * t - 1);
+// Steps
+// https://drafts.csswg.org/css-easing-2/#step-easing-functions
+const stepEdges = (t)=>{
+    if (t <= 0) return 0;
+    if (t >= 1) return 1;
+};
+const stepStart = (t, n = 1)=>stepEdges(t) ?? Math.ceil(t * n) / n;
+const stepEnd = (t, n = 1)=>stepEdges(t) ?? Math.floor(t * n) / n;
+const stepNone = (t, n = 1)=>stepEdges(t) ?? Math.floor(t * n) / (n - 1);
+const stepBoth = (t, n = 1)=>stepEdges(t) ?? (Math.floor(t * n) + 0.5) / n;
+
+var eases = /*#__PURE__*/Object.freeze({
+  __proto__: null,
+  backIn: backIn,
+  backInOut: backInOut,
+  backOut: backOut,
+  bounceIn: bounceIn,
+  bounceInOut: bounceInOut,
+  bounceOut: bounceOut,
+  circIn: circIn,
+  circInOut: circInOut,
+  circOut: circOut,
+  cubicIn: cubicIn,
+  cubicInOut: cubicInOut,
+  cubicOut: cubicOut,
+  elasticIn: elasticIn,
+  elasticInOut: elasticInOut,
+  elasticOut: elasticOut,
+  expoIn: expoIn,
+  expoInOut: expoInOut,
+  expoOut: expoOut,
+  linear: linear,
+  quadIn: quadIn,
+  quadInOut: quadInOut,
+  quadOut: quadOut,
+  quartIn: quartIn,
+  quartInOut: quartInOut,
+  quartOut: quartOut,
+  quintIn: quintIn,
+  quintInOut: quintInOut,
+  quintOut: quintOut,
+  sineIn: sineIn,
+  sineInOut: sineInOut,
+  sineOut: sineOut,
+  stepBoth: stepBoth,
+  stepEnd: stepEnd,
+  stepNone: stepNone,
+  stepStart: stepStart
+});
+
+export { avec2, avec4, eases, euler, mat2x3, mat3, quat, vec4 };

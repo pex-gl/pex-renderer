@@ -1411,38 +1411,37 @@ var encodeDecode_glsl = /* glsl */ `
 #define GAMMA 2
 #define SRGB 3
 
-const float gamma = 2.2;
+float linearToSrgb(float c) {
+  return (c <= 0.0031308) ? 12.92 * c : 1.055 * pow(c, 1.0 / 2.4) - 0.055;
+}
+float srgbToLinear(float c) {
+  return (c > 0.04045) ? pow((c + 0.055) / 1.055, 2.4) : c / 12.92;
+}
 
 // Linear
 float toLinear(float v) {
-  return pow(v, gamma);
+  return srgbToLinear(v);
 }
-
 vec2 toLinear(vec2 v) {
-  return pow(v, vec2(gamma));
+  return vec2(srgbToLinear(v.r), srgbToLinear(v.g));
 }
-
 vec3 toLinear(vec3 v) {
-  return pow(v, vec3(gamma));
+  return vec3(srgbToLinear(v.r), srgbToLinear(v.g), srgbToLinear(v.b));
 }
-
 vec4 toLinear(vec4 v) {
   return vec4(toLinear(v.rgb), v.a);
 }
 
 // Gamma
 float toGamma(float v) {
-  return pow(v, 1.0 / gamma);
+  return linearToSrgb(v);
 }
-
 vec2 toGamma(vec2 v) {
-  return pow(v, vec2(1.0 / gamma));
+  return vec2(linearToSrgb(v.r), linearToSrgb(v.g));
 }
-
 vec3 toGamma(vec3 v) {
-  return pow(v, vec3(1.0 / gamma));
+  return vec3(linearToSrgb(v.r), linearToSrgb(v.g), linearToSrgb(v.b));
 }
-
 vec4 toGamma(vec4 v) {
   return vec4(toGamma(v.rgb), v.a);
 }
@@ -1535,7 +1534,8 @@ void EvaluateDirectionalLight(inout PBRData data, DirectionalLight light, sample
         light.near,
         light.far,
         lightDeviceCoordsPositionNormalized.z,
-        light.radiusUV
+        light.radiusUV,
+        true
       )
     : 1.0;
 
@@ -1627,7 +1627,8 @@ void EvaluateSpotLight(inout PBRData data, SpotLight light, sampler2D shadowMap)
         light.near,
         light.far,
         lightDeviceCoordsPositionNormalized.z,
-        light.radiusUV
+        light.radiusUV,
+        false
       )
     : 1.0;
 
@@ -2301,7 +2302,8 @@ void EvaluateAreaLight(inout PBRData data, AreaLight light, sampler2D shadowMap,
         light.near,
         light.far,
         lightDeviceCoordsPositionNormalized.z,
-        light.radiusUV
+        light.radiusUV,
+        false
       )
     : 1.0;
 
@@ -2375,21 +2377,21 @@ void EvaluateAreaLight(inout PBRData data, AreaLight light, sampler2D shadowMap,
 `;
 
 const PCF = /* glsl */ `
-float texture2DCompare(sampler2D depths, vec2 uv, float compare, float near, float far) {
-  float depth = readDepthOrtho(depths, uv, near, far);
+float texture2DCompare(sampler2D depths, vec2 uv, float compare, float near, float far, bool ortho) {
+  float depth = ortho ? readDepthOrtho(depths, uv, near, far) : readDepth(depths, uv, near, far);
   if (depth >= far - DEPTH_TOLERANCE) return 1.0;
   return step(compare, depth);
 }
 
-float texture2DShadowLerp(sampler2D depths, vec2 size, vec2 uv, float compare, float near, float far) {
+float texture2DShadowLerp(sampler2D depths, vec2 size, vec2 uv, float compare, float near, float far, bool ortho) {
   vec2 texelSize = vec2(1.0) / size;
   vec2 f = fract(uv * size + 0.5);
   vec2 centroidUV = floor(uv * size + 0.5) / size;
 
-  float lb = texture2DCompare(depths, centroidUV + texelSize * vec2(0.0, 0.0), compare, near, far);
-  float lt = texture2DCompare(depths, centroidUV + texelSize * vec2(0.0, 1.0), compare, near, far);
-  float rb = texture2DCompare(depths, centroidUV + texelSize * vec2(1.0, 0.0), compare, near, far);
-  float rt = texture2DCompare(depths, centroidUV + texelSize * vec2(1.0, 1.0), compare, near, far);
+  float lb = texture2DCompare(depths, centroidUV + texelSize * vec2(0.0, 0.0), compare, near, far, ortho);
+  float lt = texture2DCompare(depths, centroidUV + texelSize * vec2(0.0, 1.0), compare, near, far, ortho);
+  float rb = texture2DCompare(depths, centroidUV + texelSize * vec2(1.0, 0.0), compare, near, far, ortho);
+  float rt = texture2DCompare(depths, centroidUV + texelSize * vec2(1.0, 1.0), compare, near, far, ortho);
   float a = mix(lb, lt, f.y);
   float b = mix(rb, rt, f.y);
   float c = mix(a, b, f.x);
@@ -2397,23 +2399,23 @@ float texture2DShadowLerp(sampler2D depths, vec2 size, vec2 uv, float compare, f
   return c;
 }
 
-float PCF3x3(sampler2D depths, vec2 size, vec2 uv, float compare, float near, float far) {
+float PCF3x3(sampler2D depths, vec2 size, vec2 uv, float compare, float near, float far, bool ortho) {
   float result = 0.0;
   for (int x = -1; x <= 1; x++) {
     for (int y = -1; y <= 1; y++) {
       vec2 off = vec2(x, y) / float(size);
-      result += texture2DShadowLerp(depths, size, uv + off, compare, near, far);
+      result += texture2DShadowLerp(depths, size, uv + off, compare, near, far, ortho);
     }
   }
   return result / 9.0;
 }
 
-float PCF5x5(sampler2D depths, vec2 size, vec2 uv, float compare, float near, float far) {
+float PCF5x5(sampler2D depths, vec2 size, vec2 uv, float compare, float near, float far, bool ortho) {
   float result = 0.0;
   for (int x = -2; x <= 2; x++) {
     for (int y = -2; y <= 2; y++) {
       vec2 off = vec2(x, y) / float(size);
-      result += texture2DShadowLerp(depths, size, uv + off, compare, near, far);
+      result += texture2DShadowLerp(depths, size, uv + off, compare, near, far, ortho);
     }
   }
   return result / 25.0;
@@ -2565,7 +2567,7 @@ void PCSSFindBlocker(
   }
 }
 
-float PCSSPCFFilter(sampler2D depths, vec2 size, vec2 uv, float compare, float near, float far, vec2 dz_duv, mat2 R, vec2 filterRadiusUV) {
+float PCSSPCFFilter(sampler2D depths, vec2 size, vec2 uv, float compare, float near, float far, vec2 dz_duv, mat2 R, vec2 filterRadiusUV, bool ortho) {
   float result = 0.0;
 
   for (int i = 0; i < PCSS_PCF_NUM_SAMPLES; ++i) {
@@ -2578,12 +2580,12 @@ float PCSSPCFFilter(sampler2D depths, vec2 size, vec2 uv, float compare, float n
 
     float z = BiasedZ(compare, dz_duv, offset);
 
-    result += texture2DCompare(depths, uv + offset, z, near, far);
+    result += texture2DCompare(depths, uv + offset, z, near, far, ortho);
   }
   return result / float(PCSS_PCF_NUM_SAMPLES);
 }
 
-float PCSS(sampler2D depths, vec2 size, vec2 uv, float compare, float near, float far, float ndcLightZ, vec2 radiusUV) {
+float PCSS(sampler2D depths, vec2 size, vec2 uv, float compare, float near, float far, float ndcLightZ, vec2 radiusUV, bool ortho) {
   vec2 shadowMapSizeInverse = 1.0 / size;
   mat2 R = getRandomRotationMatrix(gl_FragCoord.xy);
   vec2 dz_duv = DepthGradient(vec3(uv.xy, ndcLightZ));
@@ -2619,7 +2621,7 @@ float PCSS(sampler2D depths, vec2 size, vec2 uv, float compare, float near, floa
   vec2 filterRadiusUV = penumbraRatio * radiusUV * shadowMapSizeInverse;
 
   // STEP 3: filtering
-  return PCSSPCFFilter(depths, size, uv, compare, near, far, dz_duv, R, filterRadiusUV);
+  return PCSSPCFFilter(depths, size, uv, compare, near, far, dz_duv, R, filterRadiusUV, ortho);
 }
 `;
 const PCSSCube = /* glsl */ `
@@ -2640,8 +2642,7 @@ void PCSSFindBlockerCube(
     #endif
     highp vec3 offset = vec3(r.x, float(i / PCSS_BLOCKER_SEARCH_NUM_SAMPLES), r.y) * searchWidth;
 
-    float depth = textureCube(depths, normalize(direction + offset)).r;
-    // float depth = unpackDepth(textureCube(depths, normalize(direction + offset))) * DEPTH_PACK_FAR;
+    float depth = unpackDepth(textureCube(depths, normalize(direction + offset))) * DEPTH_PACK_FAR;
 
     if (depth < compare) {
       blockerSum += depth;
@@ -2713,7 +2714,7 @@ var shadowing_glsl = /* glsl */ `
   ${PCF}
   ${PCSS}
 
-  float getShadow(sampler2D depths, vec2 size, vec2 uv, float compare, float near, float far, float ndcLightZ, vec2 radiusUV) {
+  float getShadow(sampler2D depths, vec2 size, vec2 uv, float compare, float near, float far, float ndcLightZ, vec2 radiusUV, bool ortho) {
     if (uv.x < 0.0 || uv.y < 0.0 || uv.x > 1.0 || uv.y > 1.0) {
       return 1.0;
     }
@@ -2721,19 +2722,19 @@ var shadowing_glsl = /* glsl */ `
       return 1.0;
     #endif
     #if SHADOW_QUALITY == 1
-      return texture2DCompare(depths, uv, compare, near, far);
+      return texture2DCompare(depths, uv, compare, near, far, ortho);
     #endif
     #if SHADOW_QUALITY == 2
-      return texture2DShadowLerp(depths, size, uv, compare, near, far);
+      return texture2DShadowLerp(depths, size, uv, compare, near, far, ortho);
     #endif
     #if SHADOW_QUALITY == 3
-      return PCF3x3(depths, size, uv, compare, near, far);
+      return PCF3x3(depths, size, uv, compare, near, far, ortho);
     #endif
     #if SHADOW_QUALITY == 4
-      return PCF5x5(depths, size, uv, compare, near, far);
+      return PCF5x5(depths, size, uv, compare, near, far, ortho);
     #endif
     #if SHADOW_QUALITY == 5
-      return PCSS(depths, size, uv, compare, near, far, ndcLightZ, radiusUV);
+      return PCSS(depths, size, uv, compare, near, far, ndcLightZ, radiusUV, ortho);
     #endif
   }
 #endif
@@ -5426,7 +5427,6 @@ struct PBRData {
   vec3 sheenColor;
   float sheenRoughness;
   float sheenLinearRoughness;
-  vec3 sheen;
   float sheenAlbedoScaling;
   vec3 transmitted;
   float transmission;
@@ -5529,7 +5529,6 @@ void main() {
     data.eyeDirWorld = vec3(uInverseViewMatrix * vec4(data.eyeDirView, 0.0));
     data.indirectDiffuse = vec3(0.0);
     data.indirectSpecular = vec3(0.0);
-    data.sheen = vec3(0.0);
     data.ao = 1.0;
     data.opacity = 1.0;
 
@@ -5662,6 +5661,8 @@ void main() {
   #ifdef USE_MSAA
     color.rgb = reversibleToneMap(color.rgb);
   #endif
+
+  color.rgb = max(color.rgb, vec3(0.0));
 
   gl_FragData[0] = vec4(color, 1.0);
 
@@ -5940,6 +5941,8 @@ void main() {
     color.rgb = reversibleToneMap(color.rgb);
   #endif
 
+  color.rgb = max(color.rgb, vec3(0.0));
+
   gl_FragData[0] = color;
 
   #ifdef USE_DRAW_BUFFERS
@@ -6096,6 +6099,8 @@ void main() {
   #ifdef USE_MSAA
     color.rgb = reversibleToneMap(color.rgb);
   #endif
+
+  color.rgb = max(color.rgb, vec3(0.0));
 
   gl_FragData[0] = color;
 

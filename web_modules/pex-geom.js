@@ -1,6 +1,6 @@
 export { b as aabb } from './_chunks/aabb-CipEXYbk.js';
 import { s as set, a as sub, n as normalize, e as dot, t as toString$1, d as create$1 } from './_chunks/vec3-iMfOIZBS.js';
-export { r as ray } from './_chunks/ray-BWOyc5m_.js';
+export { r as ray } from './_chunks/ray-DyxNsD8n.js';
 export { r as rect } from './_chunks/rect-Dy6qG5eq.js';
 import './_chunks/avec3-D3IP9wAY.js';
 import './_chunks/vec2-CAYY_f5d.js';

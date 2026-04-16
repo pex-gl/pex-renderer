@@ -1,6 +1,6 @@
 import { B as Buffer } from '../_chunks/polyfills-BrKAEAju.js';
 
-/** ES Module Shims Wasm @version 2.7.0 */
+/** ES Module Shims Wasm @version 2.8.0 */
 (function () {
 
   const self_ = typeof globalThis !== 'undefined' ? globalThis : self;
@@ -182,7 +182,7 @@ import { B as Buffer } from '../_chunks/polyfills-BrKAEAju.js';
   const esmsInitOptions = optionsScript ? JSON.parse(optionsScript.innerHTML) : {};
   Object.assign(esmsInitOptions, self_.esmsInitOptions || {});
 
-  const version = "2.7.0";
+  const version = "2.8.0";
 
   const r = esmsInitOptions.version;
   if (self_.importShim || (r && r !== version)) {
@@ -488,6 +488,24 @@ import { B as Buffer } from '../_chunks/polyfills-BrKAEAju.js';
     }
   };
 
+  let policy;
+  if (typeof window.trustedTypes !== 'undefined' || typeof window.TrustedTypes !== 'undefined') {
+    try {
+      policy = (window.trustedTypes || window.TrustedTypes).createPolicy('es-module-shims', {
+        createHTML: html => html,
+        createScript: script => script
+      });
+    } catch {}
+  }
+
+  function maybeTrustedInnerHTML(html) {
+    return policy ? policy.createHTML(html) : html;
+  }
+
+  function maybeTrustedScript(script) {
+    return policy ? policy.createScript(script) : script;
+  }
+
   // support browsers without dynamic import support (eg Firefox 6x)
   let supportsJsonType = false;
   let supportsCssType = false;
@@ -548,9 +566,14 @@ import { B as Buffer } from '../_chunks/polyfills-BrKAEAju.js';
         window.removeEventListener('message', cb, false);
       }
       window.addEventListener('message', cb, false);
-
       // Feature checking with careful avoidance of unnecessary work - all gated on initial import map supports check. CSS gates on JSON feature check, Wasm instance phase gates on wasm source phase check.
-      const importMapTest = `<script nonce=${nonce || ''}>b=(s,type='text/javascript')=>URL.createObjectURL(new Blob([s],{type}));c=u=>import(u).then(()=>true,()=>false);i=innerText=>document.head.appendChild(Object.assign(document.createElement('script'),{type:'importmap',nonce:"${nonce}",innerText}));i(\`{"imports":{"x":"\${b('')}"}}\`);i(\`{"imports":{"y":"\${b('')}"}}\`);cm=${
+      const importMapTest = `<script nonce=${nonce || ''}>${
+      policy ? 't=(window.trustedTypes||window.TrustedTypes).createPolicy("es-module-shims",{createScript:s=>s});' : ''
+    }b=(s,type='text/javascript')=>URL.createObjectURL(new Blob([s],{type}));c=u=>import(u).then(()=>true,()=>false);i=innerText=>${
+      policy ? 't.createScript(innerText=>' : ''
+    }document.head.appendChild(Object.assign(document.createElement('script'),{type:'importmap',nonce:"${nonce}",innerText}))${
+      policy ? ')' : ''
+    };i(\`{"imports":{"x":"\${b('')}"}}\`);i(\`{"imports":{"y":"\${b('')}"}}\`);cm=${
       supportsImportMaps && jsonModulesEnabled ? `c(b(\`import"\${b('{}','text/json')}"with{type:"json"}\`))` : 'false'
     };sp=${
       supportsImportMaps && wasmSourcePhaseEnabled ?
@@ -581,7 +604,7 @@ import { B as Buffer } from '../_chunks/polyfills-BrKAEAju.js';
         if (doc && doc.head.childNodes.length === 0) {
           const s = doc.createElement('script');
           if (nonce) s.setAttribute('nonce', nonce);
-          s.innerHTML = importMapTest.slice(15 + (nonce ? nonce.length : 0), -9);
+          s.innerText = maybeTrustedScript(importMapTest.slice(15 + (nonce ? nonce.length : 0), -9));
           doc.head.appendChild(s);
         }
       }
@@ -594,7 +617,7 @@ import { B as Buffer } from '../_chunks/polyfills-BrKAEAju.js';
       // setting src to a blob URL results in a navigation event in webviews
       // document.write gives usability warnings
       readyForOnload = true;
-      if ('srcdoc' in iframe) iframe.srcdoc = importMapTest;
+      if ('srcdoc' in iframe) iframe.srcdoc = maybeTrustedInnerHTML(importMapTest);
       else iframe.contentDocument.write(importMapTest);
       // retrigger onload for Safari only if necessary
       if (onloadCalledWhileNotReady) doOnload();
@@ -716,7 +739,7 @@ import { B as Buffer } from '../_chunks/polyfills-BrKAEAju.js';
   // Ensure this version is the only version
   defineValue(self_, 'importShim', Object.freeze(importShim));
   const shimModeOptions = { ...esmsInitOptions, shimMode: true };
-  if (optionsScript) optionsScript.innerHTML = JSON.stringify(shimModeOptions);
+  if (optionsScript) optionsScript.innerText = maybeTrustedScript(JSON.stringify(shimModeOptions));
   self_.esmsInitOptions = shimModeOptions;
 
   const loadAll = async (load, seen) => {
@@ -934,7 +957,7 @@ import { B as Buffer } from '../_chunks/polyfills-BrKAEAju.js';
       return;
     }
 
-    const [imports, exports] = load.a;
+    const [imports, exports$1] = load.a;
 
     // "execution"
     let source = load.S,
@@ -1021,7 +1044,7 @@ import { B as Buffer } from '../_chunks/polyfills-BrKAEAju.js';
 
     // support progressive cycle binding updates (try statement avoids tdz errors)
     if (load.s && (imports.length === 0 || imports[imports.length - 1].d === -1))
-      resolvedSource += `\n;import{u$_}from'${load.s}';try{u$_({${exports
+      resolvedSource += `\n;import{u$_}from'${load.s}';try{u$_({${exports$1
       .filter(e => e.ln)
       .map(({ s, e, ln }) => `${source.slice(s, e)}:${ln}`)
       .join(',')}})}catch(_){};\n`;
@@ -1128,7 +1151,7 @@ import { B as Buffer } from '../_chunks/polyfills-BrKAEAju.js';
       type
     } = (await (sourceHook || defaultSourceHook)(reqUrl, fetchOpts, parent, defaultSourceHook)) || {};
     if (type === 'wasm') {
-      const exports = WebAssembly.Module.exports((sourceCache[url] = source));
+      const exports$1 = WebAssembly.Module.exports((sourceCache[url] = source));
       const imports = WebAssembly.Module.imports(source);
       const rStr = urlJsString(url);
       source = `import*as $_ns from${rStr};`;
@@ -1141,7 +1164,7 @@ import { B as Buffer } from '../_chunks/polyfills-BrKAEAju.js';
       }
       source += `${hotPrefix}i=await WebAssembly.instantiate(importShim._s[${rStr}],{${obj}});importShim._i.set($_ns,i);`;
       obj = '';
-      for (const { name, kind } of exports) {
+      for (const { name, kind } of exports$1) {
         source += `export let ${name}=i.exports['${name}'];`;
         if (kind === 'global') source += `try{${name}=${name}.value}catch(_){${name}=undefined}`;
         obj += `${name},`;

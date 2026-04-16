@@ -2,6 +2,9 @@
  * @constant {number}
  */ const EPSILON = 0.000001;
 /**
+ * @constant {number}
+ */ const HALF_PI = Math.PI * 0.5;
+/**
  * @constant {import("./types.js").vec3}
  */ const Y_UP = Object.freeze([
     0,
@@ -100,6 +103,7 @@
 var utils = /*#__PURE__*/Object.freeze({
   __proto__: null,
   EPSILON: EPSILON,
+  HALF_PI: HALF_PI,
   Y_UP: Y_UP,
   clamp: clamp,
   isPowerOfTwo: isPowerOfTwo,
@@ -113,4 +117,4 @@ var utils = /*#__PURE__*/Object.freeze({
   toRadians: toRadians
 });
 
-export { EPSILON as E, Y_UP as Y, toRadians as a, clamp as c, lerp as l, remap as r, toDegrees as t, utils as u };
+export { EPSILON as E, HALF_PI as H, Y_UP as Y, toRadians as a, clamp as c, lerp as l, remap as r, toDegrees as t, utils as u };

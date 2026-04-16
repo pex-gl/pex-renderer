@@ -1,4 +1,4 @@
-import { d as create$1, s as set, e as dot, a as sub, c as add, b as scale, f as cross, l as length, t as toString$1 } from './vec3-iMfOIZBS.js';
+import { s as set, e as dot, a as sub, c as add, b as scale, d as create$1, f as cross, l as length, t as toString$1 } from './vec3-iMfOIZBS.js';
 
 /**
  * Enum for different intersections values

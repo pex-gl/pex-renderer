@@ -74,6 +74,6 @@ function angleNormals(cells, positions) {
     }
     return normals;
 }
-var angleNormals$1 = /*@__PURE__*/ getDefaultExportFromCjs(angleNormals_1);
+var angleNormals_default = /*@__PURE__*/ getDefaultExportFromCjs(angleNormals_1);
 
-export { angleNormals$1 as default };
+export { angleNormals_default as default };

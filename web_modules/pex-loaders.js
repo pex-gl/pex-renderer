@@ -1,6 +1,6 @@
 import { loadArrayBuffer } from './pex-io.js';
 import { B as Buffer, g as getDefaultExportFromCjs } from './_chunks/polyfills-BrKAEAju.js';
-import { c as clamp } from './_chunks/utils-B1Ghr_dy.js';
+import { c as clamp } from './_chunks/utils-DvHcWAlR.js';
 
 class WorkerPool {
     constructor(workerLimit = 4, workerConfig = {}){
@@ -134,10 +134,10 @@ function loadGeometry(buffer, taskConfig) {
  */ /**
  * Load a draco file or array buffer as a texture
  * @alias module:pex-loaders.loadDraco
- * @param {string | ArrayBuffer} data
+ * @param {string | ArrayBuffer} urlOrArrayBuffer
  * @param {DracoOptions} [options]
  * @returns {Promise<object>}
- */ async function loadDraco(data, { transcoderPath = "assets/decoders/draco/", transcodeConfig = {
+ */ async function loadDraco(urlOrArrayBuffer, { transcoderPath = "assets/decoders/draco/", transcodeConfig = {
     attributeIDs: {
         positions: "POSITION",
         normals: "NORMAL",
@@ -154,7 +154,7 @@ function loadGeometry(buffer, taskConfig) {
 }, workerLimit, workerConfig } = {}) {
     if (!workerPool$1) workerPool$1 = new WorkerPool(workerLimit, workerConfig);
     transcoderPending$1 = getTranscoder$1(transcoderPath);
-    return await loadGeometry(data instanceof ArrayBuffer ? data : await loadArrayBuffer(data), transcodeConfig);
+    return await loadGeometry(urlOrArrayBuffer instanceof ArrayBuffer ? urlOrArrayBuffer : await loadArrayBuffer(urlOrArrayBuffer), transcodeConfig);
 }
 
 ///////////////////////////////////////////////////
@@ -748,10 +748,10 @@ const loadCompressedTexture = async (buffers, taskConfig = {})=>{
  */ /**
  * Load a basis file or array buffer as texture options
  * @alias module:pex-loaders.loadBasis
- * @param {string | ArrayBuffer} data
+ * @param {string | ArrayBuffer | ArrayBuffer[]} urlOrArrayBuffer
  * @param {BasisOptions} [options]
  * @returns {Promise<object>}
- */ async function loadBasis(data, { gl, transcoderPath = "assets/decoders/basis/", transcodeConfig = {}, workerLimit, workerConfig = {
+ */ async function loadBasis(urlOrArrayBuffer, { gl, transcoderPath = "assets/decoders/basis/", transcodeConfig = {}, workerLimit, workerConfig = {
     astcSupported: !!gl.getExtension("WEBGL_compressed_texture_astc"),
     etc1Supported: !!gl.getExtension("WEBGL_compressed_texture_etc1"),
     etc2Supported: !!gl.getExtension("WEBGL_compressed_texture_etc"),
@@ -761,11 +761,11 @@ const loadCompressedTexture = async (buffers, taskConfig = {})=>{
 } } = {}) {
     if (!workerPool) workerPool = new WorkerPool(workerLimit, workerConfig);
     transcoderPending = getTranscoder(transcoderPath);
-    const hasManyBuffers = Array.isArray(data);
-    const buffers = hasManyBuffers ? data : data instanceof ArrayBuffer ? [
-        data
+    const hasManyBuffers = Array.isArray(urlOrArrayBuffer);
+    const buffers = hasManyBuffers ? urlOrArrayBuffer : urlOrArrayBuffer instanceof ArrayBuffer ? [
+        urlOrArrayBuffer
     ] : [
-        await loadArrayBuffer(data)
+        await loadArrayBuffer(urlOrArrayBuffer)
     ];
     return await loadCompressedTexture(buffers, transcodeConfig);
 }
@@ -798,11 +798,11 @@ const getAlpha = ({ colorModel, samples })=>{
  * - KTX: http://github.khronos.org/KTX-Specification/
  * - DFD: https://www.khronos.org/registry/DataFormat/specs/1.3/dataformat.1.3.html#basicdescriptor
  * @alias module:pex-loaders.loadKtx2
- * @param {string | ArrayBuffer} data
+ * @param {string | ArrayBuffer} urlOrArrayBuffer
  * @param {Ktx2Options} [options]
  * @returns {Promise<object>}
- */ async function loadKtx2(data, { basisOptions = {} } = {}) {
-    const buffer = data instanceof ArrayBuffer ? data : await loadArrayBuffer(data);
+ */ async function loadKtx2(urlOrArrayBuffer, { basisOptions = {} } = {}) {
+    const buffer = urlOrArrayBuffer instanceof ArrayBuffer ? urlOrArrayBuffer : await loadArrayBuffer(urlOrArrayBuffer);
     const ktx = read(new Uint8Array(buffer));
     if (ktx.pixelDepth > 0) {
         throw new Error("Only 2D textures are currently supported.");
@@ -1154,11 +1154,11 @@ const extractXMP = (input)=>{
  * Load an Ultra HDR (aka gain map) file or array buffer as a texture
  * @alias module:pex-loaders.loadUltraHdr
  * @param {ctx} ctx
- * @param {string | ArrayBuffer} data
+ * @param {string | ArrayBuffer} urlOrArrayBuffer
  * @param {ctx.texture2D} [texture] Optionally pass an already created texture resource.
  * @returns {Promise<ctx.texture2D>}
- */ async function loadUltraHdr(ctx, data, texture) {
-    const jpegBuffer = new Uint8Array(data instanceof ArrayBuffer ? data : await loadArrayBuffer(data));
+ */ async function loadUltraHdr(ctx, urlOrArrayBuffer, texture) {
+    const jpegBuffer = new Uint8Array(urlOrArrayBuffer instanceof ArrayBuffer ? urlOrArrayBuffer : await loadArrayBuffer(urlOrArrayBuffer));
     // Decode the files into the textures
     const metadata = extractXMP(jpegBuffer);
     if (!metadata) throw new Error("Gain map XMP metadata not found");
@@ -1454,11 +1454,11 @@ var parseHdr$1 = /*@__PURE__*/ getDefaultExportFromCjs(parseHdr_1);
  * Load an HDR file or array buffer as a texture
  * @alias module:pex-loaders.loadHdr
  * @param {ctx} ctx
- * @param {string | ArrayBuffer} data
+ * @param {string | ArrayBuffer} urlOrArrayBuffer
  * @param {ctx.texture2D} [texture] Optionally pass an already created texture resource.
  * @returns {Promise<ctx.texture2D>}
- */ async function loadHdr(ctx, data, texture) {
-    const parsed = parseHdr$1(data instanceof ArrayBuffer ? data : await loadArrayBuffer(data));
+ */ async function loadHdr(ctx, urlOrArrayBuffer, texture) {
+    const parsed = parseHdr$1(urlOrArrayBuffer instanceof ArrayBuffer ? urlOrArrayBuffer : await loadArrayBuffer(urlOrArrayBuffer));
     texture ||= ctx.texture2D({
         pixelFormat: ctx.PixelFormat.RGBA32F,
         min: ctx.Filter.Linear,
@@ -3626,14 +3626,14 @@ const DataUtils = {
  * Load an EXR file or array buffer as a texture
  * @alias module:pex-loaders.loadExr
  * @param {ctx} ctx
- * @param {string | ArrayBuffer} data
+ * @param {string | ArrayBuffer} urlOrArrayBuffer
  * @param {ExrOptions} [options]
  * @param {ctx.texture2D} [texture] Optionally pass an already created texture resource.
  * @returns {Promise<ctx.texture2D>}
- */ async function loadExr(ctx, data, options, texture) {
+ */ async function loadExr(ctx, urlOrArrayBuffer, options, texture) {
     const outputType = options?.type || 1015;
     const isHalfFloat = outputType === 1016;
-    const parsed = parseExr(data instanceof ArrayBuffer ? data : await loadArrayBuffer(data), outputType);
+    const parsed = parseExr(urlOrArrayBuffer instanceof ArrayBuffer ? urlOrArrayBuffer : await loadArrayBuffer(urlOrArrayBuffer), outputType);
     texture ||= ctx.texture2D({
         width: 1,
         height: 1,
@@ -3649,7 +3649,7 @@ const DataUtils = {
     return texture;
 }
 
-function BasisWorker(InternalFormat, TranscoderFormat, BasisFormat) {
+/* global BASIS */ function BasisWorker(InternalFormat, TranscoderFormat, BasisFormat) {
     let config;
     let transcoderPending;
     let BasisModule;
@@ -3963,8 +3963,6 @@ function BasisWorker(InternalFormat, TranscoderFormat, BasisFormat) {
         return (value & value - 1) === 0 && value !== 0;
     }
 }
-var basisWorker = BasisWorker;
-var basisWorker$1 = /*@__PURE__*/ getDefaultExportFromCjs(basisWorker);
 
 /* global DracoDecoderModule */ /* eslint-disable no-case-declarations */ function DracoWorker() {
     let config;
@@ -4106,4 +4104,4 @@ var basisWorker$1 = /*@__PURE__*/ getDefaultExportFromCjs(basisWorker);
     }
 }
 
-export { BasisFormat, basisWorker$1 as BasisWorker, DracoWorker, WorkerPool, loadBasis, loadDraco, loadExr, loadHdr, loadKtx2, loadUltraHdr };
+export { BasisFormat, BasisWorker, DracoWorker, WorkerPool, loadBasis, loadDraco, loadExr, loadHdr, loadKtx2, loadUltraHdr };
