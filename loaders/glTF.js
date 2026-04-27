@@ -1471,7 +1471,7 @@ async function loadGltf(urlOrData, options = {}) {
     await Promise.all(
       json.images.map(async (image) => {
         // https://www.khronos.org/registry/glTF/specs/2.0/glTF-2.0.html#uris
-        if (isBinary || image.bufferView) {
+        if (image.bufferView !== undefined) {
           const bufferView = json.bufferViews[image.bufferView];
           bufferView.byteOffset = bufferView.byteOffset || 0;
           const buffer = json.buffers[bufferView.buffer];
