@@ -5,7 +5,7 @@ const __nextSubgraphID = ()=>"cluster" + __nextID++;
 const __wrapQ = (x)=>`"${x}"`;
 const __escape = (x)=>String(x).replace(/"/g, `\\"`).replace(/\n/g, "\\n");
 const __formatGraphAttribs = (attribs, acc)=>{
-    for(let a in attribs){
+    for(const a in attribs){
         let v = attribs[a];
         switch(a){
             case "bgcolor":
@@ -57,7 +57,7 @@ const __formatAttribs = (attribs)=>{
 };
 const __formatPorts = (ports)=>{
     const acc = [];
-    for(let i in ports){
+    for(const i in ports){
         acc.push(`<${i}> ${__escape(ports[i])}`);
     }
     return `{ ${acc.join(" | ")} }`;
@@ -99,14 +99,14 @@ const serializeGraph = (graph, isSub = false)=>{
     if (graph.attribs) {
         __formatGraphAttribs(graph.attribs, acc);
     }
-    for(let id in graph.nodes){
+    for(const id in graph.nodes){
         acc.push(serializeNode(id, graph.nodes[id]));
     }
-    for (let e of graph.edges){
+    for (const e of graph.edges){
         acc.push(serializeEdge(e, directed));
     }
     if (graph.sub) {
-        for (let sub of graph.sub){
+        for (const sub of graph.sub){
             acc.push(serializeGraph(sub, true));
         }
     }

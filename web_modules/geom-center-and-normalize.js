@@ -17,15 +17,15 @@ function centerAndNormalize(positions, { center: center$1 = true, normalize = tr
             sub(positions, i, bboxCenter, 0);
             if (normalize) {
                 scale(positions, i, normalizedSize);
-                if (!center$1) add(positions, i, bboxCenter, 0);
             }
+            if (!center$1) add(positions, i, bboxCenter, 0);
         } else {
             set(TEMP_VEC3, positions[i]);
             sub$1(TEMP_VEC3, bboxCenter);
             if (normalize) {
                 scale$1(TEMP_VEC3, normalizedSize);
-                if (!center$1) add$1(TEMP_VEC3, bboxCenter);
             }
+            if (!center$1) add$1(TEMP_VEC3, bboxCenter);
             set(positions[i], TEMP_VEC3);
         }
     }

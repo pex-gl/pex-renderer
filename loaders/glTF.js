@@ -2,7 +2,7 @@ import { loadJson, loadImage, loadArrayBuffer, loadBlob } from "pex-io";
 import { quat, mat4, utils } from "pex-math";
 import { loadDraco, loadKtx2 } from "pex-loaders";
 import typedArrayInterleave from "typed-array-interleave";
-import { getDirname, getFileExtension } from "../utils.js";
+import { getDirname, getFileExtension, isObject } from "../utils.js";
 import { components, entity, systems } from "../index.js";
 
 const isSafari =
@@ -35,7 +35,7 @@ const SUPPORTED_EXTENSIONS = [
   "KHR_mesh_quantization",
   "KHR_texture_basisu",
   "KHR_texture_transform",
-  // "EXT_texture_webp",
+  "EXT_texture_webp",
 
   // WIP:
   // "KHR_materials_volume_scatter"
@@ -226,19 +226,26 @@ function getPexMaterialTexture(
   materialTexture,
   { textures, images, samplers },
   ctx,
-  encoding,
+  pixelFormat,
 ) {
   // Retrieve glTF root object properties
   // https://github.com/KhronosGroup/glTF/blob/main/specification/2.0/schema/texture.schema.json
   const texture = textures[materialTexture.index];
 
   // https://github.com/KhronosGroup/glTF/blob/main/specification/2.0/schema/image.schema.json
-  const image =
-    texture.extensions &&
-    texture.extensions.KHR_texture_basisu &&
-    Number.isInteger(texture.extensions.KHR_texture_basisu.source)
-      ? images[texture.extensions.KHR_texture_basisu.source]
-      : images[texture.source];
+  let textureSource = texture.source;
+  if (texture.extensions) {
+    // https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_texture_basisu/schema/texture.KHR_texture_basisu.schema.json
+    // https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Vendor/EXT_texture_webp/schema/glTF.EXT_texture_webp.schema.json
+    const imageExtension =
+      texture.extensions.KHR_texture_basisu ||
+      texture.extensions.EXT_texture_webp;
+
+    if (imageExtension && Number.isInteger(imageExtension.source)) {
+      textureSource = imageExtension.source;
+    }
+  }
+  const image = images[textureSource];
 
   // https://github.com/KhronosGroup/glTF/blob/main/specification/2.0/schema/sampler.schema.json
   const sampler =
@@ -284,8 +291,7 @@ function getPexMaterialTexture(
       pexTextureOptions.aniso = 16;
     }
     texture._tex = ctx.texture2D({
-      encoding: encoding || ctx.Encoding.Linear,
-      pixelFormat: ctx.PixelFormat.RGBA8,
+      pixelFormat: pixelFormat ?? ctx.PixelFormat.RGBA8,
       wrapS: sampler.wrapS,
       wrapT: sampler.wrapT,
       min: sampler.minFilter,
@@ -345,7 +351,7 @@ function handleMaterial(material, gltf, ctx) {
         pbrMetallicRoughness.baseColorTexture,
         gltf,
         ctx,
-        ctx.Encoding.SRGB,
+        ctx.PixelFormat.SRGB8_ALPHA8,
       );
     }
     if (pbrMetallicRoughness.metallicFactor !== undefined) {
@@ -359,6 +365,7 @@ function handleMaterial(material, gltf, ctx) {
         pbrMetallicRoughness.metallicRoughnessTexture,
         gltf,
         ctx,
+        ctx.PixelFormat.RGB8,
       );
     }
 
@@ -377,7 +384,7 @@ function handleMaterial(material, gltf, ctx) {
             sheenExt.sheenColorTexture,
             gltf,
             ctx,
-            ctx.Encoding.SRGB,
+            ctx.PixelFormat.SRGB8_ALPHA8,
           );
         }
         if (sheenExt.sheenRoughnessTexture) {
@@ -389,7 +396,6 @@ function handleMaterial(material, gltf, ctx) {
               sheenExt.sheenRoughnessTexture,
               gltf,
               ctx,
-              ctx.Encoding.Linear,
             );
           }
         }
@@ -407,7 +413,6 @@ function handleMaterial(material, gltf, ctx) {
             clearcoatExt.clearcoatTexture,
             gltf,
             ctx,
-            ctx.Encoding.Linear,
           );
         }
         if (clearcoatExt.clearcoatRoughnessTexture) {
@@ -415,7 +420,6 @@ function handleMaterial(material, gltf, ctx) {
             clearcoatExt.clearcoatRoughnessTexture,
             gltf,
             ctx,
-            ctx.Encoding.Linear,
           );
         }
         if (clearcoatExt.clearcoatNormalTexture) {
@@ -423,7 +427,7 @@ function handleMaterial(material, gltf, ctx) {
             clearcoatExt.clearcoatNormalTexture,
             gltf,
             ctx,
-            ctx.Encoding.SRGB, // TODO: shoudln't it be linear?
+            ctx.PixelFormat.RGB8,
           );
         }
       }
@@ -437,7 +441,7 @@ function handleMaterial(material, gltf, ctx) {
             transmissionExt.transmissionTexture,
             gltf,
             ctx,
-            ctx.Encoding.Linear,
+            ctx.PixelFormat.R8,
           );
         }
       }
@@ -453,7 +457,6 @@ function handleMaterial(material, gltf, ctx) {
             diffuseTransmissionExt.diffuseTransmissionTexture,
             gltf,
             ctx,
-            ctx.Encoding.Linear,
           );
         }
         materialProps.diffuseTransmissionColor =
@@ -463,7 +466,7 @@ function handleMaterial(material, gltf, ctx) {
             diffuseTransmissionExt.diffuseTransmissionColorTexture,
             gltf,
             ctx,
-            ctx.Encoding.SRGB,
+            ctx.PixelFormat.SRGB8_ALPHA8, // SRGB8 with ALPHA8 added for mipmap
           );
         }
       }
@@ -482,7 +485,7 @@ function handleMaterial(material, gltf, ctx) {
             volumeExt.thicknessTexture,
             gltf,
             ctx,
-            ctx.Encoding.Linear,
+            ctx.PixelFormat.RG8,
           );
         }
       }
@@ -508,7 +511,6 @@ function handleMaterial(material, gltf, ctx) {
             specularExt.specularTexture,
             gltf,
             ctx,
-            ctx.Encoding.Linear,
           );
         }
         materialProps.specularColor = specularExt.specularColorFactor || [
@@ -519,7 +521,7 @@ function handleMaterial(material, gltf, ctx) {
             specularExt.specularColorTexture,
             gltf,
             ctx,
-            ctx.Encoding.SRGB,
+            ctx.PixelFormat.SRGB8_ALPHA8, // SRGB8 with ALPHA8 added for mipmap
           );
         }
       }
@@ -527,7 +529,7 @@ function handleMaterial(material, gltf, ctx) {
   }
 
   // Specular/Glossiness workflow
-  // https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_materials_pbrSpecularGlossiness/schema/glTF.KHR_materials_pbrSpecularGlossiness.schema.json
+  // https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Archived/KHR_materials_pbrSpecularGlossiness/schema/glTF.KHR_materials_pbrSpecularGlossiness.schema.json
   const pbrSpecularGlossiness = material.extensions
     ? material.extensions.KHR_materials_pbrSpecularGlossiness
     : null;
@@ -555,7 +557,7 @@ function handleMaterial(material, gltf, ctx) {
         pbrSpecularGlossiness.diffuseTexture,
         gltf,
         ctx,
-        ctx.Encoding.SRGB,
+        ctx.PixelFormat.SRGB8_ALPHA8,
       );
     }
     if (pbrSpecularGlossiness.specularGlossinessTexture) {
@@ -563,7 +565,7 @@ function handleMaterial(material, gltf, ctx) {
         pbrSpecularGlossiness.specularGlossinessTexture,
         gltf,
         ctx,
-        ctx.Encoding.SRGB,
+        ctx.PixelFormat.SRGB8_ALPHA8,
       );
     }
   }
@@ -585,6 +587,7 @@ function handleMaterial(material, gltf, ctx) {
       material.occlusionTexture,
       gltf,
       ctx,
+      ctx.PixelFormat.R8,
     );
   }
 
@@ -593,7 +596,7 @@ function handleMaterial(material, gltf, ctx) {
       material.emissiveTexture,
       gltf,
       ctx,
-      ctx.Encoding.SRGB,
+      ctx.PixelFormat.SRGB8_ALPHA8, // SRGB8 with ALPHA8 added for mipmap
     );
   }
 
@@ -1355,23 +1358,36 @@ const DEFAULT_OPTIONS = {
   supportImageBitmap: !isSafari,
 };
 
-async function loadGltf(url, options = {}) {
+async function loadGltf(urlOrData, options = {}) {
   const opts = Object.assign({}, DEFAULT_OPTIONS, options);
   const { ctx } = options;
 
-  console.debug("loaders.gltf", url, options, opts);
+  console.debug("loaders.gltf", urlOrData, options, opts);
 
-  // Load and unpack data
-  // https://www.khronos.org/registry/glTF/specs/2.0/glTF-2.0.html#glb-file-format-specification
-  const extension = getFileExtension(url);
-  const basePath = getDirname(url);
-  const isBinary = extension === "glb";
+  let data;
+  let basePath = opts.basePath;
+  let isBinary;
 
-  console.debug("loaders.gltf", url, extension, isBinary);
+  if (urlOrData instanceof ArrayBuffer) {
+    data = urlOrData;
+    isBinary = true;
+  } else if (isObject(urlOrData)) {
+    data = urlOrData;
+  } else {
+    // Load and unpack data
+    // https://www.khronos.org/registry/glTF/specs/2.0/glTF-2.0.html#glb-file-format-specification
+    const extension = getFileExtension(urlOrData);
+    basePath ??= getDirname(urlOrData);
+    isBinary = extension === "glb";
+
+    data = isBinary
+      ? await loadArrayBuffer(urlOrData)
+      : await loadJson(urlOrData);
+    console.debug("loaders.gltf", extension, isBinary);
+  }
+
   // https://github.com/KhronosGroup/glTF/blob/main/specification/2.0/schema/glTF.schema.json
-  const { json, bin } = loadData(
-    isBinary ? await loadArrayBuffer(url) : await loadJson(url),
-  );
+  const { json, bin } = loadData(data);
 
   console.debug("loaders.gltf", json, bin);
 
@@ -1455,7 +1471,7 @@ async function loadGltf(url, options = {}) {
     await Promise.all(
       json.images.map(async (image) => {
         // https://www.khronos.org/registry/glTF/specs/2.0/glTF-2.0.html#uris
-        if (isBinary || image.bufferView) {
+        if (image.bufferView !== undefined) {
           const bufferView = json.bufferViews[image.bufferView];
           bufferView.byteOffset = bufferView.byteOffset || 0;
           const buffer = json.buffers[bufferView.buffer];

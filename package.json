@@ -1,6 +1,6 @@
 {
   "name": "pex-renderer",
-  "version": "4.0.0",
+  "version": "5.0.0-alpha.9",
   "description": "Physically Based Renderer (PBR) and scene graph designed as ECS for PEX: define entities to be rendered as collections of components with their update orchestrated by systems.",
   "keywords": [
     "pex",
@@ -38,36 +38,36 @@
     "release:alpha": "snowdev release --release-as minor --prerelease alpha"
   },
   "dependencies": {
-    "geom-builder": "^3.0.1",
+    "geom-builder": "^3.1.0",
     "hammersley": "^2.0.0",
     "pex-cam": "^3.0.1",
     "pex-geom": "^3.1.0",
-    "pex-io": "^3.0.2",
-    "pex-loaders": "^1.0.0",
-    "pex-math": "^4.1.2",
+    "pex-io": "^3.2.0",
+    "pex-loaders": "^1.2.1",
+    "pex-math": "^4.2.0",
     "pex-random": "^2.1.2",
-    "pex-shaders": "^1.0.0",
+    "pex-shaders": "^2.0.0-alpha.6",
     "typed-array-interleave": "^2.0.1"
   },
   "devDependencies": {
-    "@hpcc-js/wasm-graphviz": "^1.11.0",
-    "@thi.ng/dot": "^2.1.114",
+    "@hpcc-js/wasm-graphviz": "^1.21.2",
+    "@thi.ng/dot": "^2.1.131",
     "angle-normals": "^1.0.0",
     "cosine-gradient": "^0.3.0",
-    "es-module-shims": "^2.6.2",
+    "es-module-shims": "^2.8.0",
     "fit-rect": "^1.0.3",
-    "geom-center-and-normalize": "^2.2.0",
+    "geom-center-and-normalize": "^2.2.1",
     "geom-parse-obj": "^2.0.0",
     "grid-cells": "^2.0.0",
-    "pex-color": "^2.2.0",
-    "pex-context": "^3.3.1",
-    "pex-gui": "^3.2.0",
+    "pex-color": "^2.3.0",
+    "pex-context": "^4.1.0",
+    "pex-gui": "^3.3.0",
     "primitive-geometry": "^2.11.0"
   },
   "engines": {
     "node": ">=22.0.0",
     "npm": ">=10.5.1",
-    "snowdev": ">=2.5.x"
+    "snowdev": ">=2.7.x"
   },
   "snowdev": {
     "files": "{*.js,*(systems|components|helpers|loaders|utils)/**/*.js}"

@@ -9,7 +9,7 @@ const flagDefinitions = [
   [["options", "attachmentsLocations", "color"], "LOCATION_COLOR", { type: "value" }],
   [["options", "attachmentsLocations", "normal"], "LOCATION_NORMAL", { type: "value" }],
   [["options", "attachmentsLocations", "emissive"], "LOCATION_EMISSIVE", { type: "value" }],
-  [["options", "toneMap"], "TONE_MAP", { type: "value" }],
+  [["options", "msaa"], "USE_MSAA"],
 
   [["material", "baseColor"], "", { uniform: "uBaseColor" }],
   [["material", "lineWidth"], "", { uniform: "uLineWidth" }],
@@ -121,10 +121,6 @@ export default ({ ctx } = {}) => ({
     const sharedUniforms = {
       // uViewportSize: [renderView.viewport[2], renderView.viewport[3]],
       uResolution: [renderView.viewport[2], renderView.viewport[3]],
-
-      uExposure: renderView.exposure,
-      uOutputEncoding: renderView.outputEncoding,
-
       uProjectionMatrix: renderView.camera.projectionMatrix,
       uViewMatrix: renderView.camera.viewMatrix,
     };
@@ -196,9 +192,6 @@ export default ({ ctx } = {}) => ({
     this.render(renderView, entities, options);
   },
   renderOpaque(renderView, entities, options) {
-    this.render(renderView, entities, {
-      ...options,
-      toneMap: renderView.toneMap,
-    });
+    this.render(renderView, entities, options);
   },
 });

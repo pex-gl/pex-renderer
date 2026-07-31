@@ -47,7 +47,7 @@ const materials = {
       getURL(
         `assets/materials/plastic-green.material/plastic-green_basecolor.png`,
       ),
-      ctx.Encoding.SRGB,
+      true,
     ),
   },
   "Base Color": {
@@ -85,7 +85,7 @@ const materials = {
       texture: await getTexture(
         ctx,
         getURL(`assets/textures/uv-wide/uv-wide.png`),
-        ctx.Encoding.SRGB,
+        true,
       ),
       matrix: transform,
     },
@@ -105,7 +105,7 @@ const materials = {
     baseColorTexture: await getTexture(
       ctx,
       getURL(`assets/materials/plastic-red.material/plastic-red_basecolor.png`),
-      ctx.Encoding.SRGB,
+      true,
     ),
     roughnessTexture: await getTexture(
       ctx,
@@ -128,6 +128,7 @@ const materials = {
       getURL(
         `assets/materials/plastic-glow.material/plastic-glow_basecolor.png`,
       ),
+      true,
     ),
     roughnessTexture: await getTexture(
       ctx,
@@ -151,7 +152,7 @@ const materials = {
       getURL(
         `assets/materials/plastic-glow.material/plastic-glow_emissive.png`,
       ),
-      ctx.Encoding.SRGB,
+      true,
     ),
     emissiveIntensity: 4,
   },
@@ -165,7 +166,7 @@ const materials = {
     baseColorTexture: await getTexture(
       ctx,
       getURL(`assets/textures/alpha-test-mask/alpha-test-mask.png`),
-      ctx.Encoding.SRGB,
+      true,
     ),
     alphaTexture: await getTexture(
       ctx,
@@ -183,7 +184,7 @@ const materials = {
     //     getURL(
     //       `glTF-Sample-Models/2.0/SheenCloth/glTF/technicalFabricSmall_sheen_256.png`
     //     ),
-    //     ctx.Encoding.SRGB
+    //     true,
     //   ),
     //   scale: [30, -30],
     // },
@@ -193,7 +194,7 @@ const materials = {
     //     getURL(
     //       `glTF-Sample-Models/2.0/SheenCloth/glTF/technicalFabricSmall_sheen_256.png`
     //     ),
-    //     ctx.Encoding.SRGB
+    //     true,
     //   ),
     //   scale: [30, -30],
     // },
@@ -220,9 +221,8 @@ for (let i = 0; i < nW * nH; i++) {
     transform: components.transform({
       position: [0, 0, 2],
     }),
-    camera: components.camera({
-      fov: Math.PI / 4,
-    }),
+    camera: components.camera(),
+    postProcessing: components.postProcessing(),
     orbiter: components.orbiter({ element: ctx.gl.canvas }),
   });
   world.add(cameraEntity);

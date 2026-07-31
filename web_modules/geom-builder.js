@@ -1,94 +1,82 @@
 import { t as typedArrayConstructor } from './_chunks/index-CcviitTA.js';
 
 // TODO
-// add positions documentation
 // change index to offset so it's always up to date?
-// allow int instead of bool
 class GeomBuilder {
-    constructor(opts = {}){
-        this.count = 0;
-        const size = opts.size || 32;
-        this.positions = new Float32Array(size * (opts.positions || 3));
-        this.positionsIndex = 0;
-        if (opts.colors) {
-            this.colors = new Float32Array(size * opts.colors);
-            this.colorsIndex = 0;
-        }
-        if (opts.normals) {
-            this.normals = new Float32Array(size * opts.normals);
-            this.normalsIndex = 0;
-        }
-        if (opts.uvs) {
-            this.uvs = new Float32Array(size * opts.uvs);
-            this.uvsIndex = 0;
-        }
-        if (opts.cells) {
-            const UintTypedArray = typedArrayConstructor(Math.max(256, size)); // Ensure Uint16Array at minimum
-            this.cells = new UintTypedArray(size * opts.cells);
-            this.indexCount = 0;
-        }
+    static{
+        this.indicesProps = [
+            "cells",
+            "indices"
+        ];
     }
-    addPosition(position) {
-        if (this.positionsIndex + position.length >= this.positions.length) {
-            this.positions = this._expandFloatArray(this.positions);
-        }
-        for(let i = 0; i < position.length; i++){
-            this.positions[this.positionsIndex++] = position[i];
-        }
-        this.count++;
+    static formatIndexKey(attributeName) {
+        return `${attributeName}Index`;
     }
-    addColor(color) {
-        if (this.colorsIndex + color.length >= this.colors.length) {
-            this.colors = this._expandFloatArray(this.colors);
-        }
-        for(let i = 0; i < color.length; i++){
-            this.colors[this.colorsIndex++] = color[i];
-        }
+    static formatFunctionName(attributeName) {
+        return `${attributeName[0].toUpperCase()}${attributeName.slice(1, -1)}`;
     }
-    addNormal(normal) {
-        if (this.normalsIndex + normal.length >= this.normals.length) {
-            this.normals = this._expandFloatArray(this.normals);
-        }
-        for(let i = 0; i < normal.length; i++){
-            this.normals[this.normalsIndex++] = normal[i];
-        }
-    }
-    addUV(uv) {
-        if (this.uvsIndex + uv.length >= this.uvs.length) {
-            this.uvs = this._expandFloatArray(this.uvs);
-        }
-        for(let i = 0; i < uv.length; i++){
-            this.uvs[this.uvsIndex++] = uv[i];
-        }
-    }
-    addCell(indices) {
-        if (Math.max(...indices) > 65535 && this.cells.constructor !== Uint32Array) {
-            this.cells = new Uint32Array(this.cells);
-        }
-        if (this.indexCount + indices.length >= this.cells.length) {
-            this.cells = this._expandUintArray(this.cells);
-        }
-        for(let i = 0; i < indices.length; i++){
-            this.cells[this.indexCount++] = indices[i];
-        }
-    }
-    reset() {
-        this.positionsIndex = 0;
-        if (this.normals) this.normalsIndex = 0;
-        if (this.uvs) this.uvsIndex = 0;
-        if (this.colors) this.colorsIndex = 0;
-        if (this.cells) this.indexCount = 0;
-        this.count = 0;
-    }
-    _expandFloatArray(a) {
+    static expandFloatArray(a) {
         const biggerArray = new Float32Array(a.length * 2);
         biggerArray.set(a);
         return biggerArray;
     }
-    _expandUintArray(a) {
+    static expandUintArray(a) {
         const biggerArray = new a.constructor(a.length * 2);
         biggerArray.set(a);
         return biggerArray;
+    }
+    get indexCount() {
+        for (let attributeName of GeomBuilder.indicesProps){
+            const attributeIndexKey = GeomBuilder.formatIndexKey(attributeName);
+            const indexCount = this[attributeIndexKey];
+            if (indexCount !== undefined) return indexCount;
+        }
+        return undefined;
+    }
+    constructor({ size = 32, ...attributes }){
+        this.count = 0;
+        attributes ||= {};
+        attributes.positions ??= 3;
+        this.attributes = attributes;
+        for (let [attributeName, attributeSize] of Object.entries(attributes)){
+            const isIndices = GeomBuilder.indicesProps.includes(attributeName);
+            const attributeIndexKey = GeomBuilder.formatIndexKey(attributeName);
+            const addFnName = `add${GeomBuilder.formatFunctionName(attributeName)}`;
+            // Adds this.cellsIndex, this.positionsIndex...
+            this[attributeIndexKey] = 0;
+            if (isIndices) {
+                // Adds this.cells...
+                const UintTypedArray = typedArrayConstructor(Math.max(256, size)); // Ensure Uint16Array at minimum
+                this[attributeName] = new UintTypedArray(size * attributeSize);
+            } else {
+                // Adds this.positions, this.normals, this.uvs, this.vertexColors...
+                this[attributeName] = new Float32Array(size * attributeSize);
+            }
+            // Adds this.addCell, this.addPosition, this.addNormal...
+            this[addFnName] = (value)=>{
+                // Resize indices
+                if (isIndices && Math.max(...value) > 65535 && this[attributeName].constructor !== Uint32Array) {
+                    this[attributeName] = new Uint32Array(this[attributeName]);
+                }
+                // Expand typed array exponentially
+                if (this[attributeIndexKey] + value.length >= this[attributeName].length) {
+                    this[attributeName] = isIndices ? GeomBuilder.expandUintArray(this[attributeName]) : GeomBuilder.expandFloatArray(this[attributeName]);
+                }
+                // Update typed array
+                for(let i = 0; i < value.length; i++){
+                    this[attributeName][this[attributeIndexKey]++] = value[i];
+                }
+                // Increment count for positions
+                if (attributeName === "positions") this.count++;
+            };
+        }
+    }
+    reset() {
+        for (let attributeName of Object.keys(this.attributes)){
+            const attributeIndexKey = GeomBuilder.formatIndexKey(attributeName);
+            this[attributeIndexKey] = 0;
+        }
+        this.count = 0;
     }
 }
 function createGeomBuilder(opts) {

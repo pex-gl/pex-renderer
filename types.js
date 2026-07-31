@@ -8,6 +8,7 @@
  * @property {AreaLightComponentOptions} [areaLight]
  * @property {AxesHelperComponentOptions} [axesHelper]
  * @property {BoundingBoxHelperComponentOptions} [boundingBoxHelper]
+ * @property {SkeletonHelperComponentOptions} [skeletonHelper]
  * @property {CameraHelperComponentOptions} [cameraHelper]
  * @property {CameraComponentOptions} [camera]
  * @property {DirectionalLightComponentOptions} [directionalLight]
@@ -59,6 +60,10 @@
  * @property {number[]} [color=[1, 0, 0, 1]]
  */
 /**
+ * @typedef {object} SkeletonHelperComponentOptions
+ * @property {number[]|number[][]} [color=[[0, 0, 1, 1], [1, 1, 1, 1]]]
+ */
+/**
  * @typedef {object} CameraHelperComponentOptions
  * @property {number[]} [color=[1, 1, 1, 1]]
  */
@@ -78,9 +83,6 @@
  * @property {mat4} [viewMatrix]
  * @property {mat4} [invViewMatrix]
  * @property {boolean} [culling=false]
- * @property {number} [exposure=1]
- * @property {"aces" | "agx" | "filmic" | "lottes" | "neutral" | "reinhard" | "reinhard2" | "uchimura" | "uncharted2" | "unreal"} [toneMap="aces"]
- * @property {number} [outputEncoding=ctx.Encoding.Gamma]
  * @property {number} [focalLength=50] Focal length of the camera lens [10mm - 200mm] in mm
  * @property {number} [fStop=2.8] Ratio of camera lens opening, f-number, f/N, aperture [1.2 - 32] in mm
  * @property {number} [sensorSize=[36, 24]] Physical camera sensor or film size [sensorWidth, sensorHeight] in mm
@@ -274,9 +276,14 @@
  * @property {number} [sampleCount=4] Multisample anti-aliasing samples: 1 or 4.
  */
 /**
- * @typedef {object} AAComponentOptions
+ * @typedef {object} FXAAComponentOptions
+ * @property {number} [quality=3] For edge luma threshold: 0 to 4.
  * @property {number} [subPixelQuality=0.75] Higher = softer. Helps mitigate fireflies but will blur small details.
- * @property {number} [quality=2] For edge luma threshold: 0 to 4.
+ */
+/**
+ * @typedef {object} SMAAComponentOptions
+ * @property {number} [quality=2] 0 to 3 (60/80/95/99% of the quality)
+ * @property {"luma" | "color" | "depth"} [edges=luma]
  */
 /**
  * @typedef {object} FogComponentOptions
@@ -327,13 +334,16 @@
  * @typedef {object} PostProcessingComponentOptions
  * @property {SSAOComponentOptions} [ssao]
  * @property {DoFComponentOptions} [dof]
- * @property {AAComponentOptions} [aa]
- * @property {FogComponentOptions} [fog]
  * @property {BloomComponentOptions} [bloom]
+ * @property {FogComponentOptions} [fog]
+ * @property {VignetteComponentOptions} [vignette]
  * @property {LutComponentOptions} [lut]
  * @property {ColorCorrectionComponentOptions} [colorCorrection]
- * @property {VignetteComponentOptions} [vignette]
+ * @property {FXAAComponentOptions} [fxaa]
+ * @property {SMAAComponentOptions} [smaa]
  * @property {FilmGrainComponentOptions} [filmGrain]
+ * @property {number} [exposure=1]
+ * @property {"aces" | "agx" | "agxPunchy" | "filmic" | "lottes" | "neutral" | "reinhard" | "reinhard2" | "uchimura" | "uncharted2" | "unreal"} [toneMap="aces"]
  * @property {number} opacity
  */
 /**
@@ -507,8 +517,6 @@
  * @property {object} camera
  * @property {Entity} cameraEntity
  * @property {import("pex-context/types/types").Viewport} viewport
- * @property {object} [exposure]
- * @property {object} [outputEncoding]
  */
 
 export {};

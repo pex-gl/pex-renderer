@@ -39,6 +39,7 @@ const cameraEntity = createEntity({
     culling: true,
     clearColor: [0.01, 0.01, 0.01, 1],
   }),
+  postProcessing: components.postProcessing(),
   cameraHelper: components.cameraHelper(),
 });
 world.add(cameraEntity);
@@ -48,6 +49,7 @@ const fixCameraEntity = createEntity({
     rotation: quat.fromEuler(quat.create(), [-Math.PI / 2, 0, 0]),
   }),
   camera: components.camera(),
+  postProcessing: components.postProcessing(),
   orbiter: components.orbiter({ element: ctx.gl.canvas }),
 });
 world.add(fixCameraEntity);
@@ -119,6 +121,8 @@ const transformSystem = systems.transform();
 const cameraSystem = systems.camera();
 
 const lightSystem = systems.light();
+const helperSystem = systems.helper();
+helperSystem.lineWidth = 1;
 const renderPipelineSystem = systems.renderPipeline({
   ctx,
   resourceCache,
@@ -130,7 +134,7 @@ const basicRendererSystem = systems.renderer.basic({
   resourceCache,
   renderGraph,
 });
-const helperRendererSystem = systems.renderer.helper({ ctx });
+const lineRendererSystem = systems.renderer.line({ ctx });
 
 const createView = (cameraEntity, viewport) => ({
   viewport,
@@ -219,7 +223,11 @@ ctx.frame(() => {
   lightSystem.update(world.entities);
 
   view1.draw((renderView) => {
-    renderPipelineSystem.update(world.entities, {
+    const { entities: helperEntities } = helperSystem.update(world.entities, {
+      renderView,
+      renderEngine: { systems: [transformSystem, geometrySystem] },
+    });
+    renderPipelineSystem.update([...world.entities, ...helperEntities], {
       renderers: [basicRendererSystem],
       renderView: renderView,
     });
@@ -241,8 +249,12 @@ ctx.frame(() => {
   // console.log("entitiesInView", world.entities.length, entitiesInView.length);
 
   view2.draw((renderView) => {
-    renderPipelineSystem.update(world.entities, {
-      renderers: [basicRendererSystem, helperRendererSystem],
+    const { entities: helperEntities } = helperSystem.update(world.entities, {
+      renderView,
+      renderEngine: { systems: [transformSystem, geometrySystem] },
+    });
+    renderPipelineSystem.update([...world.entities, ...helperEntities], {
+      renderers: [basicRendererSystem, lineRendererSystem],
       renderView: renderView,
     });
   });

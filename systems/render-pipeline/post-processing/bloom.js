@@ -11,7 +11,7 @@ const bloom = ({
     frag: postprocessingShaders.threshold.frag,
     // prettier-ignore
     flagDefinitions: [
-      [["camera", "exposure"], "", { uniform: "uExposure" }],
+      [["postProcessing", "exposure"], "", { uniform: "uExposure" }],
       [["postProcessing", "bloom", "threshold"], "", { uniform: "uThreshold" }],
       [["postProcessing", "bloom", "colorFunction"], "COLOR_FUNCTION", { type: "value" }],
       [["postProcessing", "bloom", "source"], "USE_SOURCE_COLOR", { compare: "color" }],

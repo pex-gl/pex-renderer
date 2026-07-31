@@ -8,7 +8,7 @@ const flagDefinitions = [
   [["options", "attachmentsLocations", "color"], "LOCATION_COLOR", { type: "value" }],
   [["options", "attachmentsLocations", "normal"], "LOCATION_NORMAL", { type: "value" }],
   [["options", "attachmentsLocations", "emissive"], "LOCATION_EMISSIVE", { type: "value" }],
-  [["options", "toneMap"], "TONE_MAP", { type: "value" }],
+  [["options", "msaa"], "USE_MSAA"],
 
   [["material", "blend"], "USE_BLEND"],
   [["material", "baseColor"], "", { uniform: "uBaseColor" }],
@@ -59,9 +59,6 @@ export default ({ ctx }) => ({
   },
   render(renderView, entities, options) {
     const sharedUniforms = {
-      uExposure: renderView.exposure,
-      uOutputEncoding: renderView.outputEncoding,
-
       uProjectionMatrix: renderView.camera.projectionMatrix,
       uViewMatrix: renderView.camera.viewMatrix,
     };
@@ -97,17 +94,9 @@ export default ({ ctx }) => ({
     }
   },
   renderOpaque(renderView, entities, options) {
-    this.render(renderView, entities, {
-      ...options,
-      toneMap: renderView.toneMap,
-      transparent: false,
-    });
+    this.render(renderView, entities, { ...options, transparent: false });
   },
   renderTransparent(renderView, entities, options) {
-    this.render(renderView, entities, {
-      ...options,
-      toneMap: renderView.toneMap,
-      transparent: true,
-    });
+    this.render(renderView, entities, { ...options, transparent: true });
   },
 });

@@ -30,8 +30,7 @@ export default ({ ctx, resourceCache }) => ({
         name: "skyTexture",
         width: 512,
         height: 256,
-        pixelFormat: ctx.PixelFormat.RGBA8,
-        encoding: ctx.Encoding.Linear,
+        pixelFormat: ctx.PixelFormat.SRGB8_ALPHA8,
         min: ctx.Filter.Linear,
         mag: ctx.Filter.Linear,
       });
@@ -80,9 +79,6 @@ export default ({ ctx, resourceCache }) => ({
           vert: ShaderParser.build(ctx, skybox.skyEnvMap.vert),
           frag: ShaderParser.build(ctx, skybox.skyEnvMap.frag),
         }),
-        uniforms: {
-          uOutputEncoding: ctx.Encoding.Linear,
-        },
         ...resourceCache.fullscreenTriangle(),
       };
 

@@ -17,7 +17,12 @@ import { dragon, getURL } from "./utils.js";
 
 random.seed(0);
 
-const State = { bbox: true, vertexHelper: true, scale: 1 };
+const State = {
+  bbox: true,
+  vertexHelper: false,
+  skeletonHelper: true,
+  scale: 1,
+};
 const pixelRatio = devicePixelRatio;
 const ctx = createContext({ pixelRatio });
 const renderEngine = createRenderEngine({ ctx, debug: true });
@@ -25,16 +30,17 @@ const world = createWorld();
 
 // Entities
 const helperEntity = createEntity({
-  transform: components.transform({ scale: [2, 2, 2] }),
+  transform: components.transform(),
   axesHelper: components.axesHelper(),
-  gridHelper: components.gridHelper(),
+  gridHelper: components.gridHelper({ size: 2 }),
 });
 world.add(helperEntity);
-const gridTenEntity = createEntity({
+
+const gridTenScaledEntity = createEntity({
   transform: components.transform({ scale: [2, 2, 2] }),
-  gridHelper: components.gridHelper({ size: 10 }),
+  gridHelper: components.gridHelper(),
 });
-world.add(gridTenEntity);
+world.add(gridTenScaledEntity);
 
 const W = window.innerWidth * devicePixelRatio;
 const H = window.innerHeight * devicePixelRatio;
@@ -49,6 +55,7 @@ const cameraEntity = createEntity({
     far: 100,
     viewport: [0, 0, Math.floor(splitRatio * W), H],
   }),
+  postProcessing: components.postProcessing(),
   orbiter: components.orbiter({ element: ctx.gl.canvas, maxDistance: 1 }),
   cameraHelper: components.cameraHelper({ color: [0, 1, 0, 1] }),
 });
@@ -190,6 +197,10 @@ cesiumManScene.entities.forEach((entity) => {
   if (entity.geometry) {
     entity.boundingBoxHelper = State.bbox && components.boundingBoxHelper();
   }
+  if (entity.skin) {
+    entity.skeletonHelper = State.skeletonHelper && components.skeletonHelper();
+    console.log(entity);
+  }
 });
 world.entities.push(...cesiumManScene.entities);
 scalableEntities.set(cesiumManScene.entities[0], cesiumManSceneScale);
@@ -307,6 +318,17 @@ gui.addParam("Vertex normals", State, "vertexHelper", {}, () => {
         entity.vertexHelper = components.vertexHelper({ size: 0.01 });
       } else {
         delete entity.vertexHelper;
+      }
+    }
+  });
+});
+gui.addParam("Skeleton", State, "skeletonHelper", {}, () => {
+  world.entities.forEach((entity) => {
+    if (entity.skin) {
+      if (State.skeletonHelper) {
+        entity.skeletonHelper = components.skeletonHelper();
+      } else {
+        delete entity.skeletonHelper;
       }
     }
   });

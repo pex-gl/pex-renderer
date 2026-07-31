@@ -3,6 +3,7 @@
 export { default as animation } from "./animation.js";
 export { default as camera } from "./camera.js";
 export { default as geometry } from "./geometry.js";
+export { default as helper } from "./helper.js";
 export { default as layer } from "./layer.js";
 export { default as light } from "./light.js";
 export { default as morph } from "./morph.js";

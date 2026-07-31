@@ -19,6 +19,7 @@ export default ({ ctx, debug = false }) => {
   const skyboxSystem = systems.skybox(options);
   const cameraSystem = systems.camera();
 
+  const helperSystem = systems.helper();
   const reflectionProbeSystem = systems.reflectionProbe(options);
   const lightSystem = systems.light();
   const renderPipelineSystem = systems.renderPipeline(options);
@@ -26,7 +27,6 @@ export default ({ ctx, debug = false }) => {
   const standardRendererSystem = systems.renderer.standard(options);
   const lineRendererSystem = systems.renderer.line(options);
   const skyboxRendererSystem = systems.renderer.skybox(options);
-  const helperRendererSystem = systems.renderer.helper(options);
 
   const renderEngine = {
     // debugMode,
@@ -54,6 +54,7 @@ export default ({ ctx, debug = false }) => {
       skyboxSystem,
       cameraSystem,
 
+      helperSystem,
       reflectionProbeSystem,
       lightSystem,
       renderPipelineSystem,
@@ -62,7 +63,6 @@ export default ({ ctx, debug = false }) => {
       standardRendererSystem,
       lineRendererSystem,
       skyboxRendererSystem,
-      helperRendererSystem,
     ],
     update(entities, deltaTime) {
       const now = performance.now();
@@ -115,19 +115,26 @@ export default ({ ctx, debug = false }) => {
             : entities;
 
           // Update camera dependent systems
+          const updateOptions = {
+            time: options.time ?? this.time,
+            renderers: options.renderers || this.renderers,
+            renderView,
+            drawToScreen: options.drawToScreen,
+            renderEngine: this,
+          };
+
+          const { entities: helperEntities } = helperSystem.update(
+            entitiesForCamera,
+            updateOptions,
+          );
           reflectionProbeSystem.update(entitiesForCamera, {
             renderers: [skyboxRendererSystem],
           });
           lightSystem.update(entitiesForCamera);
 
           const framebufferTextures = renderPipelineSystem.update(
-            entitiesForCamera,
-            {
-              time: options.time ?? this.time,
-              renderers: options.renderers || this.renderers,
-              renderView,
-              drawToScreen: options.drawToScreen,
-            },
+            [...entitiesForCamera, ...helperEntities],
+            updateOptions,
           );
           return framebufferTextures;
         },

@@ -18,7 +18,7 @@ import { cube, sphere } from "primitive-geometry";
 
 import { debugSceneTree } from "./utils.js";
 
-import dot from "./graph-viz.js";
+import { getRenderPassGraphViz } from "./graph-viz.js";
 
 random.seed(0);
 
@@ -27,6 +27,9 @@ const ctx = createContext({ pixelRatio });
 const world = createWorld();
 const renderGraph = createRenderGraph(ctx);
 const resourceCache = createResourceCache(ctx);
+
+const renderPassGraphViz = getRenderPassGraphViz();
+renderPassGraphViz.init(ctx, renderGraph);
 
 const oldApply = ctx.apply;
 ctx.apply = (...args) => {
@@ -63,46 +66,10 @@ ctx.apply = (...args) => {
 };
 
 const entities = (window.entities = []);
-renderGraph.renderPass = (opts) => {
-  if (dot) {
-    const passId =
-      opts.pass?.id || "RenderPass " + renderGraph.renderPasses.length;
-    const passName = opts.name || opts.pass?.name || null;
-
-    dot.passNode(passId, passName.replace(" ", "\n"));
-
-    opts?.pass?.opts?.color?.forEach((colorAttachment) => {
-      const colorTextureId = colorAttachment.id;
-      const colorTextureName = colorAttachment.name || colorTextureId;
-      if (colorTextureId) {
-        dot.resourceNode(colorTextureId, colorTextureName.replace(" ", "\n"));
-        dot.edge(passId, colorTextureId);
-      } else {
-        dot.edge(passId, "Window");
-      }
-    });
-
-    const depthTextureId = opts?.pass?.opts?.depth?.id;
-    const depthTextureName = opts?.pass?.opts?.depth?.name;
-    if (depthTextureId) {
-      dot.resourceNode(depthTextureId, depthTextureName.replace(" ", "\n"));
-      dot.edge(passId, depthTextureId);
-    }
-    if (opts.uses) {
-      opts.uses.forEach((tex) => {
-        if (dot) dot.edge(tex.id, passId);
-      });
-    }
-  }
-
-  if (opts.uses && ctx.debugMode) console.log("render-graph uses", opts.uses);
-
-  renderGraph.renderPasses.push(opts);
-};
 
 // Entities
 const postProcessing = components.postProcessing({
-  aa: components.postProcessing.aa(),
+  fxaa: components.postProcessing.fxaa(),
 });
 const cameraEntity = createEntity({
   transform: components.transform({ position: [0, 3, 3] }),
@@ -298,11 +265,11 @@ const skyboxSystem = systems.skybox({ ctx, resourceCache });
 const cameraSystem = systems.camera();
 const reflectionProbeSystem = systems.reflectionProbe({ ctx, resourceCache });
 const lightSystem = systems.light();
+const helperSystem = systems.helper();
 const renderPipelineSystem = systems.renderPipeline({
   ctx,
   resourceCache,
   renderGraph,
-  outputEncoding: ctx.Encoding.Linear,
 });
 const standardRendererSystem = systems.renderer.standard({
   ctx,
@@ -324,7 +291,6 @@ const skyboxRendererSystem = systems.renderer.skybox({
   resourceCache,
   renderGraph,
 });
-const helperRendererSystem = systems.renderer.helper({ ctx });
 
 const createView = (cameraEntity, viewport) => ({
   viewport,
@@ -341,7 +307,7 @@ const createView = (cameraEntity, viewport) => ({
       ],
       cameraEntity,
       camera: cameraEntity.camera,
-      toneMap: cameraEntity.camera.toneMap,
+      toneMap: cameraEntity.postProcessing.toneMap,
     };
     cameraEntity.camera.aspect =
       renderView.viewport[2] / renderView.viewport[3];
@@ -355,14 +321,15 @@ const createView = (cameraEntity, viewport) => ({
 const view1 = createView(cameraEntity, [0.0, 0.0, 0.5, 1]);
 const view2 = createView(cameraEntity, [0.5, 0.0, 0.5, 1]);
 
-let frame = 0;
-
 // GUI
 const gui = createGUI(ctx);
 gui.addFPSMeeter();
 gui.addStats();
 gui.addButton("Tree", () => {
   debugSceneTree(entities);
+});
+gui.addButton("Toggle Render Pass Graph", () => {
+  renderPassGraphViz.toggle();
 });
 const guiColorControl = gui.addTexture2D("Color", null, { flipY: true });
 // const guiNormalControl = gui.addTexture2D("Normal", null, { flipY: true });
@@ -383,10 +350,6 @@ window.addEventListener("keydown", ({ key }) => {
 });
 
 ctx.frame(() => {
-  frame++;
-
-  dot.reset();
-
   // skyboxEntity.skybox.sunPosition = [1 * Math.cos(now), 1, 1 * Math.sin(now)];
   quat.fromAxisAngle(
     spinningEntity.transform.rotation,
@@ -416,20 +379,20 @@ ctx.frame(() => {
         lineRendererSystem,
         skyboxRendererSystem,
       ],
-      renderView: renderView,
+      renderView,
     });
   });
 
   view2.draw((renderView) => {
+    const { entities: helperEntities } = helperSystem.update(world.entities, {
+      renderView,
+      renderEngine: { systems: [transformSystem, geometrySystem] },
+    });
     const { color, normal, depth } = renderPipelineSystem.update(
-      world.entities,
+      [...world.entities, ...helperEntities],
       {
-        renderers: [
-          basicRendererSystem,
-          lineRendererSystem,
-          helperRendererSystem,
-        ],
-        renderView: renderView,
+        renderers: [basicRendererSystem, lineRendererSystem],
+        renderView,
       },
     );
     guiColorControl.texture = color;
@@ -444,8 +407,6 @@ ctx.frame(() => {
   debugOnce = false;
 
   gui.draw();
-
-  if (frame == 1) dot.render();
 
   window.dispatchEvent(new CustomEvent("screenshot"));
 });

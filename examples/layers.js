@@ -273,12 +273,8 @@ gui.addParam("Blend", State, "blend", { min: 0, max: 1 });
 
 const updateCameraBlitState = () => {
   if (State.drawToScreen || State.drawToTextureBlitReady) {
-    cameraEntity.camera.outputEncoding = cameraEntity2.camera.outputEncoding =
-      ctx.Encoding.Gamma;
     cameraEntity.camera.toneMap = cameraEntity2.camera.toneMap = "aces";
   } else {
-    cameraEntity.camera.outputEncoding = cameraEntity2.camera.outputEncoding =
-      ctx.Encoding.Linear;
     cameraEntity.camera.toneMap = cameraEntity2.camera.toneMap = null;
   }
 };

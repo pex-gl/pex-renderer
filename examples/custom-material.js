@@ -31,6 +31,7 @@ const cameraEntity = createEntity({
   camera: components.camera({
     aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
   }),
+  postProcessing: components.postProcessing(),
   orbiter: components.orbiter({ element: ctx.gl.canvas }),
 });
 world.add(cameraEntity);
@@ -310,9 +311,17 @@ gui.addRadioList(
     "data.indirectSpecular",
     "data.sheenColor",
     "data.sheenRoughness",
-    "data.sheen",
-
+    "data.transmission",
+    "data.dispersion",
+    "data.diffuseTransmission",
+    "data.diffuseTransmissionColor",
+    "data.diffuseTransmissionThickness",
+    "data.thickness",
+    "data.attenuationDistance",
+    "data.attenuationColor",
+    "data.ior",
     "data.ao",
+
     "vNormalView",
     "vNormalWorld",
   ].map((value) => ({ name: value || "No debug", value })),

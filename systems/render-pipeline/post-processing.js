@@ -3,7 +3,9 @@ import createPipelineCache from "../../pipeline-cache.js";
 import ssao from "./post-processing/ssao.js";
 import dof from "./post-processing/dof.js";
 import bloom from "./post-processing/bloom.js";
-import final from "./post-processing/final.js";
+import combine from "./post-processing/combine.js";
+import smaa from "./post-processing/smaa.js";
+import final, { isFinalMainEnabled } from "./post-processing/final.js";
 
 // Impacts pipeline caching
 const pipelineProps = ["blend"];
@@ -12,7 +14,19 @@ const getPostProcessingPasses = (options) => [
   { name: "ssao", passes: ssao(options) },
   { name: "dof", passes: dof(options) },
   { name: "bloom", passes: bloom(options) },
-  { name: "final", passes: final(options) },
+  {
+    name: "combine",
+    passes: combine(options),
+    enabled: () => true,
+    srgb: true,
+  },
+  { name: "smaa", passes: smaa(options), srgb: true },
+  {
+    name: "final",
+    passes: final(options),
+    enabled: isFinalMainEnabled,
+    srgb: true,
+  },
 ];
 
 export default ({ ctx, renderGraph, resourceCache }) => ({
@@ -49,16 +63,16 @@ export default ({ ctx, renderGraph, resourceCache }) => ({
 
     for (let i = 0; i < this.postProcessingEffects.length; i++) {
       const effect = this.postProcessingEffects[i];
-      const isFinal = effect.name == "final";
-      const isEffectUsed = !!postProcessingComponent[effect.name];
+      const isEffectUsed =
+        !!postProcessingComponent[effect.name] || effect.enabled?.(renderView);
 
-      if (!isEffectUsed && !isFinal) continue;
+      if (!isEffectUsed) continue;
 
       for (let j = 0; j < effect.passes.length; j++) {
         const subPass = effect.passes[j];
         const isEnabled = !subPass.enabled || subPass.enabled(renderView);
 
-        if (!isEnabled && !isFinal) continue;
+        if (!isEnabled) continue;
 
         const passName = `${effect.name}.${subPass.name}`;
 
@@ -118,10 +132,13 @@ export default ({ ctx, renderGraph, resourceCache }) => ({
           if (!outputColor) console.warn(`Missing target ${target}.`);
         } else {
           // TODO: allow size overwrite for down/upscale
-          const { outputTextureDesc } = { ...descriptors.postProcessing };
-          outputTextureDesc.width = renderView.viewport[2];
-          outputTextureDesc.height = renderView.viewport[3];
-          outputColor = resourceCache.texture2D(outputTextureDesc);
+          const textureDesc = effect.srgb
+            ? descriptors.postProcessing.srgbOutputTextureDesc
+            : descriptors.postProcessing.outputTextureDesc;
+          textureDesc.width = renderView.viewport[2];
+          textureDesc.height = renderView.viewport[3];
+
+          outputColor = resourceCache.texture2D(textureDesc);
         }
         outputColor.name = `postProcessingPassColorOutput ${passName} (id: ${outputColor.id})`;
 
@@ -133,11 +150,6 @@ export default ({ ctx, renderGraph, resourceCache }) => ({
           uEmissiveTexture: colorAttachments.emissive,
           ...subPass.uniforms?.(renderView),
         };
-
-        // TODO: move to descriptors
-        if (isFinal) {
-          uniforms.uTextureEncoding = uniforms.uTexture.encoding;
-        }
 
         Object.assign(uniforms, sharedUniforms, pipelineUniforms);
 
@@ -152,16 +164,12 @@ export default ({ ctx, renderGraph, resourceCache }) => ({
           count: fullscreenTriangle.count,
         };
 
-        const usedUniformNames = Object.keys(
-          postProcessingCmd.pipeline.program.uniforms,
-        );
-        const textureUniformNames = usedUniformNames.filter(
-          (name) =>
-            postProcessingCmd.pipeline.program.uniforms[name].type == 35678,
-        );
-        const uses = textureUniformNames.map(
-          (name) => postProcessingCmd.uniforms[name],
-        );
+        // Get used textures from uniforms
+        const uses = Object.entries(postProcessingCmd.pipeline.program.uniforms)
+          .map(([name, value]) => {
+            if (value.type === ctx.gl.SAMPLER_2D) return uniforms[name];
+          })
+          .filter(Boolean);
 
         const renderPassView = {
           //FIXME: this seems to be wrong
@@ -170,7 +178,7 @@ export default ({ ctx, renderGraph, resourceCache }) => ({
 
         renderGraph.renderPass({
           name: `PostProcessingPass.${passName} [${renderPassView.viewport}]`,
-          uses: uses.filter(Boolean),
+          uses,
           renderView: renderPassView,
           pass: resourceCache.pass({
             name: `postProcessingPass.${passName}`,

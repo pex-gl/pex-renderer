@@ -17,10 +17,11 @@ export const getEnvMap = async (ctx, url) => {
   return await loadHdr(ctx, getURL(url));
 };
 
-export async function getTexture(ctx, file, encoding, options = {}) {
+export async function getTexture(ctx, file, srgb, options = {}) {
   const tex = ctx.texture2D({
     width: 1,
     height: 1,
+    pixelFormat: srgb ? ctx.PixelFormat.SRGB8_ALPHA8 : ctx.PixelFormat.RGBA8,
   });
   try {
     const image = await loadImage(file);
@@ -34,10 +35,10 @@ export async function getTexture(ctx, file, encoding, options = {}) {
       min: ctx.Filter.LinearMipmapLinear,
       mipmap: true,
       aniso: 16,
-      pixelFormat: ctx.PixelFormat.RGBA8,
-      encoding: encoding || ctx.Encoding.Linear,
       ...options,
     });
+    tex.name = file.split("/").at(-1);
+
     return tex;
   } catch (error) {
     console.error(error);

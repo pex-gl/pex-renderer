@@ -1,4 +1,4 @@
-import { g as getDefaultExportFromCjs } from './_chunks/polyfills-Ci6ALveU.js';
+import { g as getDefaultExportFromCjs } from './_chunks/polyfills-BrKAEAju.js';
 
 var angleNormals_1 = angleNormals;
 function hypot(x, y, z) {
@@ -74,6 +74,6 @@ function angleNormals(cells, positions) {
     }
     return normals;
 }
-var angleNormals$1 = /*@__PURE__*/ getDefaultExportFromCjs(angleNormals_1);
+var angleNormals_default = /*@__PURE__*/ getDefaultExportFromCjs(angleNormals_1);
 
-export { angleNormals$1 as default };
+export { angleNormals_default as default };

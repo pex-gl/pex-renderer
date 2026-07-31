@@ -16,6 +16,8 @@ import { cube, roundedCube, capsule, sphere } from "primitive-geometry";
 
 import { dragon, getEnvMap, getTexture, getURL } from "./utils.js";
 
+import { getRenderPassGraphViz } from "./graph-viz.js";
+
 random.seed(14);
 
 const State = {
@@ -26,22 +28,25 @@ const State = {
   baseColor: [0.8, 0.1, 0.1, 1.0],
 
   msaa: true,
-  aa: true,
   ssao: true,
-  fog: false,
-  bloom: true,
   dof: true,
+  bloom: true,
+  fog: false,
+  vignette: true,
   lut: true,
   colorCorrection: true,
-  vignette: true,
+  smaa: true,
+  fxaa: true,
   filmGrain: true,
 };
 
-// const pixelRatio = devicePixelRatio;
-const pixelRatio = 1;
+const pixelRatio = 1; // devicePixelRatio;
 const ctx = createContext({ pixelRatio });
 const renderEngine = createRenderEngine({ ctx, debug: true });
 const world = createWorld();
+
+const renderPassGraphViz = getRenderPassGraphViz();
+renderPassGraphViz.init(ctx, renderEngine.renderGraph);
 
 // Entities
 const helperEntity = createEntity({
@@ -67,30 +72,11 @@ aabb.fromPoints(dragonBounds, dragon.positions);
 const camera = components.camera({
   // fov: Math.PI / 6,
   aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
-  exposure: 1,
   fStop: 4,
 });
 const postProcessing = components.postProcessing({
-  dof: {
-    type: "gustafsson", // upitis
-    physical: true,
-    focusDistance: 7,
-    focusScale: 1,
-    samples: 6,
-    focusOnScreenPoint: false,
-    screenPoint: [0.5, 0.5],
-    chromaticAberration: 0.7,
-    luminanceThreshold: 0.7,
-    luminanceGain: 1,
-    shape: "disk",
-    debug: false,
-  },
   msaa: {
     sampleCount: 4,
-  },
-  aa: {
-    quality: 2,
-    subPixelQuality: 0.75,
   },
   ssao: {
     type: "sao", // "gtao",
@@ -112,6 +98,28 @@ const postProcessing = components.postProcessing({
     colorBounce: true,
     colorBounceIntensity: 1.0,
   },
+  dof: {
+    type: "gustafsson", // upitis
+    physical: true,
+    focusDistance: 7,
+    focusScale: 1,
+    samples: 6,
+    focusOnScreenPoint: false,
+    screenPoint: [0.5, 0.5],
+    chromaticAberration: 0.7,
+    luminanceThreshold: 0.7,
+    luminanceGain: 1,
+    shape: "disk",
+    debug: false,
+  },
+  bloom: {
+    quality: 1,
+    colorFunction: "luma",
+    threshold: 1,
+    source: false,
+    radius: 1,
+    intensity: 0.1,
+  },
   fog: {
     color: [0.5, 0.5, 0.5],
     start: 5,
@@ -123,19 +131,15 @@ const postProcessing = components.postProcessing({
     sunColor: [0.98, 0.98, 0.7],
     inscatteringCoeffs: [0.3, 0.3, 0.3],
   },
-  bloom: {
-    quality: 1,
-    colorFunction: "luma",
-    threshold: 1,
-    source: false,
-    radius: 1,
-    intensity: 0.1,
+  vignette: {
+    radius: 0.8,
+    intensity: 0.2,
   },
   lut: {
     texture: await getTexture(
       ctx,
       getURL(`assets/textures/lut/lookup-autumn.png`),
-      ctx.Encoding.Linear,
+      false,
       {
         min: ctx.Filter.Nearest,
         mag: ctx.Filter.Nearest,
@@ -151,9 +155,13 @@ const postProcessing = components.postProcessing({
     saturation: 1,
     hue: 0,
   },
-  vignette: {
-    radius: 0.8,
-    intensity: 0.2,
+  smaa: {
+    quality: 2,
+    edges: "luma",
+  },
+  fxaa: {
+    quality: 3,
+    subPixelQuality: 0.75,
   },
   filmGrain: {
     quality: 2,
@@ -163,6 +171,8 @@ const postProcessing = components.postProcessing({
     luminanceIntensity: 1,
     speed: 0.5,
   },
+  exposure: 1,
+  toneMap: "aces",
   opacity: 1,
 });
 const cameraY = s * 1;
@@ -181,7 +191,7 @@ world.add(cameraEntity);
 const baseColorTexture = await getTexture(
   ctx,
   getURL(`assets/materials/plastic-green.material/plastic-green_basecolor.png`),
-  ctx.Encoding.SRGB,
+  true,
 );
 const normalTexture = await getTexture(
   ctx,
@@ -198,7 +208,7 @@ const roughnessTexture = await getTexture(
 const emissiveColorTexture = await getTexture(
   ctx,
   getURL(`assets/materials/plastic-glow.material/plastic-glow_emissive.png`),
-  ctx.Encoding.SRGB,
+  true,
 );
 const geometries = [
   capsule({ radius: 0.25 }),
@@ -376,6 +386,10 @@ const gui = createGUI(ctx);
 gui.addColumn("Attachments");
 gui.addFPSMeeter();
 State.msg = "";
+
+gui.addButton("Toggle Render Pass Graph", () => {
+  renderPassGraphViz.toggle();
+});
 gui.addRadioList(
   "Debug Render",
   renderEngine.renderers.find(
@@ -394,21 +408,28 @@ gui.addRadioList(
     (system) => system.type == "render-pipeline-system",
   ),
   "debugRender",
-  ["", "ssao.main", "dof.main", "bloom.threshold", "bloom.downsample[3]"].map(
-    (value) => ({
-      name: value || "No debug",
-      value,
-    }),
-  ),
+  [
+    "",
+    "ssao.main",
+    "dof.main",
+    "bloom.threshold",
+    "bloom.downsample[3]",
+    "smaa.edges",
+    "smaa.weights",
+  ].map((value) => ({
+    name: value || "No debug",
+    value,
+  })),
 );
 const dummyTexture2D = ctx.texture2D({
   name: "dummyTexture2D",
-  width: 4,
-  height: 4,
+  width: 160,
+  height: 1,
 });
 const guiNormalControl = gui.addTexture2D("Normal", null, { flipY: true });
 const guiDepthControl = gui.addTexture2D("Depth", null, { flipY: true });
-const guiAOControl = gui.addTexture2D("Ao", null, { flipY: true });
+const guiAOControl = gui.addTexture2D("AO", null, { flipY: true });
+const guiLumaControl = gui.addTexture2D("Luma", null, { flipY: true });
 
 gui.addParam("Background Blur", skyboxEntity.skybox, "backgroundBlur");
 
@@ -439,6 +460,7 @@ gui.addParam("Enabled", State, "enabled", null, () => {
   } else {
     delete cameraEntity.postProcessing;
   }
+  if (renderPassGraphViz.isRendered()) renderPassGraphViz.draw();
 });
 const enablePostProPass = (name) => {
   if (State[name]) {
@@ -447,72 +469,27 @@ const enablePostProPass = (name) => {
     State[`_${name}`] = postProcessing[name];
     delete postProcessing[name];
   }
+  if (renderPassGraphViz.isRendered()) renderPassGraphViz.draw();
 };
 gui.addParam("MSAA", State, "msaa", null, () => {
   enablePostProPass("msaa");
 });
-gui.addParam("AA", State, "aa", null, () => {
-  enablePostProPass("aa");
-});
-gui.addParam("Quality", postProcessing.aa, "quality", {
-  min: 0,
-  max: 4,
-  step: 1,
-});
-gui.addParam("SubPixelQuality", postProcessing.aa, "subPixelQuality", {
-  min: 0,
-  max: 1,
-  step: 0.25,
-});
-gui.addParam("Fog", State, "fog", null, () => {
-  enablePostProPass("fog");
-});
-gui.addParam("Fog color", postProcessing.fog, "color");
-gui.addParam("Fog start", postProcessing.fog, "start", { min: 0, max: 10 });
-gui.addParam("Fog density", postProcessing.fog, "density");
-
-gui.addParam("LUT", State, "lut", null, () => {
-  enablePostProPass("lut");
-});
-
-gui.addParam("ColorCorrection", State, "colorCorrection", null, () => {
-  enablePostProPass("colorCorrection");
-});
-gui.addParam(
-  "ColorCorrection brightness",
-  postProcessing.colorCorrection,
-  "brightness",
-  { min: -0.5, max: 0.5 },
+gui.addHeader("Camera");
+gui.addParam("FoV", camera, "fov", { min: 0, max: (Math.PI / 3) * 2 });
+gui.addParam("FocalLength", camera, "focalLength", { min: 10, max: 200 });
+gui.addParam("F-Stop", cameraEntity.camera, "fStop", { min: 1.2, max: 32 });
+gui.addHeader("Tone Map & Gamma");
+gui.addParam("Exposure", postProcessing, "exposure", { min: 0, max: 5 });
+gui.addRadioList(
+  "Tone Map",
+  postProcessing,
+  "toneMap",
+  [
+    "none",
+    ...Object.keys(SHADERS.toneMap).map((value) => value.toLowerCase()),
+    "agxPunchy",
+  ].map((value) => ({ name: value, value: value === "none" ? null : value })),
 );
-gui.addParam(
-  "ColorCorrection contrast",
-  postProcessing.colorCorrection,
-  "contrast",
-  { min: 0.1, max: 3 },
-);
-gui.addParam(
-  "ColorCorrection saturation",
-  postProcessing.colorCorrection,
-  "saturation",
-  { min: 0.1, max: 2 },
-);
-gui.addParam("ColorCorrection hue", postProcessing.colorCorrection, "hue", {
-  min: -180,
-  max: 180,
-});
-
-gui.addParam("Vignette", State, "vignette", null, () => {
-  enablePostProPass("vignette");
-});
-gui.addParam("Vignette radius", postProcessing.vignette, "radius", {
-  min: 0,
-  max: 1,
-});
-gui.addParam("Vignette intensity", postProcessing.vignette, "intensity", {
-  min: 0,
-  max: 1,
-});
-
 gui.addParam("Opacity", postProcessing, "opacity", { min: 0, max: 1 });
 
 gui.addColumn("SSAO");
@@ -623,21 +600,6 @@ gui.addParam("Screen Point", postProcessing.dof.screenPoint, "1", {
   max: 1,
 });
 
-gui.addColumn("Camera");
-gui.addParam("FoV", camera, "fov", { min: 0, max: (Math.PI / 3) * 2 });
-gui.addParam("FocalLength", camera, "focalLength", { min: 10, max: 200 });
-gui.addParam("F-Stop", cameraEntity.camera, "fStop", { min: 1.2, max: 32 });
-gui.addParam("Exposure", camera, "exposure", { min: 0, max: 5 });
-gui.addRadioList(
-  "Tone Map",
-  camera,
-  "toneMap",
-  ["none", ...Object.keys(SHADERS.toneMap)].map((value) => ({
-    name: value,
-    value: value === "none" ? null : value.toLowerCase(),
-  })),
-);
-
 gui.addColumn("Bloom");
 gui.addParam("Enabled", State, "bloom", null, () => {
   enablePostProPass("bloom");
@@ -671,8 +633,88 @@ gui.addParam("Intensity", postProcessing.bloom, "intensity", {
   max: 10,
 });
 gui.addParam("Radius", postProcessing.bloom, "radius", { min: 0, max: 10 });
-gui.addColumn("Film Grain");
-gui.addParam("Enabled", State, "filmGrain", null, () => {
+
+gui.addColumn("Combine");
+gui.addParam("Fog", State, "fog", null, () => {
+  enablePostProPass("fog");
+});
+gui.addParam("Fog color", postProcessing.fog, "color");
+gui.addParam("Fog start", postProcessing.fog, "start", { min: 0, max: 10 });
+gui.addParam("Fog density", postProcessing.fog, "density");
+
+gui.addParam("LUT", State, "lut", null, () => {
+  enablePostProPass("lut");
+});
+
+gui.addParam("ColorCorrection", State, "colorCorrection", null, () => {
+  enablePostProPass("colorCorrection");
+});
+gui.addParam(
+  "ColorCorrection brightness",
+  postProcessing.colorCorrection,
+  "brightness",
+  { min: -0.5, max: 0.5 },
+);
+gui.addParam(
+  "ColorCorrection contrast",
+  postProcessing.colorCorrection,
+  "contrast",
+  { min: 0.1, max: 3 },
+);
+gui.addParam(
+  "ColorCorrection saturation",
+  postProcessing.colorCorrection,
+  "saturation",
+  { min: 0.1, max: 2 },
+);
+gui.addParam("ColorCorrection hue", postProcessing.colorCorrection, "hue", {
+  min: -180,
+  max: 180,
+});
+
+gui.addParam("Vignette", State, "vignette", null, () => {
+  enablePostProPass("vignette");
+});
+gui.addParam("Vignette radius", postProcessing.vignette, "radius", {
+  min: 0,
+  max: 1,
+});
+gui.addParam("Vignette intensity", postProcessing.vignette, "intensity", {
+  min: 0,
+  max: 1,
+});
+
+gui.addColumn("Final");
+gui.addParam("SMAA", State, "smaa", null, () => {
+  enablePostProPass("smaa");
+});
+gui.addParam("Quality", postProcessing.smaa, "quality", {
+  min: 0,
+  max: 3,
+  step: 1,
+});
+gui.addRadioList(
+  "Edges",
+  postProcessing.smaa,
+  "edges",
+  ["depth", "luma", "color"].map((value) => ({ name: value, value })),
+);
+
+gui.addParam("FXAA", State, "fxaa", null, () => {
+  enablePostProPass("fxaa");
+});
+gui.addParam("Quality", postProcessing.fxaa, "quality", {
+  min: 0,
+  max: 4,
+  step: 1,
+});
+gui.addParam("SubPixelQuality", postProcessing.fxaa, "subPixelQuality", {
+  min: 0,
+  max: 1,
+  step: 0.25,
+});
+
+gui.addParam("Film Grain", State, "filmGrain", null, () => {
   enablePostProPass("filmGrain");
 });
 gui.addParam("Quality", postProcessing.filmGrain, "quality", {
@@ -697,14 +739,16 @@ gui.addParam(
 );
 gui.addParam("Speed", postProcessing.filmGrain, "speed", { min: 0, max: 1 });
 
+enablePostProPass("msaa");
 enablePostProPass("ssao");
 enablePostProPass("dof");
-enablePostProPass("aa");
-enablePostProPass("fog");
 enablePostProPass("bloom");
+enablePostProPass("fog");
+enablePostProPass("vignette");
 enablePostProPass("lut");
 enablePostProPass("colorCorrection");
-enablePostProPass("vignette");
+enablePostProPass("smaa");
+enablePostProPass("fxaa");
 enablePostProPass("filmGrain");
 
 // Events
@@ -734,6 +778,9 @@ ctx.frame(() => {
   guiDepthControl.texture = depth;
   guiAOControl.texture =
     postProcessing?._targets?.[cameraEntity.id]?.["ssao.main"] ||
+    dummyTexture2D;
+  guiLumaControl.texture =
+    postProcessing?._targets?.[cameraEntity.id]?.["final.luma"] ||
     dummyTexture2D;
 
   ctx.debug(debugOnce);

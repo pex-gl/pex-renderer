@@ -2,6 +2,7 @@ import { NAMESPACE } from "./utils.js";
 
 export default (ctx) => ({
   renderPasses: [],
+  errors: [],
   beginFrame() {
     this.renderPasses.length = 0;
   },
@@ -12,6 +13,9 @@ export default (ctx) => ({
     this.renderPasses.push(options);
   },
   endFrame() {
+    const previousErrors = [...this.errors];
+    this.errors.length = 0;
+
     //TODO: this should be render view
     for (let i = 0; i < this.renderPasses.length; i++) {
       const {
@@ -40,13 +44,19 @@ export default (ctx) => ({
             }
             if (render) render();
           } catch (error) {
-            console.error(
-              NAMESPACE,
-              "render-graph",
-              `Pass "${name}" crashed.`,
-              error,
-              pass,
-            );
+            if (!(error instanceof Error)) error = new Error(error);
+
+            const { message } = error;
+            if (!previousErrors.includes(message)) {
+              console.error(
+                NAMESPACE,
+                "render-graph",
+                `Render Pass "${name}" crashed.`,
+                error,
+                pass,
+              );
+            }
+            this.errors.push(message);
           }
         },
       );

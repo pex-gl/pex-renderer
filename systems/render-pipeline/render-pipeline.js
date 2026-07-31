@@ -25,6 +25,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
   debug: false,
   debugRender: "",
   renderers: [],
+  reversibleToneMap: false,
 
   descriptors: addDescriptors(ctx),
 
@@ -44,6 +45,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
     renderers,
     renderView,
     colorAttachments,
+    msaa,
     entitiesInView,
     shadowMappingLight,
     transparent,
@@ -51,12 +53,9 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
     cullFaceMode,
     backgroundColorTexture,
   }) {
-    renderView.exposure ||= 1;
-    renderView.toneMap ||= null;
-    renderView.outputEncoding ||= ctx.Encoding.Linear;
-
     const options = {
       attachmentsLocations: this.getAttachmentsLocations(colorAttachments),
+      msaa: this.reversibleToneMap && msaa,
     };
 
     if (shadowMappingLight) {
@@ -119,34 +118,6 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
     };
     const postProcessing = renderView.cameraEntity.postProcessing;
 
-    // Set the render pipeline encoding and tone mapping settings before blit
-    // Output will depend on camera settings
-    if (drawToScreen) {
-      // Render pipeline is linear.
-      // Output is tone mapped in "BlitPass" or in post-processing "final"
-      renderView.outputEncoding ||= ctx.Encoding.Linear;
-      renderView.exposure ||= 1;
-      renderView.toneMap ||= null;
-    } else {
-      // Output depends on camera settings
-      // Render pipeline is gamma so we assume tone map should be applied
-      // but only if no post-processing "final"
-      if (
-        renderView.camera.outputEncoding === ctx.Encoding.Gamma &&
-        !postProcessing
-      ) {
-        renderView.outputEncoding ||= renderView.camera.outputEncoding;
-        renderView.exposure ||= renderView.camera.exposure;
-        renderView.toneMap ||= renderView.camera.toneMap;
-      } else {
-        // Render pipeline is linear.
-        // Tone mapping needs to happen manually on the returned color attachment
-        renderView.outputEncoding ||= ctx.Encoding.Linear;
-        renderView.exposure ||= 1;
-        renderView.toneMap ||= null;
-      }
-    }
-
     // Setup attachments. Can be overwritten by PostProcessingPass
     const outputs = new Set(this.outputs);
 
@@ -154,6 +125,8 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
     if (postProcessing?.bloom) outputs.add("emissive");
 
     const msaaSampleCount = postProcessing?.msaa?.sampleCount;
+    const msaa = msaaSampleCount > 0;
+
     const colorAttachments = {};
     const colorAttachmentsMSAA = {};
     let depthAttachment;
@@ -177,7 +150,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
       );
       depthAttachment.name = `mainPassDepth (id: ${depthAttachment.id})`;
 
-      if (msaaSampleCount) {
+      if (msaa) {
         depthAttachmentMSAA = {
           texture: resourceCache.renderbuffer({
             width: this.descriptors.mainPass.outputDepthTextureDesc.width,
@@ -209,7 +182,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
       const texture = colorAttachments[name];
       texture.name = `mainPass${name} (id: ${texture.id})`;
 
-      if (msaaSampleCount) {
+      if (msaa) {
         colorAttachmentsMSAA[name] = {
           texture: resourceCache.renderbuffer({
             width: this.descriptors.mainPass.outputTextureDesc.width,
@@ -305,15 +278,13 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
 
     // Main pass
     renderGraph.renderPass({
-      name: `MainPass${msaaSampleCount ? "MSAA" : ""} [${renderView.viewport}]`,
+      name: `MainPass${msaa ? "MSAA" : ""} [${renderView.viewport}]`,
       uses: [...shadowMaps],
       renderView: renderPassView,
       pass: resourceCache.pass({
         name: "mainPass",
-        color: Object.values(
-          msaaSampleCount ? colorAttachmentsMSAA : colorAttachments,
-        ),
-        depth: msaaSampleCount ? depthAttachmentMSAA : depthAttachment,
+        color: Object.values(msaa ? colorAttachmentsMSAA : colorAttachments),
+        depth: msaa ? depthAttachmentMSAA : depthAttachment,
         clearColor: renderView.camera.clearColor,
         clearDepth: 1,
       }),
@@ -322,6 +293,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
           renderers,
           renderView,
           colorAttachments,
+          msaa,
           entitiesInView,
           shadowMappingLight: false,
           transparent: false,
@@ -340,21 +312,20 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
     // Transparent pass
     if (hasTransparent) {
       renderGraph.renderPass({
-        name: `TransparentPass${msaaSampleCount ? "MSAA" : ""} [${renderView.viewport}]`,
+        name: `TransparentPass${msaa ? "MSAA" : ""} [${renderView.viewport}]`,
         uses: shadowMaps,
         renderView: renderPassView,
         pass: resourceCache.pass({
           name: "transparentPass",
-          color: [
-            (msaaSampleCount ? colorAttachmentsMSAA : colorAttachments).color,
-          ],
-          depth: msaaSampleCount ? depthAttachmentMSAA : depthAttachment,
+          color: [(msaa ? colorAttachmentsMSAA : colorAttachments).color],
+          depth: msaa ? depthAttachmentMSAA : depthAttachment,
         }),
         render: () => {
           this.drawMeshes({
             renderers,
             renderView,
             colorAttachments: { color: colorAttachments.color },
+            msaa,
             entitiesInView,
             shadowMappingLight: false,
             transparent: true,
@@ -415,15 +386,13 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
 
       if (hasBackTransmitted) {
         renderGraph.renderPass({
-          name: `TransmissionBackPass${msaaSampleCount ? "MSAA" : ""} [${renderView.viewport}]`,
+          name: `TransmissionBackPass${msaa ? "MSAA" : ""} [${renderView.viewport}]`,
           uses: [...shadowMaps, grabPassColorCopyTexture],
           renderView: renderPassView,
           pass: resourceCache.pass({
             name: "transmissionBackPass",
-            color: [
-              (msaaSampleCount ? colorAttachmentsMSAA : colorAttachments).color,
-            ],
-            depth: msaaSampleCount ? depthAttachmentMSAA : depthAttachment,
+            color: [(msaa ? colorAttachmentsMSAA : colorAttachments).color],
+            depth: msaa ? depthAttachmentMSAA : depthAttachment,
           }),
           render: () => {
             this.drawMeshes({
@@ -431,6 +400,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
               renderView,
               //why this is passed?, we are rendering here colorAttachments.color
               colorAttachments: { color: colorAttachments.color },
+              msaa,
               entitiesInView,
               shadowMappingLight: false,
               transparent: false,
@@ -462,21 +432,20 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
       }
 
       renderGraph.renderPass({
-        name: `TransmissionFrontPass${msaaSampleCount ? "MSAA" : ""} [${renderView.viewport}]`,
+        name: `TransmissionFrontPass${msaa ? "MSAA" : ""} [${renderView.viewport}]`,
         uses: [...shadowMaps, grabPassColorCopyTexture],
         renderView: renderPassView,
         pass: resourceCache.pass({
           name: "transmissionFrontPass",
-          color: [
-            (msaaSampleCount ? colorAttachmentsMSAA : colorAttachments).color,
-          ],
-          depth: msaaSampleCount ? depthAttachmentMSAA : depthAttachment,
+          color: [(msaa ? colorAttachmentsMSAA : colorAttachments).color],
+          depth: msaa ? depthAttachmentMSAA : depthAttachment,
         }),
         render: () => {
           this.drawMeshes({
             renderers,
             renderView,
             colorAttachments: { color: colorAttachments.color },
+            msaa,
             entitiesInView,
             shadowMappingLight: false,
             transparent: false,
@@ -486,6 +455,49 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
           });
         },
       });
+    }
+
+    // Inverse Tone Mapping
+    if (this.reversibleToneMap && msaa) {
+      const inverseToneMapColorTexture = resourceCache.texture2D({
+        ...this.descriptors.mainPass.outputTextureDesc,
+        width: renderView.viewport[2],
+        height: renderView.viewport[3],
+      });
+      inverseToneMapColorTexture.name = `inverseToneMapColor (id: ${inverseToneMapColorTexture.id})`;
+
+      const fullscreenTriangle = resourceCache.fullscreenTriangle();
+
+      // TODO: cache
+      const pipelineDesc = {
+        ...this.descriptors.reversibleToneMap.pipelineDesc,
+      };
+      pipelineDesc.vert = ShaderParser.build(ctx, pipelineDesc.vert);
+      pipelineDesc.frag = ShaderParser.build(ctx, pipelineDesc.frag);
+
+      const inverseToneMapCmd = {
+        name: "drawInverseToneMapFullScreenTriangleCmd",
+        attributes: fullscreenTriangle.attributes,
+        count: fullscreenTriangle.count,
+        pipeline: resourceCache.pipeline(pipelineDesc),
+        uniforms: {
+          uTexture: colorAttachments.color,
+        },
+      };
+
+      renderGraph.renderPass({
+        name: `InverseToneMapPass [${renderView.viewport}]`,
+        uses: [colorAttachments.color],
+        renderView: renderPassView,
+        pass: resourceCache.pass({
+          name: "inverseToneMapPass",
+          color: [inverseToneMapColorTexture],
+        }),
+        render: () => {
+          ctx.submit(inverseToneMapCmd);
+        },
+      });
+      colorAttachments.color = inverseToneMapColorTexture;
     }
 
     // Post-processing pass
@@ -501,25 +513,10 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
     if (drawToScreen !== false) {
       const fullscreenTriangle = resourceCache.fullscreenTriangle();
 
-      let exposure = renderView.camera.exposure; //FIXME MARCIN: what's the point of setting renderView.exposure then?
-      let toneMap = renderView.camera.toneMap;
-      let outputEncoding = renderView.camera.outputEncoding;
-
-      // Post Processing already uses renderView.camera settings
-      if (postProcessing) {
-        exposure = 1;
-        toneMap = null;
-        outputEncoding = ctx.Encoding.Linear;
-      }
-
       // TODO: cache
       const pipelineDesc = { ...this.descriptors.blit.pipelineDesc };
       pipelineDesc.vert = ShaderParser.build(ctx, pipelineDesc.vert);
-      pipelineDesc.frag = ShaderParser.build(
-        ctx,
-        pipelineDesc.frag,
-        [toneMap && `TONE_MAP ${toneMap}`].filter(Boolean),
-      );
+      pipelineDesc.frag = ShaderParser.build(ctx, pipelineDesc.frag);
 
       const blitCmd = {
         name: "drawBlitFullScreenTriangleCmd",
@@ -535,8 +532,6 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
         render: () => {
           ctx.submit(blitCmd, {
             uniforms: {
-              uExposure: exposure,
-              uOutputEncoding: outputEncoding,
               uTexture: colorAttachments.color,
             },
           });

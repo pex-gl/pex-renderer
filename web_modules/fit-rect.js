@@ -1,4 +1,4 @@
-import { g as getDefaultExportFromCjs } from './_chunks/polyfills-Ci6ALveU.js';
+import { g as getDefaultExportFromCjs } from './_chunks/polyfills-BrKAEAju.js';
 
 function fitRect(rect, target, mode) {
     mode = mode || 'contain';

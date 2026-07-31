@@ -15,6 +15,7 @@ import { aabb } from "pex-geom";
 import { cube as createCube } from "primitive-geometry";
 
 import { debugSceneTree, getEnvMap, getURL } from "./utils.js";
+import { getSceneGraphViz } from "./graph-viz.js";
 
 const MODELS_PATH =
   location.hostname === "localhost"
@@ -28,7 +29,7 @@ const State = {
   selectedModel: "",
   scenes: [],
   gridSize: 1,
-  boundingBoxes: true,
+  helpers: true,
   floor: false,
   useEnvMap: true,
   shadows: false,
@@ -125,6 +126,8 @@ world.add(axesEntity);
 // Utils
 let debugOnce = false;
 
+const sceneGraphViz = getSceneGraphViz();
+
 function openModelURL() {
   window.open(
     State.url.replace(
@@ -132,24 +135,6 @@ function openModelURL() {
       "https://github.com/KhronosGroup/glTF-Sample-Assets/blob/master/2.0/",
     ),
   );
-}
-
-async function renderGraphViz() {
-  const { default: dot } = await import("./graph-viz.js");
-  dot.reset();
-
-  State.scenes[0].entities.forEach((entity) => {
-    dot.node(
-      entity.id,
-      `${entity.transform.depth ?? "?"}: ${entity.name || "Entity"} (${
-        entity.id
-      })`,
-    );
-    const parent = entity.transform.parent;
-    if (parent) dot.edge(parent.entity.id, entity.id);
-  });
-
-  dot.render();
 }
 
 // glTF
@@ -204,15 +189,22 @@ function onSceneLoaded(scene, grid) {
     world.add(floorEntity);
   }
 
-  if (State.boundingBoxes) {
+  if (State.helpers) {
     scene.entities.forEach((entity) => {
       if (entity.geometry) {
         entity.boundingBoxHelper = components.boundingBoxHelper();
       }
+      if (entity.skin) {
+        entity.skeletonHelper = components.skeletonHelper();
+      }
+      if (entity.camera) {
+        entity.cameraHelper = components.cameraHelper();
+      }
     });
   }
 
-  if (State.graphViz) renderGraphViz();
+  sceneGraphViz.init(State.scenes[0].entities);
+  if (sceneGraphViz.isRendered()) sceneGraphViz.draw();
 
   console.log(scene);
 }
@@ -395,6 +387,25 @@ const nextScene = () => {
 };
 const nextMaterial = () => {};
 
+const dispose = () => {
+  // Clean up
+  const scenes = State.scenes.length ? State.scenes : [State.scene];
+
+  const entitiesIds = [
+    ...scenes.map((scene) => scene?.entities.map((entity) => entity.id)).flat(),
+    floorEntity?.id,
+    cameraEntity?.id,
+  ].filter(Boolean);
+
+  world.dispose(
+    world.entities.filter((entity) => entitiesIds.includes(entity.id)),
+  );
+
+  // TODO renderEngine resourceCache dispose cache
+
+  State.scenes = [];
+};
+
 // GUI
 // Add screenshots to the GUI
 const screenshots = await Promise.all(
@@ -411,7 +422,6 @@ const thumbnails = screenshots
       data: img,
       width: img.width,
       height: img.height,
-      encoding: ctx.Encoding.SRGB,
       pixelFormat: ctx.PixelFormat.RGBA8,
       flipY: true,
     }),
@@ -431,24 +441,7 @@ gui.addTexture2DList(
   thumbnails,
   5,
   async (model) => {
-    // Clean up
-    const scenes = State.scenes.length ? State.scenes : [State.scene];
-
-    const entitiesIds = [
-      ...scenes
-        .map((scene) => scene?.entities.map((entity) => entity.id))
-        .flat(),
-      floorEntity?.id,
-      cameraEntity?.id,
-    ].filter(Boolean);
-
-    world.dispose(
-      world.entities.filter((entity) => entitiesIds.includes(entity.id)),
-    );
-
-    // TODO renderEngine resourceCache dispose cache
-
-    State.scenes = [];
+    dispose();
 
     await renderModel(model);
   },
@@ -465,7 +458,6 @@ gui.addRadioList(
   })),
 );
 gui.addParam("Floor", State, "floor");
-gui.addParam("Bounding Box", State, "boundingBoxes");
 gui.addParam("Env map", State, "useEnvMap", null, () => {
   addEnvmap();
 });
@@ -477,10 +469,17 @@ gui.addButton("Next scene", nextScene);
 gui.addColumn("Debug");
 gui.addFPSMeeter();
 gui.addStats();
-gui.addParam("Graph viz", State, "graphViz");
+gui.addParam("Helpers", State, "helpers", null, () => {
+  if (State.selectedModel) {
+    dispose();
+    renderModel(State.selectedModel);
+  }
+});
+gui.addButton("Toggle Scene Graph", () => {
+  sceneGraphViz.toggle();
+});
 gui.addButton("Tree", () => {
   debugSceneTree(world.entities);
-  if (State.graphViz) renderGraphViz();
 });
 
 // Filter models
@@ -594,7 +593,7 @@ models = models.filter(({ name }) =>
     // "SheenChair",
     // "SheenCloth",
     // "SheenTestGrid",
-    // "SheenWoodLeatherSofa", // FAIL: EXT_texture_webp
+    // "SheenWoodLeatherSofa",
     // "SimpleInstancing", // HALF: need instanced bbox
     // "SimpleMaterial",
     // "SimpleMeshes",
@@ -607,10 +606,10 @@ models = models.filter(({ name }) =>
     // "SpecularTest", // HALF: left column should have no specular but we disable extension if specular=0 in getProgramFlagsAndUniforms
     // "Sponza",
     // "StainedGlassLamp", // FAIL: KHR_materials_variants
-    // "SunglassesKhronos",  // FAIL: EXT_texture_webp KHR_materials_iridescence
+    // "SunglassesKhronos", // FAIL: KHR_materials_iridescence
     // "Suzanne",
     // "TextureCoordinateTest",
-    // "TextureEncodingTest", // HALF: custom gamma and ICC profile
+    // "TextureEncodingTest",
     // "TextureLinearInterpolationTest", // HALF: EX_srgb in webgl1
     // "TextureSettingsTest",
     // "TextureTransformMultiTest",

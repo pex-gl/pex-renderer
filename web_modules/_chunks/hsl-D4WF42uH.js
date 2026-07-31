@@ -833,7 +833,7 @@ var utils = /*#__PURE__*/Object.freeze({
  * @param {boolean} alpha Handle alpha
  * @returns {hex}
  */ function toHex(color, alpha = true) {
-    const c = color.map((val)=>Math.round(val * 255));
+    const c = color.map((val)=>Math.max(0, Math.min(255, Math.round(val * 255))));
     return `#${(c[2] | c[1] << 8 | c[0] << 16 | 1 << 24).toString(16).slice(1).toUpperCase()}${alpha && color[3] !== undefined && color[3] !== 1 ? (c[3] | 1 << 8).toString(16).slice(1) : ""}`;
 }
 
@@ -902,4 +902,4 @@ var utils = /*#__PURE__*/Object.freeze({
     return setAlpha(out, a);
 }
 
-export { luvToLch as A, hsluvToLch as B, lchToHsluv as C, D50 as D, hpluvToLch as E, lchToHpluv as F, set as G, TMP as H, floorArray as I, utils as J, create as K, copy as L, fromValues as M, fromRGB as N, toRGB as O, fromHex as P, TAU as T, toHSL as a, linearToXyzD50 as b, xyzD65ToLinear as c, linearToXyzD65 as d, linearP3ToXyzD65 as e, fromHSL as f, xyzD65ToLinearP3 as g, labToXyz as h, xyzToLab as i, D65 as j, lchToLab as k, linearToRgb as l, labToLch as m, linearToOklab as n, oklabToLinear as o, getStMax as p, toeInv as q, rgbToLinear as r, setAlpha as s, toHex as t, toe as u, getCs as v, lchToLuv as w, xyzD50ToLinear as x, luvToXyz as y, xyzToLuv as z };
+export { luvToLch as A, hsluvToLch as B, lchToHsluv as C, D50 as D, hpluvToLch as E, lchToHpluv as F, TMP as G, floorArray as H, set as I, copy as J, create as K, fromHex as L, fromRGB as M, fromValues as N, toRGB as O, utils as P, TAU as T, toHSL as a, xyzD65ToLinear as b, linearToXyzD50 as c, linearToXyzD65 as d, linearP3ToXyzD65 as e, fromHSL as f, xyzD65ToLinearP3 as g, labToXyz as h, D65 as i, xyzToLab as j, lchToLab as k, linearToRgb as l, labToLch as m, linearToOklab as n, oklabToLinear as o, getStMax as p, toe as q, rgbToLinear as r, setAlpha as s, toHex as t, toeInv as u, getCs as v, lchToLuv as w, xyzD50ToLinear as x, luvToXyz as y, xyzToLuv as z };

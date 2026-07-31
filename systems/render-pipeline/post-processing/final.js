@@ -1,47 +1,48 @@
 import { postProcessing as postprocessingShaders } from "pex-shaders";
-import { ssaoMixFlagDefinitions } from "./ssao.js";
+import { isSMAAEnabled } from "./smaa.js";
 
-const final = () => {
+export const isFXAAEnabled = ({ cameraEntity }) =>
+  cameraEntity.postProcessing.fxaa;
+export const isFilmGrainEnabled = ({ cameraEntity }) =>
+  cameraEntity.postProcessing.filmGrain;
+
+export const isFinalMainEnabled = ({ cameraEntity }) =>
+  isFXAAEnabled({ cameraEntity }) ||
+  isFilmGrainEnabled({ cameraEntity }) ||
+  (Number.isFinite(cameraEntity.postProcessing.opacity) &&
+    cameraEntity.postProcessing.opacity !== 0 &&
+    cameraEntity.postProcessing.opacity !== 1);
+
+const final = ({ ctx, resourceCache, descriptors }) => {
+  const lumaPass = {
+    name: "luma",
+    frag: postprocessingShaders.luma.frag,
+    flagDefinitions: [],
+    enabled: (options) => isFXAAEnabled(options) || isFilmGrainEnabled(options),
+    passDesc: () => ({
+      clearColor: [0, 0, 0, 1],
+    }),
+    source: (options) =>
+      isSMAAEnabled(options) ? "smaa.blend" : "combine.main",
+    target: ({ viewport }) =>
+      resourceCache.texture2D({
+        ...descriptors.postProcessing.outputTextureDesc,
+        pixelFormat: ctx.gl.RG ? ctx.PixelFormat.R8 : ctx.PixelFormat.RGBA8,
+        width: viewport[2],
+        height: viewport[3],
+      }),
+  };
+
   const finalPass = {
     name: "main",
-    frag: postprocessingShaders.postProcessing.frag,
+    frag: postprocessingShaders.final.frag,
     // blend: true,
     // prettier-ignore
     flagDefinitions: [
-      // Camera
-      [["camera", "viewMatrix"], "", { uniform: "uViewMatrix" }],
-      [["camera", "near"], "", { uniform: "uNear" }],
-      [["camera", "far"], "", { uniform: "uFar" }],
-      [["camera", "fov"], "", { uniform: "uFov" }],
-      [["camera", "exposure"], "", { uniform: "uExposure" }],
-      [["camera", "toneMap"], "TONE_MAP", { type: "value" }],
-      [["camera", "outputEncoding"], "", { uniform: "uOutputEncoding" }],
-
       // AA
-      [["postProcessing", "aa"], "USE_AA"],
-      [["postProcessing", "aa", "subPixelQuality"], "", { uniform: "uSubPixelQuality", requires: "USE_AA" }],
-      [["postProcessing", "aa", "quality"], "AA_QUALITY", { type: "value", requires: "USE_AA" }],
-
-      // Fog
-      [["postProcessing", "fog"], "USE_FOG"],
-      [["postProcessing", "fog", "color"], "", { uniform: "uFogColor", requires: "USE_FOG" }],
-      [["postProcessing", "fog", "start"], "", { uniform: "uFogStart", requires: "USE_FOG" }],
-      [["postProcessing", "fog", "density"], "", { uniform: "uFogDensity", requires: "USE_FOG" }],
-      [["postProcessing", "fog", "sunPosition"], "", { uniform: "uSunPosition", requires: "USE_FOG" }],
-      [["postProcessing", "fog", "sunDispertion"], "", { uniform: "uSunDispertion", requires: "USE_FOG" }],
-      [["postProcessing", "fog", "sunIntensity"], "", { uniform: "uSunIntensity", requires: "USE_FOG" }],
-      [["postProcessing", "fog", "sunColor"], "", { uniform: "uSunColor", requires: "USE_FOG" }],
-      [["postProcessing", "fog", "inscatteringCoeffs"], "", { uniform: "uInscatteringCoeffs", requires: "USE_FOG" }],
-
-      // SSAO
-      [["postProcessing", "dof"], "USE_DOF"],
-      [["postProcessing", "ssao"], "USE_SSAO", { excludes: "USE_DOF" }],
-      ...ssaoMixFlagDefinitions,
-
-      // Bloom
-      [["postProcessing", "bloom"], "USE_BLOOM"],
-      [["postProcessing", "bloom", "intensity"], "", { uniform: "uBloomIntensity", requires: "USE_BLOOM" }],
-      [["options", "targets", "bloom.threshold"], "BLOOM_TEXTURE", { type: "texture", uniform: "uBloomTexture", requires: "USE_BLOOM" }],
+      [["postProcessing", "fxaa"], "USE_FXAA"],
+      [["postProcessing", "fxaa", "subPixelQuality"], "", { uniform: "uSubPixelQuality", requires: "USE_FXAA" }],
+      [["postProcessing", "fxaa", "quality"], "AA_QUALITY", { type: "value", requires: "USE_FXAA" }],
 
       // Film Grain
       [["postProcessing", "filmGrain"], "USE_FILM_GRAIN"],
@@ -52,35 +53,21 @@ const final = () => {
       [["postProcessing", "filmGrain", "luminanceIntensity"], "", { uniform: "uFilmGrainLuminanceIntensity", requires: "USE_FILM_GRAIN" }],
       [["postProcessing", "filmGrain", "speed"], "", { uniform: "uFilmGrainSpeed", requires: "USE_FILM_GRAIN" }],
 
-      // LUT
-      [["postProcessing", "lut"], "USE_LUT"],
-      [["postProcessing", "lut", "texture"], "LUT_TEXTURE", { type: "texture", uniform: "uLUTTexture", requires: "USE_LUT" }],
-      [["postProcessing", "lut", "texture", "width"], "", { uniform: "uLUTTextureSize", requires: "USE_LUT" }],
-
-      // Color Correction
-      [["postProcessing", "colorCorrection"], "USE_COLOR_CORRECTION"],
-      [["postProcessing", "colorCorrection", "brightness"], "", { uniform: "uBrightness", requires: "USE_COLOR_CORRECTION" }],
-      [["postProcessing", "colorCorrection", "contrast"], "", { uniform: "uContrast", requires: "USE_COLOR_CORRECTION" }],
-      [["postProcessing", "colorCorrection", "saturation"], "", { uniform: "uSaturation", requires: "USE_COLOR_CORRECTION" }],
-      [["postProcessing", "colorCorrection", "hue"], "", { uniform: "uHue", requires: "USE_COLOR_CORRECTION" }],
-
-      // Vignette
-      [["postProcessing", "vignette"], "USE_VIGNETTE"],
-      [["postProcessing", "vignette", "radius"], "", { uniform: "uVignetteRadius", requires: "USE_VIGNETTE" }],
-      [["postProcessing", "vignette", "intensity"], "", { uniform: "uVignetteIntensity", requires: "USE_VIGNETTE" }],
+      [["options", "targets", "final.luma"], "LUMA_TEXTURE", { type: "texture", uniform: "uLumaTexture", requires: "USE_FXAA" }],
+      [["options", "targets", "final.luma"], "LUMA_TEXTURE", { type: "texture", uniform: "uLumaTexture", requires: "USE_FILM_GRAIN", excludes: "USE_FXAA" }],
 
       // Output
       [["postProcessing", "opacity"], "", { uniform: "uOpacity" }],
     ],
-    // uniform: () => ({ uTextureEncoding: uniforms.uTexture.encoding }),
+    enabled: isFinalMainEnabled,
     passDesc: () => ({
       clearColor: [0, 0, 0, 1],
     }),
-    source: ({ cameraEntity }) =>
-      cameraEntity.postProcessing.dof ? "dof.main" : "color",
+    source: (options) =>
+      isSMAAEnabled(options) ? "smaa.blend" : "combine.main",
   };
 
-  return [finalPass];
+  return [lumaPass, finalPass];
 };
 
 export default final;

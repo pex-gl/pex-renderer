@@ -1,23 +1,18 @@
 import { avec3, avec4, mat4, quat, vec3 } from "pex-math";
-import { pipeline as SHADERS } from "pex-shaders";
 import createGeomBuilder from "geom-builder";
 
-import createBaseSystem from "./base.js";
-import { TEMP_MAT4, TEMP_VEC3 } from "../../utils.js";
+import { entity, components } from "../index.js";
+import { TEMP_MAT4, TEMP_VEC3 } from "../utils.js";
 
-// Impacts program caching
-// prettier-ignore
-const flagDefinitions = [
-  [["options", "attachmentsLocations", "color"], "LOCATION_COLOR", { type: "value" }],
-  [["options", "attachmentsLocations", "normal"], "LOCATION_NORMAL", { type: "value" }],
-  [["options", "attachmentsLocations", "emissive"], "LOCATION_EMISSIVE", { type: "value" }],
-  [["options", "toneMap"], "TONE_MAP", { type: "value" }],
-];
-
-const pointsToLine = (points) =>
+const pointsToLine = (points, closed = false) =>
   points.reduce((line, p, i) => {
-    line.push(p);
-    line.push([...points[(i + 1) % points.length]]);
+    if (!closed && i > 0) {
+      line.push([...points[i - 1]]);
+      line.push(p);
+    } else {
+      line.push(p);
+      line.push([...points[(i + 1) % points.length]]);
+    }
     return line;
   }, []);
 
@@ -166,6 +161,7 @@ const getSpotLight = (spotLight) => {
           center: [0, 0, distance],
           ...spotLightCircleOptions,
         }),
+        true,
       ),
     )
     .concat(
@@ -175,6 +171,7 @@ const getSpotLight = (spotLight) => {
           center: [0, 0, distance],
           ...spotLightCircleOptions,
         }),
+        true,
       ),
     );
 };
@@ -188,7 +185,7 @@ const getAreaLight = ({ areaLight, transform }) => {
     const circlePoints = getCirclePoints({ ...areaLightCircleOptions, steps });
     const z = [0, 0, size];
 
-    return pointsToLine(circlePoints)
+    return pointsToLine(circlePoints, true)
       .concat(circlePoints.flatMap((p) => [[...p], vec3.add([...p], z)]))
       .concat(
         // prettier-ignore
@@ -281,24 +278,51 @@ const AXES_POSITIONS = [
   [0, 0, 0],
   [0, 0, 1],
 ];
-const getGridLines = ({ size = 1, step = 10 } = {}) =>
-  Array.from({ length: step + 1 }, (_, k) => {
-    const halfSize = size * 0.5;
+const getGridLines = ({ size = 1, step = 10 } = {}) => {
+  // TODO: acount for transform scale?
+  const subdivisions = Math.max(Math.ceil(size), 2);
+  const halfSize = size * 0.5;
+
+  return Array.from({ length: step + 1 }, (_, k) => {
     const offset = size * (k / step) - halfSize;
-    return [
-      [-halfSize, 0, offset],
-      [halfSize, 0, offset],
-    ];
+    const a = [-halfSize, 0, offset];
+    const b = [halfSize, 0, offset];
+
+    return pointsToLine(
+      Array.from({ length: subdivisions }, (_, l) =>
+        vec3.lerp([...a], b, l / (subdivisions - 1)),
+      ),
+    );
   });
+};
 const getGrid = (grid) => [
   ...getGridLines(grid).flat(),
   ...getGridLines(grid)
     .flat()
     .map((p) => p.reverse()),
 ];
-const getVertexVector = (geometry, attributeName, size = 0.1, modelMatrix) => {
-  const positions = geometry.positions;
+const getVertexAttributeData = (geometry, attributeName) => {
   const attribute = geometry[attributeName];
+  const isAttributeVertexBuffer = attribute.buffer?.class === "vertexBuffer";
+  if (isAttributeVertexBuffer) {
+    if (!attribute.data) return;
+
+    if (ArrayBuffer.isView(attribute.data)) return attribute.data;
+
+    // TODO: gc
+    return new Float32Array(
+      attribute.data,
+      attribute.offset,
+      // TODO: is that correct?
+      attribute.buffer.length /
+        (attribute.stride / Float32Array.BYTES_PER_ELEMENT),
+    );
+  }
+  return attribute.data || attribute;
+};
+const getVertexVector = (geometry, attributeName, size = 0.1, modelMatrix) => {
+  const positions = getVertexAttributeData(geometry, "positions");
+  const attribute = getVertexAttributeData(geometry, attributeName);
 
   if (!attribute || !positions) return [];
 
@@ -402,52 +426,143 @@ const getVertexVector = (geometry, attributeName, size = 0.1, modelMatrix) => {
   return lines;
 };
 
-const geomBuilder = createGeomBuilder({ positions: 1, colors: 1 });
+const SKIN_MAT4 = mat4.create();
+const SKIN_PARENT_MAT4 = mat4.create();
+const getPositionFromMat4 = (m) => [m[12], m[13], m[14]];
+
+const getSkeleton = (skin, modelMatrix) => {
+  const positions = [];
+  // const distances = [];
+
+  mat4.set(TEMP_MAT4, modelMatrix);
+  mat4.invert(TEMP_MAT4);
+
+  // let maxDistance = Number.NEGATIVE_INFINITY;
+
+  for (let i = 0; i < skin.joints.length; i++) {
+    const joint = skin.joints[i];
+
+    const jointMatrix = joint._transform.modelMatrix;
+    const parentMatrix = joint.transform.parent.entity._transform.modelMatrix;
+
+    if (jointMatrix && parentMatrix) {
+      mat4.set(SKIN_PARENT_MAT4, TEMP_MAT4);
+      mat4.mult(SKIN_PARENT_MAT4, parentMatrix);
+      positions.push(getPositionFromMat4(SKIN_PARENT_MAT4));
+
+      mat4.set(SKIN_MAT4, TEMP_MAT4);
+      mat4.mult(SKIN_MAT4, jointMatrix);
+      positions.push(getPositionFromMat4(SKIN_MAT4));
+
+      // const d = vec3.distance(a, b);
+      // distances.push(d);
+      // maxDistance = Math.max(maxDistance, d);
+    }
+  }
+
+  return positions;
+};
+
+// TODO:
+// - cache helpers
+// - don't recompute shared helpers for each camera
 
 /**
- * Helper renderer
- * @param {import("../../types.js").SystemOptions} options
- * @returns {import("../../types.js").RendererSystem}
- * @alias module:renderer.helper
+ * Helper system
+ *
+ * @returns {import("../types.js").System}
+ * @alias module:systems.helper
  */
-export default ({ ctx }) => ({
-  ...createBaseSystem(),
-  type: "helper-renderer",
+export default () => ({
+  type: "helper-system",
+  cache: {},
   debug: false,
-  flagDefinitions,
-  cmd: null,
-  getVertexShader: () => SHADERS.helper.vert,
-  getFragmentShader: () => SHADERS.helper.frag,
-  getPipelineOptions() {
-    return {
-      depthTest: true,
-      depthWrite: true,
-      primitive: ctx.Primitive.Lines,
-    };
-  },
-  render(renderView, entities, options) {
-    geomBuilder.reset();
+  lineWidth: 2,
+  getEntities: (cacheId) => [
+    entity({
+      name: `helper-${cacheId}`,
+      transform: components.transform(),
+      geometry: Object.assign(
+        createGeomBuilder({ positions: 3, vertexColors: 4 }),
+        components.geometry(),
+      ),
+      material: components.material({
+        type: "line",
+        lineWidth: 1,
+        perspectiveScaling: false,
+        depthTest: true,
+        depthWrite: true,
+      }),
+    }),
+    entity({
+      name: `helper-no-depth-${cacheId}`,
+      transform: components.transform(),
+      geometry: Object.assign(
+        createGeomBuilder({ positions: 3, vertexColors: 4 }),
+        components.geometry(),
+      ),
+      material: components.material({
+        type: "line",
+        lineWidth: 1,
+        perspectiveScaling: false,
+        depthTest: false,
+        depthWrite: false,
+      }),
+    }),
+  ],
+  addToBuilder(
+    builder,
+    positions,
+    color = [0.23, 0.23, 0.23, 1],
+    lineWidth,
+    modelMatrix,
+  ) {
+    const isArrayOfColors = Array.isArray(color[0]);
+    let vertexColor;
 
-    const addToBuilder = (
-      positions,
-      color = [0.23, 0.23, 0.23, 1],
-      modelMatrix,
-    ) => {
-      for (let i = 0; i < positions.length; i++) {
-        const position = positions[i];
-        if (modelMatrix) vec3.multMat4(position, modelMatrix);
-        geomBuilder.addPosition(position);
-        geomBuilder.addColor(Array.isArray(color[0]) ? color[i] : color);
+    if (!isArrayOfColors) {
+      vertexColor = [...color];
+      vertexColor[3] *= lineWidth;
+    }
+
+    for (let i = 0; i < positions.length; i++) {
+      const position = positions[i];
+      if (modelMatrix) vec3.multMat4(position, modelMatrix);
+      position[0] = position[0] + Number.EPSILON; // TODO: line renderer at [0, 0, 0]
+
+      if (isArrayOfColors) {
+        vertexColor = [...color[i % color.length]];
+        vertexColor[3] *= lineWidth;
       }
-    };
+
+      builder.addPosition(position);
+      builder.addVertexColor(vertexColor);
+    }
+  },
+  update(entities, { renderView, renderEngine }) {
+    const cacheId = renderView.cameraEntity.id;
+
+    this.cache[cacheId] ||= this.getEntities(cacheId);
+    const helperEntities = this.cache[cacheId];
+
+    const [{ geometry: geomBuilder }, { geometry: geomNoDepthBuilder }] =
+      helperEntities;
+
+    geomBuilder.reset();
+    geomNoDepthBuilder.reset();
 
     for (let i = 0; i < entities.length; i++) {
       const entity = entities[i];
+
       const modelMatrix = entity._transform?.modelMatrix;
-      if (entity.transform?.position && entity.boundingBoxHelper) {
-        addToBuilder(
+      const lineWidth = this.lineWidth;
+
+      if (entity.transform?.worldBounds && entity.boundingBoxHelper) {
+        this.addToBuilder(
+          geomBuilder,
           getBBoxPositionsList(entity.transform.worldBounds),
-          entity.boundingBoxHelper?.color || [1, 0, 0, 1],
+          entity.boundingBoxHelper.color,
+          lineWidth,
         );
       }
 
@@ -458,109 +573,127 @@ export default ({ ctx }) => ({
         for (let j = 0; j < helpers.length; j++) {
           const helper = helpers[j];
           if (entity.geometry[helper.attribute]) {
-            addToBuilder(
+            this.addToBuilder(
+              geomBuilder,
               getVertexVector(
                 entity.geometry,
                 helper.attribute,
                 helper.size,
                 modelMatrix,
               ),
-              helper.color || [0, 1, 0, 1],
+              helper.color,
+              lineWidth * 0.2, // Vertex helpers are usually denser
             );
           }
         }
       }
 
-      // TODO: cache
+      if (entity.skin && entity.skeletonHelper) {
+        this.addToBuilder(
+          geomNoDepthBuilder,
+          getSkeleton(entity.skin, modelMatrix),
+          entity.skeletonHelper.color,
+          lineWidth,
+          modelMatrix,
+        );
+      }
+
       if (entity.lightHelper) {
         if (entity.directionalLight) {
-          addToBuilder(
+          this.addToBuilder(
+            geomBuilder,
             getDirectionalLight(entity),
             entity.directionalLight.color,
+            lineWidth,
             modelMatrix,
           );
         }
         if (entity.pointLight) {
-          addToBuilder(
+          this.addToBuilder(
+            geomBuilder,
             getPointLight(entity.pointLight),
             entity.pointLight.color,
+            lineWidth,
             modelMatrix,
           );
         }
         if (entity.spotLight) {
-          addToBuilder(
+          this.addToBuilder(
+            geomBuilder,
             getSpotLight(entity.spotLight),
             entity.spotLight.color,
+            lineWidth,
             modelMatrix,
           );
         }
         if (entity.areaLight) {
-          addToBuilder(
+          this.addToBuilder(
+            geomBuilder,
             getAreaLight(entity),
             entity.areaLight.color,
+            lineWidth,
             modelMatrix,
           );
         }
       }
+
       if (
         entity.cameraHelper &&
         entity.camera &&
         renderView.camera !== entity.camera
       ) {
-        addToBuilder(
+        this.addToBuilder(
+          geomBuilder,
           entity.camera.projection === "orthographic"
             ? getOrthographicCamera(entity.camera)
             : getPerspectiveCamera(entity.camera),
           entity.cameraHelper.color,
-          modelMatrix,
-        );
-      }
-      if (entity.axesHelper) {
-        addToBuilder(
-          AXES_POSITIONS.map((p) => [...p]),
-          AXES_COLORS.map((p) => [...p]),
+          lineWidth,
           modelMatrix,
         );
       }
       if (entity.gridHelper) {
-        addToBuilder(
+        this.addToBuilder(
+          geomBuilder,
           getGrid(entity.gridHelper),
           entity.gridHelper.color,
+          lineWidth,
+          modelMatrix,
+        );
+      }
+      if (entity.axesHelper) {
+        this.addToBuilder(
+          geomBuilder,
+          AXES_POSITIONS.map((p) => [...p]),
+          AXES_COLORS.map((p) => [...p]),
+          lineWidth,
           modelMatrix,
         );
       }
     }
-    if (!geomBuilder.count) return;
 
-    const geometry = geomBuilder;
+    for (let i = 0; i < helperEntities.length; i++) {
+      const entity = helperEntities[i];
 
-    this.cmd ||= {
-      name: "drawHelperLinesCmd",
-      attributes: {
-        aPosition: ctx.vertexBuffer({ data: [0, 0, 0] }),
-        aVertexColor: ctx.vertexBuffer({ data: [0, 0, 0, 0] }),
-      },
-    };
+      // Clean up geom-builder
+      entity.geometry.positions.fill(0, entity.geometry.count * 3);
+      entity.geometry.vertexColors.fill(0, entity.geometry.count * 4);
 
-    ctx.update(this.cmd.attributes.aPosition, { data: geometry.positions });
-    ctx.update(this.cmd.attributes.aVertexColor, { data: geometry.colors });
+      // Set as dirty
+      entity.geometry.positions.dirty = true;
+      entity.geometry.vertexColors.dirty = true;
 
-    ctx.submit(this.cmd, {
-      pipeline: this.getPipeline(ctx, { geometry }, options),
-      count: geometry.count,
-      uniforms: {
-        uExposure: renderView.exposure,
-        uOutputEncoding: renderView.outputEncoding,
+      if (entity.geometry.bounds) entity.geometry.bounds.dirty = true;
+    }
 
-        uProjectionMatrix: renderView.camera.projectionMatrix,
-        uViewMatrix: renderView.camera.viewMatrix,
-      },
-    });
-  },
-  renderOpaque(renderView, entities, options) {
-    this.render(renderView, entities, {
-      ...options,
-      toneMap: renderView.toneMap,
-    });
+    // Update entities
+    renderEngine.systems
+      .find(({ type }) => type === "geometry-system")
+      .update(helperEntities);
+    renderEngine.systems
+      .find(({ type }) => type === "transform-system")
+      .update(helperEntities);
+
+    return { entities: helperEntities };
   },
 });

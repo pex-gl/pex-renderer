@@ -31,11 +31,11 @@ function generateBlueNoiseTexture(ctx) {
     height: generator.size,
     data: data,
     pixelFormat: ctx.PixelFormat.RGBA8,
-    encoding: ctx.Encoding.Linear,
     wrap: ctx.Wrap.Repeat,
     mag: ctx.Filter.Linear,
     min: ctx.Filter.Linear,
   });
+  blueNoiseTexture.name = `ssaoBlueNoiseTexture`;
   return blueNoiseTexture;
 }
 
@@ -59,11 +59,11 @@ function generateNoiseTexture(ctx) {
     height: size,
     data: ssaoNoiseData,
     pixelFormat: ctx.gl.RG ? ctx.PixelFormat.RG32F : ctx.PixelFormat.RGBA32F,
-    encoding: ctx.Encoding.Linear,
     wrap: ctx.Wrap.Repeat,
     mag: ctx.Filter.Linear,
     min: ctx.Filter.Linear,
   });
+  noiseTexture.name = `ssaoNoiseTexture`;
   return noiseTexture;
 }
 
@@ -111,14 +111,12 @@ const ssao = ({ ctx, resourceCache, descriptors, scale = 1 }) => {
     passDesc: () => ({
       clearColor: [0, 0, 0, 1],
     }),
-    target: ({ viewport }) => {
-      const tex = resourceCache.texture2D({
+    target: ({ viewport }) =>
+      resourceCache.texture2D({
         ...descriptors.postProcessing.outputTextureDesc,
         width: viewport[2] * scale,
         height: viewport[3] * scale,
-      });
-      return tex;
-    },
+      }),
     size: ({ viewport }) => [viewport[2] * scale, viewport[3] * scale],
   };
 
@@ -163,15 +161,13 @@ const ssao = ({ ctx, resourceCache, descriptors, scale = 1 }) => {
     passDesc: () => ({
       clearColor: [0, 0, 0, 1],
     }),
-    target: ({ viewport }) => {
-      const tex = resourceCache.texture2D({
+    target: ({ viewport }) =>
+      resourceCache.texture2D({
         ...descriptors.postProcessing.outputTextureDesc,
         pixelFormat: ctx.gl.RG ? ctx.PixelFormat.R8 : ctx.PixelFormat.RGBA8,
         width: viewport[2] * scale,
         height: viewport[3] * scale,
-      });
-      return tex;
-    },
+      }),
     size: ({ viewport }) => [viewport[2] * scale, viewport[3] * scale],
   };
 

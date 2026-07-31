@@ -7,7 +7,6 @@ const dof = ({ resourceCache, descriptors }) => {
     flagDefinitions: [
       [["camera", "near"], "", { uniform: "uNear" }],
       [["camera", "far"], "", { uniform: "uFar" }],
-      [["camera", "exposure"], "", { uniform: "uExposure" }],
 
       [["postProcessing", "dof"], "USE_DOF"],
       [["postProcessing", "dof", "type"], "USE_DOF_GUSTAFSSON", { compare: "gustafsson", requires: "USE_DOF" }],

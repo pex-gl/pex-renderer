@@ -1,5 +1,3 @@
-var commonjsGlobal = typeof globalThis !== 'undefined' ? globalThis : typeof window !== 'undefined' ? window : typeof global !== 'undefined' ? global : typeof self !== 'undefined' ? self : {};
-
 function getDefaultExportFromCjs (x) {
 	return x && x.__esModule && Object.prototype.hasOwnProperty.call(x, 'default') ? x['default'] : x;
 }
@@ -2023,4 +2021,4 @@ var _polyfillNode_crypto$1 = /*#__PURE__*/Object.freeze({
 
 var require$$0 = /*@__PURE__*/getAugmentedNamespace(_polyfillNode_crypto$1);
 
-export { Buffer as B, global$1 as a, commonjsGlobal as c, getDefaultExportFromCjs as g, require$$0 as r };
+export { Buffer as B, global$1 as a, getDefaultExportFromCjs as g, require$$0 as r };

@@ -21,7 +21,6 @@ for (let i = 0; i < NUM_SAMPLES; i++) {
 class ReflectionProbe {
   constructor(opts) {
     this.enabled = true;
-    this.rgbm = false;
     this.size = 1024;
 
     this.set(opts);
@@ -50,8 +49,7 @@ class ReflectionProbe {
       name: "reflectionProbeDynamicCubeMap",
       width: this.size,
       height: this.size,
-      pixelFormat: this.rgbm ? ctx.PixelFormat.RGBA8 : ctx.PixelFormat.RGBA16F,
-      encoding: this.rgbm ? ctx.Encoding.RGBM : ctx.Encoding.Linear,
+      pixelFormat: ctx.PixelFormat.RGBA16F,
     });
 
     this._dynamicCubemapSides = structuredClone(CUBEMAP_SIDES).map(
@@ -88,8 +86,7 @@ class ReflectionProbe {
       name: "reflectionProbeOctMap",
       width: this.size,
       height: this.size,
-      pixelFormat: this.rgbm ? ctx.PixelFormat.RGBA8 : ctx.PixelFormat.RGBA16F,
-      encoding: this.rgbm ? ctx.Encoding.RGBM : ctx.Encoding.Linear,
+      pixelFormat: ctx.PixelFormat.RGBA16F,
     });
 
     this._reflectionMap = ctx.texture2D({
@@ -98,8 +95,7 @@ class ReflectionProbe {
       height: 2 * this.size,
       min: ctx.Filter.Linear,
       mag: ctx.Filter.Linear,
-      pixelFormat: this.rgbm ? ctx.PixelFormat.RGBA8 : ctx.PixelFormat.RGBA16F,
-      encoding: this.rgbm ? ctx.Encoding.RGBM : ctx.Encoding.Linear,
+      pixelFormat: ctx.PixelFormat.RGBA16F,
     });
 
     this._hammersleyPointSetMap = ctx.texture2D({
@@ -108,7 +104,6 @@ class ReflectionProbe {
       width: 1,
       height: NUM_SAMPLES,
       pixelFormat: ctx.PixelFormat.RGBA32F,
-      encoding: ctx.Encoding.Linear,
     });
   }
 
@@ -268,8 +263,6 @@ class ReflectionProbe {
       viewport: [0, 0, targetRegionSize, targetRegionSize],
       uniforms: {
         uOctMapAtlasSize: this._reflectionMap.width,
-        uOctMapAtlasEncoding: this._reflectionMap.encoding,
-        uOutputEncoding: this._octMap.encoding,
         uNumSamples: NUM_SAMPLES, // TODO: either make constant in shader or make it configurable
         uHammersleyPointSetMap: this._hammersleyPointSetMap,
         uSourceMipmapLevel: sourceMipmapLevel,
@@ -286,9 +279,7 @@ class ReflectionProbe {
 
     for (let i = 0; i < this._dynamicCubemapSides.length; i++) {
       const side = this._dynamicCubemapSides[i];
-      ctx.submit(side.drawPassCmd, () =>
-        drawScene(side, this._dynamicCubemap.encoding),
-      );
+      ctx.submit(side.drawPassCmd, () => drawScene(side));
     }
 
     ctx.submit(this.cubemapToOctMapCmd, {
@@ -320,8 +311,6 @@ class ReflectionProbe {
     ctx.submit(this.convolveOctmapAtlasToOctMapCmd, {
       uniforms: {
         uOctMapAtlasSize: this._reflectionMap.width,
-        uOctMapAtlasEncoding: this._reflectionMap.encoding,
-        uOutputEncoding: this._octMap.encoding,
       },
       viewport: [0, 0, IRRADIANCE_OCT_MAP_SIZE, IRRADIANCE_OCT_MAP_SIZE],
     });
@@ -375,7 +364,6 @@ export default ({ ctx, resourceCache }) => ({
     }
 
     // Compare
-    // TODO: also check for rgbm change?
     if (entity._reflectionProbe.size !== entity.reflectionProbe.size) {
       entity._reflectionProbe.resize(entity.reflectionProbe.size);
       entity.reflectionProbe.dirty = true;
@@ -407,10 +395,9 @@ export default ({ ctx, resourceCache }) => ({
       entity._reflectionProbe.dirty = false;
 
       let { renderers = [] } = options;
-      entity._reflectionProbe.update((camera, encoding) => {
+      entity._reflectionProbe.update((camera) => {
         const renderView = {
           camera: camera,
-          outputEncoding: encoding,
         };
         // should be only skybox renderers
         for (let i = 0; i < renderers.length; i++) {
@@ -422,7 +409,6 @@ export default ({ ctx, resourceCache }) => ({
         if (skyboxEntities.length > 0) {
           // TODO: drawing skybox inside reflection probe
           // skyboxEntities[0]._skybox.draw(camera, {
-          //   outputEncoding: encoding,
           //   backgroundMode: false,
           // });
         }

@@ -44,8 +44,10 @@ export default () => ({
       if (opts.type === "texture") {
         if (!value) continue;
 
-        flags.push(`USE_${defineName}`);
-        flags.push(`${defineName}_TEX_COORD ${value.texCoord || "0"}`);
+        if (defineName) {
+          flags.push(`USE_${defineName}`);
+          flags.push(`${defineName}_TEX_COORD ${value.texCoord || "0"}`);
+        }
         uniforms[opts.uniform] = value.texture || value;
 
         // Compute texture transform
@@ -61,7 +63,7 @@ export default () => ({
           );
         }
         if (value.matrix) {
-          flags.push(`USE_${defineName}_MATRIX`);
+          if (defineName) flags.push(`USE_${defineName}_MATRIX`);
           uniforms[opts.uniform + "Matrix"] = value.matrix;
         }
         // If not nullish or has default
@@ -112,6 +114,9 @@ export default () => ({
         : "1";
 
       if (mode.includes("texcoord")) debugRender = `vec3(${debugRender}, 0.0)`;
+      if (mode.includes("ior")) {
+        debugRender = `vec3((${debugRender} - 1.0) / 4.0)`;
+      }
 
       descriptor.frag = descriptor.frag.replace(
         "#define HOOK_FRAG_END",

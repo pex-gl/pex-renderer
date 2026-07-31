@@ -2,6 +2,144 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+# [5.0.0-alpha.9](https://github.com/pex-gl/pex-renderer/compare/v5.0.0-alpha.8...v5.0.0-alpha.9) (2026-02-26)
+
+
+### Bug Fixes
+
+* **ecs:** prevent negative near clipping plane ([ae3cfbd](https://github.com/pex-gl/pex-renderer/commit/ae3cfbdbd4deb69b37f8390d17eb36d51f9e4335)), closes [#26](https://github.com/pex-gl/pex-renderer/issues/26)
+* **ecs:** throw render-graph errors ([78fc921](https://github.com/pex-gl/pex-renderer/commit/78fc921fa7b804e7f643dd76751e770ef4039090))
+
+
+
+# [5.0.0-alpha.8](https://github.com/pex-gl/pex-renderer/compare/v5.0.0-alpha.7...v5.0.0-alpha.8) (2025-12-08)
+
+
+### Bug Fixes
+
+* **ecs:** set grid minimum subdivision to 2 ([8c6d23e](https://github.com/pex-gl/pex-renderer/commit/8c6d23e7f812eaf1cac7fc3416fbdd17969a0a6b))
+
+
+### Features
+
+* **gltf:** handle binary or object data directly in gltf loader ([9d402d7](https://github.com/pex-gl/pex-renderer/commit/9d402d747932ee7c1e51391357ce896f26a8e14a))
+
+
+
+# [5.0.0-alpha.7](https://github.com/pex-gl/pex-renderer/compare/v5.0.0-alpha.6...v5.0.0-alpha.7) (2025-10-31)
+
+
+### Bug Fixes
+
+* **ecs:** throw render-graph errors ([d539e8a](https://github.com/pex-gl/pex-renderer/commit/d539e8a7d4b3d2bf0cbf42097368abd40f38c4a8))
+
+
+### Features
+
+* **ecs:** compare previous errors in render-graph endFrame instead of rethrowing ([da07d1e](https://github.com/pex-gl/pex-renderer/commit/da07d1e3a2a954be079a05f3fcf891d94b3972b2))
+* **ecs:** subdivide helper grid lines ([147b754](https://github.com/pex-gl/pex-renderer/commit/147b75462844372011226b853ea7ce6fcf748e4f)), closes [#420](https://github.com/pex-gl/pex-renderer/issues/420)
+
+
+
+# [5.0.0-alpha.6](https://github.com/pex-gl/pex-renderer/compare/v5.0.0-alpha.5...v5.0.0-alpha.6) (2025-09-26)
+
+
+### Bug Fixes
+
+* **ecs:** make helper system entities bounds dirty ([3390097](https://github.com/pex-gl/pex-renderer/commit/33900973f454df002d3552c186ef0f1d38fc05dc)), closes [#421](https://github.com/pex-gl/pex-renderer/issues/421)
+
+
+### Features
+
+* **ecs:** handle ior debugRender ([4c3cb0b](https://github.com/pex-gl/pex-renderer/commit/4c3cb0b0de3a871a46401eef5ebc7034b48cd2cf))
+
+
+
+# [5.0.0-alpha.5](https://github.com/pex-gl/pex-renderer/compare/v5.0.0-alpha.4...v5.0.0-alpha.5) (2025-09-19)
+
+
+### Bug Fixes
+
+* helper system import ([86eee2c](https://github.com/pex-gl/pex-renderer/commit/86eee2cffe608ae21e2c992d096cf763c0ede51b))
+
+
+
+# [5.0.0-alpha.4](https://github.com/pex-gl/pex-renderer/compare/v5.0.0-alpha.3...v5.0.0-alpha.4) (2025-09-19)
+
+
+### Features
+
+* **ecs:** add skeleton helper ([9cbd17b](https://github.com/pex-gl/pex-renderer/commit/9cbd17bb2ce4076d8ebf72f5ff9b6fdd47de6a26))
+* **ecs:** draw axesHelper after gridHelper ([b44ddff](https://github.com/pex-gl/pex-renderer/commit/b44ddffe441b9297fb2f587e9834a9d530e2d99d))
+* **ecs:** increase helper lineWidth to 2 for readability ([051136e](https://github.com/pex-gl/pex-renderer/commit/051136ed5c80ac11c7c96273ab69306b8368f91e))
+* **ecs:** refactor helper renderer to helper system using line-renderer ([d5257bf](https://github.com/pex-gl/pex-renderer/commit/d5257bff5770a6efcbf276b4bbd790ed112d9ba2))
+* **gltf:** handle webp images ([23c14a4](https://github.com/pex-gl/pex-renderer/commit/23c14a427fa52e09f02f75e763f5e67a11af9772))
+
+
+
+# [5.0.0-alpha.3](https://github.com/pex-gl/pex-renderer/compare/v5.0.0-alpha.2...v5.0.0-alpha.3) (2025-09-12)
+
+
+### Bug Fixes
+
+* **ecs:** handle texture flag defs without defineName ([9a9f47f](https://github.com/pex-gl/pex-renderer/commit/9a9f47ff7f223574f0bffcc11b9ec6d118b55221))
+* **post-processing:** smaa target texture descriptor ([66f4e1a](https://github.com/pex-gl/pex-renderer/commit/66f4e1ad4d67127841d94cd4fad2d98615461bcf))
+
+
+### Features
+
+* **post-processing:** implement SMAA ([67b2812](https://github.com/pex-gl/pex-renderer/commit/67b2812a41f28327423248b369f085418055acf0))
+
+
+
+# [5.0.0-alpha.2](https://github.com/pex-gl/pex-renderer/compare/v5.0.0-alpha.1...v5.0.0-alpha.2) (2025-09-09)
+
+
+### Bug Fixes
+
+* **ecs:** use renderPassView for inverse tone map pass ([161defa](https://github.com/pex-gl/pex-renderer/commit/161defaa649778984a37753553abd2814ab44c86))
+
+
+### Features
+
+* **ecs:** disable reversibleTonemap ([96b5275](https://github.com/pex-gl/pex-renderer/commit/96b5275cdd240c4a50887b02aca7b595981a0242))
+* **post-processing:** default aa quality to 3 ([f33fee9](https://github.com/pex-gl/pex-renderer/commit/f33fee9b2e25068edb8276efa1b728a3fad18628))
+
+
+
+# [5.0.0-alpha.1](https://github.com/pex-gl/pex-renderer/compare/v5.0.0-alpha.0...v5.0.0-alpha.1) (2025-09-09)
+
+
+### Features
+
+* split blit and reversible tone map passes ([2e671ea](https://github.com/pex-gl/pex-renderer/commit/2e671eac3329ad9f36f884e77923348acc74a0af))
+
+
+
+# [5.0.0-alpha.0](https://github.com/pex-gl/pex-renderer/compare/v4.0.0...v5.0.0-alpha.0) (2025-09-08)
+
+
+### Bug Fixes
+
+* **post-processing:** allow disabling final.main ([dfd2d0f](https://github.com/pex-gl/pex-renderer/commit/dfd2d0f375fa3f3108667952a7beed232cfb5a75))
+
+
+### Features
+
+* **ecs:** add reversible tone mapping for MSAA resolve ([b12bdb9](https://github.com/pex-gl/pex-renderer/commit/b12bdb9dbb558b33b19ff8bb608b60b95e9f6075))
+* **ecs:** get exposure from post-processing components in post-processing passes ([15cd277](https://github.com/pex-gl/pex-renderer/commit/15cd2777305c1c1800e1f093cfb28b06efa0b459))
+* **ecs:** remove ctx.Encoding references + remove camera outputEncoding + remove RGBM from reflection probe ([1e70867](https://github.com/pex-gl/pex-renderer/commit/1e70867c43d3f31b879f1f676b3587065cd601da)), closes [#415](https://github.com/pex-gl/pex-renderer/issues/415)
+* **ecs:** remove output encoding references ([46e2673](https://github.com/pex-gl/pex-renderer/commit/46e26731316e7c1513eb839018fea5042fcde9cf))
+* **ecs:** use SRGB8_ALPHA8 for sky texture ([d2a1faa](https://github.com/pex-gl/pex-renderer/commit/d2a1faa745c5df5d04c18ddcc93479671bb7de53))
+* **gltf:** update textures types in gltf loaders for srgb + use combine/final shaders ([33e2170](https://github.com/pex-gl/pex-renderer/commit/33e2170d31c8ab467bf9297ca825cc1b98abbd75))
+* **post-processing:** add final luma pass for FXAA ([648e631](https://github.com/pex-gl/pex-renderer/commit/648e6319f0ffc979437892c3bbfff0edf9858466))
+* **post-processing:** move tonemap and exposure to post-processing ([eef9472](https://github.com/pex-gl/pex-renderer/commit/eef94728f7f59b84099c31c5100457afa5c0ad80))
+* **post-processing:** set post-processing color output pixel format to SRGB8_ALPHA8 ([1f2005b](https://github.com/pex-gl/pex-renderer/commit/1f2005bcb5b7b5dd9e54780cd39fe7a0f74148ea))
+* **post-processing:** split final pass into combine and main ([0a20392](https://github.com/pex-gl/pex-renderer/commit/0a20392d121fedd29ecc7469032e62f9cfe7999c))
+* remove exposure and tonemap from render pipeline ([dbfd673](https://github.com/pex-gl/pex-renderer/commit/dbfd67333ebf23dcf72093797fc0c0b32f331f3f))
+
+
+
 # [4.0.0](https://github.com/pex-gl/pex-renderer/compare/v4.0.0-alpha.57...v4.0.0) (2025-08-22)
 
 

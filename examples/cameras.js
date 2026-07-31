@@ -80,6 +80,7 @@ view offset: [${offset.map((n) => n.toFixed(0))}]`,
         },
         ...options,
       }),
+      postProcessing: components.postProcessing(),
       orbiter: components.orbiter({ element: ctx.gl.canvas }),
     });
     world.add(cameraEntity);
