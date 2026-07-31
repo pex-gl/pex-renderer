@@ -97,6 +97,7 @@ const lightColorToSrgb = (light) =>
 
 /**
  * Standard renderer
+ *
  * @param {import("../../types.js").SystemOptions} options
  * @returns {import("../../types.js").RendererSystem}
  * @alias module:renderer.standard

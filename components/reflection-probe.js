@@ -1,5 +1,6 @@
 /**
  * Reflection probe component
+ *
  * @param {import("../types.js").ReflectionProbeComponentOptions} [options]
  * @returns {object}
  * @alias module:components.reflectionProbe

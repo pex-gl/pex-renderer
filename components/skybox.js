@@ -1,5 +1,6 @@
 /**
  * Skybox component
+ *
  * @param {import("../types.js").SkyboxComponentOptions} [options]
  * @returns {object}
  * @alias module:components.skybox

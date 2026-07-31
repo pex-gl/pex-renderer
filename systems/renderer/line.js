@@ -33,6 +33,7 @@ const instanceRoundRound = Float32Array.of(
 
 /**
  * Line renderer
+ *
  * @param {import("../../types.js").SystemOptions} options
  * @returns {import("../../types.js").RendererSystem}
  * @alias module:renderer.line

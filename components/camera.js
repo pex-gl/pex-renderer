@@ -2,6 +2,7 @@ import { mat4 } from "pex-math";
 
 /**
  * Camera component
+ *
  * @param {import("../types.js").CameraComponentOptions} [options]
  * @returns {object}
  * @alias module:components.camera

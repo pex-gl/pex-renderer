@@ -1,5 +1,6 @@
 /**
  * Post Processing component
+ *
  * @param {import("../types.js").PostProcessingComponentOptions} [options]
  * @returns {object}
  * @alias module:components.postProcessing
@@ -23,6 +24,7 @@ const postProcessing = (options) => ({
 
 /**
  * Post Processing SSAO subcomponent
+ *
  * @param {import("../types.js").SSAOComponentOptions} [options]
  * @returns {object}
  * @alias module:components.postProcessing.ssao
@@ -50,6 +52,7 @@ postProcessing.ssao = (options) => ({
 
 /**
  * Post Processing DoF subcomponent
+ *
  * @param {import("../types.js").DoFComponentOptions} [options]
  * @returns {object}
  */
@@ -71,6 +74,7 @@ postProcessing.dof = (options) => ({
 
 /**
  * Post Processing MSAA subcomponent
+ *
  * @param {import("../types.js").MSAAComponentOptions} [options]
  * @returns {object}
  */
@@ -81,6 +85,7 @@ postProcessing.msaa = (options) => ({
 
 /**
  * Post Processing FXAA subcomponent
+ *
  * @param {import("../types.js").FXAAComponentOptions} [options]
  * @returns {object}
  */
@@ -92,6 +97,7 @@ postProcessing.fxaa = (options) => ({
 
 /**
  * Post Processing SMAA subcomponent
+ *
  * @param {import("../types.js").SMAAComponentOptions} [options]
  * @returns {object}
  */
@@ -103,6 +109,7 @@ postProcessing.smaa = (options) => ({
 
 /**
  * Post Processing Fog subcomponent
+ *
  * @param {import("../types.js").FogComponentOptions} [options]
  * @returns {object}
  */
@@ -121,6 +128,7 @@ postProcessing.fog = (options) => ({
 
 /**
  * Post Processing Bloom subcomponent
+ *
  * @param {import("../types.js").BloomComponentOptions} [options]
  * @returns {object}
  */
@@ -136,6 +144,7 @@ postProcessing.bloom = (options) => ({
 
 /**
  * Post Processing Vignette subcomponent
+ *
  * @param {import("../types.js").VignetteComponentOptions} [options]
  * @returns {object}
  */
@@ -147,6 +156,7 @@ postProcessing.vignette = (options) => ({
 
 /**
  * Post Processing LUT subcomponent
+ *
  * @param {import("../types.js").LutComponentOptions} [options]
  * @returns {object}
  */
@@ -157,6 +167,7 @@ postProcessing.lut = (options) => ({
 
 /**
  * Post Processing Color Correction subcomponent
+ *
  * @param {import("../types.js").ColorCorrectionComponentOptions} [options]
  * @returns {object}
  */
@@ -170,6 +181,7 @@ postProcessing.colorCorrection = (options) => ({
 
 /**
  * Post Processing Film Grain subcomponent
+ *
  * @param {import("../types.js").FilmGrainComponentOptions} [options]
  * @returns {object}
  */

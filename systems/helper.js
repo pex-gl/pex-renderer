@@ -79,7 +79,7 @@ const getPrismPositions = ({ radius }) => ([
   [radius, 0, 0], [0, 0, -radius],
   [radius, 0, 0], [0, 0, radius],
   [-radius, 0, 0], [0, 0, radius]
-])
+]);
 
 const getQuadPositions = ({ width = 1, height = 1, size = 2 } = {}) =>
   // prettier-ignore

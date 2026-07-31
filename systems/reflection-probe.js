@@ -343,7 +343,9 @@ class ReflectionProbe {
  * Reflection Probe system
  *
  * Adds:
+ *
  * - "_reflectionProbe" to reflectionProbe components
+ *
  * @param {import("../types.js").SystemOptions} options
  * @returns {import("../types.js").System}
  * @alias module:systems.reflectionProbe

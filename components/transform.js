@@ -1,5 +1,6 @@
 /**
  * Transform component
+ *
  * @param {import("../types.js").TransformComponentOptions} [options]
  * @returns {object}
  * @alias module:components.transform

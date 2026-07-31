@@ -1,5 +1,6 @@
 /**
  * Vertex helper component
+ *
  * @param {import("../types.js").VertexHelperComponentOptions} [options]
  * @returns {object}
  * @alias module:components.vertexHelper

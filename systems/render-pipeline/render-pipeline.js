@@ -11,9 +11,13 @@ import { getDefaultViewport } from "../../utils.js";
  * Render pipeline system
  *
  * Adds:
- * - "_near", "_far", "_radiusUV" and "_sceneBboxInLightSpace" to light components that cast shadows
- * - "_shadowCubemap" to pointLight components and "_shadowMap" to other light components
+ *
+ * - "_near", "_far", "_radiusUV" and "_sceneBboxInLightSpace" to light components
+ *   that cast shadows
+ * - "_shadowCubemap" to pointLight components and "_shadowMap" to other light
+ *   components
  * - "_targets" to postProcessing components
+ *
  * @param {import("../../types.js").SystemOptions} options
  * @returns {import("../../types.js").System}
  * @alias module:systems.renderPipeline

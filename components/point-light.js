@@ -1,5 +1,6 @@
 /**
  * Point light component
+ *
  * @param {import("../types.js").PointLightComponentOptions} [options]
  * @returns {object}
  * @alias module:components.pointLight

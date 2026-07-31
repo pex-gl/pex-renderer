@@ -15,6 +15,7 @@ export { default as transform } from "./transform.js";
 
 /**
  * All renderer systems
+ *
  * @type {module:renderer}
  * @name renderer
  * @static

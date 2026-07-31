@@ -1,5 +1,6 @@
 /**
  * Morph component
+ *
  * @param {import("../types.js").MorphComponentOptions} options
  * @returns {object}
  * @alias module:components.morph

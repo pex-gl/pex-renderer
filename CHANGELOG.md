@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+# [5.0.0](https://github.com/pex-gl/pex-renderer/compare/v5.0.0-alpha.9...v5.0.0) (2026-07-31)
+
+
+### Bug Fixes
+
+* **gltf:** handle external image ref in binary glb ([84431be](https://github.com/pex-gl/pex-renderer/commit/84431be9e32c1dbda091e2f9945d83ca76438d9b)), closes [#432](https://github.com/pex-gl/pex-renderer/issues/432)
+
+
+
 # [5.0.0-alpha.9](https://github.com/pex-gl/pex-renderer/compare/v5.0.0-alpha.8...v5.0.0-alpha.9) (2026-02-26)
 
 

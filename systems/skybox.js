@@ -12,8 +12,11 @@ const parameters = [
  * Skybox system
  *
  * Adds:
- * - "_skyTexture" to skybox components with no envMap for skybox-renderer to render
+ *
+ * - "_skyTexture" to skybox components with no envMap for skybox-renderer to
+ *   render
  * - "_skyTextureChanged" to skybox components for reflection-probe system
+ *
  * @param {import("../types.js").SystemOptions} options
  * @returns {import("../types.js").System}
  * @alias module:systems.skybox

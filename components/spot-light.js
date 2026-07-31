@@ -1,5 +1,6 @@
 /**
  * Spot light component
+ *
  * @param {import("../types.js").SpotLightComponentOptions} [options]
  * @returns {object}
  * @alias module:components.spotLight

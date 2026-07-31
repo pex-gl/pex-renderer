@@ -2,7 +2,9 @@
 
 /**
  * Material component
- * @param {import("../types.js").MaterialComponentOptions | import("../types.js").LineMaterialComponentOptions} [options]
+ *
+ * @param {import("../types.js").MaterialComponentOptions
+ *   | import("../types.js").LineMaterialComponentOptions} [options]
  * @returns {object}
  * @alias module:components.material
  */

@@ -4,7 +4,7 @@
  * @typedef {object} Entity
  * @property {number} id
  * @property {AmbientLightComponentOptions} [ambientLight]
- * @property {(AnimationComponentOptions | AnimationComponentOptions[])} [animation]
+ * @property {AnimationComponentOptions | AnimationComponentOptions[]} [animation]
  * @property {AreaLightComponentOptions} [areaLight]
  * @property {AxesHelperComponentOptions} [axesHelper]
  * @property {BoundingBoxHelperComponentOptions} [boundingBoxHelper]
@@ -52,16 +52,14 @@
  * @property {boolean} [castShadows=true]
  * @property {number} [shadowMapSize=2048]
  */
-/**
- * @typedef {object} AxesHelperComponentOptions
- */
+/** @typedef {object} AxesHelperComponentOptions */
 /**
  * @typedef {object} BoundingBoxHelperComponentOptions
  * @property {number[]} [color=[1, 0, 0, 1]]
  */
 /**
  * @typedef {object} SkeletonHelperComponentOptions
- * @property {number[]|number[][]} [color=[[0, 0, 1, 1], [1, 1, 1, 1]]]
+ * @property {number[] | number[][]} [color=[[0, 0, 1, 1], [1, 1, 1, 1]]]
  */
 /**
  * @typedef {object} CameraHelperComponentOptions
@@ -83,10 +81,14 @@
  * @property {mat4} [viewMatrix]
  * @property {mat4} [invViewMatrix]
  * @property {boolean} [culling=false]
- * @property {number} [focalLength=50] Focal length of the camera lens [10mm - 200mm] in mm
- * @property {number} [fStop=2.8] Ratio of camera lens opening, f-number, f/N, aperture [1.2 - 32] in mm
- * @property {number} [sensorSize=[36, 24]] Physical camera sensor or film size [sensorWidth, sensorHeight] in mm
- * @property {"vertical" | "horizontal" | "fit" | "overscan" | "vertical"} sensorFit Matching of camera frame to sensor frame
+ * @property {number} [focalLength=50] Focal length of the camera lens [10mm -
+ *   200mm] in mm
+ * @property {number} [fStop=2.8] Ratio of camera lens opening, f-number, f/N,
+ *   aperture [1.2 - 32] in mm
+ * @property {number} [sensorSize=[36, 24]] Physical camera sensor or film size
+ *   [sensorWidth, sensorHeight] in mm
+ * @property {"vertical" | "horizontal" | "fit" | "overscan" | "vertical"} sensorFit
+ *   Matching of camera frame to sensor frame
  * @property {CameraView} [view]
  * @property {number} [fov=Math.PI / 4]
  * @property {number} [left=-1]
@@ -112,7 +114,7 @@
  * @property {Float32Array} [uvs] Alias: texCoords/texCoords0
  * @property {Float32Array} [uvs1] Alias: texCoords1
  * @property {Float32Array} [vertexColors]
- * @property {(Uint16Array|Uint32Array)} [cells]
+ * @property {Uint16Array | Uint32Array} [cells]
  * @property {Float32Array} [weights]
  * @property {Float32Array} [joints]
  * @property {Float32Array} [offsets] Instanced
@@ -129,13 +131,11 @@
  * @property {number[]} [color=[1, 1, 1, 1]]
  * @property {number[]} [size=10]
  */
-/**
- * @typedef {object} LightHelperComponentOptions
- */
+/** @typedef {object} LightHelperComponentOptions */
 /**
  * @typedef {object} TextureTransform
  * @property {number[]} [offset] [x, y]
- * @property {number} [rotation] angle in radians
+ * @property {number} [rotation] Angle in radians
  * @property {number[]} [scales] [x, y]
  */
 /**
@@ -145,7 +145,6 @@
  * @property {number[]} [baseColor=[1, 1, 1, 1]]
  * @property {number[]} [emissiveColor="undefined"]
  * @property {number} [emissiveIntensity=1]
- *
  * @property {number} [metallic=1]
  * @property {number} [roughness=1]
  * @property {number} [ior]
@@ -153,7 +152,6 @@
  * @property {ctx.texture2D | TextureTransform} [specularTexture]
  * @property {number[]} [specularColor=[1, 1, 1]]
  * @property {ctx.texture2D | TextureTransform} [specularColorTexture]
- *
  * @property {ctx.texture2D | TextureTransform} [baseColorTexture]
  * @property {ctx.texture2D | TextureTransform} [emissiveColorTexture]
  * @property {ctx.texture2D | TextureTransform} [normalTexture]
@@ -162,21 +160,17 @@
  * @property {ctx.texture2D | TextureTransform} [metallicTexture]
  * @property {ctx.texture2D | TextureTransform} [metallicRoughnessTexture]
  * @property {ctx.texture2D | TextureTransform} [occlusionTexture]
- *
  * @property {number} [clearCoat]
  * @property {number} [clearCoatRoughness]
  * @property {ctx.texture2D | TextureTransform} [clearCoatTexture]
  * @property {ctx.texture2D | TextureTransform} [clearCoatRoughnessTexture]
  * @property {ctx.texture2D | TextureTransform} [clearCoatNormalTexture]
  * @property {number} [clearCoatNormalTextureScale]
- *
  * @property {number[]} [sheenColor]
  * @property {number} [sheenRoughness]
- *
  * @property {number} [transmission]
  * @property {ctx.texture2D | TextureTransform} [transmissionTexture]
  * @property {number} [dispersion]
- *
  * @property {number} [diffuseTransmission]
  * @property {ctx.texture2D | TextureTransform} [diffuseTransmissionTexture]
  * @property {number} [diffuseTransmissionColor=[1, 1, 1]]
@@ -186,13 +180,11 @@
  * @property {ctx.texture2D | TextureTransform} [thicknessTexture]
  * @property {number} [attenuationDistance]
  * @property {number[]} [attenuationColor]
- *
  * @property {number} [alphaTest="undefined"]
  * @property {ctx.texture2D | TextureTransform} [alphaTexture]
  * @property {boolean} [depthTest=true]
  * @property {boolean} [depthWrite=true]
  * @property {ctx.DepthFunc} [depthFunc=ctx.DepthFunc.Less]
- *
  * @property {boolean} [blend=false]
  * @property {ctx.BlendFactor} [blendSrcRGBFactor="undefined"]
  * @property {ctx.BlendFactor} [blendSrcAlphaFactor="undefined"]
@@ -201,7 +193,6 @@
  * @property {boolean} [cullFace=true]
  * @property {ctx.Face} [cullFaceMode=ctx.Face.Back]
  * @property {number} [pointSize=1]
- *
  * @property {boolean} [castShadows=false]
  * @property {boolean} [receiveShadows=false]
  */
@@ -243,32 +234,40 @@
  * @property {number} [mix=1]
  * @property {number} [samples="gtao" ? 6 : 11]
  * @property {number} [intensity=2.2]
- * @property {number} [radius=0.5] meters
+ * @property {number} [radius=0.5] Meters
  * @property {number} [blurRadius=0.5]
  * @property {number} [blurSharpness=10]
  * @property {number} [brightness=0]
- * @property {number} [contrast=1]
- * // SSAO
- * @property {number} [bias=0.001] centimeters
- * @property {number} [spiralTurns=7]
- * // GTAO
+ * @property {number} [contrast=1] // SSAO
+ * @property {number} [bias=0.001] Centimeters
+ * @property {number} [spiralTurns=7] // GTAO
  * @property {number} [slices=3]
  * @property {number} [colorBounce=true]
  * @property {number} [colorBounceIntensity=1.0]
  */
 /**
  * @typedef {object} DoFComponentOptions
- * @property {"gustafsson" | "upitis"} [type="gustafsson"] Gustafsson uses a spiral pattern while Upitis uses a circular one.
+ * @property {"gustafsson" | "upitis"} [type="gustafsson"] Gustafsson uses a
+ *   spiral pattern while Upitis uses a circular one.
  * @property {boolean} [physical=true] Use camera f-stop and focal length
  * @property {number} [focusDistance=7] The point to focus on in meters.
- * @property {number} [focusScale=1] Non physically based value for artistic control when physical is false, otherwise act as an fStop divider. Larger aperture (ie, smaller f-stop) or larger focal length (smaller fov) = smaller depth of field = more blur.
- * @property {boolean} [focusOnScreenPoint=false] Read the depth buffer to find the first intersecting object to focus on instead of a fixed focus distance.
- * @property {number[]} [screenPoint=[0.5, 0.5]] The normalized screen point to focus on when "focusOnScreenPoint" is true.
+ * @property {number} [focusScale=1] Non physically based value for artistic
+ *   control when physical is false, otherwise act as an fStop divider. Larger
+ *   aperture (ie, smaller f-stop) or larger focal length (smaller fov) =
+ *   smaller depth of field = more blur.
+ * @property {boolean} [focusOnScreenPoint=false] Read the depth buffer to find
+ *   the first intersecting object to focus on instead of a fixed focus
+ *   distance.
+ * @property {number[]} [screenPoint=[0.5, 0.5]] The normalized screen point to
+ *   focus on when "focusOnScreenPoint" is true.
  * @property {number} [chromaticAberration=0.7] Amount of RGB separation
- * @property {number} [luminanceThreshold=0.7] Threshold for out of focus hightlights
+ * @property {number} [luminanceThreshold=0.7] Threshold for out of focus
+ *   hightlights
  * @property {number} [luminanceGain=1] Gain for out of focus hightlights
- * @property {number} [samples=6] Iteration steps. More steps means better blur but also degraded performances.
- * @property {"disk" | "pentagon"} [shape="disk"] The bokeh shape for type "upitis".
+ * @property {number} [samples=6] Iteration steps. More steps means better blur
+ *   but also degraded performances.
+ * @property {"disk" | "pentagon"} [shape="disk"] The bokeh shape for type
+ *   "upitis".
  * @property {boolean} [debug=false]
  */
 /**
@@ -278,7 +277,8 @@
 /**
  * @typedef {object} FXAAComponentOptions
  * @property {number} [quality=3] For edge luma threshold: 0 to 4.
- * @property {number} [subPixelQuality=0.75] Higher = softer. Helps mitigate fireflies but will blur small details.
+ * @property {number} [subPixelQuality=0.75] Higher = softer. Helps mitigate
+ *   fireflies but will blur small details.
  */
 /**
  * @typedef {object} SMAAComponentOptions
@@ -298,12 +298,17 @@
  */
 /**
  * @typedef {object} BloomComponentOptions
- * @property {number} [quality=1] The bloom quality: 0 or 1 (0 is faster but flickers)
- * @property {"luma" | "luminance" | "average"} [colorFunction="luma"] The function used to determine the brightness of a pixel for the threshold.
- * @property {number} [threshold=1] The brightness value at which pixels are filtered out for the threshold.
- * @property {"color" | "emissive"} [source="color"] The source texture for the threshold.
+ * @property {number} [quality=1] The bloom quality: 0 or 1 (0 is faster but
+ *   flickers)
+ * @property {"luma" | "luminance" | "average"} [colorFunction="luma"] The
+ *   function used to determine the brightness of a pixel for the threshold.
+ * @property {number} [threshold=1] The brightness value at which pixels are
+ *   filtered out for the threshold.
+ * @property {"color" | "emissive"} [source="color"] The source texture for the
+ *   threshold.
  * @property {number} [intensity=0.1] The strength of the bloom effect.
- * @property {number} [radius=1] The downsampling radius which controls how much glare gets blended in.
+ * @property {number} [radius=1] The downsampling radius which controls how much
+ *   glare gets blended in.
  */
 /**
  * @typedef {object} LutComponentOptions
@@ -343,16 +348,24 @@
  * @property {SMAAComponentOptions} [smaa]
  * @property {FilmGrainComponentOptions} [filmGrain]
  * @property {number} [exposure=1]
- * @property {"aces" | "agx" | "agxPunchy" | "filmic" | "lottes" | "neutral" | "reinhard" | "reinhard2" | "uchimura" | "uncharted2" | "unreal"} [toneMap="aces"]
+ * @property {"aces"
+ *   | "agx"
+ *   | "agxPunchy"
+ *   | "filmic"
+ *   | "lottes"
+ *   | "neutral"
+ *   | "reinhard"
+ *   | "reinhard2"
+ *   | "uchimura"
+ *   | "uncharted2"
+ *   | "unreal"} [toneMap="aces"]
  * @property {number} opacity
  */
 /**
  * @typedef {object} ReflectionProbeComponentOptions
  * @property {number} [size=1024]
  */
-/**
- * @typedef {object} SkinComponentOptions
- */
+/** @typedef {object} SkinComponentOptions */
 /**
  * @typedef {object} SkyboxComponentOptions
  * @property {number[]} [sunPosition]
@@ -502,9 +515,7 @@
  * @property {Function} renderPass
  * @property {Function} endFrame
  */
-/**
- * @typedef {"Transient" | "Retained"} ResourceCacheUsage
- */
+/** @typedef {"Transient" | "Retained"} ResourceCacheUsage */
 /**
  * @typedef {object} ResourceCache
  * @property {Function} beginFrame

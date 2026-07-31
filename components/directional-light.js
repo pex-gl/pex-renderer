@@ -1,5 +1,6 @@
 /**
  * Directional light component
+ *
  * @param {import("../types.js").DirectionalLightComponentOptions} [options]
  * @returns {object}
  * @alias module:components.directionalLight

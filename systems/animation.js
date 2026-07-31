@@ -142,6 +142,7 @@ function updateAnimation(animation, deltaTime) {
 
 /**
  * Animation system
+ *
  * @returns {import("../types.js").System}
  * @alias module:systems.animation
  */

@@ -1,5 +1,6 @@
 /**
  * Geometry component
+ *
  * @param {import("../types.js").GeometryComponentOptions} [options]
  * @returns {object}
  * @alias module:components.geometry

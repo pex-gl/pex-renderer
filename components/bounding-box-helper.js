@@ -1,5 +1,6 @@
 /**
  * Bounding box helper component
+ *
  * @param {import("../types.js").BoundingBoxHelperComponentOptions} [options]
  * @returns {object}
  * @alias module:components.boundingBoxHelper

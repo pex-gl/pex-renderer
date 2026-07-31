@@ -15,6 +15,7 @@ function updateSkin(skin) {
 
 /**
  * Skin system
+ *
  * @returns {import("../types.js").System}
  * @alias module:systems.skin
  */

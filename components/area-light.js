@@ -1,5 +1,6 @@
 /**
  * Area light component
+ *
  * @param {import("../types.js").AreaLightComponentOptions} [options]
  * @returns {object}
  * @alias module:components.areaLight

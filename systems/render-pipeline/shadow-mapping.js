@@ -9,10 +9,12 @@ const MIN_NEAR = 0.01;
  * Create a shadow mapping object to compose with a render-pipeline-system
  *
  * Adds:
- * - "directionalLight", "spotLight" and "pointLight" method to create shadow map render passes
- * Requires:
- * - this.drawMeshes()
- * - this.descriptors
+ *
+ * - "directionalLight", "spotLight" and "pointLight" method to create shadow map
+ *   render passes Requires:
+ * - This.drawMeshes()
+ * - This.descriptors
+ *
  * @private
  * @param {import("../../types.js").SystemOptions} options
  * @returns {import("../../types.js").System}

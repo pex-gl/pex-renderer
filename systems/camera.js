@@ -114,7 +114,9 @@ function updateCameraProjection(camera, transform) {
  * Camera system
  *
  * Adds:
+ *
  * - "_orbiter" to orbiter components
+ *
  * @returns {import("../types.js").System}
  * @alias module:systems.camera
  */

@@ -4,6 +4,7 @@ import createPipelineCache from "../../pipeline-cache.js";
  * Base renderer
  *
  * All renderers are composed with it.
+ *
  * @returns {import("../../types.js").RendererSystem}
  * @alias module:renderer.base
  */

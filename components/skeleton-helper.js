@@ -1,5 +1,6 @@
 /**
  * Skeleton helper component
+ *
  * @param {import("../types.js").SkeletonHelperComponentOptions} [options]
  * @returns {object}
  * @alias module:components.skeletonHelper

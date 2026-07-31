@@ -1,5 +1,6 @@
 /**
  * Orbiter component
+ *
  * @param {import("../types.js").OrbiterComponentOptions} options
  * @returns {object}
  * @alias module:components.orbiter

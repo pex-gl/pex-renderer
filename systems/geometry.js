@@ -26,9 +26,11 @@ const indicesProps = ["cells", "indices"];
  * Geometry system
  *
  * Adds:
+ *
  * - "bounds" to geometry components
  * - "dirty" to geometry components properties
  * - "_geometry" to entities as reference to internal cache
+ *
  * @param {import("../types.js").SystemOptions} options
  * @returns {import("../types.js").System}
  * @alias module:systems.geometry

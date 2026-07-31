@@ -239,7 +239,8 @@ All components as a function returning a component with default values.
 
 ### pex-renderer.systems : [<code>systems</code>](#module_systems)
 
-All systems as a function returning a system with a type property and an update function.
+All systems as a function returning a system with a type property and an
+update function.
 
 **Kind**: static property of [<code>pex-renderer</code>](#module_pex-renderer)
 <a name="module_pex-renderer.world"></a>
@@ -794,7 +795,7 @@ Camera system
 
 Adds:
 
-- "\_orbiter" to orbiter components
+- "_orbiter" to orbiter components
 
 **Kind**: static method of [<code>systems</code>](#module_systems)
 <a name="module_systems.geometry"></a>
@@ -807,7 +808,7 @@ Adds:
 
 - "bounds" to geometry components
 - "dirty" to geometry components properties
-- "\_geometry" to entities as reference to internal cache
+- "_geometry" to entities as reference to internal cache
 
 **Kind**: static method of [<code>systems</code>](#module_systems)
 
@@ -837,8 +838,8 @@ Light system
 
 Adds:
 
-- "\_projectionMatrix" and "\_viewMatrix" to light components
-- "\_direction" to directional and spot light components
+- "_projectionMatrix" and "_viewMatrix" to light components
+- "_direction" to directional and spot light components
 
 **Kind**: static method of [<code>systems</code>](#module_systems)
 <a name="module_systems.morph"></a>
@@ -856,7 +857,7 @@ Reflection Probe system
 
 Adds:
 
-- "\_reflectionProbe" to reflectionProbe components
+- "_reflectionProbe" to reflectionProbe components
 
 **Kind**: static method of [<code>systems</code>](#module_systems)
 
@@ -879,8 +880,9 @@ Skybox system
 
 Adds:
 
-- "\_skyTexture" to skybox components with no envMap for skybox-renderer to render
-- "\_skyTextureChanged" to skybox components for reflection-probe system
+- "_skyTexture" to skybox components with no envMap for skybox-renderer to
+  render
+- "_skyTextureChanged" to skybox components for reflection-probe system
 
 **Kind**: static method of [<code>systems</code>](#module_systems)
 
@@ -897,7 +899,7 @@ Transform system
 Adds:
 
 - "worldBounds", "dirty" and "aabbDirty" to transform components
-- "\_transform" to entities as reference to internal cache
+- "_transform" to entities as reference to internal cache
 
 **Kind**: static method of [<code>systems</code>](#module_systems)
 <a name="module_systems.renderPipeline"></a>
@@ -908,9 +910,11 @@ Render pipeline system
 
 Adds:
 
-- "\_near", "\_far", "\_radiusUV" and "\_sceneBboxInLightSpace" to light components that cast shadows
-- "\_shadowCubemap" to pointLight components and "\_shadowMap" to other light components
-- "\_targets" to postProcessing components
+- "_near", "_far", "_radiusUV" and "_sceneBboxInLightSpace" to light components
+  that cast shadows
+- "_shadowCubemap" to pointLight components and "_shadowMap" to other light
+  components
+- "_targets" to postProcessing components
 
 **Kind**: static method of [<code>systems</code>](#module_systems)
 
@@ -968,7 +972,7 @@ Line renderer
 
 Skybox renderer
 
-Renders a skybox (envMap or \_skyTexture) to screen or to reflection probes.
+Renders a skybox (envMap or _skyTexture) to screen or to reflection probes.
 
 **Kind**: static method of [<code>renderer</code>](#module_renderer)
 
@@ -1215,7 +1219,7 @@ Standard renderer
 | Name       | Type                              | Description      |
 | ---------- | --------------------------------- | ---------------- |
 | [offset]   | <code>Array.&lt;number&gt;</code> | [x, y]           |
-| [rotation] | <code>number</code>               | angle in radians |
+| [rotation] | <code>number</code>               | Angle in radians |
 | [scales]   | <code>Array.&lt;number&gt;</code> | [x, y]           |
 
 <a name="MaterialComponentOptions"></a>
@@ -1355,12 +1359,12 @@ Standard renderer
 | [mix]                  | <code>number</code>                                           | <code>1</code>                         |             |
 | [samples]              | <code>number</code>                                           | <code>&quot;gtao&quot; ? 6 : 11</code> |             |
 | [intensity]            | <code>number</code>                                           | <code>2.2</code>                       |             |
-| [radius]               | <code>number</code>                                           | <code>0.5</code>                       | meters      |
+| [radius]               | <code>number</code>                                           | <code>0.5</code>                       | Meters      |
 | [blurRadius]           | <code>number</code>                                           | <code>0.5</code>                       |             |
 | [blurSharpness]        | <code>number</code>                                           | <code>10</code>                        |             |
 | [brightness]           | <code>number</code>                                           | <code>0</code>                         |             |
 | [contrast]             | <code>number</code>                                           | <code>1</code>                         | // SSAO     |
-| [bias]                 | <code>number</code>                                           | <code>0.001</code>                     | centimeters |
+| [bias]                 | <code>number</code>                                           | <code>0.001</code>                     | Centimeters |
 | [spiralTurns]          | <code>number</code>                                           | <code>7</code>                         | // GTAO     |
 | [slices]               | <code>number</code>                                           | <code>3</code>                         |             |
 | [colorBounce]          | <code>number</code>                                           | <code>true</code>                      |             |

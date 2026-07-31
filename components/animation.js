@@ -1,5 +1,6 @@
 /**
  * Animation component
+ *
  * @param {import("../types.js").AnimationComponentOptions} [options]
  * @returns {object}
  * @alias module:components.animation
