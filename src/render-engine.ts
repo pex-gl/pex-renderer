@@ -16,17 +16,12 @@ export default ({ ctx, debug = false }) => {
   const morphSystem = systems.morph();
   const transformSystem = systems.transform();
   const layerSystem = systems.layer();
-  const skyboxSystem = systems.skybox(options);
   const cameraSystem = systems.camera();
 
-  const helperSystem = systems.helper();
-  const reflectionProbeSystem = systems.reflectionProbe(options);
   const lightSystem = systems.light();
   const renderPipelineSystem = systems.renderPipeline(options);
 
-  const standardRendererSystem = systems.renderer.standard(options);
-  const lineRendererSystem = systems.renderer.line(options);
-  const skyboxRendererSystem = systems.renderer.skybox(options);
+  const basicRendererSystem = systems.renderer.basic(options);
 
   const renderEngine = {
     // debugMode,
@@ -51,19 +46,12 @@ export default ({ ctx, debug = false }) => {
       morphSystem,
       transformSystem,
       layerSystem,
-      skyboxSystem,
       cameraSystem,
 
-      helperSystem,
-      reflectionProbeSystem,
       lightSystem,
       renderPipelineSystem,
     ],
-    renderers: [
-      standardRendererSystem,
-      lineRendererSystem,
-      skyboxRendererSystem,
-    ],
+    renderers: [basicRendererSystem],
     update(entities, deltaTime) {
       const now = performance.now();
       this.deltaTime = deltaTime || (now - this._prevTime) / 1000;
@@ -76,7 +64,6 @@ export default ({ ctx, debug = false }) => {
       morphSystem.update(entities);
       transformSystem.update(entities);
       layerSystem.update(entities);
-      skyboxSystem.update(entities);
       cameraSystem.update(entities);
 
       for (let i = 0; i < this.renderers.length; i++) {
@@ -123,17 +110,10 @@ export default ({ ctx, debug = false }) => {
             renderEngine: this,
           };
 
-          const { entities: helperEntities } = helperSystem.update(
-            entitiesForCamera,
-            updateOptions,
-          );
-          reflectionProbeSystem.update(entitiesForCamera, {
-            renderers: [skyboxRendererSystem],
-          });
           lightSystem.update(entitiesForCamera);
 
           const framebufferTextures = renderPipelineSystem.update(
-            [...entitiesForCamera, ...helperEntities],
+            entitiesForCamera,
             updateOptions,
           );
           return framebufferTextures;

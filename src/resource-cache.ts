@@ -1,3 +1,5 @@
+import { createBuffer, createTexture, isGpuBuffer, isGpuTexture } from "pex-gpu";
+
 import { fullscreenTriangle, quad } from "./utils.js";
 
 // TODO: should this be an option
@@ -68,16 +70,52 @@ function getResourceFromCache(cache, props) {
   return null;
 }
 
-function getContextResource(ctx, cache, type, props, usage) {
+/**
+ * Allocate a 2D texture (color or depth render target). `pixelFormat` accepts a
+ * WGSL texture format string; filters live on samplers in WebGPU so min/mag are
+ * ignored here.
+ */
+const createTexture2D = (ctx, props) =>
+  createTexture(ctx, {
+    label: props.name,
+    width: props.width,
+    height: props.height,
+    format: props.pixelFormat || props.format || "rgba8unorm",
+    ...(props.sampleCount ? { sampleCount: props.sampleCount } : {}),
+    ...(props.mipmap ? { mipmap: true } : {}),
+  });
+
+// Type factories keyed by resource-cache type. Buffers/textures allocate real
+// GPU resources; pipelines are plain descriptors kept identity-stable so
+// pex-gpu's own pipeline cache hits across frames.
+const factories = {
+  texture2D: createTexture2D,
+  // MSAA/cubemap targets are only reached by not-yet-ported branches; provide
+  // working factories so descriptor construction and those paths don't throw.
+  renderbuffer: createTexture2D,
+  textureCube: (ctx, props) =>
+    createTexture(ctx, {
+      label: props.name,
+      width: props.width,
+      height: props.height,
+      format: props.pixelFormat || props.format || "rgba8unorm",
+      viewDimension: "cube",
+    }),
+  vertexBuffer: (ctx, props) =>
+    createBuffer(ctx, { usage: "vertex", data: props.data || props }),
+  indexBuffer: (ctx, props) =>
+    createBuffer(ctx, { usage: "index", data: props.data || props }),
+  pipeline: (_ctx, props) => ({ ...props }),
+};
+
+function getResource(ctx, cache, type, props, usage) {
   let resource = getResourceFromCache(cache, props);
   if (!resource) {
     resource = {
       type,
-      value: ctx[type](props),
+      value: factories[type](ctx, props),
       // TODO: this is problematic if we re-use descriptors
-      props: {
-        ...props,
-      },
+      props: { ...props },
       used: true,
       usage,
     };
@@ -87,13 +125,48 @@ function getContextResource(ctx, cache, type, props, usage) {
   return resource.value;
 }
 
+const isDisposable = (value) => isGpuTexture(value) || isGpuBuffer(value);
+
+/**
+ * Translate a pex-renderer pass description (color/depth textures, clear
+ * values) into a pex-gpu RenderPassDescriptor. Passes are plain objects with no
+ * GPU allocation, so they are built fresh rather than cached.
+ */
+function createPass(props) {
+  const pass = { label: props.name };
+
+  // A GpuTexture is passed straight through; an MSAA/cubemap wrapper carries
+  // its GpuTexture under `.texture` (its raw handle lives on GpuTexture.texture,
+  // so unwrapping unconditionally would drop the resolvable view).
+  if (props.color?.length) {
+    pass.colorAttachments = props.color.map((attachment, i) => ({
+      texture: isGpuTexture(attachment) ? attachment : attachment.texture,
+      ...(attachment.resolveTarget
+        ? { resolveTarget: attachment.resolveTarget }
+        : {}),
+      ...(props.clearColor && i === 0 ? { clearValue: props.clearColor } : {}),
+    }));
+  }
+
+  if (props.depth) {
+    pass.depthStencilAttachment = {
+      texture: isGpuTexture(props.depth) ? props.depth : props.depth.texture,
+      ...(props.clearDepth != null
+        ? { depthClearValue: props.clearDepth }
+        : {}),
+    };
+  }
+
+  return pass;
+}
+
 export default (ctx) => {
   const cache = [];
 
   const fullscreenTriangleProps = {
     attributes: {
       // prettier-ignore
-      aPosition: getContextResource(ctx, cache, "vertexBuffer", fullscreenTriangle.positions, Usage.Retained),
+      position: getResource(ctx, cache, "vertexBuffer", fullscreenTriangle.positions, Usage.Retained),
     },
     count: 3,
   };
@@ -108,10 +181,10 @@ export default (ctx) => {
   // prettier-ignore
   const fullscreenQuadProps = {
     attributes: {
-      aPosition: getContextResource(ctx, cache, "vertexBuffer", quad.positions, Usage.Retained),
-      aTexCoord0: getContextResource(ctx, cache, "vertexBuffer", quad.uvs, Usage.Retained),
+      position: getResource(ctx, cache, "vertexBuffer", quad.positions, Usage.Retained),
+      texCoord0: getResource(ctx, cache, "vertexBuffer", quad.uvs, Usage.Retained),
     },
-    indices: getContextResource(ctx, cache, "indexBuffer", quad.cells, Usage.Retained),
+    indices: getResource(ctx, cache, "indexBuffer", quad.cells, Usage.Retained),
   };
 
   cache.push({
@@ -125,23 +198,21 @@ export default (ctx) => {
     _cache: cache,
     Usage,
     texture2D: (props, usage) =>
-      getContextResource(ctx, cache, "texture2D", props, usage),
+      getResource(ctx, cache, "texture2D", props, usage),
     textureCube: (props, usage) =>
-      getContextResource(ctx, cache, "textureCube", props, usage),
+      getResource(ctx, cache, "textureCube", props, usage),
     renderbuffer: (props, usage) =>
-      getContextResource(ctx, cache, "renderbuffer", props, usage),
-    pass: (props, usage) =>
-      getContextResource(ctx, cache, "pass", props, usage),
+      getResource(ctx, cache, "renderbuffer", props, usage),
+    pass: (props) => createPass(props),
     pipeline: (props, usage) =>
-      getContextResource(ctx, cache, "pipeline", props, usage),
+      getResource(ctx, cache, "pipeline", props, usage),
     vertexBuffer: (props, usage) =>
-      getContextResource(ctx, cache, "vertexBuffer", props, usage),
+      getResource(ctx, cache, "vertexBuffer", props, usage),
     indexBuffer: (props, usage) =>
-      getContextResource(ctx, cache, "indexBuffer", props, usage),
+      getResource(ctx, cache, "indexBuffer", props, usage),
     fullscreenTriangle: () =>
       getResourceFromCache(cache, fullscreenTriangleProps).value,
-    fullscreenQuad: () =>
-      getResourceFromCache(cache, fullscreenQuadProps).value,
+    fullscreenQuad: () => getResourceFromCache(cache, fullscreenQuadProps).value,
     //TODO: add release for Retained resources
     // release() {}
     beginFrame() {
@@ -156,9 +227,7 @@ export default (ctx) => {
           cache[i].keepAlive = keepAliveCountdown;
         } else {
           if (--cache[i].keepAlive < 0) {
-            if (cache[i].value._dispose) {
-              ctx.dispose(cache[i].value);
-            }
+            if (isDisposable(cache[i].value)) cache[i].value.dispose();
             cache.splice(i, 1);
           }
         }
@@ -166,7 +235,7 @@ export default (ctx) => {
     },
     dispose() {
       for (let i = 0; i < cache.length; i++) {
-        if (cache[i].value._dispose) ctx.dispose(cache[i].value);
+        if (isDisposable(cache[i].value)) cache[i].value.dispose();
       }
       cache.length = 0;
     },

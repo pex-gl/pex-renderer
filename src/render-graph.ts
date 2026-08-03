@@ -1,3 +1,5 @@
+import { submit } from "pex-gpu";
+
 import { NAMESPACE } from "./utils.js";
 
 export default (ctx) => ({
@@ -16,50 +18,30 @@ export default (ctx) => ({
     const previousErrors = [...this.errors];
     this.errors.length = 0;
 
-    //TODO: this should be render view
     for (let i = 0; i < this.renderPasses.length; i++) {
-      const {
-        name,
-        pass,
-        renderView,
-        render,
-        uses = [],
-      } = this.renderPasses[i];
+      const { name, pass, render } = this.renderPasses[i];
 
-      ctx.submit(
-        {
-          name,
-          pass,
-          viewport: renderView.viewport,
-          scissor: renderView.viewport,
-        },
-        () => {
-          try {
-            for (let j = 0; j < uses.length; j++) {
-              const texture = uses[j];
-              //FIXME: mipmap generation should happen only once
-              if (texture.min === ctx.Filter.LinearMipmapLinear) {
-                ctx.update(texture, { mipmap: true });
-              }
-            }
-            if (render) render();
-          } catch (error) {
-            if (!(error instanceof Error)) error = new Error(error);
+      // Scoped submit keeps the render pass open so nested draw submits target
+      // it; an omitted pass renders to the canvas.
+      submit(ctx, { name, ...(pass ? { pass } : {}) }, () => {
+        try {
+          if (render) render();
+        } catch (error) {
+          if (!(error instanceof Error)) error = new Error(error);
 
-            const { message } = error;
-            if (!previousErrors.includes(message)) {
-              console.error(
-                NAMESPACE,
-                "render-graph",
-                `Render Pass "${name}" crashed.`,
-                error,
-                pass,
-              );
-            }
-            this.errors.push(message);
+          const { message } = error;
+          if (!previousErrors.includes(message)) {
+            console.error(
+              NAMESPACE,
+              "render-graph",
+              `Render Pass "${name}" crashed.`,
+              error,
+              pass,
+            );
           }
-        },
-      );
+          this.errors.push(message);
+        }
+      });
     }
   },
 });

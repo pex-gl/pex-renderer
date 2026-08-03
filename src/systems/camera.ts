@@ -53,7 +53,7 @@ function updateCameraProjection(camera, transform) {
       bottom = top - scaleH * (camera.view.size[1] / zoomH);
     }
 
-    mat4.ortho(
+    mat4.orthoZO(
       camera.projectionMatrix,
       left,
       right,
@@ -82,7 +82,7 @@ function updateCameraProjection(camera, transform) {
         top - (camera.view.offset[1] + camera.view.size[1]) * heightNormalized;
       const t = top - camera.view.offset[1] * heightNormalized;
 
-      mat4.frustum(
+      mat4.frustumZO(
         camera.projectionMatrix,
         l,
         r,
@@ -92,7 +92,7 @@ function updateCameraProjection(camera, transform) {
         camera.far,
       );
     } else {
-      mat4.perspective(
+      mat4.perspectiveZO(
         camera.projectionMatrix,
         camera.fov,
         camera.aspect,

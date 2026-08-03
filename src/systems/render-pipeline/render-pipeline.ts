@@ -1,9 +1,10 @@
 import { utils } from "pex-math";
 import { parser as ShaderParser } from "pex-shaders";
+import { submit, createSampler } from "pex-gpu";
 
 import addDescriptors from "./descriptors.js";
 import shadowMappingPipelineMethods from "./shadow-mapping.js";
-import postProcessingPipelineMethods from "./post-processing.js";
+// import postProcessingPipelineMethods from "./post-processing.js";
 import cullingPipelineMethods from "./culling.js";
 import { getDefaultViewport } from "../../utils.js";
 
@@ -33,10 +34,13 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
 
   descriptors: addDescriptors(ctx),
 
+  // Sampler for the fullscreen blit of the HDR main pass target to the canvas.
+  blitSampler: createSampler(ctx, { filter: "linear" }),
+
   outputs: new Set(["color", "depth"]), // "normal", "emissive"
 
   ...shadowMappingPipelineMethods({ renderGraph, resourceCache }),
-  ...postProcessingPipelineMethods({ ctx, renderGraph, resourceCache }),
+  // ...postProcessingPipelineMethods({ ctx, renderGraph, resourceCache }),
   ...cullingPipelineMethods({ renderGraph, resourceCache }),
 
   getAttachmentsLocations(colorAttachments) {
@@ -289,7 +293,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
         name: "mainPass",
         color: Object.values(msaa ? colorAttachmentsMSAA : colorAttachments),
         depth: msaa ? depthAttachmentMSAA : depthAttachment,
-        clearColor: renderView.camera.clearColor,
+        clearColor: renderView.camera.clearColor ?? [0, 0, 0, 1],
         clearDepth: 1,
       }),
       render: () => {
@@ -517,16 +521,11 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
     if (drawToScreen !== false) {
       const fullscreenTriangle = resourceCache.fullscreenTriangle();
 
-      // TODO: cache
-      const pipelineDesc = { ...this.descriptors.blit.pipelineDesc };
-      pipelineDesc.vert = ShaderParser.build(ctx, pipelineDesc.vert);
-      pipelineDesc.frag = ShaderParser.build(ctx, pipelineDesc.frag);
-
       const blitCmd = {
         name: "drawBlitFullScreenTriangleCmd",
         attributes: fullscreenTriangle.attributes,
         count: fullscreenTriangle.count,
-        pipeline: resourceCache.pipeline(pipelineDesc),
+        pipeline: resourceCache.pipeline(this.descriptors.blit.pipelineDesc),
       };
 
       renderGraph.renderPass({
@@ -534,9 +533,11 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
         uses: [colorAttachments.color],
         renderView,
         render: () => {
-          ctx.submit(blitCmd, {
+          submit(ctx, {
+            ...blitCmd,
             uniforms: {
               uTexture: colorAttachments.color,
+              uSampler: this.blitSampler,
             },
           });
         },

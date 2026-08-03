@@ -405,7 +405,7 @@
 // System
 /**
  * @typedef {object} SystemOptions
- * @property {import("pex-context/types/index.js")} ctx
+ * @property {import("pex-gpu").GpuContext} ctx
  * @property {ResourceCache} [resourceCache]
  * @property {RenderGraph} [renderGraph]
  */
@@ -527,7 +527,7 @@
  * @typedef {object} RenderView
  * @property {object} camera
  * @property {Entity} cameraEntity
- * @property {import("pex-context/types/types").Viewport} viewport
+ * @property {number[]} viewport [x, y, width, height]
  */
 
 export {};

@@ -1,12 +1,20 @@
 import { mat4 } from "pex-math";
 import {
   pipeline,
-  reflectionProbe as SHADERS,
+  // reflectionProbe as SHADERS,
   parser as ShaderParser,
 } from "pex-shaders";
 
 import hammersley from "hammersley";
 import { CUBEMAP_SIDES } from "../utils.js";
+
+const SHADERS = {
+  cubemapToOctMap: { frag: "" },
+  convolveOctMapAtlasToOctMap: { frag: "" },
+  blitToOctMapAtlas: { frag: "" },
+  downsampleFromOctMapAtlas: { frag: "" },
+  prefilterFromOctMapAtlas: { frag: "" },
+};
 
 const IRRADIANCE_OCT_MAP_SIZE = 64;
 

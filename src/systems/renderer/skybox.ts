@@ -1,8 +1,12 @@
 import { mat4 } from "pex-math";
-import { skybox as SHADERS } from "pex-shaders";
+// import { skybox as SHADERS } from "pex-shaders";
 
 import createBaseSystem from "./base.js";
 import { NAMESPACE, TEMP_MAT4 } from "../../utils.js";
+
+const SHADERS = {
+  skybox: { vert: "", frag: "" },
+};
 
 // Impacts program caching
 // prettier-ignore

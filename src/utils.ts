@@ -57,12 +57,7 @@ const CUBEMAP_SIDES = [
   { eye: [0, 0, 0], target: [0, 0, -1], up: [0, -1, 0], color: [0, 0, 0.5, 1], projectionMatrix: CUBEMAP_PROJECTION_MATRIX },
 ];
 
-const getDefaultViewport = (ctx) => [
-  0,
-  0,
-  ctx.gl.drawingBufferWidth,
-  ctx.gl.drawingBufferHeight,
-];
+const getDefaultViewport = (ctx) => [0, 0, ctx.width, ctx.height];
 
 const getFileExtension = (path) => {
   return (path?.match(/[^\\/]\.([^.\\/]+)$/) || [null]).pop();

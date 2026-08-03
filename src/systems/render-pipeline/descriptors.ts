@@ -1,23 +1,52 @@
 import { pipeline as SHADERS } from "pex-shaders";
 import { CUBEMAP_SIDES } from "../../utils.js";
 
+// Fullscreen-triangle blit: samples the linear HDR main pass target and encodes
+// to sRGB for the canvas. WebGPU texture origin is top-left, so uv.y is flipped
+// relative to the clip-space triangle.
+const BLIT_WGSL = /* wgsl */ `
+struct Varyings {
+  @builtin(position) position: vec4f,
+  @location(0) uv: vec2f,
+}
+
+@vertex
+fn vertexMain(@location(0) position: vec2f) -> Varyings {
+  var output: Varyings;
+  output.position = vec4f(position, 0.0, 1.0);
+  output.uv = vec2f(position.x * 0.5 + 0.5, 0.5 - position.y * 0.5);
+  return output;
+}
+
+@group(0) @binding(0) var uTexture: texture_2d<f32>;
+@group(0) @binding(1) var uSampler: sampler;
+
+fn linearToSrgb(c: vec3f) -> vec3f {
+  let lower = c * 12.92;
+  let higher = 1.055 * pow(c, vec3f(1.0 / 2.4)) - 0.055;
+  return select(higher, lower, c < vec3f(0.0031308));
+}
+
+@fragment
+fn fragmentMain(input: Varyings) -> @location(0) vec4f {
+  let color = textureSample(uTexture, uSampler, input.uv);
+  return vec4f(linearToSrgb(color.rgb), color.a);
+}
+`;
+
 export default (ctx) => ({
   directionalLightShadows: {
     colorMapDesc: {
       name: "directionalLightColorMap",
       width: 2048,
       height: 2048,
-      pixelFormat: ctx.PixelFormat.RGBA8,
-      min: ctx.Filter.Linear,
-      mag: ctx.Filter.Linear,
+      pixelFormat: "rgba8unorm",
     },
     shadowMapDesc: {
       name: "directionalLightShadowMap",
       width: 2048,
       height: 2048,
-      pixelFormat: ctx.PixelFormat.DEPTH_COMPONENT24,
-      min: ctx.Filter.Nearest,
-      mag: ctx.Filter.Nearest,
+      pixelFormat: "depth24plus",
     },
     pass: {
       name: "directionalLightShadowMappingPass",
@@ -32,17 +61,13 @@ export default (ctx) => ({
       name: "spotLightColorMap",
       width: 2048,
       height: 2048,
-      pixelFormat: ctx.PixelFormat.RGBA8,
-      min: ctx.Filter.Linear,
-      mag: ctx.Filter.Linear,
+      pixelFormat: "rgba8unorm",
     },
     shadowMapDesc: {
       name: "spotLightShadowMap",
       width: 2048,
       height: 2048,
-      pixelFormat: ctx.PixelFormat.DEPTH_COMPONENT24,
-      min: ctx.Filter.Nearest,
-      mag: ctx.Filter.Nearest,
+      pixelFormat: "depth24plus",
     },
     pass: {
       name: "spotLightShadowMappingPass",
@@ -57,26 +82,18 @@ export default (ctx) => ({
       name: "pointLightShadowCubemap",
       width: 2048,
       height: 2048,
-      pixelFormat: ctx.PixelFormat.RGBA8,
-      min: ctx.Filter.Linear,
-      mag: ctx.Filter.Linear,
+      pixelFormat: "rgba8unorm",
     },
     shadowMapDesc: {
       name: "pointLightShadowMap",
       width: 2048,
       height: 2048,
-      pixelFormat: ctx.PixelFormat.DEPTH_COMPONENT24,
-      min: ctx.Filter.Nearest,
-      mag: ctx.Filter.Nearest,
+      pixelFormat: "depth24plus",
     },
     cubemapSides: structuredClone(CUBEMAP_SIDES),
     passes: CUBEMAP_SIDES.map((side, i) => ({
       name: `pointLightShadowMappingSide${i}`,
-      color: [
-        {
-          target: ctx.gl.TEXTURE_CUBE_MAP_POSITIVE_X + i,
-        },
-      ],
+      color: [{ target: i }],
       depth: null,
       clearColor: side.color,
       clearDepth: 1,
@@ -87,17 +104,13 @@ export default (ctx) => ({
       name: "mainPassColorTexture",
       width: 1,
       height: 1,
-      pixelFormat: ctx.PixelFormat.RGBA16F,
-      min: ctx.Filter.Linear,
-      mag: ctx.Filter.Linear,
+      pixelFormat: "rgba16float",
     },
     outputDepthTextureDesc: {
       name: "mainPassDepthTexture",
       width: 1,
       height: 1,
-      pixelFormat: ctx.PixelFormat.DEPTH_COMPONENT24,
-      min: ctx.Filter.Nearest,
-      mag: ctx.Filter.Nearest,
+      pixelFormat: "depth24plus",
     },
     pass: {
       color: [],
@@ -108,10 +121,7 @@ export default (ctx) => ({
       name: "grabPassColorCopyTexture",
       width: 1,
       height: 1,
-      pixelFormat: ctx.PixelFormat.RGBA16F,
-      min: ctx.Filter.LinearMipmapLinear,
-      // min: ctx.Filter.Linear,
-      mag: ctx.Filter.Linear,
+      pixelFormat: "rgba16float",
       mipmap: true,
     },
     copyTexturePipelineDesc: {
@@ -126,29 +136,12 @@ varying vec2 vTexCoord0;
 
 void main() {
   gl_FragColor = texture2D(uTexture, vTexCoord0);
-  // gl_FragColor.rgb = vec3(
-  //   max(
-  //     max(gl_FragColor.r, gl_FragColor.g),
-  //     gl_FragColor.b)
-  // );
 }`,
     },
   },
   postProcessing: {
-    outputTextureDesc: {
-      pixelFormat: ctx.capabilities.textureHalfFloat
-        ? ctx.PixelFormat.RGBA16F
-        : ctx.PixelFormat.RGBA8,
-      min: ctx.Filter.Linear,
-      mag: ctx.Filter.Linear,
-    },
-    srgbOutputTextureDesc: {
-      pixelFormat: ctx.capabilities.sRGB
-        ? ctx.PixelFormat.SRGB8_ALPHA8
-        : ctx.PixelFormat.RGBA8,
-      min: ctx.Filter.Linear,
-      mag: ctx.Filter.Linear,
-    },
+    outputTextureDesc: { pixelFormat: "rgba16float" },
+    srgbOutputTextureDesc: { pixelFormat: "rgba8unorm-srgb" },
   },
   reversibleToneMap: {
     pipelineDesc: {
@@ -158,8 +151,9 @@ void main() {
   },
   blit: {
     pipelineDesc: {
-      vert: SHADERS.blit.vert,
-      frag: SHADERS.blit.frag,
+      vertex: BLIT_WGSL,
+      fragment: BLIT_WGSL,
+      depthWriteEnabled: false,
     },
   },
 });

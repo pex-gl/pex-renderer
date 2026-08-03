@@ -1,5 +1,10 @@
 import { vec3 } from "pex-math";
-import { skybox, parser as ShaderParser } from "pex-shaders";
+// import { skybox, parser as ShaderParser } from "pex-shaders";
+import { parser as ShaderParser } from "pex-shaders";
+
+const skybox = {
+  skyEnvMap: { vert: "", frag: "" },
+};
 
 const parameters = [
   "turbidity",

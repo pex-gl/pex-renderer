@@ -1,29 +1,26 @@
+import { mat3 } from "pex-math";
+import { submit } from "pex-gpu";
 import { pipeline as SHADERS } from "pex-shaders";
 
 import createBaseSystem from "./base.js";
 
-// Impacts program caching
-// prettier-ignore
-const flagDefinitions = [
-  [["options", "attachmentsLocations", "color"], "LOCATION_COLOR", { type: "value" }],
-  [["options", "attachmentsLocations", "normal"], "LOCATION_NORMAL", { type: "value" }],
-  [["options", "attachmentsLocations", "emissive"], "LOCATION_EMISSIVE", { type: "value" }],
-  [["options", "msaa"], "USE_MSAA"],
+// Reused per draw: uniforms are packed synchronously at submit(), so a single
+// scratch matrix is safe across entities within a frame. Unused by the unlit
+// shader but part of the shared Model uniform struct layout.
+const NORMAL_MATRIX = mat3.create();
 
-  [["material", "blend"], "USE_BLEND"],
-  [["material", "baseColor"], "", { uniform: "uBaseColor" }],
-  [["_geometry", "attributes", "aOffset"], "USE_INSTANCED_OFFSET"],
-  [["_geometry", "attributes", "aScale"], "USE_INSTANCED_SCALE"],
-  [["_geometry", "attributes", "aRotation"], "USE_INSTANCED_ROTATION"],
-  [["_geometry", "attributes", "aColor"], "USE_INSTANCED_COLOR"],
-  [["_geometry", "attributes", "aVertexColor"], "USE_VERTEX_COLORS"],
-];
-
-// Impacts pipeline caching
-const pipelineMaterialProps = ["id", "blend"];
+// Premultiplied "over" blend, matching the previous One / OneMinusSrcAlpha setup.
+const ALPHA_BLEND = {
+  color: { srcFactor: "one", dstFactor: "one-minus-src-alpha" },
+  alpha: { srcFactor: "one", dstFactor: "one-minus-src-alpha" },
+};
 
 /**
  * Basic renderer
+ *
+ * Unlit draw path built on pex-shaders' `basic` WGSL generator. Uniforms follow
+ * the shared bind group struct convention: @group(0) Frame, @group(2) Material,
+ * @group(3) Model.
  *
  * @param {import("../../types.js").SystemOptions} options
  * @returns {import("../../types.js").RendererSystem}
@@ -33,35 +30,37 @@ export default ({ ctx }) => ({
   ...createBaseSystem(),
   type: "basic-renderer",
   debug: false,
-  flagDefinitions,
-  getVertexShader: () => SHADERS.basic.vert,
-  getFragmentShader: () => SHADERS.basic.frag,
-  getPipelineHash(entity) {
-    return this.getHashFromProps(
-      entity.material,
-      pipelineMaterialProps,
-      this.debug,
-    );
+  getShader: (defines, options) => SHADERS.basic(defines, options),
+  getDefines(entity) {
+    const defines = new Set();
+    const { attributes } = entity._geometry;
+    if (attributes.offset) defines.add("USE_INSTANCED_OFFSET");
+    if (attributes.scale) defines.add("USE_INSTANCED_SCALE");
+    if (attributes.rotation) defines.add("USE_INSTANCED_ROTATION");
+    if (attributes.instanceColor) defines.add("USE_INSTANCED_COLOR");
+    if (attributes.vertexColor) defines.add("USE_VERTEX_COLORS");
+    return defines;
+  },
+  getVariantKey(entity, defines) {
+    return `${[...defines].sort().join("|")}_${entity.material.blend ? 1 : 0}`;
   },
   getPipelineOptions(entity) {
+    const { material } = entity;
     return {
-      depthWrite: !entity.material.blend,
-      depthTest: true,
-      ...(entity.material.blend
-        ? {
-            blend: true,
-            blendSrcRGBFactor: ctx.BlendFactor.One,
-            blendSrcAlphaFactor: ctx.BlendFactor.One,
-            blendDstRGBFactor: ctx.BlendFactor.OneMinusSrcAlpha,
-            blendDstAlphaFactor: ctx.BlendFactor.OneMinusSrcAlpha,
-          }
-        : {}),
+      depthWriteEnabled: material.depthWrite !== false && !material.blend,
+      cullMode: (material.cullFace ?? true) ? "back" : "none",
+      ...(material.blend ? { blend: ALPHA_BLEND } : {}),
     };
   },
   render(renderView, entities, options) {
-    const sharedUniforms = {
-      uProjectionMatrix: renderView.camera.projectionMatrix,
-      uViewMatrix: renderView.camera.viewMatrix,
+    const { camera, cameraEntity, viewport } = renderView;
+
+    const uFrame = {
+      projectionMatrix: camera.projectionMatrix,
+      viewMatrix: camera.viewMatrix,
+      inverseViewMatrix: camera.invViewMatrix || camera.inverseViewMatrix,
+      cameraPosition: cameraEntity._transform.worldPosition,
+      viewportSize: [viewport[2], viewport[3]],
     };
 
     const renderableEntities = entities.filter(
@@ -75,22 +74,28 @@ export default ({ ctx }) => ({
     for (let i = 0; i < renderableEntities.length; i++) {
       const entity = renderableEntities[i];
 
-      // Also computes this.uniforms
       const pipeline = this.getPipeline(ctx, entity, options);
 
-      const uniforms = { uModelMatrix: entity._transform.modelMatrix };
-      Object.assign(uniforms, sharedUniforms, this.uniforms);
-
-      ctx.submit({
+      submit(ctx, {
         name: options.transparent
           ? "drawTransparentBasicGeometryCmd"
           : "drawBasicGeometryCmd",
         pipeline,
         attributes: entity._geometry.attributes,
         indices: entity._geometry.indices,
-        instances: entity._geometry.instances,
-        uniforms,
-        multiDraw: entity.geometry.multiDraw,
+        count: entity._geometry.count,
+        instanceCount: entity._geometry.instances,
+        uniforms: {
+          uFrame,
+          uModel: {
+            modelMatrix: entity._transform.modelMatrix,
+            normalMatrix: mat3.fromMat4(
+              NORMAL_MATRIX,
+              entity._transform.modelMatrix,
+            ),
+          },
+          uMaterial: { baseColor: entity.material.baseColor },
+        },
       });
     }
   },
