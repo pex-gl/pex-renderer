@@ -1,0 +1,30 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "declaration": true,
+    "declarationDir": "types",
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "lib": [
+      "DOM",
+      "ES2023",
+      "ESNext"
+    ],
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "outDir": "lib",
+    "rootDir": "./src",
+    "sourceMap": true,
+    "strict": true,
+    "strictFunctionTypes": true,
+    "target": "es2023",
+    "declarationMap": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+    "verbatimModuleSyntax": true,
+    "skipLibCheck": true
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "web_modules", "**/*.spec.ts"]
+}
