@@ -74,7 +74,15 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
         });
       }
     } else {
-      if (!transparent) {
+      if (transparent) {
+        for (let i = 0; i < renderers.length; i++) {
+          renderers[i].renderTransparent?.(
+            renderView,
+            this.cullEntities(entitiesInView, renderView.camera),
+            options,
+          );
+        }
+      } else {
         for (let i = 0; i < renderers.length; i++) {
           renderers[i].renderOpaque?.(
             renderView,
@@ -98,14 +106,6 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
             );
           }
         }
-      } else {
-        for (let i = 0; i < renderers.length; i++) {
-          renderers[i].renderTransparent?.(
-            renderView,
-            this.cullEntities(entitiesInView, renderView.camera),
-            options,
-          );
-        }
       }
     }
   },
@@ -118,10 +118,10 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
     const shadowCastingEntities = entities.filter(
       (entity) => entity.geometry && entity.material?.castShadows,
     );
-    const cameraEntities = entities.filter((entity) => entity.camera);
+    const cameraEntity = entities.find((entity) => entity.camera);
 
     renderView ||= {
-      camera: cameraEntities[0].camera,
+      camera: cameraEntity.camera,
       viewport: getDefaultViewport(ctx),
     };
     const postProcessing = renderView.cameraEntity.postProcessing;
@@ -186,7 +186,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
       );
     }
 
-    for (let name of Object.keys(colorAttachments)) {
+    for (const name of Object.keys(colorAttachments)) {
       const texture = colorAttachments[name];
       texture.name = `mainPass${name} (id: ${texture.id})`;
 
@@ -535,6 +535,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
         render: () => {
           submit(ctx, {
             ...blitCmd,
+            viewport: renderView.viewport,
             uniforms: {
               uTexture: colorAttachments.color,
               uSampler: this.blitSampler,
@@ -563,10 +564,10 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
     for (let i = 0; i < entities.length; i++) {
       const entity = entities[i];
       if (entity.material) {
-        for (let property of Object.values(entity.material)) {
+        for (const property of Object.values(entity.material)) {
           if (
             property?.class === "texture" &&
-            ctx.resources.indexOf(property) !== -1
+            ctx.resources.includes(property)
           ) {
             ctx.dispose(property);
           }

@@ -44,7 +44,7 @@ const fullscreenTriangle = {
 };
 
 const CUBEMAP_PROJECTION_MATRIX = Object.freeze(
-  mat4.perspective(mat4.create(), Math.PI / 2, 1, 0.1, 100),
+  mat4.perspectiveZO(mat4.create(), Math.PI / 2, 1, 0.1, 100),
 );
 
 // prettier-ignore
@@ -56,6 +56,41 @@ const CUBEMAP_SIDES = [
   { eye: [0, 0, 0], target: [0, 0, 1], up: [0, -1, 0], color: [0, 0, 1, 1], projectionMatrix: CUBEMAP_PROJECTION_MATRIX },
   { eye: [0, 0, 0], target: [0, 0, -1], up: [0, -1, 0], color: [0, 0, 0.5, 1], projectionMatrix: CUBEMAP_PROJECTION_MATRIX },
 ];
+
+// View + projection for rendering into cube face `face` from `position`. `face`
+// is 0..5 in CUBEMAP_SIDES order (+X, -X, +Y, -Y, +Z, -Z), matching WebGPU cube
+// array-layer order.
+//
+// The projection Y is flipped: WebGPU's top-left texture origin is opposite the
+// depth-cube sampler's top-down t axis, and a cube is addressed by direction so
+// it can't be corrected at sample time the way a 2D map is (v = 0.5 - ndc.y*0.5).
+// This is a pure t flip — s stays correct, unlike negating the view up vectors.
+// It reverses winding, so cube passes must disable culling.
+//
+// WebGPU has no negative-viewport equivalent (unlike Vulkan), so this lives here
+// rather than in the GPU wrapper. Shared by all render-to-cube paths.
+const getCubeFaceCamera = (
+  face,
+  position,
+  near,
+  far,
+  viewMatrix = mat4.create(),
+  projectionMatrix = mat4.create(),
+) => {
+  const { target, up } = CUBEMAP_SIDES[face];
+
+  mat4.lookAt(
+    viewMatrix,
+    position,
+    vec3.add(vec3.set(TEMP_VEC3, target), position),
+    up,
+  );
+
+  mat4.perspectiveZO(projectionMatrix, Math.PI / 2, 1, near, far);
+  projectionMatrix[5] *= -1;
+
+  return { viewMatrix, projectionMatrix };
+};
 
 const getDefaultViewport = (ctx) => [0, 0, ctx.width, ctx.height];
 
@@ -103,6 +138,7 @@ export {
   fullscreenTriangle,
   CUBEMAP_PROJECTION_MATRIX,
   CUBEMAP_SIDES,
+  getCubeFaceCamera,
   getDefaultViewport,
   getFileExtension,
   getDirname,

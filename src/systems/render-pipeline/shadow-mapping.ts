@@ -1,7 +1,12 @@
 import { vec3, mat4 } from "pex-math";
 import { aabb } from "pex-geom";
 
-import { NAMESPACE, TEMP_VEC3 } from "../../utils.js";
+import {
+  NAMESPACE,
+  TEMP_VEC3,
+  TEMP_BOUNDS_POINTS,
+  getCubeFaceCamera,
+} from "../../utils.js";
 
 const MIN_NEAR = 0.01;
 
@@ -26,13 +31,13 @@ export default ({ renderGraph, resourceCache }) => ({
         NAMESPACE,
         `"${this.type}" light entity missing transform. Add a transformSystem.update(entities).`,
       );
-    } else if (!light._projectionMatrix) {
+    } else if (light._projectionMatrix) {
+      return true;
+    } else {
       console.warn(
         NAMESPACE,
         `"${this.type}" light component missing matrices. Add a lightSystem.update(entities).`,
       );
-    } else {
-      return true;
     }
   },
   computeLightProperties(lightEntity, light, shadowCastingEntities) {
@@ -62,25 +67,52 @@ export default ({ renderGraph, resourceCache }) => ({
           (lightEntity.areaLight ? lightEntity.transform.scale[1] : 1)),
     ];
   },
+  // Radial near/far for a point light's cube projection, derived from the scene
+  // bounds relative to the light (scene-adaptive, nothing hardcoded).
+  computePointLightProperties(lightEntity, light, bboxEntities) {
+    const lightPosition = lightEntity._transform.worldPosition;
+
+    light._sceneBbox ??= aabb.create();
+    aabb.empty(light._sceneBbox);
+    for (let i = 0; i < bboxEntities.length; i++) {
+      aabb.includeAABB(light._sceneBbox, bboxEntities[i].transform.worldBounds);
+    }
+
+    // Farthest scene corner sets far; nearest point on the box sets near.
+    aabb.getCorners(light._sceneBbox, TEMP_BOUNDS_POINTS);
+    let far = MIN_NEAR;
+    for (let i = 0; i < TEMP_BOUNDS_POINTS.length; i++) {
+      far = Math.max(far, vec3.distance(lightPosition, TEMP_BOUNDS_POINTS[i]));
+    }
+
+    TEMP_VEC3[0] = Math.max(
+      light._sceneBbox[0][0],
+      Math.min(lightPosition[0], light._sceneBbox[1][0]),
+    );
+    TEMP_VEC3[1] = Math.max(
+      light._sceneBbox[0][1],
+      Math.min(lightPosition[1], light._sceneBbox[1][1]),
+    );
+    TEMP_VEC3[2] = Math.max(
+      light._sceneBbox[0][2],
+      Math.min(lightPosition[2], light._sceneBbox[1][2]),
+    );
+
+    light._near = Math.max(MIN_NEAR, vec3.distance(lightPosition, TEMP_VEC3));
+    light._far = Math.max(light._near + MIN_NEAR, far);
+  },
   getLightAttachments(light, descriptor, cubemap) {
-    let { colorMapDesc, shadowMapDesc } = descriptor;
+    const { shadowMapDesc } = descriptor;
 
-    colorMapDesc.width =
-      colorMapDesc.height =
-      shadowMapDesc.width =
-      shadowMapDesc.height =
-        light.shadowMapSize;
+    shadowMapDesc.width = shadowMapDesc.height = light.shadowMapSize;
 
-    //TODO: can this be all done at once?
-    const colorMap = cubemap
-      ? resourceCache.textureCube(colorMapDesc)
-      : resourceCache.texture2D(colorMapDesc);
-    colorMap.name = `tempColorMap (id: ${colorMap.id})`;
-
-    const shadowMap = resourceCache.texture2D(shadowMapDesc);
+    // Modern shadow maps are sampleable depth textures; there is no color map.
+    const shadowMap = cubemap
+      ? resourceCache.textureCube(shadowMapDesc)
+      : resourceCache.texture2D(shadowMapDesc);
     shadowMap.name = `shadowMap (id: ${shadowMap.id})`;
 
-    return { color: colorMap, depth: shadowMap };
+    return { depth: shadowMap };
   },
 
   renderDirectionalLightShadowMap(
@@ -92,14 +124,20 @@ export default ({ renderGraph, resourceCache }) => ({
   ) {
     const light = lightEntity.directionalLight;
 
-    this.computeLightProperties(lightEntity, light, shadowCastingEntities);
+    // Frustum must cover receivers too, not just casters: a hardware depth
+    // comparison shadows anything whose clip depth falls outside [near, far].
+    this.computeLightProperties(
+      lightEntity,
+      light,
+      entities.filter((e) => e.geometry && e.material),
+    );
 
-    const { color, depth } = this.getLightAttachments(
+    const { depth } = this.getLightAttachments(
       light,
       this.descriptors.directionalLightShadows,
     );
 
-    mat4.ortho(
+    mat4.orthoZO(
       light._projectionMatrix,
       light._sceneBboxInLightSpace[0][0],
       light._sceneBboxInLightSpace[1][0],
@@ -122,7 +160,7 @@ export default ({ renderGraph, resourceCache }) => ({
       pass: resourceCache.pass({
         // TODO: creating new descriptor to force new pass from cache
         ...this.descriptors.directionalLightShadows.pass,
-        color: [color],
+        color: [],
         depth,
       }),
       renderView,
@@ -153,14 +191,19 @@ export default ({ renderGraph, resourceCache }) => ({
   ) {
     const light = lightEntity.spotLight || lightEntity.areaLight;
 
-    this.computeLightProperties(lightEntity, light, shadowCastingEntities);
+    // Frustum must cover receivers too (see renderDirectionalLightShadowMap).
+    this.computeLightProperties(
+      lightEntity,
+      light,
+      entities.filter((e) => e.geometry && e.material),
+    );
 
-    const { color, depth } = this.getLightAttachments(
+    const { depth } = this.getLightAttachments(
       light,
       this.descriptors.spotLightShadows,
     );
 
-    mat4.perspective(
+    mat4.perspectiveZO(
       light._projectionMatrix,
       light.angle ? 2 * light.angle : Math.PI / 2,
       depth.width / depth.height,
@@ -181,7 +224,7 @@ export default ({ renderGraph, resourceCache }) => ({
       pass: resourceCache.pass({
         // TODO: creating new descriptor to force new pass from cache
         ...this.descriptors.spotLightShadows.pass,
-        color: [color],
+        color: [],
         depth: depth,
       }),
       renderView,
@@ -210,30 +253,42 @@ export default ({ renderGraph, resourceCache }) => ({
   ) {
     const light = lightEntity.pointLight;
 
-    const { color, depth } = this.getLightAttachments(
+    const { depth } = this.getLightAttachments(
       light,
       this.descriptors.pointLightShadows,
       true,
     );
 
+    this.computePointLightProperties(
+      lightEntity,
+      light,
+      entities.filter((e) => e.geometry && e.material),
+    );
+
+    const lightPosition = lightEntity._transform.worldPosition;
+    // Projection (90° cube face, per-light near/far to match the shader) is
+    // identical across faces and reused; the per-face view must be a distinct
+    // allocation because the render graph defers passes and reads each at endFrame.
+    const projectionMatrix = mat4.create();
+
     for (let i = 0; i < this.descriptors.pointLightShadows.passes.length; i++) {
       const pass = this.descriptors.pointLightShadows.passes[i];
       //TODO: need to create new descriptor to get uniq
       const passDesc = { ...pass };
-      passDesc.color = [{ texture: color, target: passDesc.color[0].target }];
-      passDesc.depth = depth;
+      passDesc.color = [];
+      // Render into a single cube face of the depth texture.
+      passDesc.depth = { texture: depth, target: i };
 
-      const side = this.descriptors.pointLightShadows.cubemapSides[i];
+      const { viewMatrix } = getCubeFaceCamera(
+        i,
+        lightPosition,
+        light._near,
+        light._far,
+        mat4.create(),
+        projectionMatrix,
+      );
       const renderView = {
-        camera: {
-          projectionMatrix: side.projectionMatrix,
-          viewMatrix: mat4.lookAt(
-            mat4.create(), // This can't be GC as assigned in light._viewMatrix for multi-view
-            vec3.add([...side.eye], lightEntity._transform.worldPosition),
-            vec3.add([...side.target], lightEntity._transform.worldPosition),
-            side.up,
-          ),
-        },
+        camera: { projectionMatrix, viewMatrix },
         viewport: [0, 0, depth.width, depth.height],
       };
 
@@ -243,8 +298,8 @@ export default ({ renderGraph, resourceCache }) => ({
         renderView,
         render: () => {
           //why?
-          light._shadowCubemap = color; // TODO: we borrow it for a frame
-          light._projectionMatrix = side.projectionMatrix;
+          light._shadowCubemap = depth; // TODO: we borrow it for a frame
+          light._projectionMatrix = projectionMatrix;
           light._viewMatrix = renderView.camera.viewMatrix;
 
           this.drawMeshes({
@@ -259,6 +314,6 @@ export default ({ renderGraph, resourceCache }) => ({
       });
     }
 
-    light._shadowCubemap = color; // TODO: we borrow it for a frame
+    light._shadowCubemap = depth; // TODO: we borrow it for a frame
   },
 });

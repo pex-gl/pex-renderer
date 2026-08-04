@@ -1,4 +1,9 @@
-import { createBuffer, createTexture, isGpuBuffer, isGpuTexture } from "pex-gpu";
+import {
+  createBuffer,
+  createTexture,
+  isGpuBuffer,
+  isGpuTexture,
+} from "pex-gpu";
 
 import { fullscreenTriangle, quad } from "./utils.js";
 
@@ -98,6 +103,7 @@ const factories = {
       label: props.name,
       width: props.width,
       height: props.height,
+      depth: 6,
       format: props.pixelFormat || props.format || "rgba8unorm",
       viewDimension: "cube",
     }),
@@ -137,23 +143,51 @@ function createPass(props) {
 
   // A GpuTexture is passed straight through; an MSAA/cubemap wrapper carries
   // its GpuTexture under `.texture` (its raw handle lives on GpuTexture.texture,
-  // so unwrapping unconditionally would drop the resolvable view).
-  if (props.color?.length) {
-    pass.colorAttachments = props.color.map((attachment, i) => ({
-      texture: isGpuTexture(attachment) ? attachment : attachment.texture,
-      ...(attachment.resolveTarget
-        ? { resolveTarget: attachment.resolveTarget }
-        : {}),
-      ...(props.clearColor && i === 0 ? { clearValue: props.clearColor } : {}),
-    }));
+  // so unwrapping unconditionally would drop the resolvable view). An explicit
+  // empty array marks a depth-only pass (vs. undefined = default to canvas).
+  if (props.color) {
+    pass.colorAttachments = props.color.map((attachment, i) => {
+      const texture = isGpuTexture(attachment)
+        ? attachment
+        : attachment.texture;
+      return {
+        texture,
+        // Cubemap/array face: render into a single layer (eg. shadow cubemaps).
+        ...(attachment.target != null && {
+          view: texture.texture.createView({
+            dimension: "2d",
+            baseArrayLayer: attachment.target,
+            arrayLayerCount: 1,
+          }),
+        }),
+        ...(attachment.resolveTarget
+          ? { resolveTarget: attachment.resolveTarget }
+          : {}),
+        ...(props.clearColor && i === 0
+          ? { clearValue: props.clearColor }
+          : {}),
+      };
+    });
   }
 
   if (props.depth) {
+    const depthTexture = isGpuTexture(props.depth)
+      ? props.depth
+      : props.depth.texture;
     pass.depthStencilAttachment = {
-      texture: isGpuTexture(props.depth) ? props.depth : props.depth.texture,
-      ...(props.clearDepth != null
-        ? { depthClearValue: props.clearDepth }
-        : {}),
+      texture: depthTexture,
+      // Cubemap/array face depth attachment (eg. point-light shadow cube).
+      ...(!isGpuTexture(props.depth) &&
+        props.depth.target != null && {
+          view: depthTexture.texture.createView({
+            dimension: "2d",
+            baseArrayLayer: props.depth.target,
+            arrayLayerCount: 1,
+          }),
+        }),
+      ...(props.clearDepth == null
+        ? {}
+        : { depthClearValue: props.clearDepth }),
     };
   }
 

@@ -1,551 +1,506 @@
 import { mat3, mat4 } from "pex-math";
+import { submit, createTexture, createSampler } from "pex-gpu";
 import { pipeline as SHADERS } from "pex-shaders";
 
 import createBaseSystem from "./base.js";
 import { NAMESPACE, TEMP_MAT4 } from "../../utils.js";
 
-// prettier-ignore
-const flagDefinitions = [
-  [["options", "attachmentsLocations", "color"], "LOCATION_COLOR", { type: "value" }],
-  [["options", "attachmentsLocations", "normal"], "LOCATION_NORMAL", { type: "value" }],
-  [["options", "attachmentsLocations", "emissive"], "LOCATION_EMISSIVE", { type: "value" }],
-  [["options", "msaa"], "USE_MSAA"],
+const ALPHA_BLEND = {
+  color: { srcFactor: "one", dstFactor: "one-minus-src-alpha" },
+  alpha: { srcFactor: "one", dstFactor: "one-minus-src-alpha" },
+};
 
-  [["options", "depthPassOnly"], "DEPTH_PASS_ONLY"],
-  [["options", "depthPassOnly"], "USE_UNLIT_WORKFLOW"], //force unlit in depth pass mode
-  [["options", "shadowQuality"], "SHADOW_QUALITY", { type: "value" }],
-  [["options", "ambientLights", "length"], "NUM_AMBIENT_LIGHTS", { type: "value" }],
-  [["options", "directionalLights", "length"], "NUM_DIRECTIONAL_LIGHTS", { type: "value" }],
-  [["options", "pointLights", "length"], "NUM_POINT_LIGHTS", { type: "value" }],
-  [["options", "spotLights", "length"], "NUM_SPOT_LIGHTS", { type: "value" }],
-  [["options", "areaLights", "length"], "NUM_AREA_LIGHTS", { type: "value" }],
-  [["options", "reflectionProbes", "length"], "USE_REFLECTION_PROBES"],
-  [["options", "transmitted"], "USE_TRANSMISSION"],
+// Reused per draw; uniforms pack synchronously at submit().
+const NORMAL_MATRIX = mat3.create();
+const IDENTITY_MAT4 = mat4.create();
 
-  [["material", "unlit"], "USE_UNLIT_WORKFLOW", { fallback: "USE_METALLIC_ROUGHNESS_WORKFLOW" }],
-  [["material", "blend"], "USE_BLEND"],
-
-  [["skin"], "USE_SKIN"],
-  [["skin", "joints", "length"], "NUM_JOINTS", { type: "value", requires: "USE_SKIN" }],
-  [["skin", "jointMatrices"], "", { uniform: "uJointMat", requires: "USE_SKIN" }],
-
-  [["material", "baseColor"], "", { uniform: "uBaseColor" }],
-  [["material", "metallic"], "", { uniform: "uMetallic" }],
-  [["material", "roughness"], "", { uniform: "uRoughness" }],
-
-  [["material", "ior"], "USE_IOR", { uniform: "uIor" }],
-  [["material", "specular"], "USE_SPECULAR", { uniform: "uSpecular" }], // TODO: specular 0 is allowed
-  [["material", "specularTexture"], "SPECULAR_TEXTURE", { type: "texture", uniform: "uSpecularTexture", requires: "USE_SPECULAR" }],
-  [["material", "specularColor"], "", { uniform: "uSpecularColor", requires: "USE_SPECULAR", default: [1, 1, 1] }],
-  [["material", "specularColorTexture"], "SPECULAR_COLOR_TEXTURE", { type: "texture", uniform: "uSpecularColorTexture", requires: "USE_SPECULAR" }],
-
-  [["material", "emissiveColor"], "USE_EMISSIVE_COLOR", { uniform: "uEmissiveColor" }],
-  [["material", "emissiveIntensity"], "", { uniform: "uEmissiveIntensity", requires: "USE_EMISSIVE_COLOR", default: 1 }],
-  [["material", "baseColorTexture"], "BASE_COLOR_TEXTURE", { type: "texture", uniform: "uBaseColorTexture" }],
-  [["material", "emissiveColorTexture"], "EMISSIVE_COLOR_TEXTURE", { type: "texture", uniform: "uEmissiveColorTexture" }],
-  [["material", "normalTexture"], "NORMAL_TEXTURE", { type: "texture", uniform: "uNormalTexture" }],
-  [["material", "normalTextureScale"], "", { uniform: "uNormalTextureScale", requires: "USE_NORMAL_TEXTURE", default: 1 }],
-  [["material", "roughnessTexture"], "ROUGHNESS_TEXTURE", { type: "texture", uniform: "uRoughnessTexture" }],
-  [["material", "metallicTexture"], "METALLIC_TEXTURE", { type: "texture", uniform: "uMetallicTexture" }],
-  [["material", "metallicRoughnessTexture"], "METALLIC_ROUGHNESS_TEXTURE", { type: "texture", uniform: "uMetallicRoughnessTexture" }],
-  [["material", "occlusionTexture"], "OCCLUSION_TEXTURE", { type: "texture", uniform: "uOcclusionTexture" }],
-  [["material", "alphaTest"], "USE_ALPHA_TEST", { uniform: "uAlphaTest" }],
-  [["material", "alphaTexture"], "ALPHA_TEXTURE", { type: "texture", uniform: "uAlphaTexture" }],
-
-  [["material", "clearCoat"], "USE_CLEAR_COAT", { uniform: "uClearCoat" }],
-  [["material", "clearCoatRoughness"], "USE_CLEAR_COAT_ROUGHNESS", { uniform: "uClearCoatRoughness", requires: "USE_CLEAR_COAT" }],
-  [["material", "clearCoatTexture"], "CLEAR_COAT_TEXTURE", { type: "texture", uniform: "uClearCoatTexture", requires: "USE_CLEAR_COAT" }],
-  [["material", "clearCoatRoughnessTexture"], "CLEAR_COAT_ROUGHNESS_TEXTURE", { type: "texture", uniform: "uClearCoatRoughnessTexture", requires: "USE_CLEAR_COAT" }],
-  [["material", "clearCoatNormalTexture"], "CLEAR_COAT_NORMAL_TEXTURE", { type: "texture", uniform: "uClearCoatNormalTexture", requires: "USE_CLEAR_COAT" }],
-  [["material", "clearCoatNormalTextureScale"], "", { uniform: "uClearCoatNormalTextureScale", requires: "USE_CLEAR_COAT" }],
-
-  [["material", "sheenColor"], "USE_SHEEN", { uniform: "uSheenColor" }],
-  [["material", "sheenColorTexture"], "SHEEN_COLOR_TEXTURE", { uniform: "uSheenColorMap", requires: "USE_SHEEN" }],
-  [["material", "sheenRoughness"], "", { uniform: "uSheenRoughness", requires: "USE_SHEEN" }],
-  [["material", "sheenRoughnessTexture"], "", { uniform: "uSheenRoughnessTexture", requires: "USE_SHEEN" }],
-
-  [["material", "transmission"], "", { uniform: "uTransmission", requires: "USE_TRANSMISSION" }],
-  [["material", "transmissionTexture"], "TRANSMISSION_TEXTURE", { type: "texture", uniform: "uTransmissionTexture", requires: "USE_TRANSMISSION" }],
-  [["material", "dispersion"], "USE_DISPERSION", { uniform: "uDispersion", requires: "USE_TRANSMISSION" }],
-
-  [["material", "diffuseTransmission"], "USE_DIFFUSE_TRANSMISSION", { uniform: "uDiffuseTransmission" }],
-  [["material", "diffuseTransmissionTexture"], "DIFFUSE_TRANSMISSION_TEXTURE", { type: "texture", uniform: "uDiffuseTransmissionTexture", requires: "USE_DIFFUSE_TRANSMISSION" }],
-  [["material", "diffuseTransmissionColor"], "", { uniform: "uDiffuseTransmissionColor", requires: "USE_DIFFUSE_TRANSMISSION", default: [1, 1, 1] }],
-  [["material", "diffuseTransmissionColorTexture"], "DIFFUSE_TRANSMISSION_COLOR_TEXTURE", { type: "texture", uniform: "uDiffuseTransmissionColorTexture", requires: "USE_DIFFUSE_TRANSMISSION" }],
-
-  [["material", "thickness"], "USE_VOLUME", { uniform: "uThickness", requires: "USE_TRANSMISSION" }],
-  [["material", "thickness"], "USE_VOLUME", { uniform: "uThickness", requires: "USE_DIFFUSE_TRANSMISSION", excludes: "USE_TRANSMISSION" }], // excludes to avoid overwritting
-  [["material", "thicknessTexture"], "THICKNESS_TEXTURE", { type: "texture", uniform: "uThicknessTexture", requires: "USE_VOLUME" }],
-  [["material", "attenuationDistance"], "", { uniform: "uAttenuationDistance", requires: "USE_VOLUME", default: Infinity }],
-  [["material", "attenuationColor"], "", { uniform: "uAttenuationColor", requires: "USE_VOLUME", default: [1, 1, 1] }],
-
-  [["_geometry", "attributes", "aNormal"], "USE_NORMALS", { fallback: "USE_UNLIT_WORKFLOW" }],
-  [["_geometry", "attributes", "aTangent"], "USE_TANGENTS"],
-  [["_geometry", "attributes", "aTexCoord0"], "USE_TEXCOORD_0"],
-  [["_geometry", "attributes", "aTexCoord1"], "USE_TEXCOORD_1"],
-  [["_geometry", "attributes", "aOffset"], "USE_INSTANCED_OFFSET"],
-  [["_geometry", "attributes", "aScale"], "USE_INSTANCED_SCALE"],
-  [["_geometry", "attributes", "aRotation"], "USE_INSTANCED_ROTATION"],
-  [["_geometry", "attributes", "aColor"], "USE_INSTANCED_COLOR"],
-  [["_geometry", "attributes", "aVertexColor"], "USE_VERTEX_COLORS"],
+// [r, g, b] stays as authored sRGB; the shader decodes it. The 4th component
+// carries intensity (light.color.w), matching the WGSL light chunks.
+const lightColor = (light) => [
+  light.color[0],
+  light.color[1],
+  light.color[2],
+  light.intensity,
 ];
-
-const lightColorToSrgb = (light) =>
-  light.color.map((c, j) =>
-    j < 3 ? Math.pow(c * light.intensity, 1.0 / 2.2) : c,
-  );
 
 /**
  * Standard renderer
  *
- * @param {import("../../types.js").SystemOptions} options
- * @returns {import("../../types.js").RendererSystem}
+ * PBR draw path built on pex-shaders' `standard` WGSL generator. Uniforms use
+ * the shared bind group struct convention: @group(0) Frame, @group(1) Lights,
+ * @group(2) Material, @group(3) Model. Shadow maps are not rendered yet;
+ * shadow-map bindings are satisfied with dummy textures and lights are drawn
+ * unshadowed.
+ *
+ * @param options
+ * @returns
  * @alias module:renderer.standard
  */
-export default ({ ctx, shadowQuality = 3 }) => ({
+export default ({ ctx, shadowQuality = 4 }) => ({
   ...createBaseSystem(),
   type: "standard-renderer",
   debug: false,
-  flagDefinitions,
   shadowQuality,
   debugRender: "",
-  pipelineMaterialDefaults: {
-    depthWrite: undefined,
-    depthTest: undefined,
-    depthFunc: ctx.DepthFunc.Less,
-    blend: undefined,
-    blendSrcRGBFactor: undefined,
-    blendSrcAlphaFactor: undefined,
-    blendDstRGBFactor: undefined,
-    blendDstAlphaFactor: undefined,
-    cullFace: true,
-    cullFaceMode: ctx.Face.Back,
-  },
-  textures: {
-    dummyTexture2D: ctx.texture2D({
-      name: "dummyTexture2D",
-      width: 4,
-      height: 4,
-    }),
-    dummyTextureCube: ctx.textureCube({
-      name: "dummyTextureCube",
-      width: 4,
-      height: 4,
-    }),
-    ltc_1: null,
-    ltc_2: null,
-  },
+
+  // Depth-format dummies to satisfy texture_depth_2d/cube bindings when a light
+  // casts no shadow.
+  dummyTexture2D: createTexture(ctx, {
+    label: "dummyShadowMap2D",
+    width: 4,
+    height: 4,
+    format: "depth32float",
+  }),
+  dummyTextureCube: createTexture(ctx, {
+    label: "dummyShadowMapCube",
+    width: 4,
+    height: 4,
+    depth: 6,
+    viewDimension: "cube",
+    format: "depth32float",
+  }),
+  // Cube maps use a plain sampler (manual compare); 2D maps use a comparison
+  // sampler for hardware PCF.
+  shadowSampler: createSampler(ctx, { filter: "nearest" }),
+  shadowCompareSampler: createSampler(ctx, {
+    filter: "linear",
+    compare: "less-equal",
+  }),
+  ltcTextures: { ltc_1: null, ltc_2: null },
   isLoadingAreaLightData: null,
-  checkLight(light) {
-    if (light.castShadows && !(light._shadowMap || light._shadowCubemap)) {
-      console.warn(
-        NAMESPACE,
-        this.type,
-        `light component missing shadowMap. Add a renderPipeplineSystem.update(entities).`,
-      );
-    } else {
-      return true;
-    }
-  },
-  checkReflectionProbe(reflectionProbe) {
-    if (!reflectionProbe._reflectionProbe?._reflectionMap) {
-      console.warn(
-        NAMESPACE,
-        this.type,
-        `reflectionProbe component missing _reflectionProbe. Add a reflectionProbeSystem.update(entities, { renderers: [skyboxRendererSystem] }).`,
-      );
-    } else {
-      return true;
-    }
-  },
-  checkRenderableEntity(entity) {
-    if (!entity._geometry) {
-      console.warn(
-        NAMESPACE,
-        this.type,
-        `entity missing _geometry. Add a geometrySystem.update(entities).`,
-      );
-    } else if (!entity._transform) {
-      console.warn(
-        NAMESPACE,
-        this.type,
-        `entity missing _transform. Add a transformSystem.update(entities).`,
-      );
-    } else {
-      return true;
-    }
-  },
-  getVertexShader: () => SHADERS.standard.vert,
-  getFragmentShader: (options) =>
-    options.depthPassOnly ? SHADERS.depthPass.frag : SHADERS.standard.frag,
-  getPipelineHash(entity, options) {
-    const { material, _geometry: geometry } = entity;
 
-    return `${material.id}_${geometry.primitive}_${options.cullFaceMode ?? ""}_${Object.entries(
-      this.pipelineMaterialDefaults,
-    )
-      .map(([key, value]) => material[key] ?? value)
-      .join("_")}`;
-  },
-  getPipelineOptions(entity, options) {
-    const { material, _geometry: geometry } = entity;
+  // Depth-pass pipeline variants (shadow maps) keyed by their defines signature.
+  depthPipelineCache: new Map(),
 
-    return {
-      depthTest: material.depthTest,
-      depthWrite: material.depthWrite,
-      depthFunc: material.depthFunc || ctx.DepthFunc.Less,
-      blend: material.blend,
-      blendSrcRGBFactor: material.blendSrcRGBFactor,
-      blendSrcAlphaFactor: material.blendSrcAlphaFactor,
-      blendDstRGBFactor: material.blendDstRGBFactor,
-      blendDstAlphaFactor: material.blendDstAlphaFactor,
-      cullFace:
-        options.cullFaceMode && material.cullFace === false
-          ? true
-          : (material.cullFace ?? true),
-      cullFaceMode:
-        options.cullFaceMode || material.cullFaceMode || ctx.Face.Back,
-      primitive: geometry.primitive ?? ctx.Primitive.Triangles,
-    };
-  },
   async loadAreaLightData() {
     try {
       const { g_ltc_1, g_ltc_2 } = await import("./area-light-data.js");
-      if (ctx.isDisposed) return;
-      const areaLightTextureOptions = {
-        width: 64,
-        height: 64,
-        pixelFormat: ctx.PixelFormat.RGBA32F,
-        min: ctx.Filter.Nearest,
-        mag: ctx.Filter.Linear,
-      };
-      this.textures.ltc_1 = ctx.texture2D({
-        name: "areaLightMatTexture",
+      const options = { width: 64, height: 64, format: "rgba16float" };
+      this.ltcTextures.ltc_1 = createTexture(ctx, {
+        label: "areaLightMatTexture",
         data: g_ltc_1,
-        ...areaLightTextureOptions,
+        ...options,
       });
-      this.textures.ltc_2 = ctx.texture2D({
-        name: "areaLightMagTexture",
+      this.ltcTextures.ltc_2 = createTexture(ctx, {
+        label: "areaLightMagTexture",
         data: g_ltc_2,
-        ...areaLightTextureOptions,
+        ...options,
       });
     } catch (error) {
       console.error(NAMESPACE, error);
     }
   },
-  gatherLightsInfo(lights, sharedUniforms) {
-    const {
-      ambientLights,
-      directionalLights,
-      pointLights,
-      spotLights,
-      areaLights,
-      shadowCastingEntities,
-    } = lights;
 
-    const castShadows = shadowCastingEntities.length;
-
-    for (let i = 0; i < directionalLights.length; i++) {
-      const lightEntity = directionalLights[i];
-      const light = lightEntity.directionalLight;
-
-      const uniform = `uDirectionalLights[${i}].`;
-      const shadows = castShadows && light.castShadows;
-      if (shadows) this.checkLight(light);
-
-      sharedUniforms[`${uniform}direction`] = light._direction;
-      sharedUniforms[`${uniform}color`] = lightColorToSrgb(light);
-      sharedUniforms[`${uniform}castShadows`] = shadows;
-
-      sharedUniforms[`${uniform}projectionMatrix`] = light._projectionMatrix;
-      sharedUniforms[`${uniform}viewMatrix`] = light._viewMatrix;
-      sharedUniforms[`${uniform}near`] = shadows ? light._near : 0;
-      sharedUniforms[`${uniform}far`] = shadows ? light._far : 0;
-      sharedUniforms[`${uniform}bias`] = light.bias;
-      sharedUniforms[`${uniform}radiusUV`] = shadows ? light._radiusUV : [0, 0];
-      sharedUniforms[`${uniform}shadowMapSize`] = shadows
-        ? [light._shadowMap.width, light._shadowMap.height]
-        : [0, 0];
-      sharedUniforms[`uDirectionalLightShadowMaps[${i}]`] = shadows
-        ? light._shadowMap
-        : this.textures.dummyTexture2D;
-    }
-
-    for (let i = 0; i < spotLights.length; i++) {
-      const lightEntity = spotLights[i];
-      const light = lightEntity.spotLight;
-
-      const uniform = `uSpotLights[${i}].`;
-      const shadows = castShadows && light.castShadows;
-      if (shadows) this.checkLight(light);
-
-      sharedUniforms[`${uniform}position`] =
-        lightEntity._transform.worldPosition;
-      sharedUniforms[`${uniform}direction`] = light._direction;
-      sharedUniforms[`${uniform}color`] = lightColorToSrgb(light);
-      sharedUniforms[`${uniform}angle`] = light.angle;
-      sharedUniforms[`${uniform}innerAngle`] = light.innerAngle;
-      sharedUniforms[`${uniform}range`] = light.range;
-      sharedUniforms[`${uniform}castShadows`] = shadows;
-
-      sharedUniforms[`${uniform}projectionMatrix`] = light._projectionMatrix;
-      sharedUniforms[`${uniform}viewMatrix`] = light._viewMatrix;
-      sharedUniforms[`${uniform}near`] = shadows ? light._near : 0;
-      sharedUniforms[`${uniform}far`] = shadows ? light._far : 0;
-      sharedUniforms[`${uniform}bias`] = light.bias;
-      sharedUniforms[`${uniform}radiusUV`] = shadows ? light._radiusUV : [0, 0];
-      sharedUniforms[`${uniform}shadowMapSize`] = shadows
-        ? [light._shadowMap.width, light._shadowMap.height]
-        : [0, 0];
-      sharedUniforms[`uSpotLightShadowMaps[${i}]`] = shadows
-        ? light._shadowMap
-        : this.textures.dummyTexture2D;
-    }
-
-    for (let i = 0; i < pointLights.length; i++) {
-      const lightEntity = pointLights[i];
-      const light = lightEntity.pointLight;
-
-      const uniform = `uPointLights[${i}].`;
-      const shadows = castShadows && light.castShadows;
-      if (shadows) this.checkLight(light);
-
-      sharedUniforms[`${uniform}position`] =
-        lightEntity._transform.worldPosition;
-      sharedUniforms[`${uniform}color`] = lightColorToSrgb(light);
-      sharedUniforms[`${uniform}range`] = light.range;
-      sharedUniforms[`${uniform}castShadows`] = shadows;
-
-      sharedUniforms[`${uniform}bias`] = light.bias;
-      sharedUniforms[`${uniform}radius`] = light.bulbRadius;
-      sharedUniforms[`${uniform}shadowMapSize`] = shadows
-        ? [light._shadowCubemap.width, light._shadowCubemap.height]
-        : [0, 0];
-      sharedUniforms[`uPointLightShadowMaps[${i}]`] = shadows
-        ? light._shadowCubemap
-        : this.textures.dummyTextureCube;
-    }
-
-    if (areaLights.length) {
-      if (!this.isLoadingAreaLightData) {
-        this.isLoadingAreaLightData = true;
-        this.loadAreaLightData();
-      }
-    }
-
-    if (this.textures.ltc_1 && this.textures.ltc_2) {
-      for (let i = 0; i < areaLights.length; i++) {
-        const lightEntity = areaLights[i];
-        const light = lightEntity.areaLight;
-
-        const uniform = `uAreaLights[${i}].`;
-        const shadows = castShadows && light.castShadows;
-        if (shadows) this.checkLight(light);
-
-        sharedUniforms.ltc_1 = this.textures.ltc_1;
-        sharedUniforms.ltc_2 = this.textures.ltc_2;
-        sharedUniforms[`${uniform}position`] = lightEntity.transform.position;
-        sharedUniforms[`${uniform}color`] = lightColorToSrgb(light);
-        sharedUniforms[`${uniform}rotation`] = lightEntity.transform.rotation;
-        sharedUniforms[`${uniform}size`] = [
-          lightEntity.transform.scale[0] / 2,
-          lightEntity.transform.scale[1] / 2,
-        ];
-        sharedUniforms[`${uniform}disk`] = light.disk;
-        sharedUniforms[`${uniform}doubleSided`] = light.doubleSided;
-        sharedUniforms[`${uniform}castShadows`] = shadows;
-
-        sharedUniforms[`${uniform}projectionMatrix`] = light._projectionMatrix;
-        sharedUniforms[`${uniform}viewMatrix`] = light._viewMatrix;
-        sharedUniforms[`${uniform}near`] = shadows ? light._near : 0;
-        sharedUniforms[`${uniform}far`] = shadows ? light._far : 0;
-        sharedUniforms[`${uniform}bias`] = light.bias;
-        sharedUniforms[`${uniform}radiusUV`] = shadows
-          ? light._radiusUV
-          : [0, 0];
-        sharedUniforms[`${uniform}shadowMapSize`] = shadows
-          ? [light._shadowMap.width, light._shadowMap.height]
-          : [0, 0];
-        sharedUniforms[`uAreaLightShadowMaps[${i}]`] = shadows
-          ? light._shadowMap
-          : this.textures.dummyTexture2D;
-      }
-    }
-
-    for (let i = 0; i < ambientLights.length; i++) {
-      const lightEntity = ambientLights[i];
-      const color = [...lightEntity.ambientLight.color];
-      color[3] = lightEntity.ambientLight.intensity;
-      sharedUniforms[`uAmbientLights[${i}].color`] = color;
-    }
-  },
-  gatherReflectionProbeInfo(reflectionProbes, sharedUniforms) {
-    if (
-      reflectionProbes.length > 0 &&
-      this.checkReflectionProbe(reflectionProbes[0])
-    ) {
-      sharedUniforms.uReflectionMap =
-        reflectionProbes[0]._reflectionProbe._reflectionMap;
-      sharedUniforms.uReflectionMapSize =
-        reflectionProbes[0]._reflectionProbe._reflectionMap.width;
-    }
-  },
-  render(renderView, entities, options) {
-    const { camera, cameraEntity } = renderView;
-    const {
-      shadowMappingLight,
-      transparent,
-      transmitted,
-      backgroundColorTexture,
-      cullFaceMode,
-      attachmentsLocations = {},
-      msaa,
-    } = options;
-    const shadowMapping = !!shadowMappingLight;
-
-    const pipelineOptions = {
-      ambientLights: [],
-      directionalLights: [],
-      pointLights: [],
-      spotLights: [],
-      areaLights: [],
-      shadowCastingEntities: [],
-      reflectionProbes: entities.filter((e) => e.reflectionProbe),
-      depthPassOnly: shadowMapping,
-      targets: {},
-      debugRender: !shadowMapping && this.debugRender,
-      attachmentsLocations,
-      msaa,
-      transmitted,
-      cullFaceMode,
+  getShader: (defines, options) => SHADERS.standard(defines, options),
+  getShaderOptions(entity) {
+    const { _lights, _locations } = this;
+    return {
+      lights: _lights.counts,
+      locationNormal: _locations.normal ?? -1,
+      locationEmissive: _locations.emissive ?? -1,
+      texCoords: {},
     };
+  },
+  getDefines(entity) {
+    const { material, _geometry: geometry } = entity;
+    const { attributes } = geometry;
+    const defines = new Set();
 
-    const sharedUniforms = {
-      uViewportSize: [renderView.viewport[2], renderView.viewport[3]],
-    };
-
-    if (!shadowMapping) {
-      // Post processing
-      pipelineOptions.targets =
-        cameraEntity.postProcessing?._targets?.[renderView.cameraEntity.id] ||
-        {};
-
-      // Lighting
-      pipelineOptions.ambientLights = entities.filter((e) => e.ambientLight);
-      pipelineOptions.directionalLights = entities.filter(
-        (e) => e.directionalLight,
-      );
-      pipelineOptions.pointLights = entities.filter((e) => e.pointLight);
-      pipelineOptions.spotLights = entities.filter((e) => e.spotLight);
-      pipelineOptions.areaLights = entities.filter((e) => e.areaLight);
-      pipelineOptions.shadowCastingEntities = entities.filter(
-        (entity) => entity.geometry && entity.material?.castShadows,
-      );
-
-      this.gatherLightsInfo(pipelineOptions, sharedUniforms);
-      this.gatherReflectionProbeInfo(
-        pipelineOptions.reflectionProbes,
-        sharedUniforms,
-      );
-    }
-
-    if (shadowMappingLight) {
-      sharedUniforms.uProjectionMatrix = shadowMappingLight._projectionMatrix;
-      sharedUniforms.uViewMatrix = shadowMappingLight._viewMatrix;
-      sharedUniforms.uInverseViewMatrix = mat4.create();
-      sharedUniforms.uCameraPosition = [0, 0, 5];
+    // Lighting needs normals; fall back to unlit when the geometry lacks them.
+    if (material.unlit || !attributes.normal) {
+      defines.add("USE_UNLIT_WORKFLOW");
     } else {
-      sharedUniforms.uProjectionMatrix = camera.projectionMatrix;
-      sharedUniforms.uViewMatrix = camera.viewMatrix;
-      sharedUniforms.uInverseViewMatrix =
-        camera.invViewMatrix || camera.inverseViewMatrix; //TODO: settle on invViewMatrix
-      sharedUniforms.uCameraPosition = cameraEntity._transform.worldPosition; //TODO: ugly
+      defines.add("USE_METALLIC_ROUGHNESS_WORKFLOW");
+      defines.add("USE_NORMALS");
     }
-    sharedUniforms.uNormalMatrix = mat3.create();
 
-    if (backgroundColorTexture) {
-      sharedUniforms.uCaptureTexture = backgroundColorTexture;
+    if (attributes.tangent) defines.add("USE_TANGENTS");
+    if (attributes.texCoord0) defines.add("USE_TEXCOORD_0");
+    if (attributes.texCoord1) defines.add("USE_TEXCOORD_1");
+    if (attributes.vertexColor) defines.add("USE_VERTEX_COLORS");
+    if (attributes.offset) defines.add("USE_INSTANCED_OFFSET");
+    if (attributes.scale) defines.add("USE_INSTANCED_SCALE");
+    if (attributes.rotation) defines.add("USE_INSTANCED_ROTATION");
+    if (attributes.instanceColor) defines.add("USE_INSTANCED_COLOR");
+
+    if (material.blend) defines.add("USE_BLEND");
+    if (material.emissiveColor) defines.add("USE_EMISSIVE_COLOR");
+
+    if (this._locations.normal >= 0 || this._locations.emissive >= 0) {
+      defines.add("USE_DRAW_BUFFERS");
     }
+    if (this._msaa) defines.add("USE_MSAA");
+
+    return defines;
+  },
+  getVariantKey(entity, defines) {
+    const { counts } = this._lights;
+    return [
+      [...defines].sort().join("|"),
+      counts.ambient,
+      counts.directional,
+      counts.point,
+      counts.spot,
+      counts.area,
+      this._locations.normal ?? -1,
+      this._locations.emissive ?? -1,
+    ].join("_");
+  },
+  isUnlit(entity) {
+    return entity.material.unlit || !entity._geometry.attributes.normal;
+  },
+  getPipelineOptions(entity) {
+    const { material } = entity;
+    return {
+      depthWriteEnabled: material.depthWrite !== false && !material.blend,
+      cullMode: (material.cullFace ?? true) ? "back" : "none",
+      ...(material.blend ? { blend: ALPHA_BLEND } : {}),
+      // SHADOW_QUALITY only exists in the lit (non-unlit) shader.
+      ...(this.isUnlit(entity)
+        ? {}
+        : {
+            constants: {
+              SHADOW_QUALITY: material.receiveShadows ? this.shadowQuality : 0,
+            },
+          }),
+    };
+  },
+
+  // Builds the @group(1) uniform values: fixed-size struct arrays per light
+  // type plus the individually-bound shadow maps (dummies for now).
+  gatherLights(entities) {
+    const ambient = entities.filter((e) => e.ambientLight);
+    const directional = entities.filter((e) => e.directionalLight);
+    const point = entities.filter((e) => e.pointLight);
+    const spot = entities.filter((e) => e.spotLight);
+    const area = entities.filter((e) => e.areaLight);
+
+    // TODO(stage-2): area lights need LTC textures; rgba32float is
+    // unfilterable-float and won't bind under the reflected "float" sample type
+    // without the float32-filterable feature. Deferred with shadows.
+    const ltcReady = this.ltcTextures.ltc_1 && this.ltcTextures.ltc_2;
+    const areaActive = ltcReady ? area : [];
+
+    const uniforms = {};
+
+    if (ambient.length) {
+      uniforms.uAmbientLights = ambient.map((e) => ({
+        color: lightColor(e.ambientLight),
+      }));
+    }
+
+    // 2D shadow fields shared by directional/spot/area, plus the bound map.
+    const shadow2D = (light) => {
+      const map = light.castShadows ? light._shadowMap : null;
+      return {
+        map: map || this.dummyTexture2D,
+        castShadows: map ? 1 : 0,
+        near: light._near ?? 0,
+        far: light._far ?? 0,
+        radiusUV: light._radiusUV ?? [0, 0],
+        shadowMapSize: map ? [map.width, map.height] : [0, 0],
+      };
+    };
+
+    if (directional.length) {
+      uniforms.uDirectionalLights = directional.map((e) => {
+        const light = e.directionalLight;
+        const s = shadow2D(light);
+        return {
+          direction: light._direction,
+          color: lightColor(light),
+          projectionMatrix: light._projectionMatrix,
+          viewMatrix: light._viewMatrix,
+          castShadows: s.castShadows,
+          near: s.near,
+          far: s.far,
+          radiusUV: s.radiusUV,
+          shadowMapSize: s.shadowMapSize,
+        };
+      });
+      directional.forEach((e, i) => {
+        uniforms[`uDirectionalShadowMap${i}`] = shadow2D(
+          e.directionalLight,
+        ).map;
+        uniforms[`uDirectionalShadowMap${i}Sampler`] =
+          this.shadowCompareSampler;
+      });
+    }
+
+    if (point.length) {
+      uniforms.uPointLights = point.map((e) => {
+        const light = e.pointLight;
+        const map = light.castShadows ? light._shadowCubemap : null;
+        return {
+          position: e._transform.worldPosition,
+          color: lightColor(light),
+          range: light.range,
+          castShadows: map ? 1 : 0,
+          bias: light.bias ?? 0,
+          radius: light.bulbRadius ?? 0,
+          shadowMapSize: map ? [map.width, map.height] : [0, 0],
+          // Normalizes the stored/compared radial distance (shadow-mapping.ts
+          // writes length(view)/far into the cube).
+          far: light._far ?? 0,
+        };
+      });
+      point.forEach((e, i) => {
+        const light = e.pointLight;
+        uniforms[`uPointShadowMap${i}`] =
+          (light.castShadows && light._shadowCubemap) || this.dummyTextureCube;
+        uniforms[`uPointShadowMap${i}Sampler`] = this.shadowSampler;
+      });
+    }
+
+    if (spot.length) {
+      uniforms.uSpotLights = spot.map((e) => {
+        const light = e.spotLight;
+        const s = shadow2D(light);
+        return {
+          position: e._transform.worldPosition,
+          direction: light._direction,
+          color: lightColor(light),
+          innerAngle: light.innerAngle,
+          angle: light.angle,
+          range: light.range,
+          projectionMatrix: light._projectionMatrix,
+          viewMatrix: light._viewMatrix,
+          castShadows: s.castShadows,
+          near: s.near,
+          far: s.far,
+          radiusUV: s.radiusUV,
+          shadowMapSize: s.shadowMapSize,
+        };
+      });
+      spot.forEach((e, i) => {
+        uniforms[`uSpotShadowMap${i}`] = shadow2D(e.spotLight).map;
+        uniforms[`uSpotShadowMap${i}Sampler`] = this.shadowCompareSampler;
+      });
+    }
+
+    if (areaActive.length) {
+      uniforms.uLtc1 = this.ltcTextures.ltc_1;
+      uniforms.uLtc1Sampler = this.shadowSampler;
+      uniforms.uLtc2 = this.ltcTextures.ltc_2;
+      uniforms.uLtc2Sampler = this.shadowSampler;
+      uniforms.uAreaLights = areaActive.map((e) => {
+        const light = e.areaLight;
+        return {
+          position: e.transform.position,
+          color: lightColor(light),
+          rotation: e.transform.rotation,
+          size: [e.transform.scale[0] / 2, e.transform.scale[1] / 2],
+          disk: light.disk ? 1 : 0,
+          doubleSided: light.doubleSided ? 1 : 0,
+          projectionMatrix: light._projectionMatrix,
+          viewMatrix: light._viewMatrix,
+          castShadows: 0,
+          near: 0,
+          far: 0,
+          radiusUV: [0, 0],
+          shadowMapSize: [0, 0],
+        };
+      });
+      areaActive.forEach((_, i) => {
+        uniforms[`uAreaShadowMap${i}`] = this.dummyTexture2D;
+        uniforms[`uAreaShadowMap${i}Sampler`] = this.shadowCompareSampler;
+      });
+    }
+
+    return {
+      uniforms,
+      counts: {
+        ambient: ambient.length,
+        directional: directional.length,
+        point: point.length,
+        spot: spot.length,
+        area: areaActive.length,
+      },
+    };
+  },
+
+  getMaterialUniforms(entity) {
+    const { material } = entity;
+    if (this.isUnlit(entity)) return { baseColor: material.baseColor };
+
+    const uniforms = {
+      baseColor: material.baseColor,
+      metallic: material.metallic ?? 1,
+      roughness: material.roughness ?? 1,
+      ior: material.ior ?? 1.5,
+    };
+    if (material.emissiveColor) {
+      uniforms.emissiveColor = material.emissiveColor;
+      uniforms.emissiveIntensity = material.emissiveIntensity ?? 1;
+    }
+    return uniforms;
+  },
+
+  render(renderView, entities, options) {
+    const { camera, cameraEntity, viewport } = renderView;
+    const { attachmentsLocations = {}, msaa, transparent } = options;
+
+    this._msaa = msaa;
+    this._locations = {
+      normal: attachmentsLocations.normal ?? -1,
+      emissive: attachmentsLocations.emissive ?? -1,
+    };
+
+    const lights = this.gatherLights(entities);
+    this._lights = lights;
+
+    const uFrame = {
+      projectionMatrix: camera.projectionMatrix,
+      viewMatrix: camera.viewMatrix,
+      inverseViewMatrix: camera.invViewMatrix || camera.inverseViewMatrix,
+      cameraPosition: cameraEntity._transform.worldPosition,
+      viewportSize: [viewport[2], viewport[3]],
+    };
 
     const renderableEntities = entities.filter(
       (e) =>
         e.geometry &&
         e.material &&
         e.material.type === undefined &&
-        (!shadowMapping || e.material.castShadows) &&
-        (transparent ? e.material.blend : !e.material.blend) &&
-        (transmitted
-          ? cullFaceMode === ctx.Face.Front
-            ? !e.material.cullFace && e.material.transmission
-            : e.material.transmission
-          : !e.material.transmission),
+        !e.material.transmission &&
+        (transparent ? e.material.blend : !e.material.blend),
     );
 
     for (let i = 0; i < renderableEntities.length; i++) {
       const entity = renderableEntities[i];
+      const pipeline = this.getPipeline(ctx, entity, options);
 
-      if (!this.checkRenderableEntity(entity)) continue;
-
-      // Set shadow quality per entity
-      pipelineOptions.shadowQuality = entity.material.receiveShadows
-        ? this.shadowQuality
-        : 0;
-
-      // Get pipeline and program from cache. Also computes this.uniforms
-      const pipeline = this.getPipeline(ctx, entity, pipelineOptions);
-
-      const uniforms = {
-        uModelMatrix: entity._transform.modelMatrix, //FIXME: bypasses need for transformSystem access
-        uPointSize: entity.material.pointSize ?? 1,
-      };
-
-      Object.assign(uniforms, sharedUniforms, this.uniforms);
-      entity._uniforms = uniforms;
-
-      // Set the normal matrix
-      mat4.set(TEMP_MAT4, sharedUniforms.uViewMatrix);
+      // View-space normal matrix: mat3(transpose(inverse(view * model))).
+      mat4.set(TEMP_MAT4, uFrame.viewMatrix);
       mat4.mult(TEMP_MAT4, entity._transform.modelMatrix);
       mat4.invert(TEMP_MAT4);
       mat4.transpose(TEMP_MAT4);
-      mat3.fromMat4(sharedUniforms.uNormalMatrix, TEMP_MAT4);
 
-      // TODO: fix CW
-      // ctx.gl.frontFace(
-      //   determinant(entity._transform.modelMatrix) < 0 ? ctx.gl.CW : ctx.gl.CCW,
-      // );
-
-      ctx.submit({
+      submit(ctx, {
         name: transparent
           ? "drawTransparentGeometryCmd"
-          : `drawOpaque${transmitted ? "Transmitted" : ""}GeometryCmd`,
+          : "drawOpaqueGeometryCmd",
         pipeline,
         attributes: entity._geometry.attributes,
         indices: entity._geometry.indices,
         count: entity._geometry.count,
-        instances: entity._geometry.instances,
-        uniforms,
-        multiDraw: entity.geometry.multiDraw,
+        instanceCount: entity._geometry.instances,
+        uniforms: {
+          uFrame,
+          uModel: {
+            modelMatrix: entity._transform.modelMatrix,
+            normalMatrix: mat3.fromMat4(NORMAL_MATRIX, TEMP_MAT4),
+          },
+          uMaterial: this.getMaterialUniforms(entity),
+          ...lights.uniforms,
+        },
       });
     }
   },
-  renderShadow(renderView, entities, options) {
-    this.render(renderView, entities, options);
-  },
   renderOpaque(renderView, entities, options) {
-    this.render(renderView, entities, options);
+    this.render(renderView, entities, { ...options, transparent: false });
   },
   renderTransparent(renderView, entities, options) {
     this.render(renderView, entities, { ...options, transparent: true });
   },
-  dispose() {
-    for (let [key, value] of Object.entries(this.textures)) {
-      if (value) {
-        ctx.dispose(value);
-        this.textures[key] = null;
-      }
-    }
-    this.isLoadingAreaLightData = null;
+  // `linear` selects the omni (point) variant: a fragment stage stores
+  // normalized radial distance instead of clip depth (see depthPass). `bias`
+  // is the light's slope-scaled shadow bias, unused by the linear variant.
+  getDepthPipeline(entity, linear, bias) {
+    const { attributes } = entity._geometry;
+    // Depth pass only cares about position-affecting features.
+    const defines = new Set();
+    if (attributes.offset) defines.add("USE_INSTANCED_OFFSET");
+    if (attributes.scale) defines.add("USE_INSTANCED_SCALE");
+    if (attributes.rotation) defines.add("USE_INSTANCED_ROTATION");
+    if (linear) defines.add("USE_LINEAR_DEPTH");
 
-    this.pipelineCache.dispose();
+    const key = [...defines].sort().join("|");
+    let pipeline = this.depthPipelineCache.get(key);
+    if (!pipeline) {
+      const shader = SHADERS.depthPass(defines, {});
+      // 2D maps are vertex-only; the linear variant needs a fragment stage to
+      // write frag_depth.
+      pipeline = linear
+        ? { vertex: shader, fragment: shader }
+        : { vertex: shader };
+      this.depthPipelineCache.set(key, pipeline);
+    }
+    pipeline.depthWriteEnabled = true;
+    pipeline.cullMode = (entity.material.cullFace ?? true) ? "back" : "none";
+    if (linear) {
+      // The cube-face projection is Y-flipped to match the depth-cube sampler
+      // (see shadow-mapping.ts), which reverses winding; skip culling so the flip
+      // can't drop caster faces.
+      pipeline.cullMode = "none";
+      // Writing frag_depth bypasses rasterizer depth bias; the point shader
+      // biases its compare instead.
+      pipeline.depthBias = 0;
+      pipeline.depthBiasSlopeScale = 0;
+    } else {
+      // Rasterizer depth bias replaces shader-side shadow bias: a flat constant
+      // term plus the light's slope-scaled term (handles grazing angles). Too
+      // much detaches the shadow from the contact point (peter-panning).
+      pipeline.depthBias = 1;
+      pipeline.depthBiasSlopeScale = bias;
+    }
+    return pipeline;
+  },
+
+  // Depth-only pass into a light's shadow map. renderView.camera carries the
+  // light's projection/view matrices; point lights (cubemap) store normalized
+  // radial distance and need the light's far plane in uFrame.
+  renderShadow(renderView, entities, options = {}) {
+    const { camera, viewport } = renderView;
+    const light = options.shadowMappingLight;
+    const linear = !!light?._shadowCubemap;
+
+    const uFrame = {
+      projectionMatrix: camera.projectionMatrix,
+      viewMatrix: camera.viewMatrix,
+      inverseViewMatrix: camera.invViewMatrix || IDENTITY_MAT4,
+      cameraPosition: [0, 0, 0],
+      viewportSize: [viewport[2], viewport[3]],
+      ...(linear ? { far: light._far } : {}),
+    };
+
+    const casters = entities.filter(
+      (e) =>
+        e.geometry &&
+        e.material?.castShadows &&
+        e.material.type === undefined &&
+        e._geometry &&
+        e._transform,
+    );
+
+    for (let i = 0; i < casters.length; i++) {
+      const entity = casters[i];
+      submit(ctx, {
+        name: "drawShadowGeometryCmd",
+        pipeline: this.getDepthPipeline(entity, linear, light?.bias ?? 1),
+        attributes: entity._geometry.attributes,
+        indices: entity._geometry.indices,
+        count: entity._geometry.count,
+        instanceCount: entity._geometry.instances,
+        uniforms: {
+          uFrame,
+          uModel: {
+            modelMatrix: entity._transform.modelMatrix,
+            normalMatrix: mat3.fromMat4(
+              NORMAL_MATRIX,
+              entity._transform.modelMatrix,
+            ),
+          },
+        },
+      });
+    }
+  },
+  dispose() {
+    this.dummyTexture2D.dispose();
+    this.dummyTextureCube.dispose();
+    this.ltcTextures.ltc_1?.dispose();
+    this.ltcTextures.ltc_2?.dispose();
+    this.pipelineCache.clear();
+    this.depthPipelineCache.clear();
   },
 });

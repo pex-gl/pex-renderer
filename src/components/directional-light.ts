@@ -8,7 +8,7 @@
 export default (options) => ({
   color: [1, 1, 1, 1],
   intensity: 1,
-  bias: 0.1,
+  bias: 1,
   bulbRadius: 1,
   castShadows: true,
   shadowMapSize: 2048,

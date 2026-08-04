@@ -46,7 +46,7 @@ export default (ctx) => ({
       name: "directionalLightShadowMap",
       width: 2048,
       height: 2048,
-      pixelFormat: "depth24plus",
+      pixelFormat: "depth32float",
     },
     pass: {
       name: "directionalLightShadowMappingPass",
@@ -67,7 +67,7 @@ export default (ctx) => ({
       name: "spotLightShadowMap",
       width: 2048,
       height: 2048,
-      pixelFormat: "depth24plus",
+      pixelFormat: "depth32float",
     },
     pass: {
       name: "spotLightShadowMappingPass",
@@ -88,9 +88,8 @@ export default (ctx) => ({
       name: "pointLightShadowMap",
       width: 2048,
       height: 2048,
-      pixelFormat: "depth24plus",
+      pixelFormat: "depth32float",
     },
-    cubemapSides: structuredClone(CUBEMAP_SIDES),
     passes: CUBEMAP_SIDES.map((side, i) => ({
       name: `pointLightShadowMappingSide${i}`,
       color: [{ target: i }],

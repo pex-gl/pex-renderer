@@ -21,7 +21,7 @@ export default ({ ctx, debug = false }) => {
   const lightSystem = systems.light();
   const renderPipelineSystem = systems.renderPipeline(options);
 
-  const basicRendererSystem = systems.renderer.basic(options);
+  const standardRendererSystem = systems.renderer.standard(options);
 
   const renderEngine = {
     // debugMode,
@@ -51,7 +51,7 @@ export default ({ ctx, debug = false }) => {
       lightSystem,
       renderPipelineSystem,
     ],
-    renderers: [basicRendererSystem],
+    renderers: [standardRendererSystem],
     update(entities, deltaTime) {
       const now = performance.now();
       this.deltaTime = deltaTime || (now - this._prevTime) / 1000;
