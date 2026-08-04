@@ -156,7 +156,7 @@ export default ({ ctx, renderGraph, resourceCache }) => ({
         // Set command
         const fullscreenTriangle = resourceCache.fullscreenTriangle();
         //neded for name
-        let postProcessingCmd = {
+        const postProcessingCmd = {
           name: passName,
           pipeline,
           uniforms,

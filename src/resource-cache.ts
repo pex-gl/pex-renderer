@@ -212,7 +212,8 @@ export default (ctx) => {
       getResource(ctx, cache, "indexBuffer", props, usage),
     fullscreenTriangle: () =>
       getResourceFromCache(cache, fullscreenTriangleProps).value,
-    fullscreenQuad: () => getResourceFromCache(cache, fullscreenQuadProps).value,
+    fullscreenQuad: () =>
+      getResourceFromCache(cache, fullscreenQuadProps).value,
     //TODO: add release for Retained resources
     // release() {}
     beginFrame() {

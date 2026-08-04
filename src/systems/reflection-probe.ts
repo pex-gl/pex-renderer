@@ -28,9 +28,6 @@ for (let i = 0; i < NUM_SAMPLES; i++) {
 
 class ReflectionProbe {
   constructor(opts) {
-    this.enabled = true;
-    this.size = 1024;
-
     this.set(opts);
 
     const ctx = opts.ctx;
@@ -345,6 +342,8 @@ class ReflectionProbe {
     ctx.update(this._octMap, { width: size, height: size });
     ctx.update(this._reflectionMap, { width: size * 2, height: size * 2 });
   }
+  enabled = true;
+  size = 1024;
 }
 
 /**
@@ -404,7 +403,7 @@ export default ({ ctx, resourceCache }) => ({
       entity.reflectionProbe.dirty = false;
       entity._reflectionProbe.dirty = false;
 
-      let { renderers = [] } = options;
+      const { renderers = [] } = options;
       entity._reflectionProbe.update((camera) => {
         const renderView = {
           camera: camera,

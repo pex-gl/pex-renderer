@@ -2,7 +2,7 @@ export let entityCount = 0;
 
 export default (components = {}) => {
   if (Array.isArray(components)) {
-    throw new Error(
+    throw new TypeError(
       "Arrays of components are deprecated. Use props object instead.",
     );
   }

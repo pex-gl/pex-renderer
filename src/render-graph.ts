@@ -15,7 +15,7 @@ export default (ctx) => ({
     this.renderPasses.push(options);
   },
   endFrame() {
-    const previousErrors = [...this.errors];
+    const previousErrors = new Set(this.errors);
     this.errors.length = 0;
 
     for (let i = 0; i < this.renderPasses.length; i++) {
@@ -30,7 +30,7 @@ export default (ctx) => ({
           if (!(error instanceof Error)) error = new Error(error);
 
           const { message } = error;
-          if (!previousErrors.includes(message)) {
+          if (!previousErrors.has(message)) {
             console.error(
               NAMESPACE,
               "render-graph",

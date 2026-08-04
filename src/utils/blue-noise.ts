@@ -9,7 +9,7 @@ function fillWithOnes(array, count) {
 
 function shuffleArray(array, random = Math.random) {
   for (let i = array.length - 1; i > 0; i--) {
-    const replaceIndex = ~~((random() - 1e-6) * i);
+    const replaceIndex = Math.trunc((random() - 1e-6) * i);
     const tmp = array[i];
     array[i] = array[replaceIndex];
     array[replaceIndex] = tmp;
@@ -18,7 +18,6 @@ function shuffleArray(array, random = Math.random) {
 
 class BlueNoiseSamples {
   constructor(size) {
-    this.count = 0;
     this.size = -1;
     this.sigma = -1;
     this.radius = -1;
@@ -78,7 +77,7 @@ class BlueNoiseSamples {
     // generate a radius in which the score will be updated under the
     // assumption that e^-10 is insignificant enough to be the border at
     // which we drop off.
-    const radius = ~~(Math.sqrt(10 * 2 * sigma ** 2) + 1);
+    const radius = Math.trunc(Math.sqrt(10 * 2 * sigma ** 2) + 1);
     const lookupWidth = 2 * radius + 1;
     const lookupTable = new Float32Array(lookupWidth * lookupWidth);
     const sigma2 = sigma * sigma;
@@ -96,11 +95,13 @@ class BlueNoiseSamples {
   }
 
   resize(size) {
-    if (this.size !== size) {
-      this.size = size;
-      this.score = new Float32Array(size * size);
-      this.binaryPattern = new Uint8Array(size * size);
+    if (this.size === size) {
+      return;
     }
+
+    this.size = size;
+    this.score = new Float32Array(size * size);
+    this.binaryPattern = new Uint8Array(size * size);
   }
 
   invert() {
@@ -110,7 +111,7 @@ class BlueNoiseSamples {
 
     for (let i = 0, l = binaryPattern.length; i < l; i++) {
       if (binaryPattern[i] === 0) {
-        const y = ~~(i / size);
+        const y = Math.trunc(i / size);
         const x = i - y * size;
         this.updateScore(x, y, 1);
         binaryPattern[i] = 1;
@@ -153,7 +154,7 @@ class BlueNoiseSamples {
     this.binaryPattern[index] = 1;
 
     const size = this.size;
-    const y = ~~(index / size);
+    const y = Math.trunc(index / size);
     const x = index - y * size;
     this.updateScore(x, y, 1);
     this.count++;
@@ -163,7 +164,7 @@ class BlueNoiseSamples {
     this.binaryPattern[index] = 0;
 
     const size = this.size;
-    const y = ~~(index / size);
+    const y = Math.trunc(index / size);
     const x = index - y * size;
     this.updateScore(x, y, -1);
     this.count--;
@@ -176,6 +177,7 @@ class BlueNoiseSamples {
     this.setSigma(source.sigma);
     this.count = source.count;
   }
+  count = 0;
 }
 
 class BlueNoiseGenerator {

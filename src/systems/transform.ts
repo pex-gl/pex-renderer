@@ -115,22 +115,19 @@ export default () => ({
     if (
       transform.entity &&
       transform.entity.geometry &&
-      transform.entity.geometry.bounds
+      transform.entity.geometry.bounds &&
+      transform.entity.geometry.bounds &&
+      !aabb.isEmpty(transform.entity.geometry.bounds)
     ) {
-      if (
-        transform.entity.geometry.bounds &&
-        !aabb.isEmpty(transform.entity.geometry.bounds)
-      ) {
-        aabb.getCorners(transform.entity.geometry.bounds, TEMP_BOUNDS_POINTS);
-        for (var i = 0; i < TEMP_BOUNDS_POINTS.length; i++) {
-          vec3.multMat4(
-            TEMP_BOUNDS_POINTS[i],
-            this.cache[transform.entity.id].modelMatrix,
-          );
-        }
-        aabb.fromPoints(TEMP_AABB, TEMP_BOUNDS_POINTS);
-        aabb.includeAABB(transform.worldBounds, TEMP_AABB);
+      aabb.getCorners(transform.entity.geometry.bounds, TEMP_BOUNDS_POINTS);
+      for (let i = 0; i < TEMP_BOUNDS_POINTS.length; i++) {
+        vec3.multMat4(
+          TEMP_BOUNDS_POINTS[i],
+          this.cache[transform.entity.id].modelMatrix,
+        );
       }
+      aabb.fromPoints(TEMP_AABB, TEMP_BOUNDS_POINTS);
+      aabb.includeAABB(transform.worldBounds, TEMP_AABB);
     }
     // TODO: what if transform is immutable?
     // Add local worldBounds to parent worldBounds

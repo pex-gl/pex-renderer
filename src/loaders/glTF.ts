@@ -11,7 +11,7 @@ const isSafari =
 
 // Constants
 // https://www.khronos.org/registry/glTF/specs/2.0/glTF-2.0.html#specifying-extensions
-const SUPPORTED_EXTENSIONS = [
+const SUPPORTED_EXTENSIONS = new Set([
   // 1.0
   "KHR_materials_pbrSpecularGlossiness",
   // 2.0
@@ -42,12 +42,12 @@ const SUPPORTED_EXTENSIONS = [
   // "EXT_lights_image_based"
   // "KHR_animation_pointer"
   // "KHR_audio"
-];
+]);
 
 const WEBGL_CONSTANTS = {
   // https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/Constants#Buffers
-  ELEMENT_ARRAY_BUFFER: 34963, // 0x8893
-  ARRAY_BUFFER: 34962, // 0x8892
+  ELEMENT_ARRAY_BUFFER: 34_963, // 0x8893
+  ARRAY_BUFFER: 34_962, // 0x8892
 
   // https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/Constants#Data_types
   BYTE: 5120, // 0x1400
@@ -89,12 +89,12 @@ const GLTF_ACCESSOR_TYPE_COMPONENTS_NUMBER = {
 };
 
 // https://www.khronos.org/registry/glTF/specs/2.0/glTF-2.0.html#header
-const MAGIC = 0x46546c67; // glTF
+const MAGIC = 0x46_54_6c_67; // glTF
 
 // https://www.khronos.org/registry/glTF/specs/2.0/glTF-2.0.html#chunks
 const CHUNK_TYPE = {
-  JSON: 0x4e4f534a,
-  BIN: 0x004e4942,
+  JSON: 0x4e_4f_53_4a,
+  BIN: 0x00_4e_49_42,
 };
 
 const PEX_ATTRIBUTE_NAME_MAP = {
@@ -114,9 +114,9 @@ const PEX_ATTRIBUTE_NAME_MAP = {
 
 function linearToSrgb(color) {
   return [
-    color[0] ** (1.0 / 2.2),
-    color[1] ** (1.0 / 2.2),
-    color[2] ** (1.0 / 2.2),
+    color[0] ** (1 / 2.2),
+    color[1] ** (1 / 2.2),
+    color[2] ** (1 / 2.2),
     color.length == 4 ? color[3] : 1,
   ];
 }
@@ -125,8 +125,8 @@ function linearToSrgb(color) {
 const MESH_QUANTIZATION_SCALE = {
   [Int8Array]: 1 / 127,
   [Uint8Array]: 1 / 255,
-  [Int16Array]: 1 / 32767,
-  [Uint16Array]: 1 / 65535,
+  [Int16Array]: 1 / 32_767,
+  [Uint16Array]: 1 / 65_535,
 };
 
 const normalizeData = (data) =>
@@ -263,25 +263,24 @@ function getPexMaterialTexture(
   if (!texture._tex) {
     let img = image._img;
 
-    if (!utils.isPowerOfTwo(img.width) || !utils.isPowerOfTwo(img.height)) {
-      // https://www.khronos.org/registry/glTF/specs/2.0/glTF-2.0.html#samplers
-      if (
-        sampler.wrapS !== ctx.Wrap.ClampToEdge ||
+    // https://www.khronos.org/registry/glTF/specs/2.0/glTF-2.0.html#samplers
+    if (
+      (!utils.isPowerOfTwo(img.width) || !utils.isPowerOfTwo(img.height)) &&
+      (sampler.wrapS !== ctx.Wrap.ClampToEdge ||
         sampler.wrapT !== ctx.Wrap.ClampToEdge ||
-        hasMipMap
-      ) {
-        const canvas2d = document.createElement("canvas");
-        canvas2d.width = utils.nextPowerOfTwo(img.width);
-        canvas2d.height = utils.nextPowerOfTwo(img.height);
+        hasMipMap)
+    ) {
+      const canvas2d = document.createElement("canvas");
+      canvas2d.width = utils.nextPowerOfTwo(img.width);
+      canvas2d.height = utils.nextPowerOfTwo(img.height);
 
-        console.warn(
-          `Resizing NPOT texture ${img.width}x${img.height} to ${canvas2d.width}x${canvas2d.height}. Src: ${img.src}`,
-        );
+      console.warn(
+        `Resizing NPOT texture ${img.width}x${img.height} to ${canvas2d.width}x${canvas2d.height}. Src: ${img.src}`,
+      );
 
-        const ctx2d = canvas2d.getContext("2d");
-        ctx2d.drawImage(img, 0, 0, canvas2d.width, canvas2d.height);
-        img = canvas2d;
-      }
+      const ctx2d = canvas2d.getContext("2d");
+      ctx2d.drawImage(img, 0, 0, canvas2d.width, canvas2d.height);
+      img = canvas2d;
     }
     const pexTextureOptions = img.compressed
       ? img
@@ -315,7 +314,7 @@ function getPexMaterialTexture(
         // textureInfo
         texCoord: texCoord || 0,
         // textureTransform.texCoord: Overrides the textureInfo texCoord value if supplied.
-        ...(textureTransform || {}),
+        ...textureTransform,
       };
 }
 
@@ -387,17 +386,16 @@ function handleMaterial(material, gltf, ctx) {
             ctx.PixelFormat.SRGB8_ALPHA8,
           );
         }
-        if (sheenExt.sheenRoughnessTexture) {
-          if (
-            sheenExt.sheenColorTexture.index !==
+        if (
+          sheenExt.sheenRoughnessTexture &&
+          sheenExt.sheenColorTexture.index !==
             sheenExt.sheenRoughnessTexture.index
-          ) {
-            materialProps.sheenRoughnessTexture = getPexMaterialTexture(
-              sheenExt.sheenRoughnessTexture,
-              gltf,
-              ctx,
-            );
-          }
+        ) {
+          materialProps.sheenRoughnessTexture = getPexMaterialTexture(
+            sheenExt.sheenRoughnessTexture,
+            gltf,
+            ctx,
+          );
         }
       }
 
@@ -505,7 +503,7 @@ function handleMaterial(material, gltf, ctx) {
       // https://github.com/KhronosGroup/glTF/tree/main/extensions/2.0/Khronos/KHR_materials_specular
       if (material.extensions.KHR_materials_specular) {
         const specularExt = material.extensions.KHR_materials_specular;
-        materialProps.specular = specularExt.specularFactor ?? 1.0;
+        materialProps.specular = specularExt.specularFactor ?? 1;
         if (specularExt.specularTexture) {
           materialProps.specularTexture = getPexMaterialTexture(
             specularExt.specularTexture,
@@ -850,11 +848,11 @@ async function handleMesh(
       const geometryCmp = components.geometry(decodedPrimitive);
 
       const materialCmp =
-        primitive.material !== undefined
-          ? components.material(
+        primitive.material === undefined
+          ? components.material()
+          : components.material(
               handleMaterial(gltf.materials[primitive.material], gltf, ctx),
-            )
-          : components.material();
+            );
 
       const entityComponents = {
         geometry: geometryCmp,
@@ -863,7 +861,7 @@ async function handleMesh(
 
       // Create morph
       if (primitive.targets) {
-        let sources = {};
+        const sources = {};
         const targets = primitive.targets.reduce((targets, target) => {
           const targetKeys = Object.keys(target);
 
@@ -916,7 +914,6 @@ async function handleMesh(
   );
 }
 
-// eslint-disable-next-line no-unused-vars
 const formatLight = ({ type, name, color, ...rest }) => ({
   ...rest,
   color: [...(color || [1, 1, 1]), 1],
@@ -936,7 +933,7 @@ function getLight(light) {
       light._light = components.spotLight({
         ...formatLight(light),
         innerAngle: light.spot?.innerConeAngle || 0,
-        angle: light.spot?.outerConeAngle || Math.PI / 4.0,
+        angle: light.spot?.outerConeAngle || Math.PI / 4,
       });
       break;
 
@@ -1047,7 +1044,7 @@ async function handleNode(node, gltf, i, ctx, options) {
       gltf.bufferViews,
     );
 
-    let inverseBindMatrices = [];
+    const inverseBindMatrices = [];
     for (let i = 0; i < accessor._data.length; i += 16) {
       inverseBindMatrices.push(accessor._data.slice(i, i + 16));
     }
@@ -1108,7 +1105,7 @@ async function handleNode(node, gltf, i, ctx, options) {
         // subEntity.transform.entity = subEntity;
         subEntity.name = `node_${i}_${j}`;
         subEntity.transform = {
-          ...(subEntity.transform || {}),
+          ...subEntity.transform,
           parent: node.entity.transform,
         };
         // subEntity.transform.parent = node.entity.transform;
@@ -1192,7 +1189,7 @@ function handleAnimation(animation, { accessors, bufferViews, nodes }, index) {
   // });
 
   const duration = channels.reduce(
-    (duration, { input }) => Math.max(duration, input[input.length - 1]),
+    (duration, { input }) => Math.max(duration, input.at(-1)),
     0,
   );
 
@@ -1280,9 +1277,7 @@ function unpackBinary(data) {
   const buffer = binaryReader.readUint8Array(chunkLength);
 
   let json;
-  if (typeof TextDecoder !== "undefined") {
-    json = new TextDecoder().decode(buffer);
-  } else {
+  if (typeof TextDecoder === "undefined") {
     let result = "";
     const length = buffer.byteLength;
 
@@ -1290,6 +1285,8 @@ function unpackBinary(data) {
       result += String.fromCharCode(buffer[i]);
     }
     json = result;
+  } else {
+    json = new TextDecoder().decode(buffer);
   }
 
   // BIN
@@ -1333,11 +1330,11 @@ function loadData(data) {
 }
 
 function isBase64(uri) {
-  return uri.length < 5 ? false : uri.substr(0, 5) === "data:";
+  return uri.length < 5 ? false : uri.slice(0, 5) === "data:";
 }
 
 function decodeBase64(uri) {
-  const decodedString = atob(uri.split(",")[1]);
+  const decodedString = atob(uri.split(",", 2)[1]);
   const bufferLength = decodedString.length;
   const bufferView = new Uint8Array(new ArrayBuffer(bufferLength));
 
@@ -1395,7 +1392,7 @@ async function loadGltf(urlOrData, options = {}) {
   // https://www.khronos.org/registry/glTF/specs/2.0/glTF-2.0.html#specifying-extensions
   if (json.extensionsRequired) {
     const requiredExtensions = json.extensionsRequired.filter(
-      (extension) => !SUPPORTED_EXTENSIONS.includes(extension),
+      (extension) => !SUPPORTED_EXTENSIONS.has(extension),
     );
     if (requiredExtensions.length) {
       console.error(
@@ -1406,7 +1403,7 @@ async function loadGltf(urlOrData, options = {}) {
   }
   if (json.extensionsUsed) {
     const unsupportedExtensions = json.extensionsUsed.filter(
-      (extension) => !SUPPORTED_EXTENSIONS.includes(extension),
+      (extension) => !SUPPORTED_EXTENSIONS.has(extension),
     );
     if (unsupportedExtensions.length) {
       console.warn(
@@ -1434,19 +1431,15 @@ async function loadGltf(urlOrData, options = {}) {
       if (isBinary) {
         buffer._data = bin;
       } else {
-        if (isBase64(buffer.uri)) {
-          buffer._data = decodeBase64(buffer.uri);
-        } else {
-          buffer._data = await loadArrayBuffer(
-            [basePath, buffer.uri].join("/"),
-          );
-        }
+        buffer._data = isBase64(buffer.uri)
+          ? decodeBase64(buffer.uri)
+          : await loadArrayBuffer([basePath, buffer.uri].join("/"));
       }
     }),
   );
 
   // https://github.com/KhronosGroup/glTF/blob/main/specification/2.0/schema/bufferView.schema.json
-  for (let bufferView of json.bufferViews) {
+  for (const bufferView of json.bufferViews) {
     const bufferData = json.buffers[bufferView.buffer]._data;
     if (bufferView.byteOffset === undefined) bufferView.byteOffset = 0;
 
@@ -1516,7 +1509,7 @@ async function loadGltf(urlOrData, options = {}) {
 
   // Load scene
   // https://github.com/KhronosGroup/glTF/blob/main/specification/2.0/schema/scene.schema.json
-  let scenes = await Promise.all(
+  const scenes = await Promise.all(
     (json.scenes || [{}]).map(async (scene, index) => {
       // Create scene root entity
       scene.root = entity({
@@ -1566,20 +1559,22 @@ async function loadGltf(urlOrData, options = {}) {
       });
 
       json.nodes.forEach((node) => {
-        if (node.skin !== undefined) {
-          const skin = json.skins[node.skin];
-          const joints = skin.joints.map((i) => json.nodes[i].entity);
+        if (node.skin === undefined) {
+          return;
+        }
 
-          if (json.meshes[node.mesh].primitives.length === 1) {
-            node.entity.skin.joints = joints;
-          } else {
-            // TODO: implement joints
-            // node.entity.transform.children.forEach(({ entity }) => {
-            // FIXME: currently we share the same Skin component
-            // so this code is redundant after first child
-            // entity.skin.joints = joints;
-            // });
-          }
+        const skin = json.skins[node.skin];
+        const joints = skin.joints.map((i) => json.nodes[i].entity);
+
+        if (json.meshes[node.mesh].primitives.length === 1) {
+          node.entity.skin.joints = joints;
+        } else {
+          // TODO: implement joints
+          // node.entity.transform.children.forEach(({ entity }) => {
+          // FIXME: currently we share the same Skin component
+          // so this code is redundant after first child
+          // entity.skin.joints = joints;
+          // });
         }
       });
 
@@ -1597,28 +1592,28 @@ async function loadGltf(urlOrData, options = {}) {
 
       //prep skins
       json.nodes.forEach((node) => {
-        if (node.skin !== undefined) {
-          const skin = json.skins[node.skin];
-          const joints = skin.joints.map((i) => json.nodes[i].entity);
+        if (node.skin === undefined) {
+          return;
+        }
 
-          if (json.meshes[node.mesh].primitives.length === 1) {
-            // node.entity.getComponent("Skin").set({
-            //   joints: joints,
-            // });
-            node.entity.skin.joints = joints;
-            node.entity.skin.jointMatrices = joints.map(() => mat4.create());
-          } else {
-            scene.entities
-              .filter((e) => {
-                return e.transform.parent == node.entity.transform;
-              })
-              .forEach((childEntity) => {
-                childEntity.skin.joints = joints;
-                childEntity.skin.jointMatrices = joints.map(() =>
-                  mat4.create(),
-                );
-              });
-          }
+        const skin = json.skins[node.skin];
+        const joints = skin.joints.map((i) => json.nodes[i].entity);
+
+        if (json.meshes[node.mesh].primitives.length === 1) {
+          // node.entity.getComponent("Skin").set({
+          //   joints: joints,
+          // });
+          node.entity.skin.joints = joints;
+          node.entity.skin.jointMatrices = joints.map(() => mat4.create());
+        } else {
+          scene.entities
+            .filter((e) => {
+              return e.transform.parent == node.entity.transform;
+            })
+            .forEach((childEntity) => {
+              childEntity.skin.joints = joints;
+              childEntity.skin.jointMatrices = joints.map(() => mat4.create());
+            });
         }
       });
 

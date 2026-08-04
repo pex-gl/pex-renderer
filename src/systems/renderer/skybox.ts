@@ -31,25 +31,25 @@ export default ({ ctx, resourceCache }) => ({
   type: "skybox-renderer",
   debug: false,
   checkReflectionProbe(reflectionProbe) {
-    if (!reflectionProbe._reflectionProbe?._reflectionMap) {
+    if (reflectionProbe._reflectionProbe?._reflectionMap) {
+      return true;
+    } else {
       console.warn(
         NAMESPACE,
         this.type,
         `reflectionProbe component missing _reflectionProbe. Add a reflectionProbeSystem.update(entities, { renderers: [skyboxRendererSystem] }).`,
       );
-    } else {
-      return true;
     }
   },
   checkSkybox(skybox) {
-    if (!(skybox.envMap || skybox._skyTexture)) {
+    if (skybox.envMap || skybox._skyTexture) {
+      return true;
+    } else {
       console.warn(
         NAMESPACE,
         this.type,
         `skybox component missing texture. Provide a "envMap" or add a skyboxSystem.update(world.entities).`,
       );
-    } else {
-      return true;
     }
   },
   flagDefinitions,
@@ -97,7 +97,7 @@ export default ({ ctx, resourceCache }) => ({
       uEnvMapExposure: entity.skybox.exposure ?? 1,
       // TODO: rename, for oct map. Why * 2 ? Cause it is oct map atlas?
       uEnvMapSize: reflectionProbeEntity?.reflectionProbe?.size * 2 || 0,
-      uBackgroundBlur: !renderingToReflectionProbe ? backgroundBlur : false,
+      uBackgroundBlur: renderingToReflectionProbe ? false : backgroundBlur,
     };
 
     ctx.submit(this.cmd);

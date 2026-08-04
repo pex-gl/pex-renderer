@@ -45,8 +45,10 @@ export default () => ({
         if (!value) continue;
 
         if (defineName) {
-          flags.push(`USE_${defineName}`);
-          flags.push(`${defineName}_TEX_COORD ${value.texCoord || "0"}`);
+          flags.push(
+            `USE_${defineName}`,
+            `${defineName}_TEX_COORD ${value.texCoord || "0"}`,
+          );
         }
         uniforms[opts.uniform] = value.texture || value;
 
@@ -72,9 +74,7 @@ export default () => ({
         opts.default !== undefined
       ) {
         // Pass the compare test
-        if (opts.compare !== undefined) {
-          if (opts.compare === value) flags.push(defineName);
-        } else {
+        if (opts.compare === undefined) {
           // Set flag as name + value
           if (opts.type === "value") {
             // Set value flag if not empty string and use default if nullish
@@ -89,6 +89,8 @@ export default () => ({
           } else if (opts.fallback) {
             flags.push(opts.fallback);
           }
+        } else {
+          if (opts.compare === value) flags.push(defineName);
         }
 
         // Set uniform with default if value is nullish
@@ -135,7 +137,7 @@ vec4 debugColor = vec4(pow(vec3(${debugRender}${scale}), vec3(${pow})), 1.0);
     const hooks = entity.material?.hooks;
     if (hooks) {
       if (hooks.vert) {
-        for (let [hookName, hookCode] of Object.entries(hooks.vert)) {
+        for (const [hookName, hookCode] of Object.entries(hooks.vert)) {
           descriptor.vert = descriptor.vert.replace(
             `#define HOOK_VERT_${hookName}`,
             hookCode,
@@ -143,7 +145,7 @@ vec4 debugColor = vec4(pow(vec3(${debugRender}${scale}), vec3(${pow})), 1.0);
         }
       }
       if (hooks.frag) {
-        for (let [hookName, hookCode] of Object.entries(hooks.frag)) {
+        for (const [hookName, hookCode] of Object.entries(hooks.frag)) {
           descriptor.frag = descriptor.frag.replace(
             `#define HOOK_FRAG_${hookName}`,
             hookCode,

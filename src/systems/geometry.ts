@@ -21,7 +21,12 @@ const attributeMap = {
   instanceColor: "colors",
 };
 const attributeMapKeys = Object.keys(attributeMap);
-const instancedAttributes = ["offset", "scale", "rotation", "instanceColor"];
+const instancedAttributes = new Set([
+  "offset",
+  "scale",
+  "rotation",
+  "instanceColor",
+]);
 
 const indicesProps = ["cells", "indices"];
 
@@ -136,7 +141,7 @@ export default ({ ctx }) => ({
       }
     }
 
-    let boundsDirty = !geometry.bounds || geometry.bounds.dirty;
+    const boundsDirty = !geometry.bounds || geometry.bounds.dirty;
 
     // Add vertex buffers
     for (let i = 0; i < attributeMapKeys.length; i++) {
@@ -171,7 +176,7 @@ export default ({ ctx }) => ({
           attribute.stride = attributeValue.stride;
           if (
             attributeValue.divisor ||
-            instancedAttributes.includes(attributeName)
+            instancedAttributes.has(attributeName)
           ) {
             attribute.stepMode = "instance";
           }
@@ -208,9 +213,10 @@ export default ({ ctx }) => ({
         const entity = entities[i];
 
         if (entity._geometry) {
-          if (entity._geometry.indices) disposeAttribute(entity._geometry.indices);
+          if (entity._geometry.indices)
+            disposeAttribute(entity._geometry.indices);
 
-          for (let attribute of Object.values(entity._geometry.attributes)) {
+          for (const attribute of Object.values(entity._geometry.attributes)) {
             disposeAttribute(attribute);
           }
 

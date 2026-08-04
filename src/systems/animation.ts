@@ -10,8 +10,7 @@ function updateAnimation(animation, deltaTime) {
 
   if (animation.playing) {
     const animationLength =
-      animation.duration ||
-      animation.channels[0].input[animation.channels[0].input.length - 1];
+      animation.duration || animation.channels[0].input.at(-1);
     const now = performance.now();
     deltaTime ||= (now - animation.prevTime) / 1000;
 
@@ -81,9 +80,9 @@ function updateAnimation(animation, deltaTime) {
 
           // m1 = (tk+1 - tk)ak+1
           const nextInTangent =
-            nextIndex !== inputData.length - 1
-              ? vec.scale(vec.copy(outputData[prevIndex * 3]), scale)
-              : vec.create();
+            nextIndex === inputData.length - 1
+              ? vec.create()
+              : vec.scale(vec.copy(outputData[prevIndex * 3]), scale);
 
           // p(t) = (2t³ - 3t² + 1)p0 + (t³ - 2t² + t)m0 + (-2t³ + 3t²)p1 + (t³ - t²)m1
           const p0 = vec.scale(prevPosition, 2 * ttt - 3 * tt + 1);
@@ -127,15 +126,27 @@ function updateAnimation(animation, deltaTime) {
       if (isRotation) {
         quat.set(channel.target.transform.rotation, TEMP_QUAT);
         channel.target.transform.dirty = true;
-      } else if (channel.path === "translation") {
-        vec3.set(channel.target.transform.position, TEMP_VEC3);
-        channel.target.transform.dirty = true;
-      } else if (channel.path === "scale") {
-        vec3.set(channel.target.transform.scale, TEMP_VEC3);
-        channel.target.transform.dirty = true;
-      } else if (channel.path === "weights") {
-        channel.target.morph.weights = outputData[nextIndex].slice();
-      }
+      } else
+        switch (channel.path) {
+          case "translation": {
+            vec3.set(channel.target.transform.position, TEMP_VEC3);
+            channel.target.transform.dirty = true;
+
+            break;
+          }
+          case "scale": {
+            vec3.set(channel.target.transform.scale, TEMP_VEC3);
+            channel.target.transform.dirty = true;
+
+            break;
+          }
+          case "weights": {
+            channel.target.morph.weights = outputData[nextIndex].slice();
+
+            break;
+          }
+          // No default
+        }
     }
   }
 }

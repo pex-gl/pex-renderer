@@ -5,17 +5,19 @@ class ProgramCache {
   get(flags, vert, frag) {
     for (let i = 0; i < this.values.length; i++) {
       const value = this.values[i];
-      if (value.frag === frag && value.vert === vert) {
-        if (value.flags.length === flags.length) {
-          let sameFlags = true;
-          for (let j = 0; j < flags.length; j++) {
-            if (value.flags[j] !== flags[j]) {
-              sameFlags = false;
-              break;
-            }
+      if (
+        value.frag === frag &&
+        value.vert === vert &&
+        value.flags.length === flags.length
+      ) {
+        let sameFlags = true;
+        for (let j = 0; j < flags.length; j++) {
+          if (value.flags[j] !== flags[j]) {
+            sameFlags = false;
+            break;
           }
-          if (sameFlags) return value.program;
         }
+        if (sameFlags) return value.program;
       }
     }
   }

@@ -27,11 +27,11 @@
   "exports": {
     ".": {
       "types": "./types/index.d.ts",
-      "default": "./index.js"
+      "default": "./lib/index.js"
     }
   },
-  "main": "index.js",
-  "types": "types/index.d.ts",
+  "main": "./lib/index.js",
+  "types": "./types/index.d.ts",
   "scripts": {
     "build": "snowdev build",
     "dev": "snowdev dev",
@@ -43,7 +43,7 @@
     "hammersley": "^2.0.0",
     "pex-cam": "^3.0.1",
     "pex-geom": "^3.1.1",
-    "pex-gpu": "^0.0.1",
+    "pex-gpu": "file:../pex-gpu",
     "pex-io": "^3.2.0",
     "pex-loaders": "^1.2.1",
     "pex-math": "^4.3.0",
@@ -68,8 +68,8 @@
   },
   "engines": {
     "node": ">=22.0.0",
-    "npm": ">=10.5.1",
-    "snowdev": "3.0.0-alpha.0"
+    "snowdev": "3.0.0-alpha.1",
+    "npm": ">=10.5.1"
   },
   "snowdev": {
     "importMap": {

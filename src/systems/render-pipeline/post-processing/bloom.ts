@@ -41,8 +41,8 @@ const bloom = ({
       target: ({ viewport }) => {
         const tex = resourceCache.texture2D({
           ...descriptors.postProcessing.outputTextureDesc,
-          width: Math.max(~~(viewport[2] / 2 ** (i + 1)), 1),
-          height: Math.max(~~(viewport[3] / 2 ** (i + 1)), 1),
+          width: Math.max(Math.trunc(viewport[2] / 2 ** (i + 1)), 1),
+          height: Math.max(Math.trunc(viewport[3] / 2 ** (i + 1)), 1),
           min: ctx.capabilities.textureHalfFloatLinear
             ? ctx.Filter.Linear
             : ctx.Filter.Nearest,
@@ -53,8 +53,8 @@ const bloom = ({
         return tex;
       },
       size: ({ viewport }) => [
-        Math.max(~~(viewport[2] / 2 ** (i + 1)), 1),
-        Math.max(~~(viewport[3] / 2 ** (i + 1)), 1),
+        Math.max(Math.trunc(viewport[2] / 2 ** (i + 1)), 1),
+        Math.max(Math.trunc(viewport[3] / 2 ** (i + 1)), 1),
       ],
     }),
   );

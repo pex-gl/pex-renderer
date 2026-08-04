@@ -117,7 +117,7 @@ function updateCameraProjection(camera, transform) {
  *
  * - "_orbiter" to orbiter components
  *
- * @returns {import("../types.js").System}
+ * @returns
  * @alias module:systems.camera
  */
 export default () => ({
@@ -127,20 +127,20 @@ export default () => ({
   updateCameraProjection,
   computeFrustum,
   checkCamera(_, cameraEntity) {
-    if (!cameraEntity.transform) {
+    if (cameraEntity.transform) {
+      return true;
+    } else {
       console.warn(
         NAMESPACE,
         this.type,
         `camera entity missing transform. Add a transformSystem.update(entities).`,
       );
-    } else {
-      return true;
     }
   },
   updateCameraFoV(entity) {
     const camera = entity.camera;
 
-    let sensorWidth = camera.sensorSize[0];
+    const sensorWidth = camera.sensorSize[0];
     let sensorHeight = camera.sensorSize[1];
     const sensorAspectRatio = sensorWidth / sensorHeight;
     if (camera.aspect > sensorAspectRatio) {
@@ -178,79 +178,7 @@ export default () => ({
     this.updateCameraFoV(entity);
 
     if (orbiter) {
-      if (!orbiter._orbiter) {
-        updateCameraProjection(entity.camera, entity._transform);
-
-        const proxyCamera = {
-          viewMatrix: camera.viewMatrix,
-          invViewMatrix: camera.invViewMatrix,
-          position: [...entity.transform.position],
-          rotationCache: [...entity.transform.rotation],
-          target: [...orbiter.target],
-          up: [0, 1, 0],
-          zoom: camera.zoom,
-          getViewRay: (x, y, windowWidth, windowHeight) => {
-            let nx = (2 * x) / windowWidth - 1;
-            let ny = 1 - (2 * y) / windowHeight;
-            const hNear = 2 * Math.tan(camera.fov / 2) * camera.near;
-            const wNear = hNear * camera.aspect;
-            nx *= wNear * 0.5;
-            ny *= hNear * 0.5; // [origin, direction]
-
-            return [[0, 0, 0], vec3.normalize([nx, ny, -camera.near])];
-          },
-          set({ target, position, zoom }) {
-            if (zoom) {
-              camera.zoom = zoom;
-              return;
-            }
-
-            if (target) {
-              vec3.set(orbiter._orbiter.camera.target, target);
-              vec3.set(orbiter.target, target);
-            }
-
-            if (position) {
-              vec3.set(orbiter._orbiter.camera.position, position);
-              vec3.set(entity.transform.position, position);
-            }
-
-            mat4.lookAt(
-              TEMP_MAT4,
-              orbiter._orbiter.camera.position,
-              orbiter._orbiter.camera.target,
-              orbiter._orbiter.camera.up,
-            );
-            mat4.invert(TEMP_MAT4);
-            quat.fromMat4(entity.transform.rotation, TEMP_MAT4);
-            quat.set(
-              orbiter._orbiter.camera.rotationCache,
-              entity.transform.rotation,
-            );
-
-            orbiter.lat = orbiter._orbiter.lat;
-            orbiter.lon = orbiter._orbiter.lon;
-            orbiter.distance = orbiter._orbiter.distance;
-            // TODO: need to check lat/lon/dist change?
-            entity.transform.dirty = true;
-            camera.dirty = true;
-          },
-        };
-        orbiter._orbiter = createOrbiter({
-          element: orbiter.element || document.body, //TODO: element used to default to ctx.gl.canvas
-          autoUpdate: false,
-          camera: proxyCamera,
-          position: proxyCamera.position,
-          maxDistance: camera.far * 0.9,
-        });
-        orbiter._orbiter.updateCamera();
-        orbiter.distance = orbiter._orbiter.distance;
-        orbiter.lat = orbiter._orbiter.lat;
-        orbiter.lon = orbiter._orbiter.lon;
-        orbiter._orbiter.distanceCache = orbiter._orbiter.distance;
-        orbiter._orbiter.latCache = orbiter._orbiter.lat;
-        orbiter._orbiter.lonCache = orbiter._orbiter.lon;
-      } else {
+      if (orbiter._orbiter) {
         if (camera.dirty) {
           camera.dirty = false;
 
@@ -337,6 +265,78 @@ export default () => ({
         );
         mat4.set(camera.viewMatrix, camera.invViewMatrix);
         mat4.invert(camera.viewMatrix);
+      } else {
+        updateCameraProjection(entity.camera, entity._transform);
+
+        const proxyCamera = {
+          viewMatrix: camera.viewMatrix,
+          invViewMatrix: camera.invViewMatrix,
+          position: [...entity.transform.position],
+          rotationCache: [...entity.transform.rotation],
+          target: [...orbiter.target],
+          up: [0, 1, 0],
+          zoom: camera.zoom,
+          getViewRay: (x, y, windowWidth, windowHeight) => {
+            let nx = (2 * x) / windowWidth - 1;
+            let ny = 1 - (2 * y) / windowHeight;
+            const hNear = 2 * Math.tan(camera.fov / 2) * camera.near;
+            const wNear = hNear * camera.aspect;
+            nx *= wNear * 0.5;
+            ny *= hNear * 0.5; // [origin, direction]
+
+            return [[0, 0, 0], vec3.normalize([nx, ny, -camera.near])];
+          },
+          set({ target, position, zoom }) {
+            if (zoom) {
+              camera.zoom = zoom;
+              return;
+            }
+
+            if (target) {
+              vec3.set(orbiter._orbiter.camera.target, target);
+              vec3.set(orbiter.target, target);
+            }
+
+            if (position) {
+              vec3.set(orbiter._orbiter.camera.position, position);
+              vec3.set(entity.transform.position, position);
+            }
+
+            mat4.lookAt(
+              TEMP_MAT4,
+              orbiter._orbiter.camera.position,
+              orbiter._orbiter.camera.target,
+              orbiter._orbiter.camera.up,
+            );
+            mat4.invert(TEMP_MAT4);
+            quat.fromMat4(entity.transform.rotation, TEMP_MAT4);
+            quat.set(
+              orbiter._orbiter.camera.rotationCache,
+              entity.transform.rotation,
+            );
+
+            orbiter.lat = orbiter._orbiter.lat;
+            orbiter.lon = orbiter._orbiter.lon;
+            orbiter.distance = orbiter._orbiter.distance;
+            // TODO: need to check lat/lon/dist change?
+            entity.transform.dirty = true;
+            camera.dirty = true;
+          },
+        };
+        orbiter._orbiter = createOrbiter({
+          element: orbiter.element || document.body, //TODO: element used to default to ctx.gl.canvas
+          autoUpdate: false,
+          camera: proxyCamera,
+          position: proxyCamera.position,
+          maxDistance: camera.far * 0.9,
+        });
+        orbiter._orbiter.updateCamera();
+        orbiter.distance = orbiter._orbiter.distance;
+        orbiter.lat = orbiter._orbiter.lat;
+        orbiter.lon = orbiter._orbiter.lon;
+        orbiter._orbiter.distanceCache = orbiter._orbiter.distance;
+        orbiter._orbiter.latCache = orbiter._orbiter.lat;
+        orbiter._orbiter.lonCache = orbiter._orbiter.lon;
       }
     } else {
       // Camera manually updated or animation

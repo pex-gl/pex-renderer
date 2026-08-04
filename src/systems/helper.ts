@@ -7,11 +7,9 @@ import { TEMP_MAT4, TEMP_VEC3 } from "../utils.js";
 const pointsToLine = (points, closed = false) =>
   points.reduce((line, p, i) => {
     if (!closed && i > 0) {
-      line.push([...points[i - 1]]);
-      line.push(p);
+      line.push([...points[i - 1]], p);
     } else {
-      line.push(p);
-      line.push([...points[(i + 1) % points.length]]);
+      line.push(p, [...points[(i + 1) % points.length]]);
     }
     return line;
   }, []);
@@ -341,7 +339,7 @@ const getVertexVector = (geometry, attributeName, size = 0.1, modelMatrix) => {
   const rotations = geometry.rotations;
   const isRotationsFlatArray = rotations && !rotations[0]?.length;
 
-  const lines = new Array(instances * positionCount * 2);
+  const lines = Array.from({ length: instances * positionCount * 2 });
 
   let cellIndex = 0;
   // TODO: gc

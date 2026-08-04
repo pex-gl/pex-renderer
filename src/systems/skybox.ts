@@ -22,8 +22,8 @@ const parameters = [
  *   render
  * - "_skyTextureChanged" to skybox components for reflection-probe system
  *
- * @param {import("../types.js").SystemOptions} options
- * @returns {import("../types.js").System}
+ * @param options
+ * @returns
  * @alias module:systems.skybox
  */
 export default ({ ctx, resourceCache }) => ({
@@ -45,7 +45,7 @@ export default ({ ctx, resourceCache }) => ({
 
       this.cache[entity.id] = {
         sunPosition: [...entity.skybox.sunPosition],
-        parameters: new Array(parameters.length),
+        parameters: Array.from({ length: parameters.length }),
         _updateSkyTexturePass: ctx.pass({
           name: "skyboxUpdateSkyTexturePass",
           color: [entity.skybox._skyTexture],

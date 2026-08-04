@@ -64,11 +64,11 @@ const getFileExtension = (path) => {
 };
 
 const getDirname = (path) => {
-  var code = path.charCodeAt(0);
-  var hasRoot = code === 47;
-  var end = -1;
+  let code = path.charCodeAt(0);
+  const hasRoot = code === 47;
+  let end = -1;
   let matchedSlash = true;
-  for (var i = path.length - 1; i >= 1; --i) {
+  for (let i = path.length - 1; i >= 1; --i) {
     code = path.charCodeAt(i);
     if (code === 47) {
       if (!matchedSlash) {
