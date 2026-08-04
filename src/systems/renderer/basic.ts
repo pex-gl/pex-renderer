@@ -1,6 +1,6 @@
 import { mat3 } from "pex-math";
 import { submit } from "pex-gpu";
-import { pipeline as SHADERS } from "pex-shaders";
+import * as SHADERS from "../../shaders/index.js";
 
 import createBaseSystem from "./base.js";
 

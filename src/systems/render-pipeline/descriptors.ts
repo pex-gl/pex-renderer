@@ -1,4 +1,4 @@
-import { pipeline as SHADERS } from "pex-shaders";
+import * as SHADERS from "../../shaders/index.js";
 import { CUBEMAP_SIDES } from "../../utils.js";
 
 // Fullscreen-triangle blit: samples the linear HDR main pass target and encodes
