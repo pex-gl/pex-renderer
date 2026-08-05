@@ -47,8 +47,10 @@
  * @property {number} [intensity=1]
  * @property {boolean} [disk=false]
  * @property {boolean} [doubleSided=false]
- * @property {number} [bias=0.1]
- * @property {number} [bulbRadius=1]
+ * @property {number} [depthBias=1] Shadow-map rasterizer constant depth bias.
+ * @property {number} [depthBiasSlopeScale=2] Shadow-map rasterizer slope-scaled depth bias, the effective term on a float depth map (raise to remove acne).
+ * @property {number} [depthBiasClamp=0] Upper bound on the applied depth bias to limit peter-panning (0 disables the clamp).
+ * @property {number} [bulbRadius=1] Soft-shadow (PCSS) light radius in world units (scaled by the light's transform): larger widens the penumbra.
  * @property {boolean} [castShadows=true]
  * @property {number} [shadowMapSize=2048]
  */
@@ -102,8 +104,10 @@
  * @typedef {object} DirectionalLightComponentOptions
  * @property {number[]} [color=[1, 1, 1, 1]]
  * @property {number} [intensity=1]
- * @property {number} [bias=0.1]
- * @property {number} [bulbRadius=1]
+ * @property {number} [depthBias=1] Shadow-map rasterizer constant depth bias.
+ * @property {number} [depthBiasSlopeScale=2] Shadow-map rasterizer slope-scaled depth bias, the effective term on a float depth map (raise to remove acne).
+ * @property {number} [depthBiasClamp=0] Upper bound on the applied depth bias to limit peter-panning (0 disables the clamp).
+ * @property {number} [bulbRadius=1] Soft-shadow (PCSS) light size. A directional light is at infinity, so unlike positional lights (where bulbRadius is a world-space radius) this reads as an angular size relative to the shadow frustum: larger widens the penumbra.
  * @property {boolean} [castShadows=true]
  * @property {number} [shadowMapSize=2048]
  */
@@ -384,8 +388,10 @@
  * @property {number} [angle=Math.PI / 4]
  * @property {number} [innerAngle=0]
  * @property {number} [range=10]
- * @property {number} [bias=0.1]
- * @property {number} [bulbRadius=1]
+ * @property {number} [depthBias=1] Shadow-map rasterizer constant depth bias.
+ * @property {number} [depthBiasSlopeScale=2] Shadow-map rasterizer slope-scaled depth bias, the effective term on a float depth map (raise to remove acne).
+ * @property {number} [depthBiasClamp=0] Upper bound on the applied depth bias to limit peter-panning (0 disables the clamp).
+ * @property {number} [bulbRadius=1] Soft-shadow (PCSS) light radius in world units: larger widens the penumbra.
  * @property {boolean} [castShadows=true]
  * @property {number} [shadowMapSize=2048]
  */

@@ -66,6 +66,8 @@ export default ({ ctx, shadowQuality = 4 }) => ({
     filter: "linear",
     compare: "less-equal",
   }),
+  // LTC lookup tables need bilinear filtering; addressing defaults to clamp.
+  ltcSampler: createSampler(ctx, { filter: "linear" }),
   ltcTextures: { ltc_1: null, ltc_2: null },
   isLoadingAreaLightData: null,
 
@@ -75,7 +77,7 @@ export default ({ ctx, shadowQuality = 4 }) => ({
   async loadAreaLightData() {
     try {
       const { g_ltc_1, g_ltc_2 } = await import("./area-light-data.js");
-      const options = { width: 64, height: 64, format: "rgba16float" };
+      const options = { width: 64, height: 64, format: "rgba16float" as const };
       this.ltcTextures.ltc_1 = createTexture(ctx, {
         label: "areaLightMatTexture",
         data: g_ltc_1,
@@ -175,9 +177,10 @@ export default ({ ctx, shadowQuality = 4 }) => ({
     const spot = entities.filter((e) => e.spotLight);
     const area = entities.filter((e) => e.areaLight);
 
-    // TODO(stage-2): area lights need LTC textures; rgba32float is
-    // unfilterable-float and won't bind under the reflected "float" sample type
-    // without the float32-filterable feature. Deferred with shadows.
+    if (area.length && !this.isLoadingAreaLightData) {
+      this.isLoadingAreaLightData = true;
+      this.loadAreaLightData();
+    }
     const ltcReady = this.ltcTextures.ltc_1 && this.ltcTextures.ltc_2;
     const areaActive = ltcReady ? area : [];
 
@@ -280,11 +283,12 @@ export default ({ ctx, shadowQuality = 4 }) => ({
 
     if (areaActive.length) {
       uniforms.uLtc1 = this.ltcTextures.ltc_1;
-      uniforms.uLtc1Sampler = this.shadowSampler;
+      uniforms.uLtc1Sampler = this.ltcSampler;
       uniforms.uLtc2 = this.ltcTextures.ltc_2;
-      uniforms.uLtc2Sampler = this.shadowSampler;
+      uniforms.uLtc2Sampler = this.ltcSampler;
       uniforms.uAreaLights = areaActive.map((e) => {
         const light = e.areaLight;
+        const s = shadow2D(light);
         return {
           position: e.transform.position,
           color: lightColor(light),
@@ -294,15 +298,15 @@ export default ({ ctx, shadowQuality = 4 }) => ({
           doubleSided: light.doubleSided ? 1 : 0,
           projectionMatrix: light._projectionMatrix,
           viewMatrix: light._viewMatrix,
-          castShadows: 0,
-          near: 0,
-          far: 0,
-          radiusUV: [0, 0],
-          shadowMapSize: [0, 0],
+          castShadows: s.castShadows,
+          near: s.near,
+          far: s.far,
+          radiusUV: s.radiusUV,
+          shadowMapSize: s.shadowMapSize,
         };
       });
-      areaActive.forEach((_, i) => {
-        uniforms[`uAreaShadowMap${i}`] = this.dummyTexture2D;
+      areaActive.forEach((e, i) => {
+        uniforms[`uAreaShadowMap${i}`] = shadow2D(e.areaLight).map;
         uniforms[`uAreaShadowMap${i}Sampler`] = this.shadowCompareSampler;
       });
     }
@@ -404,9 +408,11 @@ export default ({ ctx, shadowQuality = 4 }) => ({
     this.render(renderView, entities, { ...options, transparent: true });
   },
   // `linear` selects the omni (point) variant: a fragment stage stores
-  // normalized radial distance instead of clip depth (see depthPass). `bias`
-  // is the light's slope-scaled shadow bias, unused by the linear variant.
-  getDepthPipeline(entity, linear, bias) {
+  // normalized radial distance instead of clip depth (see depthPass). `light`
+  // carries the rasterizer depth-bias settings, unused by the linear variant
+  // (writing frag_depth bypasses rasterizer bias; the point shader biases its
+  // compare instead).
+  getDepthPipeline(entity, linear, light) {
     const { attributes } = entity._geometry;
     // Depth pass only cares about position-affecting features.
     const defines = new Set();
@@ -433,16 +439,15 @@ export default ({ ctx, shadowQuality = 4 }) => ({
       // (see shadow-mapping.ts), which reverses winding; skip culling so the flip
       // can't drop caster faces.
       pipeline.cullMode = "none";
-      // Writing frag_depth bypasses rasterizer depth bias; the point shader
-      // biases its compare instead.
       pipeline.depthBias = 0;
       pipeline.depthBiasSlopeScale = 0;
+      pipeline.depthBiasClamp = 0;
     } else {
-      // Rasterizer depth bias replaces shader-side shadow bias: a flat constant
-      // term plus the light's slope-scaled term (handles grazing angles). Too
-      // much detaches the shadow from the contact point (peter-panning).
-      pipeline.depthBias = 1;
-      pipeline.depthBiasSlopeScale = bias;
+      // Rasterizer depth bias replaces shader-side shadow bias: a constant term
+      // plus the slope-scaled term (handles grazing angles), optionally clamped.
+      pipeline.depthBias = light?.depthBias ?? 1;
+      pipeline.depthBiasSlopeScale = light?.depthBiasSlopeScale ?? 2;
+      pipeline.depthBiasClamp = light?.depthBiasClamp ?? 0;
     }
     return pipeline;
   },
@@ -477,7 +482,7 @@ export default ({ ctx, shadowQuality = 4 }) => ({
       const entity = casters[i];
       submit(ctx, {
         name: "drawShadowGeometryCmd",
-        pipeline: this.getDepthPipeline(entity, linear, light?.bias ?? 1),
+        pipeline: this.getDepthPipeline(entity, linear, light),
         attributes: entity._geometry.attributes,
         indices: entity._geometry.indices,
         count: entity._geometry.count,
@@ -500,6 +505,9 @@ export default ({ ctx, shadowQuality = 4 }) => ({
     this.dummyTextureCube.dispose();
     this.ltcTextures.ltc_1?.dispose();
     this.ltcTextures.ltc_2?.dispose();
+    this.ltcTextures.ltc_1 = null;
+    this.ltcTextures.ltc_2 = null;
+    this.isLoadingAreaLightData = null;
     this.pipelineCache.clear();
     this.depthPipelineCache.clear();
   },

@@ -68,7 +68,7 @@
   },
   "engines": {
     "node": ">=22.0.0",
-    "snowdev": "3.0.0-alpha.1",
+    "snowdev": ">=3.0.0-alpha.1",
     "npm": ">=10.5.1"
   },
   "snowdev": {

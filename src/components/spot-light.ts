@@ -11,10 +11,12 @@ export default (options) => ({
   angle: Math.PI / 4,
   innerAngle: 0,
   range: 10,
-  // Slope-scaled depth bias applied by the shadow-map rasterizer (see
-  // renderer/standard.ts getDepthPipeline). Trades shadow acne against contact
-  // detachment (peter-panning).
-  bias: 1,
+  // Shadow-map rasterizer depth bias (see renderer/standard.ts getDepthPipeline).
+  // The slope-scaled term is the effective one on a float depth map; raise it to
+  // remove acne, clamp to avoid contact detachment (peter-panning).
+  depthBias: 1,
+  depthBiasSlopeScale: 2,
+  depthBiasClamp: 0,
   bulbRadius: 1,
   castShadows: true,
   shadowMapSize: 2048,

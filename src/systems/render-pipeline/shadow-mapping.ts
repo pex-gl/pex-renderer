@@ -58,14 +58,24 @@ export default ({ renderGraph, resourceCache }) => ({
     // Get frustum size
     aabb.size(light._sceneBboxInLightSpace, TEMP_VEC3);
 
-    light._radiusUV = [
-      (1 / TEMP_VEC3[0]) *
-        (light.bulbRadius *
-          (lightEntity.areaLight ? lightEntity.transform.scale[0] : 1)),
-      (1 / TEMP_VEC3[1]) *
-        (light.bulbRadius *
-          (lightEntity.areaLight ? lightEntity.transform.scale[1] : 1)),
-    ];
+    // Light radius as a UV fraction of the shadow map, measured at the plane the
+    // projection defines so PCSS penumbra scaling is geometrically correct:
+    // - orthographic (directional): the frustum has a constant cross-section.
+    // - perspective (spot/area): the frustum width at the near plane, 2·near·tan(halfFov).
+    if (lightEntity.directionalLight) {
+      light._radiusUV = [
+        light.bulbRadius / TEMP_VEC3[0],
+        light.bulbRadius / TEMP_VEC3[1],
+      ];
+    } else {
+      const halfFov = lightEntity.spotLight ? light.angle : Math.PI / 4;
+      const nearPlaneSize = 2 * light._near * Math.tan(halfFov);
+      const scale = lightEntity.areaLight ? lightEntity.transform.scale : null;
+      light._radiusUV = [
+        (light.bulbRadius * (scale ? scale[0] : 1)) / nearPlaneSize,
+        (light.bulbRadius * (scale ? scale[1] : 1)) / nearPlaneSize,
+      ];
+    }
   },
   // Radial near/far for a point light's cube projection, derived from the scene
   // bounds relative to the light (scene-adaptive, nothing hardcoded).

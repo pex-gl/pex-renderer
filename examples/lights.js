@@ -84,7 +84,7 @@ const directionalLightEntity = createEntity({
   directionalLight: components.directionalLight({
     color: [1, 1, 0, 1],
     intensity: 1,
-    bulbRadius: 10,
+    bulbRadius: 0.3,
   }),
   // lightHelper: components.lightHelper(),
 });
@@ -114,7 +114,7 @@ const spotLightEntity = createEntity({
     range: 5,
     angle: Math.PI / 6,
     innerAngle: Math.PI / 12,
-    bulbRadius: 10,
+    bulbRadius: 0.03,
   }),
   // lightHelper: components.lightHelper(),
 });
@@ -139,7 +139,7 @@ const pointLightEntity = createEntity({
     color: [1, 1, 0, 1],
     intensity: 1,
     range: 5,
-    bulbRadius: 10,
+    bulbRadius: 0.1,
   }),
   // lightHelper: components.lightHelper(),
 });
@@ -165,8 +165,7 @@ const areaLightEntity = createEntity({
     color: [1, 1, 0, 1],
     intensity: 1,
     disk: true,
-    bulbRadius: 10,
-    castShadows: false,
+    bulbRadius: 0.1,
   }),
   // lightHelper: components.lightHelper(),
 });
@@ -179,7 +178,7 @@ const fixAreaLightEntity = createEntity({
     position: [1, 1, 1],
     rotation: quat.fromPointToPoint(quat.create(), [1, 1, 1], [0, 0, 0]),
   }),
-  areaLight: components.areaLight({ castShadows: false }),
+  areaLight: components.areaLight(),
   // lightHelper: components.lightHelper(),
 });
 world.add(fixAreaLightEntity);
