@@ -1,11 +1,16 @@
 import { postProcessing as postProcessingShaders } from "pex-shaders";
-import createPipelineCache from "../../pipeline-cache.js";
 import ssao from "./post-processing/ssao.js";
 import dof from "./post-processing/dof.js";
 import bloom from "./post-processing/bloom.js";
 import combine from "./post-processing/combine.js";
 import smaa from "./post-processing/smaa.js";
 import final, { isFinalMainEnabled } from "./post-processing/final.js";
+
+const createPipelineCache = () => ({
+  cache: { programs: {}, pipelines: {} },
+  getPipeline() {},
+  getHashFromProps() {},
+});
 
 // Impacts pipeline caching
 const pipelineProps = ["blend"];
