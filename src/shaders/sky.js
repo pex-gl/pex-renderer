@@ -5,10 +5,8 @@ import { chunks as SHADERS } from "pex-shaders";
 // Attribute @location convention specific to this file: 0 position (vec2,
 // clip-space quad corners).
 //
-// Historically sky-env-map always resolved TONE_MAP to aces and nothing
-// ever overrode it, so it's called directly here; the other operators
-// ported to chunks.toneMap are for the (not yet ported) post-processing
-// tone-map selection.
+// The env map stores linear HDR radiance (no tonemap/gamma here) so it matches
+// other HDRIs.
 
 /**
  * @param {Set<string>} [defines=new Set()]
@@ -89,19 +87,6 @@ fn vertexMain(input: VertexInput) -> Varyings {
   return output;
 }
 
-// Fragment includes
-${SHADERS.math.TWO_PI}
-${SHADERS.encodeDecode}
-
-fn aces(x: vec3f) -> vec3f {
-  let a = 2.51;
-  let b = 0.03;
-  let c = 2.43;
-  let d = 0.59;
-  let e = 0.14;
-  return clamp((x * (a * x + b)) / (x * (c * x + d) + e), vec3f(0.0), vec3f(1.0));
-}
-
 ${hooks.fragDeclarationsEnd ?? ""}
 
 @fragment
@@ -123,9 +108,9 @@ fn fragmentMain(input: Varyings) -> FragmentOutput {
     input.mieDirectionalG,
   );
 
-  var color = skyFrag(direction, sky);
-  color = aces(color);
-  color = toLinearVec3(color);
+  // Linear HDR; Clamp to the float16 max so the sun disk's radiance
+  // (far above 65504) is never stored as Inf.
+  let color = min(skyFrag(direction, sky), vec3f(65504.0));
 
   output.color = vec4f(color, 1.0);
 

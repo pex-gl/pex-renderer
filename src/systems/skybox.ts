@@ -25,16 +25,17 @@ export default ({ ctx, resourceCache }) => ({
   debug: false,
   pipeline: null,
 
-  // Bakes the analytic sky into the entity's equirectangular _skyTexture. The
-  // rgba8unorm-srgb target encodes on write and decodes on sample, so the
-  // shader's linear output round-trips back to linear for the background pass.
+  // Bakes the analytic sky into the entity's equirectangular _skyTexture as
+  // linear HDR. rgba16float preserves radiance >1 (an 8-bit/sRGB target would
+  // clamp it) and stays filterable — unlike rgba32float — so the background pass
+  // can sample it with a linear sampler.
   updateSkyboxEntity(entity) {
     if (!this.cache[entity.id]) {
       entity.skybox._skyTexture = createTexture(ctx, {
         label: "skyTexture",
         width: 512,
         height: 256,
-        format: "rgba8unorm-srgb",
+        format: "rgba16float",
       });
 
       this.cache[entity.id] = {

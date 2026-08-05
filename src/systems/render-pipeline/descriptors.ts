@@ -1,9 +1,9 @@
 import * as SHADERS from "../../shaders/index.js";
 import { CUBEMAP_SIDES } from "../../utils.js";
 
-// Fullscreen-triangle blit: samples the linear HDR main pass target and encodes
-// to sRGB for the canvas. WebGPU texture origin is top-left, so uv.y is flipped
-// relative to the clip-space triangle.
+// Fullscreen-triangle blit: samples the linear HDR main pass target, applies
+// the frame-wide tonemap, and encodes to sRGB for the canvas. WebGPU texture
+// origin is top-left, so uv.y is flipped relative to the clip-space triangle.
 const BLIT_WGSL = /* wgsl */ `
 struct Varyings {
   @builtin(position) position: vec4f,
@@ -21,6 +21,18 @@ fn vertexMain(@location(0) position: vec2f) -> Varyings {
 @group(0) @binding(0) var uTexture: texture_2d<f32>;
 @group(0) @binding(1) var uSampler: sampler;
 
+// Narkowicz ACES filmic tonemap: linear HDR scene radiance to display range.
+// Frame-wide interim home for tonemapping until post-processing (which will own
+// exposure and operator selection) is ported.
+fn aces(x: vec3f) -> vec3f {
+  let a = 2.51;
+  let b = 0.03;
+  let c = 2.43;
+  let d = 0.59;
+  let e = 0.14;
+  return clamp((x * (a * x + b)) / (x * (c * x + d) + e), vec3f(0.0), vec3f(1.0));
+}
+
 fn linearToSrgb(c: vec3f) -> vec3f {
   let lower = c * 12.92;
   let higher = 1.055 * pow(c, vec3f(1.0 / 2.4)) - 0.055;
@@ -30,7 +42,7 @@ fn linearToSrgb(c: vec3f) -> vec3f {
 @fragment
 fn fragmentMain(input: Varyings) -> @location(0) vec4f {
   let color = textureSample(uTexture, uSampler, input.uv);
-  return vec4f(linearToSrgb(color.rgb), color.a);
+  return vec4f(linearToSrgb(aces(color.rgb)), color.a);
 }
 `;
 
