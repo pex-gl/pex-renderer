@@ -10,6 +10,8 @@ import line from "./line.js";
 import overlay from "./overlay.js";
 import helper from "./helper.js";
 import error from "./error.js";
+import sky from "./sky.js";
+import skybox from "./skybox.js";
 
 /**
  * (defines, options) => wgslString, containing both @vertex and @fragment entry points.
@@ -71,3 +73,15 @@ export { helper };
  * @static
  */
 export { error };
+/**
+ * (defines, options) => wgslString, containing both @vertex and @fragment entry points.
+ * @member {Function}
+ * @static
+ */
+export { sky };
+/**
+ * (defines, options) => wgslString, containing both @vertex and @fragment entry points.
+ * @member {Function}
+ * @static
+ */
+export { skybox };

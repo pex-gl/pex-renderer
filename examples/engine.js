@@ -7,6 +7,7 @@ import {
 
 import * as gpu from "pex-gpu";
 import { cube } from "primitive-geometry";
+import { quat } from "pex-math";
 
 const ctx = await gpu.createContext({ pixelRatio: devicePixelRatio });
 const renderEngine = createRenderEngine({ ctx });
@@ -26,6 +27,20 @@ const geometryEntity = createEntity({
   material: components.material(),
 });
 world.add(geometryEntity);
+
+const skyboxEntity = createEntity({
+  transform: components.transform(),
+  skybox: components.skybox({ sunPosition: [0, 0.15, -1] }),
+});
+world.add(skyboxEntity);
+
+const directionalLightEntity = createEntity({
+  transform: components.transform({
+    rotation: quat.fromDirection(quat.create(), [0, 0, 1]),
+  }),
+  directionalLight: components.directionalLight(),
+});
+world.add(directionalLightEntity);
 
 gpu.frame(ctx, () => {
   renderEngine.update(world.entities);

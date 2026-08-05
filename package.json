@@ -36,7 +36,8 @@
     "build": "snowdev build",
     "dev": "snowdev dev",
     "release": "snowdev release",
-    "release:alpha": "snowdev release --release-as minor --prerelease alpha"
+    "release:alpha": "snowdev release --release-as minor --prerelease alpha",
+    "test": "node test/validate-pipeline-wgsl.js"
   },
   "dependencies": {
     "geom-builder": "^3.1.0",
@@ -64,7 +65,8 @@
     "pex-color": "^2.3.0",
     "pex-context": "^4.1.0",
     "pex-gui": "^3.3.0",
-    "primitive-geometry": "^2.11.0"
+    "primitive-geometry": "^2.11.0",
+    "webgpu": "^0.4.0"
   },
   "engines": {
     "node": ">=22.0.0",
@@ -76,6 +78,16 @@
       "imports": {
         "pex-renderer": "../lib/index.js"
       }
+    },
+    "install": {
+      "resolve": {
+        "exclude": [
+          "**/webgpu/**"
+        ]
+      }
     }
+  },
+  "allowScripts": {
+    "webgpu@0.4.0": true
   }
 }

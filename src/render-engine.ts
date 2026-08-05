@@ -16,12 +16,14 @@ export default ({ ctx, debug = false }) => {
   const morphSystem = systems.morph();
   const transformSystem = systems.transform();
   const layerSystem = systems.layer();
+  const skyboxSystem = systems.skybox(options);
   const cameraSystem = systems.camera();
 
   const lightSystem = systems.light();
   const renderPipelineSystem = systems.renderPipeline(options);
 
   const standardRendererSystem = systems.renderer.standard(options);
+  const skyboxRendererSystem = systems.renderer.skybox(options);
 
   const renderEngine = {
     // debugMode,
@@ -46,12 +48,13 @@ export default ({ ctx, debug = false }) => {
       morphSystem,
       transformSystem,
       layerSystem,
+      skyboxSystem,
       cameraSystem,
 
       lightSystem,
       renderPipelineSystem,
     ],
-    renderers: [standardRendererSystem],
+    renderers: [standardRendererSystem, skyboxRendererSystem],
     update(entities, deltaTime) {
       const now = performance.now();
       this.deltaTime = deltaTime || (now - this._prevTime) / 1000;
@@ -64,6 +67,7 @@ export default ({ ctx, debug = false }) => {
       morphSystem.update(entities);
       transformSystem.update(entities);
       layerSystem.update(entities);
+      skyboxSystem.update(entities);
       cameraSystem.update(entities);
 
       for (let i = 0; i < this.renderers.length; i++) {

@@ -1,17 +1,10 @@
 import { vec3 } from "pex-math";
-// import { skybox, parser as ShaderParser } from "pex-shaders";
-import { parser as ShaderParser } from "pex-shaders";
+import { submit, createTexture } from "pex-gpu";
 
-const skybox = {
-  skyEnvMap: { vert: "", frag: "" },
-};
+import * as SHADERS from "../shaders/index.js";
 
-const parameters = [
-  "turbidity",
-  "rayleigh",
-  "mieCoefficient",
-  "mieDirectionalG",
-];
+// Sky parameters packed, in order, into the shader's `parameters: vec4f`.
+const parameters = ["turbidity", "rayleigh", "mieCoefficient", "mieDirectionalG"];
 
 /**
  * Skybox system
@@ -30,37 +23,29 @@ export default ({ ctx, resourceCache }) => ({
   type: "skybox-system",
   cache: {},
   debug: false,
-  cmd: null,
+  pipeline: null,
+
+  // Bakes the analytic sky into the entity's equirectangular _skyTexture. The
+  // rgba8unorm-srgb target encodes on write and decodes on sample, so the
+  // shader's linear output round-trips back to linear for the background pass.
   updateSkyboxEntity(entity) {
-    // Initialise
     if (!this.cache[entity.id]) {
-      entity.skybox._skyTexture = ctx.texture2D({
-        name: "skyTexture",
+      entity.skybox._skyTexture = createTexture(ctx, {
+        label: "skyTexture",
         width: 512,
         height: 256,
-        pixelFormat: ctx.PixelFormat.SRGB8_ALPHA8,
-        min: ctx.Filter.Linear,
-        mag: ctx.Filter.Linear,
+        format: "rgba8unorm-srgb",
       });
 
       this.cache[entity.id] = {
         sunPosition: [...entity.skybox.sunPosition],
         parameters: Array.from({ length: parameters.length }),
-        _updateSkyTexturePass: ctx.pass({
-          name: "skyboxUpdateSkyTexturePass",
-          color: [entity.skybox._skyTexture],
-          clearColor: [0, 0, 0, 0],
-        }),
       };
       entity.skybox.dirty = true;
     }
 
-    // Compare
     if (
-      vec3.distance(
-        this.cache[entity.id].sunPosition,
-        entity.skybox.sunPosition,
-      ) > 0
+      vec3.distance(this.cache[entity.id].sunPosition, entity.skybox.sunPosition) > 0
     ) {
       vec3.set(this.cache[entity.id].sunPosition, entity.skybox.sunPosition);
       entity.skybox.dirty = true;
@@ -74,27 +59,29 @@ export default ({ ctx, resourceCache }) => ({
       }
     }
 
-    // Update and render
     if (entity.skybox.dirty) {
       entity.skybox.dirty = false;
 
-      //TODO: use render graph
-      this.cmd ||= {
-        name: "skyboxUpdateSkyTextureCmd",
-        //TODO: MARCIN: let's just move to WebGL2 already.
-        //TODO: MARCIN: skybox.skyEnvMap looks like texture prop of skybox component not a shaderlib
-        pipeline: ctx.pipeline({
-          vert: ShaderParser.build(ctx, skybox.skyEnvMap.vert),
-          frag: ShaderParser.build(ctx, skybox.skyEnvMap.frag),
-        }),
-        ...resourceCache.fullscreenTriangle(),
-      };
+      // Immutable per object identity: create once, reuse across frames.
+      this.pipeline ||= (() => {
+        const source = SHADERS.sky(new Set(), {});
+        return { vertex: source, fragment: source };
+      })();
 
-      ctx.submit(this.cmd, {
-        pass: this.cache[entity.id]._updateSkyTexturePass,
+      submit(ctx, {
+        name: "skyboxUpdateSkyTextureCmd",
+        pass: {
+          colorAttachments: [
+            { texture: entity.skybox._skyTexture, clearValue: [0, 0, 0, 0] },
+          ],
+        },
+        pipeline: this.pipeline,
+        ...resourceCache.fullscreenTriangle(),
         uniforms: {
-          uSunPosition: this.cache[entity.id].sunPosition,
-          uParameters: this.cache[entity.id].parameters,
+          uSky: {
+            sunPosition: this.cache[entity.id].sunPosition,
+            parameters: this.cache[entity.id].parameters,
+          },
         },
       });
 
@@ -112,6 +99,19 @@ export default ({ ctx, resourceCache }) => ({
           this.updateSkyboxEntity(entity);
         }
       }
+    }
+  },
+  dispose(entities) {
+    if (entities) {
+      for (let i = 0; i < entities.length; i++) {
+        const entity = entities[i];
+        if (this.cache[entity.id]) {
+          entity.skybox._skyTexture?.dispose();
+          delete this.cache[entity.id];
+        }
+      }
+    } else {
+      this.cache = {};
     }
   },
 });
