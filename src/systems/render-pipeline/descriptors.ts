@@ -48,6 +48,30 @@ fn fragmentMain(input: Varyings) -> @location(0) vec4f {
 }
 `;
 
+// Copies the main pass's color target into the (same-or-smaller,
+// power-of-two) grab pass texture, top-left anchored. Both textures share the
+// same origin, so the fragment position doubles directly as the source texel
+// coordinate — an exact copy needs no sampler or UV remap.
+const GRAB_PASS_COPY_WGSL = /* wgsl */ `
+struct Varyings {
+  @builtin(position) position: vec4f,
+}
+
+@vertex
+fn vertexMain(@location(0) position: vec2f) -> Varyings {
+  var output: Varyings;
+  output.position = vec4f(position, 0.0, 1.0);
+  return output;
+}
+
+@group(0) @binding(0) var uTexture: texture_2d<f32>;
+
+@fragment
+fn fragmentMain(input: Varyings) -> @location(0) vec4f {
+  return textureLoad(uTexture, vec2i(input.position.xy), 0);
+}
+`;
+
 export default (ctx: GpuContext) => ({
   directionalLightShadows: {
     colorMapDesc: {
@@ -138,19 +162,9 @@ export default (ctx: GpuContext) => ({
       mipmap: true,
     },
     copyTexturePipelineDesc: {
-      // Legacy GLSL grab-pass copy, not yet ported to the WGSL blit generator.
-      vert: (SHADERS.blit as any).vert,
-      frag: /* glsl */ `
-precision highp float;
-
-uniform vec4 uViewport;
-uniform sampler2D uTexture;
-
-varying vec2 vTexCoord0;
-
-void main() {
-  gl_FragColor = texture2D(uTexture, vTexCoord0);
-}`,
+      vertex: GRAB_PASS_COPY_WGSL,
+      fragment: GRAB_PASS_COPY_WGSL,
+      depthWriteEnabled: false,
     },
   },
   postProcessing: {

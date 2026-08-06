@@ -176,13 +176,22 @@ function createPass(props: any) {
       return {
         texture,
         // Cubemap/array face: render into a single layer (eg. shadow cubemaps).
-        ...(attachment.target != null && {
-          view: texture.texture.createView({
-            dimension: "2d",
-            baseArrayLayer: attachment.target,
-            arrayLayerCount: 1,
-          }),
-        }),
+        ...(attachment.target != null
+          ? {
+              view: texture.texture.createView({
+                dimension: "2d",
+                baseArrayLayer: attachment.target,
+                arrayLayerCount: 1,
+              }),
+            }
+          : // Render attachments must target exactly one mip level; a mipmapped
+            // texture's cached default view spans the full chain.
+            texture.mipLevelCount > 1 && {
+              view: texture.texture.createView({
+                baseMipLevel: 0,
+                mipLevelCount: 1,
+              }),
+            }),
         ...(attachment.resolveTarget
           ? { resolveTarget: attachment.resolveTarget }
           : {}),

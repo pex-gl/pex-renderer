@@ -1,6 +1,6 @@
 import { utils } from "pex-math";
 import { parser as ShaderParser } from "pex-shaders";
-import { submit, createSampler } from "pex-gpu";
+import { submit, createSampler, isGpuTexture } from "pex-gpu";
 
 import addDescriptors from "./descriptors.js";
 import shadowMappingPipelineMethods from "./shadow-mapping.js";
@@ -371,7 +371,6 @@ export default ({ ctx, resourceCache, renderGraph }: SystemOptions) => ({
           this.descriptors.grabPass.copyTexturePipelineDesc,
         ),
         uniforms: {
-          uViewport: viewport,
           uTexture: colorAttachments.color,
         },
       };
@@ -385,7 +384,7 @@ export default ({ ctx, resourceCache, renderGraph }: SystemOptions) => ({
           color: [grabPassColorCopyTexture],
         }),
         render: () => {
-          (ctx as any).submit(grabPassCopyCmd);
+          submit(ctx, grabPassCopyCmd);
         },
       });
 
@@ -414,12 +413,11 @@ export default ({ ctx, resourceCache, renderGraph }: SystemOptions) => ({
               shadowMappingLight: false,
               transparent: false,
               transmitted: true,
-              cullFaceMode: (ctx as any).Face.Front,
+              cullFaceMode: "front",
               backgroundColorTexture: grabPassColorCopyTexture,
             });
           },
         });
-        const viewport = grabPassCopyCmd.uniforms.uViewport;
         const copyUniforms = {
           uniforms: {
             uTexture: colorAttachments.color,
@@ -435,7 +433,7 @@ export default ({ ctx, resourceCache, renderGraph }: SystemOptions) => ({
             color: [grabPassColorCopyTexture],
           }),
           render: () => {
-            (ctx as any).submit(grabPassCopyCmd, copyUniforms);
+            submit(ctx, grabPassCopyCmd, [copyUniforms]);
           },
         });
       }
@@ -459,7 +457,7 @@ export default ({ ctx, resourceCache, renderGraph }: SystemOptions) => ({
             shadowMappingLight: false,
             transparent: false,
             transmitted: true,
-            cullFaceMode: hasBackTransmitted && (ctx as any).Face.Back,
+            cullFaceMode: hasBackTransmitted ? "back" : undefined,
             backgroundColorTexture: grabPassColorCopyTexture,
           });
         },
@@ -503,7 +501,7 @@ export default ({ ctx, resourceCache, renderGraph }: SystemOptions) => ({
           color: [inverseToneMapColorTexture],
         }),
         render: () => {
-          (ctx as any).submit(inverseToneMapCmd);
+          submit(ctx, inverseToneMapCmd);
         },
       });
       colorAttachments.color = inverseToneMapColorTexture;
@@ -566,12 +564,7 @@ export default ({ ctx, resourceCache, renderGraph }: SystemOptions) => ({
       const entity = entities[i]!;
       if (entity.material) {
         for (const property of Object.values(entity.material) as any[]) {
-          if (
-            property?.class === "texture" &&
-            (ctx as any).resources.includes(property)
-          ) {
-            (ctx as any).dispose(property);
-          }
+          if (isGpuTexture(property)) property.dispose();
         }
       }
     }
