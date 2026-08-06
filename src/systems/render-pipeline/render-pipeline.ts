@@ -8,6 +8,8 @@ import shadowMappingPipelineMethods from "./shadow-mapping.js";
 import cullingPipelineMethods from "./culling.js";
 import { getDefaultViewport } from "../../utils.js";
 
+import type { Entity, SystemOptions } from "../../types.js";
+
 /**
  * Render pipeline system
  *
@@ -18,14 +20,10 @@ import { getDefaultViewport } from "../../utils.js";
  * - "_shadowCubemap" to pointLight components and "_shadowMap" to other light
  *   components
  * - "_targets" to postProcessing components
- *
- * @param {import("../../types.js").SystemOptions} options
- * @returns {import("../../types.js").System}
- * @alias module:systems.renderPipeline
  */
-export default ({ ctx, resourceCache, renderGraph }) => ({
+export default ({ ctx, resourceCache, renderGraph }: SystemOptions) => ({
   type: "render-pipeline-system",
-  cache: {},
+  cache: {} as Record<number, any>,
   time: 0,
   debug: false,
   debugRender: "",
@@ -43,24 +41,27 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
   // ...postProcessingPipelineMethods({ ctx, renderGraph, resourceCache }),
   ...cullingPipelineMethods({ renderGraph, resourceCache }),
 
-  getAttachmentsLocations(colorAttachments) {
+  getAttachmentsLocations(colorAttachments: any) {
     return Object.fromEntries(
       Object.keys(colorAttachments).map((key, index) => [key, index]),
     );
   },
 
-  drawMeshes({
-    renderers,
-    renderView,
-    colorAttachments,
-    msaa,
-    entitiesInView,
-    shadowMappingLight,
-    transparent,
-    transmitted,
-    cullFaceMode,
-    backgroundColorTexture,
-  }) {
+  drawMeshes(
+    this: any,
+    {
+      renderers,
+      renderView,
+      colorAttachments,
+      msaa,
+      entitiesInView,
+      shadowMappingLight,
+      transparent,
+      transmitted,
+      cullFaceMode,
+      backgroundColorTexture,
+    }: any,
+  ) {
     const options = {
       attachmentsLocations: this.getAttachmentsLocations(colorAttachments),
       msaa: this.reversibleToneMap && msaa,
@@ -110,7 +111,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
     }
   },
 
-  update(entities, options = {}) {
+  update(this: any, entities: Entity[], options: any = {}) {
     let { time, renderView, renderers, drawToScreen = true } = options;
 
     this.time = time;
@@ -121,7 +122,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
     const cameraEntity = entities.find((entity) => entity.camera);
 
     renderView ||= {
-      camera: cameraEntity.camera,
+      camera: cameraEntity!.camera,
       viewport: getDefaultViewport(ctx),
     };
     const postProcessing = renderView.cameraEntity.postProcessing;
@@ -135,10 +136,10 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
     const msaaSampleCount = postProcessing?.msaa?.sampleCount;
     const msaa = msaaSampleCount > 0;
 
-    const colorAttachments = {};
-    const colorAttachmentsMSAA = {};
-    let depthAttachment;
-    let depthAttachmentMSAA;
+    const colorAttachments: any = {};
+    const colorAttachmentsMSAA: any = {};
+    let depthAttachment: any;
+    let depthAttachmentMSAA: any;
 
     // TODO: this should be done on the fly by render graph
     this.descriptors.mainPass.outputTextureDesc.width = renderView.viewport[2];
@@ -209,7 +210,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
     // Update shadow maps
     if (shadowCastingEntities.length) {
       for (let i = 0; i < entities.length; i++) {
-        const entity = entities[i];
+        const entity = entities[i]!;
 
         if (
           entity.directionalLight?.castShadows &&
@@ -384,7 +385,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
           color: [grabPassColorCopyTexture],
         }),
         render: () => {
-          ctx.submit(grabPassCopyCmd);
+          (ctx as any).submit(grabPassCopyCmd);
         },
       });
 
@@ -413,7 +414,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
               shadowMappingLight: false,
               transparent: false,
               transmitted: true,
-              cullFaceMode: ctx.Face.Front,
+              cullFaceMode: (ctx as any).Face.Front,
               backgroundColorTexture: grabPassColorCopyTexture,
             });
           },
@@ -434,7 +435,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
             color: [grabPassColorCopyTexture],
           }),
           render: () => {
-            ctx.submit(grabPassCopyCmd, copyUniforms);
+            (ctx as any).submit(grabPassCopyCmd, copyUniforms);
           },
         });
       }
@@ -458,7 +459,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
             shadowMappingLight: false,
             transparent: false,
             transmitted: true,
-            cullFaceMode: hasBackTransmitted && ctx.Face.Back,
+            cullFaceMode: hasBackTransmitted && (ctx as any).Face.Back,
             backgroundColorTexture: grabPassColorCopyTexture,
           });
         },
@@ -502,7 +503,7 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
           color: [inverseToneMapColorTexture],
         }),
         render: () => {
-          ctx.submit(inverseToneMapCmd);
+          (ctx as any).submit(inverseToneMapCmd);
         },
       });
       colorAttachments.color = inverseToneMapColorTexture;
@@ -560,16 +561,16 @@ export default ({ ctx, resourceCache, renderGraph }) => ({
     return Object.assign(colorAttachments, { depth: depthAttachment });
   },
 
-  dispose(entities) {
+  dispose(entities: Entity[]) {
     for (let i = 0; i < entities.length; i++) {
-      const entity = entities[i];
+      const entity = entities[i]!;
       if (entity.material) {
-        for (const property of Object.values(entity.material)) {
+        for (const property of Object.values(entity.material) as any[]) {
           if (
             property?.class === "texture" &&
-            ctx.resources.includes(property)
+            (ctx as any).resources.includes(property)
           ) {
-            ctx.dispose(property);
+            (ctx as any).dispose(property);
           }
         }
       }

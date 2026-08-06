@@ -1,24 +1,23 @@
 import { chunks as SHADERS } from "pex-shaders";
 
+import type { PipelineShaderOptions } from "../types.js";
+
+/** A material texture's uniform binding slot (texture + sampler). */
+type MaterialTextureBinding = { tex: number; samp: number };
+
 // See depth-pass.js: same vertex-stage conventions (including the 1.3x
 // displacement stretch), but this pass outputs the front-facing-corrected
 // view-space normal instead of packed depth.
 
-/**
- * @param {Set<string>} [defines=new Set()]
- * @param {object} [options={}]
- * @param {object} [options.hooks={}] Raw WGSL text injected at fixed points.
- * @param {number} [options.maxJoints=256] Size of the skinning joint matrix array.
- * @param {object} [options.texCoords={}] Per-texture texture coordinate set index (0 or 1), e.g. { alpha: 1 }.
- * @returns {string}
- * @alias module:pipeline.depthPrePass
- */
-export default (defines = new Set(), options = {}) => {
+export default (
+  defines: Set<string> = new Set(),
+  options: PipelineShaderOptions = {},
+): string => {
   const hooks = options.hooks || {};
   const { maxJoints = 256 } = options;
   const texCoords = options.texCoords || {};
 
-  const tc = (key) => texCoords[key] ?? 0;
+  const tc = (key: string) => texCoords[key] ?? 0;
 
   const useNormals = defines.has("USE_NORMALS");
   const useTexCoord0 = defines.has("USE_TEXCOORD_0");
@@ -35,21 +34,30 @@ export default (defines = new Set(), options = {}) => {
   const useAlphaTexture = defines.has("USE_ALPHA_TEXTURE");
   const useAlphaTest = defines.has("USE_ALPHA_TEST");
 
-  const colorAssignment = useVertexColors && useInstancedColor
-    ? "output.color = input.vertexColor * input.instanceColor;"
-    : useInstancedColor
-      ? "output.color = input.instanceColor;"
-      : useVertexColors
-        ? "output.color = input.vertexColor;"
-        : "";
+  const colorAssignment =
+    useVertexColors && useInstancedColor
+      ? "output.color = input.vertexColor * input.instanceColor;"
+      : useInstancedColor
+        ? "output.color = input.instanceColor;"
+        : useVertexColors
+          ? "output.color = input.vertexColor;"
+          : "";
 
   const vColorExpr = useColor ? "input.color" : "vec4f(1.0)";
 
   // ---- @group(2) Material: binding numbers (0 is the Material uniform struct itself) ----
   let nextMaterialBinding = 1;
-  const bindMaterialTexture = () => ({ tex: nextMaterialBinding++, samp: nextMaterialBinding++ });
-  const matrixField = (name, binding) => (binding ? `${name}TextureMatrix: mat3x3f,` : "");
-  const textureDecl = (varName, binding, kind = "texture_2d<f32>") =>
+  const bindMaterialTexture = (): MaterialTextureBinding => ({
+    tex: nextMaterialBinding++,
+    samp: nextMaterialBinding++,
+  });
+  const matrixField = (name: string, binding: MaterialTextureBinding | null) =>
+    binding ? `${name}TextureMatrix: mat3x3f,` : "";
+  const textureDecl = (
+    varName: string,
+    binding: MaterialTextureBinding | null,
+    kind = "texture_2d<f32>",
+  ) =>
     binding
       ? `@group(2) @binding(${binding.tex}) var ${varName}: ${kind};\n@group(2) @binding(${binding.samp}) var ${varName}Sampler: sampler;`
       : "";
@@ -60,9 +68,11 @@ export default (defines = new Set(), options = {}) => {
   const alphaBlock = () => {
     if (!useAlphaTexture && !useAlphaTest) return "";
     return /* wgsl */ `
-  ${useAlphaTexture
-    ? `let alphaTexCoord = getTextureCoordinatesTransformed(data, ${tc("alpha")}, uMaterial.alphaTextureMatrix);\n  data.opacity *= textureSample(uAlphaTexture, uAlphaTextureSampler, alphaTexCoord).x;`
-    : ""}
+  ${
+    useAlphaTexture
+      ? `let alphaTexCoord = getTextureCoordinatesTransformed(data, ${tc("alpha")}, uMaterial.alphaTextureMatrix);\n  data.opacity *= textureSample(uAlphaTexture, uAlphaTextureSampler, alphaTexCoord).x;`
+      : ""
+  }
   ${useAlphaTest ? "alphaTest(&data, uMaterial.alphaTest);" : ""}`;
   };
 
@@ -150,13 +160,16 @@ fn vertexMain(input: VertexInput) -> Varyings {
 
   ${hooks.vertBeforeTransform ?? ""}
 
-  ${useDisplacementTexture
-    ? "let h = textureSampleLevel(uDisplacementTexture, uDisplacementTextureSampler, input.texCoord0, 0.0).x;\n  position = vec4f(position.xyz + uModel.displacement * h * normal * 1.3, position.w);"
-    : ""}
+  ${
+    useDisplacementTexture
+      ? "let h = textureSampleLevel(uDisplacementTexture, uDisplacementTextureSampler, input.texCoord0, 0.0).x;\n  position = vec4f(position.xyz + uModel.displacement * h * normal * 1.3, position.w);"
+      : ""
+  }
 
   var positionWorld: vec4f;
-  ${useSkin
-    ? `let skinMat =
+  ${
+    useSkin
+      ? `let skinMat =
     input.weight.x * uJointMatrices[u32(input.joint.x)] +
     input.weight.y * uJointMatrices[u32(input.joint.y)] +
     input.weight.z * uJointMatrices[u32(input.joint.z)] +
@@ -173,9 +186,10 @@ fn vertexMain(input: VertexInput) -> Varyings {
   ${useInstancedOffset ? "positionWorld = vec4f(positionWorld.xyz + input.offset, positionWorld.w);" : ""}
 
   output.normalView = (uFrame.viewMatrix * vec4f(normal, 0.0)).xyz;`
-    : `${useInstancedScale ? "position = vec4f(position.xyz * input.scale, position.w);\n  " : ""}${useInstancedRotation ? "let rotationMat = quatToMat4(input.rotation);\n  position = rotationMat * position;\n  normal = (rotationMat * vec4f(normal, 0.0)).xyz;\n  " : ""}${useInstancedOffset ? "position = vec4f(position.xyz + input.offset, position.w);\n  " : ""}
+      : `${useInstancedScale ? "position = vec4f(position.xyz * input.scale, position.w);\n  " : ""}${useInstancedRotation ? "let rotationMat = quatToMat4(input.rotation);\n  position = rotationMat * position;\n  normal = (rotationMat * vec4f(normal, 0.0)).xyz;\n  " : ""}${useInstancedOffset ? "position = vec4f(position.xyz + input.offset, position.w);\n  " : ""}
   positionWorld = uModel.modelMatrix * position;
-  output.normalView = uModel.normalMatrix * normal;`}
+  output.normalView = uModel.normalMatrix * normal;`
+  }
 
   ${colorAssignment}
 
@@ -210,9 +224,11 @@ fn fragmentMain(input: Varyings, @builtin(front_facing) frontFacing: bool) -> Fr
   data.texCoord0 = input.texCoord0;
   ${useTexCoord1 ? "data.texCoord1 = input.texCoord1;" : ""}
 
-  ${useBaseColorTexture
-    ? `getBaseColorTextured(&data, uMaterial.baseColor, uBaseColorTexture, uBaseColorTextureSampler, ${tc("baseColor")}, uMaterial.baseColorTextureMatrix, ${vColorExpr});`
-    : `getBaseColor(&data, uMaterial.baseColor, ${vColorExpr});`}
+  ${
+    useBaseColorTexture
+      ? `getBaseColorTextured(&data, uMaterial.baseColor, uBaseColorTexture, uBaseColorTextureSampler, ${tc("baseColor")}, uMaterial.baseColorTextureMatrix, ${vColorExpr});`
+      : `getBaseColor(&data, uMaterial.baseColor, ${vColorExpr});`
+  }
 
   ${alphaBlock()}
 

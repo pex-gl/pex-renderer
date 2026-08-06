@@ -1,11 +1,7 @@
-/**
- * Skybox component
- *
- * @param {import("../types.js").SkyboxComponentOptions} [options]
- * @returns {object}
- * @alias module:components.skybox
- */
-export default (options) => ({
+import type { SkyboxComponentOptions } from "../types.js";
+
+/** Skybox component */
+export default (options?: SkyboxComponentOptions) => ({
   // Shared
   backgroundBlur: false,
   exposure: 1,

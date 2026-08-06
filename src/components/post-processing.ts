@@ -1,11 +1,38 @@
-/**
- * Post Processing component
- *
- * @param {import("../types.js").PostProcessingComponentOptions} [options]
- * @returns {object}
- * @alias module:components.postProcessing
- */
-const postProcessing = (options) => ({
+import type {
+  BloomComponentOptions,
+  ColorCorrectionComponentOptions,
+  DoFComponentOptions,
+  FilmGrainComponentOptions,
+  FogComponentOptions,
+  FXAAComponentOptions,
+  LutComponentOptions,
+  MSAAComponentOptions,
+  PostProcessingComponentOptions,
+  SMAAComponentOptions,
+  SSAOComponentOptions,
+  VignetteComponentOptions,
+} from "../types.js";
+
+// The post-processing factory doubles as a namespace of subcomponent factories
+// (postProcessing.ssao, .dof, ...), so it is typed as a callable with those
+// attached members.
+interface PostProcessingFactory {
+  (options?: PostProcessingComponentOptions): object;
+  ssao: (options?: SSAOComponentOptions) => object;
+  dof: (options?: DoFComponentOptions) => object;
+  msaa: (options?: MSAAComponentOptions) => object;
+  fxaa: (options?: FXAAComponentOptions) => object;
+  smaa: (options?: SMAAComponentOptions) => object;
+  fog: (options?: FogComponentOptions) => object;
+  bloom: (options?: BloomComponentOptions) => object;
+  vignette: (options?: VignetteComponentOptions) => object;
+  lut: (options?: LutComponentOptions) => object;
+  colorCorrection: (options?: ColorCorrectionComponentOptions) => object;
+  filmGrain: (options?: FilmGrainComponentOptions) => object;
+}
+
+/** Post Processing component */
+const postProcessing = ((options?: PostProcessingComponentOptions) => ({
   // msaa
   // ssao
   // dof
@@ -20,16 +47,10 @@ const postProcessing = (options) => ({
   toneMap: "aces",
   opacity: 1,
   ...options,
-});
+})) as PostProcessingFactory;
 
-/**
- * Post Processing SSAO subcomponent
- *
- * @param {import("../types.js").SSAOComponentOptions} [options]
- * @returns {object}
- * @alias module:components.postProcessing.ssao
- */
-postProcessing.ssao = (options) => ({
+/** Post Processing SSAO subcomponent */
+postProcessing.ssao = (options?: SSAOComponentOptions) => ({
   type: "sao", // "gtao",
   noiseTexture: true,
   mix: 1,
@@ -50,13 +71,8 @@ postProcessing.ssao = (options) => ({
   ...options,
 });
 
-/**
- * Post Processing DoF subcomponent
- *
- * @param {import("../types.js").DoFComponentOptions} [options]
- * @returns {object}
- */
-postProcessing.dof = (options) => ({
+/** Post Processing DoF subcomponent */
+postProcessing.dof = (options?: DoFComponentOptions) => ({
   type: "gustafsson", // "upitis"
   physical: true,
   focusDistance: 7,
@@ -72,48 +88,28 @@ postProcessing.dof = (options) => ({
   ...options,
 });
 
-/**
- * Post Processing MSAA subcomponent
- *
- * @param {import("../types.js").MSAAComponentOptions} [options]
- * @returns {object}
- */
-postProcessing.msaa = (options) => ({
+/** Post Processing MSAA subcomponent */
+postProcessing.msaa = (options?: MSAAComponentOptions) => ({
   sampleCount: 4,
   ...options,
 });
 
-/**
- * Post Processing FXAA subcomponent
- *
- * @param {import("../types.js").FXAAComponentOptions} [options]
- * @returns {object}
- */
-postProcessing.fxaa = (options) => ({
+/** Post Processing FXAA subcomponent */
+postProcessing.fxaa = (options?: FXAAComponentOptions) => ({
   quality: 3,
   subPixelQuality: 0.75, // (0, 1]
   ...options,
 });
 
-/**
- * Post Processing SMAA subcomponent
- *
- * @param {import("../types.js").SMAAComponentOptions} [options]
- * @returns {object}
- */
-postProcessing.smaa = (options) => ({
+/** Post Processing SMAA subcomponent */
+postProcessing.smaa = (options?: SMAAComponentOptions) => ({
   quality: 2, // [0, 3]
   edges: "luma", // "depth" | "color"
   ...options,
 });
 
-/**
- * Post Processing Fog subcomponent
- *
- * @param {import("../types.js").FogComponentOptions} [options]
- * @returns {object}
- */
-postProcessing.fog = (options) => ({
+/** Post Processing Fog subcomponent */
+postProcessing.fog = (options?: FogComponentOptions) => ({
   color: [0.5, 0.5, 0.5],
   start: 5,
   density: 0.15,
@@ -126,13 +122,8 @@ postProcessing.fog = (options) => ({
   ...options,
 });
 
-/**
- * Post Processing Bloom subcomponent
- *
- * @param {import("../types.js").BloomComponentOptions} [options]
- * @returns {object}
- */
-postProcessing.bloom = (options) => ({
+/** Post Processing Bloom subcomponent */
+postProcessing.bloom = (options?: BloomComponentOptions) => ({
   quality: 1,
   colorFunction: "luma", // "average" | "luminance"
   threshold: 1,
@@ -142,36 +133,23 @@ postProcessing.bloom = (options) => ({
   ...options,
 });
 
-/**
- * Post Processing Vignette subcomponent
- *
- * @param {import("../types.js").VignetteComponentOptions} [options]
- * @returns {object}
- */
-postProcessing.vignette = (options) => ({
+/** Post Processing Vignette subcomponent */
+postProcessing.vignette = (options?: VignetteComponentOptions) => ({
   radius: 0.8,
   intensity: 0.2,
   ...options,
 });
 
-/**
- * Post Processing LUT subcomponent
- *
- * @param {import("../types.js").LutComponentOptions} [options]
- * @returns {object}
- */
-postProcessing.lut = (options) => ({
+/** Post Processing LUT subcomponent */
+postProcessing.lut = (options?: LutComponentOptions) => ({
   // texture,
   ...options,
 });
 
-/**
- * Post Processing Color Correction subcomponent
- *
- * @param {import("../types.js").ColorCorrectionComponentOptions} [options]
- * @returns {object}
- */
-postProcessing.colorCorrection = (options) => ({
+/** Post Processing Color Correction subcomponent */
+postProcessing.colorCorrection = (
+  options?: ColorCorrectionComponentOptions,
+) => ({
   brightness: 0,
   contrast: 1,
   saturation: 1,
@@ -179,13 +157,8 @@ postProcessing.colorCorrection = (options) => ({
   ...options,
 });
 
-/**
- * Post Processing Film Grain subcomponent
- *
- * @param {import("../types.js").FilmGrainComponentOptions} [options]
- * @returns {object}
- */
-postProcessing.filmGrain = (options) => ({
+/** Post Processing Film Grain subcomponent */
+postProcessing.filmGrain = (options?: FilmGrainComponentOptions) => ({
   quality: 2,
   size: 1.6,
   intensity: 0.05,

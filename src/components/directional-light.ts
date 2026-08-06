@@ -1,11 +1,7 @@
-/**
- * Directional light component
- *
- * @param {import("../types.js").DirectionalLightComponentOptions} [options]
- * @returns {object}
- * @alias module:components.directionalLight
- */
-export default (options) => ({
+import type { DirectionalLightComponentOptions } from "../types.js";
+
+/** Directional light component */
+export default (options?: DirectionalLightComponentOptions) => ({
   color: [1, 1, 1, 1],
   intensity: 1,
   // Shadow-map rasterizer depth bias (see renderer/standard.ts getDepthPipeline).

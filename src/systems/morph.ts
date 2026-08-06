@@ -1,13 +1,18 @@
-function updateMorph(morph) {
+import type { Entity, MorphComponentOptions } from "../types.js";
+
+function updateMorph(morph: MorphComponentOptions) {
+  const current = (morph.current ??= {});
+  const weights = morph.weights ?? [];
+
   Object.keys(morph.sources).forEach((key) => {
     const sourceAttributes = morph.sources[key];
     const targetAttributes = morph.targets[key];
 
-    morph.current[key] = sourceAttributes.map((source, i) => {
-      let attribute = source.length ? [0, 0, 0] : 0;
+    current[key] = sourceAttributes.map((source: any, i: number) => {
+      let attribute: any = source.length ? [0, 0, 0] : 0;
 
-      targetAttributes.forEach((target, j) => {
-        const weight = morph.weights[j];
+      targetAttributes.forEach((target: any, j: number) => {
+        const weight = weights[j]!;
         const targetAttribute = target[i];
 
         if (source.length) {
@@ -30,26 +35,23 @@ function updateMorph(morph) {
   });
 }
 
-/**
- * Morph system
- *
- * @returns {import("../types.js").System}
- * @alias module:systems.morph
- */
+/** Morph system */
 export default () => ({
   type: "morph-system",
   updateMorph,
-  update(entities) {
+  update(entities: Entity[]) {
     for (let i = 0; i < entities.length; i++) {
-      const entity = entities[i];
+      const entity = entities[i]!;
       if (!entity.morph) continue;
 
       updateMorph(entity.morph);
 
-      Object.keys(entity.morph.current).forEach((key) => {
-        entity.geometry[key] = entity.morph.current[key];
+      const current = entity.morph.current!;
+      Object.keys(current).forEach((key) => {
+        const geometry: any = entity.geometry;
+        geometry[key] = current[key];
         // Bounds will be recomputed in geometry system update if "positions"/"offsets" are dirty
-        entity.geometry[key].dirty = true;
+        geometry[key].dirty = true;
       });
     }
   },

@@ -1,13 +1,11 @@
 import { chunks as SHADERS } from "pex-shaders";
 
-/**
- * @param {Set<string>} [defines=new Set()]
- * @param {object} [options={}]
- * @param {object} [options.hooks={}] Raw WGSL text injected at fixed points.
- * @returns {string}
- * @alias module:pipeline.reversibleToneMap
- */
-export default (defines = new Set(), options = {}) => {
+import type { PipelineShaderOptions } from "../types.js";
+
+export default (
+  defines: Set<string> = new Set(),
+  options: PipelineShaderOptions = {},
+): string => {
   const hooks = options.hooks || {};
 
   return /* wgsl */ `
@@ -32,8 +30,7 @@ fn vertexMain(input: VertexInput) -> Varyings {
 }
 
 // Fragment includes
-${SHADERS.math.max3}
-${SHADERS.reversibleToneMap}
+${SHADERS.encodeDecode}
 
 ${hooks.fragDeclarationsEnd ?? ""}
 
@@ -45,7 +42,7 @@ struct FragmentOutput {
 fn fragmentMain(input: Varyings) -> FragmentOutput {
   var output: FragmentOutput;
   var color = textureSample(uTexture, uTextureSampler, input.texCoord0);
-  color = vec4f(reversibleToneMapInverse(color.rgb), color.w);
+  color = encode(color, SRGB);
 
   output.color = color;
 

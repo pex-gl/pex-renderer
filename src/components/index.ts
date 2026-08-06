@@ -1,5 +1,3 @@
-/** @module components */
-
 export { default as geometry } from "./geometry.js";
 export { default as material } from "./material.js";
 export { default as transform } from "./transform.js";

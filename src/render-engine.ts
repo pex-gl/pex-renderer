@@ -4,11 +4,26 @@ import createRenderGraph from "./render-graph.js";
 import createResourceCache from "./resource-cache.js";
 import { getDefaultViewport } from "./utils.js";
 
-export default ({ ctx, debug = false }) => {
+import type {
+  Entity,
+  GpuContext,
+  RenderEngineOptions,
+  RenderView,
+  System,
+  SystemOptions,
+} from "./types.js";
+
+export default ({
+  ctx,
+  debug = false,
+}: {
+  ctx: GpuContext;
+  debug?: boolean;
+}) => {
   const renderGraph = createRenderGraph(ctx);
   const resourceCache = createResourceCache(ctx);
 
-  const options = { ctx, resourceCache, renderGraph };
+  const options: SystemOptions = { ctx, resourceCache, renderGraph };
 
   const animationSystem = systems.animation();
   const skinSystem = systems.skin();
@@ -26,16 +41,16 @@ export default ({ ctx, debug = false }) => {
   const skyboxRendererSystem = systems.renderer.skybox(options);
 
   const renderEngine = {
-    // debugMode,
-    debug(enabled) {
+    debug(enabled: boolean) {
       for (let i = 0; i < this.systems.length; i++) {
-        this.systems[i].debug = enabled;
+        this.systems[i]!.debug = enabled;
       }
       for (let i = 0; i < this.renderers.length; i++) {
-        this.renderers[i].debug = enabled;
+        this.renderers[i]!.debug = enabled;
       }
       this.debugMode = enabled;
     },
+    debugMode: false,
     time: 0,
     deltaTime: 0,
     _prevTime: performance.now(),
@@ -53,9 +68,9 @@ export default ({ ctx, debug = false }) => {
 
       lightSystem,
       renderPipelineSystem,
-    ],
+    ] as System[],
     renderers: [standardRendererSystem, skyboxRendererSystem],
-    update(entities, deltaTime) {
+    update(entities: Entity[], deltaTime?: number) {
       const now = performance.now();
       this.deltaTime = deltaTime || (now - this._prevTime) / 1000;
       this._prevTime = now;
@@ -71,70 +86,75 @@ export default ({ ctx, debug = false }) => {
       cameraSystem.update(entities);
 
       for (let i = 0; i < this.renderers.length; i++) {
-        this.renderers[i].update(entities, this);
+        this.renderers[i]!.update(entities, this);
       }
     },
-    render(entities, cameraEntities, options = {}) {
+    render(
+      entities: Entity[],
+      cameraEntities: Entity | Entity[],
+      options: RenderEngineOptions = {},
+    ) {
       resourceCache.beginFrame();
       renderGraph.beginFrame();
 
-      if (!Array.isArray(cameraEntities)) cameraEntities = [cameraEntities];
+      const cameras = Array.isArray(cameraEntities)
+        ? cameraEntities
+        : [cameraEntities];
 
-      const framebufferTexturesPerCamera = cameraEntities.map(
-        (cameraEntity) => {
-          // Set render view
-          const viewport =
-            cameraEntity.camera.viewport || getDefaultViewport(ctx);
+      const framebufferTexturesPerCamera = cameras.map((cameraEntity) => {
+        const camera = cameraEntity.camera!;
 
-          const aspect = viewport[2] / viewport[3];
+        // Set render view
+        const viewport = camera.viewport || getDefaultViewport(ctx);
 
-          if (aspect !== cameraEntity.camera.aspect) {
-            cameraEntity.camera.aspect = aspect;
-            cameraEntity.camera.dirty = true;
-          }
+        const aspect = viewport[2]! / viewport[3]!;
 
-          const renderView = {
-            camera: cameraEntity.camera,
-            cameraEntity,
-            viewport,
-          };
+        if (aspect !== camera.aspect) {
+          camera.aspect = aspect;
+          camera.dirty = true;
+        }
 
-          const entitiesForCamera = cameraEntity.layer
-            ? entities.filter(
-                (entity) => !entity.layer || entity.layer == cameraEntity.layer,
-              )
-            : entities;
+        const renderView: RenderView = {
+          camera,
+          cameraEntity,
+          viewport,
+        };
 
-          // Update camera dependent systems
-          const updateOptions = {
-            time: options.time ?? this.time,
-            renderers: options.renderers || this.renderers,
-            renderView,
-            drawToScreen: options.drawToScreen,
-            renderEngine: this,
-          };
+        const entitiesForCamera = cameraEntity.layer
+          ? entities.filter(
+              (entity) => !entity.layer || entity.layer == cameraEntity.layer,
+            )
+          : entities;
 
-          lightSystem.update(entitiesForCamera);
+        // Update camera dependent systems
+        const updateOptions = {
+          time: options.time ?? this.time,
+          renderers: options.renderers || this.renderers,
+          renderView,
+          drawToScreen: options.drawToScreen,
+          renderEngine: this,
+        };
 
-          const framebufferTextures = renderPipelineSystem.update(
-            entitiesForCamera,
-            updateOptions,
-          );
-          return framebufferTextures;
-        },
-      );
+        lightSystem.update(entitiesForCamera);
+
+        const framebufferTextures = renderPipelineSystem.update(
+          entitiesForCamera,
+          updateOptions,
+        );
+        return framebufferTextures;
+      });
 
       renderGraph.endFrame();
       resourceCache.endFrame();
 
       return framebufferTexturesPerCamera;
     },
-    dispose(entities) {
+    dispose(entities?: Entity[]) {
       for (let i = 0; i < this.systems.length; i++) {
-        this.systems[i].dispose?.(entities);
+        this.systems[i]!.dispose?.(entities);
       }
       for (let i = 0; i < this.renderers.length; i++) {
-        this.renderers[i].dispose?.(entities);
+        this.renderers[i]!.dispose?.(entities);
       }
 
       resourceCache.dispose();

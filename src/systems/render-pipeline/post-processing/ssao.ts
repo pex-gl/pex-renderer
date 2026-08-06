@@ -1,3 +1,4 @@
+// @ts-nocheck
 import random from "pex-random";
 import { postProcessing as postprocessingShaders } from "pex-shaders";
 

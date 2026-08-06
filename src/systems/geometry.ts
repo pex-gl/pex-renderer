@@ -3,9 +3,11 @@ import { vec3 } from "pex-math";
 import { createBuffer, updateBuffer, isGpuBuffer } from "pex-gpu";
 import { NAMESPACE, TEMP_AABB } from "../utils.js";
 
+import type { Entity, SystemOptions } from "../types.js";
+
 // Keys match the WGSL vertex input names (see pex-shaders location convention),
 // so a cached attribute can be handed straight to a pex-gpu draw command.
-const attributeMap = {
+const attributeMap: Record<string, string | string[]> = {
   position: "positions",
   normal: "normals",
   tangent: "tangents",
@@ -30,7 +32,7 @@ const instancedAttributes = new Set([
 
 const indicesProps = ["cells", "indices"];
 
-function disposeAttribute(attribute) {
+function disposeAttribute(attribute: any) {
   const buffer = attribute?.buffer || attribute;
   if (isGpuBuffer(buffer)) buffer.dispose();
 }
@@ -43,16 +45,12 @@ function disposeAttribute(attribute) {
  * - "bounds" to geometry components
  * - "dirty" to geometry components properties
  * - "_geometry" to entities as reference to internal cache
- *
- * @param {import("../types.js").SystemOptions} options
- * @returns {import("../types.js").System}
- * @alias module:systems.geometry
  */
-export default ({ ctx }) => ({
+export default ({ ctx }: SystemOptions) => ({
   type: "geometry-system",
-  cache: {},
+  cache: {} as Record<number, any>,
   debug: false,
-  updateBounds(geometry) {
+  updateBounds(geometry: any) {
     const positions = geometry.positions.data || geometry.positions;
     const offsets = geometry.offsets?.data || geometry.offsets;
 
@@ -71,8 +69,8 @@ export default ({ ctx }) => ({
 
     geometry.bounds.dirty = false;
   },
-  updateGeometryEntity(entity) {
-    const geometry = entity.geometry;
+  updateGeometryEntity(entity: Entity) {
+    const geometry: any = entity.geometry;
     this.cache[entity.id] ||= { geometry: null, attributes: {} };
 
     if (this.debug && !this.cache[entity.id].geometry) {
@@ -121,7 +119,7 @@ export default ({ ctx }) => ({
 
     // Add index buffer
     for (let i = 0; i < indicesProps.length; i++) {
-      const indicesValue = geometry[indicesProps[i]];
+      const indicesValue = geometry[indicesProps[i]!];
 
       if (indicesValue) {
         if (!(geometryDirty || indicesValue.dirty)) continue;
@@ -145,12 +143,13 @@ export default ({ ctx }) => ({
 
     // Add vertex buffers
     for (let i = 0; i < attributeMapKeys.length; i++) {
-      const attributeName = attributeMapKeys[i];
+      const attributeName = attributeMapKeys[i]!;
+      const mapping: any = attributeMap[attributeName];
       const attributeValue =
         geometry[
-          Array.isArray(attributeMap[attributeName])
-            ? attributeMap[attributeName].find((prop) => geometry[prop])
-            : attributeMap[attributeName]
+          Array.isArray(mapping)
+            ? mapping.find((prop: string) => geometry[prop])
+            : mapping
         ];
 
       if (attributeValue) {
@@ -194,9 +193,9 @@ export default ({ ctx }) => ({
 
   //TODO: Use transducers
   //https://gist.github.com/craigdallimore/8b5b9d9e445bfa1e383c569e458c3e26
-  update(entities) {
+  update(entities: Entity[]) {
     for (let i = 0; i < entities.length; i++) {
-      const entity = entities[i];
+      const entity = entities[i]!;
       if (entity.geometry) {
         try {
           this.updateGeometryEntity(entity);
@@ -207,10 +206,10 @@ export default ({ ctx }) => ({
       }
     }
   },
-  dispose(entities) {
+  dispose(entities?: Entity[]) {
     if (entities) {
       for (let i = 0; i < entities.length; i++) {
-        const entity = entities[i];
+        const entity = entities[i]!;
 
         if (entity._geometry) {
           if (entity._geometry.indices)

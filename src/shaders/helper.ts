@@ -1,20 +1,16 @@
 import { chunks as SHADERS } from "pex-shaders";
 
+import type { PipelineShaderOptions } from "../types.js";
+
 // Debug helper geometry (grids, gizmos, bounding boxes) is authored directly
 // in world space, so unlike basic.js/standard.js there is no @group(3) Model
 // (no modelMatrix). @location(5) for vertexColor still matches the shared
 // mesh attribute convention, leaving 1-4 free for parity with other pipelines.
 
-/**
- * @param {Set<string>} [defines=new Set()]
- * @param {object} [options={}]
- * @param {object} [options.hooks={}] Raw WGSL text injected at fixed points.
- * @param {number} [options.locationNormal=-1] MRT output location for the normal buffer, requires USE_DRAW_BUFFERS.
- * @param {number} [options.locationEmissive=-1] MRT output location for the emissive buffer, requires USE_DRAW_BUFFERS.
- * @returns {string}
- * @alias module:pipeline.helper
- */
-export default (defines = new Set(), options = {}) => {
+export default (
+  defines: Set<string> = new Set(),
+  options: PipelineShaderOptions = {},
+): string => {
   const hooks = options.hooks || {};
   const { locationNormal = -1, locationEmissive = -1 } = options;
 

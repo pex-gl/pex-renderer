@@ -1,6 +1,8 @@
 import { mat4 } from "pex-math";
 
-function updateSkin(skin) {
+import type { Entity } from "../types.js";
+
+function updateSkin(skin: any) {
   for (let i = 0; i < skin.joints.length; i++) {
     const joint = skin.joints[i];
     const m = skin.jointMatrices[i];
@@ -13,18 +15,13 @@ function updateSkin(skin) {
   }
 }
 
-/**
- * Skin system
- *
- * @returns {import("../types.js").System}
- * @alias module:systems.skin
- */
+/** Skin system */
 export default () => ({
   type: "skin-system",
   updateSkin,
-  update(entities) {
+  update(entities: Entity[]) {
     for (let i = 0; i < entities.length; i++) {
-      const entity = entities[i];
+      const entity = entities[i]!;
 
       if (entity.skin) updateSkin(entity.skin);
     }

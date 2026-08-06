@@ -5,6 +5,13 @@ import * as SHADERS from "../../shaders/index.js";
 import createBaseSystem from "./base.js";
 import { NAMESPACE, TEMP_MAT4 } from "../../utils.js";
 
+import type {
+  Entity,
+  RendererSystem,
+  RenderView,
+  SystemOptions,
+} from "../../types.js";
+
 const ALPHA_BLEND = {
   color: { srcFactor: "one", dstFactor: "one-minus-src-alpha" },
   alpha: { srcFactor: "one", dstFactor: "one-minus-src-alpha" },
@@ -16,7 +23,7 @@ const IDENTITY_MAT4 = mat4.create();
 
 // [r, g, b] stays as authored sRGB; the shader decodes it. The 4th component
 // carries intensity (light.color.w), matching the WGSL light chunks.
-const lightColor = (light) => [
+const lightColor = (light: any) => [
   light.color[0],
   light.color[1],
   light.color[2],
@@ -28,15 +35,15 @@ const lightColor = (light) => [
  *
  * PBR draw path built on pex-shaders' `standard` WGSL generator. Uniforms use
  * the shared bind group struct convention: @group(0) Frame, @group(1) Lights,
+ *
  * @group(2) Material, @group(3) Model. Shadow maps are not rendered yet;
  * shadow-map bindings are satisfied with dummy textures and lights are drawn
  * unshadowed.
- *
- * @param options
- * @returns
- * @alias module:renderer.standard
  */
-export default ({ ctx, shadowQuality = 4 }) => ({
+export default ({
+  ctx,
+  shadowQuality = 4,
+}: SystemOptions & { shadowQuality?: number }): RendererSystem => ({
   ...createBaseSystem(),
   type: "standard-renderer",
   debug: false,
@@ -93,8 +100,9 @@ export default ({ ctx, shadowQuality = 4 }) => ({
     }
   },
 
-  getShader: (defines, options) => SHADERS.standard(defines, options),
-  getShaderOptions(entity) {
+  getShader: (defines: Set<string>, options: any) =>
+    SHADERS.standard(defines, options),
+  getShaderOptions(entity: any) {
     const { _lights, _locations } = this;
     return {
       lights: _lights.counts,
@@ -103,10 +111,10 @@ export default ({ ctx, shadowQuality = 4 }) => ({
       texCoords: {},
     };
   },
-  getDefines(entity) {
+  getDefines(entity: any) {
     const { material, _geometry: geometry } = entity;
     const { attributes } = geometry;
-    const defines = new Set();
+    const defines = new Set<string>();
 
     // Lighting needs normals; fall back to unlit when the geometry lacks them.
     if (material.unlit || !attributes.normal) {
@@ -135,7 +143,7 @@ export default ({ ctx, shadowQuality = 4 }) => ({
 
     return defines;
   },
-  getVariantKey(entity, defines) {
+  getVariantKey(entity: any, defines: Set<string>) {
     const { counts } = this._lights;
     return [
       [...defines].sort().join("|"),
@@ -148,10 +156,10 @@ export default ({ ctx, shadowQuality = 4 }) => ({
       this._locations.emissive ?? -1,
     ].join("_");
   },
-  isUnlit(entity) {
+  isUnlit(entity: any) {
     return entity.material.unlit || !entity._geometry.attributes.normal;
   },
-  getPipelineOptions(entity) {
+  getPipelineOptions(entity: any) {
     const { material } = entity;
     return {
       depthWriteEnabled: material.depthWrite !== false && !material.blend,
@@ -170,7 +178,7 @@ export default ({ ctx, shadowQuality = 4 }) => ({
 
   // Builds the @group(1) uniform values: fixed-size struct arrays per light
   // type plus the individually-bound shadow maps (dummies for now).
-  gatherLights(entities) {
+  gatherLights(entities: Entity[]) {
     const ambient = entities.filter((e) => e.ambientLight);
     const directional = entities.filter((e) => e.directionalLight);
     const point = entities.filter((e) => e.pointLight);
@@ -184,7 +192,7 @@ export default ({ ctx, shadowQuality = 4 }) => ({
     const ltcReady = this.ltcTextures.ltc_1 && this.ltcTextures.ltc_2;
     const areaActive = ltcReady ? area : [];
 
-    const uniforms = {};
+    const uniforms: any = {};
 
     if (ambient.length) {
       uniforms.uAmbientLights = ambient.map((e) => ({
@@ -193,7 +201,7 @@ export default ({ ctx, shadowQuality = 4 }) => ({
     }
 
     // 2D shadow fields shared by directional/spot/area, plus the bound map.
-    const shadow2D = (light) => {
+    const shadow2D = (light: any) => {
       const map = light.castShadows ? light._shadowMap : null;
       return {
         map: map || this.dummyTexture2D,
@@ -207,7 +215,7 @@ export default ({ ctx, shadowQuality = 4 }) => ({
 
     if (directional.length) {
       uniforms.uDirectionalLights = directional.map((e) => {
-        const light = e.directionalLight;
+        const light = e.directionalLight!;
         const s = shadow2D(light);
         return {
           direction: light._direction,
@@ -232,10 +240,10 @@ export default ({ ctx, shadowQuality = 4 }) => ({
 
     if (point.length) {
       uniforms.uPointLights = point.map((e) => {
-        const light = e.pointLight;
+        const light = e.pointLight!;
         const map = light.castShadows ? light._shadowCubemap : null;
         return {
-          position: e._transform.worldPosition,
+          position: e._transform!.worldPosition,
           color: lightColor(light),
           range: light.range,
           castShadows: map ? 1 : 0,
@@ -248,7 +256,7 @@ export default ({ ctx, shadowQuality = 4 }) => ({
         };
       });
       point.forEach((e, i) => {
-        const light = e.pointLight;
+        const light = e.pointLight!;
         uniforms[`uPointShadowMap${i}`] =
           (light.castShadows && light._shadowCubemap) || this.dummyTextureCube;
         uniforms[`uPointShadowMap${i}Sampler`] = this.shadowSampler;
@@ -257,10 +265,10 @@ export default ({ ctx, shadowQuality = 4 }) => ({
 
     if (spot.length) {
       uniforms.uSpotLights = spot.map((e) => {
-        const light = e.spotLight;
+        const light = e.spotLight!;
         const s = shadow2D(light);
         return {
-          position: e._transform.worldPosition,
+          position: e._transform!.worldPosition,
           direction: light._direction,
           color: lightColor(light),
           innerAngle: light.innerAngle,
@@ -287,13 +295,13 @@ export default ({ ctx, shadowQuality = 4 }) => ({
       uniforms.uLtc2 = this.ltcTextures.ltc_2;
       uniforms.uLtc2Sampler = this.ltcSampler;
       uniforms.uAreaLights = areaActive.map((e) => {
-        const light = e.areaLight;
+        const light = e.areaLight!;
         const s = shadow2D(light);
         return {
-          position: e.transform.position,
+          position: e.transform!.position,
           color: lightColor(light),
-          rotation: e.transform.rotation,
-          size: [e.transform.scale[0] / 2, e.transform.scale[1] / 2],
+          rotation: e.transform!.rotation,
+          size: [e.transform!.scale![0]! / 2, e.transform!.scale![1]! / 2],
           disk: light.disk ? 1 : 0,
           doubleSided: light.doubleSided ? 1 : 0,
           projectionMatrix: light._projectionMatrix,
@@ -323,11 +331,11 @@ export default ({ ctx, shadowQuality = 4 }) => ({
     };
   },
 
-  getMaterialUniforms(entity) {
+  getMaterialUniforms(entity: any) {
     const { material } = entity;
     if (this.isUnlit(entity)) return { baseColor: material.baseColor };
 
-    const uniforms = {
+    const uniforms: any = {
       baseColor: material.baseColor,
       metallic: material.metallic ?? 1,
       roughness: material.roughness ?? 1,
@@ -340,7 +348,7 @@ export default ({ ctx, shadowQuality = 4 }) => ({
     return uniforms;
   },
 
-  render(renderView, entities, options) {
+  render(renderView: RenderView, entities: Entity[], options: any) {
     const { camera, cameraEntity, viewport } = renderView;
     const { attachmentsLocations = {}, msaa, transparent } = options;
 
@@ -354,10 +362,10 @@ export default ({ ctx, shadowQuality = 4 }) => ({
     this._lights = lights;
 
     const uFrame = {
-      projectionMatrix: camera.projectionMatrix,
-      viewMatrix: camera.viewMatrix,
+      projectionMatrix: camera.projectionMatrix!,
+      viewMatrix: camera.viewMatrix!,
       inverseViewMatrix: camera.invViewMatrix || camera.inverseViewMatrix,
-      cameraPosition: cameraEntity._transform.worldPosition,
+      cameraPosition: cameraEntity!._transform!.worldPosition,
       viewportSize: [viewport[2], viewport[3]],
     };
 
@@ -371,28 +379,28 @@ export default ({ ctx, shadowQuality = 4 }) => ({
     );
 
     for (let i = 0; i < renderableEntities.length; i++) {
-      const entity = renderableEntities[i];
+      const entity = renderableEntities[i]!;
       const pipeline = this.getPipeline(ctx, entity, options);
 
       // View-space normal matrix: mat3(transpose(inverse(view * model))).
       mat4.set(TEMP_MAT4, uFrame.viewMatrix);
-      mat4.mult(TEMP_MAT4, entity._transform.modelMatrix);
+      mat4.mult(TEMP_MAT4, entity._transform!.modelMatrix);
       mat4.invert(TEMP_MAT4);
       mat4.transpose(TEMP_MAT4);
 
       submit(ctx, {
-        name: transparent
+        label: transparent
           ? "drawTransparentGeometryCmd"
           : "drawOpaqueGeometryCmd",
         pipeline,
-        attributes: entity._geometry.attributes,
-        indices: entity._geometry.indices,
-        count: entity._geometry.count,
-        instanceCount: entity._geometry.instances,
+        attributes: entity._geometry!.attributes,
+        indices: entity._geometry!.indices,
+        count: entity._geometry!.count,
+        instanceCount: entity._geometry!.instances,
         uniforms: {
           uFrame,
           uModel: {
-            modelMatrix: entity._transform.modelMatrix,
+            modelMatrix: entity._transform!.modelMatrix,
             normalMatrix: mat3.fromMat4(NORMAL_MATRIX, TEMP_MAT4),
           },
           uMaterial: this.getMaterialUniforms(entity),
@@ -401,10 +409,10 @@ export default ({ ctx, shadowQuality = 4 }) => ({
       });
     }
   },
-  renderOpaque(renderView, entities, options) {
+  renderOpaque(renderView: RenderView, entities: Entity[], options: any) {
     this.render(renderView, entities, { ...options, transparent: false });
   },
-  renderTransparent(renderView, entities, options) {
+  renderTransparent(renderView: RenderView, entities: Entity[], options: any) {
     this.render(renderView, entities, { ...options, transparent: true });
   },
   // `linear` selects the omni (point) variant: a fragment stage stores
@@ -412,10 +420,10 @@ export default ({ ctx, shadowQuality = 4 }) => ({
   // carries the rasterizer depth-bias settings, unused by the linear variant
   // (writing frag_depth bypasses rasterizer bias; the point shader biases its
   // compare instead).
-  getDepthPipeline(entity, linear, light) {
+  getDepthPipeline(entity: any, linear: boolean, light: any) {
     const { attributes } = entity._geometry;
     // Depth pass only cares about position-affecting features.
-    const defines = new Set();
+    const defines = new Set<string>();
     if (attributes.offset) defines.add("USE_INSTANCED_OFFSET");
     if (attributes.scale) defines.add("USE_INSTANCED_SCALE");
     if (attributes.rotation) defines.add("USE_INSTANCED_ROTATION");
@@ -455,17 +463,17 @@ export default ({ ctx, shadowQuality = 4 }) => ({
   // Depth-only pass into a light's shadow map. renderView.camera carries the
   // light's projection/view matrices; point lights (cubemap) store normalized
   // radial distance and need the light's far plane in uFrame.
-  renderShadow(renderView, entities, options = {}) {
+  renderShadow(renderView: RenderView, entities: Entity[], options: any = {}) {
     const { camera, viewport } = renderView;
     const light = options.shadowMappingLight;
     const linear = !!light?._shadowCubemap;
 
     const uFrame = {
-      projectionMatrix: camera.projectionMatrix,
-      viewMatrix: camera.viewMatrix,
+      projectionMatrix: camera.projectionMatrix!,
+      viewMatrix: camera.viewMatrix!,
       inverseViewMatrix: camera.invViewMatrix || IDENTITY_MAT4,
       cameraPosition: [0, 0, 0],
-      viewportSize: [viewport[2], viewport[3]],
+      viewportSize: [viewport[2]!, viewport[3]!],
       ...(linear ? { far: light._far } : {}),
     };
 
@@ -479,21 +487,21 @@ export default ({ ctx, shadowQuality = 4 }) => ({
     );
 
     for (let i = 0; i < casters.length; i++) {
-      const entity = casters[i];
+      const entity = casters[i]!;
       submit(ctx, {
-        name: "drawShadowGeometryCmd",
+        label: "drawShadowGeometryCmd",
         pipeline: this.getDepthPipeline(entity, linear, light),
-        attributes: entity._geometry.attributes,
-        indices: entity._geometry.indices,
-        count: entity._geometry.count,
-        instanceCount: entity._geometry.instances,
+        attributes: entity._geometry!.attributes,
+        indices: entity._geometry!.indices,
+        count: entity._geometry!.count,
+        instanceCount: entity._geometry!.instances,
         uniforms: {
           uFrame,
           uModel: {
-            modelMatrix: entity._transform.modelMatrix,
+            modelMatrix: entity._transform!.modelMatrix,
             normalMatrix: mat3.fromMat4(
               NORMAL_MATRIX,
-              entity._transform.modelMatrix,
+              entity._transform!.modelMatrix,
             ),
           },
         },

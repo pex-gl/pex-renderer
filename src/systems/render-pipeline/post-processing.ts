@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { postProcessing as postProcessingShaders } from "pex-shaders";
 import ssao from "./post-processing/ssao.js";
 import dof from "./post-processing/dof.js";

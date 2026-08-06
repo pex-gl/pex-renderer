@@ -1,87 +1,12 @@
-/** @module pipeline */
-
-import blit from "./blit.js";
-import reversibleToneMap from "./reversibleToneMap.js";
-import depthPass from "./depth-pass.js";
-import depthPrePass from "./depth-pre-pass.js";
-import standard from "./standard.js";
-import basic from "./basic.js";
-import line from "./line.js";
-import overlay from "./overlay.js";
-import helper from "./helper.js";
-import error from "./error.js";
-import sky from "./sky.js";
-import skybox from "./skybox.js";
-
-/**
- * (defines, options) => wgslString, containing both @vertex and @fragment entry points.
- * @member {Function}
- * @static
- */
-export { blit };
-/**
- * (defines, options) => wgslString, containing both @vertex and @fragment entry points.
- * @member {Function}
- * @static
- */
-export { reversibleToneMap };
-/**
- * (defines, options) => wgslString, containing both @vertex and @fragment entry points.
- * @member {Function}
- * @static
- */
-export { depthPass };
-/**
- * (defines, options) => wgslString, containing both @vertex and @fragment entry points.
- * @member {Function}
- * @static
- */
-export { depthPrePass };
-/**
- * (defines, options) => wgslString, containing both @vertex and @fragment entry points.
- * @member {Function}
- * @static
- */
-export { standard };
-/**
- * (defines, options) => wgslString, containing both @vertex and @fragment entry points.
- * @member {Function}
- * @static
- */
-export { basic };
-/**
- * (defines, options) => wgslString, containing both @vertex and @fragment entry points.
- * @member {Function}
- * @static
- */
-export { line };
-/**
- * (defines, options) => wgslString, containing both @vertex and @fragment entry points.
- * @member {Function}
- * @static
- */
-export { overlay };
-/**
- * (defines, options) => wgslString, containing both @vertex and @fragment entry points.
- * @member {Function}
- * @static
- */
-export { helper };
-/**
- * (defines, options) => wgslString, containing both @vertex and @fragment entry points.
- * @member {Function}
- * @static
- */
-export { error };
-/**
- * (defines, options) => wgslString, containing both @vertex and @fragment entry points.
- * @member {Function}
- * @static
- */
-export { sky };
-/**
- * (defines, options) => wgslString, containing both @vertex and @fragment entry points.
- * @member {Function}
- * @static
- */
-export { skybox };
+export { default as blit } from "./blit.js";
+export { default as reversibleToneMap } from "./reversibleToneMap.js";
+export { default as depthPass } from "./depth-pass.js";
+export { default as depthPrePass } from "./depth-pre-pass.js";
+export { default as standard } from "./standard.js";
+export { default as basic } from "./basic.js";
+export { default as line } from "./line.js";
+export { default as overlay } from "./overlay.js";
+export { default as helper } from "./helper.js";
+export { default as error } from "./error.js";
+export { default as sky } from "./sky.js";
+export { default as skybox } from "./skybox.js";

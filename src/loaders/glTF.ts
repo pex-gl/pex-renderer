@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { loadJson, loadImage, loadArrayBuffer, loadBlob } from "pex-io";
 import { quat, mat4, utils } from "pex-math";
 import { loadDraco, loadKtx2 } from "pex-loaders";

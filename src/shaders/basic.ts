@@ -1,5 +1,7 @@
 import { chunks as SHADERS } from "pex-shaders";
 
+import type { PipelineShaderOptions } from "../types.js";
+
 // Vertex attribute @location convention shared across pipeline shaders:
 // 0 position, 1 normal, 2 tangent, 3 texCoord0, 4 texCoord1, 5 vertexColor,
 // 6 instanced offset, 7 instanced scale, 8 instanced rotation, 9 instanced color,
@@ -16,16 +18,10 @@ import { chunks as SHADERS } from "pex-shaders";
 // position on the way into the fragment stage, so no separate fragCoord
 // parameter is needed either.
 
-/**
- * @param {Set<string>} [defines=new Set()]
- * @param {object} [options={}]
- * @param {object} [options.hooks={}] Raw WGSL text injected at fixed points.
- * @param {number} [options.locationNormal=-1] MRT output location for the normal buffer, requires USE_DRAW_BUFFERS.
- * @param {number} [options.locationEmissive=-1] MRT output location for the emissive buffer, requires USE_DRAW_BUFFERS.
- * @returns {string}
- * @alias module:pipeline.basic
- */
-export default (defines = new Set(), options = {}) => {
+export default (
+  defines: Set<string> = new Set(),
+  options: PipelineShaderOptions = {},
+): string => {
   const hooks = options.hooks || {};
   const { locationNormal = -1, locationEmissive = -1 } = options;
 
@@ -40,13 +36,14 @@ export default (defines = new Set(), options = {}) => {
   const useNormalOutput = useDrawBuffers && locationNormal >= 0;
   const useEmissiveOutput = useDrawBuffers && locationEmissive >= 0;
 
-  const colorAssignment = useVertexColors && useInstancedColor
-    ? "output.color = input.vertexColor * input.instanceColor;"
-    : useInstancedColor
-      ? "output.color = input.instanceColor;"
-      : useVertexColors
-        ? "output.color = input.vertexColor;"
-        : "";
+  const colorAssignment =
+    useVertexColors && useInstancedColor
+      ? "output.color = input.vertexColor * input.instanceColor;"
+      : useInstancedColor
+        ? "output.color = input.instanceColor;"
+        : useVertexColors
+          ? "output.color = input.vertexColor;"
+          : "";
 
   return /* wgsl */ `
 struct Frame {

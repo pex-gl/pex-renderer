@@ -8,6 +8,8 @@ import {
   getCubeFaceCamera,
 } from "../../utils.js";
 
+import type { Entity, RendererSystem, SystemOptions } from "../../types.js";
+
 const MIN_NEAR = 0.01;
 
 /**
@@ -21,11 +23,12 @@ const MIN_NEAR = 0.01;
  * - This.descriptors
  *
  * @private
- * @param {import("../../types.js").SystemOptions} options
- * @returns {import("../../types.js").System}
  */
-export default ({ renderGraph, resourceCache }) => ({
-  checkLight(light, lightEntity) {
+export default ({
+  renderGraph,
+  resourceCache,
+}: Pick<SystemOptions, "renderGraph" | "resourceCache">) => ({
+  checkLight(this: any, light: any, lightEntity: Entity) {
     if (!lightEntity._transform) {
       console.warn(
         NAMESPACE,
@@ -40,15 +43,20 @@ export default ({ renderGraph, resourceCache }) => ({
       );
     }
   },
-  computeLightProperties(lightEntity, light, shadowCastingEntities) {
+  computeLightProperties(
+    this: any,
+    lightEntity: Entity,
+    light: any,
+    shadowCastingEntities: Entity[],
+  ) {
     light._sceneBboxInLightSpace ??= aabb.create();
 
     aabb.fromPoints(
       light._sceneBboxInLightSpace,
       shadowCastingEntities.flatMap((entity) =>
         aabb
-          .getCorners(entity.transform.worldBounds)
-          .map((p) => vec3.multMat4(p, light._viewMatrix)),
+          .getCorners(entity.transform!.worldBounds!)
+          .map((p: any) => vec3.multMat4(p, light._viewMatrix)),
       ),
     );
 
@@ -57,6 +65,7 @@ export default ({ renderGraph, resourceCache }) => ({
 
     // Get frustum size
     aabb.size(light._sceneBboxInLightSpace, TEMP_VEC3);
+    const size: any = TEMP_VEC3;
 
     // Light radius as a UV fraction of the shadow map, measured at the plane the
     // projection defines so PCSS penumbra scaling is geometrically correct:
@@ -64,13 +73,15 @@ export default ({ renderGraph, resourceCache }) => ({
     // - perspective (spot/area): the frustum width at the near plane, 2·near·tan(halfFov).
     if (lightEntity.directionalLight) {
       light._radiusUV = [
-        light.bulbRadius / TEMP_VEC3[0],
-        light.bulbRadius / TEMP_VEC3[1],
+        light.bulbRadius / size[0],
+        light.bulbRadius / size[1],
       ];
     } else {
       const halfFov = lightEntity.spotLight ? light.angle : Math.PI / 4;
       const nearPlaneSize = 2 * light._near * Math.tan(halfFov);
-      const scale = lightEntity.areaLight ? lightEntity.transform.scale : null;
+      const scale: any = lightEntity.areaLight
+        ? lightEntity.transform!.scale
+        : null;
       light._radiusUV = [
         (light.bulbRadius * (scale ? scale[0] : 1)) / nearPlaneSize,
         (light.bulbRadius * (scale ? scale[1] : 1)) / nearPlaneSize,
@@ -79,20 +90,29 @@ export default ({ renderGraph, resourceCache }) => ({
   },
   // Radial near/far for a point light's cube projection, derived from the scene
   // bounds relative to the light (scene-adaptive, nothing hardcoded).
-  computePointLightProperties(lightEntity, light, bboxEntities) {
-    const lightPosition = lightEntity._transform.worldPosition;
+  computePointLightProperties(
+    this: any,
+    lightEntity: Entity,
+    light: any,
+    bboxEntities: Entity[],
+  ) {
+    const lightPosition: any = lightEntity._transform!.worldPosition;
 
     light._sceneBbox ??= aabb.create();
     aabb.empty(light._sceneBbox);
     for (let i = 0; i < bboxEntities.length; i++) {
-      aabb.includeAABB(light._sceneBbox, bboxEntities[i].transform.worldBounds);
+      aabb.includeAABB(
+        light._sceneBbox,
+        bboxEntities[i]!.transform!.worldBounds!,
+      );
     }
 
     // Farthest scene corner sets far; nearest point on the box sets near.
     aabb.getCorners(light._sceneBbox, TEMP_BOUNDS_POINTS);
+    const points: any = TEMP_BOUNDS_POINTS;
     let far = MIN_NEAR;
     for (let i = 0; i < TEMP_BOUNDS_POINTS.length; i++) {
-      far = Math.max(far, vec3.distance(lightPosition, TEMP_BOUNDS_POINTS[i]));
+      far = Math.max(far, vec3.distance(lightPosition, points[i]));
     }
 
     TEMP_VEC3[0] = Math.max(
@@ -111,7 +131,12 @@ export default ({ renderGraph, resourceCache }) => ({
     light._near = Math.max(MIN_NEAR, vec3.distance(lightPosition, TEMP_VEC3));
     light._far = Math.max(light._near + MIN_NEAR, far);
   },
-  getLightAttachments(light, descriptor, cubemap) {
+  getLightAttachments(
+    this: any,
+    light: any,
+    descriptor: any,
+    cubemap?: boolean,
+  ) {
     const { shadowMapDesc } = descriptor;
 
     shadowMapDesc.width = shadowMapDesc.height = light.shadowMapSize;
@@ -126,13 +151,14 @@ export default ({ renderGraph, resourceCache }) => ({
   },
 
   renderDirectionalLightShadowMap(
-    lightEntity,
-    entities,
-    renderers,
-    colorAttachments,
-    shadowCastingEntities,
+    this: any,
+    lightEntity: Entity,
+    entities: Entity[],
+    renderers: RendererSystem[],
+    colorAttachments: any,
+    shadowCastingEntities: Entity[],
   ) {
-    const light = lightEntity.directionalLight;
+    const light: any = lightEntity.directionalLight;
 
     // Frustum must cover receivers too, not just casters: a hardware depth
     // comparison shadows anything whose clip depth falls outside [near, far].
@@ -193,13 +219,14 @@ export default ({ renderGraph, resourceCache }) => ({
   },
 
   renderSpotLightShadowMap(
-    lightEntity,
-    entities,
-    renderers,
-    colorAttachments,
-    shadowCastingEntities,
+    this: any,
+    lightEntity: Entity,
+    entities: Entity[],
+    renderers: RendererSystem[],
+    colorAttachments: any,
+    shadowCastingEntities: Entity[],
   ) {
-    const light = lightEntity.spotLight || lightEntity.areaLight;
+    const light: any = lightEntity.spotLight || lightEntity.areaLight;
 
     // Frustum must cover receivers too (see renderDirectionalLightShadowMap).
     this.computeLightProperties(
@@ -256,12 +283,13 @@ export default ({ renderGraph, resourceCache }) => ({
   },
 
   renderPointLightShadowMap(
-    lightEntity,
-    entities,
-    renderers,
-    colorAttachments,
+    this: any,
+    lightEntity: Entity,
+    entities: Entity[],
+    renderers: RendererSystem[],
+    colorAttachments: any,
   ) {
-    const light = lightEntity.pointLight;
+    const light: any = lightEntity.pointLight;
 
     const { depth } = this.getLightAttachments(
       light,
@@ -275,7 +303,7 @@ export default ({ renderGraph, resourceCache }) => ({
       entities.filter((e) => e.geometry && e.material),
     );
 
-    const lightPosition = lightEntity._transform.worldPosition;
+    const lightPosition = lightEntity._transform!.worldPosition;
     // Projection (90° cube face, per-light near/far to match the shader) is
     // identical across faces and reused; the per-face view must be a distinct
     // allocation because the render graph defers passes and reads each at endFrame.

@@ -1,11 +1,7 @@
-/**
- * Point light component
- *
- * @param {import("../types.js").PointLightComponentOptions} [options]
- * @returns {object}
- * @alias module:components.pointLight
- */
-export default (options) => ({
+import type { PointLightComponentOptions } from "../types.js";
+
+/** Point light component */
+export default (options?: PointLightComponentOptions) => ({
   color: [1, 1, 1, 1],
   intensity: 1,
   range: 10,

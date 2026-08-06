@@ -1,3 +1,4 @@
+// @ts-nocheck
 // https://github.com/gkjohnson/threejs-sandbox/tree/master/blue-noise-generation
 function fillWithOnes(array, count) {
   array.fill(0);

@@ -1,15 +1,11 @@
 // See basic.js for the shared Frame/Model bind group conventions.
 
-/**
- * @param {Set<string>} [defines=new Set()]
- * @param {object} [options={}]
- * @param {object} [options.hooks={}] Raw WGSL text injected at fixed points.
- * @param {number} [options.locationNormal=-1] MRT output location for the normal buffer, requires USE_DRAW_BUFFERS.
- * @param {number} [options.locationEmissive=-1] MRT output location for the emissive buffer, requires USE_DRAW_BUFFERS.
- * @returns {string}
- * @alias module:pipeline.error
- */
-export default (defines = new Set(), options = {}) => {
+import type { PipelineShaderOptions } from "../types.js";
+
+export default (
+  defines: Set<string> = new Set(),
+  options: PipelineShaderOptions = {},
+): string => {
   const hooks = options.hooks || {};
   const { locationNormal = -1, locationEmissive = -1 } = options;
 

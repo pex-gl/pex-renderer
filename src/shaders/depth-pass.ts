@@ -1,5 +1,7 @@
 import { chunks as SHADERS } from "pex-shaders";
 
+import type { PipelineShaderOptions } from "../types.js";
+
 // See standard.js for the shared Frame/Model bind group and attribute @location
 // conventions. 2D shadow maps (directional/spot/area) are depth textures sampled
 // with a comparison sampler, so this pass is vertex-only: it writes clip-space
@@ -16,15 +18,10 @@ import { chunks as SHADERS } from "pex-shaders";
 // acne/peter-panning from displaced surfaces. Alpha-tested shadows (a fragment
 // with discard) are not handled yet.
 
-/**
- * @param {Set<string>} [defines=new Set()]
- * @param {object} [options={}]
- * @param {object} [options.hooks={}] Raw WGSL text injected at fixed points.
- * @param {number} [options.maxJoints=256] Size of the skinning joint matrix array.
- * @returns {string}
- * @alias module:pipeline.depthPass
- */
-export default (defines = new Set(), options = {}) => {
+export default (
+  defines: Set<string> = new Set(),
+  options: PipelineShaderOptions = {},
+): string => {
   const hooks = options.hooks || {};
   const { maxJoints = 256 } = options;
 
@@ -85,13 +82,16 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
 
   ${hooks.vertBeforeTransform ?? ""}
 
-  ${useDisplacementTexture
-    ? "let h = textureSampleLevel(uDisplacementTexture, uDisplacementTextureSampler, input.texCoord0, 0.0).x;\n  position = vec4f(position.xyz + uModel.displacement * h * normal * 1.3, position.w);"
-    : ""}
+  ${
+    useDisplacementTexture
+      ? "let h = textureSampleLevel(uDisplacementTexture, uDisplacementTextureSampler, input.texCoord0, 0.0).x;\n  position = vec4f(position.xyz + uModel.displacement * h * normal * 1.3, position.w);"
+      : ""
+  }
 
   var positionWorld: vec4f;
-  ${useSkin
-    ? `let skinMat =
+  ${
+    useSkin
+      ? `let skinMat =
     input.weight.x * uJointMatrices[u32(input.joint.x)] +
     input.weight.y * uJointMatrices[u32(input.joint.y)] +
     input.weight.z * uJointMatrices[u32(input.joint.z)] +
@@ -104,8 +104,9 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
   ${useInstancedRotation ? "let rotationMat = quatToMat4(input.rotation);\n  positionWorld = rotationMat * positionWorld;" : ""}
 
   ${useInstancedOffset ? "positionWorld = vec4f(positionWorld.xyz + input.offset, positionWorld.w);" : ""}`
-    : `${useInstancedScale ? "position = vec4f(position.xyz * input.scale, position.w);\n  " : ""}${useInstancedRotation ? "let rotationMat = quatToMat4(input.rotation);\n  position = rotationMat * position;\n  " : ""}${useInstancedOffset ? "position = vec4f(position.xyz + input.offset, position.w);\n  " : ""}
-  positionWorld = uModel.modelMatrix * position;`}
+      : `${useInstancedScale ? "position = vec4f(position.xyz * input.scale, position.w);\n  " : ""}${useInstancedRotation ? "let rotationMat = quatToMat4(input.rotation);\n  position = rotationMat * position;\n  " : ""}${useInstancedOffset ? "position = vec4f(position.xyz + input.offset, position.w);\n  " : ""}
+  positionWorld = uModel.modelMatrix * position;`
+  }
 
   ${hooks.vertEnd ?? ""}
 
@@ -115,7 +116,8 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
   ${useLinearDepth ? "output.viewPosition = viewPosition.xyz;" : ""}
   return output;
 }
-${useLinearDepth
+${
+  useLinearDepth
     ? `
 @fragment
 fn fragmentMain(input: VertexOutput) -> @builtin(frag_depth) f32 {
@@ -123,6 +125,7 @@ fn fragmentMain(input: VertexOutput) -> @builtin(frag_depth) f32 {
   // distance from the light; normalize to [0, 1] to store in a depth texture.
   return length(input.viewPosition) / uFrame.far;
 }`
-    : ""}
+    : ""
+}
 `;
 };

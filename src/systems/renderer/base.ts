@@ -1,3 +1,5 @@
+import type { Entity, GpuContext, RendererSystem } from "../../types.js";
+
 /**
  * Base renderer
  *
@@ -6,11 +8,8 @@
  * identity, so a new object is only needed when the generated source changes
  * (its `defines`). Mutable state (blend, cull, depth) is re-applied per draw on
  * the cached object.
- *
- * @returns {import("../../types.js").RendererSystem}
- * @alias module:renderer.base
  */
-export default () => ({
+export default (): RendererSystem => ({
   type: "base-renderer",
   pipelineCache: new Map(),
   debug: false,
@@ -24,13 +23,13 @@ export default () => ({
   getDefines() {
     return new Set();
   },
-  getVariantKey(entity, defines) {
+  getVariantKey(entity: Entity, defines: Set<string>) {
     return [...defines].sort().join("|");
   },
   getPipelineOptions() {
     return {};
   },
-  getPipeline(ctx, entity, options = {}) {
+  getPipeline(ctx: GpuContext, entity: Entity, options: any = {}) {
     const defines = this.getDefines(entity, options);
     const key = this.getVariantKey(entity, defines, options);
 

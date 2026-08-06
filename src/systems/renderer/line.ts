@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { avec3 } from "pex-math";
 import * as SHADERS from "../../shaders/index.js";
 
@@ -36,7 +37,6 @@ const instanceRoundRound = Float32Array.of(
  *
  * @param {import("../../types.js").SystemOptions} options
  * @returns {import("../../types.js").RendererSystem}
- * @alias module:renderer.line
  */
 export default ({ ctx } = {}) => ({
   ...createBaseSystem(),

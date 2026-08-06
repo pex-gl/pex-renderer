@@ -1,13 +1,9 @@
 import { mat4 } from "pex-math";
 
-/**
- * Camera component
- *
- * @param {import("../types.js").CameraComponentOptions} [options]
- * @returns {object}
- * @alias module:components.camera
- */
-export default (options) => {
+import type { CameraComponentOptions } from "../types.js";
+
+/** Camera component */
+export default (options?: CameraComponentOptions) => {
   const camera = {
     projection: "perspective",
     near: 0.5,

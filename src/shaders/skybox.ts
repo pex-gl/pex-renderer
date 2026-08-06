@@ -1,5 +1,7 @@
 import { chunks as SHADERS } from "pex-shaders";
 
+import type { PipelineShaderOptions } from "../types.js";
+
 // Draws an equirectangular environment map (a baked analytic sky or a user
 // envMap) as the scene background. A fullscreen triangle (attribute @location(0)
 // position: vec2f, clip-space corners) is unprojected into a world-space view
@@ -9,16 +11,10 @@ import { chunks as SHADERS } from "pex-shaders";
 // rgba8unorm-srgb texture that decodes on sample), so no decode is needed; the
 // result feeds the linear HDR main pass.
 
-/**
- * @param {Set<string>} [defines=new Set()]
- * @param {object} [options={}]
- * @param {object} [options.hooks={}] Raw WGSL text injected at fixed points.
- * @param {number} [options.locationNormal=-1] MRT output location for the normal buffer, requires USE_DRAW_BUFFERS.
- * @param {number} [options.locationEmissive=-1] MRT output location for the emissive buffer, requires USE_DRAW_BUFFERS.
- * @returns {string}
- * @alias module:pipeline.skybox
- */
-export default (defines = new Set(), options = {}) => {
+export default (
+  defines: Set<string> = new Set(),
+  options: PipelineShaderOptions = {},
+): string => {
   const hooks = options.hooks || {};
   const { locationNormal = -1, locationEmissive = -1 } = options;
 

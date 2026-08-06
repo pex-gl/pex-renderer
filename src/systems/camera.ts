@@ -2,18 +2,24 @@ import { mat4, vec3, quat, utils, avec4 } from "pex-math";
 import { orbiter as createOrbiter } from "pex-cam";
 import { NAMESPACE, TEMP_MAT4, TEMP_VEC3 } from "../utils.js";
 
-function computeFrustum(camera) {
+import type { Entity } from "../types.js";
+
+// The camera math operates on a fully-populated camera (projection-specific
+// fields guaranteed by the camera component), so it is typed loosely here.
+function computeFrustum(camera: any) {
   mat4.set(TEMP_MAT4, camera.projectionMatrix);
   mat4.mult(TEMP_MAT4, camera.viewMatrix);
 
+  const m: any = TEMP_MAT4;
+
   // prettier-ignore
   {
-    avec4.set4(camera.frustum, 0, TEMP_MAT4[3] - TEMP_MAT4[0], TEMP_MAT4[7] - TEMP_MAT4[4], TEMP_MAT4[11] - TEMP_MAT4[8], TEMP_MAT4[15] - TEMP_MAT4[12]) // -x
-    avec4.set4(camera.frustum, 1, TEMP_MAT4[3] + TEMP_MAT4[0], TEMP_MAT4[7] + TEMP_MAT4[4], TEMP_MAT4[11] + TEMP_MAT4[8], TEMP_MAT4[15] + TEMP_MAT4[12]) // +x
-    avec4.set4(camera.frustum, 2, TEMP_MAT4[3] + TEMP_MAT4[1], TEMP_MAT4[7] + TEMP_MAT4[5], TEMP_MAT4[11] + TEMP_MAT4[9], TEMP_MAT4[15] + TEMP_MAT4[13]) // +y
-    avec4.set4(camera.frustum, 3, TEMP_MAT4[3] - TEMP_MAT4[1], TEMP_MAT4[7] - TEMP_MAT4[5], TEMP_MAT4[11] - TEMP_MAT4[9], TEMP_MAT4[15] - TEMP_MAT4[13]) // -y
-    avec4.set4(camera.frustum, 4, TEMP_MAT4[3] - TEMP_MAT4[2], TEMP_MAT4[7] - TEMP_MAT4[6], TEMP_MAT4[11] - TEMP_MAT4[10], TEMP_MAT4[15] - TEMP_MAT4[14]) // +z (far)
-    avec4.set4(camera.frustum, 5, TEMP_MAT4[3] + TEMP_MAT4[2], TEMP_MAT4[7] + TEMP_MAT4[6], TEMP_MAT4[11] + TEMP_MAT4[10], TEMP_MAT4[15] + TEMP_MAT4[14]) // -z (near)
+    avec4.set4(camera.frustum, 0, m[3] - m[0], m[7] - m[4], m[11] - m[8], m[15] - m[12]) // -x
+    avec4.set4(camera.frustum, 1, m[3] + m[0], m[7] + m[4], m[11] + m[8], m[15] + m[12]) // +x
+    avec4.set4(camera.frustum, 2, m[3] + m[1], m[7] + m[5], m[11] + m[9], m[15] + m[13]) // +y
+    avec4.set4(camera.frustum, 3, m[3] - m[1], m[7] - m[5], m[11] - m[9], m[15] - m[13]) // -y
+    avec4.set4(camera.frustum, 4, m[3] - m[2], m[7] - m[6], m[11] - m[10], m[15] - m[14]) // +z (far)
+    avec4.set4(camera.frustum, 5, m[3] + m[2], m[7] + m[6], m[11] + m[10], m[15] + m[14]) // -z (near)
   }
 
   // Normalize planes
@@ -27,7 +33,7 @@ function computeFrustum(camera) {
 }
 
 // TODO: projectionMatrix should only be recomputed if parameters changed
-function updateCameraProjection(camera, transform) {
+function updateCameraProjection(camera: any, transform: any) {
   if (camera.projection === "orthographic") {
     const dx = (camera.right - camera.left) / (2 / camera.zoom);
     const dy = (camera.top - camera.bottom) / (2 / camera.zoom);
@@ -116,17 +122,14 @@ function updateCameraProjection(camera, transform) {
  * Adds:
  *
  * - "_orbiter" to orbiter components
- *
- * @returns
- * @alias module:systems.camera
  */
 export default () => ({
   type: "camera-system",
-  cache: {},
+  cache: {} as Record<number, any>,
   debug: false,
   updateCameraProjection,
   computeFrustum,
-  checkCamera(_, cameraEntity) {
+  checkCamera(_: unknown, cameraEntity: Entity) {
     if (cameraEntity.transform) {
       return true;
     } else {
@@ -137,8 +140,8 @@ export default () => ({
       );
     }
   },
-  updateCameraFoV(entity) {
-    const camera = entity.camera;
+  updateCameraFoV(entity: Entity) {
+    const camera: any = entity.camera;
 
     const sensorWidth = camera.sensorSize[0];
     let sensorHeight = camera.sensorSize[1];
@@ -167,9 +170,10 @@ export default () => ({
       this.cache[entity.id].focalLength = camera.focalLength;
     }
   },
-  updateCameraEntity(entity) {
-    const orbiter = entity.orbiter;
-    const camera = entity.camera;
+  // The orbiter-sync path drives a dynamic proxy camera, so it is typed loosely.
+  updateCameraEntity(entity: any) {
+    const orbiter: any = entity.orbiter;
+    const camera: any = entity.camera;
 
     // Add to cache and reset cache if camera component is different
     if (this.cache[entity.id]?.camera !== camera) {
@@ -226,7 +230,7 @@ export default () => ({
         }
 
         if (newPosition || newTarget) {
-          const opts = {};
+          const opts: any = {};
           if (newPosition) {
             opts.position = [...newPosition];
           }
@@ -276,7 +280,12 @@ export default () => ({
           target: [...orbiter.target],
           up: [0, 1, 0],
           zoom: camera.zoom,
-          getViewRay: (x, y, windowWidth, windowHeight) => {
+          getViewRay: (
+            x: number,
+            y: number,
+            windowWidth: number,
+            windowHeight: number,
+          ) => {
             let nx = (2 * x) / windowWidth - 1;
             let ny = 1 - (2 * y) / windowHeight;
             const hNear = 2 * Math.tan(camera.fov / 2) * camera.near;
@@ -286,7 +295,7 @@ export default () => ({
 
             return [[0, 0, 0], vec3.normalize([nx, ny, -camera.near])];
           },
-          set({ target, position, zoom }) {
+          set({ target, position, zoom }: any) {
             if (zoom) {
               camera.zoom = zoom;
               return;
@@ -329,7 +338,7 @@ export default () => ({
           camera: proxyCamera,
           position: proxyCamera.position,
           maxDistance: camera.far * 0.9,
-        });
+        } as any);
         orbiter._orbiter.updateCamera();
         orbiter.distance = orbiter._orbiter.distance;
         orbiter.lat = orbiter._orbiter.lat;
@@ -347,9 +356,9 @@ export default () => ({
       }
     }
   },
-  update(entities) {
+  update(entities: Entity[]) {
     for (let i = 0; i < entities.length; i++) {
-      const entity = entities[i];
+      const entity = entities[i]!;
 
       if (entity.camera) {
         if (!this.checkCamera(null, entity)) continue;

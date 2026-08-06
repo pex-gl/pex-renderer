@@ -1,5 +1,10 @@
 import { chunks as SHADERS } from "pex-shaders";
 
+import type { PipelineShaderOptions } from "../types.js";
+
+/** A material texture's uniform binding slot (texture + sampler). */
+type MaterialTextureBinding = { tex: number; samp: number };
+
 // See basic.js for the shared attribute @location, Frame/Model uniform
 // struct, and single-module vertex+fragment conventions. @group(1) (Lights)
 // and @group(2) (Material) bindings are allocated sequentially per active
@@ -8,25 +13,20 @@ import { chunks as SHADERS } from "pex-shaders";
 // displacement texture live in @group(3) (Model) at bindings 1-3.
 const MAX_LIGHTS = 4;
 
-/**
- * @param {Set<string>} [defines=new Set()]
- * @param {object} [options={}]
- * @param {object} [options.hooks={}] Raw WGSL text injected at fixed points.
- * @param {number} [options.maxJoints=256] Size of the skinning joint matrix array.
- * @param {object} [options.texCoords={}] Per-texture texture coordinate set index (0 or 1), e.g. { baseColor: 1 }.
- * @param {object} [options.lights={}] Active light counts per type (0-4), e.g. { directional: 2, point: 1 }.
- * @param {number} [options.locationNormal=-1] MRT output location for the normal buffer, requires USE_DRAW_BUFFERS.
- * @param {number} [options.locationEmissive=-1] MRT output location for the emissive buffer, requires USE_DRAW_BUFFERS.
- * @returns {string}
- * @alias module:pipeline.standard
- */
-export default (defines = new Set(), options = {}) => {
+export default (
+  defines: Set<string> = new Set(),
+  options: PipelineShaderOptions = {},
+): string => {
   const hooks = options.hooks || {};
-  const { maxJoints = 256, locationNormal = -1, locationEmissive = -1 } = options;
+  const {
+    maxJoints = 256,
+    locationNormal = -1,
+    locationEmissive = -1,
+  } = options;
   const texCoords = options.texCoords || {};
   const lights = options.lights || {};
 
-  const tc = (key) => texCoords[key] ?? 0;
+  const tc = (key: string) => texCoords[key] ?? 0;
 
   const useNormals = defines.has("USE_NORMALS");
   const useTangents = defines.has("USE_TANGENTS");
@@ -47,56 +47,89 @@ export default (defines = new Set(), options = {}) => {
   const useBlend = defines.has("USE_BLEND");
 
   const useUnlitWorkflow = defines.has("USE_UNLIT_WORKFLOW");
-  const useMetallicRoughnessWorkflow = defines.has("USE_METALLIC_ROUGHNESS_WORKFLOW");
-  const useSpecularGlossinessWorkflow = defines.has("USE_SPECULAR_GLOSSINESS_WORKFLOW");
+  const useMetallicRoughnessWorkflow = defines.has(
+    "USE_METALLIC_ROUGHNESS_WORKFLOW",
+  );
+  const useSpecularGlossinessWorkflow = defines.has(
+    "USE_SPECULAR_GLOSSINESS_WORKFLOW",
+  );
 
   const useBaseColorTexture = defines.has("USE_BASE_COLOR_TEXTURE");
   const useAlphaTexture = defines.has("USE_ALPHA_TEXTURE");
   const useAlphaTest = defines.has("USE_ALPHA_TEST");
   const useNormalTexture = defines.has("USE_NORMAL_TEXTURE");
-  const useMetallicRoughnessTexture = defines.has("USE_METALLIC_ROUGHNESS_TEXTURE");
+  const useMetallicRoughnessTexture = defines.has(
+    "USE_METALLIC_ROUGHNESS_TEXTURE",
+  );
   const useMetallicTexture = defines.has("USE_METALLIC_TEXTURE");
   const useRoughnessTexture = defines.has("USE_ROUGHNESS_TEXTURE");
-  const useSpecular = defines.has("USE_SPECULAR") && !useSpecularGlossinessWorkflow;
+  const useSpecular =
+    defines.has("USE_SPECULAR") && !useSpecularGlossinessWorkflow;
   const useSpecularTexture = defines.has("USE_SPECULAR_TEXTURE");
   const useSpecularColorTexture = defines.has("USE_SPECULAR_COLOR_TEXTURE");
   const useDiffuseTexture = defines.has("USE_DIFFUSE_TEXTURE");
-  const useSpecularGlossinessTexture = defines.has("USE_SPECULAR_GLOSSINESS_TEXTURE");
+  const useSpecularGlossinessTexture = defines.has(
+    "USE_SPECULAR_GLOSSINESS_TEXTURE",
+  );
   const useClearCoat = defines.has("USE_CLEAR_COAT");
   const useClearCoatTexture = defines.has("USE_CLEAR_COAT_TEXTURE");
-  const useClearCoatRoughnessTexture = defines.has("USE_CLEAR_COAT_ROUGHNESS_TEXTURE");
-  const useClearCoatRoughnessFromMainTexture = defines.has("USE_CLEAR_COAT_ROUGHNESS_FROM_MAIN_TEXTURE");
-  const useClearCoatNormalTexture = defines.has("USE_CLEAR_COAT_NORMAL_TEXTURE");
+  const useClearCoatRoughnessTexture = defines.has(
+    "USE_CLEAR_COAT_ROUGHNESS_TEXTURE",
+  );
+  const useClearCoatRoughnessFromMainTexture = defines.has(
+    "USE_CLEAR_COAT_ROUGHNESS_FROM_MAIN_TEXTURE",
+  );
+  const useClearCoatNormalTexture = defines.has(
+    "USE_CLEAR_COAT_NORMAL_TEXTURE",
+  );
   const useSheen = defines.has("USE_SHEEN");
   const useSheenColorTexture = defines.has("USE_SHEEN_COLOR_TEXTURE");
   const useSheenRoughnessTexture = defines.has("USE_SHEEN_ROUGHNESS_TEXTURE");
-  const useSheenRoughnessFromMainTexture = defines.has("USE_SHEEN_ROUGHNESS_FROM_MAIN_TEXTURE");
+  const useSheenRoughnessFromMainTexture = defines.has(
+    "USE_SHEEN_ROUGHNESS_FROM_MAIN_TEXTURE",
+  );
   const useTransmission = defines.has("USE_TRANSMISSION");
   const useTransmissionTexture = defines.has("USE_TRANSMISSION_TEXTURE");
   const useDispersion = defines.has("USE_DISPERSION");
   const useVolume = defines.has("USE_VOLUME");
   const useThicknessTexture = defines.has("USE_THICKNESS_TEXTURE");
   const useDiffuseTransmission = defines.has("USE_DIFFUSE_TRANSMISSION");
-  const useDiffuseTransmissionTexture = defines.has("USE_DIFFUSE_TRANSMISSION_TEXTURE");
-  const useDiffuseTransmissionColorTexture = defines.has("USE_DIFFUSE_TRANSMISSION_COLOR_TEXTURE");
+  const useDiffuseTransmissionTexture = defines.has(
+    "USE_DIFFUSE_TRANSMISSION_TEXTURE",
+  );
+  const useDiffuseTransmissionColorTexture = defines.has(
+    "USE_DIFFUSE_TRANSMISSION_COLOR_TEXTURE",
+  );
   const useOcclusionTexture = defines.has("USE_OCCLUSION_TEXTURE");
   const useEmissiveColor = defines.has("USE_EMISSIVE_COLOR");
   const useEmissiveColorTexture = defines.has("USE_EMISSIVE_COLOR_TEXTURE");
-  const useReflectionProbes = defines.has("USE_REFLECTION_PROBES") && !useUnlitWorkflow;
+  const useReflectionProbes =
+    defines.has("USE_REFLECTION_PROBES") && !useUnlitWorkflow;
 
-  const ambientLights = useUnlitWorkflow ? 0 : Math.min(lights.ambient ?? 0, MAX_LIGHTS);
-  const directionalLights = useUnlitWorkflow ? 0 : Math.min(lights.directional ?? 0, MAX_LIGHTS);
-  const pointLights = useUnlitWorkflow ? 0 : Math.min(lights.point ?? 0, MAX_LIGHTS);
-  const spotLights = useUnlitWorkflow ? 0 : Math.min(lights.spot ?? 0, MAX_LIGHTS);
-  const areaLights = useUnlitWorkflow ? 0 : Math.min(lights.area ?? 0, MAX_LIGHTS);
+  const ambientLights = useUnlitWorkflow
+    ? 0
+    : Math.min(lights.ambient ?? 0, MAX_LIGHTS);
+  const directionalLights = useUnlitWorkflow
+    ? 0
+    : Math.min(lights.directional ?? 0, MAX_LIGHTS);
+  const pointLights = useUnlitWorkflow
+    ? 0
+    : Math.min(lights.point ?? 0, MAX_LIGHTS);
+  const spotLights = useUnlitWorkflow
+    ? 0
+    : Math.min(lights.spot ?? 0, MAX_LIGHTS);
+  const areaLights = useUnlitWorkflow
+    ? 0
+    : Math.min(lights.area ?? 0, MAX_LIGHTS);
 
-  const colorAssignment = useVertexColors && useInstancedColor
-    ? "output.color = input.vertexColor * input.instanceColor;"
-    : useInstancedColor
-      ? "output.color = input.instanceColor;"
-      : useVertexColors
-        ? "output.color = input.vertexColor;"
-        : "";
+  const colorAssignment =
+    useVertexColors && useInstancedColor
+      ? "output.color = input.vertexColor * input.instanceColor;"
+      : useInstancedColor
+        ? "output.color = input.instanceColor;"
+        : useVertexColors
+          ? "output.color = input.vertexColor;"
+          : "";
 
   // vColor / texCoordTransform neutral defaults, matching the chunks-phase convention:
   // decode(vec4f(1), SRGB) is exactly vec3f(1), so passing a white vColor when
@@ -105,143 +138,268 @@ export default (defines = new Set(), options = {}) => {
 
   // ---- @group(2) Material: binding numbers (0 is the Material uniform struct itself) ----
   let nextMaterialBinding = 1;
-  const bindMaterialTexture = () => ({ tex: nextMaterialBinding++, samp: nextMaterialBinding++ });
-  const matrixField = (name, binding) => (binding ? `${name}TextureMatrix: mat3x3f,` : "");
-  const textureDecl = (varName, binding, kind = "texture_2d<f32>") =>
+  const bindMaterialTexture = (): MaterialTextureBinding => ({
+    tex: nextMaterialBinding++,
+    samp: nextMaterialBinding++,
+  });
+  const matrixField = (name: string, binding: MaterialTextureBinding | null) =>
+    binding ? `${name}TextureMatrix: mat3x3f,` : "";
+  const textureDecl = (
+    varName: string,
+    binding: MaterialTextureBinding | null,
+    kind = "texture_2d<f32>",
+  ) =>
     binding
       ? `@group(2) @binding(${binding.tex}) var ${varName}: ${kind};\n@group(2) @binding(${binding.samp}) var ${varName}Sampler: sampler;`
       : "";
 
   const baseColorTex = useBaseColorTexture ? bindMaterialTexture() : null;
   const alphaTex = useAlphaTexture ? bindMaterialTexture() : null;
-  const emissiveColorTex = useEmissiveColorTexture ? bindMaterialTexture() : null;
+  const emissiveColorTex = useEmissiveColorTexture
+    ? bindMaterialTexture()
+    : null;
   const normalTex = useNormalTexture ? bindMaterialTexture() : null;
-  const metallicRoughnessTex = useMetallicRoughnessWorkflow && useMetallicRoughnessTexture ? bindMaterialTexture() : null;
-  const metallicTex = useMetallicRoughnessWorkflow && !useMetallicRoughnessTexture && useMetallicTexture ? bindMaterialTexture() : null;
-  const roughnessTex = useMetallicRoughnessWorkflow && !useMetallicRoughnessTexture && useRoughnessTexture ? bindMaterialTexture() : null;
-  const specularTex = useMetallicRoughnessWorkflow && useSpecular && useSpecularTexture ? bindMaterialTexture() : null;
-  const specularColorTex = useMetallicRoughnessWorkflow && useSpecular && useSpecularColorTexture ? bindMaterialTexture() : null;
-  const diffuseTex = useSpecularGlossinessWorkflow && useDiffuseTexture ? bindMaterialTexture() : null;
-  const specularGlossinessTex = useSpecularGlossinessWorkflow && useSpecularGlossinessTexture ? bindMaterialTexture() : null;
-  const clearCoatTex = useClearCoat && useClearCoatTexture ? bindMaterialTexture() : null;
-  const clearCoatRoughnessTex = useClearCoat && useClearCoatRoughnessTexture ? bindMaterialTexture() : null;
-  const clearCoatNormalTex = useClearCoat && useClearCoatNormalTexture ? bindMaterialTexture() : null;
-  const sheenColorTex = useSheen && useSheenColorTexture ? bindMaterialTexture() : null;
-  const sheenRoughnessTex = useSheen && useSheenRoughnessTexture ? bindMaterialTexture() : null;
-  const transmissionTex = useTransmission && useTransmissionTexture ? bindMaterialTexture() : null;
-  const thicknessTex = useVolume && useThicknessTexture ? bindMaterialTexture() : null;
-  const diffuseTransmissionTex = useDiffuseTransmission && useDiffuseTransmissionTexture ? bindMaterialTexture() : null;
-  const diffuseTransmissionColorTex = useDiffuseTransmission && useDiffuseTransmissionColorTexture ? bindMaterialTexture() : null;
+  const metallicRoughnessTex =
+    useMetallicRoughnessWorkflow && useMetallicRoughnessTexture
+      ? bindMaterialTexture()
+      : null;
+  const metallicTex =
+    useMetallicRoughnessWorkflow &&
+    !useMetallicRoughnessTexture &&
+    useMetallicTexture
+      ? bindMaterialTexture()
+      : null;
+  const roughnessTex =
+    useMetallicRoughnessWorkflow &&
+    !useMetallicRoughnessTexture &&
+    useRoughnessTexture
+      ? bindMaterialTexture()
+      : null;
+  const specularTex =
+    useMetallicRoughnessWorkflow && useSpecular && useSpecularTexture
+      ? bindMaterialTexture()
+      : null;
+  const specularColorTex =
+    useMetallicRoughnessWorkflow && useSpecular && useSpecularColorTexture
+      ? bindMaterialTexture()
+      : null;
+  const diffuseTex =
+    useSpecularGlossinessWorkflow && useDiffuseTexture
+      ? bindMaterialTexture()
+      : null;
+  const specularGlossinessTex =
+    useSpecularGlossinessWorkflow && useSpecularGlossinessTexture
+      ? bindMaterialTexture()
+      : null;
+  const clearCoatTex =
+    useClearCoat && useClearCoatTexture ? bindMaterialTexture() : null;
+  const clearCoatRoughnessTex =
+    useClearCoat && useClearCoatRoughnessTexture ? bindMaterialTexture() : null;
+  const clearCoatNormalTex =
+    useClearCoat && useClearCoatNormalTexture ? bindMaterialTexture() : null;
+  const sheenColorTex =
+    useSheen && useSheenColorTexture ? bindMaterialTexture() : null;
+  const sheenRoughnessTex =
+    useSheen && useSheenRoughnessTexture ? bindMaterialTexture() : null;
+  const transmissionTex =
+    useTransmission && useTransmissionTexture ? bindMaterialTexture() : null;
+  const thicknessTex =
+    useVolume && useThicknessTexture ? bindMaterialTexture() : null;
+  const diffuseTransmissionTex =
+    useDiffuseTransmission && useDiffuseTransmissionTexture
+      ? bindMaterialTexture()
+      : null;
+  const diffuseTransmissionColorTex =
+    useDiffuseTransmission && useDiffuseTransmissionColorTexture
+      ? bindMaterialTexture()
+      : null;
   const occlusionTex = useOcclusionTexture ? bindMaterialTexture() : null;
 
-  const metallicRoughnessFields = useMetallicRoughnessWorkflow ? /* wgsl */ `
+  const metallicRoughnessFields = useMetallicRoughnessWorkflow
+    ? /* wgsl */ `
   metallic: f32,
   roughness: f32,
-  ${metallicRoughnessTex
-    ? matrixField("metallicRoughness", metallicRoughnessTex)
-    : `${matrixField("metallic", metallicTex)}\n  ${matrixField("roughness", roughnessTex)}`}
+  ${
+    metallicRoughnessTex
+      ? matrixField("metallicRoughness", metallicRoughnessTex)
+      : `${matrixField("metallic", metallicTex)}\n  ${matrixField("roughness", roughnessTex)}`
+  }
   ior: f32,
-  ${useSpecular ? `specular: f32,\n  specularColor: vec3f,\n  ${matrixField("specular", specularTex)}\n  ${matrixField("specularColor", specularColorTex)}` : ""}` : "";
+  ${useSpecular ? `specular: f32,\n  specularColor: vec3f,\n  ${matrixField("specular", specularTex)}\n  ${matrixField("specularColor", specularColorTex)}` : ""}`
+    : "";
 
-  const specularGlossinessFields = useSpecularGlossinessWorkflow ? /* wgsl */ `
+  const specularGlossinessFields = useSpecularGlossinessWorkflow
+    ? /* wgsl */ `
   sgDiffuse: vec4f,
   sgSpecular: vec3f,
   sgGlossiness: f32,
   ${matrixField("diffuse", diffuseTex)}
-  ${matrixField("specularGlossiness", specularGlossinessTex)}` : "";
+  ${matrixField("specularGlossiness", specularGlossinessTex)}`
+    : "";
 
-  const clearCoatFields = useClearCoat ? /* wgsl */ `
+  const clearCoatFields = useClearCoat
+    ? /* wgsl */ `
   clearCoat: f32,
   clearCoatRoughness: f32,
   ${matrixField("clearCoat", clearCoatTex)}
   ${matrixField("clearCoatRoughness", clearCoatRoughnessTex)}
-  ${clearCoatNormalTex ? "clearCoatNormalTextureScale: f32,\n  clearCoatNormalTextureMatrix: mat3x3f," : ""}` : "";
+  ${clearCoatNormalTex ? "clearCoatNormalTextureScale: f32,\n  clearCoatNormalTextureMatrix: mat3x3f," : ""}`
+    : "";
 
-  const sheenFields = useSheen ? /* wgsl */ `
+  const sheenFields = useSheen
+    ? /* wgsl */ `
   sheenColor: vec4f,
   sheenRoughness: f32,
   ${matrixField("sheenColor", sheenColorTex)}
-  ${matrixField("sheenRoughness", sheenRoughnessTex)}` : "";
+  ${matrixField("sheenRoughness", sheenRoughnessTex)}`
+    : "";
 
-  const transmissionFields = useTransmission ? /* wgsl */ `
+  const transmissionFields = useTransmission
+    ? /* wgsl */ `
   transmission: f32,
   ${matrixField("transmission", transmissionTex)}
-  ${useDispersion ? "dispersion: f32," : ""}` : "";
+  ${useDispersion ? "dispersion: f32," : ""}`
+    : "";
 
-  const volumeFields = useVolume ? /* wgsl */ `
+  const volumeFields = useVolume
+    ? /* wgsl */ `
   thickness: f32,
   attenuationColor: vec3f,
   attenuationDistance: f32,
-  ${matrixField("thickness", thicknessTex)}` : "";
+  ${matrixField("thickness", thicknessTex)}`
+    : "";
 
-  const diffuseTransmissionFields = useDiffuseTransmission ? /* wgsl */ `
+  const diffuseTransmissionFields = useDiffuseTransmission
+    ? /* wgsl */ `
   diffuseTransmission: f32,
   diffuseTransmissionColor: vec3f,
   ${matrixField("diffuseTransmission", diffuseTransmissionTex)}
-  ${matrixField("diffuseTransmissionColor", diffuseTransmissionColorTex)}` : "";
+  ${matrixField("diffuseTransmissionColor", diffuseTransmissionColorTex)}`
+    : "";
 
   // ---- @group(1) Lights: fixed-size arrays sized to the active count + individually-bound shadow maps ----
   let nextLightBinding = 0;
   const bindLight = () => nextLightBinding++;
-  const lightArrayDecl = (name, structName, count) =>
-    count === 0 ? "" : `@group(1) @binding(${bindLight()}) var<uniform> ${name}: array<${structName}, ${count}>;`;
+  const lightArrayDecl = (name: string, structName: string, count: number) =>
+    count === 0
+      ? ""
+      : `@group(1) @binding(${bindLight()}) var<uniform> ${name}: array<${structName}, ${count}>;`;
 
-  const ambientLightsDecl = lightArrayDecl("uAmbientLights", "AmbientLight", ambientLights);
-  const directionalLightsDecl = lightArrayDecl("uDirectionalLights", "DirectionalLight", directionalLights);
-  const pointLightsDecl = lightArrayDecl("uPointLights", "PointLight", pointLights);
+  const ambientLightsDecl = lightArrayDecl(
+    "uAmbientLights",
+    "AmbientLight",
+    ambientLights,
+  );
+  const directionalLightsDecl = lightArrayDecl(
+    "uDirectionalLights",
+    "DirectionalLight",
+    directionalLights,
+  );
+  const pointLightsDecl = lightArrayDecl(
+    "uPointLights",
+    "PointLight",
+    pointLights,
+  );
   const spotLightsDecl = lightArrayDecl("uSpotLights", "SpotLight", spotLights);
   const areaLightsDecl = lightArrayDecl("uAreaLights", "AreaLight", areaLights);
 
-  const ltcDecl = areaLights === 0 ? "" : /* wgsl */ `
+  const ltcDecl =
+    areaLights === 0
+      ? ""
+      : /* wgsl */ `
 @group(1) @binding(${bindLight()}) var uLtc1: texture_2d<f32>;
 @group(1) @binding(${bindLight()}) var uLtc1Sampler: sampler;
 @group(1) @binding(${bindLight()}) var uLtc2: texture_2d<f32>;
 @group(1) @binding(${bindLight()}) var uLtc2Sampler: sampler;`;
 
-  const shadowMapNames = (prefix, count) => Array.from({ length: count }, (_, i) => `u${prefix}ShadowMap${i}`);
+  const shadowMapNames = (prefix: string, count: number) =>
+    Array.from({ length: count }, (_, i) => `u${prefix}ShadowMap${i}`);
   // 2D shadow maps use a comparison sampler (hardware PCF); cube maps use a
   // regular sampler and compare manually (textureLoad is unavailable on cubes).
-  const shadowMapDecl = (names, kind, samplerKind = "sampler_comparison") =>
-    names.map((name) => `@group(1) @binding(${bindLight()}) var ${name}: ${kind};\n@group(1) @binding(${bindLight()}) var ${name}Sampler: ${samplerKind};`).join("\n");
+  const shadowMapDecl = (
+    names: string[],
+    kind: string,
+    samplerKind = "sampler_comparison",
+  ) =>
+    names
+      .map(
+        (name) =>
+          `@group(1) @binding(${bindLight()}) var ${name}: ${kind};\n@group(1) @binding(${bindLight()}) var ${name}Sampler: ${samplerKind};`,
+      )
+      .join("\n");
 
-  const directionalShadowMaps = shadowMapNames("Directional", directionalLights);
+  const directionalShadowMaps = shadowMapNames(
+    "Directional",
+    directionalLights,
+  );
   const pointShadowMaps = shadowMapNames("Point", pointLights);
   const spotShadowMaps = shadowMapNames("Spot", spotLights);
   const areaShadowMaps = shadowMapNames("Area", areaLights);
-  const directionalShadowMapDecls = shadowMapDecl(directionalShadowMaps, "texture_depth_2d");
-  const pointShadowMapDecls = shadowMapDecl(pointShadowMaps, "texture_depth_cube", "sampler");
+  const directionalShadowMapDecls = shadowMapDecl(
+    directionalShadowMaps,
+    "texture_depth_2d",
+  );
+  const pointShadowMapDecls = shadowMapDecl(
+    pointShadowMaps,
+    "texture_depth_cube",
+    "sampler",
+  );
   const spotShadowMapDecls = shadowMapDecl(spotShadowMaps, "texture_depth_2d");
   const areaShadowMapDecls = shadowMapDecl(areaShadowMaps, "texture_depth_2d");
 
-  const reflectionProbeDecl = useReflectionProbes ? /* wgsl */ `
+  const reflectionProbeDecl = useReflectionProbes
+    ? /* wgsl */ `
 @group(1) @binding(${bindLight()}) var uReflectionMap: texture_2d<f32>;
 @group(1) @binding(${bindLight()}) var uReflectionMapSampler: sampler;
-${useTransmission ? `@group(1) @binding(${bindLight()}) var uCaptureTexture: texture_2d<f32>;\n@group(1) @binding(${bindLight()}) var uCaptureTextureSampler: sampler;` : ""}` : "";
+${useTransmission ? `@group(1) @binding(${bindLight()}) var uCaptureTexture: texture_2d<f32>;\n@group(1) @binding(${bindLight()}) var uCaptureTextureSampler: sampler;` : ""}`
+    : "";
 
-  const ambientLightsBlock = Array.from({ length: ambientLights }, (_, i) =>
-    `EvaluateAmbientLight(&data, uAmbientLights[${i}], data.ao);`).join("\n  ");
-  const directionalLightsBlock = directionalShadowMaps.map((shadowMap, i) =>
-    `EvaluateDirectionalLight(&data, uDirectionalLights[${i}], ${shadowMap}, ${shadowMap}Sampler, input.positionWorld, input.position.xy);`).join("\n  ");
-  const pointLightsBlock = pointShadowMaps.map((shadowMap, i) =>
-    `EvaluatePointLight(&data, uPointLights[${i}], ${shadowMap}, ${shadowMap}Sampler, input.position.xy);`).join("\n  ");
-  const spotLightsBlock = spotShadowMaps.map((shadowMap, i) =>
-    `EvaluateSpotLight(&data, uSpotLights[${i}], ${shadowMap}, ${shadowMap}Sampler, input.positionWorld, input.position.xy);`).join("\n  ");
-  const areaLightsBlock = areaShadowMaps.map((shadowMap, i) =>
-    `EvaluateAreaLight(&data, uAreaLights[${i}], ${shadowMap}, ${shadowMap}Sampler, uLtc1, uLtc1Sampler, uLtc2, uLtc2Sampler, data.ao, input.positionWorld, uFrame.cameraPosition, input.position.xy);`).join("\n  ");
+  const ambientLightsBlock = Array.from(
+    { length: ambientLights },
+    (_, i) => `EvaluateAmbientLight(&data, uAmbientLights[${i}], data.ao);`,
+  ).join("\n  ");
+  const directionalLightsBlock = directionalShadowMaps
+    .map(
+      (shadowMap, i) =>
+        `EvaluateDirectionalLight(&data, uDirectionalLights[${i}], ${shadowMap}, ${shadowMap}Sampler, input.positionWorld, input.position.xy);`,
+    )
+    .join("\n  ");
+  const pointLightsBlock = pointShadowMaps
+    .map(
+      (shadowMap, i) =>
+        `EvaluatePointLight(&data, uPointLights[${i}], ${shadowMap}, ${shadowMap}Sampler, input.position.xy);`,
+    )
+    .join("\n  ");
+  const spotLightsBlock = spotShadowMaps
+    .map(
+      (shadowMap, i) =>
+        `EvaluateSpotLight(&data, uSpotLights[${i}], ${shadowMap}, ${shadowMap}Sampler, input.positionWorld, input.position.xy);`,
+    )
+    .join("\n  ");
+  const areaLightsBlock = areaShadowMaps
+    .map(
+      (shadowMap, i) =>
+        `EvaluateAreaLight(&data, uAreaLights[${i}], ${shadowMap}, ${shadowMap}Sampler, uLtc1, uLtc1Sampler, uLtc2, uLtc2Sampler, data.ao, input.positionWorld, uFrame.cameraPosition, input.position.xy);`,
+    )
+    .join("\n  ");
 
   const alphaBlock = () => {
     if (!useAlphaTexture && !useAlphaTest) return "";
     return /* wgsl */ `
-  ${useAlphaTexture
-    ? `let alphaTexCoord = getTextureCoordinatesTransformed(data, ${tc("alpha")}, uMaterial.alphaTextureMatrix);\n  data.opacity *= textureSample(uAlphaTexture, uAlphaTextureSampler, alphaTexCoord).x;`
-    : ""}
+  ${
+    useAlphaTexture
+      ? `let alphaTexCoord = getTextureCoordinatesTransformed(data, ${tc("alpha")}, uMaterial.alphaTextureMatrix);\n  data.opacity *= textureSample(uAlphaTexture, uAlphaTextureSampler, alphaTexCoord).x;`
+      : ""
+  }
   ${useAlphaTest ? "alphaTest(&data, uMaterial.alphaTest);" : ""}`;
   };
 
   const unlitBody = /* wgsl */ `
-  ${useBaseColorTexture
-    ? `getBaseColorTextured(&data, uMaterial.baseColor, uBaseColorTexture, uBaseColorTextureSampler, ${tc("baseColor")}, uMaterial.baseColorTextureMatrix, ${vColorExpr});`
-    : `getBaseColor(&data, uMaterial.baseColor, ${vColorExpr});`}
+  ${
+    useBaseColorTexture
+      ? `getBaseColorTextured(&data, uMaterial.baseColor, uBaseColorTexture, uBaseColorTextureSampler, ${tc("baseColor")}, uMaterial.baseColorTextureMatrix, ${vColorExpr});`
+      : `getBaseColor(&data, uMaterial.baseColor, ${vColorExpr});`
+  }
   color = data.baseColor;
   ${alphaBlock()}`;
 
@@ -264,66 +422,110 @@ ${useTransmission ? `@group(1) @binding(${bindLight()}) var uCaptureTexture: tex
 
   ${hooks.fragBeforeTextures ?? ""}
 
-  ${useNormalTexture
-    ? `getNormalTextured(&data, uNormalTexture, uNormalTextureSampler, uMaterial.normalTextureScale, ${tc("normal")}, uMaterial.normalTextureMatrix, frontFacing);`
-    : "getNormal(&data);"}
+  ${
+    useNormalTexture
+      ? `getNormalTextured(&data, uNormalTexture, uNormalTextureSampler, uMaterial.normalTextureScale, ${tc("normal")}, uMaterial.normalTextureMatrix, frontFacing);`
+      : "getNormal(&data);"
+  }
 
-  ${useEmissiveColorTexture
-    ? `getEmissiveColorTextured(&data, ${useEmissiveColor ? "uMaterial.emissiveColor" : "vec4f(1.0)"}, ${useEmissiveColor ? "uMaterial.emissiveIntensity" : "1.0"}, uEmissiveColorTexture, uEmissiveColorTextureSampler, ${tc("emissiveColor")}, uMaterial.emissiveColorTextureMatrix, ${vColorExpr});`
-    : useEmissiveColor
-      ? `getEmissiveColorFactor(&data, uMaterial.emissiveColor, uMaterial.emissiveIntensity, ${vColorExpr});`
-      : "getEmissiveColor(&data);"}
+  ${
+    useEmissiveColorTexture
+      ? `getEmissiveColorTextured(&data, ${useEmissiveColor ? "uMaterial.emissiveColor" : "vec4f(1.0)"}, ${useEmissiveColor ? "uMaterial.emissiveIntensity" : "1.0"}, uEmissiveColorTexture, uEmissiveColorTextureSampler, ${tc("emissiveColor")}, uMaterial.emissiveColorTextureMatrix, ${vColorExpr});`
+      : useEmissiveColor
+        ? `getEmissiveColorFactor(&data, uMaterial.emissiveColor, uMaterial.emissiveIntensity, ${vColorExpr});`
+        : "getEmissiveColor(&data);"
+  }
 
-  ${useMetallicRoughnessWorkflow ? /* wgsl */ `
-  ${useBaseColorTexture
-    ? `getBaseColorTextured(&data, uMaterial.baseColor, uBaseColorTexture, uBaseColorTextureSampler, ${tc("baseColor")}, uMaterial.baseColorTextureMatrix, ${vColorExpr});`
-    : `getBaseColor(&data, uMaterial.baseColor, ${vColorExpr});`}
-  ${metallicRoughnessTex
-    ? `getMetallicRoughnessTextured(&data, uMaterial.metallic, uMaterial.roughness, uMetallicRoughnessTexture, uMetallicRoughnessTextureSampler, ${tc("metallicRoughness")}, uMaterial.metallicRoughnessTextureMatrix);`
-    : `${metallicTex ? `getMetallicTextured(&data, uMaterial.metallic, uMetallicTexture, uMetallicTextureSampler, ${tc("metallic")}, uMaterial.metallicTextureMatrix);` : "getMetallic(&data, uMaterial.metallic);"}
-  ${roughnessTex ? `getRoughnessTextured(&data, uMaterial.roughness, uRoughnessTexture, uRoughnessTextureSampler, ${tc("roughness")}, uMaterial.roughnessTextureMatrix);` : "getRoughness(&data, uMaterial.roughness);"}`}
-  data.roughness = clamp(data.roughness, MIN_ROUGHNESS, 1.0);` : ""}
+  ${
+    useMetallicRoughnessWorkflow
+      ? /* wgsl */ `
+  ${
+    useBaseColorTexture
+      ? `getBaseColorTextured(&data, uMaterial.baseColor, uBaseColorTexture, uBaseColorTextureSampler, ${tc("baseColor")}, uMaterial.baseColorTextureMatrix, ${vColorExpr});`
+      : `getBaseColor(&data, uMaterial.baseColor, ${vColorExpr});`
+  }
+  ${
+    metallicRoughnessTex
+      ? `getMetallicRoughnessTextured(&data, uMaterial.metallic, uMaterial.roughness, uMetallicRoughnessTexture, uMetallicRoughnessTextureSampler, ${tc("metallicRoughness")}, uMaterial.metallicRoughnessTextureMatrix);`
+      : `${metallicTex ? `getMetallicTextured(&data, uMaterial.metallic, uMetallicTexture, uMetallicTextureSampler, ${tc("metallic")}, uMaterial.metallicTextureMatrix);` : "getMetallic(&data, uMaterial.metallic);"}
+  ${roughnessTex ? `getRoughnessTextured(&data, uMaterial.roughness, uRoughnessTexture, uRoughnessTextureSampler, ${tc("roughness")}, uMaterial.roughnessTextureMatrix);` : "getRoughness(&data, uMaterial.roughness);"}`
+  }
+  data.roughness = clamp(data.roughness, MIN_ROUGHNESS, 1.0);`
+      : ""
+  }
 
-  ${useSpecularGlossinessWorkflow ? /* wgsl */ `
+  ${
+    useSpecularGlossinessWorkflow
+      ? /* wgsl */ `
   let sgDiffuseRGBA = ${diffuseTex ? `getDiffuseTextured(uMaterial.sgDiffuse, data, uDiffuseTexture, uDiffuseTextureSampler, ${tc("diffuse")}, uMaterial.diffuseTextureMatrix);` : "getDiffuse(uMaterial.sgDiffuse);"}
   let sgSpecGloss = ${specularGlossinessTex ? `getSpecularGlossinessTextured(uMaterial.sgSpecular, uMaterial.sgGlossiness, data, uSpecularGlossinessTexture, uSpecularGlossinessTextureSampler, ${tc("specularGlossiness")}, uMaterial.specularGlossinessTextureMatrix);` : "getSpecularGlossiness(uMaterial.sgSpecular, uMaterial.sgGlossiness);"}
-  getBaseColorAndMetallicRoughnessFromSpecularGlossiness(&data, sgSpecGloss, sgDiffuseRGBA, ${vColorExpr});` : ""}
+  getBaseColorAndMetallicRoughnessFromSpecularGlossiness(&data, sgSpecGloss, sgDiffuseRGBA, ${vColorExpr});`
+      : ""
+  }
 
   ${alphaBlock()}
 
-  ${useClearCoat ? /* wgsl */ `
+  ${
+    useClearCoat
+      ? /* wgsl */ `
   ${clearCoatTex ? `getClearCoatTextured(&data, uMaterial.clearCoat, uMaterial.clearCoatRoughness, uClearCoatTexture, uClearCoatTextureSampler, ${tc("clearCoat")}, uMaterial.clearCoatTextureMatrix);` : "getClearCoat(&data, uMaterial.clearCoat);"}
-  ${clearCoatRoughnessTex
-    ? `getClearCoatRoughnessTextured(&data, uMaterial.clearCoatRoughness, uClearCoatRoughnessTexture, uClearCoatRoughnessTextureSampler, ${tc("clearCoatRoughness")}, uMaterial.clearCoatRoughnessTextureMatrix);`
-    : useClearCoatRoughnessFromMainTexture ? "" : "getClearCoatRoughness(&data, uMaterial.clearCoatRoughness);"}
+  ${
+    clearCoatRoughnessTex
+      ? `getClearCoatRoughnessTextured(&data, uMaterial.clearCoatRoughness, uClearCoatRoughnessTexture, uClearCoatRoughnessTextureSampler, ${tc("clearCoatRoughness")}, uMaterial.clearCoatRoughnessTextureMatrix);`
+      : useClearCoatRoughnessFromMainTexture
+        ? ""
+        : "getClearCoatRoughness(&data, uMaterial.clearCoatRoughness);"
+  }
   data.clearCoatLinearRoughness = data.clearCoatRoughness * data.clearCoatRoughness;
   data.f0 = mix(data.f0, f0ClearCoatToSurface(data.f0), data.clearCoat);
   data.roughness = max(data.roughness, data.clearCoatRoughness);
-  ${clearCoatNormalTex
-    ? `getClearCoatNormalTextured(&data, uClearCoatNormalTexture, uClearCoatNormalTextureSampler, uMaterial.clearCoatNormalTextureScale, ${tc("clearCoatNormal")}, uMaterial.clearCoatNormalTextureMatrix, frontFacing);`
-    : "getClearCoatNormal(&data, input.normalWorld);"}` : ""}
+  ${
+    clearCoatNormalTex
+      ? `getClearCoatNormalTextured(&data, uClearCoatNormalTexture, uClearCoatNormalTextureSampler, uMaterial.clearCoatNormalTextureScale, ${tc("clearCoatNormal")}, uMaterial.clearCoatNormalTextureMatrix, frontFacing);`
+      : "getClearCoatNormal(&data, input.normalWorld);"
+  }`
+      : ""
+  }
 
-  ${useSheen ? /* wgsl */ `
+  ${
+    useSheen
+      ? /* wgsl */ `
   ${sheenColorTex ? `getSheenColorTextured(&data, uMaterial.sheenColor, uMaterial.sheenRoughness, uSheenColorTexture, uSheenColorTextureSampler, ${tc("sheenColor")}, uMaterial.sheenColorTextureMatrix);` : "getSheenColor(&data, uMaterial.sheenColor);"}
-  ${sheenRoughnessTex
-    ? `getSheenRoughnessTextured(&data, uMaterial.sheenRoughness, uSheenRoughnessTexture, uSheenRoughnessTextureSampler, ${tc("sheenRoughness")}, uMaterial.sheenRoughnessTextureMatrix);`
-    : useSheenRoughnessFromMainTexture ? "" : "getSheenRoughness(&data, uMaterial.sheenRoughness);"}
+  ${
+    sheenRoughnessTex
+      ? `getSheenRoughnessTextured(&data, uMaterial.sheenRoughness, uSheenRoughnessTexture, uSheenRoughnessTextureSampler, ${tc("sheenRoughness")}, uMaterial.sheenRoughnessTextureMatrix);`
+      : useSheenRoughnessFromMainTexture
+        ? ""
+        : "getSheenRoughness(&data, uMaterial.sheenRoughness);"
+  }
   getSheenAlbedoScaling(&data);
   data.sheenRoughness = max(data.sheenRoughness, MIN_ROUGHNESS);
-  data.sheenLinearRoughness = data.sheenRoughness * data.sheenRoughness;` : ""}
+  data.sheenLinearRoughness = data.sheenRoughness * data.sheenRoughness;`
+      : ""
+  }
 
-  ${useTransmission ? /* wgsl */ `
+  ${
+    useTransmission
+      ? /* wgsl */ `
   data.transmitted = vec3f(0.0);
   ${useDispersion ? "data.dispersion = uMaterial.dispersion;" : ""}
-  ${transmissionTex ? `getTransmissionTextured(&data, uMaterial.transmission, uTransmissionTexture, uTransmissionTextureSampler, ${tc("transmission")}, uMaterial.transmissionTextureMatrix);` : "getTransmission(&data, uMaterial.transmission);"}` : ""}
-  ${useVolume ? /* wgsl */ `
+  ${transmissionTex ? `getTransmissionTextured(&data, uMaterial.transmission, uTransmissionTexture, uTransmissionTextureSampler, ${tc("transmission")}, uMaterial.transmissionTextureMatrix);` : "getTransmission(&data, uMaterial.transmission);"}`
+      : ""
+  }
+  ${
+    useVolume
+      ? /* wgsl */ `
   ${thicknessTex ? `getThicknessTextured(&data, uMaterial.thickness, uThicknessTexture, uThicknessTextureSampler, ${tc("thickness")}, uMaterial.thicknessTextureMatrix);` : "getThickness(&data, uMaterial.thickness);"}
-  getAttenuation(&data, uMaterial.attenuationColor, uMaterial.attenuationDistance);` : ""}
-  ${useDiffuseTransmission
-    ? (useDiffuseTransmissionTexture || useDiffuseTransmissionColorTexture
-      ? `getDiffuseTransmissionTextured(&data, uMaterial.diffuseTransmission, uMaterial.diffuseTransmissionColor, ${useDiffuseTransmissionTexture ? "uDiffuseTransmissionTexture, uDiffuseTransmissionTextureSampler" : "uDiffuseTransmissionColorTexture, uDiffuseTransmissionColorTextureSampler"}, ${tc("diffuseTransmission")}, ${useDiffuseTransmissionTexture ? "uMaterial.diffuseTransmissionTextureMatrix" : "uMaterial.diffuseTransmissionColorTextureMatrix"}, ${useDiffuseTransmissionColorTexture ? "uDiffuseTransmissionColorTexture, uDiffuseTransmissionColorTextureSampler" : "uDiffuseTransmissionTexture, uDiffuseTransmissionTextureSampler"}, ${tc("diffuseTransmissionColor")}, ${useDiffuseTransmissionColorTexture ? "uMaterial.diffuseTransmissionColorTextureMatrix" : "uMaterial.diffuseTransmissionTextureMatrix"}, uModel.modelMatrix);`
-      : `getDiffuseTransmission(&data, uMaterial.diffuseTransmission, uMaterial.diffuseTransmissionColor, uModel.modelMatrix);`)
-    : ""}
+  getAttenuation(&data, uMaterial.attenuationColor, uMaterial.attenuationDistance);`
+      : ""
+  }
+  ${
+    useDiffuseTransmission
+      ? useDiffuseTransmissionTexture || useDiffuseTransmissionColorTexture
+        ? `getDiffuseTransmissionTextured(&data, uMaterial.diffuseTransmission, uMaterial.diffuseTransmissionColor, ${useDiffuseTransmissionTexture ? "uDiffuseTransmissionTexture, uDiffuseTransmissionTextureSampler" : "uDiffuseTransmissionColorTexture, uDiffuseTransmissionColorTextureSampler"}, ${tc("diffuseTransmission")}, ${useDiffuseTransmissionTexture ? "uMaterial.diffuseTransmissionTextureMatrix" : "uMaterial.diffuseTransmissionColorTextureMatrix"}, ${useDiffuseTransmissionColorTexture ? "uDiffuseTransmissionColorTexture, uDiffuseTransmissionColorTextureSampler" : "uDiffuseTransmissionTexture, uDiffuseTransmissionTextureSampler"}, ${tc("diffuseTransmissionColor")}, ${useDiffuseTransmissionColorTexture ? "uMaterial.diffuseTransmissionColorTextureMatrix" : "uMaterial.diffuseTransmissionTextureMatrix"}, uModel.modelMatrix);`
+        : `getDiffuseTransmission(&data, uMaterial.diffuseTransmission, uMaterial.diffuseTransmissionColor, uModel.modelMatrix);`
+      : ""
+  }
 
   ${useOcclusionTexture ? `getAmbientOcclusion(&data, uOcclusionTexture, uOcclusionTextureSampler, ${tc("occlusion")}, uMaterial.occlusionTextureMatrix);` : ""}
 
@@ -332,17 +534,27 @@ ${useTransmission ? `@group(1) @binding(${bindLight()}) var uCaptureTexture: tex
   data.diffuseColor = data.baseColor * (1.0 - data.metallic);
   data.linearRoughness = data.roughness * data.roughness;
 
-  ${useMetallicRoughnessWorkflow ? /* wgsl */ `
+  ${
+    useMetallicRoughnessWorkflow
+      ? /* wgsl */ `
   getIor(&data, uMaterial.ior);
-  ${useSpecular
-    ? (useSpecularTexture || useSpecularColorTexture
-      ? `getSpecularFactorTextured(&data, uMaterial.specular, uMaterial.specularColor, ${useSpecularTexture ? "uSpecularTexture, uSpecularTextureSampler" : "uSpecularColorTexture, uSpecularColorTextureSampler"}, ${tc("specular")}, ${useSpecularTexture ? "uMaterial.specularTextureMatrix" : "uMaterial.specularColorTextureMatrix"}, ${useSpecularColorTexture ? "uSpecularColorTexture, uSpecularColorTextureSampler" : "uSpecularTexture, uSpecularTextureSampler"}, ${tc("specularColor")}, ${useSpecularColorTexture ? "uMaterial.specularColorTextureMatrix" : "uMaterial.specularTextureMatrix"});`
-      : "getSpecularFactor(&data, uMaterial.specular, uMaterial.specularColor);")
-    : "getSpecular(&data);"}` : ""}
+  ${
+    useSpecular
+      ? useSpecularTexture || useSpecularColorTexture
+        ? `getSpecularFactorTextured(&data, uMaterial.specular, uMaterial.specularColor, ${useSpecularTexture ? "uSpecularTexture, uSpecularTextureSampler" : "uSpecularColorTexture, uSpecularColorTextureSampler"}, ${tc("specular")}, ${useSpecularTexture ? "uMaterial.specularTextureMatrix" : "uMaterial.specularColorTextureMatrix"}, ${useSpecularColorTexture ? "uSpecularColorTexture, uSpecularColorTextureSampler" : "uSpecularTexture, uSpecularTextureSampler"}, ${tc("specularColor")}, ${useSpecularColorTexture ? "uMaterial.specularColorTextureMatrix" : "uMaterial.specularTextureMatrix"});`
+        : "getSpecularFactor(&data, uMaterial.specular, uMaterial.specularColor);"
+      : "getSpecular(&data);"
+  }`
+      : ""
+  }
 
-  ${useReflectionProbes ? /* wgsl */ `
+  ${
+    useReflectionProbes
+      ? /* wgsl */ `
   data.reflectionWorld = reflect(-data.eyeDirWorld, data.normalWorld);
-  EvaluateLightProbe(&data, data.ao, uReflectionMap, uReflectionMapSampler, uFrame.viewportSize.x, ${useTransmission ? "uCaptureTexture, uCaptureTextureSampler" : "uReflectionMap, uReflectionMapSampler"}, uFrame.viewportSize, uModel.modelMatrix, uFrame.projectionMatrix, uFrame.viewMatrix);` : ""}
+  EvaluateLightProbe(&data, data.ao, uReflectionMap, uReflectionMapSampler, uFrame.viewportSize.x, ${useTransmission ? "uCaptureTexture, uCaptureTextureSampler" : "uReflectionMap, uReflectionMapSampler"}, uFrame.viewportSize, uModel.modelMatrix, uFrame.projectionMatrix, uFrame.viewMatrix);`
+      : ""
+  }
 
   ${ambientLightsBlock}
   ${directionalLightsBlock}
@@ -545,13 +757,16 @@ fn vertexMain(input: VertexInput) -> Varyings {
 
   ${hooks.vertBeforeTransform ?? ""}
 
-  ${useDisplacementTexture
-    ? "let h = textureSampleLevel(uDisplacementTexture, uDisplacementTextureSampler, input.texCoord0, 0.0).x;\n  position = vec4f(position.xyz + uModel.displacement * h * normal, position.w);"
-    : ""}
+  ${
+    useDisplacementTexture
+      ? "let h = textureSampleLevel(uDisplacementTexture, uDisplacementTextureSampler, input.texCoord0, 0.0).x;\n  position = vec4f(position.xyz + uModel.displacement * h * normal, position.w);"
+      : ""
+  }
 
   var positionWorld: vec4f;
-  ${useSkin
-    ? `let skinMat =
+  ${
+    useSkin
+      ? `let skinMat =
     input.weight.x * uJointMatrices[u32(input.joint.x)] +
     input.weight.y * uJointMatrices[u32(input.joint.y)] +
     input.weight.z * uJointMatrices[u32(input.joint.z)] +
@@ -570,9 +785,10 @@ fn vertexMain(input: VertexInput) -> Varyings {
   ${useTangents ? "tangent = skinMat * vec4f(tangent.xyz, 0.0);" : ""}
 
   output.normalView = (uFrame.viewMatrix * vec4f(normal, 0.0)).xyz;`
-    : `${useInstancedScale ? "position = vec4f(position.xyz * input.scale, position.w);\n  " : ""}${useInstancedRotation ? "let rotationMat = quatToMat4(input.rotation);\n  position = rotationMat * position;\n  normal = (rotationMat * vec4f(normal, 0.0)).xyz;\n  " : ""}${useInstancedOffset ? "position = vec4f(position.xyz + input.offset, position.w);\n  " : ""}
+      : `${useInstancedScale ? "position = vec4f(position.xyz * input.scale, position.w);\n  " : ""}${useInstancedRotation ? "let rotationMat = quatToMat4(input.rotation);\n  position = rotationMat * position;\n  normal = (rotationMat * vec4f(normal, 0.0)).xyz;\n  " : ""}${useInstancedOffset ? "position = vec4f(position.xyz + input.offset, position.w);\n  " : ""}
   positionWorld = uModel.modelMatrix * position;
-  output.normalView = uModel.normalMatrix * normal;`}
+  output.normalView = uModel.normalMatrix * normal;`
+  }
 
   ${colorAssignment}
 
@@ -601,7 +817,7 @@ ${SHADERS.math.TWO_PI}
 ${SHADERS.math.saturate}
 ${SHADERS.math.multQuat}
 ${SHADERS.math.random}
-${SHADERS.math.glslMod}
+${(SHADERS.math as any).glslMod}
 ${SHADERS.encodeDecode}
 ${SHADERS.textureCoordinates}
 ${SHADERS.baseColor}
@@ -610,7 +826,8 @@ ${SHADERS.ambientOcclusion}
 ${SHADERS.math.max3}
 ${SHADERS.reversibleToneMap}
 
-${useUnlitWorkflow
+${
+  useUnlitWorkflow
     ? ""
     : `
   // Lighting
@@ -638,7 +855,8 @@ ${useUnlitWorkflow
   ${SHADERS.normal}
   ${SHADERS.metallicRoughness}
   ${SHADERS.specularGlossiness}
-`}
+`
+}
 
 ${hooks.fragDeclarationsEnd ?? ""}
 

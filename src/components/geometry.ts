@@ -1,11 +1,7 @@
-/**
- * Geometry component
- *
- * @param {import("../types.js").GeometryComponentOptions} [options]
- * @returns {object}
- * @alias module:components.geometry
- */
-export default (options) => ({
+import type { GeometryComponentOptions } from "../types.js";
+
+/** Geometry component */
+export default (options?: GeometryComponentOptions) => ({
   // positions
   // normals
   // uvs

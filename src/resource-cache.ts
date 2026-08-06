@@ -7,6 +7,20 @@ import {
 
 import { fullscreenTriangle, quad } from "./utils.js";
 
+import type { GpuContext, ResourceCache } from "./types.js";
+
+// Cache entry wrapping a GPU resource (or plain descriptor) with its allocation
+// props and liveness bookkeeping.
+interface CachedResource {
+  type: string;
+  value: any;
+  props: any;
+  used?: boolean;
+  usage?: string | undefined;
+  keepAlive?: number;
+  delteCountDown?: number;
+}
+
 // TODO: should this be an option
 const keepAliveCountdown = 30;
 
@@ -15,7 +29,7 @@ const Usage = {
   Retained: "Retained",
 };
 
-function compareAttachments(a, b) {
+function compareAttachments(a: any, b: any) {
   if (a?.texture && a?.texture === b?.texture) {
     // Check attachments with resolve targets (MSAA renderbuffer) or targets (cubemaps)
     if (a.resolveTarget) {
@@ -27,7 +41,7 @@ function compareAttachments(a, b) {
   return false;
 }
 
-function arraysEqual(a, b) {
+function arraysEqual(a: any, b: any) {
   // Check array equality or loose equality to null
   if (a === b) return true;
   if (a == null || b == null) return false;
@@ -44,9 +58,12 @@ function arraysEqual(a, b) {
   return true;
 }
 
-function getResourceFromCache(cache, props) {
+function getResourceFromCache(
+  cache: CachedResource[],
+  props: any,
+): CachedResource | null {
   for (let i = 0; i < cache.length; i++) {
-    const resource = cache[i];
+    const resource = cache[i]!;
 
     // Exclude used resources
     if (resource.used && resource.usage !== Usage.Retained) continue; // TODO: shouldn't this skip Retained resources?
@@ -80,7 +97,7 @@ function getResourceFromCache(cache, props) {
  * WGSL texture format string; filters live on samplers in WebGPU so min/mag are
  * ignored here.
  */
-const createTexture2D = (ctx, props) =>
+const createTexture2D = (ctx: GpuContext, props: any) =>
   createTexture(ctx, {
     label: props.name,
     width: props.width,
@@ -93,7 +110,7 @@ const createTexture2D = (ctx, props) =>
 // Type factories keyed by resource-cache type. Buffers/textures allocate real
 // GPU resources; pipelines are plain descriptors kept identity-stable so
 // pex-gpu's own pipeline cache hits across frames.
-const factories = {
+const factories: Record<string, (ctx: GpuContext, props: any) => any> = {
   texture2D: createTexture2D,
   // MSAA/cubemap targets are only reached by not-yet-ported branches; provide
   // working factories so descriptor construction and those paths don't throw.
@@ -114,12 +131,18 @@ const factories = {
   pipeline: (_ctx, props) => ({ ...props }),
 };
 
-function getResource(ctx, cache, type, props, usage) {
+function getResource(
+  ctx: GpuContext,
+  cache: CachedResource[],
+  type: string,
+  props: any,
+  usage?: string,
+) {
   let resource = getResourceFromCache(cache, props);
   if (!resource) {
     resource = {
       type,
-      value: factories[type](ctx, props),
+      value: factories[type]!(ctx, props),
       // TODO: this is problematic if we re-use descriptors
       props: { ...props },
       used: true,
@@ -131,22 +154,22 @@ function getResource(ctx, cache, type, props, usage) {
   return resource.value;
 }
 
-const isDisposable = (value) => isGpuTexture(value) || isGpuBuffer(value);
+const isDisposable = (value: any) => isGpuTexture(value) || isGpuBuffer(value);
 
 /**
  * Translate a pex-renderer pass description (color/depth textures, clear
  * values) into a pex-gpu RenderPassDescriptor. Passes are plain objects with no
  * GPU allocation, so they are built fresh rather than cached.
  */
-function createPass(props) {
-  const pass = { label: props.name };
+function createPass(props: any) {
+  const pass: any = { label: props.name };
 
   // A GpuTexture is passed straight through; an MSAA/cubemap wrapper carries
   // its GpuTexture under `.texture` (its raw handle lives on GpuTexture.texture,
   // so unwrapping unconditionally would drop the resolvable view). An explicit
   // empty array marks a depth-only pass (vs. undefined = default to canvas).
   if (props.color) {
-    pass.colorAttachments = props.color.map((attachment, i) => {
+    pass.colorAttachments = props.color.map((attachment: any, i: number) => {
       const texture = isGpuTexture(attachment)
         ? attachment
         : attachment.texture;
@@ -194,8 +217,8 @@ function createPass(props) {
   return pass;
 }
 
-export default (ctx) => {
-  const cache = [];
+export default (ctx: GpuContext): ResourceCache => {
+  const cache: CachedResource[] = [];
 
   const fullscreenTriangleProps = {
     attributes: {
@@ -231,38 +254,39 @@ export default (ctx) => {
   return {
     _cache: cache,
     Usage,
-    texture2D: (props, usage) =>
+    texture2D: (props: any, usage?: string) =>
       getResource(ctx, cache, "texture2D", props, usage),
-    textureCube: (props, usage) =>
+    textureCube: (props: any, usage?: string) =>
       getResource(ctx, cache, "textureCube", props, usage),
-    renderbuffer: (props, usage) =>
+    renderbuffer: (props: any, usage?: string) =>
       getResource(ctx, cache, "renderbuffer", props, usage),
-    pass: (props) => createPass(props),
-    pipeline: (props, usage) =>
+    pass: (props: any) => createPass(props),
+    pipeline: (props: any, usage?: string) =>
       getResource(ctx, cache, "pipeline", props, usage),
-    vertexBuffer: (props, usage) =>
+    vertexBuffer: (props: any, usage?: string) =>
       getResource(ctx, cache, "vertexBuffer", props, usage),
-    indexBuffer: (props, usage) =>
+    indexBuffer: (props: any, usage?: string) =>
       getResource(ctx, cache, "indexBuffer", props, usage),
     fullscreenTriangle: () =>
-      getResourceFromCache(cache, fullscreenTriangleProps).value,
+      getResourceFromCache(cache, fullscreenTriangleProps)!.value,
     fullscreenQuad: () =>
-      getResourceFromCache(cache, fullscreenQuadProps).value,
+      getResourceFromCache(cache, fullscreenQuadProps)!.value,
     //TODO: add release for Retained resources
     // release() {}
     beginFrame() {
       for (let i = 0; i < cache.length; i++) {
-        cache[i].used = false;
+        cache[i]!.used = false;
       }
     },
     endFrame() {
       for (let i = 0; i < cache.length; i++) {
-        const resource = cache[i];
+        const resource = cache[i]!;
         if (resource.used || resource.usage === Usage.Retained) {
-          cache[i].keepAlive = keepAliveCountdown;
+          resource.keepAlive = keepAliveCountdown;
         } else {
-          if (--cache[i].keepAlive < 0) {
-            if (isDisposable(cache[i].value)) cache[i].value.dispose();
+          resource.keepAlive = (resource.keepAlive ?? keepAliveCountdown) - 1;
+          if (resource.keepAlive < 0) {
+            if (isDisposable(resource.value)) resource.value.dispose();
             cache.splice(i, 1);
           }
         }
@@ -270,7 +294,7 @@ export default (ctx) => {
     },
     dispose() {
       for (let i = 0; i < cache.length; i++) {
-        if (isDisposable(cache[i].value)) cache[i].value.dispose();
+        if (isDisposable(cache[i]!.value)) cache[i]!.value.dispose();
       }
       cache.length = 0;
     },

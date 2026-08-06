@@ -1,11 +1,7 @@
-/**
- * Orbiter component
- *
- * @param {import("../types.js").OrbiterComponentOptions} options
- * @returns {object}
- * @alias module:components.orbiter
- */
-export default (options) => ({
+import type { OrbiterComponentOptions } from "../types.js";
+
+/** Orbiter component */
+export default (options?: OrbiterComponentOptions) => ({
   target: [0, 0, 0],
   lat: 0,
   lon: 0,

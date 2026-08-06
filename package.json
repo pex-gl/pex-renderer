@@ -47,7 +47,7 @@
     "pex-gpu": "file:../pex-gpu",
     "pex-io": "^3.2.0",
     "pex-loaders": "^1.2.1",
-    "pex-math": "^4.3.0",
+    "pex-math": "^4.3.2",
     "pex-random": "^2.1.2",
     "pex-shaders": "file:../pex-shaders",
     "typed-array-interleave": "^2.0.1"
@@ -70,8 +70,11 @@
   },
   "engines": {
     "node": ">=22.0.0",
-    "snowdev": ">=3.0.0-alpha.1",
-    "npm": ">=10.5.1"
+    "npm": ">=10.5.1",
+    "snowdev": ">=3.0.0-alpha.1"
+  },
+  "allowScripts": {
+    "webgpu@0.4.0": true
   },
   "snowdev": {
     "importMap": {
@@ -79,15 +82,10 @@
         "pex-renderer": "../lib/index.js"
       }
     },
-    "install": {
-      "resolve": {
-        "exclude": [
-          "**/webgpu/**"
-        ]
-      }
+    "resolve": {
+      "exclude": [
+        "**/webgpu/**"
+      ]
     }
-  },
-  "allowScripts": {
-    "webgpu@0.4.0": true
   }
 }

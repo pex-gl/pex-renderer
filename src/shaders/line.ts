@@ -1,5 +1,7 @@
 import { chunks as SHADERS } from "pex-shaders";
 
+import type { PipelineShaderOptions } from "../types.js";
+
 // Line-specific vertex attribute @location convention (distinct from the
 // mesh convention in basic.js/standard.js, since a line segment quad has no
 // object-space position/normal/texCoord of its own): 0 position (quad-local
@@ -8,16 +10,10 @@ import { chunks as SHADERS } from "pex-shaders";
 //
 // uFrame.viewportSize doubles as the old uResolution uniform.
 
-/**
- * @param {Set<string>} [defines=new Set()]
- * @param {object} [options={}]
- * @param {object} [options.hooks={}] Raw WGSL text injected at fixed points.
- * @param {number} [options.locationNormal=-1] MRT output location for the normal buffer, requires USE_DRAW_BUFFERS.
- * @param {number} [options.locationEmissive=-1] MRT output location for the emissive buffer, requires USE_DRAW_BUFFERS.
- * @returns {string}
- * @alias module:pipeline.line
- */
-export default (defines = new Set(), options = {}) => {
+export default (
+  defines: Set<string> = new Set(),
+  options: PipelineShaderOptions = {},
+): string => {
   const hooks = options.hooks || {};
   const { locationNormal = -1, locationEmissive = -1 } = options;
 
@@ -77,9 +73,11 @@ fn vertexMain(input: VertexInput) -> Varyings {
   var output: Varyings;
 
   var lineWidthScale = vec2f(1.0);
-  ${useVertexColors
-    ? "output.color = mix(input.colorA, input.colorB, input.position.z);\n  lineWidthScale = vec2f(input.colorA.w, input.colorB.w);"
-    : ""}
+  ${
+    useVertexColors
+      ? "output.color = mix(input.colorA, input.colorB, input.position.z);\n  lineWidthScale = vec2f(input.colorA.w, input.colorB.w);"
+      : ""
+  }
 
   if (length(input.pointA) == 0.0 || length(input.pointB) == 0.0) {
     output.position = vec4f(0.0, 0.0, 0.0, 1.0);

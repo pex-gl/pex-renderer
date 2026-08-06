@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { postProcessing as postprocessingShaders } from "pex-shaders";
 
 const dof = ({ resourceCache, descriptors }) => {

@@ -1,11 +1,7 @@
-/**
- * Spot light component
- *
- * @param {import("../types.js").SpotLightComponentOptions} [options]
- * @returns {object}
- * @alias module:components.spotLight
- */
-export default (options) => ({
+import type { SpotLightComponentOptions } from "../types.js";
+
+/** Spot light component */
+export default (options?: SpotLightComponentOptions) => ({
   color: [1, 1, 1, 1],
   intensity: 1,
   angle: Math.PI / 4,

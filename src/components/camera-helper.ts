@@ -1,11 +1,7 @@
-/**
- * Camera helper component
- *
- * @param {import("../types.js").CameraHelperComponentOptions} [options]
- * @returns {object}
- * @alias module:components.cameraHelper
- */
-export default (options) => ({
+import type { CameraHelperComponentOptions } from "../types.js";
+
+/** Camera helper component */
+export default (options?: CameraHelperComponentOptions) => ({
   color: [1, 1, 1, 1],
   ...options,
 });

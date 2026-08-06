@@ -1,14 +1,14 @@
 // let MaterialID = 0;
 
-/**
- * Material component
- *
- * @param {import("../types.js").MaterialComponentOptions
- *   | import("../types.js").LineMaterialComponentOptions} [options]
- * @returns {object}
- * @alias module:components.material
- */
-export default (options) => {
+import type {
+  LineMaterialComponentOptions,
+  MaterialComponentOptions,
+} from "../types.js";
+
+/** Material component */
+export default (
+  options?: MaterialComponentOptions | LineMaterialComponentOptions,
+) => {
   if (options?.type === "line") {
     return {
       baseColor: [1, 1, 1, 1],

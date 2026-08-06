@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { chunks as SHADERS, smaa as SMAA } from "pex-shaders";
 
 import { loadImage } from "pex-io";

@@ -1,11 +1,7 @@
-/**
- * Animation component
- *
- * @param {import("../types.js").AnimationComponentOptions} [options]
- * @returns {object}
- * @alias module:components.animation
- */
-export default (options) => ({
+import type { AnimationComponentOptions } from "../types.js";
+
+/** Animation component */
+export default (options?: AnimationComponentOptions) => ({
   playing: false,
   loop: false,
   time: 0, // seconds

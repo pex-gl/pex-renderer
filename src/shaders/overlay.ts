@@ -1,14 +1,12 @@
 // A fixed NDC-space screen quad, like blit.js: no Frame/Model needed, just
 // the bounds rect (in 0-1 viewport space) and the source texture at group 0.
 
-/**
- * @param {Set<string>} [defines=new Set()]
- * @param {object} [options={}]
- * @param {object} [options.hooks={}] Raw WGSL text injected at fixed points.
- * @returns {string}
- * @alias module:pipeline.overlay
- */
-export default (defines = new Set(), options = {}) => {
+import type { PipelineShaderOptions } from "../types.js";
+
+export default (
+  defines: Set<string> = new Set(),
+  options: PipelineShaderOptions = {},
+): string => {
   const hooks = options.hooks || {};
 
   return /* wgsl */ `

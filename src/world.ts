@@ -1,3 +1,4 @@
+// @ts-nocheck
 export default ({ entities = [], systems = [] } = {}) => {
   let prevTime = performance.now();
 

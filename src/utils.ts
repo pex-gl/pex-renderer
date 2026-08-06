@@ -1,7 +1,8 @@
-//TODO: MARCIN: I would break this down into separate files utils/program-cache.js, utils/temp-data.js etc
-
 import { aabb } from "pex-geom";
 import { mat2x3, mat4, quat, vec3, vec4 } from "pex-math";
+
+import type { Mat4, Vec3 } from "pex-math";
+import type { GpuContext } from "./types.js";
 
 const NAMESPACE = "pex-renderer";
 
@@ -70,14 +71,14 @@ const CUBEMAP_SIDES = [
 // WebGPU has no negative-viewport equivalent (unlike Vulkan), so this lives here
 // rather than in the GPU wrapper. Shared by all render-to-cube paths.
 const getCubeFaceCamera = (
-  face,
-  position,
-  near,
-  far,
-  viewMatrix = mat4.create(),
-  projectionMatrix = mat4.create(),
+  face: number,
+  position: Vec3,
+  near: number,
+  far: number,
+  viewMatrix: Mat4 = mat4.create(),
+  projectionMatrix: Mat4 = mat4.create(),
 ) => {
-  const { target, up } = CUBEMAP_SIDES[face];
+  const { target, up } = CUBEMAP_SIDES[face]!;
 
   mat4.lookAt(
     viewMatrix,
@@ -87,18 +88,18 @@ const getCubeFaceCamera = (
   );
 
   mat4.perspectiveZO(projectionMatrix, Math.PI / 2, 1, near, far);
-  projectionMatrix[5] *= -1;
+  projectionMatrix[5]! *= -1;
 
   return { viewMatrix, projectionMatrix };
 };
 
-const getDefaultViewport = (ctx) => [0, 0, ctx.width, ctx.height];
+const getDefaultViewport = (ctx: GpuContext) => [0, 0, ctx.width, ctx.height];
 
-const getFileExtension = (path) => {
+const getFileExtension = (path?: string) => {
   return (path?.match(/[^\\/]\.([^.\\/]+)$/) || [null]).pop();
 };
 
-const getDirname = (path) => {
+const getDirname = (path: string) => {
   let code = path.charCodeAt(0);
   const hasRoot = code === 47;
   let end = -1;
@@ -121,7 +122,7 @@ const getDirname = (path) => {
   return path.slice(0, end);
 };
 
-const isObject = (obj) =>
+const isObject = (obj: unknown) =>
   Object.prototype.toString.call(obj) === "[object Object]";
 
 export {

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { mat4 } from "pex-math";
 import {
   // pipeline,
@@ -355,7 +356,6 @@ class ReflectionProbe {
  *
  * @param {import("../types.js").SystemOptions} options
  * @returns {import("../types.js").System}
- * @alias module:systems.reflectionProbe
  */
 export default ({ ctx, resourceCache }) => ({
   type: "reflection-probe-system",

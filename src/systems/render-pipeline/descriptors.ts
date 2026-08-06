@@ -1,6 +1,8 @@
 import * as SHADERS from "../../shaders/index.js";
 import { CUBEMAP_SIDES } from "../../utils.js";
 
+import type { GpuContext } from "../../types.js";
+
 // Fullscreen-triangle blit: samples the linear HDR main pass target, applies
 // the frame-wide tonemap, and encodes to sRGB for the canvas. WebGPU texture
 // origin is top-left, so uv.y is flipped relative to the clip-space triangle.
@@ -46,7 +48,7 @@ fn fragmentMain(input: Varyings) -> @location(0) vec4f {
 }
 `;
 
-export default (ctx) => ({
+export default (ctx: GpuContext) => ({
   directionalLightShadows: {
     colorMapDesc: {
       name: "directionalLightColorMap",
@@ -136,7 +138,8 @@ export default (ctx) => ({
       mipmap: true,
     },
     copyTexturePipelineDesc: {
-      vert: SHADERS.blit.vert,
+      // Legacy GLSL grab-pass copy, not yet ported to the WGSL blit generator.
+      vert: (SHADERS.blit as any).vert,
       frag: /* glsl */ `
 precision highp float;
 
@@ -156,8 +159,9 @@ void main() {
   },
   reversibleToneMap: {
     pipelineDesc: {
-      vert: SHADERS.blit.vert,
-      frag: SHADERS.reversibleToneMap.frag,
+      // Legacy GLSL path, not yet ported to the WGSL reversibleToneMap generator.
+      vert: (SHADERS.blit as any).vert,
+      frag: (SHADERS.reversibleToneMap as any).frag,
     },
   },
   blit: {

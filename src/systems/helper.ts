@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { avec3, avec4, mat4, quat, vec3 } from "pex-math";
 import createGeomBuilder from "geom-builder";
 
@@ -469,7 +470,6 @@ const getSkeleton = (skin, modelMatrix) => {
  * Helper system
  *
  * @returns {import("../types.js").System}
- * @alias module:systems.helper
  */
 export default () => ({
   type: "helper-system",

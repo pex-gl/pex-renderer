@@ -1,11 +1,7 @@
-/**
- * Bounding box helper component
- *
- * @param {import("../types.js").BoundingBoxHelperComponentOptions} [options]
- * @returns {object}
- * @alias module:components.boundingBoxHelper
- */
-export default (options) => ({
+import type { BoundingBoxHelperComponentOptions } from "../types.js";
+
+/** Bounding box helper component */
+export default (options?: BoundingBoxHelperComponentOptions) => ({
   color: [1, 0, 0, 1],
   ...options,
 });

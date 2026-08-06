@@ -3,8 +3,19 @@ import { submit, createTexture } from "pex-gpu";
 
 import * as SHADERS from "../shaders/index.js";
 
+import type {
+  Entity,
+  SkyboxComponentOptions,
+  SystemOptions,
+} from "../types.js";
+
 // Sky parameters packed, in order, into the shader's `parameters: vec4f`.
-const parameters = ["turbidity", "rayleigh", "mieCoefficient", "mieDirectionalG"];
+const parameters: (keyof SkyboxComponentOptions)[] = [
+  "turbidity",
+  "rayleigh",
+  "mieCoefficient",
+  "mieDirectionalG",
+];
 
 /**
  * Skybox system
@@ -14,24 +25,22 @@ const parameters = ["turbidity", "rayleigh", "mieCoefficient", "mieDirectionalG"
  * - "_skyTexture" to skybox components with no envMap for skybox-renderer to
  *   render
  * - "_skyTextureChanged" to skybox components for reflection-probe system
- *
- * @param options
- * @returns
- * @alias module:systems.skybox
  */
-export default ({ ctx, resourceCache }) => ({
+export default ({ ctx, resourceCache }: SystemOptions) => ({
   type: "skybox-system",
-  cache: {},
+  cache: {} as Record<number, any>,
   debug: false,
-  pipeline: null,
+  pipeline: null as any,
 
   // Bakes the analytic sky into the entity's equirectangular _skyTexture as
   // linear HDR. rgba16float preserves radiance >1 (an 8-bit/sRGB target would
   // clamp it) and stays filterable — unlike rgba32float — so the background pass
   // can sample it with a linear sampler.
-  updateSkyboxEntity(entity) {
+  updateSkyboxEntity(entity: Entity) {
+    const skybox = entity.skybox!;
+
     if (!this.cache[entity.id]) {
-      entity.skybox._skyTexture = createTexture(ctx, {
+      skybox._skyTexture = createTexture(ctx, {
         label: "skyTexture",
         width: 512,
         height: 256,
@@ -39,29 +48,29 @@ export default ({ ctx, resourceCache }) => ({
       });
 
       this.cache[entity.id] = {
-        sunPosition: [...entity.skybox.sunPosition],
+        sunPosition: [...skybox.sunPosition!],
         parameters: Array.from({ length: parameters.length }),
       };
-      entity.skybox.dirty = true;
+      skybox.dirty = true;
     }
 
     if (
-      vec3.distance(this.cache[entity.id].sunPosition, entity.skybox.sunPosition) > 0
+      vec3.distance(this.cache[entity.id].sunPosition, skybox.sunPosition!) > 0
     ) {
-      vec3.set(this.cache[entity.id].sunPosition, entity.skybox.sunPosition);
-      entity.skybox.dirty = true;
+      vec3.set(this.cache[entity.id].sunPosition, skybox.sunPosition!);
+      skybox.dirty = true;
     }
 
     for (let i = 0; i < parameters.length; i++) {
-      const name = parameters[i];
-      if (this.cache[entity.id].parameters[i] !== entity.skybox[name]) {
-        this.cache[entity.id].parameters[i] = entity.skybox[name];
-        entity.skybox.dirty = true;
+      const name = parameters[i]!;
+      if (this.cache[entity.id].parameters[i] !== skybox[name]) {
+        this.cache[entity.id].parameters[i] = skybox[name];
+        skybox.dirty = true;
       }
     }
 
-    if (entity.skybox.dirty) {
-      entity.skybox.dirty = false;
+    if (skybox.dirty) {
+      skybox.dirty = false;
 
       // Immutable per object identity: create once, reuse across frames.
       this.pipeline ||= (() => {
@@ -70,10 +79,10 @@ export default ({ ctx, resourceCache }) => ({
       })();
 
       submit(ctx, {
-        name: "skyboxUpdateSkyTextureCmd",
+        label: "skyboxUpdateSkyTextureCmd",
         pass: {
           colorAttachments: [
-            { texture: entity.skybox._skyTexture, clearValue: [0, 0, 0, 0] },
+            { texture: skybox._skyTexture, clearValue: [0, 0, 0, 0] },
           ],
         },
         pipeline: this.pipeline,
@@ -86,12 +95,12 @@ export default ({ ctx, resourceCache }) => ({
         },
       });
 
-      entity.skybox._skyTextureChanged = true;
+      skybox._skyTextureChanged = true;
     }
   },
-  update(entities) {
+  update(entities: Entity[]) {
     for (let i = 0; i < entities.length; i++) {
-      const entity = entities[i];
+      const entity = entities[i]!;
 
       if (entity.skybox) {
         entity.skybox._skyTextureChanged = false;
@@ -102,12 +111,12 @@ export default ({ ctx, resourceCache }) => ({
       }
     }
   },
-  dispose(entities) {
+  dispose(entities?: Entity[]) {
     if (entities) {
       for (let i = 0; i < entities.length; i++) {
-        const entity = entities[i];
+        const entity = entities[i]!;
         if (this.cache[entity.id]) {
-          entity.skybox._skyTexture?.dispose();
+          entity.skybox?._skyTexture?.dispose();
           delete this.cache[entity.id];
         }
       }

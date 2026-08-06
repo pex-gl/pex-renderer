@@ -1,7 +1,10 @@
 import { vec3, vec4, quat } from "pex-math";
+
 import { TEMP_QUAT, TEMP_VEC3 } from "../utils.js";
 
-function updateAnimation(animation, deltaTime) {
+import type { Entity } from "../types.js";
+
+function updateAnimation(animation: any, deltaTime?: number) {
   if (!animation.prevTime) {
     animation.time = 0;
     animation.prevTime = performance.now();
@@ -35,8 +38,8 @@ function updateAnimation(animation, deltaTime) {
     const channel = animation.channels[i];
     const inputData = channel.input;
 
-    let prevIndex;
-    let nextIndex;
+    let prevIndex: number | undefined;
+    let nextIndex = 0;
 
     for (let j = 0; j < inputData.length; j++) {
       nextIndex = j;
@@ -46,7 +49,7 @@ function updateAnimation(animation, deltaTime) {
 
     const isRotation = channel.path === "rotation";
     const outputData = channel.output;
-    const prevInput = inputData[prevIndex];
+    const prevInput = inputData[prevIndex!];
     const nextInput = inputData[nextIndex];
     const scale = nextInput - prevInput || 1;
 
@@ -62,7 +65,7 @@ function updateAnimation(animation, deltaTime) {
           }
           break;
         case "CUBICSPLINE": {
-          const vec = isRotation ? vec4 : vec3;
+          const vec: any = isRotation ? vec4 : vec3;
           const tt = t * t;
           const ttt = tt * t;
 
@@ -151,18 +154,13 @@ function updateAnimation(animation, deltaTime) {
   }
 }
 
-/**
- * Animation system
- *
- * @returns {import("../types.js").System}
- * @alias module:systems.animation
- */
+/** Animation system */
 export default () => ({
   type: "animation-system",
   updateAnimation,
-  update(entities, { deltaTime }) {
+  update(entities: Entity[], { deltaTime }: any = {}) {
     for (let i = 0; i < entities.length; i++) {
-      const entity = entities[i];
+      const entity: any = entities[i];
 
       if (entity.animations) {
         for (let j = 0; j < entity.animations.length; j++) {

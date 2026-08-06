@@ -1,539 +1,680 @@
-//TODO: MARCIN: why is this not in each respective file?
+import type { GpuContext, GpuTexture, GpuBuffer } from "pex-gpu";
+import type { Vec2, Vec3, Quat, Mat4 } from "pex-math";
+
+/** Axis-aligned bounding box as [min, max]. */
+export type AABB = number[][];
+/** RGB or RGBA color, components in [0, 1]. */
+export type Color = number[];
+
+/** UV transform applied to a material texture. */
+export interface TextureTransform {
+  /** [x, y] */
+  offset?: Vec2;
+  /** Angle in radians. */
+  rotation?: number;
+  /** [x, y] */
+  scales?: Vec2;
+}
+
+/** A material texture: a GPU texture, optionally with a UV transform. */
+export type MaterialTexture = GpuTexture | TextureTransform;
+
 // Entity
-/**
- * @typedef {object} Entity
- * @property {number} id
- * @property {AmbientLightComponentOptions} [ambientLight]
- * @property {AnimationComponentOptions | AnimationComponentOptions[]} [animation]
- * @property {AreaLightComponentOptions} [areaLight]
- * @property {AxesHelperComponentOptions} [axesHelper]
- * @property {BoundingBoxHelperComponentOptions} [boundingBoxHelper]
- * @property {SkeletonHelperComponentOptions} [skeletonHelper]
- * @property {CameraHelperComponentOptions} [cameraHelper]
- * @property {CameraComponentOptions} [camera]
- * @property {DirectionalLightComponentOptions} [directionalLight]
- * @property {GeometryComponentOptions} [geometry]
- * @property {GridHelperComponentOptions} [gridHelper]
- * @property {LightHelperComponentOptions} [lightHelper]
- * @property {MaterialComponentOptions} [material]
- * @property {MorphComponentOptions} [morph]
- * @property {OrbiterComponentOptions} [orbiter]
- * @property {PointLightComponentOptions} [pointLight]
- * @property {PostProcessingComponentOptions} [postProcessing]
- * @property {ReflectionProbeComponentOptions} [reflectionProbe]
- * @property {SkinComponentOptions} [skin]
- * @property {SkyboxComponentOptions} [skybox]
- * @property {SpotLightComponentOptions} [spotLight]
- * @property {TransformComponentOptions} [transform]
- * @property {VertexHelperComponentOptions} [vertexHelper]
- */
+export interface Entity {
+  id: number;
+  ambientLight?: AmbientLightComponentOptions;
+  animation?: AnimationComponentOptions | AnimationComponentOptions[];
+  areaLight?: AreaLightComponentOptions;
+  axesHelper?: AxesHelperComponentOptions;
+  boundingBoxHelper?: BoundingBoxHelperComponentOptions;
+  skeletonHelper?: SkeletonHelperComponentOptions;
+  cameraHelper?: CameraHelperComponentOptions;
+  camera?: CameraComponentOptions;
+  directionalLight?: DirectionalLightComponentOptions;
+  geometry?: GeometryComponentOptions;
+  gridHelper?: GridHelperComponentOptions;
+  lightHelper?: LightHelperComponentOptions;
+  material?: MaterialComponentOptions;
+  morph?: MorphComponentOptions;
+  orbiter?: OrbiterComponentOptions;
+  pointLight?: PointLightComponentOptions;
+  postProcessing?: PostProcessingComponentOptions;
+  reflectionProbe?: ReflectionProbeComponentOptions;
+  skin?: SkinComponentOptions;
+  skybox?: SkyboxComponentOptions;
+  spotLight?: SpotLightComponentOptions;
+  transform?: TransformComponentOptions;
+  vertexHelper?: VertexHelperComponentOptions;
+  /** Layer name used to filter entities per render view. */
+  layer?: string | undefined;
+  /** Cached transform state, added by the transform system. */
+  _transform?: TransformCache;
+  /** Cached geometry GPU resources, added by the geometry system. */
+  _geometry?: GeometryCache;
+}
 
 // Components
-/**
- * @typedef {object} AmbientLightComponentOptions
- * @property {number[]} [color=[1, 1, 1, 1]]
- * @property {number} [intensity=1]
- */
-/**
- * @typedef {object} AnimationComponentOptions
- * @property {boolean} [playing=false]
- * @property {boolean} [loop=false]
- * @property {number} [time=0]
- * @property {Array} [channels=[]]
- */
-/**
- * @typedef {object} AreaLightComponentOptions
- * @property {number[]} [color=[1, 1, 1, 1]]
- * @property {number} [intensity=1]
- * @property {boolean} [disk=false]
- * @property {boolean} [doubleSided=false]
- * @property {number} [depthBias=1] Shadow-map rasterizer constant depth bias.
- * @property {number} [depthBiasSlopeScale=2] Shadow-map rasterizer slope-scaled depth bias, the effective term on a float depth map (raise to remove acne).
- * @property {number} [depthBiasClamp=0] Upper bound on the applied depth bias to limit peter-panning (0 disables the clamp).
- * @property {number} [bulbRadius=1] Soft-shadow (PCSS) light radius in world units (scaled by the light's transform): larger widens the penumbra.
- * @property {boolean} [castShadows=true]
- * @property {number} [shadowMapSize=2048]
- */
-/** @typedef {object} AxesHelperComponentOptions */
-/**
- * @typedef {object} BoundingBoxHelperComponentOptions
- * @property {number[]} [color=[1, 0, 0, 1]]
- */
-/**
- * @typedef {object} SkeletonHelperComponentOptions
- * @property {number[] | number[][]} [color=[[0, 0, 1, 1], [1, 1, 1, 1]]]
- */
-/**
- * @typedef {object} CameraHelperComponentOptions
- * @property {number[]} [color=[1, 1, 1, 1]]
- */
-/**
- * @typedef {object} CameraView
- * @property {number[]} [totalSize]
- * @property {number[]} [size]
- * @property {number[]} [offset]
- */
-/**
- * @typedef {object} CameraComponentOptions
- * @property {"perspective" | "orthographic"} [projection="perspective"]
- * @property {number} [near=0.5]
- * @property {number} [far=1000]
- * @property {number} [aspect=1]
- * @property {import("pex-color").color} [clearColor]
- * @property {mat4} [viewMatrix]
- * @property {mat4} [invViewMatrix]
- * @property {boolean} [culling=false]
- * @property {number} [focalLength=50] Focal length of the camera lens [10mm -
- *   200mm] in mm
- * @property {number} [fStop=2.8] Ratio of camera lens opening, f-number, f/N,
- *   aperture [1.2 - 32] in mm
- * @property {number} [sensorSize=[36, 24]] Physical camera sensor or film size
- *   [sensorWidth, sensorHeight] in mm
- * @property {"vertical" | "horizontal" | "fit" | "overscan" | "vertical"} sensorFit
- *   Matching of camera frame to sensor frame
- * @property {CameraView} [view]
- * @property {number} [fov=Math.PI / 4]
- * @property {number} [left=-1]
- * @property {number} [right=1]
- * @property {number} [bottom=-1]
- * @property {number} [top=1]
- * @property {number} [zoom=1]
- */
+export interface AmbientLightComponentOptions {
+  color?: Color;
+  intensity?: number;
+}
+export interface AnimationComponentOptions {
+  playing?: boolean;
+  loop?: boolean;
+  time?: number;
+  channels?: unknown[];
+}
+/** Shadow-mapping internals shared by shadow-casting lights. */
+export interface LightShadowInternals {
+  _projectionMatrix?: Mat4;
+  _viewMatrix?: Mat4;
+  _direction?: Vec3;
+  _near?: number;
+  _far?: number;
+  _radiusUV?: Vec2;
+  _shadowMap?: GpuTexture;
+  _shadowCubemap?: GpuTexture;
+  _sceneBboxInLightSpace?: AABB;
+  _sceneBbox?: AABB;
+}
+export interface AreaLightComponentOptions extends LightShadowInternals {
+  color?: Color;
+  intensity?: number;
+  disk?: boolean;
+  doubleSided?: boolean;
+  /** Shadow-map rasterizer constant depth bias. */
+  depthBias?: number;
+  /**
+   * Shadow-map rasterizer slope-scaled depth bias, the effective term on a
+   * float depth map (raise to remove acne).
+   */
+  depthBiasSlopeScale?: number;
+  /**
+   * Upper bound on the applied depth bias to limit peter-panning (0 disables
+   * the clamp).
+   */
+  depthBiasClamp?: number;
+  /**
+   * Soft-shadow (PCSS) light radius in world units (scaled by the light's
+   * transform): larger widens the penumbra.
+   */
+  bulbRadius?: number;
+  castShadows?: boolean;
+  shadowMapSize?: number;
+}
+export interface AxesHelperComponentOptions {}
+export interface BoundingBoxHelperComponentOptions {
+  color?: Color;
+}
+export interface SkeletonHelperComponentOptions {
+  color?: Color | Color[];
+}
+export interface CameraHelperComponentOptions {
+  color?: Color;
+}
+export interface CameraView {
+  totalSize?: Vec2;
+  size?: Vec2;
+  offset?: Vec2;
+}
+export interface CameraComponentOptions {
+  projection?: "perspective" | "orthographic";
+  near?: number;
+  far?: number;
+  aspect?: number;
+  clearColor?: Color;
+  viewMatrix?: Mat4;
+  invViewMatrix?: Mat4;
+  /** Alias of invViewMatrix used by some renderers. */
+  inverseViewMatrix?: Mat4;
+  culling?: boolean;
+  /** Focal length of the camera lens [10mm - 200mm] in mm. */
+  focalLength?: number;
+  /** Ratio of camera lens opening, f-number, f/N, aperture [1.2 - 32] in mm. */
+  fStop?: number;
+  /** Physical camera sensor or film size [sensorWidth, sensorHeight] in mm. */
+  sensorSize?: Vec2;
+  /** Matching of camera frame to sensor frame. */
+  sensorFit?: "vertical" | "horizontal" | "fit" | "overscan" | "fill";
+  view?: CameraView;
+  fov?: number;
+  left?: number;
+  right?: number;
+  bottom?: number;
+  top?: number;
+  zoom?: number;
+  /** [x, y, width, height] region of the target this camera renders into. */
+  viewport?: number[];
+  // Runtime, added/derived by the camera system.
+  projectionMatrix?: Mat4;
+  frustum?: Float32Array;
+  actualSensorHeight?: number;
+  dirty?: boolean;
+}
+export interface DirectionalLightComponentOptions extends LightShadowInternals {
+  color?: Color;
+  intensity?: number;
+  /** Shadow-map rasterizer constant depth bias. */
+  depthBias?: number;
+  /**
+   * Shadow-map rasterizer slope-scaled depth bias, the effective term on a
+   * float depth map (raise to remove acne).
+   */
+  depthBiasSlopeScale?: number;
+  /**
+   * Upper bound on the applied depth bias to limit peter-panning (0 disables
+   * the clamp).
+   */
+  depthBiasClamp?: number;
+  /**
+   * Soft-shadow (PCSS) light size. A directional light is at infinity, so this
+   * reads as an angular size relative to the shadow frustum: larger widens the
+   * penumbra.
+   */
+  bulbRadius?: number;
+  castShadows?: boolean;
+  shadowMapSize?: number;
+}
+export interface GeometryComponentOptions {
+  positions?: Float32Array | number[];
+  normals?: Float32Array | number[];
+  /** Alias: texCoords/texCoords0 */
+  uvs?: Float32Array | number[];
+  /** Alias: texCoords1 */
+  uvs1?: Float32Array | number[];
+  vertexColors?: Float32Array | number[];
+  cells?: Uint16Array | Uint32Array | number[];
+  weights?: Float32Array | number[];
+  joints?: Float32Array | number[];
+  /** Instanced */
+  offsets?: Float32Array | number[];
+  /** Instanced */
+  rotations?: Float32Array | number[];
+  /** Instanced */
+  scales?: Float32Array | number[];
+  /** Instanced */
+  colors?: Float32Array | number[];
+  count?: number;
+  instances?: number;
+  multiDraw?: object;
+  culled?: boolean;
+  primitive?: string;
+  /** Runtime, computed by the geometry system. */
+  bounds?: AABB;
+  attributes?: Record<string, unknown>;
+}
+export interface GridHelperComponentOptions {
+  color?: Color;
+  size?: number;
+}
+export interface LightHelperComponentOptions {}
+export interface MaterialComponentOptions {
+  unlit?: boolean;
+  type?: undefined | "line";
+  baseColor?: Color;
+  emissiveColor?: Color;
+  emissiveIntensity?: number;
+  metallic?: number;
+  roughness?: number;
+  ior?: number;
+  specular?: number;
+  specularTexture?: MaterialTexture;
+  specularColor?: Color;
+  specularColorTexture?: MaterialTexture;
+  baseColorTexture?: MaterialTexture;
+  emissiveColorTexture?: MaterialTexture;
+  normalTexture?: MaterialTexture;
+  normalTextureScale?: number;
+  roughnessTexture?: MaterialTexture;
+  metallicTexture?: MaterialTexture;
+  metallicRoughnessTexture?: MaterialTexture;
+  occlusionTexture?: MaterialTexture;
+  clearCoat?: number;
+  clearCoatRoughness?: number;
+  clearCoatTexture?: MaterialTexture;
+  clearCoatRoughnessTexture?: MaterialTexture;
+  clearCoatNormalTexture?: MaterialTexture;
+  clearCoatNormalTextureScale?: number;
+  sheenColor?: Color;
+  sheenRoughness?: number;
+  transmission?: number;
+  transmissionTexture?: MaterialTexture;
+  dispersion?: number;
+  diffuseTransmission?: number;
+  diffuseTransmissionTexture?: MaterialTexture;
+  diffuseTransmissionColor?: Color;
+  diffuseTransmissionColorTexture?: MaterialTexture;
+  thickness?: number;
+  thicknessTexture?: MaterialTexture;
+  attenuationDistance?: number;
+  attenuationColor?: Color;
+  alphaTest?: number;
+  alphaTexture?: MaterialTexture;
+  depthTest?: boolean;
+  depthWrite?: boolean;
+  depthFunc?: string;
+  blend?: boolean;
+  blendSrcRGBFactor?: string;
+  blendSrcAlphaFactor?: string;
+  blendDstRGBFactor?: string;
+  blendDstAlphaFactor?: string;
+  cullFace?: boolean;
+  cullFaceMode?: string;
+  pointSize?: number;
+  castShadows?: boolean;
+  receiveShadows?: boolean;
+  // Line material fields (type: "line"), stored on the same slot.
+  lineWidth?: number;
+  lineResolution?: number;
+  perspectiveScaling?: boolean;
+  /** Runtime flag set by renderers when the pipeline variant is rebuilt. */
+  needsPipelineUpdate?: boolean;
+}
+export interface LineMaterialComponentOptions {
+  type?: "line";
+  baseColor?: Color;
+  lineWidth?: number;
+  lineResolution?: number;
+  perspectiveScaling?: boolean;
+  depthTest?: boolean;
+  depthWrite?: boolean;
+  castShadows?: boolean;
+}
+export interface MorphComponentOptions {
+  sources: Record<string, any>;
+  targets: Record<string, any>;
+  current?: Record<string, any>;
+  weights?: number[];
+}
+export interface OrbiterComponentOptions {
+  element?: HTMLElement;
+  target?: Vec3;
+  lat?: number;
+  lon?: number;
+  distance?: number;
+  /** Runtime pex-cam orbiter instance. */
+  _orbiter?: any;
+}
+export interface PointLightComponentOptions extends LightShadowInternals {
+  color?: Color;
+  intensity?: number;
+  range?: number;
+  /** Normalized shadow-map bias (fraction of the light's far plane). */
+  bias?: number;
+  bulbRadius?: number;
+  castShadows?: boolean;
+  shadowMapSize?: number;
+}
+export interface SSAOComponentOptions {
+  type?: "sao" | "gtao";
+  noiseTexture?: boolean;
+  mix?: number;
+  samples?: number;
+  intensity?: number;
+  /** Meters */
+  radius?: number;
+  blurRadius?: number;
+  blurSharpness?: number;
+  brightness?: number;
+  contrast?: number;
+  /** Centimeters */
+  bias?: number;
+  spiralTurns?: number;
+  slices?: number;
+  colorBounce?: boolean;
+  colorBounceIntensity?: number;
+}
+export interface DoFComponentOptions {
+  /** Gustafsson uses a spiral pattern while Upitis uses a circular one. */
+  type?: "gustafsson" | "upitis";
+  /** Use camera f-stop and focal length. */
+  physical?: boolean;
+  /** The point to focus on in meters. */
+  focusDistance?: number;
+  /**
+   * Non physically based value for artistic control when physical is false,
+   * otherwise acts as an fStop divider.
+   */
+  focusScale?: number;
+  /**
+   * Read the depth buffer to find the first intersecting object to focus on
+   * instead of a fixed focus distance.
+   */
+  focusOnScreenPoint?: boolean;
+  /** The normalized screen point to focus on when "focusOnScreenPoint" is true. */
+  screenPoint?: Vec2;
+  /** Amount of RGB separation. */
+  chromaticAberration?: number;
+  /** Threshold for out of focus highlights. */
+  luminanceThreshold?: number;
+  /** Gain for out of focus highlights. */
+  luminanceGain?: number;
+  /**
+   * Iteration steps. More steps means better blur but also degraded
+   * performances.
+   */
+  samples?: number;
+  /** The bokeh shape for type "upitis". */
+  shape?: "disk" | "pentagon";
+  debug?: boolean;
+}
+export interface MSAAComponentOptions {
+  /** Multisample anti-aliasing samples: 1 or 4. */
+  sampleCount?: number;
+}
+export interface FXAAComponentOptions {
+  /** For edge luma threshold: 0 to 4. */
+  quality?: number;
+  /** Higher = softer. Helps mitigate fireflies but will blur small details. */
+  subPixelQuality?: number;
+}
+export interface SMAAComponentOptions {
+  /** 0 to 3 (60/80/95/99% of the quality). */
+  quality?: number;
+  edges?: "luma" | "color" | "depth";
+}
+export interface FogComponentOptions {
+  color?: Color;
+  start?: number;
+  density?: number;
+  sunPosition?: Vec3;
+  sunDispertion?: number;
+  sunIntensity?: number;
+  sunColor?: Color;
+  inscatteringCoeffs?: Vec3;
+}
+export interface BloomComponentOptions {
+  /** The bloom quality: 0 or 1 (0 is faster but flickers). */
+  quality?: number;
+  /** The function used to determine the brightness of a pixel for the threshold. */
+  colorFunction?: "luma" | "luminance" | "average";
+  /** The brightness value at which pixels are filtered out for the threshold. */
+  threshold?: number;
+  /** The source texture for the threshold. */
+  source?: "color" | "emissive";
+  /** The strength of the bloom effect. */
+  intensity?: number;
+  /** The downsampling radius which controls how much glare gets blended in. */
+  radius?: number;
+}
+export interface LutComponentOptions {
+  texture: GpuTexture;
+}
+export interface ColorCorrectionComponentOptions {
+  brightness?: number;
+  contrast?: number;
+  saturation?: number;
+  hue?: number;
+}
+export interface VignetteComponentOptions {
+  radius?: number;
+  intensity?: number;
+}
+export interface FilmGrainComponentOptions {
+  quality?: number;
+  size?: number;
+  intensity?: number;
+  colorIntensity?: number;
+  luminanceIntensity?: number;
+  speed?: number;
+}
+export interface PostProcessingComponentOptions {
+  ssao?: SSAOComponentOptions;
+  dof?: DoFComponentOptions;
+  bloom?: BloomComponentOptions;
+  fog?: FogComponentOptions;
+  vignette?: VignetteComponentOptions;
+  lut?: LutComponentOptions;
+  colorCorrection?: ColorCorrectionComponentOptions;
+  fxaa?: FXAAComponentOptions;
+  smaa?: SMAAComponentOptions;
+  msaa?: MSAAComponentOptions;
+  filmGrain?: FilmGrainComponentOptions;
+  exposure?: number;
+  toneMap?:
+    | "aces"
+    | "agx"
+    | "agxPunchy"
+    | "filmic"
+    | "lottes"
+    | "neutral"
+    | "reinhard"
+    | "reinhard2"
+    | "uchimura"
+    | "uncharted2"
+    | "unreal";
+  opacity?: number;
+  /** Runtime render targets, added by the render pipeline. */
+  _targets?: unknown;
+}
+export interface ReflectionProbeComponentOptions {
+  size?: number;
+}
+export interface SkinComponentOptions {}
+export interface SkyboxComponentOptions {
+  sunPosition?: Vec3;
+  envMap?: GpuTexture;
+  backgroundBlur?: boolean;
+  exposure?: number;
+  turbidity?: number;
+  rayleigh?: number;
+  mieCoefficient?: number;
+  mieDirectionalG?: number;
+  // Runtime, added by the skybox system.
+  dirty?: boolean;
+  _skyTexture?: GpuTexture;
+  _skyTextureChanged?: boolean;
+}
+export interface SpotLightComponentOptions extends LightShadowInternals {
+  color?: Color;
+  intensity?: number;
+  angle?: number;
+  innerAngle?: number;
+  range?: number;
+  /** Shadow-map rasterizer constant depth bias. */
+  depthBias?: number;
+  /**
+   * Shadow-map rasterizer slope-scaled depth bias, the effective term on a
+   * float depth map (raise to remove acne).
+   */
+  depthBiasSlopeScale?: number;
+  /**
+   * Upper bound on the applied depth bias to limit peter-panning (0 disables
+   * the clamp).
+   */
+  depthBiasClamp?: number;
+  /** Soft-shadow (PCSS) light radius in world units: larger widens the penumbra. */
+  bulbRadius?: number;
+  castShadows?: boolean;
+  shadowMapSize?: number;
+}
+export interface TransformComponentOptions {
+  position?: Vec3;
+  rotation?: Quat;
+  scale?: Vec3;
+  // Runtime, added by the transform system.
+  parent?: TransformComponentOptions;
+  entity?: Entity;
+  depth?: number;
+  worldBounds?: AABB;
+  worldPosition?: Vec3;
+  modelMatrix?: Mat4;
+  dirty?: boolean;
+  aabbDirty?: boolean;
+}
+export interface VertexHelperComponentOptions {
+  color?: Color;
+  size?: number;
+  attribute?: string;
+}
 
-/**
- * @typedef {object} DirectionalLightComponentOptions
- * @property {number[]} [color=[1, 1, 1, 1]]
- * @property {number} [intensity=1]
- * @property {number} [depthBias=1] Shadow-map rasterizer constant depth bias.
- * @property {number} [depthBiasSlopeScale=2] Shadow-map rasterizer slope-scaled depth bias, the effective term on a float depth map (raise to remove acne).
- * @property {number} [depthBiasClamp=0] Upper bound on the applied depth bias to limit peter-panning (0 disables the clamp).
- * @property {number} [bulbRadius=1] Soft-shadow (PCSS) light size. A directional light is at infinity, so unlike positional lights (where bulbRadius is a world-space radius) this reads as an angular size relative to the shadow frustum: larger widens the penumbra.
- * @property {boolean} [castShadows=true]
- * @property {number} [shadowMapSize=2048]
- */
-/**
- * @typedef {object} GeometryComponentOptions
- * @property {Float32Array} [positions]
- * @property {Float32Array} [normals]
- * @property {Float32Array} [uvs] Alias: texCoords/texCoords0
- * @property {Float32Array} [uvs1] Alias: texCoords1
- * @property {Float32Array} [vertexColors]
- * @property {Uint16Array | Uint32Array} [cells]
- * @property {Float32Array} [weights]
- * @property {Float32Array} [joints]
- * @property {Float32Array} [offsets] Instanced
- * @property {Float32Array} [rotations] Instanced
- * @property {Float32Array} [scales] Instanced
- * @property {Float32Array} [colors] Instanced
- * @property {number} [count]
- * @property {object} [multiDraw]
- * @property {boolean} [culled]
- * @property {ctx.Primitive} [primitive=ctx.Primitive.Triangles]
- */
-/**
- * @typedef {object} GridHelperComponentOptions
- * @property {number[]} [color=[1, 1, 1, 1]]
- * @property {number[]} [size=10]
- */
-/** @typedef {object} LightHelperComponentOptions */
-/**
- * @typedef {object} TextureTransform
- * @property {number[]} [offset] [x, y]
- * @property {number} [rotation] Angle in radians
- * @property {number[]} [scales] [x, y]
- */
-/**
- * @typedef {object} MaterialComponentOptions
- * @property {boolean} [unlit]
- * @property {undefined | "line"} [type="undefined"]
- * @property {number[]} [baseColor=[1, 1, 1, 1]]
- * @property {number[]} [emissiveColor="undefined"]
- * @property {number} [emissiveIntensity=1]
- * @property {number} [metallic=1]
- * @property {number} [roughness=1]
- * @property {number} [ior]
- * @property {number} [specular]
- * @property {ctx.texture2D | TextureTransform} [specularTexture]
- * @property {number[]} [specularColor=[1, 1, 1]]
- * @property {ctx.texture2D | TextureTransform} [specularColorTexture]
- * @property {ctx.texture2D | TextureTransform} [baseColorTexture]
- * @property {ctx.texture2D | TextureTransform} [emissiveColorTexture]
- * @property {ctx.texture2D | TextureTransform} [normalTexture]
- * @property {number} [normalTextureScale=1]
- * @property {ctx.texture2D | TextureTransform} [roughnessTexture]
- * @property {ctx.texture2D | TextureTransform} [metallicTexture]
- * @property {ctx.texture2D | TextureTransform} [metallicRoughnessTexture]
- * @property {ctx.texture2D | TextureTransform} [occlusionTexture]
- * @property {number} [clearCoat]
- * @property {number} [clearCoatRoughness]
- * @property {ctx.texture2D | TextureTransform} [clearCoatTexture]
- * @property {ctx.texture2D | TextureTransform} [clearCoatRoughnessTexture]
- * @property {ctx.texture2D | TextureTransform} [clearCoatNormalTexture]
- * @property {number} [clearCoatNormalTextureScale]
- * @property {number[]} [sheenColor]
- * @property {number} [sheenRoughness]
- * @property {number} [transmission]
- * @property {ctx.texture2D | TextureTransform} [transmissionTexture]
- * @property {number} [dispersion]
- * @property {number} [diffuseTransmission]
- * @property {ctx.texture2D | TextureTransform} [diffuseTransmissionTexture]
- * @property {number} [diffuseTransmissionColor=[1, 1, 1]]
- * @property {ctx.texture2D | TextureTransform} [diffuseTransmissionColorTexture]
- *
- * @property {number} [thickness]
- * @property {ctx.texture2D | TextureTransform} [thicknessTexture]
- * @property {number} [attenuationDistance]
- * @property {number[]} [attenuationColor]
- * @property {number} [alphaTest="undefined"]
- * @property {ctx.texture2D | TextureTransform} [alphaTexture]
- * @property {boolean} [depthTest=true]
- * @property {boolean} [depthWrite=true]
- * @property {ctx.DepthFunc} [depthFunc=ctx.DepthFunc.Less]
- * @property {boolean} [blend=false]
- * @property {ctx.BlendFactor} [blendSrcRGBFactor="undefined"]
- * @property {ctx.BlendFactor} [blendSrcAlphaFactor="undefined"]
- * @property {ctx.BlendFactor} [blendDstRGBFactor="undefined"]
- * @property {ctx.BlendFactor} [blendDstAlphaFactor="undefined"]
- * @property {boolean} [cullFace=true]
- * @property {ctx.Face} [cullFaceMode=ctx.Face.Back]
- * @property {number} [pointSize=1]
- * @property {boolean} [castShadows=false]
- * @property {boolean} [receiveShadows=false]
- */
-/**
- * @typedef {object} LineMaterialComponentOptions
- * @property {"line"} [type="line"]
- * @property {number[]} [baseColor=[1, 1, 1, 1]]
- * @property {number} [lineWidth=1]
- * @property {number} [lineResolution=16]
- */
-/**
- * @typedef {object} MorphComponentOptions
- * @property {object} sources
- * @property {object} targets
- * @property {object} [current]
- * @property {Array} [weights=[]]
- */
-/**
- * @typedef {object} OrbiterComponentOptions
- * @property {HTMLElement} [element=document.body]
- * @property {number[]} [target=[0, 0, 0]]
- * @property {number} [lat=0]
- * @property {number} [lon=0]
- * @property {number} [distance=0]
- */
-/**
- * @typedef {object} PointLightComponentOptions
- * @property {number[]} [color=[1, 1, 1, 1]]
- * @property {number} [intensity=1]
- * @property {number} [range=10]
- * @property {number} [bulbRadius=1]
- * @property {boolean} [castShadows=true]
- * @property {number} [shadowMapSize=2048]
- */
-/**
- * @typedef {object} SSAOComponentOptions
- * @property {"sao" | "gtao"} [type="sao"]
- * @property {boolean} [noiseTexture=true]
- * @property {number} [mix=1]
- * @property {number} [samples="gtao" ? 6 : 11]
- * @property {number} [intensity=2.2]
- * @property {number} [radius=0.5] Meters
- * @property {number} [blurRadius=0.5]
- * @property {number} [blurSharpness=10]
- * @property {number} [brightness=0]
- * @property {number} [contrast=1] // SSAO
- * @property {number} [bias=0.001] Centimeters
- * @property {number} [spiralTurns=7] // GTAO
- * @property {number} [slices=3]
- * @property {number} [colorBounce=true]
- * @property {number} [colorBounceIntensity=1.0]
- */
-/**
- * @typedef {object} DoFComponentOptions
- * @property {"gustafsson" | "upitis"} [type="gustafsson"] Gustafsson uses a
- *   spiral pattern while Upitis uses a circular one.
- * @property {boolean} [physical=true] Use camera f-stop and focal length
- * @property {number} [focusDistance=7] The point to focus on in meters.
- * @property {number} [focusScale=1] Non physically based value for artistic
- *   control when physical is false, otherwise act as an fStop divider. Larger
- *   aperture (ie, smaller f-stop) or larger focal length (smaller fov) =
- *   smaller depth of field = more blur.
- * @property {boolean} [focusOnScreenPoint=false] Read the depth buffer to find
- *   the first intersecting object to focus on instead of a fixed focus
- *   distance.
- * @property {number[]} [screenPoint=[0.5, 0.5]] The normalized screen point to
- *   focus on when "focusOnScreenPoint" is true.
- * @property {number} [chromaticAberration=0.7] Amount of RGB separation
- * @property {number} [luminanceThreshold=0.7] Threshold for out of focus
- *   hightlights
- * @property {number} [luminanceGain=1] Gain for out of focus hightlights
- * @property {number} [samples=6] Iteration steps. More steps means better blur
- *   but also degraded performances.
- * @property {"disk" | "pentagon"} [shape="disk"] The bokeh shape for type
- *   "upitis".
- * @property {boolean} [debug=false]
- */
-/**
- * @typedef {object} MSAAComponentOptions
- * @property {number} [sampleCount=4] Multisample anti-aliasing samples: 1 or 4.
- */
-/**
- * @typedef {object} FXAAComponentOptions
- * @property {number} [quality=3] For edge luma threshold: 0 to 4.
- * @property {number} [subPixelQuality=0.75] Higher = softer. Helps mitigate
- *   fireflies but will blur small details.
- */
-/**
- * @typedef {object} SMAAComponentOptions
- * @property {number} [quality=2] 0 to 3 (60/80/95/99% of the quality)
- * @property {"luma" | "color" | "depth"} [edges=luma]
- */
-/**
- * @typedef {object} FogComponentOptions
- * @property {number[]} [color=[0.5, 0.5, 0.5]]
- * @property {number} [start=5]
- * @property {number} [density=0.15]
- * @property {number[]} [sunPosition=[1, 1, 1]]
- * @property {number} [sunDispertion=0.2]
- * @property {number} [sunIntensity=0.1]
- * @property {number[]} [sunColor=[0.98, 0.98, 0.7]]
- * @property {number[]} [inscatteringCoeffs=[0.3, 0.3, 0.3]]
- */
-/**
- * @typedef {object} BloomComponentOptions
- * @property {number} [quality=1] The bloom quality: 0 or 1 (0 is faster but
- *   flickers)
- * @property {"luma" | "luminance" | "average"} [colorFunction="luma"] The
- *   function used to determine the brightness of a pixel for the threshold.
- * @property {number} [threshold=1] The brightness value at which pixels are
- *   filtered out for the threshold.
- * @property {"color" | "emissive"} [source="color"] The source texture for the
- *   threshold.
- * @property {number} [intensity=0.1] The strength of the bloom effect.
- * @property {number} [radius=1] The downsampling radius which controls how much
- *   glare gets blended in.
- */
-/**
- * @typedef {object} LutComponentOptions
- * @property {ctx.texture2D} texture
- */
-/**
- * @typedef {object} ColorCorrectionComponentOptions
- * @property {number} [brightness=0]
- * @property {number} [contrast=1]
- * @property {number} [saturation=1]
- * @property {number} [hue=0]
- */
-/**
- * @typedef {object} VignetteComponentOptions
- * @property {number} [radius=0.8]
- * @property {number} [intensity=0.2]
- */
-/**
- * @typedef {object} FilmGrainComponentOptions
- * @property {number} [quality=2]
- * @property {number} [size=1.6]
- * @property {number} [intensity=0.05]
- * @property {number} [colorIntensity=0.6]
- * @property {number} [luminanceIntensity=1]
- * @property {number} [speed=0.5]
- */
-/**
- * @typedef {object} PostProcessingComponentOptions
- * @property {SSAOComponentOptions} [ssao]
- * @property {DoFComponentOptions} [dof]
- * @property {BloomComponentOptions} [bloom]
- * @property {FogComponentOptions} [fog]
- * @property {VignetteComponentOptions} [vignette]
- * @property {LutComponentOptions} [lut]
- * @property {ColorCorrectionComponentOptions} [colorCorrection]
- * @property {FXAAComponentOptions} [fxaa]
- * @property {SMAAComponentOptions} [smaa]
- * @property {FilmGrainComponentOptions} [filmGrain]
- * @property {number} [exposure=1]
- * @property {"aces"
- *   | "agx"
- *   | "agxPunchy"
- *   | "filmic"
- *   | "lottes"
- *   | "neutral"
- *   | "reinhard"
- *   | "reinhard2"
- *   | "uchimura"
- *   | "uncharted2"
- *   | "unreal"} [toneMap="aces"]
- * @property {number} opacity
- */
-/**
- * @typedef {object} ReflectionProbeComponentOptions
- * @property {number} [size=1024]
- */
-/** @typedef {object} SkinComponentOptions */
-/**
- * @typedef {object} SkyboxComponentOptions
- * @property {number[]} [sunPosition]
- * @property {ctx.texture2D} [envMap]
- * @property {boolean} [backgroundBlur=false]
- * @property {number} [exposure=1]
- * @property {number} [turbidity=10]
- * @property {number} [rayleigh=2]
- * @property {number} [mieCoefficient=0.005]
- * @property {number} [mieDirectionalG=0.8]
- */
-/**
- * @typedef {object} SpotLightComponentOptions
- * @property {number[]} [color=[1, 1, 1, 1]]
- * @property {number} [intensity=1]
- * @property {number} [angle=Math.PI / 4]
- * @property {number} [innerAngle=0]
- * @property {number} [range=10]
- * @property {number} [depthBias=1] Shadow-map rasterizer constant depth bias.
- * @property {number} [depthBiasSlopeScale=2] Shadow-map rasterizer slope-scaled depth bias, the effective term on a float depth map (raise to remove acne).
- * @property {number} [depthBiasClamp=0] Upper bound on the applied depth bias to limit peter-panning (0 disables the clamp).
- * @property {number} [bulbRadius=1] Soft-shadow (PCSS) light radius in world units: larger widens the penumbra.
- * @property {boolean} [castShadows=true]
- * @property {number} [shadowMapSize=2048]
- */
-/**
- * @typedef {object} TransformComponentOptions
- * @property {number[]} [position=[0, 0, 0]]
- * @property {number[]} [rotation=[0, 0, 0, 1]]
- * @property {number[]} [scale=[1, 1, 1]]
- */
-/**
- * @typedef {object} VertexHelperComponentOptions
- * @property {number[]} [color=[0, 1, 0, 1]]
- * @property {number[]} [size=1]
- * @property {string} [attribute="normals"]
- */
+// Cached, system-owned resources referenced back from entities.
+/** Transform state cached per entity by the transform system. */
+export interface TransformCache {
+  transform: TransformComponentOptions;
+  modelMatrix: Mat4;
+  localModelMatrix: Mat4;
+  worldPosition: Vec3;
+}
+// Draw-relevant fields (count/instances/indices) are typed permissively:
+// they feed pex-gpu draw commands directly and may legitimately be undefined
+// at runtime (inferred by pex-gpu), which exactOptionalPropertyTypes would
+// otherwise reject when spread into a RenderCommand.
+/** Geometry GPU resources cached per entity by the geometry system. */
+export interface GeometryCache {
+  geometry: GeometryComponentOptions | null;
+  attributes: Record<string, any>;
+  indices: any;
+  count: number;
+  instances: number;
+  primitive?: string;
+  customAttributes?: string[];
+}
+
+// Shaders (pipeline WGSL generators)
+/** Raw WGSL text injected at fixed points of a pipeline shader. */
+export interface ShaderHooks {
+  vertDeclarationsEnd?: string;
+  vertBeforeTransform?: string;
+  vertEnd?: string;
+  fragDeclarationsEnd?: string;
+  fragBeforeTextures?: string;
+  fragBeforeLighting?: string;
+  fragAfterLighting?: string;
+  fragEnd?: string;
+}
+/** Active light counts per type consumed by the standard shader generator. */
+export interface ShaderLightCounts {
+  ambient?: number;
+  directional?: number;
+  point?: number;
+  spot?: number;
+  area?: number;
+}
+/** Options accepted by the pipeline WGSL generators in src/shaders. */
+export interface PipelineShaderOptions {
+  hooks?: ShaderHooks;
+  /** MRT output location for the normal buffer, requires USE_DRAW_BUFFERS. */
+  locationNormal?: number;
+  /** MRT output location for the emissive buffer, requires USE_DRAW_BUFFERS. */
+  locationEmissive?: number;
+  /** MRT output location for the velocity buffer, requires USE_DRAW_BUFFERS. */
+  locationVelocity?: number;
+  /** Size of the skinning joint matrix array. */
+  maxJoints?: number;
+  /** Per-texture texture coordinate set index (0 or 1), e.g. { baseColor: 1 }. */
+  texCoords?: Record<string, number>;
+  /** Active light counts per type (0-4), e.g. { directional: 2, point: 1 }. */
+  lights?: ShaderLightCounts;
+}
+/** Signature of a pipeline WGSL generator. */
+export type PipelineShaderBuilder = (
+  defines?: Set<string>,
+  options?: PipelineShaderOptions,
+) => string;
 
 // System
-/**
- * @typedef {object} SystemOptions
- * @property {import("pex-gpu").GpuContext} ctx
- * @property {ResourceCache} [resourceCache]
- * @property {RenderGraph} [renderGraph]
- */
-/**
- * @callback SystemUpdate
- * @param {Entity[]} entities
- * @param {number} [deltaTime]
- */
-/**
- * @callback SystemDispose
- * @param {Entity[]} entities
- */
-/**
- * @typedef {object} System
- * @property {string} type
- * @property {object} cache
- * @property {boolean} debug
- * @property {SystemUpdate} update
- * @property {SystemDispose} dispose
- */
-/**
- * @typedef RenderEngineOptions
- * @property {number} width
- * @property {number} height
- * @property {System[]} renderers
- * @property {boolean} drawToScreen
- */
-/**
- * @callback RenderEngineRender
- * @param {Entity[]} entities
- * @param {Entity[]} cameraEntities
- * @param {RenderEngineOptions} [options={}]
- */
-/**
- * @callback RenderEngineDebug
- * @param {boolean} enable
- */
-/**
- * @typedef {System} RenderEngine
- * @property {RenderEngineRender} render
- * @property {RenderEngineDebug} debug
- * @property {System[]} systems
- * @property {System[]} renderers
- */
-/**
- * @callback RendererSystemRender
- * @param {RenderView} renderView
- * @param {Entity | Entity[]} entities
- * @param {object} [options={}]
- */
-/**
- * @typedef {object} RendererSystemStageOptions
- * @property {object} [attachmentsLocations]
- * @property {object} [shadowMappingLight]
- * @property {ctx.texture2D} [backgroundColorTexture]
- * @property {boolean} [renderingToReflectionProbe]
- */
-/**
- * @callback RendererSystemStage
- * @param {RenderView[]} renderView
- * @param {Entity[]} entities
- * @param {RendererSystemStageOptions} options
- */
-/**
- * @typedef {object} RendererSystem
- * @property {string} type
- * @property {object} cache
- * @property {boolean} debug
- * @property {Array[]} flagDefinitions
- * @property {SystemUpdate} update
- * @property {SystemDispose} dispose
- * @property {RendererSystemRender} render
- * @property {RendererSystemStage} [renderBackground]
- * @property {RendererSystemStage} [renderShadow]
- * @property {RendererSystemStage} [renderOpaque]
- * @property {RendererSystemStage} [renderTransparent]
- * @property {RendererSystemStage} [renderPost]
- */
+export interface SystemOptions {
+  ctx: GpuContext;
+  resourceCache: ResourceCache;
+  renderGraph: RenderGraph;
+}
+export type SystemUpdate = (entities: Entity[], deltaTime?: number) => void;
+export type SystemDispose = (entities?: Entity[]) => void;
+export interface System {
+  type: string;
+  cache?: Record<number, any>;
+  debug?: boolean;
+  update: SystemUpdate;
+  dispose?: SystemDispose;
+}
+export interface RenderEngineOptions {
+  width?: number;
+  height?: number;
+  renderers?: RendererSystem[];
+  drawToScreen?: boolean;
+  /** Overrides the engine's accumulated time for this render call. */
+  time?: number;
+}
+export type RenderEngineRender = (
+  entities: Entity[],
+  cameraEntities: Entity[],
+  options?: RenderEngineOptions,
+) => void;
+export type RenderEngineDebug = (enable: boolean) => void;
+export interface RenderEngine extends System {
+  render: RenderEngineRender;
+  debug: any;
+  systems: System[];
+  renderers: RendererSystem[];
+}
+export type RendererSystemRender = (
+  renderView: RenderView,
+  entities: Entity | Entity[],
+  options?: any,
+) => void;
+export interface RendererSystemStageOptions {
+  attachmentsLocations?: Record<string, number>;
+  shadowMappingLight?: any;
+  backgroundColorTexture?: GpuTexture | null;
+  renderingToReflectionProbe?: boolean;
+  msaa?: boolean;
+  transparent?: boolean;
+  transmitted?: boolean;
+  cullFaceMode?: string;
+}
+export type RendererSystemStage = (
+  renderView: RenderView,
+  entities: Entity[],
+  options?: RendererSystemStageOptions,
+) => void;
+// Renderer systems accrete per-frame internal state (locations, light data,
+// pipeline caches) and expose a set of optional draw stages (render,
+// renderShadow, renderOpaque, ...) with per-renderer signatures. The index
+// signature keeps that dynamic draw path usable; RendererSystemRender and
+// RendererSystemStage document the stage shape callers rely on.
+export interface RendererSystem {
+  type: string;
+  cache?: Record<number, any>;
+  debug?: boolean;
+  flagDefinitions?: unknown[];
+  [key: string]: any;
+}
 
 // World
-/**
- * @callback WorldAdd
- * @param {Entity} entity
- */
-/**
- * @callback WorldAddSystem
- * @param {System} system
- */
-/**
- * @callback WorldUpdate
- * @param {number} [deltaTime]
- */
-/**
- * @typedef {object} World
- * @property {object[]} entities
- * @property {object[]} systems
- * @property {WorldAdd} add
- * @property {WorldAddSystem} addSystem
- * @property {WorldUpdate} update
- */
+export type WorldAdd = (entity: Entity) => void;
+export type WorldAddSystem = (system: System) => void;
+export type WorldUpdate = (deltaTime?: number) => void;
+export interface World {
+  entities: Entity[];
+  systems: System[];
+  add: WorldAdd;
+  addSystem: WorldAddSystem;
+  update: WorldUpdate;
+}
 
 // Others
-/**
- * @typedef {object} RenderGraph
- * @property {object[]} renderPasses
- * @property {Function} beginFrame
- * @property {Function} renderPass
- * @property {Function} endFrame
- */
-/** @typedef {"Transient" | "Retained"} ResourceCacheUsage */
-/**
- * @typedef {object} ResourceCache
- * @property {Function} beginFrame
- * @property {Function} endFrame
- * @property {Function} dispose
- * @property {ResourceCacheUsage} Usage
- */
-/**
- * @typedef {object} RenderView
- * @property {object} camera
- * @property {Entity} cameraEntity
- * @property {number[]} viewport [x, y, width, height]
- */
+export interface RenderGraph {
+  renderPasses: object[];
+  beginFrame: (...args: any[]) => any;
+  renderPass: (...args: any[]) => any;
+  endFrame: (...args: any[]) => any;
+}
+export type ResourceCacheUsage = "Transient" | "Retained";
+export interface ResourceCache {
+  beginFrame: (...args: any[]) => any;
+  endFrame: (...args: any[]) => any;
+  dispose: (...args: any[]) => any;
+  /** Usage-kind enum map, e.g. `resourceCache.Usage.Retained`. */
+  Usage: Record<string, string>;
+  [key: string]: any;
+}
+/** A camera and the region of a target it renders into. */
+export interface RenderView {
+  camera: CameraComponentOptions;
+  cameraEntity?: Entity;
+  /** [x, y, width, height] */
+  viewport: number[];
+}
 
-export {};
+export type { GpuContext, GpuTexture, GpuBuffer };

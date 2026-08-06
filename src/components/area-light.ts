@@ -1,11 +1,7 @@
-/**
- * Area light component
- *
- * @param {import("../types.js").AreaLightComponentOptions} [options]
- * @returns {object}
- * @alias module:components.areaLight
- */
-export default (options) => ({
+import type { AreaLightComponentOptions } from "../types.js";
+
+/** Area light component */
+export default (options?: AreaLightComponentOptions) => ({
   color: [1, 1, 1, 1],
   intensity: 1,
   disk: false,
