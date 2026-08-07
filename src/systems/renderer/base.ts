@@ -1,4 +1,4 @@
-import { mat2x3, mat3 } from "pex-math";
+import { mat2x3, mat3, mat4 } from "pex-math";
 
 import {
   textureMatrixName,
@@ -15,6 +15,7 @@ import type {
 } from "../../types.js";
 
 const IDENTITY_MAT3 = mat3.create();
+const IDENTITY_MAT4 = mat4.create();
 const TEMP_MAT2X3 = mat2x3.create();
 const TEMP_MAT3_SET = new Map<string, number[]>();
 
@@ -218,8 +219,8 @@ export default (): RendererSystem => ({
     return {
       projectionMatrix: camera.projectionMatrix!,
       viewMatrix: camera.viewMatrix!,
-      inverseViewMatrix: camera.inverseViewMatrix!,
-      cameraPosition: cameraEntity!._transform!.worldPosition,
+      inverseViewMatrix: camera.inverseViewMatrix || IDENTITY_MAT4,
+      cameraPosition: cameraEntity?._transform?.worldPosition ?? [0, 0, 0],
       viewportSize: [viewport[2]!, viewport[3]!],
     };
   },

@@ -1,15 +1,52 @@
 import { chunks as SHADERS } from "pex-shaders";
 
+import {
+  frameStruct,
+  modelStruct,
+  fragmentOutputStruct,
+  getDefineFlags,
+} from "./wgsl.js";
+
+import type { FeatureField } from "../systems/renderer/base.js";
 import type { PipelineShaderOptions } from "../types.js";
 
-// Line-specific vertex attribute @location convention (distinct from the
-// mesh convention in basic.js/standard.js, since a line segment quad has no
-// object-space position/normal/texCoord of its own): 0 position (quad-local
-// corner, xy = signed width offset, z = 0 or 1 selecting endpoint A/B),
-// 1 pointA, 2 pointB, 3 colorA, 4 colorB, 5 lineWidth (per-instance).
-//
-// uFrame.viewportSize doubles as the old uResolution uniform.
+// Line feature defines. The vertex flags come off the geometry attributes, the
+// material flags off the material component (see LINE_*_FIELDS below).
+const VERTEX_DEFINE = {
+  vertexColor: "USE_VERTEX_COLORS",
+  instancedLineWidth: "USE_INSTANCED_LINE_WIDTH",
+} as const;
 
+const MATERIAL_DEFINE = {
+  perspectiveScaling: "USE_PERSPECTIVE_SCALING",
+} as const;
+
+/** Walked against `_geometry.attributes` by the renderer's `getDefines`. */
+export const LINE_VERTEX_FIELDS: readonly FeatureField[] = [
+  { key: "vertexColor", define: VERTEX_DEFINE.vertexColor },
+  { key: "lineWidth", define: VERTEX_DEFINE.instancedLineWidth },
+];
+
+/** Walked against the material by the renderer's `getDefines`. */
+export const LINE_MATERIAL_FIELDS: readonly FeatureField[] = [
+  { key: "perspectiveScaling", define: MATERIAL_DEFINE.perspectiveScaling },
+];
+
+// Path-break sentinel: an endpoint with any component this large marks a
+// discontinuity (the segment is dropped, see vertexMain). A finite value an
+// order of magnitude above LINE_BREAK_THRESHOLD, so real coordinates — [0,0,0]
+// included — are never mistaken for a break. NaN/Inf are deliberately avoided:
+// WGSL has no isNan/isInf and may fold them away under fast math.
+export const LINE_BREAK = 1e34;
+const LINE_BREAK_THRESHOLD = "1e33";
+
+// Line-specific vertex @location convention (distinct from the mesh convention
+// in basic.ts/standard.ts, so its VertexInput is declared inline rather than
+// via vertexInputStruct): a line segment quad has no object-space attributes of
+// its own. 0 position (quad-local corner, xy = signed width offset, z = 0 or 1
+// selecting endpoint A/B), 1 pointA, 2 pointB, 3 colorA, 4 colorB,
+// 5 lineWidth (per-instance). uFrame.viewportSize doubles as the old
+// uResolution uniform.
 export const lineShader = (
   defines: Set<string> = new Set(),
   options: PipelineShaderOptions = {},
@@ -17,29 +54,17 @@ export const lineShader = (
   const hooks = options.hooks || {};
   const { locationNormal = -1, locationEmissive = -1 } = options;
 
-  const useVertexColors = defines.has("USE_VERTEX_COLORS");
-  const useInstancedLineWidth = defines.has("USE_INSTANCED_LINE_WIDTH");
-  const usePerspectiveScaling = defines.has("USE_PERSPECTIVE_SCALING");
+  const vertexFlags = getDefineFlags(VERTEX_DEFINE, defines);
+  const materialFlags = getDefineFlags(MATERIAL_DEFINE, defines);
   const useMSAA = defines.has("USE_MSAA");
   const useDrawBuffers = defines.has("USE_DRAW_BUFFERS");
   const useNormalOutput = useDrawBuffers && locationNormal >= 0;
   const useEmissiveOutput = useDrawBuffers && locationEmissive >= 0;
 
   return /* wgsl */ `
-struct Frame {
-  projectionMatrix: mat4x4f,
-  viewMatrix: mat4x4f,
-  inverseViewMatrix: mat4x4f,
-  cameraPosition: vec3f,
-  viewportSize: vec2f,
-}
-@group(0) @binding(0) var<uniform> uFrame: Frame;
+${frameStruct()}
 
-struct Model {
-  modelMatrix: mat4x4f,
-  normalMatrix: mat3x3f,
-}
-@group(3) @binding(0) var<uniform> uModel: Model;
+${modelStruct()}
 
 struct Material {
   baseColor: vec4f,
@@ -51,20 +76,19 @@ struct VertexInput {
   @location(0) position: vec3f,
   @location(1) pointA: vec3f,
   @location(2) pointB: vec3f,
-  ${useVertexColors ? "@location(3) colorA: vec4f,\n  @location(4) colorB: vec4f," : ""}
-  ${useInstancedLineWidth ? "@location(5) lineWidth: vec2f," : ""}
+  ${vertexFlags.vertexColor ? "@location(3) colorA: vec4f,\n  @location(4) colorB: vec4f," : ""}
+  ${vertexFlags.instancedLineWidth ? "@location(5) lineWidth: vec2f," : ""}
 }
 
 struct Varyings {
   @builtin(position) position: vec4f,
-  ${useVertexColors ? "@location(0) color: vec4f," : ""}
+  ${vertexFlags.vertexColor ? "@location(0) color: vec4f," : ""}
 }
 
-struct FragmentOutput {
-  @location(0) color: vec4f,
-  ${useNormalOutput ? `@location(${locationNormal}) normal: vec4f,` : ""}
-  ${useEmissiveOutput ? `@location(${locationEmissive}) emissive: vec4f,` : ""}
-}
+${fragmentOutputStruct({
+  normal: useNormalOutput ? locationNormal : -1,
+  emissive: useEmissiveOutput ? locationEmissive : -1,
+})}
 
 ${hooks.vertDeclarationsEnd ?? ""}
 
@@ -74,12 +98,15 @@ fn vertexMain(input: VertexInput) -> Varyings {
 
   var lineWidthScale = vec2f(1.0);
   ${
-    useVertexColors
+    vertexFlags.vertexColor
       ? "output.color = mix(input.colorA, input.colorB, input.position.z);\n  lineWidthScale = vec2f(input.colorA.w, input.colorB.w);"
       : ""
   }
 
-  if (length(input.pointA) == 0.0 || length(input.pointB) == 0.0) {
+  // Drop the segment on a path break (endpoint at the LINE_BREAK sentinel).
+  // Finite magnitude test only — see LINE_BREAK.
+  let threshold = vec3f(${LINE_BREAK_THRESHOLD});
+  if (any(abs(input.pointA) > threshold) || any(abs(input.pointB) > threshold)) {
     output.position = vec4f(0.0, 0.0, 0.0, 1.0);
   } else {
     let positionViewA = uFrame.viewMatrix * uModel.modelMatrix * vec4f(input.pointA, 1.0);
@@ -96,7 +123,7 @@ fn vertexMain(input: VertexInput) -> Varyings {
 
     var width = uMaterial.lineWidth * (input.position.x * xBasis + input.position.y * yBasis);
 
-    ${useInstancedLineWidth ? "width *= input.lineWidth;" : ""}
+    ${vertexFlags.instancedLineWidth ? "width *= input.lineWidth;" : ""}
 
     // Heuristic for resolution scaling to be relative to height / 1000
     width *= uFrame.viewportSize.y * 0.001;
@@ -104,7 +131,7 @@ fn vertexMain(input: VertexInput) -> Varyings {
     var pt0 = lineWidthScale.x * width;
     var pt1 = lineWidthScale.y * width;
 
-    ${usePerspectiveScaling ? "pt0 /= -positionViewA.z;\n    pt1 /= -positionViewB.z;" : ""}
+    ${materialFlags.perspectiveScaling ? "pt0 /= -positionViewA.z;\n    pt1 /= -positionViewB.z;" : ""}
 
     pt0 += screen0;
     pt1 += screen1;
@@ -132,7 +159,7 @@ fn fragmentMain(input: Varyings) -> FragmentOutput {
   var output: FragmentOutput;
   var color = decode(uMaterial.baseColor, SRGB);
 
-  ${useVertexColors ? "color *= decode(input.color, SRGB);" : ""}
+  ${vertexFlags.vertexColor ? "color *= decode(input.color, SRGB);" : ""}
 
   ${useMSAA ? "color = vec4f(reversibleToneMap(color.xyz), color.w);" : ""}
 

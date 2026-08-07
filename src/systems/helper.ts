@@ -526,7 +526,6 @@ export default () => ({
     for (let i = 0; i < positions.length; i++) {
       const position = positions[i];
       if (modelMatrix) vec3.multMat4(position, modelMatrix);
-      position[0] = position[0] + Number.EPSILON; // TODO: line renderer at [0, 0, 0]
 
       if (isArrayOfColors) {
         vertexColor = [...color[i % color.length]];

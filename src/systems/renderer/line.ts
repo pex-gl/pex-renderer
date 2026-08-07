@@ -1,27 +1,29 @@
-// @ts-nocheck
-import { avec3 } from "pex-math";
+import { avec3, mat3 } from "pex-math";
+import { submit, createBuffer } from "pex-gpu";
 
 import createBaseSystem from "./base.js";
-import { lineShader } from "../../shaders/line.js";
+import {
+  lineShader,
+  LINE_VERTEX_FIELDS,
+  LINE_MATERIAL_FIELDS,
+} from "../../shaders/line.js";
 
-// Impacts program caching
-// prettier-ignore
-const flagDefinitions = [
-  [["options", "attachmentsLocations", "color"], "LOCATION_COLOR", { type: "value" }],
-  [["options", "attachmentsLocations", "normal"], "LOCATION_NORMAL", { type: "value" }],
-  [["options", "attachmentsLocations", "emissive"], "LOCATION_EMISSIVE", { type: "value" }],
-  [["options", "msaa"], "USE_MSAA"],
+import type {
+  Entity,
+  RendererSystem,
+  RenderView,
+  SystemOptions,
+} from "../../types.js";
 
-  [["material", "baseColor"], "", { uniform: "uBaseColor" }],
-  [["material", "lineWidth"], "", { uniform: "uLineWidth" }],
-  [["material", "perspectiveScaling"], "USE_PERSPECTIVE_SCALING"],
-  [["_geometry", "attributes", "aVertexColor"], "USE_VERTEX_COLORS"],
-  [["_geometry", "attributes", "aLineWidth"], "USE_INSTANCED_LINE_WIDTH"],
-];
+// Reused per draw; the Model struct carries a normalMatrix the line shader
+// never reads, but WGSL struct packing still requires the member.
+const NORMAL_MATRIX = mat3.create();
 
-// Impacts pipeline caching
-const pipelineMaterialProps = ["id", "depthWrite", "depthTest"];
+const FLOAT = Float32Array.BYTES_PER_ELEMENT;
 
+// Base round-cap quad (6 verts): xy is the signed width offset, z selects the
+// endpoint (0 = A, 1 = B). getLinePositionsBuffer appends `resolution` cap
+// segments on each end.
 // prettier-ignore
 const instanceRoundRound = Float32Array.of(
   0, -0.5, 0,
@@ -35,33 +37,56 @@ const instanceRoundRound = Float32Array.of(
 /**
  * Line renderer
  *
- * @param {import("../../types.js").SystemOptions} options
- * @returns {import("../../types.js").RendererSystem}
+ * Screen-space expanded line segments built on the `line` WGSL generator. Each
+ * segment is drawn as an instanced quad (plus round caps); per-instance
+ * endpoints alias the geometry position buffer via strided attributes. Uniforms
+ * follow the shared bind group convention: @group(0) Frame, @group(2) Material,
+ * @group(3) Model.
  */
-export default ({ ctx } = {}) => ({
+export default ({ ctx }: SystemOptions): RendererSystem => ({
   ...createBaseSystem(),
   type: "line-renderer",
-  cache: {
-    positionBuffers: {},
-  },
+  // Round-cap quad buffers keyed by material.lineResolution.
+  cache: {},
   debug: false,
-  flagDefinitions,
-  getShader: () => lineShader(),
-  getPipelineHash(entity) {
-    return this.getHashFromProps(
-      entity.material,
-      pipelineMaterialProps,
-      this.debug,
-    );
-  },
-  getPipelineOptions(entity) {
+
+  getShader: (defines: Set<string>, options: any) => lineShader(defines, options),
+  getShaderOptions() {
+    const { _locations } = this;
     return {
-      depthWrite: !!entity.material.depthWrite,
-      depthTest: !!entity.material.depthTest,
+      locationNormal: _locations.normal ?? -1,
+      locationEmissive: _locations.emissive ?? -1,
     };
   },
-  getLinePositionsBuffer(resolution) {
-    if (!this.cache.positionBuffers[resolution]) {
+  getDefines(entity: any) {
+    const defines = new Set<string>();
+    this.getFeatureFlags(entity._geometry.attributes, LINE_VERTEX_FIELDS, defines);
+    this.getFeatureFlags(entity.material, LINE_MATERIAL_FIELDS, defines);
+    if (this._locations.normal >= 0 || this._locations.emissive >= 0) {
+      defines.add("USE_DRAW_BUFFERS");
+    }
+    if (this._msaa) defines.add("USE_MSAA");
+    return defines;
+  },
+  getVariantKey(entity: any, defines: Set<string>) {
+    return [
+      [...defines].sort().join("|"),
+      this._locations.normal ?? -1,
+      this._locations.emissive ?? -1,
+    ].join("_");
+  },
+  getPipelineOptions(entity: any) {
+    const { material } = entity;
+    // Camera-facing quads have no meaningful winding, so culling stays off.
+    return {
+      depthWriteEnabled: material.depthWrite !== false,
+      depthCompare: material.depthTest === false ? "always" : "less",
+      cullMode: "none",
+    };
+  },
+  getLinePositionsBuffer(resolution: number) {
+    const cache = this.cache!;
+    if (!cache[resolution]) {
       const positions = new Float32Array(
         instanceRoundRound.length + resolution * 18,
       );
@@ -110,20 +135,17 @@ export default ({ ctx } = {}) => ({
         );
       }
 
-      this.cache.positionBuffers[resolution] = ctx.vertexBuffer(positions);
+      cache[resolution] = createBuffer(ctx, {
+        usage: "vertex",
+        data: positions,
+      });
     }
 
-    return this.cache.positionBuffers[resolution];
+    return cache[resolution];
   },
-  render(renderView, entities, options) {
+  render(renderView: RenderView, entities: Entity[], options: any) {
     const shadowMapping = !!options.shadowMappingLight;
-
-    const sharedUniforms = {
-      // uViewportSize: [renderView.viewport[2], renderView.viewport[3]],
-      uResolution: [renderView.viewport[2], renderView.viewport[3]],
-      uProjectionMatrix: renderView.camera.projectionMatrix,
-      uViewMatrix: renderView.camera.viewMatrix,
-    };
+    const uFrame = this.getFrameUniforms(renderView);
 
     const renderableEntities = entities.filter(
       (entity) =>
@@ -134,64 +156,102 @@ export default ({ ctx } = {}) => ({
     );
 
     for (let i = 0; i < renderableEntities.length; i++) {
-      const entity = renderableEntities[i];
+      const entity = renderableEntities[i]!;
+      const material: any = entity.material;
+      const geometry: any = entity.geometry;
+      const { attributes } = entity._geometry!;
 
-      // Also computes this.uniforms
       const pipeline = this.getPipeline(entity, options);
 
-      const uniforms = {
-        uModelMatrix: entity._transform.modelMatrix,
-      };
-      Object.assign(uniforms, sharedUniforms, this.uniforms);
-
-      const resolution = entity.material.lineResolution;
+      const resolution = material.lineResolution;
       const positionBuffer = this.getLinePositionsBuffer(resolution);
 
-      const attributes = {
-        aPosition: positionBuffer,
-        aPointA: {
-          buffer: entity._geometry.attributes.aPosition.buffer,
-          divisor: 1,
-          stride: Float32Array.BYTES_PER_ELEMENT * 6,
+      // Per-instance endpoints alias the position buffer: stride 6 floats (one
+      // segment = 2 points), pointB offset by one point (3 floats).
+      const drawAttributes: Record<string, any> = {
+        position: { buffer: positionBuffer },
+        pointA: {
+          buffer: attributes.position.buffer,
+          stepMode: "instance",
+          stride: FLOAT * 6,
         },
-        aPointB: {
-          buffer: entity._geometry.attributes.aPosition.buffer,
-          divisor: 1,
-          stride: Float32Array.BYTES_PER_ELEMENT * 6,
-          offset: Float32Array.BYTES_PER_ELEMENT * 3,
+        pointB: {
+          buffer: attributes.position.buffer,
+          stepMode: "instance",
+          stride: FLOAT * 6,
+          offset: FLOAT * 3,
         },
       };
 
-      if (entity._geometry.attributes.aVertexColor) {
-        attributes.aColorA = {
-          buffer: entity._geometry.attributes.aVertexColor.buffer,
-          divisor: 1,
-          stride: Float32Array.BYTES_PER_ELEMENT * 8,
+      if (attributes.vertexColor) {
+        drawAttributes.colorA = {
+          buffer: attributes.vertexColor.buffer,
+          stepMode: "instance",
+          stride: FLOAT * 8,
         };
-        attributes.aColorB = {
-          buffer: entity._geometry.attributes.aVertexColor.buffer,
-          divisor: 1,
-          stride: Float32Array.BYTES_PER_ELEMENT * 8,
-          offset: Float32Array.BYTES_PER_ELEMENT * 4,
+        drawAttributes.colorB = {
+          buffer: attributes.vertexColor.buffer,
+          stepMode: "instance",
+          stride: FLOAT * 8,
+          offset: FLOAT * 4,
         };
       }
 
-      ctx.submit({
-        name: "drawLineGeometryCmd",
+      if (attributes.lineWidth) {
+        drawAttributes.lineWidth = {
+          buffer: attributes.lineWidth.buffer,
+          stepMode: "instance",
+        };
+      }
+
+      const positions = geometry.positions;
+
+      submit(ctx, {
+        label: "drawLineGeometryCmd",
         pipeline,
-        attributes,
+        attributes: drawAttributes,
         count: (instanceRoundRound.length + resolution * 18) / 3,
-        instances: entity.geometry.positions[0].length
-          ? entity.geometry.positions.length / 2
-          : entity.geometry.positions.length / 6,
-        uniforms,
+        instanceCount: positions[0].length
+          ? positions.length / 2
+          : positions.length / 6,
+        uniforms: {
+          uFrame,
+          uModel: {
+            modelMatrix: entity._transform!.modelMatrix,
+            normalMatrix: mat3.fromMat4(
+              NORMAL_MATRIX,
+              entity._transform!.modelMatrix,
+            ),
+          },
+          uMaterial: {
+            baseColor: material.baseColor,
+            lineWidth: material.lineWidth,
+          },
+        },
       });
     }
   },
-  renderShadow(renderView, entities, options) {
+  renderShadow(renderView: RenderView, entities: Entity[], options: any = {}) {
+    this.setStageState(options);
     this.render(renderView, entities, options);
   },
-  renderOpaque(renderView, entities, options) {
+  renderOpaque(renderView: RenderView, entities: Entity[], options: any = {}) {
+    this.setStageState(options);
     this.render(renderView, entities, options);
+  },
+  setStageState(options: any) {
+    const { attachmentsLocations = {}, msaa } = options;
+    this._msaa = msaa;
+    this._locations = {
+      normal: attachmentsLocations.normal ?? -1,
+      emissive: attachmentsLocations.emissive ?? -1,
+    };
+  },
+  dispose() {
+    for (const buffer of Object.values(this.cache!)) {
+      (buffer as any).dispose?.();
+    }
+    this.cache = {};
+    this.pipelineCache.clear();
   },
 });

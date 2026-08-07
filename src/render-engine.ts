@@ -38,6 +38,7 @@ export default ({
   const renderPipelineSystem = systems.renderPipeline(options);
 
   const standardRendererSystem = systems.renderer.standard(options);
+  const lineRendererSystem = systems.renderer.line(options);
   const skyboxRendererSystem = systems.renderer.skybox(options);
 
   const renderEngine = {
@@ -69,7 +70,11 @@ export default ({
       lightSystem,
       renderPipelineSystem,
     ] as System[],
-    renderers: [standardRendererSystem, skyboxRendererSystem],
+    renderers: [
+      standardRendererSystem,
+      lineRendererSystem,
+      skyboxRendererSystem,
+    ],
     update(entities: Entity[], deltaTime?: number) {
       const now = performance.now();
       this.deltaTime = deltaTime || (now - this._prevTime) / 1000;

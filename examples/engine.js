@@ -28,6 +28,30 @@ const geometryEntity = createEntity({
 });
 world.add(geometryEntity);
 
+const axesEntity = createEntity({
+  transform: components.transform(),
+  geometry: components.geometry({
+    positions: [
+      [0, 0, 0],
+      [1, 0, 0],
+      [0, 0, 0],
+      [0, 1, 0],
+      [0, 0, 0],
+      [0, 0, 1],
+    ],
+    vertexColors: [
+      [1, 0, 0, 1],
+      [1, 0, 0, 1],
+      [0, 1, 0, 1],
+      [0, 1, 0, 1],
+      [0, 0, 1, 1],
+      [0, 0, 1, 1],
+    ],
+  }),
+  material: components.material({ type: "line", lineWidth: 3 }),
+});
+world.add(axesEntity);
+
 const skyboxEntity = createEntity({
   transform: components.transform(),
   skybox: components.skybox({ sunPosition: [0, 0.15, -1] }),
