@@ -2,7 +2,7 @@ import { chunks as SHADERS } from "pex-shaders";
 
 import type { PipelineShaderOptions } from "../types.js";
 
-export default (
+export const blitShader = (
   defines: Set<string> = new Set(),
   options: PipelineShaderOptions = {},
 ): string => {
@@ -29,7 +29,6 @@ fn vertexMain(input: VertexInput) -> Varyings {
   return output;
 }
 
-// Fragment includes
 ${SHADERS.encodeDecode}
 
 ${hooks.fragDeclarationsEnd ?? ""}

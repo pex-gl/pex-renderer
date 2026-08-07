@@ -1,15 +1,41 @@
 import { chunks as SHADERS } from "pex-shaders";
 
+import type { FeatureField } from "../systems/renderer/base.js";
+import {
+  createBindingAllocator,
+  fragmentOutputStruct,
+  frameStruct,
+  modelStruct,
+  getTexCoordGetter,
+  getDefineFlags,
+  textureMatrixField,
+  textureSamplerDeclaration,
+  vertexInputStruct,
+  vertexTransform,
+} from "./wgsl.js";
 import type { PipelineShaderOptions } from "../types.js";
 
-/** A material texture's uniform binding slot (texture + sampler). */
-type MaterialTextureBinding = { tex: number; samp: number };
+const VERTEX_DEFINE = {
+  texCoord0: "USE_TEXCOORD_0",
+  texCoord1: "USE_TEXCOORD_1",
+  vertexColor: "USE_VERTEX_COLORS",
+  instancedOffset: "USE_INSTANCED_OFFSET",
+  instancedScale: "USE_INSTANCED_SCALE",
+  instancedRotation: "USE_INSTANCED_ROTATION",
+  instancedColor: "USE_INSTANCED_COLOR",
+} as const;
 
-// See depth-pass.js: same vertex-stage conventions (including the 1.3x
-// displacement stretch), but this pass outputs the front-facing-corrected
-// view-space normal instead of packed depth.
+export const DEPTH_PRE_PASS_VERTEX_FIELDS: readonly FeatureField[] = [
+  { key: "texCoord0", define: VERTEX_DEFINE.texCoord0 },
+  { key: "texCoord1", define: VERTEX_DEFINE.texCoord1 },
+  { key: "vertexColor", define: VERTEX_DEFINE.vertexColor },
+  { key: "offset", define: VERTEX_DEFINE.instancedOffset },
+  { key: "scale", define: VERTEX_DEFINE.instancedScale },
+  { key: "rotation", define: VERTEX_DEFINE.instancedRotation },
+  { key: "instanceColor", define: VERTEX_DEFINE.instancedColor },
+];
 
-export default (
+export const depthPrePassShader = (
   defines: Set<string> = new Set(),
   options: PipelineShaderOptions = {},
 ): string => {
@@ -17,17 +43,11 @@ export default (
   const { maxJoints = 256 } = options;
   const texCoords = options.texCoords || {};
 
-  const tc = (key: string) => texCoords[key] ?? 0;
+  const tc = getTexCoordGetter(texCoords);
 
   const useNormals = defines.has("USE_NORMALS");
-  const useTexCoord0 = defines.has("USE_TEXCOORD_0");
-  const useTexCoord1 = defines.has("USE_TEXCOORD_1");
-  const useInstancedOffset = defines.has("USE_INSTANCED_OFFSET");
-  const useInstancedScale = defines.has("USE_INSTANCED_SCALE");
-  const useInstancedRotation = defines.has("USE_INSTANCED_ROTATION");
-  const useInstancedColor = defines.has("USE_INSTANCED_COLOR");
-  const useVertexColors = defines.has("USE_VERTEX_COLORS");
-  const useColor = useVertexColors || useInstancedColor;
+  const vertexFlags = getDefineFlags(VERTEX_DEFINE, defines);
+  const useColor = vertexFlags.vertexColor || vertexFlags.instancedColor;
   const useDisplacementTexture = defines.has("USE_DISPLACEMENT_TEXTURE");
   const useSkin = defines.has("USE_SKIN");
   const useBaseColorTexture = defines.has("USE_BASE_COLOR_TEXTURE");
@@ -35,35 +55,24 @@ export default (
   const useAlphaTest = defines.has("USE_ALPHA_TEST");
 
   const colorAssignment =
-    useVertexColors && useInstancedColor
+    vertexFlags.vertexColor && vertexFlags.instancedColor
       ? "output.color = input.vertexColor * input.instanceColor;"
-      : useInstancedColor
+      : vertexFlags.instancedColor
         ? "output.color = input.instanceColor;"
-        : useVertexColors
+        : vertexFlags.vertexColor
           ? "output.color = input.vertexColor;"
           : "";
 
   const vColorExpr = useColor ? "input.color" : "vec4f(1.0)";
 
-  // ---- @group(2) Material: binding numbers (0 is the Material uniform struct itself) ----
-  let nextMaterialBinding = 1;
-  const bindMaterialTexture = (): MaterialTextureBinding => ({
-    tex: nextMaterialBinding++,
-    samp: nextMaterialBinding++,
-  });
-  const matrixField = (name: string, binding: MaterialTextureBinding | null) =>
-    binding ? `${name}TextureMatrix: mat3x3f,` : "";
-  const textureDecl = (
-    varName: string,
-    binding: MaterialTextureBinding | null,
-    kind = "texture_2d<f32>",
-  ) =>
-    binding
-      ? `@group(2) @binding(${binding.tex}) var ${varName}: ${kind};\n@group(2) @binding(${binding.samp}) var ${varName}Sampler: sampler;`
-      : "";
+  const materialBindings = createBindingAllocator(1);
 
-  const baseColorTex = useBaseColorTexture ? bindMaterialTexture() : null;
-  const alphaTex = useAlphaTexture ? bindMaterialTexture() : null;
+  const baseColorTex = useBaseColorTexture
+    ? materialBindings.nextTextureSampler()
+    : null;
+  const alphaTex = useAlphaTexture
+    ? materialBindings.nextTextureSampler()
+    : null;
 
   const alphaBlock = () => {
     if (!useAlphaTexture && !useAlphaTest) return "";
@@ -77,52 +86,41 @@ export default (
   };
 
   return /* wgsl */ `
-struct Frame {
-  projectionMatrix: mat4x4f,
-  viewMatrix: mat4x4f,
-  inverseViewMatrix: mat4x4f,
-  cameraPosition: vec3f,
-  viewportSize: vec2f,
-}
-@group(0) @binding(0) var<uniform> uFrame: Frame;
+${frameStruct()}
 
-struct Model {
-  modelMatrix: mat4x4f,
-  normalMatrix: mat3x3f,
-  ${useDisplacementTexture ? "displacement: f32," : ""}
-}
-@group(3) @binding(0) var<uniform> uModel: Model;
-${useSkin ? `@group(3) @binding(1) var<uniform> uJointMatrices: array<mat4x4f, ${maxJoints}>;` : ""}
-${useDisplacementTexture ? "@group(3) @binding(2) var uDisplacementTexture: texture_2d<f32>;\n@group(3) @binding(3) var uDisplacementTextureSampler: sampler;" : ""}
+${modelStruct({
+  displacementTexture: useDisplacementTexture,
+  skin: useSkin,
+  maxJoints,
+})}
 
 struct Material {
   baseColor: vec4f,
-  ${matrixField("baseColor", baseColorTex)}
-  ${matrixField("alpha", alphaTex)}
+  ${textureMatrixField("baseColorTexture", baseColorTex)}
+  ${textureMatrixField("alphaTexture", alphaTex)}
   ${useAlphaTest ? "alphaTest: f32," : ""}
 }
 @group(2) @binding(0) var<uniform> uMaterial: Material;
-${textureDecl("uBaseColorTexture", baseColorTex)}
-${textureDecl("uAlphaTexture", alphaTex)}
+${textureSamplerDeclaration(2, baseColorTex, "uBaseColorTexture")}
+${textureSamplerDeclaration(2, alphaTex, "uAlphaTexture")}
 
-struct VertexInput {
-  @location(0) position: vec3f,
-  ${useNormals ? "@location(1) normal: vec3f," : ""}
-  ${useTexCoord0 || useDisplacementTexture ? "@location(3) texCoord0: vec2f," : ""}
-  ${useTexCoord1 ? "@location(4) texCoord1: vec2f," : ""}
-  ${useVertexColors ? "@location(5) vertexColor: vec4f," : ""}
-  ${useInstancedOffset ? "@location(6) offset: vec3f," : ""}
-  ${useInstancedScale ? "@location(7) scale: vec3f," : ""}
-  ${useInstancedRotation ? "@location(8) rotation: vec4f," : ""}
-  ${useInstancedColor ? "@location(9) instanceColor: vec4f," : ""}
-  ${useSkin ? "@location(10) joint: vec4f,\n  @location(11) weight: vec4f," : ""}
-}
+${vertexInputStruct({
+  normal: useNormals,
+  texCoord0: vertexFlags.texCoord0 || useDisplacementTexture,
+  texCoord1: vertexFlags.texCoord1,
+  vertexColor: vertexFlags.vertexColor,
+  instancedOffset: vertexFlags.instancedOffset,
+  instancedScale: vertexFlags.instancedScale,
+  instancedRotation: vertexFlags.instancedRotation,
+  instancedColor: vertexFlags.instancedColor,
+  skin: useSkin,
+})}
 
 struct Varyings {
   @builtin(position) position: vec4f,
   @location(0) normalView: vec3f,
   @location(1) texCoord0: vec2f,
-  ${useTexCoord1 ? "@location(2) texCoord1: vec2f," : ""}
+  ${vertexFlags.texCoord1 ? "@location(2) texCoord1: vec2f," : ""}
   @location(3) positionView: vec3f,
   ${useColor ? "@location(4) color: vec4f," : ""}
 }
@@ -137,9 +135,8 @@ struct PBRData {
 // Feature toggles the included chunks expect this pipeline shader to declare.
 override DEPTH_PASS_ONLY: bool = false;
 override DEPTH_PRE_PASS_ONLY: bool = true;
-override USE_TEXCOORD_1: bool = ${useTexCoord1};
+override USE_TEXCOORD_1: bool = ${vertexFlags.texCoord1};
 
-// Vertex includes
 ${SHADERS.math.quatToMat4}
 
 ${hooks.vertDeclarationsEnd ?? ""}
@@ -153,10 +150,10 @@ fn vertexMain(input: VertexInput) -> Varyings {
   ${useNormals ? "normal = input.normal;" : ""}
 
   var texCoord = vec2f(0.0, 0.0);
-  ${useTexCoord0 ? "texCoord = input.texCoord0;" : ""}
+  ${vertexFlags.texCoord0 ? "texCoord = input.texCoord0;" : ""}
   output.texCoord0 = texCoord;
 
-  ${useTexCoord1 ? "output.texCoord1 = input.texCoord1;" : ""}
+  ${vertexFlags.texCoord1 ? "output.texCoord1 = input.texCoord1;" : ""}
 
   ${hooks.vertBeforeTransform ?? ""}
 
@@ -166,30 +163,13 @@ fn vertexMain(input: VertexInput) -> Varyings {
       : ""
   }
 
-  var positionWorld: vec4f;
-  ${
-    useSkin
-      ? `let skinMat =
-    input.weight.x * uJointMatrices[u32(input.joint.x)] +
-    input.weight.y * uJointMatrices[u32(input.joint.y)] +
-    input.weight.z * uJointMatrices[u32(input.joint.z)] +
-    input.weight.w * uJointMatrices[u32(input.joint.w)];
-
-  normal = (skinMat * vec4f(normal, 0.0)).xyz;
-
-  positionWorld = skinMat * position;
-
-  ${useInstancedScale ? "positionWorld = vec4f(positionWorld.xyz * input.scale, positionWorld.w);" : ""}
-
-  ${useInstancedRotation ? "let rotationMat = quatToMat4(input.rotation);\n  positionWorld = rotationMat * positionWorld;\n  normal = (rotationMat * vec4f(normal, 0.0)).xyz;" : ""}
-
-  ${useInstancedOffset ? "positionWorld = vec4f(positionWorld.xyz + input.offset, positionWorld.w);" : ""}
-
-  output.normalView = (uFrame.viewMatrix * vec4f(normal, 0.0)).xyz;`
-      : `${useInstancedScale ? "position = vec4f(position.xyz * input.scale, position.w);\n  " : ""}${useInstancedRotation ? "let rotationMat = quatToMat4(input.rotation);\n  position = rotationMat * position;\n  normal = (rotationMat * vec4f(normal, 0.0)).xyz;\n  " : ""}${useInstancedOffset ? "position = vec4f(position.xyz + input.offset, position.w);\n  " : ""}
-  positionWorld = uModel.modelMatrix * position;
-  output.normalView = uModel.normalMatrix * normal;`
-  }
+  ${vertexTransform({
+    useSkin,
+    instancedScale: vertexFlags.instancedScale,
+    instancedRotation: vertexFlags.instancedRotation,
+    instancedOffset: vertexFlags.instancedOffset,
+    transformNormal: true,
+  })}
 
   ${colorAssignment}
 
@@ -204,7 +184,6 @@ fn vertexMain(input: VertexInput) -> Varyings {
   return output;
 }
 
-// Fragment includes
 ${SHADERS.encodeDecode}
 ${SHADERS.textureCoordinates}
 ${SHADERS.baseColor}
@@ -212,9 +191,7 @@ ${SHADERS.alpha}
 
 ${hooks.fragDeclarationsEnd ?? ""}
 
-struct FragmentOutput {
-  @location(0) color: vec4f,
-}
+${fragmentOutputStruct()}
 
 @fragment
 fn fragmentMain(input: Varyings, @builtin(front_facing) frontFacing: bool) -> FragmentOutput {
@@ -222,7 +199,7 @@ fn fragmentMain(input: Varyings, @builtin(front_facing) frontFacing: bool) -> Fr
 
   var data: PBRData;
   data.texCoord0 = input.texCoord0;
-  ${useTexCoord1 ? "data.texCoord1 = input.texCoord1;" : ""}
+  ${vertexFlags.texCoord1 ? "data.texCoord1 = input.texCoord1;" : ""}
 
   ${
     useBaseColorTexture

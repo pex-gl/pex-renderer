@@ -14,7 +14,7 @@ This package is scaffolded and managed with [Snowdev](https://github.com/dmnsgn/
 - `npm run build` (`snowdev build`): lints/formats with ESLint + Prettier, runs TypeScript (type definitions are generated from JSDoc in `types/`), and updates the README API docs from JSDoc.
 - `npm run release` / `npm run release:alpha` (`snowdev release`): bumps version, generates changelog, tags a commit. Uses Conventional Commits + Angular preset.
 
-- `npx tsc --noEmit` — quick typecheck (strict mode, `exactOptionalPropertyTypes`).
+- `npx tsc --noEmit` — quick typecheck (strict mode, `exactOptionalPropertyTypes`) from globally installed `snowdev`
 
 There is no separate test suite in this repo; correctness is validated through the visual examples under `examples/` (served via `index.html`, `examples/index.js`) and manual inspection.
 

@@ -13,11 +13,16 @@ export interface TextureTransform {
   /** Angle in radians. */
   rotation?: number;
   /** [x, y] */
-  scales?: Vec2;
+  scale?: Vec2;
+  /** Vertex texCoord set to sample: 0 (texCoord0) or 1 (texCoord1). */
+  texCoord?: 0 | 1;
 }
 
-/** A material texture: a GPU texture, optionally with a UV transform. */
-export type MaterialTexture = GpuTexture | TextureTransform;
+/**
+ * A material texture: a GPU texture, its properties optionally decorated
+ * directly onto the texture object with a UV transform and/or texCoord set.
+ */
+export type MaterialTexture = GpuTexture & Partial<TextureTransform>;
 
 // Entity
 export interface Entity {
@@ -124,8 +129,6 @@ export interface CameraComponentOptions {
   aspect?: number;
   clearColor?: Color;
   viewMatrix?: Mat4;
-  invViewMatrix?: Mat4;
-  /** Alias of invViewMatrix used by some renderers. */
   inverseViewMatrix?: Mat4;
   culling?: boolean;
   /** Focal length of the camera lens [10mm - 200mm] in mm. */

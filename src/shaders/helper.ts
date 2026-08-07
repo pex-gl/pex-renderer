@@ -7,7 +7,7 @@ import type { PipelineShaderOptions } from "../types.js";
 // (no modelMatrix). @location(5) for vertexColor still matches the shared
 // mesh attribute convention, leaving 1-4 free for parity with other pipelines.
 
-export default (
+export const helperShader = (
   defines: Set<string> = new Set(),
   options: PipelineShaderOptions = {},
 ): string => {

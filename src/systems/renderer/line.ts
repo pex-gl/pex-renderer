@@ -1,8 +1,8 @@
 // @ts-nocheck
 import { avec3 } from "pex-math";
-import * as SHADERS from "../../shaders/index.js";
 
 import createBaseSystem from "./base.js";
+import { lineShader } from "../../shaders/line.js";
 
 // Impacts program caching
 // prettier-ignore
@@ -46,8 +46,7 @@ export default ({ ctx } = {}) => ({
   },
   debug: false,
   flagDefinitions,
-  getVertexShader: () => SHADERS.line.vert,
-  getFragmentShader: () => SHADERS.line.frag,
+  getShader: () => lineShader(),
   getPipelineHash(entity) {
     return this.getHashFromProps(
       entity.material,
@@ -138,7 +137,7 @@ export default ({ ctx } = {}) => ({
       const entity = renderableEntities[i];
 
       // Also computes this.uniforms
-      const pipeline = this.getPipeline(ctx, entity, options);
+      const pipeline = this.getPipeline(entity, options);
 
       const uniforms = {
         uModelMatrix: entity._transform.modelMatrix,

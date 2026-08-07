@@ -11,7 +11,7 @@ import type { PipelineShaderOptions } from "../types.js";
 // rgba8unorm-srgb texture that decodes on sample), so no decode is needed; the
 // result feeds the linear HDR main pass.
 
-export default (
+export const skyboxShader = (
   defines: Set<string> = new Set(),
   options: PipelineShaderOptions = {},
 ): string => {

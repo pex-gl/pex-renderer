@@ -1,92 +1,84 @@
 import { chunks as SHADERS } from "pex-shaders";
 
+import {
+  fragmentOutputStruct,
+  frameStruct,
+  modelStruct,
+  vertexInputStruct,
+  vertexTransform,
+  getDefineFlags,
+} from "./wgsl.js";
+
+import type { FeatureField } from "../systems/renderer/base.js";
 import type { PipelineShaderOptions } from "../types.js";
 
-// Vertex attribute @location convention shared across pipeline shaders:
-// 0 position, 1 normal, 2 tangent, 3 texCoord0, 4 texCoord1, 5 vertexColor,
-// 6 instanced offset, 7 instanced scale, 8 instanced rotation, 9 instanced color,
-// 10 joint, 11 weight.
-//
-// @group(0) uFrame and @group(3) uModel use a struct shape shared across all
-// pipeline shaders so their bind groups can be reused across draws/pipelines
-// without rebuilding a new bind group layout.
-//
-// Vertex and fragment stages are compiled as a single WGSL module (two entry
-// points) rather than two separate files: the inter-stage varyings only need
-// one struct definition this way, and @builtin(position) on that struct
-// doubles as clip position on the way out of the vertex stage and framebuffer
-// position on the way into the fragment stage, so no separate fragCoord
-// parameter is needed either.
+const VERTEX_DEFINE = {
+  vertexColor: "USE_VERTEX_COLORS",
+  instancedOffset: "USE_INSTANCED_OFFSET",
+  instancedScale: "USE_INSTANCED_SCALE",
+  instancedRotation: "USE_INSTANCED_ROTATION",
+  instancedColor: "USE_INSTANCED_COLOR",
+} as const;
 
-export default (
+export const BASIC_VERTEX_FIELDS: readonly FeatureField[] = [
+  { key: "vertexColor", define: VERTEX_DEFINE.vertexColor },
+  { key: "offset", define: VERTEX_DEFINE.instancedOffset },
+  { key: "scale", define: VERTEX_DEFINE.instancedScale },
+  { key: "rotation", define: VERTEX_DEFINE.instancedRotation },
+  { key: "instanceColor", define: VERTEX_DEFINE.instancedColor },
+];
+
+export const basicShader = (
   defines: Set<string> = new Set(),
   options: PipelineShaderOptions = {},
 ): string => {
   const hooks = options.hooks || {};
   const { locationNormal = -1, locationEmissive = -1 } = options;
 
-  const useInstancedOffset = defines.has("USE_INSTANCED_OFFSET");
-  const useInstancedScale = defines.has("USE_INSTANCED_SCALE");
-  const useInstancedRotation = defines.has("USE_INSTANCED_ROTATION");
-  const useInstancedColor = defines.has("USE_INSTANCED_COLOR");
-  const useVertexColors = defines.has("USE_VERTEX_COLORS");
-  const useColor = useVertexColors || useInstancedColor;
+  const vertexFlags = getDefineFlags(VERTEX_DEFINE, defines);
+  const useColor = vertexFlags.vertexColor || vertexFlags.instancedColor;
   const useMSAA = defines.has("USE_MSAA");
   const useDrawBuffers = defines.has("USE_DRAW_BUFFERS");
   const useNormalOutput = useDrawBuffers && locationNormal >= 0;
   const useEmissiveOutput = useDrawBuffers && locationEmissive >= 0;
 
   const colorAssignment =
-    useVertexColors && useInstancedColor
+    vertexFlags.vertexColor && vertexFlags.instancedColor
       ? "output.color = input.vertexColor * input.instanceColor;"
-      : useInstancedColor
+      : vertexFlags.instancedColor
         ? "output.color = input.instanceColor;"
-        : useVertexColors
+        : vertexFlags.vertexColor
           ? "output.color = input.vertexColor;"
           : "";
 
   return /* wgsl */ `
-struct Frame {
-  projectionMatrix: mat4x4f,
-  viewMatrix: mat4x4f,
-  inverseViewMatrix: mat4x4f,
-  cameraPosition: vec3f,
-  viewportSize: vec2f,
-}
-@group(0) @binding(0) var<uniform> uFrame: Frame;
+${frameStruct()}
 
-struct Model {
-  modelMatrix: mat4x4f,
-  normalMatrix: mat3x3f,
-}
-@group(3) @binding(0) var<uniform> uModel: Model;
+${modelStruct()}
 
 struct Material {
   baseColor: vec4f,
 }
 @group(2) @binding(0) var<uniform> uMaterial: Material;
 
-struct VertexInput {
-  @location(0) position: vec3f,
-  ${useInstancedOffset ? "@location(6) offset: vec3f," : ""}
-  ${useInstancedScale ? "@location(7) scale: vec3f," : ""}
-  ${useInstancedRotation ? "@location(8) rotation: vec4f," : ""}
-  ${useInstancedColor ? "@location(9) instanceColor: vec4f," : ""}
-  ${useVertexColors ? "@location(5) vertexColor: vec4f," : ""}
-}
+${vertexInputStruct({
+  vertexColor: vertexFlags.vertexColor,
+  instancedOffset: vertexFlags.instancedOffset,
+  instancedScale: vertexFlags.instancedScale,
+  instancedRotation: vertexFlags.instancedRotation,
+  instancedColor: vertexFlags.instancedColor,
+})}
 
 struct Varyings {
   @builtin(position) position: vec4f,
   ${useColor ? "@location(0) color: vec4f," : ""}
 }
 
-struct FragmentOutput {
-  @location(0) color: vec4f,
-  ${useNormalOutput ? `@location(${locationNormal}) normal: vec4f,` : ""}
-  ${useEmissiveOutput ? `@location(${locationEmissive}) emissive: vec4f,` : ""}
-}
+${fragmentOutputStruct({
+  normal: useNormalOutput ? locationNormal : -1,
+  emissive: useEmissiveOutput ? locationEmissive : -1,
+})}
 
-// Vertex includes
 ${SHADERS.math.quatToMat4}
 
 ${hooks.vertDeclarationsEnd ?? ""}
@@ -98,13 +90,11 @@ fn vertexMain(input: VertexInput) -> Varyings {
 
   ${hooks.vertBeforeTransform ?? ""}
 
-  ${useInstancedScale ? "position = vec4f(position.xyz * input.scale, position.w);" : ""}
-
-  ${useInstancedRotation ? "let rotationMat = quatToMat4(input.rotation);\n  position = rotationMat * position;" : ""}
-
-  ${useInstancedOffset ? "position = vec4f(position.xyz + input.offset, position.w);" : ""}
-
-  let positionWorld = uModel.modelMatrix * position;
+  ${vertexTransform({
+    instancedScale: vertexFlags.instancedScale,
+    instancedRotation: vertexFlags.instancedRotation,
+    instancedOffset: vertexFlags.instancedOffset,
+  })}
 
   ${colorAssignment}
 
@@ -118,7 +108,6 @@ fn vertexMain(input: VertexInput) -> Varyings {
   return output;
 }
 
-// Fragment includes
 ${SHADERS.encodeDecode}
 ${SHADERS.math.max3}
 ${SHADERS.reversibleToneMap}

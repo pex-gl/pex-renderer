@@ -1,5 +1,6 @@
 import { loadImage } from "pex-io";
 import { loadHdr, loadUltraHdr } from "pex-loaders";
+import { createTexture } from "pex-gpu";
 import { aabb } from "pex-geom";
 import { utils } from "pex-math";
 import normals from "angle-normals";
@@ -44,6 +45,19 @@ export async function getTexture(ctx, file, srgb, options = {}) {
     console.error(error);
   }
   return tex;
+}
+
+// pex-gpu (WebGPU) equivalent of getTexture, for examples ported off pex-context.
+export async function getGpuTexture(ctx, file, srgb, options = {}) {
+  const image = await loadImage(file);
+  return createTexture(ctx, {
+    label: file.split("/").at(-1),
+    data: image,
+    format: srgb ? "rgba8unorm-srgb" : "rgba8unorm",
+    flipY: true,
+    mipmap: true,
+    ...options,
+  });
 }
 
 export function updateSunPosition(skybox, elevation, azimuth) {

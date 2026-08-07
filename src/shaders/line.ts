@@ -10,7 +10,7 @@ import type { PipelineShaderOptions } from "../types.js";
 //
 // uFrame.viewportSize doubles as the old uResolution uniform.
 
-export default (
+export const lineShader = (
   defines: Set<string> = new Set(),
   options: PipelineShaderOptions = {},
 ): string => {

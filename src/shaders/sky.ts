@@ -10,7 +10,7 @@ import type { PipelineShaderOptions } from "../types.js";
 // The env map stores linear HDR radiance (no tonemap/gamma here) so it matches
 // other HDRIs.
 
-export default (
+export const skyShader = (
   defines: Set<string> = new Set(),
   options: PipelineShaderOptions = {},
 ): string => {

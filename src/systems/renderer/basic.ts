@@ -1,8 +1,8 @@
 import { mat3 } from "pex-math";
 import { submit } from "pex-gpu";
-import * as SHADERS from "../../shaders/index.js";
+import { basicShader, BASIC_VERTEX_FIELDS } from "../../shaders/basic.js";
 
-import createBaseSystem from "./base.js";
+import createBaseSystem, { ALPHA_BLEND } from "./base.js";
 
 import type {
   Entity,
@@ -15,12 +15,6 @@ import type {
 // scratch matrix is safe across entities within a frame. Unused by the unlit
 // shader but part of the shared Model uniform struct layout.
 const NORMAL_MATRIX = mat3.create();
-
-// Premultiplied "over" blend, matching the previous One / OneMinusSrcAlpha setup.
-const ALPHA_BLEND = {
-  color: { srcFactor: "one", dstFactor: "one-minus-src-alpha" },
-  alpha: { srcFactor: "one", dstFactor: "one-minus-src-alpha" },
-};
 
 /**
  * Basic renderer
@@ -36,15 +30,14 @@ export default ({ ctx }: SystemOptions): RendererSystem => ({
   type: "basic-renderer",
   debug: false,
   getShader: (defines: Set<string>, options: any) =>
-    SHADERS.basic(defines, options),
+    basicShader(defines, options),
   getDefines(entity: any) {
     const defines = new Set<string>();
-    const { attributes } = entity._geometry;
-    if (attributes.offset) defines.add("USE_INSTANCED_OFFSET");
-    if (attributes.scale) defines.add("USE_INSTANCED_SCALE");
-    if (attributes.rotation) defines.add("USE_INSTANCED_ROTATION");
-    if (attributes.instanceColor) defines.add("USE_INSTANCED_COLOR");
-    if (attributes.vertexColor) defines.add("USE_VERTEX_COLORS");
+    this.getFeatureFlags(
+      entity._geometry.attributes,
+      BASIC_VERTEX_FIELDS,
+      defines,
+    );
     return defines;
   },
   getVariantKey(entity: any, defines: Set<string>) {
@@ -59,15 +52,7 @@ export default ({ ctx }: SystemOptions): RendererSystem => ({
     };
   },
   render(renderView: RenderView, entities: Entity[], options: any) {
-    const { camera, cameraEntity, viewport } = renderView;
-
-    const uFrame = {
-      projectionMatrix: camera.projectionMatrix!,
-      viewMatrix: camera.viewMatrix!,
-      inverseViewMatrix: camera.invViewMatrix || camera.inverseViewMatrix!,
-      cameraPosition: cameraEntity!._transform!.worldPosition,
-      viewportSize: [viewport[2]!, viewport[3]!],
-    };
+    const uFrame = this.getFrameUniforms(renderView);
 
     const renderableEntities = entities.filter(
       (entity) =>
@@ -80,7 +65,7 @@ export default ({ ctx }: SystemOptions): RendererSystem => ({
     for (let i = 0; i < renderableEntities.length; i++) {
       const entity = renderableEntities[i]!;
 
-      const pipeline = this.getPipeline(ctx, entity, options);
+      const pipeline = this.getPipeline(entity, options);
 
       submit(ctx, {
         label: options.transparent

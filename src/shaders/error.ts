@@ -2,7 +2,7 @@
 
 import type { PipelineShaderOptions } from "../types.js";
 
-export default (
+export const errorShader = (
   defines: Set<string> = new Set(),
   options: PipelineShaderOptions = {},
 ): string => {

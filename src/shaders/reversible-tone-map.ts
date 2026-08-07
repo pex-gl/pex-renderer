@@ -2,7 +2,7 @@ import { chunks as SHADERS } from "pex-shaders";
 
 import type { PipelineShaderOptions } from "../types.js";
 
-export default (
+export const reversibleToneMapShader = (
   defines: Set<string> = new Set(),
   options: PipelineShaderOptions = {},
 ): string => {

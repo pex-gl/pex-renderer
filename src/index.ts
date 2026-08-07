@@ -18,6 +18,8 @@ export * as components from "./components/index.js";
  */
 export * as systems from "./systems/index.js";
 export * as loaders from "./loaders/index.js";
+/** All pipeline shader generators, namespaced per source file. */
+export * as shaders from "./shaders/index.js";
 
 export {
   /** Create a render graph for rendering passes */

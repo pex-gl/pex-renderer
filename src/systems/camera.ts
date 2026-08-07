@@ -108,7 +108,7 @@ function updateCameraProjection(camera: any, transform: any) {
     }
   }
 
-  mat4.set(camera.invViewMatrix, transform.modelMatrix);
+  mat4.set(camera.inverseViewMatrix, transform.modelMatrix);
   //look at matrix is opposite of camera modelMatrix transform
   mat4.set(camera.viewMatrix, transform.modelMatrix);
   mat4.invert(camera.viewMatrix);
@@ -213,7 +213,7 @@ export default () => ({
           newTarget = [0, 0, -orbiter._orbiter.distance];
           const useInvMatrix = false;
           if (useInvMatrix) {
-            vec3.multMat4(newTarget, camera.invViewMatrix); //this is out of date?
+            vec3.multMat4(newTarget, camera.inverseViewMatrix); //this is out of date?
           } else {
             vec3.multQuat(newTarget, entity.transform.rotation);
             vec3.add(newTarget, entity.transform.position);
@@ -261,20 +261,20 @@ export default () => ({
 
         orbiter._orbiter.updateCamera();
 
-        mat4.identity(camera.invViewMatrix);
-        mat4.translate(camera.invViewMatrix, entity.transform.position);
+        mat4.identity(camera.inverseViewMatrix);
+        mat4.translate(camera.inverseViewMatrix, entity.transform.position);
         mat4.mult(
-          camera.invViewMatrix,
+          camera.inverseViewMatrix,
           mat4.fromQuat(TEMP_MAT4, entity.transform.rotation),
         );
-        mat4.set(camera.viewMatrix, camera.invViewMatrix);
+        mat4.set(camera.viewMatrix, camera.inverseViewMatrix);
         mat4.invert(camera.viewMatrix);
       } else {
         updateCameraProjection(entity.camera, entity._transform);
 
         const proxyCamera = {
           viewMatrix: camera.viewMatrix,
-          invViewMatrix: camera.invViewMatrix,
+          inverseViewMatrix: camera.inverseViewMatrix,
           position: [...entity.transform.position],
           rotationCache: [...entity.transform.rotation],
           target: [...orbiter.target],

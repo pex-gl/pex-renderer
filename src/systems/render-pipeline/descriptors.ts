@@ -1,4 +1,4 @@
-import * as SHADERS from "../../shaders/index.js";
+import { reversibleToneMapShader } from "../../shaders/reversible-tone-map.js";
 import { CUBEMAP_SIDES } from "../../utils.js";
 
 import type { GpuContext } from "../../types.js";
@@ -174,8 +174,8 @@ export default (ctx: GpuContext) => ({
   reversibleToneMap: {
     pipelineDesc: {
       // Legacy GLSL path, not yet ported to the WGSL reversibleToneMap generator.
-      vert: (SHADERS.blit as any).vert,
-      frag: (SHADERS.reversibleToneMap as any).frag,
+      vert: BLIT_WGSL,
+      frag: reversibleToneMapShader(),
     },
   },
   blit: {

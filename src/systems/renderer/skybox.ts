@@ -1,8 +1,8 @@
 import { mat4 } from "pex-math";
 import { submit, createSampler } from "pex-gpu";
-import * as SHADERS from "../../shaders/index.js";
 
 import createBaseSystem from "./base.js";
+import { skyboxShader } from "../../shaders/skybox.js";
 import { NAMESPACE, TEMP_MAT4 } from "../../utils.js";
 
 import type {
@@ -27,7 +27,7 @@ export default ({ ctx, resourceCache }: SystemOptions): RendererSystem => ({
   sampler: createSampler(ctx, { filter: "linear" }),
 
   getShader: (defines: Set<string>, options: any) =>
-    SHADERS.skybox(defines, options),
+    skyboxShader(defines, options),
   getShaderOptions() {
     const { _locations } = this;
     return {
@@ -71,7 +71,7 @@ export default ({ ctx, resourceCache }: SystemOptions): RendererSystem => ({
     const { camera } = renderView;
     const texture = entity.skybox!.envMap || entity.skybox!._skyTexture;
 
-    const pipeline = this.getPipeline(ctx, entity, options);
+    const pipeline = this.getPipeline(entity, options);
 
     submit(ctx, {
       label: "drawSkyboxCmd",

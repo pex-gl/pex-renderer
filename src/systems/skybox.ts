@@ -1,13 +1,12 @@
 import { vec3 } from "pex-math";
 import { submit, createTexture } from "pex-gpu";
 
-import * as SHADERS from "../shaders/index.js";
-
 import type {
   Entity,
   SkyboxComponentOptions,
   SystemOptions,
 } from "../types.js";
+import { skyShader } from "../shaders/sky.js";
 
 // Sky parameters packed, in order, into the shader's `parameters: vec4f`.
 const parameters: (keyof SkyboxComponentOptions)[] = [
@@ -74,7 +73,7 @@ export default ({ ctx, resourceCache }: SystemOptions) => ({
 
       // Immutable per object identity: create once, reuse across frames.
       this.pipeline ||= (() => {
-        const source = SHADERS.sky(new Set(), {});
+        const source = skyShader(new Set(), {});
         return { vertex: source, fragment: source };
       })();
 

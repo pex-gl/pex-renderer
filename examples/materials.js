@@ -3,36 +3,31 @@ import {
   world as createWorld,
   entity as createEntity,
   components,
-} from "../index.js";
+  loaders,
+} from "pex-renderer";
 
-import createContext from "pex-context";
-import createGUI from "pex-gui";
-import { vec3, quat, mat2x3, mat3, vec2 } from "pex-math";
-import * as io from "pex-io";
+import * as gpu from "pex-gpu";
+// import createGUI from "pex-gui";
+import { vec3, quat } from "pex-math";
 
 import { sphere } from "primitive-geometry";
 import gridCells from "grid-cells";
 
-import { getEnvMap, getTexture, getURL } from "./utils.js";
+import { getGpuTexture, getURL } from "./utils.js";
 
 const pixelRatio = devicePixelRatio;
-const ctx = createContext({ pixelRatio });
+const ctx = await gpu.createContext({ pixelRatio });
 const renderEngine = createRenderEngine({ ctx, debug: true });
 const world = createWorld();
 
-const gui = createGUI(ctx);
-gui.addFPSMeeter().setPosition(10, 40);
-gui.addStats();
+// const gui = createGUI(ctx);
+// gui.addFPSMeeter().setPosition(10, 40);
+// gui.addStats();
 
-const H = ctx.gl.drawingBufferHeight;
 const nW = 4;
 const nH = 3;
 
 // Materials
-const transform23 = mat2x3.create();
-mat2x3.scale(transform23, [1.5, 1.5]);
-const transform = mat3.fromMat2x3(mat3.create(), transform23);
-
 const materials = {
   Default: {},
   Unlit: {
@@ -42,7 +37,7 @@ const materials = {
   "Unlit Base Color Texture": {
     unlit: true,
     baseColor: [1, 1, 1, 0.5],
-    baseColorTexture: await getTexture(
+    baseColorTexture: await getGpuTexture(
       ctx,
       getURL(
         `assets/materials/plastic-green.material/plastic-green_basecolor.png`,
@@ -61,10 +56,6 @@ const materials = {
     baseColor: [1, 1, 1, 0.5],
     blend: true,
     depthWrite: false,
-    blendSrcRGBFactor: ctx.BlendFactor.SrcAlpha,
-    blendSrcAlphaFactor: ctx.BlendFactor.One,
-    blendDstRGBFactor: ctx.BlendFactor.OneMinusSrcAlpha,
-    blendDstAlphaFactor: ctx.BlendFactor.One,
   },
   Transmission: {
     roughness: 0.5,
@@ -81,41 +72,37 @@ const materials = {
     baseColor: [1.0, 1.0, 1.0, 1.0],
     metallic: 0,
     roughness: 1,
-    baseColorTexture: {
-      texture: await getTexture(
-        ctx,
-        getURL(`assets/textures/uv-wide/uv-wide.png`),
-        true,
-      ),
-      matrix: transform,
-    },
+    baseColorTexture: Object.assign(
+      await getGpuTexture(ctx, getURL(`assets/textures/uv-wide/uv-wide.png`), true),
+      { scale: [1.5, 1.5] },
+    ),
   },
   // Roughness map
   "Roughness Texture": {
     baseColor: [1.0, 1.0, 0.9, 1.0],
     metallic: 1,
     roughness: 1,
-    roughnessTexture: await getTexture(
+    roughnessTexture: await getGpuTexture(
       ctx,
       getURL(`assets/textures/roughness-test/roughness-test.png`),
     ),
   },
   // Basic PBR maps
   "Basic PBR Textures": {
-    baseColorTexture: await getTexture(
+    baseColorTexture: await getGpuTexture(
       ctx,
       getURL(`assets/materials/plastic-red.material/plastic-red_basecolor.png`),
       true,
     ),
-    roughnessTexture: await getTexture(
+    roughnessTexture: await getGpuTexture(
       ctx,
       getURL(`assets/materials/plastic-red.material/plastic-red_roughness.png`),
     ),
-    metallicTexture: await getTexture(
+    metallicTexture: await getGpuTexture(
       ctx,
       getURL(`assets/materials/plastic-red.material/plastic-red_metallic.png`),
     ),
-    normalTexture: await getTexture(
+    normalTexture: await getGpuTexture(
       ctx,
       getURL(`assets/materials/plastic-red.material/plastic-red_n.png`),
     ),
@@ -123,31 +110,31 @@ const materials = {
   // Emissive
   "Emissive Texture": {
     baseColor: [1, 1, 1, 1],
-    baseColorTexture: await getTexture(
+    baseColorTexture: await getGpuTexture(
       ctx,
       getURL(
         `assets/materials/plastic-glow.material/plastic-glow_basecolor.png`,
       ),
       true,
     ),
-    roughnessTexture: await getTexture(
+    roughnessTexture: await getGpuTexture(
       ctx,
       getURL(
         `assets/materials/plastic-glow.material/plastic-glow_roughness.png`,
       ),
     ),
-    metallicTexture: await getTexture(
+    metallicTexture: await getGpuTexture(
       ctx,
       getURL(
         `assets/materials/plastic-glow.material/plastic-glow_metallic.png`,
       ),
     ),
-    normalTexture: await getTexture(
+    normalTexture: await getGpuTexture(
       ctx,
       getURL(`assets/materials/plastic-glow.material/plastic-glow_n.png`),
     ),
     emissiveColor: [1, 1, 1, 1],
-    emissiveColorTexture: await getTexture(
+    emissiveColorTexture: await getGpuTexture(
       ctx,
       getURL(
         `assets/materials/plastic-glow.material/plastic-glow_emissive.png`,
@@ -163,12 +150,12 @@ const materials = {
     baseColor: [1, 1, 1, 1],
     alphaTest: 0.5,
     cullFace: false,
-    baseColorTexture: await getTexture(
+    baseColorTexture: await getGpuTexture(
       ctx,
       getURL(`assets/textures/alpha-test-mask/alpha-test-mask.png`),
       true,
     ),
-    alphaTexture: await getTexture(
+    alphaTexture: await getGpuTexture(
       ctx,
       getURL(`assets/textures/checkerboard/checkerboard.png`),
     ),
@@ -179,40 +166,38 @@ const materials = {
     sheenColor: [1, 1, 0, 1.0],
     sheenRoughness: 1,
     // sheenColorTexture: {
-    //   texture: await getTexture(
+    //   texture: await getGpuTexture(
     //     ctx,
     //     getURL(
     //       `glTF-Sample-Models/2.0/SheenCloth/glTF/technicalFabricSmall_sheen_256.png`
     //     ),
     //     true,
     //   ),
-    //   scale: [30, -30],
+    //   scales: [30, -30],
     // },
     // sheenRoughnessTexture: {
-    //   texture: await getTexture(
+    //   texture: await getGpuTexture(
     //     ctx,
     //     getURL(
     //       `glTF-Sample-Models/2.0/SheenCloth/glTF/technicalFabricSmall_sheen_256.png`
     //     ),
     //     true,
     //   ),
-    //   scale: [30, -30],
+    //   scales: [30, -30],
     // },
   },
+  // // Specular-glossiness workflow (alternative to metallic-roughness)
+  // "Specular Glossiness": {
+  //   sgDiffuse: [0.8, 0.2, 0.2, 1.0],
+  //   sgSpecular: [0.5, 0.5, 0.5],
+  //   sgGlossiness: 0.8,
+  // },
 };
 
-const materialNames = Object.keys(materials);
 const materialValues = Object.values(materials);
 
 // Meshes
 const sphereGeometry = sphere({ nx: 32, ny: 32 });
-
-const geometry = {
-  positions: { buffer: ctx.vertexBuffer(sphereGeometry.positions) },
-  normals: { buffer: ctx.vertexBuffer(sphereGeometry.normals) },
-  uvs: { buffer: ctx.vertexBuffer(sphereGeometry.uvs) },
-  cells: { buffer: ctx.indexBuffer(sphereGeometry.cells) },
-};
 
 for (let i = 0; i < nW * nH; i++) {
   const layer = `cell${i}`;
@@ -222,8 +207,8 @@ for (let i = 0; i < nW * nH; i++) {
       position: [0, 0, 2],
     }),
     camera: components.camera(),
-    postProcessing: components.postProcessing(),
-    orbiter: components.orbiter({ element: ctx.gl.canvas }),
+    // postProcessing: components.postProcessing(), // systems/render-pipeline/post-processing.ts is not ported to pex-gpu yet
+    orbiter: components.orbiter({ element: ctx.canvas }),
   });
   world.add(cameraEntity);
 
@@ -233,7 +218,7 @@ for (let i = 0; i < nW * nH; i++) {
   const materialEntity = createEntity({
     layer,
     transform: components.transform(),
-    geometry: components.geometry(geometry),
+    geometry: components.geometry(sphereGeometry),
     material: components.material(material),
   });
   world.add(materialEntity);
@@ -254,26 +239,26 @@ world.add(directionalLightEntity);
 
 const skyEntity = createEntity({
   skybox: components.skybox({
-    envMap: await getEnvMap(ctx, "assets/envmaps/garage/garage.hdr"),
+    envMap: await loaders.hdr(ctx, getURL("assets/envmaps/garage/garage.hdr")),
   }),
-  reflectionProbe: components.reflectionProbe(),
+  // reflectionProbe: components.reflectionProbe(), // systems/reflection-probe.ts is not ported to pex-gpu yet
 });
 world.add(skyEntity);
 
 // Events
 let debugOnce = false;
 
-const headers = materialNames.map((headerTitle) => gui.addHeader(headerTitle));
+// const headers = Object.keys(materials).map((headerTitle) => gui.addHeader(headerTitle));
 
-const viewportToCanvasPosition = (viewport, height) => [
-  viewport[0] / pixelRatio,
-  (height * (1 - viewport[1] / height - viewport[3] / height)) / pixelRatio,
-];
+// const viewportToCanvasPosition = (viewport, height) => [
+//   viewport[0] / pixelRatio,
+//   (height * (1 - viewport[1] / height - viewport[3] / height)) / pixelRatio,
+// ];
 
 const onResize = () => {
   const width = window.innerWidth;
   const height = window.innerHeight;
-  ctx.set({ pixelRatio, width, height });
+  gpu.resize(ctx, width, height, pixelRatio);
 
   const W = width * pixelRatio;
   const H = height * pixelRatio;
@@ -285,11 +270,11 @@ const onResize = () => {
     cell[3],
   ]);
 
-  cells.forEach((cell, i) => {
-    const labelPosition = [10, 10];
-    vec2.add(labelPosition, viewportToCanvasPosition(cell, H));
-    headers[i]?.setPosition(...labelPosition);
-  });
+  // cells.forEach((cell, i) => {
+  //   const labelPosition = [10, 10];
+  //   vec2.add(labelPosition, viewportToCanvasPosition(cell, H));
+  //   headers[i]?.setPosition(...labelPosition);
+  // });
 
   world.entities
     .filter((entity) => entity.camera)
@@ -304,21 +289,21 @@ window.addEventListener("resize", onResize);
 onResize();
 
 window.addEventListener("keydown", ({ key }) => {
-  if (key === "g") gui.enabled = !gui.enabled;
+  // if (key === "g") gui.enabled = !gui.enabled;
   if (key === "d") debugOnce = true;
 });
 
-ctx.frame(() => {
+gpu.frame(ctx, () => {
   renderEngine.update(world.entities);
   renderEngine.render(
     world.entities,
     world.entities.filter((entity) => entity.camera),
   );
 
-  ctx.debug(debugOnce);
+  gpu.debug(ctx, debugOnce);
   debugOnce = false;
 
-  gui.draw();
+  // gui.draw();
 
   window.dispatchEvent(new CustomEvent("screenshot"));
 });
