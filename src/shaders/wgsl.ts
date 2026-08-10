@@ -232,29 +232,73 @@ export interface VertexInputFlags {
   skin?: boolean;
 }
 
-// Canonical @location convention shared by every pass's VertexInput: position
-// (0) is always present, the rest are gated by the caller's flags. A pass that
-// never reads an attribute simply leaves its flag unset.
-const VERTEX_ATTRIBUTES: readonly [keyof VertexInputFlags, string][] = [
-  ["normal", "@location(1) normal: vec3f,"],
-  ["tangent", "@location(2) tangent: vec4f,"],
-  ["texCoord0", "@location(3) texCoord0: vec2f,"],
-  ["texCoord1", "@location(4) texCoord1: vec2f,"],
-  ["vertexColor", "@location(5) vertexColor: vec4f,"],
-  ["instancedOffset", "@location(6) offset: vec3f,"],
-  ["instancedScale", "@location(7) scale: vec3f,"],
-  ["instancedRotation", "@location(8) rotation: vec4f,"],
-  ["instancedColor", "@location(9) instanceColor: vec4f,"],
-  ["skin", "@location(10) joint: vec4f,\n  @location(11) weight: vec4f,"],
+/** A WGSL IO struct member: field name and type. */
+export interface ShaderStructMember {
+  name: string;
+  type: string;
+}
+
+/**
+ * Emits struct members with sequential `@location` indices, skipping falsy
+ * entries so optional members gate inline with `cond && { … }`. Locations are
+ * assigned in list order with no gaps, so members are added or removed without
+ * hand-numbering. `start` offsets the first index (past a fixed leading member).
+ * The numbers are only ever matched back by name — vertex inputs via reflection
+ * (pex-gpu `vertex-layout.ts`), varyings by the shared vertex/fragment struct —
+ * so their order and uniqueness matter, not their values.
+ */
+function locationMembers(
+  members: readonly (ShaderStructMember | false | null | undefined)[],
+  start = 0,
+): string {
+  return members
+    .filter((member): member is ShaderStructMember => Boolean(member))
+    .map(
+      ({ name, type }, index) => `@location(${start + index}) ${name}: ${type},`,
+    )
+    .join("\n  ");
+}
+
+// VertexInput attributes gated by their flag, in @location order. Position is
+// always present and leads (see vertexInputStruct); every other attribute is
+// omitted when its flag is unset.
+const VERTEX_ATTRIBUTES: readonly (ShaderStructMember & {
+  flag: keyof VertexInputFlags;
+})[] = [
+  { flag: "normal", name: "normal", type: "vec3f" },
+  { flag: "tangent", name: "tangent", type: "vec4f" },
+  { flag: "texCoord0", name: "texCoord0", type: "vec2f" },
+  { flag: "texCoord1", name: "texCoord1", type: "vec2f" },
+  { flag: "vertexColor", name: "vertexColor", type: "vec4f" },
+  { flag: "instancedOffset", name: "offset", type: "vec3f" },
+  { flag: "instancedScale", name: "scale", type: "vec3f" },
+  { flag: "instancedRotation", name: "rotation", type: "vec4f" },
+  { flag: "instancedColor", name: "instanceColor", type: "vec4f" },
+  { flag: "skin", name: "joint", type: "vec4f" },
+  { flag: "skin", name: "weight", type: "vec4f" },
 ];
 
 export function vertexInputStruct(flags: VertexInputFlags): string {
-  const attributes = ["@location(0) position: vec3f,"];
-  for (const [key, decl] of VERTEX_ATTRIBUTES) {
-    if (flags[key]) attributes.push(decl);
-  }
   return `struct VertexInput {
-  ${attributes.join("\n  ")}
+  ${locationMembers([
+    { name: "position", type: "vec3f" },
+    ...VERTEX_ATTRIBUTES.map((attribute) => flags[attribute.flag] && attribute),
+  ])}
+}`;
+}
+
+/**
+ * A vertex stage's output struct: the `@builtin(position)` clip position
+ * followed by sequentially-located user members (falsy entries skipped). Every
+ * pass shares this `VertexOutput` shape; the `@location`s are private to the
+ * vertex/fragment pair, so they are assigned in order, not hand-numbered.
+ */
+export function vertexOutputStruct(
+  members: readonly (ShaderStructMember | false | null | undefined)[],
+): string {
+  return `struct VertexOutput {
+  @builtin(position) position: vec4f,
+  ${locationMembers(members)}
 }`;
 }
 
@@ -361,4 +405,9 @@ export function fragmentOutputStruct({
   return `struct FragmentOutput {
   ${outputs.join("\n  ")}
 }`;
+}
+
+/** Format shaders */
+export function formatShader(source: string) {
+  return source.replaceAll(/\n\s*\n/g, "\n\n");
 }

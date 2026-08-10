@@ -5,6 +5,7 @@ import {
   frameStruct,
   modelStruct,
   vertexInputStruct,
+  vertexOutputStruct,
   vertexTransform,
   getDefineFlags,
 } from "./wgsl.js";
@@ -70,10 +71,7 @@ ${vertexInputStruct({
   skin: useSkin,
 })}
 
-struct VertexOutput {
-  @builtin(position) position: vec4f,
-  ${useLinearDepth ? "@location(0) viewPosition: vec3f," : ""}
-}
+${vertexOutputStruct([useLinearDepth && { name: "viewPosition", type: "vec3f" }])}
 
 ${SHADERS.math.quatToMat4}
 

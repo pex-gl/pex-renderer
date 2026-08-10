@@ -1,5 +1,6 @@
 import { chunks as SHADERS } from "pex-shaders";
 
+import { vertexOutputStruct } from "./wgsl.js";
 import type { PipelineShaderOptions } from "../types.js";
 
 // Debug helper geometry (grids, gizmos, bounding boxes) is authored directly
@@ -34,10 +35,7 @@ struct VertexInput {
   @location(5) vertexColor: vec4f,
 }
 
-struct Varyings {
-  @builtin(position) position: vec4f,
-  @location(0) color: vec4f,
-}
+${vertexOutputStruct([{ name: "color", type: "vec4f" }])}
 
 struct FragmentOutput {
   @location(0) color: vec4f,
@@ -48,8 +46,8 @@ struct FragmentOutput {
 ${hooks.vertDeclarationsEnd ?? ""}
 
 @vertex
-fn vertexMain(input: VertexInput) -> Varyings {
-  var output: Varyings;
+fn vertexMain(input: VertexInput) -> VertexOutput {
+  var output: VertexOutput;
   output.color = input.vertexColor;
   output.position = uFrame.projectionMatrix * uFrame.viewMatrix * vec4f(input.position, 1.0);
 
@@ -66,7 +64,7 @@ ${SHADERS.reversibleToneMap}
 ${hooks.fragDeclarationsEnd ?? ""}
 
 @fragment
-fn fragmentMain(input: Varyings) -> FragmentOutput {
+fn fragmentMain(input: VertexOutput) -> FragmentOutput {
   var output: FragmentOutput;
   var color = decode(input.color, SRGB);
 

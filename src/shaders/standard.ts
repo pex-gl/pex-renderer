@@ -13,6 +13,7 @@ import {
   uniformName,
   getTexCoordGetter,
   getDefineFlags,
+  vertexOutputStruct,
   vertexInputStruct,
   vertexTransform,
 } from "./wgsl.js";
@@ -627,17 +628,16 @@ ${vertexInputStruct({
   skin: useSkin,
 })}
 
-struct Varyings {
-  @builtin(position) position: vec4f,
-  @location(0) normalWorld: vec3f,
-  @location(1) normalView: vec3f,
-  @location(2) texCoord0: vec2f,
-  ${vertexFlags.texCoord1 ? "@location(3) texCoord1: vec2f," : ""}
-  @location(4) positionWorld: vec3f,
-  @location(5) positionView: vec3f,
-  ${vertexFlags.tangent ? "@location(6) tangentView: vec4f," : ""}
-  ${useColor ? "@location(7) color: vec4f," : ""}
-}
+${vertexOutputStruct([
+  { name: "normalWorld", type: "vec3f" },
+  { name: "normalView", type: "vec3f" },
+  { name: "texCoord0", type: "vec2f" },
+  vertexFlags.texCoord1 && { name: "texCoord1", type: "vec2f" },
+  { name: "positionWorld", type: "vec3f" },
+  { name: "positionView", type: "vec3f" },
+  vertexFlags.tangent && { name: "tangentView", type: "vec4f" },
+  useColor && { name: "color", type: "vec4f" },
+])}
 
 ${fragmentOutputStruct({
   normal: useNormalOutput ? locationNormal : -1,
@@ -729,8 +729,8 @@ ${SHADERS.math.quatToMat4}
 ${hooks.vertDeclarationsEnd ?? ""}
 
 @vertex
-fn vertexMain(input: VertexInput) -> Varyings {
-  var output: Varyings;
+fn vertexMain(input: VertexInput) -> VertexOutput {
+  var output: VertexOutput;
 
   var position = vec4f(input.position, 1.0);
   var normal = vec3f(0.0, 0.0, 0.0);
@@ -832,7 +832,7 @@ ${hooks.fragDeclarationsEnd ?? ""}
 
 @fragment
 fn fragmentMain(
-  input: Varyings,
+  input: VertexOutput,
   @builtin(front_facing) frontFacing: bool
 ) -> FragmentOutput {
   var output: FragmentOutput;

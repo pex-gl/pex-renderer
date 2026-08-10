@@ -1,5 +1,6 @@
 import { chunks as SHADERS } from "pex-shaders";
 
+import { vertexOutputStruct } from "./wgsl.js";
 import type { PipelineShaderOptions } from "../types.js";
 
 export const reversibleToneMapShader = (
@@ -16,14 +17,11 @@ struct VertexInput {
   @location(0) position: vec2f,
 }
 
-struct Varyings {
-  @builtin(position) position: vec4f,
-  @location(0) texCoord0: vec2f,
-}
+${vertexOutputStruct([{ name: "texCoord0", type: "vec2f" }])}
 
 @vertex
-fn vertexMain(input: VertexInput) -> Varyings {
-  var output: Varyings;
+fn vertexMain(input: VertexInput) -> VertexOutput {
+  var output: VertexOutput;
   output.position = vec4f(input.position, 0.0, 1.0);
   output.texCoord0 = input.position * 0.5 + 0.5;
   return output;
@@ -40,7 +38,7 @@ struct FragmentOutput {
 }
 
 @fragment
-fn fragmentMain(input: Varyings) -> FragmentOutput {
+fn fragmentMain(input: VertexOutput) -> FragmentOutput {
   var output: FragmentOutput;
   var color = textureSample(uTexture, uTextureSampler, input.texCoord0);
   color = vec4f(reversibleToneMapInverse(color.rgb), color.w);

@@ -5,6 +5,7 @@ import {
   frameStruct,
   modelStruct,
   vertexInputStruct,
+  vertexOutputStruct,
   vertexTransform,
   getDefineFlags,
 } from "./wgsl.js";
@@ -69,10 +70,7 @@ ${vertexInputStruct({
   instancedColor: vertexFlags.instancedColor,
 })}
 
-struct Varyings {
-  @builtin(position) position: vec4f,
-  ${useColor ? "@location(0) color: vec4f," : ""}
-}
+${vertexOutputStruct([useColor && { name: "color", type: "vec4f" }])}
 
 ${fragmentOutputStruct({
   normal: useNormalOutput ? locationNormal : -1,
@@ -84,8 +82,8 @@ ${SHADERS.math.quatToMat4}
 ${hooks.vertDeclarationsEnd ?? ""}
 
 @vertex
-fn vertexMain(input: VertexInput) -> Varyings {
-  var output: Varyings;
+fn vertexMain(input: VertexInput) -> VertexOutput {
+  var output: VertexOutput;
   var position = vec4f(input.position, 1.0);
 
   ${hooks.vertBeforeTransform ?? ""}
@@ -115,7 +113,7 @@ ${SHADERS.reversibleToneMap}
 ${hooks.fragDeclarationsEnd ?? ""}
 
 @fragment
-fn fragmentMain(input: Varyings) -> FragmentOutput {
+fn fragmentMain(input: VertexOutput) -> FragmentOutput {
   var output: FragmentOutput;
   var color = decode(uMaterial.baseColor, SRGB);
 

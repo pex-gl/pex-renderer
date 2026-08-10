@@ -1,5 +1,6 @@
 import { chunks as SHADERS } from "pex-shaders";
 
+import { vertexOutputStruct } from "./wgsl.js";
 import type { PipelineShaderOptions } from "../types.js";
 
 // This shader bakes the analytic Preetham sky model (chunks.sky) into an
@@ -37,16 +38,15 @@ struct VertexInput {
   @location(0) position: vec2f,
 }
 
-struct Varyings {
-  @builtin(position) position: vec4f,
-  @location(0) texCoord0: vec2f,
-  @location(1) sunDirection: vec3f,
-  @location(2) sunfade: f32,
-  @location(3) sunE: f32,
-  @location(4) betaR: vec3f,
-  @location(5) betaM: vec3f,
-  @location(6) mieDirectionalG: f32,
-}
+${vertexOutputStruct([
+  { name: "texCoord0", type: "vec2f" },
+  { name: "sunDirection", type: "vec3f" },
+  { name: "sunfade", type: "f32" },
+  { name: "sunE", type: "f32" },
+  { name: "betaR", type: "vec3f" },
+  { name: "betaM", type: "vec3f" },
+  { name: "mieDirectionalG", type: "f32" },
+])}
 
 struct FragmentOutput {
   @location(0) color: vec4f,
@@ -63,8 +63,8 @@ ${(SHADERS as any).sky}
 ${hooks.vertDeclarationsEnd ?? ""}
 
 @vertex
-fn vertexMain(input: VertexInput) -> Varyings {
-  var output: Varyings;
+fn vertexMain(input: VertexInput) -> VertexOutput {
+  var output: VertexOutput;
 
   let sky = skyVertex(uSky.sunPosition, uSky.parameters);
   output.sunDirection = sky.sunDirection;
@@ -85,7 +85,7 @@ fn vertexMain(input: VertexInput) -> Varyings {
 ${hooks.fragDeclarationsEnd ?? ""}
 
 @fragment
-fn fragmentMain(input: Varyings) -> FragmentOutput {
+fn fragmentMain(input: VertexOutput) -> FragmentOutput {
   var output: FragmentOutput;
 
   // Texture coordinates to direction:

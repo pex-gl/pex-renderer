@@ -1,5 +1,6 @@
 import { chunks as SHADERS } from "pex-shaders";
 
+import { vertexOutputStruct } from "./wgsl.js";
 import type { PipelineShaderOptions } from "../types.js";
 
 // Draws an equirectangular environment map (a baked analytic sky or a user
@@ -38,10 +39,7 @@ struct VertexInput {
   @location(0) position: vec2f,
 }
 
-struct Varyings {
-  @builtin(position) position: vec4f,
-  @location(0) normal: vec3f,
-}
+${vertexOutputStruct([{ name: "normal", type: "vec3f" }])}
 
 struct FragmentOutput {
   @location(0) color: vec4f,
@@ -55,8 +53,8 @@ ${SHADERS.math.inverseMat4}
 ${hooks.vertDeclarationsEnd ?? ""}
 
 @vertex
-fn vertexMain(input: VertexInput) -> Varyings {
-  var output: Varyings;
+fn vertexMain(input: VertexInput) -> VertexOutput {
+  var output: VertexOutput;
 
   let inverseProjection = inverseMat4(uSkybox.projectionMatrix);
   let inverseModelView = transpose(mat3x3f(
@@ -85,7 +83,7 @@ ${SHADERS.reversibleToneMap}
 ${hooks.fragDeclarationsEnd ?? ""}
 
 @fragment
-fn fragmentMain(input: Varyings) -> FragmentOutput {
+fn fragmentMain(input: VertexOutput) -> FragmentOutput {
   var output: FragmentOutput;
 
   let N = normalize(input.normal);

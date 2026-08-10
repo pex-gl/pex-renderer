@@ -1,5 +1,6 @@
 // See basic.js for the shared Frame/Model bind group conventions.
 
+import { vertexOutputStruct } from "./wgsl.js";
 import type { PipelineShaderOptions } from "../types.js";
 
 export const errorShader = (
@@ -33,9 +34,7 @@ struct VertexInput {
   @location(0) position: vec3f,
 }
 
-struct Varyings {
-  @builtin(position) position: vec4f,
-}
+${vertexOutputStruct([])}
 
 struct FragmentOutput {
   @location(0) color: vec4f,
@@ -46,8 +45,8 @@ struct FragmentOutput {
 ${hooks.vertDeclarationsEnd ?? ""}
 
 @vertex
-fn vertexMain(input: VertexInput) -> Varyings {
-  var output: Varyings;
+fn vertexMain(input: VertexInput) -> VertexOutput {
+  var output: VertexOutput;
   output.position = uFrame.projectionMatrix * uFrame.viewMatrix * uModel.modelMatrix * vec4f(input.position, 1.0);
 
   ${hooks.vertEnd ?? ""}
@@ -58,7 +57,7 @@ fn vertexMain(input: VertexInput) -> Varyings {
 ${hooks.fragDeclarationsEnd ?? ""}
 
 @fragment
-fn fragmentMain(input: Varyings) -> FragmentOutput {
+fn fragmentMain(input: VertexOutput) -> FragmentOutput {
   var output: FragmentOutput;
   output.color = vec4f(1.0, 0.0, 0.0, 1.0);
 
