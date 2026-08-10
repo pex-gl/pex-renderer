@@ -216,6 +216,7 @@ const getPerspectiveCamera = (camera) => {
       [farHalfWidth, farHalfHeight, -camera.far],
       [farHalfWidth, -farHalfHeight, -camera.far],
       [-farHalfWidth, -farHalfHeight, -camera.far],
+      [-farHalfWidth, farHalfHeight, -camera.far],
     ]),
 
     ...pointsToLine([
@@ -223,6 +224,7 @@ const getPerspectiveCamera = (camera) => {
       [nearHalfWidth, nearHalfHeight, -camera.near],
       [nearHalfWidth, -nearHalfHeight, -camera.near],
       [-nearHalfWidth, -nearHalfHeight, -camera.near],
+      [-nearHalfWidth, nearHalfHeight, -camera.near],
     ]),
   ];
 };
