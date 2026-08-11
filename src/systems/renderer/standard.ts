@@ -83,6 +83,14 @@ export default ({
     viewDimension: "cube",
     format: "depth32float",
   }),
+  // Sampled-float dummy for the reflection probe's uCaptureTexture slot when a
+  // material isn't transmissive (a depth dummy can't bind to texture_2d<f32>).
+  dummyCaptureTexture: createTexture(ctx, {
+    label: "dummyCaptureTexture",
+    width: 4,
+    height: 4,
+    format: "rgba8unorm",
+  }),
   // Cube maps use a plain sampler (manual compare); 2D maps use a comparison
   // sampler for hardware PCF.
   shadowSampler: createSampler(ctx, { filter: "nearest" }),
@@ -187,6 +195,10 @@ export default ({
       defines.add("USE_DRAW_BUFFERS");
     }
 
+    if (this._reflectionProbe && !this.isUnlit(entity)) {
+      defines.add("USE_REFLECTION_PROBES");
+    }
+
     return defines;
   },
   getVariantKey(entity: any, defines: Set<string>) {
@@ -208,6 +220,7 @@ export default ({
       counts.point,
       counts.spot,
       counts.area,
+      this._reflectionProbe ? 1 : 0,
       this._locations.normal ?? -1,
       this._locations.emissive ?? -1,
       texCoords,
@@ -405,6 +418,7 @@ export default ({
       transparent,
       transmitted,
       cullFaceMode,
+      backgroundColorTexture,
     } = options;
 
     this._msaa = msaa;
@@ -415,6 +429,26 @@ export default ({
 
     const lights = this.gatherLights(entities);
     this._lights = lights;
+
+    // Scene-global IBL: the reflection probe system bakes SH + a prefiltered
+    // cubemap onto the probe entity. Presence drives USE_REFLECTION_PROBES
+    // (see getDefines/getVariantKey); the bindings below feed EvaluateLightProbe.
+    const probeEntity = entities.find((e) => e._reflectionProbe);
+    this._reflectionProbe = probeEntity?._reflectionProbe;
+    // On the transmission pass the pipeline supplies the grabbed opaque color
+    // (mip-chained for roughness-based refraction blur); other passes bind a
+    // dummy so the always-declared uCaptureTexture stays valid.
+    const captureTexture =
+      (transmitted && backgroundColorTexture) || this.dummyCaptureTexture;
+    const reflectionUniforms = this._reflectionProbe
+      ? {
+          uSpecularEnvMap: this._reflectionProbe.specularTexture,
+          uSpecularEnvMapSampler: this._reflectionProbe.sampler,
+          uIrradianceCoefficients: this._reflectionProbe.irradianceCoefficients,
+          uCaptureTexture: captureTexture,
+          uCaptureTextureSampler: this._reflectionProbe.sampler,
+        }
+      : undefined;
 
     const uFrame = this.getFrameUniforms(renderView);
 
@@ -464,6 +498,7 @@ export default ({
           },
           ...materialUniforms,
           ...lights.uniforms,
+          ...reflectionUniforms,
         },
       });
     }
@@ -566,6 +601,7 @@ export default ({
   dispose() {
     this.dummyTexture2D.dispose();
     this.dummyTextureCube.dispose();
+    this.dummyCaptureTexture.dispose();
     this.ltcTextures.ltc_1?.dispose();
     this.ltcTextures.ltc_2?.dispose();
     this.ltcTextures.ltc_1 = null;

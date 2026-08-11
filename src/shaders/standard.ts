@@ -2,6 +2,7 @@ import { chunks as SHADERS } from "pex-shaders";
 
 import { getRuntimeDefines, isFieldActive } from "../systems/renderer/base.js";
 import {
+  bindingDeclaration,
   createBindingAllocator,
   fragmentOutputStruct,
   frameStruct,
@@ -17,6 +18,10 @@ import {
   vertexInputStruct,
   vertexTransform,
 } from "./wgsl.js";
+import {
+  ROUGHNESS_LEVELS,
+  SH_COEFFICIENT_COUNT,
+} from "./reflection-probe.js";
 import type { FeatureField } from "../systems/renderer/base.js";
 import type { MaterialTextureBinding } from "./wgsl.js";
 import type { PipelineShaderOptions } from "../types.js";
@@ -367,8 +372,9 @@ ${textureSamplerDeclaration(1, lightBindings.nextTextureSampler(), "uLtc2")}`;
 
   const reflectionProbeDecl = useReflectionProbes
     ? /* wgsl */ `
-${textureSamplerDeclaration(1, lightBindings.nextTextureSampler(), "uReflectionMap")}
-${materialFlags.transmission ? textureSamplerDeclaration(1, lightBindings.nextTextureSampler(), "uCaptureTexture") : ""}`
+${textureSamplerDeclaration(1, lightBindings.nextTextureSampler(), "uSpecularEnvMap", "texture_cube<f32>")}
+${bindingDeclaration(1, lightBindings.next(), "uIrradianceCoefficients", `array<vec4f, ${SH_COEFFICIENT_COUNT}>`, "storage, read")}
+${textureSamplerDeclaration(1, lightBindings.nextTextureSampler(), "uCaptureTexture")}`
     : "";
 
   const ambientLightsBlock = Array.from(
@@ -564,7 +570,7 @@ ${materialFlags.transmission ? textureSamplerDeclaration(1, lightBindings.nextTe
     useReflectionProbes
       ? /* wgsl */ `
   data.reflectionWorld = reflect(-data.eyeDirWorld, data.normalWorld);
-  EvaluateLightProbe(&data, data.ao, uReflectionMap, uReflectionMapSampler, uFrame.viewportSize.x, ${materialFlags.transmission ? "uCaptureTexture, uCaptureTextureSampler" : "uReflectionMap, uReflectionMapSampler"}, uFrame.viewportSize, uModel.modelMatrix, uFrame.projectionMatrix, uFrame.viewMatrix);`
+  EvaluateLightProbe(&data, data.ao, uSpecularEnvMap, uSpecularEnvMapSampler, ${ROUGHNESS_LEVELS}.0, uIrradianceCoefficients, uCaptureTexture, uCaptureTextureSampler, uFrame.viewportSize, uModel.modelMatrix, uFrame.projectionMatrix, uFrame.viewMatrix);`
       : ""
   }
 
@@ -801,11 +807,9 @@ ${
     ? ""
     : `
   // Lighting
-  ${SHADERS.octMap}
   ${SHADERS.depthUnpack}
   ${SHADERS.depthRead}
   ${SHADERS.normalPerturb}
-  ${SHADERS.irradiance}
   ${SHADERS.shadowing}
   ${SHADERS.brdf}
   ${SHADERS.specular}

@@ -41,7 +41,6 @@
   },
   "dependencies": {
     "geom-builder": "^3.1.0",
-    "hammersley": "^2.0.0",
     "parse-hdr": "^1.0.0",
     "pex-cam": "^3.0.1",
     "pex-geom": "^3.1.1",

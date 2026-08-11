@@ -87,10 +87,7 @@ fn fragmentMain(input: VertexOutput) -> FragmentOutput {
   var output: FragmentOutput;
 
   let N = normalize(input.normal);
-  // envMapEquirect's vertical axis assumes a WebGL bottom-origin texture; the map
-  // is rendered/uploaded top-origin under WebGPU, so flip v.
-  let uv = envMapEquirect(N);
-  var color = textureSample(uEnvMap, uEnvMapSampler, vec2f(uv.x, 1.0 - uv.y));
+  var color = textureSample(uEnvMap, uEnvMapSampler, envMapEquirect(N));
   color = vec4f(color.rgb * uSkybox.exposure, color.a);
 
   ${useMSAA ? "color = vec4f(reversibleToneMap(color.xyz), color.w);" : ""}

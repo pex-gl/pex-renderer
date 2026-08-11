@@ -34,6 +34,7 @@ export default ({
   const skyboxSystem = systems.skybox(options);
   const cameraSystem = systems.camera();
 
+  const reflectionProbeSystem = systems.reflectionProbe(options);
   const lightSystem = systems.light();
   const renderPipelineSystem = systems.renderPipeline(options);
 
@@ -67,6 +68,7 @@ export default ({
       skyboxSystem,
       cameraSystem,
 
+      reflectionProbeSystem,
       lightSystem,
       renderPipelineSystem,
     ] as System[],
@@ -88,6 +90,7 @@ export default ({
       transformSystem.update(entities);
       layerSystem.update(entities);
       skyboxSystem.update(entities);
+      reflectionProbeSystem.update(entities);
       cameraSystem.update(entities);
 
       for (let i = 0; i < this.renderers.length; i++) {

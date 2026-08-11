@@ -1,4 +1,3 @@
-import { utils } from "pex-math";
 import { parser as ShaderParser } from "pex-shaders";
 import { submit, createSampler, isGpuTexture } from "pex-gpu";
 
@@ -108,6 +107,44 @@ export default ({ ctx, resourceCache, renderGraph }: SystemOptions) => ({
           }
         }
       }
+    }
+  },
+
+  // Builds the grab texture's mip chain with one downsample-blit render pass per
+  // level. Each is its own render-graph node, so the graph orders the write of
+  // level-1 before its read — generateMipmaps can't be used mid-frame, as its
+  // immediate queue.submit would run before the batched frame encoder.
+  generateGrabMips(this: any, grabTexture: any) {
+    const fullscreenTriangle = resourceCache.fullscreenTriangle();
+    const pipeline = resourceCache.pipeline(
+      this.descriptors.grabPass.downsamplePipelineDesc,
+    );
+
+    for (let level = 1; level < grabTexture.mipLevelCount; level++) {
+      const sourceView = grabTexture.texture.createView({
+        baseMipLevel: level - 1,
+        mipLevelCount: 1,
+      });
+      renderGraph.renderPass({
+        name: `GrabMipPass${level}`,
+        uses: [grabTexture],
+        pass: resourceCache.pass({
+          name: `grabMipPass${level}`,
+          color: [{ texture: grabTexture, level }],
+        }),
+        render: () => {
+          submit(ctx, {
+            label: `grabMip${level}Cmd`,
+            attributes: fullscreenTriangle.attributes,
+            count: fullscreenTriangle.count,
+            pipeline,
+            uniforms: {
+              uTexture: sourceView,
+              uSampler: this.blitSampler,
+            },
+          });
+        },
+      });
     }
   },
 
@@ -346,14 +383,11 @@ export default ({ ctx, resourceCache, renderGraph }: SystemOptions) => ({
 
     // Transmission pass
     if (hasTransmitted) {
-      // Grab pass
-      const viewport = [
-        0,
-        0,
-        utils.prevPowerOfTwo(renderView.viewport[2]),
-        utils.prevPowerOfTwo(renderView.viewport[3]),
-      ];
-      // const viewport = [0, 0, renderView.viewport[2], renderView.viewport[3]];
+      // Grab pass. Full viewport size (not prev-power-of-two): the transmission
+      // shader samples it with full-screen [0,1] coords, so a smaller top-left
+      // anchored copy would misalign refraction. NPOT mip chains are fine in
+      // WebGPU, so the old POT constraint no longer applies.
+      const viewport = [0, 0, renderView.viewport[2], renderView.viewport[3]];
       this.descriptors.grabPass.colorCopyTextureDesc.width = viewport[2];
       this.descriptors.grabPass.colorCopyTextureDesc.height = viewport[3];
       const grabPassColorCopyTexture = resourceCache.texture2D(
@@ -387,6 +421,8 @@ export default ({ ctx, resourceCache, renderGraph }: SystemOptions) => ({
           submit(ctx, grabPassCopyCmd);
         },
       });
+
+      this.generateGrabMips(grabPassColorCopyTexture);
 
       const hasBackTransmitted = entitiesInView.some(
         (entity) => entity.material?.transmission && !entity.material.cullFace,
@@ -436,6 +472,8 @@ export default ({ ctx, resourceCache, renderGraph }: SystemOptions) => ({
             submit(ctx, grabPassCopyCmd, [copyUniforms]);
           },
         });
+
+        this.generateGrabMips(grabPassColorCopyTexture);
       }
 
       renderGraph.renderPass({

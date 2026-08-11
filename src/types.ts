@@ -56,6 +56,22 @@ export interface Entity {
   _transform?: TransformCache;
   /** Cached geometry GPU resources, added by the geometry system. */
   _geometry?: GeometryCache;
+  /** Baked IBL GPU resources, added by the reflection-probe system. */
+  _reflectionProbe?: ReflectionProbeCache;
+}
+
+/**
+ * Baked image-based lighting resources for a reflection probe entity. Field
+ * naming follows the glTF `EXT_lights_image_based` vocabulary (specular cubemap
+ * + irradiance coefficients) so a future loader maps onto it directly.
+ */
+export interface ReflectionProbeCache {
+  /** Prefiltered specular radiance cubemap (roughness mapped to mip level). */
+  specularTexture: GpuTexture;
+  /** L2 spherical harmonics diffuse irradiance coefficients (9 × vec4f). */
+  irradianceCoefficients: GpuBuffer;
+  /** Trilinear sampler for the specular cubemap. */
+  sampler: GPUSampler;
 }
 
 // Components
@@ -452,6 +468,8 @@ export interface PostProcessingComponentOptions {
 }
 export interface ReflectionProbeComponentOptions {
   size?: number;
+  /** Set to force a rebake of the probe on the next update. */
+  dirty?: boolean;
 }
 export interface SkinComponentOptions {}
 export interface SkyboxComponentOptions {

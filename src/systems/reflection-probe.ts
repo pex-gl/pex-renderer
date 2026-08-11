@@ -1,441 +1,308 @@
-// @ts-nocheck
-import { mat4 } from "pex-math";
+import { submit, createTexture, createBuffer, createSampler } from "pex-gpu";
+
+import type { Entity, GpuTexture, SystemOptions } from "../types.js";
 import {
-  // pipeline,
-  // reflectionProbe as SHADERS,
-  parser as ShaderParser,
-} from "pex-shaders";
+  ROUGHNESS_LEVELS,
+  SH_COEFFICIENT_COUNT,
+  PREFILTER_SAMPLE_COUNT_DEFAULT,
+  reflectionProbeSHShader,
+  reflectionProbeEquirectToCubeShader,
+  reflectionProbeDownsampleShader,
+  reflectionProbePrefilterShader,
+} from "../shaders/reflection-probe.js";
 
-import hammersley from "hammersley";
-import { CUBEMAP_SIDES } from "../utils.js";
+// Base cube face size; the prefiltered roughness levels are its mip chain.
+const CUBEMAP_SIZE = 256;
+// Full mip chain of the radiance cube — the pre-blurred source the prefilter
+// samples from for filtered importance sampling.
+const RADIANCE_MIP_COUNT = 1 + Math.floor(Math.log2(CUBEMAP_SIZE));
+// Matches @workgroup_size(8, 8) in the compute shaders.
+const WORKGROUP_SIZE = 8;
 
-const SHADERS = {
-  cubemapToOctMap: { frag: "" },
-  convolveOctMapAtlasToOctMap: { frag: "" },
-  blitToOctMapAtlas: { frag: "" },
-  downsampleFromOctMapAtlas: { frag: "" },
-  prefilterFromOctMapAtlas: { frag: "" },
-};
+type ComputePipeline = { compute: string; entryPoint: string };
 
-const IRRADIANCE_OCT_MAP_SIZE = 64;
-
-const NUM_SAMPLES = 128;
-const hammersleyPointSet = new Float32Array(4 * NUM_SAMPLES);
-for (let i = 0; i < NUM_SAMPLES; i++) {
-  const p = hammersley(i, NUM_SAMPLES);
-  hammersleyPointSet[i * 4] = p[0];
-  hammersleyPointSet[i * 4 + 1] = p[1];
-}
-
-class ReflectionProbe {
-  constructor(opts) {
-    this.set(opts);
-
-    const ctx = opts.ctx;
-    this._ctx = ctx;
-    this.dirty = true;
-
-    this.initCubemap();
-    this.initOctMap();
-    this.initCommands();
-  }
-
-  init(entity) {
-    this.entity = entity;
-  }
-
-  set(opts) {
-    Object.assign(this, opts);
-  }
-
-  initCubemap() {
-    const ctx = this._ctx;
-
-    this._dynamicCubemap = ctx.textureCube({
-      name: "reflectionProbeDynamicCubeMap",
-      width: this.size,
-      height: this.size,
-      pixelFormat: ctx.PixelFormat.RGBA16F,
-    });
-
-    this._dynamicCubemapSides = structuredClone(CUBEMAP_SIDES).map(
-      (side, i) => {
-        side.viewMatrix = mat4.lookAt(
-          mat4.create(),
-          side.eye,
-          side.target,
-          side.up,
-        );
-        side.drawPassCmd = {
-          name: `reflectionProbeCubemapSideCmd${i}`,
-          pass: ctx.pass({
-            name: `reflectionProbeCubemapSidePass${i}`,
-            color: [
-              {
-                texture: this._dynamicCubemap,
-                target: ctx.gl.TEXTURE_CUBE_MAP_POSITIVE_X + i,
-              },
-            ],
-            clearColor: [0, 0, 0, 1],
-            clearDepth: 1,
-          }),
-        };
-        return side;
-      },
-    );
-  }
-
-  initOctMap() {
-    const ctx = this._ctx;
-
-    this._octMap = ctx.texture2D({
-      name: "reflectionProbeOctMap",
-      width: this.size,
-      height: this.size,
-      pixelFormat: ctx.PixelFormat.RGBA16F,
-    });
-
-    this._reflectionMap = ctx.texture2D({
-      name: "reflectionProbeReflectionMap",
-      width: 2 * this.size,
-      height: 2 * this.size,
-      min: ctx.Filter.Linear,
-      mag: ctx.Filter.Linear,
-      pixelFormat: ctx.PixelFormat.RGBA16F,
-    });
-
-    this._hammersleyPointSetMap = ctx.texture2D({
-      name: "reflectionProbeHammersleyPointSetMap",
-      data: hammersleyPointSet,
-      width: 1,
-      height: NUM_SAMPLES,
-      pixelFormat: ctx.PixelFormat.RGBA32F,
-    });
-  }
-
-  initCommands() {
-    const ctx = this._ctx;
-
-    const fullscreenTriangle = this.resourceCache.fullscreenTriangle();
-    const attributes = fullscreenTriangle.attributes;
-    const count = fullscreenTriangle.count;
-    const vert = ShaderParser.build(ctx, pipeline.blit.vert);
-
-    this.clearOctMapAtlasCmd = {
-      name: "reflectionProbeClearOctMapAtlasCmd",
-      pass: ctx.pass({
-        name: "reflectionProbeClearOctMapAtlasPass",
-        color: [this._reflectionMap],
-        clearColor: [0, 0, 0, 0],
-      }),
-    };
-
-    this.cubemapToOctMapCmd = {
-      name: "reflectionProbeCubemapToOctMapCmd",
-      pass: ctx.pass({
-        name: "reflectionProbeCubemapToOctMapPass",
-        color: [this._octMap],
-      }),
-      pipeline: ctx.pipeline({
-        vert,
-        frag: ShaderParser.build(ctx, SHADERS.cubemapToOctMap.frag),
-      }),
-      attributes,
-      count,
-      uniforms: {
-        uCubemap: this._dynamicCubemap,
-      },
-    };
-
-    this.convolveOctmapAtlasToOctMapCmd = {
-      name: "reflectionProbeConvolveOctmapAtlasToOctMapCmd",
-      pass: ctx.pass({
-        name: "reflectionProbeConvolveOctmapAtlasToOctMapPass",
-        color: [this._octMap],
-      }),
-      pipeline: ctx.pipeline({
-        vert,
-        frag: ShaderParser.build(ctx, SHADERS.convolveOctMapAtlasToOctMap.frag),
-      }),
-      attributes,
-      count,
-      uniforms: {
-        uIrradianceOctMapSize: IRRADIANCE_OCT_MAP_SIZE,
-        uOctMapAtlas: this._reflectionMap,
-      },
-    };
-
-    this.blitToOctMapAtlasCmd = {
-      name: "reflectionProbeBlitToOctMapAtlasCmd",
-      pass: ctx.pass({
-        name: "reflectionProbeBlitToOctMapAtlasPass",
-        color: [this._reflectionMap],
-      }),
-      pipeline: ctx.pipeline({
-        vert,
-        frag: ShaderParser.build(ctx, SHADERS.blitToOctMapAtlas.frag),
-      }),
-      uniforms: {
-        uOctMap: this._octMap,
-      },
-      attributes,
-      count,
-    };
-
-    this.downsampleFromOctMapAtlasCmd = {
-      name: "reflectionProbeDownsampleFromOctMapAtlasCmd",
-      pass: ctx.pass({
-        name: "reflectionProbeDownsampleFromOctMapAtlasPass",
-        color: [this._octMap],
-        clearColor: [0, 0, 0, 1],
-      }),
-      pipeline: ctx.pipeline({
-        vert,
-        frag: ShaderParser.build(ctx, SHADERS.downsampleFromOctMapAtlas.frag),
-      }),
-      uniforms: {
-        uOctMapAtlas: this._reflectionMap,
-      },
-      attributes,
-      count,
-    };
-
-    this.prefilterFromOctMapAtlasCmd = {
-      name: "reflectionProbePrefilterFromOctMapAtlasCmd",
-      pass: ctx.pass({
-        name: "reflectionProbePrefilterFromOctMapAtlasPass",
-        color: [this._octMap],
-        clearColor: [0, 0, 0, 1],
-      }),
-      pipeline: ctx.pipeline({
-        vert,
-        frag: ShaderParser.build(ctx, SHADERS.prefilterFromOctMapAtlas.frag),
-      }),
-      uniforms: {
-        uOctMapAtlas: this._reflectionMap,
-      },
-      attributes,
-      count,
-    };
-  }
-
-  // sourceRegionSize - as we downsample the octmap we recycle the fully size octMap
-  // but use only 1/2, 1/4, 1/8 of it, so when we blit it back to atlas we need to know
-  // which part is downsampled data (and the rest is garbage from previous iterations)
-  blitToOctMapAtlasLevel(mipmapLevel, roughnessLevel, sourceRegionSize) {
-    const width = this._reflectionMap.width;
-    // TODO: consider removing as it should match sourceRegionSize
-    const levelSize = Math.max(
-      64,
-      width / 2 ** (1 + mipmapLevel + roughnessLevel),
-    );
-    const roughnessLevelWidth = width / 2 ** (1 + roughnessLevel);
-    const vOffset = width - 2 ** (Math.log2(width) - roughnessLevel);
-    const hOffset =
-      2 * roughnessLevelWidth -
-      2 ** (Math.log2(2 * roughnessLevelWidth) - mipmapLevel);
-
-    this._ctx.submit(this.blitToOctMapAtlasCmd, {
-      viewport: [hOffset, vOffset, levelSize, levelSize],
-      uniforms: {
-        uOctMapSize: this._octMap.width,
-        uSourceRegionSize: sourceRegionSize,
-      },
-    });
-  }
-
-  downsampleFromOctMapAtlasLevel(
-    mipmapLevel,
-    roughnessLevel,
-    targetRegionSize,
-  ) {
-    this._ctx.submit(this.downsampleFromOctMapAtlasCmd, {
-      viewport: [0, 0, targetRegionSize, targetRegionSize],
-      uniforms: {
-        uOctMapAtlasSize: this._reflectionMap.width,
-        uMipmapLevel: mipmapLevel,
-        uRoughnessLevel: roughnessLevel,
-      },
-    });
-  }
-
-  prefilterFromOctMapAtlasLevel(
-    sourceMipmapLevel,
-    sourceRoughnessLevel,
-    roughnessLevel,
-    targetRegionSize,
-  ) {
-    this._ctx.submit(this.prefilterFromOctMapAtlasCmd, {
-      viewport: [0, 0, targetRegionSize, targetRegionSize],
-      uniforms: {
-        uOctMapAtlasSize: this._reflectionMap.width,
-        uNumSamples: NUM_SAMPLES, // TODO: either make constant in shader or make it configurable
-        uHammersleyPointSetMap: this._hammersleyPointSetMap,
-        uSourceMipmapLevel: sourceMipmapLevel,
-        uSourceRoughnessLevel: sourceRoughnessLevel,
-        uRoughnessLevel: roughnessLevel,
-      },
-    });
-  }
-
-  update(drawScene) {
-    this.dirty = false;
-
-    const ctx = this._ctx;
-
-    for (let i = 0; i < this._dynamicCubemapSides.length; i++) {
-      const side = this._dynamicCubemapSides[i];
-      ctx.submit(side.drawPassCmd, () => drawScene(side));
-    }
-
-    ctx.submit(this.cubemapToOctMapCmd, {
-      uniforms: { uTextureSize: this.size },
-    });
-
-    ctx.submit(this.clearOctMapAtlasCmd);
-
-    const maxLevel = Math.log2(this.size) - Math.log2(32);
-    this.blitToOctMapAtlasLevel(0, 0, this.size);
-
-    // Mipmap (horizontally)
-    for (let i = 0; i < maxLevel - 1; i++) {
-      const size = this.size / 2 ** (i + 1);
-      this.downsampleFromOctMapAtlasLevel(i, 0, size);
-      this.blitToOctMapAtlasLevel(i + 1, 0, size);
-    }
-    // we copy last level without downsampling it as it
-    // doesn't makes sense to have octahedral maps smaller than 64x64
-    this.blitToOctMapAtlasLevel(maxLevel, 0, 64);
-
-    // Roughness (vertically)
-    for (let i = 1; i <= maxLevel; i++) {
-      const size = Math.max(64, this.size / 2 ** i);
-      this.prefilterFromOctMapAtlasLevel(0, Math.max(0, i - 1), i, size);
-      this.blitToOctMapAtlasLevel(0, i, size);
-    }
-
-    ctx.submit(this.convolveOctmapAtlasToOctMapCmd, {
-      uniforms: {
-        uOctMapAtlasSize: this._reflectionMap.width,
-      },
-      viewport: [0, 0, IRRADIANCE_OCT_MAP_SIZE, IRRADIANCE_OCT_MAP_SIZE],
-    });
-
-    ctx.submit(this.blitToOctMapAtlasCmd, {
-      viewport: [
-        this._reflectionMap.width - IRRADIANCE_OCT_MAP_SIZE,
-        this._reflectionMap.height - IRRADIANCE_OCT_MAP_SIZE,
-        IRRADIANCE_OCT_MAP_SIZE,
-        IRRADIANCE_OCT_MAP_SIZE,
-      ],
-      uniforms: {
-        uOctMapSize: this._octMap.width,
-        uSourceRegionSize: IRRADIANCE_OCT_MAP_SIZE,
-      },
-    });
-  }
-
-  resize(size) {
-    if (!size) return;
-    const ctx = this._ctx;
-    this.size = size;
-    ctx.update(this._dynamicCubemap, { width: size, height: size });
-    ctx.update(this._octMap, { width: size, height: size });
-    ctx.update(this._reflectionMap, { width: size * 2, height: size * 2 });
-  }
-  enabled = true;
-  size = 1024;
+interface ProbeResources {
+  specularTexture: ReturnType<typeof createTexture>;
+  mipViews: GPUTextureView[];
+  radianceCube: ReturnType<typeof createTexture>;
+  // Per-mip 2d-array storage views (write targets) and single-level cube views
+  // (downsample sources) of the radiance cube.
+  radianceStorageViews: GPUTextureView[];
+  radianceLevelViews: GPUTextureView[];
+  irradianceCoefficients: ReturnType<typeof createBuffer>;
+  sampler: GPUSampler;
 }
 
 /**
- * Reflection Probe system
+ * Reflection probe system
  *
- * Adds:
+ * Filters the scene's environment (a skybox's user envMap or its analytic
+ * `_skyTexture`, both equirectangular HDR) into image-based lighting, entirely
+ * in compute:
  *
- * - "_reflectionProbe" to reflectionProbe components
+ * - diffuse irradiance projected into L2 spherical harmonics (9 coefficients)
+ * - specular radiance prefiltered into a native cubemap mip chain (split-sum)
  *
- * @param {import("../types.js").SystemOptions} options
- * @returns {import("../types.js").System}
+ * Adds to reflectionProbe components:
+ *
+ * - "_reflectionProbe": `{ specularTexture, irradianceCoefficients, sampler }`
+ *   consumed by the standard renderer's `USE_REFLECTION_PROBES` bindings.
  */
-export default ({ ctx, resourceCache }) => ({
+export default ({ ctx }: SystemOptions) => ({
   type: "reflection-probe-system",
-  cache: {},
+  cache: {} as Record<
+    number,
+    { resources: ProbeResources; envMap: GpuTexture | null }
+  >,
   debug: false,
-  updateReflectionProbeEntity(entity, skyboxEntities, options) {
-    // Initialise
-    if (!this.cache[entity.id] || !entity._reflectionProbe) {
-      this.cache[entity.id] = {};
-      entity._reflectionProbe = new ReflectionProbe({
-        ...entity.reflectionProbe,
-        ctx,
-        resourceCache,
+  shPipeline: null as ComputePipeline | null,
+  equirectToCubePipeline: null as ComputePipeline | null,
+  downsamplePipeline: null as ComputePipeline | null,
+  prefilterPipeline: null as ComputePipeline | null,
+  envSampler: null as GPUSampler | null,
+
+  createResources(): ProbeResources {
+    const specularTexture = createTexture(ctx, {
+      label: "reflectionProbeSpecularCubemap",
+      width: CUBEMAP_SIZE,
+      height: CUBEMAP_SIZE,
+      depth: 6,
+      viewDimension: "cube",
+      mipLevelCount: ROUGHNESS_LEVELS,
+      format: "rgba16float",
+      usage:
+        GPUTextureUsage.TEXTURE_BINDING |
+        GPUTextureUsage.STORAGE_BINDING |
+        GPUTextureUsage.COPY_DST,
+    });
+
+    // One write-only 2d-array view per mip: the prefilter writes all six faces
+    // of a single roughness level per dispatch.
+    const mipViews = Array.from({ length: ROUGHNESS_LEVELS }, (_, level) =>
+      specularTexture.texture.createView({
+        label: `reflectionProbeSpecularMip${level}`,
+        dimension: "2d-array",
+        baseMipLevel: level,
+        mipLevelCount: 1,
+        baseArrayLayer: 0,
+        arrayLayerCount: 6,
+      }),
+    );
+
+    // Box-filtered mip pyramid of the environment, sampled per GGX sample at the
+    // mip matching its solid angle (filtered importance sampling).
+    const radianceCube = createTexture(ctx, {
+      label: "reflectionProbeRadianceCubemap",
+      width: CUBEMAP_SIZE,
+      height: CUBEMAP_SIZE,
+      depth: 6,
+      viewDimension: "cube",
+      mipLevelCount: RADIANCE_MIP_COUNT,
+      format: "rgba16float",
+      usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.STORAGE_BINDING,
+    });
+    const radianceStorageViews = Array.from(
+      { length: RADIANCE_MIP_COUNT },
+      (_, level) =>
+        radianceCube.texture.createView({
+          label: `reflectionProbeRadianceStore${level}`,
+          dimension: "2d-array",
+          baseMipLevel: level,
+          mipLevelCount: 1,
+          baseArrayLayer: 0,
+          arrayLayerCount: 6,
+        }),
+    );
+    const radianceLevelViews = Array.from(
+      { length: RADIANCE_MIP_COUNT },
+      (_, level) =>
+        radianceCube.texture.createView({
+          label: `reflectionProbeRadianceLevel${level}`,
+          dimension: "cube",
+          baseMipLevel: level,
+          mipLevelCount: 1,
+        }),
+    );
+
+    // 9 vec4f: array<vec3f> has a 16-byte std430 stride, so coefficients are
+    // stored (and declared in WGSL) as vec4f with an unused w.
+    const irradianceCoefficients = createBuffer(ctx, {
+      label: "reflectionProbeIrradianceCoefficients",
+      usage: "storage",
+      size: SH_COEFFICIENT_COUNT * 4 * Float32Array.BYTES_PER_ELEMENT,
+    });
+
+    // Trilinear so roughness interpolates smoothly across prefiltered mips.
+    const sampler = createSampler(ctx, {
+      filter: "linear",
+      addressMode: "clamp-to-edge",
+    });
+
+    return {
+      specularTexture,
+      mipViews,
+      radianceCube,
+      radianceStorageViews,
+      radianceLevelViews,
+      irradianceCoefficients,
+      sampler,
+    };
+  },
+
+  bake(resources: ProbeResources, envMap: GpuTexture) {
+    const shPipeline = (this.shPipeline ||= {
+      compute: reflectionProbeSHShader(),
+      entryPoint: "computeMain",
+    });
+    const equirectToCubePipeline = (this.equirectToCubePipeline ||= {
+      compute: reflectionProbeEquirectToCubeShader(),
+      entryPoint: "computeMain",
+    });
+    const downsamplePipeline = (this.downsamplePipeline ||= {
+      compute: reflectionProbeDownsampleShader(),
+      entryPoint: "computeMain",
+    });
+    const prefilterPipeline = (this.prefilterPipeline ||= {
+      compute: reflectionProbePrefilterShader(),
+      entryPoint: "computeMain",
+    });
+    const envSampler = (this.envSampler ||= createSampler(ctx, {
+      filter: "linear",
+      addressMode: "repeat",
+    }));
+
+    const dispatch2d = (faceSize: number): [number, number, number] => {
+      const groups = Math.ceil(faceSize / WORKGROUP_SIZE);
+      return [groups, groups, 6];
+    };
+
+    // Diffuse: project the environment into L2 SH (single workgroup reduction).
+    submit(ctx, {
+      label: "reflectionProbeSHCmd",
+      pipeline: shPipeline,
+      uniforms: {
+        uEnvMap: envMap,
+        uEnvMapSampler: envSampler,
+        uIrradianceCoefficients: resources.irradianceCoefficients,
+      },
+      dispatch: 1,
+    });
+
+    // Radiance cube mip 0 from the equirect environment.
+    submit(ctx, {
+      label: "reflectionProbeEquirectToCubeCmd",
+      pipeline: equirectToCubePipeline,
+      uniforms: {
+        uEnvMap: envMap,
+        uEnvMapSampler: envSampler,
+        uOutput: resources.radianceStorageViews[0]!,
+        uParams: { faceSize: CUBEMAP_SIZE },
+      },
+      dispatch: dispatch2d(CUBEMAP_SIZE),
+    });
+
+    // Build the radiance mip chain. Each level is its own compute pass, so the
+    // implicit inter-pass barrier orders the write of level-1 before its read.
+    for (let level = 1; level < RADIANCE_MIP_COUNT; level++) {
+      const faceSize = CUBEMAP_SIZE >> level;
+      submit(ctx, {
+        label: `reflectionProbeDownsampleCmd${level}`,
+        pipeline: downsamplePipeline,
+        uniforms: {
+          uSource: resources.radianceLevelViews[level - 1]!,
+          uSourceSampler: resources.sampler,
+          uOutput: resources.radianceStorageViews[level]!,
+          uParams: { faceSize },
+        },
+        dispatch: dispatch2d(faceSize),
       });
     }
 
-    // Compare
-    if (entity._reflectionProbe.size !== entity.reflectionProbe.size) {
-      entity._reflectionProbe.resize(entity.reflectionProbe.size);
-      entity.reflectionProbe.dirty = true;
-    }
-
-    const skyboxEntity = skyboxEntities[0];
-
-    if (!skyboxEntity) return;
-
-    if (this.cache[entity.id].skyboxEnvMap !== skyboxEntity.skybox.envMap) {
-      this.cache[entity.id].skyboxEnvMap = skyboxEntity.skybox.envMap;
-      entity.reflectionProbe.dirty = true;
-    }
-
-    if (this.cache[entity.id].skyboxExposure !== skyboxEntity.skybox.exposure) {
-      this.cache[entity.id].skyboxExposure = skyboxEntity.skybox.exposure;
-      entity.reflectionProbe.dirty = true;
-    }
-
-    // Update and render
-    if (
-      // TODO: data ownership reflectionProbe vs _reflectionProbe
-      entity._reflectionProbe.dirty || // From ReflectionProbe instance
-      entity.reflectionProbe.dirty || // From user
-      skyboxEntity.skybox.dirty || // From user
-      skyboxEntity.skybox._skyTextureChanged // From skybox system
-    ) {
-      entity.reflectionProbe.dirty = false;
-      entity._reflectionProbe.dirty = false;
-
-      const { renderers = [] } = options;
-      entity._reflectionProbe.update((camera) => {
-        const renderView = {
-          camera: camera,
-        };
-        // should be only skybox renderers
-        for (let i = 0; i < renderers.length; i++) {
-          renderers[i].renderBackground?.(renderView, skyboxEntities, {
-            attachmentsLocations: { color: 0 },
-            renderingToReflectionProbe: true,
-          });
-        }
-        if (skyboxEntities.length > 0) {
-          // TODO: drawing skybox inside reflection probe
-          // skyboxEntities[0]._skybox.draw(camera, {
-          //   backgroundMode: false,
-          // });
-        }
+    // Specular: GGX-prefilter one roughness level per pass from the radiance cube.
+    for (let level = 0; level < ROUGHNESS_LEVELS; level++) {
+      const faceSize = CUBEMAP_SIZE >> level;
+      submit(ctx, {
+        label: `reflectionProbePrefilterCmd${level}`,
+        pipeline: prefilterPipeline,
+        uniforms: {
+          uRadianceCube: resources.radianceCube,
+          uRadianceCubeSampler: resources.sampler,
+          uOutput: resources.mipViews[level]!,
+          uParams: {
+            faceSize,
+            roughness: level / (ROUGHNESS_LEVELS - 1),
+            sampleCount: PREFILTER_SAMPLE_COUNT_DEFAULT,
+            cubeResolution: CUBEMAP_SIZE,
+          },
+        },
+        dispatch: dispatch2d(faceSize),
       });
     }
   },
-  update(entities, options = {}) {
-    for (let i = 0; i < entities.length; i++) {
-      const entity = entities[i];
-      if (entity.reflectionProbe) {
-        const skyboxEntities = entities.filter(
-          (skyboxEntity) =>
-            skyboxEntity.skybox &&
-            (!entity.layer || entity.layer == skyboxEntity.layer),
-        );
 
-        this.updateReflectionProbeEntity(entity, skyboxEntities, options);
+  updateReflectionProbeEntity(entity: Entity, envMap: GpuTexture, dirty: boolean) {
+    let cached = this.cache[entity.id];
+    if (!cached) {
+      const resources = this.createResources();
+      cached = this.cache[entity.id] = { resources, envMap: null };
+      entity._reflectionProbe = {
+        specularTexture: resources.specularTexture,
+        irradianceCoefficients: resources.irradianceCoefficients,
+        sampler: resources.sampler,
+      };
+      dirty = true;
+    }
+
+    if (cached.envMap !== envMap) {
+      cached.envMap = envMap;
+      dirty = true;
+    }
+
+    if (dirty) {
+      entity.reflectionProbe!.dirty = false;
+      this.bake(cached.resources, envMap);
+    }
+  },
+
+  update(entities: Entity[]) {
+    const skyboxEntities = entities.filter((e) => e.skybox);
+
+    for (let i = 0; i < entities.length; i++) {
+      const entity = entities[i]!;
+      if (!entity.reflectionProbe) continue;
+
+      const skyboxEntity = skyboxEntities.find(
+        (s) => !entity.layer || entity.layer == s.layer,
+      );
+      if (!skyboxEntity) continue;
+
+      const skybox = skyboxEntity.skybox!;
+      const envMap = skybox.envMap || skybox._skyTexture;
+      if (!envMap) continue;
+
+      // Rebake when the user marks the probe dirty or the analytic sky rebaked.
+      this.updateReflectionProbeEntity(
+        entity,
+        envMap,
+        !!entity.reflectionProbe.dirty || !!skybox._skyTextureChanged,
+      );
+    }
+  },
+
+  dispose(entities?: Entity[]) {
+    if (entities) {
+      for (let i = 0; i < entities.length; i++) {
+        const entity = entities[i]!;
+        const cached = this.cache[entity.id];
+        if (cached) {
+          cached.resources.specularTexture.dispose();
+          cached.resources.radianceCube.dispose();
+          cached.resources.irradianceCoefficients.dispose();
+          delete this.cache[entity.id];
+        }
       }
+    } else {
+      this.cache = {};
     }
   },
 });

@@ -184,14 +184,22 @@ function createPass(props: any) {
                 arrayLayerCount: 1,
               }),
             }
-          : // Render attachments must target exactly one mip level; a mipmapped
-            // texture's cached default view spans the full chain.
-            texture.mipLevelCount > 1 && {
-              view: texture.texture.createView({
-                baseMipLevel: 0,
-                mipLevelCount: 1,
+          : attachment.level != null
+            ? // Explicit mip target (eg. building a grab-pass mip chain).
+              {
+                view: texture.texture.createView({
+                  baseMipLevel: attachment.level,
+                  mipLevelCount: 1,
+                }),
+              }
+            : // Render attachments must target exactly one mip level; a mipmapped
+              // texture's cached default view spans the full chain.
+              texture.mipLevelCount > 1 && {
+                view: texture.texture.createView({
+                  baseMipLevel: 0,
+                  mipLevelCount: 1,
+                }),
               }),
-            }),
         ...(attachment.resolveTarget
           ? { resolveTarget: attachment.resolveTarget }
           : {}),
