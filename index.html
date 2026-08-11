@@ -33,6 +33,10 @@
         font-family: var(--font-mono);
         background-color: var(--color-black);
         color: var(--color-white);
+
+        &:has(.Examples-list--side) {
+          overflow: hidden;
+        }
       }
       * {
         text-rendering: optimizeLegibility;

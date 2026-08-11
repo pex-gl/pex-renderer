@@ -65,7 +65,7 @@
     "grid-cells": "^2.0.0",
     "pex-color": "^2.3.0",
     "pex-context": "^4.1.0",
-    "pex-gui": "^3.3.0",
+    "pex-gui": "file:../pex-gui",
     "primitive-geometry": "^2.11.0",
     "webgpu": "^0.4.0"
   },

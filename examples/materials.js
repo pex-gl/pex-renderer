@@ -7,8 +7,8 @@ import {
 } from "pex-renderer";
 
 import * as gpu from "pex-gpu";
-// import createGUI from "pex-gui";
-import { vec3, quat } from "pex-math";
+import createGUI from "pex-gui";
+import { vec3, quat, vec2 } from "pex-math";
 
 import { sphere } from "primitive-geometry";
 import gridCells from "grid-cells";
@@ -20,9 +20,9 @@ const ctx = await gpu.createContext({ pixelRatio });
 const renderEngine = createRenderEngine({ ctx, debug: true });
 const world = createWorld();
 
-// const gui = createGUI(ctx);
-// gui.addFPSMeeter().setPosition(10, 40);
-// gui.addStats();
+const gui = createGUI(ctx);
+gui.addFPSMeeter().setPosition(10, 40);
+gui.addStats();
 
 const nW = 4;
 const nH = 3;
@@ -248,12 +248,12 @@ world.add(skyEntity);
 // Events
 let debugOnce = false;
 
-// const headers = Object.keys(materials).map((headerTitle) => gui.addHeader(headerTitle));
+const headers = Object.keys(materials).map((headerTitle) => gui.addHeader(headerTitle));
 
-// const viewportToCanvasPosition = (viewport, height) => [
-//   viewport[0] / pixelRatio,
-//   (height * (1 - viewport[1] / height - viewport[3] / height)) / pixelRatio,
-// ];
+const viewportToCanvasPosition = (viewport, height) => [
+  viewport[0] / pixelRatio,
+  (height * (1 - viewport[1] / height - viewport[3] / height)) / pixelRatio,
+];
 
 const onResize = () => {
   const width = window.innerWidth;
@@ -270,11 +270,11 @@ const onResize = () => {
     cell[3],
   ]);
 
-  // cells.forEach((cell, i) => {
-  //   const labelPosition = [10, 10];
-  //   vec2.add(labelPosition, viewportToCanvasPosition(cell, H));
-  //   headers[i]?.setPosition(...labelPosition);
-  // });
+  cells.forEach((cell, i) => {
+    const labelPosition = [10, 10];
+    vec2.add(labelPosition, viewportToCanvasPosition(cell, H));
+    headers[i]?.setPosition(...labelPosition);
+  });
 
   world.entities
     .filter((entity) => entity.camera)
@@ -303,7 +303,7 @@ gpu.frame(ctx, () => {
   gpu.debug(ctx, debugOnce);
   debugOnce = false;
 
-  // gui.draw();
+  gui.draw();
 
   window.dispatchEvent(new CustomEvent("screenshot"));
 });
