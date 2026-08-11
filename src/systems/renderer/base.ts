@@ -1,3 +1,4 @@
+import { isGpuTexture } from "pex-gpu";
 import { mat2x3, mat3, mat4 } from "pex-math";
 
 import {
@@ -159,7 +160,7 @@ export function getFeatureFlags(
     if (field.texture) {
       if (!value) continue;
       const name = uniformName(field.key);
-      uniforms[name] = value;
+      uniforms[name] = isGpuTexture(value) ? value : value.texture;
       uniforms[samplerName(name)] = sampler;
       let scratch = TEMP_MAT3_SET.get(field.key);
       if (!scratch) {
