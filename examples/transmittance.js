@@ -3,23 +3,24 @@ import {
   world as createWorld,
   entity as createEntity,
   components,
-} from "../index.js";
+  loaders,
+} from "pex-renderer";
 
-import createContext from "pex-context";
+import * as gpu from "pex-gpu";
 import createGUI from "pex-gui";
 import { vec3, quat } from "pex-math";
 import { aabb } from "pex-geom";
 import { loadHdr } from "pex-loaders";
 import { plane, sphere } from "primitive-geometry";
 import gridCells from "grid-cells";
-import { getEnvMap, getTexture, getURL, dragon } from "./utils.js";
+import { getEnvMap, getURL, dragon, getGpuTexture } from "./utils.js";
 
 const State = {
   furnace: false,
 };
 
 const pixelRatio = devicePixelRatio;
-const ctx = createContext({ pixelRatio });
+const ctx = await gpu.createContext({ pixelRatio });
 const renderEngine = createRenderEngine({ ctx, debug: true });
 const world = createWorld();
 
@@ -178,7 +179,7 @@ const checkerEntity = createEntity({
   material: components.material({
     roughness: 0,
     metallic: 0,
-    baseColorTexture: await getTexture(
+    baseColorTexture: await getGpuTexture(
       ctx,
       getURL(`assets/textures/checkerboard/checkerboard.png`),
       true,
@@ -186,13 +187,6 @@ const checkerEntity = createEntity({
   }),
 });
 world.add(checkerEntity);
-
-const geometry = {
-  positions: { buffer: ctx.vertexBuffer(modelGeometry.positions) },
-  normals: { buffer: ctx.vertexBuffer(modelGeometry.normals) },
-  // uvs: { buffer: ctx.vertexBuffer(modelGeometry.uvs) },
-  cells: { buffer: ctx.indexBuffer(modelGeometry.cells) },
-};
 
 for (let i = 0; i < nW * nH; i++) {
   const layer = `cell${i}`;
@@ -205,8 +199,8 @@ for (let i = 0; i < nW * nH; i++) {
       near: 0.001,
       toneMap: "neutral",
     }),
-    postProcessing: components.postProcessing(),
-    orbiter: components.orbiter({ element: ctx.gl.canvas }),
+    // postProcessing: components.postProcessing(),
+    orbiter: components.orbiter({ element: ctx.canvas }),
   });
   world.add(cameraEntity);
 
@@ -216,7 +210,7 @@ for (let i = 0; i < nW * nH; i++) {
   const materialEntity = createEntity({
     layer,
     transform: components.transform(),
-    geometry: components.geometry(geometry),
+    geometry: components.geometry(modelGeometry),
     material: components.material(material),
   });
   world.add(materialEntity);
@@ -227,10 +221,11 @@ const ENV_MAP_PATH =
     ? "examples/glTF-Sample-Environments"
     : "https://github.com/KhronosGroup/glTF-Sample-Environments/raw/main";
 
-const envMap = await loadHdr(ctx, `${ENV_MAP_PATH}/neutral.hdr`);
-const furnaceEnvMap = await getEnvMap(
+// const envMap = await loaders.hdr(ctx, `${ENV_MAP_PATH}/neutral.hdr`);
+const envMap = await loaders.hdr(ctx, getURL("assets/envmaps/neutral.hdr"));
+const furnaceEnvMap = await loaders.hdr(
   ctx,
-  "assets/envmaps/furnace/furnace-4k.hdr",
+  getURL("assets/envmaps/furnace/furnace-4k.hdr"),
 );
 
 const skyEntity = createEntity({
@@ -272,7 +267,7 @@ const headers = brdfNames.map((headerTitle) => gui.addHeader(headerTitle));
 const onResize = () => {
   const width = window.innerWidth;
   const height = window.innerHeight;
-  ctx.set({ pixelRatio, width, height });
+  gpu.resize(ctx, width, height, pixelRatio);
 
   const W = width * pixelRatio;
   const H = height * pixelRatio;
@@ -281,12 +276,7 @@ const onResize = () => {
     header.setPosition(10, 10 + (i * H) / nH / pixelRatio);
   });
 
-  const cells = gridCells(W, H, nW, nH, 0).map((cell) => [
-    cell[0],
-    H - cell[1] - cell[3],
-    cell[2],
-    cell[3],
-  ]);
+  const cells = gridCells(W, H, nW, nH, 0);
 
   world.entities
     .filter((entity) => entity.camera)
@@ -305,14 +295,14 @@ window.addEventListener("keydown", ({ key }) => {
   if (key === "d") debugOnce = true;
 });
 
-ctx.frame(() => {
+gpu.frame(ctx, () => {
   renderEngine.update(world.entities);
   renderEngine.render(
     world.entities,
     world.entities.filter((entity) => entity.camera),
   );
 
-  ctx.debug(debugOnce);
+  gpu.debug(ctx, debugOnce);
   debugOnce = false;
 
   gui.draw();

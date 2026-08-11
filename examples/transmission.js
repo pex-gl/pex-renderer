@@ -3,16 +3,17 @@ import {
   world as createWorld,
   entity as createEntity,
   components,
-} from "../index.js";
+  loaders,
+} from "pex-renderer";
 
-import createContext from "pex-context";
+import * as gpu from "pex-gpu";
 import { quat } from "pex-math";
 import createGUI from "pex-gui";
 import random from "pex-random";
 
 import { cube, torus, sphere, roundedCube } from "primitive-geometry";
 
-import { getEnvMap } from "./utils.js";
+import { getURL } from "./utils.js";
 
 import { getRenderPassGraphViz } from "./graph-viz.js";
 
@@ -24,7 +25,7 @@ const State = {
 };
 
 const pixelRatio = devicePixelRatio;
-const ctx = createContext({ pixelRatio });
+const ctx = await gpu.createContext({ pixelRatio });
 const renderEngine = createRenderEngine({ ctx, debug: true });
 const world = createWorld();
 
@@ -34,15 +35,13 @@ renderPassGraphViz.init(ctx, renderEngine.renderGraph);
 // Entities
 const cameraEntity = createEntity({
   transform: components.transform({ position: [3, 1.5, 3] }),
-  camera: components.camera({
-    aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
-  }),
-  orbiter: components.orbiter({ element: ctx.gl.canvas }),
-  postProcessing: State.msaa
-    ? components.postProcessing({
-        msaa: components.postProcessing.msaa(),
-      })
-    : null,
+  camera: components.camera({}),
+  orbiter: components.orbiter({ element: ctx.canvas }),
+  // postProcessing: State.msaa
+  //   ? components.postProcessing({
+  //       msaa: components.postProcessing.msaa(),
+  //     })
+  //   : null,
 });
 world.add(cameraEntity);
 
@@ -64,17 +63,17 @@ world.add(floorEntity);
 const BlendModes = {
   refraction: {
     blend: true,
-    blendSrcRGBFactor: ctx.BlendFactor.One,
-    blendSrcAlphaFactor: ctx.BlendFactor.One,
-    blendDstRGBFactor: ctx.BlendFactor.Zero,
-    blendDstAlphaFactor: ctx.BlendFactor.Zero,
+    // blendSrcRGBFactor: ctx.BlendFactor.One,
+    // blendSrcAlphaFactor: ctx.BlendFactor.One,
+    // blendDstRGBFactor: ctx.BlendFactor.Zero,
+    // blendDstAlphaFactor: ctx.BlendFactor.Zero,
   },
   "alpha-blend": {
     blend: true,
-    blendSrcRGBFactor: ctx.BlendFactor.SrcAlpha,
-    blendSrcAlphaFactor: ctx.BlendFactor.One,
-    blendDstRGBFactor: ctx.BlendFactor.OneMinusSrcAlpha,
-    blendDstAlphaFactor: ctx.BlendFactor.One,
+    // blendSrcRGBFactor: ctx.BlendFactor.SrcAlpha,
+    // blendSrcAlphaFactor: ctx.BlendFactor.One,
+    // blendDstRGBFactor: ctx.BlendFactor.OneMinusSrcAlpha,
+    // blendDstAlphaFactor: ctx.BlendFactor.One,
   },
 };
 
@@ -223,8 +222,8 @@ world.add(transmittedCubesEntity);
 
 const skyEntity = createEntity({
   skybox: components.skybox({
-    backgroundBlur: false,
-    envMap: await getEnvMap(ctx, "assets/envmaps/garage/garage.hdr"),
+    // backgroundBlur: false,
+    envMap: await loaders.hdr(ctx, getURL("assets/envmaps/garage/garage.hdr")),
   }),
   reflectionProbe: components.reflectionProbe(),
 });
@@ -273,12 +272,12 @@ gui.addParam("MSAA", State, "msaa", null, () => {
   }
   if (renderPassGraphViz.isRendered()) renderPassGraphViz.draw();
 });
-const dummyTexture2D = ctx.texture2D({
+const dummyTexture2D = gpu.createTexture(ctx, {
   name: "dummyTexture2D",
   width: 4,
   height: 4,
 });
-const guiCaptureControl = gui.addTexture2D("Capture", null, { flipY: true });
+const guiCaptureControl = gui.addTexture2D("Capture", null);
 gui.addButton("Toggle Render Pass Graph", () => {
   renderPassGraphViz.toggle();
 });
@@ -411,7 +410,7 @@ window.addEventListener("keydown", ({ key }) => {
   if (key === "d") debugOnce = true;
 });
 
-ctx.frame(() => {
+gpu.frame(ctx, () => {
   if (State.autoRotate) {
     quat.fromAxisAngle(
       torusEntity.transform.rotation,
@@ -430,7 +429,7 @@ ctx.frame(() => {
 
   guiCaptureControl.texture = transmissionBackgroundTexture || dummyTexture2D;
 
-  ctx.debug(debugOnce);
+  gpu.debug(ctx, debugOnce);
   debugOnce = false;
 
   gui.draw();

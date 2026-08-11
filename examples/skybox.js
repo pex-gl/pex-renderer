@@ -3,15 +3,16 @@ import {
   world as createWorld,
   entity as createEntity,
   components,
-} from "../index.js";
+  loaders,
+} from "pex-renderer";
 
-import createContext from "pex-context";
+import * as gpu from "pex-gpu";
 import { quat } from "pex-math";
 import createGUI from "pex-gui";
 
 import { sphere } from "primitive-geometry";
 
-import { getEnvMap, updateSunPosition } from "./utils.js";
+import { getURL, updateSunPosition } from "./utils.js";
 
 const State = {
   envMap: false,
@@ -28,7 +29,7 @@ const State = {
 };
 
 const pixelRatio = devicePixelRatio;
-const ctx = createContext({ pixelRatio });
+const ctx = await gpu.createContext({ pixelRatio });
 const renderEngine = createRenderEngine({ ctx, debug: true });
 const world = createWorld();
 
@@ -36,12 +37,11 @@ const world = createWorld();
 const cameraEntity = createEntity({
   transform: components.transform({ position: [0, 0, 2] }),
   camera: components.camera({
-    aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
     near: 0.1,
     far: 100,
   }),
-  postProcessing: components.postProcessing(),
-  orbiter: components.orbiter({ element: ctx.gl.canvas }),
+  // postProcessing: components.postProcessing(),
+  orbiter: components.orbiter({ element: ctx.canvas }),
 });
 world.add(cameraEntity);
 
@@ -56,13 +56,14 @@ const geometryEntity = createEntity({
 });
 world.add(geometryEntity);
 
-const ultraHdr = await getEnvMap(
+const ultraHdr = null
+// const ultraHdr = await getEnvMap(
+//   ctx,
+//   "assets/envmaps/Ditch-River_2k/Ditch-River_2k_0.9.jpg",
+// );
+const hdrMap = await loaders.hdr(
   ctx,
-  "assets/envmaps/Ditch-River_2k/Ditch-River_2k_0.9.jpg",
-);
-const hdrMap = await getEnvMap(
-  ctx,
-  "assets/envmaps/Ditch-River_2k/Ditch-River_2k.hdr",
+  getURL("assets/envmaps/Ditch-River_2k/Ditch-River_2k.hdr"),
 );
 
 const skyboxEntity = createEntity({
@@ -96,8 +97,8 @@ const updateEnvMap = () => {
 updateEnvMap();
 
 // Update for GUI
-renderEngine.update(world.entities);
-renderEngine.render(world.entities, cameraEntity);
+// renderEngine.update(world.entities);
+// renderEngine.render(world.entities, cameraEntity);
 
 // GUI
 let guiEnvMapTextureControl;
@@ -189,39 +190,40 @@ gui.addParam("MieDirectionalG", skyboxEntity.skybox, "mieDirectionalG", {
 
 gui.addSeparator();
 gui.addLabel("Environment Map");
-gui.addRadioList(
-  "Map Size",
-  State,
-  "sizeIndex",
-  State.sizes.map((name, value) => ({
-    name,
-    value,
-  })),
-  () => {
-    reflectionProbeEntity.reflectionProbe.size = State.sizes[State.sizeIndex];
-  },
-);
+// gui.addRadioList(
+//   "Map Size",
+//   State,
+//   "sizeIndex",
+//   State.sizes.map((name, value) => ({
+//     name,
+//     value,
+//   })),
+//   () => {
+//     reflectionProbeEntity.reflectionProbe.size = State.sizes[State.sizeIndex];
+//   },
+// );
 
 gui.addColumn("Textures");
-const dummyTexture2D = ctx.texture2D({
+const dummyTexture2D = gpu.createTexture(ctx, {
   name: "dummyTexture2D",
   width: 256,
   height: 1,
+  format: "rgba8unorm",
 });
 const guiSkyTextureControl = gui.addTexture2D("Sky", null, { flipY: true });
 guiEnvMapTextureControl = gui.addTexture2D("Env Map", null, { flipY: false });
-gui.addTextureCube(
-  "Reflection Cubemap",
-  reflectionProbeEntity._reflectionProbe._dynamicCubemap,
-);
-// gui.addTexture2D(
-//   "Oct Map",
-//   reflectionProbeEntity._reflectionProbe._octMap,
+// gui.addTextureCube(
+//   "Reflection Cubemap",
+//   reflectionProbeEntity._reflectionProbe._dynamicCubemap,
 // );
-gui.addTexture2D(
-  "Reflection Map",
-  reflectionProbeEntity._reflectionProbe._reflectionMap,
-);
+// // gui.addTexture2D(
+// //   "Oct Map",
+// //   reflectionProbeEntity._reflectionProbe._octMap,
+// // );
+// gui.addTexture2D(
+//   "Reflection Map",
+//   reflectionProbeEntity._reflectionProbe._reflectionMap,
+// );
 
 // Events
 let debugOnce = false;
@@ -229,7 +231,7 @@ let debugOnce = false;
 window.addEventListener("resize", () => {
   const width = window.innerWidth;
   const height = window.innerHeight;
-  ctx.set({ pixelRatio, width, height });
+  gpu.resize(ctx, width, height, pixelRatio);
   cameraEntity.camera.aspect = width / height;
   cameraEntity.camera.dirty = true;
 });
@@ -239,7 +241,7 @@ window.addEventListener("keydown", ({ key }) => {
   if (key === "d") debugOnce = true;
 });
 
-ctx.frame(() => {
+gpu.frame(ctx, () => {
   renderEngine.update(world.entities);
   renderEngine.render(world.entities, cameraEntity);
 
@@ -248,7 +250,7 @@ ctx.frame(() => {
   guiEnvMapTextureControl.texture =
     skyboxEntity.skybox.envMap || dummyTexture2D;
 
-  ctx.debug(debugOnce);
+  gpu.debug(ctx, debugOnce);
   debugOnce = false;
 
   gui.draw();

@@ -27,6 +27,8 @@ gui.addStats();
 const nW = 4;
 const nH = 3;
 
+const remapRoughness = (t) => Math.pow(t, 2);
+
 // Materials
 const materials = {
   Default: {},
@@ -46,7 +48,7 @@ const materials = {
     ),
   },
   "Base Color": {
-    roughness: 0.5,
+    roughness: remapRoughness(0.5),
     metallic: 0,
     baseColor: [0.1, 0.5, 0.8, 1.0],
   },
@@ -58,14 +60,14 @@ const materials = {
     depthWrite: false,
   },
   Transmission: {
-    roughness: 0.5,
+    roughness: remapRoughness(0.5),
     metallic: 0,
     baseColor: [1, 1, 1, 1],
     transmission: 0.9,
     thickness: 0.9,
     attenuationDistance: 0.15,
     attenuationColor: [0.96, 0.82, 0.82],
-    dispersion: 10,
+    // dispersion: 10,
   },
   // Base color map
   "Base Color Texture": {
@@ -73,7 +75,11 @@ const materials = {
     metallic: 0,
     roughness: 1,
     baseColorTexture: Object.assign(
-      await getGpuTexture(ctx, getURL(`assets/textures/uv-wide/uv-wide.png`), true),
+      await getGpuTexture(
+        ctx,
+        getURL(`assets/textures/uv-wide/uv-wide.png`),
+        true,
+      ),
       { scale: [1.5, 1.5] },
     ),
   },
@@ -145,7 +151,7 @@ const materials = {
   },
   // Alpha map
   "Alpha Texture": {
-    roughness: 0.5,
+    roughness: remapRoughness(0.5),
     metallic: 0,
     baseColor: [1, 1, 1, 1],
     alphaTest: 0.5,
@@ -241,18 +247,20 @@ const skyEntity = createEntity({
   skybox: components.skybox({
     envMap: await loaders.hdr(ctx, getURL("assets/envmaps/garage/garage.hdr")),
   }),
-  // reflectionProbe: components.reflectionProbe(), // systems/reflection-probe.ts is not ported to pex-gpu yet
+  reflectionProbe: components.reflectionProbe(),
 });
 world.add(skyEntity);
 
 // Events
 let debugOnce = false;
 
-const headers = Object.keys(materials).map((headerTitle) => gui.addHeader(headerTitle));
+const headers = Object.keys(materials).map((headerTitle) =>
+  gui.addHeader(headerTitle),
+);
 
-const viewportToCanvasPosition = (viewport, height) => [
+const viewportToCanvasPosition = (viewport) => [
   viewport[0] / pixelRatio,
-  (height * (1 - viewport[1] / height - viewport[3] / height)) / pixelRatio,
+  viewport[1] / pixelRatio,
 ];
 
 const onResize = () => {
@@ -263,16 +271,11 @@ const onResize = () => {
   const W = width * pixelRatio;
   const H = height * pixelRatio;
 
-  const cells = gridCells(W, H, nW, nH, 0).map((cell) => [
-    cell[0],
-    H - cell[1] - cell[3],
-    cell[2],
-    cell[3],
-  ]);
+  const cells = gridCells(W, H, nW, nH, 0);
 
   cells.forEach((cell, i) => {
     const labelPosition = [10, 10];
-    vec2.add(labelPosition, viewportToCanvasPosition(cell, H));
+    vec2.add(labelPosition, viewportToCanvasPosition(cell));
     headers[i]?.setPosition(...labelPosition);
   });
 

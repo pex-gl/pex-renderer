@@ -3,22 +3,22 @@ import {
   world as createWorld,
   entity as createEntity,
   components,
-} from "../index.js";
+  loaders,
+} from "pex-renderer";
 
-import createContext from "pex-context";
+import * as gpu from "pex-gpu";
 import createGUI from "pex-gui";
 import { vec3, quat } from "pex-math";
 import { sphere } from "primitive-geometry";
 import gridCells from "grid-cells";
-
-import { getEnvMap } from "./utils.js";
+import { getURL } from "./utils.js";
 
 const State = {
   furnace: false,
 };
 
 const pixelRatio = devicePixelRatio;
-const ctx = createContext({ pixelRatio });
+const ctx = await gpu.createContext({ pixelRatio });
 const renderEngine = createRenderEngine({ ctx, debug: true });
 const world = createWorld();
 
@@ -94,13 +94,6 @@ const nH = brdfNames.length;
 // Entities
 const sphereGeometry = sphere({ nx: 32, ny: 32 });
 
-const geometry = {
-  positions: { buffer: ctx.vertexBuffer(sphereGeometry.positions) },
-  normals: { buffer: ctx.vertexBuffer(sphereGeometry.normals) },
-  uvs: { buffer: ctx.vertexBuffer(sphereGeometry.uvs) },
-  cells: { buffer: ctx.indexBuffer(sphereGeometry.cells) },
-};
-
 for (let i = 0; i < nW * nH; i++) {
   const layer = `cell${i}`;
   const cameraEntity = createEntity({
@@ -109,8 +102,8 @@ for (let i = 0; i < nW * nH; i++) {
       position: [0, 0, 2],
     }),
     camera: components.camera(),
-    postProcessing: components.postProcessing(),
-    orbiter: components.orbiter({ element: ctx.gl.canvas }),
+    // postProcessing: components.postProcessing(),
+    orbiter: components.orbiter({ element: ctx.canvas }),
   });
   world.add(cameraEntity);
 
@@ -120,19 +113,19 @@ for (let i = 0; i < nW * nH; i++) {
   const materialEntity = createEntity({
     layer,
     transform: components.transform(),
-    geometry: components.geometry(geometry),
+    geometry: components.geometry(sphereGeometry),
     material: components.material(material),
   });
   world.add(materialEntity);
 }
 
-const envMap = await getEnvMap(
+const envMap = await loaders.hdr(
   ctx,
-  "assets/envmaps/Ditch-River_2k/Ditch-River_2k.hdr",
+  getURL("assets/envmaps/Ditch-River_2k/Ditch-River_2k.hdr"),
 );
-const furnaceEnvMap = await getEnvMap(
+const furnaceEnvMap = await loaders.hdr(
   ctx,
-  "assets/envmaps/furnace/furnace-4k.hdr",
+  getURL("assets/envmaps/furnace/furnace-4k.hdr"),
 );
 
 const skyEntity = createEntity({
@@ -174,7 +167,7 @@ const headers = brdfNames.map((headerTitle) => gui.addHeader(headerTitle));
 const onResize = () => {
   const width = window.innerWidth;
   const height = window.innerHeight;
-  ctx.set({ pixelRatio, width, height });
+  gpu.resize(ctx, width, height, pixelRatio);
 
   const W = width * pixelRatio;
   const H = height * pixelRatio;
@@ -183,12 +176,7 @@ const onResize = () => {
     header.setPosition(10, 10 + (i * H) / nH / pixelRatio);
   });
 
-  const cells = gridCells(W, H, nW, nH, 0).map((cell) => [
-    cell[0],
-    H - cell[1] - cell[3],
-    cell[2],
-    cell[3],
-  ]);
+  const cells = gridCells(W, H, nW, nH, 0);
 
   world.entities
     .filter((entity) => entity.camera)
@@ -207,14 +195,14 @@ window.addEventListener("keydown", ({ key }) => {
   if (key === "d") debugOnce = true;
 });
 
-ctx.frame(() => {
+gpu.frame(ctx, () => {
   renderEngine.update(world.entities);
   renderEngine.render(
     world.entities,
     world.entities.filter((entity) => entity.camera),
   );
 
-  ctx.debug(debugOnce);
+  gpu.debug(ctx, debugOnce);
   debugOnce = false;
 
   gui.draw();
