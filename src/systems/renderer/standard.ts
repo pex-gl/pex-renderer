@@ -106,6 +106,12 @@ export default ({
     filter: "linear",
     addressMode: "repeat",
   }),
+  // uCaptureTexture (grabbed opaque color) is trilinear so refraction can sample
+  // the roughness-based mip; clamp-to-edge to avoid wrapping at screen borders.
+  captureSampler: createSampler(ctx, {
+    filter: "linear",
+    addressMode: "clamp-to-edge",
+  }),
   ltcTextures: { ltc_1: null, ltc_2: null },
   isLoadingAreaLightData: null,
 
@@ -435,20 +441,23 @@ export default ({
     // (see getDefines/getVariantKey); the bindings below feed EvaluateLightProbe.
     const probeEntity = entities.find((e) => e._reflectionProbe);
     this._reflectionProbe = probeEntity?._reflectionProbe;
-    // On the transmission pass the pipeline supplies the grabbed opaque color
-    // (mip-chained for roughness-based refraction blur); other passes bind a
-    // dummy so the always-declared uCaptureTexture stays valid.
-    const captureTexture =
-      (transmitted && backgroundColorTexture) || this.dummyCaptureTexture;
     const reflectionUniforms = this._reflectionProbe
       ? {
           uSpecularEnvMap: this._reflectionProbe.specularTexture,
           uSpecularEnvMapSampler: this._reflectionProbe.sampler,
           uIrradianceCoefficients: this._reflectionProbe.irradianceCoefficients,
-          uCaptureTexture: captureTexture,
-          uCaptureTextureSampler: this._reflectionProbe.sampler,
         }
       : undefined;
+
+    // uCaptureTexture is bound for every lit material (transmission is decoupled
+    // from the probe). On the transmission pass the pipeline supplies the grabbed
+    // opaque color (mip-chained for roughness-based refraction blur); other passes
+    // bind a dummy so the always-declared binding stays valid.
+    const captureUniforms = {
+      uCaptureTexture:
+        (transmitted && backgroundColorTexture) || this.dummyCaptureTexture,
+      uCaptureTextureSampler: this.captureSampler,
+    };
 
     const uFrame = this.getFrameUniforms(renderView);
 
@@ -499,6 +508,7 @@ export default ({
           ...materialUniforms,
           ...lights.uniforms,
           ...reflectionUniforms,
+          ...captureUniforms,
         },
       });
     }

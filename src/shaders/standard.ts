@@ -373,9 +373,22 @@ ${textureSamplerDeclaration(1, lightBindings.nextTextureSampler(), "uLtc2")}`;
   const reflectionProbeDecl = useReflectionProbes
     ? /* wgsl */ `
 ${textureSamplerDeclaration(1, lightBindings.nextTextureSampler(), "uSpecularEnvMap", "texture_cube<f32>")}
-${bindingDeclaration(1, lightBindings.next(), "uIrradianceCoefficients", `array<vec4f, ${SH_COEFFICIENT_COUNT}>`, "storage, read")}
-${textureSamplerDeclaration(1, lightBindings.nextTextureSampler(), "uCaptureTexture")}`
+${bindingDeclaration(1, lightBindings.next(), "uIrradianceCoefficients", `array<vec4f, ${SH_COEFFICIENT_COUNT}>`, "storage, read")}`
     : "";
+
+  // uCaptureTexture (the grabbed opaque color for refraction) is declared for
+  // every lit material, decoupled from the reflection probe: transmission runs
+  // via EvaluateTransmission regardless of whether a probe is present. It's also
+  // unconditional w.r.t. USE_TRANSMISSION (a runtime override) so transmissive
+  // and non-transmissive materials share one module; the renderer binds a dummy
+  // 2D texture when there's nothing to refract.
+  const captureDecl = materialFlags.unlitWorkflow
+    ? ""
+    : textureSamplerDeclaration(
+        1,
+        lightBindings.nextTextureSampler(),
+        "uCaptureTexture",
+      );
 
   const ambientLightsBlock = Array.from(
     { length: ambientLights },
@@ -570,8 +583,19 @@ ${textureSamplerDeclaration(1, lightBindings.nextTextureSampler(), "uCaptureText
     useReflectionProbes
       ? /* wgsl */ `
   data.reflectionWorld = reflect(-data.eyeDirWorld, data.normalWorld);
-  EvaluateLightProbe(&data, data.ao, uSpecularEnvMap, uSpecularEnvMapSampler, ${ROUGHNESS_LEVELS}.0, uIrradianceCoefficients, uCaptureTexture, uCaptureTextureSampler, uFrame.viewportSize, uModel.modelMatrix, uFrame.projectionMatrix, uFrame.viewMatrix);`
+  EvaluateLightProbe(&data, data.ao, uSpecularEnvMap, uSpecularEnvMapSampler, ${ROUGHNESS_LEVELS}.0, uIrradianceCoefficients);`
       : ""
+  }
+
+  ${
+    // Refraction is independent of the probe: always emitted for lit materials,
+    // gated at runtime by the USE_TRANSMISSION override.
+    materialFlags.unlitWorkflow
+      ? ""
+      : /* wgsl */ `
+  if (USE_TRANSMISSION) {
+    EvaluateTransmission(&data, uCaptureTexture, uCaptureTextureSampler, uFrame.viewportSize, uModel.modelMatrix, uFrame.projectionMatrix, uFrame.viewMatrix);
+  }`
   }
 
   ${ambientLightsBlock}
@@ -620,6 +644,7 @@ ${pointShadowMapDecls}
 ${spotShadowMapDecls}
 ${areaShadowMapDecls}
 ${reflectionProbeDecl}
+${captureDecl}
 
 ${vertexInputStruct({
   normal: useNormals,
