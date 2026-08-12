@@ -3,19 +3,20 @@ import {
   world as createWorld,
   entity as createEntity,
   components,
-} from "../index.js";
+  loaders,
+} from "pex-renderer";
 
-import createContext from "pex-context";
+import * as gpu from "pex-gpu";
 import * as io from "pex-io";
 import { quat } from "pex-math";
 import createGUI from "pex-gui";
 
 import parseObj from "geom-parse-obj";
 
-import { getEnvMap, getTexture, getURL } from "./utils.js";
+import { getEnvMap, getGpuTexture, getURL } from "./utils.js";
 
 const pixelRatio = devicePixelRatio;
-const ctx = createContext({ pixelRatio });
+const ctx = await gpu.createContext({ pixelRatio });
 const renderEngine = createRenderEngine({ ctx, debug: true });
 const world = createWorld();
 
@@ -26,7 +27,6 @@ for (let i = 0; i < 3; i++) {
     transform: components.transform({ position: [0.5, 0.5, 2] }),
     camera: components.camera({
       fov: Math.PI / 3,
-      aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
       viewport: [
         i * Math.floor((1 / 3) * window.innerWidth) * pixelRatio,
         0,
@@ -34,8 +34,8 @@ for (let i = 0; i < 3; i++) {
         window.innerHeight * pixelRatio,
       ],
     }),
-    postProcessing: components.postProcessing(),
-    orbiter: components.orbiter({ element: ctx.gl.canvas }),
+    // postProcessing: components.postProcessing(),
+    orbiter: components.orbiter({ element: ctx.canvas }),
   });
   world.add(cameraEntity);
 }
@@ -43,9 +43,11 @@ for (let i = 0; i < 3; i++) {
 const skyEntity = createEntity({
   skybox: components.skybox({
     backgroundBlur: 1,
-    envMap: await getEnvMap(
+    envMap: await loaders.hdr(
       ctx,
-      "assets/envmaps/Road_to_MonumentValley/Road_to_MonumentValley.hdr",
+      getURL(
+        "assets/envmaps/Road_to_MonumentValley/Road_to_MonumentValley.hdr",
+      ),
     ),
   }),
   reflectionProbe: components.reflectionProbe(),
@@ -64,19 +66,19 @@ const directionalLightEntity = createEntity({
 world.add(directionalLightEntity);
 
 const materialTextures = {
-  baseColorTexture: await getTexture(
+  baseColorTexture: await getGpuTexture(
     ctx,
     getURL(`assets/materials/Fabric04/Fabric04_col.jpg`),
   ),
-  normalTexture: await getTexture(
+  normalTexture: await getGpuTexture(
     ctx,
     getURL(`assets/materials/Fabric04/Fabric04_nrm.jpg`),
   ),
-  clearCoatNormalTexture: await getTexture(
+  clearCoatNormalTexture: await getGpuTexture(
     ctx,
     getURL(`assets/materials/Metal05/Metal05_nrm.jpg`),
   ),
-  occlusionTexture: await getTexture(
+  occlusionTexture: await getGpuTexture(
     ctx,
     getURL(
       `assets/models/substance-sample-scene/substance-sample-scene_ao.jpg`,
@@ -183,7 +185,7 @@ gui.addParam(
   {},
 );
 
-ctx.frame(() => {
+gpu.frame(ctx, () => {
   renderEngine.update(world.entities);
   renderEngine.render(
     world.entities,

@@ -56,7 +56,7 @@ const geometryEntity = createEntity({
 });
 world.add(geometryEntity);
 
-const ultraHdr = null
+const ultraHdr = null;
 // const ultraHdr = await getEnvMap(
 //   ctx,
 //   "assets/envmaps/Ditch-River_2k/Ditch-River_2k_0.9.jpg",
