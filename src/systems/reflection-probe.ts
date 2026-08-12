@@ -1,6 +1,18 @@
-import { submit, createTexture, createBuffer, createSampler } from "pex-gpu";
+import { mat3 } from "pex-math";
+import {
+  submit,
+  createTexture,
+  createBuffer,
+  createSampler,
+  copyExternalImage,
+} from "pex-gpu";
 
-import type { Entity, GpuTexture, SystemOptions } from "../types.js";
+import type {
+  Entity,
+  GpuTexture,
+  ReflectionProbePrebakedData,
+  SystemOptions,
+} from "../types.js";
 import {
   ROUGHNESS_LEVELS,
   SH_COEFFICIENT_COUNT,
@@ -23,14 +35,17 @@ type ComputePipeline = { compute: string; entryPoint: string };
 
 interface ProbeResources {
   specularTexture: ReturnType<typeof createTexture>;
-  mipViews: GPUTextureView[];
-  radianceCube: ReturnType<typeof createTexture>;
-  // Per-mip 2d-array storage views (write targets) and single-level cube views
-  // (downsample sources) of the radiance cube.
-  radianceStorageViews: GPUTextureView[];
-  radianceLevelViews: GPUTextureView[];
+  // Compute-bake-only intermediates, absent for a pre-baked (uploaded, not
+  // baked) probe: per-mip 2d-array storage views (write targets) and
+  // single-level cube views (downsample sources) of the radiance cube.
+  mipViews?: GPUTextureView[];
+  radianceCube?: ReturnType<typeof createTexture>;
+  radianceStorageViews?: GPUTextureView[];
+  radianceLevelViews?: GPUTextureView[];
   irradianceCoefficients: ReturnType<typeof createBuffer>;
   sampler: GPUSampler;
+  /** Mip levels in specularTexture; forwarded to entity._reflectionProbe. */
+  roughnessLevels: number;
 }
 
 /**
@@ -52,7 +67,12 @@ export default ({ ctx }: SystemOptions) => ({
   type: "reflection-probe-system",
   cache: {} as Record<
     number,
-    { resources: ProbeResources; envMap: GpuTexture | null }
+    {
+      resources: ProbeResources;
+      envMap: GpuTexture | null;
+      /** Identity of the pre-baked payload this cache entry was built from. */
+      data?: ReflectionProbePrebakedData | undefined;
+    }
   >,
   debug: false,
   shPipeline: null as ComputePipeline | null,
@@ -146,7 +166,69 @@ export default ({ ctx }: SystemOptions) => ({
       radianceLevelViews,
       irradianceCoefficients,
       sampler,
+      roughnessLevels: ROUGHNESS_LEVELS,
     };
+  },
+
+  /**
+   * Builds probe resources from pre-baked IBL data (e.g. a glTF
+   * `EXT_lights_image_based` light): uploads the file's specular mips and SH
+   * coefficients as-is, with no compute-shader bake pass. The mip count comes
+   * from the data itself rather than the fixed ROUGHNESS_LEVELS constant, so
+   * the specular cubemap's own size is what the shader is told to sample
+   * against (see systems/renderer/standard.ts's ROUGHNESS_LEVELS override).
+   */
+  createPrebakedResources(data: ReflectionProbePrebakedData): ProbeResources {
+    const roughnessLevels = data.specularImages.length;
+
+    const specularTexture = createTexture(ctx, {
+      label: "reflectionProbeSpecularCubemapPrebaked",
+      width: data.specularImageSize,
+      height: data.specularImageSize,
+      depth: 6,
+      viewDimension: "cube",
+      mipLevelCount: roughnessLevels,
+      // Assumes LDR (non-float) source images, matching the glTF-IBL-Sampler
+      // tool's default PNG output for EXT_lights_image_based.
+      format: "rgba8unorm",
+      usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
+    });
+    for (let level = 0; level < roughnessLevels; level++) {
+      const faces = data.specularImages[level]!;
+      for (let face = 0; face < faces.length; face++) {
+        copyExternalImage(ctx, specularTexture, faces[face]!, {
+          origin: [0, 0, face],
+          mipLevel: level,
+        });
+      }
+    }
+
+    // 9 vec4f: array<vec3f> has a 16-byte std430 stride (see createResources).
+    const irradianceData = new Float32Array(SH_COEFFICIENT_COUNT * 4);
+    for (let i = 0; i < SH_COEFFICIENT_COUNT; i++) {
+      const [r = 0, g = 0, b = 0] = data.irradianceCoefficients[i] ?? [];
+      irradianceData[i * 4] = r;
+      irradianceData[i * 4 + 1] = g;
+      irradianceData[i * 4 + 2] = b;
+    }
+    const irradianceCoefficients = createBuffer(ctx, {
+      label: "reflectionProbeIrradianceCoefficientsPrebaked",
+      usage: "storage",
+      data: irradianceData,
+    });
+
+    const sampler = createSampler(ctx, {
+      filter: "linear",
+      addressMode: "clamp-to-edge",
+    });
+
+    return { specularTexture, irradianceCoefficients, sampler, roughnessLevels };
+  },
+
+  disposeResources(resources: ProbeResources) {
+    resources.specularTexture.dispose();
+    resources.radianceCube?.dispose();
+    resources.irradianceCoefficients.dispose();
   },
 
   bake(resources: ProbeResources, envMap: GpuTexture) {
@@ -195,7 +277,7 @@ export default ({ ctx }: SystemOptions) => ({
       uniforms: {
         uEnvMap: envMap,
         uEnvMapSampler: envSampler,
-        uOutput: resources.radianceStorageViews[0]!,
+        uOutput: resources.radianceStorageViews![0]!,
         uParams: { faceSize: CUBEMAP_SIZE },
       },
       dispatch: dispatch2d(CUBEMAP_SIZE),
@@ -209,9 +291,9 @@ export default ({ ctx }: SystemOptions) => ({
         label: `reflectionProbeDownsampleCmd${level}`,
         pipeline: downsamplePipeline,
         uniforms: {
-          uSource: resources.radianceLevelViews[level - 1]!,
+          uSource: resources.radianceLevelViews![level - 1]!,
           uSourceSampler: resources.sampler,
-          uOutput: resources.radianceStorageViews[level]!,
+          uOutput: resources.radianceStorageViews![level]!,
           uParams: { faceSize },
         },
         dispatch: dispatch2d(faceSize),
@@ -225,9 +307,9 @@ export default ({ ctx }: SystemOptions) => ({
         label: `reflectionProbePrefilterCmd${level}`,
         pipeline: prefilterPipeline,
         uniforms: {
-          uRadianceCube: resources.radianceCube,
+          uRadianceCube: resources.radianceCube!,
           uRadianceCubeSampler: resources.sampler,
-          uOutput: resources.mipViews[level]!,
+          uOutput: resources.mipViews![level]!,
           uParams: {
             faceSize,
             roughness: level / (ROUGHNESS_LEVELS - 1),
@@ -249,6 +331,7 @@ export default ({ ctx }: SystemOptions) => ({
         specularTexture: resources.specularTexture,
         irradianceCoefficients: resources.irradianceCoefficients,
         sampler: resources.sampler,
+        roughnessLevels: resources.roughnessLevels,
       };
       dirty = true;
     }
@@ -264,12 +347,48 @@ export default ({ ctx }: SystemOptions) => ({
     }
   },
 
+  /**
+   * Pre-baked path (e.g. glTF `EXT_lights_image_based`): uploads once per
+   * distinct `data` payload and otherwise leaves entity._reflectionProbe
+   * untouched — never matched against a skybox, so it can't be overwritten by
+   * the bake path even if an unrelated skybox+reflectionProbe pair exists
+   * elsewhere in the scene.
+   */
+  updatePrebakedReflectionProbeEntity(entity: Entity) {
+    const { data } = entity.reflectionProbe!;
+    let cached = this.cache[entity.id];
+
+    if (!cached || cached.data !== data) {
+      if (cached) this.disposeResources(cached.resources);
+      const resources = this.createPrebakedResources(data!);
+      cached = this.cache[entity.id] = { resources, envMap: null, data };
+
+      entity._reflectionProbe = {
+        specularTexture: resources.specularTexture,
+        irradianceCoefficients: resources.irradianceCoefficients,
+        sampler: resources.sampler,
+        roughnessLevels: resources.roughnessLevels,
+        rotation: data!.rotation
+          ? mat3.fromQuat(mat3.create(), data!.rotation)
+          : undefined,
+        intensity: data!.intensity,
+      };
+    }
+
+    entity.reflectionProbe!.dirty = false;
+  },
+
   update(entities: Entity[]) {
     const skyboxEntities = entities.filter((e) => e.skybox);
 
     for (let i = 0; i < entities.length; i++) {
       const entity = entities[i]!;
       if (!entity.reflectionProbe) continue;
+
+      if (entity.reflectionProbe.data) {
+        this.updatePrebakedReflectionProbeEntity(entity);
+        continue;
+      }
 
       const skyboxEntity = skyboxEntities.find(
         (s) => !entity.layer || entity.layer == s.layer,
@@ -295,9 +414,7 @@ export default ({ ctx }: SystemOptions) => ({
         const entity = entities[i]!;
         const cached = this.cache[entity.id];
         if (cached) {
-          cached.resources.specularTexture.dispose();
-          cached.resources.radianceCube.dispose();
-          cached.resources.irradianceCoefficients.dispose();
+          this.disposeResources(cached.resources);
           delete this.cache[entity.id];
         }
       }

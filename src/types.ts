@@ -72,6 +72,12 @@ export interface ReflectionProbeCache {
   irradianceCoefficients: GpuBuffer;
   /** Trilinear sampler for the specular cubemap. */
   sampler: GPUSampler;
+  /** Mip levels in specularTexture; drives the shader's roughness-to-lod mapping. */
+  roughnessLevels: number;
+  /** Rotation applied to the sampled reflection/normal directions. */
+  rotation?: Mat3 | undefined;
+  /** Multiplier applied to the probe's indirect diffuse + specular output. */
+  intensity?: number | undefined;
 }
 
 // Components
@@ -466,10 +472,34 @@ export interface PostProcessingComponentOptions {
   /** Runtime render targets, added by the render pipeline. */
   _targets?: unknown;
 }
+/**
+ * Pre-baked image-based lighting data (e.g. from a glTF `EXT_lights_image_based`
+ * light) that bypasses the reflection-probe system's compute-shader bake
+ * pipeline entirely: the specular mips and SH coefficients are uploaded as-is.
+ */
+export interface ReflectionProbePrebakedData {
+  /**
+   * `[mip][face]` image sources for the specular cubemap, mip 0 first. Face
+   * order matches WebGPU cube array layers (+X, -X, +Y, -Y, +Z, -Z). The mip
+   * count becomes the probe's `roughnessLevels` — no resampling to a fixed
+   * chain is needed.
+   */
+  specularImages: ExternalImageSource[][];
+  /** Mip 0 face size in pixels. */
+  specularImageSize: number;
+  /** 9 L2 spherical harmonics coefficients, each `[r, g, b]`. */
+  irradianceCoefficients: number[][];
+  /** Rotation applied to the sampled reflection/normal directions. */
+  rotation?: Quat;
+  /** Multiplier applied to the probe's indirect diffuse + specular output. */
+  intensity?: number;
+}
 export interface ReflectionProbeComponentOptions {
   size?: number;
   /** Set to force a rebake of the probe on the next update. */
   dirty?: boolean;
+  /** Pre-baked IBL data; when set, bypasses the compute-shader bake pipeline. */
+  data?: ReflectionProbePrebakedData;
 }
 export interface SkinComponentOptions {}
 export interface SkyboxComponentOptions {

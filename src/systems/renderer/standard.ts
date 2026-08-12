@@ -39,6 +39,7 @@ const RUNTIME_DEFINES = new Set(
 
 // Reused per draw; uniforms pack synchronously at submit().
 const NORMAL_MATRIX = mat3.create();
+const IDENTITY_MAT3 = mat3.create();
 const IDENTITY_MAT4 = mat4.create();
 
 // [r, g, b] stays as authored sRGB; the shader decodes it. The 4th component
@@ -251,11 +252,17 @@ export default ({
         USE_BLEND: !!material.blend,
         // Per-material activation for `runtime` fields (see FeatureField.runtime).
         ...precomputed?.constants,
-        // SHADOW_QUALITY only exists in the lit (non-unlit) shader.
+        // SHADOW_QUALITY/ROUGHNESS_LEVELS only exist in the lit (non-unlit) shader.
         ...(this.isUnlit(entity)
           ? {}
           : {
               SHADOW_QUALITY: material.receiveShadows ? this.shadowQuality : 0,
+              // A pre-baked probe (EXT_lights_image_based) reports its own
+              // native mip count instead of the baked default (see
+              // shaders/reflection-probe.ts ROUGHNESS_LEVELS).
+              ...(this._reflectionProbe && {
+                ROUGHNESS_LEVELS: this._reflectionProbe.roughnessLevels,
+              }),
             }),
       },
     };
@@ -443,6 +450,10 @@ export default ({
     this._reflectionProbe = probeEntity?._reflectionProbe;
     const reflectionUniforms = this._reflectionProbe
       ? {
+          uReflectionProbe: {
+            rotation: this._reflectionProbe.rotation ?? IDENTITY_MAT3,
+            intensity: this._reflectionProbe.intensity ?? 1,
+          },
           uSpecularEnvMap: this._reflectionProbe.specularTexture,
           uSpecularEnvMapSampler: this._reflectionProbe.sampler,
           uIrradianceCoefficients: this._reflectionProbe.irradianceCoefficients,

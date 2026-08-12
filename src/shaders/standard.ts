@@ -372,6 +372,11 @@ ${textureSamplerDeclaration(1, lightBindings.nextTextureSampler(), "uLtc2")}`;
 
   const reflectionProbeDecl = useReflectionProbes
     ? /* wgsl */ `
+struct ReflectionProbe {
+  rotation: mat3x3f,
+  intensity: f32,
+}
+${bindingDeclaration(1, lightBindings.next(), "uReflectionProbe", "ReflectionProbe", "uniform")}
 ${textureSamplerDeclaration(1, lightBindings.nextTextureSampler(), "uSpecularEnvMap", "texture_cube<f32>")}
 ${bindingDeclaration(1, lightBindings.next(), "uIrradianceCoefficients", `array<vec4f, ${SH_COEFFICIENT_COUNT}>`, "storage, read")}`
     : "";
@@ -583,7 +588,20 @@ ${bindingDeclaration(1, lightBindings.next(), "uIrradianceCoefficients", `array<
     useReflectionProbes
       ? /* wgsl */ `
   data.reflectionWorld = reflect(-data.eyeDirWorld, data.normalWorld);
-  EvaluateLightProbe(&data, data.ao, uSpecularEnvMap, uSpecularEnvMapSampler, ${ROUGHNESS_LEVELS}.0, uIrradianceCoefficients);`
+  // Probe rotation applies to every IBL sample this draw takes (base layer,
+  // clear coat, sheen all read data.reflectionWorld/normalWorld back out of
+  // the struct), so rotate in place and restore before direct lighting runs.
+  let savedReflectionWorld = data.reflectionWorld;
+  let savedNormalWorld = data.normalWorld;
+  data.reflectionWorld = uReflectionProbe.rotation * data.reflectionWorld;
+  data.normalWorld = uReflectionProbe.rotation * data.normalWorld;
+  let indirectDiffuseBeforeProbe = data.indirectDiffuse;
+  let indirectSpecularBeforeProbe = data.indirectSpecular;
+  EvaluateLightProbe(&data, data.ao, uSpecularEnvMap, uSpecularEnvMapSampler, ROUGHNESS_LEVELS, uIrradianceCoefficients);
+  data.indirectDiffuse = indirectDiffuseBeforeProbe + (data.indirectDiffuse - indirectDiffuseBeforeProbe) * uReflectionProbe.intensity;
+  data.indirectSpecular = indirectSpecularBeforeProbe + (data.indirectSpecular - indirectSpecularBeforeProbe) * uReflectionProbe.intensity;
+  data.reflectionWorld = savedReflectionWorld;
+  data.normalWorld = savedNormalWorld;`
       : ""
   }
 
@@ -753,6 +771,12 @@ override USE_TRANSMISSION: bool = false;
 override USE_DISPERSION: bool = false;
 override USE_VOLUME: bool = false;
 override USE_DIFFUSE_TRANSMISSION: bool = false;
+// Mip levels in the bound specular cubemap: baked probes always match
+// ROUGHNESS_LEVELS (shaders/reflection-probe.ts), but a pre-baked
+// EXT_lights_image_based probe reports its own native mip count, so this is
+// swapped per-draw via the pipeline's constants rather than hardcoded here
+// (see systems/renderer/standard.ts getPipelineOptions).
+override ROUGHNESS_LEVELS: f32 = ${ROUGHNESS_LEVELS}.0;
 
 // Vertex includes
 ${SHADERS.math.quatToMat4}
