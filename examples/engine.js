@@ -20,43 +20,27 @@ const cameraEntity = createEntity({
 });
 world.add(cameraEntity);
 
-const geometryEntity = createEntity({
-  transform: components.transform(),
-  geometry: components.geometry(cube({ sx: 0.5 })),
-  material: components.material(),
-});
-world.add(geometryEntity);
-
-const axesEntity = createEntity({
-  transform: components.transform(),
-  geometry: components.geometry({
-    positions: [
-      [0, 0, 0],
-      [1, 0, 0],
-      [0, 0, 0],
-      [0, 1, 0],
-      [0, 0, 0],
-      [0, 0, 1],
-    ],
-    vertexColors: [
-      [1, 0, 0, 1],
-      [1, 0, 0, 1],
-      [0, 1, 0, 1],
-      [0, 1, 0, 1],
-      [0, 0, 1, 1],
-      [0, 0, 1, 1],
-    ],
-  }),
-  material: components.material({ type: "line", lineWidth: 3 }),
-});
-world.add(axesEntity);
-
 const skyboxEntity = createEntity({
   transform: components.transform(),
   skybox: components.skybox({ sunPosition: [0, 0.15, -1] }),
   reflectionProbe: components.reflectionProbe(),
 });
 world.add(skyboxEntity);
+
+const geometryEntity = createEntity({
+  transform: components.transform(),
+  geometry: components.geometry(cube({ sx: 0.5 })),
+  material: components.material(),
+  vertexHelper: components.vertexHelper({ size: 0.2 }),
+  boundingBoxHelper: components.boundingBoxHelper(),
+});
+world.add(geometryEntity);
+
+const helpersEntity = createEntity({
+  gridHelper: components.gridHelper(),
+  axesHelper: components.axesHelper(),
+});
+world.add(helpersEntity);
 
 gpu.frame(ctx, () => {
   renderEngine.update(world.entities);

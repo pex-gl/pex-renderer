@@ -33,6 +33,7 @@ export default ({
   const layerSystem = systems.layer();
   const skyboxSystem = systems.skybox(options);
   const cameraSystem = systems.camera();
+  const helperSystem = systems.helper();
 
   const reflectionProbeSystem = systems.reflectionProbe(options);
   const lightSystem = systems.light();
@@ -67,6 +68,7 @@ export default ({
       layerSystem,
       skyboxSystem,
       cameraSystem,
+      helperSystem,
 
       reflectionProbeSystem,
       lightSystem,
@@ -143,10 +145,15 @@ export default ({
           renderEngine: this,
         };
 
+        const { entities: helperEntities } = helperSystem.update(
+          entitiesForCamera,
+          updateOptions,
+        );
+
         lightSystem.update(entitiesForCamera);
 
         const framebufferTextures = renderPipelineSystem.update(
-          entitiesForCamera,
+          [...entitiesForCamera, ...helperEntities],
           updateOptions,
         );
         return framebufferTextures;
