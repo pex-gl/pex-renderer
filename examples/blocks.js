@@ -137,8 +137,8 @@ for (let i = 0; i < 1000; i++) {
   colors.push([c, c, c, 1]);
 }
 if (instanced) {
-  geom.offsets = { buffer: ctx.vertexBuffer(offsets), divisor: 1 };
-  geom.scales = { buffer: ctx.vertexBuffer(scales), divisor: 1 };
+  geom.offsets = { buffer: ctx.vertexBuffer(offsets), stepMode: "instance" };
+  geom.scales = { buffer: ctx.vertexBuffer(scales), stepMode: "instance" };
   geom.instances = offsets.length;
   const ent = createEntity({
     geometry: components.geometry(geom),

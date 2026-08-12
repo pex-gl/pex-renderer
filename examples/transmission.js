@@ -60,23 +60,6 @@ const floorEntity = createEntity({
 });
 world.add(floorEntity);
 
-const BlendModes = {
-  refraction: {
-    blend: true,
-    // blendSrcRGBFactor: ctx.BlendFactor.One,
-    // blendSrcAlphaFactor: ctx.BlendFactor.One,
-    // blendDstRGBFactor: ctx.BlendFactor.Zero,
-    // blendDstAlphaFactor: ctx.BlendFactor.Zero,
-  },
-  "alpha-blend": {
-    blend: true,
-    // blendSrcRGBFactor: ctx.BlendFactor.SrcAlpha,
-    // blendSrcAlphaFactor: ctx.BlendFactor.One,
-    // blendDstRGBFactor: ctx.BlendFactor.OneMinusSrcAlpha,
-    // blendDstAlphaFactor: ctx.BlendFactor.One,
-  },
-};
-
 // - opaque
 const torusEntity = createEntity({
   transform: components.transform(),
@@ -188,7 +171,7 @@ const transparentCubesEntity = createEntity({
     roughness: 0.15,
     receiveShadows: true,
     castShadows: true,
-    ...BlendModes["alpha-blend"],
+    blend: true,
   }),
 });
 world.add(transparentCubesEntity);

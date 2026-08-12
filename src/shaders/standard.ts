@@ -75,6 +75,7 @@ const VERTEX_DEFINE = {
   instancedScale: "USE_INSTANCED_SCALE",
   instancedRotation: "USE_INSTANCED_ROTATION",
   instancedColor: "USE_INSTANCED_COLOR",
+  skin: "USE_SKIN",
 } as const;
 
 // prettier-ignore
@@ -186,6 +187,8 @@ export const STANDARD_VERTEX_FIELDS: readonly FeatureField[] = [
   { key: "scale", define: VERTEX_DEFINE.instancedScale },
   { key: "rotation", define: VERTEX_DEFINE.instancedRotation },
   { key: "instanceColor", define: VERTEX_DEFINE.instancedColor },
+  { key: "joint", define: VERTEX_DEFINE.skin },
+  { key: "weight", define: VERTEX_DEFINE.skin },
 ];
 
 export const STANDARD_WORKFLOW = {
@@ -554,10 +557,17 @@ ${bindingDeclaration(1, lightBindings.next(), "uIrradianceCoefficients", `array<
   }
   if (USE_DIFFUSE_TRANSMISSION) {
   ${
-    materialFlags.diffuseTransmissionTexture ||
-    materialFlags.diffuseTransmissionColorTexture
-      ? `getDiffuseTransmissionTextured(&data, uMaterial.diffuseTransmission, uMaterial.diffuseTransmissionColor, ${materialFlags.diffuseTransmissionTexture ? "uDiffuseTransmissionTexture, uDiffuseTransmissionTextureSampler" : "uDiffuseTransmissionColorTexture, uDiffuseTransmissionColorTextureSampler"}, ${tc("diffuseTransmission")}, ${materialFlags.diffuseTransmissionTexture ? "uMaterial.diffuseTransmissionTextureMatrix" : "uMaterial.diffuseTransmissionColorTextureMatrix"}, ${materialFlags.diffuseTransmissionColorTexture ? "uDiffuseTransmissionColorTexture, uDiffuseTransmissionColorTextureSampler" : "uDiffuseTransmissionTexture, uDiffuseTransmissionTextureSampler"}, ${tc("diffuseTransmissionColor")}, ${materialFlags.diffuseTransmissionColorTexture ? "uMaterial.diffuseTransmissionColorTextureMatrix" : "uMaterial.diffuseTransmissionTextureMatrix"}, uModel.modelMatrix);`
-      : `getDiffuseTransmission(&data, uMaterial.diffuseTransmission, uMaterial.diffuseTransmissionColor, uModel.modelMatrix);`
+    // The two textures are independently optional (like clearCoat/
+    // clearCoatRoughness above) — each dispatches to the variant that only
+    // samples the texture(s) actually bound, so a material with just one of
+    // the two doesn't get the other's factor tinted by an unrelated texture.
+    materialFlags.diffuseTransmissionTexture && materialFlags.diffuseTransmissionColorTexture
+      ? `getDiffuseTransmissionTextured(&data, uMaterial.diffuseTransmission, uMaterial.diffuseTransmissionColor, uDiffuseTransmissionTexture, uDiffuseTransmissionTextureSampler, ${tc("diffuseTransmission")}, uMaterial.diffuseTransmissionTextureMatrix, uDiffuseTransmissionColorTexture, uDiffuseTransmissionColorTextureSampler, ${tc("diffuseTransmissionColor")}, uMaterial.diffuseTransmissionColorTextureMatrix, uModel.modelMatrix);`
+      : materialFlags.diffuseTransmissionTexture
+        ? `getDiffuseTransmissionFactorTextured(&data, uMaterial.diffuseTransmission, uMaterial.diffuseTransmissionColor, uDiffuseTransmissionTexture, uDiffuseTransmissionTextureSampler, ${tc("diffuseTransmission")}, uMaterial.diffuseTransmissionTextureMatrix, uModel.modelMatrix);`
+        : materialFlags.diffuseTransmissionColorTexture
+          ? `getDiffuseTransmissionColorTextured(&data, uMaterial.diffuseTransmission, uMaterial.diffuseTransmissionColor, uDiffuseTransmissionColorTexture, uDiffuseTransmissionColorTextureSampler, ${tc("diffuseTransmissionColor")}, uMaterial.diffuseTransmissionColorTextureMatrix, uModel.modelMatrix);`
+          : `getDiffuseTransmission(&data, uMaterial.diffuseTransmission, uMaterial.diffuseTransmissionColor, uModel.modelMatrix);`
   }
   }
 
@@ -762,6 +772,10 @@ override DEPTH_PACK_FAR: f32 = 10.0;
 // systems/renderer/standard.ts).
 override USE_MSAA: bool = false;
 override USE_BLEND: bool = false;
+// Only meaningful alongside USE_BLEND: scales color by opacity before output,
+// matching the "premultiplied" blendMode's GPUBlendComponent pair (see
+// BLEND_MODES in systems/renderer/base.ts).
+override PREMULTIPLY_ALPHA: bool = false;
 override USE_ALPHA_TEST: bool = false;
 override USE_SPECULAR: bool = false;
 override USE_EMISSIVE_COLOR: bool = false;
@@ -909,6 +923,9 @@ fn fragmentMain(
   ${useEmissiveOutput ? "output.emissive = vec4f(data.emissiveColor, 1.0);" : ""}
   if (USE_TRANSMISSION || USE_BLEND) {
     output.color.w = data.opacity;
+    if (PREMULTIPLY_ALPHA) {
+      output.color = vec4f(output.color.rgb * data.opacity, data.opacity);
+    }
   }
 
   ${hooks.fragEnd ?? ""}

@@ -46,15 +46,15 @@ world.add(cameraEntity);
 
 const instancedGeometry = {
   ...cube({ sx: (0.75 * 2) / N }),
-  offsets: { data: new Float32Array(instances * 3), divisor: 1 },
+  offsets: { data: new Float32Array(instances * 3), stepMode: "instance" },
   scales: {
     data: Float32Array.from({ length: instances * 3 }, (_, i) =>
       i % 3 === 2 ? 1 : 1,
     ),
-    divisor: 1,
+    stepMode: "instance",
   },
-  rotations: { data: new Float32Array(instances * 4), divisor: 1 },
-  colors: { data: new Float32Array(instances * 4), divisor: 1 },
+  rotations: { data: new Float32Array(instances * 4), stepMode: "instance" },
+  colors: { data: new Float32Array(instances * 4), stepMode: "instance" },
   instances,
 };
 

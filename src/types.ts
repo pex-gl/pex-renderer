@@ -1,5 +1,5 @@
-import type { Vec2, Vec3, Quat, Mat4 } from "pex-math";
 import type { GpuContext, GpuTexture, GpuBuffer, ExternalImageSource } from "pex-gpu";
+import type { Vec2, Vec3, Quat, Mat3, Mat4 } from "pex-math";
 
 /** Axis-aligned bounding box as [min, max]. */
 export type AABB = number[][];
@@ -33,11 +33,40 @@ export type MaterialTexture =
   | GpuTexture
   | ({ texture: GpuTexture } & Partial<TextureTransform>);
 
+/**
+ * A single vertex/index attribute value on a geometry component: a plain typed
+ * array/number array, or a GPU-backed descriptor (e.g. built by the glTF
+ * loader to share one buffer across attributes/primitives from the same
+ * bufferView).
+ */
+export type GeometryAttribute =
+  | Float32Array
+  | Uint16Array
+  | Uint32Array
+  | number[]
+  | {
+      buffer: GpuBuffer;
+      /** Raw data backing the buffer, e.g. for bounds computation. */
+      data?: Float32Array | Uint16Array | Uint32Array | number[];
+      /** Byte offset into the buffer. */
+      offset?: number;
+      /** Byte stride override. */
+      stride?: number;
+      /** "instance" to step this attribute per instance instead of per vertex. */
+      stepMode?: GPUVertexStepMode;
+      /** Re-uploads the buffer's data on the next geometry-system update. */
+      dirty?: boolean;
+    };
+
 // Entity
 export interface Entity {
   id: number;
+  /** Debug/display label, e.g. set by loaders and helper tools. */
+  name?: string;
   ambientLight?: AmbientLightComponentOptions;
-  animation?: AnimationComponentOptions | AnimationComponentOptions[];
+  animation?: AnimationComponentOptions;
+  /** Multiple named animations (e.g. from a glTF file); systems/animation.ts plays these instead of `animation` when set. */
+  animations?: AnimationComponentOptions[];
   areaLight?: AreaLightComponentOptions;
   axesHelper?: AxesHelperComponentOptions;
   boundingBoxHelper?: BoundingBoxHelperComponentOptions;
@@ -95,9 +124,12 @@ export interface AmbientLightComponentOptions {
   intensity?: number;
 }
 export interface AnimationComponentOptions {
+  name?: string;
   playing?: boolean;
   loop?: boolean;
   time?: number;
+  /** Total animation length in seconds; falls back to the last channel's input when unset. */
+  duration?: number;
   channels?: unknown[];
 }
 /** Shadow-mapping internals shared by shadow-casting lights. */
@@ -210,24 +242,25 @@ export interface DirectionalLightComponentOptions extends LightShadowInternals {
   shadowMapSize?: number;
 }
 export interface GeometryComponentOptions {
-  positions?: Float32Array | number[];
-  normals?: Float32Array | number[];
+  positions?: GeometryAttribute;
+  normals?: GeometryAttribute;
+  tangents?: GeometryAttribute;
   /** Alias: texCoords/texCoords0 */
-  uvs?: Float32Array | number[];
+  uvs?: GeometryAttribute;
   /** Alias: texCoords1 */
-  uvs1?: Float32Array | number[];
-  vertexColors?: Float32Array | number[];
-  cells?: Uint16Array | Uint32Array | number[];
-  weights?: Float32Array | number[];
-  joints?: Float32Array | number[];
+  uvs1?: GeometryAttribute;
+  vertexColors?: GeometryAttribute;
+  cells?: GeometryAttribute;
+  weights?: GeometryAttribute;
+  joints?: GeometryAttribute;
   /** Instanced */
-  offsets?: Float32Array | number[];
+  offsets?: GeometryAttribute;
   /** Instanced */
-  rotations?: Float32Array | number[];
+  rotations?: GeometryAttribute;
   /** Instanced */
-  scales?: Float32Array | number[];
+  scales?: GeometryAttribute;
   /** Instanced */
-  colors?: Float32Array | number[];
+  colors?: GeometryAttribute;
   count?: number;
   instances?: number;
   multiDraw?: object;
@@ -242,6 +275,18 @@ export interface GridHelperComponentOptions {
   size?: number;
 }
 export interface LightHelperComponentOptions {}
+/**
+ * Blend equation preset for `material.blend`, named after their common
+ * compositing-software equivalents (Photoshop/Three.js/Unity):
+ * "normal" (standard non-premultiplied "over"), "premultiplied" ("over" with
+ * color already scaled by opacity), "additive", "multiply", "screen".
+ */
+export type BlendMode =
+  | "normal"
+  | "premultiplied"
+  | "additive"
+  | "multiply"
+  | "screen";
 export interface MaterialComponentOptions {
   unlit?: boolean;
   type?: undefined | "line";
@@ -288,10 +333,8 @@ export interface MaterialComponentOptions {
   depthWrite?: boolean;
   depthFunc?: string;
   blend?: boolean;
-  blendSrcRGBFactor?: string;
-  blendSrcAlphaFactor?: string;
-  blendDstRGBFactor?: string;
-  blendDstAlphaFactor?: string;
+  /** Blend equation when `blend` is set. Default: "normal". */
+  blendMode?: BlendMode;
   cullFace?: boolean;
   cullFaceMode?: string;
   pointSize?: number;
@@ -553,7 +596,7 @@ export interface TransformComponentOptions {
   rotation?: Quat;
   scale?: Vec3;
   // Runtime, added by the transform system.
-  parent?: TransformComponentOptions;
+  parent?: TransformComponentOptions | undefined;
   entity?: Entity;
   depth?: number;
   worldBounds?: AABB;

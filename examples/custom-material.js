@@ -84,7 +84,7 @@ const grassEntity = createEntity({
             random.float(0.5),
           ),
         ),
-        divisor: 1,
+        stepMode: "instance",
       },
     },
   }),

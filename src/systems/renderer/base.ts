@@ -9,6 +9,7 @@ import {
 
 import { type Mat2x3 } from "pex-math";
 import type {
+  BlendMode,
   Entity,
   RendererSystem,
   RenderView,
@@ -183,11 +184,38 @@ export function getFeatureFlags(
   return { defines, uniforms, constants };
 }
 
-// Premultiplied "over" blend (One / OneMinusSrcAlpha), shared by every
-// renderer that draws blended geometry.
-export const ALPHA_BLEND = {
-  color: { srcFactor: "one", dstFactor: "one-minus-src-alpha" },
-  alpha: { srcFactor: "one", dstFactor: "one-minus-src-alpha" },
+// GPUBlendState per material.blendMode, shared by every renderer that draws
+// blended geometry. "normal" is the glTF BLEND spec's straight (non-
+// premultiplied) "over" equation — the fragment shader writes straight alpha
+// by default (color unscaled by opacity, opacity written to .w separately),
+// so its color channel needs SrcAlpha, not the premultiplied-alpha "one".
+// "premultiplied" instead relies on the shader actually premultiplying
+// (PREMULTIPLY_ALPHA override, see shaders/standard.ts) before this blend
+// state's "one" src factor is applied.
+export const BLEND_MODES: Record<
+  BlendMode,
+  { color: GPUBlendComponent; alpha: GPUBlendComponent }
+> = {
+  normal: {
+    color: { srcFactor: "src-alpha", dstFactor: "one-minus-src-alpha" },
+    alpha: { srcFactor: "one", dstFactor: "one" },
+  },
+  premultiplied: {
+    color: { srcFactor: "one", dstFactor: "one-minus-src-alpha" },
+    alpha: { srcFactor: "one", dstFactor: "one-minus-src-alpha" },
+  },
+  additive: {
+    color: { srcFactor: "src-alpha", dstFactor: "one" },
+    alpha: { srcFactor: "one", dstFactor: "one" },
+  },
+  multiply: {
+    color: { srcFactor: "dst", dstFactor: "zero" },
+    alpha: { srcFactor: "dst-alpha", dstFactor: "zero" },
+  },
+  screen: {
+    color: { srcFactor: "one", dstFactor: "one-minus-src" },
+    alpha: { srcFactor: "one", dstFactor: "one-minus-src" },
+  },
 };
 
 /**

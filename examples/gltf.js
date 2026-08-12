@@ -4,17 +4,17 @@ import {
   entity as createEntity,
   components,
   loaders,
-} from "../index.js";
+} from "pex-renderer";
 
-import createContext from "pex-context";
+import * as gpu from "pex-gpu";
 import createGUI from "pex-gui";
 import { loadJson, loadImage } from "pex-io";
-import { quat, vec3, mat4 } from "pex-math";
+import { quat, vec3 } from "pex-math";
 import { aabb } from "pex-geom";
 
 import { cube as createCube } from "primitive-geometry";
 
-import { debugSceneTree, getEnvMap, getURL } from "./utils.js";
+import { debugSceneTree, getURL } from "./utils.js";
 import { getSceneGraphViz } from "./graph-viz.js";
 
 const MODELS_PATH =
@@ -40,28 +40,28 @@ const State = {
       new Set(),
     ),
   ).filter((format) => !["glTF-IBL", "glTF-Meshopt"].includes(format)),
-  currentFormat: 2,
+  currentFormat: 1,
   modelName: "-",
 };
 
 const pixelRatio = devicePixelRatio;
-const ctx = createContext({ pixelRatio });
+const ctx = await gpu.createContext({ pixelRatio });
 
 const renderEngine = createRenderEngine({ ctx, debug: true });
-const world = createWorld({ systems: renderEngine.systems });
+const world = createWorld();
 
 // prettier-ignore
-const legacySpecularGlossinessFlagDefinitions = [
-  [["material", "diffuse"], "USE_SPECULAR_GLOSSINESS_WORKFLOW", { uniform: "uDiffuse" }],
-  [["material", "specular"], "", { uniform: "uSpecular", requires: "USE_SPECULAR_GLOSSINESS_WORKFLOW" }],
-  [["material", "glossiness"], "", { uniform: "uGlossiness", requires: "USE_SPECULAR_GLOSSINESS_WORKFLOW" }],
-  [["material", "diffuseTexture"], "DIFFUSE_TEXTURE", { type: "texture", uniform: "uDiffuseTexture", requires: "USE_SPECULAR_GLOSSINESS_WORKFLOW" }],
-  [["material", "specularGlossinessTexture"], "SPECULAR_GLOSSINESS_TEXTURE", { type: "texture", uniform: "uSpecularGlossinessTexture", requires: "USE_SPECULAR_GLOSSINESS_WORKFLOW" }],
-];
+// const legacySpecularGlossinessFlagDefinitions = [
+//   [["material", "diffuse"], "USE_SPECULAR_GLOSSINESS_WORKFLOW", { uniform: "uDiffuse" }],
+//   [["material", "specular"], "", { uniform: "uSpecular", requires: "USE_SPECULAR_GLOSSINESS_WORKFLOW" }],
+//   [["material", "glossiness"], "", { uniform: "uGlossiness", requires: "USE_SPECULAR_GLOSSINESS_WORKFLOW" }],
+//   [["material", "diffuseTexture"], "DIFFUSE_TEXTURE", { type: "texture", uniform: "uDiffuseTexture", requires: "USE_SPECULAR_GLOSSINESS_WORKFLOW" }],
+//   [["material", "specularGlossinessTexture"], "SPECULAR_GLOSSINESS_TEXTURE", { type: "texture", uniform: "uSpecularGlossinessTexture", requires: "USE_SPECULAR_GLOSSINESS_WORKFLOW" }],
+// ];
 
-renderEngine.renderers
-  .find((renderer) => renderer.type == "standard-renderer")
-  .flagDefinitions.push(...legacySpecularGlossinessFlagDefinitions);
+// renderEngine.renderers
+//   .find((renderer) => renderer.type == "standard-renderer")
+//   .flagDefinitions.push(...legacySpecularGlossinessFlagDefinitions);
 
 const gui = createGUI(ctx);
 
@@ -74,7 +74,6 @@ const sunEntity = createEntity({
     color: [1, 1, 0.95, 1],
     intensity: 0,
     castShadows: State.shadows,
-    bias: 0.2,
   }),
 });
 world.add(sunEntity);
@@ -103,16 +102,17 @@ let envMap;
 
 const addEnvmap = async () => {
   if (State.useEnvMap) {
-    if (!envMap) {
-      envMap = await getEnvMap(
-        ctx,
+    envMap ??= await loaders.hdr(
+      ctx,
+      getURL(
+        "assets/envmaps/Artist Workshop/artist_workshop_2k.hdr",
         // `assets/envmaps/Mono_Lake_B/Mono_Lake_B.hdr`
         // `assets/envmaps/garage/garage.hdr`,
         // `assets/envmaps/Footprint Court/footprint_court.hdr`,
-        `assets/envmaps/Artist Workshop/artist_workshop_2k.hdr`,
+        // `assets/envmaps/Artist Workshop/artist_workshop_2k.hdr`,
         // `assets/envmaps/Colorful_Studio.hdr`
-      );
-    }
+      ),
+    );
     skyEntity.skybox.envMap = envMap;
   } else {
     skyEntity.skybox.envMap = null;
@@ -147,14 +147,6 @@ function repositionModel({ root }) {
   vec3.add(root.transform.position, [x, 0, z]);
 }
 
-function aabbFromInstances(geom, offsets) {
-  const bounds = aabb.fromPoints(aabb.create(), offsets);
-  const geomBounds = aabb.fromPoints(aabb.create(), geom.positions);
-  vec3.add(bounds[0], geomBounds[0]);
-  vec3.add(bounds[1], geomBounds[1]);
-  return bounds;
-}
-
 function rescaleScene({ root }) {
   const sceneBounds = root.transform.worldBounds;
   const sceneSize = aabb.size(root.transform.worldBounds);
@@ -168,7 +160,6 @@ function rescaleScene({ root }) {
       sceneCenter.map((n) => -n),
       sceneScale,
     );
-    root.root = true;
     root.transform.scale = [sceneScale, sceneScale, sceneScale];
     root.transform.dirty = true;
   }
@@ -245,11 +236,6 @@ async function loadScene(url, grid) {
     );
 
     if (!cameraEntity) {
-      // Update needed for transform.worldBounds
-      // renderEngine.systems
-      //   .find((system) => system.type === "transform-system")
-      //   .update(scene.entities);
-      // renderEngine.update(scene.entities);
       const far = 10000;
       // TODO: "SimpleInstancing" needs aabbFromInstances
       const sceneBounds = scene.root.transform.worldBounds;
@@ -269,19 +255,17 @@ async function loadScene(url, grid) {
 
       cameraEntity = createEntity({
         transform: components.transform({
-          // position: [2, 2, 2],
           position: [sceneCenter[0], sceneCenter[1], Math.abs(distance)],
         }),
         camera: components.camera({
           near: 0.01,
           far,
           fov,
-          aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
+          aspect: ctx.width / ctx.height,
         }),
         orbiter: components.orbiter({
-          element: ctx.gl.canvas,
+          element: ctx.canvas,
           target: sceneCenter,
-          // distance,
           maxDistance: far,
         }),
       });
@@ -293,25 +277,16 @@ async function loadScene(url, grid) {
         cameraEntity.transform.dirty = true;
       }
     } else {
-      //TODO: do i need to set dirty for camera to update?
       cameraEntity.camera.near = 0.5;
-      cameraEntity.camera.aspect =
-        ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight;
-      // cameraEntity.camera.projectionMatrix = mat4.perspective(
-      //   mat4.create(),
-      //   cameraEntity.camera.fov,
-      //   cameraEntity.camera.aspect,
-      //   cameraEntity.camera.near,
-      //   cameraEntity.camera.far
-      // );
+      cameraEntity.camera.aspect = ctx.width / ctx.height;
       cameraEntity.camera.dirty = true;
 
       // TODO: hardcoded
       if (!["MultiUVTest", "GearboxAssy"].includes(State.selectedModel.name)) {
         cameraEntity.orbiter = components.orbiter({
-          element: ctx.gl.canvas,
           // target: sceneCenter,
           // distance: (boundingSphereRadius * 2) / Math.tan(cameraCmp.fov / 2),
+          element: ctx.canvas,
           minDistance: cameraEntity.camera.near,
           maxDistance: cameraEntity.camera.far,
         });
@@ -319,12 +294,7 @@ async function loadScene(url, grid) {
     }
   }
 
-  // if (["EmissiveStrengthTest"].includes(State.selectedModel.name)) {
-  //   cameraEntity.postProcessing = postProcessingComponent;
-  // } else {
-  //   delete cameraEntity.postProcessing;
-  // }
-  cameraEntity.postProcessing = postProcessingComponent;
+  // cameraEntity.postProcessing = postProcessingComponent;
 
   return scene;
 }
@@ -361,7 +331,7 @@ const nextCamera = () => {
   if (next) {
     cameraEntity = next;
     cameraEntity.camera.dirty = true;
-    cameraEntity.orbiter ||= components.orbiter({ element: ctx.gl.canvas });
+    cameraEntity.orbiter ||= components.orbiter({ element: ctx.canvas });
   }
 };
 const nextAnimation = () => {
@@ -381,9 +351,30 @@ const nextScene = () => {
   const scenes = State.scenes;
   const next = scenes[(scenes.indexOf(State.scene) + 1) % scenes.length];
 
-  if (next) {
-    console.log(next);
+  if (!next || next === State.scene) return;
+
+  // Camera is only ever pushed onto the first loaded scene's entities
+  // (see loadScene); keep it alive across scenes instead of disposing it.
+  world.dispose(
+    State.scene.entities.filter((entity) => entity !== cameraEntity),
+  );
+  State.scene = next;
+  next.entities.forEach((entity) => {
+    if (entity !== cameraEntity) world.add(entity);
+  });
+
+  if (State.helpers) {
+    next.entities.forEach((entity) => {
+      if (entity.geometry) {
+        entity.boundingBoxHelper = components.boundingBoxHelper();
+      }
+      if (entity.skin) entity.skeletonHelper = components.skeletonHelper();
+      if (entity.camera) entity.cameraHelper = components.cameraHelper();
+    });
   }
+
+  sceneGraphViz.init(next.entities);
+  if (sceneGraphViz.isRendered()) sceneGraphViz.draw();
 };
 const nextMaterial = () => {};
 
@@ -417,15 +408,7 @@ const screenshots = await Promise.all(
   ),
 );
 const thumbnails = screenshots
-  .map((img) =>
-    ctx.texture2D({
-      data: img,
-      width: img.width,
-      height: img.height,
-      pixelFormat: ctx.PixelFormat.RGBA8,
-      flipY: true,
-    }),
-  )
+  .map((img) => gpu.createTexture(ctx, { data: img, format: "rgba8unorm" }))
   .map((tex, i) => ({
     value: models[i],
     texture: tex,
@@ -538,6 +521,7 @@ models = models.filter(({ name }) =>
     // "CompareVolume",
     // "Corset",
     // "Cube",
+    // "CubeVisibility", // FAIL: KHR_node_visibility, KHR_animation_pointer
     "DamagedHelmet",
     // "DiffuseTransmissionPlant", // HALF: depth check only works with DEPTH_COMPONENT16
     // "DiffuseTransmissionTeacup",
@@ -548,7 +532,7 @@ models = models.filter(({ name }) =>
     // "DragonDispersion",
     // "Duck",
     // "EmissiveStrengthTest",
-    // "EnvironmentTest", // HALF: missing glTF-IBL
+    // "EnvironmentTest",
     // "FlightHelmet",
     // "Fox", // HALF: hardcoded near/far
     // "GlamVelvetSofa", // FAIL: KHR_materials_variants
@@ -574,8 +558,8 @@ models = models.filter(({ name }) =>
     // "MorphStressTest", // FAIL: needs animation texture
     // "MosquitoInAmber", // FAIL: TEXCOORD_2
     // "MultiUVTest", // FAIL: wrong position
-    // "MultipleScenes", // FAIL: missing implementation
-    // "NegativeScaleTest", // FAIL: need determinant test
+    // "MultipleScenes",
+    // "NegativeScaleTest",
     // "NodePerformanceTest",
     // "NormalTangentMirrorTest",
     // "NormalTangentTest",
@@ -642,9 +626,9 @@ if (grid) {
       position: new Array(3).fill(State.gridSize * 2),
     }),
     camera: components.camera({
-      aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
+      aspect: ctx.width / ctx.height,
     }),
-    orbiter: components.orbiter({ element: ctx.gl.canvas }),
+    orbiter: components.orbiter({ element: ctx.canvas }),
   });
   world.add(cameraEntity);
 
@@ -678,11 +662,7 @@ for (const model of models) {
 }
 
 window.addEventListener("resize", () => {
-  ctx.set({
-    pixelRatio,
-    width: window.innerWidth,
-    height: window.innerHeight,
-  });
+  gpu.resize(ctx, window.innerWidth, window.innerHeight, pixelRatio);
   if (cameraEntity) {
     cameraEntity.camera.aspect = window.innerWidth / window.innerHeight;
     cameraEntity.camera.dirty = true;
@@ -694,16 +674,16 @@ window.addEventListener("keydown", ({ key }) => {
   if (key === "d") debugOnce = true;
 });
 
-ctx.frame(() => {
-  ctx.debug(debugOnce);
-  debugOnce = false;
-
+gpu.frame(ctx, () => {
   if (cameraEntity) {
     renderEngine.update(world.entities);
     renderEngine.render(world.entities, cameraEntity);
   }
 
   gui.draw();
+
+  gpu.debug(ctx, debugOnce);
+  debugOnce = false;
 
   window.dispatchEvent(new CustomEvent("screenshot"));
 });

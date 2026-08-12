@@ -12,11 +12,12 @@ import {
   DEPTH_PASS_VERTEX_FIELDS,
 } from "../../shaders/depth-pass.js";
 
-import createBaseSystem, { ALPHA_BLEND } from "./base.js";
+import createBaseSystem, { BLEND_MODES } from "./base.js";
 import { samplerName, uniformName } from "../../shaders/wgsl.js";
 import { NAMESPACE, TEMP_MAT4 } from "../../utils.js";
 
 import type {
+  BlendMode,
   Entity,
   RendererSystem,
   RenderView,
@@ -42,6 +43,11 @@ const NORMAL_MATRIX = mat3.create();
 const IDENTITY_MAT3 = mat3.create();
 const IDENTITY_MAT4 = mat4.create();
 
+// Matches wgsl.ts modelStruct's default maxJoints (the uJointMatrices array
+// is a fixed-size WGSL binding, unlike the light arrays which size to the
+// real count via defines).
+const MAX_JOINTS = 256;
+
 // [r, g, b] stays as authored sRGB; the shader decodes it. The 4th component
 // carries intensity (light.color.w), matching the WGSL light chunks.
 const lightColor = (light: any) => [
@@ -50,6 +56,22 @@ const lightColor = (light: any) => [
   light.color[2],
   light.intensity,
 ];
+
+// uJointMatrices is a fixed-length array<mat4x4f, MAX_JOINTS> binding, so the
+// uniform value must always be exactly that length — pad with identity past
+// the skin's own joint count. Cached on the skin component: `jointMatrices`'
+// entries are mutated in place by systems/skin.ts each frame, so the padded
+// wrapper (built from the same references) stays valid without rebuilding.
+function getJointMatricesUniform(skin: any): any[] {
+  if (!skin._paddedJointMatrices) {
+    const padded = new Array(MAX_JOINTS);
+    for (let i = 0; i < MAX_JOINTS; i++) {
+      padded[i] = skin.jointMatrices[i] ?? IDENTITY_MAT4;
+    }
+    skin._paddedJointMatrices = padded;
+  }
+  return skin._paddedJointMatrices;
+}
 
 /**
  * Standard renderer
@@ -246,10 +268,19 @@ export default ({
       depthWriteEnabled: material.depthWrite !== false && !material.blend,
       cullMode:
         options.cullFaceMode ?? ((material.cullFace ?? true) ? "back" : "none"),
-      ...(material.blend ? { blend: ALPHA_BLEND } : {}),
+      topology: entity._geometry!.primitive ?? "triangle-list",
+      // A negative-determinant node transform (e.g. a negative scale) mirrors
+      // space and reverses triangle winding — per spec, front-facing flips
+      // from CCW to CW along with it.
+      frontFace:
+        mat4.determinant(entity._transform!.modelMatrix) < 0 ? "cw" : "ccw",
+      ...(material.blend
+        ? { blend: BLEND_MODES[(material.blendMode ?? "normal") as BlendMode] }
+        : {}),
       constants: {
         USE_MSAA: !!this._msaa,
         USE_BLEND: !!material.blend,
+        PREMULTIPLY_ALPHA: !!material.blend && material.blendMode === "premultiplied",
         // Per-material activation for `runtime` fields (see FeatureField.runtime).
         ...precomputed?.constants,
         // SHADOW_QUALITY/ROUGHNESS_LEVELS only exist in the lit (non-unlit) shader.
@@ -516,6 +547,9 @@ export default ({
             modelMatrix: entity._transform!.modelMatrix,
             normalMatrix: mat3.fromMat4(NORMAL_MATRIX, TEMP_MAT4),
           },
+          ...(entity.skin && {
+            uJointMatrices: getJointMatricesUniform(entity.skin),
+          }),
           ...materialUniforms,
           ...lights.uniforms,
           ...reflectionUniforms,
@@ -553,6 +587,9 @@ export default ({
     }
     pipeline.depthWriteEnabled = true;
     pipeline.cullMode = (entity.material.cullFace ?? true) ? "back" : "none";
+    pipeline.topology = entity._geometry.primitive ?? "triangle-list";
+    pipeline.frontFace =
+      mat4.determinant(entity._transform.modelMatrix) < 0 ? "cw" : "ccw";
     if (linear) {
       // The cube-face projection is Y-flipped to match the depth-cube sampler
       // (see shadow-mapping.ts), which reverses winding; skip culling so the flip
@@ -615,6 +652,9 @@ export default ({
               entity._transform!.modelMatrix,
             ),
           },
+          ...(entity.skin && {
+            uJointMatrices: getJointMatricesUniform(entity.skin),
+          }),
         },
       });
     }

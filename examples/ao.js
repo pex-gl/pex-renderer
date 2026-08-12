@@ -139,7 +139,7 @@ const geom = {
       levelHeight * (rect[4] + 0.5),
       rect[1] + rect[3] / 2,
     ]),
-    divisor: 1,
+    stepMode: "instance",
   },
   scales: {
     data: rects.map(
@@ -147,7 +147,7 @@ const geom = {
         rect, // return [rect[2] * Math.pow(0.9, rect[4]), levelHeight, rect[3] * Math.pow(0.9, rect[4])]
       ) => [rect[2], levelHeight, rect[3]],
     ),
-    divisor: 1,
+    stepMode: "instance",
   },
   colors: {
     data: rects.map(() => {
@@ -159,7 +159,7 @@ const geom = {
       // return dutchPalette[0 + rect[4] % 8]
       return random.element(dutchPalette);
     }),
-    divisor: 1,
+    stepMode: "instance",
   },
   instances: rects.length,
 };

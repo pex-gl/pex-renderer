@@ -2,9 +2,10 @@ import { mat3 } from "pex-math";
 import { submit } from "pex-gpu";
 import { basicShader, BASIC_VERTEX_FIELDS } from "../../shaders/basic.js";
 
-import createBaseSystem, { ALPHA_BLEND } from "./base.js";
+import createBaseSystem, { BLEND_MODES } from "./base.js";
 
 import type {
+  BlendMode,
   Entity,
   RendererSystem,
   RenderView,
@@ -48,7 +49,9 @@ export default ({ ctx }: SystemOptions): RendererSystem => ({
     return {
       depthWriteEnabled: material.depthWrite !== false && !material.blend,
       cullMode: (material.cullFace ?? true) ? "back" : "none",
-      ...(material.blend ? { blend: ALPHA_BLEND } : {}),
+      ...(material.blend
+        ? { blend: BLEND_MODES[(material.blendMode ?? "normal") as BlendMode] }
+        : {}),
     };
   },
   render(renderView: RenderView, entities: Entity[], options: any) {

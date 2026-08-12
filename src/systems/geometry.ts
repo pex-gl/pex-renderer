@@ -173,12 +173,13 @@ export default ({ ctx }: SystemOptions) => ({
 
           attribute.offset = attributeValue.offset;
           attribute.stride = attributeValue.stride;
-          if (
-            attributeValue.divisor ||
-            instancedAttributes.has(attributeName)
-          ) {
-            attribute.stepMode = "instance";
-          }
+        }
+
+        if (
+          attributeValue.stepMode === "instance" ||
+          instancedAttributes.has(attributeName)
+        ) {
+          cachedGeom.attributes[attributeName].stepMode = "instance";
         }
       } else if (cachedGeom.attributes[attributeName]) {
         disposeAttribute(cachedGeom.attributes[attributeName]);

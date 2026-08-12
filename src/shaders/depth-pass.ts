@@ -16,6 +16,7 @@ const VERTEX_DEFINE = {
   instancedOffset: "USE_INSTANCED_OFFSET",
   instancedScale: "USE_INSTANCED_SCALE",
   instancedRotation: "USE_INSTANCED_ROTATION",
+  skin: "USE_SKIN",
 } as const;
 
 export const DEPTH_PASS_VERTEX_FIELDS: readonly FeatureField[] = [
@@ -23,6 +24,8 @@ export const DEPTH_PASS_VERTEX_FIELDS: readonly FeatureField[] = [
   { key: "offset", define: VERTEX_DEFINE.instancedOffset },
   { key: "scale", define: VERTEX_DEFINE.instancedScale },
   { key: "rotation", define: VERTEX_DEFINE.instancedRotation },
+  { key: "joint", define: VERTEX_DEFINE.skin },
+  { key: "weight", define: VERTEX_DEFINE.skin },
 ];
 
 /**
