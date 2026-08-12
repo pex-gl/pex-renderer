@@ -84,7 +84,7 @@ const skyEntity = createEntity({
   }),
   skybox: components.skybox({
     sunPosition: [0.1, 0.04, -1],
-    backgroundBlur: true,
+    backgroundBlur: 1,
   }),
   reflectionProbe: components.reflectionProbe(),
 });

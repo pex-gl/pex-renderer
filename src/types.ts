@@ -557,7 +557,12 @@ export interface SkinComponentOptions {}
 export interface SkyboxComponentOptions {
   sunPosition?: Vec3;
   envMap?: GpuTexture;
-  backgroundBlur?: boolean;
+  /**
+   * Background blur amount, 0 (sharp) to 1 (fully blurred). Sampled from a
+   * paired reflectionProbe entity's prefiltered specular cubemap; ignored
+   * with a warning if no reflectionProbe is present.
+   */
+  backgroundBlur?: number;
   exposure?: number;
   turbidity?: number;
   rayleigh?: number;

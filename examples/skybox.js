@@ -75,15 +75,11 @@ const skyboxEntity = createEntity({
     backgroundBlur: State.backgroundBlur,
     exposure: 1,
   }),
-});
-world.add(skyboxEntity);
-
-const reflectionProbeEntity = createEntity({
   reflectionProbe: components.reflectionProbe({
     size: State.sizes[State.sizeIndex],
   }),
 });
-world.add(reflectionProbeEntity);
+world.add(skyboxEntity);
 
 const updateEnvMap = () => {
   skyboxEntity.skybox.envMap = State.envMap
@@ -91,7 +87,7 @@ const updateEnvMap = () => {
       ? ultraHdr
       : hdrMap
     : null;
-  reflectionProbeEntity.reflectionProbe.dirty = true;
+  skyboxEntity.reflectionProbe.dirty = true;
 };
 
 updateEnvMap();
@@ -124,7 +120,10 @@ gui.addParam("Ultra HDR", State, "ultraHdr", {}, (enabled) => {
 
   guiEnvMapTextureControl.options.flipY = enabled;
 });
-gui.addParam("BG Blur", skyboxEntity.skybox, "backgroundBlur");
+gui.addParam("BG Blur", skyboxEntity.skybox, "backgroundBlur", {
+  min: 0,
+  max: 1,
+});
 gui.addParam("Exposure", skyboxEntity.skybox, "exposure", {
   min: 0,
   max: 5,
@@ -142,7 +141,7 @@ gui.addParam(
       State.rotation,
     );
     skyboxEntity.transform.dirty = true;
-    reflectionProbeEntity.reflectionProbe.dirty = true;
+    skyboxEntity.reflectionProbe.dirty = true;
   },
 );
 gui.addSeparator();
@@ -199,7 +198,7 @@ gui.addLabel("Environment Map");
 //     value,
 //   })),
 //   () => {
-//     reflectionProbeEntity.reflectionProbe.size = State.sizes[State.sizeIndex];
+//     skyboxEntity.reflectionProbe.size = State.sizes[State.sizeIndex];
 //   },
 // );
 

@@ -1,6 +1,7 @@
 import { chunks as SHADERS } from "pex-shaders";
 
-import { vertexOutputStruct } from "./wgsl.js";
+import { vertexOutputStruct, textureSamplerDeclaration } from "./wgsl.js";
+import { ROUGHNESS_LEVELS } from "./reflection-probe.js";
 import type { PipelineShaderOptions } from "../types.js";
 
 // Draws an equirectangular environment map (a baked analytic sky or a user
@@ -11,6 +12,12 @@ import type { PipelineShaderOptions } from "../types.js";
 // The env map is already linear (a float HDR map, or the sky baked into an
 // rgba8unorm-srgb texture that decodes on sample), so no decode is needed; the
 // result feeds the linear HDR main pass.
+//
+// USE_BACKGROUND_BLUR swaps the equirect sample for the reflection-probe's
+// prefiltered specular cubemap (see shaders/reflection-probe.ts), reusing the
+// same GGX mip chain material shading samples instead of a dedicated blur
+// pass. skybox.backgroundBlur (0-1) maps linearly to lod, matching
+// getPrefilteredReflection's roughness->lod convention.
 
 export const skyboxShader = (
   defines: Set<string> = new Set(),
@@ -23,6 +30,7 @@ export const skyboxShader = (
   const useDrawBuffers = defines.has("USE_DRAW_BUFFERS");
   const useNormalOutput = useDrawBuffers && locationNormal >= 0;
   const useEmissiveOutput = useDrawBuffers && locationEmissive >= 0;
+  const useBackgroundBlur = defines.has("USE_BACKGROUND_BLUR");
 
   return /* wgsl */ `
 struct Skybox {
@@ -30,10 +38,14 @@ struct Skybox {
   viewMatrix: mat4x4f,
   modelMatrix: mat4x4f,
   exposure: f32,
+  backgroundBlur: f32,
+  rotation: mat3x3f,
 }
 @group(0) @binding(0) var<uniform> uSkybox: Skybox;
 @group(0) @binding(1) var uEnvMap: texture_2d<f32>;
 @group(0) @binding(2) var uEnvMapSampler: sampler;
+${useBackgroundBlur ? textureSamplerDeclaration(0, { texture: 3, sampler: 4 }, "uSpecularEnvMap", "texture_cube<f32>") : ""}
+${useBackgroundBlur ? `override ROUGHNESS_LEVELS: f32 = ${ROUGHNESS_LEVELS}.0;` : ""}
 
 struct VertexInput {
   @location(0) position: vec2f,
@@ -87,7 +99,12 @@ fn fragmentMain(input: VertexOutput) -> FragmentOutput {
   var output: FragmentOutput;
 
   let N = normalize(input.normal);
-  var color = textureSample(uEnvMap, uEnvMapSampler, envMapEquirect(N));
+  ${
+    useBackgroundBlur
+      ? `let lod = uSkybox.backgroundBlur * (ROUGHNESS_LEVELS - 1.0);
+  var color = textureSampleLevel(uSpecularEnvMap, uSpecularEnvMapSampler, uSkybox.rotation * N, lod);`
+      : `var color = textureSample(uEnvMap, uEnvMapSampler, envMapEquirect(N));`
+  }
   color = vec4f(color.rgb * uSkybox.exposure, color.a);
 
   ${useMSAA ? "color = vec4f(reversibleToneMap(color.xyz), color.w);" : ""}

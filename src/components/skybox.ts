@@ -3,7 +3,7 @@ import type { SkyboxComponentOptions } from "../types.js";
 /** Skybox component */
 export default (options?: SkyboxComponentOptions) => ({
   // Shared
-  backgroundBlur: false,
+  backgroundBlur: 0,
   exposure: 1,
   // Sky
   turbidity: 10,

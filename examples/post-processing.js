@@ -370,7 +370,7 @@ world.add(sunEntity);
 const skyboxEntity = createEntity({
   transform: components.transform(),
   skybox: components.skybox({
-    backgroundBlur: false,
+    backgroundBlur: 0,
     envMap: await getEnvMap(ctx, "assets/envmaps/Mono_Lake_B/Mono_Lake_B.hdr"),
   }),
   reflectionProbe: components.reflectionProbe({}),
@@ -431,7 +431,10 @@ const guiDepthControl = gui.addTexture2D("Depth", null, { flipY: true });
 const guiAOControl = gui.addTexture2D("AO", null, { flipY: true });
 const guiLumaControl = gui.addTexture2D("Luma", null, { flipY: true });
 
-gui.addParam("Background Blur", skyboxEntity.skybox, "backgroundBlur");
+gui.addParam("Background Blur", skyboxEntity.skybox, "backgroundBlur", {
+  min: 0,
+  max: 1,
+});
 
 // gui.addColumn("Material");
 // gui.addParam("Base Color", State, "baseColor", { type: "color" }, () => {

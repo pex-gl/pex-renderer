@@ -244,7 +244,7 @@ world.add(linesEntity);
 const skyboxEntity = createEntity({
   skybox: components.skybox({
     sunPosition: [1, 1, 1],
-    backgroundBlur: true,
+    backgroundBlur: 1,
     envMap: await getEnvMap(ctx, "assets/envmaps/Mono_Lake_B/Mono_Lake_B.hdr"),
   }),
 });

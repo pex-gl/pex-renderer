@@ -1,4 +1,4 @@
-import { mat4 } from "pex-math";
+import { mat3, mat4 } from "pex-math";
 import { submit, createSampler } from "pex-gpu";
 
 import createBaseSystem from "./base.js";
@@ -12,6 +12,8 @@ import type {
   SystemOptions,
 } from "../../types.js";
 
+const IDENTITY_MAT3 = mat3.create();
+
 /**
  * Skybox renderer
  *
@@ -19,12 +21,19 @@ import type {
  * envMap) as the scene background, built on the `skybox` WGSL generator. A
  * single @group(0) holds the uSkybox uniforms plus the env map and its
  * sampler.
+ *
+ * `skybox.backgroundBlur` (0-1) is sampled from the paired reflectionProbe
+ * entity's prefiltered specular cubemap instead of a dedicated blur pass —
+ * the same source `standard.ts` uses for material reflections.
  */
 export default ({ ctx, resourceCache }: SystemOptions): RendererSystem => ({
   ...createBaseSystem(),
   type: "skybox-renderer",
   debug: false,
   sampler: createSampler(ctx, { filter: "linear" }),
+  // Entity ids already warned about a missing reflectionProbe, so the warning
+  // fires once instead of every frame.
+  _warnedBackgroundBlur: new Set<number>(),
 
   getShader: (defines: Set<string>, options: any) =>
     skyboxShader(defines, options),
@@ -35,12 +44,15 @@ export default ({ ctx, resourceCache }: SystemOptions): RendererSystem => ({
       locationEmissive: _locations.emissive ?? -1,
     };
   },
-  getDefines() {
+  getDefines(entity: Entity) {
     const defines = new Set();
     if (this._locations.normal >= 0 || this._locations.emissive >= 0) {
       defines.add("USE_DRAW_BUFFERS");
     }
     if (this._msaa) defines.add("USE_MSAA");
+    if (this._reflectionProbe && (entity.skybox!.backgroundBlur ?? 0) > 0) {
+      defines.add("USE_BACKGROUND_BLUR");
+    }
     return defines;
   },
   getVariantKey(entity: any, defines: Set<string>) {
@@ -50,11 +62,16 @@ export default ({ ctx, resourceCache }: SystemOptions): RendererSystem => ({
       this._locations.emissive ?? -1,
     ].join("_");
   },
-  getPipelineOptions: () => ({
-    depthWriteEnabled: false,
-    depthCompare: "less-equal",
-    cullMode: "none",
-  }),
+  getPipelineOptions(entity: Entity) {
+    return {
+      depthWriteEnabled: false,
+      depthCompare: "less-equal",
+      cullMode: "none",
+      ...(this._reflectionProbe && (entity.skybox!.backgroundBlur ?? 0) > 0
+        ? { constants: { ROUGHNESS_LEVELS: this._reflectionProbe.roughnessLevels } }
+        : {}),
+    };
+  },
 
   checkSkybox(skybox: any) {
     if (skybox.envMap || skybox._skyTexture) return true;
@@ -69,7 +86,23 @@ export default ({ ctx, resourceCache }: SystemOptions): RendererSystem => ({
     if (!this.checkSkybox(entity.skybox)) return;
 
     const { camera } = renderView;
-    const texture = entity.skybox!.envMap || entity.skybox!._skyTexture;
+    const skybox = entity.skybox!;
+    const texture = skybox.envMap || skybox._skyTexture;
+
+    const backgroundBlur = skybox.backgroundBlur ?? 0;
+    const useBackgroundBlur = !!this._reflectionProbe && backgroundBlur > 0;
+
+    if (backgroundBlur > 0 && !this._reflectionProbe) {
+      if (!this._warnedBackgroundBlur.has(entity.id)) {
+        this._warnedBackgroundBlur.add(entity.id);
+        console.warn(
+          NAMESPACE,
+          this.type,
+          "skybox.backgroundBlur requires a paired reflectionProbe entity; rendering unblurred.",
+          entity,
+        );
+      }
+    }
 
     const pipeline = this.getPipeline(entity, options);
 
@@ -83,10 +116,16 @@ export default ({ ctx, resourceCache }: SystemOptions): RendererSystem => ({
           viewMatrix: camera.viewMatrix,
           modelMatrix:
             entity._transform?.modelMatrix || mat4.identity(TEMP_MAT4),
-          exposure: entity.skybox!.exposure ?? 1,
+          exposure: skybox.exposure ?? 1,
+          backgroundBlur,
+          rotation: this._reflectionProbe?.rotation ?? IDENTITY_MAT3,
         },
         uEnvMap: texture,
         uEnvMapSampler: this.sampler,
+        ...(useBackgroundBlur && {
+          uSpecularEnvMap: this._reflectionProbe!.specularTexture,
+          uSpecularEnvMapSampler: this._reflectionProbe!.sampler,
+        }),
       },
     });
   },
@@ -101,6 +140,12 @@ export default ({ ctx, resourceCache }: SystemOptions): RendererSystem => ({
       normal: attachmentsLocations.normal ?? -1,
       emissive: attachmentsLocations.emissive ?? -1,
     };
+
+    // Reused from material IBL (see systems/reflection-probe.ts): the same
+    // prefiltered specular cubemap drives skybox.backgroundBlur, picking a
+    // mip via lod instead of a dedicated background blur pass.
+    const probeEntity = entities.find((e) => e._reflectionProbe);
+    this._reflectionProbe = probeEntity?._reflectionProbe;
 
     for (let i = 0; i < entities.length; i++) {
       const entity = entities[i]!;
