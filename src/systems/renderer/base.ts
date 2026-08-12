@@ -10,9 +10,9 @@ import {
 import { type Mat2x3 } from "pex-math";
 import type {
   Entity,
-  MaterialTexture,
   RendererSystem,
   RenderView,
+  TextureTransform,
 } from "../../types.js";
 
 const IDENTITY_MAT3 = mat3.create();
@@ -20,7 +20,7 @@ const IDENTITY_MAT4 = mat4.create();
 const TEMP_MAT2X3 = mat2x3.create();
 const TEMP_MAT3_SET = new Map<string, number[]>();
 
-function getTextureMatrix(out: Mat2x3, texture: MaterialTexture): number[] {
+function getTextureMatrix(out: Mat2x3, texture: Partial<TextureTransform>): number[] {
   if (!texture.offset && !texture.rotation && !texture.scale) {
     return IDENTITY_MAT3;
   }
@@ -161,14 +161,18 @@ export function getFeatureFlags(
       if (!value) continue;
       const name = uniformName(field.key);
       uniforms[name] = isGpuTexture(value) ? value : value.texture;
-      uniforms[samplerName(name)] = sampler;
+      // A texture's own sampler (e.g. from a glTF sampler's wrap/filter
+      // settings) overrides the renderer's shared default.
+      uniforms[samplerName(name)] = isGpuTexture(value)
+        ? sampler
+        : (value.sampler ?? sampler);
       let scratch = TEMP_MAT3_SET.get(field.key);
       if (!scratch) {
         TEMP_MAT3_SET.set(field.key, (scratch = mat3.create()));
       }
       uMaterial[textureMatrixName(field.key)] = getTextureMatrix(
         scratch,
-        value,
+        isGpuTexture(value) ? {} : value,
       );
       continue;
     }

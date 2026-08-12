@@ -1,5 +1,5 @@
-import type { GpuContext, GpuTexture, GpuBuffer } from "pex-gpu";
 import type { Vec2, Vec3, Quat, Mat4 } from "pex-math";
+import type { GpuContext, GpuTexture, GpuBuffer, ExternalImageSource } from "pex-gpu";
 
 /** Axis-aligned bounding box as [min, max]. */
 export type AABB = number[][];
@@ -16,13 +16,22 @@ export interface TextureTransform {
   scale?: Vec2;
   /** Vertex texCoord set to sample: 0 (texCoord0) or 1 (texCoord1). */
   texCoord?: 0 | 1;
+  /**
+   * Per-texture sampler override (e.g. from a glTF sampler's wrap/filter
+   * settings). Falls back to the renderer's shared default sampler when unset.
+   */
+  sampler?: GPUSampler;
 }
 
 /**
  * A material texture: a GPU texture, its properties optionally decorated
- * directly onto the texture object with a UV transform and/or texCoord set.
+ * directly onto the texture object with a UV transform, texCoord set and/or
+ * sampler override. The nested `{ texture, ... }` form is used whenever any of
+ * these are set; a bare GpuTexture is used otherwise.
  */
-export type MaterialTexture = GpuTexture & Partial<TextureTransform>;
+export type MaterialTexture =
+  | GpuTexture
+  | ({ texture: GpuTexture } & Partial<TextureTransform>);
 
 // Entity
 export interface Entity {
