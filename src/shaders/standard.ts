@@ -526,7 +526,7 @@ ${bindingDeclaration(1, lightBindings.next(), "uIrradianceCoefficients", `array<
   ${
     textures.clearCoatNormalTexture
       ? `getClearCoatNormalTextured(&data, uClearCoatNormalTexture, uClearCoatNormalTextureSampler, uMaterial.clearCoatNormalTextureScale, ${tc("clearCoatNormal")}, uMaterial.clearCoatNormalTextureMatrix, frontFacing);`
-      : "getClearCoatNormal(&data, input.normalWorld);"
+      : "getClearCoatNormal(&data, input.normalView);"
   }
   }
 
