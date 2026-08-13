@@ -141,7 +141,6 @@ gui.addParam(
       State.rotation,
     );
     skyboxEntity.transform.dirty = true;
-    skyboxEntity.reflectionProbe.dirty = true;
   },
 );
 gui.addSeparator();

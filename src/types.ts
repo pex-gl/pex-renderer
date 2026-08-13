@@ -541,7 +541,7 @@ export interface ReflectionProbePrebakedData {
   specularImageSize: number;
   /** 9 L2 spherical harmonics coefficients, each `[r, g, b]`. */
   irradianceCoefficients: number[][];
-  /** Rotation applied to the sampled reflection/normal directions. */
+  /** Seeds the probe entity's transform rotation on load. */
   rotation?: Quat;
   /** Multiplier applied to the probe's indirect diffuse + specular output. */
   intensity?: number;

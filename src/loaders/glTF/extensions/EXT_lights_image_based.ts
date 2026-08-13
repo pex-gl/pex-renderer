@@ -8,7 +8,7 @@ import type { ReflectionProbePrebakedData } from "../../../types.js";
  * already decoded by loaders/glTF/texture.ts's resolveImages for the whole
  * document (specularImages indices point into the same images array as
  * regular textures).
- * https://github.com/KhronosGroup/glTF/tree/main/extensions/2.0/Khronos/EXT_lights_image_based
+ * https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Vendor/EXT_lights_image_based/
  */
 export function resolveLightsImageBased(
   scene: any,

@@ -1,4 +1,5 @@
 import { mat3 } from "pex-math";
+import type { Mat4 } from "pex-math";
 import {
   submit,
   createTexture,
@@ -55,8 +56,8 @@ interface ProbeResources {
  * `_skyTexture`, both equirectangular HDR) into image-based lighting, entirely
  * in compute:
  *
- * - diffuse irradiance projected into L2 spherical harmonics (9 coefficients)
- * - specular radiance prefiltered into a native cubemap mip chain (split-sum)
+ * - Diffuse irradiance projected into L2 spherical harmonics (9 coefficients)
+ * - Specular radiance prefiltered into a native cubemap mip chain (split-sum)
  *
  * Adds to reflectionProbe components:
  *
@@ -191,14 +192,29 @@ export default ({ ctx }: SystemOptions) => ({
       // Assumes LDR (non-float) source images, matching the glTF-IBL-Sampler
       // tool's default PNG output for EXT_lights_image_based.
       format: "rgba8unorm",
-      usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
+      // copyExternalImageToTexture (see copyExternalImage below) requires
+      // RENDER_ATTACHMENT on the destination in addition to COPY_DST.
+      usage:
+        GPUTextureUsage.TEXTURE_BINDING |
+        GPUTextureUsage.COPY_DST |
+        GPUTextureUsage.RENDER_ATTACHMENT,
     });
     for (let level = 0; level < roughnessLevels; level++) {
       const faces = data.specularImages[level]!;
+      // Each level's images are already sized for that level — copyExternalImage
+      // defaults to shrinking the source by 2^mipLevel (for the common case of
+      // reusing one full-res source across levels), which would double-shrink
+      // these; pass the level's actual size to override that.
+      const faceSize = Math.max(1, data.specularImageSize >> level);
       for (let face = 0; face < faces.length; face++) {
         copyExternalImage(ctx, specularTexture, faces[face]!, {
           origin: [0, 0, face],
           mipLevel: level,
+          width: faceSize,
+          height: faceSize,
+          // glTF-IBL-Sampler bakes EXT_lights_image_based faces for the WebGL
+          // reference viewer's bottom-left texture origin; WebGPU's is top-left.
+          flipY: true,
         });
       }
     }
@@ -222,7 +238,12 @@ export default ({ ctx }: SystemOptions) => ({
       addressMode: "clamp-to-edge",
     });
 
-    return { specularTexture, irradianceCoefficients, sampler, roughnessLevels };
+    return {
+      specularTexture,
+      irradianceCoefficients,
+      sampler,
+      roughnessLevels,
+    };
   },
 
   disposeResources(resources: ProbeResources) {
@@ -322,7 +343,11 @@ export default ({ ctx }: SystemOptions) => ({
     }
   },
 
-  updateReflectionProbeEntity(entity: Entity, envMap: GpuTexture, dirty: boolean) {
+  updateReflectionProbeEntity(
+    entity: Entity,
+    envMap: GpuTexture,
+    dirty: boolean,
+  ) {
     let cached = this.cache[entity.id];
     if (!cached) {
       const resources = this.createResources();
@@ -368,9 +393,6 @@ export default ({ ctx }: SystemOptions) => ({
         irradianceCoefficients: resources.irradianceCoefficients,
         sampler: resources.sampler,
         roughnessLevels: resources.roughnessLevels,
-        rotation: data!.rotation
-          ? mat3.fromQuat(mat3.create(), data!.rotation)
-          : undefined,
         intensity: data!.intensity,
       };
     }
@@ -387,25 +409,34 @@ export default ({ ctx }: SystemOptions) => ({
 
       if (entity.reflectionProbe.data) {
         this.updatePrebakedReflectionProbeEntity(entity);
-        continue;
+      } else {
+        const skyboxEntity = skyboxEntities.find(
+          (s) => !entity.layer || entity.layer == s.layer,
+        );
+        if (!skyboxEntity) continue;
+
+        const skybox = skyboxEntity.skybox!;
+        const envMap = skybox.envMap || skybox._skyTexture;
+        if (!envMap) continue;
+
+        // Rebake when the user marks the probe dirty or the analytic sky rebaked.
+        this.updateReflectionProbeEntity(
+          entity,
+          envMap,
+          !!entity.reflectionProbe.dirty || !!skybox._skyTextureChanged,
+        );
       }
 
-      const skyboxEntity = skyboxEntities.find(
-        (s) => !entity.layer || entity.layer == s.layer,
-      );
-      if (!skyboxEntity) continue;
-
-      const skybox = skyboxEntity.skybox!;
-      const envMap = skybox.envMap || skybox._skyTexture;
-      if (!envMap) continue;
-
-      // Rebake when the user marks the probe dirty or the analytic sky rebaked.
-      this.updateReflectionProbeEntity(
-        entity,
-        envMap,
-        !!entity.reflectionProbe.dirty || !!skybox._skyTextureChanged,
-      );
+      this.updateRotation(entity, entity._transform?.modelMatrix);
     }
+  },
+
+  updateRotation(entity: Entity, modelMatrix: Mat4 | undefined) {
+    const probe = entity._reflectionProbe;
+    if (!probe) return;
+    probe.rotation = modelMatrix
+      ? mat3.fromMat4(probe.rotation ?? mat3.create(), modelMatrix)
+      : undefined;
   },
 
   dispose(entities?: Entity[]) {

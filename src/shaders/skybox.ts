@@ -39,7 +39,6 @@ struct Skybox {
   modelMatrix: mat4x4f,
   exposure: f32,
   backgroundBlur: f32,
-  rotation: mat3x3f,
 }
 @group(0) @binding(0) var<uniform> uSkybox: Skybox;
 @group(0) @binding(1) var uEnvMap: texture_2d<f32>;
@@ -102,7 +101,7 @@ fn fragmentMain(input: VertexOutput) -> FragmentOutput {
   ${
     useBackgroundBlur
       ? `let lod = uSkybox.backgroundBlur * (ROUGHNESS_LEVELS - 1.0);
-  var color = textureSampleLevel(uSpecularEnvMap, uSpecularEnvMapSampler, uSkybox.rotation * N, lod);`
+  var color = textureSampleLevel(uSpecularEnvMap, uSpecularEnvMapSampler, N, lod);`
       : `var color = textureSample(uEnvMap, uEnvMapSampler, envMapEquirect(N));`
   }
   color = vec4f(color.rgb * uSkybox.exposure, color.a);

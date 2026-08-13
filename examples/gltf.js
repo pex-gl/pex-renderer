@@ -39,7 +39,7 @@ const State = {
       (formats, model) => new Set([...formats, ...Object.keys(model.variants)]),
       new Set(),
     ),
-  ).filter((format) => !["glTF-IBL", "glTF-Meshopt"].includes(format)),
+  ).filter((format) => !["glTF-Meshopt"].includes(format)),
   currentFormat: 1,
   modelName: "-",
 };
@@ -118,7 +118,7 @@ const addEnvmap = async () => {
     skyEntity.skybox.envMap = null;
   }
 };
-addEnvmap();
+await addEnvmap();
 
 const axesEntity = createEntity({ axesHelper: {} });
 world.add(axesEntity);
@@ -165,7 +165,22 @@ function rescaleScene({ root }) {
   }
 }
 
+function updateDefaultSky(scene) {
+  const hasOwnEnvironment = scene.entities.some(
+    (entity) => !!entity.reflectionProbe,
+  );
+  const inWorld = world.entities.includes(skyEntity);
+
+  if (hasOwnEnvironment && inWorld) {
+    world.dispose(skyEntity);
+  } else if (!hasOwnEnvironment && !inWorld) {
+    world.add(skyEntity);
+  }
+}
+
 function onSceneLoaded(scene, grid) {
+  updateDefaultSky(scene);
+
   if (grid) {
     rescaleScene(scene);
     repositionModel(scene);
@@ -362,6 +377,7 @@ const nextScene = () => {
   next.entities.forEach((entity) => {
     if (entity !== cameraEntity) world.add(entity);
   });
+  updateDefaultSky(next);
 
   if (State.helpers) {
     next.entities.forEach((entity) => {

@@ -296,6 +296,11 @@ function buildGltfScenes(document: GltfDocument): GltfScene[] {
 
     if (scene.reflectionProbe) {
       const reflectionProbeEntity = createEntity({
+        transform: components.transform(
+          scene.reflectionProbe.rotation
+            ? { rotation: scene.reflectionProbe.rotation }
+            : {},
+        ),
         reflectionProbe: components.reflectionProbe({ data: scene.reflectionProbe }),
       });
       reflectionProbeEntity.name = "EXT_lights_image_based";
