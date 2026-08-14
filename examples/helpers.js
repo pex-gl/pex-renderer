@@ -4,9 +4,9 @@ import {
   entity as createEntity,
   components,
   loaders,
-} from "../index.js";
+} from "pex-renderer";
 
-import createContext from "pex-context";
+import * as gpu from "pex-gpu";
 import { quat } from "pex-math";
 import createGUI from "pex-gui";
 import random from "pex-random";
@@ -24,7 +24,7 @@ const State = {
   scale: 1,
 };
 const pixelRatio = devicePixelRatio;
-const ctx = createContext({ pixelRatio });
+const ctx = await gpu.createContext({ pixelRatio });
 const renderEngine = createRenderEngine({ ctx, debug: true });
 const world = createWorld();
 
@@ -45,7 +45,7 @@ world.add(gridTenScaledEntity);
 const W = window.innerWidth * devicePixelRatio;
 const H = window.innerHeight * devicePixelRatio;
 const splitRatio = 0.66;
-const aspect = ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight;
+const aspect = ctx.width / ctx.height;
 
 const cameraEntity = createEntity({
   transform: components.transform({ position: [2, 2, 2] }),
@@ -55,8 +55,8 @@ const cameraEntity = createEntity({
     far: 100,
     viewport: [0, 0, Math.floor(splitRatio * W), H],
   }),
-  postProcessing: components.postProcessing(),
-  orbiter: components.orbiter({ element: ctx.gl.canvas, maxDistance: 1 }),
+  // postProcessing: components.postProcessing(),
+  orbiter: components.orbiter({ element: ctx.canvas, maxDistance: 1 }),
   cameraHelper: components.cameraHelper({ color: [0, 1, 0, 1] }),
 });
 world.add(cameraEntity);
@@ -206,20 +206,20 @@ world.entities.push(...cesiumManScene.entities);
 scalableEntities.set(cesiumManScene.entities[0], cesiumManSceneScale);
 
 // Animated mesh
-const [droneScene] = await loaders.gltf(
-  getURL("assets/models/buster-drone/buster-drone-etc1s-draco.glb"),
-  glTFOptions,
-);
-const droneSceneScale = 0.0025;
-droneScene.entities[0].transform.position = [-0.5, 0.25, 0.5];
-droneScene.entities[0].transform.scale = new Array(3).fill(droneSceneScale);
-droneScene.entities.forEach((entity) => {
-  if (entity.geometry) {
-    entity.boundingBoxHelper = State.bbox && components.boundingBoxHelper();
-  }
-});
-world.entities.push(...droneScene.entities);
-scalableEntities.set(droneScene.entities[0], droneSceneScale);
+// const [droneScene] = await loaders.gltf(
+//   getURL("assets/models/buster-drone/buster-drone-etc1s-draco.glb"),
+//   glTFOptions,
+// );
+// const droneSceneScale = 0.0025;
+// droneScene.entities[0].transform.position = [-0.5, 0.25, 0.5];
+// droneScene.entities[0].transform.scale = new Array(3).fill(droneSceneScale);
+// droneScene.entities.forEach((entity) => {
+//   if (entity.geometry) {
+//     entity.boundingBoxHelper = State.bbox && components.boundingBoxHelper();
+//   }
+// });
+// world.entities.push(...droneScene.entities);
+// scalableEntities.set(droneScene.entities[0], droneSceneScale);
 
 // Morphed mesh
 const [morphCubeScene] = await loaders.gltf(
@@ -343,7 +343,7 @@ gui.addParam("Scale", State, "scale", { min: 0, max: 2 }, () => {
   }
 });
 
-ctx.frame(() => {
+gpu.frame(ctx, () => {
   renderEngine.update(world.entities);
   renderEngine.render(
     world.entities,
