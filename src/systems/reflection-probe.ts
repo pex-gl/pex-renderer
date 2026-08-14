@@ -350,7 +350,12 @@ export default ({ ctx }: SystemOptions) => ({
     dirty: boolean,
   ) {
     let cached = this.cache[entity.id];
-    if (!cached) {
+    // A cache entry with `data` set was built by createPrebakedResources()
+    // (missing radianceCube/mipViews/radianceStorageViews) — e.g. the entity
+    // switched from a pre-baked payload to a bake source without changing id.
+    // Rebuild with bake-compatible resources instead of running bake() on it.
+    if (!cached || cached.data !== undefined) {
+      if (cached) this.disposeResources(cached.resources);
       const resources = this.createResources();
       cached = this.cache[entity.id] = { resources, envMap: null };
       entity._reflectionProbe = {
