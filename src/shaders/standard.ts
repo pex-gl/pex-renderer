@@ -18,10 +18,7 @@ import {
   vertexInputStruct,
   vertexTransform,
 } from "./wgsl.js";
-import {
-  ROUGHNESS_LEVELS,
-  SH_COEFFICIENT_COUNT,
-} from "./reflection-probe.js";
+import { ROUGHNESS_LEVELS, SH_COEFFICIENT_COUNT } from "./reflection-probe.js";
 import type { FeatureField } from "../systems/renderer/base.js";
 import type { MaterialTextureBinding } from "./wgsl.js";
 import type { PipelineShaderOptions } from "../types.js";
@@ -197,8 +194,6 @@ export const STANDARD_WORKFLOW = {
   specularGlossiness: MATERIAL_DEFINE.specularGlossinessWorkflow,
 } as const;
 
-const MAX_LIGHTS = 4;
-
 export const standardShader = (
   defines: Set<string> = new Set(),
   options: PipelineShaderOptions = {},
@@ -226,21 +221,13 @@ export const standardShader = (
   const useReflectionProbes =
     defines.has("USE_REFLECTION_PROBES") && !materialFlags.unlitWorkflow;
 
-  const ambientLights = materialFlags.unlitWorkflow
-    ? 0
-    : Math.min(lights.ambient ?? 0, MAX_LIGHTS);
+  const ambientLights = materialFlags.unlitWorkflow ? 0 : (lights.ambient ?? 0);
   const directionalLights = materialFlags.unlitWorkflow
     ? 0
-    : Math.min(lights.directional ?? 0, MAX_LIGHTS);
-  const pointLights = materialFlags.unlitWorkflow
-    ? 0
-    : Math.min(lights.point ?? 0, MAX_LIGHTS);
-  const spotLights = materialFlags.unlitWorkflow
-    ? 0
-    : Math.min(lights.spot ?? 0, MAX_LIGHTS);
-  const areaLights = materialFlags.unlitWorkflow
-    ? 0
-    : Math.min(lights.area ?? 0, MAX_LIGHTS);
+    : (lights.directional ?? 0);
+  const pointLights = materialFlags.unlitWorkflow ? 0 : (lights.point ?? 0);
+  const spotLights = materialFlags.unlitWorkflow ? 0 : (lights.spot ?? 0);
+  const areaLights = materialFlags.unlitWorkflow ? 0 : (lights.area ?? 0);
 
   const colorAssignment =
     vertexFlags.vertexColor && vertexFlags.instancedColor
@@ -561,7 +548,8 @@ ${bindingDeclaration(1, lightBindings.next(), "uIrradianceCoefficients", `array<
     // clearCoatRoughness above) — each dispatches to the variant that only
     // samples the texture(s) actually bound, so a material with just one of
     // the two doesn't get the other's factor tinted by an unrelated texture.
-    materialFlags.diffuseTransmissionTexture && materialFlags.diffuseTransmissionColorTexture
+    materialFlags.diffuseTransmissionTexture &&
+    materialFlags.diffuseTransmissionColorTexture
       ? `getDiffuseTransmissionTextured(&data, uMaterial.diffuseTransmission, uMaterial.diffuseTransmissionColor, uDiffuseTransmissionTexture, uDiffuseTransmissionTextureSampler, ${tc("diffuseTransmission")}, uMaterial.diffuseTransmissionTextureMatrix, uDiffuseTransmissionColorTexture, uDiffuseTransmissionColorTextureSampler, ${tc("diffuseTransmissionColor")}, uMaterial.diffuseTransmissionColorTextureMatrix, uModel.modelMatrix);`
       : materialFlags.diffuseTransmissionTexture
         ? `getDiffuseTransmissionFactorTextured(&data, uMaterial.diffuseTransmission, uMaterial.diffuseTransmissionColor, uDiffuseTransmissionTexture, uDiffuseTransmissionTextureSampler, ${tc("diffuseTransmission")}, uMaterial.diffuseTransmissionTextureMatrix, uModel.modelMatrix);`
