@@ -586,20 +586,7 @@ ${bindingDeclaration(1, lightBindings.next(), "uIrradianceCoefficients", `array<
     useReflectionProbes
       ? /* wgsl */ `
   data.reflectionWorld = reflect(-data.eyeDirWorld, data.normalWorld);
-  // Probe rotation applies to every IBL sample this draw takes (base layer,
-  // clear coat, sheen all read data.reflectionWorld/normalWorld back out of
-  // the struct), so rotate in place and restore before direct lighting runs.
-  let savedReflectionWorld = data.reflectionWorld;
-  let savedNormalWorld = data.normalWorld;
-  data.reflectionWorld = uReflectionProbe.rotation * data.reflectionWorld;
-  data.normalWorld = uReflectionProbe.rotation * data.normalWorld;
-  let indirectDiffuseBeforeProbe = data.indirectDiffuse;
-  let indirectSpecularBeforeProbe = data.indirectSpecular;
-  EvaluateLightProbe(&data, data.ao, uSpecularEnvMap, uSpecularEnvMapSampler, ROUGHNESS_LEVELS, uIrradianceCoefficients);
-  data.indirectDiffuse = indirectDiffuseBeforeProbe + (data.indirectDiffuse - indirectDiffuseBeforeProbe) * uReflectionProbe.intensity;
-  data.indirectSpecular = indirectSpecularBeforeProbe + (data.indirectSpecular - indirectSpecularBeforeProbe) * uReflectionProbe.intensity;
-  data.reflectionWorld = savedReflectionWorld;
-  data.normalWorld = savedNormalWorld;`
+  EvaluateLightProbe(&data, data.ao, uReflectionProbe.rotation, uReflectionProbe.intensity, uSpecularEnvMap, uSpecularEnvMapSampler, ROUGHNESS_LEVELS, uIrradianceCoefficients);`
       : ""
   }
 

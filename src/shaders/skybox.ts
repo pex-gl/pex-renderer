@@ -13,6 +13,11 @@ import type { PipelineShaderOptions } from "../types.js";
 // rgba8unorm-srgb texture that decodes on sample), so no decode is needed; the
 // result feeds the linear HDR main pass.
 //
+// uSkybox.rotation is the skybox entity's own transform (see utils.js's
+// getEnvironmentRotation) — the same rotation systems/reflection-probe.ts
+// applies to material IBL, so background and reflections rotate in lockstep
+// whether or not USE_BACKGROUND_BLUR is active.
+//
 // USE_BACKGROUND_BLUR swaps the equirect sample for the reflection-probe's
 // prefiltered specular cubemap (see shaders/reflection-probe.ts), reusing the
 // same GGX mip chain material shading samples instead of a dedicated blur
@@ -36,7 +41,7 @@ export const skyboxShader = (
 struct Skybox {
   projectionMatrix: mat4x4f,
   viewMatrix: mat4x4f,
-  modelMatrix: mat4x4f,
+  rotation: mat3x3f,
   exposure: f32,
   backgroundBlur: f32,
 }
@@ -44,14 +49,6 @@ struct Skybox {
 @group(0) @binding(1) var uEnvMap: texture_2d<f32>;
 @group(0) @binding(2) var uEnvMapSampler: sampler;
 ${useBackgroundBlur ? textureSamplerDeclaration(0, { texture: 3, sampler: 4 }, "uSpecularEnvMap", "texture_cube<f32>") : ""}
-${
-  useBackgroundBlur
-    ? /* wgsl */ `struct ReflectionProbe {
-  rotation: mat3x3f,
-}
-@group(0) @binding(5) var<uniform> uReflectionProbe: ReflectionProbe;`
-    : ""
-}
 ${useBackgroundBlur ? `override ROUGHNESS_LEVELS: f32 = ${ROUGHNESS_LEVELS}.0;` : ""}
 
 struct VertexInput {
@@ -82,7 +79,7 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     uSkybox.viewMatrix[2].xyz,
   ));
   let unprojected = (inverseProjection * vec4f(input.position, 0.0, 1.0)).xyz;
-  output.normal = (uSkybox.modelMatrix * vec4f(inverseModelView * unprojected, 1.0)).xyz;
+  output.normal = inverseModelView * unprojected;
 
   // z = 1.0 sits at the ZO far plane so geometry (depthCompare less-equal) wins.
   output.position = vec4f(input.position, 1.0, 1.0);
@@ -105,13 +102,13 @@ ${hooks.fragDeclarationsEnd ?? ""}
 fn fragmentMain(input: VertexOutput) -> FragmentOutput {
   var output: FragmentOutput;
 
-  let N = normalize(input.normal);
+  // uSkybox.rotation matches standard.ts's material IBL sampling of the same
+  // entity transform, so background and reflections rotate together.
+  let N = uSkybox.rotation * normalize(input.normal);
   ${
     useBackgroundBlur
       ? `let lod = uSkybox.backgroundBlur * (ROUGHNESS_LEVELS - 1.0);
-  // Match standard.ts's material IBL sampling of the same cubemap so the
-  // background lines up with reflections when the probe is rotated.
-  var color = textureSampleLevel(uSpecularEnvMap, uSpecularEnvMapSampler, uReflectionProbe.rotation * N, lod);`
+  var color = textureSampleLevel(uSpecularEnvMap, uSpecularEnvMapSampler, N, lod);`
       : `var color = textureSample(uEnvMap, uEnvMapSampler, envMapEquirect(N));`
   }
   color = vec4f(color.rgb * uSkybox.exposure, color.a);

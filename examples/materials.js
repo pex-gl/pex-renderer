@@ -74,14 +74,14 @@ const materials = {
     baseColor: [1.0, 1.0, 1.0, 1.0],
     metallic: 0,
     roughness: 1,
-    baseColorTexture: Object.assign(
-      await getGpuTexture(
+    baseColorTexture: Object.assign({
+      texture: await getGpuTexture(
         ctx,
         getURL(`assets/textures/uv-wide/uv-wide.png`),
         true,
       ),
-      { scale: [1.5, 1.5] },
-    ),
+      scale: [1.5, 1.5],
+    }),
   },
   // Roughness map
   "Roughness Texture": {

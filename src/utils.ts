@@ -1,7 +1,7 @@
 import { aabb } from "pex-geom";
-import { mat2x3, mat4, quat, vec3, vec4 } from "pex-math";
+import { mat2x3, mat3, mat4, quat, vec3, vec4 } from "pex-math";
 
-import type { Mat4, Vec3 } from "pex-math";
+import type { Mat3, Mat4, Vec3 } from "pex-math";
 import type { GpuContext } from "./types.js";
 
 const NAMESPACE = "pex-renderer";
@@ -10,6 +10,7 @@ const TEMP_VEC3 = vec3.create();
 const TEMP_VEC4 = vec4.create();
 const TEMP_QUAT = quat.create();
 const TEMP_MAT4 = mat4.create();
+const TEMP_MAT3 = mat3.create();
 const TEMP_AABB = aabb.create();
 const TEMP_MAT2X3 = mat2x3.create();
 const Y_UP = Object.freeze([0, 1, 0]);
@@ -125,12 +126,22 @@ const getDirname = (path: string) => {
 const isObject = (obj: unknown) =>
   Object.prototype.toString.call(obj) === "[object Object]";
 
+// Environment maps (equirect skybox, prefiltered specular cubemap, SH
+// coefficients) are baked in the probe/skybox entity's unrotated local
+// space, so sampling them with a world-space direction after the entity is
+// rotated by R needs the inverse: R⁻¹ = Rᵀ for a pure rotation matrix. Shared
+// by systems/reflection-probe.ts (IBL) and systems/renderer/skybox.ts
+// (background) so both read the same entity transform the same way.
+const getEnvironmentRotation = (out: Mat3, modelMatrix: Mat4 | undefined) =>
+  modelMatrix ? mat3.transpose(mat3.fromMat4(out, modelMatrix)) : undefined;
+
 export {
   NAMESPACE,
   TEMP_VEC3,
   TEMP_VEC4,
   TEMP_QUAT,
   TEMP_MAT4,
+  TEMP_MAT3,
   TEMP_AABB,
   TEMP_MAT2X3,
   Y_UP,
@@ -144,4 +155,5 @@ export {
   getFileExtension,
   getDirname,
   isObject,
+  getEnvironmentRotation,
 };

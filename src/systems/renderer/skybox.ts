@@ -1,9 +1,9 @@
-import { mat3, mat4 } from "pex-math";
+import { mat3 } from "pex-math";
 import { submit, createSampler } from "pex-gpu";
 
 import createBaseSystem from "./base.js";
 import { skyboxShader } from "../../shaders/skybox.js";
-import { NAMESPACE, TEMP_MAT4 } from "../../utils.js";
+import { NAMESPACE, TEMP_MAT3, getEnvironmentRotation } from "../../utils.js";
 
 import type {
   Entity,
@@ -21,6 +21,11 @@ const IDENTITY_MAT3 = mat3.create();
  * envMap) as the scene background, built on the `skybox` WGSL generator. A
  * single @group(0) holds the uSkybox uniforms plus the env map and its
  * sampler.
+ *
+ * The skybox entity's own transform drives environment rotation for both
+ * the background (equirect or, with backgroundBlur, the paired
+ * reflectionProbe's cubemap) and material IBL — see utils.js's
+ * getEnvironmentRotation, applied the same way in systems/reflection-probe.ts.
  *
  * `skybox.backgroundBlur` (0-1) is sampled from the paired reflectionProbe
  * entity's prefiltered specular cubemap instead of a dedicated blur pass —
@@ -114,8 +119,9 @@ export default ({ ctx, resourceCache }: SystemOptions): RendererSystem => ({
         uSkybox: {
           projectionMatrix: camera.projectionMatrix,
           viewMatrix: camera.viewMatrix,
-          modelMatrix:
-            entity._transform?.modelMatrix || mat4.identity(TEMP_MAT4),
+          rotation:
+            getEnvironmentRotation(TEMP_MAT3, entity._transform?.modelMatrix) ??
+            IDENTITY_MAT3,
           exposure: skybox.exposure ?? 1,
           backgroundBlur,
         },
@@ -124,9 +130,6 @@ export default ({ ctx, resourceCache }: SystemOptions): RendererSystem => ({
         ...(useBackgroundBlur && {
           uSpecularEnvMap: this._reflectionProbe!.specularTexture,
           uSpecularEnvMapSampler: this._reflectionProbe!.sampler,
-          uReflectionProbe: {
-            rotation: this._reflectionProbe!.rotation ?? IDENTITY_MAT3,
-          },
         }),
       },
     });
