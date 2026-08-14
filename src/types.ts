@@ -547,7 +547,6 @@ export interface ReflectionProbePrebakedData {
   intensity?: number;
 }
 export interface ReflectionProbeComponentOptions {
-  size?: number;
   /** Set to force a rebake of the probe on the next update. */
   dirty?: boolean;
   /** Pre-baked IBL data; when set, bypasses the compute-shader bake pipeline. */
