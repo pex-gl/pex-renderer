@@ -271,7 +271,8 @@ export default ({ ctx }: SystemOptions) => ({
     });
     const envSampler = (this.envSampler ||= createSampler(ctx, {
       filter: "linear",
-      addressMode: "repeat",
+      addressModeU: "repeat",
+      addressModeV: "clamp-to-edge",
     }));
 
     const dispatch2d = (faceSize: number): [number, number, number] => {
