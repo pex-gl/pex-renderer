@@ -435,8 +435,11 @@ export default ({ ctx }: SystemOptions) => ({
   updateRotation(entity: Entity, modelMatrix: Mat4 | undefined) {
     const probe = entity._reflectionProbe;
     if (!probe) return;
+    // The cubemap is baked in the probe's unrotated local space, so sampling
+    // it with a world-space direction needs the inverse rotation. R is
+    // orthogonal (rotation only, no scale), so R⁻¹ = Rᵀ.
     probe.rotation = modelMatrix
-      ? mat3.fromMat4(probe.rotation ?? mat3.create(), modelMatrix)
+      ? mat3.transpose(mat3.fromMat4(probe.rotation ?? mat3.create(), modelMatrix))
       : undefined;
   },
 

@@ -1,4 +1,4 @@
-import { mat4 } from "pex-math";
+import { mat3, mat4 } from "pex-math";
 import { submit, createSampler } from "pex-gpu";
 
 import createBaseSystem from "./base.js";
@@ -11,6 +11,8 @@ import type {
   RenderView,
   SystemOptions,
 } from "../../types.js";
+
+const IDENTITY_MAT3 = mat3.create();
 
 /**
  * Skybox renderer
@@ -122,6 +124,9 @@ export default ({ ctx, resourceCache }: SystemOptions): RendererSystem => ({
         ...(useBackgroundBlur && {
           uSpecularEnvMap: this._reflectionProbe!.specularTexture,
           uSpecularEnvMapSampler: this._reflectionProbe!.sampler,
+          uReflectionProbe: {
+            rotation: this._reflectionProbe!.rotation ?? IDENTITY_MAT3,
+          },
         }),
       },
     });

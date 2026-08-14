@@ -44,6 +44,14 @@ struct Skybox {
 @group(0) @binding(1) var uEnvMap: texture_2d<f32>;
 @group(0) @binding(2) var uEnvMapSampler: sampler;
 ${useBackgroundBlur ? textureSamplerDeclaration(0, { texture: 3, sampler: 4 }, "uSpecularEnvMap", "texture_cube<f32>") : ""}
+${
+  useBackgroundBlur
+    ? /* wgsl */ `struct ReflectionProbe {
+  rotation: mat3x3f,
+}
+@group(0) @binding(5) var<uniform> uReflectionProbe: ReflectionProbe;`
+    : ""
+}
 ${useBackgroundBlur ? `override ROUGHNESS_LEVELS: f32 = ${ROUGHNESS_LEVELS}.0;` : ""}
 
 struct VertexInput {
@@ -101,7 +109,9 @@ fn fragmentMain(input: VertexOutput) -> FragmentOutput {
   ${
     useBackgroundBlur
       ? `let lod = uSkybox.backgroundBlur * (ROUGHNESS_LEVELS - 1.0);
-  var color = textureSampleLevel(uSpecularEnvMap, uSpecularEnvMapSampler, N, lod);`
+  // Match standard.ts's material IBL sampling of the same cubemap so the
+  // background lines up with reflections when the probe is rotated.
+  var color = textureSampleLevel(uSpecularEnvMap, uSpecularEnvMapSampler, uReflectionProbe.rotation * N, lod);`
       : `var color = textureSample(uEnvMap, uEnvMapSampler, envMapEquirect(N));`
   }
   color = vec4f(color.rgb * uSkybox.exposure, color.a);
