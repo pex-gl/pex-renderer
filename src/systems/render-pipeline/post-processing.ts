@@ -1,212 +1,286 @@
-// @ts-nocheck
-import { postProcessing as postProcessingShaders } from "pex-shaders";
-import ssao from "./post-processing/ssao.js";
-import dof from "./post-processing/dof.js";
-import bloom from "./post-processing/bloom.js";
-import combine from "./post-processing/combine.js";
-import smaa from "./post-processing/smaa.js";
-import final, { isFinalMainEnabled } from "./post-processing/final.js";
+import { submit } from "pex-gpu";
 
-const createPipelineCache = () => ({
-  cache: { programs: {}, pipelines: {} },
-  getPipeline() {},
-  getHashFromProps() {},
-});
+import createFullscreenGeometry from "../../fullscreen-geometry.js";
+import { NAMESPACE, definesKey } from "../../utils.js";
+import { isResourceHandle } from "../../frame-graph/types.js";
 
-// Impacts pipeline caching
-const pipelineProps = ["blend"];
+import type { Entity, GpuContext, RenderView } from "../../types.js";
+import type {
+  FrameGraph,
+  PassUniforms,
+  ResourceHandle,
+} from "../../frame-graph/index.js";
 
-const getPostProcessingPasses = (options) => [
-  { name: "ssao", passes: ssao(options) },
-  { name: "dof", passes: dof(options) },
-  { name: "bloom", passes: bloom(options) },
-  {
-    name: "combine",
-    passes: combine(options),
-    enabled: () => true,
-    srgb: true,
-  },
-  { name: "smaa", passes: smaa(options), srgb: true },
-  {
-    name: "final",
-    passes: final(options),
-    enabled: isFinalMainEnabled,
-    srgb: true,
-  },
-];
+/**
+ * Effects run in this order. An effect is declared when the postProcessing
+ * component has a truthy key of the same name, or when it is marked `always`.
+ * Its module is only fetched once it is first needed, so a scene without bloom
+ * never downloads or parses the bloom shaders.
+ */
+const EFFECT_ORDER = [
+  "ssao",
+  "dof",
+  "bloom",
+  "combine",
+  "smaa",
+  "final",
+] as const;
 
-export default ({ ctx, renderGraph, resourceCache }) => ({
-  postProcessingEffects: null,
-  renderPostProcessing(
-    renderView,
-    colorAttachments,
-    depthAttachment,
-    descriptors,
-  ) {
-    const renderViewId = renderView.cameraEntity.id;
+export interface PostProcessingContext {
+  ctx: GpuContext;
+  cameraEntity: Entity;
+  renderView: RenderView;
+  viewport: number[];
+  time: number;
+  /** Current end of the chain — what a sub-pass reads unless it names a source. */
+  color: ResourceHandle;
+  depth?: ResourceHandle;
+  normal?: ResourceHandle;
+  emissive?: ResourceHandle;
+  /** Outputs published so far, keyed "<effect>.<subPass>". */
+  targets: Map<string, ResourceHandle>;
+}
 
-    const postProcessingComponent = renderView.cameraEntity.postProcessing;
+export interface PostProcessingSubPass {
+  name: string;
+  /** WGSL generator, same contract as the renderer shaders. */
+  shader: (defines: Set<string>, options?: unknown) => string;
+  getDefines?: (context: PostProcessingContext) => Set<string>;
+  blend?: boolean;
+  enabled?: (context: PostProcessingContext) => boolean;
+  /** Handle, or a "<effect>.<subPass>" key. Defaults to the chain's color. */
+  source?: (context: PostProcessingContext) => ResourceHandle | string | undefined;
+  /** Handle or key. A fresh target is allocated when omitted. */
+  target?: (context: PostProcessingContext) => ResourceHandle | string | undefined;
+  /** Output size, for down/upscaling chains. Defaults to the full viewport. */
+  size?: (context: PostProcessingContext) => number[];
+  uniforms?: (context: PostProcessingContext) => PassUniforms;
+  clearValue?: GPUColor;
+}
 
-    if (!this.pipelineCache) {
-      this.pipelineCache = createPipelineCache(ctx);
+export interface PostProcessingEffect {
+  name: string;
+  /** Targets are display-referred from this effect onwards. */
+  srgb?: boolean;
+  /** Declare even when the component has no key of this name. */
+  always?: boolean;
+  enabled?: (context: PostProcessingContext) => boolean;
+  passes: (context: PostProcessingContext) => PostProcessingSubPass[];
+}
 
-      // Cache based on: renderViewId, pass.name and subPass.name
-      this.pipelineCache.cache.targets = {};
-    }
+/**
+ * Post-processing as frame graph passes.
+ *
+ * Each sub-pass declares what it reads and writes; the graph handles the rest.
+ * That removes three things the previous implementation had to do by hand: a
+ * mutable target dictionary keyed by view and pass name, an explicit
+ * "if no target, this is now the chain output" reassignment, and a per-view
+ * cache that other systems reached into for the AO texture. Targets are now
+ * ordinary handles, published on the blackboard for anyone who needs them.
+ */
+export default ({ ctx, frameGraph }: { ctx: GpuContext; frameGraph: FrameGraph }) => ({
+  postProcessingEffects: new Map<string, PostProcessingEffect | null>(),
+  postProcessingLoading: new Map<string, Promise<void>>(),
+  postProcessingPipelines: new Map<string, Record<string, unknown>>(),
+  fullscreenGeometry: createFullscreenGeometry(ctx),
 
-    // Expose targets for other renderers (eg. standard to use AO)
-    postProcessingComponent._targets = this.pipelineCache.cache.targets; //TODO: hack
+  /**
+   * Fetch an effect module once. A failed import is remembered as null so a
+   * missing or broken effect doesn't retry every frame.
+   */
+  loadPostProcessingEffect(this: any, name: string): Promise<void> | undefined {
+    if (this.postProcessingEffects.has(name)) return;
 
-    this.pipelineCache.cache.targets[renderViewId] ||= {};
-    this.pipelineCache.cache.targets[renderViewId]["color"] =
-      colorAttachments.color;
-
-    this.postProcessingEffects ||= getPostProcessingPasses({
-      ctx,
-      resourceCache,
-      descriptors: this.descriptors,
-    });
-
-    for (let i = 0; i < this.postProcessingEffects.length; i++) {
-      const effect = this.postProcessingEffects[i];
-      const isEffectUsed =
-        !!postProcessingComponent[effect.name] || effect.enabled?.(renderView);
-
-      if (!isEffectUsed) continue;
-
-      for (let j = 0; j < effect.passes.length; j++) {
-        const subPass = effect.passes[j];
-        const isEnabled = !subPass.enabled || subPass.enabled(renderView);
-
-        if (!isEnabled) continue;
-
-        const passName = `${effect.name}.${subPass.name}`;
-
-        const { pipeline, uniforms: pipelineUniforms } =
-          this.pipelineCache.getPipeline(
-            ctx,
-            renderView.cameraEntity,
-            {
-              hash: this.pipelineCache.getHashFromProps(
-                subPass,
-                pipelineProps,
-                this.debug,
-              ),
-              flagDefinitions: subPass.flagDefinitions,
-              targets: this.pipelineCache.cache.targets[renderViewId],
-              vert: subPass.vert || postProcessingShaders.postProcessing.vert,
-              frag: subPass.frag,
-              debug: this.debug,
-            },
-            { blend: subPass.blend },
+    let loading = this.postProcessingLoading.get(name);
+    if (!loading) {
+      loading = import(`./post-processing/${name}.js`)
+        .then((module: { default: PostProcessingEffect }) => {
+          if (typeof module.default?.passes !== "function") {
+            throw new Error(
+              `"${name}" does not export a PostProcessingEffect. Effects still on the pre-WebGPU GLSL flagDefinitions format need porting to a WGSL shader generator first.`,
+            );
+          }
+          this.postProcessingEffects.set(name, module.default);
+        })
+        .catch((error: unknown) => {
+          this.postProcessingEffects.set(name, null);
+          console.error(
+            NAMESPACE,
+            "post-processing",
+            `failed to load effect "${name}"`,
+            error,
           );
+        })
+        .finally(() => {
+          this.postProcessingLoading.delete(name);
+        });
+      this.postProcessingLoading.set(name, loading);
+    }
+    return loading;
+  },
 
-        const viewportSize = subPass.size?.(renderView) || [
-          renderView.viewport[2],
-          renderView.viewport[3],
+  /**
+   * pex-gpu keys compiled pipelines by descriptor identity, so each shader
+   * variant needs one stable object for the lifetime of the system.
+   */
+  getPostProcessingPipeline(
+    this: any,
+    key: string,
+    subPass: PostProcessingSubPass,
+    defines: Set<string>,
+  ) {
+    const variantKey = `${key}|${definesKey(defines)}`;
+    return this.postProcessingPipelines.getOrInsertComputed(variantKey, () => {
+      const source = subPass.shader(defines);
+      return {
+        vertex: source,
+        fragment: source,
+        depthWriteEnabled: false,
+        ...(subPass.blend && { blend: true }),
+      };
+    });
+  },
+
+  async renderPostProcessing(
+    this: any,
+    {
+      renderView,
+      color,
+      depth,
+      normal,
+      emissive,
+    }: {
+      renderView: RenderView;
+      color: ResourceHandle;
+      depth?: ResourceHandle;
+      normal?: ResourceHandle;
+      emissive?: ResourceHandle;
+    },
+  ): Promise<ResourceHandle> {
+    const cameraEntity = renderView.cameraEntity!;
+    const component = cameraEntity.postProcessing as Record<string, unknown>;
+    const viewId = cameraEntity.id;
+    const { colorFormat, srgbColorFormat } = this.descriptors.postProcessing;
+
+    const context: PostProcessingContext = {
+      ctx,
+      cameraEntity,
+      renderView,
+      viewport: renderView.viewport,
+      time: this.time,
+      color,
+      ...(depth && { depth }),
+      ...(normal && { normal }),
+      ...(emissive && { emissive }),
+      targets: new Map<string, ResourceHandle>(),
+    };
+
+    // Resolve every module this frame needs before declaring anything, so the
+    // chain is complete on the first frame an effect is switched on.
+    await Promise.all(
+      EFFECT_ORDER.map((name) =>
+        this.postProcessingEffects.get(name)?.always || component[name]
+          ? this.loadPostProcessingEffect(name)
+          : undefined,
+      ).filter(Boolean),
+    );
+
+    const resolveTarget = (
+      value: ResourceHandle | string | undefined,
+    ): ResourceHandle | undefined => {
+      if (value === undefined) return undefined;
+      if (isResourceHandle(value)) return value;
+      const handle = context.targets.get(value);
+      if (!handle) {
+        console.warn(
+          NAMESPACE,
+          "post-processing",
+          `unknown target "${value}"`,
+        );
+      }
+      return handle;
+    };
+
+    for (const effectName of EFFECT_ORDER) {
+      const effect = this.postProcessingEffects.get(effectName);
+      if (!effect) continue;
+      if (!effect.always && !component[effectName]) continue;
+      if (effect.enabled && !effect.enabled(context)) continue;
+
+      for (const subPass of effect.passes(context)) {
+        if (subPass.enabled && !subPass.enabled(context)) continue;
+
+        const passKey = `${effectName}.${subPass.name}`;
+        const explicitTarget = resolveTarget(subPass.target?.(context));
+        const size = subPass.size?.(context) ?? [
+          renderView.viewport[2]!,
+          renderView.viewport[3]!,
         ];
 
-        const sharedUniforms = {
+        const output =
+          explicitTarget ??
+          frameGraph.createTexture({
+            label: `${passKey}_${viewId}`,
+            width: Math.max(1, Math.trunc(size[0]!)),
+            height: Math.max(1, Math.trunc(size[1]!)),
+            format: effect.srgb ? srgbColorFormat : colorFormat,
+          });
+
+        const input = resolveTarget(subPass.source?.(context)) ?? context.color;
+
+        const defines = subPass.getDefines?.(context) ?? new Set<string>();
+        const pipeline = this.getPostProcessingPipeline(
+          passKey,
+          subPass,
+          defines,
+        );
+
+        // Handle-valued uniforms become read edges and are swapped for physical
+        // textures before execute runs, so nothing here declares dependencies
+        // twice.
+        const uniforms: PassUniforms = {
+          uTexture: input,
+          ...(depth && { uDepthTexture: depth }),
+          ...(normal && { uNormalTexture: normal }),
+          ...(emissive && { uEmissiveTexture: emissive }),
           uViewport: renderView.viewport,
-          uViewportSize: viewportSize,
-          uTexelSize: [1 / viewportSize[0], 1 / viewportSize[1]],
+          uViewportSize: size,
+          uTexelSize: [1 / size[0]!, 1 / size[1]!],
           uTime: this.time,
+          ...subPass.uniforms?.(context),
         };
 
-        const source = subPass.source?.(renderView);
-        const target = subPass.target?.(renderView);
-
-        // Resolve attachments
-        let inputColor;
-        if (source) {
-          inputColor =
-            typeof source === "string"
-              ? this.pipelineCache.cache.targets[renderViewId][source]
-              : source;
-
-          if (!inputColor) console.warn(`Missing source ${source}.`);
-        } else {
-          inputColor = colorAttachments.color;
-        }
-
-        let outputColor;
-        if (target) {
-          outputColor =
-            typeof target === "string"
-              ? this.pipelineCache.cache.targets[renderViewId][target]
-              : target;
-          if (!outputColor) console.warn(`Missing target ${target}.`);
-        } else {
-          // TODO: allow size overwrite for down/upscale
-          const textureDesc = effect.srgb
-            ? descriptors.postProcessing.srgbOutputTextureDesc
-            : descriptors.postProcessing.outputTextureDesc;
-          textureDesc.width = renderView.viewport[2];
-          textureDesc.height = renderView.viewport[3];
-
-          outputColor = resourceCache.texture2D(textureDesc);
-        }
-        outputColor.name = `postProcessingPassColorOutput ${passName} (id: ${outputColor.id})`;
-
-        const uniforms = {
-          // TODO: only add required attachments
-          uTexture: inputColor,
-          uDepthTexture: depthAttachment,
-          uNormalTexture: colorAttachments.normal,
-          uEmissiveTexture: colorAttachments.emissive,
-          ...subPass.uniforms?.(renderView),
-        };
-
-        Object.assign(uniforms, sharedUniforms, pipelineUniforms);
-
-        // Set command
-        const fullscreenTriangle = resourceCache.fullscreenTriangle();
-        //neded for name
-        const postProcessingCmd = {
-          name: passName,
-          pipeline,
+        frameGraph.addPass({
+          name: `PostProcessing.${passKey}_${viewId}`,
+          color: [
+            {
+              texture: output,
+              ...(subPass.clearValue && { clearValue: subPass.clearValue }),
+            },
+          ],
           uniforms,
-          attributes: fullscreenTriangle.attributes,
-          count: fullscreenTriangle.count,
-        };
-
-        // Get used textures from uniforms
-        const uses = Object.entries(postProcessingCmd.pipeline.program.uniforms)
-          .map(([name, value]) => {
-            if (value.type === ctx.gl.SAMPLER_2D) return uniforms[name];
-          })
-          .filter(Boolean);
-
-        const renderPassView = {
-          //FIXME: this seems to be wrong
-          viewport: [0, 0, outputColor.width, outputColor.height],
-        };
-
-        renderGraph.renderPass({
-          name: `PostProcessingPass.${passName} [${renderPassView.viewport}]`,
-          uses,
-          renderView: renderPassView,
-          pass: resourceCache.pass({
-            name: `postProcessingPass.${passName}`,
-            color: [outputColor],
-            ...subPass.passDesc?.(renderView),
-          }),
-          render: () => {
-            ctx.submit(postProcessingCmd);
+          renderView,
+          execute: ({ uniforms: resolved }) => {
+            submit(ctx, {
+              label: passKey,
+              attributes: this.fullscreenGeometry.triangle.attributes,
+              count: this.fullscreenGeometry.triangle.count,
+              pipeline,
+              uniforms: resolved,
+            });
           },
         });
 
-        // TODO: delete from cache somehow on pass. Loop through this.postProcessingPasses?
-        // eg. Object.keys(this.cache.targets[renderViewId]).filter(key => key.startsWidth(`${pass.name}.`))
-        this.pipelineCache.cache.targets[renderViewId][passName] = outputColor;
+        context.targets.set(passKey, output);
+        frameGraph.blackboard.set(`postProcessing.${viewId}.${passKey}`, output);
 
-        // Draw to screen
-        if (!target) {
-          colorAttachments.color = outputColor;
-        }
-
-        colorAttachments[passName] = outputColor;
+        // A sub-pass writing into a target it named is a side channel (a blur
+        // feeding back into its own source, say); only an allocated target
+        // advances the chain.
+        if (!explicitTarget) context.color = output;
       }
     }
+
+    return context.color;
   },
 });

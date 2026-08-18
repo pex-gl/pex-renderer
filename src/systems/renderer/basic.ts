@@ -3,6 +3,7 @@ import { submit } from "pex-gpu";
 import { basicShader, BASIC_VERTEX_FIELDS } from "../../shaders/basic.js";
 
 import createBaseSystem, { BLEND_MODES } from "./base.js";
+import { definesKey } from "../../utils.js";
 
 import type {
   BlendMode,
@@ -42,7 +43,7 @@ export default ({ ctx }: SystemOptions): RendererSystem => ({
     return defines;
   },
   getVariantKey(entity: any, defines: Set<string>) {
-    return `${[...defines].sort().join("|")}_${entity.material.blend ? 1 : 0}`;
+    return `${definesKey(defines)}_${entity.material.blend ? 1 : 0}`;
   },
   getPipelineOptions(entity: any) {
     const { material } = entity;

@@ -1,12 +1,14 @@
 import { vec3 } from "pex-math";
 import { submit, createTexture } from "pex-gpu";
 
+import { skyShader } from "../shaders/sky.js";
+import createFullscreenGeometry from "../fullscreen-geometry.js";
+
 import type {
   Entity,
   SkyboxComponentOptions,
   SystemOptions,
 } from "../types.js";
-import { skyShader } from "../shaders/sky.js";
 
 // Sky parameters packed, in order, into the shader's `parameters: vec4f`.
 const parameters: (keyof SkyboxComponentOptions)[] = [
@@ -25,7 +27,7 @@ const parameters: (keyof SkyboxComponentOptions)[] = [
  *   render
  * - "_skyTextureChanged" to skybox components for reflection-probe system
  */
-export default ({ ctx, resourceCache }: SystemOptions) => ({
+export default ({ ctx }: SystemOptions) => ({
   type: "skybox-system",
   cache: {} as Record<number, any>,
   debug: false,
@@ -81,11 +83,11 @@ export default ({ ctx, resourceCache }: SystemOptions) => ({
         label: "skyboxUpdateSkyTextureCmd",
         pass: {
           colorAttachments: [
-            { texture: skybox._skyTexture, clearValue: [0, 0, 0, 0] },
+            { texture: skybox._skyTexture!, clearValue: [0, 0, 0, 0] },
           ],
         },
         pipeline: this.pipeline,
-        ...resourceCache.fullscreenTriangle(),
+        ...createFullscreenGeometry(ctx).triangle,
         uniforms: {
           uSky: {
             sunPosition: this.cache[entity.id].sunPosition,

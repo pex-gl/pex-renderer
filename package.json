@@ -37,7 +37,7 @@
     "dev": "snowdev dev",
     "release": "snowdev release",
     "release:alpha": "snowdev release --release-as minor --prerelease alpha",
-    "test": "node test/validate-pipeline-wgsl.js"
+    "test": "node test/frame-graph.js && node test/frustum-planes.js && node test/shadow-fit.js && node test/validate-pipeline-wgsl.js"
   },
   "dependencies": {
     "geom-builder": "^3.1.0",

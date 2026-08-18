@@ -1,5 +1,6 @@
 import type { GpuContext, GpuTexture, GpuBuffer, ExternalImageSource } from "pex-gpu";
 import type { Vec2, Vec3, Quat, Mat3, Mat4 } from "pex-math";
+import type { FrameGraph } from "./frame-graph/index.js";
 
 /** Axis-aligned bounding box as [min, max]. */
 export type AABB = number[][];
@@ -521,8 +522,6 @@ export interface PostProcessingComponentOptions {
     | "uncharted2"
     | "unreal";
   opacity?: number;
-  /** Runtime render targets, added by the render pipeline. */
-  _targets?: unknown;
 }
 /**
  * Pre-baked image-based lighting data (e.g. from a glTF `EXT_lights_image_based`
@@ -683,8 +682,7 @@ export type PipelineShaderBuilder = (
 // System
 export interface SystemOptions {
   ctx: GpuContext;
-  resourceCache: ResourceCache;
-  renderGraph: RenderGraph;
+  frameGraph: FrameGraph;
 }
 export type SystemUpdate = (entities: Entity[], deltaTime?: number) => void;
 export type SystemDispose = (entities?: Entity[]) => void;
@@ -703,11 +701,12 @@ export interface RenderEngineOptions {
   /** Overrides the engine's accumulated time for this render call. */
   time?: number;
 }
+/** Resolves to each camera's render targets, keyed by output name. */
 export type RenderEngineRender = (
   entities: Entity[],
-  cameraEntities: Entity[],
+  cameraEntities: Entity | Entity[],
   options?: RenderEngineOptions,
-) => void;
+) => Promise<Record<string, GpuTexture>[]>;
 export type RenderEngineDebug = (enable: boolean) => void;
 export interface RenderEngine extends System {
   render: RenderEngineRender;
@@ -760,22 +759,6 @@ export interface World {
   update: WorldUpdate;
 }
 
-// Others
-export interface RenderGraph {
-  renderPasses: object[];
-  beginFrame: (...args: any[]) => any;
-  renderPass: (...args: any[]) => any;
-  endFrame: (...args: any[]) => any;
-}
-export type ResourceCacheUsage = "Transient" | "Retained";
-export interface ResourceCache {
-  beginFrame: (...args: any[]) => any;
-  endFrame: (...args: any[]) => any;
-  dispose: (...args: any[]) => any;
-  /** Usage-kind enum map, e.g. `resourceCache.Usage.Retained`. */
-  Usage: Record<string, string>;
-  [key: string]: any;
-}
 /** A camera and the region of a target it renders into. */
 export interface RenderView {
   camera: CameraComponentOptions;

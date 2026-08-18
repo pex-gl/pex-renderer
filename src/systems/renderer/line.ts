@@ -2,6 +2,7 @@ import { avec3, mat3 } from "pex-math";
 import { submit, createBuffer } from "pex-gpu";
 
 import createBaseSystem from "./base.js";
+import { definesKey } from "../../utils.js";
 import {
   lineShader,
   LINE_VERTEX_FIELDS,
@@ -70,7 +71,7 @@ export default ({ ctx }: SystemOptions): RendererSystem => ({
   },
   getVariantKey(entity: any, defines: Set<string>) {
     return [
-      [...defines].sort().join("|"),
+      definesKey(defines),
       this._locations.normal ?? -1,
       this._locations.emissive ?? -1,
     ].join("_");

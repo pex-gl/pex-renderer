@@ -21,12 +21,10 @@ export * as loaders from "./loaders/index.js";
 /** All pipeline shader generators, namespaced per source file. */
 export * as shaders from "./shaders/index.js";
 
-export {
-  /** Create a render graph for rendering passes */
-  default as renderGraph,
-} from "./render-graph.js";
-export {
-  /** Create a resource cache for pex-context caching. */ default as resourceCache,
-} from "./resource-cache.js";
+/**
+ * The frame graph — declare passes and virtual resources, compile, execute —
+ * and its types.
+ */
+export * from "./frame-graph/index.js";
 
 export * as utils from "./utils.js";

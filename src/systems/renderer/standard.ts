@@ -14,7 +14,7 @@ import {
 
 import createBaseSystem, { BLEND_MODES } from "./base.js";
 import { samplerName, uniformName } from "../../shaders/wgsl.js";
-import { NAMESPACE, TEMP_MAT4 } from "../../utils.js";
+import { NAMESPACE, TEMP_MAT4, definesKey } from "../../utils.js";
 
 import type {
   BlendMode,
@@ -240,10 +240,7 @@ export default ({
       ({ key }) => material[key]?.texCoord ?? 0,
     ).join("");
     return [
-      [...defines]
-        .filter((define) => !RUNTIME_DEFINES.has(define))
-        .sort()
-        .join("|"),
+      definesKey(defines.difference(RUNTIME_DEFINES)),
       counts.ambient,
       counts.directional,
       counts.point,
@@ -574,17 +571,13 @@ export default ({
     this.getFeatureFlags(attributes, DEPTH_PASS_VERTEX_FIELDS, defines);
     if (linear) defines.add("USE_LINEAR_DEPTH");
 
-    const key = [...defines].sort().join("|");
-    let pipeline = this.depthPipelineCache.get(key);
-    if (!pipeline) {
+    const key = definesKey(defines);
+    const pipeline = this.depthPipelineCache.getOrInsertComputed(key, () => {
       const shader = depthPassShader(defines, {});
       // 2D maps are vertex-only; the linear variant needs a fragment stage to
       // write frag_depth.
-      pipeline = linear
-        ? { vertex: shader, fragment: shader }
-        : { vertex: shader };
-      this.depthPipelineCache.set(key, pipeline);
-    }
+      return linear ? { vertex: shader, fragment: shader } : { vertex: shader };
+    });
     pipeline.depthWriteEnabled = true;
     pipeline.cullMode = (entity.material.cullFace ?? true) ? "back" : "none";
     pipeline.topology = entity._geometry.primitive ?? "triangle-list";

@@ -6,6 +6,7 @@ import {
   samplerName,
   uniformName,
 } from "../../shaders/wgsl.js";
+import { definesKey } from "../../utils.js";
 
 import { type Mat2x3 } from "pex-math";
 import type {
@@ -242,7 +243,7 @@ export default (): RendererSystem => ({
     return new Set();
   },
   getVariantKey(entity: Entity, defines: Set<string>) {
-    return [...defines].sort().join("|");
+    return definesKey(defines);
   },
   getPipelineOptions() {
     return {};
@@ -261,15 +262,13 @@ export default (): RendererSystem => ({
     const defines = this.getDefines(entity, options, precomputed);
     const key = this.getVariantKey(entity, defines, options);
 
-    let pipeline = this.pipelineCache.get(key);
-    if (!pipeline) {
+    const pipeline = this.pipelineCache.getOrInsertComputed(key, () => {
       const source = this.getShader(
         defines,
         this.getShaderOptions(entity, options),
       );
-      pipeline = { vertex: source, fragment: source };
-      this.pipelineCache.set(key, pipeline);
-    }
+      return { vertex: source, fragment: source };
+    });
 
     // Blend/cull/depth may change between draws without a new pipeline object.
     Object.assign(

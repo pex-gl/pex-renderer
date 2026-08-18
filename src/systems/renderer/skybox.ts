@@ -3,7 +3,13 @@ import { submit, createSampler } from "pex-gpu";
 
 import createBaseSystem from "./base.js";
 import { skyboxShader } from "../../shaders/skybox.js";
-import { NAMESPACE, TEMP_MAT3, getEnvironmentRotation } from "../../utils.js";
+import {
+  NAMESPACE,
+  TEMP_MAT3,
+  definesKey,
+  getEnvironmentRotation,
+} from "../../utils.js";
+import createFullscreenGeometry from "../../fullscreen-geometry.js";
 
 import type {
   Entity,
@@ -31,7 +37,7 @@ const IDENTITY_MAT3 = mat3.create();
  * entity's prefiltered specular cubemap instead of a dedicated blur pass —
  * the same source `standard.ts` uses for material reflections.
  */
-export default ({ ctx, resourceCache }: SystemOptions): RendererSystem => ({
+export default ({ ctx }: SystemOptions): RendererSystem => ({
   ...createBaseSystem(),
   type: "skybox-renderer",
   debug: false,
@@ -62,7 +68,7 @@ export default ({ ctx, resourceCache }: SystemOptions): RendererSystem => ({
   },
   getVariantKey(entity: any, defines: Set<string>) {
     return [
-      [...defines].sort().join("|"),
+      definesKey(defines),
       this._locations.normal ?? -1,
       this._locations.emissive ?? -1,
     ].join("_");
@@ -114,18 +120,18 @@ export default ({ ctx, resourceCache }: SystemOptions): RendererSystem => ({
     submit(ctx, {
       label: "drawSkyboxCmd",
       pipeline,
-      ...resourceCache.fullscreenTriangle(),
+      ...createFullscreenGeometry(ctx).triangle,
       uniforms: {
         uSkybox: {
-          projectionMatrix: camera.projectionMatrix,
-          viewMatrix: camera.viewMatrix,
+          projectionMatrix: camera.projectionMatrix!,
+          viewMatrix: camera.viewMatrix!,
           rotation:
             getEnvironmentRotation(TEMP_MAT3, entity._transform?.modelMatrix) ??
             IDENTITY_MAT3,
           exposure: skybox.exposure ?? 1,
           backgroundBlur,
         },
-        uEnvMap: texture,
+        uEnvMap: texture!,
         uEnvMapSampler: this.sampler,
         ...(useBackgroundBlur && {
           uSpecularEnvMap: this._reflectionProbe!.specularTexture,

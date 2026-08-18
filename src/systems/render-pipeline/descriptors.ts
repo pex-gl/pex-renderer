@@ -1,7 +1,9 @@
 import { reversibleToneMapShader } from "../../shaders/reversible-tone-map.js";
-import { CUBEMAP_SIDES } from "../../utils.js";
 
 import type { GpuContext } from "../../types.js";
+
+// Built once: pex-gpu caches compiled pipelines by shader source identity.
+const REVERSIBLE_TONE_MAP_WGSL = reversibleToneMapShader();
 
 // Fullscreen-triangle blit: samples the linear HDR main pass target, applies
 // the frame-wide tonemap, and encodes to sRGB for the canvas. WebGPU texture
@@ -98,95 +100,13 @@ fn fragmentMain(input: Varyings) -> @location(0) vec4f {
 }
 `;
 
-export default (ctx: GpuContext) => ({
-  directionalLightShadows: {
-    colorMapDesc: {
-      name: "directionalLightColorMap",
-      width: 2048,
-      height: 2048,
-      pixelFormat: "rgba8unorm",
-    },
-    shadowMapDesc: {
-      name: "directionalLightShadowMap",
-      width: 2048,
-      height: 2048,
-      pixelFormat: "depth32float",
-    },
-    pass: {
-      name: "directionalLightShadowMappingPass",
-      color: [],
-      depth: null,
-      clearColor: [0, 0, 0, 1],
-      clearDepth: 1,
-    },
-  },
-  spotLightShadows: {
-    colorMapDesc: {
-      name: "spotLightColorMap",
-      width: 2048,
-      height: 2048,
-      pixelFormat: "rgba8unorm",
-    },
-    shadowMapDesc: {
-      name: "spotLightShadowMap",
-      width: 2048,
-      height: 2048,
-      pixelFormat: "depth32float",
-    },
-    pass: {
-      name: "spotLightShadowMappingPass",
-      color: [],
-      depth: null,
-      clearColor: [0, 0, 0, 1],
-      clearDepth: 1,
-    },
-  },
-  pointLightShadows: {
-    colorMapDesc: {
-      name: "pointLightShadowCubemap",
-      width: 2048,
-      height: 2048,
-      pixelFormat: "rgba8unorm",
-    },
-    shadowMapDesc: {
-      name: "pointLightShadowMap",
-      width: 2048,
-      height: 2048,
-      pixelFormat: "depth32float",
-    },
-    passes: CUBEMAP_SIDES.map((side, i) => ({
-      name: `pointLightShadowMappingSide${i}`,
-      color: [{ target: i }],
-      depth: null,
-      clearColor: side.color,
-      clearDepth: 1,
-    })),
-  },
+export default (_ctx: GpuContext) => ({
   mainPass: {
-    outputTextureDesc: {
-      name: "mainPassColorTexture",
-      width: 1,
-      height: 1,
-      pixelFormat: "rgba16float",
-    },
-    outputDepthTextureDesc: {
-      name: "mainPassDepthTexture",
-      width: 1,
-      height: 1,
-      pixelFormat: "depth24plus",
-    },
-    pass: {
-      color: [],
-    },
+    colorFormat: "rgba16float" as GPUTextureFormat,
+    depthFormat: "depth24plus" as GPUTextureFormat,
   },
   grabPass: {
-    colorCopyTextureDesc: {
-      name: "grabPassColorCopyTexture",
-      width: 1,
-      height: 1,
-      pixelFormat: "rgba16float",
-      mipmap: true,
-    },
+    colorFormat: "rgba16float" as GPUTextureFormat,
     copyTexturePipelineDesc: {
       vertex: GRAB_PASS_COPY_WGSL,
       fragment: GRAB_PASS_COPY_WGSL,
@@ -199,14 +119,18 @@ export default (ctx: GpuContext) => ({
     },
   },
   postProcessing: {
-    outputTextureDesc: { pixelFormat: "rgba16float" },
-    srgbOutputTextureDesc: { pixelFormat: "rgba8unorm-srgb" },
+    /** Linear HDR working format for intermediate effect targets. */
+    colorFormat: "rgba16float" as GPUTextureFormat,
+    /** Display-referred format, from the tonemap onwards. */
+    srgbColorFormat: "rgba8unorm-srgb" as GPUTextureFormat,
   },
   reversibleToneMap: {
+    // The generator emits both stages, so one source serves as vertex and
+    // fragment — same shape as the blit and grab pass descriptors.
     pipelineDesc: {
-      // Legacy GLSL path, not yet ported to the WGSL reversibleToneMap generator.
-      vert: BLIT_WGSL,
-      frag: reversibleToneMapShader(),
+      vertex: REVERSIBLE_TONE_MAP_WGSL,
+      fragment: REVERSIBLE_TONE_MAP_WGSL,
+      depthWriteEnabled: false,
     },
   },
   blit: {

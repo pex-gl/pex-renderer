@@ -1,13 +1,18 @@
-import { parser as ShaderParser } from "pex-shaders";
 import { submit, createSampler, isGpuTexture } from "pex-gpu";
 
 import addDescriptors from "./descriptors.js";
 import shadowMappingPipelineMethods from "./shadow-mapping.js";
-// import postProcessingPipelineMethods from "./post-processing.js";
+import postProcessingPipelineMethods from "./post-processing.js";
 import cullingPipelineMethods from "./culling.js";
+import createFullscreenGeometry from "../../fullscreen-geometry.js";
 import { getDefaultViewport } from "../../utils.js";
 
 import type { Entity, SystemOptions } from "../../types.js";
+import type {
+  ColorAttachmentDeclaration,
+  DepthStencilAttachmentDeclaration,
+  ResourceHandle,
+} from "../../frame-graph/index.js";
 
 /**
  * Render pipeline system
@@ -18,31 +23,33 @@ import type { Entity, SystemOptions } from "../../types.js";
  *   that cast shadows
  * - "_shadowCubemap" to pointLight components and "_shadowMap" to other light
  *   components
- * - "_targets" to postProcessing components
+ *
+ * Declares its passes into the frame graph rather than submitting them: the
+ * graph decides ordering, which passes survive, which targets share memory and
+ * which attachment contents are worth storing.
  */
-export default ({ ctx, resourceCache, renderGraph }: SystemOptions) => ({
+export default ({ ctx, frameGraph }: SystemOptions) => ({
   type: "render-pipeline-system",
-  cache: {} as Record<number, any>,
   time: 0,
   debug: false,
   debugRender: "",
-  renderers: [],
   reversibleToneMap: false,
 
   descriptors: addDescriptors(ctx),
+  fullscreen: createFullscreenGeometry(ctx),
 
   // Sampler for the fullscreen blit of the HDR main pass target to the canvas.
   blitSampler: createSampler(ctx, { filter: "linear" }),
 
   outputs: new Set(["color", "depth"]), // "normal", "emissive"
 
-  ...shadowMappingPipelineMethods({ renderGraph, resourceCache }),
-  // ...postProcessingPipelineMethods({ ctx, renderGraph, resourceCache }),
-  ...cullingPipelineMethods({ renderGraph, resourceCache }),
+  ...shadowMappingPipelineMethods({ frameGraph }),
+  ...postProcessingPipelineMethods({ ctx, frameGraph }),
+  ...cullingPipelineMethods(),
 
   getAttachmentsLocations(colorAttachments: any) {
     return Object.fromEntries(
-      Object.keys(colorAttachments).map((key, index) => [key, index]),
+      Object.keys(colorAttachments ?? {}).map((key, index) => [key, index]),
     );
   },
 
@@ -110,36 +117,35 @@ export default ({ ctx, resourceCache, renderGraph }: SystemOptions) => ({
     }
   },
 
-  // Builds the grab texture's mip chain with one downsample-blit render pass per
-  // level. Each is its own render-graph node, so the graph orders the write of
-  // level-1 before its read — generateMipmaps can't be used mid-frame, as its
-  // immediate queue.submit would run before the batched frame encoder.
-  generateGrabMips(this: any, grabTexture: any) {
-    const fullscreenTriangle = resourceCache.fullscreenTriangle();
-    const pipeline = resourceCache.pipeline(
-      this.descriptors.grabPass.downsamplePipelineDesc,
-    );
-
-    for (let level = 1; level < grabTexture.mipLevelCount; level++) {
-      const sourceView = grabTexture.texture.createView({
-        baseMipLevel: level - 1,
-        mipLevelCount: 1,
-      });
-      renderGraph.renderPass({
-        name: `GrabMipPass${level}`,
-        uses: [grabTexture],
-        pass: resourceCache.pass({
-          name: `grabMipPass${level}`,
-          color: [{ texture: grabTexture, level }],
-        }),
-        render: () => {
+  /**
+   * One downsample-blit pass per mip level of the grab texture. Each level is
+   * its own graph node, so the graph orders the write of level N before level
+   * N+1 reads it — generateMipmaps can't be used mid-frame, as its immediate
+   * queue.submit would run before the batched frame encoder.
+   *
+   * The read of the previous level is a sub-resource view resolved inside
+   * execute rather than a declared read: a pass may not declare the same handle
+   * as both read and write, and the write-after-write edge between consecutive
+   * levels already provides the ordering.
+   */
+  generateGrabMips(
+    this: any,
+    grabTexture: ResourceHandle,
+    levels: number,
+    name: string,
+  ) {
+    for (let level = 1; level < levels; level++) {
+      frameGraph.addPass({
+        name: `${name}Mip${level}`,
+        color: [{ texture: grabTexture, level }],
+        execute: ({ resolveView }) => {
           submit(ctx, {
-            label: `grabMip${level}Cmd`,
-            attributes: fullscreenTriangle.attributes,
-            count: fullscreenTriangle.count,
-            pipeline,
+            label: `grabMip${level}`,
+            attributes: this.fullscreen.triangle.attributes,
+            count: this.fullscreen.triangle.count,
+            pipeline: this.descriptors.grabPass.downsamplePipelineDesc,
             uniforms: {
-              uTexture: sourceView,
+              uTexture: resolveView(grabTexture, { level: level - 1 }),
               uSampler: this.blitSampler,
             },
           });
@@ -148,14 +154,14 @@ export default ({ ctx, resourceCache, renderGraph }: SystemOptions) => ({
     }
   },
 
-  update(this: any, entities: Entity[], options: any = {}) {
+  // Async because post-processing effects are imported on demand, so a frame
+  // that first enables one waits for its module. Nothing here touches the GPU:
+  // the graph only records declarations, and execution happens after compile.
+  async update(this: any, entities: Entity[], options: any = {}) {
     let { time, renderView, renderers, drawToScreen = true } = options;
 
     this.time = time;
 
-    const shadowCastingEntities = entities.filter(
-      (entity) => entity.geometry && entity.material?.castShadows,
-    );
     const cameraEntity = entities.find((entity) => entity.camera);
 
     renderView ||= {
@@ -164,187 +170,115 @@ export default ({ ctx, resourceCache, renderGraph }: SystemOptions) => ({
     };
     const postProcessing = renderView.cameraEntity.postProcessing;
 
-    // Setup attachments. Can be overwritten by PostProcessingPass
-    const outputs = new Set(this.outputs);
+    const width = renderView.viewport[2];
+    const height = renderView.viewport[3];
+    const viewId = renderView.cameraEntity.id;
 
+    // Which G-buffer outputs the frame needs. Declaring one that nothing reads
+    // is harmless — the graph culls the write and never allocates the target.
+    const outputs = new Set<string>(this.outputs);
     if (postProcessing?.ssao) outputs.add("normal");
     if (postProcessing?.bloom) outputs.add("emissive");
 
     const msaaSampleCount = postProcessing?.msaa?.sampleCount;
     const msaa = msaaSampleCount > 0;
 
-    const colorAttachments: any = {};
-    const colorAttachmentsMSAA: any = {};
-    let depthAttachment: any;
-    let depthAttachmentMSAA: any;
+    const { colorFormat, depthFormat } = this.descriptors.mainPass;
 
-    // TODO: this should be done on the fly by render graph
-    this.descriptors.mainPass.outputTextureDesc.width = renderView.viewport[2];
-    this.descriptors.mainPass.outputTextureDesc.height = renderView.viewport[3];
+    // ─── Attachments ─────────────────────────────────────────────────────────
+    const colorAttachments: Record<string, ResourceHandle> = {};
+    for (const name of outputs) {
+      if (name === "depth") continue;
+      colorAttachments[name] = frameGraph.createTexture({
+        label: `mainPass_${name}_${viewId}`,
+        width,
+        height,
+        format: colorFormat,
+      });
+    }
 
-    colorAttachments.color = resourceCache.texture2D(
-      this.descriptors.mainPass.outputTextureDesc,
-    );
-
+    // WebGPU has no depth resolve — GPURenderPassDepthStencilAttachment has no
+    // resolveTarget — so under MSAA the depth buffer stays multisampled and is
+    // what gets handed back. Anything wanting single-sample depth needs an
+    // explicit resolve pass of its own.
+    let depthAttachment: ResourceHandle | undefined;
     if (outputs.has("depth")) {
-      this.descriptors.mainPass.outputDepthTextureDesc.width =
-        renderView.viewport[2];
-      this.descriptors.mainPass.outputDepthTextureDesc.height =
-        renderView.viewport[3];
-      depthAttachment = resourceCache.texture2D(
-        this.descriptors.mainPass.outputDepthTextureDesc,
-      );
-      depthAttachment.name = `mainPassDepth (id: ${depthAttachment.id})`;
+      depthAttachment = frameGraph.createTexture({
+        label: `mainPassDepth${msaa ? "MSAA" : ""}_${viewId}`,
+        width,
+        height,
+        format: depthFormat,
+        ...(msaa && { sampleCount: msaaSampleCount }),
+      });
+    }
 
-      if (msaa) {
-        depthAttachmentMSAA = {
-          texture: resourceCache.renderbuffer({
-            width: this.descriptors.mainPass.outputDepthTextureDesc.width,
-            height: this.descriptors.mainPass.outputDepthTextureDesc.height,
-            pixelFormat:
-              this.descriptors.mainPass.outputDepthTextureDesc.pixelFormat,
-            sampleCount: msaaSampleCount,
-          }),
-          resolveTarget: depthAttachment,
-        };
-
-        depthAttachmentMSAA.name = `mainPassDepthMSAA (id: ${depthAttachmentMSAA.texture.id})`;
+    // Multisampled color is resolved into the single-sample attachments above;
+    // nothing samples it, so the graph marks it memoryless.
+    const msaaColor: Record<string, ResourceHandle> = {};
+    if (msaa) {
+      for (const name of Object.keys(colorAttachments)) {
+        msaaColor[name] = frameGraph.createTexture({
+          label: `mainPass_${name}MSAA_${viewId}`,
+          width,
+          height,
+          format: colorFormat,
+          sampleCount: msaaSampleCount,
+        });
       }
     }
 
-    if (outputs.has("normal")) {
-      colorAttachments.normal = resourceCache.texture2D(
-        this.descriptors.mainPass.outputTextureDesc,
-      );
-    }
+    const colorTarget = (name: string): ColorAttachmentDeclaration =>
+      msaa
+        ? { texture: msaaColor[name]!, resolveTarget: colorAttachments[name]! }
+        : { texture: colorAttachments[name]! };
+    const depthTarget = (): DepthStencilAttachmentDeclaration => ({
+      texture: depthAttachment!,
+    });
 
-    if (outputs.has("emissive")) {
-      colorAttachments.emissive = resourceCache.texture2D(
-        this.descriptors.mainPass.outputTextureDesc,
-      );
-    }
+    const layer = renderView.cameraEntity.layer;
 
-    for (const name of Object.keys(colorAttachments)) {
-      const texture = colorAttachments[name];
-      texture.name = `mainPass${name} (id: ${texture.id})`;
-
-      if (msaa) {
-        colorAttachmentsMSAA[name] = {
-          texture: resourceCache.renderbuffer({
-            width: this.descriptors.mainPass.outputTextureDesc.width,
-            height: this.descriptors.mainPass.outputTextureDesc.height,
-            pixelFormat:
-              this.descriptors.mainPass.outputTextureDesc.pixelFormat,
-            sampleCount: msaaSampleCount,
-          }),
-          resolveTarget: texture,
-        };
-        colorAttachmentsMSAA[name].name =
-          `mainPass${name}MSAA (id: ${colorAttachmentsMSAA[name].texture.id})`;
-      }
-    }
-
-    // Update shadow maps
-    if (shadowCastingEntities.length) {
-      for (let i = 0; i < entities.length; i++) {
-        const entity = entities[i]!;
-
-        if (
-          entity.directionalLight?.castShadows &&
-          this.checkLight(entity.directionalLight, entity)
-        ) {
-          this.renderDirectionalLightShadowMap(
-            entity,
-            entities,
-            renderers,
-            colorAttachments,
-            shadowCastingEntities,
-          );
-        }
-        if (
-          entity.pointLight?.castShadows &&
-          this.checkLight(entity.pointLight, entity)
-        ) {
-          this.renderPointLightShadowMap(
-            entity,
-            entities,
-            renderers,
-            colorAttachments,
-          );
-        }
-        if (
-          entity.spotLight?.castShadows &&
-          this.checkLight(entity.spotLight, entity)
-        ) {
-          this.renderSpotLightShadowMap(
-            entity,
-            entities,
-            renderers,
-            colorAttachments,
-            shadowCastingEntities,
-          );
-        }
-        if (
-          entity.areaLight?.castShadows &&
-          this.checkLight(entity.areaLight, entity)
-        ) {
-          this.renderSpotLightShadowMap(
-            entity,
-            entities,
-            renderers,
-            colorAttachments,
-            shadowCastingEntities,
-          );
-        }
-      }
-    }
-
-    // TODO: this also get entities with shadowmap regardless of castShadows changes
-    const shadowMaps = entities
-      .map(
-        (entity) =>
-          entity.directionalLight?._shadowMap ||
-          entity.spotLight?._shadowMap ||
-          entity.areaLight?._shadowMap ||
-          entity.pointLight?._shadowCubemap,
-      )
-      .filter(Boolean);
+    // ─── Shadow maps ─────────────────────────────────────────────────────────
+    // Declared once per frame and shared by every camera looking at the same
+    // layer, since a shadow map depends on the light and the scene only.
+    const { shadowMaps } = this.declareShadowMaps(entities, renderers, layer);
 
     // Filter entities by layer
-    const layer = renderView.cameraEntity.layer;
     const entitiesInView = layer
       ? entities.filter((entity) => !entity.layer || entity.layer === layer)
       : entities.filter((entity) => !entity.layer);
 
-    //we might be drawing to part of the screen
+    // We might be drawing to part of the screen
     const renderPassView = {
       ...renderView,
-      viewport: [0, 0, renderView.viewport[2], renderView.viewport[3]],
+      viewport: [0, 0, width, height],
     };
 
-    // Main pass
-    renderGraph.renderPass({
-      name: `MainPass${msaa ? "MSAA" : ""} [${renderView.viewport}]`,
-      uses: [...shadowMaps],
-      renderView: renderPassView,
-      pass: resourceCache.pass({
-        name: "mainPass",
-        color: Object.values(msaa ? colorAttachmentsMSAA : colorAttachments),
-        depth: msaa ? depthAttachmentMSAA : depthAttachment,
-        clearColor: renderView.camera.clearColor ?? [0, 0, 0, 1],
-        clearDepth: 1,
+    const drawMeshOptions = {
+      renderers,
+      renderView,
+      msaa,
+      entitiesInView,
+      shadowMappingLight: false,
+      transparent: false,
+      transmitted: false,
+    };
+
+    // ─── Main pass ───────────────────────────────────────────────────────────
+    frameGraph.addPass({
+      name: `MainPass_${viewId}`,
+      color: Object.keys(colorAttachments).map((name, index) => ({
+        ...colorTarget(name),
+        ...(index === 0 && {
+          clearValue: renderView.camera.clearColor ?? [0, 0, 0, 1],
+        }),
+      })),
+      ...(depthAttachment && {
+        depth: { ...depthTarget(), depthClearValue: 1 },
       }),
-      render: () => {
-        this.drawMeshes({
-          renderers,
-          renderView,
-          colorAttachments,
-          msaa,
-          entitiesInView,
-          shadowMappingLight: false,
-          transparent: false,
-          transmitted: false,
-        });
+      reads: shadowMaps,
+      renderView: renderPassView,
+      execute: () => {
+        this.drawMeshes({ ...drawMeshOptions, colorAttachments });
       },
     });
 
@@ -355,246 +289,200 @@ export default ({ ctx, resourceCache, renderGraph }: SystemOptions) => ({
       (entity) => entity.material?.transmission,
     );
 
-    // Transparent pass
+    // ─── Transparent pass ────────────────────────────────────────────────────
+    // Same attachments as the main pass and nothing read in between, so the
+    // graph folds the two into a single beginRenderPass.
     if (hasTransparent) {
-      renderGraph.renderPass({
-        name: `TransparentPass${msaa ? "MSAA" : ""} [${renderView.viewport}]`,
-        uses: shadowMaps,
+      frameGraph.addPass({
+        name: `TransparentPass_${viewId}`,
+        color: [colorTarget("color")],
+        ...(depthAttachment && { depth: depthTarget() }),
+        reads: shadowMaps,
         renderView: renderPassView,
-        pass: resourceCache.pass({
-          name: "transparentPass",
-          color: [(msaa ? colorAttachmentsMSAA : colorAttachments).color],
-          depth: msaa ? depthAttachmentMSAA : depthAttachment,
-        }),
-        render: () => {
+        execute: () => {
           this.drawMeshes({
-            renderers,
-            renderView,
-            colorAttachments: { color: colorAttachments.color },
-            msaa,
-            entitiesInView,
-            shadowMappingLight: false,
+            ...drawMeshOptions,
+            colorAttachments: { color: colorAttachments.color! },
             transparent: true,
-            transmitted: false,
           });
         },
       });
     }
 
-    // Transmission pass
+    // ─── Transmission ────────────────────────────────────────────────────────
     if (hasTransmitted) {
-      // Grab pass. Full viewport size (not prev-power-of-two): the transmission
-      // shader samples it with full-screen [0,1] coords, so a smaller top-left
+      // Full viewport size (not prev-power-of-two): the transmission shader
+      // samples it with full-screen [0, 1] coords, so a smaller top-left
       // anchored copy would misalign refraction. NPOT mip chains are fine in
       // WebGPU, so the old POT constraint no longer applies.
-      const viewport = [0, 0, renderView.viewport[2], renderView.viewport[3]];
-      this.descriptors.grabPass.colorCopyTextureDesc.width = viewport[2];
-      this.descriptors.grabPass.colorCopyTextureDesc.height = viewport[3];
-      const grabPassColorCopyTexture = resourceCache.texture2D(
-        this.descriptors.grabPass.colorCopyTextureDesc,
-      );
-      grabPassColorCopyTexture.name = `grabPassOutput (id: ${grabPassColorCopyTexture.id})`;
-
-      const fullscreenTriangle = resourceCache.fullscreenTriangle();
-
-      const grabPassCopyCmd = {
-        name: "grabPassCopyTextureCmd",
-        attributes: fullscreenTriangle.attributes,
-        count: fullscreenTriangle.count,
-        pipeline: resourceCache.pipeline(
-          this.descriptors.grabPass.copyTexturePipelineDesc,
-        ),
-        uniforms: {
-          uTexture: colorAttachments.color,
-        },
-      };
-
-      renderGraph.renderPass({
-        name: `GrabPass [${viewport}]`,
-        uses: [colorAttachments.color],
-        renderView: { ...renderView, viewport },
-        pass: resourceCache.pass({
-          name: "grabPass",
-          color: [grabPassColorCopyTexture],
-        }),
-        render: () => {
-          submit(ctx, grabPassCopyCmd);
-        },
-      });
-
-      this.generateGrabMips(grabPassColorCopyTexture);
-
+      const mipLevelCount = 1 + Math.floor(Math.log2(Math.max(width, height)));
       const hasBackTransmitted = entitiesInView.some(
         (entity) => entity.material?.transmission && !entity.material.cullFace,
       );
 
-      if (hasBackTransmitted) {
-        renderGraph.renderPass({
-          name: `TransmissionBackPass${msaa ? "MSAA" : ""} [${renderView.viewport}]`,
-          uses: [...shadowMaps, grabPassColorCopyTexture],
-          renderView: renderPassView,
-          pass: resourceCache.pass({
-            name: "transmissionBackPass",
-            color: [(msaa ? colorAttachmentsMSAA : colorAttachments).color],
-            depth: msaa ? depthAttachmentMSAA : depthAttachment,
-          }),
-          render: () => {
-            this.drawMeshes({
-              renderers,
-              renderView,
-              //why this is passed?, we are rendering here colorAttachments.color
-              colorAttachments: { color: colorAttachments.color },
-              msaa,
-              entitiesInView,
-              shadowMappingLight: false,
-              transparent: false,
-              transmitted: true,
-              cullFaceMode: "front",
-              backgroundColorTexture: grabPassColorCopyTexture,
+      const grabPass = (name: string) => {
+        const grab = frameGraph.createTexture({
+          label: `${name}_${viewId}`,
+          width,
+          height,
+          format: this.descriptors.grabPass.colorFormat,
+          mipLevelCount,
+        });
+
+        frameGraph.addPass({
+          name: `${name}Copy_${viewId}`,
+          color: [{ texture: grab }],
+          uniforms: { uTexture: colorAttachments.color! },
+          renderView: { ...renderView, viewport: renderPassView.viewport },
+          execute: ({ uniforms }) => {
+            submit(ctx, {
+              label: "grabPassCopyTexture",
+              attributes: this.fullscreen.triangle.attributes,
+              count: this.fullscreen.triangle.count,
+              pipeline: this.descriptors.grabPass.copyTexturePipelineDesc,
+              uniforms,
             });
           },
         });
-        const copyUniforms = {
-          uniforms: {
-            uTexture: colorAttachments.color,
-          },
-        };
 
-        renderGraph.renderPass({
-          name: `GrabTransmissionBackPass [${viewport}]`,
-          uses: [colorAttachments.color],
-          renderView: { ...renderView, viewport },
-          pass: resourceCache.pass({
-            name: "grabTransmissionBackPass",
-            color: [grabPassColorCopyTexture],
-          }),
-          render: () => {
-            submit(ctx, grabPassCopyCmd, [copyUniforms]);
+        this.generateGrabMips(grab, mipLevelCount, `${name}_${viewId}`);
+        // Published so debug views can show what refraction actually sampled.
+        frameGraph.blackboard.set(`transmission.grab.${viewId}`, grab);
+        return grab;
+      };
+
+      let grab = grabPass("GrabPass");
+
+      if (hasBackTransmitted) {
+        frameGraph.addPass({
+          name: `TransmissionBackPass_${viewId}`,
+          color: [colorTarget("color")],
+          ...(depthAttachment && { depth: depthTarget() }),
+          reads: [...shadowMaps, grab],
+          renderView: renderPassView,
+          execute: ({ resolveTexture }) => {
+            this.drawMeshes({
+              ...drawMeshOptions,
+              colorAttachments: { color: colorAttachments.color! },
+              transmitted: true,
+              cullFaceMode: "front",
+              backgroundColorTexture: resolveTexture(grab),
+            });
           },
         });
 
-        this.generateGrabMips(grabPassColorCopyTexture);
+        grab = grabPass("GrabTransmissionBackPass");
       }
 
-      renderGraph.renderPass({
-        name: `TransmissionFrontPass${msaa ? "MSAA" : ""} [${renderView.viewport}]`,
-        uses: [...shadowMaps, grabPassColorCopyTexture],
+      const frontGrab = grab;
+      frameGraph.addPass({
+        name: `TransmissionFrontPass_${viewId}`,
+        color: [colorTarget("color")],
+        ...(depthAttachment && { depth: depthTarget() }),
+        reads: [...shadowMaps, frontGrab],
         renderView: renderPassView,
-        pass: resourceCache.pass({
-          name: "transmissionFrontPass",
-          color: [(msaa ? colorAttachmentsMSAA : colorAttachments).color],
-          depth: msaa ? depthAttachmentMSAA : depthAttachment,
-        }),
-        render: () => {
+        execute: ({ resolveTexture }) => {
           this.drawMeshes({
-            renderers,
-            renderView,
-            colorAttachments: { color: colorAttachments.color },
-            msaa,
-            entitiesInView,
-            shadowMappingLight: false,
-            transparent: false,
+            ...drawMeshOptions,
+            colorAttachments: { color: colorAttachments.color! },
             transmitted: true,
             cullFaceMode: hasBackTransmitted ? "back" : undefined,
-            backgroundColorTexture: grabPassColorCopyTexture,
+            backgroundColorTexture: resolveTexture(frontGrab),
           });
         },
       });
     }
 
-    // Inverse Tone Mapping
+    let color = colorAttachments.color!;
+
+    // ─── Inverse tone map ────────────────────────────────────────────────────
     if (this.reversibleToneMap && msaa) {
-      const inverseToneMapColorTexture = resourceCache.texture2D({
-        ...this.descriptors.mainPass.outputTextureDesc,
-        width: renderView.viewport[2],
-        height: renderView.viewport[3],
+      const inverseToneMapped = frameGraph.createTexture({
+        label: `inverseToneMapColor_${viewId}`,
+        width,
+        height,
+        format: colorFormat,
       });
-      inverseToneMapColorTexture.name = `inverseToneMapColor (id: ${inverseToneMapColorTexture.id})`;
 
-      const fullscreenTriangle = resourceCache.fullscreenTriangle();
-
-      // TODO: cache
-      const pipelineDesc = {
-        ...this.descriptors.reversibleToneMap.pipelineDesc,
-      };
-      pipelineDesc.vert = ShaderParser.build(ctx, pipelineDesc.vert);
-      pipelineDesc.frag = ShaderParser.build(ctx, pipelineDesc.frag);
-
-      const inverseToneMapCmd = {
-        name: "drawInverseToneMapFullScreenTriangleCmd",
-        attributes: fullscreenTriangle.attributes,
-        count: fullscreenTriangle.count,
-        pipeline: resourceCache.pipeline(pipelineDesc),
-        uniforms: {
-          uTexture: colorAttachments.color,
-        },
-      };
-
-      renderGraph.renderPass({
-        name: `InverseToneMapPass [${renderView.viewport}]`,
-        uses: [colorAttachments.color],
+      frameGraph.addPass({
+        name: `InverseToneMapPass_${viewId}`,
+        color: [{ texture: inverseToneMapped }],
+        uniforms: { uTexture: color },
         renderView: renderPassView,
-        pass: resourceCache.pass({
-          name: "inverseToneMapPass",
-          color: [inverseToneMapColorTexture],
-        }),
-        render: () => {
-          submit(ctx, inverseToneMapCmd);
+        execute: ({ uniforms }) => {
+          submit(ctx, {
+            label: "drawInverseToneMapFullScreenTriangle",
+            attributes: this.fullscreen.triangle.attributes,
+            count: this.fullscreen.triangle.count,
+            pipeline: this.descriptors.reversibleToneMap.pipelineDesc,
+            uniforms,
+          });
         },
       });
-      colorAttachments.color = inverseToneMapColorTexture;
+      color = inverseToneMapped;
     }
 
-    // Post-processing pass
+    await frameGraph.stage("beforePostProcessing");
+
+    // ─── Post-processing ─────────────────────────────────────────────────────
     if (postProcessing) {
-      this.renderPostProcessing(
-        renderPassView,
-        colorAttachments,
-        depthAttachment,
-        this.descriptors,
-      );
+      color = await this.renderPostProcessing({
+        renderView: renderPassView,
+        color,
+        depth: depthAttachment,
+        normal: colorAttachments.normal,
+        emissive: colorAttachments.emissive,
+      });
+    }
+
+    // ─── Present ─────────────────────────────────────────────────────────────
+    // Pointing the presented image at an intermediate leaves everything that
+    // only fed the original output unreferenced, so the graph culls it.
+    if (this.debugRender) {
+      const debugTexture =
+        colorAttachments[this.debugRender] ??
+        (frameGraph.blackboard.get(
+          `postProcessing.${viewId}.${this.debugRender}`,
+        ) as ResourceHandle) ??
+        (frameGraph.blackboard.get(this.debugRender) as ResourceHandle);
+      if (debugTexture) color = debugTexture;
     }
 
     if (drawToScreen !== false) {
-      const fullscreenTriangle = resourceCache.fullscreenTriangle();
-
-      const blitCmd = {
-        name: "drawBlitFullScreenTriangleCmd",
-        attributes: fullscreenTriangle.attributes,
-        count: fullscreenTriangle.count,
-        pipeline: resourceCache.pipeline(this.descriptors.blit.pipelineDesc),
-      };
-
-      renderGraph.renderPass({
-        name: `BlitPass [${renderView.viewport}]`,
-        uses: [colorAttachments.color],
+      const presented = color;
+      frameGraph.addPass({
+        name: `BlitPass_${viewId}`,
+        // No color handles: the canvas is the target.
+        uniforms: { uTexture: presented, uSampler: this.blitSampler },
         renderView,
-        render: () => {
+        // Its whole point is a side effect on the swapchain, which the graph
+        // has no resource for.
+        neverCull: true,
+        execute: ({ uniforms }) => {
           submit(ctx, {
-            ...blitCmd,
+            label: "drawBlitFullScreenTriangle",
+            attributes: this.fullscreen.triangle.attributes,
+            count: this.fullscreen.triangle.count,
+            pipeline: this.descriptors.blit.pipelineDesc,
             viewport: renderView.viewport,
-            uniforms: {
-              uTexture: colorAttachments.color,
-              uSampler: this.blitSampler,
-            },
+            uniforms,
           });
         },
       });
     }
 
-    if (this.debugRender) {
-      let debugTexture = colorAttachments[this.debugRender];
-      debugTexture ||= this.tempBaseRenderer?.cache.targets[this.debugRender];
-
-      if (debugTexture) {
-        colorAttachments.color = debugTexture;
-      }
+    // Returned to the caller, which reads them outside the graph. `color` is
+    // the end of the chain, so it may be a post-processed target rather than
+    // the main pass attachment of the same name.
+    const renderTargets: Record<string, ResourceHandle> = {
+      ...colorAttachments,
+      color,
+      ...(depthAttachment && { depth: depthAttachment }),
+    };
+    for (const handle of Object.values(renderTargets)) {
+      frameGraph.exportTexture(handle);
     }
-
-    // Return the original object: the color attachment value can be modified
-    // after post processing renderGraph.renderPass so values are final after
-    // renderGraph.endFrame()
-    return Object.assign(colorAttachments, { depth: depthAttachment });
+    return renderTargets;
   },
 
   dispose(entities: Entity[]) {

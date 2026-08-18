@@ -1,35 +1,18 @@
 import { mat4, vec3, quat, utils, avec4 } from "pex-math";
 import { orbiter as createOrbiter } from "pex-cam";
-import { NAMESPACE, TEMP_MAT4, TEMP_VEC3 } from "../utils.js";
+import {
+  NAMESPACE,
+  TEMP_MAT4,
+  TEMP_VEC3,
+  computeFrustumPlanes,
+} from "../utils.js";
 
 import type { Entity } from "../types.js";
 
 // The camera math operates on a fully-populated camera (projection-specific
 // fields guaranteed by the camera component), so it is typed loosely here.
 function computeFrustum(camera: any) {
-  mat4.set(TEMP_MAT4, camera.projectionMatrix);
-  mat4.mult(TEMP_MAT4, camera.viewMatrix);
-
-  const m: any = TEMP_MAT4;
-
-  // prettier-ignore
-  {
-    avec4.set4(camera.frustum, 0, m[3] - m[0], m[7] - m[4], m[11] - m[8], m[15] - m[12]) // -x
-    avec4.set4(camera.frustum, 1, m[3] + m[0], m[7] + m[4], m[11] + m[8], m[15] + m[12]) // +x
-    avec4.set4(camera.frustum, 2, m[3] + m[1], m[7] + m[5], m[11] + m[9], m[15] + m[13]) // +y
-    avec4.set4(camera.frustum, 3, m[3] - m[1], m[7] - m[5], m[11] - m[9], m[15] - m[13]) // -y
-    avec4.set4(camera.frustum, 4, m[3] - m[2], m[7] - m[6], m[11] - m[10], m[15] - m[14]) // +z (far)
-    avec4.set4(camera.frustum, 5, m[3] + m[2], m[7] + m[6], m[11] + m[10], m[15] + m[14]) // -z (near)
-  }
-
-  // Normalize planes
-  for (let i = 0; i < 6; i++) {
-    TEMP_VEC3[0] = camera.frustum[i * 4];
-    TEMP_VEC3[1] = camera.frustum[i * 4 + 1];
-    TEMP_VEC3[2] = camera.frustum[i * 4 + 2];
-
-    avec4.scale(camera.frustum, i, vec3.length(TEMP_VEC3));
-  }
+  computeFrustumPlanes(camera.frustum, camera.projectionMatrix, camera.viewMatrix);
 }
 
 // TODO: projectionMatrix should only be recomputed if parameters changed

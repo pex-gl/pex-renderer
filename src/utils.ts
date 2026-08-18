@@ -1,5 +1,5 @@
 import { aabb } from "pex-geom";
-import { mat2x3, mat3, mat4, quat, vec3, vec4 } from "pex-math";
+import { avec4, mat2x3, mat3, mat4, quat, vec3, vec4 } from "pex-math";
 
 import type { Mat3, Mat4, Vec3 } from "pex-math";
 import type { GpuContext } from "./types.js";
@@ -15,6 +15,9 @@ const TEMP_AABB = aabb.create();
 const TEMP_MAT2X3 = mat2x3.create();
 const Y_UP = Object.freeze([0, 1, 0]);
 const TEMP_BOUNDS_POINTS = Array.from({ length: 8 }, () => vec3.create());
+// Six planes of (nx, ny, nz, d). Callers that keep a frustum around own their
+// own array; this is for one-shot tests.
+const TEMP_FRUSTUM = new Float32Array(24);
 
 // prettier-ignore
 const quad = {
@@ -135,8 +138,69 @@ const isObject = (obj: unknown) =>
 const getEnvironmentRotation = (out: Mat3, modelMatrix: Mat4 | undefined) =>
   modelMatrix ? mat3.transpose(mat3.fromMat4(out, modelMatrix)) : undefined;
 
+/**
+ * Gribb/Hartmann plane extraction from a view-projection, normalized so plane
+ * distances are metric. Order: -x, +x, +y, -y, far, near.
+ */
+const computeFrustumPlanes = (
+  out: any,
+  projectionMatrix: Mat4,
+  viewMatrix: Mat4,
+) => {
+  mat4.set(TEMP_MAT4, projectionMatrix);
+  mat4.mult(TEMP_MAT4, viewMatrix);
+  const m: any = TEMP_MAT4;
+
+  // The near plane is the only one that depends on the depth convention: WebGPU
+  // clips 0 <= z (as D3D does), not -w <= z, so it is the third row alone rather
+  // than w + z. Every projection here is a *ZO variant. Gribb/Hartmann 2001, §2.
+  // prettier-ignore
+  {
+    avec4.set4(out, 0, m[3] - m[0], m[7] - m[4], m[11] - m[8], m[15] - m[12])
+    avec4.set4(out, 1, m[3] + m[0], m[7] + m[4], m[11] + m[8], m[15] + m[12])
+    avec4.set4(out, 2, m[3] + m[1], m[7] + m[5], m[11] + m[9], m[15] + m[13])
+    avec4.set4(out, 3, m[3] - m[1], m[7] - m[5], m[11] - m[9], m[15] - m[13])
+    avec4.set4(out, 4, m[3] - m[2], m[7] - m[6], m[11] - m[10], m[15] - m[14])
+    avec4.set4(out, 5, m[2], m[6], m[10], m[14])
+  }
+
+  for (let i = 0; i < 6; i++) {
+    TEMP_VEC3[0] = out[i * 4]!;
+    TEMP_VEC3[1] = out[i * 4 + 1]!;
+    TEMP_VEC3[2] = out[i * 4 + 2]!;
+    avec4.scale(out, i, 1 / vec3.length(TEMP_VEC3));
+  }
+  return out;
+};
+
+/** Conservative AABB test against a frustum: false only if fully outside. */
+const isAABBInFrustum = (worldBounds: any, frustum: any) => {
+  const v: any = TEMP_VEC4;
+  for (let i = 0; i < 6; i++) {
+    avec4.set(TEMP_VEC4 as any, 0, frustum, i);
+    // Positive vertex: the corner furthest along the plane normal.
+    TEMP_VEC3[0] = v[0] >= 0 ? worldBounds[1][0] : worldBounds[0][0];
+    TEMP_VEC3[1] = v[1] >= 0 ? worldBounds[1][1] : worldBounds[0][1];
+    TEMP_VEC3[2] = v[2] >= 0 ? worldBounds[1][2] : worldBounds[0][2];
+    if (vec3.dot(TEMP_VEC4, TEMP_VEC3) + v[3] < 0) return false;
+  }
+  return true;
+};
+
+/**
+ * Stable cache key for a set of shader defines — the feature set a shader
+ * variant was generated from.
+ *
+ * Sorted because a Set iterates in insertion order: the same features gathered
+ * in a different order must land on the same variant, or the cache grows a
+ * duplicate entry and the shader is compiled twice. "|" separates because it
+ * cannot appear in a define name.
+ */
+const definesKey = (defines: Iterable<string>) => [...defines].sort().join("|");
+
 export {
   NAMESPACE,
+  definesKey,
   TEMP_VEC3,
   TEMP_VEC4,
   TEMP_QUAT,
@@ -146,6 +210,9 @@ export {
   TEMP_MAT2X3,
   Y_UP,
   TEMP_BOUNDS_POINTS,
+  TEMP_FRUSTUM,
+  computeFrustumPlanes,
+  isAABBInFrustum,
   quad,
   fullscreenTriangle,
   CUBEMAP_PROJECTION_MATRIX,
