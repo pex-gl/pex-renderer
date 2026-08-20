@@ -1,244 +1,246 @@
-// @ts-nocheck
+import { createTexture } from "pex-gpu";
 import random from "pex-random";
-import { postProcessing as postprocessingShaders } from "pex-shaders";
 
+import {
+  bilateralBlurShader,
+  gtaoShader,
+  saoShader,
+  ssaoMixShader,
+} from "../../../shaders/post-processing/ssao.js";
 import { BlueNoiseGenerator } from "../../../utils/blue-noise.js";
 
-// prettier-ignore
-export const ssaoMixFlagDefinitions = [
-  [["options", "targets", "ssao.main"], "AO_TEXTURE", { type: "texture", uniform: "uSSAOTexture", requires: "USE_SSAO" }],
-  [["postProcessing", "ssao", "mix"], "", { uniform: "uSSAOMix", requires: "USE_SSAO" }],
-  [["postProcessing", "ssao", "type"], "USE_SSAO_GTAO", { compare: "gtao", requires: "USE_SSAO" }],
-  [["postProcessing", "ssao", "colorBounce"], "USE_SSAO_COLORS", { requires: "USE_SSAO_GTAO" }],
-]
+import type { GpuContext, GpuTexture } from "../../../types.js";
+import type {
+  PostProcessingContext,
+  PostProcessingEffect,
+  PostProcessingSubPass,
+} from "../post-processing.js";
 
-function generateBlueNoiseTexture(ctx) {
-  const generator = new BlueNoiseGenerator();
-  generator.size = 32;
+// Noise textures are identical for every camera and never change, so they are
+// memoized per context rather than cached per entity. Like the fullscreen
+// geometry, they live for the context's lifetime.
+const blueNoiseTextures = new WeakMap<GpuContext, GpuTexture>();
+const noiseTextures = new WeakMap<GpuContext, GpuTexture>();
+const dummyTextures = new WeakMap<GpuContext, GpuTexture>();
 
-  const data = new Uint8Array(generator.size ** 2 * 4);
-  for (let i = 0, l = 4; i < l; i++) {
-    const result = generator.generate();
-    const bin = result.data;
-    const maxValue = result.maxValue;
+const BLUE_NOISE_SIZE = 32;
+const NOISE_SIZE = 64;
 
-    for (let j = 0, l2 = bin.length; j < l2; j++) {
-      const value = 255 * (bin[j] / maxValue);
-      data[j * 4 + i] = value;
+/** Four channels of blue noise, one generated pattern each: GTAO reads .xy. */
+function getBlueNoiseTexture(ctx: GpuContext): GpuTexture {
+  return blueNoiseTextures.getOrInsertComputed(ctx, () => {
+    const generator = new BlueNoiseGenerator();
+    generator.size = BLUE_NOISE_SIZE;
+
+    const data = new Uint8Array(BLUE_NOISE_SIZE ** 2 * 4);
+    for (let channel = 0; channel < 4; channel++) {
+      const { data: bin, maxValue } = generator.generate();
+      for (let i = 0; i < bin.length; i++) {
+        data[i * 4 + channel] = 255 * (bin[i]! / maxValue);
+      }
     }
-  }
-  const blueNoiseTexture = ctx.texture2D({
-    width: generator.size,
-    height: generator.size,
-    data: data,
-    pixelFormat: ctx.PixelFormat.RGBA8,
-    wrap: ctx.Wrap.Repeat,
-    mag: ctx.Filter.Linear,
-    min: ctx.Filter.Linear,
+
+    return createTexture(ctx, {
+      label: "ssaoBlueNoiseTexture",
+      width: BLUE_NOISE_SIZE,
+      height: BLUE_NOISE_SIZE,
+      format: "rgba8unorm",
+      data,
+    });
   });
-  blueNoiseTexture.name = `ssaoBlueNoiseTexture`;
-  return blueNoiseTexture;
 }
 
-function generateNoiseTexture(ctx) {
-  const localPRNG = random.create("0");
+/**
+ * White noise for SAO's rotation jitter. Values are [0, 1] rather than the
+ * GLSL version's [-1, 1]: the analytic fallback the same shader uses is a
+ * fract(), and 8 bit unorm is filterable where rg32float is not.
+ */
+function getNoiseTexture(ctx: GpuContext): GpuTexture {
+  return noiseTextures.getOrInsertComputed(ctx, () => {
+    const localPRNG = random.create("0");
 
-  const size = 64;
-  const sizeSquared = size ** 2;
-  const channelSize = ctx.gl.RG ? 2 : 4;
-  const ssaoNoiseData = new Float32Array(sizeSquared * channelSize);
-  for (let i = 0; i < sizeSquared; i++) {
-    ssaoNoiseData[i * channelSize + 0] = localPRNG.float(-1, 1);
-    ssaoNoiseData[i * channelSize + 1] = localPRNG.float(-1, 1);
-    if (!ctx.gl.RG) {
-      ssaoNoiseData[i * channelSize + 2] = 0;
-      ssaoNoiseData[i * channelSize + 3] = 1;
+    const data = new Uint8Array(NOISE_SIZE ** 2 * 4);
+    for (let i = 0; i < NOISE_SIZE ** 2; i++) {
+      data[i * 4] = 255 * localPRNG.float();
+      data[i * 4 + 1] = 255 * localPRNG.float();
+      data[i * 4 + 3] = 255;
     }
-  }
-  const noiseTexture = ctx.texture2D({
-    width: size,
-    height: size,
-    data: ssaoNoiseData,
-    pixelFormat: ctx.gl.RG ? ctx.PixelFormat.RG32F : ctx.PixelFormat.RGBA32F,
-    wrap: ctx.Wrap.Repeat,
-    mag: ctx.Filter.Linear,
-    min: ctx.Filter.Linear,
+
+    return createTexture(ctx, {
+      label: "ssaoNoiseTexture",
+      width: NOISE_SIZE,
+      height: NOISE_SIZE,
+      format: "rgba8unorm",
+      data,
+    });
   });
-  noiseTexture.name = `ssaoNoiseTexture`;
-  return noiseTexture;
 }
 
-const ssao = ({ ctx, resourceCache, descriptors, scale = 1 }) => {
-  // GTAO
-  const gtaoPass = {
-    name: "main",
-    frag: postprocessingShaders.gtao.frag,
-    // blend: true,
-    // prettier-ignore
-    flagDefinitions: [
-        [["camera", "near"], "", { uniform: "uNear" }],
-        [["camera", "far"], "", { uniform: "uFar" }],
-        [["camera", "fov"], "", { uniform: "uFov" }],
-
-        [["postProcessing", "ssao"], "USE_SSAO"],
-
-        [["postProcessing", "ssao", "type"], "USE_SSAO_GTAO", { compare: "gtao", requires: "USE_SSAO" }],
-        [["postProcessing", "ssao", "slices"], "NUM_SLICES", { type: "value", requires: "USE_SSAO_GTAO" }],
-        [["postProcessing", "ssao", "samples"], "NUM_SAMPLES", { type: "value", requires: "USE_SSAO_GTAO" }],
-        [["postProcessing", "ssao", "intensity"], "", { uniform: "uIntensity", requires: "USE_SSAO_GTAO" }],
-        [["postProcessing", "ssao", "radius"], "", { uniform: "uRadius", requires: "USE_SSAO_GTAO" }],
-        [["postProcessing", "ssao", "brightness"], "", { uniform: "uBrightness", requires: "USE_SSAO_GTAO" }],
-        [["postProcessing", "ssao", "contrast"], "", { uniform: "uContrast", requires: "USE_SSAO_GTAO" }],
-        [["postProcessing", "ssao", "colorBounce"], "USE_COLOR_BOUNCE", { requires: "USE_SSAO_GTAO" }],
-        [["postProcessing", "ssao", "colorBounceIntensity"], "", { uniform: "uColorBounceIntensity", requires: "USE_SSAO_GTAO" }],
-        [["postProcessing", "ssao", "noiseTexture"], "USE_GTAO_NOISE_TEXTURE", { requires: "USE_SSAO_GTAO" }],
-        [["postProcessing", "ssao", "_gtaoNoiseTexture"], "NOISE_TEXTURE", { type: "texture", uniform: "uNoiseTexture", requires: "USE_GTAO_NOISE_TEXTURE" }],
-        [["postProcessing", "ssao", "_gtaoNoiseTexture", "width"], "", { uniform: "uNoiseTextureSize", requires: "USE_GTAO_NOISE_TEXTURE" }],
-      ],
-    enabled: ({ cameraEntity }) => {
-      const isEnabled = cameraEntity.postProcessing.ssao.type === "gtao";
-
-      if (
-        isEnabled &&
-        cameraEntity.postProcessing.ssao.noiseTexture &&
-        !cameraEntity.postProcessing.ssao._gtaoNoiseTexture
-      ) {
-        cameraEntity.postProcessing.ssao._gtaoNoiseTexture =
-          generateBlueNoiseTexture(ctx);
-      }
-
-      return isEnabled;
-    },
-    passDesc: () => ({
-      clearColor: [0, 0, 0, 1],
+/** The estimators sample a noise texture unconditionally, so the binding is
+ * always declared; with the analytic hash selected it reads this instead. */
+function getDummyTexture(ctx: GpuContext): GpuTexture {
+  return dummyTextures.getOrInsertComputed(ctx, () =>
+    createTexture(ctx, {
+      label: "ssaoDummyNoiseTexture",
+      width: 1,
+      height: 1,
+      format: "rgba8unorm",
+      data: new Uint8Array([0, 0, 0, 255]),
     }),
-    target: ({ viewport }) =>
-      resourceCache.texture2D({
-        ...descriptors.postProcessing.outputTextureDesc,
-        width: viewport[2] * scale,
-        height: viewport[3] * scale,
+  );
+}
+
+const isGTAO = ({ cameraEntity }: PostProcessingContext) =>
+  cameraEntity.postProcessing!.ssao!.type === "gtao";
+
+/**
+ * Screen-space ambient occlusion.
+ *
+ * The estimators write a visibility buffer at `ssao.main`, which the separable
+ * bilateral blur cleans up in place. Applying it to the color is left to
+ * combine unless depth of field runs first, since DoF must blur an image that
+ * already has its occlusion.
+ */
+const ssao: PostProcessingEffect = {
+  name: "ssao",
+  // Both estimators reconstruct view-space position from depth and read the
+  // view-space normal target.
+  enabled: ({ depth, normal }) => !!depth && !!normal,
+  passes: (context) => {
+    const { cameraEntity } = context;
+    const camera = cameraEntity.camera!;
+    const component = cameraEntity.postProcessing!.ssao!;
+    const gtao = isGTAO(context);
+
+    // GTAO's color bounce needs the full HDR range; SAO writes visibility alone.
+    const format = (): GPUTextureFormat =>
+      gtao && component.colorBounce ? "rgba16float" : "r8unorm";
+
+    const noise = (ctx: GpuContext) =>
+      component.noiseTexture
+        ? gtao
+          ? getBlueNoiseTexture(ctx)
+          : getNoiseTexture(ctx)
+        : getDummyTexture(ctx);
+
+    const noiseSize = () =>
+      component.noiseTexture ? (gtao ? BLUE_NOISE_SIZE : NOISE_SIZE) : 1;
+
+    // Shared by both estimators: the AO buffer's own dimensions, which the
+    // chunks use to walk the depth target in texel steps.
+    const estimatorParams = ({ viewport }: PostProcessingContext) => ({
+      near: camera.near!,
+      far: camera.far!,
+      fov: camera.fov!,
+      viewportSize: [viewport[2]!, viewport[3]!],
+      texelSize: [1 / viewport[2]!, 1 / viewport[3]!],
+      intensity: component.intensity!,
+      radius: component.radius!,
+      bias: component.bias!,
+      brightness: component.brightness!,
+      contrast: component.contrast!,
+      noiseTextureSize: noiseSize(),
+    });
+
+    const gtaoPass: PostProcessingSubPass = {
+      name: "main",
+      shader: gtaoShader,
+      enabled: isGTAO,
+      constants: () => ({
+        GTAO_NUM_SLICES: component.slices!,
+        GTAO_NUM_SAMPLES: component.samples!,
+        USE_GTAO_NOISE_TEXTURE: !!component.noiseTexture,
+        USE_GTAO_COLOR_BOUNCE: !!component.colorBounce,
       }),
-    size: ({ viewport }) => [viewport[2] * scale, viewport[3] * scale],
-  };
-
-  // SAO
-  const saoPass = {
-    name: "main",
-    frag: postprocessingShaders.sao.frag,
-    // prettier-ignore
-    flagDefinitions: [
-        [["camera", "near"], "", { uniform: "uNear" }],
-        [["camera", "far"], "", { uniform: "uFar" }],
-        [["camera", "fov"], "", { uniform: "uFov" }],
-
-        [["postProcessing", "ssao"], "USE_SSAO"],
-
-        [["postProcessing", "ssao", "type"], "USE_SSAO_SAO", { compare: "sao", requires: "USE_SSAO" }],
-        [["postProcessing", "ssao", "samples"], "NUM_SAMPLES", { type: "value", requires: "USE_SSAO_SAO" }],
-        [["postProcessing", "ssao", "spiralTurns"], "NUM_SPIRAL_TURNS", { type: "value", requires: "USE_SSAO_SAO" }],
-        [["postProcessing", "ssao", "intensity"], "", { uniform: "uIntensity", requires: "USE_SSAO_SAO" }],
-        [["postProcessing", "ssao", "bias"], "", { uniform: "uBias", requires: "USE_SSAO_SAO" }],
-        [["postProcessing", "ssao", "radius"], "", { uniform: "uRadius", requires: "USE_SSAO_SAO" }],
-        [["postProcessing", "ssao", "brightness"], "", { uniform: "uBrightness", requires: "USE_SSAO_SAO" }],
-        [["postProcessing", "ssao", "contrast"], "", { uniform: "uContrast", requires: "USE_SSAO_SAO" }],
-        [["postProcessing", "ssao", "noiseTexture"], "USE_SAO_NOISE_TEXTURE", { requires: "USE_SSAO_SAO" }],
-        [["postProcessing", "ssao", "_saoNoiseTexture"], "NOISE_TEXTURE", { type: "texture", uniform: "uNoiseTexture", requires: "USE_SAO_NOISE_TEXTURE" }],
-        [["postProcessing", "ssao", "_saoNoiseTexture", "width"], "", { uniform: "uNoiseTextureSize", requires: "USE_SAO_NOISE_TEXTURE" }],
-      ],
-    enabled: ({ cameraEntity }) => {
-      const isEnabled = cameraEntity.postProcessing.ssao.type === "sao";
-
-      if (
-        isEnabled &&
-        cameraEntity.postProcessing.ssao.noiseTexture &&
-        !cameraEntity.postProcessing.ssao._saoNoiseTexture
-      ) {
-        cameraEntity.postProcessing.ssao._saoNoiseTexture =
-          generateNoiseTexture(ctx);
-      }
-
-      return isEnabled;
-    },
-    passDesc: () => ({
-      clearColor: [0, 0, 0, 1],
-    }),
-    target: ({ viewport }) =>
-      resourceCache.texture2D({
-        ...descriptors.postProcessing.outputTextureDesc,
-        pixelFormat: ctx.gl.RG ? ctx.PixelFormat.R8 : ctx.PixelFormat.RGBA8,
-        width: viewport[2] * scale,
-        height: viewport[3] * scale,
+      clearValue: [0, 0, 0, 1],
+      format,
+      uniforms: (context) => ({
+        uGTAO: {
+          ...estimatorParams(context),
+          colorBounceIntensity: component.colorBounceIntensity!,
+        },
+        uDepthTexture: context.depth!,
+        uDepthTextureSampler: context.samplers.nearest,
+        uNormalTexture: context.normal!,
+        uNormalTextureSampler: context.samplers.nearest,
+        uNoiseTexture: noise(context.ctx),
+        uNoiseTextureSampler: context.samplers.linearRepeat,
       }),
-    size: ({ viewport }) => [viewport[2] * scale, viewport[3] * scale],
-  };
+    };
 
-  const blurHorizontalPass = {
-    name: "blurHorizontal",
-    frag: postprocessingShaders.bilateralBlur.frag,
-    // prettier-ignore
-    flagDefinitions: [
-        [["camera", "near"], "", { uniform: "uNear" }],
-        [["camera", "far"], "", { uniform: "uFar" }],
-        [["postProcessing", "ssao", "blurSharpness"], "", { uniform: "uSharpness" }],
-      ],
-    enabled: ({ cameraEntity }) =>
-      cameraEntity.postProcessing.ssao.blurRadius >= 0,
-    uniforms: ({ cameraEntity: entity }) => ({
-      uDirection: [entity.postProcessing.ssao.blurRadius, 0],
-    }),
-    passDesc: () => ({
-      clearColor: [0, 0, 0, 1],
-    }),
-    source: () => "ssao.main",
-    target: ({ viewport }) =>
-      resourceCache.texture2D({
-        ...descriptors.postProcessing.outputTextureDesc,
-        pixelFormat: ctx.PixelFormat.RGBA8,
-        width: viewport[2] * scale,
-        height: viewport[3] * scale,
+    const saoPass: PostProcessingSubPass = {
+      name: "main",
+      shader: saoShader,
+      enabled: (context) => !isGTAO(context),
+      constants: () => ({
+        SAO_NUM_SAMPLES: component.samples!,
+        SAO_NUM_SPIRAL_TURNS: component.spiralTurns!,
+        USE_SAO_NOISE_TEXTURE: !!component.noiseTexture,
       }),
-    size: ({ viewport }) => [viewport[2] * scale, viewport[3] * scale],
-  };
+      clearValue: [0, 0, 0, 1],
+      format,
+      uniforms: (context) => ({
+        uSAO: estimatorParams(context),
+        uDepthTexture: context.depth!,
+        uDepthTextureSampler: context.samplers.nearest,
+        uNormalTexture: context.normal!,
+        uNormalTextureSampler: context.samplers.nearest,
+        uNoiseTexture: noise(context.ctx),
+        uNoiseTextureSampler: context.samplers.linearRepeat,
+      }),
+    };
 
-  const blurVerticalPass = {
-    name: "blurVertical",
-    frag: postprocessingShaders.bilateralBlur.frag,
-    // prettier-ignore
-    flagDefinitions: [
-      [["camera", "near"], "", { uniform: "uNear" }],
-      [["camera", "far"], "", { uniform: "uFar" }],
-      [["postProcessing", "ssao", "blurSharpness"], "", { uniform: "uSharpness" }],
-    ],
-    enabled: ({ cameraEntity }) =>
-      cameraEntity.postProcessing.ssao.blurRadius >= 0,
-    uniforms: ({ cameraEntity: entity }) => ({
-      uDirection: [0, entity.postProcessing.ssao.blurRadius],
-    }),
-    passDesc: () => ({
-      clearColor: [0, 0, 0, 1],
-    }),
-    source: () => "ssao.blurHorizontal",
-    target: () => "ssao.main",
-    size: ({ viewport }) => [viewport[2] * scale, viewport[3] * scale],
-  };
+    // A negative radius turns the blur off, leaving the raw estimate.
+    const blurEnabled = () => component.blurRadius! >= 0;
+    const blurUniforms = (direction: number[]) => (context: PostProcessingContext) => ({
+      uBlur: {
+        direction,
+        near: camera.near!,
+        far: camera.far!,
+        sharpness: component.blurSharpness!,
+      },
+      uDepthTexture: context.depth!,
+      uDepthTextureSampler: context.samplers.nearest,
+    });
 
-  const mixPass = {
-    name: "mix",
-    frag: postprocessingShaders.ssaoMix.frag,
-    // prettier-ignore
-    flagDefinitions: [
-      [["postProcessing", "ssao"], "USE_SSAO"],
-      ...ssaoMixFlagDefinitions,
-    ],
-    // If no dof, disable and do it in final
-    enabled: ({ cameraEntity }) => cameraEntity.postProcessing.dof,
-    passDesc: () => ({
-      clearColor: [0, 0, 0, 1],
-    }),
-    size: ({ viewport }) => [viewport[2] * scale, viewport[3] * scale],
-  };
+    const blurHorizontal: PostProcessingSubPass = {
+      name: "blurHorizontal",
+      shader: bilateralBlurShader,
+      enabled: blurEnabled,
+      clearValue: [0, 0, 0, 1],
+      format,
+      source: () => "ssao.main",
+      uniforms: blurUniforms([component.blurRadius!, 0]),
+    };
 
-  return [gtaoPass, saoPass, blurHorizontalPass, blurVerticalPass, mixPass];
+    const blurVertical: PostProcessingSubPass = {
+      name: "blurVertical",
+      shader: bilateralBlurShader,
+      enabled: blurEnabled,
+      source: () => "ssao.blurHorizontal",
+      target: () => "ssao.main",
+      uniforms: blurUniforms([0, component.blurRadius!]),
+    };
+
+    const mix: PostProcessingSubPass = {
+      name: "mix",
+      shader: ssaoMixShader,
+      chain: true,
+      // Without DoF, combine applies the same mix for free.
+      enabled: ({ cameraEntity }) => !!cameraEntity.postProcessing!.dof,
+      constants: (context) => ({
+        USE_SSAO_COLORS: isGTAO(context) && !!component.colorBounce,
+      }),
+      clearValue: [0, 0, 0, 1],
+      uniforms: ({ targets, samplers }) => ({
+        uSSAO: { mix: component.mix! },
+        uSSAOTexture: targets.get("ssao.main")!,
+        uSSAOTextureSampler: samplers.linear,
+      }),
+    };
+
+    return [gtaoPass, saoPass, blurHorizontal, blurVertical, mix];
+  },
 };
 
 export default ssao;

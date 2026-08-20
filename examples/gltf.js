@@ -408,8 +408,6 @@ const dispose = () => {
     world.entities.filter((entity) => entitiesIds.includes(entity.id)),
   );
 
-  // TODO renderEngine resourceCache dispose cache
-
   State.scenes = [];
 };
 
@@ -690,10 +688,10 @@ window.addEventListener("keydown", ({ key }) => {
   if (key === "d") debugOnce = true;
 });
 
-gpu.frame(ctx, () => {
+gpu.frame(ctx, async () => {
   if (cameraEntity) {
     renderEngine.update(world.entities);
-    renderEngine.render(world.entities, cameraEntity);
+    await renderEngine.render(world.entities, cameraEntity);
   }
 
   gui.draw();

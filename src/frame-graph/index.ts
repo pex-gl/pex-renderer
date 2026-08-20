@@ -252,7 +252,15 @@ export class FrameGraph {
 
   // ─── Extensibility ─────────────────────────────────────────────────────────
 
-  /** Run everything registered at this injection point. */
+  /**
+   * Run everything registered at this injection point.
+   *
+   * Callbacks may be async, but only for CPU work: declaration runs inside the
+   * caller's frame segment, and yielding past a browser present destroys the
+   * swapchain texture it acquired, which fails the submit for the whole frame.
+   * Fetch outside the frame and use what has arrived, as post-processing does
+   * with its effect modules.
+   */
   async stage(name: string): Promise<void> {
     requirePhase(this.state, "declaring", `stage("${name}")`, DECLARE_HINT);
 

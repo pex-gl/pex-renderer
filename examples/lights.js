@@ -6,14 +6,24 @@ import {
 } from "pex-renderer";
 
 import * as gpu from "pex-gpu";
-import { quat } from "pex-math";
+import createGUI, { DEFAULT_THEME } from "pex-gui";
+import { quat, vec2 } from "pex-math";
 
 import { cube } from "primitive-geometry";
 import gridCells from "grid-cells";
 
 import { dragon } from "./utils.js";
 
-const State = { animate: true };
+const State = {
+  animate: true,
+  floorReceiveShadows: true,
+  floorCastShadows: false,
+  meshReceiveShadows: true,
+  meshCastShadows: true,
+  rotation: 0,
+  // shadowMapSizeIndex: 2,
+  // shadowMapSizes: ["512", "1024", "2048", "4096"],
+};
 
 const pixelRatio = devicePixelRatio;
 const ctx = await gpu.createContext({ pixelRatio });
@@ -86,7 +96,7 @@ const directionalLightEntity = createEntity({
     intensity: 1,
     bulbRadius: 0.3,
   }),
-  // lightHelper: components.lightHelper(),
+  lightHelper: components.lightHelper(),
 });
 world.add(directionalLightEntity);
 
@@ -97,7 +107,7 @@ const fixDirectionalLightEntity = createEntity({
     rotation: quat.fromPointToPoint(quat.create(), [1, 1, 1], [0, 0, 0]),
   }),
   directionalLight: components.directionalLight(),
-  // lightHelper: components.lightHelper(),
+  lightHelper: components.lightHelper(),
 });
 world.add(fixDirectionalLightEntity);
 
@@ -116,7 +126,7 @@ const spotLightEntity = createEntity({
     innerAngle: Math.PI / 12,
     bulbRadius: 0.03,
   }),
-  // lightHelper: components.lightHelper(),
+  lightHelper: components.lightHelper(),
 });
 world.add(spotLightEntity);
 
@@ -127,7 +137,7 @@ const fixSpotLightEntity = createEntity({
     rotation: quat.fromPointToPoint(quat.create(), [1, 1, 1], [0, 0, 0]),
   }),
   spotLight: components.spotLight(),
-  // lightHelper: components.lightHelper(),
+  lightHelper: components.lightHelper(),
 });
 world.add(fixSpotLightEntity);
 
@@ -141,7 +151,7 @@ const pointLightEntity = createEntity({
     range: 5,
     bulbRadius: 0.1,
   }),
-  // lightHelper: components.lightHelper(),
+  lightHelper: components.lightHelper(),
 });
 world.add(pointLightEntity);
 
@@ -149,7 +159,7 @@ const fixPointLightEntity = createEntity({
   layer: LAYERS[2],
   transform: components.transform({ position: [1, 1, 1] }),
   pointLight: components.pointLight(),
-  // lightHelper: components.lightHelper(),
+  lightHelper: components.lightHelper(),
 });
 world.add(fixPointLightEntity);
 
@@ -167,7 +177,7 @@ const areaLightEntity = createEntity({
     disk: true,
     bulbRadius: 0.1,
   }),
-  // lightHelper: components.lightHelper(),
+  lightHelper: components.lightHelper(),
 });
 world.add(areaLightEntity);
 
@@ -179,7 +189,7 @@ const fixAreaLightEntity = createEntity({
     rotation: quat.fromPointToPoint(quat.create(), [1, 1, 1], [0, 0, 0]),
   }),
   areaLight: components.areaLight(),
-  // lightHelper: components.lightHelper(),
+  lightHelper: components.lightHelper(),
 });
 world.add(fixAreaLightEntity);
 
@@ -206,11 +216,220 @@ const rotate = (t) => {
       true;
 };
 
-gpu.frame(ctx, () => {
+// GUI
+const gui = createGUI(ctx);
+renderEngine.update(world.entities);
+await renderEngine.render(world.entities, cameraEntities);
+
+// Shadow maps come from the frame graph's pool, so the texture behind a light
+// can change between frames and is undefined on a frame where it didn't cast.
+// The GUI holds the control and re-reads the texture each frame rather than
+// capturing one here.
+const DUMMY_DEPTH = {
+  width: 4,
+  height: 4,
+  format: "depth32float",
+  usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.RENDER_ATTACHMENT,
+};
+const dummyShadowMap = gpu.createTexture(ctx, {
+  name: "dummyShadowMap",
+  ...DUMMY_DEPTH,
+});
+const dummyShadowCubemap = gpu.createTexture(ctx, {
+  name: "dummyShadowCubemap",
+  ...DUMMY_DEPTH,
+  depth: 6,
+  viewDimension: "cube",
+});
+
+const shadowMapControls = [];
+// Only a spot or area light needs its planes: those project perspectively, so
+// the stored depth is nonlinear and the GUI linearises it with near/far. A
+// directional light is orthographic and a point light writes radial distance
+// over `far` by hand, so both are linear across [0, 1] already.
+const addShadowMap = (light, { cubemap = false, perspective = false } = {}) => {
+  const dummy = cubemap ? dummyShadowCubemap : dummyShadowMap;
+  shadowMapControls.push({
+    control: cubemap
+      ? gui.addTextureCube("Shadowmap", dummy)
+      : gui.addTexture2D("Shadowmap", dummy, { flipY: true }),
+    light,
+    property: cubemap ? "_shadowCubemap" : "_shadowMap",
+    dummy,
+    perspective,
+  });
+};
+
+const viewportToCanvasPosition = (viewport) => [
+  viewport[0] / pixelRatio,
+  viewport[1] / pixelRatio,
+];
+
+const getViewportPosition = (layer, offset = [10, 10]) =>
+  vec2.add(
+    viewportToCanvasPosition(
+      cameraEntities.find((entity) => entity.layer === layer).camera.viewport,
+    ),
+    offset,
+  );
+
+gui.addHeader("Directional");
+
+gui.addParam(
+  "Intensity",
+  directionalLightEntity.directionalLight,
+  "intensity",
+  { min: 0, max: 20 },
+);
+gui.addParam(
+  "Bulb Radius",
+  directionalLightEntity.directionalLight,
+  "bulbRadius",
+  { min: 0, max: 100 },
+);
+addShadowMap(directionalLightEntity.directionalLight);
+gui.addParam(
+  "Cast Shadows",
+  directionalLightEntity.directionalLight,
+  "castShadows",
+);
+
+gui
+  .addHeader("Global")
+  .setPosition(
+    ...getViewportPosition(LAYERS[1], [-DEFAULT_THEME.columnWidth - 10, 10]),
+  );
+gui.addParam("Animate", State, "animate");
+gui.addParam("Rotation", State, "rotation", { min: 0, max: 1 }, () => {
+  State.animate = false;
+  rotate(State.rotation);
+});
+
+// gui.addRadioList(
+//   "Map Size",
+//   State,
+//   "shadowMapSizeIndex",
+//   State.shadowMapSizes.map((name, value) => ({ name, value })),
+//   () => {
+//     const shadowMapSize = State.shadowMapSizes[State.shadowMapSizeIndex];
+//     directionalLightEntity.directionalLight.shadowMapSize =
+//       fixDirectionalLightEntity.directionalLight.shadowMapSize =
+//       spotLightEntity.spotLight.shadowMapSize =
+//       fixSpotLightEntity.spotLight.shadowMapSize =
+//       pointLightEntity.pointLight.shadowMapSize =
+//       fixPointLightEntity.pointLight.shadowMapSize =
+//       areaLightEntity.areaLight.shadowMapSize =
+//       fixAreaLightEntity.areaLight.shadowMapSize =
+//         shadowMapSize;
+//   },
+// );
+
+const standardRendererSystem = renderEngine.renderers.find(
+  (renderer) => renderer.type == "standard-renderer",
+);
+gui.addParam("Shadow Quality", standardRendererSystem, "shadowQuality", {
+  min: 0,
+  max: 5,
+  step: 1,
+});
+
+gui.addHeader("Floor");
+gui.addParam("Cast Shadows", State, "floorCastShadows", {}, () => {
+  floorEntity.material.castShadows = State.floorCastShadows;
+});
+gui.addParam("Receive Shadows", State, "floorReceiveShadows", {}, () => {
+  floorEntity.material.receiveShadows = State.floorReceiveShadows;
+});
+gui.addHeader("Mesh");
+gui.addParam("Cast Shadows", State, "meshCastShadows", {}, () => {
+  meshEntity.material.castShadows = State.meshCastShadows;
+});
+gui.addParam("Receive Shadows", State, "meshReceiveShadows", {}, () => {
+  meshEntity.material.receiveShadows = State.meshReceiveShadows;
+});
+
+gui.addHeader("Spot").setPosition(...getViewportPosition(LAYERS[1]));
+gui.addParam("Range", spotLightEntity.spotLight, "range", { min: 0, max: 20 });
+gui.addParam("Intensity", spotLightEntity.spotLight, "intensity", {
+  min: 0,
+  max: 20,
+});
+gui.addParam("Angle", spotLightEntity.spotLight, "angle", {
+  min: 0,
+  max: Math.PI / 2 - Number.EPSILON,
+});
+gui.addParam("Inner angle", spotLightEntity.spotLight, "innerAngle", {
+  min: 0,
+  max: Math.PI / 2 - Number.EPSILON,
+});
+gui.addParam("Bulb Radius", spotLightEntity.spotLight, "bulbRadius", {
+  min: 0,
+  max: 100,
+});
+addShadowMap(spotLightEntity.spotLight, { perspective: true });
+gui.addParam("Cast Shadows", spotLightEntity.spotLight, "castShadows");
+
+gui.addHeader("Point").setPosition(...getViewportPosition(LAYERS[2]));
+gui.addParam("Range", pointLightEntity.pointLight, "range", {
+  min: 0,
+  max: 20,
+});
+gui.addParam("Intensity", pointLightEntity.pointLight, "intensity", {
+  min: 0,
+  max: 20,
+});
+gui.addParam("Bulb Radius", pointLightEntity.pointLight, "bulbRadius", {
+  min: 0,
+  max: 100,
+});
+addShadowMap(pointLightEntity.pointLight, { cubemap: true });
+gui.addParam("Cast Shadows", pointLightEntity.pointLight, "castShadows");
+
+gui.addHeader("Area").setPosition(...getViewportPosition(LAYERS[3]));
+gui.addParam("Intensity", areaLightEntity.areaLight, "intensity", {
+  min: 0,
+  max: 20,
+});
+gui.addParam("Width", areaLightEntity.transform.scale, "0", {
+  min: 0,
+  max: 20,
+});
+gui.addParam("Height", areaLightEntity.transform.scale, "1", {
+  min: 0,
+  max: 20,
+});
+gui.addParam("Bulb Radius", areaLightEntity.areaLight, "bulbRadius", {
+  min: 0,
+  max: 100,
+});
+gui.addParam("Disk", areaLightEntity.areaLight, "disk");
+gui.addParam("Double Sided", areaLightEntity.areaLight, "doubleSided");
+addShadowMap(areaLightEntity.areaLight, { perspective: true });
+gui.addParam("Cast Shadows", areaLightEntity.areaLight, "castShadows");
+
+gpu.frame(ctx, async () => {
   if (State.animate) rotate(performance.now() * 0.001 * 0.1);
 
   renderEngine.update(world.entities);
-  renderEngine.render(world.entities, cameraEntities);
+  await renderEngine.render(world.entities, cameraEntities);
+
+  // The light system refits near/far to the scene bounds every frame, so both
+  // the texture and the planes have to be re-read rather than captured.
+  for (const {
+    control,
+    light,
+    property,
+    dummy,
+    perspective,
+  } of shadowMapControls) {
+    control.texture = light[property] || dummy;
+    if (perspective) {
+      control.options.near = light._near;
+      control.options.far = light._far;
+    }
+  }
+
+  gui.draw();
 
   window.dispatchEvent(new CustomEvent("screenshot"));
 });

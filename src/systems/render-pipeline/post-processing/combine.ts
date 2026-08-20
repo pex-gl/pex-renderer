@@ -1,76 +1,101 @@
-// @ts-nocheck
-import { postProcessing as postprocessingShaders } from "pex-shaders";
+import {
+  combineShader,
+  TONE_MAP_DEFINE,
+} from "../../../shaders/post-processing/combine.js";
 
-import { ssaoMixFlagDefinitions } from "./ssao.js";
-import { isSMAAEnabled } from "./smaa.js";
-import { isFinalMainEnabled } from "./final.js";
+import type { PostProcessingEffect } from "../post-processing.js";
 
-const combine = ({ resourceCache, descriptors }) => {
-  const combinePass = {
-    name: "main",
-    frag: postprocessingShaders.combine.frag,
-    // prettier-ignore
-    flagDefinitions: [
-      // Camera
-      [["camera", "viewMatrix"], "", { uniform: "uViewMatrix" }],
-      [["camera", "near"], "", { uniform: "uNear" }],
-      [["camera", "far"], "", { uniform: "uFar" }],
-      [["camera", "fov"], "", { uniform: "uFov" }],
+/**
+ * Composites the HDR chain and tonemaps it. Always declared: exposure and the
+ * tonemap are not optional, they are what turns scene radiance into an image.
+ *
+ * Ambient occlusion is applied here rather than in its own pass whenever depth
+ * of field is off, saving a fullscreen pass in the common case.
+ */
+const combine: PostProcessingEffect = {
+  name: "combine",
+  srgb: true,
+  passes: ({ cameraEntity }) => {
+    const camera = cameraEntity.camera!;
+    const postProcessing = cameraEntity.postProcessing!;
+    const { fog, ssao, bloom, vignette, lut, colorCorrection } = postProcessing;
 
-      [["postProcessing", "exposure"], "", { uniform: "uExposure" }],
-      [["postProcessing", "toneMap"], "TONE_MAP", { type: "value" }],
+    // Depth of field already consumed the occlusion when it ran. Both of these
+    // check the target exists: an effect the component asks for still doesn't
+    // run if its module failed to load or its inputs were missing.
+    const mixesSSAO = (targets: Map<string, unknown>) =>
+      !!ssao && !postProcessing.dof && targets.has("ssao.main");
+    const addsBloom = (targets: Map<string, unknown>) =>
+      !!bloom && targets.has("bloom.threshold");
 
-      // Fog
-      [["postProcessing", "fog"], "USE_FOG"],
-      [["postProcessing", "fog", "color"], "", { uniform: "uFogColor", requires: "USE_FOG" }],
-      [["postProcessing", "fog", "start"], "", { uniform: "uFogStart", requires: "USE_FOG" }],
-      [["postProcessing", "fog", "density"], "", { uniform: "uFogDensity", requires: "USE_FOG" }],
-      [["postProcessing", "fog", "sunPosition"], "", { uniform: "uSunPosition", requires: "USE_FOG" }],
-      [["postProcessing", "fog", "sunDispertion"], "", { uniform: "uSunDispertion", requires: "USE_FOG" }],
-      [["postProcessing", "fog", "sunIntensity"], "", { uniform: "uSunIntensity", requires: "USE_FOG" }],
-      [["postProcessing", "fog", "sunColor"], "", { uniform: "uSunColor", requires: "USE_FOG" }],
-      [["postProcessing", "fog", "inscatteringCoeffs"], "", { uniform: "uInscatteringCoeffs", requires: "USE_FOG" }],
-
-      // SSAO
-      [["postProcessing", "dof"], "USE_DOF"],
-      [["postProcessing", "ssao"], "USE_SSAO", { excludes: "USE_DOF" }],
-      ...ssaoMixFlagDefinitions,
-
-      // Bloom
-      [["postProcessing", "bloom"], "USE_BLOOM"],
-      [["postProcessing", "bloom", "intensity"], "", { uniform: "uBloomIntensity", requires: "USE_BLOOM" }],
-      [["options", "targets", "bloom.threshold"], "BLOOM_TEXTURE", { type: "texture", uniform: "uBloomTexture", requires: "USE_BLOOM" }],
-
-      // Vignette
-      [["postProcessing", "vignette"], "USE_VIGNETTE"],
-      [["postProcessing", "vignette", "radius"], "", { uniform: "uVignetteRadius", requires: "USE_VIGNETTE" }],
-      [["postProcessing", "vignette", "intensity"], "", { uniform: "uVignetteIntensity", requires: "USE_VIGNETTE" }],
-
-      // LUT
-      [["postProcessing", "lut"], "USE_LUT"],
-      [["postProcessing", "lut", "texture"], "LUT_TEXTURE", { type: "texture", uniform: "uLUTTexture", requires: "USE_LUT" }],
-      [["postProcessing", "lut", "texture", "width"], "", { uniform: "uLUTTextureSize", requires: "USE_LUT" }],
-
-      // Color Correction
-      [["postProcessing", "colorCorrection"], "USE_COLOR_CORRECTION"],
-      [["postProcessing", "colorCorrection", "brightness"], "", { uniform: "uBrightness", requires: "USE_COLOR_CORRECTION" }],
-      [["postProcessing", "colorCorrection", "contrast"], "", { uniform: "uContrast", requires: "USE_COLOR_CORRECTION" }],
-      [["postProcessing", "colorCorrection", "saturation"], "", { uniform: "uSaturation", requires: "USE_COLOR_CORRECTION" }],
-      [["postProcessing", "colorCorrection", "hue"], "", { uniform: "uHue", requires: "USE_COLOR_CORRECTION" }],
-    ],
-    source: ({ cameraEntity }) =>
-      cameraEntity.postProcessing.dof ? "dof.main" : "color",
-    target: ({ cameraEntity, viewport }) =>
-      (isSMAAEnabled({ cameraEntity }) ||
-        isFinalMainEnabled({ cameraEntity })) &&
-      resourceCache.texture2D({
-        ...descriptors.postProcessing.srgbOutputTextureDesc,
-        width: viewport[2],
-        height: viewport[3],
-      }),
-  };
-
-  return [combinePass];
+    return [
+      {
+        name: "main",
+        shader: combineShader,
+        chain: true,
+        getDefines: ({ depth, targets }) =>
+          new Set([
+            // Null leaves the image scene-referred, which is what the exposure
+            // pickers and any external grading expect.
+            ...(postProcessing.toneMap
+              ? [`${TONE_MAP_DEFINE}${postProcessing.toneMap}`]
+              : []),
+            ...(fog && depth ? ["USE_FOG"] : []),
+            ...(mixesSSAO(targets) ? ["USE_SSAO"] : []),
+            ...(addsBloom(targets) ? ["USE_BLOOM"] : []),
+            ...(vignette ? ["USE_VIGNETTE"] : []),
+            ...(lut?.texture ? ["USE_LUT"] : []),
+            ...(colorCorrection ? ["USE_COLOR_CORRECTION"] : []),
+          ]),
+        constants: () => ({
+          USE_SSAO_COLORS: ssao?.type === "gtao" && !!ssao.colorBounce,
+        }),
+        uniforms: ({ depth, targets, samplers }) => ({
+          uCombine: {
+            viewMatrix: camera.viewMatrix!,
+            fogColor: fog?.color ?? [0, 0, 0],
+            fogStart: fog?.start ?? 0,
+            sunPosition: fog?.sunPosition ?? [0, 1, 0],
+            fogDensity: fog?.density ?? 0,
+            sunColor: fog?.sunColor ?? [0, 0, 0],
+            sunDispertion: fog?.sunDispertion ?? 0,
+            inscatteringCoeffs: fog?.inscatteringCoeffs ?? [0, 0, 0],
+            sunIntensity: fog?.sunIntensity ?? 0,
+            near: camera.near!,
+            far: camera.far!,
+            fov: camera.fov!,
+            exposure: postProcessing.exposure!,
+            ssaoMix: ssao?.mix ?? 0,
+            bloomIntensity: bloom?.intensity ?? 0,
+            vignetteRadius: vignette?.radius ?? 0,
+            vignetteIntensity: vignette?.intensity ?? 0,
+            lutTextureSize: lut?.texture?.width ?? 1,
+            brightness: colorCorrection?.brightness ?? 0,
+            contrast: colorCorrection?.contrast ?? 1,
+            saturation: colorCorrection?.saturation ?? 1,
+            hue: colorCorrection?.hue ?? 0,
+          },
+          ...(fog &&
+            depth && {
+              uDepthTexture: depth,
+              uDepthTextureSampler: samplers.nearest,
+            }),
+          ...(mixesSSAO(targets) && {
+            uSSAOTexture: targets.get("ssao.main")!,
+            uSSAOTextureSampler: samplers.linear,
+          }),
+          ...(addsBloom(targets) && {
+            uBloomTexture: targets.get("bloom.threshold")!,
+            uBloomTextureSampler: samplers.linear,
+          }),
+          ...(lut?.texture && {
+            uLUTTexture: lut.texture,
+            uLUTTextureSampler: samplers.linear,
+          }),
+        }),
+      },
+    ];
+  },
 };
 
 export default combine;

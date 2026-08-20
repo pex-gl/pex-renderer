@@ -29,7 +29,13 @@ export const LINE_VERTEX_FIELDS: readonly FeatureField[] = [
 
 /** Walked against the material by the renderer's `getDefines`. */
 export const LINE_MATERIAL_FIELDS: readonly FeatureField[] = [
-  { key: "perspectiveScaling", define: MATERIAL_DEFINE.perspectiveScaling },
+  // Boolean flag: `perspectiveScaling: false` must not activate the define,
+  // and the material factory always sets the key.
+  {
+    key: "perspectiveScaling",
+    define: MATERIAL_DEFINE.perspectiveScaling,
+    truthy: true,
+  },
 ];
 
 // Path-break sentinel: an endpoint with any component this large marks a

@@ -34,7 +34,7 @@ for (let i = 0; i < 3; i++) {
         window.innerHeight * pixelRatio,
       ],
     }),
-    // postProcessing: components.postProcessing(),
+    postProcessing: components.postProcessing(),
     orbiter: components.orbiter({ element: ctx.canvas }),
   });
   world.add(cameraEntity);
@@ -185,9 +185,9 @@ gui.addParam(
   {},
 );
 
-gpu.frame(ctx, () => {
+gpu.frame(ctx, async () => {
   renderEngine.update(world.entities);
-  renderEngine.render(
+  await renderEngine.render(
     world.entities,
     world.entities.filter((entity) => entity.camera),
   );

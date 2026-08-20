@@ -30,7 +30,7 @@ const renderEngine = createRenderEngine({ ctx, debug: true });
 const world = createWorld();
 
 const renderPassGraphViz = getRenderPassGraphViz();
-renderPassGraphViz.init(ctx, renderEngine.renderGraph);
+renderPassGraphViz.init(ctx, renderEngine.frameGraph);
 
 // Entities
 const cameraEntity = createEntity({
@@ -393,7 +393,7 @@ window.addEventListener("keydown", ({ key }) => {
   if (key === "d") debugOnce = true;
 });
 
-gpu.frame(ctx, () => {
+gpu.frame(ctx, async () => {
   if (State.autoRotate) {
     quat.fromAxisAngle(
       torusEntity.transform.rotation,
@@ -404,13 +404,15 @@ gpu.frame(ctx, () => {
   }
 
   renderEngine.update(world.entities);
-  renderEngine.render(world.entities, cameraEntity);
+  await renderEngine.render(world.entities, cameraEntity);
 
-  const transmissionBackgroundTexture = renderEngine.renderGraph.renderPasses
-    .find(({ name }) => name.startsWith("TransmissionFrontPass"))
-    ?.uses.find(({ name }) => name.startsWith("grabPassOutput"));
+  const grabHandle = renderEngine.frameGraph.blackboard.get(
+    `transmission.grab.${cameraEntity.id}`,
+  );
 
-  guiCaptureControl.texture = transmissionBackgroundTexture || dummyTexture2D;
+  guiCaptureControl.texture =
+    (grabHandle && renderEngine.frameGraph.resolve(grabHandle)) ||
+    dummyTexture2D;
 
   gpu.debug(ctx, debugOnce);
   debugOnce = false;

@@ -490,6 +490,20 @@ const state = createGraphState();
     ],
     [true, false],
   );
+
+  // Neither is sampled by any pass here, and both are read outside the graph.
+  // Without TEXTURE_BINDING the caller's bind group fails validation at submit
+  // time — invisible until something actually samples what render() returned.
+  const usageOf = (plan, name) =>
+    plan.resources.find((r) => r.name === name).usage;
+  check(
+    "exported and persistent textures can be sampled outside the graph",
+    [
+      (usageOf(first, "scratch") & GPUTextureUsage.TEXTURE_BINDING) !== 0,
+      (usageOf(first, "shadow") & GPUTextureUsage.TEXTURE_BINDING) !== 0,
+    ],
+    [true, true],
+  );
 }
 
 // ─── Attachment views ────────────────────────────────────────────────────────

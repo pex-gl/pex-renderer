@@ -23,7 +23,8 @@ ${vertexOutputStruct([{ name: "texCoord0", type: "vec2f" }])}
 fn vertexMain(input: VertexInput) -> VertexOutput {
   var output: VertexOutput;
   output.position = vec4f(input.position, 0.0, 1.0);
-  output.texCoord0 = input.position * 0.5 + 0.5;
+  output.texCoord0 = vec2f(input.position.x * 0.5 + 0.5, 0.5 - input.position.y * 0.5);
+
   return output;
 }
 

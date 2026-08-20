@@ -52,7 +52,14 @@ export interface FeatureField {
   requires?: string;
   /** Skipped if this define is already active. */
   excludes?: string;
-  /** Treat `0` as unset (e.g. transmission). Default: only nullish is unset. */
+  /**
+   * Treat falsy as unset — needed wherever the field's "off" value is `0`/
+   * `false` and something always writes the key: the material factory (line
+   * `perspectiveScaling`) or the glTF loader materializing an extension's spec
+   * defaults (`clearcoatFactor: 0`, `thicknessFactor: 0`, …). Not for fields
+   * where 0 differs from unset — KHR_materials_specular's `specular: 0` means
+   * no specular, its absence means 1. Default: only nullish is unset.
+   */
   truthy?: boolean;
   /**
    * Texture field: adds "u"+Key, "u"+Key+"Sampler" uniforms and a

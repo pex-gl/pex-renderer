@@ -62,17 +62,12 @@ const dot = {
 
     dotGraph.nodes[id] = { label: label || id, ...props };
   },
-  passNode: (id, name) => {
-    dot.node(id, name, { fillcolor: "red", color: "darkred" });
-  },
-  resourceNode: (id, name) => {
-    dot.node(id, name, { fillcolor: "blue", color: "darkblue" });
-  },
   edge: (id1, id2) => {
     dotGraph.edges.push({ src: id1, dest: id2 });
   },
-  render: () => {
-    const dotStr = serializeGraph(dotGraph);
+  // Takes a ready-made DOT string, so a caller that already has one (see
+  // toDot) doesn't have to go through the node/edge builder above.
+  render: (dotStr = serializeGraph(dotGraph)) => {
     console.debug("dotStr", dotStr);
 
     containerElement.innerHTML = graphviz.layout(dotStr, "svg", "dot");
@@ -110,101 +105,124 @@ const dot = {
   },
 };
 
-const formatTextureName = ({ id, name, pixelFormat }, { id: resolveId } = {}) =>
-  (name || id)
-    .replace(" ", "\n")
-    .replace(")", ` ${pixelFormat}${resolveId ? ` from ${resolveId}` : ``})`);
+const formatBytes = (bytes) =>
+  bytes > 1024 * 1024
+    ? `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+    : `${Math.ceil(bytes / 1024)} KB`;
 
+/**
+ * Graphviz DOT of a compiled frame from `frameGraph.inspect()`: passes as
+ * boxes, resources as ellipses, culled nodes greyed out, load/store ops on the
+ * attachment edges and physical ids on resources, so two resources sharing one
+ * are visibly recycling the same allocation.
+ *
+ * @param {import("../src/frame-graph/index.js").GraphInspection} inspection
+ * @returns {string}
+ */
+export function toDot(inspection) {
+  const { memory, stats } = inspection;
+  // "\\n" is Graphviz's own line break, not a JS newline: it has to survive
+  // into the emitted string.
+  const caption = [
+    `${stats.declaredPasses} declared, ${stats.culledPasses} culled, ${stats.mergedPasses} merged`,
+    `peak ${formatBytes(memory.peakBytes)} of ${formatBytes(memory.naiveBytes)} (saved ${formatBytes(memory.savedBytes)})`,
+  ].join("\\n");
+
+  const nodes = [];
+  const edges = [];
+
+  for (const pass of inspection.passes) {
+    const label =
+      pass.subPasses.length > 1 ? pass.subPasses.join("\\n+ ") : pass.name;
+    nodes.push(
+      `  "pass:${pass.name}" [label="${label}" fillcolor="#c62828" color=darkred];`,
+    );
+  }
+  for (const name of inspection.culledPasses) {
+    nodes.push(
+      `  "pass:${name}" [label="${name}\\n(culled)" fillcolor=gray80 color=gray50 fontcolor=gray30];`,
+    );
+  }
+
+  for (const resource of inspection.resources) {
+    if (resource.culled) continue;
+    const size =
+      resource.width !== undefined
+        ? `\\n${resource.width}×${resource.height} ${resource.format ?? ""}`
+        : "";
+    const physical =
+      resource.physicalId !== undefined ? ` #${resource.physicalId}` : "";
+    const badge = resource.imported
+      ? " [imported]"
+      : resource.transient
+        ? " [memoryless]"
+        : "";
+    nodes.push(
+      `  "res:${resource.name}" [label="${resource.name}${badge}${physical}${size}" shape=rect fillcolor="${
+        resource.imported ? "#6a1b9a" : "#1565c0"
+      }" color="${resource.imported ? "purple" : "darkblue"}"];`,
+    );
+  }
+
+  let presentsToCanvas = false;
+  for (const pass of inspection.passes) {
+    for (const read of pass.reads) {
+      edges.push(`  "res:${read}" -> "pass:${pass.name}";`);
+    }
+    for (const attachment of pass.colorAttachments) {
+      edges.push(
+        `  "pass:${pass.name}" -> "res:${attachment.name}" [label="${attachment.loadOp}/${attachment.storeOp}"];`,
+      );
+    }
+    if (pass.depthAttachment) {
+      edges.push(
+        `  "pass:${pass.name}" -> "res:${pass.depthAttachment.name}" [style=dashed label="${pass.depthAttachment.loadOp}/${pass.depthAttachment.storeOp}"];`,
+      );
+    }
+    // A pass with no attachments targets the swapchain, which the graph has no
+    // resource for.
+    if (!pass.colorAttachments.length && !pass.depthAttachment) {
+      presentsToCanvas = true;
+      edges.push(`  "pass:${pass.name}" -> canvas;`);
+    }
+  }
+  if (presentsToCanvas) {
+    nodes.push('  canvas [label="Canvas" fillcolor=black color=gray30];');
+  }
+
+  return [
+    "digraph frameGraph {",
+    "  rankdir=TB;",
+    '  fontname="Inconsolata";',
+    "  fontsize=9;",
+    "  fontcolor=gray;",
+    "  labeljust=l;",
+    "  labelloc=b;",
+    `  label="${caption}";`,
+    '  node [shape=rect style=filled fontname="Arial" fontsize=11 fontcolor=white];',
+    '  edge [fontname="Inconsolata" fontsize=9 arrowsize=0.75];',
+    ...nodes,
+    ...edges,
+    "}",
+  ].join("\n");
+}
+
+/**
+ * Draws the compiled frame graph from `frameGraph.inspect()`. The DOT itself
+ * comes from `toDot`, so the graph a viewer sees and the one dumped to a file
+ * are the same picture.
+ */
 const getRenderPassGraphViz = () => ({
   ...dot,
   needsRender: false,
-  init(ctx, renderGraph) {
-    const originalBeginFrame = renderGraph.beginFrame;
-    renderGraph.beginFrame = (...args) => {
-      if (this.needsRender) dot.reset();
-      originalBeginFrame.call(renderGraph, ...args);
-    };
-
-    const originalRenderPass = renderGraph.renderPass;
-    renderGraph.renderPass = (...args) => {
-      if (this.needsRender) {
-        const [opts] = args;
-        const passId =
-          opts.pass?.id || `RenderPass ${renderGraph.renderPasses.length}`;
-        const passName = opts.name || opts.pass?.name;
-
-        dot.passNode(passId, passName.replace(" ", "\n"));
-
-        const colorAttachments = opts?.pass?.opts?.color;
-
-        for (let i = 0; i < colorAttachments?.length; i++) {
-          const colorAttachment = colorAttachments[i];
-          const colorTexture =
-            colorAttachment?.resolveTarget ||
-            colorAttachment?.texture ||
-            colorAttachment ||
-            {};
-          const colorTextureId = colorTexture.id;
-
-          if (colorTextureId) {
-            dot.resourceNode(
-              colorTextureId,
-              formatTextureName(
-                colorTexture,
-                colorAttachment?.resolveTarget && colorAttachment?.texture,
-              ),
-            );
-            dot.edge(passId, colorTextureId);
-          } else {
-            dot.edge(passId, "Window");
-          }
-        }
-
-        const depthAttachment = opts?.pass?.opts?.depth;
-        const depthTexture =
-          depthAttachment?.resolveTarget ||
-          depthAttachment?.texture ||
-          depthAttachment ||
-          {};
-        const depthTextureId = depthTexture.id;
-
-        if (depthTextureId) {
-          dot.resourceNode(
-            depthTextureId,
-            formatTextureName(
-              depthTexture,
-              depthAttachment?.resolveTarget && depthAttachment?.texture,
-            ),
-          );
-          dot.edge(passId, depthTextureId);
-        }
-
-        if (opts.uses) {
-          const nodes = Object.keys(dotGraph.nodes);
-          opts.uses.forEach((tex) => {
-            if (!nodes.includes(tex.id)) {
-              dot.edge(formatTextureName(tex), passId);
-            } else {
-              dot.edge(tex.id, passId);
-            }
-          });
-          if (ctx.debugMode) console.log("render-graph uses", opts.uses);
-        }
-      }
-
-      originalRenderPass.call(renderGraph, ...args);
-    };
-
-    const originalEndFrame = renderGraph.endFrame;
-    renderGraph.endFrame = (...args) => {
-      originalEndFrame.call(renderGraph, ...args);
-      if (this.needsRender) {
-        dot.render();
-        this.needsRender = false;
-      }
-    };
+  init(ctx, frameGraph) {
+    this.frameGraph = frameGraph;
   },
   draw() {
+    const inspection = this.frameGraph?.inspect();
+    if (!inspection) return;
+
+    dot.render(toDot(inspection));
     this.needsRender = true;
   },
 });

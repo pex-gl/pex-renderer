@@ -192,14 +192,9 @@ for (let i = 0; i < nW * nH; i++) {
   const layer = `cell${i}`;
   const cameraEntity = createEntity({
     layer,
-    transform: components.transform({
-      position: [0, 0, 1],
-    }),
-    camera: components.camera({
-      near: 0.001,
-      toneMap: "neutral",
-    }),
-    // postProcessing: components.postProcessing(),
+    transform: components.transform({ position: [0, 0, 1] }),
+    camera: components.camera({ near: 0.001 }),
+    postProcessing: components.postProcessing({ toneMap: "neutral" }),
     orbiter: components.orbiter({ element: ctx.canvas }),
   });
   world.add(cameraEntity);
@@ -295,9 +290,9 @@ window.addEventListener("keydown", ({ key }) => {
   if (key === "d") debugOnce = true;
 });
 
-gpu.frame(ctx, () => {
+gpu.frame(ctx, async () => {
   renderEngine.update(world.entities);
-  renderEngine.render(
+  await renderEngine.render(
     world.entities,
     world.entities.filter((entity) => entity.camera),
   );

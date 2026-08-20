@@ -3,50 +3,51 @@ import {
   world as createWorld,
   entity as createEntity,
   components,
-} from "../index.js";
+  loaders,
+  shaders,
+} from "pex-renderer";
 
-import createContext from "pex-context";
+import * as gpu from "pex-gpu";
 import { quat, vec3 } from "pex-math";
 import { aabb } from "pex-geom";
 import random from "pex-random";
 import createGUI from "pex-gui";
-import * as SHADERS from "pex-shaders";
 
 import { cube, roundedCube, capsule, sphere } from "primitive-geometry";
 
-import { dragon, getEnvMap, getTexture, getURL } from "./utils.js";
+import { dragon, getGpuTexture, getURL } from "./utils.js";
 
 import { getRenderPassGraphViz } from "./graph-viz.js";
 
 random.seed(14);
 
 const State = {
-  enabled: true,
+  enabled: false,
 
   roughness: 0.5,
   metallic: 0.1,
   baseColor: [0.8, 0.1, 0.1, 1.0],
 
-  msaa: true,
-  ssao: true,
-  dof: true,
-  bloom: true,
+  msaa: false,
+  ssao: false,
+  dof: false,
+  bloom: false,
   fog: false,
-  vignette: true,
-  lut: true,
-  colorCorrection: true,
-  smaa: true,
-  fxaa: true,
-  filmGrain: true,
+  vignette: false,
+  lut: false,
+  colorCorrection: false,
+  smaa: false,
+  fxaa: false,
+  filmGrain: false,
 };
 
 const pixelRatio = 1; // devicePixelRatio;
-const ctx = createContext({ pixelRatio });
+const ctx = await gpu.createContext({ pixelRatio });
 const renderEngine = createRenderEngine({ ctx, debug: true });
 const world = createWorld();
 
 const renderPassGraphViz = getRenderPassGraphViz();
-renderPassGraphViz.init(ctx, renderEngine.renderGraph);
+renderPassGraphViz.init(ctx, renderEngine.frameGraph);
 
 // Entities
 const helperEntity = createEntity({
@@ -71,7 +72,7 @@ aabb.fromPoints(dragonBounds, dragon.positions);
 // Camera
 const camera = components.camera({
   // fov: Math.PI / 6,
-  aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
+  aspect: ctx.width / ctx.height,
   fStop: 4,
 });
 const postProcessing = components.postProcessing({
@@ -136,13 +137,13 @@ const postProcessing = components.postProcessing({
     intensity: 0.2,
   },
   lut: {
-    texture: await getTexture(
+    texture: await getGpuTexture(
       ctx,
       getURL(`assets/textures/lut/lookup-autumn.png`),
       false,
       {
-        min: ctx.Filter.Nearest,
-        mag: ctx.Filter.Nearest,
+        minFilter: "nearest",
+        magFilter: "nearest",
         mipmap: false,
         flipY: false,
         aniso: 0,
@@ -180,7 +181,7 @@ const cameraEntity = createEntity({
   transform: components.transform({ position: [0, cameraY, s * 10] }),
   camera,
   orbiter: components.orbiter({
-    element: ctx.gl.canvas,
+    element: ctx.canvas,
     target: [0, cameraY, 0],
   }),
   postProcessing,
@@ -188,24 +189,24 @@ const cameraEntity = createEntity({
 world.add(cameraEntity);
 
 // Meshes
-const baseColorTexture = await getTexture(
+const baseColorTexture = await getGpuTexture(
   ctx,
   getURL(`assets/materials/plastic-green.material/plastic-green_basecolor.png`),
   true,
 );
-const normalTexture = await getTexture(
+const normalTexture = await getGpuTexture(
   ctx,
   getURL(`assets/materials/plastic-green.material/plastic-green_n.png`),
 );
-const metallicTexture = await getTexture(
+const metallicTexture = await getGpuTexture(
   ctx,
   getURL(`assets/materials/plastic-green.material/plastic-green_metallic.png`),
 );
-const roughnessTexture = await getTexture(
+const roughnessTexture = await getGpuTexture(
   ctx,
   getURL(`assets/materials/plastic-green.material/plastic-green_roughness.png`),
 );
-const emissiveColorTexture = await getTexture(
+const emissiveColorTexture = await getGpuTexture(
   ctx,
   getURL(`assets/materials/plastic-glow.material/plastic-glow_emissive.png`),
   true,
@@ -371,7 +372,10 @@ const skyboxEntity = createEntity({
   transform: components.transform(),
   skybox: components.skybox({
     backgroundBlur: 0,
-    envMap: await getEnvMap(ctx, "assets/envmaps/Mono_Lake_B/Mono_Lake_B.hdr"),
+    envMap: await loaders.hdr(
+      ctx,
+      getURL("assets/envmaps/Mono_Lake_B/Mono_Lake_B.hdr"),
+    ),
   }),
   reflectionProbe: components.reflectionProbe({}),
 });
@@ -421,15 +425,16 @@ gui.addRadioList(
     value,
   })),
 );
-const dummyTexture2D = ctx.texture2D({
+const dummyTexture2D = gpu.createTexture(ctx, {
   name: "dummyTexture2D",
   width: 160,
   height: 1,
+  format: "rgba8unorm",
 });
 const guiNormalControl = gui.addTexture2D("Normal", null, { flipY: true });
 const guiDepthControl = gui.addTexture2D("Depth", null, { flipY: true });
-const guiAOControl = gui.addTexture2D("AO", null, { flipY: true });
-const guiLumaControl = gui.addTexture2D("Luma", null, { flipY: true });
+// const guiAOControl = gui.addTexture2D("AO", null, { flipY: true });
+// const guiLumaControl = gui.addTexture2D("Luma", null, { flipY: true });
 
 gui.addParam("Background Blur", skyboxEntity.skybox, "backgroundBlur", {
   min: 0,
@@ -487,11 +492,14 @@ gui.addRadioList(
   "Tone Map",
   postProcessing,
   "toneMap",
-  [
-    "none",
-    ...Object.keys(SHADERS.toneMap).map((value) => value.toLowerCase()),
-    "agxPunchy",
-  ].map((value) => ({ name: value, value: value === "none" ? null : value })),
+  // Not the pex-shaders export keys: those name modules, and a module can hold
+  // several operators.
+  [{ name: "none", value: null }].concat(
+    shaders.postProcessing.TONE_MAP_OPERATORS.map((value) => ({
+      name: value,
+      value,
+    })),
+  ),
 );
 gui.addParam("Opacity", postProcessing, "opacity", { min: 0, max: 1 });
 
@@ -760,7 +768,7 @@ let debugOnce = false;
 window.addEventListener("resize", () => {
   const width = window.innerWidth;
   const height = window.innerHeight;
-  ctx.set({ pixelRatio, width, height });
+  gpu.resize(ctx, width, height, pixelRatio);
   cameraEntity.camera.aspect = width / height;
   cameraEntity.camera.dirty = true;
 });
@@ -768,25 +776,26 @@ window.addEventListener("resize", () => {
 window.addEventListener("keydown", ({ key }) => {
   if (key === "g") gui.enabled = !gui.enabled;
   if (key === "d") debugOnce = true;
+  console.log(renderEngine.frameGraph);
 });
 
-ctx.frame(() => {
+gpu.frame(ctx, async () => {
   renderEngine.update(world.entities);
-  const [{ color, normal, depth }] = renderEngine.render(
+  const [{ color, normal, depth }] = await renderEngine.render(
     world.entities,
     cameraEntity,
   );
 
   guiNormalControl.texture = normal || dummyTexture2D;
   guiDepthControl.texture = depth;
-  guiAOControl.texture =
-    postProcessing?._targets?.[cameraEntity.id]?.["ssao.main"] ||
-    dummyTexture2D;
-  guiLumaControl.texture =
-    postProcessing?._targets?.[cameraEntity.id]?.["final.luma"] ||
-    dummyTexture2D;
+  // guiAOControl.texture =
+  //   postProcessing?._targets?.[cameraEntity.id]?.["ssao.main"] ||
+  //   dummyTexture2D;
+  // guiLumaControl.texture =
+  //   postProcessing?._targets?.[cameraEntity.id]?.["final.luma"] ||
+  //   dummyTexture2D;
 
-  ctx.debug(debugOnce);
+  gpu.debug(ctx, debugOnce);
   debugOnce = false;
 
   gui.draw();

@@ -1,74 +1,94 @@
-// @ts-nocheck
-import { postProcessing as postprocessingShaders } from "pex-shaders";
-import { isSMAAEnabled } from "./smaa.js";
+import { finalShader, lumaShader } from "../../../shaders/post-processing/final.js";
 
-export const isFXAAEnabled = ({ cameraEntity }) =>
-  cameraEntity.postProcessing.fxaa;
-export const isFilmGrainEnabled = ({ cameraEntity }) =>
-  cameraEntity.postProcessing.filmGrain;
+import type {
+  PostProcessingContext,
+  PostProcessingEffect,
+} from "../post-processing.js";
 
-export const isFinalMainEnabled = ({ cameraEntity }) =>
-  isFXAAEnabled({ cameraEntity }) ||
-  isFilmGrainEnabled({ cameraEntity }) ||
-  (Number.isFinite(cameraEntity.postProcessing.opacity) &&
-    cameraEntity.postProcessing.opacity !== 0 &&
-    cameraEntity.postProcessing.opacity !== 1);
+// FXAA's edge threshold pair per quality level, from the reference's presets:
+// low, medium, high, ultra, extreme.
+const FXAA_THRESHOLDS = [
+  { min: 0.0833, max: 0.25 },
+  { min: 0.0625, max: 0.166 },
+  { min: 0.0312, max: 0.125 },
+  { min: 0.0156, max: 0.063 },
+  { min: 0.0078, max: 0.031 },
+] as const;
 
-const final = ({ ctx, resourceCache, descriptors }) => {
-  const lumaPass = {
-    name: "luma",
-    frag: postprocessingShaders.luma.frag,
-    flagDefinitions: [],
-    enabled: (options) => isFXAAEnabled(options) || isFilmGrainEnabled(options),
-    passDesc: () => ({
-      clearColor: [0, 0, 0, 1],
-    }),
-    source: (options) =>
-      isSMAAEnabled(options) ? "smaa.blend" : "combine.main",
-    target: ({ viewport }) =>
-      resourceCache.texture2D({
-        ...descriptors.postProcessing.outputTextureDesc,
-        pixelFormat: ctx.gl.RG ? ctx.PixelFormat.R8 : ctx.PixelFormat.RGBA8,
-        width: viewport[2],
-        height: viewport[3],
-      }),
-  };
+const usesFXAA = ({ cameraEntity }: PostProcessingContext) =>
+  !!cameraEntity.postProcessing!.fxaa;
+const usesFilmGrain = ({ cameraEntity }: PostProcessingContext) =>
+  !!cameraEntity.postProcessing!.filmGrain;
 
-  const finalPass = {
-    name: "main",
-    frag: postprocessingShaders.final.frag,
-    // blend: true,
-    // prettier-ignore
-    flagDefinitions: [
-      // AA
-      [["postProcessing", "fxaa"], "USE_FXAA"],
-      [["postProcessing", "fxaa", "subPixelQuality"], "", { uniform: "uSubPixelQuality", requires: "USE_FXAA" }],
-      [["postProcessing", "fxaa", "quality"], "AA_QUALITY", { type: "value", requires: "USE_FXAA" }],
+/** A fully opaque or fully transparent output needs no pass of its own. */
+const usesOpacity = ({ cameraEntity }: PostProcessingContext) => {
+  const { opacity } = cameraEntity.postProcessing!;
+  return Number.isFinite(opacity) && opacity !== 0 && opacity !== 1;
+};
 
-      // Film Grain
-      [["postProcessing", "filmGrain"], "USE_FILM_GRAIN"],
-      [["postProcessing", "filmGrain", "quality"], "FILM_GRAIN_QUALITY", { type: "value", requires: "USE_FILM_GRAIN" }],
-      [["postProcessing", "filmGrain", "size"], "", { uniform: "uFilmGrainSize", requires: "USE_FILM_GRAIN" }],
-      [["postProcessing", "filmGrain", "intensity"], "", { uniform: "uFilmGrainIntensity", requires: "USE_FILM_GRAIN" }],
-      [["postProcessing", "filmGrain", "colorIntensity"], "", { uniform: "uFilmGrainColorIntensity", requires: "USE_FILM_GRAIN" }],
-      [["postProcessing", "filmGrain", "luminanceIntensity"], "", { uniform: "uFilmGrainLuminanceIntensity", requires: "USE_FILM_GRAIN" }],
-      [["postProcessing", "filmGrain", "speed"], "", { uniform: "uFilmGrainSpeed", requires: "USE_FILM_GRAIN" }],
+const isEnabled = (context: PostProcessingContext) =>
+  usesFXAA(context) || usesFilmGrain(context) || usesOpacity(context);
 
-      [["options", "targets", "final.luma"], "LUMA_TEXTURE", { type: "texture", uniform: "uLumaTexture", requires: "USE_FXAA" }],
-      [["options", "targets", "final.luma"], "LUMA_TEXTURE", { type: "texture", uniform: "uLumaTexture", requires: "USE_FILM_GRAIN", excludes: "USE_FXAA" }],
+/**
+ * The last stage: anti-aliasing, grain and output opacity, all of which want
+ * the finished display-referred image.
+ */
+const final: PostProcessingEffect = {
+  name: "final",
+  srgb: true,
+  passes: ({ cameraEntity }) => {
+    const postProcessing = cameraEntity.postProcessing!;
+    const fxaa = postProcessing.fxaa;
+    const filmGrain = postProcessing.filmGrain;
 
-      // Output
-      [["postProcessing", "opacity"], "", { uniform: "uOpacity" }],
-    ],
-    enabled: isFinalMainEnabled,
-    passDesc: () => ({
-      clearColor: [0, 0, 0, 1],
-    }),
-    source: (options) =>
-      isSMAAEnabled(options) ? "smaa.blend" : "combine.main",
-  };
-
-  return [lumaPass, finalPass];
+    return [
+      {
+        name: "luma",
+        shader: lumaShader,
+        // Both consumers read luma per tap; computing it once is the point.
+        enabled: (context) => usesFXAA(context) || usesFilmGrain(context),
+        clearValue: [0, 0, 0, 1],
+        format: () => "r8unorm",
+      },
+      {
+        name: "main",
+        shader: finalShader,
+        chain: true,
+        enabled: isEnabled,
+        getDefines: (context) =>
+          new Set([
+            ...(usesFXAA(context) ? ["USE_FXAA"] : []),
+            ...(usesFilmGrain(context) ? ["USE_FILM_GRAIN"] : []),
+          ]),
+        constants: () => {
+          const edge = FXAA_THRESHOLDS[fxaa?.quality!] ?? FXAA_THRESHOLDS[2];
+          return {
+            ...(fxaa && {
+              FXAA_EDGE_THRESHOLD_MIN: edge.min,
+              FXAA_EDGE_THRESHOLD_MAX: edge.max,
+            }),
+            ...(filmGrain && { FILM_GRAIN_QUALITY: filmGrain.quality! }),
+          };
+        },
+        clearValue: [0, 0, 0, 1],
+        uniforms: ({ targets, samplers }) => ({
+          uFinal: {
+            subPixelQuality: fxaa?.subPixelQuality ?? 0,
+            filmGrainSize: filmGrain?.size ?? 0,
+            filmGrainIntensity: filmGrain?.intensity ?? 0,
+            filmGrainColorIntensity: filmGrain?.colorIntensity ?? 0,
+            filmGrainLuminanceIntensity: filmGrain?.luminanceIntensity ?? 0,
+            filmGrainSpeed: filmGrain?.speed ?? 0,
+            opacity: postProcessing.opacity ?? 1,
+          },
+          ...(targets.has("final.luma") && {
+            uLumaTexture: targets.get("final.luma")!,
+            uLumaTextureSampler: samplers.linear,
+          }),
+        }),
+      },
+    ];
+  },
 };
 
 export default final;

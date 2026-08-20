@@ -120,7 +120,7 @@ export const STANDARD_MATERIAL_LIT_FIELDS: readonly FeatureField[] = [
   // the effect, gated by a same-named `override` constant instead of by
   // string presence — materials that differ only by one of these effects
   // being on/off then share one compiled shader module (see FeatureField.runtime).
-  { key: "clearCoat", define: MATERIAL_DEFINE.clearCoat, wgslType: "f32", default: 0, runtime: true },
+  { key: "clearCoat", define: MATERIAL_DEFINE.clearCoat, truthy: true, wgslType: "f32", default: 0, runtime: true },
   { key: "clearCoatRoughness", requires: MATERIAL_DEFINE.clearCoat, wgslType: "f32", default: 0, runtime: true },
   { key: "clearCoatTexture", requires: MATERIAL_DEFINE.clearCoat, define: MATERIAL_DEFINE.clearCoatTexture, texture: true },
   { key: "clearCoatRoughnessTexture", requires: MATERIAL_DEFINE.clearCoat, define: MATERIAL_DEFINE.clearCoatRoughnessTexture, texture: true },
@@ -140,17 +140,17 @@ export const STANDARD_MATERIAL_LIT_FIELDS: readonly FeatureField[] = [
   // KHR_materials_transmission/dispersion. transmission: 0 behaves like unset.
   { key: "transmission", define: MATERIAL_DEFINE.transmission, truthy: true, wgslType: "f32", default: 0, runtime: true },
   { key: "transmissionTexture", requires: MATERIAL_DEFINE.transmission, define: MATERIAL_DEFINE.transmissionTexture, texture: true },
-  { key: "dispersion", requires: MATERIAL_DEFINE.transmission, define: MATERIAL_DEFINE.dispersion, wgslType: "f32", default: 0, runtime: true },
+  { key: "dispersion", requires: MATERIAL_DEFINE.transmission, define: MATERIAL_DEFINE.dispersion, truthy: true, wgslType: "f32", default: 0, runtime: true },
 
   // KHR_materials_diffuse_transmission.
-  { key: "diffuseTransmission", define: MATERIAL_DEFINE.diffuseTransmission, wgslType: "f32", default: 0, runtime: true },
+  { key: "diffuseTransmission", define: MATERIAL_DEFINE.diffuseTransmission, truthy: true, wgslType: "f32", default: 0, runtime: true },
   { key: "diffuseTransmissionColor", requires: MATERIAL_DEFINE.diffuseTransmission, wgslType: "vec3f", default: [1, 1, 1], runtime: true },
   { key: "diffuseTransmissionTexture", requires: MATERIAL_DEFINE.diffuseTransmission, define: MATERIAL_DEFINE.diffuseTransmissionTexture, texture: true },
   { key: "diffuseTransmissionColorTexture", requires: MATERIAL_DEFINE.diffuseTransmission, define: MATERIAL_DEFINE.diffuseTransmissionColorTexture, texture: true },
 
   // KHR_materials_volume — shared by transmission and diffuse transmission
   // (Beer's law attenuation).
-  { key: "thickness", define: MATERIAL_DEFINE.volume, wgslType: "f32", default: 0, runtime: true },
+  { key: "thickness", define: MATERIAL_DEFINE.volume, truthy: true, wgslType: "f32", default: 0, runtime: true },
   { key: "attenuationColor", requires: MATERIAL_DEFINE.volume, wgslType: "vec3f", default: [1, 1, 1], runtime: true },
   { key: "attenuationDistance", requires: MATERIAL_DEFINE.volume, wgslType: "f32", default: Infinity, runtime: true },
   { key: "thicknessTexture", requires: MATERIAL_DEFINE.volume, define: MATERIAL_DEFINE.thicknessTexture, texture: true },
@@ -735,7 +735,6 @@ override USE_NORMAL_TEXTURE: bool = ${materialFlags.normalTexture};
 override USE_CLEAR_COAT_NORMAL_TEXTURE: bool = ${materialFlags.clearCoatNormalTexture};
 override USE_CLEAR_COAT_ROUGHNESS_FROM_MAIN_TEXTURE: bool = ${materialFlags.clearCoatRoughnessFromMainTexture};
 override USE_SHEEN_ROUGHNESS_FROM_MAIN_TEXTURE: bool = ${materialFlags.sheenRoughnessFromMainTexture};
-override USE_SSAO_COLORS: bool = false;
 override DEPTH_PACK_FAR: f32 = 10.0;
 // Genuinely overridable (unlike the toggles above, which change bind group
 // layout/struct fields and so must be baked per-variant): none of these gate
@@ -836,7 +835,8 @@ ${SHADERS.encodeDecode}
 ${SHADERS.textureCoordinates}
 ${SHADERS.baseColor}
 ${SHADERS.alpha}
-${SHADERS.ambientOcclusion}
+${(SHADERS.ambientOcclusion as any).multiBounce}
+${(SHADERS.ambientOcclusion as any).texture}
 ${SHADERS.math.max3}
 ${SHADERS.reversibleToneMap}
 

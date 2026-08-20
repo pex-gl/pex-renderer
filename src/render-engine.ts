@@ -118,10 +118,12 @@ export default ({
     /**
      * Declare, compile and execute one frame.
      *
-     * Async because effects are imported on demand, so declaration may await.
-     * Call it from an async `gpu.frame` callback: that keeps one segment open
-     * across the whole tick, so this and everything drawn after it — GUI
-     * included — share a command buffer.
+     * Async because `stage()` hooks may be. Call it from an async `gpu.frame`
+     * callback: that keeps one segment open across the whole tick, so this and
+     * everything drawn after it — GUI included — share a command buffer. What
+     * it awaits must never yield long enough for the browser to present, which
+     * destroys the swapchain texture the open segment holds and fails the
+     * submit for the entire frame.
      *
      * All cameras share one graph, so a target finished by the first camera can
      * back a different one for the second: peak memory tracks the heaviest

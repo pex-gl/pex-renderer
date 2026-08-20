@@ -426,10 +426,14 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
 
     // ─── Post-processing ─────────────────────────────────────────────────────
     if (postProcessing) {
-      color = await this.renderPostProcessing({
+      color = this.renderPostProcessing({
         renderView: renderPassView,
         color,
-        depth: depthAttachment,
+        // Multisampled depth can't be sampled (see the attachment note above),
+        // so under MSAA the effects that read it — SSAO, DoF, fog — sit this
+        // frame out rather than fail validation. Lifting that needs a depth
+        // resolve pass.
+        ...(!msaa && depthAttachment && { depth: depthAttachment }),
         normal: colorAttachments.normal,
         emissive: colorAttachments.emissive,
       });
@@ -453,7 +457,7 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
       frameGraph.addPass({
         name: `BlitPass_${viewId}`,
         // No color handles: the canvas is the target.
-        uniforms: { uTexture: presented, uSampler: this.blitSampler },
+        uniforms: { uTexture: presented, uTextureSampler: this.blitSampler },
         renderView,
         // Its whole point is a side effect on the swapchain, which the graph
         // has no resource for.

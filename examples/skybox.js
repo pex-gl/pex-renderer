@@ -40,7 +40,7 @@ const cameraEntity = createEntity({
     near: 0.1,
     far: 100,
   }),
-  // postProcessing: components.postProcessing(),
+  postProcessing: components.postProcessing(),
   orbiter: components.orbiter({ element: ctx.canvas }),
 });
 world.add(cameraEntity);
@@ -239,9 +239,9 @@ window.addEventListener("keydown", ({ key }) => {
   if (key === "d") debugOnce = true;
 });
 
-gpu.frame(ctx, () => {
+gpu.frame(ctx, async () => {
   renderEngine.update(world.entities);
-  renderEngine.render(world.entities, cameraEntity);
+  await renderEngine.render(world.entities, cameraEntity);
 
   guiSkyTextureControl.texture =
     skyboxEntity.skybox._skyTexture || dummyTexture2D;

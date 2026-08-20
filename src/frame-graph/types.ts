@@ -203,7 +203,11 @@ export interface CompiledResource {
   kind: "texture" | "buffer";
   imported: boolean;
   descriptor: TextureDescriptor | BufferDescriptor;
-  /** Derived from how passes use the resource, never requested. */
+  /**
+   * Derived from how passes use the resource — plus a sampled read for
+   * anything exported, which is read where no pass can declare it. Never
+   * requested.
+   */
   usage: GPUTextureUsageFlags | GPUBufferUsageFlags;
   /** Never sampled and never outlives its pass, so it can stay memoryless. */
   transient: boolean;

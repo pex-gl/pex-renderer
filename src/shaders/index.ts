@@ -6,6 +6,7 @@ export * as error from "./error.js";
 export * as helper from "./helper.js";
 export * as line from "./line.js";
 export * as overlay from "./overlay.js";
+export * as postProcessing from "./post-processing/index.js";
 export * as reversibleToneMap from "./reversible-tone-map.js";
 export * as sky from "./sky.js";
 export * as skybox from "./skybox.js";

@@ -42,9 +42,9 @@ const helpersEntity = createEntity({
 });
 world.add(helpersEntity);
 
-gpu.frame(ctx, () => {
+gpu.frame(ctx, async () => {
   renderEngine.update(world.entities);
-  renderEngine.render(world.entities, cameraEntity);
+  await renderEngine.render(world.entities, cameraEntity);
 
   window.dispatchEvent(new CustomEvent("screenshot"));
 });

@@ -182,6 +182,15 @@ class BlueNoiseSamples {
 }
 
 class BlueNoiseGenerator {
+  // Declared (and so visible to consumers) but not emitted: the fields are
+  // assigned in the constructor, like the rest of this untyped port.
+  declare random: () => number;
+  declare sigma: number;
+  declare size: number;
+  declare majorityPointsRatio: number;
+  declare samples: BlueNoiseSamples;
+  declare savedSamples: BlueNoiseSamples;
+
   constructor() {
     this.random = Math.random;
     this.sigma = 1.5;

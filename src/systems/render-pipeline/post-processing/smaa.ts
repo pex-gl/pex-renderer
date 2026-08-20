@@ -1,164 +1,158 @@
-// @ts-nocheck
-import { chunks as SHADERS, smaa as SMAA } from "pex-shaders";
-
+import { createTexture } from "pex-gpu";
 import { loadImage } from "pex-io";
-import { isFinalMainEnabled } from "./final.js";
+import * as pexShaders from "pex-shaders";
 
-// prettier-ignore
-export const smaaPresetsFlagDefinitions = [
-  [["postProcessing", "smaa", "quality"], "SMAA_PRESET_LOW", { compare: 0 }],
-  [["postProcessing", "smaa", "quality"], "SMAA_PRESET_MEDIUM", { compare: 1 }],
-  [["postProcessing", "smaa", "quality"], "SMAA_PRESET_HIGH", { compare: 2 }],
-  [["postProcessing", "smaa", "quality"], "SMAA_PRESET_ULTRA", { compare: 3 }],
-]
+import {
+  smaaBlendShader,
+  smaaEdgesShader,
+  smaaWeightsShader,
+} from "../../../shaders/post-processing/smaa.js";
+import { NAMESPACE } from "../../../utils.js";
 
-export const isSMAAEnabled = ({ cameraEntity }) =>
-  cameraEntity.postProcessing.smaa;
+import type { GpuContext, GpuTexture } from "../../../types.js";
+import type { PostProcessingEffect } from "../post-processing.js";
 
-const getVertexShader = (source) => `${SHADERS.output.vert}
-${source}`;
+// pex-shaders' generated types lag its exports until it is rebuilt.
+const { SMAATextures } = pexShaders as any;
 
-const replaceAfter = (source, regex, replacement) => {
-  const lastMatch = [...source.matchAll(regex)].at(-1);
-  const i = lastMatch.index + lastMatch[0].length;
-  return `${source.slice(0, i)}${replacement}${source.slice(i)}`;
+// The reference's presets. Low and medium drop diagonal and corner detection
+// outright, which is most of what makes them cheap.
+const PRESETS = [
+  { threshold: 0.15, searchSteps: 4, searchStepsDiag: 8, cornerRounding: 25, diagonals: false, corners: false },
+  { threshold: 0.1, searchSteps: 8, searchStepsDiag: 8, cornerRounding: 25, diagonals: false, corners: false },
+  { threshold: 0.1, searchSteps: 16, searchStepsDiag: 8, cornerRounding: 25, diagonals: true, corners: true },
+  { threshold: 0.05, searchSteps: 32, searchStepsDiag: 16, cornerRounding: 25, diagonals: true, corners: true },
+] as const;
+
+const EDGES_DEFINE: Record<string, string> = {
+  color: "SMAA_EDGES_COLOR",
+  depth: "SMAA_EDGES_DEPTH",
 };
 
-const getFragmentShader = (source) =>
-  replaceAfter(
-    replaceAfter(
-      source,
-      /precision\s+(lowp|mediump|highp)\s+\w+\s*;/g,
-      SHADERS.output.frag,
-    ),
-    /(gl_FragColor|gl_FragData\[0\])\s*=[^;]*;/g,
-    SHADERS.output.assignment,
-  );
+/** The precomputed area and search lookups: fixed data, one pair per context. */
+interface SMAALookups {
+  area?: GpuTexture;
+  search?: GpuTexture;
+}
+const lookups = new WeakMap<GpuContext, SMAALookups>();
 
-const {
-  SMAATextures,
-  PRESETS,
-  SMAA_EDGES_VERT,
-  SMAA_EDGES_FRAG,
-  SMAA_WEIGHTS_FRAG,
-  SMAA_WEIGHTS_VERT,
-  SMAA_BLEND_VERT,
-  SMAA_BLEND_FRAG,
-} = SMAA;
+function getLookups(ctx: GpuContext): SMAALookups {
+  let entry = lookups.get(ctx);
+  if (entry) return entry;
 
-const smaa = ({ ctx, resourceCache, descriptors }) => {
-  const edgesPass = {
-    name: "edges",
-    vert: getVertexShader(SMAA_EDGES_VERT),
-    frag: getFragmentShader(`${PRESETS}\n${SMAA_EDGES_FRAG}`),
-    // prettier-ignore
-    flagDefinitions: [
-      [["options", "targets", "combine.main"], "", { type: "texture", uniform: "uColorTexture" }],
-      [["postProcessing", "smaa", "edges"], "SMAA_EDGES_DEPTH", { compare: "depth" }],
-      [["postProcessing", "smaa", "edges"], "SMAA_EDGES_LUMA", { compare: "luma", }],
-      [["postProcessing", "smaa", "edges"], "SMAA_EDGES_COLOR", { compare: "color" }],
-      // [["postProcessing", "smaa", "predication"], "SMAA_PREDICATION 1"],
-      ...smaaPresetsFlagDefinitions,
-    ],
-    enabled: isSMAAEnabled,
-    passDesc: () => ({
-      clearColor: [0, 0, 0, 1],
-    }),
-    target: ({ viewport }) =>
-      resourceCache.texture2D({
-        ...descriptors.postProcessing.srgbOutputTextureDesc,
-        pixelFormat: ctx.gl.RG ? ctx.PixelFormat.RG8 : ctx.PixelFormat.RGBA8,
-        width: viewport[2],
-        height: viewport[3],
-      }),
-  };
-  const weightPass = {
-    name: "weights",
-    vert: getVertexShader(`${PRESETS}\n${SMAA_WEIGHTS_VERT}`),
-    frag: getFragmentShader(`${PRESETS}\n${SMAA_WEIGHTS_FRAG}`),
-    // prettier-ignore
-    flagDefinitions: [
-      [["options", "targets", "smaa.edges"], "", { type: "texture", uniform: "uEdgesTexture" }],
-      [["postProcessing", "smaa", "_smaaAreaTex"], "", { type: "texture", uniform: "uAreaTexture", }],
-      [["postProcessing", "smaa", "_smaaSearchTex"], "", { type: "texture", uniform: "uSearchTexture", }],
-      ...smaaPresetsFlagDefinitions,
-    ],
-    passDesc: () => ({
-      clearColor: [0, 0, 0, 1],
-    }),
-    enabled: (options) => {
-      const isEnabled = isSMAAEnabled(options);
-      const { cameraEntity } = options;
+  entry = {};
+  lookups.set(ctx, entry);
 
-      if (isEnabled) {
-        if (
-          !cameraEntity.postProcessing.smaa._smaaAreaTex &&
-          !cameraEntity.postProcessing.smaa._smaaAreaTexLoading
-        ) {
-          cameraEntity.postProcessing.smaa._smaaAreaTexLoading = true;
-          (async () => {
-            const image = await loadImage(SMAATextures.area);
-            cameraEntity.postProcessing.smaa._smaaAreaTex = ctx.texture2D({
-              data: image,
-              pixelFormat: ctx.PixelFormat.RGBA8,
-              mag: ctx.Filter.Linear,
-              min: ctx.Filter.Linear,
-            });
-            cameraEntity.postProcessing.smaa._smaaAreaTex.name = `smaaAreaTexture`;
-          })();
-        }
-        if (
-          !cameraEntity.postProcessing.smaa._smaaSearchTex &&
-          !cameraEntity.postProcessing.smaa._smaaSearchTexLoading
-        ) {
-          cameraEntity.postProcessing.smaa._smaaSearchTexLoading = true;
-          (async () => {
-            const image = await loadImage(SMAATextures.search);
-            cameraEntity.postProcessing.smaa._smaaSearchTex = ctx.texture2D({
-              data: image,
-              pixelFormat: ctx.PixelFormat.RGBA8,
-              mag: ctx.Filter.Nearest,
-              min: ctx.Filter.Nearest,
-              flipY: true,
-            });
-            cameraEntity.postProcessing.smaa._smaaSearchTex.name = `smaaSearchTexture`;
-          })();
-        }
-      }
+  const loaded = entry;
+  Promise.all([loadImage(SMAATextures.area), loadImage(SMAATextures.search)])
+    .then(([area, search]) => {
+      // No flipY, unlike the WebGL version: the WGSL port keeps the
+      // reference's top-left texture origin, which WebGPU shares.
+      loaded.area = createTexture(ctx, {
+        label: "smaaAreaTexture",
+        data: area,
+        format: "rgba8unorm",
+      });
+      loaded.search = createTexture(ctx, {
+        label: "smaaSearchTexture",
+        data: search,
+        format: "rgba8unorm",
+      });
+    })
+    .catch((error: unknown) => {
+      console.error(
+        NAMESPACE,
+        "post-processing",
+        "smaa lookup textures failed to load",
+        error,
+      );
+    });
 
-      return isEnabled;
-    },
-    // source: () => "smaa.edges",
-    target: ({ viewport }) =>
-      resourceCache.texture2D({
-        ...descriptors.postProcessing.srgbOutputTextureDesc,
-        width: viewport[2],
-        height: viewport[3],
-      }),
-  };
-  const blendPass = {
-    name: "blend",
-    vert: getVertexShader(SMAA_BLEND_VERT),
-    frag: getFragmentShader(SMAA_BLEND_FRAG),
-    // prettier-ignore
-    flagDefinitions: [
-      [["options", "targets", "combine.main"], "", { type: "texture", uniform: "uColorTexture" }],
-      [["options", "targets", "smaa.weights"], "", { type: "texture", uniform: "uBlendTexture" }],
-    ],
-    enabled: isSMAAEnabled,
-    passDesc: () => ({
-      clearColor: [0, 0, 0, 1],
-    }),
-    target: ({ cameraEntity, viewport }) =>
-      isFinalMainEnabled({ cameraEntity }) &&
-      resourceCache.texture2D({
-        ...descriptors.postProcessing.srgbOutputTextureDesc,
-        width: viewport[2],
-        height: viewport[3],
-      }),
-  };
+  return entry;
+}
 
-  return [edgesPass, weightPass, blendPass];
+/**
+ * Subpixel morphological anti-aliasing, 1x.
+ *
+ * Three passes: detect edges, turn them into blending weights against the
+ * precomputed area/search lookups, then blend. Runs on the display-referred
+ * image, which is what its perceptual thresholds are tuned for.
+ *
+ * The intermediate targets hold data, not color, so they opt out of the sRGB
+ * format the rest of this stage uses.
+ */
+const smaa: PostProcessingEffect = {
+  name: "smaa",
+  srgb: true,
+  // Skipped until the lookups have loaded rather than drawn with a placeholder:
+  // one or two frames without anti-aliasing beats one with wrong weights.
+  enabled: ({ ctx, cameraEntity, depth }) => {
+    const { area, search } = getLookups(ctx);
+    if (!area || !search) return false;
+    return cameraEntity.postProcessing!.smaa!.edges !== "depth" || !!depth;
+  },
+  passes: ({ cameraEntity }) => {
+    const component = cameraEntity.postProcessing!.smaa!;
+    const preset = PRESETS[component.quality!] ?? PRESETS[2];
+
+    return [
+      {
+        name: "edges",
+        shader: smaaEdgesShader,
+        getDefines: () =>
+          new Set(
+            EDGES_DEFINE[component.edges!] ? [EDGES_DEFINE[component.edges!]!] : [],
+          ),
+        constants: () => ({
+          SMAA_THRESHOLD: preset.threshold,
+          SMAA_SRGB_INPUT: true,
+        }),
+        clearValue: [0, 0, 0, 0],
+        format: () => "rg8unorm",
+        uniforms: ({ depth, samplers }) => ({
+          ...(component.edges === "depth" && {
+            uDepthTexture: depth!,
+            uDepthTextureSampler: samplers.nearest,
+          }),
+        }),
+      },
+      {
+        name: "weights",
+        shader: smaaWeightsShader,
+        constants: () => ({
+          SMAA_MAX_SEARCH_STEPS: preset.searchSteps,
+          SMAA_MAX_SEARCH_STEPS_DIAG: preset.searchStepsDiag,
+          SMAA_CORNER_ROUNDING: preset.cornerRounding,
+          SMAA_DISABLE_DIAG_DETECTION: !preset.diagonals,
+          SMAA_DISABLE_CORNER_DETECTION: !preset.corners,
+        }),
+        clearValue: [0, 0, 0, 0],
+        format: () => "rgba8unorm",
+        source: () => "smaa.edges",
+        uniforms: ({ ctx, targets, samplers }) => {
+          const { area, search } = getLookups(ctx);
+          return {
+            uEdgesTexture: targets.get("smaa.edges")!,
+            uEdgesTextureSampler: samplers.linear,
+            uAreaTexture: area!,
+            uAreaTextureSampler: samplers.linear,
+            uSearchTexture: search!,
+            uSearchTextureSampler: samplers.nearest,
+          };
+        },
+      },
+      {
+        name: "blend",
+        shader: smaaBlendShader,
+        chain: true,
+        clearValue: [0, 0, 0, 0],
+        uniforms: ({ targets, samplers }) => ({
+          uBlendTexture: targets.get("smaa.weights")!,
+          uBlendTextureSampler: samplers.linear,
+        }),
+      },
+    ];
+  },
 };
 
 export default smaa;

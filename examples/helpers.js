@@ -55,7 +55,7 @@ const cameraEntity = createEntity({
     far: 100,
     viewport: [0, 0, Math.floor(splitRatio * W), H],
   }),
-  // postProcessing: components.postProcessing(),
+  postProcessing: components.postProcessing(),
   orbiter: components.orbiter({ element: ctx.canvas, maxDistance: 1 }),
   cameraHelper: components.cameraHelper({ color: [0, 1, 0, 1] }),
 });
@@ -343,9 +343,9 @@ gui.addParam("Scale", State, "scale", { min: 0, max: 2 }, () => {
   }
 });
 
-gpu.frame(ctx, () => {
+gpu.frame(ctx, async () => {
   renderEngine.update(world.entities);
-  renderEngine.render(
+  await renderEngine.render(
     world.entities,
     world.entities.filter((entity) => entity.camera),
   );

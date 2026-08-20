@@ -1,1 +1,1 @@
-Damien Seguin from Blender
+furnace.hdr: Damien Seguin, 32x16, constant 1.0 (RGBE 255,255,255,128)

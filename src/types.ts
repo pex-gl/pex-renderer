@@ -509,18 +509,25 @@ export interface PostProcessingComponentOptions {
   msaa?: MSAAComponentOptions;
   filmGrain?: FilmGrainComponentOptions;
   exposure?: number;
+  /** Tone map operator, or null to leave the image scene-referred. */
   toneMap?:
     | "aces"
+    | "acesHill"
     | "agx"
+    | "agxGolden"
+    | "agxNeedle"
     | "agxPunchy"
     | "filmic"
+    | "hejl"
     | "lottes"
     | "neutral"
     | "reinhard"
     | "reinhard2"
+    | "reinhardJodie"
     | "uchimura"
     | "uncharted2"
-    | "unreal";
+    | "unreal"
+    | null;
   opacity?: number;
 }
 /**
@@ -743,7 +750,6 @@ export interface RendererSystem {
   type: string;
   cache?: Record<number, any>;
   debug?: boolean;
-  flagDefinitions?: unknown[];
   [key: string]: any;
 }
 

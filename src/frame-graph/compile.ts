@@ -170,7 +170,15 @@ export default function compile(
         })
       : 0,
     transient: false,
-    usage: entry.usage,
+    // A resource read outside the graph has no pass to declare that read in,
+    // and the only way to read a texture out there is to sample it — so the
+    // usage has to come from the export itself. Covers persistent resources
+    // too: `createTexture({ persistent: true })` exports by definition.
+    usage:
+      entry.usage |
+      (entry.exported && entry.kind === "texture"
+        ? GPUTextureUsage.TEXTURE_BINDING
+        : 0),
     ...(entry.imported && { physical: entry.imported }),
   }));
 

@@ -14,15 +14,22 @@ import { sphere } from "primitive-geometry";
 import gridCells from "grid-cells";
 
 import { getGpuTexture, getURL } from "./utils.js";
+import { getRenderPassGraphViz } from "./graph-viz.js";
 
 const pixelRatio = devicePixelRatio;
 const ctx = await gpu.createContext({ pixelRatio });
 const renderEngine = createRenderEngine({ ctx, debug: true });
 const world = createWorld();
 
+const renderPassGraphViz = getRenderPassGraphViz();
+renderPassGraphViz.init(ctx, renderEngine.frameGraph);
+
 const gui = createGUI(ctx);
 gui.addFPSMeeter().setPosition(10, 40);
 gui.addStats();
+gui.addButton("Toggle Render Pass Graph", () => {
+  renderPassGraphViz.toggle();
+});
 
 const nW = 4;
 const nH = 3;
@@ -213,7 +220,7 @@ for (let i = 0; i < nW * nH; i++) {
       position: [0, 0, 2],
     }),
     camera: components.camera(),
-    // postProcessing: components.postProcessing(), // systems/render-pipeline/post-processing.ts is not ported to pex-gpu yet
+    postProcessing: components.postProcessing(),
     orbiter: components.orbiter({ element: ctx.canvas }),
   });
   world.add(cameraEntity);
@@ -296,9 +303,9 @@ window.addEventListener("keydown", ({ key }) => {
   if (key === "d") debugOnce = true;
 });
 
-gpu.frame(ctx, () => {
+gpu.frame(ctx, async () => {
   renderEngine.update(world.entities);
-  renderEngine.render(
+  await renderEngine.render(
     world.entities,
     world.entities.filter((entity) => entity.camera),
   );

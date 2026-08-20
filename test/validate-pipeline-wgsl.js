@@ -1,26 +1,36 @@
 // Compiles representative option combinations of the WGSL pipeline shaders
-// (src/shaders/*.js) through Dawn's real WGSL front-end, the same way
-// pex-shaders' test/validate-wgsl.js does for its chunks.
+// (shaders/*.js) through Dawn's real WGSL front-end, the same way pex-shaders'
+// test/validate-wgsl.js does for its chunks.
 //
 // Pipeline shaders are self-contained generator functions -
 // (defines, options) => wgslString - each producing one module with both a
 // @vertex and a @fragment entry point, so each variant below is compiled as
 // a single complete module, no stub types/overrides needed.
+//
+// Imported from lib/, so it needs a build first (like test/frame-graph.js).
 
 import { create, globals } from "webgpu";
-import basic from "../src/shaders/basic.js";
-import standard from "../src/shaders/standard.js";
-import blit from "../src/shaders/blit.js";
-import reversibleToneMap from "../src/shaders/reversibleToneMap.js";
-import depthPass from "../src/shaders/depth-pass.js";
-import depthPrePass from "../src/shaders/depth-pre-pass.js";
-import line from "../src/shaders/line.js";
-import overlay from "../src/shaders/overlay.js";
-import helper from "../src/shaders/helper.js";
-import error from "../src/shaders/error.js";
-import sky from "../src/shaders/sky.js";
 
+// Before importing the shaders: they reach pex-gpu, which reads WebGPU
+// constants (GPUBufferUsage and friends) at module evaluation time.
 Object.assign(globalThis, globals);
+
+const shaders = await import("../lib/shaders/index.js");
+
+const {
+  basic,
+  standard,
+  blit,
+  reversibleToneMap,
+  depthPass,
+  depthPrePass,
+  line,
+  overlay,
+  helper,
+  error,
+  sky,
+  postProcessing,
+} = shaders;
 
 const gpu = create([]);
 const adapter = await gpu.requestAdapter();
@@ -158,38 +168,83 @@ const skyVariants = [
   { name: "hooks", defines: new Set(), options: { hooks: { vertEnd: "// hook", fragEnd: "// hook" } } },
 ];
 
+// One entry per post-processing sub-pass shader, at every define combination
+// the effect descriptors can produce.
+const postProcessingVariants = [
+  { name: "threshold [color source]", shader: postProcessing.thresholdShader, defines: new Set(["USE_SOURCE_COLOR"]) },
+  { name: "threshold [emissive source]", shader: postProcessing.thresholdShader, defines: new Set(["USE_SOURCE_EMISSIVE", "USE_EMISSIVE_TEXTURE"]) },
+  { name: "threshold [color + emissive, luminance]", shader: postProcessing.thresholdShader, defines: new Set(["USE_EMISSIVE_TEXTURE", "COLOR_FUNCTION_LUMINANCE"]) },
+  { name: "threshold [average]", shader: postProcessing.thresholdShader, defines: new Set(["COLOR_FUNCTION_AVERAGE"]) },
+  { name: "downsample [box]", shader: postProcessing.downsampleShader, defines: new Set(["QUALITY_0"]) },
+  { name: "downsample [anti-flicker]", shader: postProcessing.downsampleShader, defines: new Set() },
+  { name: "upsample [bilinear]", shader: postProcessing.upsampleShader, defines: new Set(["QUALITY_0"]) },
+  { name: "upsample [tent]", shader: postProcessing.upsampleShader, defines: new Set() },
+  { name: "gtao", shader: postProcessing.gtaoShader, defines: new Set() },
+  { name: "sao", shader: postProcessing.saoShader, defines: new Set() },
+  { name: "bilateral blur", shader: postProcessing.bilateralBlurShader, defines: new Set() },
+  { name: "ssao mix", shader: postProcessing.ssaoMixShader, defines: new Set() },
+  { name: "dof [gustafsson]", shader: postProcessing.dofShader, defines: new Set(["USE_DOF_GUSTAFSSON"]) },
+  { name: "dof [upitis]", shader: postProcessing.dofShader, defines: new Set(["USE_DOF_UPITIS"]) },
+  { name: "dof [focus on screen point]", shader: postProcessing.dofShader, defines: new Set(["USE_DOF_GUSTAFSSON", "USE_FOCUS_ON_SCREEN_POINT"]) },
+  { name: "combine [bare]", shader: postProcessing.combineShader, defines: new Set() },
+  { name: "combine [fog]", shader: postProcessing.combineShader, defines: new Set(["USE_FOG"]) },
+  { name: "combine [ssao + bloom]", shader: postProcessing.combineShader, defines: new Set(["USE_SSAO", "USE_BLOOM"]) },
+  { name: "combine [grade]", shader: postProcessing.combineShader, defines: new Set(["USE_VIGNETTE", "USE_LUT", "USE_COLOR_CORRECTION"]) },
+  { name: "combine [everything]", shader: postProcessing.combineShader, defines: new Set(["USE_FOG", "USE_SSAO", "USE_BLOOM", "USE_VIGNETTE", "USE_LUT", "USE_COLOR_CORRECTION"]) },
+  // Every operator: only the selected one is included, so a broken source shows
+  // up in its own variant and nowhere else.
+  ...postProcessing.TONE_MAP_OPERATORS.map((operator) => ({
+    name: `combine [${operator}]`,
+    shader: postProcessing.combineShader,
+    defines: new Set([`${postProcessing.TONE_MAP_DEFINE}${operator}`]),
+  })),
+  { name: "smaa edges [luma]", shader: postProcessing.smaaEdgesShader, defines: new Set() },
+  { name: "smaa edges [color]", shader: postProcessing.smaaEdgesShader, defines: new Set(["SMAA_EDGES_COLOR"]) },
+  { name: "smaa edges [depth]", shader: postProcessing.smaaEdgesShader, defines: new Set(["SMAA_EDGES_DEPTH"]) },
+  { name: "smaa weights", shader: postProcessing.smaaWeightsShader, defines: new Set() },
+  { name: "smaa blend", shader: postProcessing.smaaBlendShader, defines: new Set() },
+  { name: "luma", shader: postProcessing.lumaShader, defines: new Set() },
+  { name: "final [opacity only]", shader: postProcessing.finalShader, defines: new Set() },
+  { name: "final [fxaa]", shader: postProcessing.finalShader, defines: new Set(["USE_FXAA"]) },
+  { name: "final [film grain]", shader: postProcessing.finalShader, defines: new Set(["USE_FILM_GRAIN"]) },
+  { name: "final [fxaa + film grain]", shader: postProcessing.finalShader, defines: new Set(["USE_FXAA", "USE_FILM_GRAIN"]) },
+];
+
 for (const v of basicVariants) {
-  await check(`basic [${v.name}]`, basic(v.defines, v.options));
+  await check(`basic [${v.name}]`, basic.basicShader(v.defines, v.options));
 }
 for (const v of standardVariants) {
-  await check(`standard [${v.name}]`, standard(v.defines, v.options));
+  await check(`standard [${v.name}]`, standard.standardShader(v.defines, v.options));
 }
 for (const v of blitVariants) {
-  await check(`blit [${v.name}]`, blit(v.defines, v.options));
+  await check(`blit [${v.name}]`, blit.blitShader(v.defines, v.options));
 }
 for (const v of reversibleToneMapVariants) {
-  await check(`reversibleToneMap [${v.name}]`, reversibleToneMap(v.defines, v.options));
+  await check(`reversibleToneMap [${v.name}]`, reversibleToneMap.reversibleToneMapShader(v.defines, v.options));
 }
 for (const v of depthPassVariants) {
-  await check(`depthPass [${v.name}]`, depthPass(v.defines, v.options));
+  await check(`depthPass [${v.name}]`, depthPass.depthPassShader(v.defines, v.options));
 }
 for (const v of depthPrePassVariants) {
-  await check(`depthPrePass [${v.name}]`, depthPrePass(v.defines, v.options));
+  await check(`depthPrePass [${v.name}]`, depthPrePass.depthPrePassShader(v.defines, v.options));
 }
 for (const v of lineVariants) {
-  await check(`line [${v.name}]`, line(v.defines, v.options));
+  await check(`line [${v.name}]`, line.lineShader(v.defines, v.options));
 }
 for (const v of overlayVariants) {
-  await check(`overlay [${v.name}]`, overlay(v.defines, v.options));
+  await check(`overlay [${v.name}]`, overlay.overlayShader(v.defines, v.options));
 }
 for (const v of helperVariants) {
-  await check(`helper [${v.name}]`, helper(v.defines, v.options));
+  await check(`helper [${v.name}]`, helper.helperShader(v.defines, v.options));
 }
 for (const v of errorVariants) {
-  await check(`error [${v.name}]`, error(v.defines, v.options));
+  await check(`error [${v.name}]`, error.errorShader(v.defines, v.options));
 }
 for (const v of skyVariants) {
-  await check(`sky [${v.name}]`, sky(v.defines, v.options));
+  await check(`sky [${v.name}]`, sky.skyShader(v.defines, v.options));
+}
+for (const v of postProcessingVariants) {
+  await check(`postProcessing ${v.name}`, v.shader(v.defines));
 }
 
 console.log(`\n${errorCount} errors, ${warningCount} warnings`);
