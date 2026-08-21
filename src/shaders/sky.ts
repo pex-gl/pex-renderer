@@ -1,6 +1,6 @@
 import { chunks as SHADERS } from "pex-shaders";
 
-import { vertexOutputStruct } from "./wgsl.js";
+import { fragmentOutputStruct, vertexOutputStruct } from "./wgsl.js";
 import type { PipelineShaderOptions } from "../types.js";
 
 // This shader bakes the analytic Preetham sky model (chunks.sky) into an
@@ -16,16 +16,7 @@ export const skyShader = (
   options: PipelineShaderOptions = {},
 ): string => {
   const hooks = options.hooks || {};
-  const {
-    locationNormal = -1,
-    locationEmissive = -1,
-    locationVelocity = -1,
-  } = options;
-
-  const useDrawBuffers = defines.has("USE_DRAW_BUFFERS");
-  const useNormalOutput = useDrawBuffers && locationNormal >= 0;
-  const useEmissiveOutput = useDrawBuffers && locationEmissive >= 0;
-  const useVelocityOutput = useDrawBuffers && locationVelocity >= 0;
+  const outputs = options.outputs ?? {};
 
   return /* wgsl */ `
 struct Sky {
@@ -48,12 +39,10 @@ ${vertexOutputStruct([
   { name: "mieDirectionalG", type: "f32" },
 ])}
 
-struct FragmentOutput {
-  @location(0) color: vec4f,
-  ${useNormalOutput ? `@location(${locationNormal}) normal: vec4f,` : ""}
-  ${useEmissiveOutput ? `@location(${locationEmissive}) emissive: vec4f,` : ""}
-  ${useVelocityOutput ? `@location(${locationVelocity}) velocity: vec4f,` : ""}
-}
+${fragmentOutputStruct([
+  outputs.normal && { name: "normal", type: "vec4f" },
+  outputs.emissive && { name: "emissive", type: "vec4f" },
+])}
 
 // Vertex includes
 ${SHADERS.math.PI}
@@ -109,9 +98,8 @@ fn fragmentMain(input: VertexOutput) -> FragmentOutput {
 
   output.color = vec4f(color, 1.0);
 
-  ${useNormalOutput ? "output.normal = vec4f(0.0, 0.0, 1.0, 1.0);" : ""}
-  ${useEmissiveOutput ? "output.emissive = vec4f(0.0);" : ""}
-  ${useVelocityOutput ? "output.velocity = vec4f(0.5, 0.5, 0.5, 1.0);" : ""}
+  ${outputs.normal ? "output.normal = vec4f(0.0, 0.0, 1.0, 1.0);" : ""}
+  ${outputs.emissive ? "output.emissive = vec4f(0.0);" : ""}
 
   ${hooks.fragEnd ?? ""}
 

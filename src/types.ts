@@ -1,6 +1,12 @@
-import type { GpuContext, GpuTexture, GpuBuffer, ExternalImageSource } from "pex-gpu";
+import type {
+  GpuContext,
+  GpuTexture,
+  GpuBuffer,
+  ExternalImageSource,
+  RenderPipeline,
+} from "pex-gpu";
 import type { Vec2, Vec3, Quat, Mat3, Mat4 } from "pex-math";
-import type { FrameGraph } from "./frame-graph/index.js";
+import type { FrameGraph, ResourceHandle } from "./frame-graph/index.js";
 
 /** Axis-aligned bounding box as [min, max]. */
 export type AABB = number[][];
@@ -664,15 +670,16 @@ export interface ShaderLightCounts {
   spot?: number;
   area?: number;
 }
+/** Which optional MRT fragment outputs a pipeline shader should emit, beyond color. */
+export interface FragmentOutputs {
+  normal?: boolean;
+  emissive?: boolean;
+}
 /** Options accepted by the pipeline WGSL generators in src/shaders. */
 export interface PipelineShaderOptions {
   hooks?: ShaderHooks;
-  /** MRT output location for the normal buffer, requires USE_DRAW_BUFFERS. */
-  locationNormal?: number;
-  /** MRT output location for the emissive buffer, requires USE_DRAW_BUFFERS. */
-  locationEmissive?: number;
-  /** MRT output location for the velocity buffer, requires USE_DRAW_BUFFERS. */
-  locationVelocity?: number;
+  /** Optional MRT fragment outputs (normal, emissive) this variant should emit. */
+  outputs?: FragmentOutputs;
   /** Size of the skinning joint matrix array. */
   maxJoints?: number;
   /** Per-texture texture coordinate set index (0 or 1), e.g. { baseColor: 1 }. */
@@ -727,7 +734,7 @@ export type RendererSystemRender = (
   options?: any,
 ) => void;
 export interface RendererSystemStageOptions {
-  attachmentsLocations?: Record<string, number>;
+  outputs?: FragmentOutputs;
   shadowMappingLight?: any;
   backgroundColorTexture?: GpuTexture | null;
   renderingToReflectionProbe?: boolean;
@@ -752,6 +759,126 @@ export interface RendererSystem {
   debug?: boolean;
   [key: string]: any;
 }
+
+// render-pipeline.ts's own state and top-level orchestration methods.
+export interface RenderPipelineCore {
+  type: string;
+  time: number;
+  debug: boolean;
+  debugRender: string;
+  reversibleToneMap: boolean;
+  descriptors: Record<string, any>;
+  fullscreen: any;
+  blitSampler: GPUSampler;
+  outputs: Set<string>;
+  colorFormat: GPUTextureFormat;
+  depthFormat: GPUTextureFormat;
+
+  drawMeshes(options: any): void;
+  generateGrabMips(
+    grabTexture: ResourceHandle,
+    levels: number,
+    name: string,
+  ): void;
+  update(
+    entities: Entity[],
+    options?: any,
+  ): Promise<Record<string, ResourceHandle>>;
+  dispose(entities: Entity[]): void;
+}
+// Members shadow-mapping.ts mixes into render-pipeline-system.
+export interface ShadowMappingMethods {
+  checkLight(light: any, lightEntity: Entity): true | undefined;
+  getLightVolumeTest(
+    lightEntity: Entity,
+    light: any,
+  ): (worldBounds: any) => boolean;
+  computeLightProperties(
+    lightEntity: Entity,
+    light: any,
+    participants: Entity[],
+  ): void;
+  computePointLightProperties(
+    lightEntity: Entity,
+    light: any,
+    participants: Entity[],
+  ): void;
+  createShadowMap(
+    light: any,
+    lightEntity: Entity,
+    name: string,
+    scope: string,
+    cubemap?: boolean,
+  ): ResourceHandle;
+  declareShadowMaps(
+    entities: Entity[],
+    renderers: RendererSystem[],
+    layer: string | undefined,
+  ): { shadowMaps: ResourceHandle[]; shadowCastingLights: any[] };
+  renderDirectionalLightShadowMap(
+    lightEntity: Entity,
+    entities: Entity[],
+    renderers: RendererSystem[],
+    scope: string,
+  ): ResourceHandle;
+  renderSpotLightShadowMap(
+    lightEntity: Entity,
+    entities: Entity[],
+    renderers: RendererSystem[],
+    scope: string,
+  ): ResourceHandle;
+  renderPointLightShadowMap(
+    lightEntity: Entity,
+    entities: Entity[],
+    renderers: RendererSystem[],
+    scope: string,
+  ): ResourceHandle;
+}
+/** Samplers a post-processing sub-pass binds alongside the textures it reads. */
+export interface PostProcessingSamplers {
+  /** Filtered, clamped: color reads, and the SMAA area lookup. */
+  linear: GPUSampler;
+  /** Unfiltered, clamped: depth reads, and the SMAA search lookup. */
+  nearest: GPUSampler;
+  /** Filtered, repeating: the tiled SSAO noise textures. */
+  linearRepeat: GPUSampler;
+}
+// Members post-processing.ts mixes into render-pipeline-system.
+export interface PostProcessingMethods {
+  postProcessingEffects: Map<string, any>;
+  postProcessingLoading: Map<string, Promise<void>>;
+  postProcessingPipelines: Map<string, RenderPipeline>;
+  fullscreenGeometry: any;
+  postProcessingSamplers: PostProcessingSamplers;
+  loadPostProcessingEffect(name: string): Promise<void> | undefined;
+  getPostProcessingPipeline(
+    key: string,
+    subPass: any,
+    defines: Set<string>,
+    constants: Record<string, number | boolean>,
+  ): RenderPipeline;
+  renderPostProcessing(args: { renderView: RenderView; textures: any }): void;
+}
+// Members culling.ts mixes into render-pipeline-system.
+export interface CullingMethods {
+  cullEntities(entities: Entity[], camera: any): Entity[];
+}
+/**
+ * The render-pipeline-system object built in
+ * systems/render-pipeline/render-pipeline.ts by spreading
+ * ShadowMappingMethods, PostProcessingMethods and CullingMethods into one
+ * literal alongside RenderPipelineCore. Declared once here rather than in any
+ * single one of those files because each calls back into members another one
+ * contributes (a shadow pass calls `drawMeshes`, post-processing reads
+ * `time`): a contributor types its return as its own slice (e.g.
+ * `ShadowMappingMethods`) intersected with `ThisType<RenderPipelineSystem>`,
+ * so `this` resolves across all of them instead of being typed from that
+ * one file's own object literal alone.
+ */
+export type RenderPipelineSystem = RenderPipelineCore &
+  ShadowMappingMethods &
+  PostProcessingMethods &
+  CullingMethods;
 
 // World
 export type WorldAdd = (entity: Entity) => void;

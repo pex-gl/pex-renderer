@@ -1,6 +1,6 @@
 import { chunks as SHADERS } from "pex-shaders";
 
-import { vertexOutputStruct } from "./wgsl.js";
+import { fragmentOutputStruct, vertexOutputStruct } from "./wgsl.js";
 import type { PipelineShaderOptions } from "../types.js";
 
 export const reversibleToneMapShader = (
@@ -33,9 +33,7 @@ ${SHADERS.reversibleToneMap}
 
 ${hooks.fragDeclarationsEnd ?? ""}
 
-struct FragmentOutput {
-  @location(0) color: vec4f,
-}
+${fragmentOutputStruct()}
 
 @fragment
 fn fragmentMain(input: VertexOutput) -> FragmentOutput {

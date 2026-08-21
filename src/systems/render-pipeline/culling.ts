@@ -1,12 +1,12 @@
 import { isAABBInFrustum } from "../../utils.js";
 
-import type { Entity } from "../../types.js";
+import type { CullingMethods, Entity } from "../../types.js";
 
 const isEntityInFrustum = (entity: Entity, frustum: any) =>
   entity.geometry!.culled === false ||
   isAABBInFrustum(entity.transform!.worldBounds, frustum);
 
-export default () => ({
+export default (): CullingMethods => ({
   cullEntities: (entities: Entity[], camera: any) => {
     if (!camera.culling) return entities;
 

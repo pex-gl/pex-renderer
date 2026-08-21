@@ -2,6 +2,7 @@ import { mat4 } from "pex-math";
 import { fromLinear } from "pex-color";
 
 import { components, entity as createEntity, systems } from "../../index.js";
+import { mapKeys } from "../../utils.js";
 
 import type { GltfDocument, ResolvedGltfNode } from "./document.js";
 import type { Entity } from "../../types.js";
@@ -198,12 +199,8 @@ function buildNode(
       };
       if (morph) {
         entityProps.morph = components.morph({
-          sources: Object.fromEntries(
-            Object.entries(morph.sources).map(([key, value]) => [mapAttributeName(key), value]),
-          ),
-          targets: Object.fromEntries(
-            Object.entries(morph.targets).map(([key, value]) => [mapAttributeName(key), value]),
-          ),
+          sources: mapKeys(morph.sources, mapAttributeName),
+          targets: mapKeys(morph.targets, mapAttributeName),
           weights: morph.weights,
         });
       }

@@ -1,10 +1,18 @@
 import { submit, createSampler } from "pex-gpu";
+import type { RenderPipeline } from "pex-gpu";
 
 import createFullscreenGeometry from "../../fullscreen-geometry.js";
-import { NAMESPACE, definesKey } from "../../utils.js";
+import { NAMESPACE, definesKey, mapValues } from "../../utils.js";
 import { isResourceHandle } from "../../frame-graph/types.js";
 
-import type { Entity, GpuContext, RenderView } from "../../types.js";
+import type {
+  Entity,
+  GpuContext,
+  PostProcessingMethods,
+  PostProcessingSamplers,
+  RenderPipelineSystem,
+  RenderView,
+} from "../../types.js";
 import type { RenderTextures } from "./render-textures.js";
 import type {
   FrameGraph,
@@ -34,16 +42,6 @@ const EFFECT_ORDER = [
  * has to be decided before it is fetched.
  */
 const UNCONDITIONAL = new Set(["combine", "final"]);
-
-/** Samplers a sub-pass binds alongside the textures it reads. */
-export interface PostProcessingSamplers {
-  /** Filtered, clamped: color reads, and the SMAA area lookup. */
-  linear: GPUSampler;
-  /** Unfiltered, clamped: depth reads, and the SMAA search lookup. */
-  nearest: GPUSampler;
-  /** Filtered, repeating: the tiled SSAO noise textures. */
-  linearRepeat: GPUSampler;
-}
 
 export interface PostProcessingContext {
   ctx: GpuContext;
@@ -130,10 +128,10 @@ export default ({
 }: {
   ctx: GpuContext;
   frameGraph: FrameGraph;
-}) => ({
+}): PostProcessingMethods & ThisType<RenderPipelineSystem> => ({
   postProcessingEffects: new Map<string, PostProcessingEffect | null>(),
   postProcessingLoading: new Map<string, Promise<void>>(),
-  postProcessingPipelines: new Map<string, Record<string, unknown>>(),
+  postProcessingPipelines: new Map<string, RenderPipeline>(),
   fullscreenGeometry: createFullscreenGeometry(ctx),
   postProcessingSamplers: {
     linear: createSampler(ctx, { filter: "linear" }),
@@ -196,7 +194,13 @@ export default ({
         vertex: source,
         fragment: source,
         depthWriteEnabled: false,
-        ...(Object.keys(constants).length && { constants }),
+        // WGSL `override ...: bool` constants are authored as JS booleans;
+        // pex-gpu's RenderPipeline.constants is Record<string, number>
+        // (GPUPipelineConstantValue is a `double`), so coerce here rather than
+        // lean on the browser's WebIDL ToNumber() conversion to do it for us.
+        ...(Object.keys(constants).length && {
+          constants: mapValues(constants, Number),
+        }),
         ...(subPass.blend && { blend: subPass.blend }),
       };
     });

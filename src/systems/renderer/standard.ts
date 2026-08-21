@@ -163,7 +163,7 @@ export default ({
   getShader: (defines: Set<string>, options: any) =>
     standardShader(defines, options),
   getShaderOptions(entity: any) {
-    const { _lights, _locations } = this;
+    const { _lights, _outputs } = this;
     const { material } = entity;
 
     const texCoords: Record<string, number> = {};
@@ -174,8 +174,7 @@ export default ({
 
     return {
       lights: _lights.counts,
-      locationNormal: _locations.normal ?? -1,
-      locationEmissive: _locations.emissive ?? -1,
+      outputs: _outputs,
       texCoords,
     };
   },
@@ -220,10 +219,6 @@ export default ({
       defines,
     );
 
-    if (this._locations.normal >= 0 || this._locations.emissive >= 0) {
-      defines.add("USE_DRAW_BUFFERS");
-    }
-
     if (this._reflectionProbe && !this.isUnlit(entity)) {
       defines.add("USE_REFLECTION_PROBES");
     }
@@ -247,8 +242,8 @@ export default ({
       counts.spot,
       counts.area,
       this._reflectionProbe ? 1 : 0,
-      this._locations.normal ?? -1,
-      this._locations.emissive ?? -1,
+      this._outputs.normal ? 1 : 0,
+      this._outputs.emissive ? 1 : 0,
       texCoords,
     ].join("_");
   },
@@ -454,7 +449,7 @@ export default ({
 
   render(renderView: RenderView, entities: Entity[], options: any) {
     const {
-      attachmentsLocations = {},
+      outputs = {},
       msaa,
       transparent,
       transmitted,
@@ -463,10 +458,7 @@ export default ({
     } = options;
 
     this._msaa = msaa;
-    this._locations = {
-      normal: attachmentsLocations.normal ?? -1,
-      emissive: attachmentsLocations.emissive ?? -1,
-    };
+    this._outputs = outputs;
 
     const lights = this.gatherLights(entities);
     this._lights = lights;

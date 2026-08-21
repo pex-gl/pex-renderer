@@ -53,27 +53,20 @@ export default ({ ctx }: SystemOptions): RendererSystem => ({
 
   getShader: (defines: Set<string>, options: any) => lineShader(defines, options),
   getShaderOptions() {
-    const { _locations } = this;
-    return {
-      locationNormal: _locations.normal ?? -1,
-      locationEmissive: _locations.emissive ?? -1,
-    };
+    return { outputs: this._outputs };
   },
   getDefines(entity: any) {
     const defines = new Set<string>();
     this.getFeatureFlags(entity._geometry.attributes, LINE_VERTEX_FIELDS, defines);
     this.getFeatureFlags(entity.material, LINE_MATERIAL_FIELDS, defines);
-    if (this._locations.normal >= 0 || this._locations.emissive >= 0) {
-      defines.add("USE_DRAW_BUFFERS");
-    }
     if (this._msaa) defines.add("USE_MSAA");
     return defines;
   },
   getVariantKey(entity: any, defines: Set<string>) {
     return [
       definesKey(defines),
-      this._locations.normal ?? -1,
-      this._locations.emissive ?? -1,
+      this._outputs.normal ? 1 : 0,
+      this._outputs.emissive ? 1 : 0,
     ].join("_");
   },
   getPipelineOptions(entity: any) {
@@ -241,12 +234,9 @@ export default ({ ctx }: SystemOptions): RendererSystem => ({
     this.render(renderView, entities, options);
   },
   setStageState(options: any) {
-    const { attachmentsLocations = {}, msaa } = options;
+    const { outputs = {}, msaa } = options;
     this._msaa = msaa;
-    this._locations = {
-      normal: attachmentsLocations.normal ?? -1,
-      emissive: attachmentsLocations.emissive ?? -1,
-    };
+    this._outputs = outputs;
   },
   dispose() {
     for (const buffer of Object.values(this.cache!)) {

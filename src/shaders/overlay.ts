@@ -1,7 +1,7 @@
 // A fixed NDC-space screen quad, like blit.js: no Frame/Model needed, just
 // the bounds rect (in 0-1 viewport space) and the source texture at group 0.
 
-import { vertexOutputStruct } from "./wgsl.js";
+import { fragmentOutputStruct, vertexOutputStruct } from "./wgsl.js";
 import type { PipelineShaderOptions } from "../types.js";
 
 export const overlayShader = (
@@ -46,9 +46,7 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
   return output;
 }
 
-struct FragmentOutput {
-  @location(0) color: vec4f,
-}
+${fragmentOutputStruct()}
 
 ${hooks.fragDeclarationsEnd ?? ""}
 

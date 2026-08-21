@@ -4,7 +4,7 @@ import { commandsState } from "pex-gpu/internals";
 import * as systems from "./systems/index.js";
 
 import FrameGraph from "./frame-graph/index.js";
-import { getDefaultViewport } from "./utils.js";
+import { getDefaultViewport, mapValues } from "./utils.js";
 
 import type {
   Entity,
@@ -195,12 +195,7 @@ export default ({
 
       // Handles only become textures once the graph has allocated them.
       return targetHandlesPerCamera.map((handles) =>
-        Object.fromEntries(
-          Object.entries(handles).map(([name, handle]) => [
-            name,
-            frameGraph.resolve(handle) as GpuTexture,
-          ]),
-        ),
+        mapValues(handles, (handle) => frameGraph.resolve(handle) as GpuTexture),
       );
     },
     dispose(entities?: Entity[]) {

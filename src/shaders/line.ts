@@ -58,14 +58,11 @@ export const lineShader = (
   options: PipelineShaderOptions = {},
 ): string => {
   const hooks = options.hooks || {};
-  const { locationNormal = -1, locationEmissive = -1 } = options;
+  const outputs = options.outputs ?? {};
 
   const vertexFlags = getDefineFlags(VERTEX_DEFINE, defines);
   const materialFlags = getDefineFlags(MATERIAL_DEFINE, defines);
   const useMSAA = defines.has("USE_MSAA");
-  const useDrawBuffers = defines.has("USE_DRAW_BUFFERS");
-  const useNormalOutput = useDrawBuffers && locationNormal >= 0;
-  const useEmissiveOutput = useDrawBuffers && locationEmissive >= 0;
 
   return /* wgsl */ `
 ${frameStruct()}
@@ -91,10 +88,10 @@ struct Varyings {
   ${vertexFlags.vertexColor ? "@location(0) color: vec4f," : ""}
 }
 
-${fragmentOutputStruct({
-  normal: useNormalOutput ? locationNormal : -1,
-  emissive: useEmissiveOutput ? locationEmissive : -1,
-})}
+${fragmentOutputStruct([
+  outputs.normal && { name: "normal", type: "vec4f" },
+  outputs.emissive && { name: "emissive", type: "vec4f" },
+])}
 
 ${hooks.vertDeclarationsEnd ?? ""}
 
@@ -173,8 +170,8 @@ fn fragmentMain(input: Varyings) -> FragmentOutput {
 
   output.color = color;
 
-  ${useNormalOutput ? "output.normal = vec4f(0.0, 0.0, 1.0, 1.0);" : ""}
-  ${useEmissiveOutput ? "output.emissive = vec4f(0.0);" : ""}
+  ${outputs.normal ? "output.normal = vec4f(0.0, 0.0, 1.0, 1.0);" : ""}
+  ${outputs.emissive ? "output.emissive = vec4f(0.0);" : ""}
 
   ${hooks.fragEnd ?? ""}
 

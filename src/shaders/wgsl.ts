@@ -1,3 +1,5 @@
+import { mapValues } from "../utils.js";
+
 // Binding primitives
 
 /** A material texture's `@group(2)` uniform binding slot (texture + sampler). */
@@ -35,9 +37,9 @@ export function getDefineFlags<T extends Record<string, string>>(
   defineMap: T,
   defines: Set<string>,
 ): { [K in keyof T]: boolean } {
-  return Object.fromEntries(
-    Object.entries(defineMap).map(([key, value]) => [key, defines.has(value)]),
-  ) as { [K in keyof T]: boolean };
+  return mapValues(defineMap, (value) => defines.has(value)) as {
+    [K in keyof T]: boolean;
+  };
 }
 
 /**
@@ -378,32 +380,22 @@ export function vertexTransform({
 // Fragment stage
 
 /**
- * Optional G-buffer fragment outputs beyond the always-present color
- * (`@location(0)`), keyed by their runtime attachment `@location`. A negative
- * location omits the output (matching each pass's `useDrawBuffers && location
- *
- * > = 0` gate).
+ * The fragment stage's `FragmentOutput` struct: the always-present color
+ * target (`@location(0)`) plus whatever extra MRT members the caller passes,
+ * assigned sequential locations in that order via `locationMembers` — the same
+ * scheme `vertexOutputStruct` uses, and for the same reason: a shader picks its
+ * own member types (a motion-vector target might be `vec2f`, not `vec4f`) so
+ * this only owns the location numbering, not the shape. Called with no args
+ * it's the color-only form the depth pre-pass and post-processing blits use.
+ * The render pipeline builds its `color: [...]` pass attachments in this same
+ * fixed order, so the emitted `@location`s line up with attachment index
+ * without either side passing numbers to the other.
  */
-export interface FragmentOutputFlags {
-  normal?: number;
-  emissive?: number;
-}
-
-/**
- * The fragment stage's `FragmentOutput` struct: the color target plus the
- * optional deferred normal/emissive targets at their runtime locations. Shared
- * by the basic/standard passes; called with no args it's the color-only form
- * the depth pre-pass uses.
- */
-export function fragmentOutputStruct({
-  normal = -1,
-  emissive = -1,
-}: FragmentOutputFlags = {}): string {
-  const outputs = ["@location(0) color: vec4f,"];
-  if (normal >= 0) outputs.push(`@location(${normal}) normal: vec4f,`);
-  if (emissive >= 0) outputs.push(`@location(${emissive}) emissive: vec4f,`);
+export function fragmentOutputStruct(
+  members: readonly (ShaderStructMember | false | null | undefined)[] = [],
+): string {
   return `struct FragmentOutput {
-  ${outputs.join("\n  ")}
+  ${locationMembers([{ name: "color", type: "vec4f" }, ...members])}
 }`;
 }
 

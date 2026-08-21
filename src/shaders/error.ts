@@ -1,6 +1,6 @@
 // See basic.js for the shared Frame/Model bind group conventions.
 
-import { vertexOutputStruct } from "./wgsl.js";
+import { fragmentOutputStruct, vertexOutputStruct } from "./wgsl.js";
 import type { PipelineShaderOptions } from "../types.js";
 
 export const errorShader = (
@@ -8,11 +8,7 @@ export const errorShader = (
   options: PipelineShaderOptions = {},
 ): string => {
   const hooks = options.hooks || {};
-  const { locationNormal = -1, locationEmissive = -1 } = options;
-
-  const useDrawBuffers = defines.has("USE_DRAW_BUFFERS");
-  const useNormalOutput = useDrawBuffers && locationNormal >= 0;
-  const useEmissiveOutput = useDrawBuffers && locationEmissive >= 0;
+  const outputs = options.outputs ?? {};
 
   return /* wgsl */ `
 struct Frame {
@@ -36,11 +32,10 @@ struct VertexInput {
 
 ${vertexOutputStruct([])}
 
-struct FragmentOutput {
-  @location(0) color: vec4f,
-  ${useNormalOutput ? `@location(${locationNormal}) normal: vec4f,` : ""}
-  ${useEmissiveOutput ? `@location(${locationEmissive}) emissive: vec4f,` : ""}
-}
+${fragmentOutputStruct([
+  outputs.normal && { name: "normal", type: "vec4f" },
+  outputs.emissive && { name: "emissive", type: "vec4f" },
+])}
 
 ${hooks.vertDeclarationsEnd ?? ""}
 
@@ -61,8 +56,8 @@ fn fragmentMain(input: VertexOutput) -> FragmentOutput {
   var output: FragmentOutput;
   output.color = vec4f(1.0, 0.0, 0.0, 1.0);
 
-  ${useNormalOutput ? "output.normal = vec4f(0.0, 0.0, 1.0, 1.0);" : ""}
-  ${useEmissiveOutput ? "output.emissive = vec4f(0.0);" : ""}
+  ${outputs.normal ? "output.normal = vec4f(0.0, 0.0, 1.0, 1.0);" : ""}
+  ${outputs.emissive ? "output.emissive = vec4f(0.0);" : ""}
 
   ${hooks.fragEnd ?? ""}
 

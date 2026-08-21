@@ -129,6 +129,30 @@ const getDirname = (path: string) => {
 const isObject = (obj: unknown) =>
   Object.prototype.toString.call(obj) === "[object Object]";
 
+/** Maps each value of a plain object through `fn`, keeping the same keys. */
+const mapValues = <T, R>(
+  obj: Record<string, T>,
+  fn: (value: T, key: string, index: number) => R,
+): Record<string, R> =>
+  Object.fromEntries(
+    Object.entries(obj).map(([key, value], i): [string, R] => [
+      key,
+      fn(value, key, i),
+    ]),
+  );
+
+/** Maps each key of a plain object through `fn`, keeping the same values. */
+const mapKeys = <T>(
+  obj: Record<string, T>,
+  fn: (key: string, value: T, index: number) => string,
+): Record<string, T> =>
+  Object.fromEntries(
+    Object.entries(obj).map(([key, value], i): [string, T] => [
+      fn(key, value, i),
+      value,
+    ]),
+  );
+
 // Environment maps (equirect skybox, prefiltered specular cubemap, SH
 // coefficients) are baked in the probe/skybox entity's unrotated local
 // space, so sampling them with a world-space direction after the entity is
@@ -222,5 +246,7 @@ export {
   getFileExtension,
   getDirname,
   isObject,
+  mapValues,
+  mapKeys,
   getEnvironmentRotation,
 };

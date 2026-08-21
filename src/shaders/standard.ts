@@ -199,11 +199,8 @@ export const standardShader = (
   options: PipelineShaderOptions = {},
 ): string => {
   const hooks = options.hooks || {};
-  const {
-    maxJoints = 256,
-    locationNormal = -1,
-    locationEmissive = -1,
-  } = options;
+  const { maxJoints = 256 } = options;
+  const outputs = options.outputs ?? {};
   const texCoords = options.texCoords || {};
   const lights = options.lights || {};
 
@@ -215,9 +212,6 @@ export const standardShader = (
   const useColor = vertexFlags.vertexColor || vertexFlags.instancedColor;
   const useDisplacementTexture = defines.has("USE_DISPLACEMENT_TEXTURE");
   const useSkin = defines.has("USE_SKIN");
-  const useDrawBuffers = defines.has("USE_DRAW_BUFFERS");
-  const useNormalOutput = useDrawBuffers && locationNormal >= 0;
-  const useEmissiveOutput = useDrawBuffers && locationEmissive >= 0;
   const useReflectionProbes =
     defines.has("USE_REFLECTION_PROBES") && !materialFlags.unlitWorkflow;
 
@@ -673,10 +667,10 @@ ${vertexOutputStruct([
   useColor && { name: "color", type: "vec4f" },
 ])}
 
-${fragmentOutputStruct({
-  normal: useNormalOutput ? locationNormal : -1,
-  emissive: useEmissiveOutput ? locationEmissive : -1,
-})}
+${fragmentOutputStruct([
+  outputs.normal && { name: "normal", type: "vec4f" },
+  outputs.emissive && { name: "emissive", type: "vec4f" },
+])}
 
 struct PBRData {
   inverseViewMatrix: mat4x4f,
@@ -894,8 +888,8 @@ fn fragmentMain(
 
   output.color = vec4f(color, 1.0);
 
-  ${useNormalOutput ? "output.normal = vec4f(data.normalView * 0.5 + 0.5, 1.0);" : ""}
-  ${useEmissiveOutput ? "output.emissive = vec4f(data.emissiveColor, 1.0);" : ""}
+  ${outputs.normal ? "output.normal = vec4f(data.normalView * 0.5 + 0.5, 1.0);" : ""}
+  ${outputs.emissive ? "output.emissive = vec4f(data.emissiveColor, 1.0);" : ""}
   if (USE_TRANSMISSION || USE_BLEND) {
     output.color.w = data.opacity;
     if (PREMULTIPLY_ALPHA) {

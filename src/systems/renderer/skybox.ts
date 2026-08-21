@@ -49,17 +49,10 @@ export default ({ ctx }: SystemOptions): RendererSystem => ({
   getShader: (defines: Set<string>, options: any) =>
     skyboxShader(defines, options),
   getShaderOptions() {
-    const { _locations } = this;
-    return {
-      locationNormal: _locations.normal ?? -1,
-      locationEmissive: _locations.emissive ?? -1,
-    };
+    return { outputs: this._outputs };
   },
   getDefines(entity: Entity) {
     const defines = new Set();
-    if (this._locations.normal >= 0 || this._locations.emissive >= 0) {
-      defines.add("USE_DRAW_BUFFERS");
-    }
     if (this._msaa) defines.add("USE_MSAA");
     if (this._reflectionProbe && (entity.skybox!.backgroundBlur ?? 0) > 0) {
       defines.add("USE_BACKGROUND_BLUR");
@@ -69,8 +62,8 @@ export default ({ ctx }: SystemOptions): RendererSystem => ({
   getVariantKey(entity: any, defines: Set<string>) {
     return [
       definesKey(defines),
-      this._locations.normal ?? -1,
-      this._locations.emissive ?? -1,
+      this._outputs.normal ? 1 : 0,
+      this._outputs.emissive ? 1 : 0,
     ].join("_");
   },
   getPipelineOptions(entity: Entity) {
@@ -145,12 +138,9 @@ export default ({ ctx }: SystemOptions): RendererSystem => ({
     entities: Entity[],
     options: any = {},
   ) {
-    const { attachmentsLocations = {}, msaa } = options;
+    const { outputs = {}, msaa } = options;
     this._msaa = msaa;
-    this._locations = {
-      normal: attachmentsLocations.normal ?? -1,
-      emissive: attachmentsLocations.emissive ?? -1,
-    };
+    this._outputs = outputs;
 
     // Reused from material IBL (see systems/reflection-probe.ts): the same
     // prefiltered specular cubemap drives skybox.backgroundBlur, picking a

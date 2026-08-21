@@ -12,7 +12,13 @@ import {
   getCubeFaceCamera,
 } from "../../utils.js";
 
-import type { Entity, RendererSystem, SystemOptions } from "../../types.js";
+import type {
+  Entity,
+  RendererSystem,
+  RenderPipelineSystem,
+  ShadowMappingMethods,
+  SystemOptions,
+} from "../../types.js";
 import type { ResourceHandle } from "../../frame-graph/index.js";
 
 const MIN_NEAR = 0.01;
@@ -62,7 +68,10 @@ const shadowParticipants = (entities: Entity[]) =>
  *
  * @private
  */
-export default ({ frameGraph }: Pick<SystemOptions, "frameGraph">) => ({
+export default ({
+  frameGraph,
+}: Pick<SystemOptions, "frameGraph">): ShadowMappingMethods &
+  ThisType<RenderPipelineSystem> => ({
   checkLight(light: any, lightEntity: Entity) {
     if (!lightEntity._transform) {
       console.warn(

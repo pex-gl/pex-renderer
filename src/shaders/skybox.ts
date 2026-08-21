@@ -1,6 +1,10 @@
 import { chunks as SHADERS } from "pex-shaders";
 
-import { vertexOutputStruct, textureSamplerDeclaration } from "./wgsl.js";
+import {
+  fragmentOutputStruct,
+  vertexOutputStruct,
+  textureSamplerDeclaration,
+} from "./wgsl.js";
 import { ROUGHNESS_LEVELS } from "./reflection-probe.js";
 import type { PipelineShaderOptions } from "../types.js";
 
@@ -29,12 +33,9 @@ export const skyboxShader = (
   options: PipelineShaderOptions = {},
 ): string => {
   const hooks = options.hooks || {};
-  const { locationNormal = -1, locationEmissive = -1 } = options;
+  const outputs = options.outputs ?? {};
 
   const useMSAA = defines.has("USE_MSAA");
-  const useDrawBuffers = defines.has("USE_DRAW_BUFFERS");
-  const useNormalOutput = useDrawBuffers && locationNormal >= 0;
-  const useEmissiveOutput = useDrawBuffers && locationEmissive >= 0;
   const useBackgroundBlur = defines.has("USE_BACKGROUND_BLUR");
 
   return /* wgsl */ `
@@ -57,11 +58,10 @@ struct VertexInput {
 
 ${vertexOutputStruct([{ name: "normal", type: "vec3f" }])}
 
-struct FragmentOutput {
-  @location(0) color: vec4f,
-  ${useNormalOutput ? `@location(${locationNormal}) normal: vec4f,` : ""}
-  ${useEmissiveOutput ? `@location(${locationEmissive}) emissive: vec4f,` : ""}
-}
+${fragmentOutputStruct([
+  outputs.normal && { name: "normal", type: "vec4f" },
+  outputs.emissive && { name: "emissive", type: "vec4f" },
+])}
 
 // Vertex includes
 ${SHADERS.math.inverseMat4}
@@ -117,8 +117,8 @@ fn fragmentMain(input: VertexOutput) -> FragmentOutput {
 
   output.color = color;
 
-  ${useNormalOutput ? "output.normal = vec4f(0.0, 0.0, 1.0, 1.0);" : ""}
-  ${useEmissiveOutput ? "output.emissive = vec4f(0.0);" : ""}
+  ${outputs.normal ? "output.normal = vec4f(0.0, 0.0, 1.0, 1.0);" : ""}
+  ${outputs.emissive ? "output.emissive = vec4f(0.0);" : ""}
 
   ${hooks.fragEnd ?? ""}
 

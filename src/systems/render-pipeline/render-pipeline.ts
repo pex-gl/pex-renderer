@@ -32,7 +32,7 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
   debugRender: "",
   reversibleToneMap: false,
 
-  descriptors: addDescriptors(ctx),
+  descriptors: addDescriptors(),
   fullscreen: createFullscreenGeometry(ctx),
 
   blitSampler: createSampler(ctx, { filter: "linear" }),
@@ -45,16 +45,10 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
   ...postProcessingPipelineMethods({ ctx, frameGraph }),
   ...cullingPipelineMethods(),
 
-  getAttachmentsLocations(colorAttachments: any) {
-    return Object.fromEntries(
-      Object.keys(colorAttachments ?? {}).map((key, index) => [key, index]),
-    );
-  },
-
   drawMeshes({
     renderers,
     renderView,
-    colorAttachments,
+    colorTextures,
     msaa,
     entitiesInView,
     shadowMappingLight,
@@ -64,7 +58,7 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
     backgroundColorTexture,
   }: any) {
     const options = {
-      attachmentsLocations: this.getAttachmentsLocations(colorAttachments),
+      outputs: colorTextures ?? {},
       msaa: this.reversibleToneMap && msaa,
     };
 
@@ -171,10 +165,10 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
     const sampleCount = postProcessing?.msaa?.sampleCount;
     const msaa = sampleCount > 0;
 
-    const colorAttachments: Record<string, ResourceHandle> = {};
+    const colorTextures: Record<string, ResourceHandle> = {};
     for (const name of outputs) {
       if (name === "depth") continue;
-      colorAttachments[name] = frameGraph.createTexture({
+      colorTextures[name] = frameGraph.createTexture({
         label: `renderPipeline.${name}.${viewId}`,
         width,
         height,
@@ -182,10 +176,10 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
       });
     }
 
-    const msaaColor: Record<string, ResourceHandle> = {};
+    const msaaColorTextures: Record<string, ResourceHandle> = {};
     if (msaa) {
-      for (const name of Object.keys(colorAttachments)) {
-        msaaColor[name] = frameGraph.createTexture({
+      for (const name of Object.keys(colorTextures)) {
+        msaaColorTextures[name] = frameGraph.createTexture({
           label: `renderPipeline.${name}MSAA.${viewId}`,
           width,
           height,
@@ -199,9 +193,9 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
     // resolveTarget — so under MSAA the depth buffer stays multisampled and is
     // what gets handed back. Anything wanting single-sample depth needs an
     // explicit resolve pass of its own.
-    let depthAttachment: ResourceHandle | undefined;
+    let depthTexture: ResourceHandle | undefined;
     if (outputs.has("depth")) {
-      depthAttachment = frameGraph.createTexture({
+      depthTexture = frameGraph.createTexture({
         label: `renderPipelineDepth${msaa ? "MSAA" : ""}.${viewId}`,
         width,
         height,
@@ -218,10 +212,10 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
 
     // Frame register
     const textures = new RenderTextures(frameGraph, renderPassView);
-    for (const [name, handle] of Object.entries(colorAttachments)) {
+    for (const [name, handle] of Object.entries(colorTextures)) {
       textures.set(name, handle);
     }
-    if (depthAttachment) textures.set("depth", depthAttachment);
+    if (depthTexture) textures.set("depth", depthTexture);
     frameGraph.blackboard.set(`renderTextures.${viewId}`, textures);
 
     /**
@@ -238,21 +232,21 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
      * dropped.
      */
     const colorTarget = (name: string): ColorAttachmentDeclaration => {
-      const published = textures.get(name) ?? colorAttachments[name]!;
+      const published = textures.get(name) ?? colorTextures[name]!;
       if (!msaa) return { texture: published };
 
-      if (published !== colorAttachments[name]) {
+      if (published !== colorTextures[name]) {
         textures.report(
           `"${name}" was republished as ${textures.explain(published)} while the scene passes were still drawing, which MSAA cannot pick up. Move the pass to a stage after them, or turn MSAA off.`,
         );
       }
       return {
-        texture: msaaColor[name]!,
-        resolveTarget: colorAttachments[name]!,
+        texture: msaaColorTextures[name]!,
+        resolveTarget: colorTextures[name]!,
       };
     };
     const depthTarget = (): DepthStencilAttachmentDeclaration => ({
-      texture: depthAttachment!,
+      texture: depthTexture!,
     });
 
     const layer = renderView.cameraEntity.layer;
@@ -282,19 +276,19 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
 
     frameGraph.addPass({
       name: `opaque.${viewId}`,
-      color: Object.keys(colorAttachments).map((name, index) => ({
+      color: Object.keys(colorTextures).map((name, index) => ({
         ...colorTarget(name),
         ...(index === 0 && {
           clearValue: renderView.camera.clearColor ?? [0, 0, 0, 1],
         }),
       })),
-      ...(depthAttachment && {
+      ...(depthTexture && {
         depth: { ...depthTarget(), depthClearValue: 1 },
       }),
       reads: shadowMaps,
       renderView: renderPassView,
       execute: () => {
-        this.drawMeshes({ ...drawMeshOptions, colorAttachments });
+        this.drawMeshes({ ...drawMeshOptions, colorTextures });
       },
     });
 
@@ -311,13 +305,13 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
       frameGraph.addPass({
         name: `transparent.${viewId}`,
         color: [colorTarget("color")],
-        ...(depthAttachment && { depth: depthTarget() }),
+        ...(depthTexture && { depth: depthTarget() }),
         reads: shadowMaps,
         renderView: renderPassView,
         execute: () => {
           this.drawMeshes({
             ...drawMeshOptions,
-            colorAttachments: { color: colorAttachments.color! },
+            colorTextures: { color: colorTextures.color! },
             transparent: true,
           });
         },
@@ -368,13 +362,13 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
         frameGraph.addPass({
           name: `TransmissionBackPass_${viewId}`,
           color: [colorTarget("color")],
-          ...(depthAttachment && { depth: depthTarget() }),
+          ...(depthTexture && { depth: depthTarget() }),
           reads: [...shadowMaps, grab],
           renderView: renderPassView,
           execute: ({ resolveTexture }) => {
             this.drawMeshes({
               ...drawMeshOptions,
-              colorAttachments: { color: colorAttachments.color! },
+              colorTextures: { color: colorTextures.color! },
               transmitted: true,
               cullFaceMode: "front",
               backgroundColorTexture: resolveTexture(grab),
@@ -389,13 +383,13 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
       frameGraph.addPass({
         name: `TransmissionFrontPass_${viewId}`,
         color: [colorTarget("color")],
-        ...(depthAttachment && { depth: depthTarget() }),
+        ...(depthTexture && { depth: depthTarget() }),
         reads: [...shadowMaps, frontGrab],
         renderView: renderPassView,
         execute: ({ resolveTexture }) => {
           this.drawMeshes({
             ...drawMeshOptions,
-            colorAttachments: { color: colorAttachments.color! },
+            colorTextures: { color: colorTextures.color! },
             transmitted: true,
             cullFaceMode: hasBackTransmitted ? "back" : undefined,
             backgroundColorTexture: resolveTexture(frontGrab),
@@ -404,7 +398,6 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
       });
     }
 
-    // ─── Inverse tone map ────────────────────────────────────────────────────
     // if (this.reversibleToneMap && msaa) {
     //   const inverseToneMapped = frameGraph.createTexture({
     //     label: `inverseToneMapColor_${viewId}`,
@@ -433,22 +426,22 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
 
     await frameGraph.stage("postProcessing", textures);
 
-    // ─── Post-processing ─────────────────────────────────────────────────────
     if (postProcessing) {
       this.renderPostProcessing({ renderView: renderPassView, textures });
     }
 
-    // ─── Present ─────────────────────────────────────────────────────────────
+    await frameGraph.stage("present", textures);
+
     const color = textures.require("color")!;
 
-    // Pointing the presented image at an intermediate leaves everything that
-    // only fed the original output unreferenced, so the graph culls it.
-    const presented =
-      (this.debugRender && textures.get(this.debugRender)) || color;
-
     if (drawToScreen !== false) {
+      // Pointing the presented image at an intermediate leaves everything that
+      // only fed the original output unreferenced, so the graph culls it.
+      const presented =
+        (this.debugRender && textures.get(this.debugRender)) || color;
+
       frameGraph.addPass({
-        name: `BlitPass_${viewId}`,
+        name: `blit.${viewId}`,
         // No color handles: the canvas is the target.
         uniforms: { uTexture: presented, uTextureSampler: this.blitSampler },
         renderView,
@@ -468,13 +461,10 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
       });
     }
 
-    // Returned to the caller, which reads them outside the graph. `color` is
-    // the end of the chain, so it may be a post-processed texture rather than
-    // the main pass attachment of the same name.
     const outputTextures: Record<string, ResourceHandle> = {
-      ...colorAttachments,
+      ...colorTextures,
       color,
-      ...(depthAttachment && { depth: depthAttachment }),
+      ...(depthTexture && { depth: depthTexture }),
     };
     for (const handle of Object.values(outputTextures)) {
       frameGraph.exportTexture(handle);
