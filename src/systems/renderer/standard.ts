@@ -258,6 +258,7 @@ export default ({
     const { material } = entity;
     return {
       depthWriteEnabled: material.depthWrite !== false && !material.blend,
+      depthCompare: material.depthTest === false ? "always" : "less-equal",
       cullMode:
         options.cullFaceMode ?? ((material.cullFace ?? true) ? "back" : "none"),
       topology: entity._geometry!.primitive ?? "triangle-list",
