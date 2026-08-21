@@ -506,6 +506,94 @@ const state = createGraphState();
   );
 }
 
+// ─── Raw passes ──────────────────────────────────────────────────────────────
+// No attachments to open a render pass from, and never merges with a neighbor
+// — the execute-side encoder handoff is exercised in examples/, not here.
+{
+  console.log("\nframe graph — raw passes");
+  resetGraphState(state);
+  const api = createSetup(state, new Map());
+  const grab = api.createTexture({
+    label: "grab",
+    width: 64,
+    height: 64,
+    format: "rgba16float",
+    mipLevelCount: 4,
+  });
+  api.addPass({
+    name: "GrabCopy",
+    color: [{ texture: grab }],
+    execute: noop,
+  });
+  api.addPass({
+    name: "GrabMips",
+    type: "raw",
+    writes: [{ handle: grab, usage: GPUTextureUsage.RENDER_ATTACHMENT }],
+    execute: noop,
+  });
+  api.exportTexture(grab);
+
+  const plan = compile(state, pool, {});
+  const raw = plan.passes.find((pass) => pass.name === "GrabMips");
+  check("a raw pass opens no attachments", [raw.color, raw.depth], [[], undefined]);
+  check(
+    "a raw pass never merges with its neighbors",
+    plan.passes.map((pass) => pass.name),
+    ["GrabCopy", "GrabMips"],
+  );
+  check(
+    "the raw pass's write extends the resource's lifetime",
+    plan.resources.find((r) => r.name === "grab").lastUse,
+    plan.passes.findIndex((pass) => pass.name === "GrabMips"),
+  );
+
+  // Isolated from GrabCopy's own RENDER_ATTACHMENT write, so this pins the
+  // override actually being read rather than a flag arriving from elsewhere.
+  resetGraphState(state);
+  const api2 = createSetup(state, new Map());
+  const solo = api2.createTexture({ label: "solo", width: 8, height: 8 });
+  api2.addPass({
+    name: "SoloWrite",
+    type: "raw",
+    writes: [{ handle: solo, usage: GPUTextureUsage.COPY_DST }],
+    neverCull: true,
+    execute: noop,
+  });
+  const soloUsage = compile(state, pool, {}).resources.find(
+    (r) => r.name === "solo",
+  ).usage;
+  check(
+    "an explicit write usage lands on the resource",
+    (soloUsage & GPUTextureUsage.COPY_DST) !== 0,
+    true,
+  );
+  check(
+    "and the compute-write default is not also applied",
+    (soloUsage & GPUTextureUsage.STORAGE_BINDING) !== 0,
+    false,
+  );
+
+  // A bare handle in `writes` still means the compute-write default.
+  resetGraphState(state);
+  const api3 = createSetup(state, new Map());
+  const scratch = api3.createTexture({ label: "scratch", width: 8, height: 8 });
+  api3.addPass({
+    name: "Storage",
+    type: "raw",
+    writes: [scratch],
+    neverCull: true,
+    execute: noop,
+  });
+  const scratchUsage = compile(state, pool, {}).resources.find(
+    (r) => r.name === "scratch",
+  ).usage;
+  check(
+    "a bare handle in writes still defaults to STORAGE_BINDING",
+    (scratchUsage & GPUTextureUsage.STORAGE_BINDING) !== 0,
+    true,
+  );
+}
+
 // ─── Attachment views ────────────────────────────────────────────────────────
 // A default view spans every layer and level, and a render attachment must
 // target exactly one of each. Getting this wrong fails validation at submit

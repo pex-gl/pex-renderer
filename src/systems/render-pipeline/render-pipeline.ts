@@ -1,4 +1,4 @@
-import { submit, createSampler, isGpuTexture } from "pex-gpu";
+import { submit, createSampler, generateMipmaps, isGpuTexture } from "pex-gpu";
 
 import addDescriptors from "./descriptors.js";
 import shadowMappingPipelineMethods from "./shadow-mapping.js";
@@ -103,38 +103,6 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
           }
         }
       }
-    }
-  },
-
-  /**
-   * One downsample-blit pass per mip level of the grab texture. Each level is
-   * its own graph node, so the graph orders the write of level N before level
-   * N+1 reads it — generateMipmaps can't be used mid-frame, as its immediate
-   * queue.submit would run before the batched frame encoder.
-   *
-   * The read of the previous level is a sub-resource view resolved inside
-   * execute rather than a declared read: a pass may not declare the same handle
-   * as both read and write, and the write-after-write edge between consecutive
-   * levels already provides the ordering.
-   */
-  generateGrabMips(grabTexture: ResourceHandle, levels: number, name: string) {
-    for (let level = 1; level < levels; level++) {
-      frameGraph.addPass({
-        name: `${name}.mip${level}`,
-        color: [{ texture: grabTexture, level }],
-        execute: ({ resolveView }) => {
-          submit(ctx, {
-            label: `grabMip${level}`,
-            attributes: this.fullscreen.triangle.attributes,
-            count: this.fullscreen.triangle.count,
-            pipeline: this.descriptors.grabPass.downsamplePipelineDesc,
-            uniforms: {
-              uTexture: resolveView(grabTexture, { level: level - 1 }),
-              uSampler: this.blitSampler,
-            },
-          });
-        },
-      });
     }
   },
 
@@ -352,7 +320,19 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
           },
         });
 
-        this.generateGrabMips(grab, mipLevelCount, label);
+        if (mipLevelCount > 1) {
+          frameGraph.addPass({
+            name: `${label}.mips`,
+            type: "raw",
+            writes: [
+              { handle: grab, usage: GPUTextureUsage.RENDER_ATTACHMENT },
+            ],
+            execute: ({ resolveTexture, encoder }) => {
+              generateMipmaps(ctx, resolveTexture(grab), { encoder: encoder! });
+            },
+          });
+        }
+
         textures.set("transmission.grab", grab);
         return grab;
       };

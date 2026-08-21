@@ -14,11 +14,15 @@ import createGUI from "pex-gui";
 import parseObj from "geom-parse-obj";
 
 import { getEnvMap, getGpuTexture, getURL } from "./utils.js";
+import { getRenderPassGraphViz } from "./graph-viz.js";
 
 const pixelRatio = devicePixelRatio;
 const ctx = await gpu.createContext({ pixelRatio });
 const renderEngine = createRenderEngine({ ctx, debug: true });
 const world = createWorld();
+
+const renderPassGraphViz = getRenderPassGraphViz();
+renderPassGraphViz.init(ctx, renderEngine.frameGraph);
 
 // Entities
 for (let i = 0; i < 3; i++) {
@@ -149,6 +153,9 @@ world.add(clearCoatNormalTextureEntity);
 
 // GUI
 const gui = createGUI(ctx, { theme: { columnWidth: 250 } });
+gui.addButton("Toggle Render Pass Graph", () => {
+  renderPassGraphViz.toggle();
+});
 gui.addParam(
   "Normal Texture Scale",
   clearCoatEntity.material,

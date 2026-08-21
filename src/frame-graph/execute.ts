@@ -1,4 +1,5 @@
 import { submit } from "pex-gpu";
+import { frameState } from "pex-gpu/internals";
 
 import { NAMESPACE } from "../utils.js";
 import { isResourceHandle } from "./types.js";
@@ -208,49 +209,60 @@ export default function execute(
       ...(layerCount !== undefined && { arrayLayerCount: layerCount }),
     });
 
+  const runSubPasses = (pass: CompiledPass, encoder?: GPUCommandEncoder) => {
+    state.phase = "executing";
+    try {
+      for (const subPass of pass.subPasses) {
+        const declaration = state.passes[subPass.declarationIndex]!;
+        const context: PassContext = {
+          ctx,
+          resolveTexture,
+          resolveBuffer,
+          resolveView,
+          uniforms: resolveUniforms(declaration.uniforms, resolve),
+          ...(declaration.renderView && {
+            renderView: declaration.renderView,
+          }),
+          viewport: pass.viewport,
+          ...(encoder && { encoder }),
+        };
+
+        try {
+          subPass.execute(context);
+        } catch (error) {
+          const err = error instanceof Error ? error : new Error(String(error));
+          if (!reportedErrors.has(err.message)) {
+            reportedErrors.add(err.message);
+            console.error(
+              NAMESPACE,
+              "frame-graph",
+              `pass "${subPass.name}" crashed.`,
+              err,
+            );
+          }
+        }
+      }
+    } finally {
+      state.phase = "compiled";
+    }
+  };
+
   for (const pass of plan.passes) {
+    if (pass.type === "raw") {
+      // No render or compute pass to open: the callback records straight into
+      // the frame's live encoder, or hands it to a pex-gpu helper that opens
+      // its own passes on it (eg. generateMipmaps) — which couldn't run nested
+      // inside a pass this loop already opened.
+      runSubPasses(pass, frameState(ctx).encoder);
+      continue;
+    }
+
     // Scoped submit keeps the render pass open for the nested draws.
     const command: RenderCommand = {
       label: pass.label,
       pass: buildPassDescriptor(plan, pass),
     };
 
-    submit(ctx, command, () => {
-      state.phase = "executing";
-      try {
-        for (const subPass of pass.subPasses) {
-          const declaration = state.passes[subPass.declarationIndex]!;
-          const context: PassContext = {
-            ctx,
-            resolveTexture,
-            resolveBuffer,
-            resolveView,
-            uniforms: resolveUniforms(declaration.uniforms, resolve),
-            ...(declaration.renderView && {
-              renderView: declaration.renderView,
-            }),
-            viewport: pass.viewport,
-          };
-
-          try {
-            subPass.execute(context);
-          } catch (error) {
-            const err =
-              error instanceof Error ? error : new Error(String(error));
-            if (!reportedErrors.has(err.message)) {
-              reportedErrors.add(err.message);
-              console.error(
-                NAMESPACE,
-                "frame-graph",
-                `pass "${subPass.name}" crashed.`,
-                err,
-              );
-            }
-          }
-        }
-      } finally {
-        state.phase = "compiled";
-      }
-    });
+    submit(ctx, command, () => runSubPasses(pass));
   }
 }

@@ -3,6 +3,7 @@ import { commandsState } from "pex-gpu/internals";
 
 import { NAMESPACE } from "../utils.js";
 import { createGraphState, requirePhase, resetGraphState } from "./state.js";
+import { isResourceHandle } from "./types.js";
 import {
   addResource,
   collectUniformReads,
@@ -239,16 +240,14 @@ export class FrameGraph {
         pass.depth,
       );
     }
-    for (const handle of declaration.writes ?? []) {
-      writeResource(
-        state,
-        pass,
-        handle,
-        state.resources[handle.index]?.kind === "buffer"
+    for (const write of declaration.writes ?? []) {
+      const handle = isResourceHandle(write) ? write : write.handle;
+      const usage = isResourceHandle(write)
+        ? state.resources[handle.index]?.kind === "buffer"
           ? GPUBufferUsage.STORAGE
-          : GPUTextureUsage.STORAGE_BINDING,
-        {},
-      );
+          : GPUTextureUsage.STORAGE_BINDING
+        : write.usage;
+      writeResource(state, pass, handle, usage, {});
     }
 
     // Last, so a hook sees the pass complete and its own passes land after it.

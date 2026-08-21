@@ -124,14 +124,37 @@ export interface PassContext {
   renderView?: RenderView;
   /** Viewport of the pass's attachments, `[0, 0, width, height]`. */
   viewport: NonNullable<RenderCommand["viewport"]>;
+  /**
+   * The frame's live command encoder. Only set for a `"raw"` pass: it runs
+   * outside pex-gpu's declarative `submit()`, so nothing opens a render or
+   * compute pass around it — the callback records into this encoder directly
+   * (or hands it to a pex-gpu helper that does, eg. `generateMipmaps`).
+   */
+  encoder?: GPUCommandEncoder;
 }
 
 export type PassExecute = (context: PassContext) => void;
 
+/** A write with an explicit usage flag, for a resource a `"raw"` pass touches
+ * outside the attachment path (eg. `RENDER_ATTACHMENT` for a helper that opens
+ * its own render passes on the raw encoder). A bare handle defaults to
+ * `STORAGE_BINDING`/`STORAGE`, the compute-write case. */
+export interface WriteDeclaration {
+  handle: ResourceHandle;
+  usage: GPUTextureUsageFlags | GPUBufferUsageFlags;
+}
+
 export interface PassDeclaration {
   /** Unique within a frame. Identifies the pass for overrides and inspection. */
   name: string;
-  type?: "render" | "compute";
+  /**
+   * `"raw"` skips pex-gpu's declarative `submit()` entirely — no render or
+   * compute pass is opened, and `execute` gets the frame's live encoder
+   * instead. For work that manages its own passes on the shared encoder (eg.
+   * `generateMipmaps`), which can't run nested inside a pass the graph already
+   * opened.
+   */
+  type?: "render" | "compute" | "raw";
   color?: ColorAttachmentDeclaration[];
   depth?: DepthStencilAttachmentDeclaration;
   /**
@@ -140,10 +163,12 @@ export interface PassDeclaration {
    */
   reads?: ResourceHandle[];
   /**
-   * Resources written outside the attachment path (storage textures, buffers).
-   * Attachments are writes already and must not be repeated here.
+   * Resources written outside the attachment path (storage textures, buffers,
+   * or — as a `{ handle, usage }` pair — whatever a `"raw"` pass's own
+   * commands need). Attachments are writes already and must not be repeated
+   * here.
    */
-  writes?: ResourceHandle[];
+  writes?: (ResourceHandle | WriteDeclaration)[];
   /** Handle-valued entries become read edges and resolve before `execute`. */
   uniforms?: PassUniforms;
   /** Keep the pass even when nothing reads its outputs, eg. presenting. */
@@ -204,7 +229,7 @@ export interface CompiledPass {
   name: string;
   /** Every merged sub-pass name joined, as handed to pex-gpu. */
   label: string;
-  type: "render" | "compute";
+  type: "render" | "compute" | "raw";
   color: CompiledColorAttachment[];
   depth?: CompiledDepthStencilAttachment;
   /** Declarations folded in by merging, including its own, in order. */
