@@ -160,8 +160,26 @@ export type PassOverride = (
   declaration: PassDeclaration,
 ) => PassDeclaration | null;
 
-/** Work registered at a named stage. */
-export type StageCallback = () => void | Promise<void>;
+/**
+ * Work run right after a named pass enters the graph, to declare passes at that
+ * point in the frame. Synchronous: `addPass` is, and everything at declaration
+ * time is.
+ */
+export type PassHook = (declaration: PassDeclaration) => void;
+
+/**
+ * Work registered at a named stage, run with whatever that stage publishes and
+ * the name of the stage running, for a callback registered on several.
+ *
+ * The graph never looks inside the payload: what it holds, and whether mutating
+ * it means anything, is the contract of whoever calls `stage()`.
+ */
+// `any` rather than `unknown`: one stage name holds every callback registered on
+// it, and a parameter type is contravariant, so `unknown` would reject typed ones.
+export type StageCallback<T = any> = (
+  context: T,
+  name: string,
+) => void | Promise<void>;
 
 // ─── Compiled plan ───────────────────────────────────────────────────────────
 

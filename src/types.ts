@@ -708,7 +708,7 @@ export interface RenderEngineOptions {
   /** Overrides the engine's accumulated time for this render call. */
   time?: number;
 }
-/** Resolves to each camera's render targets, keyed by output name. */
+/** Resolves to each camera's output textures, keyed by name. */
 export type RenderEngineRender = (
   entities: Entity[],
   cameraEntities: Entity | Entity[],

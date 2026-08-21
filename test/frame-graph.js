@@ -586,5 +586,58 @@ const state = createGraphState();
   );
 }
 
+// ─── Pass hooks ──────────────────────────────────────────────────────────────
+{
+  console.log("\nframe graph — pass hooks");
+  resetGraphState(state);
+  const api = createSetup(state, new Map());
+  const color = api.createTexture({ label: "color", width: 8, height: 8 });
+  const capture = api.createTexture({ label: "capture", width: 8, height: 8 });
+  api.exportTexture(capture);
+
+  const seen = [];
+  const off = api.afterPass("MainPass", (declaration) => {
+    seen.push(declaration.name);
+    api.addPass({
+      name: "Injected",
+      color: [{ texture: capture }],
+      uniforms: { uTexture: color },
+      execute: noop,
+    });
+  });
+
+  api.addPass({ name: "MainPass", color: [{ texture: color }], execute: noop });
+  api.addPass({
+    name: "TransparentPass",
+    color: [{ texture: color }],
+    execute: noop,
+    neverCull: true,
+  });
+
+  check("the hook runs with the pass it is registered on", seen, ["MainPass"]);
+  check(
+    "and its passes land right after it",
+    state.passes.map((pass) => pass.name),
+    ["MainPass", "Injected", "TransparentPass"],
+  );
+  // The injected read sits between two writes of the same handle, which is what
+  // makes reading a target mid-frame safe: the later write waits for it.
+  check(
+    "a later write of the same target waits for the injected read",
+    [...state.passes[2].dependencies].sort(),
+    [0, 1],
+  );
+
+  off();
+  resetGraphState(state);
+  const bare = createSetup(state, new Map());
+  bare.addPass({ name: "MainPass", execute: noop, neverCull: true });
+  check(
+    "unregistering stops it",
+    state.passes.map((pass) => pass.name),
+    ["MainPass"],
+  );
+}
+
 console.log(failures ? `\n${failures} failure(s)` : "\nall checks passed");
 process.exit(failures ? 1 : 0);

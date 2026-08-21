@@ -5,6 +5,7 @@ import shadowMappingPipelineMethods from "./shadow-mapping.js";
 import postProcessingPipelineMethods from "./post-processing.js";
 import cullingPipelineMethods from "./culling.js";
 import createFullscreenGeometry from "../../fullscreen-geometry.js";
+import { RenderTextures } from "./render-textures.js";
 import { getDefaultViewport } from "../../utils.js";
 
 import type { Entity, SystemOptions } from "../../types.js";
@@ -23,10 +24,6 @@ import type {
  *   that cast shadows
  * - "_shadowCubemap" to pointLight components and "_shadowMap" to other light
  *   components
- *
- * Declares its passes into the frame graph rather than submitting them: the
- * graph decides ordering, which passes survive, which targets share memory and
- * which attachment contents are worth storing.
  */
 export default ({ ctx, frameGraph }: SystemOptions) => ({
   type: "render-pipeline-system",
@@ -38,10 +35,11 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
   descriptors: addDescriptors(ctx),
   fullscreen: createFullscreenGeometry(ctx),
 
-  // Sampler for the fullscreen blit of the HDR main pass target to the canvas.
   blitSampler: createSampler(ctx, { filter: "linear" }),
 
   outputs: new Set(["color", "depth"]), // "normal", "emissive"
+  colorFormat: "rgba16float" as GPUTextureFormat,
+  depthFormat: "depth24plus" as GPUTextureFormat,
 
   ...shadowMappingPipelineMethods({ frameGraph }),
   ...postProcessingPipelineMethods({ ctx, frameGraph }),
@@ -53,21 +51,18 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
     );
   },
 
-  drawMeshes(
-    this: any,
-    {
-      renderers,
-      renderView,
-      colorAttachments,
-      msaa,
-      entitiesInView,
-      shadowMappingLight,
-      transparent,
-      transmitted,
-      cullFaceMode,
-      backgroundColorTexture,
-    }: any,
-  ) {
+  drawMeshes({
+    renderers,
+    renderView,
+    colorAttachments,
+    msaa,
+    entitiesInView,
+    shadowMappingLight,
+    transparent,
+    transmitted,
+    cullFaceMode,
+    backgroundColorTexture,
+  }: any) {
     const options = {
       attachmentsLocations: this.getAttachmentsLocations(colorAttachments),
       msaa: this.reversibleToneMap && msaa,
@@ -128,12 +123,7 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
    * as both read and write, and the write-after-write edge between consecutive
    * levels already provides the ordering.
    */
-  generateGrabMips(
-    this: any,
-    grabTexture: ResourceHandle,
-    levels: number,
-    name: string,
-  ) {
+  generateGrabMips(grabTexture: ResourceHandle, levels: number, name: string) {
     for (let level = 1; level < levels; level++) {
       frameGraph.addPass({
         name: `${name}Mip${level}`,
@@ -157,7 +147,7 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
   // Async because post-processing effects are imported on demand, so a frame
   // that first enables one waits for its module. Nothing here touches the GPU:
   // the graph only records declarations, and execution happens after compile.
-  async update(this: any, entities: Entity[], options: any = {}) {
+  async update(entities: Entity[], options: any = {}) {
     let { time, renderView, renderers, drawToScreen = true } = options;
 
     this.time = time;
@@ -174,27 +164,35 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
     const height = renderView.viewport[3];
     const viewId = renderView.cameraEntity.id;
 
-    // Which G-buffer outputs the frame needs. Declaring one that nothing reads
-    // is harmless — the graph culls the write and never allocates the target.
     const outputs = new Set<string>(this.outputs);
     if (postProcessing?.ssao) outputs.add("normal");
     if (postProcessing?.bloom) outputs.add("emissive");
 
-    const msaaSampleCount = postProcessing?.msaa?.sampleCount;
-    const msaa = msaaSampleCount > 0;
+    const sampleCount = postProcessing?.msaa?.sampleCount;
+    const msaa = sampleCount > 0;
 
-    const { colorFormat, depthFormat } = this.descriptors.mainPass;
-
-    // ─── Attachments ─────────────────────────────────────────────────────────
     const colorAttachments: Record<string, ResourceHandle> = {};
     for (const name of outputs) {
       if (name === "depth") continue;
       colorAttachments[name] = frameGraph.createTexture({
-        label: `mainPass_${name}_${viewId}`,
+        label: `renderPipeline.${name}.${viewId}`,
         width,
         height,
-        format: colorFormat,
+        format: this.colorFormat,
       });
+    }
+
+    const msaaColor: Record<string, ResourceHandle> = {};
+    if (msaa) {
+      for (const name of Object.keys(colorAttachments)) {
+        msaaColor[name] = frameGraph.createTexture({
+          label: `renderPipeline.${name}MSAA.${viewId}`,
+          width,
+          height,
+          format: this.colorFormat,
+          sampleCount,
+        });
+      }
     }
 
     // WebGPU has no depth resolve — GPURenderPassDepthStencilAttachment has no
@@ -204,40 +202,63 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
     let depthAttachment: ResourceHandle | undefined;
     if (outputs.has("depth")) {
       depthAttachment = frameGraph.createTexture({
-        label: `mainPassDepth${msaa ? "MSAA" : ""}_${viewId}`,
+        label: `renderPipelineDepth${msaa ? "MSAA" : ""}.${viewId}`,
         width,
         height,
-        format: depthFormat,
-        ...(msaa && { sampleCount: msaaSampleCount }),
+        format: this.depthFormat,
+        ...(msaa && { sampleCount }),
       });
     }
 
-    // Multisampled color is resolved into the single-sample attachments above;
-    // nothing samples it, so the graph marks it memoryless.
-    const msaaColor: Record<string, ResourceHandle> = {};
-    if (msaa) {
-      for (const name of Object.keys(colorAttachments)) {
-        msaaColor[name] = frameGraph.createTexture({
-          label: `mainPass_${name}MSAA_${viewId}`,
-          width,
-          height,
-          format: colorFormat,
-          sampleCount: msaaSampleCount,
-        });
-      }
-    }
+    // We might be drawing to part of the screen
+    const renderPassView = {
+      ...renderView,
+      viewport: [0, 0, width, height],
+    };
 
-    const colorTarget = (name: string): ColorAttachmentDeclaration =>
-      msaa
-        ? { texture: msaaColor[name]!, resolveTarget: colorAttachments[name]! }
-        : { texture: colorAttachments[name]! };
+    // Frame register
+    const textures = new RenderTextures(frameGraph, renderPassView);
+    for (const [name, handle] of Object.entries(colorAttachments)) {
+      textures.set(name, handle);
+    }
+    if (depthAttachment) textures.set("depth", depthAttachment);
+    frameGraph.blackboard.set(`renderTextures.${viewId}`, textures);
+
+    /**
+     * Resolved per pass, not captured once: a pass injected between the scene
+     * passes can publish a modified image and have the ones after it draw into
+     * that instead. They keep the same depth attachment, so blending and depth
+     * testing carry on against the geometry already drawn.
+     *
+     * MSAA is the exception, and a hard one: the multisampled attachment holds
+     * the samples the resolve target was derived from, and WebGPU cannot load a
+     * single-sample image back into it. Mid-scene reads still work — the
+     * resolve runs at the end of every pass that declares it — but a
+     * replacement has nowhere to go, so it is reported rather than silently
+     * dropped.
+     */
+    const colorTarget = (name: string): ColorAttachmentDeclaration => {
+      const published = textures.get(name) ?? colorAttachments[name]!;
+      if (!msaa) return { texture: published };
+
+      if (published !== colorAttachments[name]) {
+        textures.report(
+          `"${name}" was republished as ${textures.explain(published)} while the scene passes were still drawing, which MSAA cannot pick up. Move the pass to a stage after them, or turn MSAA off.`,
+        );
+      }
+      return {
+        texture: msaaColor[name]!,
+        resolveTarget: colorAttachments[name]!,
+      };
+    };
     const depthTarget = (): DepthStencilAttachmentDeclaration => ({
       texture: depthAttachment!,
     });
 
     const layer = renderView.cameraEntity.layer;
 
-    // ─── Shadow maps ─────────────────────────────────────────────────────────
+    await frameGraph.stage("lights", textures);
+
     // Declared once per frame and shared by every camera looking at the same
     // layer, since a shadow map depends on the light and the scene only.
     const { shadowMaps } = this.declareShadowMaps(entities, renderers, layer);
@@ -246,12 +267,6 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
     const entitiesInView = layer
       ? entities.filter((entity) => !entity.layer || entity.layer === layer)
       : entities.filter((entity) => !entity.layer);
-
-    // We might be drawing to part of the screen
-    const renderPassView = {
-      ...renderView,
-      viewport: [0, 0, width, height],
-    };
 
     const drawMeshOptions = {
       renderers,
@@ -263,9 +278,10 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
       transmitted: false,
     };
 
-    // ─── Main pass ───────────────────────────────────────────────────────────
+    await frameGraph.stage("opaque", textures);
+
     frameGraph.addPass({
-      name: `MainPass_${viewId}`,
+      name: `opaque.${viewId}`,
       color: Object.keys(colorAttachments).map((name, index) => ({
         ...colorTarget(name),
         ...(index === 0 && {
@@ -289,12 +305,11 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
       (entity) => entity.material?.transmission,
     );
 
-    // ─── Transparent pass ────────────────────────────────────────────────────
-    // Same attachments as the main pass and nothing read in between, so the
-    // graph folds the two into a single beginRenderPass.
     if (hasTransparent) {
+      await frameGraph.stage("transparent", textures);
+
       frameGraph.addPass({
-        name: `TransparentPass_${viewId}`,
+        name: `transparent.${viewId}`,
         color: [colorTarget("color")],
         ...(depthAttachment && { depth: depthTarget() }),
         reads: shadowMaps,
@@ -309,12 +324,9 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
       });
     }
 
-    // ─── Transmission ────────────────────────────────────────────────────────
     if (hasTransmitted) {
-      // Full viewport size (not prev-power-of-two): the transmission shader
-      // samples it with full-screen [0, 1] coords, so a smaller top-left
-      // anchored copy would misalign refraction. NPOT mip chains are fine in
-      // WebGPU, so the old POT constraint no longer applies.
+      await frameGraph.stage("transmission", textures);
+
       const mipLevelCount = 1 + Math.floor(Math.log2(Math.max(width, height)));
       const hasBackTransmitted = entitiesInView.some(
         (entity) => entity.material?.transmission && !entity.material.cullFace,
@@ -322,7 +334,7 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
 
       const grabPass = (name: string) => {
         const grab = frameGraph.createTexture({
-          label: `${name}_${viewId}`,
+          label: `${name}.${viewId}`,
           width,
           height,
           format: this.descriptors.grabPass.colorFormat,
@@ -330,9 +342,9 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
         });
 
         frameGraph.addPass({
-          name: `${name}Copy_${viewId}`,
+          name: `${name}.${viewId}`,
           color: [{ texture: grab }],
-          uniforms: { uTexture: colorAttachments.color! },
+          uniforms: { uTexture: textures.get("color")! },
           renderView: { ...renderView, viewport: renderPassView.viewport },
           execute: ({ uniforms }) => {
             submit(ctx, {
@@ -346,12 +358,11 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
         });
 
         this.generateGrabMips(grab, mipLevelCount, `${name}_${viewId}`);
-        // Published so debug views can show what refraction actually sampled.
-        frameGraph.blackboard.set(`transmission.grab.${viewId}`, grab);
+        textures.set("transmission.grab", grab);
         return grab;
       };
 
-      let grab = grabPass("GrabPass");
+      let grab = grabPass("grab");
 
       if (hasBackTransmitted) {
         frameGraph.addPass({
@@ -371,7 +382,7 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
           },
         });
 
-        grab = grabPass("GrabTransmissionBackPass");
+        grab = grabPass("grabTransmissionBack");
       }
 
       const frontGrab = grab;
@@ -393,67 +404,49 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
       });
     }
 
-    let color = colorAttachments.color!;
-
     // ─── Inverse tone map ────────────────────────────────────────────────────
-    if (this.reversibleToneMap && msaa) {
-      const inverseToneMapped = frameGraph.createTexture({
-        label: `inverseToneMapColor_${viewId}`,
-        width,
-        height,
-        format: colorFormat,
-      });
+    // if (this.reversibleToneMap && msaa) {
+    //   const inverseToneMapped = frameGraph.createTexture({
+    //     label: `inverseToneMapColor_${viewId}`,
+    //     width,
+    //     height,
+    //     format: this.colorFormat,
+    //   });
 
-      frameGraph.addPass({
-        name: `InverseToneMapPass_${viewId}`,
-        color: [{ texture: inverseToneMapped }],
-        uniforms: { uTexture: color },
-        renderView: renderPassView,
-        execute: ({ uniforms }) => {
-          submit(ctx, {
-            label: "drawInverseToneMapFullScreenTriangle",
-            attributes: this.fullscreen.triangle.attributes,
-            count: this.fullscreen.triangle.count,
-            pipeline: this.descriptors.reversibleToneMap.pipelineDesc,
-            uniforms,
-          });
-        },
-      });
-      color = inverseToneMapped;
-    }
+    //   frameGraph.addPass({
+    //     name: `InverseToneMapPass_${viewId}`,
+    //     color: [{ texture: inverseToneMapped }],
+    //     uniforms: { uTexture: textures.get("color")! },
+    //     renderView: renderPassView,
+    //     execute: ({ uniforms }) => {
+    //       submit(ctx, {
+    //         label: "drawInverseToneMapFullScreenTriangle",
+    //         attributes: this.fullscreen.triangle.attributes,
+    //         count: this.fullscreen.triangle.count,
+    //         pipeline: this.descriptors.reversibleToneMap.pipelineDesc,
+    //         uniforms,
+    //       });
+    //     },
+    //   });
+    //   textures.set("color", inverseToneMapped);
+    // }
 
-    await frameGraph.stage("beforePostProcessing");
+    await frameGraph.stage("postProcessing", textures);
 
     // ─── Post-processing ─────────────────────────────────────────────────────
     if (postProcessing) {
-      color = this.renderPostProcessing({
-        renderView: renderPassView,
-        color,
-        // Multisampled depth can't be sampled (see the attachment note above),
-        // so under MSAA the effects that read it — SSAO, DoF, fog — sit this
-        // frame out rather than fail validation. Lifting that needs a depth
-        // resolve pass.
-        ...(!msaa && depthAttachment && { depth: depthAttachment }),
-        normal: colorAttachments.normal,
-        emissive: colorAttachments.emissive,
-      });
+      this.renderPostProcessing({ renderView: renderPassView, textures });
     }
 
     // ─── Present ─────────────────────────────────────────────────────────────
+    const color = textures.require("color")!;
+
     // Pointing the presented image at an intermediate leaves everything that
     // only fed the original output unreferenced, so the graph culls it.
-    if (this.debugRender) {
-      const debugTexture =
-        colorAttachments[this.debugRender] ??
-        (frameGraph.blackboard.get(
-          `postProcessing.${viewId}.${this.debugRender}`,
-        ) as ResourceHandle) ??
-        (frameGraph.blackboard.get(this.debugRender) as ResourceHandle);
-      if (debugTexture) color = debugTexture;
-    }
+    const presented =
+      (this.debugRender && textures.get(this.debugRender)) || color;
 
     if (drawToScreen !== false) {
-      const presented = color;
       frameGraph.addPass({
         name: `BlitPass_${viewId}`,
         // No color handles: the canvas is the target.
@@ -476,17 +469,17 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
     }
 
     // Returned to the caller, which reads them outside the graph. `color` is
-    // the end of the chain, so it may be a post-processed target rather than
+    // the end of the chain, so it may be a post-processed texture rather than
     // the main pass attachment of the same name.
-    const renderTargets: Record<string, ResourceHandle> = {
+    const outputTextures: Record<string, ResourceHandle> = {
       ...colorAttachments,
       color,
       ...(depthAttachment && { depth: depthAttachment }),
     };
-    for (const handle of Object.values(renderTargets)) {
+    for (const handle of Object.values(outputTextures)) {
       frameGraph.exportTexture(handle);
     }
-    return renderTargets;
+    return outputTextures;
   },
 
   dispose(entities: Entity[]) {

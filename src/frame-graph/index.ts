@@ -22,6 +22,7 @@ import type {
   BufferDescriptor,
   CompiledPlan,
   PassDeclaration,
+  PassHook,
   PassOverride,
   PhysicalResource,
   ResourceHandle,
@@ -36,7 +37,7 @@ const DECLARE_HINT = "Declare resources and passes inside frameGraph.setup().";
  * frame, compiled into an execution plan, then executed.
  *
  * Culls passes nobody reads, merges adjacent passes sharing attachments,
- * derives load/store ops and usage flags from lifetimes, and recycles targets
+ * derives load/store ops and usage flags from lifetimes, and recycles textures
  * whose lifetimes don't overlap.
  *
  * Nothing is private: the phase guards, not visibility, protect the invariants.
@@ -48,6 +49,7 @@ export class FrameGraph {
   pool: ResourcePool;
   overrides = new Map<string, PassOverride>();
   stages = new Map<string, Set<StageCallback>>();
+  passHooks = new Map<string, Set<PassHook>>();
   /** Type-loose channel for passing handles between decoupled modules. */
   blackboard = new Map<string, unknown>();
   /** Messages already logged, so a pass that throws every frame logs once. */
@@ -248,12 +250,24 @@ export class FrameGraph {
         {},
       );
     }
+
+    // Last, so a hook sees the pass complete and its own passes land after it.
+    const hooks = this.passHooks.get(pass.name);
+    if (hooks) for (const hook of hooks) hook(declaration);
   }
 
   // ─── Extensibility ─────────────────────────────────────────────────────────
 
   /**
-   * Run everything registered at this injection point.
+   * Run everything registered at this injection point, in registration order,
+   * handing each callback the payload the caller publishes for this stage.
+   *
+   * The payload is how a callback learns what exists at this point in the frame
+   * and how it hands something back — the graph passes it through untouched, so
+   * the vocabulary stays with the caller rather than becoming graph API. See
+   * `RenderTextures`, the payload the render pipeline publishes: a callback
+   * reads the frame's images by name from it and publishes its own the same
+   * way, which is what splices its passes into the frame.
    *
    * Callbacks may be async, but only for CPU work: declaration runs inside the
    * caller's frame segment, and yielding past a browser present destroys the
@@ -261,19 +275,40 @@ export class FrameGraph {
    * Fetch outside the frame and use what has arrived, as post-processing does
    * with its effect modules.
    */
-  async stage(name: string): Promise<void> {
+  async stage<T>(name: string, context?: T): Promise<void> {
     requirePhase(this.state, "declaring", `stage("${name}")`, DECLARE_HINT);
 
     const callbacks = this.stages.get(name);
     if (!callbacks) return;
-    for (const callback of callbacks) await callback();
+    for (const callback of callbacks) await callback(context, name);
   }
 
   /** Register work at a named stage. Persists across frames. */
-  on(name: string, callback: StageCallback): () => void {
+  on<T>(name: string, callback: StageCallback<T>): () => void {
     const callbacks = this.stages.getOrInsertComputed(name, () => new Set());
     callbacks.add(callback);
     return () => callbacks.delete(callback);
+  }
+
+  /**
+   * Declare passes immediately after `name` enters the graph, at that point in
+   * the frame.
+   *
+   * Every pass is an injection point this way, so positioning work relative to
+   * one costs the caller nothing: no `stage()` to add, and no set of stage
+   * names shadowing the pass list. Named stages remain for the boundaries no
+   * single pass marks — a phase that exists whether or not the pass before it
+   * was declared — and for the payload and the awaiting that come with them.
+   *
+   * The hook runs after the pass and its edges are recorded, and after any
+   * override, so a dropped pass fires nothing and a renamed one fires under its
+   * new name. Reading the frame's images from here is the register's job, keyed
+   * by the view on the declaration.
+   */
+  afterPass(name: string, hook: PassHook): () => void {
+    const hooks = this.passHooks.getOrInsertComputed(name, () => new Set());
+    hooks.add(hook);
+    return () => hooks.delete(hook);
   }
 
   /** Register a {@link PassOverride} for a pass name; null clears it. */
@@ -338,6 +373,21 @@ export class FrameGraph {
   // ─── Introspection ─────────────────────────────────────────────────────────
 
   /**
+   * Descriptor a handle was declared or imported with: format, size, sample
+   * count, mip levels.
+   *
+   * Readable from declaration onwards, so a pass sizes and formats its own
+   * textures from what it is about to read instead of being handed those values
+   * separately — the graph already holds them, and a copy is one more thing to
+   * keep in sync.
+   */
+  describe(
+    handle: ResourceHandle,
+  ): Readonly<TextureDescriptor | BufferDescriptor> | undefined {
+    return this.state.resources[handle.index]?.descriptor;
+  }
+
+  /**
    * Physical resource behind a handle. Undefined before compile, after the next
    * `setup` clears the plan, or when the resource was culled.
    */
@@ -358,6 +408,7 @@ export class FrameGraph {
     resetGraphState(this.state);
     this.overrides.clear();
     this.stages.clear();
+    this.passHooks.clear();
     this.blackboard.clear();
     this.reportedErrors.clear();
     this.plan = undefined;
@@ -368,6 +419,7 @@ export default FrameGraph;
 
 export * from "./types.js";
 export { memoryTimeline } from "./inspect.js";
+export { isTextureDescriptor } from "./state.js";
 export type { GraphPhase, GraphState } from "./state.js";
 export { ResourcePool } from "./pool.js";
 export type { PoolStats } from "./pool.js";

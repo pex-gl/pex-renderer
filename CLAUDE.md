@@ -16,7 +16,7 @@ This package is scaffolded and managed with [Snowdev](https://github.com/dmnsgn/
 
 - `npx tsc --noEmit` — quick typecheck (strict mode, `exactOptionalPropertyTypes`) from globally installed `snowdev`
 
-Rendering correctness is validated through the visual examples under `examples/` (served via `index.html`, `examples/index.js`) and manual inspection. `npm test` covers only what a screenshot cannot show: `test/frame-graph.js` (culling, merging, lifetime recycling, load/store derivation — against a stubbed pool, imported from `lib/` so it needs a build first) and `test/validate-pipeline-wgsl.js` (WGSL compiles through Dawn).
+Rendering correctness is validated through the visual examples under `examples/` (served via `index.html`, `examples/index.js`) and manual inspection. `npm test` covers only what a screenshot cannot show: `test/frame-graph.js` (culling, merging, lifetime recycling, load/store derivation) and `test/render-textures.js` (which version of a name a reader gets, and what a mismatch does) — both against a stubbed pool, imported from `lib/` so they need a build first and `test/validate-pipeline-wgsl.js` (WGSL compiles through Dawn).
 
 ## Architecture
 
@@ -30,7 +30,7 @@ The core model (see README "Architecture" section):
 
 ### Key modules at the repo root
 
-- `render-engine.ts` — the default bundle of systems for a typical render loop. Exposes `.update(entities, deltaTime)` (CPU-side scene updates plus the sky/probe bakes, bracketed in its own command buffer) and `async .render(entities, cameraEntities, options)` (declares, compiles and executes one frame graph covering **all** cameras; returns the resolved render target textures per camera).
+- `render-engine.ts` — the default bundle of systems for a typical render loop. Exposes `.update(entities, deltaTime)` (CPU-side scene updates plus the sky/probe bakes, bracketed in its own command buffer) and `async .render(entities, cameraEntities, options)` (declares, compiles and executes one frame graph covering **all** cameras; returns the resolved output textures per camera).
 - `frame-graph/` — retained-mode frame graph, three phases (see its own section below).
 - `fullscreen-geometry.ts` — the fullscreen triangle/quad vertex buffers, memoized per context. Deliberately outside the frame graph: the graph only owns resources whose lifetime is one frame.
 - `world.ts` — minimal entity/system container (`add`, `addSystem`, `update`, `dispose`).
@@ -79,7 +79,7 @@ ordered pass list:
   reader outside the graph has no pass to bound its lifetime, so releasing it
   after its last in-graph use would let a later pass draw over what the caller
   is about to read. Anything handed back must be exported: the returned
-  render targets, and the shadow maps the light system reads off the components.
+  output textures, and the shadow maps the light system reads off the components.
 - `createTexture({ persistent: true })` goes further: the resource keeps one
   dedicated texture **across** frames, never pooled. Export makes contents
   correct for the rest of the frame; persistent makes the *identity* stable,
@@ -87,7 +87,7 @@ ordered pass list:
   that must know which frame's data it holds, and pex-gpu's bind group cache,
   which is keyed by texture and would otherwise rebuild every bind group
   sampling it, every frame. Costs one texture that is never reclaimed. Right for
-  shadow maps; wrong for post-processing scratch targets. A persistent resource
+  shadow maps; wrong for post-processing scratch textures. A persistent resource
   is looked up by its descriptor `label`, so that label must be stable and
   unique across frames — it is the resource's identity here, not just a debug
   string as in WebGPU.
@@ -119,10 +119,70 @@ attachments (there are no subpasses to fall back on), deriving `loadOp`/`storeOp
 from real lifetimes, deriving usage flags, marking single-pass attachments
 `TRANSIENT_ATTACHMENT` (memoryless), and recycling whole textures by lifetime.
 
-Extensibility is three distinct mechanisms, deliberately not one: named
-`stage()` injection points, the `blackboard` for handles shared between
-decoupled modules, and `overridePass(name, transform)` to replace, wrap or drop
-a pass by name.
+Extensibility is four distinct mechanisms, deliberately not one:
+
+- `afterPass(name, hook)` — declare passes right after a named pass enters the
+  graph. Every pass is an injection point this way, so positioning against one
+  costs nothing on the declaring side: no `stage()` call to add, and no set of
+  stage names shadowing the pass list. Synchronous, since `addPass` is.
+- `stage(name, payload)` — the boundaries no single pass marks (a phase that
+  exists whether or not the pass before it was declared), and the only hook that
+  carries a payload and can be awaited. The pipeline runs two: `afterScene`,
+  once no more geometry will be drawn, and `beforePostProcessing`, after the
+  inverse tone map.
+- `blackboard` — values shared between decoupled modules.
+- `overridePass(name, transform)` — replace, wrap or drop a pass by name.
+
+`describe(handle)` answers what a resource is — format, size, sample count — so
+a module sizes its own textures from what it is about to read.
+
+Reading and writing a texture mid-frame both work, which is the point of having
+injection points at all. A pass declared between two writes of the same handle
+reads what was there at that point, because the later write picks up a
+write-after-read edge. And it can publish a modified image: the pipeline
+resolves every scene attachment from the register at the moment it declares that
+pass (`colorTarget()`), so republishing `"color"` after the main pass means the
+transparent pass, the transmission grab and the transmission front pass all
+carry on into the new image, loading rather than clearing it, against the depth
+buffer they already share. Modifying in place is the only thing ruled out — a
+pass may not read and write one handle — so a mid-scene edit is always a copy
+into a new texture.
+
+MSAA is the exception, and it is WebGPU's rather than ours: the scene renders
+into the multisampled attachment and resolves into the one everything else
+samples, and there is no way to load a single-sample image back into a
+multisampled attachment. Mid-scene reads still work (the resolve runs at the end
+of each pass that declares it); a mid-scene republish is reported and ignored.
+The `afterScene` stage is the answer for anything that has to replace the image
+under MSAA: the scene has resolved by then, so from there on every reader and
+writer of `"color"` is single-sample and a republish is picked up whatever the
+sample count.
+
+### Texture hand-off (`render-pipeline/render-textures.ts`)
+
+Declaration order is execution order, so a module joins the frame at an
+injection point rather than wherever it likes. What it needs there is a way to
+learn what the frame has produced and to hand back what it produced — that is
+`RenderTextures`, one per camera per frame, published on the blackboard as
+`renderTextures.<viewId>` and handed to every stage callback. Named for what the
+entries are: attachments and sampled results share one register, and "render
+target" is D3D/WebGL vocabulary WebGPU doesn't use — `resolveTarget` is the only
+"target" in the spec.
+
+It has two operations, and everything uses them: the pipeline's own passes, each
+post-processing sub-pass, and injected passes. `set(name, handle)` publishes,
+`get(name, requirements?)` reads. `"color"` is the frame's image — whatever was
+published under it last is what post-processing, `debugRender` and the blit read
+— alongside `"depth"`, `"normal"`, `"emissive"` from the main pass and
+`"<effect>.<subPass>"` from post-processing. So splicing passes into a frame is
+just publishing `"color"`, and nothing downstream has to be told they exist.
+
+Mismatch has one answer rather than a check per call site: `get` hands back what
+a reader can bind, so a multisampled depth texture under MSAA is simply not
+returned and the effect sits the frame out. A name keeps every version published
+under it, so a pass publishing an unusable `"color"` costs its own contribution
+and one logged error naming it rather than a frame that fails validation
+somewhere downstream. `require` is `get` plus that report when nothing qualifies.
 
 ### Directory structure
 

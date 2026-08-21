@@ -22,9 +22,18 @@ const FAR_ENOUGH = 1e6;
 
 /** Distance from a point to the nearest point of a world-space AABB. */
 const closestDistance = (worldBounds: any, point: any) => {
-  TEMP_VEC3[0] = Math.max(worldBounds[0][0], Math.min(point[0], worldBounds[1][0]));
-  TEMP_VEC3[1] = Math.max(worldBounds[0][1], Math.min(point[1], worldBounds[1][1]));
-  TEMP_VEC3[2] = Math.max(worldBounds[0][2], Math.min(point[2], worldBounds[1][2]));
+  TEMP_VEC3[0] = Math.max(
+    worldBounds[0][0],
+    Math.min(point[0], worldBounds[1][0]),
+  );
+  TEMP_VEC3[1] = Math.max(
+    worldBounds[0][1],
+    Math.min(point[1], worldBounds[1][1]),
+  );
+  TEMP_VEC3[2] = Math.max(
+    worldBounds[0][2],
+    Math.min(point[2], worldBounds[1][2]),
+  );
   return vec3.distance(point, TEMP_VEC3);
 };
 
@@ -50,15 +59,11 @@ const shadowParticipants = (entities: Entity[]) =>
  *
  * - "directionalLight", "spotLight" and "pointLight" method to create shadow map
  *   render passes Requires:
- * - This.drawMeshes()
- * - This.descriptors
  *
  * @private
  */
-export default ({
-  frameGraph,
-}: Pick<SystemOptions, "frameGraph">) => ({
-  checkLight(this: any, light: any, lightEntity: Entity) {
+export default ({ frameGraph }: Pick<SystemOptions, "frameGraph">) => ({
+  checkLight(light: any, lightEntity: Entity) {
     if (!lightEntity._transform) {
       console.warn(
         NAMESPACE,
@@ -82,7 +87,7 @@ export default ({
    * where the light stops contributing; without one the cone is open-ended and
    * only its sides reject.
    */
-  getLightVolumeTest(this: any, lightEntity: Entity, light: any) {
+  getLightVolumeTest(lightEntity: Entity, light: any) {
     const fov = lightEntity.spotLight ? 2 * light.angle : Math.PI / 2;
     // Near is what the fit is trying to find, so the provisional frustum uses
     // the smallest legal one; only the side planes and the far cap matter here.
@@ -97,7 +102,6 @@ export default ({
     return (worldBounds: any) => isAABBInFrustum(worldBounds, TEMP_FRUSTUM);
   },
   computeLightProperties(
-    this: any,
     lightEntity: Entity,
     light: any,
     participants: Entity[],
@@ -154,9 +158,10 @@ export default ({
       // meaning and "in front" is not a constraint: the box has to span every
       // participant along the light axis or casters on the far side of that
       // position get clipped out of the map. Negative near is legal here.
-      light._near = light._sceneBboxInLightSpace[1][2] === -Infinity
-        ? MIN_NEAR
-        : -light._sceneBboxInLightSpace[1][2];
+      light._near =
+        light._sceneBboxInLightSpace[1][2] === -Infinity
+          ? MIN_NEAR
+          : -light._sceneBboxInLightSpace[1][2];
       light._far = Math.max(
         light._near + MIN_NEAR,
         -light._sceneBboxInLightSpace[0][2],
@@ -191,7 +196,6 @@ export default ({
   // Radial near/far for a point light's cube projection, derived from the scene
   // bounds relative to the light (scene-adaptive, nothing hardcoded).
   computePointLightProperties(
-    this: any,
     lightEntity: Entity,
     light: any,
     participants: Entity[],
@@ -204,7 +208,10 @@ export default ({
       const worldBounds = participants[i]!.transform!.worldBounds!;
       // A point light reaches a sphere of `range`, so anything further away
       // than the nearest point of its bounds contributes nothing to the cube.
-      if (light.range > 0 && closestDistance(worldBounds, lightPosition) > light.range) {
+      if (
+        light.range > 0 &&
+        closestDistance(worldBounds, lightPosition) > light.range
+      ) {
         continue;
       }
       aabb.includeAABB(light._sceneBbox, worldBounds);
@@ -238,7 +245,6 @@ export default ({
   },
   // Modern shadow maps are sampleable depth textures; there is no color map.
   createShadowMap(
-    this: any,
     light: any,
     lightEntity: Entity,
     name: string,
@@ -272,7 +278,6 @@ export default ({
    * camera's layer before handing them over.
    */
   declareShadowMaps(
-    this: any,
     entities: Entity[],
     renderers: RendererSystem[],
     layer: string | undefined,
@@ -366,7 +371,6 @@ export default ({
   },
 
   renderDirectionalLightShadowMap(
-    this: any,
     lightEntity: Entity,
     entities: Entity[],
     renderers: RendererSystem[],
@@ -429,7 +433,6 @@ export default ({
   },
 
   renderSpotLightShadowMap(
-    this: any,
     lightEntity: Entity,
     entities: Entity[],
     renderers: RendererSystem[],
@@ -489,7 +492,6 @@ export default ({
   },
 
   renderPointLightShadowMap(
-    this: any,
     lightEntity: Entity,
     entities: Entity[],
     renderers: RendererSystem[],

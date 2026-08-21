@@ -5,6 +5,7 @@ import { NAMESPACE, definesKey } from "../../utils.js";
 import { isResourceHandle } from "../../frame-graph/types.js";
 
 import type { Entity, GpuContext, RenderView } from "../../types.js";
+import type { RenderTextures } from "./render-textures.js";
 import type {
   FrameGraph,
   PassUniforms,
@@ -51,13 +52,14 @@ export interface PostProcessingContext {
   viewport: number[];
   time: number;
   samplers: PostProcessingSamplers;
-  /** Current end of the chain — what a sub-pass reads unless it names a source. */
-  color: ResourceHandle;
-  depth?: ResourceHandle;
-  normal?: ResourceHandle;
-  emissive?: ResourceHandle;
-  /** Outputs published so far, keyed "<effect>.<subPass>". */
-  targets: Map<string, ResourceHandle>;
+  /**
+   * The frame's images. `get("color")` is the current end of the chain — what a
+   * sub-pass reads unless it names a source — alongside the main pass outputs
+   * under `"depth"`, `"normal"` and `"emissive"` and every sub-pass output so
+   * far under `"<effect>.<subPass>"`. Anything it does not hand back was not
+   * asked for or cannot be bound, so an effect needing it sits the frame out.
+   */
+  textures: RenderTextures;
 }
 
 export interface PostProcessingSubPass {
@@ -75,17 +77,22 @@ export interface PostProcessingSubPass {
   ) => Record<string, number | boolean>;
   blend?: GPUBlendState;
   enabled?: (context: PostProcessingContext) => boolean;
-  /** Handle, or a "<effect>.<subPass>" key. Defaults to the current image. */
-  source?: (context: PostProcessingContext) => ResourceHandle | string | undefined;
+  /** Handle, or a register name. Defaults to the current image, `"color"`. */
+  source?: (
+    context: PostProcessingContext,
+  ) => ResourceHandle | string | undefined;
   /**
-   * This sub-pass's output becomes the current image, which every later
-   * sub-pass reads by default. Off unless set: most sub-passes write data only
-   * their own effect consumes — a visibility buffer, a bloom pyramid level, an
-   * edge mask — and leave the image alone.
+   * Publish this sub-pass's output as `"color"`, making it the image every
+   * later sub-pass reads by default. Off unless set: most sub-passes write data
+   * only their own effect consumes — a visibility buffer, a bloom pyramid
+   * level, an edge mask — and leave the image alone. Its output is published
+   * under `"<effect>.<subPass>"` either way.
    */
   chain?: boolean;
-  /** Handle or key. A fresh target is allocated when omitted. */
-  target?: (context: PostProcessingContext) => ResourceHandle | string | undefined;
+  /** Handle or register name. A fresh target is allocated when omitted. */
+  target?: (
+    context: PostProcessingContext,
+  ) => ResourceHandle | string | undefined;
   /** Output size, for down/upscaling chains. Defaults to the full viewport. */
   size?: (context: PostProcessingContext) => number[];
   /** Output format. Defaults to the effect's working format. */
@@ -96,7 +103,7 @@ export interface PostProcessingSubPass {
 
 export interface PostProcessingEffect {
   name: string;
-  /** Targets are display-referred from this effect onwards. */
+  /** Outputs are display-referred from this effect onwards. */
   srgb?: boolean;
   enabled?: (context: PostProcessingContext) => boolean;
   passes: (context: PostProcessingContext) => PostProcessingSubPass[];
@@ -114,10 +121,16 @@ const constantsKey = (constants: Record<string, number | boolean>) =>
  * Each sub-pass declares what it reads and writes; the graph handles the rest.
  * That removes two things the previous implementation did by hand: a mutable
  * target dictionary keyed by view and pass name, and a per-view cache other
- * systems reached into for the AO texture. Targets are ordinary handles now,
- * published on the blackboard for anyone who needs them.
+ * systems reached into for the AO texture. Outputs are ordinary handles now,
+ * published in the view's register under the name any reader can ask for.
  */
-export default ({ ctx, frameGraph }: { ctx: GpuContext; frameGraph: FrameGraph }) => ({
+export default ({
+  ctx,
+  frameGraph,
+}: {
+  ctx: GpuContext;
+  frameGraph: FrameGraph;
+}) => ({
   postProcessingEffects: new Map<string, PostProcessingEffect | null>(),
   postProcessingLoading: new Map<string, Promise<void>>(),
   postProcessingPipelines: new Map<string, Record<string, unknown>>(),
@@ -135,7 +148,7 @@ export default ({ ctx, frameGraph }: { ctx: GpuContext; frameGraph: FrameGraph }
    * Fetch an effect module once. A failed import is remembered as null so a
    * missing or broken effect doesn't retry every frame.
    */
-  loadPostProcessingEffect(this: any, name: string): Promise<void> | undefined {
+  loadPostProcessingEffect(name: string): Promise<void> | undefined {
     if (this.postProcessingEffects.has(name)) return;
 
     let loading = this.postProcessingLoading.get(name);
@@ -143,7 +156,9 @@ export default ({ ctx, frameGraph }: { ctx: GpuContext; frameGraph: FrameGraph }
       loading = import(`./post-processing/${name}.js`)
         .then((module: { default: PostProcessingEffect }) => {
           if (typeof module.default?.passes !== "function") {
-            throw new Error(`"${name}" does not export a PostProcessingEffect.`);
+            throw new Error(
+              `"${name}" does not export a PostProcessingEffect.`,
+            );
           }
           this.postProcessingEffects.set(name, module.default);
         })
@@ -165,11 +180,10 @@ export default ({ ctx, frameGraph }: { ctx: GpuContext; frameGraph: FrameGraph }
   },
 
   /**
-   * pex-gpu keys compiled pipelines by descriptor identity, so each shader
+   * Pex-gpu keys compiled pipelines by descriptor identity, so each shader
    * variant needs one stable object for the lifetime of the system.
    */
   getPostProcessingPipeline(
-    this: any,
     key: string,
     subPass: PostProcessingSubPass,
     defines: Set<string>,
@@ -188,26 +202,16 @@ export default ({ ctx, frameGraph }: { ctx: GpuContext; frameGraph: FrameGraph }
     });
   },
 
-  renderPostProcessing(
-    this: any,
-    {
-      renderView,
-      color,
-      depth,
-      normal,
-      emissive,
-    }: {
-      renderView: RenderView;
-      color: ResourceHandle;
-      depth?: ResourceHandle;
-      normal?: ResourceHandle;
-      emissive?: ResourceHandle;
-    },
-  ): ResourceHandle {
+  renderPostProcessing({
+    renderView,
+    textures,
+  }: {
+    renderView: RenderView;
+    textures: RenderTextures;
+  }): void {
     const cameraEntity = renderView.cameraEntity!;
     const component = cameraEntity.postProcessing as Record<string, unknown>;
     const viewId = cameraEntity.id;
-    const { colorFormat, srgbColorFormat } = this.descriptors.postProcessing;
 
     const context: PostProcessingContext = {
       ctx,
@@ -216,11 +220,7 @@ export default ({ ctx, frameGraph }: { ctx: GpuContext; frameGraph: FrameGraph }
       viewport: renderView.viewport,
       time: this.time,
       samplers: this.postProcessingSamplers,
-      color,
-      ...(depth && { depth }),
-      ...(normal && { normal }),
-      ...(emissive && { emissive }),
-      targets: new Map<string, ResourceHandle>(),
+      textures,
     };
 
     // Start any module this frame wants and carry on with the ones already
@@ -238,21 +238,12 @@ export default ({ ctx, frameGraph }: { ctx: GpuContext; frameGraph: FrameGraph }
       }
     }
 
-    const resolveTarget = (
+    const resolveHandle = (
       value: ResourceHandle | string | undefined,
-    ): ResourceHandle | undefined => {
-      if (value === undefined) return undefined;
-      if (isResourceHandle(value)) return value;
-      const handle = context.targets.get(value);
-      if (!handle) {
-        console.warn(
-          NAMESPACE,
-          "post-processing",
-          `unknown target "${value}"`,
-        );
-      }
-      return handle;
-    };
+    ): ResourceHandle | undefined =>
+      value === undefined || isResourceHandle(value)
+        ? value
+        : textures.require(value);
 
     for (const effectName of EFFECT_ORDER) {
       const effect = this.postProcessingEffects.get(effectName);
@@ -264,7 +255,7 @@ export default ({ ctx, frameGraph }: { ctx: GpuContext; frameGraph: FrameGraph }
         if (subPass.enabled && !subPass.enabled(context)) continue;
 
         const passKey = `${effectName}.${subPass.name}`;
-        const explicitTarget = resolveTarget(subPass.target?.(context));
+        const explicitTarget = resolveHandle(subPass.target?.(context));
         const size = subPass.size?.(context) ?? [
           renderView.viewport[2]!,
           renderView.viewport[3]!,
@@ -278,10 +269,11 @@ export default ({ ctx, frameGraph }: { ctx: GpuContext; frameGraph: FrameGraph }
             height: Math.max(1, Math.trunc(size[1]!)),
             format:
               subPass.format?.(context) ??
-              (effect.srgb ? srgbColorFormat : colorFormat),
+              (effect.srgb ? "rgba8unorm-srgb" : "rgba16float"),
           });
 
-        const input = resolveTarget(subPass.source?.(context)) ?? context.color;
+        const input =
+          resolveHandle(subPass.source?.(context)) ?? textures.get("color")!;
 
         const defines = subPass.getDefines?.(context) ?? new Set<string>();
         const constants = subPass.constants?.(context) ?? {};
@@ -295,7 +287,7 @@ export default ({ ctx, frameGraph }: { ctx: GpuContext; frameGraph: FrameGraph }
         // Handle-valued uniforms become read edges and are swapped for physical
         // textures before execute runs, so nothing here declares dependencies
         // twice. Only the chain input is bound for every pass; a sub-pass binds
-        // the depth/normal/emissive targets it actually reads itself, so it
+        // the depth/normal/emissive textures it actually reads itself, so it
         // doesn't hold alive what it never samples.
         const uniforms: PassUniforms = {
           uTexture: input,
@@ -329,13 +321,9 @@ export default ({ ctx, frameGraph }: { ctx: GpuContext; frameGraph: FrameGraph }
           },
         });
 
-        context.targets.set(passKey, output);
-        frameGraph.blackboard.set(`postProcessing.${viewId}.${passKey}`, output);
-
-        if (subPass.chain) context.color = output;
+        textures.set(passKey, output);
+        if (subPass.chain) textures.set("color", output);
       }
     }
-
-    return context.color;
   },
 });

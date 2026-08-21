@@ -406,9 +406,10 @@ gpu.frame(ctx, async () => {
   renderEngine.update(world.entities);
   await renderEngine.render(world.entities, cameraEntity);
 
-  const grabHandle = renderEngine.frameGraph.blackboard.get(
-    `transmission.grab.${cameraEntity.id}`,
+  const textures = renderEngine.frameGraph.blackboard.get(
+    `renderTextures.${cameraEntity.id}`,
   );
+  const grabHandle = textures?.get("transmission.grab");
 
   guiCaptureControl.texture =
     (grabHandle && renderEngine.frameGraph.resolve(grabHandle)) ||

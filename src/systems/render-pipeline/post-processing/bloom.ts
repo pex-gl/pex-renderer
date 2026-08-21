@@ -31,7 +31,7 @@ const levelSize = (viewport: number[], level: number) => [
 
 /**
  * Bloom: threshold the bright pixels, build a downsample pyramid, then add
- * every level back at full resolution. The result stays on the blackboard as
+ * every level back at full resolution. The result stays in the register as
  * `bloom.threshold` for combine to add into the tonemapped image.
  */
 const bloom: PostProcessingEffect = {
@@ -47,24 +47,24 @@ const bloom: PostProcessingEffect = {
     const threshold: PostProcessingSubPass = {
       name: "threshold",
       shader: thresholdShader,
-      getDefines: ({ emissive }) =>
+      getDefines: ({ textures }) =>
         new Set([
-          ...(emissive ? ["USE_EMISSIVE_TEXTURE"] : []),
+          ...(textures.get("emissive") ? ["USE_EMISSIVE_TEXTURE"] : []),
           ...(component.source === "color" ? ["USE_SOURCE_COLOR"] : []),
-          ...(component.source === "emissive" && emissive
+          ...(component.source === "emissive" && textures.get("emissive")
             ? ["USE_SOURCE_EMISSIVE"]
             : []),
           ...(COLOR_FUNCTION_DEFINE[component.colorFunction!]
             ? [COLOR_FUNCTION_DEFINE[component.colorFunction!]!]
             : []),
         ]),
-      uniforms: ({ emissive, samplers }) => ({
+      uniforms: ({ textures, samplers }) => ({
         uBloom: {
           exposure: postProcessing.exposure!,
           threshold: component.threshold!,
         },
-        ...(emissive && {
-          uEmissiveTexture: emissive,
+        ...(textures.get("emissive") && {
+          uEmissiveTexture: textures.get("emissive")!,
           uEmissiveTextureSampler: samplers.linear,
         }),
       }),

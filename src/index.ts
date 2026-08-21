@@ -27,4 +27,14 @@ export * as shaders from "./shaders/index.js";
  */
 export * from "./frame-graph/index.js";
 
+/**
+ * The register of named images a view has produced so far, published by the
+ * render pipeline and handed to every `frameGraph.stage()` callback: what a
+ * pass injected into the frame reads from and publishes to.
+ */
+export {
+  RenderTextures,
+  type TextureRequirements,
+} from "./systems/render-pipeline/render-textures.js";
+
 export * as utils from "./utils.js";

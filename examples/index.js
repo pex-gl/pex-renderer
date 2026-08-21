@@ -9,6 +9,7 @@
     "gltf",
     "helpers",
     "instancing",
+    "frame-graph",
 
     // Post-Processing
     "post-processing",

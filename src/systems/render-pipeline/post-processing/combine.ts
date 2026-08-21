@@ -4,6 +4,7 @@ import {
 } from "../../../shaders/post-processing/combine.js";
 
 import type { PostProcessingEffect } from "../post-processing.js";
+import type { RenderTextures } from "../render-textures.js";
 
 /**
  * Composites the HDR chain and tonemaps it. Always declared: exposure and the
@@ -23,26 +24,26 @@ const combine: PostProcessingEffect = {
     // Depth of field already consumed the occlusion when it ran. Both of these
     // check the target exists: an effect the component asks for still doesn't
     // run if its module failed to load or its inputs were missing.
-    const mixesSSAO = (targets: Map<string, unknown>) =>
-      !!ssao && !postProcessing.dof && targets.has("ssao.main");
-    const addsBloom = (targets: Map<string, unknown>) =>
-      !!bloom && targets.has("bloom.threshold");
+    const mixesSSAO = (textures: RenderTextures) =>
+      !!ssao && !postProcessing.dof && !!textures.get("ssao.main");
+    const addsBloom = (textures: RenderTextures) =>
+      !!bloom && !!textures.get("bloom.threshold");
 
     return [
       {
         name: "main",
         shader: combineShader,
         chain: true,
-        getDefines: ({ depth, targets }) =>
+        getDefines: ({ textures }) =>
           new Set([
             // Null leaves the image scene-referred, which is what the exposure
             // pickers and any external grading expect.
             ...(postProcessing.toneMap
               ? [`${TONE_MAP_DEFINE}${postProcessing.toneMap}`]
               : []),
-            ...(fog && depth ? ["USE_FOG"] : []),
-            ...(mixesSSAO(targets) ? ["USE_SSAO"] : []),
-            ...(addsBloom(targets) ? ["USE_BLOOM"] : []),
+            ...(fog && textures.get("depth") ? ["USE_FOG"] : []),
+            ...(mixesSSAO(textures) ? ["USE_SSAO"] : []),
+            ...(addsBloom(textures) ? ["USE_BLOOM"] : []),
             ...(vignette ? ["USE_VIGNETTE"] : []),
             ...(lut?.texture ? ["USE_LUT"] : []),
             ...(colorCorrection ? ["USE_COLOR_CORRECTION"] : []),
@@ -50,7 +51,7 @@ const combine: PostProcessingEffect = {
         constants: () => ({
           USE_SSAO_COLORS: ssao?.type === "gtao" && !!ssao.colorBounce,
         }),
-        uniforms: ({ depth, targets, samplers }) => ({
+        uniforms: ({ textures, samplers }) => ({
           uCombine: {
             viewMatrix: camera.viewMatrix!,
             fogColor: fog?.color ?? [0, 0, 0],
@@ -76,16 +77,16 @@ const combine: PostProcessingEffect = {
             hue: colorCorrection?.hue ?? 0,
           },
           ...(fog &&
-            depth && {
-              uDepthTexture: depth,
+            textures.get("depth") && {
+              uDepthTexture: textures.get("depth")!,
               uDepthTextureSampler: samplers.nearest,
             }),
-          ...(mixesSSAO(targets) && {
-            uSSAOTexture: targets.get("ssao.main")!,
+          ...(mixesSSAO(textures) && {
+            uSSAOTexture: textures.get("ssao.main")!,
             uSSAOTextureSampler: samplers.linear,
           }),
-          ...(addsBloom(targets) && {
-            uBloomTexture: targets.get("bloom.threshold")!,
+          ...(addsBloom(textures) && {
+            uBloomTexture: textures.get("bloom.threshold")!,
             uBloomTextureSampler: samplers.linear,
           }),
           ...(lut?.texture && {

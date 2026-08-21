@@ -8,7 +8,7 @@ import type { PostProcessingEffect } from "../post-processing.js";
  */
 const dof: PostProcessingEffect = {
   name: "dof",
-  enabled: ({ depth }) => !!depth,
+  enabled: ({ textures }) => !!textures.get("depth"),
   passes: ({ cameraEntity }) => {
     const camera = cameraEntity.camera!;
     const component = cameraEntity.postProcessing!.dof!;
@@ -33,7 +33,7 @@ const dof: PostProcessingEffect = {
           USE_DOF_DEBUG: !!component.debug,
           USE_DOF_PHYSICAL: !!component.physical,
         }),
-        uniforms: ({ viewport, depth, samplers }) => ({
+        uniforms: ({ viewport, textures, samplers }) => ({
           uDoFParams: {
             near: camera.near!,
             far: camera.far!,
@@ -52,7 +52,7 @@ const dof: PostProcessingEffect = {
             focusScale: component.focusScale!,
             screenPoint: component.screenPoint!,
           },
-          uDepthTexture: depth!,
+          uDepthTexture: textures.get("depth")!,
           uDepthTextureSampler: samplers.nearest,
         }),
       },

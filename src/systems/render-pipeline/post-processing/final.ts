@@ -71,7 +71,7 @@ const final: PostProcessingEffect = {
           };
         },
         clearValue: [0, 0, 0, 1],
-        uniforms: ({ targets, samplers }) => ({
+        uniforms: ({ textures, samplers }) => ({
           uFinal: {
             subPixelQuality: fxaa?.subPixelQuality ?? 0,
             filmGrainSize: filmGrain?.size ?? 0,
@@ -81,8 +81,8 @@ const final: PostProcessingEffect = {
             filmGrainSpeed: filmGrain?.speed ?? 0,
             opacity: postProcessing.opacity ?? 1,
           },
-          ...(targets.has("final.luma") && {
-            uLumaTexture: targets.get("final.luma")!,
+          ...(textures.get("final.luma") && {
+            uLumaTexture: textures.get("final.luma")!,
             uLumaTextureSampler: samplers.linear,
           }),
         }),

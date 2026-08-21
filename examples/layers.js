@@ -348,7 +348,7 @@ ctx.frame(() => {
   const cameraEntities = world.entities.filter((entity) => entity.camera);
 
   renderEngine.update(world.entities);
-  const renderTargetsPerCamera = renderEngine.render(
+  const outputsPerCamera = renderEngine.render(
     world.entities,
     cameraEntities,
     { drawToScreen: State.drawToScreen, shadowQuality: 1 },
@@ -361,8 +361,8 @@ ctx.frame(() => {
 
     ctx.submit(drawTexturesMixedCmd, {
       uniforms: {
-        uTexture: renderTargetsPerCamera[0].color,
-        uTexture2: renderTargetsPerCamera[1].color,
+        uTexture: outputsPerCamera[0].color,
+        uTexture2: outputsPerCamera[1].color,
         uBlend: blend,
         uBlitReady: State.drawToTextureBlitReady,
       },

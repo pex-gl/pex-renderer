@@ -105,7 +105,8 @@ const ssao: PostProcessingEffect = {
   name: "ssao",
   // Both estimators reconstruct view-space position from depth and read the
   // view-space normal target.
-  enabled: ({ depth, normal }) => !!depth && !!normal,
+  enabled: ({ textures }) =>
+    !!textures.get("depth") && !!textures.get("normal"),
   passes: (context) => {
     const { cameraEntity } = context;
     const camera = cameraEntity.camera!;
@@ -159,9 +160,9 @@ const ssao: PostProcessingEffect = {
           ...estimatorParams(context),
           colorBounceIntensity: component.colorBounceIntensity!,
         },
-        uDepthTexture: context.depth!,
+        uDepthTexture: context.textures.get("depth")!,
         uDepthTextureSampler: context.samplers.nearest,
-        uNormalTexture: context.normal!,
+        uNormalTexture: context.textures.get("normal")!,
         uNormalTextureSampler: context.samplers.nearest,
         uNoiseTexture: noise(context.ctx),
         uNoiseTextureSampler: context.samplers.linearRepeat,
@@ -181,9 +182,9 @@ const ssao: PostProcessingEffect = {
       format,
       uniforms: (context) => ({
         uSAO: estimatorParams(context),
-        uDepthTexture: context.depth!,
+        uDepthTexture: context.textures.get("depth")!,
         uDepthTextureSampler: context.samplers.nearest,
-        uNormalTexture: context.normal!,
+        uNormalTexture: context.textures.get("normal")!,
         uNormalTextureSampler: context.samplers.nearest,
         uNoiseTexture: noise(context.ctx),
         uNoiseTextureSampler: context.samplers.linearRepeat,
@@ -199,7 +200,7 @@ const ssao: PostProcessingEffect = {
         far: camera.far!,
         sharpness: component.blurSharpness!,
       },
-      uDepthTexture: context.depth!,
+      uDepthTexture: context.textures.get("depth")!,
       uDepthTextureSampler: context.samplers.nearest,
     });
 
@@ -232,9 +233,9 @@ const ssao: PostProcessingEffect = {
         USE_SSAO_COLORS: isGTAO(context) && !!component.colorBounce,
       }),
       clearValue: [0, 0, 0, 1],
-      uniforms: ({ targets, samplers }) => ({
+      uniforms: ({ textures, samplers }) => ({
         uSSAO: { mix: component.mix! },
-        uSSAOTexture: targets.get("ssao.main")!,
+        uSSAOTexture: textures.get("ssao.main")!,
         uSSAOTextureSampler: samplers.linear,
       }),
     };

@@ -78,7 +78,7 @@ function getLookups(ctx: GpuContext): SMAALookups {
  * precomputed area/search lookups, then blend. Runs on the display-referred
  * image, which is what its perceptual thresholds are tuned for.
  *
- * The intermediate targets hold data, not color, so they opt out of the sRGB
+ * The intermediate textures hold data, not color, so they opt out of the sRGB
  * format the rest of this stage uses.
  */
 const smaa: PostProcessingEffect = {
@@ -86,10 +86,13 @@ const smaa: PostProcessingEffect = {
   srgb: true,
   // Skipped until the lookups have loaded rather than drawn with a placeholder:
   // one or two frames without anti-aliasing beats one with wrong weights.
-  enabled: ({ ctx, cameraEntity, depth }) => {
+  enabled: ({ ctx, cameraEntity, textures }) => {
     const { area, search } = getLookups(ctx);
     if (!area || !search) return false;
-    return cameraEntity.postProcessing!.smaa!.edges !== "depth" || !!depth;
+    return (
+      cameraEntity.postProcessing!.smaa!.edges !== "depth" ||
+      !!textures.get("depth")
+    );
   },
   passes: ({ cameraEntity }) => {
     const component = cameraEntity.postProcessing!.smaa!;
@@ -109,9 +112,9 @@ const smaa: PostProcessingEffect = {
         }),
         clearValue: [0, 0, 0, 0],
         format: () => "rg8unorm",
-        uniforms: ({ depth, samplers }) => ({
+        uniforms: ({ textures, samplers }) => ({
           ...(component.edges === "depth" && {
-            uDepthTexture: depth!,
+            uDepthTexture: textures.get("depth")!,
             uDepthTextureSampler: samplers.nearest,
           }),
         }),
@@ -129,10 +132,10 @@ const smaa: PostProcessingEffect = {
         clearValue: [0, 0, 0, 0],
         format: () => "rgba8unorm",
         source: () => "smaa.edges",
-        uniforms: ({ ctx, targets, samplers }) => {
+        uniforms: ({ ctx, textures, samplers }) => {
           const { area, search } = getLookups(ctx);
           return {
-            uEdgesTexture: targets.get("smaa.edges")!,
+            uEdgesTexture: textures.get("smaa.edges")!,
             uEdgesTextureSampler: samplers.linear,
             uAreaTexture: area!,
             uAreaTextureSampler: samplers.linear,
@@ -146,8 +149,8 @@ const smaa: PostProcessingEffect = {
         shader: smaaBlendShader,
         chain: true,
         clearValue: [0, 0, 0, 0],
-        uniforms: ({ targets, samplers }) => ({
-          uBlendTexture: targets.get("smaa.weights")!,
+        uniforms: ({ textures, samplers }) => ({
+          uBlendTexture: textures.get("smaa.weights")!,
           uBlendTextureSampler: samplers.linear,
         }),
       },

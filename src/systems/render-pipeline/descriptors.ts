@@ -1,8 +1,6 @@
 import { blitShader } from "../../shaders/blit.js";
 import { reversibleToneMapShader } from "../../shaders/reversible-tone-map.js";
 
-import type { GpuContext } from "../../types.js";
-
 // Built once: pex-gpu caches compiled pipelines by shader source identity.
 const REVERSIBLE_TONE_MAP_WGSL = reversibleToneMapShader();
 
@@ -61,11 +59,7 @@ fn fragmentMain(input: Varyings) -> @location(0) vec4f {
 }
 `;
 
-export default (_ctx: GpuContext) => ({
-  mainPass: {
-    colorFormat: "rgba16float" as GPUTextureFormat,
-    depthFormat: "depth24plus" as GPUTextureFormat,
-  },
+export default () => ({
   grabPass: {
     colorFormat: "rgba16float" as GPUTextureFormat,
     copyTexturePipelineDesc: {
@@ -78,12 +72,6 @@ export default (_ctx: GpuContext) => ({
       fragment: GRAB_DOWNSAMPLE_WGSL,
       depthWriteEnabled: false,
     },
-  },
-  postProcessing: {
-    /** Linear HDR working format for intermediate effect targets. */
-    colorFormat: "rgba16float" as GPUTextureFormat,
-    /** Display-referred format, from the tonemap onwards. */
-    srgbColorFormat: "rgba8unorm-srgb" as GPUTextureFormat,
   },
   reversibleToneMap: {
     // The generator emits both stages, so one source serves as vertex and
