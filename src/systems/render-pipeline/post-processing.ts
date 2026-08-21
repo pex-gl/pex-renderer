@@ -304,8 +304,10 @@ export default ({
           ...subPass.uniforms?.(context),
         };
 
+        const label = `postProcessing.${passKey}.${viewId}`;
+
         frameGraph.addPass({
-          name: `PostProcessing.${passKey}_${viewId}`,
+          name: label,
           color: [
             {
               texture: output,

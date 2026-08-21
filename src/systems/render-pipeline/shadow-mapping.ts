@@ -328,7 +328,7 @@ export default ({
     );
     if (!shadowCastingEntities.length) return result;
 
-    const scope = layer ? `_${layer}` : "";
+    const scope = layer ? `.${layer}` : "";
 
     for (let i = 0; i < entities.length; i++) {
       const entity = entities[i]!;
@@ -419,7 +419,7 @@ export default ({
     };
 
     frameGraph.addPass({
-      name: `DirectionalLightShadowMap${lightEntity.id}${scope}`,
+      name: `directionalLightShadowMap${lightEntity.id}${scope}`,
       color: [],
       depth: { texture: shadowMap, depthClearValue: 1 },
       renderView,
@@ -455,7 +455,7 @@ export default ({
       shadowParticipants(entities),
     );
 
-    const kind = lightEntity.areaLight ? "Area" : "Spot";
+    const kind = lightEntity.areaLight ? "area" : "spot";
     const shadowMap = this.createShadowMap(
       light,
       lightEntity,
@@ -543,7 +543,7 @@ export default ({
       };
 
       frameGraph.addPass({
-        name: `PointLightShadowMap${lightEntity.id}Face${i}${scope}`,
+        name: `pointLightShadowMap${lightEntity.id}Face${i}${scope}`,
         color: [],
         // One cube face per pass: six independent write chains into one texture.
         depth: { texture: shadowMap, layer: i, depthClearValue: 1 },

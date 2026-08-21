@@ -120,7 +120,7 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
   generateGrabMips(grabTexture: ResourceHandle, levels: number, name: string) {
     for (let level = 1; level < levels; level++) {
       frameGraph.addPass({
-        name: `${name}Mip${level}`,
+        name: `${name}.mip${level}`,
         color: [{ texture: grabTexture, level }],
         execute: ({ resolveView }) => {
           submit(ctx, {
@@ -327,8 +327,9 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
       );
 
       const grabPass = (name: string) => {
+        const label = `${name}.${viewId}`;
         const grab = frameGraph.createTexture({
-          label: `${name}.${viewId}`,
+          label,
           width,
           height,
           format: this.descriptors.grabPass.colorFormat,
@@ -336,13 +337,13 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
         });
 
         frameGraph.addPass({
-          name: `${name}.${viewId}`,
+          name: label,
           color: [{ texture: grab }],
           uniforms: { uTexture: textures.get("color")! },
           renderView: { ...renderView, viewport: renderPassView.viewport },
           execute: ({ uniforms }) => {
             submit(ctx, {
-              label: "grabPassCopyTexture",
+              label,
               attributes: this.fullscreen.triangle.attributes,
               count: this.fullscreen.triangle.count,
               pipeline: this.descriptors.grabPass.copyTexturePipelineDesc,
@@ -351,7 +352,7 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
           },
         });
 
-        this.generateGrabMips(grab, mipLevelCount, `${name}_${viewId}`);
+        this.generateGrabMips(grab, mipLevelCount, label);
         textures.set("transmission.grab", grab);
         return grab;
       };
@@ -360,7 +361,7 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
 
       if (hasBackTransmitted) {
         frameGraph.addPass({
-          name: `TransmissionBackPass_${viewId}`,
+          name: `transmissionBack.${viewId}`,
           color: [colorTarget("color")],
           ...(depthTexture && { depth: depthTarget() }),
           reads: [...shadowMaps, grab],
@@ -381,7 +382,7 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
 
       const frontGrab = grab;
       frameGraph.addPass({
-        name: `TransmissionFrontPass_${viewId}`,
+        name: `transmissionFront.${viewId}`,
         color: [colorTarget("color")],
         ...(depthTexture && { depth: depthTarget() }),
         reads: [...shadowMaps, frontGrab],
@@ -450,7 +451,7 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
         neverCull: true,
         execute: ({ uniforms }) => {
           submit(ctx, {
-            label: "drawBlitFullScreenTriangle",
+            label: `blit.${viewId}`,
             attributes: this.fullscreen.triangle.attributes,
             count: this.fullscreen.triangle.count,
             pipeline: this.descriptors.blit.pipelineDesc,
