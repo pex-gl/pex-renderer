@@ -1,10 +1,11 @@
 import { submit, createSampler, generateMipmaps, isGpuTexture } from "pex-gpu";
 
-import addDescriptors from "./descriptors.js";
 import shadowMappingPipelineMethods from "./shadow-mapping.js";
 import postProcessingPipelineMethods from "./post-processing.js";
 import cullingPipelineMethods from "./culling.js";
 import createFullscreenGeometry from "../../fullscreen-geometry.js";
+import { blitShader } from "../../shaders/blit.js";
+import { grabPassShader } from "../../shaders/grab-pass.js";
 import { RenderTextures } from "./render-textures.js";
 import { getDefaultViewport } from "../../utils.js";
 
@@ -14,6 +15,9 @@ import type {
   DepthStencilAttachmentDeclaration,
   ResourceHandle,
 } from "../../frame-graph/index.js";
+
+const BLIT_WGSL = blitShader();
+const GRAB_PASS_WGSL = grabPassShader();
 
 /**
  * Render pipeline system
@@ -32,10 +36,19 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
   debugRender: "",
   reversibleToneMap: false,
 
-  descriptors: addDescriptors(),
   fullscreen: createFullscreenGeometry(ctx),
 
   blitSampler: createSampler(ctx, { filter: "linear" }),
+  blitPipeline: {
+    vertex: BLIT_WGSL,
+    fragment: BLIT_WGSL,
+    depthWriteEnabled: false,
+  },
+  grabPipeline: {
+    vertex: GRAB_PASS_WGSL,
+    fragment: GRAB_PASS_WGSL,
+    depthWriteEnabled: false,
+  },
 
   outputs: new Set(["color", "depth"]), // "normal", "emissive"
   colorFormat: "rgba16float" as GPUTextureFormat,
@@ -300,7 +313,7 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
           label,
           width,
           height,
-          format: this.descriptors.grabPass.colorFormat,
+          format: this.colorFormat,
           mipLevelCount,
         });
 
@@ -314,7 +327,7 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
               label,
               attributes: this.fullscreen.triangle.attributes,
               count: this.fullscreen.triangle.count,
-              pipeline: this.descriptors.grabPass.copyTexturePipelineDesc,
+              pipeline: this.grabPipeline,
               uniforms,
             });
           },
@@ -434,7 +447,7 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
             label: `blit.${viewId}`,
             attributes: this.fullscreen.triangle.attributes,
             count: this.fullscreen.triangle.count,
-            pipeline: this.descriptors.blit.pipelineDesc,
+            pipeline: this.blitPipeline,
             viewport: renderView.viewport,
             uniforms,
           });
