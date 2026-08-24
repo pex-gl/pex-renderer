@@ -147,8 +147,15 @@ export interface LightShadowInternals {
   _near?: number;
   _far?: number;
   _radiusUV?: Vec2;
+  /**
+   * The size-bucketed array this light's shadow map is a layer of, shared with
+   * every other caster that asked for the same size.
+   */
   _shadowMap?: GpuTexture;
   _shadowCubemap?: GpuTexture;
+  /** Which bucket binding the shader samples, and the light's slot in it. */
+  _shadowBucket?: number;
+  _shadowLayer?: number;
   _sceneBboxInLightSpace?: AABB;
   _sceneBbox?: AABB;
 }
@@ -678,6 +685,9 @@ export interface ShaderLightCounts {
   point?: number;
   spot?: number;
   area?: number;
+  /** Distinct shadow map sizes in use, each one array binding. */
+  shadow2DBuckets?: number;
+  shadowCubeBuckets?: number;
 }
 /** Which optional MRT fragment outputs a pipeline shader should emit, beyond color. */
 export interface FragmentOutputs {
@@ -812,12 +822,11 @@ export interface ShadowMappingMethods {
     light: any,
     participants: Entity[],
   ): void;
-  createShadowMap(
-    light: any,
-    lightEntity: Entity,
-    name: string,
+  createShadowMapBucket(
+    size: number,
+    count: number,
+    cubemap: boolean,
     scope: string,
-    cubemap?: boolean,
   ): ResourceHandle;
   declareShadowMaps(
     entities: Entity[],
@@ -829,19 +838,22 @@ export interface ShadowMappingMethods {
     entities: Entity[],
     renderers: RendererSystem[],
     scope: string,
-  ): ResourceHandle;
+    shadowMap: ResourceHandle,
+  ): void;
   renderSpotLightShadowMap(
     lightEntity: Entity,
     entities: Entity[],
     renderers: RendererSystem[],
     scope: string,
-  ): ResourceHandle;
+    shadowMap: ResourceHandle,
+  ): void;
   renderPointLightShadowMap(
     lightEntity: Entity,
     entities: Entity[],
     renderers: RendererSystem[],
     scope: string,
-  ): ResourceHandle;
+    shadowMap: ResourceHandle,
+  ): void;
 }
 /** Samplers a post-processing sub-pass binds alongside the textures it reads. */
 export interface PostProcessingSamplers {

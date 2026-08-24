@@ -222,6 +222,13 @@ export const standardShader = (
   const pointLights = materialFlags.unlitWorkflow ? 0 : (lights.point ?? 0);
   const spotLights = materialFlags.unlitWorkflow ? 0 : (lights.spot ?? 0);
   const areaLights = materialFlags.unlitWorkflow ? 0 : (lights.area ?? 0);
+  // One binding per distinct shadow map size, not per light: a light is a layer.
+  const shadow2DBuckets = materialFlags.unlitWorkflow
+    ? 0
+    : (lights.shadow2DBuckets ?? 0);
+  const shadowCubeBuckets = materialFlags.unlitWorkflow
+    ? 0
+    : (lights.shadowCubeBuckets ?? 0);
 
   const colorAssignment =
     vertexFlags.vertexColor && vertexFlags.instancedColor
@@ -312,47 +319,70 @@ export const standardShader = (
 ${textureSamplerDeclaration(1, lightBindings.nextTextureSampler(), "uLtc1")}
 ${textureSamplerDeclaration(1, lightBindings.nextTextureSampler(), "uLtc2")}`;
 
-  const shadowMapNames = (type: string, count: number) =>
-    Array.from({ length: count }, (_, i) =>
-      uniformName(`${type}ShadowMap${i}`),
-    );
   // 2D shadow maps use a comparison sampler (hardware PCF); cube maps use a
   // regular sampler and compare manually (textureLoad is unavailable on cubes).
-  const shadowMapDecl = (
-    names: string[],
-    kind: string,
-    samplerKind = "sampler_comparison",
-  ) =>
-    names
-      .map((name) =>
-        textureSamplerDeclaration(
-          1,
-          lightBindings.nextTextureSampler(),
-          name,
-          kind,
-          samplerKind,
-        ),
-      )
-      .join("\n");
+  const shadowBucketName = (cube: boolean, i: number) =>
+    uniformName(`shadowMaps${cube ? "Cube" : "2D"}${i}`);
 
-  const directionalShadowMaps = shadowMapNames(
-    "directional",
-    directionalLights,
-  );
-  const pointShadowMaps = shadowMapNames("point", pointLights);
-  const spotShadowMaps = shadowMapNames("spot", spotLights);
-  const areaShadowMaps = shadowMapNames("area", areaLights);
-  const directionalShadowMapDecls = shadowMapDecl(
-    directionalShadowMaps,
-    "texture_depth_2d",
-  );
-  const pointShadowMapDecls = shadowMapDecl(
-    pointShadowMaps,
-    "texture_depth_cube",
-    "sampler",
-  );
-  const spotShadowMapDecls = shadowMapDecl(spotShadowMaps, "texture_depth_2d");
-  const areaShadowMapDecls = shadowMapDecl(areaShadowMaps, "texture_depth_2d");
+  const shadowBucketDecls = (count: number, cube: boolean) =>
+    Array.from({ length: count }, (_, i) =>
+      textureSamplerDeclaration(
+        1,
+        lightBindings.nextTextureSampler(),
+        shadowBucketName(cube, i),
+        cube ? "texture_depth_cube_array" : "texture_depth_2d_array",
+        cube ? "sampler" : "sampler_comparison",
+      ),
+    ).join("\n");
+
+  const shadow2DDecls = shadowBucketDecls(shadow2DBuckets, false);
+  const shadowCubeDecls = shadowBucketDecls(shadowCubeBuckets, true);
+
+  /**
+   * Which binding a light samples is runtime data — the size it asked for — so
+   * the bucket is dispatched rather than baked per light. Collapses to a single
+   * call whenever every light shares a size, which is the usual case.
+   */
+  const shadowDispatch = (
+    count: number,
+    cube: boolean,
+    name: string,
+    signature: string,
+    args: string,
+    callee: string,
+  ) => /* wgsl */ `
+fn ${name}(bucket: u32, layer: u32, ${signature}) -> f32 {
+${
+  count === 0
+    ? "  return 1.0;"
+    : Array.from(
+        { length: count },
+        (_, i) =>
+          `  if (bucket == ${i}u) { return ${callee}(${shadowBucketName(cube, i)}, ${samplerName(shadowBucketName(cube, i))}, layer, ${args}); }`,
+      ).join("\n") + "\n  return 1.0;"
+}
+}`;
+
+  const shadowDispatchDecls = materialFlags.unlitWorkflow
+    ? ""
+    : [
+        shadowDispatch(
+          shadow2DBuckets,
+          false,
+          "sampleShadowMap2D",
+          "size: vec2f, uv: vec2f, compare: f32, near: f32, far: f32, radiusUV: vec2f, dzDuv: vec2f, ortho: bool, fragCoord: vec2f",
+          "size, uv, compare, near, far, radiusUV, dzDuv, ortho, fragCoord",
+          "getShadow",
+        ),
+        shadowDispatch(
+          shadowCubeBuckets,
+          true,
+          "sampleShadowMapCube",
+          "size: vec2f, direction: vec3f, compare: f32, radius: f32, far: f32, fragCoord: vec2f",
+          "size, direction, compare, radius, far, fragCoord",
+          "getPunctualShadow",
+        ),
+      ].join("\n");
 
   const reflectionProbeDecl = useReflectionProbes
     ? /* wgsl */ `
@@ -383,30 +413,30 @@ ${bindingDeclaration(1, lightBindings.next(), "uIrradianceCoefficients", `array<
     { length: ambientLights },
     (_, i) => `EvaluateAmbientLight(&data, uAmbientLights[${i}], data.ao);`,
   ).join("\n  ");
-  const directionalLightsBlock = directionalShadowMaps
-    .map(
-      (shadowMap, i) =>
-        `EvaluateDirectionalLight(&data, uDirectionalLights[${i}], ${shadowMap}, ${samplerName(shadowMap)}, input.positionWorld, input.position.xy);`,
-    )
-    .join("\n  ");
-  const pointLightsBlock = pointShadowMaps
-    .map(
-      (shadowMap, i) =>
-        `EvaluatePointLight(&data, uPointLights[${i}], ${shadowMap}, ${samplerName(shadowMap)}, input.position.xy);`,
-    )
-    .join("\n  ");
-  const spotLightsBlock = spotShadowMaps
-    .map(
-      (shadowMap, i) =>
-        `EvaluateSpotLight(&data, uSpotLights[${i}], ${shadowMap}, ${samplerName(shadowMap)}, input.positionWorld, input.position.xy);`,
-    )
-    .join("\n  ");
-  const areaLightsBlock = areaShadowMaps
-    .map(
-      (shadowMap, i) =>
-        `EvaluateAreaLight(&data, uAreaLights[${i}], ${shadowMap}, ${samplerName(shadowMap)}, uLtc1, ${samplerName("uLtc1")}, uLtc2, ${samplerName("uLtc2")}, data.ao, input.positionWorld, uFrame.cameraPosition, input.position.xy);`,
-    )
-    .join("\n  ");
+  // Each light carries its own bucket and layer, so the loop is a plain index
+  // over the light array; the shadow binding is resolved by the dispatcher.
+  const lightsBlock = (count: number, call: (i: number) => string) =>
+    Array.from({ length: count }, (_, i) => call(i)).join("\n  ");
+
+  const directionalLightsBlock = lightsBlock(
+    directionalLights,
+    (i) =>
+      `EvaluateDirectionalLight(&data, uDirectionalLights[${i}], input.positionWorld, input.position.xy);`,
+  );
+  const pointLightsBlock = lightsBlock(
+    pointLights,
+    (i) => `EvaluatePointLight(&data, uPointLights[${i}], input.position.xy);`,
+  );
+  const spotLightsBlock = lightsBlock(
+    spotLights,
+    (i) =>
+      `EvaluateSpotLight(&data, uSpotLights[${i}], input.positionWorld, input.position.xy);`,
+  );
+  const areaLightsBlock = lightsBlock(
+    areaLights,
+    (i) =>
+      `EvaluateAreaLight(&data, uAreaLights[${i}], uLtc1, ${samplerName("uLtc1")}, uLtc2, ${samplerName("uLtc2")}, data.ao, input.positionWorld, uFrame.cameraPosition, input.position.xy);`,
+  );
 
   const alphaBlock = () => /* wgsl */ `
   ${
@@ -636,10 +666,8 @@ ${pointLightsDecl}
 ${spotLightsDecl}
 ${areaLightsDecl}
 ${ltcDecl}
-${directionalShadowMapDecls}
-${pointShadowMapDecls}
-${spotShadowMapDecls}
-${areaShadowMapDecls}
+${shadow2DDecls}
+${shadowCubeDecls}
 ${reflectionProbeDecl}
 ${captureDecl}
 
@@ -843,6 +871,7 @@ ${
   ${SHADERS.depthRead}
   ${SHADERS.normalPerturb}
   ${SHADERS.shadowing}
+  ${shadowDispatchDecls}
   ${SHADERS.brdf}
   ${SHADERS.specular}
   ${SHADERS.clearCoat}

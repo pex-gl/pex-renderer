@@ -600,9 +600,10 @@ const state = createGraphState();
 // time, not at compile time, so the rule is pinned here.
 {
   console.log("\nframe graph — attachment views");
-  const stubTexture = (depthOrArrayLayers, mipLevelCount) => ({
+  const stubTexture = (depthOrArrayLayers, mipLevelCount, viewDimension) => ({
     depthOrArrayLayers,
     mipLevelCount,
+    ...(viewDimension && { viewDimension }),
     texture: { createView: (descriptor) => descriptor },
   });
 
@@ -615,6 +616,19 @@ const state = createGraphState();
     "mipmapped texture is pinned to one level",
     attachmentView(stubTexture(1, 5), undefined, 2),
     { baseMipLevel: 2, mipLevelCount: 1 },
+  );
+  // Regression: a shadow bucket holding one light is a one-layer array, whose
+  // default view is still `2d-array` — which an attachment rejects.
+  check(
+    "single-layer array texture still needs an explicit view",
+    attachmentView(stubTexture(1, 1, "2d-array")),
+    {
+      dimension: "2d",
+      baseArrayLayer: 0,
+      arrayLayerCount: 1,
+      baseMipLevel: 0,
+      mipLevelCount: 1,
+    },
   );
   // Regression: layer 0 of a cube is still one layer out of six, and the
   // compiled plan omits a layer of 0.

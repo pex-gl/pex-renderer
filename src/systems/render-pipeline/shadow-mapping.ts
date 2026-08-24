@@ -252,28 +252,34 @@ export default ({
     light._near = Math.max(MIN_NEAR, vec3.distance(lightPosition, TEMP_VEC3));
     light._far = Math.max(light._near + MIN_NEAR, far);
   },
-  // Modern shadow maps are sampleable depth textures; there is no color map.
-  createShadowMap(
-    light: any,
-    lightEntity: Entity,
-    name: string,
+  /**
+   * One array texture for every shadow-casting light that asked for the same
+   * size, since a light is a layer rather than a texture of its own.
+   *
+   * Sizes are not snapped to a ladder: a bucket per distinct size costs one
+   * binding each — normally one, every light having the default — and every
+   * light keeps exactly the resolution it asked for.
+   *
+   * Persistent rather than pooled. A bucket lives as long as the lights in it,
+   * and pooling would save nothing while costing identity: the texture is read
+   * outside the graph (`light._shadowMap`), so a debug view could never be sure
+   * which frame's map it holds, and pex-gpu keys bind groups by texture, so
+   * every material sampling it would get a fresh bind group every frame.
+   */
+  createShadowMapBucket(
+    size: number,
+    count: number,
+    cubemap: boolean,
     scope: string,
-    cubemap?: boolean,
   ): ResourceHandle {
-    const size = light.shadowMapSize;
-    // Persistent rather than pooled. A shadow map belongs to its light for as
-    // long as the light exists, and its shape is unique enough that pooling it
-    // saves nothing — while a churning identity costs: the texture is read
-    // outside the graph (`light._shadowMap`), so a debug view could never be
-    // sure which frame's map it holds, and pex-gpu keys bind groups by texture,
-    // so every material sampling it would get a fresh bind group every frame.
     return frameGraph.createTexture({
-      label: `${name}ShadowMap${lightEntity.id}${scope}`,
+      label: `shadowMaps${cubemap ? "Cube" : "2D"}.${size}${scope}`,
       width: size,
       height: size,
       format: "depth32float",
       persistent: true,
-      ...(cubemap && { depth: 6, viewDimension: "cube" as const }),
+      depth: cubemap ? count * 6 : count,
+      viewDimension: cubemap ? ("cube-array" as const) : ("2d-array" as const),
     });
   },
 
@@ -313,6 +319,8 @@ export default ({
           if (light) {
             light._shadowMap = undefined;
             light._shadowCubemap = undefined;
+            light._shadowBucket = 0;
+            light._shadowLayer = 0;
           }
         }
       }
@@ -330,48 +338,86 @@ export default ({
 
     const scope = layer ? `.${layer}` : "";
 
+    // Every caster is collected before any texture is allocated: lights sharing
+    // a size share one array, so the whole set has to be known to size it.
+    const casters: { entity: Entity; light: any; kind: string }[] = [];
     for (let i = 0; i < entities.length; i++) {
       const entity = entities[i]!;
+      for (const [kind, light] of [
+        ["directionalLight", entity.directionalLight],
+        ["pointLight", entity.pointLight],
+        ["spotLight", entity.spotLight],
+        ["areaLight", entity.areaLight],
+      ] as [string, any][]) {
+        if (light?.castShadows && this.checkLight(light, entity)) {
+          shadowCastingLights.push(light);
+          casters.push({ entity, light, kind });
+        }
+      }
+    }
+    if (!casters.length) return result;
 
-      if (
-        entity.directionalLight?.castShadows &&
-        this.checkLight(entity.directionalLight, entity)
-      ) {
-        shadowCastingLights.push(entity.directionalLight);
-        shadowMaps.push(
-          this.renderDirectionalLightShadowMap(
-            entity,
-            entities,
-            renderers,
-            scope,
-          ),
-        );
+    // Bucket index is the binding the shader samples; layer is the slot within
+    // it. Both are read back off the light component by the renderer.
+    const buckets = new Map<
+      string,
+      { index: number; count: number; size: number; cubemap: boolean }
+    >();
+    for (const { light, kind } of casters) {
+      const cubemap = kind === "pointLight";
+      const key = `${cubemap ? "cube" : "2d"}.${light.shadowMapSize}`;
+      let bucket = buckets.get(key);
+      if (!bucket) {
+        // Indices are per kind: the shader dispatches over 2D and cube bindings
+        // separately.
+        let index = 0;
+        for (const other of buckets.values()) {
+          if (other.cubemap === cubemap) index++;
+        }
+        bucket = { index, count: 0, size: light.shadowMapSize, cubemap };
+        buckets.set(key, bucket);
       }
-      if (
-        entity.pointLight?.castShadows &&
-        this.checkLight(entity.pointLight, entity)
-      ) {
-        shadowCastingLights.push(entity.pointLight);
-        shadowMaps.push(
-          this.renderPointLightShadowMap(entity, entities, renderers, scope),
+      light._shadowBucket = bucket.index;
+      light._shadowLayer = bucket.count;
+      bucket.count++;
+    }
+
+    const bucketMaps = new Map<string, ResourceHandle>();
+    for (const [key, { size, count, cubemap }] of buckets) {
+      const handle = this.createShadowMapBucket(size, count, cubemap, scope);
+      bucketMaps.set(key, handle);
+      shadowMaps.push(handle);
+    }
+
+    for (const { entity, light, kind } of casters) {
+      const cubemap = kind === "pointLight";
+      const shadowMap = bucketMaps.get(
+        `${cubemap ? "cube" : "2d"}.${light.shadowMapSize}`,
+      )!;
+
+      if (kind === "directionalLight") {
+        this.renderDirectionalLightShadowMap(
+          entity,
+          entities,
+          renderers,
+          scope,
+          shadowMap,
         );
-      }
-      if (
-        entity.spotLight?.castShadows &&
-        this.checkLight(entity.spotLight, entity)
-      ) {
-        shadowCastingLights.push(entity.spotLight);
-        shadowMaps.push(
-          this.renderSpotLightShadowMap(entity, entities, renderers, scope),
+      } else if (cubemap) {
+        this.renderPointLightShadowMap(
+          entity,
+          entities,
+          renderers,
+          scope,
+          shadowMap,
         );
-      }
-      if (
-        entity.areaLight?.castShadows &&
-        this.checkLight(entity.areaLight, entity)
-      ) {
-        shadowCastingLights.push(entity.areaLight);
-        shadowMaps.push(
-          this.renderSpotLightShadowMap(entity, entities, renderers, scope),
+      } else {
+        this.renderSpotLightShadowMap(
+          entity,
+          entities,
+          renderers,
+          scope,
+          shadowMap,
         );
       }
     }
@@ -384,6 +430,7 @@ export default ({
     entities: Entity[],
     renderers: RendererSystem[],
     scope: string,
+    shadowMap: ResourceHandle,
   ) {
     const light: any = lightEntity.directionalLight;
 
@@ -391,13 +438,6 @@ export default ({
       lightEntity,
       light,
       shadowParticipants(entities),
-    );
-
-    const shadowMap = this.createShadowMap(
-      light,
-      lightEntity,
-      "directionalLight",
-      scope,
     );
 
     mat4.orthoZO(
@@ -421,7 +461,7 @@ export default ({
     frameGraph.addPass({
       name: `directionalLightShadowMap${lightEntity.id}${scope}`,
       color: [],
-      depth: { texture: shadowMap, depthClearValue: 1 },
+      depth: { texture: shadowMap, layer: light._shadowLayer, depthClearValue: 1 },
       renderView,
       execute: ({ resolveTexture }) => {
         // Resolved here rather than at declaration: the physical texture behind
@@ -437,8 +477,6 @@ export default ({
         });
       },
     });
-
-    return shadowMap;
   },
 
   renderSpotLightShadowMap(
@@ -446,6 +484,7 @@ export default ({
     entities: Entity[],
     renderers: RendererSystem[],
     scope: string,
+    shadowMap: ResourceHandle,
   ) {
     const light: any = lightEntity.spotLight || lightEntity.areaLight;
 
@@ -456,12 +495,6 @@ export default ({
     );
 
     const kind = lightEntity.areaLight ? "area" : "spot";
-    const shadowMap = this.createShadowMap(
-      light,
-      lightEntity,
-      `${kind}Light`,
-      scope,
-    );
 
     mat4.perspectiveZO(
       light._projectionMatrix,
@@ -482,7 +515,7 @@ export default ({
     frameGraph.addPass({
       name: `${kind}LightShadowMap${lightEntity.id}${scope}`,
       color: [],
-      depth: { texture: shadowMap, depthClearValue: 1 },
+      depth: { texture: shadowMap, layer: light._shadowLayer, depthClearValue: 1 },
       renderView,
       execute: ({ resolveTexture }) => {
         light._shadowMap = resolveTexture(shadowMap);
@@ -496,8 +529,6 @@ export default ({
         });
       },
     });
-
-    return shadowMap;
   },
 
   renderPointLightShadowMap(
@@ -505,16 +536,9 @@ export default ({
     entities: Entity[],
     renderers: RendererSystem[],
     scope: string,
+    shadowMap: ResourceHandle,
   ) {
     const light: any = lightEntity.pointLight;
-
-    const shadowMap = this.createShadowMap(
-      light,
-      lightEntity,
-      "pointLight",
-      scope,
-      true,
-    );
 
     this.computePointLightProperties(
       lightEntity,
@@ -545,8 +569,13 @@ export default ({
       frameGraph.addPass({
         name: `pointLightShadowMap${lightEntity.id}Face${i}${scope}`,
         color: [],
-        // One cube face per pass: six independent write chains into one texture.
-        depth: { texture: shadowMap, layer: i, depthClearValue: 1 },
+        // One cube face per pass: six independent write chains into one
+        // texture. Layers are flat, so the light's cube occupies six of them.
+        depth: {
+          texture: shadowMap,
+          layer: light._shadowLayer * 6 + i,
+          depthClearValue: 1,
+        },
         renderView,
         execute: ({ resolveTexture }) => {
           light._shadowCubemap = resolveTexture(shadowMap);
@@ -563,7 +592,5 @@ export default ({
         },
       });
     }
-
-    return shadowMap;
   },
 });

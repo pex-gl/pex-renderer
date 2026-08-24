@@ -82,6 +82,12 @@ const standardVariants = [
   { name: "metallic-roughness no textures no lights", defines: new Set(["USE_METALLIC_ROUGHNESS_WORKFLOW"]) },
   { name: "mr + basecolor + normal + 1 directional", defines: new Set(["USE_METALLIC_ROUGHNESS_WORKFLOW", "USE_NORMALS", "USE_TEXCOORD_0", "USE_BASE_COLOR_TEXTURE", "USE_NORMAL_TEXTURE", "USE_TANGENTS"]), options: { lights: { directional: 1 } } },
   { name: "all light types at max", defines: new Set(["USE_METALLIC_ROUGHNESS_WORKFLOW", "USE_NORMALS"]), options: { lights: { ambient: 4, directional: 4, point: 4, spot: 4, area: 4 } } },
+  // Shadow buckets: one binding per distinct map size, dispatched at runtime.
+  // The no-bucket case matters as much as the rest — the dispatchers still have
+  // to compile when nothing casts.
+  { name: "shadows, single bucket", defines: new Set(["USE_METALLIC_ROUGHNESS_WORKFLOW", "USE_NORMALS"]), options: { lights: { directional: 1, spot: 1, area: 1, point: 1, shadow2DBuckets: 1, shadowCubeBuckets: 1 } } },
+  { name: "shadows, mixed sizes", defines: new Set(["USE_METALLIC_ROUGHNESS_WORKFLOW", "USE_NORMALS"]), options: { lights: { directional: 2, spot: 2, point: 2, shadow2DBuckets: 3, shadowCubeBuckets: 2 } } },
+  { name: "shadows, casters absent", defines: new Set(["USE_METALLIC_ROUGHNESS_WORKFLOW", "USE_NORMALS"]), options: { lights: { directional: 2, point: 1, shadow2DBuckets: 0, shadowCubeBuckets: 0 } } },
   { name: "reflection probes + transmission", defines: new Set(["USE_METALLIC_ROUGHNESS_WORKFLOW", "USE_NORMALS", "USE_REFLECTION_PROBES", "USE_TRANSMISSION", "USE_TRANSMISSION_TEXTURE", "USE_DISPERSION", "USE_TEXCOORD_0"]), options: { lights: { directional: 1 } } },
   { name: "clear coat + sheen + tangents", defines: new Set(["USE_METALLIC_ROUGHNESS_WORKFLOW", "USE_NORMALS", "USE_TEXCOORD_0", "USE_CLEAR_COAT", "USE_CLEAR_COAT_TEXTURE", "USE_CLEAR_COAT_NORMAL_TEXTURE", "USE_SHEEN", "USE_SHEEN_COLOR_TEXTURE", "USE_TANGENTS"]), options: { lights: { point: 2 } } },
   { name: "clear coat roughness from main texture", defines: new Set(["USE_METALLIC_ROUGHNESS_WORKFLOW", "USE_NORMALS", "USE_TEXCOORD_0", "USE_CLEAR_COAT", "USE_CLEAR_COAT_TEXTURE", "USE_CLEAR_COAT_ROUGHNESS_FROM_MAIN_TEXTURE"]) },

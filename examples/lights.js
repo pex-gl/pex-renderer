@@ -251,7 +251,7 @@ const addShadowMap = (light, { cubemap = false, perspective = false } = {}) => {
   const dummy = cubemap ? dummyShadowCubemap : dummyShadowMap;
   shadowMapControls.push({
     control: cubemap
-      ? gui.addTextureCube("Shadowmap", dummy)
+      ? gui.addTextureCube("Shadowmap", dummy, { flipEnvMap: 1 })
       : gui.addTexture2D("Shadowmap", dummy, { flipY: true }),
     light,
     property: cubemap ? "_shadowCubemap" : "_shadowMap",
@@ -423,6 +423,7 @@ gpu.frame(ctx, async () => {
     perspective,
   } of shadowMapControls) {
     control.texture = light[property] || dummy;
+    control.options.layer = light[property] ? (light._shadowLayer ?? 0) : 0;
     if (perspective) {
       control.options.near = light._near;
       control.options.far = light._far;

@@ -90,12 +90,14 @@ export default ({
   shadowQuality,
   debugRender: "",
 
-  // Depth-format dummies to satisfy texture_depth_2d/cube bindings when a light
-  // casts no shadow.
+  // Depth-format dummies keeping a shadow bucket binding valid when nothing
+  // filled it. Array-dimensioned to match the bindings, which are always arrays.
   dummyTexture2D: createTexture(ctx, {
     label: "dummyShadowMap2D",
     width: 4,
     height: 4,
+    depth: 1,
+    viewDimension: "2d-array",
     format: "depth32float",
   }),
   dummyTextureCube: createTexture(ctx, {
@@ -103,7 +105,7 @@ export default ({
     width: 4,
     height: 4,
     depth: 6,
-    viewDimension: "cube",
+    viewDimension: "cube-array",
     format: "depth32float",
   }),
   // Sampled-float dummy for the reflection probe's uCaptureTexture slot when a
@@ -241,6 +243,8 @@ export default ({
       counts.point,
       counts.spot,
       counts.area,
+      counts.shadow2DBuckets,
+      counts.shadowCubeBuckets,
       this._reflectionProbe ? 1 : 0,
       this._outputs.normal ? 1 : 0,
       this._outputs.emissive ? 1 : 0,
@@ -316,12 +320,31 @@ export default ({
       }));
     }
 
-    // 2D shadow fields shared by directional/spot/area, plus the bound map.
+    // Shadow maps are array layers in size-bucketed textures, so a light
+    // contributes its bucket and layer rather than a binding of its own. The
+    // bucket textures are collected here in index order, which is the order the
+    // shader's dispatcher expects.
+    const shadowBuckets: { textures2D: any[]; texturesCube: any[] } = {
+      textures2D: [],
+      texturesCube: [],
+    };
+    const bucketOf = (light: any, map: any, cube: boolean) => {
+      if (!map) return { bucket: 0, layer: 0 };
+      const textures = cube
+        ? shadowBuckets.texturesCube
+        : shadowBuckets.textures2D;
+      textures[light._shadowBucket] = map;
+      return { bucket: light._shadowBucket, layer: light._shadowLayer };
+    };
+
+    // 2D shadow fields shared by directional/spot/area.
     const shadow2D = (light: any) => {
       const map = light.castShadows ? light._shadowMap : null;
+      const { bucket, layer } = bucketOf(light, map, false);
       return {
-        map: map || this.dummyTexture2D,
         castShadows: map ? 1 : 0,
+        shadowBucket: bucket,
+        shadowLayer: layer,
         near: light._near ?? 0,
         far: light._far ?? 0,
         radiusUV: light._radiusUV ?? [0, 0],
@@ -339,16 +362,13 @@ export default ({
           projectionMatrix: light._projectionMatrix,
           viewMatrix: light._viewMatrix,
           castShadows: s.castShadows,
+          shadowBucket: s.shadowBucket,
+          shadowLayer: s.shadowLayer,
           near: s.near,
           far: s.far,
           radiusUV: s.radiusUV,
           shadowMapSize: s.shadowMapSize,
         };
-      });
-      directional.forEach((e, i) => {
-        const name = uniformName(`directionalShadowMap${i}`);
-        uniforms[name] = shadow2D(e.directionalLight).map;
-        uniforms[samplerName(name)] = this.shadowCompareSampler;
       });
     }
 
@@ -356,11 +376,14 @@ export default ({
       uniforms.uPointLights = point.map((e) => {
         const light = e.pointLight!;
         const map = light.castShadows ? light._shadowCubemap : null;
+        const { bucket, layer } = bucketOf(light, map, true);
         return {
           position: e._transform!.worldPosition,
           color: lightColor(light),
           range: light.range,
           castShadows: map ? 1 : 0,
+          shadowBucket: bucket,
+          shadowLayer: layer,
           bias: light.bias ?? 0,
           radius: light.bulbRadius ?? 0,
           shadowMapSize: map ? [map.width, map.height] : [0, 0],
@@ -368,13 +391,6 @@ export default ({
           // writes length(view)/far into the cube).
           far: light._far ?? 0,
         };
-      });
-      point.forEach((e, i) => {
-        const light = e.pointLight!;
-        const name = uniformName(`pointShadowMap${i}`);
-        uniforms[name] =
-          (light.castShadows && light._shadowCubemap) || this.dummyTextureCube;
-        uniforms[samplerName(name)] = this.shadowSampler;
       });
     }
 
@@ -392,16 +408,13 @@ export default ({
           projectionMatrix: light._projectionMatrix,
           viewMatrix: light._viewMatrix,
           castShadows: s.castShadows,
+          shadowBucket: s.shadowBucket,
+          shadowLayer: s.shadowLayer,
           near: s.near,
           far: s.far,
           radiusUV: s.radiusUV,
           shadowMapSize: s.shadowMapSize,
         };
-      });
-      spot.forEach((e, i) => {
-        const name = uniformName(`spotShadowMap${i}`);
-        uniforms[name] = shadow2D(e.spotLight).map;
-        uniforms[samplerName(name)] = this.shadowCompareSampler;
       });
     }
 
@@ -423,17 +436,28 @@ export default ({
           projectionMatrix: light._projectionMatrix,
           viewMatrix: light._viewMatrix,
           castShadows: s.castShadows,
+          shadowBucket: s.shadowBucket,
+          shadowLayer: s.shadowLayer,
           near: s.near,
           far: s.far,
           radiusUV: s.radiusUV,
           shadowMapSize: s.shadowMapSize,
         };
       });
-      areaActive.forEach((e, i) => {
-        const name = uniformName(`areaShadowMap${i}`);
-        uniforms[name] = shadow2D(e.areaLight).map;
-        uniforms[samplerName(name)] = this.shadowCompareSampler;
-      });
+    }
+
+    // A bucket with no caster in it cannot happen — indices are handed out as
+    // casters are found — but a light that stopped casting mid-frame leaves a
+    // hole, so the dummy keeps the binding valid rather than the draw failing.
+    for (let i = 0; i < shadowBuckets.textures2D.length; i++) {
+      const name = uniformName(`shadowMaps2D${i}`);
+      uniforms[name] = shadowBuckets.textures2D[i] ?? this.dummyTexture2D;
+      uniforms[samplerName(name)] = this.shadowCompareSampler;
+    }
+    for (let i = 0; i < shadowBuckets.texturesCube.length; i++) {
+      const name = uniformName(`shadowMapsCube${i}`);
+      uniforms[name] = shadowBuckets.texturesCube[i] ?? this.dummyTextureCube;
+      uniforms[samplerName(name)] = this.shadowSampler;
     }
 
     return {
@@ -444,6 +468,8 @@ export default ({
         point: point.length,
         spot: spot.length,
         area: areaActive.length,
+        shadow2DBuckets: shadowBuckets.textures2D.length,
+        shadowCubeBuckets: shadowBuckets.texturesCube.length,
       },
     };
   },
