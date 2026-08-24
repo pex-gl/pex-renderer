@@ -137,26 +137,31 @@ export function textureMatrixField(
 }
 
 /**
- * A fixed-size light-array uniform declaration, or "" when the count is 0
- * (consuming no binding in that case, so the counter only advances for arrays
- * that are actually declared).
+ * A runtime-sized light-array storage declaration, or "" when the scene has
+ * none of that type (consuming no binding in that case, so the counter only
+ * advances for arrays that are actually declared).
+ *
+ * Runtime-sized rather than fixed: the shader is then independent of how many
+ * lights there are, so adding one is a buffer write rather than a recompile.
+ * The count comes from `arrayLength()`, which is exact because the binding is
+ * only declared when there is at least one light to put in it.
  */
 export function lightArrayDeclaration(
   group: number,
   alloc: BindingAllocator,
   name: string,
   structName: string,
-  count: number,
+  present: boolean,
 ): string {
-  return count === 0
-    ? ""
-    : bindingDeclaration(
+  return present
+    ? bindingDeclaration(
         group,
         alloc.next(),
         name,
-        `array<${structName}, ${count}>`,
-        "uniform",
-      );
+        `array<${structName}>`,
+        "storage, read",
+      )
+    : "";
 }
 
 // Uniform struct builders

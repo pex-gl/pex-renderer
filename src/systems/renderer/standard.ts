@@ -238,11 +238,15 @@ export default ({
     ).join("");
     return [
       definesKey(defines.difference(RUNTIME_DEFINES)),
-      counts.ambient,
-      counts.directional,
-      counts.point,
-      counts.spot,
-      counts.area,
+      // Presence, not count: light arrays are runtime-sized storage buffers, so
+      // adding a light writes a buffer instead of compiling a shader. Shadow
+      // buckets stay counted — they are texture bindings, which cannot be an
+      // array of bindings.
+      counts.ambient ? 1 : 0,
+      counts.directional ? 1 : 0,
+      counts.point ? 1 : 0,
+      counts.spot ? 1 : 0,
+      counts.area ? 1 : 0,
       counts.shadow2DBuckets,
       counts.shadowCubeBuckets,
       this._reflectionProbe ? 1 : 0,

@@ -215,13 +215,15 @@ export const standardShader = (
   const useReflectionProbes =
     defines.has("USE_REFLECTION_PROBES") && !materialFlags.unlitWorkflow;
 
-  const ambientLights = materialFlags.unlitWorkflow ? 0 : (lights.ambient ?? 0);
-  const directionalLights = materialFlags.unlitWorkflow
-    ? 0
-    : (lights.directional ?? 0);
-  const pointLights = materialFlags.unlitWorkflow ? 0 : (lights.point ?? 0);
-  const spotLights = materialFlags.unlitWorkflow ? 0 : (lights.spot ?? 0);
-  const areaLights = materialFlags.unlitWorkflow ? 0 : (lights.area ?? 0);
+  // Presence, not count: the arrays are runtime-sized, so how many lights there
+  // are never reaches the shader — only whether a type is used at all, which
+  // decides if its binding and evaluation code exist.
+  const lit = !materialFlags.unlitWorkflow;
+  const ambientLights = lit && (lights.ambient ?? 0) > 0;
+  const directionalLights = lit && (lights.directional ?? 0) > 0;
+  const pointLights = lit && (lights.point ?? 0) > 0;
+  const spotLights = lit && (lights.spot ?? 0) > 0;
+  const areaLights = lit && (lights.area ?? 0) > 0;
   // One binding per distinct shadow map size, not per light: a light is a layer.
   const shadow2DBuckets = materialFlags.unlitWorkflow
     ? 0
@@ -312,10 +314,9 @@ export const standardShader = (
     areaLights,
   );
 
-  const ltcDecl =
-    areaLights === 0
-      ? ""
-      : /* wgsl */ `
+  const ltcDecl = !areaLights
+    ? ""
+    : /* wgsl */ `
 ${textureSamplerDeclaration(1, lightBindings.nextTextureSampler(), "uLtc1")}
 ${textureSamplerDeclaration(1, lightBindings.nextTextureSampler(), "uLtc2")}`;
 
@@ -409,33 +410,39 @@ ${bindingDeclaration(1, lightBindings.next(), "uIrradianceCoefficients", `array<
         "uCaptureTexture",
       );
 
-  const ambientLightsBlock = Array.from(
-    { length: ambientLights },
-    (_, i) => `EvaluateAmbientLight(&data, uAmbientLights[${i}], data.ao);`,
-  ).join("\n  ");
-  // Each light carries its own bucket and layer, so the loop is a plain index
-  // over the light array; the shadow binding is resolved by the dispatcher.
-  const lightsBlock = (count: number, call: (i: number) => string) =>
-    Array.from({ length: count }, (_, i) => call(i)).join("\n  ");
+  // One loop per type over its whole buffer. arrayLength() is exact: a binding
+  // only exists when the scene has at least one light of that type.
+  const lightsLoop = (present: boolean, array: string, call: string) =>
+    present
+      ? /* wgsl */ `for (var i = 0u; i < arrayLength(&${array}); i++) {
+    ${call}
+  }`
+      : "";
 
-  const directionalLightsBlock = lightsBlock(
+  const ambientLightsBlock = lightsLoop(
+    ambientLights,
+    "uAmbientLights",
+    "EvaluateAmbientLight(&data, uAmbientLights[i], data.ao);",
+  );
+  const directionalLightsBlock = lightsLoop(
     directionalLights,
-    (i) =>
-      `EvaluateDirectionalLight(&data, uDirectionalLights[${i}], input.positionWorld, input.position.xy);`,
+    "uDirectionalLights",
+    "EvaluateDirectionalLight(&data, uDirectionalLights[i], input.positionWorld, input.position.xy);",
   );
-  const pointLightsBlock = lightsBlock(
+  const pointLightsBlock = lightsLoop(
     pointLights,
-    (i) => `EvaluatePointLight(&data, uPointLights[${i}], input.position.xy);`,
+    "uPointLights",
+    "EvaluatePointLight(&data, uPointLights[i], input.position.xy);",
   );
-  const spotLightsBlock = lightsBlock(
+  const spotLightsBlock = lightsLoop(
     spotLights,
-    (i) =>
-      `EvaluateSpotLight(&data, uSpotLights[${i}], input.positionWorld, input.position.xy);`,
+    "uSpotLights",
+    "EvaluateSpotLight(&data, uSpotLights[i], input.positionWorld, input.position.xy);",
   );
-  const areaLightsBlock = lightsBlock(
+  const areaLightsBlock = lightsLoop(
     areaLights,
-    (i) =>
-      `EvaluateAreaLight(&data, uAreaLights[${i}], uLtc1, ${samplerName("uLtc1")}, uLtc2, ${samplerName("uLtc2")}, data.ao, input.positionWorld, uFrame.cameraPosition, input.position.xy);`,
+    "uAreaLights",
+    `EvaluateAreaLight(&data, uAreaLights[i], uLtc1, ${samplerName("uLtc1")}, uLtc2, ${samplerName("uLtc2")}, data.ao, input.positionWorld, uFrame.cameraPosition, input.position.xy);`,
   );
 
   const alphaBlock = () => /* wgsl */ `

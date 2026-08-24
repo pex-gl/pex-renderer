@@ -678,7 +678,11 @@ export interface ShaderHooks {
   fragAfterLighting?: string;
   fragEnd?: string;
 }
-/** Active light counts per type consumed by the standard shader generator. */
+/**
+ * Active light counts per type. The standard shader generator only reads them
+ * as presence — the arrays are runtime-sized — except for the shadow bucket
+ * counts, which decide how many texture bindings exist.
+ */
 export interface ShaderLightCounts {
   ambient?: number;
   directional?: number;
@@ -703,7 +707,7 @@ export interface PipelineShaderOptions {
   maxJoints?: number;
   /** Per-texture texture coordinate set index (0 or 1), e.g. { baseColor: 1 }. */
   texCoords?: Record<string, number>;
-  /** Active light counts per type (0-4), e.g. { directional: 2, point: 1 }. */
+  /** Active light counts per type, e.g. { directional: 2, point: 1 }. */
   lights?: ShaderLightCounts;
 }
 /** Signature of a pipeline WGSL generator. */
