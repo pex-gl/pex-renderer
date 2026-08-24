@@ -309,7 +309,7 @@ async function loadScene(url, grid) {
     }
   }
 
-  // cameraEntity.postProcessing = postProcessingComponent;
+  cameraEntity.postProcessing = postProcessingComponent;
 
   return scene;
 }

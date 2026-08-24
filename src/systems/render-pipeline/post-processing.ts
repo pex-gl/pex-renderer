@@ -1,7 +1,6 @@
 import { submit, createSampler } from "pex-gpu";
 import type { RenderPipeline } from "pex-gpu";
 
-import createFullscreenGeometry from "../../fullscreen-geometry.js";
 import { NAMESPACE, definesKey, mapValues } from "../../utils.js";
 import { isResourceHandle } from "../../frame-graph/types.js";
 
@@ -132,7 +131,6 @@ export default ({
   postProcessingEffects: new Map<string, PostProcessingEffect | null>(),
   postProcessingLoading: new Map<string, Promise<void>>(),
   postProcessingPipelines: new Map<string, RenderPipeline>(),
-  fullscreenGeometry: createFullscreenGeometry(ctx),
   postProcessingSamplers: {
     linear: createSampler(ctx, { filter: "linear" }),
     nearest: createSampler(ctx, { filter: "nearest" }),
@@ -319,8 +317,8 @@ export default ({
           execute: ({ uniforms: resolved }) => {
             submit(ctx, {
               label: passKey,
-              attributes: this.fullscreenGeometry.triangle.attributes,
-              count: this.fullscreenGeometry.triangle.count,
+              attributes: this.fullscreen.triangle.attributes,
+              count: this.fullscreen.triangle.count,
               pipeline,
               uniforms: resolved,
             });

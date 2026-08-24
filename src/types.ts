@@ -848,7 +848,6 @@ export interface PostProcessingMethods {
   postProcessingEffects: Map<string, any>;
   postProcessingLoading: Map<string, Promise<void>>;
   postProcessingPipelines: Map<string, RenderPipeline>;
-  fullscreenGeometry: any;
   postProcessingSamplers: PostProcessingSamplers;
   loadPostProcessingEffect(name: string): Promise<void> | undefined;
   getPostProcessingPipeline(
