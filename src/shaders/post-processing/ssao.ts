@@ -182,6 +182,8 @@ ${fullscreenVertex()}
 // Fragment includes
 // Reads the estimator's bounced color instead of visibility alone.
 override USE_SSAO_COLORS: bool = false;
+// Tints the occlusion with the analytic multi-bounce fit.
+override USE_SSAO_MULTI_BOUNCE: bool = false;
 ${SHADERS.ambientOcclusion.multiBounce}
 ${SHADERS.ambientOcclusion.mix}
 

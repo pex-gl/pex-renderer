@@ -405,7 +405,16 @@ export interface SSAOComponentOptions {
   bias?: number;
   spiralTurns?: number;
   slices?: number;
-  colorBounce?: boolean;
+  /**
+   * Indirect bounce approximation. `"analytic"` is the Jimenez/Filament albedo
+   * polynomial, evaluated from visibility alone and applied to either
+   * estimator. `"screen-space"` additionally gathers neighbouring lit pixels
+   * inside GTAO's horizon search — two texture fetches per sample, so ~150 at
+   * default slice and sample counts — and degrades to `"analytic"` for SAO,
+   * whose estimator writes no color.
+   */
+  multiBounce?: false | "analytic" | "screen-space";
+  /** Scales the `"screen-space"` gather. */
   colorBounceIntensity?: number;
 }
 export interface DoFComponentOptions {

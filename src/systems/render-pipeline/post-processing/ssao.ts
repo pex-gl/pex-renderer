@@ -113,9 +113,13 @@ const ssao: PostProcessingEffect = {
     const component = cameraEntity.postProcessing!.ssao!;
     const gtao = isGTAO(context);
 
-    // GTAO's color bounce needs the full HDR range; SAO writes visibility alone.
+    // Only GTAO gathers neighbouring color; SAO writes visibility alone, so it
+    // degrades to the analytic fit rather than losing multi-bounce entirely.
+    const screenSpaceBounce = gtao && component.multiBounce === "screen-space";
+
+    // The gathered color needs the full HDR range; visibility alone does not.
     const format = (): GPUTextureFormat =>
-      gtao && component.colorBounce ? "rgba16float" : "r8unorm";
+      screenSpaceBounce ? "rgba16float" : "r8unorm";
 
     const noise = (ctx: GpuContext) =>
       component.noiseTexture
@@ -151,7 +155,7 @@ const ssao: PostProcessingEffect = {
         GTAO_NUM_SLICES: component.slices!,
         GTAO_NUM_SAMPLES: component.samples!,
         USE_GTAO_NOISE_TEXTURE: !!component.noiseTexture,
-        USE_GTAO_COLOR_BOUNCE: !!component.colorBounce,
+        USE_GTAO_COLOR_BOUNCE: screenSpaceBounce,
       }),
       clearValue: [0, 0, 0, 1],
       format,
@@ -229,8 +233,9 @@ const ssao: PostProcessingEffect = {
       chain: true,
       // Without DoF, combine applies the same mix for free.
       enabled: ({ cameraEntity }) => !!cameraEntity.postProcessing!.dof,
-      constants: (context) => ({
-        USE_SSAO_COLORS: isGTAO(context) && !!component.colorBounce,
+      constants: () => ({
+        USE_SSAO_COLORS: screenSpaceBounce,
+        USE_SSAO_MULTI_BOUNCE: !!component.multiBounce,
       }),
       clearValue: [0, 0, 0, 1],
       uniforms: ({ textures, samplers }) => ({

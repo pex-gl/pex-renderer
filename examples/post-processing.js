@@ -96,7 +96,7 @@ const postProcessing = components.postProcessing({
     spiralTurns: 7,
     // GTAO
     slices: 3,
-    colorBounce: true,
+    multiBounce: "screen-space",
     colorBounceIntensity: 1.0,
   },
   dof: {
@@ -545,7 +545,15 @@ gui.addParam("Slices", postProcessing.ssao, "slices", {
   max: 20,
   step: 1,
 });
-gui.addParam("Color bounce", postProcessing.ssao, "colorBounce");
+gui.addRadioList(
+  "Multi bounce",
+  postProcessing.ssao,
+  "multiBounce",
+  [false, "analytic", "screen-space"].map((value) => ({
+    name: value || "off",
+    value,
+  })),
+);
 gui.addParam("Bounce intensity", postProcessing.ssao, "colorBounceIntensity", {
   min: 0,
   max: 100,

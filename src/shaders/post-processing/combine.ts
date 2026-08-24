@@ -141,6 +141,7 @@ ${useFog ? `${SHADERS.depthRead}\n${SHADERS.depthPosition}\n${SHADERS.fog}` : ""
 ${
   useSSAO
     ? `override USE_SSAO_COLORS: bool = false;
+override USE_SSAO_MULTI_BOUNCE: bool = false;
 ${SHADERS.ambientOcclusion.multiBounce}
 ${SHADERS.ambientOcclusion.mix}`
     : ""
