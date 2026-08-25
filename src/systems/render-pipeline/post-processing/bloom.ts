@@ -4,10 +4,8 @@ import {
   upsampleShader,
 } from "../../../shaders/post-processing/bloom.js";
 
-import type {
-  PostProcessingEffect,
-  PostProcessingSubPass,
-} from "../post-processing.js";
+import type { ResourceHandle } from "../../../frame-graph/index.js";
+import type { PostProcessingEffect } from "../post-processing.js";
 
 /**
  * Halving stops once the next level would be smaller than this. Below a few
@@ -58,14 +56,14 @@ const levelCount = (viewport: number[], requested?: number) => {
 
 /**
  * Bloom: threshold the bright pixels, build a downsample pyramid, then add
- * every level back at full resolution. The result stays in the register as
- * `bloom.threshold` for combine to add into the tonemapped image.
+ * every level back up it. The sum ends in `bloom.threshold` for combine to add
+ * into the tonemapped image.
  */
 const bloom: PostProcessingEffect = {
   name: "bloom",
   // Optional: the threshold pass falls back to the color chain without it.
   outputs: ["emissive"],
-  passes: ({ cameraEntity, viewport }) => {
+  declare({ cameraEntity, viewport, textures, samplers, pass }) {
     const postProcessing = cameraEntity.postProcessing!;
     const component = postProcessing.bloom!;
 
@@ -74,45 +72,48 @@ const bloom: PostProcessingEffect = {
       component.quality === 0 ? new Set(["QUALITY_0"]) : new Set();
 
     const levels = levelCount(viewport, component.levels);
+    const emissive = textures.get("emissive");
+    const fromEmissive = component.source === "emissive" && !!emissive;
 
-    const threshold: PostProcessingSubPass = {
+    const threshold = pass({
       name: "threshold",
       shader: thresholdShader,
-      getDefines: ({ textures }) =>
-        new Set([
-          ...(textures.get("emissive") ? ["USE_EMISSIVE_TEXTURE"] : []),
-          ...(component.source === "color" ? ["USE_SOURCE_COLOR"] : []),
-          ...(component.source === "emissive" && textures.get("emissive")
-            ? ["USE_SOURCE_EMISSIVE"]
-            : []),
-          ...(COLOR_FUNCTION_DEFINE[component.colorFunction!]
-            ? [COLOR_FUNCTION_DEFINE[component.colorFunction!]!]
-            : []),
-        ]),
-      uniforms: ({ textures, samplers }) => ({
+      // Reading the emissive target instead of the color one trades physicality
+      // for artistic control: only what the artist marked emissive blooms.
+      ...(fromEmissive && { source: null }),
+      defines: new Set([
+        ...(emissive ? ["USE_EMISSIVE_TEXTURE"] : []),
+        ...(component.source === "color" ? ["USE_SOURCE_COLOR"] : []),
+        ...(fromEmissive ? ["USE_SOURCE_EMISSIVE"] : []),
+        ...(COLOR_FUNCTION_DEFINE[component.colorFunction!]
+          ? [COLOR_FUNCTION_DEFINE[component.colorFunction!]!]
+          : []),
+      ]),
+      uniforms: {
         uBloom: {
           exposure: postProcessing.exposure!,
           threshold: component.threshold!,
         },
-        ...(textures.get("emissive") && {
-          uEmissiveTexture: textures.get("emissive")!,
+        ...(emissive && {
+          uEmissiveTexture: emissive,
           uEmissiveTextureSampler: samplers.linear,
         }),
-      }),
-    };
+      },
+    });
 
-    const downsample: PostProcessingSubPass[] = Array.from(
-      { length: levels },
-      (_, level) => ({
+    const pyramid: ResourceHandle[] = [];
+    let source = threshold;
+    for (let level = 0; level < levels; level++) {
+      source = pass({
         name: `downsample[${level}]`,
         shader: downsampleShader,
-        getDefines: () => quality,
-        source: () =>
-          level === 0 ? "bloom.threshold" : `bloom.downsample[${level - 1}]`,
-        size: ({ viewport }) => levelSize(viewport, level),
-        uniforms: () => ({ uDownsample: { intensity: component.radius! } }),
-      }),
-    );
+        defines: quality,
+        source,
+        size: levelSize(viewport, level),
+        uniforms: { uDownsample: { intensity: component.radius! } },
+      });
+      pyramid.push(source);
+    }
 
     /**
      * Back up the pyramid, smallest first: each level is added into the one
@@ -120,26 +121,19 @@ const bloom: PostProcessingEffect = {
      * only the last draw is full resolution.
      *
      * Adding every level straight into the full-resolution target instead costs
-     * one full-screen draw per level — and asks a nine-tap tent to bridge a
-     * gap of up to 2^n texels, which no filter kernel can do.
+     * one full-screen draw per level — and asks a nine-tap tent to bridge a gap
+     * of up to 2^n texels, which no filter kernel can do.
      */
-    const upsample: PostProcessingSubPass[] = Array.from(
-      { length: levels },
-      (_, index) => {
-        const level = levels - 1 - index;
-        return {
-          name: `upsample[${level}]`,
-          shader: upsampleShader,
-          getDefines: () => quality,
-          blend: ADDITIVE,
-          source: () => `bloom.downsample[${level}]`,
-          target: () =>
-            level === 0 ? "bloom.threshold" : `bloom.downsample[${level - 1}]`,
-        };
-      },
-    );
-
-    return [threshold, ...downsample, ...upsample];
+    for (let level = levels - 1; level >= 0; level--) {
+      pass({
+        name: `upsample[${level}]`,
+        shader: upsampleShader,
+        defines: quality,
+        blend: ADDITIVE,
+        source: pyramid[level]!,
+        target: level === 0 ? threshold : pyramid[level - 1]!,
+      });
+    }
   },
 };
 

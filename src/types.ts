@@ -886,16 +886,18 @@ export interface PostProcessingMethods {
   loadPostProcessingEffect(name: string): Promise<void> | undefined;
   getPostProcessingPipeline(
     key: string,
-    subPass: any,
+    shader: (defines: Set<string>) => string,
     defines: Set<string>,
     constants: Record<string, number | boolean>,
+    blend?: GPUBlendState,
   ): RenderPipeline;
+  enabledPostProcessingEffects(cameraEntity: Entity): Generator<any>;
   postProcessingOutputs(cameraEntity: Entity): string[];
-  postProcessingStages(cameraEntity: Entity): Set<string>;
+  postProcessingEffectsByStage(cameraEntity: Entity): Map<string, any[]>;
   renderPostProcessing(args: {
     renderView: RenderView;
     textures: any;
-    stage: string;
+    effects: any[] | undefined;
   }): void;
 }
 /**

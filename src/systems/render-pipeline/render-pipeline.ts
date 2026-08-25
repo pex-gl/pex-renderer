@@ -271,13 +271,18 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
      * External callbacks run before the effects anchored there, so an effect
      * sees what they published.
      */
+    const effectsByStage = this.postProcessingEffectsByStage(cameraEntity);
+
     const stage = async (name: string) => {
       await frameGraph.stage(name, textures);
       this.renderPostProcessing({
         renderView: renderPassView,
         textures,
-        stage: name,
+        effects: effectsByStage.get(name),
       });
+      // Consumed, so whatever is left at the end named a stage this frame never
+      // opened.
+      effectsByStage.delete(name);
     };
 
     await stage("lights");
@@ -364,9 +369,7 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
     // place in the frame — ambient occlusion consumed as a lighting input only
     // exists if the geometry it reads was drawn first.
     const usePrePass =
-      (this.depthPrePass ||
-        this.postProcessingStages(cameraEntity).has("prePass")) &&
-      !!depthTexture;
+      (this.depthPrePass || effectsByStage.has("prePass")) && !!depthTexture;
 
     const prePassNormal = usePrePass && !!colorTextures.normal;
 
@@ -514,6 +517,14 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
     await stage("postProcessing");
 
     await stage("present");
+
+    // Silent otherwise: "transparent" and "transmission" open only if the scene
+    // has such geometry, and "outputs" is raised before the register exists.
+    for (const [name, effects] of effectsByStage) {
+      textures.report(
+        `${effects.map((effect) => `"${effect.name}"`).join(", ")} declared at the "${name}" stage, which this frame never opened, so nothing was drawn for them.`,
+      );
+    }
 
     const color = textures.require("color")!;
 

@@ -84,77 +84,71 @@ function getLookups(ctx: GpuContext): SMAALookups {
 const smaa: PostProcessingEffect = {
   name: "smaa",
   srgb: true,
-  // Skipped until the lookups have loaded rather than drawn with a placeholder:
-  // one or two frames without anti-aliasing beats one with wrong weights.
-  enabled: ({ ctx, cameraEntity, textures }) => {
+  declare({ ctx, cameraEntity, textures, samplers, pass }) {
+    // Skipped until the lookups have loaded rather than drawn with a
+    // placeholder: one or two frames without anti-aliasing beats one with wrong
+    // weights.
     const { area, search } = getLookups(ctx);
-    if (!area || !search) return false;
-    return (
-      cameraEntity.postProcessing!.smaa!.edges !== "depth" ||
-      !!textures.get("depth")
-    );
-  },
-  passes: ({ cameraEntity }) => {
+    if (!area || !search) return;
+
     const component = cameraEntity.postProcessing!.smaa!;
+    const usesDepth = component.edges === "depth";
+
+    const depth = textures.get("depth");
+    if (usesDepth && !depth) return;
+
     const preset = PRESETS[component.quality!] ?? PRESETS[2];
 
-    return [
-      {
-        name: "edges",
-        shader: smaaEdgesShader,
-        getDefines: () =>
-          new Set(
-            EDGES_DEFINE[component.edges!] ? [EDGES_DEFINE[component.edges!]!] : [],
-          ),
-        constants: () => ({
-          SMAA_THRESHOLD: preset.threshold,
-          SMAA_SRGB_INPUT: true,
-        }),
-        clearValue: [0, 0, 0, 0],
-        format: () => "rg8unorm",
-        uniforms: ({ textures, samplers }) => ({
-          ...(component.edges === "depth" && {
-            uDepthTexture: textures.get("depth")!,
-            uDepthTextureSampler: samplers.nearest,
-          }),
+    const edges = pass({
+      name: "edges",
+      shader: smaaEdgesShader,
+      defines: new Set(
+        EDGES_DEFINE[component.edges!] ? [EDGES_DEFINE[component.edges!]!] : [],
+      ),
+      constants: { SMAA_THRESHOLD: preset.threshold, SMAA_SRGB_INPUT: true },
+      clearValue: [0, 0, 0, 0],
+      format: "rg8unorm",
+      uniforms: {
+        ...(usesDepth && {
+          uDepthTexture: depth!,
+          uDepthTextureSampler: samplers.nearest,
         }),
       },
-      {
-        name: "weights",
-        shader: smaaWeightsShader,
-        constants: () => ({
-          SMAA_MAX_SEARCH_STEPS: preset.searchSteps,
-          SMAA_MAX_SEARCH_STEPS_DIAG: preset.searchStepsDiag,
-          SMAA_CORNER_ROUNDING: preset.cornerRounding,
-          SMAA_DISABLE_DIAG_DETECTION: !preset.diagonals,
-          SMAA_DISABLE_CORNER_DETECTION: !preset.corners,
-        }),
-        clearValue: [0, 0, 0, 0],
-        format: () => "rgba8unorm",
-        source: () => "smaa.edges",
-        uniforms: ({ ctx, textures, samplers }) => {
-          const { area, search } = getLookups(ctx);
-          return {
-            uEdgesTexture: textures.get("smaa.edges")!,
-            uEdgesTextureSampler: samplers.linear,
-            uAreaTexture: area!,
-            uAreaTextureSampler: samplers.linear,
-            uSearchTexture: search!,
-            uSearchTextureSampler: samplers.nearest,
-          };
-        },
+    });
+
+    const weights = pass({
+      name: "weights",
+      shader: smaaWeightsShader,
+      constants: {
+        SMAA_MAX_SEARCH_STEPS: preset.searchSteps,
+        SMAA_MAX_SEARCH_STEPS_DIAG: preset.searchStepsDiag,
+        SMAA_CORNER_ROUNDING: preset.cornerRounding,
+        SMAA_DISABLE_DIAG_DETECTION: !preset.diagonals,
+        SMAA_DISABLE_CORNER_DETECTION: !preset.corners,
       },
-      {
-        name: "blend",
-        shader: smaaBlendShader,
-        chain: true,
-        clearValue: [0, 0, 0, 0],
-        uniforms: ({ textures, samplers }) => ({
-          uBlendTexture: textures.get("smaa.weights")!,
-          uBlendTextureSampler: samplers.linear,
-        }),
+      clearValue: [0, 0, 0, 0],
+      format: "rgba8unorm",
+      source: edges,
+      uniforms: {
+        uEdgesTexture: edges,
+        uEdgesTextureSampler: samplers.linear,
+        uAreaTexture: area,
+        uAreaTextureSampler: samplers.linear,
+        uSearchTexture: search,
+        uSearchTextureSampler: samplers.nearest,
       },
-    ];
+    });
+
+    pass({
+      name: "blend",
+      shader: smaaBlendShader,
+      chain: true,
+      clearValue: [0, 0, 0, 0],
+      uniforms: {
+        uBlendTexture: weights,
+        uBlendTextureSampler: samplers.linear,
+      },
+    });
   },
 };
 
