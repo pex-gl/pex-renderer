@@ -623,9 +623,17 @@ ${bindingDeclaration(1, lightBindings.next(), "uIrradianceCoefficients", `array<
   getIor(&data, uMaterial.ior);
   if (USE_SPECULAR) {
   ${
-    textures.specularTexture || textures.specularColorTexture
-      ? `getSpecularFactorTextured(&data, uMaterial.specular, uMaterial.specularColor, ${textures.specularTexture ? "uSpecularTexture, uSpecularTextureSampler" : "uSpecularColorTexture, uSpecularColorTextureSampler"}, ${tc("specular")}, ${textures.specularTexture ? "uMaterial.specularTextureMatrix" : "uMaterial.specularColorTextureMatrix"}, ${textures.specularColorTexture ? "uSpecularColorTexture, uSpecularColorTextureSampler" : "uSpecularTexture, uSpecularTextureSampler"}, ${tc("specularColor")}, ${textures.specularColorTexture ? "uMaterial.specularColorTextureMatrix" : "uMaterial.specularTextureMatrix"});`
-      : "getSpecularFactor(&data, uMaterial.specular, uMaterial.specularColor);"
+    // The two textures are independently optional: each dispatches to the
+    // variant that only samples the texture(s) actually bound, so a material
+    // with just specularTexture doesn't get its RGB — reserved for
+    // specularColorTexture since ratification — tinting f0.
+    textures.specularTexture && textures.specularColorTexture
+      ? `getSpecularFactorTextured(&data, uMaterial.specular, uMaterial.specularColor, uSpecularTexture, uSpecularTextureSampler, ${tc("specular")}, uMaterial.specularTextureMatrix, uSpecularColorTexture, uSpecularColorTextureSampler, ${tc("specularColor")}, uMaterial.specularColorTextureMatrix);`
+      : textures.specularTexture
+        ? `getSpecularStrengthTextured(&data, uMaterial.specular, uMaterial.specularColor, uSpecularTexture, uSpecularTextureSampler, ${tc("specular")}, uMaterial.specularTextureMatrix);`
+        : textures.specularColorTexture
+          ? `getSpecularColorTextured(&data, uMaterial.specular, uMaterial.specularColor, uSpecularColorTexture, uSpecularColorTextureSampler, ${tc("specularColor")}, uMaterial.specularColorTextureMatrix);`
+          : "getSpecularFactor(&data, uMaterial.specular, uMaterial.specularColor);"
   }
   } else {
   getSpecular(&data);
