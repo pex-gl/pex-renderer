@@ -251,7 +251,7 @@ const addShadowMap = (light, { cubemap = false, perspective = false } = {}) => {
   const dummy = cubemap ? dummyShadowCubemap : dummyShadowMap;
   shadowMapControls.push({
     control: cubemap
-      ? gui.addTextureCube("Shadowmap", dummy, { flipEnvMap: 1 })
+      ? gui.addTextureCube("Shadowmap", dummy)
       : gui.addTexture2D("Shadowmap", dummy, { flipY: true }),
     light,
     property: cubemap ? "_shadowCubemap" : "_shadowMap",
@@ -341,6 +341,7 @@ gui.addParam("Receive Shadows", State, "floorReceiveShadows", {}, () => {
   floorEntity.material.receiveShadows = State.floorReceiveShadows;
 });
 gui.addHeader("Mesh");
+gui.addFPSMeeter();
 gui.addParam("Cast Shadows", State, "meshCastShadows", {}, () => {
   meshEntity.material.castShadows = State.meshCastShadows;
 });

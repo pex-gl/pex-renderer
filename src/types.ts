@@ -3,10 +3,12 @@ import type {
   GpuTexture,
   GpuBuffer,
   ExternalImageSource,
+  RenderCommand,
   RenderPipeline,
 } from "pex-gpu";
 import type { Vec2, Vec3, Quat, Mat3, Mat4 } from "pex-math";
 import type { FrameGraph, ResourceHandle } from "./frame-graph/index.js";
+import type { LightKind } from "./systems/render-pipeline/shadow-mapping.js";
 
 /** Axis-aligned bounding box as [min, max]. */
 export type AABB = number[][];
@@ -759,7 +761,11 @@ export type RendererSystemRender = (
 export interface RendererSystemStageOptions {
   outputs?: FragmentOutputs;
   shadowMappingLight?: any;
-  backgroundColorTexture?: GpuTexture | null;
+  /**
+   * Resolved frame images, keyed by the register names the renderer asked for
+   * through `inputs`. Missing entries mean nothing published that name.
+   */
+  textures?: Record<string, GpuTexture>;
   renderingToReflectionProbe?: boolean;
   msaa?: boolean;
   transparent?: boolean;
@@ -790,19 +796,18 @@ export interface RenderPipelineCore {
   debug: boolean;
   debugRender: string;
   reversibleToneMap: boolean;
-  descriptors: Record<string, any>;
+  /** Draw depth (+ normal) before shading. See render-pipeline.ts. */
+  depthPrePass: boolean;
   fullscreen: any;
-  blitSampler: GPUSampler;
+  samplers: Samplers;
+  blitPipeline: RenderPipeline;
+  grabPipeline: RenderPipeline;
   outputs: Set<string>;
   colorFormat: GPUTextureFormat;
   depthFormat: GPUTextureFormat;
 
   drawMeshes(options: any): void;
-  generateGrabMips(
-    grabTexture: ResourceHandle,
-    levels: number,
-    name: string,
-  ): void;
+  drawFullscreen(command: RenderCommand): void;
   update(
     entities: Entity[],
     options?: any,
@@ -837,21 +842,8 @@ export interface ShadowMappingMethods {
     renderers: RendererSystem[],
     layer: string | undefined,
   ): { shadowMaps: ResourceHandle[]; shadowCastingLights: any[] };
-  renderDirectionalLightShadowMap(
-    lightEntity: Entity,
-    entities: Entity[],
-    renderers: RendererSystem[],
-    scope: string,
-    shadowMap: ResourceHandle,
-  ): void;
-  renderSpotLightShadowMap(
-    lightEntity: Entity,
-    entities: Entity[],
-    renderers: RendererSystem[],
-    scope: string,
-    shadowMap: ResourceHandle,
-  ): void;
-  renderPointLightShadowMap(
+  renderShadowMap(
+    kind: LightKind,
     lightEntity: Entity,
     entities: Entity[],
     renderers: RendererSystem[],
@@ -859,9 +851,12 @@ export interface ShadowMappingMethods {
     shadowMap: ResourceHandle,
   ): void;
 }
-/** Samplers a post-processing sub-pass binds alongside the textures it reads. */
-export interface PostProcessingSamplers {
-  /** Filtered, clamped: color reads, and the SMAA area lookup. */
+/**
+ * The pipeline's samplers, bound by its own passes and handed to every
+ * post-processing sub-pass.
+ */
+export interface Samplers {
+  /** Filtered, clamped: color reads, the blit, and the SMAA area lookup. */
   linear: GPUSampler;
   /** Unfiltered, clamped: depth reads, and the SMAA search lookup. */
   nearest: GPUSampler;
@@ -873,7 +868,6 @@ export interface PostProcessingMethods {
   postProcessingEffects: Map<string, any>;
   postProcessingLoading: Map<string, Promise<void>>;
   postProcessingPipelines: Map<string, RenderPipeline>;
-  postProcessingSamplers: PostProcessingSamplers;
   loadPostProcessingEffect(name: string): Promise<void> | undefined;
   getPostProcessingPipeline(
     key: string,
@@ -881,7 +875,32 @@ export interface PostProcessingMethods {
     defines: Set<string>,
     constants: Record<string, number | boolean>,
   ): RenderPipeline;
-  renderPostProcessing(args: { renderView: RenderView; textures: any }): void;
+  postProcessingOutputs(cameraEntity: Entity): string[];
+  postProcessingStages(cameraEntity: Entity): Set<string>;
+  renderPostProcessing(args: {
+    renderView: RenderView;
+    textures: any;
+    stage: string;
+  }): void;
+}
+/**
+ * Payload of the `"outputs"` stage: what the main pass should produce for one
+ * view, before any of it has been allocated.
+ *
+ * A module joins the frame at an injection point, but the attachments it wants
+ * to read have to exist before the pass that writes them is declared — earlier
+ * than any hook that hands over {@link RenderTextures}. Adding a name here is
+ * how anything outside the pipeline asks for one.
+ *
+ * Union only: there is no way to withdraw a name another module asked for.
+ * Outputs are attachments on the main pass, so the set changing relayouts it
+ * and recompiles every material pipeline — a requirement that flickers frame to
+ * frame is far more expensive than one that is simply always on.
+ */
+export interface OutputRequest {
+  /** Add a name to request it. `"color"` and `"depth"` are always present. */
+  outputs: Set<string>;
+  renderView: RenderView;
 }
 // Members culling.ts mixes into render-pipeline-system.
 export interface CullingMethods {

@@ -36,6 +36,8 @@ const levelSize = (viewport: number[], level: number) => [
  */
 const bloom: PostProcessingEffect = {
   name: "bloom",
+  // Optional: the threshold pass falls back to the color chain without it.
+  outputs: ["emissive"],
   passes: ({ cameraEntity }) => {
     const postProcessing = cameraEntity.postProcessing!;
     const component = postProcessing.bloom!;

@@ -23,7 +23,6 @@ const {
   blit,
   reversibleToneMap,
   depthPass,
-  depthPrePass,
   line,
   overlay,
   helper,
@@ -133,15 +132,19 @@ const depthPassVariants = [
   { name: "alpha texture + alpha test", defines: new Set(["USE_NORMALS", "USE_TEXCOORD_0", "USE_BASE_COLOR_TEXTURE", "USE_ALPHA_TEXTURE", "USE_ALPHA_TEST"]) },
   { name: "skinned + instanced + vertex colors", defines: new Set(["USE_NORMALS", "USE_SKIN", "USE_INSTANCED_OFFSET", "USE_INSTANCED_SCALE", "USE_INSTANCED_ROTATION", "USE_VERTEX_COLORS"]), options: { maxJoints: 64 } },
   { name: "displacement + texcoord1", defines: new Set(["USE_NORMALS", "USE_TEXCOORD_0", "USE_TEXCOORD_1", "USE_DISPLACEMENT_TEXTURE"]) },
+  { name: "alpha test + vertex/instance colors", defines: new Set(["USE_ALPHA_TEST", "USE_VERTEX_COLORS", "USE_INSTANCED_COLOR"]) },
+  { name: "alpha test on texcoord1", defines: new Set(["USE_TEXCOORD_0", "USE_TEXCOORD_1", "USE_BASE_COLOR_TEXTURE", "USE_ALPHA_TEST"]), options: { texCoords: { baseColor: 1 } } },
+  { name: "alpha test + omni (linear depth)", defines: new Set(["USE_TEXCOORD_0", "USE_BASE_COLOR_TEXTURE", "USE_ALPHA_TEST", "USE_LINEAR_DEPTH"]) },
   { name: "hooks", defines: new Set(), options: { hooks: { vertBeforeTransform: "// hook", vertEnd: "// hook", fragDeclarationsEnd: "// hook", fragEnd: "// hook" } } },
 ];
 
-const depthPrePassVariants = [
-  { name: "default", defines: new Set(["USE_NORMALS"]) },
-  { name: "alpha texture + alpha test", defines: new Set(["USE_NORMALS", "USE_TEXCOORD_0", "USE_BASE_COLOR_TEXTURE", "USE_ALPHA_TEXTURE", "USE_ALPHA_TEST"]) },
-  { name: "skinned + instanced + vertex colors", defines: new Set(["USE_NORMALS", "USE_SKIN", "USE_INSTANCED_OFFSET", "USE_INSTANCED_SCALE", "USE_INSTANCED_ROTATION", "USE_VERTEX_COLORS"]), options: { maxJoints: 64 } },
-  { name: "displacement + texcoord1", defines: new Set(["USE_NORMALS", "USE_TEXCOORD_0", "USE_TEXCOORD_1", "USE_DISPLACEMENT_TEXTURE"]) },
-  { name: "hooks", defines: new Set(["USE_NORMALS"]), options: { hooks: { vertBeforeTransform: "// hook", vertEnd: "// hook", fragDeclarationsEnd: "// hook", fragEnd: "// hook" } } },
+// The pre-pass variant: same vertex path as a shadow map, plus a normal target.
+const depthPassPrePassVariants = [
+  { name: "normal output", defines: new Set(["USE_NORMALS", "USE_NORMAL_OUTPUT"]) },
+  { name: "normal output + skinned", defines: new Set(["USE_NORMALS", "USE_NORMAL_OUTPUT", "USE_SKIN"]), options: { maxJoints: 64 } },
+  { name: "normal output + instanced", defines: new Set(["USE_NORMALS", "USE_NORMAL_OUTPUT", "USE_INSTANCED_OFFSET", "USE_INSTANCED_SCALE", "USE_INSTANCED_ROTATION"]) },
+  { name: "normal output + displacement", defines: new Set(["USE_NORMALS", "USE_NORMAL_OUTPUT", "USE_TEXCOORD_0", "USE_DISPLACEMENT_TEXTURE"]) },
+  { name: "normal output + alpha test", defines: new Set(["USE_NORMALS", "USE_NORMAL_OUTPUT", "USE_TEXCOORD_0", "USE_BASE_COLOR_TEXTURE", "USE_ALPHA_TEXTURE", "USE_ALPHA_TEST"]) },
 ];
 
 const lineVariants = [
@@ -231,9 +234,10 @@ for (const v of reversibleToneMapVariants) {
 for (const v of depthPassVariants) {
   await check(`depthPass [${v.name}]`, depthPass.depthPassShader(v.defines, v.options));
 }
-for (const v of depthPrePassVariants) {
-  await check(`depthPrePass [${v.name}]`, depthPrePass.depthPrePassShader(v.defines, v.options));
+for (const v of depthPassPrePassVariants) {
+  await check(`depthPass [${v.name}]`, depthPass.depthPassShader(v.defines, v.options));
 }
+
 for (const v of lineVariants) {
   await check(`line [${v.name}]`, line.lineShader(v.defines, v.options));
 }

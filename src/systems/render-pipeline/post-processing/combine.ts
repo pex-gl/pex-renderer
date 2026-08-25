@@ -3,6 +3,7 @@ import {
   TONE_MAP_DEFINE,
 } from "../../../shaders/post-processing/combine.js";
 
+import { isAOPreLighting } from "../post-processing.js";
 import type { PostProcessingEffect } from "../post-processing.js";
 import type { RenderTextures } from "../render-textures.js";
 
@@ -24,8 +25,13 @@ const combine: PostProcessingEffect = {
     // Depth of field already consumed the occlusion when it ran. Both of these
     // check the target exists: an effect the component asks for still doesn't
     // run if its module failed to load or its inputs were missing.
+    // Nothing to apply when the standard shader already folded occlusion into
+    // the indirect term before shading.
     const mixesSSAO = (textures: RenderTextures) =>
-      !!ssao && !postProcessing.dof && !!textures.get("ssao.main");
+      !!ssao &&
+      !postProcessing.dof &&
+      !isAOPreLighting(cameraEntity) &&
+      !!textures.get("ssao.main");
     const addsBloom = (textures: RenderTextures) =>
       !!bloom && !!textures.get("bloom.threshold");
 

@@ -613,6 +613,7 @@ models = models.filter(({ name }) =>
     // "TextureTransformMultiTest",
     // "TextureTransformTest",
     // "ToyCar", // FAIL: (too small, wrong camera)
+    // "TrafficCone", // FAIL: KHR_materials_retroreflection
     // "TransmissionOrderTest",
     // "TransmissionRoughnessTest",
     // "TransmissionTest",

@@ -10,6 +10,7 @@ import {
 import { BlueNoiseGenerator } from "../../../utils/blue-noise.js";
 
 import type { GpuContext, GpuTexture } from "../../../types.js";
+import { isAOPreLighting } from "../post-processing.js";
 import type {
   PostProcessingContext,
   PostProcessingEffect,
@@ -103,6 +104,14 @@ const isGTAO = ({ cameraEntity }: PostProcessingContext) =>
  */
 const ssao: PostProcessingEffect = {
   name: "ssao",
+  outputs: ["normal"],
+  // Declared right after the depth/normal pre-pass, so the visibility buffer
+  // exists before anything is shaded and the standard shader can fold it into
+  // the indirect term. Without a pre-pass that stage never fires and the
+  // pipeline falls back to running the effect after the scene, applying the
+  // occlusion over the shaded image instead.
+  stage: (cameraEntity) =>
+    isAOPreLighting(cameraEntity) ? "prePass" : "postProcessing",
   // Both estimators reconstruct view-space position from depth and read the
   // view-space normal target.
   enabled: ({ textures }) =>
@@ -115,7 +124,9 @@ const ssao: PostProcessingEffect = {
 
     // Only GTAO gathers neighbouring color; SAO writes visibility alone, so it
     // degrades to the analytic fit rather than losing multi-bounce entirely.
-    const screenSpaceBounce = gtao && component.multiBounce === "screen-space";
+    // Only reachable after shading, which is exactly what isAOPreLighting keys
+    // the stage off — so this is the same condition, not a second one.
+    const screenSpaceBounce = gtao && !isAOPreLighting(cameraEntity);
 
     // The gathered color needs the full HDR range; visibility alone does not.
     const format = (): GPUTextureFormat =>
@@ -231,8 +242,10 @@ const ssao: PostProcessingEffect = {
       name: "mix",
       shader: ssaoMixShader,
       chain: true,
-      // Without DoF, combine applies the same mix for free.
-      enabled: ({ cameraEntity }) => !!cameraEntity.postProcessing!.dof,
+      // Without DoF, combine applies the same mix for free. Neither applies
+      // when the standard shader already folded occlusion into indirect light.
+      enabled: ({ cameraEntity }) =>
+        !!cameraEntity.postProcessing!.dof && !isAOPreLighting(cameraEntity),
       constants: () => ({
         USE_SSAO_COLORS: screenSpaceBounce,
         USE_SSAO_MULTI_BOUNCE: !!component.multiBounce,

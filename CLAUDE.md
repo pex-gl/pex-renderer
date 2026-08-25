@@ -177,6 +177,15 @@ published under it last is what post-processing, `debugRender` and the blit read
 `"<effect>.<subPass>"` from post-processing. So splicing passes into a frame is
 just publishing `"color"`, and nothing downstream has to be told they exist.
 
+Renderer systems read the register too: a renderer exposes
+`inputs(passOptions) => string[]`, the pipeline resolves those names as it
+declares each mesh pass — so they become real read edges — and hands back
+`options.textures`. Nothing is threaded down through `drawMeshes`, and an
+unpublished name is a compiled-out sample rather than a branch. Declaration
+order carries the timing: the standard renderer asking for `"ssao.main"` on the
+opaque pass gets it only when the effect declared before shading, which is what
+makes occlusion a lighting input rather than a multiply over the result.
+
 Mismatch has one answer rather than a check per call site: `get` hands back what
 a reader can bind, so a multisampled depth texture under MSAA is simply not
 returned and the effect sits the frame out. A name keeps every version published

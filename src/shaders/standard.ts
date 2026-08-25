@@ -410,6 +410,19 @@ ${bindingDeclaration(1, lightBindings.next(), "uIrradianceCoefficients", `array<
         "uCaptureTexture",
       );
 
+  // Screen-space ambient occlusion computed before shading, so it can modulate
+  // indirect light rather than multiply the shaded result. Declared on the same
+  // terms as uCaptureTexture — always present for a lit material, with a white
+  // dummy bound when there is none — so enabling it costs a pipeline constant
+  // rather than a new shader module.
+  const ssaoDecl = materialFlags.unlitWorkflow
+    ? ""
+    : textureSamplerDeclaration(
+        1,
+        lightBindings.nextTextureSampler(),
+        "uAOTexture",
+      );
+
   // One loop per type over its whole buffer. arrayLength() is exact: a binding
   // only exists when the scene has at least one light of that type.
   const lightsLoop = (present: boolean, array: string, call: string) =>
@@ -592,6 +605,13 @@ ${bindingDeclaration(1, lightBindings.next(), "uIrradianceCoefficients", `array<
 
   ${materialFlags.occlusionTexture ? `getAmbientOcclusion(&data, uOcclusionTexture, uOcclusionTextureSampler, ${tc("occlusion")}, uMaterial.occlusionTextureMatrix);` : ""}
 
+  // Folded into the same term the material's occlusion texture feeds, so every
+  // consumer of ao — ambient, area lights, the light probe, and the analytic
+  // multi-bounce inside it — picks it up without knowing where it came from.
+  if (USE_SSAO_TEXTURE) {
+    data.ao *= textureSampleLevel(uAOTexture, uAOTextureSampler, input.position.xy / uFrame.viewportSize, 0.0).x;
+  }
+
   ${hooks.fragBeforeLighting ?? ""}
 
   data.diffuseColor = data.baseColor * (1.0 - data.metallic);
@@ -677,6 +697,7 @@ ${shadow2DDecls}
 ${shadowCubeDecls}
 ${reflectionProbeDecl}
 ${captureDecl}
+${ssaoDecl}
 
 ${vertexInputStruct({
   normal: useNormals,
@@ -775,6 +796,7 @@ override DEPTH_PACK_FAR: f32 = 10.0;
 // systems/renderer/standard.ts).
 override USE_MSAA: bool = false;
 override USE_BLEND: bool = false;
+override USE_SSAO_TEXTURE: bool = false;
 // Only meaningful alongside USE_BLEND: scales color by opacity before output,
 // matching the "premultiplied" blendMode's GPUBlendComponent pair (see
 // BLEND_MODES in systems/renderer/base.ts).

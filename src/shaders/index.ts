@@ -1,7 +1,6 @@
 export * as basic from "./basic.js";
 export * as blit from "./blit.js";
 export * as depthPass from "./depth-pass.js";
-export * as depthPrePass from "./depth-pre-pass.js";
 export * as error from "./error.js";
 export * as helper from "./helper.js";
 export * as line from "./line.js";

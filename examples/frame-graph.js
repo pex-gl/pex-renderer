@@ -32,6 +32,9 @@ import {
 //   one here reads the opaque image and republishes it, so the scene passes
 //   after it draw into what it produced. The same effect is also declared from
 //   the "afterScene" stage, which is what MSAA needs.
+// - stage("outputs"), which runs before the main pass is declared and collects
+//   what it should produce — the only hook early enough to ask for an
+//   attachment, since every later one hands over textures that already exist.
 // - stage("postProcessing"), which hands over the view's RenderTextures:
 //   the images the frame has produced so far, by name. Reading one and
 //   publishing one are the whole injection protocol — the passes below splice
@@ -81,14 +84,17 @@ const { frameGraph } = renderEngine;
 const renderPipeline = renderEngine.systems.find(
   (system) => system.type === "render-pipeline-system",
 );
-// SSR reads view-space normals, which the main pass only writes when an output
-// asks for them. On for the lifetime of the example rather than toggled with
-// the effect: the attachment is part of the main pass declaration, so switching
-// it per frame would change the attachment layout and recompile every material
-// pipeline. It costs one full-resolution target even while SSR is off — the
-// pipeline hands its color attachments back to the caller, so the graph sees a
-// reader for the normal target whether or not anything samples it.
-renderPipeline.outputs.add("normal");
+// SSR reads view-space normals, which the main pass only writes when something
+// asks for them. Requested per view at the "outputs" stage rather than by
+// mutating the pipeline's own set, which is global to every camera.
+//
+// Requested unconditionally rather than following the effect toggle: outputs
+// are attachments on the main pass, so a set that changes relayouts it and
+// recompiles every material pipeline. It costs one full-resolution target even
+// while SSR is off — the pipeline hands its color attachments back to the
+// caller, so the graph sees a reader for the normal target whether or not
+// anything samples it.
+frameGraph.on("outputs", ({ outputs }) => outputs.add("normal"));
 
 const renderPassGraphViz = getRenderPassGraphViz();
 renderPassGraphViz.init(ctx, frameGraph);
