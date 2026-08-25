@@ -883,7 +883,7 @@ export interface PostProcessingMethods {
   postProcessingEffects: Map<string, any>;
   postProcessingLoading: Map<string, Promise<void>>;
   postProcessingPipelines: Map<string, RenderPipeline>;
-  loadPostProcessingEffect(name: string): Promise<void> | undefined;
+  loadPostProcessingEffect(registration: any): Promise<void> | undefined;
   getPostProcessingPipeline(
     key: string,
     shader: (defines: Set<string>) => string,
