@@ -20,10 +20,13 @@ const usesFXAA = ({ cameraEntity }: PostProcessingContext) =>
 const usesFilmGrain = ({ cameraEntity }: PostProcessingContext) =>
   !!cameraEntity.postProcessing!.filmGrain;
 
-/** A fully opaque or fully transparent output needs no pass of its own. */
+/**
+ * Only a fully opaque output needs no pass: the chain leaves alpha at 1, so
+ * every other value — 0 included — has to be written by something.
+ */
 const usesOpacity = ({ cameraEntity }: PostProcessingContext) => {
   const { opacity } = cameraEntity.postProcessing!;
-  return Number.isFinite(opacity) && opacity !== 0 && opacity !== 1;
+  return Number.isFinite(opacity) && opacity !== 1;
 };
 
 const isEnabled = (context: PostProcessingContext) =>

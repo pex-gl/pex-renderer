@@ -496,8 +496,20 @@ export interface BloomComponentOptions {
   source?: "color" | "emissive";
   /** The strength of the bloom effect. */
   intensity?: number;
-  /** The downsampling radius which controls how much glare gets blended in. */
+  /**
+   * Per-level gain applied as the pyramid is built: how much glare gets blended
+   * in, not how far it spreads. {@link BloomComponentOptions.levels} is what
+   * sets the extent.
+   */
   radius?: number;
+  /**
+   * Levels in the downsample pyramid, each doubling how far the glare spreads.
+   *
+   * Omitted means as many as the viewport has texels for — the widest, haziest
+   * bloom, and the only choice that is resolution-independent. A lower count is
+   * the tighter, more contained look, and nothing else exposes it.
+   */
+  levels?: number;
 }
 export interface LutComponentOptions {
   texture: GpuTexture;
@@ -798,9 +810,12 @@ export interface RenderPipelineCore {
   reversibleToneMap: boolean;
   /** Draw depth (+ normal) before shading. See render-pipeline.ts. */
   depthPrePass: boolean;
+  /** Set when the canvas is configured `alphaMode: "premultiplied"`. */
+  premultipliedAlpha: boolean;
   fullscreen: any;
   samplers: Samplers;
   blitPipeline: RenderPipeline;
+  blitPremultipliedPipeline: RenderPipeline;
   grabPipeline: RenderPipeline;
   outputs: Set<string>;
   colorFormat: GPUTextureFormat;

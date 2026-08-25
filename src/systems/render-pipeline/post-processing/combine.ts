@@ -55,8 +55,7 @@ const combine: PostProcessingEffect = {
             ...(colorCorrection ? ["USE_COLOR_CORRECTION"] : []),
           ]),
         constants: () => ({
-          USE_SSAO_COLORS:
-            ssao?.type === "gtao" && ssao.multiBounce === "screen-space",
+          USE_SSAO_COLORS: !isAOPreLighting(cameraEntity),
           USE_SSAO_MULTI_BOUNCE: !!ssao?.multiBounce,
         }),
         uniforms: ({ textures, samplers }) => ({

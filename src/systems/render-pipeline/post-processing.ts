@@ -2,6 +2,7 @@ import type { RenderPipeline } from "pex-gpu";
 
 import { NAMESPACE, definesKey, mapValues } from "../../utils.js";
 import { isResourceHandle } from "../../frame-graph/types.js";
+import { isTextureDescriptor } from "../../frame-graph/state.js";
 
 import type {
   Entity,
@@ -60,11 +61,19 @@ const DEFAULT_STAGE = "postProcessing";
  * analytic multi-bounce — needs only depth and normals, so it can run against
  * the pre-pass and modulate indirect light properly.
  *
+ * Only GTAO gathers that colour; SAO writes visibility alone and degrades to
+ * the analytic fit, so the estimator is as much part of the question as the
+ * setting is — `type` defaults to `"sao"` while `multiBounce` defaults to
+ * `"screen-space"`, and reading the setting alone would send the default
+ * configuration down the post-lighting path for a bounce it never computes.
+ *
  * Lives here rather than in the ssao module because combine has to agree, and a
  * static import between two lazily-fetched effects would defeat the fetching.
  */
-export const isAOPreLighting = (cameraEntity: Entity): boolean =>
-  cameraEntity.postProcessing?.ssao?.multiBounce !== "screen-space";
+export const isAOPreLighting = (cameraEntity: Entity): boolean => {
+  const ssao = cameraEntity.postProcessing?.ssao;
+  return !(ssao?.type === "gtao" && ssao.multiBounce === "screen-space");
+};
 
 /** An effect's stage, resolved for one camera. */
 const resolveStage = (
@@ -338,6 +347,13 @@ export default ({
         ? value
         : textures.require(value);
 
+    const textureSize = (handle: ResourceHandle): number[] | undefined => {
+      const descriptor = frameGraph.describe(handle);
+      return descriptor && isTextureDescriptor(descriptor)
+        ? [descriptor.width, descriptor.height]
+        : undefined;
+    };
+
     for (const effectName of EFFECT_ORDER) {
       const effect = this.postProcessingEffects.get(effectName);
       if (!effect) continue;
@@ -369,6 +385,12 @@ export default ({
         const input =
           resolveHandle(subPass.source?.(context)) ?? textures.get("color")!;
 
+        // Both grids come from the graph, not from `size`: `size` is only
+        // consulted when this sub-pass allocates, so it describes neither the
+        // target a sub-pass reused nor the source it samples.
+        const targetSize = textureSize(output) ?? size;
+        const sourceSize = (input && textureSize(input)) ?? targetSize;
+
         const defines = subPass.getDefines?.(context) ?? new Set<string>();
         const constants = subPass.constants?.(context) ?? {};
         const pipeline = this.getPostProcessingPipeline(
@@ -387,8 +409,9 @@ export default ({
           uTexture: input,
           uTextureSampler: this.samplers.linear,
           uPostProcessing: {
-            viewportSize: size,
-            texelSize: [1 / size[0]!, 1 / size[1]!],
+            viewportSize: targetSize,
+            texelSize: [1 / targetSize[0]!, 1 / targetSize[1]!],
+            sourceTexelSize: [1 / sourceSize[0]!, 1 / sourceSize[1]!],
             time: this.time,
           },
           ...subPass.uniforms?.(context),

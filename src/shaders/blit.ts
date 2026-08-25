@@ -40,6 +40,16 @@ fn fragmentMain(input: VertexOutput) -> FragmentOutput {
   var color = textureSample(uTexture, uTextureSampler, input.texCoord0);
   color = encode(color, SRGB);
 
+  ${
+    defines.has("USE_PREMULTIPLIED_ALPHA")
+      ? `// A canvas configured "premultiplied" reads the values as stored, so the
+  // multiply belongs after the transfer function, not before it: the
+  // compositor wants encode(rgb) * a, and premultiplying in linear space
+  // would hand it encode(rgb * a).
+  color = vec4f(color.rgb * color.a, color.a);`
+      : ""
+  }
+
   output.color = color;
 
   ${hooks.fragEnd ?? ""}

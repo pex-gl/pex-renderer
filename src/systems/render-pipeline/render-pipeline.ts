@@ -18,6 +18,7 @@ import type {
 } from "../../frame-graph/index.js";
 
 const BLIT_WGSL = blitShader();
+const BLIT_PREMULTIPLIED_WGSL = blitShader(new Set(["USE_PREMULTIPLIED_ALPHA"]));
 const GRAB_PASS_WGSL = grabPassShader();
 
 /**
@@ -50,9 +51,27 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
       addressMode: "repeat",
     }),
   },
+  /**
+   * Premultiply on the way out, as a canvas configured `alphaMode:
+   * "premultiplied"` requires. Follows the context, and settable for a caller
+   * presenting somewhere else.
+   *
+   * Getting it wrong shows only where alpha is neither 0 nor 1 — a faded
+   * output, or the soft edges of blended geometry — which is why it follows the
+   * one place that knows rather than being repeated per app.
+   */
+  premultipliedAlpha: ctx.alphaMode === "premultiplied",
+
+  // One stable descriptor object per variant: pex-gpu keys compiled pipelines
+  // by identity, so swapping fields on a shared object recompiles every frame.
   blitPipeline: {
     vertex: BLIT_WGSL,
     fragment: BLIT_WGSL,
+    depthWriteEnabled: false,
+  },
+  blitPremultipliedPipeline: {
+    vertex: BLIT_PREMULTIPLIED_WGSL,
+    fragment: BLIT_PREMULTIPLIED_WGSL,
     depthWriteEnabled: false,
   },
   grabPipeline: {
@@ -519,7 +538,9 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
         execute: ({ uniforms }) => {
           this.drawFullscreen({
             label,
-            pipeline: this.blitPipeline,
+            pipeline: this.premultipliedAlpha
+              ? this.blitPremultipliedPipeline
+              : this.blitPipeline,
             uniforms,
             viewport: renderView.viewport,
           });

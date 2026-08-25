@@ -122,11 +122,9 @@ const ssao: PostProcessingEffect = {
     const component = cameraEntity.postProcessing!.ssao!;
     const gtao = isGTAO(context);
 
-    // Only GTAO gathers neighbouring color; SAO writes visibility alone, so it
-    // degrades to the analytic fit rather than losing multi-bounce entirely.
     // Only reachable after shading, which is exactly what isAOPreLighting keys
     // the stage off — so this is the same condition, not a second one.
-    const screenSpaceBounce = gtao && !isAOPreLighting(cameraEntity);
+    const screenSpaceBounce = !isAOPreLighting(cameraEntity);
 
     // The gathered color needs the full HDR range; visibility alone does not.
     const format = (): GPUTextureFormat =>

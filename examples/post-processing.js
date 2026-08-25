@@ -42,7 +42,7 @@ const State = {
 };
 
 const pixelRatio = 1; // devicePixelRatio;
-const ctx = await gpu.createContext({ pixelRatio });
+const ctx = await gpu.createContext({ pixelRatio, alphaMode: "premultiplied" });
 const renderEngine = createRenderEngine({ ctx, debug: true });
 const world = createWorld();
 
@@ -74,6 +74,7 @@ const camera = components.camera({
   // fov: Math.PI / 6,
   aspect: ctx.width / ctx.height,
   fStop: 4,
+  clearColor: [0, 0, 0, 0],
 });
 const postProcessing = components.postProcessing({
   msaa: {
