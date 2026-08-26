@@ -12,10 +12,32 @@ export interface TextureRequirements {
    * can bind, and WebGPU has no way to sample a multisampled texture.
    */
   multisampled?: boolean;
+  /**
+   * Require a texture bindable as `texture_2d<f32>` with a filtering sampler.
+   *
+   * Depth formats are the reason this exists: they bind as `texture_depth_2d`
+   * with a non-filtering or comparison sampler, so handing one to a shader that
+   * samples colour is two validation errors rather than a wrong picture. A
+   * reader taking arbitrary names off the register — a debug view — cannot know
+   * which it will get.
+   */
+  filterableFloat?: boolean;
 }
 
-const explainRequirements = ({ format, multisampled }: TextureRequirements) =>
-  [format && `format ${format}`, !multisampled && "single-sample"]
+/** Depth and stencil aspects cannot be read as sampled float. */
+const isFilterableFloat = (format: GPUTextureFormat) =>
+  !format.startsWith("depth") && !format.startsWith("stencil");
+
+const explainRequirements = ({
+  format,
+  multisampled,
+  filterableFloat,
+}: TextureRequirements) =>
+  [
+    format && `format ${format}`,
+    !multisampled && "single-sample",
+    filterableFloat && "sampleable as filterable float",
+  ]
     .filter(Boolean)
     .join(" and ") || "no requirement";
 
@@ -114,6 +136,12 @@ export class RenderTextures {
     const descriptor = this.frameGraph.describe(handle);
     if (!descriptor || !isTextureDescriptor(descriptor)) return false;
     if (requirements.format && descriptor.format !== requirements.format) {
+      return false;
+    }
+    if (
+      requirements.filterableFloat &&
+      !isFilterableFloat(descriptor.format ?? "rgba8unorm")
+    ) {
       return false;
     }
     return requirements.multisampled || (descriptor.sampleCount ?? 1) === 1;

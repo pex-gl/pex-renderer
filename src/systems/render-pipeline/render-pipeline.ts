@@ -619,8 +619,16 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
     if (drawToScreen !== false) {
       // Pointing the presented image at an intermediate leaves everything that
       // only fed the original output unreferenced, so the graph culls it.
+      //
+      // The picker takes any name on the register, so what comes back has to be
+      // checked rather than assumed: the blit samples `texture_2d<f32>` with a
+      // filtering sampler, and "depth" is a name a caller will reach for first.
+      // Reporting and falling back to the frame's image beats failing
+      // validation somewhere further down.
       const presented =
-        (this.debugRender && textures.get(this.debugRender)) || color;
+        (this.debugRender &&
+          textures.require(this.debugRender, { filterableFloat: true })) ||
+        color;
 
       const label = `blit.${viewId}`;
       frameGraph.addPass({
@@ -670,5 +678,10 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
         }
       }
     }
+
+    // Descriptors, not GPU objects: pex-gpu holds the compiled pipelines in a
+    // WeakMap keyed by these, so releasing them is what lets those go.
+    this.postProcessingPipelines.clear();
+    this.depthResolvePipelines.clear();
   },
 });

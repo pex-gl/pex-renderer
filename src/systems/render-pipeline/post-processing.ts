@@ -203,6 +203,23 @@ const constantsKey = (constants: Record<string, number | boolean>) =>
     .map((key) => `${key}=${constants[key]}`)
     .join(",");
 
+/**
+ * Stable identity for a shader generator, so two sub-passes sharing a name but
+ * not a shader don't share a pipeline. Weak: a generator belongs to an effect
+ * module, and a module that is never loaded again should not be held alive.
+ */
+const shaderIds = new WeakMap<object, number>();
+let nextShaderId = 0;
+const shaderId = (shader: object) =>
+  shaderIds.getOrInsertComputed(shader, () => nextShaderId++);
+
+/**
+ * Pipeline variants kept before the least recently used is dropped. Generous:
+ * the working set is one per sub-pass of every enabled effect, and the point is
+ * to bound a slider dragged through its range, not to ration normal use.
+ */
+const POST_PROCESSING_PIPELINE_LIMIT = 128;
+
 /** Where a pass draws and what it is called. */
 export interface FullscreenPassScope {
   frameGraph: FrameGraph;
@@ -384,6 +401,11 @@ export default ({
   /**
    * Pex-gpu keys compiled pipelines by descriptor identity, so each shader
    * variant needs one stable object for the lifetime of the system.
+   *
+   * Bounded, because `constants` carries slider-driven counts — sample counts,
+   * spiral turns — and not just feature flags, so dragging one mints a variant
+   * per value. pex-gpu holds its compiled pipelines in a WeakMap keyed by the
+   * descriptor, so dropping the oldest here is what makes them collectable.
    */
   getPostProcessingPipeline(
     key: string,
@@ -392,23 +414,41 @@ export default ({
     constants: Record<string, number | boolean>,
     blend?: GPUBlendState,
   ) {
-    const variantKey = `${key}|${definesKey(defines)}|${constantsKey(constants)}|${blend ? JSON.stringify(blend) : ""}`;
-    return this.postProcessingPipelines.getOrInsertComputed(variantKey, () => {
-      const source = shader(defines);
-      return {
-        vertex: source,
-        fragment: source,
-        depthWriteEnabled: false,
-        // WGSL `override ...: bool` constants are authored as JS booleans;
-        // pex-gpu's RenderPipeline.constants is Record<string, number>
-        // (GPUPipelineConstantValue is a `double`), so coerce here rather than
-        // lean on the browser's WebIDL ToNumber() conversion to do it for us.
-        ...(Object.keys(constants).length && {
-          constants: mapValues(constants, Number),
-        }),
-        ...(blend && { blend }),
-      };
-    });
+    // Two sub-passes can share a key and differ only in their shader — ssao's
+    // "main" is the SAO or the GTAO generator depending on `type` — so the
+    // function is part of the identity, not just the name it was declared under.
+    const variantKey = `${key}|${shaderId(shader)}|${definesKey(defines)}|${constantsKey(constants)}|${blend ? JSON.stringify(blend) : ""}`;
+
+    const existing = this.postProcessingPipelines.get(variantKey);
+    if (existing) {
+      // Re-inserting moves it to the end: a Map iterates in insertion order, so
+      // the first key is the least recently used.
+      this.postProcessingPipelines.delete(variantKey);
+      this.postProcessingPipelines.set(variantKey, existing);
+      return existing;
+    }
+
+    const source = shader(defines);
+    const variant: RenderPipeline = {
+      vertex: source,
+      fragment: source,
+      depthWriteEnabled: false,
+      // WGSL `override ...: bool` constants are authored as JS booleans;
+      // pex-gpu's RenderPipeline.constants is Record<string, number>
+      // (GPUPipelineConstantValue is a `double`), so coerce here rather than
+      // lean on the browser's WebIDL ToNumber() conversion to do it for us.
+      ...(Object.keys(constants).length && {
+        constants: mapValues(constants, Number),
+      }),
+      ...(blend && { blend }),
+    };
+
+    this.postProcessingPipelines.set(variantKey, variant);
+    if (this.postProcessingPipelines.size > POST_PROCESSING_PIPELINE_LIMIT) {
+      const oldest = this.postProcessingPipelines.keys().next().value!;
+      this.postProcessingPipelines.delete(oldest);
+    }
+    return variant;
   },
 
   /**
