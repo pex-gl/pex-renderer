@@ -435,7 +435,7 @@ export class FrameGraph {
   }
 
   inspect(): GraphInspection {
-    return inspectGraph(this.state, this.plan, this.pool);
+    return inspectGraph(this.state, this.plan, this.pool, this.blackboard);
   }
 
   poolStats(): PoolStats {

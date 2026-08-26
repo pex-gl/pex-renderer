@@ -16,6 +16,7 @@ import type {
   CompiledColorAttachment,
   CompiledPass,
   CompiledPlan,
+  CulledPass,
   CompiledResource,
   PhysicalResource,
   ResourceHandle,
@@ -142,11 +143,23 @@ export default function compile(
   }
 
   const live: PassEntry[] = [];
-  const culledPasses: string[] = [];
+  const culledPasses: CulledPass[] = [];
   for (const pass of passes) {
     pass.culled = pass.refCount === 0 && !pass.neverCull;
-    if (pass.culled) culledPasses.push(pass.name);
-    else live.push(pass);
+    if (pass.culled) {
+      culledPasses.push({
+        name: pass.name,
+        writes: [
+          ...new Set(
+            pass.writes.map(
+              (write) => resources[write.resource]?.name ?? `resource${write.resource}`,
+            ),
+          ),
+        ],
+      });
+    } else {
+      live.push(pass);
+    }
   }
 
   // ─── Merge adjacent passes ─────────────────────────────────────────────────
@@ -422,7 +435,9 @@ export default function compile(
       NAMESPACE,
       "frame-graph",
       `culled ${culledPasses.length} pass(es):`,
-      culledPasses.join(", "),
+      culledPasses
+        .map(({ name, writes }) => `${name} (nothing reads ${writes.join(", ")})`)
+        .join("; "),
     );
   }
 

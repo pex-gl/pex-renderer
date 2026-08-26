@@ -2,6 +2,10 @@ import { isTextureDescriptor } from "../../frame-graph/state.js";
 import { NAMESPACE } from "../../utils.js";
 
 import type { FrameGraph, ResourceHandle } from "../../frame-graph/index.js";
+import type {
+  InspectableRegister,
+  RegisterPublication,
+} from "../../frame-graph/types.js";
 import type { RenderView } from "../../types.js";
 
 /** What a reader needs of a texture before it will bind it. */
@@ -64,7 +68,7 @@ const explainRequirements = ({
  * Handles belong to the frame being declared, so a register is only meaningful
  * until the next `setup()` clears the graph.
  */
-export class RenderTextures {
+export class RenderTextures implements InspectableRegister {
   frameGraph: FrameGraph;
   renderView: RenderView;
   /**
@@ -72,6 +76,12 @@ export class RenderTextures {
    * mismatch local — see `get`.
    */
   versions = new Map<string, ResourceHandle[]>();
+  /**
+   * Every publication in order, with how far into the frame it happened.
+   * `versions` answers what a name holds; this answers when it changed, which
+   * is what makes the register readable from `inspect()` output.
+   */
+  publications: RegisterPublication[] = [];
 
   constructor(frameGraph: FrameGraph, renderView: RenderView) {
     this.frameGraph = frameGraph;
@@ -81,6 +91,16 @@ export class RenderTextures {
   /** Publish `handle` as the current value of `name`. */
   set(name: string, handle: ResourceHandle): void {
     this.versions.getOrInsertComputed(name, () => []).push(handle);
+    this.publications.push({
+      name,
+      resource: handle.name,
+      declaredAfter: this.frameGraph.state.passes.length,
+    });
+  }
+
+  /** {@link InspectableRegister}: picked up by `frameGraph.inspect()`. */
+  inspectRegister(): RegisterPublication[] {
+    return this.publications;
   }
 
   /**
