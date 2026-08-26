@@ -318,7 +318,20 @@ export default ({
     precomputed?: { constants?: Record<string, boolean> },
   ) {
     const { material } = entity;
+    // A cutout resolved as coverage instead of discarded. Only when the
+    // attachment is multisampled — with one sample there is no mask to write,
+    // and blended materials derive their alpha from opacity already.
+    const alphaToCoverage =
+      !!this._multisampled &&
+      material.alphaTest !== undefined &&
+      !material.blend;
+
     return {
+      // Always assigned, never spread away when false: getPipeline() refreshes
+      // the cached pipeline object with Object.assign, so an omitted key leaves
+      // the previous draw's value in place — turning MSAA off would keep
+      // coverage enabled on a single-sample pass.
+      alphaToCoverage,
       depthWriteEnabled: material.depthWrite !== false && !material.blend,
       depthCompare: material.depthTest === false ? "always" : "less-equal",
       cullMode:
@@ -334,6 +347,7 @@ export default ({
         : {}),
       constants: {
         USE_MSAA: !!this._msaa,
+        USE_ALPHA_TO_COVERAGE: alphaToCoverage,
         USE_BLEND: !!material.blend,
         USE_SSAO_TEXTURE: !!this._textures?.["ssao.main"],
         PREMULTIPLY_ALPHA:
@@ -522,6 +536,7 @@ export default ({
     const {
       outputs = {},
       msaa,
+      multisampled,
       transparent,
       transmitted,
       cullFaceMode,
@@ -529,6 +544,7 @@ export default ({
     } = options;
 
     this._msaa = msaa;
+    this._multisampled = multisampled;
     this._outputs = outputs;
     this._textures = textures;
 
@@ -703,11 +719,21 @@ export default ({
     if (entity._geometry.attributes.normal) material.defines.add("USE_NORMALS");
     if (normalOutput) material.defines.add("USE_NORMAL_OUTPUT");
 
+    // Same cutout treatment as the opaque pass, for the same reason: discarding
+    // into a multisampled attachment is what this avoids, and the two passes
+    // have to keep the same samples either way.
+    const alphaToCoverage =
+      !!this._multisampled &&
+      normalOutput &&
+      material.defines.has("USE_ALPHA_TEST");
+    if (alphaToCoverage) material.defines.add("USE_ALPHA_TO_COVERAGE");
+
     const pipeline = this.getDepthPassPipeline(
       entity,
       this.prePassPipelineCache,
       material,
     );
+    pipeline.alphaToCoverage = alphaToCoverage;
     // Loads the depth the pass itself is laying down, one draw after another.
     pipeline.depthCompare = "less-equal";
     return pipeline;
@@ -725,12 +751,20 @@ export default ({
     const normalOutput = !!options.normalOutput;
     const uFrame = this.getFrameUniforms(renderView);
 
+    // A depth-only multisampled pre-pass has no way to express a cutout:
+    // coverage needs a colour target to take alpha from, and discarding into a
+    // multisampled attachment is what this change exists to avoid. Sitting the
+    // pass out costs those materials their early-Z — the opaque pass still
+    // writes their depth — which is the cheap half of the trade.
+    const skipAlphaTested = !!this._multisampled && !normalOutput;
+
     const drawable = entities.filter(
       (e) =>
         isStandardMesh(e) &&
         !e.material!.transmission &&
         !e.material!.blend &&
-        e.material!.depthWrite !== false,
+        e.material!.depthWrite !== false &&
+        !(skipAlphaTested && e.material!.alphaTest !== undefined),
     );
 
     for (let i = 0; i < drawable.length; i++) {

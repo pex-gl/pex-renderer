@@ -1,5 +1,5 @@
 import { submit, createSampler, generateMipmaps, isGpuTexture } from "pex-gpu";
-import type { RenderCommand } from "pex-gpu";
+import type { RenderCommand, RenderPipeline } from "pex-gpu";
 
 import shadowMappingPipelineMethods from "./shadow-mapping.js";
 import postProcessingPipelineMethods from "./post-processing.js";
@@ -7,6 +7,7 @@ import cullingPipelineMethods from "./culling.js";
 import createFullscreenGeometry from "../../fullscreen-geometry.js";
 import { blitShader } from "../../shaders/blit.js";
 import { grabPassShader } from "../../shaders/grab-pass.js";
+import { depthResolveShader } from "../../shaders/depth-resolve.js";
 import { RenderTextures } from "./render-textures.js";
 import { getDefaultViewport, mapValues } from "../../utils.js";
 
@@ -79,6 +80,34 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
     fragment: GRAB_PASS_WGSL,
     depthWriteEnabled: false,
   },
+  /**
+   * Resolve the depth buffer under MSAA so it can be sampled. Off means
+   * anything reading depth — ambient occlusion, depth of field, fog, SMAA's
+   * depth edges — sits out the frame instead, and `render()` hands back the
+   * multisampled buffer, which `RenderTextures.get` will refuse to hand to a
+   * reader.
+   *
+   * Off by default only because MSAA itself currently hangs the GPU in the
+   * multisampled scene pass; the resolve was measured innocent of that and can
+   * go back on once it is fixed.
+   */
+  depthResolve: false,
+  depthResolvePipelines: new Map<number, RenderPipeline>(),
+
+  /** One variant per MSAA level, since the sample loop is unrolled per count. */
+  getDepthResolvePipeline(sampleCount: number) {
+    return this.depthResolvePipelines.getOrInsertComputed(sampleCount, () => {
+      const source = depthResolveShader(sampleCount);
+      return {
+        vertex: source,
+        fragment: source,
+        // Writes @builtin(frag_depth) over the whole target, so the test only
+        // has to let every fragment through.
+        depthWriteEnabled: true,
+        depthCompare: "always" as GPUCompareFunction,
+      };
+    });
+  },
 
   /**
    * Costs a second geometry pass, and buys two things: fragments that end up
@@ -126,6 +155,11 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
   }: any) {
     const options = {
       outputs: colorTextures ?? {},
+      // Two different things, and conflating them hides one: whether the
+      // attachment is multisampled — which decides coverage-based alpha
+      // testing — and whether the scene is tone mapped for a reversible
+      // resolve, which is an opt-in on top of it.
+      multisampled: msaa,
       msaa: this.reversibleToneMap && msaa,
       textures,
     };
@@ -187,14 +221,23 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
     }
     await frameGraph.stage("outputs", { outputs, renderView });
 
-    const sampleCount = postProcessing?.msaa?.sampleCount;
-    const msaa = sampleCount > 0;
+    // WebGPU only guarantees 1 and 4; anything else fails texture creation and
+    // then cascades through every pipeline and bind group built against it.
+    const requestedSampleCount = postProcessing?.msaa?.sampleCount;
+    const sampleCount = requestedSampleCount > 1 ? 4 : 1;
+    const msaa = sampleCount > 1;
 
     const renderPassView = {
       ...renderView,
       viewport: [0, 0, width, height],
     };
     const textures = new RenderTextures(frameGraph, renderPassView);
+
+    if (requestedSampleCount > 1 && requestedSampleCount !== sampleCount) {
+      textures.report(
+        `msaa.sampleCount ${requestedSampleCount} is not a supported sample count — using ${sampleCount}.`,
+      );
+    }
 
     const descriptor = { width, height, format: this.colorFormat };
     const colorTextures: Record<string, ResourceHandle> = {};
@@ -260,6 +303,46 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
     const depthTarget = (): DepthStencilAttachmentDeclaration => ({
       texture: depthTexture!,
     });
+
+    /**
+     * Republishes the depth buffer as something readers can bind.
+     *
+     * WebGPU has no depth resolve, so under MSAA the depth buffer stays
+     * multisampled and `textures.get("depth")` rightly refuses to hand it back
+     * — which is enough to make ambient occlusion, depth of field, fog and
+     * SMAA's depth edges all sit out. One fullscreen pass over the samples is
+     * what lets them run with MSAA on at all.
+     *
+     * Declared where depth is first complete, since an effect anchored at the
+     * pre-pass stage reads it there.
+     */
+    const declareDepthResolve = () => {
+      if (!msaa || !depthTexture || !this.depthResolve) return;
+
+      const label = `depthResolve.${viewId}`;
+      const resolved = frameGraph.createTexture({
+        label: `renderPipelineDepthResolved.${viewId}`,
+        width,
+        height,
+        format: this.depthFormat,
+      });
+      const pipeline = this.getDepthResolvePipeline(sampleCount);
+
+      frameGraph.addPass({
+        name: label,
+        depth: { texture: resolved, depthClearValue: 1 },
+        uniforms: { uDepthTexture: depthTexture },
+        renderView: renderPassView,
+        execute: ({ uniforms }) => {
+          this.drawFullscreen({ label, pipeline, uniforms });
+        },
+      });
+
+      // A newer version under the same name: readers asking for "depth" get
+      // this one, and the multisampled original stays reachable for anything
+      // that explicitly accepts it.
+      textures.set("depth", resolved);
+    };
 
     const layer = cameraEntity.layer;
 
@@ -394,6 +477,8 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
         },
       });
 
+      declareDepthResolve();
+
       await stage("prePass");
     }
 
@@ -406,6 +491,9 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
       // depth test reject before the fragment shader runs.
       ...(!usePrePass && { depthClearValue: 1 }),
     });
+
+    // Without a pre-pass this is the first point depth is complete.
+    if (!usePrePass) declareDepthResolve();
 
     const hasTransparent = entitiesInView.some(
       (entity) => entity.material?.blend,
@@ -562,7 +650,10 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
     const outputTextures: Record<string, ResourceHandle> = {
       ...colorTextures,
       color,
-      ...(depthTexture && { depth: depthTexture }),
+      // The resolved one under MSAA: "depth" is an advertised output, so what
+      // comes back has to be something the caller can actually bind. The cost
+      // is that the resolve is never culled while MSAA is on.
+      ...(depthTexture && { depth: textures.get("depth") ?? depthTexture }),
     };
     for (const handle of Object.values(outputTextures)) {
       frameGraph.exportTexture(handle);

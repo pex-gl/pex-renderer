@@ -1,5 +1,5 @@
 import { beginFrame, endFrame } from "pex-gpu";
-import { commandsState } from "pex-gpu/internals";
+import { commandsState, frameState } from "pex-gpu/internals";
 
 import { NAMESPACE } from "../utils.js";
 import { createGraphState, requirePhase, resetGraphState } from "./state.js";
@@ -14,6 +14,7 @@ import { ResourcePool } from "./pool.js";
 import compilePlan from "./compile.js";
 import executePlan from "./execute.js";
 import inspectGraph from "./inspect.js";
+import { PassProfiler } from "./profile.js";
 
 import type { GpuBuffer, GpuContext, GpuTexture } from "../types.js";
 import type { GraphState, PassEntry } from "./state.js";
@@ -58,11 +59,33 @@ export class FrameGraph {
   /** Last compiled plan; cleared when a new frame's setup starts. */
   plan: CompiledPlan | undefined;
   debug = false;
+  /**
+   * Measure each pass' GPU time with timestamp queries, into
+   * `profiler.latest`. Needs the context created with
+   * `requiredFeatures: ["timestamp-query"]`.
+   *
+   * Off by default: it adds two query writes per pass and a readback, and the
+   * results lag a frame or two behind.
+   */
+  profile = false;
+  profiler: PassProfiler;
+  /**
+   * Give attachments that live and die inside one render pass no backing memory
+   * (Chrome 146+, `TRANSIENT_ATTACHMENT`). Saves the bandwidth of writing them
+   * out on tiled GPUs, where an MSAA attachment resolving into a single-sample
+   * target is the case it exists for.
+   *
+   * Off by default: it is a very new flag, and in this pipeline the only
+   * resources that ever qualify are the MSAA colour attachments — so a driver
+   * that mishandles it fails exactly when MSAA is on and nowhere else.
+   */
+  transientAttachments = false;
 
   constructor(ctx: GpuContext) {
     this.ctx = ctx;
     this.state = createGraphState();
     this.pool = new ResourcePool(ctx);
+    this.profiler = new PassProfiler(ctx);
   }
 
   // ─── Declaration ───────────────────────────────────────────────────────────
@@ -338,7 +361,10 @@ export class FrameGraph {
   compile(): CompiledPlan {
     requirePhase(this.state, "declared", "compile()", "Call setup() first.");
 
-    this.plan = compilePlan(this.state, this.pool, { debug: this.debug });
+    this.plan = compilePlan(this.state, this.pool, {
+      debug: this.debug,
+      transientAttachments: this.transientAttachments,
+    });
     this.state.phase = "compiled";
     return this.plan;
   }
@@ -347,7 +373,21 @@ export class FrameGraph {
   execute(): void {
     requirePhase(this.state, "compiled", "execute()", "Call compile() first.");
 
-    executePlan(this.ctx, this.state, this.plan!, this.reportedErrors);
+    const timing =
+      this.profile && this.profiler.begin(this.plan!.passes.length);
+
+    executePlan(
+      this.ctx,
+      this.state,
+      this.plan!,
+      this.reportedErrors,
+      timing ? this.profiler : undefined,
+    );
+
+    // Before the frame's submit, and never awaited: the read depends on that
+    // submit, so awaiting it here would stall what it is waiting for.
+    if (timing) this.profiler.end(frameState(this.ctx).encoder);
+
     this.state.phase = "idle";
   }
 

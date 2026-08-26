@@ -89,6 +89,8 @@ const canMerge = (previous: PassEntry, next: PassEntry): boolean => {
 
 export interface CompileOptions {
   debug?: boolean;
+  /** Mark single-pass attachments memoryless. See `FrameGraph.transientAttachments`. */
+  transientAttachments?: boolean;
 }
 
 /**
@@ -295,7 +297,7 @@ export default function compile(
 
   // Transient: whole life in one render pass, never sampled, copied or
   // exported.
-  if (TRANSIENT_ATTACHMENT !== undefined) {
+  if (TRANSIENT_ATTACHMENT !== undefined && options.transientAttachments) {
     for (const record of records) {
       const { entry } = record;
       record.transient =

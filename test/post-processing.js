@@ -109,7 +109,7 @@ const ctx = {
  * One frame of post-processing at `viewport`, run through the pipeline's stage
  * sequence so each effect lands where it asked to.
  */
-async function declareFrame(viewport, postProcessing, load) {
+async function declareFrame(viewport, postProcessing, load, { msaa = 0, resolveDepth = false } = {}) {
   const graph = new FrameGraph(undefined);
   graph.pool = createStubPool();
 
@@ -151,9 +151,22 @@ async function declareFrame(viewport, postProcessing, load) {
       });
 
     textures.set("color", target("color"));
-    textures.set("depth", target("depth", "depth24plus"));
     textures.set("normal", target("normal"));
     textures.set("emissive", target("emissive"));
+
+    // WebGPU has no depth resolve, so under MSAA the scene's depth buffer is
+    // multisampled and unbindable until the pipeline resolves it.
+    textures.set(
+      "depth",
+      graph.createTexture({
+        label: "depth",
+        width: viewport[0],
+        height: viewport[1],
+        format: "depth24plus",
+        ...(msaa && { sampleCount: msaa }),
+      }),
+    );
+    if (resolveDepth) textures.set("depth", target("depthResolve", "depth24plus"));
 
     const byStage = system.postProcessingEffectsByStage.call(
       system,
@@ -356,6 +369,40 @@ const bloomComponent = (extra) => ({
   );
   check("final ends the chain", names.at(-1), "final.main");
   check("nothing culled", plan.culledPasses, []);
+}
+
+// ─── Depth-consuming effects under MSAA ──────────────────────────────────────
+// Everything reading depth sits out while the only depth is multisampled, and
+// runs once the pipeline republishes a resolved one — which is the whole reason
+// the depth resolve pass exists.
+{
+  const dofComponent = {
+    exposure: 1,
+    dof: {
+      type: "gustafsson",
+      samples: 4,
+      focusDistance: 5,
+      focusScale: 1,
+      screenPoint: [0.5, 0.5],
+      chromaticAberration: 0,
+      luminanceThreshold: 1,
+      luminanceGain: 1,
+      shape: "circle",
+    },
+  };
+
+  const declaredWith = async (options) =>
+    (await declareFrame([1920, 1080], structuredClone(dofComponent), ["dof"], options))
+      .names.filter((name) => name.startsWith("dof."));
+
+  console.log("\nDepth readers under MSAA");
+  check("no MSAA: dof runs", await declaredWith({}), ["dof.main"]);
+  check("MSAA, unresolved: dof sits out", await declaredWith({ msaa: 4 }), []);
+  check(
+    "MSAA, resolved: dof runs again",
+    await declaredWith({ msaa: 4, resolveDepth: true }),
+    ["dof.main"],
+  );
 }
 
 // ─── The shared uniform block ────────────────────────────────────────────────

@@ -23,6 +23,7 @@ const {
   blit,
   reversibleToneMap,
   depthPass,
+  depthResolve,
   line,
   overlay,
   helper,
@@ -145,6 +146,11 @@ const depthPassPrePassVariants = [
   { name: "normal output + instanced", defines: new Set(["USE_NORMALS", "USE_NORMAL_OUTPUT", "USE_INSTANCED_OFFSET", "USE_INSTANCED_SCALE", "USE_INSTANCED_ROTATION"]) },
   { name: "normal output + displacement", defines: new Set(["USE_NORMALS", "USE_NORMAL_OUTPUT", "USE_TEXCOORD_0", "USE_DISPLACEMENT_TEXTURE"]) },
   { name: "normal output + alpha test", defines: new Set(["USE_NORMALS", "USE_NORMAL_OUTPUT", "USE_TEXCOORD_0", "USE_BASE_COLOR_TEXTURE", "USE_ALPHA_TEXTURE", "USE_ALPHA_TEST"]) },
+  { name: "normal output + alpha to coverage", defines: new Set(["USE_NORMALS", "USE_NORMAL_OUTPUT", "USE_TEXCOORD_0", "USE_BASE_COLOR_TEXTURE", "USE_ALPHA_TEST", "USE_ALPHA_TO_COVERAGE"]) },
+  // Coverage where it cannot apply: no color target means no alpha to derive
+  // the mask from, so it has to fall back to discarding rather than emit a
+  // coverage value nothing reads.
+  { name: "depth-only rejects alpha to coverage", defines: new Set(["USE_TEXCOORD_0", "USE_BASE_COLOR_TEXTURE", "USE_ALPHA_TEST", "USE_ALPHA_TO_COVERAGE"]) },
 ];
 
 const lineVariants = [
@@ -227,6 +233,10 @@ for (const v of standardVariants) {
 }
 for (const v of blitVariants) {
   await check(`blit [${v.name}]`, blit.blitShader(v.defines, v.options));
+}
+// One variant per MSAA level: the sample loop is unrolled per count.
+for (const samples of [2, 4, 8]) {
+  await check(`depthResolve [${samples}x]`, depthResolve.depthResolveShader(samples));
 }
 for (const v of reversibleToneMapVariants) {
   await check(`reversibleToneMap [${v.name}]`, reversibleToneMap.reversibleToneMapShader(v.defines, v.options));

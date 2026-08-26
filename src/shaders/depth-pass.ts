@@ -110,6 +110,10 @@ export const DEPTH_PASS_MATERIAL_FIELDS: readonly FeatureField[] = [
  * the main pass does and discard below the threshold. It composes with either
  * variant above, and is the only reason this pass binds material state at all.
  *
+ * USE_ALPHA_TO_COVERAGE resolves that cutout as a coverage mask instead, for a
+ * multisampled pre-pass. It needs the normal output: the mask comes from the
+ * alpha at location 0, which a depth-only pass has no target for.
+ *
  * The displacement offset is stretched 1.3x relative to standard.js's to reduce
  * acne/peter-panning from displaced surfaces.
  */
@@ -131,6 +135,11 @@ export const depthPassShader = (
   const writeNormal = useNormalOutput && useNormals;
 
   const useAlphaTest = defines.has(MATERIAL_DEFINE.alphaTest);
+  // Resolve the cutout as coverage rather than a discard. Only the normal
+  // output variant can: WebGPU derives the mask from the alpha at location 0,
+  // and a depth-only pass has no colour target to supply one.
+  const useAlphaToCoverage =
+    useAlphaTest && useNormalOutput && defines.has("USE_ALPHA_TO_COVERAGE");
   const materialFlags = getDefineFlags(MATERIAL_DEFINE, defines);
   const useBaseColorTexture = useAlphaTest && materialFlags.baseColorTexture;
   const useAlphaTexture = useAlphaTest && materialFlags.alphaTexture;
@@ -256,15 +265,27 @@ ${(() => {
   // override depth with radial distance (omni shadows), write the view-space
   // normal (pre-pass). Only the last two produce a value, and they never
   // co-occur, so the stage is assembled rather than written out per variant.
-  const discardBlock = useAlphaTest
+  // Opacity exactly as standard.js computes it — see the note above on the two
+  // having to agree — then either reject the fragment or turn the result into a
+  // coverage mask.
+  const opacityBlock = useAlphaTest
     ? `var opacity = uMaterial.baseColor.w;
   ${useColor ? "opacity *= input.color.w;" : ""}
   ${sampleAlpha("baseColor", "uBaseColorTexture", baseColorTextureBinding, "w")}
-  ${sampleAlpha("alpha", "uAlphaTexture", alphaTextureBinding, "x")}
+  ${sampleAlpha("alpha", "uAlphaTexture", alphaTextureBinding, "x")}`
+    : "";
+  const discardBlock =
+    useAlphaTest && !useAlphaToCoverage
+      ? `${opacityBlock}
   if (opacity < uMaterial.alphaTest) {
     discard;
   }`
-    : "";
+      : "";
+  // Matches standard.js's rescale, so the samples this pass leaves depth in are
+  // the ones the opaque pass then shades.
+  const coverageExpr = useAlphaToCoverage
+    ? `clamp((opacity - uMaterial.alphaTest) / max(fwidth(opacity), 1e-4) + 0.5, 0.0, 1.0)`
+    : "1.0";
 
   if (useLinearDepth) {
     // The shadow pass view origin is the light, so |viewPosition| is the radial
@@ -281,14 +302,14 @@ fn fragmentMain(input: VertexOutput) -> @builtin(frag_depth) f32 {
     // cannot tell which pass produced it.
     return `@fragment
 fn fragmentMain(input: VertexOutput, @builtin(front_facing) frontFacing: bool) -> @location(0) vec4f {
-  ${discardBlock}
+  ${useAlphaToCoverage ? opacityBlock : discardBlock}
   ${
     writeNormal
       ? `let frontFacingSign = select(-1.0, 1.0, frontFacing);
   let normalView = normalize(input.normalView) * frontFacingSign;`
       : "let normalView = vec3f(0.0, 0.0, 1.0);"
   }
-  return vec4f(normalView * 0.5 + 0.5, 1.0);
+  return vec4f(normalView * 0.5 + 0.5, ${coverageExpr});
 }`;
   }
 

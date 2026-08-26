@@ -165,7 +165,7 @@ const state = createGraphState();
   });
   api.exportTexture(current);
 
-  const plan = compile(state, pool, {});
+  const plan = compile(state, pool, { transientAttachments: true });
   const resource = Object.fromEntries(plan.resources.map((r) => [r.name, r]));
 
   console.log("\nframe graph — compile");

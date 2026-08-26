@@ -464,7 +464,7 @@ ${bindingDeclaration(1, lightBindings.next(), "uIrradianceCoefficients", `array<
       ? `let alphaTexCoord = getTextureCoordinatesTransformed(data, ${tc("alpha")}, uMaterial.alphaTextureMatrix);\n  data.opacity *= textureSample(uAlphaTexture, uAlphaTextureSampler, alphaTexCoord).x;`
       : ""
   }
-  if (USE_ALPHA_TEST) {
+  if (USE_ALPHA_TEST && !USE_ALPHA_TO_COVERAGE) {
   alphaTest(&data, uMaterial.alphaTest);
   }`;
 
@@ -810,6 +810,11 @@ override USE_SSAO_TEXTURE: bool = false;
 // BLEND_MODES in systems/renderer/base.ts).
 override PREMULTIPLY_ALPHA: bool = false;
 override USE_ALPHA_TEST: bool = false;
+// Alpha testing against a multisampled attachment: the cutout becomes a
+// coverage mask rather than a discard, so its edges antialias like geometry.
+// Set by the renderer when the pass is multisampled, paired with the pipeline's
+// alphaToCoverage (see systems/renderer/standard.ts).
+override USE_ALPHA_TO_COVERAGE: bool = false;
 override USE_SPECULAR: bool = false;
 override USE_EMISSIVE_COLOR: bool = false;
 override USE_CLEAR_COAT: bool = false;
@@ -961,6 +966,17 @@ fn fragmentMain(
     if (PREMULTIPLY_ALPHA) {
       output.color = vec4f(output.color.rgb * data.opacity, data.opacity);
     }
+  }
+
+  if (USE_ALPHA_TEST && USE_ALPHA_TO_COVERAGE) {
+    // Alpha drives the coverage mask, so it has to be a coverage value rather
+    // than the mask texture's own gradient: rescaled by its screen-space rate
+    // of change, it saturates to 0 or 1 everywhere except the pixel straddling
+    // the cutoff. Without this, every partially transparent texel in the
+    // interior would thin out the surface instead of only its silhouette.
+    output.color.w = saturateF32(
+      (data.opacity - uMaterial.alphaTest) / max(fwidth(data.opacity), 1e-4) + 0.5
+    );
   }
 
   ${hooks.fragEnd ?? ""}

@@ -817,6 +817,10 @@ export interface RenderPipelineCore {
   blitPipeline: RenderPipeline;
   blitPremultipliedPipeline: RenderPipeline;
   grabPipeline: RenderPipeline;
+  /** Resolve the depth buffer under MSAA so effects can sample it. */
+  depthResolve: boolean;
+  depthResolvePipelines: Map<number, RenderPipeline>;
+  getDepthResolvePipeline(sampleCount: number): RenderPipeline;
   outputs: Set<string>;
   colorFormat: GPUTextureFormat;
   depthFormat: GPUTextureFormat;

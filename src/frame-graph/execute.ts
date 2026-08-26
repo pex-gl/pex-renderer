@@ -15,6 +15,7 @@ import type {
 
 import type { GpuBuffer, GpuContext, GpuTexture } from "../types.js";
 import type { GraphState } from "./state.js";
+import type { PassProfiler } from "./profile.js";
 import type {
   CompiledColorAttachment,
   CompiledDepthStencilAttachment,
@@ -201,6 +202,8 @@ export default function execute(
   plan: CompiledPlan,
   /** Messages already logged, so a pass that throws every frame logs once. */
   reportedErrors: Set<string>,
+  /** Per-pass GPU timing, when the graph is profiling. */
+  profiler?: PassProfiler,
 ): void {
   // Bound once: the resolvers a pass is handed close over this frame's plan.
   const resolve = (handle: ResourceHandle) => {
@@ -266,7 +269,7 @@ export default function execute(
     }
   };
 
-  for (const pass of plan.passes) {
+  for (const [index, pass] of plan.passes.entries()) {
     if (pass.type === "raw") {
       // No render or compute pass to open: the callback records straight into
       // the frame's live encoder, or hands it to a pex-gpu helper that opens
@@ -277,9 +280,13 @@ export default function execute(
     }
 
     // Scoped submit keeps the render pass open for the nested draws.
+    const timestampWrites = profiler?.writesFor(index, pass.label);
     const command: RenderCommand = {
       label: pass.label,
-      pass: buildPassDescriptor(plan, pass),
+      pass: {
+        ...buildPassDescriptor(plan, pass),
+        ...(timestampWrites && { timestampWrites }),
+      },
     };
 
     submit(ctx, command, () => runSubPasses(pass));
