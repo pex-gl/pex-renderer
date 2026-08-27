@@ -29,6 +29,7 @@ const State = {
   baseColor: [0.8, 0.1, 0.1, 1.0],
 
   msaa: false,
+  taa: true,
   ssao: false,
   dof: false,
   bloom: false,
@@ -79,6 +80,10 @@ const camera = components.camera({
 const postProcessing = components.postProcessing({
   msaa: {
     sampleCount: 4,
+  },
+  taa: {
+    blendFactor: 0.1,
+    varianceGamma: 1.25,
   },
   ssao: {
     type: "sao", // "gtao",
@@ -415,6 +420,7 @@ gui.addRadioList(
   "debugRender",
   [
     "",
+    "taa.main",
     "ssao.main",
     "dof.main",
     "bloom.threshold",
@@ -491,6 +497,17 @@ const enablePostProPass = (name) => {
 };
 gui.addParam("MSAA", State, "msaa", null, () => {
   enablePostProPass("msaa");
+});
+gui.addParam("TAA", State, "taa", null, () => {
+  enablePostProPass("taa");
+});
+gui.addParam("TAA blendFactor", postProcessing.taa, "blendFactor", {
+  min: 0,
+  max: 1,
+});
+gui.addParam("TAA varianceGamma", postProcessing.taa, "varianceGamma", {
+  min: 0,
+  max: 3,
 });
 gui.addHeader("Camera");
 gui.addParam("FoV", camera, "fov", { min: 0, max: (Math.PI / 3) * 2 });

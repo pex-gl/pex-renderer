@@ -721,6 +721,9 @@ export default ({
   getPrePassPipeline(entity: any, normalOutput: boolean, material: any) {
     if (entity._geometry.attributes.normal) material.defines.add("USE_NORMALS");
     if (normalOutput) material.defines.add("USE_NORMAL_OUTPUT");
+    // Drops the shadow map's displacement stretch: this pass has to land on the
+    // same depth the opaque pass computes, not a biased one.
+    material.defines.add("USE_DEPTH_PRE_PASS");
 
     // Same cutout treatment as the opaque pass, for the same reason: discarding
     // into a multisampled attachment is what this avoids, and the two passes

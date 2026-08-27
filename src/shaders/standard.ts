@@ -17,6 +17,7 @@ import {
   vertexOutputStruct,
   vertexInputStruct,
   vertexTransform,
+  vertexJitter,
 } from "./wgsl.js";
 import { ROUGHNESS_LEVELS, SH_COEFFICIENT_COUNT } from "./reflection-probe.js";
 import type { FeatureField } from "../systems/renderer/base.js";
@@ -888,6 +889,7 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
   output.positionWorld = positionWorld.xyz / positionWorld.w;
   output.positionView = positionView.xyz / positionView.w;
   output.position = positionOut;
+  ${vertexJitter()}
 
   ${vertexFlags.tangent ? "output.tangentView = vec4f((uModel.normalMatrix * tangent.xyz), tangent.w);" : ""}
 

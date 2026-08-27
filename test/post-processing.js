@@ -51,7 +51,7 @@ const { postProcessing: shaders } = await import("../lib/shaders/index.js");
 
 // smaa is deliberately absent: its area/search lookups load through an Image,
 // which needs a browser, so it would only ever sit the frame out here.
-const EFFECT_NAMES = ["ssao", "dof", "bloom", "combine", "final"];
+const EFFECT_NAMES = ["ssao", "taa", "dof", "bloom", "combine", "final"];
 const EFFECTS = {};
 for (const name of EFFECT_NAMES) {
   EFFECTS[name] = (
@@ -79,7 +79,21 @@ function createStubPool() {
       const key = `${descriptor.format}|${descriptor.width}x${descriptor.height}|u${usage}`;
       return free.get(key)?.pop() ?? { id: nextId++, key, ...descriptor };
     },
-    acquirePersistentTexture: () => ({ id: nextId++ }),
+    // Keyed by name and reallocating on a shape or usage change, like the real
+    // pool. Both halves matter: handing back a fresh texture per call would
+    // hide a ping-pong reading the target it just wrote, and ignoring usage
+    // would hide the opposite — a resource reallocated, and so cleared, because
+    // one frame writes it and the next only reads it.
+    persistent: new Map(),
+    acquirePersistentTexture(name, descriptor, usage) {
+      const existing = this.persistent.get(name);
+      const combined = (existing?.usage ?? 0) | usage;
+      const key = `${descriptor.format}|${descriptor.width}x${descriptor.height}|u${combined}`;
+      if (existing?.key === key) return existing.texture;
+      const texture = { id: nextId++, name };
+      this.persistent.set(name, { texture, key, usage: combined });
+      return texture;
+    },
     releaseTexture(texture) {
       if (!free.has(texture.key)) free.set(texture.key, []);
       free.get(texture.key).push(texture);
@@ -109,19 +123,29 @@ const ctx = {
  * One frame of post-processing at `viewport`, run through the pipeline's stage
  * sequence so each effect lands where it asked to.
  */
-async function declareFrame(viewport, postProcessing, load, { msaa = 0, resolveDepth = false } = {}) {
+async function declareFrame(
+  viewport,
+  postProcessing,
+  load,
+  { msaa = 0, resolveDepth = false, frameIndex = 0, pool, cameraEntity: reuse } = {},
+) {
   const graph = new FrameGraph(undefined);
-  graph.pool = createStubPool();
+  // Shared across calls when the caller is driving consecutive frames: the
+  // history only means anything if the same pool hands it back.
+  graph.pool = pool ?? createStubPool();
 
   const system = {
     ...postProcessingMethods({ ctx, frameGraph: graph }),
     time: 0,
+    frameIndex,
     samplers: { linear: { id: "l" }, nearest: { id: "n" }, linearRepeat: { id: "r" } },
     drawFullscreen() {},
   };
   for (const name of load) system.postProcessingEffects.set(name, EFFECTS[name]);
 
-  const cameraEntity = {
+  // Reused across frames where the test drives consecutive ones: the effect
+  // keys its history bookkeeping on the camera entity.
+  const cameraEntity = reuse ?? {
     id: "cam",
     camera: {
       near: 0.1,
@@ -130,9 +154,14 @@ async function declareFrame(viewport, postProcessing, load, { msaa = 0, resolveD
       fStop: 2.8,
       focalLength: 50,
       viewMatrix: new Float32Array(16),
+      // Written by the engine only while temporal antialiasing is on.
+      _jitter: [0, 0],
+      _viewProjectionMatrix: new Float32Array(16),
+      _previousViewProjectionMatrix: new Float32Array(16),
+      _inverseViewProjectionMatrix: new Float32Array(16),
     },
-    postProcessing,
   };
+  cameraEntity.postProcessing = postProcessing;
   const renderView = {
     camera: cameraEntity.camera,
     cameraEntity,
@@ -202,7 +231,7 @@ async function declareFrame(viewport, postProcessing, load, { msaa = 0, resolveD
   const resourceOf = (pass) =>
     plan.resources.find((r) => r.name === pass.color[0]?.handle.name);
 
-  return { plan, textures, names, resourceOf };
+  return { plan, textures, names, resourceOf, pool: graph.pool, cameraEntity };
 }
 
 const bloomComponent = (extra) => ({
@@ -409,6 +438,123 @@ const bloomComponent = (extra) => ({
     "MSAA, resolved: dof runs again",
     await declaredWith({ msaa: 4, resolveDepth: true }),
     ["dof.main"],
+  );
+}
+
+// ─── Temporal antialiasing accumulates across frames ─────────────────────────
+// The history is the one resource that has to outlive the frame, and the one
+// whose bugs a screenshot cannot show: a ping-pong that reads the texture it
+// just wrote self-feeds into a frozen image, and a history the pool recycles
+// comes back holding some other pass's pixels.
+{
+  const taaPass = (frame) => {
+    const pass = frame.plan.passes.find((p) =>
+      p.subPasses.some((sub) => sub.name.includes("taa")),
+    );
+    if (!pass) return null;
+    return {
+      writes: pass.color.map((c) => c.handle.name),
+      // reads are indices into plan.resources.
+      reads: pass.reads.map((index) => frame.plan.resources[index].name),
+    };
+  };
+
+  const component = { exposure: 1, taa: {} };
+
+  console.log("\nTemporal antialiasing history");
+
+  const frame0 = await declareFrame([320, 200], component, ["taa"]);
+  const carry = { pool: frame0.pool, cameraEntity: frame0.cameraEntity };
+  const frame1 = await declareFrame([320, 200], component, ["taa"], { ...carry, frameIndex: 1 });
+  const frame2 = await declareFrame([320, 200], component, ["taa"], { ...carry, frameIndex: 2 });
+
+  // Alternating by frame parity, because a pass may not read and write one
+  // handle — and the graph enforces that, so a single buffer would throw.
+  check("writes alternate by parity", [frame0, frame1, frame2].map((f) => taaPass(f).writes), [
+    ["taa.history0.cam"],
+    ["taa.history1.cam"],
+    ["taa.history0.cam"],
+  ]);
+
+  // The half it is not writing. Reading the same one every frame would look
+  // right for one frame and then accumulate nothing.
+  check("reads the other half", [frame0, frame1, frame2].map((f) =>
+    taaPass(f).reads.filter((name) => name.startsWith("taa.history")),
+  ), [
+    ["taa.history1.cam"],
+    ["taa.history0.cam"],
+    ["taa.history1.cam"],
+  ]);
+
+  // Both halves, every frame: the read side has no producing pass, so only a
+  // persistent declaration gives it a handle at all — and persistence is what
+  // keeps the pool from handing its texture to something else mid-frame.
+  check(
+    "both halves are persistent",
+    frame0.plan.resources.filter((r) => r.persistent).map((r) => r.name),
+    ["taa.history0.cam", "taa.history1.cam"],
+  );
+
+  // Publishing the accumulated image as "color" is what splices it into the
+  // chain; without it every later effect would read the jittered frame.
+  check("publishes the accumulated image", frame2.textures.get("color").name, "taa.history0.cam");
+
+  // Same rule as every other depth consumer: a multisampled depth buffer is not
+  // something a reader can bind, so the effect sits the frame out.
+  const msaa = await declareFrame([320, 200], component, ["taa"], { msaa: 4 });
+  check("sits out while depth is multisampled", msaa.names, []);
+  const resolved = await declareFrame([320, 200], component, ["taa"], { msaa: 4, resolveDepth: true });
+  check("runs once depth is resolved", resolved.names, ["taa.main"]);
+
+  // The effect's side of the hand-off: what a frame reads is what the frame
+  // before it wrote, by texture identity rather than by name. The pool's side —
+  // that a persistent texture is not reallocated when its usage changes, which
+  // is what a ping-pong does to it every frame — is covered against the real
+  // pool in test/frame-graph.js, since the stub here cannot fail that way.
+  {
+    const physical = (frame, name) =>
+      frame.plan.resources.find((r) => r.name === name).physicalId;
+    const written = (frame) => {
+      const pass = frame.plan.passes.find((p) =>
+        p.subPasses.some((sub) => sub.name.includes("taa")),
+      );
+      return pass.color[0].handle.name;
+    };
+
+    const pool = createStubPool();
+    const frames = [];
+    let entity;
+    for (let i = 1; i <= 5; i++) {
+      const f = await declareFrame([64, 64], component, ["taa"], {
+        frameIndex: i,
+        pool,
+        ...(entity && { cameraEntity: entity }),
+      });
+      entity = f.cameraEntity;
+      frames.push(f);
+    }
+
+    // What frame n reads is the texture frame n-1 wrote, by identity — not just
+    // by name. Allow the first two frames to settle, since usage only reaches
+    // its union once each half has been written once.
+    const carried = frames.slice(3).map((frame, i) => {
+      const previous = frames[i + 2];
+      return physical(frame, written(previous)) === physical(previous, written(previous));
+    });
+    check("history survives between frames", carried, [true, true]);
+  }
+
+  // Ahead of everything that consumes the image, so bloom's pyramid and the
+  // tonemap see a stable one rather than a jittered frame.
+  const chained = await declareFrame(
+    [320, 200],
+    { exposure: 1, taa: {}, bloom: bloomComponent() },
+    ["taa", "bloom", "combine"],
+  );
+  check(
+    "resolves before the image is consumed",
+    chained.names.indexOf("taa.main") < chained.names.indexOf("bloom.threshold"),
+    true,
   );
 }
 

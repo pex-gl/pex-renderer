@@ -35,6 +35,8 @@ const GRAB_PASS_WGSL = grabPassShader();
 export default ({ ctx, frameGraph }: SystemOptions) => ({
   type: "render-pipeline-system",
   time: 0,
+  /** Frames rendered, from the engine. Indexes every per-frame sequence. */
+  frameIndex: 0,
   debug: false,
   debugRender: "",
   reversibleToneMap: false,
@@ -191,9 +193,16 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
   // that first enables one waits for its module. Nothing here touches the GPU:
   // the graph only records declarations, and execution happens after compile.
   async update(entities: Entity[], options: any = {}) {
-    let { time, renderView, renderers, drawToScreen = true } = options;
+    let {
+      time,
+      frameIndex = 0,
+      renderView,
+      renderers,
+      drawToScreen = true,
+    } = options;
 
     this.time = time;
+    this.frameIndex = frameIndex;
 
     // Without a view, the first camera in the scene draws to the whole canvas.
     if (!renderView) {
@@ -221,9 +230,15 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
     }
     await frameGraph.stage("outputs", { outputs, renderView });
 
+    // Temporal antialiasing supersedes multisampling: it resolves geometric
+    // aliasing across frames rather than within one, and the two cannot be
+    // stacked anyway — the accumulated image is single-sample and WebGPU has no
+    // way to load it back into a multisampled attachment.
+    const useTAA = !!postProcessing?.taa;
+
     // WebGPU only guarantees 1 and 4; anything else fails texture creation and
     // then cascades through every pipeline and bind group built against it.
-    const requestedSampleCount = postProcessing?.msaa?.sampleCount;
+    const requestedSampleCount = useTAA ? 1 : postProcessing?.msaa?.sampleCount;
     const sampleCount = requestedSampleCount > 1 ? 4 : 1;
     const msaa = sampleCount > 1;
 
@@ -236,6 +251,12 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
     if (requestedSampleCount > 1 && requestedSampleCount !== sampleCount) {
       textures.report(
         `msaa.sampleCount ${requestedSampleCount} is not a supported sample count — using ${sampleCount}.`,
+      );
+    }
+
+    if (useTAA && postProcessing?.msaa?.sampleCount > 1) {
+      textures.report(
+        'both "taa" and "msaa" are enabled. Temporal antialiasing supersedes multisampling — rendering single-sample.',
       );
     }
 
@@ -451,8 +472,13 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
     // An effect anchored at "prePass" is asking for a pre-pass, not just for a
     // place in the frame — ambient occlusion consumed as a lighting input only
     // exists if the geometry it reads was drawn first.
+    //
+    // Temporal antialiasing asks for one outright: it reads depth to reproject,
+    // and the motion vectors it will read alongside are written there, so the
+    // buffers it depends on are complete before anything is shaded.
     const usePrePass =
-      (this.depthPrePass || effectsByStage.has("prePass")) && !!depthTexture;
+      (this.depthPrePass || useTAA || effectsByStage.has("prePass")) &&
+      !!depthTexture;
 
     const prePassNormal = usePrePass && !!colorTextures.normal;
 

@@ -45,6 +45,7 @@ struct Skybox {
   rotation: mat3x3f,
   exposure: f32,
   backgroundBlur: f32,
+  jitter: vec2f,
 }
 @group(0) @binding(0) var<uniform> uSkybox: Skybox;
 @group(0) @binding(1) var uEnvMap: texture_2d<f32>;
@@ -78,7 +79,9 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     uSkybox.viewMatrix[1].xyz,
     uSkybox.viewMatrix[2].xyz,
   ));
-  let unprojected = (inverseProjection * vec4f(input.position, 0.0, 1.0)).xyz;
+  // Geometry jittered by d appears at proj(world) + d, so the fragment at
+  // clip position p sees the direction that was at p - d.
+  let unprojected = (inverseProjection * vec4f(input.position - uSkybox.jitter, 0.0, 1.0)).xyz;
   output.normal = inverseModelView * unprojected;
 
   // z = 1.0 sits at the ZO far plane so geometry (depthCompare less-equal) wins.

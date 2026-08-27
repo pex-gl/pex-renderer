@@ -8,6 +8,7 @@ import {
   vertexOutputStruct,
   vertexTransform,
   getDefineFlags,
+  vertexJitter,
 } from "./wgsl.js";
 
 import type { FeatureField } from "../systems/renderer/base.js";
@@ -97,6 +98,7 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
   let positionOut = uFrame.projectionMatrix * positionView;
 
   output.position = positionOut;
+  ${vertexJitter()}
 
   ${hooks.vertEnd ?? ""}
 

@@ -35,7 +35,7 @@ export default ({
   const transformSystem = systems.transform();
   const layerSystem = systems.layer();
   const skyboxSystem = systems.skybox(options);
-  const cameraSystem = systems.camera();
+  const cameraSystem = systems.camera(options);
   const helperSystem = systems.helper();
 
   const reflectionProbeSystem = systems.reflectionProbe(options);
@@ -60,6 +60,17 @@ export default ({
     debugMode: false,
     time: 0,
     deltaTime: 0,
+    /**
+     * Frames ticked, advanced by `update()` alongside `time` — so the camera
+     * system, which runs there, indexes the same frame the render that follows
+     * will. Drives the temporal antialiasing jitter and the ambient occlusion
+     * noise index, both of which need a frame to differ from the one before it.
+     *
+     * Owned here rather than read from pex-gpu's frame loop: that counter lives
+     * in the `frame()` closure and only reaches a caller through its callback,
+     * so a caller driving their own loop would have none.
+     */
+    frameIndex: 0,
     _prevTime: performance.now(),
     frameGraph,
     systems: [
@@ -94,6 +105,7 @@ export default ({
       this.deltaTime = deltaTime || (now - this._prevTime) / 1000;
       this._prevTime = now;
       this.time += this.deltaTime;
+      this.frameIndex++;
 
       const ownsSegment = !commandsState(ctx).frame;
       if (ownsSegment) beginFrame(ctx);
@@ -106,7 +118,7 @@ export default ({
         layerSystem.update(entities);
         skyboxSystem.update(entities);
         reflectionProbeSystem.update(entities);
-        cameraSystem.update(entities);
+        cameraSystem.update(entities, this);
 
         for (let i = 0; i < this.renderers.length; i++) {
           this.renderers[i]!.update(entities, this);
@@ -171,6 +183,7 @@ export default ({
           // Update camera dependent systems
           const updateOptions = {
             time: options.time ?? this.time,
+            frameIndex: this.frameIndex,
             renderers: options.renderers || this.renderers,
             renderView,
             drawToScreen: options.drawToScreen,

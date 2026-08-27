@@ -807,5 +807,63 @@ const state = createGraphState();
   check("current answers what the name settled on", inspected.current.color, "graded");
 }
 
+// ─── Persistent textures survive a change of usage ───────────────────────────
+// The real pool, not the stub: what a persistent resource is for is surviving
+// between frames, and it is reallocated — and so cleared — whenever the usage
+// it was created with changes. Each half of a ping-pong alternates between
+// being written and only being read, so usage taken from the frame in hand
+// destroys both halves every frame and every read comes back empty.
+{
+  const { ResourcePool } = await import("../lib/frame-graph/pool.js");
+
+  const poolCtx = {
+    device: {
+      createTexture: (descriptor) => ({
+        ...descriptor,
+        createView: () => ({}),
+        destroy() {},
+      }),
+      queue: { writeTexture() {}, submit() {}, writeBuffer() {} },
+    },
+  };
+
+  const pool = new ResourcePool(poolCtx);
+  const descriptor = { width: 8, height: 8, format: "rgba16float" };
+  const WRITTEN = GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING;
+  const READ = GPUTextureUsage.TEXTURE_BINDING;
+
+  // Four frames of a two-texture ping-pong, each half alternating roles.
+  const seen = [];
+  for (let frame = 0; frame < 4; frame++) {
+    const parity = frame % 2;
+    seen.push([
+      pool.acquirePersistentTexture("history0", descriptor, parity === 0 ? WRITTEN : READ),
+      pool.acquirePersistentTexture("history1", descriptor, parity === 0 ? READ : WRITTEN),
+    ]);
+  }
+
+  console.log("\nPersistent textures across a change of usage");
+
+  // Settled by the third frame: usage reaches its union once each half has been
+  // written once, and the reallocation that gets it there is of the half about
+  // to be overwritten anyway.
+  check(
+    "identity is stable once usage has settled",
+    [seen[2][0] === seen[3][0], seen[2][1] === seen[3][1]],
+    [true, true],
+  );
+
+  // The read side of every frame after that is the texture the frame before it
+  // wrote — by identity, which is the only thing accumulation depends on.
+  check(
+    "the reader gets what the previous frame wrote",
+    [seen[3][1] === seen[2][1], seen[2][0] === seen[1][0]],
+    [true, true],
+  );
+
+  // One texture per name, not one per frame.
+  check("one texture per name", pool.persistent.size, 2);
+}
+
 console.log(failures ? `\n${failures} failure(s)` : "\nall checks passed");
 process.exit(failures ? 1 : 0);

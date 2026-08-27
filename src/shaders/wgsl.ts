@@ -185,10 +185,26 @@ export function frameStruct({
   inverseViewMatrix: mat4x4f,
   cameraPosition: vec3f,
   viewportSize: vec2f,
+  // Sub-pixel NDC offset for temporal antialiasing, zero without it. Applied
+  // after projection rather than baked into projectionMatrix, so everything
+  // reconstructing view position from that matrix — ambient occlusion,
+  // transmission, depth of field — keeps reading an unjittered one.
+  jitter: vec2f,
   ${extraFields}
 }
 ${bindingDeclaration(0, 0, "uFrame", "Frame", "uniform")}`;
 }
+
+/**
+ * The jitter offset, applied to a clip-space position after projection.
+ *
+ * Multiplied by `w` because the perspective divide has not happened yet: the
+ * offset has to survive it as a constant NDC displacement. Emitted at the end of
+ * every rasterizing vertex stage — and nowhere in a shadow pass, whose camera is
+ * the light and whose result is sampled, not resolved.
+ */
+export const vertexJitter = (position = "output.position"): string =>
+  `${position} += vec4f(uFrame.jitter * ${position}.w, 0.0, 0.0);`;
 
 /** Options for {@link modelStruct}. */
 export interface ModelStructOptions {
@@ -299,12 +315,20 @@ export function vertexInputStruct(flags: VertexInputFlags): string {
  * followed by sequentially-located user members (falsy entries skipped). Every
  * pass shares this `VertexOutput` shape; the `@location`s are private to the
  * vertex/fragment pair, so they are assigned in order, not hand-numbered.
+ *
+ * `@invariant` is what makes a depth pre-pass safe. Two shaders computing the
+ * same clip position from the same inputs are only guaranteed the same result
+ * bit-for-bit if both declare it — a driver is otherwise free to contract
+ * multiply-adds differently in each, and the depth-only and shading passes
+ * differ in everything around the transform. Without it the second pass'
+ * `less-equal` test fails on the fragments that landed a few ULPs further away,
+ * which reads as hatching and dropouts across every surface.
  */
 export function vertexOutputStruct(
   members: readonly (ShaderStructMember | false | null | undefined)[],
 ): string {
   return `struct VertexOutput {
-  @builtin(position) position: vec4f,
+  @invariant @builtin(position) position: vec4f,
   ${locationMembers(members)}
 }`;
 }

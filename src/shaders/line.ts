@@ -5,6 +5,7 @@ import {
   modelStruct,
   fragmentOutputStruct,
   getDefineFlags,
+  vertexJitter,
 } from "./wgsl.js";
 
 import type { FeatureField } from "../systems/renderer/base.js";
@@ -144,6 +145,8 @@ fn vertexMain(input: VertexInput) -> Varyings {
 
     output.position = vec4f(clip.w * ((2.0 * pt) / uFrame.viewportSize - 1.0), clip.z, clip.w);
   }
+
+  ${vertexJitter()}
 
   ${hooks.vertEnd ?? ""}
 

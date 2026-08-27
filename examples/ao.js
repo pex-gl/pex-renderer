@@ -115,6 +115,10 @@ const postProcessing = components.postProcessing({
     bentNormals: true,
     radius: 0.1,
   }),
+  // Three slices converge here because the noise index cycles per frame and the
+  // history averages the slice azimuths out. Switch it off and the same three
+  // slices show the blotching six were raised to cover.
+  taa: components.postProcessing.taa(),
   // exposure: 1.5,
   // dof: components.postProcessing.dof(),
 });
@@ -266,6 +270,7 @@ gui.addRadioList(
     "ssao.main",
     "ssao.edges",
     "ssao.denoise[0]",
+    "taa.main",
     "ssao.blurHorizontal",
     "ssao.blurVertical",
   ].map((value) => ({
@@ -344,6 +349,19 @@ gui.addParam("Denoise blur beta", postProcessing.ssao, "denoiseBlurBeta", {
   min: 0.5,
   max: 5,
 });
+
+gui.addColumn("TAA");
+const taaState = { enabled: !!postProcessing.taa };
+const taaOptions = components.postProcessing.taa();
+gui.addParam("Enabled", taaState, "enabled", null, () => {
+  if (taaState.enabled) {
+    postProcessing.taa = taaOptions;
+  } else {
+    delete postProcessing.taa;
+  }
+});
+gui.addParam("Blend factor", taaOptions, "blendFactor", { min: 0.02, max: 1 });
+gui.addParam("Variance gamma", taaOptions, "varianceGamma", { min: 0.5, max: 3 });
 
 gui.addColumn("SAO");
 gui.addParam("Samples", postProcessing.ssao, "samples", {

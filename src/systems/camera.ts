@@ -1,18 +1,82 @@
 import { mat4, vec3, quat, utils, avec4 } from "pex-math";
 import { orbiter as createOrbiter } from "pex-cam";
+import halton from "halton";
 import {
   NAMESPACE,
   TEMP_MAT4,
   TEMP_VEC3,
   computeFrustumPlanes,
+  getDefaultViewport,
 } from "../utils.js";
 
-import type { Entity } from "../types.js";
+import type { Entity, SystemOptions } from "../types.js";
 
 // The camera math operates on a fully-populated camera (projection-specific
 // fields guaranteed by the camera component), so it is typed loosely here.
 function computeFrustum(camera: any) {
   computeFrustumPlanes(camera.frustum, camera.projectionMatrix, camera.viewMatrix);
+}
+
+/**
+ * Halton(2, 3), centred on the pixel — the standard temporal antialiasing
+ * sequence. Two coprime bases give a set that stays evenly spread at any prefix
+ * length, where random offsets clump and leave the pixel unevenly covered over
+ * the handful of frames a moving camera gets before its history is rejected.
+ *
+ * The first point of the sequence is dropped: it is (0, 0) in every base, which
+ * centres to the pixel's corner rather than anywhere useful.
+ */
+const JITTER_SAMPLE_COUNT = 8;
+const JITTER_SAMPLES = halton(JITTER_SAMPLE_COUNT + 1, [2, 3])
+  .slice(1)
+  .map(([x, y]) => [x! - 0.5, y! - 0.5]);
+const NO_JITTER = [0, 0];
+
+/**
+ * This frame's sub-pixel offset, or zero when nothing accumulates one — an
+ * offset left behind after the effect is switched off would sit the image
+ * permanently off-centre.
+ */
+function updateCameraJitter(
+  entity: any,
+  frameIndex: number,
+  viewport: number[],
+) {
+  const jitter = (entity.camera._jitter ??= [0, 0]);
+  const sample = entity.postProcessing?.taa
+    ? JITTER_SAMPLES[frameIndex % JITTER_SAMPLE_COUNT]!
+    : NO_JITTER;
+
+  // Half a pixel expressed in NDC, where one pixel spans 2 / viewportSize.
+  jitter[0] = (2 * sample[0]!) / viewport[2]!;
+  jitter[1] = (2 * sample[1]!) / viewport[3]!;
+}
+
+/**
+ * The unjittered view-projection, its inverse, and the one from last frame —
+ * what anything reprojecting between frames needs, derived here because this is
+ * the only place that knows when the view and projection matrices are final.
+ *
+ * Maintained for every camera rather than only when something reads it: it is
+ * two multiplies and an inverse, and the alternative is the camera system
+ * knowing which effects are switched on. Assumes one update per rendered frame,
+ * which is the same assumption `deltaTime` already makes.
+ */
+function updateCameraViewProjection(camera: any) {
+  camera._previousViewProjectionMatrix ??= mat4.create();
+  camera._viewProjectionMatrix ??= mat4.create();
+  camera._inverseViewProjectionMatrix ??= mat4.create();
+
+  // Captured before this frame's overwrites it. A temporal resolve holds a
+  // reference to the previous matrix through to execute, so it may only be
+  // rewritten on the next frame, never again within this one.
+  mat4.set(camera._previousViewProjectionMatrix, camera._viewProjectionMatrix);
+
+  mat4.set(camera._viewProjectionMatrix, camera.projectionMatrix);
+  mat4.mult(camera._viewProjectionMatrix, camera.viewMatrix);
+
+  mat4.set(camera._inverseViewProjectionMatrix, camera._viewProjectionMatrix);
+  mat4.invert(camera._inverseViewProjectionMatrix);
 }
 
 // TODO: projectionMatrix should only be recomputed if parameters changed
@@ -105,12 +169,16 @@ function updateCameraProjection(camera: any, transform: any) {
  * Adds:
  *
  * - "_orbiter" to orbiter components
+ * - "_viewProjectionMatrix", "_inverseViewProjectionMatrix",
+ *   "_previousViewProjectionMatrix" and "_jitter" to camera components
  */
-export default () => ({
+export default ({ ctx }: SystemOptions) => ({
   type: "camera-system",
   cache: {} as Record<number, any>,
   debug: false,
   updateCameraProjection,
+  updateCameraViewProjection,
+  updateCameraJitter,
   computeFrustum,
   checkCamera(_: unknown, cameraEntity: Entity) {
     if (cameraEntity.transform) {
@@ -339,13 +407,21 @@ export default () => ({
       }
     }
   },
-  update(entities: Entity[]) {
+  update(entities: Entity[], { frameIndex = 0 }: any = {}) {
     for (let i = 0; i < entities.length; i++) {
       const entity = entities[i]!;
 
       if (entity.camera) {
         if (!this.checkCamera(null, entity)) continue;
         this.updateCameraEntity(entity);
+        // After, not inside: every branch of updateCameraEntity leaves the view
+        // and projection matrices final, and only some of them recompute one.
+        updateCameraViewProjection(entity.camera);
+        updateCameraJitter(
+          entity,
+          frameIndex,
+          entity.camera.viewport || getDefaultViewport(ctx),
+        );
       }
     }
   },

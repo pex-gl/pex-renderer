@@ -1,7 +1,7 @@
 import { mat3 } from "pex-math";
 import { submit, createSampler } from "pex-gpu";
 
-import createBaseSystem, { outputsKey } from "./base.js";
+import createBaseSystem, { NO_JITTER, outputsKey } from "./base.js";
 import { skyboxShader } from "../../shaders/skybox.js";
 import {
   NAMESPACE,
@@ -119,6 +119,7 @@ export default ({ ctx }: SystemOptions): RendererSystem => ({
             IDENTITY_MAT3,
           exposure: skybox.exposure ?? 1,
           backgroundBlur,
+          jitter: camera._jitter ?? NO_JITTER,
         },
         uEnvMap: texture!,
         uEnvMapSampler: this.sampler,

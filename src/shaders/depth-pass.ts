@@ -13,6 +13,7 @@ import {
   vertexOutputStruct,
   vertexTransform,
   getDefineFlags,
+  vertexJitter,
 } from "./wgsl.js";
 import type { PipelineShaderOptions } from "../types.js";
 
@@ -115,7 +116,9 @@ export const DEPTH_PASS_MATERIAL_FIELDS: readonly FeatureField[] = [
  * alpha at location 0, which a depth-only pass has no target for.
  *
  * The displacement offset is stretched 1.3x relative to standard.js's to reduce
- * acne/peter-panning from displaced surfaces.
+ * acne/peter-panning from displaced surfaces — a shadow-map bias, so
+ * USE_DEPTH_PRE_PASS drops it. A pre-pass has to compute the same position the
+ * opaque pass will, to the bit; anything else is z-fighting rather than bias.
  */
 export const depthPassShader = (
   defines: Set<string> = new Set(),
@@ -132,6 +135,7 @@ export const depthPassShader = (
   // A normal target with no normals to put in it still has to be written, so
   // the attachment and the real normal are two separate conditions.
   const useNormalOutput = defines.has("USE_NORMAL_OUTPUT");
+  const usePrePass = defines.has("USE_DEPTH_PRE_PASS");
   const writeNormal = useNormalOutput && useNormals;
 
   const useAlphaTest = defines.has(MATERIAL_DEFINE.alphaTest);
@@ -230,7 +234,7 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
 
   ${
     useDisplacementTexture
-      ? "let h = textureSampleLevel(uDisplacementTexture, uDisplacementTextureSampler, input.texCoord0, 0.0).x;\n  position = vec4f(position.xyz + uModel.displacement * h * normal * 1.3, position.w);"
+      ? `let h = textureSampleLevel(uDisplacementTexture, uDisplacementTextureSampler, input.texCoord0, 0.0).x;\n  position = vec4f(position.xyz + uModel.displacement * h * normal${usePrePass ? "" : " * 1.3"}, position.w);`
       : ""
   }
 
@@ -246,6 +250,7 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
 
   let viewPosition = uFrame.viewMatrix * positionWorld;
   output.position = uFrame.projectionMatrix * viewPosition;
+  ${vertexJitter()}
   ${useLinearDepth ? "output.viewPosition = viewPosition.xyz;" : ""}
   ${texCoordSets.has(0) ? "output.texCoord0 = input.texCoord0;" : ""}
   ${texCoordSets.has(1) ? "output.texCoord1 = input.texCoord1;" : ""}

@@ -103,6 +103,7 @@ function getEstimatorScope({ cameraEntity, viewport }: EstimatorScope) {
 function declareGTAO(scope: EstimatorScope) {
   const {
     cameraEntity,
+    frameIndex,
     textures,
     pass,
     compute,
@@ -148,9 +149,12 @@ function declareGTAO(scope: EstimatorScope) {
       : GTAO_DENOISE_DISABLED_BETA,
     brightness: component.brightness!,
     contrast: component.contrast!,
-    // No temporal filter to converge one, so every frame takes the same samples
-    // rather than flickering between sets.
-    noiseIndex: 0,
+    // Rotates the slice azimuths per frame, which is what lets a temporal
+    // filter average out the error between them — the reference's own
+    // "frameIndex % 64 if using TAA or 0 otherwise". Held at 0 without one:
+    // decorrelating the noise with nothing to accumulate it turns a static
+    // pattern into a flickering one, which reads worse.
+    noiseIndex: cameraEntity.postProcessing?.taa ? frameIndex % 64 : 0,
   };
 
   // r32uint holding bitcast floats — see the chunk's gtaoLoadViewspaceDepth for

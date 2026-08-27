@@ -233,6 +233,18 @@ export interface CameraComponentOptions {
   frustum?: Float32Array;
   actualSensorHeight?: number;
   dirty?: boolean;
+  // Runtime, maintained every frame by the camera system.
+  /**
+   * Sub-pixel NDC offset for this frame while temporal antialiasing is on, zero
+   * otherwise. Applied after projection, so `projectionMatrix` stays unjittered
+   * for everything reconstructing view position from it.
+   */
+  _jitter?: Vec2;
+  /** `projectionMatrix * viewMatrix`, this frame and last. Never jittered. */
+  _viewProjectionMatrix?: Mat4;
+  _previousViewProjectionMatrix?: Mat4;
+  /** Inverse of `_viewProjectionMatrix`, for reconstructing world position. */
+  _inverseViewProjectionMatrix?: Mat4;
 }
 export interface DirectionalLightComponentOptions extends LightShadowInternals {
   color?: Color;
@@ -426,7 +438,13 @@ export interface SSAOComponentOptions {
   /** SAO: how sharply the bilateral blur rejects a depth difference. */
   blurSharpness?: number;
 
-  /** GTAO: slices of the horizon search. */
+  /**
+   * GTAO: azimuthal slices of the horizon search, and the only control over the
+   * low-frequency blotching a spatial denoiser cannot remove. Three is enough
+   * alongside `taa`, which rotates the azimuths per frame and averages the
+   * error between them; without it, raise this rather than `denoisePasses` when
+   * the occlusion reads as a pattern instead of grain.
+   */
   slices?: number;
   /**
    * GTAO: also estimate the average unoccluded direction, which then drives the
@@ -514,6 +532,20 @@ export interface SMAAComponentOptions {
   quality?: number;
   edges?: "luma" | "color" | "depth";
 }
+export interface TAAComponentOptions {
+  /**
+   * Weight given to the current frame, so roughly one over the number of frames
+   * accumulated. Lower converges further and ghosts more; the jitter sequence
+   * is eight frames long, so below ~0.05 the window outruns it.
+   */
+  blendFactor?: number;
+  /**
+   * Half-width of the history clipping box, in standard deviations of the 3x3
+   * neighbourhood. Below ~1 the history is clipped hard enough to stop
+   * accumulating; above ~1.5 ghosting starts to survive.
+   */
+  varianceGamma?: number;
+}
 export interface FogComponentOptions {
   color?: Color;
   start?: number;
@@ -581,6 +613,7 @@ export interface PostProcessingComponentOptions {
   colorCorrection?: ColorCorrectionComponentOptions;
   fxaa?: FXAAComponentOptions;
   smaa?: SMAAComponentOptions;
+  taa?: TAAComponentOptions;
   msaa?: MSAAComponentOptions;
   filmGrain?: FilmGrainComponentOptions;
   exposure?: number;
@@ -844,6 +877,8 @@ export interface RendererSystem {
 export interface RenderPipelineCore {
   type: string;
   time: number;
+  /** Frames rendered, from the engine. Indexes every per-frame sequence. */
+  frameIndex: number;
   debug: boolean;
   debugRender: string;
   reversibleToneMap: boolean;

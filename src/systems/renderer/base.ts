@@ -19,6 +19,9 @@ import type {
 
 const IDENTITY_MAT3 = mat3.create();
 const IDENTITY_MAT4 = mat4.create();
+// Shared so the common case allocates nothing: only a camera with temporal
+// antialiasing carries a jitter, and a shadow pass's light camera never does.
+export const NO_JITTER = [0, 0];
 const TEMP_MAT2X3 = mat2x3.create();
 const TEMP_MAT3_SET = new Map<string, number[]>();
 
@@ -283,6 +286,7 @@ export default (): RendererSystem => ({
       inverseViewMatrix: camera.inverseViewMatrix || IDENTITY_MAT4,
       cameraPosition: cameraEntity?._transform?.worldPosition ?? [0, 0, 0],
       viewportSize: [viewport[2]!, viewport[3]!],
+      jitter: camera._jitter ?? NO_JITTER,
     };
   },
   getPipeline(entity: Entity, options: any = {}, precomputed?: unknown) {

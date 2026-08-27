@@ -81,7 +81,7 @@ export class ResourcePool {
   /** Keyed by resource name: persistent textures are never substitutable. */
   persistent = new Map<
     string,
-    { texture: GpuTexture; key: string; bytes: number }
+    { texture: GpuTexture; key: string; bytes: number; usage: GPUTextureUsageFlags }
   >();
 
   liveBytes = 0;
@@ -136,7 +136,16 @@ export class ResourcePool {
 
   /**
    * Dedicated texture for `name`, kept across frames and never recycled.
-   * Reallocated only if the shape or usage it was created with changes.
+   * Reallocated only if the shape it was created with changes, or if a frame
+   * needs it for something the existing one was not created to do.
+   *
+   * Usage accumulates across frames rather than being taken from the frame in
+   * hand, because that is the difference between a persistent resource and a
+   * pooled one: its contents have to survive, so it cannot be reallocated
+   * merely because this frame uses it differently. A ping-pong pair is exactly
+   * that case — each half alternates between being written and only being read
+   * — and taking one frame's usage would discard both halves every frame,
+   * leaving the reader nothing but a freshly zeroed texture.
    */
   acquirePersistentTexture(
     name: string,
@@ -144,21 +153,22 @@ export class ResourcePool {
     usage: GPUTextureUsageFlags,
   ): GpuTexture {
     const mipLevelCount = ResourcePool.resolveMipLevelCount(descriptor);
-    const key = ResourcePool.textureKey(descriptor, usage, mipLevelCount);
-
     const existing = this.persistent.get(name);
+    const combined = (existing?.usage ?? 0) | usage;
+    const key = ResourcePool.textureKey(descriptor, combined, mipLevelCount);
+
     if (existing) {
       if (existing.key === key) return existing.texture;
-      // Shape changed (a resize, a different shadow map size): nothing else
-      // can claim the old one.
+      // Shape changed (a resize, a different shadow map size), or the usage
+      // grew: nothing else can claim the old one.
       existing.texture.dispose();
       this.persistentBytes -= existing.bytes;
     }
 
-    const texture = this.allocate(descriptor, usage, mipLevelCount);
+    const texture = this.allocate(descriptor, combined, mipLevelCount);
     const bytes = textureByteSize(texture);
     this.persistentBytes += bytes;
-    this.persistent.set(name, { texture, key, bytes });
+    this.persistent.set(name, { texture, key, bytes, usage: combined });
     return texture;
   }
 

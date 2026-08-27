@@ -51,6 +51,7 @@ interface EffectRegistration {
  */
 const EFFECT_ORDER: readonly EffectRegistration[] = [
   { name: "ssao", load: () => import("./post-processing/ssao.js") },
+  { name: "taa", load: () => import("./post-processing/taa.js") },
   { name: "dof", load: () => import("./post-processing/dof.js") },
   { name: "bloom", load: () => import("./post-processing/bloom.js") },
   {
@@ -155,6 +156,11 @@ export interface PostProcessingContext {
   renderView: RenderView;
   viewport: number[];
   time: number;
+  /**
+   * Frames rendered. What a temporal effect indexes its sequence by, and how it
+   * tells a continuous frame from the first one after a gap.
+   */
+  frameIndex: number;
   samplers: Samplers;
   /**
    * The frame's images. `get("color")` is the current end of the chain — what a
@@ -652,6 +658,7 @@ export default ({
         renderView,
         viewport: renderView.viewport,
         time: this.time,
+        frameIndex: this.frameIndex,
         samplers: this.samplers,
         textures,
         pass: (options) => this.declareFullscreenPass(scope, options),

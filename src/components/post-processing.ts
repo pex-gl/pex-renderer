@@ -10,6 +10,7 @@ import type {
   PostProcessingComponentOptions,
   SMAAComponentOptions,
   SSAOComponentOptions,
+  TAAComponentOptions,
   VignetteComponentOptions,
 } from "../types.js";
 
@@ -23,6 +24,7 @@ interface PostProcessingFactory {
   msaa: (options?: MSAAComponentOptions) => object;
   fxaa: (options?: FXAAComponentOptions) => object;
   smaa: (options?: SMAAComponentOptions) => object;
+  taa: (options?: TAAComponentOptions) => object;
   fog: (options?: FogComponentOptions) => object;
   bloom: (options?: BloomComponentOptions) => object;
   vignette: (options?: VignetteComponentOptions) => object;
@@ -64,15 +66,14 @@ postProcessing.ssao = (options?: SSAOComponentOptions) => ({
   spiralTurns: 7,
   blurRadius: 0.5,
   blurSharpness: 10,
-  // GTAO. Defaults are XeGTAO's own, except the slice count. Its "high" preset
-  // takes three, which is tuned for a renderer with temporal accumulation:
-  // cycling the noise index across frames is what averages out the error
-  // between slice azimuths. Nothing here does that, and the spatial denoiser
-  // cannot — a 3x3 filter removes ~7x of the high-frequency noise but only
-  // ~1.4x of the low-frequency blotching that few azimuths leave behind, which
-  // is the part that reads as a pattern. Six is where that floor stops being
-  // the limit; nine is the reference's "ultra".
-  slices: 6,
+  // GTAO. XeGTAO's own defaults, including the slice count: its "high" preset
+  // takes three, which is tuned for exactly the temporal accumulation `taa`
+  // provides — cycling the noise index rotates the slice azimuths and the
+  // history averages the error between them out. Without `taa` three slices
+  // leaves low-frequency blotching a spatial denoiser cannot remove (a 3x3
+  // filter takes ~7x off the high-frequency noise but only ~1.4x off that), so
+  // raise this to six there instead; nine is the reference's "ultra".
+  slices: 3,
   bentNormals: false,
   radiusMultiplier: 1.457,
   falloffRange: 0.615,
@@ -119,6 +120,18 @@ postProcessing.fxaa = (options?: FXAAComponentOptions) => ({
 postProcessing.smaa = (options?: SMAAComponentOptions) => ({
   quality: 2, // [0, 3]
   edges: "luma", // "depth" | "color"
+  ...options,
+});
+
+/** Post Processing TAA subcomponent */
+postProcessing.taa = (options?: TAAComponentOptions) => ({
+  // Ten frames of accumulation. Low enough that a disoccluded pixel is back to
+  // single-frame quality within a few frames, high enough that the jitter
+  // sequence completes inside the window it averages over.
+  blendFactor: 0.1,
+  // Salvi's clipping box, at the width where ghosting stops surviving and the
+  // history still accumulates. Lower clips so hard nothing converges.
+  varianceGamma: 1.25,
   ...options,
 });
 
