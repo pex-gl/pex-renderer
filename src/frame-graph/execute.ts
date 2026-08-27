@@ -15,6 +15,7 @@ import type {
 
 import type { GpuBuffer, GpuContext, GpuTexture } from "../types.js";
 import type { GraphState } from "./state.js";
+import type { PassProfiler } from "./profile.js";
 import type {
   CompiledColorAttachment,
   CompiledDepthStencilAttachment,
@@ -57,17 +58,36 @@ export function textureView(
 }
 
 /**
+ * View dimensions whose default view spans several layers, so an attachment
+ * into one of them has to name it. `1d` and `3d` are absent deliberately: a 1d
+ * texture cannot carry `RENDER_ATTACHMENT` at all, and a 3d one selects a slice
+ * through the attachment's `depthSlice` rather than a view — neither is
+ * something a single-layer 2D view could stand in for.
+ */
+const LAYERED_VIEW_DIMENSIONS = new Set<GPUTextureViewDimension>([
+  "2d-array",
+  "cube",
+  "cube-array",
+]);
+
+/**
  * Attachments must target exactly one mip level and one array layer, and a
  * default view spans all of them. So the texture's shape decides whether an
  * explicit view is needed, not whether a sub-resource was asked for: a cube
  * needs one even for layer 0.
+ *
+ * Layer count alone doesn't answer it. A one-layer array texture — a shadow
+ * bucket holding a single light — still defaults to a `2d-array` view, which an
+ * attachment rejects, so the declared view dimension decides too.
  */
 export function attachmentView(
   texture: GpuTexture,
   layer?: number,
   level?: number,
 ): GPUTextureView | undefined {
-  const layered = texture.depthOrArrayLayers > 1;
+  const layered =
+    texture.depthOrArrayLayers > 1 ||
+    LAYERED_VIEW_DIMENSIONS.has(texture.viewDimension ?? "2d");
   if (!layered && texture.mipLevelCount === 1) return undefined;
 
   return textureView(texture, {
@@ -182,6 +202,8 @@ export default function execute(
   plan: CompiledPlan,
   /** Messages already logged, so a pass that throws every frame logs once. */
   reportedErrors: Set<string>,
+  /** Per-pass GPU timing, when the graph is profiling. */
+  profiler?: PassProfiler,
 ): void {
   // Bound once: the resolvers a pass is handed close over this frame's plan.
   const resolve = (handle: ResourceHandle) => {
@@ -247,7 +269,7 @@ export default function execute(
     }
   };
 
-  for (const pass of plan.passes) {
+  for (const [index, pass] of plan.passes.entries()) {
     if (pass.type === "raw") {
       // No render or compute pass to open: the callback records straight into
       // the frame's live encoder, or hands it to a pex-gpu helper that opens
@@ -258,9 +280,13 @@ export default function execute(
     }
 
     // Scoped submit keeps the render pass open for the nested draws.
+    const timestampWrites = profiler?.writesFor(index, pass.label);
     const command: RenderCommand = {
       label: pass.label,
-      pass: buildPassDescriptor(plan, pass),
+      pass: {
+        ...buildPassDescriptor(plan, pass),
+        ...(timestampWrites && { timestampWrites }),
+      },
     };
 
     submit(ctx, command, () => runSubPasses(pass));

@@ -22,7 +22,7 @@ import { getRenderPassGraphViz } from "./graph-viz.js";
 random.seed(14);
 
 const State = {
-  enabled: false,
+  enabled: true,
 
   roughness: 0.5,
   metallic: 0.1,
@@ -42,7 +42,7 @@ const State = {
 };
 
 const pixelRatio = 1; // devicePixelRatio;
-const ctx = await gpu.createContext({ pixelRatio });
+const ctx = await gpu.createContext({ pixelRatio, alphaMode: "premultiplied" });
 const renderEngine = createRenderEngine({ ctx, debug: true });
 const world = createWorld();
 
@@ -74,6 +74,7 @@ const camera = components.camera({
   // fov: Math.PI / 6,
   aspect: ctx.width / ctx.height,
   fStop: 4,
+  clearColor: [0, 0, 0, 0],
 });
 const postProcessing = components.postProcessing({
   msaa: {
@@ -96,8 +97,8 @@ const postProcessing = components.postProcessing({
     spiralTurns: 7,
     // GTAO
     slices: 3,
-    colorBounce: true,
-    colorBounceIntensity: 1.0,
+    multiBounce: "analytic",
+    colorBounceIntensity: 1,
   },
   dof: {
     type: "gustafsson", // upitis
@@ -431,10 +432,19 @@ const dummyTexture2D = gpu.createTexture(ctx, {
   height: 1,
   format: "rgba8unorm",
 });
-const guiNormalControl = gui.addTexture2D("Normal", null, { flipY: true });
-const guiDepthControl = gui.addTexture2D("Depth", null, { flipY: true });
-// const guiAOControl = gui.addTexture2D("AO", null, { flipY: true });
-// const guiLumaControl = gui.addTexture2D("Luma", null, { flipY: true });
+const guiNormalControl = gui.addTexture2D("Normal", null);
+const guiDepthControl = gui.addTexture2D("Depth", null);
+const guiAOControl = gui.addTexture2D("AO", null);
+
+// The occlusion buffer is an internal post-processing target, so it is only a
+// handle during the frame and gets recycled once the last pass reading it is
+// done. Exporting it keeps it off the recycling list until the frame ends,
+// which is what makes it still hold occlusion when the GUI samples it.
+let aoHandle;
+renderEngine.frameGraph.on("present", (textures) => {
+  aoHandle = textures.get("ssao.main");
+  if (aoHandle) renderEngine.frameGraph.exportTexture(aoHandle);
+});
 
 gui.addParam("Background Blur", skyboxEntity.skybox, "backgroundBlur", {
   min: 0,
@@ -545,7 +555,15 @@ gui.addParam("Slices", postProcessing.ssao, "slices", {
   max: 20,
   step: 1,
 });
-gui.addParam("Color bounce", postProcessing.ssao, "colorBounce");
+gui.addRadioList(
+  "Multi bounce",
+  postProcessing.ssao,
+  "multiBounce",
+  [false, "analytic", "screen-space"].map((value) => ({
+    name: value || "off",
+    value,
+  })),
+);
 gui.addParam("Bounce intensity", postProcessing.ssao, "colorBounceIntensity", {
   min: 0,
   max: 100,
@@ -788,12 +806,8 @@ gpu.frame(ctx, async () => {
 
   guiNormalControl.texture = normal || dummyTexture2D;
   guiDepthControl.texture = depth;
-  // guiAOControl.texture =
-  //   postProcessing?._targets?.[cameraEntity.id]?.["ssao.main"] ||
-  //   dummyTexture2D;
-  // guiLumaControl.texture =
-  //   postProcessing?._targets?.[cameraEntity.id]?.["final.luma"] ||
-  //   dummyTexture2D;
+  guiAOControl.texture =
+    (aoHandle && renderEngine.frameGraph.resolve(aoHandle)) || dummyTexture2D;
 
   gpu.debug(ctx, debugOnce);
   debugOnce = false;

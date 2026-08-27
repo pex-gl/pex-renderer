@@ -23,7 +23,7 @@ const {
   blit,
   reversibleToneMap,
   depthPass,
-  depthPrePass,
+  depthResolve,
   line,
   overlay,
   helper,
@@ -82,6 +82,12 @@ const standardVariants = [
   { name: "metallic-roughness no textures no lights", defines: new Set(["USE_METALLIC_ROUGHNESS_WORKFLOW"]) },
   { name: "mr + basecolor + normal + 1 directional", defines: new Set(["USE_METALLIC_ROUGHNESS_WORKFLOW", "USE_NORMALS", "USE_TEXCOORD_0", "USE_BASE_COLOR_TEXTURE", "USE_NORMAL_TEXTURE", "USE_TANGENTS"]), options: { lights: { directional: 1 } } },
   { name: "all light types at max", defines: new Set(["USE_METALLIC_ROUGHNESS_WORKFLOW", "USE_NORMALS"]), options: { lights: { ambient: 4, directional: 4, point: 4, spot: 4, area: 4 } } },
+  // Shadow buckets: one binding per distinct map size, dispatched at runtime.
+  // The no-bucket case matters as much as the rest — the dispatchers still have
+  // to compile when nothing casts.
+  { name: "shadows, single bucket", defines: new Set(["USE_METALLIC_ROUGHNESS_WORKFLOW", "USE_NORMALS"]), options: { lights: { directional: 1, spot: 1, area: 1, point: 1, shadow2DBuckets: 1, shadowCubeBuckets: 1 } } },
+  { name: "shadows, mixed sizes", defines: new Set(["USE_METALLIC_ROUGHNESS_WORKFLOW", "USE_NORMALS"]), options: { lights: { directional: 2, spot: 2, point: 2, shadow2DBuckets: 3, shadowCubeBuckets: 2 } } },
+  { name: "shadows, casters absent", defines: new Set(["USE_METALLIC_ROUGHNESS_WORKFLOW", "USE_NORMALS"]), options: { lights: { directional: 2, point: 1, shadow2DBuckets: 0, shadowCubeBuckets: 0 } } },
   { name: "reflection probes + transmission", defines: new Set(["USE_METALLIC_ROUGHNESS_WORKFLOW", "USE_NORMALS", "USE_REFLECTION_PROBES", "USE_TRANSMISSION", "USE_TRANSMISSION_TEXTURE", "USE_DISPERSION", "USE_TEXCOORD_0"]), options: { lights: { directional: 1 } } },
   { name: "clear coat + sheen + tangents", defines: new Set(["USE_METALLIC_ROUGHNESS_WORKFLOW", "USE_NORMALS", "USE_TEXCOORD_0", "USE_CLEAR_COAT", "USE_CLEAR_COAT_TEXTURE", "USE_CLEAR_COAT_NORMAL_TEXTURE", "USE_SHEEN", "USE_SHEEN_COLOR_TEXTURE", "USE_TANGENTS"]), options: { lights: { point: 2 } } },
   { name: "clear coat roughness from main texture", defines: new Set(["USE_METALLIC_ROUGHNESS_WORKFLOW", "USE_NORMALS", "USE_TEXCOORD_0", "USE_CLEAR_COAT", "USE_CLEAR_COAT_TEXTURE", "USE_CLEAR_COAT_ROUGHNESS_FROM_MAIN_TEXTURE"]) },
@@ -127,15 +133,24 @@ const depthPassVariants = [
   { name: "alpha texture + alpha test", defines: new Set(["USE_NORMALS", "USE_TEXCOORD_0", "USE_BASE_COLOR_TEXTURE", "USE_ALPHA_TEXTURE", "USE_ALPHA_TEST"]) },
   { name: "skinned + instanced + vertex colors", defines: new Set(["USE_NORMALS", "USE_SKIN", "USE_INSTANCED_OFFSET", "USE_INSTANCED_SCALE", "USE_INSTANCED_ROTATION", "USE_VERTEX_COLORS"]), options: { maxJoints: 64 } },
   { name: "displacement + texcoord1", defines: new Set(["USE_NORMALS", "USE_TEXCOORD_0", "USE_TEXCOORD_1", "USE_DISPLACEMENT_TEXTURE"]) },
+  { name: "alpha test + vertex/instance colors", defines: new Set(["USE_ALPHA_TEST", "USE_VERTEX_COLORS", "USE_INSTANCED_COLOR"]) },
+  { name: "alpha test on texcoord1", defines: new Set(["USE_TEXCOORD_0", "USE_TEXCOORD_1", "USE_BASE_COLOR_TEXTURE", "USE_ALPHA_TEST"]), options: { texCoords: { baseColor: 1 } } },
+  { name: "alpha test + omni (linear depth)", defines: new Set(["USE_TEXCOORD_0", "USE_BASE_COLOR_TEXTURE", "USE_ALPHA_TEST", "USE_LINEAR_DEPTH"]) },
   { name: "hooks", defines: new Set(), options: { hooks: { vertBeforeTransform: "// hook", vertEnd: "// hook", fragDeclarationsEnd: "// hook", fragEnd: "// hook" } } },
 ];
 
-const depthPrePassVariants = [
-  { name: "default", defines: new Set(["USE_NORMALS"]) },
-  { name: "alpha texture + alpha test", defines: new Set(["USE_NORMALS", "USE_TEXCOORD_0", "USE_BASE_COLOR_TEXTURE", "USE_ALPHA_TEXTURE", "USE_ALPHA_TEST"]) },
-  { name: "skinned + instanced + vertex colors", defines: new Set(["USE_NORMALS", "USE_SKIN", "USE_INSTANCED_OFFSET", "USE_INSTANCED_SCALE", "USE_INSTANCED_ROTATION", "USE_VERTEX_COLORS"]), options: { maxJoints: 64 } },
-  { name: "displacement + texcoord1", defines: new Set(["USE_NORMALS", "USE_TEXCOORD_0", "USE_TEXCOORD_1", "USE_DISPLACEMENT_TEXTURE"]) },
-  { name: "hooks", defines: new Set(["USE_NORMALS"]), options: { hooks: { vertBeforeTransform: "// hook", vertEnd: "// hook", fragDeclarationsEnd: "// hook", fragEnd: "// hook" } } },
+// The pre-pass variant: same vertex path as a shadow map, plus a normal target.
+const depthPassPrePassVariants = [
+  { name: "normal output", defines: new Set(["USE_NORMALS", "USE_NORMAL_OUTPUT"]) },
+  { name: "normal output + skinned", defines: new Set(["USE_NORMALS", "USE_NORMAL_OUTPUT", "USE_SKIN"]), options: { maxJoints: 64 } },
+  { name: "normal output + instanced", defines: new Set(["USE_NORMALS", "USE_NORMAL_OUTPUT", "USE_INSTANCED_OFFSET", "USE_INSTANCED_SCALE", "USE_INSTANCED_ROTATION"]) },
+  { name: "normal output + displacement", defines: new Set(["USE_NORMALS", "USE_NORMAL_OUTPUT", "USE_TEXCOORD_0", "USE_DISPLACEMENT_TEXTURE"]) },
+  { name: "normal output + alpha test", defines: new Set(["USE_NORMALS", "USE_NORMAL_OUTPUT", "USE_TEXCOORD_0", "USE_BASE_COLOR_TEXTURE", "USE_ALPHA_TEXTURE", "USE_ALPHA_TEST"]) },
+  { name: "normal output + alpha to coverage", defines: new Set(["USE_NORMALS", "USE_NORMAL_OUTPUT", "USE_TEXCOORD_0", "USE_BASE_COLOR_TEXTURE", "USE_ALPHA_TEST", "USE_ALPHA_TO_COVERAGE"]) },
+  // Coverage where it cannot apply: no color target means no alpha to derive
+  // the mask from, so it has to fall back to discarding rather than emit a
+  // coverage value nothing reads.
+  { name: "depth-only rejects alpha to coverage", defines: new Set(["USE_TEXCOORD_0", "USE_BASE_COLOR_TEXTURE", "USE_ALPHA_TEST", "USE_ALPHA_TO_COVERAGE"]) },
 ];
 
 const lineVariants = [
@@ -219,15 +234,20 @@ for (const v of standardVariants) {
 for (const v of blitVariants) {
   await check(`blit [${v.name}]`, blit.blitShader(v.defines, v.options));
 }
+// One variant per MSAA level: the sample loop is unrolled per count.
+for (const samples of [2, 4, 8]) {
+  await check(`depthResolve [${samples}x]`, depthResolve.depthResolveShader(samples));
+}
 for (const v of reversibleToneMapVariants) {
   await check(`reversibleToneMap [${v.name}]`, reversibleToneMap.reversibleToneMapShader(v.defines, v.options));
 }
 for (const v of depthPassVariants) {
   await check(`depthPass [${v.name}]`, depthPass.depthPassShader(v.defines, v.options));
 }
-for (const v of depthPrePassVariants) {
-  await check(`depthPrePass [${v.name}]`, depthPrePass.depthPrePassShader(v.defines, v.options));
+for (const v of depthPassPrePassVariants) {
+  await check(`depthPass [${v.name}]`, depthPass.depthPassShader(v.defines, v.options));
 }
+
 for (const v of lineVariants) {
   await check(`line [${v.name}]`, line.lineShader(v.defines, v.options));
 }

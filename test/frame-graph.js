@@ -165,7 +165,7 @@ const state = createGraphState();
   });
   api.exportTexture(current);
 
-  const plan = compile(state, pool, {});
+  const plan = compile(state, pool, { transientAttachments: true });
   const resource = Object.fromEntries(plan.resources.map((r) => [r.name, r]));
 
   console.log("\nframe graph — compile");
@@ -175,7 +175,16 @@ const state = createGraphState();
     true,
   );
   check("merged pass count", plan.stats.mergedPasses, 1);
-  check("unreferenced pass is culled", plan.culledPasses, ["DeadPass"]);
+  check(
+    "unreferenced pass is culled",
+    plan.culledPasses.map((pass) => pass.name),
+    ["DeadPass"],
+  );
+  check(
+    "culled pass names the resources nothing read",
+    plan.culledPasses[0].writes,
+    ["deadDebug"],
+  );
   check("culled pass's target is never allocated", resource.deadDebug.culled, true);
   check(
     "attachment that never escapes its pass is memoryless",
@@ -600,9 +609,10 @@ const state = createGraphState();
 // time, not at compile time, so the rule is pinned here.
 {
   console.log("\nframe graph — attachment views");
-  const stubTexture = (depthOrArrayLayers, mipLevelCount) => ({
+  const stubTexture = (depthOrArrayLayers, mipLevelCount, viewDimension) => ({
     depthOrArrayLayers,
     mipLevelCount,
+    ...(viewDimension && { viewDimension }),
     texture: { createView: (descriptor) => descriptor },
   });
 
@@ -615,6 +625,19 @@ const state = createGraphState();
     "mipmapped texture is pinned to one level",
     attachmentView(stubTexture(1, 5), undefined, 2),
     { baseMipLevel: 2, mipLevelCount: 1 },
+  );
+  // Regression: a shadow bucket holding one light is a one-layer array, whose
+  // default view is still `2d-array` — which an attachment rejects.
+  check(
+    "single-layer array texture still needs an explicit view",
+    attachmentView(stubTexture(1, 1, "2d-array")),
+    {
+      dimension: "2d",
+      baseArrayLayer: 0,
+      arrayLayerCount: 1,
+      baseMipLevel: 0,
+      mipLevelCount: 1,
+    },
   );
   // Regression: layer 0 of a cube is still one layer out of six, and the
   // compiled plan omits a layer of 0.
@@ -725,6 +748,63 @@ const state = createGraphState();
     state.passes.map((pass) => pass.name),
     ["MainPass"],
   );
+}
+
+// ─── The register reaches inspect() ──────────────────────────────────────────
+{
+  console.log("\nframe graph — register inspection");
+  resetGraphState(state);
+  const api = createSetup(state, new Map());
+  const make = (label) =>
+    api.createTexture({ label, width: 64, height: 64, format: "rgba8unorm" });
+
+  // Stands in for RenderTextures: inspect() only asks whether a blackboard
+  // value can describe itself, not what class it is.
+  const publications = [];
+  const register = {
+    inspectRegister: () => publications,
+    set(name, handle) {
+      publications.push({
+        name,
+        resource: handle.name,
+        declaredAfter: state.passes.length,
+      });
+    },
+  };
+  api.blackboard.set("renderTextures.7", register);
+
+  const first = make("sceneColor");
+  api.addPass({ name: "Main", color: [{ texture: first }], execute: noop });
+  register.set("color", first);
+
+  const graded = make("graded");
+  api.addPass({
+    name: "Grade",
+    color: [{ texture: graded }],
+    uniforms: { uTexture: first },
+    execute: noop,
+  });
+  register.set("color", graded);
+  api.exportTexture(graded);
+
+  graph.plan = compile(state, pool, {});
+  const inspection = graph.inspect();
+  const [inspected] = inspection.registers;
+
+  check("the register is published under its blackboard key", inspected.key, "renderTextures.7");
+  check(
+    "every publication is listed in order",
+    inspected.publications.map((entry) => entry.resource),
+    ["sceneColor", "graded"],
+  );
+  // The whole point: which texture a name held at a given pass, without
+  // replaying the declaration by hand.
+  check(
+    "each publication maps to the compiled pass it followed",
+    inspected.publications.map((entry) => entry.afterPass),
+    [0, 1],
+  );
+  check("current answers what the name settled on", inspected.current.color, "graded");
 }
 
 console.log(failures ? `\n${failures} failure(s)` : "\nall checks passed");

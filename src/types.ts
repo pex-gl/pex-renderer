@@ -3,10 +3,12 @@ import type {
   GpuTexture,
   GpuBuffer,
   ExternalImageSource,
+  RenderCommand,
   RenderPipeline,
 } from "pex-gpu";
 import type { Vec2, Vec3, Quat, Mat3, Mat4 } from "pex-math";
 import type { FrameGraph, ResourceHandle } from "./frame-graph/index.js";
+import type { LightKind } from "./systems/render-pipeline/shadow-mapping.js";
 
 /** Axis-aligned bounding box as [min, max]. */
 export type AABB = number[][];
@@ -147,8 +149,15 @@ export interface LightShadowInternals {
   _near?: number;
   _far?: number;
   _radiusUV?: Vec2;
+  /**
+   * The size-bucketed array this light's shadow map is a layer of, shared with
+   * every other caster that asked for the same size.
+   */
   _shadowMap?: GpuTexture;
   _shadowCubemap?: GpuTexture;
+  /** Which bucket binding the shader samples, and the light's slot in it. */
+  _shadowBucket?: number;
+  _shadowLayer?: number;
   _sceneBboxInLightSpace?: AABB;
   _sceneBbox?: AABB;
 }
@@ -405,7 +414,16 @@ export interface SSAOComponentOptions {
   bias?: number;
   spiralTurns?: number;
   slices?: number;
-  colorBounce?: boolean;
+  /**
+   * Indirect bounce approximation. `"analytic"` is the Jimenez/Filament albedo
+   * polynomial, evaluated from visibility alone and applied to either
+   * estimator. `"screen-space"` additionally gathers neighbouring lit pixels
+   * inside GTAO's horizon search — two texture fetches per sample, so ~150 at
+   * default slice and sample counts — and degrades to `"analytic"` for SAO,
+   * whose estimator writes no color.
+   */
+  multiBounce?: false | "analytic" | "screen-space";
+  /** Scales the `"screen-space"` gather. */
   colorBounceIntensity?: number;
 }
 export interface DoFComponentOptions {
@@ -478,8 +496,20 @@ export interface BloomComponentOptions {
   source?: "color" | "emissive";
   /** The strength of the bloom effect. */
   intensity?: number;
-  /** The downsampling radius which controls how much glare gets blended in. */
+  /**
+   * Per-level gain applied as the pyramid is built: how much glare gets blended
+   * in, not how far it spreads. {@link BloomComponentOptions.levels} is what
+   * sets the extent.
+   */
   radius?: number;
+  /**
+   * Levels in the downsample pyramid, each doubling how far the glare spreads.
+   *
+   * Omitted means as many as the viewport has texels for — the widest, haziest
+   * bloom, and the only choice that is resolution-independent. A lower count is
+   * the tighter, more contained look, and nothing else exposes it.
+   */
+  levels?: number;
 }
 export interface LutComponentOptions {
   texture: GpuTexture;
@@ -662,13 +692,20 @@ export interface ShaderHooks {
   fragAfterLighting?: string;
   fragEnd?: string;
 }
-/** Active light counts per type consumed by the standard shader generator. */
+/**
+ * Active light counts per type. The standard shader generator only reads them
+ * as presence — the arrays are runtime-sized — except for the shadow bucket
+ * counts, which decide how many texture bindings exist.
+ */
 export interface ShaderLightCounts {
   ambient?: number;
   directional?: number;
   point?: number;
   spot?: number;
   area?: number;
+  /** Distinct shadow map sizes in use, each one array binding. */
+  shadow2DBuckets?: number;
+  shadowCubeBuckets?: number;
 }
 /** Which optional MRT fragment outputs a pipeline shader should emit, beyond color. */
 export interface FragmentOutputs {
@@ -684,7 +721,7 @@ export interface PipelineShaderOptions {
   maxJoints?: number;
   /** Per-texture texture coordinate set index (0 or 1), e.g. { baseColor: 1 }. */
   texCoords?: Record<string, number>;
-  /** Active light counts per type (0-4), e.g. { directional: 2, point: 1 }. */
+  /** Active light counts per type, e.g. { directional: 2, point: 1 }. */
   lights?: ShaderLightCounts;
 }
 /** Signature of a pipeline WGSL generator. */
@@ -736,7 +773,11 @@ export type RendererSystemRender = (
 export interface RendererSystemStageOptions {
   outputs?: FragmentOutputs;
   shadowMappingLight?: any;
-  backgroundColorTexture?: GpuTexture | null;
+  /**
+   * Resolved frame images, keyed by the register names the renderer asked for
+   * through `inputs`. Missing entries mean nothing published that name.
+   */
+  textures?: Record<string, GpuTexture>;
   renderingToReflectionProbe?: boolean;
   msaa?: boolean;
   transparent?: boolean;
@@ -767,19 +808,25 @@ export interface RenderPipelineCore {
   debug: boolean;
   debugRender: string;
   reversibleToneMap: boolean;
-  descriptors: Record<string, any>;
+  /** Draw depth (+ normal) before shading. See render-pipeline.ts. */
+  depthPrePass: boolean;
+  /** Set when the canvas is configured `alphaMode: "premultiplied"`. */
+  premultipliedAlpha: boolean;
   fullscreen: any;
-  blitSampler: GPUSampler;
+  samplers: Samplers;
+  blitPipeline: RenderPipeline;
+  blitPremultipliedPipeline: RenderPipeline;
+  grabPipeline: RenderPipeline;
+  /** Resolve the depth buffer under MSAA so effects can sample it. */
+  depthResolve: boolean;
+  depthResolvePipelines: Map<number, RenderPipeline>;
+  getDepthResolvePipeline(sampleCount: number): RenderPipeline;
   outputs: Set<string>;
   colorFormat: GPUTextureFormat;
   depthFormat: GPUTextureFormat;
 
   drawMeshes(options: any): void;
-  generateGrabMips(
-    grabTexture: ResourceHandle,
-    levels: number,
-    name: string,
-  ): void;
+  drawFullscreen(command: RenderCommand): void;
   update(
     entities: Entity[],
     options?: any,
@@ -803,40 +850,32 @@ export interface ShadowMappingMethods {
     light: any,
     participants: Entity[],
   ): void;
-  createShadowMap(
-    light: any,
-    lightEntity: Entity,
-    name: string,
+  createShadowMapBucket(
+    size: number,
+    count: number,
+    cubemap: boolean,
     scope: string,
-    cubemap?: boolean,
   ): ResourceHandle;
   declareShadowMaps(
     entities: Entity[],
     renderers: RendererSystem[],
     layer: string | undefined,
   ): { shadowMaps: ResourceHandle[]; shadowCastingLights: any[] };
-  renderDirectionalLightShadowMap(
+  renderShadowMap(
+    kind: LightKind,
     lightEntity: Entity,
     entities: Entity[],
     renderers: RendererSystem[],
     scope: string,
-  ): ResourceHandle;
-  renderSpotLightShadowMap(
-    lightEntity: Entity,
-    entities: Entity[],
-    renderers: RendererSystem[],
-    scope: string,
-  ): ResourceHandle;
-  renderPointLightShadowMap(
-    lightEntity: Entity,
-    entities: Entity[],
-    renderers: RendererSystem[],
-    scope: string,
-  ): ResourceHandle;
+    shadowMap: ResourceHandle,
+  ): void;
 }
-/** Samplers a post-processing sub-pass binds alongside the textures it reads. */
-export interface PostProcessingSamplers {
-  /** Filtered, clamped: color reads, and the SMAA area lookup. */
+/**
+ * The pipeline's samplers, bound by its own passes and handed to every
+ * post-processing sub-pass.
+ */
+export interface Samplers {
+  /** Filtered, clamped: color reads, the blit, and the SMAA area lookup. */
   linear: GPUSampler;
   /** Unfiltered, clamped: depth reads, and the SMAA search lookup. */
   nearest: GPUSampler;
@@ -848,16 +887,47 @@ export interface PostProcessingMethods {
   postProcessingEffects: Map<string, any>;
   postProcessingLoading: Map<string, Promise<void>>;
   postProcessingPipelines: Map<string, RenderPipeline>;
-  fullscreenGeometry: any;
-  postProcessingSamplers: PostProcessingSamplers;
-  loadPostProcessingEffect(name: string): Promise<void> | undefined;
+  loadPostProcessingEffect(registration: any): Promise<void> | undefined;
   getPostProcessingPipeline(
     key: string,
-    subPass: any,
+    shader: (defines: Set<string>) => string,
     defines: Set<string>,
     constants: Record<string, number | boolean>,
+    blend?: GPUBlendState,
   ): RenderPipeline;
-  renderPostProcessing(args: { renderView: RenderView; textures: any }): void;
+  /**
+   * Declare one fullscreen pass and publish it under `"<prefix>.<name>"`. The
+   * helper built-in effects get as `context.pass`, on the pipeline so anything
+   * injecting a pass from outside reaches it too.
+   */
+  declareFullscreenPass(scope: any, options: any): ResourceHandle;
+  enabledPostProcessingEffects(cameraEntity: Entity): Generator<any>;
+  postProcessingOutputs(cameraEntity: Entity): string[];
+  postProcessingEffectsByStage(cameraEntity: Entity): Map<string, any[]>;
+  renderPostProcessing(args: {
+    renderView: RenderView;
+    textures: any;
+    effects: any[] | undefined;
+  }): void;
+}
+/**
+ * Payload of the `"outputs"` stage: what the main pass should produce for one
+ * view, before any of it has been allocated.
+ *
+ * A module joins the frame at an injection point, but the attachments it wants
+ * to read have to exist before the pass that writes them is declared — earlier
+ * than any hook that hands over {@link RenderTextures}. Adding a name here is
+ * how anything outside the pipeline asks for one.
+ *
+ * Union only: there is no way to withdraw a name another module asked for.
+ * Outputs are attachments on the main pass, so the set changing relayouts it
+ * and recompiles every material pipeline — a requirement that flickers frame to
+ * frame is far more expensive than one that is simply always on.
+ */
+export interface OutputRequest {
+  /** Add a name to request it. `"color"` and `"depth"` are always present. */
+  outputs: Set<string>;
+  renderView: RenderView;
 }
 // Members culling.ts mixes into render-pipeline-system.
 export interface CullingMethods {

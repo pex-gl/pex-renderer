@@ -1,4 +1,5 @@
 import { submit, createSampler, generateMipmaps, isGpuTexture } from "pex-gpu";
+import type { RenderCommand, RenderPipeline } from "pex-gpu";
 
 import shadowMappingPipelineMethods from "./shadow-mapping.js";
 import postProcessingPipelineMethods from "./post-processing.js";
@@ -6,8 +7,9 @@ import cullingPipelineMethods from "./culling.js";
 import createFullscreenGeometry from "../../fullscreen-geometry.js";
 import { blitShader } from "../../shaders/blit.js";
 import { grabPassShader } from "../../shaders/grab-pass.js";
+import { depthResolveShader } from "../../shaders/depth-resolve.js";
 import { RenderTextures } from "./render-textures.js";
-import { getDefaultViewport } from "../../utils.js";
+import { getDefaultViewport, mapValues } from "../../utils.js";
 
 import type { Entity, SystemOptions } from "../../types.js";
 import type {
@@ -17,6 +19,7 @@ import type {
 } from "../../frame-graph/index.js";
 
 const BLIT_WGSL = blitShader();
+const BLIT_PREMULTIPLIED_WGSL = blitShader(new Set(["USE_PREMULTIPLIED_ALPHA"]));
 const GRAB_PASS_WGSL = grabPassShader();
 
 /**
@@ -38,10 +41,38 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
 
   fullscreen: createFullscreenGeometry(ctx),
 
-  blitSampler: createSampler(ctx, { filter: "linear" }),
+  // Every filtering state the pipeline and its effects sample with. One object
+  // per state rather than one per call site: pex-gpu keys its bind group cache
+  // by sampler identity, so two equal-but-distinct samplers are two entries.
+  samplers: {
+    linear: createSampler(ctx, { filter: "linear" }),
+    nearest: createSampler(ctx, { filter: "nearest" }),
+    linearRepeat: createSampler(ctx, {
+      filter: "linear",
+      addressMode: "repeat",
+    }),
+  },
+  /**
+   * Premultiply on the way out, as a canvas configured `alphaMode:
+   * "premultiplied"` requires. Follows the context, and settable for a caller
+   * presenting somewhere else.
+   *
+   * Getting it wrong shows only where alpha is neither 0 nor 1 — a faded
+   * output, or the soft edges of blended geometry — which is why it follows the
+   * one place that knows rather than being repeated per app.
+   */
+  premultipliedAlpha: ctx.alphaMode === "premultiplied",
+
+  // One stable descriptor object per variant: pex-gpu keys compiled pipelines
+  // by identity, so swapping fields on a shared object recompiles every frame.
   blitPipeline: {
     vertex: BLIT_WGSL,
     fragment: BLIT_WGSL,
+    depthWriteEnabled: false,
+  },
+  blitPremultipliedPipeline: {
+    vertex: BLIT_PREMULTIPLIED_WGSL,
+    fragment: BLIT_PREMULTIPLIED_WGSL,
     depthWriteEnabled: false,
   },
   grabPipeline: {
@@ -49,8 +80,48 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
     fragment: GRAB_PASS_WGSL,
     depthWriteEnabled: false,
   },
+  /**
+   * Resolve the depth buffer under MSAA so it can be sampled. Off means
+   * anything reading depth — ambient occlusion, depth of field, fog, SMAA's
+   * depth edges — sits out the frame instead, and `render()` hands back the
+   * multisampled buffer, which `RenderTextures.get` will refuse to hand to a
+   * reader.
+   *
+   * Off by default only because MSAA itself currently hangs the GPU in the
+   * multisampled scene pass; the resolve was measured innocent of that and can
+   * go back on once it is fixed.
+   */
+  depthResolve: false,
+  depthResolvePipelines: new Map<number, RenderPipeline>(),
 
-  outputs: new Set(["color", "depth"]), // "normal", "emissive"
+  /** One variant per MSAA level, since the sample loop is unrolled per count. */
+  getDepthResolvePipeline(sampleCount: number) {
+    return this.depthResolvePipelines.getOrInsertComputed(sampleCount, () => {
+      const source = depthResolveShader(sampleCount);
+      return {
+        vertex: source,
+        fragment: source,
+        // Writes @builtin(frag_depth) over the whole target, so the test only
+        // has to let every fragment through.
+        depthWriteEnabled: true,
+        depthCompare: "always" as GPUCompareFunction,
+      };
+    });
+  },
+
+  /**
+   * Costs a second geometry pass, and buys two things: fragments that end up
+   * hidden are rejected before the expensive shader runs, and geometry exists
+   * before lighting, which is what ambient occlusion needs to be an input to
+   * shading rather than a multiply over the result.
+   *
+   * Off by default — for a scene with little overdraw and a cheap shader the
+   * extra pass is a net loss.
+   */
+  depthPrePass: false,
+
+  /** Always produced. Effects add to it — "normal", "emissive". */
+  outputs: new Set(["color", "depth"]),
   colorFormat: "rgba16float" as GPUTextureFormat,
   depthFormat: "depth24plus" as GPUTextureFormat,
 
@@ -58,6 +129,16 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
   ...postProcessingPipelineMethods({ ctx, frameGraph }),
   ...cullingPipelineMethods(),
 
+  /** The fullscreen triangle, drawn by whatever the command asks for. */
+  drawFullscreen(command: RenderCommand) {
+    submit(ctx, {
+      attributes: this.fullscreen.triangle.attributes,
+      count: this.fullscreen.triangle.count,
+      ...command,
+    });
+  },
+
+  /** Dispatch one pass' draws to every renderer implementing its entry point. */
   drawMeshes({
     renderers,
     renderView,
@@ -68,55 +149,42 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
     transparent,
     transmitted,
     cullFaceMode,
-    backgroundColorTexture,
+    textures,
+    prePass,
+    normalOutput,
   }: any) {
     const options = {
       outputs: colorTextures ?? {},
+      // Two different things, and conflating them hides one: whether the
+      // attachment is multisampled — which decides coverage-based alpha
+      // testing — and whether the scene is tone mapped for a reversible
+      // resolve, which is an opt-in on top of it.
+      multisampled: msaa,
       msaa: this.reversibleToneMap && msaa,
+      textures,
     };
 
-    if (shadowMappingLight) {
+    const draw = (method: string, entities: Entity[], passOptions: any) => {
       for (let i = 0; i < renderers.length; i++) {
-        renderers[i].renderShadow?.(renderView, entitiesInView, {
-          ...options,
-          shadowMappingLight,
-        });
+        renderers[i][method]?.(renderView, entities, passOptions);
       }
-    } else {
-      if (transparent) {
-        for (let i = 0; i < renderers.length; i++) {
-          renderers[i].renderTransparent?.(
-            renderView,
-            this.cullEntities(entitiesInView, renderView.camera),
-            options,
-          );
-        }
-      } else {
-        for (let i = 0; i < renderers.length; i++) {
-          renderers[i].renderOpaque?.(
-            renderView,
-            this.cullEntities(entitiesInView, renderView.camera),
-            {
-              ...options,
-              transmitted,
-              cullFaceMode,
-              backgroundColorTexture: transmitted
-                ? backgroundColorTexture
-                : null,
-            },
-          );
-        }
-        if (!transmitted) {
-          for (let i = 0; i < renderers.length; i++) {
-            renderers[i].renderBackground?.(
-              renderView,
-              entitiesInView,
-              options,
-            );
-          }
-        }
-      }
+    };
+
+    // Nothing is shaded in the pre-pass, so none of the frame's images apply.
+    if (prePass) return draw("renderPrePass", entitiesInView, { normalOutput });
+    if (shadowMappingLight) {
+      return draw("renderShadow", entitiesInView, {
+        ...options,
+        shadowMappingLight,
+      });
     }
+
+    const visible = this.cullEntities(entitiesInView, renderView.camera);
+    if (transparent) return draw("renderTransparent", visible, options);
+
+    draw("renderOpaque", visible, { ...options, transmitted, cullFaceMode });
+    // A transmission pass draws over an image that already has its background.
+    if (!transmitted) draw("renderBackground", entitiesInView, options);
   },
 
   // Async because post-processing effects are imported on demand, so a frame
@@ -127,44 +195,65 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
 
     this.time = time;
 
-    const cameraEntity = entities.find((entity) => entity.camera);
+    // Without a view, the first camera in the scene draws to the whole canvas.
+    if (!renderView) {
+      const entity = entities.find((entity) => entity.camera)!;
+      renderView = {
+        cameraEntity: entity,
+        camera: entity.camera,
+        viewport: getDefaultViewport(ctx),
+      };
+    }
 
-    renderView ||= {
-      camera: cameraEntity!.camera,
-      viewport: getDefaultViewport(ctx),
-    };
-    const postProcessing = renderView.cameraEntity.postProcessing;
+    const { cameraEntity, camera } = renderView;
+    const [, , width, height] = renderView.viewport;
+    const postProcessing = cameraEntity.postProcessing;
+    const viewId = cameraEntity.id;
 
-    const width = renderView.viewport[2];
-    const height = renderView.viewport[3];
-    const viewId = renderView.cameraEntity.id;
-
+    // What the main pass produces, from three places: the pipeline's own
+    // outputs, what the enabled post-processing effects declared they sample,
+    // and whatever anything else asks for at the "outputs" stage. Effects are
+    // asked directly rather than through the stage because the pipeline owns
+    // them; everything outside it joins here, before any of this is allocated.
     const outputs = new Set<string>(this.outputs);
-    if (postProcessing?.ssao) outputs.add("normal");
-    if (postProcessing?.bloom) outputs.add("emissive");
+    for (const name of this.postProcessingOutputs(cameraEntity)) {
+      outputs.add(name);
+    }
+    await frameGraph.stage("outputs", { outputs, renderView });
 
-    const sampleCount = postProcessing?.msaa?.sampleCount;
-    const msaa = sampleCount > 0;
+    // WebGPU only guarantees 1 and 4; anything else fails texture creation and
+    // then cascades through every pipeline and bind group built against it.
+    const requestedSampleCount = postProcessing?.msaa?.sampleCount;
+    const sampleCount = requestedSampleCount > 1 ? 4 : 1;
+    const msaa = sampleCount > 1;
 
+    const renderPassView = {
+      ...renderView,
+      viewport: [0, 0, width, height],
+    };
+    const textures = new RenderTextures(frameGraph, renderPassView);
+
+    if (requestedSampleCount > 1 && requestedSampleCount !== sampleCount) {
+      textures.report(
+        `msaa.sampleCount ${requestedSampleCount} is not a supported sample count — using ${sampleCount}.`,
+      );
+    }
+
+    const descriptor = { width, height, format: this.colorFormat };
     const colorTextures: Record<string, ResourceHandle> = {};
+    const msaaColorTextures: Record<string, ResourceHandle> = {};
     for (const name of outputs) {
       if (name === "depth") continue;
       colorTextures[name] = frameGraph.createTexture({
         label: `renderPipeline.${name}.${viewId}`,
-        width,
-        height,
-        format: this.colorFormat,
+        ...descriptor,
       });
-    }
+      textures.set(name, colorTextures[name]!);
 
-    const msaaColorTextures: Record<string, ResourceHandle> = {};
-    if (msaa) {
-      for (const name of Object.keys(colorTextures)) {
+      if (msaa) {
         msaaColorTextures[name] = frameGraph.createTexture({
           label: `renderPipeline.${name}MSAA.${viewId}`,
-          width,
-          height,
-          format: this.colorFormat,
+          ...descriptor,
           sampleCount,
         });
       }
@@ -183,34 +272,19 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
         format: this.depthFormat,
         ...(msaa && { sampleCount }),
       });
+      textures.set("depth", depthTexture);
     }
 
-    // We might be drawing to part of the screen
-    const renderPassView = {
-      ...renderView,
-      viewport: [0, 0, width, height],
-    };
-
-    // Frame register
-    const textures = new RenderTextures(frameGraph, renderPassView);
-    for (const [name, handle] of Object.entries(colorTextures)) {
-      textures.set(name, handle);
-    }
-    if (depthTexture) textures.set("depth", depthTexture);
     frameGraph.blackboard.set(`renderTextures.${viewId}`, textures);
 
     /**
-     * Resolved per pass, not captured once: a pass injected between the scene
-     * passes can publish a modified image and have the ones after it draw into
-     * that instead. They keep the same depth attachment, so blending and depth
-     * testing carry on against the geometry already drawn.
+     * Resolved per pass, not captured once, so a pass injected mid-scene can
+     * republish an image and have the passes after it draw into that one.
      *
-     * MSAA is the exception, and a hard one: the multisampled attachment holds
-     * the samples the resolve target was derived from, and WebGPU cannot load a
-     * single-sample image back into it. Mid-scene reads still work — the
-     * resolve runs at the end of every pass that declares it — but a
-     * replacement has nowhere to go, so it is reported rather than silently
-     * dropped.
+     * MSAA cannot: WebGPU has no way to load a single-sample image back into
+     * the multisampled attachment its resolve target came from. Reads still
+     * work — the resolve runs at the end of every pass declaring it — but a
+     * replacement has nowhere to go, so it is reported rather than dropped.
      */
     const colorTarget = (name: string): ColorAttachmentDeclaration => {
       const published = textures.get(name) ?? colorTextures[name]!;
@@ -230,15 +304,78 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
       texture: depthTexture!,
     });
 
-    const layer = renderView.cameraEntity.layer;
+    /**
+     * Republishes the depth buffer as something readers can bind.
+     *
+     * WebGPU has no depth resolve, so under MSAA the depth buffer stays
+     * multisampled and `textures.get("depth")` rightly refuses to hand it back
+     * — which is enough to make ambient occlusion, depth of field, fog and
+     * SMAA's depth edges all sit out. One fullscreen pass over the samples is
+     * what lets them run with MSAA on at all.
+     *
+     * Declared where depth is first complete, since an effect anchored at the
+     * pre-pass stage reads it there.
+     */
+    const declareDepthResolve = () => {
+      if (!msaa || !depthTexture || !this.depthResolve) return;
 
-    await frameGraph.stage("lights", textures);
+      const label = `depthResolve.${viewId}`;
+      const resolved = frameGraph.createTexture({
+        label: `renderPipelineDepthResolved.${viewId}`,
+        width,
+        height,
+        format: this.depthFormat,
+      });
+      const pipeline = this.getDepthResolvePipeline(sampleCount);
+
+      frameGraph.addPass({
+        name: label,
+        depth: { texture: resolved, depthClearValue: 1 },
+        uniforms: { uDepthTexture: depthTexture },
+        renderView: renderPassView,
+        execute: ({ uniforms }) => {
+          this.drawFullscreen({ label, pipeline, uniforms });
+        },
+      });
+
+      // A newer version under the same name: readers asking for "depth" get
+      // this one, and the multisampled original stays reachable for anything
+      // that explicitly accepts it.
+      textures.set("depth", resolved);
+    };
+
+    const layer = cameraEntity.layer;
+
+    /**
+     * A stage boundary. Every stage is an anchor, not just "postProcessing",
+     * which is what lets an effect declare its passes mid-frame and still read
+     * and publish through the same register as the rest.
+     *
+     * External callbacks run before the effects anchored there, so an effect
+     * sees what they published.
+     */
+    const effectsByStage = this.postProcessingEffectsByStage(cameraEntity);
+
+    const stage = async (name: string) => {
+      await frameGraph.stage(name, textures);
+      this.renderPostProcessing({
+        renderView: renderPassView,
+        textures,
+        effects: effectsByStage.get(name),
+      });
+      // Consumed, so whatever is left at the end named a stage this frame never
+      // opened.
+      effectsByStage.delete(name);
+    };
+
+    await stage("lights");
 
     // Declared once per frame and shared by every camera looking at the same
     // layer, since a shadow map depends on the light and the scene only.
     const { shadowMaps } = this.declareShadowMaps(entities, renderers, layer);
 
-    // Filter entities by layer
+    // An entity without a layer belongs to every view; a camera with one sees
+    // only those plus its own.
     const entitiesInView = layer
       ? entities.filter((entity) => !entity.layer || entity.layer === layer)
       : entities.filter((entity) => !entity.layer);
@@ -253,25 +390,110 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
       transmitted: false,
     };
 
-    await frameGraph.stage("opaque", textures);
+    /**
+     * One pass of scene geometry, differing only in what it draws and where.
+     *
+     * `outputs` is both the attachment list and what the renderers declare
+     * their fragment outputs from — the shaders number their `@location()`s
+     * from it, so the two can never be allowed to disagree.
+     *
+     * A renderer names the images it samples through `inputs` — the frame's
+     * ambient occlusion, the grabbed background — rather than the pipeline
+     * threading one parameter per texture down to it. Resolving them here is
+     * what makes the ask a real read edge; a name nothing published is simply
+     * absent from the map the renderer receives.
+     */
+    const scenePass = (
+      name: string,
+      passOptions: any,
+      {
+        outputs = { color: colorTextures.color! },
+        clearColor,
+        depthClearValue,
+      }: {
+        outputs?: Record<string, ResourceHandle>;
+        clearColor?: number[];
+        depthClearValue?: number;
+      } = {},
+    ) => {
+      const inputs: Record<string, ResourceHandle> = {};
+      for (const renderer of renderers) {
+        for (const input of renderer.inputs?.(passOptions) ?? []) {
+          const handle = textures.get(input);
+          if (handle) inputs[input] = handle;
+        }
+      }
 
-    frameGraph.addPass({
-      name: `opaque.${viewId}`,
-      color: Object.keys(colorTextures).map((name, index) => ({
-        ...colorTarget(name),
-        ...(index === 0 && {
-          clearValue: renderView.camera.clearColor ?? [0, 0, 0, 1],
+      frameGraph.addPass({
+        name: `${name}.${viewId}`,
+        color: Object.keys(outputs).map((output, index) => ({
+          ...colorTarget(output),
+          ...(index === 0 && clearColor && { clearValue: clearColor }),
+        })),
+        ...(depthTexture && {
+          depth: {
+            ...depthTarget(),
+            ...(depthClearValue !== undefined && { depthClearValue }),
+          },
         }),
-      })),
-      ...(depthTexture && {
+        reads: [...shadowMaps, ...Object.values(inputs)],
+        renderView: renderPassView,
+        execute: ({ resolveTexture }) => {
+          this.drawMeshes({
+            ...passOptions,
+            colorTextures: outputs,
+            textures: mapValues(inputs, resolveTexture),
+          });
+        },
+      });
+    };
+
+    // An effect anchored at "prePass" is asking for a pre-pass, not just for a
+    // place in the frame — ambient occlusion consumed as a lighting input only
+    // exists if the geometry it reads was drawn first.
+    const usePrePass =
+      (this.depthPrePass || effectsByStage.has("prePass")) && !!depthTexture;
+
+    const prePassNormal = usePrePass && !!colorTextures.normal;
+
+    const mainOutputs = prePassNormal
+      ? Object.fromEntries(
+          Object.entries(colorTextures).filter(([name]) => name !== "normal"),
+        )
+      : colorTextures;
+
+    if (usePrePass) {
+      frameGraph.addPass({
+        name: `depthPrePass.${viewId}`,
+        color: prePassNormal ? [colorTarget("normal")] : [],
         depth: { ...depthTarget(), depthClearValue: 1 },
-      }),
-      reads: shadowMaps,
-      renderView: renderPassView,
-      execute: () => {
-        this.drawMeshes({ ...drawMeshOptions, colorTextures });
-      },
+        renderView: renderPassView,
+        execute: () => {
+          this.drawMeshes({
+            ...drawMeshOptions,
+            prePass: true,
+            normalOutput: prePassNormal,
+          });
+        },
+      });
+
+      declareDepthResolve();
+
+      await stage("prePass");
+    }
+
+    await stage("opaque");
+
+    scenePass("opaque", drawMeshOptions, {
+      outputs: mainOutputs,
+      clearColor: camera.clearColor ?? [0, 0, 0, 1],
+      // The pre-pass already cleared it; loading what it wrote is what lets the
+      // depth test reject before the fragment shader runs.
+      ...(!usePrePass && { depthClearValue: 1 }),
     });
+
+    // Without a pre-pass this is the first point depth is complete.
+    if (!usePrePass) declareDepthResolve();
 
     const hasTransparent = entitiesInView.some(
       (entity) => entity.material?.blend,
@@ -281,26 +503,12 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
     );
 
     if (hasTransparent) {
-      await frameGraph.stage("transparent", textures);
-
-      frameGraph.addPass({
-        name: `transparent.${viewId}`,
-        color: [colorTarget("color")],
-        ...(depthTexture && { depth: depthTarget() }),
-        reads: shadowMaps,
-        renderView: renderPassView,
-        execute: () => {
-          this.drawMeshes({
-            ...drawMeshOptions,
-            colorTextures: { color: colorTextures.color! },
-            transparent: true,
-          });
-        },
-      });
+      await stage("transparent");
+      scenePass("transparent", { ...drawMeshOptions, transparent: true });
     }
 
     if (hasTransmitted) {
-      await frameGraph.stage("transmission", textures);
+      await stage("transmission");
 
       const mipLevelCount = 1 + Math.floor(Math.log2(Math.max(width, height)));
       const hasBackTransmitted = entitiesInView.some(
@@ -321,12 +529,10 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
           name: label,
           color: [{ texture: grab }],
           uniforms: { uTexture: textures.get("color")! },
-          renderView: { ...renderView, viewport: renderPassView.viewport },
+          renderView: renderPassView,
           execute: ({ uniforms }) => {
-            submit(ctx, {
+            this.drawFullscreen({
               label,
-              attributes: this.fullscreen.triangle.attributes,
-              count: this.fullscreen.triangle.count,
               pipeline: this.grabPipeline,
               uniforms,
             });
@@ -346,49 +552,28 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
           });
         }
 
+        // Republished per grab, so the pass declared next picks up the image as
+        // of that point rather than the one the previous grab left behind.
         textures.set("transmission.grab", grab);
-        return grab;
       };
 
-      let grab = grabPass("grab");
+      const transmitted = { ...drawMeshOptions, transmitted: true };
 
+      grabPass("grab");
+
+      // Back faces first, against their own grab: a double-sided transmissive
+      // surface refracts what is behind it, which includes its own far side.
       if (hasBackTransmitted) {
-        frameGraph.addPass({
-          name: `transmissionBack.${viewId}`,
-          color: [colorTarget("color")],
-          ...(depthTexture && { depth: depthTarget() }),
-          reads: [...shadowMaps, grab],
-          renderView: renderPassView,
-          execute: ({ resolveTexture }) => {
-            this.drawMeshes({
-              ...drawMeshOptions,
-              colorTextures: { color: colorTextures.color! },
-              transmitted: true,
-              cullFaceMode: "front",
-              backgroundColorTexture: resolveTexture(grab),
-            });
-          },
+        scenePass("transmissionBack", {
+          ...transmitted,
+          cullFaceMode: "front",
         });
-
-        grab = grabPass("grabTransmissionBack");
+        grabPass("grabTransmissionBack");
       }
 
-      const frontGrab = grab;
-      frameGraph.addPass({
-        name: `transmissionFront.${viewId}`,
-        color: [colorTarget("color")],
-        ...(depthTexture && { depth: depthTarget() }),
-        reads: [...shadowMaps, frontGrab],
-        renderView: renderPassView,
-        execute: ({ resolveTexture }) => {
-          this.drawMeshes({
-            ...drawMeshOptions,
-            colorTextures: { color: colorTextures.color! },
-            transmitted: true,
-            cullFaceMode: hasBackTransmitted ? "back" : undefined,
-            backgroundColorTexture: resolveTexture(frontGrab),
-          });
-        },
+      scenePass("transmissionFront", {
+        ...transmitted,
+        ...(hasBackTransmitted && { cullFaceMode: "back" }),
       });
     }
 
@@ -417,39 +602,54 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
     //   });
     //   textures.set("color", inverseToneMapped);
     // }
+    await stage("postProcessing");
 
-    await frameGraph.stage("postProcessing", textures);
+    await stage("present");
 
-    if (postProcessing) {
-      this.renderPostProcessing({ renderView: renderPassView, textures });
+    // Silent otherwise: "transparent" and "transmission" open only if the scene
+    // has such geometry, and "outputs" is raised before the register exists.
+    for (const [name, effects] of effectsByStage) {
+      textures.report(
+        `${effects.map((effect) => `"${effect.name}"`).join(", ")} declared at the "${name}" stage, which this frame never opened, so nothing was drawn for them.`,
+      );
     }
-
-    await frameGraph.stage("present", textures);
 
     const color = textures.require("color")!;
 
     if (drawToScreen !== false) {
       // Pointing the presented image at an intermediate leaves everything that
       // only fed the original output unreferenced, so the graph culls it.
+      //
+      // The picker takes any name on the register, so what comes back has to be
+      // checked rather than assumed: the blit samples `texture_2d<f32>` with a
+      // filtering sampler, and "depth" is a name a caller will reach for first.
+      // Reporting and falling back to the frame's image beats failing
+      // validation somewhere further down.
       const presented =
-        (this.debugRender && textures.get(this.debugRender)) || color;
+        (this.debugRender &&
+          textures.require(this.debugRender, { filterableFloat: true })) ||
+        color;
 
+      const label = `blit.${viewId}`;
       frameGraph.addPass({
-        name: `blit.${viewId}`,
+        name: label,
         // No color handles: the canvas is the target.
-        uniforms: { uTexture: presented, uTextureSampler: this.blitSampler },
+        uniforms: {
+          uTexture: presented,
+          uTextureSampler: this.samplers.linear,
+        },
         renderView,
         // Its whole point is a side effect on the swapchain, which the graph
         // has no resource for.
         neverCull: true,
         execute: ({ uniforms }) => {
-          submit(ctx, {
-            label: `blit.${viewId}`,
-            attributes: this.fullscreen.triangle.attributes,
-            count: this.fullscreen.triangle.count,
-            pipeline: this.blitPipeline,
-            viewport: renderView.viewport,
+          this.drawFullscreen({
+            label,
+            pipeline: this.premultipliedAlpha
+              ? this.blitPremultipliedPipeline
+              : this.blitPipeline,
             uniforms,
+            viewport: renderView.viewport,
           });
         },
       });
@@ -458,7 +658,10 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
     const outputTextures: Record<string, ResourceHandle> = {
       ...colorTextures,
       color,
-      ...(depthTexture && { depth: depthTexture }),
+      // The resolved one under MSAA: "depth" is an advertised output, so what
+      // comes back has to be something the caller can actually bind. The cost
+      // is that the resolve is never culled while MSAA is on.
+      ...(depthTexture && { depth: textures.get("depth") ?? depthTexture }),
     };
     for (const handle of Object.values(outputTextures)) {
       frameGraph.exportTexture(handle);
@@ -475,5 +678,10 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
         }
       }
     }
+
+    // Descriptors, not GPU objects: pex-gpu holds the compiled pipelines in a
+    // WeakMap keyed by these, so releasing them is what lets those go.
+    this.postProcessingPipelines.clear();
+    this.depthResolvePipelines.clear();
   },
 });

@@ -1,0 +1,451 @@
+// Drives the real effects through the real post-processing driver and the real
+// frame graph, against a stubbed pool, so no GPU is involved.
+//
+// These are the parts whose bugs are invisible in a screenshot: a bloom level
+// accumulating into the wrong target, a loadOp that clears the level below
+// instead of adding to it, a filter stepping in the wrong grid, an effect
+// silently dropping out of the chain. Everything visual stays in examples/.
+//
+// Shader compilation is covered by test/validate-pipeline-wgsl.js; what is
+// checked here instead is that the uniform block every post-processing shader
+// binds agrees with what the driver writes into it — pex-gpu's packStruct
+// throws on an unknown member but silently skips a missing one, so a member no
+// writer supplies reads as zero rather than failing.
+
+// Usage flag namespaces are the only WebGPU globals the compile path touches.
+Object.assign(globalThis, {
+  GPUTextureUsage: {
+    COPY_SRC: 1,
+    COPY_DST: 2,
+    TEXTURE_BINDING: 4,
+    STORAGE_BINDING: 8,
+    RENDER_ATTACHMENT: 16,
+    TRANSIENT_ATTACHMENT: 32,
+  },
+  GPUBufferUsage: {
+    MAP_READ: 1,
+    MAP_WRITE: 2,
+    COPY_SRC: 4,
+    COPY_DST: 8,
+    INDEX: 16,
+    VERTEX: 32,
+    UNIFORM: 64,
+    STORAGE: 128,
+    INDIRECT: 256,
+    QUERY_RESOLVE: 512,
+  },
+  GPUShaderStage: { VERTEX: 1, FRAGMENT: 2, COMPUTE: 4 },
+});
+
+// Imported from the build output, like test/frame-graph.js: the modules import
+// each other with runtime ".js" specifiers, which Node's type stripping does
+// not remap to the ".ts" sources. Run `npm run build` first.
+const { FrameGraph } = await import("../lib/frame-graph/index.js");
+const { RenderTextures } = await import(
+  "../lib/systems/render-pipeline/render-textures.js"
+);
+const postProcessingMethods = (
+  await import("../lib/systems/render-pipeline/post-processing.js")
+).default;
+const { postProcessing: shaders } = await import("../lib/shaders/index.js");
+
+// smaa is deliberately absent: its area/search lookups load through an Image,
+// which needs a browser, so it would only ever sit the frame out here.
+const EFFECT_NAMES = ["ssao", "dof", "bloom", "combine", "final"];
+const EFFECTS = {};
+for (const name of EFFECT_NAMES) {
+  EFFECTS[name] = (
+    await import(`../lib/systems/render-pipeline/post-processing/${name}.js`)
+  ).default;
+}
+
+let failures = 0;
+const check = (label, actual, expected) => {
+  const ok = JSON.stringify(actual) === JSON.stringify(expected);
+  if (!ok) failures++;
+  console.log(`${ok ? "  ok" : "FAIL"}  ${label}`);
+  if (!ok) {
+    console.log(`        expected ${JSON.stringify(expected)}`);
+    console.log(`        actual   ${JSON.stringify(actual)}`);
+  }
+};
+
+/** Pool stub: hands out identity-tagged objects and recycles by descriptor. */
+function createStubPool() {
+  const free = new Map();
+  let nextId = 1;
+  return {
+    acquireTexture(descriptor, usage) {
+      const key = `${descriptor.format}|${descriptor.width}x${descriptor.height}|u${usage}`;
+      return free.get(key)?.pop() ?? { id: nextId++, key, ...descriptor };
+    },
+    acquirePersistentTexture: () => ({ id: nextId++ }),
+    releaseTexture(texture) {
+      if (!free.has(texture.key)) free.set(texture.key, []);
+      free.get(texture.key).push(texture);
+    },
+    acquireBuffer: () => ({ id: nextId++ }),
+    endFrame() {},
+    stats: () => ({}),
+    dispose() {},
+  };
+}
+
+// Enough of a context for the effects that build their own fixed textures
+// (ssao's noise): they key WeakMaps on it and call pex-gpu's createTexture,
+// which only needs a device that can hand one back.
+const ctx = {
+  device: {
+    createTexture: (descriptor) => ({
+      ...descriptor,
+      createView: () => ({}),
+      destroy() {},
+    }),
+    queue: { writeTexture() {}, submit() {}, writeBuffer() {} },
+  },
+};
+
+/**
+ * One frame of post-processing at `viewport`, run through the pipeline's stage
+ * sequence so each effect lands where it asked to.
+ */
+async function declareFrame(viewport, postProcessing, load, { msaa = 0, resolveDepth = false } = {}) {
+  const graph = new FrameGraph(undefined);
+  graph.pool = createStubPool();
+
+  const system = {
+    ...postProcessingMethods({ ctx, frameGraph: graph }),
+    time: 0,
+    samplers: { linear: { id: "l" }, nearest: { id: "n" }, linearRepeat: { id: "r" } },
+    drawFullscreen() {},
+  };
+  for (const name of load) system.postProcessingEffects.set(name, EFFECTS[name]);
+
+  const cameraEntity = {
+    id: "cam",
+    camera: {
+      near: 0.1,
+      far: 100,
+      fov: 1,
+      fStop: 2.8,
+      focalLength: 50,
+      viewMatrix: new Float32Array(16),
+    },
+    postProcessing,
+  };
+  const renderView = {
+    camera: cameraEntity.camera,
+    cameraEntity,
+    viewport: [0, 0, ...viewport],
+  };
+
+  let textures;
+  await graph.setup(() => {
+    textures = new RenderTextures(graph, renderView);
+    const target = (label, format = "rgba16float") =>
+      graph.createTexture({
+        label,
+        width: viewport[0],
+        height: viewport[1],
+        format,
+      });
+
+    textures.set("color", target("color"));
+    textures.set("normal", target("normal"));
+    textures.set("emissive", target("emissive"));
+
+    // WebGPU has no depth resolve, so under MSAA the scene's depth buffer is
+    // multisampled and unbindable until the pipeline resolves it.
+    textures.set(
+      "depth",
+      graph.createTexture({
+        label: "depth",
+        width: viewport[0],
+        height: viewport[1],
+        format: "depth24plus",
+        ...(msaa && { sampleCount: msaa }),
+      }),
+    );
+    if (resolveDepth) textures.set("depth", target("depthResolve", "depth24plus"));
+
+    const byStage = system.postProcessingEffectsByStage.call(
+      system,
+      cameraEntity,
+    );
+    for (const stage of ["prePass", "opaque", "postProcessing", "present"]) {
+      system.renderPostProcessing.call(system, {
+        renderView,
+        textures,
+        effects: byStage.get(stage),
+      });
+      byStage.delete(stage);
+    }
+
+    // Stands in for the blit and for combine reading the pyramid; without a
+    // reader outside the graph the whole chain would correctly be culled.
+    graph.exportTexture(textures.require("color"));
+    const glare = textures.get("bloom.threshold");
+    if (glare) graph.exportTexture(glare);
+  });
+
+  const plan = graph.compile();
+  const names = plan.passes.flatMap((pass) =>
+    pass.subPasses.map((sub) =>
+      sub.name.replace(/^postProcessing\.|\.cam$/g, ""),
+    ),
+  );
+  const resourceOf = (pass) =>
+    plan.resources.find((r) => r.name === pass.color[0]?.handle.name);
+
+  return { plan, textures, names, resourceOf };
+}
+
+const bloomComponent = (extra) => ({
+  quality: 1,
+  colorFunction: "luma",
+  threshold: 1,
+  source: false,
+  radius: 1,
+  intensity: 0.1,
+  ...extra,
+});
+
+// ─── Bloom pyramid depth follows the viewport ────────────────────────────────
+{
+  const levelsAt = async (viewport, extra) => {
+    const { names } = await declareFrame(
+      viewport,
+      { exposure: 1, bloom: bloomComponent(extra) },
+      ["bloom"],
+    );
+    return names.filter((name) => name.includes("downsample")).length;
+  };
+
+  console.log("Bloom level count derived from the viewport");
+  check("720p", await levelsAt([1280, 720]), 6);
+  check("1080p", await levelsAt([1920, 1080]), 7);
+  check("4K", await levelsAt([3840, 2160]), 8);
+  check("small (320x200)", await levelsAt([320, 200]), 4);
+  // Never zero, and never a level with nothing left to gather from.
+  check("tiny (16x16)", await levelsAt([16, 16]), 1);
+  check("explicit count is honoured", await levelsAt([1920, 1080], { levels: 3 }), 3);
+  check("explicit count is still capped", await levelsAt([320, 200], { levels: 9 }), 4);
+}
+
+// ─── The progressive upsample chain ──────────────────────────────────────────
+{
+  const { plan, names, resourceOf } = await declareFrame(
+    [1920, 1080],
+    { exposure: 1, bloom: bloomComponent() },
+    ["bloom"],
+  );
+
+  console.log("\nBloom declares threshold, then down, then back up");
+  check("pass order", names, [
+    "bloom.threshold",
+    ...Array.from({ length: 7 }, (_, i) => `bloom.downsample[${i}]`),
+    ...Array.from({ length: 7 }, (_, i) => `bloom.upsample[${6 - i}]`),
+  ]);
+
+  const upsamples = plan.passes.filter((pass) =>
+    pass.subPasses.some((sub) => sub.name.includes("upsample")),
+  );
+
+  // Each level is added into the level above it at that level's size — not all
+  // of them into the full-resolution target, which costs one full-screen draw
+  // per level and asks a nine-tap tent to bridge a gap of 2^n texels.
+  console.log("\nEach level accumulates into the one above it");
+  check(
+    "targets climb the pyramid",
+    upsamples.map((pass) => resourceOf(pass)?.name),
+    [
+      "bloom.downsample[5]_cam",
+      "bloom.downsample[4]_cam",
+      "bloom.downsample[3]_cam",
+      "bloom.downsample[2]_cam",
+      "bloom.downsample[1]_cam",
+      "bloom.downsample[0]_cam",
+      "bloom.threshold_cam",
+    ],
+  );
+  // A clear here would discard the level being accumulated onto.
+  check(
+    "loadOp is load, not clear",
+    [...new Set(upsamples.map((pass) => pass.color[0]?.loadOp))],
+    ["load"],
+  );
+
+  console.log("\nGraph invariants");
+  check("nothing culled", plan.culledPasses, []);
+  check(
+    "no pass reads and writes one resource",
+    plan.passes
+      .filter((pass) => pass.reads.some((read) => pass.writes.includes(read)))
+      .map((pass) => pass.name),
+    [],
+  );
+  // Merging two would make them one render pass sharing one attachment, which
+  // is only correct because they do not; if that ever changes, additive
+  // accumulation across the pair needs rechecking.
+  check(
+    "no two upsamples merged",
+    plan.passes.filter((pass) => pass.subPasses.length > 1).map((p) => p.name),
+    [],
+  );
+
+  const base = 1920 * 1080;
+  const fill = plan.passes.reduce((total, pass) => {
+    const resource = resourceOf(pass);
+    return (
+      total + (resource ? resource.descriptor.width * resource.descriptor.height : 0)
+    );
+  }, 0);
+  console.log(`\nBloom fill: ${(fill / base).toFixed(2)}x one full-screen draw`);
+  // A full-resolution draw per level lands around 9x; the progressive chain is
+  // one full-resolution draw plus a geometric series.
+  check("under 3x", fill / base < 3, true);
+}
+
+// ─── The whole chain together ────────────────────────────────────────────────
+// What exercises the register hand-off: ssao publishes what combine reads,
+// bloom what combine adds, and each chaining pass republishes "color".
+{
+  const { plan, names } = await declareFrame(
+    [1920, 1080],
+    {
+      exposure: 1,
+      toneMap: "aces",
+      opacity: 0.5,
+      fxaa: { quality: 2, subPixelQuality: 0.75 },
+      ssao: {
+        type: "gtao",
+        // Off so the test doesn't pay for blue noise generation, and stays quiet.
+        noiseTexture: false,
+        mix: 1,
+        intensity: 1,
+        radius: 0.5,
+        bias: 0.001,
+        brightness: 0,
+        contrast: 1,
+        blurRadius: 0.5,
+        blurSharpness: 10,
+        slices: 3,
+        samples: 4,
+        multiBounce: "screen-space",
+        colorBounceIntensity: 1,
+      },
+      dof: {
+        type: "gustafsson",
+        samples: 4,
+        focusDistance: 5,
+        focusScale: 1,
+        screenPoint: [0.5, 0.5],
+        chromaticAberration: 0,
+        luminanceThreshold: 1,
+        luminanceGain: 1,
+        shape: "circle",
+      },
+      bloom: bloomComponent(),
+    },
+    EFFECT_NAMES,
+  );
+
+  console.log("\nFull chain");
+  check(
+    "every enabled effect declared",
+    [...new Set(names.map((name) => name.split(".")[0]))],
+    ["ssao", "dof", "bloom", "combine", "final"],
+  );
+  // DoF must blur an image that already has its occlusion.
+  check(
+    "ssao mixes before dof",
+    names.indexOf("ssao.mix") < names.indexOf("dof.main"),
+    true,
+  );
+  check(
+    "combine composites after the pyramid",
+    names.indexOf("combine.main") > names.lastIndexOf("bloom.upsample[0]"),
+    true,
+  );
+  check("final ends the chain", names.at(-1), "final.main");
+  check("nothing culled", plan.culledPasses, []);
+}
+
+// ─── Depth-consuming effects under MSAA ──────────────────────────────────────
+// Everything reading depth sits out while the only depth is multisampled, and
+// runs once the pipeline republishes a resolved one — which is the whole reason
+// the depth resolve pass exists.
+{
+  const dofComponent = {
+    exposure: 1,
+    dof: {
+      type: "gustafsson",
+      samples: 4,
+      focusDistance: 5,
+      focusScale: 1,
+      screenPoint: [0.5, 0.5],
+      chromaticAberration: 0,
+      luminanceThreshold: 1,
+      luminanceGain: 1,
+      shape: "circle",
+    },
+  };
+
+  const declaredWith = async (options) =>
+    (await declareFrame([1920, 1080], structuredClone(dofComponent), ["dof"], options))
+      .names.filter((name) => name.startsWith("dof."));
+
+  console.log("\nDepth readers under MSAA");
+  check("no MSAA: dof runs", await declaredWith({}), ["dof.main"]);
+  check("MSAA, unresolved: dof sits out", await declaredWith({ msaa: 4 }), []);
+  check(
+    "MSAA, resolved: dof runs again",
+    await declaredWith({ msaa: 4, resolveDepth: true }),
+    ["dof.main"],
+  );
+}
+
+// ─── The shared uniform block ────────────────────────────────────────────────
+// A member the driver never writes reads as zero rather than throwing, and a
+// zero texel size collapses every neighbour tap onto the centre.
+{
+  const DRIVER_KEYS = ["viewportSize", "texelSize", "sourceTexelSize", "time"];
+
+  const members = (wgsl) =>
+    /struct PostProcessing \{([^}]*)\}/
+      .exec(wgsl)?.[1]
+      .split(",")
+      .map((line) => line.split(":")[0].trim())
+      .filter(Boolean);
+
+  const variants = {
+    threshold: shaders.thresholdShader(new Set()),
+    downsample: shaders.downsampleShader(new Set()),
+    upsample: shaders.upsampleShader(new Set()),
+    gtao: shaders.gtaoShader(new Set()),
+    sao: shaders.saoShader(new Set()),
+    combine: shaders.combineShader(new Set()),
+    dof: shaders.dofShader(new Set(["USE_DOF_GUSTAFSSON"])),
+    "final [fxaa]": shaders.finalShader(new Set(["USE_FXAA"])),
+    "smaa edges": shaders.smaaEdgesShader(new Set(["SMAA_EDGES_COLOR"])),
+  };
+
+  console.log("\nPostProcessing uniform block matches what the driver writes");
+  for (const [name, wgsl] of Object.entries(variants)) {
+    check(name, members(wgsl), DRIVER_KEYS);
+  }
+
+  // The taps offset a coordinate that is about to sample the source, so they
+  // step in the source's grid — the two differ at every level of bloom.
+  console.log("\nNeighbour taps step in the source grid");
+  for (const name of ["downsample", "upsample", "final [fxaa]"]) {
+    check(
+      name,
+      /texCoord0(LeftUp|Down) = .*uPostProcessing\.texelSize/.test(variants[name]),
+      false,
+    );
+  }
+}
+
+console.log(failures ? `\n${failures} failure(s)` : "\nall checks passed");
+process.exit(failures ? 1 : 0);

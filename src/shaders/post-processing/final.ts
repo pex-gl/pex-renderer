@@ -12,6 +12,11 @@ import { fullscreenVertex, postProcessingStruct } from "./common.js";
 
 // Both chunks read luma from a single-channel texture rather than recomputing
 // it per tap, which is what makes FXAA's edge search affordable.
+//
+// The neighbour taps sample that texture rather than `uTexture`, so they step
+// in its grid — which is `sourceTexelSize` only because the luma pass runs at
+// full resolution, like the image it was derived from. Running it at reduced
+// resolution would need its own texel size, not either of the two here.
 const READ_LUMA_TEXTURE = /* wgsl */ `
 fn readLumaTexture(tex: texture_2d<f32>, texSampler: sampler, uv: vec2f) -> f32 {
   return textureSampleLevel(tex, texSampler, uv, 0.0).r;

@@ -215,13 +215,22 @@ export const standardShader = (
   const useReflectionProbes =
     defines.has("USE_REFLECTION_PROBES") && !materialFlags.unlitWorkflow;
 
-  const ambientLights = materialFlags.unlitWorkflow ? 0 : (lights.ambient ?? 0);
-  const directionalLights = materialFlags.unlitWorkflow
+  // Presence, not count: the arrays are runtime-sized, so how many lights there
+  // are never reaches the shader — only whether a type is used at all, which
+  // decides if its binding and evaluation code exist.
+  const lit = !materialFlags.unlitWorkflow;
+  const ambientLights = lit && (lights.ambient ?? 0) > 0;
+  const directionalLights = lit && (lights.directional ?? 0) > 0;
+  const pointLights = lit && (lights.point ?? 0) > 0;
+  const spotLights = lit && (lights.spot ?? 0) > 0;
+  const areaLights = lit && (lights.area ?? 0) > 0;
+  // One binding per distinct shadow map size, not per light: a light is a layer.
+  const shadow2DBuckets = materialFlags.unlitWorkflow
     ? 0
-    : (lights.directional ?? 0);
-  const pointLights = materialFlags.unlitWorkflow ? 0 : (lights.point ?? 0);
-  const spotLights = materialFlags.unlitWorkflow ? 0 : (lights.spot ?? 0);
-  const areaLights = materialFlags.unlitWorkflow ? 0 : (lights.area ?? 0);
+    : (lights.shadow2DBuckets ?? 0);
+  const shadowCubeBuckets = materialFlags.unlitWorkflow
+    ? 0
+    : (lights.shadowCubeBuckets ?? 0);
 
   const colorAssignment =
     vertexFlags.vertexColor && vertexFlags.instancedColor
@@ -305,54 +314,76 @@ export const standardShader = (
     areaLights,
   );
 
-  const ltcDecl =
-    areaLights === 0
-      ? ""
-      : /* wgsl */ `
+  const ltcDecl = !areaLights
+    ? ""
+    : /* wgsl */ `
 ${textureSamplerDeclaration(1, lightBindings.nextTextureSampler(), "uLtc1")}
 ${textureSamplerDeclaration(1, lightBindings.nextTextureSampler(), "uLtc2")}`;
 
-  const shadowMapNames = (type: string, count: number) =>
-    Array.from({ length: count }, (_, i) =>
-      uniformName(`${type}ShadowMap${i}`),
-    );
   // 2D shadow maps use a comparison sampler (hardware PCF); cube maps use a
   // regular sampler and compare manually (textureLoad is unavailable on cubes).
-  const shadowMapDecl = (
-    names: string[],
-    kind: string,
-    samplerKind = "sampler_comparison",
-  ) =>
-    names
-      .map((name) =>
-        textureSamplerDeclaration(
-          1,
-          lightBindings.nextTextureSampler(),
-          name,
-          kind,
-          samplerKind,
-        ),
-      )
-      .join("\n");
+  const shadowBucketName = (cube: boolean, i: number) =>
+    uniformName(`shadowMaps${cube ? "Cube" : "2D"}${i}`);
 
-  const directionalShadowMaps = shadowMapNames(
-    "directional",
-    directionalLights,
-  );
-  const pointShadowMaps = shadowMapNames("point", pointLights);
-  const spotShadowMaps = shadowMapNames("spot", spotLights);
-  const areaShadowMaps = shadowMapNames("area", areaLights);
-  const directionalShadowMapDecls = shadowMapDecl(
-    directionalShadowMaps,
-    "texture_depth_2d",
-  );
-  const pointShadowMapDecls = shadowMapDecl(
-    pointShadowMaps,
-    "texture_depth_cube",
-    "sampler",
-  );
-  const spotShadowMapDecls = shadowMapDecl(spotShadowMaps, "texture_depth_2d");
-  const areaShadowMapDecls = shadowMapDecl(areaShadowMaps, "texture_depth_2d");
+  const shadowBucketDecls = (count: number, cube: boolean) =>
+    Array.from({ length: count }, (_, i) =>
+      textureSamplerDeclaration(
+        1,
+        lightBindings.nextTextureSampler(),
+        shadowBucketName(cube, i),
+        cube ? "texture_depth_cube_array" : "texture_depth_2d_array",
+        cube ? "sampler" : "sampler_comparison",
+      ),
+    ).join("\n");
+
+  const shadow2DDecls = shadowBucketDecls(shadow2DBuckets, false);
+  const shadowCubeDecls = shadowBucketDecls(shadowCubeBuckets, true);
+
+  /**
+   * Which binding a light samples is runtime data — the size it asked for — so
+   * the bucket is dispatched rather than baked per light. Collapses to a single
+   * call whenever every light shares a size, which is the usual case.
+   */
+  const shadowDispatch = (
+    count: number,
+    cube: boolean,
+    name: string,
+    signature: string,
+    args: string,
+    callee: string,
+  ) => /* wgsl */ `
+fn ${name}(bucket: u32, layer: u32, ${signature}) -> f32 {
+${
+  count === 0
+    ? "  return 1.0;"
+    : Array.from(
+        { length: count },
+        (_, i) =>
+          `  if (bucket == ${i}u) { return ${callee}(${shadowBucketName(cube, i)}, ${samplerName(shadowBucketName(cube, i))}, layer, ${args}); }`,
+      ).join("\n") + "\n  return 1.0;"
+}
+}`;
+
+  const shadowDispatchDecls = materialFlags.unlitWorkflow
+    ? ""
+    : [
+        shadowDispatch(
+          shadow2DBuckets,
+          false,
+          "sampleShadowMap2D",
+          "size: vec2f, uv: vec2f, compare: f32, near: f32, far: f32, radiusUV: vec2f, dzDuv: vec2f, ortho: bool, fragCoord: vec2f",
+          "size, uv, compare, near, far, radiusUV, dzDuv, ortho, fragCoord",
+          "getShadow",
+        ),
+        shadowDispatch(
+          shadowCubeBuckets,
+          true,
+          "sampleShadowMapCube",
+          "size: vec2f, direction: vec3f, compare: f32, radius: f32, far: f32, fragCoord: vec2f",
+          "size, direction, compare, radius, far, fragCoord",
+          "getPunctualShadow",
+        ),
+      ].join("\n");
 
   const reflectionProbeDecl = useReflectionProbes
     ? /* wgsl */ `
@@ -379,34 +410,53 @@ ${bindingDeclaration(1, lightBindings.next(), "uIrradianceCoefficients", `array<
         "uCaptureTexture",
       );
 
-  const ambientLightsBlock = Array.from(
-    { length: ambientLights },
-    (_, i) => `EvaluateAmbientLight(&data, uAmbientLights[${i}], data.ao);`,
-  ).join("\n  ");
-  const directionalLightsBlock = directionalShadowMaps
-    .map(
-      (shadowMap, i) =>
-        `EvaluateDirectionalLight(&data, uDirectionalLights[${i}], ${shadowMap}, ${samplerName(shadowMap)}, input.positionWorld, input.position.xy);`,
-    )
-    .join("\n  ");
-  const pointLightsBlock = pointShadowMaps
-    .map(
-      (shadowMap, i) =>
-        `EvaluatePointLight(&data, uPointLights[${i}], ${shadowMap}, ${samplerName(shadowMap)}, input.position.xy);`,
-    )
-    .join("\n  ");
-  const spotLightsBlock = spotShadowMaps
-    .map(
-      (shadowMap, i) =>
-        `EvaluateSpotLight(&data, uSpotLights[${i}], ${shadowMap}, ${samplerName(shadowMap)}, input.positionWorld, input.position.xy);`,
-    )
-    .join("\n  ");
-  const areaLightsBlock = areaShadowMaps
-    .map(
-      (shadowMap, i) =>
-        `EvaluateAreaLight(&data, uAreaLights[${i}], ${shadowMap}, ${samplerName(shadowMap)}, uLtc1, ${samplerName("uLtc1")}, uLtc2, ${samplerName("uLtc2")}, data.ao, input.positionWorld, uFrame.cameraPosition, input.position.xy);`,
-    )
-    .join("\n  ");
+  // Screen-space ambient occlusion computed before shading, so it can modulate
+  // indirect light rather than multiply the shaded result. Declared on the same
+  // terms as uCaptureTexture — always present for a lit material, with a white
+  // dummy bound when there is none — so enabling it costs a pipeline constant
+  // rather than a new shader module.
+  const ssaoDecl = materialFlags.unlitWorkflow
+    ? ""
+    : textureSamplerDeclaration(
+        1,
+        lightBindings.nextTextureSampler(),
+        "uAOTexture",
+      );
+
+  // One loop per type over its whole buffer. arrayLength() is exact: a binding
+  // only exists when the scene has at least one light of that type.
+  const lightsLoop = (present: boolean, array: string, call: string) =>
+    present
+      ? /* wgsl */ `for (var i = 0u; i < arrayLength(&${array}); i++) {
+    ${call}
+  }`
+      : "";
+
+  const ambientLightsBlock = lightsLoop(
+    ambientLights,
+    "uAmbientLights",
+    "EvaluateAmbientLight(&data, uAmbientLights[i], data.ao);",
+  );
+  const directionalLightsBlock = lightsLoop(
+    directionalLights,
+    "uDirectionalLights",
+    "EvaluateDirectionalLight(&data, uDirectionalLights[i], input.positionWorld, input.position.xy);",
+  );
+  const pointLightsBlock = lightsLoop(
+    pointLights,
+    "uPointLights",
+    "EvaluatePointLight(&data, uPointLights[i], input.position.xy);",
+  );
+  const spotLightsBlock = lightsLoop(
+    spotLights,
+    "uSpotLights",
+    "EvaluateSpotLight(&data, uSpotLights[i], input.positionWorld, input.position.xy);",
+  );
+  const areaLightsBlock = lightsLoop(
+    areaLights,
+    "uAreaLights",
+    `EvaluateAreaLight(&data, uAreaLights[i], uLtc1, ${samplerName("uLtc1")}, uLtc2, ${samplerName("uLtc2")}, data.ao, input.positionWorld, uFrame.cameraPosition, input.position.xy);`,
+  );
 
   const alphaBlock = () => /* wgsl */ `
   ${
@@ -414,7 +464,7 @@ ${bindingDeclaration(1, lightBindings.next(), "uIrradianceCoefficients", `array<
       ? `let alphaTexCoord = getTextureCoordinatesTransformed(data, ${tc("alpha")}, uMaterial.alphaTextureMatrix);\n  data.opacity *= textureSample(uAlphaTexture, uAlphaTextureSampler, alphaTexCoord).x;`
       : ""
   }
-  if (USE_ALPHA_TEST) {
+  if (USE_ALPHA_TEST && !USE_ALPHA_TO_COVERAGE) {
   alphaTest(&data, uMaterial.alphaTest);
   }`;
 
@@ -555,6 +605,13 @@ ${bindingDeclaration(1, lightBindings.next(), "uIrradianceCoefficients", `array<
 
   ${materialFlags.occlusionTexture ? `getAmbientOcclusion(&data, uOcclusionTexture, uOcclusionTextureSampler, ${tc("occlusion")}, uMaterial.occlusionTextureMatrix);` : ""}
 
+  // Folded into the same term the material's occlusion texture feeds, so every
+  // consumer of ao — ambient, area lights, the light probe, and the analytic
+  // multi-bounce inside it — picks it up without knowing where it came from.
+  if (USE_SSAO_TEXTURE) {
+    data.ao *= textureSampleLevel(uAOTexture, uAOTextureSampler, input.position.xy / uFrame.viewportSize, 0.0).x;
+  }
+
   ${hooks.fragBeforeLighting ?? ""}
 
   data.diffuseColor = data.baseColor * (1.0 - data.metallic);
@@ -566,9 +623,17 @@ ${bindingDeclaration(1, lightBindings.next(), "uIrradianceCoefficients", `array<
   getIor(&data, uMaterial.ior);
   if (USE_SPECULAR) {
   ${
-    textures.specularTexture || textures.specularColorTexture
-      ? `getSpecularFactorTextured(&data, uMaterial.specular, uMaterial.specularColor, ${textures.specularTexture ? "uSpecularTexture, uSpecularTextureSampler" : "uSpecularColorTexture, uSpecularColorTextureSampler"}, ${tc("specular")}, ${textures.specularTexture ? "uMaterial.specularTextureMatrix" : "uMaterial.specularColorTextureMatrix"}, ${textures.specularColorTexture ? "uSpecularColorTexture, uSpecularColorTextureSampler" : "uSpecularTexture, uSpecularTextureSampler"}, ${tc("specularColor")}, ${textures.specularColorTexture ? "uMaterial.specularColorTextureMatrix" : "uMaterial.specularTextureMatrix"});`
-      : "getSpecularFactor(&data, uMaterial.specular, uMaterial.specularColor);"
+    // The two textures are independently optional: each dispatches to the
+    // variant that only samples the texture(s) actually bound, so a material
+    // with just specularTexture doesn't get its RGB — reserved for
+    // specularColorTexture since ratification — tinting f0.
+    textures.specularTexture && textures.specularColorTexture
+      ? `getSpecularFactorTextured(&data, uMaterial.specular, uMaterial.specularColor, uSpecularTexture, uSpecularTextureSampler, ${tc("specular")}, uMaterial.specularTextureMatrix, uSpecularColorTexture, uSpecularColorTextureSampler, ${tc("specularColor")}, uMaterial.specularColorTextureMatrix);`
+      : textures.specularTexture
+        ? `getSpecularStrengthTextured(&data, uMaterial.specular, uMaterial.specularColor, uSpecularTexture, uSpecularTextureSampler, ${tc("specular")}, uMaterial.specularTextureMatrix);`
+        : textures.specularColorTexture
+          ? `getSpecularColorTextured(&data, uMaterial.specular, uMaterial.specularColor, uSpecularColorTexture, uSpecularColorTextureSampler, ${tc("specularColor")}, uMaterial.specularColorTextureMatrix);`
+          : "getSpecularFactor(&data, uMaterial.specular, uMaterial.specularColor);"
   }
   } else {
   getSpecular(&data);
@@ -636,12 +701,11 @@ ${pointLightsDecl}
 ${spotLightsDecl}
 ${areaLightsDecl}
 ${ltcDecl}
-${directionalShadowMapDecls}
-${pointShadowMapDecls}
-${spotShadowMapDecls}
-${areaShadowMapDecls}
+${shadow2DDecls}
+${shadowCubeDecls}
 ${reflectionProbeDecl}
 ${captureDecl}
+${ssaoDecl}
 
 ${vertexInputStruct({
   normal: useNormals,
@@ -740,11 +804,17 @@ override DEPTH_PACK_FAR: f32 = 10.0;
 // systems/renderer/standard.ts).
 override USE_MSAA: bool = false;
 override USE_BLEND: bool = false;
+override USE_SSAO_TEXTURE: bool = false;
 // Only meaningful alongside USE_BLEND: scales color by opacity before output,
 // matching the "premultiplied" blendMode's GPUBlendComponent pair (see
 // BLEND_MODES in systems/renderer/base.ts).
 override PREMULTIPLY_ALPHA: bool = false;
 override USE_ALPHA_TEST: bool = false;
+// Alpha testing against a multisampled attachment: the cutout becomes a
+// coverage mask rather than a discard, so its edges antialias like geometry.
+// Set by the renderer when the pass is multisampled, paired with the pipeline's
+// alphaToCoverage (see systems/renderer/standard.ts).
+override USE_ALPHA_TO_COVERAGE: bool = false;
 override USE_SPECULAR: bool = false;
 override USE_EMISSIVE_COLOR: bool = false;
 override USE_CLEAR_COAT: bool = false;
@@ -843,6 +913,7 @@ ${
   ${SHADERS.depthRead}
   ${SHADERS.normalPerturb}
   ${SHADERS.shadowing}
+  ${shadowDispatchDecls}
   ${SHADERS.brdf}
   ${SHADERS.specular}
   ${SHADERS.clearCoat}
@@ -895,6 +966,17 @@ fn fragmentMain(
     if (PREMULTIPLY_ALPHA) {
       output.color = vec4f(output.color.rgb * data.opacity, data.opacity);
     }
+  }
+
+  if (USE_ALPHA_TEST && USE_ALPHA_TO_COVERAGE) {
+    // Alpha drives the coverage mask, so it has to be a coverage value rather
+    // than the mask texture's own gradient: rescaled by its screen-space rate
+    // of change, it saturates to 0 or 1 everywhere except the pixel straddling
+    // the cutoff. Without this, every partially transparent texel in the
+    // interior would thin out the surface instead of only its silhouette.
+    output.color.w = saturateF32(
+      (data.opacity - uMaterial.alphaTest) / max(fwidth(data.opacity), 1e-4) + 0.5
+    );
   }
 
   ${hooks.fragEnd ?? ""}

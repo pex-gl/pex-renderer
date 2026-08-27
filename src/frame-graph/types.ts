@@ -265,6 +265,45 @@ export interface CompiledResource {
   physicalId?: number;
 }
 
+/**
+ * One publication into a named register, in declaration order.
+ *
+ * `declaredAfter` is how many passes existed when it was published, which is
+ * what turns a list of names into an answer to "what was `color` at this point
+ * in the frame" — the question a register exists to make answerable without
+ * replaying the declaration in your head.
+ */
+export interface RegisterPublication {
+  name: string;
+  /** Resource name of the published handle. */
+  resource: string;
+  declaredAfter: number;
+}
+
+/**
+ * A per-frame register of named resources that wants to appear in `inspect()`.
+ *
+ * Declared here rather than imported from the render pipeline: the graph has no
+ * business knowing what a `RenderTextures` is, only that something on the
+ * blackboard can describe itself.
+ */
+export interface InspectableRegister {
+  inspectRegister(): RegisterPublication[];
+}
+
+/**
+ * A pass dropped because nothing reads what it writes.
+ *
+ * The names it wrote are the reason, not decoration: culling is refcounting, so
+ * "why is this pass gone" is always "these resources ended the frame unread",
+ * and a name list is the difference between an answer and a starting point.
+ */
+export interface CulledPass {
+  name: string;
+  /** Resource names the pass wrote, all of which ended up unreferenced. */
+  writes: string[];
+}
+
 export interface CompiledPlan {
   passes: CompiledPass[];
   resources: CompiledResource[];
@@ -274,7 +313,7 @@ export interface CompiledPlan {
    * frame.
    */
   physical: (PhysicalResource | undefined)[];
-  culledPasses: string[];
+  culledPasses: CulledPass[];
   stats: {
     declaredPasses: number;
     culledPasses: number;

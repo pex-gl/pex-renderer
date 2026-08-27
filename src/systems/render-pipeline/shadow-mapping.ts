@@ -26,6 +26,19 @@ const MIN_NEAR = 0.01;
 // are wanted from that provisional frustum, so this just has to not clip.
 const FAR_ENOUGH = 1e6;
 
+/** Light components that can cast, in the order buckets index them. */
+export const LIGHT_KINDS = [
+  "directionalLight",
+  "pointLight",
+  "spotLight",
+  "areaLight",
+] as const;
+export type LightKind = (typeof LIGHT_KINDS)[number];
+
+/** Lights sharing a dimensionality and a size share one array texture. */
+const bucketKey = (cubemap: boolean, size: number) =>
+  `${cubemap ? "cube" : "2d"}.${size}`;
+
 /** Distance from a point to the nearest point of a world-space AABB. */
 const closestDistance = (worldBounds: any, point: any) => {
   TEMP_VEC3[0] = Math.max(
@@ -59,12 +72,12 @@ const shadowParticipants = (entities: Entity[]) =>
   );
 
 /**
- * Create a shadow mapping object to compose with a render-pipeline-system
+ * Shadow mapping methods, composed into the render-pipeline-system.
  *
- * Adds:
- *
- * - "directionalLight", "spotLight" and "pointLight" method to create shadow map
- *   render passes Requires:
+ * Adds `_near`, `_far`, `_radiusUV` and `_sceneBboxInLightSpace` to every
+ * casting light, plus the `_shadowBucket`/`_shadowLayer` pair naming where in
+ * the bucketed array its map lives, and `_shadowMap`/`_shadowCubemap` once the
+ * graph has allocated one.
  *
  * @private
  */
@@ -177,15 +190,12 @@ export default ({
       );
     }
 
-    // Get frustum size
-    aabb.size(light._sceneBboxInLightSpace, TEMP_VEC3);
-    const size: any = TEMP_VEC3;
-
     // Light radius as a UV fraction of the shadow map, measured at the plane the
     // projection defines so PCSS penumbra scaling is geometrically correct:
     // - orthographic (directional): the frustum has a constant cross-section.
     // - perspective (spot/area): the frustum width at the near plane, 2·near·tan(halfFov).
     if (lightEntity.directionalLight) {
+      const size: any = aabb.size(light._sceneBboxInLightSpace, TEMP_VEC3);
       light._radiusUV = [
         light.bulbRadius / size[0],
         light.bulbRadius / size[1],
@@ -202,8 +212,7 @@ export default ({
       ];
     }
   },
-  // Radial near/far for a point light's cube projection, derived from the scene
-  // bounds relative to the light (scene-adaptive, nothing hardcoded).
+  /** Radial near/far for a point light's cube projection, fitted to the scene. */
   computePointLightProperties(
     lightEntity: Entity,
     light: any,
@@ -227,53 +236,47 @@ export default ({
     }
 
     // Farthest scene corner sets far; nearest point on the box sets near.
-    aabb.getCorners(light._sceneBbox, TEMP_BOUNDS_POINTS);
-    const points: any = TEMP_BOUNDS_POINTS;
+    const points: any = aabb.getCorners(light._sceneBbox, TEMP_BOUNDS_POINTS);
     let far = MIN_NEAR;
-    for (let i = 0; i < TEMP_BOUNDS_POINTS.length; i++) {
+    for (let i = 0; i < points.length; i++) {
       far = Math.max(far, vec3.distance(lightPosition, points[i]));
     }
-
-    TEMP_VEC3[0] = Math.max(
-      light._sceneBbox[0][0],
-      Math.min(lightPosition[0], light._sceneBbox[1][0]),
-    );
-    TEMP_VEC3[1] = Math.max(
-      light._sceneBbox[0][1],
-      Math.min(lightPosition[1], light._sceneBbox[1][1]),
-    );
-    TEMP_VEC3[2] = Math.max(
-      light._sceneBbox[0][2],
-      Math.min(lightPosition[2], light._sceneBbox[1][2]),
-    );
-
     if (light.range > 0) far = Math.min(far, light.range);
 
-    light._near = Math.max(MIN_NEAR, vec3.distance(lightPosition, TEMP_VEC3));
+    light._near = Math.max(
+      MIN_NEAR,
+      closestDistance(light._sceneBbox, lightPosition),
+    );
     light._far = Math.max(light._near + MIN_NEAR, far);
   },
-  // Modern shadow maps are sampleable depth textures; there is no color map.
-  createShadowMap(
-    light: any,
-    lightEntity: Entity,
-    name: string,
+  /**
+   * One array texture for every shadow-casting light that asked for the same
+   * size, since a light is a layer rather than a texture of its own.
+   *
+   * Sizes are not snapped to a ladder: a bucket per distinct size costs one
+   * binding each — normally one, every light having the default — and every
+   * light keeps exactly the resolution it asked for.
+   *
+   * Persistent rather than pooled. A bucket lives as long as the lights in it,
+   * and pooling would save nothing while costing identity: the texture is read
+   * outside the graph (`light._shadowMap`), so a debug view could never be sure
+   * which frame's map it holds, and pex-gpu keys bind groups by texture, so
+   * every material sampling it would get a fresh bind group every frame.
+   */
+  createShadowMapBucket(
+    size: number,
+    count: number,
+    cubemap: boolean,
     scope: string,
-    cubemap?: boolean,
   ): ResourceHandle {
-    const size = light.shadowMapSize;
-    // Persistent rather than pooled. A shadow map belongs to its light for as
-    // long as the light exists, and its shape is unique enough that pooling it
-    // saves nothing — while a churning identity costs: the texture is read
-    // outside the graph (`light._shadowMap`), so a debug view could never be
-    // sure which frame's map it holds, and pex-gpu keys bind groups by texture,
-    // so every material sampling it would get a fresh bind group every frame.
     return frameGraph.createTexture({
-      label: `${name}ShadowMap${lightEntity.id}${scope}`,
+      label: `shadowMaps${cubemap ? "Cube" : "2D"}.${size}${scope}`,
       width: size,
       height: size,
       format: "depth32float",
       persistent: true,
-      ...(cubemap && { depth: 6, viewDimension: "cube" as const }),
+      depth: cubemap ? count * 6 : count,
+      viewDimension: cubemap ? ("cube-array" as const) : ("2d-array" as const),
     });
   },
 
@@ -303,16 +306,13 @@ export default ({
     if (!frameGraph.blackboard.has("shadowMaps.cleared")) {
       frameGraph.blackboard.set("shadowMaps.cleared", true);
       for (let i = 0; i < entities.length; i++) {
-        const entity = entities[i]!;
-        for (const light of [
-          entity.directionalLight,
-          entity.spotLight,
-          entity.areaLight,
-          entity.pointLight,
-        ] as any[]) {
+        for (const kind of LIGHT_KINDS) {
+          const light: any = entities[i]![kind];
           if (light) {
             light._shadowMap = undefined;
             light._shadowCubemap = undefined;
+            light._shadowBucket = 0;
+            light._shadowLayer = 0;
           }
         }
       }
@@ -330,228 +330,117 @@ export default ({
 
     const scope = layer ? `.${layer}` : "";
 
+    // Every caster is collected before any texture is allocated: lights sharing
+    // a size share one array, so the whole set has to be known to size it.
+    const casters: {
+      entity: Entity;
+      light: any;
+      kind: LightKind;
+      cubemap: boolean;
+    }[] = [];
     for (let i = 0; i < entities.length; i++) {
       const entity = entities[i]!;
+      for (const kind of LIGHT_KINDS) {
+        const light: any = entity[kind];
+        if (light?.castShadows && this.checkLight(light, entity)) {
+          shadowCastingLights.push(light);
+          casters.push({ entity, light, kind, cubemap: kind === "pointLight" });
+        }
+      }
+    }
+    if (!casters.length) return result;
 
-      if (
-        entity.directionalLight?.castShadows &&
-        this.checkLight(entity.directionalLight, entity)
-      ) {
-        shadowCastingLights.push(entity.directionalLight);
-        shadowMaps.push(
-          this.renderDirectionalLightShadowMap(
-            entity,
-            entities,
-            renderers,
-            scope,
-          ),
-        );
+    // Bucket index is the binding the shader samples; layer is the slot within
+    // it. Both are read back off the light component by the renderer.
+    const buckets = new Map<
+      string,
+      { index: number; count: number; size: number; cubemap: boolean }
+    >();
+    for (const { light, cubemap } of casters) {
+      const key = bucketKey(cubemap, light.shadowMapSize);
+      let bucket = buckets.get(key);
+      if (!bucket) {
+        // Indices are per kind: the shader dispatches over 2D and cube bindings
+        // separately.
+        let index = 0;
+        for (const other of buckets.values()) {
+          if (other.cubemap === cubemap) index++;
+        }
+        bucket = { index, count: 0, size: light.shadowMapSize, cubemap };
+        buckets.set(key, bucket);
       }
-      if (
-        entity.pointLight?.castShadows &&
-        this.checkLight(entity.pointLight, entity)
-      ) {
-        shadowCastingLights.push(entity.pointLight);
-        shadowMaps.push(
-          this.renderPointLightShadowMap(entity, entities, renderers, scope),
-        );
-      }
-      if (
-        entity.spotLight?.castShadows &&
-        this.checkLight(entity.spotLight, entity)
-      ) {
-        shadowCastingLights.push(entity.spotLight);
-        shadowMaps.push(
-          this.renderSpotLightShadowMap(entity, entities, renderers, scope),
-        );
-      }
-      if (
-        entity.areaLight?.castShadows &&
-        this.checkLight(entity.areaLight, entity)
-      ) {
-        shadowCastingLights.push(entity.areaLight);
-        shadowMaps.push(
-          this.renderSpotLightShadowMap(entity, entities, renderers, scope),
-        );
-      }
+      light._shadowBucket = bucket.index;
+      light._shadowLayer = bucket.count;
+      bucket.count++;
+    }
+
+    const bucketMaps = new Map<string, ResourceHandle>();
+    for (const [key, { size, count, cubemap }] of buckets) {
+      const handle = this.createShadowMapBucket(size, count, cubemap, scope);
+      bucketMaps.set(key, handle);
+      shadowMaps.push(handle);
+    }
+
+    for (const { entity, light, kind, cubemap } of casters) {
+      this.renderShadowMap(
+        kind,
+        entity,
+        entities,
+        renderers,
+        scope,
+        bucketMaps.get(bucketKey(cubemap, light.shadowMapSize))!,
+      );
     }
 
     return result;
   },
 
-  renderDirectionalLightShadowMap(
+  /**
+   * One light's shadow map, into the layer of the bucket it was assigned.
+   *
+   * A point light is six passes over six layers, one per cube face, and gets
+   * its near/far radially; every other kind is a single pass whose projection
+   * is the one the shader will sample back.
+   */
+  renderShadowMap(
+    kind: LightKind,
     lightEntity: Entity,
     entities: Entity[],
     renderers: RendererSystem[],
     scope: string,
+    shadowMap: ResourceHandle,
   ) {
-    const light: any = lightEntity.directionalLight;
+    const light: any = lightEntity[kind];
+    const cubemap = kind === "pointLight";
+    const participants = shadowParticipants(entities);
 
-    this.computeLightProperties(
-      lightEntity,
-      light,
-      shadowParticipants(entities),
-    );
-
-    const shadowMap = this.createShadowMap(
-      light,
-      lightEntity,
-      "directionalLight",
-      scope,
-    );
-
-    mat4.orthoZO(
-      light._projectionMatrix,
-      light._sceneBboxInLightSpace[0][0],
-      light._sceneBboxInLightSpace[1][0],
-      light._sceneBboxInLightSpace[0][1],
-      light._sceneBboxInLightSpace[1][1],
-      light._near,
-      light._far,
-    );
-
-    const renderView = {
-      camera: {
-        viewMatrix: light._viewMatrix,
-        projectionMatrix: light._projectionMatrix,
-      },
-      viewport: [0, 0, light.shadowMapSize, light.shadowMapSize],
-    };
-
-    frameGraph.addPass({
-      name: `directionalLightShadowMap${lightEntity.id}${scope}`,
-      color: [],
-      depth: { texture: shadowMap, depthClearValue: 1 },
-      renderView,
-      execute: ({ resolveTexture }) => {
-        // Resolved here rather than at declaration: the physical texture behind
-        // the handle is only known once the graph has allocated.
-        light._shadowMap = resolveTexture(shadowMap);
-
-        this.drawMeshes({
-          renderers,
-          renderView,
-          entitiesInView: entities,
-          shadowMappingLight: light,
-          transparent: false,
-        });
-      },
-    });
-
-    return shadowMap;
-  },
-
-  renderSpotLightShadowMap(
-    lightEntity: Entity,
-    entities: Entity[],
-    renderers: RendererSystem[],
-    scope: string,
-  ) {
-    const light: any = lightEntity.spotLight || lightEntity.areaLight;
-
-    this.computeLightProperties(
-      lightEntity,
-      light,
-      shadowParticipants(entities),
-    );
-
-    const kind = lightEntity.areaLight ? "area" : "spot";
-    const shadowMap = this.createShadowMap(
-      light,
-      lightEntity,
-      `${kind}Light`,
-      scope,
-    );
-
-    mat4.perspectiveZO(
-      light._projectionMatrix,
-      light.angle ? 2 * light.angle : Math.PI / 2,
-      1,
-      light._near,
-      light._far,
-    );
-
-    const renderView = {
-      camera: {
-        viewMatrix: light._viewMatrix,
-        projectionMatrix: light._projectionMatrix,
-      },
-      viewport: [0, 0, light.shadowMapSize, light.shadowMapSize],
-    };
-
-    frameGraph.addPass({
-      name: `${kind}LightShadowMap${lightEntity.id}${scope}`,
-      color: [],
-      depth: { texture: shadowMap, depthClearValue: 1 },
-      renderView,
-      execute: ({ resolveTexture }) => {
-        light._shadowMap = resolveTexture(shadowMap);
-
-        this.drawMeshes({
-          renderers,
-          renderView,
-          entitiesInView: entities,
-          shadowMappingLight: light,
-          transparent: false,
-        });
-      },
-    });
-
-    return shadowMap;
-  },
-
-  renderPointLightShadowMap(
-    lightEntity: Entity,
-    entities: Entity[],
-    renderers: RendererSystem[],
-    scope: string,
-  ) {
-    const light: any = lightEntity.pointLight;
-
-    const shadowMap = this.createShadowMap(
-      light,
-      lightEntity,
-      "pointLight",
-      scope,
-      true,
-    );
-
-    this.computePointLightProperties(
-      lightEntity,
-      light,
-      shadowParticipants(entities),
-    );
-
-    const lightPosition = lightEntity._transform!.worldPosition;
-    // Projection (90° cube face, per-light near/far to match the shader) is
-    // identical across faces and reused; the per-face view must be a distinct
-    // allocation because the render graph defers passes and reads each at endFrame.
-    const projectionMatrix = mat4.create();
-
-    for (let i = 0; i < 6; i++) {
-      const { viewMatrix } = getCubeFaceCamera(
-        i,
-        lightPosition,
-        light._near,
-        light._far,
-        mat4.create(),
-        projectionMatrix,
-      );
+    const shadowPass = (
+      name: string,
+      layer: number,
+      camera: { viewMatrix: any; projectionMatrix: any },
+    ) => {
       const renderView = {
-        camera: { projectionMatrix, viewMatrix },
+        camera,
         viewport: [0, 0, light.shadowMapSize, light.shadowMapSize],
       };
 
       frameGraph.addPass({
-        name: `pointLightShadowMap${lightEntity.id}Face${i}${scope}`,
+        name: `${name}${scope}`,
         color: [],
-        // One cube face per pass: six independent write chains into one texture.
-        depth: { texture: shadowMap, layer: i, depthClearValue: 1 },
+        depth: { texture: shadowMap, layer, depthClearValue: 1 },
         renderView,
         execute: ({ resolveTexture }) => {
-          light._shadowCubemap = resolveTexture(shadowMap);
-          light._projectionMatrix = projectionMatrix;
-          light._viewMatrix = renderView.camera.viewMatrix;
+          // Resolved here rather than at declaration: the physical texture
+          // behind the handle is only known once the graph has allocated.
+          const texture = resolveTexture(shadowMap);
+          if (cubemap) {
+            light._shadowCubemap = texture;
+            // The renderer reads the face this pass drew off the component.
+            light._projectionMatrix = camera.projectionMatrix;
+            light._viewMatrix = camera.viewMatrix;
+          } else {
+            light._shadowMap = texture;
+          }
 
           this.drawMeshes({
             renderers,
@@ -562,8 +451,63 @@ export default ({
           });
         },
       });
+    };
+
+    if (cubemap) {
+      this.computePointLightProperties(lightEntity, light, participants);
+
+      // The 90° face projection is the same for all six and is shared; each
+      // view matrix must be its own allocation, since execute reads it back
+      // long after this loop has moved on.
+      const projectionMatrix = mat4.create();
+      for (let face = 0; face < 6; face++) {
+        const { viewMatrix } = getCubeFaceCamera(
+          face,
+          lightEntity._transform!.worldPosition,
+          light._near,
+          light._far,
+          mat4.create(),
+          projectionMatrix,
+        );
+        // Layers are flat, so one cube occupies six of them, and each face is
+        // an independent write chain into the same texture.
+        shadowPass(
+          `pointLightShadowMap${lightEntity.id}Face${face}`,
+          light._shadowLayer * 6 + face,
+          { projectionMatrix, viewMatrix },
+        );
+      }
+      return;
     }
 
-    return shadowMap;
+    this.computeLightProperties(lightEntity, light, participants);
+
+    if (kind === "directionalLight") {
+      const bbox = light._sceneBboxInLightSpace;
+      mat4.orthoZO(
+        light._projectionMatrix,
+        bbox[0][0],
+        bbox[1][0],
+        bbox[0][1],
+        bbox[1][1],
+        light._near,
+        light._far,
+      );
+    } else {
+      // An area light has no angle of its own: it shadows through the same 90°
+      // cone the fit assumed.
+      mat4.perspectiveZO(
+        light._projectionMatrix,
+        light.angle ? 2 * light.angle : Math.PI / 2,
+        1,
+        light._near,
+        light._far,
+      );
+    }
+
+    shadowPass(`${kind}ShadowMap${lightEntity.id}`, light._shadowLayer, {
+      viewMatrix: light._viewMatrix,
+      projectionMatrix: light._projectionMatrix,
+    });
   },
 });

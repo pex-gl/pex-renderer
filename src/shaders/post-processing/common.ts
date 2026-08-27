@@ -9,12 +9,19 @@ import { vertexOutputStruct } from "../wgsl.js";
 /**
  * Uniforms the registry writes for every sub-pass. Bound at `@group(0)
  * @binding(0)` in every post-processing shader, whether or not the fragment
- * stage reads it: the vertex stage needs `texelSize` for its neighbour taps.
+ * stage reads it: the vertex stage needs `sourceTexelSize` for its neighbour
+ * taps.
+ *
+ * `texelSize` is the pass's own raster grid; `sourceTexelSize` is the grid of
+ * the texture it samples. The two differ only where a pass scales — bloom's
+ * pyramid — and conflating them silently mistunes every filter that steps in
+ * texels, so they are separate fields rather than one the caller reinterprets.
  */
 export const postProcessingStruct = /* wgsl */ `
 struct PostProcessing {
   viewportSize: vec2f,
   texelSize: vec2f,
+  sourceTexelSize: vec2f,
   time: f32,
 }
 @group(0) @binding(0) var<uniform> uPostProcessing: PostProcessing;
@@ -26,7 +33,10 @@ export interface FullscreenVertexOptions {
   corners?: boolean;
   /** The four axis-aligned taps (upsample tent filter, FXAA edge search). */
   axis?: boolean;
-  /** Diagonal tap distance in texels. The 4-tap upsampler samples half a texel out. */
+  /**
+   * Diagonal tap distance in *source* texels. The 4-tap upsampler samples half
+   * a texel out.
+   */
   offset?: number;
 }
 
@@ -65,6 +75,10 @@ const fullscreenVertexOutput = ({
  * flipped y makes a fullscreen pass an identity copy — target texel to source
  * texel. Tap names stay in screen terms (`Up` is visually up, one texel back in
  * v), which is what the chunks' symmetric filters expect.
+ *
+ * Taps step in source texels: they offset a coordinate that is about to sample
+ * the source, so a pass whose target is a different size — every level of
+ * bloom's pyramid — would otherwise land its taps at the wrong width.
  */
 export const fullscreenVertex = ({
   corners = false,
@@ -86,7 +100,7 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
 
   ${
     corners
-      ? `let cornerOffset = uPostProcessing.texelSize * ${offset.toFixed(2)};
+      ? `let cornerOffset = uPostProcessing.sourceTexelSize * ${offset.toFixed(2)};
   output.texCoord0LeftUp = output.texCoord0 + cornerOffset * vec2f(-1.0, -1.0);
   output.texCoord0RightUp = output.texCoord0 + cornerOffset * vec2f(1.0, -1.0);
   output.texCoord0LeftDown = output.texCoord0 + cornerOffset * vec2f(-1.0, 1.0);
@@ -95,10 +109,10 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
   }
   ${
     axis
-      ? `output.texCoord0Down = output.texCoord0 + uPostProcessing.texelSize * vec2f(0.0, 1.0);
-  output.texCoord0Up = output.texCoord0 + uPostProcessing.texelSize * vec2f(0.0, -1.0);
-  output.texCoord0Left = output.texCoord0 + uPostProcessing.texelSize * vec2f(-1.0, 0.0);
-  output.texCoord0Right = output.texCoord0 + uPostProcessing.texelSize * vec2f(1.0, 0.0);`
+      ? `output.texCoord0Down = output.texCoord0 + uPostProcessing.sourceTexelSize * vec2f(0.0, 1.0);
+  output.texCoord0Up = output.texCoord0 + uPostProcessing.sourceTexelSize * vec2f(0.0, -1.0);
+  output.texCoord0Left = output.texCoord0 + uPostProcessing.sourceTexelSize * vec2f(-1.0, 0.0);
+  output.texCoord0Right = output.texCoord0 + uPostProcessing.sourceTexelSize * vec2f(1.0, 0.0);`
       : ""
   }
 

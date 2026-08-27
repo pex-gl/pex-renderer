@@ -1,258 +1,472 @@
-// Shaders for the screen-space reflections injected by the "frame-graph"
-// example. They live here so that example stays about the frame graph API;
-// the WGSL is deliberately plain (no pex-shaders chunks, no generator) so a
-// pass declared from outside the engine reads as something anyone could write.
+import * as gpu from "pex-gpu";
+import { mat4 } from "pex-math";
+import random from "pex-random";
+
+import {
+  copyShader,
+  hiZCopyShader,
+  hiZReduceShader,
+  ssrCompositeShader,
+  ssrResolveShader,
+  ssrTemporalShader,
+  ssrTraceShader,
+} from "./frame-graph-ssr-shaders.js";
+
+// Screen-space reflections, declared entirely from outside the engine.
 //
-// Attribute convention matches the engine's fullscreen passes: @location(0) is
-// a clip-space vec2 corner of the fullscreen triangle.
+// The passes, in order:
+//
+//   ssr.hiZ          min-depth pyramid, one pass per mip level
+//   ssr.colorPyramid the frame's image and its mip chain, for rough hits
+//   ssr.trace        one ray per half-res pixel, marched through the pyramid;
+//                    writes where it hit
+//   ssr.resolve      neighbouring rays reused as extra samples for this pixel,
+//                    weighted by the BRDF they would have had here
+//   ssr.temporal     blended with the reprojected previous frame
+//   ssr.history      the copy that carries that result to the next frame
+//   ssr.composite    the probe's specular replaced by the traced one
+//
+// The last step is what makes this energy conserving rather than an overlay:
+// the main pass hands back the indirect specular it applied, so the composite
+// subtracts exactly the term the reflection replaces and fades back to the
+// probe wherever a ray found nothing. What a ray needs beyond depth and normals
+// — f0, roughness, that indirect term — comes from two extra main pass outputs
+// this file adds by wrapping the renderers' shader generators, since what an
+// output *is* lives in their WGSL.
+//
+// A ray is importance-sampled from the GGX lobe only above `mirrorRoughness`.
+// Below it the ray is the mirror direction and the lobe's blur comes from the
+// mip of the colour pyramid its cone footprint covers. Sampling a narrow lobe
+// is the worst case for a half-resolution frame — a few pixels of angular
+// spread need more rays than there are to spend, and what comes back is the
+// variance rather than the blur — while one deterministic ray read at the right
+// mip has the same expected value and no variance at all. It is also what makes
+// the temporal pass able to converge: a deterministic ray gives it the same
+// answer every frame to accumulate, instead of a new one to average.
+//
+// Injected at the opaque pass rather than at "postProcessing": reflections are
+// a lighting term, so transparency and refraction should land on top of them,
+// and the glass sphere should refract them.
 
-const FULLSCREEN_VERTEX = /* wgsl */ `
-struct VertexInput {
-  @location(0) position: vec2f,
-}
-
-struct VertexOutput {
-  @builtin(position) position: vec4f,
-  @location(0) texCoord0: vec2f,
-}
-
-@vertex
-fn vertexMain(input: VertexInput) -> VertexOutput {
-  var output: VertexOutput;
-  output.position = vec4f(input.position, 0.0, 1.0);
-  // Textures are y-down in WebGPU while clip space is y-up, so the flip makes
-  // a fullscreen pass an identity copy.
-  output.texCoord0 = vec2f(input.position.x * 0.5 + 0.5, 0.5 - input.position.y * 0.5);
-  return output;
-}
-`;
+// ─── G-buffer ────────────────────────────────────────────────────────────────
 
 /**
- * Screen-space ray march against the depth buffer.
+ * Two main pass outputs the engine doesn't have, in attachment order.
  *
- * Reads the scene color, depth and view normals of the main pass and writes the
- * reflected radiance in `rgb` with a confidence weight in `a`, so the composite
- * is a single multiply-add. Half resolution: the frame graph sizes the target,
- * this only ever works in normalized coordinates.
+ * `value` is the WGSL assigned in each renderer's fragment stage: the standard
+ * renderer has a shaded surface to describe, everything else in the main pass —
+ * the skybox, lines, helpers — has no specular of its own, and writing zeroes
+ * is what makes the trace skip those pixels.
+ *
+ * `indirectSpecular` is every specular term the surface got from something the
+ * ray could not have found: the reflection probe, and area lights, which the
+ * standard shader accumulates into the same field.
  */
-export const ssrTraceShader = /* wgsl */ `
-struct SSR {
-  viewportSize: vec2f,
-  near: f32,
-  far: f32,
-  fov: f32,
-  aspect: f32,
-  intensity: f32,
-  maxDistance: f32,
-  thickness: f32,
-  steps: f32,
-  jitter: f32,
-}
-@group(0) @binding(0) var<uniform> uSSR: SSR;
+export const G_BUFFER = [
+  {
+    name: "material",
+    value: {
+      "standard-renderer": "vec4f(data.f0, data.roughness)",
+      default: "vec4f(0.0, 0.0, 0.0, 1.0)",
+    },
+  },
+  {
+    name: "indirectSpecular",
+    value: {
+      "standard-renderer": "vec4f(data.indirectSpecular, 1.0)",
+      default: "vec4f(0.0)",
+    },
+  },
+];
 
-@group(0) @binding(1) var uTexture: texture_2d<f32>;
-@group(0) @binding(2) var uTextureSampler: sampler;
-@group(0) @binding(3) var uDepthTexture: texture_depth_2d;
-@group(0) @binding(4) var uDepthTextureSampler: sampler;
-@group(0) @binding(5) var uNormalTexture: texture_2d<f32>;
-@group(0) @binding(6) var uNormalTextureSampler: sampler;
-@group(0) @binding(7) var uNoiseTexture: texture_2d<f32>;
-@group(0) @binding(8) var uNoiseTextureSampler: sampler;
-
-// Per-step offsets along the ray, indexed rather than recomputed. A graph-owned
-// buffer: uploaded once, content-addressed by the pool.
-@group(0) @binding(9) var<storage, read> uMarchOffsets: array<f32>;
-
-${FULLSCREEN_VERTEX}
-
-fn saturateF32(x: f32) -> f32 { return clamp(x, 0.0, 1.0); }
-
-/** Eye-space distance along -z, from the [0, 1] clip depth WebGPU writes. */
-fn eyeDistance(uv: vec2f) -> f32 {
-  let d = textureSampleLevel(uDepthTexture, uDepthTextureSampler, uv, 0);
-  return uSSR.near * uSSR.far / (uSSR.far - d * (uSSR.far - uSSR.near));
-}
-
-// The texture coordinate is y-down and view space is y-up, so both directions
-// flip y. Keeping that consistent is what lets the march compare against the
-// view normals the standard renderer writes.
-fn viewPosition(uv: vec2f, distance: f32) -> vec3f {
-  let tanHalfFov = tan(uSSR.fov * 0.5);
-  let ndc = vec2f(uv.x * 2.0 - 1.0, 1.0 - uv.y * 2.0);
-  return vec3f(ndc.x * tanHalfFov * uSSR.aspect, ndc.y * tanHalfFov, -1.0) * distance;
-}
-
-fn viewToTexCoord(position: vec3f) -> vec2f {
-  let tanHalfFov = tan(uSSR.fov * 0.5);
-  let distance = max(-position.z, 1.0e-4);
-  let ndc = vec2f(
-    position.x / (tanHalfFov * uSSR.aspect * distance),
-    position.y / (tanHalfFov * distance)
-  );
-  return vec2f(ndc.x * 0.5 + 0.5, 0.5 - ndc.y * 0.5);
-}
-
-@fragment
-fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
-  let uv = input.texCoord0;
-  let distance = eyeDistance(uv);
-
-  // Nothing behind the far plane reflects: the sky is drawn by the skybox.
-  if (distance >= uSSR.far * 0.99) { return vec4f(0.0); }
-
-  let position = viewPosition(uv, distance);
-  let normal = normalize(textureSampleLevel(uNormalTexture, uNormalTextureSampler, uv, 0.0).rgb * 2.0 - 1.0);
-  let viewDirection = normalize(position);
-  let rayDirection = reflect(viewDirection, normal);
-
-  // Clipped to the near plane before it is projected: past it the perspective
-  // divide flips the ray and the march walks backwards across the screen.
-  var rayLength = uSSR.maxDistance;
-  if (position.z + rayDirection.z * rayLength > -uSSR.near) {
-    rayLength = (-uSSR.near - position.z) / rayDirection.z;
-  }
-  let endPosition = position + rayDirection * rayLength;
-  let endTexCoord = viewToTexCoord(endPosition);
-
-  // The march is uniform in screen space, not in view-space distance. Equal
-  // world-space steps project to wildly unequal pixel distances, so hits snap
-  // to a handful of iso-distance shells and the reflection comes out in flat
-  // staggered bands. Along the projected segment 1/z is linear, so the ray's
-  // depth at each sample is an interpolation rather than a second projection.
-  let invStartZ = 1.0 / -position.z;
-  let invEndZ = 1.0 / -endPosition.z;
-
-  // Tiled noise decorrelates the per-pixel step offset, trading banding for
-  // grain the half-resolution upsample then softens.
-  let noise = textureSampleLevel(
-    uNoiseTexture,
-    uNoiseTextureSampler,
-    uv * uSSR.viewportSize / 64.0,
-    0.0
-  ).r;
-
-  let steps = i32(uSSR.steps);
-  let offsetCount = arrayLength(&uMarchOffsets);
-  // A ray leaves the surface it reflects off, so the first samples sit within a
-  // texel of it. Anything nearer than this is that surface, not a reflection.
-  let bias = max(0.01, distance * 0.005);
-
-  var previousT = 0.0;
-  var previousDelta = 0.0;
-  var hitT = -1.0;
-
-  for (var i = 1; i <= steps; i++) {
-    let offset = fract(uMarchOffsets[u32(i) % offsetCount] + noise) * uSSR.jitter;
-    let t = (f32(i) - offset) / f32(steps);
-    let sampleTexCoord = mix(uv, endTexCoord, t);
-
-    // Off screen: there is no color to reflect, and clamping would smear the
-    // border pixel along the ray.
-    if (any(sampleTexCoord < vec2f(0.0)) || any(sampleTexCoord > vec2f(1.0))) { break; }
-
-    let delta = 1.0 / mix(invStartZ, invEndZ, t) - eyeDistance(sampleTexCoord);
-
-    // In front of the surface at the previous sample and behind it at this one,
-    // but not so far behind that the ray passed under an unrelated object: a
-    // depth buffer has no thickness of its own.
-    if (previousDelta <= bias && delta > bias && delta < uSSR.thickness) {
-      // Bisect the step that crossed. Without it the hit — and the color it
-      // samples — quantizes to the march, which is the staggering itself.
-      var low = previousT;
-      var high = t;
-      for (var j = 0; j < 5; j++) {
-        let mid = 0.5 * (low + high);
-        let midDelta = 1.0 / mix(invStartZ, invEndZ, mid) - eyeDistance(mix(uv, endTexCoord, mid));
-        if (midDelta > bias) { high = mid; } else { low = mid; }
-      }
-      hitT = high;
-      break;
-    }
-
-    previousT = t;
-    previousDelta = delta;
-  }
-
-  if (hitT < 0.0) { return vec4f(0.0); }
-
-  let hitTexCoord = mix(uv, endTexCoord, hitT);
-  let border = min(
-    min(hitTexCoord.x, 1.0 - hitTexCoord.x),
-    min(hitTexCoord.y, 1.0 - hitTexCoord.y)
-  );
-  let edgeFade = smoothstep(0.0, 0.15, border);
-  // Back to view space for the fade: the march parameter is linear across the
-  // screen, not along the ray, so it is not a distance.
-  let hitPosition = viewPosition(hitTexCoord, 1.0 / mix(invStartZ, invEndZ, hitT));
-  let distanceFade = 1.0 - saturateF32(length(hitPosition - position) / uSSR.maxDistance);
-  // Schlick, with a floor so surfaces facing the camera still reflect a little.
-  let fresnel = mix(0.1, 1.0, pow(1.0 - saturateF32(dot(-viewDirection, normal)), 5.0));
-
-  return vec4f(
-    textureSampleLevel(uTexture, uTextureSampler, hitTexCoord, 0.0).rgb,
-    edgeFade * distanceFade * fresnel * uSSR.intensity
-  );
-}
-`;
-
-/** Scene color plus the traced reflection, weighted by its confidence. */
-export const ssrCompositeShader = /* wgsl */ `
-@group(0) @binding(0) var uTexture: texture_2d<f32>;
-@group(0) @binding(1) var uTextureSampler: sampler;
-@group(0) @binding(2) var uReflectionTexture: texture_2d<f32>;
-@group(0) @binding(3) var uReflectionTextureSampler: sampler;
-
-${FULLSCREEN_VERTEX}
-
-@fragment
-fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
-  let color = textureSample(uTexture, uTextureSampler, input.texCoord0);
-  let reflection = textureSample(uReflectionTexture, uReflectionTextureSampler, input.texCoord0);
-  return vec4f(color.rgb + reflection.rgb * reflection.a, color.a);
-}
-`;
-
-/** Straight copy, for the debug capture the GUI holds between frames. */
-export const copyShader = /* wgsl */ `
-@group(0) @binding(0) var uTexture: texture_2d<f32>;
-@group(0) @binding(1) var uTextureSampler: sampler;
-
-${FULLSCREEN_VERTEX}
-
-@fragment
-fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
-  return textureSample(uTexture, uTextureSampler, input.texCoord0);
-}
-`;
+/** Appends a member to a generated shader's `FragmentOutput`. */
+const addFragmentOutput = (source, name) =>
+  source.replace(/(struct FragmentOutput \{[^}]*)\}/, (_, body) => {
+    const location = (body.match(/@location\(/g) ?? []).length;
+    return `${body.trimEnd()}\n  @location(${location}) ${name}: vec4f,\n}`;
+  });
 
 /**
- * Replacement for the engine's grab pass copy: same texel-for-texel copy
- * (`@builtin(position)` indexes the source directly, no sampler needed), tinted
- * so what refraction sampled is obvious on screen.
+ * Extra outputs on the main pass without touching the engine.
+ *
+ * Two wrappers, because a G-buffer channel is two things: a member of the
+ * shader's output struct — no hook covers a struct, so the generated WGSL is
+ * patched — and something assigned in the fragment stage, which every renderer
+ * shader already exposes as the `fragEnd` hook.
+ *
+ * Both key off `outputs`, the same object the pipeline builds its attachment
+ * list from, so the two can't disagree: a renderer drawing into a pass without
+ * these attachments (the shadow and pre-passes) compiles without them, and the
+ * struct members land in the order this file requests the names in.
  */
-export const tintedGrabShader = /* wgsl */ `
-struct Tint {
-  color: vec3f,
-  saturation: f32,
-}
-@group(0) @binding(0) var<uniform> uTint: Tint;
-@group(0) @binding(1) var uTexture: texture_2d<f32>;
+export function extendGBuffer(renderers) {
+  for (const renderer of renderers) {
+    const { getShader, getShaderOptions } = renderer;
 
-struct Varyings {
-  @builtin(position) position: vec4f,
+    renderer.getShaderOptions = function (entity, options) {
+      const shaderOptions = getShaderOptions.call(this, entity, options);
+      const { outputs = {}, hooks = {} } = shaderOptions;
+
+      const assignments = G_BUFFER.filter(({ name }) => outputs[name]).map(
+        ({ name, value }) =>
+          `output.${name} = ${value[renderer.type] ?? value.default};`,
+      );
+      if (!assignments.length) return shaderOptions;
+
+      return {
+        ...shaderOptions,
+        hooks: {
+          ...hooks,
+          fragEnd: [hooks.fragEnd ?? "", ...assignments].join("\n  "),
+        },
+      };
+    };
+
+    renderer.getShader = function (defines, options) {
+      const source = getShader.call(this, defines, options);
+      return G_BUFFER.reduce(
+        (wgsl, { name }) =>
+          options.outputs?.[name] ? addFragmentOutput(wgsl, name) : wgsl,
+        source,
+      );
+    };
+  }
 }
 
-@vertex
-fn vertexMain(@location(0) position: vec2f) -> Varyings {
-  var output: Varyings;
-  output.position = vec4f(position, 0.0, 1.0);
-  return output;
+// ─── Injection ───────────────────────────────────────────────────────────────
+
+const NOISE_SIZE = 64;
+
+/**
+ * Per-pixel decorrelation for the ray sampler, above `mirrorRoughness` where
+ * there is sampling to decorrelate. Two channels of white noise, shifted every
+ * frame by the R2 sequence in the shader — blue noise would distribute better
+ * spatially, which is what a real spatial reconstruction pass would want; the
+ * five-tap cross here only needs successive frames to differ.
+ */
+function createNoiseTexture(ctx) {
+  const prng = random.create("ssr");
+  const data = new Uint8Array(NOISE_SIZE ** 2 * 4);
+  for (let i = 0; i < NOISE_SIZE ** 2; i++) {
+    data[i * 4] = 255 * prng.float();
+    data[i * 4 + 1] = 255 * prng.float();
+    data[i * 4 + 3] = 255;
+  }
+
+  return gpu.createTexture(ctx, {
+    label: "ssrNoiseTexture",
+    width: NOISE_SIZE,
+    height: NOISE_SIZE,
+    format: "rgba8unorm",
+    data,
+  });
 }
 
-@fragment
-fn fragmentMain(input: Varyings) -> @location(0) vec4f {
-  let color = textureLoad(uTexture, vec2i(input.position.xy), 0);
-  let luminance = dot(color.rgb, vec3f(0.2126, 0.7152, 0.0722));
-  return vec4f(mix(vec3f(luminance), color.rgb, uTint.saturation) * uTint.color, color.a);
+const NO_DEFINES = new Set();
+
+/**
+ * Register the effect. Returns a handle for the settings that invalidate what
+ * has been accumulated so far.
+ */
+export function createSSR({ ctx, renderEngine, cameraEntity, settings }) {
+  const { frameGraph, renderers } = renderEngine;
+  const renderPipeline = renderEngine.systems.find(
+    (system) => system.type === "render-pipeline-system",
+  );
+
+  extendGBuffer(renderers);
+
+  const noiseTexture = createNoiseTexture(ctx);
+
+  // Requested unconditionally rather than following the enabled toggle: outputs
+  // are attachments on the main pass, so a set that changes relayouts it and
+  // recompiles every material pipeline.
+  //
+  // Colour, normal and these two is four rgba16float attachments, which is
+  // exactly maxColorAttachmentBytesPerSample — the whole budget. A fifth fails
+  // when the pass is created, so turning bloom on for this camera (it asks for
+  // "emissive") means packing these two into one.
+  frameGraph.on("outputs", ({ outputs }) => {
+    outputs.add("normal");
+    for (const { name } of G_BUFFER) outputs.add(name);
+  });
+
+  const inverseProjectionMatrix = mat4.create();
+  const previousViewProjectionMatrix = mat4.create();
+  const reprojectionMatrix = mat4.create();
+  let frame = 0;
+  let accumulate = false;
+
+  // One register per view per frame, so this is what "already declared for this
+  // camera this frame" means — the effect offers itself at two injection points
+  // and takes the first one whose inputs exist.
+  const declared = new WeakSet();
+
+  const declare = (textures) => {
+    if (!settings.enabled || !textures || declared.has(textures)) return;
+
+    const color = textures.get("color");
+    const depth = textures.get("depth");
+    const normal = textures.get("normal");
+    const material = textures.get("material");
+    const indirectSpecular = textures.get("indirectSpecular");
+    // Nothing published under one of those names, or depth is multisampled and
+    // cannot be sampled: sit the frame out rather than fail validation. The
+    // register hands back what a pass can bind, so there is nothing else to
+    // check.
+    if (!color || !depth || !normal || !material || !indirectSpecular) return;
+
+    declared.add(textures);
+
+    const { renderView } = textures;
+    const camera = renderView.camera;
+    const viewId = renderView.cameraEntity.id;
+    const width = renderView.viewport[2];
+    const height = renderView.viewport[3];
+    const halfWidth = Math.max(1, Math.ceil(width / 2));
+    const halfHeight = Math.max(1, Math.ceil(height / 2));
+    const levels = 1 + Math.floor(Math.log2(Math.max(width, height)));
+
+    // Reprojection, and only from the camera: there are no motion vectors, so a
+    // moving object's reflection is rejected by the temporal pass rather than
+    // followed. One camera's worth of history, which is all this example has.
+    mat4.mult(
+      mat4.set(reprojectionMatrix, previousViewProjectionMatrix),
+      camera.inverseViewMatrix,
+    );
+    mat4.mult(
+      mat4.set(previousViewProjectionMatrix, camera.projectionMatrix),
+      camera.viewMatrix,
+    );
+    mat4.invert(mat4.set(inverseProjectionMatrix, camera.projectionMatrix));
+
+    const uSSR = {
+      projectionMatrix: camera.projectionMatrix,
+      inverseProjectionMatrix,
+      reprojectionMatrix,
+      viewportSize: [width, height],
+      halfSize: [halfWidth, halfHeight],
+      frame: frame % 64,
+      near: camera.near,
+      intensity: settings.intensity,
+      maxDistance: settings.maxDistance,
+      thickness: settings.thickness,
+      steps: settings.steps,
+      maxLevel: levels - 1,
+      roughnessCutoff: settings.roughnessCutoff,
+      mirrorRoughness: settings.mirrorRoughness,
+      historyWeight:
+        accumulate && settings.temporal ? settings.historyWeight : 0,
+    };
+    frame++;
+    accumulate = true;
+
+    const pass = (options) =>
+      renderPipeline.declareFullscreenPass(
+        { renderView, textures, prefix: "ssr" },
+        options,
+      );
+
+    // ── Hierarchical depth ──
+    // Declared with addPass rather than through the fullscreen helper: each of
+    // these draws into one mip level of the texture the previous one wrote,
+    // which is a sub-resource write the helper has no vocabulary for. The
+    // ordering is the graph's: level N writes after level N-1 wrote, because
+    // they write the same resource, and the level N-1 view is resolved inside
+    // execute — declaring it as a read would be reading and writing one handle
+    // in a single pass, which is exactly what is not allowed.
+    const hiZ = frameGraph.createTexture({
+      label: `ssrHiZ_${viewId}`,
+      width,
+      height,
+      format: "r32uint",
+      mipLevelCount: levels,
+    });
+
+    // One stable descriptor object per shader, from the pipeline's own variant
+    // cache: pex-gpu keys compiled pipelines by identity, so building one per
+    // frame recompiles per frame.
+    const hiZCopyPipeline = renderPipeline.getPostProcessingPipeline(
+      "ssr.hiZ.copy",
+      hiZCopyShader,
+      NO_DEFINES,
+      {},
+    );
+    const hiZReducePipeline = renderPipeline.getPostProcessingPipeline(
+      "ssr.hiZ.reduce",
+      hiZReduceShader,
+      NO_DEFINES,
+      {},
+    );
+
+    frameGraph.addPass({
+      name: `ssr.hiZ.0.${viewId}`,
+      color: [{ texture: hiZ }],
+      uniforms: { uDepthTexture: depth },
+      renderView,
+      execute: ({ uniforms }) => {
+        renderPipeline.drawFullscreen({
+          label: "ssrHiZCopy",
+          pipeline: hiZCopyPipeline,
+          uniforms,
+        });
+      },
+    });
+
+    for (let level = 1; level < levels; level++) {
+      frameGraph.addPass({
+        name: `ssr.hiZ.${level}.${viewId}`,
+        color: [{ texture: hiZ, level }],
+        renderView,
+        execute: ({ resolveView }) => {
+          renderPipeline.drawFullscreen({
+            label: "ssrHiZReduce",
+            pipeline: hiZReducePipeline,
+            // Never createView(): pex-gpu keys its bind group cache by view
+            // identity, so a view built per frame leaks a bind group per frame.
+            uniforms: {
+              uPreviousLevelTexture: resolveView(hiZ, { level: level - 1 }),
+            },
+          });
+        },
+      });
+    }
+    textures.set("ssr.hiZ", hiZ);
+
+    // ── Radiance to reflect ──
+    // The image as it stands, with mips: a rough surface reflects a cone, not a
+    // ray, and the mip matching its footprint is what stands in for the samples
+    // it would otherwise take.
+    const colorPyramid = frameGraph.createTexture({
+      label: `ssrColorPyramid_${viewId}`,
+      width,
+      height,
+      format: frameGraph.describe(color).format,
+      mipLevelCount: levels,
+    });
+    pass({ name: "colorPyramid", shader: copyShader, target: colorPyramid });
+    frameGraph.addPass({
+      name: `ssr.colorPyramid.mips.${viewId}`,
+      // Opens its own render passes on the frame's encoder, so the graph is
+      // told what it touches rather than deriving it from attachments.
+      type: "raw",
+      writes: [{ handle: colorPyramid, usage: GPUTextureUsage.RENDER_ATTACHMENT }],
+      execute: ({ resolveTexture, encoder }) => {
+        gpu.generateMipmaps(ctx, resolveTexture(colorPyramid), { encoder });
+      },
+    });
+
+    // ── Trace, resolve, accumulate ──
+    const trace = pass({
+      name: "trace",
+      shader: ssrTraceShader,
+      size: [halfWidth, halfHeight],
+      // No colour to sample: the trace only records where a ray landed.
+      source: null,
+      clearValue: [0, 0, 0, 0],
+      uniforms: {
+        uSSR,
+        uHiZTexture: hiZ,
+        uDepthTexture: depth,
+        uNormalTexture: normal,
+        uMaterialTexture: material,
+        uNoiseTexture: frameGraph.importTexture(noiseTexture, "ssrNoise"),
+      },
+    });
+
+    const resolve = pass({
+      name: "resolve",
+      shader: ssrResolveShader,
+      // A pipeline variant per value, so the toggle is a compiled-out branch
+      // rather than a runtime one.
+      constants: { USE_NEIGHBOUR_REUSE: settings.spatialReuse },
+      size: [halfWidth, halfHeight],
+      source: null,
+      uniforms: {
+        uSSR,
+        uTraceTexture: trace,
+        uColorTexture: colorPyramid,
+        uColorTextureSampler: renderPipeline.samplers.linear,
+        uDepthTexture: depth,
+        uNormalTexture: normal,
+        uMaterialTexture: material,
+      },
+    });
+
+    // Kept across frames, and therefore not pooled: a pooled texture is a
+    // different one next frame, which is no use to something whose whole
+    // purpose is to hold the previous frame. The label is its identity here,
+    // so it carries the view id and nothing that changes frame to frame.
+    const history = frameGraph.createTexture({
+      label: `ssrHistory_${viewId}`,
+      width: halfWidth,
+      height: halfHeight,
+      format: "rgba16float",
+      persistent: true,
+    });
+
+    const temporal = pass({
+      name: "temporal",
+      shader: ssrTemporalShader,
+      size: [halfWidth, halfHeight],
+      source: null,
+      uniforms: {
+        uSSR,
+        uResolveTexture: resolve,
+        uHistoryTexture: history,
+        uHistoryTextureSampler: renderPipeline.samplers.linear,
+        uDepthTexture: depth,
+      },
+    });
+
+    // Two textures rather than a ping-pong, for two reasons: a pass may not
+    // read and write one handle, and a persistent resource is reallocated when
+    // the usage it was created with changes — which is what alternating between
+    // being read and being written every other frame would do, silently
+    // throwing away the history it exists to keep.
+    pass({ name: "history", shader: copyShader, source: temporal, target: history });
+
+    pass({
+      name: "composite",
+      shader: ssrCompositeShader,
+      uniforms: {
+        uSSR,
+        uReflectionTexture: temporal,
+        uDepthTexture: depth,
+        uNormalTexture: normal,
+        uMaterialTexture: material,
+        uIndirectSpecularTexture: indirectSpecular,
+      },
+      // Publishes the result as the frame's image: post-processing, the blit
+      // and every scene pass still to be declared read "color" when their turn
+      // comes, and this is what they now find.
+      chain: true,
+    });
+  };
+
+  // Against a pass rather than a phase. Right after the opaque pass is a
+  // position, not a stage, and every pass is an injection point under its own
+  // name — so the pipeline declares nothing for this, and the transparent and
+  // transmission passes, which resolve their attachment from the register when
+  // they declare, draw into the image this produced.
+  frameGraph.afterPass(`opaque.${cameraEntity.id}`, ({ renderView }) => {
+    // Not under MSAA: the scene passes are still drawing into the multisampled
+    // attachment, which no single-sample image can be loaded back into, so
+    // republishing here is reported and ignored. The stage below runs after the
+    // resolve, where every reader and writer of the image is single-sample.
+    if (renderView.cameraEntity.postProcessing?.msaa?.sampleCount > 1) return;
+
+    declare(frameGraph.blackboard.get(`renderTextures.${renderView.cameraEntity.id}`));
+  });
+
+  // Whatever the anchor above could not serve: MSAA, or a frame where depth was
+  // not sampleable until the pipeline resolved it.
+  frameGraph.on("postProcessing", declare);
+
+  return {
+    /** Drop what has been accumulated: a settings change invalidates it. */
+    invalidate() {
+      accumulate = false;
+    },
+  };
 }
-`;

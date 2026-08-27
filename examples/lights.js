@@ -341,6 +341,7 @@ gui.addParam("Receive Shadows", State, "floorReceiveShadows", {}, () => {
   floorEntity.material.receiveShadows = State.floorReceiveShadows;
 });
 gui.addHeader("Mesh");
+gui.addFPSMeeter();
 gui.addParam("Cast Shadows", State, "meshCastShadows", {}, () => {
   meshEntity.material.castShadows = State.meshCastShadows;
 });
@@ -423,6 +424,7 @@ gpu.frame(ctx, async () => {
     perspective,
   } of shadowMapControls) {
     control.texture = light[property] || dummy;
+    control.options.layer = light[property] ? (light._shadowLayer ?? 0) : 0;
     if (perspective) {
       control.options.near = light._near;
       control.options.far = light._far;

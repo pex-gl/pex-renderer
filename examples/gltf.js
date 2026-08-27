@@ -309,7 +309,7 @@ async function loadScene(url, grid) {
     }
   }
 
-  // cameraEntity.postProcessing = postProcessingComponent;
+  cameraEntity.postProcessing = postProcessingComponent;
 
   return scene;
 }
@@ -613,6 +613,7 @@ models = models.filter(({ name }) =>
     // "TextureTransformMultiTest",
     // "TextureTransformTest",
     // "ToyCar", // FAIL: (too small, wrong camera)
+    // "TrafficCone", // FAIL: KHR_materials_retroreflection
     // "TransmissionOrderTest",
     // "TransmissionRoughnessTest",
     // "TransmissionTest",

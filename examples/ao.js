@@ -295,7 +295,15 @@ gui.addParam("Blur sharpness", postProcessing.ssao, "blurSharpness", {
   min: 0,
   max: 20,
 });
-gui.addParam("Color bounce", postProcessing.ssao, "colorBounce");
+gui.addRadioList(
+  "Multi bounce",
+  postProcessing.ssao,
+  "multiBounce",
+  [false, "analytic", "screen-space"].map((value) => ({
+    name: value || "off",
+    value,
+  })),
+);
 gui.addParam("Bounce intensity", postProcessing.ssao, "colorBounceIntensity", {
   min: 0,
   max: 10,
