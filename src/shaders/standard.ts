@@ -485,6 +485,7 @@ ${bindingDeclaration(1, lightBindings.next(), "uIrradianceCoefficients", `array<
   data.normalView = normalize(input.normalView) * frontFacingSign;
   ${vertexFlags.tangent ? "data.tangentView = normalize(input.tangentView) * frontFacingSign;" : ""}
   data.normalWorld = normalize(input.normalWorld) * frontFacingSign;
+  data.bentNormalWorld = data.normalWorld;
   data.eyeDirView = normalize(-input.positionView);
   data.eyeDirWorld = (uFrame.inverseViewMatrix * vec4f(data.eyeDirView, 0.0)).xyz;
   data.indirectDiffuse = vec3f(0.0);
@@ -609,7 +610,12 @@ ${bindingDeclaration(1, lightBindings.next(), "uIrradianceCoefficients", `array<
   // consumer of ao — ambient, area lights, the light probe, and the analytic
   // multi-bounce inside it — picks it up without knowing where it came from.
   if (USE_SSAO_TEXTURE) {
-    data.ao *= textureSampleLevel(uAOTexture, uAOTextureSampler, input.position.xy / uFrame.viewportSize, 0.0).x;
+    let aoTerm = textureSampleLevel(uAOTexture, uAOTextureSampler, input.position.xy / uFrame.viewportSize, 0.0);
+    data.ao *= aoTerm.x;
+    if (USE_BENT_NORMALS) {
+      // The estimator works in view space; the indirect term is world space.
+      data.bentNormalWorld = normalize((uFrame.inverseViewMatrix * vec4f(aoTerm.yzw * 2.0 - 1.0, 0.0)).xyz);
+    }
   }
 
   ${hooks.fragBeforeLighting ?? ""}
@@ -747,6 +753,7 @@ struct PBRData {
   eyeDirView: vec3f,
   eyeDirWorld: vec3f,
   normalWorld: vec3f, // N, world space
+  bentNormalWorld: vec3f, // average unoccluded direction, world space; N without one
   viewWorld: vec3f, // V, view vector from position to camera, world space
   NdotV: f32,
 
@@ -805,6 +812,10 @@ override DEPTH_PACK_FAR: f32 = 10.0;
 override USE_MSAA: bool = false;
 override USE_BLEND: bool = false;
 override USE_SSAO_TEXTURE: bool = false;
+// The AO texture's remaining channels hold a bent normal, which then drives the
+// irradiance lookup and the specular occlusion cone instead of the surface
+// normal and the flat visibility term.
+override USE_BENT_NORMALS: bool = false;
 // Only meaningful alongside USE_BLEND: scales color by opacity before output,
 // matching the "premultiplied" blendMode's GPUBlendComponent pair (see
 // BLEND_MODES in systems/renderer/base.ts).
@@ -900,6 +911,7 @@ ${SHADERS.textureCoordinates}
 ${SHADERS.baseColor}
 ${SHADERS.alpha}
 ${(SHADERS.ambientOcclusion as any).multiBounce}
+${(SHADERS.ambientOcclusion as any).specular}
 ${(SHADERS.ambientOcclusion as any).texture}
 ${SHADERS.math.max3}
 ${SHADERS.reversibleToneMap}

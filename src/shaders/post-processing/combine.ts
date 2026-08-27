@@ -55,8 +55,8 @@ const TONE_MAP_SOURCES: Record<string, string | undefined> = {
 export const TONE_MAP_OPERATORS = Object.keys(TONE_MAP_SOURCES);
 
 /**
- * Prefix that carries the selection through `defines` — `TONE_MAP_agxPunchy`.
- * A define with a value in its name, as `COLOR_FUNCTION_*` is: it keys the
+ * Prefix that carries the selection through `defines` — `TONE_MAP_agxPunchy`. A
+ * define with a value in its name, as `COLOR_FUNCTION_*` is: it keys the
  * pipeline variant like any other define, and what follows the prefix is
  * literally the WGSL function the pass calls.
  */
@@ -87,7 +87,6 @@ export const combineShader = (defines: Set<string> = new Set()): string => {
   }
 
   const useFog = defines.has("USE_FOG");
-  const useSSAO = defines.has("USE_SSAO");
   const useBloom = defines.has("USE_BLOOM");
   const useVignette = defines.has("USE_VIGNETTE");
   const useLUT = defines.has("USE_LUT");
@@ -112,7 +111,6 @@ struct Combine {
   far: f32,
   fov: f32,
   exposure: f32,
-  ssaoMix: f32,
   bloomIntensity: f32,
   vignetteRadius: f32,
   vignetteIntensity: f32,
@@ -126,7 +124,6 @@ struct Combine {
 
 ${textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uTexture")}
 ${useFog ? textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uDepthTexture", "texture_depth_2d") : ""}
-${useSSAO ? textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uSSAOTexture") : ""}
 ${useBloom ? textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uBloomTexture") : ""}
 ${useLUT ? textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uLUTTexture") : ""}
 
@@ -138,14 +135,6 @@ ${SHADERS.math.saturate}
 ${SHADERS.encodeDecode}
 ${toneMapSource ?? ""}
 ${useFog ? `${SHADERS.depthRead}\n${SHADERS.depthPosition}\n${SHADERS.fog}` : ""}
-${
-  useSSAO
-    ? `override USE_SSAO_COLORS: bool = false;
-override USE_SSAO_MULTI_BOUNCE: bool = false;
-${SHADERS.ambientOcclusion.multiBounce}
-${SHADERS.ambientOcclusion.mix}`
-    : ""
-}
 ${useVignette ? SHADERS.vignette : ""}
 ${useLUT ? SHADERS.lut : ""}
 ${useColorCorrection ? SHADERS.colorCorrection : ""}
@@ -177,11 +166,6 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
     ),
     color.a
   );`
-      : ""
-  }
-  ${
-    useSSAO
-      ? "color = ssao(color, textureSample(uSSAOTexture, uSSAOTextureSampler, uv), uCombine.ssaoMix);"
       : ""
   }
   ${

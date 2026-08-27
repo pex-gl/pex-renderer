@@ -18,7 +18,7 @@ import { getRenderPassGraphViz } from "./graph-viz.js";
 
 random.seed(0);
 
-const pixelRatio = 1; // devicePixelRatio;
+const pixelRatio = devicePixelRatio;
 const ctx = await gpu.createContext({ pixelRatio });
 const renderEngine = createRenderEngine({ ctx, debug: true });
 const world = createWorld();
@@ -108,12 +108,14 @@ const rects = divide([-2 * s, -1 * s, 4 * s, 2 * s, 0], []);
 
 // Entities
 const postProcessing = components.postProcessing({
-  fxaa: components.postProcessing.fxaa(),
+  // fxaa: components.postProcessing.fxaa(),
+  // smaa: components.postProcessing.smaa(),
   ssao: components.postProcessing.ssao({
     type: "gtao",
-    intensity: 2,
+    bentNormals: true,
+    radius: 0.1,
   }),
-  exposure: 1.5,
+  // exposure: 1.5,
   // dof: components.postProcessing.dof(),
 });
 const cameraEntity = createEntity({
@@ -262,9 +264,10 @@ gui.addRadioList(
   [
     "",
     "ssao.main",
+    "ssao.edges",
+    "ssao.denoise[0]",
     "ssao.blurHorizontal",
     "ssao.blurVertical",
-    "gtao.main",
   ].map((value) => ({
     name: value || "No debug",
     value,
@@ -281,22 +284,83 @@ gui.addRadioList(
   "type",
   ["sao", "gtao"].map((value) => ({ name: value, value })),
 );
-gui.addParam("Samples", postProcessing.ssao, "samples", {
-  min: 2,
-  max: 20,
-  step: 1,
-});
-gui.addParam("Radius", postProcessing.ssao, "radius", { min: 0, max: 1000 });
-gui.addParam("Intensity", postProcessing.ssao, "intensity", {
-  min: 0,
-  max: 10,
-});
-gui.addParam("Bias", postProcessing.ssao, "bias", { min: 0, max: 0.1 });
+gui.addParam("Radius", postProcessing.ssao, "radius", { min: 0, max: 5 });
+gui.addParam("Mix", postProcessing.ssao, "mix", { min: 0, max: 1 });
 gui.addParam("Brightness", postProcessing.ssao, "brightness", {
   min: -0.5,
   max: 0.5,
 });
 gui.addParam("Contrast", postProcessing.ssao, "contrast", { min: 0.1, max: 3 });
+
+gui.addColumn("GTAO");
+gui.addParam("Slices", postProcessing.ssao, "slices", {
+  min: 1,
+  max: 9,
+  step: 1,
+});
+gui.addParam("Steps per slice", postProcessing.ssao, "samples", {
+  min: 1,
+  max: 9,
+  step: 1,
+});
+gui.addParam("Bent normals", postProcessing.ssao, "bentNormals");
+gui.addParam("Radius multiplier", postProcessing.ssao, "radiusMultiplier", {
+  min: 0.3,
+  max: 3,
+});
+gui.addParam("Falloff range", postProcessing.ssao, "falloffRange", {
+  min: 0,
+  max: 1,
+});
+gui.addParam(
+  "Sample distribution",
+  postProcessing.ssao,
+  "sampleDistributionPower",
+  { min: 1, max: 3 },
+);
+gui.addParam("Thin occluder", postProcessing.ssao, "thinOccluderCompensation", {
+  min: 0,
+  max: 0.7,
+});
+gui.addParam("Final value power", postProcessing.ssao, "finalValuePower", {
+  min: 0.5,
+  max: 5,
+});
+gui.addParam(
+  "Depth mip offset",
+  postProcessing.ssao,
+  "depthMipSamplingOffset",
+  {
+    min: 0,
+    max: 10,
+  },
+);
+gui.addParam("Denoise passes", postProcessing.ssao, "denoisePasses", {
+  min: 0,
+  max: 3,
+  step: 1,
+});
+gui.addParam("Denoise blur beta", postProcessing.ssao, "denoiseBlurBeta", {
+  min: 0.5,
+  max: 5,
+});
+
+gui.addColumn("SAO");
+gui.addParam("Samples", postProcessing.ssao, "samples", {
+  min: 2,
+  max: 20,
+  step: 1,
+});
+gui.addParam("Spiral turns", postProcessing.ssao, "spiralTurns", {
+  min: 1,
+  max: 17,
+  step: 1,
+});
+gui.addParam("Intensity", postProcessing.ssao, "intensity", {
+  min: 0,
+  max: 10,
+});
+gui.addParam("Bias", postProcessing.ssao, "bias", { min: 0, max: 0.1 });
 gui.addParam("Blur radius", postProcessing.ssao, "blurRadius", {
   min: 0,
   max: 5,
@@ -305,20 +369,6 @@ gui.addParam("Blur sharpness", postProcessing.ssao, "blurSharpness", {
   min: 0,
   max: 20,
 });
-gui.addRadioList(
-  "Multi bounce",
-  postProcessing.ssao,
-  "multiBounce",
-  [false, "analytic", "screen-space"].map((value) => ({
-    name: value || "off",
-    value,
-  })),
-);
-gui.addParam("Bounce intensity", postProcessing.ssao, "colorBounceIntensity", {
-  min: 0,
-  max: 10,
-});
-gui.addParam("Mix", postProcessing.ssao, "mix", { min: 0, max: 1 });
 
 // Events
 let debugOnce = false;

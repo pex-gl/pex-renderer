@@ -131,6 +131,13 @@ export interface PassContext {
    * (or hands it to a pex-gpu helper that does, eg. `generateMipmaps`).
    */
   encoder?: GPUCommandEncoder;
+  /**
+   * Timestamp queries for this pass, when the graph is profiling. Only set for
+   * a `"compute"` pass: the graph opens the render pass for every other kind
+   * and writes them itself, but pex-gpu opens a compute pass per dispatch, so
+   * the dispatch has to carry them through its own `pass` option to be timed.
+   */
+  timestampWrites?: GPUComputePassTimestampWrites;
 }
 
 export type PassExecute = (context: PassContext) => void;

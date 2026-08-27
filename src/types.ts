@@ -1,4 +1,5 @@
 import type {
+  ComputePipeline,
   GpuContext,
   GpuTexture,
   GpuBuffer,
@@ -400,31 +401,69 @@ export interface PointLightComponentOptions extends LightShadowInternals {
 }
 export interface SSAOComponentOptions {
   type?: "sao" | "gtao";
-  noiseTexture?: boolean;
+  /**
+   * How far to take the term towards full occlusion: 0 leaves surfaces
+   * unoccluded, 1 applies the estimate as computed.
+   */
   mix?: number;
-  samples?: number;
-  intensity?: number;
-  /** Meters */
+  /** World (view space) size of the occlusion sphere, in meters. */
   radius?: number;
-  blurRadius?: number;
-  blurSharpness?: number;
   brightness?: number;
   contrast?: number;
-  /** Centimeters */
+
+  /** SAO: sample a noise texture for the rotation jitter rather than hashing. */
+  noiseTexture?: boolean;
+  /** Samples per pixel (SAO), or steps per slice (GTAO). */
+  samples?: number;
+  /** SAO: darkening exponent. GTAO uses `finalValuePower`. */
+  intensity?: number;
+  /** SAO: bias against occlusion in smooth corners, in centimeters. */
   bias?: number;
+  /** SAO: turns of the sampling spiral. Prime, so taps don't line up. */
   spiralTurns?: number;
+  /** SAO: bilateral blur width, or negative to leave the estimate raw. */
+  blurRadius?: number;
+  /** SAO: how sharply the bilateral blur rejects a depth difference. */
+  blurSharpness?: number;
+
+  /** GTAO: slices of the horizon search. */
   slices?: number;
   /**
-   * Indirect bounce approximation. `"analytic"` is the Jimenez/Filament albedo
-   * polynomial, evaluated from visibility alone and applied to either
-   * estimator. `"screen-space"` additionally gathers neighbouring lit pixels
-   * inside GTAO's horizon search — two texture fetches per sample, so ~150 at
-   * default slice and sample counts — and degrades to `"analytic"` for SAO,
-   * whose estimator writes no color.
+   * GTAO: also estimate the average unoccluded direction, which then drives the
+   * irradiance lookup and the specular occlusion cone instead of the surface
+   * normal and the flat visibility term. Costs the buffer's other three
+   * channels and a handful of transcendentals per slice.
    */
-  multiBounce?: false | "analytic" | "screen-space";
-  /** Scales the `"screen-space"` gather. */
-  colorBounceIntensity?: number;
+  bentNormals?: boolean;
+  /**
+   * GTAO: lets the tuned radius differ from the ground-truth one, countering
+   * biases screen-space gathering has no way to avoid. Expected range
+   * [0.3, 3.0].
+   */
+  radiusMultiplier?: number;
+  /** GTAO: fraction of the radius over which a sample fades out. [0, 1] */
+  falloffRange?: number;
+  /**
+   * GTAO: 1 spreads samples evenly along a slice, higher pulls them towards the
+   * center, where the small crevices are. Expected range [1, 3].
+   */
+  sampleDistributionPower?: number;
+  /**
+   * GTAO: discards samples behind the center sooner, countering a depth buffer
+   * that holds no thickness information. Expected range [0, 0.7].
+   */
+  thinOccluderCompensation?: number;
+  /** GTAO: `occlusion = pow(occlusion, finalValuePower)`. [0.5, 5.0] */
+  finalValuePower?: number;
+  /**
+   * GTAO: trades memory bandwidth against temporal stability and thin-object
+   * accuracy — higher reads a coarser depth mip at the same offset. [0, 30]
+   */
+  depthMipSamplingOffset?: number;
+  /** GTAO: edge-aware denoise passes. 0 leaves the estimate raw. */
+  denoisePasses?: number;
+  /** GTAO: the denoiser's center tap weight. Higher blurs less. */
+  denoiseBlurBeta?: number;
 }
 export interface DoFComponentOptions {
   /** Gustafsson uses a spiral pattern while Upitis uses a circular one. */
@@ -886,7 +925,7 @@ export interface Samplers {
 export interface PostProcessingMethods {
   postProcessingEffects: Map<string, any>;
   postProcessingLoading: Map<string, Promise<void>>;
-  postProcessingPipelines: Map<string, RenderPipeline>;
+  postProcessingPipelines: Map<string, RenderPipeline | ComputePipeline>;
   loadPostProcessingEffect(registration: any): Promise<void> | undefined;
   getPostProcessingPipeline(
     key: string,
@@ -894,13 +933,16 @@ export interface PostProcessingMethods {
     defines: Set<string>,
     constants: Record<string, number | boolean>,
     blend?: GPUBlendState,
-  ): RenderPipeline;
+    compute?: boolean,
+  ): RenderPipeline | ComputePipeline;
   /**
    * Declare one fullscreen pass and publish it under `"<prefix>.<name>"`. The
    * helper built-in effects get as `context.pass`, on the pipeline so anything
    * injecting a pass from outside reaches it too.
    */
   declareFullscreenPass(scope: any, options: any): ResourceHandle;
+  /** The same, for one compute dispatch — `context.compute`. */
+  declareComputePass(scope: any, options: any): void;
   enabledPostProcessingEffects(cameraEntity: Entity): Generator<any>;
   postProcessingOutputs(cameraEntity: Entity): string[];
   postProcessingEffectsByStage(cameraEntity: Entity): Map<string, any[]>;

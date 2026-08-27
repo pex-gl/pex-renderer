@@ -194,18 +194,20 @@ const postProcessingVariants = [
   { name: "downsample [anti-flicker]", shader: postProcessing.downsampleShader, defines: new Set() },
   { name: "upsample [bilinear]", shader: postProcessing.upsampleShader, defines: new Set(["QUALITY_0"]) },
   { name: "upsample [tent]", shader: postProcessing.upsampleShader, defines: new Set() },
+  { name: "gtao prefilter", shader: postProcessing.gtaoPrefilterShader, defines: new Set() },
   { name: "gtao", shader: postProcessing.gtaoShader, defines: new Set() },
+  { name: "gtao [edges]", shader: postProcessing.gtaoShader, defines: new Set(["USE_GTAO_EDGES"]) },
+  { name: "gtao denoise", shader: postProcessing.gtaoDenoiseShader, defines: new Set() },
   { name: "sao", shader: postProcessing.saoShader, defines: new Set() },
   { name: "bilateral blur", shader: postProcessing.bilateralBlurShader, defines: new Set() },
-  { name: "ssao mix", shader: postProcessing.ssaoMixShader, defines: new Set() },
   { name: "dof [gustafsson]", shader: postProcessing.dofShader, defines: new Set(["USE_DOF_GUSTAFSSON"]) },
   { name: "dof [upitis]", shader: postProcessing.dofShader, defines: new Set(["USE_DOF_UPITIS"]) },
   { name: "dof [focus on screen point]", shader: postProcessing.dofShader, defines: new Set(["USE_DOF_GUSTAFSSON", "USE_FOCUS_ON_SCREEN_POINT"]) },
   { name: "combine [bare]", shader: postProcessing.combineShader, defines: new Set() },
   { name: "combine [fog]", shader: postProcessing.combineShader, defines: new Set(["USE_FOG"]) },
-  { name: "combine [ssao + bloom]", shader: postProcessing.combineShader, defines: new Set(["USE_SSAO", "USE_BLOOM"]) },
+  { name: "combine [bloom]", shader: postProcessing.combineShader, defines: new Set(["USE_BLOOM"]) },
   { name: "combine [grade]", shader: postProcessing.combineShader, defines: new Set(["USE_VIGNETTE", "USE_LUT", "USE_COLOR_CORRECTION"]) },
-  { name: "combine [everything]", shader: postProcessing.combineShader, defines: new Set(["USE_FOG", "USE_SSAO", "USE_BLOOM", "USE_VIGNETTE", "USE_LUT", "USE_COLOR_CORRECTION"]) },
+  { name: "combine [everything]", shader: postProcessing.combineShader, defines: new Set(["USE_FOG", "USE_BLOOM", "USE_VIGNETTE", "USE_LUT", "USE_COLOR_CORRECTION"]) },
   // Every operator: only the selected one is included, so a broken source shows
   // up in its own variant and nowhere else.
   ...postProcessing.TONE_MAP_OPERATORS.map((operator) => ({

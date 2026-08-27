@@ -7,67 +7,159 @@ const SHADERS = chunks as any;
 import {
   createBindingAllocator,
   formatShader,
+  fragmentOutputStruct,
   textureSamplerDeclaration,
 } from "../wgsl.js";
-import { FRAGMENT_COORD, fullscreenVertex, postProcessingStruct } from "./common.js";
+import {
+  FRAGMENT_COORD,
+  fullscreenVertex,
+  postProcessingStruct,
+} from "./common.js";
 
-// Screen-space ambient occlusion: two interchangeable estimators (GTAO, SAO)
-// writing a visibility buffer, a depth-aware blur to clean it up, and the mix
-// back into the color chain.
+// Screen-space ambient occlusion: two interchangeable estimators writing a
+// visibility buffer, the filter each needs to clean it up, and the mix back into
+// the color chain.
 //
-// Both estimators sample the depth and normal targets at pixel centres, so they
-// take a fragment coordinate rather than a texture coordinate.
+// GTAO is three passes — a compute prefilter over depth, the estimator, and an
+// edge-aware denoiser — where SAO is one plus a separable bilateral blur. Both
+// estimators read the depth and normal targets at pixel centres, so they take a
+// fragment coordinate rather than a texture coordinate.
 
 /**
- * Ground Truth Ambient Occlusion. Writes visibility in `.x`, or the bounced
- * indirect color in `.rgb` with visibility in `.a` when color bounce is on —
- * the mix pass reads whichever the same override selects.
+ * Levels of the depth pyramid, matching the chunk's hand-unrolled reduction and
+ * its `GTAO_DEPTH_MIP_MAX_LEVEL`. Four rather than the reference's five: a
+ * storage texture view is a single mip, and WebGPU only guarantees four storage
+ * texture bindings per stage.
  */
-export const gtaoShader = (): string => {
+export const GTAO_DEPTH_MIP_LEVELS = 4;
+
+/**
+ * Depth prefilter: the compute pass that turns the depth buffer into the linear
+ * view-space pyramid the estimator samples, in one dispatch.
+ *
+ * Not a fullscreen pass, and not because compute is faster per se: the coarser
+ * levels reduce through workgroup memory, so building them costs one read of
+ * the depth buffer rather than one full pass over the previous level each.
+ */
+export const gtaoPrefilterShader = (): string => {
   const alloc = createBindingAllocator(1);
 
   return formatShader(/* wgsl */ `
 ${postProcessingStruct}
 
-// Includes lead: the gtao chunk declares GTAOParams, the type bound below.
+${SHADERS.math.PI}
+${SHADERS.math.HALF_PI}
+${SHADERS.math.saturate}
+${SHADERS.depthRead}
+${SHADERS.gtao.common}
+${SHADERS.gtao.prefilter}
+
+
+@group(0) @binding(${alloc.next()}) var<uniform> uGTAO: GTAOParams;
+@group(0) @binding(${alloc.next()}) var uDepthTexture: texture_depth_2d;
+${Array.from(
+  { length: GTAO_DEPTH_MIP_LEVELS },
+  (_, level) =>
+    `@group(0) @binding(${alloc.next()}) var uDepthMip${level}: texture_storage_2d<r32uint, write>;`,
+).join("\n")}
+
+// Each thread covers a 2x2 block, so a workgroup covers 16x16 pixels.
+@compute @workgroup_size(8, 8, 1)
+fn computeMain(
+  @builtin(global_invocation_id) globalId: vec3u,
+  @builtin(local_invocation_id) localId: vec3u
+) {
+  gtaoPrefilterDepths16x16(
+    globalId.xy,
+    localId.xy,
+    uDepthTexture,
+    uGTAO,
+    uDepthMip0,
+    uDepthMip1,
+    uDepthMip2,
+    uDepthMip3
+  );
+}
+`);
+};
+
+/**
+ * Ground Truth Ambient Occlusion. Writes visibility in `.x` — plus the bent
+ * normal in `.yzw` under `USE_GTAO_BENT_NORMALS` — and, when a denoise pass
+ * follows, the edge weights it needs at `@location(1)`.
+ */
+export const gtaoShader = (defines: Set<string>): string => {
+  const alloc = createBindingAllocator(1);
+  const edges = defines.has("USE_GTAO_EDGES");
+
+  return formatShader(/* wgsl */ `
+${postProcessingStruct}
+
 ${SHADERS.math.PI}
 ${SHADERS.math.HALF_PI}
 ${SHADERS.math.saturate}
 ${SHADERS.colorCorrection}
-${SHADERS.depthRead}
-${SHADERS.depthPosition}
-${SHADERS.gtao}
+${SHADERS.gtao.common}
+${SHADERS.gtao.main}
+
+// The last denoise pass restores the UNORM scale; with no denoise pass to do
+// it, the estimator applies it itself.
+override GTAO_FINAL_APPLY: bool = true;
 
 @group(0) @binding(${alloc.next()}) var<uniform> uGTAO: GTAOParams;
+@group(0) @binding(${alloc.next()}) var uDepthTexture: texture_2d<u32>;
+@group(0) @binding(${alloc.next()}) var uNormalTexture: texture_2d<f32>;
 
-${textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uTexture")}
-${textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uDepthTexture", "texture_depth_2d")}
-${textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uNormalTexture")}
-${textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uNoiseTexture")}
+${fullscreenVertex()}
+
+${fragmentOutputStruct([edges && { name: "edges", type: "vec4f" }])}
+
+@fragment
+fn fragmentMain(input: VertexOutput) -> FragmentOutput {
+  var output: FragmentOutput;
+
+  let term = gtaoMainPass(vec2i(${FRAGMENT_COORD}), uDepthTexture, uNormalTexture, uGTAO);
+
+  output.color = gtaoEncodeVisibilityBentNormal(term, GTAO_FINAL_APPLY);
+  ${edges ? "output.edges = term.edgesLRTB;" : ""}
+
+  return output;
+}
+`);
+};
+
+/**
+ * One edge-aware denoise pass over the visibility buffer. Both textures are
+ * read by texel rather than sampled: the filter is a 3x3 stencil on its own
+ * grid, so there is nothing for a sampler to interpolate.
+ */
+export const gtaoDenoiseShader = (): string => {
+  const alloc = createBindingAllocator(1);
+
+  return formatShader(/* wgsl */ `
+${postProcessingStruct}
+
+${SHADERS.math.PI}
+${SHADERS.math.HALF_PI}
+${SHADERS.math.saturate}
+${SHADERS.gtao.common}
+${SHADERS.gtao.denoise}
+
+override GTAO_FINAL_APPLY: bool = false;
+
+@group(0) @binding(${alloc.next()}) var<uniform> uGTAO: GTAOParams;
+@group(0) @binding(${alloc.next()}) var uAOTexture: texture_2d<f32>;
+@group(0) @binding(${alloc.next()}) var uEdgesTexture: texture_2d<f32>;
 
 ${fullscreenVertex()}
 
 @fragment
 fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
-  var colorBounce = vec3f(0.0);
-  let visibility = gtao(
-    uTexture,
-    uTextureSampler,
-    uDepthTexture,
-    uDepthTextureSampler,
-    uNormalTexture,
-    uNormalTextureSampler,
-    uNoiseTexture,
-    uNoiseTextureSampler,
-    ${FRAGMENT_COORD},
-    uGTAO,
-    &colorBounce
-  );
+  // The reference blurs a fifth as hard on the passes that are not last, so a
+  // multi-pass denoise widens its reach without flattening the result.
+  let blurAmount = select(uGTAO.denoiseBlurBeta / 5.0, uGTAO.denoiseBlurBeta, GTAO_FINAL_APPLY);
 
-  if (USE_GTAO_COLOR_BOUNCE) {
-    return vec4f(colorBounce, visibility);
-  }
-  return vec4f(visibility, 0.0, 0.0, 1.0);
+  return gtaoDenoise(vec2i(${FRAGMENT_COORD}), uAOTexture, uEdgesTexture, blurAmount, GTAO_FINAL_APPLY);
 }
 `);
 };
@@ -154,45 +246,6 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
     uBlur.near,
     uBlur.far,
     uBlur.sharpness
-  );
-}
-`);
-};
-
-/**
- * Applies the visibility buffer to the color chain. Only declared when DoF
- * follows — otherwise combine does the same mix, saving a fullscreen pass.
- */
-export const ssaoMixShader = (): string => {
-  const alloc = createBindingAllocator(1);
-
-  return formatShader(/* wgsl */ `
-${postProcessingStruct}
-
-struct SSAO {
-  mix: f32,
-}
-@group(0) @binding(${alloc.next()}) var<uniform> uSSAO: SSAO;
-
-${textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uTexture")}
-${textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uSSAOTexture")}
-
-${fullscreenVertex()}
-
-// Fragment includes
-// Reads the estimator's bounced color instead of visibility alone.
-override USE_SSAO_COLORS: bool = false;
-// Tints the occlusion with the analytic multi-bounce fit.
-override USE_SSAO_MULTI_BOUNCE: bool = false;
-${SHADERS.ambientOcclusion.multiBounce}
-${SHADERS.ambientOcclusion.mix}
-
-@fragment
-fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
-  return ssao(
-    textureSample(uTexture, uTextureSampler, input.texCoord0),
-    textureSample(uSSAOTexture, uSSAOTextureSampler, input.texCoord0),
-    uSSAO.mix
   );
 }
 `);

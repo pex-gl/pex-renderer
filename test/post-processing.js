@@ -186,6 +186,11 @@ async function declareFrame(viewport, postProcessing, load, { msaa = 0, resolveD
     graph.exportTexture(textures.require("color"));
     const glare = textures.get("bloom.threshold");
     if (glare) graph.exportTexture(glare);
+    // Ambient occlusion's reader is the opaque mesh pass, which declares it
+    // through the standard renderer's inputs() — no mesh passes here, so the
+    // export stands in for that instead.
+    const occlusion = textures.get("ssao.main");
+    if (occlusion) graph.exportTexture(occlusion);
   });
 
   const plan = graph.compile();
@@ -319,20 +324,21 @@ const bloomComponent = (extra) => ({
       fxaa: { quality: 2, subPixelQuality: 0.75 },
       ssao: {
         type: "gtao",
-        // Off so the test doesn't pay for blue noise generation, and stays quiet.
-        noiseTexture: false,
         mix: 1,
-        intensity: 1,
         radius: 0.5,
-        bias: 0.001,
         brightness: 0,
         contrast: 1,
-        blurRadius: 0.5,
-        blurSharpness: 10,
         slices: 3,
-        samples: 4,
-        multiBounce: "screen-space",
-        colorBounceIntensity: 1,
+        samples: 3,
+        bentNormals: true,
+        radiusMultiplier: 1.457,
+        falloffRange: 0.615,
+        sampleDistributionPower: 2,
+        thinOccluderCompensation: 0,
+        finalValuePower: 2.2,
+        depthMipSamplingOffset: 3.3,
+        denoisePasses: 2,
+        denoiseBlurBeta: 1.2,
       },
       dof: {
         type: "gustafsson",
@@ -356,10 +362,11 @@ const bloomComponent = (extra) => ({
     [...new Set(names.map((name) => name.split(".")[0]))],
     ["ssao", "dof", "bloom", "combine", "final"],
   );
-  // DoF must blur an image that already has its occlusion.
+  // Occlusion is a lighting input, so it is complete before anything is shaded
+  // — which is the whole chain, DoF included.
   check(
-    "ssao mixes before dof",
-    names.indexOf("ssao.mix") < names.indexOf("dof.main"),
+    "ssao finishes before the image chain starts",
+    names.lastIndexOf("ssao.denoise[1]") < names.indexOf("dof.main"),
     true,
   );
   check(

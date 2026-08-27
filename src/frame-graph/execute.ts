@@ -37,7 +37,8 @@ const RESOLVE_HINT =
  * Sub-resource views, keyed on the raw `GPUTexture` so entries are collected
  * with it. Caching is a correctness requirement, not an optimisation: pex-gpu
  * keys bind groups by view identity and can only prune them through the
- * `GpuTexture` wrapper, so a view built per frame leaks a bind group per frame.
+ * `GpuTexture` wrapper, so a view built per frame leaks a bind group per
+ * frame.
  */
 const viewCache = new WeakMap<GPUTexture, Map<string, GPUTextureView>>();
 
@@ -231,7 +232,10 @@ export default function execute(
       ...(layerCount !== undefined && { arrayLayerCount: layerCount }),
     });
 
-  const runSubPasses = (pass: CompiledPass, encoder?: GPUCommandEncoder) => {
+  const runSubPasses = (
+    pass: CompiledPass,
+    extra?: Pick<PassContext, "encoder" | "timestampWrites">,
+  ) => {
     state.phase = "executing";
     try {
       for (const subPass of pass.subPasses) {
@@ -246,7 +250,7 @@ export default function execute(
             renderView: declaration.renderView,
           }),
           viewport: pass.viewport,
-          ...(encoder && { encoder }),
+          ...extra,
         };
 
         try {
@@ -275,7 +279,20 @@ export default function execute(
       // the frame's live encoder, or hands it to a pex-gpu helper that opens
       // its own passes on it (eg. generateMipmaps) — which couldn't run nested
       // inside a pass this loop already opened.
-      runSubPasses(pass, frameState(ctx).encoder);
+      runSubPasses(pass, { encoder: frameState(ctx).encoder });
+      continue;
+    }
+
+    if (pass.type === "compute") {
+      // pex-gpu opens a compute pass per dispatch and there is no descriptor
+      // state to share between them, so nothing is opened here — the dispatch
+      // inside `execute` opens its own. Merging never folds a compute pass into
+      // another (see canMerge), so there is exactly one dispatch to time and
+      // handing it the writes is the only way it gets timed at all.
+      const computeWrites = profiler?.writesFor(index, pass.label);
+      runSubPasses(pass, {
+        ...(computeWrites && { timestampWrites: computeWrites }),
+      });
       continue;
     }
 

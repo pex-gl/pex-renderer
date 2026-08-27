@@ -14,8 +14,10 @@ import type {
 } from "./types.js";
 
 /** An attachment with its resource resolved to a name. */
-export interface InspectedAttachment
-  extends Pick<CompiledColorAttachment, "loadOp" | "storeOp"> {
+export interface InspectedAttachment extends Pick<
+  CompiledColorAttachment,
+  "loadOp" | "storeOp"
+> {
   name: string;
   physicalId?: number;
 }
@@ -32,7 +34,8 @@ export interface InspectedPass extends Pick<CompiledPass, "name"> {
 
 /** A compiled resource flattened for display; shape fields are texture-only. */
 export interface InspectedResource
-  extends Pick<
+  extends
+    Pick<
       CompiledResource,
       | "name"
       | "kind"
@@ -180,7 +183,8 @@ export default function inspect(
   });
   let latest = -1;
   for (let i = 0; i < compiledIndexByDeclaration.length; i++) {
-    if (compiledIndexByDeclaration[i] === -1) compiledIndexByDeclaration[i] = latest;
+    if (compiledIndexByDeclaration[i] === -1)
+      compiledIndexByDeclaration[i] = latest;
     else latest = compiledIndexByDeclaration[i]!;
   }
 

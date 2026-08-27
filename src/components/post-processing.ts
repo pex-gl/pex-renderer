@@ -52,22 +52,36 @@ const postProcessing = ((options?: PostProcessingComponentOptions) => ({
 /** Post Processing SSAO subcomponent */
 postProcessing.ssao = (options?: SSAOComponentOptions) => ({
   type: "sao", // "gtao",
-  noiseTexture: true,
   mix: 1,
-  samples: options?.type === "gtao" ? 6 : 11,
-  intensity: 2.2,
   radius: 0.5, // m
-  blurRadius: 0.5,
-  blurSharpness: 10,
   brightness: 0,
   contrast: 1,
   // SAO
+  noiseTexture: true,
+  samples: options?.type === "gtao" ? 3 : 11,
+  intensity: 2.2,
   bias: 0.001, // cm
   spiralTurns: 7,
-  // GTAO
-  slices: 3,
-  multiBounce: "analytic",
-  colorBounceIntensity: 1.0,
+  blurRadius: 0.5,
+  blurSharpness: 10,
+  // GTAO. Defaults are XeGTAO's own, except the slice count. Its "high" preset
+  // takes three, which is tuned for a renderer with temporal accumulation:
+  // cycling the noise index across frames is what averages out the error
+  // between slice azimuths. Nothing here does that, and the spatial denoiser
+  // cannot — a 3x3 filter removes ~7x of the high-frequency noise but only
+  // ~1.4x of the low-frequency blotching that few azimuths leave behind, which
+  // is the part that reads as a pattern. Six is where that floor stops being
+  // the limit; nine is the reference's "ultra".
+  slices: 6,
+  bentNormals: false,
+  radiusMultiplier: 1.457,
+  falloffRange: 0.615,
+  sampleDistributionPower: 2,
+  thinOccluderCompensation: 0,
+  finalValuePower: 2.2,
+  depthMipSamplingOffset: 3.3,
+  denoisePasses: 1,
+  denoiseBlurBeta: 1.2,
   ...options,
 });
 

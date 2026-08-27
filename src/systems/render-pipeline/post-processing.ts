@@ -1,4 +1,5 @@
-import type { RenderPipeline } from "pex-gpu";
+import type { ComputePipeline, RenderPipeline } from "pex-gpu";
+import { submit } from "pex-gpu";
 
 import { NAMESPACE, definesKey, mapValues } from "../../utils.js";
 import { isTextureDescriptor } from "../../frame-graph/state.js";
@@ -16,6 +17,8 @@ import type {
   FrameGraph,
   PassUniforms,
   ResourceHandle,
+  SubResourceView,
+  TextureDescriptor,
 } from "../../frame-graph/index.js";
 
 /** One entry in the built-in chain: what turns it on, and how to fetch it. */
@@ -66,30 +69,6 @@ const EFFECT_ORDER: readonly EffectRegistration[] = [
 /** Where an effect runs unless it names another stage: after the whole scene. */
 const DEFAULT_STAGE = "postProcessing";
 
-/**
- * Whether ambient occlusion is consumed as a lighting input rather than applied
- * over the shaded image.
- *
- * The technique decides, not a setting: the screen-space bounce gathers light
- * from neighbouring pixels, which do not exist before shading, so asking for it
- * is asking for AO to run afterwards. Everything else — plain visibility, the
- * analytic multi-bounce — needs only depth and normals, so it can run against
- * the pre-pass and modulate indirect light properly.
- *
- * Only GTAO gathers that colour; SAO writes visibility alone and degrades to
- * the analytic fit, so the estimator is as much part of the question as the
- * setting is — `type` defaults to `"sao"` while `multiBounce` defaults to
- * `"screen-space"`, and reading the setting alone would send the default
- * configuration down the post-lighting path for a bounce it never computes.
- *
- * Lives here rather than in the ssao module because combine has to agree, and a
- * static import between two lazily-fetched effects would defeat the fetching.
- */
-export const isAOPreLighting = (cameraEntity: Entity): boolean => {
-  const ssao = cameraEntity.postProcessing?.ssao;
-  return !(ssao?.type === "gtao" && ssao.multiBounce === "screen-space");
-};
-
 /** An effect's stage, resolved for one camera. */
 const resolveStage = (
   effect: PostProcessingEffect,
@@ -121,6 +100,12 @@ export interface PostProcessingPassOptions {
   source?: ResourceHandle | null;
   /** Where to draw. A texture is allocated when omitted. */
   target?: ResourceHandle;
+  /**
+   * Further colour attachments, at `@location(1)` onwards. Each is published
+   * under `"<effect>.<name>"` from its own entry, so a reader asks for the
+   * buffer it wants rather than for the pass that happened to write it.
+   */
+  targets?: { name: string; texture: ResourceHandle; clearValue?: GPUColor }[];
   /** Size of the allocated target. Defaults to the full viewport. */
   size?: number[];
   /** Format of the allocated target. Defaults to the effect's working format. */
@@ -135,6 +120,33 @@ export interface PostProcessingPassOptions {
    * `"<effect>.<name>"` either way.
    */
   chain?: boolean;
+}
+
+/** One dispatch, in the terms `PassDeclaration` already uses. */
+export interface PostProcessingComputePassOptions {
+  /** Unique within the effect. Names the pass as `"<effect>.<name>"`. */
+  name: string;
+  /** WGSL generator, same contract as the fullscreen shaders. */
+  shader: (defines: Set<string>) => string;
+  defines?: Set<string>;
+  constants?: Record<string, number | boolean>;
+  /** Workgroup counts. */
+  dispatch: [number, number?, number?];
+  /**
+   * Resources the dispatch writes through a storage binding. Attachments are
+   * writes already; these are not, so the graph only learns of them here — and
+   * without them the target is culled and its usage flags lack
+   * STORAGE_BINDING.
+   */
+  writes?: ResourceHandle[];
+  uniforms?: PassUniforms;
+  /**
+   * Bindings that need a view of one mip or layer rather than the whole
+   * texture, which is every storage-texture binding: a storage view is a single
+   * level, so writing a mip chain means one binding per level. Resolved through
+   * the pass context, never `createView()` — see `resolveView`.
+   */
+  views?: Record<string, { handle: ResourceHandle } & SubResourceView>;
 }
 
 export interface PostProcessingContext {
@@ -158,6 +170,17 @@ export interface PostProcessingContext {
    * only what other effects consume needs to go through the register.
    */
   pass: (options: PostProcessingPassOptions) => ResourceHandle;
+  /**
+   * Declare one compute dispatch. Separate from `pass` rather than a flag on
+   * it: a dispatch has no attachments, no target to allocate and no image to
+   * chain, so all it shares is the pipeline cache and the uniform block.
+   */
+  compute: (options: PostProcessingComputePassOptions) => void;
+  /**
+   * A texture for the effect to own for the frame, for what `pass` cannot
+   * allocate on its own — a mip chain, or a storage target a dispatch writes.
+   */
+  createTexture: (descriptor: TextureDescriptor) => ResourceHandle;
 }
 
 export interface PostProcessingEffect {
@@ -249,7 +272,7 @@ export default ({
 }): PostProcessingMethods & ThisType<RenderPipelineSystem> => ({
   postProcessingEffects: new Map<string, PostProcessingEffect | null>(),
   postProcessingLoading: new Map<string, Promise<void>>(),
-  postProcessingPipelines: new Map<string, RenderPipeline>(),
+  postProcessingPipelines: new Map<string, RenderPipeline | ComputePipeline>(),
 
   /**
    * Fetch an effect module once. A failed import is remembered as null so a
@@ -304,6 +327,7 @@ export default ({
     defines: Set<string>,
     constants: Record<string, number | boolean>,
     blend?: GPUBlendState,
+    compute?: boolean,
   ) {
     // Two sub-passes can share a key and differ only in their shader — ssao's
     // "main" is the SAO or the GTAO generator depending on `type` — so the
@@ -320,19 +344,23 @@ export default ({
     }
 
     const source = shader(defines);
-    const variant: RenderPipeline = {
-      vertex: source,
-      fragment: source,
-      depthWriteEnabled: false,
-      // WGSL `override ...: bool` constants are authored as JS booleans;
-      // pex-gpu's RenderPipeline.constants is Record<string, number>
-      // (GPUPipelineConstantValue is a `double`), so coerce here rather than
-      // lean on the browser's WebIDL ToNumber() conversion to do it for us.
-      ...(Object.keys(constants).length && {
-        constants: mapValues(constants, Number),
-      }),
-      ...(blend && { blend }),
-    };
+    // WGSL `override ...: bool` constants are authored as JS booleans; pex-gpu's
+    // `constants` is Record<string, number> (GPUPipelineConstantValue is a
+    // `double`), so coerce here rather than lean on the browser's WebIDL
+    // ToNumber() conversion to do it for us.
+    const specialization = Object.keys(constants).length
+      ? { constants: mapValues(constants, Number) }
+      : {};
+
+    const variant: RenderPipeline | ComputePipeline = compute
+      ? { compute: source, ...specialization }
+      : {
+          vertex: source,
+          fragment: source,
+          depthWriteEnabled: false,
+          ...specialization,
+          ...(blend && { blend }),
+        };
 
     this.postProcessingPipelines.set(variantKey, variant);
     if (this.postProcessingPipelines.size > POST_PROCESSING_PIPELINE_LIMIT) {
@@ -377,6 +405,7 @@ export default ({
       blend,
       source,
       target,
+      targets,
       size = [renderView.viewport[2]!, renderView.viewport[3]!],
       format,
       uniforms,
@@ -440,18 +469,98 @@ export default ({
 
     frameGraph.addPass({
       name: `${key}.${viewId}`,
-      color: [{ texture: output, ...(clearValue && { clearValue }) }],
+      color: [
+        { texture: output, ...(clearValue && { clearValue }) },
+        ...(targets ?? []).map(({ texture, clearValue: value }) => ({
+          texture,
+          ...(value && { clearValue: value }),
+        })),
+      ],
       uniforms: passUniforms,
       renderView,
       execute: ({ uniforms: resolved }) => {
-        this.drawFullscreen({ label: key, pipeline: variant, uniforms: resolved });
+        this.drawFullscreen({
+          label: key,
+          pipeline: variant as RenderPipeline,
+          uniforms: resolved,
+        });
       },
     });
 
     textures.set(key, output);
+    for (const target of targets ?? []) {
+      textures.set(`${prefix}.${target.name}`, target.texture);
+    }
     if (chain) textures.set("color", output);
 
     return output;
+  },
+
+  /**
+   * Declare one compute dispatch, on the same terms a fullscreen pass gets: the
+   * same pipeline cache, the same uniform block, the same naming.
+   *
+   * Nothing is returned — a dispatch writes through storage bindings the caller
+   * already holds handles to, so there is no output to hand back. Those handles
+   * must be listed in `writes`: they are not attachments, so the graph has no
+   * other way to learn the pass produces them, and without it the pass is
+   * culled and its targets never gain STORAGE_BINDING.
+   */
+  declareComputePass(
+    { renderView, prefix }: Pick<FullscreenPassScope, "renderView" | "prefix">,
+    {
+      name,
+      shader,
+      defines = new Set<string>(),
+      constants = {},
+      dispatch,
+      writes,
+      uniforms,
+      views,
+    }: PostProcessingComputePassOptions,
+  ): void {
+    const viewId = renderView.cameraEntity!.id;
+    const key = `${prefix}.${name}`;
+    const viewport = renderView.viewport;
+
+    const variant = this.getPostProcessingPipeline(
+      key,
+      shader,
+      defines,
+      constants,
+      undefined,
+      true,
+    );
+
+    frameGraph.addPass({
+      name: `${key}.${viewId}`,
+      type: "compute",
+      ...(writes && { writes }),
+      uniforms: {
+        uPostProcessing: {
+          viewportSize: [viewport[2]!, viewport[3]!],
+          texelSize: [1 / viewport[2]!, 1 / viewport[3]!],
+          sourceTexelSize: [1 / viewport[2]!, 1 / viewport[3]!],
+          time: this.time,
+        },
+        ...uniforms,
+      },
+      renderView,
+      execute: ({ uniforms: resolved, resolveView, timestampWrites }) => {
+        submit(ctx, {
+          label: key,
+          pipeline: variant as ComputePipeline,
+          uniforms: {
+            ...resolved,
+            ...mapValues(views ?? {}, ({ handle, ...view }) =>
+              resolveView(handle, view),
+            ),
+          },
+          dispatch,
+          ...(timestampWrites && { pass: { label: key, timestampWrites } }),
+        });
+      },
+    });
   },
 
   /**
@@ -467,8 +576,7 @@ export default ({
     cameraEntity: Entity,
   ): Generator<PostProcessingEffect> {
     const component = cameraEntity.postProcessing as
-      | Record<string, unknown>
-      | undefined;
+      Record<string, unknown> | undefined;
     if (!component) return;
 
     for (const registration of EFFECT_ORDER) {
@@ -547,6 +655,8 @@ export default ({
         samplers: this.samplers,
         textures,
         pass: (options) => this.declareFullscreenPass(scope, options),
+        compute: (options) => this.declareComputePass(scope, options),
+        createTexture: (descriptor) => frameGraph.createTexture(descriptor),
       });
     }
   },

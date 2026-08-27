@@ -349,6 +349,7 @@ export default ({
         USE_ALPHA_TO_COVERAGE: alphaToCoverage,
         USE_BLEND: !!material.blend,
         USE_SSAO_TEXTURE: !!this._textures?.["ssao.main"],
+        USE_BENT_NORMALS: !!this._textures?.["ssao.bentNormal"],
         PREMULTIPLY_ALPHA:
           !!material.blend && material.blendMode === "premultiplied",
         // Per-material activation for `runtime` fields (see FeatureField.runtime).
@@ -528,7 +529,10 @@ export default ({
 
   inputs({ transparent, transmitted }: any = {}) {
     if (transmitted) return ["transmission.grab"];
-    return transparent ? [] : ["ssao.main"];
+    // "ssao.bentNormal" is the same texture under a second name, published only
+    // when its remaining channels carry one — which is the only thing that tells
+    // a reader whether they can be decoded.
+    return transparent ? [] : ["ssao.main", "ssao.bentNormal"];
   },
 
   render(renderView: RenderView, entities: Entity[], options: any) {

@@ -3,15 +3,11 @@ import {
   TONE_MAP_DEFINE,
 } from "../../../shaders/post-processing/combine.js";
 
-import { isAOPreLighting } from "../post-processing.js";
 import type { PostProcessingEffect } from "../post-processing.js";
 
 /**
  * Composites the HDR chain and tonemaps it. Always declared: exposure and the
  * tonemap are not optional, they are what turns scene radiance into an image.
- *
- * Ambient occlusion is applied here rather than in its own pass whenever depth
- * of field is off, saving a fullscreen pass in the common case.
  */
 const combine: PostProcessingEffect = {
   name: "combine",
@@ -19,18 +15,11 @@ const combine: PostProcessingEffect = {
   declare({ cameraEntity, textures, samplers, pass }) {
     const camera = cameraEntity.camera!;
     const postProcessing = cameraEntity.postProcessing!;
-    const { fog, ssao, bloom, vignette, lut, colorCorrection } = postProcessing;
+    const { fog, bloom, vignette, lut, colorCorrection } = postProcessing;
 
     const depth = textures.get("depth");
-    const occlusion = textures.get("ssao.main");
     const glare = textures.get("bloom.threshold");
 
-    // Depth of field already consumed the occlusion when it ran, and nothing is
-    // left to apply when the standard shader folded it into indirect light
-    // before shading. Both also check the texture exists: an effect the
-    // component asks for still doesn't run if its inputs were missing.
-    const mixesSSAO =
-      !!ssao && !postProcessing.dof && !isAOPreLighting(cameraEntity) && !!occlusion;
     const addsBloom = !!bloom && !!glare;
     const showsFog = !!fog && !!depth;
 
@@ -45,16 +34,11 @@ const combine: PostProcessingEffect = {
           ? [`${TONE_MAP_DEFINE}${postProcessing.toneMap}`]
           : []),
         ...(showsFog ? ["USE_FOG"] : []),
-        ...(mixesSSAO ? ["USE_SSAO"] : []),
         ...(addsBloom ? ["USE_BLOOM"] : []),
         ...(vignette ? ["USE_VIGNETTE"] : []),
         ...(lut?.texture ? ["USE_LUT"] : []),
         ...(colorCorrection ? ["USE_COLOR_CORRECTION"] : []),
       ]),
-      constants: {
-        USE_SSAO_COLORS: !isAOPreLighting(cameraEntity),
-        USE_SSAO_MULTI_BOUNCE: !!ssao?.multiBounce,
-      },
       uniforms: {
         uCombine: {
           viewMatrix: camera.viewMatrix!,
@@ -70,7 +54,6 @@ const combine: PostProcessingEffect = {
           far: camera.far!,
           fov: camera.fov!,
           exposure: postProcessing.exposure!,
-          ssaoMix: ssao?.mix ?? 0,
           bloomIntensity: bloom?.intensity ?? 0,
           vignetteRadius: vignette?.radius ?? 0,
           vignetteIntensity: vignette?.intensity ?? 0,
@@ -83,10 +66,6 @@ const combine: PostProcessingEffect = {
         ...(showsFog && {
           uDepthTexture: depth!,
           uDepthTextureSampler: samplers.nearest,
-        }),
-        ...(mixesSSAO && {
-          uSSAOTexture: occlusion!,
-          uSSAOTextureSampler: samplers.linear,
         }),
         ...(addsBloom && {
           uBloomTexture: glare!,

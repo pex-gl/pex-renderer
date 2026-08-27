@@ -127,9 +127,14 @@ Extensibility is four distinct mechanisms, deliberately not one:
   stage names shadowing the pass list. Synchronous, since `addPass` is.
 - `stage(name, payload)` — the boundaries no single pass marks (a phase that
   exists whether or not the pass before it was declared), and the only hook that
-  carries a payload and can be awaited. The pipeline runs two: `afterScene`,
-  once no more geometry will be drawn, and `beforePostProcessing`, after the
-  inverse tone map.
+  carries a payload and can be awaited. The pipeline opens eight, in order:
+  `outputs` (before anything is allocated, to add to the main pass' outputs),
+  then `lights`, `prePass`, `opaque`, `transparent`, `transmission`,
+  `postProcessing`, `present`. `transparent` and `transmission` open only when
+  the scene has such geometry, and `prePass` only when something asked for a
+  pre-pass — an effect anchored at a stage the frame never opened is reported
+  rather than silently dropped. The payload is the view's `RenderTextures`,
+  except `outputs`, which carries the output name set.
 - `blackboard` — values shared between decoupled modules.
 - `overridePass(name, transform)` — replace, wrap or drop a pass by name.
 
@@ -153,10 +158,10 @@ into the multisampled attachment and resolves into the one everything else
 samples, and there is no way to load a single-sample image back into a
 multisampled attachment. Mid-scene reads still work (the resolve runs at the end
 of each pass that declares it); a mid-scene republish is reported and ignored.
-The `afterScene` stage is the answer for anything that has to replace the image
-under MSAA: the scene has resolved by then, so from there on every reader and
-writer of `"color"` is single-sample and a republish is picked up whatever the
-sample count.
+The `postProcessing` stage is the answer for anything that has to replace the
+image under MSAA: the scene has resolved by then, so from there on every reader
+and writer of `"color"` is single-sample and a republish is picked up whatever
+the sample count.
 
 ### Texture hand-off (`render-pipeline/render-textures.ts`)
 

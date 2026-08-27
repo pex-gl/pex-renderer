@@ -3,54 +3,35 @@ import random from "pex-random";
 
 import {
   bilateralBlurShader,
+  GTAO_DEPTH_MIP_LEVELS,
+  gtaoDenoiseShader,
+  gtaoPrefilterShader,
   gtaoShader,
   saoShader,
-  ssaoMixShader,
 } from "../../../shaders/post-processing/ssao.js";
-import { BlueNoiseGenerator } from "../../../utils/blue-noise.js";
 
+import type { ResourceHandle } from "../../../frame-graph/index.js";
 import type { GpuContext, GpuTexture } from "../../../types.js";
-import { isAOPreLighting } from "../post-processing.js";
-import type { PostProcessingEffect } from "../post-processing.js";
+import type {
+  PostProcessingContext,
+  PostProcessingEffect,
+} from "../post-processing.js";
 
 // Noise textures are identical for every camera and never change, so they are
 // memoized per context rather than cached per entity. Like the fullscreen
 // geometry, they live for the context's lifetime.
-const blueNoiseTextures = new WeakMap<GpuContext, GpuTexture>();
 const noiseTextures = new WeakMap<GpuContext, GpuTexture>();
 const dummyTextures = new WeakMap<GpuContext, GpuTexture>();
 
-const BLUE_NOISE_SIZE = 32;
 const NOISE_SIZE = 64;
 
-/** Four channels of blue noise, one generated pattern each: GTAO reads .xy. */
-function getBlueNoiseTexture(ctx: GpuContext): GpuTexture {
-  return blueNoiseTextures.getOrInsertComputed(ctx, () => {
-    const generator = new BlueNoiseGenerator();
-    generator.size = BLUE_NOISE_SIZE;
-
-    const data = new Uint8Array(BLUE_NOISE_SIZE ** 2 * 4);
-    for (let channel = 0; channel < 4; channel++) {
-      const { data: bin, maxValue } = generator.generate();
-      for (let i = 0; i < bin.length; i++) {
-        data[i * 4 + channel] = 255 * (bin[i]! / maxValue);
-      }
-    }
-
-    return createTexture(ctx, {
-      label: "ssaoBlueNoiseTexture",
-      width: BLUE_NOISE_SIZE,
-      height: BLUE_NOISE_SIZE,
-      format: "rgba8unorm",
-      data,
-    });
-  });
-}
-
 /**
- * White noise for SAO's rotation jitter. Values are [0, 1] rather than the
- * GLSL version's [-1, 1]: the analytic fallback the same shader uses is a
- * fract(), and 8 bit unorm is filterable where rg32float is not.
+ * White noise for SAO's rotation jitter. Values are [0, 1] rather than the GLSL
+ * version's [-1, 1]: the analytic fallback the same shader uses is a fract(),
+ * and 8 bit unorm is filterable where rg32float is not.
+ *
+ * GTAO needs none: its noise is a Hilbert-driven R2 sequence evaluated per
+ * pixel, which is better distributed than a tiled texture and costs no fetch.
  */
 function getNoiseTexture(ctx: GpuContext): GpuTexture {
   return noiseTextures.getOrInsertComputed(ctx, () => {
@@ -73,8 +54,10 @@ function getNoiseTexture(ctx: GpuContext): GpuTexture {
   });
 }
 
-/** The estimators sample a noise texture unconditionally, so the binding is
- * always declared; with the analytic hash selected it reads this instead. */
+/**
+ * SAO samples a noise texture unconditionally, so the binding is always
+ * declared; with the analytic hash selected it reads this instead.
+ */
 function getDummyTexture(ctx: GpuContext): GpuTexture {
   return dummyTextures.getOrInsertComputed(ctx, () =>
     createTexture(ctx, {
@@ -87,166 +70,308 @@ function getDummyTexture(ctx: GpuContext): GpuTexture {
   );
 }
 
+/** Pixels one workgroup covers: 8x8 threads, each handling a 2x2 block. */
+const GTAO_PREFILTER_TILE = 16;
+/** Disables the denoise more elegantly than zeroing every edge would. */
+const GTAO_DENOISE_DISABLED_BETA = 1e4;
+
+/** What both estimators need beyond the effect's own context. */
+interface EstimatorScope extends PostProcessingContext {
+  /** The scene's depth buffer, as the pre-pass left it. */
+  depth: ResourceHandle;
+  /** View-space normals, encoded to [0, 1]. */
+  normal: ResourceHandle;
+}
+
+/** Everything both estimators derive from the camera and the viewport. */
+function getEstimatorScope({ cameraEntity, viewport }: EstimatorScope) {
+  const [width, height] = [viewport[2]!, viewport[3]!];
+  return {
+    camera: cameraEntity.camera!,
+    component: cameraEntity.postProcessing!.ssao!,
+    width,
+    height,
+    viewportSize: [width, height],
+    viewportPixelSize: [1 / width, 1 / height],
+  };
+}
+
 /**
- * Screen-space ambient occlusion.
- *
- * The estimator writes a visibility buffer at `ssao.main`, which the separable
- * bilateral blur cleans up in place. Applying it to the color is left to
- * combine unless depth of field runs first, since DoF must blur an image that
- * already has its occlusion.
+ * Ground Truth Ambient Occlusion, after XeGTAO: prefilter the depth buffer into
+ * a linear view-space pyramid, estimate against it, denoise.
  */
-const ssao: PostProcessingEffect = {
-  name: "ssao",
-  outputs: ["normal"],
-  // Declared right after the depth/normal pre-pass, so the visibility buffer
-  // exists before anything is shaded and the standard shader can fold it into
-  // the indirect term. Without a pre-pass that stage never fires and the
-  // pipeline falls back to running the effect after the scene, applying the
-  // occlusion over the shaded image instead.
-  stage: (cameraEntity) =>
-    isAOPreLighting(cameraEntity) ? "prePass" : "postProcessing",
-  declare({ ctx, cameraEntity, viewport, textures, samplers, pass }) {
-    // Both estimators reconstruct view-space position from depth and read the
-    // view-space normal target.
-    const depth = textures.get("depth");
-    const normal = textures.get("normal");
-    if (!depth || !normal) return;
+function declareGTAO(scope: EstimatorScope) {
+  const {
+    cameraEntity,
+    textures,
+    pass,
+    compute,
+    createTexture,
+    depth,
+    normal,
+  } = scope;
+  const { camera, component, width, height, viewportSize, viewportPixelSize } =
+    getEstimatorScope(scope);
 
-    const camera = cameraEntity.camera!;
-    const component = cameraEntity.postProcessing!.ssao!;
-    const gtao = component.type === "gtao";
+  const bentNormals = !!component.bentNormals;
+  const denoisePasses = component.denoisePasses!;
 
-    // Only reachable after shading, which is exactly what isAOPreLighting keys
-    // the stage off — so this is the same condition, not a second one.
-    const screenSpaceBounce = !isAOPreLighting(cameraEntity);
+  // The projection in the one form the estimator needs it: a view position is
+  // (ndcToViewMul * uv + ndcToViewAdd) * viewspaceZ. The vertical terms are
+  // negated because a screen coordinate's V points down where view space's Y
+  // points up.
+  const tanHalfFovY = Math.tan(camera.fov! * 0.5);
+  const tanHalfFovX = tanHalfFovY * (width / height);
+  const ndcToViewMul = [2 * tanHalfFovX, -2 * tanHalfFovY];
 
-    // The gathered color needs the full HDR range; visibility alone does not.
-    const format: GPUTextureFormat = screenSpaceBounce
-      ? "rgba16float"
-      : "r8unorm";
+  const params = {
+    ndcToViewMul,
+    ndcToViewAdd: [-tanHalfFovX, tanHalfFovY],
+    ndcToViewMulByPixelSize: [
+      ndcToViewMul[0]! / width,
+      ndcToViewMul[1]! / height,
+    ],
+    viewportSize,
+    viewportPixelSize,
+    near: camera.near!,
+    far: camera.far!,
+    effectRadius: component.radius!,
+    radiusMultiplier: component.radiusMultiplier!,
+    effectFalloffRange: component.falloffRange!,
+    sampleDistributionPower: component.sampleDistributionPower!,
+    thinOccluderCompensation: component.thinOccluderCompensation!,
+    finalValuePower: component.finalValuePower!,
+    mix: component.mix!,
+    depthMipSamplingOffset: component.depthMipSamplingOffset!,
+    denoiseBlurBeta: denoisePasses
+      ? component.denoiseBlurBeta!
+      : GTAO_DENOISE_DISABLED_BETA,
+    brightness: component.brightness!,
+    contrast: component.contrast!,
+    // No temporal filter to converge one, so every frame takes the same samples
+    // rather than flickering between sets.
+    noiseIndex: 0,
+  };
 
-    const noise = component.noiseTexture
-      ? gtao
-        ? getBlueNoiseTexture(ctx)
-        : getNoiseTexture(ctx)
-      : getDummyTexture(ctx);
-    const noiseTextureSize = component.noiseTexture
-      ? gtao
-        ? BLUE_NOISE_SIZE
-        : NOISE_SIZE
-      : 1;
+  // r32uint holding bitcast floats — see the chunk's gtaoLoadViewspaceDepth for
+  // why the pyramid is neither r16float nor r32float.
+  const depthMips = createTexture({
+    label: `ssao.depthMips.${cameraEntity.id}`,
+    width,
+    height,
+    format: "r32uint",
+    mipLevelCount: GTAO_DEPTH_MIP_LEVELS,
+  });
 
-    // Shared by both estimators: the AO buffer's own dimensions, which the
-    // chunks use to walk the depth target in texel steps.
-    const estimator = {
-      near: camera.near!,
-      far: camera.far!,
-      fov: camera.fov!,
-      viewportSize: [viewport[2]!, viewport[3]!],
-      texelSize: [1 / viewport[2]!, 1 / viewport[3]!],
-      intensity: component.intensity!,
-      radius: component.radius!,
-      bias: component.bias!,
-      brightness: component.brightness!,
-      contrast: component.contrast!,
-      noiseTextureSize,
-    };
+  compute({
+    name: "prefilterDepths",
+    shader: gtaoPrefilterShader,
+    dispatch: [
+      Math.ceil(width / GTAO_PREFILTER_TILE),
+      Math.ceil(height / GTAO_PREFILTER_TILE),
+    ],
+    writes: [depthMips],
+    uniforms: { uGTAO: params, uDepthTexture: depth },
+    // One binding per level: a storage texture view is a single mip, and the
+    // dispatch writes all five.
+    views: Object.fromEntries(
+      Array.from({ length: GTAO_DEPTH_MIP_LEVELS }, (_, level) => [
+        `uDepthMip${level}`,
+        { handle: depthMips, level },
+      ]),
+    ),
+  });
 
-    const geometry = {
+  // Visibility alone fits one channel. The bent normal takes the other three,
+  // which is also what tells a reader they are there to be decoded.
+  const format: GPUTextureFormat = bentNormals ? "rgba8unorm" : "r8unorm";
+
+  const edges = denoisePasses
+    ? createTexture({
+        label: `ssao.edges.${cameraEntity.id}`,
+        width,
+        height,
+        format: "rgba8unorm",
+      })
+    : undefined;
+
+  let ao = pass({
+    name: "main",
+    shader: gtaoShader,
+    // The estimator declares no uTexture: at the pre-pass stage the color chain
+    // is a read edge on an image nothing has drawn into yet.
+    source: null,
+    ...(edges && {
+      defines: new Set(["USE_GTAO_EDGES"]),
+      targets: [{ name: "edges", texture: edges }],
+    }),
+    constants: {
+      GTAO_NUM_SLICES: component.slices!,
+      GTAO_NUM_SAMPLES: component.samples!,
+      USE_GTAO_BENT_NORMALS: bentNormals,
+      // Nothing follows to restore the packing scale, so the estimator applies
+      // it itself.
+      GTAO_FINAL_APPLY: !denoisePasses,
+    },
+    format,
+    uniforms: {
+      uGTAO: params,
+      uDepthTexture: depthMips,
+      uNormalTexture: normal,
+    },
+  });
+
+  // The passes alternate between two textures rather than filtering one in
+  // place: a pass may not read and write the same handle.
+  let spare: ResourceHandle | undefined;
+  for (let index = 0; index < denoisePasses; index++) {
+    const source = ao;
+
+    ao = pass({
+      name: `denoise[${index}]`,
+      shader: gtaoDenoiseShader,
+      source: null,
+      ...(spare && { target: spare }),
+      constants: {
+        USE_GTAO_BENT_NORMALS: bentNormals,
+        GTAO_FINAL_APPLY: index === denoisePasses - 1,
+      },
+      format,
+      uniforms: {
+        uGTAO: params,
+        uAOTexture: source,
+        uEdgesTexture: edges!,
+      },
+    });
+    spare = source;
+  }
+
+  // Each pass published under its own name; republish the last as the buffer
+  // everything downstream asks for.
+  textures.set("ssao.main", ao);
+  // A second name for the same texture, published only when its remaining
+  // channels carry a bent normal — the only thing that tells a reader they can
+  // be decoded. See the standard renderer's inputs().
+  if (bentNormals) textures.set("ssao.bentNormal", ao);
+}
+
+/** Scalable Ambient Obscurance: one estimator pass and a separable blur. */
+function declareSAO(scope: EstimatorScope) {
+  const { ctx, samplers, pass, depth, normal } = scope;
+  const { camera, component, viewportSize, viewportPixelSize } =
+    getEstimatorScope(scope);
+
+  const noise = component.noiseTexture
+    ? getNoiseTexture(ctx)
+    : getDummyTexture(ctx);
+
+  const params = {
+    near: camera.near!,
+    far: camera.far!,
+    fov: camera.fov!,
+    viewportSize,
+    texelSize: viewportPixelSize,
+    intensity: component.intensity!,
+    radius: component.radius!,
+    bias: component.bias!,
+    brightness: component.brightness!,
+    contrast: component.contrast!,
+    noiseTextureSize: component.noiseTexture ? NOISE_SIZE : 1,
+  };
+
+  const format: GPUTextureFormat = "r8unorm";
+
+  const ao = pass({
+    name: "main",
+    shader: saoShader,
+    // SAO declares no uTexture at all, so binding the chain would be a read
+    // edge on an image it never samples — and at the prePass stage, on one the
+    // opaque pass has not written yet.
+    source: null,
+    constants: {
+      SAO_NUM_SAMPLES: component.samples!,
+      SAO_NUM_SPIRAL_TURNS: component.spiralTurns!,
+      USE_SAO_NOISE_TEXTURE: !!component.noiseTexture,
+    },
+    clearValue: [0, 0, 0, 1],
+    format,
+    uniforms: {
+      uSAO: params,
       uDepthTexture: depth,
       uDepthTextureSampler: samplers.nearest,
       uNormalTexture: normal,
       uNormalTextureSampler: samplers.nearest,
       uNoiseTexture: noise,
       uNoiseTextureSampler: samplers.linearRepeat,
-    };
+    },
+  });
 
-    let ao = pass({
-      name: "main",
-      shader: gtao ? gtaoShader : saoShader,
-      // SAO declares no uTexture at all, so binding the chain would be a read
-      // edge on an image it never samples — and at the prePass stage, on one
-      // the opaque pass has not written yet.
-      ...(!gtao && { source: null }),
-      constants: gtao
-        ? {
-            GTAO_NUM_SLICES: component.slices!,
-            GTAO_NUM_SAMPLES: component.samples!,
-            USE_GTAO_NOISE_TEXTURE: !!component.noiseTexture,
-            USE_GTAO_COLOR_BOUNCE: screenSpaceBounce,
-          }
-        : {
-            SAO_NUM_SAMPLES: component.samples!,
-            SAO_NUM_SPIRAL_TURNS: component.spiralTurns!,
-            USE_SAO_NOISE_TEXTURE: !!component.noiseTexture,
-          },
-      clearValue: [0, 0, 0, 1],
-      format,
-      uniforms: {
-        ...(gtao
-          ? {
-              uGTAO: {
-                ...estimator,
-                colorBounceIntensity: component.colorBounceIntensity!,
-              },
-            }
-          : { uSAO: estimator }),
-        ...geometry,
+  // A negative radius turns the blur off, leaving the raw estimate.
+  if (component.blurRadius! >= 0) {
+    const blur = (direction: number[]) => ({
+      uBlur: {
+        direction,
+        near: camera.near!,
+        far: camera.far!,
+        sharpness: component.blurSharpness!,
       },
+      uDepthTexture: depth,
+      uDepthTextureSampler: samplers.nearest,
     });
 
-    // A negative radius turns the blur off, leaving the raw estimate.
-    if (component.blurRadius! >= 0) {
-      const blur = (direction: number[]) => ({
-        uBlur: {
-          direction,
-          near: camera.near!,
-          far: camera.far!,
-          sharpness: component.blurSharpness!,
-        },
-        uDepthTexture: depth,
-        uDepthTextureSampler: samplers.nearest,
-      });
+    const horizontal = pass({
+      name: "blurHorizontal",
+      shader: bilateralBlurShader,
+      source: ao,
+      clearValue: [0, 0, 0, 1],
+      format,
+      uniforms: blur([component.blurRadius!, 0]),
+    });
 
-      const horizontal = pass({
-        name: "blurHorizontal",
-        shader: bilateralBlurShader,
-        source: ao,
-        clearValue: [0, 0, 0, 1],
-        format,
-        uniforms: blur([component.blurRadius!, 0]),
-      });
+    // Back into the estimate: the write lands after the read that produced the
+    // horizontal pass, so the graph orders them and nothing downstream sees the
+    // unblurred image — including "ssao.main", which the estimator pass already
+    // published as this texture.
+    pass({
+      name: "blurVertical",
+      shader: bilateralBlurShader,
+      source: horizontal,
+      target: ao,
+      uniforms: blur([0, component.blurRadius!]),
+    });
+  }
+}
 
-      // Back into the estimate: the write lands after the read that produced
-      // the horizontal pass, so the graph orders them and nothing downstream
-      // sees the unblurred image.
-      ao = pass({
-        name: "blurVertical",
-        shader: bilateralBlurShader,
-        source: horizontal,
-        target: ao,
-        uniforms: blur([0, component.blurRadius!]),
-      });
-    }
+/**
+ * Screen-space ambient occlusion.
+ *
+ * Declared at the pre-pass stage, so the visibility buffer exists before
+ * anything is shaded and the standard shader folds it into the indirect term
+ * rather than multiplying it over the result. That is the only way it is
+ * applied: with occlusion a lighting input, there is nothing left for a
+ * post-hoc mix to do.
+ *
+ * The result is published as `ssao.main` — visibility in `.x`, and under GTAO's
+ * `bentNormals` the average unoccluded direction in `.yzw`, republished as
+ * `ssao.bentNormal` because only the producer knows those channels are there.
+ */
+const ssao: PostProcessingEffect = {
+  name: "ssao",
+  outputs: ["normal"],
+  stage: "prePass",
+  declare(context) {
+    // Both estimators reconstruct view-space position from depth and read the
+    // view-space normal target.
+    const depth = context.textures.get("depth");
+    const normal = context.textures.get("normal");
+    if (!depth || !normal) return;
 
-    // Without DoF, combine applies the same mix for free. Neither applies when
-    // the standard shader already folded occlusion into indirect light.
-    if (cameraEntity.postProcessing!.dof && screenSpaceBounce) {
-      pass({
-        name: "mix",
-        shader: ssaoMixShader,
-        chain: true,
-        constants: {
-          USE_SSAO_COLORS: screenSpaceBounce,
-          USE_SSAO_MULTI_BOUNCE: !!component.multiBounce,
-        },
-        clearValue: [0, 0, 0, 1],
-        uniforms: {
-          uSSAO: { mix: component.mix! },
-          uSSAOTexture: ao,
-          uSSAOTextureSampler: samplers.linear,
-        },
-      });
+    const scope: EstimatorScope = { ...context, depth, normal };
+
+    if (context.cameraEntity.postProcessing!.ssao!.type === "gtao") {
+      declareGTAO(scope);
+    } else {
+      declareSAO(scope);
     }
   },
 };
