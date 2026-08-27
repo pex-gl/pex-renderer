@@ -9,6 +9,9 @@ import {
   vertexTransform,
   getDefineFlags,
   vertexJitter,
+  vertexVelocity,
+  VELOCITY_MEMBERS,
+  FRAGMENT_VELOCITY,
 } from "./wgsl.js";
 
 import type { FeatureField } from "../systems/renderer/base.js";
@@ -53,7 +56,7 @@ export const basicShader = (
   return /* wgsl */ `
 ${frameStruct()}
 
-${modelStruct()}
+${modelStruct({ previousModelMatrix: !!outputs.velocity })}
 
 struct Material {
   baseColor: vec4f,
@@ -68,11 +71,15 @@ ${vertexInputStruct({
   instancedColor: vertexFlags.instancedColor,
 })}
 
-${vertexOutputStruct([useColor && { name: "color", type: "vec4f" }])}
+${vertexOutputStruct([
+  useColor && { name: "color", type: "vec4f" },
+  ...(outputs.velocity ? VELOCITY_MEMBERS : []),
+])}
 
 ${fragmentOutputStruct([
   outputs.normal && { name: "normal", type: "vec4f" },
   outputs.emissive && { name: "emissive", type: "vec4f" },
+  outputs.velocity && { name: "velocity", type: "vec2f" },
 ])}
 
 ${SHADERS.math.quatToMat4}
@@ -98,6 +105,7 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
   let positionOut = uFrame.projectionMatrix * positionView;
 
   output.position = positionOut;
+  ${outputs.velocity ? vertexVelocity() : ""}
   ${vertexJitter()}
 
   ${hooks.vertEnd ?? ""}
@@ -126,6 +134,7 @@ fn fragmentMain(input: VertexOutput) -> FragmentOutput {
 
   ${outputs.normal ? "output.normal = vec4f(0.0, 0.0, 1.0, 1.0);" : ""}
   ${outputs.emissive ? "output.emissive = vec4f(0.0);" : ""}
+  ${outputs.velocity ? FRAGMENT_VELOCITY : ""}
 
   ${hooks.fragEnd ?? ""}
 

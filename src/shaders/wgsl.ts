@@ -190,6 +190,10 @@ export function frameStruct({
   // reconstructing view position from that matrix — ambient occlusion,
   // transmission, depth of field — keeps reading an unjittered one.
   jitter: vec2f,
+  // Last frame's projectionMatrix * viewMatrix, unjittered. Only a pass writing
+  // motion vectors reads it; it costs one matrix in a block that already
+  // carries three, which is cheaper than a second variant of every shader.
+  previousViewProjectionMatrix: mat4x4f,
   ${extraFields}
 }
 ${bindingDeclaration(0, 0, "uFrame", "Frame", "uniform")}`;
@@ -206,8 +210,61 @@ ${bindingDeclaration(0, 0, "uFrame", "Frame", "uniform")}`;
 export const vertexJitter = (position = "output.position"): string =>
   `${position} += vec4f(uFrame.jitter * ${position}.w, 0.0, 0.0);`;
 
+/**
+ * Varyings a pass writing motion vectors carries.
+ *
+ * Both clip positions rather than the screen-space offset itself: the offset is
+ * not linear under perspective, so interpolating it would bend every motion
+ * vector towards the triangle's interior. The divide belongs per fragment.
+ *
+ * Both are unjittered. The jitter says where geometry was rasterized, not where
+ * a surface went, and leaving it in would report the sampling pattern as motion.
+ */
+export const VELOCITY_MEMBERS: readonly ShaderStructMember[] = [
+  { name: "positionClip", type: "vec4f" },
+  { name: "previousPositionClip", type: "vec4f" },
+];
+
+/** Options for {@link vertexVelocity}. */
+export interface VertexVelocityOptions {
+  /** Expression for this frame's unjittered clip position. */
+  clip?: string;
+  /**
+   * Expression for the previous frame's world position. Defaults to the current
+   * local position through `previousModelMatrix`, which covers rigid motion —
+   * a skinned or morphed surface has no previous local position to offer yet,
+   * and passes its current world position to report camera motion alone.
+   */
+  previousWorld?: string;
+}
+
+/** Vertex-stage half of the motion vector: both clip positions, unjittered. */
+export const vertexVelocity = ({
+  clip = "positionOut",
+  previousWorld = "uModel.previousModelMatrix * position",
+}: VertexVelocityOptions = {}): string =>
+  `output.positionClip = ${clip};
+  output.previousPositionClip = uFrame.previousViewProjectionMatrix * (${previousWorld});`;
+
+/**
+ * Fragment-stage half: where this surface was last frame, minus where it is now,
+ * in texture coordinates.
+ *
+ * `previous - current` so a reader adds it to its own coordinate to find the
+ * history, and scaled by (0.5, -0.5) because NDC spans [-1, 1] with Y up where
+ * texture coordinates span [0, 1] with V down.
+ */
+export const FRAGMENT_VELOCITY = `output.velocity =
+    (input.previousPositionClip.xy / input.previousPositionClip.w -
+      input.positionClip.xy / input.positionClip.w) * vec2f(0.5, -0.5);`;
+
 /** Options for {@link modelStruct}. */
 export interface ModelStructOptions {
+  /**
+   * Declare `previousModelMatrix`, for a pass writing motion vectors. Gated
+   * rather than always present because this block is written per entity.
+   */
+  previousModelMatrix?: boolean;
   /**
    * Declare the displacement texture (bindings 2/3) and its `displacement`
    * struct field.
@@ -225,6 +282,7 @@ export interface ModelStructOptions {
  * in every pass.
  */
 export function modelStruct({
+  previousModelMatrix = false,
   displacementTexture = false,
   skin = false,
   maxJoints = 256,
@@ -232,6 +290,7 @@ export function modelStruct({
   return `struct Model {
   modelMatrix: mat4x4f,
   normalMatrix: mat3x3f,
+  ${previousModelMatrix ? "previousModelMatrix: mat4x4f," : ""}
   ${displacementTexture ? "displacement: f32," : ""}
 }
 ${bindingDeclaration(3, 0, "uModel", "Model", "uniform")}

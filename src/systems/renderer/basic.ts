@@ -88,6 +88,11 @@ export default ({ ctx }: SystemOptions): RendererSystem => ({
               NORMAL_MATRIX,
               entity._transform!.modelMatrix,
             ),
+            // Only where the shader declared it: pex-gpu throws on an unknown
+            // struct member, and modelStruct gates this on the velocity output.
+            ...(this._outputs?.velocity && {
+              previousModelMatrix: entity._transform!.previousModelMatrix,
+            }),
           },
           uMaterial: { baseColor: entity.material!.baseColor! },
         },

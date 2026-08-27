@@ -182,6 +182,7 @@ async function declareFrame(
     textures.set("color", target("color"));
     textures.set("normal", target("normal"));
     textures.set("emissive", target("emissive"));
+    textures.set("velocity", target("velocity", "rg16float"));
 
     // WebGPU has no depth resolve, so under MSAA the scene's depth buffer is
     // multisampled and unbindable until the pipeline resolves it.
@@ -543,6 +544,21 @@ const bloomComponent = (extra) => ({
     });
     check("history survives between frames", carried, [true, true]);
   }
+
+  // Motion vectors are the whole reason the effect asks for an extra main-pass
+  // output; reading them has to become a real edge, or the resolve silently
+  // falls back to camera reprojection and everything that moved on its own
+  // drags behind it.
+  check(
+    "asks the main pass for motion vectors",
+    EFFECTS.taa.outputs,
+    ["velocity"],
+  );
+  check(
+    "reads motion vectors when the main pass produced them",
+    taaPass(frame2).reads.includes("velocity"),
+    true,
+  );
 
   // Ahead of everything that consumes the image, so bloom's pyramid and the
   // tonemap see a stable one rather than a jittered frame.

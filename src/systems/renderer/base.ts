@@ -287,6 +287,8 @@ export default (): RendererSystem => ({
       cameraPosition: cameraEntity?._transform?.worldPosition ?? [0, 0, 0],
       viewportSize: [viewport[2]!, viewport[3]!],
       jitter: camera._jitter ?? NO_JITTER,
+      previousViewProjectionMatrix:
+        camera._previousViewProjectionMatrix ?? IDENTITY_MAT4,
     };
   },
   getPipeline(entity: Entity, options: any = {}, precomputed?: unknown) {

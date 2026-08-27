@@ -72,7 +72,7 @@ const basicVariants = [
   { name: "default", defines: new Set() },
   { name: "vertex+instanced color", defines: new Set(["USE_VERTEX_COLORS", "USE_INSTANCED_COLOR"]) },
   { name: "full instancing", defines: new Set(["USE_INSTANCED_OFFSET", "USE_INSTANCED_SCALE", "USE_INSTANCED_ROTATION", "USE_INSTANCED_COLOR"]) },
-  { name: "MSAA + draw buffers", defines: new Set(["USE_MSAA"]), options: { outputs: { normal: true, emissive: true } } },
+  { name: "MSAA + draw buffers", defines: new Set(["USE_MSAA"]), options: { outputs: { normal: true, emissive: true, velocity: true } } },
   { name: "hooks", defines: new Set(["USE_VERTEX_COLORS"]), options: { hooks: { vertBeforeTransform: "// hook", fragEnd: "// hook" } } },
 ];
 
@@ -94,7 +94,7 @@ const standardVariants = [
   { name: "specular-glossiness", defines: new Set(["USE_SPECULAR_GLOSSINESS_WORKFLOW", "USE_NORMALS", "USE_TEXCOORD_0", "USE_DIFFUSE_TEXTURE", "USE_SPECULAR_GLOSSINESS_TEXTURE"]), options: { lights: { directional: 1 } } },
   { name: "specular workflow (KHR)", defines: new Set(["USE_METALLIC_ROUGHNESS_WORKFLOW", "USE_NORMALS", "USE_TEXCOORD_0", "USE_SPECULAR", "USE_SPECULAR_TEXTURE", "USE_SPECULAR_COLOR_TEXTURE"]) },
   { name: "volume + diffuse transmission", defines: new Set(["USE_METALLIC_ROUGHNESS_WORKFLOW", "USE_NORMALS", "USE_TEXCOORD_0", "USE_TRANSMISSION", "USE_VOLUME", "USE_THICKNESS_TEXTURE", "USE_DIFFUSE_TRANSMISSION", "USE_DIFFUSE_TRANSMISSION_TEXTURE", "USE_DIFFUSE_TRANSMISSION_COLOR_TEXTURE"]) },
-  { name: "emissive + occlusion + msaa + drawbuffers", defines: new Set(["USE_METALLIC_ROUGHNESS_WORKFLOW", "USE_NORMALS", "USE_TEXCOORD_0", "USE_EMISSIVE_COLOR", "USE_EMISSIVE_COLOR_TEXTURE", "USE_OCCLUSION_TEXTURE", "USE_MSAA"]), options: { outputs: { normal: true, emissive: true } } },
+  { name: "emissive + occlusion + msaa + drawbuffers", defines: new Set(["USE_METALLIC_ROUGHNESS_WORKFLOW", "USE_NORMALS", "USE_TEXCOORD_0", "USE_EMISSIVE_COLOR", "USE_EMISSIVE_COLOR_TEXTURE", "USE_OCCLUSION_TEXTURE", "USE_MSAA"]), options: { outputs: { normal: true, emissive: true, velocity: true } } },
   { name: "vertex colors + blend", defines: new Set(["USE_METALLIC_ROUGHNESS_WORKFLOW", "USE_NORMALS", "USE_VERTEX_COLORS", "USE_BLEND"]) },
   { name: "texcoord1 everywhere", defines: new Set(["USE_METALLIC_ROUGHNESS_WORKFLOW", "USE_NORMALS", "USE_TEXCOORD_0", "USE_TEXCOORD_1", "USE_BASE_COLOR_TEXTURE"]), options: { texCoords: { baseColor: 1 } } },
   { name: "skinned", defines: new Set(["USE_METALLIC_ROUGHNESS_WORKFLOW", "USE_NORMALS", "USE_TANGENTS", "USE_TEXCOORD_0", "USE_SKIN"]) },
@@ -113,7 +113,7 @@ const standardVariants = [
       "USE_DIFFUSE_TRANSMISSION", "USE_DIFFUSE_TRANSMISSION_TEXTURE", "USE_DIFFUSE_TRANSMISSION_COLOR_TEXTURE",
       "USE_ALPHA_TEXTURE", "USE_ALPHA_TEST", "USE_REFLECTION_PROBES", "USE_MSAA", "USE_BLEND",
     ]),
-    options: { maxJoints: 64, lights: { ambient: 1, directional: 2, point: 2, spot: 1, area: 1 }, outputs: { normal: true, emissive: true } },
+    options: { maxJoints: 64, lights: { ambient: 1, directional: 2, point: 2, spot: 1, area: 1 }, outputs: { normal: true, emissive: true, velocity: true } },
   },
   { name: "hooks", defines: new Set(["USE_METALLIC_ROUGHNESS_WORKFLOW", "USE_NORMALS"]), options: { hooks: { vertBeforeTransform: "// hook", vertEnd: "// hook", fragBeforeTextures: "// hook", fragBeforeLighting: "// hook", fragAfterLighting: "// hook", fragEnd: "// hook" } } },
 ];
@@ -156,7 +156,7 @@ const depthPassPrePassVariants = [
 const lineVariants = [
   { name: "default", defines: new Set() },
   { name: "vertex colors + perspective scaling", defines: new Set(["USE_VERTEX_COLORS", "USE_PERSPECTIVE_SCALING"]) },
-  { name: "instanced line width + msaa + drawbuffers", defines: new Set(["USE_INSTANCED_LINE_WIDTH", "USE_MSAA"]), options: { outputs: { normal: true, emissive: true } } },
+  { name: "instanced line width + msaa + drawbuffers", defines: new Set(["USE_INSTANCED_LINE_WIDTH", "USE_MSAA"]), options: { outputs: { normal: true, emissive: true, velocity: true } } },
   { name: "hooks", defines: new Set(["USE_VERTEX_COLORS"]), options: { hooks: { vertEnd: "// hook", fragEnd: "// hook" } } },
 ];
 
@@ -167,19 +167,19 @@ const overlayVariants = [
 
 const helperVariants = [
   { name: "default", defines: new Set() },
-  { name: "msaa + drawbuffers", defines: new Set(["USE_MSAA"]), options: { outputs: { normal: true, emissive: true } } },
+  { name: "msaa + drawbuffers", defines: new Set(["USE_MSAA"]), options: { outputs: { normal: true, emissive: true, velocity: true } } },
   { name: "hooks", defines: new Set(), options: { hooks: { vertEnd: "// hook", fragEnd: "// hook" } } },
 ];
 
 const errorVariants = [
   { name: "default", defines: new Set() },
-  { name: "drawbuffers", defines: new Set(), options: { outputs: { normal: true, emissive: true } } },
+  { name: "drawbuffers", defines: new Set(), options: { outputs: { normal: true, emissive: true, velocity: true } } },
   { name: "hooks", defines: new Set(), options: { hooks: { vertEnd: "// hook", fragEnd: "// hook" } } },
 ];
 
 const skyVariants = [
   { name: "default", defines: new Set() },
-  { name: "drawbuffers", defines: new Set(), options: { outputs: { normal: true, emissive: true } } },
+  { name: "drawbuffers", defines: new Set(), options: { outputs: { normal: true, emissive: true, velocity: true } } },
   { name: "hooks", defines: new Set(), options: { hooks: { vertEnd: "// hook", fragEnd: "// hook" } } },
 ];
 
@@ -220,7 +220,8 @@ const postProcessingVariants = [
   { name: "smaa edges [depth]", shader: postProcessing.smaaEdgesShader, defines: new Set(["SMAA_EDGES_DEPTH"]) },
   { name: "smaa weights", shader: postProcessing.smaaWeightsShader, defines: new Set() },
   { name: "smaa blend", shader: postProcessing.smaaBlendShader, defines: new Set() },
-  { name: "taa", shader: postProcessing.taaShader, defines: new Set() },
+  { name: "taa [depth reprojection]", shader: postProcessing.taaShader, defines: new Set() },
+  { name: "taa [velocity]", shader: postProcessing.taaShader, defines: new Set(["USE_TAA_VELOCITY"]) },
   { name: "luma", shader: postProcessing.lumaShader, defines: new Set() },
   { name: "final [opacity only]", shader: postProcessing.finalShader, defines: new Set() },
   { name: "final [fxaa]", shader: postProcessing.finalShader, defines: new Set(["USE_FXAA"]) },
@@ -270,6 +271,62 @@ for (const v of skyVariants) {
 }
 for (const v of postProcessingVariants) {
   await check(`postProcessing ${v.name}`, v.shader(v.defines));
+}
+
+// ─── The Model block only declares what its pass can be handed ──────────────
+// pex-gpu throws on a member the struct does not declare (and silently zeroes a
+// member no one writes), so every optional field here is a contract with the
+// renderer that writes it. previousModelMatrix belongs to the passes that emit
+// motion vectors and to no others — the shadow and pre-pass shaders share a
+// Model block with no room for it.
+{
+  const members = (source) =>
+    /struct Model \{([^}]*)\}/
+      .exec(source)?.[1]
+      .split(",")
+      .map((line) => line.split(":")[0].trim())
+      .filter(Boolean);
+
+  const assertMembers = (label, source, expected) => {
+    const actual = members(source);
+    const ok = JSON.stringify(actual) === JSON.stringify(expected);
+    if (!ok) errorCount++;
+    console.log(`${ok ? "ok" : "not ok"} - Model block [${label}]`);
+    if (!ok) {
+      console.log(`     expected ${JSON.stringify(expected)}`);
+      console.log(`     actual   ${JSON.stringify(actual)}`);
+    }
+  };
+
+  const defines = new Set(["USE_NORMALS"]);
+  const base = ["modelMatrix", "normalMatrix"];
+  const withVelocity = [...base, "previousModelMatrix"];
+
+  assertMembers("standard", standard.standardShader(defines, { outputs: {} }), base);
+  assertMembers(
+    "standard + velocity",
+    standard.standardShader(defines, { outputs: { velocity: true } }),
+    withVelocity,
+  );
+  assertMembers("basic", basic.basicShader(defines, { outputs: {} }), base);
+  assertMembers(
+    "basic + velocity",
+    basic.basicShader(defines, { outputs: { velocity: true } }),
+    withVelocity,
+  );
+  assertMembers("line", line.lineShader(new Set(), { outputs: {} }), base);
+  assertMembers(
+    "line + velocity",
+    line.lineShader(new Set(), { outputs: { velocity: true } }),
+    withVelocity,
+  );
+  // Shadow maps and the pre-pass, which never write motion vectors.
+  assertMembers("depthPass", depthPass.depthPassShader(defines, { outputs: {} }), base);
+  assertMembers(
+    "depthPass + velocity output",
+    depthPass.depthPassShader(defines, { outputs: { velocity: true } }),
+    base,
+  );
 }
 
 // ─── The depth pre-pass has to agree with the pass that tests against it ─────

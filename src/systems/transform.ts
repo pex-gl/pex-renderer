@@ -84,6 +84,11 @@ export default () => ({
       this.cache[entity.id] = {
         transform,
         modelMatrix: mat4.create(),
+        // Last frame's world matrix, for anything reprojecting between frames.
+        // Seeded from the first computed one rather than left at identity, so a
+        // newly added entity does not report a frame of motion from the origin.
+        previousModelMatrix: mat4.create(),
+        hasPreviousModelMatrix: false,
         localModelMatrix: mat4.create(),
         worldPosition: vec3.create(),
       };
@@ -161,6 +166,13 @@ export default () => ({
     for (let i = 0; i < transformEntities.length; i++) {
       const entity = transformEntities[i]!;
 
+      // Captured before this frame overwrites it. Held for the whole frame: a
+      // temporal resolve reads it during execute, long after this runs.
+      mat4.set(
+        this.cache[entity.id].previousModelMatrix,
+        this.cache[entity.id].modelMatrix,
+      );
+
       // Update world matrix
       if (entity.transform!.parent) {
         mat4.set(
@@ -181,6 +193,14 @@ export default () => ({
         this.cache[entity.id].modelMatrix,
         entity.transform!,
       );
+
+      if (!this.cache[entity.id].hasPreviousModelMatrix) {
+        this.cache[entity.id].hasPreviousModelMatrix = true;
+        mat4.set(
+          this.cache[entity.id].previousModelMatrix,
+          this.cache[entity.id].modelMatrix,
+        );
+      }
 
       // Update world position
       vec3.scale(this.cache[entity.id].worldPosition, 0);

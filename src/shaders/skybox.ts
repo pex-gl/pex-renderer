@@ -4,6 +4,8 @@ import {
   fragmentOutputStruct,
   vertexOutputStruct,
   textureSamplerDeclaration,
+  VELOCITY_MEMBERS,
+  FRAGMENT_VELOCITY,
 } from "./wgsl.js";
 import { ROUGHNESS_LEVELS } from "./reflection-probe.js";
 import type { PipelineShaderOptions } from "../types.js";
@@ -46,6 +48,7 @@ struct Skybox {
   exposure: f32,
   backgroundBlur: f32,
   jitter: vec2f,
+  previousViewProjectionMatrix: mat4x4f,
 }
 @group(0) @binding(0) var<uniform> uSkybox: Skybox;
 @group(0) @binding(1) var uEnvMap: texture_2d<f32>;
@@ -57,11 +60,15 @@ struct VertexInput {
   @location(0) position: vec2f,
 }
 
-${vertexOutputStruct([{ name: "normal", type: "vec3f" }])}
+${vertexOutputStruct([
+  { name: "normal", type: "vec3f" },
+  ...(outputs.velocity ? VELOCITY_MEMBERS : []),
+])}
 
 ${fragmentOutputStruct([
   outputs.normal && { name: "normal", type: "vec4f" },
   outputs.emissive && { name: "emissive", type: "vec4f" },
+  outputs.velocity && { name: "velocity", type: "vec2f" },
 ])}
 
 // Vertex includes
@@ -86,6 +93,17 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
 
   // z = 1.0 sits at the ZO far plane so geometry (depthCompare less-equal) wins.
   output.position = vec4f(input.position, 1.0, 1.0);
+
+  ${
+    outputs.velocity
+      ? `// The sky is at infinity, so it has no position to reproject — only a
+  // direction, which w = 0 carries through the previous view-projection to
+  // that direction's vanishing point. Camera translation correctly drops out;
+  // rotation does not.
+  output.positionClip = vec4f(input.position - uSkybox.jitter, 1.0, 1.0);
+  output.previousPositionClip = uSkybox.previousViewProjectionMatrix * vec4f(output.normal, 0.0);`
+      : ""
+  }
 
   ${hooks.vertEnd ?? ""}
 
@@ -122,6 +140,7 @@ fn fragmentMain(input: VertexOutput) -> FragmentOutput {
 
   ${outputs.normal ? "output.normal = vec4f(0.0, 0.0, 1.0, 1.0);" : ""}
   ${outputs.emissive ? "output.emissive = vec4f(0.0);" : ""}
+  ${outputs.velocity ? FRAGMENT_VELOCITY : ""}
 
   ${hooks.fragEnd ?? ""}
 

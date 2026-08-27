@@ -33,6 +33,9 @@ const states = new WeakMap<Entity, TAAState>();
  */
 const taa: PostProcessingEffect = {
   name: "taa",
+  // Reprojection needs to know where each surface was, and only geometry can
+  // say that for anything that moved on its own.
+  outputs: ["velocity"],
   declare({
     cameraEntity,
     frameIndex,
@@ -88,9 +91,15 @@ const taa: PostProcessingEffect = {
       state.frameIndex === frameIndex - 1;
     states.set(cameraEntity, { width, height, frameIndex });
 
+    // Published whenever the scene pass ran with it; without it the resolve
+    // falls back to camera reprojection from depth, which is exact for a static
+    // scene and drags anything that moved on its own.
+    const velocity = textures.get("velocity");
+
     pass({
       name: "main",
       shader: taaShader,
+      ...(velocity && { defines: new Set(["USE_TAA_VELOCITY"]) }),
       // Writing straight into the history is what makes this one pass rather
       // than a resolve plus a copy: it is both the accumulator and the image
       // everything downstream reads.
@@ -109,6 +118,12 @@ const taa: PostProcessingEffect = {
         uHistoryTextureSampler: samplers.linear,
         uDepthTexture: depth,
         uDepthTextureSampler: samplers.nearest,
+        ...(velocity && {
+          uVelocityTexture: velocity,
+          // Point-sampled: interpolating motion vectors across a silhouette
+          // averages two surfaces that went different ways.
+          uVelocityTextureSampler: samplers.nearest,
+        }),
       },
     });
   },

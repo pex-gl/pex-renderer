@@ -734,6 +734,10 @@ export interface VertexHelperComponentOptions {
 export interface TransformCache {
   transform: TransformComponentOptions;
   modelMatrix: Mat4;
+  /** Last frame's `modelMatrix`, for reprojecting between frames. */
+  previousModelMatrix: Mat4;
+  /** Cleared once the first `modelMatrix` has been copied into the previous. */
+  hasPreviousModelMatrix: boolean;
   localModelMatrix: Mat4;
   worldPosition: Vec3;
 }
@@ -783,11 +787,13 @@ export interface ShaderLightCounts {
 export interface FragmentOutputs {
   normal?: boolean;
   emissive?: boolean;
+  /** Screen-space motion vectors, for temporal reprojection and motion blur. */
+  velocity?: boolean;
 }
 /** Options accepted by the pipeline WGSL generators in src/shaders. */
 export interface PipelineShaderOptions {
   hooks?: ShaderHooks;
-  /** Optional MRT fragment outputs (normal, emissive) this variant should emit. */
+  /** Optional MRT fragment outputs (normal, emissive, velocity) to emit. */
   outputs?: FragmentOutputs;
   /** Size of the skinning joint matrix array. */
   maxJoints?: number;
@@ -898,6 +904,8 @@ export interface RenderPipelineCore {
   outputs: Set<string>;
   colorFormat: GPUTextureFormat;
   depthFormat: GPUTextureFormat;
+  /** Per-output format overrides, for outputs that do not hold colour. */
+  outputFormats: Record<string, GPUTextureFormat>;
 
   drawMeshes(options: any): void;
   drawFullscreen(command: RenderCommand): void;

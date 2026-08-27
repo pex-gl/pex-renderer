@@ -1,4 +1,4 @@
-import { mat3 } from "pex-math";
+import { mat3, mat4 } from "pex-math";
 import { submit, createSampler } from "pex-gpu";
 
 import createBaseSystem, { NO_JITTER, outputsKey } from "./base.js";
@@ -19,6 +19,7 @@ import type {
 } from "../../types.js";
 
 const IDENTITY_MAT3 = mat3.create();
+const IDENTITY_MAT4 = mat4.create();
 
 /**
  * Skybox renderer
@@ -120,6 +121,8 @@ export default ({ ctx }: SystemOptions): RendererSystem => ({
           exposure: skybox.exposure ?? 1,
           backgroundBlur,
           jitter: camera._jitter ?? NO_JITTER,
+          previousViewProjectionMatrix:
+            camera._previousViewProjectionMatrix ?? IDENTITY_MAT4,
         },
         uEnvMap: texture!,
         uEnvMapSampler: this.sampler,

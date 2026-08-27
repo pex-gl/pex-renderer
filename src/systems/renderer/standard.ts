@@ -106,8 +106,20 @@ function getViewNormalMatrix(viewMatrix: any, modelMatrix: any) {
 }
 
 // The @group(3) bindings, identical in every pass that draws geometry.
-const modelUniforms = (entity: any, normalMatrix: any) => ({
-  uModel: { modelMatrix: entity._transform.modelMatrix, normalMatrix },
+const modelUniforms = (
+  entity: any,
+  normalMatrix: any,
+  previousModelMatrix = false,
+) => ({
+  uModel: {
+    modelMatrix: entity._transform.modelMatrix,
+    normalMatrix,
+    // Only where modelStruct declared it: pex-gpu throws on a member the struct
+    // does not have, and the depth-pass Model block carries no previous matrix.
+    ...(previousModelMatrix && {
+      previousModelMatrix: entity._transform.previousModelMatrix,
+    }),
+  },
   ...(entity.skin && {
     uJointMatrices: getJointMatricesUniform(entity.skin),
   }),
@@ -619,6 +631,7 @@ export default ({
               uFrame.viewMatrix,
               entity._transform!.modelMatrix,
             ),
+            !!this._outputs?.velocity,
           ),
           ...materialUniforms,
           ...lights.uniforms,

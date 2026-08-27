@@ -6,6 +6,9 @@ import {
   fragmentOutputStruct,
   getDefineFlags,
   vertexJitter,
+  vertexVelocity,
+  VELOCITY_MEMBERS,
+  FRAGMENT_VELOCITY,
 } from "./wgsl.js";
 
 import type { FeatureField } from "../systems/renderer/base.js";
@@ -68,7 +71,7 @@ export const lineShader = (
   return /* wgsl */ `
 ${frameStruct()}
 
-${modelStruct()}
+${modelStruct({ previousModelMatrix: !!outputs.velocity })}
 
 struct Material {
   baseColor: vec4f,
@@ -87,11 +90,20 @@ struct VertexInput {
 struct Varyings {
   @builtin(position) position: vec4f,
   ${vertexFlags.vertexColor ? "@location(0) color: vec4f," : ""}
+  ${
+    outputs.velocity
+      ? VELOCITY_MEMBERS.map(
+          ({ name, type }, index) =>
+            `@location(${(vertexFlags.vertexColor ? 1 : 0) + index}) ${name}: ${type},`,
+        ).join("\n  ")
+      : ""
+  }
 }
 
 ${fragmentOutputStruct([
   outputs.normal && { name: "normal", type: "vec4f" },
   outputs.emissive && { name: "emissive", type: "vec4f" },
+  outputs.velocity && { name: "velocity", type: "vec2f" },
 ])}
 
 ${hooks.vertDeclarationsEnd ?? ""}
@@ -99,6 +111,27 @@ ${hooks.vertDeclarationsEnd ?? ""}
 @vertex
 fn vertexMain(input: VertexInput) -> Varyings {
   var output: Varyings;
+
+  ${
+    outputs.velocity
+      ? `// Taken on the centreline: the screen-space expansion is the same both
+  // frames, so the widened point moves with it.
+  let worldPoint = mix(
+    uModel.modelMatrix * vec4f(input.pointA, 1.0),
+    uModel.modelMatrix * vec4f(input.pointB, 1.0),
+    input.position.z
+  );
+  let previousWorldPoint = mix(
+    uModel.previousModelMatrix * vec4f(input.pointA, 1.0),
+    uModel.previousModelMatrix * vec4f(input.pointB, 1.0),
+    input.position.z
+  );
+  ${vertexVelocity({
+    clip: "uFrame.projectionMatrix * (uFrame.viewMatrix * worldPoint)",
+    previousWorld: "previousWorldPoint",
+  })}`
+      : ""
+  }
 
   var lineWidthScale = vec2f(1.0);
   ${
@@ -175,6 +208,7 @@ fn fragmentMain(input: Varyings) -> FragmentOutput {
 
   ${outputs.normal ? "output.normal = vec4f(0.0, 0.0, 1.0, 1.0);" : ""}
   ${outputs.emissive ? "output.emissive = vec4f(0.0);" : ""}
+  ${outputs.velocity ? FRAGMENT_VELOCITY : ""}
 
   ${hooks.fragEnd ?? ""}
 

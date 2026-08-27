@@ -23,8 +23,9 @@ import { fullscreenVertex, postProcessingStruct } from "./common.js";
  *
  * `uTexture` is the chain's current image, bound by the registry.
  */
-export const taaShader = (): string => {
+export const taaShader = (defines: Set<string> = new Set()): string => {
   const alloc = createBindingAllocator(1);
+  const velocity = defines.has("USE_TAA_VELOCITY");
 
   return formatShader(/* wgsl */ `
 ${postProcessingStruct}
@@ -37,19 +38,37 @@ ${SHADERS.taa}
 ${textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uTexture")}
 ${textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uHistoryTexture")}
 ${textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uDepthTexture", "texture_depth_2d")}
+${velocity ? textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uVelocityTexture") : ""}
 
 ${fullscreenVertex()}
 
 @fragment
 fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
+  let uv = input.texCoord0;
+
+  // Dilated either way: at a silhouette the pixel centre can sit on background
+  // while the edge that moved belongs to the foreground.
+  let closest = taaClosestDepthOffset(uDepthTexture, uDepthTextureSampler, uv, uTAA.texelSize);
+
+  ${
+    velocity
+      ? `let previousUV = taaVelocityUV(uVelocityTexture, uVelocityTextureSampler, uv, closest.xy);
+  let reprojectionValid = true;`
+      : `// No motion vectors, so only camera motion can be recovered — correct for
+  // a static scene and wrong for anything that moved on its own.
+  let reprojected = taaReprojectUV(uv + closest.xy, closest.z, uTAA);
+  let previousUV = uv + (reprojected.xy - (uv + closest.xy));
+  let reprojectionValid = reprojected.z > 0.5;`
+  }
+
   return taaResolve(
-    input.texCoord0,
+    uv,
+    previousUV,
+    reprojectionValid,
     uTexture,
     uTextureSampler,
     uHistoryTexture,
     uHistoryTextureSampler,
-    uDepthTexture,
-    uDepthTextureSampler,
     uTAA
   );
 }

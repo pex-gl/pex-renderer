@@ -18,6 +18,9 @@ import {
   vertexInputStruct,
   vertexTransform,
   vertexJitter,
+  vertexVelocity,
+  VELOCITY_MEMBERS,
+  FRAGMENT_VELOCITY,
 } from "./wgsl.js";
 import { ROUGHNESS_LEVELS, SH_COEFFICIENT_COUNT } from "./reflection-probe.js";
 import type { FeatureField } from "../systems/renderer/base.js";
@@ -681,6 +684,7 @@ ${bindingDeclaration(1, lightBindings.next(), "uIrradianceCoefficients", `array<
 ${frameStruct()}
 
 ${modelStruct({
+  previousModelMatrix: !!outputs.velocity,
   displacementTexture: useDisplacementTexture,
   skin: useSkin,
   maxJoints,
@@ -736,11 +740,13 @@ ${vertexOutputStruct([
   { name: "positionView", type: "vec3f" },
   vertexFlags.tangent && { name: "tangentView", type: "vec4f" },
   useColor && { name: "color", type: "vec4f" },
+  ...(outputs.velocity ? VELOCITY_MEMBERS : []),
 ])}
 
 ${fragmentOutputStruct([
   outputs.normal && { name: "normal", type: "vec4f" },
   outputs.emissive && { name: "emissive", type: "vec4f" },
+  outputs.velocity && { name: "velocity", type: "vec2f" },
 ])}
 
 struct PBRData {
@@ -889,6 +895,15 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
   output.positionWorld = positionWorld.xyz / positionWorld.w;
   output.positionView = positionView.xyz / positionView.w;
   output.position = positionOut;
+  ${
+    outputs.velocity
+      ? vertexVelocity(
+          // A skinned surface has no previous local position to offer until the
+          // previous joint matrices exist, so it reports camera motion alone.
+          useSkin ? { previousWorld: "positionWorld" } : {},
+        )
+      : ""
+  }
   ${vertexJitter()}
 
   ${vertexFlags.tangent ? "output.tangentView = vec4f((uModel.normalMatrix * tangent.xyz), tangent.w);" : ""}
@@ -975,6 +990,7 @@ fn fragmentMain(
 
   ${outputs.normal ? "output.normal = vec4f(data.normalView * 0.5 + 0.5, 1.0);" : ""}
   ${outputs.emissive ? "output.emissive = vec4f(data.emissiveColor, 1.0);" : ""}
+  ${outputs.velocity ? FRAGMENT_VELOCITY : ""}
   if (USE_TRANSMISSION || USE_BLEND) {
     output.color.w = data.opacity;
     if (PREMULTIPLY_ALPHA) {

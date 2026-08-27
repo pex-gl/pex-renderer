@@ -420,6 +420,7 @@ gui.addRadioList(
   "debugRender",
   [
     "",
+    "velocity",
     "taa.main",
     "ssao.main",
     "dof.main",

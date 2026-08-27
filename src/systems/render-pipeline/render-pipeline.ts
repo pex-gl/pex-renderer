@@ -126,6 +126,12 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
   outputs: new Set(["color", "depth"]),
   colorFormat: "rgba16float" as GPUTextureFormat,
   depthFormat: "depth24plus" as GPUTextureFormat,
+  /**
+   * Outputs whose contents are not colour, and so want neither the working
+   * colour format nor its channel count. Motion vectors are a screen-space
+   * offset: two channels, and signed, which rules out the UNORM formats.
+   */
+  outputFormats: { velocity: "rg16float" } as Record<string, GPUTextureFormat>,
 
   ...shadowMappingPipelineMethods({ frameGraph }),
   ...postProcessingPipelineMethods({ ctx, frameGraph }),
@@ -260,11 +266,16 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
       );
     }
 
-    const descriptor = { width, height, format: this.colorFormat };
     const colorTextures: Record<string, ResourceHandle> = {};
     const msaaColorTextures: Record<string, ResourceHandle> = {};
     for (const name of outputs) {
       if (name === "depth") continue;
+
+      const descriptor = {
+        width,
+        height,
+        format: this.outputFormats[name] ?? this.colorFormat,
+      };
       colorTextures[name] = frameGraph.createTexture({
         label: `renderPipeline.${name}.${viewId}`,
         ...descriptor,
@@ -473,12 +484,12 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
     // place in the frame — ambient occlusion consumed as a lighting input only
     // exists if the geometry it reads was drawn first.
     //
-    // Temporal antialiasing asks for one outright: it reads depth to reproject,
-    // and the motion vectors it will read alongside are written there, so the
-    // buffers it depends on are complete before anything is shaded.
+    // Temporal antialiasing is not one of them: it reads depth, which the main
+    // pass writes either way, and motion vectors, which the main pass writes
+    // because the background needs them too. A pre-pass is a cost/benefit call
+    // about overdraw, so it stays with `depthPrePass`.
     const usePrePass =
-      (this.depthPrePass || useTAA || effectsByStage.has("prePass")) &&
-      !!depthTexture;
+      (this.depthPrePass || effectsByStage.has("prePass")) && !!depthTexture;
 
     const prePassNormal = usePrePass && !!colorTextures.normal;
 

@@ -270,6 +270,7 @@ gui.addRadioList(
     "ssao.main",
     "ssao.edges",
     "ssao.denoise[0]",
+    "velocity",
     "taa.main",
     "ssao.blurHorizontal",
     "ssao.blurVertical",
