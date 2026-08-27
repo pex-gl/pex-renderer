@@ -28,9 +28,22 @@ export interface TextureRequirements {
   filterableFloat?: boolean;
 }
 
-/** Depth and stencil aspects cannot be read as sampled float. */
-const isFilterableFloat = (format: GPUTextureFormat) =>
-  !format.startsWith("depth") && !format.startsWith("stencil");
+/**
+ * Whether a shader sampling `texture_2d<f32>` through a filtering sampler can
+ * bind this format. Three ways it cannot: depth and stencil aspects bind as
+ * their own texture types, integer formats bind as `u32`/`i32`, and 32 bit
+ * float formats are filterable only with the `float32-filterable` feature,
+ * which the device may not have.
+ */
+const isFilterableFloat = (
+  format: GPUTextureFormat,
+  device: GPUDevice | undefined,
+) =>
+  !format.startsWith("depth") &&
+  !format.startsWith("stencil") &&
+  !format.endsWith("uint") &&
+  !format.endsWith("sint") &&
+  (!format.endsWith("32float") || !!device?.features.has("float32-filterable"));
 
 const explainRequirements = ({
   format,
@@ -160,7 +173,12 @@ export class RenderTextures implements InspectableRegister {
     }
     if (
       requirements.filterableFloat &&
-      !isFilterableFloat(descriptor.format ?? "rgba8unorm")
+      // Optional: the register is exercised against a stubbed graph, which has
+      // no context.
+      !isFilterableFloat(
+        descriptor.format ?? "rgba8unorm",
+        this.frameGraph.ctx?.device,
+      )
     ) {
       return false;
     }

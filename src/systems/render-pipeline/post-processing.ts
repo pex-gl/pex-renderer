@@ -42,8 +42,9 @@ interface EffectRegistration {
  * Closed, and deliberately so. The order is fixed because the image chain
  * genuinely is sequential — bloom feeds combine, combine feeds smaa, smaa feeds
  * final — and an effect from outside does not need a slot here: the frame graph
- * already positions passes, and `declareFullscreenPass` gives an injected pass
- * the same ergonomics a built-in gets. See that function for where to hook.
+ * already positions passes, and the pipeline's `declareFullscreenPass` gives an
+ * injected pass the same ergonomics a built-in gets. See that method for where
+ * to hook.
  */
 const EFFECT_ORDER: readonly EffectRegistration[] = [
   { name: "ssao", load: () => import("./post-processing/ssao.js") },
@@ -222,122 +223,12 @@ const POST_PROCESSING_PIPELINE_LIMIT = 128;
 
 /** Where a pass draws and what it is called. */
 export interface FullscreenPassScope {
-  frameGraph: FrameGraph;
-  /** Supplies the samplers, the frame time, and the pipeline variant cache. */
-  pipeline: RenderPipelineSystem;
   renderView: RenderView;
   textures: RenderTextures;
   /** Prefixes the pass name and the register key. An effect uses its own name. */
   prefix: string;
   /** Allocate display-referred targets rather than HDR ones. */
   srgb?: boolean;
-}
-
-/**
- * Declare one fullscreen pass, returning what it wrote.
- *
- * The same helper the built-in effects get through `context.pass`, exported for
- * anything joining the frame from outside — so an injected pass costs no more
- * to write than a built-in one, and the graph, not a registry, decides where it
- * goes:
- *
- * ```js
- * // Before every built-in post effect, or after all of them:
- * frameGraph.on("postProcessing", (textures) => { ... });
- * frameGraph.on("present", (textures) => { ... });
- * // Or against one pass, wherever it lands:
- * frameGraph.afterPass(`postProcessing.combine.main.${cameraId}`, ...);
- * ```
- *
- * `overridePass` and `disablePass` take it from there for replacing or dropping
- * one. Publishing the result as `"color"` (via `chain`) is what splices it into
- * the image; nothing downstream has to be told it exists.
- */
-export function declareFullscreenPass(
-  { frameGraph, pipeline, renderView, textures, prefix, srgb }: FullscreenPassScope,
-  {
-    name,
-    shader,
-    defines = new Set<string>(),
-    constants = {},
-    blend,
-    source,
-    target,
-    size = [renderView.viewport[2]!, renderView.viewport[3]!],
-    format,
-    uniforms,
-    clearValue,
-    chain,
-  }: PostProcessingPassOptions,
-): ResourceHandle {
-  const viewId = renderView.cameraEntity!.id;
-  const key = `${prefix}.${name}`;
-
-  const output =
-    target ??
-    frameGraph.createTexture({
-      label: `${key}_${viewId}`,
-      width: Math.max(1, Math.trunc(size[0]!)),
-      height: Math.max(1, Math.trunc(size[1]!)),
-      format: format ?? (srgb ? "rgba8unorm-srgb" : "rgba16float"),
-    });
-
-  const input = source === undefined ? textures.get("color") : source;
-
-  const textureSize = (handle: ResourceHandle): number[] | undefined => {
-    const descriptor = frameGraph.describe(handle);
-    return descriptor && isTextureDescriptor(descriptor)
-      ? [descriptor.width, descriptor.height]
-      : undefined;
-  };
-
-  // Both grids come from the graph, not from `size`: `size` is only consulted
-  // when this pass allocates, so it describes neither a target that was handed
-  // in nor the source being sampled.
-  const targetSize = textureSize(output) ?? size;
-  const sourceSize = (input && textureSize(input)) ?? targetSize;
-
-  // Handle-valued uniforms become read edges and are swapped for physical
-  // textures before execute runs, so nothing here declares dependencies twice.
-  // Only the chain input is bound for every pass; a pass binds the
-  // depth/normal/emissive textures it actually reads itself, so it doesn't hold
-  // alive what it never samples.
-  const passUniforms: PassUniforms = {
-    ...(input && {
-      uTexture: input,
-      uTextureSampler: pipeline.samplers.linear,
-    }),
-    uPostProcessing: {
-      viewportSize: targetSize,
-      texelSize: [1 / targetSize[0]!, 1 / targetSize[1]!],
-      sourceTexelSize: [1 / sourceSize[0]!, 1 / sourceSize[1]!],
-      time: pipeline.time,
-    },
-    ...uniforms,
-  };
-
-  const variant = pipeline.getPostProcessingPipeline(
-    key,
-    shader,
-    defines,
-    constants,
-    blend,
-  );
-
-  frameGraph.addPass({
-    name: `postProcessing.${key}.${viewId}`,
-    color: [{ texture: output, ...(clearValue && { clearValue }) }],
-    uniforms: passUniforms,
-    renderView,
-    execute: ({ uniforms: resolved }) => {
-      pipeline.drawFullscreen({ label: key, pipeline: variant, uniforms: resolved });
-    },
-  });
-
-  textures.set(key, output);
-  if (chain) textures.set("color", output);
-
-  return output;
 }
 
 /**
@@ -452,6 +343,118 @@ export default ({
   },
 
   /**
+   * Declare one fullscreen pass, returning what it wrote.
+   *
+   * The helper the built-in effects get through `context.pass`, and a method on
+   * the pipeline rather than a private function so anything joining the frame
+   * from outside reaches it the same way — an injected pass then costs no more
+   * to write than a built-in one, and the graph, not a registry, decides where
+   * it goes:
+   *
+   * ```js
+   * const pipeline = renderEngine.systems.find(
+   *   (system) => system.type === "render-pipeline-system",
+   * );
+   * // Before every built-in post effect, or after all of them:
+   * frameGraph.on("postProcessing", (textures) => {
+   *   pipeline.declareFullscreenPass({ renderView: textures.renderView, textures, prefix: "myEffect" }, { ... });
+   * });
+   * // Or against one pass, wherever it lands:
+   * frameGraph.afterPass(`combine.main.${cameraId}`, ...);
+   * ```
+   *
+   * `overridePass` and `disablePass` take it from there for replacing or
+   * dropping one. Publishing the result as `"color"` (via `chain`) is what
+   * splices it into the image; nothing downstream has to be told it exists.
+   */
+  declareFullscreenPass(
+    { renderView, textures, prefix, srgb }: FullscreenPassScope,
+    {
+      name,
+      shader,
+      defines = new Set<string>(),
+      constants = {},
+      blend,
+      source,
+      target,
+      size = [renderView.viewport[2]!, renderView.viewport[3]!],
+      format,
+      uniforms,
+      clearValue,
+      chain,
+    }: PostProcessingPassOptions,
+  ): ResourceHandle {
+    const viewId = renderView.cameraEntity!.id;
+    const key = `${prefix}.${name}`;
+
+    const output =
+      target ??
+      frameGraph.createTexture({
+        label: `${key}_${viewId}`,
+        width: Math.max(1, Math.trunc(size[0]!)),
+        height: Math.max(1, Math.trunc(size[1]!)),
+        format: format ?? (srgb ? "rgba8unorm-srgb" : "rgba16float"),
+      });
+
+    const input = source === undefined ? textures.get("color") : source;
+
+    const textureSize = (handle: ResourceHandle): number[] | undefined => {
+      const descriptor = frameGraph.describe(handle);
+      return descriptor && isTextureDescriptor(descriptor)
+        ? [descriptor.width, descriptor.height]
+        : undefined;
+    };
+
+    // Both grids come from the graph, not from `size`: `size` is only consulted
+    // when this pass allocates, so it describes neither a target that was handed
+    // in nor the source being sampled.
+    const targetSize = textureSize(output) ?? size;
+    const sourceSize = (input && textureSize(input)) ?? targetSize;
+
+    // Handle-valued uniforms become read edges and are swapped for physical
+    // textures before execute runs, so nothing here declares dependencies twice.
+    // Only the chain input is bound for every pass; a pass binds the
+    // depth/normal/emissive textures it actually reads itself, so it doesn't hold
+    // alive what it never samples.
+    const passUniforms: PassUniforms = {
+      ...(input && {
+        uTexture: input,
+        uTextureSampler: this.samplers.linear,
+      }),
+      uPostProcessing: {
+        viewportSize: targetSize,
+        texelSize: [1 / targetSize[0]!, 1 / targetSize[1]!],
+        sourceTexelSize: [1 / sourceSize[0]!, 1 / sourceSize[1]!],
+        time: this.time,
+      },
+      ...uniforms,
+    };
+
+    const variant = this.getPostProcessingPipeline(
+      key,
+      shader,
+      defines,
+      constants,
+      blend,
+    );
+
+    frameGraph.addPass({
+      name: `${key}.${viewId}`,
+      color: [{ texture: output, ...(clearValue && { clearValue }) }],
+      uniforms: passUniforms,
+      renderView,
+      execute: ({ uniforms: resolved }) => {
+        this.drawFullscreen({ label: key, pipeline: variant, uniforms: resolved });
+      },
+    });
+
+    textures.set(key, output);
+    if (chain) textures.set("color", output);
+
+    return output;
+  },
+
+  /**
    * The effects this camera has switched on, in chain order, skipping any whose
    * module has not arrived.
    *
@@ -529,8 +532,6 @@ export default ({
 
     for (const effect of effects) {
       const scope: FullscreenPassScope = {
-        frameGraph,
-        pipeline: this,
         renderView,
         textures,
         prefix: effect.name,
@@ -545,7 +546,7 @@ export default ({
         time: this.time,
         samplers: this.samplers,
         textures,
-        pass: (options) => declareFullscreenPass(scope, options),
+        pass: (options) => this.declareFullscreenPass(scope, options),
       });
     }
   },

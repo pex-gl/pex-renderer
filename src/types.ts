@@ -895,6 +895,12 @@ export interface PostProcessingMethods {
     constants: Record<string, number | boolean>,
     blend?: GPUBlendState,
   ): RenderPipeline;
+  /**
+   * Declare one fullscreen pass and publish it under `"<prefix>.<name>"`. The
+   * helper built-in effects get as `context.pass`, on the pipeline so anything
+   * injecting a pass from outside reaches it too.
+   */
+  declareFullscreenPass(scope: any, options: any): ResourceHandle;
   enabledPostProcessingEffects(cameraEntity: Entity): Generator<any>;
   postProcessingOutputs(cameraEntity: Entity): string[];
   postProcessingEffectsByStage(cameraEntity: Entity): Map<string, any[]>;
