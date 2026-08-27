@@ -407,9 +407,17 @@ export default function compile(
     const target = first
       ? records[first.texture.index]!.entry.descriptor
       : undefined;
+    // The attachment's own grid, so a pass writing mip N of a pyramid is told
+    // that level's size rather than the texture's.
+    const level = (first && "level" in first ? first.level : 0) ?? 0;
     const viewport: CompiledPass["viewport"] =
       target && isTextureDescriptor(target)
-        ? [0, 0, target.width, target.height]
+        ? [
+            0,
+            0,
+            Math.max(1, target.width >> level),
+            Math.max(1, target.height >> level),
+          ]
         : [0, 0, 0, 0];
 
     return {
