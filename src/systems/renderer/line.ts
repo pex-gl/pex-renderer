@@ -1,7 +1,7 @@
 import { avec3, mat3 } from "pex-math";
 import { submit, createBuffer } from "pex-gpu";
 
-import createBaseSystem from "./base.js";
+import createBaseSystem, { outputsKey } from "./base.js";
 import { definesKey } from "../../utils.js";
 import {
   lineShader,
@@ -63,11 +63,7 @@ export default ({ ctx }: SystemOptions): RendererSystem => ({
     return defines;
   },
   getVariantKey(entity: any, defines: Set<string>) {
-    return [
-      definesKey(defines),
-      this._outputs.normal ? 1 : 0,
-      this._outputs.emissive ? 1 : 0,
-    ].join("_");
+    return `${definesKey(defines)}_${outputsKey(this._outputs)}`;
   },
   getPipelineOptions(entity: any) {
     const { material } = entity;

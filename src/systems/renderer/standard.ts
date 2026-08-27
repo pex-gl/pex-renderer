@@ -14,7 +14,7 @@ import {
   DEPTH_PASS_VERTEX_FIELDS,
 } from "../../shaders/depth-pass.js";
 
-import createBaseSystem, { BLEND_MODES } from "./base.js";
+import createBaseSystem, { BLEND_MODES, outputsKey } from "./base.js";
 import { samplerName, uniformName } from "../../shaders/wgsl.js";
 import { NAMESPACE, TEMP_MAT4, definesKey } from "../../utils.js";
 
@@ -304,8 +304,7 @@ export default ({
       counts.shadow2DBuckets,
       counts.shadowCubeBuckets,
       this._reflectionProbe ? 1 : 0,
-      this._outputs.normal ? 1 : 0,
-      this._outputs.emissive ? 1 : 0,
+      outputsKey(this._outputs),
       texCoords,
     ].join("_");
   },

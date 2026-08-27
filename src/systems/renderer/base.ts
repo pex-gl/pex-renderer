@@ -192,6 +192,26 @@ export function getFeatureFlags(
   return { defines, uniforms, constants };
 }
 
+/**
+ * Output names no fragment output corresponds to: `color` is unconditional in
+ * `fragmentOutputStruct`, and `depth` is an attachment, not a colour target.
+ */
+const IMPLICIT_OUTPUTS = new Set(["color", "depth"]);
+
+/**
+ * A pass's extra fragment outputs, in the order the shader numbers their
+ * `@location`s.
+ *
+ * Part of every renderer's variant key: `outputs` decides the shape of
+ * `FragmentOutput`, so two passes asking for different ones need different
+ * pipelines. A name list rather than a flag per known output, so an output
+ * added from outside the engine keys itself.
+ */
+export const outputsKey = (outputs: Record<string, unknown> = {}): string =>
+  Object.keys(outputs)
+    .filter((name) => !IMPLICIT_OUTPUTS.has(name))
+    .join(",");
+
 // GPUBlendState per material.blendMode, shared by every renderer that draws
 // blended geometry. "normal" is the glTF BLEND spec's straight (non-
 // premultiplied) "over" equation — the fragment shader writes straight alpha
