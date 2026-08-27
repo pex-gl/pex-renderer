@@ -553,6 +553,12 @@ export interface TAAComponentOptions {
    * accumulating; above ~1.5 ghosting starts to survive.
    */
   varianceGamma?: number;
+  /**
+   * Contrast-adaptive sharpening applied after the resolve, winning back the
+   * softness that resampling the history every frame introduces. 0 skips the
+   * pass; 1 is the reference's strongest setting.
+   */
+  sharpness?: number;
 }
 export interface FogComponentOptions {
   color?: Color;

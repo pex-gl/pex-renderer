@@ -84,6 +84,7 @@ const postProcessing = components.postProcessing({
   taa: {
     blendFactor: 0.1,
     varianceGamma: 1.25,
+    sharpness: 0,
   },
   ssao: {
     type: "sao", // "gtao",
@@ -503,6 +504,10 @@ gui.addParam("TAA", State, "taa", null, () => {
   enablePostProPass("taa");
 });
 gui.addParam("TAA blendFactor", postProcessing.taa, "blendFactor", {
+  min: 0,
+  max: 1,
+});
+gui.addParam("TAA sharpness", postProcessing.taa, "sharpness", {
   min: 0,
   max: 1,
 });

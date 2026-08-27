@@ -12,6 +12,56 @@ import {
 import { fullscreenVertex, postProcessingStruct } from "./common.js";
 
 /**
+ * Contrast-adaptive sharpening over the resolved image.
+ *
+ * A separate pass, and deliberately not folded into the resolve: what it writes
+ * must never reach the history. Sharpening an image that is then sharpened
+ * again next frame compounds without bound, and the accumulator has to keep the
+ * clean version for that reason.
+ */
+export const taaSharpenShader = (): string => {
+  const alloc = createBindingAllocator(1);
+
+  return formatShader(/* wgsl */ `
+${postProcessingStruct}
+
+${SHADERS.math.max3}
+${SHADERS.luminance}
+${SHADERS.taa}
+${SHADERS.sharpen}
+
+struct TAASharpen {
+  sharpness: f32,
+}
+@group(0) @binding(${alloc.next()}) var<uniform> uSharpen: TAASharpen;
+
+${textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uTexture")}
+
+${fullscreenVertex({ axis: true })}
+
+@fragment
+fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
+  let center = textureSampleLevel(uTexture, uTextureSampler, input.texCoord0, 0.0);
+
+  // RCAS limits against the range [0, 1], and this runs on the linear HDR image
+  // — the resolve is what softened it, so this is where the softening has to be
+  // undone, before bloom and the tonemap see it. The same reversible curve the
+  // resolve blends in brings the taps into that range and takes the result back
+  // out.
+  let up = taaTonemap(textureSampleLevel(uTexture, uTextureSampler, input.texCoord0Up, 0.0).rgb);
+  let left = taaTonemap(textureSampleLevel(uTexture, uTextureSampler, input.texCoord0Left, 0.0).rgb);
+  let middle = taaTonemap(center.rgb);
+  let right = taaTonemap(textureSampleLevel(uTexture, uTextureSampler, input.texCoord0Right, 0.0).rgb);
+  let down = taaTonemap(textureSampleLevel(uTexture, uTextureSampler, input.texCoord0Down, 0.0).rgb);
+
+  let sharpened = rcas(up, left, middle, right, down, uSharpen.sharpness);
+
+  return vec4f(max(vec3f(0.0), taaTonemapInverse(sharpened)), center.a);
+}
+`);
+};
+
+/**
  * Temporal antialiasing resolve: one pass blending this frame into the
  * accumulated history.
  *

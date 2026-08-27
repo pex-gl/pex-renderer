@@ -353,7 +353,7 @@ gui.addParam("Denoise blur beta", postProcessing.ssao, "denoiseBlurBeta", {
 
 gui.addColumn("TAA");
 const taaState = { enabled: !!postProcessing.taa };
-const taaOptions = components.postProcessing.taa();
+const taaOptions = postProcessing.taa;
 gui.addParam("Enabled", taaState, "enabled", null, () => {
   if (taaState.enabled) {
     postProcessing.taa = taaOptions;
@@ -362,7 +362,11 @@ gui.addParam("Enabled", taaState, "enabled", null, () => {
   }
 });
 gui.addParam("Blend factor", taaOptions, "blendFactor", { min: 0.02, max: 1 });
-gui.addParam("Variance gamma", taaOptions, "varianceGamma", { min: 0.5, max: 3 });
+gui.addParam("Variance gamma", taaOptions, "varianceGamma", {
+  min: 0.5,
+  max: 3,
+});
+gui.addParam("Sharpness", taaOptions, "sharpness", { min: 0, max: 1 });
 
 gui.addColumn("SAO");
 gui.addParam("Samples", postProcessing.ssao, "samples", {

@@ -1,4 +1,7 @@
-import { taaShader } from "../../../shaders/post-processing/taa.js";
+import {
+  taaShader,
+  taaSharpenShader,
+} from "../../../shaders/post-processing/taa.js";
 
 import type { Entity } from "../../../types.js";
 import type { PostProcessingEffect } from "../post-processing.js";
@@ -129,6 +132,20 @@ const taa: PostProcessingEffect = {
         }),
       },
     });
+
+    // After the resolve and reading what it published, so the history keeps the
+    // unsharpened image: sharpening what is then sharpened again next frame
+    // compounds without bound. Skipped entirely at zero, which is what makes it
+    // free rather than merely cheap.
+    const sharpness = component.sharpness ?? 0;
+    if (sharpness > 0) {
+      pass({
+        name: "sharpen",
+        shader: taaSharpenShader,
+        chain: true,
+        uniforms: { uSharpen: { sharpness } },
+      });
+    }
   },
 };
 

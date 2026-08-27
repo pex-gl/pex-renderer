@@ -132,6 +132,11 @@ postProcessing.taa = (options?: TAAComponentOptions) => ({
   // Salvi's clipping box, at the width where ghosting stops surviving and the
   // history still accumulates. Lower clips so hard nothing converges.
   varianceGamma: 1.25,
+  // Off. Resampling and reblending the history every frame does soften the
+  // image, and this is what wins that back — but how much is wanted depends on
+  // the content, and a sharpener left at a value nobody chose is how ringing
+  // gets shipped. 0.5 is a reasonable place to start.
+  sharpness: 0,
   ...options,
 });
 

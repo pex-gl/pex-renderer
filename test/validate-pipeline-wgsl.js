@@ -232,6 +232,7 @@ const postProcessingVariants = [
   { name: "smaa blend", shader: postProcessing.smaaBlendShader, defines: new Set() },
   { name: "taa [depth reprojection]", shader: postProcessing.taaShader, defines: new Set() },
   { name: "taa [velocity]", shader: postProcessing.taaShader, defines: new Set(["USE_TAA_VELOCITY"]) },
+  { name: "taa sharpen", shader: postProcessing.taaSharpenShader, defines: new Set() },
   { name: "luma", shader: postProcessing.lumaShader, defines: new Set() },
   { name: "final [opacity only]", shader: postProcessing.finalShader, defines: new Set() },
   { name: "final [fxaa]", shader: postProcessing.finalShader, defines: new Set(["USE_FXAA"]) },
