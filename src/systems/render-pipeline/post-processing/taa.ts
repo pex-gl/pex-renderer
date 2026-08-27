@@ -81,10 +81,13 @@ const taa: PostProcessingEffect = {
     ];
 
     // Nothing to blend against when the texture was just allocated (first frame
-    // for this camera), reallocated (a resize changed its shape), or left
-    // behind by a frame that is not the one immediately before this.
+    // for this camera), reallocated (a resize changed its shape), left behind
+    // by a frame that is not the one immediately before this, or describing a
+    // view this one does not continue from (a cut, via
+    // `cameraSystem.resetTemporal`).
     const state = states.get(cameraEntity);
     const historyValid =
+      !camera._temporalReset &&
       state &&
       state.width === width &&
       state.height === height &&

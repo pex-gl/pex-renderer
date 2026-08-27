@@ -33,6 +33,15 @@ const JITTER_SAMPLES = halton(JITTER_SAMPLE_COUNT + 1, [2, 3])
 const NO_JITTER = [0, 0];
 
 /**
+ * Cameras asked to drop their temporal history, consumed by the next update.
+ *
+ * Held here rather than on the component so `_temporalReset` can mean one thing
+ * — "this frame does not continue the last" — and be read by any number of
+ * consumers without one of them clearing it out from under the others.
+ */
+const temporalResets = new WeakSet<object>();
+
+/**
  * This frame's sub-pixel offset, or zero when nothing accumulates one — an
  * offset left behind after the effect is switched off would sit the image
  * permanently off-centre.
@@ -74,6 +83,19 @@ function updateCameraViewProjection(camera: any) {
 
   mat4.set(camera._viewProjectionMatrix, camera.projectionMatrix);
   mat4.mult(camera._viewProjectionMatrix, camera.viewMatrix);
+
+  // A frame with nothing behind it — the first, or the one after a cut — has no
+  // previous view worth the name, and the identity mat4.create() left behind is
+  // not one. Seeding from the matrix just computed makes every motion vector
+  // that frame read zero, which is the honest answer: nothing is known to have
+  // moved, as opposed to everything having moved from the origin.
+  if (!camera._hasPreviousViewProjectionMatrix || camera._temporalReset) {
+    camera._hasPreviousViewProjectionMatrix = true;
+    mat4.set(
+      camera._previousViewProjectionMatrix,
+      camera._viewProjectionMatrix,
+    );
+  }
 
   mat4.set(camera._inverseViewProjectionMatrix, camera._viewProjectionMatrix);
   mat4.invert(camera._inverseViewProjectionMatrix);
@@ -170,7 +192,8 @@ function updateCameraProjection(camera: any, transform: any) {
  *
  * - "_orbiter" to orbiter components
  * - "_viewProjectionMatrix", "_inverseViewProjectionMatrix",
- *   "_previousViewProjectionMatrix" and "_jitter" to camera components
+ *   "_previousViewProjectionMatrix", "_jitter" and "_temporalReset" to camera
+ *   components
  */
 export default ({ ctx }: SystemOptions) => ({
   type: "camera-system",
@@ -180,6 +203,29 @@ export default ({ ctx }: SystemOptions) => ({
   updateCameraViewProjection,
   updateCameraJitter,
   computeFrustum,
+  /**
+   * Declare that this camera's next frame does not continue from the last, so
+   * anything accumulating across frames throws its history away rather than
+   * blending it.
+   *
+   * What it is for: a cut. Reprojection assumes the previous frame looked at
+   * roughly the same thing — it finds where a surface *was* and reads the
+   * colour accumulated there. Teleport the camera and that assumption is gone:
+   * the previous view-projection describes somewhere else entirely, so every
+   * pixel reads history belonging to an unrelated image. Most of it is caught
+   * anyway (the reprojection lands off-screen, or the value is clipped against
+   * the neighbourhood), which is why a cut shows as a brief flash rather than a
+   * lasting smear — but the frames that survive both tests are wrong, and there
+   * is no way to tell from inside the resolve.
+   *
+   * Explicit rather than inferred from how far the camera moved: that test is
+   * wrong in both directions, since a fast pan is not a cut and a slow teleport
+   * is. Call it wherever the camera is repositioned — a scene load, a jump to a
+   * bookmarked view, switching between cameras that share a target.
+   */
+  resetTemporal(cameraEntity: Entity) {
+    temporalResets.add(cameraEntity);
+  },
   checkCamera(_: unknown, cameraEntity: Entity) {
     if (cameraEntity.transform) {
       return true;
@@ -414,8 +460,11 @@ export default ({ ctx }: SystemOptions) => ({
       if (entity.camera) {
         if (!this.checkCamera(null, entity)) continue;
         this.updateCameraEntity(entity);
-        // After, not inside: every branch of updateCameraEntity leaves the view
-        // and projection matrices final, and only some of them recompute one.
+        // Exactly one frame, and cleared whether or not anything reads it.
+        // Resolved first: the view-projection pair is derived from it.
+        entity.camera._temporalReset = temporalResets.delete(entity);
+        // After updateCameraEntity, not inside: every branch of it leaves the
+        // view and projection matrices final, and only some recompute one.
         updateCameraViewProjection(entity.camera);
         updateCameraJitter(
           entity,

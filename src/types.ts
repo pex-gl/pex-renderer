@@ -243,8 +243,16 @@ export interface CameraComponentOptions {
   /** `projectionMatrix * viewMatrix`, this frame and last. Never jittered. */
   _viewProjectionMatrix?: Mat4;
   _previousViewProjectionMatrix?: Mat4;
+  /** Cleared once a real view-projection has been seeded into the previous. */
+  _hasPreviousViewProjectionMatrix?: boolean;
   /** Inverse of `_viewProjectionMatrix`, for reconstructing world position. */
   _inverseViewProjectionMatrix?: Mat4;
+  /**
+   * Set for the one frame following `cameraSystem.resetTemporal(entity)`, and
+   * read by anything accumulating across frames: this frame does not continue
+   * from the last, so its history describes somewhere else.
+   */
+  _temporalReset?: boolean;
 }
 export interface DirectionalLightComponentOptions extends LightShadowInternals {
   color?: Color;
