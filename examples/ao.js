@@ -3,9 +3,10 @@ import {
   world as createWorld,
   entity as createEntity,
   components,
-} from "../index.js";
+  loaders,
+} from "pex-renderer";
 
-import createContext from "pex-context";
+import * as gpu from "pex-gpu";
 import random from "pex-random";
 import { create, fromHex } from "pex-color";
 import { quat, vec3 } from "pex-math";
@@ -13,12 +14,17 @@ import createGUI from "pex-gui";
 
 import { cube } from "primitive-geometry";
 
+import { getRenderPassGraphViz } from "./graph-viz.js";
+
 random.seed(0);
 
 const pixelRatio = 1; // devicePixelRatio;
-const ctx = createContext({ pixelRatio });
+const ctx = await gpu.createContext({ pixelRatio });
 const renderEngine = createRenderEngine({ ctx, debug: true });
 const world = createWorld();
+
+const renderPassGraphViz = getRenderPassGraphViz();
+renderPassGraphViz.init(ctx, renderEngine.frameGraph);
 
 const dutchPalette = [
   "#FFC312",
@@ -104,6 +110,7 @@ const rects = divide([-2 * s, -1 * s, 4 * s, 2 * s, 0], []);
 const postProcessing = components.postProcessing({
   fxaa: components.postProcessing.fxaa(),
   ssao: components.postProcessing.ssao({
+    type: "gtao",
     intensity: 2,
   }),
   exposure: 1.5,
@@ -112,9 +119,9 @@ const postProcessing = components.postProcessing({
 const cameraEntity = createEntity({
   transform: components.transform({ position: [-3, 3, 3] }),
   camera: components.camera({
-    aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
+    aspect: ctx.width / ctx.height,
   }),
-  orbiter: components.orbiter({ element: ctx.gl.canvas }),
+  orbiter: components.orbiter({ element: ctx.canvas }),
   postProcessing,
 });
 world.add(cameraEntity);
@@ -228,6 +235,9 @@ world.add(reflectionProbeEntity);
 const gui = createGUI(ctx);
 gui.addColumn("Attachments");
 gui.addFPSMeeter();
+gui.addButton("Toggle Render Pass Graph", () => {
+  renderPassGraphViz.toggle();
+});
 gui.addRadioList(
   "Debug Render",
   renderEngine.renderers.find(
@@ -261,9 +271,9 @@ gui.addRadioList(
   })),
 );
 
-const guiNormalControl = gui.addTexture2D("Normal", null, { flipY: true });
-const guiDepthControl = gui.addTexture2D("Depth", null, { flipY: true });
-const guiAOControl = gui.addTexture2D("AO", null, { flipY: true });
+const guiNormalControl = gui.addTexture2D("Normal", null);
+const guiDepthControl = gui.addTexture2D("Depth", null);
+const guiAOControl = gui.addTexture2D("AO", null);
 gui.addColumn("SSAO");
 gui.addRadioList(
   "Type",
@@ -316,7 +326,7 @@ let debugOnce = false;
 window.addEventListener("resize", () => {
   const width = window.innerWidth;
   const height = window.innerHeight;
-  ctx.set({ pixelRatio, width, height });
+  gpu.resize(ctx, width, height, pixelRatio);
   cameraEntity.camera.aspect = width / height;
   cameraEntity.camera.dirty = true;
 });
@@ -326,14 +336,31 @@ window.addEventListener("keydown", ({ key }) => {
   if (key === "d") debugOnce = true;
 });
 
-ctx.frame(() => {
-  renderEngine.update(world.entities);
-  const [{ normal, depth }] = renderEngine.render(world.entities, cameraEntity);
-  guiNormalControl.texture = normal;
-  guiDepthControl.texture = depth;
-  guiAOControl.texture = postProcessing._targets[cameraEntity.id]["ssao.main"];
+const dummyTexture2D = gpu.createTexture(ctx, {
+  name: "dummyTexture2D",
+  width: 160,
+  height: 1,
+  format: "rgba8unorm",
+});
+let aoHandle;
+renderEngine.frameGraph.on("present", (textures) => {
+  aoHandle = textures.get("ssao.main");
+  if (aoHandle) renderEngine.frameGraph.exportTexture(aoHandle);
+});
 
-  ctx.debug(debugOnce);
+gpu.frame(ctx, async () => {
+  renderEngine.update(world.entities);
+  const [{ color, normal, depth }] = await renderEngine.render(
+    world.entities,
+    cameraEntity,
+  );
+
+  guiNormalControl.texture = normal || dummyTexture2D;
+  guiDepthControl.texture = depth || dummyTexture2D;
+  guiAOControl.texture =
+    (aoHandle && renderEngine.frameGraph.resolve(aoHandle)) || dummyTexture2D;
+
+  gpu.debug(ctx, debugOnce);
   debugOnce = false;
 
   gui.draw();

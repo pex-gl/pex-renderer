@@ -66,7 +66,7 @@ postProcessing.ssao = (options?: SSAOComponentOptions) => ({
   spiralTurns: 7,
   // GTAO
   slices: 3,
-  multiBounce: "screen-space",
+  multiBounce: "analytic",
   colorBounceIntensity: 1.0,
   ...options,
 });

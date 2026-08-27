@@ -213,21 +213,21 @@ class BlueNoiseGenerator {
     const pointCount = Math.floor(size * size * majorityPointsRatio);
     const initialSamples = samples.binaryPattern;
 
-    console.time("Array Initialization");
+    // console.time("Array Initialization");
     fillWithOnes(initialSamples, pointCount);
     shuffleArray(initialSamples, this.random);
-    console.timeEnd("Array Initialization");
+    // console.timeEnd("Array Initialization");
 
-    console.time("Score Initialization");
+    // console.time("Score Initialization");
     for (let i = 0, l = initialSamples.length; i < l; i++) {
       if (initialSamples[i] === 1) {
         samples.addPointIndex(i);
       }
     }
-    console.timeEnd("Score Initialization");
+    // console.timeEnd("Score Initialization");
 
     // 2. Remove minority point that is in densest cluster and place it in the largest void.
-    console.time("Point Rearrangement");
+    // console.time("Point Rearrangement");
     while (true) {
       const clusterIndex = samples.findCluster();
       samples.removePointIndex(clusterIndex);
@@ -240,14 +240,14 @@ class BlueNoiseGenerator {
 
       samples.addPointIndex(voidIndex);
     }
-    console.timeEnd("Point Rearrangement");
+    // console.timeEnd("Point Rearrangement");
 
     // 3. PHASE I: Assign a rank to each progressively less dense cluster point and put it
     // in the dither array.
     const ditherArray = new Uint32Array(size * size);
     savedSamples.copy(samples);
 
-    console.time("Dither Array Phase 1");
+    // console.time("Dither Array Phase 1");
     let rank;
     rank = samples.count - 1;
     while (rank >= 0) {
@@ -257,11 +257,11 @@ class BlueNoiseGenerator {
       ditherArray[clusterIndex] = rank;
       rank--;
     }
-    console.timeEnd("Dither Array Phase 1");
+    // console.timeEnd("Dither Array Phase 1");
 
     // 4. PHASE II: Do the same thing for the largest voids up to half of the total pixels using
     // the initial binary pattern.
-    console.time("Dither Array Phase 2");
+    // console.time("Dither Array Phase 2");
     const totalSize = size * size;
     rank = savedSamples.count;
     while (rank < totalSize / 2) {
@@ -270,22 +270,22 @@ class BlueNoiseGenerator {
       ditherArray[voidIndex] = rank;
       rank++;
     }
-    console.timeEnd("Dither Array Phase 2");
+    // console.timeEnd("Dither Array Phase 2");
 
     // 5. PHASE III: Invert the pattern and finish out by assigning a rank to the remaining
     // and iteratively removing them.
-    console.time("Samples Invert");
+    // console.time("Samples Invert");
     savedSamples.invert();
-    console.timeEnd("Samples Invert");
+    // console.timeEnd("Samples Invert");
 
-    console.time("Dither Array Phase 3");
+    // console.time("Dither Array Phase 3");
     while (rank < totalSize) {
       const clusterIndex = savedSamples.findCluster();
       savedSamples.removePointIndex(clusterIndex);
       ditherArray[clusterIndex] = rank;
       rank++;
     }
-    console.timeEnd("Dither Array Phase 3");
+    // console.timeEnd("Dither Array Phase 3");
 
     return { data: ditherArray, maxValue: totalSize };
   }
