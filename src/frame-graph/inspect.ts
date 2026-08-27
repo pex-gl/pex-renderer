@@ -162,6 +162,7 @@ export default function inspect(
       ...(descriptor && {
         width: descriptor.width,
         height: descriptor.height,
+        depth: descriptor.depth,
       }),
     };
   });

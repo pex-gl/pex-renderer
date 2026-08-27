@@ -138,17 +138,21 @@ export function toDot(inspection) {
       `  "pass:${pass.name}" [label="${label}" fillcolor="#c62828" color=darkred];`,
     );
   }
-  for (const name of inspection.culledPasses) {
+  for (const { name, writes } of inspection.culledPasses) {
+    // The unread names are the reason it went, so they belong on the node
+    // rather than in a separate list nobody cross-references.
     nodes.push(
-      `  "pass:${name}" [label="${name}\\n(culled)" fillcolor=gray80 color=gray50 fontcolor=gray30];`,
+      `  "pass:${name}" [label="${name}\\n(culled: nothing reads ${writes.join(", ")})" fillcolor=gray80 color=gray50 fontcolor=gray30];`,
     );
   }
 
   for (const resource of inspection.resources) {
     if (resource.culled) continue;
+    console.log(resource);
+
     const size =
       resource.width !== undefined
-        ? `\\n${resource.width}×${resource.height} ${resource.format ?? ""}`
+        ? `\\n${resource.width}×${resource.height}${resource.depth ? `x${resource.depth}` : ""} ${resource.format ?? ""}`
         : "";
     const physical =
       resource.physicalId !== undefined ? ` #${resource.physicalId}` : "";
