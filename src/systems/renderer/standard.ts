@@ -83,15 +83,17 @@ const lightColor = (light: any) => [
 // the skin's own joint count. Cached on the skin component: `jointMatrices`'
 // entries are mutated in place by systems/skin.ts each frame, so the padded
 // wrapper (built from the same references) stays valid without rebuilding.
-function getJointMatricesUniform(skin: any): any[] {
-  if (!skin._paddedJointMatrices) {
+function getJointMatricesUniform(skin: any, previous = false): any[] {
+  const key = previous ? "_paddedPreviousJointMatrices" : "_paddedJointMatrices";
+  if (!skin[key]) {
+    const source = previous ? skin._previousJointMatrices : skin.jointMatrices;
     const padded = new Array(MAX_JOINTS);
     for (let i = 0; i < MAX_JOINTS; i++) {
-      padded[i] = skin.jointMatrices[i] ?? IDENTITY_MAT4;
+      padded[i] = source[i] ?? IDENTITY_MAT4;
     }
-    skin._paddedJointMatrices = padded;
+    skin[key] = padded;
   }
-  return skin._paddedJointMatrices;
+  return skin[key];
 }
 
 // mat3(transpose(inverse(view * model))). Shared by the main pass and the
@@ -122,6 +124,9 @@ const modelUniforms = (
   },
   ...(entity.skin && {
     uJointMatrices: getJointMatricesUniform(entity.skin),
+    ...(previousModelMatrix && {
+      uPreviousJointMatrices: getJointMatricesUniform(entity.skin, true),
+    }),
   }),
 });
 

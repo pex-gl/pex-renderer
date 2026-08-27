@@ -76,8 +76,18 @@ const basicVariants = [
   { name: "hooks", defines: new Set(["USE_VERTEX_COLORS"]), options: { hooks: { vertBeforeTransform: "// hook", fragEnd: "// hook" } } },
 ];
 
+const VELOCITY = { outputs: { normal: true, emissive: true, velocity: true } };
 const standardVariants = [
   { name: "minimal unlit", defines: new Set(["USE_UNLIT_WORKFLOW"]) },
+  // Motion vectors, once per way a vertex can move. Each takes a different
+  // route through vertexPreviousWorld, and a route that does not compile is a
+  // whole class of geometry silently ghosting.
+  { name: "velocity [rigid]", defines: new Set(["USE_NORMALS"]), options: VELOCITY },
+  { name: "velocity [skinned]", defines: new Set(["USE_NORMALS", "USE_SKIN"]), options: { ...VELOCITY, maxJoints: 64 } },
+  { name: "velocity [morphed]", defines: new Set(["USE_NORMALS", "USE_PREVIOUS_POSITION"]), options: VELOCITY },
+  { name: "velocity [static instancing]", defines: new Set(["USE_NORMALS", "USE_INSTANCED_OFFSET", "USE_INSTANCED_SCALE", "USE_INSTANCED_ROTATION"]), options: VELOCITY },
+  { name: "velocity [animated instancing]", defines: new Set(["USE_NORMALS", "USE_INSTANCED_OFFSET", "USE_INSTANCED_SCALE", "USE_INSTANCED_ROTATION", "USE_PREVIOUS_INSTANCED_OFFSET", "USE_PREVIOUS_INSTANCED_SCALE", "USE_PREVIOUS_INSTANCED_ROTATION"]), options: VELOCITY },
+  { name: "velocity [skinned + morphed + animated instancing]", defines: new Set(["USE_NORMALS", "USE_SKIN", "USE_PREVIOUS_POSITION", "USE_INSTANCED_OFFSET", "USE_INSTANCED_SCALE", "USE_INSTANCED_ROTATION", "USE_PREVIOUS_INSTANCED_OFFSET", "USE_PREVIOUS_INSTANCED_SCALE", "USE_PREVIOUS_INSTANCED_ROTATION"]), options: { ...VELOCITY, maxJoints: 64 } },
   { name: "unlit + basecolor tex + alpha test", defines: new Set(["USE_UNLIT_WORKFLOW", "USE_BASE_COLOR_TEXTURE", "USE_ALPHA_TEXTURE", "USE_ALPHA_TEST"]) },
   { name: "metallic-roughness no textures no lights", defines: new Set(["USE_METALLIC_ROUGHNESS_WORKFLOW"]) },
   { name: "mr + basecolor + normal + 1 directional", defines: new Set(["USE_METALLIC_ROUGHNESS_WORKFLOW", "USE_NORMALS", "USE_TEXCOORD_0", "USE_BASE_COLOR_TEXTURE", "USE_NORMAL_TEXTURE", "USE_TANGENTS"]), options: { lights: { directional: 1 } } },
@@ -327,6 +337,22 @@ for (const v of postProcessingVariants) {
     depthPass.depthPassShader(defines, { outputs: { velocity: true } }),
     base,
   );
+
+  // Last frame's joints double what a skinned entity uploads, so they are
+  // declared only where they are read — and the renderer writes them on exactly
+  // the same condition.
+  const skinned = new Set(["USE_NORMALS", "USE_SKIN"]);
+  const declaresPreviousJoints = (source) =>
+    /@group\(3\) @binding\(4\) var<uniform> uPreviousJointMatrices/.test(source);
+  for (const [label, source, expected] of [
+    ["skinned", standard.standardShader(skinned, { outputs: {} }), false],
+    ["skinned + velocity", standard.standardShader(skinned, { outputs: { velocity: true } }), true],
+    ["unskinned + velocity", standard.standardShader(defines, { outputs: { velocity: true } }), false],
+  ]) {
+    const ok = declaresPreviousJoints(source) === expected;
+    if (!ok) errorCount++;
+    console.log(`${ok ? "ok" : "not ok"} - previous joints [${label}]`);
+  }
 }
 
 // ─── The depth pre-pass has to agree with the pass that tests against it ─────

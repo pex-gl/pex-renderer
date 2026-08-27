@@ -19,6 +19,7 @@ import {
   vertexTransform,
   vertexJitter,
   vertexVelocity,
+  vertexPreviousWorld,
   VELOCITY_MEMBERS,
   FRAGMENT_VELOCITY,
 } from "./wgsl.js";
@@ -77,6 +78,10 @@ const VERTEX_DEFINE = {
   instancedRotation: "USE_INSTANCED_ROTATION",
   instancedColor: "USE_INSTANCED_COLOR",
   skin: "USE_SKIN",
+  previousPosition: "USE_PREVIOUS_POSITION",
+  previousInstancedOffset: "USE_PREVIOUS_INSTANCED_OFFSET",
+  previousInstancedScale: "USE_PREVIOUS_INSTANCED_SCALE",
+  previousInstancedRotation: "USE_PREVIOUS_INSTANCED_ROTATION",
 } as const;
 
 // prettier-ignore
@@ -190,6 +195,12 @@ export const STANDARD_VERTEX_FIELDS: readonly FeatureField[] = [
   { key: "instanceColor", define: VERTEX_DEFINE.instancedColor },
   { key: "joint", define: VERTEX_DEFINE.skin },
   { key: "weight", define: VERTEX_DEFINE.skin },
+  // Present only once the geometry system has seen the attribute change, which
+  // is what makes a deforming surface differ from a static one.
+  { key: "previousPosition", define: VERTEX_DEFINE.previousPosition },
+  { key: "previousOffset", define: VERTEX_DEFINE.previousInstancedOffset },
+  { key: "previousScale", define: VERTEX_DEFINE.previousInstancedScale },
+  { key: "previousRotation", define: VERTEX_DEFINE.previousInstancedRotation },
 ];
 
 export const STANDARD_WORKFLOW = {
@@ -687,6 +698,7 @@ ${modelStruct({
   previousModelMatrix: !!outputs.velocity,
   displacementTexture: useDisplacementTexture,
   skin: useSkin,
+  previousSkin: !!outputs.velocity,
   maxJoints,
 })}
 
@@ -729,6 +741,15 @@ ${vertexInputStruct({
   instancedRotation: vertexFlags.instancedRotation,
   instancedColor: vertexFlags.instancedColor,
   skin: useSkin,
+  // Only where they are read: a variant not writing motion vectors has no use
+  // for last frame's values, and binding them would cost a vertex fetch each.
+  previousPosition: !!outputs.velocity && vertexFlags.previousPosition,
+  previousInstancedOffset:
+    !!outputs.velocity && vertexFlags.previousInstancedOffset,
+  previousInstancedScale:
+    !!outputs.velocity && vertexFlags.previousInstancedScale,
+  previousInstancedRotation:
+    !!outputs.velocity && vertexFlags.previousInstancedRotation,
 })}
 
 ${vertexOutputStruct([
@@ -897,11 +918,17 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
   output.position = positionOut;
   ${
     outputs.velocity
-      ? vertexVelocity(
-          // A skinned surface has no previous local position to offer until the
-          // previous joint matrices exist, so it reports camera motion alone.
-          useSkin ? { previousWorld: "positionWorld" } : {},
-        )
+      ? `${vertexPreviousWorld({
+          useSkin,
+          instancedScale: vertexFlags.instancedScale,
+          instancedRotation: vertexFlags.instancedRotation,
+          instancedOffset: vertexFlags.instancedOffset,
+          previousPosition: vertexFlags.previousPosition,
+          previousInstancedScale: vertexFlags.previousInstancedScale,
+          previousInstancedRotation: vertexFlags.previousInstancedRotation,
+          previousInstancedOffset: vertexFlags.previousInstancedOffset,
+        })}
+  ${vertexVelocity({ previousWorld: "previousPositionWorld" })}`
       : ""
   }
   ${vertexJitter()}

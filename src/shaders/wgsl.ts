@@ -247,6 +247,78 @@ export const vertexVelocity = ({
   output.previousPositionClip = uFrame.previousViewProjectionMatrix * (${previousWorld});`;
 
 /**
+ * Where this vertex was last frame, in world space — the other half of what a
+ * motion vector is made of.
+ *
+ * Emitted after `vertexTransform`, which is what makes the two branches differ:
+ * the plain path finds `position` already carrying this frame's instancing,
+ * which is last frame's too while instance attributes are static, so the
+ * previous model matrix is all it needs. The skin path finds `position`
+ * untouched — `vertexTransform` instances the skinned world position, not the
+ * local one — so it composes the same chain itself from last frame's joints.
+ */
+export function vertexPreviousWorld({
+  useSkin = false,
+  instancedScale = false,
+  instancedRotation = false,
+  instancedOffset = false,
+  previousPosition = false,
+  previousInstancedScale = false,
+  previousInstancedRotation = false,
+  previousInstancedOffset = false,
+}: VertexTransformFlags & VertexInputFlags): string {
+  // Last frame's values where the geometry system kept them, this frame's
+  // where it did not — an attribute it never saw change holds the same data for
+  // both frames, so reading the current one is not an approximation.
+  const previousInstancing = {
+    instancedScale,
+    instancedRotation,
+    instancedOffset,
+  };
+  const attribute = {
+    scale: previousInstancedScale ? "input.previousScale" : "input.scale",
+    rotation: previousInstancedRotation
+      ? "input.previousRotation"
+      : "input.rotation",
+    offset: previousInstancedOffset ? "input.previousOffset" : "input.offset",
+  };
+  const local = previousPosition
+    ? "vec4f(input.previousPosition, 1.0)"
+    : "position";
+
+  if (!useSkin) {
+    // The plain path instances the local position before the model matrix, so
+    // it has to redo that chain whenever either half has a previous value.
+    const deforming =
+      previousPosition ||
+      previousInstancedScale ||
+      previousInstancedRotation ||
+      previousInstancedOffset;
+    if (!deforming) {
+      return "var previousPositionWorld = uModel.previousModelMatrix * position;";
+    }
+
+    return [
+      `var previousLocalPosition = ${local};`,
+      ...instancedOps("previousLocalPosition", previousInstancing, {
+        rotationMat: "previousRotationMat",
+        attribute,
+      }),
+      "var previousPositionWorld = uModel.previousModelMatrix * previousLocalPosition;",
+    ].join("\n  ");
+  }
+
+  return [
+    skinMatrix("previousSkinMat", "uPreviousJointMatrices"),
+    `var previousPositionWorld = previousSkinMat * ${local};`,
+    ...instancedOps("previousPositionWorld", previousInstancing, {
+      rotationMat: "previousRotationMat",
+      attribute,
+    }),
+  ].join("\n  ");
+}
+
+/**
  * Fragment-stage half: where this surface was last frame, minus where it is now,
  * in texture coordinates.
  *
@@ -272,6 +344,12 @@ export interface ModelStructOptions {
   displacementTexture?: boolean;
   /** Declare the skin joint-matrix array (binding 1). */
   skin?: boolean;
+  /**
+   * Declare last frame's joint-matrix array (binding 4), for a skinned pass
+   * writing motion vectors. Doubles what a skinned entity uploads, so it is
+   * gated separately from `skin`.
+   */
+  previousSkin?: boolean;
   /** Skin joint-matrix array length. */
   maxJoints?: number;
 }
@@ -285,6 +363,7 @@ export function modelStruct({
   previousModelMatrix = false,
   displacementTexture = false,
   skin = false,
+  previousSkin = false,
   maxJoints = 256,
 }: ModelStructOptions = {}): string {
   return `struct Model {
@@ -295,6 +374,7 @@ export function modelStruct({
 }
 ${bindingDeclaration(3, 0, "uModel", "Model", "uniform")}
 ${skin ? bindingDeclaration(3, 1, "uJointMatrices", `array<mat4x4f, ${maxJoints}>`, "uniform") : ""}
+${skin && previousSkin ? bindingDeclaration(3, 4, "uPreviousJointMatrices", `array<mat4x4f, ${maxJoints}>`, "uniform") : ""}
 ${displacementTexture ? textureSamplerDeclaration(3, { texture: 2, sampler: 3 }, "uDisplacementTexture") : ""}`;
 }
 
@@ -312,6 +392,12 @@ export interface VertexInputFlags {
   instancedRotation?: boolean;
   instancedColor?: boolean;
   skin?: boolean;
+  // Last frame's values, present only once the geometry system has seen the
+  // attribute change — a surface that never deforms has none.
+  previousPosition?: boolean;
+  previousInstancedOffset?: boolean;
+  previousInstancedScale?: boolean;
+  previousInstancedRotation?: boolean;
 }
 
 /** A WGSL IO struct member: field name and type. */
@@ -358,6 +444,10 @@ const VERTEX_ATTRIBUTES: readonly (ShaderStructMember & {
   { flag: "instancedColor", name: "instanceColor", type: "vec4f" },
   { flag: "skin", name: "joint", type: "vec4f" },
   { flag: "skin", name: "weight", type: "vec4f" },
+  { flag: "previousPosition", name: "previousPosition", type: "vec3f" },
+  { flag: "previousInstancedOffset", name: "previousOffset", type: "vec3f" },
+  { flag: "previousInstancedScale", name: "previousScale", type: "vec3f" },
+  { flag: "previousInstancedRotation", name: "previousRotation", type: "vec4f" },
 ];
 
 export function vertexInputStruct(flags: VertexInputFlags): string {
@@ -413,11 +503,52 @@ export interface VertexTransformFlags {
   transformTangent?: boolean;
 }
 
-const SKIN_MATRIX = `let skinMat =
-    input.weight.x * uJointMatrices[u32(input.joint.x)] +
-    input.weight.y * uJointMatrices[u32(input.joint.y)] +
-    input.weight.z * uJointMatrices[u32(input.joint.z)] +
-    input.weight.w * uJointMatrices[u32(input.joint.w)];`;
+/** Weighted blend of the four influencing joints, from `array` into `name`. */
+const skinMatrix = (name: string, array: string) => `let ${name} =
+    input.weight.x * ${array}[u32(input.joint.x)] +
+    input.weight.y * ${array}[u32(input.joint.y)] +
+    input.weight.z * ${array}[u32(input.joint.z)] +
+    input.weight.w * ${array}[u32(input.joint.w)];`;
+
+const SKIN_MATRIX = skinMatrix("skinMat", "uJointMatrices");
+
+/**
+ * Per-instance scale, rotation and offset applied to `target`, in that order.
+ *
+ * Shared by the current and previous transforms so the two cannot drift: they
+ * have to compose identically, or the difference between them reads as motion
+ * that never happened.
+ */
+function instancedOps(
+  target: string,
+  {
+    instancedScale = false,
+    instancedRotation = false,
+    instancedOffset = false,
+  }: VertexTransformFlags,
+  {
+    rotationMat = "rotationMat",
+    transformNormal = false,
+    attribute = {
+      scale: "input.scale",
+      rotation: "input.rotation",
+      offset: "input.offset",
+    },
+  }: {
+    rotationMat?: string;
+    transformNormal?: boolean;
+    attribute?: { scale: string; rotation: string; offset: string };
+  } = {},
+): string[] {
+  return [
+    instancedScale &&
+      `${target} = vec4f(${target}.xyz * ${attribute.scale}, ${target}.w);`,
+    instancedRotation &&
+      `let ${rotationMat} = quatToMat4(${attribute.rotation});\n  ${target} = ${rotationMat} * ${target};${transformNormal ? `\n  normal = (${rotationMat} * vec4f(normal, 0.0)).xyz;` : ""}`,
+    instancedOffset &&
+      `${target} = vec4f(${target}.xyz + ${attribute.offset}, ${target}.w);`,
+  ].filter(Boolean) as string[];
+}
 
 /**
  * The shared vertex-stage transform: declares `positionWorld` and applies skin
@@ -434,29 +565,20 @@ export function vertexTransform({
   transformNormal = false,
   transformTangent = false,
 }: VertexTransformFlags): string {
-  const rotate = (target: string) =>
-    `let rotationMat = quatToMat4(input.rotation);\n  ${target} = rotationMat * ${target};${transformNormal ? "\n  normal = (rotationMat * vec4f(normal, 0.0)).xyz;" : ""}`;
+  const instancing = { instancedScale, instancedRotation, instancedOffset };
 
   const branch = useSkin
     ? [
         SKIN_MATRIX,
         transformNormal && "normal = (skinMat * vec4f(normal, 0.0)).xyz;",
         "positionWorld = skinMat * position;",
-        instancedScale &&
-          "positionWorld = vec4f(positionWorld.xyz * input.scale, positionWorld.w);",
-        instancedRotation && rotate("positionWorld"),
-        instancedOffset &&
-          "positionWorld = vec4f(positionWorld.xyz + input.offset, positionWorld.w);",
+        ...instancedOps("positionWorld", instancing, { transformNormal }),
         transformTangent && "tangent = skinMat * vec4f(tangent.xyz, 0.0);",
         transformNormal &&
           "output.normalView = (uFrame.viewMatrix * vec4f(normal, 0.0)).xyz;",
       ]
     : [
-        instancedScale &&
-          "position = vec4f(position.xyz * input.scale, position.w);",
-        instancedRotation && rotate("position"),
-        instancedOffset &&
-          "position = vec4f(position.xyz + input.offset, position.w);",
+        ...instancedOps("position", instancing, { transformNormal }),
         "positionWorld = uModel.modelMatrix * position;",
         transformNormal && "output.normalView = uModel.normalMatrix * normal;",
       ];

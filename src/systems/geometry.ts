@@ -32,6 +32,52 @@ const instancedAttributes = new Set([
 
 const indicesProps = ["cells", "indices"];
 
+/**
+ * Vertex data that places a surface, and so needs last frame's values before a
+ * motion vector can be written for it: CPU-blended morph targets land in
+ * `position`, and animated instancing in the instance transforms.
+ */
+const deformingAttributes = new Set(["position", "offset", "scale", "rotation"]);
+const previousAttributeName = (name: string) =>
+  `previous${name[0]!.toUpperCase()}${name.slice(1)}`;
+
+/**
+ * Ping-pong `name`'s buffer, so the data it held stays readable as
+ * `previous<Name>`.
+ *
+ * The second buffer is allocated on the first re-upload rather than up front:
+ * an attribute written once and never touched again describes a surface that
+ * does not deform, and pays nothing. The cost falls only on geometry that
+ * actually animates — which is also the only geometry whose previous values
+ * anything would want.
+ */
+function keepPreviousBuffer(
+  ctx: any,
+  attributes: Record<string, any>,
+  name: string,
+  attribute: any,
+  data: any,
+) {
+  const previousName = previousAttributeName(name);
+  const previous = attributes[previousName];
+
+  if (previous) {
+    // Swap, then overwrite the older of the two with this frame's data.
+    attributes[previousName] = attribute;
+    attributes[name] = previous;
+    updateBuffer(ctx, previous.buffer, data);
+    return previous;
+  }
+
+  // First re-upload: the buffer in hand is last frame's, so it becomes the
+  // previous and this frame gets a new one.
+  attributes[previousName] = attribute;
+  return (attributes[name] = {
+    ...attribute,
+    buffer: createBuffer(ctx, { usage: "vertex", data }),
+  });
+}
+
 function disposeAttribute(attribute: any) {
   const buffer = attribute?.buffer || attribute;
   if (isGpuBuffer(buffer)) buffer.dispose();
@@ -164,7 +210,15 @@ export default ({ ctx }: SystemOptions) => ({
         } else {
           let attribute = cachedGeom.attributes[attributeName];
           if (attribute?.buffer) {
-            updateBuffer(ctx, attribute.buffer, data);
+            attribute = deformingAttributes.has(attributeName)
+              ? keepPreviousBuffer(
+                  ctx,
+                  cachedGeom.attributes,
+                  attributeName,
+                  attribute,
+                  data,
+                )
+              : (updateBuffer(ctx, attribute.buffer, data), attribute);
           } else {
             attribute = cachedGeom.attributes[attributeName] = {
               buffer: createBuffer(ctx, { usage: "vertex", data }),
@@ -173,6 +227,15 @@ export default ({ ctx }: SystemOptions) => ({
 
           attribute.offset = attributeValue.offset;
           attribute.stride = attributeValue.stride;
+
+          // The pair describes the same vertices, so it has to be read the
+          // same way.
+          const previous =
+            cachedGeom.attributes[previousAttributeName(attributeName)];
+          if (previous) {
+            previous.offset = attribute.offset;
+            previous.stride = attribute.stride;
+          }
         }
 
         if (
@@ -180,6 +243,9 @@ export default ({ ctx }: SystemOptions) => ({
           instancedAttributes.has(attributeName)
         ) {
           cachedGeom.attributes[attributeName].stepMode = "instance";
+          const previous =
+            cachedGeom.attributes[previousAttributeName(attributeName)];
+          if (previous) previous.stepMode = "instance";
         }
       } else if (cachedGeom.attributes[attributeName]) {
         disposeAttribute(cachedGeom.attributes[attributeName]);
