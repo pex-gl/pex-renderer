@@ -33,6 +33,7 @@ const MATERIAL_DEFINE = {
   metallicRoughnessWorkflow: "USE_METALLIC_ROUGHNESS_WORKFLOW",
   specularGlossinessWorkflow: "USE_SPECULAR_GLOSSINESS_WORKFLOW",
   alphaTest: "USE_ALPHA_TEST",
+  responsiveAA: "USE_RESPONSIVE_AA",
   emissive: "USE_EMISSIVE_COLOR",
   specular: "USE_SPECULAR",
   clearCoat: "USE_CLEAR_COAT",
@@ -89,6 +90,7 @@ export const STANDARD_MATERIAL_COMMON_FIELDS: readonly FeatureField[] = [
   { key: "baseColorTexture", define: MATERIAL_DEFINE.baseColorTexture, texture: true },
   { key: "alphaTexture", define: MATERIAL_DEFINE.alphaTexture, texture: true },
   { key: "alphaTest", define: MATERIAL_DEFINE.alphaTest, wgslType: "f32", default: 0, runtime: true },
+  { key: "responsiveAA", define: MATERIAL_DEFINE.responsiveAA, truthy: true },
 ];
 
 // Order here is significant (a field's requires/excludes can only see
@@ -768,6 +770,7 @@ ${fragmentOutputStruct([
   outputs.normal && { name: "normal", type: "vec4f" },
   outputs.emissive && { name: "emissive", type: "vec4f" },
   outputs.velocity && { name: "velocity", type: "vec2f" },
+  outputs.responsive && { name: "responsive", type: "vec4f" },
 ])}
 
 struct PBRData {
@@ -1018,6 +1021,20 @@ fn fragmentMain(
   ${outputs.normal ? "output.normal = vec4f(data.normalView * 0.5 + 0.5, 1.0);" : ""}
   ${outputs.emissive ? "output.emissive = vec4f(data.emissiveColor, 1.0);" : ""}
   ${outputs.velocity ? FRAGMENT_VELOCITY : ""}
+  ${
+    outputs.responsive
+      ? `// Blended and transmissive surfaces mark themselves without being asked:
+  // neither is drawn in the pass that writes motion vectors, so the history
+  // behind them belongs to whatever they are in front of. The opacity rides
+  // along as alpha, so a surface covering part of a pixel claims that part.
+  output.responsive = vec4f(
+    ${defines.has(MATERIAL_DEFINE.responsiveAA) ? "1.0" : "select(0.0, 1.0, USE_BLEND || USE_TRANSMISSION)"},
+    0.0,
+    0.0,
+    data.opacity
+  );`
+      : ""
+  }
   if (USE_TRANSMISSION || USE_BLEND) {
     output.color.w = data.opacity;
     if (PREMULTIPLY_ALPHA) {

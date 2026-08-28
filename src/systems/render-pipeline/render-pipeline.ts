@@ -131,7 +131,10 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
    * colour format nor its channel count. Motion vectors are a screen-space
    * offset: two channels, and signed, which rules out the UNORM formats.
    */
-  outputFormats: { velocity: "rg16float" } as Record<string, GPUTextureFormat>,
+  outputFormats: {
+    velocity: "rg16float",
+    responsive: "r8unorm",
+  } as Record<string, GPUTextureFormat>,
 
   ...shadowMappingPipelineMethods({ frameGraph }),
   ...postProcessingPipelineMethods({ ctx, frameGraph }),
@@ -439,7 +442,12 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
       name: string,
       passOptions: any,
       {
-        outputs = { color: colorTextures.color! },
+        outputs = {
+          color: colorTextures.color!,
+          ...(colorTextures.responsive && {
+            responsive: colorTextures.responsive,
+          }),
+        },
         clearColor,
         depthClearValue,
       }: {

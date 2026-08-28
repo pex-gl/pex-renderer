@@ -183,6 +183,7 @@ async function declareFrame(
     textures.set("normal", target("normal"));
     textures.set("emissive", target("emissive"));
     textures.set("velocity", target("velocity", "rg16float"));
+    textures.set("responsive", target("responsive", "r8unorm"));
 
     // WebGPU has no depth resolve, so under MSAA the scene's depth buffer is
     // multisampled and unbindable until the pipeline resolves it.
@@ -551,12 +552,27 @@ const bloomComponent = (extra) => ({
   // drags behind it.
   check(
     "asks the main pass for motion vectors",
-    EFFECTS.taa.outputs,
-    ["velocity"],
+    EFFECTS.taa.outputs.includes("velocity"),
+    true,
   );
   check(
     "reads motion vectors when the main pass produced them",
     taaPass(frame2).reads.includes("velocity"),
+    true,
+  );
+
+  // The mask is how a surface says its motion vectors do not describe it; the
+  // resolve raises the blend factor towards the current frame where it is set.
+  // Without the read edge the resolve would keep blending history into exactly
+  // the surfaces that asked it not to.
+  check(
+    "asks the main pass for the responsive mask",
+    EFFECTS.taa.outputs.includes("responsive"),
+    true,
+  );
+  check(
+    "reads the responsive mask when the main pass produced it",
+    taaPass(frame2).reads.includes("responsive"),
     true,
   );
 

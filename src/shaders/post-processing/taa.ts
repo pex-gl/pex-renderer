@@ -86,14 +86,14 @@ ${textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uDepthTexture", "tex
 ${fullscreenVertex()}
 
 @fragment
-fn fragmentMain(input: VertexOutput) -> @location(0) f32 {
+fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
   let depth = textureSampleLevel(uDepthTexture, uDepthTextureSampler, input.texCoord0, 0);
 
   // Against this frame's view, which is what the next frame will call previous.
   let ndc = vec3f(input.texCoord0.x * 2.0 - 1.0, 1.0 - input.texCoord0.y * 2.0, depth);
   var world = uTAA.inverseViewProjectionMatrix * vec4f(ndc, 1.0);
 
-  return 1.0 / world.w;
+  return vec4f(1.0 / world.w, 0.0, 0.0, 1.0);
 }
 `);
 };
@@ -114,6 +114,7 @@ export const taaShader = (defines: Set<string> = new Set()): string => {
   const alloc = createBindingAllocator(1);
   const velocity = defines.has("USE_TAA_VELOCITY");
   const disocclusion = defines.has("USE_TAA_DISOCCLUSION");
+  const responsive = defines.has("USE_TAA_RESPONSIVE");
 
   return formatShader(/* wgsl */ `
 ${postProcessingStruct}
@@ -128,6 +129,7 @@ ${textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uHistoryTexture")}
 ${textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uDepthTexture", "texture_depth_2d")}
 ${velocity ? textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uVelocityTexture") : ""}
 ${disocclusion ? textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uPreviousDepthTexture") : ""}
+${responsive ? textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uResponsiveTexture") : ""}
 
 ${fullscreenVertex()}
 
@@ -170,10 +172,21 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
       : "let sameSurface = true;"
   }
 
+  ${
+    responsive
+      ? `// Marked by surfaces whose motion vectors do not describe them, so the
+  // history behind them is not theirs. Blended geometry writes it through its
+  // own alpha, which makes a half-covering surface half responsive.
+  let responsive = textureSampleLevel(uResponsiveTexture, uResponsiveTextureSampler, uv, 0.0).x;
+  let blendFactor = mix(uTAA.blendFactor, 1.0, responsive);`
+      : "let blendFactor = uTAA.blendFactor;"
+  }
+
   return taaResolve(
     uv,
     previousUV,
     reprojectionValid && sameSurface,
+    blendFactor,
     uTexture,
     uTextureSampler,
     uHistoryTexture,

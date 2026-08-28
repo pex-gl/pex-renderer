@@ -51,6 +51,7 @@ export default (
     // depthFunc: ctx.DepthFunc.Less,
     blend: false,
     blendMode: undefined,
+    responsiveAA: false,
     cullFace: true,
     // cullFaceMode: ctx.Face.Back,
     castShadows: false,

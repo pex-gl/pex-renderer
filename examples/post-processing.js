@@ -423,6 +423,7 @@ gui.addRadioList(
   [
     "",
     "velocity",
+    "responsive",
     "taa.main",
     "ssao.main",
     "dof.main",

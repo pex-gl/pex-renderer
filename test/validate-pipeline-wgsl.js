@@ -72,11 +72,13 @@ const basicVariants = [
   { name: "default", defines: new Set() },
   { name: "vertex+instanced color", defines: new Set(["USE_VERTEX_COLORS", "USE_INSTANCED_COLOR"]) },
   { name: "full instancing", defines: new Set(["USE_INSTANCED_OFFSET", "USE_INSTANCED_SCALE", "USE_INSTANCED_ROTATION", "USE_INSTANCED_COLOR"]) },
-  { name: "MSAA + draw buffers", defines: new Set(["USE_MSAA"]), options: { outputs: { normal: true, emissive: true, velocity: true } } },
+  { name: "MSAA + draw buffers", defines: new Set(["USE_MSAA"]), options: { outputs: { normal: true, emissive: true, velocity: true, responsive: true } } },
   { name: "hooks", defines: new Set(["USE_VERTEX_COLORS"]), options: { hooks: { vertBeforeTransform: "// hook", fragEnd: "// hook" } } },
 ];
 
-const VELOCITY = { outputs: { normal: true, emissive: true, velocity: true } };
+const VELOCITY = {
+  outputs: { normal: true, emissive: true, velocity: true, responsive: true },
+};
 const standardVariants = [
   { name: "minimal unlit", defines: new Set(["USE_UNLIT_WORKFLOW"]) },
   // Motion vectors, once per way a vertex can move. Each takes a different
@@ -104,7 +106,7 @@ const standardVariants = [
   { name: "specular-glossiness", defines: new Set(["USE_SPECULAR_GLOSSINESS_WORKFLOW", "USE_NORMALS", "USE_TEXCOORD_0", "USE_DIFFUSE_TEXTURE", "USE_SPECULAR_GLOSSINESS_TEXTURE"]), options: { lights: { directional: 1 } } },
   { name: "specular workflow (KHR)", defines: new Set(["USE_METALLIC_ROUGHNESS_WORKFLOW", "USE_NORMALS", "USE_TEXCOORD_0", "USE_SPECULAR", "USE_SPECULAR_TEXTURE", "USE_SPECULAR_COLOR_TEXTURE"]) },
   { name: "volume + diffuse transmission", defines: new Set(["USE_METALLIC_ROUGHNESS_WORKFLOW", "USE_NORMALS", "USE_TEXCOORD_0", "USE_TRANSMISSION", "USE_VOLUME", "USE_THICKNESS_TEXTURE", "USE_DIFFUSE_TRANSMISSION", "USE_DIFFUSE_TRANSMISSION_TEXTURE", "USE_DIFFUSE_TRANSMISSION_COLOR_TEXTURE"]) },
-  { name: "emissive + occlusion + msaa + drawbuffers", defines: new Set(["USE_METALLIC_ROUGHNESS_WORKFLOW", "USE_NORMALS", "USE_TEXCOORD_0", "USE_EMISSIVE_COLOR", "USE_EMISSIVE_COLOR_TEXTURE", "USE_OCCLUSION_TEXTURE", "USE_MSAA"]), options: { outputs: { normal: true, emissive: true, velocity: true } } },
+  { name: "emissive + occlusion + msaa + drawbuffers", defines: new Set(["USE_METALLIC_ROUGHNESS_WORKFLOW", "USE_NORMALS", "USE_TEXCOORD_0", "USE_EMISSIVE_COLOR", "USE_EMISSIVE_COLOR_TEXTURE", "USE_OCCLUSION_TEXTURE", "USE_MSAA"]), options: { outputs: { normal: true, emissive: true, velocity: true, responsive: true } } },
   { name: "vertex colors + blend", defines: new Set(["USE_METALLIC_ROUGHNESS_WORKFLOW", "USE_NORMALS", "USE_VERTEX_COLORS", "USE_BLEND"]) },
   { name: "texcoord1 everywhere", defines: new Set(["USE_METALLIC_ROUGHNESS_WORKFLOW", "USE_NORMALS", "USE_TEXCOORD_0", "USE_TEXCOORD_1", "USE_BASE_COLOR_TEXTURE"]), options: { texCoords: { baseColor: 1 } } },
   { name: "skinned", defines: new Set(["USE_METALLIC_ROUGHNESS_WORKFLOW", "USE_NORMALS", "USE_TANGENTS", "USE_TEXCOORD_0", "USE_SKIN"]) },
@@ -123,7 +125,7 @@ const standardVariants = [
       "USE_DIFFUSE_TRANSMISSION", "USE_DIFFUSE_TRANSMISSION_TEXTURE", "USE_DIFFUSE_TRANSMISSION_COLOR_TEXTURE",
       "USE_ALPHA_TEXTURE", "USE_ALPHA_TEST", "USE_REFLECTION_PROBES", "USE_MSAA", "USE_BLEND",
     ]),
-    options: { maxJoints: 64, lights: { ambient: 1, directional: 2, point: 2, spot: 1, area: 1 }, outputs: { normal: true, emissive: true, velocity: true } },
+    options: { maxJoints: 64, lights: { ambient: 1, directional: 2, point: 2, spot: 1, area: 1 }, outputs: { normal: true, emissive: true, velocity: true, responsive: true } },
   },
   { name: "hooks", defines: new Set(["USE_METALLIC_ROUGHNESS_WORKFLOW", "USE_NORMALS"]), options: { hooks: { vertBeforeTransform: "// hook", vertEnd: "// hook", fragBeforeTextures: "// hook", fragBeforeLighting: "// hook", fragAfterLighting: "// hook", fragEnd: "// hook" } } },
 ];
@@ -166,7 +168,7 @@ const depthPassPrePassVariants = [
 const lineVariants = [
   { name: "default", defines: new Set() },
   { name: "vertex colors + perspective scaling", defines: new Set(["USE_VERTEX_COLORS", "USE_PERSPECTIVE_SCALING"]) },
-  { name: "instanced line width + msaa + drawbuffers", defines: new Set(["USE_INSTANCED_LINE_WIDTH", "USE_MSAA"]), options: { outputs: { normal: true, emissive: true, velocity: true } } },
+  { name: "instanced line width + msaa + drawbuffers", defines: new Set(["USE_INSTANCED_LINE_WIDTH", "USE_MSAA"]), options: { outputs: { normal: true, emissive: true, velocity: true, responsive: true } } },
   { name: "hooks", defines: new Set(["USE_VERTEX_COLORS"]), options: { hooks: { vertEnd: "// hook", fragEnd: "// hook" } } },
 ];
 
@@ -177,19 +179,19 @@ const overlayVariants = [
 
 const helperVariants = [
   { name: "default", defines: new Set() },
-  { name: "msaa + drawbuffers", defines: new Set(["USE_MSAA"]), options: { outputs: { normal: true, emissive: true, velocity: true } } },
+  { name: "msaa + drawbuffers", defines: new Set(["USE_MSAA"]), options: { outputs: { normal: true, emissive: true, velocity: true, responsive: true } } },
   { name: "hooks", defines: new Set(), options: { hooks: { vertEnd: "// hook", fragEnd: "// hook" } } },
 ];
 
 const errorVariants = [
   { name: "default", defines: new Set() },
-  { name: "drawbuffers", defines: new Set(), options: { outputs: { normal: true, emissive: true, velocity: true } } },
+  { name: "drawbuffers", defines: new Set(), options: { outputs: { normal: true, emissive: true, velocity: true, responsive: true } } },
   { name: "hooks", defines: new Set(), options: { hooks: { vertEnd: "// hook", fragEnd: "// hook" } } },
 ];
 
 const skyVariants = [
   { name: "default", defines: new Set() },
-  { name: "drawbuffers", defines: new Set(), options: { outputs: { normal: true, emissive: true, velocity: true } } },
+  { name: "drawbuffers", defines: new Set(), options: { outputs: { normal: true, emissive: true, velocity: true, responsive: true } } },
   { name: "hooks", defines: new Set(), options: { hooks: { vertEnd: "// hook", fragEnd: "// hook" } } },
 ];
 
@@ -233,6 +235,8 @@ const postProcessingVariants = [
   { name: "taa [depth reprojection]", shader: postProcessing.taaShader, defines: new Set() },
   { name: "taa [velocity]", shader: postProcessing.taaShader, defines: new Set(["USE_TAA_VELOCITY"]) },
   { name: "taa [disocclusion]", shader: postProcessing.taaShader, defines: new Set(["USE_TAA_DISOCCLUSION"]) },
+  { name: "taa [responsive]", shader: postProcessing.taaShader, defines: new Set(["USE_TAA_RESPONSIVE"]) },
+  { name: "taa [velocity + disocclusion + responsive]", shader: postProcessing.taaShader, defines: new Set(["USE_TAA_VELOCITY", "USE_TAA_DISOCCLUSION", "USE_TAA_RESPONSIVE"]) },
   { name: "taa [velocity + disocclusion]", shader: postProcessing.taaShader, defines: new Set(["USE_TAA_VELOCITY", "USE_TAA_DISOCCLUSION"]) },
   { name: "taa depth history", shader: postProcessing.taaDepthHistoryShader, defines: new Set() },
   { name: "taa sharpen", shader: postProcessing.taaSharpenShader, defines: new Set() },

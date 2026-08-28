@@ -69,6 +69,7 @@ ${fragmentOutputStruct([
   outputs.normal && { name: "normal", type: "vec4f" },
   outputs.emissive && { name: "emissive", type: "vec4f" },
   outputs.velocity && { name: "velocity", type: "vec2f" },
+  outputs.responsive && { name: "responsive", type: "vec4f" },
 ])}
 
 // Vertex includes
@@ -141,6 +142,7 @@ fn fragmentMain(input: VertexOutput) -> FragmentOutput {
   ${outputs.normal ? "output.normal = vec4f(0.0, 0.0, 1.0, 1.0);" : ""}
   ${outputs.emissive ? "output.emissive = vec4f(0.0);" : ""}
   ${outputs.velocity ? FRAGMENT_VELOCITY : ""}
+  ${outputs.responsive ? "output.responsive = vec4f(0.0);" : ""}
 
   ${hooks.fragEnd ?? ""}
 

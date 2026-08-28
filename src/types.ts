@@ -372,6 +372,20 @@ export interface MaterialComponentOptions {
   blend?: boolean;
   /** Blend equation when `blend` is set. Default: "normal". */
   blendMode?: BlendMode;
+  /**
+   * Tell a temporal filter not to trust this surface's history, so it favours
+   * the current frame over one reprojected through motion vectors that do not
+   * describe it.
+   *
+   * For surfaces that move in ways the vertex stage cannot report: scrolling
+   * texture coordinates, an animated normal map, anything driven from time in
+   * the shader. Blended and transmissive materials do this already without
+   * being asked, since neither is drawn in the pass that writes motion vectors.
+   *
+   * Costs the surface its temporal antialiasing, so it is a trade rather than
+   * a fix — set it where ghosting is worse than aliasing.
+   */
+  responsiveAA?: boolean;
   cullFace?: boolean;
   cullFaceMode?: string;
   pointSize?: number;
@@ -815,6 +829,8 @@ export interface FragmentOutputs {
   emissive?: boolean;
   /** Screen-space motion vectors, for temporal reprojection and motion blur. */
   velocity?: boolean;
+  /** Per-pixel mask marking surfaces a temporal filter should not trust. */
+  responsive?: boolean;
 }
 /** Options accepted by the pipeline WGSL generators in src/shaders. */
 export interface PipelineShaderOptions {

@@ -38,8 +38,9 @@ const states = new WeakMap<Entity, TAAState>();
 const taa: PostProcessingEffect = {
   name: "taa",
   // Reprojection needs to know where each surface was, and only geometry can
-  // say that for anything that moved on its own.
-  outputs: ["velocity"],
+  // say that for anything that moved on its own — plus, from the same geometry,
+  // which surfaces it could not answer for at all.
+  outputs: ["velocity", "responsive"],
   declare({
     cameraEntity,
     frameIndex,
@@ -121,9 +122,12 @@ const taa: PostProcessingEffect = {
           })
         : undefined;
 
+    const responsive = textures.get("responsive");
+
     const defines = new Set([
       ...(velocity ? ["USE_TAA_VELOCITY"] : []),
       ...(previousDepth ? ["USE_TAA_DISOCCLUSION"] : []),
+      ...(responsive ? ["USE_TAA_RESPONSIVE"] : []),
     ]);
 
     const params = {
@@ -160,6 +164,10 @@ const taa: PostProcessingEffect = {
         ...(previousDepth && {
           uPreviousDepthTexture: previousDepth,
           uPreviousDepthTextureSampler: samplers.nearest,
+        }),
+        ...(responsive && {
+          uResponsiveTexture: responsive,
+          uResponsiveTextureSampler: samplers.nearest,
         }),
       },
     });
