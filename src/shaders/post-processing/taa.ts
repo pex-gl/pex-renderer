@@ -88,7 +88,14 @@ ${fullscreenVertex()}
 
 @fragment
 fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
-  let depth = textureSampleLevel(uDepthTexture, uDepthTextureSampler, input.texCoord0, 0);
+  // Off the jittered grid, so what this records at a pixel is the surface the
+  // next frame will look for there rather than the one half a pixel away.
+  let depth = textureSampleLevel(
+    uDepthTexture,
+    uDepthTextureSampler,
+    input.texCoord0 + uTAA.depthOffset,
+    0
+  );
 
   // Against this frame's view, which is what the next frame will call previous.
   let ndc = vec3f(input.texCoord0.x * 2.0 - 1.0, 1.0 - input.texCoord0.y * 2.0, depth);
@@ -150,13 +157,18 @@ ${fullscreenVertex()}
 fn fragmentMain(input: VertexOutput) -> FragmentOutput {
   let uv = input.texCoord0;
 
+  // What the scene pass wrote sits on the jittered raster grid; the history and
+  // this pass's output sit on pixel centres. One offset reconciles them, and
+  // every read of depth or motion goes through it — see TAAParams.depthOffset.
+  let gbufferUV = uv + uTAA.depthOffset;
+
   // Dilated either way: at a silhouette the pixel centre can sit on background
   // while the edge that moved belongs to the foreground.
-  let closest = taaClosestDepthOffset(uDepthTexture, uDepthTextureSampler, uv, uTAA.texelSize);
+  let closest = taaClosestDepthOffset(uDepthTexture, uDepthTextureSampler, gbufferUV, uTAA.texelSize);
 
   ${
     velocity
-      ? `let previousUV = taaVelocityUV(uVelocityTexture, uVelocityTextureSampler, uv, closest.xy);
+      ? `let previousUV = taaVelocityUV(uVelocityTexture, uVelocityTextureSampler, uv, closest.xy + uTAA.depthOffset);
   let reprojectionValid = true;`
       : `// No motion vectors, so only camera motion can be recovered — correct for
   // a static scene and wrong for anything that moved on its own.
@@ -170,7 +182,7 @@ fn fragmentMain(input: VertexOutput) -> FragmentOutput {
       ? `// This pixel's own depth, not the dilated neighbour's: the dilation is
   // there to make a silhouette follow the foreground's motion, and the
   // question here is whether the history belongs to the surface being shaded.
-  let centerDepth = textureSampleLevel(uDepthTexture, uDepthTextureSampler, uv, 0);
+  let centerDepth = textureSampleLevel(uDepthTexture, uDepthTextureSampler, gbufferUV, 0);
   let expectedDepth = taaPreviousViewDepth(uv, centerDepth, uTAA);
   // Derivatives before any branching, so they stay in uniform control flow.
   let depthSlope = fwidth(expectedDepth);
@@ -195,13 +207,12 @@ fn fragmentMain(input: VertexOutput) -> FragmentOutput {
       : "let blendFactor = uTAA.blendFactor;"
   }
 
-  let valid = reprojectionValid && sameSurface;
-
   var output: FragmentOutput;
   output.color = taaResolve(
     uv,
     previousUV,
-    valid,
+    reprojectionValid,
+    sameSurface,
     blendFactor,
     uTexture,
     uTextureSampler,
@@ -215,7 +226,8 @@ fn fragmentMain(input: VertexOutput) -> FragmentOutput {
       ? `output.emissive = taaResolve(
     uv,
     previousUV,
-    valid,
+    reprojectionValid,
+    sameSurface,
     blendFactor,
     uEmissiveTexture,
     uEmissiveTextureSampler,

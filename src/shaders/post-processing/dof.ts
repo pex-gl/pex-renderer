@@ -31,6 +31,7 @@ ${SHADERS.math.saturate}
 ${SHADERS.math.TWO_PI}
 ${SHADERS.math.random}
 ${SHADERS.luma}
+${SHADERS.threshold}
 ${SHADERS.depthRead}
 ${SHADERS.depthOfField}
 
@@ -50,13 +51,17 @@ ${fullscreenVertex()}
 
 @fragment
 fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
+  // Every depth read is offset out of the raster's sub-pixel jitter and back
+  // onto the resolved image's grid — see DepthOfFieldParams.depthOffset.
+  let depthCoord = input.texCoord0 + uDoFParams.depthOffset;
+
   // m -> mm
   let focusDistance = ${
     focusOnScreenPoint
-      ? "readDepth(uDepthTexture, uDepthTextureSampler, uDoF.screenPoint, uDoFParams.near, uDoFParams.far)"
+      ? "readDepth(uDepthTexture, uDepthTextureSampler, uDoF.screenPoint + uDoFParams.depthOffset, uDoFParams.near, uDoFParams.far)"
       : "uDoF.focusDistance"
   } * 1000.0;
-  let centerDepth = readDepth(uDepthTexture, uDepthTextureSampler, input.texCoord0, uDoFParams.near, uDoFParams.far) * 1000.0;
+  let centerDepth = readDepth(uDepthTexture, uDepthTextureSampler, depthCoord, uDoFParams.near, uDoFParams.far) * 1000.0;
 
   // Physical mode makes focusScale an f-stop divider; otherwise it is a
   // heuristic keeping the blur relative to a 1024px-high viewport.
@@ -93,7 +98,11 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
   )`
   };
 
-  return vec4f(color, 1.0);
+  // The chain carries alpha through — a canvas configured for a transparent
+  // background needs it — and nothing here has an opinion about coverage.
+  let alpha = textureSampleLevel(uTexture, uTextureSampler, input.texCoord0, 0.0).a;
+
+  return vec4f(color, alpha);
 }
 `);
 };

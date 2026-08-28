@@ -99,6 +99,7 @@ postProcessing.dof = (options?: DoFComponentOptions) => ({
   chromaticAberration: 0.7,
   luminanceThreshold: 0.7,
   luminanceGain: 1,
+  luminanceKnee: 0.5,
   samples: 6,
   shape: "disk", // "pentagon"
   debug: false,
@@ -131,8 +132,9 @@ postProcessing.taa = (options?: TAAComponentOptions) => ({
   // single-frame quality within a few frames, high enough that the jitter
   // sequence completes inside the window it averages over.
   blendFactor: 0.1,
-  // Salvi's clipping box, at the width where ghosting stops surviving and the
-  // history still accumulates. Lower clips so hard nothing converges.
+  // Widens the rounded min/max box for content whose real range exceeds one
+  // 3x3; it cannot narrow it, so this is a ghosting control rather than the
+  // knob that decides whether edges settle.
   varianceGamma: 1.25,
   // Off. Resampling and reblending the history every frame does soften the
   // image, and this is what wins that back — but how much is wanted depends on
@@ -144,6 +146,7 @@ postProcessing.taa = (options?: TAAComponentOptions) => ({
   // second at ten metres shifts depth by well under a percent per frame — and
   // tight enough to catch an occluder giving way to what was behind it.
   disocclusionTolerance: 0.02,
+  debug: false,
   ...options,
 });
 

@@ -22,6 +22,17 @@ const dof: PostProcessingEffect = {
     const camera = cameraEntity.camera!;
     const component = cameraEntity.postProcessing!.dof!;
 
+    // Undoes the raster's sub-pixel offset when reading depth. The scene was
+    // rasterized with the jitter in it and the temporal resolve puts the colour
+    // back on pixel centres, so a depth read at a pixel describes a surface up
+    // to half a pixel away — a different one every frame, which is a circle of
+    // confusion that flickers rather than one that follows the geometry.
+    //
+    // NDC to UV, hence the sign flip on Y: the same conversion motion vectors
+    // use (see FRAGMENT_VELOCITY).
+    const jitter = camera._jitter ?? [0, 0];
+    const depthOffset = [jitter[0]! * 0.5, jitter[1]! * -0.5];
+
     pass({
       name: "main",
       shader: dofShader,
@@ -45,10 +56,12 @@ const dof: PostProcessingEffect = {
           chromaticAberration: component.chromaticAberration!,
           luminanceThreshold: component.luminanceThreshold!,
           luminanceGain: component.luminanceGain!,
+          luminanceKnee: component.luminanceKnee ?? 0.5,
           // Only read in physical mode, but always packed: the struct's layout
           // can't depend on the option.
           fStop: camera.fStop!,
           focalLength: camera.focalLength!,
+          depthOffset,
         },
         uDoF: {
           focusDistance: component.focusDistance!,

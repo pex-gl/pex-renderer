@@ -144,15 +144,62 @@ const taa: PostProcessingEffect = {
       ...(emissiveHistories ? ["USE_TAA_EMISSIVE"] : []),
     ]);
 
+    // Undoes this frame's raster offset when reading depth or motion vectors.
+    // NDC to UV, hence the sign flip on Y — the same conversion motion vectors
+    // use (see FRAGMENT_VELOCITY), and the same offset depth of field applies.
+    const depthOffset = [camera._jitter[0]! * 0.5, camera._jitter[1]! * -0.5];
+
     const params = {
       inverseViewProjectionMatrix: camera._inverseViewProjectionMatrix!,
       previousViewProjectionMatrix: camera._previousViewProjectionMatrix,
       texelSize: [1 / width, 1 / height],
+      depthOffset,
       blendFactor: component.blendFactor ?? 0.1,
       varianceGamma: component.varianceGamma ?? 1.25,
       historyValid: historyValid ? 1 : 0,
       disocclusionTolerance,
     };
+
+    const resolveUniforms = {
+      uTAA: params,
+      uHistoryTexture: histories[1 - parity]!,
+      uHistoryTextureSampler: samplers.linear,
+      uDepthTexture: depth,
+      uDepthTextureSampler: samplers.nearest,
+      ...(velocity && {
+        uVelocityTexture: velocity,
+        // Point-sampled: interpolating motion vectors across a silhouette
+        // averages two surfaces that went different ways.
+        uVelocityTextureSampler: samplers.nearest,
+      }),
+      ...(previousDepth && {
+        uPreviousDepthTexture: previousDepth,
+        uPreviousDepthTextureSampler: samplers.nearest,
+      }),
+      ...(responsive && {
+        uResponsiveTexture: responsive,
+        uResponsiveTextureSampler: samplers.nearest,
+      }),
+    };
+
+    // Its own pass into its own texture, ahead of the resolve and reading
+    // exactly what the resolve is about to read — the same history, the same
+    // unresolved image. Folding it into the resolve instead would paint the
+    // history with the debug colours and then measure the history against a
+    // frame it no longer resembles, which reports "clipped" everywhere whatever
+    // is actually happening.
+    if (component.debug) {
+      const debugDefines = new Set(defines);
+      debugDefines.delete("USE_TAA_EMISSIVE");
+
+      pass({
+        name: "debug",
+        shader: taaShader,
+        defines: debugDefines,
+        constants: { USE_TAA_DEBUG: true },
+        uniforms: resolveUniforms,
+      });
+    }
 
     pass({
       name: "main",
@@ -167,25 +214,7 @@ const taa: PostProcessingEffect = {
         targets: [{ name: "emissive", texture: emissiveHistories[parity]! }],
       }),
       uniforms: {
-        uTAA: params,
-        uHistoryTexture: histories[1 - parity]!,
-        uHistoryTextureSampler: samplers.linear,
-        uDepthTexture: depth,
-        uDepthTextureSampler: samplers.nearest,
-        ...(velocity && {
-          uVelocityTexture: velocity,
-          // Point-sampled: interpolating motion vectors across a silhouette
-          // averages two surfaces that went different ways.
-          uVelocityTextureSampler: samplers.nearest,
-        }),
-        ...(previousDepth && {
-          uPreviousDepthTexture: previousDepth,
-          uPreviousDepthTextureSampler: samplers.nearest,
-        }),
-        ...(responsive && {
-          uResponsiveTexture: responsive,
-          uResponsiveTextureSampler: samplers.nearest,
-        }),
+        ...resolveUniforms,
         ...(emissiveHistories && {
           uEmissiveTexture: emissive!,
           uEmissiveTextureSampler: samplers.linear,

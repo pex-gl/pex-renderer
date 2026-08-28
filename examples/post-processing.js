@@ -29,8 +29,8 @@ const State = {
   baseColor: [0.8, 0.1, 0.1, 1.0],
 
   msaa: false,
-  taa: true,
-  motionBlur: true,
+  taa: false,
+  motionBlur: false,
   ssao: false,
   dof: false,
   bloom: false,
@@ -96,6 +96,7 @@ const postProcessing = components.postProcessing({
     varianceGamma: 1.25,
     sharpness: 0,
     disocclusionTolerance: 0.02,
+    debug: false,
   },
   ssao: {
     type: "sao", // "gtao",
@@ -128,6 +129,7 @@ const postProcessing = components.postProcessing({
     chromaticAberration: 0.7,
     luminanceThreshold: 0.7,
     luminanceGain: 1,
+    luminanceKnee: 0.5,
     shape: "disk",
     debug: false,
   },
@@ -435,6 +437,7 @@ gui.addRadioList(
     "",
     "velocity",
     "responsive",
+    "taa.debug",
     "motionBlur.neighborMax",
     "taa.main",
     "ssao.main",
@@ -533,6 +536,7 @@ gui.addParam("TAA varianceGamma", postProcessing.taa, "varianceGamma", {
   min: 0,
   max: 3,
 });
+gui.addParam("TAA debug", postProcessing.taa, "debug");
 gui.addHeader("Motion Blur");
 gui.addParam("Enabled", State, "motionBlur", null, () => {
   enablePostProPass("motionBlur");
@@ -676,6 +680,10 @@ gui.addParam("Luminance Threshold", postProcessing.dof, "luminanceThreshold", {
 gui.addParam("Luminance Gain", postProcessing.dof, "luminanceGain", {
   min: 0,
   max: 2,
+});
+gui.addParam("Luminance Knee", postProcessing.dof, "luminanceKnee", {
+  min: 0,
+  max: 1,
 });
 gui.addRadioList(
   "Shape",

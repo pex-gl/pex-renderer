@@ -544,6 +544,17 @@ export interface DoFComponentOptions {
   /** Gain for out of focus highlights. */
   luminanceGain?: number;
   /**
+   * Half-width of the ramp into the highlight boost, as a fraction of
+   * {@link DoFComponentOptions.luminanceThreshold}. 0 is a hard cutoff, 0.5 a
+   * wide fade.
+   *
+   * The boost is multiplied by a per-pixel circle of confusion, which a jittered
+   * raster makes unsteady, so a hard cutoff turns a highlight sitting at the
+   * threshold into one that blinks instead of one that fades in as it
+   * defocuses.
+   */
+  luminanceKnee?: number;
+  /**
    * Iteration steps. More steps means better blur but also degraded
    * performances.
    */
@@ -602,15 +613,31 @@ export interface MotionBlurComponentOptions {
 }
 export interface TAAComponentOptions {
   /**
+   * Paint what the resolve decided rather than what it produced: red where
+   * there is no history to blend, orange where reprojection was rejected,
+   * yellow where the depth test called it a disocclusion, magenta where the
+   * history was off-screen, and otherwise blue with green rising as the
+   * neighbourhood clip had to overrule the history.
+   *
+   * Published as `"taa.debug"` from a pass of its own, so reading it does not
+   * disturb the accumulator.
+   */
+  debug?: boolean;
+  /**
    * Weight given to the current frame, so roughly one over the number of frames
    * accumulated. Lower converges further and ghosts more; the jitter sequence
    * is eight frames long, so below ~0.05 the window outruns it.
    */
   blendFactor?: number;
   /**
-   * Half-width of the history clipping box, in standard deviations of the 3x3
-   * neighbourhood. Below ~1 the history is clipped hard enough to stop
-   * accumulating; above ~1.5 ghosting starts to survive.
+   * Half-width of the variance term of the history clipping box, in standard
+   * deviations of the 3x3 neighbourhood.
+   *
+   * It can only widen that box, never narrow it: the floor is the
+   * neighbourhood's own rounded min/max extent, which a converged history lies
+   * inside by construction. So raising it lets more ghosting survive on noisy
+   * content whose real range exceeds one 3x3, and lowering it does nothing
+   * below ~1.
    */
   varianceGamma?: number;
   /**
