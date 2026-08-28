@@ -714,12 +714,22 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
       });
     }
 
+    // What each name holds at the end of the frame, not what the main pass
+    // wrote into it: an output a later pass republished — the temporally
+    // resolved emissive buffer — is the version every reader inside the frame
+    // saw, and handing the caller the superseded one under the same name would
+    // be a different image.
+    //
+    // "depth" is the case that has no choice: it is an advertised output, so
+    // under MSAA what comes back has to be the resolve rather than the
+    // multisampled buffer nothing can bind. The cost is that the resolve is
+    // never culled while MSAA is on.
     const outputTextures: Record<string, ResourceHandle> = {
-      ...colorTextures,
+      ...mapValues(
+        colorTextures,
+        (handle, name) => textures.get(name) ?? handle,
+      ),
       color,
-      // The resolved one under MSAA: "depth" is an advertised output, so what
-      // comes back has to be something the caller can actually bind. The cost
-      // is that the resolve is never culled while MSAA is on.
       ...(depthTexture && { depth: textures.get("depth") ?? depthTexture }),
     };
     for (const handle of Object.values(outputTextures)) {

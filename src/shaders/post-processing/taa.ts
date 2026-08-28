@@ -7,6 +7,7 @@ const SHADERS = chunks as any;
 import {
   createBindingAllocator,
   formatShader,
+  fragmentOutputStruct,
   textureSamplerDeclaration,
 } from "../wgsl.js";
 import { fullscreenVertex, postProcessingStruct } from "./common.js";
@@ -109,12 +110,20 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
  * one being accumulated.
  *
  * `uTexture` is the chain's current image, bound by the registry.
+ *
+ * The emissive buffer resolves as a second target when something asked for it,
+ * against its own history and through the same reprojection: it is a full-
+ * resolution image off the same jittered raster, so it shimmers for exactly the
+ * reason the colour image does, and bloom reads it at full resolution before
+ * any blur can hide that. Sharing the pass rather than adding one is what keeps
+ * the two from having to agree on a reprojection computed twice.
  */
 export const taaShader = (defines: Set<string> = new Set()): string => {
   const alloc = createBindingAllocator(1);
   const velocity = defines.has("USE_TAA_VELOCITY");
   const disocclusion = defines.has("USE_TAA_DISOCCLUSION");
   const responsive = defines.has("USE_TAA_RESPONSIVE");
+  const emissive = defines.has("USE_TAA_EMISSIVE");
 
   return formatShader(/* wgsl */ `
 ${postProcessingStruct}
@@ -130,11 +139,15 @@ ${textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uDepthTexture", "tex
 ${velocity ? textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uVelocityTexture") : ""}
 ${disocclusion ? textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uPreviousDepthTexture") : ""}
 ${responsive ? textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uResponsiveTexture") : ""}
+${emissive ? textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uEmissiveTexture") : ""}
+${emissive ? textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uEmissiveHistoryTexture") : ""}
+
+${fragmentOutputStruct([emissive && { name: "emissive", type: "vec4f" }])}
 
 ${fullscreenVertex()}
 
 @fragment
-fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
+fn fragmentMain(input: VertexOutput) -> FragmentOutput {
   let uv = input.texCoord0;
 
   // Dilated either way: at a silhouette the pixel centre can sit on background
@@ -182,10 +195,13 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
       : "let blendFactor = uTAA.blendFactor;"
   }
 
-  return taaResolve(
+  let valid = reprojectionValid && sameSurface;
+
+  var output: FragmentOutput;
+  output.color = taaResolve(
     uv,
     previousUV,
-    reprojectionValid && sameSurface,
+    valid,
     blendFactor,
     uTexture,
     uTextureSampler,
@@ -193,6 +209,24 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
     uHistoryTextureSampler,
     uTAA
   );
+
+  ${
+    emissive
+      ? `output.emissive = taaResolve(
+    uv,
+    previousUV,
+    valid,
+    blendFactor,
+    uEmissiveTexture,
+    uEmissiveTextureSampler,
+    uEmissiveHistoryTexture,
+    uEmissiveHistoryTextureSampler,
+    uTAA
+  );`
+      : ""
+  }
+
+  return output;
 }
 `);
 };

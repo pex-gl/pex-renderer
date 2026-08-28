@@ -124,10 +124,24 @@ const taa: PostProcessingEffect = {
 
     const responsive = textures.get("responsive");
 
+    // Resolved alongside the colour image, because it is the same jittered
+    // raster: bloom samples it at full resolution and adds the result on top of
+    // an image that is already stable, so an unresolved emissive buffer puts
+    // the jitter back into the frame it was just taken out of.
+    //
+    // Its own history pair, since the two accumulate different images — sharing
+    // the pass only shares the reprojection, which is what they do agree on.
+    const emissive = textures.get("emissive");
+    const emissiveHistories = emissive && [
+      createTexture({ label: `taa.emissiveHistory0.${viewId}`, ...descriptor }),
+      createTexture({ label: `taa.emissiveHistory1.${viewId}`, ...descriptor }),
+    ];
+
     const defines = new Set([
       ...(velocity ? ["USE_TAA_VELOCITY"] : []),
       ...(previousDepth ? ["USE_TAA_DISOCCLUSION"] : []),
       ...(responsive ? ["USE_TAA_RESPONSIVE"] : []),
+      ...(emissiveHistories ? ["USE_TAA_EMISSIVE"] : []),
     ]);
 
     const params = {
@@ -149,6 +163,9 @@ const taa: PostProcessingEffect = {
       // everything downstream reads.
       target: histories[parity]!,
       chain: true,
+      ...(emissiveHistories && {
+        targets: [{ name: "emissive", texture: emissiveHistories[parity]! }],
+      }),
       uniforms: {
         uTAA: params,
         uHistoryTexture: histories[1 - parity]!,
@@ -169,8 +186,20 @@ const taa: PostProcessingEffect = {
           uResponsiveTexture: responsive,
           uResponsiveTextureSampler: samplers.nearest,
         }),
+        ...(emissiveHistories && {
+          uEmissiveTexture: emissive!,
+          uEmissiveTextureSampler: samplers.linear,
+          uEmissiveHistoryTexture: emissiveHistories[1 - parity]!,
+          uEmissiveHistoryTextureSampler: samplers.linear,
+        }),
       },
     });
+
+    // Under its own name, not just "taa.emissive": bloom asks for the frame's
+    // emissive buffer and has no business knowing whether a temporal filter ran.
+    if (emissiveHistories) {
+      textures.set("emissive", emissiveHistories[parity]!);
+    }
 
     // After the resolve has read it, which is the whole reason one texture is
     // enough. Records depth against this frame's view, since that is what the
