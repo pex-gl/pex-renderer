@@ -367,6 +367,10 @@ gui.addParam("Variance gamma", taaOptions, "varianceGamma", {
   max: 3,
 });
 gui.addParam("Sharpness", taaOptions, "sharpness", { min: 0, max: 1 });
+gui.addParam("Disocclusion", taaOptions, "disocclusionTolerance", {
+  min: 0,
+  max: 0.2,
+});
 
 gui.addColumn("SAO");
 gui.addParam("Samples", postProcessing.ssao, "samples", {

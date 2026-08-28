@@ -560,6 +560,90 @@ const bloomComponent = (extra) => ({
     true,
   );
 
+  // Disocclusion rejection reads last frame's depth and records this frame's
+  // into the same texture, which only works because the graph orders the write
+  // after the read. Reversed, the resolve would compare this frame's depth
+  // against itself, match everywhere, and reject nothing — with no error and
+  // nothing on screen to say the test had stopped working.
+  {
+    const withDepth = { exposure: 1, taa: { disocclusionTolerance: 0.02 } };
+    const frame = await declareFrame([64, 64], withDepth, ["taa"], { frameIndex: 4 });
+    const pass = taaPass(frame);
+    const record = frame.plan.passes.find((p) =>
+      p.subPasses.some((sub) => sub.name.includes("depthHistory")),
+    );
+
+    console.log("\nDisocclusion rejection");
+
+    check(
+      "the resolve reads the recorded depth",
+      pass.reads.filter((name) => name.includes("depthHistory")),
+      ["taa.depthHistory.cam"],
+    );
+    check(
+      "and the recording happens after it",
+      frame.names.indexOf("taa.main") < frame.names.indexOf("taa.depthHistory"),
+      true,
+    );
+    check(
+      "one texture serves both directions",
+      record.color.map((c) => c.handle.name),
+      ["taa.depthHistory.cam"],
+    );
+    // It has to outlive the frame like the colour history, and for the same
+    // reason: nothing rewrites it before the next frame reads it.
+    check(
+      "kept between frames",
+      frame.plan.resources.find((r) => r.name.includes("depthHistory")).persistent,
+      true,
+    );
+
+    // Neither the pass nor the texture exists when the test is switched off.
+    const without = await declareFrame([64, 64], { exposure: 1, taa: {} }, ["taa"], {
+      frameIndex: 4,
+    });
+    check(
+      "skipped entirely at zero tolerance",
+      [
+        without.names.includes("taa.depthHistory"),
+        without.plan.resources.some((r) => r.name.includes("depthHistory")),
+      ],
+      [false, false],
+    );
+  }
+
+  // Sharpening an image that gets sharpened again next frame compounds without
+  // bound, so what the sharpener writes must never reach the accumulator.
+  {
+    const sharpened = await declareFrame(
+      [64, 64],
+      { exposure: 1, taa: { sharpness: 0.5 } },
+      ["taa"],
+      { frameIndex: 4 },
+    );
+    const sharpen = sharpened.plan.passes.find((p) =>
+      p.subPasses.some((sub) => sub.name.includes("sharpen")),
+    );
+
+    console.log("\nSharpening");
+
+    check(
+      "reads the resolved image",
+      sharpen.reads.map((i) => sharpened.plan.resources[i].name),
+      ["taa.history0.cam"],
+    );
+    check(
+      "writes somewhere other than the history",
+      sharpen.color.every((c) => !c.handle.name.startsWith("taa.history")),
+      true,
+    );
+    check(
+      "and that is what the chain carries on with",
+      sharpened.textures.get("color").name,
+      sharpen.color[0].handle.name,
+    );
+  }
+
   // Ahead of everything that consumes the image, so bloom's pyramid and the
   // tonemap see a stable one rather than a jittered frame.
   const chained = await declareFrame(

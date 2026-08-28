@@ -137,6 +137,11 @@ postProcessing.taa = (options?: TAAComponentOptions) => ({
   // the content, and a sharpener left at a value nobody chose is how ringing
   // gets shipped. 0.5 is a reasonable place to start.
   sharpness: 0,
+  // Two percent of the depth being tested, which is loose enough that a surface
+  // moving towards the camera is not mistaken for a different one — a metre per
+  // second at ten metres shifts depth by well under a percent per frame — and
+  // tight enough to catch an occluder giving way to what was behind it.
+  disocclusionTolerance: 0.02,
   ...options,
 });
 

@@ -1,6 +1,7 @@
 import {
   taaShader,
   taaSharpenShader,
+  taaDepthHistoryShader,
 } from "../../../shaders/post-processing/taa.js";
 
 import type { Entity } from "../../../types.js";
@@ -102,24 +103,50 @@ const taa: PostProcessingEffect = {
     // scene and drags anything that moved on its own.
     const velocity = textures.get("velocity");
 
+    // One texture read and written in the same frame, which the graph orders
+    // for us: the resolve reads what the last frame recorded, and the pass
+    // declared after it overwrites that with this frame's. A second output on
+    // the resolve would have needed two textures alternating instead.
+    const disocclusionTolerance = component.disocclusionTolerance ?? 0;
+    const previousDepth =
+      disocclusionTolerance > 0
+        ? createTexture({
+            label: `taa.depthHistory.${viewId}`,
+            width,
+            height,
+            // Half floats reach past any sensible far plane and hold three
+            // decimal digits doing it, where the test tolerates whole percents.
+            format: "r16float" as GPUTextureFormat,
+            persistent: true,
+          })
+        : undefined;
+
+    const defines = new Set([
+      ...(velocity ? ["USE_TAA_VELOCITY"] : []),
+      ...(previousDepth ? ["USE_TAA_DISOCCLUSION"] : []),
+    ]);
+
+    const params = {
+      inverseViewProjectionMatrix: camera._inverseViewProjectionMatrix!,
+      previousViewProjectionMatrix: camera._previousViewProjectionMatrix,
+      texelSize: [1 / width, 1 / height],
+      blendFactor: component.blendFactor ?? 0.1,
+      varianceGamma: component.varianceGamma ?? 1.25,
+      historyValid: historyValid ? 1 : 0,
+      disocclusionTolerance,
+    };
+
     pass({
       name: "main",
       shader: taaShader,
-      ...(velocity && { defines: new Set(["USE_TAA_VELOCITY"]) }),
+      defines,
       // Writing straight into the history is what makes this one pass rather
       // than a resolve plus a copy: it is both the accumulator and the image
       // everything downstream reads.
       target: histories[parity]!,
       chain: true,
       uniforms: {
-        uTAA: {
-          inverseViewProjectionMatrix: camera._inverseViewProjectionMatrix!,
-          previousViewProjectionMatrix: camera._previousViewProjectionMatrix,
-          texelSize: [1 / width, 1 / height],
-          blendFactor: component.blendFactor ?? 0.1,
-          varianceGamma: component.varianceGamma ?? 1.25,
-          historyValid: historyValid ? 1 : 0,
-        },
+        uTAA: params,
         uHistoryTexture: histories[1 - parity]!,
         uHistoryTextureSampler: samplers.linear,
         uDepthTexture: depth,
@@ -130,8 +157,31 @@ const taa: PostProcessingEffect = {
           // averages two surfaces that went different ways.
           uVelocityTextureSampler: samplers.nearest,
         }),
+        ...(previousDepth && {
+          uPreviousDepthTexture: previousDepth,
+          uPreviousDepthTextureSampler: samplers.nearest,
+        }),
       },
     });
+
+    // After the resolve has read it, which is the whole reason one texture is
+    // enough. Records depth against this frame's view, since that is what the
+    // next frame will be testing against.
+    if (previousDepth) {
+      pass({
+        name: "depthHistory",
+        shader: taaDepthHistoryShader,
+        target: previousDepth,
+        // Nothing to sample from the colour chain, and binding it would hold a
+        // texture alive for a read that never happens.
+        source: null,
+        uniforms: {
+          uTAA: params,
+          uDepthTexture: depth,
+          uDepthTextureSampler: samplers.nearest,
+        },
+      });
+    }
 
     // After the resolve and reading what it published, so the history keeps the
     // unsharpened image: sharpening what is then sharpened again next frame

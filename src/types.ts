@@ -559,6 +559,18 @@ export interface TAAComponentOptions {
    * pass; 1 is the reference's strongest setting.
    */
   sharpness?: number;
+  /**
+   * How far the depth recorded where a pixel reprojects to may differ from the
+   * depth that pixel's surface would have had there, as a fraction of it,
+   * before the history is taken to describe something else and thrown away.
+   *
+   * This is what catches a surface that was hidden last frame and is visible
+   * now: neighbourhood clipping only asks whether the history looks plausible
+   * beside its neighbours, which an occluder of similar colour passes while
+   * being entirely the wrong surface. Costs one full-screen pass and one
+   * half-float texture kept between frames; 0 skips both.
+   */
+  disocclusionTolerance?: number;
 }
 export interface FogComponentOptions {
   color?: Color;

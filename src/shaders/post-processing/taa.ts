@@ -62,6 +62,43 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
 };
 
 /**
+ * This frame's linear view depth, recorded for the next frame's disocclusion
+ * test.
+ *
+ * Its own pass rather than a second target on the resolve, so one texture can
+ * serve both directions: declared after the resolve, the write-after-read edge
+ * lets the resolve read what the last frame left before this overwrites it. A
+ * second output would have had to alternate between two.
+ */
+export const taaDepthHistoryShader = (): string => {
+  const alloc = createBindingAllocator(1);
+
+  return formatShader(/* wgsl */ `
+${postProcessingStruct}
+
+${SHADERS.luminance}
+${SHADERS.taa}
+
+@group(0) @binding(${alloc.next()}) var<uniform> uTAA: TAAParams;
+
+${textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uDepthTexture", "texture_depth_2d")}
+
+${fullscreenVertex()}
+
+@fragment
+fn fragmentMain(input: VertexOutput) -> @location(0) f32 {
+  let depth = textureSampleLevel(uDepthTexture, uDepthTextureSampler, input.texCoord0, 0);
+
+  // Against this frame's view, which is what the next frame will call previous.
+  let ndc = vec3f(input.texCoord0.x * 2.0 - 1.0, 1.0 - input.texCoord0.y * 2.0, depth);
+  var world = uTAA.inverseViewProjectionMatrix * vec4f(ndc, 1.0);
+
+  return 1.0 / world.w;
+}
+`);
+};
+
+/**
  * Temporal antialiasing resolve: one pass blending this frame into the
  * accumulated history.
  *
@@ -76,6 +113,7 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
 export const taaShader = (defines: Set<string> = new Set()): string => {
   const alloc = createBindingAllocator(1);
   const velocity = defines.has("USE_TAA_VELOCITY");
+  const disocclusion = defines.has("USE_TAA_DISOCCLUSION");
 
   return formatShader(/* wgsl */ `
 ${postProcessingStruct}
@@ -89,6 +127,7 @@ ${textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uTexture")}
 ${textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uHistoryTexture")}
 ${textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uDepthTexture", "texture_depth_2d")}
 ${velocity ? textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uVelocityTexture") : ""}
+${disocclusion ? textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uPreviousDepthTexture") : ""}
 
 ${fullscreenVertex()}
 
@@ -111,10 +150,30 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
   let reprojectionValid = reprojected.z > 0.5;`
   }
 
+  ${
+    disocclusion
+      ? `// This pixel's own depth, not the dilated neighbour's: the dilation is
+  // there to make a silhouette follow the foreground's motion, and the
+  // question here is whether the history belongs to the surface being shaded.
+  let centerDepth = textureSampleLevel(uDepthTexture, uDepthTextureSampler, uv, 0);
+  let expectedDepth = taaPreviousViewDepth(uv, centerDepth, uTAA);
+  // Derivatives before any branching, so they stay in uniform control flow.
+  let depthSlope = fwidth(expectedDepth);
+  let sameSurface = !taaDisoccluded(
+    uPreviousDepthTexture,
+    uPreviousDepthTextureSampler,
+    previousUV,
+    expectedDepth,
+    depthSlope,
+    uTAA
+  );`
+      : "let sameSurface = true;"
+  }
+
   return taaResolve(
     uv,
     previousUV,
-    reprojectionValid,
+    reprojectionValid && sameSurface,
     uTexture,
     uTextureSampler,
     uHistoryTexture,

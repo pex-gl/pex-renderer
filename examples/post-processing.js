@@ -85,6 +85,7 @@ const postProcessing = components.postProcessing({
     blendFactor: 0.1,
     varianceGamma: 1.25,
     sharpness: 0,
+    disocclusionTolerance: 0.02,
   },
   ssao: {
     type: "sao", // "gtao",
@@ -510,6 +511,10 @@ gui.addParam("TAA blendFactor", postProcessing.taa, "blendFactor", {
 gui.addParam("TAA sharpness", postProcessing.taa, "sharpness", {
   min: 0,
   max: 1,
+});
+gui.addParam("TAA disocclusion", postProcessing.taa, "disocclusionTolerance", {
+  min: 0,
+  max: 0.2,
 });
 gui.addParam("TAA varianceGamma", postProcessing.taa, "varianceGamma", {
   min: 0,
