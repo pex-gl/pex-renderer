@@ -406,6 +406,19 @@ export interface LineMaterialComponentOptions {
   perspectiveScaling?: boolean;
   depthTest?: boolean;
   depthWrite?: boolean;
+  /**
+   * Rasterizer constant depth bias, in depth-buffer resolvable units. Negative
+   * pulls towards the camera, which is how coincident lines (an axes helper
+   * over a grid line) are given a stable winner instead of z-fighting.
+   */
+  depthBias?: number;
+  /**
+   * Rasterizer slope-scaled depth bias. Best left unset for lines: a ribbon
+   * seen end-on has an extreme depth slope, so the term swings with the view.
+   */
+  depthBiasSlopeScale?: number;
+  /** Upper bound on the applied depth bias (0 disables the clamp). */
+  depthBiasClamp?: number;
   castShadows?: boolean;
 }
 export interface MorphComponentOptions {

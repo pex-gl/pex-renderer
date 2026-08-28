@@ -509,6 +509,23 @@ export default () => ({
         depthWrite: false,
       }),
     }),
+    entity({
+      name: `helper-biased-${cacheId}`,
+      transform: components.transform(),
+      geometry: Object.assign(
+        createGeomBuilder({ positions: 3, vertexColors: 4 }),
+        components.geometry(),
+      ),
+      material: components.material({
+        type: "line",
+        lineWidth: 1,
+        perspectiveScaling: false,
+        depthTest: true,
+        depthWrite: true,
+        depthBias: -16,
+        depthBiasSlopeScale: 0,
+      }),
+    }),
   ],
   addToBuilder(
     builder,
@@ -544,11 +561,15 @@ export default () => ({
     this.cache[cacheId] ||= this.getEntities(cacheId);
     const helperEntities = this.cache[cacheId];
 
-    const [{ geometry: geomBuilder }, { geometry: geomNoDepthBuilder }] =
-      helperEntities;
+    const [
+      { geometry: geomBuilder },
+      { geometry: geomNoDepthBuilder },
+      { geometry: geomBiasedBuilder },
+    ] = helperEntities;
 
     geomBuilder.reset();
     geomNoDepthBuilder.reset();
+    geomBiasedBuilder.reset();
 
     for (let i = 0; i < entities.length; i++) {
       const entity = entities[i];
@@ -558,7 +579,7 @@ export default () => ({
 
       if (entity.transform?.worldBounds && entity.boundingBoxHelper) {
         this.addToBuilder(
-          geomBuilder,
+          geomBiasedBuilder,
           getBBoxPositionsList(entity.transform.worldBounds),
           entity.boundingBoxHelper.color,
           lineWidth,
@@ -662,7 +683,7 @@ export default () => ({
       }
       if (entity.axesHelper) {
         this.addToBuilder(
-          geomBuilder,
+          geomBiasedBuilder,
           AXES_POSITIONS.map((p) => [...p]),
           AXES_COLORS.map((p) => [...p]),
           lineWidth,

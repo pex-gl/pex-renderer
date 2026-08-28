@@ -72,6 +72,12 @@ export default ({ ctx }: SystemOptions): RendererSystem => ({
       depthWriteEnabled: material.depthWrite !== false,
       depthCompare: material.depthTest === false ? "always" : "less",
       cullMode: "none",
+      // Always written, undefined included: the pipeline object is cached per
+      // shader variant and mutated per draw, so an omitted key would leave the
+      // previous entity's bias in place.
+      depthBias: material.depthBias,
+      depthBiasSlopeScale: material.depthBiasSlopeScale,
+      depthBiasClamp: material.depthBiasClamp,
     };
   },
   getLinePositionsBuffer(resolution: number) {
