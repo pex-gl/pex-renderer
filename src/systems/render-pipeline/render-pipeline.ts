@@ -5,6 +5,7 @@ import shadowMappingPipelineMethods from "./shadow-mapping.js";
 import postProcessingPipelineMethods from "./post-processing.js";
 import cullingPipelineMethods from "./culling.js";
 import createFullscreenGeometry from "../../fullscreen-geometry.js";
+import { SCENE_OUTPUT_MEMBERS } from "../../shaders/wgsl.js";
 import { blitShader } from "../../shaders/blit.js";
 import { grabPassShader } from "../../shaders/grab-pass.js";
 import { depthResolveShader } from "../../shaders/depth-resolve.js";
@@ -269,11 +270,24 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
       );
     }
 
+    // Ordered by `SCENE_OUTPUT_MEMBERS`, not by which effect asked for what: the
+    // shaders number their `@location`s from that list, and a location selects
+    // the attachment at the same index. Ordering by the asking effect instead
+    // puts each buffer's contents in the next buffer along as soon as two
+    // effects contribute — silently, wherever the formats happen to be
+    // component-compatible.
+    const sceneOutputs = SCENE_OUTPUT_MEMBERS.map(({ name }) => name);
+    const colorOutputs = [
+      "color",
+      ...sceneOutputs.filter((name) => outputs.has(name)),
+      // Whatever the "outputs" stage added: a renderer from outside numbers its
+      // own locations, and an unknown name has no slot here to claim.
+      ...outputs.difference(new Set(["color", "depth", ...sceneOutputs])),
+    ];
+
     const colorTextures: Record<string, ResourceHandle> = {};
     const msaaColorTextures: Record<string, ResourceHandle> = {};
-    for (const name of outputs) {
-      if (name === "depth") continue;
-
+    for (const name of colorOutputs) {
       const descriptor = {
         width,
         height,

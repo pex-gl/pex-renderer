@@ -2,6 +2,7 @@ import { chunks as SHADERS } from "pex-shaders";
 
 import {
   fragmentOutputStruct,
+  sceneOutputMembers,
   vertexOutputStruct,
   textureSamplerDeclaration,
   VELOCITY_MEMBERS,
@@ -65,12 +66,7 @@ ${vertexOutputStruct([
   ...(outputs.velocity ? VELOCITY_MEMBERS : []),
 ])}
 
-${fragmentOutputStruct([
-  outputs.normal && { name: "normal", type: "vec4f" },
-  outputs.emissive && { name: "emissive", type: "vec4f" },
-  outputs.velocity && { name: "velocity", type: "vec2f" },
-  outputs.responsive && { name: "responsive", type: "vec4f" },
-])}
+${fragmentOutputStruct(sceneOutputMembers(outputs))}
 
 // Vertex includes
 ${SHADERS.math.inverseMat4}

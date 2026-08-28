@@ -1,5 +1,7 @@
 import { mapValues } from "../utils.js";
 
+import type { FragmentOutputs } from "../types.js";
+
 // Binding primitives
 
 /** A material texture's `@group(2)` uniform binding slot (texture + sampler). */
@@ -597,9 +599,6 @@ export function vertexTransform({
  * own member types (a motion-vector target might be `vec2f`, not `vec4f`) so
  * this only owns the location numbering, not the shape. Called with no args
  * it's the color-only form the depth pre-pass and post-processing blits use.
- * The render pipeline builds its `color: [...]` pass attachments in this same
- * fixed order, so the emitted `@location`s line up with attachment index
- * without either side passing numbers to the other.
  */
 export function fragmentOutputStruct(
   members: readonly (ShaderStructMember | false | null | undefined)[] = [],
@@ -608,6 +607,34 @@ export function fragmentOutputStruct(
   ${locationMembers([{ name: "color", type: "vec4f" }, ...members])}
 }`;
 }
+
+/**
+ * The scene's extra fragment outputs past `color`, in the order their
+ * `@location`s are numbered.
+ *
+ * A location means nothing on its own — it selects the pass attachment at the
+ * same index — and the two lists are built in different files: the struct here,
+ * the `color: [...]` attachments in the render pipeline. So both order by this
+ * one list rather than by whatever asked for each output. Getting it wrong
+ * passes validation whenever the mismatched formats happen to be
+ * component-compatible, and then writes each buffer's contents into the next
+ * one along.
+ */
+export const SCENE_OUTPUT_MEMBERS: readonly (ShaderStructMember & {
+  name: keyof FragmentOutputs;
+})[] = [
+  { name: "normal", type: "vec4f" },
+  { name: "emissive", type: "vec4f" },
+  // Screen-space offset, so two channels wherever it appears.
+  { name: "velocity", type: "vec2f" },
+  { name: "responsive", type: "vec4f" },
+];
+
+/** The subset of them a pass writes, still in numbering order. */
+export const sceneOutputMembers = (
+  outputs: FragmentOutputs = {},
+): ShaderStructMember[] =>
+  SCENE_OUTPUT_MEMBERS.filter((member) => outputs[member.name]);
 
 /** Format shaders */
 export function formatShader(source: string) {

@@ -832,6 +832,8 @@ gui.addParam(
 gui.addParam("Speed", postProcessing.filmGrain, "speed", { min: 0, max: 1 });
 
 enablePostProPass("msaa");
+enablePostProPass("taa");
+enablePostProPass("motionBlur");
 enablePostProPass("ssao");
 enablePostProPass("dof");
 enablePostProPass("bloom");

@@ -1,6 +1,10 @@
 import { chunks as SHADERS } from "pex-shaders";
 
-import { fragmentOutputStruct, vertexOutputStruct } from "./wgsl.js";
+import {
+  fragmentOutputStruct,
+  sceneOutputMembers,
+  vertexOutputStruct,
+} from "./wgsl.js";
 import type { PipelineShaderOptions } from "../types.js";
 
 // This shader bakes the analytic Preetham sky model (chunks.sky) into an
@@ -39,10 +43,7 @@ ${vertexOutputStruct([
   { name: "mieDirectionalG", type: "f32" },
 ])}
 
-${fragmentOutputStruct([
-  outputs.normal && { name: "normal", type: "vec4f" },
-  outputs.emissive && { name: "emissive", type: "vec4f" },
-])}
+${fragmentOutputStruct(sceneOutputMembers(outputs))}
 
 // Vertex includes
 ${SHADERS.math.PI}

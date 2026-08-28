@@ -4,6 +4,7 @@ import {
   frameStruct,
   modelStruct,
   fragmentOutputStruct,
+  sceneOutputMembers,
   getDefineFlags,
   vertexJitter,
   vertexVelocity,
@@ -100,12 +101,7 @@ struct Varyings {
   }
 }
 
-${fragmentOutputStruct([
-  outputs.normal && { name: "normal", type: "vec4f" },
-  outputs.emissive && { name: "emissive", type: "vec4f" },
-  outputs.velocity && { name: "velocity", type: "vec2f" },
-  outputs.responsive && { name: "responsive", type: "vec4f" },
-])}
+${fragmentOutputStruct(sceneOutputMembers(outputs))}
 
 ${hooks.vertDeclarationsEnd ?? ""}
 
