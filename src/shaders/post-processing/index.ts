@@ -5,4 +5,5 @@ export * from "./bloom.js";
 export * from "./combine.js";
 export * from "./smaa.js";
 export * from "./taa.js";
+export * from "./motion-blur.js";
 export * from "./final.js";

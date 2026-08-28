@@ -30,6 +30,7 @@ const State = {
 
   msaa: false,
   taa: true,
+  motionBlur: true,
   ssao: false,
   dof: false,
   bloom: false,
@@ -80,6 +81,15 @@ const camera = components.camera({
 const postProcessing = components.postProcessing({
   msaa: {
     sampleCount: 4,
+  },
+  motionBlur: {
+    intensity: 1,
+    samples: 35,
+    tileSize: 40,
+    centerWeightBias: 40,
+    directionBlend: 1.5,
+    jitterScale: 27,
+    tileBlend: 1,
   },
   taa: {
     blendFactor: 0.1,
@@ -424,6 +434,7 @@ gui.addRadioList(
     "",
     "velocity",
     "responsive",
+    "motionBlur.neighborMax",
     "taa.main",
     "ssao.main",
     "dof.main",
@@ -521,6 +532,29 @@ gui.addParam("TAA varianceGamma", postProcessing.taa, "varianceGamma", {
   min: 0,
   max: 3,
 });
+gui.addHeader("Motion Blur");
+gui.addParam("Enabled", State, "motionBlur", null, () => {
+  enablePostProPass("motionBlur");
+});
+gui.addParam("Intensity", postProcessing.motionBlur, "intensity", {
+  min: 0,
+  max: 2,
+});
+gui.addParam("Samples", postProcessing.motionBlur, "samples", {
+  min: 3,
+  max: 63,
+  step: 2,
+});
+gui.addParam("Tile size", postProcessing.motionBlur, "tileSize", {
+  min: 8,
+  max: 64,
+  step: 8,
+});
+gui.addParam("Centre weight", postProcessing.motionBlur, "centerWeightBias", {
+  min: 1,
+  max: 80,
+});
+
 gui.addHeader("Camera");
 gui.addParam("FoV", camera, "fov", { min: 0, max: (Math.PI / 3) * 2 });
 gui.addParam("FocalLength", camera, "focalLength", { min: 10, max: 200 });

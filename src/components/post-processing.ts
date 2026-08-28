@@ -9,6 +9,7 @@ import type {
   MSAAComponentOptions,
   PostProcessingComponentOptions,
   SMAAComponentOptions,
+  MotionBlurComponentOptions,
   SSAOComponentOptions,
   TAAComponentOptions,
   VignetteComponentOptions,
@@ -25,6 +26,7 @@ interface PostProcessingFactory {
   fxaa: (options?: FXAAComponentOptions) => object;
   smaa: (options?: SMAAComponentOptions) => object;
   taa: (options?: TAAComponentOptions) => object;
+  motionBlur: (options?: MotionBlurComponentOptions) => object;
   fog: (options?: FogComponentOptions) => object;
   bloom: (options?: BloomComponentOptions) => object;
   vignette: (options?: VignetteComponentOptions) => object;
@@ -142,6 +144,20 @@ postProcessing.taa = (options?: TAAComponentOptions) => ({
   // second at ten metres shifts depth by well under a percent per frame — and
   // tight enough to catch an occluder giving way to what was behind it.
   disocclusionTolerance: 0.02,
+  ...options,
+});
+
+/** Post Processing Motion Blur subcomponent */
+postProcessing.motionBlur = (options?: MotionBlurComponentOptions) => ({
+  // The reference's own settings, which it uses unchanged across every scene
+  // it reports: {N, r, rho, gamma, xi} = {35, 40, 1, 40, 27}.
+  intensity: 1,
+  samples: 35,
+  tileSize: 40,
+  centerWeightBias: 40,
+  directionBlend: 1.5,
+  jitterScale: 27,
+  tileBlend: 1,
   ...options,
 });
 

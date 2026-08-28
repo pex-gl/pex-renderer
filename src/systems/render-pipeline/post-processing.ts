@@ -52,6 +52,7 @@ interface EffectRegistration {
 const EFFECT_ORDER: readonly EffectRegistration[] = [
   { name: "ssao", load: () => import("./post-processing/ssao.js") },
   { name: "taa", load: () => import("./post-processing/taa.js") },
+  { name: "motionBlur", load: () => import("./post-processing/motion-blur.js") },
   { name: "dof", load: () => import("./post-processing/dof.js") },
   { name: "bloom", load: () => import("./post-processing/bloom.js") },
   {

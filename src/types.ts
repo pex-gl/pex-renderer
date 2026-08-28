@@ -554,6 +554,39 @@ export interface SMAAComponentOptions {
   quality?: number;
   edges?: "luma" | "color" | "depth";
 }
+export interface MotionBlurComponentOptions {
+  /**
+   * Fraction of the frame the shutter is open, scaling the motion that is
+   * smeared along. 1 blurs the whole frame's motion; 0 skips the effect.
+   */
+  intensity?: number;
+  /** Samples gathered per pixel. The reference uses 35. */
+  samples?: number;
+  /**
+   * Tile size in pixels, and so the longest motion the filter can represent:
+   * the neighbourhood pass reaches exactly one tile out, and anything moving
+   * further arrives from a tile nothing looked at. Raising it widens the
+   * longest streak and coarsens where streaks begin and end.
+   */
+  tileSize?: number;
+  /**
+   * Bias on the unblurred centre sample's weight. Higher keeps more of the
+   * original pixel, which is what stops thin features thinning out.
+   */
+  centerWeightBias?: number;
+  /**
+   * How quickly sampling swings from across the dominant motion to along the
+   * pixel's own as that motion grows.
+   */
+  directionBlend?: number;
+  /** Baseline jitter in pixels, divided by the sample count. */
+  jitterScale?: number;
+  /**
+   * How far from a tile border a pixel starts borrowing the neighbouring
+   * tile's motion, trading a visible seam between tiles for noise.
+   */
+  tileBlend?: number;
+}
 export interface TAAComponentOptions {
   /**
    * Weight given to the current frame, so roughly one over the number of frames
@@ -654,6 +687,7 @@ export interface PostProcessingComponentOptions {
   fxaa?: FXAAComponentOptions;
   smaa?: SMAAComponentOptions;
   taa?: TAAComponentOptions;
+  motionBlur?: MotionBlurComponentOptions;
   msaa?: MSAAComponentOptions;
   filmGrain?: FilmGrainComponentOptions;
   exposure?: number;

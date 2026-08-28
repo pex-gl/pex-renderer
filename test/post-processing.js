@@ -51,11 +51,14 @@ const { postProcessing: shaders } = await import("../lib/shaders/index.js");
 
 // smaa is deliberately absent: its area/search lookups load through an Image,
 // which needs a browser, so it would only ever sit the frame out here.
-const EFFECT_NAMES = ["ssao", "taa", "dof", "bloom", "combine", "final"];
+const EFFECT_NAMES = ["ssao", "taa", "motionBlur", "dof", "bloom", "combine", "final"];
 const EFFECTS = {};
 for (const name of EFFECT_NAMES) {
+  // Effects are named in camelCase and filed in kebab-case, which the registry
+  // bridges with an explicit specifier per entry.
+  const file = name.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
   EFFECTS[name] = (
-    await import(`../lib/systems/render-pipeline/post-processing/${name}.js`)
+    await import(`../lib/systems/render-pipeline/post-processing/${file}.js`)
   ).default;
 }
 
@@ -127,7 +130,14 @@ async function declareFrame(
   viewport,
   postProcessing,
   load,
-  { msaa = 0, resolveDepth = false, frameIndex = 0, pool, cameraEntity: reuse } = {},
+  {
+    msaa = 0,
+    resolveDepth = false,
+    frameIndex = 0,
+    pool,
+    cameraEntity: reuse,
+    omit,
+  } = {},
 ) {
   const graph = new FrameGraph(undefined);
   // Shared across calls when the caller is driving consecutive frames: the
@@ -182,12 +192,14 @@ async function declareFrame(
     textures.set("color", target("color"));
     textures.set("normal", target("normal"));
     textures.set("emissive", target("emissive"));
-    textures.set("velocity", target("velocity", "rg16float"));
+    if (omit !== "velocity") {
+      textures.set("velocity", target("velocity", "rg16float"));
+    }
     textures.set("responsive", target("responsive", "r8unorm"));
 
     // WebGPU has no depth resolve, so under MSAA the scene's depth buffer is
     // multisampled and unbindable until the pipeline resolves it.
-    textures.set(
+    if (omit !== "depth") textures.set(
       "depth",
       graph.createTexture({
         label: "depth",
@@ -670,6 +682,78 @@ const bloomComponent = (extra) => ({
   check(
     "resolves before the image is consumed",
     chained.names.indexOf("taa.main") < chained.names.indexOf("bloom.threshold"),
+    true,
+  );
+}
+
+// ─── Motion blur reduces the velocity buffer before gathering ───────────────
+// The tile grid is what bounds the filter: it can only smear along a motion
+// some tile recorded, and only as far as one tile out. A grid derived from the
+// wrong size silently truncates long streaks instead of failing.
+{
+  const component = { intensity: 1, tileSize: 40, samples: 35 };
+  const frame = await declareFrame(
+    [1280, 720],
+    { exposure: 1, motionBlur: component },
+    ["motionBlur"],
+  );
+  const sized = (name) => {
+    const pass = frame.plan.passes.find((p) =>
+      p.subPasses.some((sub) => sub.name.includes(name)),
+    );
+    const resource = frame.plan.resources.find(
+      (r) => r.name === pass.color[0].handle.name,
+    );
+    return [resource.descriptor.width, resource.descriptor.height];
+  };
+
+  console.log("\nMotion blur");
+
+  check("reduces, widens, then gathers", frame.names, [
+    "motionBlur.tileMaxX",
+    "motionBlur.tileMaxY",
+    "motionBlur.neighborMax",
+    "motionBlur.main",
+  ]);
+
+  // Separable: the first pass keeps full height, the second brings it down.
+  check("tile grid follows the viewport", [sized("tileMaxX"), sized("tileMaxY")], [
+    [32, 720],
+    [32, 18],
+  ]);
+  check("the neighbourhood keeps that grid", sized("neighborMax"), [32, 18]);
+
+  // Both are structural — nothing to smear along, and nothing to order samples
+  // by — so the effect sits the frame out rather than drawing something wrong.
+  for (const missing of ["velocity", "depth"]) {
+    const partial = await declareFrame(
+      [320, 200],
+      { exposure: 1, motionBlur: component },
+      ["motionBlur"],
+      { omit: missing },
+    );
+    check(`sits out without ${missing}`, partial.names, []);
+  }
+
+  // A shutter held closed is not a cheap blur, it is no blur.
+  const closed = await declareFrame(
+    [320, 200],
+    { exposure: 1, motionBlur: { intensity: 0 } },
+    ["motionBlur"],
+  );
+  check("skipped entirely at zero intensity", closed.names, []);
+
+  // After the resolve: what should be smeared is the accumulated image, not a
+  // jittered frame, and blurring before it would feed the accumulator streaks.
+  const chained = await declareFrame(
+    [320, 200],
+    { exposure: 1, taa: {}, motionBlur: component },
+    ["taa", "motionBlur"],
+    { frameIndex: 4 },
+  );
+  check(
+    "smears what the resolve produced",
+    chained.names.indexOf("taa.main") < chained.names.indexOf("motionBlur.main"),
     true,
   );
 }
