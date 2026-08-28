@@ -18,10 +18,17 @@ const VELOCITY_FORMAT = "rg16float" as GPUTextureFormat;
  * tile widened to include the motions that could reach it, and every pixel then
  * gathers colour along those motions.
  *
- * Runs after temporal antialiasing and before bloom, on the linear image. After
- * the resolve because blurring a jittered frame would smear the jitter along
- * with everything else, and the accumulated image is what should be smeared;
- * before bloom because a streak that ends bright should bloom.
+ * Runs after the temporal resolve and depth of field, before bloom, on the
+ * linear image. After the resolve because blurring a jittered frame would smear
+ * the jitter along with everything else, and the accumulated image is what
+ * should be smeared; after depth of field because that one needs the image to
+ * still match the depth buffer and this is what breaks that; before bloom
+ * because a streak that ends bright should glare.
+ *
+ * A thin bright line smeared over its streak is divided by the streak's length,
+ * which can take it under the bloom threshold — the glare then thins out with
+ * speed rather than streaking. That is what every engine putting bloom last
+ * does; `bloom.softKnee` is what keeps it a fade rather than a cliff.
  */
 const motionBlur: PostProcessingEffect = {
   name: "motionBlur",

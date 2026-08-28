@@ -48,12 +48,19 @@ interface EffectRegistration {
  * already positions passes, and the pipeline's `declareFullscreenPass` gives an
  * injected pass the same ergonomics a built-in gets. See that method for where
  * to hook.
+ *
+ * The middle of it is Unity HDRP's: resolve, then defocus, then smear, then
+ * glare. What fixes the two depth-driven effects against each other is that
+ * depth of field reads a circle of confusion per pixel, so it has to run while
+ * the image still corresponds to the depth buffer — a smeared image no longer
+ * does. Motion blur only compares depths along its sample line, which survives
+ * a defocused image far better.
  */
 const EFFECT_ORDER: readonly EffectRegistration[] = [
   { name: "ssao", load: () => import("./post-processing/ssao.js") },
   { name: "taa", load: () => import("./post-processing/taa.js") },
-  { name: "motionBlur", load: () => import("./post-processing/motion-blur.js") },
   { name: "dof", load: () => import("./post-processing/dof.js") },
+  { name: "motionBlur", load: () => import("./post-processing/motion-blur.js") },
   { name: "bloom", load: () => import("./post-processing/bloom.js") },
   {
     name: "combine",

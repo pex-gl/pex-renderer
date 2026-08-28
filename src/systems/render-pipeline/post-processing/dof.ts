@@ -3,8 +3,15 @@ import { dofShader } from "../../../shaders/post-processing/dof.js";
 import type { PostProcessingEffect } from "../post-processing.js";
 
 /**
- * Depth of field. Runs before bloom so out-of-focus highlights bloom as the
- * bokeh shows them, not as the sharp image would.
+ * Depth of field.
+ *
+ * First of the image-space effects after the temporal resolve, because it reads
+ * a circle of confusion per pixel from the depth buffer: motion blur smears the
+ * image out of correspondence with that depth, and defocusing a streak by the
+ * depth of whatever the streak is passing over is wrong at every pixel of it.
+ * Before bloom for the same reason it is before motion blur — out-of-focus
+ * highlights should glare as the bokeh shows them, not as the sharp image
+ * would.
  */
 const dof: PostProcessingEffect = {
   name: "dof",
