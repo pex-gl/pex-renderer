@@ -32,9 +32,17 @@ const COLOR_FUNCTION_DEFINE: Record<string, string> = {
   average: "COLOR_FUNCTION_AVERAGE",
 };
 
+/**
+ * Level 0 is a quarter of the viewport: the bright pass already spent the first
+ * halving, and the pyramid starts below it.
+ *
+ * Kino's arrangement, and the reason this is not a full-resolution pyramid: the
+ * glare is a wide low-frequency image, so the top octave costs the most and
+ * contributes the least.
+ */
 const levelSize = (viewport: number[], level: number) => [
-  viewport[2]! / 2 ** (level + 1),
-  viewport[3]! / 2 ** (level + 1),
+  viewport[2]! / 2 ** (level + 2),
+  viewport[3]! / 2 ** (level + 2),
 ];
 
 /**
@@ -48,16 +56,20 @@ const levelSize = (viewport: number[], level: number) => [
  * control as much as a budget.
  */
 const levelCount = (viewport: number[], requested?: number) => {
-  const fits = Math.floor(
-    Math.log2(Math.min(viewport[2]!, viewport[3]!) / MIN_LEVEL_SIZE),
-  );
+  // One less than the halvings the viewport has, since the bright pass already
+  // spent the first.
+  const fits =
+    Math.floor(
+      Math.log2(Math.min(viewport[2]!, viewport[3]!) / MIN_LEVEL_SIZE),
+    ) - 1;
   return Math.max(1, Math.min(requested ?? MAX_LEVELS, fits));
 };
 
 /**
- * Bloom: threshold the bright pixels, build a downsample pyramid, then add
- * every level back up it. The sum ends in `bloom.threshold` for combine to add
- * into the tonemapped image.
+ * Bloom: threshold the bright pixels at half resolution, build a downsample
+ * pyramid below that, then add every level back up it. The sum ends in
+ * `bloom.threshold` for combine to add into the tonemapped image, sampled
+ * bilinearly — which is the chain's last upsample.
  */
 const bloom: PostProcessingEffect = {
   name: "bloom",
@@ -78,6 +90,7 @@ const bloom: PostProcessingEffect = {
     const threshold = pass({
       name: "threshold",
       shader: thresholdShader,
+      size: [viewport[2]! / 2, viewport[3]! / 2],
       // Reading the emissive target instead of the color one trades physicality
       // for artistic control: only what the artist marked emissive blooms.
       ...(fromEmissive && { source: null }),
@@ -93,6 +106,12 @@ const bloom: PostProcessingEffect = {
         uBloom: {
           exposure: postProcessing.exposure!,
           threshold: component.threshold!,
+          // Half-width of the ramp into the glare, as a fraction of the
+          // threshold. Content sitting at the threshold is the case it exists
+          // for: without it, anything that moves such a pixel by a few percent
+          // — a temporal resolve's residual, a thin line's coverage, a motion
+          // blur streak — swings the whole cutoff.
+          softKnee: component.softKnee ?? 0.5,
         },
         ...(emissive && {
           uEmissiveTexture: emissive,
@@ -118,11 +137,12 @@ const bloom: PostProcessingEffect = {
     /**
      * Back up the pyramid, smallest first: each level is added into the one
      * above it *at that level's size*, so the sum accumulates as it climbs and
-     * only the last draw is full resolution.
+     * the last draw is the half-resolution bright pass. Combine's bilinear read
+     * takes it the rest of the way.
      *
-     * Adding every level straight into the full-resolution target instead costs
-     * one full-screen draw per level — and asks a nine-tap tent to bridge a gap
-     * of up to 2^n texels, which no filter kernel can do.
+     * Adding every level straight into one target instead costs a draw at that
+     * size per level — and asks a nine-tap tent to bridge a gap of up to 2^n
+     * texels, which no filter kernel can do.
      */
     for (let level = levels - 1; level >= 0; level--) {
       pass({

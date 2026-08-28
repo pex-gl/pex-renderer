@@ -135,6 +135,7 @@ const postProcessing = components.postProcessing({
     quality: 1,
     colorFunction: "luma",
     threshold: 1,
+    softKnee: 0.5,
     source: false,
     radius: 1,
     intensity: 0.1,
@@ -710,6 +711,10 @@ gui.addRadioList(
 gui.addParam("Threshold", postProcessing.bloom, "threshold", {
   min: 0,
   max: 2,
+});
+gui.addParam("Soft Knee", postProcessing.bloom, "softKnee", {
+  min: 0,
+  max: 1,
 });
 gui.addRadioList(
   "Source",

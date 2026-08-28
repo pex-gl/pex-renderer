@@ -28,9 +28,13 @@ const colorFunction = (defines: Set<string>) => {
 };
 
 /**
- * Bright pass: everything above the threshold is what glares. Reading the
- * emissive target instead of the color one trades physicality for artistic
- * control — only what the artist marked emissive blooms, at any brightness.
+ * Bright pass: what exceeds the threshold is what glares — the amount above it,
+ * not the whole colour scaled by how far above it sits, so `softKnee` fades a
+ * pixel in from zero rather than snapping it to full brightness.
+ *
+ * Reading the emissive target instead of the color one trades physicality for
+ * artistic control — only what the artist marked emissive blooms, at any
+ * brightness.
  */
 export const thresholdShader = (defines: Set<string> = new Set()): string => {
   const useSourceColor = defines.has("USE_SOURCE_COLOR");
@@ -48,6 +52,7 @@ ${postProcessingStruct}
 struct Bloom {
   exposure: f32,
   threshold: f32,
+  softKnee: f32,
 }
 @group(0) @binding(${alloc.next()}) var<uniform> uBloom: Bloom;
 
@@ -70,7 +75,12 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
   );
   color = vec4f(color.rgb * uBloom.exposure, color.a);
 
-  color = threshold(color, ${colorFunction(defines)}(color.rgb), uBloom.threshold);
+  color = threshold(
+    color,
+    ${colorFunction(defines)}(color.rgb),
+    uBloom.threshold,
+    uBloom.softKnee
+  );
 
   ${addEmissive ? "color += textureSample(uEmissiveTexture, uEmissiveTextureSampler, input.texCoord0);" : ""}
 

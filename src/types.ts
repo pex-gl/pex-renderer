@@ -649,6 +649,17 @@ export interface BloomComponentOptions {
   colorFunction?: "luma" | "luminance" | "average";
   /** The brightness value at which pixels are filtered out for the threshold. */
   threshold?: number;
+  /**
+   * Half-width of the ramp into the glare, as a fraction of
+   * {@link BloomComponentOptions.threshold}. 0 is a hard cutoff, 0.5 a wide
+   * fade.
+   *
+   * Content sitting at the threshold is what it is for: a hard cutoff turns any
+   * few-percent wobble in such a pixel — a temporal resolve's residual, a thin
+   * line's coverage — into a swing across the whole cutoff, which reads as
+   * flicker in the glare.
+   */
+  softKnee?: number;
   /** The source texture for the threshold. */
   source?: "color" | "emissive";
   /** The strength of the bloom effect. */

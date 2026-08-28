@@ -180,6 +180,7 @@ postProcessing.bloom = (options?: BloomComponentOptions) => ({
   quality: 1,
   colorFunction: "luma", // "average" | "luminance"
   threshold: 1,
+  softKnee: 0.5,
   source: false, // "color" | "emissive"
   radius: 1,
   intensity: 0.1,
