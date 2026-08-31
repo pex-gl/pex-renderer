@@ -124,12 +124,16 @@ fn fragmentMain(input: VertexOutput) -> FragmentOutput {
   // entity transform, so background and reflections rotate together.
   let N = uSkybox.rotation * normalize(input.normal);
   ${
+    // Exposure is baked into the reflection probe's prefiltered cubemap
+    // (reflection-probe bake), so the blur path must NOT reapply it; the raw
+    // equirect path is unexposed and applies it here. Either way exposure lands
+    // exactly once, and the blurred background matches the material IBL.
     useBackgroundBlur
       ? `let lod = uSkybox.backgroundBlur * (ROUGHNESS_LEVELS - 1.0);
   var color = textureSampleLevel(uSpecularEnvMap, uSpecularEnvMapSampler, N, lod);`
-      : `var color = textureSample(uEnvMap, uEnvMapSampler, envMapEquirect(N));`
+      : `var color = textureSample(uEnvMap, uEnvMapSampler, envMapEquirect(N));
+  color = vec4f(color.rgb * uSkybox.exposure, color.a);`
   }
-  color = vec4f(color.rgb * uSkybox.exposure, color.a);
 
   ${useMSAA ? "color = vec4f(reversibleToneMap(color.xyz), color.w);" : ""}
 

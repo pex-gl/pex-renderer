@@ -72,6 +72,8 @@ export default ({ ctx }: SystemOptions) => ({
     {
       resources: ProbeResources;
       envMap: GpuTexture | null;
+      /** Skybox exposure the probe was last baked with; a change forces a rebake. */
+      exposure?: number;
       /** Identity of the pre-baked payload this cache entry was built from. */
       data?: ReflectionProbePrebakedData | undefined;
     }
@@ -253,7 +255,7 @@ export default ({ ctx }: SystemOptions) => ({
     resources.irradianceCoefficients.dispose();
   },
 
-  bake(resources: ProbeResources, envMap: GpuTexture) {
+  bake(resources: ProbeResources, envMap: GpuTexture, exposure: number) {
     const shPipeline = (this.shPipeline ||= {
       compute: reflectionProbeSHShader(),
       entryPoint: "computeMain",
@@ -289,6 +291,7 @@ export default ({ ctx }: SystemOptions) => ({
         uEnvMap: envMap,
         uEnvMapSampler: envSampler,
         uIrradianceCoefficients: resources.irradianceCoefficients,
+        uParams: { exposure },
       },
       dispatch: 1,
     });
@@ -301,7 +304,7 @@ export default ({ ctx }: SystemOptions) => ({
         uEnvMap: envMap,
         uEnvMapSampler: envSampler,
         uOutput: resources.radianceStorageViews![0]!,
-        uParams: { faceSize: CUBEMAP_SIZE },
+        uParams: { faceSize: CUBEMAP_SIZE, exposure },
       },
       dispatch: dispatch2d(CUBEMAP_SIZE),
     });
@@ -348,6 +351,7 @@ export default ({ ctx }: SystemOptions) => ({
   updateReflectionProbeEntity(
     entity: Entity,
     envMap: GpuTexture,
+    exposure: number,
     dirty: boolean,
   ) {
     let cached = this.cache[entity.id];
@@ -373,9 +377,17 @@ export default ({ ctx }: SystemOptions) => ({
       dirty = true;
     }
 
+    // Exposure is baked into the SH + radiance cube (v6 filters the raw env map
+    // rather than re-rendering the exposed skybox, as v5 did), so a change has to
+    // rebake for lit materials to track it.
+    if (cached.exposure !== exposure) {
+      cached.exposure = exposure;
+      dirty = true;
+    }
+
     if (dirty) {
       entity.reflectionProbe!.dirty = false;
-      this.bake(cached.resources, envMap);
+      this.bake(cached.resources, envMap, exposure);
     }
   },
 
@@ -430,6 +442,7 @@ export default ({ ctx }: SystemOptions) => ({
         this.updateReflectionProbeEntity(
           entity,
           envMap,
+          skybox.exposure ?? 1,
           !!entity.reflectionProbe.dirty || !!skybox._skyTextureChanged,
         );
       }
