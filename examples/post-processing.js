@@ -29,18 +29,18 @@ const State = {
   baseColor: [0.8, 0.1, 0.1, 1.0],
 
   msaa: false,
-  taa: false,
-  motionBlur: false,
-  ssao: false,
-  dof: false,
-  bloom: false,
+  taa: true,
+  motionBlur: true,
+  ssao: true,
+  dof: true,
+  bloom: true,
   fog: false,
-  vignette: false,
-  lut: false,
-  colorCorrection: false,
+  vignette: true,
+  lut: true,
+  colorCorrection: true,
   smaa: false,
-  fxaa: false,
-  filmGrain: false,
+  fxaa: true,
+  filmGrain: true,
 };
 
 const pixelRatio = 1; // devicePixelRatio;
@@ -78,11 +78,15 @@ const camera = components.camera({
   fStop: 4,
   clearColor: [0, 0, 0, 0],
 });
+// Subcomponents go through their own factory rather than a bare object literal:
+// the factory is where the defaults live, and a literal carries only the keys it
+// spells out — a pass reading one it never set packs an undefined into its
+// uniform block.
 const postProcessing = components.postProcessing({
-  msaa: {
+  msaa: components.postProcessing.msaa({
     sampleCount: 4,
-  },
-  motionBlur: {
+  }),
+  motionBlur: components.postProcessing.motionBlur({
     intensity: 1,
     samples: 35,
     tileSize: 40,
@@ -90,50 +94,66 @@ const postProcessing = components.postProcessing({
     directionBlend: 1.5,
     jitterScale: 27,
     tileBlend: 1,
-  },
-  taa: {
+  }),
+  taa: components.postProcessing.taa({
     blendFactor: 0.1,
     varianceGamma: 1.25,
     sharpness: 0,
     disocclusionTolerance: 0.02,
     debug: false,
-  },
-  ssao: {
+  }),
+  ssao: components.postProcessing.ssao({
     type: "sao", // "gtao",
-    noiseTexture: true,
     mix: 1,
-    // samples: options?.type === "gtao" ? 6 : 11,
-    samples: 11,
-    intensity: 2.2,
-    radius: 0.5,
-    bias: 0.001, // cm
-    blurRadius: 0.5,
-    blurSharpness: 10,
+    radius: 0.5, // m
     brightness: 0,
     contrast: 1,
     // SAO
+    noiseTexture: true,
+    samples: 11, // GTAO: steps per slice, 3
+    intensity: 2.2,
+    bias: 0.001, // cm
     spiralTurns: 7,
+    blurRadius: 0.5,
+    blurSharpness: 10,
     // GTAO
     slices: 3,
-    multiBounce: "analytic",
-    colorBounceIntensity: 1,
-  },
-  dof: {
-    type: "gustafsson", // upitis
-    physical: true,
+    bentNormals: false,
+    radiusMultiplier: 1.457,
+    falloffRange: 0.615,
+    sampleDistributionPower: 2,
+    thinOccluderCompensation: 0,
+    finalValuePower: 2.2,
+    depthMipSamplingOffset: 3.3,
+    denoisePasses: 1,
+    denoiseBlurBeta: 1.2,
+  }),
+  dof: components.postProcessing.dof({
+    // physical: true,
+    physical: false,
     focusDistance: 7,
     focusScale: 1,
-    samples: 6,
+    blurriness: 0.03,
+    focusRange: 1,
+    focusFalloff: 1,
     focusOnScreenPoint: false,
     screenPoint: [0.5, 0.5],
-    chromaticAberration: 0.7,
+    maxCoCRadius: 0.05,
+    rings: 4,
+    samples: 6,
+    ringOcclusion: true,
+    postFilter: true,
+    transitionBlur: true,
+    blades: 0,
+    bladeRotation: 0,
+    bladeCurvature: 0,
+    chromaticAberration: 0.05,
     luminanceThreshold: 0.7,
     luminanceGain: 1,
     luminanceKnee: 0.5,
-    shape: "disk",
     debug: false,
-  },
-  bloom: {
+  }),
+  bloom: components.postProcessing.bloom({
     quality: 1,
     colorFunction: "luma",
     threshold: 1,
@@ -141,8 +161,8 @@ const postProcessing = components.postProcessing({
     source: false,
     radius: 1,
     intensity: 0.1,
-  },
-  fog: {
+  }),
+  fog: components.postProcessing.fog({
     color: [0.5, 0.5, 0.5],
     start: 5,
     density: 0.15,
@@ -152,12 +172,12 @@ const postProcessing = components.postProcessing({
     sunIntensity: 0.1,
     sunColor: [0.98, 0.98, 0.7],
     inscatteringCoeffs: [0.3, 0.3, 0.3],
-  },
-  vignette: {
+  }),
+  vignette: components.postProcessing.vignette({
     radius: 0.8,
     intensity: 0.2,
-  },
-  lut: {
+  }),
+  lut: components.postProcessing.lut({
     texture: await getGpuTexture(
       ctx,
       getURL(`assets/textures/lut/lookup-autumn.png`),
@@ -170,29 +190,29 @@ const postProcessing = components.postProcessing({
         aniso: 0,
       },
     ),
-  },
-  colorCorrection: {
+  }),
+  colorCorrection: components.postProcessing.colorCorrection({
     brightness: 0,
     contrast: 1,
     saturation: 1,
     hue: 0,
-  },
-  smaa: {
+  }),
+  smaa: components.postProcessing.smaa({
     quality: 2,
     edges: "luma",
-  },
-  fxaa: {
+  }),
+  fxaa: components.postProcessing.fxaa({
     quality: 3,
     subPixelQuality: 0.75,
-  },
-  filmGrain: {
+  }),
+  filmGrain: components.postProcessing.filmGrain({
     quality: 2,
     size: 1.6,
     intensity: 0.05,
     colorIntensity: 0.6,
     luminanceIntensity: 1,
     speed: 0.5,
-  },
+  }),
   exposure: 1,
   toneMap: "aces",
   opacity: 1,
@@ -441,6 +461,13 @@ gui.addRadioList(
     "motionBlur.neighborMax",
     "taa.main",
     "ssao.main",
+    "ssao.edges",
+    "ssao.denoise[0]",
+    "dof.prefilter",
+    "dof.tileDilate",
+    "dof.far",
+    "dof.near",
+    "dof.debug",
     "dof.main",
     "bloom.threshold",
     "bloom.downsample[3]",
@@ -623,18 +650,43 @@ gui.addParam("Slices", postProcessing.ssao, "slices", {
   max: 20,
   step: 1,
 });
-gui.addRadioList(
-  "Multi bounce",
-  postProcessing.ssao,
-  "multiBounce",
-  [false, "analytic", "screen-space"].map((value) => ({
-    name: value || "off",
-    value,
-  })),
-);
-gui.addParam("Bounce intensity", postProcessing.ssao, "colorBounceIntensity", {
+gui.addParam("Bent normals", postProcessing.ssao, "bentNormals");
+gui.addParam("Radius multiplier", postProcessing.ssao, "radiusMultiplier", {
+  min: 0.3,
+  max: 3,
+});
+gui.addParam("Falloff range", postProcessing.ssao, "falloffRange", {
   min: 0,
-  max: 100,
+  max: 1,
+});
+gui.addParam(
+  "Sample distribution",
+  postProcessing.ssao,
+  "sampleDistributionPower",
+  { min: 1, max: 3 },
+);
+gui.addParam("Thin occluder", postProcessing.ssao, "thinOccluderCompensation", {
+  min: 0,
+  max: 0.7,
+});
+gui.addParam("Final value power", postProcessing.ssao, "finalValuePower", {
+  min: 0.5,
+  max: 5,
+});
+gui.addParam(
+  "Depth mip offset",
+  postProcessing.ssao,
+  "depthMipSamplingOffset",
+  { min: 0, max: 30 },
+);
+gui.addParam("Denoise passes", postProcessing.ssao, "denoisePasses", {
+  min: 0,
+  max: 3,
+  step: 1,
+});
+gui.addParam("Denoise blur beta", postProcessing.ssao, "denoiseBlurBeta", {
+  min: 0,
+  max: 5,
 });
 gui.addLabel("Blur");
 gui.addParam("Radius", postProcessing.ssao, "blurRadius", { min: 0, max: 2 });
@@ -647,31 +699,72 @@ gui.addColumn("Depth of Field");
 gui.addParam("Enabled", State, "dof", null, () => {
   enablePostProPass("dof");
 });
+gui.addParam("Debug CoC", postProcessing.dof, "debug");
 gui.addParam("Physical", postProcessing.dof, "physical");
-gui.addRadioList(
-  "Type",
-  postProcessing.dof,
-  "type",
-  ["gustafsson", "upitis"].map((value) => ({ name: value, value })),
-);
 gui.addParam("Focus Distance", postProcessing.dof, "focusDistance", {
   min: 0,
   max: 10,
 });
+gui.addParam("Focus On Screen Point", postProcessing.dof, "focusOnScreenPoint");
+gui.addParam("Screen Point X", postProcessing.dof.screenPoint, "0", {
+  min: 0,
+  max: 1,
+});
+gui.addParam("Screen Point Y", postProcessing.dof.screenPoint, "1", {
+  min: 0,
+  max: 1,
+});
+// Physical
 gui.addParam("Focus Scale", postProcessing.dof, "focusScale", {
   min: 0,
   max: 20,
 });
+// Non-physical
+gui.addParam("Blurriness", postProcessing.dof, "blurriness", {
+  min: 0,
+  max: 0.2,
+});
+gui.addParam("Focus Range", postProcessing.dof, "focusRange", {
+  min: 0,
+  max: 20,
+});
+gui.addParam("Focus Falloff", postProcessing.dof, "focusFalloff", {
+  min: 0.1,
+  max: 4,
+});
+
+gui.addColumn("Depth of Field Bokeh");
+gui.addParam("Max CoC Radius", postProcessing.dof, "maxCoCRadius", {
+  min: 0,
+  max: 0.2,
+});
+gui.addParam("Rings", postProcessing.dof, "rings", { min: 1, max: 6, step: 1 });
 gui.addParam("Samples", postProcessing.dof, "samples", {
-  min: 1,
-  max: 6,
+  min: 3,
+  max: 12,
   step: 1,
+});
+gui.addParam("Ring Occlusion", postProcessing.dof, "ringOcclusion");
+gui.addParam("Post Filter", postProcessing.dof, "postFilter");
+gui.addParam("Transition Blur", postProcessing.dof, "transitionBlur");
+gui.addParam("Blades", postProcessing.dof, "blades", {
+  min: 0,
+  max: 11,
+  step: 1,
+});
+gui.addParam("Blade Rotation", postProcessing.dof, "bladeRotation", {
+  min: 0,
+  max: Math.PI,
+});
+gui.addParam("Blade Curvature", postProcessing.dof, "bladeCurvature", {
+  min: 0,
+  max: 1,
 });
 gui.addParam(
   "Chromatic Aberration",
   postProcessing.dof,
   "chromaticAberration",
-  { min: 0, max: 4 },
+  { min: 0, max: 0.5 },
 );
 gui.addParam("Luminance Threshold", postProcessing.dof, "luminanceThreshold", {
   min: 0,
@@ -682,21 +775,6 @@ gui.addParam("Luminance Gain", postProcessing.dof, "luminanceGain", {
   max: 2,
 });
 gui.addParam("Luminance Knee", postProcessing.dof, "luminanceKnee", {
-  min: 0,
-  max: 1,
-});
-gui.addRadioList(
-  "Shape",
-  postProcessing.dof,
-  "shape",
-  ["disk", "pentagon"].map((value) => ({ name: value, value })),
-);
-gui.addParam("Focus On Screen Point", postProcessing.dof, "focusOnScreenPoint");
-gui.addParam("Screen Point", postProcessing.dof.screenPoint, "0", {
-  min: 0,
-  max: 1,
-});
-gui.addParam("Screen Point", postProcessing.dof.screenPoint, "1", {
   min: 0,
   max: 1,
 });

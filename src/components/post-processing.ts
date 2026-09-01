@@ -90,18 +90,44 @@ postProcessing.ssao = (options?: SSAOComponentOptions) => ({
 
 /** Post Processing DoF subcomponent */
 postProcessing.dof = (options?: DoFComponentOptions) => ({
-  type: "gustafsson", // "upitis"
+  // The camera's own optics. False swaps in the three artistic knobs below,
+  // which describe the same curve without asking for a lens.
   physical: true,
-  focusDistance: 7,
-  focusScale: 1,
+  focusDistance: 7, // m
   focusOnScreenPoint: false,
   screenPoint: [0.5, 0.5],
-  chromaticAberration: 0.7,
-  luminanceThreshold: 0.7,
-  luminanceGain: 1,
-  luminanceKnee: 0.5,
+
+  // Physical only: the f-stop and the focal length decide the blur, and this is
+  // the override for a shot that wants more than the lens gives.
+  focusScale: 1,
+
+  // Artistic only.
+  blurriness: 0.03,
+  focusRange: 1, // m
+  focusFalloff: 1,
+
+  // Radius cap as a fraction of viewport height, and so also the sample budget:
+  // the gather spends `rings`/`samples` taps over whatever radius a tile asks
+  // for, never more.
+  maxCoCRadius: 0.05,
+  rings: 4,
   samples: 6,
-  shape: "disk", // "pentagon"
+  ringOcclusion: true,
+  postFilter: true,
+  transitionBlur: true,
+
+  // Circular. Three or more blades gives the polygonal bokeh a real diaphragm
+  // stops down to.
+  blades: 0,
+  bladeRotation: 0,
+  bladeCurvature: 0,
+
+  chromaticAberration: 0.05,
+  luminanceThreshold: 0.7,
+  // Off: an unclamped HDR gather already spreads a highlight's energy over its
+  // disc correctly, so this is an artistic punch-up and not a correction.
+  luminanceGain: 0,
+  luminanceKnee: 0.5,
   debug: false,
   ...options,
 });

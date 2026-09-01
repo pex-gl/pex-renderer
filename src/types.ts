@@ -519,48 +519,156 @@ export interface SSAOComponentOptions {
   denoiseBlurBeta?: number;
 }
 export interface DoFComponentOptions {
-  /** Gustafsson uses a spiral pattern while Upitis uses a circular one. */
-  type?: "gustafsson" | "upitis";
-  /** Use camera f-stop and focal length. */
+  /**
+   * Take the circle of confusion from the camera's own optics — `focalLength`,
+   * `fStop` and the sensor height the camera system fitted to the viewport.
+   *
+   * False swaps in {@link DoFComponentOptions.blurriness},
+   * {@link DoFComponentOptions.focusRange} and
+   * {@link DoFComponentOptions.focusFalloff}, which describe the same curve for
+   * a scene that has no camera to speak of. Both produce a radius in the same
+   * units through the same cap, so switching changes the curve and never the
+   * scale.
+   */
   physical?: boolean;
   /** The point to focus on in meters. */
   focusDistance?: number;
   /**
-   * Non physically based value for artistic control when physical is false,
-   * otherwise acts as an fStop divider.
-   */
-  focusScale?: number;
-  /**
    * Read the depth buffer to find the first intersecting object to focus on
    * instead of a fixed focus distance.
+   *
+   * A median over a small cross rather than one texel, so a thin object
+   * crossing the reticle does not rack the whole image's focus onto it.
    */
   focusOnScreenPoint?: boolean;
   /** The normalized screen point to focus on when "focusOnScreenPoint" is true. */
   screenPoint?: Vec2;
-  /** Amount of RGB separation. */
+  /**
+   * Multiplier on the circle of confusion, when `physical`. The f-stop and the
+   * focal length decide the blur; this is the artistic override for a shot that
+   * wants more of it than the lens gives.
+   */
+  focusScale?: number;
+  /**
+   * Background blur at infinity, as a fraction of viewport height, when
+   * `physical` is false. The foreground's is unbounded and stops at
+   * {@link DoFComponentOptions.maxCoCRadius}, which is how a real lens behaves.
+   */
+  blurriness?: number;
+  /** Depth of the in-focus zone around the focus distance in meters, when `physical` is false. */
+  focusRange?: number;
+  /**
+   * How sharply blur ramps outside that zone, when `physical` is false. 1 is
+   * linear, above holds focus longer then blurs faster, below leaves the zone
+   * immediately.
+   */
+  focusFalloff?: number;
+  /**
+   * Largest circle of confusion radius, as a fraction of viewport height.
+   *
+   * A cap, and also the sample budget: the gather spends
+   * {@link DoFComponentOptions.rings} and {@link DoFComponentOptions.samples}
+   * taps over whatever radius the neighbourhood asks for, so this decides how
+   * thinly they can ever be spread. A fraction of height rather than pixels,
+   * which is what keeps one setting blurring over the same fraction of the
+   * image at every resolution.
+   */
+  maxCoCRadius?: number;
+  /**
+   * Concentric rings of samples in the gather. Quality, not radius.
+   *
+   * Rings are evenly spaced and carry samples in proportion to their
+   * circumference, so tap density is uniform per unit area and one mip level
+   * serves the whole kernel. Raising this converges on a flat disc; it does not
+   * change how far the blur reaches.
+   */
+  rings?: number;
+  /**
+   * Samples in the first ring; ring i carries i times this. Quality, not
+   * radius.
+   */
+  samples?: number;
+  /**
+   * Let each ring of the far field occlude the rings beyond it, approximating a
+   * depth ordering within the background: two background surfaces at different
+   * depths then read as two surfaces rather than one average. Off is the plain
+   * weighted sum, where the further one bleeds through.
+   *
+   * Only within the background. How far the background bleeds over the
+   * geometry in front of it is capped by that geometry's own defocus, which is
+   * unconditional and not this.
+   */
+  ringOcclusion?: boolean;
+  /**
+   * Filter the gathered fields before compositing, which is what removes the
+   * ring structure a modest sample budget leaves behind. One pass and two half
+   * resolution textures.
+   */
+  postFilter?: boolean;
+  /**
+   * Blur the sharp image by its own small radius where the half-resolution
+   * gather is too coarse to describe one — about one to three pixels.
+   *
+   * What stops focus racking from popping as content crosses that width. Three
+   * extra full-resolution taps.
+   */
+  transitionBlur?: boolean;
+  /**
+   * Diaphragm blades. Under three the aperture is round.
+   *
+   * The shape holds at every defocus amount, as a real aperture's does — its
+   * bokeh is an image of the opening, so a six-bladed diaphragm is hexagonal
+   * whether the disc is three pixels or three hundred. What makes a small
+   * bokeh look round is that a three-pixel hexagon cannot be resolved, and
+   * that is a sampling limit rather than the shape changing.
+   */
+  blades?: number;
+  /** Diaphragm rotation in radians. */
+  bladeRotation?: number;
+  /** Rounds the blades off, 0 straight to 1 circular. */
+  bladeCurvature?: number;
+  /**
+   * Per-channel displacement of the bokeh, as a fraction of its radius. 0 skips
+   * the three taps it costs.
+   *
+   * Only the fringing that scales with the circle of confusion belongs here.
+   * The lateral kind scales with distance from the optical centre instead,
+   * which is a different function of a different variable and belongs with
+   * distortion and vignetting, after the tone map.
+   */
   chromaticAberration?: number;
-  /** Threshold for out of focus highlights. */
+  /**
+   * Threshold for out of focus highlights, on luma after
+   * {@link PostProcessingComponentOptions.exposure} — the units bloom
+   * thresholds in, so the two effects agree on what counts as bright.
+   */
   luminanceThreshold?: number;
-  /** Gain for out of focus highlights. */
+  /**
+   * Extra punch for out of focus highlights, as a multiplier approaching
+   * `1 + luminanceGain`. Artistic, and off by default.
+   *
+   * Not an energy correction, despite what the control is usually called
+   * elsewhere: a normalised gather of unclamped radiance already spreads a
+   * highlight over its disc correctly, since a point of radiance `L` covering
+   * one pixel over a disc of area `A` arrives at `L / A` per pixel on its own.
+   * The boost older depth of field carries exists because a clamped pipeline
+   * destroyed the highlight's real intensity before the blur ran. Nothing is
+   * clamped here, so raising this makes bokeh brighter than the lens would —
+   * which is a look, not a fix.
+   */
   luminanceGain?: number;
   /**
    * Half-width of the ramp into the highlight boost, as a fraction of
    * {@link DoFComponentOptions.luminanceThreshold}. 0 is a hard cutoff, 0.5 a
    * wide fade.
    *
-   * The boost is multiplied by a per-pixel circle of confusion, which a jittered
-   * raster makes unsteady, so a hard cutoff turns a highlight sitting at the
+   * The boost is multiplied by a per-pixel circle of confusion, which is never
+   * perfectly steady, so a hard cutoff turns a highlight sitting at the
    * threshold into one that blinks instead of one that fades in as it
    * defocuses.
    */
   luminanceKnee?: number;
-  /**
-   * Iteration steps. More steps means better blur but also degraded
-   * performances.
-   */
-  samples?: number;
-  /** The bokeh shape for type "upitis". */
-  shape?: "disk" | "pentagon";
+  /** Show the circle of confusion instead of the image: near red, far blue, the tile's gather radius green. */
   debug?: boolean;
 }
 export interface MSAAComponentOptions {

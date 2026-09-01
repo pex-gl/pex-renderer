@@ -4,12 +4,12 @@ import {
   entity as createEntity,
   components,
   loaders,
-} from "../index.js";
+} from "pex-renderer";
 
-import createContext from "pex-context";
+import * as gpu from "pex-gpu";
 import createGUI from "pex-gui";
 import { utils, quat } from "pex-math";
-import { pipeline as SHADERS } from "pex-shaders";
+// import { pipeline as SHADERS } from "pex-shaders";
 
 import fitRect from "fit-rect";
 import { getEnvMap, getURL } from "./utils.js";
@@ -27,13 +27,16 @@ const State = {
 };
 
 const pixelRatio = devicePixelRatio;
-const ctx = createContext({ pixelRatio });
+const ctx = await gpu.createContext({ pixelRatio });
 const renderEngine = createRenderEngine({ ctx, debug: true });
 const world = createWorld();
 
 const skyboxEntity = createEntity({
   skybox: components.skybox({
-    envMap: await getEnvMap(ctx, "assets/envmaps/Mono_Lake_B/Mono_Lake_B.hdr"),
+    envMap: await loaders.hdr(
+      ctx,
+      getURL("assets/envmaps/Mono_Lake_B/Mono_Lake_B.hdr"),
+    ),
   }),
 });
 world.add(skyboxEntity);
@@ -77,8 +80,33 @@ world.entities.push(...scene.entities);
 
 const cameraEntity = scene.entities.filter((entity) => entity.camera)[0];
 const postProcessing = components.postProcessing({
+  taa: components.postProcessing.taa(),
   dof: components.postProcessing.dof({
+    physical: true,
     focusDistance: 7.95,
+    focusOnScreenPoint: false,
+    screenPoint: [0.5, 0.5],
+    // Physical only
+    focusScale: 1,
+    // Artistic only
+    blurriness: 0.03,
+    focusRange: 1,
+    focusFalloff: 1,
+    // Bokeh
+    maxCoCRadius: 0.05,
+    rings: 4,
+    samples: 6,
+    ringOcclusion: true,
+    postFilter: true,
+    transitionBlur: true,
+    blades: 0,
+    bladeRotation: 0,
+    bladeCurvature: 0,
+    chromaticAberration: 0.05,
+    luminanceThreshold: 0.7,
+    luminanceGain: 1,
+    luminanceKnee: 0.5,
+    debug: false,
   }),
 });
 cameraEntity.postProcessing = postProcessing;
@@ -96,48 +124,48 @@ rectCtx.strokeRect(0, 0, rectCanvas.width, rectCanvas.height);
 const overlayEntity = createEntity({
   overlay: {
     bounds: [0, 0, 1, 1],
-    texture: ctx.texture2D({ data: rectCanvas, width: 1, height: 1 }),
+    texture: gpu.createTexture(ctx, { data: rectCanvas, width: 1, height: 1 }),
   },
 });
 world.add(overlayEntity);
 
-const createOverlayRenderer = ({ ctx }) => {
-  const overlayRendererSystem = {
-    type: "overlay-renderer",
-    cache: {},
-    drawOverlayCmd: {
-      attributes: {
-        aPosition: ctx.vertexBuffer([-1, -1, 1, -1, 1, 1, -1, 1]),
-        aTexCoord0: ctx.vertexBuffer([0, 0, 1, 0, 1, 1, 0, 1]),
-      },
-      indices: ctx.indexBuffer([0, 1, 2, 0, 2, 3]),
-      pipeline: ctx.pipeline({
-        program: ctx.program({
-          vert: SHADERS.overlay.vert,
-          frag: SHADERS.overlay.frag,
-        }),
-        depthWrite: false,
-        blend: true,
-        blendSrcRGBFactor: ctx.BlendFactor.One,
-        blendDstRGBFactor: ctx.BlendFactor.OneMinusSrcAlpha,
-        blendSrcAlphaFactor: ctx.BlendFactor.One,
-        blendDstAlphaFactor: ctx.BlendFactor.OneMinusSrcAlpha,
-      }),
-    },
-    render(entity) {
-      ctx.submit(overlayRendererSystem.drawOverlayCmd, {
-        uniforms: {
-          uBounds: entity.overlay.bounds,
-          uTexture: entity.overlay.texture,
-        },
-      });
-    },
-    update: () => {},
-  };
-  return overlayRendererSystem;
-};
+// const createOverlayRenderer = ({ ctx }) => {
+//   const overlayRendererSystem = {
+//     type: "overlay-renderer",
+//     cache: {},
+//     drawOverlayCmd: {
+//       attributes: {
+//         aPosition: ctx.vertexBuffer([-1, -1, 1, -1, 1, 1, -1, 1]),
+//         aTexCoord0: ctx.vertexBuffer([0, 0, 1, 0, 1, 1, 0, 1]),
+//       },
+//       indices: ctx.indexBuffer([0, 1, 2, 0, 2, 3]),
+//       pipeline: ctx.pipeline({
+//         program: ctx.program({
+//           vert: SHADERS.overlay.vert,
+//           frag: SHADERS.overlay.frag,
+//         }),
+//         depthWrite: false,
+//         blend: true,
+//         blendSrcRGBFactor: ctx.BlendFactor.One,
+//         blendDstRGBFactor: ctx.BlendFactor.OneMinusSrcAlpha,
+//         blendSrcAlphaFactor: ctx.BlendFactor.One,
+//         blendDstAlphaFactor: ctx.BlendFactor.OneMinusSrcAlpha,
+//       }),
+//     },
+//     render(entity) {
+//       ctx.submit(overlayRendererSystem.drawOverlayCmd, {
+//         uniforms: {
+//           uBounds: entity.overlay.bounds,
+//           uTexture: entity.overlay.texture,
+//         },
+//       });
+//     },
+//     update: () => {},
+//   };
+//   return overlayRendererSystem;
+// };
 
-const overlayRenderer = createOverlayRenderer({ ctx });
+// const overlayRenderer = createOverlayRenderer({ ctx });
 
 // GUI
 const gui = createGUI(ctx);
@@ -214,25 +242,66 @@ gui.addRadioList(
 
 gui.addColumn("Depth of Field");
 gui.addParam("Enabled", postProcessing, "dof");
+gui.addParam("Debug CoC", postProcessing.dof, "debug");
 gui.addParam("Physical", postProcessing.dof, "physical");
-gui.addRadioList(
-  "Type",
-  postProcessing.dof,
-  "type",
-  ["gustafsson", "upitis"].map((value) => ({ name: value, value })),
-);
 gui.addParam("Focus distance", postProcessing.dof, "focusDistance", {
   min: 0,
   max: 100,
 });
+gui.addParam("On Screen Point", postProcessing.dof, "focusOnScreenPoint");
+gui.addParam("Screen Point X", postProcessing.dof.screenPoint, "0", {
+  min: 0,
+  max: 1,
+});
+gui.addParam("Screen Point Y", postProcessing.dof.screenPoint, "1", {
+  min: 0,
+  max: 1,
+});
+gui.addLabel("Physical");
 gui.addParam("Focus scale", postProcessing.dof, "focusScale", {
   min: 0,
   max: 20,
 });
+gui.addLabel("Artistic");
+gui.addParam("Blurriness", postProcessing.dof, "blurriness", {
+  min: 0,
+  max: 0.2,
+});
+gui.addParam("Focus range", postProcessing.dof, "focusRange", {
+  min: 0,
+  max: 20,
+});
+gui.addParam("Focus falloff", postProcessing.dof, "focusFalloff", {
+  min: 0.1,
+  max: 4,
+});
+
+gui.addColumn("Bokeh");
+gui.addParam("Max CoC Radius", postProcessing.dof, "maxCoCRadius", {
+  min: 0,
+  max: 0.2,
+});
+gui.addParam("Rings", postProcessing.dof, "rings", { min: 1, max: 6, step: 1 });
 gui.addParam("Samples", postProcessing.dof, "samples", {
-  min: 1,
-  max: 6,
+  min: 3,
+  max: 12,
   step: 1,
+});
+gui.addParam("Ring Occlusion", postProcessing.dof, "ringOcclusion");
+gui.addParam("Post Filter", postProcessing.dof, "postFilter");
+gui.addParam("Transition Blur", postProcessing.dof, "transitionBlur");
+gui.addParam("Blades", postProcessing.dof, "blades", {
+  min: 0,
+  max: 11,
+  step: 1,
+});
+gui.addParam("Blade Rotation", postProcessing.dof, "bladeRotation", {
+  min: 0,
+  max: Math.PI,
+});
+gui.addParam("Blade Curvature", postProcessing.dof, "bladeCurvature", {
+  min: 0,
+  max: 1,
 });
 gui.addParam(
   "Chromatic Aberration",
@@ -240,7 +309,7 @@ gui.addParam(
   "chromaticAberration",
   {
     min: 0,
-    max: 4,
+    max: 0.5,
   },
 );
 gui.addParam("Luminance Threshold", postProcessing.dof, "luminanceThreshold", {
@@ -251,18 +320,10 @@ gui.addParam("Luminance Gain", postProcessing.dof, "luminanceGain", {
   min: 0,
   max: 2,
 });
-gui.addRadioList(
-  "Shape",
-  postProcessing.dof,
-  "shape",
-  ["disk", "pentagon"].map((value) => ({ name: value, value })),
-);
-gui.addParam("On Screen Point", postProcessing.dof, "focusOnScreenPoint");
-gui.addParam("Screen Point", postProcessing.dof, "screenPoint", {
+gui.addParam("Luminance Knee", postProcessing.dof, "luminanceKnee", {
   min: 0,
   max: 1,
 });
-gui.addParam("Debug", postProcessing.dof, "debug");
 
 // Events
 let debugOnce = false;
@@ -279,7 +340,7 @@ function onResize() {
     window.innerHeight * pixelRatio,
   ];
 
-  ctx.set({ pixelRatio, width, height });
+  gpu.resize(ctx, width, height, pixelRatio);
 
   State.aspectRatios[2] = [windowBounds[2], windowBounds[3]];
 
@@ -335,12 +396,12 @@ window.addEventListener("keydown", ({ key }) => {
   if (key === "d") debugOnce = true;
 });
 
-ctx.frame(() => {
+gpu.frame(ctx, async () => {
   renderEngine.update(world.entities);
-  renderEngine.render(world.entities, cameraEntity);
-  overlayRenderer.render(overlayEntity);
+  await renderEngine.render(world.entities, cameraEntity);
+  // overlayRenderer.render(overlayEntity);
 
-  ctx.debug(debugOnce);
+  gpu.debug(ctx, debugOnce);
   debugOnce = false;
 
   const aspectRatio = cameraEntity.camera.aspect;

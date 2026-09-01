@@ -117,6 +117,33 @@ export interface PostProcessingPassOptions {
   targets?: { name: string; texture: ResourceHandle; clearValue?: GPUColor }[];
   /** Size of the allocated target. Defaults to the full viewport. */
   size?: number[];
+  /**
+   * Allocate this many mip levels on the target.
+   *
+   * For a later pass that samples the result at a varying rate: a tap standing
+   * for more than one texel has to read the level whose texels are that size,
+   * or it reports a point where it was asked about an area — which is what
+   * turns a sparse gather into a picture of its own sample pattern.
+   *
+   * Filling them is the caller's, through `level` and `views`. A generic box
+   * reduction is only correct for a texture that is all colour: anything
+   * carrying a second quantity — a circle of confusion, a depth, a coverage —
+   * needs a filter that knows what averaging it would mean.
+   */
+  mipLevelCount?: number;
+  /** Mip level of the target to draw into. Defaults to 0. */
+  level?: number;
+  /**
+   * Bindings resolved as a view of one mip or layer inside `execute`, rather
+   * than as read edges like `uniforms`.
+   *
+   * What a pass filling a mip chain needs: it writes level N and samples level
+   * N-1 of the same texture, and a handle may not be read and written by one
+   * pass. The write-after-write edge against the previous level's pass is what
+   * orders them instead. Resolved through the pass context, never
+   * `createView()` — see `resolveView`.
+   */
+  views?: Record<string, { handle: ResourceHandle } & SubResourceView>;
   /** Format of the allocated target. Defaults to the effect's working format. */
   format?: GPUTextureFormat;
   uniforms?: PassUniforms;
@@ -422,6 +449,9 @@ export default ({
       targets,
       size = [renderView.viewport[2]!, renderView.viewport[3]!],
       format,
+      mipLevelCount,
+      level,
+      views,
       uniforms,
       clearValue,
       chain,
@@ -429,6 +459,7 @@ export default ({
   ): ResourceHandle {
     const viewId = renderView.cameraEntity!.id;
     const key = `${prefix}.${name}`;
+    const mipped = !!mipLevelCount && mipLevelCount > 1;
 
     const output =
       target ??
@@ -437,6 +468,7 @@ export default ({
         width: Math.max(1, Math.trunc(size[0]!)),
         height: Math.max(1, Math.trunc(size[1]!)),
         format: format ?? (srgb ? "rgba8unorm-srgb" : "rgba16float"),
+        ...(mipped && { mipLevelCount }),
       });
 
     const input = source === undefined ? textures.get("color") : source;
@@ -484,7 +516,7 @@ export default ({
     frameGraph.addPass({
       name: `${key}.${viewId}`,
       color: [
-        { texture: output, ...(clearValue && { clearValue }) },
+        { texture: output, ...(level && { level }), ...(clearValue && { clearValue }) },
         ...(targets ?? []).map(({ texture, clearValue: value }) => ({
           texture,
           ...(value && { clearValue: value }),
@@ -492,11 +524,16 @@ export default ({
       ],
       uniforms: passUniforms,
       renderView,
-      execute: ({ uniforms: resolved }) => {
+      execute: ({ uniforms: resolved, resolveView }) => {
         this.drawFullscreen({
           label: key,
           pipeline: variant as RenderPipeline,
-          uniforms: resolved,
+          uniforms: {
+            ...resolved,
+            ...mapValues(views ?? {}, ({ handle, ...view }) =>
+              resolveView(handle, view),
+            ),
+          },
         });
       },
     });
