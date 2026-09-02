@@ -116,11 +116,10 @@ postProcessing.dof = (options?: DoFComponentOptions) => ({
   focusRange: 1, // m
   focusFalloff: 1,
 
-  // Radius cap as a fraction of viewport height, and so also the sample budget:
-  // the gather spends `rings`/`samples` taps over whatever radius a tile asks
-  // for, never more.
+  // Radius cap as a fraction of viewport height. `rings` caps what the gather
+  // may spend reaching it; below that the count follows the radius.
   maxCoCRadius: 0.05,
-  rings: 4,
+  rings: 8,
   samples: 6,
   ringOcclusion: true,
   postFilter: true,

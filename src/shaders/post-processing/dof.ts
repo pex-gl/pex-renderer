@@ -17,8 +17,8 @@ import { fullscreenVertex, postProcessingStruct } from "./common.js";
 // fields, a post filter, and the composite.
 //
 // Each includes the chunk members it calls into and no more — the tile passes
-// touch neither depth nor a circle of confusion, and the post filter needs
-// none of it.
+// touch neither depth nor a circle of confusion, and the post filter needs only
+// a luminance.
 //
 // Plumbing only — coordinates, loop bounds, attachments. What the numbers mean
 // lives in the chunk.
@@ -307,18 +307,24 @@ fn fragmentMain(input: VertexOutput) -> FragmentOutput {
 };
 
 /**
- * Four bilinear taps half a texel out, a 3x3 tent for four samples: what
- * removes the ring structure a modest sample budget leaves behind, on both
- * fields at once.
+ * The post filter, which is a different filter per field.
  *
- * Correct on the near field because it is premultiplied — a linear filter over
- * colour and coverage together is what "over" expects.
+ * The far field takes four bilinear taps half a texel out, a 3x3 tent for four
+ * samples: what removes the ring structure a modest sample budget leaves
+ * behind. Correct on it because a defocused background is smooth by
+ * construction, so there is nothing an average destroys.
+ *
+ * The near field takes nine and a median instead. What it has to remove is not
+ * ring structure but speckle — see `dofFilterNear` — and a tent spreads a speck
+ * rather than rejecting it.
  */
 export const dofPostFilterShader = (): string => {
   const alloc = createBindingAllocator(1);
 
   return formatShader(/* wgsl */ `
 ${postProcessingStruct}
+${SHADERS.luma}
+${SHADERS.depthOfField.postFilter}
 
 ${textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uTexture")}
 ${textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uNearTexture")}
@@ -340,7 +346,14 @@ fn dofTent(tex: texture_2d<f32>, texSampler: sampler, input: VertexOutput) -> ve
 fn fragmentMain(input: VertexOutput) -> FragmentOutput {
   var output: FragmentOutput;
   output.color = dofTent(uTexture, uTextureSampler, input);
-  output.near = dofTent(uNearTexture, uNearTextureSampler, input);
+  // Point sampled, so the nine taps are nine texels: a bilinear read would
+  // average the speck back in before the median could reject it.
+  output.near = dofFilterNear(
+    uNearTexture,
+    uNearTextureSampler,
+    input.texCoord0,
+    uPostProcessing.sourceTexelSize
+  );
   return output;
 }
 `);

@@ -220,7 +220,7 @@ const ENV_MAP_PATH =
 const envMap = await loaders.hdr(ctx, getURL("assets/envmaps/neutral.hdr"));
 const furnaceEnvMap = await loaders.hdr(
   ctx,
-  getURL("assets/envmaps/furnace/furnace-4k.hdr"),
+  getURL("assets/envmaps/furnace/furnace.hdr"),
 );
 
 const skyEntity = createEntity({

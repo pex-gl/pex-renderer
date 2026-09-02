@@ -570,7 +570,13 @@ export interface DoFComponentOptions {
    */
   maxCoCRadius?: number;
   /**
-   * Concentric rings of samples in the gather. Quality, not radius.
+   * Most concentric rings of samples the gather may spend. Quality, not radius.
+   *
+   * A cap rather than a count: one ring per pixel of radius resolves a disc
+   * exactly, so the gather takes that many until this binds. Below it a small
+   * circle of confusion costs proportionally fewer taps; above it the rings
+   * spread and the mip chain covers the gap, which the near field shows first —
+   * its coverage starts falling off in steps one ring apart.
    *
    * Rings are evenly spaced and carry samples in proportion to their
    * circumference, so tap density is uniform per unit area and one mip level

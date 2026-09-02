@@ -116,12 +116,16 @@ const dof: PostProcessingEffect = {
     const tilesY = Math.ceil(halfHeight / tilePixels);
     const tileSize = [tilesX, tilesY];
 
-    const rings = component.rings ?? 4;
+    const rings = component.rings ?? 8;
     const samples = component.samples ?? 6;
 
     // The footprint one tap stands for, which sets how deep the chain has to
     // go. Rings are evenly spaced, so the level has to cover the larger of the
     // radial gap and the arc.
+    //
+    // At the cap, which is where the chain is deepest: the gather takes one
+    // ring per pixel of radius until `rings` binds, so the widest spacing it
+    // can ever ask for is the one this radius produces.
     const spacing = Math.max(
       maxCoCRadius / rings,
       (2 * Math.PI * maxCoCRadius) / (rings * samples),
@@ -418,7 +422,10 @@ const dof: PostProcessingEffect = {
         targets: [{ name: "nearBlur", texture: nearBlur }],
         uniforms: {
           uNearTexture: near,
-          uNearTextureSampler: samplers.linear,
+          // Point sampled, unlike the far field's tent beside it: the near
+          // filter's nine taps have to be nine texels, and interpolating would
+          // average a speck back in before the median could reject it.
+          uNearTextureSampler: samplers.nearest,
         },
       });
       nearField = nearBlur;

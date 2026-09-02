@@ -11,7 +11,7 @@ import * as gpu from "pex-gpu";
 import { quat, vec3 } from "pex-math";
 import { aabb } from "pex-geom";
 import random from "pex-random";
-import createGUI from "pex-gui";
+import createGUI, { DEFAULT_THEME } from "pex-gui";
 
 import { cube, roundedCube, capsule, sphere } from "primitive-geometry";
 
@@ -143,7 +143,7 @@ const postProcessing = components.postProcessing({
     focusOnScreenPoint: false,
     screenPoint: [0.5, 0.5],
     maxCoCRadius: 0.05,
-    rings: 4,
+    rings: 8,
     samples: 6,
     ringOcclusion: true,
     postFilter: true,
@@ -456,14 +456,64 @@ renderEngine.systems
 
 // GUI
 const gui = createGUI(ctx);
-gui.addTab("Rendering");
-gui.addColumn("Render");
+gui.addColumn("Profile");
 gui.addFPSMeeter();
-State.msg = "";
-
 gui.addButton("Toggle Render Pass Graph", () => {
   renderPassGraphViz.toggle();
 });
+
+gui.addHeader("Camera");
+gui.addParam("FoV", camera, "fov", { min: 0, max: (Math.PI / 3) * 2 });
+gui.addParam("FocalLength", camera, "focalLength", { min: 10, max: 200 });
+gui.addParam("F-Stop", cameraEntity.camera, "fStop", { min: 1.2, max: 32 });
+gui.addHeader("Post-Processing");
+gui.addParam("Enabled", State, "enabled", null, () => {
+  if (State.enabled) {
+    cameraEntity.postProcessing = postProcessing;
+  } else {
+    delete cameraEntity.postProcessing;
+  }
+  if (renderPassGraphViz.isRendered()) renderPassGraphViz.draw();
+});
+const enablePostProPass = (name) => {
+  if (State[name]) {
+    if (State[`_${name}`]) postProcessing[name] = State[`_${name}`];
+  } else {
+    State[`_${name}`] = postProcessing[name];
+    delete postProcessing[name];
+  }
+  if (renderPassGraphViz.isRendered()) renderPassGraphViz.draw();
+};
+// gui.addParam("MSAA", State, "msaa", null, () => {
+//   enablePostProPass("msaa");
+// });
+gui.addParam("Exposure", postProcessing, "exposure", { min: 0, max: 5 });
+gui.addRadioList(
+  "Tone Map",
+  postProcessing,
+  "toneMap",
+  [{ name: "none", value: null }].concat(
+    shaders.postProcessing.TONE_MAP_OPERATORS.map((value) => ({
+      name: value,
+      value,
+    })),
+  ),
+);
+gui.addParam("Blades", postProcessing, "blades", { min: 0, max: 11, step: 1 });
+gui.addParam("Blade Rotation", postProcessing, "bladeRotation", {
+  min: 0,
+  max: Math.PI,
+});
+gui.addParam("Blade Curvature", postProcessing, "bladeCurvature", {
+  min: 0,
+  max: 1,
+});
+gui.addParam("Opacity", postProcessing, "opacity", { min: 0, max: 1 });
+
+gui.addTab("Rendering");
+gui.addColumn("Render");
+State.msg = "";
+
 gui.addRadioList(
   "Debug Render",
   renderEngine.renderers.find(
@@ -489,8 +539,8 @@ gui.addRadioList(
     "dof.cocResolve",
     "dof.prefilter",
     "dof.downsample[1]",
-    "dof.downsample[2]",
-    "dof.downsample[3]",
+    // "dof.downsample[2]",
+    // "dof.downsample[3]",
     "dof.tileMaxX",
     "dof.tileMaxY",
     "dof.tileDilate",
@@ -538,8 +588,8 @@ const dummyTexture2D = gpu.createTexture(ctx, {
   format: "rgba8unorm",
 });
 gui.addColumn("Outputs");
-const guiNormalControl = gui.addTexture2D("Normal", null);
 const guiDepthControl = gui.addTexture2D("Depth", null);
+const guiNormalControl = gui.addTexture2D("Normal", null);
 const guiVelocityControl = gui.addTexture2D("Velocity", null);
 const guiAOControl = gui.addTexture2D("AO", null);
 
@@ -575,60 +625,8 @@ gui.addParam("Background Blur", skyboxEntity.skybox, "backgroundBlur", {
 //   });
 // });
 
-// // PostProcess
-// postProcessTab.setActive();
-gui.addParam("Post-Processing enabled", State, "enabled", null, () => {
-  if (State.enabled) {
-    cameraEntity.postProcessing = postProcessing;
-  } else {
-    delete cameraEntity.postProcessing;
-  }
-  if (renderPassGraphViz.isRendered()) renderPassGraphViz.draw();
-});
-const enablePostProPass = (name) => {
-  if (State[name]) {
-    if (State[`_${name}`]) postProcessing[name] = State[`_${name}`];
-  } else {
-    State[`_${name}`] = postProcessing[name];
-    delete postProcessing[name];
-  }
-  if (renderPassGraphViz.isRendered()) renderPassGraphViz.draw();
-};
-gui.addParam("MSAA", State, "msaa", null, () => {
-  enablePostProPass("msaa");
-});
-
-gui.addColumn("Camera");
-gui.addParam("FoV", camera, "fov", { min: 0, max: (Math.PI / 3) * 2 });
-gui.addParam("FocalLength", camera, "focalLength", { min: 10, max: 200 });
-gui.addParam("F-Stop", cameraEntity.camera, "fStop", { min: 1.2, max: 32 });
-gui.addHeader("Tone Map & Gamma");
-gui.addParam("Exposure", postProcessing, "exposure", { min: 0, max: 5 });
-gui.addRadioList(
-  "Tone Map",
-  postProcessing,
-  "toneMap",
-  // Not the pex-shaders export keys: those name modules, and a module can hold
-  // several operators.
-  [{ name: "none", value: null }].concat(
-    shaders.postProcessing.TONE_MAP_OPERATORS.map((value) => ({
-      name: value,
-      value,
-    })),
-  ),
-);
-gui.addParam("Blades", postProcessing, "blades", { min: 0, max: 11, step: 1 });
-gui.addParam("Blade Rotation", postProcessing, "bladeRotation", {
-  min: 0,
-  max: Math.PI,
-});
-gui.addParam("Blade Curvature", postProcessing, "bladeCurvature", {
-  min: 0,
-  max: 1,
-});
-gui.addParam("Opacity", postProcessing, "opacity", { min: 0, max: 1 });
-
 gui.addTab("SSAO");
+gui.addColumn("Common");
 gui.addParam("Enabled", State, "ssao", null, () => {
   enablePostProPass("ssao");
 });
@@ -644,27 +642,34 @@ gui.addParam("Samples", postProcessing.ssao, "samples", {
   step: 1,
 });
 gui.addParam("Radius", postProcessing.ssao, "radius", { min: 0, max: 10 });
-gui.addParam("Intensity", postProcessing.ssao, "intensity", {
-  min: 0,
-  max: 10,
-});
-gui.addParam("Bias", postProcessing.ssao, "bias", { min: 0, max: 0.7 });
 gui.addParam("Brightness", postProcessing.ssao, "brightness", {
   min: -0.5,
   max: 0.5,
 });
 gui.addParam("Contrast", postProcessing.ssao, "contrast", { min: 0.1, max: 3 });
 
-gui.addParam("Noise texture", postProcessing.ssao, "noiseTexture");
-gui.addParam("Mix", postProcessing.ssao, "mix", { min: 0, max: 1 });
-
-gui.addLabel("SSAO (SAO)");
+gui.addColumn("SSAO (SAO)");
+gui.addParam("Intensity", postProcessing.ssao, "intensity", {
+  min: 0,
+  max: 10,
+});
 gui.addParam("Spiral Turns", postProcessing.ssao, "spiralTurns", {
   min: 2,
   max: 20,
   step: 1,
 });
-gui.addLabel("SSAO (GTAO)");
+gui.addParam("Blur Radius", postProcessing.ssao, "blurRadius", {
+  min: 0,
+  max: 2,
+});
+gui.addParam("Blur Sharpness", postProcessing.ssao, "blurSharpness", {
+  min: 0,
+  max: 20,
+});
+gui.addParam("Noise texture", postProcessing.ssao, "noiseTexture");
+gui.addParam("Bias", postProcessing.ssao, "bias", { min: 0, max: 0.7 });
+
+gui.addColumn("SSAO (GTAO)");
 gui.addParam("Slices", postProcessing.ssao, "slices", {
   min: 2,
   max: 20,
@@ -675,6 +680,7 @@ gui.addParam("Radius multiplier", postProcessing.ssao, "radiusMultiplier", {
   min: 0.3,
   max: 3,
 });
+gui.addParam("Mix", postProcessing.ssao, "mix", { min: 0, max: 1 });
 gui.addParam("Falloff range", postProcessing.ssao, "falloffRange", {
   min: 0,
   max: 1,
@@ -708,14 +714,9 @@ gui.addParam("Denoise blur beta", postProcessing.ssao, "denoiseBlurBeta", {
   min: 0,
   max: 5,
 });
-gui.addLabel("Blur");
-gui.addParam("Radius", postProcessing.ssao, "blurRadius", { min: 0, max: 2 });
-gui.addParam("Sharpness", postProcessing.ssao, "blurSharpness", {
-  min: 0,
-  max: 20,
-});
 
 gui.addTab("TAA");
+gui.addColumn("Options");
 gui.addParam("Enabled", State, "taa", null, () => {
   enablePostProPass("taa");
 });
@@ -736,7 +737,9 @@ gui.addParam("TAA varianceGamma", postProcessing.taa, "varianceGamma", {
   max: 3,
 });
 gui.addParam("TAA debug", postProcessing.taa, "debug");
+
 gui.addTab("Motion Blur");
+gui.addColumn("Options");
 gui.addParam("Enabled", State, "motionBlur", null, () => {
   enablePostProPass("motionBlur");
 });
@@ -760,10 +763,14 @@ gui.addParam("Centre weight", postProcessing.motionBlur, "centerWeightBias", {
 });
 
 gui.addTab("Depth of Field");
+gui.addColumn("Options");
 gui.addParam("Enabled", State, "dof", null, () => {
   enablePostProPass("dof");
 });
 gui.addParam("Debug CoC", postProcessing.dof, "debug");
+gui.addParam("Ring Occlusion", postProcessing.dof, "ringOcclusion");
+gui.addParam("Post Filter", postProcessing.dof, "postFilter");
+gui.addParam("Transition Blur", postProcessing.dof, "transitionBlur");
 gui.addParam("Physical", postProcessing.dof, "physical");
 gui.addParam("Focus Distance", postProcessing.dof, "focusDistance", {
   min: 0,
@@ -778,12 +785,12 @@ gui.addParam("Screen Point Y", postProcessing.dof.screenPoint, "1", {
   min: 0,
   max: 1,
 });
-// Physical
+gui.addColumn("Physical");
 gui.addParam("Focus Scale", postProcessing.dof, "focusScale", {
   min: 0,
   max: 20,
 });
-// Non-physical
+gui.addColumn("Artistic");
 gui.addParam("Blurriness", postProcessing.dof, "blurriness", {
   min: 0,
   max: 0.2,
@@ -797,20 +804,21 @@ gui.addParam("Focus Falloff", postProcessing.dof, "focusFalloff", {
   max: 4,
 });
 
-gui.addHeader("Depth of Field Bokeh");
+gui.addColumn("Bokeh");
 gui.addParam("Max CoC Radius", postProcessing.dof, "maxCoCRadius", {
   min: 0,
   max: 0.2,
 });
-gui.addParam("Rings", postProcessing.dof, "rings", { min: 1, max: 6, step: 1 });
+gui.addParam("Rings", postProcessing.dof, "rings", {
+  min: 1,
+  max: 16,
+  step: 1,
+});
 gui.addParam("Samples", postProcessing.dof, "samples", {
   min: 3,
   max: 12,
   step: 1,
 });
-gui.addParam("Ring Occlusion", postProcessing.dof, "ringOcclusion");
-gui.addParam("Post Filter", postProcessing.dof, "postFilter");
-gui.addParam("Transition Blur", postProcessing.dof, "transitionBlur");
 gui.addParam(
   "Chromatic Aberration",
   postProcessing.dof,
@@ -831,6 +839,7 @@ gui.addParam("Luminance Knee", postProcessing.dof, "luminanceKnee", {
 });
 
 gui.addTab("Bloom");
+gui.addColumn("Options");
 gui.addParam("Enabled", State, "bloom", null, () => {
   enablePostProPass("bloom");
 });
@@ -869,6 +878,7 @@ gui.addParam("Intensity", postProcessing.bloom, "intensity", {
 gui.addParam("Radius", postProcessing.bloom, "radius", { min: 0, max: 10 });
 
 gui.addTab("Lens Flare");
+gui.addColumn("Options");
 gui.addParam("Enabled", State, "lensFlare", null, () => {
   enablePostProPass("lensFlare");
 });
@@ -971,6 +981,7 @@ gui.addParam(
 );
 
 gui.addTab("Combine");
+gui.addColumn("Options");
 gui.addParam("Fog", State, "fog", null, () => {
   enablePostProPass("fog");
 });
@@ -1021,6 +1032,7 @@ gui.addParam("Vignette intensity", postProcessing.vignette, "intensity", {
 });
 
 gui.addTab("Final");
+gui.addColumn("Options");
 gui.addParam("SMAA", State, "smaa", null, () => {
   enablePostProPass("smaa");
 });
@@ -1093,13 +1105,15 @@ enablePostProPass("filmGrain");
 // Events
 let debugOnce = false;
 
-window.addEventListener("resize", () => {
+const onResize = () => {
   const width = window.innerWidth;
   const height = window.innerHeight;
   gpu.resize(ctx, width, height, pixelRatio);
   cameraEntity.camera.aspect = width / height;
   cameraEntity.camera.dirty = true;
-});
+};
+window.addEventListener("resize", onResize);
+onResize();
 
 window.addEventListener("keydown", ({ key }) => {
   if (key === "g") gui.enabled = !gui.enabled;
