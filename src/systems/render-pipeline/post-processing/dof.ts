@@ -91,7 +91,8 @@ const dof: PostProcessingEffect = {
     if (!depth) return;
 
     const camera = cameraEntity.camera!;
-    const component = cameraEntity.postProcessing!.dof!;
+    const postProcessing = cameraEntity.postProcessing!;
+    const component = postProcessing.dof!;
     const viewId = cameraEntity.id;
 
     const width = viewport[2]!;
@@ -174,13 +175,15 @@ const dof: PostProcessingEffect = {
 
       maxCoCRadius,
       chromaticAberration,
-      exposure: cameraEntity.postProcessing!.exposure!,
+      exposure: postProcessing.exposure!,
       luminanceThreshold: component.luminanceThreshold ?? 0.7,
       luminanceGain: component.luminanceGain ?? 0,
       luminanceKnee: component.luminanceKnee ?? 0.5,
-      blades: component.blades ?? 0,
-      bladeRotation: component.bladeRotation ?? 0,
-      bladeCurvature: component.bladeCurvature ?? 0,
+      // The diaphragm is the camera's, not this effect's: the lens flare images
+      // the same opening as its starburst.
+      blades: postProcessing.blades ?? 0,
+      bladeRotation: postProcessing.bladeRotation ?? 0,
+      bladeCurvature: postProcessing.bladeCurvature ?? 0,
     };
 
     const depthUniforms = {

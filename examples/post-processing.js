@@ -456,7 +456,8 @@ renderEngine.systems
 
 // GUI
 const gui = createGUI(ctx);
-gui.addColumn("Attachments");
+gui.addTab("Rendering");
+gui.addColumn("Render");
 gui.addFPSMeeter();
 State.msg = "";
 
@@ -483,25 +484,46 @@ gui.addRadioList(
   "debugRender",
   [
     "",
-    "velocity",
-    "responsive",
-    "taa.debug",
-    "motionBlur.neighborMax",
-    "taa.main",
-    "ssao.main",
-    "ssao.edges",
-    "ssao.denoise[0]",
+    "taa.emissive",
+    "taa.depthHistory",
+    "dof.cocResolve",
     "dof.prefilter",
+    "dof.downsample[1]",
+    "dof.downsample[2]",
+    "dof.downsample[3]",
+    "dof.tileMaxX",
+    "dof.tileMaxY",
     "dof.tileDilate",
     "dof.far",
     "dof.near",
-    "dof.debug",
+    "dof.farBlur",
+    "dof.nearBlur",
     "dof.main",
+    "motionBlur.tileMaxX",
+    "motionBlur.tileMaxY",
+    "motionBlur.neighborMax",
+    "motionBlur.main",
     "bloom.threshold",
-    "bloom.downsample[3]",
+    "bloom.downsample[0]",
+    "bloom.downsample[1]",
+    "bloom.downsample[2]",
+    "bloom.upsample[2]",
+    "bloom.upsample[1]",
+    "bloom.upsample[0]",
     "lensFlare.bright",
+    // "lensFlare.blurDown[0]",
+    // "lensFlare.blurDown[1]",
+    // "lensFlare.blurUp[1]",
+    // "lensFlare.blurUp[0]",
     "lensFlare.streakSeed",
+    "lensFlare.streak[0]",
+    "lensFlare.streak[1]",
+    "lensFlare.streak[2]",
+    "lensFlare.streak[3]",
     "lensFlare.main",
+    "combine.main",
+    "final.luma",
+    "final.main",
     "smaa.edges",
     "smaa.weights",
   ].map((value) => ({
@@ -515,8 +537,10 @@ const dummyTexture2D = gpu.createTexture(ctx, {
   height: 1,
   format: "rgba8unorm",
 });
+gui.addColumn("Outputs");
 const guiNormalControl = gui.addTexture2D("Normal", null);
 const guiDepthControl = gui.addTexture2D("Depth", null);
+const guiVelocityControl = gui.addTexture2D("Velocity", null);
 const guiAOControl = gui.addTexture2D("AO", null);
 
 // The occlusion buffer is an internal post-processing target, so it is only a
@@ -534,7 +558,7 @@ gui.addParam("Background Blur", skyboxEntity.skybox, "backgroundBlur", {
   max: 1,
 });
 
-// gui.addColumn("Material");
+// gui.addTab("Material");
 // gui.addParam("Base Color", State, "baseColor", { type: "color" }, () => {
 //   entities.forEach((entity) => {
 //     entity.material = { baseColor: State.baseColor };
@@ -552,10 +576,8 @@ gui.addParam("Background Blur", skyboxEntity.skybox, "backgroundBlur", {
 // });
 
 // // PostProcess
-// const postProcessTab = gui.addTab("PostProcess");
 // postProcessTab.setActive();
-gui.addColumn("Post-Processing");
-gui.addParam("Enabled", State, "enabled", null, () => {
+gui.addParam("Post-Processing enabled", State, "enabled", null, () => {
   if (State.enabled) {
     cameraEntity.postProcessing = postProcessing;
   } else {
@@ -575,50 +597,8 @@ const enablePostProPass = (name) => {
 gui.addParam("MSAA", State, "msaa", null, () => {
   enablePostProPass("msaa");
 });
-gui.addParam("TAA", State, "taa", null, () => {
-  enablePostProPass("taa");
-});
-gui.addParam("TAA blendFactor", postProcessing.taa, "blendFactor", {
-  min: 0,
-  max: 1,
-});
-gui.addParam("TAA sharpness", postProcessing.taa, "sharpness", {
-  min: 0,
-  max: 1,
-});
-gui.addParam("TAA disocclusion", postProcessing.taa, "disocclusionTolerance", {
-  min: 0,
-  max: 0.2,
-});
-gui.addParam("TAA varianceGamma", postProcessing.taa, "varianceGamma", {
-  min: 0,
-  max: 3,
-});
-gui.addParam("TAA debug", postProcessing.taa, "debug");
-gui.addHeader("Motion Blur");
-gui.addParam("Enabled", State, "motionBlur", null, () => {
-  enablePostProPass("motionBlur");
-});
-gui.addParam("Intensity", postProcessing.motionBlur, "intensity", {
-  min: 0,
-  max: 2,
-});
-gui.addParam("Samples", postProcessing.motionBlur, "samples", {
-  min: 3,
-  max: 63,
-  step: 2,
-});
-gui.addParam("Tile size", postProcessing.motionBlur, "tileSize", {
-  min: 8,
-  max: 64,
-  step: 8,
-});
-gui.addParam("Centre weight", postProcessing.motionBlur, "centerWeightBias", {
-  min: 1,
-  max: 80,
-});
 
-gui.addHeader("Camera");
+gui.addColumn("Camera");
 gui.addParam("FoV", camera, "fov", { min: 0, max: (Math.PI / 3) * 2 });
 gui.addParam("FocalLength", camera, "focalLength", { min: 10, max: 200 });
 gui.addParam("F-Stop", cameraEntity.camera, "fStop", { min: 1.2, max: 32 });
@@ -637,9 +617,18 @@ gui.addRadioList(
     })),
   ),
 );
+gui.addParam("Blades", postProcessing, "blades", { min: 0, max: 11, step: 1 });
+gui.addParam("Blade Rotation", postProcessing, "bladeRotation", {
+  min: 0,
+  max: Math.PI,
+});
+gui.addParam("Blade Curvature", postProcessing, "bladeCurvature", {
+  min: 0,
+  max: 1,
+});
 gui.addParam("Opacity", postProcessing, "opacity", { min: 0, max: 1 });
 
-gui.addColumn("SSAO");
+gui.addTab("SSAO");
 gui.addParam("Enabled", State, "ssao", null, () => {
   enablePostProPass("ssao");
 });
@@ -726,7 +715,51 @@ gui.addParam("Sharpness", postProcessing.ssao, "blurSharpness", {
   max: 20,
 });
 
-gui.addColumn("Depth of Field");
+gui.addTab("TAA");
+gui.addParam("Enabled", State, "taa", null, () => {
+  enablePostProPass("taa");
+});
+gui.addParam("TAA blendFactor", postProcessing.taa, "blendFactor", {
+  min: 0,
+  max: 1,
+});
+gui.addParam("TAA sharpness", postProcessing.taa, "sharpness", {
+  min: 0,
+  max: 1,
+});
+gui.addParam("TAA disocclusion", postProcessing.taa, "disocclusionTolerance", {
+  min: 0,
+  max: 0.2,
+});
+gui.addParam("TAA varianceGamma", postProcessing.taa, "varianceGamma", {
+  min: 0,
+  max: 3,
+});
+gui.addParam("TAA debug", postProcessing.taa, "debug");
+gui.addTab("Motion Blur");
+gui.addParam("Enabled", State, "motionBlur", null, () => {
+  enablePostProPass("motionBlur");
+});
+gui.addParam("Intensity", postProcessing.motionBlur, "intensity", {
+  min: 0,
+  max: 2,
+});
+gui.addParam("Samples", postProcessing.motionBlur, "samples", {
+  min: 3,
+  max: 63,
+  step: 2,
+});
+gui.addParam("Tile size", postProcessing.motionBlur, "tileSize", {
+  min: 8,
+  max: 64,
+  step: 8,
+});
+gui.addParam("Centre weight", postProcessing.motionBlur, "centerWeightBias", {
+  min: 1,
+  max: 80,
+});
+
+gui.addTab("Depth of Field");
 gui.addParam("Enabled", State, "dof", null, () => {
   enablePostProPass("dof");
 });
@@ -764,7 +797,7 @@ gui.addParam("Focus Falloff", postProcessing.dof, "focusFalloff", {
   max: 4,
 });
 
-gui.addColumn("Depth of Field Bokeh");
+gui.addHeader("Depth of Field Bokeh");
 gui.addParam("Max CoC Radius", postProcessing.dof, "maxCoCRadius", {
   min: 0,
   max: 0.2,
@@ -797,7 +830,7 @@ gui.addParam("Luminance Knee", postProcessing.dof, "luminanceKnee", {
   max: 1,
 });
 
-gui.addColumn("Bloom");
+gui.addTab("Bloom");
 gui.addParam("Enabled", State, "bloom", null, () => {
   enablePostProPass("bloom");
 });
@@ -835,7 +868,7 @@ gui.addParam("Intensity", postProcessing.bloom, "intensity", {
 });
 gui.addParam("Radius", postProcessing.bloom, "radius", { min: 0, max: 10 });
 
-gui.addColumn("Lens Flare");
+gui.addTab("Lens Flare");
 gui.addParam("Enabled", State, "lensFlare", null, () => {
   enablePostProPass("lensFlare");
 });
@@ -936,17 +969,8 @@ gui.addParam(
     step: 1,
   },
 );
-gui.addParam("Blades", postProcessing, "blades", { min: 0, max: 11, step: 1 });
-gui.addParam("Blade Rotation", postProcessing, "bladeRotation", {
-  min: 0,
-  max: Math.PI,
-});
-gui.addParam("Blade Curvature", postProcessing, "bladeCurvature", {
-  min: 0,
-  max: 1,
-});
 
-gui.addColumn("Combine");
+gui.addTab("Combine");
 gui.addParam("Fog", State, "fog", null, () => {
   enablePostProPass("fog");
 });
@@ -996,7 +1020,7 @@ gui.addParam("Vignette intensity", postProcessing.vignette, "intensity", {
   max: 1,
 });
 
-gui.addColumn("Final");
+gui.addTab("Final");
 gui.addParam("SMAA", State, "smaa", null, () => {
   enablePostProPass("smaa");
 });
@@ -1084,12 +1108,13 @@ window.addEventListener("keydown", ({ key }) => {
 
 gpu.frame(ctx, async () => {
   renderEngine.update(world.entities);
-  const [{ color, normal, depth }] = await renderEngine.render(
+  const [{ depth, normal, velocity }] = await renderEngine.render(
     world.entities,
     cameraEntity,
   );
 
   guiNormalControl.texture = normal || dummyTexture2D;
+  guiVelocityControl.texture = velocity || dummyTexture2D;
   guiDepthControl.texture = depth;
   guiAOControl.texture =
     (aoHandle && renderEngine.frameGraph.resolve(aoHandle)) || dummyTexture2D;

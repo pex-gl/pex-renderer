@@ -16,19 +16,12 @@ import { fullscreenVertex, postProcessingStruct } from "./common.js";
 // and its mip chain, tile reduction and dilation, one gather producing both
 // fields, a post filter, and the composite.
 //
+// Each includes the chunk members it calls into and no more — the tile passes
+// touch neither depth nor a circle of confusion, and the post filter needs
+// none of it.
+//
 // Plumbing only — coordinates, loop bounds, attachments. What the numbers mean
 // lives in the chunk.
-
-/** What every pass needs in scope: the chunk and everything it calls into. */
-const preamble = /* wgsl */ `
-${SHADERS.math.PI}
-${SHADERS.math.TWO_PI}
-${SHADERS.math.saturate}
-${SHADERS.luma}
-${SHADERS.threshold}
-${SHADERS.depthRead}
-${SHADERS.depthOfField}
-`;
 
 const params = (alloc: ReturnType<typeof createBindingAllocator>) =>
   `@group(0) @binding(${alloc.next()}) var<uniform> uDoFParams: DepthOfFieldParams;`;
@@ -60,7 +53,10 @@ export const dofFocusShader = (): string => {
 
   return formatShader(/* wgsl */ `
 ${postProcessingStruct}
-${preamble}
+${SHADERS.depthRead}
+${SHADERS.depthOfField.common}
+${SHADERS.depthOfField.depth}
+${SHADERS.depthOfField.focus}
 
 ${params(alloc)}
 ${textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uDepthTexture", "texture_depth_2d")}
@@ -76,22 +72,36 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
 };
 
 /** Half-resolution colour and signed circle of confusion, with the boost baked in. */
-export const dofPrefilterShader = (defines: Set<string> = new Set()): string => {
+export const dofPrefilterShader = (
+  defines: Set<string> = new Set(),
+): string => {
   const resolved = defines.has("USE_DOF_RESOLVED_COC");
-  const fromScreenPoint =
-    !resolved && defines.has("USE_FOCUS_ON_SCREEN_POINT");
+  const fromScreenPoint = !resolved && defines.has("USE_FOCUS_ON_SCREEN_POINT");
   const alloc = createBindingAllocator(1);
 
   return formatShader(/* wgsl */ `
 ${postProcessingStruct}
-${preamble}
+${SHADERS.math.saturate}
+${SHADERS.luma}
+${SHADERS.threshold}
+${SHADERS.depthRead}
+${SHADERS.depthOfField.common}
+${SHADERS.depthOfField.depth}
+${SHADERS.depthOfField.coc}
+${SHADERS.depthOfField.downsample}
+${SHADERS.depthOfField.prefilter}
 
 ${params(alloc)}
 ${textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uTexture")}
 ${
   resolved
     ? textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uCoCTexture")
-    : textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uDepthTexture", "texture_depth_2d")
+    : textureSamplerDeclaration(
+        0,
+        alloc.nextTextureSampler(),
+        "uDepthTexture",
+        "texture_depth_2d",
+      )
 }
 ${fromScreenPoint ? textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uFocusTexture") : ""}
 
@@ -125,7 +135,8 @@ export const dofDownsampleShader = (): string => {
 
   return formatShader(/* wgsl */ `
 ${postProcessingStruct}
-${preamble}
+${SHADERS.math.saturate}
+${SHADERS.depthOfField.downsample}
 
 ${textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uTexture")}
 
@@ -150,7 +161,7 @@ export const dofTileMaxXShader = (): string => {
 
   return formatShader(/* wgsl */ `
 ${postProcessingStruct}
-${preamble}
+${SHADERS.depthOfField.tiles}
 
 ${textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uTexture")}
 
@@ -179,7 +190,7 @@ export const dofTileMaxYShader = (): string => {
 
   return formatShader(/* wgsl */ `
 ${postProcessingStruct}
-${preamble}
+${SHADERS.depthOfField.tiles}
 
 ${textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uTexture")}
 
@@ -215,7 +226,7 @@ export const dofTileDilateShader = (): string => {
 
   return formatShader(/* wgsl */ `
 ${postProcessingStruct}
-${preamble}
+${SHADERS.depthOfField.tiles}
 
 ${textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uTexture")}
 
@@ -254,7 +265,11 @@ export const dofGatherShader = (): string => {
 
   return formatShader(/* wgsl */ `
 ${postProcessingStruct}
-${preamble}
+${SHADERS.math.PI}
+${SHADERS.math.TWO_PI}
+${SHADERS.math.saturate}
+${SHADERS.depthOfField.common}
+${SHADERS.depthOfField.gather}
 
 ${params(alloc)}
 ${textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uTexture")}
@@ -350,7 +365,11 @@ export const dofCoCResolveShader = (
 
   return formatShader(/* wgsl */ `
 ${postProcessingStruct}
-${preamble}
+${SHADERS.depthRead}
+${SHADERS.depthOfField.common}
+${SHADERS.depthOfField.depth}
+${SHADERS.depthOfField.coc}
+${SHADERS.depthOfField.resolve}
 ${SHADERS.luminance}
 ${SHADERS.taa}
 
@@ -417,23 +436,34 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
  * prefilter: a half-resolution radius cannot say which side of a silhouette a
  * full-resolution pixel is on.
  */
-export const dofCompositeShader = (defines: Set<string> = new Set()): string => {
+export const dofCompositeShader = (
+  defines: Set<string> = new Set(),
+): string => {
   const resolved = defines.has("USE_DOF_RESOLVED_COC");
-  const fromScreenPoint =
-    !resolved && defines.has("USE_FOCUS_ON_SCREEN_POINT");
+  const fromScreenPoint = !resolved && defines.has("USE_FOCUS_ON_SCREEN_POINT");
   const debug = defines.has("USE_DOF_DEBUG");
   const alloc = createBindingAllocator(1);
 
   return formatShader(/* wgsl */ `
 ${postProcessingStruct}
-${preamble}
+${SHADERS.math.saturate}
+${SHADERS.depthRead}
+${SHADERS.depthOfField.common}
+${SHADERS.depthOfField.depth}
+${SHADERS.depthOfField.coc}
+${SHADERS.depthOfField.composite}
 
 ${params(alloc)}
 ${textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uTexture")}
 ${
   resolved
     ? textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uCoCTexture")
-    : textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uDepthTexture", "texture_depth_2d")
+    : textureSamplerDeclaration(
+        0,
+        alloc.nextTextureSampler(),
+        "uDepthTexture",
+        "texture_depth_2d",
+      )
 }
 ${textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uFarTexture")}
 ${textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uNearTexture")}
