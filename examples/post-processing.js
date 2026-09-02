@@ -34,6 +34,7 @@ const State = {
   ssao: true,
   dof: true,
   bloom: true,
+  lensFlare: true,
   fog: false,
   vignette: true,
   lut: true,
@@ -83,6 +84,9 @@ const camera = components.camera({
 // spells out — a pass reading one it never set packs an undefined into its
 // uniform block.
 const postProcessing = components.postProcessing({
+  blades: 6,
+  bladeRotation: 0,
+  bladeCurvature: 0,
   msaa: components.postProcessing.msaa({
     sampleCount: 4,
   }),
@@ -144,9 +148,6 @@ const postProcessing = components.postProcessing({
     ringOcclusion: true,
     postFilter: true,
     transitionBlur: true,
-    blades: 0,
-    bladeRotation: 0,
-    bladeCurvature: 0,
     chromaticAberration: 0.05,
     luminanceThreshold: 0.7,
     luminanceGain: 1,
@@ -161,6 +162,33 @@ const postProcessing = components.postProcessing({
     source: false,
     radius: 1,
     intensity: 0.1,
+  }),
+  lensFlare: components.postProcessing.lensFlare({
+    intensity: 1,
+    tint: [1, 1, 1],
+    threshold: 3,
+    softKnee: 0.5,
+    source: false,
+    clamp: 50,
+    blur: 2,
+    ghosts: 4,
+    ghostIntensity: 1,
+    reversedIntensity: 0.5,
+    warpedIntensity: 0,
+    ghostStart: 1.25,
+    ghostSpacing: 1.5,
+    ghostDimmer: 0.8,
+    haloIntensity: 0.4,
+    haloRadius: 0.4,
+    chromaticAberration: 0.02,
+    chromaticSamples: 4,
+    vignette: 1,
+    streakIntensity: 0.5,
+    streakLength: 0.5,
+    streakThreshold: 0,
+    streakRotation: 0,
+    streakIterations: 5,
+    streakDirections: 0,
   }),
   fog: components.postProcessing.fog({
     color: [0.5, 0.5, 0.5],
@@ -471,6 +499,9 @@ gui.addRadioList(
     "dof.main",
     "bloom.threshold",
     "bloom.downsample[3]",
+    "lensFlare.bright",
+    "lensFlare.streakSeed",
+    "lensFlare.main",
     "smaa.edges",
     "smaa.weights",
   ].map((value) => ({
@@ -747,19 +778,6 @@ gui.addParam("Samples", postProcessing.dof, "samples", {
 gui.addParam("Ring Occlusion", postProcessing.dof, "ringOcclusion");
 gui.addParam("Post Filter", postProcessing.dof, "postFilter");
 gui.addParam("Transition Blur", postProcessing.dof, "transitionBlur");
-gui.addParam("Blades", postProcessing.dof, "blades", {
-  min: 0,
-  max: 11,
-  step: 1,
-});
-gui.addParam("Blade Rotation", postProcessing.dof, "bladeRotation", {
-  min: 0,
-  max: Math.PI,
-});
-gui.addParam("Blade Curvature", postProcessing.dof, "bladeCurvature", {
-  min: 0,
-  max: 1,
-});
 gui.addParam(
   "Chromatic Aberration",
   postProcessing.dof,
@@ -816,6 +834,117 @@ gui.addParam("Intensity", postProcessing.bloom, "intensity", {
   max: 10,
 });
 gui.addParam("Radius", postProcessing.bloom, "radius", { min: 0, max: 10 });
+
+gui.addColumn("Lens Flare");
+gui.addParam("Enabled", State, "lensFlare", null, () => {
+  enablePostProPass("lensFlare");
+});
+gui.addParam("Intensity", postProcessing.lensFlare, "intensity", {
+  min: 0,
+  max: 4,
+});
+gui.addParam("Tint", postProcessing.lensFlare, "tint");
+gui.addParam("Threshold", postProcessing.lensFlare, "threshold", {
+  min: 0,
+  max: 10,
+});
+gui.addRadioList(
+  "Source",
+  postProcessing.lensFlare,
+  "source",
+  [false, "bloom"].map((value) => ({ name: value || "own", value })),
+);
+gui.addParam("Clamp", postProcessing.lensFlare, "clamp", {
+  min: 1,
+  max: 500,
+});
+gui.addParam("Blur", postProcessing.lensFlare, "blur", {
+  min: 0,
+  max: 4,
+});
+gui.addParam("Ghosts", postProcessing.lensFlare, "ghosts", {
+  min: 0,
+  max: 8,
+  step: 1,
+});
+gui.addParam("Ghost Intensity", postProcessing.lensFlare, "ghostIntensity", {
+  min: 0,
+  max: 2,
+});
+gui.addParam("Reversed", postProcessing.lensFlare, "reversedIntensity", {
+  min: 0,
+  max: 2,
+});
+gui.addParam("Warped", postProcessing.lensFlare, "warpedIntensity", {
+  min: 0,
+  max: 2,
+});
+gui.addParam("Ghost Start", postProcessing.lensFlare, "ghostStart", {
+  min: 0.5,
+  max: 4,
+});
+gui.addParam("Ghost Spacing", postProcessing.lensFlare, "ghostSpacing", {
+  min: 1,
+  max: 3,
+});
+gui.addParam("Ghost Dimmer", postProcessing.lensFlare, "ghostDimmer", {
+  min: 0,
+  max: 1,
+});
+gui.addParam("Halo Intensity", postProcessing.lensFlare, "haloIntensity", {
+  min: 0,
+  max: 2,
+});
+gui.addParam("Halo Radius", postProcessing.lensFlare, "haloRadius", {
+  min: 0,
+  max: 1,
+});
+gui.addParam(
+  "Chromatic Aberration",
+  postProcessing.lensFlare,
+  "chromaticAberration",
+  { min: 0, max: 0.2 },
+);
+gui.addParam("Vignette", postProcessing.lensFlare, "vignette", {
+  min: 0,
+  max: 1,
+});
+gui.addParam("Streaks", postProcessing.lensFlare, "streakIntensity", {
+  min: 0,
+  max: 2,
+});
+gui.addParam("Streak Length", postProcessing.lensFlare, "streakLength", {
+  min: 0,
+  max: 1,
+});
+gui.addParam("Streak Threshold", postProcessing.lensFlare, "streakThreshold", {
+  min: 0,
+  max: 5,
+});
+gui.addParam("Streak Rotation", postProcessing.lensFlare, "streakRotation", {
+  min: 0,
+  max: Math.PI,
+});
+// 0 takes the axes from the diaphragm below; 1 is the anamorphic streak.
+gui.addParam(
+  "Streak Directions",
+  postProcessing.lensFlare,
+  "streakDirections",
+  {
+    min: 0,
+    max: 8,
+    step: 1,
+  },
+);
+gui.addParam("Blades", postProcessing, "blades", { min: 0, max: 11, step: 1 });
+gui.addParam("Blade Rotation", postProcessing, "bladeRotation", {
+  min: 0,
+  max: Math.PI,
+});
+gui.addParam("Blade Curvature", postProcessing, "bladeCurvature", {
+  min: 0,
+  max: 1,
+});
 
 gui.addColumn("Combine");
 gui.addParam("Fog", State, "fog", null, () => {
@@ -928,6 +1057,7 @@ enablePostProPass("motionBlur");
 enablePostProPass("ssao");
 enablePostProPass("dof");
 enablePostProPass("bloom");
+enablePostProPass("lensFlare");
 enablePostProPass("fog");
 enablePostProPass("vignette");
 enablePostProPass("lut");
@@ -950,7 +1080,6 @@ window.addEventListener("resize", () => {
 window.addEventListener("keydown", ({ key }) => {
   if (key === "g") gui.enabled = !gui.enabled;
   if (key === "d") debugOnce = true;
-  console.log(renderEngine.frameGraph);
 });
 
 gpu.frame(ctx, async () => {

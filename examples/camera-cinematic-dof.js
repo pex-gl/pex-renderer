@@ -99,9 +99,6 @@ const postProcessing = components.postProcessing({
     ringOcclusion: true,
     postFilter: true,
     transitionBlur: true,
-    blades: 0,
-    bladeRotation: 0,
-    bladeCurvature: 0,
     chromaticAberration: 0.05,
     luminanceThreshold: 0.7,
     luminanceGain: 1,
@@ -290,16 +287,16 @@ gui.addParam("Samples", postProcessing.dof, "samples", {
 gui.addParam("Ring Occlusion", postProcessing.dof, "ringOcclusion");
 gui.addParam("Post Filter", postProcessing.dof, "postFilter");
 gui.addParam("Transition Blur", postProcessing.dof, "transitionBlur");
-gui.addParam("Blades", postProcessing.dof, "blades", {
+gui.addParam("Blades", postProcessing, "blades", {
   min: 0,
   max: 11,
   step: 1,
 });
-gui.addParam("Blade Rotation", postProcessing.dof, "bladeRotation", {
+gui.addParam("Blade Rotation", postProcessing, "bladeRotation", {
   min: 0,
   max: Math.PI,
 });
-gui.addParam("Blade Curvature", postProcessing.dof, "bladeCurvature", {
+gui.addParam("Blade Curvature", postProcessing, "bladeCurvature", {
   min: 0,
   max: 1,
 });

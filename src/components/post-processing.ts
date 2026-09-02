@@ -5,6 +5,7 @@ import type {
   FilmGrainComponentOptions,
   FogComponentOptions,
   FXAAComponentOptions,
+  LensFlareComponentOptions,
   LutComponentOptions,
   MSAAComponentOptions,
   PostProcessingComponentOptions,
@@ -33,6 +34,7 @@ interface PostProcessingFactory {
   lut: (options?: LutComponentOptions) => object;
   colorCorrection: (options?: ColorCorrectionComponentOptions) => object;
   filmGrain: (options?: FilmGrainComponentOptions) => object;
+  lensFlare: (options?: LensFlareComponentOptions) => object;
 }
 
 /** Post Processing component */
@@ -50,6 +52,14 @@ const postProcessing = ((options?: PostProcessingComponentOptions) => ({
   exposure: 1,
   toneMap: "aces",
   opacity: 1,
+
+  // The diaphragm. Here rather than on one effect because two of them image it
+  // and would otherwise disagree about the same lens: depth of field's bokeh is
+  // the opening itself, and the lens flare's starburst is its diffraction
+  // pattern. Circular under three blades.
+  blades: 0,
+  bladeRotation: 0,
+  bladeCurvature: 0,
   ...options,
 })) as PostProcessingFactory;
 
@@ -115,12 +125,6 @@ postProcessing.dof = (options?: DoFComponentOptions) => ({
   ringOcclusion: true,
   postFilter: true,
   transitionBlur: true,
-
-  // Circular. Three or more blades gives the polygonal bokeh a real diaphragm
-  // stops down to.
-  blades: 0,
-  bladeRotation: 0,
-  bladeCurvature: 0,
 
   chromaticAberration: 0.05,
   luminanceThreshold: 0.7,
@@ -213,6 +217,65 @@ postProcessing.bloom = (options?: BloomComponentOptions) => ({
   source: false, // "color" | "emissive"
   radius: 1,
   intensity: 0.1,
+  ...options,
+});
+
+/** Post Processing Lens Flare subcomponent */
+postProcessing.lensFlare = (options?: LensFlareComponentOptions) => ({
+  intensity: 1,
+  tint: [1, 1, 1],
+  // Its own cutoff rather than bloom's: bloom glares off anything above the
+  // display's white, a flare only off a source bright enough to reflect between
+  // lens elements, so this sits well above it.
+  threshold: 3,
+  softKnee: 0.5,
+  source: false, // "bloom"
+  // Visible flare length scales with source brightness, so an unbounded HDR
+  // highlight draws spikes off the edge of the frame. Unity's bloom carries the
+  // same control for the same reason.
+  clamp: 50,
+  // Two levels of dual-filter blur. The families magnify what they read, and a
+  // quarter-resolution pass has no detail to magnify.
+  blur: 2,
+
+  // Ghosts on the far side of the optical axis, the same on the near side, and
+  // the polar family. Two of the three are on: the reversed set is the same
+  // discs mirrored, and having all three at full strength reads as clutter
+  // rather than as more lens.
+  ghosts: 4,
+  ghostIntensity: 1,
+  reversedIntensity: 0.5,
+  warpedIntensity: 0,
+  ghostStart: 1.25,
+  ghostSpacing: 1.5,
+  ghostDimmer: 0.8,
+
+  haloIntensity: 0.4,
+  haloRadius: 0.4,
+
+  // Fraction of a full sweep, applied radially. Small: past a few percent the
+  // families separate into three coloured copies rather than fringing.
+  chromaticAberration: 0.02,
+  chromaticSamples: 4,
+
+  // Full suppression on the axis, since every family converges there.
+  vignette: 1,
+
+  // Off by default. Spikes need a diaphragm to diffract off, and `blades` is 0
+  // — a round aperture — unless the scene says otherwise.
+  streakIntensity: 0,
+  // Whole spike, as a fraction of viewport width: half the frame, so it reaches
+  // a quarter of it either side of the source.
+  streakLength: 0.5,
+  streakThreshold: 0,
+  streakRotation: 0, // rad, added to bladeRotation
+  // A ceiling on the passes, not the number of them: the length decides how
+  // many are needed, and five covers the longest spike worth drawing at 4K.
+  streakIterations: 5,
+  // 0 takes the axes from the diaphragm and draws its starburst; 1 is the
+  // single streak a cylindrical anamorphic element gives, which has no blade
+  // count behind it.
+  streakDirections: 0,
   ...options,
 });
 

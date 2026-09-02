@@ -40,8 +40,7 @@ export interface TextureTransform {
  * these are set; a bare GpuTexture is used otherwise.
  */
 export type MaterialTexture =
-  | GpuTexture
-  | ({ texture: GpuTexture } & Partial<TextureTransform>);
+  GpuTexture | ({ texture: GpuTexture } & Partial<TextureTransform>);
 
 /**
  * A single vertex/index attribute value on a geometry component: a plain typed
@@ -319,11 +318,7 @@ export interface LightHelperComponentOptions {}
  * color already scaled by opacity), "additive", "multiply", "screen".
  */
 export type BlendMode =
-  | "normal"
-  | "premultiplied"
-  | "additive"
-  | "multiply"
-  | "screen";
+  "normal" | "premultiplied" | "additive" | "multiply" | "screen";
 export interface MaterialComponentOptions {
   unlit?: boolean;
   type?: undefined | "line";
@@ -614,20 +609,6 @@ export interface DoFComponentOptions {
    */
   transitionBlur?: boolean;
   /**
-   * Diaphragm blades. Under three the aperture is round.
-   *
-   * The shape holds at every defocus amount, as a real aperture's does — its
-   * bokeh is an image of the opening, so a six-bladed diaphragm is hexagonal
-   * whether the disc is three pixels or three hundred. What makes a small
-   * bokeh look round is that a three-pixel hexagon cannot be resolved, and
-   * that is a sampling limit rather than the shape changing.
-   */
-  blades?: number;
-  /** Diaphragm rotation in radians. */
-  bladeRotation?: number;
-  /** Rounds the blades off, 0 straight to 1 circular. */
-  bladeCurvature?: number;
-  /**
    * Per-channel displacement of the bokeh, as a fraction of its radius. 0 skips
    * the three taps it costs.
    *
@@ -814,6 +795,146 @@ export interface BloomComponentOptions {
    */
   levels?: number;
 }
+export interface LensFlareComponentOptions {
+  /** Overall strength, applied where the flare is added to the image. */
+  intensity?: number;
+  /** Multiplies every family. A lens coating tints what it fails to transmit. */
+  tint?: number[];
+  /**
+   * Brightness above which a pixel flares, after exposure.
+   *
+   * Well above bloom's: bloom glares off anything past the display's white,
+   * while a ghost is a source bright enough to reflect twice off coated glass
+   * and still register. A low value here puts faint copies of the whole image
+   * across the frame.
+   */
+  threshold?: number;
+  /** Half-width of the ramp into the flare, as a fraction of the threshold. */
+  softKnee?: number;
+  /**
+   * "bloom" reads bloom's pyramid instead of thresholding again, which costs
+   * nothing in a scene that already pays for bloom — at the price of the
+   * cutoff and the softness both becoming bloom's, and of
+   * {@link LensFlareComponentOptions.blur} selecting a pyramid level rather
+   * than running a filter.
+   *
+   * Falls back to its own bright pass whenever bloom is off.
+   */
+  source?: false | "bloom";
+  /**
+   * Ceiling on the bright pass, in exposed units, applied before the threshold.
+   *
+   * A flare spreads a source's energy over an area, so what survives at a given
+   * distance is the source's value times a falloff — and since display white is
+   * a fixed number, the distance at which a flare stops being visible grows
+   * with the source. Without a ceiling a bright enough highlight draws spikes
+   * across the whole frame. Raise it for more reach, not
+   * {@link LensFlareComponentOptions.streakLength}.
+   */
+  clamp?: number;
+  /**
+   * Dual-filter blur levels applied to the bright pass before the ghosts and
+   * the halo resample it, and so how soft they are.
+   *
+   * They magnify what they read — a ghost at scale three covers nine times the
+   * area of its source — and no filter recovers detail a quarter-resolution
+   * pass never had, so the softness has to be in the texture. Nearly free: each
+   * level is a quarter the area of the one above it.
+   *
+   * The streaks read the unblurred pass instead. A spike is the diffraction of
+   * a peak, and a blurred peak diffracts into a band.
+   */
+  blur?: number;
+  /**
+   * Ghosts per family. Each is the aperture imaged by one pair of internal
+   * reflections, so the count is how many surface pairs the lens is standing
+   * in for.
+   */
+  ghosts?: number;
+  /** Ghosts on the far side of the optical axis from their source. */
+  ghostIntensity?: number;
+  /** Ghosts on the source's own side, from an odd number of reflections. */
+  reversedIntensity?: number;
+  /**
+   * Ghosts wrapped around the axis in polar coordinates, so a bright point
+   * draws an arc rather than a disc. The family that reads as a lens rather
+   * than as a row of discs.
+   */
+  warpedIntensity?: number;
+  /** Scale of the first ghost, as a multiple of the source's distance from the axis. */
+  ghostStart?: number;
+  /**
+   * Exponent the scales grow by. Above 1 the ghosts crowd near the axis and
+   * spread towards the frame edge, which is what a real ghost series does; 1 is
+   * an even march no lens produces.
+   */
+  ghostSpacing?: number;
+  /** Multiplied in per ghost, so the series fades as it marches out. */
+  ghostDimmer?: number;
+  /** The ring drawn by everything at a fixed distance from the optical axis. */
+  haloIntensity?: number;
+  /** That distance, in screen heights. */
+  haloRadius?: number;
+  /**
+   * Radial dispersion, as a fraction of the frame.
+   *
+   * Lateral: it grows with distance from the optical axis and vanishes on it,
+   * so it fringes the frame edges and never the middle. Past a few percent the
+   * families separate into three coloured copies instead of fringing.
+   */
+  chromaticAberration?: number;
+  /** Steps in the spectral sweep. Under three the sweep bands visibly. */
+  chromaticSamples?: number;
+  /**
+   * How strongly flares are suppressed near the optical axis, 0 to 1.
+   *
+   * Every family's coordinates converge there, so without it a source draws
+   * every ghost on top of itself.
+   */
+  vignette?: number;
+  /**
+   * The diaphragm's diffraction spikes.
+   *
+   * Needs a diaphragm: with {@link PostProcessingComponentOptions.blades} under
+   * three the aperture is round and produces none, unless
+   * {@link LensFlareComponentOptions.streakDirections} names axes directly.
+   */
+  streakIntensity?: number;
+  /**
+   * Length of a whole spike, as a fraction of viewport width — it reaches half
+   * of this in each direction from the source. 0.5 spans half the frame; 2
+   * runs off both edges, which a bright enough source really does.
+   */
+  streakLength?: number;
+  /**
+   * Brightness a pixel needs to spike, on top of the flare threshold.
+   *
+   * Its own cutoff because a spike is the peak's artifact: what should streak
+   * is the few sources bright enough to diffract visibly, not everything that
+   * cleared the threshold for a ghost.
+   */
+  streakThreshold?: number;
+  /** Rotates the spikes, in radians, on top of the diaphragm's own rotation. */
+  streakRotation?: number;
+  /**
+   * Passes the streak filter is allowed, each six taps at an eighth resolution.
+   *
+   * A budget, not a length: how many are used follows from
+   * {@link LensFlareComponentOptions.streakLength}, because the stride can only
+   * grow so far between passes before the spike breaks into beads, and reaching
+   * further than that costs another pass. Set below what a length needs and the
+   * spike comes out short rather than beaded.
+   */
+  streakIterations?: number;
+  /**
+   * Spike axes, or 0 to take them from the diaphragm.
+   *
+   * 1 is the single streak a cylindrical anamorphic element gives, which is not
+   * the aperture's doing and so has no blade count behind it. Each axis is
+   * bidirectional, so it draws two spikes.
+   */
+  streakDirections?: number;
+}
 export interface LutComponentOptions {
   texture: GpuTexture;
 }
@@ -849,6 +970,31 @@ export interface PostProcessingComponentOptions {
   motionBlur?: MotionBlurComponentOptions;
   msaa?: MSAAComponentOptions;
   filmGrain?: FilmGrainComponentOptions;
+  lensFlare?: LensFlareComponentOptions;
+  /**
+   * Diaphragm blades. Under three the aperture is round.
+   *
+   * On the parent rather than on one effect because more than one images it:
+   * {@link DoFComponentOptions} draws its bokeh as the opening itself, and
+   * {@link LensFlareComponentOptions} draws its starburst as that opening's
+   * diffraction pattern — one lens, so one description.
+   *
+   * The bokeh's shape holds at every defocus amount, as a real aperture's does:
+   * a six-bladed diaphragm is hexagonal whether the disc is three pixels or
+   * three hundred. What makes a small bokeh look round is that a three-pixel
+   * hexagon cannot be resolved, which is a sampling limit rather than the shape
+   * changing.
+   */
+  blades?: number;
+  /** Diaphragm rotation in radians. */
+  bladeRotation?: number;
+  /**
+   * Rounds the blades off, 0 straight to 1 circular.
+   *
+   * Rounds the starburst away with them: a curved blade has no straight edge to
+   * diffract a spike off, so a fully circular diaphragm produces none.
+   */
+  bladeCurvature?: number;
   exposure?: number;
   /** Tone map operator, or null to leave the image scene-referred. */
   toneMap?:

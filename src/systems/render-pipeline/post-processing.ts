@@ -62,6 +62,7 @@ const EFFECT_ORDER: readonly EffectRegistration[] = [
   { name: "dof", load: () => import("./post-processing/dof.js") },
   { name: "motionBlur", load: () => import("./post-processing/motion-blur.js") },
   { name: "bloom", load: () => import("./post-processing/bloom.js") },
+  { name: "lensFlare", load: () => import("./post-processing/lens-flare.js") },
   {
     name: "combine",
     load: () => import("./post-processing/combine.js"),

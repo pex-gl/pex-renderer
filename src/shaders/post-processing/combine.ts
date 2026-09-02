@@ -88,6 +88,7 @@ export const combineShader = (defines: Set<string> = new Set()): string => {
 
   const useFog = defines.has("USE_FOG");
   const useBloom = defines.has("USE_BLOOM");
+  const useLensFlare = defines.has("USE_LENS_FLARE");
   const useVignette = defines.has("USE_VIGNETTE");
   const useLUT = defines.has("USE_LUT");
   const useColorCorrection = defines.has("USE_COLOR_CORRECTION");
@@ -112,6 +113,7 @@ struct Combine {
   fov: f32,
   exposure: f32,
   bloomIntensity: f32,
+  lensFlareIntensity: f32,
   vignetteRadius: f32,
   vignetteIntensity: f32,
   lutTextureSize: f32,
@@ -125,6 +127,7 @@ struct Combine {
 ${textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uTexture")}
 ${useFog ? textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uDepthTexture", "texture_depth_2d") : ""}
 ${useBloom ? textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uBloomTexture") : ""}
+${useLensFlare ? textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uLensFlareTexture") : ""}
 ${useLUT ? textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uLUTTexture") : ""}
 
 ${fullscreenVertex()}
@@ -171,6 +174,15 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
   ${
     useBloom
       ? "color = vec4f(color.rgb + textureSample(uBloomTexture, uBloomTextureSampler, uv).rgb * uCombine.bloomIntensity, color.a);"
+      : ""
+  }
+  ${
+    // Added rather than chained, and here rather than after the tone map: a
+    // flare is light that reached the sensor, so it is exposed and tone mapped
+    // with everything else. Bilinear from a quarter-resolution texture, which
+    // is the upsample its own chain never had to do.
+    useLensFlare
+      ? "color = vec4f(color.rgb + textureSample(uLensFlareTexture, uLensFlareTextureSampler, uv).rgb * uCombine.lensFlareIntensity, color.a);"
       : ""
   }
 

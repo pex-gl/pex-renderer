@@ -15,12 +15,15 @@ const combine: PostProcessingEffect = {
   declare({ cameraEntity, textures, samplers, pass }) {
     const camera = cameraEntity.camera!;
     const postProcessing = cameraEntity.postProcessing!;
-    const { fog, bloom, vignette, lut, colorCorrection } = postProcessing;
+    const { fog, bloom, lensFlare, vignette, lut, colorCorrection } =
+      postProcessing;
 
     const depth = textures.get("depth");
     const glare = textures.get("bloom.threshold");
+    const flare = textures.get("lensFlare.main");
 
     const addsBloom = !!bloom && !!glare;
+    const addsLensFlare = !!lensFlare && !!flare;
     const showsFog = !!fog && !!depth;
 
     pass({
@@ -35,6 +38,7 @@ const combine: PostProcessingEffect = {
           : []),
         ...(showsFog ? ["USE_FOG"] : []),
         ...(addsBloom ? ["USE_BLOOM"] : []),
+        ...(addsLensFlare ? ["USE_LENS_FLARE"] : []),
         ...(vignette ? ["USE_VIGNETTE"] : []),
         ...(lut?.texture ? ["USE_LUT"] : []),
         ...(colorCorrection ? ["USE_COLOR_CORRECTION"] : []),
@@ -55,6 +59,7 @@ const combine: PostProcessingEffect = {
           fov: camera.fov!,
           exposure: postProcessing.exposure!,
           bloomIntensity: bloom?.intensity ?? 0,
+          lensFlareIntensity: lensFlare?.intensity ?? 0,
           vignetteRadius: vignette?.radius ?? 0,
           vignetteIntensity: vignette?.intensity ?? 0,
           lutTextureSize: lut?.texture?.width ?? 1,
@@ -70,6 +75,10 @@ const combine: PostProcessingEffect = {
         ...(addsBloom && {
           uBloomTexture: glare!,
           uBloomTextureSampler: samplers.linear,
+        }),
+        ...(addsLensFlare && {
+          uLensFlareTexture: flare!,
+          uLensFlareTextureSampler: samplers.linear,
         }),
         ...(lut?.texture && {
           uLUTTexture: lut.texture,
