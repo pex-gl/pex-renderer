@@ -130,7 +130,13 @@ export interface ReflectionProbeCache {
 // Components
 export interface AmbientLightComponentOptions {
   color?: Color;
+  /**
+   * Luminance in cd/m², the same unit as image-based lighting: a stand-in for
+   * an environment of uniform brightness rather than an extra lamp.
+   */
   intensity?: number;
+  /** `intensity`, unconverted — the shaders take luminance. Added by the light system. */
+  _intensity?: number;
 }
 export interface AnimationComponentOptions {
   name?: string;
@@ -143,6 +149,12 @@ export interface AnimationComponentOptions {
 }
 /** Shadow-mapping internals shared by shadow-casting lights. */
 export interface LightShadowInternals {
+  /**
+   * `intensity` converted to the unit the shaders integrate — illuminance (lx)
+   * for a directional light, luminous intensity (cd) for point and spot,
+   * luminance (cd/m²) for area. Added by the light system.
+   */
+  _intensity?: number;
   _projectionMatrix?: Mat4;
   _viewMatrix?: Mat4;
   _direction?: Vec3;
@@ -163,6 +175,12 @@ export interface LightShadowInternals {
 }
 export interface AreaLightComponentOptions extends LightShadowInternals {
   color?: Color;
+  /**
+   * Luminous power in lumens, spread over the emitting surface — the
+   * transform's x and y scale — to give the luminance the shader integrates.
+   * Scaling the light up therefore dims it, since the same power covers more
+   * area. Halved again when `doubleSided`.
+   */
   intensity?: number;
   disk?: boolean;
   doubleSided?: boolean;
@@ -255,6 +273,12 @@ export interface CameraComponentOptions {
 }
 export interface DirectionalLightComponentOptions extends LightShadowInternals {
   color?: Color;
+  /**
+   * Illuminance in lux (lm/m²) on a surface facing the light — the unit
+   * `KHR_lights_punctual` uses. Distance-independent: a directional light is
+   * infinitely far away, so it does not fall off. Midday sun is around
+   * 100 000 lx, an overcast sky around 1000 lx.
+   */
   intensity?: number;
   /** Shadow-map rasterizer constant depth bias. */
   depthBias?: number;
@@ -433,8 +457,23 @@ export interface OrbiterComponentOptions {
 }
 export interface PointLightComponentOptions extends LightShadowInternals {
   color?: Color;
+  /**
+   * Luminous power in lumens, radiated equally in every direction: the light
+   * system divides by 4π to get the luminous intensity the shader integrates.
+   * A 75 W incandescent bulb is around 1000 lm.
+   *
+   * `KHR_lights_punctual` measures point lights in candela instead; the glTF
+   * loader converts.
+   */
   intensity?: number;
+  /**
+   * Distance at which the light stops contributing, in meters. Infinite by
+   * default, matching glTF — the cutoff bounds the light's shadow map and
+   * culling work, it is not what makes it fall off.
+   */
   range?: number;
+  /** 1/`range`², or 0 when infinite. Added by the light system. */
+  _invSqrFalloff?: number;
   /** Normalized shadow-map bias (fraction of the light's far plane). */
   bias?: number;
   bulbRadius?: number;
@@ -1079,10 +1118,33 @@ export interface SkyboxComponentOptions {
 }
 export interface SpotLightComponentOptions extends LightShadowInternals {
   color?: Color;
+  /**
+   * Luminous power in lumens; the light system converts it to the axial
+   * luminous intensity the shader integrates, by `focusedSpot`.
+   *
+   * `KHR_lights_punctual` measures spot lights in candela instead; the glTF
+   * loader converts.
+   */
   intensity?: number;
+  /** Outer cone half-angle in radians, past which the light contributes nothing. */
   angle?: number;
+  /** Cone half-angle in radians within which the light is at full intensity. */
   innerAngle?: number;
+  /**
+   * Concentrate the luminous power into the cone (Φ = 2π(1−cos`angle`)I) rather
+   * than spreading it over a hemisphere (Φ = πI), so narrowing the beam
+   * brightens it the way a real fixture does. Off by default, which decouples
+   * brightness from the cone angle.
+   */
+  focusedSpot?: boolean;
+  /**
+   * Distance at which the light stops contributing, in meters. Infinite by
+   * default, matching glTF — the cutoff bounds the light's shadow map and
+   * culling work, it is not what makes it fall off.
+   */
   range?: number;
+  /** 1/`range`², or 0 when infinite. Added by the light system. */
+  _invSqrFalloff?: number;
   /** Shadow-map rasterizer constant depth bias. */
   depthBias?: number;
   /**

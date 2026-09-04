@@ -125,8 +125,12 @@ const getDirectionalLight = ({ transform }) => {
   );
 };
 
+// A gizmo has to be drawable, and an infinite range has no extent to draw.
+const HELPER_RANGE = 10;
+const helperRange = (range) => (Number.isFinite(range) ? range : HELPER_RANGE);
+
 const getPointLight = (pointLight) => {
-  const radius = pointLight.range / 2;
+  const radius = helperRange(pointLight.range) / 2;
   const prismRadius = radius * 0.1;
 
   return getPrismPositions({ radius: prismRadius }).concat(
@@ -145,7 +149,7 @@ const getPointLight = (pointLight) => {
 const spotLightCircleOptions = { steps: 32, axis: [0, 1] };
 
 const getSpotLight = (spotLight) => {
-  const distance = spotLight.range;
+  const distance = helperRange(spotLight.range);
   const radius = distance * Math.tan(spotLight.angle);
   const innerRadius = distance * Math.tan(spotLight.innerAngle);
 

@@ -473,7 +473,7 @@ ${bindingDeclaration(1, lightBindings.next(), "uIrradianceCoefficients", `array<
   const areaLightsBlock = lightsLoop(
     areaLights,
     "uAreaLights",
-    `EvaluateAreaLight(&data, uAreaLights[i], uLtc1, ${samplerName("uLtc1")}, uLtc2, ${samplerName("uLtc2")}, data.ao, input.positionWorld, uFrame.cameraPosition, input.position.xy);`,
+    `EvaluateAreaLight(&data, uAreaLights[i], uLtc1, ${samplerName("uLtc1")}, uLtc2, ${samplerName("uLtc2")}, input.positionWorld, uFrame.cameraPosition, input.position.xy);`,
   );
 
   const alphaBlock = () => /* wgsl */ `
@@ -800,7 +800,7 @@ struct PBRData {
   directColor: vec3f,
   diffuseColor: vec3f, // color contribution from diffuse lighting
   indirectDiffuse: vec3f, // contribution from IBL light probe and Ambient Light
-  indirectSpecular: vec3f, // contribution from IBL light probe and Area Light
+  indirectSpecular: vec3f, // contribution from IBL light probe
   sheenColor: vec3f,
   sheenRoughness: f32,
   sheenLinearRoughness: f32,

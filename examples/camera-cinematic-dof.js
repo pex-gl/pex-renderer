@@ -65,7 +65,7 @@ const pointLightEntity = createEntity({
   }),
   pointLight: components.pointLight({
     color: [2, 1, 1, 1],
-    intensity: 2,
+    intensity: 25, // lm
     castShadows: true,
   }),
 });

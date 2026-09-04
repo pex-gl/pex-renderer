@@ -211,6 +211,71 @@ const isAABBInFrustum = (worldBounds: any, frustum: any) => {
   return true;
 };
 
+// Photometric conversions between the units lights are authored in and the
+// units the shaders integrate. The shaders take what the rendering equation
+// needs — `intensity * attenuation` is the illuminance reaching the surface —
+// so punctual lights arrive as luminous intensity (cd) and area lights as the
+// luminance (cd/m²) of their emitting surface. systems/light.ts applies these
+// once per frame; nothing downstream sees lumens.
+const FOUR_PI = 4 * Math.PI;
+const TWO_PI = 2 * Math.PI;
+
+/** Luminous power (lm) of an isotropic point source to luminous intensity (cd). */
+const pointPowerToIntensity = (luminousPower: number): number =>
+  luminousPower / FOUR_PI;
+
+/** Luminous intensity (cd) of an isotropic point source to luminous power (lm). */
+const pointIntensityToPower = (luminousIntensity: number): number =>
+  luminousIntensity * FOUR_PI;
+
+/**
+ * Luminous power (lm) of a spot light to its axial luminous intensity (cd).
+ *
+ * `focused` couples the beam to the cone: the same power concentrated into a
+ * narrower cone burns brighter, which is what a real fixture does and what
+ * `KHR_lights_punctual` describes. Left off, power spreads over a hemisphere
+ * (Φ = πI) and narrowing the cone only makes the pool smaller.
+ *
+ * `angle` is the outer cone half-angle, in radians.
+ */
+const spotPowerToIntensity = (
+  luminousPower: number,
+  angle: number,
+  focused?: boolean,
+): number =>
+  focused
+    ? luminousPower / (TWO_PI * (1 - Math.cos(angle)))
+    : luminousPower / Math.PI;
+
+/** Axial luminous intensity (cd) of a spot light to luminous power (lm). */
+const spotIntensityToPower = (
+  luminousIntensity: number,
+  angle: number,
+  focused?: boolean,
+): number =>
+  focused
+    ? luminousIntensity * TWO_PI * (1 - Math.cos(angle))
+    : luminousIntensity * Math.PI;
+
+/**
+ * Luminous power (lm) of a Lambertian emitter to its luminance (cd/m²), the
+ * unit the linearly transformed cosines integrate against.
+ *
+ * `width` and `height` are the light's world-space extent — the transform's x
+ * and y scale — so a disk is the ellipse they bound. A double-sided emitter
+ * spreads the same power over both faces.
+ */
+const areaPowerToLuminance = (
+  luminousPower: number,
+  width: number,
+  height: number,
+  disk?: boolean,
+  doubleSided?: boolean,
+): number => {
+  const area = disk ? (Math.PI * width * height) / 4 : width * height;
+  return area > 0 ? luminousPower / (Math.PI * area * (doubleSided ? 2 : 1)) : 0;
+};
+
 /**
  * Stable cache key for a set of shader defines — the feature set a shader
  * variant was generated from.
@@ -249,4 +314,9 @@ export {
   mapValues,
   mapKeys,
   getEnvironmentRotation,
+  pointPowerToIntensity,
+  pointIntensityToPower,
+  spotPowerToIntensity,
+  spotIntensityToPower,
+  areaPowerToLuminance,
 };

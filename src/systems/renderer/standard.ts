@@ -70,12 +70,13 @@ const IDENTITY_MAT4 = mat4.create();
 const MAX_JOINTS = 256;
 
 // [r, g, b] stays as authored sRGB; the shader decodes it. The 4th component
-// carries intensity (light.color.w), matching the WGSL light chunks.
+// carries the photometric intensity the shader integrates (light.color.w) —
+// systems/light.ts converted it from the authored unit.
 const lightColor = (light: any) => [
   light.color[0],
   light.color[1],
   light.color[2],
-  light.intensity,
+  light._intensity,
 ];
 
 // uJointMatrices is a fixed-length array<mat4x4f, MAX_JOINTS> binding, so the
@@ -463,7 +464,7 @@ export default ({
         return {
           position: e._transform!.worldPosition,
           color: lightColor(light),
-          range: light.range,
+          invSqrFalloff: light._invSqrFalloff,
           bias: light.bias ?? 0,
           radius: light.bulbRadius ?? 0,
           // Normalizes the stored/compared radial distance (shadow-mapping.ts
@@ -487,7 +488,7 @@ export default ({
           color: lightColor(light),
           innerAngle: light.innerAngle,
           angle: light.angle,
-          range: light.range,
+          invSqrFalloff: light._invSqrFalloff,
           projectionMatrix: light._projectionMatrix,
           viewMatrix: light._viewMatrix,
           ...shadow2D(light),

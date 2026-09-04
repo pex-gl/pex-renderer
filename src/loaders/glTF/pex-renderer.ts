@@ -2,7 +2,11 @@ import { mat4 } from "pex-math";
 import { fromLinear } from "pex-color";
 
 import { components, entity as createEntity, systems } from "../../index.js";
-import { mapKeys } from "../../utils.js";
+import {
+  mapKeys,
+  pointIntensityToPower,
+  spotIntensityToPower,
+} from "../../utils.js";
 
 import type { GltfDocument, ResolvedGltfNode } from "./document.js";
 import type { Entity } from "../../types.js";
@@ -130,27 +134,41 @@ function mapMaterial(material: Record<string, any>): Record<string, any> {
   return result;
 }
 
-function mapLight(light: Record<string, any>): Record<string, any> {
-  return {
-    color: [...light.color, 1],
-    intensity: light.intensity,
-    ...(light.range !== undefined && { range: light.range }),
-    ...(light.type === "spot" && {
-      innerAngle: light.innerConeAngle,
-      angle: light.outerConeAngle,
-    }),
-  };
-}
-
+// KHR_lights_punctual measures directional lights in lux, which is
+// pex-renderer's unit too, but point and spot lights in candela, where
+// pex-renderer authors luminous power. This is the only place candela exists.
 function buildLightComponent(light: Record<string, any>) {
-  const props = mapLight(light);
+  const common = {
+    color: [...light.color, 1],
+    // An absent range is infinite, which is the components' own default.
+    ...(light.range !== undefined && { range: light.range }),
+  };
+
   switch (light.type) {
     case "directional":
-      return components.directionalLight(props);
+      return components.directionalLight({
+        ...common,
+        intensity: light.intensity,
+      });
     case "point":
-      return components.pointLight(props);
+      return components.pointLight({
+        ...common,
+        intensity: pointIntensityToPower(light.intensity),
+      });
     case "spot":
-      return components.spotLight(props);
+      return components.spotLight({
+        ...common,
+        // The spec defines the intensity as the brightness inside the inner
+        // cone, so the beam is focused by definition.
+        intensity: spotIntensityToPower(
+          light.intensity,
+          light.outerConeAngle,
+          true,
+        ),
+        focusedSpot: true,
+        innerAngle: light.innerConeAngle,
+        angle: light.outerConeAngle,
+      });
     default:
       throw new Error(`Unexpected light type: ${light.type}`);
   }

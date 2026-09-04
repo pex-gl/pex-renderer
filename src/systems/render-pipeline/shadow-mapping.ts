@@ -118,7 +118,10 @@ export default ({
       fov,
       1,
       MIN_NEAR,
-      light.range > 0 ? light.range : FAR_ENOUGH,
+      // An infinite range needs a finite far plane to build a frustum from.
+      Number.isFinite(light.range) && light.range > 0
+        ? light.range
+        : FAR_ENOUGH,
     );
     computeFrustumPlanes(TEMP_FRUSTUM, TEMP_MAT4, light._viewMatrix);
     return (worldBounds: any) => isAABBInFrustum(worldBounds, TEMP_FRUSTUM);

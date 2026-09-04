@@ -120,7 +120,7 @@ const spotLightEntity = createEntity({
   }),
   spotLight: components.spotLight({
     color: [1, 1, 0, 1],
-    intensity: 2,
+    intensity: 6.28, // lm
     range: 5,
     angle: Math.PI / 6,
     innerAngle: Math.PI / 12,
@@ -147,7 +147,7 @@ const pointLightEntity = createEntity({
   transform: components.transform({ position: [-1, 1, -1] }),
   pointLight: components.pointLight({
     color: [1, 1, 0, 1],
-    intensity: 1,
+    intensity: 12.6, // lm
     range: 5,
     bulbRadius: 0.1,
   }),
@@ -173,7 +173,7 @@ const areaLightEntity = createEntity({
   }),
   areaLight: components.areaLight({
     color: [1, 1, 0, 1],
-    intensity: 1,
+    intensity: 2.47, // lm
     disk: true,
     bulbRadius: 0.1,
   }),
@@ -353,7 +353,7 @@ gui.addHeader("Spot").setPosition(...getViewportPosition(LAYERS[1]));
 gui.addParam("Range", spotLightEntity.spotLight, "range", { min: 0, max: 20 });
 gui.addParam("Intensity", spotLightEntity.spotLight, "intensity", {
   min: 0,
-  max: 20,
+  max: 60,
 });
 gui.addParam("Angle", spotLightEntity.spotLight, "angle", {
   min: 0,
@@ -377,7 +377,7 @@ gui.addParam("Range", pointLightEntity.pointLight, "range", {
 });
 gui.addParam("Intensity", pointLightEntity.pointLight, "intensity", {
   min: 0,
-  max: 20,
+  max: 250,
 });
 gui.addParam("Bulb Radius", pointLightEntity.pointLight, "bulbRadius", {
   min: 0,
@@ -389,7 +389,7 @@ gui.addParam("Cast Shadows", pointLightEntity.pointLight, "castShadows");
 gui.addHeader("Area").setPosition(...getViewportPosition(LAYERS[3]));
 gui.addParam("Intensity", areaLightEntity.areaLight, "intensity", {
   min: 0,
-  max: 20,
+  max: 60,
 });
 gui.addParam("Width", areaLightEntity.transform.scale, "0", {
   min: 0,

@@ -392,7 +392,7 @@ const pointLightEntity = createEntity({
   }),
   pointLight: components.pointLight({
     color: [1, 0, 0, 1],
-    intensity: 10,
+    intensity: 126, // lm
     range: 10,
     castShadows: true,
   }),
@@ -413,7 +413,7 @@ const areaLightEntity = createEntity({
   }),
   areaLight: components.areaLight({
     color: [2.0, 1.2, 0.1, 1],
-    intensity: 2,
+    intensity: 31.4, // lm
     castShadows: true,
   }),
 });
