@@ -453,17 +453,21 @@ export interface SSAOComponentOptions {
   brightness?: number;
   contrast?: number;
 
-  /** SAO: sample a noise texture for the rotation jitter rather than hashing. */
-  noiseTexture?: boolean;
-  /** Samples per pixel (SAO), or steps per slice (GTAO). */
-  samples?: number;
-  /** SAO: darkening exponent. GTAO uses `finalValuePower`. */
+  /** SAO: samples per pixel. */
+  saoSamples?: number;
+  /**
+   * SAO: scales the occlusion sum before the anti-tone map; useful range is
+   * roughly 0.1 to 1. GTAO uses `finalValuePower`.
+   */
   intensity?: number;
-  /** SAO: bias against occlusion in smooth corners, in centimeters. */
+  /** SAO: bias against occlusion in smooth corners, in meters. */
   bias?: number;
   /** SAO: turns of the sampling spiral. Prime, so taps don't line up. */
   spiralTurns?: number;
-  /** SAO: bilateral blur width, or negative to leave the estimate raw. */
+  /**
+   * SAO: reach of the bilateral blur either side of a pixel, in pixels, or
+   * negative to leave the estimate raw. Nine taps span it.
+   */
   blurRadius?: number;
   /** SAO: how sharply the bilateral blur rejects a depth difference. */
   blurSharpness?: number;
@@ -476,6 +480,8 @@ export interface SSAOComponentOptions {
    * the occlusion reads as a pattern instead of grain.
    */
   slices?: number;
+  /** GTAO: steps along each slice. The total tap count is `slices` times it. */
+  stepsPerSlice?: number;
   /**
    * GTAO: also estimate the average unoccluded direction, which then drives the
    * irradiance lookup and the specular occlusion cone instead of the surface

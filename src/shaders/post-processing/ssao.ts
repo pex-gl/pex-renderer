@@ -27,38 +27,37 @@ import {
 
 /**
  * Levels of the depth pyramid, matching the chunk's hand-unrolled reduction and
- * its `GTAO_DEPTH_MIP_MAX_LEVEL`. Four rather than the reference's five: a
+ * GTAO's `GTAO_DEPTH_MIP_MAX_LEVEL`. Four rather than the reference's five: a
  * storage texture view is a single mip, and WebGPU only guarantees four storage
  * texture bindings per stage.
  */
-export const GTAO_DEPTH_MIP_LEVELS = 4;
+export const DEPTH_MIP_LEVELS = 4;
 
 /**
  * Depth prefilter: the compute pass that turns the depth buffer into the linear
- * view-space pyramid the estimator samples, in one dispatch.
+ * view-space pyramid both estimators sample, in one dispatch.
  *
  * Not a fullscreen pass, and not because compute is faster per se: the coarser
  * levels reduce through workgroup memory, so building them costs one read of
  * the depth buffer rather than one full pass over the previous level each.
+ *
+ * Both estimators bind the pyramid's own small params struct rather than their
+ * own: the reduction needs four scalars, and which filter runs is a constant.
  */
-export const gtaoPrefilterShader = (): string => {
+export const depthPyramidShader = (): string => {
   const alloc = createBindingAllocator(1);
 
   return formatShader(/* wgsl */ `
 ${postProcessingStruct}
 
-${SHADERS.math.PI}
-${SHADERS.math.HALF_PI}
 ${SHADERS.math.saturate}
 ${SHADERS.depthRead}
-${SHADERS.gtao.common}
-${SHADERS.gtao.prefilter}
+${SHADERS.depthPyramid}
 
-
-@group(0) @binding(${alloc.next()}) var<uniform> uGTAO: GTAOParams;
+@group(0) @binding(${alloc.next()}) var<uniform> uDepthPyramid: DepthPyramidParams;
 @group(0) @binding(${alloc.next()}) var uDepthTexture: texture_depth_2d;
 ${Array.from(
-  { length: GTAO_DEPTH_MIP_LEVELS },
+  { length: DEPTH_MIP_LEVELS },
   (_, level) =>
     `@group(0) @binding(${alloc.next()}) var uDepthMip${level}: texture_storage_2d<r32uint, write>;`,
 ).join("\n")}
@@ -69,11 +68,11 @@ fn computeMain(
   @builtin(global_invocation_id) globalId: vec3u,
   @builtin(local_invocation_id) localId: vec3u
 ) {
-  gtaoPrefilterDepths16x16(
+  depthPyramidBuild16x16(
     globalId.xy,
     localId.xy,
     uDepthTexture,
-    uGTAO,
+    uDepthPyramid,
     uDepthMip0,
     uDepthMip1,
     uDepthMip2,
@@ -99,6 +98,8 @@ ${SHADERS.math.PI}
 ${SHADERS.math.HALF_PI}
 ${SHADERS.math.saturate}
 ${SHADERS.colorCorrection}
+${SHADERS.depthRead}
+${SHADERS.depthPyramid}
 ${SHADERS.gtao.common}
 ${SHADERS.gtao.main}
 
@@ -164,7 +165,13 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
 `);
 };
 
-/** Scalable Ambient Obscurance. Writes visibility in `.x`. */
+/**
+ * Scalable Ambient Obscurance. Writes visibility in `.x`.
+ *
+ * Reads the depth pyramid rather than the depth buffer: a tap far from its
+ * pixel picks a coarser level, which is what keeps the cost flat as the radius
+ * grows instead of rising with it.
+ */
 export const saoShader = (): string => {
   const alloc = createBindingAllocator(1);
 
@@ -174,17 +181,14 @@ ${postProcessingStruct}
 // Includes lead: the sao chunk declares SAOParams, the type bound below.
 ${SHADERS.math.TWO_PI}
 ${SHADERS.math.saturate}
-${SHADERS.math.random}
 ${SHADERS.colorCorrection}
 ${SHADERS.depthRead}
-${SHADERS.depthPosition}
+${SHADERS.depthPyramid}
 ${SHADERS.sao}
 
 @group(0) @binding(${alloc.next()}) var<uniform> uSAO: SAOParams;
-
-${textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uDepthTexture", "texture_depth_2d")}
-${textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uNormalTexture")}
-${textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uNoiseTexture")}
+@group(0) @binding(${alloc.next()}) var uDepthTexture: texture_2d<u32>;
+@group(0) @binding(${alloc.next()}) var uNormalTexture: texture_2d<f32>;
 
 ${fullscreenVertex()}
 
@@ -192,11 +196,7 @@ ${fullscreenVertex()}
 fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
   let visibility = sao(
     uDepthTexture,
-    uDepthTextureSampler,
     uNormalTexture,
-    uNormalTextureSampler,
-    uNoiseTexture,
-    uNoiseTextureSampler,
     ${FRAGMENT_COORD},
     uSAO
   );
@@ -217,7 +217,9 @@ export const bilateralBlurShader = (): string => {
 ${postProcessingStruct}
 
 struct BilateralBlur {
-  direction: vec2f,
+  // Unit axis, and the reach either side of it in pixels.
+  axis: vec2f,
+  radius: f32,
   near: f32,
   far: f32,
   sharpness: f32,
@@ -241,7 +243,8 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
     uDepthTexture,
     uDepthTextureSampler,
     input.texCoord0,
-    uBlur.direction,
+    uBlur.axis,
+    uBlur.radius,
     uPostProcessing.viewportSize,
     uBlur.near,
     uBlur.far,

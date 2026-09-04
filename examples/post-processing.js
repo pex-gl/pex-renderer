@@ -109,19 +109,19 @@ const postProcessing = components.postProcessing({
   ssao: components.postProcessing.ssao({
     type: "sao", // "gtao",
     mix: 1,
+    // Shared with GTAO, which scales it by radiusMultiplier.
     radius: 0.5, // m
     brightness: 0,
     contrast: 1,
     // SAO
-    noiseTexture: true,
-    samples: 11, // GTAO: steps per slice, 3
-    intensity: 2.2,
-    bias: 0.001, // cm
+    saoSamples: 11,
+    intensity: 1,
+    bias: 0.01, // m
     spiralTurns: 7,
-    blurRadius: 0.5,
+    blurRadius: 8, // px
     blurSharpness: 10,
-    // GTAO
     slices: 3,
+    stepsPerSlice: 3,
     bentNormals: false,
     radiusMultiplier: 1.457,
     falloffRange: 0.615,
@@ -534,6 +534,11 @@ gui.addRadioList(
   "debugRender",
   [
     "",
+    "ssao.main",
+    "ssao.blurHorizontal",
+    "ssao.blurVertical",
+    "ssao.edges",
+    "ssao.denoise[0]",
     "taa.emissive",
     "taa.depthHistory",
     "dof.cocResolve",
@@ -576,6 +581,8 @@ gui.addRadioList(
     "final.main",
     "smaa.edges",
     "smaa.weights",
+    "dof.debug",
+    "taa.debug",
   ].map((value) => ({
     name: value || "No debug",
     value,
@@ -636,11 +643,6 @@ gui.addRadioList(
   "type",
   ["sao", "gtao"].map((value) => ({ name: value, value })),
 );
-gui.addParam("Samples", postProcessing.ssao, "samples", {
-  min: 2,
-  max: 20,
-  step: 1,
-});
 gui.addParam("Radius", postProcessing.ssao, "radius", { min: 0, max: 10 });
 gui.addParam("Brightness", postProcessing.ssao, "brightness", {
   min: -0.5,
@@ -649,30 +651,39 @@ gui.addParam("Brightness", postProcessing.ssao, "brightness", {
 gui.addParam("Contrast", postProcessing.ssao, "contrast", { min: 0.1, max: 3 });
 
 gui.addColumn("SSAO (SAO)");
-gui.addParam("Intensity", postProcessing.ssao, "intensity", {
-  min: 0,
-  max: 10,
-});
-gui.addParam("Spiral Turns", postProcessing.ssao, "spiralTurns", {
+gui.addParam("Samples", postProcessing.ssao, "saoSamples", {
   min: 2,
   max: 20,
   step: 1,
 });
+gui.addParam("Spiral Turns", postProcessing.ssao, "spiralTurns", {
+  min: 1,
+  max: 17,
+  step: 1,
+});
+gui.addParam("Intensity", postProcessing.ssao, "intensity", {
+  min: 0,
+  max: 1.5,
+});
+gui.addParam("Bias", postProcessing.ssao, "bias", { min: 0, max: 0.05 });
 gui.addParam("Blur Radius", postProcessing.ssao, "blurRadius", {
   min: 0,
-  max: 2,
+  max: 24,
 });
 gui.addParam("Blur Sharpness", postProcessing.ssao, "blurSharpness", {
   min: 0,
   max: 20,
 });
-gui.addParam("Noise texture", postProcessing.ssao, "noiseTexture");
-gui.addParam("Bias", postProcessing.ssao, "bias", { min: 0, max: 0.7 });
 
 gui.addColumn("SSAO (GTAO)");
 gui.addParam("Slices", postProcessing.ssao, "slices", {
   min: 2,
   max: 20,
+  step: 1,
+});
+gui.addParam("Steps per slice", postProcessing.ssao, "stepsPerSlice", {
+  min: 1,
+  max: 9,
   step: 1,
 });
 gui.addParam("Bent normals", postProcessing.ssao, "bentNormals");
@@ -707,7 +718,7 @@ gui.addParam(
 );
 gui.addParam("Denoise passes", postProcessing.ssao, "denoisePasses", {
   min: 0,
-  max: 3,
+  max: 5,
   step: 1,
 });
 gui.addParam("Denoise blur beta", postProcessing.ssao, "denoiseBlurBeta", {

@@ -206,7 +206,7 @@ const postProcessingVariants = [
   { name: "downsample [anti-flicker]", shader: postProcessing.downsampleShader, defines: new Set() },
   { name: "upsample [bilinear]", shader: postProcessing.upsampleShader, defines: new Set(["QUALITY_0"]) },
   { name: "upsample [tent]", shader: postProcessing.upsampleShader, defines: new Set() },
-  { name: "gtao prefilter", shader: postProcessing.gtaoPrefilterShader, defines: new Set() },
+  { name: "depth pyramid", shader: postProcessing.depthPyramidShader, defines: new Set() },
   { name: "gtao", shader: postProcessing.gtaoShader, defines: new Set() },
   { name: "gtao [edges]", shader: postProcessing.gtaoShader, defines: new Set(["USE_GTAO_EDGES"]) },
   { name: "gtao denoise", shader: postProcessing.gtaoDenoiseShader, defines: new Set() },

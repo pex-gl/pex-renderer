@@ -67,16 +67,24 @@ const postProcessing = ((options?: PostProcessingComponentOptions) => ({
 postProcessing.ssao = (options?: SSAOComponentOptions) => ({
   type: "sao", // "gtao",
   mix: 1,
+  // Shared with GTAO, which scales it by radiusMultiplier.
   radius: 0.5, // m
   brightness: 0,
   contrast: 1,
-  // SAO
-  noiseTexture: true,
-  samples: options?.type === "gtao" ? 3 : 11,
-  intensity: 2.2,
-  bias: 0.001, // cm
+  // SAO. The supplemental's NUM_SAMPLES; NUM_SPIRAL_TURNS is prime to it, so
+  // the taps land on a uniform angular grid.
+  saoSamples: 11,
+  // The reference's defaults, and intensity transfers regardless of radius:
+  // our falloff is normalized by radius^2, so the sum already carries the
+  // 1/radius^6 the reference applies separately as intensityDivR6.
+  intensity: 1,
+  bias: 0.01, // m
   spiralTurns: 7,
-  blurRadius: 0.5,
+  // Reference's R * SCALE: nine taps two pixels apart. Pixels rather than a
+  // fraction of the viewport, because the noise it removes is per pixel — a
+  // fixed reach averages a fixed number of independent estimates whatever the
+  // resolution, where a fraction would spread the same nine taps thinner.
+  blurRadius: 8, // px
   blurSharpness: 10,
   // GTAO. XeGTAO's own defaults, including the slice count: its "high" preset
   // takes three, which is tuned for exactly the temporal accumulation `taa`
@@ -86,6 +94,8 @@ postProcessing.ssao = (options?: SSAOComponentOptions) => ({
   // filter takes ~7x off the high-frequency noise but only ~1.4x off that), so
   // raise this to six there instead; nine is the reference's "ultra".
   slices: 3,
+  /** Steps along each slice: the total tap count is slices * this. */
+  stepsPerSlice: 3,
   bentNormals: false,
   radiusMultiplier: 1.457,
   falloffRange: 0.615,

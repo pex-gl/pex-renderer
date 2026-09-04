@@ -1,77 +1,20 @@
-import { createTexture } from "pex-gpu";
-import random from "pex-random";
-
 import {
   bilateralBlurShader,
-  GTAO_DEPTH_MIP_LEVELS,
+  DEPTH_MIP_LEVELS,
+  depthPyramidShader,
   gtaoDenoiseShader,
-  gtaoPrefilterShader,
   gtaoShader,
   saoShader,
 } from "../../../shaders/post-processing/ssao.js";
 
 import type { ResourceHandle } from "../../../frame-graph/index.js";
-import type { GpuContext, GpuTexture } from "../../../types.js";
 import type {
   PostProcessingContext,
   PostProcessingEffect,
 } from "../post-processing.js";
 
-// Noise textures are identical for every camera and never change, so they are
-// memoized per context rather than cached per entity. Like the fullscreen
-// geometry, they live for the context's lifetime.
-const noiseTextures = new WeakMap<GpuContext, GpuTexture>();
-const dummyTextures = new WeakMap<GpuContext, GpuTexture>();
-
-const NOISE_SIZE = 64;
-
-/**
- * White noise for SAO's rotation jitter. Values are [0, 1] rather than the GLSL
- * version's [-1, 1]: the analytic fallback the same shader uses is a fract(),
- * and 8 bit unorm is filterable where rg32float is not.
- *
- * GTAO needs none: its noise is a Hilbert-driven R2 sequence evaluated per
- * pixel, which is better distributed than a tiled texture and costs no fetch.
- */
-function getNoiseTexture(ctx: GpuContext): GpuTexture {
-  return noiseTextures.getOrInsertComputed(ctx, () => {
-    const localPRNG = random.create("0");
-
-    const data = new Uint8Array(NOISE_SIZE ** 2 * 4);
-    for (let i = 0; i < NOISE_SIZE ** 2; i++) {
-      data[i * 4] = 255 * localPRNG.float();
-      data[i * 4 + 1] = 255 * localPRNG.float();
-      data[i * 4 + 3] = 255;
-    }
-
-    return createTexture(ctx, {
-      label: "ssaoNoiseTexture",
-      width: NOISE_SIZE,
-      height: NOISE_SIZE,
-      format: "rgba8unorm",
-      data,
-    });
-  });
-}
-
-/**
- * SAO samples a noise texture unconditionally, so the binding is always
- * declared; with the analytic hash selected it reads this instead.
- */
-function getDummyTexture(ctx: GpuContext): GpuTexture {
-  return dummyTextures.getOrInsertComputed(ctx, () =>
-    createTexture(ctx, {
-      label: "ssaoDummyNoiseTexture",
-      width: 1,
-      height: 1,
-      format: "rgba8unorm",
-      data: new Uint8Array([0, 0, 0, 255]),
-    }),
-  );
-}
-
 /** Pixels one workgroup covers: 8x8 threads, each handling a 2x2 block. */
-const GTAO_PREFILTER_TILE = 16;
+const DEPTH_PYRAMID_TILE = 16;
 /** Disables the denoise more elegantly than zeroing every edge would. */
 const GTAO_DENOISE_DISABLED_BETA = 1e4;
 
@@ -94,6 +37,65 @@ function getEstimatorScope({ cameraEntity, viewport }: EstimatorScope) {
     viewportSize: [width, height],
     viewportPixelSize: [1 / width, 1 / height],
   };
+}
+
+/** The four scalars the reduction needs, whichever filter it runs. */
+interface DepthPyramidParams {
+  // Indexable so it packs as a uniform block like the estimators' own params.
+  [key: string]: number;
+  near: number;
+  far: number;
+  effectRadius: number;
+  falloffRange: number;
+}
+
+/**
+ * The linear view-space depth pyramid both estimators sample, in one dispatch.
+ *
+ * SAO takes rotated grid subsampling — McGuire12 table 1 compares five filters
+ * and finds it the only one whose levels hold values that were in the scene —
+ * where GTAO takes the closest-biased mean its falloff parameters are tuned
+ * against.
+ */
+function declareDepthPyramid(
+  scope: EstimatorScope,
+  params: DepthPyramidParams,
+  rotatedGrid = false,
+) {
+  const { cameraEntity, compute, createTexture, depth } = scope;
+  const { width, height } = getEstimatorScope(scope);
+
+  // r32uint holding bitcast floats — see the chunk's depthPyramidLoad for why
+  // the pyramid is neither r16float nor r32float.
+  const depthMips = createTexture({
+    label: `ssao.depthMips.${cameraEntity.id}`,
+    width,
+    height,
+    format: "r32uint",
+    mipLevelCount: DEPTH_MIP_LEVELS,
+  });
+
+  compute({
+    name: "prefilterDepths",
+    shader: depthPyramidShader,
+    dispatch: [
+      Math.ceil(width / DEPTH_PYRAMID_TILE),
+      Math.ceil(height / DEPTH_PYRAMID_TILE),
+    ],
+    constants: { DEPTH_PYRAMID_ROTATED_GRID: rotatedGrid },
+    writes: [depthMips],
+    uniforms: { uDepthPyramid: params, uDepthTexture: depth },
+    // One binding per level: a storage texture view is a single mip, and the
+    // dispatch writes them all.
+    views: Object.fromEntries(
+      Array.from({ length: DEPTH_MIP_LEVELS }, (_, level) => [
+        `uDepthMip${level}`,
+        { handle: depthMips, level },
+      ]),
+    ),
+  });
+
+  return depthMips;
 }
 
 /**
@@ -157,33 +159,13 @@ function declareGTAO(scope: EstimatorScope) {
     noiseIndex: cameraEntity.postProcessing?.taa ? frameIndex % 64 : 0,
   };
 
-  // r32uint holding bitcast floats — see the chunk's gtaoLoadViewspaceDepth for
-  // why the pyramid is neither r16float nor r32float.
-  const depthMips = createTexture({
-    label: `ssao.depthMips.${cameraEntity.id}`,
-    width,
-    height,
-    format: "r32uint",
-    mipLevelCount: GTAO_DEPTH_MIP_LEVELS,
-  });
-
-  compute({
-    name: "prefilterDepths",
-    shader: gtaoPrefilterShader,
-    dispatch: [
-      Math.ceil(width / GTAO_PREFILTER_TILE),
-      Math.ceil(height / GTAO_PREFILTER_TILE),
-    ],
-    writes: [depthMips],
-    uniforms: { uGTAO: params, uDepthTexture: depth },
-    // One binding per level: a storage texture view is a single mip, and the
-    // dispatch writes all five.
-    views: Object.fromEntries(
-      Array.from({ length: GTAO_DEPTH_MIP_LEVELS }, (_, level) => [
-        `uDepthMip${level}`,
-        { handle: depthMips, level },
-      ]),
-    ),
+  const depthMips = declareDepthPyramid(scope, {
+    near: camera.near!,
+    far: camera.far!,
+    // The filter's falloff is expressed against the radius the estimator
+    // actually gathers over, which is the tuned one.
+    effectRadius: component.radius! * component.radiusMultiplier!,
+    falloffRange: component.falloffRange!,
   });
 
   // Visibility alone fits one channel. The bent normal takes the other three,
@@ -211,7 +193,7 @@ function declareGTAO(scope: EstimatorScope) {
     }),
     constants: {
       GTAO_NUM_SLICES: component.slices!,
-      GTAO_NUM_SAMPLES: component.samples!,
+      GTAO_NUM_STEPS_PER_SLICE: component.stepsPerSlice!,
       USE_GTAO_BENT_NORMALS: bentNormals,
       // Nothing follows to restore the packing scale, so the estimator applies
       // it itself.
@@ -261,26 +243,43 @@ function declareGTAO(scope: EstimatorScope) {
 
 /** Scalable Ambient Obscurance: one estimator pass and a separable blur. */
 function declareSAO(scope: EstimatorScope) {
-  const { ctx, samplers, pass, depth, normal } = scope;
-  const { camera, component, viewportSize, viewportPixelSize } =
-    getEstimatorScope(scope);
+  const { samplers, pass, depth, normal } = scope;
+  const { camera, component, width, height } = getEstimatorScope(scope);
 
-  const noise = component.noiseTexture
-    ? getNoiseTexture(ctx)
-    : getDummyTexture(ctx);
+  const depthMips = declareDepthPyramid(
+    scope,
+    // Rotated grid subsampling picks a depth rather than combining four, so the
+    // filter's falloff terms go unread.
+    { near: camera.near!, far: camera.far!, effectRadius: 0, falloffRange: 0 },
+    true,
+  );
+
+  // Taken from the projection matrix rather than the field of view, after the
+  // reference: an offset frustum (`camera.view`) or a jittered projection is a
+  // different matrix but the same fov, and reconstructing through the fov would
+  // put every sample on a surface the scene does not have.
+  const projection = camera.projectionMatrix!;
+  const [p00, p11, p20, p21] = [
+    projection[0]!,
+    projection[5]!,
+    projection[8]!,
+    projection[9]!,
+  ];
 
   const params = {
-    near: camera.near!,
+    projInfo: [
+      2 / (width * p00),
+      -2 / (height * p11),
+      (p20 - 1) / p00,
+      (1 + p21) / p11,
+    ],
     far: camera.far!,
-    fov: camera.fov!,
-    viewportSize,
-    texelSize: viewportPixelSize,
+    projScale: 0.5 * height * p11,
     intensity: component.intensity!,
     radius: component.radius!,
     bias: component.bias!,
     brightness: component.brightness!,
     contrast: component.contrast!,
-    noiseTextureSize: component.noiseTexture ? NOISE_SIZE : 1,
   };
 
   const format: GPUTextureFormat = "r8unorm";
@@ -293,28 +292,24 @@ function declareSAO(scope: EstimatorScope) {
     // opaque pass has not written yet.
     source: null,
     constants: {
-      SAO_NUM_SAMPLES: component.samples!,
+      SAO_NUM_SAMPLES: component.saoSamples!,
       SAO_NUM_SPIRAL_TURNS: component.spiralTurns!,
-      USE_SAO_NOISE_TEXTURE: !!component.noiseTexture,
     },
     clearValue: [0, 0, 0, 1],
     format,
     uniforms: {
       uSAO: params,
-      uDepthTexture: depth,
-      uDepthTextureSampler: samplers.nearest,
+      uDepthTexture: depthMips,
       uNormalTexture: normal,
-      uNormalTextureSampler: samplers.nearest,
-      uNoiseTexture: noise,
-      uNoiseTextureSampler: samplers.linearRepeat,
     },
   });
 
   // A negative radius turns the blur off, leaving the raw estimate.
   if (component.blurRadius! >= 0) {
-    const blur = (direction: number[]) => ({
+    const blur = (axis: number[]) => ({
       uBlur: {
-        direction,
+        axis,
+        radius: component.blurRadius!,
         near: camera.near!,
         far: camera.far!,
         sharpness: component.blurSharpness!,
@@ -329,7 +324,7 @@ function declareSAO(scope: EstimatorScope) {
       source: ao,
       clearValue: [0, 0, 0, 1],
       format,
-      uniforms: blur([component.blurRadius!, 0]),
+      uniforms: blur([1, 0]),
     });
 
     // Back into the estimate: the write lands after the read that produced the
@@ -341,7 +336,7 @@ function declareSAO(scope: EstimatorScope) {
       shader: bilateralBlurShader,
       source: horizontal,
       target: ao,
-      uniforms: blur([0, component.blurRadius!]),
+      uniforms: blur([0, 1]),
     });
   }
 }
