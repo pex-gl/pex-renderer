@@ -32,7 +32,18 @@ export default (
     baseColorTexture: undefined,
     emissiveColor: undefined,
     emissiveColorTexture: undefined,
-    emissiveIntensity: 1,
+    // Multiplier on emissiveColor, as KHR_materials_emissive_strength defines
+    // it: 1 puts the authored colour at display white, above that is the
+    // headroom a bloom pass needs. Unitless, so it means the same thing in a
+    // physically lit scene and a relative one.
+    emissiveStrength: 1,
+    // How much of the camera's exposure emissive receives, applied as
+    // mix(1.0, exposure, emissiveExposure). 0 undoes the exposure, so the
+    // authored value keeps its screen level whatever the camera does — what
+    // makes the multiplier above unitless, and what forces a surface to carry
+    // on blooming. 1 meters it like any other light, which only means anything
+    // if the product above was authored as a luminance in cd/m².
+    emissiveExposure: 0,
     metallic: 1,
     metallicTexture: undefined,
     roughness: 1,

@@ -42,6 +42,9 @@ const cameraEntities = gridCells(W, H, nW, nH, 0).map((cell, i) => {
     layer: LAYERS[i],
     transform: components.transform({ position: [2, 2, 3] }),
     camera: components.camera({
+      // Metered for the studio lamps below rather than for daylight: f/2.8 at
+      // 1/30s is EV 7.9, where 500 lx on white reads just over half.
+      shutterSpeed: 1 / 30,
       target: [0, 0, 0],
       aspect: W / nW / (H / nH),
       viewport: [cell[0], cell[1], cell[2], cell[3]],
@@ -80,7 +83,7 @@ world.add(floorEntity);
 
 // Lights
 const ambientLightEntity = createEntity({
-  ambientLight: components.ambientLight({ intensity: 0.01 }),
+  ambientLight: components.ambientLight({ intensity: 1.6 }), // cd/m²
 });
 world.add(ambientLightEntity);
 
@@ -93,7 +96,7 @@ const directionalLightEntity = createEntity({
   }),
   directionalLight: components.directionalLight({
     color: [1, 1, 0, 1],
-    intensity: 1,
+    intensity: 500, // lx
     bulbRadius: 0.3,
   }),
   lightHelper: components.lightHelper(),
@@ -106,7 +109,7 @@ const fixDirectionalLightEntity = createEntity({
     position: [1, 1, 1],
     rotation: quat.fromPointToPoint(quat.create(), [1, 1, 1], [0, 0, 0]),
   }),
-  directionalLight: components.directionalLight(),
+  directionalLight: components.directionalLight({ intensity: 500 }), // lx
   lightHelper: components.lightHelper(),
 });
 world.add(fixDirectionalLightEntity);
@@ -120,10 +123,11 @@ const spotLightEntity = createEntity({
   }),
   spotLight: components.spotLight({
     color: [1, 1, 0, 1],
-    intensity: 6.28, // lm
+    intensity: 4700, // lm, a stage fresnel
     range: 5,
     angle: Math.PI / 6,
     innerAngle: Math.PI / 12,
+    focusedSpot: false,
     bulbRadius: 0.03,
   }),
   lightHelper: components.lightHelper(),
@@ -136,7 +140,7 @@ const fixSpotLightEntity = createEntity({
     position: [1, 1, 1],
     rotation: quat.fromPointToPoint(quat.create(), [1, 1, 1], [0, 0, 0]),
   }),
-  spotLight: components.spotLight(),
+  spotLight: components.spotLight({ intensity: 4700 }), // lm
   lightHelper: components.lightHelper(),
 });
 world.add(fixSpotLightEntity);
@@ -147,7 +151,7 @@ const pointLightEntity = createEntity({
   transform: components.transform({ position: [-1, 1, -1] }),
   pointLight: components.pointLight({
     color: [1, 1, 0, 1],
-    intensity: 12.6, // lm
+    intensity: 19_000, // lm, a 1 kW studio lamp
     range: 5,
     bulbRadius: 0.1,
   }),
@@ -158,7 +162,7 @@ world.add(pointLightEntity);
 const fixPointLightEntity = createEntity({
   layer: LAYERS[2],
   transform: components.transform({ position: [1, 1, 1] }),
-  pointLight: components.pointLight(),
+  pointLight: components.pointLight({ intensity: 19_000 }), // lm
   lightHelper: components.lightHelper(),
 });
 world.add(fixPointLightEntity);
@@ -173,7 +177,7 @@ const areaLightEntity = createEntity({
   }),
   areaLight: components.areaLight({
     color: [1, 1, 0, 1],
-    intensity: 2.47, // lm
+    intensity: 3700, // lm, a 1 m² softbox
     disk: true,
     bulbRadius: 0.1,
   }),
@@ -188,7 +192,7 @@ const fixAreaLightEntity = createEntity({
     position: [1, 1, 1],
     rotation: quat.fromPointToPoint(quat.create(), [1, 1, 1], [0, 0, 0]),
   }),
-  areaLight: components.areaLight(),
+  areaLight: components.areaLight({ intensity: 4700 }), // lm
   lightHelper: components.lightHelper(),
 });
 world.add(fixAreaLightEntity);
@@ -279,7 +283,7 @@ gui.addParam(
   "Intensity",
   directionalLightEntity.directionalLight,
   "intensity",
-  { min: 0, max: 20 },
+  { min: 0, max: 2000 },
 );
 gui.addParam(
   "Bulb Radius",
@@ -353,7 +357,7 @@ gui.addHeader("Spot").setPosition(...getViewportPosition(LAYERS[1]));
 gui.addParam("Range", spotLightEntity.spotLight, "range", { min: 0, max: 20 });
 gui.addParam("Intensity", spotLightEntity.spotLight, "intensity", {
   min: 0,
-  max: 60,
+  max: 20000,
 });
 gui.addParam("Angle", spotLightEntity.spotLight, "angle", {
   min: 0,
@@ -363,6 +367,7 @@ gui.addParam("Inner angle", spotLightEntity.spotLight, "innerAngle", {
   min: 0,
   max: Math.PI / 2 - Number.EPSILON,
 });
+gui.addParam("Focused Spot", spotLightEntity.spotLight, "focusedSpot");
 gui.addParam("Bulb Radius", spotLightEntity.spotLight, "bulbRadius", {
   min: 0,
   max: 100,
@@ -377,7 +382,7 @@ gui.addParam("Range", pointLightEntity.pointLight, "range", {
 });
 gui.addParam("Intensity", pointLightEntity.pointLight, "intensity", {
   min: 0,
-  max: 250,
+  max: 80000,
 });
 gui.addParam("Bulb Radius", pointLightEntity.pointLight, "bulbRadius", {
   min: 0,
@@ -389,7 +394,7 @@ gui.addParam("Cast Shadows", pointLightEntity.pointLight, "castShadows");
 gui.addHeader("Area").setPosition(...getViewportPosition(LAYERS[3]));
 gui.addParam("Intensity", areaLightEntity.areaLight, "intensity", {
   min: 0,
-  max: 60,
+  max: 20000,
 });
 gui.addParam("Width", areaLightEntity.transform.scale, "0", {
   min: 0,

@@ -4,7 +4,10 @@ import type { SkyboxComponentOptions } from "../types.js";
 export default (options?: SkyboxComponentOptions) => ({
   // Shared
   backgroundBlur: 0,
-  exposure: 1,
+  // Irradiance the environment produces, in lux — what calibrates it into the
+  // luminance (cd/m²) the rest of the lighting is in. Daylight without its sun,
+  // which is what an environment carries here.
+  intensity: 30_000,
   // Sky
   turbidity: 10,
   rayleigh: 2,

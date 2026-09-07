@@ -76,7 +76,6 @@ aabb.fromPoints(dragonBounds, dragon.positions);
 const camera = components.camera({
   // fov: Math.PI / 6,
   aspect: ctx.width / ctx.height,
-  fStop: 4,
   clearColor: [0, 0, 0, 0],
 });
 // Subcomponents go through their own factory rather than a bare object literal:
@@ -241,7 +240,7 @@ const postProcessing = components.postProcessing({
     luminanceIntensity: 1,
     speed: 0.5,
   }),
-  exposure: 1,
+  exposure: 0, // stops
   toneMap: "aces",
   opacity: 1,
 });
@@ -392,7 +391,9 @@ const pointLightEntity = createEntity({
   }),
   pointLight: components.pointLight({
     color: [1, 0, 0, 1],
-    intensity: 126, // lm
+    // Theatrical rather than a real fixture: an accent has to approach the
+    // sun's 100 000 lx to read against it at all, and a bulb cannot.
+    intensity: 6_300_000, // lm
     range: 10,
     castShadows: true,
   }),
@@ -413,7 +414,7 @@ const areaLightEntity = createEntity({
   }),
   areaLight: components.areaLight({
     color: [2.0, 1.2, 0.1, 1],
-    intensity: 31.4, // lm
+    intensity: 1_570_000, // lm, theatrical for the same reason as the point light
     castShadows: true,
   }),
 });
@@ -430,7 +431,7 @@ const sunEntity = createEntity({
   }),
   directionalLight: components.directionalLight({
     color: [1, 1, 0.95, 1],
-    intensity: 2,
+    intensity: 100_000, // lx, a clear midday sun
     castShadows: true,
     bias: 0.01,
   }),
@@ -466,6 +467,11 @@ gui.addHeader("Camera");
 gui.addParam("FoV", camera, "fov", { min: 0, max: (Math.PI / 3) * 2 });
 gui.addParam("FocalLength", camera, "focalLength", { min: 10, max: 200 });
 gui.addParam("F-Stop", cameraEntity.camera, "fStop", { min: 1.2, max: 32 });
+gui.addParam("Shutter Speed (s)", cameraEntity.camera, "shutterSpeed", {
+  min: 1 / 8000,
+  max: 1 / 60,
+});
+gui.addParam("ISO", cameraEntity.camera, "iso", { min: 50, max: 6400 });
 gui.addHeader("Post-Processing");
 gui.addParam("Enabled", State, "enabled", null, () => {
   if (State.enabled) {
@@ -487,7 +493,7 @@ const enablePostProPass = (name) => {
 // gui.addParam("MSAA", State, "msaa", null, () => {
 //   enablePostProPass("msaa");
 // });
-gui.addParam("Exposure", postProcessing, "exposure", { min: 0, max: 5 });
+gui.addParam("Exposure", postProcessing, "exposure", { min: -3, max: 3 });
 gui.addRadioList(
   "Tone Map",
   postProcessing,

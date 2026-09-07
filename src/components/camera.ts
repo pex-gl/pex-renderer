@@ -17,10 +17,23 @@ export default (options?: CameraComponentOptions) => {
     frustum: new Float32Array(24),
 
     focalLength: 50, // mm
-    fStop: 2.8,
+    fStop: 16,
     sensorSize: [36, 24], // mm
     actualSensorHeight: 24, // mm
     sensorFit: "vertical",
+
+    // Exposure is always metered from `fStop` and the two below; there is no
+    // unitless mode to switch to, so no scene has to be re-authored to follow
+    // one. Lighting kept in relative values meters itself with
+    // `exposureCompensation`.
+    //
+    // Sunny 16 as it is actually written — f/16 at 1/ISO — which puts an 18%
+    // grey card at 0.198 under the default sun and sky. The aperture is the
+    // exposure's, not the depth of field's: a shot that wants bokeh opens up
+    // and re-meters, the same five stops a photographer pays.
+    shutterSpeed: 1 / 125, // s
+    iso: 100,
+    exposureCompensation: 0, // stops
     // view
     ...options,
   };

@@ -181,7 +181,7 @@ world.add(
     }),
     directionalLight: components.directionalLight({
       color: [1, 1, 1, 1],
-      intensity: 3,
+      intensity: 100_000, // lx, a clear midday sun
       castShadows: true,
       bias: 0.05,
     }),

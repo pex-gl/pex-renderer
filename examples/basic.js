@@ -5,9 +5,9 @@ import {
   resourceCache as createResourceCache,
   systems,
   components,
-} from "../index.js";
+} from "pex-renderer";
 
-import createContext from "pex-context";
+import * as gpu from "pex-gpu";
 import { quat } from "pex-math";
 import createGUI from "pex-gui";
 
@@ -16,7 +16,7 @@ import { cube, torus, sphere } from "primitive-geometry";
 import { updateSunPosition } from "./utils.js";
 
 const pixelRatio = devicePixelRatio;
-const ctx = createContext({ pixelRatio });
+const ctx = await gpu.createContext({ pixelRatio });
 const world = createWorld();
 const renderGraph = createRenderGraph(ctx);
 const resourceCache = createResourceCache(ctx);
@@ -25,7 +25,7 @@ const resourceCache = createResourceCache(ctx);
 const cameraEntity = createEntity({
   transform: components.transform({ position: [3, 3, 3] }),
   camera: components.camera({
-    aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
+    aspect: ctx.width / ctx.height,
   }),
   postProcessing: components.postProcessing(),
   orbiter: components.orbiter({ element: ctx.gl.canvas }),
@@ -84,7 +84,7 @@ const directionalLightEntity = createEntity({
   }),
   directionalLight: components.directionalLight({
     color: [1, 0, 0, 1],
-    intensity: 10,
+    intensity: 100_000, // lx, a clear midday sun
   }),
 });
 world.add(directionalLightEntity);
@@ -118,7 +118,7 @@ let debugOnce = false;
 window.addEventListener("resize", () => {
   const width = window.innerWidth;
   const height = window.innerHeight;
-  ctx.set({ pixelRatio, width, height });
+  gpu.resize(ctx, width, height, pixelRatio);
   cameraEntity.camera.aspect = width / height;
   cameraEntity.camera.dirty = true;
 });
@@ -128,7 +128,7 @@ window.addEventListener("keydown", ({ key }) => {
   if (key === "d") debugOnce = true;
 });
 
-ctx.frame(() => {
+gpu.frame(ctx, async () => {
   const now = performance.now() * 0.001;
   quat.fromAxisAngle(torusEntity.transform.rotation, [1, 0, 0], now);
   torusEntity.transform.dirty = true;

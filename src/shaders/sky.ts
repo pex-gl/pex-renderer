@@ -93,8 +93,10 @@ fn fragmentMain(input: VertexOutput) -> FragmentOutput {
     input.mieDirectionalG,
   );
 
-  // Linear HDR; Clamp to the float16 max so the sun disk's radiance
-  // (far above 65504) is never stored as Inf.
+  // Linear HDR in the model's own units — systems/skybox.ts calibrates them to
+  // cd/m² downstream, alongside the equivalent multiply for an env map. Clamped
+  // to the float16 max so the sun disc, which reaches ~4.5e5 units at zenith,
+  // is never stored as Inf.
   let color = min(skyFrag(direction, sky), vec3f(65504.0));
 
   output.color = vec4f(color, 1.0);

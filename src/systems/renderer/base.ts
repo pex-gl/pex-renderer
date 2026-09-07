@@ -286,6 +286,7 @@ export default (): RendererSystem => ({
       inverseViewMatrix: camera.inverseViewMatrix || IDENTITY_MAT4,
       cameraPosition: cameraEntity?._transform?.worldPosition ?? [0, 0, 0],
       viewportSize: [viewport[2]!, viewport[3]!],
+      exposure: camera._exposure ?? 1,
       jitter: camera._jitter ?? NO_JITTER,
       previousViewProjectionMatrix:
         camera._previousViewProjectionMatrix ?? IDENTITY_MAT4,

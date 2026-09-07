@@ -46,7 +46,11 @@ struct Skybox {
   projectionMatrix: mat4x4f,
   viewMatrix: mat4x4f,
   rotation: mat3x3f,
-  exposure: f32,
+  luminanceScale: f32,
+  // The view's, separate from the environment's calibration: the blur path
+  // reads a cubemap that already carries that calibration but knows nothing of
+  // the camera, so this one applies to both paths.
+  cameraExposure: f32,
   backgroundBlur: f32,
   jitter: vec2f,
   previousViewProjectionMatrix: mat4x4f,
@@ -124,16 +128,19 @@ fn fragmentMain(input: VertexOutput) -> FragmentOutput {
   // entity transform, so background and reflections rotate together.
   let N = uSkybox.rotation * normalize(input.normal);
   ${
-    // Exposure is baked into the reflection probe's prefiltered cubemap
-    // (reflection-probe bake), so the blur path must NOT reapply it; the raw
-    // equirect path is unexposed and applies it here. Either way exposure lands
-    // exactly once, and the blurred background matches the material IBL.
+    // The calibration into cd/m² is baked into the reflection probe's
+    // prefiltered cubemap (reflection-probe bake), so the blur path must NOT
+    // reapply it; the raw equirect path is uncalibrated and applies it here.
+    // Either way it lands exactly once, and the blurred background matches the
+    // material IBL.
     useBackgroundBlur
       ? `let lod = uSkybox.backgroundBlur * (ROUGHNESS_LEVELS - 1.0);
   var color = textureSampleLevel(uSpecularEnvMap, uSpecularEnvMapSampler, N, lod);`
       : `var color = textureSample(uEnvMap, uEnvMapSampler, envMapEquirect(N));
-  color = vec4f(color.rgb * uSkybox.exposure, color.a);`
+  color = vec4f(color.rgb * uSkybox.luminanceScale, color.a);`
   }
+
+  color = vec4f(color.rgb * uSkybox.cameraExposure, color.a);
 
   ${useMSAA ? "color = vec4f(reversibleToneMap(color.xyz), color.w);" : ""}
 

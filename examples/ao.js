@@ -119,7 +119,6 @@ const postProcessing = components.postProcessing({
   // history averages the slice azimuths out. Switch it off and the same three
   // slices show the blotching six were raised to cover.
   taa: components.postProcessing.taa(),
-  // exposure: 1.5,
   // dof: components.postProcessing.dof(),
 });
 const cameraEntity = createEntity({
@@ -196,7 +195,7 @@ const lightEntity = createEntity({
   }),
   directionalLight: components.directionalLight({
     color: [1, 1, 1, 1],
-    intensity: 1,
+    intensity: 100_000, // lx, a clear midday sun
     castShadows: true,
     bias: 0.01,
   }),
@@ -217,7 +216,7 @@ for (let i = 0; i < numLights; i++) {
     }),
     directionalLight: components.directionalLight({
       color: [1, 1, 1, 1],
-      intensity: 1,
+      intensity: 100_000, // lx, a clear midday sun
       castShadows: true,
       bias: 0.01,
     }),
@@ -227,7 +226,7 @@ for (let i = 0; i < numLights; i++) {
 
 const skyboxEntity = createEntity({
   transform: components.transform(),
-  skybox: components.skybox({ sunPosition: [0, 0.05, -1] }),
+  skybox: components.skybox({ sunPosition: [0, 0.5, -1] }),
 });
 world.add(skyboxEntity);
 

@@ -44,6 +44,8 @@ const cameraEntity = createEntity({
   orbiter: components.orbiter({ element: ctx.canvas }),
 });
 world.add(cameraEntity);
+console.log(cameraEntity);
+
 
 const geometryEntity = createEntity({
   transform: components.transform({ position: [0, 0, 0] }),
@@ -73,7 +75,6 @@ const skyboxEntity = createEntity({
   skybox: components.skybox({
     sunPosition: [0, 0.05, -1],
     backgroundBlur: State.backgroundBlur,
-    exposure: 1,
   }),
   reflectionProbe: components.reflectionProbe({
     size: State.sizes[State.sizeIndex],
@@ -101,9 +102,16 @@ let guiEnvMapTextureControl;
 const gui = createGUI(ctx);
 gui.addColumn("Scene");
 gui.addLabel("Camera");
-gui.addParam("Post Exposure", cameraEntity.postProcessing, "exposure", {
-  min: 0,
-  max: 5,
+gui.addParam(
+  "Exposure Compensation",
+  cameraEntity.camera,
+  "exposureCompensation",
+  { min: -6, max: 6 },
+);
+gui.addLabel("Post-Processing");
+gui.addParam("Grading Exposure", cameraEntity.postProcessing, "exposure", {
+  min: -3,
+  max: 3,
 });
 gui.addSeparator();
 gui.addLabel("Material");
@@ -124,9 +132,9 @@ gui.addParam("BG Blur", skyboxEntity.skybox, "backgroundBlur", {
   min: 0,
   max: 1,
 });
-gui.addParam("Exposure", skyboxEntity.skybox, "exposure", {
+gui.addParam("Intensity (lx)", skyboxEntity.skybox, "intensity", {
   min: 0,
-  max: 5,
+  max: 100_000,
 });
 
 gui.addParam(

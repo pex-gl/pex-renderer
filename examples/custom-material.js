@@ -262,7 +262,7 @@ const directionalLightEntity = createEntity({
   }),
   directionalLight: components.directionalLight({
     color: [1, 1, 1, 1],
-    intensity: 5,
+    intensity: 100_000, // lx, a clear midday sun
     castShadows: true,
   }),
   lightHelper: true,

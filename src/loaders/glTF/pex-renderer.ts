@@ -65,7 +65,7 @@ const MATERIAL_FIELD_MAP: Record<string, [string, ((v: any) => any)?]> = {
   occlusionTexture: ["occlusionTexture"],
   emissiveFactor: ["emissiveColor", srgb],
   emissiveTexture: ["emissiveColorTexture"],
-  emissiveStrength: ["emissiveIntensity"],
+  emissiveStrength: ["emissiveStrength"],
   ior: ["ior"],
   // KHR_materials_clearcoat
   clearcoatFactor: ["clearCoat"],

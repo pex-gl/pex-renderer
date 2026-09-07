@@ -173,7 +173,8 @@ export const STANDARD_MATERIAL_LIT_FIELDS: readonly FeatureField[] = [
   // texture is present, or a zeroed one when there's no texture either
   // (matching getEmissiveColor()'s hardcoded 0) — see the litBody template.
   { key: "emissiveColor", define: MATERIAL_DEFINE.emissive, wgslType: "vec4f", default: [0, 0, 0, 0], runtime: true },
-  { key: "emissiveIntensity", requires: MATERIAL_DEFINE.emissive, wgslType: "f32", default: 1, runtime: true },
+  { key: "emissiveStrength", requires: MATERIAL_DEFINE.emissive, wgslType: "f32", default: 1, runtime: true },
+  { key: "emissiveExposure", requires: MATERIAL_DEFINE.emissive, wgslType: "f32", default: 0, runtime: true },
   { key: "emissiveColorTexture", define: MATERIAL_DEFINE.emissiveColorTexture, texture: true },
 ];
 
@@ -492,6 +493,9 @@ ${bindingDeclaration(1, lightBindings.next(), "uIrradianceCoefficients", `array<
       ? `getBaseColorTextured(&data, uMaterial.baseColor, uBaseColorTexture, uBaseColorTextureSampler, ${tc("baseColor")}, uMaterial.baseColorTextureMatrix, ${vColorExpr});`
       : `getBaseColor(&data, uMaterial.baseColor, ${vColorExpr});`
   }
+  // Display-referred, not metered: an unlit material declares its output
+  // colour, and baseColor is an sRGB value capped at 1 with no way to express
+  // a luminance, so metering it for daylight would render it black.
   color = data.baseColor;
   ${alphaBlock()}`;
 
@@ -526,11 +530,17 @@ ${bindingDeclaration(1, lightBindings.next(), "uIrradianceCoefficients", `array<
       ? // Neutral multiplier (1.0) when the factor isn't set, so the texture
         // passes through untinted — select() picks it at pipeline-creation
         // time instead of this being a separate JS-generated code path.
-        `getEmissiveColorTextured(&data, select(vec4f(1.0), uMaterial.emissiveColor, USE_EMISSIVE_COLOR), select(1.0, uMaterial.emissiveIntensity, USE_EMISSIVE_COLOR), uEmissiveColorTexture, uEmissiveColorTextureSampler, ${tc("emissiveColor")}, uMaterial.emissiveColorTextureMatrix, ${vColorExpr});`
+        `getEmissiveColorTextured(&data, select(vec4f(1.0), uMaterial.emissiveColor, USE_EMISSIVE_COLOR), select(1.0, uMaterial.emissiveStrength, USE_EMISSIVE_COLOR), uEmissiveColorTexture, uEmissiveColorTextureSampler, ${tc("emissiveColor")}, uMaterial.emissiveColorTextureMatrix, ${vColorExpr});`
       : // Zeroed multiplier reproduces getEmissiveColor()'s hardcoded 0 when
         // the factor isn't set.
-        `getEmissiveColorFactor(&data, select(vec4f(0.0), uMaterial.emissiveColor, USE_EMISSIVE_COLOR), select(0.0, uMaterial.emissiveIntensity, USE_EMISSIVE_COLOR), ${vColorExpr});`
+        `getEmissiveColorFactor(&data, select(vec4f(0.0), uMaterial.emissiveColor, USE_EMISSIVE_COLOR), select(0.0, uMaterial.emissiveStrength, USE_EMISSIVE_COLOR), ${vColorExpr});`
   }
+
+  // Emissive is display-referred by default: the value authored is the value
+  // that reaches the exposed buffer, so it reads the same whether or not the
+  // camera is metering physically. emissiveExposure dials it towards being a
+  // luminance the camera meters like anything else.
+  data.emissiveColor *= mix(1.0, uFrame.exposure, uMaterial.emissiveExposure);
 
   ${
     materialFlags.metallicRoughnessWorkflow
@@ -692,7 +702,10 @@ ${bindingDeclaration(1, lightBindings.next(), "uIrradianceCoefficients", `array<
 
   ${hooks.fragAfterLighting ?? ""}
 
-  color = data.emissiveColor + data.indirectDiffuse + data.indirectSpecular + data.directColor + data.transmitted;`;
+  // Only the terms that are scene radiance get metered. data.transmitted is
+  // already exposed (it samples the grab texture this same multiply wrote), and
+  // data.emissiveColor carries its own exposure treatment from above.
+  color = (data.indirectDiffuse + data.indirectSpecular + data.directColor) * uFrame.exposure + data.emissiveColor + data.transmitted;`;
 
   return /* wgsl */ `
 ${frameStruct()}

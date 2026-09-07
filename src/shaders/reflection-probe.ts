@@ -110,7 +110,7 @@ export const reflectionProbeSHShader = (): string => /* wgsl */ `
 ${SHADERS.math.PI}
 ${SHADERS.math.TWO_PI}
 
-struct Params { exposure: f32 }
+struct Params { luminanceScale: f32 }
 
 @group(0) @binding(0) var uEnvMap: texture_2d<f32>;
 @group(0) @binding(1) var uEnvMapSampler: sampler;
@@ -140,6 +140,11 @@ fn computeMain(@builtin(local_invocation_index) lid: u32) {
   loop {
     if (i >= ${SH_SAMPLE_COUNT}u) { break; }
     let dir = fibonacciSphere(i, ${SH_SAMPLE_COUNT}u);
+    // The analytic sky's sun disc is not excluded, and does not need to be: it
+    // covers 2.2e-5 of the sphere, so these samples hit it 0.18 times on
+    // average and leaving it in moves the result by at most 0.1%. Raising
+    // SH_SAMPLE_COUNT far enough to give it real hits would turn it into a
+    // spike double-counting the directional light, and would need a mask.
     let radiance = sampleEnv(dir);
     let b = shBasis(dir);
     for (var k = 0u; k < ${SH_COEFFICIENT_COUNT}u; k++) { acc[k] += radiance * b[k]; }
@@ -156,7 +161,7 @@ fn computeMain(@builtin(local_invocation_index) lid: u32) {
     for (var k = 0u; k < ${SH_COEFFICIENT_COUNT}u; k++) {
       var s = vec3f(0.0);
       for (var t = 0u; t < ${SH_WORKGROUP_SIZE}u; t++) { s += partial[t][k]; }
-      uIrradianceCoefficients[k] = vec4f(s * dw * A[k] * uParams.exposure, 0.0);
+      uIrradianceCoefficients[k] = vec4f(s * dw * A[k] * uParams.luminanceScale, 0.0);
     }
   }
 }
@@ -171,7 +176,7 @@ export const reflectionProbeEquirectToCubeShader = (): string => /* wgsl */ `
 ${SHADERS.math.PI}
 ${SHADERS.math.TWO_PI}
 
-struct Params { faceSize: f32, exposure: f32 }
+struct Params { faceSize: f32, luminanceScale: f32 }
 
 @group(0) @binding(0) var uEnvMap: texture_2d<f32>;
 @group(0) @binding(1) var uEnvMapSampler: sampler;
@@ -189,7 +194,11 @@ fn computeMain(@builtin(global_invocation_id) gid: vec3u) {
 
   let st = (vec2f(f32(gid.x), f32(gid.y)) + 0.5) / uParams.faceSize * 2.0 - 1.0;
   let N = normalize(cubeDirection(gid.z, st));
-  textureStore(uOutput, vec2i(gid.xy), i32(gid.z), vec4f(sampleEnv(N) * uParams.exposure, 1.0));
+  // Clamped to the float16 max: the calibration can push a sun disc that was
+  // already at the format's ceiling well past it, and one Inf texel takes the
+  // whole prefiltered chain with it.
+  let radiance = min(sampleEnv(N) * uParams.luminanceScale, vec3f(65504.0));
+  textureStore(uOutput, vec2i(gid.xy), i32(gid.z), vec4f(radiance, 1.0));
 }
 `;
 

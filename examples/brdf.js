@@ -18,7 +18,7 @@ const State = {
   baseColor: "colored",
 };
 
-const SUN_INTENSITY = 2;
+const SUN_INTENSITY = 100_000; // lx
 
 const COLORS = {
   black: [0, 0, 0, 1],

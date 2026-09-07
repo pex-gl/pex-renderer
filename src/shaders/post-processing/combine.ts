@@ -186,7 +186,8 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
       : ""
   }
 
-  // Tone mapping and gamma conversion
+  // Grading exposure — the camera's is already in the image — then tone
+  // mapping and gamma conversion.
   color = vec4f(color.rgb * uCombine.exposure, color.a);
   ${toneMapSource ? `color = vec4f(saturateVec3(${operator}(color.rgb)), color.a);` : ""}
 

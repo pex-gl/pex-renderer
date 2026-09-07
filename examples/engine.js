@@ -22,7 +22,11 @@ world.add(cameraEntity);
 
 const skyboxEntity = createEntity({
   transform: components.transform(),
-  skybox: components.skybox({ sunPosition: [0, 0.15, -1] }),
+  // Skylight only — nothing here pairs a directional light with the sky, so the
+  // sun has to be high enough for the sky alone to carry the scene. At 45
+  // degrees it delivers about 17 000 lx, a stop under the daylight the default
+  // exposure meters for, which is what skylight without direct sun looks like.
+  skybox: components.skybox({ sunPosition: [0, 1, -1] }),
   reflectionProbe: components.reflectionProbe(),
 });
 world.add(skyboxEntity);

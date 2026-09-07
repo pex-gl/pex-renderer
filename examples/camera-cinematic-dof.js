@@ -53,7 +53,7 @@ const sunEntity = createEntity({
   }),
   directionalLight: components.directionalLight({
     color: [1, 1, 1, 1],
-    intensity: 5,
+    intensity: 100_000, // lx, a clear midday sun
     castShadows: true,
   }),
 });
@@ -65,7 +65,9 @@ const pointLightEntity = createEntity({
   }),
   pointLight: components.pointLight({
     color: [2, 1, 1, 1],
-    intensity: 25, // lm
+    // A large film lamp. Physically it is a whisper next to the sun — as it
+    // already was — and it is here for the shadow, not for the exposure.
+    intensity: 20_000, // lm
     castShadows: true,
   }),
 });
@@ -108,6 +110,11 @@ const postProcessing = components.postProcessing({
 });
 cameraEntity.postProcessing = postProcessing;
 cameraEntity.camera.far = 100;
+
+cameraEntity.camera.fStop = 2.8;
+cameraEntity.camera.shutterSpeed = 1 / 4000;
+cameraEntity.camera.fov = undefined;
+cameraEntity.camera.focalLength = 100;
 
 const rectCanvas = document.createElement("canvas");
 document.body.appendChild(rectCanvas);
@@ -208,6 +215,12 @@ gui.addParam("F-Stop", cameraEntity.camera, "fStop", {
   min: 1.2,
   max: 32,
 });
+
+gui.addParam("Shutter Speed (s)", cameraEntity.camera, "shutterSpeed", {
+  min: 1 / 8000,
+  max: 1 / 60,
+});
+gui.addParam("ISO", cameraEntity.camera, "iso", { min: 50, max: 6400 });
 
 gui.addHeader("Sensor");
 gui.addParam("Show sensor frame", State, "showSensorFrame");

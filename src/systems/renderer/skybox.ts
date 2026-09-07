@@ -118,7 +118,8 @@ export default ({ ctx }: SystemOptions): RendererSystem => ({
           rotation:
             getEnvironmentRotation(TEMP_MAT3, entity._transform?.modelMatrix) ??
             IDENTITY_MAT3,
-          exposure: skybox.exposure ?? 1,
+          luminanceScale: skybox._luminanceScale ?? 1,
+          cameraExposure: camera._exposure ?? 1,
           backgroundBlur,
           jitter: camera._jitter ?? NO_JITTER,
           previousViewProjectionMatrix:

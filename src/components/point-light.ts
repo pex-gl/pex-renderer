@@ -3,9 +3,10 @@ import type { PointLightComponentOptions } from "../types.js";
 /** Point light component */
 export default (options?: PointLightComponentOptions) => ({
   color: [1, 1, 1, 1],
-  // Luminous power (lm). 4π lm is 1 cd, the illuminance a metre away that an
-  // unexposed pipeline is scaled for; a 75 W bulb is nearer 1000 lm.
-  intensity: 4 * Math.PI,
+  // Luminous power (lm), about a 75 W incandescent bulb. Reads as almost
+  // nothing against the default sun; an interior wants the camera stopped down
+  // to match, the way a real one would be.
+  intensity: 1000,
   // Infinite, matching KHR_lights_punctual: the cutoff is an optimisation, not
   // a look, and inverse-square already ends the light's reach.
   range: Infinity,

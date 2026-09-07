@@ -641,7 +641,7 @@ if (grid) {
       position: new Array(3).fill(State.gridSize * 2),
     }),
     camera: components.camera({
-      aspect: ctx.width / ctx.height,
+    aspect: ctx.width / ctx.height,
     }),
     orbiter: components.orbiter({ element: ctx.canvas }),
   });

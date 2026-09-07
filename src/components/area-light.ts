@@ -3,8 +3,9 @@ import type { AreaLightComponentOptions } from "../types.js";
 /** Area light component */
 export default (options?: AreaLightComponentOptions) => ({
   color: [1, 1, 1, 1],
-  // Luminous power (lm). π lm over the default unit-scaled quad is 1 cd/m².
-  intensity: Math.PI,
+  // Luminous power (lm), spread over the emitting surface: scaling the light
+  // up dims it, since the same power covers more area.
+  intensity: 1000,
   disk: false,
   doubleSided: false,
   // Shadow-map rasterizer depth bias (see renderer/standard.ts getDepthPipeline).

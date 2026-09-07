@@ -154,7 +154,7 @@ const materials = {
       ),
       true,
     ),
-    emissiveIntensity: 4,
+    emissiveStrength: 4,
   },
   // Alpha map
   "Alpha Texture": {
@@ -213,6 +213,8 @@ const materialValues = Object.values(materials);
 const sphereGeometry = sphere({ nx: 32, ny: 32 });
 
 for (let i = 0; i < nW * nH; i++) {
+  const material = materialValues[i];
+
   const layer = `cell${i}`;
   const cameraEntity = createEntity({
     layer,
@@ -220,12 +222,13 @@ for (let i = 0; i < nW * nH; i++) {
       position: [0, 0, 2],
     }),
     camera: components.camera(),
-    postProcessing: components.postProcessing(),
+    postProcessing: components.postProcessing({
+      // bloom: material.emissiveColor && components.postProcessing.bloom(),
+    }),
     orbiter: components.orbiter({ element: ctx.canvas }),
   });
   world.add(cameraEntity);
 
-  const material = materialValues[i];
   if (!material) continue;
 
   const materialEntity = createEntity({
@@ -245,7 +248,7 @@ const directionalLightEntity = createEntity({
   }),
   directionalLight: components.directionalLight({
     color: [1, 1, 1, 2],
-    intensity: 1,
+    intensity: 100_000, // lx, a clear midday sun
   }),
 });
 world.add(directionalLightEntity);

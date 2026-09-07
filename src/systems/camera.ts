@@ -6,6 +6,8 @@ import {
   TEMP_MAT4,
   TEMP_VEC3,
   computeFrustumPlanes,
+  ev100,
+  exposureFromEV100,
   getDefaultViewport,
 } from "../utils.js";
 
@@ -101,6 +103,24 @@ function updateCameraViewProjection(camera: any) {
   mat4.invert(camera._inverseViewProjectionMatrix);
 }
 
+/**
+ * Scene luminance (cd/m²) to a sensor-referred value, pre-multiplied into
+ * everything that writes scene colour rather than applied downstream: the
+ * colour target is half float and physical lighting overruns it, and every
+ * threshold after this point — bloom, lens flare, depth of field — is a number
+ * about the exposed image.
+ *
+ * Compensation offsets the metered EV rather than scaling the result — the
+ * same number either way, and the sign follows the photographic convention:
+ * positive opens up, one stop per unit.
+ */
+function updateCameraExposure(camera: any) {
+  camera._exposure = exposureFromEV100(
+    ev100(camera.fStop, camera.shutterSpeed, camera.iso) -
+      (camera.exposureCompensation ?? 0),
+  );
+}
+
 // TODO: projectionMatrix should only be recomputed if parameters changed
 function updateCameraProjection(camera: any, transform: any) {
   if (camera.projection === "orthographic") {
@@ -192,8 +212,8 @@ function updateCameraProjection(camera: any, transform: any) {
  *
  * - "_orbiter" to orbiter components
  * - "_viewProjectionMatrix", "_inverseViewProjectionMatrix",
- *   "_previousViewProjectionMatrix", "_jitter" and "_temporalReset" to camera
- *   components
+ *   "_previousViewProjectionMatrix", "_jitter", "_temporalReset" and
+ *   "_exposure" to camera components
  */
 export default ({ ctx }: SystemOptions) => ({
   type: "camera-system",
@@ -202,6 +222,7 @@ export default ({ ctx }: SystemOptions) => ({
   updateCameraProjection,
   updateCameraViewProjection,
   updateCameraJitter,
+  updateCameraExposure,
   computeFrustum,
   /**
    * Declare that this camera's next frame does not continue from the last, so
@@ -460,6 +481,7 @@ export default ({ ctx }: SystemOptions) => ({
       if (entity.camera) {
         if (!this.checkCamera(null, entity)) continue;
         this.updateCameraEntity(entity);
+        updateCameraExposure(entity.camera);
         // Exactly one frame, and cleared whether or not anything reads it.
         // Resolved first: the view-projection pair is derived from it.
         entity.camera._temporalReset = temporalResets.delete(entity);

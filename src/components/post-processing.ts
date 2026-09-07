@@ -49,7 +49,10 @@ const postProcessing = ((options?: PostProcessingComponentOptions) => ({
   // lut
   // colorCorrection
   // filmGrain
-  exposure: 1,
+  // Grading exposure, in stops, on top of the camera's — the image is already
+  // exposed by the time it gets here, so this brightens the bloom and flare
+  // that are in it rather than causing more of them.
+  exposure: 0,
   toneMap: "aces",
   opacity: 1,
 

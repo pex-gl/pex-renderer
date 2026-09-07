@@ -35,7 +35,7 @@ renderPassGraphViz.init(ctx, renderEngine.frameGraph);
 // Entities
 const cameraEntity = createEntity({
   transform: components.transform({ position: [3, 1.5, 3] }),
-  camera: components.camera({}),
+  camera: components.camera(),
   orbiter: components.orbiter({ element: ctx.canvas }),
   // postProcessing: State.msaa
   //   ? components.postProcessing({
@@ -219,7 +219,7 @@ const directionalLightEntity = createEntity({
   }),
   directionalLight: components.directionalLight({
     color: [1, 1, 1, 2],
-    intensity: 1,
+    intensity: 100_000, // lx, a clear midday sun
     castShadows: true,
     bias: 0.03,
   }),
@@ -233,7 +233,7 @@ const directionalLightEntity2 = createEntity({
   }),
   directionalLight: components.directionalLight({
     color: [1, 1, 1, 2],
-    intensity: 1,
+    intensity: 100_000, // lx, a clear midday sun
     castShadows: true,
     bias: 0.03,
   }),

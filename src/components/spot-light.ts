@@ -3,8 +3,8 @@ import type { SpotLightComponentOptions } from "../types.js";
 /** Spot light component */
 export default (options?: SpotLightComponentOptions) => ({
   color: [1, 1, 1, 1],
-  // Luminous power (lm). π lm is 1 cd on axis while `focusedSpot` is off.
-  intensity: Math.PI,
+  // Luminous power (lm), about a 75 W incandescent bulb.
+  intensity: 1000,
   angle: Math.PI / 4,
   innerAngle: 0,
   // Concentrate the power into the cone rather than spreading it over a

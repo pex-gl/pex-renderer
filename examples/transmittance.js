@@ -193,7 +193,9 @@ for (let i = 0; i < nW * nH; i++) {
   const cameraEntity = createEntity({
     layer,
     transform: components.transform({ position: [0, 0, 1] }),
-    camera: components.camera({ near: 0.001 }),
+    camera: components.camera({
+      near: 0.001,
+    }),
     postProcessing: components.postProcessing({ toneMap: "neutral" }),
     orbiter: components.orbiter({ element: ctx.canvas }),
   });
@@ -239,7 +241,7 @@ const sunEntity = createEntity({
   }),
   directionalLight: components.directionalLight({
     color: [1, 1, 1, 1],
-    intensity: 1,
+    intensity: 100_000, // lx, a clear midday sun
     castShadows: false,
   }),
 });

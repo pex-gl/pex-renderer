@@ -72,8 +72,8 @@ export default ({ ctx }: SystemOptions) => ({
     {
       resources: ProbeResources;
       envMap: GpuTexture | null;
-      /** Skybox exposure the probe was last baked with; a change forces a rebake. */
-      exposure?: number;
+      /** Calibration the probe was last baked with; a change forces a rebake. */
+      luminanceScale?: number;
       /** Identity of the pre-baked payload this cache entry was built from. */
       data?: ReflectionProbePrebakedData | undefined;
     }
@@ -255,7 +255,11 @@ export default ({ ctx }: SystemOptions) => ({
     resources.irradianceCoefficients.dispose();
   },
 
-  bake(resources: ProbeResources, envMap: GpuTexture, exposure: number) {
+  bake(
+    resources: ProbeResources,
+    envMap: GpuTexture,
+    luminanceScale: number,
+  ) {
     const shPipeline = (this.shPipeline ||= {
       compute: reflectionProbeSHShader(),
       entryPoint: "computeMain",
@@ -291,7 +295,7 @@ export default ({ ctx }: SystemOptions) => ({
         uEnvMap: envMap,
         uEnvMapSampler: envSampler,
         uIrradianceCoefficients: resources.irradianceCoefficients,
-        uParams: { exposure },
+        uParams: { luminanceScale },
       },
       dispatch: 1,
     });
@@ -304,7 +308,7 @@ export default ({ ctx }: SystemOptions) => ({
         uEnvMap: envMap,
         uEnvMapSampler: envSampler,
         uOutput: resources.radianceStorageViews![0]!,
-        uParams: { faceSize: CUBEMAP_SIZE, exposure },
+        uParams: { faceSize: CUBEMAP_SIZE, luminanceScale },
       },
       dispatch: dispatch2d(CUBEMAP_SIZE),
     });
@@ -351,7 +355,7 @@ export default ({ ctx }: SystemOptions) => ({
   updateReflectionProbeEntity(
     entity: Entity,
     envMap: GpuTexture,
-    exposure: number,
+    luminanceScale: number,
     dirty: boolean,
   ) {
     let cached = this.cache[entity.id];
@@ -377,17 +381,17 @@ export default ({ ctx }: SystemOptions) => ({
       dirty = true;
     }
 
-    // Exposure is baked into the SH + radiance cube (v6 filters the raw env map
-    // rather than re-rendering the exposed skybox, as v5 did), so a change has to
-    // rebake for lit materials to track it.
-    if (cached.exposure !== exposure) {
-      cached.exposure = exposure;
+    // The calibration is baked into the SH + radiance cube (v6 filters the raw
+    // env map rather than re-rendering the exposed skybox, as v5 did), so a
+    // change has to rebake for lit materials to track it.
+    if (cached.luminanceScale !== luminanceScale) {
+      cached.luminanceScale = luminanceScale;
       dirty = true;
     }
 
     if (dirty) {
       entity.reflectionProbe!.dirty = false;
-      this.bake(cached.resources, envMap, exposure);
+      this.bake(cached.resources, envMap, luminanceScale);
     }
   },
 
@@ -442,7 +446,7 @@ export default ({ ctx }: SystemOptions) => ({
         this.updateReflectionProbeEntity(
           entity,
           envMap,
-          skybox.exposure ?? 1,
+          skybox._luminanceScale ?? 1,
           !!entity.reflectionProbe.dirty || !!skybox._skyTextureChanged,
         );
       }

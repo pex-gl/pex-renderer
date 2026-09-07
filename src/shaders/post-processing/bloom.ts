@@ -50,7 +50,6 @@ export const thresholdShader = (defines: Set<string> = new Set()): string => {
 ${postProcessingStruct}
 
 struct Bloom {
-  exposure: f32,
   threshold: f32,
   softKnee: f32,
 }
@@ -73,8 +72,6 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
     ${useSourceEmissive ? "uEmissiveTexture, uEmissiveTextureSampler" : "uTexture, uTextureSampler"},
     input.texCoord0
   );
-  color = vec4f(color.rgb * uBloom.exposure, color.a);
-
   color = threshold(
     color,
     ${colorFunction(defines)}(color.rgb),

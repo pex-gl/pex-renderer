@@ -197,6 +197,9 @@ fn fragmentMain(input: Varyings) -> FragmentOutput {
 
   ${vertexFlags.vertexColor ? "color *= decode(input.color, SRGB);" : ""}
 
+  // Pre-exposed like every other writer of scene colour, before the tone map.
+  // color = vec4f(color.rgb * uFrame.exposure, color.a);
+
   ${useMSAA ? "color = vec4f(reversibleToneMap(color.xyz), color.w);" : ""}
 
   color = vec4f(max(color.xyz, vec3f(0.0)), color.w);

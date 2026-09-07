@@ -279,7 +279,6 @@ const lensFlare: PostProcessingEffect = {
 
       haloRadius: component.haloRadius ?? 0.4,
       vignette: component.vignette ?? 1,
-      exposure: postProcessing.exposure!,
       threshold: component.threshold ?? 1,
 
       softKnee: component.softKnee ?? 0.5,

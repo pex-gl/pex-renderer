@@ -114,7 +114,7 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
   ) * 0.25;
 
   color = vec4f(
-    min(color.rgb * uLensFlare.exposure, vec3f(uLensFlare.clamp)),
+    min(color.rgb, vec3f(uLensFlare.clamp)),
     color.a
   );
 

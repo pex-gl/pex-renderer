@@ -179,7 +179,6 @@ const dof: PostProcessingEffect = {
 
       maxCoCRadius,
       chromaticAberration,
-      exposure: postProcessing.exposure!,
       luminanceThreshold: component.luminanceThreshold ?? 0.7,
       luminanceGain: component.luminanceGain ?? 0,
       luminanceKnee: component.luminanceKnee ?? 0.5,

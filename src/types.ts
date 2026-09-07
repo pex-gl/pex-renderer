@@ -230,8 +230,30 @@ export interface CameraComponentOptions {
   culling?: boolean;
   /** Focal length of the camera lens [10mm - 200mm] in mm. */
   focalLength?: number;
-  /** Ratio of camera lens opening, f-number, f/N, aperture [1.2 - 32] in mm. */
+  /**
+   * Ratio of camera lens opening, f-number, f/N, aperture [1.2 - 32] in mm.
+   *
+   * Drives both the depth of field and the exposure — one opening, as on a
+   * real camera: stopping down for a deeper focus also darkens the image.
+   *
+   * The default is the exposure's f/16, not a bokeh-friendly one. A shot that
+   * wants shallow focus opens up and re-meters on `shutterSpeed` or `iso`.
+   */
   fStop?: number;
+  /** Time the sensor is exposed for, in seconds (1/125, not 125). */
+  shutterSpeed?: number;
+  /** Sensor sensitivity, in ISO. */
+  iso?: number;
+  /**
+   * Stops of exposure on top of the one metered from the optics — positive
+   * brightens. Unlike the post-processing grading exposure, this is part of the
+   * camera, so it changes what bloom, lens flare and depth of field see.
+   *
+   * Also how a scene lit in relative rather than physical units is metered:
+   * there is no unitless exposure mode, so such a scene compensates the ~15
+   * stops between its own scale and a lux-and-lumens one here.
+   */
+  exposureCompensation?: number;
   /** Physical camera sensor or film size [sensorWidth, sensorHeight] in mm. */
   sensorSize?: Vec2;
   /** Matching of camera frame to sensor frame. */
@@ -257,6 +279,11 @@ export interface CameraComponentOptions {
    * for everything reconstructing view position from it.
    */
   _jitter?: Vec2;
+  /**
+   * The resolved exposure, pre-multiplied into everything that writes scene
+   * colour. Added by the camera system.
+   */
+  _exposure?: number;
   /** `projectionMatrix * viewMatrix`, this frame and last. Never jittered. */
   _viewProjectionMatrix?: Mat4;
   _previousViewProjectionMatrix?: Mat4;
@@ -344,11 +371,37 @@ export interface LightHelperComponentOptions {}
 export type BlendMode =
   "normal" | "premultiplied" | "additive" | "multiply" | "screen";
 export interface MaterialComponentOptions {
+  /**
+   * Skip lighting and output `baseColor` directly. Display referred: the colour
+   * authored is the colour drawn, unaffected by the camera's exposure, since an
+   * sRGB colour capped at 1 cannot express a luminance.
+   */
   unlit?: boolean;
   type?: undefined | "line";
   baseColor?: Color;
   emissiveColor?: Color;
-  emissiveIntensity?: number;
+  /**
+   * Multiplier on `emissiveColor`, matching glTF's
+   * `KHR_materials_emissive_strength`: 1 puts the authored colour at display
+   * white, and higher values are the headroom a bloom pass works from.
+   */
+  emissiveStrength?: number;
+  /**
+   * How much of the camera's exposure the emissive term receives, [0, 1],
+   * applied as `mix(1.0, exposure, emissiveExposure)`.
+   *
+   * 0 (the default) undoes the exposure — the surface holds its authored screen
+   * value whatever the camera does. That is what keeps `emissiveStrength` a
+   * unitless multiplier, meaning the same thing in a physically lit scene and a
+   * relative one, and it is how you force a surface to carry on blooming, or
+   * keep a decal or HUD element legible.
+   *
+   * 1 meters it like any other light, so stopping the camera down dims it as a
+   * real source would. Only meaningful if `emissiveColor * emissiveStrength`
+   * was authored as a luminance in cd/m² — a computer display is 200 to 1000,
+   * and display white at the default exposure is near 38 000.
+   */
+  emissiveExposure?: number;
   metallic?: number;
   roughness?: number;
   ior?: number;
@@ -670,9 +723,9 @@ export interface DoFComponentOptions {
    */
   chromaticAberration?: number;
   /**
-   * Threshold for out of focus highlights, on luma after
-   * {@link PostProcessingComponentOptions.exposure} — the units bloom
-   * thresholds in, so the two effects agree on what counts as bright.
+   * Threshold for out of focus highlights, on the luma of the exposed image —
+   * the units bloom thresholds in, so the two effects agree on what counts as
+   * bright.
    */
   luminanceThreshold?: number;
   /**
@@ -1046,8 +1099,16 @@ export interface PostProcessingComponentOptions {
    * diffract a spike off, so a fully circular diaphragm produces none.
    */
   bladeCurvature?: number;
+  /**
+   * Grading exposure in stops, applied after every effect and before the tone
+   * map — positive brightens.
+   *
+   * Distinct from {@link CameraComponentOptions}' exposure, which is the
+   * sensor's: this brightens the bloom and flare already in the image, where
+   * opening the camera up produces more of them.
+   */
   exposure?: number;
-  /** Tone map operator, or null to leave the image scene-referred. */
+  /** Tone map operator, or null to leave the image linear and un-mapped. */
   toneMap?:
     | "aces"
     | "acesHill"
@@ -1106,7 +1167,29 @@ export interface SkyboxComponentOptions {
    * with a warning if no reflectionProbe is present.
    */
   backgroundBlur?: number;
-  exposure?: number;
+  /**
+   * What calibrates the environment into the luminance (cd/m²) the rest of the
+   * lighting is in. Independent of the camera's exposure, which is applied to
+   * the result. What it *means* depends on whether the source's own scale is
+   * knowable, and the two cases genuinely differ.
+   *
+   * For the analytic sky it is **lux**: the irradiance at the reference
+   * configuration — sun at zenith, default turbidity — which is measurable
+   * because the sky is generated here. The model scales down from there as the
+   * sun drops, so a sunset stays a sunset.
+   *
+   * For an `envMap` it is a **plain multiplier**: a scale applied so that the
+   * result comes out in lux, with the lux yours to arrange. A `.hdr` carries no
+   * absolute scale, so no number here can claim one — expect to retune it per
+   * file. The default suits a map of roughly a third mean radiance, typical of
+   * the format.
+   *
+   * Either way it excludes the sun: the sun disc is far beyond what a half
+   * float environment can hold, and belongs to a directional light.
+   */
+  intensity?: number;
+  /** `intensity` resolved against the source's own reference. Added by the skybox system. */
+  _luminanceScale?: number;
   turbidity?: number;
   rayleigh?: number;
   mieCoefficient?: number;

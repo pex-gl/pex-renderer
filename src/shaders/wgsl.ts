@@ -187,6 +187,10 @@ export function frameStruct({
   inverseViewMatrix: mat4x4f,
   cameraPosition: vec3f,
   viewportSize: vec2f,
+  // Scene luminance to sensor-referred scale. Applied by every pass that writes
+  // scene colour, before the store, so the half-float target holds an exposed
+  // image and every threshold downstream is a number about that image.
+  exposure: f32,
   // Sub-pixel NDC offset for temporal antialiasing, zero without it. Applied
   // after projection rather than baked into projectionMatrix, so everything
   // reconstructing view position from that matrix — ambient occlusion,

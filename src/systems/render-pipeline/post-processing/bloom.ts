@@ -104,7 +104,6 @@ const bloom: PostProcessingEffect = {
       ]),
       uniforms: {
         uBloom: {
-          exposure: postProcessing.exposure!,
           threshold: component.threshold!,
           // Half-width of the ramp into the glare, as a fraction of the
           // threshold. Content sitting at the threshold is the case it exists

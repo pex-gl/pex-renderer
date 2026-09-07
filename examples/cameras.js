@@ -70,6 +70,9 @@ view offset: [${offset.map((n) => n.toFixed(0))}]`,
         position: [3, 3, 3],
       }),
       camera: components.camera({
+        // Nothing here but a sky with the sun near the horizon, which delivers
+        // about 900 lx — six stops under the daylight the default meters for.
+        exposureCompensation: 6,
         projection,
         aspect,
         viewport,

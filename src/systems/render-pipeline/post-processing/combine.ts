@@ -6,8 +6,8 @@ import {
 import type { PostProcessingEffect } from "../post-processing.js";
 
 /**
- * Composites the HDR chain and tonemaps it. Always declared: exposure and the
- * tonemap are not optional, they are what turns scene radiance into an image.
+ * Composites the HDR chain and tonemaps it. Always declared: the tone map is
+ * not optional, it is what turns an exposed image into a displayable one.
  */
 const combine: PostProcessingEffect = {
   name: "combine",
@@ -31,8 +31,8 @@ const combine: PostProcessingEffect = {
       shader: combineShader,
       chain: true,
       defines: new Set([
-        // Null leaves the image scene-referred, which is what the exposure
-        // pickers and any external grading expect.
+        // Null leaves the image linear and un-mapped, which is what any
+        // external grading expects.
         ...(postProcessing.toneMap
           ? [`${TONE_MAP_DEFINE}${postProcessing.toneMap}`]
           : []),
@@ -57,7 +57,8 @@ const combine: PostProcessingEffect = {
           near: camera.near!,
           far: camera.far!,
           fov: camera.fov!,
-          exposure: postProcessing.exposure!,
+          // Authored in stops, applied as a gain.
+          exposure: 2 ** postProcessing.exposure!,
           bloomIntensity: bloom?.intensity ?? 0,
           lensFlareIntensity: lensFlare?.intensity ?? 0,
           vignetteRadius: vignette?.radius ?? 0,
