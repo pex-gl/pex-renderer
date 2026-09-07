@@ -14,9 +14,13 @@ import {
   DEPTH_PASS_VERTEX_FIELDS,
 } from "../../shaders/depth-pass.js";
 
-import createBaseSystem, { BLEND_MODES, outputsKey } from "./base.js";
+import createBaseSystem, {
+  BLEND_MODES,
+  getHookUniforms,
+  outputsKey,
+} from "./base.js";
 import { samplerName, uniformName } from "../../shaders/wgsl.js";
-import { NAMESPACE, TEMP_MAT4, definesKey } from "../../utils.js";
+import { NAMESPACE, TEMP_MAT4, definesKey, hooksKey } from "../../utils.js";
 
 import type {
   BlendMode,
@@ -250,6 +254,8 @@ export default ({
       lights: _lights.counts,
       outputs: _outputs,
       texCoords: getTexCoords(entity.material, TEXTURE_KEYS),
+      hooks: entity.material.hooks,
+      debugRender: this.debugRender,
     };
   },
   getMaterialDefines(entity: any) {
@@ -324,6 +330,11 @@ export default ({
       this._reflectionProbe ? 1 : 0,
       outputsKey(this._outputs),
       texCoords,
+      // Both change the generated WGSL: the hooks by their own source (hashed,
+      // so materials sharing hook text share a pipeline), debugRender by the
+      // expression it writes over the result.
+      hooksKey(material.hooks),
+      this.debugRender,
     ].join("_");
   },
   isUnlit(entity: any) {
@@ -562,6 +573,7 @@ export default ({
       transmitted,
       cullFaceMode,
       textures = {},
+      frameIndex = NaN,
     } = options;
 
     this._msaa = msaa;
@@ -643,6 +655,7 @@ export default ({
           ...lights.uniforms,
           ...reflectionUniforms,
           ...captureUniforms,
+          ...getHookUniforms(entity, frameIndex, this.materialSampler),
         },
       });
     }
@@ -666,7 +679,22 @@ export default ({
     const defines = new Set<string>();
     this.getFeatureFlags(attributes, DEPTH_PASS_VERTEX_FIELDS, defines);
 
-    if (entity.material.alphaTest === undefined) return { defines };
+    // Vertex hooks run here too: a hook that displaces a vertex has to displace
+    // it identically in every pass, or the surface casts a shadow it does not
+    // occupy and the pre-pass lays down depth the opaque pass cannot match.
+    // Displacing along the normal is the common case, and this pass otherwise
+    // only fetches one when it writes one, so a vertex hook asks for it.
+    const { hooks } = entity.material;
+    if (
+      (hooks?.vertBeforeTransform ||
+        hooks?.vertDeclarationsEnd ||
+        hooks?.vertEnd) &&
+      attributes.normal
+    ) {
+      defines.add("USE_NORMALS");
+    }
+
+    if (entity.material.alphaTest === undefined) return { defines, hooks };
 
     this.getFeatureFlags(attributes, DEPTH_PASS_ALPHA_VERTEX_FIELDS, defines);
     const { uniforms } = this.getFeatureFlags(
@@ -677,6 +705,7 @@ export default ({
     );
     return {
       defines,
+      hooks,
       uniforms,
       texCoords: getTexCoords(entity.material, DEPTH_PASS_TEXTURE_KEYS),
     };
@@ -685,12 +714,16 @@ export default ({
   // Shared by shadow maps and the pre-pass, which differ only in the defines
   // they add before this and the depth bias they set after it.
   getDepthPassPipeline(entity: any, cache: Map<string, any>, material: any) {
-    const { defines, texCoords } = material;
+    const { defines, texCoords, hooks } = material;
     // texCoords picks which UV set the alpha test samples, so it varies the
     // source the same way a define does.
-    const key = `${definesKey(defines)}_${JSON.stringify(texCoords ?? {})}`;
+    const key = [
+      definesKey(defines),
+      JSON.stringify(texCoords ?? {}),
+      hooksKey(hooks),
+    ].join("_");
     const pipeline = cache.getOrInsertComputed(key, () => {
-      const shader = depthPassShader(defines, { texCoords });
+      const shader = depthPassShader(defines, { texCoords, hooks });
       // Depth comes out of the rasterizer, so a fragment stage exists only when
       // one of the variants needs it: to reject, to write radial distance, or
       // to fill the normal target.
@@ -774,6 +807,7 @@ export default ({
    */
   renderPrePass(renderView: RenderView, entities: Entity[], options: any = {}) {
     const normalOutput = !!options.normalOutput;
+    const frameIndex = options.frameIndex ?? NaN;
     const uFrame = this.getFrameUniforms(renderView);
 
     // A depth-only multisampled pre-pass has no way to express a cutout:
@@ -812,6 +846,7 @@ export default ({
             ),
           ),
           ...material.uniforms,
+          ...getHookUniforms(entity, frameIndex, this.materialSampler),
         },
       });
     }
@@ -823,6 +858,7 @@ export default ({
   renderShadow(renderView: RenderView, entities: Entity[], options: any = {}) {
     const light = options.shadowMappingLight;
     const linear = !!light?._shadowCubemap;
+    const frameIndex = options.frameIndex ?? NaN;
 
     const uFrame = {
       ...this.getFrameUniforms(renderView),
@@ -854,6 +890,7 @@ export default ({
             mat3.fromMat4(NORMAL_MATRIX, entity._transform!.modelMatrix),
           ),
           ...material.uniforms,
+          ...getHookUniforms(entity, frameIndex, this.materialSampler),
         },
       });
     }

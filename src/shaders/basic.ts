@@ -13,6 +13,9 @@ import {
   vertexVelocity,
   VELOCITY_MEMBERS,
   FRAGMENT_VELOCITY,
+  createBindingAllocator,
+  hookMembers,
+  hookBindingsDeclaration,
 } from "./wgsl.js";
 
 import type { FeatureField } from "../systems/renderer/base.js";
@@ -63,18 +66,23 @@ struct Material {
   baseColor: vec4f,
 }
 @group(2) @binding(0) var<uniform> uMaterial: Material;
+${hookBindingsDeclaration(2, createBindingAllocator(1), hooks.bindings)}
 
-${vertexInputStruct({
-  vertexColor: vertexFlags.vertexColor,
-  instancedOffset: vertexFlags.instancedOffset,
-  instancedScale: vertexFlags.instancedScale,
-  instancedRotation: vertexFlags.instancedRotation,
-  instancedColor: vertexFlags.instancedColor,
-})}
+${vertexInputStruct(
+  {
+    vertexColor: vertexFlags.vertexColor,
+    instancedOffset: vertexFlags.instancedOffset,
+    instancedScale: vertexFlags.instancedScale,
+    instancedRotation: vertexFlags.instancedRotation,
+    instancedColor: vertexFlags.instancedColor,
+  },
+  hookMembers(hooks.attributes),
+)}
 
 ${vertexOutputStruct([
   useColor && { name: "color", type: "vec4f" },
   ...(outputs.velocity ? VELOCITY_MEMBERS : []),
+  ...hookMembers(hooks.interStage),
 ])}
 
 ${fragmentOutputStruct(sceneOutputMembers(outputs))}

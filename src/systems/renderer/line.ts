@@ -1,8 +1,8 @@
 import { avec3, mat3 } from "pex-math";
 import { submit, createBuffer } from "pex-gpu";
 
-import createBaseSystem, { outputsKey } from "./base.js";
-import { definesKey } from "../../utils.js";
+import createBaseSystem, { getHookUniforms, outputsKey } from "./base.js";
+import { definesKey, hooksKey } from "../../utils.js";
 import {
   lineShader,
   LINE_VERTEX_FIELDS,
@@ -52,8 +52,8 @@ export default ({ ctx }: SystemOptions): RendererSystem => ({
   debug: false,
 
   getShader: (defines: Set<string>, options: any) => lineShader(defines, options),
-  getShaderOptions() {
-    return { outputs: this._outputs };
+  getShaderOptions(entity: any) {
+    return { outputs: this._outputs, hooks: entity.material.hooks };
   },
   getDefines(entity: any) {
     const defines = new Set<string>();
@@ -63,7 +63,11 @@ export default ({ ctx }: SystemOptions): RendererSystem => ({
     return defines;
   },
   getVariantKey(entity: any, defines: Set<string>) {
-    return `${definesKey(defines)}_${outputsKey(this._outputs)}`;
+    return [
+      definesKey(defines),
+      outputsKey(this._outputs),
+      hooksKey(entity.material.hooks),
+    ].join("_");
   },
   getPipelineOptions(entity: any) {
     const { material } = entity;
@@ -228,6 +232,7 @@ export default ({ ctx }: SystemOptions): RendererSystem => ({
             baseColor: material.baseColor,
             lineWidth: material.lineWidth,
           },
+          ...getHookUniforms(entity, options.frameIndex ?? NaN),
         },
       });
     }

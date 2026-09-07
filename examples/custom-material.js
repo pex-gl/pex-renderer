@@ -3,9 +3,11 @@ import {
   world as createWorld,
   entity as createEntity,
   components,
-} from "../index.js";
+  shaders,
+  loaders,
+} from "pex-renderer";
 
-import createContext from "pex-context";
+import * as gpu from "pex-gpu";
 import { quat } from "pex-math";
 import createGUI from "pex-gui";
 import random from "pex-random";
@@ -13,12 +15,12 @@ import * as SHADERS from "pex-shaders";
 
 import { cube, icosphere, plane, cone } from "primitive-geometry";
 
-import { getEnvMap } from "./utils.js";
+import { getEnvMap, getURL } from "./utils.js";
 
 random.seed(0);
 
 const pixelRatio = devicePixelRatio;
-const ctx = createContext({ pixelRatio });
+const ctx = await gpu.createContext({ pixelRatio });
 const renderEngine = createRenderEngine({ ctx, debug: true });
 const world = createWorld();
 
@@ -29,10 +31,10 @@ const cameraEntity = createEntity({
     rotation: quat.create(),
   }),
   camera: components.camera({
-    aspect: ctx.gl.drawingBufferWidth / ctx.gl.drawingBufferHeight,
+    aspect: ctx.width / ctx.height,
   }),
   postProcessing: components.postProcessing(),
-  orbiter: components.orbiter({ element: ctx.gl.canvas }),
+  orbiter: components.orbiter({ element: ctx.canvas }),
 });
 world.add(cameraEntity);
 
@@ -71,6 +73,12 @@ const grassPlaneGeometry = plane({
   direction: "y",
 });
 
+// Shared by both hooked materials below: the classic Perlin noise chunk and
+// the helpers it is built on, as WGSL functions (cnoiseVec3 here).
+const NOISE = /* wgsl */ `
+${SHADERS.chunks.noise.common}
+${SHADERS.chunks.noise.perlin}`;
+
 const grassEntity = createEntity({
   transform: components.transform({ position: [0, floorThickness * 0.5, 0] }),
   geometry: components.geometry({
@@ -78,12 +86,15 @@ const grassEntity = createEntity({
     offsets: grassPlaneGeometry.positions,
     instances: grassPlaneGeometry.positions.length / 3,
     attributes: {
-      aInstanceTintColor: {
-        buffer: ctx.vertexBuffer(
-          new Float32Array(grassPlaneGeometry.positions.length * 3).map(() =>
-            random.float(0.5),
+      // Named as the hook declares it below: pex-gpu resolves a vertex buffer
+      // by the name of the shader input it feeds.
+      instanceTint: {
+        buffer: gpu.createBuffer(ctx, {
+          usage: "vertex",
+          data: new Float32Array(grassPlaneGeometry.positions.length * 3).map(
+            () => random.float(0.5),
           ),
-        ),
+        }),
         stepMode: "instance",
       },
     },
@@ -95,55 +106,38 @@ const grassEntity = createEntity({
     castShadows: true,
     receiveShadows: true,
     hooks: {
-      vert: {
-        DECLARATIONS_END: /* glsl */ `
-attribute vec3 aInstanceTintColor;
-uniform float uTime;
-varying float vNoiseAmount;
-varying float vColorNoise;
-varying vec3 vInstanceTintColor;
+      attributes: { instanceTint: "vec3f" },
+      varyings: { noiseAmount: "f32", colorNoise: "f32", tint: "vec3f" },
+      bindings: { time: "f32" },
+      // Called once per entity per frame, so the blade bends the same way in
+      // the shadow map, the depth pre-pass and the shaded pass.
+      uniforms: () => ({ time: (performance.now() % 10000) / 2000 }),
+      vertDeclarationsEnd: NOISE,
+      vertBeforeTransform: /* wgsl */ `
+  let frequency = input.offset * 0.3;
+  let noiseAmountX = cnoiseVec3(frequency + vec3f(uHooks.time, 0.0, 0.0));
+  let noiseAmountZ = cnoiseVec3(frequency + vec3f(0.0, 0.0, uHooks.time));
+  let noiseAmountY = 0.7 + 0.7 * cnoiseVec3(frequency + vec3f(1.0, 0.5, 21.52));
 
-${SHADERS.chunks.noise.common}
-${SHADERS.chunks.noise.perlin}
-        `,
-        BEFORE_TRANSFORM: /* glsl */ `
-vec3 frequency = aOffset.xyz * 0.3;
-float noiseAmountX = cnoise(frequency + vec3(uTime, 0.0, 0.0));
-float noiseAmountZ = cnoise(frequency + vec3(0.0, 0.0, uTime));
-float noiseAmountY = 0.7 + 0.7 * cnoise(frequency + vec3(1.0, 0.5, 21.520));
+  let y = (position.y + ${grassHeight.toFixed(2)} / 2.0) / ${grassHeight.toFixed(2)};
+  let y2 = y * y;
 
-float y = (position.y + ${grassHeight.toFixed(2)} / 2.0) / ${grassHeight.toFixed(2)};
-float y2 = y * y;
+  output.noiseAmount = position.y / ${grassHeight.toFixed(2)};
 
-vNoiseAmount = position.y / ${grassHeight.toFixed(2)};
+  position.x += 0.5 * noiseAmountX * y2;
+  position.z += 0.5 * noiseAmountZ * y2;
+  position.y *= 1.0 - 2.0 * (0.5 * noiseAmountX * y2 * 0.5 * noiseAmountZ * y2);
+  position.y *= pow(clamp(length(input.offset.xz), 0.0, 1.0), 3.0);
+  position.y *= noiseAmountY;
 
-position.x += 0.5 * noiseAmountX * y2;
-position.z += 0.5 * noiseAmountZ * y2;
-position.y *= 1.0 - 2.0 * (0.5 * noiseAmountX * y2 * 0.5 * noiseAmountZ * y2);
-position.y *= pow(clamp(length(aOffset.xz / 1.0), 0.0, 1.0), 3.0);
-position.y *= noiseAmountY;
-
-vColorNoise = position.y / ${grassHeight.toFixed(2)};
-vInstanceTintColor = aInstanceTintColor;
-        `,
-      },
-      frag: {
-        DECLARATIONS_END: /* glsl */ `
-varying float vNoiseAmount;
-varying float vColorNoise;
-varying vec3 vInstanceTintColor;
-        `,
-        BEFORE_LIGHTING: /* glsl */ `
-data.baseColor = mix(vec3(0.3, 1.0, 0.0), vec3(0.0, 0.5, 0.2), vColorNoise);
-data.baseColor *= 0.4 + vNoiseAmount;
-data.baseColor = mix(data.baseColor, vInstanceTintColor, 0.3);
-        `,
-      },
-      uniforms: (entity) => {
-        return {
-          uTime: (performance.now() % 10000) / 2000,
-        };
-      },
+  output.colorNoise = position.y / ${grassHeight.toFixed(2)};
+  output.tint = input.instanceTint;
+      `,
+      fragBeforeLighting: /* wgsl */ `
+  data.baseColor = mix(vec3f(0.3, 1.0, 0.0), vec3f(0.0, 0.5, 0.2), input.colorNoise);
+  data.baseColor *= 0.4 + input.noiseAmount;
+  data.baseColor = mix(data.baseColor, input.tint, 0.3);
+      `,
     },
   }),
 });
@@ -162,40 +156,25 @@ const sphereEntity = createEntity({
     castShadows: true,
     receiveShadows: true,
     hooks: {
-      vert: {
-        DECLARATIONS_END: /* glsl */ `
-uniform float uTime;
-varying float vNoiseAmount;
-
-${SHADERS.chunks.noise.common}
-${SHADERS.chunks.noise.perlin}
-        `,
-        BEFORE_TRANSFORM: /* glsl */ `
-vec3 frequency = position.xyz * 2.0;
-vNoiseAmount = 0.5 + 0.5 * cnoise(frequency + vec3(uTime, 0.0, 0.0));
-position.xyz += normal.xyz * vNoiseAmount;
-        `,
-      },
-      frag: {
-        DECLARATIONS_END: /* glsl */ `
-varying float vNoiseAmount;
-        `,
-        BEFORE_TEXTURES: /* glsl */ `
-vec3 dX = dFdx(data.positionView);
-vec3 dY = dFdy(data.positionView);
-data.normalView = normalize(cross(dX, dY));
-data.normalWorld = vec3(data.inverseViewMatrix * vec4(data.normalView, 0.0));
-        `,
-        BEFORE_LIGHTING: /* glsl */ `
-data.metallic = step(0.5, vNoiseAmount);
-data.baseColor = mix(vec3(2.0, 0.4, 0.0), vec3(1.0), data.metallic);
-        `,
-      },
-      uniforms: (entity) => {
-        return {
-          uTime: (performance.now() % 1000000) / 2000,
-        };
-      },
+      varyings: { noiseAmount: "f32" },
+      bindings: { time: "f32" },
+      uniforms: () => ({ time: (performance.now() % 1000000) / 2000 }),
+      vertDeclarationsEnd: NOISE,
+      vertBeforeTransform: /* wgsl */ `
+  let frequency = position.xyz * 2.0;
+  output.noiseAmount = 0.5 + 0.5 * cnoiseVec3(frequency + vec3f(uHooks.time, 0.0, 0.0));
+  position = vec4f(position.xyz + normal * output.noiseAmount, position.w);
+      `,
+      fragBeforeTextures: /* wgsl */ `
+  let dX = dpdx(data.positionView);
+  let dY = dpdy(data.positionView);
+  data.normalView = normalize(cross(dX, dY));
+  data.normalWorld = (data.inverseViewMatrix * vec4f(data.normalView, 0.0)).xyz;
+      `,
+      fragBeforeLighting: /* wgsl */ `
+  data.metallic = step(0.5, input.noiseAmount);
+  data.baseColor = mix(vec3f(2.0, 0.4, 0.0), vec3f(1.0), vec3f(data.metallic));
+      `,
     },
   }),
 });
@@ -245,7 +224,10 @@ const skyboxEntity = createEntity({
   skybox: components.skybox({
     sunPosition: [1, 1, 1],
     backgroundBlur: 1,
-    envMap: await getEnvMap(ctx, "assets/envmaps/Mono_Lake_B/Mono_Lake_B.hdr"),
+    envMap: await loaders.hdr(
+      ctx,
+      getURL("assets/envmaps/Mono_Lake_B/Mono_Lake_B.hdr"),
+    ),
   }),
 });
 world.add(skyboxEntity);
@@ -322,8 +304,8 @@ gui.addRadioList(
     "data.ior",
     "data.ao",
 
-    "vNormalView",
-    "vNormalWorld",
+    "input.normalView",
+    "input.normalWorld",
   ].map((value) => ({ name: value || "No debug", value })),
 );
 
@@ -333,7 +315,7 @@ let debugOnce = false;
 window.addEventListener("resize", () => {
   const width = window.innerWidth;
   const height = window.innerHeight;
-  ctx.set({ pixelRatio, width, height });
+  gpu.resize(ctx, width, height, pixelRatio);
   cameraEntity.camera.aspect = width / height;
   cameraEntity.camera.dirty = true;
 });
@@ -343,11 +325,11 @@ window.addEventListener("keydown", ({ key }) => {
   if (key === "d") debugOnce = true;
 });
 
-ctx.frame(() => {
+gpu.frame(ctx, async () => {
   renderEngine.update(world.entities);
-  renderEngine.render(world.entities, cameraEntity);
+  await renderEngine.render(world.entities, cameraEntity);
 
-  ctx.debug(debugOnce);
+  gpu.debug(ctx, debugOnce);
   debugOnce = false;
 
   gui.draw();

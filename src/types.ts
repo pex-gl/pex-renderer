@@ -467,6 +467,11 @@ export interface MaterialComponentOptions {
   lineWidth?: number;
   lineResolution?: number;
   perspectiveScaling?: boolean;
+  /**
+   * Custom WGSL spliced into the shader that draws this material, and the
+   * values its own bindings are fed with.
+   */
+  hooks?: MaterialHooks;
   /** Runtime flag set by renderers when the pipeline variant is rebuilt. */
   needsPipelineUpdate?: boolean;
 }
@@ -492,6 +497,11 @@ export interface LineMaterialComponentOptions {
   /** Upper bound on the applied depth bias (0 disables the clamp). */
   depthBiasClamp?: number;
   castShadows?: boolean;
+  /**
+   * Custom WGSL spliced into the shader that draws this material, and the
+   * values its own bindings are fed with.
+   */
+  hooks?: MaterialHooks;
 }
 export interface MorphComponentOptions {
   sources: Record<string, any>;
@@ -1293,8 +1303,33 @@ export interface GeometryCache {
 }
 
 // Shaders (pipeline WGSL generators)
-/** Raw WGSL text injected at fixed points of a pipeline shader. */
+/**
+ * WGSL injected at fixed points of a pipeline shader, plus the declarations
+ * that cannot be written as free text: a vertex attribute needs an
+ * `@location` inside the generated `VertexInput`, an inter-stage variable a
+ * member of the shared `VertexOutput`, and a uniform a `@group`/`@binding` the
+ * generator alone can allocate without colliding.
+ */
 export interface ShaderHooks {
+  /**
+   * Extra vertex attributes, name to WGSL type. Located after the pass' own
+   * attributes and read as `input.<name>`; the value comes from
+   * `geometry.attributes.<name>`, which pex-gpu resolves by that name.
+   */
+  attributes?: Record<string, string>;
+  /**
+   * Extra inter-stage variables, name to WGSL type. Written as `output.<name>`
+   * in a vertex hook and read as `input.<name>` in a fragment one. They count
+   * against `maxInterStageShaderVariables` alongside the pass' own.
+   */
+  interStage?: Record<string, string>;
+  /**
+   * Extra bindings in the material bind group, name to WGSL type. A
+   * `texture_*` type becomes a texture plus its sampler, named `u<Name>` and
+   * `u<Name>Sampler`; everything else becomes a field of the `uHooks` uniform
+   * block, read as `uHooks.<name>`.
+   */
+  bindings?: Record<string, string>;
   vertDeclarationsEnd?: string;
   vertBeforeTransform?: string;
   vertEnd?: string;
@@ -1303,6 +1338,28 @@ export interface ShaderHooks {
   fragBeforeLighting?: string;
   fragAfterLighting?: string;
   fragEnd?: string;
+}
+/**
+ * A material's hooks: the shader text and declarations above, plus the values
+ * its own bindings are drawn with.
+ *
+ * The compiled variant is keyed by this object's contents, hashed once per
+ * object, so changing a hook at runtime means assigning a new `hooks` object —
+ * editing a string in place keeps the pipeline that was built from the old one.
+ */
+export interface MaterialHooks extends ShaderHooks {
+  /**
+   * Values for `bindings`, keyed by the same names — every declared binding
+   * needs one. A texture's entry takes the texture, and an optional
+   * `<name>Sampler` entry its sampler; without one the standard renderer binds
+   * the sampler it uses for material textures, and a renderer with none of its
+   * own has nothing to fall back on.
+   *
+   * Called once per entity per frame, not once per draw: the shadow, pre- and
+   * main passes run the same vertex hook, and a value read from a clock would
+   * put the same vertex in three different places.
+   */
+  uniforms?: (entity: Entity) => Record<string, unknown>;
 }
 /**
  * Active light counts per type. The standard shader generator only reads them
@@ -1339,6 +1396,13 @@ export interface PipelineShaderOptions {
   texCoords?: Record<string, number>;
   /** Active light counts per type, e.g. { directional: 2, point: 1 }. */
   lights?: ShaderLightCounts;
+  /**
+   * WGSL expression written over the shaded colour instead of it, for
+   * inspecting one term of the surface: a `PBRData` member (`"data.roughness"`)
+   * or anything else in scope at the end of the fragment stage
+   * (`"input.normalView"`). Standard renderer only.
+   */
+  debugRender?: string;
 }
 /** Signature of a pipeline WGSL generator. */
 export type PipelineShaderBuilder = (

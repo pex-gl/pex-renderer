@@ -195,6 +195,60 @@ export function getFeatureFlags(
   return { defines, uniforms, constants };
 }
 
+const NO_HOOK_UNIFORMS = {};
+
+/**
+ * Uniform values for a material's hook bindings, mapped onto the names the
+ * generator declared: a texture entry becomes `u<Name>`/`u<Name>Sampler`
+ * (`sampler` when the hook supplies none of its own), everything else a field
+ * of the `uHooks` block.
+ *
+ * Computed once per entity per frame, keyed by `frameIndex`, rather than once
+ * per draw: the shadow, pre- and main passes run the same vertex hook, and a
+ * value read from a clock would displace a vertex differently in each — a
+ * shadow that does not match its caster, and a pre-pass depth the opaque pass
+ * can no longer test `less-equal` against. Without a frame index (NaN) nothing
+ * is reused.
+ */
+export function getHookUniforms(
+  entity: any,
+  frameIndex: number,
+  sampler?: GPUSampler,
+): Record<string, any> {
+  const hooks = entity.material?.hooks;
+  if (!hooks?.uniforms) return NO_HOOK_UNIFORMS;
+
+  const cache = (entity._hookUniforms ??= {});
+  if (cache.hooks === hooks && cache.frameIndex === frameIndex) {
+    return cache.uniforms;
+  }
+
+  const bindings = hooks.bindings ?? {};
+  const values = hooks.uniforms(entity);
+  const uHooks: Record<string, any> = {};
+  const uniforms: Record<string, any> = {};
+
+  for (const key of Object.keys(values)) {
+    // Supplied alongside its texture below, and not a field of the block.
+    if (key.endsWith("Sampler") && bindings[key.slice(0, -"Sampler".length)]) {
+      continue;
+    }
+    if (bindings[key]?.startsWith("texture_")) {
+      const name = uniformName(key);
+      uniforms[name] = values[key];
+      uniforms[samplerName(name)] = values[`${key}Sampler`] ?? sampler;
+    } else {
+      uHooks[key] = values[key];
+    }
+  }
+  if (Object.keys(uHooks).length) uniforms.uHooks = uHooks;
+
+  cache.hooks = hooks;
+  cache.frameIndex = frameIndex;
+  cache.uniforms = uniforms;
+  return uniforms;
+}
+
 /**
  * Output names no fragment output corresponds to: `color` is unconditional in
  * `fragmentOutputStruct`, and `depth` is an attachment, not a colour target.

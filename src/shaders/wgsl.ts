@@ -217,7 +217,7 @@ export const vertexJitter = (position = "output.position"): string =>
   `${position} += vec4f(uFrame.jitter * ${position}.w, 0.0, 0.0);`;
 
 /**
- * Varyings a pass writing motion vectors carries.
+ * Inter-stage variables a pass writing motion vectors carries.
  *
  * Both clip positions rather than the screen-space offset itself: the offset is
  * not linear under perspective, so interpolating it would bend every motion
@@ -418,10 +418,11 @@ export interface ShaderStructMember {
  * assigned in list order with no gaps, so members are added or removed without
  * hand-numbering. `start` offsets the first index (past a fixed leading member).
  * The numbers are only ever matched back by name — vertex inputs via reflection
- * (pex-gpu `vertex-layout.ts`), varyings by the shared vertex/fragment struct —
+ * (pex-gpu `vertex-layout.ts`), inter-stage variables by the shared
+ * vertex/fragment struct —
  * so their order and uniqueness matter, not their values.
  */
-function locationMembers(
+export function locationMembers(
   members: readonly (ShaderStructMember | false | null | undefined)[],
   start = 0,
 ): string {
@@ -456,11 +457,15 @@ const VERTEX_ATTRIBUTES: readonly (ShaderStructMember & {
   { flag: "previousInstancedRotation", name: "previousRotation", type: "vec4f" },
 ];
 
-export function vertexInputStruct(flags: VertexInputFlags): string {
+export function vertexInputStruct(
+  flags: VertexInputFlags,
+  extra: readonly ShaderStructMember[] = [],
+): string {
   return `struct VertexInput {
   ${locationMembers([
     { name: "position", type: "vec3f" },
     ...VERTEX_ATTRIBUTES.map((attribute) => flags[attribute.flag] && attribute),
+    ...extra,
   ])}
 }`;
 }
@@ -486,6 +491,55 @@ export function vertexOutputStruct(
   @invariant @builtin(position) position: vec4f,
   ${locationMembers(members)}
 }`;
+}
+
+// Hook declarations. The three things a `ShaderHooks` cannot write as free
+// text — an attribute's @location, an inter-stage variable's place in the
+// shared VertexOutput, a binding's @group/@binding — all come from here, so the
+// hook author names and types them and the generator places them.
+
+/** A hook's `attributes`/`interStage`/`bindings` record as struct members. */
+export const hookMembers = (
+  types: Record<string, string> = {},
+): ShaderStructMember[] =>
+  Object.entries(types).map(([name, type]) => ({ name, type }));
+
+/** Whether a hook binding is a texture handle rather than a `uHooks` field. */
+const isTextureType = (type: string) => type.startsWith("texture_");
+
+/**
+ * A hook's `bindings` as declarations in `group`, taking binding slots from
+ * `alloc` after the pass' own. Scalar/vector/matrix entries share one `uHooks`
+ * uniform block; a `texture_*` entry becomes a texture and sampler pair under
+ * the same `u`+capitalize convention as every other texture uniform.
+ */
+export function hookBindingsDeclaration(
+  group: number,
+  alloc: BindingAllocator,
+  bindings: Record<string, string> = {},
+): string {
+  const entries = Object.entries(bindings);
+  const fields = entries.filter(([, type]) => !isTextureType(type));
+  const textures = entries.filter(([, type]) => isTextureType(type));
+
+  return [
+    fields.length
+      ? `struct Hooks {
+  ${fields.map(([name, type]) => `${name}: ${type},`).join("\n  ")}
+}
+${bindingDeclaration(group, alloc.next(), "uHooks", "Hooks", "uniform")}`
+      : "",
+    ...textures.map(([name, type]) =>
+      textureSamplerDeclaration(
+        group,
+        alloc.nextTextureSampler(),
+        uniformName(name),
+        type,
+      ),
+    ),
+  ]
+    .filter(Boolean)
+    .join("\n");
 }
 
 /**

@@ -10,6 +10,10 @@ import {
   vertexVelocity,
   VELOCITY_MEMBERS,
   FRAGMENT_VELOCITY,
+  createBindingAllocator,
+  locationMembers,
+  hookMembers,
+  hookBindingsDeclaration,
 } from "./wgsl.js";
 
 import type { FeatureField } from "../systems/renderer/base.js";
@@ -69,6 +73,13 @@ export const lineShader = (
   const materialFlags = getDefineFlags(MATERIAL_DEFINE, defines);
   const useMSAA = defines.has("USE_MSAA");
 
+  // A hook's inter-stage variables follow the pass' own, whose count depends on
+  // what this variant carries: the vertex colour, then the two velocity clip
+  // positions.
+  const interStageBase =
+    (vertexFlags.vertexColor ? 1 : 0) +
+    (outputs.velocity ? VELOCITY_MEMBERS.length : 0);
+
   return /* wgsl */ `
 ${frameStruct()}
 
@@ -79,6 +90,7 @@ struct Material {
   lineWidth: f32,
 }
 @group(2) @binding(0) var<uniform> uMaterial: Material;
+${hookBindingsDeclaration(2, createBindingAllocator(1), hooks.bindings)}
 
 struct VertexInput {
   @location(0) position: vec3f,
@@ -86,9 +98,10 @@ struct VertexInput {
   @location(2) pointB: vec3f,
   ${vertexFlags.vertexColor ? "@location(3) colorA: vec4f,\n  @location(4) colorB: vec4f," : ""}
   ${vertexFlags.instancedLineWidth ? "@location(5) lineWidth: vec2f," : ""}
+  ${locationMembers(hookMembers(hooks.attributes), 6)}
 }
 
-struct Varyings {
+struct VertexOutput {
   @builtin(position) position: vec4f,
   ${vertexFlags.vertexColor ? "@location(0) color: vec4f," : ""}
   ${
@@ -99,6 +112,7 @@ struct Varyings {
         ).join("\n  ")
       : ""
   }
+  ${locationMembers(hookMembers(hooks.interStage), interStageBase)}
 }
 
 ${fragmentOutputStruct(sceneOutputMembers(outputs))}
@@ -106,8 +120,8 @@ ${fragmentOutputStruct(sceneOutputMembers(outputs))}
 ${hooks.vertDeclarationsEnd ?? ""}
 
 @vertex
-fn vertexMain(input: VertexInput) -> Varyings {
-  var output: Varyings;
+fn vertexMain(input: VertexInput) -> VertexOutput {
+  var output: VertexOutput;
 
   ${
     outputs.velocity
@@ -191,7 +205,7 @@ ${SHADERS.reversibleToneMap}
 ${hooks.fragDeclarationsEnd ?? ""}
 
 @fragment
-fn fragmentMain(input: Varyings) -> FragmentOutput {
+fn fragmentMain(input: VertexOutput) -> FragmentOutput {
   var output: FragmentOutput;
   var color = decode(uMaterial.baseColor, SRGB);
 

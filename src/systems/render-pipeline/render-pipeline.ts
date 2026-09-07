@@ -166,6 +166,10 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
     normalOutput,
   }: any) {
     const options = {
+      // Every pass of a frame draws with the same hook uniform values, which
+      // is what keeps a displaced vertex in the same place in all of them
+      // (see getHookUniforms in systems/renderer/base.ts).
+      frameIndex: this.frameIndex,
       outputs: colorTextures ?? {},
       // Two different things, and conflating them hides one: whether the
       // attachment is multisampled — which decides coverage-based alpha
@@ -183,7 +187,12 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
     };
 
     // Nothing is shaded in the pre-pass, so none of the frame's images apply.
-    if (prePass) return draw("renderPrePass", entitiesInView, { normalOutput });
+    if (prePass) {
+      return draw("renderPrePass", entitiesInView, {
+        normalOutput,
+        frameIndex: this.frameIndex,
+      });
+    }
     if (shadowMappingLight) {
       return draw("renderShadow", entitiesInView, {
         ...options,

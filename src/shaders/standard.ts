@@ -23,6 +23,8 @@ import {
   vertexPreviousWorld,
   VELOCITY_MEMBERS,
   FRAGMENT_VELOCITY,
+  hookMembers,
+  hookBindingsDeclaration,
 } from "./wgsl.js";
 import { ROUGHNESS_LEVELS, SH_COEFFICIENT_COUNT } from "./reflection-probe.js";
 import type { FeatureField } from "../systems/renderer/base.js";
@@ -212,6 +214,95 @@ export const STANDARD_WORKFLOW = {
   metallicRoughness: MATERIAL_DEFINE.metallicRoughnessWorkflow,
   specularGlossiness: MATERIAL_DEFINE.specularGlossinessWorkflow,
 } as const;
+
+/**
+ * The surface description every hook, chunk and debug view reads. Module level
+ * so `PBR_DATA_TYPES` derives from the same text the shader compiles.
+ */
+const PBR_DATA_STRUCT = /* wgsl */ `struct PBRData {
+  inverseViewMatrix: mat4x4f,
+  texCoord0: vec2f,
+  texCoord1: vec2f,
+  normalView: vec3f,
+  tangentView: vec4f,
+  positionWorld: vec3f,
+  positionView: vec3f,
+  eyeDirView: vec3f,
+  eyeDirWorld: vec3f,
+  normalWorld: vec3f, // N, world space
+  bentNormalWorld: vec3f, // average unoccluded direction, world space; N without one
+  viewWorld: vec3f, // V, view vector from position to camera, world space
+  NdotV: f32,
+
+  baseColor: vec3f,
+  emissiveColor: vec3f,
+  opacity: f32,
+  roughness: f32, // roughness value, as authored by the model creator (input to shader)
+  metallic: f32, // metallic value at the surface
+  linearRoughness: f32, // roughness mapped to a more linear change in the roughness (proposed by [2])
+  f0: vec3f, // Reflectance at normal incidence, specular color
+  f90: vec3f, // Specular response at grazing incidence
+  clearCoat: f32,
+  clearCoatRoughness: f32,
+  clearCoatLinearRoughness: f32,
+  clearCoatNormal: vec3f,
+  reflectionWorld: vec3f,
+  directColor: vec3f,
+  diffuseColor: vec3f, // color contribution from diffuse lighting
+  indirectDiffuse: vec3f, // contribution from IBL light probe and Ambient Light
+  indirectSpecular: vec3f, // contribution from IBL light probe
+  sheenColor: vec3f,
+  sheenRoughness: f32,
+  sheenLinearRoughness: f32,
+  sheenAlbedoScaling: f32,
+  transmitted: vec3f,
+  transmission: f32,
+  diffuseTransmission: f32,
+  diffuseTransmissionColor: vec3f,
+  diffuseTransmissionThickness: f32,
+  thickness: f32,
+  attenuationColor: vec3f,
+  attenuationDistance: f32,
+  dispersion: f32,
+  ior: f32,
+  ao: f32,
+}
+`;
+
+/** PBRData member name to WGSL type, for typing a `debugRender` expression. */
+const PBR_DATA_TYPES: Record<string, string> = Object.fromEntries(
+  [...PBR_DATA_STRUCT.matchAll(/^\s+(\w+): (\w+),/gm)].map((match) => [
+    match[1]!,
+    match[2]!,
+  ]),
+);
+
+/**
+ * A debug expression as a colour written over the shaded result.
+ *
+ * Named PBRData members are coerced by their declared type — a scalar splats,
+ * a vec2 pads, a vec4 drops its alpha — and anything else is left to `vec3f()`,
+ * which covers a vec3 inter-stage variable and a scalar alike. Direction-valued
+ * members are remapped from [-1, 1], the only transform that would otherwise
+ * clip to black.
+ *
+ * The value is written linear and pre-tone-map, so it reads exactly only with
+ * post-processing off; through a tone curve it is still ordered, just compressed.
+ */
+function debugRenderAssignment(expression: string): string {
+  const member = expression.startsWith("data.")
+    ? PBR_DATA_TYPES[expression.slice("data.".length)]
+    : undefined;
+  const value =
+    member === "vec2f"
+      ? `vec3f(${expression}, 0.0)`
+      : member === "vec4f"
+        ? `${expression}.xyz`
+        : `vec3f(${expression})`;
+  const signed = /normal|tangent|reflection/i.test(expression);
+
+  return `output.color = vec4f(${signed ? `${value} * 0.5 + 0.5` : value}, 1.0);`;
+}
 
 export const standardShader = (
   defines: Set<string> = new Set(),
@@ -733,6 +824,7 @@ ${STANDARD_MATERIAL_FIELDS.filter((field) => field.texture)
     ),
   )
   .join("\n")}
+${hookBindingsDeclaration(2, materialBindings, hooks.bindings)}
 
 ${ambientLightsDecl}
 ${directionalLightsDecl}
@@ -746,27 +838,30 @@ ${reflectionProbeDecl}
 ${captureDecl}
 ${ssaoDecl}
 
-${vertexInputStruct({
-  normal: useNormals,
-  tangent: vertexFlags.tangent,
-  texCoord0: vertexFlags.texCoord0 || useDisplacementTexture,
-  texCoord1: vertexFlags.texCoord1,
-  vertexColor: vertexFlags.vertexColor,
-  instancedOffset: vertexFlags.instancedOffset,
-  instancedScale: vertexFlags.instancedScale,
-  instancedRotation: vertexFlags.instancedRotation,
-  instancedColor: vertexFlags.instancedColor,
-  skin: useSkin,
-  // Only where they are read: a variant not writing motion vectors has no use
-  // for last frame's values, and binding them would cost a vertex fetch each.
-  previousPosition: !!outputs.velocity && vertexFlags.previousPosition,
-  previousInstancedOffset:
-    !!outputs.velocity && vertexFlags.previousInstancedOffset,
-  previousInstancedScale:
-    !!outputs.velocity && vertexFlags.previousInstancedScale,
-  previousInstancedRotation:
-    !!outputs.velocity && vertexFlags.previousInstancedRotation,
-})}
+${vertexInputStruct(
+  {
+    normal: useNormals,
+    tangent: vertexFlags.tangent,
+    texCoord0: vertexFlags.texCoord0 || useDisplacementTexture,
+    texCoord1: vertexFlags.texCoord1,
+    vertexColor: vertexFlags.vertexColor,
+    instancedOffset: vertexFlags.instancedOffset,
+    instancedScale: vertexFlags.instancedScale,
+    instancedRotation: vertexFlags.instancedRotation,
+    instancedColor: vertexFlags.instancedColor,
+    skin: useSkin,
+    // Only where they are read: a variant not writing motion vectors has no use
+    // for last frame's values, and binding them would cost a vertex fetch each.
+    previousPosition: !!outputs.velocity && vertexFlags.previousPosition,
+    previousInstancedOffset:
+      !!outputs.velocity && vertexFlags.previousInstancedOffset,
+    previousInstancedScale:
+      !!outputs.velocity && vertexFlags.previousInstancedScale,
+    previousInstancedRotation:
+      !!outputs.velocity && vertexFlags.previousInstancedRotation,
+  },
+  hookMembers(hooks.attributes),
+)}
 
 ${vertexOutputStruct([
   { name: "normalWorld", type: "vec3f" },
@@ -778,58 +873,12 @@ ${vertexOutputStruct([
   vertexFlags.tangent && { name: "tangentView", type: "vec4f" },
   useColor && { name: "color", type: "vec4f" },
   ...(outputs.velocity ? VELOCITY_MEMBERS : []),
+  ...hookMembers(hooks.interStage),
 ])}
 
 ${fragmentOutputStruct(sceneOutputMembers(outputs))}
 
-struct PBRData {
-  inverseViewMatrix: mat4x4f,
-  texCoord0: vec2f,
-  texCoord1: vec2f,
-  normalView: vec3f,
-  tangentView: vec4f,
-  positionWorld: vec3f,
-  positionView: vec3f,
-  eyeDirView: vec3f,
-  eyeDirWorld: vec3f,
-  normalWorld: vec3f, // N, world space
-  bentNormalWorld: vec3f, // average unoccluded direction, world space; N without one
-  viewWorld: vec3f, // V, view vector from position to camera, world space
-  NdotV: f32,
-
-  baseColor: vec3f,
-  emissiveColor: vec3f,
-  opacity: f32,
-  roughness: f32, // roughness value, as authored by the model creator (input to shader)
-  metallic: f32, // metallic value at the surface
-  linearRoughness: f32, // roughness mapped to a more linear change in the roughness (proposed by [2])
-  f0: vec3f, // Reflectance at normal incidence, specular color
-  f90: vec3f, // Specular response at grazing incidence
-  clearCoat: f32,
-  clearCoatRoughness: f32,
-  clearCoatLinearRoughness: f32,
-  clearCoatNormal: vec3f,
-  reflectionWorld: vec3f,
-  directColor: vec3f,
-  diffuseColor: vec3f, // color contribution from diffuse lighting
-  indirectDiffuse: vec3f, // contribution from IBL light probe and Ambient Light
-  indirectSpecular: vec3f, // contribution from IBL light probe
-  sheenColor: vec3f,
-  sheenRoughness: f32,
-  sheenLinearRoughness: f32,
-  sheenAlbedoScaling: f32,
-  transmitted: vec3f,
-  transmission: f32,
-  diffuseTransmission: f32,
-  diffuseTransmissionColor: vec3f,
-  diffuseTransmissionThickness: f32,
-  thickness: f32,
-  attenuationColor: vec3f,
-  attenuationDistance: f32,
-  dispersion: f32,
-  ior: f32,
-  ao: f32,
-}
+${PBR_DATA_STRUCT}
 
 // Feature toggles the included chunks expect this pipeline shader to declare.
 override DEPTH_PASS_ONLY: bool = false;
@@ -1063,6 +1112,7 @@ fn fragmentMain(
   }
 
   ${hooks.fragEnd ?? ""}
+  ${options.debugRender ? debugRenderAssignment(options.debugRender) : ""}
 
   return output;
 }

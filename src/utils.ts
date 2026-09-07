@@ -2,7 +2,7 @@ import { aabb } from "pex-geom";
 import { avec4, mat2x3, mat3, mat4, quat, vec3, vec4 } from "pex-math";
 
 import type { Mat3, Mat4, Vec3 } from "pex-math";
-import type { GpuContext } from "./types.js";
+import type { GpuContext, ShaderHooks } from "./types.js";
 
 const NAMESPACE = "pex-renderer";
 
@@ -305,9 +305,41 @@ const exposureFromEV100 = (ev100: number): number => 1 / (1.2 * 2 ** ev100);
  */
 const definesKey = (defines: Iterable<string>) => [...defines].sort().join("|");
 
+// FNV-1a, base36. Short enough to sit in a pipeline cache key and cheap enough
+// to run over a whole shader hook body.
+const hashString = (value: string) => {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < value.length; i++) {
+    hash ^= value.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return (hash >>> 0).toString(36);
+};
+
+const HOOKS_KEYS = new WeakMap<object, string>();
+
+/**
+ * A material's hooks as a pipeline cache key: derived from the WGSL they
+ * generate, so two materials sharing hook source share one compiled pipeline,
+ * and a changed hook is a new variant rather than a stale one. Memoised per
+ * hooks object — a draw pays a WeakMap lookup, not a hash of the source.
+ *
+ * `hooks.uniforms` is a function and drops out of the serialization, which is
+ * what makes per-frame values free: only what reaches the shader text keys it.
+ */
+const hooksKey = (hooks?: ShaderHooks) => {
+  if (!hooks) return "";
+  let key = HOOKS_KEYS.get(hooks);
+  if (key === undefined) {
+    HOOKS_KEYS.set(hooks, (key = hashString(JSON.stringify(hooks))));
+  }
+  return key;
+};
+
 export {
   NAMESPACE,
   definesKey,
+  hooksKey,
   TEMP_VEC3,
   TEMP_VEC4,
   TEMP_QUAT,

@@ -14,6 +14,8 @@ import {
   vertexTransform,
   getDefineFlags,
   vertexJitter,
+  hookMembers,
+  hookBindingsDeclaration,
 } from "./wgsl.js";
 import type { PipelineShaderOptions } from "../types.js";
 
@@ -157,6 +159,24 @@ export const depthPassShader = (
   if (useBaseColorTexture) texCoordSets.add(tc("baseColor"));
   if (useAlphaTexture) texCoordSets.add(tc("alpha"));
 
+  // A vertex hook is written once and compiled in every pass that draws the
+  // material, so what its chunks resolve against in the standard shader has to
+  // resolve here too — that pass' fragment includes are the reason a noise
+  // chunk finds glslMod there. Only alongside a hook: nothing in a depth-only
+  // pass calls any of it.
+  const hookPrelude = hooks.vertDeclarationsEnd
+    ? [
+        SHADERS.math.PI,
+        SHADERS.math.TWO_PI,
+        SHADERS.math.saturate,
+        SHADERS.math.multQuat,
+        SHADERS.math.random,
+        (SHADERS.math as any).glslMod,
+        SHADERS.math.max3,
+        SHADERS.encodeDecode,
+      ].join("\n")
+    : "";
+
   const materialBindings = createBindingAllocator(1);
   const baseColorTextureBinding = useBaseColorTexture
     ? materialBindings.nextTextureSampler()
@@ -190,6 +210,7 @@ ${textureSamplerDeclaration(2, baseColorTextureBinding, "uBaseColorTexture")}
 ${textureSamplerDeclaration(2, alphaTextureBinding, "uAlphaTexture")}`
     : ""
 }
+${hookBindingsDeclaration(2, materialBindings, hooks.bindings)}
 
 ${modelStruct({
   displacementTexture: useDisplacementTexture,
@@ -197,17 +218,20 @@ ${modelStruct({
   maxJoints,
 })}
 
-${vertexInputStruct({
-  normal: useNormals,
-  texCoord0: vertexFlags.texCoord0 || useDisplacementTexture,
-  texCoord1: texCoordSets.has(1),
-  vertexColor: useColor && vertexFlags.vertexColor,
-  instancedOffset: vertexFlags.instancedOffset,
-  instancedScale: vertexFlags.instancedScale,
-  instancedRotation: vertexFlags.instancedRotation,
-  instancedColor: useColor && vertexFlags.instancedColor,
-  skin: useSkin,
-})}
+${vertexInputStruct(
+  {
+    normal: useNormals,
+    texCoord0: vertexFlags.texCoord0 || useDisplacementTexture,
+    texCoord1: texCoordSets.has(1),
+    vertexColor: useColor && vertexFlags.vertexColor,
+    instancedOffset: vertexFlags.instancedOffset,
+    instancedScale: vertexFlags.instancedScale,
+    instancedRotation: vertexFlags.instancedRotation,
+    instancedColor: useColor && vertexFlags.instancedColor,
+    skin: useSkin,
+  },
+  hookMembers(hooks.attributes),
+)}
 
 ${vertexOutputStruct([
   useLinearDepth && { name: "viewPosition", type: "vec3f" },
@@ -215,9 +239,11 @@ ${vertexOutputStruct([
   texCoordSets.has(0) && { name: "texCoord0", type: "vec2f" },
   texCoordSets.has(1) && { name: "texCoord1", type: "vec2f" },
   useColor && { name: "color", type: "vec4f" },
+  ...hookMembers(hooks.interStage),
 ])}
 
 ${SHADERS.math.quatToMat4}
+${hookPrelude}
 
 ${hooks.vertDeclarationsEnd ?? ""}
 

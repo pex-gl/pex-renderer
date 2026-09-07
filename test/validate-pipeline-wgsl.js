@@ -68,12 +68,46 @@ async function check(label, code) {
   }
 }
 
+// Material hooks, exercised on every generator that takes them: the shader
+// text is only half of it, since attributes, inter-stage variables and bindings
+// are placed by the generator (locations after the pass' own, bindings after
+// its material textures) and a collision there is a compile error rather than a
+// wrong pixel.
+const HOOKS = {
+  attributes: { instanceTint: "vec3f" },
+  interStage: { tint: "vec3f", noiseAmount: "f32" },
+  bindings: { time: "f32", noiseTexture: "texture_2d<f32>" },
+  vertDeclarationsEnd: "fn hookWobble(p: vec3f, t: f32) -> vec3f { return p + vec3f(sin(t), 0.0, 0.0); }",
+  vertBeforeTransform: `position = vec4f(hookWobble(position.xyz, uHooks.time), position.w);
+  output.tint = input.instanceTint;
+  output.noiseAmount = position.y;`,
+  vertEnd: "// hook",
+  fragDeclarationsEnd: "const HOOK_MIX: f32 = 0.3;",
+  fragEnd: `output.color = vec4f(
+    mix(output.color.rgb, input.tint, HOOK_MIX) * input.noiseAmount *
+      textureSample(uNoiseTexture, uNoiseTextureSampler, vec2f(0.5)).rgb,
+    output.color.a
+  );`,
+};
+
+// The vertex half alone, which is what a depth pass compiles: the same hook
+// object draws the shadow map and the pre-pass, so what it declares has to
+// place itself there too.
+const VERTEX_HOOKS = {
+  attributes: HOOKS.attributes,
+  interStage: HOOKS.interStage,
+  bindings: HOOKS.bindings,
+  vertDeclarationsEnd: HOOKS.vertDeclarationsEnd,
+  vertBeforeTransform: HOOKS.vertBeforeTransform,
+  vertEnd: HOOKS.vertEnd,
+};
+
 const basicVariants = [
   { name: "default", defines: new Set() },
   { name: "vertex+instanced color", defines: new Set(["USE_VERTEX_COLORS", "USE_INSTANCED_COLOR"]) },
   { name: "full instancing", defines: new Set(["USE_INSTANCED_OFFSET", "USE_INSTANCED_SCALE", "USE_INSTANCED_ROTATION", "USE_INSTANCED_COLOR"]) },
   { name: "MSAA + draw buffers", defines: new Set(["USE_MSAA"]), options: { outputs: { normal: true, emissive: true, velocity: true, responsive: true } } },
-  { name: "hooks", defines: new Set(["USE_VERTEX_COLORS"]), options: { hooks: { vertBeforeTransform: "// hook", fragEnd: "// hook" } } },
+  { name: "hooks", defines: new Set(["USE_VERTEX_COLORS", "USE_INSTANCED_OFFSET"]), options: { hooks: HOOKS } },
 ];
 
 const VELOCITY = {
@@ -127,7 +161,14 @@ const standardVariants = [
     ]),
     options: { maxJoints: 64, lights: { ambient: 1, directional: 2, point: 2, spot: 1, area: 1 }, outputs: { normal: true, emissive: true, velocity: true, responsive: true } },
   },
-  { name: "hooks", defines: new Set(["USE_METALLIC_ROUGHNESS_WORKFLOW", "USE_NORMALS"]), options: { hooks: { vertBeforeTransform: "// hook", vertEnd: "// hook", fragBeforeTextures: "// hook", fragBeforeLighting: "// hook", fragAfterLighting: "// hook", fragEnd: "// hook" } } },
+  { name: "hooks", defines: new Set(["USE_METALLIC_ROUGHNESS_WORKFLOW", "USE_NORMALS", "USE_INSTANCED_OFFSET"]), options: { hooks: { ...HOOKS, fragBeforeTextures: "// hook", fragBeforeLighting: "data.baseColor = mix(data.baseColor, input.tint, HOOK_MIX);", fragAfterLighting: "// hook" }, lights: { directional: 1, shadow2DBuckets: 1 } } },
+  // debugRender writes over the shaded result, coercing by the member's own
+  // type: a scalar splats, a vec2 pads, a vec4 drops its alpha.
+  { name: "debugRender [f32]", defines: new Set(["USE_METALLIC_ROUGHNESS_WORKFLOW", "USE_NORMALS"]), options: { debugRender: "data.roughness", lights: { directional: 1 } } },
+  { name: "debugRender [vec2f]", defines: new Set(["USE_METALLIC_ROUGHNESS_WORKFLOW", "USE_NORMALS"]), options: { debugRender: "data.texCoord0" } },
+  { name: "debugRender [vec4f]", defines: new Set(["USE_METALLIC_ROUGHNESS_WORKFLOW", "USE_NORMALS", "USE_TANGENTS"]), options: { debugRender: "data.tangentView" } },
+  { name: "debugRender [inter-stage]", defines: new Set(["USE_METALLIC_ROUGHNESS_WORKFLOW", "USE_NORMALS"]), options: { debugRender: "input.normalWorld" } },
+  { name: "debugRender + hooks", defines: new Set(["USE_METALLIC_ROUGHNESS_WORKFLOW", "USE_NORMALS", "USE_INSTANCED_OFFSET"]), options: { hooks: HOOKS, debugRender: "data.baseColor" } },
 ];
 
 const blitVariants = [
@@ -148,7 +189,9 @@ const depthPassVariants = [
   { name: "alpha test + vertex/instance colors", defines: new Set(["USE_ALPHA_TEST", "USE_VERTEX_COLORS", "USE_INSTANCED_COLOR"]) },
   { name: "alpha test on texcoord1", defines: new Set(["USE_TEXCOORD_0", "USE_TEXCOORD_1", "USE_BASE_COLOR_TEXTURE", "USE_ALPHA_TEST"]), options: { texCoords: { baseColor: 1 } } },
   { name: "alpha test + omni (linear depth)", defines: new Set(["USE_TEXCOORD_0", "USE_BASE_COLOR_TEXTURE", "USE_ALPHA_TEST", "USE_LINEAR_DEPTH"]) },
-  { name: "hooks", defines: new Set(), options: { hooks: { vertBeforeTransform: "// hook", vertEnd: "// hook", fragDeclarationsEnd: "// hook", fragEnd: "// hook" } } },
+  { name: "hooks", defines: new Set(["USE_INSTANCED_OFFSET"]), options: { hooks: VERTEX_HOOKS } },
+  { name: "hooks + alpha test", defines: new Set(["USE_TEXCOORD_0", "USE_BASE_COLOR_TEXTURE", "USE_ALPHA_TEST"]), options: { hooks: VERTEX_HOOKS } },
+  { name: "hooks + omni (linear depth)", defines: new Set(["USE_LINEAR_DEPTH"]), options: { hooks: VERTEX_HOOKS } },
 ];
 
 // The pre-pass variant: same vertex path as a shadow map, plus a normal target.
@@ -163,13 +206,18 @@ const depthPassPrePassVariants = [
   // the mask from, so it has to fall back to discarding rather than emit a
   // coverage value nothing reads.
   { name: "depth-only rejects alpha to coverage", defines: new Set(["USE_TEXCOORD_0", "USE_BASE_COLOR_TEXTURE", "USE_ALPHA_TEST", "USE_ALPHA_TO_COVERAGE"]) },
+  { name: "normal output + hooks", defines: new Set(["USE_NORMALS", "USE_NORMAL_OUTPUT", "USE_INSTANCED_OFFSET"]), options: { hooks: VERTEX_HOOKS } },
 ];
 
 const lineVariants = [
   { name: "default", defines: new Set() },
   { name: "vertex colors + perspective scaling", defines: new Set(["USE_VERTEX_COLORS", "USE_PERSPECTIVE_SCALING"]) },
   { name: "instanced line width + msaa + drawbuffers", defines: new Set(["USE_INSTANCED_LINE_WIDTH", "USE_MSAA"]), options: { outputs: { normal: true, emissive: true, velocity: true, responsive: true } } },
-  { name: "hooks", defines: new Set(["USE_VERTEX_COLORS"]), options: { hooks: { vertEnd: "// hook", fragEnd: "// hook" } } },
+  // The line generator hand-writes its IO structs, so a hook's attributes and
+  // inter-stage variables are located past its own rather than by the shared
+  // builders.
+  { name: "hooks", defines: new Set(["USE_VERTEX_COLORS"]), options: { hooks: { attributes: HOOKS.attributes, interStage: HOOKS.interStage, bindings: HOOKS.bindings, vertEnd: "output.tint = input.instanceTint;\n  output.noiseAmount = uHooks.time;", fragDeclarationsEnd: HOOKS.fragDeclarationsEnd, fragEnd: HOOKS.fragEnd } } },
+  { name: "hooks + velocity", defines: new Set(["USE_VERTEX_COLORS"]), options: { outputs: { velocity: true }, hooks: { interStage: HOOKS.interStage, bindings: { time: "f32" }, vertEnd: "output.tint = vec3f(uHooks.time);\n  output.noiseAmount = uHooks.time;" } } },
 ];
 
 const overlayVariants = [

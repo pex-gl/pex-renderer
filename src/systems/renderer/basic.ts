@@ -2,8 +2,8 @@ import { mat3 } from "pex-math";
 import { submit } from "pex-gpu";
 import { basicShader, BASIC_VERTEX_FIELDS } from "../../shaders/basic.js";
 
-import createBaseSystem, { BLEND_MODES } from "./base.js";
-import { definesKey } from "../../utils.js";
+import createBaseSystem, { BLEND_MODES, getHookUniforms } from "./base.js";
+import { definesKey, hooksKey } from "../../utils.js";
 
 import type {
   BlendMode,
@@ -42,8 +42,15 @@ export default ({ ctx }: SystemOptions): RendererSystem => ({
     );
     return defines;
   },
+  getShaderOptions(entity: any) {
+    return { outputs: this._outputs, hooks: entity.material.hooks };
+  },
   getVariantKey(entity: any, defines: Set<string>) {
-    return `${definesKey(defines)}_${entity.material.blend ? 1 : 0}`;
+    return [
+      definesKey(defines),
+      entity.material.blend ? 1 : 0,
+      hooksKey(entity.material.hooks),
+    ].join("_");
   },
   getPipelineOptions(entity: any) {
     const { material } = entity;
@@ -95,6 +102,7 @@ export default ({ ctx }: SystemOptions): RendererSystem => ({
             }),
           },
           uMaterial: { baseColor: entity.material!.baseColor! },
+          ...getHookUniforms(entity, options.frameIndex ?? NaN),
         },
       });
     }
