@@ -9,6 +9,7 @@ import {
 import * as gpu from "pex-gpu";
 import createGUI from "pex-gui";
 import { loadJson, loadImage } from "pex-io";
+import { loadHdr } from "pex-loaders";
 import { quat, vec3 } from "pex-math";
 import { aabb } from "pex-geom";
 
@@ -102,7 +103,7 @@ let envMap;
 
 const addEnvmap = async () => {
   if (State.useEnvMap) {
-    envMap ??= await loaders.hdr(
+    envMap ??= await loadHdr(
       ctx,
       getURL(
         "assets/envmaps/Artist Workshop/artist_workshop_2k.hdr",
@@ -223,7 +224,7 @@ async function loadScene(url, grid) {
       includeCameras: !grid,
       includeAnimations: true,
       includeLights: !grid,
-      dracoOptions: { transcoderPath: getURL("assets/decoders/draco/") },
+      // dracoOptions: { transcoderPath: getURL("assets/decoders/draco/") },
       basisOptions: { transcoderPath: getURL("assets/decoders/basis/") },
     });
     State.scene = scene = State.scenes[0];
@@ -641,7 +642,7 @@ if (grid) {
       position: new Array(3).fill(State.gridSize * 2),
     }),
     camera: components.camera({
-    aspect: ctx.width / ctx.height,
+      aspect: ctx.width / ctx.height,
     }),
     orbiter: components.orbiter({ element: ctx.canvas }),
   });

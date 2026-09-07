@@ -3,10 +3,10 @@ import {
   world as createWorld,
   entity as createEntity,
   components,
-  loaders,
 } from "pex-renderer";
 
 import * as gpu from "pex-gpu";
+import { loadHdr } from "pex-loaders";
 import createGUI from "pex-gui";
 import { vec3, quat, vec2 } from "pex-math";
 
@@ -255,7 +255,7 @@ world.add(directionalLightEntity);
 
 const skyEntity = createEntity({
   skybox: components.skybox({
-    envMap: await loaders.hdr(ctx, getURL("assets/envmaps/garage/garage.hdr")),
+    envMap: await loadHdr(ctx, getURL("assets/envmaps/garage/garage.hdr")),
   }),
   reflectionProbe: components.reflectionProbe(),
 });

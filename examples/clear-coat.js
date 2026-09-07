@@ -3,17 +3,17 @@ import {
   world as createWorld,
   entity as createEntity,
   components,
-  loaders,
 } from "pex-renderer";
 
 import * as gpu from "pex-gpu";
 import * as io from "pex-io";
+import { loadHdr } from "pex-loaders";
 import { quat } from "pex-math";
 import createGUI from "pex-gui";
 
 import parseObj from "geom-parse-obj";
 
-import { getEnvMap, getGpuTexture, getURL } from "./utils.js";
+import { getGpuTexture, getURL } from "./utils.js";
 import { getRenderPassGraphViz } from "./graph-viz.js";
 
 const pixelRatio = devicePixelRatio;
@@ -47,7 +47,7 @@ for (let i = 0; i < 3; i++) {
 const skyEntity = createEntity({
   skybox: components.skybox({
     backgroundBlur: 1,
-    envMap: await loaders.hdr(
+    envMap: await loadHdr(
       ctx,
       getURL(
         "assets/envmaps/Road_to_MonumentValley/Road_to_MonumentValley.hdr",

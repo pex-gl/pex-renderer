@@ -3,10 +3,10 @@ import {
   world as createWorld,
   entity as createEntity,
   components,
-  loaders,
 } from "pex-renderer";
 
 import * as gpu from "pex-gpu";
+import { loadHdr } from "pex-loaders";
 import { quat } from "pex-math";
 import createGUI from "pex-gui";
 
@@ -46,7 +46,6 @@ const cameraEntity = createEntity({
 world.add(cameraEntity);
 console.log(cameraEntity);
 
-
 const geometryEntity = createEntity({
   transform: components.transform({ position: [0, 0, 0] }),
   geometry: components.geometry(sphere()),
@@ -63,7 +62,7 @@ const ultraHdr = null;
 //   ctx,
 //   "assets/envmaps/Ditch-River_2k/Ditch-River_2k_0.9.jpg",
 // );
-const hdrMap = await loaders.hdr(
+const hdrMap = await loadHdr(
   ctx,
   getURL("assets/envmaps/Ditch-River_2k/Ditch-River_2k.hdr"),
 );

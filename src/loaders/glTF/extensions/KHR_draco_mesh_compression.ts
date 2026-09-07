@@ -1,6 +1,6 @@
 import { loadDraco } from "pex-loaders";
 
-import { WEBGL_TYPED_ARRAY_BY_COMPONENT_TYPES } from "../common.js";
+import { WEBGL_TYPED_ARRAY_BY_COMPONENT_TYPES, normalizeData } from "../common.js";
 
 export interface DracoOptions {
   dracoOptions?: Record<string, any>;
@@ -35,7 +35,8 @@ export async function resolveDracoPrimitive(
   for (const name in primitive.attributes) {
     if (gltfAttributeMap[name] === undefined) continue;
     const accessor = accessors[primitive.attributes[name]];
-    const componentType = WEBGL_TYPED_ARRAY_BY_COMPONENT_TYPES[accessor.componentType]!;
+    const componentType =
+      WEBGL_TYPED_ARRAY_BY_COMPONENT_TYPES[accessor.componentType]!;
     attributeTypes[name] = componentType.name;
     if (accessor.normalized === true) normalizedAttributes.push(name);
   }
@@ -49,8 +50,19 @@ export async function resolveDracoPrimitive(
       ...options.dracoOptions,
     });
 
+    // Decoded attributes bypass resolveAttributes, so its post-decode
+    // conversions have to be repeated here or they are silently skipped.
     for (const name of normalizedAttributes) {
-      if (geometry[name]) geometry[name].normalized = true;
+      if (geometry[name]) geometry[name].data = normalizeData(geometry[name].data);
+    }
+
+    // JOINTS_0 decodes to the accessor's integer type. As on the uncompressed
+    // path, the shader's vec4u reflects to uint32x4, so the actual width has to
+    // be pinned from the decoded array.
+    if (geometry.JOINTS_0) {
+      const componentBytes = geometry.JOINTS_0.data.BYTES_PER_ELEMENT;
+      geometry.JOINTS_0.format = componentBytes === 1 ? "uint8x4" : "uint16x4";
+      geometry.JOINTS_0.stride = componentBytes * 4;
     }
 
     return geometry;

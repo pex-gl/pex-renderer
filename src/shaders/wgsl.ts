@@ -449,7 +449,7 @@ const VERTEX_ATTRIBUTES: readonly (ShaderStructMember & {
   { flag: "instancedScale", name: "scale", type: "vec3f" },
   { flag: "instancedRotation", name: "rotation", type: "vec4f" },
   { flag: "instancedColor", name: "instanceColor", type: "vec4f" },
-  { flag: "skin", name: "joint", type: "vec4f" },
+  { flag: "skin", name: "joint", type: "vec4u" },
   { flag: "skin", name: "weight", type: "vec4f" },
   { flag: "previousPosition", name: "previousPosition", type: "vec3f" },
   { flag: "previousInstancedOffset", name: "previousOffset", type: "vec3f" },
@@ -565,10 +565,10 @@ export interface VertexTransformFlags {
 
 /** Weighted blend of the four influencing joints, from `array` into `name`. */
 const skinMatrix = (name: string, array: string) => `let ${name} =
-    input.weight.x * ${array}[u32(input.joint.x)] +
-    input.weight.y * ${array}[u32(input.joint.y)] +
-    input.weight.z * ${array}[u32(input.joint.z)] +
-    input.weight.w * ${array}[u32(input.joint.w)];`;
+    input.weight.x * ${array}[input.joint.x] +
+    input.weight.y * ${array}[input.joint.y] +
+    input.weight.z * ${array}[input.joint.z] +
+    input.weight.w * ${array}[input.joint.w];`;
 
 const SKIN_MATRIX = skinMatrix("skinMat", "uJointMatrices");
 

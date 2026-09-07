@@ -3,10 +3,10 @@ import {
   world as createWorld,
   entity as createEntity,
   components,
-  loaders,
 } from "pex-renderer";
 
 import * as gpu from "pex-gpu";
+import { loadHdr } from "pex-loaders";
 import createGUI from "pex-gui";
 import { vec3, quat } from "pex-math";
 import { sphere } from "primitive-geometry";
@@ -188,11 +188,11 @@ const setBaseColors = () => {
 };
 setBaseColors();
 
-const envMap = await loaders.hdr(
+const envMap = await loadHdr(
   ctx,
   getURL("assets/envmaps/Ditch-River_2k/Ditch-River_2k.hdr"),
 );
-const furnaceEnvMap = await loaders.hdr(
+const furnaceEnvMap = await loadHdr(
   ctx,
   getURL("assets/envmaps/furnace/furnace.hdr"),
 );

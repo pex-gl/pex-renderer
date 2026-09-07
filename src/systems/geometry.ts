@@ -227,6 +227,7 @@ export default ({ ctx }: SystemOptions) => ({
 
           attribute.offset = attributeValue.offset;
           attribute.stride = attributeValue.stride;
+          attribute.format = attributeValue.format;
 
           // The pair describes the same vertices, so it has to be read the
           // same way.
@@ -235,6 +236,7 @@ export default ({ ctx }: SystemOptions) => ({
           if (previous) {
             previous.offset = attribute.offset;
             previous.stride = attribute.stride;
+            previous.format = attribute.format;
           }
         }
 

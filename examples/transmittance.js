@@ -3,17 +3,16 @@ import {
   world as createWorld,
   entity as createEntity,
   components,
-  loaders,
 } from "pex-renderer";
 
 import * as gpu from "pex-gpu";
+import { loadHdr } from "pex-loaders";
 import createGUI from "pex-gui";
 import { vec3, quat } from "pex-math";
 import { aabb } from "pex-geom";
-import { loadHdr } from "pex-loaders";
 import { plane, sphere } from "primitive-geometry";
 import gridCells from "grid-cells";
-import { getEnvMap, getURL, dragon, getGpuTexture } from "./utils.js";
+import { getURL, dragon, getGpuTexture } from "./utils.js";
 
 const State = {
   furnace: false,
@@ -218,9 +217,9 @@ const ENV_MAP_PATH =
     ? "examples/glTF-Sample-Environments"
     : "https://github.com/KhronosGroup/glTF-Sample-Environments/raw/main";
 
-// const envMap = await loaders.hdr(ctx, `${ENV_MAP_PATH}/neutral.hdr`);
-const envMap = await loaders.hdr(ctx, getURL("assets/envmaps/neutral.hdr"));
-const furnaceEnvMap = await loaders.hdr(
+// const envMap = await loadHdr(ctx, `${ENV_MAP_PATH}/neutral.hdr`);
+const envMap = await loadHdr(ctx, getURL("assets/envmaps/neutral.hdr"));
+const furnaceEnvMap = await loadHdr(
   ctx,
   getURL("assets/envmaps/furnace/furnace.hdr"),
 );

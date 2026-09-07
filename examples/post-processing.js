@@ -3,15 +3,15 @@ import {
   world as createWorld,
   entity as createEntity,
   components,
-  loaders,
   shaders,
 } from "pex-renderer";
 
 import * as gpu from "pex-gpu";
+import { loadHdr } from "pex-loaders";
 import { quat, vec3 } from "pex-math";
 import { aabb } from "pex-geom";
 import random from "pex-random";
-import createGUI, { DEFAULT_THEME } from "pex-gui";
+import createGUI from "pex-gui";
 
 import { cube, roundedCube, capsule, sphere } from "primitive-geometry";
 
@@ -442,7 +442,7 @@ const skyboxEntity = createEntity({
   transform: components.transform(),
   skybox: components.skybox({
     backgroundBlur: 0,
-    envMap: await loaders.hdr(
+    envMap: await loadHdr(
       ctx,
       getURL("assets/envmaps/Mono_Lake_B/Mono_Lake_B.hdr"),
     ),

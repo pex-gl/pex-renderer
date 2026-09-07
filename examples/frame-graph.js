@@ -3,11 +3,11 @@ import {
   world as createWorld,
   entity as createEntity,
   components,
-  loaders,
   memoryTimeline,
 } from "pex-renderer";
 
 import * as gpu from "pex-gpu";
+import { loadHdr } from "pex-loaders";
 import { quat } from "pex-math";
 import createGUI from "pex-gui";
 import random from "pex-random";
@@ -167,7 +167,7 @@ world.add(transmittedEntity);
 world.add(
   createEntity({
     skybox: components.skybox({
-      envMap: await loaders.hdr(ctx, getURL("assets/envmaps/garage/garage.hdr")),
+      envMap: await loadHdr(ctx, getURL("assets/envmaps/garage/garage.hdr")),
     }),
     reflectionProbe: components.reflectionProbe(),
   }),
@@ -328,9 +328,27 @@ const onSetting = () => {
 };
 gui.addParam("Enabled", State.ssr, "enabled", null, onSetting);
 gui.addParam("Intensity", State.ssr, "intensity", { min: 0, max: 3 });
-gui.addParam("Max distance", State.ssr, "maxDistance", { min: 1, max: 30 }, onSetting);
-gui.addParam("Thickness", State.ssr, "thickness", { min: 0.05, max: 2 }, onSetting);
-gui.addParam("Steps", State.ssr, "steps", { min: 8, max: 96, step: 1 }, onSetting);
+gui.addParam(
+  "Max distance",
+  State.ssr,
+  "maxDistance",
+  { min: 1, max: 30 },
+  onSetting,
+);
+gui.addParam(
+  "Thickness",
+  State.ssr,
+  "thickness",
+  { min: 0.05, max: 2 },
+  onSetting,
+);
+gui.addParam(
+  "Steps",
+  State.ssr,
+  "steps",
+  { min: 8, max: 96, step: 1 },
+  onSetting,
+);
 gui.addParam(
   "Roughness cutoff",
   State.ssr,
@@ -347,7 +365,10 @@ gui.addParam(
 );
 gui.addParam("Reuse neighbours", State.ssr, "spatialReuse", null, onSetting);
 gui.addParam("Accumulate", State.ssr, "temporal", null, onSetting);
-gui.addParam("History weight", State.ssr, "historyWeight", { min: 0, max: 0.98 });
+gui.addParam("History weight", State.ssr, "historyWeight", {
+  min: 0,
+  max: 0.98,
+});
 
 gui.addColumn("Overrides");
 // Replaces what the pipeline's grab pass draws while keeping its declaration:
@@ -450,7 +471,10 @@ gpu.frame(ctx, async () => {
   guiReflectionControl.texture =
     (reflectionHandle && frameGraph.resolve(reflectionHandle)) || dummyTexture;
 
-  if (!guiCaptureControl.texture || guiCaptureControl.texture === dummyTexture) {
+  if (
+    !guiCaptureControl.texture ||
+    guiCaptureControl.texture === dummyTexture
+  ) {
     const captureHandle = textures?.get("ssr.capture");
     guiCaptureControl.texture =
       (captureHandle && frameGraph.resolve(captureHandle)) || dummyTexture;

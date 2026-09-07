@@ -50,17 +50,24 @@ export type MaterialTexture =
  */
 export type GeometryAttribute =
   | Float32Array
+  | Uint8Array
   | Uint16Array
   | Uint32Array
   | number[]
   | {
       buffer: GpuBuffer;
       /** Raw data backing the buffer, e.g. for bounds computation. */
-      data?: Float32Array | Uint16Array | Uint32Array | number[];
+      data?: Float32Array | Uint8Array | Uint16Array | Uint32Array | number[];
       /** Byte offset into the buffer. */
       offset?: number;
       /** Byte stride override. */
       stride?: number;
+      /**
+       * Vertex format override. Needed when the WGSL type does not determine
+       * the storage width — `vec4u` accepts uint8x4/uint16x4/uint32x4 alike,
+       * so integer attributes such as `joints` must say which they are.
+       */
+      format?: GPUVertexFormat;
       /** "instance" to step this attribute per instance instead of per vertex. */
       stepMode?: GPUVertexStepMode;
       /** Re-uploads the buffer's data on the next geometry-system update. */

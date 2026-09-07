@@ -7,12 +7,12 @@ import {
 } from "pex-renderer";
 
 import * as gpu from "pex-gpu";
+import { loadHdr } from "pex-loaders";
 import createGUI from "pex-gui";
 import { utils, quat } from "pex-math";
-// import { pipeline as SHADERS } from "pex-shaders";
 
 import fitRect from "fit-rect";
-import { getEnvMap, getURL } from "./utils.js";
+import { getURL } from "./utils.js";
 
 const State = {
   resolutionPreset: 1,
@@ -33,7 +33,7 @@ const world = createWorld();
 
 const skyboxEntity = createEntity({
   skybox: components.skybox({
-    envMap: await loaders.hdr(
+    envMap: await loadHdr(
       ctx,
       getURL("assets/envmaps/Mono_Lake_B/Mono_Lake_B.hdr"),
     ),

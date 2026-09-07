@@ -48,7 +48,7 @@
     "pex-geom": "^3.1.1",
     "pex-gpu": "file:../pex-gpu",
     "pex-io": "^3.2.0",
-    "pex-loaders": "^1.2.1",
+    "pex-loaders": "file:../pex-loaders",
     "pex-math": "^4.4.0",
     "pex-random": "^2.1.2",
     "pex-shaders": "file:../pex-shaders",

@@ -4,6 +4,7 @@ import typedArrayInterleave from "typed-array-interleave";
 import { getAccessor } from "./accessor.js";
 import {
   MESH_QUANTIZATION_SCALE,
+  WEBGL_CONSTANTS,
   WEBGL_TYPED_ARRAY_BY_COMPONENT_TYPES,
   normalizeData,
 } from "./common.js";
@@ -30,57 +31,65 @@ export function resolveAttributes(
   for (const name in attributesMap) {
     const accessor = getAccessor(gltf.accessors[attributesMap[name]!], gltf.bufferViews);
 
-    if (accessor.sparse) {
-      attributes[name] = accessor._data;
-      continue;
-    }
+    // The conversions below rewrite values CPU-side and compose: an accessor
+    // may legally be sparse *and* normalized, or normalized *and* a VEC3
+    // COLOR_0. Each reads whatever the previous one produced, falling back to
+    // the accessor's own tightly-packed copy. Setting `data` opts the
+    // attribute out of the shared-bufferView buffer below, since the rewritten
+    // values live only in the new array.
+    let data;
 
-    // KHR_mesh_quantization: denormalize CPU-side into a fresh Float32Array.
-    // The geometry system infers WebGPU vertex formats from the WGSL type, not
-    // from the accessor, so a normalized integer source needs to already be
-    // float data by the time it reaches it — this loses the shared-buffer
-    // optimization below for quantized attributes only.
-    if (accessor.normalized) {
-      attributes[name] = normalizeData(accessor._data);
-      continue;
-    }
+    // Sparse accessors: getAccessor substitutes the sparse values into _data,
+    // which is the only place they exist.
+    if (accessor.sparse) data = accessor._data;
 
-    // JOINTS_0 is always an unnormalized integer accessor (UNSIGNED_BYTE or
-    // UNSIGNED_SHORT per spec — normalizing joint indices would be meaningless)
-    // but the shader's `joint` input is vec4f, so the raw indices need a
-    // straight cast to float, not the [0,1] scaling normalizeData applies.
-    if (name === "JOINTS_0") {
-      attributes[name] = Float32Array.from(accessor._data);
-      continue;
-    }
+    // KHR_mesh_quantization: denormalize into a fresh Float32Array. Vertex
+    // formats are inferred from the WGSL type rather than the accessor, so a
+    // normalized integer source has to already be float data on arrival.
+    if (accessor.normalized) data = normalizeData(data ?? accessor._data);
 
-    // The vertex shader's vertexColor input is always vec4f; a VEC3 COLOR_0
-    // needs an alpha=1 channel interleaved in before upload. Assumes COLOR_0
-    // isn't itself interleaved with other attributes in the same bufferView
-    // (rare in practice).
+    // The vertex shader's vertexColor input is always vec4f, so a VEC3 COLOR_0
+    // needs an alpha=1 channel interleaved in.
     if (name === "COLOR_0" && accessor.type === "VEC3") {
-      const count = accessor.count;
-      const data = typedArrayInterleave(
+      data = typedArrayInterleave(
         Float32Array,
         [3, 1],
-        new Float32Array(accessor._bufferView._data, accessor.byteOffset, count * 3),
-        new Float32Array(count).fill(1),
+        data ?? accessor._data,
+        new Float32Array(accessor.count).fill(1),
       );
-      attributes[name] = { buffer: createBuffer(ctx, { usage: "vertex", data }), data };
-      continue;
     }
 
-    const data = accessor._bufferView._data;
-    const stride = accessor._bufferView.byteStride;
-    let buffer = accessor._bufferView._vertexBuffer;
-    if (!buffer) {
-      buffer = accessor._bufferView._vertexBuffer = createBuffer(ctx, {
-        usage: "vertex",
-        data,
-      });
-    }
+    // JOINTS_0 is an unnormalized integer accessor, UNSIGNED_BYTE or
+    // UNSIGNED_SHORT per spec. The shader's `joint` input is vec4u, which
+    // reflects to uint32x4 — vec4<u32> is fed by uint8x4/uint16x4/uint32x4
+    // alike, so the width has to come from the accessor rather than the WGSL.
+    const joints =
+      name === "JOINTS_0"
+        ? accessor.componentType === WEBGL_CONSTANTS.UNSIGNED_BYTE
+          ? { format: "uint8x4" as const, stride: 4 }
+          : { format: "uint16x4" as const, stride: 8 }
+        : undefined;
 
-    attributes[name] = { buffer, data, offset: accessor.byteOffset, stride };
+    if (data) {
+      attributes[name] = joints ? { data, ...joints } : data;
+    } else {
+      const bufferViewData = accessor._bufferView._data;
+      let buffer = accessor._bufferView._vertexBuffer;
+      if (!buffer) {
+        buffer = accessor._bufferView._vertexBuffer = createBuffer(ctx, {
+          usage: "vertex",
+          data: bufferViewData,
+        });
+      }
+
+      attributes[name] = {
+        buffer,
+        data: bufferViewData,
+        offset: accessor.byteOffset,
+        stride: accessor._bufferView.byteStride ?? joints?.stride,
+        ...(joints && { format: joints.format }),
+      };
+    }
   }
 
   return attributes;

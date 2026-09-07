@@ -181,7 +181,7 @@ scalableEntities.set(instancedEntity, instancedEntityScale);
 const glTFOptions = {
   ctx,
   includeCameras: false,
-  dracoOptions: { transcoderPath: getURL("assets/decoders/draco/") },
+  // dracoOptions: { transcoderPath: getURL("assets/decoders/draco/") },
   basisOptions: { transcoderPath: getURL("assets/decoders/basis/") },
 };
 const [cesiumManScene] = await loaders.gltf(
@@ -242,7 +242,7 @@ scalableEntities.set(morphCubeScene.entities[0], morphCubeSceneScale);
 const skyEntity = createEntity({
   transform: components.transform(),
   skybox: components.skybox({
-    sunPosition: [0, 0.05, -1],
+    sunPosition: [0, 0.5, -1],
   }),
   reflectionProbe: components.reflectionProbe(),
 });

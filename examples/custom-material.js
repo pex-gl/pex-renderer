@@ -3,11 +3,10 @@ import {
   world as createWorld,
   entity as createEntity,
   components,
-  shaders,
-  loaders,
 } from "pex-renderer";
 
 import * as gpu from "pex-gpu";
+import { loadHdr } from "pex-loaders";
 import { quat } from "pex-math";
 import createGUI from "pex-gui";
 import random from "pex-random";
@@ -15,7 +14,7 @@ import * as SHADERS from "pex-shaders";
 
 import { cube, icosphere, plane, cone } from "primitive-geometry";
 
-import { getEnvMap, getURL } from "./utils.js";
+import { getURL } from "./utils.js";
 
 random.seed(0);
 
@@ -107,7 +106,7 @@ const grassEntity = createEntity({
     receiveShadows: true,
     hooks: {
       attributes: { instanceTint: "vec3f" },
-      varyings: { noiseAmount: "f32", colorNoise: "f32", tint: "vec3f" },
+      interStage: { noiseAmount: "f32", colorNoise: "f32", tint: "vec3f" },
       bindings: { time: "f32" },
       // Called once per entity per frame, so the blade bends the same way in
       // the shadow map, the depth pre-pass and the shaded pass.
@@ -156,7 +155,7 @@ const sphereEntity = createEntity({
     castShadows: true,
     receiveShadows: true,
     hooks: {
-      varyings: { noiseAmount: "f32" },
+      interStage: { noiseAmount: "f32" },
       bindings: { time: "f32" },
       uniforms: () => ({ time: (performance.now() % 1000000) / 2000 }),
       vertDeclarationsEnd: NOISE,
@@ -224,7 +223,7 @@ const skyboxEntity = createEntity({
   skybox: components.skybox({
     sunPosition: [1, 1, 1],
     backgroundBlur: 1,
-    envMap: await loaders.hdr(
+    envMap: await loadHdr(
       ctx,
       getURL("assets/envmaps/Mono_Lake_B/Mono_Lake_B.hdr"),
     ),

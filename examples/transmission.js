@@ -3,10 +3,10 @@ import {
   world as createWorld,
   entity as createEntity,
   components,
-  loaders,
 } from "pex-renderer";
 
 import * as gpu from "pex-gpu";
+import { loadHdr } from "pex-loaders";
 import { quat } from "pex-math";
 import createGUI from "pex-gui";
 import random from "pex-random";
@@ -206,7 +206,7 @@ world.add(transmittedCubesEntity);
 const skyEntity = createEntity({
   skybox: components.skybox({
     // backgroundBlur: false,
-    envMap: await loaders.hdr(ctx, getURL("assets/envmaps/garage/garage.hdr")),
+    envMap: await loadHdr(ctx, getURL("assets/envmaps/garage/garage.hdr")),
   }),
   reflectionProbe: components.reflectionProbe(),
 });
