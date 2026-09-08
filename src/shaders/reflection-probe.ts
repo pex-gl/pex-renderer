@@ -110,7 +110,7 @@ export const reflectionProbeSHShader = (): string => /* wgsl */ `
 ${SHADERS.math.PI}
 ${SHADERS.math.TWO_PI}
 
-struct Params { luminanceScale: f32 }
+struct Params { luminanceScale: f32, sunCosCutoff: f32, sunDirection: vec3f }
 
 @group(0) @binding(0) var uEnvMap: texture_2d<f32>;
 @group(0) @binding(1) var uEnvMapSampler: sampler;
@@ -140,14 +140,20 @@ fn computeMain(@builtin(local_invocation_index) lid: u32) {
   loop {
     if (i >= ${SH_SAMPLE_COUNT}u) { break; }
     let dir = fibonacciSphere(i, ${SH_SAMPLE_COUNT}u);
-    // The analytic sky's sun disc is not excluded, and does not need to be: it
-    // covers 2.2e-5 of the sphere, so these samples hit it 0.18 times on
-    // average and leaving it in moves the result by at most 0.1%. Raising
-    // SH_SAMPLE_COUNT far enough to give it real hits would turn it into a
-    // spike double-counting the directional light, and would need a mask.
-    let radiance = sampleEnv(dir);
-    let b = shBasis(dir);
-    for (var k = 0u; k < ${SH_COEFFICIENT_COUNT}u; k++) { acc[k] += radiance * b[k]; }
+    // The sun disc is masked out, not integrated. It covers 2.2e-5 of the
+    // sphere, so this sample set lands on it 0.18 times on average: whether it
+    // is hit at all depends on where the disc falls relative to the lattice,
+    // and one hit carries enough energy to swing the irradiance by 2x. Moving
+    // the sun then reads as an exposure step. Its energy belongs to the
+    // directional light, and the sky's calibration already excludes it.
+    //
+    // The caller sizes the cone to clear the disc plus the bilinear reach of
+    // the texels holding it; masking only the disc still leaks most of it.
+    if (dot(dir, uParams.sunDirection) <= uParams.sunCosCutoff) {
+      let radiance = sampleEnv(dir);
+      let b = shBasis(dir);
+      for (var k = 0u; k < ${SH_COEFFICIENT_COUNT}u; k++) { acc[k] += radiance * b[k]; }
+    }
     i += ${SH_WORKGROUP_SIZE}u;
   }
 

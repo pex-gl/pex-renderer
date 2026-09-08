@@ -1,5 +1,5 @@
-import { mat3 } from "pex-math";
-import type { Mat4 } from "pex-math";
+import { mat3, vec3 } from "pex-math";
+import type { Mat4, Vec3 } from "pex-math";
 import {
   submit,
   createTexture,
@@ -33,6 +33,17 @@ const RADIANCE_MIP_COUNT = 1 + Math.floor(Math.log2(CUBEMAP_SIZE));
 // Matches @workgroup_size(8, 8) in the compute shaders.
 const WORKGROUP_SIZE = 8;
 
+// Angular radius of the sun disc the analytic sky draws, from the
+// sunAngularDiameterCos its shader uses (pex-shaders' sky chunk).
+const SUN_ANGULAR_RADIUS = Math.acos(0.9999566769464484);
+// Texels of slack around it when masking the disc out of the SH projection.
+// Sampling is bilinear, so a hot texel reaches one texel out; two clears it
+// with room for the disc landing off-centre within its own texel.
+const SUN_MASK_TEXELS = 2;
+// dot() can never exceed 1, so nothing is masked.
+const NO_SUN_MASK = 2;
+const NO_SUN_DIRECTION: Vec3 = [0, 1, 0];
+
 type ComputePipeline = { compute: string; entryPoint: string };
 
 interface ProbeCacheEntry {
@@ -44,6 +55,10 @@ interface ProbeCacheEntry {
   data?: ReflectionProbePrebakedData | undefined;
   /** A bake the graph has not run yet. Only the bake itself clears it. */
   needsBake?: boolean;
+  /** Direction of the analytic sky's sun, masked out of the SH projection. */
+  sunDirection?: Vec3;
+  /** cos of the masked cone's radius; NO_SUN_MASK when there is no sun. */
+  sunCosCutoff?: number;
 }
 
 interface ProbeResources {
@@ -281,7 +296,11 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
       uniforms: {
         uEnvMap: environment,
         uEnvMapSampler: envSampler,
-        uParams: { luminanceScale },
+        uParams: {
+          luminanceScale,
+          sunCosCutoff: cached.sunCosCutoff ?? NO_SUN_MASK,
+          sunDirection: cached.sunDirection ?? NO_SUN_DIRECTION,
+        },
       },
       execute: ({ uniforms, resolveBuffer, timestampWrites }) => {
         submit(ctx, {
@@ -420,6 +439,7 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
     entity: Entity,
     envMap: GpuTexture,
     luminanceScale: number,
+    sunPosition: Vec3 | undefined,
     dirty: boolean,
   ) {
     let cached = this.cache[entity.id];
@@ -450,6 +470,18 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
     if (cached.luminanceScale !== luminanceScale) {
       cached.luminanceScale = luminanceScale;
       dirty = true;
+    }
+
+    // Tracks the sky it is baked from rather than forcing a rebake of its own:
+    // the sun only moves by the sky being redrawn, which already dirties this.
+    cached.sunDirection ??= vec3.create();
+    if (sunPosition) {
+      vec3.normalize(vec3.set(cached.sunDirection, sunPosition));
+      cached.sunCosCutoff = Math.cos(
+        SUN_ANGULAR_RADIUS + (SUN_MASK_TEXELS * Math.PI) / envMap.height,
+      );
+    } else {
+      cached.sunCosCutoff = NO_SUN_MASK;
     }
 
     // `dirty` is the input; `needsBake` is the pending work only the bake
@@ -512,6 +544,9 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
           entity,
           envMap,
           skybox._luminanceScale ?? 1,
+          // A user envMap hides the analytic sky, and nothing says where its
+          // sun is, so only the generated sky gets its disc masked.
+          skybox.envMap ? undefined : skybox.sunPosition,
           !!entity.reflectionProbe.dirty || !!skybox._skyTextureChanged,
         );
       }
