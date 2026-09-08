@@ -21,7 +21,8 @@ const getInvSqrFalloff = (range: number) =>
  *
  * Adds:
  *
- * - "_projectionMatrix" and "_viewMatrix" to light components
+ * - "_viewMatrix" to light components (the shadow projection is fitted per
+ *   camera layer and lives on the render pipeline's LightShadow instead)
  * - "_direction" to directional and spot light components
  * - "_intensity" to every light component: the authored intensity converted to
  *   the unit the shaders integrate (see utils.ts)
@@ -30,7 +31,6 @@ const getInvSqrFalloff = (range: number) =>
 export default () => ({
   type: "light-system",
   updateLight(light: LightShadowInternals, transform?: TransformCache) {
-    light._projectionMatrix ??= mat4.create();
     light._viewMatrix ??= mat4.create();
 
     if (transform) {

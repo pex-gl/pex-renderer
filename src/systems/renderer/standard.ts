@@ -26,8 +26,24 @@ import type {
   RendererSystem,
   RenderView,
   ShaderLightCounts,
+  LightShadow,
   SystemOptions,
 } from "../../types.js";
+
+/**
+ * A light the frame declared no shadow for. The struct members still have to
+ * pack, and `castShadows: 0` is what makes the shader skip them.
+ */
+const NO_SHADOW: LightShadow = {
+  cubemap: false,
+  bucket: 0,
+  layer: 0,
+  near: 0,
+  far: 0,
+  radiusUV: [0, 0],
+  projectionMatrix: mat4.create() as any,
+  texture: undefined,
+};
 
 /** @group(1) bindings for the pass's lights, plus what the shader keys on. */
 interface StandardLights {
@@ -371,7 +387,7 @@ export default ({
 
   // Builds the @group(1) values: one runtime-sized struct array per light type,
   // plus one texture binding per shadow bucket.
-  gatherLights(entities: Entity[]): StandardLights {
+  gatherLights(entities: Entity[], scope: string): StandardLights {
     const ambient = entities.filter((e) => e.ambientLight);
     const directional = entities.filter((e) => e.directionalLight);
     const point = entities.filter((e) => e.pointLight);
@@ -401,30 +417,43 @@ export default ({
       textures2D: [],
       texturesCube: [],
     };
+    // A light's map is fitted to the casters of one camera layer, so the shadow
+    // is looked up by the scope the pipeline is drawing — not flat on the
+    // component, which a light seen by several layers would overwrite.
+    const shadowOf = (light: any): LightShadow =>
+      light._shadows?.get(scope) ?? NO_SHADOW;
+
     // Struct fields every light type carries, whatever the map's
     // dimensionality. Registering the texture is a side effect of asking for
     // them, so a bucket only exists once some light points at it.
-    const shadowSlot = (light: any, map: any, cube: boolean) => {
+    const shadowSlot = (light: any, shadow: LightShadow, cube: boolean) => {
+      const map = light.castShadows ? shadow.texture : undefined;
       if (map) {
         (cube ? shadowBuckets.texturesCube : shadowBuckets.textures2D)[
-          light._shadowBucket
+          shadow.bucket
         ] = map;
       }
       return {
         castShadows: map ? 1 : 0,
-        shadowBucket: map ? light._shadowBucket : 0,
-        shadowLayer: map ? light._shadowLayer : 0,
+        shadowBucket: map ? shadow.bucket : 0,
+        shadowLayer: map ? shadow.layer : 0,
         shadowMapSize: map ? [map.width, map.height] : [0, 0],
       };
     };
 
-    // The 2D projection fields on top, shared by directional/spot/area.
-    const shadow2D = (light: any) => ({
-      ...shadowSlot(light, light.castShadows ? light._shadowMap : null, false),
-      near: light._near ?? 0,
-      far: light._far ?? 0,
-      radiusUV: light._radiusUV ?? [0, 0],
-    });
+    // The 2D projection fields on top, shared by directional/spot/area. The
+    // projection comes from the shadow too: it is the one the map was rendered
+    // with, and sampling with any other misaligns the comparison.
+    const shadow2D = (light: any) => {
+      const shadow = shadowOf(light);
+      return {
+        ...shadowSlot(light, shadow, false),
+        projectionMatrix: shadow.projectionMatrix,
+        near: shadow.near,
+        far: shadow.far,
+        radiusUV: shadow.radiusUV,
+      };
+    };
 
     if (directional.length) {
       uniforms.uDirectionalLights = directional.map((e) => {
@@ -432,7 +461,6 @@ export default ({
         return {
           direction: light._direction,
           color: lightColor(light),
-          projectionMatrix: light._projectionMatrix,
           viewMatrix: light._viewMatrix,
           ...shadow2D(light),
         };
@@ -442,6 +470,7 @@ export default ({
     if (point.length) {
       uniforms.uPointLights = point.map((e) => {
         const light = e.pointLight!;
+        const shadow = shadowOf(light);
         return {
           position: e._transform!.worldPosition,
           color: lightColor(light),
@@ -450,12 +479,8 @@ export default ({
           radius: light.bulbRadius ?? 0,
           // Normalizes the stored/compared radial distance (shadow-mapping.ts
           // writes length(view)/far into the cube).
-          far: light._far ?? 0,
-          ...shadowSlot(
-            light,
-            light.castShadows ? light._shadowCubemap : null,
-            true,
-          ),
+          far: shadow.far,
+          ...shadowSlot(light, shadow, true),
         };
       });
     }
@@ -470,7 +495,6 @@ export default ({
           innerAngle: light.innerAngle,
           angle: light.angle,
           invSqrFalloff: light._invSqrFalloff,
-          projectionMatrix: light._projectionMatrix,
           viewMatrix: light._viewMatrix,
           ...shadow2D(light),
         };
@@ -491,7 +515,6 @@ export default ({
           size: [e.transform!.scale![0]! / 2, e.transform!.scale![1]! / 2],
           disk: light.disk ? 1 : 0,
           doubleSided: light.doubleSided ? 1 : 0,
-          projectionMatrix: light._projectionMatrix,
           viewMatrix: light._viewMatrix,
           ...shadow2D(light),
         };
@@ -553,7 +576,7 @@ export default ({
     // the renderer by whichever pass ran last.
     const passOptions: StandardPassOptions = {
       ...options,
-      lights: this.gatherLights(entities),
+      lights: this.gatherLights(entities, options.shadowScope ?? ""),
     };
 
     // Scene-global IBL: the reflection probe system bakes SH + a prefiltered
@@ -866,14 +889,15 @@ export default ({
     options: RendererPassOptions = {},
   ) {
     const light = options.shadowMappingLight;
-    const linear = !!light?._shadowCubemap;
+    const shadow = options.lightShadow;
+    const linear = !!shadow?.cubemap;
     const frameIndex = options.frameIndex ?? NaN;
 
     const uFrame = {
       ...this.getFrameUniforms(renderView),
       // The view origin is the light, not a camera entity.
       cameraPosition: [0, 0, 0],
-      ...(linear && { far: light._far }),
+      ...(linear && { far: shadow!.far }),
     };
 
     const casters = entities.filter(

@@ -29,6 +29,7 @@ const pixelRatio = devicePixelRatio;
 const ctx = await gpu.createContext({ pixelRatio });
 const renderEngine = createRenderEngine({ ctx });
 const world = createWorld();
+window.world = world;
 
 const W = ctx.width;
 const H = ctx.height;
@@ -227,10 +228,10 @@ const gui = createGUI(ctx);
 renderEngine.update(world.entities);
 await renderEngine.render(world.entities, cameraEntities);
 
-// Shadow maps come from the frame graph's pool, so the texture behind a light
-// can change between frames and is undefined on a frame where it didn't cast.
-// The GUI holds the control and re-reads the texture each frame rather than
-// capturing one here.
+// A light's shadow map lives on `_shadows`, keyed by the camera layer it
+// was fitted for — a light seen by several layers has one map per layer — and
+// the entry is undefined on a frame where the light didn't cast. The GUI holds
+// the control and re-reads the shadow each frame rather than capturing one.
 const DUMMY_DEPTH = {
   width: 4,
   height: 4,
@@ -253,14 +254,18 @@ const shadowMapControls = [];
 // the stored depth is nonlinear and the GUI linearises it with near/far. A
 // directional light is orthographic and a point light writes radial distance
 // over `far` by hand, so both are linear across [0, 1] already.
-const addShadowMap = (light, { cubemap = false, perspective = false } = {}) => {
+const addShadowMap = (
+  lightEntity,
+  light,
+  { cubemap = false, perspective = false } = {},
+) => {
   const dummy = cubemap ? dummyShadowCubemap : dummyShadowMap;
   shadowMapControls.push({
     control: cubemap
       ? gui.addTextureCube("Shadowmap", dummy)
       : gui.addTexture2D("Shadowmap", dummy, { flipY: true }),
     light,
-    property: cubemap ? "_shadowCubemap" : "_shadowMap",
+    layer: lightEntity.layer ?? "",
     dummy,
     perspective,
   });
@@ -293,7 +298,7 @@ gui.addParam(
   "bulbRadius",
   { min: 0, max: 100 },
 );
-addShadowMap(directionalLightEntity.directionalLight);
+addShadowMap(directionalLightEntity, directionalLightEntity.directionalLight);
 gui.addParam(
   "Cast Shadows",
   directionalLightEntity.directionalLight,
@@ -374,7 +379,9 @@ gui.addParam("Bulb Radius", spotLightEntity.spotLight, "bulbRadius", {
   min: 0,
   max: 100,
 });
-addShadowMap(spotLightEntity.spotLight, { perspective: true });
+addShadowMap(spotLightEntity, spotLightEntity.spotLight, {
+  perspective: true,
+});
 gui.addParam("Cast Shadows", spotLightEntity.spotLight, "castShadows");
 
 gui.addHeader("Point").setPosition(...getViewportPosition(LAYERS[2]));
@@ -390,7 +397,9 @@ gui.addParam("Bulb Radius", pointLightEntity.pointLight, "bulbRadius", {
   min: 0,
   max: 100,
 });
-addShadowMap(pointLightEntity.pointLight, { cubemap: true });
+addShadowMap(pointLightEntity, pointLightEntity.pointLight, {
+  cubemap: true,
+});
 gui.addParam("Cast Shadows", pointLightEntity.pointLight, "castShadows");
 
 gui.addHeader("Area").setPosition(...getViewportPosition(LAYERS[3]));
@@ -412,7 +421,9 @@ gui.addParam("Bulb Radius", areaLightEntity.areaLight, "bulbRadius", {
 });
 gui.addParam("Disk", areaLightEntity.areaLight, "disk");
 gui.addParam("Double Sided", areaLightEntity.areaLight, "doubleSided");
-addShadowMap(areaLightEntity.areaLight, { perspective: true });
+addShadowMap(areaLightEntity, areaLightEntity.areaLight, {
+  perspective: true,
+});
 gui.addParam("Cast Shadows", areaLightEntity.areaLight, "castShadows");
 
 gpu.frame(ctx, async () => {
@@ -421,20 +432,21 @@ gpu.frame(ctx, async () => {
   renderEngine.update(world.entities);
   await renderEngine.render(world.entities, cameraEntities);
 
-  // The light system refits near/far to the scene bounds every frame, so both
-  // the texture and the planes have to be re-read rather than captured.
+  // The pipeline refits near/far to the scene bounds every frame, so both the
+  // texture and the planes have to be re-read rather than captured.
   for (const {
     control,
     light,
-    property,
+    layer,
     dummy,
     perspective,
   } of shadowMapControls) {
-    control.texture = light[property] || dummy;
-    control.options.layer = light[property] ? (light._shadowLayer ?? 0) : 0;
+    const shadow = light._shadows?.get(layer);
+    control.texture = shadow?.texture || dummy;
+    control.options.layer = shadow?.texture ? shadow.layer : 0;
     if (perspective) {
-      control.options.near = light._near;
-      control.options.far = light._far;
+      control.options.near = shadow?.near;
+      control.options.far = shadow?.far;
     }
   }
 

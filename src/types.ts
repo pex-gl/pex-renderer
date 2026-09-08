@@ -154,6 +154,42 @@ export interface AnimationComponentOptions {
   duration?: number;
   channels?: unknown[];
 }
+/**
+ * What one light's shadow map is, for one declaration scope.
+ *
+ * Everything here depends on the caster set as well as the light — the frustum
+ * is fitted to it, and the bucket slot is handed out per scope — so it cannot
+ * live flat on the component: a light without a `layer` is declared once per
+ * camera layer, and a single set of fields would leave every camera but the
+ * last shading against another scope's projection.
+ */
+export interface LightShadow {
+  /** Whether the map is a cube (point lights) rather than a 2D layer. */
+  cubemap: boolean;
+  /**
+   * The size-bucketed array this map is a layer of, shared with every other
+   * caster of the same size: which bucket binding the shader samples, and the
+   * light's slot in it.
+   */
+  bucket: number;
+  layer: number;
+  /** The fitted frustum, which PCSS linearises the stored depth against. */
+  near: number;
+  far: number;
+  /**
+   * The bulb radius as a fraction of the map, which is what makes a penumbra
+   * scale with the light's physical size: PCSS works in shadow-map UV, and the
+   * same bulb covers more of a map fitted tightly to the casters than of one
+   * that spans the scene. Measured where the projection holds it constant —
+   * across the box for an orthographic light, at the near plane for a
+   * perspective one.
+   */
+  radiusUV: Vec2;
+  /** Fitted to the scope's casters, so it must be sampled with its own map. */
+  projectionMatrix: Mat4;
+  /** Resolved during execution; unset when the light did not cast this scope. */
+  texture: GpuTexture | undefined;
+}
 /** Shadow-mapping internals shared by shadow-casting lights. */
 export interface LightShadowInternals {
   /**
@@ -162,21 +198,14 @@ export interface LightShadowInternals {
    * luminance (cd/m²) for area. Added by the light system.
    */
   _intensity?: number;
-  _projectionMatrix?: Mat4;
   _viewMatrix?: Mat4;
   _direction?: Vec3;
-  _near?: number;
-  _far?: number;
-  _radiusUV?: Vec2;
   /**
-   * The size-bucketed array this light's shadow map is a layer of, shared with
-   * every other caster that asked for the same size.
+   * One shadow per declaration scope, keyed the way the pipeline scopes shadow
+   * passes (`""` for an unlayered camera). Added by the render pipeline.
    */
-  _shadowMap?: GpuTexture;
-  _shadowCubemap?: GpuTexture;
-  /** Which bucket binding the shader samples, and the light's slot in it. */
-  _shadowBucket?: number;
-  _shadowLayer?: number;
+  _shadows?: Map<string, LightShadow>;
+  /** Frustum-fitting scratch, reused across frames to avoid reallocating. */
   _sceneBboxInLightSpace?: AABB;
   _sceneBbox?: AABB;
 }
@@ -1500,6 +1529,14 @@ export interface RendererPassOptions {
   reflectionProbe?: ReflectionProbeCache;
   /** Depth-only pass into this light's shadow map. */
   shadowMappingLight?: any;
+  /** The shadow that pass fills in, so the draw knows the map it is writing. */
+  lightShadow?: LightShadow;
+  /**
+   * Which of a light's {@link LightShadow}s this view shades with — the
+   * camera's layer, or `""`. Scoped rather than implied, because a light
+   * without a `layer` has one shadow per layer.
+   */
+  shadowScope?: string;
   transparent?: boolean;
   transmitted?: boolean;
   cullFaceMode?: GPUCullMode;
@@ -1564,15 +1601,18 @@ export interface ShadowMappingMethods {
     lightEntity: Entity,
     light: any,
   ): (worldBounds: any) => boolean;
+  getLightShadow(light: any, scope: string): LightShadow;
   computeLightProperties(
     lightEntity: Entity,
     light: any,
     participants: Entity[],
+    shadow: LightShadow,
   ): void;
   computePointLightProperties(
     lightEntity: Entity,
     light: any,
     participants: Entity[],
+    shadow: LightShadow,
   ): void;
   createShadowMapBucket(
     size: number,
@@ -1584,7 +1624,7 @@ export interface ShadowMappingMethods {
     entities: Entity[],
     renderers: RendererSystem[],
     layer: string | undefined,
-  ): { shadowMaps: ResourceHandle[]; shadowCastingLights: any[] };
+  ): { shadowMaps: ResourceHandle[] };
   renderShadowMap(
     kind: LightKind,
     lightEntity: Entity,
@@ -1592,6 +1632,7 @@ export interface ShadowMappingMethods {
     renderers: RendererSystem[],
     scope: string,
     shadowMap: ResourceHandle,
+    shadow: LightShadow,
   ): void;
 }
 /**

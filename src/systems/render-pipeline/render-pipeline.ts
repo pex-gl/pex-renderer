@@ -20,7 +20,9 @@ import type {
 } from "../../frame-graph/index.js";
 
 const BLIT_WGSL = blitShader();
-const BLIT_PREMULTIPLIED_WGSL = blitShader(new Set(["USE_PREMULTIPLIED_ALPHA"]));
+const BLIT_PREMULTIPLIED_WGSL = blitShader(
+  new Set(["USE_PREMULTIPLIED_ALPHA"]),
+);
 const GRAB_PASS_WGSL = grabPassShader();
 
 /**
@@ -28,10 +30,8 @@ const GRAB_PASS_WGSL = grabPassShader();
  *
  * Adds:
  *
- * - "_near", "_far", "_radiusUV" and "_sceneBboxInLightSpace" to light components
- *   that cast shadows
- * - "_shadowCubemap" to pointLight components and "_shadowMap" to other light
- *   components
+ * - "_shadows" to light components: one LightShadow per camera layer, holding the
+ *   fitted frustum, the bucket slot the shader samples and the map
  */
 export default ({ ctx, frameGraph }: SystemOptions) => ({
   type: "render-pipeline-system",
@@ -158,6 +158,8 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
     msaa,
     entitiesInView,
     shadowMappingLight,
+    lightShadow,
+    shadowScope,
     transparent,
     transmitted,
     cullFaceMode,
@@ -181,6 +183,9 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
       // Which probe lights a camera is a question about what that camera
       // sees, so the pipeline resolves it per view.
       reflectionProbe,
+      // Which of a light's shadow records this view shades with: a light
+      // without a layer has one per layer, fitted to that layer's casters.
+      shadowScope,
     };
 
     const draw = (method: string, entities: Entity[], passOptions: any) => {
@@ -195,6 +200,7 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
       return draw("renderShadow", entitiesInView, {
         ...options,
         shadowMappingLight,
+        lightShadow,
       });
     }
 
@@ -439,15 +445,19 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
 
     await stage("lights");
 
-    // Declared once per frame and shared by every camera looking at the same
-    // layer, since a shadow map depends on the light and the scene only.
-    const { shadowMaps } = this.declareShadowMaps(entities, renderers, layer);
-
     // An entity without a layer belongs to every view; a camera with one sees
     // only those plus its own.
     const entitiesInView = layer
       ? entities.filter((entity) => !entity.layer || entity.layer === layer)
       : entities.filter((entity) => !entity.layer);
+
+    // Declared once per frame and shared by every camera looking at the same
+    // layer, since a shadow map depends on the light and the scene only.
+    const { shadowMaps } = this.declareShadowMaps(
+      entitiesInView,
+      renderers,
+      layer,
+    );
 
     // What the scene passes light with, resolved once per view rather than once
     // per renderer per pass. Importing is interned per frame, so these are the
@@ -485,6 +495,7 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
       msaa,
       entitiesInView,
       shadowMappingLight: false,
+      shadowScope: layer ?? "",
       transparent: false,
       transmitted: false,
       reflectionProbe,
