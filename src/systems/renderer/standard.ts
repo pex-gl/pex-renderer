@@ -14,11 +14,7 @@ import {
   DEPTH_PASS_VERTEX_FIELDS,
 } from "../../shaders/depth-pass.js";
 
-import createBaseSystem, {
-  BLEND_MODES,
-  getHookUniforms,
-  outputsKey,
-} from "./base.js";
+import createBaseSystem, { BLEND_MODES, outputsKey } from "./base.js";
 import { samplerName, uniformName } from "../../shaders/wgsl.js";
 import { NAMESPACE, TEMP_MAT4, definesKey, hooksKey } from "../../utils.js";
 
@@ -84,12 +80,6 @@ const RUNTIME_DEFINES = new Set(
 // Reused per draw; uniforms pack synchronously at submit().
 const NORMAL_MATRIX = mat3.create();
 const IDENTITY_MAT3 = mat3.create();
-const IDENTITY_MAT4 = mat4.create();
-
-// Matches wgsl.ts modelStruct's default maxJoints (the uJointMatrices array
-// is a fixed-size WGSL binding, unlike the light arrays which size to the
-// real count via defines).
-const MAX_JOINTS = 256;
 
 // [r, g, b] stays as authored sRGB; the shader decodes it. The 4th component
 // carries the photometric intensity the shader integrates (light.color.w) —
@@ -101,26 +91,6 @@ const lightColor = (light: any) => [
   light._intensity,
 ];
 
-// uJointMatrices is a fixed-length array<mat4x4f, MAX_JOINTS> binding, so the
-// uniform value must always be exactly that length — pad with identity past
-// the skin's own joint count. Cached on the skin component: `jointMatrices`'
-// entries are mutated in place by systems/skin.ts each frame, so the padded
-// wrapper (built from the same references) stays valid without rebuilding.
-function getJointMatricesUniform(skin: any, previous = false): any[] {
-  const key = previous
-    ? "_paddedPreviousJointMatrices"
-    : "_paddedJointMatrices";
-  if (!skin[key]) {
-    const source = previous ? skin._previousJointMatrices : skin.jointMatrices;
-    const padded = new Array(MAX_JOINTS);
-    for (let i = 0; i < MAX_JOINTS; i++) {
-      padded[i] = source[i] ?? IDENTITY_MAT4;
-    }
-    skin[key] = padded;
-  }
-  return skin[key];
-}
-
 // mat3(transpose(inverse(view * model))). Shared by the main pass and the
 // pre-pass so both encode the normal target identically — a reader must not be
 // able to tell which one produced it.
@@ -131,29 +101,6 @@ function getViewNormalMatrix(viewMatrix: any, modelMatrix: any) {
   mat4.transpose(TEMP_MAT4);
   return mat3.fromMat4(NORMAL_MATRIX, TEMP_MAT4);
 }
-
-// The @group(3) bindings, identical in every pass that draws geometry.
-const modelUniforms = (
-  entity: any,
-  normalMatrix: any,
-  previousModelMatrix = false,
-) => ({
-  uModel: {
-    modelMatrix: entity._transform.modelMatrix,
-    normalMatrix,
-    // Only where modelStruct declared it: pex-gpu throws on a member the struct
-    // does not have, and the depth-pass Model block carries no previous matrix.
-    ...(previousModelMatrix && {
-      previousModelMatrix: entity._transform.previousModelMatrix,
-    }),
-  },
-  ...(entity.skin && {
-    uJointMatrices: getJointMatricesUniform(entity.skin),
-    ...(previousModelMatrix && {
-      uPreviousJointMatrices: getJointMatricesUniform(entity.skin, true),
-    }),
-  }),
-});
 
 // A mesh this renderer owns: `material.type` names another renderer (basic,
 // line), and the underscore-prefixed caches only exist once their systems have
@@ -613,6 +560,8 @@ export default ({
     // cubemap onto the probe entity; the pipeline picks the one this view
     // sees. Presence drives USE_REFLECTION_PROBES
     // (see getDefines/getVariantKey); the bindings below feed EvaluateLightProbe.
+    const velocity = !!options.outputs?.velocity;
+
     const reflectionUniforms = reflectionProbe
       ? {
           uReflectionProbe: {
@@ -656,6 +605,16 @@ export default ({
       const materialUniforms = materialFeatures.uniforms;
       materialUniforms.uMaterial.baseColor = entity.material!.baseColor!;
 
+      // The same options shaders/standard.ts generated modelStruct with, so the
+      // block matches the struct. getDefines has folded the vertex-attribute
+      // defines into materialFeatures by now, which is where USE_SKIN comes
+      // from on both sides.
+      const modelStructOptions = {
+        previousModelMatrix: velocity,
+        skin: materialFeatures.defines.has("USE_SKIN"),
+        previousSkin: velocity,
+      };
+
       submit(ctx, {
         label: transparent
           ? "drawTransparentGeometryCmd"
@@ -667,19 +626,19 @@ export default ({
         instanceCount: entity._geometry!.instances,
         uniforms: {
           uFrame,
-          ...modelUniforms(
+          ...this.getModelUniforms(
             entity,
             getViewNormalMatrix(
               uFrame.viewMatrix,
               entity._transform!.modelMatrix,
             ),
-            !!options.outputs?.velocity,
+            modelStructOptions,
           ),
           ...materialUniforms,
           ...passOptions.lights.uniforms,
           ...reflectionUniforms,
           ...captureUniforms,
-          ...getHookUniforms(entity, frameIndex, this.materialSampler),
+          ...this.getHookUniforms(entity, frameIndex, this.materialSampler),
         },
       });
     }
@@ -883,15 +842,16 @@ export default ({
         instanceCount: entity._geometry!.instances,
         uniforms: {
           uFrame,
-          ...modelUniforms(
+          ...this.getModelUniforms(
             entity,
             getViewNormalMatrix(
               uFrame.viewMatrix,
               entity._transform!.modelMatrix,
             ),
+            { skin: material.defines.has("USE_SKIN") },
           ),
           ...material.uniforms,
-          ...getHookUniforms(entity, frameIndex, this.materialSampler),
+          ...this.getHookUniforms(entity, frameIndex, this.materialSampler),
         },
       });
     }
@@ -934,12 +894,13 @@ export default ({
           uFrame,
           // World-space: nothing in this pass reads the normal, but the binding
           // is part of the shared Model struct.
-          ...modelUniforms(
+          ...this.getModelUniforms(
             entity,
             mat3.fromMat4(NORMAL_MATRIX, entity._transform!.modelMatrix),
+            { skin: material.defines.has("USE_SKIN") },
           ),
           ...material.uniforms,
-          ...getHookUniforms(entity, frameIndex, this.materialSampler),
+          ...this.getHookUniforms(entity, frameIndex, this.materialSampler),
         },
       });
     }

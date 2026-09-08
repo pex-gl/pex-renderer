@@ -2,11 +2,7 @@ import { mat3 } from "pex-math";
 import { submit } from "pex-gpu";
 import { basicShader, BASIC_VERTEX_FIELDS } from "../../shaders/basic.js";
 
-import createBaseSystem, {
-  BLEND_MODES,
-  getHookUniforms,
-  outputsKey,
-} from "./base.js";
+import createBaseSystem, { BLEND_MODES, outputsKey } from "./base.js";
 import { definesKey, hooksKey } from "../../utils.js";
 
 import type {
@@ -106,20 +102,14 @@ export default ({ ctx }: SystemOptions): RendererSystem => ({
         instanceCount: entity._geometry!.instances,
         uniforms: {
           uFrame,
-          uModel: {
-            modelMatrix: entity._transform!.modelMatrix,
-            normalMatrix: mat3.fromMat4(
-              NORMAL_MATRIX,
-              entity._transform!.modelMatrix,
-            ),
-            // Only where the shader declared it: pex-gpu throws on an unknown
-            // struct member, and modelStruct gates this on the velocity output.
-            ...(!!options.outputs?.velocity && {
-              previousModelMatrix: entity._transform!.previousModelMatrix,
-            }),
-          },
+          ...this.getModelUniforms(
+            entity,
+            mat3.fromMat4(NORMAL_MATRIX, entity._transform!.modelMatrix),
+            // The shader declares no skin bindings, so the block carries none.
+            { previousModelMatrix: !!options.outputs?.velocity },
+          ),
           uMaterial: { baseColor: entity.material!.baseColor! },
-          ...getHookUniforms(entity, options.frameIndex ?? NaN),
+          ...this.getHookUniforms(entity, options.frameIndex ?? NaN),
         },
       });
     }

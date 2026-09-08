@@ -1,7 +1,7 @@
 import { avec3, mat3 } from "pex-math";
 import { submit, createBuffer } from "pex-gpu";
 
-import createBaseSystem, { getHookUniforms, outputsKey } from "./base.js";
+import createBaseSystem, { outputsKey } from "./base.js";
 import { definesKey, hooksKey } from "../../utils.js";
 import {
   lineShader,
@@ -227,23 +227,17 @@ export default ({ ctx }: SystemOptions): RendererSystem => ({
           : positions.length / 6,
         uniforms: {
           uFrame,
-          uModel: {
-            modelMatrix: entity._transform!.modelMatrix,
-            normalMatrix: mat3.fromMat4(
-              NORMAL_MATRIX,
-              entity._transform!.modelMatrix,
-            ),
-            // Only where the shader declared it: pex-gpu throws on an unknown
-            // struct member, and modelStruct gates this on the velocity output.
-            ...(!!options.outputs?.velocity && {
-              previousModelMatrix: entity._transform!.previousModelMatrix,
-            }),
-          },
+          ...this.getModelUniforms(
+            entity,
+            mat3.fromMat4(NORMAL_MATRIX, entity._transform!.modelMatrix),
+            // The shader declares no skin bindings, so the block carries none.
+            { previousModelMatrix: !!options.outputs?.velocity },
+          ),
           uMaterial: {
             baseColor: material.baseColor,
             lineWidth: material.lineWidth,
           },
-          ...getHookUniforms(entity, options.frameIndex ?? NaN),
+          ...this.getHookUniforms(entity, options.frameIndex ?? NaN),
         },
       });
     }

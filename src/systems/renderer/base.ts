@@ -6,9 +6,10 @@ import {
   samplerName,
   uniformName,
 } from "../../shaders/wgsl.js";
+import type { ModelStructOptions } from "../../shaders/wgsl.js";
 import { definesKey } from "../../utils.js";
 
-import { type Mat2x3 } from "pex-math";
+import type { Mat2x3, Mat3 } from "pex-math";
 import type {
   BlendMode,
   Entity,
@@ -20,6 +21,10 @@ import type {
 
 const IDENTITY_MAT3 = mat3.create();
 const IDENTITY_MAT4 = mat4.create();
+// Matches wgsl.ts modelStruct's default maxJoints (uJointMatrices is a
+// fixed-size WGSL binding, unlike the light arrays which size to the real count
+// via defines).
+const MAX_JOINTS = 256;
 // Shared so the common case allocates nothing: only a camera with temporal
 // antialiasing carries a jitter, and a shadow pass's light camera never does.
 export const NO_JITTER = [0, 0];
@@ -196,59 +201,29 @@ export function getFeatureFlags(
   return { defines, uniforms, constants };
 }
 
-const NO_HOOK_UNIFORMS = {};
-
-/**
- * Uniform values for a material's hook bindings, mapped onto the names the
- * generator declared: a texture entry becomes `u<Name>`/`u<Name>Sampler`
- * (`sampler` when the hook supplies none of its own), everything else a field
- * of the `uHooks` block.
- *
- * Computed once per entity per frame, keyed by `frameIndex`, rather than once
- * per draw: the shadow, pre- and main passes run the same vertex hook, and a
- * value read from a clock would displace a vertex differently in each — a
- * shadow that does not match its caster, and a pre-pass depth the opaque pass
- * can no longer test `less-equal` against. Without a frame index (NaN) nothing
- * is reused.
- */
-export function getHookUniforms(
-  entity: any,
-  frameIndex: number,
-  sampler?: GPUSampler,
-): Record<string, any> {
-  const hooks = entity.material?.hooks;
-  if (!hooks?.uniforms) return NO_HOOK_UNIFORMS;
-
-  const cache = (entity._hookUniforms ??= {});
-  if (cache.hooks === hooks && cache.frameIndex === frameIndex) {
-    return cache.uniforms;
+// uJointMatrices is a fixed-length array<mat4x4f, maxJoints> binding, so the
+// value must always be exactly that length — pad with identity past the skin's
+// own joint count. Cached on the skin component: `jointMatrices`' entries are
+// mutated in place by systems/skin.ts each frame, so the padded wrapper (built
+// from the same references) stays valid without rebuilding.
+function getJointMatricesUniform(
+  skin: any,
+  maxJoints: number,
+  previous = false,
+): any[] {
+  const key = previous
+    ? "_paddedPreviousJointMatrices"
+    : "_paddedJointMatrices";
+  if (skin[key]?.length !== maxJoints) {
+    const source = previous ? skin._previousJointMatrices : skin.jointMatrices;
+    const padded = new Array(maxJoints);
+    for (let i = 0; i < maxJoints; i++) padded[i] = source[i] ?? IDENTITY_MAT4;
+    skin[key] = padded;
   }
-
-  const bindings = hooks.bindings ?? {};
-  const values = hooks.uniforms(entity);
-  const uHooks: Record<string, any> = {};
-  const uniforms: Record<string, any> = {};
-
-  for (const key of Object.keys(values)) {
-    // Supplied alongside its texture below, and not a field of the block.
-    if (key.endsWith("Sampler") && bindings[key.slice(0, -"Sampler".length)]) {
-      continue;
-    }
-    if (bindings[key]?.startsWith("texture_")) {
-      const name = uniformName(key);
-      uniforms[name] = values[key];
-      uniforms[samplerName(name)] = values[`${key}Sampler`] ?? sampler;
-    } else {
-      uHooks[key] = values[key];
-    }
-  }
-  if (Object.keys(uHooks).length) uniforms.uHooks = uHooks;
-
-  cache.hooks = hooks;
-  cache.frameIndex = frameIndex;
-  cache.uniforms = uniforms;
-  return uniforms;
+  return skin[key];
 }
+
+const NO_HOOK_UNIFORMS = {};
 
 /**
  * Output names no fragment output corresponds to: `color` is unconditional in
@@ -344,6 +319,95 @@ export default (): RendererSystem => ({
     _precomputed?: unknown,
   ) {
     return {};
+  },
+  /**
+   * The `@group(3)` bindings, identical in every pass that draws geometry.
+   *
+   * Takes the options the pass generated its shader's `modelStruct` with, so
+   * the block and the struct cannot disagree — a binding supplied where the
+   * shader declared none is rejected at submit, and one declared but not
+   * supplied fails validation.
+   */
+  getModelUniforms(
+    entity: Entity,
+    normalMatrix: Mat3,
+    {
+      previousModelMatrix = false,
+      skin = false,
+      previousSkin = false,
+      maxJoints = MAX_JOINTS,
+    }: ModelStructOptions = {},
+  ) {
+    return {
+      uModel: {
+        modelMatrix: entity._transform!.modelMatrix,
+        normalMatrix,
+        ...(previousModelMatrix && {
+          previousModelMatrix: entity._transform!.previousModelMatrix,
+        }),
+      },
+      ...(skin && {
+        uJointMatrices: getJointMatricesUniform(entity.skin, maxJoints),
+        ...(previousSkin && {
+          uPreviousJointMatrices: getJointMatricesUniform(
+            entity.skin,
+            maxJoints,
+            true,
+          ),
+        }),
+      }),
+    };
+  },
+  /**
+   * Uniform values for a material's hook bindings, mapped onto the names the
+   * generator declared: a texture entry becomes `u<Name>`/`u<Name>Sampler`
+   * (`sampler` when the hook supplies none of its own), everything else a field
+   * of the `uHooks` block.
+   *
+   * Computed once per entity per frame, keyed by `frameIndex`, rather than once
+   * per draw: the shadow, pre- and main passes run the same vertex hook, and a
+   * value read from a clock would displace a vertex differently in each — a
+   * shadow that does not match its caster, and a pre-pass depth the opaque pass
+   * can no longer test `less-equal` against. Without a frame index (NaN)
+   * nothing is reused.
+   */
+  getHookUniforms(
+    entity: any,
+    frameIndex: number,
+    sampler?: GPUSampler,
+  ): Record<string, any> {
+    const hooks = entity.material?.hooks;
+    if (!hooks?.uniforms) return NO_HOOK_UNIFORMS;
+
+    const cache = (entity._hookUniforms ??= {});
+    if (cache.hooks === hooks && cache.frameIndex === frameIndex) {
+      return cache.uniforms;
+    }
+
+    const bindings = hooks.bindings ?? {};
+    const values = hooks.uniforms(entity);
+    const uHooks: Record<string, any> = {};
+    const uniforms: Record<string, any> = {};
+
+    for (const key of Object.keys(values)) {
+      // Supplied alongside its texture below, and not a field of the block.
+      if (key.endsWith("Sampler") && bindings[key.slice(0, -"Sampler".length)]) {
+        continue;
+      }
+      if (bindings[key]?.startsWith("texture_")) {
+        const name = uniformName(key);
+        uniforms[name] = values[key];
+        uniforms[samplerName(name)] = values[`${key}Sampler`] ?? sampler;
+      } else {
+        uHooks[key] = values[key];
+      }
+    }
+    if (Object.keys(uHooks).length) uniforms.uHooks = uHooks;
+
+    cache.hooks = hooks;
+    cache.frameIndex = frameIndex;
+    cache.uniforms = uniforms;
+    return uniforms;
   },
   getFrameUniforms(renderView: RenderView) {
     const { camera, cameraEntity, viewport } = renderView;
