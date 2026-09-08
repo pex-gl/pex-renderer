@@ -804,7 +804,7 @@ export default ({
     entities: Entity[],
     options: RendererPassOptions = {},
   ) {
-    const normalOutput = !!options.normalOutput;
+    const normalOutput = !!options.outputs?.normal;
     const multisampled = !!options.multisampled;
     const frameIndex = options.frameIndex ?? NaN;
     const uFrame = this.getFrameUniforms(renderView);

@@ -163,7 +163,6 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
     cullFaceMode,
     textures,
     prePass,
-    normalOutput,
     reflectionProbe,
   }: any) {
     const options = {
@@ -203,7 +202,9 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
 
     if (prePass) {
       return draw("renderPrePass", visible, {
-        normalOutput,
+        // Its own attachments, not the main pass's: the only one it can write
+        // is the normal target, and only when it is taking it over.
+        outputs: colorTextures ?? {},
         // Decides whether a cutout resolves as coverage, so it has to reach the
         // pass that lays the depth down, not just the one that shades it.
         multisampled: msaa,
@@ -563,7 +564,13 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
     const usePrePass =
       (this.depthPrePass || effectsByStage.has("prePass")) && !!depthTexture;
 
-    const prePassNormal = usePrePass && !!colorTextures.normal;
+    // The one attachment a pre-pass can write, and only when the frame has one
+    // to write into. What the main pass then leaves out of its own outputs.
+    const prePassOutputs =
+      usePrePass && colorTextures.normal
+        ? { normal: colorTextures.normal }
+        : {};
+    const prePassNormal = !!prePassOutputs.normal;
 
     const mainOutputs = prePassNormal
       ? Object.fromEntries(
@@ -581,7 +588,7 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
           this.drawMeshes({
             ...drawMeshOptions,
             prePass: true,
-            normalOutput: prePassNormal,
+            colorTextures: prePassOutputs,
           });
         },
       });

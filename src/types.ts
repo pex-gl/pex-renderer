@@ -1503,8 +1503,6 @@ export interface RendererPassOptions {
   transparent?: boolean;
   transmitted?: boolean;
   cullFaceMode?: GPUCullMode;
-  /** The pre-pass writes view-space normals alongside depth. */
-  normalOutput?: boolean;
 }
 export type RendererSystemStage = (
   renderView: RenderView,
