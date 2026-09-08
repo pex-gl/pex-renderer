@@ -10,7 +10,9 @@ import {
 } from "../../shaders/line.js";
 
 import type {
+  PipelineShaderOptions,
   Entity,
+  RendererPassOptions,
   RendererSystem,
   RenderView,
   SystemOptions,
@@ -51,21 +53,26 @@ export default ({ ctx }: SystemOptions): RendererSystem => ({
   cache: {},
   debug: false,
 
-  getShader: (defines: Set<string>, options: any) => lineShader(defines, options),
-  getShaderOptions(entity: any) {
-    return { outputs: this._outputs, hooks: entity.material.hooks };
+  getShader: (defines: Set<string>, options: PipelineShaderOptions) =>
+    lineShader(defines, options),
+  getShaderOptions(entity: any, options: RendererPassOptions) {
+    return { outputs: options.outputs, hooks: entity.material.hooks };
   },
-  getDefines(entity: any) {
+  getDefines(entity: any, options: RendererPassOptions) {
     const defines = new Set<string>();
     this.getFeatureFlags(entity._geometry.attributes, LINE_VERTEX_FIELDS, defines);
     this.getFeatureFlags(entity.material, LINE_MATERIAL_FIELDS, defines);
-    if (this._msaa) defines.add("USE_MSAA");
+    if (options.msaa) defines.add("USE_MSAA");
     return defines;
   },
-  getVariantKey(entity: any, defines: Set<string>) {
+  getVariantKey(
+    entity: any,
+    defines: Set<string>,
+    options: RendererPassOptions,
+  ) {
     return [
       definesKey(defines),
-      outputsKey(this._outputs),
+      outputsKey(options.outputs),
       hooksKey(entity.material.hooks),
     ].join("_");
   },
@@ -143,7 +150,11 @@ export default ({ ctx }: SystemOptions): RendererSystem => ({
 
     return cache[resolution];
   },
-  render(renderView: RenderView, entities: Entity[], options: any) {
+  render(
+    renderView: RenderView,
+    entities: Entity[],
+    options: RendererPassOptions,
+  ) {
     const shadowMapping = !!options.shadowMappingLight;
     const uFrame = this.getFrameUniforms(renderView);
 
@@ -224,7 +235,7 @@ export default ({ ctx }: SystemOptions): RendererSystem => ({
             ),
             // Only where the shader declared it: pex-gpu throws on an unknown
             // struct member, and modelStruct gates this on the velocity output.
-            ...(this._outputs?.velocity && {
+            ...(!!options.outputs?.velocity && {
               previousModelMatrix: entity._transform!.previousModelMatrix,
             }),
           },
@@ -237,18 +248,19 @@ export default ({ ctx }: SystemOptions): RendererSystem => ({
       });
     }
   },
-  renderShadow(renderView: RenderView, entities: Entity[], options: any = {}) {
-    this.setStageState(options);
+  renderShadow(
+    renderView: RenderView,
+    entities: Entity[],
+    options: RendererPassOptions = {},
+  ) {
     this.render(renderView, entities, options);
   },
-  renderOpaque(renderView: RenderView, entities: Entity[], options: any = {}) {
-    this.setStageState(options);
+  renderOpaque(
+    renderView: RenderView,
+    entities: Entity[],
+    options: RendererPassOptions = {},
+  ) {
     this.render(renderView, entities, options);
-  },
-  setStageState(options: any) {
-    const { outputs = {}, msaa } = options;
-    this._msaa = msaa;
-    this._outputs = outputs;
   },
   dispose() {
     for (const buffer of Object.values(this.cache!)) {

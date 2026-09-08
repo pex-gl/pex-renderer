@@ -12,6 +12,7 @@ import { type Mat2x3 } from "pex-math";
 import type {
   BlendMode,
   Entity,
+  RendererPassOptions,
   RendererSystem,
   RenderView,
   TextureTransform,
@@ -320,16 +321,28 @@ export default (): RendererSystem => ({
   getShader() {
     return "";
   },
-  getShaderOptions() {
+  getShaderOptions(_entity: Entity, _options: RendererPassOptions) {
     return {};
   },
-  getDefines() {
-    return new Set();
+  getDefines(
+    _entity: Entity,
+    _options: RendererPassOptions,
+    _precomputed?: unknown,
+  ) {
+    return new Set<string>();
   },
-  getVariantKey(entity: Entity, defines: Set<string>) {
+  getVariantKey(
+    entity: Entity,
+    defines: Set<string>,
+    _options: RendererPassOptions,
+  ) {
     return definesKey(defines);
   },
-  getPipelineOptions() {
+  getPipelineOptions(
+    _entity: Entity,
+    _options: RendererPassOptions,
+    _precomputed?: unknown,
+  ) {
     return {};
   },
   getFrameUniforms(renderView: RenderView) {
@@ -346,7 +359,11 @@ export default (): RendererSystem => ({
         camera._previousViewProjectionMatrix ?? IDENTITY_MAT4,
     };
   },
-  getPipeline(entity: Entity, options: any = {}, precomputed?: unknown) {
+  getPipeline(
+    entity: Entity,
+    options: RendererPassOptions = {},
+    precomputed?: unknown,
+  ) {
     const defines = this.getDefines(entity, options, precomputed);
     const key = this.getVariantKey(entity, defines, options);
 

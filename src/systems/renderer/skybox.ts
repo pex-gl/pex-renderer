@@ -13,7 +13,9 @@ import {
 import createFullscreenGeometry from "../../fullscreen-geometry.js";
 
 import type {
+  PipelineShaderOptions,
   Entity,
+  RendererPassOptions,
   RendererSystem,
   RenderView,
   SystemOptions,
@@ -48,31 +50,49 @@ export default ({ ctx }: SystemOptions): RendererSystem => ({
   // fires once instead of every frame.
   _warnedBackgroundBlur: new Set<number>(),
 
-  getShader: (defines: Set<string>, options: any) =>
+  getShader: (defines: Set<string>, options: PipelineShaderOptions) =>
     skyboxShader(defines, options),
-  getShaderOptions() {
-    return { outputs: this._outputs };
+  getShaderOptions(_entity: Entity, options: RendererPassOptions) {
+    return { outputs: options.outputs };
   },
-  getDefines(entity: Entity) {
-    const defines = new Set();
-    if (this._msaa) defines.add("USE_MSAA");
-    if (this._reflectionProbe && (entity.skybox!.backgroundBlur ?? 0) > 0) {
+  getDefines(entity: Entity, options: RendererPassOptions) {
+    const defines = new Set<string>();
+    if (options.msaa) defines.add("USE_MSAA");
+    if (this.useBackgroundBlur(entity, options)) {
       defines.add("USE_BACKGROUND_BLUR");
     }
     return defines;
   },
-  getVariantKey(entity: any, defines: Set<string>) {
-    return `${definesKey(defines)}_${outputsKey(this._outputs)}`;
+  getVariantKey(
+    entity: any,
+    defines: Set<string>,
+    options: RendererPassOptions,
+  ) {
+    return `${definesKey(defines)}_${outputsKey(options.outputs)}`;
   },
-  getPipelineOptions(entity: Entity) {
+  getPipelineOptions(entity: Entity, options: RendererPassOptions) {
     return {
       depthWriteEnabled: false,
       depthCompare: "less-equal",
       cullMode: "none",
-      ...(this._reflectionProbe && (entity.skybox!.backgroundBlur ?? 0) > 0
-        ? { constants: { ROUGHNESS_LEVELS: this._reflectionProbe.roughnessLevels } }
+      ...(this.useBackgroundBlur(entity, options)
+        ? {
+            constants: {
+              ROUGHNESS_LEVELS: options.reflectionProbe!.roughnessLevels,
+            },
+          }
         : {}),
     };
+  },
+
+  /**
+   * `backgroundBlur` reads the paired probe's prefiltered cubemap, so it can
+   * only apply where the view has one.
+   */
+  useBackgroundBlur(entity: Entity, options: RendererPassOptions) {
+    return (
+      !!options.reflectionProbe && (entity.skybox!.backgroundBlur ?? 0) > 0
+    );
   },
 
   checkSkybox(skybox: any) {
@@ -84,7 +104,7 @@ export default ({ ctx }: SystemOptions): RendererSystem => ({
     );
   },
 
-  render(renderView: RenderView, entity: Entity, options: any) {
+  render(renderView: RenderView, entity: Entity, options: RendererPassOptions) {
     if (!this.checkSkybox(entity.skybox)) return;
 
     const { camera } = renderView;
@@ -92,9 +112,9 @@ export default ({ ctx }: SystemOptions): RendererSystem => ({
     const texture = getSkyboxEnvMap(skybox);
 
     const backgroundBlur = skybox.backgroundBlur ?? 0;
-    const useBackgroundBlur = !!this._reflectionProbe && backgroundBlur > 0;
+    const useBackgroundBlur = this.useBackgroundBlur(entity, options);
 
-    if (backgroundBlur > 0 && !this._reflectionProbe) {
+    if (backgroundBlur > 0 && !options.reflectionProbe) {
       if (!this._warnedBackgroundBlur.has(entity.id)) {
         this._warnedBackgroundBlur.add(entity.id);
         console.warn(
@@ -129,26 +149,20 @@ export default ({ ctx }: SystemOptions): RendererSystem => ({
         uEnvMap: texture!,
         uEnvMapSampler: this.sampler,
         ...(useBackgroundBlur && {
-          uSpecularEnvMap: this._reflectionProbe!.specularTexture,
-          uSpecularEnvMapSampler: this._reflectionProbe!.sampler,
+          uSpecularEnvMap: options.reflectionProbe!.specularTexture,
+          uSpecularEnvMapSampler: options.reflectionProbe!.sampler,
         }),
       },
     });
   },
+  // The probe reaching here is reused from material IBL (see
+  // systems/reflection-probe.ts): the same prefiltered specular cubemap drives
+  // skybox.backgroundBlur, picking a mip via lod rather than a blur pass.
   renderBackground(
     renderView: RenderView,
     entities: Entity[],
-    options: any = {},
+    options: RendererPassOptions = {},
   ) {
-    const { outputs = {}, msaa, reflectionProbe } = options;
-    this._msaa = msaa;
-    this._outputs = outputs;
-
-    // Reused from material IBL (see systems/reflection-probe.ts): the same
-    // prefiltered specular cubemap drives skybox.backgroundBlur, picking a
-    // mip via lod instead of a dedicated background blur pass.
-    this._reflectionProbe = reflectionProbe;
-
     for (let i = 0; i < entities.length; i++) {
       const entity = entities[i]!;
       if (

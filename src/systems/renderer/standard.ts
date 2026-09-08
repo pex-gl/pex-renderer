@@ -23,12 +23,30 @@ import { samplerName, uniformName } from "../../shaders/wgsl.js";
 import { NAMESPACE, TEMP_MAT4, definesKey, hooksKey } from "../../utils.js";
 
 import type {
+  PipelineShaderOptions,
   BlendMode,
   Entity,
+  RendererPassOptions,
   RendererSystem,
   RenderView,
+  ShaderLightCounts,
   SystemOptions,
 } from "../../types.js";
+
+/** @group(1) bindings for the pass's lights, plus what the shader keys on. */
+interface StandardLights {
+  uniforms: Record<string, any>;
+  counts: Required<ShaderLightCounts>;
+}
+
+/**
+ * The pipeline's pass options plus what this renderer works out once per pass.
+ * Handed to every pipeline hook so none of them reads renderer state left over
+ * from the pass before.
+ */
+interface StandardPassOptions extends RendererPassOptions {
+  lights: StandardLights;
+}
 
 // Texture-typed material slots, precomputed once (not per draw) for the
 // texCoord bookkeeping in getShaderOptions()/getVariantKey().
@@ -89,7 +107,9 @@ const lightColor = (light: any) => [
 // entries are mutated in place by systems/skin.ts each frame, so the padded
 // wrapper (built from the same references) stays valid without rebuilding.
 function getJointMatricesUniform(skin: any, previous = false): any[] {
-  const key = previous ? "_paddedPreviousJointMatrices" : "_paddedJointMatrices";
+  const key = previous
+    ? "_paddedPreviousJointMatrices"
+    : "_paddedJointMatrices";
   if (!skin[key]) {
     const source = previous ? skin._previousJointMatrices : skin.jointMatrices;
     const padded = new Array(MAX_JOINTS);
@@ -246,13 +266,12 @@ export default ({
     }
   },
 
-  getShader: (defines: Set<string>, options: any) =>
+  getShader: (defines: Set<string>, options: PipelineShaderOptions) =>
     standardShader(defines, options),
-  getShaderOptions(entity: any) {
-    const { _lights, _outputs } = this;
+  getShaderOptions(entity: any, options: StandardPassOptions) {
     return {
-      lights: _lights.counts,
-      outputs: _outputs,
+      lights: options.lights.counts,
+      outputs: options.outputs,
       texCoords: getTexCoords(entity.material, TEXTURE_KEYS),
       hooks: entity.material.hooks,
       debugRender: this.debugRender,
@@ -288,7 +307,7 @@ export default ({
   },
   getDefines(
     entity: any,
-    _options?: any,
+    options: StandardPassOptions,
     materialFeatures?: { defines: Set<string> },
   ) {
     const { defines } = materialFeatures ?? this.getMaterialDefines(entity);
@@ -299,15 +318,19 @@ export default ({
       defines,
     );
 
-    if (this._reflectionProbe && !this.isUnlit(entity)) {
+    if (options.reflectionProbe && !this.isUnlit(entity)) {
       defines.add("USE_REFLECTION_PROBES");
     }
 
     return defines;
   },
-  getVariantKey(entity: any, defines: Set<string>) {
+  getVariantKey(
+    entity: any,
+    defines: Set<string>,
+    options: StandardPassOptions,
+  ) {
     const { material } = entity;
-    const { counts } = this._lights;
+    const { counts } = options.lights;
     // texCoord assignments are baked into the WGSL (see getShaderOptions), so
     // two materials with the same defines but different UV channels per slot
     // need distinct pipeline variants.
@@ -327,8 +350,8 @@ export default ({
       counts.area ? 1 : 0,
       counts.shadow2DBuckets,
       counts.shadowCubeBuckets,
-      this._reflectionProbe ? 1 : 0,
-      outputsKey(this._outputs),
+      options.reflectionProbe ? 1 : 0,
+      outputsKey(options.outputs),
       texCoords,
       // Both change the generated WGSL: the hooks by their own source (hashed,
       // so materials sharing hook text share a pipeline), debugRender by the
@@ -342,7 +365,7 @@ export default ({
   },
   getPipelineOptions(
     entity: any,
-    options: any = {},
+    options: StandardPassOptions,
     precomputed?: { constants?: Record<string, boolean> },
   ) {
     const { material } = entity;
@@ -350,7 +373,7 @@ export default ({
     // attachment is multisampled — with one sample there is no mask to write,
     // and blended materials derive their alpha from opacity already.
     const alphaToCoverage =
-      !!this._multisampled &&
+      !!options.multisampled &&
       material.alphaTest !== undefined &&
       !material.blend;
 
@@ -374,11 +397,11 @@ export default ({
         ? { blend: BLEND_MODES[(material.blendMode ?? "normal") as BlendMode] }
         : {}),
       constants: {
-        USE_MSAA: !!this._msaa,
+        USE_MSAA: !!options.msaa,
         USE_ALPHA_TO_COVERAGE: alphaToCoverage,
         USE_BLEND: !!material.blend,
-        USE_SSAO_TEXTURE: !!this._textures?.["ssao.main"],
-        USE_BENT_NORMALS: !!this._textures?.["ssao.bentNormal"],
+        USE_SSAO_TEXTURE: !!options.textures?.["ssao.main"],
+        USE_BENT_NORMALS: !!options.textures?.["ssao.bentNormal"],
         PREMULTIPLY_ALPHA:
           !!material.blend && material.blendMode === "premultiplied",
         // Per-material activation for `runtime` fields (see FeatureField.runtime).
@@ -391,8 +414,8 @@ export default ({
               // A pre-baked probe (EXT_lights_image_based) reports its own
               // native mip count instead of the baked default (see
               // shaders/reflection-probe.ts ROUGHNESS_LEVELS).
-              ...(this._reflectionProbe && {
-                ROUGHNESS_LEVELS: this._reflectionProbe.roughnessLevels,
+              ...(options.reflectionProbe && {
+                ROUGHNESS_LEVELS: options.reflectionProbe.roughnessLevels,
               }),
             }),
       },
@@ -401,7 +424,7 @@ export default ({
 
   // Builds the @group(1) values: one runtime-sized struct array per light type,
   // plus one texture binding per shadow bucket.
-  gatherLights(entities: Entity[]) {
+  gatherLights(entities: Entity[]): StandardLights {
     const ambient = entities.filter((e) => e.ambientLight);
     const directional = entities.filter((e) => e.directionalLight);
     const point = entities.filter((e) => e.pointLight);
@@ -564,11 +587,12 @@ export default ({
     return transparent ? [] : ["ssao.main", "ssao.bentNormal"];
   },
 
-  render(renderView: RenderView, entities: Entity[], options: any) {
+  render(
+    renderView: RenderView,
+    entities: Entity[],
+    options: RendererPassOptions,
+  ) {
     const {
-      outputs = {},
-      msaa,
-      multisampled,
       transparent,
       transmitted,
       cullFaceMode,
@@ -577,28 +601,27 @@ export default ({
       reflectionProbe,
     } = options;
 
-    this._msaa = msaa;
-    this._multisampled = multisampled;
-    this._outputs = outputs;
-    this._textures = textures;
-
-    const lights = this.gatherLights(entities);
-    this._lights = lights;
+    // Gathered once for the pass and carried alongside the pipeline's own
+    // options, so the hooks below read one object rather than fields left on
+    // the renderer by whichever pass ran last.
+    const passOptions: StandardPassOptions = {
+      ...options,
+      lights: this.gatherLights(entities),
+    };
 
     // Scene-global IBL: the reflection probe system bakes SH + a prefiltered
     // cubemap onto the probe entity; the pipeline picks the one this view
     // sees. Presence drives USE_REFLECTION_PROBES
     // (see getDefines/getVariantKey); the bindings below feed EvaluateLightProbe.
-    this._reflectionProbe = reflectionProbe;
-    const reflectionUniforms = this._reflectionProbe
+    const reflectionUniforms = reflectionProbe
       ? {
           uReflectionProbe: {
-            rotation: this._reflectionProbe.rotation ?? IDENTITY_MAT3,
-            intensity: this._reflectionProbe.intensity ?? 1,
+            rotation: reflectionProbe.rotation ?? IDENTITY_MAT3,
+            intensity: reflectionProbe.intensity ?? 1,
           },
-          uSpecularEnvMap: this._reflectionProbe.specularTexture,
-          uSpecularEnvMapSampler: this._reflectionProbe.sampler,
-          uIrradianceCoefficients: this._reflectionProbe.irradianceCoefficients,
+          uSpecularEnvMap: reflectionProbe.specularTexture,
+          uSpecularEnvMapSampler: reflectionProbe.sampler,
+          uIrradianceCoefficients: reflectionProbe.irradianceCoefficients,
         }
       : undefined;
 
@@ -628,7 +651,7 @@ export default ({
       // Computed once for this entity/draw and threaded through getPipeline
       // (defines) below, instead of recomputing the material feature walk.
       const materialFeatures = this.getMaterialDefines(entity);
-      const pipeline = this.getPipeline(entity, options, materialFeatures);
+      const pipeline = this.getPipeline(entity, passOptions, materialFeatures);
 
       const materialUniforms = materialFeatures.uniforms;
       materialUniforms.uMaterial.baseColor = entity.material!.baseColor!;
@@ -650,10 +673,10 @@ export default ({
               uFrame.viewMatrix,
               entity._transform!.modelMatrix,
             ),
-            !!this._outputs?.velocity,
+            !!options.outputs?.velocity,
           ),
           ...materialUniforms,
-          ...lights.uniforms,
+          ...passOptions.lights.uniforms,
           ...reflectionUniforms,
           ...captureUniforms,
           ...getHookUniforms(entity, frameIndex, this.materialSampler),
@@ -661,10 +684,18 @@ export default ({
       });
     }
   },
-  renderOpaque(renderView: RenderView, entities: Entity[], options: any) {
+  renderOpaque(
+    renderView: RenderView,
+    entities: Entity[],
+    options: RendererPassOptions,
+  ) {
     this.render(renderView, entities, { ...options, transparent: false });
   },
-  renderTransparent(renderView: RenderView, entities: Entity[], options: any) {
+  renderTransparent(
+    renderView: RenderView,
+    entities: Entity[],
+    options: RendererPassOptions,
+  ) {
     this.render(renderView, entities, { ...options, transparent: true });
   },
   /**
@@ -771,7 +802,12 @@ export default ({
     return pipeline;
   },
 
-  getPrePassPipeline(entity: any, normalOutput: boolean, material: any) {
+  getPrePassPipeline(
+    entity: any,
+    normalOutput: boolean,
+    multisampled: boolean,
+    material: any,
+  ) {
     if (entity._geometry.attributes.normal) material.defines.add("USE_NORMALS");
     if (normalOutput) material.defines.add("USE_NORMAL_OUTPUT");
     // Drops the shadow map's displacement stretch: this pass has to land on the
@@ -782,9 +818,7 @@ export default ({
     // into a multisampled attachment is what this avoids, and the two passes
     // have to keep the same samples either way.
     const alphaToCoverage =
-      !!this._multisampled &&
-      normalOutput &&
-      material.defines.has("USE_ALPHA_TEST");
+      multisampled && normalOutput && material.defines.has("USE_ALPHA_TEST");
     if (alphaToCoverage) material.defines.add("USE_ALPHA_TO_COVERAGE");
 
     const pipeline = this.getDepthPassPipeline(
@@ -806,8 +840,13 @@ export default ({
    * occlude geometry that should be visible. Alpha-tested materials included:
    * the shader recomputes the same opacity and discards on the same threshold.
    */
-  renderPrePass(renderView: RenderView, entities: Entity[], options: any = {}) {
+  renderPrePass(
+    renderView: RenderView,
+    entities: Entity[],
+    options: RendererPassOptions = {},
+  ) {
     const normalOutput = !!options.normalOutput;
+    const multisampled = !!options.multisampled;
     const frameIndex = options.frameIndex ?? NaN;
     const uFrame = this.getFrameUniforms(renderView);
 
@@ -816,7 +855,7 @@ export default ({
     // multisampled attachment is what this change exists to avoid. Sitting the
     // pass out costs those materials their early-Z — the opaque pass still
     // writes their depth — which is the cheap half of the trade.
-    const skipAlphaTested = !!this._multisampled && !normalOutput;
+    const skipAlphaTested = multisampled && !normalOutput;
 
     const drawable = entities.filter(
       (e) =>
@@ -832,7 +871,12 @@ export default ({
       const material = this.getDepthPassMaterial(entity);
       submit(ctx, {
         label: "drawPrePassGeometryCmd",
-        pipeline: this.getPrePassPipeline(entity, normalOutput, material),
+        pipeline: this.getPrePassPipeline(
+          entity,
+          normalOutput,
+          multisampled,
+          material,
+        ),
         attributes: entity._geometry!.attributes,
         indices: entity._geometry!.indices,
         count: entity._geometry!.count,
@@ -856,7 +900,11 @@ export default ({
   // Depth-only pass into a light's shadow map. renderView.camera carries the
   // light's projection/view matrices; point lights (cubemap) store normalized
   // radial distance and need the light's far plane in uFrame.
-  renderShadow(renderView: RenderView, entities: Entity[], options: any = {}) {
+  renderShadow(
+    renderView: RenderView,
+    entities: Entity[],
+    options: RendererPassOptions = {},
+  ) {
     const light = options.shadowMappingLight;
     const linear = !!light?._shadowCubemap;
     const frameIndex = options.frameIndex ?? NaN;

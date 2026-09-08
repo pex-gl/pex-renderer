@@ -2,12 +2,18 @@ import { mat3 } from "pex-math";
 import { submit } from "pex-gpu";
 import { basicShader, BASIC_VERTEX_FIELDS } from "../../shaders/basic.js";
 
-import createBaseSystem, { BLEND_MODES, getHookUniforms } from "./base.js";
+import createBaseSystem, {
+  BLEND_MODES,
+  getHookUniforms,
+  outputsKey,
+} from "./base.js";
 import { definesKey, hooksKey } from "../../utils.js";
 
 import type {
+  PipelineShaderOptions,
   BlendMode,
   Entity,
+  RendererPassOptions,
   RendererSystem,
   RenderView,
   SystemOptions,
@@ -31,7 +37,7 @@ export default ({ ctx }: SystemOptions): RendererSystem => ({
   ...createBaseSystem(),
   type: "basic-renderer",
   debug: false,
-  getShader: (defines: Set<string>, options: any) =>
+  getShader: (defines: Set<string>, options: PipelineShaderOptions) =>
     basicShader(defines, options),
   getDefines(entity: any) {
     const defines = new Set<string>();
@@ -42,14 +48,21 @@ export default ({ ctx }: SystemOptions): RendererSystem => ({
     );
     return defines;
   },
-  getShaderOptions(entity: any) {
-    return { outputs: this._outputs, hooks: entity.material.hooks };
+  getShaderOptions(entity: any, options: RendererPassOptions) {
+    return { outputs: options.outputs, hooks: entity.material.hooks };
   },
-  getVariantKey(entity: any, defines: Set<string>) {
+  getVariantKey(
+    entity: any,
+    defines: Set<string>,
+    options: RendererPassOptions,
+  ) {
     return [
       definesKey(defines),
       entity.material.blend ? 1 : 0,
       hooksKey(entity.material.hooks),
+      // Decides the shape of FragmentOutput, so two passes writing different
+      // attachments cannot share a pipeline.
+      outputsKey(options.outputs),
     ].join("_");
   },
   getPipelineOptions(entity: any) {
@@ -62,7 +75,11 @@ export default ({ ctx }: SystemOptions): RendererSystem => ({
         : {}),
     };
   },
-  render(renderView: RenderView, entities: Entity[], options: any) {
+  render(
+    renderView: RenderView,
+    entities: Entity[],
+    options: RendererPassOptions,
+  ) {
     const uFrame = this.getFrameUniforms(renderView);
 
     const renderableEntities = entities.filter(
@@ -97,7 +114,7 @@ export default ({ ctx }: SystemOptions): RendererSystem => ({
             ),
             // Only where the shader declared it: pex-gpu throws on an unknown
             // struct member, and modelStruct gates this on the velocity output.
-            ...(this._outputs?.velocity && {
+            ...(!!options.outputs?.velocity && {
               previousModelMatrix: entity._transform!.previousModelMatrix,
             }),
           },
@@ -107,10 +124,18 @@ export default ({ ctx }: SystemOptions): RendererSystem => ({
       });
     }
   },
-  renderOpaque(renderView: RenderView, entities: Entity[], options: any) {
+  renderOpaque(
+    renderView: RenderView,
+    entities: Entity[],
+    options: RendererPassOptions,
+  ) {
     this.render(renderView, entities, { ...options, transparent: false });
   },
-  renderTransparent(renderView: RenderView, entities: Entity[], options: any) {
+  renderTransparent(
+    renderView: RenderView,
+    entities: Entity[],
+    options: RendererPassOptions,
+  ) {
     this.render(renderView, entities, { ...options, transparent: true });
   },
 });

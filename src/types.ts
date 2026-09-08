@@ -1384,14 +1384,23 @@ export interface ShaderLightCounts {
   shadow2DBuckets?: number;
   shadowCubeBuckets?: number;
 }
-/** Which optional MRT fragment outputs a pipeline shader should emit, beyond color. */
+/**
+ * Which optional MRT fragment outputs a pipeline shader should emit, beyond
+ * color.
+ *
+ * Only presence is read. The render pipeline passes the pass's attachment
+ * handles as the values rather than booleans, so nothing may depend on the
+ * value's type.
+ */
 export interface FragmentOutputs {
-  normal?: boolean;
-  emissive?: boolean;
+  normal?: unknown;
+  emissive?: unknown;
   /** Screen-space motion vectors, for temporal reprojection and motion blur. */
-  velocity?: boolean;
+  velocity?: unknown;
   /** Per-pixel mask marking surfaces a temporal filter should not trust. */
-  responsive?: boolean;
+  responsive?: unknown;
+  /** Outputs added from outside the engine, which key their own variants. */
+  [name: string]: unknown;
 }
 /** Options accepted by the pipeline WGSL generators in src/shaders. */
 export interface PipelineShaderOptions {
@@ -1458,24 +1467,49 @@ export type RendererSystemRender = (
   entities: Entity | Entity[],
   options?: any,
 ) => void;
-export interface RendererSystemStageOptions {
+/**
+ * What the render pipeline hands a renderer for one pass of one view.
+ *
+ * Passed down to the pipeline hooks (`getDefines`, `getShaderOptions`,
+ * `getVariantKey`, `getPipelineOptions`) rather than stashed on the renderer:
+ * a renderer draws several passes per frame and several views per frame, and a
+ * field left over from the previous one is a pipeline variant compiled against
+ * the wrong pass.
+ */
+export interface RendererPassOptions {
+  /**
+   * Frame the draw belongs to. Keys the per-entity hook uniform cache, so every
+   * pass of one frame displaces a vertex identically.
+   */
+  frameIndex?: number;
+  /** Colour attachments this pass writes; shaders number `@location` from it. */
   outputs?: FragmentOutputs;
-  shadowMappingLight?: any;
+  /**
+   * The attachment is multisampled, so a cutout can resolve as coverage rather
+   * than a discard. Distinct from `msaa`.
+   */
+  multisampled?: boolean;
+  /** The scene is tone mapped for a reversible resolve. */
+  msaa?: boolean;
   /**
    * Resolved frame images, keyed by the register names the renderer asked for
    * through `inputs`. Missing entries mean nothing published that name.
    */
   textures?: Record<string, GpuTexture>;
-  renderingToReflectionProbe?: boolean;
-  msaa?: boolean;
+  /** Image-based lighting for this view, picked by the pipeline. */
+  reflectionProbe?: ReflectionProbeCache;
+  /** Depth-only pass into this light's shadow map. */
+  shadowMappingLight?: any;
   transparent?: boolean;
   transmitted?: boolean;
-  cullFaceMode?: string;
+  cullFaceMode?: GPUCullMode;
+  /** The pre-pass writes view-space normals alongside depth. */
+  normalOutput?: boolean;
 }
 export type RendererSystemStage = (
   renderView: RenderView,
   entities: Entity[],
-  options?: RendererSystemStageOptions,
+  options?: RendererPassOptions,
 ) => void;
 // Renderer systems accrete per-frame internal state (locations, light data,
 // pipeline caches) and expose a set of optional draw stages (render,

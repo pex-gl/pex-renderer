@@ -204,6 +204,9 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
     if (prePass) {
       return draw("renderPrePass", visible, {
         normalOutput,
+        // Decides whether a cutout resolves as coverage, so it has to reach the
+        // pass that lays the depth down, not just the one that shades it.
+        multisampled: msaa,
         frameIndex: this.frameIndex,
       });
     }
