@@ -190,13 +190,8 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
       }
     };
 
-    // Nothing is shaded in the pre-pass, so none of the frame's images apply.
-    if (prePass) {
-      return draw("renderPrePass", entitiesInView, {
-        normalOutput,
-        frameIndex: this.frameIndex,
-      });
-    }
+    // Before the cull: a shadow map is rendered from the light, so the camera
+    // frustum says nothing about which casters it needs.
     if (shadowMappingLight) {
       return draw("renderShadow", entitiesInView, {
         ...options,
@@ -205,6 +200,14 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
     }
 
     const visible = this.cullEntities(entitiesInView, renderView.camera);
+
+    if (prePass) {
+      return draw("renderPrePass", visible, {
+        normalOutput,
+        frameIndex: this.frameIndex,
+      });
+    }
+
     if (transparent) return draw("renderTransparent", visible, options);
 
     draw("renderOpaque", visible, { ...options, transmitted, cullFaceMode });
