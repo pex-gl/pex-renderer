@@ -136,6 +136,7 @@ async function loadGltfDocument(
   await resolveImages(json, {
     basePath,
     supportImageBitmap: opts.supportImageBitmap,
+    ctx,
   });
 
   const samplerCache = new Map<number, GPUSampler>();

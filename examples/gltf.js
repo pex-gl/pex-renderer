@@ -30,7 +30,7 @@ const State = {
   selectedModel: "",
   scenes: [],
   gridSize: 1,
-  helpers: true,
+  helpers: false,
   floor: false,
   useEnvMap: true,
   shadows: false,
@@ -46,7 +46,14 @@ const State = {
 };
 
 const pixelRatio = devicePixelRatio;
-const ctx = await gpu.createContext({ pixelRatio });
+const ctx = await gpu.createContext({
+  pixelRatio,
+  optionalFeatures: [
+    "texture-compression-bc",
+    "texture-compression-etc2",
+    "texture-compression-astc",
+  ],
+});
 
 const renderEngine = createRenderEngine({ ctx, debug: true });
 const world = createWorld();
@@ -84,7 +91,7 @@ const skyEntity = createEntity({
     rotation: quat.fromEuler(quat.create(), [0, -Math.PI / 2, 0]),
   }),
   skybox: components.skybox({
-    sunPosition: [0.1, 0.04, -1],
+    sunPosition: [0.1, 0.4, -1],
     backgroundBlur: 1,
   }),
   reflectionProbe: components.reflectionProbe(),
@@ -152,7 +159,7 @@ function rescaleScene({ root }) {
   const sceneBounds = root.transform.worldBounds;
   const sceneSize = aabb.size(root.transform.worldBounds);
   const sceneCenter = aabb.center(root.transform.worldBounds);
-  let maxSize = Math.max(sceneSize[0], Math.max(sceneSize[1], sceneSize[2]));
+  let maxSize = Math.max(sceneSize[0], sceneSize[1], sceneSize[2]);
   if (maxSize == 0 || maxSize == Infinity) maxSize = 1;
   const sceneScale = 1 / maxSize;
 
@@ -468,10 +475,10 @@ gui.addColumn("Debug");
 gui.addFPSMeeter();
 gui.addStats();
 gui.addParam("Helpers", State, "helpers", null, () => {
-  if (State.selectedModel) {
-    dispose();
-    renderModel(State.selectedModel);
-  }
+  if (!State.selectedModel) return;
+
+  dispose();
+  renderModel(State.selectedModel);
 });
 gui.addButton("Toggle Scene Graph", () => {
   sceneGraphViz.toggle();
@@ -609,7 +616,7 @@ models = models.filter(({ name }) =>
     // "Suzanne",
     // "TextureCoordinateTest",
     // "TextureEncodingTest",
-    // "TextureLinearInterpolationTest", // HALF: EX_srgb in webgl1
+    // "TextureLinearInterpolationTest",
     // "TextureSettingsTest",
     // "TextureTransformMultiTest",
     // "TextureTransformTest",

@@ -1,5 +1,6 @@
-import { loadImage, loadBlob } from "pex-io";
+import { loadImage, loadBlob, loadArrayBuffer } from "pex-io";
 import { createTexture, createSampler } from "pex-gpu";
+import { transcodeKtx2 } from "pex-loaders";
 
 import { isBase64 } from "./io.js";
 
@@ -37,7 +38,11 @@ function minFilterToWebGPU(glFilter?: number): {
 } {
   switch (glFilter) {
     case GL_NEAREST:
-      return { minFilter: "nearest", mipmapFilter: "nearest", hasMipmap: false };
+      return {
+        minFilter: "nearest",
+        mipmapFilter: "nearest",
+        hasMipmap: false,
+      };
     case GL_NEAREST_MIPMAP_NEAREST:
       return { minFilter: "nearest", mipmapFilter: "nearest", hasMipmap: true };
     case GL_LINEAR_MIPMAP_NEAREST:
@@ -61,9 +66,20 @@ function wrapToWebGPU(glWrap?: number): GPUAddressMode {
   }
 }
 
+const KTX2_MIME = "image/ktx2";
+
+const isKtx2 = (image: any): boolean =>
+  image.mimeType === KTX2_MIME ||
+  (typeof image.uri === "string" && image.uri.split("?")[0]!.endsWith(".ktx2"));
+
 export interface ResolveImagesOptions {
   basePath?: string | undefined;
   supportImageBitmap?: boolean;
+  /**
+   * Required to transcode KHR_texture_basisu images, which needs the device's
+   * compressed-texture features.
+   */
+  ctx?: GpuContext;
 }
 
 /**
@@ -79,6 +95,26 @@ export async function resolveImages(
 
   await Promise.all(
     json.images.map(async (image: any) => {
+      // KHR_texture_basisu payloads are not decodable images: transcode them to
+      // a compressed mip chain here, where async work is allowed, and let
+      // resolveTexture upload it synchronously like every other image.
+      if (isKtx2(image)) {
+        if (!options.ctx) {
+          console.warn(
+            "glTF loader: KHR_texture_basisu image skipped (resolveImages needs a ctx to pick a transcode target).",
+          );
+          return;
+        }
+        const buffer =
+          image.bufferView === undefined
+            ? await loadArrayBuffer(
+                decodeURIComponent([options.basePath, image.uri].join("/")),
+              )
+            : json.bufferViews[image.bufferView]._data;
+        image._ktx2 = await transcodeKtx2(options.ctx, buffer);
+        return;
+      }
+
       if (image.bufferView !== undefined) {
         const bufferView = json.bufferViews[image.bufferView];
         bufferView.byteOffset = bufferView.byteOffset || 0;
@@ -94,14 +130,29 @@ export async function resolveImages(
       } else if (isBase64(image.uri)) {
         image._img = await loadCrossOriginImage(image.uri);
       } else {
-        const url = decodeURIComponent(
-          [options.basePath, image.uri].join("/"),
-        );
+        const url = decodeURIComponent([options.basePath, image.uri].join("/"));
         image._img = options.supportImageBitmap
           ? await loadImageBitmap(await loadBlob(url, { mode: "cors" }))
           : await loadCrossOriginImage(url);
       }
     }),
+  );
+}
+
+/**
+ * Picks the image a texture should load from.
+ *
+ * Extensions each nominate their own image, replacing `texture.source` — which
+ * a required extension may omit entirely, since there is then no fallback to
+ * describe. KHR_texture_basisu wins over EXT_texture_webp when both are
+ * present: it stays GPU-compressed, where webp decodes to RGBA like any other
+ * image.
+ */
+function resolveTextureSource(texture: any): number | undefined {
+  return (
+    texture.extensions?.KHR_texture_basisu?.source ??
+    texture.extensions?.EXT_texture_webp?.source ??
+    texture.source
   );
 }
 
@@ -112,6 +163,9 @@ export async function resolveImages(
  * field that references it. If two fields reference the same texture index
  * requesting different pixelFormats (e.g. one sRGB, one linear), the first
  * requested format wins; this mirrors the previous WebGL loader's behavior.
+ *
+ * Returns undefined when no image source is usable, so the material simply
+ * renders without that map rather than failing the whole load.
  * https://github.com/KhronosGroup/glTF/blob/main/specification/2.0/schema/textureInfo.schema.json
  */
 export function resolveTexture(
@@ -120,17 +174,19 @@ export function resolveTexture(
   ctx: GpuContext,
   samplerCache: Map<number, GPUSampler>,
   pixelFormat?: GPUTextureFormat,
-): MaterialTexture {
+): MaterialTexture | undefined {
   const { textures, images, samplers } = gltf;
   const texture = textures[materialTexture.index];
 
-  if (texture.extensions?.KHR_texture_basisu || texture.extensions?.EXT_texture_webp) {
+  const source = resolveTextureSource(texture);
+  if (source === undefined) {
     console.warn(
-      "glTF loader: KHR_texture_basisu/EXT_texture_webp are unsupported (pex-loaders' transcoder isn't ported to pex-gpu yet); texture may be missing.",
+      `glTF loader: texture ${materialTexture.index} has no image source this loader supports (extensions: ${Object.keys(texture.extensions ?? {}).join(", ") || "none"}).`,
     );
+    return undefined;
   }
 
-  const image = images[texture.source];
+  const image = images[source];
   const samplerDef = samplers?.[texture.sampler];
 
   if (!texture._tex) {
@@ -138,12 +194,29 @@ export function resolveTexture(
       samplerDef?.minFilter,
     );
 
-    texture._tex = createTexture(ctx, {
-      label: image.uri || image.name,
-      data: image._img,
-      format: pixelFormat ?? "rgba8unorm",
-      mipmap: hasMipmap,
-    });
+    // A transcoded KTX2 carries its own format and mip chain: the container's
+    // transfer function decides sRGB, so `pixelFormat` does not apply, and the
+    // levels are uploaded rather than generated (compressed formats cannot be
+    // rendered into).
+    const ktx2: Awaited<ReturnType<typeof transcodeKtx2>> | undefined =
+      image._ktx2;
+    texture._tex = createTexture(
+      ctx,
+      ktx2
+        ? {
+            label: image.uri || image.name,
+            width: ktx2.width,
+            height: ktx2.height,
+            format: ktx2.format,
+            mipLevels: ktx2.levels.map((level) => level.data),
+          }
+        : {
+            label: image.uri || image.name,
+            data: image._img,
+            format: pixelFormat ?? "rgba8unorm",
+            mipmap: hasMipmap,
+          },
+    );
 
     if (texture.sampler !== undefined && !samplerCache.has(texture.sampler)) {
       const magFilter = magFilterToWebGPU(samplerDef?.magFilter);
@@ -151,7 +224,10 @@ export function resolveTexture(
       // when maxAnisotropy > 1 — a mixed nearest/linear sampler (common in
       // glTF test assets, e.g. BoxTextured) must skip it entirely.
       const allLinear =
-        hasMipmap && magFilter === "linear" && minFilter === "linear" && mipmapFilter === "linear";
+        hasMipmap &&
+        magFilter === "linear" &&
+        minFilter === "linear" &&
+        mipmapFilter === "linear";
 
       samplerCache.set(
         texture.sampler,
@@ -168,7 +244,9 @@ export function resolveTexture(
   }
 
   const sampler =
-    texture.sampler !== undefined ? samplerCache.get(texture.sampler) : undefined;
+    texture.sampler !== undefined
+      ? samplerCache.get(texture.sampler)
+      : undefined;
 
   // https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_texture_transform/schema/KHR_texture_transform.textureInfo.schema.json
   const textureTransform = materialTexture.extensions?.KHR_texture_transform;

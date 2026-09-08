@@ -28,9 +28,8 @@ export const SUPPORTED_EXTENSIONS = new Set([
   // "KHR_materials_volume_scatter"
   // "KHR_animation_pointer"
   // "KHR_audio"
-  // "KHR_texture_basisu" / "EXT_texture_webp": pex-loaders' KTX2/basis
-  //   transcoder currently picks its target format from a WebGL context and
-  //   hasn't been ported to pex-gpu/WebGPU yet.
+  "KHR_texture_basisu",
+  "EXT_texture_webp",
 ]);
 
 // https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/Constants#Buffers
@@ -50,7 +49,12 @@ export const WEBGL_CONSTANTS = {
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Typed_arrays#Typed_array_views
 export const WEBGL_TYPED_ARRAY_BY_COMPONENT_TYPES: Record<
   number,
-  Float32ArrayConstructor | Int8ArrayConstructor | Uint8ArrayConstructor | Int16ArrayConstructor | Uint16ArrayConstructor | Uint32ArrayConstructor
+  | Float32ArrayConstructor
+  | Int8ArrayConstructor
+  | Uint8ArrayConstructor
+  | Int16ArrayConstructor
+  | Uint16ArrayConstructor
+  | Uint32ArrayConstructor
 > = {
   [WEBGL_CONSTANTS.BYTE]: Int8Array,
   [WEBGL_CONSTANTS.UNSIGNED_BYTE]: Uint8Array,

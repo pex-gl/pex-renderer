@@ -139,7 +139,9 @@ function mapMaterial(material: Record<string, any>): Record<string, any> {
 // pex-renderer authors luminous power. This is the only place candela exists.
 function buildLightComponent(light: Record<string, any>) {
   const common = {
-    color: [...light.color, 1],
+    // Same sRGB convention as material factors: the shader decodes the light
+    // colour, and glTF authors it linear.
+    color: srgb(light.color),
     // An absent range is infinite, which is the components' own default.
     ...(light.range !== undefined && { range: light.range }),
   };
