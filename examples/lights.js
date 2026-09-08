@@ -44,11 +44,13 @@ const cameraEntities = gridCells(W, H, nW, nH, 0).map((cell, i) => {
     camera: components.camera({
       // Metered for the studio lamps below rather than for daylight: f/2.8 at
       // 1/30s is EV 7.9, where 500 lx on white reads just over half.
+      fStop: 2.8,
       shutterSpeed: 1 / 30,
       target: [0, 0, 0],
       aspect: W / nW / (H / nH),
       viewport: [cell[0], cell[1], cell[2], cell[3]],
     }),
+    postProcessing: components.postProcessing(),
     orbiter: components.orbiter({ element: ctx.canvas }),
   });
   world.add(cameraEntity);

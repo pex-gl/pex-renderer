@@ -13,7 +13,7 @@ import createGUI from "pex-gui";
 
 import parseObj from "geom-parse-obj";
 
-import { getGpuTexture, getURL } from "./utils.js";
+import { getTexture, getURL } from "./utils.js";
 import { getRenderPassGraphViz } from "./graph-viz.js";
 
 const pixelRatio = devicePixelRatio;
@@ -71,19 +71,19 @@ const directionalLightEntity = createEntity({
 world.add(directionalLightEntity);
 
 const materialTextures = {
-  baseColorTexture: await getGpuTexture(
+  baseColorTexture: await getTexture(
     ctx,
     getURL(`assets/materials/Fabric04/Fabric04_col.jpg`),
   ),
-  normalTexture: await getGpuTexture(
+  normalTexture: await getTexture(
     ctx,
     getURL(`assets/materials/Fabric04/Fabric04_nrm.jpg`),
   ),
-  clearCoatNormalTexture: await getGpuTexture(
+  clearCoatNormalTexture: await getTexture(
     ctx,
     getURL(`assets/materials/Metal05/Metal05_nrm.jpg`),
   ),
-  occlusionTexture: await getGpuTexture(
+  occlusionTexture: await getTexture(
     ctx,
     getURL(
       `assets/models/substance-sample-scene/substance-sample-scene_ao.jpg`,

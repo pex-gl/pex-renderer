@@ -13,6 +13,7 @@ import createGUI from "pex-gui";
 import { sphere } from "primitive-geometry";
 
 import { getURL, updateSunPosition } from "./utils.js";
+import { getRenderPassGraphViz } from "./graph-viz.js";
 
 const State = {
   envMap: false,
@@ -32,6 +33,9 @@ const pixelRatio = devicePixelRatio;
 const ctx = await gpu.createContext({ pixelRatio });
 const renderEngine = createRenderEngine({ ctx, debug: true });
 const world = createWorld();
+
+const renderPassGraphViz = getRenderPassGraphViz();
+renderPassGraphViz.init(ctx, renderEngine.frameGraph);
 
 // Entities
 const cameraEntity = createEntity({
@@ -100,6 +104,9 @@ updateEnvMap();
 let guiEnvMapTextureControl;
 const gui = createGUI(ctx);
 gui.addColumn("Scene");
+gui.addButton("Toggle Render Pass Graph", () => {
+  renderPassGraphViz.toggle();
+});
 gui.addLabel("Camera");
 gui.addParam(
   "Exposure Compensation",

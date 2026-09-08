@@ -12,7 +12,7 @@ import { vec3, quat } from "pex-math";
 import { aabb } from "pex-geom";
 import { plane, sphere } from "primitive-geometry";
 import gridCells from "grid-cells";
-import { getURL, dragon, getGpuTexture } from "./utils.js";
+import { getURL, dragon, getTexture } from "./utils.js";
 
 const State = {
   furnace: false,
@@ -178,7 +178,7 @@ const checkerEntity = createEntity({
   material: components.material({
     roughness: 0,
     metallic: 0,
-    baseColorTexture: await getGpuTexture(
+    baseColorTexture: await getTexture(
       ctx,
       getURL(`assets/textures/checkerboard/checkerboard.png`),
       true,

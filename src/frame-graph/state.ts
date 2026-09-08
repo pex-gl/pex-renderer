@@ -81,6 +81,8 @@ export interface GraphState {
   passNames: Set<string>;
   /** Persistent names declared this frame; two sharing one would share a texture. */
   persistentNames: Set<string>;
+  /** Handle already handed out for a physical resource this frame. */
+  importedResources: Map<PhysicalResource, ResourceHandle>;
   phase: GraphPhase;
 }
 
@@ -89,6 +91,7 @@ export const createGraphState = (): GraphState => ({
   passes: [],
   passNames: new Set(),
   persistentNames: new Set(),
+  importedResources: new Map(),
   phase: "idle",
 });
 
@@ -97,6 +100,7 @@ export const resetGraphState = (state: GraphState): void => {
   state.passes.length = 0;
   state.passNames.clear();
   state.persistentNames.clear();
+  state.importedResources.clear();
   state.phase = "idle";
 };
 

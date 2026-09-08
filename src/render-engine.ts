@@ -1,6 +1,3 @@
-import { beginFrame, endFrame } from "pex-gpu";
-import { commandsState } from "pex-gpu/internals";
-
 import * as systems from "./systems/index.js";
 
 import FrameGraph from "./frame-graph/index.js";
@@ -93,13 +90,7 @@ export default ({
       lineRendererSystem,
       skyboxRendererSystem,
     ],
-    /**
-     * CPU-side scene update, plus the GPU work that produces inputs for the
-     * frame rather than the frame itself (sky and reflection probe bakes).
-     *
-     * Brackets its own command buffer so those bakes batch into one submit,
-     * unless the caller already opened one.
-     */
+    /** CPU-side scene update. Records no GPU commands; `render()` does. */
     update(entities: Entity[], deltaTime?: number) {
       const now = performance.now();
       this.deltaTime = deltaTime || (now - this._prevTime) / 1000;
@@ -107,24 +98,18 @@ export default ({
       this.time += this.deltaTime;
       this.frameIndex++;
 
-      const ownsSegment = !commandsState(ctx).frame;
-      if (ownsSegment) beginFrame(ctx);
-      try {
-        animationSystem.update(entities, this);
-        skinSystem.update(entities);
-        geometrySystem.update(entities);
-        morphSystem.update(entities);
-        transformSystem.update(entities);
-        layerSystem.update(entities);
-        skyboxSystem.update(entities);
-        reflectionProbeSystem.update(entities);
-        cameraSystem.update(entities, this);
+      animationSystem.update(entities, this);
+      skinSystem.update(entities);
+      geometrySystem.update(entities);
+      morphSystem.update(entities);
+      transformSystem.update(entities);
+      layerSystem.update(entities);
+      skyboxSystem.update(entities);
+      reflectionProbeSystem.update(entities);
+      cameraSystem.update(entities, this);
 
-        for (let i = 0; i < this.renderers.length; i++) {
-          this.renderers[i]!.update(entities, this);
-        }
-      } finally {
-        if (ownsSegment) endFrame(ctx);
+      for (let i = 0; i < this.renderers.length; i++) {
+        this.renderers[i]!.update(entities, this);
       }
     },
     /**
@@ -154,6 +139,10 @@ export default ({
 
       await frameGraph.render(async () => {
         targetHandlesPerCamera = [];
+
+        // View-independent: one sky and one probe bake feed every camera.
+        skyboxSystem.declareSkybox(entities);
+        reflectionProbeSystem.declareReflectionProbes(entities);
 
         for (const cameraEntity of cameras) {
           const camera = cameraEntity.camera!;

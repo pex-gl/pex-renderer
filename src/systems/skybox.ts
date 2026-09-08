@@ -26,6 +26,9 @@ const parameters: (keyof SkyboxComponentOptions)[] = [
  * - "_skyTexture" to skybox components with no envMap for skybox-renderer to
  *   render
  * - "_skyTextureChanged" to skybox components for reflection-probe system
+ *
+ * `update` is CPU only. `declareSkybox` records the environment map and its
+ * bake into the frame's graph, once per frame rather than per camera.
  */
 // Irradiance the analytic sky produces, in its own model units, at the
 // reference configuration: sun at zenith, default turbidity.
@@ -41,20 +44,20 @@ const parameters: (keyof SkyboxComponentOptions)[] = [
 // 45 degrees and 0.61 near the horizon.
 const SKY_REFERENCE_IRRADIANCE = 20.3;
 
-export default ({ ctx }: SystemOptions) => ({
+export default ({ ctx, frameGraph }: SystemOptions) => ({
   type: "skybox-system",
   cache: {} as Record<number, any>,
   debug: false,
   pipeline: null as any,
 
-  // Bakes the analytic sky into the entity's equirectangular _skyTexture as
-  // linear HDR. rgba16float preserves radiance >1 (an 8-bit/sRGB target would
-  // clamp it) and stays filterable — unlike rgba32float — so the background pass
-  // can sample it with a linear sampler.
   updateSkyboxEntity(entity: Entity) {
     const skybox = entity.skybox!;
+    let cached = this.cache[entity.id];
 
-    if (!this.cache[entity.id]) {
+    if (!cached) {
+      // Linear HDR: rgba16float preserves radiance >1 (an 8-bit/sRGB target
+      // would clamp it) and stays filterable — unlike rgba32float — so the
+      // background pass can sample it with a linear sampler.
       skybox._skyTexture = createTexture(ctx, {
         label: "skyTexture",
         width: 512,
@@ -62,56 +65,36 @@ export default ({ ctx }: SystemOptions) => ({
         format: "rgba16float",
       });
 
-      this.cache[entity.id] = {
+      cached = this.cache[entity.id] = {
         sunPosition: [...skybox.sunPosition!],
         parameters: Array.from({ length: parameters.length }),
+        needsBake: true,
       };
-      skybox.dirty = true;
     }
 
-    if (
-      vec3.distance(this.cache[entity.id].sunPosition, skybox.sunPosition!) > 0
-    ) {
-      vec3.set(this.cache[entity.id].sunPosition, skybox.sunPosition!);
+    if (vec3.distance(cached.sunPosition, skybox.sunPosition!) > 0) {
+      vec3.set(cached.sunPosition, skybox.sunPosition!);
       skybox.dirty = true;
     }
 
     for (let i = 0; i < parameters.length; i++) {
       const name = parameters[i]!;
-      if (this.cache[entity.id].parameters[i] !== skybox[name]) {
-        this.cache[entity.id].parameters[i] = skybox[name];
+      if (cached.parameters[i] !== skybox[name]) {
+        cached.parameters[i] = skybox[name];
         skybox.dirty = true;
       }
     }
 
+    // `dirty` is the user's input; `needsBake` is the pending work only the
+    // bake clears.
     if (skybox.dirty) {
       skybox.dirty = false;
-
-      // Immutable per object identity: create once, reuse across frames.
-      this.pipeline ||= (() => {
-        const source = skyShader(new Set(), {});
-        return { vertex: source, fragment: source };
-      })();
-
-      submit(ctx, {
-        label: "skyboxUpdateSkyTextureCmd",
-        pass: {
-          colorAttachments: [
-            { texture: skybox._skyTexture!, clearValue: [0, 0, 0, 0] },
-          ],
-        },
-        pipeline: this.pipeline,
-        ...createFullscreenGeometry(ctx).triangle,
-        uniforms: {
-          uSky: {
-            sunPosition: this.cache[entity.id].sunPosition,
-            parameters: this.cache[entity.id].parameters,
-          },
-        },
-      });
-
-      skybox._skyTextureChanged = true;
+      cached.needsBake = true;
     }
+
+    // Pending rather than done: the reflection probe system runs next and
+    // settles its own rebake before either is declared.
+    skybox._skyTextureChanged = cached.needsBake;
   },
   update(entities: Entity[]) {
     for (let i = 0; i < entities.length; i++) {
@@ -136,6 +119,55 @@ export default ({ ctx }: SystemOptions) => ({
           this.updateSkyboxEntity(entity);
         }
       }
+    }
+  },
+  /**
+   * Records the analytic sky bake into this frame's graph, for every skybox
+   * whose sky has moved since it was last drawn.
+   */
+  declareSkybox(entities: Entity[]) {
+    for (let i = 0; i < entities.length; i++) {
+      const entity = entities[i]!;
+      const skybox = entity.skybox;
+      const cached = this.cache[entity.id];
+      if (!skybox?._skyTexture || !cached?.needsBake) continue;
+
+      // Immutable per object identity: create once, reuse across frames.
+      this.pipeline ||= (() => {
+        const source = skyShader(new Set(), {});
+        return { vertex: source, fragment: source };
+      })();
+
+      // Imported, not graph-owned: the sky is rewritten only when it moves, so
+      // on most frames no pass writes it and a handle would resolve to nothing.
+      // The renderers bind it straight off the component.
+      const skyTexture = frameGraph.importTexture(
+        skybox._skyTexture,
+        `skyTexture.${entity.id}`,
+      );
+
+      frameGraph.addPass({
+        name: `skyTexture.${entity.id}`,
+        color: [{ texture: skyTexture, clearValue: [0, 0, 0, 0] }],
+        uniforms: {
+          uSky: {
+            sunPosition: cached.sunPosition,
+            parameters: cached.parameters,
+          },
+        },
+        execute: ({ uniforms }) => {
+          submit(ctx, {
+            label: "skyboxUpdateSkyTextureCmd",
+            pipeline: this.pipeline,
+            ...createFullscreenGeometry(ctx).triangle,
+            uniforms,
+          });
+
+          // Cleared here, not at declaration: a pass that never runs leaves
+          // the bake pending rather than losing it.
+          cached.needsBake = false;
+        },
+      });
     }
   },
   dispose(entities?: Entity[]) {

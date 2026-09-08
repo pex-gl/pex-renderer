@@ -128,12 +128,21 @@ export class FrameGraph {
     );
   }
 
-  /** Reference a resource the graph does not own (shadow maps, IBL, canvas). */
+  /**
+   * Reference a resource the graph does not own (shadow maps, IBL, canvas).
+   *
+   * Importing one texture twice in a frame returns the first handle: a handle
+   * identifies a resource, and two for one would hide the edges between them.
+   */
   importTexture(texture: GpuTexture, label?: string): ResourceHandle {
-    requirePhase(this.state, "declaring", "importTexture", DECLARE_HINT);
+    const { state } = this;
+    requirePhase(state, "declaring", "importTexture", DECLARE_HINT);
 
-    return addResource(
-      this.state,
+    const existing = state.importedResources.get(texture);
+    if (existing) return existing;
+
+    const handle = addResource(
+      state,
       label ?? `importedTexture${texture.id}`,
       "texture",
       {
@@ -147,19 +156,27 @@ export class FrameGraph {
       },
       texture,
     );
+    state.importedResources.set(texture, handle);
+    return handle;
   }
 
+  /** As {@link FrameGraph.importTexture}, interned the same way. */
   importBuffer(buffer: GpuBuffer, label?: string): ResourceHandle {
     const { state } = this;
     requirePhase(state, "declaring", "importBuffer", DECLARE_HINT);
 
-    return addResource(
+    const existing = state.importedResources.get(buffer);
+    if (existing) return existing;
+
+    const handle = addResource(
       state,
       label ?? `importedBuffer${state.resources.length}`,
       "buffer",
       { usage: "storage" },
       buffer,
     );
+    state.importedResources.set(buffer, handle);
+    return handle;
   }
 
   /**

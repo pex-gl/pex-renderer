@@ -15,7 +15,7 @@ import createGUI from "pex-gui";
 
 import { cube, roundedCube, capsule, sphere } from "primitive-geometry";
 
-import { dragon, getGpuTexture, getURL } from "./utils.js";
+import { dragon, getTexture, getURL } from "./utils.js";
 
 import { getRenderPassGraphViz } from "./graph-viz.js";
 
@@ -205,7 +205,7 @@ const postProcessing = components.postProcessing({
     intensity: 0.2,
   }),
   lut: components.postProcessing.lut({
-    texture: await getGpuTexture(
+    texture: await getTexture(
       ctx,
       getURL(`assets/textures/lut/lookup-autumn.png`),
       false,
@@ -257,24 +257,24 @@ const cameraEntity = createEntity({
 world.add(cameraEntity);
 
 // Meshes
-const baseColorTexture = await getGpuTexture(
+const baseColorTexture = await getTexture(
   ctx,
   getURL(`assets/materials/plastic-green.material/plastic-green_basecolor.png`),
   true,
 );
-const normalTexture = await getGpuTexture(
+const normalTexture = await getTexture(
   ctx,
   getURL(`assets/materials/plastic-green.material/plastic-green_n.png`),
 );
-const metallicTexture = await getGpuTexture(
+const metallicTexture = await getTexture(
   ctx,
   getURL(`assets/materials/plastic-green.material/plastic-green_metallic.png`),
 );
-const roughnessTexture = await getGpuTexture(
+const roughnessTexture = await getTexture(
   ctx,
   getURL(`assets/materials/plastic-green.material/plastic-green_roughness.png`),
 );
-const emissiveColorTexture = await getGpuTexture(
+const emissiveColorTexture = await getTexture(
   ctx,
   getURL(`assets/materials/plastic-glow.material/plastic-glow_emissive.png`),
   true,

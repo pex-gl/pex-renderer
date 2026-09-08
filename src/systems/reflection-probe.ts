@@ -14,7 +14,7 @@ import type {
   ReflectionProbePrebakedData,
   SystemOptions,
 } from "../types.js";
-import { getEnvironmentRotation } from "../utils.js";
+import { getEnvironmentRotation, getSkyboxEnvMap } from "../utils.js";
 import {
   ROUGHNESS_LEVELS,
   SH_COEFFICIENT_COUNT,
@@ -35,15 +35,19 @@ const WORKGROUP_SIZE = 8;
 
 type ComputePipeline = { compute: string; entryPoint: string };
 
+interface ProbeCacheEntry {
+  resources: ProbeResources;
+  envMap: GpuTexture | null;
+  /** Calibration the probe was last baked with; a change forces a rebake. */
+  luminanceScale?: number;
+  /** Identity of the pre-baked payload this cache entry was built from. */
+  data?: ReflectionProbePrebakedData | undefined;
+  /** A bake the graph has not run yet. Only the bake itself clears it. */
+  needsBake?: boolean;
+}
+
 interface ProbeResources {
   specularTexture: ReturnType<typeof createTexture>;
-  // Compute-bake-only intermediates, absent for a pre-baked (uploaded, not
-  // baked) probe: per-mip 2d-array storage views (write targets) and
-  // single-level cube views (downsample sources) of the radiance cube.
-  mipViews?: GPUTextureView[];
-  radianceCube?: ReturnType<typeof createTexture>;
-  radianceStorageViews?: GPUTextureView[];
-  radianceLevelViews?: GPUTextureView[];
   irradianceCoefficients: ReturnType<typeof createBuffer>;
   sampler: GPUSampler;
   /** Mip levels in specularTexture; forwarded to entity._reflectionProbe. */
@@ -64,20 +68,13 @@ interface ProbeResources {
  *
  * - "_reflectionProbe": `{ specularTexture, irradianceCoefficients, sampler }`
  *   consumed by the standard renderer's `USE_REFLECTION_PROBES` bindings.
+ *
+ * `update` is CPU only. `declareReflectionProbes` records the probe's outputs
+ * and its bake into the frame's graph, once per frame rather than per camera.
  */
-export default ({ ctx }: SystemOptions) => ({
+export default ({ ctx, frameGraph }: SystemOptions) => ({
   type: "reflection-probe-system",
-  cache: {} as Record<
-    number,
-    {
-      resources: ProbeResources;
-      envMap: GpuTexture | null;
-      /** Calibration the probe was last baked with; a change forces a rebake. */
-      luminanceScale?: number;
-      /** Identity of the pre-baked payload this cache entry was built from. */
-      data?: ReflectionProbePrebakedData | undefined;
-    }
-  >,
+  cache: {} as Record<number, ProbeCacheEntry>,
   debug: false,
   shPipeline: null as ComputePipeline | null,
   equirectToCubePipeline: null as ComputePipeline | null,
@@ -100,54 +97,6 @@ export default ({ ctx }: SystemOptions) => ({
         GPUTextureUsage.COPY_DST,
     });
 
-    // One write-only 2d-array view per mip: the prefilter writes all six faces
-    // of a single roughness level per dispatch.
-    const mipViews = Array.from({ length: ROUGHNESS_LEVELS }, (_, level) =>
-      specularTexture.texture.createView({
-        label: `reflectionProbeSpecularMip${level}`,
-        dimension: "2d-array",
-        baseMipLevel: level,
-        mipLevelCount: 1,
-        baseArrayLayer: 0,
-        arrayLayerCount: 6,
-      }),
-    );
-
-    // Box-filtered mip pyramid of the environment, sampled per GGX sample at the
-    // mip matching its solid angle (filtered importance sampling).
-    const radianceCube = createTexture(ctx, {
-      label: "reflectionProbeRadianceCubemap",
-      width: CUBEMAP_SIZE,
-      height: CUBEMAP_SIZE,
-      depth: 6,
-      viewDimension: "cube",
-      mipLevelCount: RADIANCE_MIP_COUNT,
-      format: "rgba16float",
-      usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.STORAGE_BINDING,
-    });
-    const radianceStorageViews = Array.from(
-      { length: RADIANCE_MIP_COUNT },
-      (_, level) =>
-        radianceCube.texture.createView({
-          label: `reflectionProbeRadianceStore${level}`,
-          dimension: "2d-array",
-          baseMipLevel: level,
-          mipLevelCount: 1,
-          baseArrayLayer: 0,
-          arrayLayerCount: 6,
-        }),
-    );
-    const radianceLevelViews = Array.from(
-      { length: RADIANCE_MIP_COUNT },
-      (_, level) =>
-        radianceCube.texture.createView({
-          label: `reflectionProbeRadianceLevel${level}`,
-          dimension: "cube",
-          baseMipLevel: level,
-          mipLevelCount: 1,
-        }),
-    );
-
     // 9 vec4f: array<vec3f> has a 16-byte std430 stride, so coefficients are
     // stored (and declared in WGSL) as vec4f with an unused w.
     const irradianceCoefficients = createBuffer(ctx, {
@@ -164,10 +113,6 @@ export default ({ ctx }: SystemOptions) => ({
 
     return {
       specularTexture,
-      mipViews,
-      radianceCube,
-      radianceStorageViews,
-      radianceLevelViews,
       irradianceCoefficients,
       sampler,
       roughnessLevels: ROUGHNESS_LEVELS,
@@ -251,15 +196,17 @@ export default ({ ctx }: SystemOptions) => ({
 
   disposeResources(resources: ProbeResources) {
     resources.specularTexture.dispose();
-    resources.radianceCube?.dispose();
     resources.irradianceCoefficients.dispose();
   },
 
-  bake(
-    resources: ProbeResources,
-    envMap: GpuTexture,
-    luminanceScale: number,
-  ) {
+  /**
+   * Records one probe's bake into this frame's graph: SH projection, the
+   * radiance pyramid, and the GGX prefilter of every roughness level.
+   */
+  declareBake(entity: Entity, cached: ProbeCacheEntry) {
+    const { resources, envMap } = cached;
+    const luminanceScale = cached.luminanceScale ?? 1;
+
     const shPipeline = (this.shPipeline ||= {
       compute: reflectionProbeSHShader(),
       entryPoint: "computeMain",
@@ -282,64 +229,161 @@ export default ({ ctx }: SystemOptions) => ({
       addressModeV: "clamp-to-edge",
     }));
 
+    const scope = entity.id;
+    // Imported, not graph-owned: these outlive the bake that fills them, and
+    // the renderers bind them straight off the component. Importing is interned
+    // per frame, so the render pipeline reaches the same nodes when it declares
+    // the scene passes' reads.
+    const specular = frameGraph.importTexture(
+      resources.specularTexture,
+      `reflectionProbeSpecular.${scope}`,
+    );
+    const irradiance = frameGraph.importBuffer(
+      resources.irradianceCoefficients,
+      `reflectionProbeIrradiance.${scope}`,
+    );
+    const environment = frameGraph.importTexture(
+      envMap!,
+      `reflectionProbeEnvMap.${scope}`,
+    );
+
+    // Box-filtered mip pyramid of the environment, sampled per GGX sample at the
+    // mip matching its solid angle (filtered importance sampling). Graph-owned
+    // rather than imported: it lives only for the length of a bake, so the pool
+    // reclaims it once the probe settles.
+    const radiance = frameGraph.createTexture({
+      label: `reflectionProbeRadiance.${scope}`,
+      width: CUBEMAP_SIZE,
+      height: CUBEMAP_SIZE,
+      depth: 6,
+      viewDimension: "cube",
+      mipLevelCount: RADIANCE_MIP_COUNT,
+      format: "rgba16float",
+    });
+
     const dispatch2d = (faceSize: number): [number, number, number] => {
       const groups = Math.ceil(faceSize / WORKGROUP_SIZE);
       return [groups, groups, 6];
     };
 
+    // All six faces of one mip, write-only: what a single dispatch covers.
+    const storageView = (level: number) =>
+      ({ dimension: "2d-array", level, layer: 0, layerCount: 6 }) as const;
+
     // Diffuse: project the environment into L2 SH (single workgroup reduction).
-    submit(ctx, {
-      label: "reflectionProbeSHCmd",
-      pipeline: shPipeline,
+    frameGraph.addPass({
+      name: `reflectionProbeSH.${scope}`,
+      type: "compute",
+      // A handle-valued uniform is a read edge, and a pass may not read and
+      // write one resource — so this is declared as a write and resolved in
+      // execute instead.
+      writes: [irradiance],
       uniforms: {
-        uEnvMap: envMap,
+        uEnvMap: environment,
         uEnvMapSampler: envSampler,
-        uIrradianceCoefficients: resources.irradianceCoefficients,
         uParams: { luminanceScale },
       },
-      dispatch: 1,
+      execute: ({ uniforms, resolveBuffer, timestampWrites }) => {
+        submit(ctx, {
+          label: "reflectionProbeSHCmd",
+          pipeline: shPipeline,
+          uniforms: {
+            ...uniforms,
+            uIrradianceCoefficients: resolveBuffer(irradiance),
+          },
+          dispatch: 1,
+          ...(timestampWrites && {
+            pass: { label: `reflectionProbeSH.${scope}`, timestampWrites },
+          }),
+        });
+      },
     });
 
     // Radiance cube mip 0 from the equirect environment.
-    submit(ctx, {
-      label: "reflectionProbeEquirectToCubeCmd",
-      pipeline: equirectToCubePipeline,
+    frameGraph.addPass({
+      name: `reflectionProbeEquirectToCube.${scope}`,
+      type: "compute",
+      writes: [radiance],
       uniforms: {
-        uEnvMap: envMap,
+        uEnvMap: environment,
         uEnvMapSampler: envSampler,
-        uOutput: resources.radianceStorageViews![0]!,
         uParams: { faceSize: CUBEMAP_SIZE, luminanceScale },
       },
-      dispatch: dispatch2d(CUBEMAP_SIZE),
+      execute: ({ uniforms, resolveView, timestampWrites }) => {
+        submit(ctx, {
+          label: "reflectionProbeEquirectToCubeCmd",
+          pipeline: equirectToCubePipeline,
+          uniforms: {
+            ...uniforms,
+            uOutput: resolveView(radiance, storageView(0)),
+          },
+          dispatch: dispatch2d(CUBEMAP_SIZE),
+          ...(timestampWrites && {
+            pass: {
+              label: `reflectionProbeEquirectToCube.${scope}`,
+              timestampWrites,
+            },
+          }),
+        });
+      },
     });
 
-    // Build the radiance mip chain. Each level is its own compute pass, so the
-    // implicit inter-pass barrier orders the write of level-1 before its read.
     for (let level = 1; level < RADIANCE_MIP_COUNT; level++) {
       const faceSize = CUBEMAP_SIZE >> level;
-      submit(ctx, {
-        label: `reflectionProbeDownsampleCmd${level}`,
-        pipeline: downsamplePipeline,
-        uniforms: {
-          uSource: resources.radianceLevelViews![level - 1]!,
-          uSourceSampler: resources.sampler,
-          uOutput: resources.radianceStorageViews![level]!,
-          uParams: { faceSize },
+      frameGraph.addPass({
+        name: `reflectionProbeDownsample${level}.${scope}`,
+        type: "compute",
+        // Samples level-1 while writing level, which a read edge cannot
+        // express — so the sampled usage is declared here instead. Ordering
+        // is the write-after-write edge to the level before, and the implicit
+        // barrier between two compute passes.
+        writes: [
+          {
+            handle: radiance,
+            usage:
+              GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING,
+          },
+        ],
+        uniforms: { uParams: { faceSize } },
+        execute: ({ uniforms, resolveView, timestampWrites }) => {
+          submit(ctx, {
+            label: `reflectionProbeDownsampleCmd${level}`,
+            pipeline: downsamplePipeline,
+            uniforms: {
+              ...uniforms,
+              uSource: resolveView(radiance, {
+                dimension: "cube",
+                level: level - 1,
+                layer: 0,
+                layerCount: 6,
+              }),
+              uSourceSampler: resources.sampler,
+              uOutput: resolveView(radiance, storageView(level)),
+            },
+            dispatch: dispatch2d(faceSize),
+            ...(timestampWrites && {
+              pass: {
+                label: `reflectionProbeDownsample${level}.${scope}`,
+                timestampWrites,
+              },
+            }),
+          });
         },
-        dispatch: dispatch2d(faceSize),
       });
     }
 
     // Specular: GGX-prefilter one roughness level per pass from the radiance cube.
     for (let level = 0; level < ROUGHNESS_LEVELS; level++) {
       const faceSize = CUBEMAP_SIZE >> level;
-      submit(ctx, {
-        label: `reflectionProbePrefilterCmd${level}`,
-        pipeline: prefilterPipeline,
+      const isLastLevel = level === ROUGHNESS_LEVELS - 1;
+
+      frameGraph.addPass({
+        name: `reflectionProbePrefilter${level}.${scope}`,
+        type: "compute",
+        writes: [specular],
         uniforms: {
-          uRadianceCube: resources.radianceCube!,
+          uRadianceCube: radiance,
           uRadianceCubeSampler: resources.sampler,
-          uOutput: resources.mipViews![level]!,
           uParams: {
             faceSize,
             roughness: level / (ROUGHNESS_LEVELS - 1),
@@ -347,7 +391,27 @@ export default ({ ctx }: SystemOptions) => ({
             cubeResolution: CUBEMAP_SIZE,
           },
         },
-        dispatch: dispatch2d(faceSize),
+        execute: ({ uniforms, resolveView, timestampWrites }) => {
+          submit(ctx, {
+            label: `reflectionProbePrefilterCmd${level}`,
+            pipeline: prefilterPipeline,
+            uniforms: {
+              ...uniforms,
+              uOutput: resolveView(specular, storageView(level)),
+            },
+            dispatch: dispatch2d(faceSize),
+            ...(timestampWrites && {
+              pass: {
+                label: `reflectionProbePrefilter${level}.${scope}`,
+                timestampWrites,
+              },
+            }),
+          });
+
+          // Cleared on the last level, not at declaration: a bake that never
+          // runs stays pending rather than being lost.
+          if (isLastLevel) cached.needsBake = false;
+        },
       });
     }
   },
@@ -359,10 +423,9 @@ export default ({ ctx }: SystemOptions) => ({
     dirty: boolean,
   ) {
     let cached = this.cache[entity.id];
-    // A cache entry with `data` set was built by createPrebakedResources()
-    // (missing radianceCube/mipViews/radianceStorageViews) — e.g. the entity
-    // switched from a pre-baked payload to a bake source without changing id.
-    // Rebuild with bake-compatible resources instead of running bake() on it.
+    // A cache entry with `data` set came from createPrebakedResources(): its
+    // specular cubemap carries the file's mip count and format, so rebuild
+    // rather than bake into it.
     if (!cached || cached.data !== undefined) {
       if (cached) this.disposeResources(cached.resources);
       const resources = this.createResources();
@@ -389,9 +452,11 @@ export default ({ ctx }: SystemOptions) => ({
       dirty = true;
     }
 
+    // `dirty` is the input; `needsBake` is the pending work only the bake
+    // clears.
     if (dirty) {
       entity.reflectionProbe!.dirty = false;
-      this.bake(cached.resources, envMap, luminanceScale);
+      cached.needsBake = true;
     }
   },
 
@@ -439,10 +504,10 @@ export default ({ ctx }: SystemOptions) => ({
         if (!skyboxEntity) continue;
 
         const skybox = skyboxEntity.skybox!;
-        const envMap = skybox.envMap || skybox._skyTexture;
+        const envMap = getSkyboxEnvMap(skybox);
         if (!envMap) continue;
 
-        // Rebake when the user marks the probe dirty or the analytic sky rebaked.
+        // Rebake when the user marks the probe dirty or the sky is about to.
         this.updateReflectionProbeEntity(
           entity,
           envMap,
@@ -452,6 +517,24 @@ export default ({ ctx }: SystemOptions) => ({
       }
 
       this.updateRotation(entity, entity._transform?.modelMatrix);
+    }
+  },
+
+  /**
+   * Records every probe's outputs into this frame's graph, and the bake for
+   * those whose environment changed under them.
+   */
+  declareReflectionProbes(entities: Entity[]) {
+    for (let i = 0; i < entities.length; i++) {
+      const entity = entities[i]!;
+      const cached = this.cache[entity.id];
+
+      // A pre-baked probe never bakes: `update` uploaded its data and there is
+      // nothing to filter.
+      if (!entity.reflectionProbe || !cached?.needsBake || !cached.envMap) {
+        continue;
+      }
+      this.declareBake(entity, cached);
     }
   },
 

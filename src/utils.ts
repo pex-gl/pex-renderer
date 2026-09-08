@@ -2,7 +2,11 @@ import { aabb } from "pex-geom";
 import { avec4, mat2x3, mat3, mat4, quat, vec3, vec4 } from "pex-math";
 
 import type { Mat3, Mat4, Vec3 } from "pex-math";
-import type { GpuContext, ShaderHooks } from "./types.js";
+import type {
+  GpuContext,
+  ShaderHooks,
+  SkyboxComponentOptions,
+} from "./types.js";
 
 const NAMESPACE = "pex-renderer";
 
@@ -161,6 +165,13 @@ const mapKeys = <T>(
 // (background) so both read the same entity transform the same way.
 const getEnvironmentRotation = (out: Mat3, modelMatrix: Mat4 | undefined) =>
   modelMatrix ? mat3.transpose(mat3.fromMat4(out, modelMatrix)) : undefined;
+
+// A user envMap hides the analytic sky rather than replacing it, so it wins
+// while it is set and the baked sky stays behind it. Shared by the skybox
+// system (bake target), the render pipeline (read edge) and the skybox
+// renderer (what it draws) so all three agree on which map is in use.
+const getSkyboxEnvMap = (skybox: SkyboxComponentOptions) =>
+  skybox.envMap || skybox._skyTexture;
 
 /**
  * Gribb/Hartmann plane extraction from a view-projection, normalized so plane
@@ -364,6 +375,7 @@ export {
   mapValues,
   mapKeys,
   getEnvironmentRotation,
+  getSkyboxEnvMap,
   pointPowerToIntensity,
   pointIntensityToPower,
   spotPowerToIntensity,

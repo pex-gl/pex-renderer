@@ -13,7 +13,7 @@ import { vec3, quat, vec2 } from "pex-math";
 import { sphere } from "primitive-geometry";
 import gridCells from "grid-cells";
 
-import { getGpuTexture, getURL } from "./utils.js";
+import { getTexture, getURL } from "./utils.js";
 import { getRenderPassGraphViz } from "./graph-viz.js";
 
 const pixelRatio = devicePixelRatio;
@@ -46,7 +46,7 @@ const materials = {
   "Unlit Base Color Texture": {
     unlit: true,
     baseColor: [1, 1, 1, 0.5],
-    baseColorTexture: await getGpuTexture(
+    baseColorTexture: await getTexture(
       ctx,
       getURL(
         `assets/materials/plastic-green.material/plastic-green_basecolor.png`,
@@ -82,7 +82,7 @@ const materials = {
     metallic: 0,
     roughness: 1,
     baseColorTexture: Object.assign({
-      texture: await getGpuTexture(
+      texture: await getTexture(
         ctx,
         getURL(`assets/textures/uv-wide/uv-wide.png`),
         true,
@@ -95,27 +95,27 @@ const materials = {
     baseColor: [1.0, 1.0, 0.9, 1.0],
     metallic: 1,
     roughness: 1,
-    roughnessTexture: await getGpuTexture(
+    roughnessTexture: await getTexture(
       ctx,
       getURL(`assets/textures/roughness-test/roughness-test.png`),
     ),
   },
   // Basic PBR maps
   "Basic PBR Textures": {
-    baseColorTexture: await getGpuTexture(
+    baseColorTexture: await getTexture(
       ctx,
       getURL(`assets/materials/plastic-red.material/plastic-red_basecolor.png`),
       true,
     ),
-    roughnessTexture: await getGpuTexture(
+    roughnessTexture: await getTexture(
       ctx,
       getURL(`assets/materials/plastic-red.material/plastic-red_roughness.png`),
     ),
-    metallicTexture: await getGpuTexture(
+    metallicTexture: await getTexture(
       ctx,
       getURL(`assets/materials/plastic-red.material/plastic-red_metallic.png`),
     ),
-    normalTexture: await getGpuTexture(
+    normalTexture: await getTexture(
       ctx,
       getURL(`assets/materials/plastic-red.material/plastic-red_n.png`),
     ),
@@ -123,31 +123,31 @@ const materials = {
   // Emissive
   "Emissive Texture": {
     baseColor: [1, 1, 1, 1],
-    baseColorTexture: await getGpuTexture(
+    baseColorTexture: await getTexture(
       ctx,
       getURL(
         `assets/materials/plastic-glow.material/plastic-glow_basecolor.png`,
       ),
       true,
     ),
-    roughnessTexture: await getGpuTexture(
+    roughnessTexture: await getTexture(
       ctx,
       getURL(
         `assets/materials/plastic-glow.material/plastic-glow_roughness.png`,
       ),
     ),
-    metallicTexture: await getGpuTexture(
+    metallicTexture: await getTexture(
       ctx,
       getURL(
         `assets/materials/plastic-glow.material/plastic-glow_metallic.png`,
       ),
     ),
-    normalTexture: await getGpuTexture(
+    normalTexture: await getTexture(
       ctx,
       getURL(`assets/materials/plastic-glow.material/plastic-glow_n.png`),
     ),
     emissiveColor: [1, 1, 1, 1],
-    emissiveColorTexture: await getGpuTexture(
+    emissiveColorTexture: await getTexture(
       ctx,
       getURL(
         `assets/materials/plastic-glow.material/plastic-glow_emissive.png`,
@@ -163,12 +163,12 @@ const materials = {
     baseColor: [1, 1, 1, 1],
     alphaTest: 0.5,
     cullFace: false,
-    baseColorTexture: await getGpuTexture(
+    baseColorTexture: await getTexture(
       ctx,
       getURL(`assets/textures/alpha-test-mask/alpha-test-mask.png`),
       true,
     ),
-    alphaTexture: await getGpuTexture(
+    alphaTexture: await getTexture(
       ctx,
       getURL(`assets/textures/checkerboard/checkerboard.png`),
     ),
@@ -179,7 +179,7 @@ const materials = {
     sheenColor: [1, 1, 0, 1.0],
     sheenRoughness: 1,
     // sheenColorTexture: {
-    //   texture: await getGpuTexture(
+    //   texture: await getTexture(
     //     ctx,
     //     getURL(
     //       `glTF-Sample-Models/2.0/SheenCloth/glTF/technicalFabricSmall_sheen_256.png`
@@ -189,7 +189,7 @@ const materials = {
     //   scales: [30, -30],
     // },
     // sheenRoughnessTexture: {
-    //   texture: await getGpuTexture(
+    //   texture: await getTexture(
     //     ctx,
     //     getURL(
     //       `glTF-Sample-Models/2.0/SheenCloth/glTF/technicalFabricSmall_sheen_256.png`

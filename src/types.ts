@@ -1214,6 +1214,7 @@ export interface SkyboxComponentOptions {
   // Runtime, added by the skybox system.
   dirty?: boolean;
   _skyTexture?: GpuTexture;
+  /** A sky bake this frame has not run yet; the reflection probe follows it. */
   _skyTextureChanged?: boolean;
 }
 export interface SpotLightComponentOptions extends LightShadowInternals {

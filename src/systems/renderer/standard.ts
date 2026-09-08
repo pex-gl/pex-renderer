@@ -574,6 +574,7 @@ export default ({
       cullFaceMode,
       textures = {},
       frameIndex = NaN,
+      reflectionProbe,
     } = options;
 
     this._msaa = msaa;
@@ -585,10 +586,10 @@ export default ({
     this._lights = lights;
 
     // Scene-global IBL: the reflection probe system bakes SH + a prefiltered
-    // cubemap onto the probe entity. Presence drives USE_REFLECTION_PROBES
+    // cubemap onto the probe entity; the pipeline picks the one this view
+    // sees. Presence drives USE_REFLECTION_PROBES
     // (see getDefines/getVariantKey); the bindings below feed EvaluateLightProbe.
-    const probeEntity = entities.find((e) => e._reflectionProbe);
-    this._reflectionProbe = probeEntity?._reflectionProbe;
+    this._reflectionProbe = reflectionProbe;
     const reflectionUniforms = this._reflectionProbe
       ? {
           uReflectionProbe: {

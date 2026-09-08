@@ -8,6 +8,7 @@ import {
   TEMP_MAT3,
   definesKey,
   getEnvironmentRotation,
+  getSkyboxEnvMap,
 } from "../../utils.js";
 import createFullscreenGeometry from "../../fullscreen-geometry.js";
 
@@ -75,7 +76,7 @@ export default ({ ctx }: SystemOptions): RendererSystem => ({
   },
 
   checkSkybox(skybox: any) {
-    if (skybox.envMap || skybox._skyTexture) return true;
+    if (getSkyboxEnvMap(skybox)) return true;
     console.warn(
       NAMESPACE,
       this.type,
@@ -88,7 +89,7 @@ export default ({ ctx }: SystemOptions): RendererSystem => ({
 
     const { camera } = renderView;
     const skybox = entity.skybox!;
-    const texture = skybox.envMap || skybox._skyTexture;
+    const texture = getSkyboxEnvMap(skybox);
 
     const backgroundBlur = skybox.backgroundBlur ?? 0;
     const useBackgroundBlur = !!this._reflectionProbe && backgroundBlur > 0;
@@ -139,15 +140,14 @@ export default ({ ctx }: SystemOptions): RendererSystem => ({
     entities: Entity[],
     options: any = {},
   ) {
-    const { outputs = {}, msaa } = options;
+    const { outputs = {}, msaa, reflectionProbe } = options;
     this._msaa = msaa;
     this._outputs = outputs;
 
     // Reused from material IBL (see systems/reflection-probe.ts): the same
     // prefiltered specular cubemap drives skybox.backgroundBlur, picking a
     // mip via lod instead of a dedicated background blur pass.
-    const probeEntity = entities.find((e) => e._reflectionProbe);
-    this._reflectionProbe = probeEntity?._reflectionProbe;
+    this._reflectionProbe = reflectionProbe;
 
     for (let i = 0; i < entities.length; i++) {
       const entity = entities[i]!;

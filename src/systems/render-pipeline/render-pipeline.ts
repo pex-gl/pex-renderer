@@ -10,7 +10,7 @@ import { blitShader } from "../../shaders/blit.js";
 import { grabPassShader } from "../../shaders/grab-pass.js";
 import { depthResolveShader } from "../../shaders/depth-resolve.js";
 import { RenderTextures } from "./render-textures.js";
-import { getDefaultViewport, mapValues } from "../../utils.js";
+import { getDefaultViewport, getSkyboxEnvMap, mapValues } from "../../utils.js";
 
 import type { Entity, SystemOptions } from "../../types.js";
 import type {
@@ -164,6 +164,7 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
     textures,
     prePass,
     normalOutput,
+    reflectionProbe,
   }: any) {
     const options = {
       // Every pass of a frame draws with the same hook uniform values, which
@@ -178,6 +179,9 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
       multisampled: msaa,
       msaa: this.reversibleToneMap && msaa,
       textures,
+      // Which probe lights a camera is a question about what that camera
+      // sees, so the pipeline resolves it per view.
+      reflectionProbe,
     };
 
     const draw = (method: string, entities: Entity[], passOptions: any) => {
@@ -438,6 +442,36 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
       ? entities.filter((entity) => !entity.layer || entity.layer === layer)
       : entities.filter((entity) => !entity.layer);
 
+    // What the scene passes light with, resolved once per view rather than once
+    // per renderer per pass. Importing is interned per frame, so these are the
+    // same nodes the skybox and probe systems wrote when they declared their
+    // bakes — which is what turns them into read edges on the passes below.
+    const environmentReads: ResourceHandle[] = [];
+    let reflectionProbe;
+    for (const entity of entitiesInView) {
+      const envMap = entity.skybox && getSkyboxEnvMap(entity.skybox);
+      if (envMap) {
+        environmentReads.push(
+          frameGraph.importTexture(envMap, `skyboxEnvMap.${entity.id}`),
+        );
+      }
+
+      // Only the probe the renderers pick: the first in view, as they read it.
+      if (entity._reflectionProbe && !reflectionProbe) {
+        reflectionProbe = entity._reflectionProbe;
+        environmentReads.push(
+          frameGraph.importTexture(
+            reflectionProbe.specularTexture,
+            `reflectionProbeSpecular.${entity.id}`,
+          ),
+          frameGraph.importBuffer(
+            reflectionProbe.irradianceCoefficients,
+            `reflectionProbeIrradiance.${entity.id}`,
+          ),
+        );
+      }
+    }
+
     const drawMeshOptions = {
       renderers,
       renderView,
@@ -446,6 +480,7 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
       shadowMappingLight: false,
       transparent: false,
       transmitted: false,
+      reflectionProbe,
     };
 
     /**
@@ -499,7 +534,7 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
             ...(depthClearValue !== undefined && { depthClearValue }),
           },
         }),
-        reads: [...shadowMaps, ...Object.values(inputs)],
+        reads: [...shadowMaps, ...environmentReads, ...Object.values(inputs)],
         renderView: renderPassView,
         execute: ({ resolveTexture }) => {
           this.drawMeshes({
