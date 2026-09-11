@@ -393,6 +393,8 @@ export default ({ ctx }: SystemOptions) => ({
         const proxyCamera = {
           viewMatrix: camera.viewMatrix,
           inverseViewMatrix: camera.inverseViewMatrix,
+          // pex-cam's orbiter reads the inverse-view matrix under this name when panning
+          invViewMatrix: camera.inverseViewMatrix,
           position: [...entity.transform.position],
           rotationCache: [...entity.transform.rotation],
           target: [...orbiter.target],
