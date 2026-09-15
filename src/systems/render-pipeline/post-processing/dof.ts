@@ -17,16 +17,21 @@ import type { PostProcessingEffect } from "../post-processing.js";
 /** Colour and the signed circle of confusion; the two fields; all half resolution. */
 const FIELD_FORMAT = "rgba16float" as GPUTextureFormat;
 
-/** A tile is the near and far maximum it holds, and nothing else. */
-const TILE_FORMAT = "rg16float" as GPUTextureFormat;
+/**
+ * A tile is the largest and smallest radius each field reaches inside it.
+ *
+ * The maxima bound each field's search. The minima say whether the tile
+ * describes one surface or several, which is what decides how many rings the
+ * gather spends there.
+ */
+const TILE_FORMAT = "rgba16float" as GPUTextureFormat;
 
 /**
  * Tile size in half-resolution pixels, unless a large radius forces it up.
  *
  * Sets how coarsely the near field's gather radius is quantised: a larger tile
  * spends samples on pixels that did not need them, a smaller one costs more
- * dilation taps to reach the same radius. Eight is what FidelityFX and HDRP
- * both settle on.
+ * dilation taps to reach the same radius.
  */
 const MIN_TILE_SIZE = 8;
 
@@ -36,6 +41,10 @@ const MIN_TILE_SIZE = 8;
  * following the radius: a 5% radius at 1080p reaches four tiles of eight, but
  * a 20% one at 4K would reach twenty-seven, and the dilation would cost more
  * than the gather it exists to make cheap.
+ *
+ * The tile is sized against one less than this, because the reach is the radius
+ * plus the extra tile the bilinear read needs — sizing against the whole budget
+ * spends it before that tile is added and lands at `MAX_DILATE_RADIUS + 1`.
  */
 const MAX_DILATE_RADIUS = 4;
 
@@ -110,25 +119,31 @@ const dof: PostProcessingEffect = {
 
     const tilePixels = Math.max(
       MIN_TILE_SIZE,
-      Math.ceil(maxCoCRadius / MAX_DILATE_RADIUS),
+      Math.ceil(maxCoCRadius / (MAX_DILATE_RADIUS - 1)),
     );
     const tilesX = Math.ceil(halfWidth / tilePixels);
     const tilesY = Math.ceil(halfHeight / tilePixels);
     const tileSize = [tilesX, tilesY];
 
-    const rings = component.rings ?? 8;
-    const samples = component.samples ?? 6;
+    // At least one of each: the gather divides by the ring count and steps the
+    // angle by the sample count, so zero is a division by zero that reaches the
+    // tap offsets as NaN rather than as a missing effect.
+    const nearRings = Math.max(1, Math.round(component.nearRings ?? 8));
+    const farRings = Math.max(1, Math.round(component.farRings ?? 8));
+    const samples = Math.max(1, Math.round(component.samples ?? 6));
 
     // The footprint one tap stands for, which sets how deep the chain has to
     // go. Rings are evenly spaced, so the level has to cover the larger of the
     // radial gap and the arc.
     //
     // At the cap, which is where the chain is deepest: the gather takes one
-    // ring per pixel of radius until `rings` binds, so the widest spacing it
-    // can ever ask for is the one this radius produces.
+    // ring per pixel of radius until the cap binds, so the widest spacing it
+    // can ever ask for is the one this radius produces. The smaller of the two
+    // caps, since that is the field whose rings spread furthest apart.
+    const ringCap = Math.min(nearRings, farRings);
     const spacing = Math.max(
-      maxCoCRadius / rings,
-      (2 * Math.PI * maxCoCRadius) / (rings * samples),
+      maxCoCRadius / ringCap,
+      (2 * Math.PI * maxCoCRadius) / (ringCap * samples),
     );
     // One level past that spacing, bounded by what the half-resolution image
     // actually has. Derived rather than a constant: a chain shorter than it
@@ -152,10 +167,19 @@ const dof: PostProcessingEffect = {
     // Packed by member name against DepthOfFieldParams, so a key that does not
     // exist there throws rather than shifting everything after it.
     const uDoFParams = {
-      viewportSize: [width, height],
       texelSize: [1 / width, 1 / height],
       halfTexelSize: [1 / halfWidth, 1 / halfHeight],
       screenPoint: component.screenPoint ?? [0.5, 0.5],
+      // The tile grid is a whole number of tiles, so it covers `tilesX *
+      // tilePixels >= halfWidth`. Addressing it with the image's own UV assumes
+      // those are equal — true only when the width divides — and otherwise
+      // drifts by up to a whole tile towards the far edge, which eats the slack
+      // the dilation carries for the bilinear read and clips the near field's
+      // reach there.
+      tileScale: [
+        halfWidth / (tilesX * tilePixels),
+        halfHeight / (tilesY * tilePixels),
+      ],
       near: camera.near!,
       far: camera.far!,
       // m -> mm, the unit the thin lens model works in.
@@ -341,7 +365,8 @@ const dof: PostProcessingEffect = {
       // has to look to find one. One more than that, because the gather reads
       // this interpolated: the four tiles it blends are centred up to a tile
       // away from the pixel asking. It widens the region a large radius applies
-      // to by one tile, and cannot raise the radius itself.
+      // to by one tile, and cannot raise the radius itself. Bounded at
+      // MAX_DILATE_RADIUS by how the tile was sized above.
       DOF_TILE_DILATE_RADIUS: Math.ceil(maxCoCRadius / tilePixels) + 1,
     };
 
@@ -383,7 +408,8 @@ const dof: PostProcessingEffect = {
       name: "far",
       shader: dofGatherShader,
       constants: {
-        DOF_RINGS: rings,
+        DOF_NEAR_RINGS: nearRings,
+        DOF_FAR_RINGS: farRings,
         DOF_SAMPLES: samples,
         DOF_MAX_MIP: mipLevelCount - 1,
         USE_DOF_RING_OCCLUSION: component.ringOcclusion ?? true,
@@ -394,6 +420,15 @@ const dof: PostProcessingEffect = {
       targets: [{ name: "near", texture: near }],
       uniforms: {
         uDoFParams,
+        // The same texture the chain input is bound to, for its alpha alone.
+        // A tap's weight is an inverse disc area, singular for a small radius,
+        // so a radius interpolated across a silhouette belongs to neither
+        // surface and outweighs the real foreground beside it by orders of
+        // magnitude. Colour keeps the filtered binding above: point sampling
+        // that too would save the fetch and draw a bright texel of a coarse
+        // level as a hard square.
+        uCoCTexture: prefilter,
+        uCoCTextureSampler: samplers.nearest,
         uTileTexture: dilated,
         // Interpolated, so the near field's gather radius varies continuously
         // instead of stepping at tile borders.

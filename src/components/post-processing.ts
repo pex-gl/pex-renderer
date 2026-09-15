@@ -129,10 +129,13 @@ postProcessing.dof = (options?: DoFComponentOptions) => ({
   focusRange: 1, // m
   focusFalloff: 1,
 
-  // Radius cap as a fraction of viewport height. `rings` caps what the gather
-  // may spend reaching it; below that the count follows the radius.
+  // Radius cap as a fraction of viewport height. The ring caps bound what the
+  // gather may spend reaching it; below that the count follows the radius.
   maxCoCRadius: 0.05,
-  rings: 8,
+  // One per field: their spans are not comparable, so a shared cap starves the
+  // near field, whose span is the neighbourhood's rather than the pixel's.
+  nearRings: 8,
+  farRings: 8,
   samples: 6,
   ringOcclusion: true,
   postFilter: true,

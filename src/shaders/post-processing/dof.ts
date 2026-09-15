@@ -172,14 +172,14 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
   let base = i32(input.position.x) * DOF_TILE_SIZE;
   let row = f32(i32(input.position.y)) + 0.5;
 
-  var tile = vec2f(0.0);
+  var tile = vec4f(0.0, 0.0, -DOF_TILE_ABSENT, -DOF_TILE_ABSENT);
 
   for (var i: i32 = 0; i < DOF_TILE_SIZE; i++) {
     let uv = vec2f(f32(base + i) + 0.5, row) * uPostProcessing.sourceTexelSize;
     tile = max(tile, dofTileCoC(textureSampleLevel(uTexture, uTextureSampler, uv, 0.0).a));
   }
 
-  return vec4f(tile, 0.0, 1.0);
+  return tile;
 }
 `);
 };
@@ -201,14 +201,14 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
   let column = f32(i32(input.position.x)) + 0.5;
   let base = i32(input.position.y) * DOF_TILE_SIZE;
 
-  var tile = vec2f(0.0);
+  var tile = vec4f(0.0, 0.0, -DOF_TILE_ABSENT, -DOF_TILE_ABSENT);
 
   for (var i: i32 = 0; i < DOF_TILE_SIZE; i++) {
     let uv = vec2f(column, f32(base + i) + 0.5) * uPostProcessing.sourceTexelSize;
-    tile = max(tile, textureSampleLevel(uTexture, uTextureSampler, uv, 0.0).rg);
+    tile = max(tile, textureSampleLevel(uTexture, uTextureSampler, uv, 0.0));
   }
 
-  return vec4f(tile, 0.0, 1.0);
+  return tile;
 }
 `);
 };
@@ -234,7 +234,7 @@ ${fullscreenVertex()}
 
 @fragment
 fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
-  var tile = vec2f(0.0);
+  var tile = vec4f(0.0, 0.0, -DOF_TILE_ABSENT, -DOF_TILE_ABSENT);
   let limit = DOF_TILE_DILATE_RADIUS * DOF_TILE_DILATE_RADIUS;
 
   for (var y: i32 = -DOF_TILE_DILATE_RADIUS; y <= DOF_TILE_DILATE_RADIUS; y++) {
@@ -244,17 +244,17 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
       }
 
       let uv = input.texCoord0 + vec2f(f32(x), f32(y)) * uPostProcessing.sourceTexelSize;
-      tile = max(tile, textureSampleLevel(uTexture, uTextureSampler, uv, 0.0).rg);
+      tile = max(tile, textureSampleLevel(uTexture, uTextureSampler, uv, 0.0));
     }
   }
 
-  return vec4f(tile, 0.0, 1.0);
+  return tile;
 }
 `);
 };
 
 /**
- * The gather: both fields, from one set of taps, at half resolution.
+ * The gather: both fields, each over its own span, at half resolution.
  *
  * Two attachments because the fields composite differently — the far one by the
  * destination's own defocus, the near one by its own coverage — and one image
@@ -273,6 +273,8 @@ ${SHADERS.depthOfField.gather}
 
 ${params(alloc)}
 ${textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uTexture")}
+${/* The prefilter again, to read a radius unfiltered; see `dofGather`. */ ""}
+${textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uCoCTexture")}
 ${textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uTileTexture")}
 
 ${fullscreenVertex()}
@@ -287,11 +289,18 @@ fn fragmentMain(input: VertexOutput) -> FragmentOutput {
   // inside it needs, and a blend of two such values stays above the larger's
   // true requirement. Point sampling would quantise the near field's gather
   // radius to the tile grid, a visible step in blur along every tile border.
-  let tile = textureSampleLevel(uTileTexture, uTileTextureSampler, input.texCoord0, 0.0).rg;
+  let tile = textureSampleLevel(
+    uTileTexture,
+    uTileTextureSampler,
+    input.texCoord0 * uDoFParams.tileScale,
+    0.0
+  );
 
   let fields = dofGather(
     uTexture,
     uTextureSampler,
+    uCoCTexture,
+    uCoCTextureSampler,
     input.texCoord0,
     input.position.xy,
     tile,
@@ -514,7 +523,12 @@ ${
   // Its own attachment rather than in place of the image: everything after this
   // still applies exposure and a tone map, so a visualization written into the
   // chain would arrive display-encoded and could not be read as a number.
-  let tile = textureSampleLevel(uTileTexture, uTileTextureSampler, input.texCoord0, 0.0).rg;
+  let tile = textureSampleLevel(
+    uTileTexture,
+    uTileTextureSampler,
+    input.texCoord0 * uDoFParams.tileScale,
+    0.0
+  ).xy;
 
   var output: FragmentOutput;
   output.color = composited;

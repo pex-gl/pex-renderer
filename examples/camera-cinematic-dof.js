@@ -96,7 +96,8 @@ const postProcessing = components.postProcessing({
     focusFalloff: 1,
     // Bokeh
     maxCoCRadius: 0.05,
-    rings: 4,
+    nearRings: 8,
+    farRings: 8,
     samples: 6,
     ringOcclusion: true,
     postFilter: true,
@@ -108,6 +109,7 @@ const postProcessing = components.postProcessing({
     debug: false,
   }),
 });
+// cameraEntity.orbiter = components.orbiter({ element: ctx.canvas });
 cameraEntity.postProcessing = postProcessing;
 cameraEntity.camera.far = 100;
 
@@ -195,6 +197,33 @@ gui.addRadioList(
     { name: "W:H", value: 2 },
   ],
   onResize,
+);
+gui.addRadioList(
+  "Debug Post-Processing",
+  renderEngine.systems.find(
+    (system) => system.type == "render-pipeline-system",
+  ),
+  "debugRender",
+  [
+    "",
+    "dof.cocResolve",
+    "dof.prefilter",
+    "dof.downsample[1]",
+    // "dof.downsample[2]",
+    // "dof.downsample[3]",
+    "dof.tileMaxX",
+    "dof.tileMaxY",
+    "dof.tileDilate",
+    "dof.far",
+    "dof.near",
+    "dof.farBlur",
+    "dof.nearBlur",
+    "dof.main",
+    "dof.debug",
+  ].map((value) => ({
+    name: value || "No debug",
+    value,
+  })),
 );
 gui.addColumn("Camera");
 gui.addHeader("Planes");
@@ -291,7 +320,16 @@ gui.addParam("Max CoC Radius", postProcessing.dof, "maxCoCRadius", {
   min: 0,
   max: 0.2,
 });
-gui.addParam("Rings", postProcessing.dof, "rings", { min: 1, max: 6, step: 1 });
+gui.addParam("Near rings", postProcessing.dof, "nearRings", {
+  min: 1,
+  max: 16,
+  step: 1,
+});
+gui.addParam("Far rings", postProcessing.dof, "farRings", {
+  min: 1,
+  max: 16,
+  step: 1,
+});
 gui.addParam("Samples", postProcessing.dof, "samples", {
   min: 3,
   max: 12,

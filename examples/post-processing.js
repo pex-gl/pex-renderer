@@ -29,19 +29,19 @@ const State = {
   baseColor: [0.8, 0.1, 0.1, 1.0],
 
   msaa: false,
-  taa: true,
-  motionBlur: true,
-  ssao: true,
+  taa: false,
+  motionBlur: false,
+  ssao: false,
   dof: true,
-  bloom: true,
-  lensFlare: true,
+  bloom: false,
+  lensFlare: false,
   fog: false,
-  vignette: true,
-  lut: true,
-  colorCorrection: true,
+  vignette: false,
+  lut: false,
+  colorCorrection: false,
   smaa: false,
-  fxaa: true,
-  filmGrain: true,
+  fxaa: false,
+  filmGrain: false,
 };
 
 const pixelRatio = 1; // devicePixelRatio;
@@ -142,7 +142,8 @@ const postProcessing = components.postProcessing({
     focusOnScreenPoint: false,
     screenPoint: [0.5, 0.5],
     maxCoCRadius: 0.05,
-    rings: 8,
+    nearRings: 8,
+    farRings: 8,
     samples: 6,
     ringOcclusion: true,
     postFilter: true,
@@ -826,7 +827,12 @@ gui.addParam("Max CoC Radius", postProcessing.dof, "maxCoCRadius", {
   min: 0,
   max: 0.2,
 });
-gui.addParam("Rings", postProcessing.dof, "rings", {
+gui.addParam("Near rings", postProcessing.dof, "nearRings", {
+  min: 1,
+  max: 16,
+  step: 1,
+});
+gui.addParam("Far rings", postProcessing.dof, "farRings", {
   min: 1,
   max: 16,
   step: 1,

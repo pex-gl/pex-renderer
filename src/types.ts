@@ -706,28 +706,40 @@ export interface DoFComponentOptions {
    * Largest circle of confusion radius, as a fraction of viewport height.
    *
    * A cap, and also the sample budget: the gather spends
-   * {@link DoFComponentOptions.rings} and {@link DoFComponentOptions.samples}
-   * taps over whatever radius the neighbourhood asks for, so this decides how
-   * thinly they can ever be spread. A fraction of height rather than pixels,
-   * which is what keeps one setting blurring over the same fraction of the
-   * image at every resolution.
+   * {@link DoFComponentOptions.nearRings}, {@link DoFComponentOptions.farRings}
+   * and {@link DoFComponentOptions.samples} taps over whatever radius the
+   * neighbourhood asks for, so this decides how thinly they can ever be spread.
+   * A fraction of height rather than pixels, which is what keeps one setting
+   * blurring over the same fraction of the image at every resolution.
    */
   maxCoCRadius?: number;
   /**
-   * Most concentric rings of samples the gather may spend. Quality, not radius.
+   * Most concentric rings the near field's gather may spend. Quality, not
+   * radius.
    *
    * A cap rather than a count: one ring per pixel of radius resolves a disc
    * exactly, so the gather takes that many until this binds. Below it a small
    * circle of confusion costs proportionally fewer taps; above it the rings
-   * spread and the mip chain covers the gap, which the near field shows first —
-   * its coverage starts falling off in steps one ring apart.
+   * spread and the mip chain covers the gap, which shows as coverage falling
+   * off in steps one ring apart.
    *
    * Rings are evenly spaced and carry samples in proportion to their
    * circumference, so tap density is uniform per unit area and one mip level
    * serves the whole kernel. Raising this converges on a flat disc; it does not
    * change how far the blur reaches.
+   *
+   * Separate from {@link DoFComponentOptions.farRings} because the two spans
+   * are not comparable: a foreground scatters in from wherever it is, so the
+   * near field is sized by the neighbourhood, where the far field is sized by
+   * one pixel's own defocus. The near field is therefore the one a shared cap
+   * starves.
    */
-  rings?: number;
+  nearRings?: number;
+  /**
+   * Most concentric rings the far field's gather may spend. Quality, not
+   * radius. See {@link DoFComponentOptions.nearRings}.
+   */
+  farRings?: number;
   /**
    * Samples in the first ring; ring i carries i times this. Quality, not
    * radius.
