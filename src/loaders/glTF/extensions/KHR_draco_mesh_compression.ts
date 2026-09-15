@@ -1,6 +1,9 @@
 import { loadDraco } from "pex-loaders";
 
-import { WEBGL_TYPED_ARRAY_BY_COMPONENT_TYPES, normalizeData } from "../common.js";
+import {
+  WEBGL_TYPED_ARRAY_BY_COMPONENT_TYPES,
+  normalizeData,
+} from "../common.js";
 
 export interface DracoOptions {
   dracoOptions?: Record<string, any>;
@@ -53,7 +56,8 @@ export async function resolveDracoPrimitive(
     // Decoded attributes bypass resolveAttributes, so its post-decode
     // conversions have to be repeated here or they are silently skipped.
     for (const name of normalizedAttributes) {
-      if (geometry[name]) geometry[name].data = normalizeData(geometry[name].data);
+      if (geometry[name])
+        geometry[name].data = normalizeData(geometry[name].data);
     }
 
     // JOINTS_0 decodes to the accessor's integer type. As on the uncompressed

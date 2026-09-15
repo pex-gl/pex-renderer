@@ -81,7 +81,12 @@ export class ResourcePool {
   /** Keyed by resource name: persistent textures are never substitutable. */
   persistent = new Map<
     string,
-    { texture: GpuTexture; key: string; bytes: number; usage: GPUTextureUsageFlags }
+    {
+      texture: GpuTexture;
+      key: string;
+      bytes: number;
+      usage: GPUTextureUsageFlags;
+    }
   >();
 
   liveBytes = 0;
@@ -95,15 +100,20 @@ export class ResourcePool {
 
   /** The only method that creates a texture; the rest hand out existing ones. */
   allocate(
-    { persistent, mipmap, ...descriptor }: TextureDescriptor,
+    descriptor: TextureDescriptor,
     usage: GPUTextureUsageFlags,
     mipLevelCount: number,
   ): GpuTexture {
+    const options = { ...descriptor };
+    // Graph-level, not createTexture's: `persistent` is pooling identity, and
+    // the chain is allocated rather than generated since there is no data.
+    delete options.persistent;
+    delete options.mipmap;
+
     return createTexture(this.ctx, {
       label: "frame-graph texture",
-      ...descriptor,
-      format: descriptor.format ?? "rgba8unorm",
-      // No initial data, so the chain is allocated rather than generated.
+      ...options,
+      format: options.format ?? "rgba8unorm",
       ...(mipLevelCount > 1 && { mipLevelCount }),
       usage,
     });

@@ -8,7 +8,10 @@ import { resolveNodeTransform, type ResolvedNodeTransform } from "./node.js";
 import { resolveCamera } from "./camera.js";
 import { resolveLight } from "./light.js";
 import { resolveSkin } from "./skin.js";
-import { resolveAnimation, type ResolvedAnimationChannel } from "./animation.js";
+import {
+  resolveAnimation,
+  type ResolvedAnimationChannel,
+} from "./animation.js";
 import { resolveMesh } from "./mesh.js";
 import { resolveMeshGpuInstancing } from "./extensions/EXT_mesh_gpu_instancing.js";
 import { resolveLightsImageBased } from "./extensions/EXT_lights_image_based.js";
@@ -41,7 +44,11 @@ export interface GltfDocument {
   defaultSceneIndex: number;
   scenes: ResolvedGltfScene[];
   nodes: ResolvedGltfNode[];
-  animations: { name: string; duration: number; channels: ResolvedAnimationChannel[] }[];
+  animations: {
+    name: string;
+    duration: number;
+    channels: ResolvedAnimationChannel[];
+  }[];
 }
 
 export interface LoadGltfDocumentOptions {
@@ -66,9 +73,9 @@ const DEFAULT_OPTIONS = {
  * Loads and fully resolves a glTF/GLB file into a generic, glTF-spec-shaped
  * document: GPU textures/buffers are created via pex-gpu, but node/mesh/
  * material data uses glTF vocabulary throughout (attribute semantics like
- * "POSITION", material fields like "baseColorFactor") — no pex-renderer
- * entity or component types appear anywhere here. See
- * loaders/glTF/pex-renderer.ts for the ECS mapping.
+ * "POSITION", material fields like "baseColorFactor") — no pex-renderer entity
+ * or component types appear anywhere here. See loaders/glTF/pex-renderer.ts for
+ * the ECS mapping.
  */
 async function loadGltfDocument(
   urlOrData: string | ArrayBuffer | object,
@@ -86,7 +93,8 @@ async function loadGltfDocument(
     const url = urlOrData as string;
     const extension = getFileExtension(url);
     basePath ??= getDirname(url);
-    data = extension === "glb" ? await loadArrayBuffer(url) : await loadJson(url);
+    data =
+      extension === "glb" ? await loadArrayBuffer(url) : await loadJson(url);
   }
 
   // https://github.com/KhronosGroup/glTF/blob/main/specification/2.0/schema/glTF.schema.json
@@ -97,7 +105,10 @@ async function loadGltfDocument(
     (extension: string) => !SUPPORTED_EXTENSIONS.has(extension),
   );
   if (requiredExtensions.length) {
-    console.error("glTF loader: missing required extensions", requiredExtensions);
+    console.error(
+      "glTF loader: missing required extensions",
+      requiredExtensions,
+    );
   }
   const unsupportedExtensions = (json.extensionsUsed ?? []).filter(
     (extension: string) => !SUPPORTED_EXTENSIONS.has(extension),
@@ -107,19 +118,21 @@ async function loadGltfDocument(
   }
 
   // https://github.com/KhronosGroup/glTF/blob/main/specification/2.0/schema/asset.schema.json
-  const version = Number.parseInt(json.asset.version, 10);
+  const version = Number(json.asset.version);
   if (!version || version < 2) {
-    console.warn(`glTF loader: invalid or unsupported version: ${json.asset.version}`);
+    console.warn(
+      `glTF loader: invalid or unsupported version: ${json.asset.version}`,
+    );
   }
 
   // Buffers: https://github.com/KhronosGroup/glTF/blob/main/specification/2.0/schema/buffer.schema.json
   await Promise.all(
     (json.buffers ?? []).map(async (buffer: any) => {
-      buffer._data = bin
-        ? bin
-        : isBase64(buffer.uri)
+      buffer._data =
+        bin ??
+        (isBase64(buffer.uri)
           ? decodeBase64(buffer.uri)
-          : await loadArrayBuffer([basePath, buffer.uri].join("/"));
+          : await loadArrayBuffer([basePath, buffer.uri].join("/")));
     }),
   );
 
@@ -162,7 +175,9 @@ async function loadGltfDocument(
       const lightIndex = node.extensions?.KHR_lights_punctual?.light;
       if (opts.includeLights && Number.isInteger(lightIndex)) {
         resolved.lightIndex = lightIndex;
-        resolved.light = resolveLight(json.extensions.KHR_lights_punctual.lights[lightIndex]);
+        resolved.light = resolveLight(
+          json.extensions.KHR_lights_punctual.lights[lightIndex],
+        );
       }
 
       if (Number.isInteger(node.skin)) {

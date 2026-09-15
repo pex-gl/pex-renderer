@@ -32,7 +32,10 @@ export const NO_JITTER = [0, 0];
 const TEMP_MAT2X3 = mat2x3.create();
 const TEMP_MAT3_SET = new Map<string, number[]>();
 
-function getTextureMatrix(out: Mat2x3, texture: Partial<TextureTransform>): number[] {
+function getTextureMatrix(
+  out: Mat2x3,
+  texture: Partial<TextureTransform>,
+): number[] {
   if (!texture.offset && !texture.rotation && !texture.scale) {
     return IDENTITY_MAT3;
   }
@@ -217,9 +220,10 @@ function getJointMatricesUniform(
     : "_paddedJointMatrices";
   if (skin[key]?.length !== maxJoints) {
     const source = previous ? skin._previousJointMatrices : skin.jointMatrices;
-    const padded = new Array(maxJoints);
-    for (let i = 0; i < maxJoints; i++) padded[i] = source[i] ?? IDENTITY_MAT4;
-    skin[key] = padded;
+    skin[key] = Array.from(
+      { length: maxJoints },
+      (_, i) => source[i] ?? IDENTITY_MAT4,
+    );
   }
   return skin[key];
 }
@@ -293,12 +297,16 @@ export default (): RendererSystem => ({
   getShader() {
     return "";
   },
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   getShaderOptions(_entity: Entity, _options: RendererPassOptions) {
     return {};
   },
   getDefines(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _entity: Entity,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _options: RendererPassOptions,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _precomputed?: unknown,
   ) {
     return new Set<string>();
@@ -306,13 +314,17 @@ export default (): RendererSystem => ({
   getVariantKey(
     entity: Entity,
     defines: Set<string>,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _options: RendererPassOptions,
   ) {
     return definesKey(defines);
   },
   getPipelineOptions(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _entity: Entity,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _options: RendererPassOptions,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _precomputed?: unknown,
   ) {
     return {};
@@ -397,17 +409,20 @@ export default (): RendererSystem => ({
     const uHooks: Record<string, any> = {};
     const uniforms: Record<string, any> = {};
 
-    for (const key of Object.keys(values)) {
+    for (const [key, value] of Object.entries(values)) {
       // Supplied alongside its texture below, and not a field of the block.
-      if (key.endsWith("Sampler") && bindings[key.slice(0, -"Sampler".length)]) {
+      if (
+        key.endsWith("Sampler") &&
+        bindings[key.slice(0, -"Sampler".length)]
+      ) {
         continue;
       }
       if (bindings[key]?.startsWith("texture_")) {
         const name = uniformName(key);
-        uniforms[name] = values[key];
+        uniforms[name] = value;
         uniforms[samplerName(name)] = values[`${key}Sampler`] ?? sampler;
       } else {
-        uHooks[key] = values[key];
+        uHooks[key] = value;
       }
     }
     if (Object.keys(uHooks).length) uniforms.uHooks = uHooks;

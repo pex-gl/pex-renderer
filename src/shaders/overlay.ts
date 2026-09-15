@@ -5,7 +5,7 @@ import { fragmentOutputStruct, vertexOutputStruct } from "./wgsl.js";
 import type { PipelineShaderOptions } from "../types.js";
 
 export const overlayShader = (
-  defines: Set<string> = new Set(),
+  defines?: Set<string>,
   options: PipelineShaderOptions = {},
 ): string => {
   const hooks = options.hooks || {};

@@ -229,13 +229,8 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
   // that first enables one waits for its module. Nothing here touches the GPU:
   // the graph only records declarations, and execution happens after compile.
   async update(entities: Entity[], options: any = {}) {
-    let {
-      time,
-      frameIndex = 0,
-      renderView,
-      renderers,
-      drawToScreen = true,
-    } = options;
+    const { time, frameIndex = 0, renderers, drawToScreen = true } = options;
+    let { renderView } = options;
 
     this.time = time;
     this.frameIndex = frameIndex;
@@ -251,7 +246,8 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
     }
 
     const { cameraEntity, camera } = renderView;
-    const [, , width, height] = renderView.viewport;
+    const width = renderView.viewport[2];
+    const height = renderView.viewport[3];
     const postProcessing = cameraEntity.postProcessing;
     const viewId = cameraEntity.id;
 

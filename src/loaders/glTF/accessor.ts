@@ -30,7 +30,9 @@ export function getAccessor(accessor: any, bufferViews: any[]): any {
   const itemBytes = byteSize * numberOfComponents;
   const byteStride = accessor._bufferView.byteStride;
   if (byteStride && byteStride !== itemBytes) {
-    accessor._data = new TypedArrayConstructor(accessor.count * numberOfComponents);
+    accessor._data = new TypedArrayConstructor(
+      accessor.count * numberOfComponents,
+    );
     for (let i = 0; i < accessor.count; i++) {
       accessor._data.set(
         new TypedArrayConstructor(

@@ -16,7 +16,7 @@ import type { PipelineShaderOptions } from "../types.js";
 // other HDRIs.
 
 export const skyShader = (
-  defines: Set<string> = new Set(),
+  defines?: Set<string>,
   options: PipelineShaderOptions = {},
 ): string => {
   const hooks = options.hooks || {};
@@ -48,7 +48,7 @@ ${fragmentOutputStruct(sceneOutputMembers(outputs))}
 // Vertex includes
 ${SHADERS.math.PI}
 ${SHADERS.math.saturate}
-${(SHADERS as any).sky}
+${SHADERS.sky}
 
 ${hooks.vertDeclarationsEnd ?? ""}
 

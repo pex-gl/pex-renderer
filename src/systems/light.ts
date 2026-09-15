@@ -21,8 +21,8 @@ const getInvSqrFalloff = (range: number) =>
  *
  * Adds:
  *
- * - "_viewMatrix" to light components (the shadow projection is fitted per
- *   camera layer and lives on the render pipeline's LightShadow instead)
+ * - "_viewMatrix" to light components (the shadow projection is fitted per camera
+ *   layer and lives on the render pipeline's LightShadow instead)
  * - "_direction" to directional and spot light components
  * - "_intensity" to every light component: the authored intensity converted to
  *   the unit the shaders integrate (see utils.ts)

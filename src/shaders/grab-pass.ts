@@ -2,13 +2,13 @@ import { fragmentOutputStruct, vertexOutputStruct } from "./wgsl.js";
 import type { PipelineShaderOptions } from "../types.js";
 
 /**
- * Copies the main pass's color target into the (same-or-smaller,
- * power-of-two) grab pass texture, top-left anchored. Both textures share the
- * same origin, so the fragment position doubles directly as the source texel
- * coordinate — an exact copy needs no sampler or UV remap.
+ * Copies the main pass's color target into the (same-or-smaller, power-of-two)
+ * grab pass texture, top-left anchored. Both textures share the same origin, so
+ * the fragment position doubles directly as the source texel coordinate — an
+ * exact copy needs no sampler or UV remap.
  */
 export const grabPassShader = (
-  defines: Set<string> = new Set(),
+  defines?: Set<string>,
   options: PipelineShaderOptions = {},
 ): string => {
   const hooks = options.hooks || {};

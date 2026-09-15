@@ -240,8 +240,8 @@ fn computeMain(@builtin(global_invocation_id) gid: vec3u) {
  * the specular cubemap via GGX importance sampling (split-sum). Each sample is
  * fetched from the radiance mip whose texel solid angle matches the sample's
  * footprint (filtered importance sampling, Colbert & Krivánek), which removes
- * the coherent under-sampling noise a full-resolution fetch produces.
- * One dispatch per roughness level writes all six faces via a 2d-array view.
+ * the coherent under-sampling noise a full-resolution fetch produces. One
+ * dispatch per roughness level writes all six faces via a 2d-array view.
  */
 export const reflectionProbePrefilterShader = (): string => /* wgsl */ `
 ${SHADERS.math.PI}

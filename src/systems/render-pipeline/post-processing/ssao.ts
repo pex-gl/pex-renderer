@@ -103,16 +103,8 @@ function declareDepthPyramid(
  * a linear view-space pyramid, estimate against it, denoise.
  */
 function declareGTAO(scope: EstimatorScope) {
-  const {
-    cameraEntity,
-    frameIndex,
-    textures,
-    pass,
-    compute,
-    createTexture,
-    depth,
-    normal,
-  } = scope;
+  const { cameraEntity, frameIndex, textures, pass, createTexture, normal } =
+    scope;
   const { camera, component, width, height, viewportSize, viewportPixelSize } =
     getEstimatorScope(scope);
 

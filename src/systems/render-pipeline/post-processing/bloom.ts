@@ -135,7 +135,7 @@ const bloom: PostProcessingEffect = {
 
     /**
      * Back up the pyramid, smallest first: each level is added into the one
-     * above it *at that level's size*, so the sum accumulates as it climbs and
+     * above it _at that level's size_, so the sum accumulates as it climbs and
      * the last draw is the half-resolution bright pass. Combine's bilinear read
      * takes it the rest of the way.
      *

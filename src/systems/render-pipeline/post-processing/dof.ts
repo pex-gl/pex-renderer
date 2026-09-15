@@ -14,7 +14,10 @@ import {
 import type { Entity } from "../../../types.js";
 import type { PostProcessingEffect } from "../post-processing.js";
 
-/** Colour and the signed circle of confusion; the two fields; all half resolution. */
+/**
+ * Colour and the signed circle of confusion; the two fields; all half
+ * resolution.
+ */
 const FIELD_FORMAT = "rgba16float" as GPUTextureFormat;
 
 /**
@@ -36,11 +39,11 @@ const TILE_FORMAT = "rgba16float" as GPUTextureFormat;
 const MIN_TILE_SIZE = 8;
 
 /**
- * How many tiles the dilation is allowed to reach, which bounds it at
- * (2r + 1)^2 taps. Growing the tiles instead is what keeps that square from
- * following the radius: a 5% radius at 1080p reaches four tiles of eight, but
- * a 20% one at 4K would reach twenty-seven, and the dilation would cost more
- * than the gather it exists to make cheap.
+ * How many tiles the dilation is allowed to reach, which bounds it at (2r +
+ * 1)^2 taps. Growing the tiles instead is what keeps that square from following
+ * the radius: a 5% radius at 1080p reaches four tiles of eight, but a 20% one
+ * at 4K would reach twenty-seven, and the dilation would cost more than the
+ * gather it exists to make cheap.
  *
  * The tile is sized against one less than this, because the reach is the radius
  * plus the extra tile the bilinear read needs — sizing against the whole budget
@@ -48,7 +51,10 @@ const MIN_TILE_SIZE = 8;
  */
 const MAX_DILATE_RADIUS = 4;
 
-/** Below this there is no disc to speak of and the transition blur has it covered. */
+/**
+ * Below this there is no disc to speak of and the transition blur has it
+ * covered.
+ */
 const MIN_COC_RADIUS = 0.5;
 
 /**
@@ -160,9 +166,9 @@ const dof: PostProcessingEffect = {
     const focusOnScreenPoint = !!component.focusOnScreenPoint;
     const chromaticAberration = component.chromaticAberration ?? 0;
 
-    const defines = new Set([
-      ...(focusOnScreenPoint ? ["USE_FOCUS_ON_SCREEN_POINT"] : []),
-    ]);
+    const defines = new Set(
+      focusOnScreenPoint ? ["USE_FOCUS_ON_SCREEN_POINT"] : [],
+    );
 
     // Packed by member name against DepthOfFieldParams, so a key that does not
     // exist there throws rather than shifting everything after it.

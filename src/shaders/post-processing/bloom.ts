@@ -42,7 +42,8 @@ export const thresholdShader = (defines: Set<string> = new Set()): string => {
   const useEmissiveTexture = defines.has("USE_EMISSIVE_TEXTURE");
 
   // Emissive is added on top unless the threshold ran on one specific source.
-  const addEmissive = useEmissiveTexture && !useSourceColor && !useSourceEmissive;
+  const addEmissive =
+    useEmissiveTexture && !useSourceColor && !useSourceEmissive;
 
   const alloc = createBindingAllocator(1);
 

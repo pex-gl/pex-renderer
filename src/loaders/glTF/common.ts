@@ -94,15 +94,15 @@ export const CHUNK_TYPE = {
 } as const;
 
 // https://github.com/KhronosGroup/glTF/tree/master/extensions/2.0/Khronos/KHR_mesh_quantization#encoding-quantized-data
-export const MESH_QUANTIZATION_SCALE = new Map<Function, number>([
+export const MESH_QUANTIZATION_SCALE = new Map<object, number>([
   [Int8Array, 1 / 127],
   [Uint8Array, 1 / 255],
   [Int16Array, 1 / 32_767],
   [Uint16Array, 1 / 65_535],
 ]);
 
-export const normalizeData = (data: { constructor: Function }): Float32Array =>
-  new Float32Array(data as unknown as ArrayLike<number>).map(
+export const normalizeData = (data: ArrayLike<number>): Float32Array =>
+  new Float32Array(data).map(
     (v) => v * (MESH_QUANTIZATION_SCALE.get(data.constructor) ?? 1),
   );
 

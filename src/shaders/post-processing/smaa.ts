@@ -19,7 +19,8 @@ import { postProcessingStruct } from "./common.js";
 // Texture coordinates keep the top-left origin the reference implementation
 // assumes (see the smaa chunk), which is also WebGPU's.
 
-const TEX_COORD = "vec2f(input.position.x * 0.5 + 0.5, 0.5 - input.position.y * 0.5)";
+const TEX_COORD =
+  "vec2f(input.position.x * 0.5 + 0.5, 0.5 - input.position.y * 0.5)";
 
 const VERTEX_INPUT = /* wgsl */ `
 struct VertexInput {
@@ -39,7 +40,12 @@ ${postProcessingStruct}
 
 ${
   depth
-    ? textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uDepthTexture", "texture_depth_2d")
+    ? textureSamplerDeclaration(
+        0,
+        alloc.nextTextureSampler(),
+        "uDepthTexture",
+        "texture_depth_2d",
+      )
     : textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uTexture")
 }
 

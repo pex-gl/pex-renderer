@@ -253,7 +253,7 @@ export interface AreaLightComponentOptions extends LightShadowInternals {
   castShadows?: boolean;
   shadowMapSize?: number;
 }
-export interface AxesHelperComponentOptions {}
+export type AxesHelperComponentOptions = Record<string, never>;
 export interface BoundingBoxHelperComponentOptions {
   color?: Color;
 }
@@ -431,7 +431,7 @@ export interface GridHelperComponentOptions {
   color?: Color;
   size?: number;
 }
-export interface LightHelperComponentOptions {}
+export type LightHelperComponentOptions = Record<string, never>;
 /**
  * Named blend equation, after the common compositing-software equivalents:
  * "normal" (non-premultiplied "over"), "premultiplied" ("over" with color
@@ -1585,7 +1585,19 @@ export interface SystemOptions {
   ctx: GpuContext;
   frameGraph: FrameGraph;
 }
-export type SystemUpdate = (entities: Entity[], deltaTime?: number) => void;
+/**
+ * Per-frame values the caller threads to systems that need them. Open because
+ * the render engine passes itself, so a system reads whichever fields it knows.
+ */
+export interface SystemUpdateOptions {
+  deltaTime?: number;
+  frameIndex?: number;
+  [key: string]: unknown;
+}
+export type SystemUpdate = (
+  entities: Entity[],
+  options?: SystemUpdateOptions,
+) => void;
 export type SystemDispose = (entities?: Entity[]) => void;
 export interface System {
   type: string;
@@ -1842,15 +1854,22 @@ export type RenderPipelineSystem = RenderPipelineCore &
   CullingMethods;
 
 // World
-export type WorldAdd = (entity: Entity) => void;
-export type WorldAddSystem = (system: System) => void;
+export interface WorldOptions {
+  entities?: Entity[];
+  systems?: System[];
+}
+export type WorldAdd = (entity: Entity) => Entity;
+export type WorldAddSystem = (system: System) => System;
 export type WorldUpdate = (deltaTime?: number) => void;
+/** Omitted entities dispose the whole world. */
+export type WorldDispose = (entities?: Entity | Entity[]) => void;
 export interface World {
   entities: Entity[];
   systems: System[];
   add: WorldAdd;
   addSystem: WorldAddSystem;
   update: WorldUpdate;
+  dispose: WorldDispose;
 }
 
 /** A camera and the region of a target it renders into. */

@@ -4,7 +4,10 @@ import type { GpuContext } from "../../types.js";
  * Resolves a glTF camera definition into a generic camera data object.
  * https://github.com/KhronosGroup/glTF/blob/main/specification/2.0/schema/camera.schema.json
  */
-export function resolveCamera(camera: any, ctx: GpuContext): Record<string, any> {
+export function resolveCamera(
+  camera: any,
+  ctx: GpuContext,
+): Record<string, any> {
   if (camera.type === "orthographic") {
     // https://github.com/KhronosGroup/glTF/blob/main/specification/2.0/schema/camera.orthographic.schema.json
     return {

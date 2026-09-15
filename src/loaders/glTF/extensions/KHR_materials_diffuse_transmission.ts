@@ -14,7 +14,9 @@ export function resolveDiffuseTransmission(
 
   const result: Record<string, any> = {
     diffuseTransmissionFactor: ext.diffuseTransmissionFactor ?? 0,
-    diffuseTransmissionColorFactor: ext.diffuseTransmissionColorFactor ?? [1, 1, 1],
+    diffuseTransmissionColorFactor: ext.diffuseTransmissionColorFactor ?? [
+      1, 1, 1,
+    ],
   };
   if (ext.diffuseTransmissionTexture) {
     result.diffuseTransmissionTexture = resolveTexture(

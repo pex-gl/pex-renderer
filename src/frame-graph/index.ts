@@ -60,9 +60,8 @@ export class FrameGraph {
   plan: CompiledPlan | undefined;
   debug = false;
   /**
-   * Measure each pass' GPU time with timestamp queries, into
-   * `profiler.latest`. Needs the context created with
-   * `requiredFeatures: ["timestamp-query"]`.
+   * Measure each pass' GPU time with timestamp queries, into `profiler.latest`.
+   * Needs the context created with `requiredFeatures: ["timestamp-query"]`.
    *
    * Off by default: it adds two query writes per pass and a readback, and the
    * results lag a frame or two behind.
@@ -408,7 +407,7 @@ export class FrameGraph {
     this.state.phase = "idle";
   }
 
-  /** setup + compile + execute, bracketing execution in one command buffer. */
+  /** Setup + compile + execute, bracketing execution in one command buffer. */
   async render(declare: () => void | Promise<void>): Promise<CompiledPlan> {
     await this.setup(declare);
     const compiled = this.compile();

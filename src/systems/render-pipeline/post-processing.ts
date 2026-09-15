@@ -1,7 +1,12 @@
 import type { ComputePipeline, RenderPipeline } from "pex-gpu";
 import { submit } from "pex-gpu";
 
-import { NAMESPACE, definesKey, mapValues } from "../../utils.js";
+import {
+  NAMESPACE,
+  compareStrings,
+  definesKey,
+  mapValues,
+} from "../../utils.js";
 import { isTextureDescriptor } from "../../frame-graph/state.js";
 
 import type {
@@ -60,7 +65,10 @@ const EFFECT_ORDER: readonly EffectRegistration[] = [
   { name: "ssao", load: () => import("./post-processing/ssao.js") },
   { name: "taa", load: () => import("./post-processing/taa.js") },
   { name: "dof", load: () => import("./post-processing/dof.js") },
-  { name: "motionBlur", load: () => import("./post-processing/motion-blur.js") },
+  {
+    name: "motionBlur",
+    load: () => import("./post-processing/motion-blur.js"),
+  },
   { name: "bloom", load: () => import("./post-processing/bloom.js") },
   { name: "lensFlare", load: () => import("./post-processing/lens-flare.js") },
   {
@@ -265,7 +273,7 @@ export interface PostProcessingEffect {
 
 const constantsKey = (constants: Record<string, number | boolean>) =>
   Object.keys(constants)
-    .sort()
+    .toSorted(compareStrings)
     .map((key) => `${key}=${constants[key]}`)
     .join(",");
 
@@ -328,16 +336,16 @@ export default ({
 
     let loading = this.postProcessingLoading.get(name);
     if (!loading) {
-      loading = load()
-        .then((module: { default: PostProcessingEffect }) => {
+      loading = (async () => {
+        try {
+          const module: { default: PostProcessingEffect } = await load();
           if (typeof module.default?.declare !== "function") {
-            throw new Error(
+            throw new TypeError(
               `"${name}" does not export a PostProcessingEffect.`,
             );
           }
           this.postProcessingEffects.set(name, module.default);
-        })
-        .catch((error: unknown) => {
+        } catch (error) {
           this.postProcessingEffects.set(name, null);
           console.error(
             NAMESPACE,
@@ -345,10 +353,10 @@ export default ({
             `failed to load effect "${name}"`,
             error,
           );
-        })
-        .finally(() => {
+        } finally {
           this.postProcessingLoading.delete(name);
-        });
+        }
+      })();
       this.postProcessingLoading.set(name, loading);
     }
     return loading;
@@ -517,7 +525,11 @@ export default ({
     frameGraph.addPass({
       name: `${key}.${viewId}`,
       color: [
-        { texture: output, ...(level && { level }), ...(clearValue && { clearValue }) },
+        {
+          texture: output,
+          ...(level && { level }),
+          ...(clearValue && { clearValue }),
+        },
         ...(targets ?? []).map(({ texture, clearValue: value }) => ({
           texture,
           ...(value && { clearValue: value }),

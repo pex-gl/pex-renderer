@@ -48,7 +48,10 @@ class BinaryReader {
  * Unpack a GLB (binary glTF) buffer into its JSON and BIN chunks.
  * https://www.khronos.org/registry/glTF/specs/2.0/glTF-2.0.html#glb-file-format-specification
  */
-function unpackBinary(data: ArrayBuffer): { json: string; bin: Uint8Array | null } {
+function unpackBinary(data: ArrayBuffer): {
+  json: string;
+  bin: Uint8Array | null;
+} {
   const binaryReader = new BinaryReader(data);
 
   // https://github.com/KhronosGroup/glTF/tree/master/specification/2.0#header
@@ -75,7 +78,7 @@ function unpackBinary(data: ArrayBuffer): { json: string; bin: Uint8Array | null
   const buffer = binaryReader.readUint8Array(chunkLength);
   const json =
     typeof TextDecoder === "undefined"
-      ? Array.from(buffer, (byte) => String.fromCharCode(byte)).join("")
+      ? Array.from(buffer, (byte) => String.fromCodePoint(byte)).join("")
       : new TextDecoder().decode(buffer);
 
   let bin: Uint8Array | null = null;
@@ -101,7 +104,10 @@ function unpackBinary(data: ArrayBuffer): { json: string; bin: Uint8Array | null
   return { json, bin };
 }
 
-/** Splits raw input (GLB ArrayBuffer, or already-parsed/loaded JSON) into { json, bin }. */
+/**
+ * Splits raw input (GLB ArrayBuffer, or already-parsed/loaded JSON) into {
+ * json, bin }.
+ */
 export function loadData(data: ArrayBuffer | object): {
   json: any;
   bin?: ArrayBuffer | undefined;
@@ -118,7 +124,7 @@ export function loadData(data: ArrayBuffer | object): {
 }
 
 export function isBase64(uri: string): boolean {
-  return uri.length >= 5 && uri.slice(0, 5) === "data:";
+  return uri.startsWith("data:");
 }
 
 export function decodeBase64(uri: string): ArrayBuffer {
@@ -127,7 +133,7 @@ export function decodeBase64(uri: string): ArrayBuffer {
   const bufferView = new Uint8Array(new ArrayBuffer(bufferLength));
 
   for (let i = 0; i < bufferLength; i++) {
-    bufferView[i] = decodedString.charCodeAt(i);
+    bufferView[i] = decodedString.codePointAt(i)!;
   }
 
   return bufferView.buffer;

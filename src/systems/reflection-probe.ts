@@ -57,7 +57,7 @@ interface ProbeCacheEntry {
   needsBake?: boolean;
   /** Direction of the analytic sky's sun, masked out of the SH projection. */
   sunDirection?: Vec3;
-  /** cos of the masked cone's radius; NO_SUN_MASK when there is no sun. */
+  /** Cos of the masked cone's radius; NO_SUN_MASK when there is no sun. */
   sunCosCutoff?: number;
 }
 

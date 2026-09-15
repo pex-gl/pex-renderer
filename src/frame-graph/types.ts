@@ -7,13 +7,18 @@ import type {
   Uniforms,
 } from "pex-gpu";
 
-import type { GpuBuffer, GpuContext, GpuTexture, RenderView } from "../types.js";
+import type {
+  GpuBuffer,
+  GpuContext,
+  GpuTexture,
+  RenderView,
+} from "../types.js";
 
 // ─── Handles ─────────────────────────────────────────────────────────────────
 
 /**
- * Reference to a virtual resource, resolved to a GPU object only inside a pass's
- * `execute`.
+ * Reference to a virtual resource, resolved to a GPU object only inside a
+ * pass's `execute`.
  *
  * Interned, one instance per resource: identity comparison works, and a handle
  * in a `uniforms` bag stays distinguishable from a numeric uniform.
@@ -41,7 +46,8 @@ export type PhysicalResource = GpuTexture | GpuBuffer;
  * "cube"`; `mipmap` allocates the chain rather than generating it.
  */
 export interface TextureDescriptor
-  extends Required<Pick<CreateTextureOptions, "width" | "height">>,
+  extends
+    Required<Pick<CreateTextureOptions, "width" | "height">>,
     Pick<
       CreateTextureOptions,
       | "label"
@@ -73,8 +79,10 @@ export type BufferDescriptor = CreateBufferOptions;
 // ─── Pass declaration ────────────────────────────────────────────────────────
 
 /** Color attachment with handles for textures; load/store ops are derived. */
-export interface ColorAttachmentDeclaration
-  extends Pick<ColorAttachment, "clearValue"> {
+export interface ColorAttachmentDeclaration extends Pick<
+  ColorAttachment,
+  "clearValue"
+> {
   texture: ResourceHandle;
   /** Cube face or array layer to render into. */
   layer?: number;
@@ -83,18 +91,19 @@ export interface ColorAttachmentDeclaration
   resolveTarget?: ResourceHandle;
 }
 
-export interface DepthStencilAttachmentDeclaration
-  extends Pick<
-    GPURenderPassDepthStencilAttachment,
-    "depthClearValue" | "stencilClearValue"
-  > {
+export interface DepthStencilAttachmentDeclaration extends Pick<
+  GPURenderPassDepthStencilAttachment,
+  "depthClearValue" | "stencilClearValue"
+> {
   texture: ResourceHandle;
   layer?: number;
 }
 
 /** `GPUTextureViewDescriptor` in the graph's `layer`/`level` vocabulary. */
-export interface SubResourceView
-  extends Pick<GPUTextureViewDescriptor, "dimension"> {
+export interface SubResourceView extends Pick<
+  GPUTextureViewDescriptor,
+  "dimension"
+> {
   level?: number;
   levelCount?: number;
   layer?: number;
@@ -142,10 +151,12 @@ export interface PassContext {
 
 export type PassExecute = (context: PassContext) => void;
 
-/** A write with an explicit usage flag, for a resource a `"raw"` pass touches
+/**
+ * A write with an explicit usage flag, for a resource a `"raw"` pass touches
  * outside the attachment path (eg. `RENDER_ATTACHMENT` for a helper that opens
  * its own render passes on the raw encoder). A bare handle defaults to
- * `STORAGE_BINDING`/`STORAGE`, the compute-write case. */
+ * `STORAGE_BINDING`/`STORAGE`, the compute-write case.
+ */
 export interface WriteDeclaration {
   handle: ResourceHandle;
   usage: GPUTextureUsageFlags | GPUBufferUsageFlags;
@@ -171,9 +182,8 @@ export interface PassDeclaration {
   reads?: ResourceHandle[];
   /**
    * Resources written outside the attachment path (storage textures, buffers,
-   * or — as a `{ handle, usage }` pair — whatever a `"raw"` pass's own
-   * commands need). Attachments are writes already and must not be repeated
-   * here.
+   * or — as a `{ handle, usage }` pair — whatever a `"raw"` pass's own commands
+   * need). Attachments are writes already and must not be repeated here.
    */
   writes?: (ResourceHandle | WriteDeclaration)[];
   /** Handle-valued entries become read edges and resolve before `execute`. */
@@ -216,7 +226,8 @@ export type StageCallback<T = any> = (
 // ─── Compiled plan ───────────────────────────────────────────────────────────
 
 export interface CompiledColorAttachment
-  extends Pick<ColorAttachment, "clearValue">,
+  extends
+    Pick<ColorAttachment, "clearValue">,
     Required<Pick<ColorAttachment, "loadOp" | "storeOp">> {
   handle: ResourceHandle;
   layer?: number;
@@ -225,7 +236,8 @@ export interface CompiledColorAttachment
 }
 
 export interface CompiledDepthStencilAttachment
-  extends Omit<CompiledColorAttachment, "clearValue" | "resolveTarget">,
+  extends
+    Omit<CompiledColorAttachment, "clearValue" | "resolveTarget">,
     Pick<
       GPURenderPassDepthStencilAttachment,
       "depthClearValue" | "stencilClearValue"
@@ -254,9 +266,8 @@ export interface CompiledResource {
   imported: boolean;
   descriptor: TextureDescriptor | BufferDescriptor;
   /**
-   * Derived from how passes use the resource — plus a sampled read for
-   * anything exported, which is read where no pass can declare it. Never
-   * requested.
+   * Derived from how passes use the resource — plus a sampled read for anything
+   * exported, which is read where no pass can declare it. Never requested.
    */
   usage: GPUTextureUsageFlags | GPUBufferUsageFlags;
   /** Never sampled and never outlives its pass, so it can stay memoryless. */

@@ -182,8 +182,8 @@ export class PassProfiler {
       else unmeasured++;
     }
 
-    const rows = [...this.latest]
-      .sort((left, right) => {
+    const rows = this.latest
+      .toSorted((left, right) => {
         if (left.valid !== right.valid) return left.valid ? 1 : -1;
         return right.ms - left.ms;
       })

@@ -22,11 +22,10 @@ export interface WriteSite {
 }
 
 /** Declaration-phase bookkeeping behind a resource. */
-export interface ResourceEntry
-  extends Pick<
-    CompiledResource,
-    "index" | "name" | "kind" | "descriptor" | "usage"
-  > {
+export interface ResourceEntry extends Pick<
+  CompiledResource,
+  "index" | "name" | "kind" | "descriptor" | "usage"
+> {
   handle: ResourceHandle;
   /** Set for imported resources; the graph never allocates or recycles these. */
   imported?: PhysicalResource;
@@ -36,7 +35,10 @@ export interface ResourceEntry
   persistent?: boolean;
   /** Declaration index of the last pass to write it, -1 if never written. */
   lastWriter: number;
-  /** Declaration indices reading the current version, for write-after-read edges. */
+  /**
+   * Declaration indices reading the current version, for write-after-read
+   * edges.
+   */
   currentReaders: number[];
   /** Number of read edges; drives culling. */
   refCount: number;
@@ -44,9 +46,8 @@ export interface ResourceEntry
 
 /** A declared pass with its defaults resolved. */
 export interface PassEntry
-  extends Required<
-      Pick<PassDeclaration, "name" | "type" | "neverCull" | "execute">
-    >,
+  extends
+    Required<Pick<PassDeclaration, "name" | "type" | "neverCull" | "execute">>,
     Pick<PassDeclaration, "uniforms" | "renderView"> {
   index: number;
   color: ColorAttachmentDeclaration[];
@@ -61,25 +62,25 @@ export interface PassEntry
 }
 
 /**
- * Where the graph is in the declare → compile → execute cycle; every phase guard
- * reads it.
+ * Where the graph is in the declare → compile → execute cycle; every phase
+ * guard reads it.
  *
  * `executing` covers a pass's `execute` callback only, not the whole of
- * {@link FrameGraph.execute}, so resolving a handle between passes still throws.
+ * {@link FrameGraph.execute}, so resolving a handle between passes still
+ * throws.
  */
 export type GraphPhase =
-  | "idle"
-  | "declaring"
-  | "declared"
-  | "compiled"
-  | "executing";
+  "idle" | "declaring" | "declared" | "compiled" | "executing";
 
 export interface GraphState {
   resources: ResourceEntry[];
   passes: PassEntry[];
   /** Names in declaration order, for duplicate detection and overrides. */
   passNames: Set<string>;
-  /** Persistent names declared this frame; two sharing one would share a texture. */
+  /**
+   * Persistent names declared this frame; two sharing one would share a
+   * texture.
+   */
   persistentNames: Set<string>;
   /** Handle already handed out for a physical resource this frame. */
   importedResources: Map<PhysicalResource, ResourceHandle>;

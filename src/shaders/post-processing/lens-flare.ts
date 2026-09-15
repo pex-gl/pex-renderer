@@ -23,21 +23,22 @@ import { fullscreenVertex, postProcessingStruct } from "./common.js";
  * Sources
  *
  * - John Chapman, "Pseudo Lens Flare" (2013).
- *   https://john-chapman.github.io/2017/11/05/pseudo-lens-flare.html
- *   The ghost and halo formulation: resample one bright pass through the
- *   optical centre instead of drawing sprites at a projected light position.
+ *   https://john-chapman.github.io/2017/11/05/pseudo-lens-flare.html The ghost
+ *   and halo formulation: resample one bright pass through the optical centre
+ *   instead of drawing sprites at a projected light position.
  * - Unity, "Screen Space Lens Flare" (HDRP/URP 14+).
  *   https://github.com/Unity-Technologies/Graphics/blob/master/Packages/com.unity.render-pipelines.core/Runtime/PostProcessing/Shaders/LensFlareScreenSpaceCommon.hlsl
  *   Chapman plus the polar family, the spectral sweep and the streak chain, and
- *   the arrangement this follows. Pass order is in HDRenderPipeline.PostProcess.cs.
+ *   the arrangement this follows. Pass order is in
+ *   HDRenderPipeline.PostProcess.cs.
  * - Froyok (Lena Piquet), "Custom Lens-Flare in UE4" (2021).
- *   https://www.froyok.fr/blog/2021-09-ue4-custom-lens-flare/
- *   Where the blur between the threshold and the ghost pass comes from, and the
- *   reason it is a dual filter rather than one wide kernel.
- * - Masaki Kawase, "Frame Buffer Postprocessing Effects in DOUBLE-S.T.E.A.L",
- *   GDC 2003. http://www.daionet.gr.jp/~masa/archives/GDC2003_DSTEAL.ppt
- *   The streak filter: a few taps per pass with a stride that grows
- *   geometrically, so reach costs log passes.
+ *   https://www.froyok.fr/blog/2021-09-ue4-custom-lens-flare/ Where the blur
+ *   between the threshold and the ghost pass comes from, and the reason it is a
+ *   dual filter rather than one wide kernel.
+ * - Masaki Kawase, "Frame Buffer Postprocessing Effects in DOUBLE-S.T.E.A.L", GDC
+ *   2003. http://www.daionet.gr.jp/~masa/archives/GDC2003_DSTEAL.ppt The streak
+ *   filter: a few taps per pass with a stride that grows geometrically, so
+ *   reach costs log passes.
  * - Jorge Jimenez, "Next Generation Post Processing in Call of Duty: Advanced
  *   Warfare", SIGGRAPH 2014.
  *   http://www.iryoku.com/next-generation-post-processing-in-call-of-duty-advanced-warfare
@@ -47,8 +48,8 @@ import { fullscreenVertex, postProcessingStruct } from "./common.js";
  * through an actual lens prescription and need a light list as well as the
  * optics, so neither is a post-process.
  *
- * - Hullin et al., "Physically-Based Real-Time Lens Flare Rendering",
- *   SIGGRAPH 2011. doi:10.1145/2010324.1964936
+ * - Hullin et al., "Physically-Based Real-Time Lens Flare Rendering", SIGGRAPH
+ *   2011. doi:10.1145/2010324.1964936
  * - Lee and Eisemann, "Practical Real-Time Lens-Flare Rendering", EGSR 2013.
  *   doi:10.1111/cgf.12145
  */
@@ -59,12 +60,12 @@ const params = (alloc: ReturnType<typeof createBindingAllocator>) =>
 /**
  * Bright pass: what the flare families resample.
  *
- * Its own threshold rather than bloom's, because the two want different
- * cutoffs — bloom glares off anything above the display's white, a flare only
- * off a source bright enough to reflect between lens elements — and because an
- * effect that reads another effect's buffer stops working when that one is
- * switched off. `source: "bloom"` is the opt-out for a scene that would rather
- * spend nothing here.
+ * Its own threshold rather than bloom's, because the two want different cutoffs
+ * — bloom glares off anything above the display's white, a flare only off a
+ * source bright enough to reflect between lens elements — and because an effect
+ * that reads another effect's buffer stops working when that one is switched
+ * off. `source: "bloom"` is the opt-out for a scene that would rather spend
+ * nothing here.
  *
  * Exposure-aware like bloom's: the threshold is a number about the image, so it
  * has to be applied where the image is, not to the scene radiance behind it.

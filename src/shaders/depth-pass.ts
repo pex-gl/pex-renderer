@@ -312,12 +312,6 @@ ${(() => {
     discard;
   }`
       : "";
-  // Matches standard.js's rescale, so the samples this pass leaves depth in are
-  // the ones the opaque pass then shades.
-  const coverageExpr = useAlphaToCoverage
-    ? `clamp((opacity - uMaterial.alphaCutoff) / max(fwidth(opacity), 1e-4) + 0.5, 0.0, 1.0)`
-    : "1.0";
-
   if (useLinearDepth) {
     // The shadow pass view origin is the light, so |viewPosition| is the radial
     // distance from the light; normalize to [0, 1] to store in a depth texture.
@@ -327,6 +321,12 @@ fn fragmentMain(input: VertexOutput) -> @builtin(frag_depth) f32 {
   return length(input.viewPosition) / uFrame.far;
 }`;
   }
+
+  // Matches standard.js's rescale, so the samples this pass leaves depth in are
+  // the ones the opaque pass then shades.
+  const coverageExpr = useAlphaToCoverage
+    ? `clamp((opacity - uMaterial.alphaCutoff) / max(fwidth(opacity), 1e-4) + 0.5, 0.0, 1.0)`
+    : "1.0";
 
   if (useNormalOutput) {
     // Same encoding the main pass uses for its normal target, so a reader

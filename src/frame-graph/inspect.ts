@@ -173,9 +173,10 @@ export default function inspect(
   // Declaration index -> compiled pass index. A declaration folded into a
   // merged pass reports that pass; a culled one has none, so the last surviving
   // declaration before it stands in.
-  const compiledIndexByDeclaration = new Array<number>(
-    state.passes.length,
-  ).fill(-1);
+  const compiledIndexByDeclaration = Array.from(
+    { length: state.passes.length },
+    () => -1,
+  );
   plan.passes.forEach((pass, index) => {
     for (const subPass of pass.subPasses) {
       compiledIndexByDeclaration[subPass.declarationIndex] = index;
@@ -230,7 +231,7 @@ export function memoryTimeline(inspection: GraphInspection): {
     passCount: inspection.passes.length,
     rows: inspection.resources
       .filter((resource) => !resource.culled && !resource.imported)
-      .sort((a, b) => a.firstUse - b.firstUse || b.bytes - a.bytes)
+      .toSorted((a, b) => a.firstUse - b.firstUse || b.bytes - a.bytes)
       .map((resource) => ({
         name: resource.name,
         firstUse: resource.firstUse,

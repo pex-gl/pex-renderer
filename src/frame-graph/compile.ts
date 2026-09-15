@@ -58,7 +58,7 @@ const attachmentsMatch = (a: PassEntry, b: PassEntry): boolean => {
       return false;
     }
   }
-  if (!a.depth !== !b.depth) return false;
+  if (Boolean(a.depth) !== Boolean(b.depth)) return false;
   if (
     a.depth &&
     b.depth &&
@@ -84,19 +84,25 @@ const canMerge = (previous: PassEntry, next: PassEntry): boolean => {
   if (!attachmentsMatch(previous, next)) return false;
   // Non-attachment data flow (a storage write consumed by the next pass) needs
   // the passes kept apart so WebGPU inserts a barrier between them.
-  const previousWrites = new Set(previous.writes.map((write) => write.resource));
-  return !next.reads.some((resource) => previousWrites.has(resource));
+  const previousWrites = new Set(
+    previous.writes.map((write) => write.resource),
+  );
+  return next.reads.every((resource) => !previousWrites.has(resource));
 };
 
 export interface CompileOptions {
   debug?: boolean;
-  /** Mark single-pass attachments memoryless. See `FrameGraph.transientAttachments`. */
+  /**
+   * Mark single-pass attachments memoryless. See
+   * `FrameGraph.transientAttachments`.
+   */
   transientAttachments?: boolean;
 }
 
 /**
- * Turn the declared graph into an execution plan: cull, merge, derive load/store
- * ops and usage flags, then hand out physical resources by lifetime.
+ * Turn the declared graph into an execution plan: cull, merge, derive
+ * load/store ops and usage flags, then hand out physical resources by
+ * lifetime.
  *
  * Declaration order is preserved: setup is sequential, so every dependency
  * already points backwards and no topological sort is needed.
@@ -121,7 +127,8 @@ export default function compile(
     const written = new Set<number>();
     for (const write of pass.writes) written.add(write.resource);
     pass.refCount = written.size;
-    for (const resource of written) writersByResource[resource]!.push(pass.index);
+    for (const resource of written)
+      writersByResource[resource]!.push(pass.index);
   }
 
   const stack: number[] = [];
@@ -152,7 +159,8 @@ export default function compile(
         writes: [
           ...new Set(
             pass.writes.map(
-              (write) => resources[write.resource]?.name ?? `resource${write.resource}`,
+              (write) =>
+                resources[write.resource]?.name ?? `resource${write.resource}`,
             ),
           ),
         ],
@@ -239,10 +247,10 @@ export default function compile(
           : "clear";
 
       // Stored only if something after this group can observe it.
-      let storeOp: GPUStoreOp = "discard";
-      if (entry.exported || entry.imported || record.lastUse > group) {
-        storeOp = "store";
-      }
+      const storeOp: GPUStoreOp =
+        entry.exported || entry.imported || record.lastUse > group
+          ? "store"
+          : "discard";
 
       writtenBefore.add(key);
 
@@ -444,7 +452,9 @@ export default function compile(
       "frame-graph",
       `culled ${culledPasses.length} pass(es):`,
       culledPasses
-        .map(({ name, writes }) => `${name} (nothing reads ${writes.join(", ")})`)
+        .map(
+          ({ name, writes }) => `${name} (nothing reads ${writes.join(", ")})`,
+        )
         .join("; "),
     );
   }

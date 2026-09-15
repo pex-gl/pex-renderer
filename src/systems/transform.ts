@@ -1,11 +1,6 @@
 import { mat4, vec3 } from "pex-math";
 import { aabb } from "pex-geom";
-import {
-  NAMESPACE,
-  TEMP_AABB,
-  TEMP_MAT4,
-  TEMP_BOUNDS_POINTS,
-} from "../utils.js";
+import { TEMP_AABB, TEMP_MAT4, TEMP_BOUNDS_POINTS } from "../utils.js";
 
 import type { Mat4 } from "pex-math";
 import type { Entity, TransformComponentOptions } from "../types.js";
@@ -121,7 +116,6 @@ export default () => ({
     if (
       transform.entity &&
       transform.entity.geometry &&
-      transform.entity.geometry.bounds &&
       transform.entity.geometry.bounds &&
       !aabb.isEmpty(transform.entity.geometry.bounds)
     ) {

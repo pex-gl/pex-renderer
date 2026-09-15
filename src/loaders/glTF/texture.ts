@@ -70,7 +70,8 @@ const KTX2_MIME = "image/ktx2";
 
 const isKtx2 = (image: any): boolean =>
   image.mimeType === KTX2_MIME ||
-  (typeof image.uri === "string" && image.uri.split("?")[0]!.endsWith(".ktx2"));
+  (typeof image.uri === "string" &&
+    image.uri.split("?", 1)[0]!.endsWith(".ktx2"));
 
 export interface ResolveImagesOptions {
   basePath?: string | undefined;
@@ -244,32 +245,32 @@ export function resolveTexture(
   }
 
   const sampler =
-    texture.sampler !== undefined
-      ? samplerCache.get(texture.sampler)
-      : undefined;
+    texture.sampler === undefined
+      ? undefined
+      : samplerCache.get(texture.sampler);
 
   // https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_texture_transform/schema/KHR_texture_transform.textureInfo.schema.json
   const textureTransform = materialTexture.extensions?.KHR_texture_transform;
   const texCoord = materialTexture.texCoord;
 
-  if (!texCoord && !textureTransform && !sampler) {
-    return texture._tex;
+  if (texCoord || textureTransform || sampler) {
+    return {
+      texture: texture._tex,
+      texCoord: texCoord || 0,
+      ...(sampler && { sampler }),
+      // textureTransform.texCoord overrides the textureInfo texCoord above, per spec.
+      ...textureTransform,
+      // KHR_texture_transform's rotation is counter-clockwise looking at the UV
+      // plane; base.ts's getTextureMatrix rotates the sampling coordinates the
+      // other way round (its positive angle visually spins the sampled image
+      // counter-clockwise, the opposite of rotating the UVs themselves
+      // counter-clockwise) — negate here so a positive glTF rotation matches the
+      // spec's visual result instead of spinning the texture backwards.
+      ...(textureTransform?.rotation !== undefined && {
+        rotation: -textureTransform.rotation,
+      }),
+    };
   }
 
-  return {
-    texture: texture._tex,
-    texCoord: texCoord || 0,
-    ...(sampler && { sampler }),
-    // textureTransform.texCoord overrides the textureInfo texCoord above, per spec.
-    ...textureTransform,
-    // KHR_texture_transform's rotation is counter-clockwise looking at the UV
-    // plane; base.ts's getTextureMatrix rotates the sampling coordinates the
-    // other way round (its positive angle visually spins the sampled image
-    // counter-clockwise, the opposite of rotating the UVs themselves
-    // counter-clockwise) — negate here so a positive glTF rotation matches the
-    // spec's visual result instead of spinning the texture backwards.
-    ...(textureTransform?.rotation !== undefined && {
-      rotation: -textureTransform.rotation,
-    }),
-  };
+  return texture._tex;
 }

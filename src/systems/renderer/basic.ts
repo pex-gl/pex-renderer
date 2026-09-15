@@ -23,10 +23,8 @@ const NORMAL_MATRIX = mat3.create();
  * Basic renderer
  *
  * Unlit draw path built on pex-shaders' `basic` WGSL generator. Uniforms follow
- * the shared bind group struct convention: @group(0) Frame, @group(2)
- * Material,
- *
- * @group(3) Model.
+ * the shared bind group struct convention: `@group(0)` Frame, `@group(2)`
+ * Material, `@group(3)` Model.
  */
 export default ({ ctx }: SystemOptions): RendererSystem => ({
   ...createBaseSystem(),

@@ -59,7 +59,7 @@ export function createBindingAllocator(start = 0): BindingAllocator {
 }
 
 /**
- * A single `@group @binding var` declaration line — the primitive every other
+ * A single `@group`/`@binding` `var` declaration line — the primitive every other
  * binding declaration here is built from. `addressSpace` (e.g. `"uniform"`) is
  * omitted for handle types (textures/samplers), which take none in WGSL.
  */
@@ -209,9 +209,9 @@ ${bindingDeclaration(0, 0, "uFrame", "Frame", "uniform")}`;
  * The jitter offset, applied to a clip-space position after projection.
  *
  * Multiplied by `w` because the perspective divide has not happened yet: the
- * offset has to survive it as a constant NDC displacement. Emitted at the end of
- * every rasterizing vertex stage — and nowhere in a shadow pass, whose camera is
- * the light and whose result is sampled, not resolved.
+ * offset has to survive it as a constant NDC displacement. Emitted at the end
+ * of every rasterizing vertex stage — and nowhere in a shadow pass, whose
+ * camera is the light and whose result is sampled, not resolved.
  */
 export const vertexJitter = (position = "output.position"): string =>
   `${position} += vec4f(uFrame.jitter * ${position}.w, 0.0, 0.0);`;
@@ -224,7 +224,8 @@ export const vertexJitter = (position = "output.position"): string =>
  * vector towards the triangle's interior. The divide belongs per fragment.
  *
  * Both are unjittered. The jitter says where geometry was rasterized, not where
- * a surface went, and leaving it in would report the sampling pattern as motion.
+ * a surface went, and leaving it in would report the sampling pattern as
+ * motion.
  */
 export const VELOCITY_MEMBERS: readonly ShaderStructMember[] = [
   { name: "positionClip", type: "vec4f" },
@@ -237,9 +238,9 @@ export interface VertexVelocityOptions {
   clip?: string;
   /**
    * Expression for the previous frame's world position. Defaults to the current
-   * local position through `previousModelMatrix`, which covers rigid motion —
-   * a skinned or morphed surface has no previous local position to offer yet,
-   * and passes its current world position to report camera motion alone.
+   * local position through `previousModelMatrix`, which covers rigid motion — a
+   * skinned or morphed surface has no previous local position to offer yet, and
+   * passes its current world position to report camera motion alone.
    */
   previousWorld?: string;
 }
@@ -325,8 +326,8 @@ export function vertexPreviousWorld({
 }
 
 /**
- * Fragment-stage half: where this surface was last frame, minus where it is now,
- * in texture coordinates.
+ * Fragment-stage half: where this surface was last frame, minus where it is
+ * now, in texture coordinates.
  *
  * `previous - current` so a reader adds it to its own coordinate to find the
  * history, and scaled by (0.5, -0.5) because NDC spans [-1, 1] with Y up where
@@ -416,11 +417,11 @@ export interface ShaderStructMember {
  * Emits struct members with sequential `@location` indices, skipping falsy
  * entries so optional members gate inline with `cond && { … }`. Locations are
  * assigned in list order with no gaps, so members are added or removed without
- * hand-numbering. `start` offsets the first index (past a fixed leading member).
- * The numbers are only ever matched back by name — vertex inputs via reflection
- * (pex-gpu `vertex-layout.ts`), inter-stage variables by the shared
- * vertex/fragment struct —
- * so their order and uniqueness matter, not their values.
+ * hand-numbering. `start` offsets the first index (past a fixed leading
+ * member). The numbers are only ever matched back by name — vertex inputs via
+ * reflection (pex-gpu `vertex-layout.ts`), inter-stage variables by the shared
+ * vertex/fragment struct — so their order and uniqueness matter, not their
+ * values.
  */
 export function locationMembers(
   members: readonly (ShaderStructMember | false | null | undefined)[],
@@ -429,7 +430,8 @@ export function locationMembers(
   return members
     .filter((member): member is ShaderStructMember => Boolean(member))
     .map(
-      ({ name, type }, index) => `@location(${start + index}) ${name}: ${type},`,
+      ({ name, type }, index) =>
+        `@location(${start + index}) ${name}: ${type},`,
     )
     .join("\n  ");
 }
@@ -454,7 +456,11 @@ const VERTEX_ATTRIBUTES: readonly (ShaderStructMember & {
   { flag: "previousPosition", name: "previousPosition", type: "vec3f" },
   { flag: "previousInstancedOffset", name: "previousOffset", type: "vec3f" },
   { flag: "previousInstancedScale", name: "previousScale", type: "vec3f" },
-  { flag: "previousInstancedRotation", name: "previousRotation", type: "vec4f" },
+  {
+    flag: "previousInstancedRotation",
+    name: "previousRotation",
+    type: "vec4f",
+  },
 ];
 
 export function vertexInputStruct(
@@ -650,13 +656,13 @@ export function vertexTransform({
 // Fragment stage
 
 /**
- * The fragment stage's `FragmentOutput` struct: the always-present color
- * target (`@location(0)`) plus whatever extra MRT members the caller passes,
- * assigned sequential locations in that order via `locationMembers` — the same
- * scheme `vertexOutputStruct` uses, and for the same reason: a shader picks its
- * own member types (a motion-vector target might be `vec2f`, not `vec4f`) so
- * this only owns the location numbering, not the shape. Called with no args
- * it's the color-only form the depth pre-pass and post-processing blits use.
+ * The fragment stage's `FragmentOutput` struct: the always-present color target
+ * (`@location(0)`) plus whatever extra MRT members the caller passes, assigned
+ * sequential locations in that order via `locationMembers` — the same scheme
+ * `vertexOutputStruct` uses, and for the same reason: a shader picks its own
+ * member types (a motion-vector target might be `vec2f`, not `vec4f`) so this
+ * only owns the location numbering, not the shape. Called with no args it's the
+ * color-only form the depth pre-pass and post-processing blits use.
  */
 export function fragmentOutputStruct(
   members: readonly (ShaderStructMember | false | null | undefined)[] = [],

@@ -255,7 +255,7 @@ function resolveSkins(ctx: BuildContext): void {
     if (!skinComponent) return;
 
     const joints = node.skin.jointNodeIndices.map(
-      (jointNodeIndex) => ctx.nodeEntities.get(jointNodeIndex)?.[0]!,
+      (jointNodeIndex) => ctx.nodeEntities.get(jointNodeIndex)![0]!,
     );
     skinComponent.inverseBindMatrices = node.skin.inverseBindMatrices;
     skinComponent.joints = joints;

@@ -43,8 +43,8 @@ const instanceRoundRound = Float32Array.of(
  * Screen-space expanded line segments built on the `line` WGSL generator. Each
  * segment is drawn as an instanced quad (plus round caps); per-instance
  * endpoints alias the geometry position buffer via strided attributes. Uniforms
- * follow the shared bind group convention: @group(0) Frame, @group(2) Material,
- * @group(3) Model.
+ * follow the shared bind group convention: `@group(0)` Frame, `@group(2)`
+ * Material, `@group(3)` Model.
  */
 export default ({ ctx }: SystemOptions): RendererSystem => ({
   ...createBaseSystem(),
@@ -60,7 +60,11 @@ export default ({ ctx }: SystemOptions): RendererSystem => ({
   },
   getDefines(entity: any, options: RendererPassOptions) {
     const defines = new Set<string>();
-    this.getFeatureFlags(entity._geometry.attributes, LINE_VERTEX_FIELDS, defines);
+    this.getFeatureFlags(
+      entity._geometry.attributes,
+      LINE_VERTEX_FIELDS,
+      defines,
+    );
     this.getFeatureFlags(entity.material, LINE_MATERIAL_FIELDS, defines);
     if (options.msaa) defines.add("USE_MSAA");
     return defines;

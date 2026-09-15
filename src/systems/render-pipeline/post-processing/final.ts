@@ -42,7 +42,7 @@ const final: PostProcessingEffect = {
           })
         : undefined;
 
-    const edge = FXAA_THRESHOLDS[fxaa?.quality!] ?? FXAA_THRESHOLDS[2];
+    const edge = FXAA_THRESHOLDS[fxaa?.quality ?? 2] ?? FXAA_THRESHOLDS[2];
 
     pass({
       name: "main",

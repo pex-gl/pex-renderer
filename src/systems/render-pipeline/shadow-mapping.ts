@@ -234,7 +234,9 @@ export default ({
       shadow.radiusUV[0] = light.bulbRadius / size[0];
       shadow.radiusUV[1] = light.bulbRadius / size[1];
     } else {
-      const halfFov = lightEntity.spotLight ? light.outerConeAngle : Math.PI / 4;
+      const halfFov = lightEntity.spotLight
+        ? light.outerConeAngle
+        : Math.PI / 4;
       const nearPlaneSize = 2 * shadow.near * Math.tan(halfFov);
       const scale: any = lightEntity.areaLight
         ? lightEntity.transform!.scale

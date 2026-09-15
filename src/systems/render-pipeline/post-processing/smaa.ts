@@ -18,10 +18,38 @@ const { SMAATextures } = pexShaders as any;
 // The reference's presets. Low and medium drop diagonal and corner detection
 // outright, which is most of what makes them cheap.
 const PRESETS = [
-  { threshold: 0.15, searchSteps: 4, searchStepsDiag: 8, cornerRounding: 25, diagonals: false, corners: false },
-  { threshold: 0.1, searchSteps: 8, searchStepsDiag: 8, cornerRounding: 25, diagonals: false, corners: false },
-  { threshold: 0.1, searchSteps: 16, searchStepsDiag: 8, cornerRounding: 25, diagonals: true, corners: true },
-  { threshold: 0.05, searchSteps: 32, searchStepsDiag: 16, cornerRounding: 25, diagonals: true, corners: true },
+  {
+    threshold: 0.15,
+    searchSteps: 4,
+    searchStepsDiag: 8,
+    cornerRounding: 25,
+    diagonals: false,
+    corners: false,
+  },
+  {
+    threshold: 0.1,
+    searchSteps: 8,
+    searchStepsDiag: 8,
+    cornerRounding: 25,
+    diagonals: false,
+    corners: false,
+  },
+  {
+    threshold: 0.1,
+    searchSteps: 16,
+    searchStepsDiag: 8,
+    cornerRounding: 25,
+    diagonals: true,
+    corners: true,
+  },
+  {
+    threshold: 0.05,
+    searchSteps: 32,
+    searchStepsDiag: 16,
+    cornerRounding: 25,
+    diagonals: true,
+    corners: true,
+  },
 ] as const;
 
 const EDGES_DEFINE: Record<string, string> = {
@@ -44,8 +72,12 @@ function getLookups(ctx: GpuContext): SMAALookups {
   lookups.set(ctx, entry);
 
   const loaded = entry;
-  Promise.all([loadImage(SMAATextures.area), loadImage(SMAATextures.search)])
-    .then(([area, search]) => {
+  void (async () => {
+    try {
+      const [area, search] = await Promise.all([
+        loadImage(SMAATextures.area),
+        loadImage(SMAATextures.search),
+      ]);
       // No flipY, unlike the WebGL version: the WGSL port keeps the
       // reference's top-left texture origin, which WebGPU shares.
       loaded.area = createTexture(ctx, {
@@ -58,15 +90,15 @@ function getLookups(ctx: GpuContext): SMAALookups {
         data: search,
         format: "rgba8unorm",
       });
-    })
-    .catch((error: unknown) => {
+    } catch (error) {
       console.error(
         NAMESPACE,
         "post-processing",
         "smaa lookup textures failed to load",
         error,
       );
-    });
+    }
+  })();
 
   return entry;
 }

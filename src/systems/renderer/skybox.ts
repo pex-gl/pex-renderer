@@ -29,17 +29,17 @@ const IDENTITY_MAT4 = mat4.create();
  *
  * Draws an equirectangular environment map (a baked analytic sky or a user
  * envMap) as the scene background, built on the `skybox` WGSL generator. A
- * single @group(0) holds the uSkybox uniforms plus the env map and its
+ * single `@group(0)` holds the uSkybox uniforms plus the env map and its
  * sampler.
  *
- * The skybox entity's own transform drives environment rotation for both
- * the background (equirect or, with backgroundBlur, the paired
- * reflectionProbe's cubemap) and material IBL — see utils.js's
- * getEnvironmentRotation, applied the same way in systems/reflection-probe.ts.
+ * The skybox entity's own transform drives environment rotation for both the
+ * background (equirect or, with backgroundBlur, the paired reflectionProbe's
+ * cubemap) and material IBL — see utils.js's getEnvironmentRotation, applied
+ * the same way in systems/reflection-probe.ts.
  *
  * `skybox.backgroundBlur` (0-1) is sampled from the paired reflectionProbe
- * entity's prefiltered specular cubemap instead of a dedicated blur pass —
- * the same source `standard.ts` uses for material reflections.
+ * entity's prefiltered specular cubemap instead of a dedicated blur pass — the
+ * same source `standard.ts` uses for material reflections.
  */
 export default ({ ctx }: SystemOptions): RendererSystem => ({
   ...createBaseSystem(),
@@ -114,16 +114,18 @@ export default ({ ctx }: SystemOptions): RendererSystem => ({
     const backgroundBlur = skybox.backgroundBlur ?? 0;
     const useBackgroundBlur = this.useBackgroundBlur(entity, options);
 
-    if (backgroundBlur > 0 && !options.reflectionProbe) {
-      if (!this._warnedBackgroundBlur.has(entity.id)) {
-        this._warnedBackgroundBlur.add(entity.id);
-        console.warn(
-          NAMESPACE,
-          this.type,
-          "skybox.backgroundBlur requires a paired reflectionProbe entity; rendering unblurred.",
-          entity,
-        );
-      }
+    if (
+      backgroundBlur > 0 &&
+      !options.reflectionProbe &&
+      !this._warnedBackgroundBlur.has(entity.id)
+    ) {
+      this._warnedBackgroundBlur.add(entity.id);
+      console.warn(
+        NAMESPACE,
+        this.type,
+        "skybox.backgroundBlur requires a paired reflectionProbe entity; rendering unblurred.",
+        entity,
+      );
     }
 
     const pipeline = this.getPipeline(entity, options);

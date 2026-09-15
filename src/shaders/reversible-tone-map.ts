@@ -4,7 +4,7 @@ import { fragmentOutputStruct, vertexOutputStruct } from "./wgsl.js";
 import type { PipelineShaderOptions } from "../types.js";
 
 export const reversibleToneMapShader = (
-  defines: Set<string> = new Set(),
+  defines?: Set<string>,
   options: PipelineShaderOptions = {},
 ): string => {
   const hooks = options.hooks || {};

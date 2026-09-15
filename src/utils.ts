@@ -108,12 +108,12 @@ const getFileExtension = (path?: string) => {
 };
 
 const getDirname = (path: string) => {
-  let code = path.charCodeAt(0);
+  let code = path.codePointAt(0);
   const hasRoot = code === 47;
   let end = -1;
   let matchedSlash = true;
   for (let i = path.length - 1; i >= 1; --i) {
-    code = path.charCodeAt(i);
+    code = path.codePointAt(i);
     if (code === 47) {
       if (!matchedSlash) {
         end = i;
@@ -146,7 +146,7 @@ const mapValues = <T, R>(
   );
 
 /** Maps each key of a plain object through `fn`, keeping the same values. */
-const mapKeys = <T,>(
+const mapKeys = <T>(
   obj: Record<string, T>,
   fn: (key: string, value: T, index: number) => string,
 ): Record<string, T> =>
@@ -254,9 +254,7 @@ const spotPowerToIntensity = (
   angle: number,
   focused?: boolean,
 ): number =>
-  focused
-    ? luminousPower / (TWO_PI * (1 - Math.cos(angle)))
-    : luminousPower / Math.PI;
+  luminousPower / (focused ? TWO_PI * (1 - Math.cos(angle)) : Math.PI);
 
 /** Axial luminous intensity (cd) of a spot light to luminous power (lm). */
 const spotIntensityToPower = (
@@ -308,6 +306,12 @@ const ev100 = (fStop: number, shutterSpeed: number, iso: number): number =>
 const exposureFromEV100 = (ev100: number): number => 1 / (1.2 * 2 ** ev100);
 
 /**
+ * Code point order, so a cache key built from sorted strings is the same
+ * everywhere: the default sort is locale-dependent.
+ */
+const compareStrings = (a: string, b: string) => Number(a > b) - Number(a < b);
+
+/**
  * Stable cache key for a set of shader defines — the feature set a shader
  * variant was generated from.
  *
@@ -316,15 +320,16 @@ const exposureFromEV100 = (ev100: number): number => 1 / (1.2 * 2 ** ev100);
  * duplicate entry and the shader is compiled twice. "|" separates because it
  * cannot appear in a define name.
  */
-const definesKey = (defines: Iterable<string>) => [...defines].sort().join("|");
+const definesKey = (defines: Iterable<string>) =>
+  [...defines].toSorted(compareStrings).join("|");
 
 // FNV-1a, base36. Short enough to sit in a pipeline cache key and cheap enough
 // to run over a whole shader hook body.
 const hashString = (value: string) => {
-  let hash = 0x811c9dc5;
+  let hash = 0x81_1c_9d_c5;
   for (let i = 0; i < value.length; i++) {
-    hash ^= value.charCodeAt(i);
-    hash = Math.imul(hash, 0x01000193);
+    hash ^= value.codePointAt(i)!;
+    hash = Math.imul(hash, 0x01_00_01_93);
   }
   return (hash >>> 0).toString(36);
 };
@@ -351,6 +356,7 @@ const hooksKey = (hooks?: ShaderHooks) => {
 
 export {
   NAMESPACE,
+  compareStrings,
   definesKey,
   hooksKey,
   TEMP_VEC3,

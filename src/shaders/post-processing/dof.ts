@@ -71,7 +71,10 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
 `);
 };
 
-/** Half-resolution colour and signed circle of confusion, with the boost baked in. */
+/**
+ * Half-resolution colour and signed circle of confusion, with the boost baked
+ * in.
+ */
 export const dofPrefilterShader = (
   defines: Set<string> = new Set(),
 ): string => {
@@ -273,7 +276,7 @@ ${SHADERS.depthOfField.gather}
 
 ${params(alloc)}
 ${textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uTexture")}
-${/* The prefilter again, to read a radius unfiltered; see `dofGather`. */ ""}
+// The prefilter again, to read a radius unfiltered; see dofGather.
 ${textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uCoCTexture")}
 ${textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uTileTexture")}
 

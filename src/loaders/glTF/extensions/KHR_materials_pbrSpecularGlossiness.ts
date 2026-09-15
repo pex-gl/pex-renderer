@@ -2,9 +2,7 @@ import { resolveTexture } from "../texture.js";
 
 import type { GpuContext } from "../../../types.js";
 
-/**
- * https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Archived/KHR_materials_pbrSpecularGlossiness/schema/glTF.KHR_materials_pbrSpecularGlossiness.schema.json
- */
+/** https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Archived/KHR_materials_pbrSpecularGlossiness/schema/glTF.KHR_materials_pbrSpecularGlossiness.schema.json */
 export function resolvePbrSpecularGlossiness(
   material: any,
   gltf: any,

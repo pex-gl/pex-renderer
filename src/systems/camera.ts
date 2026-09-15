@@ -1,10 +1,9 @@
-import { mat4, vec3, quat, utils, avec4 } from "pex-math";
+import { mat4, vec3, quat, utils } from "pex-math";
 import { orbiter as createOrbiter } from "pex-cam";
 import halton from "halton";
 import {
   NAMESPACE,
   TEMP_MAT4,
-  TEMP_VEC3,
   computeFrustumPlanes,
   ev100,
   exposureFromEV100,
@@ -16,7 +15,11 @@ import type { Entity, SystemOptions } from "../types.js";
 // The camera math operates on a fully-populated camera (projection-specific
 // fields guaranteed by the camera component), so it is typed loosely here.
 function computeFrustum(camera: any) {
-  computeFrustumPlanes(camera.frustum, camera.projectionMatrix, camera.viewMatrix);
+  computeFrustumPlanes(
+    camera.frustum,
+    camera.projectionMatrix,
+    camera.viewMatrix,
+  );
 }
 
 /**
@@ -110,9 +113,9 @@ function updateCameraViewProjection(camera: any) {
  * threshold after this point — bloom, lens flare, depth of field — is a number
  * about the exposed image.
  *
- * Compensation offsets the metered EV rather than scaling the result — the
- * same number either way, and the sign follows the photographic convention:
- * positive opens up, one stop per unit.
+ * Compensation offsets the metered EV rather than scaling the result — the same
+ * number either way, and the sign follows the photographic convention: positive
+ * opens up, one stop per unit.
  */
 function updateCameraExposure(camera: any) {
   camera._exposure = exposureFromEV100(
@@ -230,7 +233,7 @@ export default ({ ctx }: SystemOptions) => ({
    * blending it.
    *
    * What it is for: a cut. Reprojection assumes the previous frame looked at
-   * roughly the same thing — it finds where a surface *was* and reads the
+   * roughly the same thing — it finds where a surface _was_ and reads the
    * colour accumulated there. Teleport the camera and that assumption is gone:
    * the previous view-projection describes somewhere else entirely, so every
    * pixel reads history belonging to an unrelated image. Most of it is caught

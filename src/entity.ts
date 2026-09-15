@@ -2,7 +2,7 @@ import type { Entity } from "./types.js";
 
 export let entityCount = 0;
 
-export default <T extends Record<string, any> = {}>(
+export default <T extends Record<string, any> = object>(
   components: T = {} as T,
 ): Entity & T => {
   if (Array.isArray(components)) {

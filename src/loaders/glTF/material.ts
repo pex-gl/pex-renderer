@@ -15,10 +15,10 @@ import type { GpuContext } from "../../types.js";
 
 /**
  * Resolves a glTF material into a flat, glTF-vocabulary PBR data object
- * (`baseColorFactor`, `metallicFactor`, extension fields like
- * `clearcoatFactor` flattened to the top level, ...) with textures uploaded to
- * GPU. Field names intentionally match the glTF spec, not any pex-renderer
- * component — see loaders/glTF/pex-renderer.ts for the ECS mapping.
+ * (`baseColorFactor`, `metallicFactor`, extension fields like `clearcoatFactor`
+ * flattened to the top level, ...) with textures uploaded to GPU. Field names
+ * intentionally match the glTF spec, not any pex-renderer component — see
+ * loaders/glTF/pex-renderer.ts for the ECS mapping.
  * https://github.com/KhronosGroup/glTF/blob/main/specification/2.0/schema/material.schema.json
  */
 export function resolveMaterial(
@@ -31,14 +31,17 @@ export function resolveMaterial(
     name: material.name,
     doubleSided: !!material.doubleSided,
     alphaMode: material.alphaMode ?? "OPAQUE",
-    alphaCutoff: material.alphaMode === "MASK" ? (material.alphaCutoff ?? 0.5) : undefined,
+    alphaCutoff:
+      material.alphaMode === "MASK" ? (material.alphaCutoff ?? 0.5) : undefined,
     unlit: resolveUnlit(material),
   };
 
   // https://github.com/KhronosGroup/glTF/blob/main/specification/2.0/schema/material.pbrMetallicRoughness.schema.json
   const pbrMetallicRoughness = material.pbrMetallicRoughness;
   if (pbrMetallicRoughness) {
-    result.baseColorFactor = pbrMetallicRoughness.baseColorFactor ?? [1, 1, 1, 1];
+    result.baseColorFactor = pbrMetallicRoughness.baseColorFactor ?? [
+      1, 1, 1, 1,
+    ];
     result.metallicFactor = pbrMetallicRoughness.metallicFactor ?? 1;
     result.roughnessFactor = pbrMetallicRoughness.roughnessFactor ?? 1;
     if (pbrMetallicRoughness.baseColorTexture) {

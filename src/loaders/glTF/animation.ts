@@ -1,11 +1,17 @@
 import { getAccessor } from "./accessor.js";
-import { GLTF_ACCESSOR_TYPE_COMPONENTS_NUMBER, normalizeData } from "./common.js";
+import {
+  GLTF_ACCESSOR_TYPE_COMPONENTS_NUMBER,
+  normalizeData,
+} from "./common.js";
 
 export interface ResolvedAnimationChannel {
   input: Float32Array;
   output: number[][];
   interpolation: string;
-  /** Raw glTF node index — resolved to an entity by loaders/glTF/pex-renderer.ts. */
+  /**
+   * Raw glTF node index — resolved to an entity by
+   * loaders/glTF/pex-renderer.ts.
+   */
   targetNodeIndex: number;
   path: "translation" | "rotation" | "scale" | "weights";
 }
@@ -25,18 +31,24 @@ export function resolveAnimation(
     (channel: any) => {
       // https://github.com/KhronosGroup/glTF/blob/main/specification/2.0/schema/animation.sampler.schema.json
       const sampler = animation.samplers[channel.sampler];
-      const input = getAccessor(gltf.accessors[sampler.input], gltf.bufferViews);
-      const output = getAccessor(gltf.accessors[sampler.output], gltf.bufferViews);
+      const input = getAccessor(
+        gltf.accessors[sampler.input],
+        gltf.bufferViews,
+      );
+      const output = getAccessor(
+        gltf.accessors[sampler.output],
+        gltf.bufferViews,
+      );
       const targetNode = gltf.nodes[channel.target.node];
 
       const outputValues = output.normalized
         ? normalizeData(output._data)
         : output._data;
 
-      let stride = GLTF_ACCESSOR_TYPE_COMPONENTS_NUMBER[output.type]!;
-      if (channel.target.path === "weights") {
-        stride = gltf.meshes[targetNode.mesh].weights?.length ?? 1;
-      }
+      const stride =
+        channel.target.path === "weights"
+          ? (gltf.meshes[targetNode.mesh].weights?.length ?? 1)
+          : GLTF_ACCESSOR_TYPE_COMPONENTS_NUMBER[output.type]!;
 
       const outputData: number[][] = [];
       for (let i = 0; i < outputValues.length; i += stride) {

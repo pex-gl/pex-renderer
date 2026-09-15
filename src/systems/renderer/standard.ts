@@ -44,7 +44,7 @@ const NO_SHADOW: LightShadow = {
   texture: undefined,
 };
 
-/** @group(1) bindings for the pass's lights, plus what the shader keys on. */
+/** `@group(1)` bindings for the pass's lights, plus what the shader keys on. */
 interface StandardLights {
   uniforms: Record<string, any>;
   counts: Required<ShaderLightCounts>;
@@ -843,7 +843,7 @@ export default ({
         !e.material!.transmission &&
         !e.material!.blend &&
         e.material!.depthWriteEnabled !== false &&
-        !(skipAlphaTested && e.material!.alphaCutoff !== undefined),
+        (!skipAlphaTested || e.material!.alphaCutoff === undefined),
     );
 
     for (let i = 0; i < drawable.length; i++) {
