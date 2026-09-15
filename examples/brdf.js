@@ -94,16 +94,16 @@ for (let i = 0; i < nW; i++) {
     baseColor: COLORS.red,
     metallic: 1,
     roughness: 0.5,
-    clearCoat: i / 10,
-    clearCoatRoughness: 0.04,
+    clearcoat: i / 10,
+    clearcoatRoughness: 0.04,
   });
   materials["Clear Coat Roughness"] ||= [];
   materials["Clear Coat Roughness"].push({
     baseColor: COLORS.red,
     metallic: 1,
     roughness: 0.5,
-    clearCoat: 1,
-    clearCoatRoughness: i / 10,
+    clearcoat: 1,
+    clearcoatRoughness: i / 10,
   });
   // Charlie sheen + albedo scaling is an approximation with no energy guarantee
   materials["Sheen Roughness"] ||= [];

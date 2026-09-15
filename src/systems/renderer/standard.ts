@@ -14,13 +14,12 @@ import {
   DEPTH_PASS_VERTEX_FIELDS,
 } from "../../shaders/depth-pass.js";
 
-import createBaseSystem, { BLEND_MODES, outputsKey } from "./base.js";
+import createBaseSystem, { outputsKey } from "./base.js";
 import { samplerName, uniformName } from "../../shaders/wgsl.js";
 import { NAMESPACE, TEMP_MAT4, definesKey, hooksKey } from "../../utils.js";
 
 import type {
   PipelineShaderOptions,
-  BlendMode,
   Entity,
   RendererPassOptions,
   RendererSystem,
@@ -332,13 +331,12 @@ export default ({
     precomputed?: { constants?: Record<string, boolean> },
   ) {
     const { material } = entity;
+    const blend = this.getPipelineBlend(material.blend);
     // A cutout resolved as coverage instead of discarded. Only when the
     // attachment is multisampled — with one sample there is no mask to write,
     // and blended materials derive their alpha from opacity already.
     const alphaToCoverage =
-      !!options.multisampled &&
-      material.alphaTest !== undefined &&
-      !material.blend;
+      !!options.multisampled && material.alphaCutoff !== undefined && !blend;
 
     return {
       // Always assigned, never spread away when false: getPipeline() refreshes
@@ -346,27 +344,27 @@ export default ({
       // the previous draw's value in place — turning MSAA off would keep
       // coverage enabled on a single-sample pass.
       alphaToCoverage,
-      depthWriteEnabled: material.depthWrite !== false && !material.blend,
-      depthCompare: material.depthTest === false ? "always" : "less-equal",
-      cullMode:
-        options.cullFaceMode ?? ((material.cullFace ?? true) ? "back" : "none"),
-      topology: entity._geometry!.primitive ?? "triangle-list",
+      depthWriteEnabled: material.depthWriteEnabled ?? !blend,
+      depthCompare: material.depthCompare ?? "less-equal",
+      cullMode: options.cullMode ?? material.cullMode ?? "back",
+      topology: entity._geometry!.topology ?? "triangle-list",
       // A negative-determinant node transform (e.g. a negative scale) mirrors
       // space and reverses triangle winding — per spec, front-facing flips
       // from CCW to CW along with it.
       frontFace:
         mat4.determinant(entity._transform!.modelMatrix) < 0 ? "cw" : "ccw",
-      ...(material.blend
-        ? { blend: BLEND_MODES[(material.blendMode ?? "normal") as BlendMode] }
-        : {}),
+      ...(blend ? { blend } : {}),
       constants: {
         USE_MSAA: !!options.msaa,
         USE_ALPHA_TO_COVERAGE: alphaToCoverage,
-        USE_BLEND: !!material.blend,
+        USE_BLEND: !!blend,
         USE_SSAO_TEXTURE: !!options.textures?.["ssao.main"],
         USE_BENT_NORMALS: !!options.textures?.["ssao.bentNormal"],
+        // Matched on the equation rather than on a preset name, so a
+        // hand-written GPUBlendState expecting premultiplied color gets it too.
         PREMULTIPLY_ALPHA:
-          !!material.blend && material.blendMode === "premultiplied",
+          blend?.color?.srcFactor === "one" &&
+          blend?.color?.dstFactor === "one-minus-src-alpha",
         // Per-material activation for `runtime` fields (see FeatureField.runtime).
         ...precomputed?.constants,
         // SHADOW_QUALITY/ROUGHNESS_LEVELS only exist in the lit (non-unlit) shader.
@@ -475,7 +473,7 @@ export default ({
           position: e._transform!.worldPosition,
           color: lightColor(light),
           invSqrFalloff: light._invSqrFalloff,
-          bias: light.bias ?? 0,
+          depthBiasNormalized: light.depthBiasNormalized ?? 0,
           radius: light.bulbRadius ?? 0,
           // Normalizes the stored/compared radial distance (shadow-mapping.ts
           // writes length(view)/far into the cube).
@@ -492,8 +490,8 @@ export default ({
           position: e._transform!.worldPosition,
           direction: light._direction,
           color: lightColor(light),
-          innerAngle: light.innerAngle,
-          angle: light.angle,
+          innerConeAngle: light.innerConeAngle,
+          outerConeAngle: light.outerConeAngle,
           invSqrFalloff: light._invSqrFalloff,
           viewMatrix: light._viewMatrix,
           ...shadow2D(light),
@@ -565,7 +563,7 @@ export default ({
     const {
       transparent,
       transmitted,
-      cullFaceMode,
+      cullMode,
       textures = {},
       frameIndex = NaN,
       reflectionProbe,
@@ -611,8 +609,8 @@ export default ({
       (e) =>
         isStandardMesh(e) &&
         (transmitted
-          ? cullFaceMode === "front"
-            ? !e.material!.cullFace && e.material!.transmission
+          ? cullMode === "front"
+            ? e.material!.cullMode === "none" && e.material!.transmission
             : e.material!.transmission
           : !e.material!.transmission) &&
         (transparent ? e.material!.blend : !e.material!.blend),
@@ -646,7 +644,7 @@ export default ({
         attributes: entity._geometry!.attributes,
         indices: entity._geometry!.indices,
         count: entity._geometry!.count,
-        instanceCount: entity._geometry!.instances,
+        instanceCount: entity._geometry!.instanceCount,
         uniforms: {
           uFrame,
           ...this.getModelUniforms(
@@ -708,7 +706,7 @@ export default ({
       defines.add("USE_NORMALS");
     }
 
-    if (entity.material.alphaTest === undefined) return { defines, hooks };
+    if (entity.material.alphaCutoff === undefined) return { defines, hooks };
 
     this.getFeatureFlags(attributes, DEPTH_PASS_ALPHA_VERTEX_FIELDS, defines);
     const { uniforms } = this.getFeatureFlags(
@@ -741,15 +739,15 @@ export default ({
       // Depth comes out of the rasterizer, so a fragment stage exists only when
       // one of the variants needs it: to reject, to write radial distance, or
       // to fill the normal target.
-      return ["USE_ALPHA_TEST", "USE_LINEAR_DEPTH", "USE_NORMAL_OUTPUT"].some(
+      return ["USE_ALPHA_CUTOFF", "USE_LINEAR_DEPTH", "USE_NORMAL_OUTPUT"].some(
         (define) => defines.has(define),
       )
         ? { vertex: shader, fragment: shader }
         : { vertex: shader };
     });
     pipeline.depthWriteEnabled = true;
-    pipeline.cullMode = (entity.material.cullFace ?? true) ? "back" : "none";
-    pipeline.topology = entity._geometry.primitive ?? "triangle-list";
+    pipeline.cullMode = entity.material.cullMode ?? "back";
+    pipeline.topology = entity._geometry.topology ?? "triangle-list";
     pipeline.frontFace =
       mat4.determinant(entity._transform.modelMatrix) < 0 ? "cw" : "ccw";
     return pipeline;
@@ -800,7 +798,7 @@ export default ({
     // into a multisampled attachment is what this avoids, and the two passes
     // have to keep the same samples either way.
     const alphaToCoverage =
-      multisampled && normalOutput && material.defines.has("USE_ALPHA_TEST");
+      multisampled && normalOutput && material.defines.has("USE_ALPHA_CUTOFF");
     if (alphaToCoverage) material.defines.add("USE_ALPHA_TO_COVERAGE");
 
     const pipeline = this.getDepthPassPipeline(
@@ -844,8 +842,8 @@ export default ({
         isStandardMesh(e) &&
         !e.material!.transmission &&
         !e.material!.blend &&
-        e.material!.depthWrite !== false &&
-        !(skipAlphaTested && e.material!.alphaTest !== undefined),
+        e.material!.depthWriteEnabled !== false &&
+        !(skipAlphaTested && e.material!.alphaCutoff !== undefined),
     );
 
     for (let i = 0; i < drawable.length; i++) {
@@ -862,7 +860,7 @@ export default ({
         attributes: entity._geometry!.attributes,
         indices: entity._geometry!.indices,
         count: entity._geometry!.count,
-        instanceCount: entity._geometry!.instances,
+        instanceCount: entity._geometry!.instanceCount,
         uniforms: {
           uFrame,
           ...this.getModelUniforms(
@@ -913,7 +911,7 @@ export default ({
         attributes: entity._geometry!.attributes,
         indices: entity._geometry!.indices,
         count: entity._geometry!.count,
-        instanceCount: entity._geometry!.instances,
+        instanceCount: entity._geometry!.instanceCount,
         uniforms: {
           uFrame,
           // World-space: nothing in this pass reads the normal, but the binding

@@ -275,7 +275,7 @@ const roughnessTexture = await getTexture(
   ctx,
   getURL(`assets/materials/plastic-green.material/plastic-green_roughness.png`),
 );
-const emissiveColorTexture = await getTexture(
+const emissiveTexture = await getTexture(
   ctx,
   getURL(`assets/materials/plastic-glow.material/plastic-glow_emissive.png`),
   true,
@@ -368,7 +368,7 @@ for (let j = -5; j <= 5; j += 2) {
         metallic: 0.0, // 0.01, // (j + 5) / 10,
         baseColorTexture,
         roughnessTexture,
-        emissiveColorTexture,
+        emissiveTexture,
         metallicTexture,
         normalTexture,
         castShadows: true,
@@ -388,7 +388,7 @@ const pointLightEntity = createEntity({
   geometry: components.geometry(sphere({ radius: 0.1 })),
   material: components.material({
     baseColor: [0, 0, 0, 1],
-    emissiveColor: [1, 0, 0, 1],
+    emissive: [1, 0, 0, 1],
   }),
   pointLight: components.pointLight({
     color: [1, 0, 0, 1],
@@ -411,7 +411,7 @@ const areaLightEntity = createEntity({
   geometry: components.geometry(cube()),
   material: components.material({
     baseColor: [0, 0, 0, 1],
-    emissiveColor: [2.0, 1.2, 0.1, 1],
+    emissive: [2.0, 1.2, 0.1, 1],
   }),
   areaLight: components.areaLight({
     color: [2.0, 1.2, 0.1, 1],
@@ -527,7 +527,7 @@ gui.addRadioList(
     (renderer) => renderer.type == "standard-renderer",
   ),
   "debugRender",
-  ["", "data.normalView", "data.emissiveColor", "data.ao"].map((value) => ({
+  ["", "data.normalView", "data.emissive", "data.ao"].map((value) => ({
     name: value || "No debug",
     value,
   })),

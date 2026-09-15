@@ -62,7 +62,7 @@ export async function resolveDracoPrimitive(
     if (geometry.JOINTS_0) {
       const componentBytes = geometry.JOINTS_0.data.BYTES_PER_ELEMENT;
       geometry.JOINTS_0.format = componentBytes === 1 ? "uint8x4" : "uint16x4";
-      geometry.JOINTS_0.stride = componentBytes * 4;
+      geometry.JOINTS_0.arrayStride = componentBytes * 4;
     }
 
     return geometry;

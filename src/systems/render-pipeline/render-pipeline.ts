@@ -162,7 +162,7 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
     shadowScope,
     transparent,
     transmitted,
-    cullFaceMode,
+    cullMode,
     textures,
     prePass,
     reflectionProbe,
@@ -220,7 +220,7 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
 
     if (transparent) return draw("renderTransparent", visible, options);
 
-    draw("renderOpaque", visible, { ...options, transmitted, cullFaceMode });
+    draw("renderOpaque", visible, { ...options, transmitted, cullMode });
     // A transmission pass draws over an image that already has its background.
     if (!transmitted) draw("renderBackground", entitiesInView, options);
   },
@@ -639,7 +639,8 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
 
       const mipLevelCount = 1 + Math.floor(Math.log2(Math.max(width, height)));
       const hasBackTransmitted = entitiesInView.some(
-        (entity) => entity.material?.transmission && !entity.material.cullFace,
+        (entity) =>
+          entity.material?.transmission && entity.material.cullMode === "none",
       );
 
       const grabPass = (name: string) => {
@@ -693,14 +694,14 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
       if (hasBackTransmitted) {
         scenePass("transmissionBack", {
           ...transmitted,
-          cullFaceMode: "front",
+          cullMode: "front",
         });
         grabPass("grabTransmissionBack");
       }
 
       scenePass("transmissionFront", {
         ...transmitted,
-        ...(hasBackTransmitted && { cullFaceMode: "back" }),
+        ...(hasBackTransmitted && { cullMode: "back" }),
       });
     }
 

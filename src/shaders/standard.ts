@@ -35,13 +35,13 @@ const MATERIAL_DEFINE = {
   unlitWorkflow: "USE_UNLIT_WORKFLOW",
   metallicRoughnessWorkflow: "USE_METALLIC_ROUGHNESS_WORKFLOW",
   specularGlossinessWorkflow: "USE_SPECULAR_GLOSSINESS_WORKFLOW",
-  alphaTest: "USE_ALPHA_TEST",
+  alphaCutoff: "USE_ALPHA_CUTOFF",
   responsiveAA: "USE_RESPONSIVE_AA",
-  emissive: "USE_EMISSIVE_COLOR",
+  emissive: "USE_EMISSIVE",
   specular: "USE_SPECULAR",
-  clearCoat: "USE_CLEAR_COAT",
-  clearCoatRoughnessFromMainTexture:
-    "USE_CLEAR_COAT_ROUGHNESS_FROM_MAIN_TEXTURE",
+  clearcoat: "USE_CLEARCOAT",
+  clearcoatRoughnessFromMainTexture:
+    "USE_CLEARCOAT_ROUGHNESS_FROM_MAIN_TEXTURE",
   sheen: "USE_SHEEN",
   sheenRoughnessFromMainTexture: "USE_SHEEN_ROUGHNESS_FROM_MAIN_TEXTURE",
   transmission: "USE_TRANSMISSION",
@@ -51,18 +51,18 @@ const MATERIAL_DEFINE = {
 
   baseColorTexture: "USE_BASE_COLOR_TEXTURE",
   alphaTexture: "USE_ALPHA_TEXTURE",
-  emissiveColorTexture: "USE_EMISSIVE_COLOR_TEXTURE",
+  emissiveTexture: "USE_EMISSIVE_TEXTURE",
   normalTexture: "USE_NORMAL_TEXTURE",
   metallicRoughnessTexture: "USE_METALLIC_ROUGHNESS_TEXTURE",
   metallicTexture: "USE_METALLIC_TEXTURE",
   roughnessTexture: "USE_ROUGHNESS_TEXTURE",
   specularTexture: "USE_SPECULAR_TEXTURE",
   specularColorTexture: "USE_SPECULAR_COLOR_TEXTURE",
-  diffuseTexture: "USE_DIFFUSE_TEXTURE",
-  specularGlossinessTexture: "USE_SPECULAR_GLOSSINESS_TEXTURE",
-  clearCoatTexture: "USE_CLEAR_COAT_TEXTURE",
-  clearCoatRoughnessTexture: "USE_CLEAR_COAT_ROUGHNESS_TEXTURE",
-  clearCoatNormalTexture: "USE_CLEAR_COAT_NORMAL_TEXTURE",
+  sgDiffuseTexture: "USE_SG_DIFFUSE_TEXTURE",
+  sgSpecularGlossinessTexture: "USE_SG_SPECULAR_GLOSSINESS_TEXTURE",
+  clearcoatTexture: "USE_CLEARCOAT_TEXTURE",
+  clearcoatRoughnessTexture: "USE_CLEARCOAT_ROUGHNESS_TEXTURE",
+  clearcoatNormalTexture: "USE_CLEARCOAT_NORMAL_TEXTURE",
   sheenColorTexture: "USE_SHEEN_COLOR_TEXTURE",
   sheenRoughnessTexture: "USE_SHEEN_ROUGHNESS_TEXTURE",
   transmissionTexture: "USE_TRANSMISSION_TEXTURE",
@@ -92,7 +92,7 @@ const VERTEX_DEFINE = {
 export const STANDARD_MATERIAL_COMMON_FIELDS: readonly FeatureField[] = [
   { key: "baseColorTexture", define: MATERIAL_DEFINE.baseColorTexture, texture: true },
   { key: "alphaTexture", define: MATERIAL_DEFINE.alphaTexture, texture: true },
-  { key: "alphaTest", define: MATERIAL_DEFINE.alphaTest, wgslType: "f32", default: 0, runtime: true },
+  { key: "alphaCutoff", define: MATERIAL_DEFINE.alphaCutoff, wgslType: "f32", default: 0, runtime: true },
   { key: "responsiveAA", define: MATERIAL_DEFINE.responsiveAA, truthy: true },
 ];
 
@@ -104,8 +104,8 @@ export const STANDARD_MATERIAL_LIT_FIELDS: readonly FeatureField[] = [
   { key: "normalTextureScale", requires: MATERIAL_DEFINE.normalTexture, wgslType: "f32", default: 1 },
 
   // Specular-glossiness workflow.
-  { key: "diffuseTexture", requires: MATERIAL_DEFINE.specularGlossinessWorkflow, define: MATERIAL_DEFINE.diffuseTexture, texture: true },
-  { key: "specularGlossinessTexture", requires: MATERIAL_DEFINE.specularGlossinessWorkflow, define: MATERIAL_DEFINE.specularGlossinessTexture, texture: true },
+  { key: "sgDiffuseTexture", requires: MATERIAL_DEFINE.specularGlossinessWorkflow, define: MATERIAL_DEFINE.sgDiffuseTexture, texture: true },
+  { key: "sgSpecularGlossinessTexture", requires: MATERIAL_DEFINE.specularGlossinessWorkflow, define: MATERIAL_DEFINE.sgSpecularGlossinessTexture, texture: true },
   { key: "sgDiffuse", requires: MATERIAL_DEFINE.specularGlossinessWorkflow, wgslType: "vec4f", default: [1, 1, 1, 1] },
   { key: "sgSpecular", requires: MATERIAL_DEFINE.specularGlossinessWorkflow, wgslType: "vec3f", default: [1, 1, 1] },
   { key: "sgGlossiness", requires: MATERIAL_DEFINE.specularGlossinessWorkflow, wgslType: "f32", default: 1 },
@@ -118,8 +118,8 @@ export const STANDARD_MATERIAL_LIT_FIELDS: readonly FeatureField[] = [
   { key: "roughness", requires: MATERIAL_DEFINE.metallicRoughnessWorkflow, wgslType: "f32", default: 1 },
   { key: "ior", requires: MATERIAL_DEFINE.metallicRoughnessWorkflow, wgslType: "f32", default: 1.5 },
 
-  // KHR_materials_specular: OR-activated by either field sharing MATERIAL_DEFINE.specular.
-  // `runtime: true` here (unlike clearCoat/sheen/etc.) still respects its
+  // OR-activated by either field sharing MATERIAL_DEFINE.specular.
+  // `runtime: true` here (unlike clearcoat/sheen/etc.) still respects its
   // `requires` — metallicRoughnessWorkflow is a genuinely structural gate,
   // not an internal group link, so getFeatureFlags keeps enforcing it (see
   // the runtimeDefines check in base.ts).
@@ -128,22 +128,21 @@ export const STANDARD_MATERIAL_LIT_FIELDS: readonly FeatureField[] = [
   { key: "specularTexture", requires: MATERIAL_DEFINE.specular, define: MATERIAL_DEFINE.specularTexture, texture: true },
   { key: "specularColorTexture", requires: MATERIAL_DEFINE.specular, define: MATERIAL_DEFINE.specularColorTexture, texture: true },
 
-  // KHR_materials_clearcoat. `runtime: true` (also below for sheen/
-  // transmission/dispersion/volume/diffuseTransmission): the scalar factor
-  // is always in the Material struct and the shader body always evaluates
-  // the effect, gated by a same-named `override` constant instead of by
-  // string presence — materials that differ only by one of these effects
-  // being on/off then share one compiled shader module (see FeatureField.runtime).
-  { key: "clearCoat", define: MATERIAL_DEFINE.clearCoat, truthy: true, wgslType: "f32", default: 0, runtime: true },
-  { key: "clearCoatRoughness", requires: MATERIAL_DEFINE.clearCoat, wgslType: "f32", default: 0, runtime: true },
-  { key: "clearCoatTexture", requires: MATERIAL_DEFINE.clearCoat, define: MATERIAL_DEFINE.clearCoatTexture, texture: true },
-  { key: "clearCoatRoughnessTexture", requires: MATERIAL_DEFINE.clearCoat, define: MATERIAL_DEFINE.clearCoatRoughnessTexture, texture: true },
-  // No dedicated roughness texture: packed into the clearCoat texture's g channel.
-  { key: "clearCoatTexture", requires: MATERIAL_DEFINE.clearCoat, excludes: MATERIAL_DEFINE.clearCoatRoughnessTexture, define: MATERIAL_DEFINE.clearCoatRoughnessFromMainTexture },
-  { key: "clearCoatNormalTexture", requires: MATERIAL_DEFINE.clearCoat, define: MATERIAL_DEFINE.clearCoatNormalTexture, texture: true },
-  { key: "clearCoatNormalTextureScale", requires: MATERIAL_DEFINE.clearCoatNormalTexture, wgslType: "f32", default: 1 },
+  // `runtime: true` (also below for sheen/transmission/dispersion/volume/
+  // diffuseTransmission): the scalar factor is always in the Material struct
+  // and the shader body always evaluates the effect, gated by a same-named
+  // `override` constant instead of by string presence — materials that differ
+  // only by one of these effects being on/off then share one compiled shader
+  // module (see FeatureField.runtime).
+  { key: "clearcoat", define: MATERIAL_DEFINE.clearcoat, truthy: true, wgslType: "f32", default: 0, runtime: true },
+  { key: "clearcoatRoughness", requires: MATERIAL_DEFINE.clearcoat, wgslType: "f32", default: 0, runtime: true },
+  { key: "clearcoatTexture", requires: MATERIAL_DEFINE.clearcoat, define: MATERIAL_DEFINE.clearcoatTexture, texture: true },
+  { key: "clearcoatRoughnessTexture", requires: MATERIAL_DEFINE.clearcoat, define: MATERIAL_DEFINE.clearcoatRoughnessTexture, texture: true },
+  // No dedicated roughness texture: packed into the clearcoat texture's g channel.
+  { key: "clearcoatTexture", requires: MATERIAL_DEFINE.clearcoat, excludes: MATERIAL_DEFINE.clearcoatRoughnessTexture, define: MATERIAL_DEFINE.clearcoatRoughnessFromMainTexture },
+  { key: "clearcoatNormalTexture", requires: MATERIAL_DEFINE.clearcoat, define: MATERIAL_DEFINE.clearcoatNormalTexture, texture: true },
+  { key: "clearcoatNormalTextureScale", requires: MATERIAL_DEFINE.clearcoatNormalTexture, wgslType: "f32", default: 1 },
 
-  // KHR_materials_sheen.
   { key: "sheenColor", define: MATERIAL_DEFINE.sheen, wgslType: "vec4f", default: [0, 0, 0, 0], runtime: true },
   { key: "sheenRoughness", requires: MATERIAL_DEFINE.sheen, wgslType: "f32", default: 0, runtime: true },
   { key: "sheenColorTexture", requires: MATERIAL_DEFINE.sheen, define: MATERIAL_DEFINE.sheenColorTexture, texture: true },
@@ -151,33 +150,31 @@ export const STANDARD_MATERIAL_LIT_FIELDS: readonly FeatureField[] = [
   // No dedicated roughness texture: packed into the sheenColor texture's alpha.
   { key: "sheenColorTexture", requires: MATERIAL_DEFINE.sheen, excludes: MATERIAL_DEFINE.sheenRoughnessTexture, define: MATERIAL_DEFINE.sheenRoughnessFromMainTexture },
 
-  // KHR_materials_transmission/dispersion. transmission: 0 behaves like unset.
+  // transmission: 0 behaves like unset.
   { key: "transmission", define: MATERIAL_DEFINE.transmission, truthy: true, wgslType: "f32", default: 0, runtime: true },
   { key: "transmissionTexture", requires: MATERIAL_DEFINE.transmission, define: MATERIAL_DEFINE.transmissionTexture, texture: true },
   { key: "dispersion", requires: MATERIAL_DEFINE.transmission, define: MATERIAL_DEFINE.dispersion, truthy: true, wgslType: "f32", default: 0, runtime: true },
 
-  // KHR_materials_diffuse_transmission.
   { key: "diffuseTransmission", define: MATERIAL_DEFINE.diffuseTransmission, truthy: true, wgslType: "f32", default: 0, runtime: true },
   { key: "diffuseTransmissionColor", requires: MATERIAL_DEFINE.diffuseTransmission, wgslType: "vec3f", default: [1, 1, 1], runtime: true },
   { key: "diffuseTransmissionTexture", requires: MATERIAL_DEFINE.diffuseTransmission, define: MATERIAL_DEFINE.diffuseTransmissionTexture, texture: true },
   { key: "diffuseTransmissionColorTexture", requires: MATERIAL_DEFINE.diffuseTransmission, define: MATERIAL_DEFINE.diffuseTransmissionColorTexture, texture: true },
 
-  // KHR_materials_volume — shared by transmission and diffuse transmission
-  // (Beer's law attenuation).
+  // Shared by transmission and diffuse transmission (Beer's law attenuation).
   { key: "thickness", define: MATERIAL_DEFINE.volume, truthy: true, wgslType: "f32", default: 0, runtime: true },
   { key: "attenuationColor", requires: MATERIAL_DEFINE.volume, wgslType: "vec3f", default: [1, 1, 1], runtime: true },
   { key: "attenuationDistance", requires: MATERIAL_DEFINE.volume, wgslType: "f32", default: Infinity, runtime: true },
   { key: "thicknessTexture", requires: MATERIAL_DEFINE.volume, define: MATERIAL_DEFINE.thicknessTexture, texture: true },
 
   { key: "occlusionTexture", define: MATERIAL_DEFINE.occlusionTexture, texture: true },
-  // emissiveColorTexture is independent of emissiveColor: the shader
-  // select()s a neutral (1.0) factor when emissiveColor isn't set and a
-  // texture is present, or a zeroed one when there's no texture either
-  // (matching getEmissiveColor()'s hardcoded 0) — see the litBody template.
-  { key: "emissiveColor", define: MATERIAL_DEFINE.emissive, wgslType: "vec4f", default: [0, 0, 0, 0], runtime: true },
+  { key: "occlusionTextureStrength", requires: MATERIAL_DEFINE.occlusionTexture, wgslType: "f32", default: 1 },
+  // emissiveTexture is independent of emissive: the shader select()s a neutral
+  // (1.0) factor when emissive isn't set and a texture is present, or a zeroed
+  // one when there's no texture either — see the litBody template.
+  { key: "emissive", define: MATERIAL_DEFINE.emissive, wgslType: "vec4f", default: [0, 0, 0, 0], runtime: true },
   { key: "emissiveStrength", requires: MATERIAL_DEFINE.emissive, wgslType: "f32", default: 1, runtime: true },
   { key: "emissiveExposure", requires: MATERIAL_DEFINE.emissive, wgslType: "f32", default: 0, runtime: true },
-  { key: "emissiveColorTexture", define: MATERIAL_DEFINE.emissiveColorTexture, texture: true },
+  { key: "emissiveTexture", define: MATERIAL_DEFINE.emissiveTexture, texture: true },
 ];
 
 export const STANDARD_MATERIAL_FIELDS: readonly FeatureField[] = [
@@ -198,7 +195,7 @@ export const STANDARD_VERTEX_FIELDS: readonly FeatureField[] = [
   { key: "offset", define: VERTEX_DEFINE.instancedOffset },
   { key: "scale", define: VERTEX_DEFINE.instancedScale },
   { key: "rotation", define: VERTEX_DEFINE.instancedRotation },
-  { key: "instanceColor", define: VERTEX_DEFINE.instancedColor },
+  { key: "color", define: VERTEX_DEFINE.instancedColor },
   { key: "joint", define: VERTEX_DEFINE.skin },
   { key: "weight", define: VERTEX_DEFINE.skin },
   // Present only once the geometry system has seen the attribute change, which
@@ -235,17 +232,17 @@ const PBR_DATA_STRUCT = /* wgsl */ `struct PBRData {
   NdotV: f32,
 
   baseColor: vec3f,
-  emissiveColor: vec3f,
+  emissive: vec3f,
   opacity: f32,
   roughness: f32, // roughness value, as authored by the model creator (input to shader)
   metallic: f32, // metallic value at the surface
   linearRoughness: f32, // roughness mapped to a more linear change in the roughness (proposed by [2])
   f0: vec3f, // Reflectance at normal incidence, specular color
   f90: vec3f, // Specular response at grazing incidence
-  clearCoat: f32,
-  clearCoatRoughness: f32,
-  clearCoatLinearRoughness: f32,
-  clearCoatNormal: vec3f,
+  clearcoat: f32,
+  clearcoatRoughness: f32,
+  clearcoatLinearRoughness: f32,
+  clearcoatNormal: vec3f,
   reflectionWorld: vec3f,
   directColor: vec3f,
   diffuseColor: vec3f, // color contribution from diffuse lighting
@@ -280,14 +277,15 @@ const PBR_DATA_TYPES: Record<string, string> = Object.fromEntries(
 /**
  * A debug expression as a colour written over the shaded result.
  *
- * Named PBRData members are coerced by their declared type — a scalar splats,
- * a vec2 pads, a vec4 drops its alpha — and anything else is left to `vec3f()`,
+ * Named PBRData members are coerced by their declared type — a scalar splats, a
+ * vec2 pads, a vec4 drops its alpha — and anything else is left to `vec3f()`,
  * which covers a vec3 inter-stage variable and a scalar alike. Direction-valued
  * members are remapped from [-1, 1], the only transform that would otherwise
  * clip to black.
  *
  * The value is written linear and pre-tone-map, so it reads exactly only with
- * post-processing off; through a tone curve it is still ordered, just compressed.
+ * post-processing off; through a tone curve it is still ordered, just
+ * compressed.
  */
 function debugRenderAssignment(expression: string): string {
   const member = expression.startsWith("data.")
@@ -344,9 +342,9 @@ export const standardShader = (
 
   const colorAssignment =
     vertexFlags.vertexColor && vertexFlags.instancedColor
-      ? "output.color = input.vertexColor * input.instanceColor;"
+      ? "output.color = input.vertexColor * input.color;"
       : vertexFlags.instancedColor
-        ? "output.color = input.instanceColor;"
+        ? "output.color = input.color;"
         : vertexFlags.vertexColor
           ? "output.color = input.vertexColor;"
           : "";
@@ -424,11 +422,11 @@ export const standardShader = (
     areaLights,
   );
 
-  const ltcDecl = !areaLights
-    ? ""
-    : /* wgsl */ `
+  const ltcDecl = areaLights
+    ? /* wgsl */ `
 ${textureSamplerDeclaration(1, lightBindings.nextTextureSampler(), "uLtc1")}
-${textureSamplerDeclaration(1, lightBindings.nextTextureSampler(), "uLtc2")}`;
+${textureSamplerDeclaration(1, lightBindings.nextTextureSampler(), "uLtc2")}`
+    : "";
 
   // 2D shadow maps use a comparison sampler (hardware PCF); cube maps use a
   // regular sampler and compare manually (textureLoad is unavailable on cubes).
@@ -574,8 +572,8 @@ ${bindingDeclaration(1, lightBindings.next(), "uIrradianceCoefficients", `array<
       ? `let alphaTexCoord = getTextureCoordinatesTransformed(data, ${tc("alpha")}, uMaterial.alphaTextureMatrix);\n  data.opacity *= textureSample(uAlphaTexture, uAlphaTextureSampler, alphaTexCoord).x;`
       : ""
   }
-  if (USE_ALPHA_TEST && !USE_ALPHA_TO_COVERAGE) {
-  alphaTest(&data, uMaterial.alphaTest);
+  if (USE_ALPHA_CUTOFF && !USE_ALPHA_TO_COVERAGE) {
+  alphaTest(&data, uMaterial.alphaCutoff);
   }`;
 
   const unlitBody = /* wgsl */ `
@@ -617,21 +615,20 @@ ${bindingDeclaration(1, lightBindings.next(), "uIrradianceCoefficients", `array<
   }
 
   ${
-    materialFlags.emissiveColorTexture
+    materialFlags.emissiveTexture
       ? // Neutral multiplier (1.0) when the factor isn't set, so the texture
         // passes through untinted — select() picks it at pipeline-creation
         // time instead of this being a separate JS-generated code path.
-        `getEmissiveColorTextured(&data, select(vec4f(1.0), uMaterial.emissiveColor, USE_EMISSIVE_COLOR), select(1.0, uMaterial.emissiveStrength, USE_EMISSIVE_COLOR), uEmissiveColorTexture, uEmissiveColorTextureSampler, ${tc("emissiveColor")}, uMaterial.emissiveColorTextureMatrix, ${vColorExpr});`
-      : // Zeroed multiplier reproduces getEmissiveColor()'s hardcoded 0 when
-        // the factor isn't set.
-        `getEmissiveColorFactor(&data, select(vec4f(0.0), uMaterial.emissiveColor, USE_EMISSIVE_COLOR), select(0.0, uMaterial.emissiveStrength, USE_EMISSIVE_COLOR), ${vColorExpr});`
+        `getEmissiveTextured(&data, select(vec4f(1.0), uMaterial.emissive, USE_EMISSIVE), select(1.0, uMaterial.emissiveStrength, USE_EMISSIVE), uEmissiveTexture, uEmissiveTextureSampler, ${tc("emissive")}, uMaterial.emissiveTextureMatrix, ${vColorExpr});`
+      : // Zeroed multiplier leaves the term at 0 when the factor isn't set.
+        `getEmissive(&data, select(vec4f(0.0), uMaterial.emissive, USE_EMISSIVE), select(0.0, uMaterial.emissiveStrength, USE_EMISSIVE), ${vColorExpr});`
   }
 
   // Emissive is display-referred by default: the value authored is the value
   // that reaches the exposed buffer, so it reads the same whether or not the
   // camera is metering physically. emissiveExposure dials it towards being a
   // luminance the camera meters like anything else.
-  data.emissiveColor *= mix(1.0, uFrame.exposure, uMaterial.emissiveExposure);
+  data.emissive *= mix(1.0, uFrame.exposure, uMaterial.emissiveExposure);
 
   ${
     materialFlags.metallicRoughnessWorkflow
@@ -654,30 +651,30 @@ ${bindingDeclaration(1, lightBindings.next(), "uIrradianceCoefficients", `array<
   ${
     materialFlags.specularGlossinessWorkflow
       ? /* wgsl */ `
-  let sgDiffuseRGBA = ${textures.diffuseTexture ? `getDiffuseTextured(uMaterial.sgDiffuse, data, uDiffuseTexture, uDiffuseTextureSampler, ${tc("diffuse")}, uMaterial.diffuseTextureMatrix);` : "getDiffuse(uMaterial.sgDiffuse);"}
-  let sgSpecGloss = ${textures.specularGlossinessTexture ? `getSpecularGlossinessTextured(uMaterial.sgSpecular, uMaterial.sgGlossiness, data, uSpecularGlossinessTexture, uSpecularGlossinessTextureSampler, ${tc("specularGlossiness")}, uMaterial.specularGlossinessTextureMatrix);` : "getSpecularGlossiness(uMaterial.sgSpecular, uMaterial.sgGlossiness);"}
+  let sgDiffuseRGBA = ${textures.sgDiffuseTexture ? `getDiffuseTextured(uMaterial.sgDiffuse, data, uSgDiffuseTexture, uSgDiffuseTextureSampler, ${tc("sgDiffuse")}, uMaterial.sgDiffuseTextureMatrix);` : "getDiffuse(uMaterial.sgDiffuse);"}
+  let sgSpecGloss = ${textures.sgSpecularGlossinessTexture ? `getSpecularGlossinessTextured(uMaterial.sgSpecular, uMaterial.sgGlossiness, data, uSgSpecularGlossinessTexture, uSgSpecularGlossinessTextureSampler, ${tc("sgSpecularGlossiness")}, uMaterial.sgSpecularGlossinessTextureMatrix);` : "getSpecularGlossiness(uMaterial.sgSpecular, uMaterial.sgGlossiness);"}
   getBaseColorAndMetallicRoughnessFromSpecularGlossiness(&data, sgSpecGloss, sgDiffuseRGBA, ${vColorExpr});`
       : ""
   }
 
   ${alphaBlock()}
 
-  if (USE_CLEAR_COAT) {
-  ${textures.clearCoatTexture ? `getClearCoatTextured(&data, uMaterial.clearCoat, uMaterial.clearCoatRoughness, uClearCoatTexture, uClearCoatTextureSampler, ${tc("clearCoat")}, uMaterial.clearCoatTextureMatrix);` : "getClearCoat(&data, uMaterial.clearCoat);"}
+  if (USE_CLEARCOAT) {
+  ${textures.clearcoatTexture ? `getClearcoatTextured(&data, uMaterial.clearcoat, uMaterial.clearcoatRoughness, uClearcoatTexture, uClearcoatTextureSampler, ${tc("clearcoat")}, uMaterial.clearcoatTextureMatrix);` : "getClearcoat(&data, uMaterial.clearcoat);"}
   ${
-    textures.clearCoatRoughnessTexture
-      ? `getClearCoatRoughnessTextured(&data, uMaterial.clearCoatRoughness, uClearCoatRoughnessTexture, uClearCoatRoughnessTextureSampler, ${tc("clearCoatRoughness")}, uMaterial.clearCoatRoughnessTextureMatrix);`
-      : materialFlags.clearCoatRoughnessFromMainTexture
+    textures.clearcoatRoughnessTexture
+      ? `getClearcoatRoughnessTextured(&data, uMaterial.clearcoatRoughness, uClearcoatRoughnessTexture, uClearcoatRoughnessTextureSampler, ${tc("clearcoatRoughness")}, uMaterial.clearcoatRoughnessTextureMatrix);`
+      : materialFlags.clearcoatRoughnessFromMainTexture
         ? ""
-        : "getClearCoatRoughness(&data, uMaterial.clearCoatRoughness);"
+        : "getClearcoatRoughness(&data, uMaterial.clearcoatRoughness);"
   }
-  data.clearCoatLinearRoughness = data.clearCoatRoughness * data.clearCoatRoughness;
-  data.f0 = mix(data.f0, f0ClearCoatToSurface(data.f0), data.clearCoat);
-  data.roughness = max(data.roughness, data.clearCoatRoughness);
+  data.clearcoatLinearRoughness = data.clearcoatRoughness * data.clearcoatRoughness;
+  data.f0 = mix(data.f0, f0ClearcoatToSurface(data.f0), data.clearcoat);
+  data.roughness = max(data.roughness, data.clearcoatRoughness);
   ${
-    textures.clearCoatNormalTexture
-      ? `getClearCoatNormalTextured(&data, uClearCoatNormalTexture, uClearCoatNormalTextureSampler, uMaterial.clearCoatNormalTextureScale, ${tc("clearCoatNormal")}, uMaterial.clearCoatNormalTextureMatrix, frontFacing);`
-      : "getClearCoatNormal(&data, input.normalView);"
+    textures.clearcoatNormalTexture
+      ? `getClearcoatNormalTextured(&data, uClearcoatNormalTexture, uClearcoatNormalTextureSampler, uMaterial.clearcoatNormalTextureScale, ${tc("clearcoatNormal")}, uMaterial.clearcoatNormalTextureMatrix, frontFacing);`
+      : "getClearcoatNormal(&data, input.normalView);"
   }
   }
 
@@ -708,22 +705,22 @@ ${bindingDeclaration(1, lightBindings.next(), "uIrradianceCoefficients", `array<
   }
   if (USE_DIFFUSE_TRANSMISSION) {
   ${
-    // The two textures are independently optional (like clearCoat/
-    // clearCoatRoughness above) — each dispatches to the variant that only
+    // The two textures are independently optional (like clearcoat/
+    // clearcoatRoughness above) — each dispatches to the variant that only
     // samples the texture(s) actually bound, so a material with just one of
     // the two doesn't get the other's factor tinted by an unrelated texture.
     materialFlags.diffuseTransmissionTexture &&
     materialFlags.diffuseTransmissionColorTexture
       ? `getDiffuseTransmissionTextured(&data, uMaterial.diffuseTransmission, uMaterial.diffuseTransmissionColor, uDiffuseTransmissionTexture, uDiffuseTransmissionTextureSampler, ${tc("diffuseTransmission")}, uMaterial.diffuseTransmissionTextureMatrix, uDiffuseTransmissionColorTexture, uDiffuseTransmissionColorTextureSampler, ${tc("diffuseTransmissionColor")}, uMaterial.diffuseTransmissionColorTextureMatrix, uModel.modelMatrix);`
       : materialFlags.diffuseTransmissionTexture
-        ? `getDiffuseTransmissionFactorTextured(&data, uMaterial.diffuseTransmission, uMaterial.diffuseTransmissionColor, uDiffuseTransmissionTexture, uDiffuseTransmissionTextureSampler, ${tc("diffuseTransmission")}, uMaterial.diffuseTransmissionTextureMatrix, uModel.modelMatrix);`
+        ? `getDiffuseTransmissionStrengthTextured(&data, uMaterial.diffuseTransmission, uMaterial.diffuseTransmissionColor, uDiffuseTransmissionTexture, uDiffuseTransmissionTextureSampler, ${tc("diffuseTransmission")}, uMaterial.diffuseTransmissionTextureMatrix, uModel.modelMatrix);`
         : materialFlags.diffuseTransmissionColorTexture
           ? `getDiffuseTransmissionColorTextured(&data, uMaterial.diffuseTransmission, uMaterial.diffuseTransmissionColor, uDiffuseTransmissionColorTexture, uDiffuseTransmissionColorTextureSampler, ${tc("diffuseTransmissionColor")}, uMaterial.diffuseTransmissionColorTextureMatrix, uModel.modelMatrix);`
           : `getDiffuseTransmission(&data, uMaterial.diffuseTransmission, uMaterial.diffuseTransmissionColor, uModel.modelMatrix);`
   }
   }
 
-  ${materialFlags.occlusionTexture ? `getAmbientOcclusion(&data, uOcclusionTexture, uOcclusionTextureSampler, ${tc("occlusion")}, uMaterial.occlusionTextureMatrix);` : ""}
+  ${materialFlags.occlusionTexture ? `getAmbientOcclusion(&data, uMaterial.occlusionTextureStrength, uOcclusionTexture, uOcclusionTextureSampler, ${tc("occlusion")}, uMaterial.occlusionTextureMatrix);` : ""}
 
   // Folded into the same term the material's occlusion texture feeds, so every
   // consumer of ao — ambient, area lights, the light probe, and the analytic
@@ -753,15 +750,15 @@ ${bindingDeclaration(1, lightBindings.next(), "uIrradianceCoefficients", `array<
     // with just specularTexture doesn't get its RGB — reserved for
     // specularColorTexture since ratification — tinting f0.
     textures.specularTexture && textures.specularColorTexture
-      ? `getSpecularFactorTextured(&data, uMaterial.specular, uMaterial.specularColor, uSpecularTexture, uSpecularTextureSampler, ${tc("specular")}, uMaterial.specularTextureMatrix, uSpecularColorTexture, uSpecularColorTextureSampler, ${tc("specularColor")}, uMaterial.specularColorTextureMatrix);`
+      ? `getSpecularTextured(&data, uMaterial.specular, uMaterial.specularColor, uSpecularTexture, uSpecularTextureSampler, ${tc("specular")}, uMaterial.specularTextureMatrix, uSpecularColorTexture, uSpecularColorTextureSampler, ${tc("specularColor")}, uMaterial.specularColorTextureMatrix);`
       : textures.specularTexture
         ? `getSpecularStrengthTextured(&data, uMaterial.specular, uMaterial.specularColor, uSpecularTexture, uSpecularTextureSampler, ${tc("specular")}, uMaterial.specularTextureMatrix);`
         : textures.specularColorTexture
           ? `getSpecularColorTextured(&data, uMaterial.specular, uMaterial.specularColor, uSpecularColorTexture, uSpecularColorTextureSampler, ${tc("specularColor")}, uMaterial.specularColorTextureMatrix);`
-          : "getSpecularFactor(&data, uMaterial.specular, uMaterial.specularColor);"
+          : "getSpecular(&data, uMaterial.specular, uMaterial.specularColor);"
   }
   } else {
-  getSpecular(&data);
+  getSpecularFromIor(&data);
   }`
       : ""
   }
@@ -795,8 +792,8 @@ ${bindingDeclaration(1, lightBindings.next(), "uIrradianceCoefficients", `array<
 
   // Only the terms that are scene radiance get metered. data.transmitted is
   // already exposed (it samples the grab texture this same multiply wrote), and
-  // data.emissiveColor carries its own exposure treatment from above.
-  color = (data.indirectDiffuse + data.indirectSpecular + data.directColor) * uFrame.exposure + data.emissiveColor + data.transmitted;`;
+  // data.emissive carries its own exposure treatment from above.
+  color = (data.indirectDiffuse + data.indirectSpecular + data.directColor) * uFrame.exposure + data.emissive + data.transmitted;`;
 
   return /* wgsl */ `
 ${frameStruct()}
@@ -886,8 +883,8 @@ override DEPTH_PRE_PASS_ONLY: bool = false;
 override USE_TEXCOORD_1: bool = ${vertexFlags.texCoord1};
 override USE_TANGENTS: bool = ${vertexFlags.tangent};
 override USE_NORMAL_TEXTURE: bool = ${materialFlags.normalTexture};
-override USE_CLEAR_COAT_NORMAL_TEXTURE: bool = ${materialFlags.clearCoatNormalTexture};
-override USE_CLEAR_COAT_ROUGHNESS_FROM_MAIN_TEXTURE: bool = ${materialFlags.clearCoatRoughnessFromMainTexture};
+override USE_CLEARCOAT_NORMAL_TEXTURE: bool = ${materialFlags.clearcoatNormalTexture};
+override USE_CLEARCOAT_ROUGHNESS_FROM_MAIN_TEXTURE: bool = ${materialFlags.clearcoatRoughnessFromMainTexture};
 override USE_SHEEN_ROUGHNESS_FROM_MAIN_TEXTURE: bool = ${materialFlags.sheenRoughnessFromMainTexture};
 override DEPTH_PACK_FAR: f32 = 10.0;
 // Genuinely overridable (unlike the toggles above, which change bind group
@@ -906,18 +903,18 @@ override USE_SSAO_TEXTURE: bool = false;
 // normal and the flat visibility term.
 override USE_BENT_NORMALS: bool = false;
 // Only meaningful alongside USE_BLEND: scales color by opacity before output,
-// matching the "premultiplied" blendMode's GPUBlendComponent pair (see
-// BLEND_MODES in systems/renderer/base.ts).
+// matching a premultiplied blend equation (see BLEND_MODES and
+// getPipelineBlend in systems/renderer/base.ts).
 override PREMULTIPLY_ALPHA: bool = false;
-override USE_ALPHA_TEST: bool = false;
+override USE_ALPHA_CUTOFF: bool = false;
 // Alpha testing against a multisampled attachment: the cutout becomes a
 // coverage mask rather than a discard, so its edges antialias like geometry.
 // Set by the renderer when the pass is multisampled, paired with the pipeline's
 // alphaToCoverage (see systems/renderer/standard.ts).
 override USE_ALPHA_TO_COVERAGE: bool = false;
 override USE_SPECULAR: bool = false;
-override USE_EMISSIVE_COLOR: bool = false;
-override USE_CLEAR_COAT: bool = false;
+override USE_EMISSIVE: bool = false;
+override USE_CLEARCOAT: bool = false;
 override USE_SHEEN: bool = false;
 override USE_TRANSMISSION: bool = false;
 override USE_DISPERSION: bool = false;
@@ -1010,14 +1007,14 @@ ${SHADERS.math.TWO_PI}
 ${SHADERS.math.saturate}
 ${SHADERS.math.multQuat}
 ${SHADERS.math.random}
-${(SHADERS.math as any).glslMod}
+${SHADERS.math.glslMod}
 ${SHADERS.encodeDecode}
 ${SHADERS.textureCoordinates}
 ${SHADERS.baseColor}
 ${SHADERS.alpha}
-${(SHADERS.ambientOcclusion as any).multiBounce}
-${(SHADERS.ambientOcclusion as any).specular}
-${(SHADERS.ambientOcclusion as any).texture}
+${SHADERS.ambientOcclusion.multiBounce}
+${SHADERS.ambientOcclusion.specular}
+${SHADERS.ambientOcclusion.texture}
 ${SHADERS.math.max3}
 ${SHADERS.reversibleToneMap}
 
@@ -1033,7 +1030,7 @@ ${
   ${shadowDispatchDecls}
   ${SHADERS.brdf}
   ${SHADERS.specular}
-  ${SHADERS.clearCoat}
+  ${SHADERS.clearcoat}
   ${SHADERS.sheenColor}
   ${SHADERS.transmission}
   ${SHADERS.indirect}
@@ -1045,7 +1042,7 @@ ${
   ${SHADERS.lightArea}
 
   // Material and geometric context
-  ${SHADERS.emissiveColor}
+  ${SHADERS.emissive}
   ${SHADERS.normal}
   ${SHADERS.metallicRoughness}
   ${SHADERS.specularGlossiness}
@@ -1077,7 +1074,7 @@ fn fragmentMain(
   output.color = vec4f(color, 1.0);
 
   ${outputs.normal ? "output.normal = vec4f(data.normalView * 0.5 + 0.5, 1.0);" : ""}
-  ${outputs.emissive ? "output.emissive = vec4f(data.emissiveColor, 1.0);" : ""}
+  ${outputs.emissive ? "output.emissive = vec4f(data.emissive, 1.0);" : ""}
   ${outputs.velocity ? FRAGMENT_VELOCITY : ""}
   ${
     outputs.responsive
@@ -1100,14 +1097,14 @@ fn fragmentMain(
     }
   }
 
-  if (USE_ALPHA_TEST && USE_ALPHA_TO_COVERAGE) {
+  if (USE_ALPHA_CUTOFF && USE_ALPHA_TO_COVERAGE) {
     // Alpha drives the coverage mask, so it has to be a coverage value rather
     // than the mask texture's own gradient: rescaled by its screen-space rate
     // of change, it saturates to 0 or 1 everywhere except the pixel straddling
     // the cutoff. Without this, every partially transparent texel in the
     // interior would thin out the surface instead of only its silhouette.
     output.color.w = saturateF32(
-      (data.opacity - uMaterial.alphaTest) / max(fwidth(data.opacity), 1e-4) + 0.5
+      (data.opacity - uMaterial.alphaCutoff) / max(fwidth(data.opacity), 1e-4) + 0.5
     );
   }
 

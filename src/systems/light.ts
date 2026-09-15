@@ -79,7 +79,7 @@ export default () => ({
         this.updateLight(spotLight, _transform);
         spotLight._intensity = spotPowerToIntensity(
           spotLight.intensity!,
-          spotLight.angle!,
+          spotLight.outerConeAngle!,
           spotLight.focusedSpot,
         );
         spotLight._invSqrFalloff = getInvSqrFalloff(spotLight.range!);

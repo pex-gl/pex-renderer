@@ -32,7 +32,7 @@
     "custom-material",
     "brdf",
     "transmission",
-    "clear-coat",
+    "clearcoat",
     "point-size",
   ];
 

@@ -1,13 +1,12 @@
-import { mat3 } from "pex-math";
+import { mat3, mat4 } from "pex-math";
 import { submit } from "pex-gpu";
 import { basicShader, BASIC_VERTEX_FIELDS } from "../../shaders/basic.js";
 
-import createBaseSystem, { BLEND_MODES, outputsKey } from "./base.js";
+import createBaseSystem, { outputsKey } from "./base.js";
 import { definesKey, hooksKey } from "../../utils.js";
 
 import type {
   PipelineShaderOptions,
-  BlendMode,
   Entity,
   RendererPassOptions,
   RendererSystem,
@@ -63,12 +62,18 @@ export default ({ ctx }: SystemOptions): RendererSystem => ({
   },
   getPipelineOptions(entity: any) {
     const { material } = entity;
+    const blend = this.getPipelineBlend(material.blend);
     return {
-      depthWriteEnabled: material.depthWrite !== false && !material.blend,
-      cullMode: (material.cullFace ?? true) ? "back" : "none",
-      ...(material.blend
-        ? { blend: BLEND_MODES[(material.blendMode ?? "normal") as BlendMode] }
-        : {}),
+      depthWriteEnabled: material.depthWriteEnabled ?? !blend,
+      depthCompare: material.depthCompare ?? "less-equal",
+      cullMode: material.cullMode ?? "back",
+      topology: entity._geometry.topology ?? "triangle-list",
+      // A negative-determinant node transform (e.g. a negative scale) mirrors
+      // space and reverses triangle winding — per spec, front-facing flips
+      // from CCW to CW along with it.
+      frontFace:
+        mat4.determinant(entity._transform.modelMatrix) < 0 ? "cw" : "ccw",
+      ...(blend ? { blend } : {}),
     };
   },
   render(
@@ -99,7 +104,7 @@ export default ({ ctx }: SystemOptions): RendererSystem => ({
         attributes: entity._geometry!.attributes,
         indices: entity._geometry!.indices,
         count: entity._geometry!.count,
-        instanceCount: entity._geometry!.instances,
+        instanceCount: entity._geometry!.instanceCount,
         uniforms: {
           uFrame,
           ...this.getModelUniforms(

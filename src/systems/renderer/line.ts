@@ -80,8 +80,8 @@ export default ({ ctx }: SystemOptions): RendererSystem => ({
     const { material } = entity;
     // Camera-facing quads have no meaningful winding, so culling stays off.
     return {
-      depthWriteEnabled: material.depthWrite !== false,
-      depthCompare: material.depthTest === false ? "always" : "less",
+      depthWriteEnabled: material.depthWriteEnabled !== false,
+      depthCompare: material.depthCompare ?? "less",
       cullMode: "none",
       // Always written, undefined included: the pipeline object is cached per
       // shader variant and mutated per draw, so an omitted key would leave the
@@ -184,12 +184,12 @@ export default ({ ctx }: SystemOptions): RendererSystem => ({
         pointA: {
           buffer: attributes.position.buffer,
           stepMode: "instance",
-          stride: FLOAT * 6,
+          arrayStride: FLOAT * 6,
         },
         pointB: {
           buffer: attributes.position.buffer,
           stepMode: "instance",
-          stride: FLOAT * 6,
+          arrayStride: FLOAT * 6,
           offset: FLOAT * 3,
         },
       };
@@ -198,12 +198,12 @@ export default ({ ctx }: SystemOptions): RendererSystem => ({
         drawAttributes.colorA = {
           buffer: attributes.vertexColor.buffer,
           stepMode: "instance",
-          stride: FLOAT * 8,
+          arrayStride: FLOAT * 8,
         };
         drawAttributes.colorB = {
           buffer: attributes.vertexColor.buffer,
           stepMode: "instance",
-          stride: FLOAT * 8,
+          arrayStride: FLOAT * 8,
           offset: FLOAT * 4,
         };
       }

@@ -20,15 +20,10 @@ const attributeMap: Record<string, string | string[]> = {
   offset: "offsets",
   scale: "scales",
   rotation: "rotations",
-  instanceColor: "colors",
+  color: "colors",
 };
 const attributeMapKeys = Object.keys(attributeMap);
-const instancedAttributes = new Set([
-  "offset",
-  "scale",
-  "rotation",
-  "instanceColor",
-]);
+const instancedAttributes = new Set(["offset", "scale", "rotation", "color"]);
 
 const indicesProps = ["cells", "indices"];
 
@@ -37,7 +32,12 @@ const indicesProps = ["cells", "indices"];
  * motion vector can be written for it: CPU-blended morph targets land in
  * `position`, and animated instancing in the instance transforms.
  */
-const deformingAttributes = new Set(["position", "offset", "scale", "rotation"]);
+const deformingAttributes = new Set([
+  "position",
+  "offset",
+  "scale",
+  "rotation",
+]);
 const previousAttributeName = (name: string) =>
   `previous${name[0]!.toUpperCase()}${name.slice(1)}`;
 
@@ -140,9 +140,9 @@ export default ({ ctx }: SystemOptions) => ({
       }
       cachedGeom.geometry = geometry;
 
-      cachedGeom.instances = geometry.instances;
+      cachedGeom.instanceCount = geometry.instanceCount;
       cachedGeom.count = geometry.count;
-      cachedGeom.primitive = geometry.primitive;
+      cachedGeom.topology = geometry.topology;
 
       // Add custom attributes
       if (cachedGeom.customAttributes) {
@@ -226,7 +226,7 @@ export default ({ ctx }: SystemOptions) => ({
           }
 
           attribute.offset = attributeValue.offset;
-          attribute.stride = attributeValue.stride;
+          attribute.arrayStride = attributeValue.arrayStride;
           attribute.format = attributeValue.format;
 
           // The pair describes the same vertices, so it has to be read the
@@ -235,7 +235,7 @@ export default ({ ctx }: SystemOptions) => ({
             cachedGeom.attributes[previousAttributeName(attributeName)];
           if (previous) {
             previous.offset = attribute.offset;
-            previous.stride = attribute.stride;
+            previous.arrayStride = attribute.arrayStride;
             previous.format = attribute.format;
           }
         }

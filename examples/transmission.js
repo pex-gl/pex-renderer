@@ -163,7 +163,7 @@ const transparentCubesEntity = createEntity({
     offsets: g1.positions,
     scales: g1.scales,
     colors: g1.colors,
-    instances: g1.positions.length,
+    instanceCount: g1.positions.length,
   }),
   material: components.material({
     baseColor: [1, 1, 1, 0.5],
@@ -171,7 +171,7 @@ const transparentCubesEntity = createEntity({
     roughness: 0.15,
     receiveShadows: true,
     castShadows: true,
-    blend: true,
+    blend: "normal",
   }),
 });
 world.add(transparentCubesEntity);
@@ -183,7 +183,7 @@ const transmittedCubesEntity = createEntity({
     ...roundedCube({ sx: 0.99, radius: 0.05 }),
     offsets: g2.positions,
     scales: g2.scales,
-    instances: g2.positions.length,
+    instanceCount: g2.positions.length,
   }),
   material: components.material({
     baseColor: [1, 1, 1, 1],
@@ -198,7 +198,7 @@ const transmittedCubesEntity = createEntity({
     ior: 1.5,
     specular: 0.1,
     specularColor: [0, 0, 1],
-    cullFace: false,
+    cullMode: "none",
   }),
 });
 world.add(transmittedCubesEntity);
@@ -221,7 +221,6 @@ const directionalLightEntity = createEntity({
     color: [1, 1, 1, 2],
     intensity: 100_000, // lx, a clear midday sun
     castShadows: true,
-    bias: 0.03,
   }),
 });
 world.add(directionalLightEntity);
@@ -235,7 +234,6 @@ const directionalLightEntity2 = createEntity({
     color: [1, 1, 1, 2],
     intensity: 100_000, // lx, a clear midday sun
     castShadows: true,
-    bias: 0.03,
   }),
 });
 world.add(directionalLightEntity2);

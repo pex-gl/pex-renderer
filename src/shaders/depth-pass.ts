@@ -31,7 +31,7 @@ const VERTEX_DEFINE = {
 } as const;
 
 const MATERIAL_DEFINE = {
-  alphaTest: "USE_ALPHA_TEST",
+  alphaCutoff: "USE_ALPHA_CUTOFF",
   baseColorTexture: "USE_BASE_COLOR_TEXTURE",
   alphaTexture: "USE_ALPHA_TEXTURE",
 } as const;
@@ -54,7 +54,7 @@ export const DEPTH_PASS_VERTEX_FIELDS: readonly FeatureField[] = [
 export const DEPTH_PASS_ALPHA_VERTEX_FIELDS: readonly FeatureField[] = [
   { key: "texCoord1", define: VERTEX_DEFINE.texCoord1 },
   { key: "vertexColor", define: VERTEX_DEFINE.vertexColor },
-  { key: "instanceColor", define: VERTEX_DEFINE.instancedColor },
+  { key: "color", define: VERTEX_DEFINE.instancedColor },
 ];
 
 /**
@@ -66,8 +66,8 @@ export const DEPTH_PASS_ALPHA_VERTEX_FIELDS: readonly FeatureField[] = [
  */
 export const DEPTH_PASS_MATERIAL_FIELDS: readonly FeatureField[] = [
   {
-    key: "alphaTest",
-    define: MATERIAL_DEFINE.alphaTest,
+    key: "alphaCutoff",
+    define: MATERIAL_DEFINE.alphaCutoff,
     wgslType: "f32",
     default: 0,
   },
@@ -75,19 +75,19 @@ export const DEPTH_PASS_MATERIAL_FIELDS: readonly FeatureField[] = [
     key: "baseColor",
     wgslType: "vec4f",
     default: [1, 1, 1, 1],
-    requires: MATERIAL_DEFINE.alphaTest,
+    requires: MATERIAL_DEFINE.alphaCutoff,
   },
   {
     key: "baseColorTexture",
     define: MATERIAL_DEFINE.baseColorTexture,
     texture: true,
-    requires: MATERIAL_DEFINE.alphaTest,
+    requires: MATERIAL_DEFINE.alphaCutoff,
   },
   {
     key: "alphaTexture",
     define: MATERIAL_DEFINE.alphaTexture,
     texture: true,
-    requires: MATERIAL_DEFINE.alphaTest,
+    requires: MATERIAL_DEFINE.alphaCutoff,
   },
 ];
 
@@ -109,8 +109,8 @@ export const DEPTH_PASS_MATERIAL_FIELDS: readonly FeatureField[] = [
  * bunching. Because frag_depth is written explicitly, rasterizer depth bias no
  * longer applies — bias is done in the light shader's compare instead.
  *
- * USE_ALPHA_TEST adds the fragment stage's other job: recompute opacity the way
- * the main pass does and discard below the threshold. It composes with either
+ * USE_ALPHA_CUTOFF adds the fragment stage's other job: recompute opacity the
+ * way the main pass does and discard below the cutoff. It composes with either
  * variant above, and is the only reason this pass binds material state at all.
  *
  * USE_ALPHA_TO_COVERAGE resolves that cutout as a coverage mask instead, for a
@@ -140,7 +140,7 @@ export const depthPassShader = (
   const usePrePass = defines.has("USE_DEPTH_PRE_PASS");
   const writeNormal = useNormalOutput && useNormals;
 
-  const useAlphaTest = defines.has(MATERIAL_DEFINE.alphaTest);
+  const useAlphaTest = defines.has(MATERIAL_DEFINE.alphaCutoff);
   // Resolve the cutout as coverage rather than a discard. Only the normal
   // output variant can: WebGPU derives the mask from the alpha at location 0,
   // and a depth-only pass has no colour target to supply one.
@@ -203,7 +203,7 @@ ${
   baseColor: vec4f,
   ${textureMatrixField("baseColorTexture", baseColorTextureBinding)}
   ${textureMatrixField("alphaTexture", alphaTextureBinding)}
-  alphaTest: f32,
+  alphaCutoff: f32,
 }
 ${bindingDeclaration(2, 0, "uMaterial", "Material", "uniform")}
 ${textureSamplerDeclaration(2, baseColorTextureBinding, "uBaseColorTexture")}
@@ -283,10 +283,10 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
   ${
     useColor
       ? vertexFlags.vertexColor && vertexFlags.instancedColor
-        ? "output.color = input.vertexColor * input.instanceColor;"
+        ? "output.color = input.vertexColor * input.color;"
         : vertexFlags.vertexColor
           ? "output.color = input.vertexColor;"
-          : "output.color = input.instanceColor;"
+          : "output.color = input.color;"
       : ""
   }
   return output;
@@ -308,14 +308,14 @@ ${(() => {
   const discardBlock =
     useAlphaTest && !useAlphaToCoverage
       ? `${opacityBlock}
-  if (opacity < uMaterial.alphaTest) {
+  if (opacity < uMaterial.alphaCutoff) {
     discard;
   }`
       : "";
   // Matches standard.js's rescale, so the samples this pass leaves depth in are
   // the ones the opaque pass then shades.
   const coverageExpr = useAlphaToCoverage
-    ? `clamp((opacity - uMaterial.alphaTest) / max(fwidth(opacity), 1e-4) + 0.5, 0.0, 1.0)`
+    ? `clamp((opacity - uMaterial.alphaCutoff) / max(fwidth(opacity), 1e-4) + 0.5, 0.0, 1.0)`
     : "1.0";
 
   if (useLinearDepth) {

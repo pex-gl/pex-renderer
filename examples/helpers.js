@@ -164,7 +164,7 @@ const instancedEntity = createEntity({
     offsets: grid,
     scales,
     rotations,
-    instances: grid.length,
+    instanceCount: grid.length,
   }),
   material: components.material({
     baseColor: [0.5, 1, 0.7, 1],

@@ -26,9 +26,8 @@ const {
   depthResolve,
   line,
   overlay,
-  helper,
-  error,
   sky,
+  skybox,
   postProcessing,
 } = shaders;
 
@@ -124,7 +123,7 @@ const standardVariants = [
   { name: "velocity [static instancing]", defines: new Set(["USE_NORMALS", "USE_INSTANCED_OFFSET", "USE_INSTANCED_SCALE", "USE_INSTANCED_ROTATION"]), options: VELOCITY },
   { name: "velocity [animated instancing]", defines: new Set(["USE_NORMALS", "USE_INSTANCED_OFFSET", "USE_INSTANCED_SCALE", "USE_INSTANCED_ROTATION", "USE_PREVIOUS_INSTANCED_OFFSET", "USE_PREVIOUS_INSTANCED_SCALE", "USE_PREVIOUS_INSTANCED_ROTATION"]), options: VELOCITY },
   { name: "velocity [skinned + morphed + animated instancing]", defines: new Set(["USE_NORMALS", "USE_SKIN", "USE_PREVIOUS_POSITION", "USE_INSTANCED_OFFSET", "USE_INSTANCED_SCALE", "USE_INSTANCED_ROTATION", "USE_PREVIOUS_INSTANCED_OFFSET", "USE_PREVIOUS_INSTANCED_SCALE", "USE_PREVIOUS_INSTANCED_ROTATION"]), options: { ...VELOCITY, maxJoints: 64 } },
-  { name: "unlit + basecolor tex + alpha test", defines: new Set(["USE_UNLIT_WORKFLOW", "USE_BASE_COLOR_TEXTURE", "USE_ALPHA_TEXTURE", "USE_ALPHA_TEST"]) },
+  { name: "unlit + basecolor tex + alpha test", defines: new Set(["USE_UNLIT_WORKFLOW", "USE_BASE_COLOR_TEXTURE", "USE_ALPHA_TEXTURE", "USE_ALPHA_CUTOFF"]) },
   { name: "metallic-roughness no textures no lights", defines: new Set(["USE_METALLIC_ROUGHNESS_WORKFLOW"]) },
   { name: "mr + basecolor + normal + 1 directional", defines: new Set(["USE_METALLIC_ROUGHNESS_WORKFLOW", "USE_NORMALS", "USE_TEXCOORD_0", "USE_BASE_COLOR_TEXTURE", "USE_NORMAL_TEXTURE", "USE_TANGENTS"]), options: { lights: { directional: 1 } } },
   { name: "all light types at max", defines: new Set(["USE_METALLIC_ROUGHNESS_WORKFLOW", "USE_NORMALS"]), options: { lights: { ambient: 4, directional: 4, point: 4, spot: 4, area: 4 } } },
@@ -135,12 +134,12 @@ const standardVariants = [
   { name: "shadows, mixed sizes", defines: new Set(["USE_METALLIC_ROUGHNESS_WORKFLOW", "USE_NORMALS"]), options: { lights: { directional: 2, spot: 2, point: 2, shadow2DBuckets: 3, shadowCubeBuckets: 2 } } },
   { name: "shadows, casters absent", defines: new Set(["USE_METALLIC_ROUGHNESS_WORKFLOW", "USE_NORMALS"]), options: { lights: { directional: 2, point: 1, shadow2DBuckets: 0, shadowCubeBuckets: 0 } } },
   { name: "reflection probes + transmission", defines: new Set(["USE_METALLIC_ROUGHNESS_WORKFLOW", "USE_NORMALS", "USE_REFLECTION_PROBES", "USE_TRANSMISSION", "USE_TRANSMISSION_TEXTURE", "USE_DISPERSION", "USE_TEXCOORD_0"]), options: { lights: { directional: 1 } } },
-  { name: "clear coat + sheen + tangents", defines: new Set(["USE_METALLIC_ROUGHNESS_WORKFLOW", "USE_NORMALS", "USE_TEXCOORD_0", "USE_CLEAR_COAT", "USE_CLEAR_COAT_TEXTURE", "USE_CLEAR_COAT_NORMAL_TEXTURE", "USE_SHEEN", "USE_SHEEN_COLOR_TEXTURE", "USE_TANGENTS"]), options: { lights: { point: 2 } } },
-  { name: "clear coat roughness from main texture", defines: new Set(["USE_METALLIC_ROUGHNESS_WORKFLOW", "USE_NORMALS", "USE_TEXCOORD_0", "USE_CLEAR_COAT", "USE_CLEAR_COAT_TEXTURE", "USE_CLEAR_COAT_ROUGHNESS_FROM_MAIN_TEXTURE"]) },
-  { name: "specular-glossiness", defines: new Set(["USE_SPECULAR_GLOSSINESS_WORKFLOW", "USE_NORMALS", "USE_TEXCOORD_0", "USE_DIFFUSE_TEXTURE", "USE_SPECULAR_GLOSSINESS_TEXTURE"]), options: { lights: { directional: 1 } } },
+  { name: "clear coat + sheen + tangents", defines: new Set(["USE_METALLIC_ROUGHNESS_WORKFLOW", "USE_NORMALS", "USE_TEXCOORD_0", "USE_CLEARCOAT", "USE_CLEARCOAT_TEXTURE", "USE_CLEARCOAT_NORMAL_TEXTURE", "USE_SHEEN", "USE_SHEEN_COLOR_TEXTURE", "USE_TANGENTS"]), options: { lights: { point: 2 } } },
+  { name: "clear coat roughness from main texture", defines: new Set(["USE_METALLIC_ROUGHNESS_WORKFLOW", "USE_NORMALS", "USE_TEXCOORD_0", "USE_CLEARCOAT", "USE_CLEARCOAT_TEXTURE", "USE_CLEARCOAT_ROUGHNESS_FROM_MAIN_TEXTURE"]) },
+  { name: "specular-glossiness", defines: new Set(["USE_SPECULAR_GLOSSINESS_WORKFLOW", "USE_NORMALS", "USE_TEXCOORD_0", "USE_SG_DIFFUSE_TEXTURE", "USE_SG_SPECULAR_GLOSSINESS_TEXTURE"]), options: { lights: { directional: 1 } } },
   { name: "specular workflow (KHR)", defines: new Set(["USE_METALLIC_ROUGHNESS_WORKFLOW", "USE_NORMALS", "USE_TEXCOORD_0", "USE_SPECULAR", "USE_SPECULAR_TEXTURE", "USE_SPECULAR_COLOR_TEXTURE"]) },
   { name: "volume + diffuse transmission", defines: new Set(["USE_METALLIC_ROUGHNESS_WORKFLOW", "USE_NORMALS", "USE_TEXCOORD_0", "USE_TRANSMISSION", "USE_VOLUME", "USE_THICKNESS_TEXTURE", "USE_DIFFUSE_TRANSMISSION", "USE_DIFFUSE_TRANSMISSION_TEXTURE", "USE_DIFFUSE_TRANSMISSION_COLOR_TEXTURE"]) },
-  { name: "emissive + occlusion + msaa + drawbuffers", defines: new Set(["USE_METALLIC_ROUGHNESS_WORKFLOW", "USE_NORMALS", "USE_TEXCOORD_0", "USE_EMISSIVE_COLOR", "USE_EMISSIVE_COLOR_TEXTURE", "USE_OCCLUSION_TEXTURE", "USE_MSAA"]), options: { outputs: { normal: true, emissive: true, velocity: true, responsive: true } } },
+  { name: "emissive + occlusion + msaa + drawbuffers", defines: new Set(["USE_METALLIC_ROUGHNESS_WORKFLOW", "USE_NORMALS", "USE_TEXCOORD_0", "USE_EMISSIVE", "USE_EMISSIVE_TEXTURE", "USE_OCCLUSION_TEXTURE", "USE_MSAA"]), options: { outputs: { normal: true, emissive: true, velocity: true, responsive: true } } },
   { name: "vertex colors + blend", defines: new Set(["USE_METALLIC_ROUGHNESS_WORKFLOW", "USE_NORMALS", "USE_VERTEX_COLORS", "USE_BLEND"]) },
   { name: "texcoord1 everywhere", defines: new Set(["USE_METALLIC_ROUGHNESS_WORKFLOW", "USE_NORMALS", "USE_TEXCOORD_0", "USE_TEXCOORD_1", "USE_BASE_COLOR_TEXTURE"]), options: { texCoords: { baseColor: 1 } } },
   { name: "skinned", defines: new Set(["USE_METALLIC_ROUGHNESS_WORKFLOW", "USE_NORMALS", "USE_TANGENTS", "USE_TEXCOORD_0", "USE_SKIN"]) },
@@ -151,13 +150,13 @@ const standardVariants = [
       "USE_METALLIC_ROUGHNESS_WORKFLOW", "USE_NORMALS", "USE_TANGENTS", "USE_TEXCOORD_0", "USE_TEXCOORD_1", "USE_VERTEX_COLORS",
       "USE_SKIN", "USE_INSTANCED_OFFSET", "USE_INSTANCED_SCALE", "USE_INSTANCED_ROTATION",
       "USE_BASE_COLOR_TEXTURE", "USE_NORMAL_TEXTURE", "USE_METALLIC_ROUGHNESS_TEXTURE",
-      "USE_EMISSIVE_COLOR", "USE_EMISSIVE_COLOR_TEXTURE", "USE_OCCLUSION_TEXTURE",
-      "USE_CLEAR_COAT", "USE_CLEAR_COAT_TEXTURE", "USE_CLEAR_COAT_ROUGHNESS_TEXTURE", "USE_CLEAR_COAT_NORMAL_TEXTURE",
+      "USE_EMISSIVE", "USE_EMISSIVE_TEXTURE", "USE_OCCLUSION_TEXTURE",
+      "USE_CLEARCOAT", "USE_CLEARCOAT_TEXTURE", "USE_CLEARCOAT_ROUGHNESS_TEXTURE", "USE_CLEARCOAT_NORMAL_TEXTURE",
       "USE_SHEEN", "USE_SHEEN_COLOR_TEXTURE", "USE_SHEEN_ROUGHNESS_TEXTURE",
       "USE_TRANSMISSION", "USE_TRANSMISSION_TEXTURE", "USE_DISPERSION",
       "USE_VOLUME", "USE_THICKNESS_TEXTURE",
       "USE_DIFFUSE_TRANSMISSION", "USE_DIFFUSE_TRANSMISSION_TEXTURE", "USE_DIFFUSE_TRANSMISSION_COLOR_TEXTURE",
-      "USE_ALPHA_TEXTURE", "USE_ALPHA_TEST", "USE_REFLECTION_PROBES", "USE_MSAA", "USE_BLEND",
+      "USE_ALPHA_TEXTURE", "USE_ALPHA_CUTOFF", "USE_REFLECTION_PROBES", "USE_MSAA", "USE_BLEND",
     ]),
     options: { maxJoints: 64, lights: { ambient: 1, directional: 2, point: 2, spot: 1, area: 1 }, outputs: { normal: true, emissive: true, velocity: true, responsive: true } },
   },
@@ -183,14 +182,14 @@ const reversibleToneMapVariants = [
 
 const depthPassVariants = [
   { name: "default", defines: new Set() },
-  { name: "alpha texture + alpha test", defines: new Set(["USE_NORMALS", "USE_TEXCOORD_0", "USE_BASE_COLOR_TEXTURE", "USE_ALPHA_TEXTURE", "USE_ALPHA_TEST"]) },
+  { name: "alpha texture + alpha test", defines: new Set(["USE_NORMALS", "USE_TEXCOORD_0", "USE_BASE_COLOR_TEXTURE", "USE_ALPHA_TEXTURE", "USE_ALPHA_CUTOFF"]) },
   { name: "skinned + instanced + vertex colors", defines: new Set(["USE_NORMALS", "USE_SKIN", "USE_INSTANCED_OFFSET", "USE_INSTANCED_SCALE", "USE_INSTANCED_ROTATION", "USE_VERTEX_COLORS"]), options: { maxJoints: 64 } },
   { name: "displacement + texcoord1", defines: new Set(["USE_NORMALS", "USE_TEXCOORD_0", "USE_TEXCOORD_1", "USE_DISPLACEMENT_TEXTURE"]) },
-  { name: "alpha test + vertex/instance colors", defines: new Set(["USE_ALPHA_TEST", "USE_VERTEX_COLORS", "USE_INSTANCED_COLOR"]) },
-  { name: "alpha test on texcoord1", defines: new Set(["USE_TEXCOORD_0", "USE_TEXCOORD_1", "USE_BASE_COLOR_TEXTURE", "USE_ALPHA_TEST"]), options: { texCoords: { baseColor: 1 } } },
-  { name: "alpha test + omni (linear depth)", defines: new Set(["USE_TEXCOORD_0", "USE_BASE_COLOR_TEXTURE", "USE_ALPHA_TEST", "USE_LINEAR_DEPTH"]) },
+  { name: "alpha test + vertex/instance colors", defines: new Set(["USE_ALPHA_CUTOFF", "USE_VERTEX_COLORS", "USE_INSTANCED_COLOR"]) },
+  { name: "alpha test on texcoord1", defines: new Set(["USE_TEXCOORD_0", "USE_TEXCOORD_1", "USE_BASE_COLOR_TEXTURE", "USE_ALPHA_CUTOFF"]), options: { texCoords: { baseColor: 1 } } },
+  { name: "alpha test + omni (linear depth)", defines: new Set(["USE_TEXCOORD_0", "USE_BASE_COLOR_TEXTURE", "USE_ALPHA_CUTOFF", "USE_LINEAR_DEPTH"]) },
   { name: "hooks", defines: new Set(["USE_INSTANCED_OFFSET"]), options: { hooks: VERTEX_HOOKS } },
-  { name: "hooks + alpha test", defines: new Set(["USE_TEXCOORD_0", "USE_BASE_COLOR_TEXTURE", "USE_ALPHA_TEST"]), options: { hooks: VERTEX_HOOKS } },
+  { name: "hooks + alpha test", defines: new Set(["USE_TEXCOORD_0", "USE_BASE_COLOR_TEXTURE", "USE_ALPHA_CUTOFF"]), options: { hooks: VERTEX_HOOKS } },
   { name: "hooks + omni (linear depth)", defines: new Set(["USE_LINEAR_DEPTH"]), options: { hooks: VERTEX_HOOKS } },
 ];
 
@@ -200,12 +199,12 @@ const depthPassPrePassVariants = [
   { name: "normal output + skinned", defines: new Set(["USE_NORMALS", "USE_NORMAL_OUTPUT", "USE_SKIN"]), options: { maxJoints: 64 } },
   { name: "normal output + instanced", defines: new Set(["USE_NORMALS", "USE_NORMAL_OUTPUT", "USE_INSTANCED_OFFSET", "USE_INSTANCED_SCALE", "USE_INSTANCED_ROTATION"]) },
   { name: "normal output + displacement", defines: new Set(["USE_NORMALS", "USE_NORMAL_OUTPUT", "USE_TEXCOORD_0", "USE_DISPLACEMENT_TEXTURE"]) },
-  { name: "normal output + alpha test", defines: new Set(["USE_NORMALS", "USE_NORMAL_OUTPUT", "USE_TEXCOORD_0", "USE_BASE_COLOR_TEXTURE", "USE_ALPHA_TEXTURE", "USE_ALPHA_TEST"]) },
-  { name: "normal output + alpha to coverage", defines: new Set(["USE_NORMALS", "USE_NORMAL_OUTPUT", "USE_TEXCOORD_0", "USE_BASE_COLOR_TEXTURE", "USE_ALPHA_TEST", "USE_ALPHA_TO_COVERAGE"]) },
+  { name: "normal output + alpha test", defines: new Set(["USE_NORMALS", "USE_NORMAL_OUTPUT", "USE_TEXCOORD_0", "USE_BASE_COLOR_TEXTURE", "USE_ALPHA_TEXTURE", "USE_ALPHA_CUTOFF"]) },
+  { name: "normal output + alpha to coverage", defines: new Set(["USE_NORMALS", "USE_NORMAL_OUTPUT", "USE_TEXCOORD_0", "USE_BASE_COLOR_TEXTURE", "USE_ALPHA_CUTOFF", "USE_ALPHA_TO_COVERAGE"]) },
   // Coverage where it cannot apply: no color target means no alpha to derive
   // the mask from, so it has to fall back to discarding rather than emit a
   // coverage value nothing reads.
-  { name: "depth-only rejects alpha to coverage", defines: new Set(["USE_TEXCOORD_0", "USE_BASE_COLOR_TEXTURE", "USE_ALPHA_TEST", "USE_ALPHA_TO_COVERAGE"]) },
+  { name: "depth-only rejects alpha to coverage", defines: new Set(["USE_TEXCOORD_0", "USE_BASE_COLOR_TEXTURE", "USE_ALPHA_CUTOFF", "USE_ALPHA_TO_COVERAGE"]) },
   { name: "normal output + hooks", defines: new Set(["USE_NORMALS", "USE_NORMAL_OUTPUT", "USE_INSTANCED_OFFSET"]), options: { hooks: VERTEX_HOOKS } },
 ];
 
@@ -225,21 +224,18 @@ const overlayVariants = [
   { name: "hooks", defines: new Set(), options: { hooks: { vertEnd: "// hook", fragEnd: "// hook" } } },
 ];
 
-const helperVariants = [
-  { name: "default", defines: new Set() },
-  { name: "msaa + drawbuffers", defines: new Set(["USE_MSAA"]), options: { outputs: { normal: true, emissive: true, velocity: true, responsive: true } } },
-  { name: "hooks", defines: new Set(), options: { hooks: { vertEnd: "// hook", fragEnd: "// hook" } } },
-];
-
-const errorVariants = [
-  { name: "default", defines: new Set() },
-  { name: "drawbuffers", defines: new Set(), options: { outputs: { normal: true, emissive: true, velocity: true, responsive: true } } },
-  { name: "hooks", defines: new Set(), options: { hooks: { vertEnd: "// hook", fragEnd: "// hook" } } },
-];
-
 const skyVariants = [
   { name: "default", defines: new Set() },
   { name: "drawbuffers", defines: new Set(), options: { outputs: { normal: true, emissive: true, velocity: true, responsive: true } } },
+  { name: "hooks", defines: new Set(), options: { hooks: { vertEnd: "// hook", fragEnd: "// hook" } } },
+];
+
+// USE_BACKGROUND_BLUR samples the reflection probe's prefiltered cubemap
+// instead of the equirect env map, so it binds a different texture type.
+const skyboxVariants = [
+  { name: "default", defines: new Set() },
+  { name: "background blur", defines: new Set(["USE_BACKGROUND_BLUR"]) },
+  { name: "msaa + drawbuffers", defines: new Set(["USE_MSAA"]), options: { outputs: { normal: true, emissive: true, velocity: true, responsive: true } } },
   { name: "hooks", defines: new Set(), options: { hooks: { vertEnd: "// hook", fragEnd: "// hook" } } },
 ];
 
@@ -260,9 +256,34 @@ const postProcessingVariants = [
   { name: "gtao denoise", shader: postProcessing.gtaoDenoiseShader, defines: new Set() },
   { name: "sao", shader: postProcessing.saoShader, defines: new Set() },
   { name: "bilateral blur", shader: postProcessing.bilateralBlurShader, defines: new Set() },
-  { name: "dof [gustafsson]", shader: postProcessing.dofShader, defines: new Set(["USE_DOF_GUSTAFSSON"]) },
-  { name: "dof [upitis]", shader: postProcessing.dofShader, defines: new Set(["USE_DOF_UPITIS"]) },
-  { name: "dof [focus on screen point]", shader: postProcessing.dofShader, defines: new Set(["USE_DOF_GUSTAFSSON", "USE_FOCUS_ON_SCREEN_POINT"]) },
+  // Depth of field is a chain of sub-passes: the parameterless ones still have
+  // to compile, and the three that branch do so on how the CoC arrived (packed
+  // in the prefiltered texture, or resolved to its own full-res one).
+  { name: "dof focus", shader: postProcessing.dofFocusShader, defines: new Set() },
+  { name: "dof prefilter", shader: postProcessing.dofPrefilterShader, defines: new Set() },
+  { name: "dof prefilter [resolved coc]", shader: postProcessing.dofPrefilterShader, defines: new Set(["USE_DOF_RESOLVED_COC"]) },
+  { name: "dof prefilter [focus on screen point]", shader: postProcessing.dofPrefilterShader, defines: new Set(["USE_FOCUS_ON_SCREEN_POINT"]) },
+  { name: "dof downsample", shader: postProcessing.dofDownsampleShader, defines: new Set() },
+  { name: "dof tile max x", shader: postProcessing.dofTileMaxXShader, defines: new Set() },
+  { name: "dof tile max y", shader: postProcessing.dofTileMaxYShader, defines: new Set() },
+  { name: "dof tile dilate", shader: postProcessing.dofTileDilateShader, defines: new Set() },
+  { name: "dof gather", shader: postProcessing.dofGatherShader, defines: new Set() },
+  { name: "dof post filter", shader: postProcessing.dofPostFilterShader, defines: new Set() },
+  { name: "dof coc resolve", shader: postProcessing.dofCoCResolveShader, defines: new Set() },
+  { name: "dof coc resolve [velocity]", shader: postProcessing.dofCoCResolveShader, defines: new Set(["USE_DOF_COC_VELOCITY"]) },
+  { name: "dof coc resolve [focus on screen point]", shader: postProcessing.dofCoCResolveShader, defines: new Set(["USE_FOCUS_ON_SCREEN_POINT"]) },
+  { name: "dof composite", shader: postProcessing.dofCompositeShader, defines: new Set() },
+  { name: "dof composite [resolved coc]", shader: postProcessing.dofCompositeShader, defines: new Set(["USE_DOF_RESOLVED_COC"]) },
+  { name: "dof composite [debug]", shader: postProcessing.dofCompositeShader, defines: new Set(["USE_DOF_DEBUG", "USE_FOCUS_ON_SCREEN_POINT"]) },
+  // Lens flare: each feature is its own branch of the main pass, and the
+  // streaks come from their own seed + convolution pair.
+  { name: "lens flare bright", shader: postProcessing.lensFlareBrightShader, defines: new Set() },
+  { name: "lens flare streak seed", shader: postProcessing.lensFlareStreakSeedShader, defines: new Set() },
+  { name: "lens flare streak", shader: postProcessing.lensFlareStreakShader, defines: new Set() },
+  { name: "lens flare [ghosts]", shader: postProcessing.lensFlareMainShader, defines: new Set(["USE_LENS_FLARE_GHOSTS"]) },
+  { name: "lens flare [halo]", shader: postProcessing.lensFlareMainShader, defines: new Set(["USE_LENS_FLARE_HALO"]) },
+  { name: "lens flare [streaks]", shader: postProcessing.lensFlareMainShader, defines: new Set(["USE_LENS_FLARE_STREAKS"]) },
+  { name: "lens flare [everything]", shader: postProcessing.lensFlareMainShader, defines: new Set(["USE_LENS_FLARE_GHOSTS", "USE_LENS_FLARE_HALO", "USE_LENS_FLARE_STREAKS", "USE_LENS_FLARE_WARPED", "USE_LENS_FLARE_REVERSED"]) },
   { name: "combine [bare]", shader: postProcessing.combineShader, defines: new Set() },
   { name: "combine [fog]", shader: postProcessing.combineShader, defines: new Set(["USE_FOG"]) },
   { name: "combine [bloom]", shader: postProcessing.combineShader, defines: new Set(["USE_BLOOM"]) },
@@ -330,14 +351,11 @@ for (const v of lineVariants) {
 for (const v of overlayVariants) {
   await check(`overlay [${v.name}]`, overlay.overlayShader(v.defines, v.options));
 }
-for (const v of helperVariants) {
-  await check(`helper [${v.name}]`, helper.helperShader(v.defines, v.options));
-}
-for (const v of errorVariants) {
-  await check(`error [${v.name}]`, error.errorShader(v.defines, v.options));
-}
 for (const v of skyVariants) {
   await check(`sky [${v.name}]`, sky.skyShader(v.defines, v.options));
+}
+for (const v of skyboxVariants) {
+  await check(`skybox [${v.name}]`, skybox.skyboxShader(v.defines, v.options));
 }
 for (const v of postProcessingVariants) {
   await check(`postProcessing ${v.name}`, v.shader(v.defines));

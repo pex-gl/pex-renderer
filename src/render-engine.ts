@@ -61,7 +61,8 @@ export default ({
      * Frames ticked, advanced by `update()` alongside `time` — so the camera
      * system, which runs there, indexes the same frame the render that follows
      * will. Drives the temporal antialiasing jitter and the ambient occlusion
-     * noise index, both of which need a frame to differ from the one before it.
+     * noise index, both of which need a frame to differ from the one before
+     * it.
      *
      * Owned here rather than read from pex-gpu's frame loop: that counter lives
      * in the `frame()` closure and only reaches a caller through its callback,
@@ -197,7 +198,10 @@ export default ({
 
       // Handles only become textures once the graph has allocated them.
       return targetHandlesPerCamera.map((handles) =>
-        mapValues(handles, (handle) => frameGraph.resolve(handle) as GpuTexture),
+        mapValues(
+          handles,
+          (handle) => frameGraph.resolve(handle) as GpuTexture,
+        ),
       );
     },
     dispose(entities?: Entity[]) {

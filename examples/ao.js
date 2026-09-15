@@ -173,7 +173,7 @@ const geom = {
     }),
     stepMode: "instance",
   },
-  instances: rects.length,
+  instanceCount: rects.length,
 };
 const geomEntity = createEntity({
   transform: components.transform(),
@@ -197,7 +197,6 @@ const lightEntity = createEntity({
     color: [1, 1, 1, 1],
     intensity: 100_000, // lx, a clear midday sun
     castShadows: true,
-    bias: 0.01,
   }),
 });
 world.add(lightEntity);
@@ -218,7 +217,6 @@ for (let i = 0; i < numLights; i++) {
       color: [1, 1, 1, 1],
       intensity: 100_000, // lx, a clear midday sun
       castShadows: true,
-      bias: 0.01,
     }),
   });
   world.add(lightEntity);

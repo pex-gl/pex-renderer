@@ -141,7 +141,7 @@ export default ({
    * only its sides reject.
    */
   getLightVolumeTest(lightEntity: Entity, light: any) {
-    const fov = lightEntity.spotLight ? 2 * light.angle : Math.PI / 2;
+    const fov = lightEntity.spotLight ? 2 * light.outerConeAngle : Math.PI / 2;
     // Near is what the fit is trying to find, so the provisional frustum uses
     // the smallest legal one; only the side planes and the far cap matter here.
     mat4.perspectiveZO(
@@ -234,7 +234,7 @@ export default ({
       shadow.radiusUV[0] = light.bulbRadius / size[0];
       shadow.radiusUV[1] = light.bulbRadius / size[1];
     } else {
-      const halfFov = lightEntity.spotLight ? light.angle : Math.PI / 4;
+      const halfFov = lightEntity.spotLight ? light.outerConeAngle : Math.PI / 4;
       const nearPlaneSize = 2 * shadow.near * Math.tan(halfFov);
       const scale: any = lightEntity.areaLight
         ? lightEntity.transform!.scale
@@ -535,7 +535,7 @@ export default ({
       // cone the fit assumed.
       mat4.perspectiveZO(
         shadow.projectionMatrix,
-        light.angle ? 2 * light.angle : Math.PI / 2,
+        light.outerConeAngle ? 2 * light.outerConeAngle : Math.PI / 2,
         1,
         shadow.near,
         shadow.far,

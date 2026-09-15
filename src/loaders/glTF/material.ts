@@ -93,6 +93,7 @@ export function resolveMaterial(
       ctx,
       samplerCache,
     );
+    result.occlusionTextureStrength = material.occlusionTexture.strength ?? 1;
   }
 
   if (material.emissiveTexture) {

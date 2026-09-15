@@ -8,7 +8,10 @@ import {
   WEBGL_TYPED_ARRAY_BY_COMPONENT_TYPES,
   normalizeData,
 } from "./common.js";
-import { resolveDracoPrimitive, type DracoOptions } from "./extensions/KHR_draco_mesh_compression.js";
+import {
+  resolveDracoPrimitive,
+  type DracoOptions,
+} from "./extensions/KHR_draco_mesh_compression.js";
 import { resolveMaterial } from "./material.js";
 
 import type { GpuContext } from "../../types.js";
@@ -29,7 +32,10 @@ export function resolveAttributes(
   const attributes: Record<string, any> = {};
 
   for (const name in attributesMap) {
-    const accessor = getAccessor(gltf.accessors[attributesMap[name]!], gltf.bufferViews);
+    const accessor = getAccessor(
+      gltf.accessors[attributesMap[name]!],
+      gltf.bufferViews,
+    );
 
     // The conversions below rewrite values CPU-side and compose: an accessor
     // may legally be sparse *and* normalized, or normalized *and* a VEC3
@@ -66,8 +72,8 @@ export function resolveAttributes(
     const joints =
       name === "JOINTS_0"
         ? accessor.componentType === WEBGL_CONSTANTS.UNSIGNED_BYTE
-          ? { format: "uint8x4" as const, stride: 4 }
-          : { format: "uint16x4" as const, stride: 8 }
+          ? { format: "uint8x4" as const, arrayStride: 4 }
+          : { format: "uint16x4" as const, arrayStride: 8 }
         : undefined;
 
     if (data) {
@@ -86,7 +92,7 @@ export function resolveAttributes(
         buffer,
         data: bufferViewData,
         offset: accessor.byteOffset,
-        stride: accessor._bufferView.byteStride ?? joints?.stride,
+        arrayStride: accessor._bufferView.byteStride ?? joints?.arrayStride,
         ...(joints && { format: joints.format }),
       };
     }
@@ -102,12 +108,20 @@ export function resolveIndices(
 ): { indices: any; count: number } | null {
   if (indicesAccessorIndex === undefined) return null;
 
-  const accessor = getAccessor(gltf.accessors[indicesAccessorIndex], gltf.bufferViews);
+  const accessor = getAccessor(
+    gltf.accessors[indicesAccessorIndex],
+    gltf.bufferViews,
+  );
   return { indices: accessor._data, count: accessor.count };
 }
 
-/** Resolves POSITION accessor min/max into `[min, max]` bounds, quantization-scaled. */
-export function resolvePositionBounds(positionAccessor: any): number[][] | undefined {
+/**
+ * Resolves POSITION accessor min/max into `[min, max]` bounds,
+ * quantization-scaled.
+ */
+export function resolvePositionBounds(
+  positionAccessor: any,
+): number[][] | undefined {
   if (!positionAccessor?.min || !positionAccessor?.max) return undefined;
 
   const scale = positionAccessor.normalized
@@ -152,19 +166,23 @@ function resolveTopology(
   mode: number,
   geometry: Record<string, any>,
 ): GPUPrimitiveTopology {
-  if (mode !== GLTF_PRIMITIVE_MODE.LINE_LOOP && mode !== GLTF_PRIMITIVE_MODE.TRIANGLE_FAN) {
+  if (
+    mode !== GLTF_PRIMITIVE_MODE.LINE_LOOP &&
+    mode !== GLTF_PRIMITIVE_MODE.TRIANGLE_FAN
+  ) {
     return GLTF_MODE_TOPOLOGY[mode] ?? "triangle-list";
   }
 
   const existingIndices: ArrayLike<number> | undefined = geometry.indices;
-  const indexCount: number = existingIndices ? existingIndices.length : geometry.count;
-  const indexAt = (i: number): number => (existingIndices ? existingIndices[i]! : i);
+  const indexCount: number = existingIndices
+    ? existingIndices.length
+    : geometry.count;
+  const indexAt = (i: number): number =>
+    existingIndices ? existingIndices[i]! : i;
 
   if (mode === GLTF_PRIMITIVE_MODE.LINE_LOOP) {
     const IndexArray = existingIndices?.constructor as
-      | Uint16ArrayConstructor
-      | Uint32ArrayConstructor
-      | undefined;
+      Uint16ArrayConstructor | Uint32ArrayConstructor | undefined;
     const closed = new (IndexArray ?? Uint32Array)(indexCount + 1);
     for (let i = 0; i < indexCount; i++) closed[i] = indexAt(i);
     closed[indexCount] = indexAt(0);
@@ -233,18 +251,28 @@ export async function resolvePrimitiveGeometry(
   }
 
   // Default mode is TRIANGLES (4) when omitted, per spec.
-  geometry.primitive = resolveTopology(primitive.mode ?? GLTF_PRIMITIVE_MODE.TRIANGLES, geometry);
+  geometry.topology = resolveTopology(
+    primitive.mode ?? GLTF_PRIMITIVE_MODE.TRIANGLES,
+    geometry,
+  );
 
   return geometry;
 }
 
-/** Resolves a primitive's morph targets: `{ sources, targets, weights }`, sources/targets keyed by attribute semantic. */
+/**
+ * Resolves a primitive's morph targets: `{ sources, targets, weights }`,
+ * sources/targets keyed by attribute semantic.
+ */
 export function resolvePrimitiveMorphTargets(
   primitive: any,
   geometry: Record<string, any>,
   gltf: { bufferViews: any[]; accessors: any[] },
   weights: number[],
-): { sources: Record<string, any>; targets: Record<string, any[]>; weights: number[] } | null {
+): {
+  sources: Record<string, any>;
+  targets: Record<string, any[]>;
+  weights: number[];
+} | null {
   if (!primitive.targets) return null;
 
   const sources: Record<string, any> = {};
@@ -254,7 +282,10 @@ export function resolvePrimitiveMorphTargets(
     for (const targetKey in target) {
       targets[targetKey] ??= [];
 
-      const accessor = getAccessor(gltf.accessors[target[targetKey]], gltf.bufferViews);
+      const accessor = getAccessor(
+        gltf.accessors[target[targetKey]],
+        gltf.bufferViews,
+      );
       targets[targetKey]!.push(
         accessor.normalized ? normalizeData(accessor._data) : accessor._data,
       );
@@ -262,7 +293,8 @@ export function resolvePrimitiveMorphTargets(
       if (!sources[targetKey]) {
         const sourceAccessorIndex = primitive.attributes[targetKey];
         const sourceAccessor =
-          sourceAccessorIndex !== undefined && gltf.accessors[sourceAccessorIndex];
+          sourceAccessorIndex !== undefined &&
+          gltf.accessors[sourceAccessorIndex];
 
         if (sourceAccessor?._bufferView) {
           const resolved = getAccessor(sourceAccessor, gltf.bufferViews);
@@ -292,7 +324,13 @@ export async function resolveMesh(
   ctx: GpuContext,
   samplerCache: Map<number, GPUSampler>,
   options: DracoOptions,
-): Promise<{ geometry: Record<string, any>; material: Record<string, any>; morph: ReturnType<typeof resolvePrimitiveMorphTargets> }[]> {
+): Promise<
+  {
+    geometry: Record<string, any>;
+    material: Record<string, any>;
+    morph: ReturnType<typeof resolvePrimitiveMorphTargets>;
+  }[]
+> {
   return Promise.all(
     mesh.primitives.map(async (primitive) => {
       const geometry = await resolvePrimitiveGeometry(
@@ -302,11 +340,21 @@ export async function resolveMesh(
         instancedAttributes,
         options,
       );
-      const morph = resolvePrimitiveMorphTargets(primitive, geometry, gltf, mesh.weights ?? []);
+      const morph = resolvePrimitiveMorphTargets(
+        primitive,
+        geometry,
+        gltf,
+        mesh.weights ?? [],
+      );
       const material =
         primitive.material === undefined
           ? {}
-          : resolveMaterial(gltf.materials[primitive.material], gltf, ctx, samplerCache);
+          : resolveMaterial(
+              gltf.materials[primitive.material],
+              gltf,
+              ctx,
+              samplerCache,
+            );
 
       return { geometry, material, morph };
     }),

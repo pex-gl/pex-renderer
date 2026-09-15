@@ -128,8 +128,8 @@ const spotLightEntity = createEntity({
     color: [1, 1, 0, 1],
     intensity: 4700, // lm, a stage fresnel
     range: 5,
-    angle: Math.PI / 6,
-    innerAngle: Math.PI / 12,
+    outerConeAngle: Math.PI / 6,
+    innerConeAngle: Math.PI / 12,
     focusedSpot: false,
     bulbRadius: 0.03,
   }),
@@ -366,11 +366,11 @@ gui.addParam("Intensity", spotLightEntity.spotLight, "intensity", {
   min: 0,
   max: 20000,
 });
-gui.addParam("Angle", spotLightEntity.spotLight, "angle", {
+gui.addParam("Outer cone angle", spotLightEntity.spotLight, "outerConeAngle", {
   min: 0,
   max: Math.PI / 2 - Number.EPSILON,
 });
-gui.addParam("Inner angle", spotLightEntity.spotLight, "innerAngle", {
+gui.addParam("Inner cone angle", spotLightEntity.spotLight, "innerConeAngle", {
   min: 0,
   max: Math.PI / 2 - Number.EPSILON,
 });

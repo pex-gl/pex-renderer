@@ -5,8 +5,8 @@ export default (options?: SpotLightComponentOptions) => ({
   color: [1, 1, 1, 1],
   // Luminous power (lm), about a 75 W incandescent bulb.
   intensity: 1000,
-  angle: Math.PI / 4,
-  innerAngle: 0,
+  outerConeAngle: Math.PI / 4,
+  innerConeAngle: 0,
   // Concentrate the power into the cone rather than spreading it over a
   // hemisphere, so narrowing the beam brightens it the way a real fixture does.
   focusedSpot: false,

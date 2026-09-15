@@ -448,7 +448,7 @@ const VERTEX_ATTRIBUTES: readonly (ShaderStructMember & {
   { flag: "instancedOffset", name: "offset", type: "vec3f" },
   { flag: "instancedScale", name: "scale", type: "vec3f" },
   { flag: "instancedRotation", name: "rotation", type: "vec4f" },
-  { flag: "instancedColor", name: "instanceColor", type: "vec4f" },
+  { flag: "instancedColor", name: "color", type: "vec4f" },
   { flag: "skin", name: "joint", type: "vec4u" },
   { flag: "skin", name: "weight", type: "vec4f" },
   { flag: "previousPosition", name: "previousPosition", type: "vec3f" },

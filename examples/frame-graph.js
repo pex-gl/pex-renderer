@@ -183,7 +183,6 @@ world.add(
       color: [1, 1, 1, 1],
       intensity: 100_000, // lx, a clear midday sun
       castShadows: true,
-      bias: 0.05,
     }),
   }),
 );

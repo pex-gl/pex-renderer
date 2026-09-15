@@ -12,6 +12,7 @@ import { definesKey } from "../../utils.js";
 import type { Mat2x3, Mat3 } from "pex-math";
 import type {
   BlendMode,
+  MaterialComponentOptions,
   Entity,
   RendererPassOptions,
   RendererSystem,
@@ -134,7 +135,7 @@ export function isFieldActive(
  * so a field can only write once its define set is final (e.g. `specularColor`
  * waits on sibling `specular`). Define-only tables leave `uniforms` empty.
  */
-export function getFeatureFlags(
+function getFeatureFlags(
   source: any,
   fields: readonly FeatureField[],
   defines: Set<string>,
@@ -245,18 +246,14 @@ export const outputsKey = (outputs: Record<string, unknown> = {}): string =>
     .filter((name) => !IMPLICIT_OUTPUTS.has(name))
     .join(",");
 
-// GPUBlendState per material.blendMode, shared by every renderer that draws
-// blended geometry. "normal" is the glTF BLEND spec's straight (non-
-// premultiplied) "over" equation — the fragment shader writes straight alpha
-// by default (color unscaled by opacity, opacity written to .w separately),
-// so its color channel needs SrcAlpha, not the premultiplied-alpha "one".
-// "premultiplied" instead relies on the shader actually premultiplying
-// (PREMULTIPLY_ALPHA override, see shaders/standard.ts) before this blend
-// state's "one" src factor is applied.
-export const BLEND_MODES: Record<
-  BlendMode,
-  { color: GPUBlendComponent; alpha: GPUBlendComponent }
-> = {
+// Named blend equations, shared by every renderer that draws blended geometry.
+// "normal" is the glTF BLEND spec's straight (non-premultiplied) "over"
+// equation — the fragment shader writes straight alpha by default (color
+// unscaled by opacity, opacity written to .w separately), so its color channel
+// needs src-alpha, not the premultiplied "one". "premultiplied" instead relies
+// on the shader actually premultiplying (PREMULTIPLY_ALPHA override, see
+// shaders/standard.ts) before this state's "one" src factor is applied.
+export const BLEND_MODES: Record<BlendMode, GPUBlendState> = {
   normal: {
     color: { srcFactor: "src-alpha", dstFactor: "one-minus-src-alpha" },
     alpha: { srcFactor: "one", dstFactor: "one" },
@@ -319,6 +316,17 @@ export default (): RendererSystem => ({
     _precomputed?: unknown,
   ) {
     return {};
+  },
+  /**
+   * A material's blend, as a pipeline takes it. Anything falsy — the empty
+   * string included — is opaque, so one truthiness check covers "no blending"
+   * and the named equations alike.
+   */
+  getPipelineBlend(
+    blend: MaterialComponentOptions["blend"],
+  ): GPUBlendState | undefined {
+    if (!blend) return undefined;
+    return typeof blend === "string" ? BLEND_MODES[blend] : blend;
   },
   /**
    * The `@group(3)` bindings, identical in every pass that draws geometry.

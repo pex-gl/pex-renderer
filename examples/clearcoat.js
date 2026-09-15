@@ -79,7 +79,7 @@ const materialTextures = {
     ctx,
     getURL(`assets/materials/Fabric04/Fabric04_nrm.jpg`),
   ),
-  clearCoatNormalTexture: await getTexture(
+  clearcoatNormalTexture: await getTexture(
     ctx,
     getURL(`assets/materials/Metal05/Metal05_nrm.jpg`),
   ),
@@ -99,32 +99,32 @@ const ballGeometry = components.geometry(
   )[0],
 );
 
-const clearCoatMaterial = {
+const clearcoatMaterial = {
   baseColor: [1, 0, 0, 1],
   roughness: 0.25,
   metallic: 0,
-  clearCoat: 1,
-  clearCoatRoughness: 0.1,
+  clearcoat: 1,
+  clearcoatRoughness: 0.1,
   castShadows: true,
   receiveShadows: true,
   occlusionTexture: materialTextures.occlusionTexture,
   normalTextureScale: 1,
 };
 
-const clearCoatEntity = createEntity({
+const clearcoatEntity = createEntity({
   layer: "camera-1",
   transform: components.transform(),
   geometry: ballGeometry,
-  material: components.material(clearCoatMaterial),
+  material: components.material(clearcoatMaterial),
 });
-world.add(clearCoatEntity);
+world.add(clearcoatEntity);
 
 const normalTextureEntity = createEntity({
   layer: "camera-2",
   transform: components.transform(),
   geometry: ballGeometry,
   material: components.material({
-    ...clearCoatMaterial,
+    ...clearcoatMaterial,
     normalTexture: {
       texture: materialTextures.normalTexture,
       scale: [4, 4],
@@ -133,24 +133,24 @@ const normalTextureEntity = createEntity({
 });
 world.add(normalTextureEntity);
 
-const clearCoatNormalTextureEntity = createEntity({
+const clearcoatNormalTextureEntity = createEntity({
   layer: "camera-3",
   transform: components.transform(),
   geometry: ballGeometry,
   material: components.material({
-    ...clearCoatMaterial,
+    ...clearcoatMaterial,
     normalTexture: {
       texture: materialTextures.normalTexture,
       scale: [4, 4],
     },
-    clearCoatNormalTexture: {
-      texture: materialTextures.clearCoatNormalTexture,
+    clearcoatNormalTexture: {
+      texture: materialTextures.clearcoatNormalTexture,
       scale: [8, 8],
     },
-    clearCoatNormalTextureScale: 1,
+    clearcoatNormalTextureScale: 1,
   }),
 });
-world.add(clearCoatNormalTextureEntity);
+world.add(clearcoatNormalTextureEntity);
 
 // GUI
 const gui = createGUI(ctx, { theme: { columnWidth: 250 } });
@@ -159,37 +159,37 @@ gui.addButton("Toggle Render Pass Graph", () => {
 });
 gui.addParam(
   "Normal Texture Scale",
-  clearCoatEntity.material,
+  clearcoatEntity.material,
   "normalTextureScale",
   {},
   () => {
     normalTextureEntity.material.normalTextureScale =
-      clearCoatEntity.material.normalTextureScale;
-    clearCoatNormalTextureEntity.material.normalTextureScale =
-      clearCoatEntity.material.normalTextureScale;
+      clearcoatEntity.material.normalTextureScale;
+    clearcoatNormalTextureEntity.material.normalTextureScale =
+      clearcoatEntity.material.normalTextureScale;
   },
 );
-gui.addParam("ClearCoat", clearCoatEntity.material, "clearCoat", {}, () => {
-  normalTextureEntity.material.clearCoat = clearCoatEntity.material.clearCoat;
-  clearCoatNormalTextureEntity.material.clearCoat =
-    clearCoatEntity.material.clearCoat;
+gui.addParam("Clearcoat", clearcoatEntity.material, "clearcoat", {}, () => {
+  normalTextureEntity.material.clearcoat = clearcoatEntity.material.clearcoat;
+  clearcoatNormalTextureEntity.material.clearcoat =
+    clearcoatEntity.material.clearcoat;
 });
 gui.addParam(
-  "ClearCoat Roughness",
-  clearCoatEntity.material,
-  "clearCoatRoughness",
+  "Clearcoat Roughness",
+  clearcoatEntity.material,
+  "clearcoatRoughness",
   {},
   () => {
-    normalTextureEntity.material.clearCoatRoughness =
-      clearCoatEntity.material.clearCoatRoughness;
-    clearCoatNormalTextureEntity.material.clearCoatRoughness =
-      clearCoatEntity.material.clearCoatRoughness;
+    normalTextureEntity.material.clearcoatRoughness =
+      clearcoatEntity.material.clearcoatRoughness;
+    clearcoatNormalTextureEntity.material.clearcoatRoughness =
+      clearcoatEntity.material.clearcoatRoughness;
   },
 );
 gui.addParam(
-  "ClearCoat Normal Texture Scale",
-  clearCoatNormalTextureEntity.material,
-  "clearCoatNormalTextureScale",
+  "Clearcoat Normal Texture Scale",
+  clearcoatNormalTextureEntity.material,
+  "clearcoatNormalTextureScale",
   {},
 );
 

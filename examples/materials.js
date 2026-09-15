@@ -63,8 +63,7 @@ const materials = {
     roughness: 0.5,
     metallic: 0,
     baseColor: [1, 1, 1, 0.5],
-    blend: true,
-    depthWrite: false,
+    blend: "normal",
   },
   Transmission: {
     roughness: remapRoughness(0.5),
@@ -146,8 +145,8 @@ const materials = {
       ctx,
       getURL(`assets/materials/plastic-glow.material/plastic-glow_n.png`),
     ),
-    emissiveColor: [1, 1, 1, 1],
-    emissiveColorTexture: await getTexture(
+    emissive: [1, 1, 1, 1],
+    emissiveTexture: await getTexture(
       ctx,
       getURL(
         `assets/materials/plastic-glow.material/plastic-glow_emissive.png`,
@@ -161,8 +160,8 @@ const materials = {
     roughness: remapRoughness(0.5),
     metallic: 0,
     baseColor: [1, 1, 1, 1],
-    alphaTest: 0.5,
-    cullFace: false,
+    alphaCutoff: 0.5,
+    cullMode: "none",
     baseColorTexture: await getTexture(
       ctx,
       getURL(`assets/textures/alpha-test-mask/alpha-test-mask.png`),
@@ -223,7 +222,7 @@ for (let i = 0; i < nW * nH; i++) {
     }),
     camera: components.camera(),
     postProcessing: components.postProcessing({
-      // bloom: material.emissiveColor && components.postProcessing.bloom(),
+      // bloom: material.emissive && components.postProcessing.bloom(),
     }),
     orbiter: components.orbiter({ element: ctx.canvas }),
   });

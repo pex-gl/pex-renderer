@@ -63,8 +63,8 @@ const world = createWorld();
 //   [["material", "diffuse"], "USE_SPECULAR_GLOSSINESS_WORKFLOW", { uniform: "uDiffuse" }],
 //   [["material", "specular"], "", { uniform: "uSpecular", requires: "USE_SPECULAR_GLOSSINESS_WORKFLOW" }],
 //   [["material", "glossiness"], "", { uniform: "uGlossiness", requires: "USE_SPECULAR_GLOSSINESS_WORKFLOW" }],
-//   [["material", "diffuseTexture"], "DIFFUSE_TEXTURE", { type: "texture", uniform: "uDiffuseTexture", requires: "USE_SPECULAR_GLOSSINESS_WORKFLOW" }],
-//   [["material", "specularGlossinessTexture"], "SPECULAR_GLOSSINESS_TEXTURE", { type: "texture", uniform: "uSpecularGlossinessTexture", requires: "USE_SPECULAR_GLOSSINESS_WORKFLOW" }],
+//   [["material", "sgDiffuseTexture"], "DIFFUSE_TEXTURE", { type: "texture", uniform: "uSgDiffuseTexture", requires: "USE_SPECULAR_GLOSSINESS_WORKFLOW" }],
+//   [["material", "sgSpecularGlossinessTexture"], "SPECULAR_GLOSSINESS_TEXTURE", { type: "texture", uniform: "uSgSpecularGlossinessTexture", requires: "USE_SPECULAR_GLOSSINESS_WORKFLOW" }],
 // ];
 
 // renderEngine.renderers
@@ -80,7 +80,7 @@ const sunEntity = createEntity({
   }),
   directionalLight: components.directionalLight({
     color: [1, 1, 0.95, 1],
-    intensity: 0,
+    intensity: 100_000,
     castShadows: State.shadows,
   }),
 });
@@ -245,7 +245,7 @@ async function loadScene(url, grid) {
     if (entity.material) {
       entity.material.castShadows = State.shadows;
       entity.material.receiveShadows = State.shadows;
-      if (entity.material.transmission) entity.material.cullFace = false;
+      if (entity.material.transmission) entity.material.cullMode = "none";
     }
 
     world.add(entity);

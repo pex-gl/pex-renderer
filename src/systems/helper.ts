@@ -150,8 +150,8 @@ const spotLightCircleOptions = { steps: 32, axis: [0, 1] };
 
 const getSpotLight = (spotLight) => {
   const distance = helperRange(spotLight.range);
-  const radius = distance * Math.tan(spotLight.angle);
-  const innerRadius = distance * Math.tan(spotLight.innerAngle);
+  const radius = distance * Math.tan(spotLight.outerConeAngle);
+  const innerRadius = distance * Math.tan(spotLight.innerConeAngle);
 
   return getPyramidEdgePositions({
     sx: radius * Math.sin(Math.PI / 4),
@@ -320,7 +320,7 @@ const getVertexAttributeData = (geometry, attributeName) => {
       attribute.offset,
       // TODO: is that correct?
       attribute.buffer.length /
-        (attribute.stride / Float32Array.BYTES_PER_ELEMENT),
+        (attribute.arrayStride / Float32Array.BYTES_PER_ELEMENT),
     );
   }
   return attribute.data || attribute;
@@ -331,7 +331,7 @@ const getVertexVector = (geometry, attributeName, size = 0.1, modelMatrix) => {
 
   if (!attribute || !positions) return [];
 
-  const instances = geometry.instances || 1;
+  const instances = geometry.instanceCount || 1;
 
   const isAttributeFlatArray = !attribute[0]?.length;
   const isPositionsFlatArray = !positions[0]?.length;
@@ -494,8 +494,7 @@ export default () => ({
         type: "line",
         lineWidth: 1,
         perspectiveScaling: false,
-        depthTest: true,
-        depthWrite: true,
+        depthWriteEnabled: true,
       }),
     }),
     entity({
@@ -509,8 +508,8 @@ export default () => ({
         type: "line",
         lineWidth: 1,
         perspectiveScaling: false,
-        depthTest: false,
-        depthWrite: false,
+        depthWriteEnabled: false,
+        depthCompare: "always",
       }),
     }),
     entity({
@@ -524,8 +523,7 @@ export default () => ({
         type: "line",
         lineWidth: 1,
         perspectiveScaling: false,
-        depthTest: true,
-        depthWrite: true,
+        depthWriteEnabled: true,
         depthBias: -16,
         depthBiasSlopeScale: 0,
       }),

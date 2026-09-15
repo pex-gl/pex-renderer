@@ -83,7 +83,7 @@ const grassEntity = createEntity({
   geometry: components.geometry({
     ...coneGeometry,
     offsets: grassPlaneGeometry.positions,
-    instances: grassPlaneGeometry.positions.length / 3,
+    instanceCount: grassPlaneGeometry.positions.length / 3,
     attributes: {
       // Named as the hook declares it below: pex-gpu resolves a vertex buffer
       // by the name of the shader input it feeds.
@@ -275,16 +275,16 @@ gui.addRadioList(
     "data.NdotV",
 
     "data.baseColor",
-    "data.emissiveColor",
+    "data.emissive",
     "data.opacity",
     "data.roughness",
     "data.metallic",
     "data.linearRoughness",
     "data.f0",
-    "data.clearCoat",
-    "data.clearCoatRoughness",
-    "data.clearCoatLinearRoughness",
-    "data.clearCoatNormal",
+    "data.clearcoat",
+    "data.clearcoatRoughness",
+    "data.clearcoatLinearRoughness",
+    "data.clearcoatNormal",
     "data.reflectionWorld",
     "data.directColor",
     "data.diffuseColor",

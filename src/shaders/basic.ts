@@ -34,7 +34,7 @@ export const BASIC_VERTEX_FIELDS: readonly FeatureField[] = [
   { key: "offset", define: VERTEX_DEFINE.instancedOffset },
   { key: "scale", define: VERTEX_DEFINE.instancedScale },
   { key: "rotation", define: VERTEX_DEFINE.instancedRotation },
-  { key: "instanceColor", define: VERTEX_DEFINE.instancedColor },
+  { key: "color", define: VERTEX_DEFINE.instancedColor },
 ];
 
 export const basicShader = (
@@ -50,9 +50,9 @@ export const basicShader = (
 
   const colorAssignment =
     vertexFlags.vertexColor && vertexFlags.instancedColor
-      ? "output.color = input.vertexColor * input.instanceColor;"
+      ? "output.color = input.vertexColor * input.color;"
       : vertexFlags.instancedColor
-        ? "output.color = input.instanceColor;"
+        ? "output.color = input.color;"
         : vertexFlags.vertexColor
           ? "output.color = input.vertexColor;"
           : "";

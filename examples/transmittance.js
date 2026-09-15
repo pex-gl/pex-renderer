@@ -40,7 +40,7 @@ const materialDefaults = {
   baseColor: getBaseColor(),
   metallic: 0,
   roughness: 0,
-  cullFace: false,
+  cullMode: "none",
   receiveShadows: false,
 };
 

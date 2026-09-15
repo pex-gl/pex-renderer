@@ -44,9 +44,8 @@ export type MaterialTexture =
 
 /**
  * A single vertex/index attribute value on a geometry component: a plain typed
- * array/number array, or a GPU-backed descriptor (e.g. built by the glTF
- * loader to share one buffer across attributes/primitives from the same
- * bufferView).
+ * array/number array, or a GPU-backed descriptor (e.g. built by the glTF loader
+ * to share one buffer across attributes/primitives from the same bufferView).
  */
 export type GeometryAttribute =
   | Float32Array
@@ -60,12 +59,12 @@ export type GeometryAttribute =
       data?: Float32Array | Uint8Array | Uint16Array | Uint32Array | number[];
       /** Byte offset into the buffer. */
       offset?: number;
-      /** Byte stride override. */
-      stride?: number;
+      /** Byte stride between elements (WebGPU's arrayStride). */
+      arrayStride?: number;
       /**
        * Vertex format override. Needed when the WGSL type does not determine
-       * the storage width — `vec4u` accepts uint8x4/uint16x4/uint32x4 alike,
-       * so integer attributes such as `joints` must say which they are.
+       * the storage width — `vec4u` accepts uint8x4/uint16x4/uint32x4 alike, so
+       * integer attributes such as `joints` must say which they are.
        */
       format?: GPUVertexFormat;
       /** "instance" to step this attribute per instance instead of per vertex. */
@@ -81,7 +80,10 @@ export interface Entity {
   name?: string;
   ambientLight?: AmbientLightComponentOptions;
   animation?: AnimationComponentOptions;
-  /** Multiple named animations (e.g. from a glTF file); systems/animation.ts plays these instead of `animation` when set. */
+  /**
+   * Multiple named animations (e.g. from a glTF file); systems/animation.ts
+   * plays these instead of `animation` when set.
+   */
   animations?: AnimationComponentOptions[];
   areaLight?: AreaLightComponentOptions;
   axesHelper?: AxesHelperComponentOptions;
@@ -116,8 +118,10 @@ export interface Entity {
 
 /**
  * Baked image-based lighting resources for a reflection probe entity. Field
- * naming follows the glTF `EXT_lights_image_based` vocabulary (specular cubemap
- * + irradiance coefficients) so a future loader maps onto it directly.
+ * naming follows the glTF `EXT_lights_image_based` vocabulary (specular
+ * cubemap
+ *
+ * - Irradiance coefficients) so a future loader maps onto it directly.
  */
 export interface ReflectionProbeCache {
   /** Prefiltered specular radiance cubemap (roughness mapped to mip level). */
@@ -126,7 +130,10 @@ export interface ReflectionProbeCache {
   irradianceCoefficients: GpuBuffer;
   /** Trilinear sampler for the specular cubemap. */
   sampler: GPUSampler;
-  /** Mip levels in specularTexture; drives the shader's roughness-to-lod mapping. */
+  /**
+   * Mip levels in specularTexture; drives the shader's roughness-to-lod
+   * mapping.
+   */
   roughnessLevels: number;
   /** Rotation applied to the sampled reflection/normal directions. */
   rotation?: Mat3 | undefined;
@@ -142,7 +149,10 @@ export interface AmbientLightComponentOptions {
    * an environment of uniform brightness rather than an extra lamp.
    */
   intensity?: number;
-  /** `intensity`, unconverted — the shaders take luminance. Added by the light system. */
+  /**
+   * `intensity`, unconverted — the shaders take luminance. Added by the light
+   * system.
+   */
   _intensity?: number;
 }
 export interface AnimationComponentOptions {
@@ -150,7 +160,10 @@ export interface AnimationComponentOptions {
   playing?: boolean;
   loop?: boolean;
   time?: number;
-  /** Total animation length in seconds; falls back to the last channel's input when unset. */
+  /**
+   * Total animation length in seconds; falls back to the last channel's input
+   * when unset.
+   */
   duration?: number;
   channels?: unknown[];
 }
@@ -269,8 +282,8 @@ export interface CameraComponentOptions {
   /**
    * Ratio of camera lens opening, f-number, f/N, aperture [1.2 - 32] in mm.
    *
-   * Drives both the depth of field and the exposure — one opening, as on a
-   * real camera: stopping down for a deeper focus also darkens the image.
+   * Drives both the depth of field and the exposure — one opening, as on a real
+   * camera: stopping down for a deeper focus also darkens the image.
    *
    * The default is the exposure's f/16, not a bokeh-friendly one. A shot that
    * wants shallow focus opens up and re-meters on `shutterSpeed` or `iso`.
@@ -339,8 +352,8 @@ export interface DirectionalLightComponentOptions extends LightShadowInternals {
   /**
    * Illuminance in lux (lm/m²) on a surface facing the light — the unit
    * `KHR_lights_punctual` uses. Distance-independent: a directional light is
-   * infinitely far away, so it does not fall off. Midday sun is around
-   * 100 000 lx, an overcast sky around 1000 lx.
+   * infinitely far away, so it does not fall off. Midday sun is around 100 000
+   * lx, an overcast sky around 1000 lx.
    */
   intensity?: number;
   /** Shadow-map rasterizer constant depth bias. */
@@ -367,13 +380,25 @@ export interface DirectionalLightComponentOptions extends LightShadowInternals {
 export interface GeometryComponentOptions {
   positions?: GeometryAttribute;
   normals?: GeometryAttribute;
+  /**
+   * Absent tangents are fine: the shader derives a TBN from screen-space
+   * derivatives.
+   */
   tangents?: GeometryAttribute;
-  /** Alias: texCoords/texCoords0 */
   uvs?: GeometryAttribute;
-  /** Alias: texCoords1 */
+  /** Alias of `uvs`. */
+  texCoords?: GeometryAttribute;
+  /** Alias of `uvs`. */
+  uvs0?: GeometryAttribute;
+  /** Alias of `uvs`. */
+  texCoords0?: GeometryAttribute;
   uvs1?: GeometryAttribute;
+  /** Alias of `uvs1`. */
+  texCoords1?: GeometryAttribute;
   vertexColors?: GeometryAttribute;
   cells?: GeometryAttribute;
+  /** Alias of `cells`. */
+  indices?: GeometryAttribute;
   weights?: GeometryAttribute;
   joints?: GeometryAttribute;
   /** Instanced */
@@ -384,14 +409,23 @@ export interface GeometryComponentOptions {
   scales?: GeometryAttribute;
   /** Instanced */
   colors?: GeometryAttribute;
+  /**
+   * Vertices to draw; inferred from the indices or the position buffer when
+   * unset.
+   */
   count?: number;
-  instances?: number;
-  multiDraw?: object;
+  instanceCount?: number;
+  /** Whether the entity takes part in frustum culling. Default: true. */
   culled?: boolean;
-  primitive?: string;
+  /** Default: "triangle-list". */
+  topology?: GPUPrimitiveTopology;
+  /**
+   * Attributes beyond the ones named above, keyed by the WGSL vertex input they
+   * feed — so reaching them needs a material hook declaring that input.
+   */
+  attributes?: Record<string, unknown>;
   /** Runtime, computed by the geometry system. */
   bounds?: AABB;
-  attributes?: Record<string, unknown>;
 }
 export interface GridHelperComponentOptions {
   color?: Color;
@@ -399,25 +433,104 @@ export interface GridHelperComponentOptions {
 }
 export interface LightHelperComponentOptions {}
 /**
- * Blend equation preset for `material.blend`, named after their common
- * compositing-software equivalents (Photoshop/Three.js/Unity):
- * "normal" (standard non-premultiplied "over"), "premultiplied" ("over" with
- * color already scaled by opacity), "additive", "multiply", "screen".
+ * Named blend equation, after the common compositing-software equivalents:
+ * "normal" (non-premultiplied "over"), "premultiplied" ("over" with color
+ * already scaled by opacity), "additive", "multiply", "screen".
  */
 export type BlendMode =
   "normal" | "premultiplied" | "additive" | "multiply" | "screen";
-export interface MaterialComponentOptions {
+/**
+ * What the basic renderer draws with, and what every other material builds on:
+ * one colour plus the pipeline state any draw takes.
+ */
+export interface BasicMaterialComponentOptions {
+  baseColor?: Color;
+  /**
+   * Blending this material is composited with, as a named equation or a raw
+   * `GPUBlendState`. Anything falsy is opaque, which is also what puts the
+   * material in the opaque pass rather than the transparent one.
+   */
+  blend?: BlendMode | GPUBlendState;
+  /** Default: `true` unless `blend` is set. */
+  depthWriteEnabled?: boolean;
+  /** Default: the renderer's own ("less-equal", "less" for lines). */
+  depthCompare?: GPUCompareFunction;
+  /** Default: "back". */
+  cullMode?: GPUCullMode;
+  castShadows?: boolean;
+  /**
+   * Custom WGSL spliced into the shader that draws this material, and the
+   * values its own bindings are fed with.
+   */
+  hooks?: MaterialHooks;
+  /** Runtime flag set by renderers when the pipeline variant is rebuilt. */
+  needsPipelineUpdate?: boolean;
+}
+/**
+ * Lines, drawn as camera-facing quads expanded from a segment — so `cullMode`
+ * is ignored (no meaningful winding) and the depth bias fields exist to settle
+ * coincident geometry instead.
+ */
+export interface LineMaterialComponentOptions extends BasicMaterialComponentOptions {
+  type?: "line";
+  /**
+   * Width in world units, or in pixels at unit distance when
+   * `perspectiveScaling`.
+   */
+  lineWidth?: number;
+  /** Segments per round cap/join. */
+  lineResolution?: number;
+  /** Whether `lineWidth` shrinks with distance. */
+  perspectiveScaling?: boolean;
+  /**
+   * Rasterizer constant depth bias, in depth-buffer resolvable units. Negative
+   * pulls towards the camera, which is how coincident lines (an axes helper
+   * over a grid line) are given a stable winner instead of z-fighting.
+   */
+  depthBias?: number;
+  /**
+   * Rasterizer slope-scaled depth bias. Best left unset for lines: a ribbon
+   * seen end-on has an extreme depth slope, so the term swings with the view.
+   */
+  depthBiasSlopeScale?: number;
+  /** Upper bound on the applied depth bias (0 disables the clamp). */
+  depthBiasClamp?: number;
+}
+/**
+ * The standard renderer's unlit workflow: textured and alpha-tested like a lit
+ * material, but shaded as `baseColor` alone.
+ */
+export interface StandardUnlitMaterialComponentOptions extends BasicMaterialComponentOptions {
   /**
    * Skip lighting and output `baseColor` directly. Display referred: the colour
    * authored is the colour drawn, unaffected by the camera's exposure, since an
    * sRGB colour capped at 1 cannot express a luminance.
    */
   unlit?: boolean;
-  type?: undefined | "line";
-  baseColor?: Color;
-  emissiveColor?: Color;
+  baseColorTexture?: MaterialTexture;
+  alphaTexture?: MaterialTexture;
+  alphaCutoff?: number;
   /**
-   * Multiplier on `emissiveColor`, matching glTF's
+   * Tell a temporal filter not to trust this surface's history, so it favours
+   * the current frame over one reprojected through motion vectors that do not
+   * describe it.
+   *
+   * For surfaces that move in ways the vertex stage cannot report: scrolling
+   * texture coordinates, an animated normal map, anything driven from time in
+   * the shader. Blended and transmissive materials do this already without
+   * being asked, since neither is drawn in the pass that writes motion
+   * vectors.
+   *
+   * Costs the surface its temporal antialiasing, so it is a trade rather than a
+   * fix — set it where ghosting is worse than aliasing.
+   */
+  responsiveAA?: boolean;
+}
+/** The full PBR surface of the standard renderer's lit workflows. */
+export interface StandardMaterialComponentOptions extends StandardUnlitMaterialComponentOptions {
+  emissive?: Color;
+  /**
+   * Multiplier on `emissive`, matching glTF's
    * `KHR_materials_emissive_strength`: 1 puts the authored colour at display
    * white, and higher values are the headroom a bloom pass works from.
    */
@@ -433,11 +546,12 @@ export interface MaterialComponentOptions {
    * keep a decal or HUD element legible.
    *
    * 1 meters it like any other light, so stopping the camera down dims it as a
-   * real source would. Only meaningful if `emissiveColor * emissiveStrength`
-   * was authored as a luminance in cd/m² — a computer display is 200 to 1000,
-   * and display white at the default exposure is near 38 000.
+   * real source would. Only meaningful if `emissive * emissiveStrength` was
+   * authored as a luminance in cd/m² — a computer display is 200 to 1000, and
+   * display white at the default exposure is near 38 000.
    */
   emissiveExposure?: number;
+  emissiveTexture?: MaterialTexture;
   metallic?: number;
   roughness?: number;
   ior?: number;
@@ -445,22 +559,34 @@ export interface MaterialComponentOptions {
   specularTexture?: MaterialTexture;
   specularColor?: Color;
   specularColorTexture?: MaterialTexture;
-  baseColorTexture?: MaterialTexture;
-  emissiveColorTexture?: MaterialTexture;
   normalTexture?: MaterialTexture;
   normalTextureScale?: number;
   roughnessTexture?: MaterialTexture;
   metallicTexture?: MaterialTexture;
   metallicRoughnessTexture?: MaterialTexture;
   occlusionTexture?: MaterialTexture;
-  clearCoat?: number;
-  clearCoatRoughness?: number;
-  clearCoatTexture?: MaterialTexture;
-  clearCoatRoughnessTexture?: MaterialTexture;
-  clearCoatNormalTexture?: MaterialTexture;
-  clearCoatNormalTextureScale?: number;
+  occlusionTextureStrength?: number;
+  /**
+   * Specular-glossiness workflow, from the archived
+   * KHR_materials_pbrSpecularGlossiness. Prefixed because the extension's own
+   * `specularFactor` means something else to KHR_materials_specular; setting
+   * any of them selects the workflow.
+   */
+  sgDiffuse?: Color;
+  sgSpecular?: Color;
+  sgGlossiness?: number;
+  sgDiffuseTexture?: MaterialTexture;
+  sgSpecularGlossinessTexture?: MaterialTexture;
+  clearcoat?: number;
+  clearcoatRoughness?: number;
+  clearcoatTexture?: MaterialTexture;
+  clearcoatRoughnessTexture?: MaterialTexture;
+  clearcoatNormalTexture?: MaterialTexture;
+  clearcoatNormalTextureScale?: number;
   sheenColor?: Color;
+  sheenColorTexture?: MaterialTexture;
   sheenRoughness?: number;
+  sheenRoughnessTexture?: MaterialTexture;
   transmission?: number;
   transmissionTexture?: MaterialTexture;
   dispersion?: number;
@@ -472,76 +598,28 @@ export interface MaterialComponentOptions {
   thicknessTexture?: MaterialTexture;
   attenuationDistance?: number;
   attenuationColor?: Color;
-  alphaTest?: number;
-  alphaTexture?: MaterialTexture;
-  depthTest?: boolean;
-  depthWrite?: boolean;
-  depthFunc?: string;
-  blend?: boolean;
-  /** Blend equation when `blend` is set. Default: "normal". */
-  blendMode?: BlendMode;
-  /**
-   * Tell a temporal filter not to trust this surface's history, so it favours
-   * the current frame over one reprojected through motion vectors that do not
-   * describe it.
-   *
-   * For surfaces that move in ways the vertex stage cannot report: scrolling
-   * texture coordinates, an animated normal map, anything driven from time in
-   * the shader. Blended and transmissive materials do this already without
-   * being asked, since neither is drawn in the pass that writes motion vectors.
-   *
-   * Costs the surface its temporal antialiasing, so it is a trade rather than
-   * a fix — set it where ghosting is worse than aliasing.
-   */
-  responsiveAA?: boolean;
-  cullFace?: boolean;
-  cullFaceMode?: string;
-  pointSize?: number;
-  castShadows?: boolean;
   receiveShadows?: boolean;
-  // Line material fields (type: "line"), stored on the same slot.
-  lineWidth?: number;
-  lineResolution?: number;
-  perspectiveScaling?: boolean;
-  /**
-   * Custom WGSL spliced into the shader that draws this material, and the
-   * values its own bindings are fed with.
-   */
-  hooks?: MaterialHooks;
-  /** Runtime flag set by renderers when the pipeline variant is rebuilt. */
-  needsPipelineUpdate?: boolean;
 }
-export interface LineMaterialComponentOptions {
-  type?: "line";
-  baseColor?: Color;
-  lineWidth?: number;
-  lineResolution?: number;
-  perspectiveScaling?: boolean;
-  depthTest?: boolean;
-  depthWrite?: boolean;
-  /**
-   * Rasterizer constant depth bias, in depth-buffer resolvable units. Negative
-   * pulls towards the camera, which is how coincident lines (an axes helper
-   * over a grid line) are given a stable winner instead of z-fighting.
-   */
-  depthBias?: number;
-  /**
-   * Rasterizer slope-scaled depth bias. Best left unset for lines: a ribbon
-   * seen end-on has an extreme depth slope, so the term swings with the view.
-   */
-  depthBiasSlopeScale?: number;
-  /** Upper bound on the applied depth bias (0 disables the clamp). */
-  depthBiasClamp?: number;
-  castShadows?: boolean;
-  /**
-   * Custom WGSL spliced into the shader that draws this material, and the
-   * values its own bindings are fed with.
-   */
-  hooks?: MaterialHooks;
-}
+/**
+ * An entity's material slot, whichever renderer claims it: every variant's
+ * fields, since the renderer is chosen from the component rather than
+ * declared.
+ */
+export interface MaterialComponentOptions
+  extends StandardMaterialComponentOptions, LineMaterialComponentOptions {}
 export interface MorphComponentOptions {
+  /**
+   * The unmorphed geometry attributes, keyed the way the geometry component
+   * keys them.
+   */
   sources: Record<string, any>;
+  /**
+   * Morph targets keyed by attribute, each holding one array per target — the
+   * transpose of glTF's `mesh.primitive.targets`, which is an array of
+   * attribute dictionaries. Same word, different shape.
+   */
   targets: Record<string, any>;
+  /** `sources` blended by `weights`, written each update; seeded from `sources`. */
   current?: Record<string, any>;
   weights?: number[];
 }
@@ -558,8 +636,8 @@ export interface PointLightComponentOptions extends LightShadowInternals {
   color?: Color;
   /**
    * Luminous power in lumens, radiated equally in every direction: the light
-   * system divides by 4π to get the luminous intensity the shader integrates.
-   * A 75 W incandescent bulb is around 1000 lm.
+   * system divides by 4π to get the luminous intensity the shader integrates. A
+   * 75 W incandescent bulb is around 1000 lm.
    *
    * `KHR_lights_punctual` measures point lights in candela instead; the glTF
    * loader converts.
@@ -573,8 +651,13 @@ export interface PointLightComponentOptions extends LightShadowInternals {
   range?: number;
   /** 1/`range`², or 0 when infinite. Added by the light system. */
   _invSqrFalloff?: number;
-  /** Normalized shadow-map bias (fraction of the light's far plane). */
-  bias?: number;
+  /**
+   * Shadow-map bias as a fraction of the light's far plane, applied to the
+   * depth compare. Point lights write radial distance to `frag_depth`, which
+   * the rasterizer's `depthBias` does not apply to — hence a different term
+   * from the one every other light takes.
+   */
+  depthBiasNormalized?: number;
   bulbRadius?: number;
   castShadows?: boolean;
   shadowMapSize?: number;
@@ -629,8 +712,8 @@ export interface SSAOComponentOptions {
   bentNormals?: boolean;
   /**
    * GTAO: lets the tuned radius differ from the ground-truth one, countering
-   * biases screen-space gathering has no way to avoid. Expected range
-   * [0.3, 3.0].
+   * biases screen-space gathering has no way to avoid. Expected range [0.3,
+   * 3.0].
    */
   radiusMultiplier?: number;
   /** GTAO: fraction of the radius over which a sample fades out. [0, 1] */
@@ -694,7 +777,10 @@ export interface DoFComponentOptions {
    * {@link DoFComponentOptions.maxCoCRadius}, which is how a real lens behaves.
    */
   blurriness?: number;
-  /** Depth of the in-focus zone around the focus distance in meters, when `physical` is false. */
+  /**
+   * Depth of the in-focus zone around the focus distance in meters, when
+   * `physical` is false.
+   */
   focusRange?: number;
   /**
    * How sharply blur ramps outside that zone, when `physical` is false. 1 is
@@ -728,10 +814,10 @@ export interface DoFComponentOptions {
    * serves the whole kernel. Raising this converges on a flat disc; it does not
    * change how far the blur reaches.
    *
-   * Separate from {@link DoFComponentOptions.farRings} because the two spans
-   * are not comparable: a foreground scatters in from wherever it is, so the
-   * near field is sized by the neighbourhood, where the far field is sized by
-   * one pixel's own defocus. The near field is therefore the one a shared cap
+   * Separate from {@link DoFComponentOptions.farRings} because the two spans are
+   * not comparable: a foreground scatters in from wherever it is, so the near
+   * field is sized by the neighbourhood, where the far field is sized by one
+   * pixel's own defocus. The near field is therefore the one a shared cap
    * starves.
    */
   nearRings?: number;
@@ -751,8 +837,8 @@ export interface DoFComponentOptions {
    * depths then read as two surfaces rather than one average. Off is the plain
    * weighted sum, where the further one bleeds through.
    *
-   * Only within the background. How far the background bleeds over the
-   * geometry in front of it is capped by that geometry's own defocus, which is
+   * Only within the background. How far the background bleeds over the geometry
+   * in front of it is capped by that geometry's own defocus, which is
    * unconditional and not this.
    */
   ringOcclusion?: boolean;
@@ -787,8 +873,8 @@ export interface DoFComponentOptions {
    */
   luminanceThreshold?: number;
   /**
-   * Extra punch for out of focus highlights, as a multiplier approaching
-   * `1 + luminanceGain`. Artistic, and off by default.
+   * Extra punch for out of focus highlights, as a multiplier approaching `1 +
+   * luminanceGain`. Artistic, and off by default.
    *
    * Not an energy correction, despite what the control is usually called
    * elsewhere: a normalised gather of unclamped radiance already spreads a
@@ -811,7 +897,10 @@ export interface DoFComponentOptions {
    * defocuses.
    */
   luminanceKnee?: number;
-  /** Show the circle of confusion instead of the image: near red, far blue, the tile's gather radius green. */
+  /**
+   * Show the circle of confusion instead of the image: near red, far blue, the
+   * tile's gather radius green.
+   */
   debug?: boolean;
 }
 export interface MSAAComponentOptions {
@@ -857,8 +946,8 @@ export interface MotionBlurComponentOptions {
   /** Baseline jitter in pixels, divided by the sample count. */
   jitterScale?: number;
   /**
-   * How far from a tile border a pixel starts borrowing the neighbouring
-   * tile's motion, trading a visible seam between tiles for noise.
+   * How far from a tile border a pixel starts borrowing the neighbouring tile's
+   * motion, trading a visible seam between tiles for noise.
    */
   tileBlend?: number;
 }
@@ -975,10 +1064,10 @@ export interface LensFlareComponentOptions {
   softKnee?: number;
   /**
    * "bloom" reads bloom's pyramid instead of thresholding again, which costs
-   * nothing in a scene that already pays for bloom — at the price of the
-   * cutoff and the softness both becoming bloom's, and of
-   * {@link LensFlareComponentOptions.blur} selecting a pyramid level rather
-   * than running a filter.
+   * nothing in a scene that already pays for bloom — at the price of the cutoff
+   * and the softness both becoming bloom's, and of
+   * {@link LensFlareComponentOptions.blur} selecting a pyramid level rather than
+   * running a filter.
    *
    * Falls back to its own bright pass whenever bloom is off.
    */
@@ -1009,8 +1098,8 @@ export interface LensFlareComponentOptions {
   blur?: number;
   /**
    * Ghosts per family. Each is the aperture imaged by one pair of internal
-   * reflections, so the count is how many surface pairs the lens is standing
-   * in for.
+   * reflections, so the count is how many surface pairs the lens is standing in
+   * for.
    */
   ghosts?: number;
   /** Ghosts on the far side of the optical axis from their source. */
@@ -1023,7 +1112,10 @@ export interface LensFlareComponentOptions {
    * than as a row of discs.
    */
   warpedIntensity?: number;
-  /** Scale of the first ghost, as a multiple of the source's distance from the axis. */
+  /**
+   * Scale of the first ghost, as a multiple of the source's distance from the
+   * axis.
+   */
   ghostStart?: number;
   /**
    * Exponent the scales grow by. Above 1 the ghosts crowd near the axis and
@@ -1064,8 +1156,8 @@ export interface LensFlareComponentOptions {
   streakIntensity?: number;
   /**
    * Length of a whole spike, as a fraction of viewport width — it reaches half
-   * of this in each direction from the source. 0.5 spans half the frame; 2
-   * runs off both edges, which a bright enough source really does.
+   * of this in each direction from the source. 0.5 spans half the frame; 2 runs
+   * off both edges, which a bright enough source really does.
    */
   streakLength?: number;
   /**
@@ -1188,9 +1280,10 @@ export interface PostProcessingComponentOptions {
   opacity?: number;
 }
 /**
- * Pre-baked image-based lighting data (e.g. from a glTF `EXT_lights_image_based`
- * light) that bypasses the reflection-probe system's compute-shader bake
- * pipeline entirely: the specular mips and SH coefficients are uploaded as-is.
+ * Pre-baked image-based lighting data (e.g. from a glTF
+ * `EXT_lights_image_based` light) that bypasses the reflection-probe system's
+ * compute-shader bake pipeline entirely: the specular mips and SH coefficients
+ * are uploaded as-is.
  */
 export interface ReflectionProbePrebakedData {
   /**
@@ -1215,20 +1308,35 @@ export interface ReflectionProbeComponentOptions {
   /** Pre-baked IBL data; when set, bypasses the compute-shader bake pipeline. */
   data?: ReflectionProbePrebakedData;
 }
-export interface SkinComponentOptions {}
+export interface SkinComponentOptions {
+  /** Joint entities, in the order `inverseBindMatrices` is indexed by. */
+  joints?: Entity[];
+  /**
+   * One per joint, from glTF's accessor of the same name. glTF's `skeleton` has
+   * no counterpart here: it names a pivot node and, per spec, is not needed to
+   * compute skinning transforms.
+   */
+  inverseBindMatrices?: Mat4[];
+  /** One per joint, written by the skin system each update. */
+  jointMatrices?: Mat4[];
+  /** Last update's `jointMatrices`, added by the skin system for motion vectors. */
+  _previousJointMatrices?: Mat4[];
+  /** Cleared once the first `jointMatrices` have been copied into the previous. */
+  _hasPreviousJointMatrices?: boolean;
+}
 export interface SkyboxComponentOptions {
   sunPosition?: Vec3;
   envMap?: GpuTexture;
   /**
    * Background blur amount, 0 (sharp) to 1 (fully blurred). Sampled from a
-   * paired reflectionProbe entity's prefiltered specular cubemap; ignored
-   * with a warning if no reflectionProbe is present.
+   * paired reflectionProbe entity's prefiltered specular cubemap; ignored with
+   * a warning if no reflectionProbe is present.
    */
   backgroundBlur?: number;
   /**
    * What calibrates the environment into the luminance (cd/m²) the rest of the
    * lighting is in. Independent of the camera's exposure, which is applied to
-   * the result. What it *means* depends on whether the source's own scale is
+   * the result. What it _means_ depends on whether the source's own scale is
    * knowable, and the two cases genuinely differ.
    *
    * For the analytic sky it is **lux**: the irradiance at the reference
@@ -1246,7 +1354,10 @@ export interface SkyboxComponentOptions {
    * float environment can hold, and belongs to a directional light.
    */
   intensity?: number;
-  /** `intensity` resolved against the source's own reference. Added by the skybox system. */
+  /**
+   * `intensity` resolved against the source's own reference. Added by the
+   * skybox system.
+   */
   _luminanceScale?: number;
   turbidity?: number;
   rayleigh?: number;
@@ -1269,14 +1380,14 @@ export interface SpotLightComponentOptions extends LightShadowInternals {
    */
   intensity?: number;
   /** Outer cone half-angle in radians, past which the light contributes nothing. */
-  angle?: number;
+  outerConeAngle?: number;
   /** Cone half-angle in radians within which the light is at full intensity. */
-  innerAngle?: number;
+  innerConeAngle?: number;
   /**
-   * Concentrate the luminous power into the cone (Φ = 2π(1−cos`angle`)I) rather
-   * than spreading it over a hemisphere (Φ = πI), so narrowing the beam
-   * brightens it the way a real fixture does. Off by default, which decouples
-   * brightness from the cone angle.
+   * Concentrate the luminous power into the cone (Φ =
+   * 2π(1−cos`outerConeAngle`)I) rather than spreading it over a hemisphere (Φ =
+   * πI), so narrowing the beam brightens it the way a real fixture does. Off by
+   * default, which decouples brightness from the cone angle.
    */
   focusedSpot?: boolean;
   /**
@@ -1336,7 +1447,7 @@ export interface TransformCache {
   localModelMatrix: Mat4;
   worldPosition: Vec3;
 }
-// Draw-relevant fields (count/instances/indices) are typed permissively:
+// Draw-relevant fields (count/instanceCount/indices) are typed permissively:
 // they feed pex-gpu draw commands directly and may legitimately be undefined
 // at runtime (inferred by pex-gpu), which exactOptionalPropertyTypes would
 // otherwise reject when spread into a RenderCommand.
@@ -1346,18 +1457,18 @@ export interface GeometryCache {
   attributes: Record<string, any>;
   indices: any;
   count: number;
-  instances: number;
-  primitive?: string;
+  instanceCount: number;
+  topology?: GPUPrimitiveTopology;
   customAttributes?: string[];
 }
 
 // Shaders (pipeline WGSL generators)
 /**
  * WGSL injected at fixed points of a pipeline shader, plus the declarations
- * that cannot be written as free text: a vertex attribute needs an
- * `@location` inside the generated `VertexInput`, an inter-stage variable a
- * member of the shared `VertexOutput`, and a uniform a `@group`/`@binding` the
- * generator alone can allocate without colliding.
+ * that cannot be written as free text: a vertex attribute needs an `@location`
+ * inside the generated `VertexInput`, an inter-stage variable a member of the
+ * shared `VertexOutput`, and a uniform a `@group`/`@binding` the generator
+ * alone can allocate without colliding.
  */
 export interface ShaderHooks {
   /**
@@ -1373,8 +1484,8 @@ export interface ShaderHooks {
    */
   interStage?: Record<string, string>;
   /**
-   * Extra bindings in the material bind group, name to WGSL type. A
-   * `texture_*` type becomes a texture plus its sampler, named `u<Name>` and
+   * Extra bindings in the material bind group, name to WGSL type. A `texture_*`
+   * type becomes a texture plus its sampler, named `u<Name>` and
    * `u<Name>Sampler`; everything else becomes a field of the `uHooks` uniform
    * block, read as `uHooks.<name>`.
    */
@@ -1394,7 +1505,8 @@ export interface ShaderHooks {
  *
  * The compiled variant is keyed by this object's contents, hashed once per
  * object, so changing a hook at runtime means assigning a new `hooks` object —
- * editing a string in place keeps the pipeline that was built from the old one.
+ * editing a string in place keeps the pipeline that was built from the old
+ * one.
  */
 export interface MaterialHooks extends ShaderHooks {
   /**
@@ -1512,8 +1624,8 @@ export type RendererSystemRender = (
  * What the render pipeline hands a renderer for one pass of one view.
  *
  * Passed down to the pipeline hooks (`getDefines`, `getShaderOptions`,
- * `getVariantKey`, `getPipelineOptions`) rather than stashed on the renderer:
- * a renderer draws several passes per frame and several views per frame, and a
+ * `getVariantKey`, `getPipelineOptions`) rather than stashed on the renderer: a
+ * renderer draws several passes per frame and several views per frame, and a
  * field left over from the previous one is a pipeline variant compiled against
  * the wrong pass.
  */
@@ -1544,14 +1656,14 @@ export interface RendererPassOptions {
   /** The shadow that pass fills in, so the draw knows the map it is writing. */
   lightShadow?: LightShadow;
   /**
-   * Which of a light's {@link LightShadow}s this view shades with — the
-   * camera's layer, or `""`. Scoped rather than implied, because a light
-   * without a `layer` has one shadow per layer.
+   * Which of a light's {@link LightShadow}s this view shades with — the camera's
+   * layer, or `""`. Scoped rather than implied, because a light without a
+   * `layer` has one shadow per layer.
    */
   shadowScope?: string;
   transparent?: boolean;
   transmitted?: boolean;
-  cullFaceMode?: GPUCullMode;
+  cullMode?: GPUCullMode;
 }
 export type RendererSystemStage = (
   renderView: RenderView,
@@ -1715,15 +1827,14 @@ export interface CullingMethods {
 }
 /**
  * The render-pipeline-system object built in
- * systems/render-pipeline/render-pipeline.ts by spreading
- * ShadowMappingMethods, PostProcessingMethods and CullingMethods into one
- * literal alongside RenderPipelineCore. Declared once here rather than in any
- * single one of those files because each calls back into members another one
- * contributes (a shadow pass calls `drawMeshes`, post-processing reads
- * `time`): a contributor types its return as its own slice (e.g.
- * `ShadowMappingMethods`) intersected with `ThisType<RenderPipelineSystem>`,
- * so `this` resolves across all of them instead of being typed from that
- * one file's own object literal alone.
+ * systems/render-pipeline/render-pipeline.ts by spreading ShadowMappingMethods,
+ * PostProcessingMethods and CullingMethods into one literal alongside
+ * RenderPipelineCore. Declared once here rather than in any single one of those
+ * files because each calls back into members another one contributes (a shadow
+ * pass calls `drawMeshes`, post-processing reads `time`): a contributor types
+ * its return as its own slice (e.g. `ShadowMappingMethods`) intersected with
+ * `ThisType<RenderPipelineSystem>`, so `this` resolves across all of them
+ * instead of being typed from that one file's own object literal alone.
  */
 export type RenderPipelineSystem = RenderPipelineCore &
   ShadowMappingMethods &
