@@ -1,4 +1,4 @@
-import { chunks as SHADERS } from "pex-shaders";
+import { shaders as SHADERS } from "pex-shaders";
 
 import {
   fragmentOutputStruct,
@@ -7,7 +7,7 @@ import {
 } from "./wgsl.js";
 import type { PipelineShaderOptions } from "../types.js";
 
-// This shader bakes the analytic Preetham sky model (chunks.sky) into an
+// This shader bakes the analytic Preetham sky model (shaders.sky) into an
 // equirectangular env map: a fullscreen quad, no Frame/Model bind groups.
 // Attribute @location convention specific to this file: 0 position (vec2,
 // clip-space quad corners).

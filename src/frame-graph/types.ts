@@ -218,6 +218,7 @@ export type PassHook = (declaration: PassDeclaration) => void;
  */
 // `any` rather than `unknown`: one stage name holds every callback registered on
 // it, and a parameter type is contravariant, so `unknown` would reject typed ones.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type StageCallback<T = any> = (
   context: T,
   name: string,

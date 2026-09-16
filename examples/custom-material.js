@@ -10,7 +10,7 @@ import { loadHdr } from "pex-loaders";
 import { quat } from "pex-math";
 import createGUI from "pex-gui";
 import random from "pex-random";
-import * as SHADERS from "pex-shaders";
+import { shaders as SHADERS } from "pex-shaders";
 
 import { cube, icosphere, plane, cone } from "primitive-geometry";
 
@@ -75,8 +75,8 @@ const grassPlaneGeometry = plane({
 // Shared by both hooked materials below: the classic Perlin noise chunk and
 // the helpers it is built on, as WGSL functions (cnoiseVec3 here).
 const NOISE = /* wgsl */ `
-${SHADERS.chunks.noise.common}
-${SHADERS.chunks.noise.perlin}`;
+${SHADERS.noise.common}
+${SHADERS.noise.perlin}`;
 
 const grassEntity = createEntity({
   transform: components.transform({ position: [0, floorThickness * 0.5, 0] }),

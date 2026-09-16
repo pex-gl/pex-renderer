@@ -1,4 +1,4 @@
-import { chunks as SHADERS } from "pex-shaders";
+import { shaders as SHADERS } from "pex-shaders";
 
 import {
   createBindingAllocator,
@@ -10,7 +10,7 @@ import { fullscreenVertex, postProcessingStruct } from "./common.js";
 // The last pass: the effects that want the finished, display-referred image —
 // FXAA and film grain — plus the output opacity.
 
-// Both chunks read luma from a single-channel texture rather than recomputing
+// Both shaders read luma from a single-channel texture rather than recomputing
 // it per tap, which is what makes FXAA's edge search affordable.
 //
 // The neighbour taps sample that texture rather than `uTexture`, so they step

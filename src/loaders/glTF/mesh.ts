@@ -14,7 +14,7 @@ import {
 } from "./extensions/KHR_draco_mesh_compression.js";
 import { resolveMaterial } from "./material.js";
 
-import type { GpuContext } from "../../types.js";
+import type { GpuContext, MorphAttribute } from "../../types.js";
 import type * as GLTF from "types-gltf";
 import type {
   ResolvedGeometry,
@@ -99,7 +99,10 @@ export function resolveAttributes(
 
       attributes[name] = {
         buffer,
-        data: bufferViewData,
+        // The buffer holds the whole bufferView, which the offset and stride
+        // below index into; `data` is this accessor's own values, which is
+        // what anything reading the attribute CPU-side wants.
+        data: accessor._data,
         offset: accessor.byteOffset,
         arrayStride: accessor._bufferView.byteStride ?? joints?.arrayStride,
         ...(joints && { format: joints.format }),
@@ -311,7 +314,7 @@ export function resolvePrimitiveMorphTargets(
           // Draco-decoded primitives have no source accessor bufferView.
           const attribute = geometry[targetKey] as
             { data?: TypedArray } | undefined;
-          sources[targetKey] = attribute?.data ?? attribute;
+          sources[targetKey] = (attribute?.data ?? attribute) as MorphAttribute;
         }
       }
     }

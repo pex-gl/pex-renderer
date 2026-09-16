@@ -1,9 +1,4 @@
-import { chunks } from "pex-shaders";
-
-// pex-shaders' generated types lag behind its chunks until it is rebuilt
-// (same reason as the casts in shaders/standard.ts and shaders/ssao.ts).
-const SHADERS = chunks as any;
-
+import { shaders as SHADERS } from "pex-shaders";
 import {
   createBindingAllocator,
   formatShader,

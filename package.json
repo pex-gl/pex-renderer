@@ -44,19 +44,19 @@
     "halton": "^1.0.0",
     "pex-cam": "^3.0.1",
     "pex-color": "^2.3.0",
-    "pex-geom": "^3.1.1",
-    "pex-gpu": "file:../pex-gpu",
+    "pex-geom": "^3.1.2",
+    "pex-gpu": "^0.0.3",
     "pex-io": "^3.2.0",
-    "pex-loaders": "file:../pex-loaders",
+    "pex-loaders": "^2.0.0-alpha.1",
     "pex-math": "^4.4.0",
     "pex-random": "^2.1.2",
-    "pex-shaders": "file:../pex-shaders",
+    "pex-shaders": "^3.0.0-alpha.0",
     "typed-array-interleave": "^2.0.1",
     "types-gltf": "^1.0.0"
   },
   "devDependencies": {
-    "@hpcc-js/wasm-graphviz": "^1.28.0",
-    "@thi.ng/dot": "^2.1.141",
+    "@hpcc-js/wasm-graphviz": "^1.29.1",
+    "@thi.ng/dot": "^2.1.142",
     "angle-normals": "^1.0.0",
     "cosine-gradient": "^0.3.0",
     "es-module-shims": "^2.8.4",
@@ -65,9 +65,9 @@
     "geom-parse-obj": "^2.0.0",
     "grid-cells": "^2.0.0",
     "pex-context": "^4.1.0",
-    "pex-gui": "file:../pex-gui",
+    "pex-gui": "^4.0.0",
     "primitive-geometry": "^2.11.0",
-    "webgpu": "^0.4.0"
+    "webgpu": "^0.6.1"
   },
   "engines": {
     "node": ">=22.0.0",
@@ -75,7 +75,7 @@
     "snowdev": ">=3.0.0-alpha.1"
   },
   "allowScripts": {
-    "webgpu@0.4.0": true
+    "webgpu@0.6.1": true
   },
   "snowdev": {
     "importMap": {

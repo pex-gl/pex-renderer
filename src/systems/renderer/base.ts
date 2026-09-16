@@ -1,4 +1,4 @@
-import { isGpuTexture } from "pex-gpu";
+import { isGpuBuffer, isGpuTexture } from "pex-gpu";
 import { mat2x3, mat3, mat4 } from "pex-math";
 
 import {
@@ -9,16 +9,27 @@ import {
 import type { ModelStructOptions } from "../../shaders/wgsl.js";
 import { definesKey } from "../../utils.js";
 
-import type { Mat2x3, Mat3 } from "pex-math";
+import type {
+  GpuBuffer,
+  Uniforms,
+  UniformValue,
+  VertexAttribute,
+} from "pex-gpu";
+import type { Mat2x3, Mat3, Mat4 } from "pex-math";
 import type {
   BlendMode,
   MaterialComponentOptions,
+  MaterialTexture,
   Entity,
   RendererPassOptions,
   RendererSystem,
   RenderView,
+  SkinComponentOptions,
   TextureTransform,
 } from "../../types.js";
+
+/** One packed uniform block; pex-gpu does not export `PackableValue` itself. */
+type UniformBlock = Extract<UniformValue, Record<string, unknown>>;
 
 const IDENTITY_MAT3 = mat3.create();
 const IDENTITY_MAT4 = mat4.create();
@@ -139,20 +150,23 @@ export function isFieldActive(
  * waits on sibling `specular`). Define-only tables leave `uniforms` empty.
  */
 function getFeatureFlags(
-  source: any,
+  // A material component or an attributes map, read by field name.
+  source: object,
   fields: readonly FeatureField[],
   defines: Set<string>,
   sampler?: GPUSampler,
 ): {
   defines: Set<string>;
-  uniforms: Record<string, any>;
+  uniforms: Uniforms;
   constants: Record<string, boolean>;
 } {
+  const values = source as Record<string, unknown>;
+
   for (const field of fields) {
     if (field.requires && !defines.has(field.requires)) continue;
     if (field.excludes && defines.has(field.excludes)) continue;
 
-    const value = source[field.key];
+    const value = values[field.key];
     if (field.texture) {
       if (value && field.define) defines.add(field.define);
       continue;
@@ -163,8 +177,8 @@ function getFeatureFlags(
     if (field.define && hasValue) defines.add(field.define);
   }
 
-  const uMaterial: Record<string, any> = {};
-  const uniforms: Record<string, any> = { uMaterial };
+  const uMaterial: UniformBlock = {};
+  const uniforms: Uniforms = { uMaterial };
   // Real per-material activation for `runtime` fields' own defines — the
   // caller passes this into the pipeline's `constants` (see getPipeline).
   // Real per-material activation for `runtime` fields, passed to the pipeline's
@@ -177,29 +191,32 @@ function getFeatureFlags(
       constants[field.define] = defines.has(field.define);
     }
     if (!isFieldActive(field, runtimeDefines, defines)) continue;
-    const value = source[field.key];
+    const value = values[field.key];
 
     if (field.texture) {
       if (!value) continue;
+      const texture = value as MaterialTexture;
       const name = uniformName(field.key);
-      uniforms[name] = isGpuTexture(value) ? value : value.texture;
+      uniforms[name] = isGpuTexture(texture) ? texture : texture.texture;
       // A texture's own sampler (e.g. from a glTF sampler's wrap/filter
       // settings) overrides the renderer's shared default.
-      uniforms[samplerName(name)] = isGpuTexture(value)
-        ? sampler
-        : (value.sampler ?? sampler);
+      uniforms[samplerName(name)] = isGpuTexture(texture)
+        ? sampler!
+        : (texture.sampler ?? sampler!);
       let scratch = TEMP_MAT3_SET.get(field.key);
       if (!scratch) {
         TEMP_MAT3_SET.set(field.key, (scratch = mat3.create()));
       }
       uMaterial[textureMatrixName(field.key)] = getTextureMatrix(
         scratch,
-        isGpuTexture(value) ? {} : value,
+        isGpuTexture(texture) ? {} : texture,
       );
       continue;
     }
 
-    if (field.wgslType) uMaterial[field.key] = value ?? field.default;
+    if (field.wgslType) {
+      uMaterial[field.key] = (value ?? field.default) as UniformBlock[string];
+    }
   }
 
   return { defines, uniforms, constants };
@@ -211,15 +228,16 @@ function getFeatureFlags(
 // mutated in place by systems/skin.ts each frame, so the padded wrapper (built
 // from the same references) stays valid without rebuilding.
 function getJointMatricesUniform(
-  skin: any,
+  skin: SkinComponentOptions,
   maxJoints: number,
   previous = false,
-): any[] {
+): Mat4[] {
   const key = previous
     ? "_paddedPreviousJointMatrices"
     : "_paddedJointMatrices";
   if (skin[key]?.length !== maxJoints) {
-    const source = previous ? skin._previousJointMatrices : skin.jointMatrices;
+    const source =
+      (previous ? skin._previousJointMatrices : skin.jointMatrices) ?? [];
     skin[key] = Array.from(
       { length: maxJoints },
       (_, i) => source[i] ?? IDENTITY_MAT4,
@@ -249,6 +267,10 @@ export const outputsKey = (outputs: Record<string, unknown> = {}): string =>
   Object.keys(outputs)
     .filter((name) => !IMPLICIT_OUTPUTS.has(name))
     .join(",");
+
+/** The buffer behind a cached attribute, which may be the bare buffer. */
+export const attributeBuffer = (attribute: GpuBuffer | VertexAttribute) =>
+  isGpuBuffer(attribute) ? attribute : attribute.buffer;
 
 // Named blend equations, shared by every renderer that draws blended geometry.
 // "normal" is the glTF BLEND spec's straight (non-premultiplied) "over"
@@ -367,10 +389,10 @@ export default (): RendererSystem => ({
         }),
       },
       ...(skin && {
-        uJointMatrices: getJointMatricesUniform(entity.skin, maxJoints),
+        uJointMatrices: getJointMatricesUniform(entity.skin!, maxJoints),
         ...(previousSkin && {
           uPreviousJointMatrices: getJointMatricesUniform(
-            entity.skin,
+            entity.skin!,
             maxJoints,
             true,
           ),
@@ -392,22 +414,22 @@ export default (): RendererSystem => ({
    * nothing is reused.
    */
   getHookUniforms(
-    entity: any,
+    entity: Entity,
     frameIndex: number,
     sampler?: GPUSampler,
-  ): Record<string, any> {
+  ): Uniforms {
     const hooks = entity.material?.hooks;
     if (!hooks?.uniforms) return NO_HOOK_UNIFORMS;
 
     const cache = (entity._hookUniforms ??= {});
     if (cache.hooks === hooks && cache.frameIndex === frameIndex) {
-      return cache.uniforms;
+      return cache.uniforms!;
     }
 
     const bindings = hooks.bindings ?? {};
     const values = hooks.uniforms(entity);
-    const uHooks: Record<string, any> = {};
-    const uniforms: Record<string, any> = {};
+    const uHooks: UniformBlock = {};
+    const uniforms: Uniforms = {};
 
     for (const [key, value] of Object.entries(values)) {
       // Supplied alongside its texture below, and not a field of the block.
@@ -420,9 +442,9 @@ export default (): RendererSystem => ({
       if (bindings[key]?.startsWith("texture_")) {
         const name = uniformName(key);
         uniforms[name] = value;
-        uniforms[samplerName(name)] = values[`${key}Sampler`] ?? sampler;
+        uniforms[samplerName(name)] = values[`${key}Sampler`] ?? sampler!;
       } else {
-        uHooks[key] = value;
+        uHooks[key] = value as UniformBlock[string];
       }
     }
     if (Object.keys(uHooks).length) uniforms.uHooks = uHooks;

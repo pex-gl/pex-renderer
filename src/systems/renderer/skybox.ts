@@ -18,6 +18,7 @@ import type {
   RendererPassOptions,
   RendererSystem,
   RenderView,
+  SkyboxComponentOptions,
   SystemOptions,
 } from "../../types.js";
 
@@ -64,7 +65,7 @@ export default ({ ctx }: SystemOptions): RendererSystem => ({
     return defines;
   },
   getVariantKey(
-    entity: any,
+    _entity: Entity,
     defines: Set<string>,
     options: RendererPassOptions,
   ) {
@@ -95,7 +96,7 @@ export default ({ ctx }: SystemOptions): RendererSystem => ({
     );
   },
 
-  checkSkybox(skybox: any) {
+  checkSkybox(skybox: SkyboxComponentOptions) {
     if (getSkyboxEnvMap(skybox)) return true;
     console.warn(
       NAMESPACE,

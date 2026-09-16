@@ -22,7 +22,7 @@ const NORMAL_MATRIX = mat3.create();
 /**
  * Basic renderer
  *
- * Unlit draw path built on pex-shaders' `basic` WGSL generator. Uniforms follow
+ * Unlit draw path built. Uniforms follow
  * the shared bind group struct convention: `@group(0)` Frame, `@group(2)`
  * Material, `@group(3)` Model.
  */
@@ -32,45 +32,45 @@ export default ({ ctx }: SystemOptions): RendererSystem => ({
   debug: false,
   getShader: (defines: Set<string>, options: PipelineShaderOptions) =>
     basicShader(defines, options),
-  getDefines(entity: any) {
+  getDefines(entity: Entity) {
     const defines = new Set<string>();
     this.getFeatureFlags(
-      entity._geometry.attributes,
+      entity._geometry!.attributes,
       BASIC_VERTEX_FIELDS,
       defines,
     );
     return defines;
   },
-  getShaderOptions(entity: any, options: RendererPassOptions) {
-    return { outputs: options.outputs, hooks: entity.material.hooks };
+  getShaderOptions(entity: Entity, options: RendererPassOptions) {
+    return { outputs: options.outputs, hooks: entity.material!.hooks };
   },
   getVariantKey(
-    entity: any,
+    entity: Entity,
     defines: Set<string>,
     options: RendererPassOptions,
   ) {
     return [
       definesKey(defines),
-      entity.material.blend ? 1 : 0,
-      hooksKey(entity.material.hooks),
+      entity.material!.blend ? 1 : 0,
+      hooksKey(entity.material!.hooks),
       // Decides the shape of FragmentOutput, so two passes writing different
       // attachments cannot share a pipeline.
       outputsKey(options.outputs),
     ].join("_");
   },
-  getPipelineOptions(entity: any) {
-    const { material } = entity;
+  getPipelineOptions(entity: Entity) {
+    const material = entity.material!;
     const blend = this.getPipelineBlend(material.blend);
     return {
       depthWriteEnabled: material.depthWriteEnabled ?? !blend,
       depthCompare: material.depthCompare ?? "less-equal",
       cullMode: material.cullMode ?? "back",
-      topology: entity._geometry.topology ?? "triangle-list",
+      topology: entity._geometry!.topology ?? "triangle-list",
       // A negative-determinant node transform (e.g. a negative scale) mirrors
       // space and reverses triangle winding — per spec, front-facing flips
       // from CCW to CW along with it.
       frontFace:
-        mat4.determinant(entity._transform.modelMatrix) < 0 ? "cw" : "ccw",
+        mat4.determinant(entity._transform!.modelMatrix) < 0 ? "cw" : "ccw",
       ...(blend ? { blend } : {}),
     };
   },

@@ -1,12 +1,26 @@
 import { aabb } from "pex-geom";
 import { avec4, mat2x3, mat3, mat4, quat, vec3, vec4 } from "pex-math";
 
+import type { AABB } from "pex-geom";
 import type { Mat3, Mat4, Vec3 } from "pex-math";
 import type {
   GpuContext,
+  Viewport,
   ShaderHooks,
   SkyboxComponentOptions,
 } from "./types.js";
+
+// pex-math vectors and matrices are `number[]` of a known length, which
+// `noUncheckedIndexedAccess` cannot see — indexing one otherwise yields
+// `number | undefined` at every component.
+type Vec3Elements = [number, number, number];
+type Vec4Elements = [number, number, number, number];
+type Mat4Elements = [
+  ...Vec4Elements,
+  ...Vec4Elements,
+  ...Vec4Elements,
+  ...Vec4Elements,
+];
 
 const NAMESPACE = "pex-renderer";
 
@@ -101,7 +115,12 @@ const getCubeFaceCamera = (
   return { viewMatrix, projectionMatrix };
 };
 
-const getDefaultViewport = (ctx: GpuContext) => [0, 0, ctx.width, ctx.height];
+const getDefaultViewport = (ctx: GpuContext): Viewport => [
+  0,
+  0,
+  ctx.width,
+  ctx.height,
+];
 
 const getFileExtension = (path?: string) => {
   return (path?.match(/[^\\/]\.([^.\\/]+)$/) || [null]).pop();
@@ -178,13 +197,13 @@ const getSkyboxEnvMap = (skybox: SkyboxComponentOptions) =>
  * distances are metric. Order: -x, +x, +y, -y, far, near.
  */
 const computeFrustumPlanes = (
-  out: any,
+  out: Float32Array,
   projectionMatrix: Mat4,
   viewMatrix: Mat4,
 ) => {
   mat4.set(TEMP_MAT4, projectionMatrix);
   mat4.mult(TEMP_MAT4, viewMatrix);
-  const m: any = TEMP_MAT4;
+  const m = TEMP_MAT4 as Mat4Elements;
 
   // The near plane is the only one that depends on the depth convention: WebGPU
   // clips 0 <= z (as D3D does), not -w <= z, so it is the third row alone rather
@@ -209,14 +228,15 @@ const computeFrustumPlanes = (
 };
 
 /** Conservative AABB test against a frustum: false only if fully outside. */
-const isAABBInFrustum = (worldBounds: any, frustum: any) => {
-  const v: any = TEMP_VEC4;
+const isAABBInFrustum = (worldBounds: AABB, frustum: Float32Array) => {
+  const v = TEMP_VEC4 as Vec4Elements;
+  const [min, max] = worldBounds as [Vec3Elements, Vec3Elements];
   for (let i = 0; i < 6; i++) {
-    avec4.set(TEMP_VEC4 as any, 0, frustum, i);
+    avec4.set(TEMP_VEC4 as unknown as Float32Array, 0, frustum, i);
     // Positive vertex: the corner furthest along the plane normal.
-    TEMP_VEC3[0] = v[0] >= 0 ? worldBounds[1][0] : worldBounds[0][0];
-    TEMP_VEC3[1] = v[1] >= 0 ? worldBounds[1][1] : worldBounds[0][1];
-    TEMP_VEC3[2] = v[2] >= 0 ? worldBounds[1][2] : worldBounds[0][2];
+    TEMP_VEC3[0] = v[0] >= 0 ? max[0] : min[0];
+    TEMP_VEC3[1] = v[1] >= 0 ? max[1] : min[1];
+    TEMP_VEC3[2] = v[2] >= 0 ? max[2] : min[2];
     if (vec3.dot(TEMP_VEC4, TEMP_VEC3) + v[3] < 0) return false;
   }
   return true;

@@ -12,7 +12,14 @@ import { depthResolveShader } from "../../shaders/depth-resolve.js";
 import { RenderTextures } from "./render-textures.js";
 import { getDefaultViewport, getSkyboxEnvMap, mapValues } from "../../utils.js";
 
-import type { Entity, SystemOptions } from "../../types.js";
+import type {
+  DrawMeshesOptions,
+  Entity,
+  RendererPassOptions,
+  RenderPipelineUpdateOptions,
+  RenderView,
+  SystemOptions,
+} from "../../types.js";
 import type {
   ColorAttachmentDeclaration,
   DepthStencilAttachmentDeclaration,
@@ -166,7 +173,7 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
     textures,
     prePass,
     reflectionProbe,
-  }: any) {
+  }: DrawMeshesOptions) {
     const options = {
       // Every pass of a frame draws with the same hook uniform values, which
       // is what keeps a displaced vertex in the same place in all of them
@@ -188,9 +195,13 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
       shadowScope,
     };
 
-    const draw = (method: string, entities: Entity[], passOptions: any) => {
+    const draw = (
+      method: string,
+      entities: Entity[],
+      passOptions: RendererPassOptions,
+    ) => {
       for (let i = 0; i < renderers.length; i++) {
-        renderers[i][method]?.(renderView, entities, passOptions);
+        renderers[i]![method]?.(renderView, entities, passOptions);
       }
     };
 
@@ -228,26 +239,33 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
   // Async because post-processing effects are imported on demand, so a frame
   // that first enables one waits for its module. Nothing here touches the GPU:
   // the graph only records declarations, and execution happens after compile.
-  async update(entities: Entity[], options: any = {}) {
-    const { time, frameIndex = 0, renderers, drawToScreen = true } = options;
-    let { renderView } = options;
+  async update(entities: Entity[], options: RenderPipelineUpdateOptions = {}) {
+    const {
+      time = 0,
+      frameIndex = 0,
+      renderers = [],
+      drawToScreen = true,
+    } = options;
 
     this.time = time;
     this.frameIndex = frameIndex;
 
     // Without a view, the first camera in the scene draws to the whole canvas.
-    if (!renderView) {
-      const entity = entities.find((entity) => entity.camera)!;
-      renderView = {
-        cameraEntity: entity,
-        camera: entity.camera,
-        viewport: getDefaultViewport(ctx),
-      };
-    }
+    const renderView =
+      options.renderView ??
+      (() => {
+        const entity = entities.find((entity) => entity.camera)!;
+        return {
+          cameraEntity: entity,
+          camera: entity.camera!,
+          viewport: getDefaultViewport(ctx),
+        };
+      })();
 
-    const { cameraEntity, camera } = renderView;
-    const width = renderView.viewport[2];
-    const height = renderView.viewport[3];
+    const { camera } = renderView;
+    const cameraEntity = renderView.cameraEntity!;
+    const width = renderView.viewport[2]!;
+    const height = renderView.viewport[3]!;
     const postProcessing = cameraEntity.postProcessing;
     const viewId = cameraEntity.id;
 
@@ -270,11 +288,12 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
 
     // WebGPU only guarantees 1 and 4; anything else fails texture creation and
     // then cascades through every pipeline and bind group built against it.
-    const requestedSampleCount = useTAA ? 1 : postProcessing?.msaa?.sampleCount;
+    const requestedSampleCount =
+      (useTAA ? 1 : postProcessing?.msaa?.sampleCount) ?? 1;
     const sampleCount = requestedSampleCount > 1 ? 4 : 1;
     const msaa = sampleCount > 1;
 
-    const renderPassView = {
+    const renderPassView: RenderView = {
       ...renderView,
       viewport: [0, 0, width, height],
     };
@@ -286,7 +305,7 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
       );
     }
 
-    if (useTAA && postProcessing?.msaa?.sampleCount > 1) {
+    if (useTAA && (postProcessing?.msaa?.sampleCount ?? 0) > 1) {
       textures.report(
         'both "taa" and "msaa" are enabled. Temporal antialiasing supersedes multisampling — rendering single-sample.',
       );
@@ -490,7 +509,6 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
       renderView,
       msaa,
       entitiesInView,
-      shadowMappingLight: false,
       shadowScope: layer ?? "",
       transparent: false,
       transmitted: false,
@@ -512,7 +530,7 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
      */
     const scenePass = (
       name: string,
-      passOptions: any,
+      passOptions: Omit<DrawMeshesOptions, "colorTextures" | "textures">,
       {
         outputs = {
           color: colorTextures.color!,
@@ -807,7 +825,7 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
     for (let i = 0; i < entities.length; i++) {
       const entity = entities[i]!;
       if (entity.material) {
-        for (const property of Object.values(entity.material) as any[]) {
+        for (const property of Object.values(entity.material)) {
           if (isGpuTexture(property)) property.dispose();
         }
       }

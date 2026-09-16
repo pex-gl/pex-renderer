@@ -1,4 +1,4 @@
-import { chunks, toneMap } from "pex-shaders";
+import { shaders as SHADERS, toneMap as TONE_MAP } from "pex-shaders";
 
 import { NAMESPACE } from "../../utils.js";
 import {
@@ -7,12 +7,6 @@ import {
   textureSamplerDeclaration,
 } from "../wgsl.js";
 import { fullscreenVertex, postProcessingStruct } from "./common.js";
-
-// pex-shaders' generated types lag behind until it is rebuilt (same reason as
-// the casts in shaders/standard.ts and shaders/sky.ts) — and its tone map types
-// still describe the GLSL package, which lacks the operators the WGSL one added.
-const SHADERS = chunks as any;
-const TONE_MAP = toneMap as unknown as Record<string, string>;
 
 // Where the frame stops being scene-referred: everything above the tonemap
 // works in linear HDR radiance, everything below it in display-referred sRGB.

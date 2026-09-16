@@ -1,4 +1,4 @@
-import { chunks as SHADERS } from "pex-shaders";
+import { shaders as SHADERS } from "pex-shaders";
 
 // Number of prefiltered roughness levels (mip levels) in the specular cubemap.
 // The fragment shader maps perceptual roughness to lod in [0, ROUGHNESS_LEVELS - 1].
@@ -80,7 +80,7 @@ fn distributionGGX(NoH: f32, roughness: f32) -> f32 {
 `;
 
 // Real L2 SH basis (z-up ordering) evaluated at a direction, shared by the
-// projection (below) and the fragment reconstruction (chunks/indirect.js) so the
+// projection (below) and the fragment reconstruction (shaders/indirect.js) so the
 // two always agree on basis and index order.
 const shBasis = /* wgsl */ `
 fn shBasis(n: vec3f) -> array<f32, 9> {

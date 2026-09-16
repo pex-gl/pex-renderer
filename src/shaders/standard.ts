@@ -1,4 +1,4 @@
-import { chunks as SHADERS } from "pex-shaders";
+import { shaders as SHADERS } from "pex-shaders";
 
 import { getRuntimeDefines, isFieldActive } from "../systems/renderer/base.js";
 import {
@@ -877,7 +877,7 @@ ${fragmentOutputStruct(sceneOutputMembers(outputs))}
 
 ${PBR_DATA_STRUCT}
 
-// Feature toggles the included chunks expect this pipeline shader to declare.
+// Feature toggles the included shaders expect this pipeline shader to declare.
 override DEPTH_PASS_ONLY: bool = false;
 override DEPTH_PRE_PASS_ONLY: bool = false;
 override USE_TEXCOORD_1: bool = ${vertexFlags.texCoord1};

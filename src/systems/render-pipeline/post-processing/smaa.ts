@@ -1,6 +1,6 @@
 import { createTexture } from "pex-gpu";
 import { loadImage } from "pex-io";
-import * as pexShaders from "pex-shaders";
+import { SMAATextures } from "pex-shaders";
 
 import {
   smaaBlendShader,
@@ -11,9 +11,6 @@ import { NAMESPACE } from "../../../utils.js";
 
 import type { GpuContext, GpuTexture } from "../../../types.js";
 import type { PostProcessingEffect } from "../post-processing.js";
-
-// pex-shaders' generated types lag its exports until it is rebuilt.
-const { SMAATextures } = pexShaders as any;
 
 // The reference's presets. Low and medium drop diagonal and corner detection
 // outright, which is most of what makes them cheap.

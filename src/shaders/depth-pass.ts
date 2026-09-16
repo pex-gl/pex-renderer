@@ -1,4 +1,4 @@
-import { chunks as SHADERS } from "pex-shaders";
+import { shaders as SHADERS } from "pex-shaders";
 
 import type { FeatureField } from "../systems/renderer/base.js";
 import {
@@ -160,7 +160,7 @@ export const depthPassShader = (
   if (useAlphaTexture) texCoordSets.add(tc("alpha"));
 
   // A vertex hook is written once and compiled in every pass that draws the
-  // material, so what its chunks resolve against in the standard shader has to
+  // material, so what its shader resolve against in the standard shader has to
   // resolve here too — that pass' fragment includes are the reason a noise
   // chunk finds glslMod there. Only alongside a hook: nothing in a depth-only
   // pass calls any of it.
@@ -171,7 +171,7 @@ export const depthPassShader = (
         SHADERS.math.saturate,
         SHADERS.math.multQuat,
         SHADERS.math.random,
-        (SHADERS.math as any).glslMod,
+        SHADERS.math.glslMod,
         SHADERS.math.max3,
         SHADERS.encodeDecode,
       ].join("\n")

@@ -295,13 +295,22 @@ function buildAnimations(
       name: animation.name,
       duration: animation.duration,
       loop: true,
-      channels: animation.channels.map((channel) => ({
-        input: channel.input,
-        output: channel.output,
-        interpolation: channel.interpolation,
-        target: nodeEntities.get(channel.targetNodeIndex)?.[0],
-        path: channel.path,
-      })),
+      // A channel whose node produced no entity has nothing to drive, and the
+      // animation system dereferences the target unconditionally.
+      channels: animation.channels.flatMap((channel) => {
+        const target = nodeEntities.get(channel.targetNodeIndex)?.[0];
+        return target
+          ? [
+              {
+                input: channel.input,
+                output: channel.output,
+                interpolation: channel.interpolation,
+                target,
+                path: channel.path,
+              },
+            ]
+          : [];
+      }),
     }),
   );
 }

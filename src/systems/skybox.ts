@@ -4,6 +4,7 @@ import { submit, createTexture } from "pex-gpu";
 import { skyShader } from "../shaders/sky.js";
 import createFullscreenGeometry from "../fullscreen-geometry.js";
 
+import type { Vec3 } from "pex-math";
 import type {
   Entity,
   SkyboxComponentOptions,
@@ -11,12 +12,12 @@ import type {
 } from "../types.js";
 
 // Sky parameters packed, in order, into the shader's `parameters: vec4f`.
-const parameters: (keyof SkyboxComponentOptions)[] = [
+const parameters = [
   "turbidity",
   "rayleigh",
   "mieCoefficient",
   "mieDirectionalG",
-];
+] as const satisfies readonly (keyof SkyboxComponentOptions)[];
 
 /**
  * Skybox system
@@ -44,11 +45,18 @@ const parameters: (keyof SkyboxComponentOptions)[] = [
 // 45 degrees and 0.61 near the horizon.
 const SKY_REFERENCE_IRRADIANCE = 20.3;
 
+interface SkyboxCache {
+  sunPosition: Vec3;
+  /** Last baked values of `parameters`, in the same order. */
+  parameters: number[];
+  needsBake: boolean;
+}
+
 export default ({ ctx, frameGraph }: SystemOptions) => ({
   type: "skybox-system",
-  cache: {} as Record<number, any>,
+  cache: {} as Record<number, SkyboxCache>,
   debug: false,
-  pipeline: null as any,
+  pipeline: null as { vertex: string; fragment: string } | null,
 
   updateSkyboxEntity(entity: Entity) {
     const skybox = entity.skybox!;
@@ -67,7 +75,7 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
 
       cached = this.cache[entity.id] = {
         sunPosition: [...skybox.sunPosition!],
-        parameters: Array.from({ length: parameters.length }),
+        parameters: [],
         needsBake: true,
       };
     }
@@ -78,9 +86,9 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
     }
 
     for (let i = 0; i < parameters.length; i++) {
-      const name = parameters[i]!;
-      if (cached.parameters[i] !== skybox[name]) {
-        cached.parameters[i] = skybox[name];
+      const value = skybox[parameters[i]!] ?? 0;
+      if (cached.parameters[i] !== value) {
+        cached.parameters[i] = value;
         skybox.dirty = true;
       }
     }
@@ -133,10 +141,10 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
       if (!skybox?._skyTexture || !cached?.needsBake) continue;
 
       // Immutable per object identity: create once, reuse across frames.
-      this.pipeline ||= (() => {
+      const pipeline = (this.pipeline ||= (() => {
         const source = skyShader(new Set(), {});
         return { vertex: source, fragment: source };
-      })();
+      })());
 
       // Imported, not graph-owned: the sky is rewritten only when it moves, so
       // on most frames no pass writes it and a handle would resolve to nothing.
@@ -158,7 +166,7 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
         execute: ({ uniforms }) => {
           submit(ctx, {
             label: "skyboxUpdateSkyTextureCmd",
-            pipeline: this.pipeline,
+            pipeline,
             ...createFullscreenGeometry(ctx).triangle,
             uniforms,
           });

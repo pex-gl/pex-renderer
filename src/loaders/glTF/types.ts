@@ -1,5 +1,10 @@
 import type * as GLTF from "types-gltf";
-import type { GpuBuffer, GpuTexture, MaterialTexture } from "../../types.js";
+import type {
+  GpuBuffer,
+  GpuTexture,
+  MaterialTexture,
+  MorphAttribute,
+} from "../../types.js";
 // pex-loaders re-exports the function but not its result type.
 import type { transcodeKtx2 } from "pex-loaders";
 
@@ -204,7 +209,7 @@ export interface ResolvedPrimitive {
 }
 
 export interface ResolvedMorphTargets {
-  sources: Record<string, TypedArray | unknown>;
-  targets: Record<string, (TypedArray | unknown)[]>;
+  sources: Record<string, MorphAttribute>;
+  targets: Record<string, MorphAttribute[]>;
   weights: number[];
 }

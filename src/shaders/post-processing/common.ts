@@ -55,7 +55,7 @@ const AXIS_MEMBERS = [
 
 /**
  * `VertexOutput` for a post-processing pass. Neighbour taps are interpolated
- * rather than recomputed per fragment — the down/upsample and FXAA chunks take
+ * rather than recomputed per fragment — the down/upsample and FXAA shader take
  * them as parameters for exactly that reason.
  */
 const fullscreenVertexOutput = ({
@@ -74,7 +74,7 @@ const fullscreenVertexOutput = ({
  * WebGPU's texture origin is top-left while clip space points y up, so the
  * flipped y makes a fullscreen pass an identity copy — target texel to source
  * texel. Tap names stay in screen terms (`Up` is visually up, one texel back in
- * v), which is what the chunks' symmetric filters expect.
+ * v), which is what the shaders' symmetric filters expect.
  *
  * Taps step in source texels: they offset a coordinate that is about to sample
  * the source, so a pass whose target is a different size — every level of
@@ -120,9 +120,4 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
 }
 `;
 
-/**
- * `gl_FragCoord` counterpart: the chunks ported from GLSL take a pixel-centre
- * coordinate, and WebGPU's `@builtin(position)` already shares the depth and
- * normal targets' top-left origin, so it maps texel-for-texel with no flip.
- */
 export const FRAGMENT_COORD = "input.position.xy";

@@ -18,15 +18,24 @@ import createBaseSystem, { outputsKey } from "./base.js";
 import { samplerName, uniformName } from "../../shaders/wgsl.js";
 import { NAMESPACE, TEMP_MAT4, definesKey, hooksKey } from "../../utils.js";
 
+import type { GpuTexture, RenderPipeline, Uniforms } from "pex-gpu";
+import type { Mat4 } from "pex-math";
 import type {
   PipelineShaderOptions,
   Entity,
+  LightComponentOptions,
+  MaterialComponentOptions,
+  MaterialHooks,
+  MaterialTexture,
   RendererPassOptions,
   RendererSystem,
   RenderView,
   ShaderLightCounts,
+  Shadow2DLightComponentOptions,
+  ShadowCastingLightComponentOptions,
   LightShadow,
   SystemOptions,
+  TextureTransform,
 } from "../../types.js";
 
 /**
@@ -40,13 +49,27 @@ const NO_SHADOW: LightShadow = {
   near: 0,
   far: 0,
   radiusUV: [0, 0],
-  projectionMatrix: mat4.create() as any,
+  projectionMatrix: mat4.create(),
   texture: undefined,
 };
 
+/**
+ * `@group(1)` values. A light array is an array of structs, which pex-gpu's
+ * packer takes but its `PackableValue` does not spell.
+ */
+type LightUniforms = Record<string, Uniforms[string] | Uniforms[]>;
+
+/** A depth-only draw's shader variant, plus what an alpha-testing one binds. */
+interface DepthPassMaterial {
+  defines: Set<string>;
+  hooks?: MaterialHooks | undefined;
+  uniforms?: Uniforms;
+  texCoords?: Record<string, number>;
+}
+
 /** `@group(1)` bindings for the pass's lights, plus what the shader keys on. */
 interface StandardLights {
-  uniforms: Record<string, any>;
+  uniforms: LightUniforms;
   counts: Required<ShaderLightCounts>;
 }
 
@@ -73,12 +96,13 @@ const DEPTH_PASS_TEXTURE_KEYS = ["baseColorTexture", "alphaTexture"];
 // ask for it: slot name minus the "Texture" suffix (see getTexCoordGetter).
 // Absent means set 0, so only non-zero assignments are carried.
 function getTexCoords(
-  material: any,
+  material: MaterialComponentOptions,
   keys: readonly string[],
 ): Record<string, number> {
+  const textures = material as Record<string, MaterialTexture | undefined>;
   const texCoords: Record<string, number> = {};
   for (const key of keys) {
-    const texCoord = material[key]?.texCoord;
+    const texCoord = (textures[key] as TextureTransform | undefined)?.texCoord;
     if (texCoord) texCoords[key.replace(/Texture$/, "")] = texCoord;
   }
   return texCoords;
@@ -99,17 +123,17 @@ const IDENTITY_MAT3 = mat3.create();
 // [r, g, b] stays as authored sRGB; the shader decodes it. The 4th component
 // carries the photometric intensity the shader integrates (light.color.w) —
 // systems/light.ts converted it from the authored unit.
-const lightColor = (light: any) => [
-  light.color[0],
-  light.color[1],
-  light.color[2],
-  light._intensity,
+const lightColor = (light: LightComponentOptions) => [
+  light.color![0]!,
+  light.color![1]!,
+  light.color![2]!,
+  light._intensity!,
 ];
 
 // mat3(transpose(inverse(view * model))). Shared by the main pass and the
 // pre-pass so both encode the normal target identically — a reader must not be
 // able to tell which one produced it.
-function getViewNormalMatrix(viewMatrix: any, modelMatrix: any) {
+function getViewNormalMatrix(viewMatrix: Mat4, modelMatrix: Mat4) {
   mat4.set(TEMP_MAT4, viewMatrix);
   mat4.mult(TEMP_MAT4, modelMatrix);
   mat4.invert(TEMP_MAT4);
@@ -120,7 +144,7 @@ function getViewNormalMatrix(viewMatrix: any, modelMatrix: any) {
 // A mesh this renderer owns: `material.type` names another renderer (basic,
 // line), and the underscore-prefixed caches only exist once their systems have
 // run.
-const isStandardMesh = (entity: any) =>
+const isStandardMesh = (entity: Entity) =>
   entity.geometry &&
   entity.material &&
   entity.material.type === undefined &&
@@ -204,10 +228,10 @@ export default ({
   isLoadingAreaLightData: null,
 
   // Shadow-map variants of the depth pass.
-  depthPipelineCache: new Map(),
+  depthPipelineCache: new Map<string, RenderPipeline>(),
   // Pre-pass variants, cached apart from the shadow ones: the pre-pass never
   // sets depth bias, so a shared entry would keep whatever a shadow draw left.
-  prePassPipelineCache: new Map(),
+  prePassPipelineCache: new Map<string, RenderPipeline>(),
 
   async loadAreaLightData() {
     try {
@@ -230,17 +254,17 @@ export default ({
 
   getShader: (defines: Set<string>, options: PipelineShaderOptions) =>
     standardShader(defines, options),
-  getShaderOptions(entity: any, options: StandardPassOptions) {
+  getShaderOptions(entity: Entity, options: StandardPassOptions) {
     return {
       lights: options.lights.counts,
       outputs: options.outputs,
-      texCoords: getTexCoords(entity.material, TEXTURE_KEYS),
-      hooks: entity.material.hooks,
+      texCoords: getTexCoords(entity.material!, TEXTURE_KEYS),
+      hooks: entity.material!.hooks,
       debugRender: this.debugRender,
     };
   },
-  getMaterialDefines(entity: any) {
-    const { material } = entity;
+  getMaterialDefines(entity: Entity) {
+    const material = entity.material!;
     const unlit = this.isUnlit(entity);
     const defines = new Set<string>();
 
@@ -268,14 +292,14 @@ export default ({
     );
   },
   getDefines(
-    entity: any,
+    entity: Entity,
     options: StandardPassOptions,
     materialFeatures?: { defines: Set<string> },
   ) {
     const { defines } = materialFeatures ?? this.getMaterialDefines(entity);
 
     this.getFeatureFlags(
-      entity._geometry.attributes,
+      entity._geometry!.attributes,
       STANDARD_VERTEX_FIELDS,
       defines,
     );
@@ -287,17 +311,18 @@ export default ({
     return defines;
   },
   getVariantKey(
-    entity: any,
+    entity: Entity,
     defines: Set<string>,
     options: StandardPassOptions,
   ) {
-    const { material } = entity;
+    const material = entity.material!;
+    const textures = material as Record<string, MaterialTexture | undefined>;
     const { counts } = options.lights;
     // texCoord assignments are baked into the WGSL (see getShaderOptions), so
     // two materials with the same defines but different UV channels per slot
     // need distinct pipeline variants.
     const texCoords = TEXTURE_KEYS.map(
-      (key) => material[key]?.texCoord ?? 0,
+      (key) => (textures[key] as TextureTransform | undefined)?.texCoord ?? 0,
     ).join("");
     return [
       definesKey(defines.difference(RUNTIME_DEFINES)),
@@ -322,15 +347,15 @@ export default ({
       this.debugRender,
     ].join("_");
   },
-  isUnlit(entity: any) {
-    return entity.material.unlit || !entity._geometry.attributes.normal;
+  isUnlit(entity: Entity) {
+    return entity.material!.unlit || !entity._geometry!.attributes.normal;
   },
   getPipelineOptions(
-    entity: any,
+    entity: Entity,
     options: StandardPassOptions,
     precomputed?: { constants?: Record<string, boolean> },
   ) {
-    const { material } = entity;
+    const material = entity.material!;
     const blend = this.getPipelineBlend(material.blend);
     // A cutout resolved as coverage instead of discarded. Only when the
     // attachment is multisampled — with one sample there is no mask to write,
@@ -399,11 +424,11 @@ export default ({
     const ltcReady = this.ltcTextures.ltc_1 && this.ltcTextures.ltc_2;
     const areaActive = ltcReady ? area : [];
 
-    const uniforms: any = {};
+    const uniforms: LightUniforms = {};
 
     if (ambient.length) {
       uniforms.uAmbientLights = ambient.map((e) => ({
-        color: lightColor(e.ambientLight),
+        color: lightColor(e.ambientLight!),
       }));
     }
 
@@ -411,20 +436,27 @@ export default ({
     // contributes its bucket and layer rather than a binding of its own. The
     // bucket textures are collected here in index order, which is the order the
     // shader's dispatcher expects.
-    const shadowBuckets: { textures2D: any[]; texturesCube: any[] } = {
+    const shadowBuckets: {
+      textures2D: (GpuTexture | undefined)[];
+      texturesCube: (GpuTexture | undefined)[];
+    } = {
       textures2D: [],
       texturesCube: [],
     };
     // A light's map is fitted to the casters of one camera layer, so the shadow
     // is looked up by the scope the pipeline is drawing — not flat on the
     // component, which a light seen by several layers would overwrite.
-    const shadowOf = (light: any): LightShadow =>
+    const shadowOf = (light: ShadowCastingLightComponentOptions): LightShadow =>
       light._shadows?.get(scope) ?? NO_SHADOW;
 
     // Struct fields every light type carries, whatever the map's
     // dimensionality. Registering the texture is a side effect of asking for
     // them, so a bucket only exists once some light points at it.
-    const shadowSlot = (light: any, shadow: LightShadow, cube: boolean) => {
+    const shadowSlot = (
+      light: ShadowCastingLightComponentOptions,
+      shadow: LightShadow,
+      cube: boolean,
+    ) => {
       const map = light.castShadows ? shadow.texture : undefined;
       if (map) {
         (cube ? shadowBuckets.texturesCube : shadowBuckets.textures2D)[
@@ -442,7 +474,7 @@ export default ({
     // The 2D projection fields on top, shared by directional/spot/area. The
     // projection comes from the shadow too: it is the one the map was rendered
     // with, and sampling with any other misaligns the comparison.
-    const shadow2D = (light: any) => {
+    const shadow2D = (light: ShadowCastingLightComponentOptions) => {
       const shadow = shadowOf(light);
       return {
         ...shadowSlot(light, shadow, false),
@@ -457,9 +489,9 @@ export default ({
       uniforms.uDirectionalLights = directional.map((e) => {
         const light = e.directionalLight!;
         return {
-          direction: light._direction,
+          direction: light._direction!,
           color: lightColor(light),
-          viewMatrix: light._viewMatrix,
+          viewMatrix: light._viewMatrix!,
           ...shadow2D(light),
         };
       });
@@ -472,7 +504,7 @@ export default ({
         return {
           position: e._transform!.worldPosition,
           color: lightColor(light),
-          invSqrFalloff: light._invSqrFalloff,
+          invSqrFalloff: light._invSqrFalloff!,
           depthBiasNormalized: light.depthBiasNormalized ?? 0,
           radius: light.bulbRadius ?? 0,
           // Normalizes the stored/compared radial distance (shadow-mapping.ts
@@ -488,12 +520,12 @@ export default ({
         const light = e.spotLight!;
         return {
           position: e._transform!.worldPosition,
-          direction: light._direction,
+          direction: light._direction!,
           color: lightColor(light),
-          innerConeAngle: light.innerConeAngle,
-          outerConeAngle: light.outerConeAngle,
-          invSqrFalloff: light._invSqrFalloff,
-          viewMatrix: light._viewMatrix,
+          innerConeAngle: light.innerConeAngle!,
+          outerConeAngle: light.outerConeAngle!,
+          invSqrFalloff: light._invSqrFalloff!,
+          viewMatrix: light._viewMatrix!,
           ...shadow2D(light),
         };
       });
@@ -507,13 +539,13 @@ export default ({
       uniforms.uAreaLights = areaActive.map((e) => {
         const light = e.areaLight!;
         return {
-          position: e.transform!.position,
+          position: e.transform!.position!,
           color: lightColor(light),
-          rotation: e.transform!.rotation,
+          rotation: e.transform!.rotation!,
           size: [e.transform!.scale![0]! / 2, e.transform!.scale![1]! / 2],
           disk: light.disk ? 1 : 0,
           doubleSided: light.doubleSided ? 1 : 0,
-          viewMatrix: light._viewMatrix,
+          viewMatrix: light._viewMatrix!,
           ...shadow2D(light),
         };
       });
@@ -547,7 +579,7 @@ export default ({
     };
   },
 
-  inputs({ transparent, transmitted }: any = {}) {
+  inputs({ transparent, transmitted }: RendererPassOptions = {}) {
     if (transmitted) return ["transmission.grab"];
     // "ssao.bentNormal" is the same texture under a second name, published only
     // when its remaining channels carry one — which is the only thing that tells
@@ -656,7 +688,7 @@ export default ({
             modelStructOptions,
           ),
           ...materialUniforms,
-          ...passOptions.lights.uniforms,
+          ...(passOptions.lights.uniforms as Uniforms),
           ...reflectionUniforms,
           ...captureUniforms,
           ...this.getHookUniforms(entity, frameIndex, this.materialSampler),
@@ -686,8 +718,8 @@ export default ({
    * a surface looks like. `texCoords` mirrors what the main pass resolved so
    * both sample the same UV set.
    */
-  getDepthPassMaterial(entity: any) {
-    const { attributes } = entity._geometry;
+  getDepthPassMaterial(entity: Entity): DepthPassMaterial {
+    const { attributes } = entity._geometry!;
     const defines = new Set<string>();
     this.getFeatureFlags(attributes, DEPTH_PASS_VERTEX_FIELDS, defines);
 
@@ -696,7 +728,7 @@ export default ({
     // occupy and the pre-pass lays down depth the opaque pass cannot match.
     // Displacing along the normal is the common case, and this pass otherwise
     // only fetches one when it writes one, so a vertex hook asks for it.
-    const { hooks } = entity.material;
+    const { hooks } = entity.material!;
     if (
       (hooks?.vertBeforeTransform ||
         hooks?.vertDeclarationsEnd ||
@@ -706,11 +738,11 @@ export default ({
       defines.add("USE_NORMALS");
     }
 
-    if (entity.material.alphaCutoff === undefined) return { defines, hooks };
+    if (entity.material!.alphaCutoff === undefined) return { defines, hooks };
 
     this.getFeatureFlags(attributes, DEPTH_PASS_ALPHA_VERTEX_FIELDS, defines);
     const { uniforms } = this.getFeatureFlags(
-      entity.material,
+      entity.material!,
       DEPTH_PASS_MATERIAL_FIELDS,
       defines,
       this.materialSampler,
@@ -719,13 +751,17 @@ export default ({
       defines,
       hooks,
       uniforms,
-      texCoords: getTexCoords(entity.material, DEPTH_PASS_TEXTURE_KEYS),
+      texCoords: getTexCoords(entity.material!, DEPTH_PASS_TEXTURE_KEYS),
     };
   },
 
   // Shared by shadow maps and the pre-pass, which differ only in the defines
   // they add before this and the depth bias they set after it.
-  getDepthPassPipeline(entity: any, cache: Map<string, any>, material: any) {
+  getDepthPassPipeline(
+    entity: Entity,
+    cache: Map<string, RenderPipeline>,
+    material: DepthPassMaterial,
+  ) {
     const { defines, texCoords, hooks } = material;
     // texCoords picks which UV set the alpha test samples, so it varies the
     // source the same way a define does.
@@ -735,7 +771,10 @@ export default ({
       hooksKey(hooks),
     ].join("_");
     const pipeline = cache.getOrInsertComputed(key, () => {
-      const shader = depthPassShader(defines, { texCoords, hooks });
+      const shader = depthPassShader(defines, {
+        ...(texCoords && { texCoords }),
+        ...(hooks && { hooks }),
+      });
       // Depth comes out of the rasterizer, so a fragment stage exists only when
       // one of the variants needs it: to reject, to write radial distance, or
       // to fill the normal target.
@@ -746,17 +785,22 @@ export default ({
         : { vertex: shader };
     });
     pipeline.depthWriteEnabled = true;
-    pipeline.cullMode = entity.material.cullMode ?? "back";
-    pipeline.topology = entity._geometry.topology ?? "triangle-list";
+    pipeline.cullMode = entity.material!.cullMode ?? "back";
+    pipeline.topology = entity._geometry!.topology ?? "triangle-list";
     pipeline.frontFace =
-      mat4.determinant(entity._transform.modelMatrix) < 0 ? "cw" : "ccw";
+      mat4.determinant(entity._transform!.modelMatrix) < 0 ? "cw" : "ccw";
     return pipeline;
   },
 
   // `linear` selects the omni (point) variant: a fragment stage stores
   // normalized radial distance instead of clip depth. Rasterizer depth bias is
   // skipped there (frag_depth bypasses it; the point shader biases its compare).
-  getDepthPipeline(entity: any, linear: boolean, light: any, material: any) {
+  getDepthPipeline(
+    entity: Entity,
+    linear: boolean,
+    light: ShadowCastingLightComponentOptions | undefined,
+    material: DepthPassMaterial,
+  ) {
     if (linear) material.defines.add("USE_LINEAR_DEPTH");
 
     const pipeline = this.getDepthPassPipeline(
@@ -775,20 +819,23 @@ export default ({
     } else {
       // Rasterizer depth bias replaces shader-side shadow bias: a constant term
       // plus the slope-scaled term (handles grazing angles), optionally clamped.
-      pipeline.depthBias = light?.depthBias ?? 1;
-      pipeline.depthBiasSlopeScale = light?.depthBiasSlopeScale ?? 2;
-      pipeline.depthBiasClamp = light?.depthBiasClamp ?? 0;
+      // Point lights take the branch above, carrying `depthBiasNormalized`.
+      const bias = light as Shadow2DLightComponentOptions | undefined;
+      pipeline.depthBias = bias?.depthBias ?? 1;
+      pipeline.depthBiasSlopeScale = bias?.depthBiasSlopeScale ?? 2;
+      pipeline.depthBiasClamp = bias?.depthBiasClamp ?? 0;
     }
     return pipeline;
   },
 
   getPrePassPipeline(
-    entity: any,
+    entity: Entity,
     normalOutput: boolean,
     multisampled: boolean,
-    material: any,
+    material: DepthPassMaterial,
   ) {
-    if (entity._geometry.attributes.normal) material.defines.add("USE_NORMALS");
+    if (entity._geometry!.attributes.normal)
+      material.defines.add("USE_NORMALS");
     if (normalOutput) material.defines.add("USE_NORMAL_OUTPUT");
     // Drops the shadow map's displacement stretch: this pass has to land on the
     // same depth the opaque pass computes, not a biased one.

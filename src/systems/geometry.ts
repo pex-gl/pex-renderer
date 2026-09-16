@@ -3,7 +3,37 @@ import { vec3 } from "pex-math";
 import { createBuffer, updateBuffer, isGpuBuffer } from "pex-gpu";
 import { NAMESPACE, TEMP_AABB } from "../utils.js";
 
-import type { Entity, SystemOptions } from "../types.js";
+import type {
+  Attributes,
+  GpuBuffer,
+  GpuContext,
+  VertexAttribute,
+} from "pex-gpu";
+import type {
+  AttributeData,
+  Entity,
+  GeometryAttribute,
+  GeometryCache,
+  GeometryComponentOptions,
+  SystemOptions,
+} from "../types.js";
+
+/**
+ * An attribute as this system reads it off a component: the declared shapes,
+ * plus the `dirty` flag anything mutating vertex data sets — which lands on a
+ * plain array as readily as on a descriptor.
+ */
+type SourceAttribute = GeometryAttribute & { dirty?: boolean };
+
+/**
+ * The GPU-backed half of {@link SourceAttribute}, or nothing if it is plain
+ * data. Discriminated on the data shapes rather than on `buffer`, which a typed
+ * array has of its own.
+ */
+export const asDescriptor = (attribute: SourceAttribute) =>
+  ArrayBuffer.isView(attribute) || Array.isArray(attribute)
+    ? undefined
+    : attribute;
 
 // Keys match the WGSL vertex input names (see pex-shaders location convention),
 // so a cached attribute can be handed straight to a pex-gpu draw command.
@@ -41,6 +71,48 @@ const deformingAttributes = new Set([
 const previousAttributeName = (name: string) =>
   `previous${name[0]!.toUpperCase()}${name.slice(1)}`;
 
+const BYTES_PER_INDEX = { uint16: 2, uint32: 4 } as const;
+
+/**
+ * Bytes pex-gpu will write for `data`, mirroring its coercion: a typed array
+ * goes as-is, a plain array becomes floats — or indices at the buffer's own
+ * format, which updateBuffer converts to.
+ */
+const uploadByteLength = (data: AttributeData, buffer: GpuBuffer) => {
+  if (ArrayBuffer.isView(data)) return data.byteLength;
+  const components = Array.isArray(data[0]) ? data[0]!.length : 1;
+  return (
+    data.length *
+    components *
+    (buffer.indexFormat
+      ? BYTES_PER_INDEX[buffer.indexFormat]
+      : Float32Array.BYTES_PER_ELEMENT)
+  );
+};
+
+/**
+ * Upload into `buffer`, or replace it when the data outgrew it: an attribute
+ * array can be swapped for a larger one between frames — a geometry builder
+ * doubling its capacity — and a GPU buffer cannot be resized in place.
+ */
+function writeBuffer(
+  ctx: GpuContext,
+  buffer: GpuBuffer,
+  data: AttributeData,
+  usage: "vertex" | "index",
+) {
+  if (uploadByteLength(data, buffer) <= buffer.size) {
+    updateBuffer(ctx, buffer, data);
+    return buffer;
+  }
+  buffer.dispose();
+  return createBuffer(ctx, {
+    usage,
+    data,
+    ...(buffer.indexFormat && { indexFormat: buffer.indexFormat }),
+  });
+}
+
 /**
  * Ping-pong `name`'s buffer, so the data it held stays readable as
  * `previous<Name>`.
@@ -52,20 +124,37 @@ const previousAttributeName = (name: string) =>
  * anything would want.
  */
 function keepPreviousBuffer(
-  ctx: any,
-  attributes: Record<string, any>,
+  ctx: GpuContext,
+  attributes: Attributes,
   name: string,
-  attribute: any,
-  data: any,
+  attribute: VertexAttribute,
+  data: AttributeData,
 ) {
   const previousName = previousAttributeName(name);
-  const previous = attributes[previousName];
+  const previous = attributes[previousName] as VertexAttribute | undefined;
+
+  // Both halves have to hold the same shape, or the previous-value read runs
+  // off the end of the smaller one. A geometry that just changed vertex count
+  // has no correspondence to last frame anyway, so a grown attribute restarts
+  // both halves from this frame's data.
+  const grown =
+    uploadByteLength(data, attribute.buffer) > attribute.buffer.size;
+  if (grown) {
+    attribute.buffer.dispose();
+    attribute.buffer = createBuffer(ctx, { usage: "vertex", data });
+  }
 
   if (previous) {
     // Swap, then overwrite the older of the two with this frame's data.
     attributes[previousName] = attribute;
     attributes[name] = previous;
-    updateBuffer(ctx, previous.buffer, data);
+
+    if (grown) {
+      previous.buffer.dispose();
+      previous.buffer = createBuffer(ctx, { usage: "vertex", data });
+    } else {
+      updateBuffer(ctx, previous.buffer, data);
+    }
     return previous;
   }
 
@@ -78,8 +167,27 @@ function keepPreviousBuffer(
   });
 }
 
-function disposeAttribute(attribute: any) {
-  const buffer = attribute?.buffer || attribute;
+/** The plain data behind an attribute, which may be a GPU-backed descriptor. */
+export const attributeData = (attribute: SourceAttribute): AttributeData =>
+  asDescriptor(attribute)?.data ?? (attribute as AttributeData);
+
+/**
+ * Copies a field onto a cached attribute, removing it when the component has
+ * none: pex-gpu reads an absent field as "infer this one", which an explicit
+ * `undefined` does not spell in its type.
+ */
+function setAttributeField<
+  K extends "offset" | "arrayStride" | "format" | "stepMode",
+>(attribute: VertexAttribute, key: K, value: VertexAttribute[K] | undefined) {
+  if (value === undefined) delete attribute[key];
+  else attribute[key] = value;
+}
+
+function disposeAttribute(
+  attribute: GpuBuffer | VertexAttribute | undefined,
+): void {
+  const buffer =
+    (attribute as VertexAttribute | undefined)?.buffer ?? attribute;
   if (isGpuBuffer(buffer)) buffer.dispose();
 }
 
@@ -94,42 +202,51 @@ function disposeAttribute(attribute: any) {
  */
 export default ({ ctx }: SystemOptions) => ({
   type: "geometry-system",
-  cache: {} as Record<number, any>,
+  cache: {} as Record<number, GeometryCache>,
   debug: false,
-  updateBounds(geometry: any) {
-    const positions = geometry.positions.data || geometry.positions;
-    const offsets = geometry.offsets?.data || geometry.offsets;
+  updateBounds(geometry: GeometryComponentOptions) {
+    const positions = attributeData(geometry.positions!)!;
+    const offsets = geometry.offsets && attributeData(geometry.offsets);
 
-    geometry.bounds ||= aabb.create();
+    const bounds = (geometry.bounds ||= aabb.create());
 
     // TODO: handle skin system?
     if (offsets?.length) {
-      aabb.fromPoints(geometry.bounds, offsets);
+      aabb.fromPoints(bounds, offsets);
 
       aabb.fromPoints(TEMP_AABB, positions);
-      vec3.add(geometry.bounds[0], TEMP_AABB[0]);
-      vec3.add(geometry.bounds[1], TEMP_AABB[1]);
+      vec3.add(bounds[0]!, TEMP_AABB[0]!);
+      vec3.add(bounds[1]!, TEMP_AABB[1]!);
     } else {
-      aabb.fromPoints(geometry.bounds, positions);
+      aabb.fromPoints(bounds, positions);
     }
 
-    geometry.bounds.dirty = false;
+    bounds.dirty = false;
   },
   updateGeometryEntity(entity: Entity) {
-    const geometry: any = entity.geometry;
-    this.cache[entity.id] ||= { geometry: null, attributes: {} };
+    const geometry = entity.geometry!;
+    // Attributes are reached by the names attributeMap maps to, which the
+    // component type spells out one by one rather than as an index signature.
+    const source = geometry as unknown as Record<
+      string,
+      SourceAttribute | undefined
+    >;
+    // count/instanceCount/indices are filled in below, or left for pex-gpu to
+    // infer from the buffers.
+    const cachedGeom = (this.cache[entity.id] ||= {
+      geometry: null,
+      attributes: {},
+    } as unknown as GeometryCache);
 
-    if (this.debug && !this.cache[entity.id].geometry) {
+    if (this.debug && !cachedGeom.geometry) {
       console.debug(
         NAMESPACE,
         this.type,
         "add to cache",
         entity.id,
-        this.cache[entity.id],
+        cachedGeom,
       );
     }
-
-    const cachedGeom = this.cache[entity.id];
 
     const geometryDirty = cachedGeom.geometry !== geometry;
 
@@ -140,15 +257,15 @@ export default ({ ctx }: SystemOptions) => ({
       }
       cachedGeom.geometry = geometry;
 
-      cachedGeom.instanceCount = geometry.instanceCount;
-      cachedGeom.count = geometry.count;
+      cachedGeom.instanceCount = geometry.instanceCount!;
+      cachedGeom.count = geometry.count!;
       cachedGeom.topology = geometry.topology;
 
       // Add custom attributes
       if (cachedGeom.customAttributes) {
         for (let i = 0; i < cachedGeom.customAttributes.length; i++) {
-          const attributeName = cachedGeom.customAttributes[i];
-          if (!geometry.attributes || !geometry.attributes[attributeName]) {
+          const attributeName = cachedGeom.customAttributes[i]!;
+          if (!geometry.attributes?.[attributeName]) {
             disposeAttribute(cachedGeom.attributes[attributeName]);
             delete cachedGeom.attributes[attributeName];
           }
@@ -163,24 +280,31 @@ export default ({ ctx }: SystemOptions) => ({
       }
     }
 
+    // Everything mutated below this system also created, as a descriptor; the
+    // union in `Attributes` is there for an attribute handed over as a buffer.
+    const cached = cachedGeom.attributes as Record<
+      string,
+      VertexAttribute | undefined
+    >;
+
     // Add index buffer
     for (let i = 0; i < indicesProps.length; i++) {
-      const indicesValue = geometry[indicesProps[i]!];
+      const indicesValue = source[indicesProps[i]!];
 
       if (indicesValue) {
         if (!(geometryDirty || indicesValue.dirty)) continue;
         indicesValue.dirty = false;
 
-        if (isGpuBuffer(indicesValue.buffer || indicesValue)) {
-          cachedGeom.indices = indicesValue.buffer || indicesValue;
+        const descriptor = asDescriptor(indicesValue);
+        const given = descriptor?.buffer ?? indicesValue;
+        if (isGpuBuffer(given)) {
+          cachedGeom.indices = given;
         } else {
-          const data = indicesValue.data || indicesValue;
-          if (cachedGeom.indices) {
-            updateBuffer(ctx, cachedGeom.indices, data);
-          } else {
-            cachedGeom.indices = createBuffer(ctx, { usage: "index", data });
-          }
-          cachedGeom.indices.offset = indicesValue.offset;
+          const data = attributeData(indicesValue);
+          cachedGeom.indices = cachedGeom.indices
+            ? writeBuffer(ctx, cachedGeom.indices, data, "index")
+            : createBuffer(ctx, { usage: "index", data });
+          cachedGeom.indices.offset = descriptor?.offset;
         }
       }
     }
@@ -190,11 +314,11 @@ export default ({ ctx }: SystemOptions) => ({
     // Add vertex buffers
     for (let i = 0; i < attributeMapKeys.length; i++) {
       const attributeName = attributeMapKeys[i]!;
-      const mapping: any = attributeMap[attributeName];
+      const mapping = attributeMap[attributeName]!;
       const attributeValue =
-        geometry[
+        source[
           Array.isArray(mapping)
-            ? mapping.find((prop: string) => geometry[prop])
+            ? (mapping.find((prop) => source[prop]) ?? mapping[0]!)
             : mapping
         ];
 
@@ -202,13 +326,15 @@ export default ({ ctx }: SystemOptions) => ({
         if (!(geometryDirty || attributeValue.dirty)) continue;
         attributeValue.dirty = false;
 
-        const data = attributeValue.data || attributeValue; //.data should be deprecated
+        const descriptor = asDescriptor(attributeValue);
+        const data = attributeData(attributeValue); //.data should be deprecated
 
         // Set the attribute
-        if (isGpuBuffer(attributeValue.buffer || attributeValue)) {
-          cachedGeom.attributes[attributeName] = attributeValue;
+        const given = descriptor?.buffer ?? attributeValue;
+        if (isGpuBuffer(given)) {
+          cachedGeom.attributes[attributeName] = descriptor as VertexAttribute;
         } else {
-          let attribute = cachedGeom.attributes[attributeName];
+          let attribute = cached[attributeName];
           if (attribute?.buffer) {
             attribute = deformingAttributes.has(attributeName)
               ? keepPreviousBuffer(
@@ -218,40 +344,44 @@ export default ({ ctx }: SystemOptions) => ({
                   attribute,
                   data,
                 )
-              : (updateBuffer(ctx, attribute.buffer, data), attribute);
+              : ((attribute.buffer = writeBuffer(
+                  ctx,
+                  attribute.buffer,
+                  data,
+                  "vertex",
+                )),
+                attribute);
           } else {
-            attribute = cachedGeom.attributes[attributeName] = {
+            attribute = cached[attributeName] = {
               buffer: createBuffer(ctx, { usage: "vertex", data }),
             };
           }
 
-          attribute.offset = attributeValue.offset;
-          attribute.arrayStride = attributeValue.arrayStride;
-          attribute.format = attributeValue.format;
+          setAttributeField(attribute, "offset", descriptor?.offset);
+          setAttributeField(attribute, "arrayStride", descriptor?.arrayStride);
+          setAttributeField(attribute, "format", descriptor?.format);
 
           // The pair describes the same vertices, so it has to be read the
           // same way.
-          const previous =
-            cachedGeom.attributes[previousAttributeName(attributeName)];
+          const previous = cached[previousAttributeName(attributeName)];
           if (previous) {
-            previous.offset = attribute.offset;
-            previous.arrayStride = attribute.arrayStride;
-            previous.format = attribute.format;
+            setAttributeField(previous, "offset", attribute.offset);
+            setAttributeField(previous, "arrayStride", attribute.arrayStride);
+            setAttributeField(previous, "format", attribute.format);
           }
         }
 
         if (
-          attributeValue.stepMode === "instance" ||
+          descriptor?.stepMode === "instance" ||
           instancedAttributes.has(attributeName)
         ) {
-          cachedGeom.attributes[attributeName].stepMode = "instance";
-          const previous =
-            cachedGeom.attributes[previousAttributeName(attributeName)];
+          cached[attributeName]!.stepMode = "instance";
+          const previous = cached[previousAttributeName(attributeName)];
           if (previous) previous.stepMode = "instance";
         }
-      } else if (cachedGeom.attributes[attributeName]) {
-        disposeAttribute(cachedGeom.attributes[attributeName]);
-        delete cachedGeom.attributes[attributeName];
+      } else if (cached[attributeName]) {
+        disposeAttribute(cached[attributeName]);
+        delete cached[attributeName];
       }
     }
 
@@ -268,7 +398,7 @@ export default ({ ctx }: SystemOptions) => ({
       if (entity.geometry) {
         try {
           this.updateGeometryEntity(entity);
-          entity._geometry = this.cache[entity.id];
+          entity._geometry = this.cache[entity.id]!;
         } catch (error) {
           console.error(NAMESPACE, this.type, "update failed", error, entity);
         }

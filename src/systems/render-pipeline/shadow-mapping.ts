@@ -12,10 +12,15 @@ import {
   getCubeFaceCamera,
 } from "../../utils.js";
 
+import type { AABB } from "pex-geom";
+import type { Mat4, Vec3 } from "pex-math";
 import type {
   Entity,
+  PointLightComponentOptions,
   RendererSystem,
   RenderPipelineSystem,
+  RenderView,
+  ShadowCastingLightComponentOptions,
   ShadowMappingMethods,
   LightShadow,
   SystemOptions,
@@ -49,21 +54,17 @@ const bucketKey = (cubemap: boolean, size: number) =>
 const nameSuffix = (scope: string) => (scope ? `.${scope}` : "");
 
 /** Distance from a point to the nearest point of a world-space AABB. */
-const closestDistance = (worldBounds: any, point: any) => {
-  TEMP_VEC3[0] = Math.max(
-    worldBounds[0][0],
-    Math.min(point[0], worldBounds[1][0]),
-  );
-  TEMP_VEC3[1] = Math.max(
-    worldBounds[0][1],
-    Math.min(point[1], worldBounds[1][1]),
-  );
-  TEMP_VEC3[2] = Math.max(
-    worldBounds[0][2],
-    Math.min(point[2], worldBounds[1][2]),
-  );
+const closestDistance = (worldBounds: AABB, point: Vec3) => {
+  const [min, max] = worldBounds as [Vec3, Vec3];
+  TEMP_VEC3[0] = Math.max(min[0]!, Math.min(point[0]!, max[0]!));
+  TEMP_VEC3[1] = Math.max(min[1]!, Math.min(point[1]!, max[1]!));
+  TEMP_VEC3[2] = Math.max(min[2]!, Math.min(point[2]!, max[2]!));
   return vec3.distance(point, TEMP_VEC3);
 };
+
+/** Where a light stops contributing; only the falling-off kinds declare one. */
+const lightRange = (light: ShadowCastingLightComponentOptions) =>
+  (light as PointLightComponentOptions).range ?? 0;
 
 /**
  * Entities the shadow pass is about. A caster puts geometry in the map; a
@@ -93,7 +94,7 @@ export default ({
   frameGraph,
 }: Pick<SystemOptions, "frameGraph">): ShadowMappingMethods &
   ThisType<RenderPipelineSystem> => ({
-  checkLight(light: any, lightEntity: Entity) {
+  checkLight(light: ShadowCastingLightComponentOptions, lightEntity: Entity) {
     if (!lightEntity._transform) {
       console.warn(
         NAMESPACE,
@@ -113,7 +114,10 @@ export default ({
    * the fields are rewritten every frame, so a fresh object per frame would be
    * an allocation per light per scope for nothing.
    */
-  getLightShadow(light: any, scope: string): LightShadow {
+  getLightShadow(
+    light: ShadowCastingLightComponentOptions,
+    scope: string,
+  ): LightShadow {
     light._shadows ??= new Map<string, LightShadow>();
     let shadow: LightShadow | undefined = light._shadows.get(scope);
     if (!shadow) {
@@ -124,7 +128,7 @@ export default ({
         near: 0,
         far: 0,
         radiusUV: [0, 0],
-        projectionMatrix: mat4.create() as any,
+        projectionMatrix: mat4.create(),
         texture: undefined,
       };
       light._shadows.set(scope, shadow);
@@ -140,8 +144,14 @@ export default ({
    * where the light stops contributing; without one the cone is open-ended and
    * only its sides reject.
    */
-  getLightVolumeTest(lightEntity: Entity, light: any) {
-    const fov = lightEntity.spotLight ? 2 * light.outerConeAngle : Math.PI / 2;
+  getLightVolumeTest(
+    lightEntity: Entity,
+    light: ShadowCastingLightComponentOptions,
+  ) {
+    const fov = lightEntity.spotLight
+      ? 2 * lightEntity.spotLight.outerConeAngle!
+      : Math.PI / 2;
+    const range = lightRange(light);
     // Near is what the fit is trying to find, so the provisional frustum uses
     // the smallest legal one; only the side planes and the far cap matter here.
     mat4.perspectiveZO(
@@ -150,16 +160,14 @@ export default ({
       1,
       MIN_NEAR,
       // An infinite range needs a finite far plane to build a frustum from.
-      Number.isFinite(light.range) && light.range > 0
-        ? light.range
-        : FAR_ENOUGH,
+      Number.isFinite(range) && range > 0 ? range : FAR_ENOUGH,
     );
-    computeFrustumPlanes(TEMP_FRUSTUM, TEMP_MAT4, light._viewMatrix);
-    return (worldBounds: any) => isAABBInFrustum(worldBounds, TEMP_FRUSTUM);
+    computeFrustumPlanes(TEMP_FRUSTUM, TEMP_MAT4, light._viewMatrix!);
+    return (worldBounds: AABB) => isAABBInFrustum(worldBounds, TEMP_FRUSTUM);
   },
   computeLightProperties(
     lightEntity: Entity,
-    light: any,
+    light: ShadowCastingLightComponentOptions,
     participants: Entity[],
     shadow: LightShadow,
   ) {
@@ -187,11 +195,11 @@ export default ({
 
       const corners = aabb.getCorners(worldBounds, TEMP_BOUNDS_POINTS);
       for (let c = 0; c < corners.length; c++) {
-        const p: any = vec3.multMat4(corners[c]!, light._viewMatrix);
+        const p = vec3.multMat4(corners[c]!, light._viewMatrix!);
         aabb.includePoint(light._sceneBboxInLightSpace, p);
         // Depth is measured along -z. Corners behind the light describe nothing
         // the map can hold, and letting them through is what collapses near.
-        const distance = -p[2];
+        const distance = -p[2]!;
         if (distance <= 0) continue;
         if (distance < near) near = distance;
         if (distance > far) far = distance;
@@ -206,7 +214,8 @@ export default ({
       }
       // `range` is where the light stops contributing, so nothing beyond it can
       // shadow anything.
-      if (light.range > 0) far = Math.min(far, light.range);
+      const range = lightRange(light);
+      if (range > 0) far = Math.min(far, range);
 
       shadow.near = Math.max(MIN_NEAR, near);
       shadow.far = Math.max(shadow.near + MIN_NEAR, far);
@@ -215,14 +224,9 @@ export default ({
       // meaning and "in front" is not a constraint: the box has to span every
       // participant along the light axis or casters on the far side of that
       // position get clipped out of the map. Negative near is legal here.
-      shadow.near =
-        light._sceneBboxInLightSpace[1][2] === -Infinity
-          ? MIN_NEAR
-          : -light._sceneBboxInLightSpace[1][2];
-      shadow.far = Math.max(
-        shadow.near + MIN_NEAR,
-        -light._sceneBboxInLightSpace[0][2],
-      );
+      const [boxMin, boxMax] = light._sceneBboxInLightSpace as [Vec3, Vec3];
+      shadow.near = boxMax[2] === -Infinity ? MIN_NEAR : -boxMax[2]!;
+      shadow.far = Math.max(shadow.near + MIN_NEAR, -boxMin[2]!);
     }
 
     // Light radius as a UV fraction of the shadow map, measured at the plane the
@@ -230,31 +234,32 @@ export default ({
     // - orthographic (directional): the frustum has a constant cross-section.
     // - perspective (spot/area): the frustum width at the near plane, 2·near·tan(halfFov).
     if (lightEntity.directionalLight) {
-      const size: any = aabb.size(light._sceneBboxInLightSpace, TEMP_VEC3);
-      shadow.radiusUV[0] = light.bulbRadius / size[0];
-      shadow.radiusUV[1] = light.bulbRadius / size[1];
+      const size = aabb.size(light._sceneBboxInLightSpace, TEMP_VEC3);
+      shadow.radiusUV[0] = light.bulbRadius! / size[0]!;
+      shadow.radiusUV[1] = light.bulbRadius! / size[1]!;
     } else {
       const halfFov = lightEntity.spotLight
-        ? light.outerConeAngle
+        ? lightEntity.spotLight.outerConeAngle!
         : Math.PI / 4;
       const nearPlaneSize = 2 * shadow.near * Math.tan(halfFov);
-      const scale: any = lightEntity.areaLight
+      const scale = lightEntity.areaLight
         ? lightEntity.transform!.scale
-        : null;
+        : undefined;
       shadow.radiusUV[0] =
-        (light.bulbRadius * (scale ? scale[0] : 1)) / nearPlaneSize;
+        (light.bulbRadius! * (scale ? scale[0]! : 1)) / nearPlaneSize;
       shadow.radiusUV[1] =
-        (light.bulbRadius * (scale ? scale[1] : 1)) / nearPlaneSize;
+        (light.bulbRadius! * (scale ? scale[1]! : 1)) / nearPlaneSize;
     }
   },
   /** Radial near/far for a point light's cube projection, fitted to the scene. */
   computePointLightProperties(
     lightEntity: Entity,
-    light: any,
+    light: PointLightComponentOptions,
     participants: Entity[],
     shadow: LightShadow,
   ) {
-    const lightPosition: any = lightEntity._transform!.worldPosition;
+    const lightPosition = lightEntity._transform!.worldPosition;
+    const range = light.range ?? 0;
 
     light._sceneBbox ??= aabb.create();
     aabb.empty(light._sceneBbox);
@@ -262,26 +267,23 @@ export default ({
       const worldBounds = participants[i]!.transform!.worldBounds!;
       // A point light reaches a sphere of `range`, so anything further away
       // than the nearest point of its bounds contributes nothing to the cube.
-      if (
-        light.range > 0 &&
-        closestDistance(worldBounds, lightPosition) > light.range
-      ) {
+      if (range > 0 && closestDistance(worldBounds, lightPosition) > range) {
         continue;
       }
       aabb.includeAABB(light._sceneBbox, worldBounds);
     }
 
     // Farthest scene corner sets far; nearest point on the box sets near.
-    const points: any = aabb.getCorners(light._sceneBbox, TEMP_BOUNDS_POINTS);
+    const points = aabb.getCorners(light._sceneBbox, TEMP_BOUNDS_POINTS);
     let far = MIN_NEAR;
     for (let i = 0; i < points.length; i++) {
-      far = Math.max(far, vec3.distance(lightPosition, points[i]));
+      far = Math.max(far, vec3.distance(lightPosition, points[i]!));
     }
-    if (light.range > 0) far = Math.min(far, light.range);
+    if (range > 0) far = Math.min(far, range);
 
     shadow.near = Math.max(
       MIN_NEAR,
-      closestDistance(light._sceneBbox, lightPosition),
+      closestDistance(light._sceneBbox!, lightPosition),
     );
     shadow.far = Math.max(shadow.near + MIN_NEAR, far);
   },
@@ -336,8 +338,9 @@ export default ({
     layer: string | undefined,
   ): { shadowMaps: ResourceHandle[] } {
     const key = `shadowMaps.${layer ?? ""}`;
-    const memoized = frameGraph.blackboard.get(key);
-    if (memoized) return memoized as any;
+    const memoized = frameGraph.blackboard.get(key) as
+      { shadowMaps: ResourceHandle[] } | undefined;
+    if (memoized) return memoized;
 
     const scope = layer ?? "";
 
@@ -348,7 +351,7 @@ export default ({
     // passes below still get to fill in the lights that do cast.
     for (let i = 0; i < entities.length; i++) {
       for (const kind of LIGHT_KINDS) {
-        const light: any = entities[i]![kind];
+        const light = entities[i]![kind];
         if (light) this.getLightShadow(light, scope).texture = undefined;
       }
     }
@@ -366,14 +369,14 @@ export default ({
     // a size share one array, so the whole set has to be known to size it.
     const casters: {
       entity: Entity;
-      light: any;
+      light: ShadowCastingLightComponentOptions;
       kind: LightKind;
       shadow: LightShadow;
     }[] = [];
     for (let i = 0; i < entities.length; i++) {
       const entity = entities[i]!;
       for (const kind of LIGHT_KINDS) {
-        const light: any = entity[kind];
+        const light = entity[kind];
         if (light?.castShadows && this.checkLight(light, entity)) {
           const shadow = this.getLightShadow(light, scope);
           shadow.cubemap = kind === "pointLight";
@@ -390,7 +393,8 @@ export default ({
       { index: number; count: number; size: number; cubemap: boolean }
     >();
     for (const { light, shadow } of casters) {
-      const key = bucketKey(shadow.cubemap, light.shadowMapSize);
+      const size = light.shadowMapSize!;
+      const key = bucketKey(shadow.cubemap, size);
       let bucket = buckets.get(key);
       if (!bucket) {
         // Indices are per kind: the shader dispatches over 2D and cube bindings
@@ -399,12 +403,7 @@ export default ({
         for (const other of buckets.values()) {
           if (other.cubemap === shadow.cubemap) index++;
         }
-        bucket = {
-          index,
-          count: 0,
-          size: light.shadowMapSize,
-          cubemap: shadow.cubemap,
-        };
+        bucket = { index, count: 0, size, cubemap: shadow.cubemap };
         buckets.set(key, bucket);
       }
       shadow.bucket = bucket.index;
@@ -426,7 +425,7 @@ export default ({
         entities,
         renderers,
         scope,
-        bucketMaps.get(bucketKey(shadow.cubemap, light.shadowMapSize))!,
+        bucketMaps.get(bucketKey(shadow.cubemap, light.shadowMapSize!))!,
         shadow,
       );
     }
@@ -450,17 +449,17 @@ export default ({
     shadowMap: ResourceHandle,
     shadow: LightShadow,
   ) {
-    const light: any = lightEntity[kind];
+    const light = lightEntity[kind]!;
     const participants = shadowParticipants(entities);
 
     const shadowPass = (
       name: string,
       layer: number,
-      camera: { viewMatrix: any; projectionMatrix: any },
+      camera: { viewMatrix: Mat4; projectionMatrix: Mat4 },
     ) => {
-      const renderView = {
+      const renderView: RenderView = {
         camera,
-        viewport: [0, 0, light.shadowMapSize, light.shadowMapSize],
+        viewport: [0, 0, light.shadowMapSize!, light.shadowMapSize!],
       };
 
       frameGraph.addPass({
@@ -522,13 +521,13 @@ export default ({
     this.computeLightProperties(lightEntity, light, participants, shadow);
 
     if (kind === "directionalLight") {
-      const bbox = light._sceneBboxInLightSpace;
+      const [bboxMin, bboxMax] = light._sceneBboxInLightSpace as [Vec3, Vec3];
       mat4.orthoZO(
         shadow.projectionMatrix,
-        bbox[0][0],
-        bbox[1][0],
-        bbox[0][1],
-        bbox[1][1],
+        bboxMin[0]!,
+        bboxMax[0]!,
+        bboxMin[1]!,
+        bboxMax[1]!,
         shadow.near,
         shadow.far,
       );
@@ -537,7 +536,9 @@ export default ({
       // cone the fit assumed.
       mat4.perspectiveZO(
         shadow.projectionMatrix,
-        light.outerConeAngle ? 2 * light.outerConeAngle : Math.PI / 2,
+        lightEntity.spotLight?.outerConeAngle
+          ? 2 * lightEntity.spotLight.outerConeAngle
+          : Math.PI / 2,
         1,
         shadow.near,
         shadow.far,
@@ -545,7 +546,7 @@ export default ({
     }
 
     shadowPass(`${kind}ShadowMap${lightEntity.id}`, shadow.layer, {
-      viewMatrix: light._viewMatrix,
+      viewMatrix: light._viewMatrix!,
       projectionMatrix: shadow.projectionMatrix,
     });
   },

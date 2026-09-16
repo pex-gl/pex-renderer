@@ -1,5 +1,8 @@
 import type {
+  Attributes,
   ComputePipeline,
+  Uniforms,
+  UniformValue,
   GpuContext,
   GpuTexture,
   GpuBuffer,
@@ -7,12 +10,19 @@ import type {
   RenderCommand,
   RenderPipeline,
 } from "pex-gpu";
-import type { Vec2, Vec3, Quat, Mat3, Mat4 } from "pex-math";
+import type { AABB } from "pex-geom";
+import type { Vec2, Vec3, Quat, Mat3, Mat4, TypedArray } from "pex-math";
 import type { FrameGraph, ResourceHandle } from "./frame-graph/index.js";
+import type createFullscreenGeometry from "./fullscreen-geometry.js";
 import type { LightKind } from "./systems/render-pipeline/shadow-mapping.js";
+import type {
+  FullscreenPassScope,
+  PostProcessingComputePassOptions,
+  PostProcessingEffect,
+  PostProcessingPassOptions,
+} from "./systems/render-pipeline/post-processing.js";
+import type { RenderTextures } from "./systems/render-pipeline/render-textures.js";
 
-/** Axis-aligned bounding box as [min, max]. */
-export type AABB = number[][];
 /** RGB or RGBA color, components in [0, 1]. */
 export type Color = number[];
 
@@ -42,21 +52,23 @@ export interface TextureTransform {
 export type MaterialTexture =
   GpuTexture | ({ texture: GpuTexture } & Partial<TextureTransform>);
 
+/** Plain vertex/index data, as opposed to a GPU-backed descriptor. */
+export type AttributeData = TypedArray | Vec3[];
 /**
- * A single vertex/index attribute value on a geometry component: a plain typed
- * array/number array, or a GPU-backed descriptor (e.g. built by the glTF loader
- * to share one buffer across attributes/primitives from the same bufferView).
+ * A single vertex/index attribute value on a geometry component: plain data, or
+ * a GPU-backed descriptor (e.g. built by the glTF loader to share one buffer
+ * across attributes/primitives from the same bufferView).
  */
 export type GeometryAttribute =
-  | Float32Array
-  | Uint8Array
-  | Uint16Array
-  | Uint32Array
-  | number[]
+  | AttributeData
   | {
       buffer: GpuBuffer;
-      /** Raw data backing the buffer, e.g. for bounds computation. */
-      data?: Float32Array | Uint8Array | Uint16Array | Uint32Array | number[];
+      /**
+       * This attribute's own values, tightly packed — what reads it CPU-side
+       * (bounds, helpers) use, as opposed to the buffer, which may hold more
+       * than this attribute and is indexed by `offset`/`arrayStride`.
+       */
+      data?: AttributeData;
       /** Byte offset into the buffer. */
       offset?: number;
       /** Byte stride between elements (WebGPU's arrayStride). */
@@ -114,6 +126,12 @@ export interface Entity {
   _geometry?: GeometryCache;
   /** Baked IBL GPU resources, added by the reflection-probe system. */
   _reflectionProbe?: ReflectionProbeCache;
+  /** Last frame's shader hook uniforms, added by the renderer base. */
+  _hookUniforms?: {
+    hooks?: ShaderHooks;
+    frameIndex?: number;
+    uniforms?: Uniforms;
+  };
 }
 
 /**
@@ -155,6 +173,20 @@ export interface AmbientLightComponentOptions {
    */
   _intensity?: number;
 }
+/** One animated property of one entity, sampled from keyframes. */
+export interface AnimationChannel {
+  /** Keyframe times, in seconds. */
+  input: Float32Array;
+  /**
+   * One value per keyframe — three per keyframe for CUBICSPLINE: in-tangent,
+   * data point, out-tangent.
+   */
+  output: number[][];
+  /** "STEP", "CUBICSPLINE", or LINEAR for anything else. */
+  interpolation: string;
+  target: Entity;
+  path: "translation" | "rotation" | "scale" | "weights";
+}
 export interface AnimationComponentOptions {
   name?: string;
   playing?: boolean;
@@ -165,7 +197,10 @@ export interface AnimationComponentOptions {
    * when unset.
    */
   duration?: number;
-  channels?: unknown[];
+  channels?: AnimationChannel[];
+  // Runtime, maintained by the animation system.
+  prevTime?: number;
+  needsUpdate?: boolean;
 }
 /**
  * What one light's shadow map is, for one declaration scope.
@@ -204,6 +239,17 @@ export interface LightShadow {
   texture: GpuTexture | undefined;
 }
 /** Shadow-mapping internals shared by shadow-casting lights. */
+/** A light whose shadow is a 2D map, and so takes the rasterizer depth bias. */
+export type Shadow2DLightComponentOptions =
+  | AreaLightComponentOptions
+  | DirectionalLightComponentOptions
+  | SpotLightComponentOptions;
+/** Any light component that can cast a shadow. */
+export type ShadowCastingLightComponentOptions =
+  Shadow2DLightComponentOptions | PointLightComponentOptions;
+/** Any light component. */
+export type LightComponentOptions =
+  AmbientLightComponentOptions | ShadowCastingLightComponentOptions;
 export interface LightShadowInternals {
   /**
    * `intensity` converted to the unit the shaders integrate — illuminance (lx)
@@ -314,8 +360,8 @@ export interface CameraComponentOptions {
   bottom?: number;
   top?: number;
   zoom?: number;
-  /** [x, y, width, height] region of the target this camera renders into. */
-  viewport?: number[];
+  /** Region of the target this camera renders into. */
+  viewport?: Viewport;
   // Runtime, added/derived by the camera system.
   projectionMatrix?: Mat4;
   frustum?: Float32Array;
@@ -425,11 +471,16 @@ export interface GeometryComponentOptions {
    */
   attributes?: Record<string, unknown>;
   /** Runtime, computed by the geometry system. */
-  bounds?: AABB;
+  bounds?: AABB & {
+    /** Recompute the bounds on the next geometry-system update. */
+    dirty?: boolean;
+  };
 }
 export interface GridHelperComponentOptions {
   color?: Color;
   size?: number;
+  /** Lines per axis. */
+  step?: number;
 }
 export type LightHelperComponentOptions = Record<string, never>;
 /**
@@ -607,20 +658,32 @@ export interface StandardMaterialComponentOptions extends StandardUnlitMaterialC
  */
 export interface MaterialComponentOptions
   extends StandardMaterialComponentOptions, LineMaterialComponentOptions {}
+/**
+ * One morphable attribute, blended element-wise: flat attribute data, as the
+ * glTF loader produces, or one scalar or vector per vertex.
+ */
+export type MorphAttribute =
+  | Int8Array
+  | Uint8Array
+  | Int16Array
+  | Uint16Array
+  | Uint32Array
+  | Float32Array
+  | (number | number[])[];
 export interface MorphComponentOptions {
   /**
    * The unmorphed geometry attributes, keyed the way the geometry component
    * keys them.
    */
-  sources: Record<string, any>;
+  sources: Record<string, MorphAttribute>;
   /**
    * Morph targets keyed by attribute, each holding one array per target — the
    * transpose of glTF's `mesh.primitive.targets`, which is an array of
    * attribute dictionaries. Same word, different shape.
    */
-  targets: Record<string, any>;
+  targets: Record<string, MorphAttribute[]>;
   /** `sources` blended by `weights`, written each update; seeded from `sources`. */
-  current?: Record<string, any>;
+  current?: Record<string, MorphAttribute>;
   weights?: number[];
 }
 export interface OrbiterComponentOptions {
@@ -1323,6 +1386,10 @@ export interface SkinComponentOptions {
   _previousJointMatrices?: Mat4[];
   /** Cleared once the first `jointMatrices` have been copied into the previous. */
   _hasPreviousJointMatrices?: boolean;
+  /** `jointMatrices` padded to the shader's fixed array length, by a renderer. */
+  _paddedJointMatrices?: Mat4[];
+  /** `_previousJointMatrices` padded the same way. */
+  _paddedPreviousJointMatrices?: Mat4[];
 }
 export interface SkyboxComponentOptions {
   sunPosition?: Vec3;
@@ -1447,18 +1514,19 @@ export interface TransformCache {
   localModelMatrix: Mat4;
   worldPosition: Vec3;
 }
-// Draw-relevant fields (count/instanceCount/indices) are typed permissively:
-// they feed pex-gpu draw commands directly and may legitimately be undefined
-// at runtime (inferred by pex-gpu), which exactOptionalPropertyTypes would
-// otherwise reject when spread into a RenderCommand.
+// Draw-relevant fields (count/instanceCount/indices) are declared as always
+// present: they feed pex-gpu draw commands directly and may legitimately be
+// undefined at runtime (inferred by pex-gpu), which exactOptionalPropertyTypes
+// would otherwise reject when spread into a RenderCommand.
 /** Geometry GPU resources cached per entity by the geometry system. */
 export interface GeometryCache {
   geometry: GeometryComponentOptions | null;
-  attributes: Record<string, any>;
-  indices: any;
+  attributes: Attributes;
+  /** Index buffer, carrying the byte offset the draw starts at. */
+  indices: GpuBuffer & { offset?: number | undefined };
   count: number;
   instanceCount: number;
-  topology?: GPUPrimitiveTopology;
+  topology?: GPUPrimitiveTopology | undefined;
   customAttributes?: string[];
 }
 
@@ -1520,7 +1588,7 @@ export interface MaterialHooks extends ShaderHooks {
    * main passes run the same vertex hook, and a value read from a clock would
    * put the same vertex in three different places.
    */
-  uniforms?: (entity: Entity) => Record<string, unknown>;
+  uniforms?: (entity: Entity) => Record<string, UniformValue>;
 }
 /**
  * Active light counts per type. The standard shader generator only reads them
@@ -1587,7 +1655,8 @@ export interface SystemOptions {
 }
 /**
  * Per-frame values the caller threads to systems that need them. Open because
- * the render engine passes itself, so a system reads whichever fields it knows.
+ * the render engine passes itself, so a system reads whichever fields it
+ * knows.
  */
 export interface SystemUpdateOptions {
   deltaTime?: number;
@@ -1601,7 +1670,8 @@ export type SystemUpdate = (
 export type SystemDispose = (entities?: Entity[]) => void;
 export interface System {
   type: string;
-  cache?: Record<number, any>;
+  /** Per-entity derived state; the shape is the system's own. */
+  cache?: Record<number, unknown>;
   debug?: boolean;
   update: SystemUpdate;
   dispose?: SystemDispose;
@@ -1621,16 +1691,17 @@ export type RenderEngineRender = (
   options?: RenderEngineOptions,
 ) => Promise<Record<string, GpuTexture>[]>;
 export type RenderEngineDebug = (enable: boolean) => void;
-export interface RenderEngine extends System {
+// `debug` is a method here, not the `System` flag of the same name.
+export interface RenderEngine extends Omit<System, "debug"> {
   render: RenderEngineRender;
-  debug: any;
+  debug: RenderEngineDebug;
   systems: System[];
   renderers: RendererSystem[];
 }
 export type RendererSystemRender = (
   renderView: RenderView,
   entities: Entity | Entity[],
-  options?: any,
+  options?: RendererPassOptions,
 ) => void;
 /**
  * What the render pipeline hands a renderer for one pass of one view.
@@ -1646,36 +1717,36 @@ export interface RendererPassOptions {
    * Frame the draw belongs to. Keys the per-entity hook uniform cache, so every
    * pass of one frame displaces a vertex identically.
    */
-  frameIndex?: number;
+  frameIndex?: number | undefined;
   /** Colour attachments this pass writes; shaders number `@location` from it. */
-  outputs?: FragmentOutputs;
+  outputs?: FragmentOutputs | undefined;
   /**
    * The attachment is multisampled, so a cutout can resolve as coverage rather
    * than a discard. Distinct from `msaa`.
    */
-  multisampled?: boolean;
+  multisampled?: boolean | undefined;
   /** The scene is tone mapped for a reversible resolve. */
-  msaa?: boolean;
+  msaa?: boolean | undefined;
   /**
    * Resolved frame images, keyed by the register names the renderer asked for
    * through `inputs`. Missing entries mean nothing published that name.
    */
-  textures?: Record<string, GpuTexture>;
+  textures?: Record<string, GpuTexture> | undefined;
   /** Image-based lighting for this view, picked by the pipeline. */
-  reflectionProbe?: ReflectionProbeCache;
+  reflectionProbe?: ReflectionProbeCache | undefined;
   /** Depth-only pass into this light's shadow map. */
-  shadowMappingLight?: any;
+  shadowMappingLight?: ShadowCastingLightComponentOptions | undefined;
   /** The shadow that pass fills in, so the draw knows the map it is writing. */
-  lightShadow?: LightShadow;
+  lightShadow?: LightShadow | undefined;
   /**
    * Which of a light's {@link LightShadow}s this view shades with — the camera's
    * layer, or `""`. Scoped rather than implied, because a light without a
    * `layer` has one shadow per layer.
    */
-  shadowScope?: string;
-  transparent?: boolean;
-  transmitted?: boolean;
-  cullMode?: GPUCullMode;
+  shadowScope?: string | undefined;
+  transparent?: boolean | undefined;
+  transmitted?: boolean | undefined;
+  cullMode?: GPUCullMode | undefined;
 }
 export type RendererSystemStage = (
   renderView: RenderView,
@@ -1689,11 +1760,39 @@ export type RendererSystemStage = (
 // RendererSystemStage document the stage shape callers rely on.
 export interface RendererSystem {
   type: string;
-  cache?: Record<number, any>;
   debug?: boolean;
+  // Stages are dispatched by name (`renderer[method]?.(…)`), so the value type
+  // has to stay callable — `unknown` is not.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   [key: string]: any;
 }
 
+/** One mesh pass' inputs, as the pipeline hands them to `drawMeshes`. */
+export interface DrawMeshesOptions {
+  renderers: RendererSystem[];
+  renderView: RenderView;
+  entitiesInView: Entity[];
+  /** The pass' extra fragment outputs, beyond colour. */
+  colorTextures?: FragmentOutputs | undefined;
+  msaa?: boolean | undefined;
+  shadowMappingLight?: ShadowCastingLightComponentOptions | undefined;
+  lightShadow?: LightShadow | undefined;
+  shadowScope?: string | undefined;
+  transparent?: boolean | undefined;
+  transmitted?: boolean | undefined;
+  cullMode?: GPUCullMode | undefined;
+  textures?: Record<string, GpuTexture> | undefined;
+  prePass?: boolean | undefined;
+  reflectionProbe?: ReflectionProbeCache | undefined;
+}
+/** Per-frame values the render engine threads into one camera's pipeline pass. */
+export interface RenderPipelineUpdateOptions {
+  time?: number | undefined;
+  frameIndex?: number | undefined;
+  renderers?: RendererSystem[] | undefined;
+  renderView?: RenderView | undefined;
+  drawToScreen?: boolean | undefined;
+}
 // render-pipeline.ts's own state and top-level orchestration methods.
 export interface RenderPipelineCore {
   type: string;
@@ -1707,7 +1806,7 @@ export interface RenderPipelineCore {
   depthPrePass: boolean;
   /** Set when the canvas is configured `alphaMode: "premultiplied"`. */
   premultipliedAlpha: boolean;
-  fullscreen: any;
+  fullscreen: ReturnType<typeof createFullscreenGeometry>;
   samplers: Samplers;
   blitPipeline: RenderPipeline;
   blitPremultipliedPipeline: RenderPipeline;
@@ -1722,31 +1821,37 @@ export interface RenderPipelineCore {
   /** Per-output format overrides, for outputs that do not hold colour. */
   outputFormats: Record<string, GPUTextureFormat>;
 
-  drawMeshes(options: any): void;
+  drawMeshes(options: DrawMeshesOptions): void;
   drawFullscreen(command: RenderCommand): void;
   update(
     entities: Entity[],
-    options?: any,
+    options?: RenderPipelineUpdateOptions,
   ): Promise<Record<string, ResourceHandle>>;
   dispose(entities: Entity[]): void;
 }
 // Members shadow-mapping.ts mixes into render-pipeline-system.
 export interface ShadowMappingMethods {
-  checkLight(light: any, lightEntity: Entity): true | undefined;
+  checkLight(
+    light: ShadowCastingLightComponentOptions,
+    lightEntity: Entity,
+  ): true | undefined;
   getLightVolumeTest(
     lightEntity: Entity,
-    light: any,
-  ): (worldBounds: any) => boolean;
-  getLightShadow(light: any, scope: string): LightShadow;
+    light: ShadowCastingLightComponentOptions,
+  ): (worldBounds: AABB) => boolean;
+  getLightShadow(
+    light: ShadowCastingLightComponentOptions,
+    scope: string,
+  ): LightShadow;
   computeLightProperties(
     lightEntity: Entity,
-    light: any,
+    light: ShadowCastingLightComponentOptions,
     participants: Entity[],
     shadow: LightShadow,
   ): void;
   computePointLightProperties(
     lightEntity: Entity,
-    light: any,
+    light: PointLightComponentOptions,
     participants: Entity[],
     shadow: LightShadow,
   ): void;
@@ -1785,10 +1890,14 @@ export interface Samplers {
 }
 // Members post-processing.ts mixes into render-pipeline-system.
 export interface PostProcessingMethods {
-  postProcessingEffects: Map<string, any>;
+  /** `null` marks an effect whose module failed to load, so it is not retried. */
+  postProcessingEffects: Map<string, PostProcessingEffect | null>;
   postProcessingLoading: Map<string, Promise<void>>;
   postProcessingPipelines: Map<string, RenderPipeline | ComputePipeline>;
-  loadPostProcessingEffect(registration: any): Promise<void> | undefined;
+  loadPostProcessingEffect(registration: {
+    name: string;
+    load: () => Promise<{ default: PostProcessingEffect }>;
+  }): Promise<void> | undefined;
   getPostProcessingPipeline(
     key: string,
     shader: (defines: Set<string>) => string,
@@ -1802,16 +1911,26 @@ export interface PostProcessingMethods {
    * helper built-in effects get as `context.pass`, on the pipeline so anything
    * injecting a pass from outside reaches it too.
    */
-  declareFullscreenPass(scope: any, options: any): ResourceHandle;
+  declareFullscreenPass(
+    scope: FullscreenPassScope,
+    options: PostProcessingPassOptions,
+  ): ResourceHandle;
   /** The same, for one compute dispatch — `context.compute`. */
-  declareComputePass(scope: any, options: any): void;
-  enabledPostProcessingEffects(cameraEntity: Entity): Generator<any>;
+  declareComputePass(
+    scope: Pick<FullscreenPassScope, "renderView" | "prefix">,
+    options: PostProcessingComputePassOptions,
+  ): void;
+  enabledPostProcessingEffects(
+    cameraEntity: Entity,
+  ): Generator<PostProcessingEffect>;
   postProcessingOutputs(cameraEntity: Entity): string[];
-  postProcessingEffectsByStage(cameraEntity: Entity): Map<string, any[]>;
+  postProcessingEffectsByStage(
+    cameraEntity: Entity,
+  ): Map<string, PostProcessingEffect[]>;
   renderPostProcessing(args: {
     renderView: RenderView;
-    textures: any;
-    effects: any[] | undefined;
+    textures: RenderTextures;
+    effects: PostProcessingEffect[] | undefined;
   }): void;
 }
 /**
@@ -1835,7 +1954,7 @@ export interface OutputRequest {
 }
 // Members culling.ts mixes into render-pipeline-system.
 export interface CullingMethods {
-  cullEntities(entities: Entity[], camera: any): Entity[];
+  cullEntities(entities: Entity[], camera: CameraComponentOptions): Entity[];
 }
 /**
  * The render-pipeline-system object built in
@@ -1873,11 +1992,12 @@ export interface World {
 }
 
 /** A camera and the region of a target it renders into. */
+/** [x, y, width, height] region of a target. */
+export type Viewport = [number, number, number, number];
 export interface RenderView {
   camera: CameraComponentOptions;
   cameraEntity?: Entity;
-  /** [x, y, width, height] */
-  viewport: number[];
+  viewport: Viewport;
 }
 
 export type { GpuContext, GpuTexture, GpuBuffer };

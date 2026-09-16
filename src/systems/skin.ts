@@ -1,12 +1,16 @@
 import { mat4 } from "pex-math";
 
-import type { Entity } from "../types.js";
+import type { Entity, SkinComponentOptions } from "../types.js";
 
-function updateSkin(skin: any) {
+function updateSkin(skin: SkinComponentOptions) {
+  const joints = skin.joints!;
+  const jointMatrices = skin.jointMatrices!;
+  const inverseBindMatrices = skin.inverseBindMatrices!;
+
   // Last frame's, for anything reprojecting a skinned surface between frames.
   // Doubles the block a skinned entity uploads, so it is only ever read by a
   // pass that writes motion vectors.
-  const previous = (skin._previousJointMatrices ??= skin.joints.map(() =>
+  const previous = (skin._previousJointMatrices ??= joints.map(() =>
     mat4.create(),
   ));
   // Nothing to carry over on the first update: seeding from the matrices this
@@ -15,20 +19,20 @@ function updateSkin(skin: any) {
   const seed = !skin._hasPreviousJointMatrices;
   skin._hasPreviousJointMatrices = true;
 
-  for (let i = 0; i < skin.joints.length; i++) {
-    const joint = skin.joints[i];
-    const m = skin.jointMatrices[i];
+  for (let i = 0; i < joints.length; i++) {
+    const joint = joints[i]!;
+    const m = jointMatrices[i]!;
 
-    mat4.set(previous[i], m);
+    mat4.set(previous[i]!, m);
 
     mat4.identity(m);
     if (joint._transform) {
       const modelMatrix = joint._transform.modelMatrix;
       mat4.mult(m, modelMatrix);
-      mat4.mult(m, skin.inverseBindMatrices[i]);
+      mat4.mult(m, inverseBindMatrices[i]!);
     }
 
-    if (seed) mat4.set(previous[i], m);
+    if (seed) mat4.set(previous[i]!, m);
   }
 }
 

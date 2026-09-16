@@ -3,7 +3,11 @@ import { aabb } from "pex-geom";
 import { TEMP_AABB, TEMP_MAT4, TEMP_BOUNDS_POINTS } from "../utils.js";
 
 import type { Mat4 } from "pex-math";
-import type { Entity, TransformComponentOptions } from "../types.js";
+import type {
+  Entity,
+  TransformCache,
+  TransformComponentOptions,
+} from "../types.js";
 
 function updateModelMatrix(matrix: Mat4, transform: TransformComponentOptions) {
   mat4.identity(matrix);
@@ -24,7 +28,7 @@ function updateModelMatrix(matrix: Mat4, transform: TransformComponentOptions) {
  */
 export default () => ({
   type: "transform-system",
-  cache: {} as Record<number, any>,
+  cache: {} as Record<number, TransformCache>,
   debug: false,
   updateModelMatrix,
   sort(entities: Entity[]) {
@@ -90,6 +94,8 @@ export default () => ({
       isNotCached = true;
     }
 
+    const cached = this.cache[entity.id]!;
+
     // TODO: why is it not in this.cache[entity.id]?
     transform.worldBounds ||= aabb.create();
     // TODO: is this ever used?
@@ -97,18 +103,18 @@ export default () => ({
 
     if (
       // TODO: do we need to check object props in detail or that would be too expensive?
-      this.cache[entity.id].transform !== transform ||
+      cached.transform !== transform ||
       isNotCached ||
       transform.dirty
     ) {
       transform.dirty = false;
-      this.cache[entity.id].transform = transform;
+      cached.transform = transform;
 
       if (this.debug) {
         // console.debug(NAMESPACE, this.type, "update", transform);
       }
 
-      updateModelMatrix(this.cache[entity.id].localModelMatrix, transform);
+      updateModelMatrix(cached.localModelMatrix, transform);
     }
   },
   updateBoundingBox(transform: TransformComponentOptions) {
@@ -123,7 +129,7 @@ export default () => ({
       for (let i = 0; i < TEMP_BOUNDS_POINTS.length; i++) {
         vec3.multMat4(
           TEMP_BOUNDS_POINTS[i]!,
-          this.cache[transform.entity.id].modelMatrix,
+          this.cache[transform.entity.id]!.modelMatrix,
         );
       }
       aabb.fromPoints(TEMP_AABB, TEMP_BOUNDS_POINTS);
@@ -153,55 +159,41 @@ export default () => ({
       entity.transform!.entity ||= entity;
 
       this.updateTransformEntity(entity);
-      entity._transform = this.cache[entity.id];
+      entity._transform = this.cache[entity.id]!;
     }
 
     //Note: this is fine as long our components are sorted by depth
     for (let i = 0; i < transformEntities.length; i++) {
       const entity = transformEntities[i]!;
+      const cached = this.cache[entity.id]!;
 
       // Captured before this frame overwrites it. Held for the whole frame: a
       // temporal resolve reads it during execute, long after this runs.
-      mat4.set(
-        this.cache[entity.id].previousModelMatrix,
-        this.cache[entity.id].modelMatrix,
-      );
+      mat4.set(cached.previousModelMatrix, cached.modelMatrix);
 
       // Update world matrix
       if (entity.transform!.parent) {
         mat4.set(
-          this.cache[entity.id].modelMatrix,
+          cached.modelMatrix,
           // TODO: can we only store entity id instead of full reference?
-          this.cache[entity.transform!.parent.entity!.id].modelMatrix,
+          this.cache[entity.transform!.parent.entity!.id]!.modelMatrix,
         );
       } else {
-        mat4.identity(this.cache[entity.id].modelMatrix);
+        mat4.identity(cached.modelMatrix);
       }
 
-      mat4.mult(
-        this.cache[entity.id].modelMatrix,
-        this.cache[entity.id].localModelMatrix,
-      );
+      mat4.mult(cached.modelMatrix, cached.localModelMatrix);
 
-      this.updateModelMatrixHierarchy(
-        this.cache[entity.id].modelMatrix,
-        entity.transform!,
-      );
+      this.updateModelMatrixHierarchy(cached.modelMatrix, entity.transform!);
 
-      if (!this.cache[entity.id].hasPreviousModelMatrix) {
-        this.cache[entity.id].hasPreviousModelMatrix = true;
-        mat4.set(
-          this.cache[entity.id].previousModelMatrix,
-          this.cache[entity.id].modelMatrix,
-        );
+      if (!cached.hasPreviousModelMatrix) {
+        cached.hasPreviousModelMatrix = true;
+        mat4.set(cached.previousModelMatrix, cached.modelMatrix);
       }
 
       // Update world position
-      vec3.scale(this.cache[entity.id].worldPosition, 0);
-      vec3.multMat4(
-        this.cache[entity.id].worldPosition,
-        this.cache[entity.id].modelMatrix,
-      );
+      vec3.scale(cached.worldPosition, 0);
+      vec3.multMat4(cached.worldPosition, cached.modelMatrix);
 
       // Reset worldBounds
       aabb.empty(entity.transform!.worldBounds!);
