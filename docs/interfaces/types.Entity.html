@@ -1,0 +1,424 @@
+<!DOCTYPE html><html class="default" lang="en" data-base="../"><head><meta charset="utf-8"/><meta http-equiv="x-ua-compatible" content="IE=edge"/><title>Entity | pex-renderer</title><meta name="description" content="Documentation for pex-renderer"/><meta name="viewport" content="width=device-width, initial-scale=1"/><link rel="stylesheet" href="../assets/style.css"/><link rel="stylesheet" href="../assets/highlight.css"/><script defer src="../assets/main.js"></script><script async src="../assets/icons.js" id="tsd-icons-script"></script><script async src="../assets/search.js" id="tsd-search-script"></script><script async src="../assets/navigation.js" id="tsd-nav-script"></script><script async src="../assets/hierarchy.js" id="tsd-hierarchy-script"></script><style>
+@media (prefers-color-scheme: dark) {
+  :root {
+    --md-sys-color-primary: #f6be46;
+    --md-sys-color-on-primary: #412d00;
+    --md-sys-color-primary-container: #5d4200;
+    --md-sys-color-on-primary-container: #ffdea3;
+    --md-sys-color-secondary: #d9c4a0;
+    --md-sys-color-on-secondary: #3b2f15;
+    --md-sys-color-secondary-container: #53452a;
+    --md-sys-color-on-secondary-container: #f6e0bb;
+    --md-sys-color-tertiary: #b2cfa8;
+    --md-sys-color-on-tertiary: #1e361a;
+    --md-sys-color-tertiary-container: #344d2f;
+    --md-sys-color-on-tertiary-container: #cdebc2;
+    --md-sys-color-error: #ffb4ab;
+    --md-sys-color-on-error: #690005;
+    --md-sys-color-error-container: #93000a;
+    --md-sys-color-on-error-container: #ffb4ab;
+    --md-sys-color-background: #1e1b16;
+    --md-sys-color-on-background: #e9e1d9;
+    --md-sys-color-surface: #1e1b16;
+    --md-sys-color-on-surface: #e9e1d9;
+    --md-sys-color-surface-variant: #4e4639;
+    --md-sys-color-on-surface-variant: #d1c5b4;
+    --md-sys-color-outline: #9a8f80;
+    --md-sys-color-outline-variant: #4e4639;
+    --md-sys-color-shadow: #000000;
+    --md-sys-color-scrim: #000000;
+    --md-sys-color-inverse-surface: #e9e1d9;
+    --md-sys-color-inverse-on-surface: #34302a;
+    --md-sys-color-inverse-primary: #7a5900;
+    --md-sys-color-surface-dim: #16130e;
+    --md-sys-color-surface-bright: #3d3933;
+    --md-sys-color-surface-container-lowest: #110e09;
+    --md-sys-color-surface-container-low: #1e1b16;
+    --md-sys-color-surface-container: #221f1a;
+    --md-sys-color-surface-container-high: #2d2924;
+    --md-sys-color-surface-container-highest: #38342e
+  }
+}
+:root[data-theme="dark"] {
+  --md-sys-color-primary: #f6be46;
+  --md-sys-color-on-primary: #412d00;
+  --md-sys-color-primary-container: #5d4200;
+  --md-sys-color-on-primary-container: #ffdea3;
+  --md-sys-color-secondary: #d9c4a0;
+  --md-sys-color-on-secondary: #3b2f15;
+  --md-sys-color-secondary-container: #53452a;
+  --md-sys-color-on-secondary-container: #f6e0bb;
+  --md-sys-color-tertiary: #b2cfa8;
+  --md-sys-color-on-tertiary: #1e361a;
+  --md-sys-color-tertiary-container: #344d2f;
+  --md-sys-color-on-tertiary-container: #cdebc2;
+  --md-sys-color-error: #ffb4ab;
+  --md-sys-color-on-error: #690005;
+  --md-sys-color-error-container: #93000a;
+  --md-sys-color-on-error-container: #ffb4ab;
+  --md-sys-color-background: #1e1b16;
+  --md-sys-color-on-background: #e9e1d9;
+  --md-sys-color-surface: #1e1b16;
+  --md-sys-color-on-surface: #e9e1d9;
+  --md-sys-color-surface-variant: #4e4639;
+  --md-sys-color-on-surface-variant: #d1c5b4;
+  --md-sys-color-outline: #9a8f80;
+  --md-sys-color-outline-variant: #4e4639;
+  --md-sys-color-shadow: #000000;
+  --md-sys-color-scrim: #000000;
+  --md-sys-color-inverse-surface: #e9e1d9;
+  --md-sys-color-inverse-on-surface: #34302a;
+  --md-sys-color-inverse-primary: #7a5900;
+  --md-sys-color-surface-dim: #16130e;
+  --md-sys-color-surface-bright: #3d3933;
+  --md-sys-color-surface-container-lowest: #110e09;
+  --md-sys-color-surface-container-low: #1e1b16;
+  --md-sys-color-surface-container: #221f1a;
+  --md-sys-color-surface-container-high: #2d2924;
+  --md-sys-color-surface-container-highest: #38342e
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --md-sys-color-primary: #7a5900;
+    --md-sys-color-on-primary: #ffffff;
+    --md-sys-color-primary-container: #ffdea3;
+    --md-sys-color-on-primary-container: #261900;
+    --md-sys-color-secondary: #6c5c3f;
+    --md-sys-color-on-secondary: #ffffff;
+    --md-sys-color-secondary-container: #f6e0bb;
+    --md-sys-color-on-secondary-container: #251a04;
+    --md-sys-color-tertiary: #4b6545;
+    --md-sys-color-on-tertiary: #ffffff;
+    --md-sys-color-tertiary-container: #cdebc2;
+    --md-sys-color-on-tertiary-container: #092007;
+    --md-sys-color-error: #ba1a1a;
+    --md-sys-color-on-error: #ffffff;
+    --md-sys-color-error-container: #ffdad6;
+    --md-sys-color-on-error-container: #410002;
+    --md-sys-color-background: #fffbff;
+    --md-sys-color-on-background: #1e1b16;
+    --md-sys-color-surface: #fffbff;
+    --md-sys-color-on-surface: #1e1b16;
+    --md-sys-color-surface-variant: #ede1cf;
+    --md-sys-color-on-surface-variant: #4e4639;
+    --md-sys-color-outline: #7f7667;
+    --md-sys-color-outline-variant: #d1c5b4;
+    --md-sys-color-shadow: #000000;
+    --md-sys-color-scrim: #000000;
+    --md-sys-color-inverse-surface: #34302a;
+    --md-sys-color-inverse-on-surface: #f8efe7;
+    --md-sys-color-inverse-primary: #f6be46;
+    --md-sys-color-surface-dim: #e1d9d0;
+    --md-sys-color-surface-bright: #fff8f2;
+    --md-sys-color-surface-container-lowest: #ffffff;
+    --md-sys-color-surface-container-low: #fbf2e9;
+    --md-sys-color-surface-container: #f5ede4;
+    --md-sys-color-surface-container-high: #efe7de;
+    --md-sys-color-surface-container-highest: #e9e1d9
+  }
+}
+:root[data-theme="light"] {
+  --md-sys-color-primary: #7a5900;
+  --md-sys-color-on-primary: #ffffff;
+  --md-sys-color-primary-container: #ffdea3;
+  --md-sys-color-on-primary-container: #261900;
+  --md-sys-color-secondary: #6c5c3f;
+  --md-sys-color-on-secondary: #ffffff;
+  --md-sys-color-secondary-container: #f6e0bb;
+  --md-sys-color-on-secondary-container: #251a04;
+  --md-sys-color-tertiary: #4b6545;
+  --md-sys-color-on-tertiary: #ffffff;
+  --md-sys-color-tertiary-container: #cdebc2;
+  --md-sys-color-on-tertiary-container: #092007;
+  --md-sys-color-error: #ba1a1a;
+  --md-sys-color-on-error: #ffffff;
+  --md-sys-color-error-container: #ffdad6;
+  --md-sys-color-on-error-container: #410002;
+  --md-sys-color-background: #fffbff;
+  --md-sys-color-on-background: #1e1b16;
+  --md-sys-color-surface: #fffbff;
+  --md-sys-color-on-surface: #1e1b16;
+  --md-sys-color-surface-variant: #ede1cf;
+  --md-sys-color-on-surface-variant: #4e4639;
+  --md-sys-color-outline: #7f7667;
+  --md-sys-color-outline-variant: #d1c5b4;
+  --md-sys-color-shadow: #000000;
+  --md-sys-color-scrim: #000000;
+  --md-sys-color-inverse-surface: #34302a;
+  --md-sys-color-inverse-on-surface: #f8efe7;
+  --md-sys-color-inverse-primary: #f6be46;
+  --md-sys-color-surface-dim: #e1d9d0;
+  --md-sys-color-surface-bright: #fff8f2;
+  --md-sys-color-surface-container-lowest: #ffffff;
+  --md-sys-color-surface-container-low: #fbf2e9;
+  --md-sys-color-surface-container: #f5ede4;
+  --md-sys-color-surface-container-high: #efe7de;
+  --md-sys-color-surface-container-highest: #e9e1d9
+}
+</style><link rel="stylesheet" href="../assets/material-style.css"/></head><body><script>document.documentElement.dataset.theme = localStorage.getItem("tsd-theme") || "os";document.body.style.display="none";setTimeout(() => window.app?app.showPage():document.body.style.removeProperty("display"),500)</script><header class="tsd-page-toolbar">
+<div class="tsd-toolbar-contents container"><a href="../index.html" class="title">pex-renderer</a>
+<div id="tsd-toolbar-links"></div><button id="tsd-search-trigger" class="tsd-widget" aria-label="Search"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-search"></use></svg></button><dialog id="tsd-search" aria-label="Search"><input role="combobox" id="tsd-search-input" aria-controls="tsd-search-results" aria-autocomplete="list" aria-expanded="true" autocapitalize="off" autocomplete="off" placeholder="Search the docs" maxLength="100"/>
+<ul role="listbox" id="tsd-search-results"></ul>
+<div id="tsd-search-status" aria-live="polite" aria-atomic="true">
+<div>Preparing search index...</div></div></dialog><a href="#" class="tsd-widget menu" id="tsd-toolbar-menu-trigger" data-toggle="menu" aria-label="Menu"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-menu"></use></svg></a></div></header>
+<div class="container container-main">
+<div class="col-content">
+<div class="tsd-page-title">
+<ul class="tsd-breadcrumb" aria-label="Breadcrumb">
+<li><a href="../modules/types.html">types</a></li>
+<li><a href="" aria-current="page">Entity</a></li></ul>
+<h1>Interface Entity</h1></div>
+<div class="tsd-signature"><span class="tsd-signature-keyword">interface</span> <span class="tsd-kind-interface">Entity</span> <span class="tsd-signature-symbol">{</span><br/>    <a class="tsd-kind-property" href="#_geometry">_geometry</a><span class="tsd-signature-symbol">?:</span> <a href="types.GeometryCache.html" class="tsd-signature-type tsd-kind-interface">GeometryCache</a><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#_hookuniforms">_hookUniforms</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-symbol">{</span><br/>        <span class="tsd-kind-property">frameIndex</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">;</span><br/>        <span class="tsd-kind-property">hooks</span><span class="tsd-signature-symbol">?:</span> <a href="types.ShaderHooks.html" class="tsd-signature-type tsd-kind-interface">ShaderHooks</a><span class="tsd-signature-symbol">;</span><br/>        <span class="tsd-kind-property">uniforms</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">Uniforms</span><span class="tsd-signature-symbol">;</span><br/>    <span class="tsd-signature-symbol">}</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#_reflectionprobe">_reflectionProbe</a><span class="tsd-signature-symbol">?:</span> <a href="types.ReflectionProbeCache.html" class="tsd-signature-type tsd-kind-interface">ReflectionProbeCache</a><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#_transform">_transform</a><span class="tsd-signature-symbol">?:</span> <a href="types.TransformCache.html" class="tsd-signature-type tsd-kind-interface">TransformCache</a><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#ambientlight">ambientLight</a><span class="tsd-signature-symbol">?:</span> <a href="types.AmbientLightComponentOptions.html" class="tsd-signature-type tsd-kind-interface">AmbientLightComponentOptions</a><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#animation">animation</a><span class="tsd-signature-symbol">?:</span> <a href="types.AnimationComponentOptions.html" class="tsd-signature-type tsd-kind-interface">AnimationComponentOptions</a><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#animations">animations</a><span class="tsd-signature-symbol">?:</span> <a href="types.AnimationComponentOptions.html" class="tsd-signature-type tsd-kind-interface">AnimationComponentOptions</a><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#arealight">areaLight</a><span class="tsd-signature-symbol">?:</span> <a href="types.AreaLightComponentOptions.html" class="tsd-signature-type tsd-kind-interface">AreaLightComponentOptions</a><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#axeshelper">axesHelper</a><span class="tsd-signature-symbol">?:</span> <a href="../types/types.AxesHelperComponentOptions.html" class="tsd-signature-type tsd-kind-type-alias">AxesHelperComponentOptions</a><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#boundingboxhelper">boundingBoxHelper</a><span class="tsd-signature-symbol">?:</span> <a href="types.BoundingBoxHelperComponentOptions.html" class="tsd-signature-type tsd-kind-interface">BoundingBoxHelperComponentOptions</a><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#camera">camera</a><span class="tsd-signature-symbol">?:</span> <a href="types.CameraComponentOptions.html" class="tsd-signature-type tsd-kind-interface">CameraComponentOptions</a><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#camerahelper">cameraHelper</a><span class="tsd-signature-symbol">?:</span> <a href="types.CameraHelperComponentOptions.html" class="tsd-signature-type tsd-kind-interface">CameraHelperComponentOptions</a><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#directionallight">directionalLight</a><span class="tsd-signature-symbol">?:</span> <a href="types.DirectionalLightComponentOptions.html" class="tsd-signature-type tsd-kind-interface">DirectionalLightComponentOptions</a><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#geometry">geometry</a><span class="tsd-signature-symbol">?:</span> <a href="types.GeometryComponentOptions.html" class="tsd-signature-type tsd-kind-interface">GeometryComponentOptions</a><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#gridhelper">gridHelper</a><span class="tsd-signature-symbol">?:</span> <a href="types.GridHelperComponentOptions.html" class="tsd-signature-type tsd-kind-interface">GridHelperComponentOptions</a><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#id">id</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#layer">layer</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#lighthelper">lightHelper</a><span class="tsd-signature-symbol">?:</span> <a href="../types/types.LightHelperComponentOptions.html" class="tsd-signature-type tsd-kind-type-alias">LightHelperComponentOptions</a><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#material">material</a><span class="tsd-signature-symbol">?:</span> <a href="types.MaterialComponentOptions.html" class="tsd-signature-type tsd-kind-interface">MaterialComponentOptions</a><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#morph">morph</a><span class="tsd-signature-symbol">?:</span> <a href="types.MorphComponentOptions.html" class="tsd-signature-type tsd-kind-interface">MorphComponentOptions</a><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#name">name</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#orbiter">orbiter</a><span class="tsd-signature-symbol">?:</span> <a href="types.OrbiterComponentOptions.html" class="tsd-signature-type tsd-kind-interface">OrbiterComponentOptions</a><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#pointlight">pointLight</a><span class="tsd-signature-symbol">?:</span> <a href="types.PointLightComponentOptions.html" class="tsd-signature-type tsd-kind-interface">PointLightComponentOptions</a><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#postprocessing">postProcessing</a><span class="tsd-signature-symbol">?:</span> <a href="types.PostProcessingComponentOptions.html" class="tsd-signature-type tsd-kind-interface">PostProcessingComponentOptions</a><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#reflectionprobe">reflectionProbe</a><span class="tsd-signature-symbol">?:</span> <a href="types.ReflectionProbeComponentOptions.html" class="tsd-signature-type tsd-kind-interface">ReflectionProbeComponentOptions</a><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#skeletonhelper">skeletonHelper</a><span class="tsd-signature-symbol">?:</span> <a href="types.SkeletonHelperComponentOptions.html" class="tsd-signature-type tsd-kind-interface">SkeletonHelperComponentOptions</a><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#skin">skin</a><span class="tsd-signature-symbol">?:</span> <a href="types.SkinComponentOptions.html" class="tsd-signature-type tsd-kind-interface">SkinComponentOptions</a><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#skybox">skybox</a><span class="tsd-signature-symbol">?:</span> <a href="types.SkyboxComponentOptions.html" class="tsd-signature-type tsd-kind-interface">SkyboxComponentOptions</a><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#spotlight">spotLight</a><span class="tsd-signature-symbol">?:</span> <a href="types.SpotLightComponentOptions.html" class="tsd-signature-type tsd-kind-interface">SpotLightComponentOptions</a><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#transform">transform</a><span class="tsd-signature-symbol">?:</span> <a href="types.TransformComponentOptions.html" class="tsd-signature-type tsd-kind-interface">TransformComponentOptions</a><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#vertexhelper">vertexHelper</a><span class="tsd-signature-symbol">?:</span> <a href="types.VertexHelperComponentOptions.html" class="tsd-signature-type tsd-kind-interface">VertexHelperComponentOptions</a><span class="tsd-signature-symbol">;</span><br/><span class="tsd-signature-symbol">}</span></div><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L89">types.ts:89</a></li></ul></aside>
+<section class="tsd-panel-group tsd-index-group">
+<section class="tsd-panel tsd-index-panel">
+<details class="tsd-index-content tsd-accordion" open><summary class="tsd-accordion-summary tsd-index-summary"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-chevronDown"></use></svg>
+<h5 class="tsd-index-heading uppercase">Index</h5></summary>
+<div class="tsd-accordion-details">
+<section class="tsd-index-section">
+<h3 class="tsd-index-heading tsd-anchor-link" id="properties">Properties<a href="#properties" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<div class="tsd-index-list"><a href="#_geometry" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>_<wbr/>geometry?</span></a>
+<a href="#_hookuniforms" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>_<wbr/>hook<wbr/>Uniforms?</span></a>
+<a href="#_reflectionprobe" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>_<wbr/>reflection<wbr/>Probe?</span></a>
+<a href="#_transform" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>_<wbr/>transform?</span></a>
+<a href="#ambientlight" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>ambient<wbr/>Light?</span></a>
+<a href="#animation" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>animation?</span></a>
+<a href="#animations" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>animations?</span></a>
+<a href="#arealight" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>area<wbr/>Light?</span></a>
+<a href="#axeshelper" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>axes<wbr/>Helper?</span></a>
+<a href="#boundingboxhelper" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>bounding<wbr/>Box<wbr/>Helper?</span></a>
+<a href="#camera" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>camera?</span></a>
+<a href="#camerahelper" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>camera<wbr/>Helper?</span></a>
+<a href="#directionallight" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>directional<wbr/>Light?</span></a>
+<a href="#geometry" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>geometry?</span></a>
+<a href="#gridhelper" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>grid<wbr/>Helper?</span></a>
+<a href="#id" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>id</span></a>
+<a href="#layer" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>layer?</span></a>
+<a href="#lighthelper" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>light<wbr/>Helper?</span></a>
+<a href="#material" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>material?</span></a>
+<a href="#morph" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>morph?</span></a>
+<a href="#name" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>name?</span></a>
+<a href="#orbiter" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>orbiter?</span></a>
+<a href="#pointlight" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>point<wbr/>Light?</span></a>
+<a href="#postprocessing" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>post<wbr/>Processing?</span></a>
+<a href="#reflectionprobe" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>reflection<wbr/>Probe?</span></a>
+<a href="#skeletonhelper" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>skeleton<wbr/>Helper?</span></a>
+<a href="#skin" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>skin?</span></a>
+<a href="#skybox" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>skybox?</span></a>
+<a href="#spotlight" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>spot<wbr/>Light?</span></a>
+<a href="#transform" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>transform?</span></a>
+<a href="#vertexhelper" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>vertex<wbr/>Helper?</span></a>
+</div></section></div></details></section></section>
+<details class="tsd-panel-group tsd-member-group tsd-accordion" open><summary class="tsd-accordion-summary" data-key="section-Properties"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-chevronDown"></use></svg>
+<h2 class="tsd-anchor-link" id="properties-1">Properties<a href="#properties-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h2></summary>
+<section>
+<section class="tsd-panel tsd-member">
+<h3 class="tsd-anchor-link" id="_geometry"><code class="tsd-tag">Optional</code><span>_<wbr/>geometry</span><a href="#_geometry" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<div class="tsd-signature"><span class="tsd-kind-property">_geometry</span><span class="tsd-signature-symbol">?:</span> <a href="types.GeometryCache.html" class="tsd-signature-type tsd-kind-interface">GeometryCache</a></div>
+<div class="tsd-comment tsd-typography"><p>Cached geometry GPU resources, added by the geometry system.</p>
+</div><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L126">types.ts:126</a></li></ul></aside></section>
+<section class="tsd-panel tsd-member">
+<h3 class="tsd-anchor-link" id="_hookuniforms"><code class="tsd-tag">Optional</code><span>_<wbr/>hook<wbr/>Uniforms</span><a href="#_hookuniforms" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<div class="tsd-signature"><span class="tsd-kind-property">_hookUniforms</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-symbol">{</span><br/>    <span class="tsd-kind-property">frameIndex</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">;</span><br/>    <span class="tsd-kind-property">hooks</span><span class="tsd-signature-symbol">?:</span> <a href="types.ShaderHooks.html" class="tsd-signature-type tsd-kind-interface">ShaderHooks</a><span class="tsd-signature-symbol">;</span><br/>    <span class="tsd-kind-property">uniforms</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">Uniforms</span><span class="tsd-signature-symbol">;</span><br/><span class="tsd-signature-symbol">}</span></div>
+<div class="tsd-comment tsd-typography"><p>Last frame's shader hook uniforms, added by the renderer base.</p>
+</div><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L130">types.ts:130</a></li></ul></aside></section>
+<section class="tsd-panel tsd-member">
+<h3 class="tsd-anchor-link" id="_reflectionprobe"><code class="tsd-tag">Optional</code><span>_<wbr/>reflection<wbr/>Probe</span><a href="#_reflectionprobe" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<div class="tsd-signature"><span class="tsd-kind-property">_reflectionProbe</span><span class="tsd-signature-symbol">?:</span> <a href="types.ReflectionProbeCache.html" class="tsd-signature-type tsd-kind-interface">ReflectionProbeCache</a></div>
+<div class="tsd-comment tsd-typography"><p>Baked IBL GPU resources, added by the reflection-probe system.</p>
+</div><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L128">types.ts:128</a></li></ul></aside></section>
+<section class="tsd-panel tsd-member">
+<h3 class="tsd-anchor-link" id="_transform"><code class="tsd-tag">Optional</code><span>_<wbr/>transform</span><a href="#_transform" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<div class="tsd-signature"><span class="tsd-kind-property">_transform</span><span class="tsd-signature-symbol">?:</span> <a href="types.TransformCache.html" class="tsd-signature-type tsd-kind-interface">TransformCache</a></div>
+<div class="tsd-comment tsd-typography"><p>Cached transform state, added by the transform system.</p>
+</div><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L124">types.ts:124</a></li></ul></aside></section>
+<section class="tsd-panel tsd-member">
+<h3 class="tsd-anchor-link" id="ambientlight"><code class="tsd-tag">Optional</code><span>ambient<wbr/>Light</span><a href="#ambientlight" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<div class="tsd-signature"><span class="tsd-kind-property">ambientLight</span><span class="tsd-signature-symbol">?:</span> <a href="types.AmbientLightComponentOptions.html" class="tsd-signature-type tsd-kind-interface">AmbientLightComponentOptions</a></div><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L93">types.ts:93</a></li></ul></aside></section>
+<section class="tsd-panel tsd-member">
+<h3 class="tsd-anchor-link" id="animation"><code class="tsd-tag">Optional</code><span>animation</span><a href="#animation" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<div class="tsd-signature"><span class="tsd-kind-property">animation</span><span class="tsd-signature-symbol">?:</span> <a href="types.AnimationComponentOptions.html" class="tsd-signature-type tsd-kind-interface">AnimationComponentOptions</a></div><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L94">types.ts:94</a></li></ul></aside></section>
+<section class="tsd-panel tsd-member">
+<h3 class="tsd-anchor-link" id="animations"><code class="tsd-tag">Optional</code><span>animations</span><a href="#animations" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<div class="tsd-signature"><span class="tsd-kind-property">animations</span><span class="tsd-signature-symbol">?:</span> <a href="types.AnimationComponentOptions.html" class="tsd-signature-type tsd-kind-interface">AnimationComponentOptions</a><span class="tsd-signature-symbol">[]</span></div>
+<div class="tsd-comment tsd-typography"><p>Multiple named animations (e.g. from a glTF file); systems/animation.ts
+plays these instead of <code>animation</code> when set.</p>
+</div><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L99">types.ts:99</a></li></ul></aside></section>
+<section class="tsd-panel tsd-member">
+<h3 class="tsd-anchor-link" id="arealight"><code class="tsd-tag">Optional</code><span>area<wbr/>Light</span><a href="#arealight" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<div class="tsd-signature"><span class="tsd-kind-property">areaLight</span><span class="tsd-signature-symbol">?:</span> <a href="types.AreaLightComponentOptions.html" class="tsd-signature-type tsd-kind-interface">AreaLightComponentOptions</a></div><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L100">types.ts:100</a></li></ul></aside></section>
+<section class="tsd-panel tsd-member">
+<h3 class="tsd-anchor-link" id="axeshelper"><code class="tsd-tag">Optional</code><span>axes<wbr/>Helper</span><a href="#axeshelper" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<div class="tsd-signature"><span class="tsd-kind-property">axesHelper</span><span class="tsd-signature-symbol">?:</span> <a href="../types/types.AxesHelperComponentOptions.html" class="tsd-signature-type tsd-kind-type-alias">AxesHelperComponentOptions</a></div><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L101">types.ts:101</a></li></ul></aside></section>
+<section class="tsd-panel tsd-member">
+<h3 class="tsd-anchor-link" id="boundingboxhelper"><code class="tsd-tag">Optional</code><span>bounding<wbr/>Box<wbr/>Helper</span><a href="#boundingboxhelper" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<div class="tsd-signature"><span class="tsd-kind-property">boundingBoxHelper</span><span class="tsd-signature-symbol">?:</span> <a href="types.BoundingBoxHelperComponentOptions.html" class="tsd-signature-type tsd-kind-interface">BoundingBoxHelperComponentOptions</a></div><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L102">types.ts:102</a></li></ul></aside></section>
+<section class="tsd-panel tsd-member">
+<h3 class="tsd-anchor-link" id="camera"><code class="tsd-tag">Optional</code><span>camera</span><a href="#camera" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<div class="tsd-signature"><span class="tsd-kind-property">camera</span><span class="tsd-signature-symbol">?:</span> <a href="types.CameraComponentOptions.html" class="tsd-signature-type tsd-kind-interface">CameraComponentOptions</a></div><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L105">types.ts:105</a></li></ul></aside></section>
+<section class="tsd-panel tsd-member">
+<h3 class="tsd-anchor-link" id="camerahelper"><code class="tsd-tag">Optional</code><span>camera<wbr/>Helper</span><a href="#camerahelper" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<div class="tsd-signature"><span class="tsd-kind-property">cameraHelper</span><span class="tsd-signature-symbol">?:</span> <a href="types.CameraHelperComponentOptions.html" class="tsd-signature-type tsd-kind-interface">CameraHelperComponentOptions</a></div><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L104">types.ts:104</a></li></ul></aside></section>
+<section class="tsd-panel tsd-member">
+<h3 class="tsd-anchor-link" id="directionallight"><code class="tsd-tag">Optional</code><span>directional<wbr/>Light</span><a href="#directionallight" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<div class="tsd-signature"><span class="tsd-kind-property">directionalLight</span><span class="tsd-signature-symbol">?:</span> <a href="types.DirectionalLightComponentOptions.html" class="tsd-signature-type tsd-kind-interface">DirectionalLightComponentOptions</a></div><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L106">types.ts:106</a></li></ul></aside></section>
+<section class="tsd-panel tsd-member">
+<h3 class="tsd-anchor-link" id="geometry"><code class="tsd-tag">Optional</code><span>geometry</span><a href="#geometry" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<div class="tsd-signature"><span class="tsd-kind-property">geometry</span><span class="tsd-signature-symbol">?:</span> <a href="types.GeometryComponentOptions.html" class="tsd-signature-type tsd-kind-interface">GeometryComponentOptions</a></div><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L107">types.ts:107</a></li></ul></aside></section>
+<section class="tsd-panel tsd-member">
+<h3 class="tsd-anchor-link" id="gridhelper"><code class="tsd-tag">Optional</code><span>grid<wbr/>Helper</span><a href="#gridhelper" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<div class="tsd-signature"><span class="tsd-kind-property">gridHelper</span><span class="tsd-signature-symbol">?:</span> <a href="types.GridHelperComponentOptions.html" class="tsd-signature-type tsd-kind-interface">GridHelperComponentOptions</a></div><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L108">types.ts:108</a></li></ul></aside></section>
+<section class="tsd-panel tsd-member">
+<h3 class="tsd-anchor-link" id="id"><span>id</span><a href="#id" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<div class="tsd-signature"><span class="tsd-kind-property">id</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span></div><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L90">types.ts:90</a></li></ul></aside></section>
+<section class="tsd-panel tsd-member">
+<h3 class="tsd-anchor-link" id="layer"><code class="tsd-tag">Optional</code><span>layer</span><a href="#layer" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<div class="tsd-signature"><span class="tsd-kind-property">layer</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span></div>
+<div class="tsd-comment tsd-typography"><p>Layer name used to filter entities per render view.</p>
+</div><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L122">types.ts:122</a></li></ul></aside></section>
+<section class="tsd-panel tsd-member">
+<h3 class="tsd-anchor-link" id="lighthelper"><code class="tsd-tag">Optional</code><span>light<wbr/>Helper</span><a href="#lighthelper" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<div class="tsd-signature"><span class="tsd-kind-property">lightHelper</span><span class="tsd-signature-symbol">?:</span> <a href="../types/types.LightHelperComponentOptions.html" class="tsd-signature-type tsd-kind-type-alias">LightHelperComponentOptions</a></div><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L109">types.ts:109</a></li></ul></aside></section>
+<section class="tsd-panel tsd-member">
+<h3 class="tsd-anchor-link" id="material"><code class="tsd-tag">Optional</code><span>material</span><a href="#material" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<div class="tsd-signature"><span class="tsd-kind-property">material</span><span class="tsd-signature-symbol">?:</span> <a href="types.MaterialComponentOptions.html" class="tsd-signature-type tsd-kind-interface">MaterialComponentOptions</a></div><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L110">types.ts:110</a></li></ul></aside></section>
+<section class="tsd-panel tsd-member">
+<h3 class="tsd-anchor-link" id="morph"><code class="tsd-tag">Optional</code><span>morph</span><a href="#morph" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<div class="tsd-signature"><span class="tsd-kind-property">morph</span><span class="tsd-signature-symbol">?:</span> <a href="types.MorphComponentOptions.html" class="tsd-signature-type tsd-kind-interface">MorphComponentOptions</a></div><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L111">types.ts:111</a></li></ul></aside></section>
+<section class="tsd-panel tsd-member">
+<h3 class="tsd-anchor-link" id="name"><code class="tsd-tag">Optional</code><span>name</span><a href="#name" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<div class="tsd-signature"><span class="tsd-kind-property">name</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span></div>
+<div class="tsd-comment tsd-typography"><p>Debug/display label, e.g. set by loaders and helper tools.</p>
+</div><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L92">types.ts:92</a></li></ul></aside></section>
+<section class="tsd-panel tsd-member">
+<h3 class="tsd-anchor-link" id="orbiter"><code class="tsd-tag">Optional</code><span>orbiter</span><a href="#orbiter" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<div class="tsd-signature"><span class="tsd-kind-property">orbiter</span><span class="tsd-signature-symbol">?:</span> <a href="types.OrbiterComponentOptions.html" class="tsd-signature-type tsd-kind-interface">OrbiterComponentOptions</a></div><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L112">types.ts:112</a></li></ul></aside></section>
+<section class="tsd-panel tsd-member">
+<h3 class="tsd-anchor-link" id="pointlight"><code class="tsd-tag">Optional</code><span>point<wbr/>Light</span><a href="#pointlight" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<div class="tsd-signature"><span class="tsd-kind-property">pointLight</span><span class="tsd-signature-symbol">?:</span> <a href="types.PointLightComponentOptions.html" class="tsd-signature-type tsd-kind-interface">PointLightComponentOptions</a></div><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L113">types.ts:113</a></li></ul></aside></section>
+<section class="tsd-panel tsd-member">
+<h3 class="tsd-anchor-link" id="postprocessing"><code class="tsd-tag">Optional</code><span>post<wbr/>Processing</span><a href="#postprocessing" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<div class="tsd-signature"><span class="tsd-kind-property">postProcessing</span><span class="tsd-signature-symbol">?:</span> <a href="types.PostProcessingComponentOptions.html" class="tsd-signature-type tsd-kind-interface">PostProcessingComponentOptions</a></div><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L114">types.ts:114</a></li></ul></aside></section>
+<section class="tsd-panel tsd-member">
+<h3 class="tsd-anchor-link" id="reflectionprobe"><code class="tsd-tag">Optional</code><span>reflection<wbr/>Probe</span><a href="#reflectionprobe" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<div class="tsd-signature"><span class="tsd-kind-property">reflectionProbe</span><span class="tsd-signature-symbol">?:</span> <a href="types.ReflectionProbeComponentOptions.html" class="tsd-signature-type tsd-kind-interface">ReflectionProbeComponentOptions</a></div><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L115">types.ts:115</a></li></ul></aside></section>
+<section class="tsd-panel tsd-member">
+<h3 class="tsd-anchor-link" id="skeletonhelper"><code class="tsd-tag">Optional</code><span>skeleton<wbr/>Helper</span><a href="#skeletonhelper" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<div class="tsd-signature"><span class="tsd-kind-property">skeletonHelper</span><span class="tsd-signature-symbol">?:</span> <a href="types.SkeletonHelperComponentOptions.html" class="tsd-signature-type tsd-kind-interface">SkeletonHelperComponentOptions</a></div><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L103">types.ts:103</a></li></ul></aside></section>
+<section class="tsd-panel tsd-member">
+<h3 class="tsd-anchor-link" id="skin"><code class="tsd-tag">Optional</code><span>skin</span><a href="#skin" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<div class="tsd-signature"><span class="tsd-kind-property">skin</span><span class="tsd-signature-symbol">?:</span> <a href="types.SkinComponentOptions.html" class="tsd-signature-type tsd-kind-interface">SkinComponentOptions</a></div><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L116">types.ts:116</a></li></ul></aside></section>
+<section class="tsd-panel tsd-member">
+<h3 class="tsd-anchor-link" id="skybox"><code class="tsd-tag">Optional</code><span>skybox</span><a href="#skybox" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<div class="tsd-signature"><span class="tsd-kind-property">skybox</span><span class="tsd-signature-symbol">?:</span> <a href="types.SkyboxComponentOptions.html" class="tsd-signature-type tsd-kind-interface">SkyboxComponentOptions</a></div><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L117">types.ts:117</a></li></ul></aside></section>
+<section class="tsd-panel tsd-member">
+<h3 class="tsd-anchor-link" id="spotlight"><code class="tsd-tag">Optional</code><span>spot<wbr/>Light</span><a href="#spotlight" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<div class="tsd-signature"><span class="tsd-kind-property">spotLight</span><span class="tsd-signature-symbol">?:</span> <a href="types.SpotLightComponentOptions.html" class="tsd-signature-type tsd-kind-interface">SpotLightComponentOptions</a></div><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L118">types.ts:118</a></li></ul></aside></section>
+<section class="tsd-panel tsd-member">
+<h3 class="tsd-anchor-link" id="transform"><code class="tsd-tag">Optional</code><span>transform</span><a href="#transform" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<div class="tsd-signature"><span class="tsd-kind-property">transform</span><span class="tsd-signature-symbol">?:</span> <a href="types.TransformComponentOptions.html" class="tsd-signature-type tsd-kind-interface">TransformComponentOptions</a></div><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L119">types.ts:119</a></li></ul></aside></section>
+<section class="tsd-panel tsd-member">
+<h3 class="tsd-anchor-link" id="vertexhelper"><code class="tsd-tag">Optional</code><span>vertex<wbr/>Helper</span><a href="#vertexhelper" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<div class="tsd-signature"><span class="tsd-kind-property">vertexHelper</span><span class="tsd-signature-symbol">?:</span> <a href="types.VertexHelperComponentOptions.html" class="tsd-signature-type tsd-kind-interface">VertexHelperComponentOptions</a></div><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L120">types.ts:120</a></li></ul></aside></section></section></details></div>
+<div class="col-sidebar">
+<div class="page-menu">
+<div class="tsd-navigation settings">
+<details class="tsd-accordion"><summary class="tsd-accordion-summary"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-chevronDown"></use></svg>
+<h3>Settings</h3></summary>
+<div class="tsd-accordion-details">
+<div class="tsd-filter-visibility"><span class="settings-label">Member Visibility</span>
+<ul id="tsd-filter-options">
+<li class="tsd-filter-item"><label class="tsd-filter-input"><input type="checkbox" id="tsd-filter-protected" name="protected"/><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect class="tsd-checkbox-background" width="30" height="30" x="1" y="1" rx="6" fill="none"></rect><path class="tsd-checkbox-checkmark" d="M8.35422 16.8214L13.2143 21.75L24.6458 10.25" stroke="none" stroke-width="3.5" stroke-linejoin="round" fill="none"></path></svg><span>Protected</span></label></li>
+<li class="tsd-filter-item"><label class="tsd-filter-input"><input type="checkbox" id="tsd-filter-inherited" name="inherited" checked/><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect class="tsd-checkbox-background" width="30" height="30" x="1" y="1" rx="6" fill="none"></rect><path class="tsd-checkbox-checkmark" d="M8.35422 16.8214L13.2143 21.75L24.6458 10.25" stroke="none" stroke-width="3.5" stroke-linejoin="round" fill="none"></path></svg><span>Inherited</span></label></li>
+<li class="tsd-filter-item"><label class="tsd-filter-input"><input type="checkbox" id="tsd-filter-external" name="external"/><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect class="tsd-checkbox-background" width="30" height="30" x="1" y="1" rx="6" fill="none"></rect><path class="tsd-checkbox-checkmark" d="M8.35422 16.8214L13.2143 21.75L24.6458 10.25" stroke="none" stroke-width="3.5" stroke-linejoin="round" fill="none"></path></svg><span>External</span></label></li></ul></div>
+<div class="tsd-theme-toggle"><label class="settings-label" for="tsd-theme">Theme</label><select id="tsd-theme"><option value="os">OS</option><option value="light">Light</option><option value="dark">Dark</option></select></div></div></details></div>
+<details open class="tsd-accordion tsd-page-navigation"><summary class="tsd-accordion-summary"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-chevronDown"></use></svg>
+<h3>On This Page</h3></summary>
+<div class="tsd-accordion-details">
+<details open class="tsd-accordion tsd-page-navigation-section"><summary class="tsd-accordion-summary" data-key="section-Properties"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-chevronDown"></use></svg>Properties</summary>
+<div><a href="#_geometry"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>_<wbr/>geometry</span></a><a href="#_hookuniforms"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>_<wbr/>hook<wbr/>Uniforms</span></a><a href="#_reflectionprobe"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>_<wbr/>reflection<wbr/>Probe</span></a><a href="#_transform"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>_<wbr/>transform</span></a><a href="#ambientlight"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>ambient<wbr/>Light</span></a><a href="#animation"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>animation</span></a><a href="#animations"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>animations</span></a><a href="#arealight"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>area<wbr/>Light</span></a><a href="#axeshelper"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>axes<wbr/>Helper</span></a><a href="#boundingboxhelper"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>bounding<wbr/>Box<wbr/>Helper</span></a><a href="#camera"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>camera</span></a><a href="#camerahelper"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>camera<wbr/>Helper</span></a><a href="#directionallight"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>directional<wbr/>Light</span></a><a href="#geometry"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>geometry</span></a><a href="#gridhelper"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>grid<wbr/>Helper</span></a><a href="#id"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>id</span></a><a href="#layer"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>layer</span></a><a href="#lighthelper"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>light<wbr/>Helper</span></a><a href="#material"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>material</span></a><a href="#morph"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>morph</span></a><a href="#name"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>name</span></a><a href="#orbiter"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>orbiter</span></a><a href="#pointlight"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>point<wbr/>Light</span></a><a href="#postprocessing"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>post<wbr/>Processing</span></a><a href="#reflectionprobe"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>reflection<wbr/>Probe</span></a><a href="#skeletonhelper"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>skeleton<wbr/>Helper</span></a><a href="#skin"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>skin</span></a><a href="#skybox"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>skybox</span></a><a href="#spotlight"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>spot<wbr/>Light</span></a><a href="#transform"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>transform</span></a><a href="#vertexhelper"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>vertex<wbr/>Helper</span></a></div></details></div></details></div>
+<div class="site-menu">
+<nav class="tsd-navigation"><a href="../modules.html">pex-renderer</a>
+<ul class="tsd-small-nested-navigation" id="tsd-nav-container">
+<li>Loading...</li></ul></nav></div></div></div><footer>
+<p class="tsd-generator">Generated using <a href="https://typedoc.org/" target="_blank">TypeDoc</a></p></footer>
+<div class="overlay"></div><script>
+          try {
+            const generateLinkElement = document.querySelector(".tsd-generator a");
+            const link = document.createElement("a");
+            Object.assign(link, {
+              href: "https://github.com/dmnsgn/typedoc-material-theme",
+              target: "_blank",
+              rel: "noreferrer",
+              innerText: "typedoc-material-theme."
+            });
+            generateLinkElement.insertAdjacentElement("afterend", link);
+            generateLinkElement.insertAdjacentText("afterend", " with ");
+          } catch (error) {
+
+          }
+        </script></body></html>

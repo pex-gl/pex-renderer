@@ -59,9 +59,10 @@ export function createBindingAllocator(start = 0): BindingAllocator {
 }
 
 /**
- * A single `@group`/`@binding` `var` declaration line — the primitive every other
- * binding declaration here is built from. `addressSpace` (e.g. `"uniform"`) is
- * omitted for handle types (textures/samplers), which take none in WGSL.
+ * A single `@group`/`@binding` `var` declaration line — the primitive every
+ * other binding declaration here is built from. `addressSpace` (e.g.
+ * `"uniform"`) is omitted for handle types (textures/samplers), which take none
+ * in WGSL.
  */
 export function bindingDeclaration(
   group: number,

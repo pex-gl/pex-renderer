@@ -1,0 +1,3930 @@
+<!DOCTYPE html><html class="default" lang="en" data-base="./"><head><meta charset="utf-8"/><meta http-equiv="x-ua-compatible" content="IE=edge"/><title>pex-renderer</title><meta name="description" content="Documentation for pex-renderer"/><meta name="viewport" content="width=device-width, initial-scale=1"/><link rel="stylesheet" href="assets/style.css"/><link rel="stylesheet" href="assets/highlight.css"/><script defer src="assets/main.js"></script><script async src="assets/icons.js" id="tsd-icons-script"></script><script async src="assets/search.js" id="tsd-search-script"></script><script async src="assets/navigation.js" id="tsd-nav-script"></script><script async src="assets/hierarchy.js" id="tsd-hierarchy-script"></script><style>
+@media (prefers-color-scheme: dark) {
+  :root {
+    --md-sys-color-primary: #f6be46;
+    --md-sys-color-on-primary: #412d00;
+    --md-sys-color-primary-container: #5d4200;
+    --md-sys-color-on-primary-container: #ffdea3;
+    --md-sys-color-secondary: #d9c4a0;
+    --md-sys-color-on-secondary: #3b2f15;
+    --md-sys-color-secondary-container: #53452a;
+    --md-sys-color-on-secondary-container: #f6e0bb;
+    --md-sys-color-tertiary: #b2cfa8;
+    --md-sys-color-on-tertiary: #1e361a;
+    --md-sys-color-tertiary-container: #344d2f;
+    --md-sys-color-on-tertiary-container: #cdebc2;
+    --md-sys-color-error: #ffb4ab;
+    --md-sys-color-on-error: #690005;
+    --md-sys-color-error-container: #93000a;
+    --md-sys-color-on-error-container: #ffb4ab;
+    --md-sys-color-background: #1e1b16;
+    --md-sys-color-on-background: #e9e1d9;
+    --md-sys-color-surface: #1e1b16;
+    --md-sys-color-on-surface: #e9e1d9;
+    --md-sys-color-surface-variant: #4e4639;
+    --md-sys-color-on-surface-variant: #d1c5b4;
+    --md-sys-color-outline: #9a8f80;
+    --md-sys-color-outline-variant: #4e4639;
+    --md-sys-color-shadow: #000000;
+    --md-sys-color-scrim: #000000;
+    --md-sys-color-inverse-surface: #e9e1d9;
+    --md-sys-color-inverse-on-surface: #34302a;
+    --md-sys-color-inverse-primary: #7a5900;
+    --md-sys-color-surface-dim: #16130e;
+    --md-sys-color-surface-bright: #3d3933;
+    --md-sys-color-surface-container-lowest: #110e09;
+    --md-sys-color-surface-container-low: #1e1b16;
+    --md-sys-color-surface-container: #221f1a;
+    --md-sys-color-surface-container-high: #2d2924;
+    --md-sys-color-surface-container-highest: #38342e
+  }
+}
+:root[data-theme="dark"] {
+  --md-sys-color-primary: #f6be46;
+  --md-sys-color-on-primary: #412d00;
+  --md-sys-color-primary-container: #5d4200;
+  --md-sys-color-on-primary-container: #ffdea3;
+  --md-sys-color-secondary: #d9c4a0;
+  --md-sys-color-on-secondary: #3b2f15;
+  --md-sys-color-secondary-container: #53452a;
+  --md-sys-color-on-secondary-container: #f6e0bb;
+  --md-sys-color-tertiary: #b2cfa8;
+  --md-sys-color-on-tertiary: #1e361a;
+  --md-sys-color-tertiary-container: #344d2f;
+  --md-sys-color-on-tertiary-container: #cdebc2;
+  --md-sys-color-error: #ffb4ab;
+  --md-sys-color-on-error: #690005;
+  --md-sys-color-error-container: #93000a;
+  --md-sys-color-on-error-container: #ffb4ab;
+  --md-sys-color-background: #1e1b16;
+  --md-sys-color-on-background: #e9e1d9;
+  --md-sys-color-surface: #1e1b16;
+  --md-sys-color-on-surface: #e9e1d9;
+  --md-sys-color-surface-variant: #4e4639;
+  --md-sys-color-on-surface-variant: #d1c5b4;
+  --md-sys-color-outline: #9a8f80;
+  --md-sys-color-outline-variant: #4e4639;
+  --md-sys-color-shadow: #000000;
+  --md-sys-color-scrim: #000000;
+  --md-sys-color-inverse-surface: #e9e1d9;
+  --md-sys-color-inverse-on-surface: #34302a;
+  --md-sys-color-inverse-primary: #7a5900;
+  --md-sys-color-surface-dim: #16130e;
+  --md-sys-color-surface-bright: #3d3933;
+  --md-sys-color-surface-container-lowest: #110e09;
+  --md-sys-color-surface-container-low: #1e1b16;
+  --md-sys-color-surface-container: #221f1a;
+  --md-sys-color-surface-container-high: #2d2924;
+  --md-sys-color-surface-container-highest: #38342e
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --md-sys-color-primary: #7a5900;
+    --md-sys-color-on-primary: #ffffff;
+    --md-sys-color-primary-container: #ffdea3;
+    --md-sys-color-on-primary-container: #261900;
+    --md-sys-color-secondary: #6c5c3f;
+    --md-sys-color-on-secondary: #ffffff;
+    --md-sys-color-secondary-container: #f6e0bb;
+    --md-sys-color-on-secondary-container: #251a04;
+    --md-sys-color-tertiary: #4b6545;
+    --md-sys-color-on-tertiary: #ffffff;
+    --md-sys-color-tertiary-container: #cdebc2;
+    --md-sys-color-on-tertiary-container: #092007;
+    --md-sys-color-error: #ba1a1a;
+    --md-sys-color-on-error: #ffffff;
+    --md-sys-color-error-container: #ffdad6;
+    --md-sys-color-on-error-container: #410002;
+    --md-sys-color-background: #fffbff;
+    --md-sys-color-on-background: #1e1b16;
+    --md-sys-color-surface: #fffbff;
+    --md-sys-color-on-surface: #1e1b16;
+    --md-sys-color-surface-variant: #ede1cf;
+    --md-sys-color-on-surface-variant: #4e4639;
+    --md-sys-color-outline: #7f7667;
+    --md-sys-color-outline-variant: #d1c5b4;
+    --md-sys-color-shadow: #000000;
+    --md-sys-color-scrim: #000000;
+    --md-sys-color-inverse-surface: #34302a;
+    --md-sys-color-inverse-on-surface: #f8efe7;
+    --md-sys-color-inverse-primary: #f6be46;
+    --md-sys-color-surface-dim: #e1d9d0;
+    --md-sys-color-surface-bright: #fff8f2;
+    --md-sys-color-surface-container-lowest: #ffffff;
+    --md-sys-color-surface-container-low: #fbf2e9;
+    --md-sys-color-surface-container: #f5ede4;
+    --md-sys-color-surface-container-high: #efe7de;
+    --md-sys-color-surface-container-highest: #e9e1d9
+  }
+}
+:root[data-theme="light"] {
+  --md-sys-color-primary: #7a5900;
+  --md-sys-color-on-primary: #ffffff;
+  --md-sys-color-primary-container: #ffdea3;
+  --md-sys-color-on-primary-container: #261900;
+  --md-sys-color-secondary: #6c5c3f;
+  --md-sys-color-on-secondary: #ffffff;
+  --md-sys-color-secondary-container: #f6e0bb;
+  --md-sys-color-on-secondary-container: #251a04;
+  --md-sys-color-tertiary: #4b6545;
+  --md-sys-color-on-tertiary: #ffffff;
+  --md-sys-color-tertiary-container: #cdebc2;
+  --md-sys-color-on-tertiary-container: #092007;
+  --md-sys-color-error: #ba1a1a;
+  --md-sys-color-on-error: #ffffff;
+  --md-sys-color-error-container: #ffdad6;
+  --md-sys-color-on-error-container: #410002;
+  --md-sys-color-background: #fffbff;
+  --md-sys-color-on-background: #1e1b16;
+  --md-sys-color-surface: #fffbff;
+  --md-sys-color-on-surface: #1e1b16;
+  --md-sys-color-surface-variant: #ede1cf;
+  --md-sys-color-on-surface-variant: #4e4639;
+  --md-sys-color-outline: #7f7667;
+  --md-sys-color-outline-variant: #d1c5b4;
+  --md-sys-color-shadow: #000000;
+  --md-sys-color-scrim: #000000;
+  --md-sys-color-inverse-surface: #34302a;
+  --md-sys-color-inverse-on-surface: #f8efe7;
+  --md-sys-color-inverse-primary: #f6be46;
+  --md-sys-color-surface-dim: #e1d9d0;
+  --md-sys-color-surface-bright: #fff8f2;
+  --md-sys-color-surface-container-lowest: #ffffff;
+  --md-sys-color-surface-container-low: #fbf2e9;
+  --md-sys-color-surface-container: #f5ede4;
+  --md-sys-color-surface-container-high: #efe7de;
+  --md-sys-color-surface-container-highest: #e9e1d9
+}
+</style><link rel="stylesheet" href="assets/material-style.css"/></head><body><script>document.documentElement.dataset.theme = localStorage.getItem("tsd-theme") || "os";document.body.style.display="none";setTimeout(() => window.app?app.showPage():document.body.style.removeProperty("display"),500)</script><header class="tsd-page-toolbar">
+<div class="tsd-toolbar-contents container"><a href="index.html" class="title">pex-renderer</a>
+<div id="tsd-toolbar-links"></div><button id="tsd-search-trigger" class="tsd-widget" aria-label="Search"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><use href="assets/icons.svg#icon-search"></use></svg></button><dialog id="tsd-search" aria-label="Search"><input role="combobox" id="tsd-search-input" aria-controls="tsd-search-results" aria-autocomplete="list" aria-expanded="true" autocapitalize="off" autocomplete="off" placeholder="Search the docs" maxLength="100"/>
+<ul role="listbox" id="tsd-search-results"></ul>
+<div id="tsd-search-status" aria-live="polite" aria-atomic="true">
+<div>Preparing search index...</div></div></dialog><a href="#" class="tsd-widget menu" id="tsd-toolbar-menu-trigger" data-toggle="menu" aria-label="Menu"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><use href="assets/icons.svg#icon-menu"></use></svg></a></div></header>
+<div class="container container-main">
+<div class="col-content">
+<div class="tsd-page-title">
+<h1>pex-renderer</h1></div>
+<div class="tsd-panel tsd-typography"><h1 id="pex-renderer" class="tsd-anchor-link">pex-renderer<a href="#pex-renderer" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h1>
+<p><a href="https://www.npmjs.com/package/pex-renderer"><img src="https://img.shields.io/npm/v/pex-renderer" alt="npm version"></a>
+<a href="https://www.npmjs.com/package/pex-renderer"><img src="https://img.shields.io/badge/stability-stable-green.svg" alt="stability-stable"></a>
+<a href="https://bundlephobia.com/package/pex-renderer"><img src="https://img.shields.io/bundlephobia/minzip/pex-renderer" alt="npm minzipped size"></a>
+<a href="https://github.com/pex-gl/pex-renderer/blob/main/package.json"><img src="https://img.shields.io/librariesio/release/npm/pex-renderer" alt="dependencies"></a>
+<a href="https://github.com/microsoft/TypeScript"><img src="https://img.shields.io/npm/types/pex-renderer" alt="types"></a>
+<a href="https://conventionalcommits.org"><img src="https://img.shields.io/badge/Conventional%20Commits-1.0.0-fa6673.svg" alt="Conventional Commits"></a>
+<a href="https://github.com/prettier/prettier"><img src="https://img.shields.io/badge/styled_with-Prettier-f8bc45.svg?logo=prettier" alt="styled with prettier"></a>
+<a href="https://github.com/eslint/eslint"><img src="https://img.shields.io/badge/linted_with-ES_Lint-4B32C3.svg?logo=eslint" alt="linted with eslint"></a>
+<a href="https://github.com/pex-gl/pex-renderer/blob/main/LICENSE.md"><img src="https://img.shields.io/github/license/pex-gl/pex-renderer" alt="license"></a></p>
+<p>Physically Based Renderer (PBR) and scene graph designed as ECS for <a href="https://pex.gl">PEX</a>: define entities to be rendered as collections of components with their update orchestrated by systems.</p>
+<p><img src="https://raw.githubusercontent.com/pex-gl/pex-renderer/main/screenshot.jpg" alt=""></p>
+<h2 id="installation" class="tsd-anchor-link">Installation<a href="#installation" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<pre><code class="bash"><span class="hl-0">npm</span><span class="hl-1"> </span><span class="hl-2">install</span><span class="hl-1"> </span><span class="hl-2">pex-renderer</span>
+</code><button type="button">Copy</button></pre>
+
+<h2 id="usage" class="tsd-anchor-link">Usage<a href="#usage" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<pre><code class="js"><span class="hl-3">import</span><span class="hl-1"> {</span><br/><span class="hl-1">  </span><span class="hl-4">renderEngine</span><span class="hl-1"> </span><span class="hl-3">as</span><span class="hl-1"> </span><span class="hl-4">createRenderEngine</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-4">world</span><span class="hl-1"> </span><span class="hl-3">as</span><span class="hl-1"> </span><span class="hl-4">createWorld</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-4">entity</span><span class="hl-1"> </span><span class="hl-3">as</span><span class="hl-1"> </span><span class="hl-4">createEntity</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-4">components</span><span class="hl-1">,</span><br/><span class="hl-1">} </span><span class="hl-3">from</span><span class="hl-1"> </span><span class="hl-2">&quot;pex-renderer&quot;</span><span class="hl-1">;</span><br/><br/><span class="hl-3">import</span><span class="hl-1"> </span><span class="hl-4">createContext</span><span class="hl-1"> </span><span class="hl-3">from</span><span class="hl-1"> </span><span class="hl-2">&quot;pex-context&quot;</span><span class="hl-1">;</span><br/><span class="hl-3">import</span><span class="hl-1"> { </span><span class="hl-4">sphere</span><span class="hl-1"> } </span><span class="hl-3">from</span><span class="hl-1"> </span><span class="hl-2">&quot;primitive-geometry&quot;</span><span class="hl-1">;</span><br/><br/><span class="hl-5">const</span><span class="hl-1"> </span><span class="hl-6">ctx</span><span class="hl-1"> = </span><span class="hl-0">createContext</span><span class="hl-1">({ </span><span class="hl-4">pixelRatio:</span><span class="hl-1"> </span><span class="hl-4">devicePixelRatio</span><span class="hl-1"> });</span><br/><span class="hl-5">const</span><span class="hl-1"> </span><span class="hl-6">renderEngine</span><span class="hl-1"> = </span><span class="hl-0">createRenderEngine</span><span class="hl-1">({ </span><span class="hl-4">ctx</span><span class="hl-1"> });</span><br/><br/><span class="hl-5">const</span><span class="hl-1"> </span><span class="hl-6">world</span><span class="hl-1"> = </span><span class="hl-0">createWorld</span><span class="hl-1">();</span><br/><br/><span class="hl-5">const</span><span class="hl-1"> </span><span class="hl-6">cameraEntity</span><span class="hl-1"> = </span><span class="hl-0">createEntity</span><span class="hl-1">({</span><br/><span class="hl-1">  </span><span class="hl-4">transform:</span><span class="hl-1"> </span><span class="hl-4">components</span><span class="hl-1">.</span><span class="hl-0">transform</span><span class="hl-1">({ </span><span class="hl-4">position:</span><span class="hl-1"> [</span><span class="hl-7">0</span><span class="hl-1">, </span><span class="hl-7">0</span><span class="hl-1">, </span><span class="hl-7">3</span><span class="hl-1">] }),</span><br/><span class="hl-1">  </span><span class="hl-4">camera:</span><span class="hl-1"> </span><span class="hl-4">components</span><span class="hl-1">.</span><span class="hl-0">camera</span><span class="hl-1">(),</span><br/><span class="hl-1">  </span><span class="hl-4">postProcessing:</span><span class="hl-1"> </span><span class="hl-4">components</span><span class="hl-1">.</span><span class="hl-0">postProcessing</span><span class="hl-1">(),</span><br/><span class="hl-1">  </span><span class="hl-4">orbiter:</span><span class="hl-1"> </span><span class="hl-4">components</span><span class="hl-1">.</span><span class="hl-0">orbiter</span><span class="hl-1">(),</span><br/><span class="hl-1">});</span><br/><span class="hl-4">world</span><span class="hl-1">.</span><span class="hl-0">add</span><span class="hl-1">(</span><span class="hl-4">cameraEntity</span><span class="hl-1">);</span><br/><br/><span class="hl-5">const</span><span class="hl-1"> </span><span class="hl-6">skyEntity</span><span class="hl-1"> = </span><span class="hl-0">createEntity</span><span class="hl-1">({</span><br/><span class="hl-1">  </span><span class="hl-4">skybox:</span><span class="hl-1"> </span><span class="hl-4">components</span><span class="hl-1">.</span><span class="hl-0">skybox</span><span class="hl-1">({ </span><span class="hl-4">sunPosition:</span><span class="hl-1"> [</span><span class="hl-7">1</span><span class="hl-1">, </span><span class="hl-7">0.5</span><span class="hl-1">, </span><span class="hl-7">1</span><span class="hl-1">] }),</span><br/><span class="hl-1">  </span><span class="hl-4">reflectionProbe:</span><span class="hl-1"> </span><span class="hl-4">components</span><span class="hl-1">.</span><span class="hl-0">reflectionProbe</span><span class="hl-1">(),</span><br/><span class="hl-1">});</span><br/><span class="hl-4">world</span><span class="hl-1">.</span><span class="hl-0">add</span><span class="hl-1">(</span><span class="hl-4">skyEntity</span><span class="hl-1">);</span><br/><br/><span class="hl-5">const</span><span class="hl-1"> </span><span class="hl-6">geometryEntity</span><span class="hl-1"> = </span><span class="hl-0">createEntity</span><span class="hl-1">({</span><br/><span class="hl-1">  </span><span class="hl-4">transform:</span><span class="hl-1"> </span><span class="hl-4">components</span><span class="hl-1">.</span><span class="hl-0">transform</span><span class="hl-1">({ </span><span class="hl-4">position:</span><span class="hl-1"> [</span><span class="hl-7">0</span><span class="hl-1">, </span><span class="hl-7">0</span><span class="hl-1">, </span><span class="hl-7">0</span><span class="hl-1">] }),</span><br/><span class="hl-1">  </span><span class="hl-4">geometry:</span><span class="hl-1"> </span><span class="hl-4">components</span><span class="hl-1">.</span><span class="hl-0">geometry</span><span class="hl-1">(</span><span class="hl-0">sphere</span><span class="hl-1">()),</span><br/><span class="hl-1">  </span><span class="hl-4">material:</span><span class="hl-1"> </span><span class="hl-4">components</span><span class="hl-1">.</span><span class="hl-0">material</span><span class="hl-1">({</span><br/><span class="hl-1">    </span><span class="hl-4">baseColor:</span><span class="hl-1"> [</span><span class="hl-7">1</span><span class="hl-1">, </span><span class="hl-7">0</span><span class="hl-1">, </span><span class="hl-7">0</span><span class="hl-1">, </span><span class="hl-7">1</span><span class="hl-1">],</span><br/><span class="hl-1">    </span><span class="hl-4">metallic:</span><span class="hl-1"> </span><span class="hl-7">0</span><span class="hl-1">,</span><br/><span class="hl-1">    </span><span class="hl-4">roughness:</span><span class="hl-1"> </span><span class="hl-7">0.5</span><span class="hl-1">,</span><br/><span class="hl-1">  }),</span><br/><span class="hl-1">});</span><br/><span class="hl-4">world</span><span class="hl-1">.</span><span class="hl-0">add</span><span class="hl-1">(</span><span class="hl-4">geometryEntity</span><span class="hl-1">);</span><br/><br/><span class="hl-4">ctx</span><span class="hl-1">.</span><span class="hl-0">frame</span><span class="hl-1">(() </span><span class="hl-5">=&gt;</span><span class="hl-1"> {</span><br/><span class="hl-1">  </span><span class="hl-4">renderEngine</span><span class="hl-1">.</span><span class="hl-0">update</span><span class="hl-1">(</span><span class="hl-4">world</span><span class="hl-1">.</span><span class="hl-4">entities</span><span class="hl-1">);</span><br/><span class="hl-1">  </span><span class="hl-4">renderEngine</span><span class="hl-1">.</span><span class="hl-0">render</span><span class="hl-1">(</span><span class="hl-4">world</span><span class="hl-1">.</span><span class="hl-4">entities</span><span class="hl-1">, </span><span class="hl-4">cameraEntity</span><span class="hl-1">);</span><br/><span class="hl-1">});</span>
+</code><button type="button">Copy</button></pre>
+
+<h2 id="architecture" class="tsd-anchor-link">Architecture<a href="#architecture" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<ul>
+<li>components are <strong>plain old data</strong> objects</li>
+<li>data lives in components or system caches</li>
+<li>systems are functions</li>
+<li>systems communicate through components</li>
+<li>system order is maintained by the user</li>
+</ul>
+<h2 id="api" class="tsd-anchor-link">API<a href="#api" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<!-- api-start -->
+<h2 id="modules" class="tsd-anchor-link">Modules<a href="#modules" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<dl>
+<dt><a href="#module_pex-renderer">pex-renderer</a></dt>
+<dd></dd>
+<dt><a href="#module_components">components</a></dt>
+<dd></dd>
+<dt><a href="#module_systems">systems</a></dt>
+<dd></dd>
+<dt><a href="#module_renderer">renderer</a></dt>
+<dd></dd>
+</dl>
+<h2 id="typedefs" class="tsd-anchor-link">Typedefs<a href="#typedefs" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<dl>
+<dt><a href="#Entity">Entity</a> : <code>object</code></dt>
+<dd></dd>
+<dt><a href="#AmbientLightComponentOptions">AmbientLightComponentOptions</a> : <code>object</code></dt>
+<dd></dd>
+<dt><a href="#AnimationComponentOptions">AnimationComponentOptions</a> : <code>object</code></dt>
+<dd></dd>
+<dt><a href="#AreaLightComponentOptions">AreaLightComponentOptions</a> : <code>object</code></dt>
+<dd></dd>
+<dt><a href="#AxesHelperComponentOptions">AxesHelperComponentOptions</a> : <code>object</code></dt>
+<dd></dd>
+<dt><a href="#BoundingBoxHelperComponentOptions">BoundingBoxHelperComponentOptions</a> : <code>object</code></dt>
+<dd></dd>
+<dt><a href="#SkeletonHelperComponentOptions">SkeletonHelperComponentOptions</a> : <code>object</code></dt>
+<dd></dd>
+<dt><a href="#CameraHelperComponentOptions">CameraHelperComponentOptions</a> : <code>object</code></dt>
+<dd></dd>
+<dt><a href="#CameraView">CameraView</a> : <code>object</code></dt>
+<dd></dd>
+<dt><a href="#CameraComponentOptions">CameraComponentOptions</a> : <code>object</code></dt>
+<dd></dd>
+<dt><a href="#DirectionalLightComponentOptions">DirectionalLightComponentOptions</a> : <code>object</code></dt>
+<dd></dd>
+<dt><a href="#GeometryComponentOptions">GeometryComponentOptions</a> : <code>object</code></dt>
+<dd></dd>
+<dt><a href="#GridHelperComponentOptions">GridHelperComponentOptions</a> : <code>object</code></dt>
+<dd></dd>
+<dt><a href="#LightHelperComponentOptions">LightHelperComponentOptions</a> : <code>object</code></dt>
+<dd></dd>
+<dt><a href="#TextureTransform">TextureTransform</a> : <code>object</code></dt>
+<dd></dd>
+<dt><a href="#MaterialComponentOptions">MaterialComponentOptions</a> : <code>object</code></dt>
+<dd></dd>
+<dt><a href="#LineMaterialComponentOptions">LineMaterialComponentOptions</a> : <code>object</code></dt>
+<dd></dd>
+<dt><a href="#MorphComponentOptions">MorphComponentOptions</a> : <code>object</code></dt>
+<dd></dd>
+<dt><a href="#OrbiterComponentOptions">OrbiterComponentOptions</a> : <code>object</code></dt>
+<dd></dd>
+<dt><a href="#PointLightComponentOptions">PointLightComponentOptions</a> : <code>object</code></dt>
+<dd></dd>
+<dt><a href="#SSAOComponentOptions">SSAOComponentOptions</a> : <code>object</code></dt>
+<dd></dd>
+<dt><a href="#DoFComponentOptions">DoFComponentOptions</a> : <code>object</code></dt>
+<dd></dd>
+<dt><a href="#MSAAComponentOptions">MSAAComponentOptions</a> : <code>object</code></dt>
+<dd></dd>
+<dt><a href="#FXAAComponentOptions">FXAAComponentOptions</a> : <code>object</code></dt>
+<dd></dd>
+<dt><a href="#SMAAComponentOptions">SMAAComponentOptions</a> : <code>object</code></dt>
+<dd></dd>
+<dt><a href="#FogComponentOptions">FogComponentOptions</a> : <code>object</code></dt>
+<dd></dd>
+<dt><a href="#BloomComponentOptions">BloomComponentOptions</a> : <code>object</code></dt>
+<dd></dd>
+<dt><a href="#LutComponentOptions">LutComponentOptions</a> : <code>object</code></dt>
+<dd></dd>
+<dt><a href="#ColorCorrectionComponentOptions">ColorCorrectionComponentOptions</a> : <code>object</code></dt>
+<dd></dd>
+<dt><a href="#VignetteComponentOptions">VignetteComponentOptions</a> : <code>object</code></dt>
+<dd></dd>
+<dt><a href="#FilmGrainComponentOptions">FilmGrainComponentOptions</a> : <code>object</code></dt>
+<dd></dd>
+<dt><a href="#PostProcessingComponentOptions">PostProcessingComponentOptions</a> : <code>object</code></dt>
+<dd></dd>
+<dt><a href="#ReflectionProbeComponentOptions">ReflectionProbeComponentOptions</a> : <code>object</code></dt>
+<dd></dd>
+<dt><a href="#SkinComponentOptions">SkinComponentOptions</a> : <code>object</code></dt>
+<dd></dd>
+<dt><a href="#SkyboxComponentOptions">SkyboxComponentOptions</a> : <code>object</code></dt>
+<dd></dd>
+<dt><a href="#SpotLightComponentOptions">SpotLightComponentOptions</a> : <code>object</code></dt>
+<dd></dd>
+<dt><a href="#TransformComponentOptions">TransformComponentOptions</a> : <code>object</code></dt>
+<dd></dd>
+<dt><a href="#VertexHelperComponentOptions">VertexHelperComponentOptions</a> : <code>object</code></dt>
+<dd></dd>
+<dt><a href="#SystemOptions">SystemOptions</a> : <code>object</code></dt>
+<dd></dd>
+<dt><a href="#SystemUpdate">SystemUpdate</a> : <code>function</code></dt>
+<dd></dd>
+<dt><a href="#SystemDispose">SystemDispose</a> : <code>function</code></dt>
+<dd></dd>
+<dt><a href="#System">System</a> : <code>object</code></dt>
+<dd></dd>
+<dt><a href="#RenderEngineOptions">RenderEngineOptions</a></dt>
+<dd></dd>
+<dt><a href="#RenderEngineRender">RenderEngineRender</a> : <code>function</code></dt>
+<dd></dd>
+<dt><a href="#RenderEngineDebug">RenderEngineDebug</a> : <code>function</code></dt>
+<dd></dd>
+<dt><a href="#RenderEngine">RenderEngine</a> : <code><a href="#System">System</a></code></dt>
+<dd></dd>
+<dt><a href="#RendererSystemRender">RendererSystemRender</a> : <code>function</code></dt>
+<dd></dd>
+<dt><a href="#RendererSystemStageOptions">RendererSystemStageOptions</a> : <code>object</code></dt>
+<dd></dd>
+<dt><a href="#RendererSystemStage">RendererSystemStage</a> : <code>function</code></dt>
+<dd></dd>
+<dt><a href="#RendererSystem">RendererSystem</a> : <code>object</code></dt>
+<dd></dd>
+<dt><a href="#WorldAdd">WorldAdd</a> : <code>function</code></dt>
+<dd></dd>
+<dt><a href="#WorldAddSystem">WorldAddSystem</a> : <code>function</code></dt>
+<dd></dd>
+<dt><a href="#WorldUpdate">WorldUpdate</a> : <code>function</code></dt>
+<dd></dd>
+<dt><a href="#World">World</a> : <code>object</code></dt>
+<dd></dd>
+<dt><a href="#RenderGraph">RenderGraph</a> : <code>object</code></dt>
+<dd></dd>
+<dt><a href="#ResourceCacheUsage">ResourceCacheUsage</a> : <code>&quot;Transient&quot;</code> | <code>&quot;Retained&quot;</code></dt>
+<dd></dd>
+<dt><a href="#ResourceCache">ResourceCache</a> : <code>object</code></dt>
+<dd></dd>
+<dt><a href="#RenderView">RenderView</a> : <code>object</code></dt>
+<dd></dd>
+</dl>
+<p><a name="module_pex-renderer"></a></p>
+<h2 id="pex-renderer-1" class="tsd-anchor-link">pex-renderer<a href="#pex-renderer-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<ul>
+<li><a href="#module_pex-renderer">pex-renderer</a>
+<ul>
+<li><a href="#module_pex-renderer.components">.components</a> : <a href="#module_components"><code>components</code></a></li>
+<li><a href="#module_pex-renderer.systems">.systems</a> : <a href="#module_systems"><code>systems</code></a></li>
+<li><a href="#module_pex-renderer.world">.world()</a> ⇒ <a href="#World"><code>World</code></a></li>
+<li><a href="#module_pex-renderer.entity">.entity([components])</a> ⇒ <a href="#Entity"><code>Entity</code></a></li>
+<li><a href="#module_pex-renderer.renderEngine">.renderEngine()</a> ⇒ <a href="#RenderEngine"><code>RenderEngine</code></a></li>
+<li><a href="#module_pex-renderer.renderGraph">.renderGraph(ctx)</a> ⇒ <a href="#RenderGraph"><code>RenderGraph</code></a></li>
+<li><a href="#module_pex-renderer.resourceCache">.resourceCache(ctx)</a> ⇒ <a href="#ResourceCache"><code>ResourceCache</code></a></li>
+</ul>
+</li>
+</ul>
+<p><a name="module_pex-renderer.components"></a></p>
+<h3 id="pex-renderercomponents-components" class="tsd-anchor-link">pex-renderer.components : <a href="#module_components"><code>components</code></a><a href="#pex-renderercomponents-components" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>All components as a function returning a component with default values.</p>
+<p><strong>Kind</strong>: static property of <a href="#module_pex-renderer"><code>pex-renderer</code></a>
+<a name="module_pex-renderer.systems"></a></p>
+<h3 id="pex-renderersystems-systems" class="tsd-anchor-link">pex-renderer.systems : <a href="#module_systems"><code>systems</code></a><a href="#pex-renderersystems-systems" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>All systems as a function returning a system with a type property and an
+update function.</p>
+<p><strong>Kind</strong>: static property of <a href="#module_pex-renderer"><code>pex-renderer</code></a>
+<a name="module_pex-renderer.world"></a></p>
+<h3 id="pex-rendererworld-⇒-world" class="tsd-anchor-link">pex-renderer.world() ⇒ <a href="#World"><code>World</code></a><a href="#pex-rendererworld-⇒-world" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>Create a world object to store entities and systems</p>
+<p><strong>Kind</strong>: static method of <a href="#module_pex-renderer"><code>pex-renderer</code></a>
+<a name="module_pex-renderer.entity"></a></p>
+<h3 id="pex-rendererentitycomponents-⇒-entity" class="tsd-anchor-link">pex-renderer.entity([components]) ⇒ <a href="#Entity"><code>Entity</code></a><a href="#pex-rendererentitycomponents-⇒-entity" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>Create an entity from an object of plain data components</p>
+<p><strong>Kind</strong>: static method of <a href="#module_pex-renderer"><code>pex-renderer</code></a></p>
+<table>
+<thead>
+<tr>
+<th>Param</th>
+<th>Type</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[components]</td>
+<td><code>object</code></td>
+<td><code>{}</code></td>
+</tr>
+</tbody>
+</table>
+<p><a name="module_pex-renderer.renderEngine"></a></p>
+<h3 id="pex-rendererrenderengine-⇒-renderengine" class="tsd-anchor-link">pex-renderer.renderEngine() ⇒ <a href="#RenderEngine"><code>RenderEngine</code></a><a href="#pex-rendererrenderengine-⇒-renderengine" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>Create a render engine eg. a collection of systems for default rendering</p>
+<p><strong>Kind</strong>: static method of <a href="#module_pex-renderer"><code>pex-renderer</code></a>
+<a name="module_pex-renderer.renderGraph"></a></p>
+<h3 id="pex-rendererrendergraphctx-⇒-rendergraph" class="tsd-anchor-link">pex-renderer.renderGraph(ctx) ⇒ <a href="#RenderGraph"><code>RenderGraph</code></a><a href="#pex-rendererrendergraphctx-⇒-rendergraph" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>Create a render graph for rendering passes</p>
+<p><strong>Kind</strong>: static method of <a href="#module_pex-renderer"><code>pex-renderer</code></a></p>
+<table>
+<thead>
+<tr>
+<th>Param</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ctx</td>
+<td><code>module:pex-context/types/index.js</code></td>
+</tr>
+</tbody>
+</table>
+<p><a name="module_pex-renderer.resourceCache"></a></p>
+<h3 id="pex-rendererresourcecachectx-⇒-resourcecache" class="tsd-anchor-link">pex-renderer.resourceCache(ctx) ⇒ <a href="#ResourceCache"><code>ResourceCache</code></a><a href="#pex-rendererresourcecachectx-⇒-resourcecache" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>Create a resource cache for pex-context caching.</p>
+<p><strong>Kind</strong>: static method of <a href="#module_pex-renderer"><code>pex-renderer</code></a></p>
+<table>
+<thead>
+<tr>
+<th>Param</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ctx</td>
+<td><code>module:pex-context/types/index.js</code></td>
+</tr>
+</tbody>
+</table>
+<p><a name="module_components"></a></p>
+<h2 id="components" class="tsd-anchor-link">components<a href="#components" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<ul>
+<li><a href="#module_components">components</a>
+<ul>
+<li><a href="#module_components.ambientLight">.ambientLight([options])</a> ⇒ <code>object</code></li>
+<li><a href="#module_components.animation">.animation([options])</a> ⇒ <code>object</code></li>
+<li><a href="#module_components.areaLight">.areaLight([options])</a> ⇒ <code>object</code></li>
+<li><a href="#module_components.axesHelper">.axesHelper([options])</a> ⇒ <code>object</code></li>
+<li><a href="#module_components.boundingBoxHelper">.boundingBoxHelper([options])</a> ⇒ <code>object</code></li>
+<li><a href="#module_components.cameraHelper">.cameraHelper([options])</a> ⇒ <code>object</code></li>
+<li><a href="#module_components.camera">.camera([options])</a> ⇒ <code>object</code></li>
+<li><a href="#module_components.directionalLight">.directionalLight([options])</a> ⇒ <code>object</code></li>
+<li><a href="#module_components.geometry">.geometry([options])</a> ⇒ <code>object</code></li>
+<li><a href="#module_components.gridHelper">.gridHelper([options])</a> ⇒ <code>object</code></li>
+<li><a href="#module_components.lightHelper">.lightHelper([options])</a> ⇒ <code>object</code></li>
+<li><a href="#module_components.material">.material([options])</a> ⇒ <code>object</code></li>
+<li><a href="#module_components.morph">.morph(options)</a> ⇒ <code>object</code></li>
+<li><a href="#module_components.orbiter">.orbiter(options)</a> ⇒ <code>object</code></li>
+<li><a href="#module_components.pointLight">.pointLight([options])</a> ⇒ <code>object</code></li>
+<li><a href="#module_components.postProcessing">.postProcessing([options])</a> ⇒ <code>object</code>
+<ul>
+<li><a href="#module_components.postProcessing.ssao">.ssao([options])</a> ⇒ <code>object</code></li>
+<li><a href="#module_components.postProcessing.dof">.dof([options])</a> ⇒ <code>object</code></li>
+<li><a href="#module_components.postProcessing.msaa">.msaa([options])</a> ⇒ <code>object</code></li>
+<li><a href="#module_components.postProcessing.fxaa">.fxaa([options])</a> ⇒ <code>object</code></li>
+<li><a href="#module_components.postProcessing.smaa">.smaa([options])</a> ⇒ <code>object</code></li>
+<li><a href="#module_components.postProcessing.fog">.fog([options])</a> ⇒ <code>object</code></li>
+<li><a href="#module_components.postProcessing.bloom">.bloom([options])</a> ⇒ <code>object</code></li>
+<li><a href="#module_components.postProcessing.vignette">.vignette([options])</a> ⇒ <code>object</code></li>
+<li><a href="#module_components.postProcessing.lut">.lut([options])</a> ⇒ <code>object</code></li>
+<li><a href="#module_components.postProcessing.colorCorrection">.colorCorrection([options])</a> ⇒ <code>object</code></li>
+<li><a href="#module_components.postProcessing.filmGrain">.filmGrain([options])</a> ⇒ <code>object</code></li>
+</ul>
+</li>
+<li><a href="#module_components.reflectionProbe">.reflectionProbe([options])</a> ⇒ <code>object</code></li>
+<li><a href="#module_components.skeletonHelper">.skeletonHelper([options])</a> ⇒ <code>object</code></li>
+<li><a href="#module_components.skin">.skin([options])</a> ⇒ <code>object</code></li>
+<li><a href="#module_components.skybox">.skybox([options])</a> ⇒ <code>object</code></li>
+<li><a href="#module_components.spotLight">.spotLight([options])</a> ⇒ <code>object</code></li>
+<li><a href="#module_components.transform">.transform([options])</a> ⇒ <code>object</code></li>
+<li><a href="#module_components.vertexHelper">.vertexHelper([options])</a> ⇒ <code>object</code></li>
+</ul>
+</li>
+</ul>
+<p><a name="module_components.ambientLight"></a></p>
+<h3 id="componentsambientlightoptions-⇒-object" class="tsd-anchor-link">components.ambientLight([options]) ⇒ <code>object</code><a href="#componentsambientlightoptions-⇒-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>Ambient light component</p>
+<p><strong>Kind</strong>: static method of <a href="#module_components"><code>components</code></a></p>
+<table>
+<thead>
+<tr>
+<th>Param</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[options]</td>
+<td><a href="#AmbientLightComponentOptions"><code>AmbientLightComponentOptions</code></a></td>
+</tr>
+</tbody>
+</table>
+<p><a name="module_components.animation"></a></p>
+<h3 id="componentsanimationoptions-⇒-object" class="tsd-anchor-link">components.animation([options]) ⇒ <code>object</code><a href="#componentsanimationoptions-⇒-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>Animation component</p>
+<p><strong>Kind</strong>: static method of <a href="#module_components"><code>components</code></a></p>
+<table>
+<thead>
+<tr>
+<th>Param</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[options]</td>
+<td><a href="#AnimationComponentOptions"><code>AnimationComponentOptions</code></a></td>
+</tr>
+</tbody>
+</table>
+<p><a name="module_components.areaLight"></a></p>
+<h3 id="componentsarealightoptions-⇒-object" class="tsd-anchor-link">components.areaLight([options]) ⇒ <code>object</code><a href="#componentsarealightoptions-⇒-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>Area light component</p>
+<p><strong>Kind</strong>: static method of <a href="#module_components"><code>components</code></a></p>
+<table>
+<thead>
+<tr>
+<th>Param</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[options]</td>
+<td><a href="#AreaLightComponentOptions"><code>AreaLightComponentOptions</code></a></td>
+</tr>
+</tbody>
+</table>
+<p><a name="module_components.axesHelper"></a></p>
+<h3 id="componentsaxeshelperoptions-⇒-object" class="tsd-anchor-link">components.axesHelper([options]) ⇒ <code>object</code><a href="#componentsaxeshelperoptions-⇒-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>Axes helper component</p>
+<p><strong>Kind</strong>: static method of <a href="#module_components"><code>components</code></a></p>
+<table>
+<thead>
+<tr>
+<th>Param</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[options]</td>
+<td><a href="#AxesHelperComponentOptions"><code>AxesHelperComponentOptions</code></a></td>
+</tr>
+</tbody>
+</table>
+<p><a name="module_components.boundingBoxHelper"></a></p>
+<h3 id="componentsboundingboxhelperoptions-⇒-object" class="tsd-anchor-link">components.boundingBoxHelper([options]) ⇒ <code>object</code><a href="#componentsboundingboxhelperoptions-⇒-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>Bounding box helper component</p>
+<p><strong>Kind</strong>: static method of <a href="#module_components"><code>components</code></a></p>
+<table>
+<thead>
+<tr>
+<th>Param</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[options]</td>
+<td><a href="#BoundingBoxHelperComponentOptions"><code>BoundingBoxHelperComponentOptions</code></a></td>
+</tr>
+</tbody>
+</table>
+<p><a name="module_components.cameraHelper"></a></p>
+<h3 id="componentscamerahelperoptions-⇒-object" class="tsd-anchor-link">components.cameraHelper([options]) ⇒ <code>object</code><a href="#componentscamerahelperoptions-⇒-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>Camera helper component</p>
+<p><strong>Kind</strong>: static method of <a href="#module_components"><code>components</code></a></p>
+<table>
+<thead>
+<tr>
+<th>Param</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[options]</td>
+<td><a href="#CameraHelperComponentOptions"><code>CameraHelperComponentOptions</code></a></td>
+</tr>
+</tbody>
+</table>
+<p><a name="module_components.camera"></a></p>
+<h3 id="componentscameraoptions-⇒-object" class="tsd-anchor-link">components.camera([options]) ⇒ <code>object</code><a href="#componentscameraoptions-⇒-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>Camera component</p>
+<p><strong>Kind</strong>: static method of <a href="#module_components"><code>components</code></a></p>
+<table>
+<thead>
+<tr>
+<th>Param</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[options]</td>
+<td><a href="#CameraComponentOptions"><code>CameraComponentOptions</code></a></td>
+</tr>
+</tbody>
+</table>
+<p><a name="module_components.directionalLight"></a></p>
+<h3 id="componentsdirectionallightoptions-⇒-object" class="tsd-anchor-link">components.directionalLight([options]) ⇒ <code>object</code><a href="#componentsdirectionallightoptions-⇒-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>Directional light component</p>
+<p><strong>Kind</strong>: static method of <a href="#module_components"><code>components</code></a></p>
+<table>
+<thead>
+<tr>
+<th>Param</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[options]</td>
+<td><a href="#DirectionalLightComponentOptions"><code>DirectionalLightComponentOptions</code></a></td>
+</tr>
+</tbody>
+</table>
+<p><a name="module_components.geometry"></a></p>
+<h3 id="componentsgeometryoptions-⇒-object" class="tsd-anchor-link">components.geometry([options]) ⇒ <code>object</code><a href="#componentsgeometryoptions-⇒-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>Geometry component</p>
+<p><strong>Kind</strong>: static method of <a href="#module_components"><code>components</code></a></p>
+<table>
+<thead>
+<tr>
+<th>Param</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[options]</td>
+<td><a href="#GeometryComponentOptions"><code>GeometryComponentOptions</code></a></td>
+</tr>
+</tbody>
+</table>
+<p><a name="module_components.gridHelper"></a></p>
+<h3 id="componentsgridhelperoptions-⇒-object" class="tsd-anchor-link">components.gridHelper([options]) ⇒ <code>object</code><a href="#componentsgridhelperoptions-⇒-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>Grid helper component</p>
+<p><strong>Kind</strong>: static method of <a href="#module_components"><code>components</code></a></p>
+<table>
+<thead>
+<tr>
+<th>Param</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[options]</td>
+<td><a href="#GridHelperComponentOptions"><code>GridHelperComponentOptions</code></a></td>
+</tr>
+</tbody>
+</table>
+<p><a name="module_components.lightHelper"></a></p>
+<h3 id="componentslighthelperoptions-⇒-object" class="tsd-anchor-link">components.lightHelper([options]) ⇒ <code>object</code><a href="#componentslighthelperoptions-⇒-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>Light helper component</p>
+<p><strong>Kind</strong>: static method of <a href="#module_components"><code>components</code></a></p>
+<table>
+<thead>
+<tr>
+<th>Param</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[options]</td>
+<td><a href="#LightHelperComponentOptions"><code>LightHelperComponentOptions</code></a></td>
+</tr>
+</tbody>
+</table>
+<p><a name="module_components.material"></a></p>
+<h3 id="componentsmaterialoptions-⇒-object" class="tsd-anchor-link">components.material([options]) ⇒ <code>object</code><a href="#componentsmaterialoptions-⇒-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>Material component</p>
+<p><strong>Kind</strong>: static method of <a href="#module_components"><code>components</code></a></p>
+<table>
+<thead>
+<tr>
+<th>Param</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[options]</td>
+<td><a href="#MaterialComponentOptions"><code>MaterialComponentOptions</code></a> | <a href="#LineMaterialComponentOptions"><code>LineMaterialComponentOptions</code></a></td>
+</tr>
+</tbody>
+</table>
+<p><a name="module_components.morph"></a></p>
+<h3 id="componentsmorphoptions-⇒-object" class="tsd-anchor-link">components.morph(options) ⇒ <code>object</code><a href="#componentsmorphoptions-⇒-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>Morph component</p>
+<p><strong>Kind</strong>: static method of <a href="#module_components"><code>components</code></a></p>
+<table>
+<thead>
+<tr>
+<th>Param</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>options</td>
+<td><a href="#MorphComponentOptions"><code>MorphComponentOptions</code></a></td>
+</tr>
+</tbody>
+</table>
+<p><a name="module_components.orbiter"></a></p>
+<h3 id="componentsorbiteroptions-⇒-object" class="tsd-anchor-link">components.orbiter(options) ⇒ <code>object</code><a href="#componentsorbiteroptions-⇒-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>Orbiter component</p>
+<p><strong>Kind</strong>: static method of <a href="#module_components"><code>components</code></a></p>
+<table>
+<thead>
+<tr>
+<th>Param</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>options</td>
+<td><a href="#OrbiterComponentOptions"><code>OrbiterComponentOptions</code></a></td>
+</tr>
+</tbody>
+</table>
+<p><a name="module_components.pointLight"></a></p>
+<h3 id="componentspointlightoptions-⇒-object" class="tsd-anchor-link">components.pointLight([options]) ⇒ <code>object</code><a href="#componentspointlightoptions-⇒-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>Point light component</p>
+<p><strong>Kind</strong>: static method of <a href="#module_components"><code>components</code></a></p>
+<table>
+<thead>
+<tr>
+<th>Param</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[options]</td>
+<td><a href="#PointLightComponentOptions"><code>PointLightComponentOptions</code></a></td>
+</tr>
+</tbody>
+</table>
+<p><a name="module_components.postProcessing"></a></p>
+<h3 id="componentspostprocessingoptions-⇒-object" class="tsd-anchor-link">components.postProcessing([options]) ⇒ <code>object</code><a href="#componentspostprocessingoptions-⇒-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>Post Processing component</p>
+<p><strong>Kind</strong>: static method of <a href="#module_components"><code>components</code></a></p>
+<table>
+<thead>
+<tr>
+<th>Param</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[options]</td>
+<td><a href="#PostProcessingComponentOptions"><code>PostProcessingComponentOptions</code></a></td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><a href="#module_components.postProcessing">.postProcessing([options])</a> ⇒ <code>object</code>
+<ul>
+<li><a href="#module_components.postProcessing.ssao">.ssao([options])</a> ⇒ <code>object</code></li>
+<li><a href="#module_components.postProcessing.dof">.dof([options])</a> ⇒ <code>object</code></li>
+<li><a href="#module_components.postProcessing.msaa">.msaa([options])</a> ⇒ <code>object</code></li>
+<li><a href="#module_components.postProcessing.fxaa">.fxaa([options])</a> ⇒ <code>object</code></li>
+<li><a href="#module_components.postProcessing.smaa">.smaa([options])</a> ⇒ <code>object</code></li>
+<li><a href="#module_components.postProcessing.fog">.fog([options])</a> ⇒ <code>object</code></li>
+<li><a href="#module_components.postProcessing.bloom">.bloom([options])</a> ⇒ <code>object</code></li>
+<li><a href="#module_components.postProcessing.vignette">.vignette([options])</a> ⇒ <code>object</code></li>
+<li><a href="#module_components.postProcessing.lut">.lut([options])</a> ⇒ <code>object</code></li>
+<li><a href="#module_components.postProcessing.colorCorrection">.colorCorrection([options])</a> ⇒ <code>object</code></li>
+<li><a href="#module_components.postProcessing.filmGrain">.filmGrain([options])</a> ⇒ <code>object</code></li>
+</ul>
+</li>
+</ul>
+<p><a name="module_components.postProcessing.ssao"></a></p>
+<h4 id="postprocessingssaooptions-⇒-object" class="tsd-anchor-link">postProcessing.ssao([options]) ⇒ <code>object</code><a href="#postprocessingssaooptions-⇒-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h4>
+<p>Post Processing SSAO subcomponent</p>
+<p><strong>Kind</strong>: static method of <a href="#module_components.postProcessing"><code>postProcessing</code></a></p>
+<table>
+<thead>
+<tr>
+<th>Param</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[options]</td>
+<td><a href="#SSAOComponentOptions"><code>SSAOComponentOptions</code></a></td>
+</tr>
+</tbody>
+</table>
+<p><a name="module_components.postProcessing.dof"></a></p>
+<h4 id="postprocessingdofoptions-⇒-object" class="tsd-anchor-link">postProcessing.dof([options]) ⇒ <code>object</code><a href="#postprocessingdofoptions-⇒-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h4>
+<p>Post Processing DoF subcomponent</p>
+<p><strong>Kind</strong>: static method of <a href="#module_components.postProcessing"><code>postProcessing</code></a></p>
+<table>
+<thead>
+<tr>
+<th>Param</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[options]</td>
+<td><a href="#DoFComponentOptions"><code>DoFComponentOptions</code></a></td>
+</tr>
+</tbody>
+</table>
+<p><a name="module_components.postProcessing.msaa"></a></p>
+<h4 id="postprocessingmsaaoptions-⇒-object" class="tsd-anchor-link">postProcessing.msaa([options]) ⇒ <code>object</code><a href="#postprocessingmsaaoptions-⇒-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h4>
+<p>Post Processing MSAA subcomponent</p>
+<p><strong>Kind</strong>: static method of <a href="#module_components.postProcessing"><code>postProcessing</code></a></p>
+<table>
+<thead>
+<tr>
+<th>Param</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[options]</td>
+<td><a href="#MSAAComponentOptions"><code>MSAAComponentOptions</code></a></td>
+</tr>
+</tbody>
+</table>
+<p><a name="module_components.postProcessing.fxaa"></a></p>
+<h4 id="postprocessingfxaaoptions-⇒-object" class="tsd-anchor-link">postProcessing.fxaa([options]) ⇒ <code>object</code><a href="#postprocessingfxaaoptions-⇒-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h4>
+<p>Post Processing FXAA subcomponent</p>
+<p><strong>Kind</strong>: static method of <a href="#module_components.postProcessing"><code>postProcessing</code></a></p>
+<table>
+<thead>
+<tr>
+<th>Param</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[options]</td>
+<td><a href="#FXAAComponentOptions"><code>FXAAComponentOptions</code></a></td>
+</tr>
+</tbody>
+</table>
+<p><a name="module_components.postProcessing.smaa"></a></p>
+<h4 id="postprocessingsmaaoptions-⇒-object" class="tsd-anchor-link">postProcessing.smaa([options]) ⇒ <code>object</code><a href="#postprocessingsmaaoptions-⇒-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h4>
+<p>Post Processing SMAA subcomponent</p>
+<p><strong>Kind</strong>: static method of <a href="#module_components.postProcessing"><code>postProcessing</code></a></p>
+<table>
+<thead>
+<tr>
+<th>Param</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[options]</td>
+<td><a href="#SMAAComponentOptions"><code>SMAAComponentOptions</code></a></td>
+</tr>
+</tbody>
+</table>
+<p><a name="module_components.postProcessing.fog"></a></p>
+<h4 id="postprocessingfogoptions-⇒-object" class="tsd-anchor-link">postProcessing.fog([options]) ⇒ <code>object</code><a href="#postprocessingfogoptions-⇒-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h4>
+<p>Post Processing Fog subcomponent</p>
+<p><strong>Kind</strong>: static method of <a href="#module_components.postProcessing"><code>postProcessing</code></a></p>
+<table>
+<thead>
+<tr>
+<th>Param</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[options]</td>
+<td><a href="#FogComponentOptions"><code>FogComponentOptions</code></a></td>
+</tr>
+</tbody>
+</table>
+<p><a name="module_components.postProcessing.bloom"></a></p>
+<h4 id="postprocessingbloomoptions-⇒-object" class="tsd-anchor-link">postProcessing.bloom([options]) ⇒ <code>object</code><a href="#postprocessingbloomoptions-⇒-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h4>
+<p>Post Processing Bloom subcomponent</p>
+<p><strong>Kind</strong>: static method of <a href="#module_components.postProcessing"><code>postProcessing</code></a></p>
+<table>
+<thead>
+<tr>
+<th>Param</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[options]</td>
+<td><a href="#BloomComponentOptions"><code>BloomComponentOptions</code></a></td>
+</tr>
+</tbody>
+</table>
+<p><a name="module_components.postProcessing.vignette"></a></p>
+<h4 id="postprocessingvignetteoptions-⇒-object" class="tsd-anchor-link">postProcessing.vignette([options]) ⇒ <code>object</code><a href="#postprocessingvignetteoptions-⇒-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h4>
+<p>Post Processing Vignette subcomponent</p>
+<p><strong>Kind</strong>: static method of <a href="#module_components.postProcessing"><code>postProcessing</code></a></p>
+<table>
+<thead>
+<tr>
+<th>Param</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[options]</td>
+<td><a href="#VignetteComponentOptions"><code>VignetteComponentOptions</code></a></td>
+</tr>
+</tbody>
+</table>
+<p><a name="module_components.postProcessing.lut"></a></p>
+<h4 id="postprocessinglutoptions-⇒-object" class="tsd-anchor-link">postProcessing.lut([options]) ⇒ <code>object</code><a href="#postprocessinglutoptions-⇒-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h4>
+<p>Post Processing LUT subcomponent</p>
+<p><strong>Kind</strong>: static method of <a href="#module_components.postProcessing"><code>postProcessing</code></a></p>
+<table>
+<thead>
+<tr>
+<th>Param</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[options]</td>
+<td><a href="#LutComponentOptions"><code>LutComponentOptions</code></a></td>
+</tr>
+</tbody>
+</table>
+<p><a name="module_components.postProcessing.colorCorrection"></a></p>
+<h4 id="postprocessingcolorcorrectionoptions-⇒-object" class="tsd-anchor-link">postProcessing.colorCorrection([options]) ⇒ <code>object</code><a href="#postprocessingcolorcorrectionoptions-⇒-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h4>
+<p>Post Processing Color Correction subcomponent</p>
+<p><strong>Kind</strong>: static method of <a href="#module_components.postProcessing"><code>postProcessing</code></a></p>
+<table>
+<thead>
+<tr>
+<th>Param</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[options]</td>
+<td><a href="#ColorCorrectionComponentOptions"><code>ColorCorrectionComponentOptions</code></a></td>
+</tr>
+</tbody>
+</table>
+<p><a name="module_components.postProcessing.filmGrain"></a></p>
+<h4 id="postprocessingfilmgrainoptions-⇒-object" class="tsd-anchor-link">postProcessing.filmGrain([options]) ⇒ <code>object</code><a href="#postprocessingfilmgrainoptions-⇒-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h4>
+<p>Post Processing Film Grain subcomponent</p>
+<p><strong>Kind</strong>: static method of <a href="#module_components.postProcessing"><code>postProcessing</code></a></p>
+<table>
+<thead>
+<tr>
+<th>Param</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[options]</td>
+<td><a href="#FilmGrainComponentOptions"><code>FilmGrainComponentOptions</code></a></td>
+</tr>
+</tbody>
+</table>
+<p><a name="module_components.reflectionProbe"></a></p>
+<h3 id="componentsreflectionprobeoptions-⇒-object" class="tsd-anchor-link">components.reflectionProbe([options]) ⇒ <code>object</code><a href="#componentsreflectionprobeoptions-⇒-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>Reflection probe component</p>
+<p><strong>Kind</strong>: static method of <a href="#module_components"><code>components</code></a></p>
+<table>
+<thead>
+<tr>
+<th>Param</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[options]</td>
+<td><a href="#ReflectionProbeComponentOptions"><code>ReflectionProbeComponentOptions</code></a></td>
+</tr>
+</tbody>
+</table>
+<p><a name="module_components.skeletonHelper"></a></p>
+<h3 id="componentsskeletonhelperoptions-⇒-object" class="tsd-anchor-link">components.skeletonHelper([options]) ⇒ <code>object</code><a href="#componentsskeletonhelperoptions-⇒-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>Skeleton helper component</p>
+<p><strong>Kind</strong>: static method of <a href="#module_components"><code>components</code></a></p>
+<table>
+<thead>
+<tr>
+<th>Param</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[options]</td>
+<td><a href="#SkeletonHelperComponentOptions"><code>SkeletonHelperComponentOptions</code></a></td>
+</tr>
+</tbody>
+</table>
+<p><a name="module_components.skin"></a></p>
+<h3 id="componentsskinoptions-⇒-object" class="tsd-anchor-link">components.skin([options]) ⇒ <code>object</code><a href="#componentsskinoptions-⇒-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>Skin component</p>
+<p><strong>Kind</strong>: static method of <a href="#module_components"><code>components</code></a></p>
+<table>
+<thead>
+<tr>
+<th>Param</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[options]</td>
+<td><a href="#SkinComponentOptions"><code>SkinComponentOptions</code></a></td>
+</tr>
+</tbody>
+</table>
+<p><a name="module_components.skybox"></a></p>
+<h3 id="componentsskyboxoptions-⇒-object" class="tsd-anchor-link">components.skybox([options]) ⇒ <code>object</code><a href="#componentsskyboxoptions-⇒-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>Skybox component</p>
+<p><strong>Kind</strong>: static method of <a href="#module_components"><code>components</code></a></p>
+<table>
+<thead>
+<tr>
+<th>Param</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[options]</td>
+<td><a href="#SkyboxComponentOptions"><code>SkyboxComponentOptions</code></a></td>
+</tr>
+</tbody>
+</table>
+<p><a name="module_components.spotLight"></a></p>
+<h3 id="componentsspotlightoptions-⇒-object" class="tsd-anchor-link">components.spotLight([options]) ⇒ <code>object</code><a href="#componentsspotlightoptions-⇒-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>Spot light component</p>
+<p><strong>Kind</strong>: static method of <a href="#module_components"><code>components</code></a></p>
+<table>
+<thead>
+<tr>
+<th>Param</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[options]</td>
+<td><a href="#SpotLightComponentOptions"><code>SpotLightComponentOptions</code></a></td>
+</tr>
+</tbody>
+</table>
+<p><a name="module_components.transform"></a></p>
+<h3 id="componentstransformoptions-⇒-object" class="tsd-anchor-link">components.transform([options]) ⇒ <code>object</code><a href="#componentstransformoptions-⇒-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>Transform component</p>
+<p><strong>Kind</strong>: static method of <a href="#module_components"><code>components</code></a></p>
+<table>
+<thead>
+<tr>
+<th>Param</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[options]</td>
+<td><a href="#TransformComponentOptions"><code>TransformComponentOptions</code></a></td>
+</tr>
+</tbody>
+</table>
+<p><a name="module_components.vertexHelper"></a></p>
+<h3 id="componentsvertexhelperoptions-⇒-object" class="tsd-anchor-link">components.vertexHelper([options]) ⇒ <code>object</code><a href="#componentsvertexhelperoptions-⇒-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>Vertex helper component</p>
+<p><strong>Kind</strong>: static method of <a href="#module_components"><code>components</code></a></p>
+<table>
+<thead>
+<tr>
+<th>Param</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[options]</td>
+<td><a href="#VertexHelperComponentOptions"><code>VertexHelperComponentOptions</code></a></td>
+</tr>
+</tbody>
+</table>
+<p><a name="module_systems"></a></p>
+<h2 id="systems" class="tsd-anchor-link">systems<a href="#systems" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<ul>
+<li><a href="#module_systems">systems</a>
+<ul>
+<li><a href="#module_systems.renderer">.renderer</a> : <a href="#module_renderer"><code>renderer</code></a></li>
+<li><a href="#module_systems.animation">.animation()</a> ⇒ <a href="#System"><code>System</code></a></li>
+<li><a href="#module_systems.camera">.camera()</a> ⇒ <a href="#System"><code>System</code></a></li>
+<li><a href="#module_systems.geometry">.geometry(options)</a> ⇒ <a href="#System"><code>System</code></a></li>
+<li><a href="#module_systems.helper">.helper()</a> ⇒ <a href="#System"><code>System</code></a></li>
+<li><a href="#module_systems.layer">.layer()</a> ⇒ <a href="#System"><code>System</code></a></li>
+<li><a href="#module_systems.light">.light()</a> ⇒ <a href="#System"><code>System</code></a></li>
+<li><a href="#module_systems.morph">.morph()</a> ⇒ <a href="#System"><code>System</code></a></li>
+<li><a href="#module_systems.reflectionProbe">.reflectionProbe(options)</a> ⇒ <a href="#System"><code>System</code></a></li>
+<li><a href="#module_systems.skin">.skin()</a> ⇒ <a href="#System"><code>System</code></a></li>
+<li><a href="#module_systems.skybox">.skybox(options)</a> ⇒ <a href="#System"><code>System</code></a></li>
+<li><a href="#module_systems.transform">.transform()</a> ⇒ <a href="#System"><code>System</code></a></li>
+<li><a href="#module_systems.renderPipeline">.renderPipeline(options)</a> ⇒ <a href="#System"><code>System</code></a></li>
+</ul>
+</li>
+</ul>
+<p><a name="module_systems.renderer"></a></p>
+<h3 id="systemsrenderer-renderer" class="tsd-anchor-link">systems.renderer : <a href="#module_renderer"><code>renderer</code></a><a href="#systemsrenderer-renderer" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>All renderer systems</p>
+<p><strong>Kind</strong>: static property of <a href="#module_systems"><code>systems</code></a>
+<a name="module_systems.animation"></a></p>
+<h3 id="systemsanimation-⇒-system" class="tsd-anchor-link">systems.animation() ⇒ <a href="#System"><code>System</code></a><a href="#systemsanimation-⇒-system" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>Animation system</p>
+<p><strong>Kind</strong>: static method of <a href="#module_systems"><code>systems</code></a>
+<a name="module_systems.camera"></a></p>
+<h3 id="systemscamera-⇒-system" class="tsd-anchor-link">systems.camera() ⇒ <a href="#System"><code>System</code></a><a href="#systemscamera-⇒-system" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>Camera system</p>
+<p>Adds:</p>
+<ul>
+<li>&quot;_orbiter&quot; to orbiter components</li>
+</ul>
+<p><strong>Kind</strong>: static method of <a href="#module_systems"><code>systems</code></a>
+<a name="module_systems.geometry"></a></p>
+<h3 id="systemsgeometryoptions-⇒-system" class="tsd-anchor-link">systems.geometry(options) ⇒ <a href="#System"><code>System</code></a><a href="#systemsgeometryoptions-⇒-system" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>Geometry system</p>
+<p>Adds:</p>
+<ul>
+<li>&quot;bounds&quot; to geometry components</li>
+<li>&quot;dirty&quot; to geometry components properties</li>
+<li>&quot;_geometry&quot; to entities as reference to internal cache</li>
+</ul>
+<p><strong>Kind</strong>: static method of <a href="#module_systems"><code>systems</code></a></p>
+<table>
+<thead>
+<tr>
+<th>Param</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>options</td>
+<td><a href="#SystemOptions"><code>SystemOptions</code></a></td>
+</tr>
+</tbody>
+</table>
+<p><a name="module_systems.helper"></a></p>
+<h3 id="systemshelper-⇒-system" class="tsd-anchor-link">systems.helper() ⇒ <a href="#System"><code>System</code></a><a href="#systemshelper-⇒-system" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>Helper system</p>
+<p><strong>Kind</strong>: static method of <a href="#module_systems"><code>systems</code></a>
+<a name="module_systems.layer"></a></p>
+<h3 id="systemslayer-⇒-system" class="tsd-anchor-link">systems.layer() ⇒ <a href="#System"><code>System</code></a><a href="#systemslayer-⇒-system" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>Layer system</p>
+<p><strong>Kind</strong>: static method of <a href="#module_systems"><code>systems</code></a>
+<a name="module_systems.light"></a></p>
+<h3 id="systemslight-⇒-system" class="tsd-anchor-link">systems.light() ⇒ <a href="#System"><code>System</code></a><a href="#systemslight-⇒-system" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>Light system</p>
+<p>Adds:</p>
+<ul>
+<li>&quot;_projectionMatrix&quot; and &quot;_viewMatrix&quot; to light components</li>
+<li>&quot;_direction&quot; to directional and spot light components</li>
+</ul>
+<p><strong>Kind</strong>: static method of <a href="#module_systems"><code>systems</code></a>
+<a name="module_systems.morph"></a></p>
+<h3 id="systemsmorph-⇒-system" class="tsd-anchor-link">systems.morph() ⇒ <a href="#System"><code>System</code></a><a href="#systemsmorph-⇒-system" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>Morph system</p>
+<p><strong>Kind</strong>: static method of <a href="#module_systems"><code>systems</code></a>
+<a name="module_systems.reflectionProbe"></a></p>
+<h3 id="systemsreflectionprobeoptions-⇒-system" class="tsd-anchor-link">systems.reflectionProbe(options) ⇒ <a href="#System"><code>System</code></a><a href="#systemsreflectionprobeoptions-⇒-system" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>Reflection Probe system</p>
+<p>Adds:</p>
+<ul>
+<li>&quot;_reflectionProbe&quot; to reflectionProbe components</li>
+</ul>
+<p><strong>Kind</strong>: static method of <a href="#module_systems"><code>systems</code></a></p>
+<table>
+<thead>
+<tr>
+<th>Param</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>options</td>
+<td><a href="#SystemOptions"><code>SystemOptions</code></a></td>
+</tr>
+</tbody>
+</table>
+<p><a name="module_systems.skin"></a></p>
+<h3 id="systemsskin-⇒-system" class="tsd-anchor-link">systems.skin() ⇒ <a href="#System"><code>System</code></a><a href="#systemsskin-⇒-system" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>Skin system</p>
+<p><strong>Kind</strong>: static method of <a href="#module_systems"><code>systems</code></a>
+<a name="module_systems.skybox"></a></p>
+<h3 id="systemsskyboxoptions-⇒-system" class="tsd-anchor-link">systems.skybox(options) ⇒ <a href="#System"><code>System</code></a><a href="#systemsskyboxoptions-⇒-system" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>Skybox system</p>
+<p>Adds:</p>
+<ul>
+<li>&quot;_skyTexture&quot; to skybox components with no envMap for skybox-renderer to
+render</li>
+<li>&quot;_skyTextureChanged&quot; to skybox components for reflection-probe system</li>
+</ul>
+<p><strong>Kind</strong>: static method of <a href="#module_systems"><code>systems</code></a></p>
+<table>
+<thead>
+<tr>
+<th>Param</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>options</td>
+<td><a href="#SystemOptions"><code>SystemOptions</code></a></td>
+</tr>
+</tbody>
+</table>
+<p><a name="module_systems.transform"></a></p>
+<h3 id="systemstransform-⇒-system" class="tsd-anchor-link">systems.transform() ⇒ <a href="#System"><code>System</code></a><a href="#systemstransform-⇒-system" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>Transform system</p>
+<p>Adds:</p>
+<ul>
+<li>&quot;worldBounds&quot;, &quot;dirty&quot; and &quot;aabbDirty&quot; to transform components</li>
+<li>&quot;_transform&quot; to entities as reference to internal cache</li>
+</ul>
+<p><strong>Kind</strong>: static method of <a href="#module_systems"><code>systems</code></a>
+<a name="module_systems.renderPipeline"></a></p>
+<h3 id="systemsrenderpipelineoptions-⇒-system" class="tsd-anchor-link">systems.renderPipeline(options) ⇒ <a href="#System"><code>System</code></a><a href="#systemsrenderpipelineoptions-⇒-system" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>Render pipeline system</p>
+<p>Adds:</p>
+<ul>
+<li>&quot;_near&quot;, &quot;_far&quot;, &quot;_radiusUV&quot; and &quot;_sceneBboxInLightSpace&quot; to light components
+that cast shadows</li>
+<li>&quot;_shadowCubemap&quot; to pointLight components and &quot;_shadowMap&quot; to other light
+components</li>
+<li>&quot;_targets&quot; to postProcessing components</li>
+</ul>
+<p><strong>Kind</strong>: static method of <a href="#module_systems"><code>systems</code></a></p>
+<table>
+<thead>
+<tr>
+<th>Param</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>options</td>
+<td><a href="#SystemOptions"><code>SystemOptions</code></a></td>
+</tr>
+</tbody>
+</table>
+<p><a name="module_renderer"></a></p>
+<h2 id="renderer" class="tsd-anchor-link">renderer<a href="#renderer" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<ul>
+<li><a href="#module_renderer">renderer</a>
+<ul>
+<li><a href="#module_renderer.base">.base()</a> ⇒ <a href="#RendererSystem"><code>RendererSystem</code></a></li>
+<li><a href="#module_renderer.basic">.basic(options)</a> ⇒ <a href="#RendererSystem"><code>RendererSystem</code></a></li>
+<li><a href="#module_renderer.line">.line(options)</a> ⇒ <a href="#RendererSystem"><code>RendererSystem</code></a></li>
+<li><a href="#module_renderer.skybox">.skybox(options)</a> ⇒ <a href="#RendererSystem"><code>RendererSystem</code></a></li>
+<li><a href="#module_renderer.standard">.standard(options)</a> ⇒ <a href="#RendererSystem"><code>RendererSystem</code></a></li>
+</ul>
+</li>
+</ul>
+<p><a name="module_renderer.base"></a></p>
+<h3 id="rendererbase-⇒-renderersystem" class="tsd-anchor-link">renderer.base() ⇒ <a href="#RendererSystem"><code>RendererSystem</code></a><a href="#rendererbase-⇒-renderersystem" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>Base renderer</p>
+<p>All renderers are composed with it.</p>
+<p><strong>Kind</strong>: static method of <a href="#module_renderer"><code>renderer</code></a>
+<a name="module_renderer.basic"></a></p>
+<h3 id="rendererbasicoptions-⇒-renderersystem" class="tsd-anchor-link">renderer.basic(options) ⇒ <a href="#RendererSystem"><code>RendererSystem</code></a><a href="#rendererbasicoptions-⇒-renderersystem" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>Basic renderer</p>
+<p><strong>Kind</strong>: static method of <a href="#module_renderer"><code>renderer</code></a></p>
+<table>
+<thead>
+<tr>
+<th>Param</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>options</td>
+<td><a href="#SystemOptions"><code>SystemOptions</code></a></td>
+</tr>
+</tbody>
+</table>
+<p><a name="module_renderer.line"></a></p>
+<h3 id="rendererlineoptions-⇒-renderersystem" class="tsd-anchor-link">renderer.line(options) ⇒ <a href="#RendererSystem"><code>RendererSystem</code></a><a href="#rendererlineoptions-⇒-renderersystem" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>Line renderer</p>
+<p><strong>Kind</strong>: static method of <a href="#module_renderer"><code>renderer</code></a></p>
+<table>
+<thead>
+<tr>
+<th>Param</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>options</td>
+<td><a href="#SystemOptions"><code>SystemOptions</code></a></td>
+</tr>
+</tbody>
+</table>
+<p><a name="module_renderer.skybox"></a></p>
+<h3 id="rendererskyboxoptions-⇒-renderersystem" class="tsd-anchor-link">renderer.skybox(options) ⇒ <a href="#RendererSystem"><code>RendererSystem</code></a><a href="#rendererskyboxoptions-⇒-renderersystem" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>Skybox renderer</p>
+<p>Renders a skybox (envMap or _skyTexture) to screen or to reflection probes.</p>
+<p><strong>Kind</strong>: static method of <a href="#module_renderer"><code>renderer</code></a></p>
+<table>
+<thead>
+<tr>
+<th>Param</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>options</td>
+<td><a href="#SystemOptions"><code>SystemOptions</code></a></td>
+</tr>
+</tbody>
+</table>
+<p><a name="module_renderer.standard"></a></p>
+<h3 id="rendererstandardoptions-⇒-renderersystem" class="tsd-anchor-link">renderer.standard(options) ⇒ <a href="#RendererSystem"><code>RendererSystem</code></a><a href="#rendererstandardoptions-⇒-renderersystem" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>Standard renderer</p>
+<p><strong>Kind</strong>: static method of <a href="#module_renderer"><code>renderer</code></a></p>
+<table>
+<thead>
+<tr>
+<th>Param</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>options</td>
+<td><a href="#SystemOptions"><code>SystemOptions</code></a></td>
+</tr>
+</tbody>
+</table>
+<p><a name="Entity"></a></p>
+<h2 id="entity-object" class="tsd-anchor-link">Entity : <code>object</code><a href="#entity-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p><strong>Kind</strong>: global typedef
+<strong>Properties</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>id</td>
+<td><code>number</code></td>
+</tr>
+<tr>
+<td>[ambientLight]</td>
+<td><a href="#AmbientLightComponentOptions"><code>AmbientLightComponentOptions</code></a></td>
+</tr>
+<tr>
+<td>[animation]</td>
+<td><a href="#AnimationComponentOptions"><code>AnimationComponentOptions</code></a> | <a href="#AnimationComponentOptions"><code>Array.&lt;AnimationComponentOptions&gt;</code></a></td>
+</tr>
+<tr>
+<td>[areaLight]</td>
+<td><a href="#AreaLightComponentOptions"><code>AreaLightComponentOptions</code></a></td>
+</tr>
+<tr>
+<td>[axesHelper]</td>
+<td><a href="#AxesHelperComponentOptions"><code>AxesHelperComponentOptions</code></a></td>
+</tr>
+<tr>
+<td>[boundingBoxHelper]</td>
+<td><a href="#BoundingBoxHelperComponentOptions"><code>BoundingBoxHelperComponentOptions</code></a></td>
+</tr>
+<tr>
+<td>[skeletonHelper]</td>
+<td><a href="#SkeletonHelperComponentOptions"><code>SkeletonHelperComponentOptions</code></a></td>
+</tr>
+<tr>
+<td>[cameraHelper]</td>
+<td><a href="#CameraHelperComponentOptions"><code>CameraHelperComponentOptions</code></a></td>
+</tr>
+<tr>
+<td>[camera]</td>
+<td><a href="#CameraComponentOptions"><code>CameraComponentOptions</code></a></td>
+</tr>
+<tr>
+<td>[directionalLight]</td>
+<td><a href="#DirectionalLightComponentOptions"><code>DirectionalLightComponentOptions</code></a></td>
+</tr>
+<tr>
+<td>[geometry]</td>
+<td><a href="#GeometryComponentOptions"><code>GeometryComponentOptions</code></a></td>
+</tr>
+<tr>
+<td>[gridHelper]</td>
+<td><a href="#GridHelperComponentOptions"><code>GridHelperComponentOptions</code></a></td>
+</tr>
+<tr>
+<td>[lightHelper]</td>
+<td><a href="#LightHelperComponentOptions"><code>LightHelperComponentOptions</code></a></td>
+</tr>
+<tr>
+<td>[material]</td>
+<td><a href="#MaterialComponentOptions"><code>MaterialComponentOptions</code></a></td>
+</tr>
+<tr>
+<td>[morph]</td>
+<td><a href="#MorphComponentOptions"><code>MorphComponentOptions</code></a></td>
+</tr>
+<tr>
+<td>[orbiter]</td>
+<td><a href="#OrbiterComponentOptions"><code>OrbiterComponentOptions</code></a></td>
+</tr>
+<tr>
+<td>[pointLight]</td>
+<td><a href="#PointLightComponentOptions"><code>PointLightComponentOptions</code></a></td>
+</tr>
+<tr>
+<td>[postProcessing]</td>
+<td><a href="#PostProcessingComponentOptions"><code>PostProcessingComponentOptions</code></a></td>
+</tr>
+<tr>
+<td>[reflectionProbe]</td>
+<td><a href="#ReflectionProbeComponentOptions"><code>ReflectionProbeComponentOptions</code></a></td>
+</tr>
+<tr>
+<td>[skin]</td>
+<td><a href="#SkinComponentOptions"><code>SkinComponentOptions</code></a></td>
+</tr>
+<tr>
+<td>[skybox]</td>
+<td><a href="#SkyboxComponentOptions"><code>SkyboxComponentOptions</code></a></td>
+</tr>
+<tr>
+<td>[spotLight]</td>
+<td><a href="#SpotLightComponentOptions"><code>SpotLightComponentOptions</code></a></td>
+</tr>
+<tr>
+<td>[transform]</td>
+<td><a href="#TransformComponentOptions"><code>TransformComponentOptions</code></a></td>
+</tr>
+<tr>
+<td>[vertexHelper]</td>
+<td><a href="#VertexHelperComponentOptions"><code>VertexHelperComponentOptions</code></a></td>
+</tr>
+</tbody>
+</table>
+<p><a name="AmbientLightComponentOptions"></a></p>
+<h2 id="ambientlightcomponentoptions-object" class="tsd-anchor-link">AmbientLightComponentOptions : <code>object</code><a href="#ambientlightcomponentoptions-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p><strong>Kind</strong>: global typedef
+<strong>Properties</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[color]</td>
+<td><code>Array.&lt;number&gt;</code></td>
+<td><code>[1, 1, 1, 1]</code></td>
+</tr>
+<tr>
+<td>[intensity]</td>
+<td><code>number</code></td>
+<td><code>1</code></td>
+</tr>
+</tbody>
+</table>
+<p><a name="AnimationComponentOptions"></a></p>
+<h2 id="animationcomponentoptions-object" class="tsd-anchor-link">AnimationComponentOptions : <code>object</code><a href="#animationcomponentoptions-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p><strong>Kind</strong>: global typedef
+<strong>Properties</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[playing]</td>
+<td><code>boolean</code></td>
+<td><code>false</code></td>
+</tr>
+<tr>
+<td>[loop]</td>
+<td><code>boolean</code></td>
+<td><code>false</code></td>
+</tr>
+<tr>
+<td>[time]</td>
+<td><code>number</code></td>
+<td><code>0</code></td>
+</tr>
+<tr>
+<td>[channels]</td>
+<td><code>Array</code></td>
+<td><code>[]</code></td>
+</tr>
+</tbody>
+</table>
+<p><a name="AreaLightComponentOptions"></a></p>
+<h2 id="arealightcomponentoptions-object" class="tsd-anchor-link">AreaLightComponentOptions : <code>object</code><a href="#arealightcomponentoptions-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p><strong>Kind</strong>: global typedef
+<strong>Properties</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[color]</td>
+<td><code>Array.&lt;number&gt;</code></td>
+<td><code>[1, 1, 1, 1]</code></td>
+</tr>
+<tr>
+<td>[intensity]</td>
+<td><code>number</code></td>
+<td><code>1</code></td>
+</tr>
+<tr>
+<td>[disk]</td>
+<td><code>boolean</code></td>
+<td><code>false</code></td>
+</tr>
+<tr>
+<td>[doubleSided]</td>
+<td><code>boolean</code></td>
+<td><code>false</code></td>
+</tr>
+<tr>
+<td>[bias]</td>
+<td><code>number</code></td>
+<td><code>0.1</code></td>
+</tr>
+<tr>
+<td>[bulbRadius]</td>
+<td><code>number</code></td>
+<td><code>1</code></td>
+</tr>
+<tr>
+<td>[castShadows]</td>
+<td><code>boolean</code></td>
+<td><code>true</code></td>
+</tr>
+<tr>
+<td>[shadowMapSize]</td>
+<td><code>number</code></td>
+<td><code>2048</code></td>
+</tr>
+</tbody>
+</table>
+<p><a name="AxesHelperComponentOptions"></a></p>
+<h2 id="axeshelpercomponentoptions-object" class="tsd-anchor-link">AxesHelperComponentOptions : <code>object</code><a href="#axeshelpercomponentoptions-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p><strong>Kind</strong>: global typedef
+<a name="BoundingBoxHelperComponentOptions"></a></p>
+<h2 id="boundingboxhelpercomponentoptions-object" class="tsd-anchor-link">BoundingBoxHelperComponentOptions : <code>object</code><a href="#boundingboxhelpercomponentoptions-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p><strong>Kind</strong>: global typedef
+<strong>Properties</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[color]</td>
+<td><code>Array.&lt;number&gt;</code></td>
+<td><code>[1, 0, 0, 1]</code></td>
+</tr>
+</tbody>
+</table>
+<p><a name="SkeletonHelperComponentOptions"></a></p>
+<h2 id="skeletonhelpercomponentoptions-object" class="tsd-anchor-link">SkeletonHelperComponentOptions : <code>object</code><a href="#skeletonhelpercomponentoptions-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p><strong>Kind</strong>: global typedef
+<strong>Properties</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[color]</td>
+<td><code>Array.&lt;number&gt;</code> | <code>Array.&lt;Array.&lt;number&gt;&gt;</code></td>
+<td><code>[[0, 0, 1, 1], [1, 1, 1, 1]]</code></td>
+</tr>
+</tbody>
+</table>
+<p><a name="CameraHelperComponentOptions"></a></p>
+<h2 id="camerahelpercomponentoptions-object" class="tsd-anchor-link">CameraHelperComponentOptions : <code>object</code><a href="#camerahelpercomponentoptions-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p><strong>Kind</strong>: global typedef
+<strong>Properties</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[color]</td>
+<td><code>Array.&lt;number&gt;</code></td>
+<td><code>[1, 1, 1, 1]</code></td>
+</tr>
+</tbody>
+</table>
+<p><a name="CameraView"></a></p>
+<h2 id="cameraview-object" class="tsd-anchor-link">CameraView : <code>object</code><a href="#cameraview-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p><strong>Kind</strong>: global typedef
+<strong>Properties</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[totalSize]</td>
+<td><code>Array.&lt;number&gt;</code></td>
+</tr>
+<tr>
+<td>[size]</td>
+<td><code>Array.&lt;number&gt;</code></td>
+</tr>
+<tr>
+<td>[offset]</td>
+<td><code>Array.&lt;number&gt;</code></td>
+</tr>
+</tbody>
+</table>
+<p><a name="CameraComponentOptions"></a></p>
+<h2 id="cameracomponentoptions-object" class="tsd-anchor-link">CameraComponentOptions : <code>object</code><a href="#cameracomponentoptions-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p><strong>Kind</strong>: global typedef
+<strong>Properties</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[projection]</td>
+<td><code>&quot;perspective&quot;</code> | <code>&quot;orthographic&quot;</code></td>
+<td><code>&quot;perspective&quot;</code></td>
+<td></td>
+</tr>
+<tr>
+<td>[near]</td>
+<td><code>number</code></td>
+<td><code>0.5</code></td>
+<td></td>
+</tr>
+<tr>
+<td>[far]</td>
+<td><code>number</code></td>
+<td><code>1000</code></td>
+<td></td>
+</tr>
+<tr>
+<td>[aspect]</td>
+<td><code>number</code></td>
+<td><code>1</code></td>
+<td></td>
+</tr>
+<tr>
+<td>[clearColor]</td>
+<td><code>module:pex-color~color</code></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>[viewMatrix]</td>
+<td><code>mat4</code></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>[invViewMatrix]</td>
+<td><code>mat4</code></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>[culling]</td>
+<td><code>boolean</code></td>
+<td><code>false</code></td>
+<td></td>
+</tr>
+<tr>
+<td>[focalLength]</td>
+<td><code>number</code></td>
+<td><code>50</code></td>
+<td>Focal length of the camera lens [10mm - 200mm] in mm</td>
+</tr>
+<tr>
+<td>[fStop]</td>
+<td><code>number</code></td>
+<td><code>2.8</code></td>
+<td>Ratio of camera lens opening, f-number, f/N, aperture [1.2 - 32] in mm</td>
+</tr>
+<tr>
+<td>[sensorSize]</td>
+<td><code>number</code></td>
+<td><code>[36, 24]</code></td>
+<td>Physical camera sensor or film size [sensorWidth, sensorHeight] in mm</td>
+</tr>
+<tr>
+<td>sensorFit</td>
+<td><code>&quot;vertical&quot;</code> | <code>&quot;horizontal&quot;</code> | <code>&quot;fit&quot;</code> | <code>&quot;overscan&quot;</code> | <code>&quot;vertical&quot;</code></td>
+<td></td>
+<td>Matching of camera frame to sensor frame</td>
+</tr>
+<tr>
+<td>[view]</td>
+<td><a href="#CameraView"><code>CameraView</code></a></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>[fov]</td>
+<td><code>number</code></td>
+<td><code>Math.PI / 4</code></td>
+<td></td>
+</tr>
+<tr>
+<td>[left]</td>
+<td><code>number</code></td>
+<td><code>-1</code></td>
+<td></td>
+</tr>
+<tr>
+<td>[right]</td>
+<td><code>number</code></td>
+<td><code>1</code></td>
+<td></td>
+</tr>
+<tr>
+<td>[bottom]</td>
+<td><code>number</code></td>
+<td><code>-1</code></td>
+<td></td>
+</tr>
+<tr>
+<td>[top]</td>
+<td><code>number</code></td>
+<td><code>1</code></td>
+<td></td>
+</tr>
+<tr>
+<td>[zoom]</td>
+<td><code>number</code></td>
+<td><code>1</code></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p><a name="DirectionalLightComponentOptions"></a></p>
+<h2 id="directionallightcomponentoptions-object" class="tsd-anchor-link">DirectionalLightComponentOptions : <code>object</code><a href="#directionallightcomponentoptions-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p><strong>Kind</strong>: global typedef
+<strong>Properties</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[color]</td>
+<td><code>Array.&lt;number&gt;</code></td>
+<td><code>[1, 1, 1, 1]</code></td>
+</tr>
+<tr>
+<td>[intensity]</td>
+<td><code>number</code></td>
+<td><code>1</code></td>
+</tr>
+<tr>
+<td>[bias]</td>
+<td><code>number</code></td>
+<td><code>0.1</code></td>
+</tr>
+<tr>
+<td>[bulbRadius]</td>
+<td><code>number</code></td>
+<td><code>1</code></td>
+</tr>
+<tr>
+<td>[castShadows]</td>
+<td><code>boolean</code></td>
+<td><code>true</code></td>
+</tr>
+<tr>
+<td>[shadowMapSize]</td>
+<td><code>number</code></td>
+<td><code>2048</code></td>
+</tr>
+</tbody>
+</table>
+<p><a name="GeometryComponentOptions"></a></p>
+<h2 id="geometrycomponentoptions-object" class="tsd-anchor-link">GeometryComponentOptions : <code>object</code><a href="#geometrycomponentoptions-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p><strong>Kind</strong>: global typedef
+<strong>Properties</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[positions]</td>
+<td><code>Float32Array</code></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>[normals]</td>
+<td><code>Float32Array</code></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>[uvs]</td>
+<td><code>Float32Array</code></td>
+<td></td>
+<td>Alias: texCoords/texCoords0</td>
+</tr>
+<tr>
+<td>[uvs1]</td>
+<td><code>Float32Array</code></td>
+<td></td>
+<td>Alias: texCoords1</td>
+</tr>
+<tr>
+<td>[vertexColors]</td>
+<td><code>Float32Array</code></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>[cells]</td>
+<td><code>Uint16Array</code> | <code>Uint32Array</code></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>[weights]</td>
+<td><code>Float32Array</code></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>[joints]</td>
+<td><code>Float32Array</code></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>[offsets]</td>
+<td><code>Float32Array</code></td>
+<td></td>
+<td>Instanced</td>
+</tr>
+<tr>
+<td>[rotations]</td>
+<td><code>Float32Array</code></td>
+<td></td>
+<td>Instanced</td>
+</tr>
+<tr>
+<td>[scales]</td>
+<td><code>Float32Array</code></td>
+<td></td>
+<td>Instanced</td>
+</tr>
+<tr>
+<td>[colors]</td>
+<td><code>Float32Array</code></td>
+<td></td>
+<td>Instanced</td>
+</tr>
+<tr>
+<td>[count]</td>
+<td><code>number</code></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>[multiDraw]</td>
+<td><code>object</code></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>[culled]</td>
+<td><code>boolean</code></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>[primitive]</td>
+<td><code>ctx.Primitive</code></td>
+<td><code>ctx.Primitive.Triangles</code></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p><a name="GridHelperComponentOptions"></a></p>
+<h2 id="gridhelpercomponentoptions-object" class="tsd-anchor-link">GridHelperComponentOptions : <code>object</code><a href="#gridhelpercomponentoptions-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p><strong>Kind</strong>: global typedef
+<strong>Properties</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[color]</td>
+<td><code>Array.&lt;number&gt;</code></td>
+<td><code>[1, 1, 1, 1]</code></td>
+</tr>
+<tr>
+<td>[size]</td>
+<td><code>Array.&lt;number&gt;</code></td>
+<td><code>10</code></td>
+</tr>
+</tbody>
+</table>
+<p><a name="LightHelperComponentOptions"></a></p>
+<h2 id="lighthelpercomponentoptions-object" class="tsd-anchor-link">LightHelperComponentOptions : <code>object</code><a href="#lighthelpercomponentoptions-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p><strong>Kind</strong>: global typedef
+<a name="TextureTransform"></a></p>
+<h2 id="texturetransform-object" class="tsd-anchor-link">TextureTransform : <code>object</code><a href="#texturetransform-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p><strong>Kind</strong>: global typedef
+<strong>Properties</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[offset]</td>
+<td><code>Array.&lt;number&gt;</code></td>
+<td>[x, y]</td>
+</tr>
+<tr>
+<td>[rotation]</td>
+<td><code>number</code></td>
+<td>Angle in radians</td>
+</tr>
+<tr>
+<td>[scales]</td>
+<td><code>Array.&lt;number&gt;</code></td>
+<td>[x, y]</td>
+</tr>
+</tbody>
+</table>
+<p><a name="MaterialComponentOptions"></a></p>
+<h2 id="materialcomponentoptions-object" class="tsd-anchor-link">MaterialComponentOptions : <code>object</code><a href="#materialcomponentoptions-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p><strong>Kind</strong>: global typedef
+<strong>Properties</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[unlit]</td>
+<td><code>boolean</code></td>
+<td></td>
+</tr>
+<tr>
+<td>[type]</td>
+<td><code>undefined</code> | <code>&quot;line&quot;</code></td>
+<td><code>&quot;undefined&quot;</code></td>
+</tr>
+<tr>
+<td>[baseColor]</td>
+<td><code>Array.&lt;number&gt;</code></td>
+<td><code>[1, 1, 1, 1]</code></td>
+</tr>
+<tr>
+<td>[emissiveColor]</td>
+<td><code>Array.&lt;number&gt;</code></td>
+<td><code>&quot;undefined&quot;</code></td>
+</tr>
+<tr>
+<td>[emissiveIntensity]</td>
+<td><code>number</code></td>
+<td><code>1</code></td>
+</tr>
+<tr>
+<td>[metallic]</td>
+<td><code>number</code></td>
+<td><code>1</code></td>
+</tr>
+<tr>
+<td>[roughness]</td>
+<td><code>number</code></td>
+<td><code>1</code></td>
+</tr>
+<tr>
+<td>[ior]</td>
+<td><code>number</code></td>
+<td></td>
+</tr>
+<tr>
+<td>[specular]</td>
+<td><code>number</code></td>
+<td></td>
+</tr>
+<tr>
+<td>[specularTexture]</td>
+<td><code>ctx.texture2D</code> | <a href="#TextureTransform"><code>TextureTransform</code></a></td>
+<td></td>
+</tr>
+<tr>
+<td>[specularColor]</td>
+<td><code>Array.&lt;number&gt;</code></td>
+<td><code>[1, 1, 1]</code></td>
+</tr>
+<tr>
+<td>[specularColorTexture]</td>
+<td><code>ctx.texture2D</code> | <a href="#TextureTransform"><code>TextureTransform</code></a></td>
+<td></td>
+</tr>
+<tr>
+<td>[baseColorTexture]</td>
+<td><code>ctx.texture2D</code> | <a href="#TextureTransform"><code>TextureTransform</code></a></td>
+<td></td>
+</tr>
+<tr>
+<td>[emissiveColorTexture]</td>
+<td><code>ctx.texture2D</code> | <a href="#TextureTransform"><code>TextureTransform</code></a></td>
+<td></td>
+</tr>
+<tr>
+<td>[normalTexture]</td>
+<td><code>ctx.texture2D</code> | <a href="#TextureTransform"><code>TextureTransform</code></a></td>
+<td></td>
+</tr>
+<tr>
+<td>[normalTextureScale]</td>
+<td><code>number</code></td>
+<td><code>1</code></td>
+</tr>
+<tr>
+<td>[roughnessTexture]</td>
+<td><code>ctx.texture2D</code> | <a href="#TextureTransform"><code>TextureTransform</code></a></td>
+<td></td>
+</tr>
+<tr>
+<td>[metallicTexture]</td>
+<td><code>ctx.texture2D</code> | <a href="#TextureTransform"><code>TextureTransform</code></a></td>
+<td></td>
+</tr>
+<tr>
+<td>[metallicRoughnessTexture]</td>
+<td><code>ctx.texture2D</code> | <a href="#TextureTransform"><code>TextureTransform</code></a></td>
+<td></td>
+</tr>
+<tr>
+<td>[occlusionTexture]</td>
+<td><code>ctx.texture2D</code> | <a href="#TextureTransform"><code>TextureTransform</code></a></td>
+<td></td>
+</tr>
+<tr>
+<td>[clearCoat]</td>
+<td><code>number</code></td>
+<td></td>
+</tr>
+<tr>
+<td>[clearCoatRoughness]</td>
+<td><code>number</code></td>
+<td></td>
+</tr>
+<tr>
+<td>[clearCoatTexture]</td>
+<td><code>ctx.texture2D</code> | <a href="#TextureTransform"><code>TextureTransform</code></a></td>
+<td></td>
+</tr>
+<tr>
+<td>[clearCoatRoughnessTexture]</td>
+<td><code>ctx.texture2D</code> | <a href="#TextureTransform"><code>TextureTransform</code></a></td>
+<td></td>
+</tr>
+<tr>
+<td>[clearCoatNormalTexture]</td>
+<td><code>ctx.texture2D</code> | <a href="#TextureTransform"><code>TextureTransform</code></a></td>
+<td></td>
+</tr>
+<tr>
+<td>[clearCoatNormalTextureScale]</td>
+<td><code>number</code></td>
+<td></td>
+</tr>
+<tr>
+<td>[sheenColor]</td>
+<td><code>Array.&lt;number&gt;</code></td>
+<td></td>
+</tr>
+<tr>
+<td>[sheenRoughness]</td>
+<td><code>number</code></td>
+<td></td>
+</tr>
+<tr>
+<td>[transmission]</td>
+<td><code>number</code></td>
+<td></td>
+</tr>
+<tr>
+<td>[transmissionTexture]</td>
+<td><code>ctx.texture2D</code> | <a href="#TextureTransform"><code>TextureTransform</code></a></td>
+<td></td>
+</tr>
+<tr>
+<td>[dispersion]</td>
+<td><code>number</code></td>
+<td></td>
+</tr>
+<tr>
+<td>[diffuseTransmission]</td>
+<td><code>number</code></td>
+<td></td>
+</tr>
+<tr>
+<td>[diffuseTransmissionTexture]</td>
+<td><code>ctx.texture2D</code> | <a href="#TextureTransform"><code>TextureTransform</code></a></td>
+<td></td>
+</tr>
+<tr>
+<td>[diffuseTransmissionColor]</td>
+<td><code>number</code></td>
+<td><code>[1, 1, 1]</code></td>
+</tr>
+<tr>
+<td>[diffuseTransmissionColorTexture]</td>
+<td><code>ctx.texture2D</code> | <a href="#TextureTransform"><code>TextureTransform</code></a></td>
+<td></td>
+</tr>
+<tr>
+<td>[thickness]</td>
+<td><code>number</code></td>
+<td></td>
+</tr>
+<tr>
+<td>[thicknessTexture]</td>
+<td><code>ctx.texture2D</code> | <a href="#TextureTransform"><code>TextureTransform</code></a></td>
+<td></td>
+</tr>
+<tr>
+<td>[attenuationDistance]</td>
+<td><code>number</code></td>
+<td></td>
+</tr>
+<tr>
+<td>[attenuationColor]</td>
+<td><code>Array.&lt;number&gt;</code></td>
+<td></td>
+</tr>
+<tr>
+<td>[alphaTest]</td>
+<td><code>number</code></td>
+<td><code>&quot;undefined&quot;</code></td>
+</tr>
+<tr>
+<td>[alphaTexture]</td>
+<td><code>ctx.texture2D</code> | <a href="#TextureTransform"><code>TextureTransform</code></a></td>
+<td></td>
+</tr>
+<tr>
+<td>[depthTest]</td>
+<td><code>boolean</code></td>
+<td><code>true</code></td>
+</tr>
+<tr>
+<td>[depthWrite]</td>
+<td><code>boolean</code></td>
+<td><code>true</code></td>
+</tr>
+<tr>
+<td>[depthFunc]</td>
+<td><code>ctx.DepthFunc</code></td>
+<td><code>ctx.DepthFunc.Less</code></td>
+</tr>
+<tr>
+<td>[blend]</td>
+<td><code>boolean</code></td>
+<td><code>false</code></td>
+</tr>
+<tr>
+<td>[blendSrcRGBFactor]</td>
+<td><code>ctx.BlendFactor</code></td>
+<td><code>&quot;undefined&quot;</code></td>
+</tr>
+<tr>
+<td>[blendSrcAlphaFactor]</td>
+<td><code>ctx.BlendFactor</code></td>
+<td><code>&quot;undefined&quot;</code></td>
+</tr>
+<tr>
+<td>[blendDstRGBFactor]</td>
+<td><code>ctx.BlendFactor</code></td>
+<td><code>&quot;undefined&quot;</code></td>
+</tr>
+<tr>
+<td>[blendDstAlphaFactor]</td>
+<td><code>ctx.BlendFactor</code></td>
+<td><code>&quot;undefined&quot;</code></td>
+</tr>
+<tr>
+<td>[cullFace]</td>
+<td><code>boolean</code></td>
+<td><code>true</code></td>
+</tr>
+<tr>
+<td>[cullFaceMode]</td>
+<td><code>ctx.Face</code></td>
+<td><code>ctx.Face.Back</code></td>
+</tr>
+<tr>
+<td>[pointSize]</td>
+<td><code>number</code></td>
+<td><code>1</code></td>
+</tr>
+<tr>
+<td>[castShadows]</td>
+<td><code>boolean</code></td>
+<td><code>false</code></td>
+</tr>
+<tr>
+<td>[receiveShadows]</td>
+<td><code>boolean</code></td>
+<td><code>false</code></td>
+</tr>
+</tbody>
+</table>
+<p><a name="LineMaterialComponentOptions"></a></p>
+<h2 id="linematerialcomponentoptions-object" class="tsd-anchor-link">LineMaterialComponentOptions : <code>object</code><a href="#linematerialcomponentoptions-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p><strong>Kind</strong>: global typedef
+<strong>Properties</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[type]</td>
+<td><code>&quot;line&quot;</code></td>
+<td><code>&quot;line&quot;</code></td>
+</tr>
+<tr>
+<td>[baseColor]</td>
+<td><code>Array.&lt;number&gt;</code></td>
+<td><code>[1, 1, 1, 1]</code></td>
+</tr>
+<tr>
+<td>[lineWidth]</td>
+<td><code>number</code></td>
+<td><code>1</code></td>
+</tr>
+<tr>
+<td>[lineResolution]</td>
+<td><code>number</code></td>
+<td><code>16</code></td>
+</tr>
+</tbody>
+</table>
+<p><a name="MorphComponentOptions"></a></p>
+<h2 id="morphcomponentoptions-object" class="tsd-anchor-link">MorphComponentOptions : <code>object</code><a href="#morphcomponentoptions-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p><strong>Kind</strong>: global typedef
+<strong>Properties</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>sources</td>
+<td><code>object</code></td>
+<td></td>
+</tr>
+<tr>
+<td>targets</td>
+<td><code>object</code></td>
+<td></td>
+</tr>
+<tr>
+<td>[current]</td>
+<td><code>object</code></td>
+<td></td>
+</tr>
+<tr>
+<td>[weights]</td>
+<td><code>Array</code></td>
+<td><code>[]</code></td>
+</tr>
+</tbody>
+</table>
+<p><a name="OrbiterComponentOptions"></a></p>
+<h2 id="orbitercomponentoptions-object" class="tsd-anchor-link">OrbiterComponentOptions : <code>object</code><a href="#orbitercomponentoptions-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p><strong>Kind</strong>: global typedef
+<strong>Properties</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[element]</td>
+<td><code>HTMLElement</code></td>
+<td><code>document.body</code></td>
+</tr>
+<tr>
+<td>[target]</td>
+<td><code>Array.&lt;number&gt;</code></td>
+<td><code>[0, 0, 0]</code></td>
+</tr>
+<tr>
+<td>[lat]</td>
+<td><code>number</code></td>
+<td><code>0</code></td>
+</tr>
+<tr>
+<td>[lon]</td>
+<td><code>number</code></td>
+<td><code>0</code></td>
+</tr>
+<tr>
+<td>[distance]</td>
+<td><code>number</code></td>
+<td><code>0</code></td>
+</tr>
+</tbody>
+</table>
+<p><a name="PointLightComponentOptions"></a></p>
+<h2 id="pointlightcomponentoptions-object" class="tsd-anchor-link">PointLightComponentOptions : <code>object</code><a href="#pointlightcomponentoptions-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p><strong>Kind</strong>: global typedef
+<strong>Properties</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[color]</td>
+<td><code>Array.&lt;number&gt;</code></td>
+<td><code>[1, 1, 1, 1]</code></td>
+</tr>
+<tr>
+<td>[intensity]</td>
+<td><code>number</code></td>
+<td><code>1</code></td>
+</tr>
+<tr>
+<td>[range]</td>
+<td><code>number</code></td>
+<td><code>10</code></td>
+</tr>
+<tr>
+<td>[bulbRadius]</td>
+<td><code>number</code></td>
+<td><code>1</code></td>
+</tr>
+<tr>
+<td>[castShadows]</td>
+<td><code>boolean</code></td>
+<td><code>true</code></td>
+</tr>
+<tr>
+<td>[shadowMapSize]</td>
+<td><code>number</code></td>
+<td><code>2048</code></td>
+</tr>
+</tbody>
+</table>
+<p><a name="SSAOComponentOptions"></a></p>
+<h2 id="ssaocomponentoptions-object" class="tsd-anchor-link">SSAOComponentOptions : <code>object</code><a href="#ssaocomponentoptions-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p><strong>Kind</strong>: global typedef
+<strong>Properties</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[type]</td>
+<td><code>&quot;sao&quot;</code> | <code>&quot;gtao&quot;</code></td>
+<td><code>&quot;sao&quot;</code></td>
+<td></td>
+</tr>
+<tr>
+<td>[noiseTexture]</td>
+<td><code>boolean</code></td>
+<td><code>true</code></td>
+<td></td>
+</tr>
+<tr>
+<td>[mix]</td>
+<td><code>number</code></td>
+<td><code>1</code></td>
+<td></td>
+</tr>
+<tr>
+<td>[samples]</td>
+<td><code>number</code></td>
+<td><code>&quot;gtao&quot; ? 6 : 11</code></td>
+<td></td>
+</tr>
+<tr>
+<td>[intensity]</td>
+<td><code>number</code></td>
+<td><code>2.2</code></td>
+<td></td>
+</tr>
+<tr>
+<td>[radius]</td>
+<td><code>number</code></td>
+<td><code>0.5</code></td>
+<td>Meters</td>
+</tr>
+<tr>
+<td>[blurRadius]</td>
+<td><code>number</code></td>
+<td><code>0.5</code></td>
+<td></td>
+</tr>
+<tr>
+<td>[blurSharpness]</td>
+<td><code>number</code></td>
+<td><code>10</code></td>
+<td></td>
+</tr>
+<tr>
+<td>[brightness]</td>
+<td><code>number</code></td>
+<td><code>0</code></td>
+<td></td>
+</tr>
+<tr>
+<td>[contrast]</td>
+<td><code>number</code></td>
+<td><code>1</code></td>
+<td>// SSAO</td>
+</tr>
+<tr>
+<td>[bias]</td>
+<td><code>number</code></td>
+<td><code>0.001</code></td>
+<td>Centimeters</td>
+</tr>
+<tr>
+<td>[spiralTurns]</td>
+<td><code>number</code></td>
+<td><code>7</code></td>
+<td>// GTAO</td>
+</tr>
+<tr>
+<td>[slices]</td>
+<td><code>number</code></td>
+<td><code>3</code></td>
+<td></td>
+</tr>
+<tr>
+<td>[colorBounce]</td>
+<td><code>number</code></td>
+<td><code>true</code></td>
+<td></td>
+</tr>
+<tr>
+<td>[colorBounceIntensity]</td>
+<td><code>number</code></td>
+<td><code>1.0</code></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p><a name="DoFComponentOptions"></a></p>
+<h2 id="dofcomponentoptions-object" class="tsd-anchor-link">DoFComponentOptions : <code>object</code><a href="#dofcomponentoptions-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p><strong>Kind</strong>: global typedef
+<strong>Properties</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[type]</td>
+<td><code>&quot;gustafsson&quot;</code> | <code>&quot;upitis&quot;</code></td>
+<td><code>&quot;gustafsson&quot;</code></td>
+<td>Gustafsson uses a spiral pattern while Upitis uses a circular one.</td>
+</tr>
+<tr>
+<td>[physical]</td>
+<td><code>boolean</code></td>
+<td><code>true</code></td>
+<td>Use camera f-stop and focal length</td>
+</tr>
+<tr>
+<td>[focusDistance]</td>
+<td><code>number</code></td>
+<td><code>7</code></td>
+<td>The point to focus on in meters.</td>
+</tr>
+<tr>
+<td>[focusScale]</td>
+<td><code>number</code></td>
+<td><code>1</code></td>
+<td>Non physically based value for artistic control when physical is false, otherwise act as an fStop divider. Larger aperture (ie, smaller f-stop) or larger focal length (smaller fov) = smaller depth of field = more blur.</td>
+</tr>
+<tr>
+<td>[focusOnScreenPoint]</td>
+<td><code>boolean</code></td>
+<td><code>false</code></td>
+<td>Read the depth buffer to find the first intersecting object to focus on instead of a fixed focus distance.</td>
+</tr>
+<tr>
+<td>[screenPoint]</td>
+<td><code>Array.&lt;number&gt;</code></td>
+<td><code>[0.5, 0.5]</code></td>
+<td>The normalized screen point to focus on when &quot;focusOnScreenPoint&quot; is true.</td>
+</tr>
+<tr>
+<td>[chromaticAberration]</td>
+<td><code>number</code></td>
+<td><code>0.7</code></td>
+<td>Amount of RGB separation</td>
+</tr>
+<tr>
+<td>[luminanceThreshold]</td>
+<td><code>number</code></td>
+<td><code>0.7</code></td>
+<td>Threshold for out of focus hightlights</td>
+</tr>
+<tr>
+<td>[luminanceGain]</td>
+<td><code>number</code></td>
+<td><code>1</code></td>
+<td>Gain for out of focus hightlights</td>
+</tr>
+<tr>
+<td>[samples]</td>
+<td><code>number</code></td>
+<td><code>6</code></td>
+<td>Iteration steps. More steps means better blur but also degraded performances.</td>
+</tr>
+<tr>
+<td>[shape]</td>
+<td><code>&quot;disk&quot;</code> | <code>&quot;pentagon&quot;</code></td>
+<td><code>&quot;disk&quot;</code></td>
+<td>The bokeh shape for type &quot;upitis&quot;.</td>
+</tr>
+<tr>
+<td>[debug]</td>
+<td><code>boolean</code></td>
+<td><code>false</code></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p><a name="MSAAComponentOptions"></a></p>
+<h2 id="msaacomponentoptions-object" class="tsd-anchor-link">MSAAComponentOptions : <code>object</code><a href="#msaacomponentoptions-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p><strong>Kind</strong>: global typedef
+<strong>Properties</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[sampleCount]</td>
+<td><code>number</code></td>
+<td><code>4</code></td>
+<td>Multisample anti-aliasing samples: 1 or 4.</td>
+</tr>
+</tbody>
+</table>
+<p><a name="FXAAComponentOptions"></a></p>
+<h2 id="fxaacomponentoptions-object" class="tsd-anchor-link">FXAAComponentOptions : <code>object</code><a href="#fxaacomponentoptions-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p><strong>Kind</strong>: global typedef
+<strong>Properties</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[quality]</td>
+<td><code>number</code></td>
+<td><code>3</code></td>
+<td>For edge luma threshold: 0 to 4.</td>
+</tr>
+<tr>
+<td>[subPixelQuality]</td>
+<td><code>number</code></td>
+<td><code>0.75</code></td>
+<td>Higher = softer. Helps mitigate fireflies but will blur small details.</td>
+</tr>
+</tbody>
+</table>
+<p><a name="SMAAComponentOptions"></a></p>
+<h2 id="smaacomponentoptions-object" class="tsd-anchor-link">SMAAComponentOptions : <code>object</code><a href="#smaacomponentoptions-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p><strong>Kind</strong>: global typedef
+<strong>Properties</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[quality]</td>
+<td><code>number</code></td>
+<td><code>2</code></td>
+<td>0 to 3 (60/80/95/99% of the quality)</td>
+</tr>
+<tr>
+<td>[edges]</td>
+<td><code>&quot;luma&quot;</code> | <code>&quot;color&quot;</code> | <code>&quot;depth&quot;</code></td>
+<td><code>luma</code></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p><a name="FogComponentOptions"></a></p>
+<h2 id="fogcomponentoptions-object" class="tsd-anchor-link">FogComponentOptions : <code>object</code><a href="#fogcomponentoptions-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p><strong>Kind</strong>: global typedef
+<strong>Properties</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[color]</td>
+<td><code>Array.&lt;number&gt;</code></td>
+<td><code>[0.5, 0.5, 0.5]</code></td>
+</tr>
+<tr>
+<td>[start]</td>
+<td><code>number</code></td>
+<td><code>5</code></td>
+</tr>
+<tr>
+<td>[density]</td>
+<td><code>number</code></td>
+<td><code>0.15</code></td>
+</tr>
+<tr>
+<td>[sunPosition]</td>
+<td><code>Array.&lt;number&gt;</code></td>
+<td><code>[1, 1, 1]</code></td>
+</tr>
+<tr>
+<td>[sunDispertion]</td>
+<td><code>number</code></td>
+<td><code>0.2</code></td>
+</tr>
+<tr>
+<td>[sunIntensity]</td>
+<td><code>number</code></td>
+<td><code>0.1</code></td>
+</tr>
+<tr>
+<td>[sunColor]</td>
+<td><code>Array.&lt;number&gt;</code></td>
+<td><code>[0.98, 0.98, 0.7]</code></td>
+</tr>
+<tr>
+<td>[inscatteringCoeffs]</td>
+<td><code>Array.&lt;number&gt;</code></td>
+<td><code>[0.3, 0.3, 0.3]</code></td>
+</tr>
+</tbody>
+</table>
+<p><a name="BloomComponentOptions"></a></p>
+<h2 id="bloomcomponentoptions-object" class="tsd-anchor-link">BloomComponentOptions : <code>object</code><a href="#bloomcomponentoptions-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p><strong>Kind</strong>: global typedef
+<strong>Properties</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[quality]</td>
+<td><code>number</code></td>
+<td><code>1</code></td>
+<td>The bloom quality: 0 or 1 (0 is faster but flickers)</td>
+</tr>
+<tr>
+<td>[colorFunction]</td>
+<td><code>&quot;luma&quot;</code> | <code>&quot;luminance&quot;</code> | <code>&quot;average&quot;</code></td>
+<td><code>&quot;luma&quot;</code></td>
+<td>The function used to determine the brightness of a pixel for the threshold.</td>
+</tr>
+<tr>
+<td>[threshold]</td>
+<td><code>number</code></td>
+<td><code>1</code></td>
+<td>The brightness value at which pixels are filtered out for the threshold.</td>
+</tr>
+<tr>
+<td>[source]</td>
+<td><code>&quot;color&quot;</code> | <code>&quot;emissive&quot;</code></td>
+<td><code>&quot;color&quot;</code></td>
+<td>The source texture for the threshold.</td>
+</tr>
+<tr>
+<td>[intensity]</td>
+<td><code>number</code></td>
+<td><code>0.1</code></td>
+<td>The strength of the bloom effect.</td>
+</tr>
+<tr>
+<td>[radius]</td>
+<td><code>number</code></td>
+<td><code>1</code></td>
+<td>The downsampling radius which controls how much glare gets blended in.</td>
+</tr>
+</tbody>
+</table>
+<p><a name="LutComponentOptions"></a></p>
+<h2 id="lutcomponentoptions-object" class="tsd-anchor-link">LutComponentOptions : <code>object</code><a href="#lutcomponentoptions-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p><strong>Kind</strong>: global typedef
+<strong>Properties</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>texture</td>
+<td><code>ctx.texture2D</code></td>
+</tr>
+</tbody>
+</table>
+<p><a name="ColorCorrectionComponentOptions"></a></p>
+<h2 id="colorcorrectioncomponentoptions-object" class="tsd-anchor-link">ColorCorrectionComponentOptions : <code>object</code><a href="#colorcorrectioncomponentoptions-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p><strong>Kind</strong>: global typedef
+<strong>Properties</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[brightness]</td>
+<td><code>number</code></td>
+<td><code>0</code></td>
+</tr>
+<tr>
+<td>[contrast]</td>
+<td><code>number</code></td>
+<td><code>1</code></td>
+</tr>
+<tr>
+<td>[saturation]</td>
+<td><code>number</code></td>
+<td><code>1</code></td>
+</tr>
+<tr>
+<td>[hue]</td>
+<td><code>number</code></td>
+<td><code>0</code></td>
+</tr>
+</tbody>
+</table>
+<p><a name="VignetteComponentOptions"></a></p>
+<h2 id="vignettecomponentoptions-object" class="tsd-anchor-link">VignetteComponentOptions : <code>object</code><a href="#vignettecomponentoptions-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p><strong>Kind</strong>: global typedef
+<strong>Properties</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[radius]</td>
+<td><code>number</code></td>
+<td><code>0.8</code></td>
+</tr>
+<tr>
+<td>[intensity]</td>
+<td><code>number</code></td>
+<td><code>0.2</code></td>
+</tr>
+</tbody>
+</table>
+<p><a name="FilmGrainComponentOptions"></a></p>
+<h2 id="filmgraincomponentoptions-object" class="tsd-anchor-link">FilmGrainComponentOptions : <code>object</code><a href="#filmgraincomponentoptions-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p><strong>Kind</strong>: global typedef
+<strong>Properties</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[quality]</td>
+<td><code>number</code></td>
+<td><code>2</code></td>
+</tr>
+<tr>
+<td>[size]</td>
+<td><code>number</code></td>
+<td><code>1.6</code></td>
+</tr>
+<tr>
+<td>[intensity]</td>
+<td><code>number</code></td>
+<td><code>0.05</code></td>
+</tr>
+<tr>
+<td>[colorIntensity]</td>
+<td><code>number</code></td>
+<td><code>0.6</code></td>
+</tr>
+<tr>
+<td>[luminanceIntensity]</td>
+<td><code>number</code></td>
+<td><code>1</code></td>
+</tr>
+<tr>
+<td>[speed]</td>
+<td><code>number</code></td>
+<td><code>0.5</code></td>
+</tr>
+</tbody>
+</table>
+<p><a name="PostProcessingComponentOptions"></a></p>
+<h2 id="postprocessingcomponentoptions-object" class="tsd-anchor-link">PostProcessingComponentOptions : <code>object</code><a href="#postprocessingcomponentoptions-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p><strong>Kind</strong>: global typedef
+<strong>Properties</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[ssao]</td>
+<td><a href="#SSAOComponentOptions"><code>SSAOComponentOptions</code></a></td>
+<td></td>
+</tr>
+<tr>
+<td>[dof]</td>
+<td><a href="#DoFComponentOptions"><code>DoFComponentOptions</code></a></td>
+<td></td>
+</tr>
+<tr>
+<td>[bloom]</td>
+<td><a href="#BloomComponentOptions"><code>BloomComponentOptions</code></a></td>
+<td></td>
+</tr>
+<tr>
+<td>[fog]</td>
+<td><a href="#FogComponentOptions"><code>FogComponentOptions</code></a></td>
+<td></td>
+</tr>
+<tr>
+<td>[vignette]</td>
+<td><a href="#VignetteComponentOptions"><code>VignetteComponentOptions</code></a></td>
+<td></td>
+</tr>
+<tr>
+<td>[lut]</td>
+<td><a href="#LutComponentOptions"><code>LutComponentOptions</code></a></td>
+<td></td>
+</tr>
+<tr>
+<td>[colorCorrection]</td>
+<td><a href="#ColorCorrectionComponentOptions"><code>ColorCorrectionComponentOptions</code></a></td>
+<td></td>
+</tr>
+<tr>
+<td>[fxaa]</td>
+<td><a href="#FXAAComponentOptions"><code>FXAAComponentOptions</code></a></td>
+<td></td>
+</tr>
+<tr>
+<td>[smaa]</td>
+<td><a href="#SMAAComponentOptions"><code>SMAAComponentOptions</code></a></td>
+<td></td>
+</tr>
+<tr>
+<td>[filmGrain]</td>
+<td><a href="#FilmGrainComponentOptions"><code>FilmGrainComponentOptions</code></a></td>
+<td></td>
+</tr>
+<tr>
+<td>[exposure]</td>
+<td><code>number</code></td>
+<td><code>1</code></td>
+</tr>
+<tr>
+<td>[toneMap]</td>
+<td><code>&quot;aces&quot;</code> | <code>&quot;agx&quot;</code> | <code>&quot;agxPunchy&quot;</code> | <code>&quot;filmic&quot;</code> | <code>&quot;lottes&quot;</code> | <code>&quot;neutral&quot;</code> | <code>&quot;reinhard&quot;</code> | <code>&quot;reinhard2&quot;</code> | <code>&quot;uchimura&quot;</code> | <code>&quot;uncharted2&quot;</code> | <code>&quot;unreal&quot;</code></td>
+<td><code>&quot;aces&quot;</code></td>
+</tr>
+<tr>
+<td>opacity</td>
+<td><code>number</code></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p><a name="ReflectionProbeComponentOptions"></a></p>
+<h2 id="reflectionprobecomponentoptions-object" class="tsd-anchor-link">ReflectionProbeComponentOptions : <code>object</code><a href="#reflectionprobecomponentoptions-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p><strong>Kind</strong>: global typedef
+<strong>Properties</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[size]</td>
+<td><code>number</code></td>
+<td><code>1024</code></td>
+</tr>
+</tbody>
+</table>
+<p><a name="SkinComponentOptions"></a></p>
+<h2 id="skincomponentoptions-object" class="tsd-anchor-link">SkinComponentOptions : <code>object</code><a href="#skincomponentoptions-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p><strong>Kind</strong>: global typedef
+<a name="SkyboxComponentOptions"></a></p>
+<h2 id="skyboxcomponentoptions-object" class="tsd-anchor-link">SkyboxComponentOptions : <code>object</code><a href="#skyboxcomponentoptions-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p><strong>Kind</strong>: global typedef
+<strong>Properties</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[sunPosition]</td>
+<td><code>Array.&lt;number&gt;</code></td>
+<td></td>
+</tr>
+<tr>
+<td>[envMap]</td>
+<td><code>ctx.texture2D</code></td>
+<td></td>
+</tr>
+<tr>
+<td>[backgroundBlur]</td>
+<td><code>boolean</code></td>
+<td><code>false</code></td>
+</tr>
+<tr>
+<td>[exposure]</td>
+<td><code>number</code></td>
+<td><code>1</code></td>
+</tr>
+<tr>
+<td>[turbidity]</td>
+<td><code>number</code></td>
+<td><code>10</code></td>
+</tr>
+<tr>
+<td>[rayleigh]</td>
+<td><code>number</code></td>
+<td><code>2</code></td>
+</tr>
+<tr>
+<td>[mieCoefficient]</td>
+<td><code>number</code></td>
+<td><code>0.005</code></td>
+</tr>
+<tr>
+<td>[mieDirectionalG]</td>
+<td><code>number</code></td>
+<td><code>0.8</code></td>
+</tr>
+</tbody>
+</table>
+<p><a name="SpotLightComponentOptions"></a></p>
+<h2 id="spotlightcomponentoptions-object" class="tsd-anchor-link">SpotLightComponentOptions : <code>object</code><a href="#spotlightcomponentoptions-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p><strong>Kind</strong>: global typedef
+<strong>Properties</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[color]</td>
+<td><code>Array.&lt;number&gt;</code></td>
+<td><code>[1, 1, 1, 1]</code></td>
+</tr>
+<tr>
+<td>[intensity]</td>
+<td><code>number</code></td>
+<td><code>1</code></td>
+</tr>
+<tr>
+<td>[angle]</td>
+<td><code>number</code></td>
+<td><code>Math.PI / 4</code></td>
+</tr>
+<tr>
+<td>[innerAngle]</td>
+<td><code>number</code></td>
+<td><code>0</code></td>
+</tr>
+<tr>
+<td>[range]</td>
+<td><code>number</code></td>
+<td><code>10</code></td>
+</tr>
+<tr>
+<td>[bias]</td>
+<td><code>number</code></td>
+<td><code>0.1</code></td>
+</tr>
+<tr>
+<td>[bulbRadius]</td>
+<td><code>number</code></td>
+<td><code>1</code></td>
+</tr>
+<tr>
+<td>[castShadows]</td>
+<td><code>boolean</code></td>
+<td><code>true</code></td>
+</tr>
+<tr>
+<td>[shadowMapSize]</td>
+<td><code>number</code></td>
+<td><code>2048</code></td>
+</tr>
+</tbody>
+</table>
+<p><a name="TransformComponentOptions"></a></p>
+<h2 id="transformcomponentoptions-object" class="tsd-anchor-link">TransformComponentOptions : <code>object</code><a href="#transformcomponentoptions-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p><strong>Kind</strong>: global typedef
+<strong>Properties</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[position]</td>
+<td><code>Array.&lt;number&gt;</code></td>
+<td><code>[0, 0, 0]</code></td>
+</tr>
+<tr>
+<td>[rotation]</td>
+<td><code>Array.&lt;number&gt;</code></td>
+<td><code>[0, 0, 0, 1]</code></td>
+</tr>
+<tr>
+<td>[scale]</td>
+<td><code>Array.&lt;number&gt;</code></td>
+<td><code>[1, 1, 1]</code></td>
+</tr>
+</tbody>
+</table>
+<p><a name="VertexHelperComponentOptions"></a></p>
+<h2 id="vertexhelpercomponentoptions-object" class="tsd-anchor-link">VertexHelperComponentOptions : <code>object</code><a href="#vertexhelpercomponentoptions-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p><strong>Kind</strong>: global typedef
+<strong>Properties</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[color]</td>
+<td><code>Array.&lt;number&gt;</code></td>
+<td><code>[0, 1, 0, 1]</code></td>
+</tr>
+<tr>
+<td>[size]</td>
+<td><code>Array.&lt;number&gt;</code></td>
+<td><code>1</code></td>
+</tr>
+<tr>
+<td>[attribute]</td>
+<td><code>string</code></td>
+<td><code>&quot;&amp;quot;normals&amp;quot;&quot;</code></td>
+</tr>
+</tbody>
+</table>
+<p><a name="SystemOptions"></a></p>
+<h2 id="systemoptions-object" class="tsd-anchor-link">SystemOptions : <code>object</code><a href="#systemoptions-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p><strong>Kind</strong>: global typedef
+<strong>Properties</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ctx</td>
+<td><code>module:pex-context/types/index.js</code></td>
+</tr>
+<tr>
+<td>[resourceCache]</td>
+<td><a href="#ResourceCache"><code>ResourceCache</code></a></td>
+</tr>
+<tr>
+<td>[renderGraph]</td>
+<td><a href="#RenderGraph"><code>RenderGraph</code></a></td>
+</tr>
+</tbody>
+</table>
+<p><a name="SystemUpdate"></a></p>
+<h2 id="systemupdate-function" class="tsd-anchor-link">SystemUpdate : <code>function</code><a href="#systemupdate-function" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p><strong>Kind</strong>: global typedef</p>
+<table>
+<thead>
+<tr>
+<th>Param</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>entities</td>
+<td><a href="#Entity"><code>Array.&lt;Entity&gt;</code></a></td>
+</tr>
+<tr>
+<td>[deltaTime]</td>
+<td><code>number</code></td>
+</tr>
+</tbody>
+</table>
+<p><a name="SystemDispose"></a></p>
+<h2 id="systemdispose-function" class="tsd-anchor-link">SystemDispose : <code>function</code><a href="#systemdispose-function" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p><strong>Kind</strong>: global typedef</p>
+<table>
+<thead>
+<tr>
+<th>Param</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>entities</td>
+<td><a href="#Entity"><code>Array.&lt;Entity&gt;</code></a></td>
+</tr>
+</tbody>
+</table>
+<p><a name="System"></a></p>
+<h2 id="system-object" class="tsd-anchor-link">System : <code>object</code><a href="#system-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p><strong>Kind</strong>: global typedef
+<strong>Properties</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>type</td>
+<td><code>string</code></td>
+</tr>
+<tr>
+<td>cache</td>
+<td><code>object</code></td>
+</tr>
+<tr>
+<td>debug</td>
+<td><code>boolean</code></td>
+</tr>
+<tr>
+<td>update</td>
+<td><a href="#SystemUpdate"><code>SystemUpdate</code></a></td>
+</tr>
+<tr>
+<td>dispose</td>
+<td><a href="#SystemDispose"><code>SystemDispose</code></a></td>
+</tr>
+</tbody>
+</table>
+<p><a name="RenderEngineOptions"></a></p>
+<h2 id="renderengineoptions" class="tsd-anchor-link">RenderEngineOptions<a href="#renderengineoptions" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p><strong>Kind</strong>: global typedef
+<strong>Properties</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>width</td>
+<td><code>number</code></td>
+</tr>
+<tr>
+<td>height</td>
+<td><code>number</code></td>
+</tr>
+<tr>
+<td>renderers</td>
+<td><a href="#System"><code>Array.&lt;System&gt;</code></a></td>
+</tr>
+<tr>
+<td>drawToScreen</td>
+<td><code>boolean</code></td>
+</tr>
+</tbody>
+</table>
+<p><a name="RenderEngineRender"></a></p>
+<h2 id="renderenginerender-function" class="tsd-anchor-link">RenderEngineRender : <code>function</code><a href="#renderenginerender-function" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p><strong>Kind</strong>: global typedef</p>
+<table>
+<thead>
+<tr>
+<th>Param</th>
+<th>Type</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>entities</td>
+<td><a href="#Entity"><code>Array.&lt;Entity&gt;</code></a></td>
+<td></td>
+</tr>
+<tr>
+<td>cameraEntities</td>
+<td><a href="#Entity"><code>Array.&lt;Entity&gt;</code></a></td>
+<td></td>
+</tr>
+<tr>
+<td>[options]</td>
+<td><a href="#RenderEngineOptions"><code>RenderEngineOptions</code></a></td>
+<td><code>{}</code></td>
+</tr>
+</tbody>
+</table>
+<p><a name="RenderEngineDebug"></a></p>
+<h2 id="renderenginedebug-function" class="tsd-anchor-link">RenderEngineDebug : <code>function</code><a href="#renderenginedebug-function" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p><strong>Kind</strong>: global typedef</p>
+<table>
+<thead>
+<tr>
+<th>Param</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>enable</td>
+<td><code>boolean</code></td>
+</tr>
+</tbody>
+</table>
+<p><a name="RenderEngine"></a></p>
+<h2 id="renderengine-system" class="tsd-anchor-link">RenderEngine : <a href="#System"><code>System</code></a><a href="#renderengine-system" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p><strong>Kind</strong>: global typedef
+<strong>Properties</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>render</td>
+<td><a href="#RenderEngineRender"><code>RenderEngineRender</code></a></td>
+</tr>
+<tr>
+<td>debug</td>
+<td><a href="#RenderEngineDebug"><code>RenderEngineDebug</code></a></td>
+</tr>
+<tr>
+<td>systems</td>
+<td><a href="#System"><code>Array.&lt;System&gt;</code></a></td>
+</tr>
+<tr>
+<td>renderers</td>
+<td><a href="#System"><code>Array.&lt;System&gt;</code></a></td>
+</tr>
+</tbody>
+</table>
+<p><a name="RendererSystemRender"></a></p>
+<h2 id="renderersystemrender-function" class="tsd-anchor-link">RendererSystemRender : <code>function</code><a href="#renderersystemrender-function" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p><strong>Kind</strong>: global typedef</p>
+<table>
+<thead>
+<tr>
+<th>Param</th>
+<th>Type</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>renderView</td>
+<td><a href="#RenderView"><code>RenderView</code></a></td>
+<td></td>
+</tr>
+<tr>
+<td>entities</td>
+<td><a href="#Entity"><code>Entity</code></a> | <a href="#Entity"><code>Array.&lt;Entity&gt;</code></a></td>
+<td></td>
+</tr>
+<tr>
+<td>[options]</td>
+<td><code>object</code></td>
+<td><code>{}</code></td>
+</tr>
+</tbody>
+</table>
+<p><a name="RendererSystemStageOptions"></a></p>
+<h2 id="renderersystemstageoptions-object" class="tsd-anchor-link">RendererSystemStageOptions : <code>object</code><a href="#renderersystemstageoptions-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p><strong>Kind</strong>: global typedef
+<strong>Properties</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[attachmentsLocations]</td>
+<td><code>object</code></td>
+</tr>
+<tr>
+<td>[shadowMappingLight]</td>
+<td><code>object</code></td>
+</tr>
+<tr>
+<td>[backgroundColorTexture]</td>
+<td><code>ctx.texture2D</code></td>
+</tr>
+<tr>
+<td>[renderingToReflectionProbe]</td>
+<td><code>boolean</code></td>
+</tr>
+</tbody>
+</table>
+<p><a name="RendererSystemStage"></a></p>
+<h2 id="renderersystemstage-function" class="tsd-anchor-link">RendererSystemStage : <code>function</code><a href="#renderersystemstage-function" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p><strong>Kind</strong>: global typedef</p>
+<table>
+<thead>
+<tr>
+<th>Param</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>renderView</td>
+<td><a href="#RenderView"><code>Array.&lt;RenderView&gt;</code></a></td>
+</tr>
+<tr>
+<td>entities</td>
+<td><a href="#Entity"><code>Array.&lt;Entity&gt;</code></a></td>
+</tr>
+<tr>
+<td>options</td>
+<td><a href="#RendererSystemStageOptions"><code>RendererSystemStageOptions</code></a></td>
+</tr>
+</tbody>
+</table>
+<p><a name="RendererSystem"></a></p>
+<h2 id="renderersystem-object" class="tsd-anchor-link">RendererSystem : <code>object</code><a href="#renderersystem-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p><strong>Kind</strong>: global typedef
+<strong>Properties</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>type</td>
+<td><code>string</code></td>
+</tr>
+<tr>
+<td>cache</td>
+<td><code>object</code></td>
+</tr>
+<tr>
+<td>debug</td>
+<td><code>boolean</code></td>
+</tr>
+<tr>
+<td>flagDefinitions</td>
+<td><code>Array.&lt;Array&gt;</code></td>
+</tr>
+<tr>
+<td>update</td>
+<td><a href="#SystemUpdate"><code>SystemUpdate</code></a></td>
+</tr>
+<tr>
+<td>dispose</td>
+<td><a href="#SystemDispose"><code>SystemDispose</code></a></td>
+</tr>
+<tr>
+<td>render</td>
+<td><a href="#RendererSystemRender"><code>RendererSystemRender</code></a></td>
+</tr>
+<tr>
+<td>[renderBackground]</td>
+<td><a href="#RendererSystemStage"><code>RendererSystemStage</code></a></td>
+</tr>
+<tr>
+<td>[renderShadow]</td>
+<td><a href="#RendererSystemStage"><code>RendererSystemStage</code></a></td>
+</tr>
+<tr>
+<td>[renderOpaque]</td>
+<td><a href="#RendererSystemStage"><code>RendererSystemStage</code></a></td>
+</tr>
+<tr>
+<td>[renderTransparent]</td>
+<td><a href="#RendererSystemStage"><code>RendererSystemStage</code></a></td>
+</tr>
+<tr>
+<td>[renderPost]</td>
+<td><a href="#RendererSystemStage"><code>RendererSystemStage</code></a></td>
+</tr>
+</tbody>
+</table>
+<p><a name="WorldAdd"></a></p>
+<h2 id="worldadd-function" class="tsd-anchor-link">WorldAdd : <code>function</code><a href="#worldadd-function" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p><strong>Kind</strong>: global typedef</p>
+<table>
+<thead>
+<tr>
+<th>Param</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>entity</td>
+<td><a href="#Entity"><code>Entity</code></a></td>
+</tr>
+</tbody>
+</table>
+<p><a name="WorldAddSystem"></a></p>
+<h2 id="worldaddsystem-function" class="tsd-anchor-link">WorldAddSystem : <code>function</code><a href="#worldaddsystem-function" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p><strong>Kind</strong>: global typedef</p>
+<table>
+<thead>
+<tr>
+<th>Param</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>system</td>
+<td><a href="#System"><code>System</code></a></td>
+</tr>
+</tbody>
+</table>
+<p><a name="WorldUpdate"></a></p>
+<h2 id="worldupdate-function" class="tsd-anchor-link">WorldUpdate : <code>function</code><a href="#worldupdate-function" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p><strong>Kind</strong>: global typedef</p>
+<table>
+<thead>
+<tr>
+<th>Param</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[deltaTime]</td>
+<td><code>number</code></td>
+</tr>
+</tbody>
+</table>
+<p><a name="World"></a></p>
+<h2 id="world-object" class="tsd-anchor-link">World : <code>object</code><a href="#world-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p><strong>Kind</strong>: global typedef
+<strong>Properties</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>entities</td>
+<td><code>Array.&lt;object&gt;</code></td>
+</tr>
+<tr>
+<td>systems</td>
+<td><code>Array.&lt;object&gt;</code></td>
+</tr>
+<tr>
+<td>add</td>
+<td><a href="#WorldAdd"><code>WorldAdd</code></a></td>
+</tr>
+<tr>
+<td>addSystem</td>
+<td><a href="#WorldAddSystem"><code>WorldAddSystem</code></a></td>
+</tr>
+<tr>
+<td>update</td>
+<td><a href="#WorldUpdate"><code>WorldUpdate</code></a></td>
+</tr>
+</tbody>
+</table>
+<p><a name="RenderGraph"></a></p>
+<h2 id="rendergraph-object" class="tsd-anchor-link">RenderGraph : <code>object</code><a href="#rendergraph-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p><strong>Kind</strong>: global typedef
+<strong>Properties</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>renderPasses</td>
+<td><code>Array.&lt;object&gt;</code></td>
+</tr>
+<tr>
+<td>beginFrame</td>
+<td><code>function</code></td>
+</tr>
+<tr>
+<td>renderPass</td>
+<td><code>function</code></td>
+</tr>
+<tr>
+<td>endFrame</td>
+<td><code>function</code></td>
+</tr>
+</tbody>
+</table>
+<p><a name="ResourceCacheUsage"></a></p>
+<h2 id="resourcecacheusage-transient--retained" class="tsd-anchor-link">ResourceCacheUsage : <code>&quot;Transient&quot;</code> | <code>&quot;Retained&quot;</code><a href="#resourcecacheusage-transient--retained" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p><strong>Kind</strong>: global typedef
+<a name="ResourceCache"></a></p>
+<h2 id="resourcecache-object" class="tsd-anchor-link">ResourceCache : <code>object</code><a href="#resourcecache-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p><strong>Kind</strong>: global typedef
+<strong>Properties</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>beginFrame</td>
+<td><code>function</code></td>
+</tr>
+<tr>
+<td>endFrame</td>
+<td><code>function</code></td>
+</tr>
+<tr>
+<td>dispose</td>
+<td><code>function</code></td>
+</tr>
+<tr>
+<td>Usage</td>
+<td><a href="#ResourceCacheUsage"><code>ResourceCacheUsage</code></a></td>
+</tr>
+</tbody>
+</table>
+<p><a name="RenderView"></a></p>
+<h2 id="renderview-object" class="tsd-anchor-link">RenderView : <code>object</code><a href="#renderview-object" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p><strong>Kind</strong>: global typedef
+<strong>Properties</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>camera</td>
+<td><code>object</code></td>
+</tr>
+<tr>
+<td>cameraEntity</td>
+<td><a href="#Entity"><code>Entity</code></a></td>
+</tr>
+<tr>
+<td>viewport</td>
+<td><code>module:pex-context/types/types~Viewport</code></td>
+</tr>
+</tbody>
+</table>
+<!-- api-end -->
+<h2 id="license" class="tsd-anchor-link">License<a href="#license" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p>MIT. See <a href="https://github.com/pex-gl/pex-renderer/blob/main/LICENSE.md">license file</a>.</p>
+</div></div>
+<div class="col-sidebar">
+<div class="page-menu">
+<div class="tsd-navigation settings">
+<details class="tsd-accordion"><summary class="tsd-accordion-summary"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="assets/icons.svg#icon-chevronDown"></use></svg>
+<h3>Settings</h3></summary>
+<div class="tsd-accordion-details">
+<div class="tsd-filter-visibility"><span class="settings-label">Member Visibility</span>
+<ul id="tsd-filter-options">
+<li class="tsd-filter-item"><label class="tsd-filter-input"><input type="checkbox" id="tsd-filter-protected" name="protected"/><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect class="tsd-checkbox-background" width="30" height="30" x="1" y="1" rx="6" fill="none"></rect><path class="tsd-checkbox-checkmark" d="M8.35422 16.8214L13.2143 21.75L24.6458 10.25" stroke="none" stroke-width="3.5" stroke-linejoin="round" fill="none"></path></svg><span>Protected</span></label></li>
+<li class="tsd-filter-item"><label class="tsd-filter-input"><input type="checkbox" id="tsd-filter-inherited" name="inherited" checked/><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect class="tsd-checkbox-background" width="30" height="30" x="1" y="1" rx="6" fill="none"></rect><path class="tsd-checkbox-checkmark" d="M8.35422 16.8214L13.2143 21.75L24.6458 10.25" stroke="none" stroke-width="3.5" stroke-linejoin="round" fill="none"></path></svg><span>Inherited</span></label></li>
+<li class="tsd-filter-item"><label class="tsd-filter-input"><input type="checkbox" id="tsd-filter-external" name="external"/><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect class="tsd-checkbox-background" width="30" height="30" x="1" y="1" rx="6" fill="none"></rect><path class="tsd-checkbox-checkmark" d="M8.35422 16.8214L13.2143 21.75L24.6458 10.25" stroke="none" stroke-width="3.5" stroke-linejoin="round" fill="none"></path></svg><span>External</span></label></li></ul></div>
+<div class="tsd-theme-toggle"><label class="settings-label" for="tsd-theme">Theme</label><select id="tsd-theme"><option value="os">OS</option><option value="light">Light</option><option value="dark">Dark</option></select></div></div></details></div>
+<details open class="tsd-accordion tsd-page-navigation"><summary class="tsd-accordion-summary"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="assets/icons.svg#icon-chevronDown"></use></svg>
+<h3>On This Page</h3></summary>
+<div class="tsd-accordion-details"><a href="#pex-renderer"><span>pex-<wbr/>renderer</span></a>
+<ul>
+<li><a href="#installation"><span>Installation</span></a></li>
+<li><a href="#usage"><span>Usage</span></a></li>
+<li><a href="#architecture"><span>Architecture</span></a></li>
+<li><a href="#api"><span>API</span></a></li>
+<li><a href="#modules"><span>Modules</span></a></li>
+<li><a href="#typedefs"><span>Typedefs</span></a></li>
+<li><a href="#pex-renderer-1"><span>pex-<wbr/>renderer</span></a></li>
+<li>
+<ul>
+<li><a href="#pex-renderercomponents-components"><span>pex-<wbr/>renderer.components : components</span></a></li>
+<li><a href="#pex-renderersystems-systems"><span>pex-<wbr/>renderer.systems : systems</span></a></li>
+<li><a href="#pex-rendererworld-⇒-world"><span>pex-<wbr/>renderer.world() ⇒ <wbr/>World</span></a></li>
+<li><a href="#pex-rendererentitycomponents-⇒-entity"><span>pex-<wbr/>renderer.entity([components]) ⇒ <wbr/>Entity</span></a></li>
+<li><a href="#pex-rendererrenderengine-⇒-renderengine"><span>pex-<wbr/>renderer.render<wbr/>Engine() ⇒ <wbr/>Render<wbr/>Engine</span></a></li>
+<li><a href="#pex-rendererrendergraphctx-⇒-rendergraph"><span>pex-<wbr/>renderer.render<wbr/>Graph(ctx) ⇒ <wbr/>Render<wbr/>Graph</span></a></li>
+<li><a href="#pex-rendererresourcecachectx-⇒-resourcecache"><span>pex-<wbr/>renderer.resource<wbr/>Cache(ctx) ⇒ <wbr/>Resource<wbr/>Cache</span></a></li></ul></li>
+<li><a href="#components"><span>components</span></a></li>
+<li>
+<ul>
+<li><a href="#componentsambientlightoptions-⇒-object"><span>components.ambient<wbr/>Light([options]) ⇒ object</span></a></li>
+<li><a href="#componentsanimationoptions-⇒-object"><span>components.animation([options]) ⇒ object</span></a></li>
+<li><a href="#componentsarealightoptions-⇒-object"><span>components.area<wbr/>Light([options]) ⇒ object</span></a></li>
+<li><a href="#componentsaxeshelperoptions-⇒-object"><span>components.axes<wbr/>Helper([options]) ⇒ object</span></a></li>
+<li><a href="#componentsboundingboxhelperoptions-⇒-object"><span>components.bounding<wbr/>Box<wbr/>Helper([options]) ⇒ object</span></a></li>
+<li><a href="#componentscamerahelperoptions-⇒-object"><span>components.camera<wbr/>Helper([options]) ⇒ object</span></a></li>
+<li><a href="#componentscameraoptions-⇒-object"><span>components.camera([options]) ⇒ object</span></a></li>
+<li><a href="#componentsdirectionallightoptions-⇒-object"><span>components.directional<wbr/>Light([options]) ⇒ object</span></a></li>
+<li><a href="#componentsgeometryoptions-⇒-object"><span>components.geometry([options]) ⇒ object</span></a></li>
+<li><a href="#componentsgridhelperoptions-⇒-object"><span>components.grid<wbr/>Helper([options]) ⇒ object</span></a></li>
+<li><a href="#componentslighthelperoptions-⇒-object"><span>components.light<wbr/>Helper([options]) ⇒ object</span></a></li>
+<li><a href="#componentsmaterialoptions-⇒-object"><span>components.material([options]) ⇒ object</span></a></li>
+<li><a href="#componentsmorphoptions-⇒-object"><span>components.morph(options) ⇒ object</span></a></li>
+<li><a href="#componentsorbiteroptions-⇒-object"><span>components.orbiter(options) ⇒ object</span></a></li>
+<li><a href="#componentspointlightoptions-⇒-object"><span>components.point<wbr/>Light([options]) ⇒ object</span></a></li>
+<li><a href="#componentspostprocessingoptions-⇒-object"><span>components.post<wbr/>Processing([options]) ⇒ object</span></a></li>
+<li>
+<ul>
+<li><a href="#postprocessingssaooptions-⇒-object"><span>post<wbr/>Processing.ssao([options]) ⇒ object</span></a></li>
+<li><a href="#postprocessingdofoptions-⇒-object"><span>post<wbr/>Processing.dof([options]) ⇒ object</span></a></li>
+<li><a href="#postprocessingmsaaoptions-⇒-object"><span>post<wbr/>Processing.msaa([options]) ⇒ object</span></a></li>
+<li><a href="#postprocessingfxaaoptions-⇒-object"><span>post<wbr/>Processing.fxaa([options]) ⇒ object</span></a></li>
+<li><a href="#postprocessingsmaaoptions-⇒-object"><span>post<wbr/>Processing.smaa([options]) ⇒ object</span></a></li>
+<li><a href="#postprocessingfogoptions-⇒-object"><span>post<wbr/>Processing.fog([options]) ⇒ object</span></a></li>
+<li><a href="#postprocessingbloomoptions-⇒-object"><span>post<wbr/>Processing.bloom([options]) ⇒ object</span></a></li>
+<li><a href="#postprocessingvignetteoptions-⇒-object"><span>post<wbr/>Processing.vignette([options]) ⇒ object</span></a></li>
+<li><a href="#postprocessinglutoptions-⇒-object"><span>post<wbr/>Processing.lut([options]) ⇒ object</span></a></li>
+<li><a href="#postprocessingcolorcorrectionoptions-⇒-object"><span>post<wbr/>Processing.color<wbr/>Correction([options]) ⇒ object</span></a></li>
+<li><a href="#postprocessingfilmgrainoptions-⇒-object"><span>post<wbr/>Processing.film<wbr/>Grain([options]) ⇒ object</span></a></li></ul></li>
+<li><a href="#componentsreflectionprobeoptions-⇒-object"><span>components.reflection<wbr/>Probe([options]) ⇒ object</span></a></li>
+<li><a href="#componentsskeletonhelperoptions-⇒-object"><span>components.skeleton<wbr/>Helper([options]) ⇒ object</span></a></li>
+<li><a href="#componentsskinoptions-⇒-object"><span>components.skin([options]) ⇒ object</span></a></li>
+<li><a href="#componentsskyboxoptions-⇒-object"><span>components.skybox([options]) ⇒ object</span></a></li>
+<li><a href="#componentsspotlightoptions-⇒-object"><span>components.spot<wbr/>Light([options]) ⇒ object</span></a></li>
+<li><a href="#componentstransformoptions-⇒-object"><span>components.transform([options]) ⇒ object</span></a></li>
+<li><a href="#componentsvertexhelperoptions-⇒-object"><span>components.vertex<wbr/>Helper([options]) ⇒ object</span></a></li></ul></li>
+<li><a href="#systems"><span>systems</span></a></li>
+<li>
+<ul>
+<li><a href="#systemsrenderer-renderer"><span>systems.renderer : renderer</span></a></li>
+<li><a href="#systemsanimation-⇒-system"><span>systems.animation() ⇒ <wbr/>System</span></a></li>
+<li><a href="#systemscamera-⇒-system"><span>systems.camera() ⇒ <wbr/>System</span></a></li>
+<li><a href="#systemsgeometryoptions-⇒-system"><span>systems.geometry(options) ⇒ <wbr/>System</span></a></li>
+<li><a href="#systemshelper-⇒-system"><span>systems.helper() ⇒ <wbr/>System</span></a></li>
+<li><a href="#systemslayer-⇒-system"><span>systems.layer() ⇒ <wbr/>System</span></a></li>
+<li><a href="#systemslight-⇒-system"><span>systems.light() ⇒ <wbr/>System</span></a></li>
+<li><a href="#systemsmorph-⇒-system"><span>systems.morph() ⇒ <wbr/>System</span></a></li>
+<li><a href="#systemsreflectionprobeoptions-⇒-system"><span>systems.reflection<wbr/>Probe(options) ⇒ <wbr/>System</span></a></li>
+<li><a href="#systemsskin-⇒-system"><span>systems.skin() ⇒ <wbr/>System</span></a></li>
+<li><a href="#systemsskyboxoptions-⇒-system"><span>systems.skybox(options) ⇒ <wbr/>System</span></a></li>
+<li><a href="#systemstransform-⇒-system"><span>systems.transform() ⇒ <wbr/>System</span></a></li>
+<li><a href="#systemsrenderpipelineoptions-⇒-system"><span>systems.render<wbr/>Pipeline(options) ⇒ <wbr/>System</span></a></li></ul></li>
+<li><a href="#renderer"><span>renderer</span></a></li>
+<li>
+<ul>
+<li><a href="#rendererbase-⇒-renderersystem"><span>renderer.base() ⇒ <wbr/>Renderer<wbr/>System</span></a></li>
+<li><a href="#rendererbasicoptions-⇒-renderersystem"><span>renderer.basic(options) ⇒ <wbr/>Renderer<wbr/>System</span></a></li>
+<li><a href="#rendererlineoptions-⇒-renderersystem"><span>renderer.line(options) ⇒ <wbr/>Renderer<wbr/>System</span></a></li>
+<li><a href="#rendererskyboxoptions-⇒-renderersystem"><span>renderer.skybox(options) ⇒ <wbr/>Renderer<wbr/>System</span></a></li>
+<li><a href="#rendererstandardoptions-⇒-renderersystem"><span>renderer.standard(options) ⇒ <wbr/>Renderer<wbr/>System</span></a></li></ul></li>
+<li><a href="#entity-object"><span>Entity : object</span></a></li>
+<li><a href="#ambientlightcomponentoptions-object"><span>Ambient<wbr/>Light<wbr/>Component<wbr/>Options : object</span></a></li>
+<li><a href="#animationcomponentoptions-object"><span>Animation<wbr/>Component<wbr/>Options : object</span></a></li>
+<li><a href="#arealightcomponentoptions-object"><span>Area<wbr/>Light<wbr/>Component<wbr/>Options : object</span></a></li>
+<li><a href="#axeshelpercomponentoptions-object"><span>Axes<wbr/>Helper<wbr/>Component<wbr/>Options : object</span></a></li>
+<li><a href="#boundingboxhelpercomponentoptions-object"><span>Bounding<wbr/>Box<wbr/>Helper<wbr/>Component<wbr/>Options : object</span></a></li>
+<li><a href="#skeletonhelpercomponentoptions-object"><span>Skeleton<wbr/>Helper<wbr/>Component<wbr/>Options : object</span></a></li>
+<li><a href="#camerahelpercomponentoptions-object"><span>Camera<wbr/>Helper<wbr/>Component<wbr/>Options : object</span></a></li>
+<li><a href="#cameraview-object"><span>Camera<wbr/>View : object</span></a></li>
+<li><a href="#cameracomponentoptions-object"><span>Camera<wbr/>Component<wbr/>Options : object</span></a></li>
+<li><a href="#directionallightcomponentoptions-object"><span>Directional<wbr/>Light<wbr/>Component<wbr/>Options : object</span></a></li>
+<li><a href="#geometrycomponentoptions-object"><span>Geometry<wbr/>Component<wbr/>Options : object</span></a></li>
+<li><a href="#gridhelpercomponentoptions-object"><span>Grid<wbr/>Helper<wbr/>Component<wbr/>Options : object</span></a></li>
+<li><a href="#lighthelpercomponentoptions-object"><span>Light<wbr/>Helper<wbr/>Component<wbr/>Options : object</span></a></li>
+<li><a href="#texturetransform-object"><span>Texture<wbr/>Transform : object</span></a></li>
+<li><a href="#materialcomponentoptions-object"><span>Material<wbr/>Component<wbr/>Options : object</span></a></li>
+<li><a href="#linematerialcomponentoptions-object"><span>Line<wbr/>Material<wbr/>Component<wbr/>Options : object</span></a></li>
+<li><a href="#morphcomponentoptions-object"><span>Morph<wbr/>Component<wbr/>Options : object</span></a></li>
+<li><a href="#orbitercomponentoptions-object"><span>Orbiter<wbr/>Component<wbr/>Options : object</span></a></li>
+<li><a href="#pointlightcomponentoptions-object"><span>Point<wbr/>Light<wbr/>Component<wbr/>Options : object</span></a></li>
+<li><a href="#ssaocomponentoptions-object"><span>SSAO<wbr/>Component<wbr/>Options : object</span></a></li>
+<li><a href="#dofcomponentoptions-object"><span>Do<wbr/>F<wbr/>Component<wbr/>Options : object</span></a></li>
+<li><a href="#msaacomponentoptions-object"><span>MSAA<wbr/>Component<wbr/>Options : object</span></a></li>
+<li><a href="#fxaacomponentoptions-object"><span>FXAA<wbr/>Component<wbr/>Options : object</span></a></li>
+<li><a href="#smaacomponentoptions-object"><span>SMAA<wbr/>Component<wbr/>Options : object</span></a></li>
+<li><a href="#fogcomponentoptions-object"><span>Fog<wbr/>Component<wbr/>Options : object</span></a></li>
+<li><a href="#bloomcomponentoptions-object"><span>Bloom<wbr/>Component<wbr/>Options : object</span></a></li>
+<li><a href="#lutcomponentoptions-object"><span>Lut<wbr/>Component<wbr/>Options : object</span></a></li>
+<li><a href="#colorcorrectioncomponentoptions-object"><span>Color<wbr/>Correction<wbr/>Component<wbr/>Options : object</span></a></li>
+<li><a href="#vignettecomponentoptions-object"><span>Vignette<wbr/>Component<wbr/>Options : object</span></a></li>
+<li><a href="#filmgraincomponentoptions-object"><span>Film<wbr/>Grain<wbr/>Component<wbr/>Options : object</span></a></li>
+<li><a href="#postprocessingcomponentoptions-object"><span>Post<wbr/>Processing<wbr/>Component<wbr/>Options : object</span></a></li>
+<li><a href="#reflectionprobecomponentoptions-object"><span>Reflection<wbr/>Probe<wbr/>Component<wbr/>Options : object</span></a></li>
+<li><a href="#skincomponentoptions-object"><span>Skin<wbr/>Component<wbr/>Options : object</span></a></li>
+<li><a href="#skyboxcomponentoptions-object"><span>Skybox<wbr/>Component<wbr/>Options : object</span></a></li>
+<li><a href="#spotlightcomponentoptions-object"><span>Spot<wbr/>Light<wbr/>Component<wbr/>Options : object</span></a></li>
+<li><a href="#transformcomponentoptions-object"><span>Transform<wbr/>Component<wbr/>Options : object</span></a></li>
+<li><a href="#vertexhelpercomponentoptions-object"><span>Vertex<wbr/>Helper<wbr/>Component<wbr/>Options : object</span></a></li>
+<li><a href="#systemoptions-object"><span>System<wbr/>Options : object</span></a></li>
+<li><a href="#systemupdate-function"><span>System<wbr/>Update : function</span></a></li>
+<li><a href="#systemdispose-function"><span>System<wbr/>Dispose : function</span></a></li>
+<li><a href="#system-object"><span>System : object</span></a></li>
+<li><a href="#renderengineoptions"><span>Render<wbr/>Engine<wbr/>Options</span></a></li>
+<li><a href="#renderenginerender-function"><span>Render<wbr/>Engine<wbr/>Render : function</span></a></li>
+<li><a href="#renderenginedebug-function"><span>Render<wbr/>Engine<wbr/>Debug : function</span></a></li>
+<li><a href="#renderengine-system"><span>Render<wbr/>Engine : <wbr/>System</span></a></li>
+<li><a href="#renderersystemrender-function"><span>Renderer<wbr/>System<wbr/>Render : function</span></a></li>
+<li><a href="#renderersystemstageoptions-object"><span>Renderer<wbr/>System<wbr/>Stage<wbr/>Options : object</span></a></li>
+<li><a href="#renderersystemstage-function"><span>Renderer<wbr/>System<wbr/>Stage : function</span></a></li>
+<li><a href="#renderersystem-object"><span>Renderer<wbr/>System : object</span></a></li>
+<li><a href="#worldadd-function"><span>World<wbr/>Add : function</span></a></li>
+<li><a href="#worldaddsystem-function"><span>World<wbr/>Add<wbr/>System : function</span></a></li>
+<li><a href="#worldupdate-function"><span>World<wbr/>Update : function</span></a></li>
+<li><a href="#world-object"><span>World : object</span></a></li>
+<li><a href="#rendergraph-object"><span>Render<wbr/>Graph : object</span></a></li>
+<li><a href="#resourcecacheusage-transient--retained"><span>Resource<wbr/>Cache<wbr/>Usage : &quot;<wbr/>Transient&quot; | &quot;<wbr/>Retained&quot;</span></a></li>
+<li><a href="#resourcecache-object"><span>Resource<wbr/>Cache : object</span></a></li>
+<li><a href="#renderview-object"><span>Render<wbr/>View : object</span></a></li>
+<li><a href="#license"><span>License</span></a></li></ul></div></details></div>
+<div class="site-menu">
+<nav class="tsd-navigation"><a href="modules.html">pex-renderer</a>
+<ul class="tsd-small-nested-navigation" id="tsd-nav-container">
+<li>Loading...</li></ul></nav></div></div></div><footer>
+<p class="tsd-generator">Generated using <a href="https://typedoc.org/" target="_blank">TypeDoc</a></p></footer>
+<div class="overlay"></div><script>
+          try {
+            const generateLinkElement = document.querySelector(".tsd-generator a");
+            const link = document.createElement("a");
+            Object.assign(link, {
+              href: "https://github.com/dmnsgn/typedoc-material-theme",
+              target: "_blank",
+              rel: "noreferrer",
+              innerText: "typedoc-material-theme."
+            });
+            generateLinkElement.insertAdjacentElement("afterend", link);
+            generateLinkElement.insertAdjacentText("afterend", " with ");
+          } catch (error) {
+
+          }
+        </script></body></html>

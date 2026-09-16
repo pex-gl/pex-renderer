@@ -29,7 +29,7 @@ import type {
 type Vec3Elements = [number, number, number];
 
 /**
- * geom-builder's arrays, named after the attributes it was created with, plus
+ * Geom-builder's arrays, named after the attributes it was created with, plus
  * the flag the geometry system re-uploads on.
  */
 type HelperGeometry = GeomBuilder &

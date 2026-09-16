@@ -7,10 +7,10 @@ import { vertexOutputStruct } from "../wgsl.js";
 // (vec2, clip-space fullscreen triangle corners).
 
 /**
- * Uniforms the registry writes for every sub-pass. Bound at
- * `@group(0)` `@binding(0)` in every post-processing shader, whether or not
- * the fragment stage reads it: the vertex stage needs `sourceTexelSize` for
- * its neighbour taps.
+ * Uniforms the registry writes for every sub-pass. Bound at `@group(0)`
+ * `@binding(0)` in every post-processing shader, whether or not the fragment
+ * stage reads it: the vertex stage needs `sourceTexelSize` for its neighbour
+ * taps.
  *
  * `texelSize` is the pass's own raster grid; `sourceTexelSize` is the grid of
  * the texture it samples. The two differ only where a pass scales — bloom's
