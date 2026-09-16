@@ -1,18 +1,27 @@
 import { resolveTexture } from "../texture.js";
 
 import type { GpuContext } from "../../../types.js";
+import type * as GLTF from "types-gltf";
+import type { KHR_materials_transmission } from "types-gltf/extensions";
+import type { ResolvedGltf, ResolvedMaterial } from "../types.js";
+
+type Transmission = Pick<
+  ResolvedMaterial,
+  "transmissionFactor" | "transmissionTexture"
+>;
 
 /** https://github.com/KhronosGroup/glTF/tree/main/extensions/2.0/Khronos/KHR_materials_transmission */
 export function resolveTransmission(
-  material: any,
-  gltf: any,
+  material: GLTF.Material,
+  gltf: ResolvedGltf,
   ctx: GpuContext,
   samplerCache: Map<number, GPUSampler>,
-): Record<string, any> | null {
-  const ext = material.extensions?.KHR_materials_transmission;
+): Transmission | null {
+  const ext = material.extensions?.KHR_materials_transmission as
+    KHR_materials_transmission.Material | undefined;
   if (!ext) return null;
 
-  const result: Record<string, any> = {
+  const result: Transmission = {
     transmissionFactor: ext.transmissionFactor ?? 0,
   };
   if (ext.transmissionTexture) {

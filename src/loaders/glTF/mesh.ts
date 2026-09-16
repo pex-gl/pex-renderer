@@ -15,6 +15,15 @@ import {
 import { resolveMaterial } from "./material.js";
 
 import type { GpuContext } from "../../types.js";
+import type * as GLTF from "types-gltf";
+import type {
+  ResolvedGeometry,
+  ResolvedGltf,
+  ResolvedMaterial,
+  ResolvedMorphTargets,
+  ResolvedPrimitive,
+  TypedArray,
+} from "./types.js";
 
 /**
  * Resolves a primitive/instancing attributes map into GPU-backed descriptors
@@ -26,15 +35,15 @@ import type { GpuContext } from "../../types.js";
  */
 export function resolveAttributes(
   attributesMap: Record<string, number>,
-  gltf: { bufferViews: any[]; accessors: any[] },
+  gltf: ResolvedGltf,
   ctx: GpuContext,
-): Record<string, any> {
-  const attributes: Record<string, any> = {};
+): ResolvedGeometry {
+  const attributes: ResolvedGeometry = {};
 
   for (const name in attributesMap) {
     const accessor = getAccessor(
-      gltf.accessors[attributesMap[name]!],
-      gltf.bufferViews,
+      gltf.accessors![attributesMap[name]!]!,
+      gltf.bufferViews!,
     );
 
     // The conversions below rewrite values CPU-side and compose: an accessor
@@ -43,7 +52,7 @@ export function resolveAttributes(
     // the accessor's own tightly-packed copy. Setting `data` opts the
     // attribute out of the shared-bufferView buffer below, since the rewritten
     // values live only in the new array.
-    let data;
+    let data: TypedArray | undefined;
 
     // Sparse accessors: getAccessor substitutes the sparse values into _data,
     // which is the only place they exist.
@@ -104,13 +113,13 @@ export function resolveAttributes(
 /** Resolves a primitive's indices accessor into a raw typed array + count. */
 export function resolveIndices(
   indicesAccessorIndex: number | undefined,
-  gltf: { bufferViews: any[]; accessors: any[] },
-): { indices: any; count: number } | null {
+  gltf: ResolvedGltf,
+): { indices: TypedArray; count: number } | null {
   if (indicesAccessorIndex === undefined) return null;
 
   const accessor = getAccessor(
-    gltf.accessors[indicesAccessorIndex],
-    gltf.bufferViews,
+    gltf.accessors![indicesAccessorIndex]!,
+    gltf.bufferViews!,
   );
   return { indices: accessor._data, count: accessor.count };
 }
@@ -120,7 +129,7 @@ export function resolveIndices(
  * quantization-scaled.
  */
 export function resolvePositionBounds(
-  positionAccessor: any,
+  positionAccessor: GLTF.Accessor | undefined,
 ): number[][] | undefined {
   if (!positionAccessor?.min || !positionAccessor?.max) return undefined;
 
@@ -164,7 +173,7 @@ const GLTF_MODE_TOPOLOGY: Record<number, GPUPrimitiveTopology> = {
  */
 function resolveTopology(
   mode: number,
-  geometry: Record<string, any>,
+  geometry: ResolvedGeometry,
 ): GPUPrimitiveTopology {
   if (
     mode !== GLTF_PRIMITIVE_MODE.LINE_LOOP &&
@@ -176,7 +185,7 @@ function resolveTopology(
   const existingIndices: ArrayLike<number> | undefined = geometry.indices;
   const indexCount: number = existingIndices
     ? existingIndices.length
-    : geometry.count;
+    : (geometry.count ?? 0);
   const indexAt = (i: number): number =>
     existingIndices ? existingIndices[i]! : i;
 
@@ -212,20 +221,20 @@ function resolveTopology(
  * https://github.com/KhronosGroup/glTF/blob/main/specification/2.0/schema/mesh.primitive.schema.json
  */
 export async function resolvePrimitiveGeometry(
-  primitive: any,
-  gltf: { bufferViews: any[]; accessors: any[] },
+  primitive: GLTF.MeshPrimitive,
+  gltf: ResolvedGltf,
   ctx: GpuContext,
-  instancedAttributes: Record<string, any>,
+  instancedAttributes: ResolvedGeometry,
   options: DracoOptions,
-): Promise<Record<string, any>> {
-  let geometry: Record<string, any> = {};
+): Promise<ResolvedGeometry> {
+  let geometry: ResolvedGeometry = {};
 
   // The loader must process KHR_draco_mesh_compression first: the decoded
   // attributes replace their accessor-resolved equivalents below.
   const draco = await resolveDracoPrimitive(
     primitive,
-    gltf.bufferViews,
-    gltf.accessors,
+    gltf.bufferViews!,
+    gltf.accessors!,
     options,
   );
   if (draco) geometry = draco;
@@ -240,14 +249,14 @@ export async function resolvePrimitiveGeometry(
     instancedAttributes,
   );
 
-  const positionAccessor = gltf.accessors[primitive.attributes.POSITION];
+  const positionAccessor = gltf.accessors![primitive.attributes.POSITION!];
   const bounds = resolvePositionBounds(positionAccessor);
   if (bounds) geometry.bounds = bounds;
 
   if (!geometry.indices && primitive.indices !== undefined) {
     Object.assign(geometry, resolveIndices(primitive.indices, gltf));
   } else if (!geometry.indices && positionAccessor) {
-    geometry.count = getAccessor(positionAccessor, gltf.bufferViews).count;
+    geometry.count = getAccessor(positionAccessor, gltf.bufferViews!).count;
   }
 
   // Default mode is TRIANGLES (4) when omitted, per spec.
@@ -264,27 +273,23 @@ export async function resolvePrimitiveGeometry(
  * sources/targets keyed by attribute semantic.
  */
 export function resolvePrimitiveMorphTargets(
-  primitive: any,
-  geometry: Record<string, any>,
-  gltf: { bufferViews: any[]; accessors: any[] },
+  primitive: GLTF.MeshPrimitive,
+  geometry: ResolvedGeometry,
+  gltf: ResolvedGltf,
   weights: number[],
-): {
-  sources: Record<string, any>;
-  targets: Record<string, any[]>;
-  weights: number[];
-} | null {
+): ResolvedMorphTargets | null {
   if (!primitive.targets) return null;
 
-  const sources: Record<string, any> = {};
-  const targets: Record<string, any[]> = {};
+  const sources: ResolvedMorphTargets["sources"] = {};
+  const targets: ResolvedMorphTargets["targets"] = {};
 
   for (const target of primitive.targets) {
     for (const targetKey in target) {
       targets[targetKey] ??= [];
 
       const accessor = getAccessor(
-        gltf.accessors[target[targetKey]],
-        gltf.bufferViews,
+        gltf.accessors![target[targetKey]!]!,
+        gltf.bufferViews!,
       );
       targets[targetKey]!.push(
         accessor.normalized ? normalizeData(accessor._data) : accessor._data,
@@ -293,17 +298,20 @@ export function resolvePrimitiveMorphTargets(
       if (!sources[targetKey]) {
         const sourceAccessorIndex = primitive.attributes[targetKey];
         const sourceAccessor =
-          sourceAccessorIndex !== undefined &&
-          gltf.accessors[sourceAccessorIndex];
+          sourceAccessorIndex === undefined
+            ? undefined
+            : gltf.accessors![sourceAccessorIndex];
 
         if (sourceAccessor?._bufferView) {
-          const resolved = getAccessor(sourceAccessor, gltf.bufferViews);
+          const resolved = getAccessor(sourceAccessor, gltf.bufferViews!);
           sources[targetKey] = resolved.normalized
             ? normalizeData(resolved._data)
             : resolved._data;
         } else {
           // Draco-decoded primitives have no source accessor bufferView.
-          sources[targetKey] = geometry[targetKey]?.data ?? geometry[targetKey];
+          const attribute = geometry[targetKey] as
+            { data?: TypedArray } | undefined;
+          sources[targetKey] = attribute?.data ?? attribute;
         }
       }
     }
@@ -318,19 +326,13 @@ export function resolvePrimitiveMorphTargets(
  * https://github.com/KhronosGroup/glTF/blob/main/specification/2.0/schema/mesh.schema.json
  */
 export async function resolveMesh(
-  mesh: { primitives: any[]; weights?: number[] },
-  instancedAttributes: Record<string, any>,
-  gltf: any,
+  mesh: GLTF.Mesh,
+  instancedAttributes: ResolvedGeometry,
+  gltf: ResolvedGltf,
   ctx: GpuContext,
   samplerCache: Map<number, GPUSampler>,
   options: DracoOptions,
-): Promise<
-  {
-    geometry: Record<string, any>;
-    material: Record<string, any>;
-    morph: ReturnType<typeof resolvePrimitiveMorphTargets>;
-  }[]
-> {
+): Promise<ResolvedPrimitive[]> {
   return Promise.all(
     mesh.primitives.map(async (primitive) => {
       const geometry = await resolvePrimitiveGeometry(
@@ -346,11 +348,11 @@ export async function resolveMesh(
         gltf,
         mesh.weights ?? [],
       );
-      const material =
+      const material: ResolvedMaterial | Record<string, never> =
         primitive.material === undefined
           ? {}
           : resolveMaterial(
-              gltf.materials[primitive.material],
+              gltf.materials![primitive.material]!,
               gltf,
               ctx,
               samplerCache,

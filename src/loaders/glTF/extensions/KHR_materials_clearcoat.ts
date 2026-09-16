@@ -1,18 +1,32 @@
 import { resolveTexture } from "../texture.js";
 
 import type { GpuContext } from "../../../types.js";
+import type * as GLTF from "types-gltf";
+import type { KHR_materials_clearcoat } from "types-gltf/extensions";
+import type { ResolvedGltf, ResolvedMaterial } from "../types.js";
+
+type Clearcoat = Pick<
+  ResolvedMaterial,
+  | "clearcoatFactor"
+  | "clearcoatRoughnessFactor"
+  | "clearcoatTexture"
+  | "clearcoatRoughnessTexture"
+  | "clearcoatNormalTexture"
+  | "clearcoatNormalTextureScale"
+>;
 
 /** https://github.com/KhronosGroup/glTF/tree/main/extensions/2.0/Khronos/KHR_materials_clearcoat#clearcoat */
 export function resolveClearcoat(
-  material: any,
-  gltf: any,
+  material: GLTF.Material,
+  gltf: ResolvedGltf,
   ctx: GpuContext,
   samplerCache: Map<number, GPUSampler>,
-): Record<string, any> | null {
-  const ext = material.extensions?.KHR_materials_clearcoat;
+): Clearcoat | null {
+  const ext = material.extensions?.KHR_materials_clearcoat as
+    KHR_materials_clearcoat.Material | undefined;
   if (!ext) return null;
 
-  const result: Record<string, any> = {
+  const result: Clearcoat = {
     clearcoatFactor: ext.clearcoatFactor ?? 0,
     clearcoatRoughnessFactor: ext.clearcoatRoughnessFactor ?? 0,
   };

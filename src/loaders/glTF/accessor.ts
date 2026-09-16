@@ -4,20 +4,30 @@ import {
   GLTF_ACCESSOR_COMPONENT_TYPE_SIZE,
 } from "./common.js";
 
+import type * as GLTF from "types-gltf";
+import type { ResolvedAccessor, ResolvedBufferView } from "./types.js";
+
 /**
  * Resolves a glTF accessor's data into a typed array (`accessor._data`),
  * caching the result on the accessor object. Handles bufferView byteStride
  * mismatches and sparse accessors.
  * https://github.com/KhronosGroup/glTF/blob/main/specification/2.0/schema/accessor.schema.json
  */
-export function getAccessor(accessor: any, bufferViews: any[]): any {
+export function getAccessor(
+  source: GLTF.Accessor,
+  bufferViews: ResolvedBufferView[],
+): ResolvedAccessor {
+  // This function is what makes an accessor resolved: everything downstream
+  // reads `_data` off it, so the cast marks that transition rather than
+  // spreading optional-`_data` checks across every consumer.
+  const accessor = source as ResolvedAccessor;
   if (accessor._data) return accessor;
 
   const numberOfComponents =
     GLTF_ACCESSOR_TYPE_COMPONENTS_NUMBER[accessor.type]!;
   if (accessor.byteOffset === undefined) accessor.byteOffset = 0;
 
-  accessor._bufferView = bufferViews[accessor.bufferView];
+  accessor._bufferView = bufferViews[accessor.bufferView!]!;
 
   const TypedArrayConstructor =
     WEBGL_TYPED_ARRAY_BY_COMPONENT_TYPES[accessor.componentType]!;
@@ -60,13 +70,13 @@ export function getAccessor(accessor: any, bufferViews: any[]): any {
       ]!;
 
     const sparseIndices = new TypedArrayIndicesConstructor(
-      bufferViews[accessor.sparse.indices.bufferView]._data,
+      bufferViews[accessor.sparse.indices.bufferView]!._data,
       accessor.sparse.indices.byteOffset || 0,
       accessor.sparse.count,
     );
 
     const sparseValues = new TypedArrayConstructor(
-      bufferViews[accessor.sparse.values.bufferView]._data,
+      bufferViews[accessor.sparse.values.bufferView]!._data,
       accessor.sparse.values.byteOffset || 0,
       accessor.sparse.count * numberOfComponents,
     );
@@ -87,7 +97,7 @@ export function getAccessor(accessor: any, bufferViews: any[]): any {
         componentIndex < numberOfComponents;
         componentIndex++
       ) {
-        accessor._data[dataIndex++] = sparseValues[valuesIndex++];
+        accessor._data[dataIndex++] = sparseValues[valuesIndex++]!;
       }
     }
   }

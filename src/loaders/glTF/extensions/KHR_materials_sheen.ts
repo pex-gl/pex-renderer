@@ -1,18 +1,30 @@
 import { resolveTexture } from "../texture.js";
 
 import type { GpuContext } from "../../../types.js";
+import type * as GLTF from "types-gltf";
+import type { KHR_materials_sheen } from "types-gltf/extensions";
+import type { ResolvedGltf, ResolvedMaterial } from "../types.js";
+
+type Sheen = Pick<
+  ResolvedMaterial,
+  | "sheenColorFactor"
+  | "sheenRoughnessFactor"
+  | "sheenColorTexture"
+  | "sheenRoughnessTexture"
+>;
 
 /** https://github.com/KhronosGroup/glTF/tree/main/extensions/2.0/Khronos/KHR_materials_sheen#sheen */
 export function resolveSheen(
-  material: any,
-  gltf: any,
+  material: GLTF.Material,
+  gltf: ResolvedGltf,
   ctx: GpuContext,
   samplerCache: Map<number, GPUSampler>,
-): Record<string, any> | null {
-  const ext = material.extensions?.KHR_materials_sheen;
+): Sheen | null {
+  const ext = material.extensions?.KHR_materials_sheen as
+    KHR_materials_sheen.Material | undefined;
   if (!ext) return null;
 
-  const result: Record<string, any> = {
+  const result: Sheen = {
     sheenColorFactor: ext.sheenColorFactor ?? [0, 0, 0],
     sheenRoughnessFactor: ext.sheenRoughnessFactor ?? 0,
   };

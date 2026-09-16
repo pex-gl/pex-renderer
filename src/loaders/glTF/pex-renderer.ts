@@ -1,4 +1,6 @@
 import { mat4 } from "pex-math";
+
+import type { Mat4 } from "pex-math";
 import { fromLinear } from "pex-color";
 
 import { components, entity as createEntity, systems } from "../../index.js";
@@ -10,7 +12,18 @@ import {
 } from "../../utils.js";
 
 import type { GltfDocument, ResolvedGltfNode } from "./document.js";
-import type { Entity } from "../../types.js";
+import type {
+  ResolvedGeometry,
+  ResolvedLight,
+  ResolvedMaterial,
+} from "./types.js";
+import type {
+  Entity,
+  GeometryComponentOptions,
+  MaterialComponentOptions,
+  SkinComponentOptions,
+  TransformComponentOptions,
+} from "../../types.js";
 
 // glTF attribute semantic -> pex geometry component field.
 const PEX_ATTRIBUTE_NAME_MAP: Record<string, string> = {
@@ -39,8 +52,10 @@ function mapAttributeName(name: string): string {
   return PEX_ATTRIBUTE_NAME_MAP[name] ?? name.toLowerCase();
 }
 
-function mapGeometry(geometry: Record<string, any>): Record<string, any> {
-  const result: Record<string, any> = {};
+function mapGeometry(geometry: ResolvedGeometry): GeometryComponentOptions {
+  // Keys are remapped from glTF semantics at run time, so the bag is built
+  // untyped and asserted once, here at the boundary.
+  const result: Record<string, unknown> = {};
 
   for (const key in geometry) {
     if (key === "indices") {
@@ -54,7 +69,8 @@ function mapGeometry(geometry: Record<string, any>): Record<string, any> {
       // EXT_mesh_gpu_instancing both spell with a leading underscore. Keyed by
       // the WGSL vertex input a material hook declares to read it — so `_COLOR`
       // lands on the instanced `color` input the renderers already know.
-      (result.attributes ??= {})[key.slice(1).toLowerCase()] = geometry[key];
+      const attributes = (result.attributes ??= {}) as Record<string, unknown>;
+      attributes[key.slice(1).toLowerCase()] = geometry[key];
     } else {
       // A spec semantic we do not implement: the second UV set is the last one
       // the shaders declare, and one joints/weights set the last skin influence.
@@ -93,8 +109,11 @@ const MATERIAL_CONSUMED = new Set([
   "alphaMode",
 ]);
 
-function mapMaterial(material: Record<string, any>): Record<string, any> {
-  const result: Record<string, any> = {
+function mapMaterial(
+  material: ResolvedMaterial | Record<string, never>,
+): MaterialComponentOptions {
+  // Same as mapGeometry: glTF field names are rewritten at run time.
+  const result: Record<string, unknown> = {
     name: material.name,
     unlit: material.unlit || undefined,
     cullMode: material.doubleSided ? "none" : "back",
@@ -104,22 +123,24 @@ function mapMaterial(material: Record<string, any>): Record<string, any> {
 
   for (const key in material) {
     if (MATERIAL_CONSUMED.has(key)) continue;
-    const value = material[key];
+    const value = (material as Record<string, unknown>)[key];
     if (value === undefined) continue;
     const toSrgb = SRGB_MATERIAL_FACTORS[key];
-    result[key.replace(/Factor$/, "")] = toSrgb ? toSrgb(value) : value;
+    result[key.replace(/Factor$/, "")] = toSrgb
+      ? toSrgb(value as number[])
+      : value;
   }
 
   // depthWriteEnabled follows from blend in the renderers, as the spec requires.
   if (material.alphaMode === "BLEND") result.blend = "normal";
 
-  return result;
+  return result as MaterialComponentOptions;
 }
 
 // KHR_lights_punctual measures directional lights in lux, which is
 // pex-renderer's unit too, but point and spot lights in candela, where
 // pex-renderer authors luminous power. This is the only place candela exists.
-function buildLightComponent(light: Record<string, any>) {
+function buildLightComponent(light: ResolvedLight) {
   const common = {
     // Same sRGB convention as material factors: the shader decodes the light
     // colour, and glTF authors it linear.
@@ -146,12 +167,12 @@ function buildLightComponent(light: Record<string, any>) {
         // cone, so the beam is focused by definition.
         intensity: spotIntensityToPower(
           light.intensity,
-          light.outerConeAngle,
+          light.outerConeAngle!,
           true,
         ),
         focusedSpot: true,
-        innerConeAngle: light.innerConeAngle,
-        outerConeAngle: light.outerConeAngle,
+        innerConeAngle: light.innerConeAngle!,
+        outerConeAngle: light.outerConeAngle!,
       });
     default:
       throw new Error(`Unexpected light type: ${light.type}`);
@@ -166,14 +187,14 @@ interface BuildContext {
 function buildNode(
   nodeIndex: number,
   ctx: BuildContext,
-  parentTransform: any,
+  parentTransform: TransformComponentOptions | undefined,
   sceneEntities: Entity[],
 ): Entity[] {
   const cached = ctx.nodeEntities.get(nodeIndex);
   if (cached) return cached;
 
   const node = ctx.document.nodes[nodeIndex]!;
-  const entityComponents: Record<string, any> = {
+  const entityComponents: Record<string, unknown> = {
     transform: components.transform({
       ...node.transform,
       parent: parentTransform,
@@ -191,7 +212,7 @@ function buildNode(
   nodeEntity.name = node.name || `node_${nodeIndex}`;
   sceneEntities.push(nodeEntity);
 
-  const skinComponent: Record<string, any> | null = node.skin
+  const skinComponent: SkinComponentOptions | null = node.skin
     ? components.skin({})
     : null;
 
@@ -200,7 +221,7 @@ function buildNode(
   if (node.primitives) {
     const primitiveComponents = node.primitives.map(
       ({ geometry, material, morph }) => {
-        const entityProps: Record<string, any> = {
+        const entityProps: Record<string, unknown> = {
           geometry: components.geometry(mapGeometry(geometry)),
           material: components.material(mapMaterial(material)),
         };
@@ -251,13 +272,15 @@ function resolveSkins(ctx: BuildContext): void {
     if (!node.skin) return;
 
     const entities = ctx.nodeEntities.get(nodeIndex);
-    const skinComponent: any = entities?.find((e) => e.skin)?.skin;
+    const skinComponent = entities?.find((e) => e.skin)?.skin;
     if (!skinComponent) return;
 
     const joints = node.skin.jointNodeIndices.map(
       (jointNodeIndex) => ctx.nodeEntities.get(jointNodeIndex)![0]!,
     );
-    skinComponent.inverseBindMatrices = node.skin.inverseBindMatrices;
+    // Float32Array reads as a Mat4 everywhere the skin system touches it.
+    skinComponent.inverseBindMatrices = node.skin
+      .inverseBindMatrices as unknown as Mat4[];
     skinComponent.joints = joints;
     skinComponent.jointMatrices = joints.map(() => mat4.create());
   });

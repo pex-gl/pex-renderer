@@ -51,7 +51,8 @@
     "pex-math": "^4.4.0",
     "pex-random": "^2.1.2",
     "pex-shaders": "file:../pex-shaders",
-    "typed-array-interleave": "^2.0.1"
+    "typed-array-interleave": "^2.0.1",
+    "types-gltf": "^1.0.0"
   },
   "devDependencies": {
     "@hpcc-js/wasm-graphviz": "^1.28.0",

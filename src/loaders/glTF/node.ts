@@ -1,5 +1,7 @@
 import { mat4, quat } from "pex-math";
 
+import type * as GLTF from "types-gltf";
+
 export interface ResolvedNodeTransform {
   position: number[];
   rotation: number[];
@@ -11,18 +13,19 @@ export interface ResolvedNodeTransform {
  * present.
  * https://github.com/KhronosGroup/glTF/blob/main/specification/2.0/schema/node.schema.json
  */
-export function resolveNodeTransform(node: any): ResolvedNodeTransform {
+export function resolveNodeTransform(node: GLTF.Node): ResolvedNodeTransform {
   if (node.matrix) {
     const mn = mat4.create();
+    const matrix = node.matrix;
     const scale = [
-      Math.hypot(node.matrix[0], node.matrix[1], node.matrix[2]),
-      Math.hypot(node.matrix[4], node.matrix[5], node.matrix[6]),
-      Math.hypot(node.matrix[8], node.matrix[9], node.matrix[10]),
+      Math.hypot(matrix[0], matrix[1], matrix[2]),
+      Math.hypot(matrix[4], matrix[5], matrix[6]),
+      Math.hypot(matrix[8], matrix[9], matrix[10]),
     ];
     for (const col of [0, 1, 2]) {
-      mn[col] = node.matrix[col] / scale[0]!;
-      mn[col + 4] = node.matrix[col + 4] / scale[1]!;
-      mn[col + 8] = node.matrix[col + 8] / scale[2]!;
+      mn[col] = matrix[col]! / scale[0]!;
+      mn[col + 4] = matrix[col + 4]! / scale[1]!;
+      mn[col + 8] = matrix[col + 8]! / scale[2]!;
     }
 
     return {

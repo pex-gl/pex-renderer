@@ -1,5 +1,7 @@
 import { MAGIC, CHUNK_TYPE } from "./common.js";
 
+import type { ResolvedGltf } from "./types.js";
+
 function uint8ArrayToArrayBuffer({
   buffer,
   byteOffset,
@@ -109,7 +111,7 @@ function unpackBinary(data: ArrayBuffer): {
  * json, bin }.
  */
 export function loadData(data: ArrayBuffer | object): {
-  json: any;
+  json: ResolvedGltf;
   bin?: ArrayBuffer | undefined;
 } {
   if (data instanceof ArrayBuffer) {
@@ -120,7 +122,7 @@ export function loadData(data: ArrayBuffer | object): {
     };
   }
 
-  return { json: data };
+  return { json: data as ResolvedGltf };
 }
 
 export function isBase64(uri: string): boolean {

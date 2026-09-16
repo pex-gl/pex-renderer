@@ -4,6 +4,9 @@ import {
   normalizeData,
 } from "./common.js";
 
+import type * as GLTF from "types-gltf";
+import type { ResolvedGltf } from "./types.js";
+
 export interface ResolvedAnimationChannel {
   input: Float32Array;
   output: number[][];
@@ -23,23 +26,20 @@ export interface ResolvedAnimationChannel {
  * https://github.com/KhronosGroup/glTF/blob/main/specification/2.0/schema/animation.schema.json
  */
 export function resolveAnimation(
-  animation: any,
-  gltf: { accessors: any[]; bufferViews: any[]; nodes: any[]; meshes: any[] },
+  animation: GLTF.Animation,
+  gltf: ResolvedGltf,
   index: number,
 ): { name: string; duration: number; channels: ResolvedAnimationChannel[] } {
+  const accessors = gltf.accessors!;
+  const bufferViews = gltf.bufferViews!;
+
   const channels: ResolvedAnimationChannel[] = animation.channels.map(
-    (channel: any) => {
+    (channel) => {
       // https://github.com/KhronosGroup/glTF/blob/main/specification/2.0/schema/animation.sampler.schema.json
-      const sampler = animation.samplers[channel.sampler];
-      const input = getAccessor(
-        gltf.accessors[sampler.input],
-        gltf.bufferViews,
-      );
-      const output = getAccessor(
-        gltf.accessors[sampler.output],
-        gltf.bufferViews,
-      );
-      const targetNode = gltf.nodes[channel.target.node];
+      const sampler = animation.samplers[channel.sampler]!;
+      const input = getAccessor(accessors[sampler.input]!, bufferViews);
+      const output = getAccessor(accessors[sampler.output]!, bufferViews);
+      const targetNode = gltf.nodes![channel.target.node!]!;
 
       const outputValues = output.normalized
         ? normalizeData(output._data)
@@ -47,7 +47,7 @@ export function resolveAnimation(
 
       const stride =
         channel.target.path === "weights"
-          ? (gltf.meshes[targetNode.mesh].weights?.length ?? 1)
+          ? (gltf.meshes![targetNode.mesh!]!.weights?.length ?? 1)
           : GLTF_ACCESSOR_TYPE_COMPONENTS_NUMBER[output.type]!;
 
       const outputData: number[][] = [];
@@ -56,10 +56,11 @@ export function resolveAnimation(
       }
 
       return {
-        input: input._data,
+        // The spec fixes a sampler's input accessor to SCALAR/FLOAT.
+        input: input._data as Float32Array,
         output: outputData,
-        interpolation: sampler.interpolation,
-        targetNodeIndex: channel.target.node,
+        interpolation: sampler.interpolation ?? "LINEAR",
+        targetNodeIndex: channel.target.node!,
         path: channel.target.path,
       };
     },

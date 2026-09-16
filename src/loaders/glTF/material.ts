@@ -12,6 +12,8 @@ import { resolveUnlit } from "./extensions/KHR_materials_unlit.js";
 import { resolvePbrSpecularGlossiness } from "./extensions/KHR_materials_pbrSpecularGlossiness.js";
 
 import type { GpuContext } from "../../types.js";
+import type * as GLTF from "types-gltf";
+import type { ResolvedGltf, ResolvedMaterial } from "./types.js";
 
 /**
  * Resolves a glTF material into a flat, glTF-vocabulary PBR data object
@@ -22,12 +24,12 @@ import type { GpuContext } from "../../types.js";
  * https://github.com/KhronosGroup/glTF/blob/main/specification/2.0/schema/material.schema.json
  */
 export function resolveMaterial(
-  material: any,
-  gltf: any,
+  material: GLTF.Material,
+  gltf: ResolvedGltf,
   ctx: GpuContext,
   samplerCache: Map<number, GPUSampler>,
-): Record<string, any> {
-  const result: Record<string, any> = {
+): ResolvedMaterial {
+  const result: ResolvedMaterial = {
     name: material.name,
     doubleSided: !!material.doubleSided,
     alphaMode: material.alphaMode ?? "OPAQUE",

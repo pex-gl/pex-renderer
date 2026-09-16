@@ -5,6 +5,13 @@ import { transcodeKtx2 } from "pex-loaders";
 import { isBase64 } from "./io.js";
 
 import type { GpuContext, MaterialTexture } from "../../types.js";
+import type * as GLTF from "types-gltf";
+import type {
+  EXT_texture_webp,
+  KHR_texture_basisu,
+  KHR_texture_transform,
+} from "types-gltf/extensions";
+import type { ResolvedGltf, ResolvedImage } from "./types.js";
 
 // https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/Constants#Textures
 const GL_NEAREST = 9728;
@@ -24,7 +31,9 @@ const loadImageBitmap = async (blob: Blob) =>
 // HTMLImageElement properties" spread doesn't survive TS generation) — cast to
 // pass crossOrigin, which loadImage does forward at runtime.
 const loadCrossOriginImage = (url: string) =>
-  loadImage({ url, crossOrigin: "anonymous" } as any);
+  loadImage({ url, crossOrigin: "anonymous" } as unknown as Parameters<
+    typeof loadImage
+  >[0]);
 
 // https://github.com/KhronosGroup/glTF/blob/main/specification/2.0/schema/sampler.schema.json
 function magFilterToWebGPU(glFilter?: number): GPUFilterMode {
@@ -68,7 +77,7 @@ function wrapToWebGPU(glWrap?: number): GPUAddressMode {
 
 const KTX2_MIME = "image/ktx2";
 
-const isKtx2 = (image: any): boolean =>
+const isKtx2 = (image: GLTF.Image): boolean =>
   image.mimeType === KTX2_MIME ||
   (typeof image.uri === "string" &&
     image.uri.split("?", 1)[0]!.endsWith(".ktx2"));
@@ -89,13 +98,16 @@ export interface ResolveImagesOptions {
  * https://github.com/KhronosGroup/glTF/blob/main/specification/2.0/schema/image.schema.json
  */
 export async function resolveImages(
-  json: any,
+  json: ResolvedGltf,
   options: ResolveImagesOptions,
 ): Promise<void> {
   if (!json.images) return;
 
+  const bufferViews = json.bufferViews ?? [];
+  const buffers = json.buffers ?? [];
+
   await Promise.all(
-    json.images.map(async (image: any) => {
+    json.images.map(async (image: ResolvedImage) => {
       // KHR_texture_basisu payloads are not decodable images: transcode them to
       // a compressed mip chain here, where async work is allowed, and let
       // resolveTexture upload it synchronously like every other image.
@@ -111,24 +123,24 @@ export async function resolveImages(
             ? await loadArrayBuffer(
                 decodeURIComponent([options.basePath, image.uri].join("/")),
               )
-            : json.bufferViews[image.bufferView]._data;
+            : bufferViews[image.bufferView]!._data;
         image._ktx2 = await transcodeKtx2(options.ctx, buffer);
         return;
       }
 
       if (image.bufferView !== undefined) {
-        const bufferView = json.bufferViews[image.bufferView];
+        const bufferView = bufferViews[image.bufferView]!;
         bufferView.byteOffset = bufferView.byteOffset || 0;
-        const buffer = json.buffers[bufferView.buffer];
+        const buffer = buffers[bufferView.buffer]!;
         const data = buffer._data.slice(
           bufferView.byteOffset,
           bufferView.byteOffset + bufferView.byteLength,
         );
-        const blob = new Blob([data], { type: image.mimeType });
+        const blob = new Blob([data], { type: image.mimeType ?? "" });
         image._img = options.supportImageBitmap
           ? await loadImageBitmap(blob)
           : await loadCrossOriginImage(URL.createObjectURL(blob));
-      } else if (isBase64(image.uri)) {
+      } else if (image.uri !== undefined && isBase64(image.uri)) {
         image._img = await loadCrossOriginImage(image.uri);
       } else {
         const url = decodeURIComponent([options.basePath, image.uri].join("/"));
@@ -149,12 +161,13 @@ export async function resolveImages(
  * present: it stays GPU-compressed, where webp decodes to RGBA like any other
  * image.
  */
-function resolveTextureSource(texture: any): number | undefined {
-  return (
-    texture.extensions?.KHR_texture_basisu?.source ??
-    texture.extensions?.EXT_texture_webp?.source ??
-    texture.source
-  );
+function resolveTextureSource(texture: GLTF.Texture): number | undefined {
+  const basisu = texture.extensions?.KHR_texture_basisu as
+    KHR_texture_basisu.Texture | undefined;
+  const webp = texture.extensions?.EXT_texture_webp as
+    EXT_texture_webp.GlTF | undefined;
+
+  return basisu?.source ?? webp?.source ?? texture.source;
 }
 
 /**
@@ -170,14 +183,14 @@ function resolveTextureSource(texture: any): number | undefined {
  * https://github.com/KhronosGroup/glTF/blob/main/specification/2.0/schema/textureInfo.schema.json
  */
 export function resolveTexture(
-  materialTexture: any,
-  gltf: any,
+  materialTexture: GLTF.TextureInfo,
+  gltf: ResolvedGltf,
   ctx: GpuContext,
   samplerCache: Map<number, GPUSampler>,
   pixelFormat?: GPUTextureFormat,
 ): MaterialTexture | undefined {
-  const { textures, images, samplers } = gltf;
-  const texture = textures[materialTexture.index];
+  const { textures = [], images = [], samplers } = gltf;
+  const texture = textures[materialTexture.index]!;
 
   const source = resolveTextureSource(texture);
   if (source === undefined) {
@@ -187,37 +200,43 @@ export function resolveTexture(
     return undefined;
   }
 
-  const image = images[source];
-  const samplerDef = samplers?.[texture.sampler];
+  const image = images[source]!;
+  const samplerDef =
+    texture.sampler === undefined ? undefined : samplers?.[texture.sampler];
+  const label = image.uri || image.name || "glTF image";
 
   if (!texture._tex) {
     const { minFilter, mipmapFilter, hasMipmap } = minFilterToWebGPU(
       samplerDef?.minFilter,
     );
 
+    const { _ktx2: ktx2, _img: decoded } = image;
+
     // A transcoded KTX2 carries its own format and mip chain: the container's
     // transfer function decides sRGB, so `pixelFormat` does not apply, and the
     // levels are uploaded rather than generated (compressed formats cannot be
     // rendered into).
-    const ktx2: Awaited<ReturnType<typeof transcodeKtx2>> | undefined =
-      image._ktx2;
-    texture._tex = createTexture(
-      ctx,
-      ktx2
-        ? {
-            label: image.uri || image.name,
-            width: ktx2.width,
-            height: ktx2.height,
-            format: ktx2.format,
-            mipLevels: ktx2.levels.map((level) => level.data),
-          }
-        : {
-            label: image.uri || image.name,
-            data: image._img,
-            format: pixelFormat ?? "rgba8unorm",
-            mipmap: hasMipmap,
-          },
-    );
+    if (ktx2) {
+      texture._tex = createTexture(ctx, {
+        label,
+        width: ktx2.width,
+        height: ktx2.height,
+        format: ktx2.format,
+        mipLevels: ktx2.levels.map((level) => level.data),
+      });
+    } else if (decoded) {
+      texture._tex = createTexture(ctx, {
+        label,
+        data: decoded,
+        format: pixelFormat ?? "rgba8unorm",
+        mipmap: hasMipmap,
+      });
+    } else {
+      console.warn(
+        `glTF loader: image ${source} was never decoded (a KHR_texture_basisu payload resolveImages had no ctx for, or a failed load).`,
+      );
+      return undefined;
+    }
 
     if (texture.sampler !== undefined && !samplerCache.has(texture.sampler)) {
       const magFilter = magFilterToWebGPU(samplerDef?.magFilter);
@@ -250,16 +269,18 @@ export function resolveTexture(
       : samplerCache.get(texture.sampler);
 
   // https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_texture_transform/schema/KHR_texture_transform.textureInfo.schema.json
-  const textureTransform = materialTexture.extensions?.KHR_texture_transform;
+  const textureTransform = materialTexture.extensions?.KHR_texture_transform as
+    KHR_texture_transform.TextureInfo | undefined;
   const texCoord = materialTexture.texCoord;
 
   if (texCoord || textureTransform || sampler) {
     return {
-      texture: texture._tex,
-      texCoord: texCoord || 0,
+      texture: texture._tex!,
       ...(sampler && { sampler }),
-      // textureTransform.texCoord overrides the textureInfo texCoord above, per spec.
       ...textureTransform,
+      // textureTransform.texCoord overrides the textureInfo's, per spec; the
+      // renderer samples two UV sets, so anything beyond falls back to the first.
+      texCoord: (textureTransform?.texCoord ?? texCoord) === 1 ? 1 : 0,
       // KHR_texture_transform's rotation is counter-clockwise looking at the UV
       // plane; base.ts's getTextureMatrix rotates the sampling coordinates the
       // other way round (its positive angle visually spins the sampled image
@@ -272,5 +293,5 @@ export function resolveTexture(
     };
   }
 
-  return texture._tex;
+  return texture._tex!;
 }

@@ -1,9 +1,17 @@
+import type { KHR_lights_punctual } from "types-gltf/extensions";
+import type { ResolvedLight } from "./types.js";
+
+export type PunctualLight = KHR_lights_punctual.Light & {
+  /** Cached result: several nodes may reference the same light. */
+  _resolved?: ResolvedLight;
+};
+
 /**
  * Resolves a KHR_lights_punctual light definition, caching the result on the
- * light object (multiple nodes may reference the same light).
+ * light object.
  * https://github.com/KhronosGroup/glTF/tree/main/extensions/2.0/Khronos/KHR_lights_punctual
  */
-export function resolveLight(light: any): any {
+export function resolveLight(light: PunctualLight): ResolvedLight {
   if (light._resolved) return light._resolved;
 
   light._resolved = {
@@ -20,5 +28,5 @@ export function resolveLight(light: any): any {
     }),
   };
 
-  return light._resolved;
+  return light._resolved!;
 }

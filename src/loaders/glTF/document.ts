@@ -13,19 +13,29 @@ import {
   type ResolvedAnimationChannel,
 } from "./animation.js";
 import { resolveMesh } from "./mesh.js";
+import type { DracoOptions } from "./extensions/KHR_draco_mesh_compression.js";
 import { resolveMeshGpuInstancing } from "./extensions/EXT_mesh_gpu_instancing.js";
 import { resolveLightsImageBased } from "./extensions/EXT_lights_image_based.js";
 
 import type { GpuContext, ReflectionProbePrebakedData } from "../../types.js";
+import type * as GLTF from "types-gltf";
+import type {
+  ResolvedBuffer,
+  ResolvedBufferView,
+  ResolvedCamera,
+  ResolvedLight,
+} from "./types.js";
+import type { KHR_lights_punctual } from "types-gltf/extensions";
+import type { PunctualLight } from "./light.js";
 
 export interface ResolvedGltfNode {
   name: string;
   transform: ResolvedNodeTransform;
   childrenIndices: number[];
   cameraIndex?: number;
-  camera?: Record<string, any>;
+  camera?: ResolvedCamera;
   lightIndex?: number;
-  light?: Record<string, any>;
+  light?: ResolvedLight;
   meshIndex?: number;
   primitives?: Awaited<ReturnType<typeof resolveMesh>>;
   skinIndex?: number;
@@ -40,7 +50,7 @@ export interface ResolvedGltfScene {
 
 export interface GltfDocument {
   ctx: GpuContext;
-  asset: any;
+  asset: GLTF.Asset;
   defaultSceneIndex: number;
   scenes: ResolvedGltfScene[];
   nodes: ResolvedGltfNode[];
@@ -57,7 +67,7 @@ export interface LoadGltfDocumentOptions {
   includeCameras?: boolean;
   includeLights?: boolean;
   includeAnimations?: boolean;
-  dracoOptions?: Record<string, any>;
+  dracoOptions?: DracoOptions["dracoOptions"];
   supportImageBitmap?: boolean;
 }
 
@@ -127,18 +137,20 @@ async function loadGltfDocument(
 
   // Buffers: https://github.com/KhronosGroup/glTF/blob/main/specification/2.0/schema/buffer.schema.json
   await Promise.all(
-    (json.buffers ?? []).map(async (buffer: any) => {
+    (json.buffers ?? []).map(async (buffer: ResolvedBuffer) => {
+      // A GLB's first buffer carries no uri: its bytes are the binary chunk.
+      const uri = buffer.uri ?? "";
       buffer._data =
         bin ??
-        (isBase64(buffer.uri)
-          ? decodeBase64(buffer.uri)
-          : await loadArrayBuffer([basePath, buffer.uri].join("/")));
+        (isBase64(uri)
+          ? decodeBase64(uri)
+          : await loadArrayBuffer([basePath, uri].join("/")));
     }),
   );
 
   // Buffer views: https://github.com/KhronosGroup/glTF/blob/main/specification/2.0/schema/bufferView.schema.json
-  for (const bufferView of json.bufferViews ?? []) {
-    const bufferData = json.buffers[bufferView.buffer]._data;
+  for (const bufferView of (json.bufferViews ?? []) as ResolvedBufferView[]) {
+    const bufferData = json.buffers![bufferView.buffer]!._data;
     bufferView.byteOffset ??= 0;
     bufferView._data = bufferData.slice(
       bufferView.byteOffset,
@@ -159,42 +171,44 @@ async function loadGltfDocument(
   // wrapper — fixes the previous loader's "every scene re-walks every node"
   // bug (glTF-Sample-Assets' MultipleScenes test) as a side effect.
   const nodes: ResolvedGltfNode[] = await Promise.all(
-    (json.nodes ?? []).map(async (node: any): Promise<ResolvedGltfNode> => {
+    (json.nodes ?? []).map(async (node): Promise<ResolvedGltfNode> => {
       const resolved: ResolvedGltfNode = {
-        name: node.name,
+        name: node.name!,
         transform: resolveNodeTransform(node),
         childrenIndices: node.children ?? [],
       };
 
       if (opts.includeCameras && Number.isInteger(node.camera)) {
-        resolved.cameraIndex = node.camera;
-        resolved.camera = resolveCamera(json.cameras[node.camera], ctx);
+        resolved.cameraIndex = node.camera!;
+        resolved.camera = resolveCamera(json.cameras![node.camera!]!, ctx);
       }
 
       // https://github.com/KhronosGroup/glTF/tree/main/extensions/2.0/Khronos/KHR_lights_punctual
-      const lightIndex = node.extensions?.KHR_lights_punctual?.light;
+      const nodeLights = node.extensions?.KHR_lights_punctual as
+        KHR_lights_punctual.Node | undefined;
+      const lightIndex = nodeLights?.light;
       if (opts.includeLights && Number.isInteger(lightIndex)) {
-        resolved.lightIndex = lightIndex;
-        resolved.light = resolveLight(
-          json.extensions.KHR_lights_punctual.lights[lightIndex],
-        );
+        const documentLights = json.extensions?.KHR_lights_punctual as
+          { lights: PunctualLight[] } | undefined;
+        resolved.lightIndex = lightIndex!;
+        resolved.light = resolveLight(documentLights!.lights[lightIndex!]!);
       }
 
       if (Number.isInteger(node.skin)) {
-        resolved.skinIndex = node.skin;
-        resolved.skin = resolveSkin(json.skins[node.skin], json);
+        resolved.skinIndex = node.skin!;
+        resolved.skin = resolveSkin(json.skins![node.skin!]!, json);
       }
 
       if (Number.isInteger(node.mesh)) {
-        resolved.meshIndex = node.mesh;
+        resolved.meshIndex = node.mesh!;
         const instancedAttributes = resolveMeshGpuInstancing(node, json, ctx);
         resolved.primitives = await resolveMesh(
-          json.meshes[node.mesh],
+          json.meshes![node.mesh!]!,
           instancedAttributes,
           json,
           ctx,
           samplerCache,
-          { dracoOptions: opts.dracoOptions },
+          { ...(opts.dracoOptions && { dracoOptions: opts.dracoOptions }) },
         );
       }
 
@@ -203,14 +217,14 @@ async function loadGltfDocument(
   );
 
   const animations = opts.includeAnimations
-    ? (json.animations ?? []).map((animation: any, index: number) =>
+    ? (json.animations ?? []).map((animation, index) =>
         resolveAnimation(animation, json, index),
       )
     : [];
 
   const scenes: ResolvedGltfScene[] = (json.scenes ?? [{ nodes: [] }]).map(
-    (scene: any) => ({
-      name: scene.name,
+    (scene) => ({
+      ...(scene.name !== undefined && { name: scene.name }),
       rootNodeIndices: scene.nodes ?? [],
       reflectionProbe: resolveLightsImageBased(scene, json),
     }),

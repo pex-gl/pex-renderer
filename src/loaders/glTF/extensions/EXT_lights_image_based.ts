@@ -1,4 +1,15 @@
 import type { ReflectionProbePrebakedData } from "../../../types.js";
+import type * as GLTF from "types-gltf";
+import type { ResolvedGltf } from "../types.js";
+
+interface ImageBasedLight {
+  /** Indices into the document's images, outer array per mip, inner per face. */
+  specularImages: number[][];
+  specularImageSize: number;
+  irradianceCoefficients: number[][];
+  rotation?: number[];
+  intensity?: number;
+}
 
 /**
  * Resolves the scene-level `EXT_lights_image_based` reference (unlike
@@ -11,22 +22,28 @@ import type { ReflectionProbePrebakedData } from "../../../types.js";
  * https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Vendor/EXT_lights_image_based/
  */
 export function resolveLightsImageBased(
-  scene: any,
-  gltf: any,
+  scene: GLTF.Scene,
+  gltf: ResolvedGltf,
 ): ReflectionProbePrebakedData | null {
-  const lightIndex = scene.extensions?.EXT_lights_image_based?.light;
-  if (lightIndex === undefined) return null;
+  const reference = scene.extensions?.EXT_lights_image_based as
+    { light: number } | undefined;
+  if (reference?.light === undefined) return null;
 
-  const light = gltf.extensions?.EXT_lights_image_based?.lights?.[lightIndex];
+  const extension = gltf.extensions?.EXT_lights_image_based as
+    { lights?: ImageBasedLight[] } | undefined;
+  const light = extension?.lights?.[reference.light];
   if (!light) return null;
 
+  // resolveImages has already decoded everything the document references.
+  const images = gltf.images!;
+
   return {
-    specularImages: light.specularImages.map((mip: number[]) =>
-      mip.map((imageIndex) => gltf.images[imageIndex]._img),
+    specularImages: light.specularImages.map((mip) =>
+      mip.map((imageIndex) => images[imageIndex]!._img!),
     ),
     specularImageSize: light.specularImageSize,
     irradianceCoefficients: light.irradianceCoefficients,
-    rotation: light.rotation,
-    intensity: light.intensity,
+    ...(light.rotation && { rotation: light.rotation }),
+    ...(light.intensity !== undefined && { intensity: light.intensity }),
   };
 }
