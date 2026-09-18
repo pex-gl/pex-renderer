@@ -59,6 +59,21 @@ export class PassProfiler {
   names: string[] = [];
   /** Most recent completed read, in plan order. */
   latest: PassTiming[] = [];
+  /**
+   * Wall-clock GPU time from the first timed pass beginning to the last one
+   * ending, in milliseconds, or null when the last read produced nothing
+   * usable.
+   *
+   * What a frame budget is measured against, where summing {@link latest} is
+   * not: passes pipeline, so two can be in flight over the same microsecond and
+   * a sum counts it twice. A span counts it once, and counts the gaps between
+   * passes too — idle time waiting on the CPU is real elapsed GPU time.
+   *
+   * Covers this graph's passes alone. Anything submitted outside it — a clear
+   * the caller issued, another module's compute — falls outside the span, as do
+   * `raw` passes, which carry no timestamps and so cannot extend it.
+   */
+  totalTime: number | null = null;
   /** Set once the feature turns out to be missing, so it reports once. */
   unavailable = false;
 
@@ -145,17 +160,37 @@ export class PassProfiler {
         if (!timestamps) return;
 
         const timings: PassTiming[] = [];
+        // Tracked as BigInt: a device timestamp is nanoseconds since an
+        // unspecified origin and can exceed what a double holds exactly, so the
+        // span is subtracted before it is ever converted.
+        let first: bigint | undefined;
+        let last: bigint | undefined;
         for (let index = 0; index < names.length; index++) {
           const name = names[index];
           if (name === undefined) continue;
+          const begin = timestamps[index * 2]!;
+          const end = timestamps[index * 2 + 1]!;
           // Subtract as BigInt nanoseconds, before the values lose precision
           // as Numbers.
-          const ms =
-            Number(timestamps[index * 2 + 1]! - timestamps[index * 2]!) / 1e6;
+          const ms = Number(end - begin) / 1e6;
           const valid = Number.isFinite(ms) && ms >= 0 && ms < MAX_PLAUSIBLE_MS;
           timings.push({ name, ms, valid });
+
+          // Only passes that reported: an unwritten slot reads 0, which would
+          // otherwise drag the start of the span back to the epoch.
+          if (!valid) continue;
+          if (first === undefined || begin < first) first = begin;
+          if (last === undefined || end > last) last = end;
         }
         this.latest = timings;
+
+        const spanMs = first === undefined ? null : Number(last! - first) / 1e6;
+        this.totalTime =
+          spanMs !== null &&
+          Number.isFinite(spanMs) &&
+          spanMs < MAX_PLAUSIBLE_MS
+            ? spanMs
+            : null;
       } catch {
         // A retired set can still be destroyed out from under an in-flight
         // read on device loss; a dropped frame of timings is not worth
@@ -193,9 +228,13 @@ export class PassProfiler {
           : `  ${"unmeasured".padStart(13)}  ${name}`,
       );
 
+    // The span leads: it is the one figure comparable to a frame budget, where
+    // the sum beside it double-counts every pass that overlapped another.
     const header =
-      `GPU ${total.toFixed(3)}ms total` +
-      (unmeasured ? ` (${unmeasured} pass(es) unmeasured)` : "");
+      `GPU ${this.totalTime === null ? "unmeasured" : `${this.totalTime.toFixed(3)}ms`} span` +
+      ` (${total.toFixed(3)}ms summed` +
+      (unmeasured ? `, ${unmeasured} pass(es) unmeasured` : "") +
+      ")";
     return [header, ...rows].join("\n");
   }
 
