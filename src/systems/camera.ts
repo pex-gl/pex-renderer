@@ -15,6 +15,7 @@ import type {
   CameraComponentOptions,
   CameraView,
   Entity,
+  EntityId,
   SystemOptions,
   SystemUpdateOptions,
   TransformCache,
@@ -281,7 +282,7 @@ function updateCameraProjection(
  */
 export default ({ ctx }: SystemOptions) => ({
   type: "camera-system",
-  cache: {} as Record<number, CameraCache>,
+  cache: {} as Record<EntityId, CameraCache>,
   debug: false,
   updateCameraProjection,
   updateCameraViewProjection,

@@ -7,6 +7,7 @@ import createFullscreenGeometry from "../fullscreen-geometry.js";
 import type { Vec3 } from "pex-math";
 import type {
   Entity,
+  EntityId,
   SkyboxComponentOptions,
   SystemOptions,
 } from "../types.js";
@@ -54,7 +55,7 @@ interface SkyboxCache {
 
 export default ({ ctx, frameGraph }: SystemOptions) => ({
   type: "skybox-system",
-  cache: {} as Record<number, SkyboxCache>,
+  cache: {} as Record<EntityId, SkyboxCache>,
   debug: false,
   pipeline: null as { vertex: string; fragment: string } | null,
 

@@ -1,5 +1,4 @@
 import type {
-  Attributes,
   ComputePipeline,
   Uniforms,
   UniformValue,
@@ -9,6 +8,7 @@ import type {
   ExternalImageSource,
   RenderCommand,
   RenderPipeline,
+  VertexAttribute,
 } from "pex-gpu";
 import type { AABB } from "pex-geom";
 import type { Vec2, Vec3, Quat, Mat3, Mat4, TypedArray } from "pex-math";
@@ -58,36 +58,45 @@ export type AttributeData = TypedArray | Vec3[];
  * A single vertex/index attribute value on a geometry component: plain data, or
  * a GPU-backed descriptor (e.g. built by the glTF loader to share one buffer
  * across attributes/primitives from the same bufferView).
+ *
+ * The descriptor is pex-gpu's `VertexAttribute` with an optional buffer — the
+ * `offset`, `arrayStride` and `format` a draw reads it with. `format` is an override on
+ * the format inferred from the shader's WGSL type, needed whenever that type
+ * does not determine the storage width: `vec4u` accepts uint8x4/uint16x4/
+ * uint32x4 alike, so integer attributes such as `joints` must say which they
+ * are.
  */
 export type GeometryAttribute =
   | AttributeData
-  | {
-      buffer: GpuBuffer;
+  | (Omit<VertexAttribute, "buffer"> & {
+      /**
+       * The buffer to draw from. Without one, `data` is uploaded into a buffer
+       * the geometry system allocates, owns and frees.
+       */
+      buffer?: GpuBuffer;
       /**
        * This attribute's own values, tightly packed — what reads it CPU-side
        * (bounds, helpers) use, as opposed to the buffer, which may hold more
        * than this attribute and is indexed by `offset`/`arrayStride`.
        */
       data?: AttributeData;
-      /** Byte offset into the buffer. */
-      offset?: number;
-      /** Byte stride between elements (WebGPU's arrayStride). */
-      arrayStride?: number;
-      /**
-       * Vertex format override. Needed when the WGSL type does not determine
-       * the storage width — `vec4u` accepts uint8x4/uint16x4/uint32x4 alike, so
-       * integer attributes such as `joints` must say which they are.
-       */
-      format?: GPUVertexFormat;
-      /** "instance" to step this attribute per instance instead of per vertex. */
-      stepMode?: GPUVertexStepMode;
       /** Re-uploads the buffer's data on the next geometry-system update. */
       dirty?: boolean;
-    };
+      /**
+       * Elements to reserve, so data that changes count is written in place
+       * instead of reallocating. Doubles when exceeded, never shrinks, and is
+       * freed with the attribute. Costs the out-of-range validation error an
+       * exactly sized buffer raises when a draw runs past its contents.
+       */
+      capacity?: number;
+    });
 
 // Entity
+/** Identifier handed out by `createEntity`, and the key of every system cache. */
+export type EntityId = number;
+
 export interface Entity {
-  id: number;
+  id: EntityId;
   /** Debug/display label, e.g. set by loaders and helper tools. */
   name?: string;
   ambientLight?: AmbientLightComponentOptions;
@@ -467,9 +476,12 @@ export interface GeometryComponentOptions {
   topology?: GPUPrimitiveTopology;
   /**
    * Attributes beyond the ones named above, keyed by the WGSL vertex input they
-   * feed — so reaching them needs a material hook declaring that input.
+   * feed — so reaching them needs a material hook declaring that input. Handled
+   * like a named attribute: plain data is uploaded and re-uploaded on `dirty`,
+   * a buffer handed over is bound as it is, and only what the geometry system
+   * allocated is freed with the entity.
    */
-  attributes?: Record<string, unknown>;
+  attributes?: Record<string, GeometryAttribute | GpuBuffer>;
   /** Runtime, computed by the geometry system. */
   bounds?: AABB & {
     /** Recompute the bounds on the next geometry-system update. */
@@ -1521,7 +1533,11 @@ export interface TransformCache {
 /** Geometry GPU resources cached per entity by the geometry system. */
 export interface GeometryCache {
   geometry: GeometryComponentOptions | null;
-  attributes: Attributes;
+  /**
+   * Vertex attributes by WGSL input name. Always descriptors: a bare buffer,
+   * which pex-gpu also accepts, is normalised into one on the way in.
+   */
+  attributes: Record<string, VertexAttribute>;
   /** Index buffer, carrying the byte offset the draw starts at. */
   indices: GpuBuffer & { offset?: number | undefined };
   count: number;
@@ -1671,7 +1687,7 @@ export type SystemDispose = (entities?: Entity[]) => void;
 export interface System {
   type: string;
   /** Per-entity derived state; the shape is the system's own. */
-  cache?: Record<number, unknown>;
+  cache?: Record<EntityId, unknown>;
   debug?: boolean;
   update: SystemUpdate;
   dispose?: SystemDispose;

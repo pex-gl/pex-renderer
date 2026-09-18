@@ -10,6 +10,7 @@ import {
 
 import type {
   Entity,
+  EntityId,
   GpuTexture,
   ReflectionProbePrebakedData,
   SystemOptions,
@@ -89,7 +90,7 @@ interface ProbeResources {
  */
 export default ({ ctx, frameGraph }: SystemOptions) => ({
   type: "reflection-probe-system",
-  cache: {} as Record<number, ProbeCacheEntry>,
+  cache: {} as Record<EntityId, ProbeCacheEntry>,
   debug: false,
   shPipeline: null as ComputePipeline | null,
   equirectToCubePipeline: null as ComputePipeline | null,

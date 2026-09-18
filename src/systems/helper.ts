@@ -2,7 +2,7 @@ import { avec3, avec4, mat4, quat, vec3 } from "pex-math";
 import createGeomBuilder from "geom-builder";
 
 import { entity, components } from "../index.js";
-import { attributeData } from "./geometry.js";
+import { getAttributeData } from "./geometry.js";
 import { TEMP_MAT4, TEMP_VEC3 } from "../utils.js";
 
 import type { GeomBuilder } from "geom-builder";
@@ -13,6 +13,7 @@ import type {
   CameraComponentOptions,
   Color,
   Entity,
+  EntityId,
   GeometryAttribute,
   GeometryComponentOptions,
   GridHelperComponentOptions,
@@ -383,7 +384,7 @@ const getVertexAttributeData = (
   const attribute = (geometry as Record<string, GeometryAttribute | undefined>)[
     attributeName
   ];
-  return attribute && attributeData(attribute);
+  return attribute && getAttributeData(attribute);
 };
 const getVertexVector = (
   geometry: GeometryComponentOptions,
@@ -543,7 +544,7 @@ const getSkeleton = (skin: SkinComponentOptions, modelMatrix: Mat4) => {
 /** Helper system */
 export default () => ({
   type: "helper-system",
-  cache: {} as Record<number, HelperEntities>,
+  cache: {} as Record<EntityId, HelperEntities>,
   debug: false,
   lineWidth: 2,
   getEntities: (cacheId: number): HelperEntities => [

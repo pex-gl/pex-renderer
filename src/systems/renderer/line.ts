@@ -13,6 +13,7 @@ import type { Attributes, GpuBuffer } from "pex-gpu";
 import type {
   PipelineShaderOptions,
   Entity,
+  EntityId,
   RendererPassOptions,
   RendererSystem,
   RenderView,
@@ -41,7 +42,7 @@ const instanceRoundRound = Float32Array.of(
 // `RendererSystem` reaches a renderer's own state through an index signature,
 // which loses what this one keeps there: round-cap quads keyed by resolution.
 const lineBuffers = (renderer: RendererSystem) =>
-  renderer.cache as Record<number, GpuBuffer>;
+  renderer.cache as Record<EntityId, GpuBuffer>;
 
 /**
  * Line renderer
@@ -56,7 +57,7 @@ export default ({ ctx }: SystemOptions): RendererSystem => ({
   ...createBaseSystem(),
   type: "line-renderer",
   // Round-cap quad buffers keyed by material.lineResolution.
-  cache: {} as Record<number, GpuBuffer>,
+  cache: {} as Record<EntityId, GpuBuffer>,
   debug: false,
 
   getShader: (defines: Set<string>, options: PipelineShaderOptions) =>

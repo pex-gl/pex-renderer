@@ -5,6 +5,7 @@ import { TEMP_AABB, TEMP_MAT4, TEMP_BOUNDS_POINTS } from "../utils.js";
 import type { Mat4 } from "pex-math";
 import type {
   Entity,
+  EntityId,
   TransformCache,
   TransformComponentOptions,
 } from "../types.js";
@@ -28,7 +29,7 @@ function updateModelMatrix(matrix: Mat4, transform: TransformComponentOptions) {
  */
 export default () => ({
   type: "transform-system",
-  cache: {} as Record<number, TransformCache>,
+  cache: {} as Record<EntityId, TransformCache>,
   debug: false,
   updateModelMatrix,
   sort(entities: Entity[]) {
