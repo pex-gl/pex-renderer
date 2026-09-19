@@ -11,7 +11,7 @@ export default (options?: MaterialComponentOptions) => {
       castShadows: false,
       lineWidth: 1,
       lineResolution: 6,
-      perspectiveScaling: true,
+      perspectiveScaling: false,
       ...options,
     };
   }
