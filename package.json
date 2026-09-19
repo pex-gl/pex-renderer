@@ -34,7 +34,7 @@
   "types": "./types/index.d.ts",
   "scripts": {
     "build": "snowdev build",
-    "dev": "snowdev dev",
+    "dev": "snowdev dev --no-open",
     "release": "snowdev release",
     "release:alpha": "snowdev release --release-as minor --prerelease alpha",
     "test": "node test/frame-graph.js && node test/render-textures.js && node test/post-processing.js && node test/camera.js && node test/frustum-planes.js && node test/shadow-fit.js && node test/validate-pipeline-wgsl.js"
