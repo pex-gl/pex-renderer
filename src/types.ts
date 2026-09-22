@@ -328,7 +328,7 @@ export interface CameraComponentOptions {
   near?: number;
   far?: number;
   aspect?: number;
-  clearColor?: Color;
+  backgroundColor?: Color;
   viewMatrix?: Mat4;
   inverseViewMatrix?: Mat4;
   culling?: boolean;

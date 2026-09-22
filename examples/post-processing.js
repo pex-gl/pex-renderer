@@ -76,7 +76,7 @@ aabb.fromPoints(dragonBounds, dragon.positions);
 const camera = components.camera({
   // fov: Math.PI / 6,
   aspect: ctx.width / ctx.height,
-  clearColor: [0, 0, 0, 0],
+  backgroundColor: [0, 0, 0, 0],
 });
 // Subcomponents go through their own factory rather than a bare object literal:
 // the factory is where the defaults live, and a literal carries only the keys it

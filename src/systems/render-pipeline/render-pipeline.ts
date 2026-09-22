@@ -1,5 +1,6 @@
 import { submit, createSampler, generateMipmaps, isGpuTexture } from "pex-gpu";
-import type { RenderCommand, RenderPipeline } from "pex-gpu";
+import { vec4 } from "pex-math";
+import { toLinear } from "pex-color";
 
 import shadowMappingPipelineMethods from "./shadow-mapping.js";
 import postProcessingPipelineMethods from "./post-processing.js";
@@ -12,6 +13,7 @@ import { depthResolveShader } from "../../shaders/depth-resolve.js";
 import { RenderTextures } from "./render-textures.js";
 import { getDefaultViewport, getSkyboxEnvMap, mapValues } from "../../utils.js";
 
+import type { RenderCommand, RenderPipeline } from "pex-gpu";
 import type {
   DrawMeshesOptions,
   Entity,
@@ -31,6 +33,7 @@ const BLIT_PREMULTIPLIED_WGSL = blitShader(
   new Set(["USE_PREMULTIPLIED_ALPHA"]),
 );
 const GRAB_PASS_WGSL = grabPassShader();
+const TEMP_CLEAR_VALUE = vec4.create();
 
 /**
  * Render pipeline system
@@ -538,11 +541,11 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
             responsive: colorTextures.responsive,
           }),
         },
-        clearColor,
+        clearValue,
         depthClearValue,
       }: {
         outputs?: Record<string, ResourceHandle>;
-        clearColor?: number[];
+        clearValue?: number[];
         depthClearValue?: number;
       } = {},
     ) => {
@@ -558,7 +561,7 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
         name: `${name}.${viewId}`,
         color: Object.keys(outputs).map((output, index) => ({
           ...colorTarget(output),
-          ...(index === 0 && clearColor && { clearValue: clearColor }),
+          ...(index === 0 && clearValue && { clearValue }),
         })),
         ...(depthTexture && {
           depth: {
@@ -627,7 +630,10 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
 
     scenePass("opaque", drawMeshOptions, {
       outputs: mainOutputs,
-      clearColor: camera.clearColor ?? [0, 0, 0, 1],
+      clearValue: toLinear(
+        camera.backgroundColor ?? [0, 0, 0, 1],
+        TEMP_CLEAR_VALUE,
+      ),
       // The pre-pass already cleared it; loading what it wrote is what lets the
       // depth test reject before the fragment shader runs.
       ...(!usePrePass && { depthClearValue: 1 }),

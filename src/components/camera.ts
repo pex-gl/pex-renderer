@@ -9,7 +9,7 @@ export default (options?: CameraComponentOptions) => {
     near: 0.5,
     far: 1000,
     aspect: 1,
-    clearColor: [0, 0, 0, 1],
+    backgroundColor: [0, 0, 0, 1],
     viewMatrix: mat4.lookAt(mat4.create(), [0, 0, 1], [0, 0, 0], [0, 1, 0]),
     inverseViewMatrix: mat4.create(),
     projectionMatrix: mat4.create(),

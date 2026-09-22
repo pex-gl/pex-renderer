@@ -37,7 +37,7 @@ const cameraEntity = createEntity({
     far: 5,
     target: [0, cameraPosition[1], -4],
     culling: true,
-    clearColor: [0.01, 0.01, 0.01, 1],
+    backgroundColor: [0.01, 0.01, 0.01, 1],
   }),
   postProcessing: components.postProcessing(),
   cameraHelper: components.cameraHelper(),
