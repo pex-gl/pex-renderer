@@ -8,7 +8,5 @@ export function resolveEmissiveStrength(
 ): Pick<ResolvedMaterial, "emissiveStrength"> | null {
   const ext = material.extensions?.KHR_materials_emissive_strength as
     KHR_materials_emissive_strength.Material | undefined;
-  if (!ext) return null;
-
-  return { emissiveStrength: ext.emissiveStrength ?? 1 };
+  return ext ? { emissiveStrength: ext.emissiveStrength ?? 1 } : null;
 }

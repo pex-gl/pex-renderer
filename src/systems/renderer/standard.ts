@@ -264,12 +264,8 @@ export default ({
     }
   },
 
-  getShader: (defines: Set<string>, options: PipelineShaderOptions) => {
-    const s = standardShader(defines, options);
-    console.log(s);
-
-    return s;
-  },
+  getShader: (defines: Set<string>, options: PipelineShaderOptions) =>
+    standardShader(defines, options),
   getShaderOptions(entity: Entity, options: StandardPassOptions) {
     return {
       shadow2DBuckets: options.lights.shadow2DBuckets,

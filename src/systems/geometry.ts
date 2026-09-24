@@ -145,8 +145,10 @@ function shouldReuse(
   count: number,
   { usage, capacity }: BufferOptions,
 ) {
-  if (count * bytesPerElement(data, usage, buffer) > buffer.size) return false;
-  return capacity !== undefined || count === buffer.length;
+  return (
+    count * bytesPerElement(data, usage, buffer) <= buffer.size &&
+    (capacity !== undefined || count === buffer.length)
+  );
 }
 
 /**
@@ -267,10 +269,10 @@ function removeAttribute(
   delete attributes[name];
 
   const previousName = previousNames[name];
-  if (previousName) {
-    disposeAttribute(ctx, attributes[previousName]);
-    delete attributes[previousName];
-  }
+  if (!previousName) return;
+
+  disposeAttribute(ctx, attributes[previousName]);
+  delete attributes[previousName];
 }
 
 function updateAttribute(

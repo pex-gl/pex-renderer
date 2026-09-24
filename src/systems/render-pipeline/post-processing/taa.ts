@@ -70,7 +70,12 @@ const taa: PostProcessingEffect = {
       viewId,
       descriptor,
     );
-    const historyValid = isHistoryValid(cameraEntity, frameIndex, width, height);
+    const historyValid = isHistoryValid(
+      cameraEntity,
+      frameIndex,
+      width,
+      height,
+    );
 
     // Published whenever the scene pass ran with it; without it the resolve
     // falls back to camera reprojection from depth, which is exact for a static
@@ -107,7 +112,12 @@ const taa: PostProcessingEffect = {
     const emissive = textures.get("emissive");
     const emissiveHistories =
       emissive &&
-      createHistoryPair(createTexture, "taa.emissiveHistory", viewId, descriptor);
+      createHistoryPair(
+        createTexture,
+        "taa.emissiveHistory",
+        viewId,
+        descriptor,
+      );
 
     const defines = new Set([
       ...(velocity ? ["USE_TAA_VELOCITY"] : []),

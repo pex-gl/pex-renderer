@@ -56,8 +56,8 @@ export function createHistoryTracker() {
  * write one handle. Persistent: their contents have to survive to the next
  * frame, which is the one thing the pool's per-frame recycling would otherwise
  * take away. Declared both ways round every frame, as the read side has no
- * producing pass this frame and only a persistent declaration gives it a
- * handle at all.
+ * producing pass this frame and only a persistent declaration gives it a handle
+ * at all.
  */
 export const createHistoryPair = (
   createTexture: PostProcessingContext["createTexture"],
@@ -65,6 +65,14 @@ export const createHistoryPair = (
   viewId: Entity["id"],
   descriptor: Omit<TextureDescriptor, "label" | "persistent">,
 ): [ResourceHandle, ResourceHandle] => [
-  createTexture({ label: `${label}0.${viewId}`, ...descriptor, persistent: true }),
-  createTexture({ label: `${label}1.${viewId}`, ...descriptor, persistent: true }),
+  createTexture({
+    label: `${label}0.${viewId}`,
+    ...descriptor,
+    persistent: true,
+  }),
+  createTexture({
+    label: `${label}1.${viewId}`,
+    ...descriptor,
+    persistent: true,
+  }),
 ];

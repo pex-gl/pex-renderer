@@ -137,9 +137,9 @@ export function isFieldActive(
   ) {
     return false;
   }
-  if (!field.runtime) return defines.has(field.define ?? field.requires ?? "");
-
-  return true;
+  return field.runtime
+    ? true
+    : defines.has(field.define ?? field.requires ?? "");
 }
 
 /**

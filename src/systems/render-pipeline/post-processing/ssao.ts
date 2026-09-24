@@ -297,40 +297,39 @@ function declareSAO(scope: EstimatorScope) {
   });
 
   // A negative radius turns the blur off, leaving the raw estimate.
-  if (component.blurRadius! >= 0) {
-    const blur = (axis: number[]) => ({
-      uBlur: {
-        axis,
-        radius: component.blurRadius!,
-        near: camera.near!,
-        far: camera.far!,
-        sharpness: component.blurSharpness!,
-      },
-      uDepthTexture: depth,
-      uDepthTextureSampler: samplers.nearest,
-    });
+  if (component.blurRadius! < 0) return;
+  const blur = (axis: number[]) => ({
+    uBlur: {
+      axis,
+      radius: component.blurRadius!,
+      near: camera.near!,
+      far: camera.far!,
+      sharpness: component.blurSharpness!,
+    },
+    uDepthTexture: depth,
+    uDepthTextureSampler: samplers.nearest,
+  });
 
-    const horizontal = pass({
-      name: "blurHorizontal",
-      shader: bilateralBlurShader,
-      source: ao,
-      clearValue: [0, 0, 0, 1],
-      format,
-      uniforms: blur([1, 0]),
-    });
+  const horizontal = pass({
+    name: "blurHorizontal",
+    shader: bilateralBlurShader,
+    source: ao,
+    clearValue: [0, 0, 0, 1],
+    format,
+    uniforms: blur([1, 0]),
+  });
 
-    // Back into the estimate: the write lands after the read that produced the
-    // horizontal pass, so the graph orders them and nothing downstream sees the
-    // unblurred image — including "ssao.main", which the estimator pass already
-    // published as this texture.
-    pass({
-      name: "blurVertical",
-      shader: bilateralBlurShader,
-      source: horizontal,
-      target: ao,
-      uniforms: blur([0, 1]),
-    });
-  }
+  // Back into the estimate: the write lands after the read that produced the
+  // horizontal pass, so the graph orders them and nothing downstream sees the
+  // unblurred image — including "ssao.main", which the estimator pass already
+  // published as this texture.
+  pass({
+    name: "blurVertical",
+    shader: bilateralBlurShader,
+    source: horizontal,
+    target: ao,
+    uniforms: blur([0, 1]),
+  });
 }
 
 /**

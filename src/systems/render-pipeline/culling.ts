@@ -11,13 +11,12 @@ const isEntityInFrustum = (entity: Entity, frustum: Float32Array) =>
   isAABBInFrustum(entity.transform!.worldBounds!, frustum);
 
 export default (): CullingMethods => ({
-  cullEntities: (entities: Entity[], camera: CameraComponentOptions) => {
-    if (!camera.culling) return entities;
-
-    return entities.filter(
-      (entity) =>
-        !entity.geometry ||
-        (entity.transform && isEntityInFrustum(entity, camera.frustum!)),
-    );
-  },
+  cullEntities: (entities: Entity[], camera: CameraComponentOptions) =>
+    camera.culling
+      ? entities.filter(
+          (entity) =>
+            !entity.geometry ||
+            (entity.transform && isEntityInFrustum(entity, camera.frustum!)),
+        )
+      : entities,
 });

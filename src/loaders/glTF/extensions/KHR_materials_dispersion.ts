@@ -8,7 +8,5 @@ export function resolveDispersion(
 ): Pick<ResolvedMaterial, "dispersion"> | null {
   const ext = material.extensions?.KHR_materials_dispersion as
     KHR_materials_dispersion.Material | undefined;
-  if (!ext) return null;
-
-  return { dispersion: ext.dispersion ?? 0 };
+  return ext ? { dispersion: ext.dispersion ?? 0 } : null;
 }

@@ -8,7 +8,5 @@ export function resolveIor(
 ): Pick<ResolvedMaterial, "ior"> | null {
   const ext = material.extensions?.KHR_materials_ior as
     KHR_materials_ior.Material | undefined;
-  if (!ext) return null;
-
-  return { ior: ext.ior ?? 1.5 };
+  return ext ? { ior: ext.ior ?? 1.5 } : null;
 }

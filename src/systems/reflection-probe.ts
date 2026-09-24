@@ -487,10 +487,9 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
 
     // `dirty` is the input; `needsBake` is the pending work only the bake
     // clears.
-    if (dirty) {
-      entity.reflectionProbe!.dirty = false;
-      cached.needsBake = true;
-    }
+    if (!dirty) return;
+    entity.reflectionProbe!.dirty = false;
+    cached.needsBake = true;
   },
 
   /**

@@ -154,7 +154,11 @@ ${textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uTexture")}
 ${textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uBlendTexture")}
 ${
   reprojection
-    ? textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uVelocityTexture")
+    ? textureSamplerDeclaration(
+        0,
+        alloc.nextTextureSampler(),
+        "uVelocityTexture",
+      )
     : ""
 }
 

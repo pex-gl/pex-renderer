@@ -102,21 +102,21 @@ export default () => ({
     // TODO: is this ever used?
     // transform.worldPosition ||= vec3.create();
 
-    if (
+    if (!(
       // TODO: do we need to check object props in detail or that would be too expensive?
-      cached.transform !== transform ||
-      isNotCached ||
-      transform.dirty
-    ) {
-      transform.dirty = false;
-      cached.transform = transform;
-
-      if (this.debug) {
-        // console.debug(NAMESPACE, this.type, "update", transform);
-      }
-
-      updateModelMatrix(cached.localModelMatrix, transform);
+      cached.transform !== transform || isNotCached || transform.dirty
+    )) {
+      return;
     }
+
+    transform.dirty = false;
+    cached.transform = transform;
+
+    if (this.debug) {
+      // console.debug(NAMESPACE, this.type, "update", transform);
+    }
+
+    updateModelMatrix(cached.localModelMatrix, transform);
   },
   updateBoundingBox(transform: TransformComponentOptions) {
     // Get worldBounds from geometry bound and transforming them to world space
