@@ -7,10 +7,11 @@ import {
   uniformName,
 } from "../../shaders/wgsl.js";
 import type { ModelStructOptions } from "../../shaders/wgsl.js";
-import { definesKey } from "../../utils.js";
+import { NAMESPACE, definesKey } from "../../utils.js";
 
 import type {
   GpuBuffer,
+  RenderPipeline,
   Uniforms,
   UniformValue,
   VertexAttribute,
@@ -248,6 +249,17 @@ function getJointMatricesUniform(
 
 const NO_HOOK_UNIFORMS = {};
 
+// The variant key each entity last drew with, per cache, so a miss can say
+// what changed. Only filled while `debug` is on.
+const LAST_VARIANT_KEYS = new WeakMap<
+  Map<string, RenderPipeline>,
+  WeakMap<Entity, string>
+>();
+
+// Defines never contain "|"; a debugRender expression might, which only splits
+// that one part.
+const keyParts = (key: string) => new Set(key.split("|"));
+
 /**
  * Output names no fragment output corresponds to: `color` is unconditional in
  * `fragmentOutputStruct`, and `depth` is an attachment, not a colour target.
@@ -266,7 +278,7 @@ const IMPLICIT_OUTPUTS = new Set(["color", "depth"]);
 export const outputsKey = (outputs: Record<string, unknown> = {}): string =>
   Object.keys(outputs)
     .filter((name) => !IMPLICIT_OUTPUTS.has(name))
-    .join(",");
+    .join("|");
 
 /** The buffer behind a cached attribute, which may be the bare buffer. */
 export const attributeBuffer = (attribute: GpuBuffer | VertexAttribute) =>
@@ -319,8 +331,14 @@ export default (): RendererSystem => ({
   getShader() {
     return "";
   },
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  getShaderOptions(_entity: Entity, _options: RendererPassOptions) {
+  getShaderOptions(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _entity: Entity,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _options: RendererPassOptions,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _defines?: Set<string>,
+  ) {
     return {};
   },
   getDefines(
@@ -468,6 +486,48 @@ export default (): RendererSystem => ({
         camera._previousViewProjectionMatrix ?? IDENTITY_MAT4,
     };
   },
+  /**
+   * A pipeline cache lookup by variant key. With `debug` on, a miss logs how
+   * long `create` took and what changed since the entity's last key in that
+   * cache.
+   */
+  getCachedPipeline(
+    name: string,
+    cache: Map<string, RenderPipeline>,
+    key: string,
+    entity: Entity,
+    create: () => RenderPipeline,
+  ): RenderPipeline {
+    if (!this.debug) return cache.getOrInsertComputed(key, create);
+
+    const last = LAST_VARIANT_KEYS.getOrInsertComputed(
+      cache,
+      () => new WeakMap(),
+    );
+    const pipeline = cache.getOrInsertComputed(key, () => {
+      const start = performance.now();
+      const created = create();
+      const parts = keyParts(key);
+      // A first miss has nothing to compare against.
+      const previousParts = keyParts(last.get(entity) ?? key);
+      // A set difference loses repeated parts (the two shadow bucket counts),
+      // hence the full key alongside.
+      console.debug(
+        NAMESPACE,
+        this.type,
+        `${name} variant miss, ${(performance.now() - start).toFixed(1)}ms`,
+        {
+          added: [...parts.difference(previousParts)],
+          removed: [...previousParts.difference(parts)],
+          key,
+        },
+        entity,
+      );
+      return created;
+    });
+    last.set(entity, key);
+    return pipeline;
+  },
   getPipeline(
     entity: Entity,
     options: RendererPassOptions = {},
@@ -476,13 +536,18 @@ export default (): RendererSystem => ({
     const defines = this.getDefines(entity, options, precomputed);
     const key = this.getVariantKey(entity, defines, options);
 
-    const pipeline = this.pipelineCache.getOrInsertComputed(key, () => {
-      const source = this.getShader(
-        defines,
-        this.getShaderOptions(entity, options),
-      );
-      return { vertex: source, fragment: source };
-    });
+    const pipeline = this.getCachedPipeline(
+      "pipeline",
+      this.pipelineCache,
+      key,
+      entity,
+      () => ({
+        shader: this.getShader(
+          defines,
+          this.getShaderOptions(entity, options, defines),
+        ),
+      }),
+    );
 
     // Blend/cull/depth may change between draws without a new pipeline object.
     Object.assign(

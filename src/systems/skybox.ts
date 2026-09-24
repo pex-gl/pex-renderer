@@ -57,7 +57,7 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
   type: "skybox-system",
   cache: {} as Record<EntityId, SkyboxCache>,
   debug: false,
-  pipeline: null as { vertex: string; fragment: string } | null,
+  pipeline: null as { shader: string } | null,
 
   updateSkyboxEntity(entity: Entity) {
     const skybox = entity.skybox!;
@@ -142,10 +142,7 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
       if (!skybox?._skyTexture || !cached?.needsBake) continue;
 
       // Immutable per object identity: create once, reuse across frames.
-      const pipeline = (this.pipeline ||= (() => {
-        const source = skyShader(new Set(), {});
-        return { vertex: source, fragment: source };
-      })());
+      const pipeline = (this.pipeline ||= { shader: skyShader(new Set(), {}) });
 
       // Imported, not graph-owned: the sky is rewritten only when it moves, so
       // on most frames no pass writes it and a handle would resolve to nothing.

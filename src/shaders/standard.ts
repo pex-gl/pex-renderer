@@ -91,7 +91,7 @@ const VERTEX_DEFINE = {
 
 // prettier-ignore
 export const STANDARD_MATERIAL_COMMON_FIELDS: readonly FeatureField[] = [
-  { key: "baseColorTexture", define: MATERIAL_DEFINE.baseColorTexture, texture: true },
+  { key: "baseColorTexture", excludes: MATERIAL_DEFINE.specularGlossinessWorkflow, define: MATERIAL_DEFINE.baseColorTexture, texture: true },
   { key: "alphaTexture", define: MATERIAL_DEFINE.alphaTexture, texture: true },
   { key: "alphaCutoff", define: MATERIAL_DEFINE.alphaCutoff, wgslType: "f32", default: 0, runtime: true },
   { key: "responsiveAA", define: MATERIAL_DEFINE.responsiveAA, truthy: true },

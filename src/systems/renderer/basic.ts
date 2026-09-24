@@ -55,7 +55,7 @@ export default ({ ctx }: SystemOptions): RendererSystem => ({
       // Decides the shape of FragmentOutput, so two passes writing different
       // attachments cannot share a pipeline.
       outputsKey(options.outputs),
-    ].join("_");
+    ].join("|");
   },
   getPipelineOptions(entity: Entity) {
     const material = entity.material!;

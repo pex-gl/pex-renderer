@@ -276,7 +276,7 @@ const constantsKey = (constants: Record<string, number | boolean>) =>
   Object.keys(constants)
     .toSorted(compareStrings)
     .map((key) => `${key}=${constants[key]}`)
-    .join(",");
+    .join("|");
 
 /**
  * Stable identity for a shader generator, so two sub-passes sharing a name but
@@ -406,8 +406,7 @@ export default ({
     const variant: RenderPipeline | ComputePipeline = compute
       ? { compute: source, ...specialization }
       : {
-          vertex: source,
-          fragment: source,
+          shader: source,
           depthWriteEnabled: false,
           ...specialization,
           ...(blend && { blend }),

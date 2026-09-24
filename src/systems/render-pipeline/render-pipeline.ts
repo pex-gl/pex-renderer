@@ -79,18 +79,15 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
   // One stable descriptor object per variant: pex-gpu keys compiled pipelines
   // by identity, so swapping fields on a shared object recompiles every frame.
   blitPipeline: {
-    vertex: BLIT_WGSL,
-    fragment: BLIT_WGSL,
+    shader: BLIT_WGSL,
     depthWriteEnabled: false,
   },
   blitPremultipliedPipeline: {
-    vertex: BLIT_PREMULTIPLIED_WGSL,
-    fragment: BLIT_PREMULTIPLIED_WGSL,
+    shader: BLIT_PREMULTIPLIED_WGSL,
     depthWriteEnabled: false,
   },
   grabPipeline: {
-    vertex: GRAB_PASS_WGSL,
-    fragment: GRAB_PASS_WGSL,
+    shader: GRAB_PASS_WGSL,
     depthWriteEnabled: false,
   },
   /**
@@ -110,10 +107,8 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
   /** One variant per MSAA level, since the sample loop is unrolled per count. */
   getDepthResolvePipeline(sampleCount: number) {
     return this.depthResolvePipelines.getOrInsertComputed(sampleCount, () => {
-      const source = depthResolveShader(sampleCount);
       return {
-        vertex: source,
-        fragment: source,
+        shader: depthResolveShader(sampleCount),
         // Writes @builtin(frag_depth) over the whole target, so the test only
         // has to let every fragment through.
         depthWriteEnabled: true,

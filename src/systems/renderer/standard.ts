@@ -15,6 +15,7 @@ import {
 } from "../../shaders/depth-pass.js";
 
 import createBaseSystem, { outputsKey } from "./base.js";
+import type { FeatureField } from "./base.js";
 import { samplerName, uniformName } from "../../shaders/wgsl.js";
 import { LIGHT_TYPES } from "../../shaders/light.js";
 import { NAMESPACE, TEMP_MAT4, definesKey, hooksKey } from "../../utils.js";
@@ -94,26 +95,19 @@ interface StandardPassOptions extends RendererPassOptions {
   lights: StandardLights;
 }
 
-// Texture-typed material slots, precomputed once (not per draw) for the
-// texCoord bookkeeping in getShaderOptions()/getVariantKey().
-const TEXTURE_KEYS = STANDARD_MATERIAL_FIELDS.filter(
-  (field) => field.texture,
-).map((field) => field.key);
-
-// Material texture slots the depth pass samples — only what feeds the alpha
-// test, since nothing else about a surface reaches a depth-only draw.
-const DEPTH_PASS_TEXTURE_KEYS = ["baseColorTexture", "alphaTexture"];
-
 // Which UV set each texture slot samples, keyed the way the shader generators
 // ask for it: slot name minus the "Texture" suffix (see getTexCoordGetter).
-// Absent means set 0, so only non-zero assignments are carried.
+// Absent means set 0, so only non-zero assignments are carried. A slot whose
+// define is off is never sampled, so its UV set would only split the variant.
 function getTexCoords(
   material: MaterialComponentOptions,
-  keys: readonly string[],
+  fields: readonly FeatureField[],
+  defines: Set<string>,
 ): Record<string, number> {
   const textures = material as Record<string, MaterialTexture | undefined>;
   const texCoords: Record<string, number> = {};
-  for (const key of keys) {
+  for (const { key, texture, define } of fields) {
+    if (!texture || !defines.has(define!)) continue;
     const texCoord = (textures[key] as TextureTransform | undefined)?.texCoord;
     if (texCoord) texCoords[key.replace(/Texture$/, "")] = texCoord;
   }
@@ -266,12 +260,20 @@ export default ({
 
   getShader: (defines: Set<string>, options: PipelineShaderOptions) =>
     standardShader(defines, options),
-  getShaderOptions(entity: Entity, options: StandardPassOptions) {
+  getShaderOptions(
+    entity: Entity,
+    options: StandardPassOptions,
+    defines: Set<string>,
+  ) {
     return {
       shadow2DBuckets: options.lights.shadow2DBuckets,
       shadowCubeBuckets: options.lights.shadowCubeBuckets,
       outputs: options.outputs,
-      texCoords: getTexCoords(entity.material!, TEXTURE_KEYS),
+      texCoords: getTexCoords(
+        entity.material!,
+        STANDARD_MATERIAL_FIELDS,
+        defines,
+      ),
       hooks: entity.material!.hooks,
       debugRender: this.debugRender,
     };
@@ -329,29 +331,23 @@ export default ({
     options: StandardPassOptions,
   ) {
     const material = entity.material!;
-    const textures = material as Record<string, MaterialTexture | undefined>;
-    // texCoord assignments are baked into the WGSL (see getShaderOptions), so
-    // two materials with the same defines but different UV channels per slot
-    // need distinct pipeline variants.
-    const texCoords = TEXTURE_KEYS.map(
-      (key) => (textures[key] as TextureTransform | undefined)?.texCoord ?? 0,
-    ).join("");
     return [
+      // USE_REFLECTION_PROBES carries the probe, and only for lit materials.
       definesKey(defines.difference(RUNTIME_DEFINES)),
       // The scene's lights are absent from the key: they live in one buffer
       // whose per-type ranges are uniform data. Shadow buckets are not — they
       // are texture bindings, which cannot be an array of bindings.
       options.lights.shadow2DBuckets,
       options.lights.shadowCubeBuckets,
-      options.reflectionProbe ? 1 : 0,
       outputsKey(options.outputs),
-      texCoords,
+      // UV set assignments are baked into the WGSL.
+      JSON.stringify(getTexCoords(material, STANDARD_MATERIAL_FIELDS, defines)),
       // Both change the generated WGSL: the hooks by their own source (hashed,
       // so materials sharing hook text share a pipeline), debugRender by the
       // expression it writes over the result.
       hooksKey(material.hooks),
       this.debugRender,
-    ].join("_");
+    ].join("|");
   },
   isUnlit(entity: Entity) {
     return entity.material!.unlit || !entity._geometry!.attributes.normal;
@@ -760,13 +756,18 @@ export default ({
       defines,
       hooks,
       uniforms,
-      texCoords: getTexCoords(entity.material!, DEPTH_PASS_TEXTURE_KEYS),
+      texCoords: getTexCoords(
+        entity.material!,
+        DEPTH_PASS_MATERIAL_FIELDS,
+        defines,
+      ),
     };
   },
 
   // Shared by shadow maps and the pre-pass, which differ only in the defines
   // they add before this and the depth bias they set after it.
   getDepthPassPipeline(
+    name: string,
     entity: Entity,
     cache: Map<string, RenderPipeline>,
     material: DepthPassMaterial,
@@ -778,8 +779,8 @@ export default ({
       definesKey(defines),
       JSON.stringify(texCoords ?? {}),
       hooksKey(hooks),
-    ].join("_");
-    const pipeline = cache.getOrInsertComputed(key, () => {
+    ].join("|");
+    const pipeline = this.getCachedPipeline(name, cache, key, entity, () => {
       const shader = depthPassShader(defines, {
         ...(texCoords && { texCoords }),
         ...(hooks && { hooks }),
@@ -790,7 +791,7 @@ export default ({
       return ["USE_ALPHA_CUTOFF", "USE_LINEAR_DEPTH", "USE_NORMAL_OUTPUT"].some(
         (define) => defines.has(define),
       )
-        ? { vertex: shader, fragment: shader }
+        ? { shader }
         : { vertex: shader };
     });
     pipeline.depthWriteEnabled = true;
@@ -813,6 +814,7 @@ export default ({
     if (linear) material.defines.add("USE_LINEAR_DEPTH");
 
     const pipeline = this.getDepthPassPipeline(
+      "shadow",
       entity,
       this.depthPipelineCache,
       material,
@@ -858,6 +860,7 @@ export default ({
     if (alphaToCoverage) material.defines.add("USE_ALPHA_TO_COVERAGE");
 
     const pipeline = this.getDepthPassPipeline(
+      "prePass",
       entity,
       this.prePassPipelineCache,
       material,

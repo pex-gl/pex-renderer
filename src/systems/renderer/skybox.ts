@@ -69,7 +69,7 @@ export default ({ ctx }: SystemOptions): RendererSystem => ({
     defines: Set<string>,
     options: RendererPassOptions,
   ) {
-    return `${definesKey(defines)}_${outputsKey(options.outputs)}`;
+    return `${definesKey(defines)}|${outputsKey(options.outputs)}`;
   },
   getPipelineOptions(entity: Entity, options: RendererPassOptions) {
     return {

@@ -85,7 +85,7 @@ export default ({ ctx }: SystemOptions): RendererSystem => ({
       definesKey(defines),
       outputsKey(options.outputs),
       hooksKey(entity.material!.hooks),
-    ].join("_");
+    ].join("|");
   },
   getPipelineOptions(entity: Entity) {
     const material = entity.material!;
