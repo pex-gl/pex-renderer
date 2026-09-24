@@ -373,8 +373,10 @@ export default ({
       // Always assigned, never spread away when false: getPipeline() refreshes
       // the cached pipeline object with Object.assign, so an omitted key leaves
       // the previous draw's value in place — turning MSAA off would keep
-      // coverage enabled on a single-sample pass.
+      // coverage enabled on a single-sample pass, and an opaque material sharing
+      // a variant with a blended one would inherit its blend state.
       alphaToCoverage,
+      blend,
       depthWriteEnabled: material.depthWriteEnabled ?? !blend,
       depthCompare: material.depthCompare ?? "less-equal",
       cullMode: options.cullMode ?? material.cullMode ?? "back",
@@ -384,7 +386,6 @@ export default ({
       // from CCW to CW along with it.
       frontFace:
         mat4.determinant(entity._transform!.modelMatrix) < 0 ? "cw" : "ccw",
-      ...(blend ? { blend } : {}),
       constants: {
         USE_MSAA: !!options.msaa,
         USE_ALPHA_TO_COVERAGE: alphaToCoverage,
