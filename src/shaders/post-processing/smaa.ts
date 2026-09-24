@@ -1,90 +1,84 @@
-import { shaders as SHADERS } from "pex-shaders";
+import { smaa as SMAA } from "pex-shaders";
 import {
+  bindingDeclaration,
   createBindingAllocator,
   formatShader,
   textureSamplerDeclaration,
-  vertexOutputStruct,
 } from "../wgsl.js";
-import { postProcessingStruct } from "./common.js";
+import { fullscreenVertex, postProcessingStruct } from "./common.js";
 
-// SMAA 1x, three passes. Each has its own vertex stage: the taps are not a
-// symmetric neighbourhood like the other effects' but the algorithm's specific
-// search offsets, so they don't go through common.ts's shared one.
+// SMAA 1x and T2x, from wgsl-smaa's chunks. Every pass shares the common
+// fullscreen vertex stage: the algorithm's search offsets are affine in the
+// texture coordinate, so they are derived per fragment from the texel size
+// rather than interpolated.
 //
 // Texture coordinates keep the top-left origin the reference implementation
-// assumes (see the smaa chunk), which is also WebGPU's.
+// assumes, which is also WebGPU's.
 
-const TEX_COORD =
-  "vec2f(input.position.x * 0.5 + 0.5, 0.5 - input.position.y * 0.5)";
-
-const VERTEX_INPUT = /* wgsl */ `
-struct VertexInput {
-  @location(0) position: vec2f,
+/**
+ * The renderer's motion vectors point from this frame to the last (see
+ * FRAGMENT_VELOCITY), SMAA's the other way round, as a motion blur velocity
+ * buffer would.
+ */
+const decodeVelocity = /* wgsl */ `
+fn smaaDecodeVelocity(sample: vec4f) -> vec2f {
+  return -sample.rg;
 }
 `;
 
-/** Pass 1: writes the left/top edge pair, discarding where there is none. */
+/**
+ * Pass 1: writes the left/top edge pair, discarding where there is none.
+ *
+ * Luma or color edges by default, `SMAA_EDGES_DEPTH` for depth ones, and
+ * `USE_SMAA_PREDICATION` to lower the luma/color threshold where depth has an
+ * edge.
+ */
 export const smaaEdgesShader = (defines: Set<string> = new Set()): string => {
   const depth = defines.has("SMAA_EDGES_DEPTH");
   const color = defines.has("SMAA_EDGES_COLOR");
+  const predication = !depth && defines.has("USE_SMAA_PREDICATION");
 
   const alloc = createBindingAllocator(1);
 
   return formatShader(/* wgsl */ `
 ${postProcessingStruct}
 
+${depth ? "" : textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uTexture")}
 ${
-  depth
+  depth || predication
     ? textureSamplerDeclaration(
         0,
         alloc.nextTextureSampler(),
         "uDepthTexture",
         "texture_depth_2d",
       )
-    : textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uTexture")
+    : ""
 }
 
-${VERTEX_INPUT}
-
-${vertexOutputStruct([
-  { name: "texCoord0", type: "vec2f" },
-  { name: "offset0", type: "vec4f" },
-  { name: "offset1", type: "vec4f" },
-  { name: "offset2", type: "vec4f" },
-])}
+${fullscreenVertex()}
 
 // Includes
-${SHADERS.encodeDecode}
-${SHADERS.smaa.common}
-${SHADERS.smaa.edges}
-
-@vertex
-fn vertexMain(input: VertexInput) -> VertexOutput {
-  var output: VertexOutput;
-
-  output.position = vec4f(input.position, 0.0, 1.0);
-  output.texCoord0 = ${TEX_COORD};
-
-  let texelSize = uPostProcessing.texelSize.xyxy;
-  output.offset0 = texelSize * vec4f(-1.0, 0.0, 0.0, -1.0) + output.texCoord0.xyxy;
-  output.offset1 = texelSize * vec4f(1.0, 0.0, 0.0, 1.0) + output.texCoord0.xyxy;
-  output.offset2 = texelSize * vec4f(-2.0, 0.0, 0.0, -2.0) + output.texCoord0.xyxy;
-
-  return output;
-}
+${SMAA.chunks.edges}
 
 @fragment
 fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
+  let offsets = smaaEdgeDetectionOffsets(input.texCoord0, uPostProcessing.texelSize);
+
   let edges = ${
     depth
-      ? "smaaDepthEdgeDetection(uDepthTexture, uDepthTextureSampler, input.texCoord0, input.offset0)"
+      ? "smaaDepthEdgeDetection(uDepthTexture, uDepthTextureSampler, input.texCoord0, offsets[0])"
       : `${color ? "smaaColorEdgeDetection" : "smaaLumaEdgeDetection"}(
     uTexture,
     uTextureSampler,
     input.texCoord0,
-    input.offset0,
-    input.offset1,
-    input.offset2
+    offsets[0],
+    offsets[1],
+    offsets[2],
+    ${
+      predication
+        ? "smaaCalculatePredicatedThreshold(uDepthTexture, uDepthTextureSampler, input.texCoord0, offsets[0])"
+        : "vec2f(SMAA_THRESHOLD)"
+    }
   )`
   };
 
@@ -93,58 +87,36 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
 `);
 };
 
-/** Pass 2: turns edges into per-side blending weights. */
+/**
+ * Pass 2: turns edges into per-side blending weights. Subsample indices are
+ * zero for 1x, and select the area texture's rows matching the jitter for T2x.
+ */
 export const smaaWeightsShader = (): string => {
   const alloc = createBindingAllocator(1);
 
   return formatShader(/* wgsl */ `
 ${postProcessingStruct}
 
+struct SMAA {
+  subsampleIndices: vec4f,
+}
+@group(0) @binding(${alloc.next()}) var<uniform> uSMAA: SMAA;
+
 ${textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uEdgesTexture")}
 ${textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uAreaTexture")}
 ${textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uSearchTexture")}
 
-${VERTEX_INPUT}
-
-${vertexOutputStruct([
-  { name: "texCoord0", type: "vec2f" },
-  { name: "pixCoord", type: "vec2f" },
-  { name: "offset0", type: "vec4f" },
-  { name: "offset1", type: "vec4f" },
-  { name: "offset2", type: "vec4f" },
-])}
+${fullscreenVertex()}
 
 // Includes
-${SHADERS.math.saturate}
-${SHADERS.smaa.common}
-${SHADERS.smaa.weights}
-
-@vertex
-fn vertexMain(input: VertexInput) -> VertexOutput {
-  var output: VertexOutput;
-
-  output.position = vec4f(input.position, 0.0, 1.0);
-  output.texCoord0 = ${TEX_COORD};
-  output.pixCoord = output.texCoord0 * uPostProcessing.viewportSize;
-
-  // Quarter-texel offsets so one bilinear fetch reads four edges at once
-  // (@PSEUDO_GATHER4).
-  let texelSize = uPostProcessing.texelSize.xyxy;
-  output.offset0 = texelSize * vec4f(-0.25, -0.125, 1.25, -0.125) + output.texCoord0.xyxy;
-  output.offset1 = texelSize * vec4f(-0.125, -0.25, -0.125, 1.25) + output.texCoord0.xyxy;
-
-  // And these mark where the searches end
-  output.offset2 =
-    uPostProcessing.texelSize.xxyy *
-    (vec4f(-2.0, 2.0, -2.0, 2.0) * f32(SMAA_MAX_SEARCH_STEPS)) +
-    vec4f(output.offset0.xz, output.offset1.yw);
-
-  return output;
-}
+${SMAA.chunks.weights}
 
 @fragment
 fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
-  // SMAA 1x: no subsample indices (see @SUBSAMPLE_INDICES).
+  let viewportSize = uPostProcessing.viewportSize;
+  let texelSize = uPostProcessing.texelSize;
+  let offsets = smaaBlendingWeightCalculationOffsets(input.texCoord0, texelSize);
+
   return smaaBlendingWeightCalculation(
     uEdgesTexture,
     uEdgesTextureSampler,
@@ -152,21 +124,27 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
     uAreaTextureSampler,
     uSearchTexture,
     uSearchTextureSampler,
-    uPostProcessing.viewportSize,
-    uPostProcessing.texelSize,
+    viewportSize,
+    texelSize,
     input.texCoord0,
-    input.pixCoord,
-    input.offset0,
-    input.offset1,
-    input.offset2,
-    vec4f(0.0)
+    input.texCoord0 * viewportSize,
+    offsets[0],
+    offsets[1],
+    offsets[2],
+    uSMAA.subsampleIndices
   );
 }
 `);
 };
 
-/** Pass 3: blends each pixel with the neighbour its weights point at. */
-export const smaaBlendShader = (): string => {
+/**
+ * Pass 3: blends each pixel with the neighbour its weights point at.
+ * `USE_SMAA_REPROJECTION` also packs the antialiased velocity into alpha, for
+ * the temporal resolve.
+ */
+export const smaaBlendShader = (defines: Set<string> = new Set()): string => {
+  const reprojection = defines.has("USE_SMAA_REPROJECTION");
+
   const alloc = createBindingAllocator(1);
 
   return formatShader(/* wgsl */ `
@@ -174,40 +152,89 @@ ${postProcessingStruct}
 
 ${textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uTexture")}
 ${textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uBlendTexture")}
+${
+  reprojection
+    ? textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uVelocityTexture")
+    : ""
+}
 
-${VERTEX_INPUT}
-
-${vertexOutputStruct([
-  { name: "texCoord0", type: "vec2f" },
-  { name: "offset", type: "vec4f" },
-])}
+${fullscreenVertex()}
 
 // Includes
-${SHADERS.smaa.common}
-${SHADERS.smaa.blend}
-
-@vertex
-fn vertexMain(input: VertexInput) -> VertexOutput {
-  var output: VertexOutput;
-
-  output.position = vec4f(input.position, 0.0, 1.0);
-  output.texCoord0 = ${TEX_COORD};
-  output.offset = uPostProcessing.texelSize.xyxy * vec4f(1.0, 0.0, 0.0, 1.0) + output.texCoord0.xyxy;
-
-  return output;
-}
+${decodeVelocity}
+${SMAA.chunks.blend}
 
 @fragment
 fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
-  return smaaNeighborhoodBlending(
+  let texelSize = uPostProcessing.texelSize;
+
+  return ${reprojection ? "smaaNeighborhoodBlendingReprojection" : "smaaNeighborhoodBlending"}(
     uTexture,
     uTextureSampler,
     uBlendTexture,
-    uBlendTextureSampler,
-    uPostProcessing.texelSize,
+    uBlendTextureSampler,${
+      reprojection
+        ? `
+    uVelocityTexture,
+    uVelocityTextureSampler,`
+        : ""
+    }
+    texelSize,
     input.texCoord0,
-    input.offset
+    smaaNeighborhoodBlendingOffset(input.texCoord0, texelSize)
   );
+}
+`);
+};
+
+/**
+ * T2x resolve: this frame's blend output (`uTexture`) with the previous one's
+ * (`uHistoryTexture`), both read through `uTextureSampler`.
+ * `USE_SMAA_REPROJECTION` follows the velocity to where each pixel was, and
+ * takes alpha from the image SMAA started from (`uColorTexture`): the blend
+ * packed velocity where the image's own alpha was, and the chain after this
+ * composites with it.
+ */
+export const smaaResolveShader = (defines: Set<string> = new Set()): string => {
+  const reprojection = defines.has("USE_SMAA_REPROJECTION");
+
+  const alloc = createBindingAllocator(1);
+
+  return formatShader(/* wgsl */ `
+${postProcessingStruct}
+
+${textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uTexture")}
+${bindingDeclaration(0, alloc.next(), "uHistoryTexture", "texture_2d<f32>")}
+${
+  reprojection
+    ? `${textureSamplerDeclaration(0, alloc.nextTextureSampler(), "uVelocityTexture")}
+${bindingDeclaration(0, alloc.next(), "uColorTexture", "texture_2d<f32>")}`
+    : ""
+}
+
+${fullscreenVertex()}
+
+// Includes
+${decodeVelocity}
+${SMAA.chunks.resolve}
+
+@fragment
+fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
+  ${
+    reprojection
+      ? `let resolved = smaaResolveReprojection(
+    uTexture,
+    uHistoryTexture,
+    uTextureSampler,
+    uVelocityTexture,
+    uVelocityTextureSampler,
+    input.texCoord0
+  );
+  let alpha = textureSampleLevel(uColorTexture, uTextureSampler, input.texCoord0, 0.0).a;
+
+  return vec4f(resolved.rgb, alpha);`
+      : `return smaaResolve(uTexture, uHistoryTexture, uTextureSampler, input.texCoord0);`
+  }
 }
 `);
 };

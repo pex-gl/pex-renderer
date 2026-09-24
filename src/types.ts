@@ -992,6 +992,34 @@ export interface SMAAComponentOptions {
   /** 0 to 3 (60/80/95/99% of the quality). */
   quality?: number;
   edges?: "luma" | "color" | "depth";
+  /**
+   * Lower the luma or color edge threshold where the depth buffer has an edge,
+   * scaling it up everywhere else: geometry stays antialiased while texture
+   * detail is left alone.
+   */
+  predication?: boolean;
+  /** Depth difference counting as an edge for predication. */
+  predicationThreshold?: number;
+  /** How much predication scales the edge threshold up: 1 to 5. */
+  predicationScale?: number;
+  /** How much predication lowers the threshold at depth edges: 0 to 1. */
+  predicationStrength?: number;
+  /**
+   * `"t2x"` jitters the camera between two sub-pixel positions and resolves
+   * each frame with the previous one. Temporal antialiasing supersedes it: with
+   * `taa` on, this runs as 1x.
+   */
+  mode?: "1x" | "t2x";
+  /**
+   * T2x only: reproject the previous frame through the velocity buffer rather
+   * than blending it in place, which ghosts anything moving.
+   */
+  reprojection?: boolean;
+  /**
+   * T2x reprojection: the higher, the sooner a pixel whose motion changed stops
+   * blending with its history. 0 to 80.
+   */
+  reprojectionWeightScale?: number;
 }
 export interface MotionBlurComponentOptions {
   /**
@@ -1887,9 +1915,9 @@ export interface ShadowMappingMethods {
  * post-processing sub-pass.
  */
 export interface Samplers {
-  /** Filtered, clamped: color reads, the blit, and the SMAA area lookup. */
+  /** Filtered, clamped: color reads, the blit, and the SMAA lookups. */
   linear: GPUSampler;
-  /** Unfiltered, clamped: depth reads, and the SMAA search lookup. */
+  /** Unfiltered, clamped: depth and motion vector reads. */
   nearest: GPUSampler;
   /** Filtered, repeating: the tiled SSAO noise textures. */
   linearRepeat: GPUSampler;

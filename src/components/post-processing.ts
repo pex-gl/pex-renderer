@@ -168,6 +168,13 @@ postProcessing.fxaa = (options?: FXAAComponentOptions) => ({
 postProcessing.smaa = (options?: SMAAComponentOptions) => ({
   quality: 2, // [0, 3]
   edges: "luma", // "depth" | "color"
+  predication: false,
+  predicationThreshold: 0.01,
+  predicationScale: 2,
+  predicationStrength: 0.4,
+  mode: "1x", // "t2x"
+  reprojection: true,
+  reprojectionWeightScale: 30,
   ...options,
 });
 

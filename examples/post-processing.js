@@ -32,7 +32,7 @@ const State = {
   taa: false,
   motionBlur: false,
   ssao: false,
-  dof: true,
+  dof: false,
   bloom: false,
   lensFlare: false,
   fog: false,
@@ -228,6 +228,9 @@ const postProcessing = components.postProcessing({
   smaa: components.postProcessing.smaa({
     quality: 2,
     edges: "luma",
+    predication: false,
+    mode: "1x",
+    reprojection: true,
   }),
   fxaa: components.postProcessing.fxaa({
     quality: 3,
@@ -588,6 +591,7 @@ gui.addRadioList(
     "final.main",
     "smaa.edges",
     "smaa.weights",
+    "smaa.blend",
     "dof.debug",
     "taa.debug",
   ].map((value) => ({
@@ -1069,6 +1073,30 @@ gui.addRadioList(
   postProcessing.smaa,
   "edges",
   ["depth", "luma", "color"].map((value) => ({ name: value, value })),
+);
+gui.addParam("Predication", postProcessing.smaa, "predication");
+gui.addParam("Predication scale", postProcessing.smaa, "predicationScale", {
+  min: 1,
+  max: 5,
+});
+gui.addParam(
+  "Predication strength",
+  postProcessing.smaa,
+  "predicationStrength",
+  { min: 0, max: 1 },
+);
+gui.addRadioList(
+  "Mode",
+  postProcessing.smaa,
+  "mode",
+  ["1x", "t2x"].map((value) => ({ name: value, value })),
+);
+gui.addParam("Reprojection", postProcessing.smaa, "reprojection");
+gui.addParam(
+  "Reprojection weight",
+  postProcessing.smaa,
+  "reprojectionWeightScale",
+  { min: 0, max: 80 },
 );
 
 gui.addParam("FXAA", State, "fxaa", null, () => {

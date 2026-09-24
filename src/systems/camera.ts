@@ -94,6 +94,16 @@ const JITTER_SAMPLES = halton(JITTER_SAMPLE_COUNT + 1, [2, 3])
 const NO_JITTER = [0, 0];
 
 /**
+ * SMAA T2x's two sample positions, in pixels with y up: the reference's
+ * @SUBSAMPLE_INDICES table. The smaa effect tells which one a frame used from
+ * the jitter's sign, and picks the matching subsample indices.
+ */
+const SMAA_T2X_JITTER_SAMPLES = [
+  [0.25, -0.25],
+  [-0.25, 0.25],
+];
+
+/**
  * Cameras asked to drop their temporal history, consumed by the next update.
  *
  * Held here rather than on the component so `_temporalReset` can mean one thing
@@ -105,7 +115,8 @@ const temporalResets = new WeakSet<object>();
 /**
  * This frame's sub-pixel offset, or zero when nothing accumulates one — an
  * offset left behind after the effect is switched off would sit the image
- * permanently off-centre.
+ * permanently off-centre. Temporal antialiasing supersedes SMAA T2x, so its
+ * sequence wins when both are on.
  */
 function updateCameraJitter(
   entity: Entity,
@@ -113,9 +124,12 @@ function updateCameraJitter(
   viewport: number[],
 ) {
   const jitter = (entity.camera!._jitter ??= [0, 0]);
-  const sample = entity.postProcessing?.taa
+  const postProcessing = entity.postProcessing;
+  const sample = postProcessing?.taa
     ? JITTER_SAMPLES[frameIndex % JITTER_SAMPLE_COUNT]!
-    : NO_JITTER;
+    : postProcessing?.smaa?.mode === "t2x"
+      ? SMAA_T2X_JITTER_SAMPLES[frameIndex % 2]!
+      : NO_JITTER;
 
   // Half a pixel expressed in NDC, where one pixel spans 2 / viewportSize.
   jitter[0] = (2 * sample[0]!) / viewport[2]!;

@@ -257,10 +257,11 @@ export interface PostProcessingEffect {
    * Declared here rather than in the pipeline so the requirement sits with the
    * code that reads it; the pipeline unions whatever the loaded effects ask
    * for. An output is an attachment on the main pass, so adding one relayouts
-   * it and recompiles the material pipelines — which is why this is a static
-   * list rather than something recomputed from the component each frame.
+   * it and recompiles the material pipelines — which is why a function of the
+   * component only suits an option that switches a feature, never a value
+   * tweaked every frame.
    */
-  outputs?: string[];
+  outputs?: string[] | ((cameraEntity: Entity) => string[]);
   /** Outputs are display-referred from this effect onwards. */
   srgb?: boolean;
   /**
@@ -664,8 +665,15 @@ export default ({
   /** Main pass outputs the enabled effects need. */
   postProcessingOutputs(cameraEntity: Entity): string[] {
     const outputs: string[] = [];
-    for (const effect of this.enabledPostProcessingEffects(cameraEntity)) {
-      if (effect.outputs) outputs.push(...effect.outputs);
+    for (const { outputs: effectOutputs } of this.enabledPostProcessingEffects(
+      cameraEntity,
+    )) {
+      if (!effectOutputs) continue;
+      outputs.push(
+        ...(typeof effectOutputs === "function"
+          ? effectOutputs(cameraEntity)
+          : effectOutputs),
+      );
     }
     return outputs;
   },

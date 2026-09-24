@@ -145,8 +145,7 @@ const getDirname = (path: string) => {
   }
 
   if (end === -1) return hasRoot ? "/" : ".";
-  if (hasRoot && end === 1) return "//";
-  return path.slice(0, end);
+  return hasRoot && end === 1 ? "//" : path.slice(0, end);
 };
 
 const isObject = (obj: unknown) =>
@@ -165,7 +164,7 @@ const mapValues = <T, R>(
   );
 
 /** Maps each key of a plain object through `fn`, keeping the same values. */
-const mapKeys = <T,>(
+const mapKeys = <T>(
   obj: Record<string, T>,
   fn: (key: string, value: T, index: number) => string,
 ): Record<string, T> =>

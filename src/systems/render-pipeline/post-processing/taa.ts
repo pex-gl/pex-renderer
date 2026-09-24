@@ -3,24 +3,11 @@ import {
   taaSharpenShader,
   taaDepthHistoryShader,
 } from "../../../shaders/post-processing/taa.js";
+import { createHistoryPair, createHistoryTracker } from "./history.js";
 
-import type { Entity } from "../../../types.js";
 import type { PostProcessingEffect } from "../post-processing.js";
 
-/**
- * What the last frame left behind for a camera, so this one can tell whether
- * the history texture holds anything worth blending.
- *
- * Kept here rather than on the camera component because it is this effect's
- * bookkeeping and nothing else reads it — and weakly, so a discarded camera
- * entity does not pin an entry.
- */
-interface TAAState {
-  width: number;
-  height: number;
-  frameIndex: number;
-}
-const states = new WeakMap<Entity, TAAState>();
+const isHistoryValid = createHistoryTracker();
 
 /**
  * Temporal antialiasing.
@@ -76,28 +63,14 @@ const taa: PostProcessingEffect = {
       width,
       height,
       format: "rgba16float" as GPUTextureFormat,
-      persistent: true,
     };
-    // Declared both ways round every frame: the read side has no producing pass
-    // this frame, and only a persistent declaration gives it a handle at all.
-    const histories = [
-      createTexture({ label: `taa.history0.${viewId}`, ...descriptor }),
-      createTexture({ label: `taa.history1.${viewId}`, ...descriptor }),
-    ];
-
-    // Nothing to blend against when the texture was just allocated (first frame
-    // for this camera), reallocated (a resize changed its shape), left behind
-    // by a frame that is not the one immediately before this, or describing a
-    // view this one does not continue from (a cut, via
-    // `cameraSystem.resetTemporal`).
-    const state = states.get(cameraEntity);
-    const historyValid =
-      !camera._temporalReset &&
-      state &&
-      state.width === width &&
-      state.height === height &&
-      state.frameIndex === frameIndex - 1;
-    states.set(cameraEntity, { width, height, frameIndex });
+    const histories = createHistoryPair(
+      createTexture,
+      "taa.history",
+      viewId,
+      descriptor,
+    );
+    const historyValid = isHistoryValid(cameraEntity, frameIndex, width, height);
 
     // Published whenever the scene pass ran with it; without it the resolve
     // falls back to camera reprojection from depth, which is exact for a static
@@ -132,10 +105,9 @@ const taa: PostProcessingEffect = {
     // Its own history pair, since the two accumulate different images — sharing
     // the pass only shares the reprojection, which is what they do agree on.
     const emissive = textures.get("emissive");
-    const emissiveHistories = emissive && [
-      createTexture({ label: `taa.emissiveHistory0.${viewId}`, ...descriptor }),
-      createTexture({ label: `taa.emissiveHistory1.${viewId}`, ...descriptor }),
-    ];
+    const emissiveHistories =
+      emissive &&
+      createHistoryPair(createTexture, "taa.emissiveHistory", viewId, descriptor);
 
     const defines = new Set([
       ...(velocity ? ["USE_TAA_VELOCITY"] : []),
