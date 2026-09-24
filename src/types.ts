@@ -1607,21 +1607,6 @@ export interface MaterialHooks extends ShaderHooks {
   uniforms?: (entity: Entity) => Record<string, UniformValue>;
 }
 /**
- * Active light counts per type. The standard shader generator only reads them
- * as presence — the arrays are runtime-sized — except for the shadow bucket
- * counts, which decide how many texture bindings exist.
- */
-export interface ShaderLightCounts {
-  ambient?: number;
-  directional?: number;
-  point?: number;
-  spot?: number;
-  area?: number;
-  /** Distinct shadow map sizes in use, each one array binding. */
-  shadow2DBuckets?: number;
-  shadowCubeBuckets?: number;
-}
-/**
  * Which optional MRT fragment outputs a pipeline shader should emit, beyond
  * color.
  *
@@ -1648,8 +1633,13 @@ export interface PipelineShaderOptions {
   maxJoints?: number;
   /** Per-texture texture coordinate set index (0 or 1), e.g. { baseColor: 1 }. */
   texCoords?: Record<string, number>;
-  /** Active light counts per type, e.g. { directional: 2, point: 1 }. */
-  lights?: ShaderLightCounts;
+  /**
+   * Distinct shadow map sizes in use, each one array texture binding. The only
+   * thing about a scene's lights the generated WGSL depends on — how many
+   * lights of which type it holds is uniform data (see shaders/light.ts).
+   */
+  shadow2DBuckets?: number;
+  shadowCubeBuckets?: number;
   /**
    * WGSL expression written over the shaded colour instead of it, for
    * inspecting one term of the surface: a `PBRData` member (`"data.roughness"`)

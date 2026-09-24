@@ -14,8 +14,12 @@ import gridCells from "grid-cells";
 
 import { dragon } from "./utils.js";
 
+const LAYERS = ["directional", "spot", "point", "area"];
+
 const State = {
   animate: true,
+  shadows: true,
+  enabled: Object.fromEntries(LAYERS.map((layer) => [layer, true])),
   floorReceiveShadows: true,
   floorCastShadows: false,
   meshReceiveShadows: true,
@@ -37,7 +41,6 @@ const nW = 2;
 const nH = 2;
 
 // Entities
-const LAYERS = ["directional", "spot", "point", "area"];
 const cameraEntities = gridCells(W, H, nW, nH, 0).map((cell, i) => {
   const cameraEntity = createEntity({
     layer: LAYERS[i],
@@ -200,6 +203,16 @@ const fixAreaLightEntity = createEntity({
 });
 world.add(fixAreaLightEntity);
 
+const LIGHT_COMPONENTS = [
+  "directionalLight",
+  "spotLight",
+  "pointLight",
+  "areaLight",
+];
+const lights = world.entities.flatMap((entity) =>
+  LIGHT_COMPONENTS.map((type) => entity[type]).filter(Boolean),
+);
+
 const rotate = (t) => {
   const phi = Math.PI * 2 * t;
   const position = [Math.cos(phi), 1, Math.sin(phi)];
@@ -264,10 +277,20 @@ const addShadowMap = (
     control: cubemap
       ? gui.addTextureCube("Shadowmap", dummy)
       : gui.addTexture2D("Shadowmap", dummy, { flipY: true }),
+    entity: lightEntity,
     light,
     layer: lightEntity.layer ?? "",
     dummy,
     perspective,
+  });
+};
+
+// Removing an entity from the world is all it takes to drop a light: the
+// systems only ever see what `renderEngine.update`/`render` are handed.
+const addEnabledParam = (lightEntity) => {
+  gui.addParam("Enabled", State.enabled, lightEntity.layer, {}, (enabled) => {
+    if (enabled) world.add(lightEntity);
+    else world.entities.splice(world.entities.indexOf(lightEntity), 1);
   });
 };
 
@@ -285,6 +308,7 @@ const getViewportPosition = (layer, offset = [10, 10]) =>
   );
 
 gui.addHeader("Directional");
+addEnabledParam(directionalLightEntity);
 
 gui.addParam(
   "Intensity",
@@ -314,6 +338,9 @@ gui.addParam("Animate", State, "animate");
 gui.addParam("Rotation", State, "rotation", { min: 0, max: 1 }, () => {
   State.animate = false;
   rotate(State.rotation);
+});
+gui.addParam("Shadows", State, "shadows", {}, () => {
+  for (const light of lights) light.castShadows = State.shadows;
 });
 
 // gui.addRadioList(
@@ -361,6 +388,7 @@ gui.addParam("Receive Shadows", State, "meshReceiveShadows", {}, () => {
 });
 
 gui.addHeader("Spot").setPosition(...getViewportPosition(LAYERS[1]));
+addEnabledParam(spotLightEntity);
 gui.addParam("Range", spotLightEntity.spotLight, "range", { min: 0, max: 20 });
 gui.addParam("Intensity", spotLightEntity.spotLight, "intensity", {
   min: 0,
@@ -385,6 +413,7 @@ addShadowMap(spotLightEntity, spotLightEntity.spotLight, {
 gui.addParam("Cast Shadows", spotLightEntity.spotLight, "castShadows");
 
 gui.addHeader("Point").setPosition(...getViewportPosition(LAYERS[2]));
+addEnabledParam(pointLightEntity);
 gui.addParam("Range", pointLightEntity.pointLight, "range", {
   min: 0,
   max: 20,
@@ -403,6 +432,7 @@ addShadowMap(pointLightEntity, pointLightEntity.pointLight, {
 gui.addParam("Cast Shadows", pointLightEntity.pointLight, "castShadows");
 
 gui.addHeader("Area").setPosition(...getViewportPosition(LAYERS[3]));
+addEnabledParam(areaLightEntity);
 gui.addParam("Intensity", areaLightEntity.areaLight, "intensity", {
   min: 0,
   max: 20000,
@@ -436,12 +466,18 @@ gpu.frame(ctx, async () => {
   // texture and the planes have to be re-read rather than captured.
   for (const {
     control,
+    entity,
     light,
     layer,
     dummy,
     perspective,
   } of shadowMapControls) {
-    const shadow = light._shadows?.get(layer);
+    // A light the world no longer holds keeps its last `_shadows` entry: only
+    // the lights handed to the pipeline get cleared, and the texture it names
+    // has since been recycled by the pool.
+    const shadow = world.entities.includes(entity)
+      ? light._shadows?.get(layer)
+      : undefined;
     control.texture = shadow?.texture || dummy;
     control.options.layer = shadow?.texture ? shadow.layer : 0;
     if (perspective) {

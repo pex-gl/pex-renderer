@@ -71,18 +71,13 @@
   },
   "engines": {
     "node": ">=22.0.0",
-    "npm": ">=10.5.1",
-    "snowdev": ">=3.0.0-alpha.1"
+    "snowdev": ">=3.0.0-alpha.3"
   },
+  "packageManager": "npm@10.5.1",
   "allowScripts": {
     "webgpu@0.6.1": true
   },
   "snowdev": {
-    "importMap": {
-      "imports": {
-        "pex-renderer": "../lib/index.js"
-      }
-    },
     "resolve": {
       "exclude": [
         "**/webgpu/**"

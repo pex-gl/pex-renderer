@@ -113,7 +113,7 @@ export class PassProfiler {
       }
       const capacity = Math.ceil(needed / CAPACITY_BLOCK) * CAPACITY_BLOCK;
       this.slot = {
-        query: createTimestampQuery(this.ctx, capacity),
+        query: createTimestampQuery(this.ctx, { count: capacity }),
         capacity,
         reads: 0,
         retired: false,

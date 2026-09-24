@@ -7,7 +7,6 @@ import {
   fragmentOutputStruct,
   sceneOutputMembers,
   frameStruct,
-  lightArrayDeclaration,
   modelStruct,
   textureMatrixField,
   textureSamplerDeclaration,
@@ -27,6 +26,8 @@ import {
   hookBindingsDeclaration,
 } from "./wgsl.js";
 import { ROUGHNESS_LEVELS, SH_COEFFICIENT_COUNT } from "./reflection-probe.js";
+import { LIGHT_STRUCTS } from "./light.js";
+import type { LightType } from "./light.js";
 import type { FeatureField } from "../systems/renderer/base.js";
 import type { MaterialTextureBinding } from "./wgsl.js";
 import type { PipelineShaderOptions } from "../types.js";
@@ -310,7 +311,6 @@ export const standardShader = (
   const { maxJoints = 256 } = options;
   const outputs = options.outputs ?? {};
   const texCoords = options.texCoords || {};
-  const lights = options.lights || {};
 
   const tc = getTexCoordGetter(texCoords);
 
@@ -320,25 +320,14 @@ export const standardShader = (
   const useColor = vertexFlags.vertexColor || vertexFlags.instancedColor;
   const useDisplacementTexture = defines.has("USE_DISPLACEMENT_TEXTURE");
   const useSkin = defines.has("USE_SKIN");
-  const useReflectionProbes =
-    defines.has("USE_REFLECTION_PROBES") && !materialFlags.unlitWorkflow;
-
-  // Presence, not count: the arrays are runtime-sized, so how many lights there
-  // are never reaches the shader — only whether a type is used at all, which
-  // decides if its binding and evaluation code exist.
   const lit = !materialFlags.unlitWorkflow;
-  const ambientLights = lit && (lights.ambient ?? 0) > 0;
-  const directionalLights = lit && (lights.directional ?? 0) > 0;
-  const pointLights = lit && (lights.point ?? 0) > 0;
-  const spotLights = lit && (lights.spot ?? 0) > 0;
-  const areaLights = lit && (lights.area ?? 0) > 0;
+  const useReflectionProbes = defines.has("USE_REFLECTION_PROBES") && lit;
+
   // One binding per distinct shadow map size, not per light: a light is a layer.
-  const shadow2DBuckets = materialFlags.unlitWorkflow
-    ? 0
-    : (lights.shadow2DBuckets ?? 0);
-  const shadowCubeBuckets = materialFlags.unlitWorkflow
-    ? 0
-    : (lights.shadowCubeBuckets ?? 0);
+  // The only light data left that shapes the WGSL — how many lights of which
+  // type the scene holds is uniform data (see shaders/light.ts).
+  const shadow2DBuckets = lit ? (options.shadow2DBuckets ?? 0) : 0;
+  const shadowCubeBuckets = lit ? (options.shadowCubeBuckets ?? 0) : 0;
 
   const colorAssignment =
     vertexFlags.vertexColor && vertexFlags.instancedColor
@@ -386,44 +375,15 @@ export const standardShader = (
   // Lights
   const lightBindings = createBindingAllocator(0);
 
-  const ambientLightsDecl = lightArrayDeclaration(
-    1,
-    lightBindings,
-    "uAmbientLights",
-    "AmbientLight",
-    ambientLights,
-  );
-  const directionalLightsDecl = lightArrayDeclaration(
-    1,
-    lightBindings,
-    "uDirectionalLights",
-    "DirectionalLight",
-    directionalLights,
-  );
-  const pointLightsDecl = lightArrayDeclaration(
-    1,
-    lightBindings,
-    "uPointLights",
-    "PointLight",
-    pointLights,
-  );
-  const spotLightsDecl = lightArrayDeclaration(
-    1,
-    lightBindings,
-    "uSpotLights",
-    "SpotLight",
-    spotLights,
-  );
-  const areaLightsDecl = lightArrayDeclaration(
-    1,
-    lightBindings,
-    "uAreaLights",
-    "AreaLight",
-    areaLights,
-  );
-
-  const ltcDecl = areaLights
+  // Every lit material declares the same lighting bindings whatever the scene
+  // holds, the LTC lookup tables included — the renderer binds a dummy for
+  // those until an area light asks for them. Gating any of it on what is in
+  // the scene would make adding a light regenerate and recompile the WGSL of
+  // every material, synchronously, mid-frame.
+  const lightsDecl = lit
     ? /* wgsl */ `
+${bindingDeclaration(1, lightBindings.next(), "uLights", "array<SceneLight>", "storage, read")}
+${bindingDeclaration(1, lightBindings.next(), "uLightRanges", "LightRanges", "uniform")}
 ${textureSamplerDeclaration(1, lightBindings.nextTextureSampler(), "uLtc1")}
 ${textureSamplerDeclaration(1, lightBindings.nextTextureSampler(), "uLtc2")}`
     : "";
@@ -531,40 +491,39 @@ ${bindingDeclaration(1, lightBindings.next(), "uIrradianceCoefficients", `array<
         "uAOTexture",
       );
 
-  // One loop per type over its whole buffer. arrayLength() is exact: a binding
-  // only exists when the scene has at least one light of that type.
-  const lightsLoop = (present: boolean, array: string, call: string) =>
-    present
-      ? /* wgsl */ `for (var i = 0u; i < arrayLength(&${array}); i++) {
-    ${call}
-  }`
-      : "";
+  // One loop per type over its slice of the shared buffer, scoped so the five
+  // ranges don't collide. A type the scene has none of has a count of 0.
+  const lightsLoop = (type: LightType, call: string) => /* wgsl */ `{
+    let range = uLightRanges.${type};
+    for (var i = range.offset; i < range.offset + range.count; i++) {
+      ${call}
+    }
+  }`;
 
   const ambientLightsBlock = lightsLoop(
-    ambientLights,
-    "uAmbientLights",
-    "EvaluateAmbientLight(&data, uAmbientLights[i], data.ao);",
+    "ambient",
+    "EvaluateAmbientLight(&data, uLights[i], data.ao);",
   );
   const directionalLightsBlock = lightsLoop(
-    directionalLights,
-    "uDirectionalLights",
-    "EvaluateDirectionalLight(&data, uDirectionalLights[i], input.positionWorld, input.position.xy);",
+    "directional",
+    "EvaluateDirectionalLight(&data, uLights[i], input.positionWorld, input.position.xy);",
   );
   const pointLightsBlock = lightsLoop(
-    pointLights,
-    "uPointLights",
-    "EvaluatePointLight(&data, uPointLights[i], input.position.xy);",
+    "point",
+    "EvaluatePointLight(&data, uLights[i], input.position.xy);",
   );
   const spotLightsBlock = lightsLoop(
-    spotLights,
-    "uSpotLights",
-    "EvaluateSpotLight(&data, uSpotLights[i], input.positionWorld, input.position.xy);",
+    "spot",
+    "EvaluateSpotLight(&data, uLights[i], input.positionWorld, input.position.xy);",
   );
-  const areaLightsBlock = lightsLoop(
-    areaLights,
-    "uAreaLights",
-    `EvaluateAreaLight(&data, uAreaLights[i], uLtc1, ${samplerName("uLtc1")}, uLtc2, ${samplerName("uLtc2")}, input.positionWorld, uFrame.cameraPosition, input.position.xy);`,
-  );
+  // Behind an override rather than always compiled: linearly transformed
+  // cosines is by far the largest of the five evaluations, and a scene without
+  // an area light should not carry its register pressure. Toggling it rebuilds
+  // pipelines from the one shader module, not the module.
+  const areaLightsBlock = /* wgsl */ `if (USE_AREA_LIGHTS) ${lightsLoop(
+    "area",
+    `EvaluateAreaLight(&data, uLights[i], uLtc1, ${samplerName("uLtc1")}, uLtc2, ${samplerName("uLtc2")}, input.positionWorld, uFrame.cameraPosition, input.position.xy);`,
+  )}`;
 
   const alphaBlock = () => /* wgsl */ `
   ${
@@ -823,12 +782,7 @@ ${STANDARD_MATERIAL_FIELDS.filter((field) => field.texture)
   .join("\n")}
 ${hookBindingsDeclaration(2, materialBindings, hooks.bindings)}
 
-${ambientLightsDecl}
-${directionalLightsDecl}
-${pointLightsDecl}
-${spotLightsDecl}
-${areaLightsDecl}
-${ltcDecl}
+${lightsDecl}
 ${shadow2DDecls}
 ${shadowCubeDecls}
 ${reflectionProbeDecl}
@@ -916,6 +870,7 @@ override USE_SPECULAR: bool = false;
 override USE_EMISSIVE: bool = false;
 override USE_CLEARCOAT: bool = false;
 override USE_SHEEN: bool = false;
+override USE_AREA_LIGHTS: bool = false;
 override USE_TRANSMISSION: bool = false;
 override USE_DISPERSION: bool = false;
 override USE_VOLUME: bool = false;
@@ -1023,6 +978,7 @@ ${
     ? ""
     : `
   // Lighting
+  ${LIGHT_STRUCTS}
   ${SHADERS.depthUnpack}
   ${SHADERS.depthRead}
   ${SHADERS.normalPerturb}

@@ -16,9 +16,11 @@ import {
 
 import createBaseSystem, { outputsKey } from "./base.js";
 import { samplerName, uniformName } from "../../shaders/wgsl.js";
+import { LIGHT_TYPES } from "../../shaders/light.js";
 import { NAMESPACE, TEMP_MAT4, definesKey, hooksKey } from "../../utils.js";
 
 import type { GpuTexture, RenderPipeline, Uniforms } from "pex-gpu";
+import type { LightType } from "../../shaders/light.js";
 import type { Mat4 } from "pex-math";
 import type {
   PipelineShaderOptions,
@@ -30,7 +32,6 @@ import type {
   RendererPassOptions,
   RendererSystem,
   RenderView,
-  ShaderLightCounts,
   Shadow2DLightComponentOptions,
   ShadowCastingLightComponentOptions,
   LightShadow,
@@ -53,11 +54,18 @@ const NO_SHADOW: LightShadow = {
   texture: undefined,
 };
 
+/** Where each type's lights sit in the shared buffer. */
+type LightRanges = Record<LightType, { offset: number; count: number }>;
+
 /**
- * `@group(1)` values. A light array is an array of structs, which pex-gpu's
- * packer takes but its `PackableValue` does not spell.
+ * `@group(1)` values. The lights are an array of structs and the ranges a
+ * struct of structs — shapes pex-gpu's packer takes but its `PackableValue`
+ * does not spell.
  */
-type LightUniforms = Record<string, Uniforms[string] | Uniforms[]>;
+type LightUniforms = Record<
+  string,
+  Uniforms[string] | Uniforms[] | LightRanges
+>;
 
 /** A depth-only draw's shader variant, plus what an alpha-testing one binds. */
 interface DepthPassMaterial {
@@ -70,7 +78,11 @@ interface DepthPassMaterial {
 /** `@group(1)` bindings for the pass's lights, plus what the shader keys on. */
 interface StandardLights {
   uniforms: LightUniforms;
-  counts: Required<ShaderLightCounts>;
+  /** Distinct shadow map sizes, each one texture binding — so a variant each. */
+  shadow2DBuckets: number;
+  shadowCubeBuckets: number;
+  /** Whether the pass has any area light, which gates the LTC evaluation. */
+  area: boolean;
 }
 
 /**
@@ -252,11 +264,16 @@ export default ({
     }
   },
 
-  getShader: (defines: Set<string>, options: PipelineShaderOptions) =>
-    standardShader(defines, options),
+  getShader: (defines: Set<string>, options: PipelineShaderOptions) => {
+    const s = standardShader(defines, options);
+    console.log(s);
+
+    return s;
+  },
   getShaderOptions(entity: Entity, options: StandardPassOptions) {
     return {
-      lights: options.lights.counts,
+      shadow2DBuckets: options.lights.shadow2DBuckets,
+      shadowCubeBuckets: options.lights.shadowCubeBuckets,
       outputs: options.outputs,
       texCoords: getTexCoords(entity.material!, TEXTURE_KEYS),
       hooks: entity.material!.hooks,
@@ -317,7 +334,6 @@ export default ({
   ) {
     const material = entity.material!;
     const textures = material as Record<string, MaterialTexture | undefined>;
-    const { counts } = options.lights;
     // texCoord assignments are baked into the WGSL (see getShaderOptions), so
     // two materials with the same defines but different UV channels per slot
     // need distinct pipeline variants.
@@ -326,17 +342,11 @@ export default ({
     ).join("");
     return [
       definesKey(defines.difference(RUNTIME_DEFINES)),
-      // Presence, not count: light arrays are runtime-sized storage buffers, so
-      // adding a light writes a buffer instead of compiling a shader. Shadow
-      // buckets stay counted — they are texture bindings, which cannot be an
-      // array of bindings.
-      counts.ambient ? 1 : 0,
-      counts.directional ? 1 : 0,
-      counts.point ? 1 : 0,
-      counts.spot ? 1 : 0,
-      counts.area ? 1 : 0,
-      counts.shadow2DBuckets,
-      counts.shadowCubeBuckets,
+      // The scene's lights are absent from the key: they live in one buffer
+      // whose per-type ranges are uniform data. Shadow buckets are not — they
+      // are texture bindings, which cannot be an array of bindings.
+      options.lights.shadow2DBuckets,
+      options.lights.shadowCubeBuckets,
       options.reflectionProbe ? 1 : 0,
       outputsKey(options.outputs),
       texCoords,
@@ -397,6 +407,9 @@ export default ({
           ? {}
           : {
               SHADOW_QUALITY: material.receiveShadows ? this.shadowQuality : 0,
+              // Not a variant: the LTC evaluation is large enough to be worth
+              // compiling out, but its bindings are declared either way.
+              USE_AREA_LIGHTS: options.lights.area,
               // A pre-baked probe (EXT_lights_image_based) reports its own
               // native mip count instead of the baked default (see
               // shaders/reflection-probe.ts ROUGHNESS_LEVELS).
@@ -408,8 +421,8 @@ export default ({
     };
   },
 
-  // Builds the @group(1) values: one runtime-sized struct array per light type,
-  // plus one texture binding per shadow bucket.
+  // Builds the @group(1) values: every light of every type in one buffer, the
+  // per-type ranges into it, and one texture binding per shadow bucket.
   gatherLights(entities: Entity[], scope: string): StandardLights {
     const ambient = entities.filter((e) => e.ambientLight);
     const directional = entities.filter((e) => e.directionalLight);
@@ -425,12 +438,6 @@ export default ({
     const areaActive = ltcReady ? area : [];
 
     const uniforms: LightUniforms = {};
-
-    if (ambient.length) {
-      uniforms.uAmbientLights = ambient.map((e) => ({
-        color: lightColor(e.ambientLight!),
-      }));
-    }
 
     // Shadow maps are array layers in size-bucketed textures, so a light
     // contributes its bucket and layer rather than a binding of its own. The
@@ -485,8 +492,12 @@ export default ({
       };
     };
 
-    if (directional.length) {
-      uniforms.uDirectionalLights = directional.map((e) => {
+    // One entry per light, in LIGHT_TYPES order, each filling only the members
+    // of the union its own type reads — the allocator zeroes the rest.
+    const byType: Record<LightType, Uniforms[]> = {
+      ambient: ambient.map((e) => ({ color: lightColor(e.ambientLight!) })),
+
+      directional: directional.map((e) => {
         const light = e.directionalLight!;
         return {
           direction: light._direction!,
@@ -494,11 +505,9 @@ export default ({
           viewMatrix: light._viewMatrix!,
           ...shadow2D(light),
         };
-      });
-    }
+      }),
 
-    if (point.length) {
-      uniforms.uPointLights = point.map((e) => {
+      point: point.map((e) => {
         const light = e.pointLight!;
         const shadow = shadowOf(light);
         return {
@@ -512,11 +521,9 @@ export default ({
           far: shadow.far,
           ...shadowSlot(light, shadow, true),
         };
-      });
-    }
+      }),
 
-    if (spot.length) {
-      uniforms.uSpotLights = spot.map((e) => {
+      spot: spot.map((e) => {
         const light = e.spotLight!;
         return {
           position: e._transform!.worldPosition,
@@ -528,15 +535,9 @@ export default ({
           viewMatrix: light._viewMatrix!,
           ...shadow2D(light),
         };
-      });
-    }
+      }),
 
-    if (areaActive.length) {
-      uniforms.uLtc1 = this.ltcTextures.ltc_1;
-      uniforms[samplerName("uLtc1")] = this.ltcSampler;
-      uniforms.uLtc2 = this.ltcTextures.ltc_2;
-      uniforms[samplerName("uLtc2")] = this.ltcSampler;
-      uniforms.uAreaLights = areaActive.map((e) => {
+      area: areaActive.map((e) => {
         const light = e.areaLight!;
         return {
           position: e.transform!.position!,
@@ -548,8 +549,25 @@ export default ({
           viewMatrix: light._viewMatrix!,
           ...shadow2D(light),
         };
-      });
+      }),
+    };
+
+    const lights: Uniforms[] = [];
+    const ranges = {} as LightRanges;
+    for (const type of LIGHT_TYPES) {
+      ranges[type] = { offset: lights.length, count: byType[type].length };
+      lights.push(...byType[type]);
     }
+    uniforms.uLights = lights;
+    uniforms.uLightRanges = ranges;
+
+    // Declared by every lit material whether or not the scene has an area
+    // light, so a dummy stands in until the tables finish loading.
+    // USE_AREA_LIGHTS is false until then, so nothing samples it.
+    uniforms.uLtc1 = this.ltcTextures.ltc_1 ?? this.dummyWhiteTexture;
+    uniforms[samplerName("uLtc1")] = this.ltcSampler;
+    uniforms.uLtc2 = this.ltcTextures.ltc_2 ?? this.dummyWhiteTexture;
+    uniforms[samplerName("uLtc2")] = this.ltcSampler;
 
     // A bucket with no caster in it cannot happen — indices are handed out as
     // casters are found — but a light that stopped casting mid-frame leaves a
@@ -567,15 +585,9 @@ export default ({
 
     return {
       uniforms,
-      counts: {
-        ambient: ambient.length,
-        directional: directional.length,
-        point: point.length,
-        spot: spot.length,
-        area: areaActive.length,
-        shadow2DBuckets: shadowBuckets.textures2D.length,
-        shadowCubeBuckets: shadowBuckets.texturesCube.length,
-      },
+      shadow2DBuckets: shadowBuckets.textures2D.length,
+      shadowCubeBuckets: shadowBuckets.texturesCube.length,
+      area: areaActive.length > 0,
     };
   },
 
