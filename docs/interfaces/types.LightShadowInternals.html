@@ -170,7 +170,7 @@
 <li><a href="" aria-current="page">LightShadowInternals</a></li></ul>
 <h1>Interface LightShadowInternals</h1></div>
 <div class="tsd-signature"><span class="tsd-signature-keyword">interface</span> <span class="tsd-kind-interface">LightShadowInternals</span> <span class="tsd-signature-symbol">{</span><br/>    <a class="tsd-kind-property" href="#_direction">_direction</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">Vec3</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#_intensity">_intensity</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#_scenebbox">_sceneBbox</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">AABB</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#_scenebboxinlightspace">_sceneBboxInLightSpace</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">AABB</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#_shadows">_shadows</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">Map</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">,</span> <a href="types.LightShadow.html" class="tsd-signature-type tsd-kind-interface">LightShadow</a><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#_viewmatrix">_viewMatrix</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">Mat4</span><span class="tsd-signature-symbol">;</span><br/><span class="tsd-signature-symbol">}</span></div>
-<section class="tsd-panel tsd-hierarchy" data-refl="128">
+<section class="tsd-panel tsd-hierarchy" data-refl="126">
 <h4>Hierarchy (<a href="../hierarchy.html#types.LightShadowInternals">View Summary</a>)</h4>
 <ul class="tsd-hierarchy">
 <li class="tsd-hierarchy-item"><span class="tsd-hierarchy-target">LightShadowInternals</span>
@@ -180,7 +180,7 @@
 <li class="tsd-hierarchy-item"><a href="types.PointLightComponentOptions.html" class="tsd-signature-type tsd-kind-interface">PointLightComponentOptions</a></li>
 <li class="tsd-hierarchy-item"><a href="types.SpotLightComponentOptions.html" class="tsd-signature-type tsd-kind-interface">SpotLightComponentOptions</a></li></ul></li></ul></section><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L253">types.ts:253</a></li></ul></aside>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/types.ts#L262">pex-renderer/src/types.ts:262</a></li></ul></aside>
 <section class="tsd-panel-group tsd-index-group">
 <section class="tsd-panel tsd-index-panel">
 <details class="tsd-index-content tsd-accordion" open><summary class="tsd-accordion-summary tsd-index-summary"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-chevronDown"></use></svg>
@@ -202,7 +202,7 @@
 <h3 class="tsd-anchor-link" id="_direction"><code class="tsd-tag">Optional</code><span>_<wbr/>direction</span><a href="#_direction" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">_direction</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">Vec3</span></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L261">types.ts:261</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/types.ts#L270">pex-renderer/src/types.ts:270</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="_intensity"><code class="tsd-tag">Optional</code><span>_<wbr/>intensity</span><a href="#_intensity" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">_intensity</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">number</span></div>
@@ -211,19 +211,19 @@ for a directional light, luminous intensity (cd) for point and spot,
 luminance (cd/m²) for area. Added by the light system.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L259">types.ts:259</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/types.ts#L268">pex-renderer/src/types.ts:268</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="_scenebbox"><code class="tsd-tag">Optional</code><span>_<wbr/>scene<wbr/>Bbox</span><a href="#_scenebbox" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">_sceneBbox</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">AABB</span></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L269">types.ts:269</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/types.ts#L278">pex-renderer/src/types.ts:278</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="_scenebboxinlightspace"><code class="tsd-tag">Optional</code><span>_<wbr/>scene<wbr/>Bbox<wbr/>In<wbr/>Light<wbr/>Space</span><a href="#_scenebboxinlightspace" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">_sceneBboxInLightSpace</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">AABB</span></div>
 <div class="tsd-comment tsd-typography"><p>Frustum-fitting scratch, reused across frames to avoid reallocating.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L268">types.ts:268</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/types.ts#L277">pex-renderer/src/types.ts:277</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="_shadows"><code class="tsd-tag">Optional</code><span>_<wbr/>shadows</span><a href="#_shadows" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">_shadows</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">Map</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">,</span> <a href="types.LightShadow.html" class="tsd-signature-type tsd-kind-interface">LightShadow</a><span class="tsd-signature-symbol">&gt;</span></div>
@@ -231,12 +231,12 @@ luminance (cd/m²) for area. Added by the light system.</p>
 passes (<code>&quot;&quot;</code> for an unlayered camera). Added by the render pipeline.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L266">types.ts:266</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/types.ts#L275">pex-renderer/src/types.ts:275</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="_viewmatrix"><code class="tsd-tag">Optional</code><span>_<wbr/>view<wbr/>Matrix</span><a href="#_viewmatrix" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">_viewMatrix</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">Mat4</span></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L260">types.ts:260</a></li></ul></aside></section></section></details></div>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/types.ts#L269">pex-renderer/src/types.ts:269</a></li></ul></aside></section></section></details></div>
 <div class="col-sidebar">
 <div class="page-menu">
 <div class="tsd-navigation settings">

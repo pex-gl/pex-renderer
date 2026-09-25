@@ -171,7 +171,7 @@
 <h1>Interface SkinComponentOptions</h1></div>
 <div class="tsd-signature"><span class="tsd-signature-keyword">interface</span> <span class="tsd-kind-interface">SkinComponentOptions</span> <span class="tsd-signature-symbol">{</span><br/>    <a class="tsd-kind-property" href="#_haspreviousjointmatrices">_hasPreviousJointMatrices</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#_paddedjointmatrices">_paddedJointMatrices</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">Mat4</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#_paddedpreviousjointmatrices">_paddedPreviousJointMatrices</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">Mat4</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#_previousjointmatrices">_previousJointMatrices</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">Mat4</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#inversebindmatrices">inverseBindMatrices</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">Mat4</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#jointmatrices">jointMatrices</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">Mat4</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#joints">joints</a><span class="tsd-signature-symbol">?:</span> <a href="types.Entity.html" class="tsd-signature-type tsd-kind-interface">Entity</a><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">;</span><br/><span class="tsd-signature-symbol">}</span></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L1374">types.ts:1374</a></li></ul></aside>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/types.ts#L1414">pex-renderer/src/types.ts:1414</a></li></ul></aside>
 <section class="tsd-panel-group tsd-index-group">
 <section class="tsd-panel tsd-index-panel">
 <details class="tsd-index-content tsd-accordion" open><summary class="tsd-accordion-summary tsd-index-summary"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-chevronDown"></use></svg>
@@ -196,28 +196,28 @@
 <div class="tsd-comment tsd-typography"><p>Cleared once the first <code>jointMatrices</code> have been copied into the previous.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L1388">types.ts:1388</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/types.ts#L1428">pex-renderer/src/types.ts:1428</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="_paddedjointmatrices"><code class="tsd-tag">Optional</code><span>_<wbr/>padded<wbr/>Joint<wbr/>Matrices</span><a href="#_paddedjointmatrices" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">_paddedJointMatrices</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">Mat4</span><span class="tsd-signature-symbol">[]</span></div>
 <div class="tsd-comment tsd-typography"><p><code>jointMatrices</code> padded to the shader's fixed array length, by a renderer.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L1390">types.ts:1390</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/types.ts#L1430">pex-renderer/src/types.ts:1430</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="_paddedpreviousjointmatrices"><code class="tsd-tag">Optional</code><span>_<wbr/>padded<wbr/>Previous<wbr/>Joint<wbr/>Matrices</span><a href="#_paddedpreviousjointmatrices" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">_paddedPreviousJointMatrices</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">Mat4</span><span class="tsd-signature-symbol">[]</span></div>
 <div class="tsd-comment tsd-typography"><p><code>_previousJointMatrices</code> padded the same way.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L1392">types.ts:1392</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/types.ts#L1432">pex-renderer/src/types.ts:1432</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="_previousjointmatrices"><code class="tsd-tag">Optional</code><span>_<wbr/>previous<wbr/>Joint<wbr/>Matrices</span><a href="#_previousjointmatrices" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">_previousJointMatrices</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">Mat4</span><span class="tsd-signature-symbol">[]</span></div>
 <div class="tsd-comment tsd-typography"><p>Last update's <code>jointMatrices</code>, added by the skin system for motion vectors.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L1386">types.ts:1386</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/types.ts#L1426">pex-renderer/src/types.ts:1426</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="inversebindmatrices"><code class="tsd-tag">Optional</code><span>inverse<wbr/>Bind<wbr/>Matrices</span><a href="#inversebindmatrices" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">inverseBindMatrices</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">Mat4</span><span class="tsd-signature-symbol">[]</span></div>
@@ -226,21 +226,21 @@ no counterpart here: it names a pivot node and, per spec, is not needed to
 compute skinning transforms.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L1382">types.ts:1382</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/types.ts#L1422">pex-renderer/src/types.ts:1422</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="jointmatrices"><code class="tsd-tag">Optional</code><span>joint<wbr/>Matrices</span><a href="#jointmatrices" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">jointMatrices</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">Mat4</span><span class="tsd-signature-symbol">[]</span></div>
 <div class="tsd-comment tsd-typography"><p>One per joint, written by the skin system each update.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L1384">types.ts:1384</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/types.ts#L1424">pex-renderer/src/types.ts:1424</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="joints"><code class="tsd-tag">Optional</code><span>joints</span><a href="#joints" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">joints</span><span class="tsd-signature-symbol">?:</span> <a href="types.Entity.html" class="tsd-signature-type tsd-kind-interface">Entity</a><span class="tsd-signature-symbol">[]</span></div>
 <div class="tsd-comment tsd-typography"><p>Joint entities, in the order <code>inverseBindMatrices</code> is indexed by.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L1376">types.ts:1376</a></li></ul></aside></section></section></details></div>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/types.ts#L1416">pex-renderer/src/types.ts:1416</a></li></ul></aside></section></section></details></div>
 <div class="col-sidebar">
 <div class="page-menu">
 <div class="tsd-navigation settings">

@@ -175,6 +175,9 @@
 <div class="tsd-signature tsd-anchor-link" id="smaaedgesshader"><span class="tsd-kind-call-signature">smaaEdgesShader</span><span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">defines</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">Set</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><a href="#smaaedgesshader" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
 <div class="tsd-description">
 <div class="tsd-comment tsd-typography"><p>Pass 1: writes the left/top edge pair, discarding where there is none.</p>
+<p>Luma or color edges by default, <code>SMAA_EDGES_DEPTH</code> for depth ones, and
+<code>USE_SMAA_PREDICATION</code> to lower the luma/color threshold where depth has an
+edge.</p>
 </div>
 <div class="tsd-parameters">
 <h4 class="tsd-parameters-title">Parameters</h4>
@@ -182,7 +185,7 @@
 <li><span><span class="tsd-kind-parameter">defines</span>: <span class="tsd-signature-type">Set</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol"> = ...</span></span></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">string</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/shaders/post-processing/smaa.ts#L27">shaders/post-processing/smaa.ts:27</a></li></ul></aside></div></li></ul></section></div>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/shaders/post-processing/smaa.ts#L36">pex-renderer/src/shaders/post-processing/smaa.ts:36</a></li></ul></aside></div></li></ul></section></div>
 <div class="col-sidebar">
 <div class="page-menu">
 <div class="tsd-navigation settings">

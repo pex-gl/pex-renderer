@@ -177,9 +177,9 @@ renderer draws several passes per frame and several views per frame, and a
 field left over from the previous one is a pipeline variant compiled against
 the wrong pass.</p>
 </div></section>
-<div class="tsd-signature"><span class="tsd-signature-keyword">interface</span> <span class="tsd-kind-interface">RendererPassOptions</span> <span class="tsd-signature-symbol">{</span><br/>    <a class="tsd-kind-property" href="#cullmode">cullMode</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">GPUCullMode</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#frameindex">frameIndex</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#lightshadow">lightShadow</a><span class="tsd-signature-symbol">?:</span> <a href="types.LightShadow.html" class="tsd-signature-type tsd-kind-interface">LightShadow</a><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#msaa">msaa</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#multisampled">multisampled</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#outputs">outputs</a><span class="tsd-signature-symbol">?:</span> <a href="types.FragmentOutputs.html" class="tsd-signature-type tsd-kind-interface">FragmentOutputs</a><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#reflectionprobe">reflectionProbe</a><span class="tsd-signature-symbol">?:</span> <a href="types.ReflectionProbeCache.html" class="tsd-signature-type tsd-kind-interface">ReflectionProbeCache</a><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#shadowmappinglight">shadowMappingLight</a><span class="tsd-signature-symbol">?:</span> <a href="../types/types.ShadowCastingLightComponentOptions.html" class="tsd-signature-type tsd-kind-type-alias">ShadowCastingLightComponentOptions</a><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#shadowscope">shadowScope</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#textures">textures</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">Record</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">,</span> <span class="tsd-signature-type">GpuTexture</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#transmitted">transmitted</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#transparent">transparent</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol">;</span><br/><span class="tsd-signature-symbol">}</span></div><aside class="tsd-sources">
+<div class="tsd-signature"><span class="tsd-signature-keyword">interface</span> <span class="tsd-kind-interface">RendererPassOptions</span> <span class="tsd-signature-symbol">{</span><br/>    <a class="tsd-kind-property" href="#cullmode">cullMode</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">GPUCullMode</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#frameindex">frameIndex</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#lightshadow">lightShadow</a><span class="tsd-signature-symbol">?:</span> <a href="types.LightShadow.html" class="tsd-signature-type tsd-kind-interface">LightShadow</a><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#msaa">msaa</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#multisampled">multisampled</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#outputs">outputs</a><span class="tsd-signature-symbol">?:</span> <a href="types.FragmentOutputs.html" class="tsd-signature-type tsd-kind-interface">FragmentOutputs</a><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#reflectionprobe">reflectionProbe</a><span class="tsd-signature-symbol">?:</span> <a href="types.ReflectionProbeCache.html" class="tsd-signature-type tsd-kind-interface">ReflectionProbeCache</a><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#shadowmappinglight">shadowMappingLight</a><span class="tsd-signature-symbol">?:</span> <a href="../types/types.ShadowCastingLightComponentOptions.html" class="tsd-signature-type tsd-kind-type-alias">ShadowCastingLightComponentOptions</a><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#shadowscope">shadowScope</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#textures">textures</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">Record</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">,</span> <a href="types.GpuTexture.html" class="tsd-signature-type tsd-kind-interface">GpuTexture</a><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#transmitted">transmitted</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#transparent">transparent</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol">;</span><br/><span class="tsd-signature-symbol">}</span></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L1715">types.ts:1715</a></li></ul></aside>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/types.ts#L1749">pex-renderer/src/types.ts:1749</a></li></ul></aside>
 <section class="tsd-panel-group tsd-index-group">
 <section class="tsd-panel tsd-index-panel">
 <details class="tsd-index-content tsd-accordion" open><summary class="tsd-accordion-summary tsd-index-summary"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-chevronDown"></use></svg>
@@ -207,7 +207,7 @@ the wrong pass.</p>
 <h3 class="tsd-anchor-link" id="cullmode"><code class="tsd-tag">Optional</code><span>cull<wbr/>Mode</span><a href="#cullmode" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">cullMode</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">GPUCullMode</span></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L1749">types.ts:1749</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/types.ts#L1783">pex-renderer/src/types.ts:1783</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="frameindex"><code class="tsd-tag">Optional</code><span>frame<wbr/>Index</span><a href="#frameindex" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">frameIndex</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">number</span></div>
@@ -215,21 +215,21 @@ the wrong pass.</p>
 pass of one frame displaces a vertex identically.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L1720">types.ts:1720</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/types.ts#L1754">pex-renderer/src/types.ts:1754</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="lightshadow"><code class="tsd-tag">Optional</code><span>light<wbr/>Shadow</span><a href="#lightshadow" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">lightShadow</span><span class="tsd-signature-symbol">?:</span> <a href="types.LightShadow.html" class="tsd-signature-type tsd-kind-interface">LightShadow</a></div>
 <div class="tsd-comment tsd-typography"><p>The shadow that pass fills in, so the draw knows the map it is writing.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L1740">types.ts:1740</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/types.ts#L1774">pex-renderer/src/types.ts:1774</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="msaa"><code class="tsd-tag">Optional</code><span>msaa</span><a href="#msaa" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">msaa</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">boolean</span></div>
 <div class="tsd-comment tsd-typography"><p>The scene is tone mapped for a reversible resolve.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L1729">types.ts:1729</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/types.ts#L1763">pex-renderer/src/types.ts:1763</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="multisampled"><code class="tsd-tag">Optional</code><span>multisampled</span><a href="#multisampled" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">multisampled</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">boolean</span></div>
@@ -237,28 +237,28 @@ pass of one frame displaces a vertex identically.</p>
 than a discard. Distinct from <code>msaa</code>.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L1727">types.ts:1727</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/types.ts#L1761">pex-renderer/src/types.ts:1761</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="outputs"><code class="tsd-tag">Optional</code><span>outputs</span><a href="#outputs" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">outputs</span><span class="tsd-signature-symbol">?:</span> <a href="types.FragmentOutputs.html" class="tsd-signature-type tsd-kind-interface">FragmentOutputs</a></div>
 <div class="tsd-comment tsd-typography"><p>Colour attachments this pass writes; shaders number <code>@location</code> from it.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L1722">types.ts:1722</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/types.ts#L1756">pex-renderer/src/types.ts:1756</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="reflectionprobe"><code class="tsd-tag">Optional</code><span>reflection<wbr/>Probe</span><a href="#reflectionprobe" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">reflectionProbe</span><span class="tsd-signature-symbol">?:</span> <a href="types.ReflectionProbeCache.html" class="tsd-signature-type tsd-kind-interface">ReflectionProbeCache</a></div>
 <div class="tsd-comment tsd-typography"><p>Image-based lighting for this view, picked by the pipeline.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L1736">types.ts:1736</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/types.ts#L1770">pex-renderer/src/types.ts:1770</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="shadowmappinglight"><code class="tsd-tag">Optional</code><span>shadow<wbr/>Mapping<wbr/>Light</span><a href="#shadowmappinglight" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">shadowMappingLight</span><span class="tsd-signature-symbol">?:</span> <a href="../types/types.ShadowCastingLightComponentOptions.html" class="tsd-signature-type tsd-kind-type-alias">ShadowCastingLightComponentOptions</a></div>
 <div class="tsd-comment tsd-typography"><p>Depth-only pass into this light's shadow map.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L1738">types.ts:1738</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/types.ts#L1772">pex-renderer/src/types.ts:1772</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="shadowscope"><code class="tsd-tag">Optional</code><span>shadow<wbr/>Scope</span><a href="#shadowscope" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">shadowScope</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span></div>
@@ -267,25 +267,25 @@ layer, or <code>&quot;&quot;</code>. Scoped rather than implied, because a light
 <code>layer</code> has one shadow per layer.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L1746">types.ts:1746</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/types.ts#L1780">pex-renderer/src/types.ts:1780</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="textures"><code class="tsd-tag">Optional</code><span>textures</span><a href="#textures" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
-<div class="tsd-signature"><span class="tsd-kind-property">textures</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">Record</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">,</span> <span class="tsd-signature-type">GpuTexture</span><span class="tsd-signature-symbol">&gt;</span></div>
+<div class="tsd-signature"><span class="tsd-kind-property">textures</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">Record</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">,</span> <a href="types.GpuTexture.html" class="tsd-signature-type tsd-kind-interface">GpuTexture</a><span class="tsd-signature-symbol">&gt;</span></div>
 <div class="tsd-comment tsd-typography"><p>Resolved frame images, keyed by the register names the renderer asked for
 through <code>inputs</code>. Missing entries mean nothing published that name.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L1734">types.ts:1734</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/types.ts#L1768">pex-renderer/src/types.ts:1768</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="transmitted"><code class="tsd-tag">Optional</code><span>transmitted</span><a href="#transmitted" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">transmitted</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">boolean</span></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L1748">types.ts:1748</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/types.ts#L1782">pex-renderer/src/types.ts:1782</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="transparent"><code class="tsd-tag">Optional</code><span>transparent</span><a href="#transparent" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">transparent</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">boolean</span></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L1747">types.ts:1747</a></li></ul></aside></section></section></details></div>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/types.ts#L1781">pex-renderer/src/types.ts:1781</a></li></ul></aside></section></section></details></div>
 <div class="col-sidebar">
 <div class="page-menu">
 <div class="tsd-navigation settings">

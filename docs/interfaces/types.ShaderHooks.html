@@ -177,14 +177,14 @@ shared <code>VertexOutput</code>, and a uniform a <code>@group</code>/<code>@bin
 alone can allocate without colliding.</p>
 </div></section>
 <div class="tsd-signature"><span class="tsd-signature-keyword">interface</span> <span class="tsd-kind-interface">ShaderHooks</span> <span class="tsd-signature-symbol">{</span><br/>    <a class="tsd-kind-property" href="#attributes">attributes</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">Record</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">,</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#bindings">bindings</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">Record</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">,</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#fragafterlighting">fragAfterLighting</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#fragbeforelighting">fragBeforeLighting</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#fragbeforetextures">fragBeforeTextures</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#fragdeclarationsend">fragDeclarationsEnd</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#fragend">fragEnd</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#interstage">interStage</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">Record</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">,</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#vertbeforetransform">vertBeforeTransform</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#vertdeclarationsend">vertDeclarationsEnd</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#vertend">vertEnd</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">;</span><br/><span class="tsd-signature-symbol">}</span></div>
-<section class="tsd-panel tsd-hierarchy" data-refl="669">
+<section class="tsd-panel tsd-hierarchy" data-refl="674">
 <h4>Hierarchy (<a href="../hierarchy.html#types.ShaderHooks">View Summary</a>)</h4>
 <ul class="tsd-hierarchy">
 <li class="tsd-hierarchy-item"><span class="tsd-hierarchy-target">ShaderHooks</span>
 <ul class="tsd-hierarchy">
 <li class="tsd-hierarchy-item"><a href="types.MaterialHooks.html" class="tsd-signature-type tsd-kind-interface">MaterialHooks</a></li></ul></li></ul></section><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L1541">types.ts:1541</a></li></ul></aside>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/types.ts#L1585">pex-renderer/src/types.ts:1585</a></li></ul></aside>
 <section class="tsd-panel-group tsd-index-group">
 <section class="tsd-panel tsd-index-panel">
 <details class="tsd-index-content tsd-accordion" open><summary class="tsd-accordion-summary tsd-index-summary"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-chevronDown"></use></svg>
@@ -215,7 +215,7 @@ attributes and read as <code>input.&lt;name&gt;</code>; the value comes from
 <code>geometry.attributes.&lt;name&gt;</code>, which pex-gpu resolves by that name.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L1547">types.ts:1547</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/types.ts#L1591">pex-renderer/src/types.ts:1591</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="bindings"><code class="tsd-tag">Optional</code><span>bindings</span><a href="#bindings" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">bindings</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">Record</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">,</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">&gt;</span></div>
@@ -225,32 +225,32 @@ type becomes a texture plus its sampler, named <code>u&lt;Name&gt;</code> and
 block, read as <code>uHooks.&lt;name&gt;</code>.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L1560">types.ts:1560</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/types.ts#L1604">pex-renderer/src/types.ts:1604</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="fragafterlighting"><code class="tsd-tag">Optional</code><span>frag<wbr/>After<wbr/>Lighting</span><a href="#fragafterlighting" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">fragAfterLighting</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L1567">types.ts:1567</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/types.ts#L1611">pex-renderer/src/types.ts:1611</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="fragbeforelighting"><code class="tsd-tag">Optional</code><span>frag<wbr/>Before<wbr/>Lighting</span><a href="#fragbeforelighting" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">fragBeforeLighting</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L1566">types.ts:1566</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/types.ts#L1610">pex-renderer/src/types.ts:1610</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="fragbeforetextures"><code class="tsd-tag">Optional</code><span>frag<wbr/>Before<wbr/>Textures</span><a href="#fragbeforetextures" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">fragBeforeTextures</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L1565">types.ts:1565</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/types.ts#L1609">pex-renderer/src/types.ts:1609</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="fragdeclarationsend"><code class="tsd-tag">Optional</code><span>frag<wbr/>Declarations<wbr/>End</span><a href="#fragdeclarationsend" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">fragDeclarationsEnd</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L1564">types.ts:1564</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/types.ts#L1608">pex-renderer/src/types.ts:1608</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="fragend"><code class="tsd-tag">Optional</code><span>frag<wbr/>End</span><a href="#fragend" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">fragEnd</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L1568">types.ts:1568</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/types.ts#L1612">pex-renderer/src/types.ts:1612</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="interstage"><code class="tsd-tag">Optional</code><span>inter<wbr/>Stage</span><a href="#interstage" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">interStage</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">Record</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">,</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">&gt;</span></div>
@@ -259,22 +259,22 @@ in a vertex hook and read as <code>input.&lt;name&gt;</code> in a fragment one. 
 against <code>maxInterStageShaderVariables</code> alongside the pass' own.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L1553">types.ts:1553</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/types.ts#L1597">pex-renderer/src/types.ts:1597</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="vertbeforetransform"><code class="tsd-tag">Optional</code><span>vert<wbr/>Before<wbr/>Transform</span><a href="#vertbeforetransform" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">vertBeforeTransform</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L1562">types.ts:1562</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/types.ts#L1606">pex-renderer/src/types.ts:1606</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="vertdeclarationsend"><code class="tsd-tag">Optional</code><span>vert<wbr/>Declarations<wbr/>End</span><a href="#vertdeclarationsend" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">vertDeclarationsEnd</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L1561">types.ts:1561</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/types.ts#L1605">pex-renderer/src/types.ts:1605</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="vertend"><code class="tsd-tag">Optional</code><span>vert<wbr/>End</span><a href="#vertend" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">vertEnd</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L1563">types.ts:1563</a></li></ul></aside></section></section></details></div>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/types.ts#L1607">pex-renderer/src/types.ts:1607</a></li></ul></aside></section></section></details></div>
 <div class="col-sidebar">
 <div class="page-menu">
 <div class="tsd-navigation settings">

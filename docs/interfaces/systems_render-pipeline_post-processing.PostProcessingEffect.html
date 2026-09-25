@@ -169,9 +169,9 @@
 <li><a href="../modules/systems_render-pipeline_post-processing.html">systems/render-pipeline/post-processing</a></li>
 <li><a href="" aria-current="page">PostProcessingEffect</a></li></ul>
 <h1>Interface PostProcessingEffect</h1></div>
-<div class="tsd-signature"><span class="tsd-signature-keyword">interface</span> <span class="tsd-kind-interface">PostProcessingEffect</span> <span class="tsd-signature-symbol">{</span><br/>    <a class="tsd-kind-property" href="#declare">declare</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">context</span><span class="tsd-signature-symbol">:</span> <a href="systems_render-pipeline_post-processing.PostProcessingContext.html" class="tsd-signature-type tsd-kind-interface">PostProcessingContext</a><span class="tsd-signature-symbol">)</span> <span class="tsd-signature-symbol">=&gt;</span> <span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#name">name</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#outputs">outputs</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#srgb">srgb</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#stage">stage</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span> <span class="tsd-signature-symbol">|</span> (<span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">cameraEntity</span><span class="tsd-signature-symbol">:</span> <a href="types.Entity.html" class="tsd-signature-type tsd-kind-interface">Entity</a><span class="tsd-signature-symbol">)</span> <span class="tsd-signature-symbol">=&gt;</span> <span class="tsd-signature-type">string</span>)<span class="tsd-signature-symbol">;</span><br/><span class="tsd-signature-symbol">}</span></div><aside class="tsd-sources">
+<div class="tsd-signature"><span class="tsd-signature-keyword">interface</span> <span class="tsd-kind-interface">PostProcessingEffect</span> <span class="tsd-signature-symbol">{</span><br/>    <a class="tsd-kind-property" href="#declare">declare</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">context</span><span class="tsd-signature-symbol">:</span> <a href="systems_render-pipeline_post-processing.PostProcessingContext.html" class="tsd-signature-type tsd-kind-interface">PostProcessingContext</a><span class="tsd-signature-symbol">)</span> <span class="tsd-signature-symbol">=&gt;</span> <span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#name">name</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#outputs">outputs</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">[]</span> <span class="tsd-signature-symbol">|</span> (<span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">cameraEntity</span><span class="tsd-signature-symbol">:</span> <a href="types.Entity.html" class="tsd-signature-type tsd-kind-interface">Entity</a><span class="tsd-signature-symbol">)</span> <span class="tsd-signature-symbol">=&gt;</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">[]</span>)<span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#srgb">srgb</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#stage">stage</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span> <span class="tsd-signature-symbol">|</span> (<span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">cameraEntity</span><span class="tsd-signature-symbol">:</span> <a href="types.Entity.html" class="tsd-signature-type tsd-kind-interface">Entity</a><span class="tsd-signature-symbol">)</span> <span class="tsd-signature-symbol">=&gt;</span> <span class="tsd-signature-type">string</span>)<span class="tsd-signature-symbol">;</span><br/><span class="tsd-signature-symbol">}</span></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/systems/render-pipeline/post-processing.ts#L236">systems/render-pipeline/post-processing.ts:236</a></li></ul></aside>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/systems/render-pipeline/post-processing.ts#L236">pex-renderer/src/systems/render-pipeline/post-processing.ts:236</a></li></ul></aside>
 <section class="tsd-panel-group tsd-index-group">
 <section class="tsd-panel tsd-index-panel">
 <details class="tsd-index-content tsd-accordion" open><summary class="tsd-accordion-summary tsd-index-summary"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-chevronDown"></use></svg>
@@ -196,7 +196,7 @@ without declaring any is how an effect sits the frame out — its inputs are
 missing, or its settings amount to a no-op.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/systems/render-pipeline/post-processing.ts#L271">systems/render-pipeline/post-processing.ts:271</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/systems/render-pipeline/post-processing.ts#L272">pex-renderer/src/systems/render-pipeline/post-processing.ts:272</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="name"><span>name</span><a href="#name" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">name</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span></div>
@@ -204,27 +204,28 @@ missing, or its settings amount to a no-op.</p>
 switches the effect on and the prefix its outputs are published under.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/systems/render-pipeline/post-processing.ts#L241">systems/render-pipeline/post-processing.ts:241</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/systems/render-pipeline/post-processing.ts#L241">pex-renderer/src/systems/render-pipeline/post-processing.ts:241</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="outputs"><code class="tsd-tag">Optional</code><span>outputs</span><a href="#outputs" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
-<div class="tsd-signature"><span class="tsd-kind-property">outputs</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">[]</span></div>
+<div class="tsd-signature"><span class="tsd-kind-property">outputs</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">[]</span> <span class="tsd-signature-symbol">|</span> (<span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">cameraEntity</span><span class="tsd-signature-symbol">:</span> <a href="types.Entity.html" class="tsd-signature-type tsd-kind-interface">Entity</a><span class="tsd-signature-symbol">)</span> <span class="tsd-signature-symbol">=&gt;</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">[]</span>)</div>
 <div class="tsd-comment tsd-typography"><p>Main pass outputs this effect samples, beyond the color chain — <code>&quot;normal&quot;</code>,
 <code>&quot;emissive&quot;</code>, and whatever later ones exist.</p>
 <p>Declared here rather than in the pipeline so the requirement sits with the
 code that reads it; the pipeline unions whatever the loaded effects ask
 for. An output is an attachment on the main pass, so adding one relayouts
-it and recompiles the material pipelines — which is why this is a static
-list rather than something recomputed from the component each frame.</p>
+it and recompiles the material pipelines — which is why a function of the
+component only suits an option that switches a feature, never a value
+tweaked every frame.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/systems/render-pipeline/post-processing.ts#L263">systems/render-pipeline/post-processing.ts:263</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/systems/render-pipeline/post-processing.ts#L264">pex-renderer/src/systems/render-pipeline/post-processing.ts:264</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="srgb"><code class="tsd-tag">Optional</code><span>srgb</span><a href="#srgb" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">srgb</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">boolean</span></div>
 <div class="tsd-comment tsd-typography"><p>Outputs are display-referred from this effect onwards.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/systems/render-pipeline/post-processing.ts#L265">systems/render-pipeline/post-processing.ts:265</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/systems/render-pipeline/post-processing.ts#L266">pex-renderer/src/systems/render-pipeline/post-processing.ts:266</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="stage"><code class="tsd-tag">Optional</code><span>stage</span><a href="#stage" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">stage</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span> <span class="tsd-signature-symbol">|</span> (<span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">cameraEntity</span><span class="tsd-signature-symbol">:</span> <a href="types.Entity.html" class="tsd-signature-type tsd-kind-interface">Entity</a><span class="tsd-signature-symbol">)</span> <span class="tsd-signature-symbol">=&gt;</span> <span class="tsd-signature-type">string</span>)</div>
@@ -237,7 +238,7 @@ publishes through the same register, so anything downstream picks up its
 output by name without knowing when it ran.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/systems/render-pipeline/post-processing.ts#L252">systems/render-pipeline/post-processing.ts:252</a></li></ul></aside></section></section></details></div>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/systems/render-pipeline/post-processing.ts#L252">pex-renderer/src/systems/render-pipeline/post-processing.ts:252</a></li></ul></aside></section></section></details></div>
 <div class="col-sidebar">
 <div class="page-menu">
 <div class="tsd-navigation settings">

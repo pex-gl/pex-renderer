@@ -177,9 +177,9 @@ cubemap</p>
 <li>Irradiance coefficients) so a future loader maps onto it directly.</li>
 </ul>
 </div></section>
-<div class="tsd-signature"><span class="tsd-signature-keyword">interface</span> <span class="tsd-kind-interface">ReflectionProbeCache</span> <span class="tsd-signature-symbol">{</span><br/>    <a class="tsd-kind-property" href="#intensity">intensity</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#irradiancecoefficients">irradianceCoefficients</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">GpuBuffer</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#rotation">rotation</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">Mat3</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#roughnesslevels">roughnessLevels</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#sampler">sampler</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">GPUSampler</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#speculartexture">specularTexture</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">GpuTexture</span><span class="tsd-signature-symbol">;</span><br/><span class="tsd-signature-symbol">}</span></div><aside class="tsd-sources">
+<div class="tsd-signature"><span class="tsd-signature-keyword">interface</span> <span class="tsd-kind-interface">ReflectionProbeCache</span> <span class="tsd-signature-symbol">{</span><br/>    <a class="tsd-kind-property" href="#intensity">intensity</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#irradiancecoefficients">irradianceCoefficients</a><span class="tsd-signature-symbol">:</span> <a href="types.GpuBuffer.html" class="tsd-signature-type tsd-kind-interface">GpuBuffer</a><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#rotation">rotation</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">Mat3</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#roughnesslevels">roughnessLevels</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#sampler">sampler</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">GPUSampler</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#speculartexture">specularTexture</a><span class="tsd-signature-symbol">:</span> <a href="types.GpuTexture.html" class="tsd-signature-type tsd-kind-interface">GpuTexture</a><span class="tsd-signature-symbol">;</span><br/><span class="tsd-signature-symbol">}</span></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L144">types.ts:144</a></li></ul></aside>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/types.ts#L153">pex-renderer/src/types.ts:153</a></li></ul></aside>
 <section class="tsd-panel-group tsd-index-group">
 <section class="tsd-panel tsd-index-panel">
 <details class="tsd-index-content tsd-accordion" open><summary class="tsd-accordion-summary tsd-index-summary"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-chevronDown"></use></svg>
@@ -203,21 +203,21 @@ cubemap</p>
 <div class="tsd-comment tsd-typography"><p>Multiplier applied to the probe's indirect diffuse + specular output.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L159">types.ts:159</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/types.ts#L168">pex-renderer/src/types.ts:168</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="irradiancecoefficients"><span>irradiance<wbr/>Coefficients</span><a href="#irradiancecoefficients" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
-<div class="tsd-signature"><span class="tsd-kind-property">irradianceCoefficients</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">GpuBuffer</span></div>
+<div class="tsd-signature"><span class="tsd-kind-property">irradianceCoefficients</span><span class="tsd-signature-symbol">:</span> <a href="types.GpuBuffer.html" class="tsd-signature-type tsd-kind-interface">GpuBuffer</a></div>
 <div class="tsd-comment tsd-typography"><p>L2 spherical harmonics diffuse irradiance coefficients (9 × vec4f).</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L148">types.ts:148</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/types.ts#L157">pex-renderer/src/types.ts:157</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="rotation"><code class="tsd-tag">Optional</code><span>rotation</span><a href="#rotation" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">rotation</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">Mat3</span></div>
 <div class="tsd-comment tsd-typography"><p>Rotation applied to the sampled reflection/normal directions.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L157">types.ts:157</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/types.ts#L166">pex-renderer/src/types.ts:166</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="roughnesslevels"><span>roughness<wbr/>Levels</span><a href="#roughnesslevels" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">roughnessLevels</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span></div>
@@ -225,21 +225,21 @@ cubemap</p>
 mapping.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L155">types.ts:155</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/types.ts#L164">pex-renderer/src/types.ts:164</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="sampler"><span>sampler</span><a href="#sampler" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">sampler</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">GPUSampler</span></div>
 <div class="tsd-comment tsd-typography"><p>Trilinear sampler for the specular cubemap.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L150">types.ts:150</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/types.ts#L159">pex-renderer/src/types.ts:159</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="speculartexture"><span>specular<wbr/>Texture</span><a href="#speculartexture" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
-<div class="tsd-signature"><span class="tsd-kind-property">specularTexture</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">GpuTexture</span></div>
+<div class="tsd-signature"><span class="tsd-kind-property">specularTexture</span><span class="tsd-signature-symbol">:</span> <a href="types.GpuTexture.html" class="tsd-signature-type tsd-kind-interface">GpuTexture</a></div>
 <div class="tsd-comment tsd-typography"><p>Prefiltered specular radiance cubemap (roughness mapped to mip level).</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/types.ts#L146">types.ts:146</a></li></ul></aside></section></section></details></div>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/types.ts#L155">pex-renderer/src/types.ts:155</a></li></ul></aside></section></section></details></div>
 <div class="col-sidebar">
 <div class="page-menu">
 <div class="tsd-navigation settings">

@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+# [6.0.0-alpha.1](https://github.com/pex-gl/pex-renderer/compare/v6.0.0-alpha.0...v6.0.0-alpha.1) (2026-09-25)
+
+### Bug Fixes
+
+* always include blend in standard pipeline options ([e7b148e](https://github.com/pex-gl/pex-renderer/commit/e7b148e355ee180b2353947517fbd4393f515c5e))
+* correct texCoord defines + log variant cache miss ([307610d](https://github.com/pex-gl/pex-renderer/commit/307610d24e17703efe419acc6fb016fc7aac1e2a))
+* handle geometry data resize both ways + allow geometry.customAttributes plain data/dirty update path ([3d6ff91](https://github.com/pex-gl/pex-renderer/commit/3d6ff91e5c7e33f8dd4b3e52891cb3890813461a))
+
+### Features
+
+* add frame graph profiler totalTime ([788f7c8](https://github.com/pex-gl/pex-renderer/commit/788f7c8866284bc1951a9d69d36cecbedf308616))
+* disable perspective scaling by default ([a5438a3](https://github.com/pex-gl/pex-renderer/commit/a5438a3b3c9e0106975abd859dcb91008f439ca5))
+* move to one light shared buffer ([65be49b](https://github.com/pex-gl/pex-renderer/commit/65be49b30fd41221ca1386cd61e4ed13a45edc3f))
+* rename camera clearColor to backgroundColor and convert it with toLinear on the fly ([33c1bf6](https://github.com/pex-gl/pex-renderer/commit/33c1bf6e384c03004ac98cf37cc65ec9850aedd8)), closes [#357](https://github.com/pex-gl/pex-renderer/issues/357)
+* upgrade smaa ([e7d0da2](https://github.com/pex-gl/pex-renderer/commit/e7d0da22d9707102800ad1abebb64f0b16bce6f9))
+
 # [6.0.0-alpha.0](https://github.com/pex-gl/pex-renderer/compare/v5.0.0...v6.0.0-alpha.0) (2026-09-16)
 
 

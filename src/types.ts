@@ -60,11 +60,11 @@ export type AttributeData = TypedArray | Vec3[];
  * across attributes/primitives from the same bufferView).
  *
  * The descriptor is pex-gpu's `VertexAttribute` with an optional buffer — the
- * `offset`, `arrayStride` and `format` a draw reads it with. `format` is an override on
- * the format inferred from the shader's WGSL type, needed whenever that type
- * does not determine the storage width: `vec4u` accepts uint8x4/uint16x4/
- * uint32x4 alike, so integer attributes such as `joints` must say which they
- * are.
+ * `offset`, `arrayStride` and `format` a draw reads it with. `format` is an
+ * override on the format inferred from the shader's WGSL type, needed whenever
+ * that type does not determine the storage width: `vec4u` accepts
+ * uint8x4/uint16x4/ uint32x4 alike, so integer attributes such as `joints` must
+ * say which they are.
  */
 export type GeometryAttribute =
   | AttributeData

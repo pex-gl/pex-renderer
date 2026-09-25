@@ -170,15 +170,20 @@
 <li><a href="" aria-current="page">default</a></li></ul>
 <h1>Variable default<code class="tsd-tag">Const</code></h1></div>
 <div class="tsd-signature"><span class="tsd-kind-variable">default</span><span class="tsd-signature-symbol">:</span> <a href="../interfaces/systems_render-pipeline_post-processing.PostProcessingEffect.html" class="tsd-signature-type tsd-kind-interface">PostProcessingEffect</a><span class="tsd-signature-symbol"> = ...</span></div>
-<div class="tsd-comment tsd-typography"><p>Subpixel morphological anti-aliasing, 1x.</p>
+<div class="tsd-comment tsd-typography"><p>Subpixel morphological anti-aliasing, 1x or T2x.</p>
 <p>Three passes: detect edges, turn them into blending weights against the
 precomputed area/search lookups, then blend. Runs on the display-referred
 image, which is what its perceptual thresholds are tuned for.</p>
+<p>T2x renders each frame at one of two jittered sub-pixel positions (see the
+camera system), picks the area texture rows matching it, and resolves the
+blended frame with the previous one — reprojected through the velocity buffer
+temporal antialiasing and motion blur also read.</p>
 <p>The intermediate textures hold data, not color, so they opt out of the sRGB
-format the rest of this stage uses.</p>
+format the rest of this stage uses. The histories do not: the blend and the
+resolve mix colors, which the sRGB format does in linear space.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/systems/render-pipeline/post-processing/smaa.ts#L113">systems/render-pipeline/post-processing/smaa.ts:113</a></li></ul></aside></div>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/systems/render-pipeline/post-processing/smaa.ts#L106">pex-renderer/src/systems/render-pipeline/post-processing/smaa.ts:106</a></li></ul></aside></div>
 <div class="col-sidebar">
 <div class="page-menu">
 <div class="tsd-navigation settings">

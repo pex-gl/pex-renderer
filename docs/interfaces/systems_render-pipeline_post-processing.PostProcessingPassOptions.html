@@ -174,7 +174,7 @@
 </div></section>
 <div class="tsd-signature"><span class="tsd-signature-keyword">interface</span> <span class="tsd-kind-interface">PostProcessingPassOptions</span> <span class="tsd-signature-symbol">{</span><br/>    <a class="tsd-kind-property" href="#blend">blend</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">GPUBlendState</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#chain">chain</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#clearvalue">clearValue</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">GPUColor</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#constants">constants</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">Record</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">,</span> <span class="tsd-signature-type">number</span> <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#defines">defines</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">Set</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#format">format</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">GPUTextureFormat</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#level">level</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#miplevelcount">mipLevelCount</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#name">name</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#shader">shader</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">defines</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Set</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">)</span> <span class="tsd-signature-symbol">=&gt;</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#size">size</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#source">source</a><span class="tsd-signature-symbol">?:</span> <a href="frame-graph_types.ResourceHandle.html" class="tsd-signature-type tsd-kind-interface">ResourceHandle</a> <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-type">null</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#target">target</a><span class="tsd-signature-symbol">?:</span> <a href="frame-graph_types.ResourceHandle.html" class="tsd-signature-type tsd-kind-interface">ResourceHandle</a><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#targets">targets</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-symbol">{</span> <span class="tsd-kind-property">clearValue</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">GPUColor</span><span class="tsd-signature-symbol">;</span> <span class="tsd-kind-property">name</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">;</span> <span class="tsd-kind-property">texture</span><span class="tsd-signature-symbol">:</span> <a href="frame-graph_types.ResourceHandle.html" class="tsd-signature-type tsd-kind-interface">ResourceHandle</a> <span class="tsd-signature-symbol">}</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#uniforms">uniforms</a><span class="tsd-signature-symbol">?:</span> <a href="../types/frame-graph_types.PassUniforms.html" class="tsd-signature-type tsd-kind-type-alias">PassUniforms</a><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#views">views</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">Record</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">,</span> <span class="tsd-signature-symbol">{</span> <span class="tsd-kind-property">handle</span><span class="tsd-signature-symbol">:</span> <a href="frame-graph_types.ResourceHandle.html" class="tsd-signature-type tsd-kind-interface">ResourceHandle</a> <span class="tsd-signature-symbol">}</span> <span class="tsd-signature-symbol">&amp;</span> <a href="frame-graph_types.SubResourceView.html" class="tsd-signature-type tsd-kind-interface">SubResourceView</a><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">;</span><br/><span class="tsd-signature-symbol">}</span></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/systems/render-pipeline/post-processing.ts#L100">systems/render-pipeline/post-processing.ts:100</a></li></ul></aside>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/systems/render-pipeline/post-processing.ts#L100">pex-renderer/src/systems/render-pipeline/post-processing.ts:100</a></li></ul></aside>
 <section class="tsd-panel-group tsd-index-group">
 <section class="tsd-panel tsd-index-panel">
 <details class="tsd-index-content tsd-accordion" open><summary class="tsd-accordion-summary tsd-index-summary"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-chevronDown"></use></svg>
@@ -206,7 +206,7 @@
 <h3 class="tsd-anchor-link" id="blend"><code class="tsd-tag">Optional</code><span>blend</span><a href="#blend" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">blend</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">GPUBlendState</span></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/systems/render-pipeline/post-processing.ts#L112">systems/render-pipeline/post-processing.ts:112</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/systems/render-pipeline/post-processing.ts#L112">pex-renderer/src/systems/render-pipeline/post-processing.ts:112</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="chain"><code class="tsd-tag">Optional</code><span>chain</span><a href="#chain" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">chain</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">boolean</span></div>
@@ -217,12 +217,12 @@ effect consumes — a visibility buffer, a bloom pyramid level, an edge mask
 <code>&quot;&lt;effect&gt;.&lt;name&gt;&quot;</code> either way.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/systems/render-pipeline/post-processing.ts#L167">systems/render-pipeline/post-processing.ts:167</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/systems/render-pipeline/post-processing.ts#L167">pex-renderer/src/systems/render-pipeline/post-processing.ts:167</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="clearvalue"><code class="tsd-tag">Optional</code><span>clear<wbr/>Value</span><a href="#clearvalue" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">clearValue</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">GPUColor</span></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/systems/render-pipeline/post-processing.ts#L159">systems/render-pipeline/post-processing.ts:159</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/systems/render-pipeline/post-processing.ts#L159">pex-renderer/src/systems/render-pipeline/post-processing.ts:159</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="constants"><code class="tsd-tag">Optional</code><span>constants</span><a href="#constants" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">constants</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">Record</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">,</span> <span class="tsd-signature-type">number</span> <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol">&gt;</span></div>
@@ -231,26 +231,26 @@ flips one gets its own pipeline rather than mutating a shared object whose
 passes have not executed yet.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/systems/render-pipeline/post-processing.ts#L111">systems/render-pipeline/post-processing.ts:111</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/systems/render-pipeline/post-processing.ts#L111">pex-renderer/src/systems/render-pipeline/post-processing.ts:111</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="defines"><code class="tsd-tag">Optional</code><span>defines</span><a href="#defines" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">defines</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">Set</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">&gt;</span></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/systems/render-pipeline/post-processing.ts#L105">systems/render-pipeline/post-processing.ts:105</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/systems/render-pipeline/post-processing.ts#L105">pex-renderer/src/systems/render-pipeline/post-processing.ts:105</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="format"><code class="tsd-tag">Optional</code><span>format</span><a href="#format" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">format</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">GPUTextureFormat</span></div>
 <div class="tsd-comment tsd-typography"><p>Format of the allocated target. Defaults to the effect's working format.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/systems/render-pipeline/post-processing.ts#L157">systems/render-pipeline/post-processing.ts:157</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/systems/render-pipeline/post-processing.ts#L157">pex-renderer/src/systems/render-pipeline/post-processing.ts:157</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="level"><code class="tsd-tag">Optional</code><span>level</span><a href="#level" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">level</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">number</span></div>
 <div class="tsd-comment tsd-typography"><p>Mip level of the target to draw into. Defaults to 0.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/systems/render-pipeline/post-processing.ts#L144">systems/render-pipeline/post-processing.ts:144</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/systems/render-pipeline/post-processing.ts#L144">pex-renderer/src/systems/render-pipeline/post-processing.ts:144</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="miplevelcount"><code class="tsd-tag">Optional</code><span>mip<wbr/>Level<wbr/>Count</span><a href="#miplevelcount" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">mipLevelCount</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">number</span></div>
@@ -265,28 +265,28 @@ carrying a second quantity — a circle of confusion, a depth, a coverage —
 needs a filter that knows what averaging it would mean.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/systems/render-pipeline/post-processing.ts#L142">systems/render-pipeline/post-processing.ts:142</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/systems/render-pipeline/post-processing.ts#L142">pex-renderer/src/systems/render-pipeline/post-processing.ts:142</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="name"><span>name</span><a href="#name" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">name</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span></div>
 <div class="tsd-comment tsd-typography"><p>Unique within the effect. Published as <code>&quot;&lt;effect&gt;.&lt;name&gt;&quot;</code>.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/systems/render-pipeline/post-processing.ts#L102">systems/render-pipeline/post-processing.ts:102</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/systems/render-pipeline/post-processing.ts#L102">pex-renderer/src/systems/render-pipeline/post-processing.ts:102</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="shader"><span>shader</span><a href="#shader" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">shader</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">defines</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Set</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">)</span> <span class="tsd-signature-symbol">=&gt;</span> <span class="tsd-signature-type">string</span></div>
 <div class="tsd-comment tsd-typography"><p>WGSL generator, same contract as the renderer shaders.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/systems/render-pipeline/post-processing.ts#L104">systems/render-pipeline/post-processing.ts:104</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/systems/render-pipeline/post-processing.ts#L104">pex-renderer/src/systems/render-pipeline/post-processing.ts:104</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="size"><code class="tsd-tag">Optional</code><span>size</span><a href="#size" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">size</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">[]</span></div>
 <div class="tsd-comment tsd-typography"><p>Size of the allocated target. Defaults to the full viewport.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/systems/render-pipeline/post-processing.ts#L128">systems/render-pipeline/post-processing.ts:128</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/systems/render-pipeline/post-processing.ts#L128">pex-renderer/src/systems/render-pipeline/post-processing.ts:128</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="source"><code class="tsd-tag">Optional</code><span>source</span><a href="#source" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">source</span><span class="tsd-signature-symbol">?:</span> <a href="frame-graph_types.ResourceHandle.html" class="tsd-signature-type tsd-kind-interface">ResourceHandle</a> <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-type">null</span></div>
@@ -295,14 +295,14 @@ binds nothing, for a shader that declares no <code>uTexture</code> — which is 
 edge the graph would otherwise carry for a sample that never happens.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/systems/render-pipeline/post-processing.ts#L118">systems/render-pipeline/post-processing.ts:118</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/systems/render-pipeline/post-processing.ts#L118">pex-renderer/src/systems/render-pipeline/post-processing.ts:118</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="target"><code class="tsd-tag">Optional</code><span>target</span><a href="#target" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">target</span><span class="tsd-signature-symbol">?:</span> <a href="frame-graph_types.ResourceHandle.html" class="tsd-signature-type tsd-kind-interface">ResourceHandle</a></div>
 <div class="tsd-comment tsd-typography"><p>Where to draw. A texture is allocated when omitted.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/systems/render-pipeline/post-processing.ts#L120">systems/render-pipeline/post-processing.ts:120</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/systems/render-pipeline/post-processing.ts#L120">pex-renderer/src/systems/render-pipeline/post-processing.ts:120</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="targets"><code class="tsd-tag">Optional</code><span>targets</span><a href="#targets" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">targets</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-symbol">{</span> <span class="tsd-kind-property">clearValue</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">GPUColor</span><span class="tsd-signature-symbol">;</span> <span class="tsd-kind-property">name</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">;</span> <span class="tsd-kind-property">texture</span><span class="tsd-signature-symbol">:</span> <a href="frame-graph_types.ResourceHandle.html" class="tsd-signature-type tsd-kind-interface">ResourceHandle</a> <span class="tsd-signature-symbol">}</span><span class="tsd-signature-symbol">[]</span></div>
@@ -311,12 +311,12 @@ under <code>&quot;&lt;effect&gt;.&lt;name&gt;&quot;</code> from its own entry, s
 buffer it wants rather than for the pass that happened to write it.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/systems/render-pipeline/post-processing.ts#L126">systems/render-pipeline/post-processing.ts:126</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/systems/render-pipeline/post-processing.ts#L126">pex-renderer/src/systems/render-pipeline/post-processing.ts:126</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="uniforms"><code class="tsd-tag">Optional</code><span>uniforms</span><a href="#uniforms" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">uniforms</span><span class="tsd-signature-symbol">?:</span> <a href="../types/frame-graph_types.PassUniforms.html" class="tsd-signature-type tsd-kind-type-alias">PassUniforms</a></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/systems/render-pipeline/post-processing.ts#L158">systems/render-pipeline/post-processing.ts:158</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/systems/render-pipeline/post-processing.ts#L158">pex-renderer/src/systems/render-pipeline/post-processing.ts:158</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="views"><code class="tsd-tag">Optional</code><span>views</span><a href="#views" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">views</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">Record</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">,</span> <span class="tsd-signature-symbol">{</span> <span class="tsd-kind-property">handle</span><span class="tsd-signature-symbol">:</span> <a href="frame-graph_types.ResourceHandle.html" class="tsd-signature-type tsd-kind-interface">ResourceHandle</a> <span class="tsd-signature-symbol">}</span> <span class="tsd-signature-symbol">&amp;</span> <a href="frame-graph_types.SubResourceView.html" class="tsd-signature-type tsd-kind-interface">SubResourceView</a><span class="tsd-signature-symbol">&gt;</span></div>
@@ -329,7 +329,7 @@ orders them instead. Resolved through the pass context, never
 <code>createView()</code> — see <code>resolveView</code>.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/systems/render-pipeline/post-processing.ts#L155">systems/render-pipeline/post-processing.ts:155</a></li></ul></aside></section></section></details></div>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/systems/render-pipeline/post-processing.ts#L155">pex-renderer/src/systems/render-pipeline/post-processing.ts:155</a></li></ul></aside></section></section></details></div>
 <div class="col-sidebar">
 <div class="page-menu">
 <div class="tsd-navigation settings">

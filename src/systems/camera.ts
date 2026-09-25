@@ -95,6 +95,7 @@ const NO_JITTER = [0, 0];
 
 /**
  * SMAA T2x's two sample positions, in pixels with y up: the reference's
+ *
  * @SUBSAMPLE_INDICES table. The smaa effect tells which one a frame used from
  * the jitter's sign, and picks the matching subsample indices.
  */

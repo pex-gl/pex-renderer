@@ -175,7 +175,7 @@ release follow compiled lifetimes rather than call order, so a target freed
 at pass 3 can serve a different resource at pass 4.</p>
 </div></section><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/frame-graph/pool.ts#L29">frame-graph/pool.ts:29</a></li></ul></aside>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/frame-graph/pool.ts#L29">pex-renderer/src/frame-graph/pool.ts:29</a></li></ul></aside>
 <section class="tsd-panel-group tsd-index-group">
 <section class="tsd-panel tsd-index-panel">
 <details class="tsd-index-content tsd-accordion" open><summary class="tsd-accordion-summary tsd-index-summary"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-chevronDown"></use></svg>
@@ -218,15 +218,15 @@ at pass 3 can serve a different resource at pass 4.</p>
 <h3 class="tsd-anchor-link" id="constructor"><span>constructor</span><a href="#constructor" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
 <li class="">
-<div class="tsd-signature tsd-anchor-link" id="constructorresourcepool"><span class="tsd-signature-keyword">new</span> <span class="tsd-kind-constructor-signature">ResourcePool</span><span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">ctx</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">GpuContext</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <a href="" class="tsd-signature-type tsd-kind-class">ResourcePool</a><a href="#constructorresourcepool" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
+<div class="tsd-signature tsd-anchor-link" id="constructorresourcepool"><span class="tsd-signature-keyword">new</span> <span class="tsd-kind-constructor-signature">ResourcePool</span><span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">ctx</span><span class="tsd-signature-symbol">:</span> <a href="../interfaces/types.GpuContext.html" class="tsd-signature-type tsd-kind-interface">GpuContext</a><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <a href="" class="tsd-signature-type tsd-kind-class">ResourcePool</a><a href="#constructorresourcepool" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
 <div class="tsd-description">
 <div class="tsd-parameters">
 <h4 class="tsd-parameters-title">Parameters</h4>
 <ul class="tsd-parameter-list">
-<li><span><span class="tsd-kind-parameter">ctx</span>: <span class="tsd-signature-type">GpuContext</span></span></li></ul></div>
+<li><span><span class="tsd-kind-parameter">ctx</span>: <a href="../interfaces/types.GpuContext.html" class="tsd-signature-type tsd-kind-interface">GpuContext</a></span></li></ul></div>
 <h4 class="tsd-returns-title">Returns <a href="" class="tsd-signature-type tsd-kind-class">ResourcePool</a></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/frame-graph/pool.ts#L97">frame-graph/pool.ts:97</a></li></ul></aside></div></li></ul></section></section></details>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/frame-graph/pool.ts#L97">pex-renderer/src/frame-graph/pool.ts:97</a></li></ul></aside></div></li></ul></section></section></details>
 <details class="tsd-panel-group tsd-member-group tsd-accordion" open><summary class="tsd-accordion-summary" data-key="section-Properties"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-chevronDown"></use></svg>
 <h2 class="tsd-anchor-link" id="properties-1">Properties<a href="#properties-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h2></summary>
 <section>
@@ -236,51 +236,51 @@ at pass 3 can serve a different resource at pass 4.</p>
 <div class="tsd-comment tsd-typography"><p>Free lists of interchangeable textures, keyed by shape and usage.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/frame-graph/pool.ts#L73">frame-graph/pool.ts:73</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/frame-graph/pool.ts#L73">pex-renderer/src/frame-graph/pool.ts:73</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="buffercache"><span>buffer<wbr/>Cache</span><a href="#buffercache" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
-<div class="tsd-signature"><span class="tsd-kind-property">bufferCache</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Map</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">,</span> <span class="tsd-signature-type">GpuBuffer</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol"> = ...</span></div>
+<div class="tsd-signature"><span class="tsd-kind-property">bufferCache</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Map</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">,</span> <a href="../interfaces/types.GpuBuffer.html" class="tsd-signature-type tsd-kind-interface">GpuBuffer</a><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol"> = ...</span></div>
 <div class="tsd-comment tsd-typography"><p>Content-addressed rather than pooled: graph uploads are immutable and tiny
 next to render targets.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/frame-graph/pool.ts#L80">frame-graph/pool.ts:80</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/frame-graph/pool.ts#L80">pex-renderer/src/frame-graph/pool.ts:80</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="checkedout"><span>checked<wbr/>Out</span><a href="#checkedout" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
-<div class="tsd-signature"><span class="tsd-kind-property">checkedOut</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Map</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">GpuTexture</span><span class="tsd-signature-symbol">,</span> <span class="tsd-signature-symbol">{</span> <span class="tsd-kind-property">bytes</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">;</span> <span class="tsd-kind-property">key</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span> <span class="tsd-signature-symbol">}</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol"> = ...</span></div>
+<div class="tsd-signature"><span class="tsd-kind-property">checkedOut</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Map</span><span class="tsd-signature-symbol">&lt;</span><a href="../interfaces/types.GpuTexture.html" class="tsd-signature-type tsd-kind-interface">GpuTexture</a><span class="tsd-signature-symbol">,</span> <span class="tsd-signature-symbol">{</span> <span class="tsd-kind-property">bytes</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">;</span> <span class="tsd-kind-property">key</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span> <span class="tsd-signature-symbol">}</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol"> = ...</span></div>
 <div class="tsd-comment tsd-typography"><p>Which bucket a handed-out texture came from, so release is O(1).</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/frame-graph/pool.ts#L75">frame-graph/pool.ts:75</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/frame-graph/pool.ts#L75">pex-renderer/src/frame-graph/pool.ts:75</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="ctx"><span>ctx</span><a href="#ctx" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
-<div class="tsd-signature"><span class="tsd-kind-property">ctx</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">GpuContext</span></div><aside class="tsd-sources">
+<div class="tsd-signature"><span class="tsd-kind-property">ctx</span><span class="tsd-signature-symbol">:</span> <a href="../interfaces/types.GpuContext.html" class="tsd-signature-type tsd-kind-interface">GpuContext</a></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/frame-graph/pool.ts#L71">frame-graph/pool.ts:71</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/frame-graph/pool.ts#L71">pex-renderer/src/frame-graph/pool.ts:71</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="livebytes"><span>live<wbr/>Bytes</span><a href="#livebytes" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">liveBytes</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol"> = 0</span></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/frame-graph/pool.ts#L92">frame-graph/pool.ts:92</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/frame-graph/pool.ts#L92">pex-renderer/src/frame-graph/pool.ts:92</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="peakbytes"><span>peak<wbr/>Bytes</span><a href="#peakbytes" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">peakBytes</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol"> = 0</span></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/frame-graph/pool.ts#L93">frame-graph/pool.ts:93</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/frame-graph/pool.ts#L93">pex-renderer/src/frame-graph/pool.ts:93</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="persistent"><span>persistent</span><a href="#persistent" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
-<div class="tsd-signature"><span class="tsd-kind-property">persistent</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Map</span><span class="tsd-signature-symbol">&lt;</span><br/>    <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-signature-symbol">{</span> <span class="tsd-kind-property">bytes</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">;</span> <span class="tsd-kind-property">key</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">;</span> <span class="tsd-kind-property">texture</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">GpuTexture</span><span class="tsd-signature-symbol">;</span> <span class="tsd-kind-property">usage</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span> <span class="tsd-signature-symbol">}</span><span class="tsd-signature-symbol">,</span><br/><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol"> = ...</span></div>
+<div class="tsd-signature"><span class="tsd-kind-property">persistent</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Map</span><span class="tsd-signature-symbol">&lt;</span><br/>    <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-signature-symbol">{</span> <span class="tsd-kind-property">bytes</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">;</span> <span class="tsd-kind-property">key</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">;</span> <span class="tsd-kind-property">texture</span><span class="tsd-signature-symbol">:</span> <a href="../interfaces/types.GpuTexture.html" class="tsd-signature-type tsd-kind-interface">GpuTexture</a><span class="tsd-signature-symbol">;</span> <span class="tsd-kind-property">usage</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span> <span class="tsd-signature-symbol">}</span><span class="tsd-signature-symbol">,</span><br/><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol"> = ...</span></div>
 <div class="tsd-comment tsd-typography"><p>Keyed by resource name: persistent textures are never substitutable.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/frame-graph/pool.ts#L82">frame-graph/pool.ts:82</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/frame-graph/pool.ts#L82">pex-renderer/src/frame-graph/pool.ts:82</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="persistentbytes"><span>persistent<wbr/>Bytes</span><a href="#persistentbytes" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">persistentBytes</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol"> = 0</span></div>
 <div class="tsd-comment tsd-typography"><p>Never reclaimed, so tracked apart from the pooled total.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/frame-graph/pool.ts#L95">frame-graph/pool.ts:95</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/frame-graph/pool.ts#L95">pex-renderer/src/frame-graph/pool.ts:95</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="idle_frames_before_eviction"><code class="tsd-tag">Static</code><span>IDLE_<wbr/>FRAMES_<wbr/>BEFORE_<wbr/>EVICTION</span><a href="#idle_frames_before_eviction" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">IDLE_FRAMES_BEFORE_EVICTION</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol"> = 30</span></div>
@@ -288,7 +288,7 @@ next to render targets.</p>
 that toggling an effect or resizing doesn't pay for reallocation.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/frame-graph/pool.ts#L34">frame-graph/pool.ts:34</a></li></ul></aside></section></section></details>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/frame-graph/pool.ts#L34">pex-renderer/src/frame-graph/pool.ts:34</a></li></ul></aside></section></section></details>
 <details class="tsd-panel-group tsd-member-group tsd-accordion" open><summary class="tsd-accordion-summary" data-key="section-Methods"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-chevronDown"></use></svg>
 <h2 class="tsd-anchor-link" id="methods-1">Methods<a href="#methods-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h2></summary>
 <section>
@@ -296,20 +296,20 @@ that toggling an effect or resizing doesn't pay for reallocation.</p>
 <h3 class="tsd-anchor-link" id="acquirebuffer"><span>acquire<wbr/>Buffer</span><a href="#acquirebuffer" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
 <li class="">
-<div class="tsd-signature tsd-anchor-link" id="acquirebuffer-1"><span class="tsd-kind-call-signature">acquireBuffer</span><span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">descriptor</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">CreateBufferOptions</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">GpuBuffer</span><a href="#acquirebuffer-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
+<div class="tsd-signature tsd-anchor-link" id="acquirebuffer-1"><span class="tsd-kind-call-signature">acquireBuffer</span><span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">descriptor</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">CreateBufferOptions</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <a href="../interfaces/types.GpuBuffer.html" class="tsd-signature-type tsd-kind-interface">GpuBuffer</a><a href="#acquirebuffer-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
 <div class="tsd-description">
 <div class="tsd-parameters">
 <h4 class="tsd-parameters-title">Parameters</h4>
 <ul class="tsd-parameter-list">
 <li><span><span class="tsd-kind-parameter">descriptor</span>: <span class="tsd-signature-type">CreateBufferOptions</span></span></li></ul></div>
-<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">GpuBuffer</span></h4><aside class="tsd-sources">
+<h4 class="tsd-returns-title">Returns <a href="../interfaces/types.GpuBuffer.html" class="tsd-signature-type tsd-kind-interface">GpuBuffer</a></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/frame-graph/pool.ts#L197">frame-graph/pool.ts:197</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/frame-graph/pool.ts#L197">pex-renderer/src/frame-graph/pool.ts:197</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="acquirepersistenttexture"><span>acquire<wbr/>Persistent<wbr/>Texture</span><a href="#acquirepersistenttexture" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
 <li class="">
-<div class="tsd-signature tsd-anchor-link" id="acquirepersistenttexture-1"><span class="tsd-kind-call-signature">acquirePersistentTexture</span><span class="tsd-signature-symbol">(</span><br/>    <span class="tsd-kind-parameter">name</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-kind-parameter">descriptor</span><span class="tsd-signature-symbol">:</span> <a href="../interfaces/frame-graph_types.TextureDescriptor.html" class="tsd-signature-type tsd-kind-interface">TextureDescriptor</a><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-kind-parameter">usage</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">,</span><br/><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">GpuTexture</span><a href="#acquirepersistenttexture-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
+<div class="tsd-signature tsd-anchor-link" id="acquirepersistenttexture-1"><span class="tsd-kind-call-signature">acquirePersistentTexture</span><span class="tsd-signature-symbol">(</span><br/>    <span class="tsd-kind-parameter">name</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-kind-parameter">descriptor</span><span class="tsd-signature-symbol">:</span> <a href="../interfaces/frame-graph_types.TextureDescriptor.html" class="tsd-signature-type tsd-kind-interface">TextureDescriptor</a><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-kind-parameter">usage</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">,</span><br/><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <a href="../interfaces/types.GpuTexture.html" class="tsd-signature-type tsd-kind-interface">GpuTexture</a><a href="#acquirepersistenttexture-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
 <div class="tsd-description">
 <div class="tsd-comment tsd-typography"><p>Dedicated texture for <code>name</code>, kept across frames and never recycled.
 Reallocated only if the shape it was created with changes, or if a frame
@@ -328,28 +328,28 @@ leaving the reader nothing but a freshly zeroed texture.</p>
 <li><span><span class="tsd-kind-parameter">name</span>: <span class="tsd-signature-type">string</span></span></li>
 <li><span><span class="tsd-kind-parameter">descriptor</span>: <a href="../interfaces/frame-graph_types.TextureDescriptor.html" class="tsd-signature-type tsd-kind-interface">TextureDescriptor</a></span></li>
 <li><span><span class="tsd-kind-parameter">usage</span>: <span class="tsd-signature-type">number</span></span></li></ul></div>
-<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">GpuTexture</span></h4><aside class="tsd-sources">
+<h4 class="tsd-returns-title">Returns <a href="../interfaces/types.GpuTexture.html" class="tsd-signature-type tsd-kind-interface">GpuTexture</a></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/frame-graph/pool.ts#L160">frame-graph/pool.ts:160</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/frame-graph/pool.ts#L160">pex-renderer/src/frame-graph/pool.ts:160</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="acquiretexture"><span>acquire<wbr/>Texture</span><a href="#acquiretexture" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
 <li class="">
-<div class="tsd-signature tsd-anchor-link" id="acquiretexture-1"><span class="tsd-kind-call-signature">acquireTexture</span><span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">descriptor</span><span class="tsd-signature-symbol">:</span> <a href="../interfaces/frame-graph_types.TextureDescriptor.html" class="tsd-signature-type tsd-kind-interface">TextureDescriptor</a><span class="tsd-signature-symbol">,</span> <span class="tsd-kind-parameter">usage</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">GpuTexture</span><a href="#acquiretexture-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
+<div class="tsd-signature tsd-anchor-link" id="acquiretexture-1"><span class="tsd-kind-call-signature">acquireTexture</span><span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">descriptor</span><span class="tsd-signature-symbol">:</span> <a href="../interfaces/frame-graph_types.TextureDescriptor.html" class="tsd-signature-type tsd-kind-interface">TextureDescriptor</a><span class="tsd-signature-symbol">,</span> <span class="tsd-kind-parameter">usage</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <a href="../interfaces/types.GpuTexture.html" class="tsd-signature-type tsd-kind-interface">GpuTexture</a><a href="#acquiretexture-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
 <div class="tsd-description">
 <div class="tsd-parameters">
 <h4 class="tsd-parameters-title">Parameters</h4>
 <ul class="tsd-parameter-list">
 <li><span><span class="tsd-kind-parameter">descriptor</span>: <a href="../interfaces/frame-graph_types.TextureDescriptor.html" class="tsd-signature-type tsd-kind-interface">TextureDescriptor</a></span></li>
 <li><span><span class="tsd-kind-parameter">usage</span>: <span class="tsd-signature-type">number</span></span></li></ul></div>
-<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">GpuTexture</span></h4><aside class="tsd-sources">
+<h4 class="tsd-returns-title">Returns <a href="../interfaces/types.GpuTexture.html" class="tsd-signature-type tsd-kind-interface">GpuTexture</a></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/frame-graph/pool.ts#L122">frame-graph/pool.ts:122</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/frame-graph/pool.ts#L122">pex-renderer/src/frame-graph/pool.ts:122</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="allocate"><span>allocate</span><a href="#allocate" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
 <li class="">
-<div class="tsd-signature tsd-anchor-link" id="allocate-1"><span class="tsd-kind-call-signature">allocate</span><span class="tsd-signature-symbol">(</span><br/>    <span class="tsd-kind-parameter">descriptor</span><span class="tsd-signature-symbol">:</span> <a href="../interfaces/frame-graph_types.TextureDescriptor.html" class="tsd-signature-type tsd-kind-interface">TextureDescriptor</a><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-kind-parameter">usage</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-kind-parameter">mipLevelCount</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">,</span><br/><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">GpuTexture</span><a href="#allocate-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
+<div class="tsd-signature tsd-anchor-link" id="allocate-1"><span class="tsd-kind-call-signature">allocate</span><span class="tsd-signature-symbol">(</span><br/>    <span class="tsd-kind-parameter">descriptor</span><span class="tsd-signature-symbol">:</span> <a href="../interfaces/frame-graph_types.TextureDescriptor.html" class="tsd-signature-type tsd-kind-interface">TextureDescriptor</a><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-kind-parameter">usage</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-kind-parameter">mipLevelCount</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">,</span><br/><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <a href="../interfaces/types.GpuTexture.html" class="tsd-signature-type tsd-kind-interface">GpuTexture</a><a href="#allocate-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
 <div class="tsd-description">
 <div class="tsd-comment tsd-typography"><p>The only method that creates a texture; the rest hand out existing ones.</p>
 </div>
@@ -359,9 +359,9 @@ leaving the reader nothing but a freshly zeroed texture.</p>
 <li><span><span class="tsd-kind-parameter">descriptor</span>: <a href="../interfaces/frame-graph_types.TextureDescriptor.html" class="tsd-signature-type tsd-kind-interface">TextureDescriptor</a></span></li>
 <li><span><span class="tsd-kind-parameter">usage</span>: <span class="tsd-signature-type">number</span></span></li>
 <li><span><span class="tsd-kind-parameter">mipLevelCount</span>: <span class="tsd-signature-type">number</span></span></li></ul></div>
-<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">GpuTexture</span></h4><aside class="tsd-sources">
+<h4 class="tsd-returns-title">Returns <a href="../interfaces/types.GpuTexture.html" class="tsd-signature-type tsd-kind-interface">GpuTexture</a></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/frame-graph/pool.ts#L102">frame-graph/pool.ts:102</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/frame-graph/pool.ts#L102">pex-renderer/src/frame-graph/pool.ts:102</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="dispose"><span>dispose</span><a href="#dispose" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -370,7 +370,7 @@ leaving the reader nothing but a freshly zeroed texture.</p>
 <div class="tsd-description">
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/frame-graph/pool.ts#L237">frame-graph/pool.ts:237</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/frame-graph/pool.ts#L237">pex-renderer/src/frame-graph/pool.ts:237</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="endframe"><span>end<wbr/>Frame</span><a href="#endframe" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -379,20 +379,20 @@ leaving the reader nothing but a freshly zeroed texture.</p>
 <div class="tsd-description">
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/frame-graph/pool.ts#L208">frame-graph/pool.ts:208</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/frame-graph/pool.ts#L208">pex-renderer/src/frame-graph/pool.ts:208</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="releasetexture"><span>release<wbr/>Texture</span><a href="#releasetexture" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
 <li class="">
-<div class="tsd-signature tsd-anchor-link" id="releasetexture-1"><span class="tsd-kind-call-signature">releaseTexture</span><span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">texture</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">GpuTexture</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">void</span><a href="#releasetexture-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
+<div class="tsd-signature tsd-anchor-link" id="releasetexture-1"><span class="tsd-kind-call-signature">releaseTexture</span><span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">texture</span><span class="tsd-signature-symbol">:</span> <a href="../interfaces/types.GpuTexture.html" class="tsd-signature-type tsd-kind-interface">GpuTexture</a><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">void</span><a href="#releasetexture-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
 <div class="tsd-description">
 <div class="tsd-parameters">
 <h4 class="tsd-parameters-title">Parameters</h4>
 <ul class="tsd-parameter-list">
-<li><span><span class="tsd-kind-parameter">texture</span>: <span class="tsd-signature-type">GpuTexture</span></span></li></ul></div>
+<li><span><span class="tsd-kind-parameter">texture</span>: <a href="../interfaces/types.GpuTexture.html" class="tsd-signature-type tsd-kind-interface">GpuTexture</a></span></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/frame-graph/pool.ts#L185">frame-graph/pool.ts:185</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/frame-graph/pool.ts#L185">pex-renderer/src/frame-graph/pool.ts:185</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="stats"><span>stats</span><a href="#stats" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -401,7 +401,7 @@ leaving the reader nothing but a freshly zeroed texture.</p>
 <div class="tsd-description">
 <h4 class="tsd-returns-title">Returns <a href="../interfaces/frame-graph_pool.PoolStats.html" class="tsd-signature-type tsd-kind-interface">PoolStats</a></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/frame-graph/pool.ts#L221">frame-graph/pool.ts:221</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/frame-graph/pool.ts#L221">pex-renderer/src/frame-graph/pool.ts:221</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="bufferkey"><code class="tsd-tag">Static</code><span>buffer<wbr/>Key</span><a href="#bufferkey" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -416,7 +416,7 @@ leaving the reader nothing but a freshly zeroed texture.</p>
 <li><span><span class="tsd-kind-parameter">descriptor</span>: <span class="tsd-signature-type">CreateBufferOptions</span></span></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">string</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/frame-graph/pool.ts#L54">frame-graph/pool.ts:54</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/frame-graph/pool.ts#L54">pex-renderer/src/frame-graph/pool.ts:54</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="resolvemiplevelcount"><code class="tsd-tag">Static</code><span>resolve<wbr/>Mip<wbr/>Level<wbr/>Count</span><a href="#resolvemiplevelcount" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -431,7 +431,7 @@ leaving the reader nothing but a freshly zeroed texture.</p>
 <li><span><span class="tsd-kind-parameter">descriptor</span>: <a href="../interfaces/frame-graph_types.TextureDescriptor.html" class="tsd-signature-type tsd-kind-interface">TextureDescriptor</a></span></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">number</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/frame-graph/pool.ts#L62">frame-graph/pool.ts:62</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/frame-graph/pool.ts#L62">pex-renderer/src/frame-graph/pool.ts:62</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="texturekey"><code class="tsd-tag">Static</code><span>texture<wbr/>Key</span><a href="#texturekey" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -450,7 +450,7 @@ render-attachment-only texture would fail validation at bind time.</p>
 <li><span><span class="tsd-kind-parameter">mipLevelCount</span>: <span class="tsd-signature-type">number</span></span></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">string</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/frame-graph/pool.ts#L41">frame-graph/pool.ts:41</a></li></ul></aside></div></li></ul></section></section></details></div>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/frame-graph/pool.ts#L41">pex-renderer/src/frame-graph/pool.ts:41</a></li></ul></aside></div></li></ul></section></section></details></div>
 <div class="col-sidebar">
 <div class="page-menu">
 <div class="tsd-navigation settings">

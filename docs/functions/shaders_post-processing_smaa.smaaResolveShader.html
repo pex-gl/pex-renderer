@@ -1,4 +1,4 @@
-<!DOCTYPE html><html class="default" lang="en" data-base="../"><head><meta charset="utf-8"/><meta http-equiv="x-ua-compatible" content="IE=edge"/><title>asDescriptor | pex-renderer</title><meta name="description" content="Documentation for pex-renderer"/><meta name="viewport" content="width=device-width, initial-scale=1"/><link rel="stylesheet" href="../assets/style.css"/><link rel="stylesheet" href="../assets/highlight.css"/><script defer src="../assets/main.js"></script><script async src="../assets/icons.js" id="tsd-icons-script"></script><script async src="../assets/search.js" id="tsd-search-script"></script><script async src="../assets/navigation.js" id="tsd-nav-script"></script><script async src="../assets/hierarchy.js" id="tsd-hierarchy-script"></script><style>
+<!DOCTYPE html><html class="default" lang="en" data-base="../"><head><meta charset="utf-8"/><meta http-equiv="x-ua-compatible" content="IE=edge"/><title>smaaResolveShader | pex-renderer</title><meta name="description" content="Documentation for pex-renderer"/><meta name="viewport" content="width=device-width, initial-scale=1"/><link rel="stylesheet" href="../assets/style.css"/><link rel="stylesheet" href="../assets/highlight.css"/><script defer src="../assets/main.js"></script><script async src="../assets/icons.js" id="tsd-icons-script"></script><script async src="../assets/search.js" id="tsd-search-script"></script><script async src="../assets/navigation.js" id="tsd-nav-script"></script><script async src="../assets/hierarchy.js" id="tsd-hierarchy-script"></script><style>
 @media (prefers-color-scheme: dark) {
   :root {
     --md-sys-color-primary: #f6be46;
@@ -166,62 +166,28 @@
 <div class="col-content">
 <div class="tsd-page-title">
 <ul class="tsd-breadcrumb" aria-label="Breadcrumb">
-<li><a href="../modules/systems_geometry.html">systems/geometry</a></li>
-<li><a href="" aria-current="page">asDescriptor</a></li></ul>
-<h1>Function asDescriptor</h1></div>
+<li><a href="../modules/shaders_post-processing_smaa.html">shaders/post-processing/smaa</a></li>
+<li><a href="" aria-current="page">smaaResolveShader</a></li></ul>
+<h1>Function smaaResolveShader</h1></div>
 <section class="tsd-panel">
 <ul class="tsd-signatures">
 <li class="">
-<div class="tsd-signature tsd-anchor-link" id="asdescriptor"><span class="tsd-kind-call-signature">asDescriptor</span><span class="tsd-signature-symbol">(</span><br/>    <span class="tsd-kind-parameter">attribute</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">SourceAttribute</span><span class="tsd-signature-symbol">,</span><br/><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span><br/>    <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-symbol">{</span><br/>        <span class="tsd-kind-property">arrayStride</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">;</span><br/>        <span class="tsd-kind-property">buffer</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">GpuBuffer</span><span class="tsd-signature-symbol">;</span><br/>        <span class="tsd-kind-property">data</span><span class="tsd-signature-symbol">?:</span> <a href="../types/types.AttributeData.html" class="tsd-signature-type tsd-kind-type-alias">AttributeData</a><span class="tsd-signature-symbol">;</span><br/>        <span class="tsd-kind-property">dirty</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol">;</span><br/>        <span class="tsd-kind-property">format</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">GPUVertexFormat</span><span class="tsd-signature-symbol">;</span><br/>        <span class="tsd-kind-property">offset</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">;</span><br/>        <span class="tsd-kind-property">stepMode</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">GPUVertexStepMode</span><span class="tsd-signature-symbol">;</span><br/>    <span class="tsd-signature-symbol">}</span> <span class="tsd-signature-symbol">&amp;</span> <span class="tsd-signature-symbol">{</span> <span class="tsd-kind-property">dirty</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">boolean</span> <span class="tsd-signature-symbol">}</span><br/>    <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-type">undefined</span><a href="#asdescriptor" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
+<div class="tsd-signature tsd-anchor-link" id="smaaresolveshader"><span class="tsd-kind-call-signature">smaaResolveShader</span><span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">defines</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">Set</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><a href="#smaaresolveshader" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
 <div class="tsd-description">
-<div class="tsd-comment tsd-typography"><p>The GPU-backed half of SourceAttribute, or nothing if it is plain
-data. Discriminated on the data shapes rather than on <code>buffer</code>, which a typed
-array has of its own.</p>
+<div class="tsd-comment tsd-typography"><p>T2x resolve: this frame's blend output (<code>uTexture</code>) with the previous one's
+(<code>uHistoryTexture</code>), both read through <code>uTextureSampler</code>.
+<code>USE_SMAA_REPROJECTION</code> follows the velocity to where each pixel was, and
+takes alpha from the image SMAA started from (<code>uColorTexture</code>): the blend
+packed velocity where the image's own alpha was, and the chain after this
+composites with it.</p>
 </div>
 <div class="tsd-parameters">
 <h4 class="tsd-parameters-title">Parameters</h4>
 <ul class="tsd-parameter-list">
-<li><span><span class="tsd-kind-parameter">attribute</span>: <span class="tsd-signature-type">SourceAttribute</span></span></li></ul></div>
-<h4 class="tsd-returns-title">Returns <br/>    <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-symbol">{</span><br/>        <span class="tsd-kind-property">arrayStride</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">;</span><br/>        <span class="tsd-kind-property">buffer</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">GpuBuffer</span><span class="tsd-signature-symbol">;</span><br/>        <span class="tsd-kind-property">data</span><span class="tsd-signature-symbol">?:</span> <a href="../types/types.AttributeData.html" class="tsd-signature-type tsd-kind-type-alias">AttributeData</a><span class="tsd-signature-symbol">;</span><br/>        <span class="tsd-kind-property">dirty</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol">;</span><br/>        <span class="tsd-kind-property">format</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">GPUVertexFormat</span><span class="tsd-signature-symbol">;</span><br/>        <span class="tsd-kind-property">offset</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">;</span><br/>        <span class="tsd-kind-property">stepMode</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">GPUVertexStepMode</span><span class="tsd-signature-symbol">;</span><br/>    <span class="tsd-signature-symbol">}</span> <span class="tsd-signature-symbol">&amp;</span> <span class="tsd-signature-symbol">{</span> <span class="tsd-kind-property">dirty</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">boolean</span> <span class="tsd-signature-symbol">}</span><br/>    <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-type">undefined</span></h4>
+<li><span><span class="tsd-kind-parameter">defines</span>: <span class="tsd-signature-type">Set</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol"> = ...</span></span></li></ul></div>
+<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">string</span></h4><aside class="tsd-sources">
 <ul>
-<li><span class="tsd-signature-symbol">{</span><br/>    <span class="tsd-kind-property">arrayStride</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">;</span><br/>    <span class="tsd-kind-property">buffer</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">GpuBuffer</span><span class="tsd-signature-symbol">;</span><br/>    <span class="tsd-kind-property">data</span><span class="tsd-signature-symbol">?:</span> <a href="../types/types.AttributeData.html" class="tsd-signature-type tsd-kind-type-alias">AttributeData</a><span class="tsd-signature-symbol">;</span><br/>    <span class="tsd-kind-property">dirty</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol">;</span><br/>    <span class="tsd-kind-property">format</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">GPUVertexFormat</span><span class="tsd-signature-symbol">;</span><br/>    <span class="tsd-kind-property">offset</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">;</span><br/>    <span class="tsd-kind-property">stepMode</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">GPUVertexStepMode</span><span class="tsd-signature-symbol">;</span><br/><span class="tsd-signature-symbol">}</span> <span class="tsd-signature-symbol">&amp;</span> <span class="tsd-signature-symbol">{</span> <span class="tsd-kind-property">dirty</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">boolean</span> <span class="tsd-signature-symbol">}</span>
-<ul class="tsd-parameters">
-<li class="tsd-parameter">
-<h5><code class="tsd-tag">Optional</code><span class="tsd-kind-property">arrayStride</span><span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">number</span></h5>
-<div class="tsd-comment tsd-typography"><p>Byte stride between elements (WebGPU's arrayStride).</p>
-</div></li>
-<li class="tsd-parameter">
-<h5><span class="tsd-kind-property">buffer</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">GpuBuffer</span></h5></li>
-<li class="tsd-parameter">
-<h5><code class="tsd-tag">Optional</code><span class="tsd-kind-property">data</span><span class="tsd-signature-symbol">?: </span><a href="../types/types.AttributeData.html" class="tsd-signature-type tsd-kind-type-alias">AttributeData</a></h5>
-<div class="tsd-comment tsd-typography"><p>This attribute's own values, tightly packed — what reads it CPU-side
-(bounds, helpers) use, as opposed to the buffer, which may hold more
-than this attribute and is indexed by <code>offset</code>/<code>arrayStride</code>.</p>
-</div></li>
-<li class="tsd-parameter">
-<h5><code class="tsd-tag">Optional</code><span class="tsd-kind-property">dirty</span><span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">boolean</span></h5>
-<div class="tsd-comment tsd-typography"><p>Re-uploads the buffer's data on the next geometry-system update.</p>
-</div></li>
-<li class="tsd-parameter">
-<h5><code class="tsd-tag">Optional</code><span class="tsd-kind-property">format</span><span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">GPUVertexFormat</span></h5>
-<div class="tsd-comment tsd-typography"><p>Vertex format override. Needed when the WGSL type does not determine
-the storage width — <code>vec4u</code> accepts uint8x4/uint16x4/uint32x4 alike, so
-integer attributes such as <code>joints</code> must say which they are.</p>
-</div></li>
-<li class="tsd-parameter">
-<h5><code class="tsd-tag">Optional</code><span class="tsd-kind-property">offset</span><span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">number</span></h5>
-<div class="tsd-comment tsd-typography"><p>Byte offset into the buffer.</p>
-</div></li>
-<li class="tsd-parameter">
-<h5><code class="tsd-tag">Optional</code><span class="tsd-kind-property">stepMode</span><span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">GPUVertexStepMode</span></h5>
-<div class="tsd-comment tsd-typography"><p>&quot;instance&quot; to step this attribute per instance instead of per vertex.</p>
-</div></li></ul>
-<ul class="tsd-parameters">
-<li class="tsd-parameter">
-<h5><code class="tsd-tag">Optional</code><span class="tsd-kind-property">dirty</span><span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">boolean</span></h5></li></ul></li>
-<li><span class="tsd-signature-type">undefined</span></li></ul><aside class="tsd-sources">
-<ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/d473585cc44b59c5e4a9c5547bb07d9a6f88a406/src/systems/geometry.ts#L33">systems/geometry.ts:33</a></li></ul></aside></div></li></ul></section></div>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/307610d24e17703efe419acc6fb016fc7aac1e2a/src/shaders/post-processing/smaa.ts#L202">pex-renderer/src/shaders/post-processing/smaa.ts:202</a></li></ul></aside></div></li></ul></section></div>
 <div class="col-sidebar">
 <div class="page-menu">
 <div class="tsd-navigation settings">
