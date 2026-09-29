@@ -627,7 +627,6 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
       outputs: mainOutputs,
       clearValue: toLinear(
         camera.backgroundColor ?? [0, 0, 0, 1],
-        TEMP_CLEAR_VALUE,
       ),
       // The pre-pass already cleared it; loading what it wrote is what lets the
       // depth test reject before the fragment shader runs.
