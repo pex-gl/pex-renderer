@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+# [6.0.0-alpha.2](https://github.com/pex-gl/pex-renderer/compare/v6.0.0-alpha.1...v6.0.0-alpha.2) (2026-10-07)
+
+### Bug Fixes
+
+* stop caching linear camera backgroundColor ([e4f1d63](https://github.com/pex-gl/pex-renderer/commit/e4f1d6306cd8d8f0e116f94c8dda7b9616312db0))
+
 # [6.0.0-alpha.1](https://github.com/pex-gl/pex-renderer/compare/v6.0.0-alpha.0...v6.0.0-alpha.1) (2026-09-25)
 
 ### Bug Fixes

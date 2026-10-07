@@ -625,9 +625,7 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
 
     scenePass("opaque", drawMeshOptions, {
       outputs: mainOutputs,
-      clearValue: toLinear(
-        camera.backgroundColor ?? [0, 0, 0, 1],
-      ),
+      clearValue: toLinear(camera.backgroundColor ?? [0, 0, 0, 1]),
       // The pre-pass already cleared it; loading what it wrote is what lets the
       // depth test reject before the fragment shader runs.
       ...(!usePrePass && { depthClearValue: 1 }),
