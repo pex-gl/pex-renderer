@@ -10,6 +10,7 @@ import {
 import {
   depthPassShader,
   DEPTH_PASS_ALPHA_VERTEX_FIELDS,
+  DEPTH_PASS_HOOK_VERTEX_FIELDS,
   DEPTH_PASS_MATERIAL_FIELDS,
   DEPTH_PASS_VERTEX_FIELDS,
 } from "../../shaders/depth-pass.js";
@@ -732,17 +733,16 @@ export default ({
 
     // Vertex hooks run here too: a hook that displaces a vertex has to displace
     // it identically in every pass, or the surface casts a shadow it does not
-    // occupy and the pre-pass lays down depth the opaque pass cannot match.
-    // Displacing along the normal is the common case, and this pass otherwise
-    // only fetches one when it writes one, so a vertex hook asks for it.
+    // occupy and the pre-pass lays down depth the opaque pass cannot match. So a
+    // vertex hook gets every attribute the main pass hands it, not only those
+    // this pass reads.
     const { hooks } = entity.material!;
     if (
-      (hooks?.vertBeforeTransform ||
-        hooks?.vertDeclarationsEnd ||
-        hooks?.vertEnd) &&
-      attributes.normal
+      hooks?.vertBeforeTransform ||
+      hooks?.vertDeclarationsEnd ||
+      hooks?.vertEnd
     ) {
-      defines.add("USE_NORMALS");
+      this.getFeatureFlags(attributes, DEPTH_PASS_HOOK_VERTEX_FIELDS, defines);
     }
 
     if (entity.material!.alphaCutoff === undefined) return { defines, hooks };
@@ -850,9 +850,6 @@ export default ({
     if (entity._geometry!.attributes.normal)
       material.defines.add("USE_NORMALS");
     if (normalOutput) material.defines.add("USE_NORMAL_OUTPUT");
-    // Drops the shadow map's displacement stretch: this pass has to land on the
-    // same depth the opaque pass computes, not a biased one.
-    material.defines.add("USE_DEPTH_PRE_PASS");
 
     // Same cutout treatment as the opaque pass, for the same reason: discarding
     // into a multisampled attachment is what this avoids, and the two passes

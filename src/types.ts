@@ -1581,6 +1581,12 @@ export interface GeometryCache {
  * inside the generated `VertexInput`, an inter-stage variable a member of the
  * shared `VertexOutput`, and a uniform a `@group`/`@binding` the generator
  * alone can allocate without colliding.
+ *
+ * Vertex hooks read the geometry through `attributes.<name>` (`normal`,
+ * `tangent`, `texCoord0`, `texCoord1`, `vertexColor`, `offset`, `scale`,
+ * `rotation`, `color`), which holds a value with no effect when the geometry
+ * has no such attribute. Every define is a `bool` override, so a hook can
+ * branch on `USE_INSTANCED_OFFSET` and the like in any variant.
  */
 export interface ShaderHooks {
   /**

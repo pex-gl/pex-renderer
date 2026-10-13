@@ -17,6 +17,7 @@ import {
   defineOverrides,
   vertexOutputStruct,
   vertexInputStruct,
+  vertexAttributes,
   vertexTransform,
   vertexJitter,
   vertexVelocity,
@@ -89,7 +90,6 @@ const VERTEX_DEFINE = {
   previousInstancedOffset: "USE_PREVIOUS_INSTANCED_OFFSET",
   previousInstancedScale: "USE_PREVIOUS_INSTANCED_SCALE",
   previousInstancedRotation: "USE_PREVIOUS_INSTANCED_ROTATION",
-  displacementTexture: "USE_DISPLACEMENT_TEXTURE",
 } as const;
 
 const PASS_DEFINE = {
@@ -325,7 +325,6 @@ export const standardShader = (
   const vertexFlags = getDefineFlags(VERTEX_DEFINE, defines);
   const useNormals = vertexFlags.normal;
   const useColor = vertexFlags.vertexColor || vertexFlags.instancedColor;
-  const useDisplacementTexture = vertexFlags.displacementTexture;
   const useSkin = vertexFlags.skin;
   const lit = !materialFlags.unlitWorkflow;
   const useReflectionProbes =
@@ -762,12 +761,33 @@ ${bindingDeclaration(1, lightBindings.next(), "uIrradianceCoefficients", `array<
   // data.emissive carries its own exposure treatment from above.
   color = (data.indirectDiffuse + data.indirectSpecular + data.directColor) * uFrame.exposure + data.emissive + data.transmitted;`;
 
+  const vertexInputs = {
+    normal: useNormals,
+    tangent: vertexFlags.tangent,
+    texCoord0: vertexFlags.texCoord0,
+    texCoord1: vertexFlags.texCoord1,
+    vertexColor: vertexFlags.vertexColor,
+    instancedOffset: vertexFlags.instancedOffset,
+    instancedScale: vertexFlags.instancedScale,
+    instancedRotation: vertexFlags.instancedRotation,
+    instancedColor: vertexFlags.instancedColor,
+    skin: useSkin,
+    // Only where they are read: a variant not writing motion vectors has no use
+    // for last frame's values, and binding them would cost a vertex fetch each.
+    previousPosition: !!outputs.velocity && vertexFlags.previousPosition,
+    previousInstancedOffset:
+      !!outputs.velocity && vertexFlags.previousInstancedOffset,
+    previousInstancedScale:
+      !!outputs.velocity && vertexFlags.previousInstancedScale,
+    previousInstancedRotation:
+      !!outputs.velocity && vertexFlags.previousInstancedRotation,
+  };
+
   return /* wgsl */ `
 ${frameStruct()}
 
 ${modelStruct({
   previousModelMatrix: !!outputs.velocity,
-  displacementTexture: useDisplacementTexture,
   skin: useSkin,
   previousSkin: !!outputs.velocity,
   maxJoints,
@@ -797,30 +817,7 @@ ${reflectionProbeDecl}
 ${captureDecl}
 ${ssaoDecl}
 
-${vertexInputStruct(
-  {
-    normal: useNormals,
-    tangent: vertexFlags.tangent,
-    texCoord0: vertexFlags.texCoord0 || useDisplacementTexture,
-    texCoord1: vertexFlags.texCoord1,
-    vertexColor: vertexFlags.vertexColor,
-    instancedOffset: vertexFlags.instancedOffset,
-    instancedScale: vertexFlags.instancedScale,
-    instancedRotation: vertexFlags.instancedRotation,
-    instancedColor: vertexFlags.instancedColor,
-    skin: useSkin,
-    // Only where they are read: a variant not writing motion vectors has no use
-    // for last frame's values, and binding them would cost a vertex fetch each.
-    previousPosition: !!outputs.velocity && vertexFlags.previousPosition,
-    previousInstancedOffset:
-      !!outputs.velocity && vertexFlags.previousInstancedOffset,
-    previousInstancedScale:
-      !!outputs.velocity && vertexFlags.previousInstancedScale,
-    previousInstancedRotation:
-      !!outputs.velocity && vertexFlags.previousInstancedRotation,
-  },
-  hookMembers(hooks.attributes),
-)}
+${vertexInputStruct(vertexInputs, hookMembers(hooks.attributes))}
 
 ${vertexOutputStruct([
   { name: "normalWorld", type: "vec3f" },
@@ -882,6 +879,7 @@ ${hooks.vertDeclarationsEnd ?? ""}
 @vertex
 fn vertexMain(input: VertexInput) -> VertexOutput {
   var output: VertexOutput;
+  ${vertexAttributes(vertexInputs)}
 
   var position = vec4f(input.position, 1.0);
   var normal = vec3f(0.0, 0.0, 0.0);
@@ -895,12 +893,6 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
   ${vertexFlags.texCoord1 ? "output.texCoord1 = input.texCoord1;" : ""}
 
   ${hooks.vertBeforeTransform ?? ""}
-
-  ${
-    useDisplacementTexture
-      ? "let h = textureSampleLevel(uDisplacementTexture, uDisplacementTextureSampler, input.texCoord0, 0.0).x;\n  position = vec4f(position.xyz + uModel.displacement * h * normal, position.w);"
-      : ""
-  }
 
   ${vertexTransform({
     useSkin,

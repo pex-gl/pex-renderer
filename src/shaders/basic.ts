@@ -6,6 +6,7 @@ import {
   frameStruct,
   modelStruct,
   vertexInputStruct,
+  vertexAttributes,
   vertexOutputStruct,
   vertexTransform,
   getDefineFlags,
@@ -73,16 +74,7 @@ struct Material {
 @group(2) @binding(0) var<uniform> uMaterial: Material;
 ${hookBindingsDeclaration(2, createBindingAllocator(1), hooks.bindings)}
 
-${vertexInputStruct(
-  {
-    vertexColor: vertexFlags.vertexColor,
-    instancedOffset: vertexFlags.instancedOffset,
-    instancedScale: vertexFlags.instancedScale,
-    instancedRotation: vertexFlags.instancedRotation,
-    instancedColor: vertexFlags.instancedColor,
-  },
-  hookMembers(hooks.attributes),
-)}
+${vertexInputStruct(vertexFlags, hookMembers(hooks.attributes))}
 
 ${vertexOutputStruct([
   useColor && { name: "color", type: "vec4f" },
@@ -101,6 +93,7 @@ ${hooks.vertDeclarationsEnd ?? ""}
 @vertex
 fn vertexMain(input: VertexInput) -> VertexOutput {
   var output: VertexOutput;
+  ${vertexAttributes(vertexFlags)}
   var position = vec4f(input.position, 1.0);
 
   ${hooks.vertBeforeTransform ?? ""}

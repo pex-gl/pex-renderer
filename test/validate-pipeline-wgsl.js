@@ -152,7 +152,6 @@ const standardVariants = [
   { name: "vertex colors + blend", defines: new Set(["USE_METALLIC_ROUGHNESS_WORKFLOW", "USE_NORMALS", "USE_VERTEX_COLORS", "USE_BLEND"]) },
   { name: "texcoord1 everywhere", defines: new Set(["USE_METALLIC_ROUGHNESS_WORKFLOW", "USE_NORMALS", "USE_TEXCOORD_0", "USE_TEXCOORD_1", "USE_BASE_COLOR_TEXTURE"]), options: { texCoords: { baseColor: 1 } } },
   { name: "skinned", defines: new Set(["USE_METALLIC_ROUGHNESS_WORKFLOW", "USE_NORMALS", "USE_TANGENTS", "USE_TEXCOORD_0", "USE_SKIN"]) },
-  { name: "displacement", defines: new Set(["USE_METALLIC_ROUGHNESS_WORKFLOW", "USE_NORMALS", "USE_TEXCOORD_0", "USE_DISPLACEMENT_TEXTURE"]) },
   {
     name: "kitchen sink",
     defines: new Set([
@@ -193,7 +192,6 @@ const depthPassVariants = [
   { name: "default", defines: new Set() },
   { name: "alpha texture + alpha test", defines: new Set(["USE_NORMALS", "USE_TEXCOORD_0", "USE_BASE_COLOR_TEXTURE", "USE_ALPHA_TEXTURE", "USE_ALPHA_CUTOFF"]) },
   { name: "skinned + instanced + vertex colors", defines: new Set(["USE_NORMALS", "USE_SKIN", "USE_INSTANCED_OFFSET", "USE_INSTANCED_SCALE", "USE_INSTANCED_ROTATION", "USE_VERTEX_COLORS"]), options: { maxJoints: 64 } },
-  { name: "displacement + texcoord1", defines: new Set(["USE_NORMALS", "USE_TEXCOORD_0", "USE_TEXCOORD_1", "USE_DISPLACEMENT_TEXTURE"]) },
   { name: "alpha test + vertex/instance colors", defines: new Set(["USE_ALPHA_CUTOFF", "USE_VERTEX_COLORS", "USE_INSTANCED_COLOR"]) },
   { name: "alpha test on texcoord1", defines: new Set(["USE_TEXCOORD_0", "USE_TEXCOORD_1", "USE_BASE_COLOR_TEXTURE", "USE_ALPHA_CUTOFF"]), options: { texCoords: { baseColor: 1 } } },
   { name: "alpha test + omni (linear depth)", defines: new Set(["USE_TEXCOORD_0", "USE_BASE_COLOR_TEXTURE", "USE_ALPHA_CUTOFF", "USE_LINEAR_DEPTH"]) },
@@ -207,7 +205,6 @@ const depthPassPrePassVariants = [
   { name: "normal output", defines: new Set(["USE_NORMALS", "USE_NORMAL_OUTPUT"]) },
   { name: "normal output + skinned", defines: new Set(["USE_NORMALS", "USE_NORMAL_OUTPUT", "USE_SKIN"]), options: { maxJoints: 64 } },
   { name: "normal output + instanced", defines: new Set(["USE_NORMALS", "USE_NORMAL_OUTPUT", "USE_INSTANCED_OFFSET", "USE_INSTANCED_SCALE", "USE_INSTANCED_ROTATION"]) },
-  { name: "normal output + displacement", defines: new Set(["USE_NORMALS", "USE_NORMAL_OUTPUT", "USE_TEXCOORD_0", "USE_DISPLACEMENT_TEXTURE"]) },
   { name: "normal output + alpha test", defines: new Set(["USE_NORMALS", "USE_NORMAL_OUTPUT", "USE_TEXCOORD_0", "USE_BASE_COLOR_TEXTURE", "USE_ALPHA_TEXTURE", "USE_ALPHA_CUTOFF"]) },
   { name: "normal output + alpha to coverage", defines: new Set(["USE_NORMALS", "USE_NORMAL_OUTPUT", "USE_TEXCOORD_0", "USE_BASE_COLOR_TEXTURE", "USE_ALPHA_CUTOFF", "USE_ALPHA_TO_COVERAGE"]) },
   // Coverage where it cannot apply: no color target means no alpha to derive
@@ -357,9 +354,7 @@ for (const v of depthPassVariants) {
   await check(`depthPass [${v.name}]`, depthPass.depthPassShader(v.defines, v.options));
 }
 for (const v of depthPassPrePassVariants) {
-  // getPrePassPipeline always adds this, so compile what actually runs.
-  const defines = new Set([...v.defines, "USE_DEPTH_PRE_PASS"]);
-  await check(`depthPass [${v.name}]`, depthPass.depthPassShader(defines, v.options));
+  await check(`depthPass [${v.name}]`, depthPass.depthPassShader(v.defines, v.options));
 }
 
 for (const v of lineVariants) {
@@ -438,7 +433,7 @@ for (const v of postProcessingVariants) {
   // the same condition.
   const skinned = new Set(["USE_NORMALS", "USE_SKIN"]);
   const declaresPreviousJoints = (source) =>
-    /@group\(3\) @binding\(4\) var<uniform> uPreviousJointMatrices/.test(source);
+    /@group\(3\) @binding\(2\) var<uniform> uPreviousJointMatrices/.test(source);
   for (const [label, source, expected] of [
     ["skinned", standard.standardShader(skinned, { outputs: {} }), false],
     ["skinned + velocity", standard.standardShader(skinned, { outputs: { velocity: true } }), true],
@@ -451,23 +446,16 @@ for (const v of postProcessingVariants) {
 }
 
 // ─── The depth pre-pass has to agree with the pass that tests against it ─────
-// Both of these are driver-dependent and will not show up reliably in a
+// Driver-dependent and will not show up reliably in a
 // screenshot: the opaque pass loads the pre-pass depth and tests less-equal, so
 // any disagreement about the computed position rejects the fragments that
 // landed further away, which reads as hatching and dropouts across every
 // surface rather than as an obvious error.
 {
   const options = { outputs: {} };
-  const withDisplacement = new Set([
-    "USE_NORMALS",
-    "USE_TEXCOORD_0",
-    "USE_DISPLACEMENT_TEXTURE",
-  ]);
-  const standardSource = standard.standardShader(withDisplacement, options);
-  const prePassSource = depthPass.depthPassShader(
-    new Set([...withDisplacement, "USE_DEPTH_PRE_PASS"]),
-    options,
-  );
+  const defines = new Set(["USE_NORMALS", "USE_TEXCOORD_0"]);
+  const standardSource = standard.standardShader(defines, options);
+  const prePassSource = depthPass.depthPassShader(defines, options);
 
   const assert = (label, ok) => {
     if (!ok) errorCount++;
@@ -480,15 +468,6 @@ for (const v of postProcessingVariants) {
   assert(
     "prePass agreement [invariant position in both]",
     invariant.test(standardSource) && invariant.test(prePassSource),
-  );
-
-  // The 1.3x stretch is a shadow-map bias; in the pre-pass it is a real offset
-  // between two passes that must land on the same depth.
-  const displacement = (source) =>
-    source.split("\n").find((l) => l.includes("uModel.displacement"))?.trim();
-  assert(
-    "prePass agreement [displacement matches the opaque pass]",
-    displacement(standardSource) === displacement(prePassSource),
   );
 }
 

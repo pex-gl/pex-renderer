@@ -10,6 +10,7 @@ import {
   textureMatrixField,
   textureSamplerDeclaration,
   vertexInputStruct,
+  vertexAttributes,
   vertexOutputStruct,
   vertexTransform,
   getDefineFlags,
@@ -22,6 +23,7 @@ import type { PipelineShaderOptions } from "../types.js";
 
 const VERTEX_DEFINE = {
   normal: "USE_NORMALS",
+  tangent: "USE_TANGENTS",
   texCoord0: "USE_TEXCOORD_0",
   texCoord1: "USE_TEXCOORD_1",
   vertexColor: "USE_VERTEX_COLORS",
@@ -30,7 +32,6 @@ const VERTEX_DEFINE = {
   instancedRotation: "USE_INSTANCED_ROTATION",
   instancedColor: "USE_INSTANCED_COLOR",
   skin: "USE_SKIN",
-  displacementTexture: "USE_DISPLACEMENT_TEXTURE",
 } as const;
 
 const MATERIAL_DEFINE = {
@@ -42,7 +43,6 @@ const MATERIAL_DEFINE = {
 const PASS_DEFINE = {
   linearDepth: "USE_LINEAR_DEPTH",
   normalOutput: "USE_NORMAL_OUTPUT",
-  depthPrePass: "USE_DEPTH_PRE_PASS",
   alphaToCoverage: "USE_ALPHA_TO_COVERAGE",
 } as const;
 
@@ -65,6 +65,17 @@ export const DEPTH_PASS_ALPHA_VERTEX_FIELDS: readonly FeatureField[] = [
   { key: "texCoord1", define: VERTEX_DEFINE.texCoord1 },
   { key: "vertexColor", define: VERTEX_DEFINE.vertexColor },
   { key: "color", define: VERTEX_DEFINE.instancedColor },
+];
+
+/**
+ * Geometry attributes a vertex hook can read through `attributes`, beyond
+ * {@link DEPTH_PASS_VERTEX_FIELDS}. The hook runs in every pass, so it has to
+ * read the same values here as in the main pass.
+ */
+export const DEPTH_PASS_HOOK_VERTEX_FIELDS: readonly FeatureField[] = [
+  { key: "normal", define: VERTEX_DEFINE.normal },
+  { key: "tangent", define: VERTEX_DEFINE.tangent },
+  ...DEPTH_PASS_ALPHA_VERTEX_FIELDS,
 ];
 
 /**
@@ -126,11 +137,6 @@ export const DEPTH_PASS_MATERIAL_FIELDS: readonly FeatureField[] = [
  * USE_ALPHA_TO_COVERAGE resolves that cutout as a coverage mask instead, for a
  * multisampled pre-pass. It needs the normal output: the mask comes from the
  * alpha at location 0, which a depth-only pass has no target for.
- *
- * The displacement offset is stretched 1.3x relative to standard.js's to reduce
- * acne/peter-panning from displaced surfaces — a shadow-map bias, so
- * USE_DEPTH_PRE_PASS drops it. A pre-pass has to compute the same position the
- * opaque pass will, to the bit; anything else is z-fighting rather than bias.
  */
 export const depthPassShader = (
   defines: Set<string> = new Set(),
@@ -139,17 +145,18 @@ export const depthPassShader = (
   const hooks = options.hooks || {};
   const { maxJoints = 256 } = options;
 
+  // Fetched whenever defined, not only for what this pass reads: the renderer
+  // also defines them for a vertex hook, which has to see the same
+  // `attributes` here as in the main pass.
   const vertexFlags = getDefineFlags(VERTEX_DEFINE, defines);
   const materialFlags = getDefineFlags(MATERIAL_DEFINE, defines);
   const passFlags = getDefineFlags(PASS_DEFINE, defines);
   const useNormals = vertexFlags.normal;
-  const useDisplacementTexture = vertexFlags.displacementTexture;
   const useSkin = vertexFlags.skin;
   const useLinearDepth = passFlags.linearDepth;
   // A normal target with no normals to put in it still has to be written, so
   // the attachment and the real normal are two separate conditions.
   const useNormalOutput = passFlags.normalOutput;
-  const usePrePass = passFlags.depthPrePass;
   const writeNormal = useNormalOutput && useNormals;
 
   const useAlphaTest = materialFlags.alphaCutoff;
@@ -224,25 +231,11 @@ ${textureSamplerDeclaration(2, alphaTextureBinding, "uAlphaTexture")}`
 ${hookBindingsDeclaration(2, materialBindings, hooks.bindings)}
 
 ${modelStruct({
-  displacementTexture: useDisplacementTexture,
   skin: useSkin,
   maxJoints,
 })}
 
-${vertexInputStruct(
-  {
-    normal: useNormals,
-    texCoord0: vertexFlags.texCoord0 || useDisplacementTexture,
-    texCoord1: texCoordSets.has(1),
-    vertexColor: useColor && vertexFlags.vertexColor,
-    instancedOffset: vertexFlags.instancedOffset,
-    instancedScale: vertexFlags.instancedScale,
-    instancedRotation: vertexFlags.instancedRotation,
-    instancedColor: useColor && vertexFlags.instancedColor,
-    skin: useSkin,
-  },
-  hookMembers(hooks.attributes),
-)}
+${vertexInputStruct(vertexFlags, hookMembers(hooks.attributes))}
 
 ${vertexOutputStruct([
   useLinearDepth && { name: "viewPosition", type: "vec3f" },
@@ -265,17 +258,12 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
   // Declared up front: vertexTransform writes output.normalView itself when it
   // is transforming normals.
   var output: VertexOutput;
+  ${vertexAttributes(vertexFlags)}
   var position = vec4f(input.position, 1.0);
   var normal = vec3f(0.0, 0.0, 0.0);
   ${useNormals ? "normal = input.normal;" : ""}
 
   ${hooks.vertBeforeTransform ?? ""}
-
-  ${
-    useDisplacementTexture
-      ? `let h = textureSampleLevel(uDisplacementTexture, uDisplacementTextureSampler, input.texCoord0, 0.0).x;\n  position = vec4f(position.xyz + uModel.displacement * h * normal${usePrePass ? "" : " * 1.3"}, position.w);`
-      : ""
-  }
 
   ${vertexTransform({
     useSkin,

@@ -339,15 +339,10 @@ export interface ModelStructOptions {
    * rather than always present because this block is written per entity.
    */
   previousModelMatrix?: boolean;
-  /**
-   * Declare the displacement texture (bindings 2/3) and its `displacement`
-   * struct field.
-   */
-  displacementTexture?: boolean;
   /** Declare the skin joint-matrix array (binding 1). */
   skin?: boolean;
   /**
-   * Declare last frame's joint-matrix array (binding 4), for a skinned pass
+   * Declare last frame's joint-matrix array (binding 2), for a skinned pass
    * writing motion vectors. Doubles what a skinned entity uploads, so it is
    * gated separately from `skin`.
    */
@@ -357,13 +352,12 @@ export interface ModelStructOptions {
 }
 
 /**
- * The `@group(3)` per-model uniform block plus its optional skin joint-matrix
- * (binding 1) and displacement texture (bindings 2/3) decls — the same layout
- * in every pass.
+ * The `@group(3)` per-model uniform block plus its optional current (binding 1)
+ * and previous (binding 2) skin joint-matrix decls — the same layout in every
+ * pass.
  */
 export function modelStruct({
   previousModelMatrix = false,
-  displacementTexture = false,
   skin = false,
   previousSkin = false,
   maxJoints = 256,
@@ -372,12 +366,10 @@ export function modelStruct({
   modelMatrix: mat4x4f,
   normalMatrix: mat3x3f,
   ${previousModelMatrix ? "previousModelMatrix: mat4x4f," : ""}
-  ${displacementTexture ? "displacement: f32," : ""}
 }
 ${bindingDeclaration(3, 0, "uModel", "Model", "uniform")}
 ${skin ? bindingDeclaration(3, 1, "uJointMatrices", `array<mat4x4f, ${maxJoints}>`, "uniform") : ""}
-${skin && previousSkin ? bindingDeclaration(3, 4, "uPreviousJointMatrices", `array<mat4x4f, ${maxJoints}>`, "uniform") : ""}
-${displacementTexture ? textureSamplerDeclaration(3, { texture: 2, sampler: 3 }, "uDisplacementTexture") : ""}`;
+${skin && previousSkin ? bindingDeclaration(3, 2, "uPreviousJointMatrices", `array<mat4x4f, ${maxJoints}>`, "uniform") : ""}`;
 }
 
 // Vertex stage: input struct and the transform body it feeds.
@@ -433,19 +425,61 @@ export function locationMembers(
 
 // VertexInput attributes gated by their flag, in @location order. Position is
 // always present and leads (see vertexInputStruct); every other attribute is
-// omitted when its flag is unset.
+// omitted when its flag is unset. `fallback` is the value with no effect, which
+// hooks read in its place through `attributes` (see vertexAttributes).
 const VERTEX_ATTRIBUTES: readonly (ShaderStructMember & {
   flag: keyof VertexInputFlags;
+  fallback?: string;
 })[] = [
-  { flag: "normal", name: "normal", type: "vec3f" },
-  { flag: "tangent", name: "tangent", type: "vec4f" },
-  { flag: "texCoord0", name: "texCoord0", type: "vec2f" },
-  { flag: "texCoord1", name: "texCoord1", type: "vec2f" },
-  { flag: "vertexColor", name: "vertexColor", type: "vec4f" },
-  { flag: "instancedOffset", name: "offset", type: "vec3f" },
-  { flag: "instancedScale", name: "scale", type: "vec3f" },
-  { flag: "instancedRotation", name: "rotation", type: "vec4f" },
-  { flag: "instancedColor", name: "color", type: "vec4f" },
+  { flag: "normal", name: "normal", type: "vec3f", fallback: "vec3f(0.0)" },
+  {
+    flag: "tangent",
+    name: "tangent",
+    type: "vec4f",
+    fallback: "vec4f(1.0, 0.0, 0.0, 1.0)",
+  },
+  {
+    flag: "texCoord0",
+    name: "texCoord0",
+    type: "vec2f",
+    fallback: "vec2f(0.0)",
+  },
+  {
+    flag: "texCoord1",
+    name: "texCoord1",
+    type: "vec2f",
+    fallback: "vec2f(0.0)",
+  },
+  {
+    flag: "vertexColor",
+    name: "vertexColor",
+    type: "vec4f",
+    fallback: "vec4f(1.0)",
+  },
+  {
+    flag: "instancedOffset",
+    name: "offset",
+    type: "vec3f",
+    fallback: "vec3f(0.0)",
+  },
+  {
+    flag: "instancedScale",
+    name: "scale",
+    type: "vec3f",
+    fallback: "vec3f(1.0)",
+  },
+  {
+    flag: "instancedRotation",
+    name: "rotation",
+    type: "vec4f",
+    fallback: "vec4f(0.0, 0.0, 0.0, 1.0)",
+  },
+  {
+    flag: "instancedColor",
+    name: "color",
+    type: "vec4f",
+    fallback: "vec4f(1.0)",
+  },
   { flag: "skin", name: "joint", type: "vec4u" },
   { flag: "skin", name: "weight", type: "vec4f" },
   { flag: "previousPosition", name: "previousPosition", type: "vec3f" },
@@ -458,6 +492,10 @@ const VERTEX_ATTRIBUTES: readonly (ShaderStructMember & {
   },
 ];
 
+const FALLBACK_ATTRIBUTES = VERTEX_ATTRIBUTES.filter(
+  (attribute) => attribute.fallback,
+);
+
 export function vertexInputStruct(
   flags: VertexInputFlags,
   extra: readonly ShaderStructMember[] = [],
@@ -468,7 +506,22 @@ export function vertexInputStruct(
     ...VERTEX_ATTRIBUTES.map((attribute) => flags[attribute.flag] && attribute),
     ...extra,
   ])}
+}
+
+struct VertexAttributes {
+  ${FALLBACK_ATTRIBUTES.map(({ name, type }) => `${name}: ${type},`).join("\n  ")}
 }`;
+}
+
+/**
+ * Declares `attributes`, a {@link vertexInputStruct}'s `VertexAttributes`: every
+ * attribute with a fallback, read from `input` when `flags` declares it. Gives
+ * vertex hooks one set of names that resolves in every variant.
+ */
+export function vertexAttributes(flags: VertexInputFlags): string {
+  return `let attributes = VertexAttributes(${FALLBACK_ATTRIBUTES.map(
+    ({ flag, name, fallback }) => (flags[flag] ? `input.${name}` : fallback),
+  ).join(", ")});`;
 }
 
 /**
