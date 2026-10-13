@@ -37,4 +37,6 @@ export {
   type TextureRequirements,
 } from "./systems/render-pipeline/render-textures.js";
 
+export type { BakesStage } from "./types.js";
+
 export * as utils from "./utils.js";

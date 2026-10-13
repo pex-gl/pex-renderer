@@ -71,7 +71,7 @@
   },
   "packageManager": "npm@10.5.1",
   "engines": {
-    "node": ">=22.0.0",
+    "node": ">=24.0.0",
     "snowdev": ">=3.0.0-alpha.3"
   },
   "allowScripts": {

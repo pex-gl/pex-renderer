@@ -558,8 +558,11 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
   /**
    * Records every probe's outputs into this frame's graph, and the bake for
    * those whose environment changed under them.
+   *
+   * Returns whether a bake was declared.
    */
-  declareReflectionProbes(entities: Entity[]) {
+  declareReflectionProbes(entities: Entity[]): boolean {
+    let declared = false;
     for (let i = 0; i < entities.length; i++) {
       const entity = entities[i]!;
       const cached = this.cache[entity.id];
@@ -570,7 +573,9 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
         continue;
       }
       this.declareBake(entity, cached);
+      declared = true;
     }
+    return declared;
   },
 
   updateRotation(entity: Entity, modelMatrix: Mat4 | undefined) {

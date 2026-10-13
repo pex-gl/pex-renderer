@@ -13,6 +13,7 @@ import {
   DEPTH_PASS_MATERIAL_FIELDS,
   DEPTH_PASS_VERTEX_FIELDS,
 } from "../../shaders/depth-pass.js";
+import { errorShader } from "../../shaders/error.js";
 
 import createBaseSystem, { outputsKey } from "./base.js";
 import type { FeatureField } from "./base.js";
@@ -168,7 +169,7 @@ export default ({
   ctx,
   shadowQuality = 4,
 }: SystemOptions & { shadowQuality?: number }): RendererSystem => ({
-  ...createBaseSystem(),
+  ...createBaseSystem({ ctx }),
   type: "standard-renderer",
   debug: false,
   shadowQuality,
@@ -260,6 +261,7 @@ export default ({
 
   getShader: (defines: Set<string>, options: PipelineShaderOptions) =>
     standardShader(defines, options),
+  getErrorShader: errorShader,
   getShaderOptions(
     entity: Entity,
     options: StandardPassOptions,

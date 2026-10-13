@@ -1,9 +1,12 @@
+import { flush } from "pex-gpu";
+
 import * as systems from "./systems/index.js";
 
 import FrameGraph from "./frame-graph/index.js";
 import { getDefaultViewport, mapValues } from "./utils.js";
 
 import type {
+  BakesStage,
   Entity,
   GpuContext,
   GpuTexture,
@@ -142,8 +145,24 @@ export default ({
         targetHandlesPerCamera = [];
 
         // View-independent: one sky and one probe bake feed every camera.
-        skyboxSystem.declareSkybox(entities);
-        reflectionProbeSystem.declareReflectionProbes(entities);
+        const skyBaked = skyboxSystem.declareSkybox(entities);
+        const probesBaked =
+          reflectionProbeSystem.declareReflectionProbes(entities);
+
+        // External bakes join here and set `declared`.
+        const bakes: BakesStage = { declared: skyBaked || probesBaked };
+        await frameGraph.stage("bakes", bakes);
+
+        // Bakes clear needsBake when encoded: submit them on their own so a
+        // failing scene pass can't discard them.
+        if (bakes.declared) {
+          frameGraph.addPass({
+            name: "flushBakes",
+            type: "raw",
+            neverCull: true,
+            execute: ({ ctx }) => flush(ctx),
+          });
+        }
 
         for (const cameraEntity of cameras) {
           const camera = cameraEntity.camera!;

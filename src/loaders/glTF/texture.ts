@@ -187,7 +187,7 @@ export function resolveTexture(
   gltf: ResolvedGltf,
   ctx: GpuContext,
   samplerCache: Map<number, GPUSampler>,
-  pixelFormat?: GPUTextureFormat,
+  pixelFormat: GPUTextureFormat = "rgba8unorm",
 ): MaterialTexture | undefined {
   const { textures = [], images = [], samplers } = gltf;
   const texture = textures[materialTexture.index]!;
@@ -228,7 +228,7 @@ export function resolveTexture(
       texture._tex = createTexture(ctx, {
         label,
         data: decoded,
-        format: pixelFormat ?? "rgba8unorm",
+        format: pixelFormat,
         mipmap: hasMipmap,
       });
     } else {

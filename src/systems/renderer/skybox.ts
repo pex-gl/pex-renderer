@@ -43,7 +43,7 @@ const IDENTITY_MAT4 = mat4.create();
  * same source `standard.ts` uses for material reflections.
  */
 export default ({ ctx }: SystemOptions): RendererSystem => ({
-  ...createBaseSystem(),
+  ...createBaseSystem({ ctx }),
   type: "skybox-renderer",
   debug: false,
   sampler: createSampler(ctx, { filter: "linear" }),

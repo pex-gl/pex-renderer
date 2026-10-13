@@ -1718,6 +1718,11 @@ export interface RenderEngineOptions {
   /** Overrides the engine's accumulated time for this render call. */
   time?: number;
 }
+/** Payload of the `bakes` stage. */
+export interface BakesStage {
+  /** Set when a callback declares a bake, so the frame flushes it. */
+  declared: boolean;
+}
 /** Resolves to each camera's output textures, keyed by name. */
 export type RenderEngineRender = (
   entities: Entity[],

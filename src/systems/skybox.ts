@@ -133,8 +133,11 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
   /**
    * Records the analytic sky bake into this frame's graph, for every skybox
    * whose sky has moved since it was last drawn.
+   *
+   * Returns whether a bake was declared.
    */
-  declareSkybox(entities: Entity[]) {
+  declareSkybox(entities: Entity[]): boolean {
+    let declared = false;
     for (let i = 0; i < entities.length; i++) {
       const entity = entities[i]!;
       const skybox = entity.skybox;
@@ -174,7 +177,9 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
           cached.needsBake = false;
         },
       });
+      declared = true;
     }
+    return declared;
   },
   dispose(entities?: Entity[]) {
     if (entities) {

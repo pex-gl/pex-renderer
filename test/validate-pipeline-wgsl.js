@@ -24,6 +24,7 @@ const {
   reversibleToneMap,
   depthPass,
   depthResolve,
+  error,
   line,
   overlay,
   sky,
@@ -112,6 +113,14 @@ const basicVariants = [
 const VELOCITY = {
   outputs: { normal: true, emissive: true, velocity: true, responsive: true },
 };
+// Takes the failed variant's defines: every vertex path must compile, there is
+// no fallback left.
+const errorVariants = [
+  { name: "default", defines: new Set() },
+  { name: "full instancing", defines: new Set(["USE_INSTANCED_OFFSET", "USE_INSTANCED_SCALE", "USE_INSTANCED_ROTATION"]) },
+  { name: "MSAA + draw buffers", defines: new Set(["USE_MSAA"]), options: VELOCITY },
+  { name: "skin + velocity", defines: new Set(["USE_SKIN"]), options: VELOCITY },
+];
 const standardVariants = [
   { name: "minimal unlit", defines: new Set(["USE_UNLIT_WORKFLOW"]) },
   // Motion vectors, once per way a vertex can move. Each takes a different
@@ -327,6 +336,9 @@ const postProcessingVariants = [
 
 for (const v of basicVariants) {
   await check(`basic [${v.name}]`, basic.basicShader(v.defines, v.options));
+}
+for (const v of errorVariants) {
+  await check(`error [${v.name}]`, error.errorShader(v.defines, v.options));
 }
 for (const v of standardVariants) {
   await check(`standard [${v.name}]`, standard.standardShader(v.defines, v.options));

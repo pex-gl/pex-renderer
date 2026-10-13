@@ -54,7 +54,7 @@ const lineBuffers = (renderer: RendererSystem) =>
  * Material, `@group(3)` Model.
  */
 export default ({ ctx }: SystemOptions): RendererSystem => ({
-  ...createBaseSystem(),
+  ...createBaseSystem({ ctx }),
   type: "line-renderer",
   // Round-cap quad buffers keyed by material.lineResolution.
   cache: {} as Record<EntityId, GpuBuffer>,

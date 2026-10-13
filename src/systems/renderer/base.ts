@@ -1,4 +1,4 @@
-import { isGpuBuffer, isGpuTexture } from "pex-gpu";
+import { isGpuBuffer, isGpuTexture, pipelineFailed } from "pex-gpu";
 import { mat2x3, mat3, mat4 } from "pex-math";
 
 import {
@@ -26,6 +26,7 @@ import type {
   RendererSystem,
   RenderView,
   SkinComponentOptions,
+  SystemOptions,
   TextureTransform,
 } from "../../types.js";
 
@@ -256,6 +257,10 @@ const LAST_VARIANT_KEYS = new WeakMap<
   WeakMap<Entity, string>
 >();
 
+// Never swapped again: a failing error shader is skipped, not rebuilt every
+// frame.
+const ERROR_PIPELINES = new WeakSet<RenderPipeline>();
+
 // Defines never contain "|"; a debugRender expression might, which only splits
 // that one part.
 const keyParts = (key: string) => new Set(key.split("|"));
@@ -323,7 +328,7 @@ export const BLEND_MODES: Record<BlendMode, GPUBlendState> = {
  * (its `defines`). Mutable state (blend, cull, depth) is re-applied per draw on
  * the cached object.
  */
-export default (): RendererSystem => ({
+export default ({ ctx }: Pick<SystemOptions, "ctx">): RendererSystem => ({
   type: "base-renderer",
   pipelineCache: new Map(),
   debug: false,
@@ -536,7 +541,7 @@ export default (): RendererSystem => ({
     const defines = this.getDefines(entity, options, precomputed);
     const key = this.getVariantKey(entity, defines, options);
 
-    const pipeline = this.getCachedPipeline(
+    let pipeline = this.getCachedPipeline(
       "pipeline",
       this.pipelineCache,
       key,
@@ -548,6 +553,29 @@ export default (): RendererSystem => ({
         ),
       }),
     );
+
+    // pex-gpu skips failed pipelines: draw the error shader instead so the
+    // failure stays visible.
+    if (
+      this.getErrorShader &&
+      !ERROR_PIPELINES.has(pipeline) &&
+      pipelineFailed(ctx, pipeline)
+    ) {
+      pipeline = {
+        shader: this.getErrorShader(
+          defines,
+          this.getShaderOptions(entity, options, defines),
+        ),
+      };
+      ERROR_PIPELINES.add(pipeline);
+      this.pipelineCache.set(key, pipeline);
+      console.error(
+        NAMESPACE,
+        this.type,
+        "pipeline failed, drawing with the error shader",
+        entity,
+      );
+    }
 
     // Blend/cull/depth may change between draws without a new pipeline object.
     Object.assign(

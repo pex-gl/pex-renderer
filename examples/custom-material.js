@@ -179,6 +179,26 @@ const sphereEntity = createEntity({
 });
 world.add(sphereEntity);
 
+const State = { brokenShader: false };
+const workingHooks = {
+  fragBeforeLighting: /* wgsl */ `data.baseColor = vec3f(0.2, 0.4, 1.0);`,
+};
+const brokenHooks = {
+  fragBeforeLighting: /* wgsl */ `data.baseColor = undefinedColor;`,
+};
+const brokenEntity = createEntity({
+  transform: components.transform({ position: [1.5, 0.5, -1.5] }),
+  geometry: components.geometry(cube({ sx: 0.5 })),
+  material: components.material({
+    baseColor: [1, 1, 1, 1],
+    roughness: 0.5,
+    castShadows: true,
+    receiveShadows: true,
+    hooks: State.brokenShader ? brokenHooks : workingHooks,
+  }),
+});
+world.add(brokenEntity);
+
 // Add segment geometry for line renderer system
 const lineGeometry = { positions: [], vertexColors: [] };
 let lineColors = [
@@ -307,6 +327,9 @@ gui.addRadioList(
     "input.normalWorld",
   ].map((value) => ({ name: value || "No debug", value })),
 );
+gui.addParam("Broken shader", State, "brokenShader", {}, (value) => {
+  brokenEntity.material.hooks = value ? brokenHooks : workingHooks;
+});
 
 // Events
 let debugOnce = false;

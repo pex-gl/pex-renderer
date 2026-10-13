@@ -1,6 +1,7 @@
 import { mat3, mat4 } from "pex-math";
 import { submit } from "pex-gpu";
 import { basicShader, BASIC_VERTEX_FIELDS } from "../../shaders/basic.js";
+import { errorShader } from "../../shaders/error.js";
 
 import createBaseSystem, { outputsKey } from "./base.js";
 import { definesKey, hooksKey } from "../../utils.js";
@@ -26,11 +27,12 @@ const NORMAL_MATRIX = mat3.create();
  * convention: `@group(0)` Frame, `@group(2)` Material, `@group(3)` Model.
  */
 export default ({ ctx }: SystemOptions): RendererSystem => ({
-  ...createBaseSystem(),
+  ...createBaseSystem({ ctx }),
   type: "basic-renderer",
   debug: false,
   getShader: (defines: Set<string>, options: PipelineShaderOptions) =>
     basicShader(defines, options),
+  getErrorShader: errorShader,
   getDefines(entity: Entity) {
     const defines = new Set<string>();
     this.getFeatureFlags(

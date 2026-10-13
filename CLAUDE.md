@@ -30,7 +30,7 @@ The core model (see README "Architecture" section):
 
 ### Key modules at the repo root
 
-- `render-engine.ts` — the default bundle of systems for a typical render loop. Exposes `.update(entities, deltaTime)` (CPU-side scene updates plus the sky/probe bakes, bracketed in its own command buffer) and `async .render(entities, cameraEntities, options)` (declares, compiles and executes one frame graph covering **all** cameras; returns the resolved output textures per camera).
+- `render-engine.ts` — the default bundle of systems for a typical render loop. Exposes `.update(entities, deltaTime)` (CPU-side scene updates, no GPU commands) and `async .render(entities, cameraEntities, options)` (declares, compiles and executes one frame graph covering **all** cameras; returns the resolved output textures per camera). The sky/probe bakes and the `bakes` stage are declared first, then flushed (`flushBakes`) into their own command buffer: they clear `needsBake` when encoded, so a failing scene pass must not discard them.
 - `frame-graph/` — retained-mode frame graph, three phases (see its own section below).
 - `fullscreen-geometry.ts` — the fullscreen triangle/quad vertex buffers, memoized per context. Deliberately outside the frame graph: the graph only owns resources whose lifetime is one frame.
 - `world.ts` — minimal entity/system container (`add`, `addSystem`, `update`, `dispose`).
@@ -103,9 +103,8 @@ ordered pass list:
   included — batches into one command buffer. **Declaration must never await
   anything that yields past a browser present**: the open segment acquired the
   swapchain texture when it opened, and presenting destroys it, so the submit
-  fails for the entire frame — silently taking the sky and reflection probe
-  bakes with it, which run once and clear their dirty flags either way. This is
-  why post-processing kicks off its effect `import()`s without awaiting them and
+  fails for the entire frame, bakes excepted (flushed separately). This is why
+  post-processing kicks off its effect `import()`s without awaiting them and
   declares only the modules that have already arrived.
 - **Pass names are unique within a frame**, and one graph spans every camera, so
   `render-pipeline.update()` runs once per camera into the same graph. Per-camera
@@ -127,7 +126,10 @@ Extensibility is four distinct mechanisms, deliberately not one:
   stage names shadowing the pass list. Synchronous, since `addPass` is.
 - `stage(name, payload)` — the boundaries no single pass marks (a phase that
   exists whether or not the pass before it was declared), and the only hook that
-  carries a payload and can be awaited. The pipeline opens eight, in order:
+  carries a payload and can be awaited. The render engine opens `bakes` once
+  per frame, before any camera: a view-independent bake declares its passes
+  there, clears its dirty flag in `execute`, and sets `declared` on the payload
+  so the frame flushes it. The pipeline opens eight per camera, in order:
   `outputs` (before anything is allocated, to add to the main pass' outputs),
   then `lights`, `prePass`, `opaque`, `transparent`, `transmission`,
   `postProcessing`, `present`. `transparent` and `transmission` open only when
