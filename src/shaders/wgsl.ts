@@ -45,6 +45,28 @@ export function getDefineFlags<T extends Record<string, string>>(
 }
 
 /**
+ * Declares every define of `defineMaps` as a `bool` override, so WGSL (hooks
+ * included) can branch on any of them whether or not the variant sets it.
+ * `runtime` defines are declared `false`: their value comes per draw through
+ * the pipeline's constants.
+ */
+export function defineOverrides(
+  defineMaps: readonly Record<string, string>[],
+  defines: Set<string>,
+  runtime: Set<string> = new Set(),
+): string {
+  // Baked as literals, never passed as constants: the value is already part of
+  // the variant, and WebKit rejects a constant for an override the entry point
+  // doesn't reference.
+  return [...new Set(defineMaps.flatMap(Object.values))]
+    .map(
+      (name) =>
+        `override ${name}: bool = ${!runtime.has(name) && defines.has(name)};`,
+    )
+    .join("\n");
+}
+
+/**
  * Curries a bind group's binding counter into a closure (not a class — matches
  * the getTexCoordGetter/getDefineFlags factory idiom and keeps the module
  * tree-shakeable). Material groups reserve binding 0 for the uMaterial struct,

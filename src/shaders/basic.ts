@@ -9,6 +9,7 @@ import {
   vertexOutputStruct,
   vertexTransform,
   getDefineFlags,
+  defineOverrides,
   vertexJitter,
   vertexVelocity,
   VELOCITY_MEMBERS,
@@ -29,6 +30,10 @@ const VERTEX_DEFINE = {
   instancedColor: "USE_INSTANCED_COLOR",
 } as const;
 
+const PASS_DEFINE = {
+  msaa: "USE_MSAA",
+} as const;
+
 export const BASIC_VERTEX_FIELDS: readonly FeatureField[] = [
   { key: "vertexColor", define: VERTEX_DEFINE.vertexColor },
   { key: "offset", define: VERTEX_DEFINE.instancedOffset },
@@ -46,7 +51,7 @@ export const basicShader = (
 
   const vertexFlags = getDefineFlags(VERTEX_DEFINE, defines);
   const useColor = vertexFlags.vertexColor || vertexFlags.instancedColor;
-  const useMSAA = defines.has("USE_MSAA");
+  const useMSAA = getDefineFlags(PASS_DEFINE, defines).msaa;
 
   const colorAssignment =
     vertexFlags.vertexColor && vertexFlags.instancedColor
@@ -86,6 +91,8 @@ ${vertexOutputStruct([
 ])}
 
 ${fragmentOutputStruct(sceneOutputMembers(outputs))}
+
+${defineOverrides([VERTEX_DEFINE, PASS_DEFINE], defines)}
 
 ${SHADERS.math.quatToMat4}
 

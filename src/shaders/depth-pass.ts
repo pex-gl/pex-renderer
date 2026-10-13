@@ -13,6 +13,7 @@ import {
   vertexOutputStruct,
   vertexTransform,
   getDefineFlags,
+  defineOverrides,
   vertexJitter,
   hookMembers,
   hookBindingsDeclaration,
@@ -20,6 +21,7 @@ import {
 import type { PipelineShaderOptions } from "../types.js";
 
 const VERTEX_DEFINE = {
+  normal: "USE_NORMALS",
   texCoord0: "USE_TEXCOORD_0",
   texCoord1: "USE_TEXCOORD_1",
   vertexColor: "USE_VERTEX_COLORS",
@@ -28,12 +30,20 @@ const VERTEX_DEFINE = {
   instancedRotation: "USE_INSTANCED_ROTATION",
   instancedColor: "USE_INSTANCED_COLOR",
   skin: "USE_SKIN",
+  displacementTexture: "USE_DISPLACEMENT_TEXTURE",
 } as const;
 
 const MATERIAL_DEFINE = {
   alphaCutoff: "USE_ALPHA_CUTOFF",
   baseColorTexture: "USE_BASE_COLOR_TEXTURE",
   alphaTexture: "USE_ALPHA_TEXTURE",
+} as const;
+
+const PASS_DEFINE = {
+  linearDepth: "USE_LINEAR_DEPTH",
+  normalOutput: "USE_NORMAL_OUTPUT",
+  depthPrePass: "USE_DEPTH_PRE_PASS",
+  alphaToCoverage: "USE_ALPHA_TO_COVERAGE",
 } as const;
 
 export const DEPTH_PASS_VERTEX_FIELDS: readonly FeatureField[] = [
@@ -129,24 +139,25 @@ export const depthPassShader = (
   const hooks = options.hooks || {};
   const { maxJoints = 256 } = options;
 
-  const useNormals = defines.has("USE_NORMALS");
   const vertexFlags = getDefineFlags(VERTEX_DEFINE, defines);
-  const useDisplacementTexture = defines.has("USE_DISPLACEMENT_TEXTURE");
-  const useSkin = defines.has("USE_SKIN");
-  const useLinearDepth = defines.has("USE_LINEAR_DEPTH");
+  const materialFlags = getDefineFlags(MATERIAL_DEFINE, defines);
+  const passFlags = getDefineFlags(PASS_DEFINE, defines);
+  const useNormals = vertexFlags.normal;
+  const useDisplacementTexture = vertexFlags.displacementTexture;
+  const useSkin = vertexFlags.skin;
+  const useLinearDepth = passFlags.linearDepth;
   // A normal target with no normals to put in it still has to be written, so
   // the attachment and the real normal are two separate conditions.
-  const useNormalOutput = defines.has("USE_NORMAL_OUTPUT");
-  const usePrePass = defines.has("USE_DEPTH_PRE_PASS");
+  const useNormalOutput = passFlags.normalOutput;
+  const usePrePass = passFlags.depthPrePass;
   const writeNormal = useNormalOutput && useNormals;
 
-  const useAlphaTest = defines.has(MATERIAL_DEFINE.alphaCutoff);
+  const useAlphaTest = materialFlags.alphaCutoff;
   // Resolve the cutout as coverage rather than a discard. Only the normal
   // output variant can: WebGPU derives the mask from the alpha at location 0,
   // and a depth-only pass has no colour target to supply one.
   const useAlphaToCoverage =
-    useAlphaTest && useNormalOutput && defines.has("USE_ALPHA_TO_COVERAGE");
-  const materialFlags = getDefineFlags(MATERIAL_DEFINE, defines);
+    useAlphaTest && useNormalOutput && passFlags.alphaToCoverage;
   const useBaseColorTexture = useAlphaTest && materialFlags.baseColorTexture;
   const useAlphaTexture = useAlphaTest && materialFlags.alphaTexture;
   const useColor =
@@ -241,6 +252,8 @@ ${vertexOutputStruct([
   useColor && { name: "color", type: "vec4f" },
   ...hookMembers(hooks.interStage),
 ])}
+
+${defineOverrides([VERTEX_DEFINE, MATERIAL_DEFINE, PASS_DEFINE], defines)}
 
 ${SHADERS.math.quatToMat4}
 ${hookPrelude}

@@ -1,7 +1,16 @@
 import { shaders as SHADERS } from "pex-shaders";
 
-import { fragmentOutputStruct, vertexOutputStruct } from "./wgsl.js";
+import {
+  defineOverrides,
+  fragmentOutputStruct,
+  getDefineFlags,
+  vertexOutputStruct,
+} from "./wgsl.js";
 import type { PipelineShaderOptions } from "../types.js";
+
+const PASS_DEFINE = {
+  premultipliedAlpha: "USE_PREMULTIPLIED_ALPHA",
+} as const;
 
 export const blitShader = (
   defines: Set<string> = new Set(),
@@ -30,6 +39,8 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
 
 ${SHADERS.encodeDecode}
 
+${defineOverrides([PASS_DEFINE], defines)}
+
 ${hooks.fragDeclarationsEnd ?? ""}
 
 ${fragmentOutputStruct()}
@@ -41,7 +52,7 @@ fn fragmentMain(input: VertexOutput) -> FragmentOutput {
   color = encode(color, SRGB);
 
   ${
-    defines.has("USE_PREMULTIPLIED_ALPHA")
+    getDefineFlags(PASS_DEFINE, defines).premultipliedAlpha
       ? `// A canvas configured "premultiplied" reads the values as stored, so the
   // multiply belongs after the transfer function, not before it: the
   // compositor wants encode(rgb) * a, and premultiplying in linear space

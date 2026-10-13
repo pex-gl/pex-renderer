@@ -14,6 +14,7 @@ import {
   uniformName,
   getTexCoordGetter,
   getDefineFlags,
+  defineOverrides,
   vertexOutputStruct,
   vertexInputStruct,
   vertexTransform,
@@ -74,6 +75,7 @@ const MATERIAL_DEFINE = {
 } as const;
 
 const VERTEX_DEFINE = {
+  normal: "USE_NORMALS",
   tangent: "USE_TANGENTS",
   texCoord0: "USE_TEXCOORD_0",
   texCoord1: "USE_TEXCOORD_1",
@@ -87,6 +89,11 @@ const VERTEX_DEFINE = {
   previousInstancedOffset: "USE_PREVIOUS_INSTANCED_OFFSET",
   previousInstancedScale: "USE_PREVIOUS_INSTANCED_SCALE",
   previousInstancedRotation: "USE_PREVIOUS_INSTANCED_ROTATION",
+  displacementTexture: "USE_DISPLACEMENT_TEXTURE",
+} as const;
+
+const PASS_DEFINE = {
+  reflectionProbes: "USE_REFLECTION_PROBES",
 } as const;
 
 // prettier-ignore
@@ -314,14 +321,15 @@ export const standardShader = (
 
   const tc = getTexCoordGetter(texCoords);
 
-  const useNormals = defines.has("USE_NORMALS");
   const materialFlags = getDefineFlags(MATERIAL_DEFINE, defines);
   const vertexFlags = getDefineFlags(VERTEX_DEFINE, defines);
+  const useNormals = vertexFlags.normal;
   const useColor = vertexFlags.vertexColor || vertexFlags.instancedColor;
-  const useDisplacementTexture = defines.has("USE_DISPLACEMENT_TEXTURE");
-  const useSkin = defines.has("USE_SKIN");
+  const useDisplacementTexture = vertexFlags.displacementTexture;
+  const useSkin = vertexFlags.skin;
   const lit = !materialFlags.unlitWorkflow;
-  const useReflectionProbes = defines.has("USE_REFLECTION_PROBES") && lit;
+  const useReflectionProbes =
+    getDefineFlags(PASS_DEFINE, defines).reflectionProbes && lit;
 
   // One binding per distinct shadow map size, not per light: a light is a layer.
   // The only light data left that shapes the WGSL — how many lights of which
@@ -831,24 +839,17 @@ ${fragmentOutputStruct(sceneOutputMembers(outputs))}
 
 ${PBR_DATA_STRUCT}
 
-// Feature toggles the included shaders expect this pipeline shader to declare.
+// Every define, so that hooks can branch on any of them. Runtime material
+// effects only gate a body branch (their scalar uMaterial fields are always
+// declared, see the runtime FeatureField flag in systems/renderer/base.ts), so
+// they are set per draw through the pipeline's constants: materials that differ
+// only by one of them share one compiled shader module.
+${defineOverrides([VERTEX_DEFINE, MATERIAL_DEFINE, PASS_DEFINE], defines, MATERIAL_RUNTIME_DEFINES)}
 override DEPTH_PASS_ONLY: bool = false;
 override DEPTH_PRE_PASS_ONLY: bool = false;
-override USE_TEXCOORD_1: bool = ${vertexFlags.texCoord1};
-override USE_TANGENTS: bool = ${vertexFlags.tangent};
-override USE_NORMAL_TEXTURE: bool = ${materialFlags.normalTexture};
-override USE_CLEARCOAT_NORMAL_TEXTURE: bool = ${materialFlags.clearcoatNormalTexture};
-override USE_CLEARCOAT_ROUGHNESS_FROM_MAIN_TEXTURE: bool = ${materialFlags.clearcoatRoughnessFromMainTexture};
-override USE_SHEEN_ROUGHNESS_FROM_MAIN_TEXTURE: bool = ${materialFlags.sheenRoughnessFromMainTexture};
 override DEPTH_PACK_FAR: f32 = 10.0;
-// Genuinely overridable (unlike the toggles above, which change bind group
-// layout/struct fields and so must be baked per-variant): none of these gate
-// a binding or struct field — their scalar uMaterial fields are always
-// declared (see the runtime FeatureField flag in systems/renderer/base.ts)
-// — only a body branch, so materials that differ only by one of these
-// effects being on/off share one compiled shader module. Real per-material
-// values are supplied via the pipeline's constants (getPipelineOptions() in
-// systems/renderer/standard.ts).
+// Pass state, set per draw through the pipeline's constants
+// (getPipelineOptions() in systems/renderer/standard.ts).
 override USE_MSAA: bool = false;
 override USE_BLEND: bool = false;
 override USE_SSAO_TEXTURE: bool = false;
@@ -860,21 +861,12 @@ override USE_BENT_NORMALS: bool = false;
 // matching a premultiplied blend equation (see BLEND_MODES and
 // getPipelineBlend in systems/renderer/base.ts).
 override PREMULTIPLY_ALPHA: bool = false;
-override USE_ALPHA_CUTOFF: bool = false;
 // Alpha testing against a multisampled attachment: the cutout becomes a
 // coverage mask rather than a discard, so its edges antialias like geometry.
 // Set by the renderer when the pass is multisampled, paired with the pipeline's
 // alphaToCoverage (see systems/renderer/standard.ts).
 override USE_ALPHA_TO_COVERAGE: bool = false;
-override USE_SPECULAR: bool = false;
-override USE_EMISSIVE: bool = false;
-override USE_CLEARCOAT: bool = false;
-override USE_SHEEN: bool = false;
 override USE_AREA_LIGHTS: bool = false;
-override USE_TRANSMISSION: bool = false;
-override USE_DISPERSION: bool = false;
-override USE_VOLUME: bool = false;
-override USE_DIFFUSE_TRANSMISSION: bool = false;
 // Mip levels in the bound specular cubemap: baked probes always match
 // ROUGHNESS_LEVELS (shaders/reflection-probe.ts), but a pre-baked
 // EXT_lights_image_based probe reports its own native mip count, so this is

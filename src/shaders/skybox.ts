@@ -1,7 +1,9 @@
 import { shaders as SHADERS } from "pex-shaders";
 
 import {
+  defineOverrides,
   fragmentOutputStruct,
+  getDefineFlags,
   sceneOutputMembers,
   vertexOutputStruct,
   textureSamplerDeclaration,
@@ -10,6 +12,11 @@ import {
 } from "./wgsl.js";
 import { ROUGHNESS_LEVELS } from "./reflection-probe.js";
 import type { PipelineShaderOptions } from "../types.js";
+
+const PASS_DEFINE = {
+  msaa: "USE_MSAA",
+  backgroundBlur: "USE_BACKGROUND_BLUR",
+} as const;
 
 // Draws an equirectangular environment map (a baked analytic sky or a user
 // envMap) as the scene background. A fullscreen triangle (attribute @location(0)
@@ -38,8 +45,10 @@ export const skyboxShader = (
   const hooks = options.hooks || {};
   const outputs = options.outputs ?? {};
 
-  const useMSAA = defines.has("USE_MSAA");
-  const useBackgroundBlur = defines.has("USE_BACKGROUND_BLUR");
+  const { msaa: useMSAA, backgroundBlur: useBackgroundBlur } = getDefineFlags(
+    PASS_DEFINE,
+    defines,
+  );
 
   return /* wgsl */ `
 struct Skybox {
@@ -71,6 +80,8 @@ ${vertexOutputStruct([
 ])}
 
 ${fragmentOutputStruct(sceneOutputMembers(outputs))}
+
+${defineOverrides([PASS_DEFINE], defines)}
 
 // Vertex includes
 ${SHADERS.math.inverseMat4}

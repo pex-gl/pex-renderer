@@ -6,6 +6,7 @@ import {
   fragmentOutputStruct,
   sceneOutputMembers,
   getDefineFlags,
+  defineOverrides,
   vertexJitter,
   vertexVelocity,
   VELOCITY_MEMBERS,
@@ -28,6 +29,10 @@ const VERTEX_DEFINE = {
 
 const MATERIAL_DEFINE = {
   perspectiveScaling: "USE_PERSPECTIVE_SCALING",
+} as const;
+
+const PASS_DEFINE = {
+  msaa: "USE_MSAA",
 } as const;
 
 /** Walked against `_geometry.attributes` by the renderer's `getDefines`. */
@@ -71,7 +76,7 @@ export const lineShader = (
 
   const vertexFlags = getDefineFlags(VERTEX_DEFINE, defines);
   const materialFlags = getDefineFlags(MATERIAL_DEFINE, defines);
-  const useMSAA = defines.has("USE_MSAA");
+  const useMSAA = getDefineFlags(PASS_DEFINE, defines).msaa;
 
   // A hook's inter-stage variables follow the pass' own, whose count depends on
   // what this variant carries: the vertex colour, then the two velocity clip
@@ -116,6 +121,8 @@ struct VertexOutput {
 }
 
 ${fragmentOutputStruct(sceneOutputMembers(outputs))}
+
+${defineOverrides([VERTEX_DEFINE, MATERIAL_DEFINE, PASS_DEFINE], defines)}
 
 ${hooks.vertDeclarationsEnd ?? ""}
 
