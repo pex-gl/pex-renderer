@@ -194,10 +194,6 @@ variant above, and is the only reason this pass binds material state at all.</p>
 <p>USE_ALPHA_TO_COVERAGE resolves that cutout as a coverage mask instead, for a
 multisampled pre-pass. It needs the normal output: the mask comes from the
 alpha at location 0, which a depth-only pass has no target for.</p>
-<p>The displacement offset is stretched 1.3x relative to standard.js's to reduce
-acne/peter-panning from displaced surfaces — a shadow-map bias, so
-USE_DEPTH_PRE_PASS drops it. A pre-pass has to compute the same position the
-opaque pass will, to the bit; anything else is z-fighting rather than bias.</p>
 </div>
 <div class="tsd-parameters">
 <h4 class="tsd-parameters-title">Parameters</h4>
@@ -206,7 +202,7 @@ opaque pass will, to the bit; anything else is z-fighting rather than bias.</p>
 <li><span><span class="tsd-kind-parameter">options</span>: <a href="../interfaces/types.PipelineShaderOptions.html" class="tsd-signature-type tsd-kind-interface">PipelineShaderOptions</a><span class="tsd-signature-symbol"> = {}</span></span></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">string</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/e4f1d6306cd8d8f0e116f94c8dda7b9616312db0/src/shaders/depth-pass.ts#L125">pex-renderer/src/shaders/depth-pass.ts:125</a></li></ul></aside></div></li></ul></section></div>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/48d7f7eea01647a411f9b9bed13e884a1aecb8e6/src/shaders/depth-pass.ts#L141">shaders/depth-pass.ts:141</a></li></ul></aside></div></li></ul></section></div>
 <div class="col-sidebar">
 <div class="page-menu">
 <div class="tsd-navigation settings">

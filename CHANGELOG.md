@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+# [6.0.0-alpha.3](https://github.com/pex-gl/pex-renderer/compare/v6.0.0-alpha.2...v6.0.0-alpha.3) (2026-10-16)
+
+### Features
+
+* add defines overrides to shaders via defineOverrides ([dbfe8cf](https://github.com/pex-gl/pex-renderer/commit/dbfe8cf4f0e8386576e1288af405a4f464e5f86a))
+* draw failed pipelines with a red error shader ([550225a](https://github.com/pex-gl/pex-renderer/commit/550225af0752fea3716d4fae1b442f37c6b6f6e0))
+* expose every define and attribute to shader hooks ([842fdfd](https://github.com/pex-gl/pex-renderer/commit/842fdfdf53ffb39a22712c58bedf8f06939c8b40))
+
 # [6.0.0-alpha.2](https://github.com/pex-gl/pex-renderer/compare/v6.0.0-alpha.1...v6.0.0-alpha.2) (2026-10-07)
 
 ### Bug Fixes
