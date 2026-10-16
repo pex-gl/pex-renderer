@@ -84,7 +84,7 @@ const LAYERED_VIEW_DIMENSIONS = new Set<GPUTextureViewDimension>([
 export function attachmentView(
   texture: GpuTexture,
   layer?: number,
-  level?: number,
+  level: number = 0,
 ): GPUTextureView | undefined {
   const layered =
     texture.depthOrArrayLayers > 1 ||
@@ -97,7 +97,7 @@ export function attachmentView(
       baseArrayLayer: layer ?? 0,
       arrayLayerCount: 1,
     }),
-    baseMipLevel: level ?? 0,
+    baseMipLevel: level,
     mipLevelCount: 1,
   });
 }

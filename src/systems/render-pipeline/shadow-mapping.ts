@@ -335,14 +335,14 @@ export default ({
   declareShadowMaps(
     entities: Entity[],
     renderers: RendererSystem[],
-    layer: string | undefined,
+    layer: string | undefined = "",
   ): { shadowMaps: ResourceHandle[] } {
-    const key = `shadowMaps.${layer ?? ""}`;
+    const key = `shadowMaps.${layer}`;
     const memoized = frameGraph.blackboard.get(key) as
       { shadowMaps: ResourceHandle[] } | undefined;
     if (memoized) return memoized;
 
-    const scope = layer ?? "";
+    const scope = layer;
 
     // Cleared per scope, and for every light rather than only the casters: a
     // shadow left over from a frame where the light did cast would name a
