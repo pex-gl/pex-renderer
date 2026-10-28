@@ -37,6 +37,10 @@ const TEMP_BOUNDS_POINTS = Array.from({ length: 8 }, () => vec3.create());
 // own array; this is for one-shot tests.
 const TEMP_FRUSTUM = new Float32Array(24);
 
+// Stand-in far plane for an unbounded frustum (a light with no `range`, a
+// camera with an infinite `far`): it just has to not clip.
+const FAR_ENOUGH = 1e6;
+
 // prettier-ignore
 const quad = {
   positions:  Float32Array.of(
@@ -221,7 +225,10 @@ const computeFrustumPlanes = (
     TEMP_VEC3[0] = out[i * 4]!;
     TEMP_VEC3[1] = out[i * 4 + 1]!;
     TEMP_VEC3[2] = out[i * 4 + 2]!;
-    avec4.scale(out, i, 1 / vec3.length(TEMP_VEC3));
+    const length = vec3.length(TEMP_VEC3);
+    // An infinite far plane comes out as (0, 0, 0, near): no normal to
+    // normalize, and every point in front of it.
+    if (length > 0) avec4.scale(out, i, 1 / length);
   }
   return out;
 };
@@ -370,6 +377,7 @@ export {
   Y_UP,
   TEMP_BOUNDS_POINTS,
   TEMP_FRUSTUM,
+  FAR_ENOUGH,
   computeFrustumPlanes,
   isAABBInFrustum,
   quad,

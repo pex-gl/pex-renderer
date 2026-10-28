@@ -344,6 +344,12 @@ export interface CameraComponentOptions {
    * occlusion, depth of field and motion blur as negative depths.
    */
   near?: number;
+  /**
+   * `Infinity` for an infinite perspective projection, as glTF asks for when
+   * `zfar` is undefined: nothing is clipped, the background reads as infinitely
+   * far, and culling keeps no far plane. Finite under an orthographic projection,
+   * whose depth is linear between near and far.
+   */
   far?: number;
   /** Magnification: values above 1 zoom in. */
   zoom?: number;

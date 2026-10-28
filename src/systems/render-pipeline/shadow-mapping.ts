@@ -7,6 +7,7 @@ import {
   TEMP_MAT4,
   TEMP_BOUNDS_POINTS,
   TEMP_FRUSTUM,
+  FAR_ENOUGH,
   computeFrustumPlanes,
   isAABBInFrustum,
   getCubeFaceCamera,
@@ -28,9 +29,6 @@ import type {
 import type { ResourceHandle } from "../../frame-graph/index.js";
 
 const MIN_NEAR = 0.01;
-// Stand-in far plane for a light with no `range`: only the cone's side planes
-// are wanted from that provisional frustum, so this just has to not clip.
-const FAR_ENOUGH = 1e6;
 
 /** Light components that can cast, in the order buckets index them. */
 export const LIGHT_KINDS = [
@@ -159,7 +157,8 @@ export default ({
       fov,
       1,
       MIN_NEAR,
-      // An infinite range needs a finite far plane to build a frustum from.
+      // An infinite range needs a finite far plane to build a frustum from:
+      // only the cone's side planes are wanted from this provisional one.
       Number.isFinite(range) && range > 0 ? range : FAR_ENOUGH,
     );
     computeFrustumPlanes(TEMP_FRUSTUM, TEMP_MAT4, light._viewMatrix!);

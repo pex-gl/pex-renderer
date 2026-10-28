@@ -3,7 +3,7 @@ import createGeomBuilder from "geom-builder";
 
 import { entity, components } from "../index.js";
 import { getAttributeData } from "./geometry.js";
-import { TEMP_MAT4, TEMP_VEC3 } from "../utils.js";
+import { FAR_ENOUGH, TEMP_MAT4, TEMP_VEC3 } from "../utils.js";
 
 import type { GeomBuilder } from "geom-builder";
 import type { AABB } from "pex-geom";
@@ -287,9 +287,10 @@ const unprojectNear = ([x, y]: number[], m: Mat4): Vec3 => {
  * bounds and view offsets are drawn as rendered.
  */
 const getCamera = (camera: CameraComponentOptions) => {
-  const { projection, _inverseProjectionMatrix, near, far } =
+  const { projection, _inverseProjectionMatrix, near } =
     camera as Required<CameraComponentOptions>;
   const orthographic = projection === "orthographic";
+  const far = Number.isFinite(camera.far) ? camera.far! : FAR_ENOUGH;
 
   const nearCorners = NDC_CORNERS.map((corner) =>
     unprojectNear(corner, _inverseProjectionMatrix),
