@@ -186,8 +186,7 @@ const dof: PostProcessingEffect = {
         halfWidth / (tilesX * tilePixels),
         halfHeight / (tilesY * tilePixels),
       ],
-      near: camera.near!,
-      far: camera.far!,
+      inverseProjectionMatrix: camera._inverseProjectionMatrix!,
       // m -> mm, the unit the thin lens model works in.
       focusDistance: (component.focusDistance ?? 7) * 1000,
 

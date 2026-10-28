@@ -338,6 +338,11 @@ export interface CameraHelperComponentOptions {
 }
 export interface CameraComponentOptions {
   projection?: "perspective" | "orthographic";
+  /**
+   * Post-processing reads depth as a positive distance from the camera, so an
+   * orthographic `near` below 0 leaves what is behind the camera to ambient
+   * occlusion, depth of field and motion blur as negative depths.
+   */
   near?: number;
   far?: number;
   /** Magnification: values above 1 zoom in. */
@@ -897,6 +902,11 @@ export interface DoFComponentOptions {
    * a scene that has no camera to speak of. Both produce a radius in the same
    * units through the same cap, so switching changes the curve and never the
    * scale.
+   *
+   * An orthographic camera has no lens: it defocuses as the one its `fov`
+   * describes would, zoom included. Either way depth is measured from the
+   * camera, so moving an orthographic camera along its axis changes the blur
+   * but not the framing.
    */
   physical?: boolean;
   /** The point to focus on in meters. */

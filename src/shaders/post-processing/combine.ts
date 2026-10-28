@@ -129,7 +129,7 @@ ${SHADERS.math.PI}
 ${SHADERS.math.saturate}
 ${SHADERS.encodeDecode}
 ${toneMapSource ?? ""}
-${useFog ? `${SHADERS.depthPosition}\n${SHADERS.fog}` : ""}
+${useFog ? `${SHADERS.depthRead}\n${SHADERS.depthPosition}\n${SHADERS.fog}` : ""}
 ${useVignette ? SHADERS.vignette : ""}
 ${useLUT ? SHADERS.lut : ""}
 ${useColorCorrection ? SHADERS.colorCorrection : ""}

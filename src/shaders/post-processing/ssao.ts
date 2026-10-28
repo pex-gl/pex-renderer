@@ -215,8 +215,7 @@ struct BilateralBlur {
   // Unit axis, and the reach either side of it in pixels.
   axis: vec2f,
   radius: f32,
-  near: f32,
-  far: f32,
+  inverseProjectionMatrix: mat4x4f,
   sharpness: f32,
 }
 @group(0) @binding(${alloc.next()}) var<uniform> uBlur: BilateralBlur;
@@ -241,8 +240,7 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
     uBlur.axis,
     uBlur.radius,
     uPostProcessing.viewportSize,
-    uBlur.near,
-    uBlur.far,
+    uBlur.inverseProjectionMatrix,
     uBlur.sharpness
   );
 }

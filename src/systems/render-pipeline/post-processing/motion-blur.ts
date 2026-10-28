@@ -64,8 +64,7 @@ const motionBlur: PostProcessingEffect = {
       directionBlend: component.directionBlend ?? 1.5,
       jitterScale: component.jitterScale ?? 27,
       tileBlend: component.tileBlend ?? 1,
-      near: camera.near!,
-      far: camera.far!,
+      inverseProjectionMatrix: camera._inverseProjectionMatrix!,
     };
 
     // Separable, so each invocation reads a row of a tile rather than all of

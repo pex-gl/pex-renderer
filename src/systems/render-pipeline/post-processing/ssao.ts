@@ -7,6 +7,7 @@ import {
   saoShader,
 } from "../../../shaders/post-processing/ssao.js";
 
+import type { Mat4 } from "pex-math";
 import type { ResourceHandle } from "../../../frame-graph/index.js";
 import type {
   PostProcessingContext,
@@ -39,15 +40,34 @@ function getEstimatorScope({ cameraEntity, viewport }: EstimatorScope) {
   };
 }
 
-/** The four scalars the reduction needs, whichever filter it runs. */
-interface DepthPyramidParams {
-  // Indexable so it packs as a uniform block like the estimators' own params.
-  [key: string]: number;
-  near: number;
-  far: number;
+/**
+ * The projection terms both estimators rebuild a view position from, read from
+ * the matrix so zoom and an offset frustum (`camera.view`) are accounted for.
+ *
+ * The references assume a perspective projection. Clip w is the view depth
+ * there and 1 under an orthographic one, and an off-axis frustum carries its
+ * offset in P20/P21 under the former and P30/P31 under the latter: the other
+ * pair is zero, so their difference serves both.
+ */
+function getProjectionTerms(projection: Mat4) {
+  return {
+    p00: projection[0]!,
+    p11: projection[5]!,
+    offsetX: projection[8]! - projection[12]!,
+    offsetY: projection[9]! - projection[13]!,
+    clipW: [-projection[11]!, projection[15]!],
+  };
+}
+
+/**
+ * What the reduction needs, whichever filter it runs. A type rather than an
+ * interface so it packs as a uniform block like the estimators' own params.
+ */
+type DepthPyramidParams = {
+  inverseProjectionMatrix: Mat4;
   effectRadius: number;
   falloffRange: number;
-}
+};
 
 /**
  * The linear view-space depth pyramid both estimators sample, in one dispatch.
@@ -112,30 +132,23 @@ function declareGTAO(scope: EstimatorScope) {
   const denoisePasses = component.denoisePasses!;
 
   // The projection in the one form the estimator needs it: a view position is
-  // (ndcToViewMul * uv + ndcToViewAdd) * viewspaceZ. The vertical terms are
-  // negated because a screen coordinate's V points down where view space's Y
-  // points up. Read from the matrix so zoom and an offset frustum
-  // (`camera.view`) are accounted for.
-  const projection = camera.projectionMatrix!;
-  const [p00, p11, p20, p21] = [
-    projection[0]!,
-    projection[5]!,
-    projection[8]!,
-    projection[9]!,
-  ];
+  // (ndcToViewMul * uv + ndcToViewAdd) * clip w. The vertical terms are negated
+  // because a screen coordinate's V points down where view space's Y points up.
+  const { p00, p11, offsetX, offsetY, clipW } = getProjectionTerms(
+    camera.projectionMatrix!,
+  );
   const ndcToViewMul = [2 / p00, -2 / p11];
 
   const params = {
     ndcToViewMul,
-    ndcToViewAdd: [(p20 - 1) / p00, (1 + p21) / p11],
+    ndcToViewAdd: [(offsetX - 1) / p00, (1 + offsetY) / p11],
     ndcToViewMulByPixelSize: [
       ndcToViewMul[0]! / width,
       ndcToViewMul[1]! / height,
     ],
     viewportSize,
     viewportPixelSize,
-    near: camera.near!,
-    far: camera.far!,
+    clipW,
     effectRadius: component.radius!,
     radiusMultiplier: component.radiusMultiplier!,
     effectFalloffRange: component.falloffRange!,
@@ -158,8 +171,7 @@ function declareGTAO(scope: EstimatorScope) {
   };
 
   const depthMips = declareDepthPyramid(scope, {
-    near: camera.near!,
-    far: camera.far!,
+    inverseProjectionMatrix: camera._inverseProjectionMatrix!,
     // The filter's falloff is expressed against the radius the estimator
     // actually gathers over, which is the tuned one.
     effectRadius: component.radius! * component.radiusMultiplier!,
@@ -248,7 +260,11 @@ function declareSAO(scope: EstimatorScope) {
     scope,
     // Rotated grid subsampling picks a depth rather than combining four, so the
     // filter's falloff terms go unread.
-    { near: camera.near!, far: camera.far!, effectRadius: 0, falloffRange: 0 },
+    {
+      inverseProjectionMatrix: camera._inverseProjectionMatrix!,
+      effectRadius: 0,
+      falloffRange: 0,
+    },
     true,
   );
 
@@ -256,22 +272,18 @@ function declareSAO(scope: EstimatorScope) {
   // reference: an offset frustum (`camera.view`) or a jittered projection is a
   // different matrix but the same fov, and reconstructing through the fov would
   // put every sample on a surface the scene does not have.
-  const projection = camera.projectionMatrix!;
-  const [p00, p11, p20, p21] = [
-    projection[0]!,
-    projection[5]!,
-    projection[8]!,
-    projection[9]!,
-  ];
+  const { p00, p11, offsetX, offsetY, clipW } = getProjectionTerms(
+    camera.projectionMatrix!,
+  );
 
   const params = {
     projInfo: [
       2 / (width * p00),
       -2 / (height * p11),
-      (p20 - 1) / p00,
-      (1 + p21) / p11,
+      (offsetX - 1) / p00,
+      (1 + offsetY) / p11,
     ],
-    far: camera.far!,
+    clipW,
     projScale: 0.5 * height * p11,
     intensity: component.intensity!,
     radius: component.radius!,
@@ -308,8 +320,7 @@ function declareSAO(scope: EstimatorScope) {
     uBlur: {
       axis,
       radius: component.blurRadius!,
-      near: camera.near!,
-      far: camera.far!,
+      inverseProjectionMatrix: camera._inverseProjectionMatrix!,
       sharpness: component.blurSharpness!,
     },
     uDepthTexture: depth,
