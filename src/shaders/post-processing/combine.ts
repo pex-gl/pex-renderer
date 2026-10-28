@@ -113,6 +113,8 @@ struct Combine {
   contrast: f32,
   saturation: f32,
   hue: f32,
+  fogMaxOpacity: f32,
+  fogInvCutoffDistance: f32,
 }
 @group(0) @binding(${alloc.next()}) var<uniform> uCombine: Combine;
 
@@ -146,7 +148,7 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
   let position = reconstructPositionFromDepth(uv, depth, uCombine.inverseProjectionMatrix);
   let rayLength = length(position);
   let sunDirection = normalize((uCombine.viewMatrix * vec4f(normalize(uCombine.sunPosition), 0.0)).xyz);
-  color = vec4f(
+  let fogged = vec4f(
     fog(
       color.rgb,
       rayLength - uCombine.fogStart,
@@ -157,10 +159,12 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
       uCombine.sunDispertion,
       uCombine.sunIntensity,
       uCombine.inscatteringCoeffs,
-      uCombine.fogColor
+      uCombine.fogColor,
+      uCombine.fogMaxOpacity
     ),
     color.a
-  );`
+  );
+  color = select(color, fogged, rayLength * uCombine.fogInvCutoffDistance <= 1.0);`
       : ""
   }
   ${

@@ -1189,6 +1189,18 @@ export interface FogComponentOptions {
   color?: Color;
   start?: number;
   density?: number;
+  /**
+   * Opacity the fog never exceeds, so the background stays visible at any
+   * distance — infinitely far under an infinite far plane, where it would
+   * otherwise turn entirely into the fog colour.
+   */
+  maxOpacity?: number;
+  /**
+   * Distance from the camera, in meters, past which nothing is fogged. Excludes
+   * the background, e.g. a sky that already holds its own haze, once larger
+   * than the scene. Infinite by default: everything is fogged.
+   */
+  cutoffDistance?: number;
   sunPosition?: Vec3;
   sunDispertion?: number;
   sunIntensity?: number;

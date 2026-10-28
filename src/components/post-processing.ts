@@ -221,6 +221,8 @@ postProcessing.fog = (options?: FogComponentOptions) => ({
   color: [0.5, 0.5, 0.5],
   start: 5,
   density: 0.15,
+  maxOpacity: 1,
+  cutoffDistance: Infinity,
 
   sunPosition: [1, 1, 1],
   sunDispertion: 0.2,

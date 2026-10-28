@@ -54,6 +54,9 @@ const combine: PostProcessingEffect = {
           sunDispertion: fog?.sunDispertion ?? 0,
           inscatteringCoeffs: fog?.inscatteringCoeffs ?? [0, 0, 0],
           sunIntensity: fog?.sunIntensity ?? 0,
+          fogMaxOpacity: fog?.maxOpacity ?? 1,
+          // 0 when infinite, so no Infinity reaches the shader.
+          fogInvCutoffDistance: 1 / (fog?.cutoffDistance ?? Infinity),
           inverseProjectionMatrix: camera._inverseProjectionMatrix!,
           // Authored in stops, applied as a gain.
           exposure: 2 ** postProcessing.exposure!,
