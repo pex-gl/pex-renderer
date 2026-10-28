@@ -6,6 +6,8 @@ import {
   loaders,
 } from "pex-renderer";
 
+import { lens } from "cameras";
+
 import * as gpu from "pex-gpu";
 import { loadHdr } from "pex-loaders";
 import createGUI from "pex-gui";
@@ -13,6 +15,14 @@ import { utils, quat } from "pex-math";
 
 import fitRect from "fit-rect";
 import { getURL } from "./utils.js";
+
+// Width × height in mm.
+const SENSORS = {
+  "Full frame": lens.FULL_FRAME,
+  "Super 35": [24.89, 18.66],
+  "APS-C": [23.5, 15.6],
+  "Micro 4/3": [17.3, 13],
+};
 
 const State = {
   resolutionPreset: 1,
@@ -24,6 +34,8 @@ const State = {
     [window.innerWidth, window.innerHeight],
   ],
   showSensorFrame: true,
+  sensor: "Full frame",
+  focalLength: 100,
 };
 
 const pixelRatio = devicePixelRatio;
@@ -65,8 +77,7 @@ const pointLightEntity = createEntity({
   }),
   pointLight: components.pointLight({
     color: [2, 1, 1, 1],
-    // A large film lamp. Physically it is a whisper next to the sun — as it
-    // already was — and it is here for the shadow, not for the exposure.
+    // A large film lamp: negligible next to the sun, here for the shadow.
     intensity: 20_000, // lm
     castShadows: true,
   }),
@@ -109,68 +120,32 @@ const postProcessing = components.postProcessing({
     debug: false,
   }),
 });
-// cameraEntity.orbiter = components.orbiter({ element: ctx.canvas });
+// cameraEntity.controls = components.controls.orbit();
 cameraEntity.postProcessing = postProcessing;
 cameraEntity.camera.far = 100;
 
 cameraEntity.camera.fStop = 2.8;
 cameraEntity.camera.shutterSpeed = 1 / 4000;
-cameraEntity.camera.fov = undefined;
-cameraEntity.camera.focalLength = 100;
+cameraEntity.camera.focalLength = State.focalLength;
 
-const rectCanvas = document.createElement("canvas");
-document.body.appendChild(rectCanvas);
-rectCanvas.width = cameraEntity.camera.sensorSize[0] * 10;
-rectCanvas.height = cameraEntity.camera.sensorSize[1] * 10;
-const rectCtx = rectCanvas.getContext("2d");
-rectCtx.strokeStyle = "#00DD00";
-rectCtx.lineWidth = 3;
-rectCtx.strokeRect(0, 0, rectCanvas.width, rectCanvas.height);
+// Sensor gate: sized from `_sensorHeight`, so it shows each sensor fit's crop.
+const sensorFrame = document.createElement("div");
+sensorFrame.style.cssText =
+  "position: fixed; border: 2px solid #00dd00; box-sizing: border-box; pointer-events: none;";
+document.body.appendChild(sensorFrame);
 
-const overlayEntity = createEntity({
-  overlay: {
-    bounds: [0, 0, 1, 1],
-    texture: gpu.createTexture(ctx, { data: rectCanvas, width: 1, height: 1 }),
-  },
-});
-world.add(overlayEntity);
+const updateSensorFrame = () => {
+  const { viewport, sensorSize, _sensorHeight } = cameraEntity.camera;
+  sensorFrame.style.display = State.showSensorFrame ? "" : "none";
 
-// const createOverlayRenderer = ({ ctx }) => {
-//   const overlayRendererSystem = {
-//     type: "overlay-renderer",
-//     cache: {},
-//     drawOverlayCmd: {
-//       attributes: {
-//         aPosition: ctx.vertexBuffer([-1, -1, 1, -1, 1, 1, -1, 1]),
-//         aTexCoord0: ctx.vertexBuffer([0, 0, 1, 0, 1, 1, 0, 1]),
-//       },
-//       indices: ctx.indexBuffer([0, 1, 2, 0, 2, 3]),
-//       pipeline: ctx.pipeline({
-//         program: ctx.program({
-//           vert: SHADERS.overlay.vert,
-//           frag: SHADERS.overlay.frag,
-//         }),
-//         blend: "normal",
-//         blendSrcRGBFactor: ctx.BlendFactor.One,
-//         blendDstRGBFactor: ctx.BlendFactor.OneMinusSrcAlpha,
-//         blendSrcAlphaFactor: ctx.BlendFactor.One,
-//         blendDstAlphaFactor: ctx.BlendFactor.OneMinusSrcAlpha,
-//       }),
-//     },
-//     render(entity) {
-//       ctx.submit(overlayRendererSystem.drawOverlayCmd, {
-//         uniforms: {
-//           uBounds: entity.overlay.bounds,
-//           uTexture: entity.overlay.texture,
-//         },
-//       });
-//     },
-//     update: () => {},
-//   };
-//   return overlayRendererSystem;
-// };
-
-// const overlayRenderer = createOverlayRenderer({ ctx });
+  const [x, y, width, height] = viewport.map((v) => v / ctx.pixelRatio);
+  const frameHeight = (height * sensorSize[1]) / _sensorHeight;
+  const frameWidth = (frameHeight * sensorSize[0]) / sensorSize[1];
+  sensorFrame.style.left = `${x + (width - frameWidth) / 2}px`;
+  sensorFrame.style.top = `${y + (height - frameHeight) / 2}px`;
+  sensorFrame.style.width = `${frameWidth}px`;
+  sensorFrame.style.height = `${frameHeight}px`;
+};
 
 // GUI
 const gui = createGUI(ctx);
@@ -231,14 +206,29 @@ gui.addParam("Far", cameraEntity.camera, "far", { min: 10, max: 1000 });
 gui.addHeader("Lens");
 let cameraInfoLabel = gui.addLabel("Info");
 
-gui.addParam("Field Of View (rad)", cameraEntity.camera, "fov", {
-  min: 0,
-  max: (120 / 180) * Math.PI,
-});
-gui.addParam("Focal Length (mm)", cameraEntity.camera, "focalLength", {
-  min: 0,
-  max: 200,
-});
+// The last one touched drives the lens: a focal length overrides the fov.
+gui.addParam(
+  "Field Of View (rad)",
+  cameraEntity.camera,
+  "fov",
+  { min: 0, max: (120 / 180) * Math.PI },
+  () => {
+    cameraEntity.camera.focalLength = undefined;
+  },
+);
+gui.addParam(
+  "Focal Length (mm)",
+  State,
+  "focalLength",
+  { min: 1, max: 200 },
+  (value) => {
+    cameraEntity.camera.focalLength = value;
+  },
+);
+// Optical zoom: scales `_focalLength`, so the depth of field too.
+gui.addParam("Zoom", cameraEntity.camera, "zoom", { min: 0.5, max: 4 });
+
+gui.addHeader("Exposure");
 gui.addParam("F-Stop", cameraEntity.camera, "fStop", {
   min: 1.2,
   max: 32,
@@ -249,9 +239,26 @@ gui.addParam("Shutter Speed (s)", cameraEntity.camera, "shutterSpeed", {
   max: 1 / 60,
 });
 gui.addParam("ISO", cameraEntity.camera, "iso", { min: 50, max: 6400 });
+gui.addParam(
+  "Exposure compensation (stops)",
+  cameraEntity.camera,
+  "exposureCompensation",
+  { min: -4, max: 4 },
+);
 
 gui.addHeader("Sensor");
 gui.addParam("Show sensor frame", State, "showSensorFrame");
+gui.addRadioList(
+  "Format",
+  State,
+  "sensor",
+  Object.keys(SENSORS).map((name) => ({ name, value: name })),
+  (name) => {
+    // In place: the width and height sliders are bound to this array.
+    cameraEntity.camera.sensorSize[0] = SENSORS[name][0];
+    cameraEntity.camera.sensorSize[1] = SENSORS[name][1];
+  },
+);
 gui.addParam("Sensor width (mm)", cameraEntity.camera.sensorSize, "0", {
   min: 0,
   max: 100,
@@ -262,21 +269,12 @@ gui.addParam("Sensor height (mm)", cameraEntity.camera.sensorSize, "1", {
   max: 100,
 });
 
-gui.addRadioList(
-  "Sensor fit",
-  cameraEntity.camera,
-  "sensorFit",
-  [
-    { name: "Vertical", value: "vertical" },
-    { name: "Horizontal", value: "horizontal" },
-    { name: "Fill", value: "fill" },
-    { name: "Overscan", value: "overscan" },
-  ],
-  () => {
-    // set value again to trigger fieldOfView change
-    onResize();
-  },
-);
+gui.addRadioList("Sensor fit", cameraEntity.camera, "sensorFit", [
+  { name: "Vertical", value: "vertical" },
+  { name: "Horizontal", value: "horizontal" },
+  { name: "Fill", value: "fill" },
+  { name: "Overscan", value: "overscan" },
+]);
 
 gui.addColumn("Depth of Field");
 gui.addParam("Enabled", postProcessing, "dof");
@@ -391,48 +389,12 @@ function onResize() {
 
   State.aspectRatios[2] = [windowBounds[2], windowBounds[3]];
 
-  const camera = cameraEntity.camera;
-
   const [cameraWidth, cameraHeight] =
     State.aspectRatios[State.aspectRatioPreset];
-  const cameraBounds = [0, 0, cameraWidth, cameraHeight];
-  const cameraViewport = fitRect(cameraBounds, windowBounds);
-  const sensorBounds = [0, 0, camera.sensorSize[0], camera.sensorSize[1]];
-  let sensorFitBounds = [0, 0, 0.1, 0.1];
-
-  const sensorAspectRatio = camera.sensorSize[0] / camera.sensorSize[1];
-  const cameraAspectRatio = cameraWidth / cameraHeight;
-  if (cameraAspectRatio > sensorAspectRatio) {
-    if (camera.sensorFit === "vertical" || camera.sensorFit === "overscan") {
-      sensorFitBounds = fitRect(sensorBounds, cameraViewport);
-    } else {
-      // horizontal || fill
-      sensorFitBounds = fitRect(sensorBounds, cameraViewport, "cover");
-    }
-  } else {
-    if (camera.sensorFit === "horizontal" || camera.sensorFit === "overscan") {
-      sensorFitBounds = fitRect(sensorBounds, cameraViewport);
-    } else {
-      // vertical || fill
-      sensorFitBounds = fitRect(sensorBounds, cameraViewport, "cover");
-    }
-  }
-
-  let bounds = [...sensorFitBounds];
-  if (sensorFitBounds.some((d) => d > 1)) {
-    bounds[0] /= width;
-    bounds[1] /= height;
-    bounds[2] /= width;
-    bounds[3] /= height;
-  }
-  // overlay coordinates are from top left corner so we need to flip y
-  bounds[1] = 1.0 - bounds[1] - bounds[3];
-
-  // State.sensorFitBounds = bounds;
-
-  overlayEntity.overlay.bounds = bounds;
-
-  camera.viewport = cameraViewport;
+  cameraEntity.camera.viewport = fitRect(
+    [0, 0, cameraWidth, cameraHeight],
+    windowBounds,
+  );
 }
 
 window.addEventListener("resize", onResize);
@@ -446,18 +408,20 @@ window.addEventListener("keydown", ({ key }) => {
 gpu.frame(ctx, async () => {
   renderEngine.update(world.entities);
   await renderEngine.render(world.entities, cameraEntity);
-  // overlayRenderer.render(overlayEntity);
+  updateSensorFrame();
 
   gpu.debug(ctx, debugOnce);
   debugOnce = false;
 
-  const aspectRatio = cameraEntity.camera.aspect;
-  const yfov = cameraEntity.camera.fov;
-  const xfov =
-    2 * Math.atan(aspectRatio * Math.tan(cameraEntity.camera.fov / 2));
+  const camera = cameraEntity.camera;
+  const xfov = 2 * Math.atan(camera.aspect * Math.tan(camera.fov / 2));
+  const ev100 = lens.ev100(camera.fStop, camera.shutterSpeed, camera.iso);
   cameraInfoLabel.setTitle(`X FOV : ${utils.toDegrees(xfov).toFixed(0)}°
-Y FOV : ${utils.toDegrees(yfov).toFixed(0)}°
-ASPECT : ${aspectRatio.toFixed(2)}`);
+Y FOV : ${utils.toDegrees(camera.fov).toFixed(0)}°
+ASPECT : ${camera.aspect.toFixed(2)}
+FOCAL LENGTH : ${camera._focalLength.toFixed(1)}mm
+SENSOR HEIGHT : ${camera._sensorHeight.toFixed(1)}mm
+EV100 : ${ev100.toFixed(1)}`);
   gui.draw();
 
   window.dispatchEvent(new CustomEvent("screenshot"));

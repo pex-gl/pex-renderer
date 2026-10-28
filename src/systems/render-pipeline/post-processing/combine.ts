@@ -54,9 +54,7 @@ const combine: PostProcessingEffect = {
           sunDispertion: fog?.sunDispertion ?? 0,
           inscatteringCoeffs: fog?.inscatteringCoeffs ?? [0, 0, 0],
           sunIntensity: fog?.sunIntensity ?? 0,
-          near: camera.near!,
-          far: camera.far!,
-          fov: camera.fov!,
+          inverseProjectionMatrix: camera._inverseProjectionMatrix!,
           // Authored in stops, applied as a gain.
           exposure: 2 ** postProcessing.exposure!,
           bloomIntensity: bloom?.intensity ?? 0,

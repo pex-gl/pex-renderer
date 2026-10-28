@@ -51,11 +51,10 @@ const cameraEntities = gridCells(W, H, nW, nH, 0).map((cell, i) => {
       fStop: 2.8,
       shutterSpeed: 1 / 30,
       target: [0, 0, 0],
-      aspect: W / nW / (H / nH),
       viewport: [cell[0], cell[1], cell[2], cell[3]],
     }),
     postProcessing: components.postProcessing(),
-    orbiter: components.orbiter({ element: ctx.canvas }),
+    controls: components.controls.orbit(),
   });
   world.add(cameraEntity);
   return cameraEntity;

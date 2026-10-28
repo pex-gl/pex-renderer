@@ -191,14 +191,13 @@ const dof: PostProcessingEffect = {
       // m -> mm, the unit the thin lens model works in.
       focusDistance: (component.focusDistance ?? 7) * 1000,
 
-      focalLength: camera.focalLength!,
+      focalLength: camera._focalLength!,
       fStop: camera.fStop!,
       // Sensor millimetres to half-resolution pixels of radius: one halving for
       // diameter to radius, one for the grid. The sensor height is the one the
       // camera system fitted to the viewport, so this follows sensorFit rather
       // than assuming the frame is filled.
-      cocScale:
-        (height * 0.25) / (camera.actualSensorHeight ?? camera.sensorSize![1]!),
+      cocScale: (height * 0.25) / camera._sensorHeight!,
       focusScale: component.focusScale ?? 1,
 
       blurScale: (component.blurriness ?? 0.03) * height * 0.5,

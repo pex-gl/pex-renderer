@@ -20,7 +20,6 @@
     // View
     // "layers",
     "cameras",
-    "frustum-culling",
     "multi-view",
 
     // Lighting

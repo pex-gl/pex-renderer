@@ -28,11 +28,17 @@ const check = (label, actual, expected) => {
 const ctx = { width: 800, height: 600 };
 
 let nextId = 0;
-const createCameraEntity = () => ({
+const createCameraEntity = (options) => ({
   id: `cam${nextId++}`,
   transform: {},
-  camera: components.camera(),
+  // What the transform system would add: an identity world matrix.
+  _transform: {
+    modelMatrix: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
+  },
+  camera: components.camera(options),
 });
+
+const round = (value) => Math.round(value * 1e6) / 1e6;
 
 // ─── resetTemporal lasts exactly one frame ──────────────────────────────────
 {
@@ -77,9 +83,12 @@ const createCameraEntity = () => ({
   // A distinct projection per frame, so a matrix captured from the wrong step
   // is visible rather than coincidentally equal.
   const frame = (n) => {
-    camera.projectionMatrix[0] = n;
+    camera.zoom = n;
     system.update([entity], { frameIndex: n });
-    return [camera._viewProjectionMatrix[0], camera._previousViewProjectionMatrix[0]];
+    return [
+      camera._viewProjectionMatrix[0],
+      camera._previousViewProjectionMatrix[0],
+    ];
   };
 
   console.log("\nView-projection history");
@@ -87,15 +96,77 @@ const createCameraEntity = () => ({
   // The first frame has nothing behind it, so previous is seeded from current
   // rather than left at the identity mat4.create() produced — otherwise every
   // motion vector that frame reads as motion out of the origin.
-  check("first frame carries no motion", frame(2), [2, 2]);
-  check("second frame looks back one", frame(3), [3, 2]);
-  check("and keeps looking back exactly one", frame(4), [4, 3]);
+  const [first, firstPrevious] = frame(2);
+  check("first frame carries no motion", firstPrevious, first);
+  const [second, secondPrevious] = frame(3);
+  check("second frame looks back one", secondPrevious, first);
+  const [, thirdPrevious] = frame(4);
+  check("and keeps looking back exactly one", thirdPrevious, second);
 
   // A cut is the same situation as a first frame: the previous view describes
   // somewhere else, so it is reseeded rather than reprojected against.
   system.resetTemporal(entity);
-  check("a cut carries no motion either", frame(5), [5, 5]);
-  check("and looks back one again after it", frame(6), [6, 5]);
+  const [cut, cutPrevious] = frame(5);
+  check("a cut carries no motion either", cutPrevious, cut);
+  const [, afterCutPrevious] = frame(6);
+  check("and looks back one again after it", afterCutPrevious, cut);
+}
+
+// ─── Lens and projection ────────────────────────────────────────────────────
+{
+  const system = cameraSystem({ ctx });
+  console.log("\nLens and projection");
+
+  const viewport = createCameraEntity({ viewport: [0, 0, 400, 100] });
+  system.update([viewport]);
+  check("aspect from the viewport", viewport.camera.aspect, 4);
+
+  const view = createCameraEntity({
+    viewport: [0, 0, 100, 100],
+    view: { totalSize: [300, 100], size: [100, 100], offset: [0, 0] },
+  });
+  system.update([view]);
+  check("aspect from the full view, not the tile", view.camera.aspect, 3);
+
+  const lens = createCameraEntity({ focalLength: 50 });
+  system.update([lens]);
+  check(
+    "focal length drives the fov over the fitted sensor",
+    round(lens.camera.fov),
+    round(2 * Math.atan(24 / 100)),
+  );
+  check("fitted sensor height", lens.camera._sensorHeight, 24);
+  lens.camera.zoom = 2;
+  system.update([lens]);
+  check(
+    "zoom lengthens the depth of field focal length",
+    round(lens.camera._focalLength),
+    100,
+  );
+
+  const orthographic = createCameraEntity({
+    projection: "orthographic",
+    size: 2,
+    zoom: 2,
+  });
+  system.update([orthographic]);
+  check(
+    "orthographic size, aspect and zoom in",
+    round(orthographic.camera.projectionMatrix[5]),
+    1,
+  );
+
+  const bounds = createCameraEntity({
+    projection: "orthographic",
+    bounds: [0, 800, 600, 0],
+  });
+  system.update([bounds]);
+  const m = bounds.camera.projectionMatrix;
+  check(
+    "explicit bounds map the top-left corner to NDC (-1, 1)",
+    [round(m[12]), round(m[13])],
+    [-1, 1],
+  );
 }
 
 console.log(failures ? `\n${failures} failure(s)` : "\nall checks passed");

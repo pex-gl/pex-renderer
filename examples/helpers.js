@@ -45,18 +45,16 @@ world.add(gridTenScaledEntity);
 const W = window.innerWidth * devicePixelRatio;
 const H = window.innerHeight * devicePixelRatio;
 const splitRatio = 0.66;
-const aspect = ctx.width / ctx.height;
 
 const cameraEntity = createEntity({
   transform: components.transform({ position: [2, 2, 2] }),
   camera: components.camera({
-    aspect,
     near: 0.1,
     far: 100,
     viewport: [0, 0, Math.floor(splitRatio * W), H],
   }),
   postProcessing: components.postProcessing(),
-  orbiter: components.orbiter({ element: ctx.canvas, maxDistance: 1 }),
+  controls: components.controls.orbit(),
   cameraHelper: components.cameraHelper({ color: [0, 1, 0, 1] }),
 });
 world.add(cameraEntity);
@@ -68,12 +66,11 @@ const perspectiveCameraEntity = createEntity({
   }),
   camera: components.camera({
     fov: Math.PI / 6,
-    aspect,
     near: 1,
     far: 12,
     viewport: [splitRatio * W, 0.5 * H, (1 - splitRatio) * W, 0.5 * H],
   }),
-  // orbiter: components.orbiter(),
+  // controls: components.controls.orbit(),
   cameraHelper: components.cameraHelper({ color: [0, 1, 0, 1] }),
 });
 world.add(perspectiveCameraEntity);
@@ -85,10 +82,9 @@ const orthographicCameraEntity = createEntity({
   }),
   camera: components.camera({
     projection: "orthographic",
-    aspect,
     near: 0.1,
     far: 10,
-    zoom: 3,
+    zoom: 1 / 3,
     viewport: [splitRatio * W, 0, (1 - splitRatio) * W, 0.5 * H],
   }),
   cameraHelper: components.cameraHelper({ color: [0, 0, 1, 1] }),
@@ -286,8 +282,8 @@ gui.addParam("Far", orthographicCameraEntity.camera, "far", {
   max: 20,
 });
 gui.addParam("Zoom", orthographicCameraEntity.camera, "zoom", {
-  min: 1,
-  max: 5,
+  min: 0.2,
+  max: 1,
 });
 gui.addColumn("Light");
 gui.addParam(

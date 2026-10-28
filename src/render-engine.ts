@@ -32,6 +32,7 @@ export default ({
   const skinSystem = systems.skin();
   const geometrySystem = systems.geometry(options);
   const morphSystem = systems.morph();
+  const controlsSystem = systems.controls(options);
   const transformSystem = systems.transform();
   const layerSystem = systems.layer();
   const skyboxSystem = systems.skybox(options);
@@ -79,6 +80,7 @@ export default ({
       skinSystem,
       geometrySystem,
       morphSystem,
+      controlsSystem,
       transformSystem,
       layerSystem,
       skyboxSystem,
@@ -106,6 +108,7 @@ export default ({
       skinSystem.update(entities);
       geometrySystem.update(entities);
       morphSystem.update(entities);
+      controlsSystem.update(entities, this);
       transformSystem.update(entities);
       layerSystem.update(entities);
       skyboxSystem.update(entities);
@@ -167,16 +170,7 @@ export default ({
         for (const cameraEntity of cameras) {
           const camera = cameraEntity.camera!;
 
-          // Set render view
           const viewport = camera.viewport || getDefaultViewport(ctx);
-
-          const aspect = viewport[2]! / viewport[3]!;
-
-          if (aspect !== camera.aspect) {
-            camera.aspect = aspect;
-            camera.dirty = true;
-          }
-
           const renderView: RenderView = {
             camera,
             cameraEntity,

@@ -265,67 +265,50 @@ const getAreaLight = ({ areaLight, transform }: Entity) => {
 };
 
 // Cameras
-const getPerspectiveCamera = (camera: CameraComponentOptions) => {
-  const { fov, near, far, aspect } = camera as Required<CameraComponentOptions>;
+const NDC_CORNERS = [
+  [-1, 1],
+  [1, 1],
+  [1, -1],
+  [-1, -1],
+];
 
-  const nearHalfHeight = Math.tan(fov / 2) * near;
-  const farHalfHeight = Math.tan(fov / 2) * far;
-  const nearHalfWidth = nearHalfHeight * aspect;
-  const farHalfWidth = farHalfHeight * aspect;
-
+// Near plane point in view space: NDC depth 0, with the perspective divide.
+const unprojectNear = ([x, y]: number[], m: Mat4): Vec3 => {
+  const w = m[3]! * x! + m[7]! * y! + m[15]!;
   return [
-    ...getPyramidEdgePositions({
-      sx: farHalfWidth,
-      sy: farHalfHeight,
-      sz: -far,
-    }),
-
-    ...pointsToLine([
-      [-farHalfWidth, farHalfHeight, -far],
-      [farHalfWidth, farHalfHeight, -far],
-      [farHalfWidth, -farHalfHeight, -far],
-      [-farHalfWidth, -farHalfHeight, -far],
-      [-farHalfWidth, farHalfHeight, -far],
-    ]),
-
-    ...pointsToLine([
-      [-nearHalfWidth, nearHalfHeight, -near],
-      [nearHalfWidth, nearHalfHeight, -near],
-      [nearHalfWidth, -nearHalfHeight, -near],
-      [-nearHalfWidth, -nearHalfHeight, -near],
-      [-nearHalfWidth, nearHalfHeight, -near],
-    ]),
+    (m[0]! * x! + m[4]! * y! + m[12]!) / w,
+    (m[1]! * x! + m[5]! * y! + m[13]!) / w,
+    (m[2]! * x! + m[6]! * y! + m[14]!) / w,
   ];
 };
 
-const getOrthographicCamera = (camera: CameraComponentOptions) => {
-  const { near, far, zoom, left, right, top, bottom, view } =
+/**
+ * Frustum edges unprojected from the projection matrix, so zoom, orthographic
+ * bounds and view offsets are drawn as rendered.
+ */
+const getCamera = (camera: CameraComponentOptions) => {
+  const { projection, _inverseProjectionMatrix, near, far } =
     camera as Required<CameraComponentOptions>;
+  const orthographic = projection === "orthographic";
 
-  let minX = (right + left) / 2 - (right - left) / (2 / zoom);
-  let maxX = (right + left) / 2 + (right - left) / (2 / zoom);
-  let maxY = (top + bottom) / 2 + (top - bottom) / (2 / zoom);
-  let minY = (top + bottom) / 2 - (top - bottom) / (2 / zoom);
+  const nearCorners = NDC_CORNERS.map((corner) =>
+    unprojectNear(corner, _inverseProjectionMatrix),
+  );
+  const farCorners = nearCorners.map(([x, y]): Vec3 =>
+    orthographic
+      ? [x!, y!, -far]
+      : [(x! * far) / near, (y! * far) / near, -far],
+  );
 
-  if (view) {
-    const size = view.size!;
-    const totalSize = view.totalSize!;
-    const offset = view.offset!;
-
-    const zoomW = 1 / zoom / (size[0]! / totalSize[0]!);
-    const zoomH = 1 / zoom / (size[1]! / totalSize[1]!);
-    const scaleW = (right - left) / size[0]!;
-    const scaleH = (top - bottom) / size[1]!;
-
-    minX += scaleW * (offset[0]! / zoomW);
-    maxX = minX + scaleW * (size[0]! / zoomW);
-    maxY -= scaleH * (offset[1]! / zoomH);
-    minY = maxY - scaleH * (size[1]! / zoomH);
-  }
-  return getBBoxPositionsList([
-    [minX, maxY, -near],
-    [maxX, minY, -far],
-  ]);
+  // One array per vertex: addToBuilder transforms positions in place.
+  return [
+    ...farCorners.flatMap((corner, i) => [
+      orthographic ? nearCorners[i]! : [0, 0, 0],
+      corner,
+    ]),
+    ...pointsToLine(nearCorners, true),
+    ...pointsToLine(farCorners, true),
+  ].map((point) => [...point]);
 };
 
 // Extras
@@ -723,14 +706,12 @@ export default () => ({
 
       if (
         entity.cameraHelper &&
-        entity.camera &&
+        entity.camera?._inverseProjectionMatrix &&
         renderView.camera !== entity.camera
       ) {
         this.addToBuilder(
           geomBuilder,
-          entity.camera.projection === "orthographic"
-            ? getOrthographicCamera(entity.camera)
-            : getPerspectiveCamera(entity.camera),
+          getCamera(entity.camera),
           entity.cameraHelper.color,
           lineWidth,
           modelMatrix,

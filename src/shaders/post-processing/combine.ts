@@ -94,6 +94,7 @@ ${postProcessingStruct}
 
 struct Combine {
   viewMatrix: mat4x4f,
+  inverseProjectionMatrix: mat4x4f,
   fogColor: vec3f,
   fogStart: f32,
   sunPosition: vec3f,
@@ -102,9 +103,6 @@ struct Combine {
   sunDispertion: f32,
   inscatteringCoeffs: vec3f,
   sunIntensity: f32,
-  near: f32,
-  far: f32,
-  fov: f32,
   exposure: f32,
   bloomIntensity: f32,
   lensFlareIntensity: f32,
@@ -131,7 +129,7 @@ ${SHADERS.math.PI}
 ${SHADERS.math.saturate}
 ${SHADERS.encodeDecode}
 ${toneMapSource ?? ""}
-${useFog ? `${SHADERS.depthRead}\n${SHADERS.depthPosition}\n${SHADERS.fog}` : ""}
+${useFog ? `${SHADERS.depthPosition}\n${SHADERS.fog}` : ""}
 ${useVignette ? SHADERS.vignette : ""}
 ${useLUT ? SHADERS.lut : ""}
 ${useColorCorrection ? SHADERS.colorCorrection : ""}
@@ -144,8 +142,8 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
   // HDR effects
   ${
     useFog
-      ? `let z = readDepth(uDepthTexture, uDepthTextureSampler, uv, uCombine.near, uCombine.far);
-  let position = reconstructPositionFromDepth(uv, z, uCombine.fov, uCombine.far, uPostProcessing.viewportSize);
+      ? `let depth = textureSampleLevel(uDepthTexture, uDepthTextureSampler, uv, 0);
+  let position = reconstructPositionFromDepth(uv, depth, uCombine.inverseProjectionMatrix);
   let rayLength = length(position);
   let sunDirection = normalize((uCombine.viewMatrix * vec4f(normalize(uCombine.sunPosition), 0.0)).xyz);
   color = vec4f(

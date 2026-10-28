@@ -24,11 +24,9 @@ const resourceCache = createResourceCache(ctx);
 // Entities
 const cameraEntity = createEntity({
   transform: components.transform({ position: [3, 3, 3] }),
-  camera: components.camera({
-    aspect: ctx.width / ctx.height,
-  }),
+  camera: components.camera({}),
   postProcessing: components.postProcessing(),
-  orbiter: components.orbiter({ element: ctx.gl.canvas }),
+  controls: components.controls.orbit(),
 });
 world.add(cameraEntity);
 
@@ -93,7 +91,8 @@ world.add(directionalLightEntity);
 const geometrySystem = systems.geometry({ ctx });
 const transformSystem = systems.transform();
 const skyboxSystem = systems.skybox({ ctx, resourceCache });
-const cameraSystem = systems.camera();
+const controlsSystem = systems.controls({ ctx });
+const cameraSystem = systems.camera({ ctx });
 const reflectionProbeSystem = systems.reflectionProbe({ ctx, resourceCache });
 const lightSystem = systems.light();
 const renderPipelineSystem = systems.renderPipeline({
@@ -119,8 +118,6 @@ window.addEventListener("resize", () => {
   const width = window.innerWidth;
   const height = window.innerHeight;
   gpu.resize(ctx, width, height, pixelRatio);
-  cameraEntity.camera.aspect = width / height;
-  cameraEntity.camera.dirty = true;
 });
 
 window.addEventListener("keydown", ({ key }) => {
@@ -151,6 +148,7 @@ gpu.frame(ctx, async () => {
 
   try {
     geometrySystem.update(world.entities);
+    controlsSystem.update(world.entities, { deltaTime: 1 / 60 });
     transformSystem.update(world.entities);
     skyboxSystem.update(world.entities);
     cameraSystem.update(world.entities);

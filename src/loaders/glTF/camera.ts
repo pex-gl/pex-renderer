@@ -1,15 +1,14 @@
-import type { GpuContext } from "../../types.js";
 import type * as GLTF from "types-gltf";
 import type { ResolvedCamera } from "./types.js";
 
 /**
  * Resolves a glTF camera definition into a generic camera data object.
+ *
+ * The aspect ratio is the viewport's, as the camera system derives it:
+ * `aspectRatio` and `xmag` are ignored rather than stretching the image.
  * https://github.com/KhronosGroup/glTF/blob/main/specification/2.0/schema/camera.schema.json
  */
-export function resolveCamera(
-  camera: GLTF.Camera,
-  ctx: GpuContext,
-): ResolvedCamera {
+export function resolveCamera(camera: GLTF.Camera): ResolvedCamera {
   if (camera.type === "orthographic") {
     // https://github.com/KhronosGroup/glTF/blob/main/specification/2.0/schema/camera.orthographic.schema.json
     return {
@@ -17,10 +16,7 @@ export function resolveCamera(
       projection: "orthographic",
       near: camera.orthographic!.znear,
       far: camera.orthographic!.zfar,
-      left: -camera.orthographic!.xmag,
-      right: camera.orthographic!.xmag,
-      top: camera.orthographic!.ymag,
-      bottom: -camera.orthographic!.ymag,
+      size: camera.orthographic!.ymag,
     };
   }
 
@@ -31,6 +27,5 @@ export function resolveCamera(
     near: camera.perspective!.znear,
     far: camera.perspective!.zfar ?? Infinity,
     fov: camera.perspective!.yfov,
-    aspect: camera.perspective!.aspectRatio ?? ctx.width / ctx.height,
   };
 }

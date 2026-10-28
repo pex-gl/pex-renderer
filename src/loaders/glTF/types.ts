@@ -156,10 +156,7 @@ export type ResolvedCamera =
       projection: "orthographic";
       near?: number;
       far?: number;
-      left: number;
-      right: number;
-      top: number;
-      bottom: number;
+      size: number;
     }
   | {
       name?: string | undefined;
@@ -167,7 +164,6 @@ export type ResolvedCamera =
       near?: number;
       far: number;
       fov: number;
-      aspect: number;
     };
 
 /** A KHR_lights_punctual light, defaults applied. */

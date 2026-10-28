@@ -307,24 +307,6 @@ const areaPowerToLuminance = (
 };
 
 /**
- * Exposure value at ISO 100 for a set of camera settings — the photographic
- * scale where each stop doubles the light reaching the sensor.
- *
- * `shutterSpeed` is in seconds (1/125, not 125).
- */
-const ev100 = (fStop: number, shutterSpeed: number, iso: number): number =>
-  Math.log2(((fStop * fStop) / shutterSpeed) * (100 / iso));
-
-/**
- * Scale factor taking scene luminance (cd/m²) to a sensor-referred value.
- *
- * The 1.2 is the standard reflected-light meter calibration constant, so a
- * surface of 18% reflectance under an exposure metered for it lands at middle
- * grey rather than at 1.0.
- */
-const exposureFromEV100 = (ev100: number): number => 1 / (1.2 * 2 ** ev100);
-
-/**
  * Code point order, so a cache key built from sorted strings is the same
  * everywhere: the default sort is locale-dependent.
  */
@@ -408,6 +390,4 @@ export {
   spotPowerToIntensity,
   spotIntensityToPower,
   areaPowerToLuminance,
-  ev100,
-  exposureFromEV100,
 };

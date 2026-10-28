@@ -1,5 +1,6 @@
 export { default as animation } from "./animation.js";
 export { default as camera } from "./camera.js";
+export { default as controls } from "./controls.js";
 export { default as geometry } from "./geometry.js";
 export { default as helper } from "./helper.js";
 export { default as layer } from "./layer.js";

@@ -17,7 +17,7 @@ const cameraEntity = createEntity({
   transform: components.transform({ position: [3, 3, 3] }),
   camera: components.camera(),
   postProcessing: components.postProcessing(),
-  orbiter: components.orbiter({ element: ctx.canvas }),
+  controls: components.controls.orbit(),
 });
 world.add(cameraEntity);
 

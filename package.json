@@ -37,12 +37,12 @@
     "dev": "snowdev dev --no-open",
     "release": "snowdev release",
     "release:alpha": "snowdev release --release-as minor --prerelease alpha",
-    "test": "node test/frame-graph.js && node test/render-textures.js && node test/post-processing.js && node test/camera.js && node test/frustum-planes.js && node test/shadow-fit.js && node test/validate-pipeline-wgsl.js && node test/standard-variants.js"
+    "test": "node --test \"test/*.js\""
   },
   "dependencies": {
+    "cameras": "^4.0.0-alpha.0",
     "geom-builder": "^3.1.0",
     "halton": "^1.1.0",
-    "pex-cam": "^3.0.1",
     "pex-color": "^2.3.0",
     "pex-geom": "^3.1.2",
     "pex-gpu": "^0.0.5",

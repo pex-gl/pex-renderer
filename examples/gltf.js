@@ -280,40 +280,16 @@ async function loadScene(url, grid) {
         transform: components.transform({
           position: [sceneCenter[0], sceneCenter[1], Math.abs(distance)],
         }),
-        camera: components.camera({
-          near: 0.01,
-          far,
-          fov,
-          aspect: ctx.width / ctx.height,
-        }),
-        orbiter: components.orbiter({
-          element: ctx.canvas,
+        camera: components.camera({ near: 0.01, far, fov }),
+        controls: components.controls.orbit({
           target: sceneCenter,
-          maxDistance: far,
+          distanceBounds: [0.01, far * 0.9],
         }),
       });
       scene.entities.push(cameraEntity);
       world.add(cameraEntity);
-
-      if (State.selectedModel.name == "Fox") {
-        cameraEntity.transform.position = [100, 100, 100];
-        cameraEntity.transform.dirty = true;
-      }
     } else {
-      cameraEntity.camera.near = 0.5;
-      cameraEntity.camera.aspect = ctx.width / ctx.height;
-      cameraEntity.camera.dirty = true;
-
-      // TODO: hardcoded
-      if (!["MultiUVTest", "GearboxAssy"].includes(State.selectedModel.name)) {
-        cameraEntity.orbiter = components.orbiter({
-          // target: sceneCenter,
-          // distance: (boundingSphereRadius * 2) / Math.tan(cameraCmp.fov / 2),
-          element: ctx.canvas,
-          minDistance: cameraEntity.camera.near,
-          maxDistance: cameraEntity.camera.far,
-        });
-      }
+      // cameraEntity.camera.near = 0.5;
     }
   }
 
@@ -353,8 +329,7 @@ const nextCamera = () => {
 
   if (next) {
     cameraEntity = next;
-    cameraEntity.camera.dirty = true;
-    cameraEntity.orbiter ||= components.orbiter({ element: ctx.canvas });
+    cameraEntity.controls ||= components.controls.orbit();
   }
 };
 const nextAnimation = () => {
@@ -648,10 +623,8 @@ if (grid) {
     transform: components.transform({
       position: new Array(3).fill(State.gridSize * 2),
     }),
-    camera: components.camera({
-      aspect: ctx.width / ctx.height,
-    }),
-    orbiter: components.orbiter({ element: ctx.canvas }),
+    camera: components.camera({}),
+    controls: components.controls.orbit(),
   });
   world.add(cameraEntity);
 
@@ -687,8 +660,6 @@ for (const model of models) {
 window.addEventListener("resize", () => {
   gpu.resize(ctx, window.innerWidth, window.innerHeight, pixelRatio);
   if (cameraEntity) {
-    cameraEntity.camera.aspect = window.innerWidth / window.innerHeight;
-    cameraEntity.camera.dirty = true;
   }
 });
 

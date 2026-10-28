@@ -35,65 +35,72 @@ const lightAt = (position) => {
 };
 const position = [-1, 1, -1];
 
+// Fits one shadow scope and returns its near/far.
+const fit = (lightEntity, light, participants) => {
+  const shadow = pipeline.getLightShadow(light, "");
+  pipeline.computeLightProperties(lightEntity, light, participants, shadow);
+  return shadow;
+};
+
 console.log("\nshadow fit — spot light (perspective, cone)");
 {
-  const light = { ...lightAt(position), angle: Math.PI / 6, range: 5, bulbRadius: 0.1 };
-  pipeline.computeLightProperties({ spotLight: light }, light, scene.filter(
+  const light = { ...lightAt(position), outerConeAngle: Math.PI / 6, range: 5, bulbRadius: 0.1 };
+  const shadow = fit({ spotLight: light }, light, scene.filter(
     (e) => e.material?.castShadows || e.material?.receiveShadows));
 
-  check("near is not pinned to the minimum", light._near > 0.02, `near=${light._near.toFixed(3)}`);
-  check("far is capped by the light's range", light._far <= 5 + 1e-6, `far=${light._far.toFixed(3)}`);
-  check("near/far ratio is usable", light._far / light._near < 100,
-    `ratio=${(light._far / light._near).toFixed(1)}`);
+  check("near is not pinned to the minimum", shadow.near > 0.02, `near=${shadow.near.toFixed(3)}`);
+  check("far is capped by the light's range", shadow.far <= 5 + 1e-6, `far=${shadow.far.toFixed(3)}`);
+  check("near/far ratio is usable", shadow.far / shadow.near < 100,
+    `ratio=${(shadow.far / shadow.near).toFixed(1)}`);
   check("the caster is inside the frustum",
-    light._near <= vec3.distance(position, [0, 0.5, 0]) &&
-    light._far >= vec3.distance(position, [0, 0.5, 0]));
+    shadow.near <= vec3.distance(position, [0, 0.5, 0]) &&
+    shadow.far >= vec3.distance(position, [0, 0.5, 0]));
 }
 
 console.log("\nshadow fit — geometry that neither casts nor receives");
 {
   // No range, so nothing caps far and the helper's reach is unmasked — this is
   // what inflates a frustum in a scene with debug geometry in it.
-  const light = { ...lightAt(position), angle: Math.PI / 6 };
-  const withHelper = { ...lightAt(position), angle: Math.PI / 6 };
-  pipeline.computeLightProperties({ spotLight: light }, light,
+  const light = { ...lightAt(position), outerConeAngle: Math.PI / 6 };
+  const withHelper = { ...lightAt(position), outerConeAngle: Math.PI / 6 };
+  const filtered = fit({ spotLight: light }, light,
     scene.filter((e) => e.material?.castShadows || e.material?.receiveShadows));
   // The same call with the helper allowed in, as the old fit did.
-  pipeline.computeLightProperties({ spotLight: withHelper }, withHelper, scene);
+  const all = fit({ spotLight: withHelper }, withHelper, scene);
 
-  check("a helper cannot stretch the frustum", light._far < withHelper._far / 2,
-    `filtered far=${light._far.toFixed(2)} vs all=${withHelper._far.toFixed(2)}`);
-  check("nor drag the near plane down", light._near >= withHelper._near,
-    `filtered near=${light._near.toFixed(3)} vs all=${withHelper._near.toFixed(3)}`);
+  check("a helper cannot stretch the frustum", filtered.far < all.far / 2,
+    `filtered far=${filtered.far.toFixed(2)} vs all=${all.far.toFixed(2)}`);
+  check("nor drag the near plane down", filtered.near >= all.near,
+    `filtered near=${filtered.near.toFixed(3)} vs all=${all.near.toFixed(3)}`);
 }
 
 console.log("\nshadow fit — directional light (orthographic, no cone)");
 {
   const light = lightAt(position);
-  pipeline.computeLightProperties({ directionalLight: light }, light,
+  const shadow = fit({ directionalLight: light }, light,
     scene.filter((e) => e.material?.castShadows || e.material?.receiveShadows));
-  check("covers the whole scene it lights", light._far > 2, `far=${light._far.toFixed(3)}`);
+  check("covers the whole scene it lights", shadow.far > 2, `far=${shadow.far.toFixed(3)}`);
 
   // A directional light has no apex: its transform position is a convention,
   // not a boundary. Clipping at it would drop casters on the far side.
   const behind = entity([-1.6, 1.6, -1.6], [-1.4, 1.8, -1.4],
     { castShadows: true });
   const spanning = lightAt(position);
-  pipeline.computeLightProperties({ directionalLight: spanning }, spanning,
+  const spanningShadow = fit({ directionalLight: spanning }, spanning,
     [caster, behind]);
   const depthOf = (point) =>
     -vec3.multMat4([...point], spanning._viewMatrix)[2];
   check("a caster behind the light position is still inside the box",
-    spanning._near <= depthOf([-1.5, 1.7, -1.5]) + 1e-6,
-    `near=${spanning._near.toFixed(3)} caster depth=${depthOf([-1.5, 1.7, -1.5]).toFixed(3)}`);
+    spanningShadow.near <= depthOf([-1.5, 1.7, -1.5]) + 1e-6,
+    `near=${spanningShadow.near.toFixed(3)} caster depth=${depthOf([-1.5, 1.7, -1.5]).toFixed(3)}`);
 }
 
 console.log("\nshadow fit — nothing in reach");
 {
-  const light = { ...lightAt(position), angle: Math.PI / 6, range: 5 };
-  pipeline.computeLightProperties({ spotLight: light }, light, []);
-  check("frustum stays valid", light._far > light._near && light._near > 0,
-    `[${light._near}, ${light._far}]`);
+  const light = { ...lightAt(position), outerConeAngle: Math.PI / 6, range: 5 };
+  const shadow = fit({ spotLight: light }, light, []);
+  check("frustum stays valid", shadow.far > shadow.near && shadow.near > 0,
+    `[${shadow.near}, ${shadow.far}]`);
 }
 
 console.log(failures ? `\n${failures} failure(s)` : "\nall checks passed");

@@ -114,14 +114,20 @@ function declareGTAO(scope: EstimatorScope) {
   // The projection in the one form the estimator needs it: a view position is
   // (ndcToViewMul * uv + ndcToViewAdd) * viewspaceZ. The vertical terms are
   // negated because a screen coordinate's V points down where view space's Y
-  // points up.
-  const tanHalfFovY = Math.tan(camera.fov! * 0.5);
-  const tanHalfFovX = tanHalfFovY * (width / height);
-  const ndcToViewMul = [2 * tanHalfFovX, -2 * tanHalfFovY];
+  // points up. Read from the matrix so zoom and an offset frustum
+  // (`camera.view`) are accounted for.
+  const projection = camera.projectionMatrix!;
+  const [p00, p11, p20, p21] = [
+    projection[0]!,
+    projection[5]!,
+    projection[8]!,
+    projection[9]!,
+  ];
+  const ndcToViewMul = [2 / p00, -2 / p11];
 
   const params = {
     ndcToViewMul,
-    ndcToViewAdd: [-tanHalfFovX, tanHalfFovY],
+    ndcToViewAdd: [(p20 - 1) / p00, (1 + p21) / p11],
     ndcToViewMulByPixelSize: [
       ndcToViewMul[0]! / width,
       ndcToViewMul[1]! / height,

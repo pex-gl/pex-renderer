@@ -124,9 +124,8 @@ const postProcessing = components.postProcessing({
 const cameraEntity = createEntity({
   transform: components.transform({ position: [-3, 3, 3] }),
   camera: components.camera({
-    aspect: ctx.width / ctx.height,
   }),
-  orbiter: components.orbiter({ element: ctx.canvas }),
+  controls: components.controls.orbit(),
   postProcessing,
 });
 world.add(cameraEntity);
@@ -402,8 +401,6 @@ window.addEventListener("resize", () => {
   const width = window.innerWidth;
   const height = window.innerHeight;
   gpu.resize(ctx, width, height, pixelRatio);
-  cameraEntity.camera.aspect = width / height;
-  cameraEntity.camera.dirty = true;
 });
 
 window.addEventListener("keydown", ({ key }) => {

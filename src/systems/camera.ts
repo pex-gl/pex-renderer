@@ -1,31 +1,24 @@
-import { mat4, vec3, quat, utils } from "pex-math";
-import { orbiter as createOrbiter } from "pex-cam";
+import { mat4 } from "pex-math";
+import { lens, projection } from "cameras";
 import halton from "halton";
 import {
   NAMESPACE,
-  TEMP_MAT4,
   computeFrustumPlanes,
-  ev100,
-  exposureFromEV100,
   getDefaultViewport,
 } from "../utils.js";
 
-import type { Vec2, Vec3 } from "pex-math";
+import type { FrustumBounds } from "cameras";
 import type {
   CameraComponentOptions,
-  CameraView,
   Entity,
-  EntityId,
   SystemOptions,
   SystemUpdateOptions,
-  TransformCache,
+  Viewport,
 } from "../types.js";
 
 /**
  * A camera after the component has applied its defaults. The math below reads
- * these fields directly rather than re-checking each one; the projection-
- * specific groups (`fov`, or the six orthographic bounds) are guaranteed by
- * whichever branch of the component ran.
+ * these fields directly rather than re-checking each one.
  */
 type ResolvedCamera = CameraComponentOptions &
   Required<
@@ -35,16 +28,12 @@ type ResolvedCamera = CameraComponentOptions &
       | "near"
       | "far"
       | "aspect"
-      | "fov"
-      | "left"
-      | "right"
-      | "top"
-      | "bottom"
       | "zoom"
+      | "fov"
+      | "size"
       | "fStop"
       | "shutterSpeed"
       | "iso"
-      | "focalLength"
       | "sensorSize"
       | "sensorFit"
       | "projectionMatrix"
@@ -52,23 +41,14 @@ type ResolvedCamera = CameraComponentOptions &
       | "inverseViewMatrix"
       | "frustum"
     >
-  > & { view?: Required<CameraView> };
-
-/** The camera system's per-entity focal length / field of view bookkeeping. */
-interface CameraCache {
-  camera: ResolvedCamera;
-  fov?: number;
-  focalLength?: number;
-}
-
-/** What pex-cam's orbiter writes back through the proxy camera's `set`. */
-interface OrbiterCameraSet {
-  target?: Vec3;
-  position?: Vec3;
-  zoom?: number;
-}
+  >;
 
 const resolvedCamera = (entity: Entity) => entity.camera as ResolvedCamera;
+
+// WebGPU clip space. Jitter is not part of the projection but a shader uniform,
+// so `projectionMatrix` stays unjittered for view position reconstruction.
+const DEPTH = { depthRange: "zero-to-one", reversedZ: false } as const;
+const TEMP_BOUNDS: FrustumBounds = [0, 0, 0, 0];
 
 function computeFrustum(camera: ResolvedCamera) {
   computeFrustumPlanes(
@@ -186,103 +166,80 @@ function updateCameraViewProjection(camera: ResolvedCamera) {
  * opens up, one stop per unit.
  */
 function updateCameraExposure(camera: ResolvedCamera) {
-  camera._exposure = exposureFromEV100(
-    ev100(camera.fStop, camera.shutterSpeed, camera.iso) -
+  camera._exposure = lens.exposureFromEV100(
+    lens.ev100(camera.fStop, camera.shutterSpeed, camera.iso) -
       (camera.exposureCompensation ?? 0),
   );
 }
 
-// TODO: projectionMatrix should only be recomputed if parameters changed
-function updateCameraProjection(
-  camera: ResolvedCamera,
-  transform: TransformCache,
-) {
-  // pex-math vectors are `number[]`, so their components read as optional.
-  const view = camera.view as
-    | { totalSize: [number, number]; size: [number, number]; offset: Vec2 }
-    | undefined;
+/**
+ * Aspect, field of view and the sensor height and focal length depth of field
+ * reads, after `sensorFit` and zoom.
+ *
+ * A view renders a part of a larger frame, so the lens frames the whole of it.
+ */
+function updateCameraLens(camera: ResolvedCamera, viewport: Viewport) {
+  const [width, height] = camera.view?.totalSize ?? [viewport[2], viewport[3]];
+  camera.aspect = width / height;
 
-  if (camera.projection === "orthographic") {
-    const dx = (camera.right - camera.left) / (2 / camera.zoom);
-    const dy = (camera.top - camera.bottom) / (2 / camera.zoom);
-    const cx = (camera.right + camera.left) / 2;
-    const cy = (camera.top + camera.bottom) / 2;
-
-    let left = cx - dx;
-    let right = cx + dx;
-    let top = cy + dy;
-    let bottom = cy - dy;
-
-    if (view) {
-      const [viewWidth, viewHeight] = view.size;
-      const [totalWidth, totalHeight] = view.totalSize;
-      const zoomW = 1 / camera.zoom / (viewWidth / totalWidth);
-      const zoomH = 1 / camera.zoom / (viewHeight / totalHeight);
-      const scaleW = (camera.right - camera.left) / viewWidth;
-      const scaleH = (camera.top - camera.bottom) / viewHeight;
-
-      left += scaleW * (view.offset[0]! / zoomW);
-      right = left + scaleW * (viewWidth / zoomW);
-      top -= scaleH * (view.offset[1]! / zoomH);
-      bottom = top - scaleH * (viewHeight / zoomH);
-    }
-
-    mat4.orthoZO(
-      camera.projectionMatrix,
-      left,
-      right,
-      bottom,
-      top,
-      camera.near,
-      camera.far,
+  camera._sensorHeight = lens.fittedSensorHeight(
+    camera.sensorSize,
+    camera.aspect,
+    camera.sensorFit,
+  );
+  if (camera.focalLength !== undefined) {
+    camera.fov = lens.fovFromFocalLength(
+      camera.focalLength,
+      camera._sensorHeight,
     );
-  } else {
-    if (view) {
-      const [viewWidth, viewHeight] = view.size;
-      const [totalWidth, totalHeight] = view.totalSize;
-      const [offsetX, offsetY] = view.offset as [number, number];
-      const aspectRatio = totalWidth / totalHeight;
+  }
+  camera._focalLength =
+    lens.focalLengthFromFov(camera.fov, camera._sensorHeight) * camera.zoom;
+}
 
-      const top = Math.tan(camera.fov * 0.5) * camera.near;
-      const bottom = -top;
-      const left = aspectRatio * bottom;
-      const right = aspectRatio * top;
-      const width = Math.abs(right - left);
-      const height = Math.abs(top - bottom);
-      const widthNormalized = width / totalWidth;
-      const heightNormalized = height / totalHeight;
+function updateCameraProjection(camera: ResolvedCamera) {
+  const orthographic = camera.projection === "orthographic";
 
-      const l = left + offsetX * widthNormalized;
-      const r = left + (offsetX + viewWidth) * widthNormalized;
-      const b = top - (offsetY + viewHeight) * heightNormalized;
-      const t = top - offsetY * heightNormalized;
-
-      mat4.frustumZO(
-        camera.projectionMatrix,
-        l,
-        r,
-        b,
-        t,
-        camera.near,
-        camera.far,
-      );
-    } else {
-      mat4.perspectiveZO(
-        camera.projectionMatrix,
+  const bounds = orthographic
+    ? camera.bounds
+      ? projection.zoomBounds(TEMP_BOUNDS, camera.bounds, camera.zoom)
+      : projection.orthographicBounds(
+          TEMP_BOUNDS,
+          camera.size,
+          camera.aspect,
+          camera.zoom,
+        )
+    : projection.perspectiveBounds(
+        TEMP_BOUNDS,
         camera.fov,
         camera.aspect,
         camera.near,
-        camera.far,
+        camera.zoom,
       );
-    }
-  }
+  if (camera.view) projection.applyViewOffset(bounds, camera.view);
 
-  mat4.set(camera.inverseViewMatrix, transform.modelMatrix);
-  //look at matrix is opposite of camera modelMatrix transform
-  mat4.set(camera.viewMatrix, transform.modelMatrix);
+  (orthographic ? projection.orthographic : projection.frustum)(
+    camera.projectionMatrix,
+    bounds,
+    camera.near,
+    camera.far,
+    DEPTH,
+  );
+
+  // Unprojects depth whatever the projection, zoom or view offset.
+  mat4.invert(
+    mat4.set(
+      (camera._inverseProjectionMatrix ??= mat4.create()),
+      camera.projectionMatrix,
+    ),
+  );
+}
+
+/** World transform, so a camera parented to another entity follows it. */
+function updateCameraView(camera: ResolvedCamera, entity: Entity) {
+  mat4.set(camera.inverseViewMatrix, entity._transform!.modelMatrix);
+  mat4.set(camera.viewMatrix, camera.inverseViewMatrix);
   mat4.invert(camera.viewMatrix);
-
-  if (camera.culling) computeFrustum(camera);
 }
 
 /**
@@ -290,16 +247,19 @@ function updateCameraProjection(
  *
  * Adds:
  *
- * - "_orbiter" to orbiter components
- * - "_viewProjectionMatrix", "_inverseViewProjectionMatrix",
- *   "_previousViewProjectionMatrix", "_jitter", "_temporalReset" and
- *   "_exposure" to camera components
+ * - "aspect", "projectionMatrix", "viewMatrix", "inverseViewMatrix" and
+ *   "frustum" to camera components
+ * - "_sensorHeight", "_focalLength", "_inverseProjectionMatrix",
+ *   "_viewProjectionMatrix",
+ *   "_inverseViewProjectionMatrix", "_previousViewProjectionMatrix",
+ *   "_jitter", "_temporalReset" and "_exposure" to camera components
  */
 export default ({ ctx }: SystemOptions) => ({
   type: "camera-system",
-  cache: {} as Record<EntityId, CameraCache>,
   debug: false,
+  updateCameraLens,
   updateCameraProjection,
+  updateCameraView,
   updateCameraViewProjection,
   updateCameraJitter,
   updateCameraExposure,
@@ -328,7 +288,7 @@ export default ({ ctx }: SystemOptions) => ({
     temporalResets.add(cameraEntity);
   },
   checkCamera(_: unknown, cameraEntity: Entity) {
-    if (cameraEntity.transform) {
+    if (cameraEntity._transform) {
       return true;
     } else {
       console.warn(
@@ -338,228 +298,6 @@ export default ({ ctx }: SystemOptions) => ({
       );
     }
   },
-  updateCameraFoV(entity: Entity) {
-    const camera = resolvedCamera(entity);
-    const cached = this.cache[entity.id]!;
-
-    const [sensorWidth, sensorHeightDefault] = camera.sensorSize as [
-      number,
-      number,
-    ];
-    let sensorHeight = sensorHeightDefault;
-    const sensorAspectRatio = sensorWidth / sensorHeight;
-    if (camera.aspect > sensorAspectRatio) {
-      if (camera.sensorFit === "horizontal" || camera.sensorFit === "fill") {
-        sensorHeight = sensorWidth / camera.aspect;
-      }
-    } else {
-      if (
-        camera.sensorFit === "horizontal" ||
-        camera.sensorFit === "overscan"
-      ) {
-        sensorHeight = sensorWidth / camera.aspect;
-      }
-    }
-    camera.actualSensorHeight = sensorHeight;
-
-    if (cached.fov !== camera.fov) {
-      camera.focalLength = sensorHeight / 2 / Math.tan(camera.fov / 2);
-      cached.fov = camera.fov;
-      cached.focalLength = camera.focalLength;
-    } else if (cached.focalLength !== camera.focalLength) {
-      camera.fov = 2 * Math.atan(sensorHeight / 2 / camera.focalLength);
-      cached.fov = camera.fov;
-      cached.focalLength = camera.focalLength;
-    }
-  },
-  updateCameraEntity(entity: Entity) {
-    const orbiter = entity.orbiter;
-    const camera = resolvedCamera(entity);
-    const transform = entity.transform!;
-
-    // Add to cache and reset cache if camera component is different
-    if (this.cache[entity.id]?.camera !== camera) {
-      this.cache[entity.id] = { camera };
-    }
-    this.updateCameraFoV(entity);
-
-    if (orbiter) {
-      if (orbiter._orbiter) {
-        if (camera.dirty) {
-          camera.dirty = false;
-
-          updateCameraProjection(camera, entity._transform!);
-        }
-
-        let newPosition = null;
-        let newTarget = null;
-
-        // check if camera moved without _orbiter intervention
-        if (
-          vec3.distance(orbiter._orbiter.camera.position, transform.position!) >
-          utils.EPSILON
-        ) {
-          newPosition = [...transform.position!];
-        }
-
-        //check if camera rotated without orbiter intervention
-        if (
-          vec3.distance(
-            orbiter._orbiter.camera.rotationCache,
-            transform.rotation!,
-          ) > utils.EPSILON
-        ) {
-          // console.log("sync with camera rotation");
-          newTarget = [0, 0, -orbiter._orbiter.distance];
-          const useInvMatrix = false;
-          if (useInvMatrix) {
-            vec3.multMat4(newTarget, camera.inverseViewMatrix); //this is out of date?
-          } else {
-            vec3.multQuat(newTarget, transform.rotation!);
-            vec3.add(newTarget, transform.position!);
-          }
-        }
-
-        // check if camera orbiter moved without _orbiter intervention
-        if (
-          vec3.distance(orbiter.target!, orbiter._orbiter.camera.target) >
-          utils.EPSILON
-        ) {
-          newTarget = orbiter.target!;
-          // console.log("sync with orbiter target");
-        }
-
-        if (newPosition || newTarget) {
-          const opts: { position?: Vec3; target?: Vec3 } = {};
-          if (newPosition) {
-            opts.position = [...newPosition];
-          }
-          if (newTarget) {
-            opts.target = [...newTarget];
-          }
-          orbiter._orbiter.camera.set(opts);
-          orbiter._orbiter.set({
-            camera: orbiter._orbiter.camera,
-          });
-        } else {
-          // added cached properties to know if distance,lon,lat changed externally
-          // and if they haven't give a chance to _orbiter.updateCamera() to update them
-          // comparing orbiter.distance to orbiter._orbiter.distance would always overwrite orbiter
-          if (orbiter.distance !== orbiter._orbiter.distanceCache) {
-            orbiter._orbiter.distanceCache = orbiter.distance;
-            orbiter._orbiter.set({ distance: orbiter.distance });
-          }
-          if (orbiter.lon !== orbiter._orbiter.lonCache) {
-            orbiter._orbiter.lonCache = orbiter.lon;
-            orbiter._orbiter.set({ lon: orbiter.lon });
-          }
-          if (orbiter.lat !== orbiter._orbiter.latCache) {
-            orbiter._orbiter.latCache = orbiter.lat;
-            orbiter._orbiter.set({ lat: orbiter.lat });
-          }
-        }
-
-        orbiter._orbiter.updateCamera();
-
-        mat4.identity(camera.inverseViewMatrix);
-        mat4.translate(camera.inverseViewMatrix, transform.position!);
-        mat4.mult(
-          camera.inverseViewMatrix,
-          mat4.fromQuat(TEMP_MAT4, transform.rotation!),
-        );
-        mat4.set(camera.viewMatrix, camera.inverseViewMatrix);
-        mat4.invert(camera.viewMatrix);
-      } else {
-        updateCameraProjection(camera, entity._transform!);
-
-        // pex-cam drives this stand-in for its own camera class, so it carries
-        // only what the orbiter reads and writes back through `set`.
-        const proxyCamera = {
-          viewMatrix: camera.viewMatrix,
-          inverseViewMatrix: camera.inverseViewMatrix,
-          // pex-cam's orbiter reads the inverse-view matrix under this name when panning
-          invViewMatrix: camera.inverseViewMatrix,
-          position: [...transform.position!],
-          rotationCache: [...transform.rotation!],
-          target: [...orbiter.target!],
-          up: [0, 1, 0],
-          zoom: camera.zoom,
-          getViewRay: (
-            x: number,
-            y: number,
-            windowWidth: number,
-            windowHeight: number,
-          ) => {
-            let nx = (2 * x) / windowWidth - 1;
-            let ny = 1 - (2 * y) / windowHeight;
-            const hNear = 2 * Math.tan(camera.fov / 2) * camera.near;
-            const wNear = hNear * camera.aspect;
-            nx *= wNear * 0.5;
-            ny *= hNear * 0.5; // [origin, direction]
-
-            return [[0, 0, 0], vec3.normalize([nx, ny, -camera.near])];
-          },
-          set({ target, position, zoom }: OrbiterCameraSet) {
-            if (zoom) {
-              camera.zoom = zoom;
-              return;
-            }
-
-            if (target) {
-              vec3.set(orbiter._orbiter.camera.target, target);
-              vec3.set(orbiter.target!, target);
-            }
-
-            if (position) {
-              vec3.set(orbiter._orbiter.camera.position, position);
-              vec3.set(transform.position!, position);
-            }
-
-            mat4.lookAt(
-              TEMP_MAT4,
-              orbiter._orbiter.camera.position,
-              orbiter._orbiter.camera.target,
-              orbiter._orbiter.camera.up,
-            );
-            mat4.invert(TEMP_MAT4);
-            quat.fromMat4(transform.rotation!, TEMP_MAT4);
-            quat.set(
-              orbiter._orbiter.camera.rotationCache,
-              transform.rotation!,
-            );
-
-            orbiter.lat = orbiter._orbiter.lat;
-            orbiter.lon = orbiter._orbiter.lon;
-            orbiter.distance = orbiter._orbiter.distance;
-            // TODO: need to check lat/lon/dist change?
-            transform.dirty = true;
-            camera.dirty = true;
-          },
-        };
-        orbiter._orbiter = createOrbiter({
-          element: orbiter.element || document.body, //TODO: element used to default to ctx.gl.canvas
-          autoUpdate: false,
-          camera: proxyCamera,
-          position: proxyCamera.position,
-          maxDistance: camera.far * 0.9,
-        } as unknown as Parameters<typeof createOrbiter>[0]);
-        orbiter._orbiter.updateCamera();
-        orbiter.distance = orbiter._orbiter.distance;
-        orbiter.lat = orbiter._orbiter.lat;
-        orbiter.lon = orbiter._orbiter.lon;
-        orbiter._orbiter.distanceCache = orbiter._orbiter.distance;
-        orbiter._orbiter.latCache = orbiter._orbiter.lat;
-        orbiter._orbiter.lonCache = orbiter._orbiter.lon;
-      }
-    } else {
-      // Camera manually updated or animation
-      if (camera.dirty) {
-        camera.dirty = false;
-
-        updateCameraProjection(camera, entity._transform!);
-      }
-    }
-  },
   update(entities: Entity[], { frameIndex = 0 }: SystemUpdateOptions = {}) {
     for (let i = 0; i < entities.length; i++) {
       const entity = entities[i]!;
@@ -567,19 +305,18 @@ export default ({ ctx }: SystemOptions) => ({
       if (entity.camera) {
         if (!this.checkCamera(null, entity)) continue;
         const camera = resolvedCamera(entity);
-        this.updateCameraEntity(entity);
+        const viewport = camera.viewport || getDefaultViewport(ctx);
+
+        updateCameraLens(camera, viewport);
+        updateCameraProjection(camera);
+        updateCameraView(camera, entity);
+        if (camera.culling) computeFrustum(camera);
         updateCameraExposure(camera);
         // Exactly one frame, and cleared whether or not anything reads it.
         // Resolved first: the view-projection pair is derived from it.
         camera._temporalReset = temporalResets.delete(entity);
-        // After updateCameraEntity, not inside: every branch of it leaves the
-        // view and projection matrices final, and only some recompute one.
         updateCameraViewProjection(camera);
-        updateCameraJitter(
-          entity,
-          frameIndex,
-          entity.camera.viewport || getDefaultViewport(ctx),
-        );
+        updateCameraJitter(entity, frameIndex, viewport);
       }
     }
   },

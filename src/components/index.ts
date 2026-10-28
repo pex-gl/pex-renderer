@@ -3,7 +3,7 @@ export { default as material } from "./material.js";
 export { default as transform } from "./transform.js";
 
 export { default as camera } from "./camera.js";
-export { default as orbiter } from "./orbiter.js";
+export * as controls from "./controls.js";
 
 export { default as animation } from "./animation.js";
 export { default as morph } from "./morph.js";

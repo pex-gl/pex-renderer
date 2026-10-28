@@ -182,9 +182,12 @@ async function declareFrame(
       fStop: 2.8,
       focalLength: 50,
       sensorSize: [36, 24],
-      actualSensorHeight: 24,
       viewMatrix: new Float32Array(16),
       projectionMatrix: CENTRED_PROJECTION,
+      // Written by the camera system.
+      _sensorHeight: 24,
+      _focalLength: 50,
+      _inverseProjectionMatrix: new Float32Array(16),
       // Written by the engine only while temporal antialiasing is on.
       _jitter: [0, 0],
       _viewProjectionMatrix: new Float32Array(16),

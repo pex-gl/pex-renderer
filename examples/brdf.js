@@ -163,7 +163,7 @@ for (let i = 0; i < nW * nH; i++) {
     }),
     camera: components.camera(),
     // postProcessing: components.postProcessing({ toneMap: "neutral" }),
-    orbiter: components.orbiter({ element: ctx.canvas }),
+    controls: components.controls.orbit(),
   });
   world.add(cameraEntity);
 
@@ -262,8 +262,6 @@ const onResize = () => {
     .filter((entity) => entity.camera)
     .forEach((cameraEntity, i) => {
       cameraEntity.camera.viewport = cells[i];
-      cameraEntity.camera.aspect = cells[i][2] / cells[i][3];
-      cameraEntity.camera.dirty = true;
     });
 };
 

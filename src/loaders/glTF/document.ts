@@ -180,7 +180,7 @@ async function loadGltfDocument(
 
       if (opts.includeCameras && Number.isInteger(node.camera)) {
         resolved.cameraIndex = node.camera!;
-        resolved.camera = resolveCamera(json.cameras![node.camera!]!, ctx);
+        resolved.camera = resolveCamera(json.cameras![node.camera!]!);
       }
 
       // https://github.com/KhronosGroup/glTF/tree/main/extensions/2.0/Khronos/KHR_lights_punctual

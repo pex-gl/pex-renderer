@@ -23,6 +23,7 @@ random.seed(14);
 
 const State = {
   enabled: true,
+  focalLength: 50,
 
   roughness: 0.5,
   metallic: 0.1,
@@ -75,7 +76,6 @@ aabb.fromPoints(dragonBounds, dragon.positions);
 // Camera
 const camera = components.camera({
   // fov: Math.PI / 6,
-  aspect: ctx.width / ctx.height,
   backgroundColor: [0, 0, 0, 0],
 });
 // Subcomponents go through their own factory rather than a bare object literal:
@@ -252,10 +252,7 @@ const cameraY = s * 1;
 const cameraEntity = createEntity({
   transform: components.transform({ position: [0, cameraY, s * 10] }),
   camera,
-  orbiter: components.orbiter({
-    element: ctx.canvas,
-    target: [0, cameraY, 0],
-  }),
+  controls: components.controls.orbit({ target: [0, cameraY, 0] }),
   postProcessing,
 });
 world.add(cameraEntity);
@@ -468,8 +465,19 @@ gui.addButton("Toggle Render Pass Graph", () => {
 });
 
 gui.addHeader("Camera");
-gui.addParam("FoV", camera, "fov", { min: 0, max: (Math.PI / 3) * 2 });
-gui.addParam("FocalLength", camera, "focalLength", { min: 10, max: 200 });
+// The last one touched drives the lens: a focal length overrides the fov.
+gui.addParam("FoV", camera, "fov", { min: 0, max: (Math.PI / 3) * 2 }, () => {
+  camera.focalLength = undefined;
+});
+gui.addParam(
+  "FocalLength",
+  State,
+  "focalLength",
+  { min: 10, max: 200 },
+  (value) => {
+    camera.focalLength = value;
+  },
+);
 gui.addParam("F-Stop", cameraEntity.camera, "fStop", { min: 1.2, max: 32 });
 gui.addParam("Shutter Speed (s)", cameraEntity.camera, "shutterSpeed", {
   min: 1 / 8000,
@@ -1160,8 +1168,6 @@ const onResize = () => {
   const width = window.innerWidth;
   const height = window.innerHeight;
   gpu.resize(ctx, width, height, pixelRatio);
-  cameraEntity.camera.aspect = width / height;
-  cameraEntity.camera.dirty = true;
 };
 window.addEventListener("resize", onResize);
 onResize();

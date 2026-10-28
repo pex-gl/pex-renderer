@@ -39,7 +39,7 @@ for (let i = 0; i < 3; i++) {
       ],
     }),
     postProcessing: components.postProcessing(),
-    orbiter: components.orbiter({ element: ctx.canvas }),
+    controls: components.controls.orbit(),
   });
   world.add(cameraEntity);
 }

@@ -36,7 +36,7 @@ renderPassGraphViz.init(ctx, renderEngine.frameGraph);
 const cameraEntity = createEntity({
   transform: components.transform({ position: [3, 1.5, 3] }),
   camera: components.camera(),
-  orbiter: components.orbiter({ element: ctx.canvas }),
+  controls: components.controls.orbit(),
   // postProcessing: State.msaa
   //   ? components.postProcessing({
   //       msaa: components.postProcessing.msaa(),
@@ -382,8 +382,6 @@ window.addEventListener("resize", () => {
   const width = window.innerWidth;
   const height = window.innerHeight;
   ctx.set({ pixelRatio, width, height });
-  cameraEntity.camera.aspect = width / height;
-  cameraEntity.camera.dirty = true;
 });
 
 window.addEventListener("keydown", ({ key }) => {

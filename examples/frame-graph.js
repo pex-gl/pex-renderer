@@ -90,7 +90,7 @@ renderPassGraphViz.init(ctx, frameGraph);
 const cameraEntity = createEntity({
   transform: components.transform({ position: [0, 1.2, 4] }),
   camera: components.camera({ fov: Math.PI / 4, near: 0.1, far: 30 }),
-  orbiter: components.orbiter({ element: ctx.canvas, target: [0, 0.5, 0] }),
+  controls: components.controls.orbit({ target: [0, 0.5, 0] }),
   postProcessing: components.postProcessing(),
 });
 world.add(cameraEntity);
@@ -435,8 +435,6 @@ window.addEventListener("resize", () => {
   const width = window.innerWidth;
   const height = window.innerHeight;
   gpu.resize(ctx, window.innerWidth, window.innerHeight, pixelRatio);
-  cameraEntity.camera.aspect = width / height;
-  cameraEntity.camera.dirty = true;
   // The history is half the viewport, so it is reallocated and holds nothing.
   ssr.invalidate();
 });

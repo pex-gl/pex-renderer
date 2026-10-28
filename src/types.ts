@@ -11,6 +11,22 @@ import type {
   VertexAttribute,
 } from "pex-gpu";
 import type { AABB } from "pex-geom";
+import type {
+  CameraView,
+  FirstPersonControls,
+  FirstPersonControlsOptions,
+  FlyControls,
+  FlyControlsOptions,
+  FrustumBounds,
+  KeyboardManagerOptions,
+  MapControls,
+  OrbitControls,
+  OrbitControlsOptions,
+  PointerManagerOptions,
+  SensorFit,
+  TrackballControls,
+  TrackballControlsOptions,
+} from "cameras";
 import type { Vec2, Vec3, Quat, Mat3, Mat4, TypedArray } from "pex-math";
 import type { FrameGraph, ResourceHandle } from "./frame-graph/index.js";
 import type createFullscreenGeometry from "./fullscreen-geometry.js";
@@ -112,13 +128,13 @@ export interface Entity {
   skeletonHelper?: SkeletonHelperComponentOptions;
   cameraHelper?: CameraHelperComponentOptions;
   camera?: CameraComponentOptions;
+  controls?: ControlsComponentOptions;
   directionalLight?: DirectionalLightComponentOptions;
   geometry?: GeometryComponentOptions;
   gridHelper?: GridHelperComponentOptions;
   lightHelper?: LightHelperComponentOptions;
   material?: MaterialComponentOptions;
   morph?: MorphComponentOptions;
-  orbiter?: OrbiterComponentOptions;
   pointLight?: PointLightComponentOptions;
   postProcessing?: PostProcessingComponentOptions;
   reflectionProbe?: ReflectionProbeComponentOptions;
@@ -133,6 +149,8 @@ export interface Entity {
   _transform?: TransformCache;
   /** Cached geometry GPU resources, added by the geometry system. */
   _geometry?: GeometryCache;
+  /** Controller instance declared by `controls`, added by the controls system. */
+  _controls?: Controls;
   /** Baked IBL GPU resources, added by the reflection-probe system. */
   _reflectionProbe?: ReflectionProbeCache;
   /** Last frame's shader hook uniforms, added by the renderer base. */
@@ -318,22 +336,25 @@ export interface SkeletonHelperComponentOptions {
 export interface CameraHelperComponentOptions {
   color?: Color;
 }
-export interface CameraView {
-  totalSize?: Vec2;
-  size?: Vec2;
-  offset?: Vec2;
-}
 export interface CameraComponentOptions {
   projection?: "perspective" | "orthographic";
   near?: number;
   far?: number;
-  aspect?: number;
+  /** Magnification: values above 1 zoom in. */
+  zoom?: number;
   backgroundColor?: Color;
-  viewMatrix?: Mat4;
-  inverseViewMatrix?: Mat4;
   culling?: boolean;
-  /** Focal length of the camera lens [10mm - 200mm] in mm. */
+  /** Vertical field of view in radians. Derived when `focalLength` is set. */
+  fov?: number;
+  /** Focal length of the camera lens in mm. Leave undefined to drive `fov`. */
   focalLength?: number;
+  /** Orthographic half of the vertical extent at zoom 1. */
+  size?: number;
+  /**
+   * Orthographic frustum `[left, right, bottom, top]` at zoom 1, used as is:
+   * overrides `size` and the aspect ratio.
+   */
+  bounds?: FrustumBounds;
   /**
    * Ratio of camera lens opening, f-number, f/N, aperture [1.2 - 32] in mm.
    *
@@ -359,24 +380,26 @@ export interface CameraComponentOptions {
    */
   exposureCompensation?: number;
   /** Physical camera sensor or film size [sensorWidth, sensorHeight] in mm. */
-  sensorSize?: Vec2;
+  sensorSize?: [number, number];
   /** Matching of camera frame to sensor frame. */
-  sensorFit?: "vertical" | "horizontal" | "fit" | "overscan" | "fill";
+  sensorFit?: SensorFit;
+  /** Sub-rectangle of a larger view, for tiled or multi-screen rendering. */
   view?: CameraView;
-  fov?: number;
-  left?: number;
-  right?: number;
-  bottom?: number;
-  top?: number;
-  zoom?: number;
   /** Region of the target this camera renders into. */
   viewport?: Viewport;
-  // Runtime, added/derived by the camera system.
-  projectionMatrix?: Mat4;
-  frustum?: Float32Array;
-  actualSensorHeight?: number;
-  dirty?: boolean;
   // Runtime, maintained every frame by the camera system.
+  /** From `view.totalSize`, else from the viewport. */
+  aspect?: number;
+  projectionMatrix?: Mat4;
+  viewMatrix?: Mat4;
+  inverseViewMatrix?: Mat4;
+  frustum?: Float32Array;
+  /** Sensor height spanning the viewport height after `sensorFit`, in mm. */
+  _sensorHeight?: number;
+  /** Focal length matching the zoomed field of view on `_sensorHeight`, in mm. */
+  _focalLength?: number;
+  /** Inverse of `projectionMatrix`, for reconstructing view position. */
+  _inverseProjectionMatrix?: Mat4;
   /**
    * Sub-pixel NDC offset for this frame while temporal antialiasing is on, zero
    * otherwise. Applied after projection, so `projectionMatrix` stays unjittered
@@ -698,15 +721,63 @@ export interface MorphComponentOptions {
   current?: Record<string, MorphAttribute>;
   weights?: number[];
 }
-export interface OrbiterComponentOptions {
+interface ControlsInputOptions {
+  /** Element listened to for pointer input. Defaults to the canvas. */
   element?: HTMLElement;
-  target?: Vec3;
-  lat?: number;
-  lon?: number;
-  distance?: number;
-  /** Runtime pex-cam orbiter instance. */
-  _orbiter?: any;
+  /**
+   * Pointer manager options. `interactiveArea` defaults to the camera
+   * viewport.
+   */
+  pointer?: PointerManagerOptions;
+  /**
+   * Keyboard manager options, listening on `window`. Set by the first person
+   * and fly factories; `null` disables the keys.
+   */
+  keyboard?: KeyboardManagerOptions | null;
 }
+type ControlsComponent<Controller, Options> = {
+  /** Instantiated by the controls system. */
+  controller: Controller;
+} & Omit<Options, "lens"> &
+  ControlsInputOptions;
+export type OrbitControlsComponentOptions = ControlsComponent<
+  typeof OrbitControls,
+  OrbitControlsOptions
+>;
+export type MapControlsComponentOptions = ControlsComponent<
+  typeof MapControls,
+  OrbitControlsOptions
+>;
+export type TrackballControlsComponentOptions = ControlsComponent<
+  typeof TrackballControls,
+  TrackballControlsOptions
+>;
+export type FirstPersonControlsComponentOptions = ControlsComponent<
+  typeof FirstPersonControls,
+  FirstPersonControlsOptions
+>;
+export type FlyControlsComponentOptions = ControlsComponent<
+  typeof FlyControls,
+  FlyControlsOptions
+>;
+/**
+ * Declares a controller for a camera entity. `position` defaults to the
+ * transform position; `controller`, `position`, `target`, `up`, `bindings`
+ * and the input options are read when the controller is created, other
+ * settings whenever they change.
+ */
+export type ControlsComponentOptions =
+  | OrbitControlsComponentOptions
+  | MapControlsComponentOptions
+  | TrackballControlsComponentOptions
+  | FirstPersonControlsComponentOptions
+  | FlyControlsComponentOptions;
+export type Controls =
+  | OrbitControls
+  | MapControls
+  | TrackballControls
+  | FirstPersonControls
+  | FlyControls;
 export interface PointLightComponentOptions extends LightShadowInternals {
   color?: Color;
   /**
