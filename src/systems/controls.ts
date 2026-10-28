@@ -263,14 +263,16 @@ export default ({ ctx }: SystemOptions) => ({
     }
   },
   dispose(entities?: Entity[]) {
-    for (const entity of entities ?? []) {
-      const cached = this.cache[entity.id];
-      if (!cached) continue;
-      this.disposeControls(cached);
-      delete this.cache[entity.id];
-      delete entity._controls;
-    }
-    if (!entities) {
+    if (entities) {
+      for (let i = 0; i < entities.length; i++) {
+        const entity = entities[i]!;
+        const cached = this.cache[entity.id];
+        if (!cached) continue;
+        this.disposeControls(cached);
+        delete this.cache[entity.id];
+        delete entity._controls;
+      }
+    } else {
       for (const cached of Object.values(this.cache)) {
         this.disposeControls(cached);
       }
