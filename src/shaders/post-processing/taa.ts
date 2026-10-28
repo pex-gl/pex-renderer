@@ -23,6 +23,7 @@ ${postProcessingStruct}
 
 ${SHADERS.math.max3}
 ${SHADERS.luminance}
+${SHADERS.depthRead}
 ${SHADERS.taa}
 ${SHADERS.sharpen}
 
@@ -73,6 +74,7 @@ export const taaDepthHistoryShader = (): string => {
 ${postProcessingStruct}
 
 ${SHADERS.luminance}
+${SHADERS.depthRead}
 ${SHADERS.taa}
 
 @group(0) @binding(${alloc.next()}) var<uniform> uTAA: TAAParams;
@@ -92,11 +94,8 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
     0
   );
 
-  // Against this frame's view, which is what the next frame will call previous.
-  let ndc = vec3f(input.texCoord0.x * 2.0 - 1.0, 1.0 - input.texCoord0.y * 2.0, depth);
-  var world = uTAA.inverseViewProjectionMatrix * vec4f(ndc, 1.0);
-
-  return vec4f(1.0 / world.w, 0.0, 0.0, 1.0);
+  // In this frame's view, which is what the next frame will call previous.
+  return vec4f(taaViewDepth(depth, uTAA), 0.0, 0.0, 1.0);
 }
 `);
 };
@@ -131,6 +130,7 @@ export const taaShader = (defines: Set<string> = new Set()): string => {
 ${postProcessingStruct}
 
 ${SHADERS.luminance}
+${SHADERS.depthRead}
 ${SHADERS.taa}
 
 @group(0) @binding(${alloc.next()}) var<uniform> uTAA: TAAParams;

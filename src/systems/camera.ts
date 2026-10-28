@@ -118,9 +118,11 @@ function updateCameraJitter(
 }
 
 /**
- * The unjittered view-projection, its inverse, and the one from last frame —
+ * The unjittered view-projection, its inverse, and the ones from last frame —
  * what anything reprojecting between frames needs, derived here because this is
  * the only place that knows when the view and projection matrices are final.
+ * The previous view matrix is captured by `updateCameraView`, before it is
+ * overwritten.
  *
  * Maintained for every camera rather than only when something reads it: it is
  * two multiplies and an inverse, and the alternative is the camera system
@@ -148,6 +150,7 @@ function updateCameraViewProjection(camera: ResolvedCamera) {
   if (!camera._hasPreviousViewProjectionMatrix || camera._temporalReset) {
     camera._hasPreviousViewProjectionMatrix = true;
     mat4.set(previous, viewProjection);
+    mat4.set(camera._previousViewMatrix!, camera.viewMatrix);
   }
 
   mat4.set(inverse, viewProjection);
@@ -235,8 +238,15 @@ function updateCameraProjection(camera: ResolvedCamera) {
   );
 }
 
-/** World transform, so a camera parented to another entity follows it. */
+/**
+ * World transform, so a camera parented to another entity follows it. Last
+ * frame's view is kept for the view depth temporal effects compare against.
+ */
 function updateCameraView(camera: ResolvedCamera, entity: Entity) {
+  mat4.set(
+    (camera._previousViewMatrix ??= mat4.create()),
+    camera.viewMatrix,
+  );
   mat4.set(camera.inverseViewMatrix, entity._transform!.modelMatrix);
   mat4.set(camera.viewMatrix, camera.inverseViewMatrix);
   mat4.invert(camera.viewMatrix);
@@ -250,7 +260,7 @@ function updateCameraView(camera: ResolvedCamera, entity: Entity) {
  * - "aspect", "projectionMatrix", "viewMatrix", "inverseViewMatrix" and
  *   "frustum" to camera components
  * - "_sensorHeight", "_focalLength", "_inverseProjectionMatrix",
- *   "_viewProjectionMatrix",
+ *   "_viewProjectionMatrix", "_previousViewMatrix",
  *   "_inverseViewProjectionMatrix", "_previousViewProjectionMatrix",
  *   "_jitter", "_temporalReset" and "_exposure" to camera components
  */

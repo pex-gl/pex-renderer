@@ -419,6 +419,8 @@ export interface CameraComponentOptions {
   /** `projectionMatrix * viewMatrix`, this frame and last. Never jittered. */
   _viewProjectionMatrix?: Mat4;
   _previousViewProjectionMatrix?: Mat4;
+  /** `viewMatrix` last frame, for view depth across frames. */
+  _previousViewMatrix?: Mat4;
   /** Cleared once a real view-projection has been seeded into the previous. */
   _hasPreviousViewProjectionMatrix?: boolean;
   /** Inverse of `_viewProjectionMatrix`, for reconstructing world position. */

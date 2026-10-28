@@ -298,6 +298,8 @@ const dof: PostProcessingEffect = {
           uTAA: {
             inverseViewProjectionMatrix: camera._inverseViewProjectionMatrix!,
             previousViewProjectionMatrix: camera._previousViewProjectionMatrix!,
+            inverseProjectionMatrix: camera._inverseProjectionMatrix!,
+            previousViewMatrix: camera._previousViewMatrix!,
             texelSize: [1 / width, 1 / height],
             // Undoes the raster's sub-pixel offset when reading what the scene
             // pass wrote. NDC to UV, hence the sign flip on Y.

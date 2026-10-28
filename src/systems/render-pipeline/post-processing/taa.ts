@@ -93,8 +93,8 @@ const taa: PostProcessingEffect = {
             label: `taa.depthHistory.${viewId}`,
             width,
             height,
-            // Half floats reach past any sensible far plane and hold three
-            // decimal digits doing it, where the test tolerates whole percents.
+            // Half floats hold three decimal digits, where the test tolerates
+            // whole percents. Their range is the taa chunk's to clamp to.
             format: "r16float" as GPUTextureFormat,
             persistent: true,
           })
@@ -134,6 +134,8 @@ const taa: PostProcessingEffect = {
     const params = {
       inverseViewProjectionMatrix: camera._inverseViewProjectionMatrix!,
       previousViewProjectionMatrix: camera._previousViewProjectionMatrix,
+      inverseProjectionMatrix: camera._inverseProjectionMatrix!,
+      previousViewMatrix: camera._previousViewMatrix!,
       texelSize: [1 / width, 1 / height],
       depthOffset,
       blendFactor: component.blendFactor ?? 0.1,
