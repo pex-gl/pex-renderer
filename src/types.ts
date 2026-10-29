@@ -734,6 +734,13 @@ export interface MorphComponentOptions {
   current?: Record<string, MorphAttribute>;
   weights?: number[];
 }
+interface ControlsKeyboardOptions extends KeyboardManagerOptions {
+  /**
+   * Listened to for keys. An element only hears them while focused, so it
+   * needs a `tabindex`. Defaults to `window`.
+   */
+  target?: EventTarget;
+}
 interface ControlsInputOptions {
   /** Element listened to for pointer input. Defaults to the canvas. */
   element?: HTMLElement;
@@ -743,10 +750,10 @@ interface ControlsInputOptions {
    */
   pointer?: PointerManagerOptions;
   /**
-   * Keyboard manager options, listening on `window`. Set by the first person
-   * and fly factories; `null` disables the keys.
+   * Keyboard manager options. Set by the first person and fly factories;
+   * `null` disables the keys.
    */
-  keyboard?: KeyboardManagerOptions | null;
+  keyboard?: ControlsKeyboardOptions | null;
 }
 type ControlsComponent<Controller, Options> = {
   /** Instantiated by the controls system. */

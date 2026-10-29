@@ -161,9 +161,11 @@ export default ({ ctx }: SystemOptions) => ({
       element ?? (ctx.canvas as HTMLElement),
       pointer,
     ).enable();
-    const keyboardManager = keyboard
-      ? new KeyboardManager(window, keyboard).enable()
-      : null;
+    let keyboardManager: KeyboardManager | null = null;
+    if (keyboard) {
+      const { target = window, ...keyboardOptions } = keyboard;
+      keyboardManager = new KeyboardManager(target, keyboardOptions).enable();
+    }
     controls.attach(pointerManager, keyboardManager);
 
     return {

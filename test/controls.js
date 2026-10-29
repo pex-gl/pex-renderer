@@ -31,7 +31,7 @@ const createElement = () =>
       removeProperty() {},
     },
   });
-// KeyboardManager listens on it for first person and fly controls.
+// KeyboardManager listens on it for first person and fly controls by default.
 globalThis.window = new EventTarget();
 
 const ctx = { width: 800, height: 600, canvas: createElement() };
@@ -178,6 +178,22 @@ const createCameraEntity = (controls, camera) => ({
     round([0, Math.SQRT1_2, 0, Math.SQRT1_2]),
   );
   check("listens to the keyboard", !!entity._controls.keyboard, true);
+  check(
+    "on window by default",
+    entity._controls.keyboard.target === window,
+    true,
+  );
+
+  const target = createElement();
+  const targeted = createCameraEntity(
+    components.controls.fly({ keyboard: { target } }),
+  );
+  system.update([targeted], { deltaTime: dt });
+  check(
+    "on the keyboard target",
+    targeted._controls.keyboard.target === target,
+    true,
+  );
 
   const keyless = createCameraEntity(
     components.controls.fly({ keyboard: null }),
