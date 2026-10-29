@@ -347,8 +347,8 @@ export interface CameraComponentOptions {
   /**
    * `Infinity` for an infinite perspective projection, as glTF asks for when
    * `zfar` is undefined: nothing is clipped, the background reads as infinitely
-   * far, and culling keeps no far plane. Finite under an orthographic projection,
-   * whose depth is linear between near and far.
+   * far, and culling keeps no far plane. Finite under an orthographic
+   * projection, whose depth is linear between near and far.
    */
   far?: number;
   /** Magnification: values above 1 zoom in. */
@@ -736,22 +736,19 @@ export interface MorphComponentOptions {
 }
 interface ControlsKeyboardOptions extends KeyboardManagerOptions {
   /**
-   * Listened to for keys. An element only hears them while focused, so it
-   * needs a `tabindex`. Defaults to `window`.
+   * Listened to for keys. An element only hears them while focused, so it needs
+   * a `tabindex`. Defaults to `window`.
    */
   target?: EventTarget;
 }
 interface ControlsInputOptions {
   /** Element listened to for pointer input. Defaults to the canvas. */
   element?: HTMLElement;
-  /**
-   * Pointer manager options. `interactiveArea` defaults to the camera
-   * viewport.
-   */
+  /** Pointer manager options. `interactiveArea` defaults to the camera viewport. */
   pointer?: PointerManagerOptions;
   /**
-   * Keyboard manager options. Set by the first person and fly factories;
-   * `null` disables the keys.
+   * Keyboard manager options. Set by the first person and fly factories; `null`
+   * disables the keys.
    */
   keyboard?: ControlsKeyboardOptions | null;
 }
@@ -782,9 +779,9 @@ export type FlyControlsComponentOptions = ControlsComponent<
 >;
 /**
  * Declares a controller for a camera entity. `position` defaults to the
- * transform position; `controller`, `position`, `target`, `up`, `bindings`
- * and the input options are read when the controller is created, other
- * settings whenever they change.
+ * transform position; `controller`, `position`, `target`, `up`, `bindings` and
+ * the input options are read when the controller is created, other settings
+ * whenever they change.
  */
 export type ControlsComponentOptions =
   | OrbitControlsComponentOptions

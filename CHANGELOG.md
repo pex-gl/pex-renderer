@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+# [6.0.0-alpha.4](https://github.com/pex-gl/pex-renderer/compare/v6.0.0-alpha.3...v6.0.0-alpha.4) (2026-10-29)
+
+### Bug Fixes
+
+* align controls system dispose with sibling systems ([bddd9ea](https://github.com/pex-gl/pex-renderer/commit/bddd9ea09df4fd185f5332a399583dc8c5d5b49a))
+* read orthographic depth in post-processing ([0b4cee4](https://github.com/pex-gl/pex-renderer/commit/0b4cee4c9320081bf196b38c9258a1f1c229807d))
+
+### Features
+
+* add camera _previousViewMatrix for orthographic TAA disocclusion ([5f8987a](https://github.com/pex-gl/pex-renderer/commit/5f8987ab27d6897c8086c423485d01f3f3b8e44b))
+* add fog maxOpacity and cutoffDistance ([707784f](https://github.com/pex-gl/pex-renderer/commit/707784f88c168f375aa5ce0aed997504b94ddfec))
+* **controls:** add explicit keyboard target ([dc07f27](https://github.com/pex-gl/pex-renderer/commit/dc07f27d3cfc053d99ce87dc88057c7a58840cab))
+* support infinite camera far ([2910a84](https://github.com/pex-gl/pex-renderer/commit/2910a84611aeac921d5d2230074fd4dae06eea8f))
+* upgrade camera system to cameras + add control system and components ([b078595](https://github.com/pex-gl/pex-renderer/commit/b078595ec45c01b90dba587836033ca239048784))
+
 # [6.0.0-alpha.3](https://github.com/pex-gl/pex-renderer/compare/v6.0.0-alpha.2...v6.0.0-alpha.3) (2026-10-16)
 
 ### Features

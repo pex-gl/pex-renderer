@@ -1,6 +1,6 @@
 {
   "name": "pex-renderer",
-  "version": "6.0.0-alpha.3",
+  "version": "6.0.0-alpha.4",
   "description": "Physically Based Renderer (PBR) and scene graph designed as ECS for PEX: define entities to be rendered as collections of components with their update orchestrated by systems.",
   "keywords": [
     "pex",
@@ -39,6 +39,9 @@
     "release:alpha": "snowdev release --release-as minor --prerelease alpha",
     "test": "node --test \"test/*.js\""
   },
+  "allowScripts": {
+    "webgpu@0.6.2": true
+  },
   "dependencies": {
     "cameras": "^4.0.0-alpha.1",
     "geom-builder": "^3.1.0",
@@ -73,9 +76,6 @@
   "engines": {
     "node": ">=26.0.0",
     "snowdev": ">=3.0.0-alpha.3"
-  },
-  "allowScripts": {
-    "webgpu@0.6.2": true
   },
   "snowdev": {
     "resolve": {
