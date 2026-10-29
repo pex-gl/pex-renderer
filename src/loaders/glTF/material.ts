@@ -11,8 +11,8 @@ import { resolveEmissiveStrength } from "./extensions/KHR_materials_emissive_str
 import { resolveUnlit } from "./extensions/KHR_materials_unlit.js";
 import { resolvePbrSpecularGlossiness } from "./extensions/KHR_materials_pbrSpecularGlossiness.js";
 
-import type { GpuContext } from "../../types.js";
 import type * as GLTF from "types-gltf";
+import type { GpuContext } from "../../types.js";
 import type { ResolvedGltf, ResolvedMaterial } from "./types.js";
 
 /**

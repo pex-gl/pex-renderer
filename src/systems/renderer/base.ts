@@ -6,7 +6,6 @@ import {
   samplerName,
   uniformName,
 } from "../../shaders/wgsl.js";
-import type { ModelStructOptions } from "../../shaders/wgsl.js";
 import { NAMESPACE, definesKey } from "../../utils.js";
 
 import type {
@@ -17,6 +16,7 @@ import type {
   VertexAttribute,
 } from "pex-gpu";
 import type { Mat2x3, Mat3, Mat4 } from "pex-math";
+import type { ModelStructOptions } from "../../shaders/wgsl.js";
 import type {
   BlendMode,
   MaterialComponentOptions,
@@ -131,17 +131,12 @@ export function isFieldActive(
   runtimeDefines: Set<string>,
   defines: Set<string>,
 ): boolean {
-  if (
-    field.runtime &&
+  return field.runtime &&
     field.requires &&
     !runtimeDefines.has(field.requires) &&
     !defines.has(field.requires)
-  ) {
-    return false;
-  }
-  return field.runtime
-    ? true
-    : defines.has(field.define ?? field.requires ?? "");
+    ? false
+    : field.runtime || defines.has(field.define ?? field.requires ?? "");
 }
 
 /**

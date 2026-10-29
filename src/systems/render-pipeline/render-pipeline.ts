@@ -1,5 +1,4 @@
 import { submit, createSampler, generateMipmaps, isGpuTexture } from "pex-gpu";
-import { vec4 } from "pex-math";
 import { toLinear } from "pex-color";
 
 import shadowMappingPipelineMethods from "./shadow-mapping.js";
@@ -33,7 +32,6 @@ const BLIT_PREMULTIPLIED_WGSL = blitShader(
   new Set(["USE_PREMULTIPLIED_ALPHA"]),
 );
 const GRAB_PASS_WGSL = grabPassShader();
-const TEMP_CLEAR_VALUE = vec4.create();
 
 /**
  * Render pipeline system
@@ -460,9 +458,11 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
 
     // An entity without a layer belongs to every view; a camera with one sees
     // only those plus its own.
-    const entitiesInView = layer
-      ? entities.filter((entity) => !entity.layer || entity.layer === layer)
-      : entities.filter((entity) => !entity.layer);
+    const entitiesInView = entities.filter(
+      layer
+        ? (entity) => !entity.layer || entity.layer === layer
+        : (entity) => !entity.layer,
+    );
 
     // Declared once per frame and shared by every camera looking at the same
     // layer, since a shadow map depends on the light and the scene only.

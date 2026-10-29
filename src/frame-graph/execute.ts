@@ -222,13 +222,19 @@ export default function execute(
     resolve(handle) as GpuBuffer;
   const resolveView = (
     handle: ResourceHandle,
-    { level, levelCount, layer, layerCount, dimension }: SubResourceView = {},
+    {
+      level = 0,
+      levelCount = 1,
+      layer = 0,
+      layerCount,
+      dimension,
+    }: SubResourceView = {},
   ) =>
     textureView(resolveTexture(handle), {
       ...(dimension && { dimension }),
-      baseMipLevel: level ?? 0,
-      mipLevelCount: levelCount ?? 1,
-      baseArrayLayer: layer ?? 0,
+      baseMipLevel: level,
+      mipLevelCount: levelCount,
+      baseArrayLayer: layer,
       ...(layerCount !== undefined && { arrayLayerCount: layerCount }),
     });
 

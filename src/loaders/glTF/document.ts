@@ -4,29 +4,28 @@ import { loadData, isBase64, decodeBase64 } from "./io.js";
 import { SUPPORTED_EXTENSIONS, isSafari } from "./common.js";
 import { getFileExtension, getDirname, isObject } from "../../utils.js";
 import { resolveImages } from "./texture.js";
-import { resolveNodeTransform, type ResolvedNodeTransform } from "./node.js";
+import { resolveNodeTransform } from "./node.js";
 import { resolveCamera } from "./camera.js";
 import { resolveLight } from "./light.js";
 import { resolveSkin } from "./skin.js";
-import {
-  resolveAnimation,
-  type ResolvedAnimationChannel,
-} from "./animation.js";
+import { resolveAnimation } from "./animation.js";
 import { resolveMesh } from "./mesh.js";
-import type { DracoOptions } from "./extensions/KHR_draco_mesh_compression.js";
 import { resolveMeshGpuInstancing } from "./extensions/EXT_mesh_gpu_instancing.js";
 import { resolveLightsImageBased } from "./extensions/EXT_lights_image_based.js";
 
-import type { GpuContext, ReflectionProbePrebakedData } from "../../types.js";
 import type * as GLTF from "types-gltf";
+import type { KHR_lights_punctual } from "types-gltf/extensions";
+import type { GpuContext, ReflectionProbePrebakedData } from "../../types.js";
 import type {
   ResolvedBuffer,
   ResolvedBufferView,
   ResolvedCamera,
   ResolvedLight,
 } from "./types.js";
-import type { KHR_lights_punctual } from "types-gltf/extensions";
+import type { DracoOptions } from "./extensions/KHR_draco_mesh_compression.js";
+import type { ResolvedAnimationChannel } from "./animation.js";
 import type { PunctualLight } from "./light.js";
+import type { ResolvedNodeTransform } from "./node.js";
 
 export interface ResolvedGltfNode {
   name: string;

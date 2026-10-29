@@ -1,8 +1,8 @@
 import { resolveAttributes } from "../mesh.js";
 
-import type { GpuContext } from "../../../types.js";
 import type * as GLTF from "types-gltf";
 import type { EXT_mesh_gpu_instancing } from "types-gltf/extensions";
+import type { GpuContext } from "../../../types.js";
 import type { ResolvedGeometry, ResolvedGltf } from "../types.js";
 
 /**

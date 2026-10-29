@@ -1,6 +1,7 @@
 import { mat4 } from "pex-math";
 import { lens, projection } from "cameras";
 import halton from "halton";
+
 import {
   NAMESPACE,
   computeFrustumPlanes,
@@ -76,7 +77,7 @@ const NO_JITTER = [0, 0];
 /**
  * SMAA T2x's two sample positions, in pixels with y up: the reference's
  *
- * @SUBSAMPLE_INDICES table. The smaa effect tells which one a frame used from
+ * `@SUBSAMPLE_INDICES` table. The smaa effect tells which one a frame used from
  * the jitter's sign, and picks the matching subsample indices.
  */
 const SMAA_T2X_JITTER_SAMPLES = [
@@ -243,10 +244,7 @@ function updateCameraProjection(camera: ResolvedCamera) {
  * frame's view is kept for the view depth temporal effects compare against.
  */
 function updateCameraView(camera: ResolvedCamera, entity: Entity) {
-  mat4.set(
-    (camera._previousViewMatrix ??= mat4.create()),
-    camera.viewMatrix,
-  );
+  mat4.set((camera._previousViewMatrix ??= mat4.create()), camera.viewMatrix);
   mat4.set(camera.inverseViewMatrix, entity._transform!.modelMatrix);
   mat4.set(camera.viewMatrix, camera.inverseViewMatrix);
   mat4.invert(camera.viewMatrix);
@@ -257,12 +255,12 @@ function updateCameraView(camera: ResolvedCamera, entity: Entity) {
  *
  * Adds:
  *
- * - "aspect", "projectionMatrix", "viewMatrix", "inverseViewMatrix" and
- *   "frustum" to camera components
+ * - "aspect", "projectionMatrix", "viewMatrix", "inverseViewMatrix" and "frustum"
+ *   to camera components
  * - "_sensorHeight", "_focalLength", "_inverseProjectionMatrix",
  *   "_viewProjectionMatrix", "_previousViewMatrix",
- *   "_inverseViewProjectionMatrix", "_previousViewProjectionMatrix",
- *   "_jitter", "_temporalReset" and "_exposure" to camera components
+ *   "_inverseViewProjectionMatrix", "_previousViewProjectionMatrix", "_jitter",
+ *   "_temporalReset" and "_exposure" to camera components
  */
 export default ({ ctx }: SystemOptions) => ({
   type: "camera-system",

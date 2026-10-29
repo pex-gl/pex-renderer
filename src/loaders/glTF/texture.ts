@@ -4,13 +4,13 @@ import { transcodeKtx2 } from "pex-loaders";
 
 import { isBase64 } from "./io.js";
 
-import type { GpuContext, MaterialTexture } from "../../types.js";
 import type * as GLTF from "types-gltf";
 import type {
   EXT_texture_webp,
   KHR_texture_basisu,
   KHR_texture_transform,
 } from "types-gltf/extensions";
+import type { GpuContext, MaterialTexture } from "../../types.js";
 import type { ResolvedGltf, ResolvedImage } from "./types.js";
 
 // https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/Constants#Textures

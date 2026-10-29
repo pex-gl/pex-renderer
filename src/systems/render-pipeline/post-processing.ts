@@ -1,4 +1,3 @@
-import type { ComputePipeline, RenderPipeline } from "pex-gpu";
 import { submit } from "pex-gpu";
 
 import {
@@ -8,6 +7,7 @@ import {
   mapValues,
 } from "../../utils.js";
 import { isTextureDescriptor } from "../../frame-graph/state.js";
+import type { ComputePipeline, RenderPipeline } from "pex-gpu";
 
 import type {
   Entity,

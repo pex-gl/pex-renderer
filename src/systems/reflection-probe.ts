@@ -1,5 +1,4 @@
 import { mat3, vec3 } from "pex-math";
-import type { Mat4, Vec3 } from "pex-math";
 import {
   submit,
   createTexture,
@@ -8,13 +7,6 @@ import {
   copyExternalImage,
 } from "pex-gpu";
 
-import type {
-  Entity,
-  EntityId,
-  GpuTexture,
-  ReflectionProbePrebakedData,
-  SystemOptions,
-} from "../types.js";
 import { getEnvironmentRotation, getSkyboxEnvMap } from "../utils.js";
 import {
   ROUGHNESS_LEVELS,
@@ -25,6 +17,15 @@ import {
   reflectionProbeDownsampleShader,
   reflectionProbePrefilterShader,
 } from "../shaders/reflection-probe.js";
+
+import type { Mat4, Vec3 } from "pex-math";
+import type {
+  Entity,
+  EntityId,
+  GpuTexture,
+  ReflectionProbePrebakedData,
+  SystemOptions,
+} from "../types.js";
 
 // Base cube face size; the prefiltered roughness levels are its mip chain.
 const CUBEMAP_SIZE = 256;

@@ -1,12 +1,12 @@
 import loadGltfDocument from "./document.js";
 import buildGltfScenes from "./pex-renderer.js";
 
+import type { LoadGltfDocumentOptions } from "./document.js";
+import type { GltfScene } from "./pex-renderer.js";
+
 export { default as loadGltfDocument } from "./document.js";
 export type { GltfDocument, LoadGltfDocumentOptions } from "./document.js";
 export type { GltfScene } from "./pex-renderer.js";
-
-import type { LoadGltfDocumentOptions } from "./document.js";
-import type { GltfScene } from "./pex-renderer.js";
 
 /**
  * Loads a glTF/GLB file and converts it into pex-renderer entities, one

@@ -1,8 +1,8 @@
 import { resolveTexture } from "../texture.js";
 
-import type { GpuContext } from "../../../types.js";
 import type * as GLTF from "types-gltf";
 import type { KHR_materials_sheen } from "types-gltf/extensions";
+import type { GpuContext } from "../../../types.js";
 import type { ResolvedGltf, ResolvedMaterial } from "../types.js";
 
 type Sheen = Pick<

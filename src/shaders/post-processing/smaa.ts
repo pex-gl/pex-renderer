@@ -1,4 +1,5 @@
 import { smaa as SMAA } from "pex-shaders";
+
 import {
   bindingDeclaration,
   createBindingAllocator,

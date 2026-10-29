@@ -1,6 +1,5 @@
 import { mat4 } from "pex-math";
 
-import type { Mat4 } from "pex-math";
 import { fromLinear } from "pex-color";
 
 import { components, entity as createEntity, systems } from "../../index.js";
@@ -10,6 +9,7 @@ import {
   pointIntensityToPower,
   spotIntensityToPower,
 } from "../../utils.js";
+import type { Mat4 } from "pex-math";
 
 import type { GltfDocument, ResolvedGltfNode } from "./document.js";
 import type {

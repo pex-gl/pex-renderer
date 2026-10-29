@@ -1,6 +1,5 @@
 import { shaders as SHADERS } from "pex-shaders";
 
-import type { FeatureField } from "../systems/renderer/base.js";
 import {
   bindingDeclaration,
   createBindingAllocator,
@@ -19,6 +18,7 @@ import {
   hookMembers,
   hookBindingsDeclaration,
 } from "./wgsl.js";
+import type { FeatureField } from "../systems/renderer/base.js";
 import type { PipelineShaderOptions } from "../types.js";
 
 const VERTEX_DEFINE = {

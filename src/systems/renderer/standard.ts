@@ -1,5 +1,6 @@
 import { mat3, mat4 } from "pex-math";
 import { submit, createTexture, createSampler } from "pex-gpu";
+
 import {
   standardShader,
   STANDARD_MATERIAL_COMMON_FIELDS,
@@ -17,14 +18,14 @@ import {
 import { errorShader } from "../../shaders/error.js";
 
 import createBaseSystem, { outputsKey } from "./base.js";
-import type { FeatureField } from "./base.js";
 import { samplerName, uniformName } from "../../shaders/wgsl.js";
 import { LIGHT_TYPES } from "../../shaders/light.js";
 import { NAMESPACE, TEMP_MAT4, definesKey, hooksKey } from "../../utils.js";
 
 import type { GpuTexture, RenderPipeline, Uniforms } from "pex-gpu";
-import type { LightType } from "../../shaders/light.js";
 import type { Mat4 } from "pex-math";
+import type { LightType } from "../../shaders/light.js";
+import type { FeatureField } from "./base.js";
 import type {
   PipelineShaderOptions,
   Entity,

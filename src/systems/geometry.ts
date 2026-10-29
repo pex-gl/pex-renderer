@@ -1,6 +1,7 @@
 import { aabb } from "pex-geom";
 import { vec3 } from "pex-math";
 import { createBuffer, updateBuffer, isGpuBuffer } from "pex-gpu";
+
 import { NAMESPACE, TEMP_AABB } from "../utils.js";
 
 import type { GpuBuffer, GpuContext, VertexAttribute } from "pex-gpu";

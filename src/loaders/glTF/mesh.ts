@@ -8,14 +8,12 @@ import {
   WEBGL_TYPED_ARRAY_BY_COMPONENT_TYPES,
   normalizeData,
 } from "./common.js";
-import {
-  resolveDracoPrimitive,
-  type DracoOptions,
-} from "./extensions/KHR_draco_mesh_compression.js";
+import { resolveDracoPrimitive } from "./extensions/KHR_draco_mesh_compression.js";
 import { resolveMaterial } from "./material.js";
 
-import type { GpuContext, MorphAttribute } from "../../types.js";
 import type * as GLTF from "types-gltf";
+import type { DracoOptions } from "./extensions/KHR_draco_mesh_compression.js";
+import type { GpuContext, MorphAttribute } from "../../types.js";
 import type {
   ResolvedGeometry,
   ResolvedGltf,

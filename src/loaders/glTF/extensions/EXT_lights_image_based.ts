@@ -1,5 +1,5 @@
-import type { ReflectionProbePrebakedData } from "../../../types.js";
 import type * as GLTF from "types-gltf";
+import type { ReflectionProbePrebakedData } from "../../../types.js";
 import type { ResolvedGltf } from "../types.js";
 
 interface ImageBasedLight {

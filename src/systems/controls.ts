@@ -163,7 +163,7 @@ export default ({ ctx }: SystemOptions) => ({
     ).enable();
     let keyboardManager: KeyboardManager | null = null;
     if (keyboard) {
-      const { target = window, ...keyboardOptions } = keyboard;
+      const { target = globalThis, ...keyboardOptions } = keyboard;
       keyboardManager = new KeyboardManager(target, keyboardOptions).enable();
     }
     controls.attach(pointerManager, keyboardManager);
@@ -188,8 +188,8 @@ export default ({ ctx }: SystemOptions) => ({
     viewportArea(cached.pointer.interactiveArea, camera, ctx.width, ctx.height);
   },
   /**
-   * Resync the controller to a camera edited outside of it: transform
-   * position and rotation, or zoom.
+   * Resync the controller to a camera edited outside of it: transform position
+   * and rotation, or zoom.
    */
   syncExternalEdits(
     cached: ControlsCache,

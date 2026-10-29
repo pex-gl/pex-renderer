@@ -1,7 +1,7 @@
 import { resolveTexture } from "../texture.js";
 
-import type { GpuContext } from "../../../types.js";
 import type * as GLTF from "types-gltf";
+import type { GpuContext } from "../../../types.js";
 import type { ResolvedGltf, ResolvedMaterial } from "../types.js";
 
 interface DiffuseTransmissionExtension {

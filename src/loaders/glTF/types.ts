@@ -1,12 +1,13 @@
 import type * as GLTF from "types-gltf";
+import type { transcodeKtx2 } from "pex-loaders";
 import type {
   GpuBuffer,
   GpuTexture,
   MaterialTexture,
   MorphAttribute,
 } from "../../types.js";
+
 // pex-loaders re-exports the function but not its result type.
-import type { transcodeKtx2 } from "pex-loaders";
 
 type Ktx2Result = Awaited<ReturnType<typeof transcodeKtx2>>;
 
