@@ -122,8 +122,8 @@ export const STANDARD_MATERIAL_LIT_FIELDS: readonly FeatureField[] = [
   { key: "metallicRoughnessTexture", requires: MATERIAL_DEFINE.metallicRoughnessWorkflow, define: MATERIAL_DEFINE.metallicRoughnessTexture, texture: true },
   { key: "metallicTexture", requires: MATERIAL_DEFINE.metallicRoughnessWorkflow, excludes: MATERIAL_DEFINE.metallicRoughnessTexture, define: MATERIAL_DEFINE.metallicTexture, texture: true },
   { key: "roughnessTexture", requires: MATERIAL_DEFINE.metallicRoughnessWorkflow, excludes: MATERIAL_DEFINE.metallicRoughnessTexture, define: MATERIAL_DEFINE.roughnessTexture, texture: true },
-  { key: "metallic", requires: MATERIAL_DEFINE.metallicRoughnessWorkflow, wgslType: "f32", default: 1 },
-  { key: "roughness", requires: MATERIAL_DEFINE.metallicRoughnessWorkflow, wgslType: "f32", default: 1 },
+  { key: "metallic", requires: MATERIAL_DEFINE.metallicRoughnessWorkflow, wgslType: "f32", default: 0 },
+  { key: "roughness", requires: MATERIAL_DEFINE.metallicRoughnessWorkflow, wgslType: "f32", default: 0.5 },
   { key: "ior", requires: MATERIAL_DEFINE.metallicRoughnessWorkflow, wgslType: "f32", default: 1.5 },
 
   // OR-activated by either field sharing MATERIAL_DEFINE.specular.

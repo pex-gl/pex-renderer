@@ -26,8 +26,8 @@ export default (options?: MaterialComponentOptions) => {
     // Display referred by default: 0 undoes the camera's exposure, which is
     // what keeps emissiveStrength unitless.
     emissiveExposure: 0,
-    metallic: 1,
-    roughness: 1,
+    metallic: 0,
+    roughness: 0.5,
     ior: 1.5,
     normalTextureScale: 1,
     occlusionTextureStrength: 1,
