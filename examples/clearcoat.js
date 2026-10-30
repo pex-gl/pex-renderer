@@ -25,10 +25,14 @@ const renderPassGraphViz = getRenderPassGraphViz();
 renderPassGraphViz.init(ctx, renderEngine.frameGraph);
 
 // Entities
+let controlledCamera;
+
 for (let i = 0; i < 3; i++) {
   const cameraEntity = createEntity({
     layer: `camera-${i + 1}`,
-    transform: components.transform({ position: [0.5, 0.5, 2] }),
+    transform: controlledCamera
+      ? components.transform({ parent: controlledCamera.transform })
+      : components.transform({ position: [0.5, 0.5, 2] }),
     camera: components.camera({
       fov: Math.PI / 3,
       viewport: [
@@ -39,9 +43,16 @@ for (let i = 0; i < 3; i++) {
       ],
     }),
     postProcessing: components.postProcessing(),
-    controls: components.controls.orbit(),
+    ...(controlledCamera
+      ? {}
+      : {
+          controls: components.controls.orbit({
+            pointer: { interactiveArea: [0, 0, 1, 1] },
+          }),
+        }),
   });
   world.add(cameraEntity);
+  controlledCamera ??= cameraEntity;
 }
 
 const skyEntity = createEntity({

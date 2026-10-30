@@ -153,19 +153,27 @@ const nH = brdfNames.length;
 // Entities
 const sphereGeometry = sphere({ nx: 32, ny: 32 });
 const materialEntities = [];
+let controlledCamera;
 
 for (let i = 0; i < nW * nH; i++) {
   const layer = `cell${i}`;
   const cameraEntity = createEntity({
     layer,
-    transform: components.transform({
-      position: [0, 0, 2],
-    }),
+    transform: controlledCamera
+      ? components.transform({ parent: controlledCamera.transform })
+      : components.transform({ position: [0, 0, 2] }),
     camera: components.camera(),
     // postProcessing: components.postProcessing({ toneMap: "neutral" }),
-    controls: components.controls.orbit(),
+    ...(controlledCamera
+      ? {}
+      : {
+          controls: components.controls.orbit({
+            pointer: { interactiveArea: [0, 0, 1, 1] },
+          }),
+        }),
   });
   world.add(cameraEntity);
+  controlledCamera ??= cameraEntity;
 
   const material = brdfMaterials[i];
   if (!material) continue;

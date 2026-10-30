@@ -210,6 +210,7 @@ const materialValues = Object.values(materials);
 
 // Meshes
 const sphereGeometry = sphere({ nx: 32, ny: 32 });
+let controlledCamera;
 
 for (let i = 0; i < nW * nH; i++) {
   const material = materialValues[i];
@@ -217,16 +218,23 @@ for (let i = 0; i < nW * nH; i++) {
   const layer = `cell${i}`;
   const cameraEntity = createEntity({
     layer,
-    transform: components.transform({
-      position: [0, 0, 2],
-    }),
+    transform: controlledCamera
+      ? components.transform({ parent: controlledCamera.transform })
+      : components.transform({ position: [0, 0, 2] }),
     camera: components.camera(),
     postProcessing: components.postProcessing({
       // bloom: material.emissive && components.postProcessing.bloom(),
     }),
-    controls: components.controls.orbit(),
+    ...(controlledCamera
+      ? {}
+      : {
+          controls: components.controls.orbit({
+            pointer: { interactiveArea: [0, 0, 1, 1] },
+          }),
+        }),
   });
   world.add(cameraEntity);
+  controlledCamera ??= cameraEntity;
 
   if (!material) continue;
 
