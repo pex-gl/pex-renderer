@@ -241,13 +241,11 @@ export default ({
         ? lightEntity.spotLight.outerConeAngle!
         : Math.PI / 4;
       const nearPlaneSize = 2 * shadow.near * Math.tan(halfFov);
-      const scale = lightEntity.areaLight
-        ? lightEntity.transform!.scale
-        : undefined;
-      shadow.radiusUV[0] =
-        (light.bulbRadius! * (scale ? scale[0]! : 1)) / nearPlaneSize;
-      shadow.radiusUV[1] =
-        (light.bulbRadius! * (scale ? scale[1]! : 1)) / nearPlaneSize;
+      const { areaLight } = lightEntity;
+      const extentX = areaLight ? 2 * vec3.length(areaLight._halfExtentX!) : 1;
+      const extentY = areaLight ? 2 * vec3.length(areaLight._halfExtentY!) : 1;
+      shadow.radiusUV[0] = (light.bulbRadius! * extentX) / nearPlaneSize;
+      shadow.radiusUV[1] = (light.bulbRadius! * extentY) / nearPlaneSize;
     }
   },
   /** Radial near/far for a point light's cube projection, fitted to the scene. */

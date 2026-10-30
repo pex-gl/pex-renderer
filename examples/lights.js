@@ -436,14 +436,23 @@ gui.addParam("Intensity", areaLightEntity.areaLight, "intensity", {
   min: 0,
   max: 20000,
 });
-gui.addParam("Width", areaLightEntity.transform.scale, "0", {
-  min: 0,
-  max: 20,
-});
-gui.addParam("Height", areaLightEntity.transform.scale, "1", {
-  min: 0,
-  max: 20,
-});
+const markAreaLightDirty = () => {
+  areaLightEntity.transform.dirty = true;
+};
+gui.addParam(
+  "Width",
+  areaLightEntity.transform.scale,
+  "0",
+  { min: 0, max: 20 },
+  markAreaLightDirty,
+);
+gui.addParam(
+  "Height",
+  areaLightEntity.transform.scale,
+  "1",
+  { min: 0, max: 20 },
+  markAreaLightDirty,
+);
 gui.addParam("Bulb Radius", areaLightEntity.areaLight, "bulbRadius", {
   min: 0,
   max: 100,

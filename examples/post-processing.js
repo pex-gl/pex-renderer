@@ -53,20 +53,15 @@ const world = createWorld();
 const renderPassGraphViz = getRenderPassGraphViz();
 renderPassGraphViz.init(ctx, renderEngine.frameGraph);
 
-// Scene scale: 1 is metres, 0.05 is macro (1 m -> 5 cm). Every distance below
-// is authored at s = 1 and multiplied by s, so the image stays the same and
-// only what is physically scale-dependent (the lens, if physical) changes.
+// Scale scene to macro, 1m -> 5cm
 // const s = 1;
 const s = 0.05;
 
 // Entities
 const helperEntity = createEntity({
-  transform: components.transform({
-    position: [0, 0.01 * s, 0],
-    scale: [s, s, s],
-  }),
+  transform: components.transform({ position: [0, 0.01 * s, 0] }),
   axesHelper: components.axesHelper(),
-  gridHelper: components.gridHelper(),
+  gridHelper: components.gridHelper({ size: 10 * s }),
 });
 world.add(helperEntity);
 const scene = createEntity({
@@ -199,8 +194,6 @@ const postProcessing = components.postProcessing({
   fog: components.postProcessing.fog({
     color: [0.5, 0.5, 0.5],
     start: 5 * s, // m
-    // Approximate: the fog curve also has fixed metre terms, so at s = 0.05 it
-    // reads about 13% denser past start.
     density: 0.15 / s, // 1/m
     maxOpacity: 1,
     cutoffDistance: Infinity, // m
@@ -390,9 +383,6 @@ for (let j = -5; j <= 5; j += 2) {
 }
 
 // Lights
-// Same image at any scale: illuminance from a power (lm) falls with distance²,
-// so power scales by s². Lux (sun) and emissive luminance don't depend on
-// distance; radii and ranges are distances, so they scale by s.
 const pointLightEntity = createEntity({
   transform: components.transform({
     parent: scene.transform,
@@ -447,7 +437,6 @@ const sunEntity = createEntity({
   directionalLight: components.directionalLight({
     color: [1, 1, 0.95, 1],
     intensity: 100_000, // lx, a clear midday sun
-    // Measured against the shadow frustum, which spans the scene.
     bulbRadius: 1 * s, // m
     castShadows: true,
     bias: 0.01,
@@ -1046,9 +1035,6 @@ gui.addParam("Fog max opacity", postProcessing.fog, "maxOpacity", {
   min: 0,
   max: 1,
 });
-// A list rather than a slider: off is Infinity, which no slider reaches. The
-// scene spans about 5s to 15s from the camera, so 50s leaves only the sky
-// unfogged and 10s the back half of the scene too.
 gui.addRadioList(
   "Fog cutoff distance",
   postProcessing.fog,

@@ -300,8 +300,8 @@ const spotIntensityToPower = (
  * Luminous power (lm) of a Lambertian emitter to its luminance (cd/m²), the
  * unit the linearly transformed cosines integrate against.
  *
- * `width` and `height` are the light's world-space extent — the transform's x
- * and y scale — so a disk is the ellipse they bound. A double-sided emitter
+ * `width` and `height` are the light's world-space extent — the model matrix's
+ * x and y axes — so a disk is the ellipse they bound. A double-sided emitter
  * spreads the same power over both faces.
  */
 const areaPowerToLuminance = (

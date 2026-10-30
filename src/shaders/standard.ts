@@ -944,7 +944,6 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
 ${SHADERS.math.PI}
 ${SHADERS.math.TWO_PI}
 ${SHADERS.math.saturate}
-${SHADERS.math.multQuat}
 ${SHADERS.math.random}
 ${SHADERS.math.glslMod}
 ${SHADERS.encodeDecode}

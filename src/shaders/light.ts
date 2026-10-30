@@ -40,10 +40,10 @@ export const LIGHT_STRUCTS = /* wgsl */ `struct SceneLight {
   radius: f32,
   // rgb authored in sRGB, w the luminance the light was metered at.
   color: vec4f,
-  // Area light orientation and half-extents.
-  rotation: vec4f,
-  size: vec2f,
+  // Area light half edges, world space.
+  halfExtentX: vec3f,
   innerConeAngle: f32,
+  halfExtentY: vec3f,
   outerConeAngle: f32,
   disk: u32,
   doubleSided: u32,

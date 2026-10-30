@@ -298,8 +298,8 @@ export interface LightShadowInternals {
 export interface AreaLightComponentOptions extends LightShadowInternals {
   color?: Color;
   /**
-   * Luminous power in lumens, spread over the emitting surface — the
-   * transform's x and y scale — to give the luminance the shader integrates.
+   * Luminous power in lumens, spread over the emitting surface — the world
+   * x and y extent — to give the luminance the shader integrates.
    * Scaling the light up therefore dims it, since the same power covers more
    * area. Halved again when `doubleSided`.
    */
@@ -320,11 +320,14 @@ export interface AreaLightComponentOptions extends LightShadowInternals {
   depthBiasClamp?: number;
   /**
    * Soft-shadow (PCSS) light radius in world units (scaled by the light's
-   * transform): larger widens the penumbra.
+   * world extent): larger widens the penumbra.
    */
   bulbRadius?: number;
   castShadows?: boolean;
   shadowMapSize?: number;
+  /** World-space half edges of the emitting surface. Added by the light system. */
+  _halfExtentX?: Vec3;
+  _halfExtentY?: Vec3;
 }
 export type AxesHelperComponentOptions = Record<string, never>;
 export interface BoundingBoxHelperComponentOptions {

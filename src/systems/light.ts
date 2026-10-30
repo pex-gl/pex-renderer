@@ -8,6 +8,7 @@ import {
   spotPowerToIntensity,
 } from "../utils.js";
 
+import type { Mat4, Vec3 } from "pex-math";
 import type { Entity, LightShadowInternals, TransformCache } from "../types.js";
 
 const Z_UP_4 = Object.freeze([0, 0, 1, 0]);
@@ -16,6 +17,13 @@ const Z_UP_4 = Object.freeze([0, 0, 1, 0]);
 // range is the window switched off rather than a division by infinity.
 const getInvSqrFalloff = (range: number) =>
   Number.isFinite(range) && range > 0 ? 1 / (range * range) : 0;
+
+const setHalfColumn = (out: Vec3, matrix: Mat4, column: number) => {
+  out[0] = matrix[column * 4]! * 0.5;
+  out[1] = matrix[column * 4 + 1]! * 0.5;
+  out[2] = matrix[column * 4 + 2]! * 0.5;
+  return out;
+};
 
 /**
  * Light system
@@ -28,6 +36,7 @@ const getInvSqrFalloff = (range: number) =>
  * - "_intensity" to every light component: the authored intensity converted to
  *   the unit the shaders integrate (see utils.ts)
  * - "_invSqrFalloff" to point and spot light components
+ * - "_halfExtentX" and "_halfExtentY" to area light components
  */
 export default () => ({
   type: "light-system",
@@ -63,7 +72,6 @@ export default () => ({
         spotLight,
         pointLight,
         areaLight,
-        transform,
         _transform,
       } = entities[i]!;
 
@@ -88,12 +96,23 @@ export default () => ({
 
       if (areaLight) {
         this.updateLight(areaLight, _transform);
-        // The emitting quad spans the transform's x and y scale.
-        const scale = transform?.scale;
+        // The emitting quad spans the model matrix's x and y columns, so a
+        // parent's rotation and scale light the scene the way they draw it.
+        const { modelMatrix } = _transform!;
+        const halfExtentX = setHalfColumn(
+          (areaLight._halfExtentX ??= vec3.create()),
+          modelMatrix,
+          0,
+        );
+        const halfExtentY = setHalfColumn(
+          (areaLight._halfExtentY ??= vec3.create()),
+          modelMatrix,
+          1,
+        );
         areaLight._intensity = areaPowerToLuminance(
           areaLight.intensity!,
-          scale?.[0] ?? 1,
-          scale?.[1] ?? 1,
+          2 * vec3.length(halfExtentX),
+          2 * vec3.length(halfExtentY),
           areaLight.disk,
           areaLight.doubleSided,
         );

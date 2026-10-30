@@ -537,10 +537,10 @@ export default ({
       area: areaActive.map((e) => {
         const light = e.areaLight!;
         return {
-          position: e.transform!.position!,
+          position: e._transform!.worldPosition,
           color: lightColor(light),
-          rotation: e.transform!.rotation!,
-          size: [e.transform!.scale![0]! / 2, e.transform!.scale![1]! / 2],
+          halfExtentX: light._halfExtentX!,
+          halfExtentY: light._halfExtentY!,
           disk: light.disk ? 1 : 0,
           doubleSided: light.doubleSided ? 1 : 0,
           viewMatrix: light._viewMatrix!,
