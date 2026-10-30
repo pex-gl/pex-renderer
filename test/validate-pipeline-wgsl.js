@@ -447,7 +447,7 @@ for (const v of postProcessingVariants) {
 
 // ─── The depth pre-pass has to agree with the pass that tests against it ─────
 // Driver-dependent and will not show up reliably in a
-// screenshot: the opaque pass loads the pre-pass depth and tests less-equal, so
+// screenshot: the opaque pass loads the pre-pass depth and tests greater-equal, so
 // any disagreement about the computed position rejects the fragments that
 // landed further away, which reads as hatching and dropouts across every
 // surface rather than as an obvious error.

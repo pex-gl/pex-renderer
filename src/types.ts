@@ -339,6 +339,10 @@ export interface CameraHelperComponentOptions {
 export interface CameraComponentOptions {
   projection?: "perspective" | "orthographic";
   /**
+   * Default: 0.01 m. Reversed-Z makes depth precision independent of `near`,
+   * so it only sets what clips: at the default fov, a subject down to ~1 cm can
+   * fill the frame.
+   *
    * Post-processing reads depth as a positive distance from the camera, so an
    * orthographic `near` below 0 leaves what is behind the camera to ambient
    * occlusion, depth of field and motion blur as negative depths.
@@ -552,7 +556,10 @@ export interface BasicMaterialComponentOptions {
   blend?: BlendMode | GPUBlendState;
   /** Default: `true` unless `blend` is set. */
   depthWriteEnabled?: boolean;
-  /** Default: the renderer's own ("less-equal", "less" for lines). */
+  /**
+   * Default: the renderer's own ("greater-equal", "greater" for lines). Camera
+   * depth is reversed-Z: near is 1, far is 0, so "greater" means closer.
+   */
   depthCompare?: GPUCompareFunction;
   /** Default: "back". */
   cullMode?: GPUCullMode;
@@ -582,9 +589,10 @@ export interface LineMaterialComponentOptions extends BasicMaterialComponentOpti
   /** Whether `lineWidth` shrinks with distance. */
   perspectiveScaling?: boolean;
   /**
-   * Rasterizer constant depth bias, in depth-buffer resolvable units. Negative
-   * pulls towards the camera, which is how coincident lines (an axes helper
-   * over a grid line) are given a stable winner instead of z-fighting.
+   * Rasterizer constant depth bias, in depth-buffer resolvable units. Camera
+   * depth is reversed-Z, so positive pulls towards the camera, which is how
+   * coincident lines (an axes helper over a grid line) are given a stable
+   * winner instead of z-fighting.
    */
   depthBias?: number;
   /**

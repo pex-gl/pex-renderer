@@ -74,7 +74,7 @@ export default ({ ctx }: SystemOptions): RendererSystem => ({
   getPipelineOptions(entity: Entity, options: RendererPassOptions) {
     return {
       depthWriteEnabled: false,
-      depthCompare: "less-equal",
+      depthCompare: "greater-equal",
       cullMode: "none",
       ...(this.useBackgroundBlur(entity, options)
         ? {

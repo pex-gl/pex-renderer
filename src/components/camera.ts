@@ -6,7 +6,7 @@ import type { CameraComponentOptions } from "../types.js";
 /** Camera component */
 export default (options?: CameraComponentOptions) => ({
   projection: "perspective",
-  near: 0.5,
+  near: 0.01,
   far: 1000,
   zoom: 1,
   fov: lens.DEFAULT_FOV,

@@ -43,7 +43,7 @@
     "webgpu@0.6.2": true
   },
   "dependencies": {
-    "cameras": "^4.0.0-alpha.1",
+    "cameras": "^4.0.0-alpha.2",
     "geom-builder": "^3.1.0",
     "halton": "^1.1.0",
     "pex-color": "^2.3.0",

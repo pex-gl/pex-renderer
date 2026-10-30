@@ -92,7 +92,7 @@ export default ({ ctx }: SystemOptions): RendererSystem => ({
     // Camera-facing quads have no meaningful winding, so culling stays off.
     return {
       depthWriteEnabled: material.depthWriteEnabled !== false,
-      depthCompare: material.depthCompare ?? "less",
+      depthCompare: material.depthCompare ?? "greater",
       cullMode: "none",
       // Always written, undefined included: the pipeline object is cached per
       // shader variant and mutated per draw, so an omitted key would leave the

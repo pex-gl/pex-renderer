@@ -16,7 +16,7 @@ import {
 //
 // The passes, in order:
 //
-//   ssr.hiZ          min-depth pyramid, one pass per mip level
+//   ssr.hiZ          nearest-depth pyramid, one pass per mip level
 //   ssr.colorPyramid the frame's image and its mip chain, for rough hits
 //   ssr.trace        one ray per half-res pixel, marched through the pyramid;
 //                    writes where it hit

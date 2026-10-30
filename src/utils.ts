@@ -197,7 +197,9 @@ const getSkyboxEnvMap = (skybox: SkyboxComponentOptions) =>
 
 /**
  * Gribb/Hartmann plane extraction from a view-projection, normalized so plane
- * distances are metric. Order: -x, +x, +y, -y, far, near.
+ * distances are metric. Order: -x, +x, +y, -y, then the depth planes: far, near
+ * for a conventional projection (shadow maps), near, far for a reversed-Z one
+ * (cameras).
  */
 const computeFrustumPlanes = (
   out: Float32Array,
@@ -208,9 +210,11 @@ const computeFrustumPlanes = (
   mat4.mult(TEMP_MAT4, viewMatrix);
   const m = TEMP_MAT4 as Mat4Elements;
 
-  // The near plane is the only one that depends on the depth convention: WebGPU
-  // clips 0 <= z (as D3D does), not -w <= z, so it is the third row alone rather
-  // than w + z. Every projection here is a *ZO variant. Gribb/Hartmann 2001, §2.
+  // WebGPU clips 0 <= z <= w (as D3D does), not -w <= z, so the z >= 0 plane is
+  // the third row alone rather than w + z. Every projection here is zero-to-one.
+  // Which of the two depth planes is near depends on the convention; culling
+  // tests all six alike, so nothing downstream needs to know. Gribb/Hartmann
+  // 2001, §2.
   // prettier-ignore
   {
     avec4.set4(out, 0, m[3] - m[0], m[7] - m[4], m[11] - m[8], m[15] - m[12])
@@ -226,8 +230,8 @@ const computeFrustumPlanes = (
     TEMP_VEC3[1] = out[i * 4 + 1]!;
     TEMP_VEC3[2] = out[i * 4 + 2]!;
     const length = vec3.length(TEMP_VEC3);
-    // An infinite far plane comes out as (0, 0, 0, near): no normal to
-    // normalize, and every point in front of it.
+    // An infinite far plane comes out as (0, 0, 0, near), at index 4 or 5 by
+    // convention: no normal to normalize, and every point in front of it.
     if (length > 0) avec4.scale(out, i, 1 / length);
   }
   return out;

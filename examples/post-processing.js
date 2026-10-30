@@ -53,16 +53,22 @@ const world = createWorld();
 const renderPassGraphViz = getRenderPassGraphViz();
 renderPassGraphViz.init(ctx, renderEngine.frameGraph);
 
+// Scene scale: 1 is metres, 0.05 is macro (1 m -> 5 cm). Every distance below
+// is authored at s = 1 and multiplied by s, so the image stays the same and
+// only what is physically scale-dependent (the lens, if physical) changes.
+// const s = 1;
+const s = 0.05;
+
 // Entities
 const helperEntity = createEntity({
-  transform: components.transform({ position: [0, 0.01, 0] }),
+  transform: components.transform({
+    position: [0, 0.01 * s, 0],
+    scale: [s, s, s],
+  }),
   axesHelper: components.axesHelper(),
   gridHelper: components.gridHelper(),
 });
 world.add(helperEntity);
-// Scale scene to macro, 1m -> 5cm
-const s = 1;
-// const s = 0.05;
 const scene = createEntity({
   transform: components.transform({ scale: [s, s, s] }),
 });
@@ -109,16 +115,16 @@ const postProcessing = components.postProcessing({
     type: "sao", // "gtao",
     mix: 1,
     // Shared with GTAO, which scales it by radiusMultiplier.
-    radius: 0.5, // m
+    radius: 0.5 * s, // m
     brightness: 0,
     contrast: 1,
     // SAO
     saoSamples: 11,
     intensity: 1,
-    bias: 0.01, // m
+    bias: 0.01 * s, // m
     spiralTurns: 7,
     blurRadius: 8, // px
-    blurSharpness: 10,
+    blurSharpness: 10 / s, // 1/m
     slices: 3,
     stepsPerSlice: 3,
     bentNormals: false,
@@ -134,10 +140,10 @@ const postProcessing = components.postProcessing({
   dof: components.postProcessing.dof({
     // physical: true,
     physical: false,
-    focusDistance: 7,
+    focusDistance: 7 * s, // m
     focusScale: 1,
     blurriness: 0.03,
-    focusRange: 1,
+    focusRange: 1 * s, // m
     focusFalloff: 1,
     focusOnScreenPoint: false,
     screenPoint: [0.5, 0.5],
@@ -192,8 +198,12 @@ const postProcessing = components.postProcessing({
   }),
   fog: components.postProcessing.fog({
     color: [0.5, 0.5, 0.5],
-    start: 5,
-    density: 0.15,
+    start: 5 * s, // m
+    // Approximate: the fog curve also has fixed metre terms, so at s = 0.05 it
+    // reads about 13% denser past start.
+    density: 0.15 / s, // 1/m
+    maxOpacity: 1,
+    cutoffDistance: Infinity, // m
 
     sunPosition: [1, 1, 1],
     sunDispertion: 0.2,
@@ -380,6 +390,9 @@ for (let j = -5; j <= 5; j += 2) {
 }
 
 // Lights
+// Same image at any scale: illuminance from a power (lm) falls with distance²,
+// so power scales by s². Lux (sun) and emissive luminance don't depend on
+// distance; radii and ranges are distances, so they scale by s.
 const pointLightEntity = createEntity({
   transform: components.transform({
     parent: scene.transform,
@@ -394,8 +407,9 @@ const pointLightEntity = createEntity({
     color: [1, 0, 0, 1],
     // Theatrical rather than a real fixture: an accent has to approach the
     // sun's 100 000 lx to read against it at all, and a bulb cannot.
-    intensity: 6_300_000, // lm
-    range: 10,
+    intensity: 6_300_000 * s * s, // lm
+    range: 10 * s, // m
+    bulbRadius: 1 * s, // m
     castShadows: true,
   }),
 });
@@ -415,7 +429,7 @@ const areaLightEntity = createEntity({
   }),
   areaLight: components.areaLight({
     color: [2.0, 1.2, 0.1, 1],
-    intensity: 1_570_000, // lm, theatrical for the same reason as the point light
+    intensity: 1_570_000 * s * s, // lm, theatrical for the same reason as the point light
     castShadows: true,
   }),
 });
@@ -433,6 +447,8 @@ const sunEntity = createEntity({
   directionalLight: components.directionalLight({
     color: [1, 1, 0.95, 1],
     intensity: 100_000, // lx, a clear midday sun
+    // Measured against the shadow frustum, which spans the scene.
+    bulbRadius: 1 * s, // m
     castShadows: true,
     bias: 0.01,
   }),
@@ -662,7 +678,7 @@ gui.addRadioList(
   "type",
   ["sao", "gtao"].map((value) => ({ name: value, value })),
 );
-gui.addParam("Radius", postProcessing.ssao, "radius", { min: 0, max: 10 });
+gui.addParam("Radius", postProcessing.ssao, "radius", { min: 0, max: 10 * s });
 gui.addParam("Brightness", postProcessing.ssao, "brightness", {
   min: -0.5,
   max: 0.5,
@@ -684,14 +700,14 @@ gui.addParam("Intensity", postProcessing.ssao, "intensity", {
   min: 0,
   max: 1.5,
 });
-gui.addParam("Bias", postProcessing.ssao, "bias", { min: 0, max: 0.05 });
+gui.addParam("Bias", postProcessing.ssao, "bias", { min: 0, max: 0.05 * s });
 gui.addParam("Blur Radius", postProcessing.ssao, "blurRadius", {
   min: 0,
   max: 24,
 });
 gui.addParam("Blur Sharpness", postProcessing.ssao, "blurSharpness", {
   min: 0,
-  max: 20,
+  max: 20 / s,
 });
 
 gui.addColumn("SSAO (GTAO)");
@@ -804,7 +820,7 @@ gui.addParam("Transition Blur", postProcessing.dof, "transitionBlur");
 gui.addParam("Physical", postProcessing.dof, "physical");
 gui.addParam("Focus Distance", postProcessing.dof, "focusDistance", {
   min: 0,
-  max: 10,
+  max: 10 * s,
 });
 gui.addParam("Focus On Screen Point", postProcessing.dof, "focusOnScreenPoint");
 gui.addParam("Screen Point X", postProcessing.dof.screenPoint, "0", {
@@ -827,7 +843,7 @@ gui.addParam("Blurriness", postProcessing.dof, "blurriness", {
 });
 gui.addParam("Focus Range", postProcessing.dof, "focusRange", {
   min: 0,
-  max: 20,
+  max: 20 * s,
 });
 gui.addParam("Focus Falloff", postProcessing.dof, "focusFalloff", {
   min: 0.1,
@@ -1020,9 +1036,49 @@ gui.addColumn("Options");
 gui.addParam("Fog", State, "fog", null, () => {
   enablePostProPass("fog");
 });
-gui.addParam("Fog color", postProcessing.fog, "color");
-gui.addParam("Fog start", postProcessing.fog, "start", { min: 0, max: 10 });
-gui.addParam("Fog density", postProcessing.fog, "density");
+gui.addParam("Fog color", postProcessing.fog, "color", { type: "color" });
+gui.addParam("Fog start", postProcessing.fog, "start", { min: 0, max: 10 * s });
+gui.addParam("Fog density", postProcessing.fog, "density", {
+  min: 0,
+  max: 1 / s,
+});
+gui.addParam("Fog max opacity", postProcessing.fog, "maxOpacity", {
+  min: 0,
+  max: 1,
+});
+// A list rather than a slider: off is Infinity, which no slider reaches. The
+// scene spans about 5s to 15s from the camera, so 50s leaves only the sky
+// unfogged and 10s the back half of the scene too.
+gui.addRadioList(
+  "Fog cutoff distance",
+  postProcessing.fog,
+  "cutoffDistance",
+  [Infinity, 50 * s, 10 * s].map((value) => ({
+    name: Number.isFinite(value) ? `${value} m` : "off",
+    value,
+  })),
+);
+gui.addParam("Fog sun position", postProcessing.fog, "sunPosition", {
+  min: -1,
+  max: 1,
+});
+gui.addParam("Fog sun color", postProcessing.fog, "sunColor", {
+  type: "color",
+});
+gui.addParam("Fog sun intensity", postProcessing.fog, "sunIntensity", {
+  min: 0,
+  max: 1,
+});
+gui.addParam("Fog sun dispertion", postProcessing.fog, "sunDispertion", {
+  min: 0,
+  max: 1,
+});
+gui.addParam(
+  "Fog inscattering",
+  postProcessing.fog,
+  "inscatteringCoeffs",
+  { min: 0, max: 1 },
+);
 
 gui.addParam("LUT", State, "lut", null, () => {
   enablePostProPass("lut");

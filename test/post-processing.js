@@ -230,12 +230,12 @@ async function declareFrame(
           label: "depth",
           width: viewport[0],
           height: viewport[1],
-          format: "depth24plus",
+          format: "depth32float",
           ...(msaa && { sampleCount: msaa }),
         }),
       );
     if (resolveDepth)
-      textures.set("depth", target("depthResolve", "depth24plus"));
+      textures.set("depth", target("depthResolve", "depth32float"));
 
     const byStage = system.postProcessingEffectsByStage.call(
       system,

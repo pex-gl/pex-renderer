@@ -217,6 +217,7 @@ somewhere downstream. `require` is `get` plus that report when nothing qualifies
 - Systems that cache GPU resources per-entity must implement `dispose(entities)` to free `ctx` resources (buffers, textures) and clear cache entries — see `systems/geometry.js` for the pattern (dispose specific entities, or clear the whole cache when called with no args).
 - Debug logging goes through `if (this.debug) console.debug(NAMESPACE, this.type, ...)`; system-level errors are caught per-entity and logged with `console.error(NAMESPACE, this.type, "update failed", error, entity)` rather than throwing, so one bad entity doesn't break the frame.
 - Avoid per-frame allocations in system `update()` loops — reuse the `TEMP_*` scratch objects from `utils.js` instead of creating new vectors/matrices/AABBs.
+- Camera depth is **reversed-Z** (near 1, far 0, `depth32float`): mesh pipelines test `greater`/`greater-equal`, clears are `0`, the background is `0`, and "closest" is `max`. Shadow maps keep the conventional mapping. Read camera depth through `_inverseProjectionMatrix` (`linearizeDepth`, `reconstructPositionFromDepth`) rather than near/far formulas, so it stays convention-agnostic. See `REVERSED_Z.md`.
 - Attribute/property names on components sometimes accept multiple aliases (see `attributeMap` in `systems/geometry.js`, e.g. `uvs`/`texCoords`/`uvs0`/`texCoords0` all map to `aTexCoord0`) — check existing alias handling before assuming a single canonical name.
 
 ## Coding Style

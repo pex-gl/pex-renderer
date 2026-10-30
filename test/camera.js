@@ -169,5 +169,35 @@ const round = (value) => Math.round(value * 1e6) / 1e6;
   );
 }
 
+// ─── Reversed-Z: near at 1, far at 0 ────────────────────────────────────────
+// Every depth test, clear and background check in the pipeline assumes it, and
+// a projection that silently fell back would invert all of them at once.
+{
+  const system = cameraSystem({ ctx });
+  console.log("\nreversed-Z");
+
+  const ndcDepth = (m, distance) =>
+    round((m[10] * -distance + m[14]) / (m[11] * -distance + m[15]));
+
+  for (const projection of ["perspective", "orthographic"]) {
+    const entity = createCameraEntity({ projection, near: 0.5, far: 100 });
+    system.update([entity]);
+    const m = entity.camera.projectionMatrix;
+    check(
+      `${projection}: near maps to 1, far to 0`,
+      [ndcDepth(m, 0.5), ndcDepth(m, 100)],
+      [1, 0],
+    );
+  }
+
+  const infinite = createCameraEntity({ near: 0.5, far: Infinity });
+  system.update([infinite]);
+  check(
+    "infinite far: depth is near / distance",
+    ndcDepth(infinite.camera.projectionMatrix, 50),
+    0.01,
+  );
+}
+
 console.log(failures ? `\n${failures} failure(s)` : "\nall checks passed");
 process.exit(failures ? 1 : 0);

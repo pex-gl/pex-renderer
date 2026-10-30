@@ -378,7 +378,7 @@ export default ({
       alphaToCoverage,
       blend,
       depthWriteEnabled: material.depthWriteEnabled ?? !blend,
-      depthCompare: material.depthCompare ?? "less-equal",
+      depthCompare: material.depthCompare ?? "greater-equal",
       cullMode: options.cullMode ?? material.cullMode ?? "back",
       topology: entity._geometry!.topology ?? "triangle-list",
       // A negative-determinant node transform (e.g. a negative scale) mirrors
@@ -867,7 +867,7 @@ export default ({
     );
     pipeline.alphaToCoverage = alphaToCoverage;
     // Loads the depth the pass itself is laying down, one draw after another.
-    pipeline.depthCompare = "less-equal";
+    pipeline.depthCompare = "greater-equal";
     return pipeline;
   },
 

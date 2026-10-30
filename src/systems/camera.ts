@@ -48,7 +48,15 @@ const resolvedCamera = (entity: Entity) => entity.camera as ResolvedCamera;
 
 // WebGPU clip space. Jitter is not part of the projection but a shader uniform,
 // so `projectionMatrix` stays unjittered for view position reconstruction.
-const DEPTH = { depthRange: "zero-to-one", reversedZ: false } as const;
+//
+// Reversed-Z: near maps to 1, far to 0, so camera depth tests `greater`, clears
+// to 0, and its background is 0. Float depth is densest near 0, which cancels
+// the 1 / z falloff of a perspective projection: precision stays roughly
+// proportional to distance instead of collapsing past a few units, and neither
+// a small `near` nor an infinite `far` costs any. Shadow maps keep the
+// conventional mapping: they project with their own matrices and gain nothing
+// (orthographic depth is linear, spot frusta are fitted tight).
+const DEPTH = { depthRange: "zero-to-one", reversedZ: true } as const;
 const TEMP_BOUNDS: FrustumBounds = [0, 0, 0, 0];
 
 function computeFrustum(camera: ResolvedCamera) {

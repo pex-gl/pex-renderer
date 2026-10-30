@@ -65,7 +65,7 @@ export default ({ ctx }: SystemOptions): RendererSystem => ({
     const blend = this.getPipelineBlend(material.blend);
     return {
       depthWriteEnabled: material.depthWriteEnabled ?? !blend,
-      depthCompare: material.depthCompare ?? "less-equal",
+      depthCompare: material.depthCompare ?? "greater-equal",
       cullMode: material.cullMode ?? "back",
       topology: entity._geometry!.topology ?? "triangle-list",
       // A negative-determinant node transform (e.g. a negative scale) mirrors

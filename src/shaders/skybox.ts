@@ -103,8 +103,9 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
   let unprojected = (inverseProjection * vec4f(input.position - uSkybox.jitter, 0.0, 1.0)).xyz;
   output.normal = inverseModelView * unprojected;
 
-  // z = 1.0 sits at the ZO far plane so geometry (depthCompare less-equal) wins.
-  output.position = vec4f(input.position, 1.0, 1.0);
+  // z = 0.0 is the reversed-Z far plane, so geometry (depthCompare
+  // greater-equal) wins.
+  output.position = vec4f(input.position, 0.0, 1.0);
 
   ${
     outputs.velocity

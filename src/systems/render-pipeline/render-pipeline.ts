@@ -129,7 +129,11 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
   /** Always produced. Effects add to it — "normal", "emissive". */
   outputs: new Set(["color", "depth"]),
   colorFormat: "rgba16float" as GPUTextureFormat,
-  depthFormat: "depth24plus" as GPUTextureFormat,
+  /**
+   * Float, for reversed-Z to have precision to spend near 0. `depth24plus` may
+   * be a 24-bit integer, which reversing gains nothing on.
+   */
+  depthFormat: "depth32float" as GPUTextureFormat,
   /**
    * Outputs whose contents are not colour, and so want neither the working
    * colour format nor its channel count. Motion vectors are a screen-space
@@ -416,7 +420,7 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
 
       frameGraph.addPass({
         name: label,
-        depth: { texture: resolved, depthClearValue: 1 },
+        depth: { texture: resolved, depthClearValue: 0 },
         uniforms: { uDepthTexture: depthTexture },
         renderView: renderPassView,
         execute: ({ uniforms }) => {
@@ -605,7 +609,7 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
       frameGraph.addPass({
         name: `depthPrePass.${viewId}`,
         color: prePassNormal ? [colorTarget("normal")] : [],
-        depth: { ...depthTarget(), depthClearValue: 1 },
+        depth: { ...depthTarget(), depthClearValue: 0 },
         renderView: renderPassView,
         execute: () => {
           this.drawMeshes({
@@ -628,7 +632,7 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
       clearValue: toLinear(camera.backgroundColor ?? [0, 0, 0, 1]),
       // The pre-pass already cleared it; loading what it wrote is what lets the
       // depth test reject before the fragment shader runs.
-      ...(!usePrePass && { depthClearValue: 1 }),
+      ...(!usePrePass && { depthClearValue: 0 }),
     });
 
     // Without a pre-pass this is the first point depth is complete.

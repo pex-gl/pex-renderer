@@ -90,7 +90,7 @@ console.error = () => {};
   console.log("\nrender textures — bindability");
   textures.set(
     "depth",
-    texture("mainPassDepthMSAA", { format: "depth24plus", sampleCount: 4 }),
+    texture("mainPassDepthMSAA", { format: "depth32float", sampleCount: 4 }),
   );
   check("multisampled is not handed out", textures.get("depth"), undefined);
   check(

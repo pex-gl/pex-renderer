@@ -1,13 +1,15 @@
 // Checks the extracted planes against the clip volume they claim to describe.
 // Culling is conservative, so an over-permissive plane is invisible in a
-// screenshot: it renders the same, it just fails to reject. The near plane is
-// the one that depends on the depth convention (WebGPU clips 0 <= z, not
-// -w <= z) and the one that was wrong.
+// screenshot: it renders the same, it just fails to reject. The z >= 0 plane is
+// the one that depends on the clip convention (WebGPU clips 0 <= z, not
+// -w <= z) and the one that was wrong. It is near for shadow maps and far for
+// the reversed-Z camera, so the two depth planes swap indices between them.
 import { mat4, vec3 } from "pex-math";
+import { projection } from "cameras";
 
 import { computeFrustumPlanes } from "../lib/utils.js";
 
-const NAMES = ["-x", "+x", "+y", "-y", "far", "near"];
+const SIDES = ["-x", "+x", "+y", "-y"];
 
 // NDC corners of the WebGPU clip volume: z in [0, 1].
 const CORNERS = [];
@@ -29,8 +31,13 @@ const distance = (frustum, i, point) =>
   frustum[i * 4 + 2] * point[2] +
   frustum[i * 4 + 3];
 
-function run(label, projectionMatrix, near, far) {
+function run(label, projectionMatrix, near, far, reversedZ = false) {
   console.log(`frustum planes — ${label}`);
+  const nearPlane = reversedZ ? 4 : 5;
+  const farPlane = reversedZ ? 5 : 4;
+  const names = [...SIDES];
+  names[nearPlane] = "near";
+  names[farPlane] = "far";
 
   const frustum = computeFrustumPlanes(
     new Float32Array(24),
@@ -38,7 +45,7 @@ function run(label, projectionMatrix, near, far) {
     mat4.create(),
   );
 
-  const lengths = NAMES.map((_, i) =>
+  const lengths = names.map((_, i) =>
     vec3.length([frustum[i * 4], frustum[i * 4 + 1], frustum[i * 4 + 2]]),
   );
   check(
@@ -62,32 +69,45 @@ function run(label, projectionMatrix, near, far) {
   check(
     "every clip volume corner is inside every plane",
     worst.distance > -1e-4,
-    `worst ${worst.distance.toFixed(6)} on ${NAMES[worst.plane]}`,
+    `worst ${worst.distance.toFixed(6)} on ${names[worst.plane]}`,
   );
 
   // The GL form of the near plane lands at near * far / (2 * far - near),
   // roughly half the near distance, which quietly stops culling anything.
   check(
     "the near plane sits at the true near distance",
-    distance(frustum, 5, [0, 0, -(near + 1e-3)]) > 0 &&
-      distance(frustum, 5, [0, 0, -(near - 1e-3)]) < 0,
+    distance(frustum, nearPlane, [0, 0, -(near + 1e-3)]) > 0 &&
+      distance(frustum, nearPlane, [0, 0, -(near - 1e-3)]) < 0,
     `near=${near}`,
   );
 
   // Normalized planes give metric distances, which anything doing a sphere or
   // distance test depends on. Multiplying by the normal length instead of
   // dividing keeps the sign, so only the magnitude gives it away.
-  const behindNear = distance(frustum, 5, [0, 0, -(near + 2)]);
+  const behindNear = distance(frustum, nearPlane, [0, 0, -(near + 2)]);
   check(
     "plane distances are metric",
     Math.abs(behindNear - 2) < 1e-4 &&
-      Math.abs(distance(frustum, 4, [0, 0, -(far - 3)]) - 3) < 1e-3,
+      Math.abs(distance(frustum, farPlane, [0, 0, -(far - 3)]) - 3) < 1e-3,
     `2 units past near reads ${behindNear.toFixed(4)}`,
   );
 }
 
 run(
-  "perspectiveZO (camera, spot/area/point shadow)",
+  "reversed-Z frustum (camera)",
+  projection.frustum(
+    mat4.create(),
+    projection.perspectiveBounds([0, 0, 0, 0], Math.PI / 3, 1, 0.5),
+    0.5,
+    100,
+    { depthRange: "zero-to-one", reversedZ: true },
+  ),
+  0.5,
+  100,
+  true,
+);
+run(
+  "perspectiveZO (spot/area/point shadow)",
   mat4.perspectiveZO(mat4.create(), Math.PI / 3, 1, 0.5, 100),
   0.5,
   100,

@@ -222,9 +222,10 @@ fn fragmentMain(input: VertexOutput) -> @location(0) u32 {
 /**
  * One mip level from the one above it, keeping the nearest surface.
  *
- * A minimum, and conservatively so: the traversal skips a cell when the ray
- * passes in front of everything in it, so a level that lost a texel would let
- * it skip geometry that is really there.
+ * A maximum, since camera depth is reversed-Z (near is 1), and conservatively
+ * so: the traversal skips a cell when the ray passes in front of everything in
+ * it, so a level that lost a texel would let it skip geometry that is really
+ * there.
  */
 export const hiZReduceShader = () => /* wgsl */ `
 @group(0) @binding(0) var uPreviousLevelTexture: texture_2d<u32>;
@@ -241,23 +242,23 @@ fn fragmentMain(input: VertexOutput) -> @location(0) u32 {
   let base = vec2i(input.position.xy) * 2;
 
   var nearest = load(base, size);
-  nearest = min(nearest, load(base + vec2i(1, 0), size));
-  nearest = min(nearest, load(base + vec2i(0, 1), size));
-  nearest = min(nearest, load(base + vec2i(1, 1), size));
+  nearest = max(nearest, load(base + vec2i(1, 0), size));
+  nearest = max(nearest, load(base + vec2i(0, 1), size));
+  nearest = max(nearest, load(base + vec2i(1, 1), size));
 
   // An odd level leaves a column, a row or a corner texel out of every 2x2
   // block, and dropping one is exactly the conservative failure above.
   let odd = vec2<bool>((size.x & 1) == 1, (size.y & 1) == 1);
   if (odd.x) {
-    nearest = min(nearest, load(base + vec2i(2, 0), size));
-    nearest = min(nearest, load(base + vec2i(2, 1), size));
+    nearest = max(nearest, load(base + vec2i(2, 0), size));
+    nearest = max(nearest, load(base + vec2i(2, 1), size));
   }
   if (odd.y) {
-    nearest = min(nearest, load(base + vec2i(0, 2), size));
-    nearest = min(nearest, load(base + vec2i(1, 2), size));
+    nearest = max(nearest, load(base + vec2i(0, 2), size));
+    nearest = max(nearest, load(base + vec2i(1, 2), size));
   }
   if (odd.x && odd.y) {
-    nearest = min(nearest, load(base + vec2i(2, 2), size));
+    nearest = max(nearest, load(base + vec2i(2, 2), size));
   }
 
   return bitcast<u32>(nearest);
@@ -308,7 +309,7 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
   let coord = sourceCoord(halfCoord);
 
   let depth = textureLoad(uDepthTexture, coord, 0);
-  if (depth >= 1.0) { return vec4f(0.0); }
+  if (depth <= 0.0) { return vec4f(0.0); }
 
   let material = textureLoad(uMaterialTexture, coord, 0);
   let f0 = material.rgb;
@@ -377,7 +378,7 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
   if (abs(delta.y) > 1.0e-9) {
     tMax = min(tMax, (select(1.0, 0.0, delta.y < 0.0) - texCoord0.y) / delta.y);
   }
-  if (dz > 1.0e-9) { tMax = min(tMax, (1.0 - z0) / dz); }
+  if (dz < -1.0e-9) { tMax = min(tMax, -z0 / dz); }
   if (tMax <= 0.0) { return vec4f(0.0); }
 
   // Half a mip-0 texel, in ray parameter: enough to land inside the next cell
@@ -408,14 +409,14 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
     // Nowhere in this cell is the ray behind that surface, so nothing in the
     // cell can be what it hits — whichever way its depth is going. Skip it, and
     // take the next one twice as wide.
-    if (max(zEnter, zExit) <= nearest) {
+    if (min(zEnter, zExit) >= nearest) {
       t = tCell;
       level = min(level + 1, maxLevel);
       continue;
     }
 
     // Something in this cell is in front of the ray. Refine, without advancing:
-    // the minimum says where the cell's nearest surface is, not which of its
+    // the pyramid says where the cell's nearest surface is, not which of its
     // texels holds it.
     if (level > 0) {
       level -= 1;
@@ -485,7 +486,7 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
   let coord = sourceCoord(halfCoord);
 
   let depth = textureLoad(uDepthTexture, coord, 0);
-  if (depth >= 1.0) { return vec4f(0.0); }
+  if (depth <= 0.0) { return vec4f(0.0); }
 
   let material = textureLoad(uMaterialTexture, coord, 0);
   let roughness = material.a;
@@ -773,7 +774,7 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
   let depth = textureLoad(uDepthTexture, coord, 0);
   let material = textureLoad(uMaterialTexture, coord, 0);
   let f0 = material.rgb;
-  if (depth >= 1.0 || max(f0.r, max(f0.g, f0.b)) <= 0.0) { return color; }
+  if (depth <= 0.0 || max(f0.r, max(f0.g, f0.b)) <= 0.0) { return color; }
 
   let position = viewPositionFromDepth(texelCenter(coord), depth);
   let normal = normalize(textureLoad(uNormalTexture, coord, 0).rgb * 2.0 - 1.0);

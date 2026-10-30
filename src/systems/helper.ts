@@ -272,13 +272,14 @@ const NDC_CORNERS = [
   [-1, -1],
 ];
 
-// Near plane point in view space: NDC depth 0, with the perspective divide.
+// Near plane point in view space: NDC depth 1 (reversed-Z), with the
+// perspective divide.
 const unprojectNear = ([x, y]: number[], m: Mat4): Vec3 => {
-  const w = m[3]! * x! + m[7]! * y! + m[15]!;
+  const w = m[3]! * x! + m[7]! * y! + m[11]! + m[15]!;
   return [
-    (m[0]! * x! + m[4]! * y! + m[12]!) / w,
-    (m[1]! * x! + m[5]! * y! + m[13]!) / w,
-    (m[2]! * x! + m[6]! * y! + m[14]!) / w,
+    (m[0]! * x! + m[4]! * y! + m[8]! + m[12]!) / w,
+    (m[1]! * x! + m[5]! * y! + m[9]! + m[13]!) / w,
+    (m[2]! * x! + m[6]! * y! + m[10]! + m[14]!) / w,
   ];
 };
 
@@ -564,7 +565,7 @@ export default () => ({
         lineWidth: 1,
         perspectiveScaling: false,
         depthWriteEnabled: true,
-        depthBias: -16,
+        depthBias: 16,
         depthBiasSlopeScale: 0,
       }),
     }),

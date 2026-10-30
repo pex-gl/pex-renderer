@@ -43,9 +43,10 @@ fn fragmentMain(input: VertexOutput) -> @builtin(frag_depth) f32 {
   // source texel coordinate directly — no sampler, no UV remap.
   let coord = vec2i(input.position.xy);
 
-  var nearest = 1.0;
+  // Reversed-Z: the closest sample is the largest.
+  var nearest = 0.0;
   for (var i = 0; i < ${Math.max(1, Math.trunc(sampleCount))}; i++) {
-    nearest = min(nearest, textureLoad(uDepthTexture, coord, i));
+    nearest = max(nearest, textureLoad(uDepthTexture, coord, i));
   }
 
   return nearest;
