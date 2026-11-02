@@ -55,7 +55,12 @@ const cameraEntity = createEntity({
   }),
   postProcessing: components.postProcessing(),
   controls: components.controls.orbit(),
-  cameraHelper: components.cameraHelper({ color: [0, 1, 0, 1] }),
+  cameraHelper: components.cameraHelper({
+    color: [0, 1, 0, 1],
+    crossHair: true,
+    thirds: true,
+    safeAreas: true,
+  }),
 });
 world.add(cameraEntity);
 

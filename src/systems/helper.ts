@@ -5,12 +5,14 @@ import { entity, components } from "../index.js";
 import { getAttributeData } from "./geometry.js";
 import { FAR_ENOUGH, TEMP_MAT4, TEMP_VEC3 } from "../utils.js";
 
+import type { CameraView } from "cameras";
 import type { GeomBuilder } from "geom-builder";
 import type { AABB } from "pex-geom";
 import type { Mat4, TypedArray, Vec3 } from "pex-math";
 import type {
   AttributeData,
   CameraComponentOptions,
+  CameraHelperComponentOptions,
   Color,
   Entity,
   EntityId,
@@ -272,14 +274,14 @@ const NDC_CORNERS = [
   [-1, -1],
 ];
 
-// Near plane point in view space: NDC depth 1 (reversed-Z), with the
-// perspective divide.
-const unprojectNear = ([x, y]: number[], m: Mat4): Vec3 => {
-  const w = m[3]! * x! + m[7]! * y! + m[11]! + m[15]!;
+// View space point from NDC, with the perspective divide. Reversed-Z: depth 1
+// is the near plane.
+const unproject = ([x, y]: number[], m: Mat4, depth = 1): Vec3 => {
+  const w = m[3]! * x! + m[7]! * y! + m[11]! * depth + m[15]!;
   return [
-    (m[0]! * x! + m[4]! * y! + m[8]! + m[12]!) / w,
-    (m[1]! * x! + m[5]! * y! + m[9]! + m[13]!) / w,
-    (m[2]! * x! + m[6]! * y! + m[10]! + m[14]!) / w,
+    (m[0]! * x! + m[4]! * y! + m[8]! * depth + m[12]!) / w,
+    (m[1]! * x! + m[5]! * y! + m[9]! * depth + m[13]!) / w,
+    (m[2]! * x! + m[6]! * y! + m[10]! * depth + m[14]!) / w,
   ];
 };
 
@@ -294,7 +296,7 @@ const getCamera = (camera: CameraComponentOptions) => {
   const far = Number.isFinite(camera.far) ? camera.far! : FAR_ENOUGH;
 
   const nearCorners = NDC_CORNERS.map((corner) =>
-    unprojectNear(corner, _inverseProjectionMatrix),
+    unproject(corner, _inverseProjectionMatrix),
   );
   const farCorners = nearCorners.map(([x, y]): Vec3 =>
     orthographic
@@ -311,6 +313,63 @@ const getCamera = (camera: CameraComponentOptions) => {
     ...pointsToLine(nearCorners, true),
     ...pointsToLine(farCorners, true),
   ].map((point) => [...point]);
+};
+
+// Just past the near plane, so the guides are never clipped.
+const VIEWFINDER_DEPTH = 0.999;
+// Half length of the crosshair, as a fraction of the frame half height.
+const VIEWFINDER_CROSSHAIR_SIZE = 0.04;
+const VIEWFINDER_SAFE_AREAS = [0.93, 0.9];
+
+// View offsets are in pixels from the top left of the whole frame.
+const frameToViewNdc = (
+  [x, y]: number[],
+  { totalSize, size, offset }: CameraView,
+) => [
+  (((x! + 1) * 0.5 * totalSize[0] - offset[0]) / size[0]) * 2 - 1,
+  1 - (((1 - y!) * 0.5 * totalSize[1] - offset[1]) / size[1]) * 2,
+];
+
+/**
+ * Guides in frame coordinates (-1 to 1, y up), unprojected through the camera's
+ * own projection so they land on the rendered frame. A view is a tile of a
+ * larger frame: the guides frame the whole of it, not each tile.
+ */
+const getViewfinder = (
+  camera: CameraComponentOptions,
+  { crossHair, thirds, safeAreas }: CameraHelperComponentOptions,
+) => {
+  const { _inverseProjectionMatrix, aspect, view } =
+    camera as Required<CameraComponentOptions>;
+  const lines: number[][] = [];
+
+  if (crossHair) {
+    const size = VIEWFINDER_CROSSHAIR_SIZE;
+    lines.push([-size / aspect, 0], [size / aspect, 0], [0, -size], [0, size]);
+  }
+  if (thirds) {
+    for (const t of [-1 / 3, 1 / 3]) {
+      lines.push([t, -1], [t, 1], [-1, t], [1, t]);
+    }
+  }
+  if (safeAreas) {
+    for (const scale of VIEWFINDER_SAFE_AREAS) {
+      lines.push(
+        ...pointsToLine(
+          NDC_CORNERS.map(([x, y]) => [x! * scale, y! * scale]),
+          true,
+        ),
+      );
+    }
+  }
+
+  return lines.map((point) =>
+    unproject(
+      view ? frameToViewNdc(point, view) : point,
+      _inverseProjectionMatrix,
+      VIEWFINDER_DEPTH,
+    ),
+  );
 };
 
 // Extras
@@ -545,14 +604,16 @@ export default () => ({
       }),
     }),
     entity({
-      name: `helper-no-depth-${cacheId}`,
+      name: `helper-overlay-${cacheId}`,
       transform: components.transform(),
       geometry: createHelperGeometry(),
       material: components.material({
         type: "line",
         lineWidth: 1,
         perspectiveScaling: false,
-        depthWriteEnabled: false,
+        // Drawn before the background, which fills wherever depth is left at
+        // the clear value.
+        depthWriteEnabled: true,
         depthCompare: "always",
       }),
     }),
@@ -612,12 +673,12 @@ export default () => ({
 
     const [
       { geometry: geomBuilder },
-      { geometry: geomNoDepthBuilder },
+      { geometry: geomOverlayBuilder },
       { geometry: geomBiasedBuilder },
     ] = helperEntities;
 
     geomBuilder.reset();
-    geomNoDepthBuilder.reset();
+    geomOverlayBuilder.reset();
     geomBiasedBuilder.reset();
 
     for (let i = 0; i < entities.length; i++) {
@@ -659,7 +720,7 @@ export default () => ({
 
       if (entity.skin && entity.skeletonHelper) {
         this.addToBuilder(
-          geomNoDepthBuilder,
+          geomOverlayBuilder,
           getSkeleton(entity.skin, modelMatrix!),
           entity.skeletonHelper.color,
           lineWidth,
@@ -706,18 +767,24 @@ export default () => ({
         }
       }
 
-      if (
-        entity.cameraHelper &&
-        entity.camera?._inverseProjectionMatrix &&
-        renderView.camera !== entity.camera
-      ) {
-        this.addToBuilder(
-          geomBuilder,
-          getCamera(entity.camera),
-          entity.cameraHelper.color,
-          lineWidth,
-          modelMatrix,
-        );
+      if (entity.cameraHelper && entity.camera?._inverseProjectionMatrix) {
+        if (renderView.camera === entity.camera) {
+          this.addToBuilder(
+            geomOverlayBuilder,
+            getViewfinder(entity.camera, entity.cameraHelper),
+            entity.cameraHelper.color,
+            lineWidth * 0.5,
+            modelMatrix,
+          );
+        } else {
+          this.addToBuilder(
+            geomBuilder,
+            getCamera(entity.camera),
+            entity.cameraHelper.color,
+            lineWidth,
+            modelMatrix,
+          );
+        }
       }
       if (entity.gridHelper) {
         this.addToBuilder(

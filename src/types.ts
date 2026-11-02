@@ -336,8 +336,18 @@ export interface BoundingBoxHelperComponentOptions {
 export interface SkeletonHelperComponentOptions {
   color?: Color | Color[];
 }
+/**
+ * The frustum is drawn in other cameras' views; `crossHair`, `thirds` and
+ * `safeAreas` are framing guides drawn in the camera's own view.
+ */
 export interface CameraHelperComponentOptions {
   color?: Color;
+  /** Cross at the frame centre. */
+  crossHair?: boolean;
+  /** Rule-of-thirds grid. */
+  thirds?: boolean;
+  /** Action (93%) and title (90%) safe areas, after EBU R 95. */
+  safeAreas?: boolean;
 }
 export interface CameraComponentOptions {
   projection?: "perspective" | "orthographic";
