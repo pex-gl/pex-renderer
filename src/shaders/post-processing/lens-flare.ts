@@ -223,6 +223,23 @@ export const lensFlareMainShader = (
 
   const alloc = createBindingAllocator(1);
 
+  let ghostsBlock = "";
+  if (useGhosts || useReversed || useWarped) {
+    ghostsBlock = `// Ghosts and the halo converge on the optical axis; the streaks belong on
+  // top of the source, so they are added after this.
+  var ghosts = vec3f(0.0);
+  ${useGhosts ? `ghosts += lensFlareGhosts(uTexture, uTextureSampler, uv, uLensFlare, -1.0, false) * uLensFlare.ghostIntensity;` : ""}
+  ${useReversed ? `ghosts += lensFlareGhosts(uTexture, uTextureSampler, uv, uLensFlare, 1.0, false) * uLensFlare.ghostReversedIntensity;` : ""}
+  ${
+    useWarped
+      ? `ghosts += lensFlareGhosts(uTexture, uTextureSampler, uv, uLensFlare, -1.0, true)
+    * uLensFlare.ghostWarpedIntensity
+    * lensFlareWarpSeam(uv, uLensFlare);`
+      : ""
+  }
+  color += ghosts;`;
+  }
+
   return formatShader(/* wgsl */ `
 ${postProcessingStruct}
 ${SHADERS.math.TWO_PI}
@@ -243,23 +260,7 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
 
   var color = vec3f(0.0);
 
-  ${
-    useGhosts || useReversed || useWarped
-      ? `// Ghosts and the halo converge on the optical axis; the streaks belong on
-  // top of the source, so they are added after this.
-  var ghosts = vec3f(0.0);
-  ${useGhosts ? `ghosts += lensFlareGhosts(uTexture, uTextureSampler, uv, uLensFlare, -1.0, false) * uLensFlare.ghostIntensity;` : ""}
-  ${useReversed ? `ghosts += lensFlareGhosts(uTexture, uTextureSampler, uv, uLensFlare, 1.0, false) * uLensFlare.ghostReversedIntensity;` : ""}
-  ${
-    useWarped
-      ? `ghosts += lensFlareGhosts(uTexture, uTextureSampler, uv, uLensFlare, -1.0, true)
-    * uLensFlare.ghostWarpedIntensity
-    * lensFlareWarpSeam(uv, uLensFlare);`
-      : ""
-  }
-  color += ghosts;`
-      : ""
-  }
+  ${ghostsBlock}
   ${useHalo ? `color += lensFlareHalo(uTexture, uTextureSampler, uv, uLensFlare) * uLensFlare.haloIntensity;` : ""}
 
   color *= lensFlareVignette(uv, uLensFlare);

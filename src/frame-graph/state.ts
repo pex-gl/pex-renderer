@@ -114,9 +114,8 @@ export const requirePhase = (
 ): void => {
   if (state.phase === expected) return;
 
-  throw new Error(
-    `${NAMESPACE}: ${what} while the frame graph is "${state.phase}" — only valid while "${expected}".${hint ? ` ${hint}` : ""}`,
-  );
+  const message = `${NAMESPACE}: ${what} while the frame graph is "${state.phase}" — only valid while "${expected}".`;
+  throw new Error(hint ? `${message} ${hint}` : message);
 };
 
 export const isTextureDescriptor = (

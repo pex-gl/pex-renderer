@@ -115,11 +115,12 @@ function updateCameraJitter(
 ) {
   const jitter = (entity.camera!._jitter ??= [0, 0]);
   const postProcessing = entity.postProcessing;
-  const sample = postProcessing?.taa
-    ? JITTER_SAMPLES[frameIndex % JITTER_SAMPLE_COUNT]!
-    : postProcessing?.smaa?.mode === "t2x"
-      ? SMAA_T2X_JITTER_SAMPLES[frameIndex % 2]!
-      : NO_JITTER;
+  let sample = NO_JITTER;
+  if (postProcessing?.taa) {
+    sample = JITTER_SAMPLES[frameIndex % JITTER_SAMPLE_COUNT]!;
+  } else if (postProcessing?.smaa?.mode === "t2x") {
+    sample = SMAA_T2X_JITTER_SAMPLES[frameIndex % 2]!;
+  }
 
   // Half a pixel expressed in NDC, where one pixel spans 2 / viewportSize.
   jitter[0] = (2 * sample[0]!) / viewport[2]!;
@@ -212,22 +213,25 @@ function updateCameraLens(camera: ResolvedCamera, viewport: Viewport) {
 function updateCameraProjection(camera: ResolvedCamera) {
   const orthographic = camera.projection === "orthographic";
 
-  const bounds = orthographic
-    ? camera.bounds
-      ? projection.zoomBounds(TEMP_BOUNDS, camera.bounds, camera.zoom)
-      : projection.orthographicBounds(
-          TEMP_BOUNDS,
-          camera.size,
-          camera.aspect,
-          camera.zoom,
-        )
-    : projection.perspectiveBounds(
-        TEMP_BOUNDS,
-        camera.fov,
-        camera.aspect,
-        camera.near,
-        camera.zoom,
-      );
+  let bounds;
+  if (!orthographic) {
+    bounds = projection.perspectiveBounds(
+      TEMP_BOUNDS,
+      camera.fov,
+      camera.aspect,
+      camera.near,
+      camera.zoom,
+    );
+  } else if (camera.bounds) {
+    bounds = projection.zoomBounds(TEMP_BOUNDS, camera.bounds, camera.zoom);
+  } else {
+    bounds = projection.orthographicBounds(
+      TEMP_BOUNDS,
+      camera.size,
+      camera.aspect,
+      camera.zoom,
+    );
+  }
   if (camera.view) projection.applyViewOffset(bounds, camera.view);
 
   (orthographic ? projection.orthographic : projection.frustum)(
@@ -239,11 +243,9 @@ function updateCameraProjection(camera: ResolvedCamera) {
   );
 
   // Unprojects depth whatever the projection, zoom or view offset.
+  camera._inverseProjectionMatrix ??= mat4.create();
   mat4.invert(
-    mat4.set(
-      (camera._inverseProjectionMatrix ??= mat4.create()),
-      camera.projectionMatrix,
-    ),
+    mat4.set(camera._inverseProjectionMatrix, camera.projectionMatrix),
   );
 }
 
@@ -252,7 +254,8 @@ function updateCameraProjection(camera: ResolvedCamera) {
  * frame's view is kept for the view depth temporal effects compare against.
  */
 function updateCameraView(camera: ResolvedCamera, entity: Entity) {
-  mat4.set((camera._previousViewMatrix ??= mat4.create()), camera.viewMatrix);
+  camera._previousViewMatrix ??= mat4.create();
+  mat4.set(camera._previousViewMatrix, camera.viewMatrix);
   mat4.set(camera.inverseViewMatrix, entity._transform!.modelMatrix);
   mat4.set(camera.viewMatrix, camera.inverseViewMatrix);
   mat4.invert(camera.viewMatrix);

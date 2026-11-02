@@ -7,6 +7,7 @@ import {
   modelStruct,
   vertexInputStruct,
   vertexAttributes,
+  vertexColorAssignment,
   vertexOutputStruct,
   vertexTransform,
   getDefineFlags,
@@ -54,15 +55,6 @@ export const basicShader = (
   const useColor = vertexFlags.vertexColor || vertexFlags.instancedColor;
   const useMSAA = getDefineFlags(PASS_DEFINE, defines).msaa;
 
-  const colorAssignment =
-    vertexFlags.vertexColor && vertexFlags.instancedColor
-      ? "output.color = input.vertexColor * input.color;"
-      : vertexFlags.instancedColor
-        ? "output.color = input.color;"
-        : vertexFlags.vertexColor
-          ? "output.color = input.vertexColor;"
-          : "";
-
   return /* wgsl */ `
 ${frameStruct()}
 
@@ -104,7 +96,7 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     instancedOffset: vertexFlags.instancedOffset,
   })}
 
-  ${colorAssignment}
+  ${vertexColorAssignment(vertexFlags)}
 
   let positionView = uFrame.viewMatrix * positionWorld;
   let positionOut = uFrame.projectionMatrix * positionView;

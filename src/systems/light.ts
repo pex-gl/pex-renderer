@@ -99,13 +99,15 @@ export default () => ({
         // The emitting quad spans the model matrix's x and y columns, so a
         // parent's rotation and scale light the scene the way they draw it.
         const { modelMatrix } = _transform!;
+        areaLight._halfExtentX ??= vec3.create();
+        areaLight._halfExtentY ??= vec3.create();
         const halfExtentX = setHalfColumn(
-          (areaLight._halfExtentX ??= vec3.create()),
+          areaLight._halfExtentX,
           modelMatrix,
           0,
         );
         const halfExtentY = setHalfColumn(
-          (areaLight._halfExtentY ??= vec3.create()),
+          areaLight._halfExtentY,
           modelMatrix,
           1,
         );

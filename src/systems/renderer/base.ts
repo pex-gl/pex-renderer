@@ -15,18 +15,21 @@ import type {
   UniformValue,
   VertexAttribute,
 } from "pex-gpu";
-import type { Mat2x3, Mat3, Mat4 } from "pex-math";
+import type { Mat2x3, Mat3, Mat4, Vec2, Vec3 } from "pex-math";
 import type { ModelStructOptions } from "../../shaders/wgsl.js";
 import type {
   BlendMode,
   MaterialComponentOptions,
   MaterialTexture,
   Entity,
+  PipelineShaderOptions,
   RendererPassOptions,
   RendererSystem,
   RenderView,
   SkinComponentOptions,
+  SystemDispose,
   SystemOptions,
+  SystemUpdate,
   TextureTransform,
 } from "../../types.js";
 
@@ -154,7 +157,7 @@ function getFeatureFlags(
   sampler?: GPUSampler,
 ): {
   defines: Set<string>;
-  uniforms: Uniforms;
+  uniforms: Uniforms & { uMaterial: UniformBlock };
   constants: Record<string, boolean>;
 } {
   const values = source as Record<string, unknown>;
@@ -175,7 +178,7 @@ function getFeatureFlags(
   }
 
   const uMaterial: UniformBlock = {};
-  const uniforms: Uniforms = { uMaterial };
+  const uniforms: Uniforms & { uMaterial: UniformBlock } = { uMaterial };
   // Real per-material activation for `runtime` fields' own defines — the
   // caller passes this into the pipeline's `constants` (see getPipeline).
   // Real per-material activation for `runtime` fields, passed to the pipeline's
@@ -202,7 +205,8 @@ function getFeatureFlags(
         : (texture.sampler ?? sampler!);
       let scratch = TEMP_MAT3_SET.get(field.key);
       if (!scratch) {
-        TEMP_MAT3_SET.set(field.key, (scratch = mat3.create()));
+        scratch = mat3.create();
+        TEMP_MAT3_SET.set(field.key, scratch);
       }
       uMaterial[textureMatrixName(field.key)] = getTextureMatrix(
         scratch,
@@ -314,6 +318,86 @@ export const BLEND_MODES: Record<BlendMode, GPUBlendState> = {
   },
 };
 
+/** Pipeline state re-applied per draw; `undefined` resets a field. */
+export type PipelineOptions = {
+  [K in Exclude<keyof RenderPipeline, "constants">]?:
+    RenderPipeline[K] | undefined;
+} & {
+  // WGSL `bool` overrides: WebIDL converts booleans to the expected double.
+  constants?: Record<string, number | boolean> | undefined;
+};
+
+/** `@group(0)` Frame block values shared by every renderer. */
+export type FrameUniforms = {
+  projectionMatrix: Mat4;
+  viewMatrix: Mat4;
+  inverseViewMatrix: Mat4;
+  cameraPosition: Vec3;
+  viewportSize: Vec2;
+  exposure: number;
+  jitter: Vec2;
+  previousViewProjectionMatrix: Mat4;
+};
+
+/**
+ * Members every renderer gets from the base renderer. Declared so `this` inside
+ * a renderer resolves them before the `RendererSystem` index signature.
+ */
+export interface BaseRendererSystem extends RendererSystem {
+  pipelineCache: Map<string, RenderPipeline>;
+  getFeatureFlags: typeof getFeatureFlags;
+  getShader(defines: Set<string>, options: PipelineShaderOptions): string;
+  getErrorShader?(defines: Set<string>, options: PipelineShaderOptions): string;
+  getShaderOptions(
+    entity: Entity,
+    options: RendererPassOptions,
+    defines?: Set<string>,
+  ): PipelineShaderOptions;
+  getDefines(
+    entity: Entity,
+    options: RendererPassOptions,
+    precomputed?: unknown,
+  ): Set<string>;
+  getVariantKey(
+    entity: Entity,
+    defines: Set<string>,
+    options: RendererPassOptions,
+  ): string;
+  getPipelineOptions(
+    entity: Entity,
+    options: RendererPassOptions,
+    precomputed?: unknown,
+  ): PipelineOptions;
+  getPipelineBlend(
+    blend: MaterialComponentOptions["blend"],
+  ): GPUBlendState | undefined;
+  getModelUniforms(
+    entity: Entity,
+    normalMatrix: Mat3,
+    options?: ModelStructOptions,
+  ): Uniforms;
+  getHookUniforms(
+    entity: Entity,
+    frameIndex: number,
+    sampler?: GPUSampler,
+  ): Uniforms;
+  getFrameUniforms(renderView: RenderView): FrameUniforms;
+  getCachedPipeline(
+    name: string,
+    cache: Map<string, RenderPipeline>,
+    key: string,
+    entity: Entity,
+    create: () => RenderPipeline,
+  ): RenderPipeline;
+  getPipeline(
+    entity: Entity,
+    options?: RendererPassOptions,
+    precomputed?: unknown,
+  ): RenderPipeline;
+  update: SystemUpdate;
+  dispose: SystemDispose;
+}
+
 /**
  * Base renderer
  *
@@ -323,7 +407,7 @@ export const BLEND_MODES: Record<BlendMode, GPUBlendState> = {
  * (its `defines`). Mutable state (blend, cull, depth) is re-applied per draw on
  * the cached object.
  */
-export default ({ ctx }: Pick<SystemOptions, "ctx">): RendererSystem => ({
+export default ({ ctx }: Pick<SystemOptions, "ctx">): BaseRendererSystem => ({
   type: "base-renderer",
   pipelineCache: new Map(),
   debug: false,
@@ -479,7 +563,7 @@ export default ({ ctx }: Pick<SystemOptions, "ctx">): RendererSystem => ({
       viewMatrix: camera.viewMatrix!,
       inverseViewMatrix: camera.inverseViewMatrix || IDENTITY_MAT4,
       cameraPosition: cameraEntity?._transform?.worldPosition ?? [0, 0, 0],
-      viewportSize: [viewport[2]!, viewport[3]!],
+      viewportSize: [viewport[2], viewport[3]],
       exposure: camera._exposure ?? 1,
       jitter: camera._jitter ?? NO_JITTER,
       previousViewProjectionMatrix:

@@ -25,7 +25,7 @@ import { NAMESPACE, TEMP_MAT4, definesKey, hooksKey } from "../../utils.js";
 import type { GpuTexture, RenderPipeline, Uniforms } from "pex-gpu";
 import type { Mat4 } from "pex-math";
 import type { LightType } from "../../shaders/light.js";
-import type { FeatureField } from "./base.js";
+import type { BaseRendererSystem, FeatureField } from "./base.js";
 import type {
   PipelineShaderOptions,
   Entity,
@@ -34,7 +34,6 @@ import type {
   MaterialHooks,
   MaterialTexture,
   RendererPassOptions,
-  RendererSystem,
   RenderView,
   Shadow2DLightComponentOptions,
   ShadowCastingLightComponentOptions,
@@ -160,6 +159,76 @@ const isStandardMesh = (entity: Entity) =>
   entity._geometry &&
   entity._transform;
 
+/** Members the standard renderer adds to the base renderer. */
+export interface StandardRendererSystem extends BaseRendererSystem {
+  shadowQuality: number;
+  debugRender: string;
+  dummyTexture2D: GpuTexture;
+  dummyTextureCube: GpuTexture;
+  dummyCaptureTexture: GpuTexture;
+  dummyWhiteTexture: GpuTexture;
+  shadowSampler: GPUSampler;
+  shadowCompareSampler: GPUSampler;
+  ltcSampler: GPUSampler;
+  materialSampler: GPUSampler;
+  captureSampler: GPUSampler;
+  ltcTextures: { ltc_1: GpuTexture | null; ltc_2: GpuTexture | null };
+  isLoadingAreaLightData: boolean | null;
+  depthPipelineCache: Map<string, RenderPipeline>;
+  prePassPipelineCache: Map<string, RenderPipeline>;
+  loadAreaLightData(): Promise<void>;
+  getMaterialDefines(
+    entity: Entity,
+  ): ReturnType<BaseRendererSystem["getFeatureFlags"]>;
+  isUnlit(entity: Entity): boolean;
+  gatherLights(entities: Entity[], scope: string): StandardLights;
+  inputs(options?: RendererPassOptions): string[];
+  render(
+    renderView: RenderView,
+    entities: Entity[],
+    options: RendererPassOptions,
+  ): void;
+  renderOpaque(
+    renderView: RenderView,
+    entities: Entity[],
+    options: RendererPassOptions,
+  ): void;
+  renderTransparent(
+    renderView: RenderView,
+    entities: Entity[],
+    options: RendererPassOptions,
+  ): void;
+  getDepthPassMaterial(entity: Entity): DepthPassMaterial;
+  getDepthPassPipeline(
+    name: string,
+    entity: Entity,
+    cache: Map<string, RenderPipeline>,
+    material: DepthPassMaterial,
+  ): RenderPipeline;
+  getDepthPipeline(
+    entity: Entity,
+    linear: boolean,
+    light: ShadowCastingLightComponentOptions | undefined,
+    material: DepthPassMaterial,
+  ): RenderPipeline;
+  getPrePassPipeline(
+    entity: Entity,
+    normalOutput: boolean,
+    multisampled: boolean,
+    material: DepthPassMaterial,
+  ): RenderPipeline;
+  renderPrePass(
+    renderView: RenderView,
+    entities: Entity[],
+    options?: RendererPassOptions,
+  ): void;
+  renderShadow(
+    renderView: RenderView,
+    entities: Entity[],
+    options?: RendererPassOptions,
+  ): void;
+}
+
 /**
  * Standard renderer
  *
@@ -170,7 +239,7 @@ const isStandardMesh = (entity: Entity) =>
 export default ({
   ctx,
   shadowQuality = 4,
-}: SystemOptions & { shadowQuality?: number }): RendererSystem => ({
+}: SystemOptions & { shadowQuality?: number }): StandardRendererSystem => ({
   ...createBaseSystem({ ctx }),
   type: "standard-renderer",
   debug: false,
@@ -429,7 +498,7 @@ export default ({
 
     if (area.length && !this.isLoadingAreaLightData) {
       this.isLoadingAreaLightData = true;
-      this.loadAreaLightData();
+      void this.loadAreaLightData();
     }
     const ltcReady = this.ltcTextures.ltc_1 && this.ltcTextures.ltc_2;
     const areaActive = ltcReady ? area : [];
@@ -646,16 +715,18 @@ export default ({
 
     const uFrame = this.getFrameUniforms(renderView);
 
-    const renderableEntities = entities.filter(
-      (e) =>
-        isStandardMesh(e) &&
-        (transmitted
-          ? cullMode === "front"
-            ? e.material!.cullMode === "none" && e.material!.transmission
-            : e.material!.transmission
-          : !e.material!.transmission) &&
-        (transparent ? e.material!.blend : !e.material!.blend),
-    );
+    const renderableEntities = entities.filter((e) => {
+      if (!isStandardMesh(e)) return false;
+      const material = e.material!;
+      const matchesTransmission = transmitted
+        ? !!material.transmission &&
+          (cullMode !== "front" || material.cullMode === "none")
+        : !material.transmission;
+      return (
+        matchesTransmission &&
+        (transparent ? !!material.blend : !material.blend)
+      );
+    });
 
     for (let i = 0; i < renderableEntities.length; i++) {
       const entity = renderableEntities[i]!;
@@ -954,7 +1025,7 @@ export default ({
       ...this.getFrameUniforms(renderView),
       // The view origin is the light, not a camera entity.
       cameraPosition: [0, 0, 0],
-      ...(linear && { far: shadow!.far }),
+      ...(linear && { far: shadow.far }),
     };
 
     const casters = entities.filter(

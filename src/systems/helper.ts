@@ -354,7 +354,7 @@ const getGrid = (grid: GridHelperComponentOptions) => [
   ...getGridLines(grid).flat(),
   ...getGridLines(grid)
     .flat()
-    .map((p) => p.reverse()),
+    .map((p) => p.toReversed()),
 ];
 /** One flat typed array, or one array per vertex. */
 const isFlatArray = (data: AttributeData): data is TypedArray =>

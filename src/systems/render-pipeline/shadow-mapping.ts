@@ -91,6 +91,7 @@ const shadowParticipants = (entities: Entity[]) =>
 export default ({
   frameGraph,
 }: Pick<SystemOptions, "frameGraph">): ShadowMappingMethods &
+  // eslint-disable-next-line sonarjs/no-useless-intersection -- ThisType types `this`, it has no members by design
   ThisType<RenderPipelineSystem> => ({
   checkLight(light: ShadowCastingLightComponentOptions, lightEntity: Entity) {
     if (!lightEntity._transform) {
@@ -280,7 +281,7 @@ export default ({
 
     shadow.near = Math.max(
       MIN_NEAR,
-      closestDistance(light._sceneBbox!, lightPosition),
+      closestDistance(light._sceneBbox, lightPosition),
     );
     shadow.far = Math.max(shadow.near + MIN_NEAR, far);
   },

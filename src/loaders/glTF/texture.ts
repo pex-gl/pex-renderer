@@ -275,7 +275,7 @@ export function resolveTexture(
 
   if (texCoord || textureTransform || sampler) {
     return {
-      texture: texture._tex!,
+      texture: texture._tex,
       ...(sampler && { sampler }),
       ...textureTransform,
       // textureTransform.texCoord overrides the textureInfo's, per spec; the
@@ -293,5 +293,5 @@ export function resolveTexture(
     };
   }
 
-  return texture._tex!;
+  return texture._tex;
 }

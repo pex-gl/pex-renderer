@@ -168,7 +168,7 @@ const mapValues = <T, R>(
   );
 
 /** Maps each key of a plain object through `fn`, keeping the same values. */
-const mapKeys = <T,>(
+const mapKeys = <T>(
   obj: Record<string, T>,
   fn: (key: string, value: T, index: number) => string,
 ): Record<string, T> =>
@@ -312,9 +312,8 @@ const areaPowerToLuminance = (
   doubleSided?: boolean,
 ): number => {
   const area = disk ? (Math.PI * width * height) / 4 : width * height;
-  return area > 0
-    ? luminousPower / (Math.PI * area * (doubleSided ? 2 : 1))
-    : 0;
+  const faceCount = doubleSided ? 2 : 1;
+  return area > 0 ? luminousPower / (Math.PI * area * faceCount) : 0;
 };
 
 /**
@@ -361,7 +360,8 @@ const hooksKey = (hooks?: ShaderHooks) => {
   if (!hooks) return "";
   let key = HOOKS_KEYS.get(hooks);
   if (key === undefined) {
-    HOOKS_KEYS.set(hooks, (key = hashString(JSON.stringify(hooks))));
+    key = hashString(JSON.stringify(hooks));
+    HOOKS_KEYS.set(hooks, key);
   }
   return key;
 };

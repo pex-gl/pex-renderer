@@ -66,7 +66,7 @@ export const readResource = (
   state: GraphState,
   pass: PassEntry,
   handle: ResourceHandle,
-  usage: GPUTextureUsageFlags | GPUBufferUsageFlags,
+  usage: GPUFlagsConstant,
 ): void => {
   const resource = state.resources[handle.index];
   if (!resource) throw new Error(`${NAMESPACE}: unknown resource handle`);
@@ -85,7 +85,7 @@ export const writeResource = (
   state: GraphState,
   pass: PassEntry,
   handle: ResourceHandle,
-  usage: GPUTextureUsageFlags | GPUBufferUsageFlags,
+  usage: GPUFlagsConstant,
   site: Pick<ColorAttachmentDeclaration, "layer" | "level" | "resolveTarget">,
 ): void => {
   const resource = state.resources[handle.index];

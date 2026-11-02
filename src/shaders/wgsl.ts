@@ -58,7 +58,7 @@ export function defineOverrides(
   // Baked as literals, never passed as constants: the value is already part of
   // the variant, and WebKit rejects a constant for an override the entry point
   // doesn't reference.
-  return [...new Set(defineMaps.flatMap(Object.values))]
+  return [...new Set(defineMaps.flatMap((map) => Object.values(map)))]
     .map(
       (name) =>
         `override ${name}: bool = ${!runtime.has(name) && defines.has(name)};`,
@@ -362,14 +362,15 @@ export function modelStruct({
   previousSkin = false,
   maxJoints = 256,
 }: ModelStructOptions = {}): string {
+  const jointMatricesType = `array<mat4x4f, ${maxJoints}>`;
   return `struct Model {
   modelMatrix: mat4x4f,
   normalMatrix: mat3x3f,
   ${previousModelMatrix ? "previousModelMatrix: mat4x4f," : ""}
 }
 ${bindingDeclaration(3, 0, "uModel", "Model", "uniform")}
-${skin ? bindingDeclaration(3, 1, "uJointMatrices", `array<mat4x4f, ${maxJoints}>`, "uniform") : ""}
-${skin && previousSkin ? bindingDeclaration(3, 2, "uPreviousJointMatrices", `array<mat4x4f, ${maxJoints}>`, "uniform") : ""}`;
+${skin ? bindingDeclaration(3, 1, "uJointMatrices", jointMatricesType, "uniform") : ""}
+${skin && previousSkin ? bindingDeclaration(3, 2, "uPreviousJointMatrices", jointMatricesType, "uniform") : ""}`;
 }
 
 // Vertex stage: input struct and the transform body it feeds.
@@ -399,6 +400,9 @@ export interface ShaderStructMember {
   name: string;
   type: string;
 }
+/** A member, or a falsy placeholder for one left out of this variant. */
+export type OptionalStructMember =
+  ShaderStructMember | false | null | undefined;
 
 /**
  * Emits struct members with sequential `@location` indices, skipping falsy
@@ -411,7 +415,7 @@ export interface ShaderStructMember {
  * values.
  */
 export function locationMembers(
-  members: readonly (ShaderStructMember | false | null | undefined)[],
+  members: readonly OptionalStructMember[],
   start = 0,
 ): string {
   return members
@@ -525,6 +529,22 @@ export function vertexAttributes(flags: VertexInputFlags): string {
 }
 
 /**
+ * Forwards whichever of the vertex and instanced colours `flags` declares to
+ * `output.color`, multiplied when both are.
+ */
+export function vertexColorAssignment({
+  vertexColor,
+  instancedColor,
+}: VertexInputFlags): string {
+  if (vertexColor && instancedColor) {
+    return "output.color = input.vertexColor * input.color;";
+  }
+  if (instancedColor) return "output.color = input.color;";
+  if (vertexColor) return "output.color = input.vertexColor;";
+  return "";
+}
+
+/**
  * A vertex stage's output struct: the `@builtin(position)` clip position
  * followed by sequentially-located user members (falsy entries skipped). Every
  * pass shares this `VertexOutput` shape; the `@location`s are private to the
@@ -539,7 +559,7 @@ export function vertexAttributes(flags: VertexInputFlags): string {
  * which reads as hatching and dropouts across every surface.
  */
 export function vertexOutputStruct(
-  members: readonly (ShaderStructMember | false | null | undefined)[],
+  members: readonly OptionalStructMember[],
 ): string {
   return `struct VertexOutput {
   @invariant @builtin(position) position: vec4f,
@@ -654,11 +674,14 @@ function instancedOps(
     attribute?: { scale: string; rotation: string; offset: string };
   } = {},
 ): string[] {
+  const normalRotation = transformNormal
+    ? `\n  normal = (${rotationMat} * vec4f(normal, 0.0)).xyz;`
+    : "";
   return [
     instancedScale &&
       `${target} = vec4f(${target}.xyz * ${attribute.scale}, ${target}.w);`,
     instancedRotation &&
-      `let ${rotationMat} = quatToMat4(${attribute.rotation});\n  ${target} = ${rotationMat} * ${target};${transformNormal ? `\n  normal = (${rotationMat} * vec4f(normal, 0.0)).xyz;` : ""}`,
+      `let ${rotationMat} = quatToMat4(${attribute.rotation});\n  ${target} = ${rotationMat} * ${target};${normalRotation}`,
     instancedOffset &&
       `${target} = vec4f(${target}.xyz + ${attribute.offset}, ${target}.w);`,
   ].filter(Boolean) as string[];
@@ -713,7 +736,7 @@ export function vertexTransform({
  * color-only form the depth pre-pass and post-processing blits use.
  */
 export function fragmentOutputStruct(
-  members: readonly (ShaderStructMember | false | null | undefined)[] = [],
+  members: readonly OptionalStructMember[] = [],
 ): string {
   return `struct FragmentOutput {
   ${locationMembers([{ name: "color", type: "vec4f" }, ...members])}

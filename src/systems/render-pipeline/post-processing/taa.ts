@@ -55,8 +55,8 @@ const taa: PostProcessingEffect = {
     }
 
     const viewId = cameraEntity.id;
-    const width = renderView.viewport[2]!;
-    const height = renderView.viewport[3]!;
+    const width = renderView.viewport[2];
+    const height = renderView.viewport[3];
 
     const parity = frameIndex % 2;
     const descriptor = {
@@ -95,7 +95,7 @@ const taa: PostProcessingEffect = {
             height,
             // Half floats hold three decimal digits, where the test tolerates
             // whole percents. Their range is the taa chunk's to clamp to.
-            format: "r16float" as GPUTextureFormat,
+            format: "r16float",
             persistent: true,
           })
         : undefined;
@@ -200,7 +200,7 @@ const taa: PostProcessingEffect = {
       uniforms: {
         ...resolveUniforms,
         ...(emissiveHistories && {
-          uEmissiveTexture: emissive!,
+          uEmissiveTexture: emissive,
           uEmissiveTextureSampler: samplers.linear,
           uEmissiveHistoryTexture: emissiveHistories[1 - parity]!,
           uEmissiveHistoryTextureSampler: samplers.linear,

@@ -230,8 +230,10 @@ export class PassProfiler {
 
     // The span leads: it is the one figure comparable to a frame budget, where
     // the sum beside it double-counts every pass that overlapped another.
+    const span =
+      this.totalTime === null ? "unmeasured" : `${this.totalTime.toFixed(3)}ms`;
     const header =
-      `GPU ${this.totalTime === null ? "unmeasured" : `${this.totalTime.toFixed(3)}ms`} span` +
+      `GPU ${span} span` +
       ` (${total.toFixed(3)}ms summed` +
       (unmeasured ? `, ${unmeasured} pass(es) unmeasured` : "") +
       ")";

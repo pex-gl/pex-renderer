@@ -71,15 +71,15 @@ const combine: PostProcessingEffect = {
           hue: colorCorrection?.hue ?? 0,
         },
         ...(showsFog && {
-          uDepthTexture: depth!,
+          uDepthTexture: depth,
           uDepthTextureSampler: samplers.nearest,
         }),
         ...(addsBloom && {
-          uBloomTexture: glare!,
+          uBloomTexture: glare,
           uBloomTextureSampler: samplers.linear,
         }),
         ...(addsLensFlare && {
-          uLensFlareTexture: flare!,
+          uLensFlareTexture: flare,
           uLensFlareTextureSampler: samplers.linear,
         }),
         ...(lut?.texture && {

@@ -10,6 +10,7 @@ import {
   textureSamplerDeclaration,
   vertexInputStruct,
   vertexAttributes,
+  vertexColorAssignment,
   vertexOutputStruct,
   vertexTransform,
   getDefineFlags,
@@ -281,15 +282,7 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
   ${useLinearDepth ? "output.viewPosition = viewPosition.xyz;" : ""}
   ${texCoordSets.has(0) ? "output.texCoord0 = input.texCoord0;" : ""}
   ${texCoordSets.has(1) ? "output.texCoord1 = input.texCoord1;" : ""}
-  ${
-    useColor
-      ? vertexFlags.vertexColor && vertexFlags.instancedColor
-        ? "output.color = input.vertexColor * input.color;"
-        : vertexFlags.vertexColor
-          ? "output.color = input.vertexColor;"
-          : "output.color = input.color;"
-      : ""
-  }
+  ${useColor ? vertexColorAssignment(vertexFlags) : ""}
   return output;
 }
 ${(() => {
@@ -300,12 +293,13 @@ ${(() => {
   // Opacity exactly as standard.js computes it — see the note above on the two
   // having to agree — then either reject the fragment or turn the result into a
   // coverage mask.
-  const opacityBlock = useAlphaTest
-    ? `var opacity = uMaterial.baseColor.w;
+  let opacityBlock = "";
+  if (useAlphaTest) {
+    opacityBlock = `var opacity = uMaterial.baseColor.w;
   ${useColor ? "opacity *= input.color.w;" : ""}
   ${sampleAlpha("baseColor", "uBaseColorTexture", baseColorTextureBinding, "w")}
-  ${sampleAlpha("alpha", "uAlphaTexture", alphaTextureBinding, "x")}`
-    : "";
+  ${sampleAlpha("alpha", "uAlphaTexture", alphaTextureBinding, "x")}`;
+  }
   const discardBlock =
     useAlphaTest && !useAlphaToCoverage
       ? `${opacityBlock}

@@ -31,7 +31,7 @@ export class ResourcePool {
    * Frames a pooled resource may sit unused before it is disposed. High enough
    * that toggling an effect or resizing doesn't pay for reallocation.
    */
-  static IDLE_FRAMES_BEFORE_EVICTION = 30;
+  static readonly IDLE_FRAMES_BEFORE_EVICTION = 30;
 
   /**
    * Every parameter that must match for two textures to be substitutable,

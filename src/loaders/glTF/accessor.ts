@@ -81,9 +81,7 @@ export function getAccessor(
       accessor.sparse.count * numberOfComponents,
     );
 
-    if (accessor._data !== null) {
-      accessor._data = accessor._data.slice();
-    }
+    accessor._data = accessor._data.slice();
 
     let valuesIndex = 0;
     for (

@@ -36,6 +36,7 @@ export const errorShader = (
   // places the geometry.
   const outputs = options.outputs ?? {};
   const { skin, ...instancing } = getDefineFlags(VERTEX_DEFINE, defines);
+  const velocityOptions = skin ? { previousWorld: "positionWorld" } : {};
 
   return /* wgsl */ `
 ${frameStruct()}
@@ -67,7 +68,7 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
   let positionOut = uFrame.projectionMatrix * uFrame.viewMatrix * positionWorld;
 
   output.position = positionOut;
-  ${outputs.velocity ? vertexVelocity(skin ? { previousWorld: "positionWorld" } : {}) : ""}
+  ${outputs.velocity ? vertexVelocity(velocityOptions) : ""}
   ${vertexJitter()}
 
   return output;

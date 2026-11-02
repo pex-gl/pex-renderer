@@ -281,11 +281,14 @@ export class FrameGraph {
     }
     for (const write of declaration.writes ?? []) {
       const handle = isResourceHandle(write) ? write : write.handle;
-      const usage = isResourceHandle(write)
-        ? state.resources[handle.index]?.kind === "buffer"
-          ? GPUBufferUsage.STORAGE
-          : GPUTextureUsage.STORAGE_BINDING
-        : write.usage;
+      let usage: GPUFlagsConstant;
+      if (!isResourceHandle(write)) {
+        usage = write.usage;
+      } else if (state.resources[handle.index]?.kind === "buffer") {
+        usage = GPUBufferUsage.STORAGE;
+      } else {
+        usage = GPUTextureUsage.STORAGE_BINDING;
+      }
       writeResource(state, pass, handle, usage, {});
     }
 

@@ -28,5 +28,5 @@ export function resolveLight(light: PunctualLight): ResolvedLight {
     }),
   };
 
-  return light._resolved!;
+  return light._resolved;
 }

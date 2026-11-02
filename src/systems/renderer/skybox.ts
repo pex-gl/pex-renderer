@@ -16,14 +16,32 @@ import type {
   PipelineShaderOptions,
   Entity,
   RendererPassOptions,
-  RendererSystem,
   RenderView,
   SkyboxComponentOptions,
   SystemOptions,
 } from "../../types.js";
+import type { BaseRendererSystem } from "./base.js";
 
 const IDENTITY_MAT3 = mat3.create();
 const IDENTITY_MAT4 = mat4.create();
+
+/** Members the skybox renderer adds to the base renderer. */
+export interface SkyboxRendererSystem extends BaseRendererSystem {
+  sampler: GPUSampler;
+  _warnedBackgroundBlur: Set<number>;
+  useBackgroundBlur(entity: Entity, options: RendererPassOptions): boolean;
+  checkSkybox(skybox: SkyboxComponentOptions): true | undefined;
+  render(
+    renderView: RenderView,
+    entity: Entity,
+    options: RendererPassOptions,
+  ): void;
+  renderBackground(
+    renderView: RenderView,
+    entities: Entity[],
+    options?: RendererPassOptions,
+  ): void;
+}
 
 /**
  * Skybox renderer
@@ -42,7 +60,7 @@ const IDENTITY_MAT4 = mat4.create();
  * entity's prefiltered specular cubemap instead of a dedicated blur pass — the
  * same source `standard.ts` uses for material reflections.
  */
-export default ({ ctx }: SystemOptions): RendererSystem => ({
+export default ({ ctx }: SystemOptions): SkyboxRendererSystem => ({
   ...createBaseSystem({ ctx }),
   type: "skybox-renderer",
   debug: false,
@@ -106,7 +124,7 @@ export default ({ ctx }: SystemOptions): RendererSystem => ({
   },
 
   render(renderView: RenderView, entity: Entity, options: RendererPassOptions) {
-    if (!this.checkSkybox(entity.skybox)) return;
+    if (!this.checkSkybox(entity.skybox!)) return;
 
     const { camera } = renderView;
     const skybox = entity.skybox!;

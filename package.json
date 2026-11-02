@@ -54,7 +54,7 @@
     "pex-math": "^4.5.0",
     "pex-random": "^2.1.2",
     "pex-shaders": "^3.0.0-alpha.2",
-    "typed-array-interleave": "^2.0.1",
+    "typed-array-interleave": "^2.0.2",
     "types-gltf": "^1.0.0"
   },
   "devDependencies": {

@@ -17,6 +17,7 @@ import type {
   DrawMeshesOptions,
   Entity,
   RendererPassOptions,
+  RendererStage,
   RenderPipelineUpdateOptions,
   RenderView,
   SystemOptions,
@@ -196,7 +197,7 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
     };
 
     const draw = (
-      method: string,
+      method: RendererStage,
       entities: Entity[],
       passOptions: RendererPassOptions,
     ) => {
@@ -264,8 +265,8 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
 
     const { camera } = renderView;
     const cameraEntity = renderView.cameraEntity!;
-    const width = renderView.viewport[2]!;
-    const height = renderView.viewport[3]!;
+    const width = renderView.viewport[2];
+    const height = renderView.viewport[3];
     const postProcessing = cameraEntity.postProcessing;
     const viewId = cameraEntity.id;
 
@@ -338,7 +339,7 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
         label: `renderPipeline.${name}.${viewId}`,
         ...descriptor,
       });
-      textures.set(name, colorTextures[name]!);
+      textures.set(name, colorTextures[name]);
 
       if (msaa) {
         msaaColorTextures[name] = frameGraph.createTexture({
@@ -753,8 +754,11 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
     // Silent otherwise: "transparent" and "transmission" open only if the scene
     // has such geometry, and "outputs" is raised before the register exists.
     for (const [name, effects] of effectsByStage) {
+      const effectNames = effects
+        .map((effect) => `"${effect.name}"`)
+        .join(", ");
       textures.report(
-        `${effects.map((effect) => `"${effect.name}"`).join(", ")} declared at the "${name}" stage, which this frame never opened, so nothing was drawn for them.`,
+        `${effectNames} declared at the "${name}" stage, which this frame never opened, so nothing was drawn for them.`,
       );
     }
 

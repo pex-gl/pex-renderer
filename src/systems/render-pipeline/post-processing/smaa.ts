@@ -181,6 +181,12 @@ const smaa: PostProcessingEffect = {
       },
     });
 
+    // Which of the two samples this frame was rendered at.
+    let subsampleIndices = NO_SUBSAMPLE_INDICES;
+    if (temporal) {
+      subsampleIndices = T2X_SUBSAMPLE_INDICES[jitter[0]! > 0 ? 0 : 1]!;
+    }
+
     const weights = pass({
       name: "weights",
       shader: smaaWeightsShader,
@@ -189,12 +195,7 @@ const smaa: PostProcessingEffect = {
       format: "rgba8unorm",
       source: null,
       uniforms: {
-        uSMAA: {
-          // Which of the two samples this frame was rendered at.
-          subsampleIndices: temporal
-            ? T2X_SUBSAMPLE_INDICES[jitter[0]! > 0 ? 0 : 1]!
-            : NO_SUBSAMPLE_INDICES,
-        },
+        uSMAA: { subsampleIndices },
         uEdgesTexture: edges,
         uEdgesTextureSampler: samplers.linear,
         uAreaTexture: area,
@@ -211,7 +212,7 @@ const smaa: PostProcessingEffect = {
       // Linearly filtered, unlike other motion vector reads: the reference
       // antialiases velocity along with color, for the resolve.
       ...(reprojection && {
-        uVelocityTexture: velocity!,
+        uVelocityTexture: velocity,
         uVelocityTextureSampler: samplers.linear,
       }),
     };
@@ -228,8 +229,8 @@ const smaa: PostProcessingEffect = {
       return;
     }
 
-    const width = renderView.viewport[2]!;
-    const height = renderView.viewport[3]!;
+    const width = renderView.viewport[2];
+    const height = renderView.viewport[3];
     const parity = frameIndex % 2;
     const histories = createHistoryPair(
       createFrameTexture,
@@ -268,7 +269,7 @@ const smaa: PostProcessingEffect = {
         uTextureSampler: samplers.nearest,
         uHistoryTexture: historyValid ? histories[1 - parity]! : current,
         ...(reprojection && {
-          uVelocityTexture: velocity!,
+          uVelocityTexture: velocity,
           uVelocityTextureSampler: samplers.nearest,
           uColorTexture: color!,
         }),

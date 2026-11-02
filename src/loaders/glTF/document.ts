@@ -16,12 +16,7 @@ import { resolveLightsImageBased } from "./extensions/EXT_lights_image_based.js"
 import type * as GLTF from "types-gltf";
 import type { KHR_lights_punctual } from "types-gltf/extensions";
 import type { GpuContext, ReflectionProbePrebakedData } from "../../types.js";
-import type {
-  ResolvedBuffer,
-  ResolvedBufferView,
-  ResolvedCamera,
-  ResolvedLight,
-} from "./types.js";
+import type { ResolvedBuffer, ResolvedCamera, ResolvedLight } from "./types.js";
 import type { DracoOptions } from "./extensions/KHR_draco_mesh_compression.js";
 import type { ResolvedAnimationChannel } from "./animation.js";
 import type { PunctualLight } from "./light.js";
@@ -148,7 +143,7 @@ async function loadGltfDocument(
   );
 
   // Buffer views: https://github.com/KhronosGroup/glTF/blob/main/specification/2.0/schema/bufferView.schema.json
-  for (const bufferView of (json.bufferViews ?? []) as ResolvedBufferView[]) {
+  for (const bufferView of json.bufferViews ?? []) {
     const bufferData = json.buffers![bufferView.buffer]!._data;
     bufferView.byteOffset ??= 0;
     bufferView._data = bufferData.slice(

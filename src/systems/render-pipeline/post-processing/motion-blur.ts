@@ -48,8 +48,8 @@ const motionBlur: PostProcessingEffect = {
     const intensity = component.intensity ?? 1;
     if (intensity <= 0) return;
 
-    const width = renderView.viewport[2]!;
-    const height = renderView.viewport[3]!;
+    const width = renderView.viewport[2];
+    const height = renderView.viewport[3];
     const tileSize = Math.max(1, Math.trunc(component.tileSize ?? 40));
     const tilesX = Math.ceil(width / tileSize);
     const tilesY = Math.ceil(height / tileSize);

@@ -41,6 +41,24 @@ export const smaaEdgesShader = (defines: Set<string> = new Set()): string => {
 
   const alloc = createBindingAllocator(1);
 
+  let edgeDetectionCall =
+    "smaaDepthEdgeDetection(uDepthTexture, uDepthTextureSampler, input.texCoord0, offsets[0])";
+  if (!depth) {
+    edgeDetectionCall = `${color ? "smaaColorEdgeDetection" : "smaaLumaEdgeDetection"}(
+    uTexture,
+    uTextureSampler,
+    input.texCoord0,
+    offsets[0],
+    offsets[1],
+    offsets[2],
+    ${
+      predication
+        ? "smaaCalculatePredicatedThreshold(uDepthTexture, uDepthTextureSampler, input.texCoord0, offsets[0])"
+        : "vec2f(SMAA_THRESHOLD)"
+    }
+  )`;
+  }
+
   return formatShader(/* wgsl */ `
 ${postProcessingStruct}
 
@@ -65,23 +83,7 @@ ${SMAA.chunks.edges}
 fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
   let offsets = smaaEdgeDetectionOffsets(input.texCoord0, uPostProcessing.texelSize);
 
-  let edges = ${
-    depth
-      ? "smaaDepthEdgeDetection(uDepthTexture, uDepthTextureSampler, input.texCoord0, offsets[0])"
-      : `${color ? "smaaColorEdgeDetection" : "smaaLumaEdgeDetection"}(
-    uTexture,
-    uTextureSampler,
-    input.texCoord0,
-    offsets[0],
-    offsets[1],
-    offsets[2],
-    ${
-      predication
-        ? "smaaCalculatePredicatedThreshold(uDepthTexture, uDepthTextureSampler, input.texCoord0, offsets[0])"
-        : "vec2f(SMAA_THRESHOLD)"
-    }
-  )`
-  };
+  let edges = ${edgeDetectionCall};
 
   return vec4f(edges, 0.0, 1.0);
 }

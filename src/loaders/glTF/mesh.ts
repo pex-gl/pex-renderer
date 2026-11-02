@@ -69,19 +69,20 @@ export function resolveAttributes(
         [3, 1],
         data ?? accessor._data,
         new Float32Array(accessor.count).fill(1),
-      );
+      ) as Float32Array;
     }
 
     // JOINTS_0 is an unnormalized integer accessor, UNSIGNED_BYTE or
     // UNSIGNED_SHORT per spec. The shader's `joint` input is vec4u, which
     // reflects to uint32x4 — vec4<u32> is fed by uint8x4/uint16x4/uint32x4
     // alike, so the width has to come from the accessor rather than the WGSL.
-    const joints =
-      name === "JOINTS_0"
-        ? accessor.componentType === WEBGL_CONSTANTS.UNSIGNED_BYTE
+    let joints;
+    if (name === "JOINTS_0") {
+      joints =
+        accessor.componentType === WEBGL_CONSTANTS.UNSIGNED_BYTE
           ? { format: "uint8x4" as const, arrayStride: 4 }
-          : { format: "uint16x4" as const, arrayStride: 8 }
-        : undefined;
+          : { format: "uint16x4" as const, arrayStride: 8 };
+    }
 
     if (data) {
       attributes[name] = joints ? { data, ...joints } : data;
@@ -292,7 +293,7 @@ export function resolvePrimitiveMorphTargets(
         gltf.accessors![target[targetKey]!]!,
         gltf.bufferViews!,
       );
-      targets[targetKey]!.push(
+      targets[targetKey].push(
         accessor.normalized ? normalizeData(accessor._data) : accessor._data,
       );
 

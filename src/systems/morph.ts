@@ -4,6 +4,40 @@ import type {
   MorphComponentOptions,
 } from "../types.js";
 
+function blendScalar(
+  source: number,
+  targets: (number | number[])[][],
+  index: number,
+  weights: number[],
+) {
+  let attribute = source;
+  for (let j = 0; j < targets.length; j++) {
+    attribute += (targets[j]![index] as number) * weights[j]!;
+  }
+  return attribute;
+}
+
+function blendVector(
+  source: number[],
+  targets: (number | number[])[][],
+  index: number,
+  weights: number[],
+) {
+  const attribute: [number, number, number] = [
+    source[0]!,
+    source[1]!,
+    source[2]!,
+  ];
+  for (let j = 0; j < targets.length; j++) {
+    const target = targets[j]![index] as number[];
+    const weight = weights[j]!;
+    attribute[0] += target[0]! * weight;
+    attribute[1] += target[1]! * weight;
+    attribute[2] += target[2]! * weight;
+  }
+  return attribute;
+}
+
 function updateMorph(morph: MorphComponentOptions) {
   const current = (morph.current ??= {});
   const weights = morph.weights ?? [];
@@ -16,29 +50,11 @@ function updateMorph(morph: MorphComponentOptions) {
     const sourceAttributes = morph.sources[key] as (number | number[])[];
     const targetAttributes = morph.targets[key] as (number | number[])[][];
 
-    current[key] = sourceAttributes.map((source, i) => {
-      if (typeof source === "number") {
-        let attribute = source;
-        for (let j = 0; j < targetAttributes.length; j++) {
-          attribute += (targetAttributes[j]![i] as number) * weights[j]!;
-        }
-        return attribute;
-      }
-
-      const attribute: [number, number, number] = [
-        source[0]!,
-        source[1]!,
-        source[2]!,
-      ];
-      for (let j = 0; j < targetAttributes.length; j++) {
-        const target = targetAttributes[j]![i] as number[];
-        const weight = weights[j]!;
-        attribute[0] += target[0]! * weight;
-        attribute[1] += target[1]! * weight;
-        attribute[2] += target[2]! * weight;
-      }
-      return attribute;
-    }) as MorphAttribute;
+    current[key] = sourceAttributes.map((source, i) =>
+      typeof source === "number"
+        ? blendScalar(source, targetAttributes, i, weights)
+        : blendVector(source, targetAttributes, i, weights),
+    );
   });
 }
 
@@ -64,7 +80,7 @@ export default () => ({
       Object.keys(current).forEach((key) => {
         geometry[key] = current[key]!;
         // Bounds will be recomputed in geometry system update if "positions"/"offsets" are dirty
-        geometry[key]!.dirty = true;
+        geometry[key].dirty = true;
       });
     }
   },

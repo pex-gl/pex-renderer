@@ -240,9 +240,8 @@ export default function compile(
       const key = siteKey({ resource: texture.index, layer, level });
       // First touch has no contents worth loading: clearing is cheaper than a
       // tile reload.
-      const loadOp: GPULoadOp = cleared
-        ? "clear"
-        : writtenBefore.has(key) || entry.imported
+      const loadOp: GPULoadOp =
+        !cleared && (writtenBefore.has(key) || entry.imported)
           ? "load"
           : "clear";
 

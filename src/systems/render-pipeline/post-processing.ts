@@ -320,6 +320,7 @@ export default ({
 }: {
   ctx: GpuContext;
   frameGraph: FrameGraph;
+  // eslint-disable-next-line sonarjs/no-useless-intersection -- ThisType types `this`, it has no members by design
 }): PostProcessingMethods & ThisType<RenderPipelineSystem> => ({
   postProcessingEffects: new Map<string, PostProcessingEffect | null>(),
   postProcessingLoading: new Map<string, Promise<void>>(),
@@ -456,7 +457,7 @@ export default ({
       source,
       target,
       targets,
-      size = [renderView.viewport[2]!, renderView.viewport[3]!],
+      size = [renderView.viewport[2], renderView.viewport[3]],
       format,
       mipLevelCount,
       level,
@@ -602,9 +603,9 @@ export default ({
       ...(writes && { writes }),
       uniforms: {
         uPostProcessing: {
-          viewportSize: [viewport[2]!, viewport[3]!],
-          texelSize: [1 / viewport[2]!, 1 / viewport[3]!],
-          sourceTexelSize: [1 / viewport[2]!, 1 / viewport[3]!],
+          viewportSize: [viewport[2], viewport[3]],
+          texelSize: [1 / viewport[2], 1 / viewport[3]],
+          sourceTexelSize: [1 / viewport[2], 1 / viewport[3]],
           time: this.time,
         },
         ...uniforms,
@@ -654,7 +655,7 @@ export default ({
       // invisible and permanent: the sky and reflection probe bake once, into
       // the frame this would have straddled, and clear their dirty flags either
       // way.
-      this.loadPostProcessingEffect(registration);
+      void this.loadPostProcessingEffect(registration);
 
       const effect = this.postProcessingEffects.get(name);
       if (effect) yield effect;

@@ -109,7 +109,7 @@ export type GeometryAttribute =
 
 // Entity
 /** Identifier handed out by `createEntity`, and the key of every system cache. */
-export type EntityId = number;
+export type EntityId = number; // eslint-disable-line sonarjs/redundant-type-aliases -- Names the role in signatures and docs
 
 export interface Entity {
   id: EntityId;
@@ -142,7 +142,7 @@ export interface Entity {
   skybox?: SkyboxComponentOptions;
   spotLight?: SpotLightComponentOptions;
   transform?: TransformComponentOptions;
-  vertexHelper?: VertexHelperComponentOptions;
+  vertexHelper?: VertexHelperComponentOptions | VertexHelperComponentOptions[];
   /** Layer name used to filter entities per render view. */
   layer?: string | undefined;
   /** Cached transform state, added by the transform system. */
@@ -1776,27 +1776,27 @@ export interface FragmentOutputs {
 }
 /** Options accepted by the pipeline WGSL generators in src/shaders. */
 export interface PipelineShaderOptions {
-  hooks?: ShaderHooks;
+  hooks?: ShaderHooks | undefined;
   /** Optional MRT fragment outputs (normal, emissive, velocity) to emit. */
-  outputs?: FragmentOutputs;
+  outputs?: FragmentOutputs | undefined;
   /** Size of the skinning joint matrix array. */
-  maxJoints?: number;
+  maxJoints?: number | undefined;
   /** Per-texture texture coordinate set index (0 or 1), e.g. { baseColor: 1 }. */
-  texCoords?: Record<string, number>;
+  texCoords?: Record<string, number> | undefined;
   /**
    * Distinct shadow map sizes in use, each one array texture binding. The only
    * thing about a scene's lights the generated WGSL depends on — how many
    * lights of which type it holds is uniform data (see shaders/light.ts).
    */
-  shadow2DBuckets?: number;
-  shadowCubeBuckets?: number;
+  shadow2DBuckets?: number | undefined;
+  shadowCubeBuckets?: number | undefined;
   /**
    * WGSL expression written over the shaded colour instead of it, for
    * inspecting one term of the surface: a `PBRData` member (`"data.roughness"`)
    * or anything else in scope at the end of the fragment stage
    * (`"input.normalView"`). Standard renderer only.
    */
-  debugRender?: string;
+  debugRender?: string | undefined;
 }
 /** Signature of a pipeline WGSL generator. */
 export type PipelineShaderBuilder = (
@@ -1912,20 +1912,28 @@ export interface RendererPassOptions {
 export type RendererSystemStage = (
   renderView: RenderView,
   entities: Entity[],
-  options?: RendererPassOptions,
+  options: RendererPassOptions,
 ) => void;
+/** Draw stages the render pipeline dispatches by name to every renderer. */
+export type RendererStage =
+  | "renderShadow"
+  | "renderPrePass"
+  | "renderOpaque"
+  | "renderTransparent"
+  | "renderBackground";
 // Renderer systems accrete per-frame internal state (locations, light data,
-// pipeline caches) and expose a set of optional draw stages (render,
-// renderShadow, renderOpaque, ...) with per-renderer signatures. The index
-// signature keeps that dynamic draw path usable; RendererSystemRender and
-// RendererSystemStage document the stage shape callers rely on.
-export interface RendererSystem {
+// pipeline caches) declared by their own interfaces, and implement any of the
+// stages.
+export interface RendererSystem extends Partial<
+  Record<RendererStage, RendererSystemStage>
+> {
   type: string;
   debug?: boolean;
-  // Stages are dispatched by name (`renderer[method]?.(…)`), so the value type
-  // has to stay callable — `unknown` is not.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  [key: string]: any;
+  /** Frame images read by the renderer, by register name. */
+  inputs?(options?: RendererPassOptions): string[];
+  update?: SystemUpdate;
+  dispose?: SystemDispose;
+  [key: string]: unknown;
 }
 
 /** One mesh pass' inputs, as the pipeline hands them to `drawMeshes`. */

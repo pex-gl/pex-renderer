@@ -25,11 +25,10 @@ export default ({ entities = [], systems = [] }: WorldOptions = {}): World => {
       }
     },
     dispose(entities?: Entity | Entity[]) {
-      const entitiesToDispose = entities
-        ? Array.isArray(entities)
-          ? entities
-          : [entities]
-        : this.entities;
+      let entitiesToDispose = this.entities;
+      if (entities) {
+        entitiesToDispose = Array.isArray(entities) ? entities : [entities];
+      }
 
       for (let i = 0; i < this.systems.length; i++) {
         this.systems[i]!.dispose?.(entitiesToDispose);

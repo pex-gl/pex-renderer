@@ -11,15 +11,34 @@ import type {
   PipelineShaderOptions,
   Entity,
   RendererPassOptions,
-  RendererSystem,
   RenderView,
   SystemOptions,
 } from "../../types.js";
+import type { BaseRendererSystem } from "./base.js";
 
 // Reused per draw: uniforms are packed synchronously at submit(), so a single
 // scratch matrix is safe across entities within a frame. Unused by the unlit
 // shader but part of the shared Model uniform struct layout.
 const NORMAL_MATRIX = mat3.create();
+
+/** Members the basic renderer adds to the base renderer. */
+export interface BasicRendererSystem extends BaseRendererSystem {
+  render(
+    renderView: RenderView,
+    entities: Entity[],
+    options: RendererPassOptions,
+  ): void;
+  renderOpaque(
+    renderView: RenderView,
+    entities: Entity[],
+    options: RendererPassOptions,
+  ): void;
+  renderTransparent(
+    renderView: RenderView,
+    entities: Entity[],
+    options: RendererPassOptions,
+  ): void;
+}
 
 /**
  * Basic renderer
@@ -27,7 +46,7 @@ const NORMAL_MATRIX = mat3.create();
  * Unlit draw path built. Uniforms follow the shared bind group struct
  * convention: `@group(0)` Frame, `@group(2)` Material, `@group(3)` Model.
  */
-export default ({ ctx }: SystemOptions): RendererSystem => ({
+export default ({ ctx }: SystemOptions): BasicRendererSystem => ({
   ...createBaseSystem({ ctx }),
   type: "basic-renderer",
   debug: false,

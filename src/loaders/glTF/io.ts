@@ -117,7 +117,7 @@ export function loadData(data: ArrayBuffer | object): {
   if (data instanceof ArrayBuffer) {
     const unpacked = unpackBinary(data);
     return {
-      json: JSON.parse(unpacked.json),
+      json: JSON.parse(unpacked.json) as ResolvedGltf,
       bin: unpacked.bin ? uint8ArrayToArrayBuffer(unpacked.bin) : undefined,
     };
   }

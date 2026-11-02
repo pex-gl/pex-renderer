@@ -158,7 +158,7 @@ export default ({ ctx }: SystemOptions) => ({
     controls.zoomTo(camera.zoom!, false).saveState();
 
     const pointerManager = new PointerManager(
-      element ?? (ctx.canvas as HTMLElement),
+      element ?? ctx.canvas,
       pointer,
     ).enable();
     let keyboardManager: KeyboardManager | null = null;
@@ -220,7 +220,8 @@ export default ({ ctx }: SystemOptions) => ({
         continue;
       }
       cached.settings[key] = copy(value);
-      (changed ??= {})[key] = value;
+      changed ??= {};
+      changed[key] = value;
     }
     if (changed) cached.controls.set(changed);
   },

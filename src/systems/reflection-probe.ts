@@ -502,12 +502,12 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
    */
   updatePrebakedReflectionProbeEntity(entity: Entity) {
     const { data } = entity.reflectionProbe!;
-    let cached = this.cache[entity.id];
+    const cached = this.cache[entity.id];
 
     if (!cached || cached.data !== data) {
       if (cached) this.disposeResources(cached.resources);
       const resources = this.createPrebakedResources(data!);
-      cached = this.cache[entity.id] = { resources, envMap: null, data };
+      this.cache[entity.id] = { resources, envMap: null, data };
 
       entity._reflectionProbe = {
         specularTexture: resources.specularTexture,

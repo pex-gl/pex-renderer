@@ -18,6 +18,7 @@ import {
   vertexOutputStruct,
   vertexInputStruct,
   vertexAttributes,
+  vertexColorAssignment,
   vertexTransform,
   vertexJitter,
   vertexVelocity,
@@ -276,7 +277,7 @@ const PBR_DATA_STRUCT = /* wgsl */ `struct PBRData {
 
 /** PBRData member name to WGSL type, for typing a `debugRender` expression. */
 const PBR_DATA_TYPES: Record<string, string> = Object.fromEntries(
-  [...PBR_DATA_STRUCT.matchAll(/^\s+(\w+): (\w+),/gm)].map((match) => [
+  [...PBR_DATA_STRUCT.matchAll(/^ +(\w+): (\w+),/gm)].map((match) => [
     match[1]!,
     match[2]!,
   ]),
@@ -299,15 +300,16 @@ function debugRenderAssignment(expression: string): string {
   const member = expression.startsWith("data.")
     ? PBR_DATA_TYPES[expression.slice("data.".length)]
     : undefined;
-  const value =
-    member === "vec2f"
-      ? `vec3f(${expression}, 0.0)`
-      : member === "vec4f"
-        ? `${expression}.xyz`
-        : `vec3f(${expression})`;
+  let value = `vec3f(${expression})`;
+  if (member === "vec2f") {
+    value = `vec3f(${expression}, 0.0)`;
+  } else if (member === "vec4f") {
+    value = `${expression}.xyz`;
+  }
   const signed = /normal|tangent|reflection/i.test(expression);
+  const color = signed ? `${value} * 0.5 + 0.5` : value;
 
-  return `output.color = vec4f(${signed ? `${value} * 0.5 + 0.5` : value}, 1.0);`;
+  return `output.color = vec4f(${color}, 1.0);`;
 }
 
 export const standardShader = (
@@ -335,15 +337,6 @@ export const standardShader = (
   // type the scene holds is uniform data (see shaders/light.ts).
   const shadow2DBuckets = lit ? (options.shadow2DBuckets ?? 0) : 0;
   const shadowCubeBuckets = lit ? (options.shadowCubeBuckets ?? 0) : 0;
-
-  const colorAssignment =
-    vertexFlags.vertexColor && vertexFlags.instancedColor
-      ? "output.color = input.vertexColor * input.color;"
-      : vertexFlags.instancedColor
-        ? "output.color = input.color;"
-        : vertexFlags.vertexColor
-          ? "output.color = input.vertexColor;"
-          : "";
 
   // vColor / texCoordTransform neutral defaults, matching the chunks-phase convention:
   // decode(vec4f(1), SRGB) is exactly vec3f(1), so passing a white vColor when
@@ -460,6 +453,7 @@ ${
         ),
       ].join("\n");
 
+  const irradianceCoefficientsType = `array<vec4f, ${SH_COEFFICIENT_COUNT}>`;
   const reflectionProbeDecl = useReflectionProbes
     ? /* wgsl */ `
 struct ReflectionProbe {
@@ -468,7 +462,7 @@ struct ReflectionProbe {
 }
 ${bindingDeclaration(1, lightBindings.next(), "uReflectionProbe", "ReflectionProbe", "uniform")}
 ${textureSamplerDeclaration(1, lightBindings.nextTextureSampler(), "uSpecularEnvMap", "texture_cube<f32>")}
-${bindingDeclaration(1, lightBindings.next(), "uIrradianceCoefficients", `array<vec4f, ${SH_COEFFICIENT_COUNT}>`, "storage, read")}`
+${bindingDeclaration(1, lightBindings.next(), "uIrradianceCoefficients", irradianceCoefficientsType, "storage, read")}`
     : "";
 
   // uCaptureTexture (the grabbed opaque color for refraction) is declared for
@@ -542,12 +536,77 @@ ${bindingDeclaration(1, lightBindings.next(), "uIrradianceCoefficients", `array<
   alphaTest(&data, uMaterial.alphaCutoff);
   }`;
 
-  const unlitBody = /* wgsl */ `
-  ${
-    materialFlags.baseColorTexture
-      ? `getBaseColorTextured(&data, uMaterial.baseColor, uBaseColorTexture, uBaseColorTextureSampler, ${tc("baseColor")}, uMaterial.baseColorTextureMatrix, ${vColorExpr});`
-      : `getBaseColor(&data, uMaterial.baseColor, ${vColorExpr});`
+  const baseColorCall = materialFlags.baseColorTexture
+    ? `getBaseColorTextured(&data, uMaterial.baseColor, uBaseColorTexture, uBaseColorTextureSampler, ${tc("baseColor")}, uMaterial.baseColorTextureMatrix, ${vColorExpr});`
+    : `getBaseColor(&data, uMaterial.baseColor, ${vColorExpr});`;
+
+  const metallicCall = textures.metallicTexture
+    ? `getMetallicTextured(&data, uMaterial.metallic, uMetallicTexture, uMetallicTextureSampler, ${tc("metallic")}, uMaterial.metallicTextureMatrix);`
+    : "getMetallic(&data, uMaterial.metallic);";
+  const roughnessCall = textures.roughnessTexture
+    ? `getRoughnessTextured(&data, uMaterial.roughness, uRoughnessTexture, uRoughnessTextureSampler, ${tc("roughness")}, uMaterial.roughnessTextureMatrix);`
+    : "getRoughness(&data, uMaterial.roughness);";
+  let metallicRoughnessCall = `${metallicCall}
+  ${roughnessCall}`;
+  if (textures.metallicRoughnessTexture) {
+    metallicRoughnessCall = `getMetallicRoughnessTextured(&data, uMaterial.metallic, uMaterial.roughness, uMetallicRoughnessTexture, uMetallicRoughnessTextureSampler, ${tc("metallicRoughness")}, uMaterial.metallicRoughnessTextureMatrix);`;
   }
+
+  const sgDiffuseCall = textures.sgDiffuseTexture
+    ? `getDiffuseTextured(uMaterial.sgDiffuse, data, uSgDiffuseTexture, uSgDiffuseTextureSampler, ${tc("sgDiffuse")}, uMaterial.sgDiffuseTextureMatrix);`
+    : "getDiffuse(uMaterial.sgDiffuse);";
+  const sgSpecularGlossinessCall = textures.sgSpecularGlossinessTexture
+    ? `getSpecularGlossinessTextured(uMaterial.sgSpecular, uMaterial.sgGlossiness, data, uSgSpecularGlossinessTexture, uSgSpecularGlossinessTextureSampler, ${tc("sgSpecularGlossiness")}, uMaterial.sgSpecularGlossinessTextureMatrix);`
+    : "getSpecularGlossiness(uMaterial.sgSpecular, uMaterial.sgGlossiness);";
+
+  let clearcoatRoughnessCall =
+    "getClearcoatRoughness(&data, uMaterial.clearcoatRoughness);";
+  if (textures.clearcoatRoughnessTexture) {
+    clearcoatRoughnessCall = `getClearcoatRoughnessTextured(&data, uMaterial.clearcoatRoughness, uClearcoatRoughnessTexture, uClearcoatRoughnessTextureSampler, ${tc("clearcoatRoughness")}, uMaterial.clearcoatRoughnessTextureMatrix);`;
+  } else if (materialFlags.clearcoatRoughnessFromMainTexture) {
+    clearcoatRoughnessCall = "";
+  }
+
+  let sheenRoughnessCall =
+    "getSheenRoughness(&data, uMaterial.sheenRoughness);";
+  if (textures.sheenRoughnessTexture) {
+    sheenRoughnessCall = `getSheenRoughnessTextured(&data, uMaterial.sheenRoughness, uSheenRoughnessTexture, uSheenRoughnessTextureSampler, ${tc("sheenRoughness")}, uMaterial.sheenRoughnessTextureMatrix);`;
+  } else if (materialFlags.sheenRoughnessFromMainTexture) {
+    sheenRoughnessCall = "";
+  }
+
+  // The two textures are independently optional (like clearcoat/
+  // clearcoatRoughness above) — each dispatches to the variant that only
+  // samples the texture(s) actually bound, so a material with just one of
+  // the two doesn't get the other's factor tinted by an unrelated texture.
+  let diffuseTransmissionCall = `getDiffuseTransmission(&data, uMaterial.diffuseTransmission, uMaterial.diffuseTransmissionColor, uModel.modelMatrix);`;
+  if (
+    materialFlags.diffuseTransmissionTexture &&
+    materialFlags.diffuseTransmissionColorTexture
+  ) {
+    diffuseTransmissionCall = `getDiffuseTransmissionTextured(&data, uMaterial.diffuseTransmission, uMaterial.diffuseTransmissionColor, uDiffuseTransmissionTexture, uDiffuseTransmissionTextureSampler, ${tc("diffuseTransmission")}, uMaterial.diffuseTransmissionTextureMatrix, uDiffuseTransmissionColorTexture, uDiffuseTransmissionColorTextureSampler, ${tc("diffuseTransmissionColor")}, uMaterial.diffuseTransmissionColorTextureMatrix, uModel.modelMatrix);`;
+  } else if (materialFlags.diffuseTransmissionTexture) {
+    diffuseTransmissionCall = `getDiffuseTransmissionStrengthTextured(&data, uMaterial.diffuseTransmission, uMaterial.diffuseTransmissionColor, uDiffuseTransmissionTexture, uDiffuseTransmissionTextureSampler, ${tc("diffuseTransmission")}, uMaterial.diffuseTransmissionTextureMatrix, uModel.modelMatrix);`;
+  } else if (materialFlags.diffuseTransmissionColorTexture) {
+    diffuseTransmissionCall = `getDiffuseTransmissionColorTextured(&data, uMaterial.diffuseTransmission, uMaterial.diffuseTransmissionColor, uDiffuseTransmissionColorTexture, uDiffuseTransmissionColorTextureSampler, ${tc("diffuseTransmissionColor")}, uMaterial.diffuseTransmissionColorTextureMatrix, uModel.modelMatrix);`;
+  }
+
+  // The two textures are independently optional: each dispatches to the
+  // variant that only samples the texture(s) actually bound, so a material
+  // with just specularTexture doesn't get its RGB — reserved for
+  // specularColorTexture since ratification — tinting f0.
+  let specularCall =
+    "getSpecular(&data, uMaterial.specular, uMaterial.specularColor);";
+  if (textures.specularTexture && textures.specularColorTexture) {
+    specularCall = `getSpecularTextured(&data, uMaterial.specular, uMaterial.specularColor, uSpecularTexture, uSpecularTextureSampler, ${tc("specular")}, uMaterial.specularTextureMatrix, uSpecularColorTexture, uSpecularColorTextureSampler, ${tc("specularColor")}, uMaterial.specularColorTextureMatrix);`;
+  } else if (textures.specularTexture) {
+    specularCall = `getSpecularStrengthTextured(&data, uMaterial.specular, uMaterial.specularColor, uSpecularTexture, uSpecularTextureSampler, ${tc("specular")}, uMaterial.specularTextureMatrix);`;
+  } else if (textures.specularColorTexture) {
+    specularCall = `getSpecularColorTextured(&data, uMaterial.specular, uMaterial.specularColor, uSpecularColorTexture, uSpecularColorTextureSampler, ${tc("specularColor")}, uMaterial.specularColorTextureMatrix);`;
+  }
+
+  const unlitBody = /* wgsl */ `
+  ${baseColorCall}
   // Display-referred, not metered: an unlit material declares its output
   // colour, and baseColor is an sRGB value capped at 1 with no way to express
   // a luminance, so metering it for daylight would render it black.
@@ -599,17 +658,8 @@ ${bindingDeclaration(1, lightBindings.next(), "uIrradianceCoefficients", `array<
   ${
     materialFlags.metallicRoughnessWorkflow
       ? /* wgsl */ `
-  ${
-    materialFlags.baseColorTexture
-      ? `getBaseColorTextured(&data, uMaterial.baseColor, uBaseColorTexture, uBaseColorTextureSampler, ${tc("baseColor")}, uMaterial.baseColorTextureMatrix, ${vColorExpr});`
-      : `getBaseColor(&data, uMaterial.baseColor, ${vColorExpr});`
-  }
-  ${
-    textures.metallicRoughnessTexture
-      ? `getMetallicRoughnessTextured(&data, uMaterial.metallic, uMaterial.roughness, uMetallicRoughnessTexture, uMetallicRoughnessTextureSampler, ${tc("metallicRoughness")}, uMaterial.metallicRoughnessTextureMatrix);`
-      : `${textures.metallicTexture ? `getMetallicTextured(&data, uMaterial.metallic, uMetallicTexture, uMetallicTextureSampler, ${tc("metallic")}, uMaterial.metallicTextureMatrix);` : "getMetallic(&data, uMaterial.metallic);"}
-  ${textures.roughnessTexture ? `getRoughnessTextured(&data, uMaterial.roughness, uRoughnessTexture, uRoughnessTextureSampler, ${tc("roughness")}, uMaterial.roughnessTextureMatrix);` : "getRoughness(&data, uMaterial.roughness);"}`
-  }
+  ${baseColorCall}
+  ${metallicRoughnessCall}
   data.roughness = clamp(data.roughness, MIN_ROUGHNESS, 1.0);`
       : ""
   }
@@ -617,8 +667,8 @@ ${bindingDeclaration(1, lightBindings.next(), "uIrradianceCoefficients", `array<
   ${
     materialFlags.specularGlossinessWorkflow
       ? /* wgsl */ `
-  let sgDiffuseRGBA = ${textures.sgDiffuseTexture ? `getDiffuseTextured(uMaterial.sgDiffuse, data, uSgDiffuseTexture, uSgDiffuseTextureSampler, ${tc("sgDiffuse")}, uMaterial.sgDiffuseTextureMatrix);` : "getDiffuse(uMaterial.sgDiffuse);"}
-  let sgSpecGloss = ${textures.sgSpecularGlossinessTexture ? `getSpecularGlossinessTextured(uMaterial.sgSpecular, uMaterial.sgGlossiness, data, uSgSpecularGlossinessTexture, uSgSpecularGlossinessTextureSampler, ${tc("sgSpecularGlossiness")}, uMaterial.sgSpecularGlossinessTextureMatrix);` : "getSpecularGlossiness(uMaterial.sgSpecular, uMaterial.sgGlossiness);"}
+  let sgDiffuseRGBA = ${sgDiffuseCall}
+  let sgSpecGloss = ${sgSpecularGlossinessCall}
   getBaseColorAndMetallicRoughnessFromSpecularGlossiness(&data, sgSpecGloss, sgDiffuseRGBA, ${vColorExpr});`
       : ""
   }
@@ -627,13 +677,7 @@ ${bindingDeclaration(1, lightBindings.next(), "uIrradianceCoefficients", `array<
 
   if (USE_CLEARCOAT) {
   ${textures.clearcoatTexture ? `getClearcoatTextured(&data, uMaterial.clearcoat, uMaterial.clearcoatRoughness, uClearcoatTexture, uClearcoatTextureSampler, ${tc("clearcoat")}, uMaterial.clearcoatTextureMatrix);` : "getClearcoat(&data, uMaterial.clearcoat);"}
-  ${
-    textures.clearcoatRoughnessTexture
-      ? `getClearcoatRoughnessTextured(&data, uMaterial.clearcoatRoughness, uClearcoatRoughnessTexture, uClearcoatRoughnessTextureSampler, ${tc("clearcoatRoughness")}, uMaterial.clearcoatRoughnessTextureMatrix);`
-      : materialFlags.clearcoatRoughnessFromMainTexture
-        ? ""
-        : "getClearcoatRoughness(&data, uMaterial.clearcoatRoughness);"
-  }
+  ${clearcoatRoughnessCall}
   data.clearcoatLinearRoughness = data.clearcoatRoughness * data.clearcoatRoughness;
   data.f0 = mix(data.f0, f0ClearcoatToSurface(data.f0), data.clearcoat);
   data.roughness = max(data.roughness, data.clearcoatRoughness);
@@ -646,13 +690,7 @@ ${bindingDeclaration(1, lightBindings.next(), "uIrradianceCoefficients", `array<
 
   if (USE_SHEEN) {
   ${textures.sheenColorTexture ? `getSheenColorTextured(&data, uMaterial.sheenColor, uMaterial.sheenRoughness, uSheenColorTexture, uSheenColorTextureSampler, ${tc("sheenColor")}, uMaterial.sheenColorTextureMatrix);` : "getSheenColor(&data, uMaterial.sheenColor);"}
-  ${
-    textures.sheenRoughnessTexture
-      ? `getSheenRoughnessTextured(&data, uMaterial.sheenRoughness, uSheenRoughnessTexture, uSheenRoughnessTextureSampler, ${tc("sheenRoughness")}, uMaterial.sheenRoughnessTextureMatrix);`
-      : materialFlags.sheenRoughnessFromMainTexture
-        ? ""
-        : "getSheenRoughness(&data, uMaterial.sheenRoughness);"
-  }
+  ${sheenRoughnessCall}
   getSheenAlbedoScaling(&data);
   data.sheenRoughness = max(data.sheenRoughness, MIN_ROUGHNESS);
   data.sheenLinearRoughness = data.sheenRoughness * data.sheenRoughness;
@@ -670,20 +708,7 @@ ${bindingDeclaration(1, lightBindings.next(), "uIrradianceCoefficients", `array<
   getAttenuation(&data, uMaterial.attenuationColor, uMaterial.attenuationDistance);
   }
   if (USE_DIFFUSE_TRANSMISSION) {
-  ${
-    // The two textures are independently optional (like clearcoat/
-    // clearcoatRoughness above) — each dispatches to the variant that only
-    // samples the texture(s) actually bound, so a material with just one of
-    // the two doesn't get the other's factor tinted by an unrelated texture.
-    materialFlags.diffuseTransmissionTexture &&
-    materialFlags.diffuseTransmissionColorTexture
-      ? `getDiffuseTransmissionTextured(&data, uMaterial.diffuseTransmission, uMaterial.diffuseTransmissionColor, uDiffuseTransmissionTexture, uDiffuseTransmissionTextureSampler, ${tc("diffuseTransmission")}, uMaterial.diffuseTransmissionTextureMatrix, uDiffuseTransmissionColorTexture, uDiffuseTransmissionColorTextureSampler, ${tc("diffuseTransmissionColor")}, uMaterial.diffuseTransmissionColorTextureMatrix, uModel.modelMatrix);`
-      : materialFlags.diffuseTransmissionTexture
-        ? `getDiffuseTransmissionStrengthTextured(&data, uMaterial.diffuseTransmission, uMaterial.diffuseTransmissionColor, uDiffuseTransmissionTexture, uDiffuseTransmissionTextureSampler, ${tc("diffuseTransmission")}, uMaterial.diffuseTransmissionTextureMatrix, uModel.modelMatrix);`
-        : materialFlags.diffuseTransmissionColorTexture
-          ? `getDiffuseTransmissionColorTextured(&data, uMaterial.diffuseTransmission, uMaterial.diffuseTransmissionColor, uDiffuseTransmissionColorTexture, uDiffuseTransmissionColorTextureSampler, ${tc("diffuseTransmissionColor")}, uMaterial.diffuseTransmissionColorTextureMatrix, uModel.modelMatrix);`
-          : `getDiffuseTransmission(&data, uMaterial.diffuseTransmission, uMaterial.diffuseTransmissionColor, uModel.modelMatrix);`
-  }
+  ${diffuseTransmissionCall}
   }
 
   ${materialFlags.occlusionTexture ? `getAmbientOcclusion(&data, uMaterial.occlusionTextureStrength, uOcclusionTexture, uOcclusionTextureSampler, ${tc("occlusion")}, uMaterial.occlusionTextureMatrix);` : ""}
@@ -710,19 +735,7 @@ ${bindingDeclaration(1, lightBindings.next(), "uIrradianceCoefficients", `array<
       ? /* wgsl */ `
   getIor(&data, uMaterial.ior);
   if (USE_SPECULAR) {
-  ${
-    // The two textures are independently optional: each dispatches to the
-    // variant that only samples the texture(s) actually bound, so a material
-    // with just specularTexture doesn't get its RGB — reserved for
-    // specularColorTexture since ratification — tinting f0.
-    textures.specularTexture && textures.specularColorTexture
-      ? `getSpecularTextured(&data, uMaterial.specular, uMaterial.specularColor, uSpecularTexture, uSpecularTextureSampler, ${tc("specular")}, uMaterial.specularTextureMatrix, uSpecularColorTexture, uSpecularColorTextureSampler, ${tc("specularColor")}, uMaterial.specularColorTextureMatrix);`
-      : textures.specularTexture
-        ? `getSpecularStrengthTextured(&data, uMaterial.specular, uMaterial.specularColor, uSpecularTexture, uSpecularTextureSampler, ${tc("specular")}, uMaterial.specularTextureMatrix);`
-        : textures.specularColorTexture
-          ? `getSpecularColorTextured(&data, uMaterial.specular, uMaterial.specularColor, uSpecularColorTexture, uSpecularColorTextureSampler, ${tc("specularColor")}, uMaterial.specularColorTextureMatrix);`
-          : "getSpecular(&data, uMaterial.specular, uMaterial.specularColor);"
-  }
+  ${specularCall}
   } else {
   getSpecularFromIor(&data);
   }`
@@ -782,6 +795,10 @@ ${bindingDeclaration(1, lightBindings.next(), "uIrradianceCoefficients", `array<
     previousInstancedRotation:
       !!outputs.velocity && vertexFlags.previousInstancedRotation,
   };
+
+  const responsiveFactor = defines.has(MATERIAL_DEFINE.responsiveAA)
+    ? "1.0"
+    : "select(0.0, 1.0, USE_BLEND || USE_TRANSMISSION)";
 
   return /* wgsl */ `
 ${frameStruct()}
@@ -903,7 +920,7 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     transformTangent: vertexFlags.tangent,
   })}
 
-  ${colorAssignment}
+  ${vertexColorAssignment(vertexFlags)}
 
   output.normalWorld = normalize((uFrame.inverseViewMatrix * vec4f(output.normalView, 0.0)).xyz);
 
@@ -1022,7 +1039,7 @@ fn fragmentMain(
   // behind them belongs to whatever they are in front of. The opacity rides
   // along as alpha, so a surface covering part of a pixel claims that part.
   output.responsive = vec4f(
-    ${defines.has(MATERIAL_DEFINE.responsiveAA) ? "1.0" : "select(0.0, 1.0, USE_BLEND || USE_TRANSMISSION)"},
+    ${responsiveFactor},
     0.0,
     0.0,
     data.opacity

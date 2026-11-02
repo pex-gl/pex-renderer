@@ -159,7 +159,7 @@ export type PassExecute = (context: PassContext) => void;
  */
 export interface WriteDeclaration {
   handle: ResourceHandle;
-  usage: GPUTextureUsageFlags | GPUBufferUsageFlags;
+  usage: GPUFlagsConstant;
 }
 
 export interface PassDeclaration {
@@ -270,7 +270,7 @@ export interface CompiledResource {
    * Derived from how passes use the resource — plus a sampled read for anything
    * exported, which is read where no pass can declare it. Never requested.
    */
-  usage: GPUTextureUsageFlags | GPUBufferUsageFlags;
+  usage: GPUFlagsConstant;
   /** Never sampled and never outlives its pass, so it can stay memoryless. */
   transient: boolean;
   /** Holds a dedicated texture across frames rather than coming from the pool. */

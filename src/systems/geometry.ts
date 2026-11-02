@@ -100,10 +100,10 @@ const bufferCache = (ctx: GpuContext) =>
   buffersPerContext.getOrInsertComputed(ctx, () => new WeakSet<GpuBuffer>());
 
 /** Element count pex-gpu will write for `data`: an array of vectors flattens. */
-const elementCount = (data: AttributeData) =>
-  ArrayBuffer.isView(data)
-    ? data.length
-    : data.length * (Array.isArray(data[0]) ? data[0]!.length : 1);
+const elementCount = (data: AttributeData) => {
+  if (ArrayBuffer.isView(data)) return data.length;
+  return data.length * (Array.isArray(data[0]) ? data[0].length : 1);
+};
 
 /**
  * Bytes pex-gpu writes per element, mirroring its coercion. A new index buffer
@@ -356,7 +356,7 @@ export default ({ ctx }: SystemOptions) => ({
   cache: {} as Record<EntityId, GeometryCache>,
   debug: false,
   updateBounds(geometry: GeometryComponentOptions) {
-    const positions = getAttributeData(geometry.positions!)!;
+    const positions = getAttributeData(geometry.positions!);
     const offsets = geometry.offsets && getAttributeData(geometry.offsets);
 
     const bounds = (geometry.bounds ||= aabb.create());

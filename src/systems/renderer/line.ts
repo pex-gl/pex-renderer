@@ -13,12 +13,11 @@ import type { Attributes, GpuBuffer } from "pex-gpu";
 import type {
   PipelineShaderOptions,
   Entity,
-  EntityId,
   RendererPassOptions,
-  RendererSystem,
   RenderView,
   SystemOptions,
 } from "../../types.js";
+import type { BaseRendererSystem } from "./base.js";
 
 // Reused per draw; the Model struct carries a normalMatrix the line shader
 // never reads, but WGSL struct packing still requires the member.
@@ -39,10 +38,27 @@ const instanceRoundRound = Float32Array.of(
   0, 0.5, 0,
 );
 
-// `RendererSystem` reaches a renderer's own state through an index signature,
-// which loses what this one keeps there: round-cap quads keyed by resolution.
-const lineBuffers = (renderer: RendererSystem) =>
-  renderer.cache as Record<EntityId, GpuBuffer>;
+/** Members the line renderer adds to the base renderer. */
+export interface LineRendererSystem extends BaseRendererSystem {
+  /** Round-cap quad buffers keyed by `material.lineResolution`. */
+  cache: Record<number, GpuBuffer>;
+  getLinePositionsBuffer(resolution: number): GpuBuffer;
+  render(
+    renderView: RenderView,
+    entities: Entity[],
+    options: RendererPassOptions,
+  ): void;
+  renderShadow(
+    renderView: RenderView,
+    entities: Entity[],
+    options?: RendererPassOptions,
+  ): void;
+  renderOpaque(
+    renderView: RenderView,
+    entities: Entity[],
+    options?: RendererPassOptions,
+  ): void;
+}
 
 /**
  * Line renderer
@@ -53,11 +69,10 @@ const lineBuffers = (renderer: RendererSystem) =>
  * follow the shared bind group convention: `@group(0)` Frame, `@group(2)`
  * Material, `@group(3)` Model.
  */
-export default ({ ctx }: SystemOptions): RendererSystem => ({
+export default ({ ctx }: SystemOptions): LineRendererSystem => ({
   ...createBaseSystem({ ctx }),
   type: "line-renderer",
-  // Round-cap quad buffers keyed by material.lineResolution.
-  cache: {} as Record<EntityId, GpuBuffer>,
+  cache: {},
   debug: false,
 
   getShader: (defines: Set<string>, options: PipelineShaderOptions) =>
@@ -103,7 +118,7 @@ export default ({ ctx }: SystemOptions): RendererSystem => ({
     };
   },
   getLinePositionsBuffer(resolution: number) {
-    const cache = lineBuffers(this);
+    const { cache } = this;
     if (!cache[resolution]) {
       const positions = new Float32Array(
         instanceRoundRound.length + resolution * 18,
@@ -254,8 +269,8 @@ export default ({ ctx }: SystemOptions): RendererSystem => ({
             { previousModelMatrix: !!options.outputs?.velocity },
           ),
           uMaterial: {
-            baseColor: material.baseColor,
-            lineWidth: material.lineWidth,
+            baseColor: material.baseColor!,
+            lineWidth: material.lineWidth!,
           },
           ...this.getHookUniforms(entity, options.frameIndex ?? NaN),
         },
@@ -277,7 +292,7 @@ export default ({ ctx }: SystemOptions): RendererSystem => ({
     this.render(renderView, entities, options);
   },
   dispose() {
-    for (const buffer of Object.values(lineBuffers(this))) {
+    for (const buffer of Object.values(this.cache)) {
       buffer.dispose();
     }
     this.cache = {};

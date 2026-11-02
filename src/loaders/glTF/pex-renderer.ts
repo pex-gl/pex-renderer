@@ -69,7 +69,8 @@ function mapGeometry(geometry: ResolvedGeometry): GeometryComponentOptions {
       // EXT_mesh_gpu_instancing both spell with a leading underscore. Keyed by
       // the WGSL vertex input a material hook declares to read it — so `_COLOR`
       // lands on the instanced `color` input the renderers already know.
-      const attributes = (result.attributes ??= {}) as Record<string, unknown>;
+      result.attributes ??= {};
+      const attributes = result.attributes as Record<string, unknown>;
       attributes[key.slice(1).toLowerCase()] = geometry[key];
     } else {
       // A spec semantic we do not implement: the second UV set is the last one
@@ -134,7 +135,7 @@ function mapMaterial(
   // depthWriteEnabled follows from blend in the renderers, as the spec requires.
   if (material.alphaMode === "BLEND") result.blend = "normal";
 
-  return result as MaterialComponentOptions;
+  return result;
 }
 
 // KHR_lights_punctual measures directional lights in lux, which is
@@ -175,7 +176,7 @@ function buildLightComponent(light: ResolvedLight) {
         outerConeAngle: light.outerConeAngle!,
       });
     default:
-      throw new Error(`Unexpected light type: ${light.type}`);
+      throw new Error(`Unexpected light type: ${String(light.type)}`);
   }
 }
 

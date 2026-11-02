@@ -11,5 +11,5 @@ export default <T extends object = object>(
     );
   }
 
-  return { id: entityCount++, ...components } as Entity & T;
+  return { id: entityCount++, ...components };
 };
