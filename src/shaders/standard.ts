@@ -629,7 +629,6 @@ ${bindingDeclaration(1, lightBindings.next(), "uIrradianceCoefficients", irradia
   data.ao = 1.0;
   data.opacity = 1.0;
   data.viewWorld = normalize(uFrame.cameraPosition - input.positionWorld);
-  data.NdotV = saturateF32(abs(dot(data.normalWorld, data.viewWorld)) + FLT_EPS);
 
   ${hooks.fragBeforeTextures ?? ""}
 
@@ -638,6 +637,8 @@ ${bindingDeclaration(1, lightBindings.next(), "uIrradianceCoefficients", irradia
       ? `getNormalTextured(&data, uNormalTexture, uNormalTextureSampler, uMaterial.normalTextureScale, ${tc("normal")}, uMaterial.normalTextureMatrix, frontFacing);`
       : "getNormal(&data);"
   }
+  // After normal mapping, so it's the normal lighting shades with.
+  data.NdotV = saturateF32(abs(dot(data.normalWorld, data.viewWorld)) + FLT_EPS);
 
   ${
     materialFlags.emissiveTexture
