@@ -248,6 +248,9 @@ const PBR_DATA_STRUCT = /* wgsl */ `struct PBRData {
   linearRoughness: f32, // roughness mapped to a more linear change in the roughness (proposed by [2])
   f0: vec3f, // Reflectance at normal incidence, specular color
   f90: vec3f, // Specular response at grazing incidence
+  dfg: vec2f, // split-sum DFG scale and bias: f0 * x + f90 * y
+  energyCompensation: vec3f, // multiple-scattering compensation of the direct specular lobe
+  FssEss: vec3f, // single-scattering specular reflectance of the indirect lobe
   clearcoat: f32,
   clearcoatRoughness: f32,
   clearcoatLinearRoughness: f32,
@@ -742,6 +745,8 @@ ${bindingDeclaration(1, lightBindings.next(), "uIrradianceCoefficients", irradia
   }`
       : ""
   }
+
+  getEnergyCompensation(&data);
 
   ${
     useReflectionProbes
