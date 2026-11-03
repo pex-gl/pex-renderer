@@ -3,6 +3,7 @@ import { loadHdr, loadUltraHdr } from "pex-loaders";
 import { createTexture } from "pex-gpu";
 import { aabb } from "pex-geom";
 import { utils } from "pex-math";
+import { vec3FromSpherical } from "cameras";
 import normals from "angle-normals";
 import centerAndNormalize from "geom-center-and-normalize";
 
@@ -31,13 +32,11 @@ export async function getTexture(ctx, file, srgb, options = {}) {
 }
 
 export function updateSunPosition(skybox, elevation, azimuth) {
-  const phi = utils.toRadians(90 - elevation);
-  const theta = utils.toRadians(azimuth);
-  skybox.sunPosition = [
-    Math.sin(phi) * Math.sin(theta),
-    Math.cos(phi),
-    -Math.sin(phi) * Math.cos(theta),
-  ];
+  skybox.sunPosition = vec3FromSpherical(skybox.sunPosition ?? [0, 0, 0], [
+    1,
+    utils.toRadians(elevation),
+    utils.toRadians(azimuth),
+  ]);
 }
 
 export function debugSceneTree(entities) {

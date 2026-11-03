@@ -21,12 +21,10 @@ const State = {
   backgroundBlur: 0,
   rotation: 0,
   // rotation: 1.5 * Math.PI,
-  sizeIndex: 4,
-  sizes: [256, 512, 1024, 2048, 4096],
-  maxElevation: 30,
-  elevation: 0,
-  azimuth: -180,
-  progress: 0,
+  maxElevation: 47,
+  elevation: 47,
+  azimuth: 0,
+  progress: 0.5,
 };
 
 const pixelRatio = devicePixelRatio;
@@ -79,11 +77,10 @@ const skyboxEntity = createEntity({
     sunPosition: [0, 0.05, -1],
     backgroundBlur: State.backgroundBlur,
   }),
-  reflectionProbe: components.reflectionProbe({
-    size: State.sizes[State.sizeIndex],
-  }),
+  reflectionProbe: components.reflectionProbe(),
 });
 world.add(skyboxEntity);
+updateSunPosition(skyboxEntity.skybox, State.elevation, State.azimuth);
 
 const updateEnvMap = () => {
   skyboxEntity.skybox.envMap = State.envMap
@@ -95,10 +92,6 @@ const updateEnvMap = () => {
 };
 
 updateEnvMap();
-
-// Update for GUI
-// renderEngine.update(world.entities);
-// renderEngine.render(world.entities, cameraEntity);
 
 // GUI
 let guiEnvMapTextureControl;
@@ -125,24 +118,11 @@ gui.addParam("Roughness", geometryEntity.material, "roughness");
 gui.addParam("Metallic", geometryEntity.material, "metallic");
 
 gui.addColumn("Skybox");
-
-gui.addParam("EnvMap", State, "envMap", {}, (enabled) => {
-  updateEnvMap();
-});
-gui.addParam("Ultra HDR", State, "ultraHdr", {}, (enabled) => {
-  updateEnvMap();
-
-  guiEnvMapTextureControl.options.flipY = enabled;
-});
-gui.addParam("BG Blur", skyboxEntity.skybox, "backgroundBlur", {
-  min: 0,
-  max: 1,
-});
+gui.addLabel("Environment");
 gui.addParam("Intensity (lx)", skyboxEntity.skybox, "intensity", {
   min: 0,
   max: 100_000,
 });
-
 gui.addParam(
   "Rotation",
   State,
@@ -157,9 +137,24 @@ gui.addParam(
     skyboxEntity.transform.dirty = true;
   },
 );
-gui.addSeparator();
-gui.addLabel("Sky Texture");
+gui.addParam("BG Blur", skyboxEntity.skybox, "backgroundBlur", {
+  min: 0,
+  max: 1,
+});
 
+gui.addSeparator();
+gui.addLabel("Env Map");
+gui.addParam("Enabled", State, "envMap", {}, (enabled) => {
+  updateEnvMap();
+});
+gui.addParam("Ultra HDR", State, "ultraHdr", {}, (enabled) => {
+  updateEnvMap();
+
+  guiEnvMapTextureControl.options.flipY = enabled;
+});
+
+gui.addSeparator();
+gui.addLabel("Sky");
 gui.addParam(
   "Sun Progress",
   State,
@@ -170,7 +165,7 @@ gui.addParam(
   },
   () => {
     State.elevation = State.maxElevation * Math.sin(Math.PI * State.progress);
-    State.azimuth = 360 * State.progress - 180;
+    State.azimuth = 180 - 360 * State.progress;
     updateSunPosition(skyboxEntity.skybox, State.elevation, State.azimuth);
   },
 );
@@ -185,7 +180,6 @@ gui.addParam(
 gui.addParam("Sun Azimuth", State, "azimuth", { min: -180, max: 180 }, () =>
   updateSunPosition(skyboxEntity.skybox, State.elevation, State.azimuth),
 );
-updateSunPosition(skyboxEntity.skybox, State.elevation, State.azimuth);
 gui.addParam("Turbidity", skyboxEntity.skybox, "turbidity", {
   min: 0,
   max: 20,
@@ -200,21 +194,6 @@ gui.addParam("MieDirectionalG", skyboxEntity.skybox, "mieDirectionalG", {
   max: 1,
 });
 
-gui.addSeparator();
-gui.addLabel("Environment Map");
-// gui.addRadioList(
-//   "Map Size",
-//   State,
-//   "sizeIndex",
-//   State.sizes.map((name, value) => ({
-//     name,
-//     value,
-//   })),
-//   () => {
-//     skyboxEntity.reflectionProbe.size = State.sizes[State.sizeIndex];
-//   },
-// );
-
 gui.addColumn("Textures");
 const dummyTexture2D = gpu.createTexture(ctx, {
   name: "dummyTexture2D",
@@ -224,18 +203,24 @@ const dummyTexture2D = gpu.createTexture(ctx, {
 });
 const guiSkyTextureControl = gui.addTexture2D("Sky", null, { flipY: true });
 guiEnvMapTextureControl = gui.addTexture2D("Env Map", null, { flipY: false });
-// gui.addTextureCube(
-//   "Reflection Cubemap",
-//   reflectionProbeEntity._reflectionProbe._dynamicCubemap,
-// );
-// // gui.addTexture2D(
-// //   "Oct Map",
-// //   reflectionProbeEntity._reflectionProbe._octMap,
-// // );
-// gui.addTexture2D(
-//   "Reflection Map",
-//   reflectionProbeEntity._reflectionProbe._reflectionMap,
-// );
+const dummyTextureCube = gpu.createTexture(ctx, {
+  name: "dummyTextureCube",
+  width: 1,
+  height: 1,
+  depth: 6,
+  viewDimension: "cube",
+  format: "rgba8unorm",
+});
+const guiSpecularTextureControl = gui.addTextureCube(
+  "Specular Cubemap",
+  dummyTextureCube,
+  { level: 0 },
+);
+// One mip per roughness level: what the prefilter wrote for each.
+gui.addParam("Specular Level", guiSpecularTextureControl.options, "level", {
+  min: 0,
+  max: 5,
+});
 
 // Events
 let debugOnce = false;
@@ -257,8 +242,17 @@ gpu.frame(ctx, async () => {
 
   guiSkyTextureControl.texture =
     skyboxEntity.skybox._skyTexture || dummyTexture2D;
+  guiSkyTextureControl.options.exposure = Math.log2(
+    (skyboxEntity.skybox._luminanceScale ?? 1) *
+      (cameraEntity.camera._exposure ?? 1),
+  );
   guiEnvMapTextureControl.texture =
     skyboxEntity.skybox.envMap || dummyTexture2D;
+  guiSpecularTextureControl.texture =
+    skyboxEntity._reflectionProbe?.specularTexture || dummyTextureCube;
+  guiSpecularTextureControl.options.exposure = Math.log2(
+    cameraEntity.camera._exposure ?? 1,
+  );
 
   gpu.debug(ctx, debugOnce);
   debugOnce = false;

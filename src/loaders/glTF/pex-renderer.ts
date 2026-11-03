@@ -94,6 +94,8 @@ const srgb = (color: number[]): number[] =>
     color[2]!,
     color.length === 4 ? color[3]! : 1,
   );
+// TODO: sRGB-encode COLOR_0 too. glTF vertex colors are linear but reach the
+// shaders' sRGB-decoded vColor unchanged, so they render too dark.
 const SRGB_MATERIAL_FACTORS: Record<string, (color: number[]) => number[]> = {
   baseColorFactor: srgb,
   emissiveFactor: srgb,

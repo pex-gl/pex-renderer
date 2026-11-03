@@ -103,8 +103,8 @@ export function extendGBuffer(renderers) {
   for (const renderer of renderers) {
     const { getShader, getShaderOptions } = renderer;
 
-    renderer.getShaderOptions = function (entity, options) {
-      const shaderOptions = getShaderOptions.call(this, entity, options);
+    renderer.getShaderOptions = function (...args) {
+      const shaderOptions = getShaderOptions.apply(this, args);
       const { outputs = {}, hooks = {} } = shaderOptions;
 
       const assignments = G_BUFFER.filter(({ name }) => outputs[name]).map(

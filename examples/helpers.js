@@ -32,15 +32,9 @@ const world = createWorld();
 const helperEntity = createEntity({
   transform: components.transform(),
   axesHelper: components.axesHelper(),
-  gridHelper: components.gridHelper({ size: 2 }),
-});
-world.add(helperEntity);
-
-const gridTenScaledEntity = createEntity({
-  transform: components.transform({ scale: [2, 2, 2] }),
   gridHelper: components.gridHelper(),
 });
-world.add(gridTenScaledEntity);
+world.add(helperEntity);
 
 const W = window.innerWidth * devicePixelRatio;
 const H = window.innerHeight * devicePixelRatio;
@@ -56,7 +50,6 @@ const cameraEntity = createEntity({
   postProcessing: components.postProcessing(),
   controls: components.controls.orbit(),
   cameraHelper: components.cameraHelper({
-    color: [0, 1, 0, 1],
     crossHair: true,
     thirds: true,
     safeAreas: true,
@@ -256,7 +249,7 @@ const directionalLightEntity = createEntity({
   }),
   directionalLight: components.directionalLight({
     color: [1, 1, 0, 1],
-    intensity: 100_000, // lx, a clear midday sun
+    intensity: 17_000,
   }),
   lightHelper: components.lightHelper(),
 });
@@ -292,13 +285,10 @@ gui.addParam("Zoom", orthographicCameraEntity.camera, "zoom", {
 });
 gui.addColumn("Light");
 gui.addParam(
-  "Intensity",
+  "Intensity (lx)",
   directionalLightEntity.directionalLight,
   "intensity",
-  {
-    min: 0,
-    max: 20,
-  },
+  { min: 0, max: 120_000 },
 );
 gui.addColumn("Geometry");
 gui.addParam("Bounding box", State, "bbox", {}, () => {

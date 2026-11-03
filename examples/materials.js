@@ -41,7 +41,7 @@ const materials = {
   Default: {},
   Unlit: {
     unlit: true,
-    baseColor: [1, 0, 0, 0.5],
+    baseColor: [1, 1, 0, 0.5],
   },
   "Unlit Base Color Texture": {
     unlit: true,
