@@ -1,6 +1,5 @@
 import { loadImage, loadBlob, loadArrayBuffer } from "pex-io";
 import { createTexture, createSampler } from "pex-gpu";
-import { transcodeKtx2 } from "pex-loaders";
 
 import { isBase64 } from "./io.js";
 
@@ -124,6 +123,7 @@ export async function resolveImages(
                 decodeURIComponent([options.basePath, image.uri].join("/")),
               )
             : bufferViews[image.bufferView]!._data;
+        const { transcodeKtx2 } = await import("pex-loaders");
         image._ktx2 = await transcodeKtx2(options.ctx, buffer);
         return;
       }
