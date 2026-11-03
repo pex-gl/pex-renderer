@@ -624,7 +624,6 @@ ${bindingDeclaration(1, lightBindings.next(), "uIrradianceCoefficients", irradia
   data.normalView = normalize(input.normalView) * frontFacingSign;
   ${vertexFlags.tangent ? "data.tangentView = normalize(input.tangentView) * frontFacingSign;" : ""}
   data.normalWorld = normalize(input.normalWorld) * frontFacingSign;
-  data.bentNormalWorld = data.normalWorld;
   data.eyeDirView = normalize(-input.positionView);
   data.eyeDirWorld = (uFrame.inverseViewMatrix * vec4f(data.eyeDirView, 0.0)).xyz;
   data.indirectDiffuse = vec3f(0.0);
@@ -642,6 +641,7 @@ ${bindingDeclaration(1, lightBindings.next(), "uIrradianceCoefficients", irradia
   }
   // After normal mapping, so it's the normal lighting shades with.
   data.NdotV = saturateF32(abs(dot(data.normalWorld, data.viewWorld)) + FLT_EPS);
+  data.bentNormalWorld = data.normalWorld;
 
   ${
     materialFlags.emissiveTexture
