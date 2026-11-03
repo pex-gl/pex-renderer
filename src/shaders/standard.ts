@@ -687,8 +687,8 @@ ${bindingDeclaration(1, lightBindings.next(), "uIrradianceCoefficients", irradia
   data.roughness = max(data.roughness, data.clearcoatRoughness);
   ${
     textures.clearcoatNormalTexture
-      ? `getClearcoatNormalTextured(&data, uClearcoatNormalTexture, uClearcoatNormalTextureSampler, uMaterial.clearcoatNormalTextureScale, ${tc("clearcoatNormal")}, uMaterial.clearcoatNormalTextureMatrix, frontFacing);`
-      : "getClearcoatNormal(&data, input.normalView);"
+      ? `getClearcoatNormalTextured(&data, normalize(input.normalView) * frontFacingSign, uClearcoatNormalTexture, uClearcoatNormalTextureSampler, uMaterial.clearcoatNormalTextureScale, ${tc("clearcoatNormal")}, uMaterial.clearcoatNormalTextureMatrix, frontFacing);`
+      : "getClearcoatNormal(&data, normalize(input.normalView) * frontFacingSign);"
   }
   }
 
