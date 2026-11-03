@@ -287,7 +287,10 @@ wants shallow focus opens up and re-meters on <code>shutterSpeed</code> or <code
 </div></li>
 <li class="tsd-parameter">
 <h5><span class="tsd-kind-property">near</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">number</span></h5>
-<div class="tsd-comment tsd-typography"><p>Post-processing reads depth as a positive distance from the camera, so an
+<div class="tsd-comment tsd-typography"><p>Default: 0.01 m. Reversed-Z makes depth precision independent of <code>near</code>, so
+it only sets what clips: at the default fov, a subject down to ~1 cm can
+fill the frame.</p>
+<p>Post-processing reads depth as a positive distance from the camera, so an
 orthographic <code>near</code> below 0 leaves what is behind the camera to ambient
 occlusion, depth of field and motion blur as negative depths.</p>
 </div></li>
@@ -326,7 +329,7 @@ occlusion, depth of field and motion blur as negative depths.</p>
 <div class="tsd-comment tsd-typography"><p>Magnification: values above 1 zoom in.</p>
 </div></li></ul></li></ul></li></ul></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/a5bc1b23ecf76117767b7beafa148d672a2dfbb3/src/components/camera.ts#L7">components/camera.ts:7</a></li></ul></aside></div>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/4d3d963be1e234e2f7f9a8d107ace7a6a3ef1a4a/src/components/camera.ts#L7">components/camera.ts:7</a></li></ul></aside></div>
 <div class="col-sidebar">
 <div class="page-menu">
 <div class="tsd-navigation settings">

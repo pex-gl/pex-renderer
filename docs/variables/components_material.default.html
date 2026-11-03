@@ -225,9 +225,10 @@ material in the opaque pass rather than the transparent one.</p>
 </div></li>
 <li class="tsd-parameter">
 <h5><code class="tsd-tag">Optional</code><span class="tsd-kind-property">depthBias</span><span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">number</span></h5>
-<div class="tsd-comment tsd-typography"><p>Rasterizer constant depth bias, in depth-buffer resolvable units. Negative
-pulls towards the camera, which is how coincident lines (an axes helper
-over a grid line) are given a stable winner instead of z-fighting.</p>
+<div class="tsd-comment tsd-typography"><p>Rasterizer constant depth bias, in depth-buffer resolvable units. Camera
+depth is reversed-Z, so positive pulls towards the camera, which is how
+coincident lines (an axes helper over a grid line) are given a stable
+winner instead of z-fighting.</p>
 </div></li>
 <li class="tsd-parameter">
 <h5><code class="tsd-tag">Optional</code><span class="tsd-kind-property">depthBiasClamp</span><span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">number</span></h5>
@@ -240,7 +241,8 @@ seen end-on has an extreme depth slope, so the term swings with the view.</p>
 </div></li>
 <li class="tsd-parameter">
 <h5><code class="tsd-tag">Optional</code><span class="tsd-kind-property">depthCompare</span><span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">GPUCompareFunction</span></h5>
-<div class="tsd-comment tsd-typography"><p>Default: the renderer's own (&quot;less-equal&quot;, &quot;less&quot; for lines).</p>
+<div class="tsd-comment tsd-typography"><p>Default: the renderer's own (&quot;greater-equal&quot;, &quot;greater&quot; for lines). Camera
+depth is reversed-Z: near is 1, far is 0, so &quot;greater&quot; means closer.</p>
 </div></li>
 <li class="tsd-parameter">
 <h5><span class="tsd-kind-property">depthWriteEnabled</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">boolean</span></h5>
@@ -424,9 +426,10 @@ material in the opaque pass rather than the transparent one.</p>
 </div></li>
 <li class="tsd-parameter">
 <h5><code class="tsd-tag">Optional</code><span class="tsd-kind-property">depthBias</span><span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">number</span></h5>
-<div class="tsd-comment tsd-typography"><p>Rasterizer constant depth bias, in depth-buffer resolvable units. Negative
-pulls towards the camera, which is how coincident lines (an axes helper
-over a grid line) are given a stable winner instead of z-fighting.</p>
+<div class="tsd-comment tsd-typography"><p>Rasterizer constant depth bias, in depth-buffer resolvable units. Camera
+depth is reversed-Z, so positive pulls towards the camera, which is how
+coincident lines (an axes helper over a grid line) are given a stable
+winner instead of z-fighting.</p>
 </div></li>
 <li class="tsd-parameter">
 <h5><code class="tsd-tag">Optional</code><span class="tsd-kind-property">depthBiasClamp</span><span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">number</span></h5>
@@ -439,7 +442,8 @@ seen end-on has an extreme depth slope, so the term swings with the view.</p>
 </div></li>
 <li class="tsd-parameter">
 <h5><code class="tsd-tag">Optional</code><span class="tsd-kind-property">depthCompare</span><span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">GPUCompareFunction</span></h5>
-<div class="tsd-comment tsd-typography"><p>Default: the renderer's own (&quot;less-equal&quot;, &quot;less&quot; for lines).</p>
+<div class="tsd-comment tsd-typography"><p>Default: the renderer's own (&quot;greater-equal&quot;, &quot;greater&quot; for lines). Camera
+depth is reversed-Z: near is 1, far is 0, so &quot;greater&quot; means closer.</p>
 </div></li>
 <li class="tsd-parameter">
 <h5><code class="tsd-tag">Optional</code><span class="tsd-kind-property">depthWriteEnabled</span><span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">boolean</span></h5>
@@ -584,7 +588,7 @@ authored is the colour drawn, unaffected by the camera's exposure, since an
 sRGB colour capped at 1 cannot express a luminance.</p>
 </div></li></ul></li></ul></li></ul></li></ul></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/a5bc1b23ecf76117767b7beafa148d672a2dfbb3/src/components/material.ts#L6">components/material.ts:6</a></li></ul></aside></div>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/4d3d963be1e234e2f7f9a8d107ace7a6a3ef1a4a/src/components/material.ts#L6">components/material.ts:6</a></li></ul></aside></div>
 <div class="col-sidebar">
 <div class="page-menu">
 <div class="tsd-navigation settings">

@@ -175,7 +175,9 @@
 <div class="tsd-signature tsd-anchor-link" id="computefrustumplanes"><span class="tsd-kind-call-signature">computeFrustumPlanes</span><span class="tsd-signature-symbol">(</span><br/>    <span class="tsd-kind-parameter">out</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Float32Array</span><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-kind-parameter">projectionMatrix</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Mat4</span><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-kind-parameter">viewMatrix</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Mat4</span><span class="tsd-signature-symbol">,</span><br/><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Float32Array</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">ArrayBufferLike</span><span class="tsd-signature-symbol">&gt;</span><a href="#computefrustumplanes" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
 <div class="tsd-description">
 <div class="tsd-comment tsd-typography"><p>Gribb/Hartmann plane extraction from a view-projection, normalized so plane
-distances are metric. Order: -x, +x, +y, -y, far, near.</p>
+distances are metric. Order: -x, +x, +y, -y, then the depth planes: far, near
+for a conventional projection (shadow maps), near, far for a reversed-Z one
+(cameras).</p>
 </div>
 <div class="tsd-parameters">
 <h4 class="tsd-parameters-title">Parameters</h4>
@@ -185,7 +187,7 @@ distances are metric. Order: -x, +x, +y, -y, far, near.</p>
 <li><span><span class="tsd-kind-parameter">viewMatrix</span>: <span class="tsd-signature-type">Mat4</span></span></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Float32Array</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">ArrayBufferLike</span><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/a5bc1b23ecf76117767b7beafa148d672a2dfbb3/src/utils.ts#L202">utils.ts:202</a></li></ul></aside></div></li></ul></section></div>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/4d3d963be1e234e2f7f9a8d107ace7a6a3ef1a4a/src/utils.ts#L204">utils.ts:204</a></li></ul></aside></div></li></ul></section></div>
 <div class="col-sidebar">
 <div class="page-menu">
 <div class="tsd-navigation settings">

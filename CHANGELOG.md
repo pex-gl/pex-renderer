@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+# [6.0.0-alpha.5](https://github.com/pex-gl/pex-renderer/compare/v6.0.0-alpha.4...v6.0.0-alpha.5) (2026-11-03)
+
+### Bug Fixes
+
+* compute NdotV after normal mapping ([5f0e417](https://github.com/pex-gl/pex-renderer/commit/5f0e4173220d9fbf1851e2ed2d9d5cfeae3e598a))
+* fall back to the normal-mapped normal for the bent normal ([37528a2](https://github.com/pex-gl/pex-renderer/commit/37528a205a40072db356f17f49121bb04c9562ba))
+* light area lights from their world transform ([4dca369](https://github.com/pex-gl/pex-renderer/commit/4dca369f2304cab8c2eee1e3eacf40103ca8e063))
+* pass the front-facing geometric normal to clearcoat ([2180683](https://github.com/pex-gl/pex-renderer/commit/21806837047a36fae2ebcbc2bb1e8cf277bb2b9e))
+
+### Features
+
+* add camera viewfinder helper framing guides for the camera's own view ([83b7b0a](https://github.com/pex-gl/pex-renderer/commit/83b7b0a49f78125613efed1c444e49bbac7d2bbe))
+* default standard material metallic to 0 and roughness 0.5 ([ff9e1b9](https://github.com/pex-gl/pex-renderer/commit/ff9e1b98cadab6e5055dcb88473203bf58d1be25))
+* reversed-Z camera depth ([49387cc](https://github.com/pex-gl/pex-renderer/commit/49387ccb3390aefdfd70ae4e0742f54f90776534))
+
+### Performance Improvements
+
+* lazy load the KTX2 transcoder and pack LTC tables as half floats ([4d3d963](https://github.com/pex-gl/pex-renderer/commit/4d3d963be1e234e2f7f9a8d107ace7a6a3ef1a4a))
+
 # [6.0.0-alpha.4](https://github.com/pex-gl/pex-renderer/compare/v6.0.0-alpha.3...v6.0.0-alpha.4) (2026-10-29)
 
 ### Bug Fixes

@@ -1,0 +1,590 @@
+<!DOCTYPE html><html class="default" lang="en" data-base="../"><head><meta charset="utf-8"/><meta http-equiv="x-ua-compatible" content="IE=edge"/><title>BasicRendererSystem | pex-renderer</title><meta name="description" content="Documentation for pex-renderer"/><meta name="viewport" content="width=device-width, initial-scale=1"/><link rel="stylesheet" href="../assets/style.css"/><link rel="stylesheet" href="../assets/highlight.css"/><script defer src="../assets/main.js"></script><script async src="../assets/icons.js" id="tsd-icons-script"></script><script async src="../assets/search.js" id="tsd-search-script"></script><script async src="../assets/navigation.js" id="tsd-nav-script"></script><script async src="../assets/hierarchy.js" id="tsd-hierarchy-script"></script><style>
+@media (prefers-color-scheme: dark) {
+  :root {
+    --md-sys-color-primary: #f6be46;
+    --md-sys-color-on-primary: #412d00;
+    --md-sys-color-primary-container: #5d4200;
+    --md-sys-color-on-primary-container: #ffdea3;
+    --md-sys-color-secondary: #d9c4a0;
+    --md-sys-color-on-secondary: #3b2f15;
+    --md-sys-color-secondary-container: #53452a;
+    --md-sys-color-on-secondary-container: #f6e0bb;
+    --md-sys-color-tertiary: #b2cfa8;
+    --md-sys-color-on-tertiary: #1e361a;
+    --md-sys-color-tertiary-container: #344d2f;
+    --md-sys-color-on-tertiary-container: #cdebc2;
+    --md-sys-color-error: #ffb4ab;
+    --md-sys-color-on-error: #690005;
+    --md-sys-color-error-container: #93000a;
+    --md-sys-color-on-error-container: #ffb4ab;
+    --md-sys-color-background: #1e1b16;
+    --md-sys-color-on-background: #e9e1d9;
+    --md-sys-color-surface: #1e1b16;
+    --md-sys-color-on-surface: #e9e1d9;
+    --md-sys-color-surface-variant: #4e4639;
+    --md-sys-color-on-surface-variant: #d1c5b4;
+    --md-sys-color-outline: #9a8f80;
+    --md-sys-color-outline-variant: #4e4639;
+    --md-sys-color-shadow: #000000;
+    --md-sys-color-scrim: #000000;
+    --md-sys-color-inverse-surface: #e9e1d9;
+    --md-sys-color-inverse-on-surface: #34302a;
+    --md-sys-color-inverse-primary: #7a5900;
+    --md-sys-color-surface-dim: #16130e;
+    --md-sys-color-surface-bright: #3d3933;
+    --md-sys-color-surface-container-lowest: #110e09;
+    --md-sys-color-surface-container-low: #1e1b16;
+    --md-sys-color-surface-container: #221f1a;
+    --md-sys-color-surface-container-high: #2d2924;
+    --md-sys-color-surface-container-highest: #38342e
+  }
+}
+:root[data-theme="dark"] {
+  --md-sys-color-primary: #f6be46;
+  --md-sys-color-on-primary: #412d00;
+  --md-sys-color-primary-container: #5d4200;
+  --md-sys-color-on-primary-container: #ffdea3;
+  --md-sys-color-secondary: #d9c4a0;
+  --md-sys-color-on-secondary: #3b2f15;
+  --md-sys-color-secondary-container: #53452a;
+  --md-sys-color-on-secondary-container: #f6e0bb;
+  --md-sys-color-tertiary: #b2cfa8;
+  --md-sys-color-on-tertiary: #1e361a;
+  --md-sys-color-tertiary-container: #344d2f;
+  --md-sys-color-on-tertiary-container: #cdebc2;
+  --md-sys-color-error: #ffb4ab;
+  --md-sys-color-on-error: #690005;
+  --md-sys-color-error-container: #93000a;
+  --md-sys-color-on-error-container: #ffb4ab;
+  --md-sys-color-background: #1e1b16;
+  --md-sys-color-on-background: #e9e1d9;
+  --md-sys-color-surface: #1e1b16;
+  --md-sys-color-on-surface: #e9e1d9;
+  --md-sys-color-surface-variant: #4e4639;
+  --md-sys-color-on-surface-variant: #d1c5b4;
+  --md-sys-color-outline: #9a8f80;
+  --md-sys-color-outline-variant: #4e4639;
+  --md-sys-color-shadow: #000000;
+  --md-sys-color-scrim: #000000;
+  --md-sys-color-inverse-surface: #e9e1d9;
+  --md-sys-color-inverse-on-surface: #34302a;
+  --md-sys-color-inverse-primary: #7a5900;
+  --md-sys-color-surface-dim: #16130e;
+  --md-sys-color-surface-bright: #3d3933;
+  --md-sys-color-surface-container-lowest: #110e09;
+  --md-sys-color-surface-container-low: #1e1b16;
+  --md-sys-color-surface-container: #221f1a;
+  --md-sys-color-surface-container-high: #2d2924;
+  --md-sys-color-surface-container-highest: #38342e
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --md-sys-color-primary: #7a5900;
+    --md-sys-color-on-primary: #ffffff;
+    --md-sys-color-primary-container: #ffdea3;
+    --md-sys-color-on-primary-container: #261900;
+    --md-sys-color-secondary: #6c5c3f;
+    --md-sys-color-on-secondary: #ffffff;
+    --md-sys-color-secondary-container: #f6e0bb;
+    --md-sys-color-on-secondary-container: #251a04;
+    --md-sys-color-tertiary: #4b6545;
+    --md-sys-color-on-tertiary: #ffffff;
+    --md-sys-color-tertiary-container: #cdebc2;
+    --md-sys-color-on-tertiary-container: #092007;
+    --md-sys-color-error: #ba1a1a;
+    --md-sys-color-on-error: #ffffff;
+    --md-sys-color-error-container: #ffdad6;
+    --md-sys-color-on-error-container: #410002;
+    --md-sys-color-background: #fffbff;
+    --md-sys-color-on-background: #1e1b16;
+    --md-sys-color-surface: #fffbff;
+    --md-sys-color-on-surface: #1e1b16;
+    --md-sys-color-surface-variant: #ede1cf;
+    --md-sys-color-on-surface-variant: #4e4639;
+    --md-sys-color-outline: #7f7667;
+    --md-sys-color-outline-variant: #d1c5b4;
+    --md-sys-color-shadow: #000000;
+    --md-sys-color-scrim: #000000;
+    --md-sys-color-inverse-surface: #34302a;
+    --md-sys-color-inverse-on-surface: #f8efe7;
+    --md-sys-color-inverse-primary: #f6be46;
+    --md-sys-color-surface-dim: #e1d9d0;
+    --md-sys-color-surface-bright: #fff8f2;
+    --md-sys-color-surface-container-lowest: #ffffff;
+    --md-sys-color-surface-container-low: #fbf2e9;
+    --md-sys-color-surface-container: #f5ede4;
+    --md-sys-color-surface-container-high: #efe7de;
+    --md-sys-color-surface-container-highest: #e9e1d9
+  }
+}
+:root[data-theme="light"] {
+  --md-sys-color-primary: #7a5900;
+  --md-sys-color-on-primary: #ffffff;
+  --md-sys-color-primary-container: #ffdea3;
+  --md-sys-color-on-primary-container: #261900;
+  --md-sys-color-secondary: #6c5c3f;
+  --md-sys-color-on-secondary: #ffffff;
+  --md-sys-color-secondary-container: #f6e0bb;
+  --md-sys-color-on-secondary-container: #251a04;
+  --md-sys-color-tertiary: #4b6545;
+  --md-sys-color-on-tertiary: #ffffff;
+  --md-sys-color-tertiary-container: #cdebc2;
+  --md-sys-color-on-tertiary-container: #092007;
+  --md-sys-color-error: #ba1a1a;
+  --md-sys-color-on-error: #ffffff;
+  --md-sys-color-error-container: #ffdad6;
+  --md-sys-color-on-error-container: #410002;
+  --md-sys-color-background: #fffbff;
+  --md-sys-color-on-background: #1e1b16;
+  --md-sys-color-surface: #fffbff;
+  --md-sys-color-on-surface: #1e1b16;
+  --md-sys-color-surface-variant: #ede1cf;
+  --md-sys-color-on-surface-variant: #4e4639;
+  --md-sys-color-outline: #7f7667;
+  --md-sys-color-outline-variant: #d1c5b4;
+  --md-sys-color-shadow: #000000;
+  --md-sys-color-scrim: #000000;
+  --md-sys-color-inverse-surface: #34302a;
+  --md-sys-color-inverse-on-surface: #f8efe7;
+  --md-sys-color-inverse-primary: #f6be46;
+  --md-sys-color-surface-dim: #e1d9d0;
+  --md-sys-color-surface-bright: #fff8f2;
+  --md-sys-color-surface-container-lowest: #ffffff;
+  --md-sys-color-surface-container-low: #fbf2e9;
+  --md-sys-color-surface-container: #f5ede4;
+  --md-sys-color-surface-container-high: #efe7de;
+  --md-sys-color-surface-container-highest: #e9e1d9
+}
+</style><link rel="stylesheet" href="../assets/material-style.css"/></head><body><script>document.documentElement.dataset.theme = localStorage.getItem("tsd-theme") || "os";document.body.style.display="none";setTimeout(() => window.app?app.showPage():document.body.style.removeProperty("display"),500)</script><header class="tsd-page-toolbar">
+<div class="tsd-toolbar-contents container"><a href="../index.html" class="title">pex-renderer</a>
+<div id="tsd-toolbar-links"></div><button id="tsd-search-trigger" class="tsd-widget" aria-label="Search"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-search"></use></svg></button><dialog id="tsd-search" aria-label="Search"><input role="combobox" id="tsd-search-input" aria-controls="tsd-search-results" aria-autocomplete="list" aria-expanded="true" autocapitalize="off" autocomplete="off" placeholder="Search the docs" maxLength="100"/>
+<ul role="listbox" id="tsd-search-results"></ul>
+<div id="tsd-search-status" aria-live="polite" aria-atomic="true">
+<div>Preparing search index...</div></div></dialog><a href="#" class="tsd-widget menu" id="tsd-toolbar-menu-trigger" data-toggle="menu" aria-label="Menu"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-menu"></use></svg></a></div></header>
+<div class="container container-main">
+<div class="col-content">
+<div class="tsd-page-title">
+<ul class="tsd-breadcrumb" aria-label="Breadcrumb">
+<li><a href="../modules/systems_renderer_basic.html">systems/renderer/basic</a></li>
+<li><a href="" aria-current="page">BasicRendererSystem</a></li></ul>
+<h1>Interface BasicRendererSystem</h1></div>
+<section class="tsd-panel tsd-comment">
+<div class="tsd-comment tsd-typography"><p>Members the basic renderer adds to the base renderer.</p>
+</div></section>
+<div class="tsd-signature"><span class="tsd-signature-keyword">interface</span> <span class="tsd-kind-interface">BasicRendererSystem</span> <span class="tsd-signature-symbol">{</span><br/>    <a class="tsd-kind-property" href="#debug">debug</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#dispose">dispose</a><span class="tsd-signature-symbol">:</span> <a href="../types/types.SystemDispose.html" class="tsd-signature-type tsd-kind-type-alias">SystemDispose</a><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#getfeatureflags">getFeatureFlags</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">(</span><br/>        <span class="tsd-kind-parameter">source</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">object</span><span class="tsd-signature-symbol">,</span><br/>        <span class="tsd-kind-parameter">fields</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-keyword">readonly</span> <a href="systems_renderer_base.FeatureField.html" class="tsd-signature-type tsd-kind-interface">FeatureField</a><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">,</span><br/>        <span class="tsd-kind-parameter">defines</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Set</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">,</span><br/>        <span class="tsd-kind-parameter">sampler</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">GPUSampler</span><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-signature-symbol">)</span> <span class="tsd-signature-symbol">=&gt;</span> <span class="tsd-signature-symbol">{</span><br/>        <span class="tsd-kind-property">constants</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Record</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">,</span> <span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">;</span><br/>        <span class="tsd-kind-property">defines</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Set</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">;</span><br/>        <span class="tsd-kind-property">uniforms</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Uniforms</span> <span class="tsd-signature-symbol">&amp;</span> <span class="tsd-signature-symbol">{</span> <span class="tsd-kind-property">uMaterial</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">UniformBlock</span> <span class="tsd-signature-symbol">}</span><span class="tsd-signature-symbol">;</span><br/>    <span class="tsd-signature-symbol">}</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#pipelinecache">pipelineCache</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Map</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">,</span> <span class="tsd-signature-type">RenderPipeline</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#renderbackground">renderBackground</a><span class="tsd-signature-symbol">?:</span> <a href="../types/types.RendererSystemStage.html" class="tsd-signature-type tsd-kind-type-alias">RendererSystemStage</a><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#renderprepass">renderPrePass</a><span class="tsd-signature-symbol">?:</span> <a href="../types/types.RendererSystemStage.html" class="tsd-signature-type tsd-kind-type-alias">RendererSystemStage</a><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#rendershadow">renderShadow</a><span class="tsd-signature-symbol">?:</span> <a href="../types/types.RendererSystemStage.html" class="tsd-signature-type tsd-kind-type-alias">RendererSystemStage</a><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#type">type</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#update">update</a><span class="tsd-signature-symbol">:</span> <a href="../types/types.SystemUpdate.html" class="tsd-signature-type tsd-kind-type-alias">SystemUpdate</a><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-call-signature" href="#getcachedpipeline-1">getCachedPipeline</a><span class="tsd-signature-symbol">(</span><br/>        <span class="tsd-kind-parameter">name</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">,</span><br/>        <span class="tsd-kind-parameter">cache</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Map</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">,</span> <span class="tsd-signature-type">RenderPipeline</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">,</span><br/>        <span class="tsd-kind-parameter">key</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">,</span><br/>        <span class="tsd-kind-parameter">entity</span><span class="tsd-signature-symbol">:</span> <a href="types.Entity.html" class="tsd-signature-type tsd-kind-interface">Entity</a><span class="tsd-signature-symbol">,</span><br/>        <span class="tsd-kind-parameter">create</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">()</span> <span class="tsd-signature-symbol">=&gt;</span> <span class="tsd-signature-type">RenderPipeline</span><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">RenderPipeline</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-call-signature" href="#getdefines-1">getDefines</a><span class="tsd-signature-symbol">(</span><br/>        <span class="tsd-kind-parameter">entity</span><span class="tsd-signature-symbol">:</span> <a href="types.Entity.html" class="tsd-signature-type tsd-kind-interface">Entity</a><span class="tsd-signature-symbol">,</span><br/>        <span class="tsd-kind-parameter">options</span><span class="tsd-signature-symbol">:</span> <a href="types.RendererPassOptions.html" class="tsd-signature-type tsd-kind-interface">RendererPassOptions</a><span class="tsd-signature-symbol">,</span><br/>        <span class="tsd-kind-parameter">precomputed</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">unknown</span><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Set</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-call-signature" href="#geterrorshader-1">getErrorShader</a><span class="tsd-signature-symbol">?</span><span class="tsd-signature-symbol">(</span><br/>        <span class="tsd-kind-parameter">defines</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Set</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">,</span><br/>        <span class="tsd-kind-parameter">options</span><span class="tsd-signature-symbol">:</span> <a href="types.PipelineShaderOptions.html" class="tsd-signature-type tsd-kind-interface">PipelineShaderOptions</a><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-call-signature" href="#getframeuniforms-1">getFrameUniforms</a><span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">renderView</span><span class="tsd-signature-symbol">:</span> <a href="types.RenderView.html" class="tsd-signature-type tsd-kind-interface">RenderView</a><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <a href="../types/systems_renderer_base.FrameUniforms.html" class="tsd-signature-type tsd-kind-type-alias">FrameUniforms</a><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-call-signature" href="#gethookuniforms-1">getHookUniforms</a><span class="tsd-signature-symbol">(</span><br/>        <span class="tsd-kind-parameter">entity</span><span class="tsd-signature-symbol">:</span> <a href="types.Entity.html" class="tsd-signature-type tsd-kind-interface">Entity</a><span class="tsd-signature-symbol">,</span><br/>        <span class="tsd-kind-parameter">frameIndex</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">,</span><br/>        <span class="tsd-kind-parameter">sampler</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">GPUSampler</span><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Uniforms</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-call-signature" href="#getmodeluniforms-1">getModelUniforms</a><span class="tsd-signature-symbol">(</span><br/>        <span class="tsd-kind-parameter">entity</span><span class="tsd-signature-symbol">:</span> <a href="types.Entity.html" class="tsd-signature-type tsd-kind-interface">Entity</a><span class="tsd-signature-symbol">,</span><br/>        <span class="tsd-kind-parameter">normalMatrix</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Mat3</span><span class="tsd-signature-symbol">,</span><br/>        <span class="tsd-kind-parameter">options</span><span class="tsd-signature-symbol">?:</span> <a href="shaders_wgsl.ModelStructOptions.html" class="tsd-signature-type tsd-kind-interface">ModelStructOptions</a><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Uniforms</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-call-signature" href="#getpipeline-1">getPipeline</a><span class="tsd-signature-symbol">(</span><br/>        <span class="tsd-kind-parameter">entity</span><span class="tsd-signature-symbol">:</span> <a href="types.Entity.html" class="tsd-signature-type tsd-kind-interface">Entity</a><span class="tsd-signature-symbol">,</span><br/>        <span class="tsd-kind-parameter">options</span><span class="tsd-signature-symbol">?:</span> <a href="types.RendererPassOptions.html" class="tsd-signature-type tsd-kind-interface">RendererPassOptions</a><span class="tsd-signature-symbol">,</span><br/>        <span class="tsd-kind-parameter">precomputed</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">unknown</span><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">RenderPipeline</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-call-signature" href="#getpipelineblend-1">getPipelineBlend</a><span class="tsd-signature-symbol">(</span><br/>        <span class="tsd-kind-parameter">blend</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">GPUBlendState</span> <span class="tsd-signature-symbol">|</span> <a href="../types/types.BlendMode.html" class="tsd-signature-type tsd-kind-type-alias">BlendMode</a> <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">GPUBlendState</span> <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-call-signature" href="#getpipelineoptions-1">getPipelineOptions</a><span class="tsd-signature-symbol">(</span><br/>        <span class="tsd-kind-parameter">entity</span><span class="tsd-signature-symbol">:</span> <a href="types.Entity.html" class="tsd-signature-type tsd-kind-interface">Entity</a><span class="tsd-signature-symbol">,</span><br/>        <span class="tsd-kind-parameter">options</span><span class="tsd-signature-symbol">:</span> <a href="types.RendererPassOptions.html" class="tsd-signature-type tsd-kind-interface">RendererPassOptions</a><span class="tsd-signature-symbol">,</span><br/>        <span class="tsd-kind-parameter">precomputed</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">unknown</span><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <a href="../types/systems_renderer_base.PipelineOptions.html" class="tsd-signature-type tsd-kind-type-alias">PipelineOptions</a><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-call-signature" href="#getshader-1">getShader</a><span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">defines</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Set</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">,</span> <span class="tsd-kind-parameter">options</span><span class="tsd-signature-symbol">:</span> <a href="types.PipelineShaderOptions.html" class="tsd-signature-type tsd-kind-interface">PipelineShaderOptions</a><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-call-signature" href="#getshaderoptions-1">getShaderOptions</a><span class="tsd-signature-symbol">(</span><br/>        <span class="tsd-kind-parameter">entity</span><span class="tsd-signature-symbol">:</span> <a href="types.Entity.html" class="tsd-signature-type tsd-kind-interface">Entity</a><span class="tsd-signature-symbol">,</span><br/>        <span class="tsd-kind-parameter">options</span><span class="tsd-signature-symbol">:</span> <a href="types.RendererPassOptions.html" class="tsd-signature-type tsd-kind-interface">RendererPassOptions</a><span class="tsd-signature-symbol">,</span><br/>        <span class="tsd-kind-parameter">defines</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">Set</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <a href="types.PipelineShaderOptions.html" class="tsd-signature-type tsd-kind-interface">PipelineShaderOptions</a><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-call-signature" href="#getvariantkey-1">getVariantKey</a><span class="tsd-signature-symbol">(</span><br/>        <span class="tsd-kind-parameter">entity</span><span class="tsd-signature-symbol">:</span> <a href="types.Entity.html" class="tsd-signature-type tsd-kind-interface">Entity</a><span class="tsd-signature-symbol">,</span><br/>        <span class="tsd-kind-parameter">defines</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Set</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">,</span><br/>        <span class="tsd-kind-parameter">options</span><span class="tsd-signature-symbol">:</span> <a href="types.RendererPassOptions.html" class="tsd-signature-type tsd-kind-interface">RendererPassOptions</a><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-call-signature" href="#inputs-1">inputs</a><span class="tsd-signature-symbol">?</span><span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">options</span><span class="tsd-signature-symbol">?:</span> <a href="types.RendererPassOptions.html" class="tsd-signature-type tsd-kind-interface">RendererPassOptions</a><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-call-signature" href="#render-1">render</a><span class="tsd-signature-symbol">(</span><br/>        <span class="tsd-kind-parameter">renderView</span><span class="tsd-signature-symbol">:</span> <a href="types.RenderView.html" class="tsd-signature-type tsd-kind-interface">RenderView</a><span class="tsd-signature-symbol">,</span><br/>        <span class="tsd-kind-parameter">entities</span><span class="tsd-signature-symbol">:</span> <a href="types.Entity.html" class="tsd-signature-type tsd-kind-interface">Entity</a><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">,</span><br/>        <span class="tsd-kind-parameter">options</span><span class="tsd-signature-symbol">:</span> <a href="types.RendererPassOptions.html" class="tsd-signature-type tsd-kind-interface">RendererPassOptions</a><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-call-signature" href="#renderopaque-1">renderOpaque</a><span class="tsd-signature-symbol">(</span><br/>        <span class="tsd-kind-parameter">renderView</span><span class="tsd-signature-symbol">:</span> <a href="types.RenderView.html" class="tsd-signature-type tsd-kind-interface">RenderView</a><span class="tsd-signature-symbol">,</span><br/>        <span class="tsd-kind-parameter">entities</span><span class="tsd-signature-symbol">:</span> <a href="types.Entity.html" class="tsd-signature-type tsd-kind-interface">Entity</a><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">,</span><br/>        <span class="tsd-kind-parameter">options</span><span class="tsd-signature-symbol">:</span> <a href="types.RendererPassOptions.html" class="tsd-signature-type tsd-kind-interface">RendererPassOptions</a><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-call-signature" href="#rendertransparent-1">renderTransparent</a><span class="tsd-signature-symbol">(</span><br/>        <span class="tsd-kind-parameter">renderView</span><span class="tsd-signature-symbol">:</span> <a href="types.RenderView.html" class="tsd-signature-type tsd-kind-interface">RenderView</a><span class="tsd-signature-symbol">,</span><br/>        <span class="tsd-kind-parameter">entities</span><span class="tsd-signature-symbol">:</span> <a href="types.Entity.html" class="tsd-signature-type tsd-kind-interface">Entity</a><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">,</span><br/>        <span class="tsd-kind-parameter">options</span><span class="tsd-signature-symbol">:</span> <a href="types.RendererPassOptions.html" class="tsd-signature-type tsd-kind-interface">RendererPassOptions</a><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">;</span><br/>    <span class="tsd-signature-symbol">[</span><span class="tsd-kind-index-signature">key</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">]:</span> <span class="tsd-signature-type">unknown</span><span class="tsd-signature-symbol">;</span><br/><span class="tsd-signature-symbol">}</span></div>
+<section class="tsd-panel tsd-hierarchy" data-refl="2464">
+<h4>Hierarchy (<a href="../hierarchy.html#systems/renderer/basic.BasicRendererSystem">View Summary</a>)</h4>
+<ul class="tsd-hierarchy">
+<li class="tsd-hierarchy-item"><a href="systems_renderer_base.BaseRendererSystem.html" class="tsd-signature-type tsd-kind-interface">BaseRendererSystem</a>
+<ul class="tsd-hierarchy">
+<li class="tsd-hierarchy-item"><span class="tsd-hierarchy-target">BasicRendererSystem</span></li></ul></li></ul></section>
+<section class="tsd-panel">
+<h4 class="tsd-before-signature">Indexable</h4>
+<ul class="tsd-signatures">
+<li class="tsd-index-signature">
+<div class="tsd-signature"><span class="tsd-signature-symbol">[</span><span class="tsd-kind-parameter">key</span>: <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">]:</span> <span class="tsd-signature-type">unknown</span></div></li></ul></section><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/4d3d963be1e234e2f7f9a8d107ace7a6a3ef1a4a/src/systems/renderer/basic.ts#L25">systems/renderer/basic.ts:25</a></li></ul></aside>
+<section class="tsd-panel-group tsd-index-group">
+<section class="tsd-panel tsd-index-panel">
+<details class="tsd-index-content tsd-accordion" open><summary class="tsd-accordion-summary tsd-index-summary"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-chevronDown"></use></svg>
+<h5 class="tsd-index-heading uppercase">Index</h5></summary>
+<div class="tsd-accordion-details">
+<section class="tsd-index-section">
+<h3 class="tsd-index-heading tsd-anchor-link" id="properties">Properties<a href="#properties" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<div class="tsd-index-list"><a href="#debug" class="tsd-index-link tsd-is-inherited"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>debug?</span></a>
+<a href="#dispose" class="tsd-index-link tsd-is-inherited"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>dispose</span></a>
+<a href="#getfeatureflags" class="tsd-index-link tsd-is-inherited"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>get<wbr/>Feature<wbr/>Flags</span></a>
+<a href="#pipelinecache" class="tsd-index-link tsd-is-inherited"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>pipeline<wbr/>Cache</span></a>
+<a href="#renderbackground" class="tsd-index-link tsd-is-inherited"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>render<wbr/>Background?</span></a>
+<a href="#renderprepass" class="tsd-index-link tsd-is-inherited"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>render<wbr/>Pre<wbr/>Pass?</span></a>
+<a href="#rendershadow" class="tsd-index-link tsd-is-inherited"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>render<wbr/>Shadow?</span></a>
+<a href="#type" class="tsd-index-link tsd-is-inherited"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>type</span></a>
+<a href="#update" class="tsd-index-link tsd-is-inherited"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>update</span></a>
+</div></section>
+<section class="tsd-index-section">
+<h3 class="tsd-index-heading tsd-anchor-link" id="methods">Methods<a href="#methods" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<div class="tsd-index-list"><a href="#getcachedpipeline" class="tsd-index-link tsd-is-inherited"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>get<wbr/>Cached<wbr/>Pipeline</span></a>
+<a href="#getdefines" class="tsd-index-link tsd-is-inherited"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>get<wbr/>Defines</span></a>
+<a href="#geterrorshader" class="tsd-index-link tsd-is-inherited"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>get<wbr/>Error<wbr/>Shader?</span></a>
+<a href="#getframeuniforms" class="tsd-index-link tsd-is-inherited"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>get<wbr/>Frame<wbr/>Uniforms</span></a>
+<a href="#gethookuniforms" class="tsd-index-link tsd-is-inherited"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>get<wbr/>Hook<wbr/>Uniforms</span></a>
+<a href="#getmodeluniforms" class="tsd-index-link tsd-is-inherited"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>get<wbr/>Model<wbr/>Uniforms</span></a>
+<a href="#getpipeline" class="tsd-index-link tsd-is-inherited"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>get<wbr/>Pipeline</span></a>
+<a href="#getpipelineblend" class="tsd-index-link tsd-is-inherited"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>get<wbr/>Pipeline<wbr/>Blend</span></a>
+<a href="#getpipelineoptions" class="tsd-index-link tsd-is-inherited"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>get<wbr/>Pipeline<wbr/>Options</span></a>
+<a href="#getshader" class="tsd-index-link tsd-is-inherited"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>get<wbr/>Shader</span></a>
+<a href="#getshaderoptions" class="tsd-index-link tsd-is-inherited"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>get<wbr/>Shader<wbr/>Options</span></a>
+<a href="#getvariantkey" class="tsd-index-link tsd-is-inherited"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>get<wbr/>Variant<wbr/>Key</span></a>
+<a href="#inputs" class="tsd-index-link tsd-is-inherited"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>inputs?</span></a>
+<a href="#render" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>render</span></a>
+<a href="#renderopaque" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>render<wbr/>Opaque</span></a>
+<a href="#rendertransparent" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>render<wbr/>Transparent</span></a>
+</div></section></div></details></section></section>
+<details class="tsd-panel-group tsd-member-group tsd-accordion" open><summary class="tsd-accordion-summary" data-key="section-Properties"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-chevronDown"></use></svg>
+<h2 class="tsd-anchor-link" id="properties-1">Properties<a href="#properties-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h2></summary>
+<section>
+<section class="tsd-panel tsd-member tsd-is-inherited">
+<h3 class="tsd-anchor-link" id="debug"><code class="tsd-tag">Optional</code><span>debug</span><a href="#debug" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<div class="tsd-signature"><span class="tsd-kind-property">debug</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">boolean</span></div><aside class="tsd-sources">
+<p>Inherited from <a href="systems_renderer_base.BaseRendererSystem.html">BaseRendererSystem</a>.<a href="systems_renderer_base.BaseRendererSystem.html#debug">debug</a></p>
+<ul>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/4d3d963be1e234e2f7f9a8d107ace7a6a3ef1a4a/src/types.ts#L1941">types.ts:1941</a></li></ul></aside></section>
+<section class="tsd-panel tsd-member tsd-is-inherited">
+<h3 class="tsd-anchor-link" id="dispose"><span>dispose</span><a href="#dispose" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<div class="tsd-signature"><span class="tsd-kind-property">dispose</span><span class="tsd-signature-symbol">:</span> <a href="../types/types.SystemDispose.html" class="tsd-signature-type tsd-kind-type-alias">SystemDispose</a></div><aside class="tsd-sources">
+<p>Inherited from <a href="systems_renderer_base.BaseRendererSystem.html">BaseRendererSystem</a>.<a href="systems_renderer_base.BaseRendererSystem.html#dispose">dispose</a></p>
+<ul>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/4d3d963be1e234e2f7f9a8d107ace7a6a3ef1a4a/src/systems/renderer/base.ts#L398">systems/renderer/base.ts:398</a></li></ul></aside></section>
+<section class="tsd-panel tsd-member tsd-is-inherited">
+<h3 class="tsd-anchor-link" id="getfeatureflags"><span>get<wbr/>Feature<wbr/>Flags</span><a href="#getfeatureflags" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<div class="tsd-signature"><span class="tsd-kind-property">getFeatureFlags</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">(</span><br/>    <span class="tsd-kind-parameter">source</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">object</span><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-kind-parameter">fields</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-keyword">readonly</span> <a href="systems_renderer_base.FeatureField.html" class="tsd-signature-type tsd-kind-interface">FeatureField</a><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-kind-parameter">defines</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Set</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-kind-parameter">sampler</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">GPUSampler</span><span class="tsd-signature-symbol">,</span><br/><span class="tsd-signature-symbol">)</span> <span class="tsd-signature-symbol">=&gt;</span> <span class="tsd-signature-symbol">{</span><br/>    <span class="tsd-kind-property">constants</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Record</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">,</span> <span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">;</span><br/>    <span class="tsd-kind-property">defines</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Set</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">;</span><br/>    <span class="tsd-kind-property">uniforms</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Uniforms</span> <span class="tsd-signature-symbol">&amp;</span> <span class="tsd-signature-symbol">{</span> <span class="tsd-kind-property">uMaterial</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">UniformBlock</span> <span class="tsd-signature-symbol">}</span><span class="tsd-signature-symbol">;</span><br/><span class="tsd-signature-symbol">}</span></div>
+<div class="tsd-type-declaration">
+<h4>Type Declaration</h4>
+<ul class="tsd-parameters">
+<li class="tsd-parameter-signature">
+<ul class="tsd-signatures">
+<li class="tsd-signature"><span class="tsd-signature-symbol">(</span><br/>    <span class="tsd-kind-parameter">source</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">object</span><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-kind-parameter">fields</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-keyword">readonly</span> <a href="systems_renderer_base.FeatureField.html" class="tsd-signature-type tsd-kind-interface">FeatureField</a><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-kind-parameter">defines</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Set</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-kind-parameter">sampler</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">GPUSampler</span><span class="tsd-signature-symbol">,</span><br/><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">{</span><br/>    <span class="tsd-kind-property">constants</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Record</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">,</span> <span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">;</span><br/>    <span class="tsd-kind-property">defines</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Set</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">;</span><br/>    <span class="tsd-kind-property">uniforms</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Uniforms</span> <span class="tsd-signature-symbol">&amp;</span> <span class="tsd-signature-symbol">{</span> <span class="tsd-kind-property">uMaterial</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">UniformBlock</span> <span class="tsd-signature-symbol">}</span><span class="tsd-signature-symbol">;</span><br/><span class="tsd-signature-symbol">}</span></li>
+<li class="tsd-description">
+<div class="tsd-comment tsd-typography"><p>Walks <code>fields</code> against <code>source</code> (material, geometry attributes, any flat bag)
+in two passes: first collect active defines, then write uMaterial/texture
+uniforms. Two passes because WGSL struct packing throws on an unknown member,
+so a field can only write once its define set is final (e.g. <code>specularColor</code>
+waits on sibling <code>specular</code>). Define-only tables leave <code>uniforms</code> empty.</p>
+</div>
+<div class="tsd-parameters">
+<h4 class="tsd-parameters-title">Parameters</h4>
+<ul class="tsd-parameter-list">
+<li><span><span class="tsd-kind-parameter">source</span>: <span class="tsd-signature-type">object</span></span></li>
+<li><span><span class="tsd-kind-parameter">fields</span>: <span class="tsd-signature-keyword">readonly</span> <a href="systems_renderer_base.FeatureField.html" class="tsd-signature-type tsd-kind-interface">FeatureField</a><span class="tsd-signature-symbol">[]</span></span></li>
+<li><span><span class="tsd-kind-parameter">defines</span>: <span class="tsd-signature-type">Set</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">&gt;</span></span></li>
+<li><span><code class="tsd-tag">Optional</code><span class="tsd-kind-parameter">sampler</span>: <span class="tsd-signature-type">GPUSampler</span></span></li></ul></div>
+<h4 class="tsd-returns-title">Returns <span class="tsd-signature-symbol">{</span><br/>    <span class="tsd-kind-property">constants</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Record</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">,</span> <span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">;</span><br/>    <span class="tsd-kind-property">defines</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Set</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">;</span><br/>    <span class="tsd-kind-property">uniforms</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Uniforms</span> <span class="tsd-signature-symbol">&amp;</span> <span class="tsd-signature-symbol">{</span> <span class="tsd-kind-property">uMaterial</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">UniformBlock</span> <span class="tsd-signature-symbol">}</span><span class="tsd-signature-symbol">;</span><br/><span class="tsd-signature-symbol">}</span></h4></li></ul></li></ul></div><aside class="tsd-sources">
+<p>Inherited from <a href="systems_renderer_base.BaseRendererSystem.html">BaseRendererSystem</a>.<a href="systems_renderer_base.BaseRendererSystem.html#getfeatureflags">getFeatureFlags</a></p>
+<ul>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/4d3d963be1e234e2f7f9a8d107ace7a6a3ef1a4a/src/systems/renderer/base.ts#L348">systems/renderer/base.ts:348</a></li></ul></aside></section>
+<section class="tsd-panel tsd-member tsd-is-inherited">
+<h3 class="tsd-anchor-link" id="pipelinecache"><span>pipeline<wbr/>Cache</span><a href="#pipelinecache" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<div class="tsd-signature"><span class="tsd-kind-property">pipelineCache</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Map</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">,</span> <span class="tsd-signature-type">RenderPipeline</span><span class="tsd-signature-symbol">&gt;</span></div><aside class="tsd-sources">
+<p>Inherited from <a href="systems_renderer_base.BaseRendererSystem.html">BaseRendererSystem</a>.<a href="systems_renderer_base.BaseRendererSystem.html#pipelinecache">pipelineCache</a></p>
+<ul>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/4d3d963be1e234e2f7f9a8d107ace7a6a3ef1a4a/src/systems/renderer/base.ts#L347">systems/renderer/base.ts:347</a></li></ul></aside></section>
+<section class="tsd-panel tsd-member tsd-is-inherited">
+<h3 class="tsd-anchor-link" id="renderbackground"><code class="tsd-tag">Optional</code><span>render<wbr/>Background</span><a href="#renderbackground" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<div class="tsd-signature"><span class="tsd-kind-property">renderBackground</span><span class="tsd-signature-symbol">?:</span> <a href="../types/types.RendererSystemStage.html" class="tsd-signature-type tsd-kind-type-alias">RendererSystemStage</a></div><aside class="tsd-sources">
+<p>Inherited from <a href="types.RendererSystem.html">RendererSystem</a>.<a href="types.RendererSystem.html#renderbackground">renderBackground</a></p></aside></section>
+<section class="tsd-panel tsd-member tsd-is-inherited">
+<h3 class="tsd-anchor-link" id="renderprepass"><code class="tsd-tag">Optional</code><span>render<wbr/>Pre<wbr/>Pass</span><a href="#renderprepass" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<div class="tsd-signature"><span class="tsd-kind-property">renderPrePass</span><span class="tsd-signature-symbol">?:</span> <a href="../types/types.RendererSystemStage.html" class="tsd-signature-type tsd-kind-type-alias">RendererSystemStage</a></div><aside class="tsd-sources">
+<p>Inherited from <a href="types.RendererSystem.html">RendererSystem</a>.<a href="types.RendererSystem.html#renderprepass">renderPrePass</a></p></aside></section>
+<section class="tsd-panel tsd-member tsd-is-inherited">
+<h3 class="tsd-anchor-link" id="rendershadow"><code class="tsd-tag">Optional</code><span>render<wbr/>Shadow</span><a href="#rendershadow" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<div class="tsd-signature"><span class="tsd-kind-property">renderShadow</span><span class="tsd-signature-symbol">?:</span> <a href="../types/types.RendererSystemStage.html" class="tsd-signature-type tsd-kind-type-alias">RendererSystemStage</a></div><aside class="tsd-sources">
+<p>Inherited from <a href="types.RendererSystem.html">RendererSystem</a>.<a href="types.RendererSystem.html#rendershadow">renderShadow</a></p></aside></section>
+<section class="tsd-panel tsd-member tsd-is-inherited">
+<h3 class="tsd-anchor-link" id="type"><span>type</span><a href="#type" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<div class="tsd-signature"><span class="tsd-kind-property">type</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span></div><aside class="tsd-sources">
+<p>Inherited from <a href="systems_renderer_base.BaseRendererSystem.html">BaseRendererSystem</a>.<a href="systems_renderer_base.BaseRendererSystem.html#type">type</a></p>
+<ul>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/4d3d963be1e234e2f7f9a8d107ace7a6a3ef1a4a/src/types.ts#L1940">types.ts:1940</a></li></ul></aside></section>
+<section class="tsd-panel tsd-member tsd-is-inherited">
+<h3 class="tsd-anchor-link" id="update"><span>update</span><a href="#update" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<div class="tsd-signature"><span class="tsd-kind-property">update</span><span class="tsd-signature-symbol">:</span> <a href="../types/types.SystemUpdate.html" class="tsd-signature-type tsd-kind-type-alias">SystemUpdate</a></div><aside class="tsd-sources">
+<p>Inherited from <a href="systems_renderer_base.BaseRendererSystem.html">BaseRendererSystem</a>.<a href="systems_renderer_base.BaseRendererSystem.html#update">update</a></p>
+<ul>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/4d3d963be1e234e2f7f9a8d107ace7a6a3ef1a4a/src/systems/renderer/base.ts#L397">systems/renderer/base.ts:397</a></li></ul></aside></section></section></details>
+<details class="tsd-panel-group tsd-member-group tsd-accordion" open><summary class="tsd-accordion-summary" data-key="section-Methods"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-chevronDown"></use></svg>
+<h2 class="tsd-anchor-link" id="methods-1">Methods<a href="#methods-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h2></summary>
+<section>
+<section class="tsd-panel tsd-member tsd-is-inherited">
+<h3 class="tsd-anchor-link" id="getcachedpipeline"><span>get<wbr/>Cached<wbr/>Pipeline</span><a href="#getcachedpipeline" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<ul class="tsd-signatures tsd-is-inherited">
+<li class="tsd-is-inherited">
+<div class="tsd-signature tsd-anchor-link" id="getcachedpipeline-1"><span class="tsd-kind-call-signature">getCachedPipeline</span><span class="tsd-signature-symbol">(</span><br/>    <span class="tsd-kind-parameter">name</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-kind-parameter">cache</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Map</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">,</span> <span class="tsd-signature-type">RenderPipeline</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-kind-parameter">key</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-kind-parameter">entity</span><span class="tsd-signature-symbol">:</span> <a href="types.Entity.html" class="tsd-signature-type tsd-kind-interface">Entity</a><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-kind-parameter">create</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">()</span> <span class="tsd-signature-symbol">=&gt;</span> <span class="tsd-signature-type">RenderPipeline</span><span class="tsd-signature-symbol">,</span><br/><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">RenderPipeline</span><a href="#getcachedpipeline-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
+<div class="tsd-description">
+<div class="tsd-parameters">
+<h4 class="tsd-parameters-title">Parameters</h4>
+<ul class="tsd-parameter-list">
+<li><span><span class="tsd-kind-parameter">name</span>: <span class="tsd-signature-type">string</span></span></li>
+<li><span><span class="tsd-kind-parameter">cache</span>: <span class="tsd-signature-type">Map</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">,</span> <span class="tsd-signature-type">RenderPipeline</span><span class="tsd-signature-symbol">&gt;</span></span></li>
+<li><span><span class="tsd-kind-parameter">key</span>: <span class="tsd-signature-type">string</span></span></li>
+<li><span><span class="tsd-kind-parameter">entity</span>: <a href="types.Entity.html" class="tsd-signature-type tsd-kind-interface">Entity</a></span></li>
+<li><span><span class="tsd-kind-parameter">create</span>: <span class="tsd-signature-symbol">()</span> <span class="tsd-signature-symbol">=&gt;</span> <span class="tsd-signature-type">RenderPipeline</span></span></li></ul></div>
+<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">RenderPipeline</span></h4><aside class="tsd-sources">
+<p>Inherited from <a href="systems_renderer_base.BaseRendererSystem.html">BaseRendererSystem</a>.<a href="systems_renderer_base.BaseRendererSystem.html#getcachedpipeline">getCachedPipeline</a></p>
+<ul>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/4d3d963be1e234e2f7f9a8d107ace7a6a3ef1a4a/src/systems/renderer/base.ts#L385">systems/renderer/base.ts:385</a></li></ul></aside></div></li></ul></section>
+<section class="tsd-panel tsd-member tsd-is-inherited">
+<h3 class="tsd-anchor-link" id="getdefines"><span>get<wbr/>Defines</span><a href="#getdefines" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<ul class="tsd-signatures tsd-is-inherited">
+<li class="tsd-is-inherited">
+<div class="tsd-signature tsd-anchor-link" id="getdefines-1"><span class="tsd-kind-call-signature">getDefines</span><span class="tsd-signature-symbol">(</span><br/>    <span class="tsd-kind-parameter">entity</span><span class="tsd-signature-symbol">:</span> <a href="types.Entity.html" class="tsd-signature-type tsd-kind-interface">Entity</a><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-kind-parameter">options</span><span class="tsd-signature-symbol">:</span> <a href="types.RendererPassOptions.html" class="tsd-signature-type tsd-kind-interface">RendererPassOptions</a><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-kind-parameter">precomputed</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">unknown</span><span class="tsd-signature-symbol">,</span><br/><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Set</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">&gt;</span><a href="#getdefines-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
+<div class="tsd-description">
+<div class="tsd-parameters">
+<h4 class="tsd-parameters-title">Parameters</h4>
+<ul class="tsd-parameter-list">
+<li><span><span class="tsd-kind-parameter">entity</span>: <a href="types.Entity.html" class="tsd-signature-type tsd-kind-interface">Entity</a></span></li>
+<li><span><span class="tsd-kind-parameter">options</span>: <a href="types.RendererPassOptions.html" class="tsd-signature-type tsd-kind-interface">RendererPassOptions</a></span></li>
+<li><span><code class="tsd-tag">Optional</code><span class="tsd-kind-parameter">precomputed</span>: <span class="tsd-signature-type">unknown</span></span></li></ul></div>
+<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Set</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
+<p>Inherited from <a href="systems_renderer_base.BaseRendererSystem.html">BaseRendererSystem</a>.<a href="systems_renderer_base.BaseRendererSystem.html#getdefines">getDefines</a></p>
+<ul>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/4d3d963be1e234e2f7f9a8d107ace7a6a3ef1a4a/src/systems/renderer/base.ts#L356">systems/renderer/base.ts:356</a></li></ul></aside></div></li></ul></section>
+<section class="tsd-panel tsd-member tsd-is-inherited">
+<h3 class="tsd-anchor-link" id="geterrorshader"><code class="tsd-tag">Optional</code><span>get<wbr/>Error<wbr/>Shader</span><a href="#geterrorshader" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<ul class="tsd-signatures tsd-is-inherited">
+<li class="tsd-is-inherited">
+<div class="tsd-signature tsd-anchor-link" id="geterrorshader-1"><span class="tsd-kind-call-signature">getErrorShader</span><span class="tsd-signature-symbol">?</span><span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">defines</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Set</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">,</span> <span class="tsd-kind-parameter">options</span><span class="tsd-signature-symbol">:</span> <a href="types.PipelineShaderOptions.html" class="tsd-signature-type tsd-kind-interface">PipelineShaderOptions</a><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><a href="#geterrorshader-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
+<div class="tsd-description">
+<div class="tsd-parameters">
+<h4 class="tsd-parameters-title">Parameters</h4>
+<ul class="tsd-parameter-list">
+<li><span><span class="tsd-kind-parameter">defines</span>: <span class="tsd-signature-type">Set</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">&gt;</span></span></li>
+<li><span><span class="tsd-kind-parameter">options</span>: <a href="types.PipelineShaderOptions.html" class="tsd-signature-type tsd-kind-interface">PipelineShaderOptions</a></span></li></ul></div>
+<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">string</span></h4><aside class="tsd-sources">
+<p>Inherited from <a href="systems_renderer_base.BaseRendererSystem.html">BaseRendererSystem</a>.<a href="systems_renderer_base.BaseRendererSystem.html#geterrorshader">getErrorShader</a></p>
+<ul>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/4d3d963be1e234e2f7f9a8d107ace7a6a3ef1a4a/src/systems/renderer/base.ts#L350">systems/renderer/base.ts:350</a></li></ul></aside></div></li></ul></section>
+<section class="tsd-panel tsd-member tsd-is-inherited">
+<h3 class="tsd-anchor-link" id="getframeuniforms"><span>get<wbr/>Frame<wbr/>Uniforms</span><a href="#getframeuniforms" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<ul class="tsd-signatures tsd-is-inherited">
+<li class="tsd-is-inherited">
+<div class="tsd-signature tsd-anchor-link" id="getframeuniforms-1"><span class="tsd-kind-call-signature">getFrameUniforms</span><span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">renderView</span><span class="tsd-signature-symbol">:</span> <a href="types.RenderView.html" class="tsd-signature-type tsd-kind-interface">RenderView</a><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <a href="../types/systems_renderer_base.FrameUniforms.html" class="tsd-signature-type tsd-kind-type-alias">FrameUniforms</a><a href="#getframeuniforms-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
+<div class="tsd-description">
+<div class="tsd-parameters">
+<h4 class="tsd-parameters-title">Parameters</h4>
+<ul class="tsd-parameter-list">
+<li><span><span class="tsd-kind-parameter">renderView</span>: <a href="types.RenderView.html" class="tsd-signature-type tsd-kind-interface">RenderView</a></span></li></ul></div>
+<h4 class="tsd-returns-title">Returns <a href="../types/systems_renderer_base.FrameUniforms.html" class="tsd-signature-type tsd-kind-type-alias">FrameUniforms</a></h4><aside class="tsd-sources">
+<p>Inherited from <a href="systems_renderer_base.BaseRendererSystem.html">BaseRendererSystem</a>.<a href="systems_renderer_base.BaseRendererSystem.html#getframeuniforms">getFrameUniforms</a></p>
+<ul>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/4d3d963be1e234e2f7f9a8d107ace7a6a3ef1a4a/src/systems/renderer/base.ts#L384">systems/renderer/base.ts:384</a></li></ul></aside></div></li></ul></section>
+<section class="tsd-panel tsd-member tsd-is-inherited">
+<h3 class="tsd-anchor-link" id="gethookuniforms"><span>get<wbr/>Hook<wbr/>Uniforms</span><a href="#gethookuniforms" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<ul class="tsd-signatures tsd-is-inherited">
+<li class="tsd-is-inherited">
+<div class="tsd-signature tsd-anchor-link" id="gethookuniforms-1"><span class="tsd-kind-call-signature">getHookUniforms</span><span class="tsd-signature-symbol">(</span><br/>    <span class="tsd-kind-parameter">entity</span><span class="tsd-signature-symbol">:</span> <a href="types.Entity.html" class="tsd-signature-type tsd-kind-interface">Entity</a><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-kind-parameter">frameIndex</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-kind-parameter">sampler</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">GPUSampler</span><span class="tsd-signature-symbol">,</span><br/><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Uniforms</span><a href="#gethookuniforms-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
+<div class="tsd-description">
+<div class="tsd-parameters">
+<h4 class="tsd-parameters-title">Parameters</h4>
+<ul class="tsd-parameter-list">
+<li><span><span class="tsd-kind-parameter">entity</span>: <a href="types.Entity.html" class="tsd-signature-type tsd-kind-interface">Entity</a></span></li>
+<li><span><span class="tsd-kind-parameter">frameIndex</span>: <span class="tsd-signature-type">number</span></span></li>
+<li><span><code class="tsd-tag">Optional</code><span class="tsd-kind-parameter">sampler</span>: <span class="tsd-signature-type">GPUSampler</span></span></li></ul></div>
+<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Uniforms</span></h4><aside class="tsd-sources">
+<p>Inherited from <a href="systems_renderer_base.BaseRendererSystem.html">BaseRendererSystem</a>.<a href="systems_renderer_base.BaseRendererSystem.html#gethookuniforms">getHookUniforms</a></p>
+<ul>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/4d3d963be1e234e2f7f9a8d107ace7a6a3ef1a4a/src/systems/renderer/base.ts#L379">systems/renderer/base.ts:379</a></li></ul></aside></div></li></ul></section>
+<section class="tsd-panel tsd-member tsd-is-inherited">
+<h3 class="tsd-anchor-link" id="getmodeluniforms"><span>get<wbr/>Model<wbr/>Uniforms</span><a href="#getmodeluniforms" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<ul class="tsd-signatures tsd-is-inherited">
+<li class="tsd-is-inherited">
+<div class="tsd-signature tsd-anchor-link" id="getmodeluniforms-1"><span class="tsd-kind-call-signature">getModelUniforms</span><span class="tsd-signature-symbol">(</span><br/>    <span class="tsd-kind-parameter">entity</span><span class="tsd-signature-symbol">:</span> <a href="types.Entity.html" class="tsd-signature-type tsd-kind-interface">Entity</a><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-kind-parameter">normalMatrix</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Mat3</span><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-kind-parameter">options</span><span class="tsd-signature-symbol">?:</span> <a href="shaders_wgsl.ModelStructOptions.html" class="tsd-signature-type tsd-kind-interface">ModelStructOptions</a><span class="tsd-signature-symbol">,</span><br/><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Uniforms</span><a href="#getmodeluniforms-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
+<div class="tsd-description">
+<div class="tsd-parameters">
+<h4 class="tsd-parameters-title">Parameters</h4>
+<ul class="tsd-parameter-list">
+<li><span><span class="tsd-kind-parameter">entity</span>: <a href="types.Entity.html" class="tsd-signature-type tsd-kind-interface">Entity</a></span></li>
+<li><span><span class="tsd-kind-parameter">normalMatrix</span>: <span class="tsd-signature-type">Mat3</span></span></li>
+<li><span><code class="tsd-tag">Optional</code><span class="tsd-kind-parameter">options</span>: <a href="shaders_wgsl.ModelStructOptions.html" class="tsd-signature-type tsd-kind-interface">ModelStructOptions</a></span></li></ul></div>
+<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Uniforms</span></h4><aside class="tsd-sources">
+<p>Inherited from <a href="systems_renderer_base.BaseRendererSystem.html">BaseRendererSystem</a>.<a href="systems_renderer_base.BaseRendererSystem.html#getmodeluniforms">getModelUniforms</a></p>
+<ul>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/4d3d963be1e234e2f7f9a8d107ace7a6a3ef1a4a/src/systems/renderer/base.ts#L374">systems/renderer/base.ts:374</a></li></ul></aside></div></li></ul></section>
+<section class="tsd-panel tsd-member tsd-is-inherited">
+<h3 class="tsd-anchor-link" id="getpipeline"><span>get<wbr/>Pipeline</span><a href="#getpipeline" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<ul class="tsd-signatures tsd-is-inherited">
+<li class="tsd-is-inherited">
+<div class="tsd-signature tsd-anchor-link" id="getpipeline-1"><span class="tsd-kind-call-signature">getPipeline</span><span class="tsd-signature-symbol">(</span><br/>    <span class="tsd-kind-parameter">entity</span><span class="tsd-signature-symbol">:</span> <a href="types.Entity.html" class="tsd-signature-type tsd-kind-interface">Entity</a><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-kind-parameter">options</span><span class="tsd-signature-symbol">?:</span> <a href="types.RendererPassOptions.html" class="tsd-signature-type tsd-kind-interface">RendererPassOptions</a><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-kind-parameter">precomputed</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">unknown</span><span class="tsd-signature-symbol">,</span><br/><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">RenderPipeline</span><a href="#getpipeline-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
+<div class="tsd-description">
+<div class="tsd-parameters">
+<h4 class="tsd-parameters-title">Parameters</h4>
+<ul class="tsd-parameter-list">
+<li><span><span class="tsd-kind-parameter">entity</span>: <a href="types.Entity.html" class="tsd-signature-type tsd-kind-interface">Entity</a></span></li>
+<li><span><code class="tsd-tag">Optional</code><span class="tsd-kind-parameter">options</span>: <a href="types.RendererPassOptions.html" class="tsd-signature-type tsd-kind-interface">RendererPassOptions</a></span></li>
+<li><span><code class="tsd-tag">Optional</code><span class="tsd-kind-parameter">precomputed</span>: <span class="tsd-signature-type">unknown</span></span></li></ul></div>
+<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">RenderPipeline</span></h4><aside class="tsd-sources">
+<p>Inherited from <a href="systems_renderer_base.BaseRendererSystem.html">BaseRendererSystem</a>.<a href="systems_renderer_base.BaseRendererSystem.html#getpipeline">getPipeline</a></p>
+<ul>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/4d3d963be1e234e2f7f9a8d107ace7a6a3ef1a4a/src/systems/renderer/base.ts#L392">systems/renderer/base.ts:392</a></li></ul></aside></div></li></ul></section>
+<section class="tsd-panel tsd-member tsd-is-inherited">
+<h3 class="tsd-anchor-link" id="getpipelineblend"><span>get<wbr/>Pipeline<wbr/>Blend</span><a href="#getpipelineblend" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<ul class="tsd-signatures tsd-is-inherited">
+<li class="tsd-is-inherited">
+<div class="tsd-signature tsd-anchor-link" id="getpipelineblend-1"><span class="tsd-kind-call-signature">getPipelineBlend</span><span class="tsd-signature-symbol">(</span><br/>    <span class="tsd-kind-parameter">blend</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">GPUBlendState</span> <span class="tsd-signature-symbol">|</span> <a href="../types/types.BlendMode.html" class="tsd-signature-type tsd-kind-type-alias">BlendMode</a> <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol">,</span><br/><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">GPUBlendState</span> <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-type">undefined</span><a href="#getpipelineblend-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
+<div class="tsd-description">
+<div class="tsd-parameters">
+<h4 class="tsd-parameters-title">Parameters</h4>
+<ul class="tsd-parameter-list">
+<li><span><span class="tsd-kind-parameter">blend</span>: <span class="tsd-signature-type">GPUBlendState</span> <span class="tsd-signature-symbol">|</span> <a href="../types/types.BlendMode.html" class="tsd-signature-type tsd-kind-type-alias">BlendMode</a> <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-type">undefined</span></span></li></ul></div>
+<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">GPUBlendState</span> <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-type">undefined</span></h4><aside class="tsd-sources">
+<p>Inherited from <a href="systems_renderer_base.BaseRendererSystem.html">BaseRendererSystem</a>.<a href="systems_renderer_base.BaseRendererSystem.html#getpipelineblend">getPipelineBlend</a></p>
+<ul>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/4d3d963be1e234e2f7f9a8d107ace7a6a3ef1a4a/src/systems/renderer/base.ts#L371">systems/renderer/base.ts:371</a></li></ul></aside></div></li></ul></section>
+<section class="tsd-panel tsd-member tsd-is-inherited">
+<h3 class="tsd-anchor-link" id="getpipelineoptions"><span>get<wbr/>Pipeline<wbr/>Options</span><a href="#getpipelineoptions" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<ul class="tsd-signatures tsd-is-inherited">
+<li class="tsd-is-inherited">
+<div class="tsd-signature tsd-anchor-link" id="getpipelineoptions-1"><span class="tsd-kind-call-signature">getPipelineOptions</span><span class="tsd-signature-symbol">(</span><br/>    <span class="tsd-kind-parameter">entity</span><span class="tsd-signature-symbol">:</span> <a href="types.Entity.html" class="tsd-signature-type tsd-kind-interface">Entity</a><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-kind-parameter">options</span><span class="tsd-signature-symbol">:</span> <a href="types.RendererPassOptions.html" class="tsd-signature-type tsd-kind-interface">RendererPassOptions</a><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-kind-parameter">precomputed</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">unknown</span><span class="tsd-signature-symbol">,</span><br/><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <a href="../types/systems_renderer_base.PipelineOptions.html" class="tsd-signature-type tsd-kind-type-alias">PipelineOptions</a><a href="#getpipelineoptions-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
+<div class="tsd-description">
+<div class="tsd-parameters">
+<h4 class="tsd-parameters-title">Parameters</h4>
+<ul class="tsd-parameter-list">
+<li><span><span class="tsd-kind-parameter">entity</span>: <a href="types.Entity.html" class="tsd-signature-type tsd-kind-interface">Entity</a></span></li>
+<li><span><span class="tsd-kind-parameter">options</span>: <a href="types.RendererPassOptions.html" class="tsd-signature-type tsd-kind-interface">RendererPassOptions</a></span></li>
+<li><span><code class="tsd-tag">Optional</code><span class="tsd-kind-parameter">precomputed</span>: <span class="tsd-signature-type">unknown</span></span></li></ul></div>
+<h4 class="tsd-returns-title">Returns <a href="../types/systems_renderer_base.PipelineOptions.html" class="tsd-signature-type tsd-kind-type-alias">PipelineOptions</a></h4><aside class="tsd-sources">
+<p>Inherited from <a href="systems_renderer_base.BaseRendererSystem.html">BaseRendererSystem</a>.<a href="systems_renderer_base.BaseRendererSystem.html#getpipelineoptions">getPipelineOptions</a></p>
+<ul>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/4d3d963be1e234e2f7f9a8d107ace7a6a3ef1a4a/src/systems/renderer/base.ts#L366">systems/renderer/base.ts:366</a></li></ul></aside></div></li></ul></section>
+<section class="tsd-panel tsd-member tsd-is-inherited">
+<h3 class="tsd-anchor-link" id="getshader"><span>get<wbr/>Shader</span><a href="#getshader" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<ul class="tsd-signatures tsd-is-inherited">
+<li class="tsd-is-inherited">
+<div class="tsd-signature tsd-anchor-link" id="getshader-1"><span class="tsd-kind-call-signature">getShader</span><span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">defines</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Set</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">,</span> <span class="tsd-kind-parameter">options</span><span class="tsd-signature-symbol">:</span> <a href="types.PipelineShaderOptions.html" class="tsd-signature-type tsd-kind-interface">PipelineShaderOptions</a><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><a href="#getshader-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
+<div class="tsd-description">
+<div class="tsd-parameters">
+<h4 class="tsd-parameters-title">Parameters</h4>
+<ul class="tsd-parameter-list">
+<li><span><span class="tsd-kind-parameter">defines</span>: <span class="tsd-signature-type">Set</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">&gt;</span></span></li>
+<li><span><span class="tsd-kind-parameter">options</span>: <a href="types.PipelineShaderOptions.html" class="tsd-signature-type tsd-kind-interface">PipelineShaderOptions</a></span></li></ul></div>
+<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">string</span></h4><aside class="tsd-sources">
+<p>Inherited from <a href="systems_renderer_base.BaseRendererSystem.html">BaseRendererSystem</a>.<a href="systems_renderer_base.BaseRendererSystem.html#getshader">getShader</a></p>
+<ul>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/4d3d963be1e234e2f7f9a8d107ace7a6a3ef1a4a/src/systems/renderer/base.ts#L349">systems/renderer/base.ts:349</a></li></ul></aside></div></li></ul></section>
+<section class="tsd-panel tsd-member tsd-is-inherited">
+<h3 class="tsd-anchor-link" id="getshaderoptions"><span>get<wbr/>Shader<wbr/>Options</span><a href="#getshaderoptions" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<ul class="tsd-signatures tsd-is-inherited">
+<li class="tsd-is-inherited">
+<div class="tsd-signature tsd-anchor-link" id="getshaderoptions-1"><span class="tsd-kind-call-signature">getShaderOptions</span><span class="tsd-signature-symbol">(</span><br/>    <span class="tsd-kind-parameter">entity</span><span class="tsd-signature-symbol">:</span> <a href="types.Entity.html" class="tsd-signature-type tsd-kind-interface">Entity</a><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-kind-parameter">options</span><span class="tsd-signature-symbol">:</span> <a href="types.RendererPassOptions.html" class="tsd-signature-type tsd-kind-interface">RendererPassOptions</a><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-kind-parameter">defines</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">Set</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">,</span><br/><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <a href="types.PipelineShaderOptions.html" class="tsd-signature-type tsd-kind-interface">PipelineShaderOptions</a><a href="#getshaderoptions-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
+<div class="tsd-description">
+<div class="tsd-parameters">
+<h4 class="tsd-parameters-title">Parameters</h4>
+<ul class="tsd-parameter-list">
+<li><span><span class="tsd-kind-parameter">entity</span>: <a href="types.Entity.html" class="tsd-signature-type tsd-kind-interface">Entity</a></span></li>
+<li><span><span class="tsd-kind-parameter">options</span>: <a href="types.RendererPassOptions.html" class="tsd-signature-type tsd-kind-interface">RendererPassOptions</a></span></li>
+<li><span><code class="tsd-tag">Optional</code><span class="tsd-kind-parameter">defines</span>: <span class="tsd-signature-type">Set</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">&gt;</span></span></li></ul></div>
+<h4 class="tsd-returns-title">Returns <a href="types.PipelineShaderOptions.html" class="tsd-signature-type tsd-kind-interface">PipelineShaderOptions</a></h4><aside class="tsd-sources">
+<p>Inherited from <a href="systems_renderer_base.BaseRendererSystem.html">BaseRendererSystem</a>.<a href="systems_renderer_base.BaseRendererSystem.html#getshaderoptions">getShaderOptions</a></p>
+<ul>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/4d3d963be1e234e2f7f9a8d107ace7a6a3ef1a4a/src/systems/renderer/base.ts#L351">systems/renderer/base.ts:351</a></li></ul></aside></div></li></ul></section>
+<section class="tsd-panel tsd-member tsd-is-inherited">
+<h3 class="tsd-anchor-link" id="getvariantkey"><span>get<wbr/>Variant<wbr/>Key</span><a href="#getvariantkey" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<ul class="tsd-signatures tsd-is-inherited">
+<li class="tsd-is-inherited">
+<div class="tsd-signature tsd-anchor-link" id="getvariantkey-1"><span class="tsd-kind-call-signature">getVariantKey</span><span class="tsd-signature-symbol">(</span><br/>    <span class="tsd-kind-parameter">entity</span><span class="tsd-signature-symbol">:</span> <a href="types.Entity.html" class="tsd-signature-type tsd-kind-interface">Entity</a><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-kind-parameter">defines</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Set</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-kind-parameter">options</span><span class="tsd-signature-symbol">:</span> <a href="types.RendererPassOptions.html" class="tsd-signature-type tsd-kind-interface">RendererPassOptions</a><span class="tsd-signature-symbol">,</span><br/><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><a href="#getvariantkey-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
+<div class="tsd-description">
+<div class="tsd-parameters">
+<h4 class="tsd-parameters-title">Parameters</h4>
+<ul class="tsd-parameter-list">
+<li><span><span class="tsd-kind-parameter">entity</span>: <a href="types.Entity.html" class="tsd-signature-type tsd-kind-interface">Entity</a></span></li>
+<li><span><span class="tsd-kind-parameter">defines</span>: <span class="tsd-signature-type">Set</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">&gt;</span></span></li>
+<li><span><span class="tsd-kind-parameter">options</span>: <a href="types.RendererPassOptions.html" class="tsd-signature-type tsd-kind-interface">RendererPassOptions</a></span></li></ul></div>
+<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">string</span></h4><aside class="tsd-sources">
+<p>Inherited from <a href="systems_renderer_base.BaseRendererSystem.html">BaseRendererSystem</a>.<a href="systems_renderer_base.BaseRendererSystem.html#getvariantkey">getVariantKey</a></p>
+<ul>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/4d3d963be1e234e2f7f9a8d107ace7a6a3ef1a4a/src/systems/renderer/base.ts#L361">systems/renderer/base.ts:361</a></li></ul></aside></div></li></ul></section>
+<section class="tsd-panel tsd-member tsd-is-inherited">
+<h3 class="tsd-anchor-link" id="inputs"><code class="tsd-tag">Optional</code><span>inputs</span><a href="#inputs" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<ul class="tsd-signatures tsd-is-inherited">
+<li class="tsd-is-inherited">
+<div class="tsd-signature tsd-anchor-link" id="inputs-1"><span class="tsd-kind-call-signature">inputs</span><span class="tsd-signature-symbol">?</span><span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">options</span><span class="tsd-signature-symbol">?:</span> <a href="types.RendererPassOptions.html" class="tsd-signature-type tsd-kind-interface">RendererPassOptions</a><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">[]</span><a href="#inputs-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
+<div class="tsd-description">
+<div class="tsd-comment tsd-typography"><p>Frame images read by the renderer, by register name.</p>
+</div>
+<div class="tsd-parameters">
+<h4 class="tsd-parameters-title">Parameters</h4>
+<ul class="tsd-parameter-list">
+<li><span><code class="tsd-tag">Optional</code><span class="tsd-kind-parameter">options</span>: <a href="types.RendererPassOptions.html" class="tsd-signature-type tsd-kind-interface">RendererPassOptions</a></span></li></ul></div>
+<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">[]</span></h4><aside class="tsd-sources">
+<p>Inherited from <a href="systems_renderer_base.BaseRendererSystem.html">BaseRendererSystem</a>.<a href="systems_renderer_base.BaseRendererSystem.html#inputs">inputs</a></p>
+<ul>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/4d3d963be1e234e2f7f9a8d107ace7a6a3ef1a4a/src/types.ts#L1943">types.ts:1943</a></li></ul></aside></div></li></ul></section>
+<section class="tsd-panel tsd-member">
+<h3 class="tsd-anchor-link" id="render"><span>render</span><a href="#render" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<ul class="tsd-signatures">
+<li class="">
+<div class="tsd-signature tsd-anchor-link" id="render-1"><span class="tsd-kind-call-signature">render</span><span class="tsd-signature-symbol">(</span><br/>    <span class="tsd-kind-parameter">renderView</span><span class="tsd-signature-symbol">:</span> <a href="types.RenderView.html" class="tsd-signature-type tsd-kind-interface">RenderView</a><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-kind-parameter">entities</span><span class="tsd-signature-symbol">:</span> <a href="types.Entity.html" class="tsd-signature-type tsd-kind-interface">Entity</a><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-kind-parameter">options</span><span class="tsd-signature-symbol">:</span> <a href="types.RendererPassOptions.html" class="tsd-signature-type tsd-kind-interface">RendererPassOptions</a><span class="tsd-signature-symbol">,</span><br/><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">void</span><a href="#render-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
+<div class="tsd-description">
+<div class="tsd-parameters">
+<h4 class="tsd-parameters-title">Parameters</h4>
+<ul class="tsd-parameter-list">
+<li><span><span class="tsd-kind-parameter">renderView</span>: <a href="types.RenderView.html" class="tsd-signature-type tsd-kind-interface">RenderView</a></span></li>
+<li><span><span class="tsd-kind-parameter">entities</span>: <a href="types.Entity.html" class="tsd-signature-type tsd-kind-interface">Entity</a><span class="tsd-signature-symbol">[]</span></span></li>
+<li><span><span class="tsd-kind-parameter">options</span>: <a href="types.RendererPassOptions.html" class="tsd-signature-type tsd-kind-interface">RendererPassOptions</a></span></li></ul></div>
+<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/4d3d963be1e234e2f7f9a8d107ace7a6a3ef1a4a/src/systems/renderer/basic.ts#L26">systems/renderer/basic.ts:26</a></li></ul></aside></div></li></ul></section>
+<section class="tsd-panel tsd-member">
+<h3 class="tsd-anchor-link" id="renderopaque"><span>render<wbr/>Opaque</span><a href="#renderopaque" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<ul class="tsd-signatures">
+<li class="">
+<div class="tsd-signature tsd-anchor-link" id="renderopaque-1"><span class="tsd-kind-call-signature">renderOpaque</span><span class="tsd-signature-symbol">(</span><br/>    <span class="tsd-kind-parameter">renderView</span><span class="tsd-signature-symbol">:</span> <a href="types.RenderView.html" class="tsd-signature-type tsd-kind-interface">RenderView</a><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-kind-parameter">entities</span><span class="tsd-signature-symbol">:</span> <a href="types.Entity.html" class="tsd-signature-type tsd-kind-interface">Entity</a><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-kind-parameter">options</span><span class="tsd-signature-symbol">:</span> <a href="types.RendererPassOptions.html" class="tsd-signature-type tsd-kind-interface">RendererPassOptions</a><span class="tsd-signature-symbol">,</span><br/><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">void</span><a href="#renderopaque-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
+<div class="tsd-description">
+<div class="tsd-parameters">
+<h4 class="tsd-parameters-title">Parameters</h4>
+<ul class="tsd-parameter-list">
+<li><span><span class="tsd-kind-parameter">renderView</span>: <a href="types.RenderView.html" class="tsd-signature-type tsd-kind-interface">RenderView</a></span></li>
+<li><span><span class="tsd-kind-parameter">entities</span>: <a href="types.Entity.html" class="tsd-signature-type tsd-kind-interface">Entity</a><span class="tsd-signature-symbol">[]</span></span></li>
+<li><span><span class="tsd-kind-parameter">options</span>: <a href="types.RendererPassOptions.html" class="tsd-signature-type tsd-kind-interface">RendererPassOptions</a></span></li></ul></div>
+<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4><aside class="tsd-sources">
+<p>Overrides <a href="types.RendererSystem.html">RendererSystem</a>.<a href="types.RendererSystem.html#renderopaque">renderOpaque</a></p>
+<ul>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/4d3d963be1e234e2f7f9a8d107ace7a6a3ef1a4a/src/systems/renderer/basic.ts#L31">systems/renderer/basic.ts:31</a></li></ul></aside></div></li></ul></section>
+<section class="tsd-panel tsd-member">
+<h3 class="tsd-anchor-link" id="rendertransparent"><span>render<wbr/>Transparent</span><a href="#rendertransparent" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<ul class="tsd-signatures">
+<li class="">
+<div class="tsd-signature tsd-anchor-link" id="rendertransparent-1"><span class="tsd-kind-call-signature">renderTransparent</span><span class="tsd-signature-symbol">(</span><br/>    <span class="tsd-kind-parameter">renderView</span><span class="tsd-signature-symbol">:</span> <a href="types.RenderView.html" class="tsd-signature-type tsd-kind-interface">RenderView</a><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-kind-parameter">entities</span><span class="tsd-signature-symbol">:</span> <a href="types.Entity.html" class="tsd-signature-type tsd-kind-interface">Entity</a><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-kind-parameter">options</span><span class="tsd-signature-symbol">:</span> <a href="types.RendererPassOptions.html" class="tsd-signature-type tsd-kind-interface">RendererPassOptions</a><span class="tsd-signature-symbol">,</span><br/><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">void</span><a href="#rendertransparent-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
+<div class="tsd-description">
+<div class="tsd-parameters">
+<h4 class="tsd-parameters-title">Parameters</h4>
+<ul class="tsd-parameter-list">
+<li><span><span class="tsd-kind-parameter">renderView</span>: <a href="types.RenderView.html" class="tsd-signature-type tsd-kind-interface">RenderView</a></span></li>
+<li><span><span class="tsd-kind-parameter">entities</span>: <a href="types.Entity.html" class="tsd-signature-type tsd-kind-interface">Entity</a><span class="tsd-signature-symbol">[]</span></span></li>
+<li><span><span class="tsd-kind-parameter">options</span>: <a href="types.RendererPassOptions.html" class="tsd-signature-type tsd-kind-interface">RendererPassOptions</a></span></li></ul></div>
+<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4><aside class="tsd-sources">
+<p>Overrides <a href="types.RendererSystem.html">RendererSystem</a>.<a href="types.RendererSystem.html#rendertransparent">renderTransparent</a></p>
+<ul>
+<li>Defined in <a href="https://github.com/pex-gl/pex-renderer/blob/4d3d963be1e234e2f7f9a8d107ace7a6a3ef1a4a/src/systems/renderer/basic.ts#L36">systems/renderer/basic.ts:36</a></li></ul></aside></div></li></ul></section></section></details></div>
+<div class="col-sidebar">
+<div class="page-menu">
+<div class="tsd-navigation settings">
+<details class="tsd-accordion"><summary class="tsd-accordion-summary"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-chevronDown"></use></svg>
+<h3>Settings</h3></summary>
+<div class="tsd-accordion-details">
+<div class="tsd-filter-visibility"><span class="settings-label">Member Visibility</span>
+<ul id="tsd-filter-options">
+<li class="tsd-filter-item"><label class="tsd-filter-input"><input type="checkbox" id="tsd-filter-protected" name="protected"/><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect class="tsd-checkbox-background" width="30" height="30" x="1" y="1" rx="6" fill="none"></rect><path class="tsd-checkbox-checkmark" d="M8.35422 16.8214L13.2143 21.75L24.6458 10.25" stroke="none" stroke-width="3.5" stroke-linejoin="round" fill="none"></path></svg><span>Protected</span></label></li>
+<li class="tsd-filter-item"><label class="tsd-filter-input"><input type="checkbox" id="tsd-filter-inherited" name="inherited" checked/><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect class="tsd-checkbox-background" width="30" height="30" x="1" y="1" rx="6" fill="none"></rect><path class="tsd-checkbox-checkmark" d="M8.35422 16.8214L13.2143 21.75L24.6458 10.25" stroke="none" stroke-width="3.5" stroke-linejoin="round" fill="none"></path></svg><span>Inherited</span></label></li>
+<li class="tsd-filter-item"><label class="tsd-filter-input"><input type="checkbox" id="tsd-filter-external" name="external"/><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect class="tsd-checkbox-background" width="30" height="30" x="1" y="1" rx="6" fill="none"></rect><path class="tsd-checkbox-checkmark" d="M8.35422 16.8214L13.2143 21.75L24.6458 10.25" stroke="none" stroke-width="3.5" stroke-linejoin="round" fill="none"></path></svg><span>External</span></label></li></ul></div>
+<div class="tsd-theme-toggle"><label class="settings-label" for="tsd-theme">Theme</label><select id="tsd-theme"><option value="os">OS</option><option value="light">Light</option><option value="dark">Dark</option></select></div></div></details></div>
+<details open class="tsd-accordion tsd-page-navigation"><summary class="tsd-accordion-summary"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-chevronDown"></use></svg>
+<h3>On This Page</h3></summary>
+<div class="tsd-accordion-details">
+<details open class="tsd-accordion tsd-page-navigation-section"><summary class="tsd-accordion-summary" data-key="section-Properties"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-chevronDown"></use></svg>Properties</summary>
+<div><a href="#debug" class="tsd-is-inherited"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>debug</span></a><a href="#dispose" class="tsd-is-inherited"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>dispose</span></a><a href="#getfeatureflags" class="tsd-is-inherited"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>get<wbr/>Feature<wbr/>Flags</span></a><a href="#pipelinecache" class="tsd-is-inherited"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>pipeline<wbr/>Cache</span></a><a href="#renderbackground" class="tsd-is-inherited"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>render<wbr/>Background</span></a><a href="#renderprepass" class="tsd-is-inherited"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>render<wbr/>Pre<wbr/>Pass</span></a><a href="#rendershadow" class="tsd-is-inherited"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>render<wbr/>Shadow</span></a><a href="#type" class="tsd-is-inherited"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>type</span></a><a href="#update" class="tsd-is-inherited"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>update</span></a></div></details>
+<details open class="tsd-accordion tsd-page-navigation-section"><summary class="tsd-accordion-summary" data-key="section-Methods"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-chevronDown"></use></svg>Methods</summary>
+<div><a href="#getcachedpipeline" class="tsd-is-inherited"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>get<wbr/>Cached<wbr/>Pipeline</span></a><a href="#getdefines" class="tsd-is-inherited"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>get<wbr/>Defines</span></a><a href="#geterrorshader" class="tsd-is-inherited"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>get<wbr/>Error<wbr/>Shader</span></a><a href="#getframeuniforms" class="tsd-is-inherited"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>get<wbr/>Frame<wbr/>Uniforms</span></a><a href="#gethookuniforms" class="tsd-is-inherited"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>get<wbr/>Hook<wbr/>Uniforms</span></a><a href="#getmodeluniforms" class="tsd-is-inherited"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>get<wbr/>Model<wbr/>Uniforms</span></a><a href="#getpipeline" class="tsd-is-inherited"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>get<wbr/>Pipeline</span></a><a href="#getpipelineblend" class="tsd-is-inherited"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>get<wbr/>Pipeline<wbr/>Blend</span></a><a href="#getpipelineoptions" class="tsd-is-inherited"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>get<wbr/>Pipeline<wbr/>Options</span></a><a href="#getshader" class="tsd-is-inherited"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>get<wbr/>Shader</span></a><a href="#getshaderoptions" class="tsd-is-inherited"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>get<wbr/>Shader<wbr/>Options</span></a><a href="#getvariantkey" class="tsd-is-inherited"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>get<wbr/>Variant<wbr/>Key</span></a><a href="#inputs" class="tsd-is-inherited"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>inputs</span></a><a href="#render"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>render</span></a><a href="#renderopaque"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>render<wbr/>Opaque</span></a><a href="#rendertransparent"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>render<wbr/>Transparent</span></a></div></details></div></details></div>
+<div class="site-menu">
+<nav class="tsd-navigation"><a href="../modules.html">pex-renderer</a>
+<ul class="tsd-small-nested-navigation" id="tsd-nav-container">
+<li>Loading...</li></ul></nav></div></div></div><footer>
+<p class="tsd-generator">Generated using <a href="https://typedoc.org/" target="_blank">TypeDoc</a></p></footer>
+<div class="overlay"></div><script>
+          try {
+            const generateLinkElement = document.querySelector(".tsd-generator a");
+            const link = document.createElement("a");
+            Object.assign(link, {
+              href: "https://github.com/dmnsgn/typedoc-material-theme",
+              target: "_blank",
+              rel: "noreferrer",
+              innerText: "typedoc-material-theme."
+            });
+            generateLinkElement.insertAdjacentElement("afterend", link);
+            generateLinkElement.insertAdjacentText("afterend", " with ");
+          } catch (error) {
+
+          }
+        </script></body></html>

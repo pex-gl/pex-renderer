@@ -298,10 +298,10 @@ export interface LightShadowInternals {
 export interface AreaLightComponentOptions extends LightShadowInternals {
   color?: Color;
   /**
-   * Luminous power in lumens, spread over the emitting surface — the world
-   * x and y extent — to give the luminance the shader integrates.
-   * Scaling the light up therefore dims it, since the same power covers more
-   * area. Halved again when `doubleSided`.
+   * Luminous power in lumens, spread over the emitting surface — the world x
+   * and y extent — to give the luminance the shader integrates. Scaling the
+   * light up therefore dims it, since the same power covers more area. Halved
+   * again when `doubleSided`.
    */
   intensity?: number;
   disk?: boolean;
@@ -319,8 +319,8 @@ export interface AreaLightComponentOptions extends LightShadowInternals {
    */
   depthBiasClamp?: number;
   /**
-   * Soft-shadow (PCSS) light radius in world units (scaled by the light's
-   * world extent): larger widens the penumbra.
+   * Soft-shadow (PCSS) light radius in world units (scaled by the light's world
+   * extent): larger widens the penumbra.
    */
   bulbRadius?: number;
   castShadows?: boolean;
@@ -352,8 +352,8 @@ export interface CameraHelperComponentOptions {
 export interface CameraComponentOptions {
   projection?: "perspective" | "orthographic";
   /**
-   * Default: 0.01 m. Reversed-Z makes depth precision independent of `near`,
-   * so it only sets what clips: at the default fov, a subject down to ~1 cm can
+   * Default: 0.01 m. Reversed-Z makes depth precision independent of `near`, so
+   * it only sets what clips: at the default fov, a subject down to ~1 cm can
    * fill the frame.
    *
    * Post-processing reads depth as a positive distance from the camera, so an

@@ -604,12 +604,7 @@ export function hookBindingsDeclaration(
 ${bindingDeclaration(group, alloc.next(), "uHooks", "Hooks", "uniform")}`
       : "",
     ...textures.map(([name, type]) =>
-      textureSamplerDeclaration(
-        group,
-        alloc.nextTextureSampler(),
-        name,
-        type,
-      ),
+      textureSamplerDeclaration(group, alloc.nextTextureSampler(), name, type),
     ),
   ]
     .filter(Boolean)
