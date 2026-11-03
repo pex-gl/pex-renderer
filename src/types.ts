@@ -1729,8 +1729,8 @@ export interface ShaderHooks {
   interStage?: Record<string, string>;
   /**
    * Extra bindings in the material bind group, name to WGSL type. A `texture_*`
-   * type becomes a texture plus its sampler, named `u<Name>` and
-   * `u<Name>Sampler`; everything else becomes a field of the `uHooks` uniform
+   * type becomes a texture plus its sampler, named `<name>` and
+   * `<name>Sampler`; everything else becomes a field of the `uHooks` uniform
    * block, read as `uHooks.<name>`.
    */
   bindings?: Record<string, string>;

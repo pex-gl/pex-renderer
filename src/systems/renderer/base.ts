@@ -504,9 +504,9 @@ export default ({ ctx }: Pick<SystemOptions, "ctx">): BaseRendererSystem => ({
   },
   /**
    * Uniform values for a material's hook bindings, mapped onto the names the
-   * generator declared: a texture entry becomes `u<Name>`/`u<Name>Sampler`
-   * (`sampler` when the hook supplies none of its own), everything else a field
-   * of the `uHooks` block.
+   * generator declared: a texture entry keeps its name and pairs with
+   * `<name>Sampler` (`sampler` when the hook supplies none of its own),
+   * everything else becomes a field of the `uHooks` block.
    *
    * Computed once per entity per frame, keyed by `frameIndex`, rather than once
    * per draw: the shadow, pre- and main passes run the same vertex hook, and a
@@ -542,9 +542,9 @@ export default ({ ctx }: Pick<SystemOptions, "ctx">): BaseRendererSystem => ({
         continue;
       }
       if (bindings[key]?.startsWith("texture_")) {
-        const name = uniformName(key);
-        uniforms[name] = value;
-        uniforms[samplerName(name)] = values[`${key}Sampler`] ?? sampler!;
+        const samplerKey = samplerName(key);
+        uniforms[key] = value;
+        uniforms[samplerKey] = values[samplerKey] ?? sampler!;
       } else {
         uHooks[key] = value as UniformBlock[string];
       }

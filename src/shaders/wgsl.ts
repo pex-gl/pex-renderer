@@ -584,8 +584,8 @@ const isTextureType = (type: string) => type.startsWith("texture_");
 /**
  * A hook's `bindings` as declarations in `group`, taking binding slots from
  * `alloc` after the pass' own. Scalar/vector/matrix entries share one `uHooks`
- * uniform block; a `texture_*` entry becomes a texture and sampler pair under
- * the same `u`+capitalize convention as every other texture uniform.
+ * uniform block; a `texture_*` entry becomes a texture and sampler pair named
+ * as authored.
  */
 export function hookBindingsDeclaration(
   group: number,
@@ -607,7 +607,7 @@ ${bindingDeclaration(group, alloc.next(), "uHooks", "Hooks", "uniform")}`
       textureSamplerDeclaration(
         group,
         alloc.nextTextureSampler(),
-        uniformName(name),
+        name,
         type,
       ),
     ),

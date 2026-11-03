@@ -31,8 +31,13 @@ const createElement = () =>
       removeProperty() {},
     },
   });
-// KeyboardManager listens on it for first person and fly controls by default.
-globalThis.window = new EventTarget();
+// KeyboardManager listens on globalThis for first person and fly controls by
+// default, which is window in a browser.
+const windowTarget = new EventTarget();
+for (const method of ["addEventListener", "removeEventListener"]) {
+  globalThis[method] = windowTarget[method].bind(windowTarget);
+}
+globalThis.window = globalThis;
 
 const ctx = { width: 800, height: 600, canvas: createElement() };
 const dt = 1 / 60;
