@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+# [6.0.0-alpha.6](https://github.com/pex-gl/pex-renderer/compare/v6.0.0-alpha.5...v6.0.0-alpha.6) (2026-11-13)
+
+### Features
+
+* add load() to systems, renderers and renderEngine ([5d78f9d](https://github.com/pex-gl/pex-renderer/commit/5d78f9d100df7ee7c1a792936cdd0ff573dd6caf))
+
 # [6.0.0-alpha.5](https://github.com/pex-gl/pex-renderer/compare/v6.0.0-alpha.4...v6.0.0-alpha.5) (2026-11-03)
 
 ### Bug Fixes

@@ -235,8 +235,8 @@ export interface PostProcessingContext {
 
 export interface PostProcessingEffect {
   /**
-   * Must match the entry's name: it is both the component key that
-   * switches the effect on and the prefix its outputs are published under.
+   * Must match the entry's name: it is both the component key that switches the
+   * effect on and the prefix its outputs are published under.
    */
   name: string;
   /**
