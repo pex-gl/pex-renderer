@@ -38,6 +38,7 @@ import type {
   Shadow2DLightComponentOptions,
   ShadowCastingLightComponentOptions,
   LightShadow,
+  SystemLoad,
   SystemOptions,
   TextureTransform,
 } from "../../types.js";
@@ -173,10 +174,11 @@ export interface StandardRendererSystem extends BaseRendererSystem {
   materialSampler: GPUSampler;
   captureSampler: GPUSampler;
   ltcTextures: { ltc_1: GpuTexture | null; ltc_2: GpuTexture | null };
-  isLoadingAreaLightData: boolean | null;
+  areaLightData: Promise<void> | null;
   depthPipelineCache: Map<string, RenderPipeline>;
   prePassPipelineCache: Map<string, RenderPipeline>;
   loadAreaLightData(): Promise<void>;
+  load: SystemLoad;
   getMaterialDefines(
     entity: Entity,
   ): ReturnType<BaseRendererSystem["getFeatureFlags"]>;
@@ -303,7 +305,7 @@ export default ({
     addressMode: "clamp-to-edge",
   }),
   ltcTextures: { ltc_1: null, ltc_2: null },
-  isLoadingAreaLightData: null,
+  areaLightData: null,
 
   // Shadow-map variants of the depth pass.
   depthPipelineCache: new Map<string, RenderPipeline>(),
@@ -314,6 +316,8 @@ export default ({
   async loadAreaLightData() {
     try {
       const { g_ltc_1, g_ltc_2 } = await import("./area-light-data.js");
+      if (!this.areaLightData || this.ltcTextures.ltc_1) return;
+
       const options = { width: 64, height: 64, format: "rgba16float" as const };
       this.ltcTextures.ltc_1 = createTexture(ctx, {
         label: "areaLightMatTexture",
@@ -328,6 +332,15 @@ export default ({
     } catch (error) {
       console.error(NAMESPACE, error);
     }
+  },
+
+  load(entities: Entity[]) {
+    if (!this.areaLightData && entities.some((e) => e.areaLight)) {
+      this.areaLightData = this.loadAreaLightData();
+    }
+    return this.ltcTextures.ltc_1
+      ? undefined
+      : (this.areaLightData ?? undefined);
   },
 
   getShader: (defines: Set<string>, options: PipelineShaderOptions) =>
@@ -496,10 +509,7 @@ export default ({
     const spot = entities.filter((e) => e.spotLight);
     const area = entities.filter((e) => e.areaLight);
 
-    if (area.length && !this.isLoadingAreaLightData) {
-      this.isLoadingAreaLightData = true;
-      void this.loadAreaLightData();
-    }
+    void this.load(area);
     const ltcReady = this.ltcTextures.ltc_1 && this.ltcTextures.ltc_2;
     const areaActive = ltcReady ? area : [];
 
@@ -1066,7 +1076,7 @@ export default ({
     this.ltcTextures.ltc_2?.dispose();
     this.ltcTextures.ltc_1 = null;
     this.ltcTextures.ltc_2 = null;
-    this.isLoadingAreaLightData = null;
+    this.areaLightData = null;
     this.pipelineCache.clear();
     this.depthPipelineCache.clear();
     this.prePassPipelineCache.clear();

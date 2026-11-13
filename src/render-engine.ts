@@ -118,6 +118,31 @@ export default ({
       for (let i = 0; i < this.renderers.length; i++) {
         this.renderers[i]!.update(entities, this);
       }
+
+      void this.load(entities);
+    },
+    /**
+     * Start loading what `entities` need: post-processing effects and their
+     * assets, area light data. `update()` already starts it; call it again to
+     * wait. Await outside the frame: a pending load yields past a present.
+     * Settles once every load has, failed ones included; `undefined` when
+     * nothing is pending.
+     */
+    load(entities: Entity[]) {
+      let pending: Promise<unknown>[] | undefined;
+      for (let i = 0; i < this.systems.length; i++) {
+        const loading = this.systems[i]!.load?.(entities);
+        if (!loading) continue;
+        pending ??= [];
+        pending.push(loading);
+      }
+      for (let i = 0; i < this.renderers.length; i++) {
+        const loading = this.renderers[i]!.load?.(entities);
+        if (!loading) continue;
+        pending ??= [];
+        pending.push(loading);
+      }
+      return pending && Promise.allSettled(pending);
     },
     /**
      * Declare, compile and execute one frame.

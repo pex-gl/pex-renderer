@@ -1834,6 +1834,12 @@ export type SystemUpdate = (
   options?: SystemUpdateOptions,
 ) => void;
 export type SystemDispose = (entities?: Entity[]) => void;
+/**
+ * Start fetching what `entities` need and have not loaded yet. Safe to call
+ * every frame: nothing is fetched twice. Settles once loaded; `undefined` when
+ * nothing is pending.
+ */
+export type SystemLoad = (entities: Entity[]) => Promise<unknown> | undefined;
 export interface System {
   type: string;
   /** Per-entity derived state; the shape is the system's own. */
@@ -1841,6 +1847,7 @@ export interface System {
   debug?: boolean;
   update: SystemUpdate;
   dispose?: SystemDispose;
+  load?: SystemLoad;
 }
 export interface RenderEngineOptions {
   width?: number;
@@ -1863,8 +1870,9 @@ export type RenderEngineRender = (
 ) => Record<string, GpuTexture>[];
 export type RenderEngineDebug = (enable: boolean) => void;
 // `debug` is a method here, not the `System` flag of the same name.
-export interface RenderEngine extends Omit<System, "debug"> {
+export interface RenderEngine extends Omit<System, "debug" | "load"> {
   render: RenderEngineRender;
+  load: SystemLoad;
   debug: RenderEngineDebug;
   systems: System[];
   renderers: RendererSystem[];
@@ -1943,6 +1951,7 @@ export interface RendererSystem extends Partial<
   inputs?(options?: RendererPassOptions): string[];
   update?: SystemUpdate;
   dispose?: SystemDispose;
+  load?: SystemLoad;
   [key: string]: unknown;
 }
 
@@ -2006,6 +2015,7 @@ export interface RenderPipelineCore {
     entities: Entity[],
     options?: RenderPipelineUpdateOptions,
   ): Record<string, ResourceHandle>;
+  load: SystemLoad;
   dispose(entities: Entity[]): void;
 }
 // Members shadow-mapping.ts mixes into render-pipeline-system.
@@ -2073,10 +2083,19 @@ export interface PostProcessingMethods {
   postProcessingEffects: Map<string, PostProcessingEffect | null>;
   postProcessingLoading: Map<string, Promise<void>>;
   postProcessingPipelines: Map<string, RenderPipeline | ComputePipeline>;
-  loadPostProcessingEffect(registration: {
+  loadPostProcessingEffect(entry: {
     name: string;
     load: () => Promise<{ default: PostProcessingEffect }>;
   }): Promise<void> | undefined;
+  /**
+   * Append the pending loads of the effects enabled on `cameraEntity`, and of
+   * their assets, to `pending`, or to a new array on the first one. `undefined`
+   * when nothing is pending.
+   */
+  loadPostProcessing(
+    cameraEntity: Entity,
+    pending?: Promise<unknown>[],
+  ): Promise<unknown>[] | undefined;
   getPostProcessingPipeline(
     key: string,
     shader: (defines: Set<string>) => string,

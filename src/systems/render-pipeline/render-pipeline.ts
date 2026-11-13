@@ -237,6 +237,14 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
     if (!transmitted) draw("renderBackground", entitiesInView, options);
   },
 
+  load(entities: Entity[]) {
+    let pending: Promise<unknown>[] | undefined;
+    for (const entity of entities) {
+      if (entity.camera) pending = this.loadPostProcessing(entity, pending);
+    }
+    return pending && Promise.allSettled(pending);
+  },
+
   // Nothing here touches the GPU: the graph only records declarations, and
   // execution happens after compile.
   update(entities: Entity[], options: RenderPipelineUpdateOptions = {}) {

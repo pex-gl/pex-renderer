@@ -37,6 +37,7 @@ const NO_SUBSAMPLE_INDICES = [0, 0, 0, 0];
 interface SMAALookups {
   area?: GpuTexture;
   search?: GpuTexture;
+  loading?: Promise<void> | undefined;
 }
 const lookups = new WeakMap<GpuContext, SMAALookups>();
 
@@ -48,7 +49,7 @@ function getLookups(ctx: GpuContext): SMAALookups {
   lookups.set(ctx, entry);
 
   const loaded = entry;
-  void (async () => {
+  entry.loading = (async () => {
     try {
       const [area, search] = await Promise.all([
         loadImage(SMAA.SMAATextures.area),
@@ -73,6 +74,8 @@ function getLookups(ctx: GpuContext): SMAALookups {
         "smaa lookup textures failed to load",
         error,
       );
+    } finally {
+      loaded.loading = undefined;
     }
   })();
 
@@ -106,6 +109,7 @@ const usesReprojection = (cameraEntity: Entity) => {
 const smaa: PostProcessingEffect = {
   name: "smaa",
   srgb: true,
+  load: (ctx) => getLookups(ctx).loading,
   outputs: (cameraEntity) =>
     usesReprojection(cameraEntity) ? ["velocity"] : [],
   declare({

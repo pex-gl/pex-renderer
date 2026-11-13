@@ -27,7 +27,7 @@ import type {
 } from "../../frame-graph/index.js";
 
 /** One entry in the built-in chain: what turns it on, and how to fetch it. */
-interface EffectRegistration {
+interface EffectEntry {
   /** Component key that switches the effect on, and its register prefix. */
   name: string;
   /**
@@ -61,7 +61,7 @@ interface EffectRegistration {
  * does. Motion blur only compares depths along its sample line, which survives
  * a defocused image far better.
  */
-const EFFECT_ORDER: readonly EffectRegistration[] = [
+const EFFECT_ORDER: readonly EffectEntry[] = [
   { name: "ssao", load: () => import("./post-processing/ssao.js") },
   { name: "taa", load: () => import("./post-processing/taa.js") },
   { name: "dof", load: () => import("./post-processing/dof.js") },
@@ -235,7 +235,7 @@ export interface PostProcessingContext {
 
 export interface PostProcessingEffect {
   /**
-   * Must match the registration's name: it is both the component key that
+   * Must match the entry's name: it is both the component key that
    * switches the effect on and the prefix its outputs are published under.
    */
   name: string;
@@ -270,6 +270,20 @@ export interface PostProcessingEffect {
    * missing, or its settings amount to a no-op.
    */
   declare: (context: PostProcessingContext) => void;
+  /** Fetch assets the effect needs beyond its module. See `SystemLoad`. */
+  load?: (ctx: GpuContext) => Promise<unknown> | undefined;
+}
+
+function* enabledEffectEntries(cameraEntity: Entity): Generator<EffectEntry> {
+  const component = cameraEntity.postProcessing as
+    Record<string, unknown> | undefined;
+  if (!component) return;
+
+  for (const entry of EFFECT_ORDER) {
+    if (entry.unconditional || component[entry.name]) {
+      yield entry;
+    }
+  }
 }
 
 const constantsKey = (constants: Record<string, number | boolean>) =>
@@ -333,7 +347,7 @@ export default ({
   loadPostProcessingEffect({
     name,
     load,
-  }: EffectRegistration): Promise<void> | undefined {
+  }: EffectEntry): Promise<void> | undefined {
     if (this.postProcessingEffects.has(name)) return;
 
     let loading = this.postProcessingLoading.get(name);
@@ -362,6 +376,22 @@ export default ({
       this.postProcessingLoading.set(name, loading);
     }
     return loading;
+  },
+
+  loadPostProcessing(cameraEntity: Entity, pending?: Promise<unknown>[]) {
+    for (const entry of enabledEffectEntries(cameraEntity)) {
+      const loading = this.loadPostProcessingEffect(entry);
+      const assets = loading
+        ? (async () => {
+            await loading;
+            return this.postProcessingEffects.get(entry.name)?.load?.(ctx);
+          })()
+        : this.postProcessingEffects.get(entry.name)?.load?.(ctx);
+      if (!assets) continue;
+      pending ??= [];
+      pending.push(assets);
+    }
+    return pending;
   },
 
   /**
@@ -640,14 +670,7 @@ export default ({
   *enabledPostProcessingEffects(
     cameraEntity: Entity,
   ): Generator<PostProcessingEffect> {
-    const component = cameraEntity.postProcessing as
-      Record<string, unknown> | undefined;
-    if (!component) return;
-
-    for (const registration of EFFECT_ORDER) {
-      const { name, unconditional } = registration;
-      if (!unconditional && !component[name]) continue;
-
+    for (const entry of enabledEffectEntries(cameraEntity)) {
       // Never awaited. The caller's frame segment acquired the swapchain
       // texture when it opened, and a module fetch is long enough for the
       // browser to present in the meantime — which destroys that texture and
@@ -655,9 +678,9 @@ export default ({
       // invisible and permanent: the sky and reflection probe bake once, into
       // the frame this would have straddled, and clear their dirty flags either
       // way.
-      void this.loadPostProcessingEffect(registration);
+      void this.loadPostProcessingEffect(entry);
 
-      const effect = this.postProcessingEffects.get(name);
+      const effect = this.postProcessingEffects.get(entry.name);
       if (effect) yield effect;
     }
   },
