@@ -1860,7 +1860,7 @@ export type RenderEngineRender = (
   entities: Entity[],
   cameraEntities: Entity | Entity[],
   options?: RenderEngineOptions,
-) => Promise<Record<string, GpuTexture>[]>;
+) => Record<string, GpuTexture>[];
 export type RenderEngineDebug = (enable: boolean) => void;
 // `debug` is a method here, not the `System` flag of the same name.
 export interface RenderEngine extends Omit<System, "debug"> {
@@ -2005,7 +2005,7 @@ export interface RenderPipelineCore {
   update(
     entities: Entity[],
     options?: RenderPipelineUpdateOptions,
-  ): Promise<Record<string, ResourceHandle>>;
+  ): Record<string, ResourceHandle>;
   dispose(entities: Entity[]): void;
 }
 // Members shadow-mapping.ts mixes into render-pipeline-system.

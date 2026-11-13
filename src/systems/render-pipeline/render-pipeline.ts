@@ -237,10 +237,9 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
     if (!transmitted) draw("renderBackground", entitiesInView, options);
   },
 
-  // Async because post-processing effects are imported on demand, so a frame
-  // that first enables one waits for its module. Nothing here touches the GPU:
-  // the graph only records declarations, and execution happens after compile.
-  async update(entities: Entity[], options: RenderPipelineUpdateOptions = {}) {
+  // Nothing here touches the GPU: the graph only records declarations, and
+  // execution happens after compile.
+  update(entities: Entity[], options: RenderPipelineUpdateOptions = {}) {
     const {
       time = 0,
       frameIndex = 0,
@@ -279,7 +278,7 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
     for (const name of this.postProcessingOutputs(cameraEntity)) {
       outputs.add(name);
     }
-    await frameGraph.stage("outputs", { outputs, renderView });
+    frameGraph.stage("outputs", { outputs, renderView });
 
     // Temporal antialiasing supersedes multisampling: it resolves geometric
     // aliasing across frames rather than within one, and the two cannot be
@@ -447,8 +446,8 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
      */
     const effectsByStage = this.postProcessingEffectsByStage(cameraEntity);
 
-    const stage = async (name: string) => {
-      await frameGraph.stage(name, textures);
+    const stage = (name: string) => {
+      frameGraph.stage(name, textures);
       this.renderPostProcessing({
         renderView: renderPassView,
         textures,
@@ -459,7 +458,7 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
       effectsByStage.delete(name);
     };
 
-    await stage("lights");
+    stage("lights");
 
     // An entity without a layer belongs to every view; a camera with one sees
     // only those plus its own.
@@ -623,10 +622,10 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
 
       declareDepthResolve();
 
-      await stage("prePass");
+      stage("prePass");
     }
 
-    await stage("opaque");
+    stage("opaque");
 
     scenePass("opaque", drawMeshOptions, {
       outputs: mainOutputs,
@@ -647,12 +646,12 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
     );
 
     if (hasTransparent) {
-      await stage("transparent");
+      stage("transparent");
       scenePass("transparent", { ...drawMeshOptions, transparent: true });
     }
 
     if (hasTransmitted) {
-      await stage("transmission");
+      stage("transmission");
 
       const mipLevelCount = 1 + Math.floor(Math.log2(Math.max(width, height)));
       const hasBackTransmitted = entitiesInView.some(
@@ -747,9 +746,9 @@ export default ({ ctx, frameGraph }: SystemOptions) => ({
     //   });
     //   textures.set("color", inverseToneMapped);
     // }
-    await stage("postProcessing");
+    stage("postProcessing");
 
-    await stage("present");
+    stage("present");
 
     // Silent otherwise: "transparent" and "transmission" open only if the scene
     // has such geometry, and "outputs" is raised before the register exists.

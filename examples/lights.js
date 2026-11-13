@@ -238,7 +238,7 @@ const rotate = (t) => {
 // GUI
 const gui = createGUI(ctx);
 renderEngine.update(world.entities);
-await renderEngine.render(world.entities, cameraEntities);
+renderEngine.render(world.entities, cameraEntities);
 
 // A light's shadow map lives on `_shadows`, keyed by the camera layer it
 // was fitted for — a light seen by several layers has one map per layer — and
@@ -464,11 +464,11 @@ addShadowMap(areaLightEntity, areaLightEntity.areaLight, {
 });
 gui.addParam("Cast Shadows", areaLightEntity.areaLight, "castShadows");
 
-gpu.frame(ctx, async () => {
+gpu.frame(ctx, () => {
   if (State.animate) rotate(performance.now() * 0.001 * 0.1);
 
   renderEngine.update(world.entities);
-  await renderEngine.render(world.entities, cameraEntities);
+  renderEngine.render(world.entities, cameraEntities);
 
   // The pipeline refits near/far to the scene bounds every frame, so both the
   // texture and the planes have to be re-read rather than captured.

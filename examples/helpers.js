@@ -334,9 +334,9 @@ gui.addParam("Scale", State, "scale", { min: 0, max: 2 }, () => {
   }
 });
 
-gpu.frame(ctx, async () => {
+gpu.frame(ctx, () => {
   renderEngine.update(world.entities);
-  await renderEngine.render(
+  renderEngine.render(
     world.entities,
     world.entities.filter((entity) => entity.camera),
   );

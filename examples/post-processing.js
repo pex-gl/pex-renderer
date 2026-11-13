@@ -1219,9 +1219,9 @@ window.addEventListener("keydown", ({ key }) => {
   if (key === "d") debugOnce = true;
 });
 
-gpu.frame(ctx, async () => {
+gpu.frame(ctx, () => {
   renderEngine.update(world.entities);
-  const [{ depth, normal, velocity }] = await renderEngine.render(
+  const [{ depth, normal, velocity }] = renderEngine.render(
     world.entities,
     cameraEntity,
   );

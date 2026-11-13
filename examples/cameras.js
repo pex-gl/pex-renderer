@@ -340,7 +340,7 @@ const showCulling = () => {
 
 let time = 0;
 let sinceLastFrame = 0;
-gpu.frame(ctx, async ({ deltaTime }) => {
+gpu.frame(ctx, ({ deltaTime }) => {
   sinceLastFrame += deltaTime;
   if (sinceLastFrame < 1 / State.fps - 0.001) return;
   sinceLastFrame = 0;
@@ -353,7 +353,7 @@ gpu.frame(ctx, async ({ deltaTime }) => {
   showCulling();
   // The preserved canvas is never cleared: bezels would keep stale pixels.
   gpu.submit(ctx, { pass: { clearValue: [0, 0, 0, 1] } });
-  await renderEngine.render(world.entities, [
+  renderEngine.render(world.entities, [
     ...(State.videoWall ? wall : [player]),
     followCam,
     minimap,

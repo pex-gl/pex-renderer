@@ -139,7 +139,7 @@ const ctx = {
  * One frame of post-processing at `viewport`, run through the pipeline's stage
  * sequence so each effect lands where it asked to.
  */
-async function declareFrame(
+function declareFrame(
   viewport,
   postProcessing,
   load,
@@ -203,7 +203,7 @@ async function declareFrame(
   };
 
   let textures;
-  await graph.setup(() => {
+  graph.setup(() => {
     textures = new RenderTextures(graph, renderView);
     const target = (label, format = "rgba16float") =>
       graph.createTexture({
@@ -288,8 +288,8 @@ const bloomComponent = (extra) => ({
 
 // ─── Bloom pyramid depth follows the viewport ────────────────────────────────
 {
-  const levelsAt = async (viewport, extra) => {
-    const { names } = await declareFrame(
+  const levelsAt = (viewport, extra) => {
+    const { names } = declareFrame(
       viewport,
       { exposure: 1, bloom: bloomComponent(extra) },
       ["bloom"],
@@ -298,27 +298,27 @@ const bloomComponent = (extra) => ({
   };
 
   console.log("Bloom level count derived from the viewport");
-  check("720p", await levelsAt([1280, 720]), 5);
-  check("1080p", await levelsAt([1920, 1080]), 6);
-  check("4K", await levelsAt([3840, 2160]), 7);
-  check("small (320x200)", await levelsAt([320, 200]), 3);
+  check("720p", levelsAt([1280, 720]), 5);
+  check("1080p", levelsAt([1920, 1080]), 6);
+  check("4K", levelsAt([3840, 2160]), 7);
+  check("small (320x200)", levelsAt([320, 200]), 3);
   // Never zero, and never a level with nothing left to gather from.
-  check("tiny (16x16)", await levelsAt([16, 16]), 1);
+  check("tiny (16x16)", levelsAt([16, 16]), 1);
   check(
     "explicit count is honoured",
-    await levelsAt([1920, 1080], { levels: 3 }),
+    levelsAt([1920, 1080], { levels: 3 }),
     3,
   );
   check(
     "explicit count is still capped",
-    await levelsAt([320, 200], { levels: 9 }),
+    levelsAt([320, 200], { levels: 9 }),
     3,
   );
 }
 
 // ─── The progressive upsample chain ──────────────────────────────────────────
 {
-  const { plan, names, resourceOf } = await declareFrame(
+  const { plan, names, resourceOf } = declareFrame(
     [1920, 1080],
     { exposure: 1, bloom: bloomComponent() },
     ["bloom"],
@@ -396,7 +396,7 @@ const bloomComponent = (extra) => ({
 // What exercises the register hand-off: ssao publishes what combine reads,
 // bloom what combine adds, and each chaining pass republishes "color".
 {
-  const { plan, names } = await declareFrame(
+  const { plan, names } = declareFrame(
     [1920, 1080],
     {
       exposure: 1,
@@ -479,27 +479,24 @@ const bloomComponent = (extra) => ({
     },
   };
 
-  const declaredWith = async (options) =>
-    (
-      await declareFrame(
-        [1920, 1080],
-        structuredClone(dofComponent),
-        ["dof"],
-        options,
-      )
+  const declaredWith = (options) =>
+    declareFrame(
+      [1920, 1080],
+      structuredClone(dofComponent),
+      ["dof"],
+      options,
     ).names.filter((name) => name.startsWith("dof."));
 
   console.log("\nDepth readers under MSAA");
   // Whether the chain ran at all, not what it is made of — the composite is the
   // pass that publishes, so it is the one that says depth was readable.
-  const composited = async (options) =>
-    (await declaredWith(options)).includes("dof.main");
+  const composited = (options) => declaredWith(options).includes("dof.main");
 
-  check("no MSAA: dof runs", await composited({}), true);
-  check("MSAA, unresolved: dof sits out", await declaredWith({ msaa: 4 }), []);
+  check("no MSAA: dof runs", composited({}), true);
+  check("MSAA, unresolved: dof sits out", declaredWith({ msaa: 4 }), []);
   check(
     "MSAA, resolved: dof runs again",
-    await composited({ msaa: 4, resolveDepth: true }),
+    composited({ msaa: 4, resolveDepth: true }),
     true,
   );
 }
@@ -526,13 +523,13 @@ const bloomComponent = (extra) => ({
 
   console.log("\nTemporal antialiasing history");
 
-  const frame0 = await declareFrame([320, 200], component, ["taa"]);
+  const frame0 = declareFrame([320, 200], component, ["taa"]);
   const carry = { pool: frame0.pool, cameraEntity: frame0.cameraEntity };
-  const frame1 = await declareFrame([320, 200], component, ["taa"], {
+  const frame1 = declareFrame([320, 200], component, ["taa"], {
     ...carry,
     frameIndex: 1,
   });
-  const frame2 = await declareFrame([320, 200], component, ["taa"], {
+  const frame2 = declareFrame([320, 200], component, ["taa"], {
     ...carry,
     frameIndex: 2,
   });
@@ -583,9 +580,9 @@ const bloomComponent = (extra) => ({
 
   // Same rule as every other depth consumer: a multisampled depth buffer is not
   // something a reader can bind, so the effect sits the frame out.
-  const msaa = await declareFrame([320, 200], component, ["taa"], { msaa: 4 });
+  const msaa = declareFrame([320, 200], component, ["taa"], { msaa: 4 });
   check("sits out while depth is multisampled", msaa.names, []);
-  const resolved = await declareFrame([320, 200], component, ["taa"], {
+  const resolved = declareFrame([320, 200], component, ["taa"], {
     msaa: 4,
     resolveDepth: true,
   });
@@ -610,7 +607,7 @@ const bloomComponent = (extra) => ({
     const frames = [];
     let entity;
     for (let i = 1; i <= 5; i++) {
-      const f = await declareFrame([64, 64], component, ["taa"], {
+      const f = declareFrame([64, 64], component, ["taa"], {
         frameIndex: i,
         pool,
         ...(entity && { cameraEntity: entity }),
@@ -669,7 +666,7 @@ const bloomComponent = (extra) => ({
   // nothing on screen to say the test had stopped working.
   {
     const withDepth = { exposure: 1, taa: { disocclusionTolerance: 0.02 } };
-    const frame = await declareFrame([64, 64], withDepth, ["taa"], {
+    const frame = declareFrame([64, 64], withDepth, ["taa"], {
       frameIndex: 4,
     });
     const pass = taaPass(frame);
@@ -704,7 +701,7 @@ const bloomComponent = (extra) => ({
     );
 
     // Neither the pass nor the texture exists when the test is switched off.
-    const without = await declareFrame(
+    const without = declareFrame(
       [64, 64],
       { exposure: 1, taa: {} },
       ["taa"],
@@ -725,7 +722,7 @@ const bloomComponent = (extra) => ({
   // Sharpening an image that gets sharpened again next frame compounds without
   // bound, so what the sharpener writes must never reach the accumulator.
   {
-    const sharpened = await declareFrame(
+    const sharpened = declareFrame(
       [64, 64],
       { exposure: 1, taa: { sharpness: 0.5 } },
       ["taa"],
@@ -756,7 +753,7 @@ const bloomComponent = (extra) => ({
 
   // Ahead of everything that consumes the image, so bloom's pyramid and the
   // tonemap see a stable one rather than a jittered frame.
-  const chained = await declareFrame(
+  const chained = declareFrame(
     [320, 200],
     { exposure: 1, taa: {}, bloom: bloomComponent() },
     ["taa", "bloom", "combine"],
@@ -775,7 +772,7 @@ const bloomComponent = (extra) => ({
 // wrong size silently truncates long streaks instead of failing.
 {
   const component = { intensity: 1, tileSize: 40, samples: 35 };
-  const frame = await declareFrame(
+  const frame = declareFrame(
     [1280, 720],
     { exposure: 1, motionBlur: component },
     ["motionBlur"],
@@ -813,7 +810,7 @@ const bloomComponent = (extra) => ({
   // Both are structural — nothing to smear along, and nothing to order samples
   // by — so the effect sits the frame out rather than drawing something wrong.
   for (const missing of ["velocity", "depth"]) {
-    const partial = await declareFrame(
+    const partial = declareFrame(
       [320, 200],
       { exposure: 1, motionBlur: component },
       ["motionBlur"],
@@ -823,7 +820,7 @@ const bloomComponent = (extra) => ({
   }
 
   // A shutter held closed is not a cheap blur, it is no blur.
-  const closed = await declareFrame(
+  const closed = declareFrame(
     [320, 200],
     { exposure: 1, motionBlur: { intensity: 0 } },
     ["motionBlur"],
@@ -832,7 +829,7 @@ const bloomComponent = (extra) => ({
 
   // After the resolve: what should be smeared is the accumulated image, not a
   // jittered frame, and blurring before it would feed the accumulator streaks.
-  const chained = await declareFrame(
+  const chained = declareFrame(
     [320, 200],
     { exposure: 1, taa: {}, motionBlur: component },
     ["taa", "motionBlur"],
@@ -875,7 +872,7 @@ const bloomComponent = (extra) => ({
     names.filter((name) => name.startsWith("lensFlare."));
 
   {
-    const { names, plan, resourceOf } = await flareFrame({
+    const { names, plan, resourceOf } = flareFrame({
       blades: 6,
       lensFlare: lensFlareComponent(),
     });
@@ -939,26 +936,26 @@ const bloomComponent = (extra) => ({
   // a longer streak has to buy another pass rather than a longer stride. The
   // budget bounds it: asking for more than it allows shortens the spike.
   console.log("\nLens flare streak length drives the pass count");
-  const streakPassesAt = async (streakLength, streakIterations) => {
-    const { names } = await flareFrame({
+  const streakPassesAt = (streakLength, streakIterations) => {
+    const { names } = flareFrame({
       blades: 6,
       lensFlare: lensFlareComponent({ streakLength, streakIterations }),
     });
     return flareNames(names).filter((name) => name.includes("streak[")).length;
   };
-  check("0.02", await streakPassesAt(0.02), 1);
-  check("0.1", await streakPassesAt(0.1), 3);
-  check("0.5", await streakPassesAt(0.5), 4);
-  check("2", await streakPassesAt(2), 5);
-  check("2, capped at 3", await streakPassesAt(2, 3), 3);
+  check("0.02", streakPassesAt(0.02), 1);
+  check("0.1", streakPassesAt(0.1), 3);
+  check("0.5", streakPassesAt(0.5), 4);
+  check("2", streakPassesAt(2), 5);
+  check("2, capped at 3", streakPassesAt(2, 3), 3);
 
   // Down and straight back up, so the ghosts resample a band-limited image at
   // its own resolution rather than magnifying a coarse level. Bloom's filter
   // pair, but without the accumulation: a ghost is one image of the aperture,
   // not a sum of scales.
   console.log("\nLens flare blurs the bright pass before the families read it");
-  const blurAt = async (blur, viewport = [1920, 1080]) => {
-    const { names } = await declareFrame(
+  const blurAt = (blur, viewport = [1920, 1080]) => {
+    const { names } = declareFrame(
       viewport,
       {
         exposure: 1,
@@ -969,17 +966,17 @@ const bloomComponent = (extra) => ({
     return flareNames(names).filter((name) => name.includes("blur")).length;
   };
   // No blur is no passes: the composite reads the bright pass itself.
-  check("0", await blurAt(0), 0);
-  check("1", await blurAt(1), 2);
-  check("3", await blurAt(3), 6);
+  check("0", blurAt(0), 0);
+  check("1", blurAt(1), 2);
+  check("3", blurAt(3), 6);
   // Halving stops while a level still has neighbours to gather from.
-  check("3, but only 64x36 to halve", await blurAt(3, [256, 144]), 4);
+  check("3, but only 64x36 to halve", blurAt(3, [256, 144]), 4);
 
   {
     // The streak seed reads the sharp bright pass and the composite reads the
     // blurred one: a spike is the diffraction of a peak, and a blurred peak
     // diffracts into a band.
-    const { plan } = await flareFrame({
+    const { plan } = flareFrame({
       blades: 6,
       lensFlare: lensFlareComponent(),
     });
@@ -1005,7 +1002,7 @@ const bloomComponent = (extra) => ({
 
   console.log("\nLens flare sources");
   {
-    const { names } = await flareFrame(
+    const { names } = flareFrame(
       {
         bloom: bloomComponent(),
         lensFlare: lensFlareComponent({ source: "bloom", streakIntensity: 0 }),
@@ -1021,7 +1018,7 @@ const bloomComponent = (extra) => ({
   {
     // Falls back rather than sitting out: an effect switched off should not
     // silently switch another one off with it.
-    const { names } = await flareFrame({
+    const { names } = flareFrame({
       lensFlare: lensFlareComponent({ source: "bloom", streakIntensity: 0 }),
     });
     check(
@@ -1033,7 +1030,7 @@ const bloomComponent = (extra) => ({
 
   console.log("\nLens flare families");
   {
-    const { names } = await flareFrame({
+    const { names } = flareFrame({
       lensFlare: lensFlareComponent({
         ghostIntensity: 0,
         reversedIntensity: 0,
@@ -1046,7 +1043,7 @@ const bloomComponent = (extra) => ({
   }
   {
     // A round aperture has no straight edge to diffract a spike off.
-    const { names } = await flareFrame({
+    const { names } = flareFrame({
       blades: 0,
       lensFlare: lensFlareComponent({ streakDirections: 0 }),
     });
@@ -1057,7 +1054,7 @@ const bloomComponent = (extra) => ({
     );
   }
   {
-    const { names } = await flareFrame({
+    const { names } = flareFrame({
       blades: 6,
       bladeCurvature: 1,
       lensFlare: lensFlareComponent(),

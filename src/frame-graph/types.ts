@@ -222,7 +222,7 @@ export type PassHook = (declaration: PassDeclaration) => void;
 export type StageCallback<T = any> = (
   context: T,
   name: string,
-) => void | Promise<void>;
+) => void;
 
 // ─── Compiled plan ───────────────────────────────────────────────────────────
 

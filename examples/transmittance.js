@@ -289,9 +289,9 @@ window.addEventListener("keydown", ({ key }) => {
   if (key === "d") debugOnce = true;
 });
 
-gpu.frame(ctx, async () => {
+gpu.frame(ctx, () => {
   renderEngine.update(world.entities);
-  await renderEngine.render(
+  renderEngine.render(
     world.entities,
     world.entities.filter((entity) => entity.camera),
   );

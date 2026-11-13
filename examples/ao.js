@@ -420,9 +420,9 @@ renderEngine.frameGraph.on("present", (textures) => {
   if (aoHandle) renderEngine.frameGraph.exportTexture(aoHandle);
 });
 
-gpu.frame(ctx, async () => {
+gpu.frame(ctx, () => {
   renderEngine.update(world.entities);
-  const [{ color, normal, depth }] = await renderEngine.render(
+  const [{ color, normal, depth }] = renderEngine.render(
     world.entities,
     cameraEntity,
   );

@@ -668,10 +668,10 @@ window.addEventListener("keydown", ({ key }) => {
   if (key === "d") debugOnce = true;
 });
 
-gpu.frame(ctx, async () => {
+gpu.frame(ctx, () => {
   if (cameraEntity) {
     renderEngine.update(world.entities);
-    await renderEngine.render(world.entities, cameraEntity);
+    renderEngine.render(world.entities, cameraEntity);
   }
 
   gui.draw();

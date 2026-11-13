@@ -310,18 +310,17 @@ export class FrameGraph {
    * reads the frame's images by name from it and publishes its own the same
    * way, which is what splices its passes into the frame.
    *
-   * Callbacks may be async, but only for CPU work: declaration runs inside the
-   * caller's frame segment, and yielding past a browser present destroys the
-   * swapchain texture it acquired, which fails the submit for the whole frame.
-   * Fetch outside the frame and use what has arrived, as post-processing does
-   * with its effect modules.
+   * Callbacks are sync: declaration runs inside the caller's frame segment, and
+   * yielding past a browser present destroys the swapchain texture it acquired,
+   * which fails the submit for the whole frame. Fetch outside the frame and use
+   * what has arrived, as post-processing does with its effect modules.
    */
-  async stage<T>(name: string, context?: T): Promise<void> {
+  stage<T>(name: string, context?: T): void {
     requirePhase(this.state, "declaring", `stage("${name}")`, DECLARE_HINT);
 
     const callbacks = this.stages.get(name);
     if (!callbacks) return;
-    for (const callback of callbacks) await callback(context, name);
+    for (const callback of callbacks) callback(context, name);
   }
 
   /** Register work at a named stage. Persists across frames. */
@@ -339,7 +338,7 @@ export class FrameGraph {
    * one costs the caller nothing: no `stage()` to add, and no set of stage
    * names shadowing the pass list. Named stages remain for the boundaries no
    * single pass marks — a phase that exists whether or not the pass before it
-   * was declared — and for the payload and the awaiting that come with them.
+   * was declared — and for the payload that comes with them.
    *
    * The hook runs after the pass and its edges are recorded, and after any
    * override, so a dropped pass fires nothing and a renamed one fires under its
@@ -364,14 +363,14 @@ export class FrameGraph {
 
   // ─── Lifecycle ─────────────────────────────────────────────────────────────
 
-  /** Declare the frame. May await: nothing is recorded until execute. */
-  async setup(declare: () => void | Promise<void>): Promise<void> {
+  /** Declare the frame. Nothing is recorded until execute. */
+  setup(declare: () => void): void {
     resetGraphState(this.state);
     this.blackboard.clear();
     this.plan = undefined;
     this.state.phase = "declaring";
     try {
-      await declare();
+      declare();
     } finally {
       this.state.phase = "declared";
     }
@@ -411,8 +410,8 @@ export class FrameGraph {
   }
 
   /** Setup + compile + execute, bracketing execution in one command buffer. */
-  async render(declare: () => void | Promise<void>): Promise<CompiledPlan> {
-    await this.setup(declare);
+  render(declare: () => void): CompiledPlan {
+    this.setup(declare);
     const compiled = this.compile();
 
     // A caller already inside a segment keeps ownership of it, so anything it

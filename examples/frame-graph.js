@@ -444,7 +444,7 @@ window.addEventListener("keydown", ({ key }) => {
   if (key === "d") debugOnce = true;
 });
 
-gpu.frame(ctx, async () => {
+gpu.frame(ctx, () => {
   if (State.autoRotate) {
     quat.fromAxisAngle(
       torusEntity.transform.rotation,
@@ -455,7 +455,7 @@ gpu.frame(ctx, async () => {
   }
 
   renderEngine.update(world.entities);
-  await renderEngine.render(world.entities, cameraEntity);
+  renderEngine.render(world.entities, cameraEntity);
 
   // The register is published on the blackboard, one entry per view: that is
   // how a reader outside the graph reaches the frame's images by name.

@@ -75,7 +75,7 @@
   "packageManager": "npm@11.12.1",
   "engines": {
     "node": ">=26.0.0",
-    "snowdev": ">=3.0.0-alpha.3"
+    "snowdev": ">=3.0.0-alpha.6"
   },
   "snowdev": {
     "resolve": {

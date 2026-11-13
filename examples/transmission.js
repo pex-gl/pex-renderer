@@ -389,7 +389,7 @@ window.addEventListener("keydown", ({ key }) => {
   if (key === "d") debugOnce = true;
 });
 
-gpu.frame(ctx, async () => {
+gpu.frame(ctx, () => {
   if (State.autoRotate) {
     quat.fromAxisAngle(
       torusEntity.transform.rotation,
@@ -400,7 +400,7 @@ gpu.frame(ctx, async () => {
   }
 
   renderEngine.update(world.entities);
-  await renderEngine.render(world.entities, cameraEntity);
+  renderEngine.render(world.entities, cameraEntity);
 
   const textures = renderEngine.frameGraph.blackboard.get(
     `renderTextures.${cameraEntity.id}`,

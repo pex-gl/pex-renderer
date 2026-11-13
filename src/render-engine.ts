@@ -122,18 +122,14 @@ export default ({
     /**
      * Declare, compile and execute one frame.
      *
-     * Async because `stage()` hooks may be. Call it from an async `gpu.frame`
-     * callback: that keeps one segment open across the whole tick, so this and
-     * everything drawn after it — GUI included — share a command buffer. What
-     * it awaits must never yield long enough for the browser to present, which
-     * destroys the swapchain texture the open segment holds and fails the
-     * submit for the entire frame.
+     * Call it from a `gpu.frame` callback: this and everything drawn after it
+     * in that frame — GUI included — share a command buffer.
      *
      * All cameras share one graph, so a target finished by the first camera can
      * back a different one for the second: peak memory tracks the heaviest
      * camera rather than their sum.
      */
-    async render(
+    render(
       entities: Entity[],
       cameraEntities: Entity | Entity[],
       options: RenderEngineOptions = {},
@@ -144,7 +140,7 @@ export default ({
 
       let targetHandlesPerCamera: Record<string, ResourceHandle>[] = [];
 
-      await frameGraph.render(async () => {
+      frameGraph.render(() => {
         targetHandlesPerCamera = [];
 
         // View-independent: one sky and one probe bake feed every camera.
@@ -154,7 +150,7 @@ export default ({
 
         // External bakes join here and set `declared`.
         const bakes: BakesStage = { declared: skyBaked || probesBaked };
-        await frameGraph.stage("bakes", bakes);
+        frameGraph.stage("bakes", bakes);
 
         // Bakes clear needsBake when encoded: submit them on their own so a
         // failing scene pass can't discard them.
@@ -201,7 +197,7 @@ export default ({
           lightSystem.update(entitiesForCamera);
 
           targetHandlesPerCamera.push(
-            await renderPipelineSystem.update(
+            renderPipelineSystem.update(
               [...entitiesForCamera, ...helperEntities],
               updateOptions,
             ),

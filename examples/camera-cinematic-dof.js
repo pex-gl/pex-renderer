@@ -405,9 +405,9 @@ window.addEventListener("keydown", ({ key }) => {
   if (key === "d") debugOnce = true;
 });
 
-gpu.frame(ctx, async () => {
+gpu.frame(ctx, () => {
   renderEngine.update(world.entities);
-  await renderEngine.render(world.entities, cameraEntity);
+  renderEngine.render(world.entities, cameraEntity);
   updateSensorFrame();
 
   gpu.debug(ctx, debugOnce);
